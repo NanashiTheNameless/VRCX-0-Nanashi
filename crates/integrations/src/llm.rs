@@ -278,6 +278,19 @@ impl LlmClient {
         (!name.is_empty()).then(|| name.to_string())
     }
 
+    async fn send_chat_request(
+        &self,
+        body: &ChatRequestBody<'_>,
+    ) -> Result<reqwest::Response, LlmError> {
+        Ok(self
+            .with_extra_headers(
+                self.authorized(self.http.post(self.openai_url("/chat/completions"))),
+            )
+            .json(body)
+            .send()
+            .await?)
+    }
+
     /// Request one non-streaming chat completion.
     pub async fn complete_chat(
         &self,
@@ -378,7 +391,7 @@ impl LlmClient {
                 },
             })
             .collect();
-        let body = ChatRequestBody {
+        let mut body = ChatRequestBody {
             model: &self.model,
             messages,
             tools: request_tools,
@@ -386,18 +399,28 @@ impl LlmClient {
             reasoning: reasoning_request(options),
         };
 
-        let response = self
-            .with_extra_headers(
-                self.authorized(self.http.post(self.openai_url("/chat/completions"))),
-            )
-            .json(&body)
-            .send()
-            .await?;
-
+        let mut response = self.send_chat_request(&body).await?;
         if !response.status().is_success() {
             let status = response.status().as_u16();
             let message = response.text().await.unwrap_or_default();
-            return Err(LlmError::Api { status, message });
+            // Some models (e.g. OpenAI reasoning models on /chat/completions)
+            // reject a reasoning effort alongside function tools; retry once
+            // without it rather than failing the turn.
+            if body.reasoning.is_none() || !is_reasoning_param_rejection(status, &message) {
+                return Err(LlmError::Api { status, message });
+            }
+            tracing::warn!(
+                model = %self.model,
+                response = %message,
+                "assistant: provider rejected reasoning effort; retrying without it"
+            );
+            body.reasoning = None;
+            response = self.send_chat_request(&body).await?;
+            if !response.status().is_success() {
+                let status = response.status().as_u16();
+                let message = response.text().await.unwrap_or_default();
+                return Err(LlmError::Api { status, message });
+            }
         }
 
         let mut stream = response.bytes_stream();
@@ -512,6 +535,21 @@ fn parse_models_response(
         models,
         model_reasoning,
     })
+}
+
+/// A 400 whose error names the reasoning parameter, e.g. OpenAI's
+/// `"param": "reasoning_effort"` for models that disallow it with tools.
+fn is_reasoning_param_rejection(status: u16, body: &str) -> bool {
+    if status != 400 {
+        return false;
+    }
+    let param = serde_json::from_str::<Value>(body)
+        .ok()
+        .and_then(|payload| payload.pointer("/error/param")?.as_str().map(str::to_owned));
+    match param {
+        Some(param) => param.starts_with("reasoning"),
+        None => body.to_ascii_lowercase().contains("reasoning_effort"),
+    }
 }
 
 fn reasoning_request(options: &LlmRequestOptions) -> Option<ReasoningRequest> {

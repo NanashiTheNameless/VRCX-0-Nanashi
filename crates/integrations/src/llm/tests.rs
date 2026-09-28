@@ -544,3 +544,92 @@ fn azure_urls_keep_query_and_default_api_version() {
         "https://res.openai.azure.com/openai/v1/models"
     );
 }
+
+#[test]
+fn reasoning_param_rejection_matches_openai_tools_error() {
+    let body = r#"{"error":{"message":"Function tools with reasoning_effort are not supported for gpt-5.6-luna in /v1/chat/completions.","type":"invalid_request_error","param":"reasoning_effort","code":null}}"#;
+    assert!(is_reasoning_param_rejection(400, body));
+    assert!(is_reasoning_param_rejection(
+        400,
+        "unsupported reasoning_effort value"
+    ));
+}
+
+#[test]
+fn reasoning_param_rejection_ignores_other_errors() {
+    let body = r#"{"error":{"message":"bad messages","param":"messages"}}"#;
+    assert!(!is_reasoning_param_rejection(400, body));
+    assert!(!is_reasoning_param_rejection(
+        401,
+        r#"{"error":{"param":"reasoning_effort"}}"#
+    ));
+}
+
+#[tokio::test]
+async fn stream_chat_retries_without_reasoning_when_provider_rejects_it() {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+    let base_url = format!("http://{}/v1", listener.local_addr().unwrap());
+    let server = tokio::spawn(async move {
+        let mut bodies = Vec::new();
+        for attempt in 0..2 {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut request = Vec::new();
+            let mut chunk = [0_u8; 4096];
+            let body = loop {
+                let read = stream.read(&mut chunk).await.unwrap();
+                request.extend_from_slice(&chunk[..read]);
+                let text = String::from_utf8_lossy(&request).to_string();
+                if let Some((head, body)) = text.split_once("\r\n\r\n") {
+                    let length = head
+                        .lines()
+                        .find_map(|line| {
+                            let (name, value) = line.split_once(':')?;
+                            name.eq_ignore_ascii_case("content-length")
+                                .then(|| value.trim().parse::<usize>().ok())?
+                        })
+                        .unwrap_or(0);
+                    if body.len() >= length {
+                        break body.to_string();
+                    }
+                }
+                if read == 0 {
+                    break String::new();
+                }
+            };
+            bodies.push(body);
+            let (status, reply) = if attempt == 0 {
+                (
+                    "400 Bad Request",
+                    r#"{"error":{"message":"no","param":"reasoning_effort"}}"#.to_string(),
+                )
+            } else {
+                (
+                    "200 OK",
+                    "data: {\"choices\":[{\"delta\":{\"content\":\"hi\"}}]}\n\ndata: [DONE]\n\n"
+                        .to_string(),
+                )
+            };
+            let response = format!(
+                "HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{reply}",
+                reply.len()
+            );
+            stream.write_all(response.as_bytes()).await.unwrap();
+        }
+        bodies
+    });
+
+    let client = LlmClient::new(&base_url, "key", "gpt-test", None).unwrap();
+    let options = LlmRequestOptions {
+        reasoning_effort: Some("high".into()),
+        ..Default::default()
+    };
+    let turn = client
+        .stream_chat(&[], &[], &options, |_| {})
+        .await
+        .unwrap();
+    assert_eq!(turn.content, "hi");
+
+    let bodies = server.await.unwrap();
+    assert!(bodies[0].contains("\"reasoning\""));
+    assert!(!bodies[1].contains("\"reasoning\""));
+}
