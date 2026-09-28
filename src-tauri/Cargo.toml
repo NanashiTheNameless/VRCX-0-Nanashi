@@ -31,10 +31,6 @@ tokio = { workspace = true, features = [
     "io-util",
     "fs"
 ] }
-rustls = { version = "0.23", default-features = false, features = [
-    "aws_lc_rs",
-    "std"
-] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2.5.1"
 tauri-plugin-notification = "2"

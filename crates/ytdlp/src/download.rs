@@ -18,6 +18,7 @@ fn allowed(host: &str) -> bool {
     )
 }
 fn client() -> Result<reqwest::Client, String> {
+    vrcx_0_core::tls::install_crypto_provider();
     reqwest::Client::builder()
         .user_agent(vrcx_0_core::user_agent::component_user_agent("yt-dlp"))
         .timeout(Duration::from_secs(180))

@@ -8,6 +8,7 @@ pub async fn fetch_safety_list(url: &str) -> Result<String, String> {
     if url.scheme() != "https" || !url.username().is_empty() || url.password().is_some() {
         return Err("List URL must use HTTPS without credentials".into());
     }
+    vrcx_0_core::tls::install_crypto_provider();
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(20))
         .redirect(reqwest::redirect::Policy::none())

@@ -168,6 +168,7 @@ impl LlmClient {
         model: impl Into<String>,
         proxy_url: Option<&str>,
     ) -> Result<Self, LlmError> {
+        vrcx_0_core::tls::install_crypto_provider();
         let mut builder = Client::builder()
             .timeout(Duration::from_secs(180))
             .user_agent(vrcx_0_core::user_agent::app_user_agent());

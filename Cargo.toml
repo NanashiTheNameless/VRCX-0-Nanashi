@@ -76,7 +76,14 @@ iana-time-zone = "0.1"
 machine-uid = "0.6"
 percent-encoding = "2"
 proptest = "1"
-reqwest = "0.13"
+# No bundled crypto provider: the app installs ring (vrcx_0_core::tls). The
+# default provider, AWS-LC, builds a large C library that dominated CI time.
+reqwest = { version = "0.13", default-features = false, features = [
+    "rustls-no-provider",
+    "charset",
+    "http2",
+    "system-proxy",
+] }
 regex = "1"
 fs4 = "1.1"
 rusqlite = "0.40"

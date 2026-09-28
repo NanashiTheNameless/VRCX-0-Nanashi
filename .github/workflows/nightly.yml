@@ -125,6 +125,9 @@ jobs:
 
             - name: Build package
               env:
+                  # Set the CARGO_FINGERPRINT_LOG=1 repository variable for one run to
+                  # log why each crate is rebuilt (to diagnose cache misses).
+                  CARGO_LOG: ${{ vars.CARGO_FINGERPRINT_LOG == '1' && 'cargo::core::compiler::fingerprint=info' || '' }}
                   TAURI_UPDATER_PUBLIC_KEY: ${{ vars.TAURI_UPDATER_PUBLIC_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_UPDATER_PRIVATE_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_UPDATER_PRIVATE_KEY_PASSWORD }}
@@ -273,6 +276,9 @@ jobs:
 
             - name: Build binary
               env:
+                  # Set the CARGO_FINGERPRINT_LOG=1 repository variable for one run to
+                  # log why each crate is rebuilt (to diagnose cache misses).
+                  CARGO_LOG: ${{ vars.CARGO_FINGERPRINT_LOG == '1' && 'cargo::core::compiler::fingerprint=info' || '' }}
                   TAURI_UPDATER_PUBLIC_KEY: ${{ vars.TAURI_UPDATER_PUBLIC_KEY }}
                   VRCX_0_WEBKIT_BUILD_TARGET: safari18.2
               # --timings writes target/cargo-timings/cargo-timing.html: per-crate
@@ -388,7 +394,22 @@ jobs:
         runs-on: ubuntu-24.04
         permissions:
             contents: write
+            actions: write
         steps:
+            - name: Prune superseded Rust caches
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  # Keep only the newest Rust cache per job. Every change to the
+                  # dependency files saves a new ~5.5 GB set, and older sets push
+                  # the repository past GitHub's 10 GB limit, causing evictions.
+                  gh api --paginate "repos/$GITHUB_REPOSITORY/actions/caches?per_page=100&sort=created_at&direction=desc" \
+                      --jq '.actions_caches[] | select(.key | startswith("v0-rust-")) | "\(.id) \(.key)"' \
+                  | awk '{ job = $2; sub(/-[0-9a-f]+$/, "", job); if (seen[job]++) print $1 }' \
+                  | while read -r id; do
+                      gh api -X DELETE "repos/$GITHUB_REPOSITORY/actions/caches/$id" || true
+                  done
+
             - uses: actions/checkout@v7
 
             - uses: actions/setup-node@v7

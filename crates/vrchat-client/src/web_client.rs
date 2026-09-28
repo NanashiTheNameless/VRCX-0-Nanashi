@@ -265,6 +265,7 @@ fn build_http_client_with_redirects(
     user_agent: &str,
     follow_redirects: bool,
 ) -> Result<Client> {
+    vrcx_0_core::tls::install_crypto_provider();
     let mut builder = Client::builder()
         .cookie_provider(jar)
         .user_agent(user_agent)

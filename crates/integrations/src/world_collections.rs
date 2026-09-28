@@ -26,6 +26,7 @@ pub async fn create_world_collection(
     token: &str,
     payload: &WorldCollectionCreatePayload,
 ) -> Result<WorldCollectionCreateResponse, WorldCollectionShareError> {
+    vrcx_0_core::tls::install_crypto_provider();
     let client = reqwest::Client::builder()
         .user_agent(vrcx_0_core::user_agent::app_user_agent())
         .timeout(WORLD_COLLECTIONS_UPLOAD_TIMEOUT)
@@ -64,6 +65,7 @@ pub async fn register_world_revision(
     token: &str,
     payload: &WorldOpenRegisterPayload,
 ) -> Result<(), WorldCollectionShareError> {
+    vrcx_0_core::tls::install_crypto_provider();
     let client = reqwest::Client::builder()
         .user_agent(vrcx_0_core::user_agent::app_user_agent())
         .timeout(WORLD_COLLECTIONS_UPLOAD_TIMEOUT)
@@ -101,6 +103,7 @@ fn redact_secret(value: &str, secret: &str) -> String {
 pub async fn mint_world_collection_token(
     owner_hint: &str,
 ) -> Result<WorldCollectionTokenMintResponse, WorldCollectionShareError> {
+    vrcx_0_core::tls::install_crypto_provider();
     let client = reqwest::Client::builder()
         .user_agent(vrcx_0_core::user_agent::app_user_agent())
         .timeout(WORLD_COLLECTIONS_FETCH_TIMEOUT)
@@ -158,6 +161,7 @@ pub async fn fetch_world_collection(
     id: &str,
 ) -> Result<WorldCollectionSnapshotResponse, WorldCollectionShareError> {
     let id = validate_collection_shortcode(id)?;
+    vrcx_0_core::tls::install_crypto_provider();
     let client = reqwest::Client::builder()
         .user_agent(vrcx_0_core::user_agent::app_user_agent())
         .timeout(WORLD_COLLECTIONS_FETCH_TIMEOUT)

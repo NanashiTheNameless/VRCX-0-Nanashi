@@ -37,6 +37,7 @@ fn valid_sha(value: &str) -> bool {
 }
 
 fn client(timeout: Duration) -> Result<reqwest::Client, String> {
+    vrcx_0_core::tls::install_crypto_provider();
     reqwest::Client::builder()
         .timeout(timeout)
         .redirect(reqwest::redirect::Policy::none())

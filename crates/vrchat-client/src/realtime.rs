@@ -156,6 +156,7 @@ pub async fn connect_websocket(
     let stream =
         resolve_tcp_stream(&target_host, target_port, options.proxy_url.as_deref()).await?;
 
+    vrcx_0_core::tls::install_crypto_provider();
     client_async_tls(request, stream)
         .await
         .map(|(stream, _)| stream)

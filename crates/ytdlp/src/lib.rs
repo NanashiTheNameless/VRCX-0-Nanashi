@@ -146,6 +146,7 @@ impl Runtime {
             .stdout(Stdio::null())
             .stderr(Stdio::null());
         let mut child = process::spawn(&mut command)?;
+        vrcx_0_core::tls::install_crypto_provider();
         let client = reqwest::Client::builder()
             .no_proxy()
             .timeout(Duration::from_secs(1))

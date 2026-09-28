@@ -79,7 +79,7 @@ pub fn init_error_logging(app_data: Option<PathBuf>) {
 }
 
 pub fn init_tls_crypto_provider() {
-    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+    vrcx_0_core::tls::install_crypto_provider();
 }
 
 pub fn updater_public_key() -> String {

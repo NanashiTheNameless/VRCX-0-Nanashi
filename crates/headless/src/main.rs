@@ -197,7 +197,7 @@ impl CliLoginPrompt for StdinLoginPrompt {
 }
 
 fn init_tls_crypto_provider() {
-    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+    vrcx_0_core::tls::install_crypto_provider();
 }
 
 fn init_tracing(app_data: Option<PathBuf>) {

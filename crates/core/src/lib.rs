@@ -23,6 +23,7 @@ pub mod screenshots;
 pub mod social_circles;
 pub mod text;
 pub mod time;
+pub mod tls;
 pub mod trust;
 pub mod two_factor_method;
 pub mod user_agent;

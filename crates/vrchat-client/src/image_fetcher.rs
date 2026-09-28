@@ -41,6 +41,7 @@ impl ImageFetcher {
     ) -> Result<Self> {
         let user_agent = build_vrcx_user_agent(app_version);
         let contact_user_agent = contact_user_agent(&user_agent);
+        vrcx_0_core::tls::install_crypto_provider();
         let mut builder = Client::builder()
             .cookie_provider(cookie_jar)
             .user_agent(user_agent)

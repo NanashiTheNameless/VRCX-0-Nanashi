@@ -279,6 +279,7 @@ async fn connect_ws() -> Result<OvrConnection, String> {
 }
 
 async fn connect_ws_to(url: &str) -> Result<OvrConnection, String> {
+    vrcx_0_core::tls::install_crypto_provider();
     let (ws_stream, _) =
         tokio::time::timeout(OVR_CONNECT_TIMEOUT, tokio_tungstenite::connect_async(url))
             .await
