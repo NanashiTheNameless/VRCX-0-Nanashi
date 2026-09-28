@@ -2247,6 +2247,12 @@ const generatedCommands = {
             isFolder
         });
     },
+    /**
+     * Fork: reveal error-log.txt (or the data folder when no log exists yet).
+     */
+    async appOpenErrorLogFolder(): Promise<null> {
+        return await TAURI_INVOKE('app__open_error_log_folder');
+    },
     async appOpenBackgroundImageFilesSelectorDialog(
         defaultPath: string | null
     ): Promise<string[]> {
