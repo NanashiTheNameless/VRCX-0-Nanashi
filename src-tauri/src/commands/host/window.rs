@@ -121,7 +121,6 @@ pub(crate) fn stop_runtime_services(app_handle: &AppHandle) {
     crate::bootstrap::linux_rendering::stop(app_handle);
     crate::bootstrap::sidebar_auto_hide::park(app_handle, true);
     if let Some(state) = app_handle.try_state::<AppState>() {
-        state.log_watcher_compat_bridge().stop();
         state
             .runtime_host()
             .stop_for_application_exit("application-exit");

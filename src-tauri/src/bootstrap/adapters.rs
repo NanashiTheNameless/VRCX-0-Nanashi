@@ -23,7 +23,6 @@ use vrcx_0_application_core::{
 };
 use vrcx_0_application_core::{RuntimeTask, RuntimeTaskExecutor, RuntimeTaskHandle};
 use vrcx_0_core::{proxy::with_remote_dns, realtime::RealtimeWsStatusPayload};
-use vrcx_0_host_desktop::host_capabilities::{is_host_capability_available, HostCapability};
 use vrcx_0_runtime_host_desktop::notification::{
     DesktopNotificationAction, DesktopNotifier, NotificationDoNotDisturbSnapshot,
 };
@@ -66,11 +65,7 @@ impl RuntimeEventSink for TauriRuntimeEventSink {
                 }
             }
         }
-        let frontend_event = match event {
-            "runtimeGameLogEvent" => "addGameLogEvent",
-            event => event,
-        };
-        emit_to_main_window_if_visible(&self.app_handle, frontend_event, payload);
+        emit_to_main_window_if_visible(&self.app_handle, event, payload);
     }
 }
 
@@ -175,11 +170,7 @@ fn windows_notification_app_id(app: &tauri::AppHandle) -> Result<String, String>
     Ok(app.config().identifier.clone())
 }
 
-pub fn emit_to_main_window_if_visible<S>(
-    app_handle: &tauri::AppHandle,
-    event: &str,
-    payload: S,
-) -> bool
+fn emit_to_main_window_if_visible<S>(app_handle: &tauri::AppHandle, event: &str, payload: S) -> bool
 where
     S: Serialize + Clone,
 {
@@ -378,14 +369,6 @@ pub(super) fn start_host_services(app: &tauri::AppHandle, state: &AppState) {
     state.runtime_host().start_data_services();
     state.runtime_host().start_game_services();
     state.runtime_host().start_desktop_services();
-
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
-    if is_host_capability_available(HostCapability::GameLogWatcher) {
-        state.log_watcher_compat_bridge().start(
-            app.clone(),
-            state.runtime_host().log_watcher_for_compatibility(),
-        );
-    }
 }
 
 #[derive(Clone)]

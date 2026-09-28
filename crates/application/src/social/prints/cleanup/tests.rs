@@ -4,10 +4,10 @@ use super::{
     PrintCleanupQueue, PrintCleanupTrigger, PrintListItem, PRINT_CLEANUP_DEBOUNCE,
 };
 use serde_json::json;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
-    Arc,
+    Arc, Mutex,
 };
 use std::time::Duration;
 use vrcx_0_application_core::vrchat_api::VrchatApiResponse;
@@ -16,6 +16,7 @@ use vrcx_0_application_core::{
     TaskSupervisor,
 };
 use vrcx_0_core::realtime::RealtimeWsMessagePayload;
+use vrcx_0_core::vrchat_endpoints::VRCHAT_API_DEFAULT_ENDPOINT;
 
 fn item(id: &str, created_at: &str) -> PrintListItem {
     PrintListItem {
@@ -156,7 +157,7 @@ fn cleanup_queue_uses_2500ms_debounce_and_keeps_one_flight_pending() {
     let spawned = Arc::clone(&executor.spawned);
     supervisor.set_executor(executor);
     let queue = PrintCleanupQueue::new();
-    let deps = test_deps();
+    let deps = test_deps(Arc::new(TestPrintAdapter::new(&[], &[])));
     let trigger = PrintCleanupTrigger {
         user_id: "usr_self".into(),
         endpoint: "https://api.vrchat.cloud/api/1".into(),
@@ -199,46 +200,100 @@ impl RuntimeTaskHandle for CountingTaskHandle {
     }
 }
 
-struct NoopPrintAdapter;
+struct TestPrintAdapter {
+    legacy_favorite_ids: serde_json::Value,
+    favorite_ids_by_user: Mutex<HashMap<String, serde_json::Value>>,
+    prints_by_user: HashMap<String, serde_json::Value>,
+    deleted: Mutex<Vec<String>>,
+}
 
-impl super::super::favorites::PrintFavoritesStore for NoopPrintAdapter {
+impl TestPrintAdapter {
+    fn new(legacy_favorite_ids: &[&str], prints_by_user: &[(&str, Vec<String>)]) -> Self {
+        Self {
+            legacy_favorite_ids: json!(legacy_favorite_ids),
+            favorite_ids_by_user: Mutex::new(HashMap::new()),
+            prints_by_user: prints_by_user
+                .iter()
+                .map(|(user_id, ids)| {
+                    let prints = ids
+                        .iter()
+                        .enumerate()
+                        .map(|(index, id)| {
+                            json!({ "id": id, "createdAt": format!("2026-06-01T00:00:{index:02}Z") })
+                        })
+                        .collect::<Vec<_>>();
+                    ((*user_id).to_string(), json!(prints))
+                })
+                .collect(),
+            deleted: Mutex::new(Vec::new()),
+        }
+    }
+
+    fn deleted(&self) -> Vec<String> {
+        self.deleted.lock().unwrap().clone()
+    }
+}
+
+impl super::super::favorites::PrintFavoritesStore for TestPrintAdapter {
     fn auto_delete_enabled(&self) -> vrcx_0_application_core::Result<bool> {
-        Ok(false)
+        Ok(true)
     }
 
     fn auto_delete_limit(&self) -> vrcx_0_application_core::Result<String> {
-        Ok("60".into())
+        Ok("30".into())
     }
 
-    fn favorite_ids(&self) -> vrcx_0_application_core::Result<serde_json::Value> {
-        Ok(json!([]))
+    fn legacy_favorite_ids(&self) -> vrcx_0_application_core::Result<serde_json::Value> {
+        Ok(self.legacy_favorite_ids.clone())
     }
 
-    fn write_favorite_ids(&self, _ids: &serde_json::Value) -> vrcx_0_application_core::Result<()> {
+    fn favorite_ids(
+        &self,
+        user_id: &str,
+    ) -> vrcx_0_application_core::Result<Option<serde_json::Value>> {
+        Ok(self
+            .favorite_ids_by_user
+            .lock()
+            .unwrap()
+            .get(user_id)
+            .cloned())
+    }
+
+    fn write_favorite_ids(
+        &self,
+        user_id: &str,
+        ids: &serde_json::Value,
+    ) -> vrcx_0_application_core::Result<()> {
+        self.favorite_ids_by_user
+            .lock()
+            .unwrap()
+            .insert(user_id.to_string(), ids.clone());
         Ok(())
     }
 }
 
-impl super::PrintRemote for NoopPrintAdapter {
+impl super::PrintRemote for TestPrintAdapter {
     fn list_prints<'a>(
         &'a self,
         _endpoint: &'a str,
-        _user_id: &'a str,
+        user_id: &'a str,
         _count: i32,
     ) -> super::PrintRemoteFuture<'a> {
-        Box::pin(async {
-            Ok(VrchatApiResponse {
-                status: 200,
-                data: "[]".into(),
-            })
-        })
+        let data = self
+            .prints_by_user
+            .get(user_id)
+            .cloned()
+            .unwrap_or_else(|| json!([]))
+            .to_string();
+        Box::pin(async move { Ok(VrchatApiResponse { status: 200, data }) })
     }
 
     fn delete_print<'a>(
         &'a self,
         _endpoint: &'a str,
-        _print_id: &'a str,
+        print_id: &'a str,
     ) -> super::PrintRemoteFuture<'a> {
+        self.deleted.lock().unwrap().push(print_id.to_string());
         Box::pin(async {
             Ok(VrchatApiResponse {
                 status: 200,
@@ -248,8 +303,7 @@ impl super::PrintRemote for NoopPrintAdapter {
     }
 }
 
-fn test_deps() -> PrintCleanupDeps {
-    let adapter = Arc::new(NoopPrintAdapter);
+fn test_deps(adapter: Arc<TestPrintAdapter>) -> PrintCleanupDeps {
     PrintCleanupDeps {
         store: adapter.clone(),
         remote: adapter,
@@ -257,4 +311,38 @@ fn test_deps() -> PrintCleanupDeps {
         auth_scope: RuntimeAuthScope::new(),
         remote_mutations: Arc::new(RemoteMutationGate::default()),
     }
+}
+
+async fn run_cleanup_as(deps: &PrintCleanupDeps, user_id: &str) {
+    deps.auth_scope.set(user_id, VRCHAT_API_DEFAULT_ENDPOINT);
+    super::run_print_auto_cleanup(
+        deps,
+        &PrintCleanupTrigger {
+            user_id: user_id.into(),
+            endpoint: VRCHAT_API_DEFAULT_ENDPOINT.into(),
+            reason: "test".into(),
+        },
+    )
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn cleanup_under_another_account_keeps_favorites_protected() {
+    let account_a_prints = (0..31)
+        .map(|index| format!("prnt_a_{index:02}"))
+        .collect::<Vec<_>>();
+    let adapter = Arc::new(TestPrintAdapter::new(
+        &["prnt_a_00"],
+        &[
+            ("usr_a", account_a_prints),
+            ("usr_b", vec!["prnt_b_00".to_string()]),
+        ],
+    ));
+    let deps = test_deps(adapter.clone());
+
+    run_cleanup_as(&deps, "usr_b").await;
+    run_cleanup_as(&deps, "usr_a").await;
+
+    assert_eq!(adapter.deleted(), vec!["prnt_a_01"]);
 }

@@ -8,6 +8,7 @@ use chrono::Utc;
 use crate::database::online_backup::backup_connection_to_path;
 use crate::database::sidecar::{remove_sidecars, sidecar_path};
 use crate::Error;
+use vrcx_0_platform::path_utils::replace_file_atomically;
 
 use super::{
     checkpoint, checkpoint_status, ensure_upgrade_version_written, open_configured_connection,
@@ -162,14 +163,16 @@ impl DatabaseService {
         let old_main_path = match self.replace_main_database(&work_db_path) {
             Ok(path) => path,
             Err(error) => {
-                match reopen(&self.db_path) {
-                    Ok(main) => {
-                        *inner = DatabaseMode::Main(main);
-                    }
-                    Err(reopen_error) => {
-                        tracing::warn!(
-                            "Failed to reopen database after upgrade rollback: {reopen_error}"
-                        );
+                if self.db_path.exists() {
+                    match reopen(&self.db_path) {
+                        Ok(main) => {
+                            *inner = DatabaseMode::Main(main);
+                        }
+                        Err(reopen_error) => {
+                            tracing::warn!(
+                                "Failed to reopen database after upgrade rollback: {reopen_error}"
+                            );
+                        }
                     }
                 }
                 return Err(error);
@@ -270,7 +273,7 @@ impl DatabaseService {
             }
             other => {
                 *inner = other;
-                if let Some(status) = self.read_status_if_exists(&self.active_status_path())? {
+                if let Some(status) = read_status_if_exists(&self.active_status_path())? {
                     status
                 } else {
                     return Ok(());
@@ -297,20 +300,7 @@ impl DatabaseService {
     }
 
     pub fn get_failed_upgrade(&self) -> Result<Option<DatabaseUpgradeStatus>, Error> {
-        if let Some(status) = self.read_status_if_exists(&self.failed_status_path())? {
-            if Path::new(&status.work_db_path).exists() {
-                return Ok(Some(status));
-            }
-        }
-
-        if let Some(mut status) = self.read_status_if_exists(&self.active_status_path())? {
-            if Path::new(&status.work_db_path).exists() {
-                status.reason = Some(unfinished_upgrade_reason(&status));
-                return Ok(Some(status));
-            }
-        }
-
-        Ok(None)
+        unfinished_upgrade_status(&self.upgrade_dir)
     }
 
     pub fn discard_failed_upgrade(&self) -> Result<(), Error> {
@@ -475,26 +465,11 @@ impl DatabaseService {
     }
 
     pub(super) fn active_status_path(&self) -> PathBuf {
-        self.upgrade_dir.join("upgrade-active.json")
+        active_status_file(&self.upgrade_dir)
     }
 
     pub(super) fn failed_status_path(&self) -> PathBuf {
-        self.upgrade_dir.join("upgrade-failed.json")
-    }
-
-    fn read_status_if_exists(&self, path: &Path) -> Result<Option<DatabaseUpgradeStatus>, Error> {
-        let temporary_path = status_temporary_path(path)?;
-        if path.exists() {
-            match read_upgrade_status(path) {
-                Ok(status) => return Ok(Some(status)),
-                Err(error) if !temporary_path.exists() => return Err(error),
-                Err(_) => {}
-            }
-        }
-        if temporary_path.exists() {
-            return Ok(Some(read_upgrade_status(&temporary_path)?));
-        }
-        Ok(None)
+        failed_status_file(&self.upgrade_dir)
     }
 
     fn write_status(&self, path: &Path, status: &DatabaseUpgradeStatus) -> Result<(), Error> {
@@ -520,25 +495,27 @@ impl DatabaseService {
     }
 
     fn replace_main_database(&self, work_db_path: &Path) -> Result<PathBuf, Error> {
-        let old_main_path = self.upgrade_dir.join("VRCX-0-before-upgrade.sqlite3");
+        let old_main_path = pre_upgrade_database_path(&self.upgrade_dir);
         self.remove_file_if_exists(&old_main_path)?;
         remove_sidecars(&old_main_path)?;
         remove_sidecars(&self.db_path)?;
         remove_sidecars(work_db_path)?;
 
         if self.db_path.exists() {
-            fs::rename(&self.db_path, &old_main_path)?;
+            replace_file_atomically(&self.db_path, &old_main_path)?;
         }
 
-        match fs::rename(work_db_path, &self.db_path) {
-            Ok(()) => Ok(old_main_path),
-            Err(error) => {
-                if old_main_path.exists() && !self.db_path.exists() {
-                    let _ = fs::rename(&old_main_path, &self.db_path);
-                }
-                Err(Error::Io(error))
+        if let Err(error) = replace_file_atomically(work_db_path, &self.db_path) {
+            if let Err(restore_error) =
+                restore_interrupted_replacement(&self.db_path, &self.upgrade_dir)
+            {
+                tracing::warn!(
+                    "Failed to restore the pre-upgrade database after a failed replacement: {restore_error}"
+                );
             }
+            return Err(Error::Io(error));
         }
+        Ok(old_main_path)
     }
 
     fn rollback_replaced_database(
@@ -555,19 +532,19 @@ impl DatabaseService {
             )));
         }
         if self.db_path.exists() {
-            fs::rename(&self.db_path, work_db_path)?;
+            replace_file_atomically(&self.db_path, work_db_path)?;
         }
         if !old_main_path.exists() {
             if work_db_path.exists() && !self.db_path.exists() {
-                let _ = fs::rename(work_db_path, &self.db_path);
+                let _ = replace_file_atomically(work_db_path, &self.db_path);
             }
             return Err(Error::Database(
                 "Original database backup is missing during upgrade rollback.".into(),
             ));
         }
-        if let Err(error) = fs::rename(old_main_path, &self.db_path) {
+        if let Err(error) = replace_file_atomically(old_main_path, &self.db_path) {
             if work_db_path.exists() && !self.db_path.exists() {
-                let _ = fs::rename(work_db_path, &self.db_path);
+                let _ = replace_file_atomically(work_db_path, &self.db_path);
             }
             return Err(Error::Io(error));
         }
@@ -587,6 +564,69 @@ impl DatabaseService {
         }
         Ok(())
     }
+}
+
+fn pre_upgrade_database_path(upgrade_dir: &Path) -> PathBuf {
+    upgrade_dir.join("VRCX-0-before-upgrade.sqlite3")
+}
+
+fn active_status_file(upgrade_dir: &Path) -> PathBuf {
+    upgrade_dir.join("upgrade-active.json")
+}
+
+fn failed_status_file(upgrade_dir: &Path) -> PathBuf {
+    upgrade_dir.join("upgrade-failed.json")
+}
+
+fn read_status_if_exists(path: &Path) -> Result<Option<DatabaseUpgradeStatus>, Error> {
+    let temporary_path = status_temporary_path(path)?;
+    if path.exists() {
+        match read_upgrade_status(path) {
+            Ok(status) => return Ok(Some(status)),
+            Err(error) if !temporary_path.exists() => return Err(error),
+            Err(_) => {}
+        }
+    }
+    if temporary_path.exists() {
+        return Ok(Some(read_upgrade_status(&temporary_path)?));
+    }
+    Ok(None)
+}
+
+fn unfinished_upgrade_status(upgrade_dir: &Path) -> Result<Option<DatabaseUpgradeStatus>, Error> {
+    if let Some(status) = read_status_if_exists(&failed_status_file(upgrade_dir))? {
+        if Path::new(&status.work_db_path).exists() {
+            return Ok(Some(status));
+        }
+    }
+
+    if let Some(mut status) = read_status_if_exists(&active_status_file(upgrade_dir))? {
+        if Path::new(&status.work_db_path).exists() {
+            status.reason = Some(unfinished_upgrade_reason(&status));
+            return Ok(Some(status));
+        }
+    }
+
+    Ok(None)
+}
+
+pub(super) fn restore_interrupted_replacement(
+    db_path: &Path,
+    upgrade_dir: &Path,
+) -> Result<(), Error> {
+    let pre_upgrade_path = pre_upgrade_database_path(upgrade_dir);
+    if !pre_upgrade_path.exists()
+        || (db_path.exists() && !matches!(unfinished_upgrade_status(upgrade_dir), Ok(Some(_))))
+    {
+        return Ok(());
+    }
+    remove_sidecars(db_path)?;
+    replace_file_atomically(&pre_upgrade_path, db_path)?;
+    tracing::warn!(
+        "Restored the pre-upgrade database after an interrupted upgrade replacement: {}",
+        db_path.display()
+    );
+    Ok(())
 }
 
 fn unfinished_upgrade_reason(status: &DatabaseUpgradeStatus) -> String {

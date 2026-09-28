@@ -621,10 +621,7 @@ impl GameLogProcessor {
         for row in pending.output.runtime_persisted_mirrors {
             self.deps
                 .event_bus
-                .emit_runtime_game_log_event(RuntimeGameLogEventPayload {
-                    runtime_persisted: true,
-                    raw: row,
-                });
+                .emit_runtime_game_log_event(RuntimeGameLogEventPayload { raw: row });
         }
         Ok(())
     }

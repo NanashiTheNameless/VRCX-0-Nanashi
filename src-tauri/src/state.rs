@@ -6,7 +6,6 @@ use crate::adapters::assistant::{
     TauriAssistantConfigAdapter, TauriAssistantLlmClientFactory,
     TauriAssistantSessionPersistenceAdapter,
 };
-use crate::adapters::log_watcher::LogWatcherCompatBridge;
 use crate::adapters::mcp::{
     TauriMcpActivityQueryAdapter, TauriMcpConfigAdapter, TauriMcpFavoritesQueryAdapter,
     TauriMcpFeedQueryAdapter, TauriMcpFriendLocalDataAdapter, TauriMcpMutualGraphAdapter,
@@ -40,7 +39,6 @@ pub const BACKGROUND_MODE_RESUME_ROUTE_STORAGE_KEY: &str = "VRCX_BackgroundModeR
 pub struct AppState {
     runtime: DesktopRuntimeHostState,
     mcp_controller: McpServerController,
-    log_watcher_compat_bridge: LogWatcherCompatBridge,
     pending_deep_links: PendingDeepLinks,
     pending_desktop_notification_activations: PendingDesktopNotificationActivations,
     favorite_details: FavoriteDetailsRuntime,
@@ -89,10 +87,6 @@ impl AppState {
         &self.mcp_controller
     }
 
-    pub(crate) fn log_watcher_compat_bridge(&self) -> &LogWatcherCompatBridge {
-        &self.log_watcher_compat_bridge
-    }
-
     pub(crate) fn pending_deep_links(&self) -> &PendingDeepLinks {
         &self.pending_deep_links
     }
@@ -124,12 +118,10 @@ impl AppState {
         let quick_search = runtime.quick_search_runtime();
         let mcp_controller =
             McpServerController::new(mcp_runtime(&runtime, McpCaller::ExternalServer));
-        let log_watcher_compat_bridge = LogWatcherCompatBridge::new();
 
         Ok(Self {
             runtime,
             mcp_controller,
-            log_watcher_compat_bridge,
             pending_deep_links: PendingDeepLinks::default(),
             pending_desktop_notification_activations:
                 PendingDesktopNotificationActivations::default(),
@@ -234,6 +226,18 @@ impl AppState {
                 .await;
         }
         Ok(written)
+    }
+
+    pub async fn refresh_local_world_favorite_details(
+        &self,
+    ) -> Result<vrcx_0_application::favorites::LocalWorldDetailsRefreshOutput, AppError> {
+        let output = self
+            .runtime
+            .local_data()
+            .favorite_local_world_details_refresh()
+            .await?;
+        self.favorite_details.invalidate_world_cards().await;
+        Ok(output)
     }
 
     pub async fn hydrate_favorite_details(

@@ -808,10 +808,6 @@ impl DesktopRuntimeHostState {
         self.desktop.host_file_access.register_path(path);
     }
 
-    pub fn log_watcher_for_compatibility(&self) -> LogWatcher {
-        self.game.log_watcher.clone()
-    }
-
     pub fn is_game_running(&self) -> bool {
         self.game.process_monitor.is_game_running()
     }

@@ -3047,7 +3047,6 @@ export type ActivityViewOutput = {
     builtFromCursor: string;
     builtAt: string;
 };
-export type AddGameLogEventPayload = string | RuntimeGameLogEventPayload;
 export type AncillaryRuntimeSnapshot = {
     communityThemeState: CommunityThemeProjection | null;
     profileBackupCurrentStatus: ProfileBackupStatus;
@@ -3416,7 +3415,7 @@ export type BackendRuntimeCombinedSnapshot = {
     authenticatedSession: AuthenticatedSessionProjection;
 };
 export type BackendRuntimeEventPayloadMap = {
-    addGameLogEvent: AddGameLogEventPayload;
+    addGameLogEvent: RuntimeGameLogEventPayload;
     authenticatedSessionProjection: AuthenticatedSessionProjection;
     authenticatedRuntimePhase: AuthenticatedRuntimePhaseSnapshot;
     appUpdateStatus: AppUpdateStatusSnapshot;
@@ -6275,10 +6274,7 @@ export type RemoteModerationRow = {
 export type RequestInviteRequest = { requestSlot?: number | null };
 export type ResolvedFriendLogName = { userId: string; displayName: string };
 export type Role = 'user' | 'assistant' | 'tool_call' | 'tool_result';
-export type RuntimeGameLogEventPayload = {
-    runtimePersisted: boolean;
-    raw: string[];
-};
+export type RuntimeGameLogEventPayload = { raw: string[] };
 export type RuntimeGroupInstancesProjection = {
     status: RuntimeGroupInstancesStatus;
     userId: string;

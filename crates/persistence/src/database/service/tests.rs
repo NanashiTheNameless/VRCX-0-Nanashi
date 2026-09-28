@@ -498,6 +498,104 @@ fn failed_upgraded_database_reopen_restores_original_and_preserves_work_copy() -
     Ok(())
 }
 
+fn interrupt_upgrade_between_replacement_renames(dir: &TestDir) -> Result<PathBuf, Error> {
+    let db_path = dir.path.join("VRCX-0.sqlite3");
+    let empty = HashMap::new();
+    {
+        let db = DatabaseService::new(&db_path)?;
+        db.execute_non_query("CREATE TABLE recovery_items (value TEXT NOT NULL)", &empty)?;
+        db.execute_non_query(
+            "INSERT INTO recovery_items (value) VALUES ('original')",
+            &empty,
+        )?;
+        db.begin_upgrade(17, 18)?;
+        db.execute_non_query("UPDATE recovery_items SET value = 'upgraded'", &empty)?;
+    }
+    crate::database::sidecar::remove_sidecars(&db_path)?;
+    std::fs::rename(
+        &db_path,
+        dir.path
+            .join("db-upgrade")
+            .join("VRCX-0-before-upgrade.sqlite3"),
+    )?;
+    Ok(db_path)
+}
+
+#[test]
+fn interrupted_upgrade_replacement_restores_original_before_retry() -> Result<(), Error> {
+    let dir = TestDir::new("database-upgrade-interrupted-replacement");
+    let db_path = interrupt_upgrade_between_replacement_renames(&dir)?;
+
+    let db = DatabaseService::new(&db_path)?;
+    assert!(db.get_failed_upgrade()?.is_some());
+    db.discard_failed_upgrade()?;
+
+    let rows = db.execute("SELECT value FROM recovery_items", &HashMap::new())?;
+    assert_eq!(rows, vec![vec![serde_json::json!("original")]]);
+    Ok(())
+}
+
+#[test]
+fn interrupted_upgrade_replacement_restores_original_over_a_recreated_database() -> Result<(), Error>
+{
+    let dir = TestDir::new("database-upgrade-interrupted-recreated");
+    let db_path = interrupt_upgrade_between_replacement_renames(&dir)?;
+    Connection::open(&db_path)
+        .and_then(|conn| conn.execute_batch("CREATE TABLE configs (key TEXT PRIMARY KEY)"))
+        .map_err(Error::sqlite)?;
+
+    let db = DatabaseService::new(&db_path)?;
+
+    let rows = db.execute("SELECT value FROM recovery_items", &HashMap::new())?;
+    assert_eq!(rows, vec![vec![serde_json::json!("original")]]);
+    Ok(())
+}
+
+#[test]
+fn interrupted_upgrade_replacement_restores_original_without_the_work_copy() -> Result<(), Error> {
+    let dir = TestDir::new("database-upgrade-interrupted-no-work-copy");
+    let db_path = interrupt_upgrade_between_replacement_renames(&dir)?;
+    let work_db_path = dir
+        .path
+        .join("db-upgrade")
+        .join("VRCX-0-upgrade-17-to-18.sqlite3");
+    crate::database::sidecar::remove_sidecars(&work_db_path)?;
+    std::fs::remove_file(&work_db_path)?;
+
+    let db = DatabaseService::new(&db_path)?;
+
+    let rows = db.execute("SELECT value FROM recovery_items", &HashMap::new())?;
+    assert_eq!(rows, vec![vec![serde_json::json!("original")]]);
+    Ok(())
+}
+
+#[test]
+fn unreadable_upgrade_status_keeps_the_existing_main_database() -> Result<(), Error> {
+    let dir = TestDir::new("database-upgrade-unreadable-status");
+    let db_path = dir.path.join("VRCX-0.sqlite3");
+    let upgrade_dir = dir.path.join("db-upgrade");
+    let empty = HashMap::new();
+    for (path, value) in [
+        (db_path.clone(), "current"),
+        (upgrade_dir.join("VRCX-0-before-upgrade.sqlite3"), "stale"),
+    ] {
+        std::fs::create_dir_all(path.parent().unwrap())?;
+        let db = DatabaseService::new(&path)?;
+        db.execute_non_query("CREATE TABLE recovery_items (value TEXT NOT NULL)", &empty)?;
+        db.execute_non_query(
+            &format!("INSERT INTO recovery_items (value) VALUES ('{value}')"),
+            &empty,
+        )?;
+    }
+    std::fs::write(upgrade_dir.join("upgrade-active.json"), "{")?;
+
+    let db = DatabaseService::new(&db_path)?;
+
+    let rows = db.execute("SELECT value FROM recovery_items", &empty)?;
+    assert_eq!(rows, vec![vec![serde_json::json!("current")]]);
+    Ok(())
+}
+
 #[test]
 fn discarding_failed_upgrade_preserves_main_database_and_allows_retry() -> Result<(), Error> {
     let dir = TestDir::new("database-upgrade-discard-failed");

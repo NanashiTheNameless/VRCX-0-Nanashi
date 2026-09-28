@@ -342,7 +342,6 @@ impl GameClientProcessor {
         self.deps
             .event_bus
             .emit_runtime_game_log_event(RuntimeGameLogEventPayload {
-                runtime_persisted: true,
                 raw: vec![
                     "runtime-game-client".into(),
                     created_at,

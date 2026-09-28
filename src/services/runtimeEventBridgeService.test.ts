@@ -1277,7 +1277,6 @@ describe('runtimeEventBridgeService', () => {
         await bindRuntimeEvents();
 
         const payload = {
-            runtimePersisted: true,
             raw: [
                 'runtime-game-log',
                 '2026-05-15T00:00:00.000Z',

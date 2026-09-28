@@ -356,6 +356,10 @@ impl FavoriteDetailsRuntime {
         Ok(cached_count)
     }
 
+    pub async fn invalidate_world_cards(&self) {
+        self.inner.world_cards.invalidate_all().await;
+    }
+
     pub async fn refresh_world_card(&self, entity: &Value) {
         let world_id = entity_id(entity);
         if world_id.is_empty() {

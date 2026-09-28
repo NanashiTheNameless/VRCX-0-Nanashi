@@ -32,7 +32,7 @@ pub use game_client::{
     NoopGameClientWindowActions,
 };
 pub use game_event_bus::{
-    AddGameLogEventPayload, CrashRelaunchDecisionPayload, EmptyEventPayload, GameClientEvent,
+    CrashRelaunchDecisionPayload, EmptyEventPayload, GameClientEvent,
     GameLogPersistenceFallbackPayload, GameLogSideEffectEvent, GameLogSideEffectObserver,
     GameLogSideEffectSink, GameNoVrPayload, NowPlayingPayload, NowPlayingSnapshot,
     RuntimeGameEventBusExt, RuntimeGameLogEventPayload, RuntimeNotificationLevel,

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::common::{normalize_text, now_iso, strict_row_i64, strict_row_string, ParamsBuilder};
-use crate::database::schema::ensure_moderation_table;
+use crate::database::schema::ensure_user_store_tables;
 use crate::database::DatabaseService;
 use crate::ownership::OwnerId;
 use crate::realtime::normalize_user_table_prefix;
@@ -64,7 +64,7 @@ pub fn local_moderation_list(
         return Ok(Vec::new());
     }
     let user_prefix = normalize_user_table_prefix(&owner_user_id)?;
-    ensure_moderation_table(db, &user_prefix)?;
+    ensure_user_store_tables(db, &user_prefix)?;
     db.execute(
         &format!(
             "SELECT user_id, updated_at, display_name, block, mute FROM {user_prefix}_moderation"
@@ -99,7 +99,7 @@ pub fn local_moderation_get(
         return Ok(None);
     }
     let user_prefix = normalize_user_table_prefix(&owner_user_id)?;
-    ensure_moderation_table(db, &user_prefix)?;
+    ensure_user_store_tables(db, &user_prefix)?;
     db
         .execute(
             &format!("SELECT user_id, updated_at, display_name, block, mute FROM {user_prefix}_moderation WHERE user_id = @user_id LIMIT 1"),
@@ -138,7 +138,7 @@ pub fn local_moderation_sync_snapshot(
         return Ok(Vec::new());
     }
     let user_prefix = normalize_user_table_prefix(&owner_user_id)?;
-    ensure_moderation_table(db, &user_prefix)?;
+    ensure_user_store_tables(db, &user_prefix)?;
 
     let mut moderation_by_user_id: HashMap<String, LocalModerationOutput> = HashMap::new();
     let mut metadata_by_user_id: HashMap<String, ModerationMetadataCandidate> = HashMap::new();
@@ -242,7 +242,7 @@ pub(crate) fn set_local_moderation_row(
         return Ok(());
     }
     let user_prefix = normalize_user_table_prefix(&owner_user_id)?;
-    ensure_moderation_table(db, &user_prefix)?;
+    ensure_user_store_tables(db, &user_prefix)?;
     db.execute_non_query(
         &format!("INSERT OR REPLACE INTO {user_prefix}_moderation (user_id, updated_at, display_name, block, mute) VALUES (@user_id, @updated_at, @display_name, @block, @mute)"),
         &ParamsBuilder::new()
@@ -267,7 +267,7 @@ pub(crate) fn delete_local_moderation_row(
         return Ok(());
     }
     let user_prefix = normalize_user_table_prefix(&owner_user_id)?;
-    ensure_moderation_table(db, &user_prefix)?;
+    ensure_user_store_tables(db, &user_prefix)?;
     db.execute_non_query(
         &format!("DELETE FROM {user_prefix}_moderation WHERE user_id = @user_id"),
         &ParamsBuilder::new().set("user_id", user_id).build(),

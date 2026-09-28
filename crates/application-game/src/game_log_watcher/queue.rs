@@ -7,21 +7,12 @@ use super::watcher::Inner;
 
 pub(super) struct WatcherParseSink<'a> {
     pub(super) inner: &'a Inner,
-    pub(super) first_run: bool,
 }
 
 impl GameLogParseSink for WatcherParseSink<'_> {
     fn push(&mut self, event: GameLogEvent) {
-        let inner = self.inner;
-        let compat_row = (!self.first_run).then(|| event.to_compat_row());
-        if inner.event_sink.is_some() {
-            inner.event_buffer.lock().unwrap().push(event);
-        }
-
-        if let Some(compat_row) = compat_row {
-            if let Ok(json) = serde_json::to_string(&compat_row) {
-                inner.compat_event_buffer.lock().unwrap().push(json);
-            }
+        if self.inner.event_sink.is_some() {
+            self.inner.event_buffer.lock().unwrap().push(event);
         }
     }
 

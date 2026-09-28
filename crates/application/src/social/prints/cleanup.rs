@@ -16,8 +16,8 @@ use vrcx_0_application_core::{PrintCleanupInputSink, RuntimeEventBus, TaskSuperv
 pub use vrcx_0_application_realtime::is_print_created_content_refresh;
 
 use super::favorites::{
-    read_auto_delete_old_prints_enabled, read_auto_delete_prints_limit, read_favorite_ids,
-    write_favorite_ids, PrintFavoritesStore,
+    read_auto_delete_old_prints_enabled, read_auto_delete_prints_limit,
+    retain_existing_favorite_ids, PrintFavoritesStore,
 };
 use vrcx_0_application_core::{AuthenticatedMutationContext, Error, RemoteMutationGate, Result};
 
@@ -261,16 +261,11 @@ pub async fn run_print_auto_cleanup(
         .iter()
         .map(|print| print.id.clone())
         .collect::<HashSet<_>>();
-    let stored_favorite_ids = read_favorite_ids(deps.store.as_ref())?;
-    let favorite_ids_list = stored_favorite_ids
-        .iter()
-        .filter(|id| existing_ids.contains(*id))
-        .cloned()
-        .collect::<Vec<_>>();
-    let favorite_ids = favorite_ids_list.iter().cloned().collect::<HashSet<_>>();
-    if favorite_ids_list.len() != stored_favorite_ids.len() {
-        write_favorite_ids(deps.store.as_ref(), &favorite_ids_list)?;
-    }
+    let favorite_ids = retain_existing_favorite_ids(
+        deps.store.as_ref(),
+        &mutation.scope().current_user_id,
+        &existing_ids,
+    )?;
 
     let selection = select_prints_to_delete(&prints, limit, &favorite_ids);
     let mut deleted = 0usize;

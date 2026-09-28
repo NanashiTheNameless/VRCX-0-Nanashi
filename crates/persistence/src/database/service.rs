@@ -96,11 +96,12 @@ pub(crate) struct DatabaseWriteTransaction<'conn> {
 
 impl DatabaseService {
     pub fn new(db_path: &Path) -> Result<Self, Error> {
-        let main = open_main_database(db_path)?;
         let upgrade_dir = db_path
             .parent()
             .unwrap_or_else(|| Path::new("."))
             .join("db-upgrade");
+        upgrade::restore_interrupted_replacement(db_path, &upgrade_dir)?;
+        let main = open_main_database(db_path)?;
 
         Ok(Self {
             db_path: db_path.to_path_buf(),

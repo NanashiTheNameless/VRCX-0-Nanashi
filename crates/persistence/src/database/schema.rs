@@ -150,77 +150,50 @@ fn favorite_index_exists(db: &DatabaseService, index_name: &str) -> Result<bool,
 }
 
 pub(crate) fn ensure_assistant_tables(db: &DatabaseService) -> Result<(), Error> {
-    ensure_owner_table(db)?;
-    for sql in [
-        "CREATE TABLE IF NOT EXISTS assistant_session (id TEXT PRIMARY KEY, title TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT '', entity_panel_open INTEGER NOT NULL DEFAULT 0, surfaced_entities TEXT NOT NULL DEFAULT '[]', owner_id INTEGER NOT NULL DEFAULT 0)",
-        "CREATE TABLE IF NOT EXISTS assistant_message (id TEXT PRIMARY KEY, session_id TEXT NOT NULL, seq INTEGER NOT NULL DEFAULT 0, role TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT '')",
-        "CREATE INDEX IF NOT EXISTS assistant_message_session_seq_idx ON assistant_message (session_id, seq)",
-    ] {
-        db.execute_non_query(sql, &Default::default())?;
-    }
-    // Upgrade tables created before the UI-state columns existed.
-    add_column_if_missing(
-        db,
-        "assistant_session",
-        "entity_panel_open",
-        "INTEGER NOT NULL DEFAULT 0",
-    )?;
-    add_column_if_missing(
-        db,
-        "assistant_session",
-        COL_OWNER_ID,
-        "INTEGER NOT NULL DEFAULT 0",
-    )?;
-    add_column_if_missing(
-        db,
-        "assistant_session",
-        "surfaced_entities",
-        "TEXT NOT NULL DEFAULT '[]'",
-    )?;
-    add_column_if_missing(db, "assistant_session", "endpoint_id", "TEXT")?;
-    add_column_if_missing(db, "assistant_session", "model", "TEXT")?;
-    add_column_if_missing(
-        db,
-        "assistant_session",
-        "allow_writes",
-        "INTEGER NOT NULL DEFAULT 0",
-    )?;
-    add_column_if_missing(
-        db,
-        "assistant_session",
-        "playbook_mode",
-        "TEXT NOT NULL DEFAULT 'auto'",
-    )?;
-    Ok(())
-}
-
-pub(crate) fn ensure_moderation_table(
-    db: &DatabaseService,
-    user_prefix: &str,
-) -> Result<(), Error> {
-    ensure_user_store_tables(db, user_prefix)?;
-    db.execute_non_query(
-        &format!("CREATE TABLE IF NOT EXISTS {user_prefix}_moderation (user_id TEXT PRIMARY KEY, updated_at TEXT, display_name TEXT, block INTEGER, mute INTEGER)"),
-        &Default::default(),
-    )?;
-    Ok(())
-}
-
-pub(crate) fn ensure_avatar_history_table(
-    db: &DatabaseService,
-    user_prefix: &str,
-) -> Result<(), Error> {
-    db.execute_non_query(
-        &format!(
-            "CREATE TABLE IF NOT EXISTS {user_prefix}_avatar_history (
-                avatar_id TEXT PRIMARY KEY,
-                created_at TEXT NOT NULL DEFAULT '',
-                time INTEGER NOT NULL DEFAULT 0
-            )"
-        ),
-        &Default::default(),
-    )?;
-    Ok(())
+    db.ensure_schema_once("assistant", || {
+        ensure_owner_table(db)?;
+        for sql in [
+            "CREATE TABLE IF NOT EXISTS assistant_session (id TEXT PRIMARY KEY, title TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT '', entity_panel_open INTEGER NOT NULL DEFAULT 0, surfaced_entities TEXT NOT NULL DEFAULT '[]', owner_id INTEGER NOT NULL DEFAULT 0)",
+            "CREATE TABLE IF NOT EXISTS assistant_message (id TEXT PRIMARY KEY, session_id TEXT NOT NULL, seq INTEGER NOT NULL DEFAULT 0, role TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT '')",
+            "CREATE INDEX IF NOT EXISTS assistant_message_session_seq_idx ON assistant_message (session_id, seq)",
+        ] {
+            db.execute_non_query(sql, &Default::default())?;
+        }
+        // Upgrade tables created before the UI-state columns existed.
+        add_column_if_missing(
+            db,
+            "assistant_session",
+            "entity_panel_open",
+            "INTEGER NOT NULL DEFAULT 0",
+        )?;
+        add_column_if_missing(
+            db,
+            "assistant_session",
+            COL_OWNER_ID,
+            "INTEGER NOT NULL DEFAULT 0",
+        )?;
+        add_column_if_missing(
+            db,
+            "assistant_session",
+            "surfaced_entities",
+            "TEXT NOT NULL DEFAULT '[]'",
+        )?;
+        add_column_if_missing(db, "assistant_session", "endpoint_id", "TEXT")?;
+        add_column_if_missing(db, "assistant_session", "model", "TEXT")?;
+        add_column_if_missing(
+            db,
+            "assistant_session",
+            "allow_writes",
+            "INTEGER NOT NULL DEFAULT 0",
+        )?;
+        add_column_if_missing(
+            db,
+            "assistant_session",
+            "playbook_mode",
+            "TEXT NOT NULL DEFAULT 'auto'",
+        )?;
+        Ok(())
+    })
 }
 
 pub(crate) fn ensure_user_store_tables(
@@ -228,7 +201,12 @@ pub(crate) fn ensure_user_store_tables(
     user_prefix: &str,
 ) -> Result<(), Error> {
     ensure_realtime_tables(db, user_prefix)?;
-    ensure_avatar_history_table(db, user_prefix)?;
+    db.ensure_schema_once(&format!("user_store:{user_prefix}"), || {
+        ensure_user_store_statements(db, user_prefix)
+    })
+}
+
+fn ensure_user_store_statements(db: &DatabaseService, user_prefix: &str) -> Result<(), Error> {
     for sql in [
         format!(
             "CREATE TABLE IF NOT EXISTS {user_prefix}_activity_sync_state_v2 (
@@ -506,6 +484,46 @@ mod schema_version_tests {
             std::env::temp_dir().join(format!("vrcx-0-{name}-{}-{nonce}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         DatabaseService::new(&dir.join("VRCX-0.sqlite3")).unwrap()
+    }
+
+    fn read_finishes_while_writer_is_busy(
+        db: &DatabaseService,
+        read: impl FnOnce() -> Result<(), Error> + Send,
+    ) -> bool {
+        std::thread::scope(|scope| {
+            let (finished, receiver) = std::sync::mpsc::channel();
+            db.write_transaction(|_| {
+                scope.spawn(move || {
+                    let _ = finished.send(read().is_ok());
+                });
+                Ok(receiver
+                    .recv_timeout(std::time::Duration::from_secs(2))
+                    .unwrap_or(false))
+            })
+            .unwrap()
+        })
+    }
+
+    #[test]
+    fn user_store_reads_do_not_wait_for_the_writer_once_tables_exist() {
+        let db = test_db("schema-user-store-read-while-writing");
+        let owner = crate::ownership::OwnerId::new("usr_self".to_string());
+        crate::local_moderation::local_moderation_list(&db, owner.clone()).unwrap();
+
+        assert!(read_finishes_while_writer_is_busy(&db, || {
+            crate::local_moderation::local_moderation_list(&db, owner).map(|_| ())
+        }));
+    }
+
+    #[test]
+    fn assistant_reads_do_not_wait_for_the_writer_once_tables_exist() {
+        let db = test_db("schema-assistant-read-while-writing");
+        let owner = crate::ownership::OwnerId::new("usr_self".to_string());
+        crate::assistant::assistant_sessions_load(&db, &owner).unwrap();
+
+        assert!(read_finishes_while_writer_is_busy(&db, || {
+            crate::assistant::assistant_sessions_load(&db, &owner).map(|_| ())
+        }));
     }
 
     #[test]

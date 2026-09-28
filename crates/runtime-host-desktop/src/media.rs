@@ -165,11 +165,19 @@ impl DesktopMediaRuntime {
     }
 
     pub fn print_favorites(&self) -> Result<PrintFavoriteState> {
-        Ok(favorite_state(&self.print_adapter)?)
+        Ok(favorite_state(
+            &self.print_adapter,
+            &self.auth_scope.snapshot().current_user_id,
+        )?)
     }
 
     pub fn set_print_favorite(&self, print_id: &str, favorite: bool) -> Result<PrintFavoriteState> {
-        Ok(set_print_favorite(&self.print_adapter, print_id, favorite)?)
+        Ok(set_print_favorite(
+            &self.print_adapter,
+            &self.auth_scope.snapshot().current_user_id,
+            print_id,
+            favorite,
+        )?)
     }
 
     pub fn set_print_favorites(
@@ -179,13 +187,18 @@ impl DesktopMediaRuntime {
     ) -> Result<PrintFavoriteBulkResult> {
         Ok(set_print_favorites(
             &self.print_adapter,
+            &self.auth_scope.snapshot().current_user_id,
             print_ids,
             favorite,
         )?)
     }
 
     pub fn ensure_print_deletable(&self, print_id: &str) -> vrcx_0_application_core::Result<()> {
-        ensure_print_deletable(&self.print_adapter, print_id)
+        ensure_print_deletable(
+            &self.print_adapter,
+            &self.auth_scope.snapshot().current_user_id,
+            print_id,
+        )
     }
 
     pub async fn collect_inventory_items(

@@ -45,12 +45,7 @@ pub fn app__favorite_local_snapshot(
 pub async fn app__favorite_local_world_details_refresh(
     state: State<'_, AppState>,
 ) -> Result<LocalWorldDetailsRefreshOutput, AppError> {
-    state
-        .runtime_host()
-        .local_data()
-        .favorite_local_world_details_refresh()
-        .await
-        .map_err(AppError::from)
+    state.refresh_local_world_favorite_details().await
 }
 
 #[tauri::command(async)]

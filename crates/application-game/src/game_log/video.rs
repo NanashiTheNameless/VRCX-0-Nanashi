@@ -126,10 +126,7 @@ pub async fn handle_video_play(
     };
 
     backend_status.publish_game_log_persisted(affected_count);
-    event_bus.emit_runtime_game_log_event(RuntimeGameLogEventPayload {
-        runtime_persisted: true,
-        raw: raw_row,
-    });
+    event_bus.emit_runtime_game_log_event(RuntimeGameLogEventPayload { raw: raw_row });
 
     let activity = video_activity_candidate(&input);
     side_effect_sink.emit(GameLogSideEffectEvent::NowPlaying(Box::new(

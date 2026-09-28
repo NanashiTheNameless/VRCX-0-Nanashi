@@ -408,6 +408,32 @@ async fn refreshed_world_details_replace_the_cached_card_without_another_group_r
 }
 
 #[tokio::test]
+async fn invalidated_world_cards_resolve_refreshed_local_details() {
+    let harness = WorldHydrateHarness::new();
+    harness.world_cache.hydrate_from_payload(&json!({
+        "id": "wrld_local",
+        "name": "Local World",
+        "imageUrl": "https://example.test/old.png",
+        "releaseStatus": "private"
+    }));
+    harness.hydrate_local(&["wrld_local"]).await;
+    harness.world_cache.hydrate_from_payload(&json!({
+        "id": "wrld_local",
+        "name": "Local World",
+        "imageUrl": "https://example.test/new.png",
+        "releaseStatus": "private"
+    }));
+
+    harness.runtime.invalidate_world_cards().await;
+    let output = harness.hydrate_local(&["wrld_local"]).await;
+
+    assert_eq!(
+        output.details_by_id.get("wrld_local").unwrap()["imageUrl"],
+        "https://example.test/new.png"
+    );
+}
+
+#[tokio::test]
 async fn world_details_hydrate_marks_cache_resolved_favorites_as_unverified() {
     let harness = WorldHydrateHarness::new();
     harness.world_cache.hydrate_from_payload(&json!({

@@ -295,7 +295,7 @@ fn disabled_persistence_keeps_live_state_projection_overlay_and_side_effects() -
     assert!(!events.iter().any(|event| {
         (event.name == "backendRuntimeTelemetry"
             && event.payload.get("kind").and_then(|kind| kind.as_str()) == Some("gameLogPersisted"))
-            || event.name == "runtimeGameLogEvent"
+            || event.name == "addGameLogEvent"
             || event.name == "gameLogPersistenceFallback"
     }));
     Ok(())
@@ -898,12 +898,12 @@ fn emits_runtime_persisted_mirror_after_worker_write() -> Result<()> {
 
     let events = processor.deps.event_bus.take_events_for_test();
     assert!(events.iter().any(|event| {
-        event.name == "runtimeGameLogEvent"
+        event.name == "addGameLogEvent"
             && event
                 .payload
-                .get("runtimePersisted")
-                .and_then(|value| value.as_bool())
-                == Some(true)
+                .get("raw")
+                .and_then(|raw| raw.as_array())
+                .is_some_and(|raw| raw.iter().any(|value| value == "wrld_mirror:1"))
     }));
     Ok(())
 }
@@ -947,7 +947,7 @@ fn enabled_write_failure_emits_fallback_and_skips_persisted_outputs() -> Result<
     assert!(!events.iter().any(|event| {
         (event.name == "backendRuntimeTelemetry"
             && event.payload.get("kind").and_then(|kind| kind.as_str()) == Some("gameLogPersisted"))
-            || event.name == "runtimeGameLogEvent"
+            || event.name == "addGameLogEvent"
     }));
     assert!(events.iter().any(|event| event.name == "gameLogProjection"));
     Ok(())
@@ -1795,9 +1795,7 @@ fn unchanged_log_publishes_snapshot_after_each_restart() -> Result<()> {
                 .count(),
             1
         );
-        assert!(!events
-            .iter()
-            .any(|event| event.name == "runtimeGameLogEvent"));
+        assert!(!events.iter().any(|event| event.name == "addGameLogEvent"));
         restored.handle_jobs(vec![scan])?;
         assert!(!restored
             .deps
@@ -1850,7 +1848,7 @@ fn duplicate_scan_can_publish_without_replaying_rows_or_side_effects() -> Result
         .event_bus
         .take_events_for_test()
         .iter()
-        .any(|event| event.name == "runtimeGameLogEvent"));
+        .any(|event| event.name == "addGameLogEvent"));
     Ok(())
 }
 

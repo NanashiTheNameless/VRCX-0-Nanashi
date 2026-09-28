@@ -6,17 +6,20 @@ use super::cleanup::{
     clamp_print_limit, favorite_limit_for_print_limit, CleanupWarning, PRINT_AUTO_DELETE_LIMIT_MAX,
     PRINT_HARD_CAP,
 };
+use vrcx_0_application_core::vrchat_api::require_text;
 use vrcx_0_application_core::Result;
 
 pub use super::cleanup::CleanupWarningKind;
 
 pub const DEFAULT_AUTO_DELETE_PRINTS_LIMIT: i64 = 60;
+const PRINT_FAVORITES_OWNER_REQUIRED: &str = "Print favorites require an authenticated user.";
 
 pub trait PrintFavoritesStore: Send + Sync {
     fn auto_delete_enabled(&self) -> Result<bool>;
     fn auto_delete_limit(&self) -> Result<String>;
-    fn favorite_ids(&self) -> Result<Value>;
-    fn write_favorite_ids(&self, ids: &Value) -> Result<()>;
+    fn legacy_favorite_ids(&self) -> Result<Value>;
+    fn favorite_ids(&self, user_id: &str) -> Result<Option<Value>>;
+    fn write_favorite_ids(&self, user_id: &str, ids: &Value) -> Result<()>;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, specta::Type)]
@@ -108,18 +111,47 @@ pub fn effective_favorite_limit(store: &dyn PrintFavoritesStore) -> Result<i64> 
     }
 }
 
-pub fn read_favorite_ids(store: &dyn PrintFavoritesStore) -> Result<Vec<String>> {
-    let value = store.favorite_ids()?;
-    Ok(favorite_ids_from_json(&value))
+fn read_favorite_ids(store: &dyn PrintFavoritesStore, user_id: &str) -> Result<Vec<String>> {
+    let user_id = require_text(user_id, PRINT_FAVORITES_OWNER_REQUIRED)?;
+    let ids = match store.favorite_ids(&user_id)? {
+        Some(ids) => ids,
+        None => store.legacy_favorite_ids()?,
+    };
+    Ok(favorite_ids_from_json(&ids))
 }
 
-pub fn write_favorite_ids(store: &dyn PrintFavoritesStore, ids: &[String]) -> Result<()> {
+fn write_favorite_ids(
+    store: &dyn PrintFavoritesStore,
+    user_id: &str,
+    ids: &[String],
+) -> Result<()> {
+    let user_id = require_text(user_id, PRINT_FAVORITES_OWNER_REQUIRED)?;
     let ids = favorite_ids_from_json(&serde_json::json!(ids));
-    store.write_favorite_ids(&serde_json::json!(ids))
+    store.write_favorite_ids(&user_id, &serde_json::json!(ids))
 }
 
-pub fn favorite_state(store: &dyn PrintFavoritesStore) -> Result<PrintFavoriteState> {
-    let favorite_ids = read_favorite_ids(store)?;
+pub(super) fn retain_existing_favorite_ids(
+    store: &dyn PrintFavoritesStore,
+    user_id: &str,
+    existing_ids: &HashSet<String>,
+) -> Result<HashSet<String>> {
+    let stored = read_favorite_ids(store, user_id)?;
+    let retained = stored
+        .iter()
+        .filter(|id| existing_ids.contains(*id))
+        .cloned()
+        .collect::<Vec<_>>();
+    if retained.len() != stored.len() {
+        write_favorite_ids(store, user_id, &retained)?;
+    }
+    Ok(retained.into_iter().collect())
+}
+
+pub fn favorite_state(
+    store: &dyn PrintFavoritesStore,
+    user_id: &str,
+) -> Result<PrintFavoriteState> {
+    let favorite_ids = read_favorite_ids(store, user_id)?;
     let limit = effective_favorite_limit(store)?;
     let max_favorites = favorite_limit_for_print_limit(limit);
     Ok(PrintFavoriteState {
@@ -131,14 +163,15 @@ pub fn favorite_state(store: &dyn PrintFavoritesStore) -> Result<PrintFavoriteSt
 
 pub fn set_print_favorite(
     store: &dyn PrintFavoritesStore,
+    user_id: &str,
     print_id: &str,
     favorite: bool,
 ) -> Result<PrintFavoriteState> {
-    let current = read_favorite_ids(store)?;
+    let current = read_favorite_ids(store, user_id)?;
     let limit = effective_favorite_limit(store)?;
     let max_favorites = favorite_limit_for_print_limit(limit);
     let next = set_favorite_id(&current, print_id, favorite, max_favorites);
-    write_favorite_ids(store, &next)?;
+    write_favorite_ids(store, user_id, &next)?;
     Ok(PrintFavoriteState {
         warning: favorite_warning(next.len(), limit),
         favorite_ids: next,
@@ -156,12 +189,13 @@ pub struct PrintFavoriteBulkResult {
 
 pub fn set_print_favorites(
     store: &dyn PrintFavoritesStore,
+    user_id: &str,
     print_ids: &[String],
     favorite: bool,
 ) -> Result<PrintFavoriteBulkResult> {
     let limit = effective_favorite_limit(store)?;
     let max_favorites = favorite_limit_for_print_limit(limit);
-    let mut next = read_favorite_ids(store)?;
+    let mut next = read_favorite_ids(store, user_id)?;
     let mut applied = 0;
     let mut skipped = 0;
 
@@ -183,7 +217,7 @@ pub fn set_print_favorites(
     }
 
     if applied > 0 {
-        write_favorite_ids(store, &next)?;
+        write_favorite_ids(store, user_id, &next)?;
     }
 
     Ok(PrintFavoriteBulkResult {
@@ -197,12 +231,19 @@ pub fn set_print_favorites(
     })
 }
 
-pub fn ensure_print_deletable(store: &dyn PrintFavoritesStore, print_id: &str) -> Result<()> {
+pub fn ensure_print_deletable(
+    store: &dyn PrintFavoritesStore,
+    user_id: &str,
+    print_id: &str,
+) -> Result<()> {
     let print_id = print_id.trim();
     if print_id.is_empty() {
         return Ok(());
     }
-    if read_favorite_ids(store)?.iter().any(|id| id == print_id) {
+    if read_favorite_ids(store, user_id)?
+        .iter()
+        .any(|id| id == print_id)
+    {
         return Err(vrcx_0_application_core::Error::Custom(format!(
             "Print {print_id} is favorited and cannot be deleted."
         )));
@@ -212,30 +253,52 @@ pub fn ensure_print_deletable(store: &dyn PrintFavoritesStore, print_id: &str) -
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
     use std::sync::Mutex;
 
     use super::{
-        ensure_print_deletable, favorite_ids_from_json, favorite_warning, set_favorite_id,
-        set_print_favorites, CleanupWarningKind, PrintFavoritesStore,
+        ensure_print_deletable, favorite_ids_from_json, favorite_warning, read_favorite_ids,
+        set_favorite_id, set_print_favorite, set_print_favorites, CleanupWarningKind,
+        PrintFavoritesStore,
     };
     use serde_json::{json, Value};
     use vrcx_0_application_core::Result;
 
+    const USER: &str = "usr_self";
+
     struct TestFavoritesStore {
         limit: i64,
-        ids: Mutex<Value>,
+        legacy: Value,
+        by_user: Mutex<HashMap<String, Value>>,
     }
 
     impl TestFavoritesStore {
         fn new(limit: i64, ids: &[&str]) -> Self {
             Self {
                 limit,
-                ids: Mutex::new(json!(ids)),
+                legacy: json!([]),
+                by_user: Mutex::new(HashMap::from([(USER.to_string(), json!(ids))])),
             }
         }
 
+        fn with_legacy(legacy: &[&str]) -> Self {
+            Self {
+                limit: 60,
+                legacy: json!(legacy),
+                by_user: Mutex::new(HashMap::new()),
+            }
+        }
+
+        fn stored_ids(&self, user_id: &str) -> Option<Vec<String>> {
+            self.by_user
+                .lock()
+                .expect("favorite ids lock")
+                .get(user_id)
+                .map(favorite_ids_from_json)
+        }
+
         fn ids(&self) -> Vec<String> {
-            favorite_ids_from_json(&self.ids.lock().expect("favorite ids lock"))
+            self.stored_ids(USER).unwrap_or_default()
         }
     }
 
@@ -248,14 +311,44 @@ mod tests {
             Ok(self.limit.to_string())
         }
 
-        fn favorite_ids(&self) -> Result<Value> {
-            Ok(self.ids.lock().expect("favorite ids lock").clone())
+        fn legacy_favorite_ids(&self) -> Result<Value> {
+            Ok(self.legacy.clone())
         }
 
-        fn write_favorite_ids(&self, ids: &Value) -> Result<()> {
-            *self.ids.lock().expect("favorite ids lock") = ids.clone();
+        fn favorite_ids(&self, user_id: &str) -> Result<Option<Value>> {
+            Ok(self
+                .by_user
+                .lock()
+                .expect("favorite ids lock")
+                .get(user_id)
+                .cloned())
+        }
+
+        fn write_favorite_ids(&self, user_id: &str, ids: &Value) -> Result<()> {
+            self.by_user
+                .lock()
+                .expect("favorite ids lock")
+                .insert(user_id.to_string(), ids.clone());
             Ok(())
         }
+    }
+
+    #[test]
+    fn favorites_are_scoped_per_account_and_seeded_from_the_legacy_list() {
+        let store = TestFavoritesStore::with_legacy(&["prnt_a", "prnt_b"]);
+
+        set_print_favorite(&store, "usr_b", "prnt_c", true).expect("favorite");
+
+        assert_eq!(
+            store.stored_ids("usr_b"),
+            Some(vec!["prnt_a".into(), "prnt_b".into(), "prnt_c".into()])
+        );
+        assert_eq!(store.stored_ids("usr_a"), None);
+        assert_eq!(
+            read_favorite_ids(&store, "usr_a").expect("read"),
+            vec!["prnt_a", "prnt_b"]
+        );
+        assert!(read_favorite_ids(&store, "  ").is_err());
     }
 
     #[test]
@@ -318,6 +411,7 @@ mod tests {
 
         let result = set_print_favorites(
             &store,
+            USER,
             &[
                 "prnt_new_a".to_string(),
                 "prnt_new_b".to_string(),
@@ -340,6 +434,7 @@ mod tests {
 
         let result = set_print_favorites(
             &store,
+            USER,
             &[" prnt_a ".to_string(), "".to_string(), "prnt_c".to_string()],
             true,
         )
@@ -357,9 +452,13 @@ mod tests {
     fn bulk_unfavorite_removes_every_requested_id() {
         let store = TestFavoritesStore::new(30, &["prnt_a", "prnt_b", "prnt_c"]);
 
-        let result =
-            set_print_favorites(&store, &["prnt_a".to_string(), "prnt_c".to_string()], false)
-                .expect("bulk unfavorite");
+        let result = set_print_favorites(
+            &store,
+            USER,
+            &["prnt_a".to_string(), "prnt_c".to_string()],
+            false,
+        )
+        .expect("bulk unfavorite");
 
         assert_eq!(result.applied, 2);
         assert_eq!(result.state.favorite_ids, vec!["prnt_b"]);
@@ -370,8 +469,8 @@ mod tests {
     fn favorited_prints_are_not_deletable() {
         let store = TestFavoritesStore::new(30, &["prnt_a"]);
 
-        assert!(ensure_print_deletable(&store, " prnt_a ").is_err());
-        assert!(ensure_print_deletable(&store, "prnt_b").is_ok());
-        assert!(ensure_print_deletable(&store, "  ").is_ok());
+        assert!(ensure_print_deletable(&store, USER, " prnt_a ").is_err());
+        assert!(ensure_print_deletable(&store, USER, "prnt_b").is_ok());
+        assert!(ensure_print_deletable(&store, USER, "  ").is_ok());
     }
 }

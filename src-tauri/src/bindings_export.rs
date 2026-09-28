@@ -22,8 +22,8 @@ use vrcx_0_application_core::{
     RealtimeUserProjection, RuntimeVrchatAuthFailurePayload, VrcStatusSnapshot,
 };
 use vrcx_0_application_game::{
-    AddGameLogEventPayload, GameClientEvent, GameLogPersistenceFallbackPayload, GameLogProjection,
-    GameLogSideEffectEvent, RuntimeWorkerErrorPayload,
+    GameClientEvent, GameLogPersistenceFallbackPayload, GameLogProjection, GameLogSideEffectEvent,
+    RuntimeGameLogEventPayload, RuntimeWorkerErrorPayload,
 };
 use vrcx_0_application_realtime::RealtimeFeedProjection;
 use vrcx_0_assistant::{
@@ -45,7 +45,7 @@ use crate::commands;
 #[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
 struct BackendRuntimeEventPayloadMap {
-    add_game_log_event: AddGameLogEventPayload,
+    add_game_log_event: RuntimeGameLogEventPayload,
     authenticated_session_projection: AuthenticatedSessionProjection,
     authenticated_runtime_phase: AuthenticatedRuntimePhaseSnapshot,
     app_update_status: AppUpdateStatusSnapshot,

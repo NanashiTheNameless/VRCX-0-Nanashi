@@ -85,13 +85,17 @@ impl FavoriteWorldCardCache {
             changed
         };
         if changed {
-            self.synced_tags
-                .lock()
-                .unwrap_or_else(|error| error.into_inner())
-                .clear();
-            self.cards.invalidate_all();
-            self.cards.run_pending_tasks().await;
+            self.invalidate_all().await;
         }
+    }
+
+    pub(super) async fn invalidate_all(&self) {
+        self.synced_tags
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .clear();
+        self.cards.invalidate_all();
+        self.cards.run_pending_tasks().await;
     }
 
     pub(super) fn mark_tag_synced(&self, tag: &str) {
