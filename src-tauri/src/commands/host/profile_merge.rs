@@ -1,0 +1,25 @@
+#![allow(non_snake_case)]
+
+//! Fork: "Import from VRCX / VRCX-0" (non-destructive merge).
+
+use tauri::State;
+use vrcx_0_outbound_adapters::{ProfileMergeSourceKind, ProfileMergeSources};
+use vrcx_0_persistence::profile_merge::ProfileMergeReport;
+
+use crate::error::AppError;
+use crate::state::AppState;
+
+#[tauri::command(async)]
+#[specta::specta]
+pub fn app__profile_merge_sources(state: State<'_, AppState>) -> ProfileMergeSources {
+    state.runtime_host().profile_merge_sources()
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn app__profile_merge_run(
+    state: State<'_, AppState>,
+    source: ProfileMergeSourceKind,
+) -> Result<ProfileMergeReport, AppError> {
+    Ok(state.runtime_host().run_profile_merge(source).await?)
+}

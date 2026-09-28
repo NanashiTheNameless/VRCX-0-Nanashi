@@ -42,7 +42,7 @@ impl VulkanContext {
             >(entry.static_fn().get_instance_proc_addr)
         };
 
-        let app_name = c"VRCX-0";
+        let app_name = c"VRCX-0-Nanashi";
         let app_info = vk::ApplicationInfo::default()
             .application_name(app_name)
             .api_version(vk::API_VERSION_1_1);

@@ -500,11 +500,11 @@ export function buildScreenshotSearchRow(
         filePath: normalized.filePath,
         dateTime: normalized.dateTime,
         dateLabel: formatScreenshotDateTime(normalized.dateTime, locale),
-        world: normalized.world?.name || '—',
-        author: normalized.author?.displayName || '—',
+        world: normalized.world?.name || '-',
+        author: normalized.author?.displayName || '-',
         playerCount: normalized.players.length,
-        resolution: normalized.resolution || '—',
-        match: match || '—'
+        resolution: normalized.resolution || '-',
+        match: match || '-'
     };
 }
 

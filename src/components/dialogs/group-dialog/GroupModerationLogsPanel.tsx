@@ -179,13 +179,13 @@ function isAuditLogDiffShape(
 
 function truncateAuditLogDiffText(value: string) {
     return value.length > AUDIT_LOG_DIFF_VALUE_MAX_LENGTH
-        ? `${value.slice(0, AUDIT_LOG_DIFF_VALUE_MAX_LENGTH)}…`
+        ? `${value.slice(0, AUDIT_LOG_DIFF_VALUE_MAX_LENGTH)}...`
         : value;
 }
 
 function compactAuditLogDiffValue(value: unknown): string {
     if (value === undefined) {
-        return '—';
+        return '-';
     }
     if (value === null) {
         return 'null';
@@ -264,7 +264,7 @@ export function createGroupAuditLogColumns(
                 <span className="text-muted-foreground text-xs tabular-nums">
                     {row.original.created_at
                         ? formatDateFilter(row.original.created_at, 'long')
-                        : '—'}
+                        : '-'}
                 </span>
             )
         },
@@ -282,7 +282,7 @@ export function createGroupAuditLogColumns(
                     {row.original.eventType
                         ? formatGroupAuditLogTypeName(row.original.eventType) ||
                           row.original.eventType
-                        : '—'}
+                        : '-'}
                 </span>
             )
         },
@@ -298,7 +298,7 @@ export function createGroupAuditLogColumns(
             cell: ({ row }) => {
                 const actorArgs = groupAuditLogActorDialogArgs(row.original);
                 if (!actorArgs) {
-                    return <span className="font-medium">—</span>;
+                    return <span className="font-medium">-</span>;
                 }
                 return (
                     <Button
@@ -332,7 +332,7 @@ export function createGroupAuditLogColumns(
                                 worldNameClassName="text-xs"
                             />
                         ) : null}
-                        <div>{row.original.description || '—'}</div>
+                        <div>{row.original.description || '-'}</div>
                     </div>
                 );
             }
@@ -360,7 +360,7 @@ export function createGroupAuditLogColumns(
                 const data = formatLogData(row.original.data);
                 return (
                     <span className="text-muted-foreground font-mono text-xs break-words whitespace-normal">
-                        {data || '—'}
+                        {data || '-'}
                     </span>
                 );
             }

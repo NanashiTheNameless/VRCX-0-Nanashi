@@ -139,7 +139,7 @@ impl WristDeviceToken {
         }
         self.battery_percent.map(|percent| {
             if self.status == DeviceStatus::Charging {
-                format!("{percent}% ⚡")
+                format!("{percent}%+")
             } else {
                 format!("{percent}%")
             }

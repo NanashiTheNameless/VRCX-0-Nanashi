@@ -17,7 +17,7 @@ export function useLoginPageController() {
 
     return {
         actions: {
-            openDiscord: () => page.openExternalLink(links.discord),
+            openIssues: () => page.openExternalLink(links.issues),
             openForgotPassword: () =>
                 page.openExternalLink(links.vrchatPassword),
             openGithub: () => page.openExternalLink(links.github),

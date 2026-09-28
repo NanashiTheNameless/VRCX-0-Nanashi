@@ -3,6 +3,7 @@ import { commands } from '@/platform/tauri/bindings';
 import type { StartupBootstrapSnapshot } from '@/platform/tauri/bindings';
 import configRepository from '@/repositories/configRepository';
 import storageRepository from '@/repositories/storageRepository';
+import { loadCustomLocales } from '@/services/customLocaleService';
 import {
     APP_CJK_FONT_PACK_DEFAULT_KEY,
     APP_FONT_DEFAULT_KEY
@@ -20,6 +21,7 @@ import { showSQLiteErrorDialog } from './sqliteErrorDialogService';
 import { primeStartupBootstrapSystemCulture } from './startupBootstrapSnapshot';
 import {
     applyAppFontPreferences,
+    primeInstalledFontFamilies,
     applyThemeColor,
     applyThemeMode,
     applyZoomLevel,
@@ -101,6 +103,9 @@ export async function initializeReactRuntime() {
             )
         ]);
 
+        // Fork: register user language files first so a saved custom locale
+        // is not normalized back to English.
+        await loadCustomLocales();
         const trimmedSavedAppLanguage = String(savedAppLanguage ?? '').trim();
         const localeSource =
             trimmedSavedAppLanguage ||
@@ -119,6 +124,9 @@ export async function initializeReactRuntime() {
             applyThemeMode(resolvedThemeMode)
         );
         applyThemeColor(resolveThemeColor(themeColor));
+        // Fork: know installed fonts before applying, so an installed copy
+        // of an "online" font is used instead of the CDN.
+        await primeInstalledFontFamilies();
         applyAppFontPreferences({
             fontFamily,
             customFontFamily,

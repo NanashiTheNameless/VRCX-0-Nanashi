@@ -10,7 +10,8 @@ use vrcx_0_application::profile::{
 use vrcx_0_application_core::{Error, WebClient};
 use vrcx_0_contracts::external_api::{self, ExternalApiScope};
 
-const GITHUB_RELEASES_URL: &str = "https://api.github.com/repos/Map1en/VRCX-0/releases";
+const GITHUB_RELEASES_URL: &str =
+    "https://api.github.com/repos/NanashiTheNameless/VRCX-0-Nanashi/releases";
 
 pub struct GitHubReleaseCatalogAdapter {
     web: Arc<WebClient>,

@@ -3,7 +3,10 @@ import { ChevronDownIcon, Settings2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { getLanguageName, languageCodes } from '@/localization/index';
-import { supportsConfigurableCjkFontPack } from '@/services/themeService';
+import {
+    isAppFontAvailableLocally,
+    supportsConfigurableCjkFontPack
+} from '@/services/themeService';
 import {
     APP_CJK_FONT_PACK_DEFAULT_KEY,
     APP_CJK_FONT_PACKS,
@@ -87,18 +90,20 @@ type SettingsInterfaceAppearanceCardProps = {
     onReducedMotionAndBlurChange: (value: boolean) => void;
 };
 
+// Fork: fonts marked "(online)" are downloaded from a font CDN when selected.
 const fontFamilyNames: Record<string, string> = {
-    inter: 'Inter',
-    noto_sans: 'Noto Sans',
-    nunito_sans: 'Nunito Sans',
-    ibm_plex_sans: 'IBM Plex Sans',
-    jetbrains_mono: 'JetBrains Mono',
-    fantasque_sans_mono: 'Fantasque Sans Mono'
+    oxproto: '0xProto (Default)',
+    inter: 'Inter (online)',
+    noto_sans: 'Noto Sans (online)',
+    nunito_sans: 'Nunito Sans (online)',
+    ibm_plex_sans: 'IBM Plex Sans (online)',
+    jetbrains_mono: 'JetBrains Mono (online)',
+    fantasque_sans_mono: 'Fantasque Sans Mono (online)'
 };
 
 const cjkFontPackNames: Record<string, string> = {
-    noto: 'Noto Sans CJK',
-    puhuiti: 'PuHuiTi CJK'
+    noto: 'Noto Sans CJK (online)',
+    puhuiti: 'PuHuiTi CJK (online)'
 };
 
 const westernFontDropdownOptions = APP_FONT_FAMILIES.filter(
@@ -110,7 +115,11 @@ const cjkFontPackOptions = APP_CJK_FONT_PACKS;
 function getFontFamilyLabel(t: TFunction, value: string) {
     const fixedName = fontFamilyNames[value];
     if (fixedName) {
-        return fixedName;
+        // Fork: an installed copy is used instead of the CDN.
+        return fixedName.endsWith(' (online)') &&
+            isAppFontAvailableLocally(value)
+            ? fixedName.replace(/ \(online\)$/, ' (installed)')
+            : fixedName;
     }
     if (value === 'system_ui') {
         return t('view.settings.appearance.appearance.font_family_system_ui');
@@ -305,27 +314,32 @@ export function SettingsInterfaceAppearanceCard({
             cardId="interface.appearance"
             title={t('view.settings.appearance.appearance.header')}
         >
-            <Field
-                label={t('view.settings.appearance.appearance.language')}
-                controlId="settings-language"
-            >
-                <Select value={locale || 'en'} onValueChange={onLanguageChange}>
-                    <SelectTrigger id="settings-language" className="w-56">
-                        <SelectValue>
-                            {getLanguageName(locale || 'en')}
-                        </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectGroup>
-                            {languageCodes.map((code) => (
-                                <SelectItem key={code} value={code}>
-                                    {getLanguageName(code)}
-                                </SelectItem>
-                            ))}
-                        </SelectGroup>
-                    </SelectContent>
-                </Select>
-            </Field>
+            {languageCodes.length > 1 ? (
+                <Field
+                    label={t('view.settings.appearance.appearance.language')}
+                    controlId="settings-language"
+                >
+                    <Select
+                        value={locale || 'en'}
+                        onValueChange={onLanguageChange}
+                    >
+                        <SelectTrigger id="settings-language" className="w-56">
+                            <SelectValue>
+                                {getLanguageName(locale || 'en')}
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectGroup>
+                                {languageCodes.map((code) => (
+                                    <SelectItem key={code} value={code}>
+                                        {getLanguageName(code)}
+                                    </SelectItem>
+                                ))}
+                            </SelectGroup>
+                        </SelectContent>
+                    </Select>
+                </Field>
+            ) : null}
 
             {!hideFontControls ? (
                 <FontFamilyPreferenceField

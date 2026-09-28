@@ -20,13 +20,13 @@ const VRChatCameraResolutions: VRChatResolution[] = [
 ];
 
 const GITHUB_RELEASES_URL =
-    'https://api.github.com/repos/Map1en/VRCX-0/releases';
+    'https://api.github.com/repos/NanashiTheNameless/VRCX-0-Nanashi/releases';
 
 const TABLE_MAX_SIZE_MIN = 100;
-const TABLE_MAX_SIZE_MAX = 10000;
+const TABLE_MAX_SIZE_MAX = 100000;
 
 const SEARCH_LIMIT_MIN = 10000;
-const SEARCH_LIMIT_MAX = 100000;
+const SEARCH_LIMIT_MAX = 1000000;
 
 const DEFAULT_MAX_TABLE_SIZE = 500;
 const DEFAULT_SEARCH_LIMIT = 50000;

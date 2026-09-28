@@ -90,7 +90,7 @@ export function announcementRoleNames(
 }
 
 export function announcementTimestamp(value: string | null | undefined) {
-    return value ? formatDateFilter(value, 'long') : '—';
+    return value ? formatDateFilter(value, 'long') : '-';
 }
 
 export function announcementUserLabel(
@@ -122,7 +122,7 @@ export function getGroupRowLabel(row: unknown): string {
         return row;
     }
     if (!isRecord(row)) {
-        return '—';
+        return '-';
     }
     const user = isRecord(row.user) ? row.user : {};
     const label =
@@ -132,7 +132,7 @@ export function getGroupRowLabel(row: unknown): string {
             row.displayName,
             row.name,
             row.imageUrl
-        ) || '—';
+        ) || '-';
     const galleryName = firstText(row.$galleryName);
     return galleryName ? `${galleryName}: ${label}` : label;
 }

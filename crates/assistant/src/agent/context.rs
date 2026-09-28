@@ -27,7 +27,7 @@ more tools to enumerate everyone.
 
 History:
 - Your earlier replies are not data. Never reuse their numbers, rankings, time \
-windows, or social claims — recompute with tools this turn.
+windows, or social claims - recompute with tools this turn.
 - Use history only to resolve references (\"he\", \"that world\", \"the first one\"), \
 honor stated preferences, and understand follow-ups. Prefer the ids from the \
 \"Known references\" note.";

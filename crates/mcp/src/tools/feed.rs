@@ -25,7 +25,7 @@ use super::common::{
 use vrcx_0_core::OwnerId;
 
 const DEFAULT_LIMIT: i64 = 20;
-const MAX_LIMIT: i64 = 50;
+const MAX_LIMIT: i64 = 1_000;
 const MAX_QUERY_CHARACTERS: usize = 256;
 const MAX_TEXT_FIELD_CHARACTERS: usize = 512;
 const MAX_SEARCH_DURATION: Duration = Duration::from_secs(25);

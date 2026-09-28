@@ -11,7 +11,8 @@ chrono = { workspace = true }
 iana-time-zone.workspace = true
 futures-util = "0.3"
 moka = { version = "0.12", features = ["sync"] }
-serde = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+specta.workspace = true
 serde_json = { workspace = true }
 sys-locale.workspace = true
 tokio = { workspace = true, features = ["sync", "time"] }

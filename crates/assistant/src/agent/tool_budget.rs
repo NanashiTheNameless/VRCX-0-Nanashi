@@ -43,7 +43,7 @@ fn budget_text_tool_content(text: &str) -> String {
     let keep = TOOL_CONTENT_CHAR_BUDGET.saturating_sub(128);
     let clipped: String = text.chars().take(keep).collect();
     let omitted = text.chars().count().saturating_sub(clipped.chars().count());
-    format!("{clipped}\n\n[Tool result truncated by VRCX-0: omitted {omitted} characters.]")
+    format!("{clipped}\n\n[Tool result truncated by VRCX-0-Nanashi: omitted {omitted} characters.]")
 }
 
 fn within_tool_budget(text: &str) -> bool {
@@ -80,7 +80,7 @@ fn compact_json_value(value: &Value, array_limit: usize, string_limit: usize) ->
         Value::String(text) if text.chars().count() > string_limit => {
             let clipped: String = text.chars().take(string_limit).collect();
             Value::String(format!(
-                "{clipped}… [truncated {} characters]",
+                "{clipped}... [truncated {} characters]",
                 text.chars().count().saturating_sub(clipped.chars().count())
             ))
         }
@@ -126,7 +126,7 @@ mod tests {
         let content = budget_text_tool_content(&text);
 
         assert!(within_tool_budget(&content));
-        assert!(content.contains("Tool result truncated by VRCX-0"));
+        assert!(content.contains("Tool result truncated by VRCX-0-Nanashi"));
     }
 
     #[test]

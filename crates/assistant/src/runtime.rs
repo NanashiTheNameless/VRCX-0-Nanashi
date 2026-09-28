@@ -20,7 +20,13 @@ use crate::endpoints::{
 /// from the model unless the user has explicitly armed writes, so a prompt
 /// injection in attacker-controlled data (e.g. a friend's bio) cannot drive an
 /// autonomous write.
-const WRITE_TOOLS: &[&str] = &["favorite_local", "favorite_vrchat", "set_friend_note"];
+const WRITE_TOOLS: &[&str] = &[
+    "favorite_local",
+    "favorite_vrchat",
+    "set_friend_note",
+    "create_reminder",
+    "delete_reminder",
+];
 use crate::error::AssistantError;
 use crate::events::AssistantEmitter;
 use crate::ports::{AssistantConfig, AssistantLlmClientFactory, AssistantSessionPersistence};
@@ -225,9 +231,7 @@ impl AssistantController {
             .filter(|value| !value.trim().is_empty())
             .ok_or(AssistantError::NotConfigured)?;
         let endpoint = self.endpoints.resolve(endpoint_id)?;
-        let client = self
-            .endpoints
-            .llm_client(&endpoint.base_url, &endpoint.api_key, model)?;
+        let client = self.endpoints.llm_client(&endpoint, model)?;
 
         let stored_effort = self
             .endpoints
@@ -348,7 +352,7 @@ async fn load_tool_defs(tools: &InProcessMcpTools) -> Result<Vec<ToolDefinition>
 }
 
 /// Removes the per-session cancel token when a turn task finishes, but only if
-/// it still owns the slot — a turn superseded by a newer one must not evict the
+/// it still owns the slot - a turn superseded by a newer one must not evict the
 /// newer turn's token (which would leave the new turn uncancellable).
 struct CancelCleanup {
     cancels: Arc<Mutex<HashMap<String, (String, CancellationToken)>>>,

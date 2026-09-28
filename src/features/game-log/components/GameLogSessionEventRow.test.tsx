@@ -301,13 +301,17 @@ describe('SessionEventGroups player durations', () => {
             screen
                 .getByText('Fallback')
                 .closest('button')
-                ?.previousElementSibling?.getAttribute('data-affinity')
+                ?.parentElement?.previousElementSibling?.getAttribute(
+                    'data-affinity'
+                )
         ).toBe('');
         expect(
             screen
                 .getByText('Member')
                 .closest('button')
-                ?.previousElementSibling?.getAttribute('data-affinity')
+                ?.parentElement?.previousElementSibling?.getAttribute(
+                    'data-affinity'
+                )
         ).toBe('');
         expect(screen.getAllByText('parent-time')).toHaveLength(2);
         expect(

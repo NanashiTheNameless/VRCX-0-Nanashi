@@ -53,6 +53,16 @@ pub(super) fn build_activity_content(
     };
 
     let mut content = match activity_type {
+        "SafetyGroup" | "SafetyAvatar" | "SafetyCommunity" | "SafetyUrl" => titled_body(
+            "shield",
+            &payload.trimmed_text("title"),
+            literal_body(payload.trimmed_text("message")),
+        ),
+        "Reminder" => titled_body(
+            "bell",
+            &payload.trimmed_text("title"),
+            literal_body(payload.trimmed_text("message")),
+        ),
         "OnPlayerJoining" => titled_body(
             "instance",
             &title_name,

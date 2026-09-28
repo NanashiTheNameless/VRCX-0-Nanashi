@@ -129,7 +129,6 @@ export type BuildSettingsPageStateSectionsInput = DialogSectionInput &
         hmdNotificationsDialogOpen: boolean;
         integrationPrefs: SettingsIntegrationPrefs;
         locale: string;
-        migrateLegacyVrcxData: SettingsVoidAction;
         normalizeRecentActionCooldownMinutes: (value: string) => number;
         notificationTtsTest: string;
         notificationTtsTestVisible: boolean;

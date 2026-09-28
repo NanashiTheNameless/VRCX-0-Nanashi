@@ -125,7 +125,7 @@ pub fn get_best_time_to_play(
             .then_with(|| left.bucket.cmp(&right.bucket))
     });
     if let Some(limit) = input.limit {
-        rows.truncate(limit.clamp(1, 50) as usize);
+        rows.truncate(limit.clamp(1, 500) as usize);
     }
 
     Ok(BestTimeToPlayOutput {

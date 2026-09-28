@@ -2,7 +2,10 @@ import { FolderOpenIcon, MoreHorizontalIcon, Trash2Icon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { commands } from '@/platform/tauri/bindings';
+import {
+    commands,
+    type DeepLinkSchemeSettings
+} from '@/platform/tauri/bindings';
 import { toast } from '@/services/toastService';
 import { normalizeAvatarAutoCleanupPreference } from '@/shared/constants/settings';
 import { dataDirectoryPathForDisplay } from '@/shared/utils/dataDirectoryPath';
@@ -28,6 +31,7 @@ import { Switch } from '@/ui/shadcn/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import { BrowseHistoryRetentionField } from '../BrowseHistoryRetentionField';
+import { ProfileMergeFields } from '../ProfileMergeFields';
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
@@ -137,6 +141,75 @@ function DeepLinkRegistrationField() {
     );
 }
 
+// Fork: turn the extra link schemes on/off (vrcx-0-nanashi:// is always on).
+function DeepLinkSchemeToggles() {
+    const { t } = useTranslation();
+    const [settings, setSettings] = useState<DeepLinkSchemeSettings | null>(
+        null
+    );
+
+    useEffect(() => {
+        let active = true;
+        commands
+            .appDeepLinkSchemesGet()
+            .then((result) => {
+                if (active) setSettings(result);
+            })
+            .catch(() => {});
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    if (!settings) {
+        return null;
+    }
+
+    async function update(next: DeepLinkSchemeSettings) {
+        setSettings(next);
+        try {
+            setSettings(await commands.appDeepLinkSchemesSet(next));
+        } catch (error: unknown) {
+            setSettings(settings);
+            toast.add({
+                type: 'error',
+                title: error instanceof Error ? error.message : String(error)
+            });
+        }
+    }
+
+    return (
+        <>
+            <Field
+                label={t('view.settings.deep_link_schemes.upstream')}
+                description={t(
+                    'view.settings.deep_link_schemes.upstream_description'
+                )}
+            >
+                <Switch
+                    checked={settings.upstream}
+                    onCheckedChange={(checked) =>
+                        void update({ ...settings, upstream: checked })
+                    }
+                />
+            </Field>
+            <Field
+                label={t('view.settings.deep_link_schemes.legacy')}
+                description={t(
+                    'view.settings.deep_link_schemes.legacy_description'
+                )}
+            >
+                <Switch
+                    checked={settings.legacy}
+                    onCheckedChange={(checked) =>
+                        void update({ ...settings, legacy: checked })
+                    }
+                />
+            </Field>
+        </>
+    );
+}
+
 export function SettingsAdvancedTab() {
     const state = useSettingsAdvancedTabState();
     return <SettingsAdvancedTabContent advanced={state} />;
@@ -167,7 +240,6 @@ export function SettingsAdvancedTabContent({
         onFeedPersistenceDisabledChange,
         onAvatarAutoCleanupChange,
         onOpenPurgeDialog,
-        onMigrateLegacyVrcxData,
         onRefreshSqliteTableSizes,
         onRefreshOnlineVisits,
         onRefreshConfigTreeData,
@@ -175,8 +247,7 @@ export function SettingsAdvancedTabContent({
         onResetAppDataDir,
         onCleanupAppDataDir,
         onDismissAppDataDirCleanup,
-        onClearConfigTreeData,
-        onAnonymousUsageTelemetryChange
+        onClearConfigTreeData
     } = advanced;
     const { t } = useTranslation();
     const appDataDirSourceLabel = appDataDirState
@@ -238,6 +309,7 @@ export function SettingsAdvancedTabContent({
                     </Field>
                 ) : null}
                 <DeepLinkRegistrationField />
+                <DeepLinkSchemeToggles />
             </SettingsCard>
 
             <SettingsCard
@@ -501,45 +573,7 @@ export function SettingsAdvancedTabContent({
                     'view.settings.advanced.advanced_ui.import_recovery.header'
                 )}
             >
-                <Field
-                    label={t(
-                        'view.settings.advanced.advanced_ui.import_recovery.import_from_vrcx'
-                    )}
-                    description={t(
-                        'view.settings.advanced.advanced_ui.import_recovery.description'
-                    )}
-                >
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={onMigrateLegacyVrcxData}
-                    >
-                        {t(
-                            'view.settings.advanced.advanced_ui.import_recovery.review'
-                        )}
-                    </Button>
-                </Field>
-            </SettingsCard>
-            <SettingsCard
-                cardId="advanced.usage-data"
-                title={t(
-                    'view.settings.advanced.advanced_ui.usage_data.header'
-                )}
-            >
-                <Field
-                    label={t(
-                        'view.settings.advanced.advanced_ui.usage_data.share'
-                    )}
-                    description={t(
-                        'view.settings.advanced.advanced_ui.usage_data.description'
-                    )}
-                >
-                    <Switch
-                        checked={prefs.anonymousUsageTelemetry}
-                        onCheckedChange={onAnonymousUsageTelemetryChange}
-                    />
-                </Field>
+                <ProfileMergeFields />
             </SettingsCard>
             {/* Danger zone: destructive, irreversible actions kept visually separate at the bottom. */}
             <section className="border-destructive/30 flex shrink-0 flex-col rounded-lg border">

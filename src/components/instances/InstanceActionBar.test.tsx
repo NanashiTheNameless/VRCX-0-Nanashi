@@ -400,7 +400,7 @@ describe('InstanceActionBar', () => {
         expect(apiFallbackHtml).toContain('4/32');
         expect(fallbackHtml).toContain('3/32');
         expect(fallbackHtml).not.toContain('-1/32');
-        expect(unknownHtml).toContain('—/32');
+        expect(unknownHtml).toContain('-/32');
         expect(unknownHtml).not.toContain('-1/32');
     });
 

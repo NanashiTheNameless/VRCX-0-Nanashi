@@ -2,7 +2,6 @@ import type { AppDataDirState, HostPlatform } from '@/platform/tauri/bindings';
 import type { AvatarAutoCleanupPreference } from '@/shared/constants/settings';
 
 export type SettingsAdvancedPrefs = {
-    anonymousUsageTelemetry?: boolean;
     autoSweepVRChatCache?: boolean;
     avatarAutoCleanup?: AvatarAutoCleanupPreference;
     gameLogDisabled?: boolean;
@@ -21,7 +20,6 @@ export type SettingsAdvancedModel = {
     hostPlatform?: HostPlatform;
     avatarAutoCleanupOptions: readonly AvatarAutoCleanupPreference[];
     configTreeData: Record<string, unknown>;
-    onAnonymousUsageTelemetryChange: (checked: boolean) => void;
     onAutoSweepVRChatCacheChange: (checked: boolean) => void;
     onAvatarAutoCleanupChange: (value: AvatarAutoCleanupPreference) => void;
     onClearConfigTreeData: () => void;
@@ -31,7 +29,6 @@ export type SettingsAdvancedModel = {
     onFeedPersistenceDisabledChange: (disabled: boolean) => void;
     onFocusVrchatOnJoinChange: (checked: boolean) => void;
     onLogResourceLoadChange: (checked: boolean) => void;
-    onMigrateLegacyVrcxData: SettingsAdvancedAction;
     onOpenAppDataDirSelector: SettingsAdvancedAction;
     onOpenPurgeDialog: () => void;
     onRefreshConfigTreeData: SettingsAdvancedAction;

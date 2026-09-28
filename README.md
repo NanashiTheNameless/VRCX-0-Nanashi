@@ -1,117 +1,109 @@
-<div align="center">
+# VRCX-0-Nanashi
 
-# <img src="images/VRCX-0.png" alt="VRCX-0 Logo" width="25"> VRCX-0
+**A personal fork of [VRCX-0](https://github.com/Map1en/VRCX-0) by Map1en.**
 
-### The fast, lightweight VRCX.
+This is not the official VRCX-0. It is maintained by NamelessNanashi for personal use,
+tracks upstream loosely, and makes opinionated changes upstream may not want. For the
+official app, support, and community, use [Map1en/VRCX-0](https://github.com/Map1en/VRCX-0).
+Please do not report bugs from this fork to upstream.
 
-English | [Français](README.fr-FR.md) | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-Hant.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md)
+VRCX-0 is a desktop companion for VRChat: see where your friends are, keep a history of
+the people you've met and the worlds you've visited, manage your favorites, and more.
+It is a Rust + Tauri rewrite of VRCX.
 
-[![Release](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/version.json&style=flat&color=4c566a&labelColor=1f2328&logo=github&logoColor=white)](https://github.com/Map1en/VRCX-0/releases/latest)
-[![Downloads](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/downloads.json&style=flat&color=4c566a&labelColor=1f2328)](https://github.com/Map1en/VRCX-0/releases)
-[![Windows installer size](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/windows-installer-size.json&style=flat&label=installer&color=4c566a&labelColor=1f2328&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZiI%2BPHBhdGggZD0iTTIuNCAyLjRoOC41djguNUgyLjR6TTEzLjEgMi40SDIxLjZ2OC41aC04LjV6TTIuNCAxMy4xaDguNVYyMS42SDIuNHpNMTMuMSAxMy4xSDIxLjZWMjEuNmgtOC41eiIvPjwvc3ZnPg%3D%3D)](https://github.com/Map1en/VRCX-0/releases/latest)
-[![Discord](https://img.shields.io/discord/1494343220467994644?style=flat&logo=discord&logoColor=white&label=discord&color=5865f2&labelColor=1f2328)](https://discord.gg/fehKP3SVPN)
-<br>
-[![CI](https://img.shields.io/github/actions/workflow/status/Map1en/VRCX-0/ci.yml?branch=master&label=ci&style=flat&labelColor=1f2328)](https://github.com/Map1en/VRCX-0/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/Map1en/VRCX-0/badge-data/coverage.json&style=flat&color=4c566a&labelColor=1f2328)](https://github.com/Map1en/VRCX-0/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/license-GPL--3.0-4c566a?style=flat&labelColor=1f2328)](LICENSE)
+## What this fork changes
 
-[![Download](https://img.shields.io/badge/Download%20VRCX--0-4340a2?style=for-the-badge)](https://github.com/Map1en/VRCX-0/releases/latest)
-
-Windows · macOS · Linux
-
-![VRCX-0](images/screenshot-user-dialog.webp)
-
-</div>
-
-A desktop companion for VRChat: see where your friends are, keep a history of the people you've met and the worlds you've visited, manage your favorites, and more.
-
-VRCX-0 is a ground-up rewrite of VRCX by one of its former maintainers. Rebuilt in Rust, it's faster and lighter, and years of history stay smooth.
-
-## Highlights
-
-- **Years of history stay smooth** — data that makes VRCX sluggish runs
-  smoothly in VRCX-0, even on low-end PCs and home servers
-- **About 50%–70% less memory than VRCX**
-- **Background mode needs just tens of MB of memory**, with all core features
-  still running
-- **Smaller than a single avatar bundle** — just over 10 MB to download, just
-  over 30 MB installed; less than a tenth the size of VRCX
-- **Seamless migration** — imports your VRCX database and settings
-  automatically; VRCX's own database is never modified, so you can switch back
-  at any time
-
-### Only in VRCX-0
-
-- **Social AI** — insights into your VRChat social life: who you play with
-  most, who you're drifting away from, when friends are most likely online;
-  just connect the AI service you already use
-- **Sidebar Mode** — keep an eye on friends from a narrow sidebar; docks to the
-  screen edge and auto-hides on Windows and macOS
-- **Keyboard shortcuts** — common actions without the mouse; global hotkey on
-  Windows
-- **Lock** — lock the interface with a code to protect your privacy
-- **Sharing** — share links for world collections, worlds, avatars, and
-  instances
-
-### For advanced users
-
-- **MCP server** — let external AI tools use your local social data directly
-- **Integration API** — real-time in-game data for third-party apps
-- **Headless mode** — run without a UI; see `crates/headless`
-
-### Compared with VRCX
-
-| Feature               | VRCX                                                                   | VRCX-0 (+ = added)                                                            |
-| --------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| **Social automation** | Switch status when alone or with others; auto-reply to invite requests | + Schedules, multiple context rules with priorities, previous status restored |
-| **Notifications**     | Desktop, TTS, XSOverlay, OVR Toolkit, wrist overlay                    | + Discord webhooks, Do Not Disturb; per-event filtering on every channel      |
-| **VR overlay**        | Browser-rendered (100 MB+); OpenVR                                     | + Native rendering (tens of MB); OpenXR (**tested with WiVRn**)               |
-| Screenshots           | View and search metadata                                               | + Grid view, batch management, ZIP export                                     |
-| Avatar details        | Performance rank and file size                                         | + Full performance stats against each platform's limits                       |
-| Backup                | VRChat registry settings                                               | + Scheduled database backups, one-click restore                               |
-| Friend locations      | Group friends by instance                                              | + Worlds view                                                                 |
-| Group management      | Set visibility one group at a time                                     | + Batch leave and batch visibility; group roles in the player list            |
-| Themes                | Built-in themes, custom CSS file                                       | + Community themes, background image, in-app CSS editor, accent color         |
-| Game log              | All accounts mixed together                                            | Stored per account                                                            |
-
-Everything else VRCX does, VRCX-0 does too.
+- **No telemetry.** Usage stats, heartbeats, crash reporting, the in-app feedback form,
+  and community theme install-count pings are removed entirely.
+- **Social AI is off by default.** Turn it on under Settings > AI. Nothing is sent to an
+  AI service while it is disabled. Supports OpenAI-compatible, Anthropic, Google Gemini and
+  Ollama APIs, local or LAN models with no key, and custom headers.
+- **Keeps the PC awake** (optional, on by default) so live updates keep arriving while the app
+  sits in the tray; the screen can still turn off.
+- **Custom notification sounds.** Under Settings > Notifications, choose an audio file and
+  volume per event for anyone, friends, or favorite friends. Sounds work in background mode
+  and respect Do Not Disturb and privacy lock.
+- **Opt-in VRChat video playback helper.** Settings > Media installs managed yt-dlp master
+  updates and a local PO-token provider. Cookie use is a separate opt-in: explicitly select a
+  browser to refresh or import your own cookies.txt. Originals are backed up for restore.
+  No video caching or browser extension. See [setup and playback limits](YTDLP_SETUP.md).
+- **Safety watchlists and warnings.** Settings > Notifications includes group/avatar watchlists,
+  opt-in community lists, and URL-host warnings. Group/avatar profiles have a Watch button;
+  user/avatar profiles show community-list matches. Warning delivery uses the System & Safety
+  filters and custom sounds. Logged URLs are inspected locally without fetching or resolving them.
+  Community sources default to warnings; automatic user blocks and bans from selected owned
+  groups require explicit configuration and are recorded in Safety history.
+  Game-log tables and sessions show inline warnings without opening logged URLs.
+  Group checks cover public memberships. Your own avatar ID can be confirmed through the API;
+  other players' avatar alerts use names and explicitly mark the ID as unverified.
+  Avatar lists offer reviewed batches of up to 25 exact IDs to block, with cancellation and
+  per-ID results. A name match alone never blocks: an on-demand instance check looks names up
+  with your avatar search provider and offers a confirmed block only when exactly one listed ID
+  matches. Avatar lists can also be hidden account-wide at a throttled pace (daily cap, backoff);
+  turning that off never unblocks, and unblocking is a separate reviewed action. Community lists
+  hosted on GitHub are mirrored locally and refreshed when the repository changes.
+  Instance kicks remain unavailable.
+- **Assistant reminders.** Ask the assistant (with writes turned on) to tell you when a friend comes
+  online, goes offline, moves or joins you, or at a time. Reminders are saved, fire as normal
+  notifications with the chat closed, and are listed under Settings > AI.
+- **Wrist overlay pages.** Hide and show the wrist overlay again quickly (3 seconds by default) to
+  switch between the feed, the players in your instance, and the players you have notes on. Under
+  Settings > VR you choose which pages appear, their order, the player order and the switch window.
+- **Launch without Steam.** Set the VRChat install folder in Launch Options to start VRChat directly.
+- **Import from VRCX or VRCX-0.** Merges the other app's database and adds settings you have not set
+  here yet.
+- **Local fonts by default.** Bundled 0xProto and system CJK fonts work offline. Additional
+  online font choices are labelled in Settings > Interface.
+- **Legacy VRCX links work.** `vrcx://world/...`, `vrcx://avatar/...`, `vrcx://user/...`,
+  `vrcx://group/...` and `vrcx://addavatardb/...` open in this app. If the original VRCX or
+  upstream VRCX-0 is also installed, whichever app registered a scheme last handles it.
+- **English only.** Other UI translations were removed. Support (issues, questions) is offered
+  in English only; other languages, including any custom translations you load, are not
+  officially supported on this fork.
+- **Separate app identity.** Installs and runs side by side with upstream VRCX-0, with its own data
+  folder (`VRCX-0-Nanashi`). On first launch it copies your existing VRCX-0 data folder (caches
+  excluded); upstream data is never changed. Its own link scheme is `vrcx-0-nanashi://`, and
+  `vrcx-0://` / `vrcx://` links are accepted too.
+- **Updates come from this fork's releases**, not upstream.
 
 ## Install
 
-Grab the file for your platform from the [latest release](https://github.com/Map1en/VRCX-0/releases/latest):
+Grab the file for your platform from the
+[latest release](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest):
 
-| Platform              | File                                        |
-| --------------------- | ------------------------------------------- |
-| Windows               | `VRCX-0_<version>_windows_x86_64_setup.exe` |
-| macOS (Apple Silicon) | `VRCX-0_<version>_macos_aarch64.dmg`        |
-| macOS (Intel)         | `VRCX-0_<version>_macos_x86_64.dmg`         |
-| Linux                 | `.AppImage`, `.deb`, or `.rpm`              |
+| Platform              | File                                                |
+| --------------------- | --------------------------------------------------- |
+| Windows               | `VRCX-0-Nanashi_<version>_windows_x86_64_setup.exe` |
+| macOS (Apple Silicon) | `VRCX-0-Nanashi_<version>_macos_aarch64.dmg`        |
+| macOS (Intel)         | `VRCX-0-Nanashi_<version>_macos_x86_64.dmg`         |
+| Linux                 | `.AppImage`, `.deb`, or `.rpm`                      |
 
-On macOS, if the first launch is blocked, open **System Settings → Privacy &
-Security** and click **Open Anyway**.
+Fork builds are not code-signed. On Windows, SmartScreen may warn on first run. On macOS,
+if the first launch is blocked, open **System Settings > Privacy & Security** and click
+**Open Anyway**.
 
 ### Linux
 
 Hardware acceleration for the app interface is off by default. Turn it on under
-**Settings → System → Hardware acceleration (experimental)**; if the interface
-doesn't display properly, VRCX-0 turns it back off automatically. Setting
+**Settings > System > Hardware acceleration (experimental)**; if the interface doesn't
+display properly, the app turns it back off automatically. Setting
 `WEBKIT_DISABLE_DMABUF_RENDERER` yourself hides this option.
-
-## Feedback
-
-- Questions and chat: [Discord](https://discord.gg/fehKP3SVPN)
-- Bug reports and feature requests: [GitHub Issues](https://github.com/Map1en/VRCX-0/issues)
 
 ## Building from source
 
-Use these steps to contribute or build VRCX-0 locally. Before contributing, see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-Requirements: Node.js ≥ 24.10, npm ≥ 11.5, and a stable Rust toolchain via rustup.
-On Windows, also install **Visual Studio Build Tools** with the **Desktop development with C++** workload.
+Requirements: Node.js >= 24.10, npm >= 11.5, and a stable Rust toolchain via rustup
+(rustc >= 1.95). On Windows, also install **Visual Studio Build Tools** with the
+**Desktop development with C++** workload. On Linux, install the WebKitGTK 4.1
+development packages, for example on Debian/Ubuntu:
 
 ```bash
-git clone https://github.com/Map1en/VRCX-0
-cd VRCX-0
+sudo apt install libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev \
+  librsvg2-dev libayatana-appindicator3-dev libasound2-dev
+```
+
+```bash
+git clone https://github.com/NanashiTheNameless/VRCX-0-Nanashi
+cd VRCX-0-Nanashi
 
 npm install
 ```
@@ -128,11 +120,23 @@ Build for release (skip code signing and installer):
 npm run tauri:build -- --no-sign --no-bundle
 ```
 
+## Credits
+
+VRCX-0-Nanashi is built on [VRCX-0](https://github.com/Map1en/VRCX-0) by Map1en and its
+contributors, which in turn builds on [VRCX](https://github.com/vrcx-team/VRCX). Thanks to
+everyone who worked on both.
+
+## Support this fork
+
+- [GitHub Sponsors](https://github.com/sponsors/NanashiTheNameless)
+- [Buy Me a Coffee](https://buymeacoffee.com/NamelessNanashi)
+- [Ko-fi](https://ko-fi.com/NanashiTheNameless)
+- [Liberapay](https://liberapay.com/NamelessNanashi)
+- [Throne](https://throne.com/NamelessNanashi)
+
 ## License
 
-VRCX-0 is licensed under the GNU General Public License v3.0 (GPLv3).
+GNU General Public License v3.0 (GPLv3), same as upstream. See [LICENSE](LICENSE).
 
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FMap1en%2FVRCX-0.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FMap1en%2FVRCX-0?ref=badge_large)
-
-VRCX-0 is not endorsed by VRChat Inc. VRChat and all associated properties are
+This project is not endorsed by VRChat Inc. VRChat and all associated properties are
 trademarks or registered trademarks of VRChat Inc.

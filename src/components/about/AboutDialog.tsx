@@ -1,6 +1,9 @@
 import { CoffeeIcon, HeartIcon, type LucideIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+// Fork: wordmark font bundled locally (was loaded from Google Fonts at runtime).
+import '@fontsource/jost/500.css';
 
 import { cn } from '@/lib/utils';
 import { openExternalLink } from '@/services/entityMediaService';
@@ -23,10 +26,6 @@ import {
     type AboutContributor
 } from './useAboutContributors';
 
-const WORDMARK_FONT_LINK_ID = 'vrcx-0-about-wordmark-font';
-const WORDMARK_FONT_URL =
-    'https://fonts.googleapis.com/css2?family=Jost:wght@500&text=VRCX-0&display=swap';
-
 const PLATFORM_LABELS: Record<string, string> = {
     windows: 'Windows',
     macos: 'macOS',
@@ -48,29 +47,30 @@ const SUPPORT_LINKS: AboutActionLink[] = [
         icon: HeartIcon
     },
     {
+        key: 'buymeacoffee',
+        label: 'Buy Me a Coffee',
+        href: links.buyMeACoffee,
+        icon: CoffeeIcon
+    },
+    {
         key: 'kofi',
         label: 'Ko-fi',
         href: links.kofi,
         icon: CoffeeIcon
     },
     {
-        key: 'afdian',
-        label: '爱发电',
-        href: links.afdian,
+        key: 'liberapay',
+        label: 'Liberapay',
+        href: links.liberapay,
+        icon: HeartIcon
+    },
+    {
+        key: 'throne',
+        label: 'Throne',
+        href: links.throne,
         icon: HeartIcon
     }
 ];
-
-function ensureWordmarkFontLoaded() {
-    if (document.getElementById(WORDMARK_FONT_LINK_ID)) {
-        return;
-    }
-    const link = document.createElement('link');
-    link.id = WORDMARK_FONT_LINK_ID;
-    link.rel = 'stylesheet';
-    link.href = WORDMARK_FONT_URL;
-    document.head.appendChild(link);
-}
 
 function getAppDisplayVersion(): string {
     return formatReleaseDisplayVersion(VERSION || '') || String(VERSION || '');
@@ -200,12 +200,6 @@ export function AboutVrcxDialog({
         (state) => state.hostCapabilities.platform
     );
 
-    useEffect(() => {
-        if (open) {
-            ensureWordmarkFontLoaded();
-        }
-    }, [open]);
-
     const displayVersion = getAppDisplayVersion();
     const platformLabel = PLATFORM_LABELS[hostPlatform] || '';
 
@@ -220,7 +214,7 @@ export function AboutVrcxDialog({
                         className="text-4xl leading-none font-medium tracking-normal select-none"
                         style={{ fontFamily: "'Jost', var(--font-sans)" }}
                     >
-                        VRCX-0
+                        VRCX-0-Nanashi
                     </DialogTitle>
                     <DialogDescription className="mt-3 text-[13px]">
                         {t('view.about.tagline')}

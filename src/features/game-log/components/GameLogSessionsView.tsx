@@ -35,6 +35,7 @@ import { useGameLogSessionAffinity } from '../gameLogSessionAffinity';
 import { buildGameLogSessionDurationDetails } from '../gameLogSessionDurations';
 import type { GameLogSession, GameLogSessionEvent } from '../gameLogTypes';
 import { SessionEventGroups } from './GameLogSessionEventRow';
+import { SafetyLogLocationContext } from './SafetyLogBadge';
 
 const FACEPILE_CLASSES = [
     'bg-rose-800 text-rose-100',
@@ -245,7 +246,7 @@ function formatSessionEventRange(
         const firstDay = localDayKey(firstEventAt);
         const lastDay = localDayKey(lastEventAt);
         const format = firstDay && firstDay === lastDay ? 'time' : 'short';
-        return `${formatDateFilter(firstEventAt, format)} – ${formatDateFilter(lastEventAt, format)}`;
+        return `${formatDateFilter(firstEventAt, format)} - ${formatDateFilter(lastEventAt, format)}`;
     }
     return formatDateFilter(firstEventAt || fallbackCreatedAt, 'time');
 }
@@ -439,10 +440,12 @@ const GameLogSessionSegment = memo(function GameLogSessionSegment({
             </div>
 
             <CollapsibleContent>
-                <SessionEventGroups
-                    durationByKey={durationByKey}
-                    events={session.events}
-                />
+                <SafetyLogLocationContext value={session.location}>
+                    <SessionEventGroups
+                        durationByKey={durationByKey}
+                        events={session.events}
+                    />
+                </SafetyLogLocationContext>
             </CollapsibleContent>
         </Collapsible>
     );

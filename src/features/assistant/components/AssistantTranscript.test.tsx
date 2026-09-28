@@ -80,7 +80,7 @@ describe('AssistantTranscript', () => {
                 messages={messages}
                 emptyState={null}
                 scrollToLatestLabel="Jump to latest"
-                thinkingLabel="Thinking…"
+                thinkingLabel="Thinking..."
             />
         );
 
@@ -103,7 +103,7 @@ describe('AssistantTranscript', () => {
                 messages={[]}
                 emptyState={<p>Ask about your social life</p>}
                 scrollToLatestLabel="Jump to latest"
-                thinkingLabel="Thinking…"
+                thinkingLabel="Thinking..."
             />
         );
 

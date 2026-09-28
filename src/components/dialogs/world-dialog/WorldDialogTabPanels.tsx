@@ -216,7 +216,7 @@ export function WorldDialogTabPanels({
           ? t('dialog.world.tags.public')
           : world.releaseStatus === 'private'
             ? t('dialog.world.tags.private')
-            : '—';
+            : '-';
     return (
         <EntityDialogTabs
             value={activeTab}
@@ -243,8 +243,8 @@ export function WorldDialogTabPanels({
                     <Badge variant="outline">
                         <UsersIcon data-icon="inline-start" />
                         {t('dialog.world.instances.capacity_count', {
-                            count: world.recommendedCapacity || '—',
-                            max: world.capacity || '—'
+                            count: world.recommendedCapacity || '-',
+                            max: world.capacity || '-'
                         })}
                     </Badge>
                     <WorldSidebarPinButton
@@ -460,28 +460,28 @@ export function WorldDialogTabPanels({
                         onClick={world.authorId ? onOpenAuthor : undefined}
                     >
                         <span className="block truncate text-xs">
-                            {world.authorName || '—'}
+                            {world.authorName || '-'}
                         </span>
                     </EntityInfoBlock>
                     <EntityInfoBlock
                         label={t('dialog.world.info.players')}
-                        value={world.occupants ? String(world.occupants) : '—'}
+                        value={world.occupants ? String(world.occupants) : '-'}
                     />
                     <EntityInfoBlock
                         label={t('dialog.world.info.favorites')}
                         value={
                             world.favorites
                                 ? `${world.favorites}${favoriteRate ? ` (${favoriteRate}%)` : ''}`
-                                : '—'
+                                : '-'
                         }
                     />
                     <EntityInfoBlock
                         label={t('dialog.world.info.visits')}
-                        value={world.visits ? String(world.visits) : '—'}
+                        value={world.visits ? String(world.visits) : '-'}
                     />
                     <EntityInfoBlock
                         label={t('dialog.world.info.capacity')}
-                        value={`${world.recommendedCapacity || '—'} (${world.capacity || '—'})`}
+                        value={`${world.recommendedCapacity || '-'} (${world.capacity || '-'})`}
                     />
                     <EntityInfoBlock
                         label={t('dialog.world.info.created_at')}
@@ -533,7 +533,7 @@ export function WorldDialogTabPanels({
                                 ? formatPreviousInstanceCount(
                                       previousInstances.length
                                   )
-                                : '—'
+                                : '-'
                         }
                         onClick={
                             previousInstances.length
@@ -546,7 +546,7 @@ export function WorldDialogTabPanels({
                         value={
                             totalVisitTime > 0
                                 ? timeToText(totalVisitTime)
-                                : '—'
+                                : '-'
                         }
                     />
                     {friendVisits && friendVisits.friendCount > 0 ? (
@@ -576,25 +576,25 @@ export function WorldDialogTabPanels({
                     ) : null}
                     <EntityInfoBlock
                         label={t('dialog.world.info.version')}
-                        value={world.version ? String(world.version) : '—'}
+                        value={world.version ? String(world.version) : '-'}
                     />
                     <EntityInfoBlock
                         label={t('dialog.world.info.heat')}
-                        value={world.heat ? String(world.heat) : '—'}
+                        value={world.heat ? String(world.heat) : '-'}
                     />
                     <EntityInfoBlock
                         label={t('dialog.world.info.popularity')}
                         value={
-                            world.popularity ? String(world.popularity) : '—'
+                            world.popularity ? String(world.popularity) : '-'
                         }
                     />
                     <EntityInfoBlock
                         label={t('dialog.world.info.persistent_data')}
-                        value={hasPersistData ? '✓' : '—'}
+                        value={hasPersistData ? 'Yes' : '-'}
                     />
                     <EntityInfoBlock
                         label={t('dialog.world.info.cache_size')}
-                        value={world.$isCached ? world.$cacheSize || '—' : '—'}
+                        value={world.$isCached ? world.$cacheSize || '-' : '-'}
                     />
                     <EntityInfoBlock
                         label={t('dialog.world.info.release_status')}
@@ -607,7 +607,7 @@ export function WorldDialogTabPanels({
                         <span className="block text-xs whitespace-normal">
                             {world.platforms
                                 ?.map(platformDisplayName)
-                                .join(', ') || '—'}
+                                .join(', ') || '-'}
                         </span>
                     </EntityInfoBlock>
                     {Array.isArray(world.urlList) && world.urlList.length ? (

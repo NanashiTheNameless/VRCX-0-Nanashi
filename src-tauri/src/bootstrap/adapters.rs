@@ -375,7 +375,6 @@ pub(super) fn start_host_services(app: &tauri::AppHandle, state: &AppState) {
     state
         .runtime_host()
         .set_runtime_task_executor(TauriRuntimeTaskExecutor);
-    state.runtime_host().start_telemetry_runtime();
     state.runtime_host().start_data_services();
     state.runtime_host().start_game_services();
     state.runtime_host().start_desktop_services();

@@ -220,7 +220,10 @@ fn fixed_external_scopes_keep_origin_and_path_restrictions() {
 
     assert!(build_web_execute_request_with_policy(
         ExternalHttpRequestInput {
-            url: Some("https://api.github.com/repos/Map1en/VRCX-0/contributors".into()),
+            url: Some(
+                "https://api.github.com/repos/NanashiTheNameless/VRCX-0-Nanashi/contributors"
+                    .into()
+            ),
             ..Default::default()
         },
         ExternalApiScope::GithubContributors,
@@ -229,7 +232,9 @@ fn fixed_external_scopes_keep_origin_and_path_restrictions() {
     .is_ok());
     assert!(build_web_execute_request_with_policy(
         ExternalHttpRequestInput {
-            url: Some("https://api.github.com/repos/Map1en/VRCX-0/releases".into()),
+            url: Some(
+                "https://api.github.com/repos/NanashiTheNameless/VRCX-0-Nanashi/releases".into()
+            ),
             ..Default::default()
         },
         ExternalApiScope::GithubContributors,
@@ -238,7 +243,9 @@ fn fixed_external_scopes_keep_origin_and_path_restrictions() {
     .is_err());
     assert!(build_web_execute_request_with_policy(
         ExternalHttpRequestInput {
-            url: Some("https://github.com/repos/Map1en/VRCX-0/contributors".into()),
+            url: Some(
+                "https://github.com/repos/NanashiTheNameless/VRCX-0-Nanashi/contributors".into()
+            ),
             ..Default::default()
         },
         ExternalApiScope::GithubContributors,

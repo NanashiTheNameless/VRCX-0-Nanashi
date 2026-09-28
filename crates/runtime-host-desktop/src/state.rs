@@ -58,7 +58,6 @@ use vrcx_0_application::remote::WorldRemoteRuntime;
 use vrcx_0_application::social::{
     CurrentUserMutationRuntime, GroupBanImportStartInput, GroupBanImportStatus,
 };
-use vrcx_0_application::telemetry::{TelemetryRuntime, TelemetryRuntimeDeps};
 use vrcx_0_application_activity::OverlayActivitySnapshot;
 use vrcx_0_application_core::{
     BackendRuntimeMode, BackendRuntimePhase, BackendRuntimeStatusPublisher,
@@ -197,13 +196,14 @@ pub struct GameRuntimeBundle {
     pub auto_launch: AutoAppLaunchManager,
 }
 
+const KEEP_SYSTEM_AWAKE_CONFIG_KEY: &str = "keepSystemAwake";
+
 pub struct DesktopRuntimeBundle {
     pub services: Arc<DesktopRuntimeServices>,
     pub host_file_access: HostFileAccess,
     pub discord_rpc: Arc<DiscordRpc>,
     pub vr_overlay_runtime: Arc<DesktopVrOverlayRuntime>,
     pub app_update: AppUpdateRuntime,
-    pub telemetry: TelemetryRuntime,
     pub background_image: BackgroundImageService,
     pub community_theme: CommunityThemeService,
     pub integration_api: Arc<DesktopIntegrationApiRuntime>,
@@ -211,6 +211,9 @@ pub struct DesktopRuntimeBundle {
 }
 
 pub struct DesktopRuntimeHostState {
+    safety: Arc<crate::safety::SafetyRuntime>,
+    reminders: Arc<crate::reminders::ReminderRuntime>,
+    ytdlp: Arc<vrcx_0_ytdlp::Runtime>,
     runtime: RuntimeHostState,
     game: Arc<GameRuntimeBundle>,
     desktop: Arc<DesktopRuntimeBundle>,
@@ -339,22 +342,6 @@ impl DesktopRuntimeHostState {
                 Arc::clone(builder.desktop_assembly().instance_dwell())
                     as Arc<dyn InstanceRosterObserver>,
             ]));
-        let telemetry = TelemetryRuntime::new(TelemetryRuntimeDeps {
-            environment: Arc::new(vrcx_0_outbound_adapters::LocalTelemetryEnvironment::new(
-                builder.desktop_assembly().config().clone(),
-                Arc::clone(builder.desktop_assembly().database()),
-                builder.paths().app_data.clone(),
-                Arc::new(|| {
-                    vrcx_0_host_desktop::system_theme::current_system_theme_category()
-                        .unwrap_or_default()
-                        .to_string()
-                }),
-            )),
-            transport: Arc::new(vrcx_0_outbound_adapters::HttpTelemetryTransport::production()),
-            tasks: builder.desktop_assembly().tasks().clone(),
-            backend_runtime: builder.backend_runtime().clone(),
-            app_version: app_version.clone(),
-        });
         let profile_config: Arc<dyn vrcx_0_application::profile::ProfileConfigStore> =
             Arc::new(vrcx_0_outbound_adapters::LocalProfileConfigStore::new(
                 Arc::clone(builder.database()),
@@ -397,7 +384,21 @@ impl DesktopRuntimeHostState {
         }));
         let vr_overlay_runtime =
             Arc::new(DesktopVrOverlayRuntime::new(Arc::clone(&desktop_services))?);
-        let game_log_sink: Arc<dyn GameLogEventSink> = game_log_runtime.clone();
+        let (safety, safety_receiver) = crate::safety::SafetyRuntime::new(
+            builder.desktop_assembly().config().clone(),
+            Arc::clone(builder.desktop_assembly().database()),
+            builder.desktop_assembly().auth_scope().clone(),
+            overlay_activity.clone(),
+        );
+        let reminders = crate::reminders::ReminderRuntime::new(
+            builder.desktop_assembly().config().clone(),
+            builder.desktop_assembly().auth_scope().clone(),
+            overlay_activity.clone(),
+        );
+        let game_log_sink: Arc<dyn GameLogEventSink> = Arc::new(crate::safety::SafetyLogSink {
+            inner: game_log_runtime.clone(),
+            safety: Arc::clone(&safety),
+        });
         let log_watcher = LogWatcher::new_with_location_snapshot_scanner(
             Some(game_log_sink),
             Arc::new(HostLogLocationSnapshotScanner),
@@ -469,7 +470,6 @@ impl DesktopRuntimeHostState {
             discord_rpc,
             vr_overlay_runtime,
             app_update,
-            telemetry,
             background_image,
             community_theme,
             integration_api: Arc::clone(&integration_api_runtime),
@@ -626,6 +626,36 @@ impl DesktopRuntimeHostState {
                 world_cache: Arc::clone(runtime.desktop_assembly().world_cache()),
             },
         );
+        let vrchat_data = vrcx_0_host_desktop::vrchat_paths::vrchat_app_data();
+        let ytdlp = vrcx_0_ytdlp::Runtime::new(
+            runtime.paths().app_data.clone(),
+            if vrchat_data.as_os_str().is_empty() {
+                String::new()
+            } else {
+                vrchat_data.join("Tools").to_string_lossy().into_owned()
+            },
+        );
+        let yt_worker = Arc::clone(&ytdlp);
+        runtime
+            .desktop_assembly()
+            .tasks()
+            .spawn_cancellable(move |stop| async move {
+                let mut tick = 0u8;
+                while !stop.is_stop_requested() {
+                    if tick == 0 {
+                        yt_worker.maintain().await;
+                    }
+                    tick = (tick + 1) % 60;
+                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                }
+            });
+        reminders.start(runtime.desktop_assembly().tasks());
+        safety.start(
+            safety_receiver,
+            runtime.desktop_assembly().tasks(),
+            vrchat_api.clone(),
+            runtime.desktop_assembly().avatar_moderation().clone(),
+        );
         let vrchat_remote = DesktopVrchatRemoteFacade::new(
             vrchat_api.clone(),
             media.clone(),
@@ -650,8 +680,6 @@ impl DesktopRuntimeHostState {
                 runtime.desktop_assembly().diagnostics().clone(),
                 runtime.desktop_assembly().background_jobs().clone(),
             ),
-            runtime.desktop_assembly().config().clone(),
-            desktop.telemetry.clone(),
             runtime.paths().app_data.join("error-log.txt"),
         );
         let legacy_migration = DesktopLegacyMigrationRuntime::new(
@@ -701,6 +729,9 @@ impl DesktopRuntimeHostState {
         );
 
         Ok(Self {
+            safety,
+            reminders,
+            ytdlp,
             runtime,
             game,
             desktop,
@@ -727,16 +758,41 @@ impl DesktopRuntimeHostState {
         })
     }
 
-    pub fn start_telemetry_runtime(&self) {
-        self.desktop.telemetry.start();
-    }
-
     pub fn start_game_services(&self) {
         self.extension.start_game_services(&self.runtime);
     }
 
     pub fn start_desktop_services(&self) {
         self.extension.start_desktop_services(&self.runtime);
+        self.apply_keep_system_awake_from_config();
+    }
+
+    /// Fork: hold a "keep the system awake" lock so live updates keep flowing
+    /// while the app runs in the background. On by default.
+    pub fn apply_keep_system_awake_from_config(&self) {
+        let enabled = self
+            .runtime
+            .desktop_assembly()
+            .config()
+            .get_bool(KEEP_SYSTEM_AWAKE_CONFIG_KEY, true)
+            .unwrap_or(true);
+        if let Err(error) = vrcx_0_host_desktop::power::set_keep_awake(enabled) {
+            tracing::warn!(%error, "failed to apply keep-awake preference");
+        }
+    }
+
+    pub fn set_keep_system_awake(&self, enabled: bool) -> Result<bool> {
+        self.runtime
+            .desktop_assembly()
+            .config()
+            .set_bool(KEEP_SYSTEM_AWAKE_CONFIG_KEY, enabled)?;
+        vrcx_0_host_desktop::power::set_keep_awake(enabled)
+            .map_err(vrcx_0_composition::Error::Custom)?;
+        Ok(vrcx_0_host_desktop::power::is_keep_awake_active())
+    }
+
+    pub fn keep_system_awake_active(&self) -> bool {
+        vrcx_0_host_desktop::power::is_keep_awake_active()
     }
 
     pub fn set_notification_desktop_notifier(
@@ -849,29 +905,6 @@ impl DesktopRuntimeHostState {
         self.desktop.community_theme.report_install(theme_id).await
     }
 
-    pub fn record_telemetry_event(
-        &self,
-        event: vrcx_0_application::telemetry::TelemetryClientEvent,
-    ) {
-        self.desktop.telemetry.record_event(event);
-    }
-
-    pub async fn submit_telemetry_feedback(&self, content: &str) -> Result<()> {
-        self.desktop
-            .telemetry
-            .submit_feedback(content)
-            .await
-            .map_err(|error| vrcx_0_composition::Error::Custom(error.to_string()))
-    }
-
-    pub async fn flush_pending_telemetry_errors(&self) {
-        self.desktop.telemetry.flush_pending_rust_errors().await;
-    }
-
-    pub async fn shutdown_telemetry_flush(&self) {
-        self.desktop.telemetry.shutdown_flush().await;
-    }
-
     pub async fn check_for_app_update(
         &self,
     ) -> vrcx_0_application::profile::AppUpdateStatusSnapshot {
@@ -932,6 +965,18 @@ impl DesktopRuntimeHostState {
 
     pub fn worlds(&self) -> &WorldRemoteRuntime {
         &self.worlds
+    }
+
+    pub fn ytdlp(&self) -> &Arc<vrcx_0_ytdlp::Runtime> {
+        &self.ytdlp
+    }
+
+    pub fn safety(&self) -> &Arc<crate::safety::SafetyRuntime> {
+        &self.safety
+    }
+
+    pub fn reminders(&self) -> &Arc<crate::reminders::ReminderRuntime> {
+        &self.reminders
     }
 
     pub fn vrchat_remote(&self) -> &DesktopVrchatRemoteFacade {
@@ -1924,6 +1969,26 @@ impl DesktopRuntimeHostState {
         &self.runtime.paths().app_data
     }
 
+    pub fn profile_merge_sources(&self) -> vrcx_0_outbound_adapters::ProfileMergeSources {
+        vrcx_0_outbound_adapters::profile_merge_sources()
+    }
+
+    /// Fork: non-destructively merge VRCX or upstream VRCX-0 data into this profile.
+    pub async fn run_profile_merge(
+        &self,
+        kind: vrcx_0_outbound_adapters::ProfileMergeSourceKind,
+    ) -> Result<vrcx_0_persistence::profile_merge::ProfileMergeReport> {
+        let database = Arc::clone(self.runtime.database());
+        let storage = Arc::clone(self.runtime.storage());
+        let app_data = self.runtime.paths().app_data.clone();
+        tokio::task::spawn_blocking(move || {
+            vrcx_0_outbound_adapters::run_profile_merge(&database, &storage, &app_data, kind)
+        })
+        .await
+        .map_err(|error| vrcx_0_composition::Error::Custom(format!("import task failed: {error}")))?
+        .map_err(|error| vrcx_0_composition::Error::Custom(error.to_string()))
+    }
+
     pub fn start_screenshot_library_scan(
         &self,
         force: bool,
@@ -1982,9 +2047,10 @@ impl DesktopRuntimeHostState {
         self.runtime.desktop_assembly().webhook_delivery_snapshot()
     }
 
-    pub fn stop_for_application_exit(&self, reason: &str, flush_telemetry: impl FnOnce()) {
+    pub fn stop_for_application_exit(&self, reason: &str) {
+        self.ytdlp.stop();
+        let _ = vrcx_0_host_desktop::power::set_keep_awake(false);
         self.runtime.stop_backend_runtime(reason);
-        flush_telemetry();
         self.runtime.desktop_assembly().tasks().stop_all();
     }
 

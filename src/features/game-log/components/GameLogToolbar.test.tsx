@@ -127,7 +127,7 @@ describe('GameLogToolbar', () => {
         ).toBe(true);
         expect(mocks.picker).toHaveBeenLastCalledWith(
             expect.objectContaining({
-                maxDays: 7,
+                maxDays: 31,
                 minuteStep: 15,
                 align: 'end'
             })

@@ -1,4 +1,4 @@
-export const DATA_TABLE_EMPTY_VALUE = '—';
+export const DATA_TABLE_EMPTY_VALUE = '-';
 
 export const DATA_TABLE_ROW_CLASS_NAME =
     'h-[var(--vrcx-0-table-row-height)] border-[var(--vrcx-0-table-divider)] hover:bg-[var(--vrcx-0-table-row-hover-surface)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--vrcx-0-table-row-focus)] has-aria-expanded:bg-[var(--vrcx-0-table-row-expanded-surface)] has-aria-expanded:hover:bg-[var(--vrcx-0-table-row-expanded-surface)] data-[state=expanded]:bg-[var(--vrcx-0-table-row-expanded-surface)] data-[state=expanded]:hover:bg-[var(--vrcx-0-table-row-expanded-surface)] data-[state=selected]:bg-[var(--vrcx-0-table-row-selected-surface)] data-[state=selected]:hover:bg-[var(--vrcx-0-table-row-selected-hover-surface)]';

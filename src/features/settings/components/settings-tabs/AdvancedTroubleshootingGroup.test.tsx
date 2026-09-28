@@ -39,7 +39,7 @@ const labels: Record<string, string> = {
         'Refresh online users',
     'view.settings.advanced.advanced_ui.troubleshooting.vrchat_config':
         'VRChat config',
-    'view.settings.advanced.advanced_ui.troubleshooting.view_config': 'View…',
+    'view.settings.advanced.advanced_ui.troubleshooting.view_config': 'View...',
     'view.settings.advanced.advanced_ui.troubleshooting.hide_config': 'Hide',
     'view.settings.general.logging.header': 'Logging',
     'view.settings.general.logging.resource_load': 'Resource load logging',
@@ -178,7 +178,7 @@ describe('AdvancedTroubleshootingGroup', () => {
         const view = renderGroup(props);
         await openTools(user);
 
-        const viewButton = screen.getByRole('button', { name: 'View…' });
+        const viewButton = screen.getByRole('button', { name: 'View...' });
         await user.click(viewButton);
         fireEvent.click(viewButton);
 

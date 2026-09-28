@@ -1,9 +1,8 @@
 import { Component, type ReactNode } from 'react';
 
-import { recordRouteError } from '@/services/telemetry/telemetryPageReach';
-import type { TelemetryRouteErrorClass } from '@/services/telemetry/telemetryTypes';
+export type RouteErrorClass = 'load_fail' | 'render_crash';
 
-export function classifyRouteError(error: unknown): TelemetryRouteErrorClass {
+export function classifyRouteError(error: unknown): RouteErrorClass {
     const name = error instanceof Error ? error.name : '';
     const message = error instanceof Error ? error.message : String(error);
     if (
@@ -52,7 +51,7 @@ export class RouteErrorBoundary extends Component<
     }
 
     componentDidCatch(error: unknown): void {
-        recordRouteError(classifyRouteError(error), error);
+        console.error(`Route ${classifyRouteError(error)}:`, error);
     }
 
     render(): ReactNode {

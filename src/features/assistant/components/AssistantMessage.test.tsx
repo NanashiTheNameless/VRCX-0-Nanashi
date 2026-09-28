@@ -20,7 +20,7 @@ describe('AssistantMessage', () => {
     it('renders a user message with end-aligned message and secondary bubble primitives', () => {
         const html = renderToStaticMarkup(
             <AssistantMessage
-                thinkingLabel="Thinking…"
+                thinkingLabel="Thinking..."
                 message={{
                     id: 'user_1',
                     role: 'user',
@@ -41,7 +41,7 @@ describe('AssistantMessage', () => {
     it('renders a completed assistant response in a ghost bubble', () => {
         const html = renderToStaticMarkup(
             <AssistantMessage
-                thinkingLabel="Thinking…"
+                thinkingLabel="Thinking..."
                 message={assistantMessage({
                     text: '**Three friends** were online.',
                     streaming: false
@@ -57,7 +57,7 @@ describe('AssistantMessage', () => {
     it('shows pending tool calls as status markers before assistant text', () => {
         const html = renderToStaticMarkup(
             <AssistantMessage
-                thinkingLabel="Thinking…"
+                thinkingLabel="Thinking..."
                 message={assistantMessage({
                     text: 'Reading local social data',
                     toolCalls: [
@@ -86,14 +86,14 @@ describe('AssistantMessage', () => {
     it('shows the thinking marker while a whitespace-only response is streaming', () => {
         const html = renderToStaticMarkup(
             <AssistantMessage
-                thinkingLabel="Thinking…"
+                thinkingLabel="Thinking..."
                 message={assistantMessage({ text: '\n\n' })}
             />
         );
 
         expect(html).toContain('data-slot="marker"');
         expect(html).toContain('role="status"');
-        expect(html).toContain('Thinking…');
+        expect(html).toContain('Thinking...');
         expect(html).toContain('animate-spin');
         expect(html).not.toContain('whitespace-pre-wrap');
     });
@@ -101,7 +101,7 @@ describe('AssistantMessage', () => {
     it('renders turn errors with the destructive bubble variant', () => {
         const html = renderToStaticMarkup(
             <AssistantMessage
-                thinkingLabel="Thinking…"
+                thinkingLabel="Thinking..."
                 message={assistantMessage({
                     streaming: false,
                     error: 'The endpoint was removed.'

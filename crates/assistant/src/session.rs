@@ -634,7 +634,7 @@ impl SessionStore {
         }
     }
 
-    /// Whether `turn_id` is still the session's active turn — false once a newer
+    /// Whether `turn_id` is still the session's active turn - false once a newer
     /// turn has taken over, so a superseded turn can bow out without clobbering it.
     pub fn is_current_turn(&self, session_id: &str, turn_id: &str) -> bool {
         self.state
@@ -755,7 +755,7 @@ impl SessionStore {
     /// so a reopened session restores its right-panel contents.
     pub fn set_surfaced_entities(&self, session_id: &str, entities: &[Entity]) {
         // Mutate and persist under one lock so the in-memory change and the DB
-        // write stay ordered together — a manual toggle racing a turn end can't
+        // write stay ordered together - a manual toggle racing a turn end can't
         // land its UPDATE out of order and desync the persisted panel state.
         let mut state = self.state.lock().unwrap();
         let Some(session) = state.sessions.get_mut(session_id) else {
@@ -905,7 +905,7 @@ fn derive_title(content: &str) -> String {
     let trimmed = content.trim();
     let title: String = trimmed.chars().take(40).collect();
     if trimmed.chars().count() > 40 {
-        format!("{title}…")
+        format!("{title}...")
     } else {
         title
     }

@@ -180,6 +180,11 @@ fn install_staged_legacy_vrcx_data(
     Ok(())
 }
 
+/// Consistent snapshot of a (possibly in-use) SQLite database via the backup API.
+pub fn snapshot_database(from: &Path, to: &Path) -> Result<(), Error> {
+    copy_database_snapshot(from, to, |_, _| {})
+}
+
 fn copy_database_snapshot(
     from: &Path,
     to: &Path,

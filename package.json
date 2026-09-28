@@ -1,5 +1,5 @@
 {
-    "name": "VRCX-0",
+    "name": "VRCX-0-Nanashi",
     "private": true,
     "description": "The fast, lightweight VRCX built with Tauri and Rust.",
     "keywords": [
@@ -9,10 +9,13 @@
         "vrchat"
     ],
     "license": "GPL-3.0-only",
-    "author": "Map1en <maplenagisa@gmail.com>",
+    "author": "NamelessNanashi <Nanashi@namelessnanashi.dev>",
+    "contributors": [
+        "Map1en <maplenagisa@gmail.com> (original VRCX-0 author)"
+    ],
     "repository": {
         "type": "git",
-        "url": "https://github.com/Map1en/VRCX-0"
+        "url": "https://github.com/NanashiTheNameless/VRCX-0-Nanashi"
     },
     "type": "module",
     "scripts": {
@@ -52,6 +55,7 @@
         "@dnd-kit/sortable": "^10.0.0",
         "@dnd-kit/utilities": "^3.2.2",
         "@fontsource-variable/geist": "^5.3.0",
+        "@fontsource/jost": "^5.3.0",
         "@shadcn/react": "^0.3.1",
         "@sigma/edge-curve": "^3.1.0",
         "@sigma/node-border": "^3.0.0",

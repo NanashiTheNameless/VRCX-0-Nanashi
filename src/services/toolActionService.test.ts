@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { navigate, recordRecentToolOpen, recordToolOpen } = vi.hoisted(() => ({
+const { navigate, recordRecentToolOpen } = vi.hoisted(() => ({
     navigate: vi.fn(),
-    recordRecentToolOpen: vi.fn(() => Promise.resolve()),
-    recordToolOpen: vi.fn()
+    recordRecentToolOpen: vi.fn(() => Promise.resolve())
 }));
 
 vi.mock('@/services/toastService', () => ({
@@ -23,13 +22,10 @@ vi.mock('@/services/i18nService', () => ({
 vi.mock('@/services/toolRecentService', () => ({
     recordRecentToolOpen
 }));
-vi.mock('@/services/telemetry/telemetryToolUsage', () => ({
-    recordToolOpen
-}));
 
 import { triggerToolByKey } from './toolActionService';
 
-describe('tool action telemetry', () => {
+describe('tool action dispatch', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -40,8 +36,6 @@ describe('tool action telemetry', () => {
             t: (key) => key
         });
 
-        expect(recordToolOpen).toHaveBeenCalledOnce();
-        expect(recordToolOpen).toHaveBeenCalledWith('inventory');
         expect(recordRecentToolOpen).toHaveBeenCalledWith('inventory');
         expect(navigate).toHaveBeenCalledWith('/tools/inventory');
     });
@@ -56,7 +50,6 @@ describe('tool action telemetry', () => {
             t: (key) => key
         });
 
-        expect(recordToolOpen).not.toHaveBeenCalled();
         expect(recordRecentToolOpen).not.toHaveBeenCalled();
         expect(navigate).not.toHaveBeenCalled();
     });

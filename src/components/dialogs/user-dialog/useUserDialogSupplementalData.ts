@@ -36,7 +36,7 @@ import type { UserDialogProfileRecord } from './useUserDialogProfileResource';
 type DialogRecord = Record<string, unknown>;
 type SupplementalStats = UserDialogStats & { mutualFriendCount?: number };
 
-export const USER_DIALOG_INSTANCE_HISTORY_LIMIT = 50;
+export const USER_DIALOG_INSTANCE_HISTORY_LIMIT = 500;
 
 type RepresentedGroupState = {
     endpoint: string;

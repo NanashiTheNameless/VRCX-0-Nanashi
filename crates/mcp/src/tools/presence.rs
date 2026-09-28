@@ -16,7 +16,7 @@ use super::common::structured_result;
 #[tool_router(router = presence_tool_router, vis = "pub(crate)")]
 impl VrcxMcpServer {
     #[tool(
-        description = "[L1·query] List friends online right now from live VRCX-0 session memory (state, location, world, instance access, status, platform). Realtime, not history. Use for \"who is online\" or \"who can I join now\". Private instances may be redacted by VRChat privacy rules."
+        description = "[L1·query] List friends online right now from live VRCX-0-Nanashi session memory (state, location, world, instance access, status, platform). Realtime, not history. Use for \"who is online\" or \"who can I join now\". Private instances may be redacted by VRChat privacy rules."
     )]
     async fn get_online_friends(
         &self,

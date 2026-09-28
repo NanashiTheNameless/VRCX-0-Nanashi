@@ -124,7 +124,7 @@ export function InstanceHistoryRow({
                     </span>
                 ) : null}
                 <span className="text-muted-foreground w-11 shrink-0 text-xs tabular-nums">
-                    {formatClock(rowTimestamp(row)) || '—'}
+                    {formatClock(rowTimestamp(row)) || '-'}
                 </span>
                 <div className="min-w-0 flex-1 text-xs">
                     {location ? (
@@ -137,7 +137,7 @@ export function InstanceHistoryRow({
                             className="max-w-full"
                         />
                     ) : (
-                        '—'
+                        '-'
                     )}
                 </div>
                 <span className="text-muted-foreground text-xs tabular-nums">

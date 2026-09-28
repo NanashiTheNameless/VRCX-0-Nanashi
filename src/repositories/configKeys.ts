@@ -22,9 +22,6 @@ export const ConfigKeys = defineConfigKeys({
     autoInstallUpdatesOnStartup: { type: 'bool', default: true },
     id: { type: 'string', default: '' },
     branch: { type: 'string', default: '' },
-    telemetryInstallId: { type: 'string', default: null },
-    telemetryBasicInfoReportedVersion: { type: 'string', default: '' },
-    telemetryConfigReportedVersion: { type: 'string', default: '' },
     lastUserLoggedIn: { type: 'string', default: null },
     savedCredentials: { type: 'string', default: '{}' },
 
@@ -66,12 +63,12 @@ export const ConfigKeys = defineConfigKeys({
     themeColor: { type: 'string', default: 'default' },
     lastDarkTheme: { type: 'string', default: null },
     ZoomLevel: { type: 'int', default: 100 },
-    fontFamily: { type: 'string', default: 'geist' },
+    fontFamily: { type: 'string', default: 'oxproto' },
     customFontFamily: { type: 'string', default: '' },
     customFontPrimary: { type: 'string', default: '' },
     customFontSecondary: { type: 'string', default: '' },
     customFontOverride: { type: 'string', default: '' },
-    cjkFontPack: { type: 'string', default: 'noto' },
+    cjkFontPack: { type: 'string', default: 'system' },
     dtHour12: { type: 'bool', default: false },
     dtIsoFormat: { type: 'bool', default: false },
     hideNicknames: { type: 'bool', default: false },
@@ -128,10 +125,10 @@ export const ConfigKeys = defineConfigKeys({
     gameLogDisabled: { type: 'bool', default: false },
     feedPersistenceDisabled: { type: 'bool', default: false },
     avatarAutoCleanup: { type: 'string', default: 'Off' },
-    anonymousUsageTelemetry: { type: 'bool', default: true },
     userGeneratedContentPath: { type: 'string', default: '' },
     logResourceLoad: { type: 'bool', default: false },
     udonExceptionLogging: { type: 'bool', default: false },
+    socialAiEnabled: { type: 'bool', default: false },
     showNewDashboardButton: { type: 'bool', default: true },
     backgroundModeEnabled: { type: 'bool', default: false },
 
@@ -151,6 +148,7 @@ export const ConfigKeys = defineConfigKeys({
     desktopToast: { type: 'string', default: 'Never' },
     afkDesktopToast: { type: 'bool', default: false },
     desktopNotificationSound: { type: 'bool', default: false },
+    notificationSounds: { type: 'string', default: '{"version":1,"rules":{}}' },
     notificationDoNotDisturbEndOnGameStart: { type: 'bool', default: true },
     notificationLayout: { type: 'string', default: null },
     notificationTTS: { type: 'string', default: 'Never' },
@@ -196,6 +194,10 @@ export const ConfigKeys = defineConfigKeys({
     wristOverlayDarkBackground: { type: 'bool', default: true },
     wristOverlayShowDevices: { type: 'bool', default: true },
     wristOverlayShowBatteryPercent: { type: 'bool', default: false },
+    // Fork: customizable wrist pages.
+    wristOverlayPages: { type: 'string', default: 'feed,players,notes' },
+    wristOverlayPlayersSort: { type: 'string', default: 'name' },
+    wristOverlayPageFlipSeconds: { type: 'string', default: '3' },
 
     // ── Settings - VR Background ─────────────────────
     // ── Auto State Change ────────────────────────────

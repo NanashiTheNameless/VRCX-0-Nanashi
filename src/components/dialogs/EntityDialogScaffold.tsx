@@ -428,7 +428,7 @@ function EntityRawJson({ value }: EntityRawJsonProps) {
     );
 }
 
-function EntityBlank({ children = '—' }: { children?: ReactNode }) {
+function EntityBlank({ children = '-' }: { children?: ReactNode }) {
     return <div className="text-muted-foreground text-sm">{children}</div>;
 }
 
@@ -461,7 +461,7 @@ function EntityFactRow({
             </span>
             {children || (
                 <span className="text-muted-foreground/80 min-w-0 truncate text-right">
-                    {value || '—'}
+                    {value || '-'}
                 </span>
             )}
         </div>
@@ -575,7 +575,7 @@ function EntityInfoBlock({
                             mono ? 'font-mono text-xs font-normal' : ''
                         )}
                     >
-                        {value || '—'}
+                        {value || '-'}
                     </span>
                 )}
             </div>

@@ -46,7 +46,7 @@ import {
     isDashboardWidgetFilterActive
 } from './dashboardWidgetUtils';
 
-const GAME_LOG_WIDGET_MAX_ROWS = 200;
+const GAME_LOG_WIDGET_MAX_ROWS = 500;
 
 type DashboardGameLogRow = {
     created_at?: string;
@@ -264,7 +264,7 @@ function GameLogEntryContent({
                     <span className="truncate">{label}</span>
                     {expandedDetail ? (
                         <span className="text-muted-foreground ml-1 min-w-0 truncate">
-                            — {expandedDetail}
+                            - {expandedDetail}
                         </span>
                     ) : null}
                 </div>

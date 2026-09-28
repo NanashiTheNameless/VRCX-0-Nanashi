@@ -39,7 +39,7 @@ export function performanceRankFillClass(rank: string | undefined) {
     }
 }
 
-export const EMPTY_VALUE = '—';
+export const EMPTY_VALUE = '-';
 
 export type PerformanceStat = {
     key: keyof AvatarStatsRecord;

@@ -7,11 +7,14 @@ import {
     type AssistantRuntimeSelection,
     type PlaybookMode
 } from '@/platform/tauri/bindings';
+import { setBoolConfigPreference } from '@/services/preferencesService';
 import { toast } from '@/services/toastService';
+import { useAssistantChatStore } from '@/state/assistantChatStore';
 import {
     openLlmEndpointsManager,
     useLlmEndpointsStore
 } from '@/state/llmEndpointsStore';
+import { usePreferencesStore } from '@/state/preferencesStore';
 import { Button } from '@/ui/shadcn/button';
 import {
     Select,
@@ -54,6 +57,9 @@ export function AssistantSettingsGroup({
     const [followCustomProxy, setFollowCustomProxy] = useState(true);
     const [proxyLoading, setProxyLoading] = useState(false);
     const [endpointsLoaded, setEndpointsLoaded] = useState(false);
+    const socialAiEnabled = usePreferencesStore(
+        (state) => state.socialAiEnabled
+    );
     const showSetupGate =
         endpointsLoaded &&
         !endpoints.some((endpoint) => endpoint.models.length);
@@ -109,6 +115,23 @@ export function AssistantSettingsGroup({
         }
     }
 
+    async function updateSocialAiEnabled(enabled: boolean) {
+        if (!enabled) {
+            useAssistantChatStore.getState().setOpen(false);
+        }
+        usePreferencesStore
+            .getState()
+            .patchPreferences({ socialAiEnabled: enabled });
+        try {
+            await setBoolConfigPreference('socialAiEnabled', enabled);
+        } catch (error) {
+            usePreferencesStore
+                .getState()
+                .patchPreferences({ socialAiEnabled: !enabled });
+            toast.add({ type: 'error', title: errorMessage(error) });
+        }
+    }
+
     async function updateFollowCustomProxy(enabled: boolean) {
         setProxyLoading(true);
         try {
@@ -134,7 +157,18 @@ export function AssistantSettingsGroup({
                 title={t('view.settings.ai.header')}
                 description={t('view.settings.ai.description')}
             >
-                {showSetupGate ? (
+                <Field
+                    label={t('view.settings.ai.enable')}
+                    description={t('view.settings.ai.enable_description')}
+                >
+                    <Switch
+                        checked={socialAiEnabled}
+                        onCheckedChange={(checked) =>
+                            void updateSocialAiEnabled(checked)
+                        }
+                    />
+                </Field>
+                {!socialAiEnabled ? null : showSetupGate ? (
                     <div className="flex flex-col items-center gap-3 py-6 text-center">
                         <span className="text-muted-foreground text-sm">
                             {t('view.settings.ai.setup_hint')}

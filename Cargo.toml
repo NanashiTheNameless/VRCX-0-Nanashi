@@ -26,7 +26,8 @@ members = [
     "crates/headless",
     "crates/mcp",
     "crates/integration-api",
-    "crates/assistant"
+    "crates/assistant",
+    "crates/ytdlp"
 ]
 default-members = [
     "src-tauri",
@@ -54,7 +55,8 @@ default-members = [
     "crates/headless",
     "crates/mcp",
     "crates/integration-api",
-    "crates/assistant"
+    "crates/assistant",
+    "crates/ytdlp"
 ]
 resolver = "2"
 

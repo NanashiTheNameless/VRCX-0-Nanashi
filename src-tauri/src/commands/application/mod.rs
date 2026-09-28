@@ -28,7 +28,6 @@ pub mod registry_backup;
 pub mod share_collection;
 pub mod social_baseline;
 pub mod social_mutation;
-pub mod telemetry;
 pub mod translation;
 pub mod user_dialog_tab_counts;
 pub mod user_groups_overview;

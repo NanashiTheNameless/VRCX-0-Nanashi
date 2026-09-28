@@ -737,7 +737,7 @@ function getFriendsLocations(
 export { getFriendsLocations, resolveFriendPresenceLocation };
 
 /**
- * Get the display text for a location — synchronous, pure function.
+ * Get the display text for a location - synchronous, pure function.
  * Does NOT handle async world name lookups (those stay in the component).
  * @param {object} L - Parsed location object from parseLocation()
  * @param {object} options

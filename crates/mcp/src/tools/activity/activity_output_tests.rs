@@ -186,6 +186,7 @@ fn test_server(
             tasks.clone(),
         )),
         favorite_mutations,
+        reminders: None,
         tasks,
         caller: crate::runtime::McpCaller::ExternalServer,
     };

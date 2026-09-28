@@ -147,8 +147,13 @@ pub struct OverlayActivityRuntime {
 pub(super) struct OverlayActivityRuntimeInner {
     pub(super) state: Mutex<OverlayActivityState>,
     sink: Mutex<Option<Arc<dyn OverlayActivitySink>>>,
+    observer: Mutex<Option<OverlayActivityCandidateObserver>>,
     group_notification_inputs_revision: AtomicU64,
 }
+
+/// Fork: sees every candidate before filtering (used by assistant reminders).
+/// Called without any runtime lock held, so it may ingest candidates itself.
+pub type OverlayActivityCandidateObserver = Arc<dyn Fn(&OverlayActivityCandidate) + Send + Sync>;
 
 pub trait OverlayActivitySink: Send + Sync {
     fn emit_overlay_activity_snapshot(&self, snapshot: OverlayActivitySnapshot);
@@ -211,6 +216,7 @@ impl OverlayActivityRuntime {
             inner: Arc::new(OverlayActivityRuntimeInner {
                 state: Mutex::new(OverlayActivityState::default()),
                 sink: Mutex::new(None),
+                observer: Mutex::new(None),
                 group_notification_inputs_revision: AtomicU64::new(0),
             }),
         }
@@ -272,6 +278,12 @@ impl OverlayActivityRuntime {
     {
         if let Ok(mut current) = self.inner.sink.lock() {
             *current = Some(Arc::new(sink));
+        }
+    }
+
+    pub fn set_candidate_observer(&self, observer: OverlayActivityCandidateObserver) {
+        if let Ok(mut current) = self.inner.observer.lock() {
+            *current = Some(observer);
         }
     }
 
@@ -380,6 +392,15 @@ impl OverlayActivityRuntime {
         &self,
         candidate: OverlayActivityCandidate,
     ) -> Option<OverlayActivityEntry> {
+        let observer = self
+            .inner
+            .observer
+            .lock()
+            .ok()
+            .and_then(|observer| observer.clone());
+        if let Some(observer) = observer {
+            observer(&candidate);
+        }
         let (entry, snapshot, delivery) = {
             let mut state = self.inner.state.lock().ok()?;
             let definition = known_definition_for_type(&candidate.activity_type)?;

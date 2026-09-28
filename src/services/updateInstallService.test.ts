@@ -69,10 +69,11 @@ function tauriRelease() {
     return {
         updaterType: 'tauri' as const,
         manifestUrl:
-            'https://github.com/Map1en/VRCX-0/releases/latest/download/latest_windows.json',
+            'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/latest_windows.json',
         target: 'windows-x86_64-stable',
         channel: 'stable' as const,
-        htmlUrl: 'https://github.com/Map1en/VRCX-0/releases/tag/v2.7.0',
+        htmlUrl:
+            'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/tag/v2.7.0',
         canonicalVersion: '2.7.0',
         displayVersion: '2.7.0',
         tagName: 'v2.7.0',
@@ -108,7 +109,8 @@ describe('openOrInstallLatestAvailableUpdate', () => {
                 updaterType: 'manual',
                 manifestUrl: '',
                 target: '',
-                htmlUrl: 'https://github.com/Map1en/VRCX-0/releases/tag/v2.7.0',
+                htmlUrl:
+                    'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/tag/v2.7.0',
                 canonicalVersion: '2.7.0',
                 displayVersion: '2.7.0',
                 channel: 'stable',
@@ -125,7 +127,7 @@ describe('openOrInstallLatestAvailableUpdate', () => {
         await openOrInstallLatestAvailableUpdate();
 
         expect(mocks.openExternalLink).toHaveBeenCalledWith(
-            'https://github.com/Map1en/VRCX-0/releases/tag/v2.7.0'
+            'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/tag/v2.7.0'
         );
         expect(mocks.confirmInstall).not.toHaveBeenCalled();
         expect(mocks.toastError).not.toHaveBeenCalled();
@@ -136,9 +138,10 @@ describe('openOrInstallLatestAvailableUpdate', () => {
             latestUpdaterRelease: {
                 updaterType: 'tauri',
                 manifestUrl:
-                    'https://github.com/Map1en/VRCX-0/releases/latest/download/latest_windows.json',
+                    'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/latest_windows.json',
                 target: 'windows-x86_64-stable',
-                htmlUrl: 'https://github.com/Map1en/VRCX-0/releases/tag/v2.7.0',
+                htmlUrl:
+                    'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/tag/v2.7.0',
                 canonicalVersion: '2.7.0',
                 displayVersion: '2.7.0',
                 channel: 'stable',
@@ -197,7 +200,8 @@ describe('openOrInstallLatestAvailableUpdate', () => {
         const installed = await installUpdateRelease({
             updaterType: 'manual',
             channel: 'stable',
-            htmlUrl: 'https://github.com/Map1en/VRCX-0/releases/tag/v2.7.0',
+            htmlUrl:
+                'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/tag/v2.7.0',
             canonicalVersion: '2.7.0',
             displayVersion: '2.7.0',
             tagName: 'v2.7.0',

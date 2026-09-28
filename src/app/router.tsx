@@ -19,7 +19,6 @@ import { useSidebarAutoHide } from '@/components/layout/useSidebarAutoHide';
 import { useTrayShortcut } from '@/components/layout/useTrayShortcut';
 import { WindowResizeHandles } from '@/components/layout/WindowResizeHandles';
 import { cn } from '@/lib/utils';
-import { recordRouteEnter } from '@/services/telemetry/telemetryPageReach';
 import {
     initializeWindowAlwaysOnTop,
     initializeWindowDisplayMode,
@@ -168,9 +167,6 @@ function AppRouterContent() {
             );
         });
     }, []);
-    useEffect(() => {
-        recordRouteEnter(pathname);
-    }, [pathname]);
     useEffect(() => {
         if (pathname === '/login') {
             leaveSidebarWindowModeForLogin();

@@ -147,7 +147,7 @@ export function InstanceActionSummary({
                     options.countAlign === 'left' ? 'text-left' : 'text-right'
                 )}
             >
-                {model.hasUserCount ? model.resolvedUserCount : '—'}
+                {model.hasUserCount ? model.resolvedUserCount : '-'}
                 {model.capacity ? `/${model.capacity}` : ''}
             </span>
         ) : null;

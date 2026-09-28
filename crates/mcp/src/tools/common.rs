@@ -221,7 +221,7 @@ fn parse_rolling_window(text: &str, now: DateTime<Utc>) -> Option<TimeWindowPara
 }
 
 /// Parse a duration from word forms (`7 days`, `last 3 weeks`) or compact forms
-/// (`7d`, `2w`, `3mo`, `24h`, `1y`). Bare `m` is read as months — the common
+/// (`7d`, `2w`, `3mo`, `24h`, `1y`). Bare `m` is read as months - the common
 /// intent for social-history windows. `text` is expected to be lowercased.
 fn parse_duration(text: &str) -> Option<Duration> {
     let number: i64 = text
@@ -502,7 +502,7 @@ pub(super) fn map_application_query_error(error: vrcx_0_application_core::Error)
         vrcx_0_application_core::Error::PersistenceInvalidData(message) => message,
         other => {
             tracing::warn!("MCP persistence query failed: {other}");
-            "internal data error while reading local VRCX-0 data".into()
+            "internal data error while reading local VRCX-0-Nanashi data".into()
         }
     }
 }
@@ -521,7 +521,7 @@ pub(super) fn application_query_result<T: Serialize>(
         Err(vrcx_0_application_core::Error::PersistenceInvalidData(message)) => Err(message),
         Err(error) => {
             tracing::warn!("MCP social query failed: {error}");
-            Err("internal data error while reading local VRCX-0 data".into())
+            Err("internal data error while reading local VRCX-0-Nanashi data".into())
         }
     }
 }

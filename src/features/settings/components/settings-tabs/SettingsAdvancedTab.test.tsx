@@ -14,7 +14,7 @@ const labels: Record<string, string> = {
     'view.settings.advanced.advanced_ui.behavior.deep_link_registration':
         'Open VRCX-0 links',
     'view.settings.advanced.advanced_ui.storage.change_folder':
-        'Change folder…',
+        'Change folder...',
     'view.settings.advanced.advanced_ui.storage.more':
         'More data location actions',
     'view.settings.advanced.advanced.data_directory.source_cli':
@@ -31,9 +31,16 @@ const labels: Record<string, string> = {
 const commandMocks = vi.hoisted(() => ({
     appBrowseHistoryRetentionDaysGet: vi.fn(),
     appDeepLinkRegistrationStatus: vi.fn(),
-    appDeepLinkRegistrationRepair: vi.fn()
+    appDeepLinkRegistrationRepair: vi.fn(),
+    appDeepLinkSchemesGet: vi.fn(() =>
+        Promise.resolve({ upstream: true, legacy: true })
+    ),
+    appDeepLinkSchemesSet: vi.fn()
 }));
 
+vi.mock('../ProfileMergeFields', () => ({
+    ProfileMergeFields: () => null
+}));
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: commandMocks
 }));
@@ -74,7 +81,6 @@ function createModel(
         hostPlatform: 'windows',
         avatarAutoCleanupOptions: ['Off'],
         configTreeData: {},
-        onAnonymousUsageTelemetryChange: vi.fn(),
         onAutoSweepVRChatCacheChange: vi.fn(),
         onAvatarAutoCleanupChange: vi.fn(),
         onClearConfigTreeData: vi.fn(),
@@ -82,7 +88,6 @@ function createModel(
         onFeedPersistenceDisabledChange: vi.fn(),
         onFocusVrchatOnJoinChange: vi.fn(),
         onLogResourceLoadChange: vi.fn(),
-        onMigrateLegacyVrcxData: vi.fn(),
         onOpenAppDataDirSelector: vi.fn(),
         onCleanupAppDataDir: vi.fn(),
         onDismissAppDataDirCleanup: vi.fn(),
@@ -96,7 +101,6 @@ function createModel(
         onVrcQuitFixChange: vi.fn(),
         onlineVisitCount: null,
         prefs: {
-            anonymousUsageTelemetry: false,
             autoSweepVRChatCache: false,
             avatarAutoCleanup: 'Off',
             gameLogDisabled: false,
@@ -182,7 +186,7 @@ describe('SettingsAdvancedTab data directory states', () => {
         expect(
             (
                 screen.getByRole('button', {
-                    name: 'Change folder…'
+                    name: 'Change folder...'
                 }) as HTMLButtonElement
             ).disabled
         ).toBe(false);
@@ -239,7 +243,7 @@ describe('SettingsAdvancedTab data directory states', () => {
         expect(
             (
                 screen.getByRole('button', {
-                    name: 'Change folder…'
+                    name: 'Change folder...'
                 }) as HTMLButtonElement
             ).disabled
         ).toBe(true);

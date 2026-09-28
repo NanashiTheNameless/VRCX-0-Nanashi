@@ -149,6 +149,20 @@ pub(super) fn parse_video_change(
     line: &str,
     content: &str,
 ) -> bool {
+    // AVPro messages vary by player/version. Preserve URL-bearing lines as events;
+    // safety inspection consumes these locally without treating them as playback requests.
+    if content.contains("[AVProVideo]")
+        && (content.contains("https://") || content.contains("http://"))
+    {
+        out.push_event(
+            fname,
+            line,
+            GameLogEventKind::Event {
+                data: format!("VideoURL: {content}"),
+            },
+        );
+        return true;
+    }
     let tag = "[Video Playback] Attempting to resolve URL '";
     if !content.starts_with(tag) {
         return false;

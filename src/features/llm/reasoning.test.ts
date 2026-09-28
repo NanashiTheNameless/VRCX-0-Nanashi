@@ -34,7 +34,9 @@ function endpoint(
         hasKey: true,
         models,
         modelReasoning,
-        lastDetectedAt: null
+        lastDetectedAt: null,
+        apiKind: 'openaiCompatible',
+        headers: []
     };
 }
 

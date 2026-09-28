@@ -133,7 +133,7 @@ export function AppMenuBar({ showHelp = true }: { showHelp?: boolean }) {
             <Menubar className="h-full border-0 bg-transparent p-0! shadow-none">
                 <MenubarMenu>
                     <MenubarTrigger className="text-muted-foreground hover:text-foreground aria-expanded:text-foreground h-full rounded-none px-3 py-0! text-xs">
-                        <span className="vrcx-0-brand">VRCX-0</span>
+                        <span className="vrcx-0-brand">VRCX-0-Nanashi</span>
                     </MenubarTrigger>
                     <MenubarContent align="start">
                         <MenubarGroup>
@@ -243,14 +243,11 @@ export function AppMenuBar({ showHelp = true }: { showHelp?: boolean }) {
                                     GitHub
                                 </MenuItem>
                                 <MenuItem
-                                    onClick={() => openLink(links.discord)}
+                                    onClick={() =>
+                                        openLink(links.upstreamGithub)
+                                    }
                                 >
-                                    Discord
-                                </MenuItem>
-                                <MenuItem
-                                    onClick={() => openLink(links.qqGroup)}
-                                >
-                                    {t('nav_menu.qq_group')}
+                                    {t('app_menu.upstream_project')}
                                 </MenuItem>
                             </MenubarGroup>
                             <MenubarSeparator />

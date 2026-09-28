@@ -4,7 +4,12 @@ use std::path::{Path, PathBuf};
 
 use crate::error::Error;
 
-const APP_DIR_NAME: &str = "VRCX-0";
+const APP_DIR_NAME: &str = "VRCX-0-Nanashi";
+/// Upstream VRCX-0's data folder. Copied once into [`APP_DIR_NAME`] on first
+/// launch so the fork starts with the user's existing profile.
+const UPSTREAM_APP_DIR_NAME: &str = "VRCX-0";
+/// Regenerable caches and per-process state that are not worth copying.
+const UPSTREAM_COPY_SKIP: &[&str] = &["ImageCache", "ScreenshotThumbs", "runtime.lock"];
 const DATA_DIR_POINTER_FILE: &str = "VRCX-0.data-dir.json";
 const DATA_DIR_ARG: &str = "--data-dir";
 const PROFILE_DB_FILE: &str = "VRCX-0.sqlite3";
@@ -97,7 +102,76 @@ pub fn default_app_data_dir() -> Result<PathBuf, Error> {
 }
 
 pub fn resolve_app_data_dir() -> Result<AppDataDirResolution, Error> {
+    if let Ok(default_dir) = default_app_data_dir() {
+        if let Some(config_dir) = default_dir.parent() {
+            seed_from_upstream_app_dir(&config_dir.join(UPSTREAM_APP_DIR_NAME), &default_dir);
+        }
+    }
     resolve_app_data_dir_from_args(std::env::args_os().skip(1))
+}
+
+/// Fork: when this fork has no data folder yet but upstream VRCX-0 does, copy
+/// upstream's folder (minus caches and the runtime lock) so settings, the
+/// database and a custom data-dir pointer carry over. Upstream data is never
+/// modified. Best effort: on failure the partial copy is removed and the app
+/// starts fresh.
+pub fn seed_from_upstream_app_dir(upstream_dir: &Path, fork_dir: &Path) -> bool {
+    if fork_dir.exists() || !upstream_dir.is_dir() {
+        return false;
+    }
+    if upstream_dir.join("runtime.lock").exists() {
+        tracing::warn!(
+            upstream = %upstream_dir.display(),
+            "upstream VRCX-0 appears to be running; copying its data anyway"
+        );
+    }
+    match copy_dir_filtered(upstream_dir, fork_dir, UPSTREAM_COPY_SKIP) {
+        Ok(()) => {
+            tracing::info!(
+                from = %upstream_dir.display(),
+                to = %fork_dir.display(),
+                "seeded fork data folder from upstream VRCX-0"
+            );
+            true
+        }
+        Err(error) => {
+            tracing::warn!(%error, "failed to copy upstream VRCX-0 data; starting fresh");
+            let _ = std::fs::remove_dir_all(fork_dir);
+            false
+        }
+    }
+}
+
+/// Profile database of an upstream VRCX-0 install (honours its custom data
+/// directory pointer), when it exists.
+pub fn upstream_vrcx0_profile_db() -> Option<PathBuf> {
+    let upstream_default = dirs::config_dir()?.join(UPSTREAM_APP_DIR_NAME);
+    let data_dir = read_persisted_app_data_dir_from_default(&upstream_default)
+        .ok()
+        .flatten()
+        .unwrap_or(upstream_default);
+    let db = data_dir.join(PROFILE_DB_FILE);
+    db.is_file().then_some(db)
+}
+
+fn copy_dir_filtered(from: &Path, to: &Path, skip: &[&str]) -> std::io::Result<()> {
+    std::fs::create_dir_all(to)?;
+    for entry in std::fs::read_dir(from)? {
+        let entry = entry?;
+        let name = entry.file_name();
+        if skip.iter().any(|skipped| OsStr::new(skipped) == name) {
+            continue;
+        }
+        let source = entry.path();
+        let target = to.join(&name);
+        let file_type = entry.file_type()?;
+        if file_type.is_dir() {
+            copy_dir_filtered(&source, &target, &[])?;
+        } else if file_type.is_file() {
+            std::fs::copy(&source, &target)?;
+        }
+    }
+    Ok(())
 }
 
 pub fn resolve_app_data_dir_from_args(
@@ -455,6 +529,56 @@ fn comparable_path_components(path: &Path) -> Vec<String> {
 
 fn path_string(path: &Path) -> String {
     path.to_string_lossy().into_owned()
+}
+
+#[cfg(test)]
+mod seed_tests {
+    use super::*;
+
+    fn temp_dir(name: &str) -> PathBuf {
+        let dir =
+            std::env::temp_dir().join(format!("vrcx-0-nanashi-seed-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn copies_upstream_profile_once_and_skips_caches() {
+        let root = temp_dir("copy");
+        let upstream = root.join("VRCX-0");
+        let fork = root.join("VRCX-0-Nanashi");
+        std::fs::create_dir_all(upstream.join("ImageCache")).unwrap();
+        std::fs::create_dir_all(upstream.join("backups")).unwrap();
+        std::fs::write(upstream.join(PROFILE_DB_FILE), b"db").unwrap();
+        std::fs::write(upstream.join(PROFILE_CONFIG_FILE), b"{}").unwrap();
+        std::fs::write(upstream.join("runtime.lock"), b"").unwrap();
+        std::fs::write(upstream.join("ImageCache/a.png"), b"x").unwrap();
+        std::fs::write(upstream.join("backups/b.zip"), b"z").unwrap();
+
+        assert!(seed_from_upstream_app_dir(&upstream, &fork));
+        assert!(fork.join(PROFILE_DB_FILE).is_file());
+        assert!(fork.join("backups/b.zip").is_file());
+        assert!(!fork.join("ImageCache").exists());
+        assert!(!fork.join("runtime.lock").exists());
+        assert!(upstream.join(PROFILE_DB_FILE).is_file());
+
+        std::fs::write(fork.join(PROFILE_DB_FILE), b"fork").unwrap();
+        assert!(!seed_from_upstream_app_dir(&upstream, &fork));
+        assert_eq!(std::fs::read(fork.join(PROFILE_DB_FILE)).unwrap(), b"fork");
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn does_nothing_without_upstream_folder() {
+        let root = temp_dir("none");
+        assert!(!seed_from_upstream_app_dir(
+            &root.join("missing"),
+            &root.join("fork")
+        ));
+        assert!(!root.join("fork").exists());
+        let _ = std::fs::remove_dir_all(root);
+    }
 }
 
 #[cfg(test)]

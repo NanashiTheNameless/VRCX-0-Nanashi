@@ -3,7 +3,7 @@
     "fallbackLocale": "en",
     "domains": {
         "overlay": {
-            "locales": ["en", "zh-CN", "zh-TW", "ja", "ko"],
+            "locales": ["en"],
             "coverage": "required",
             "messages": [
                 {

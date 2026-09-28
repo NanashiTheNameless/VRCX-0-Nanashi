@@ -57,7 +57,7 @@ const FRIEND_CIRCLES: Playbook = Playbook {
     tool_whitelist: &["get_friend_circles"],
     constraint_prompt: "The user is asking which of their friends know each other (friend \
 groups / circles). Call get_friend_circles exactly once; it returns ready-made \
-mutual-friendship circles with a summary. Narrate from that summary and the circle rows — \
+mutual-friendship circles with a summary. Narrate from that summary and the circle rows - \
 do NOT attempt graph reasoning yourself. Circles reflect who is friends with whom (mutual \
 connections), which is not the same as who plays together.",
 };
@@ -67,7 +67,7 @@ const CO_PRESENCE: Playbook = Playbook {
     constraint_prompt: "The user wants to know who they play with or spend the most time with. \
 Call get_copresence_summary once; it returns people ranked by time spent together, computed \
 from the local game log (reliable even for private instances you attended). It defaults to \
-current friends and is already ranked — read the top rows, do NOT loop or re-rank. For an \
+current friends and is already ranked - read the top rows, do NOT loop or re-rank. For an \
 all-time / 'ever' question OMIT timeWindow entirely; only pass a window if the user named a \
 period. This measures time played together, which is not the same as who is friends with whom.",
 };
@@ -95,7 +95,7 @@ const ONLINE_FRIENDS: Playbook = Playbook {
     constraint_prompt: "The user wants to know who is online right now or who they can join. \
 Call get_online_friends once; it lists friends currently online with their location and \
 instance access, from live session memory (realtime, not history). Narrate the summary and \
-rows. Private instances may be redacted by VRChat privacy rules — say so if the list looks \
+rows. Private instances may be redacted by VRChat privacy rules - say so if the list looks \
 incomplete; never guess hidden locations.",
 };
 
@@ -111,8 +111,8 @@ peak buckets from the summary; do NOT add up sessions yourself.",
 const SOCIAL_RECAP: Playbook = Playbook {
     tool_whitelist: &["summarize_social_period"],
     constraint_prompt: "The user wants an overall recap of their recent social activity (their \
-week, month, or a period). Call summarize_social_period once; it composes several analyses — \
-your activity, top companions, new and fading friends, top worlds, best times — into one \
+week, month, or a period). Call summarize_social_period once; it composes several analyses - \
+your activity, top companions, new and fading friends, top worlds, best times - into one \
 bundle to narrate. Read the whole bundle and summarize it; do NOT separately call the \
 individual tools it already includes.",
 };
@@ -176,7 +176,7 @@ presence)",
     },
     Intent {
         label: "activity_timeline",
-        description: "how the user's own playtime is distributed over time — which months, \
+        description: "how the user's own playtime is distributed over time - which months, \
 weeks, or days they played most, or their personal play trend",
         keywords: &[
             "which month",

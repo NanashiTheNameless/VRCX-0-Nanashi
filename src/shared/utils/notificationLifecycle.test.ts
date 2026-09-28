@@ -12,7 +12,7 @@ describe('getNotificationLifecycleBucket', () => {
         );
     });
 
-    it('groups replies to the user’s own past requests into the activity bucket, shown after pending actions', () => {
+    it("groups replies to the user's own past requests into the activity bucket, shown after pending actions", () => {
         expect(getNotificationLifecycleBucket('inviteResponse')).toBe(
             'activity'
         );

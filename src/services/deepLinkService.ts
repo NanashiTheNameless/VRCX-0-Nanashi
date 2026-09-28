@@ -4,16 +4,27 @@ import type {
     SharedCollectionImportStatus
 } from '@/platform/tauri/bindings';
 import { tauriClient } from '@/platform/tauri/client';
+import avatarSearchProviderRepository from '@/repositories/avatarSearchProviderRepository';
 import shareCollectionRepository from '@/repositories/shareCollectionRepository';
 import { toast } from '@/services/toastService';
 import { isCollectionShortcode } from '@/shared/constants/collectionShare';
-import { isAvatarId, isWorldId } from '@/shared/constants/vrchatIds';
+import {
+    isAvatarId,
+    isGroupId,
+    isUserId,
+    isWorldId
+} from '@/shared/constants/vrchatIds';
 import { isVrcxInstanceLink } from '@/shared/constants/vrcxDeepLinks';
 import { useLaunchStore } from '@/state/launchStore';
 import { useModalStore } from '@/state/modalStore';
 import { useWorldCollectionImportStore } from '@/state/worldCollectionImportStore';
 
-import { openAvatarDialog, openWorldDialog } from './dialogService';
+import {
+    openAvatarDialog,
+    openGroupDialog,
+    openUserDialog,
+    openWorldDialog
+} from './dialogService';
 import i18n from './i18nService';
 import { subscribeRuntimeEvent } from './runtime-event-bridge/subscription';
 
@@ -126,7 +137,65 @@ export function handleDeepLinkAction(action: DeepLinkAction): void {
                 );
             }
             break;
+        case 'openUser':
+            if (isUserId(action.userId)) {
+                openUserDialog({ userId: action.userId });
+            } else {
+                console.warn(
+                    'Ignored deep link with invalid user id:',
+                    action.userId
+                );
+            }
+            break;
+        case 'openGroup':
+            if (isGroupId(action.groupId)) {
+                openGroupDialog({ groupId: action.groupId });
+            } else {
+                console.warn(
+                    'Ignored deep link with invalid group id:',
+                    action.groupId
+                );
+            }
+            break;
+        case 'addAvatarProvider':
+            void addAvatarProviderFlow(action.url).catch((error: unknown) => {
+                console.warn('Failed to add avatar search provider:', error);
+            });
+            break;
     }
+}
+
+// Legacy VRCX `vrcx://addavatardb/<url>` support. Always asks first, since the
+// provider receives every avatar search query.
+async function addAvatarProviderFlow(url: string): Promise<void> {
+    const config = await avatarSearchProviderRepository.getConfig();
+    if (config.providerList.includes(url)) {
+        toast.add({
+            type: 'success',
+            title: i18n.t('deep_link.add_avatar_provider.already_added')
+        });
+        return;
+    }
+    const result = await useModalStore.getState().confirm({
+        title: i18n.t('deep_link.add_avatar_provider.title'),
+        description: i18n.t('deep_link.add_avatar_provider.description', {
+            url
+        }),
+        confirmText: i18n.t('deep_link.add_avatar_provider.confirm'),
+        cancelText: i18n.t('deep_link.add_avatar_provider.cancel')
+    });
+    if (!result.ok) {
+        return;
+    }
+    await avatarSearchProviderRepository.saveConfig({
+        enabled: true,
+        providerList: [...config.providerList, url],
+        selectedProvider: config.selectedProvider || url
+    });
+    toast.add({
+        type: 'success',
+        title: i18n.t('deep_link.add_avatar_provider.added')
+    });
 }
 
 function logPendingDeepLinkDrainFailure(error: unknown): void {

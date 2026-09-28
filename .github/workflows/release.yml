@@ -70,6 +70,15 @@ jobs:
             fail-fast: false
             matrix:
                 include:
+                    - label: Windows Installer
+                      os: windows-latest
+                      rust_target: ''
+                      webkit_build_target: ''
+                      build_command: npm run tauri:build -- --bundles nsis
+                      artifact_name: windows-installer
+                      artifact_path: |
+                          target/release/bundle/nsis/*_windows_x86_64_setup.exe
+                          target/release/bundle/latest_windows.json
                     - label: Linux Packages
                       os: ubuntu-24.04
                       rust_target: ''
@@ -170,11 +179,34 @@ jobs:
                       fi
                       exit 0
                   fi
-                  if [[ "${{ needs.prepare.outputs.channel }}" == "beta" ]]; then
+                  # Windows (NSIS) carries the full semver version, including -beta.N.
+                  if [[ "${{ needs.prepare.outputs.channel }}" == "beta" && "$RUNNER_OS" == "macOS" ]]; then
                       ${{ matrix.build_command }} --config "$override_config"
                   else
                       ${{ matrix.build_command }}
                   fi
+
+            - name: Prepare Windows release and updater assets
+              if: runner.os == 'Windows'
+              run: |
+                  bundle_dir="target/release/bundle"
+                  setup_source="$(find "$bundle_dir/nsis" -maxdepth 1 -name '*-setup.exe' | sort | head -n 1)"
+                  if [[ -z "$setup_source" || ! -s "${setup_source}.sig" ]]; then
+                      echo "Missing NSIS installer or updater signature in $bundle_dir/nsis" >&2
+                      exit 1
+                  fi
+                  setup_path="$bundle_dir/nsis/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_windows_x86_64_setup.exe"
+                  if [[ "$setup_source" != "$setup_path" ]]; then
+                      mv "$setup_source" "$setup_path"
+                      mv "${setup_source}.sig" "${setup_path}.sig"
+                  fi
+                  node scripts/create-tauri-updater-manifest.ts \
+                      --version "${{ needs.prepare.outputs.build_version }}" \
+                      --tag "${{ needs.prepare.outputs.tag }}" \
+                      --target "windows-x86_64-stable" \
+                      --asset-name "$(basename "$setup_path")" \
+                      --signature-file "${setup_path}.sig" \
+                      --out "$bundle_dir/latest_windows.json"
 
             - name: Prepare Linux release and updater assets
               if: runner.os == 'Linux'
@@ -224,9 +256,9 @@ jobs:
                       exit 1
                   fi
 
-                  appimage_path="$bundle_dir/appimage/VRCX-0_${{ needs.prepare.outputs.build_version }}_linux_x86_64.AppImage"
-                  deb_path="$bundle_dir/deb/VRCX-0_${{ needs.prepare.outputs.build_version }}_linux_x86_64.deb"
-                  rpm_path="$bundle_dir/rpm/VRCX-0_${{ needs.prepare.outputs.build_version }}_linux_x86_64.rpm"
+                  appimage_path="$bundle_dir/appimage/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_linux_x86_64.AppImage"
+                  deb_path="$bundle_dir/deb/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_linux_x86_64.deb"
+                  rpm_path="$bundle_dir/rpm/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_linux_x86_64.rpm"
 
                   rename_asset "$appimage_source" "$appimage_path"
                   rename_asset "$deb_source" "$deb_path"
@@ -265,7 +297,7 @@ jobs:
                       echo "No macOS DMG found in $dmg_dir" >&2
                       exit 1
                   fi
-                  renamed_dmg="$dmg_dir/VRCX-0_${{ needs.prepare.outputs.build_version }}_${{ matrix.dmg_asset_arch }}.dmg"
+                  renamed_dmg="$dmg_dir/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_${{ matrix.dmg_asset_arch }}.dmg"
                   if [[ "$dmg_path" != "$renamed_dmg" ]]; then
                       if [[ -e "$renamed_dmg" ]]; then
                           echo "Target macOS DMG already exists: $renamed_dmg" >&2

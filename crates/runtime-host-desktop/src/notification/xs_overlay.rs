@@ -3,7 +3,7 @@ use vrcx_0_host_desktop::overlay_notifications::send_xs_notification;
 
 use super::NotificationDeliveryPreferences;
 
-const NOTIFICATION_APP_TITLE: &str = "VRCX-0";
+const NOTIFICATION_APP_TITLE: &str = "VRCX-0-Nanashi";
 
 pub(super) fn send_xs_overlay_notification(
     render: &RenderedNotification,

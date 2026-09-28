@@ -1,6 +1,6 @@
 ## What does this PR do?
 
-<!-- A brief description — what changed and why? -->
+<!-- A brief description - what changed and why? -->
 
 ## How to test
 

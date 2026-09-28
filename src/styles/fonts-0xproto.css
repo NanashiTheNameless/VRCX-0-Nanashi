@@ -1,0 +1,24 @@
+/* Fork: bundled 0xProto (https://github.com/0xType/0xProto), SIL OFL 1.1. See LICENSES/OFL-1.1-0xProto.txt. */
+@font-face {
+    font-family: '0xProto';
+    src: url('../assets/fonts/0xproto/0xProto-Regular.woff2') format('woff2');
+    font-weight: 100 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: '0xProto';
+    src: url('../assets/fonts/0xproto/0xProto-Bold.woff2') format('woff2');
+    font-weight: 600 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: '0xProto';
+    src: url('../assets/fonts/0xproto/0xProto-Italic.woff2') format('woff2');
+    font-weight: 100 900;
+    font-style: italic;
+    font-display: swap;
+}

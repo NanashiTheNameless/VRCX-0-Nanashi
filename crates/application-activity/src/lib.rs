@@ -10,10 +10,11 @@ pub use activity_warmup::{
 };
 pub use overlay_activity::{
     overlay_activity_type_definitions, OverlayActivityActorRelation, OverlayActivityCandidate,
-    OverlayActivityCategory, OverlayActivityContent, OverlayActivityDelivery, OverlayActivityEntry,
-    OverlayActivityFavoriteGroupKeys, OverlayActivityFavoriteSubject, OverlayActivityFilters,
-    OverlayActivityRule, OverlayActivityRuntime, OverlayActivityScope, OverlayActivitySink,
-    OverlayActivitySnapshot, OverlayActivitySurface, OverlayActivitySurfaceFilters,
-    OverlayActivityText, OverlayActivityTypeDefinition, OverlayFavoriteGroups,
+    OverlayActivityCandidateObserver, OverlayActivityCategory, OverlayActivityContent,
+    OverlayActivityDelivery, OverlayActivityEntry, OverlayActivityFavoriteGroupKeys,
+    OverlayActivityFavoriteSubject, OverlayActivityFilters, OverlayActivityRule,
+    OverlayActivityRuntime, OverlayActivityScope, OverlayActivitySink, OverlayActivitySnapshot,
+    OverlayActivitySurface, OverlayActivitySurfaceFilters, OverlayActivityText,
+    OverlayActivityTypeDefinition, OverlayFavoriteGroups,
 };
 pub use sink_registry::OverlayActivitySinkRegistry;

@@ -54,6 +54,8 @@ pub(crate) struct DesktopRuntimeServicesDeps {
 }
 
 pub struct DesktopRuntimeServices {
+    /// Fork: used for local notes on the wrist overlay's Players/Notes pages.
+    db: Arc<DatabaseService>,
     web: Arc<WebClient>,
     image_cache: Arc<ImageCache>,
     config: ConfigRepository,
@@ -121,6 +123,7 @@ impl DesktopRuntimeServices {
             }));
         deps.overlay_activity_sinks.add(notification_sink);
         Ok(Self {
+            db: Arc::clone(&deps.db),
             web: deps.web,
             image_cache: deps.image_cache,
             config: deps.config,
@@ -332,6 +335,20 @@ impl VrOverlayRuntimeServices for DesktopRuntimeServices {
 
     fn now_playing(&self) -> NowPlayingSnapshot {
         DesktopRuntimeServices::now_playing(self).as_ref().clone()
+    }
+
+    fn user_notes(&self, user_ids: &[String]) -> std::collections::HashMap<String, String> {
+        user_ids
+            .iter()
+            .filter(|id| !id.trim().is_empty())
+            .filter_map(|id| {
+                vrcx_0_persistence::memos::memo_get_user(&self.db, id.clone())
+                    .ok()
+                    .flatten()
+                    .map(|memo| (id.clone(), memo.memo))
+            })
+            .filter(|(_, memo)| !memo.trim().is_empty())
+            .collect()
     }
 }
 

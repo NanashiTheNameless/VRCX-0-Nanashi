@@ -6,7 +6,7 @@ use vrcx_0_application_realtime::RealtimeHostRuntime;
 
 use crate::ports::{
     McpActivityQueries, McpConfig, McpFavoritesQueries, McpFeedQueries, McpFriendLocalData,
-    McpMutualGraph, McpSocialHistoryQueries,
+    McpMutualGraph, McpReminders, McpSocialHistoryQueries,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -27,6 +27,7 @@ pub struct McpRuntime {
     pub(crate) feed_queries: McpFeedQueries,
     pub(crate) mutual_graph: McpMutualGraph,
     pub(crate) favorite_mutations: FavoriteMutationCoordinator,
+    pub(crate) reminders: Option<McpReminders>,
     pub(crate) tasks: TaskSupervisor,
     pub(crate) caller: McpCaller,
 }
@@ -42,6 +43,8 @@ pub struct McpRuntimeDeps {
     pub feed_queries: McpFeedQueries,
     pub mutual_graph: McpMutualGraph,
     pub favorite_mutations: FavoriteMutationCoordinator,
+    /// Fork: assistant reminders; None where the host has no reminder engine.
+    pub reminders: Option<McpReminders>,
     pub tasks: TaskSupervisor,
 }
 
@@ -58,6 +61,7 @@ impl McpRuntime {
             feed_queries: deps.feed_queries,
             mutual_graph: deps.mutual_graph,
             favorite_mutations: deps.favorite_mutations,
+            reminders: deps.reminders,
             tasks: deps.tasks,
             caller,
         }

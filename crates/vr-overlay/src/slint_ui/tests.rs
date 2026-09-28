@@ -371,7 +371,7 @@ fn wrist_charging_device_shows_a_charging_marker() {
     let tokens = wrist_device_tokens(&devices, 512.0);
     let item = wrist_device_item(&tokens[0], true, true);
 
-    assert_eq!(item.percent.as_str(), "82% ⚡");
+    assert_eq!(item.percent.as_str(), "82%+");
 }
 
 #[test]

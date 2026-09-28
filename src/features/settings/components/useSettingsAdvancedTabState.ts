@@ -17,7 +17,6 @@ export function useSettingsAdvancedTabState() {
             avatarAutoCleanup: state.avatarAutoCleanup,
             gameLogDisabled: state.gameLogDisabled,
             feedPersistenceDisabled: state.feedPersistenceDisabled,
-            anonymousUsageTelemetry: state.anonymousUsageTelemetry,
             udonExceptionLogging: state.udonExceptionLogging,
             logResourceLoad: state.logResourceLoad
         }))
@@ -44,8 +43,7 @@ export function useSettingsAdvancedTabState() {
         resetAppDataDir,
         cleanupAppDataDir,
         dismissAppDataDirCleanup,
-        setConfigTreeData,
-        migrateLegacyVrcxData
+        setConfigTreeData
     } = advanced;
 
     const advancedTab = {
@@ -91,13 +89,6 @@ export function useSettingsAdvancedTabState() {
         onLogResourceLoadChange: (checked: boolean) => {
             saveBoolPreference('logResourceLoad', 'logResourceLoad', checked);
         },
-        onAnonymousUsageTelemetryChange: (checked: boolean) => {
-            saveBoolPreference(
-                'anonymousUsageTelemetry',
-                'anonymousUsageTelemetry',
-                checked
-            );
-        },
         onGameLogDisabledChange: (checked: boolean) => {
             handleGameLogDisabledChange(checked);
         },
@@ -112,7 +103,6 @@ export function useSettingsAdvancedTabState() {
             );
         },
         onOpenPurgeDialog: () => setPurgeDialogOpen(true),
-        onMigrateLegacyVrcxData: migrateLegacyVrcxData,
         onRefreshSqliteTableSizes: refreshSqliteTableSizes,
         onRefreshOnlineVisits: refreshOnlineVisits,
         onRefreshConfigTreeData: refreshConfigTreeData,

@@ -300,6 +300,12 @@ pub fn setup_app_with_data_dir(
 }
 
 fn wire_deep_links(app: &tauri::AppHandle) {
+    if let Some(state) = app.try_state::<AppState>() {
+        crate::commands::application::deep_link::apply_deep_link_scheme_settings(
+            app,
+            state.inner(),
+        );
+    }
     #[cfg(all(debug_assertions, any(windows, target_os = "linux")))]
     if let Err(error) = app.deep_link().register_all() {
         tracing::warn!(error = %error, "failed to register development deep link schemes");

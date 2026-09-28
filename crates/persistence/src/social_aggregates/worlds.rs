@@ -18,7 +18,7 @@ pub fn search_worlds_visited(
     owner_user_id: &OwnerId,
     input: SearchWorldsVisitedInput,
 ) -> Result<SearchWorldsVisitedOutput, Error> {
-    let limit = input.limit.clamp(1, 100);
+    let limit = input.limit.clamp(1, 1_000);
     let mut sql = String::from(
         "SELECT world_id, world_name, location, created_at, time
          FROM gamelog_location

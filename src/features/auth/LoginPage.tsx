@@ -92,7 +92,7 @@ export function LoginPage() {
             </div>
             <LoginPageFooter
                 onOpenGithub={actions.openGithub}
-                onOpenDiscord={actions.openDiscord}
+                onOpenIssues={actions.openIssues}
             />
             <LoginProxySettingsDialog
                 open={proxyDialog.open}

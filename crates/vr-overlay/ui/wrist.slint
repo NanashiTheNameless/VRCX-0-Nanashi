@@ -21,6 +21,7 @@ export struct WristFeedItem {
 }
 
 export component WristPanel inherits Window {
+    default-font-family: "0xProto";
     background: transparent;
 
     in property <bool> dark-background: true;
@@ -251,7 +252,7 @@ export component WristPanel inherits Window {
                 width: self.preferred-width + 4px;
                 height: now-playing-title.preferred-height / 2;
                 visible: root.now-playing-title-truncated;
-                text: "…";
+                text: "...";
                 font-size: 14px;
                 horizontal-alignment: right;
                 vertical-alignment: top;

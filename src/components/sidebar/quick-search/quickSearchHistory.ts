@@ -10,7 +10,7 @@ import { isRecord } from '@/shared/utils/record';
 import type { QuickSearchEntityType, QuickSearchResult } from '../quickSearch';
 
 const HISTORY_FILE_NAME = 'quick-search-history.json';
-const HISTORY_LIMIT = 5;
+const HISTORY_LIMIT = 20;
 const HISTORY_VERSION = 1;
 let recordQueue = Promise.resolve();
 

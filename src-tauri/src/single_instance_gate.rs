@@ -20,9 +20,9 @@ const SINGLE_INSTANCE_HANDOFF_INTERVAL: Duration = Duration::from_millis(200);
 // Mirrors tauri-plugin-single-instance 2.x Windows transport so the early guard
 // can still wake the already-running app before Tauri finishes initializing.
 #[cfg(target_os = "windows")]
-const TAURI_SINGLE_INSTANCE_CLASS_NAME: &str = "com.vrcx-0.app-sic";
+const TAURI_SINGLE_INSTANCE_CLASS_NAME: &str = "dev.namelessnanashi.vrcx-0-nanashi-sic";
 #[cfg(target_os = "windows")]
-const TAURI_SINGLE_INSTANCE_WINDOW_NAME: &str = "com.vrcx-0.app-siw";
+const TAURI_SINGLE_INSTANCE_WINDOW_NAME: &str = "dev.namelessnanashi.vrcx-0-nanashi-siw";
 #[cfg(target_os = "windows")]
 const WMCOPYDATA_SINGLE_INSTANCE_DATA: usize = 1542;
 

@@ -104,7 +104,7 @@ fn name_field(map: &serde_json::Map<String, Value>) -> Option<String> {
 }
 
 /// Entities the final answer actually names, ordered by where they first appear
-/// in the answer (earlier mention = higher priority). No cap — the panel shows
+/// in the answer (earlier mention = higher priority). No cap - the panel shows
 /// everyone the answer surfaced. Empty when the answer names nobody.
 pub fn surfaced_entities(candidates: Vec<Entity>, answer: &str) -> Vec<Entity> {
     let lowered_answer = answer.to_ascii_lowercase();

@@ -1,19 +1,13 @@
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
 
 use vrcx_0_application::profile::{
     DatabaseUpgradePreflight, DatabaseUpgradePreflightStatus, DatabaseUpgradeProgress,
-    DatabaseUpgradeRunResult, DatabaseUpgradeRunStatus, DatabaseUpgradeRuntime,
+    DatabaseUpgradeRunResult, DatabaseUpgradeRuntime,
 };
-use vrcx_0_application::telemetry::TelemetryRuntime;
 use vrcx_0_contracts::{LegacyMigrationPaths, LegacyVrcxSource};
-use vrcx_0_persistence::config::ConfigRepository;
 
 use crate::{Error, Result};
-
-const ANONYMOUS_USAGE_TELEMETRY_CONFIG_KEY: &str = "anonymousUsageTelemetry";
-const FAILURE_TELEMETRY_FLUSH_TIMEOUT: Duration = Duration::from_secs(1);
 
 pub trait DatabaseUpgradeLifecycle: Send + Sync {
     fn stop_runtime_services(&self);
@@ -23,22 +17,13 @@ pub trait DatabaseUpgradeLifecycle: Send + Sync {
 #[derive(Clone)]
 pub struct DesktopDatabaseUpgradeRuntime {
     runtime: DatabaseUpgradeRuntime,
-    config: ConfigRepository,
-    telemetry: TelemetryRuntime,
     failure_log_path: PathBuf,
 }
 
 impl DesktopDatabaseUpgradeRuntime {
-    pub fn new(
-        runtime: DatabaseUpgradeRuntime,
-        config: ConfigRepository,
-        telemetry: TelemetryRuntime,
-        failure_log_path: PathBuf,
-    ) -> Self {
+    pub fn new(runtime: DatabaseUpgradeRuntime, failure_log_path: PathBuf) -> Self {
         Self {
             runtime,
-            config,
-            telemetry,
             failure_log_path,
         }
     }
@@ -64,7 +49,6 @@ impl DesktopDatabaseUpgradeRuntime {
                         .unwrap_or("previous database upgrade did not finish"),
                 );
             }
-            self.flush_failure_telemetry().await;
         }
         Ok(preflight)
     }
@@ -74,9 +58,6 @@ impl DesktopDatabaseUpgradeRuntime {
         let result = tokio::task::spawn_blocking(move || runtime.run())
             .await
             .map_err(|error| Error::Custom(format!("database upgrade task failed: {error}")))?;
-        if result.status == DatabaseUpgradeRunStatus::Failed {
-            self.flush_failure_telemetry().await;
-        }
         Ok(result)
     }
 
@@ -91,9 +72,6 @@ impl DesktopDatabaseUpgradeRuntime {
             .map_err(|error| {
                 Error::Custom(format!("database upgrade retry task failed: {error}"))
             })??;
-        if result.status == DatabaseUpgradeRunStatus::Failed {
-            self.flush_failure_telemetry().await;
-        }
         Ok(result)
     }
 
@@ -110,7 +88,6 @@ impl DesktopDatabaseUpgradeRuntime {
                 .map_err(Error::from);
         if let Err(error) = &result {
             tracing::error!(error = %error, "legacy VRCX snapshot preparation failed");
-            self.flush_failure_telemetry().await;
         }
         result
     }
@@ -123,26 +100,14 @@ impl DesktopDatabaseUpgradeRuntime {
         &self,
         lifecycle: Arc<dyn DatabaseUpgradeLifecycle>,
     ) -> Result<String> {
-        let anonymous_usage_telemetry = self
-            .config
-            .get_bool(ANONYMOUS_USAGE_TELEMETRY_CONFIG_KEY, true)
-            .unwrap_or(true);
         lifecycle.stop_runtime_services();
         let runtime = self.runtime.clone();
         let recovery_result = tokio::task::spawn_blocking(move || runtime.start_fresh_database())
             .await
             .map_err(|error| Error::Custom(format!("database fresh-start task failed: {error}")))?;
-        let config = self.config.clone();
-        let result = finalize_start_fresh(
-            recovery_result.map_err(Error::from),
-            anonymous_usage_telemetry,
-            move || {
-                config
-                    .set_bool(ANONYMOUS_USAGE_TELEMETRY_CONFIG_KEY, false)
-                    .map_err(Error::from)
-            },
-            move || lifecycle.request_restart(),
-        );
+        let result = finalize_start_fresh(recovery_result.map_err(Error::from), move || {
+            lifecycle.request_restart()
+        });
         match result {
             Ok(recovery_dir) => {
                 tracing::info!(
@@ -157,34 +122,9 @@ impl DesktopDatabaseUpgradeRuntime {
             }
         }
     }
-
-    async fn flush_failure_telemetry(&self) {
-        if tokio::time::timeout(
-            FAILURE_TELEMETRY_FLUSH_TIMEOUT,
-            self.telemetry.flush_pending_rust_errors(),
-        )
-        .await
-        .is_err()
-        {
-            tracing::debug!("database upgrade failure telemetry flush timed out");
-        }
-    }
 }
 
-fn finalize_start_fresh<T>(
-    result: Result<T>,
-    anonymous_usage_telemetry: bool,
-    preserve_disabled_telemetry: impl FnOnce() -> Result<()>,
-    request_restart: impl FnOnce(),
-) -> Result<T> {
-    if result.is_ok() && !anonymous_usage_telemetry {
-        if let Err(error) = preserve_disabled_telemetry() {
-            tracing::error!(
-                error = %error,
-                "failed to preserve the disabled telemetry preference in the fresh database"
-            );
-        }
-    }
+fn finalize_start_fresh<T>(result: Result<T>, request_restart: impl FnOnce()) -> Result<T> {
     request_restart();
     result
 }
@@ -243,11 +183,8 @@ mod tests {
     }
 
     #[test]
-    fn fresh_database_completion_preserves_disabled_telemetry_and_always_restarts() {
-        for (succeeds, telemetry_enabled, expected_preserves) in
-            [(true, false, 1), (true, true, 0), (false, false, 0)]
-        {
-            let preserves = AtomicUsize::new(0);
+    fn fresh_database_completion_always_restarts() {
+        for succeeds in [true, false] {
             let restarts = AtomicUsize::new(0);
             let result = if succeeds {
                 Ok("recovery")
@@ -255,20 +192,11 @@ mod tests {
                 Err(Error::Custom("failed".into()))
             };
 
-            let result = finalize_start_fresh(
-                result,
-                telemetry_enabled,
-                || {
-                    preserves.fetch_add(1, Ordering::SeqCst);
-                    Ok(())
-                },
-                || {
-                    restarts.fetch_add(1, Ordering::SeqCst);
-                },
-            );
+            let result = finalize_start_fresh(result, || {
+                restarts.fetch_add(1, Ordering::SeqCst);
+            });
 
             assert_eq!(result.is_ok(), succeeds);
-            assert_eq!(preserves.load(Ordering::SeqCst), expected_preserves);
             assert_eq!(restarts.load(Ordering::SeqCst), 1);
         }
     }

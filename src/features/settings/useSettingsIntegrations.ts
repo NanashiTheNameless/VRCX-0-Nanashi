@@ -433,7 +433,9 @@ export function useSettingsIntegrations({ commit }: SettingsIntegrationsDeps) {
                 id: endpointId,
                 baseUrl: null,
                 apiKey: null,
-                persist: true
+                persist: true,
+                apiKind: null,
+                headers: null
             });
             const currentDraft = translationDraftRef.current;
             if (currentDraft.translationEndpointId.trim() !== endpointId) {

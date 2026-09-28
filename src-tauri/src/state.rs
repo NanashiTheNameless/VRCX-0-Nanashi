@@ -10,7 +10,7 @@ use crate::adapters::log_watcher::LogWatcherCompatBridge;
 use crate::adapters::mcp::{
     TauriMcpActivityQueryAdapter, TauriMcpConfigAdapter, TauriMcpFavoritesQueryAdapter,
     TauriMcpFeedQueryAdapter, TauriMcpFriendLocalDataAdapter, TauriMcpMutualGraphAdapter,
-    TauriMcpSocialHistoryQueryAdapter,
+    TauriMcpRemindersAdapter, TauriMcpSocialHistoryQueryAdapter,
 };
 use crate::deep_link::PendingDeepLinks;
 use crate::desktop_notification_activation::PendingDesktopNotificationActivations;
@@ -392,6 +392,9 @@ fn mcp_runtime(runtime: &DesktopRuntimeHostState, caller: McpCaller) -> McpRunti
                 deps.tasks.clone(),
             )),
             favorite_mutations: deps.favorite_mutations,
+            reminders: Some(Arc::new(TauriMcpRemindersAdapter::new(Arc::clone(
+                runtime.reminders(),
+            )))),
             tasks: deps.tasks,
         },
         caller,

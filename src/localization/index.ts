@@ -1,37 +1,18 @@
 import enMessages from './en.json';
+import { registerLanguageCode, unregisterLanguageCode } from './locales';
 
-type LocalizedStringTable = Record<string, unknown> & {
+export type LocalizedStringTable = Record<string, unknown> & {
     language?: string;
 };
 
 type LocaleLoader = () => Promise<{ default: LocalizedStringTable }>;
 
 const languageNames: Record<string, string> = {
-    cs: 'Čeština (cs)',
-    de: 'Deutsch (de)',
-    en: 'English (en)',
-    es: 'Español (es)',
-    fr: 'Français (fr)',
-    ja: '日本語 (ja)',
-    ko: '한국어 (ko)',
-    pt: 'Português Brasileiro (pt-br)',
-    ru: 'Русский (ru)',
-    'zh-CN': '中文（简体） (zh-CN)',
-    'zh-TW': '中文（繁體） (zh-TW)'
+    en: 'English (en)'
 };
 
-const localeLoaders: Record<string, LocaleLoader> = {
-    cs: () => import('./cs.json'),
-    de: () => import('./de.json'),
-    es: () => import('./es.json'),
-    fr: () => import('./fr.json'),
-    ja: () => import('./ja.json'),
-    ko: () => import('./ko.json'),
-    pt: () => import('./pt.json'),
-    ru: () => import('./ru.json'),
-    'zh-CN': () => import('./zh-CN.json'),
-    'zh-TW': () => import('./zh-TW.json')
-};
+// Fork: English only. Other locale files were removed.
+const localeLoaders: Record<string, LocaleLoader> = {};
 
 const loadedLocales = new Map<string, LocalizedStringTable>([
     ['en', enMessages]
@@ -78,6 +59,26 @@ export function loadLocaleMessages(
         });
     pendingLocales.set(code, request);
     return request;
+}
+
+/** Register (or replace) a user-supplied locale table loaded at runtime. */
+export function registerCustomLocale(
+    code: string,
+    name: string,
+    messages: LocalizedStringTable
+) {
+    languageNames[code] = name;
+    loadedLocales.set(code, messages);
+    registerLanguageCode(code);
+}
+
+export function unregisterCustomLocale(code: string) {
+    if (code === FALLBACK_LOCALE_CODE) {
+        return;
+    }
+    delete languageNames[code];
+    loadedLocales.delete(code);
+    unregisterLanguageCode(code);
 }
 
 function getLanguageName(code: string) {

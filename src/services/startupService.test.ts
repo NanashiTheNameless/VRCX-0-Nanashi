@@ -32,6 +32,9 @@ vi.mock('@/platform/tauri/bindings', () => ({
     }
 }));
 
+vi.mock('@/services/customLocaleService', () => ({
+    loadCustomLocales: vi.fn(async () => [])
+}));
 vi.mock('@/repositories/configRepository', () => ({
     default: {
         init: mocks.configInit,
@@ -83,6 +86,7 @@ vi.mock('./themeService', () => ({
     applyThemeColor: mocks.applyThemeColor,
     applyThemeMode: mocks.applyThemeMode,
     applyZoomLevel: mocks.applyZoomLevel,
+    primeInstalledFontFamilies: vi.fn(async () => undefined),
     resolveThemeColor: mocks.resolveThemeColor,
     resolveThemeMode: mocks.resolveThemeMode
 }));
@@ -192,17 +196,14 @@ describe('startupService', () => {
 
         await initializeReactRuntime();
 
-        expect(useShellStore.getState().locale).toBe('zh-TW');
-        expect(mocks.configSetString).toHaveBeenCalledWith(
-            'appLanguage',
-            'zh-TW'
-        );
+        expect(useShellStore.getState().locale).toBe('en');
+        expect(mocks.configSetString).toHaveBeenCalledWith('appLanguage', 'en');
         expect(mocks.appSystemLanguage).not.toHaveBeenCalled();
         expect(mocks.applyAppFontPreferences).toHaveBeenCalledWith({
             fontFamily: 'Inter',
             customFontFamily: '',
             cjkFontPack: 'noto-sans-cjk',
-            locale: 'zh-TW'
+            locale: 'en'
         });
         expectCalledInOrder([
             mocks.configSetString,

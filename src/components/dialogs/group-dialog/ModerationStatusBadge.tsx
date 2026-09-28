@@ -16,8 +16,8 @@ export function ModerationStatusBadge({
     status: string;
     label?: string;
 }) {
-    if (!status || status === '—') {
-        return <span>—</span>;
+    if (!status || status === '-') {
+        return <span>-</span>;
     }
     const tone = moderationStatusTone(status);
     const displayLabel = label ?? status;

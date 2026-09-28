@@ -161,6 +161,7 @@ impl OverlayActivitySink for NotificationDispatcher {
     fn emit_overlay_activity_snapshot(&self, _snapshot: OverlayActivitySnapshot) {}
 
     fn emit_overlay_activity_delivery(&self, delivery: OverlayActivityDelivery) {
+        play_custom_notification_sound(&self.config, &delivery, &self.output);
         let preferences = load_preferences(&self.config);
         let game = load_game_state(&self.session, &self.config);
         let plan = plan_allowed_by_suppressors(
@@ -281,6 +282,30 @@ fn prepare_rendered_notification(
         locale: job.locale,
         local_image,
         desktop_action,
+    }
+}
+
+/// Fork: per-event custom sound (see `sounds.rs`). Treated as an audio
+/// surface, so Do Not Disturb / privacy lock rules for TTS also mute it.
+fn play_custom_notification_sound(
+    config: &ConfigRepository,
+    delivery: &OverlayActivityDelivery,
+    output: &NotificationOutputContext,
+) {
+    let Some((path, volume)) =
+        super::sounds::load_notification_sounds(config).resolve(&delivery.entry)
+    else {
+        return;
+    };
+    if output
+        .do_not_disturb
+        .suppresses(OverlayActivitySurface::Tts)
+        || output.privacy_lock.suppresses(OverlayActivitySurface::Tts)
+    {
+        return;
+    }
+    if let Err(error) = vrcx_0_host_desktop::sound::play_sound_file(&path, volume) {
+        tracing::warn!(%error, activity_type = %delivery.entry.activity_type, "failed to play notification sound");
     }
 }
 

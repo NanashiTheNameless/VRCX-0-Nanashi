@@ -5,18 +5,24 @@ import { setI18nLanguage } from './i18nService';
 
 describe('login error localization', () => {
     it.each([
-        ['Invalid Username/Email or Password', '用户名、邮箱或密码错误。'],
-        ['Missing Credentials', '缺少有效的登录信息，请重新登录。'],
+        [
+            'Invalid Username/Email or Password',
+            'Invalid username, email, or password.'
+        ],
+        [
+            'Missing Credentials',
+            'Missing valid login credentials. Please sign in again.'
+        ],
         [
             'The stored browser session still requires interactive verification.',
-            '此次登录需要额外验证，请手动登录。'
+            'This session requires additional verification. Please sign in manually.'
         ],
         [
             '2FA is required but no supported method was returned.',
-            '此账号需要双重认证，但未找到支持的验证方式。'
+            'This account requires two-factor authentication, but no supported verification method is available.'
         ]
     ])('localizes known login failures: %s', async (message, translation) => {
-        await setI18nLanguage('zh-CN');
+        await setI18nLanguage('en');
         for (const text of [message, JSON.stringify(message)]) {
             expect(getLoginErrorMessage(new Error(text), 'Login failed')).toBe(
                 translation
@@ -25,18 +31,18 @@ describe('login error localization', () => {
     });
 
     it('uses the saved-credential error code without changing the error', async () => {
-        await setI18nLanguage('zh-CN');
+        await setI18nLanguage('en');
         const error = Object.assign(new Error('Original diagnostic message'), {
             code: 'AUTH_SAVED_CREDENTIALS_INVALID'
         });
         expect(getLoginErrorMessage(error, 'Login failed')).toBe(
-            '保存的登录信息已失效，已移除此保存账号，请重新登录。'
+            'Saved login credentials are no longer valid. The saved account has been removed. Please sign in again.'
         );
         expect(error.message).toBe('Original diagnostic message');
     });
 
     it('preserves specific server details even when classified as an invalid session', async () => {
-        await setI18nLanguage('zh-CN');
+        await setI18nLanguage('en');
         const error = Object.assign(
             new Error('"Please contact support: abc"'),
             {
@@ -54,17 +60,12 @@ describe('login error localization', () => {
     });
 
     it.each([false, true])(
-        'localizes the new-location login error (quoted: %s) using the current language',
+        'maps the new-location login error (quoted: %s) to its English message',
         async (quoted) => {
             const message =
                 "It looks like you're logging in from somewhere new! Check your email for a message from VRChat.";
             const error = new Error(
                 ` ${quoted ? JSON.stringify(message) : message} `
-            );
-
-            await setI18nLanguage('zh-CN');
-            expect(getLoginErrorMessage(error, 'Login failed')).toBe(
-                '你似乎正在从新的地点登录！请检查邮箱，查看 VRChat 发来的邮件。'
             );
 
             await setI18nLanguage('en');

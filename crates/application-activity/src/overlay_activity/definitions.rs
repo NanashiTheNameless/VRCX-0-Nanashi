@@ -47,6 +47,42 @@ const GROUP_FAVORITE_SCOPES: &[OverlayActivityScope] = &[
 
 const ACTIVITY_TYPES: &[ActivityTypeDefinition] = &[
     definition(
+        "SafetyGroup",
+        OverlayActivityCategory::SystemSafety,
+        BOOLEAN_SCOPES,
+        OverlayActivityScope::On,
+        &[],
+    ),
+    definition(
+        "SafetyAvatar",
+        OverlayActivityCategory::SystemSafety,
+        BOOLEAN_SCOPES,
+        OverlayActivityScope::On,
+        &[],
+    ),
+    definition(
+        "SafetyCommunity",
+        OverlayActivityCategory::SystemSafety,
+        BOOLEAN_SCOPES,
+        OverlayActivityScope::On,
+        &[],
+    ),
+    definition(
+        "SafetyUrl",
+        OverlayActivityCategory::SystemSafety,
+        BOOLEAN_SCOPES,
+        OverlayActivityScope::On,
+        &[],
+    ),
+    // Fork: assistant-created reminders (upstream #479).
+    definition(
+        "Reminder",
+        OverlayActivityCategory::SystemSafety,
+        BOOLEAN_SCOPES,
+        OverlayActivityScope::On,
+        &[],
+    ),
+    definition(
         "invite",
         OverlayActivityCategory::ActionRequired,
         DIRECT_ACTOR_SCOPES,

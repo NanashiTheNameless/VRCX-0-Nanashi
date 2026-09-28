@@ -12,7 +12,7 @@ use vrcx_0_core::vrchat_endpoints::{VRCHAT_CLOUD_ROOT_HOST, VRCHAT_SITE_HOST};
 use vrcx_0_core::{image_sniff::sniff_image_mime, proxy::with_remote_dns};
 
 pub type Result<T> = std::result::Result<T, WebClientError>;
-pub(crate) const BASE_USER_AGENT: &str = "VRCX-0";
+pub(crate) const BASE_USER_AGENT: &str = "VRCX-0-Nanashi";
 
 #[derive(Debug, thiserror::Error)]
 pub enum WebClientError {

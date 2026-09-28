@@ -215,7 +215,7 @@ describe('inviteDialogModel', () => {
     it('returns no local groups when the local group list is missing', () => {
         // buildFavoriteGroupItems only reads localFriendFavoriteGroups (no
         // Object.keys fallback), unlike buildFavoriteGroupLabelsByUserId. This
-        // asymmetry is intentional — lock it so it is not "unified" by accident.
+        // asymmetry is intentional - lock it so it is not "unified" by accident.
         expect(
             buildFavoriteGroupItems({
                 favoriteFriendGroups: [],

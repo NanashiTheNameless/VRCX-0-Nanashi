@@ -249,7 +249,7 @@ fn resolve_session_fetch_limit(
     if !has_filtering {
         return limit;
     }
-    let ceiling = limit.max(search_limit.min(2000));
+    let ceiling = limit.max(search_limit);
     limit.max(max_table_size.min(ceiling))
 }
 

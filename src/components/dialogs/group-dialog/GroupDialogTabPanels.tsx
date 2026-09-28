@@ -403,7 +403,7 @@ export function GroupDialogTabPanels({
                                           group.createdAt || group.created_at,
                                           'long'
                                       )
-                                    : '—'
+                                    : '-'
                             }
                         />
                         <EntityInfoBlock
@@ -416,7 +416,7 @@ export function GroupDialogTabPanels({
                                               previousInstances[0]?.createdAt,
                                           'long'
                                       )
-                                    : '—'
+                                    : '-'
                             }
                             onClick={
                                 previousInstances.length
@@ -426,21 +426,21 @@ export function GroupDialogTabPanels({
                         />
                         <EntityInfoBlock
                             label={t('dialog.group.action.join_state')}
-                            value={joinState || '—'}
+                            value={joinState || '-'}
                         />
                         <EntityInfoBlock
                             label={t('dialog.group.label.membership')}
                             value={
-                                memberStatus || group.membershipStatus || '—'
+                                memberStatus || group.membershipStatus || '-'
                             }
                         />
                         <EntityInfoBlock
                             label={t('dialog.group.label.languages')}
-                            value={languages.join(', ') || '—'}
+                            value={languages.join(', ') || '-'}
                         />
                         <EntityInfoBlock
                             label={t('dialog.group.label.privacy')}
-                            value={group.privacy || '—'}
+                            value={group.privacy || '-'}
                         />
                         {links.length ? (
                             <EntityInfoBlock
@@ -468,7 +468,7 @@ export function GroupDialogTabPanels({
                         ) : null}
                         <EntityInfoBlock
                             label="URL"
-                            value={groupUrl || '—'}
+                            value={groupUrl || '-'}
                             mono
                             wide
                             onClick={
@@ -483,7 +483,7 @@ export function GroupDialogTabPanels({
                         />
                         <EntityInfoBlock
                             label={t('dialog.group.label.owner_2')}
-                            value={ownerLabel || '—'}
+                            value={ownerLabel || '-'}
                             wide
                             onClick={group.ownerId ? onOpenOwner : undefined}
                         />

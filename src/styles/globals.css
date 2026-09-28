@@ -2,6 +2,7 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 @import '@fontsource-variable/geist';
+@import './fonts-0xproto.css';
 @import './object-row.css';
 
 @custom-variant dark (&:is(.dark *));
@@ -550,7 +551,7 @@
          * (titlebar + content ride the viewport; only the position:fixed sidebar
          * stays put), so the UI "drifts" under a touch that should behave like a
          * mouse. Pin the document scroll and kill viewport overscroll here. We do
-         * NOT set touch-action:none — Blink intersects it down the ancestor chain,
+         * NOT set touch-action:none - Blink intersects it down the ancestor chain,
          * which would also break touch-scroll in every nested overflow:auto list.
          */
         overflow: hidden;

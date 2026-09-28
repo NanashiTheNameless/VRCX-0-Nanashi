@@ -5,6 +5,7 @@ import { useRuntimeStore } from '@/state/runtimeStore';
 
 import { useSettingsPageSection } from '../../SettingsPageStateContext';
 import { SettingsTabContent } from '../SettingsViewParts';
+import { SettingsCustomLanguagesCard } from './SettingsCustomLanguagesCard';
 import { SettingsInterfaceAppearanceCard } from './SettingsInterfaceAppearanceCard';
 import { SettingsInterfaceDisplayCards } from './SettingsInterfaceDisplayCards';
 import { SettingsInterfaceThemesCard } from './SettingsInterfaceThemesCard';
@@ -100,6 +101,7 @@ export function SettingsInterfaceTab() {
                 }
                 onReducedMotionAndBlurChange={onReducedMotionAndBlurChange}
             />
+            <SettingsCustomLanguagesCard />
             <SettingsInterfaceThemesCard />
             <SettingsInterfaceDisplayCards
                 prefs={prefs}

@@ -50,6 +50,8 @@ pub struct AssistantLlmClientInput {
     pub api_key: String,
     pub model: String,
     pub proxy_url: Option<String>,
+    pub api_kind: vrcx_0_contracts::llm::LlmApiKind,
+    pub headers: Vec<vrcx_0_contracts::llm::LlmHeader>,
 }
 
 pub type AssistantLlmFuture<'a, T> =

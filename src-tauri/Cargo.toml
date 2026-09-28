@@ -12,6 +12,7 @@ path = "src/bin/export-bindings.rs"
 required-features = ["bindings-export"]
 
 [dependencies]
+vrcx-0-ytdlp = { path = "../crates/ytdlp" }
 async-trait = { workspace = true }
 tauri = { version = "2", features = ["tray-icon", "image-ico", "macos-proxy"] }
 serde = { workspace = true, features = ["derive"] }

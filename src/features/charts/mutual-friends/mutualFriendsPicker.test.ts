@@ -67,7 +67,7 @@ describe('mutualFriendsPicker', () => {
     it('keeps long graph labels compact for node rendering', () => {
         expect(truncateMutualFriendLabel('Short name', 20)).toBe('Short name');
         expect(truncateMutualFriendLabel('Very long display name', 10)).toBe(
-            'Very long…'
+            'Very long...'
         );
     });
 });

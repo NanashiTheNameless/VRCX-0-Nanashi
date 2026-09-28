@@ -12,6 +12,11 @@ vi.mock(import('@/platform/tauri/webview'), async (importOriginal) => ({
 import { useShellStore } from '@/state/shellStore';
 
 import {
+    isAppFontAvailableLocally,
+    isFontFamilyInstalled,
+    setInstalledFontFamilies
+} from './themeService';
+import {
     applyThemeMode,
     resolveAppCjkFontPackForLocale,
     supportsConfigurableCjkFontPack
@@ -104,21 +109,28 @@ describe('themeService theme mode', () => {
 });
 
 describe('themeService CJK font locale routing', () => {
-    it('allows configurable CJK font packs for core CJK locales', () => {
-        expect(supportsConfigurableCjkFontPack('zh-CN')).toBe(true);
-        expect(supportsConfigurableCjkFontPack('zh-TW')).toBe(true);
-        expect(supportsConfigurableCjkFontPack('zh-Hans')).toBe(true);
-        expect(supportsConfigurableCjkFontPack('zh-Hant-TW')).toBe(true);
-        expect(supportsConfigurableCjkFontPack('ja')).toBe(true);
-        expect(supportsConfigurableCjkFontPack('ko')).toBe(true);
-        expect(resolveAppCjkFontPackForLocale('puhuiti', 'ja')).toBe('puhuiti');
-    });
-
     it('uses the system CJK font for non-core CJK app locales', () => {
         expect(supportsConfigurableCjkFontPack('en')).toBe(false);
         expect(supportsConfigurableCjkFontPack('fr')).toBe(false);
         expect(supportsConfigurableCjkFontPack('de')).toBe(false);
         expect(resolveAppCjkFontPackForLocale('noto', 'en')).toBe('system');
         expect(resolveAppCjkFontPackForLocale('puhuiti', 'fr')).toBe('system');
+    });
+});
+
+describe('themeService local-first fonts', () => {
+    afterEach(() => {
+        setInstalledFontFamilies([]);
+    });
+
+    it('treats bundled fonts as local and online fonts as local only when installed', () => {
+        expect(isAppFontAvailableLocally('oxproto')).toBe(true);
+        expect(isAppFontAvailableLocally('inter')).toBe(false);
+        setInstalledFontFamilies(['Inter', 'Noto Sans JP']);
+        expect(isAppFontAvailableLocally('inter')).toBe(true);
+        expect(isFontFamilyInstalled("'Inter Variable', 'Inter'")).toBe(true);
+        expect(isFontFamilyInstalled(["'Noto Sans JP'"])).toBe(true);
+        expect(isFontFamilyInstalled("'Nunito Sans'")).toBe(false);
+        expect(isAppFontAvailableLocally('unknown-font')).toBe(false);
     });
 });

@@ -6,7 +6,6 @@ import {
     isHostCapabilitySupported
 } from '@/services/hostCapabilityService';
 import i18n from '@/services/i18nService';
-import { recordToolOpen } from '@/services/telemetry/telemetryToolUsage';
 import { toast } from '@/services/toastService';
 import { recordRecentToolOpen } from '@/services/toolRecentService';
 import {
@@ -139,7 +138,6 @@ export async function triggerToolByKey(
         return;
     }
 
-    recordToolOpen(resolvedToolKey);
     void recordRecentToolOpen(resolvedToolKey).catch(() => {});
 
     if (action.type === 'route') {

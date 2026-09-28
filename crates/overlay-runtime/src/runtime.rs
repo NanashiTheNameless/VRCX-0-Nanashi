@@ -35,8 +35,8 @@ use super::{
     surfaces::hmd_toast::{refresh_cached_world_name, HmdToastState},
     surfaces::wrist::compact_duration,
     test_preview::test_wrist_frame_input,
-    WristOverlayFrameInput, WristOverlayRenderOptions, WristOverlaySizePreset, WristRuntimeFooter,
-    WristRuntimeNowPlaying,
+    WristOverlayFrameInput, WristOverlayRenderOptions, WristOverlaySizePreset, WristPage,
+    WristPageOrder, WristPlayerRow, WristPlayersSort, WristRuntimeFooter, WristRuntimeNowPlaying,
 };
 
 pub(crate) use super::config::load_runtime_config;
@@ -137,6 +137,10 @@ pub(super) struct VrOverlayRuntimeConfig {
     pub(crate) locale: OverlayLocale,
     pub(crate) dt_hour12: bool,
     pub(crate) show_instance_id_in_location: bool,
+    /// Fork: customizable wrist pages (Settings > VR).
+    pub(crate) wrist_pages: WristPageOrder,
+    pub(crate) wrist_players_sort: WristPlayersSort,
+    pub(crate) wrist_page_flip_secs: u8,
 }
 
 impl Default for VrOverlayRuntimeConfig {
@@ -151,6 +155,9 @@ impl Default for VrOverlayRuntimeConfig {
             locale: OverlayLocale::default(),
             dt_hour12: false,
             show_instance_id_in_location: false,
+            wrist_pages: WristPageOrder::default(),
+            wrist_players_sort: WristPlayersSort::Name,
+            wrist_page_flip_secs: DEFAULT_WRIST_PAGE_FLIP_SECS,
         }
     }
 }
@@ -900,18 +907,72 @@ impl GameProcessEventSink for VrOverlayRuntime {
     }
 }
 
+/// Fork: showing the wrist again within this many seconds after hiding it flips to the
+/// next page (configurable 1-10).
+pub(crate) const DEFAULT_WRIST_PAGE_FLIP_SECS: u8 = 3;
+
 struct RuntimeWristFrameProducer {
     services: Arc<dyn VrOverlayRuntimeServices>,
+    page: WristPage,
+    was_visible: bool,
+    hidden_at: Option<Instant>,
 }
 
 impl RuntimeWristFrameProducer {
     fn new(services: Arc<dyn VrOverlayRuntimeServices>) -> Self {
-        Self { services }
+        Self {
+            services,
+            page: WristPage::Feed,
+            was_visible: false,
+            hidden_at: None,
+        }
+    }
+
+    /// Hide-then-show within the flip window = next page (double tap of the wrist
+    /// button). Frames are sampled about once a second, so the window is generous.
+    fn track_page(&mut self, config: &VrOverlayRuntimeConfig, visible: bool, now: Instant) {
+        let (page, hidden_at) = next_wrist_page(
+            &config.wrist_pages,
+            Duration::from_secs(u64::from(config.wrist_page_flip_secs)),
+            self.page,
+            self.was_visible,
+            self.hidden_at,
+            visible,
+            now,
+        );
+        self.page = page;
+        self.hidden_at = hidden_at;
+        self.was_visible = visible;
+    }
+}
+
+/// Hide-then-show within `flip_window` advances to the next shown page. Returns
+/// the new page and the time the wrist was last hidden.
+fn next_wrist_page(
+    order: &WristPageOrder,
+    flip_window: Duration,
+    page: WristPage,
+    was_visible: bool,
+    hidden_at: Option<Instant>,
+    visible: bool,
+    now: Instant,
+) -> (WristPage, Option<Instant>) {
+    // Pages can be turned off while shown; fall back to the first shown page.
+    let page = order.normalize(page);
+    if visible && !was_visible {
+        let flip = hidden_at.is_some_and(|hidden| now.duration_since(hidden) <= flip_window);
+        (if flip { order.next_after(page) } else { page }, hidden_at)
+    } else if !visible && was_visible {
+        (page, Some(now))
+    } else {
+        (page, hidden_at)
     }
 }
 
 impl VrOverlayFrameProducer for RuntimeWristFrameProducer {
     fn next_frame(&mut self, input: VrOverlayFrameInput) -> Result<RgbaFrame, String> {
+        self.track_page(&input.config, input.wrist_visible, Instant::now());
+        let page = self.page;
         let frame_input = if input.test_mode {
             test_wrist_frame_input(
                 input.config,
@@ -925,6 +986,7 @@ impl VrOverlayFrameProducer for RuntimeWristFrameProducer {
                 input.config,
                 input.devices,
                 input.wrist_visible,
+                page,
             )
         };
         let model = build_wrist_surface_model(frame_input);
@@ -1075,10 +1137,42 @@ pub(super) fn build_wrist_frame_input(
     config: VrOverlayRuntimeConfig,
     devices: Vec<VrDeviceSnapshot>,
     live_now_playing: bool,
+    page: WristPage,
 ) -> WristOverlayFrameInput {
     let game_log = services.game_log_snapshot();
     let now_playing = services.now_playing();
     let captured_at_ms = now_ms();
+    // Fork: player rows (with local notes) only when a player page is shown.
+    let players = if page == WristPage::Feed {
+        Vec::new()
+    } else {
+        let ids: Vec<String> = game_log
+            .players
+            .iter()
+            .map(|player| player.user_id.clone())
+            .collect();
+        let notes = services.user_notes(&ids);
+        let mut rows: Vec<(Option<i64>, WristPlayerRow)> = game_log
+            .players
+            .iter()
+            .map(|player| {
+                (
+                    player.join_time_ms,
+                    WristPlayerRow {
+                        display_name: player.display_name.clone(),
+                        note: notes.get(&player.user_id).cloned().unwrap_or_default(),
+                        joined_text: player
+                            .join_time_ms
+                            .map(|joined| compact_duration((captured_at_ms - joined).max(0)))
+                            .unwrap_or_default(),
+                        is_friend: false,
+                    },
+                )
+            })
+            .collect();
+        sort_wrist_players(&mut rows, config.wrist_players_sort);
+        rows.into_iter().map(|(_, row)| row).collect()
+    };
     let mut activity = services.overlay_activity().snapshot();
     for entry in &mut activity.entries {
         refresh_cached_world_name(services.world_cache(), entry);
@@ -1106,6 +1200,8 @@ pub(super) fn build_wrist_frame_input(
         locale: config.locale.as_str().to_string(),
         show_instance_id_in_location: config.show_instance_id_in_location,
         captured_at_ms,
+        page,
+        players,
     }
 }
 
@@ -1152,6 +1248,86 @@ fn instance_duration_text(location: &str, started_at: &str, now_ms: i64) -> Stri
 fn is_real_instance_location(location: &str) -> bool {
     let location = location.trim().to_ascii_lowercase();
     location.starts_with("wrld_") && location.contains(':')
+}
+
+/// Name order (case-insensitive) or most recent join first; ties by name.
+fn sort_wrist_players(rows: &mut [(Option<i64>, WristPlayerRow)], sort: WristPlayersSort) {
+    rows.sort_by(|(a_joined, a), (b_joined, b)| {
+        let by_name = || {
+            a.display_name
+                .to_lowercase()
+                .cmp(&b.display_name.to_lowercase())
+        };
+        match sort {
+            WristPlayersSort::Name => by_name(),
+            WristPlayersSort::Joined => b_joined.cmp(a_joined).then_with(by_name),
+        }
+    });
+}
+
+#[cfg(test)]
+mod wrist_page_tests {
+    use super::*;
+
+    const WINDOW: Duration = Duration::from_secs(3);
+
+    #[test]
+    fn hide_then_show_quickly_flips_the_page() {
+        let order = WristPageOrder::default();
+        let start = Instant::now();
+        let at = |secs| start + Duration::from_secs(secs);
+        let step = |page, was, hidden, visible, now| {
+            next_wrist_page(&order, WINDOW, page, was, hidden, visible, now)
+        };
+        let (page, hidden) = step(WristPage::Feed, false, None, true, at(0));
+        assert_eq!(page, WristPage::Feed);
+        let (page, hidden) = step(page, true, hidden, false, at(2));
+        assert_eq!(hidden, Some(at(2)));
+        let (page, hidden) = step(page, false, hidden, true, at(3));
+        assert_eq!(page, WristPage::Players);
+        let (page, hidden) = step(page, true, hidden, false, at(4));
+        // Shown again too late: stays on the same page.
+        let (page, _) = step(page, false, hidden, true, at(20));
+        assert_eq!(page, WristPage::Players);
+    }
+
+    #[test]
+    fn custom_order_and_window_are_respected() {
+        let order = WristPageOrder::from_config("notes,feed");
+        let start = Instant::now();
+        let at = |secs| start + Duration::from_secs(secs);
+        let window = Duration::from_secs(6);
+        // Players was turned off while shown: falls back to the first shown page.
+        let (page, _) =
+            next_wrist_page(&order, window, WristPage::Players, true, None, true, at(0));
+        assert_eq!(page, WristPage::Notes);
+        let (page, hidden) = next_wrist_page(&order, window, page, true, None, false, at(1));
+        let (page, _) = next_wrist_page(&order, window, page, false, hidden, true, at(6));
+        assert_eq!(page, WristPage::Feed, "5 s is inside a 6 s window");
+    }
+
+    fn row(name: &str) -> WristPlayerRow {
+        WristPlayerRow {
+            display_name: name.into(),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn players_sort_by_name_or_latest_join() {
+        let mut rows = vec![
+            (Some(10), row("bea")),
+            (Some(30), row("Cid")),
+            (None, row("Abe")),
+            (Some(30), row("ann")),
+        ];
+        sort_wrist_players(&mut rows, WristPlayersSort::Name);
+        let names: Vec<_> = rows.iter().map(|(_, r)| r.display_name.as_str()).collect();
+        assert_eq!(names, ["Abe", "ann", "bea", "Cid"]);
+        sort_wrist_players(&mut rows, WristPlayersSort::Joined);
+        let names: Vec<_> = rows.iter().map(|(_, r)| r.display_name.as_str()).collect();
+        assert_eq!(names, ["ann", "Cid", "bea", "Abe"]);
+    }
 }
 
 #[cfg(test)]

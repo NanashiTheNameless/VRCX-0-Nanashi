@@ -272,19 +272,14 @@ mod tests {
     }
 
     #[test]
-    fn auth_failure_notification_label_language_prefixes_are_localized() {
-        assert_eq!(
-            auth_failure_notification_labels_for_language("zh-CN").title,
-            "VRChat 登录已失效"
-        );
-        assert_eq!(
-            auth_failure_notification_labels_for_language("zh-TW").title,
-            "VRChat 登入已過期"
-        );
-        assert_eq!(
-            auth_failure_notification_labels_for_language("ja").title,
-            "VRChat ログインの有効期限が切れました"
-        );
+    fn auth_failure_notification_labels_fall_back_to_english() {
+        let english = auth_failure_notification_labels_for_language("en").title;
+        for language in ["zh-CN", "zh-TW", "ja"] {
+            assert_eq!(
+                auth_failure_notification_labels_for_language(language).title,
+                english
+            );
+        }
     }
 
     #[test]

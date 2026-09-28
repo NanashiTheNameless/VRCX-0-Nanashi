@@ -121,7 +121,7 @@ export function InstanceLocationSummary({
     const hasCapacity = resolvedCapacity !== null && resolvedCapacity > 0;
     const playerSummary =
         hasPlayerCount || hasCapacity
-            ? `${hasPlayerCount ? resolvedPlayerCount : '—'}${hasCapacity ? `/${resolvedCapacity}` : ''}`
+            ? `${hasPlayerCount ? resolvedPlayerCount : '-'}${hasCapacity ? `/${resolvedCapacity}` : ''}`
             : '';
     const locationLabel =
         [
@@ -129,7 +129,7 @@ export function InstanceLocationSummary({
             accessTypeName || locObj.accessTypeName || ''
         ]
             .filter(Boolean)
-            .join(' · ') || '—';
+            .join(' · ') || '-';
 
     function openLocationGroupDialog(event: SyntheticEvent<HTMLElement>) {
         if (!interactive) {
@@ -189,7 +189,7 @@ export function InstanceLocationSummary({
     }
 
     if (!locObj.isRealInstance && !locObj.tag) {
-        return <span className={className}>—</span>;
+        return <span className={className}>-</span>;
     }
 
     return (

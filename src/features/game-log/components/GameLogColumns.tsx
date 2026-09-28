@@ -42,6 +42,7 @@ import {
     SortButton
 } from './GameLogTableParts';
 import { GameLogTypeIndicator } from './GameLogTypeIndicator';
+import { SafetyLogBadge } from './SafetyLogBadge';
 
 type UseGameLogColumnsOptions = {
     deletingGameLogKey: string;
@@ -55,18 +56,21 @@ type UseGameLogColumnsOptions = {
 function DateCell({ row }: { row: AppRow<GameLogRow> }) {
     const createdAt = row.original?.created_at || '';
     return (
-        <Tooltip>
-            <TooltipTrigger
-                render={
-                    <span className="text-sm">
-                        {formatDateFilter(createdAt, 'short')}
-                    </span>
-                }
-            />
-            <TooltipContent>
-                {formatDateFilter(createdAt, 'long')}
-            </TooltipContent>
-        </Tooltip>
+        <div className="flex items-center gap-1.5">
+            <SafetyLogBadge row={row.original} />
+            <Tooltip>
+                <TooltipTrigger
+                    render={
+                        <span className="text-sm">
+                            {formatDateFilter(createdAt, 'short')}
+                        </span>
+                    }
+                />
+                <TooltipContent>
+                    {formatDateFilter(createdAt, 'long')}
+                </TooltipContent>
+            </Tooltip>
+        </div>
     );
 }
 

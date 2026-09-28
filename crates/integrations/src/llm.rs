@@ -5,9 +5,15 @@ use reqwest::{Client, Proxy};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 pub use vrcx_0_contracts::llm::{
-    AssistantTurn, ChatMessage, FunctionCall, LlmEndpointDetectModelsResult, LlmModelReasoning,
-    LlmRequestOptions, ToolCall, ToolDefinition,
+    AssistantTurn, ChatMessage, FunctionCall, LlmApiKind, LlmEndpointDetectModelsResult, LlmHeader,
+    LlmModelReasoning, LlmRequestOptions, ToolCall, ToolDefinition,
 };
+
+mod anthropic;
+mod bedrock;
+mod cohere;
+mod gemini;
+mod ollama;
 use vrcx_0_core::proxy::with_remote_dns;
 
 #[derive(Debug, thiserror::Error)]
@@ -20,6 +26,8 @@ pub enum LlmError {
     NotConfigured,
 }
 
+const AZURE_DEFAULT_API_VERSION: &str = "2024-10-21";
+
 const OPENROUTER_REASONING_EFFORTS: &[&str] =
     &["max", "xhigh", "high", "medium", "low", "minimal", "none"];
 
@@ -29,6 +37,8 @@ pub struct LlmClient {
     base_url: String,
     api_key: String,
     model: String,
+    api_kind: LlmApiKind,
+    headers: Vec<LlmHeader>,
 }
 
 #[derive(Serialize)]
@@ -157,13 +167,52 @@ impl LlmClient {
             base_url: normalize_base_url(&base_url),
             api_key: api_key.into(),
             model: model.into(),
+            api_kind: LlmApiKind::OpenaiCompatible,
+            headers: Vec::new(),
         })
+    }
+
+    /// Select the wire protocol and extra headers for this endpoint.
+    pub fn with_api(mut self, api_kind: LlmApiKind, headers: Vec<LlmHeader>) -> Self {
+        self.api_kind = api_kind;
+        self.headers = headers
+            .into_iter()
+            .filter(|header| !header.name.trim().is_empty())
+            .collect();
+        self
+    }
+
+    fn with_extra_headers(&self, mut request: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
+        for header in &self.headers {
+            request = request.header(header.name.trim(), header.value.as_str());
+        }
+        request
     }
 
     /// List the models the configured endpoint advertises (`GET /models`).
     pub async fn list_models(&self) -> Result<LlmEndpointDetectModelsResult, LlmError> {
-        let url = format!("{}/models", self.base_url);
-        let response = self.authorized(self.http.get(&url)).send().await?;
+        match self.api_kind {
+            LlmApiKind::OpenaiCompatible => {}
+            LlmApiKind::Anthropic => return self.anthropic_list_models().await,
+            LlmApiKind::Gemini => return self.gemini_list_models().await,
+            LlmApiKind::Ollama => return self.ollama_list_models().await,
+            LlmApiKind::Cohere => return self.cohere_list_models().await,
+            LlmApiKind::Bedrock => return self.bedrock_list_models().await,
+            LlmApiKind::VertexAi => return self.vertex_list_models().await,
+            LlmApiKind::AzureOpenai => {
+                if let Some(deployment) = self.azure_deployment_name() {
+                    return Ok(LlmEndpointDetectModelsResult {
+                        models: vec![deployment],
+                        model_reasoning: Vec::new(),
+                    });
+                }
+            }
+        }
+        let url = self.openai_url("/models");
+        let response = self
+            .with_extra_headers(self.authorized(self.http.get(&url)))
+            .send()
+            .await?;
         let status = response.status();
         if !status.is_success() {
             let message = response.text().await.unwrap_or_default();
@@ -185,9 +234,48 @@ impl LlmClient {
     fn authorized(&self, request: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
         if self.api_key.is_empty() {
             request
+        } else if self.api_kind == LlmApiKind::AzureOpenai {
+            request.header("api-key", &self.api_key)
         } else {
             request.bearer_auth(&self.api_key)
         }
+    }
+
+    /// Build `{base}{path}` for OpenAI-format endpoints. Azure keeps any query
+    /// string from the base URL (e.g. `?api-version=...`) after the path and
+    /// defaults `api-version` when it is missing.
+    fn openai_url(&self, path: &str) -> String {
+        let (base, query) = match self.base_url.split_once('?') {
+            Some((base, query)) => (base.trim_end_matches('/'), Some(query)),
+            None => (self.base_url.as_str(), None),
+        };
+        let mut url = format!("{base}{path}");
+        let mut query = query.unwrap_or_default().to_string();
+        if self.api_kind == LlmApiKind::AzureOpenai
+            && !base.ends_with("/openai/v1")
+            && !query
+                .split('&')
+                .any(|pair| pair.starts_with("api-version="))
+        {
+            if !query.is_empty() {
+                query.push('&');
+            }
+            query.push_str("api-version=");
+            query.push_str(AZURE_DEFAULT_API_VERSION);
+        }
+        if !query.is_empty() {
+            url.push('?');
+            url.push_str(&query);
+        }
+        url
+    }
+
+    /// Azure deployment URLs (`.../openai/deployments/<name>`) name the model.
+    fn azure_deployment_name(&self) -> Option<String> {
+        let base = self.base_url.split('?').next().unwrap_or_default();
+        let (_, rest) = base.split_once("/deployments/")?;
+        let name = rest.split('/').next().unwrap_or_default();
+        (!name.is_empty()).then(|| name.to_string())
     }
 
     /// Request one non-streaming chat completion.
@@ -196,6 +284,16 @@ impl LlmClient {
         messages: &[ChatMessage],
         options: &LlmRequestOptions,
     ) -> Result<String, LlmError> {
+        match self.api_kind {
+            LlmApiKind::OpenaiCompatible => {}
+            LlmApiKind::Anthropic => return self.anthropic_complete_chat(messages, options).await,
+            LlmApiKind::Gemini => return self.gemini_complete_chat(messages, options).await,
+            LlmApiKind::Ollama => return self.ollama_complete_chat(messages, options).await,
+            LlmApiKind::Cohere => return self.cohere_complete_chat(messages, options).await,
+            LlmApiKind::Bedrock => return self.bedrock_complete_chat(messages, options).await,
+            LlmApiKind::VertexAi => return self.gemini_complete_chat(messages, options).await,
+            LlmApiKind::AzureOpenai => {}
+        }
         let body = ChatRequestBody {
             model: &self.model,
             messages,
@@ -205,9 +303,8 @@ impl LlmClient {
         };
 
         let response = self
-            .authorized(
-                self.http
-                    .post(format!("{}/chat/completions", self.base_url)),
+            .with_extra_headers(
+                self.authorized(self.http.post(self.openai_url("/chat/completions"))),
             )
             .json(&body)
             .send()
@@ -236,6 +333,40 @@ impl LlmClient {
     where
         F: FnMut(&str),
     {
+        match self.api_kind {
+            LlmApiKind::OpenaiCompatible => {}
+            LlmApiKind::Anthropic => {
+                return self
+                    .anthropic_stream_chat(messages, tools, options, on_text)
+                    .await
+            }
+            LlmApiKind::Gemini => {
+                return self
+                    .gemini_stream_chat(messages, tools, options, on_text)
+                    .await
+            }
+            LlmApiKind::Ollama => {
+                return self
+                    .ollama_stream_chat(messages, tools, options, on_text)
+                    .await
+            }
+            LlmApiKind::Cohere => {
+                return self
+                    .cohere_stream_chat(messages, tools, options, on_text)
+                    .await
+            }
+            LlmApiKind::Bedrock => {
+                return self
+                    .bedrock_stream_chat(messages, tools, options, on_text)
+                    .await
+            }
+            LlmApiKind::VertexAi => {
+                return self
+                    .gemini_stream_chat(messages, tools, options, on_text)
+                    .await
+            }
+            LlmApiKind::AzureOpenai => {}
+        }
         let request_tools = tools
             .iter()
             .map(|tool| RequestTool {
@@ -256,9 +387,8 @@ impl LlmClient {
         };
 
         let response = self
-            .authorized(
-                self.http
-                    .post(format!("{}/chat/completions", self.base_url)),
+            .with_extra_headers(
+                self.authorized(self.http.post(self.openai_url("/chat/completions"))),
             )
             .json(&body)
             .send()

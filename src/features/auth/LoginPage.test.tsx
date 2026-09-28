@@ -77,7 +77,7 @@ function controllerValue(
     const noop = () => undefined;
     return {
         actions: {
-            openDiscord: noop,
+            openIssues: noop,
             openForgotPassword: noop,
             openGithub: noop,
             openRegister: noop

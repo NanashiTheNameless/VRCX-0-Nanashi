@@ -13,7 +13,7 @@ const DEFAULT_RETENTION_DAYS: i64 = 30;
 const OFF_RETENTION_DAYS: i64 = -1;
 const ALLOWED_RETENTION_DAYS: [i64; 6] = [OFF_RETENTION_DAYS, 0, 7, 30, 90, 365];
 const DEFAULT_PAGE_LIMIT: i64 = 120;
-const MAX_PAGE_LIMIT: i64 = 200;
+const MAX_PAGE_LIMIT: i64 = 2_000;
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "lowercase")]

@@ -249,3 +249,25 @@ pub trait McpFeedQueryPort: Send + Sync {
 }
 
 pub type McpFeedQueries = Arc<dyn McpFeedQueryPort>;
+
+/// Fork: assistant reminders (upstream #479); shared with the desktop host.
+pub use vrcx_0_contracts::reminders::{
+    Reminder as McpReminder, ReminderTrigger as McpReminderTrigger,
+};
+
+pub trait McpRemindersPort: Send + Sync {
+    fn create(
+        &self,
+        owner_user_id: &OwnerId,
+        message: String,
+        trigger: McpReminderTrigger,
+        recurring: bool,
+    ) -> vrcx_0_application_core::Result<McpReminder>;
+
+    fn list(&self, owner_user_id: &OwnerId) -> vrcx_0_application_core::Result<Vec<McpReminder>>;
+
+    /// Returns false when no reminder with that id belongs to the owner.
+    fn delete(&self, owner_user_id: &OwnerId, id: &str) -> vrcx_0_application_core::Result<bool>;
+}
+
+pub type McpReminders = Arc<dyn McpRemindersPort>;

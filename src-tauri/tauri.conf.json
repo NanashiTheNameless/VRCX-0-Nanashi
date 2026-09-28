@@ -1,8 +1,8 @@
 {
     "$schema": "https://schema.tauri.app/config/2",
-    "productName": "VRCX-0",
+    "productName": "VRCX-0-Nanashi",
     "version": "2.30.0",
-    "identifier": "com.vrcx-0.app",
+    "identifier": "dev.namelessnanashi.vrcx-0-nanashi",
     "build": {
         "frontendDist": "../dist",
         "devUrl": "http://localhost:9000",
@@ -34,7 +34,7 @@
             {
                 "label": "main",
                 "create": false,
-                "title": "VRCX-0",
+                "title": "VRCX-0-Nanashi",
                 "width": 1024,
                 "height": 768,
                 "minWidth": 320,
@@ -47,7 +47,7 @@
         "trayIcon": {
             "id": "main",
             "iconPath": "icons/icon.png",
-            "tooltip": "VRCX-0"
+            "tooltip": "VRCX-0-Nanashi"
         }
     },
     "bundle": {
@@ -56,6 +56,7 @@
         "resources": {
             "../LICENSE": "LICENSE",
             "../LICENSES/MIT.txt": "LICENSES/MIT.txt",
+            "../LICENSES/OFL-1.1-0xProto.txt": "LICENSES/OFL-1.1-0xProto.txt",
             "resources/licenses/THIRD_PARTY_NOTICES.txt": "licenses/THIRD_PARTY_NOTICES.txt"
         },
         "targets": ["nsis"],
@@ -68,12 +69,12 @@
         ],
         "windows": {
             "digestAlgorithm": "sha256",
-            "certificateThumbprint": "CF3C4BD75C0B82455ABEBFF09A2127FA92F6C140",
             "timestampUrl": "http://time.certum.pl",
             "nsis": {
                 "installerIcon": "icons/icon.ico",
                 "displayLanguageSelector": false,
-                "installMode": "currentUser"
+                "installMode": "currentUser",
+                "installerHooks": "installer/ytdlp-hooks.nsh"
             }
         },
         "createUpdaterArtifacts": true
@@ -81,14 +82,14 @@
     "plugins": {
         "deep-link": {
             "desktop": {
-                "schemes": ["vrcx-0"]
+                "schemes": ["vrcx-0-nanashi", "vrcx-0", "vrcx"]
             }
         },
         "updater": {
-            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEIwQTA3NTFDOTAxM0E3MjYKUldRbXB4T1FISFdnc0dXNWJhUEVNUVNNcm5ubytmR3lEdTBCUzJPUFY0dHpLcW1UdldwUFB4OWEK",
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc2RkU0RTAyMjA2NTBDQ0MKUldUTURHVWdBazcrZGpZaXpiTE9xYTJ1aGpQNURYMHBqOG5WRnhhVHdQSmdWU2EyMHc2ckRPNXIK",
             "endpoints": [
-                "https://github.com/Map1en/VRCX-0/releases/latest/download/latest_linux_and_macos.json",
-                "https://github.com/Map1en/VRCX-0/releases/latest/download/latest_windows.json"
+                "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/latest_linux_and_macos.json",
+                "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/latest_windows.json"
             ],
             "windows": {
                 "installMode": "passive"

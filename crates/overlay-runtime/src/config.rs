@@ -5,9 +5,10 @@ use super::eligibility::WristOverlayStartMode;
 use super::localization::OverlayLocale;
 use super::runtime::{
     HmdNotificationConfig, HmdNotificationPosition, VrOverlayRuntimeConfig, WristOverlayHand,
+    DEFAULT_WRIST_PAGE_FLIP_SECS,
 };
 use super::service::OverlayBackendPreference;
-use super::{WristOverlayRenderOptions, WristOverlaySizePreset};
+use super::{WristOverlayRenderOptions, WristOverlaySizePreset, WristPageOrder, WristPlayersSort};
 
 pub const VR_OVERLAY_ENABLED_CONFIG_KEY: &str = "wristOverlayEnabled";
 pub const VR_OVERLAY_BACKEND_CONFIG_KEY: &str = "wristOverlayBackend";
@@ -19,6 +20,9 @@ pub const VR_OVERLAY_HIDE_PRIVATE_WORLDS_CONFIG_KEY: &str = "wristOverlayHidePri
 pub const VR_OVERLAY_DARK_BACKGROUND_CONFIG_KEY: &str = "wristOverlayDarkBackground";
 pub const VR_OVERLAY_SHOW_DEVICES_CONFIG_KEY: &str = "wristOverlayShowDevices";
 pub const VR_OVERLAY_SHOW_BATTERY_PERCENT_CONFIG_KEY: &str = "wristOverlayShowBatteryPercent";
+pub const VR_OVERLAY_PAGES_CONFIG_KEY: &str = "wristOverlayPages";
+pub const VR_OVERLAY_PLAYERS_SORT_CONFIG_KEY: &str = "wristOverlayPlayersSort";
+pub const VR_OVERLAY_PAGE_FLIP_SECONDS_CONFIG_KEY: &str = "wristOverlayPageFlipSeconds";
 pub const HMD_NOTIFICATIONS_ENABLED_CONFIG_KEY: &str = "hmdNotificationsEnabled";
 pub const HMD_NOTIFICATION_START_MODE_CONFIG_KEY: &str = "hmdNotificationStartMode";
 pub const HMD_NOTIFICATION_TIMEOUT_CONFIG_KEY: &str = "hmdNotificationTimeout";
@@ -102,6 +106,21 @@ pub(super) fn load_runtime_config(config: &ConfigRepository) -> VrOverlayRuntime
     let show_instance_id_in_location = config
         .get_bool(SHOW_INSTANCE_ID_IN_LOCATION_CONFIG_KEY, false)
         .unwrap_or(false);
+    let wrist_pages = config
+        .get_string(VR_OVERLAY_PAGES_CONFIG_KEY, WristPageOrder::DEFAULT_CONFIG)
+        .map(|value| WristPageOrder::from_config(&value))
+        .unwrap_or_default();
+    let wrist_players_sort = config
+        .get_string(VR_OVERLAY_PLAYERS_SORT_CONFIG_KEY, "name")
+        .map(|value| WristPlayersSort::from_config(&value))
+        .unwrap_or_default();
+    let wrist_page_flip_secs = config
+        .get_raw(VR_OVERLAY_PAGE_FLIP_SECONDS_CONFIG_KEY)
+        .ok()
+        .flatten()
+        .and_then(|value| value.trim().parse::<u8>().ok())
+        .unwrap_or(DEFAULT_WRIST_PAGE_FLIP_SECS)
+        .clamp(1, 10);
 
     VrOverlayRuntimeConfig {
         start_mode,
@@ -125,5 +144,8 @@ pub(super) fn load_runtime_config(config: &ConfigRepository) -> VrOverlayRuntime
         locale,
         dt_hour12,
         show_instance_id_in_location,
+        wrist_pages,
+        wrist_players_sort,
+        wrist_page_flip_secs,
     }
 }

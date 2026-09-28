@@ -19,6 +19,7 @@ impl VrcxMcpServer {
             + Self::graph_tool_router()
             + Self::invites_tool_router()
             + Self::presence_tool_router()
+            + Self::reminders_tool_router()
     }
 }
 
@@ -38,6 +39,8 @@ mod router_tests {
         assert_eq!(
             names,
             vec![
+                "create_reminder",
+                "delete_reminder",
                 "favorite_local",
                 "favorite_vrchat",
                 "find_user",
@@ -59,6 +62,7 @@ mod router_tests {
                 "get_online_friends",
                 "get_social_graph",
                 "get_visit_timeline",
+                "list_reminders",
                 "recall_encounter",
                 "refresh_mutual_graph",
                 "search_friend_feed",

@@ -3,7 +3,7 @@ use vrcx_0_host_desktop::overlay_notifications::OvrToolkit;
 
 use super::NotificationDeliveryPlan;
 
-const NOTIFICATION_APP_TITLE: &str = "VRCX-0";
+const NOTIFICATION_APP_TITLE: &str = "VRCX-0-Nanashi";
 
 pub(super) fn send_ovrt_notification(
     ovrt: &OvrToolkit,

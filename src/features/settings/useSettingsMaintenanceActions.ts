@@ -8,7 +8,6 @@ import {
     dismissDataDirCleanup,
     planDataDirMigration
 } from '@/services/dataDirMigrationService';
-import { promptLegacyVrcxForceMigration } from '@/services/legacyVrcxMigrationService';
 import type { IntConfigPreferenceKey } from '@/services/preferencesService';
 import {
     deleteAllScreenshotMetadata as deleteAllScreenshotMetadataFromShell,
@@ -103,7 +102,6 @@ type SettingsMaintenanceActionsDeps = {
 };
 
 export function createSettingsMaintenanceActions({
-    alert,
     commit,
     confirm,
     avatarFeedHistoryRepository,
@@ -424,9 +422,6 @@ export function createSettingsMaintenanceActions({
             setPurgeInProgress(false);
         }
     }
-    async function migrateLegacyVrcxData() {
-        await promptLegacyVrcxForceMigration({ alert, confirm, t, toast });
-    }
     async function openUgcFolderSelector() {
         const selectedPath = await openFolderSelectorDialog(
             prefs.userGeneratedContentPath || ''
@@ -546,7 +541,6 @@ export function createSettingsMaintenanceActions({
         openUgcFolderSelector,
         handleCropInstancePrintsChange,
         handleGameLogDisabledChange,
-        handleFeedPersistenceDisabledChange,
-        migrateLegacyVrcxData
+        handleFeedPersistenceDisabledChange
     };
 }

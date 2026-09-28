@@ -53,12 +53,12 @@ import {
 } from './WorldDialogViewParts';
 
 function overviewValue(value: unknown) {
-    return value || value === 0 ? String(value) : '—';
+    return value || value === 0 ? String(value) : '-';
 }
 
 function scoreValue(value: unknown) {
     const displayValue = overviewValue(value);
-    return displayValue === '—' ? displayValue : `${displayValue}/10`;
+    return displayValue === '-' ? displayValue : `${displayValue}/10`;
 }
 
 function WorldOverviewMetric({
@@ -71,7 +71,7 @@ function WorldOverviewMetric({
     value: unknown;
 }) {
     const displayValue = overviewValue(value);
-    if (displayValue === '—') {
+    if (displayValue === '-') {
         return null;
     }
 

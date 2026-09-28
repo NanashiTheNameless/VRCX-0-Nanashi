@@ -6,9 +6,9 @@ body:
     - type: markdown
       attributes:
           value: |
-              Thanks for reporting! Please make sure you're on the **latest version** first — the bug may already be fixed.
+              Thanks for reporting! Please make sure you're on the **latest version** first - the bug may already be fixed.
 
-              Need quick help? Join our [Discord](https://discord.gg/fehKP3SVPN).
+              This is a personal fork of VRCX-0. Please do not report fork bugs to upstream. Support is offered in English only.
 
     - type: input
       attributes:
@@ -21,7 +21,7 @@ body:
     - type: textarea
       attributes:
           label: What happened?
-          description: Describe the bug — what were you doing, and what went wrong?
+          description: Describe the bug - what were you doing, and what went wrong?
       validations:
           required: true
     - type: textarea

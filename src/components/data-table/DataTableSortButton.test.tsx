@@ -75,7 +75,7 @@ describe('DataTableSortButton (bound to a TanStack Table column)', () => {
         };
     }
 
-    it('drives the bound column’s own sort state directly, so clicking the header updates the table without an onSort prop', () => {
+    it("drives the bound column's own sort state directly, so clicking the header updates the table without an onSort prop", () => {
         const column = createColumnStub(false);
         render(
             <DataTableSortButton

@@ -379,7 +379,9 @@ fn release(
     AppUpdateCatalogRelease {
         tag_name: Some(tag_name.into()),
         assets,
-        html_url: Some("https://github.com/Map1en/VRCX-0/releases/tag/v1.2.3".into()),
+        html_url: Some(
+            "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/tag/v1.2.3".into(),
+        ),
         name: None,
         prerelease,
         published_at: Some("2026-07-16T12:00:00Z".into()),
@@ -488,7 +490,7 @@ fn normalize_release_requires_matching_installer_asset_when_required() {
         vec![asset(
             "latest_windows.json",
             "uploaded",
-            "https://github.com/Map1en/VRCX-0/releases/download/v1.2.3/latest_windows.json",
+            "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/download/v1.2.3/latest_windows.json",
         )],
     );
 

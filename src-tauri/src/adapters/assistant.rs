@@ -27,6 +27,7 @@ impl AssistantLlmClientFactoryPort for TauriAssistantLlmClientFactory {
             input.model,
             input.proxy_url.as_deref(),
         )
+        .map(|client| client.with_api(input.api_kind, input.headers))
         .map(|inner| Arc::new(TauriAssistantLlmClient { inner }) as Arc<dyn AssistantLlmClientPort>)
         .map_err(llm_error)
     }

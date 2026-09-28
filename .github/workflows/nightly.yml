@@ -1,0 +1,342 @@
+name: Nightly
+
+# Builds every push to master (no scheduled builds) and publishes it as a
+# prerelease on the beta update channel, so installed nightly builds update
+# themselves through the in-app updater.
+#
+# Version scheme: <major>.<minor>.<patch + 1>-beta.<run_number>, derived from
+# src-tauri/tauri.conf.json. The patch bump keeps nightlies newer than the
+# stable version they are based on; run_number keeps them strictly increasing.
+#
+# Also force-moves the `Nightly-Rolling` tag/release to the newest build.
+#
+# Required repository configuration:
+#   vars.TAURI_UPDATER_PUBLIC_KEY           minisign public key (also used by release.yml)
+#   secrets.TAURI_UPDATER_PRIVATE_KEY       minisign private key
+#   secrets.TAURI_UPDATER_PRIVATE_KEY_PASSWORD
+
+on:
+    push:
+        branches:
+            - master
+        paths-ignore:
+            - '**/*.md'
+            - '.github/ISSUE_TEMPLATE/**'
+            - 'images/**'
+    workflow_dispatch:
+
+concurrency:
+    group: nightly
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+
+jobs:
+    prepare:
+        name: Prepare Nightly Metadata
+        runs-on: ubuntu-24.04
+        outputs:
+            base_version: ${{ steps.version.outputs.base_version }}
+            build_version: ${{ steps.version.outputs.build_version }}
+            beta_number: ${{ steps.version.outputs.beta_number }}
+            display_version: ${{ steps.version.outputs.display_version }}
+            tag: ${{ steps.version.outputs.tag }}
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24.x
+
+            - id: version
+              name: Compute nightly version
+              run: |
+                  base="$(node -p "require('./src-tauri/tauri.conf.json').version.split('-')[0]")"
+                  nightly_base="$(node -e "const [a,b,c]=process.argv[1].split('.').map(Number); console.log([a,b,c+1].join('.'))" "$base")"
+                  node scripts/prepare-release-version.ts \
+                      --version "${nightly_base}-beta.${{ github.run_number }}" \
+                      --dry-run
+
+    package:
+        name: ${{ matrix.label }}
+        needs: prepare
+        runs-on: ${{ matrix.os }}
+        defaults:
+            run:
+                shell: bash
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - label: Windows Installer
+                      os: windows-latest
+                      rust_target: ''
+                      webkit_build_target: ''
+                      artifact_name: windows-installer
+                      artifact_path: |
+                          target/release/bundle/nsis/*_windows_x86_64_setup.exe
+                          target/release/bundle/latest_windows.json
+                    - label: Linux Packages
+                      os: ubuntu-24.04
+                      rust_target: ''
+                      webkit_build_target: safari17.4
+                      artifact_name: linux-packages
+                      artifact_path: |
+                          target/release/bundle/appimage/*.AppImage
+                          target/release/bundle/appimage/*.AppImage.sig
+                          target/release/bundle/deb/*.deb
+                          target/release/bundle/deb/*.deb.sig
+                          target/release/bundle/rpm/*.rpm
+                          target/release/bundle/rpm/*.rpm.sig
+                          target/release/bundle/latest_linux_and_macos.json
+                    - label: macOS DMG (Apple Silicon)
+                      os: macos-latest
+                      rust_target: aarch64-apple-darwin
+                      dmg_asset_arch: macos_aarch64
+                      updater_asset_name: update_macos_aarch64.app.tar.gz
+                      webkit_build_target: safari18.2
+                      artifact_name: macos-aarch64-dmg
+                      artifact_path: |
+                          target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+                          target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz
+                          target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
+                    - label: macOS DMG (Intel)
+                      os: macos-latest
+                      rust_target: x86_64-apple-darwin
+                      dmg_asset_arch: macos_x86_64
+                      updater_asset_name: update_macos_x86_64.app.tar.gz
+                      webkit_build_target: safari18.2
+                      artifact_name: macos-x86_64-dmg
+                      artifact_path: |
+                          target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+                          target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz
+                          target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: dtolnay/rust-toolchain@stable
+
+            - name: Install Rust target
+              if: matrix.rust_target != ''
+              run: rustup target add "${{ matrix.rust_target }}"
+
+            - uses: ./.github/actions/setup-node
+
+            - name: Install Linux package dependencies
+              if: runner.os == 'Linux'
+              uses: ./.github/actions/setup-linux-tauri
+              with:
+                  mode: package
+
+            - name: Stamp nightly version
+              run: node scripts/prepare-release-version.ts --version "${{ needs.prepare.outputs.build_version }}"
+
+            - name: Inject updater public key
+              env:
+                  TAURI_UPDATER_PUBLIC_KEY: ${{ vars.TAURI_UPDATER_PUBLIC_KEY }}
+              run: |
+                  if [[ -z "$TAURI_UPDATER_PUBLIC_KEY" ]]; then
+                      echo "TAURI_UPDATER_PUBLIC_KEY repository variable is required for updater artifacts" >&2
+                      exit 1
+                  fi
+                  node -e "const fs = require('node:fs'); const path = 'src-tauri/tauri.conf.json'; const config = JSON.parse(fs.readFileSync(path, 'utf8')); config.plugins ??= {}; config.plugins.updater ??= {}; config.plugins.updater.pubkey = process.env.TAURI_UPDATER_PUBLIC_KEY; config.bundle ??= {}; config.bundle.windows ??= {}; delete config.bundle.windows.certificateThumbprint; delete config.bundle.windows.signCommand; fs.writeFileSync(path, JSON.stringify(config, null, 4) + '\n');"
+
+            - name: Build package
+              env:
+                  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_UPDATER_PRIVATE_KEY }}
+                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_UPDATER_PRIVATE_KEY_PASSWORD }}
+                  VRCX_0_WEBKIT_BUILD_TARGET: ${{ matrix.webkit_build_target }}
+              run: |
+                  override_config="${RUNNER_TEMP}/tauri-nightly-override.json"
+                  case "$RUNNER_OS" in
+                      Linux)
+                          # rpm cannot carry a semver prerelease in Version; use Release instead.
+                          node -e "require('node:fs').writeFileSync(process.argv[1], JSON.stringify({ version: process.argv[2], bundle: { linux: { rpm: { release: '0.beta.' + process.argv[3] } } } }))" "$override_config" "${{ needs.prepare.outputs.base_version }}" "${{ needs.prepare.outputs.beta_number }}"
+                          npm run tauri:build -- --config src-tauri/tauri.linux.conf.json --no-bundle
+                          npm run tauri -- bundle --config src-tauri/tauri.linux.conf.json --bundles appimage deb
+                          npm run tauri -- bundle --config "$override_config" --bundles rpm
+                          ;;
+                      macOS)
+                          node -e "require('node:fs').writeFileSync(process.argv[1], JSON.stringify({ bundle: { macOS: { bundleVersion: process.argv[2] } } }))" "$override_config" "${{ github.run_number }}"
+                          npm run tauri:build -- --target "${{ matrix.rust_target }}" --bundles app,dmg --config "$override_config"
+                          ;;
+                      Windows)
+                          npm run tauri:build -- --bundles nsis
+                          ;;
+                  esac
+
+            - name: Prepare Windows release and updater assets
+              if: runner.os == 'Windows'
+              run: |
+                  bundle_dir="target/release/bundle"
+                  setup_source="$(find "$bundle_dir/nsis" -maxdepth 1 -name '*-setup.exe' | sort | head -n 1)"
+                  if [[ -z "$setup_source" || ! -s "${setup_source}.sig" ]]; then
+                      echo "Missing NSIS installer or updater signature in $bundle_dir/nsis" >&2
+                      exit 1
+                  fi
+                  setup_path="$bundle_dir/nsis/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_windows_x86_64_setup.exe"
+                  mv "$setup_source" "$setup_path"
+                  mv "${setup_source}.sig" "${setup_path}.sig"
+                  node scripts/create-tauri-updater-manifest.ts \
+                      --version "${{ needs.prepare.outputs.build_version }}" \
+                      --tag "${{ needs.prepare.outputs.tag }}" \
+                      --target "windows-x86_64-stable" \
+                      --asset-name "$(basename "$setup_path")" \
+                      --signature-file "${setup_path}.sig" \
+                      --out "$bundle_dir/latest_windows.json"
+
+            - name: Prepare Linux release and updater assets
+              if: runner.os == 'Linux'
+              run: |
+                  bundle_dir="target/release/bundle"
+                  manifest_path="$bundle_dir/latest_linux_and_macos.json"
+                  version="${{ needs.prepare.outputs.build_version }}"
+
+                  rename_asset() {
+                      local source="$1" destination="$2"
+                      if [[ "$source" != "$destination" ]]; then
+                          mv "$source" "$destination"
+                      fi
+                      if [[ -f "${source}.sig" && "${source}.sig" != "${destination}.sig" ]]; then
+                          mv "${source}.sig" "${destination}.sig"
+                      fi
+                      if [[ ! -f "${destination}.sig" ]]; then
+                          node node_modules/@tauri-apps/cli/tauri.js signer sign "$destination" > "${destination}.sig"
+                      fi
+                      if [[ ! -s "${destination}.sig" ]]; then
+                          echo "No updater signature for $destination" >&2
+                          exit 1
+                      fi
+                  }
+
+                  appimage_path="$bundle_dir/appimage/VRCX-0-Nanashi_${version}_linux_x86_64.AppImage"
+                  deb_path="$bundle_dir/deb/VRCX-0-Nanashi_${version}_linux_x86_64.deb"
+                  rpm_path="$bundle_dir/rpm/VRCX-0-Nanashi_${version}_linux_x86_64.rpm"
+                  rename_asset "$(find "$bundle_dir/appimage" -maxdepth 1 -name '*.AppImage' | sort | head -n 1)" "$appimage_path"
+                  rename_asset "$(find "$bundle_dir/deb" -maxdepth 1 -name '*.deb' | sort | head -n 1)" "$deb_path"
+                  rename_asset "$(find "$bundle_dir/rpm" -maxdepth 1 -name '*.rpm' | sort | head -n 1)" "$rpm_path"
+
+                  base_arg=()
+                  for pair in "appimage:$appimage_path" "deb:$deb_path" "rpm:$rpm_path"; do
+                      kind="${pair%%:*}"
+                      path="${pair#*:}"
+                      node scripts/create-tauri-updater-manifest.ts \
+                          --version "$version" \
+                          --tag "${{ needs.prepare.outputs.tag }}" \
+                          --target "linux-x86_64-${kind}-stable" \
+                          --asset-name "$(basename "$path")" \
+                          --signature-file "${path}.sig" \
+                          "${base_arg[@]}" \
+                          --out "$manifest_path"
+                      base_arg=(--base "$manifest_path")
+                  done
+
+            - name: Prepare macOS release and updater assets
+              if: runner.os == 'macOS'
+              run: |
+                  dmg_dir="target/${{ matrix.rust_target }}/release/bundle/dmg"
+                  dmg_path="$(find "$dmg_dir" -maxdepth 1 -name '*.dmg' | sort | head -n 1)"
+                  mv "$dmg_path" "$dmg_dir/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_${{ matrix.dmg_asset_arch }}.dmg"
+
+                  updater_dir="target/${{ matrix.rust_target }}/release/bundle/macos"
+                  archive_path="$(find "$updater_dir" -maxdepth 1 -name '*.app.tar.gz' | sort | head -n 1)"
+                  if [[ -z "$archive_path" || ! -f "${archive_path}.sig" ]]; then
+                      echo "Missing macOS updater archive or signature in $updater_dir" >&2
+                      exit 1
+                  fi
+                  mv "$archive_path" "$updater_dir/${{ matrix.updater_asset_name }}"
+                  mv "${archive_path}.sig" "$updater_dir/${{ matrix.updater_asset_name }}.sig"
+
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: nightly-${{ matrix.artifact_name }}
+                  path: ${{ matrix.artifact_path }}
+                  if-no-files-found: error
+
+    publish:
+        name: Publish Nightly
+        needs:
+            - prepare
+            - package
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: write
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: actions/setup-node@v6
+              with:
+                  node-version: 24.x
+
+            - uses: actions/download-artifact@v8
+              with:
+                  path: release-assets
+                  merge-multiple: true
+
+            - name: Flatten release assets
+              run: |
+                  find release-assets -mindepth 2 -type f -exec mv -n {} release-assets/ \;
+                  find release-assets -mindepth 1 -type d -empty -delete
+                  find release-assets -type f | sort
+
+            - name: Add macOS updater entries to Linux/macOS manifest
+              run: |
+                  manifest_path="release-assets/latest_linux_and_macos.json"
+                  for target in macos-aarch64-stable macos-x86_64-stable; do
+                      archive_name="update_${target%-stable}.app.tar.gz"
+                      archive_name="${archive_name//-/_}"
+                      node scripts/create-tauri-updater-manifest.ts \
+                          --version "${{ needs.prepare.outputs.build_version }}" \
+                          --tag "${{ needs.prepare.outputs.tag }}" \
+                          --target "$target" \
+                          --asset-name "$archive_name" \
+                          --signature-file "release-assets/${archive_name}.sig" \
+                          --base "$manifest_path" \
+                          --out "$manifest_path"
+                  done
+
+            - name: Remove updater signatures from GitHub release assets
+              run: find release-assets -type f -name '*.sig' -delete
+
+            - uses: softprops/action-gh-release@v3
+              with:
+                  tag_name: ${{ needs.prepare.outputs.tag }}
+                  target_commitish: ${{ github.sha }}
+                  name: Nightly ${{ needs.prepare.outputs.display_version }}
+                  body: |
+                      Automated nightly build of ${{ github.sha }}.
+                      Installed nightly builds update to this automatically.
+                  draft: false
+                  prerelease: true
+                  make_latest: false
+                  files: release-assets/*
+                  fail_on_unmatched_files: true
+
+            - name: Update Nightly-Rolling release
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  # Rolling tag that always points at the newest nightly build. Its tag
+                  # name is not semver, so the in-app updater ignores it; it exists for
+                  # people who want a stable download URL for the latest build.
+                  git tag -f Nightly-Rolling "$GITHUB_SHA"
+                  git push -f origin refs/tags/Nightly-Rolling
+                  gh release delete Nightly-Rolling --repo "$GITHUB_REPOSITORY" --yes || true
+                  gh release create Nightly-Rolling release-assets/* \
+                      --repo "$GITHUB_REPOSITORY" \
+                      --verify-tag \
+                      --prerelease \
+                      --latest=false \
+                      --title "Nightly (rolling)" \
+                      --notes "Latest nightly build: ${{ needs.prepare.outputs.display_version }} from $GITHUB_SHA."
+
+            - name: Prune old nightlies (keep 10)
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName,isPrerelease,createdAt \
+                      --jq '[.[] | select(.isPrerelease and (.tagName | test("-beta\\.[0-9]+$")))] | sort_by(.createdAt) | reverse | .[10:] | .[].tagName' \
+                  | while read -r tag; do
+                      gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
+                  done

@@ -164,6 +164,9 @@ export function useTitleBarActions(
     const notificationLayout = usePreferencesStore(
         (state) => state.notificationLayout
     );
+    const socialAiEnabled = usePreferencesStore(
+        (state) => state.socialAiEnabled
+    );
     const vrcUnseenNotificationCount = useVrcNotificationStore(
         (state) => state.unseenCount
     );
@@ -503,13 +506,17 @@ export function useTitleBarActions(
                 </Tooltip>
             </div>
             {notificationAction}
-            <TitleBarButton
-                label={t('assistant.title')}
-                className="size-7 min-w-7 rounded-md px-0"
-                onClick={() => useAssistantChatStore.getState().setOpen(true)}
-            >
-                <SparklesIcon data-icon="icon" />
-            </TitleBarButton>
+            {socialAiEnabled ? (
+                <TitleBarButton
+                    label={t('assistant.title')}
+                    className="size-7 min-w-7 rounded-md px-0"
+                    onClick={() =>
+                        useAssistantChatStore.getState().setOpen(true)
+                    }
+                >
+                    <SparklesIcon data-icon="icon" />
+                </TitleBarButton>
+            ) : null}
             {themeToggleAction}
             {alwaysOnTopButton}
             <TitleBarButton

@@ -20,3 +20,17 @@ scripts/package-windows-release.ps1
 .agents/
 .mcp.json
 tsconfig.tsbuildinfo
+
+*nogit*
+*githide*
+*.nogit.*
+*.githide.*
+*.gitignore.*
+githide/
+
+# Local updater signing credentials
+/.signing/
+
+# Python plugin test artifacts
+__pycache__/
+*.pyc

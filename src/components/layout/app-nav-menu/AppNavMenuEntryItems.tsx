@@ -190,7 +190,7 @@ function NavMenuFolderItem({
             ? ''
             : firstShortcutPosition === lastShortcutPosition
               ? String(firstShortcutPosition)
-              : `${firstShortcutPosition}–${lastShortcutPosition}`;
+              : `${firstShortcutPosition}-${lastShortcutPosition}`;
 
     useEffect(() => {
         if (rememberedOpen === undefined || (isActive && !wasActive.current)) {

@@ -234,8 +234,8 @@ describe('screenshotMetadataValues', () => {
         expect(formatScreenshotBytes(0)).toBe('');
         expect(formatScreenshotBytes(512)).toBe('512 B');
         expect(formatScreenshotBytes(1536)).toBe('1.5 KB');
-        expect(formatScreenshotDateTime(null)).toBe('—');
-        expect(formatScreenshotDateTime('invalid')).toBe('—');
+        expect(formatScreenshotDateTime(null)).toBe('-');
+        expect(formatScreenshotDateTime('invalid')).toBe('-');
     });
 
     it('normalizes gallery scroll positions for persistence', () => {

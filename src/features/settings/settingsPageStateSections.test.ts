@@ -68,7 +68,6 @@ function createInput(
         },
         locale: 'en',
         llmEndpoints: [],
-        migrateLegacyVrcxData: callback,
         normalizeRecentActionCooldownMinutes: () => 60,
         notificationTtsTest: '',
         notificationTtsTestVisible: false,

@@ -128,12 +128,12 @@ function isSameLocalDay(leftMs: number, rightMs: number) {
 
 function playerTimestampText(timestampMs: number, instanceStartMs: number) {
     if (!timestampMs) {
-        return '—';
+        return '-';
     }
     if (instanceStartMs && isSameLocalDay(timestampMs, instanceStartMs)) {
-        return formatClock(timestampMs) || '—';
+        return formatClock(timestampMs) || '-';
     }
-    return formatCompactDateTime(timestampMs) || '—';
+    return formatCompactDateTime(timestampMs) || '-';
 }
 
 function playerJoinTimestamp(
@@ -874,7 +874,7 @@ export function PreviousInstanceDetailsPanel({
                             {formatDateFilterOrFallback(
                                 row?.created_at || row?.createdAt,
                                 'long',
-                                { empty: '—', invalid: '—' }
+                                { empty: '-', invalid: '-' }
                             )}
                         </dd>
                     </div>
@@ -898,7 +898,7 @@ export function PreviousInstanceDetailsPanel({
                                 />
                             ) : (
                                 <span className="text-muted-foreground">
-                                    {'—'}
+                                    {'-'}
                                 </span>
                             )}
                         </dd>

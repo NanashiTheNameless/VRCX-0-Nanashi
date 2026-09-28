@@ -13,7 +13,7 @@ use crate::host_capabilities::{require_host_capability, HostCapability};
 use crate::vrchat_paths;
 
 const DEFAULT_ENTRY_LIMIT: usize = 300;
-const MAX_ENTRY_LIMIT: usize = 1000;
+const MAX_ENTRY_LIMIT: usize = 100_000;
 
 #[derive(Clone, Debug, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]

@@ -196,10 +196,10 @@ export function useGroupModerationColumns({
                 const detail =
                     moderationRowRoles(row.original, group) ||
                     moderationRowNote(row.original) ||
-                    '—';
-                if (detail === '—') {
+                    '-';
+                if (detail === '-') {
                     return (
-                        <span className="text-muted-foreground text-xs">—</span>
+                        <span className="text-muted-foreground text-xs">-</span>
                     );
                 }
                 return (
@@ -267,7 +267,7 @@ export function useGroupModerationColumns({
                 const date = moderationRowDate(row.original);
                 return (
                     <span className="text-xs">
-                        {date ? formatDateFilter(date, 'long') : '—'}
+                        {date ? formatDateFilter(date, 'long') : '-'}
                     </span>
                 );
             }

@@ -22,7 +22,11 @@ function draft(): LlmEndpointProviderDraft {
         apiKey: 'sk-existing',
         clearKey: true,
         models: ['manual-model'],
-        detectedModelReasoning: null
+        detectedModelReasoning: null,
+        apiKind: 'openaiCompatible',
+        savedApiKind: 'openaiCompatible',
+        headersText: '',
+        savedHeadersText: ''
     };
 }
 
@@ -32,11 +36,25 @@ describe('LLM endpoint presets', () => {
             LLM_ENDPOINT_PROVIDER_PRESETS.map((preset) => preset.id)
         ).toEqual([
             'openai',
+            'anthropic',
+            'gemini-native',
             'openrouter',
             'gemini',
+            'groq',
+            'together',
+            'mistral',
             'deepseek',
             'xai',
-            'siliconflow'
+            'siliconflow',
+            'azure',
+            'cohere',
+            'bedrock',
+            'vertex',
+            'ollama',
+            'ollama-openai',
+            'lmstudio',
+            'llamacpp',
+            'vllm'
         ]);
         expect(DEFAULT_LLM_ENDPOINT_PROVIDER_ID).toBe('openai');
         expect(createEmptyLlmEndpointDraft()).toMatchObject({
@@ -80,7 +98,7 @@ describe('LLM endpoint presets', () => {
     });
 
     it('applies a preset while dropping credentials from the previous target', () => {
-        expect(applyLlmEndpointProviderPreset(draft(), 'xai')).toEqual({
+        expect(applyLlmEndpointProviderPreset(draft(), 'xai')).toMatchObject({
             id: 'ep_1',
             savedBaseUrl: 'https://example.test/v1',
             providerId: 'xai',
@@ -94,7 +112,9 @@ describe('LLM endpoint presets', () => {
     });
 
     it('applies additional common provider presets', () => {
-        expect(applyLlmEndpointProviderPreset(draft(), 'openrouter')).toEqual({
+        expect(
+            applyLlmEndpointProviderPreset(draft(), 'openrouter')
+        ).toMatchObject({
             id: 'ep_1',
             savedBaseUrl: 'https://example.test/v1',
             providerId: 'openrouter',
@@ -105,7 +125,9 @@ describe('LLM endpoint presets', () => {
             models: [],
             detectedModelReasoning: null
         });
-        expect(applyLlmEndpointProviderPreset(draft(), 'siliconflow')).toEqual({
+        expect(
+            applyLlmEndpointProviderPreset(draft(), 'siliconflow')
+        ).toMatchObject({
             id: 'ep_1',
             savedBaseUrl: 'https://example.test/v1',
             providerId: 'siliconflow',
@@ -140,7 +162,7 @@ describe('LLM endpoint presets', () => {
                 draft(),
                 CUSTOM_LLM_ENDPOINT_PROVIDER_ID
             )
-        ).toEqual({
+        ).toMatchObject({
             id: 'ep_1',
             savedBaseUrl: 'https://example.test/v1',
             providerId: CUSTOM_LLM_ENDPOINT_PROVIDER_ID,

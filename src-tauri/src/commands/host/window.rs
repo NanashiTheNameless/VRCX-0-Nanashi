@@ -124,23 +124,7 @@ pub(crate) fn stop_runtime_services(app_handle: &AppHandle) {
         state.log_watcher_compat_bridge().stop();
         state
             .runtime_host()
-            .stop_for_application_exit("application-exit", || {
-                flush_telemetry_before_task_shutdown(&state);
-            });
-    }
-}
-
-fn flush_telemetry_before_task_shutdown(state: &AppState) {
-    match tokio::runtime::Handle::try_current() {
-        Ok(handle) if handle.runtime_flavor() == tokio::runtime::RuntimeFlavor::MultiThread => {
-            tokio::task::block_in_place(|| {
-                handle.block_on(state.runtime_host().shutdown_telemetry_flush())
-            });
-        }
-        Ok(_) => {}
-        Err(_) => {
-            tauri::async_runtime::block_on(state.runtime_host().shutdown_telemetry_flush());
-        }
+            .stop_for_application_exit("application-exit");
     }
 }
 
@@ -172,9 +156,9 @@ pub(crate) fn set_tray_icon_notification(app_handle: &AppHandle, notify: bool) {
             )));
         }
         let tooltip = if notify {
-            "VRCX-0 (new notification)"
+            "VRCX-0-Nanashi (new notification)"
         } else {
-            "VRCX-0"
+            "VRCX-0-Nanashi"
         };
         let _ = tray.set_tooltip(Some(tooltip));
     }

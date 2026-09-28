@@ -38,6 +38,7 @@ import {
     EntityActionSeparator,
     EntityActionSub
 } from '../../EntityDialogScaffold';
+import { SafetySourceBadge } from '../../SafetyWatchButton';
 import type {
     UserHeaderCommands,
     UserHeaderModel
@@ -142,6 +143,7 @@ export function UserDialogHeaderActions({
 
     return (
         <>
+            <SafetySourceBadge kind="user" id={profile.id ?? ''} />
             {!isCurrentUser && isFriend ? (
                 <FavoriteActionMenu
                     kind="friend"

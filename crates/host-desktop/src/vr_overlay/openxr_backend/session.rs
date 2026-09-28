@@ -127,7 +127,7 @@ impl SessionContext {
         let instance = entry
             .create_instance(
                 &xr::ApplicationInfo {
-                    application_name: "VRCX-0",
+                    application_name: "VRCX-0-Nanashi",
                     ..Default::default()
                 },
                 &extensions,

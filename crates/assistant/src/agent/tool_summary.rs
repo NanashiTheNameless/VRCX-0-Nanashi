@@ -312,7 +312,7 @@ pub(super) fn parse_arguments(raw: &str) -> Option<serde_json::Map<String, Value
         Ok(map) => map,
         Err(error) => {
             // Distinguish "model sent no args" (empty, handled above) from
-            // "model sent malformed JSON we dropped" — the latter usually means
+            // "model sent malformed JSON we dropped" - the latter usually means
             // a truncated stream or a weak model and is worth surfacing.
             tracing::warn!(args = %trimmed, %error, "assistant: tool arguments were not valid JSON; dispatching with none");
             return None;
@@ -331,7 +331,7 @@ pub(super) fn truncate(text: &str) -> String {
         return trimmed.to_string();
     }
     let clipped: String = trimmed.chars().take(SUMMARY_LIMIT).collect();
-    format!("{clipped}…")
+    format!("{clipped}...")
 }
 
 #[cfg(test)]

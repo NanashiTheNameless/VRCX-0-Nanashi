@@ -10,8 +10,8 @@ use vrcx_0_core::{FavoriteEntityKind, OwnerId};
 use vrcx_0_mcp::{
     McpActivityQueryPort, McpActivitySession, McpConfigPort, McpFavoritesQueryPort,
     McpFeedQueryPort, McpFriendCurrent, McpFriendLocalDataPort, McpFriendMemo, McpInterruptCheck,
-    McpLocalModeration, McpMemoSave, McpMutualGraphMeta, McpMutualGraphPort,
-    McpSocialHistoryQueryPort,
+    McpLocalModeration, McpMemoSave, McpMutualGraphMeta, McpMutualGraphPort, McpReminder,
+    McpReminderTrigger, McpRemindersPort, McpSocialHistoryQueryPort,
 };
 use vrcx_0_persistence::{
     activity, config::ConfigRepository, favorites, friends, local_moderation, memos,
@@ -440,5 +440,40 @@ impl McpFeedQueryPort for TauriMcpFeedQueryAdapter {
             move || should_interrupt(),
         )
         .map_err(Into::into)
+    }
+}
+
+/// Fork: assistant reminder tools backed by the desktop reminder engine.
+pub(crate) struct TauriMcpRemindersAdapter {
+    reminders: Arc<vrcx_0_runtime_host_desktop::reminders::ReminderRuntime>,
+}
+
+impl TauriMcpRemindersAdapter {
+    pub(crate) fn new(
+        reminders: Arc<vrcx_0_runtime_host_desktop::reminders::ReminderRuntime>,
+    ) -> Self {
+        Self { reminders }
+    }
+}
+
+impl McpRemindersPort for TauriMcpRemindersAdapter {
+    fn create(
+        &self,
+        owner_user_id: &OwnerId,
+        message: String,
+        trigger: McpReminderTrigger,
+        recurring: bool,
+    ) -> vrcx_0_application_core::Result<McpReminder> {
+        self.reminders
+            .create(owner_user_id.as_str(), message, trigger, recurring)
+            .map_err(vrcx_0_application_core::Error::PersistenceInvalidData)
+    }
+
+    fn list(&self, owner_user_id: &OwnerId) -> vrcx_0_application_core::Result<Vec<McpReminder>> {
+        Ok(self.reminders.list(owner_user_id.as_str()))
+    }
+
+    fn delete(&self, owner_user_id: &OwnerId, id: &str) -> vrcx_0_application_core::Result<bool> {
+        Ok(self.reminders.delete(owner_user_id.as_str(), id))
     }
 }

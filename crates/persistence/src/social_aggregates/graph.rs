@@ -14,13 +14,13 @@ use super::types::{
 };
 
 const DEFAULT_MAX_NODES: usize = 40;
-const MAX_MAX_NODES: usize = 250;
+const MAX_MAX_NODES: usize = 5_000;
 const DEFAULT_MAX_EDGES: usize = 100;
-const MAX_MAX_EDGES: usize = 1_000;
+const MAX_MAX_EDGES: usize = 50_000;
 const DEFAULT_MAX_CIRCLES: usize = 6;
-const MAX_MAX_CIRCLES: usize = 50;
+const MAX_MAX_CIRCLES: usize = 500;
 const DEFAULT_MAX_MEMBERS_PER_CIRCLE: usize = 8;
-const MAX_MAX_MEMBERS_PER_CIRCLE: usize = 100;
+const MAX_MAX_MEMBERS_PER_CIRCLE: usize = 2_000;
 
 pub fn get_social_graph(
     db: &DatabaseService,

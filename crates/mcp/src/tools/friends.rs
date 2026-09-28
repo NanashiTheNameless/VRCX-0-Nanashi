@@ -412,7 +412,7 @@ impl VrcxMcpServer {
             recent_changes,
             favorite_groups: self.friend_favorite_groups(&user_id)?,
             caveats: vec![
-                "Friend profile combines local VRCX-0 observations and current realtime memory; missing fields mean unobserved or not loaded.".into(),
+                "Friend profile combines local VRCX-0-Nanashi observations and current realtime memory; missing fields mean unobserved or not loaded.".into(),
                 "When realtime friend memory is unavailable, current uses the latest observed local profile fields where possible.".into(),
                 "Moderation status is read-only here; MCP does not execute block or mute actions.".into(),
             ],
@@ -757,7 +757,7 @@ fn clamped_friend_note_limit(limit: Option<i64>) -> usize {
     limit
         .and_then(|value| usize::try_from(value).ok())
         .unwrap_or(25)
-        .clamp(1, 100)
+        .clamp(1, 1_000)
 }
 
 fn friend_note_cursor(row: &FriendNoteRow) -> String {

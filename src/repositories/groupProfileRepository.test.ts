@@ -199,7 +199,7 @@ describe('GroupProfileRepository', () => {
 
     it('resolves the real group id from users/{id}/groups rows, not the gmem_ membership id', async () => {
         // VRChat's users/{id}/groups endpoint returns each row's `id` as the
-        // gmem_ membership record id, not the group id — the real group id is
+        // gmem_ membership record id, not the group id - the real group id is
         // in `groupId`. getUserGroups must prefer groupId, or every group
         // shown from this endpoint would carry the wrong id.
         tauriMock.commands.appVrchatGroupUserGroupsGet.mockResolvedValue({

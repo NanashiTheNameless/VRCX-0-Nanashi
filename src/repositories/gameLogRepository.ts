@@ -154,7 +154,7 @@ async function queryLatestSessions({
     limit = 25
 }: QueryLatestSessionsInput = {}) {
     // Read config with a 0 sentinel ("unset") and let the backend own the
-    // default table/search limits — keeps those magic numbers in one place.
+    // default table/search limits - keeps those magic numbers in one place.
     const [maxTableSizeValue, searchLimitValue] = await Promise.all([
         configRepository.getInt('maxTableSize_v2', 0),
         configRepository.getInt('searchLimit', 0)

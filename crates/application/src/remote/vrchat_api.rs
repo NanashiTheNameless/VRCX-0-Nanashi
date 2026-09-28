@@ -51,6 +51,61 @@ pub struct VrchatApiRuntime {
 }
 
 impl VrchatApiRuntime {
+    /// Background actions must still belong to the initiating account and policy
+    /// after the mutation throttle has finished waiting.
+    pub async fn execute_guarded(
+        &self,
+        expected: &vrcx_0_application_core::RuntimeAuthScopeSnapshot,
+        input: VrchatApiRequest,
+        scope: VrchatScope,
+        authorized: impl Fn() -> bool,
+    ) -> Result<VrchatApiResponse> {
+        let denied = || {
+            vrcx_0_application_core::Error::Custom(
+                "Background action cancelled: account or policy changed".into(),
+            )
+        };
+        if !self.auth_scope.snapshot().generation_matches(expected) || !authorized() {
+            return Err(denied());
+        }
+        if !is_remote_mutation_request(&input) {
+            return self
+                .port
+                .execute(
+                    "safety".into(),
+                    "Checking safety watchlists".into(),
+                    input,
+                    scope,
+                )
+                .await;
+        }
+        let mutation = AuthenticatedMutationContext::capture(
+            &self.auth_scope,
+            &self.remote_mutations,
+            "Safety action",
+        )?;
+        if !mutation.scope().generation_matches(expected) {
+            return Err(denied());
+        }
+        let mut input = input;
+        mutation.apply_scope_to_request(&mut input);
+        mutation
+            .run_after_wait(VRCHAT_REMOTE_MUTATION_INTERVAL, || async {
+                if !authorized() {
+                    return Err(denied());
+                }
+                self.port
+                    .execute(
+                        "safety".into(),
+                        "Applying an opted-in safety action".into(),
+                        input,
+                        scope,
+                    )
+                    .await
+            })
+            .await
+    }
+
     pub fn new(
         auth_scope: RuntimeAuthScope,
         remote_mutations: Arc<RemoteMutationGate>,
@@ -201,5 +256,38 @@ mod tests {
             port.requests.lock().unwrap()[0].endpoint.as_deref(),
             Some("https://api.example.test/api/1")
         );
+    }
+    #[tokio::test]
+    async fn guarded_mutation_rechecks_account_and_policy_after_throttle() {
+        use std::sync::atomic::{AtomicBool, Ordering};
+        for change_account in [false, true] {
+            let auth = RuntimeAuthScope::new();
+            auth.set("usr_current", "https://api.vrchat.cloud/api/1");
+            let expected = auth.snapshot();
+            let gate = Arc::new(RemoteMutationGate::default());
+            gate.wait(&expected, VRCHAT_REMOTE_MUTATION_INTERVAL).await;
+            let port = Arc::new(RecordingPort::default());
+            let runtime = VrchatApiRuntime::new(auth.clone(), gate, port.clone());
+            let allowed = AtomicBool::new(true);
+            let change = async {
+                tokio::time::sleep(Duration::from_millis(20)).await;
+                if change_account {
+                    auth.set("usr_other", "https://api.vrchat.cloud/api/1");
+                } else {
+                    allowed.store(false, Ordering::SeqCst);
+                }
+            };
+            let request = VrchatApiRequest {
+                method: Some("POST".into()),
+                ..Default::default()
+            };
+            let (result, _) = tokio::join!(
+                runtime.execute_guarded(&expected, request, VrchatScope::Vrchat, || allowed
+                    .load(Ordering::SeqCst)),
+                change
+            );
+            assert!(result.is_err());
+            assert!(port.requests.lock().unwrap().is_empty());
+        }
     }
 }

@@ -5,7 +5,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use specta::Type;
 use vrcx_0_contracts::llm::{
-    ChatMessage, LlmEndpointDetectModelsResult, LlmModelReasoning, LlmRequestOptions,
+    ChatMessage, LlmApiKind, LlmEndpointDetectModelsResult, LlmHeader, LlmModelReasoning,
+    LlmRequestOptions,
 };
 
 use crate::config::{deobfuscate_api_key, normalize_llm_base_url, obfuscate_api_key, PlaybookMode};
@@ -16,6 +17,7 @@ use crate::ports::{
 use crate::session::random_hex;
 
 mod migration;
+mod stored_headers;
 
 const LLM_ENDPOINTS_CONFIG_KEY: &str = "llm.endpoints";
 const LLM_FOLLOW_CUSTOM_PROXY_CONFIG_KEY: &str = "llm.followCustomProxy";
@@ -53,6 +55,10 @@ struct StoredLlmEndpoint {
     model_reasoning: Vec<LlmModelReasoning>,
     #[serde(default)]
     last_detected_at: Option<String>,
+    #[serde(default)]
+    api_kind: LlmApiKind,
+    #[serde(default, with = "stored_headers")]
+    headers: Vec<LlmHeader>,
 }
 
 #[derive(Debug, Clone)]
@@ -60,6 +66,8 @@ pub struct ResolvedLlmEndpoint {
     pub base_url: String,
     pub api_key: String,
     pub model_reasoning: Vec<LlmModelReasoning>,
+    pub api_kind: LlmApiKind,
+    pub headers: Vec<LlmHeader>,
 }
 
 #[derive(Debug, Clone, Serialize, Type)]
@@ -73,6 +81,8 @@ pub struct LlmEndpointDto {
     pub models: Vec<String>,
     pub model_reasoning: Vec<LlmModelReasoning>,
     pub last_detected_at: Option<String>,
+    pub api_kind: LlmApiKind,
+    pub headers: Vec<LlmHeader>,
 }
 
 #[derive(Debug, Clone, Deserialize, Type)]
@@ -84,6 +94,10 @@ pub struct LlmEndpointUpsertInput {
     pub api_key: Option<String>,
     pub models: Vec<String>,
     pub model_reasoning: Option<Vec<LlmModelReasoning>>,
+    #[serde(default)]
+    pub api_kind: Option<LlmApiKind>,
+    #[serde(default)]
+    pub headers: Option<Vec<LlmHeader>>,
 }
 
 #[derive(Debug, Clone, Deserialize, Type)]
@@ -93,6 +107,10 @@ pub struct LlmEndpointDetectModelsInput {
     pub base_url: Option<String>,
     pub api_key: Option<String>,
     pub persist: Option<bool>,
+    #[serde(default)]
+    pub api_kind: Option<LlmApiKind>,
+    #[serde(default)]
+    pub headers: Option<Vec<LlmHeader>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
@@ -213,6 +231,16 @@ impl EndpointStore {
             })
             .and_then(|endpoint| endpoint.last_detected_at.clone());
 
+        let api_kind = input
+            .api_kind
+            .or_else(|| existing.as_ref().map(|endpoint| endpoint.api_kind))
+            .unwrap_or_default();
+        let headers = input
+            .headers
+            .map(normalize_headers)
+            .or_else(|| existing.as_ref().map(|endpoint| endpoint.headers.clone()))
+            .unwrap_or_default();
+
         let endpoint = StoredLlmEndpoint {
             id: id.clone(),
             name,
@@ -221,6 +249,8 @@ impl EndpointStore {
             models,
             model_reasoning,
             last_detected_at,
+            api_kind,
+            headers,
         };
 
         if let Some(existing) = endpoints.iter_mut().find(|endpoint| endpoint.id == id) {
@@ -268,7 +298,7 @@ impl EndpointStore {
     ) -> Result<LlmEndpointDetectModelsResult, AssistantError> {
         self.ensure_migrated()?;
         let resolved = self.resolve_detect_target(&input)?;
-        let client = self.llm_client(&resolved.base_url, &resolved.api_key, "")?;
+        let client = self.llm_client(&resolved, "")?;
         let result = client.list_models().await?;
         let models = normalize_models(result.models);
         let model_reasoning = retain_reasoning_for_models(result.model_reasoning, &models);
@@ -362,7 +392,7 @@ impl EndpointStore {
             return Err(AssistantError::NotConfigured);
         }
         let prompt = translation_system_prompt(input.prompt.as_deref(), &input.target_lang);
-        let client = self.llm_client(&endpoint.base_url, &endpoint.api_key, model)?;
+        let client = self.llm_client(&endpoint, model)?;
         let options = LlmRequestOptions {
             reasoning_effort: resolve_reasoning_effort(
                 &endpoint.base_url,
@@ -381,16 +411,17 @@ impl EndpointStore {
 
     pub(crate) fn llm_client(
         &self,
-        base_url: &str,
-        api_key: &str,
+        endpoint: &ResolvedLlmEndpoint,
         model: &str,
     ) -> Result<AssistantLlmClient, AssistantError> {
         self.llm_factory
             .create(AssistantLlmClientInput {
-                base_url: base_url.to_string(),
-                api_key: api_key.to_string(),
+                base_url: endpoint.base_url.clone(),
+                api_key: endpoint.api_key.clone(),
                 model: model.to_string(),
                 proxy_url: self.explicit_proxy_url()?.map(str::to_string),
+                api_kind: endpoint.api_kind,
+                headers: endpoint.headers.clone(),
             })
             .map_err(AssistantError::from)
     }
@@ -435,6 +466,12 @@ impl EndpointStore {
             if let Some(key) = input.api_key.as_deref() {
                 resolved.api_key = key.trim().to_string();
             }
+            if let Some(api_kind) = input.api_kind {
+                resolved.api_kind = api_kind;
+            }
+            if let Some(headers) = input.headers.clone() {
+                resolved.headers = normalize_headers(headers);
+            }
             return Ok(resolved);
         }
 
@@ -455,6 +492,8 @@ impl EndpointStore {
                 .unwrap_or("")
                 .to_string(),
             model_reasoning: Vec::new(),
+            api_kind: input.api_kind.unwrap_or_default(),
+            headers: normalize_headers(input.headers.clone().unwrap_or_default()),
         })
     }
 
@@ -491,7 +530,26 @@ fn to_dto(endpoint: StoredLlmEndpoint) -> LlmEndpointDto {
         models: endpoint.models,
         model_reasoning: endpoint.model_reasoning,
         last_detected_at: endpoint.last_detected_at,
+        api_kind: endpoint.api_kind,
+        headers: endpoint.headers,
     }
+}
+
+fn normalize_headers(headers: Vec<LlmHeader>) -> Vec<LlmHeader> {
+    headers
+        .into_iter()
+        .map(|header| LlmHeader {
+            name: header.name.trim().to_string(),
+            value: header.value.trim().to_string(),
+        })
+        .filter(|header| {
+            !header.name.is_empty()
+                && header
+                    .name
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || b"-_".contains(&byte))
+        })
+        .collect()
 }
 
 fn resolve_endpoint(endpoint: StoredLlmEndpoint) -> ResolvedLlmEndpoint {
@@ -499,6 +557,8 @@ fn resolve_endpoint(endpoint: StoredLlmEndpoint) -> ResolvedLlmEndpoint {
         base_url: normalize_llm_base_url(&endpoint.base_url),
         api_key: deobfuscate_api_key(&endpoint.api_key),
         model_reasoning: endpoint.model_reasoning,
+        api_kind: endpoint.api_kind,
+        headers: endpoint.headers,
     }
 }
 
@@ -553,6 +613,8 @@ fn ensure_endpoint(
         models,
         model_reasoning: Vec::new(),
         last_detected_at: None,
+        api_kind: LlmApiKind::default(),
+        headers: Vec::new(),
     });
     id
 }

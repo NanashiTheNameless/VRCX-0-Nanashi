@@ -48,7 +48,7 @@ function AssistantMessageImpl({
                                     aria-hidden="true"
                                     className="shimmer ml-1"
                                 >
-                                    …
+                                    ...
                                 </span>
                             )}
                         </BubbleContent>

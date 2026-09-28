@@ -44,6 +44,7 @@ import type {
     GameLogSessionEvent,
     GameLogSessionMember
 } from '../gameLogTypes';
+import { SafetyLogBadge } from './SafetyLogBadge';
 
 const VIDEO_SOURCE_WITHOUT_LINK = new Set(['LSMedia', 'PopcornPalace']);
 const PLAYER_EVENT_GRID_CLASS =
@@ -197,7 +198,15 @@ function PlayerActivityRow({
                 isFavorite={item?.isFavorite}
                 iconOnly
             />
-            <PlayerCell item={item} />
+            <span className="flex min-w-0 items-center gap-1.5">
+                <SafetyLogBadge
+                    row={{
+                        ...item,
+                        type: showDuration ? 'OnPlayerLeft' : 'OnPlayerJoined'
+                    }}
+                />
+                <PlayerCell item={item} />
+            </span>
             <DurationText
                 value={
                     showDuration
@@ -235,7 +244,15 @@ function SinglePlayerActivityRow({
                 isFavorite={item?.isFavorite}
                 iconOnly
             />
-            <PlayerCell item={item} />
+            <span className="flex min-w-0 items-center gap-1.5">
+                <SafetyLogBadge
+                    row={{
+                        ...item,
+                        type: showDuration ? 'OnPlayerLeft' : 'OnPlayerJoined'
+                    }}
+                />
+                <PlayerCell item={item} />
+            </span>
             <EventLabel event={event} />
             <DurationText
                 value={
@@ -377,6 +394,7 @@ function VideoActivityRow({ event }: { event: GameLogSessionEvent }) {
                         <EventTime value={event.created_at} />
                         <VideoIcon className="text-muted-foreground size-3.5 shrink-0" />
                         <div className="flex min-w-0 items-center gap-1.5">
+                            <SafetyLogBadge row={event} />
                             {showVideoLink ? (
                                 <Button
                                     type="button"

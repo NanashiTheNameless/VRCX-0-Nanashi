@@ -19,6 +19,7 @@ import {
     EntityActionItem,
     EntityActionSeparator
 } from '../../EntityDialogScaffold';
+import { SafetyWatchButton } from '../../SafetyWatchButton';
 import type {
     AvatarActionStatus,
     AvatarControls,
@@ -96,6 +97,11 @@ export function AvatarDialogHeaderActions({
 
     return (
         <>
+            <SafetyWatchButton
+                kind="avatar"
+                id={avatar.id}
+                label={avatar.name || ''}
+            />
             <Button
                 type="button"
                 variant={canSelectAvatar ? 'default' : 'outline'}

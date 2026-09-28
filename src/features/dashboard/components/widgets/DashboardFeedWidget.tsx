@@ -49,7 +49,7 @@ import {
     isDashboardWidgetFilterActive
 } from './dashboardWidgetUtils';
 
-const FEED_WIDGET_MAX_ROWS = 100;
+const FEED_WIDGET_MAX_ROWS = 300;
 type DashboardFeedWidgetRow = FeedRow & {
     isFavorite: boolean;
 };

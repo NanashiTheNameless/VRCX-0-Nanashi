@@ -110,7 +110,7 @@ export function moderationRowUserId(row: unknown) {
 
 export function moderationRowLabel(row: unknown) {
     if (!isRecord(row)) {
-        return String(row ?? '—');
+        return String(row ?? '-');
     }
     return (
         text(
@@ -122,7 +122,7 @@ export function moderationRowLabel(row: unknown) {
             row.targetUserId,
             row.actorId,
             row.id
-        ) || '—'
+        ) || '-'
     );
 }
 
@@ -156,7 +156,7 @@ export function moderationRowStatus(row: unknown) {
             source.type,
             source.membershipStatus,
             source.visibility
-        ) || '—'
+        ) || '-'
     );
 }
 
@@ -170,7 +170,7 @@ export function moderationStatusTone(
     status: string
 ): GroupModerationStatusTone {
     const value = status.toLowerCase();
-    if (!value || value === '—') {
+    if (!value || value === '-') {
         return 'neutral';
     }
     if (value.includes('banned')) {

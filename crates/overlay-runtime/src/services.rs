@@ -23,4 +23,9 @@ pub trait VrOverlayRuntimeServices: Send + Sync {
     fn game_log_snapshot(&self) -> RuntimeSnapshot;
 
     fn now_playing(&self) -> NowPlayingSnapshot;
+
+    /// Fork: local notes for these user ids (for the wrist Players/Notes pages).
+    fn user_notes(&self, _user_ids: &[String]) -> std::collections::HashMap<String, String> {
+        std::collections::HashMap::new()
+    }
 }

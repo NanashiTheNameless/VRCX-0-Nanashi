@@ -139,12 +139,12 @@ fn current_linux_package_kind() -> LinuxPackageKind {
     }
     if command_succeeds(
         "dpkg-query",
-        &["-W", "-f=${Status}", "vrcx-0"],
+        &["-W", "-f=${Status}", "vrcx-0-nanashi"],
         Some("install ok installed"),
     ) {
         return LinuxPackageKind::Deb;
     }
-    if command_succeeds("rpm", &["-q", "vrcx-0"], None) {
+    if command_succeeds("rpm", &["-q", "vrcx-0-nanashi"], None) {
         return LinuxPackageKind::Rpm;
     }
     LinuxPackageKind::Unknown

@@ -23,5 +23,6 @@ pub use service::{
 pub use services::VrOverlayRuntimeServices;
 pub use surfaces::wrist::{
     build_wrist_surface_model, WristOverlayFrameInput, WristOverlayRenderOptions,
-    WristOverlaySizePreset, WristRuntimeFooter, WristRuntimeNowPlaying,
+    WristOverlaySizePreset, WristPage, WristPageOrder, WristPlayerRow, WristPlayersSort,
+    WristRuntimeFooter, WristRuntimeNowPlaying,
 };

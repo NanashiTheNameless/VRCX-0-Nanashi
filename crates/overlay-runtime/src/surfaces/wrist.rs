@@ -83,6 +83,131 @@ impl Default for WristOverlayRenderOptions {
     }
 }
 
+/// Fork: wrist overlay pages, cycled by showing the wrist again shortly after hiding it.
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type,
+)]
+#[serde(rename_all = "camelCase")]
+pub enum WristPage {
+    #[default]
+    Feed,
+    /// Everyone in the instance, with their local note when there is one.
+    Players,
+    /// Only players in the instance that have a local note.
+    Notes,
+}
+
+impl WristPage {
+    pub const ALL: [Self; 3] = [Self::Feed, Self::Players, Self::Notes];
+
+    pub fn as_config(self) -> &'static str {
+        match self {
+            Self::Feed => "feed",
+            Self::Players => "players",
+            Self::Notes => "notes",
+        }
+    }
+
+    pub fn from_config(value: &str) -> Option<Self> {
+        Self::ALL
+            .into_iter()
+            .find(|page| page.as_config() == value.trim())
+    }
+}
+
+/// Fork: which wrist pages are shown and in what order (Settings > VR). Stored as
+/// a comma list such as "feed,players,notes"; never empty (falls back to Feed).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct WristPageOrder {
+    pages: [WristPage; 3],
+    len: usize,
+}
+
+impl Default for WristPageOrder {
+    fn default() -> Self {
+        Self {
+            pages: WristPage::ALL,
+            len: WristPage::ALL.len(),
+        }
+    }
+}
+
+impl WristPageOrder {
+    pub const DEFAULT_CONFIG: &'static str = "feed,players,notes";
+
+    pub fn from_config(value: &str) -> Self {
+        let mut pages = [WristPage::Feed; 3];
+        let mut len = 0;
+        for page in value.split(',').filter_map(WristPage::from_config) {
+            if !pages[..len].contains(&page) {
+                pages[len] = page;
+                len += 1;
+            }
+        }
+        if len == 0 {
+            len = 1;
+        }
+        Self { pages, len }
+    }
+
+    pub fn pages(&self) -> &[WristPage] {
+        &self.pages[..self.len]
+    }
+
+    pub fn first(&self) -> WristPage {
+        self.pages[0]
+    }
+
+    /// The page after `page`, wrapping; the first page when `page` is not shown.
+    pub fn next_after(&self, page: WristPage) -> WristPage {
+        let pages = self.pages();
+        pages
+            .iter()
+            .position(|candidate| *candidate == page)
+            .map(|index| pages[(index + 1) % pages.len()])
+            .unwrap_or_else(|| self.first())
+    }
+
+    /// `page` if it is still shown, otherwise the first shown page.
+    pub fn normalize(&self, page: WristPage) -> WristPage {
+        if self.pages().contains(&page) {
+            page
+        } else {
+            self.first()
+        }
+    }
+}
+
+/// Fork: order of rows on the Players / Notes pages.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum WristPlayersSort {
+    #[default]
+    Name,
+    /// Most recent join first.
+    Joined,
+}
+
+impl WristPlayersSort {
+    pub fn from_config(value: &str) -> Self {
+        match value.trim() {
+            "joined" => Self::Joined,
+            _ => Self::Name,
+        }
+    }
+}
+
+/// Fork: a player in the current instance for the Players / Notes pages.
+#[derive(
+    Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type,
+)]
+#[serde(rename_all = "camelCase")]
+pub struct WristPlayerRow {
+    pub display_name: String,
+    pub note: String,
+    pub joined_text: String,
+    pub is_friend: bool,
+}
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct WristOverlayFrameInput {
@@ -95,6 +220,10 @@ pub struct WristOverlayFrameInput {
     pub locale: String,
     pub show_instance_id_in_location: bool,
     pub captured_at_ms: i64,
+    #[serde(default)]
+    pub page: WristPage,
+    #[serde(default)]
+    pub players: Vec<WristPlayerRow>,
 }
 
 #[derive(
@@ -195,15 +324,33 @@ pub fn build_wrist_surface_model(input: WristOverlayFrameInput) -> WristSurfaceM
         OverlayLocale::from_config(&input.locale),
         input.show_instance_id_in_location,
     );
-    let feed_rows = input
-        .activity
-        .entries
-        .iter()
-        .rev()
-        .filter(|entry| !should_hide_private_world(entry, input.options.hide_private_worlds))
-        .take(MAX_FEED_ROWS)
-        .map(|entry| feed_line_from_activity(entry, &localizer))
-        .collect();
+    let feed_rows = match input.page {
+        WristPage::Feed => input
+            .activity
+            .entries
+            .iter()
+            .rev()
+            .filter(|entry| !should_hide_private_world(entry, input.options.hide_private_worlds))
+            .take(MAX_FEED_ROWS)
+            .map(|entry| feed_line_from_activity(entry, &localizer))
+            .collect(),
+        WristPage::Players => player_lines(&input.players, false),
+        WristPage::Notes => player_lines(&input.players, true),
+    };
+    let footer_left = match input.page {
+        WristPage::Feed => localizer.text(&OverlayActivityText::message(
+            OverlayMessage::overlay_footer_players(input.footer.player_count),
+        )),
+        WristPage::Players => format!("Players ({})", input.players.len()),
+        WristPage::Notes => format!(
+            "Notes ({})",
+            input
+                .players
+                .iter()
+                .filter(|p| !p.note.trim().is_empty())
+                .count()
+        ),
+    };
     WristSurfaceModel {
         size: input.options.size.overlay_size(),
         dark_background: input.options.dark_background,
@@ -222,13 +369,50 @@ pub fn build_wrist_surface_model(input: WristOverlayFrameInput) -> WristSurfaceM
             now_playing_model(now_playing, input.captured_at_ms, input.live_now_playing)
         }),
         footer: OverlayFooter {
-            left: localizer.text(&OverlayActivityText::message(
-                OverlayMessage::overlay_footer_players(input.footer.player_count),
-            )),
+            left: footer_left,
             center: localized_instance_duration(&localizer, &input.footer.instance_duration),
             right: input.footer.local_time,
         },
     }
+}
+
+/// Rows for the Players / Notes pages (English-only fork; no localization keys).
+fn player_lines(players: &[WristPlayerRow], notes_only: bool) -> Vec<FeedLine> {
+    let lines: Vec<FeedLine> = players
+        .iter()
+        .filter(|player| !notes_only || !player.note.trim().is_empty())
+        .take(MAX_FEED_ROWS)
+        .map(|player| FeedLine {
+            time_text: player.joined_text.clone(),
+            kind: FeedKind::Instance,
+            actor_text: player.display_name.clone(),
+            detail: player.note.trim().replace('\n', " "),
+            relation: if player.is_friend {
+                FeedRelation::Friend
+            } else {
+                FeedRelation::None
+            },
+            severity: FeedSeverity::Normal,
+            accent: FeedAccent::None,
+        })
+        .collect();
+    if !lines.is_empty() {
+        return lines;
+    }
+    vec![FeedLine {
+        time_text: String::new(),
+        kind: FeedKind::System,
+        actor_text: String::new(),
+        detail: if notes_only {
+            "No one here has a note."
+        } else {
+            "No players in this instance yet."
+        }
+        .to_string(),
+        relation: FeedRelation::None,
+        severity: FeedSeverity::Normal,
+        accent: FeedAccent::None,
+    }]
 }
 
 fn localized_instance_duration(localizer: &OverlayLocalizer, duration: &str) -> String {
@@ -558,6 +742,55 @@ where
 }
 
 #[cfg(test)]
+mod page_tests {
+    use super::*;
+
+    fn player(name: &str, note: &str) -> WristPlayerRow {
+        WristPlayerRow {
+            display_name: name.into(),
+            note: note.into(),
+            joined_text: "5m".into(),
+            is_friend: false,
+        }
+    }
+
+    #[test]
+    fn pages_cycle_feed_players_notes_by_default() {
+        let order = WristPageOrder::from_config(WristPageOrder::DEFAULT_CONFIG);
+        assert_eq!(order, WristPageOrder::default());
+        assert_eq!(order.next_after(WristPage::Feed), WristPage::Players);
+        assert_eq!(order.next_after(WristPage::Players), WristPage::Notes);
+        assert_eq!(order.next_after(WristPage::Notes), WristPage::Feed);
+    }
+
+    #[test]
+    fn page_order_is_customizable_deduplicated_and_never_empty() {
+        let order = WristPageOrder::from_config("notes, feed,notes,bogus");
+        assert_eq!(order.pages(), &[WristPage::Notes, WristPage::Feed]);
+        assert_eq!(order.next_after(WristPage::Feed), WristPage::Notes);
+        assert_eq!(order.next_after(WristPage::Players), WristPage::Notes);
+        assert_eq!(order.normalize(WristPage::Players), WristPage::Notes);
+        let single = WristPageOrder::from_config("players");
+        assert_eq!(single.next_after(WristPage::Players), WristPage::Players);
+        assert_eq!(WristPageOrder::from_config("").pages(), &[WristPage::Feed]);
+    }
+
+    #[test]
+    fn notes_page_lists_only_players_with_notes() {
+        let players = vec![player("Ada", "met at the club"), player("Bob", "  ")];
+        let all = player_lines(&players, false);
+        assert_eq!(all.len(), 2);
+        assert_eq!(all[0].actor_text, "Ada");
+        assert_eq!(all[0].detail, "met at the club");
+        let notes = player_lines(&players, true);
+        assert_eq!(notes.len(), 1);
+        assert_eq!(notes[0].actor_text, "Ada");
+        let empty = player_lines(&[player("Bob", "")], true);
+        assert_eq!(empty[0].detail, "No one here has a note.");
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use serde_json::Value;
     use vrcx_0_application_activity::{
@@ -645,7 +878,7 @@ mod tests {
         entry.content.body =
             OverlayActivityText::message(OverlayMessage::notifications_has_joined());
 
-        assert_eq!(feed_line(&entry, "zh-CN").detail, "Ada 加入了房间");
+        assert_eq!(feed_line(&entry, "en").detail, "Ada has joined");
     }
 
     #[test]
@@ -656,8 +889,8 @@ mod tests {
             OverlayActivityText::message(OverlayMessage::notifications_online_location("wrld_1"));
 
         assert_eq!(
-            feed_line(&entry, "zh-CN").detail,
-            "Ada 在 Test World 上线了"
+            feed_line(&entry, "en").detail,
+            "Ada has logged in to Test World"
         );
     }
 
@@ -668,7 +901,7 @@ mod tests {
         entry.content.body =
             OverlayActivityText::message(OverlayMessage::notifications_gps("wrld_1"));
 
-        assert_eq!(feed_line(&entry, "zh-CN").detail, "Ada 现在位于 某个房间");
+        assert_eq!(feed_line(&entry, "en").detail, "Ada is in an instance");
     }
 
     #[test]
@@ -685,8 +918,8 @@ mod tests {
         ));
 
         assert_eq!(
-            feed_line(&entry, "zh-CN").detail,
-            "Ada 现在位于 Group World 群组+(Group Name)"
+            feed_line(&entry, "en").detail,
+            "Ada is in Group World Group+(Group Name)"
         );
     }
 

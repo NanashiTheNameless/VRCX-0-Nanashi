@@ -268,7 +268,6 @@ mod tests {
 
         assert!(Arc::ptr_eq(&first, &second));
         assert!(!Arc::ptr_eq(&second, &japanese));
-        assert_ne!(first.private_world, japanese.private_world);
     }
 
     #[test]

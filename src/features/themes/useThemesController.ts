@@ -23,7 +23,6 @@ import {
     loadCatalog,
     loadCommunityThemeStats,
     loadLocalCommunityThemePreview,
-    reportCommunityThemeInstall,
     saveCommunityThemeOverrideCss,
     startLocalCommunityThemePreviewWatch,
     stopLocalCommunityThemePreview,
@@ -140,17 +139,6 @@ export function useThemesController() {
     async function installTheme(theme: CommunityThemeManifest) {
         try {
             await installCommunityTheme(theme);
-            void reportCommunityThemeInstall(theme.id).then((reported) => {
-                if (!reported) {
-                    return;
-                }
-                setThemeStatsById((currentStats) => ({
-                    ...currentStats,
-                    [theme.id]: {
-                        downloads: (currentStats[theme.id]?.downloads ?? 0) + 1
-                    }
-                }));
-            });
             toast.add({
                 type: 'success',
                 title: t('view.community_themes.toast.theme_enabled')

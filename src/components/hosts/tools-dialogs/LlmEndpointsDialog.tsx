@@ -48,16 +48,21 @@ import {
     SelectTrigger,
     SelectValue
 } from '@/ui/shadcn/select';
+import { Textarea } from '@/ui/shadcn/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import {
     CUSTOM_LLM_ENDPOINT_PROVIDER_ID,
+    LLM_API_KINDS,
     LLM_ENDPOINT_PROVIDER_PRESETS,
     applyLlmEndpointBaseUrl,
     applyLlmEndpointProviderPreset,
     createEmptyLlmEndpointDraft,
     findLlmEndpointProviderId,
+    formatLlmHeaders,
+    isLlmApiKind,
     isLlmEndpointProviderId,
+    parseLlmHeaders,
     shouldUseSavedLlmEndpointForDetect,
     type LlmEndpointProviderDraft
 } from './llmEndpointPresets';
@@ -78,7 +83,11 @@ function draftFromEndpoint(endpoint: LlmEndpointDto): EndpointDraft {
         apiKey: endpoint.apiKey,
         clearKey: false,
         models: endpoint.models,
-        detectedModelReasoning: null
+        detectedModelReasoning: null,
+        apiKind: endpoint.apiKind ?? 'openaiCompatible',
+        savedApiKind: endpoint.apiKind ?? 'openaiCompatible',
+        headersText: formatLlmHeaders(endpoint.headers ?? []),
+        savedHeadersText: formatLlmHeaders(endpoint.headers ?? [])
     };
 }
 
@@ -118,7 +127,9 @@ function sameDetectionTarget(
         current.id === requested.id &&
         current.baseUrl.trim() === requested.baseUrl.trim() &&
         current.apiKey.trim() === requested.apiKey.trim() &&
-        current.clearKey === requested.clearKey
+        current.clearKey === requested.clearKey &&
+        current.apiKind === requested.apiKind &&
+        current.headersText === requested.headersText
     );
 }
 
@@ -218,7 +229,11 @@ export function LlmEndpointsDialog({
             id: useSavedEndpoint ? target.id : null,
             baseUrl: useSavedEndpoint ? null : target.baseUrl.trim() || null,
             apiKey: useSavedEndpoint ? null : target.apiKey.trim() || null,
-            persist: useSavedEndpoint
+            persist: useSavedEndpoint,
+            apiKind: useSavedEndpoint ? null : target.apiKind,
+            headers: useSavedEndpoint
+                ? null
+                : parseLlmHeaders(target.headersText)
         });
         if (!sameDetectionTarget(draftRef.current, target)) {
             return null;
@@ -302,7 +317,9 @@ export function LlmEndpointsDialog({
                 baseUrl: target.baseUrl.trim(),
                 apiKey: endpointApiKeyInput(target),
                 models,
-                modelReasoning
+                modelReasoning,
+                apiKind: target.apiKind,
+                headers: parseLlmHeaders(target.headersText)
             });
             if (models.length) {
                 toast.add({
@@ -347,7 +364,9 @@ export function LlmEndpointsDialog({
             id: endpoint.id,
             baseUrl: null,
             apiKey: null,
-            persist: true
+            persist: true,
+            apiKind: null,
+            headers: null
         }).catch((error: unknown) => {
             toast.add({
                 type: 'error',
@@ -471,6 +490,50 @@ export function LlmEndpointsDialog({
                             </Select>
                         </div>
                         <div className="grid gap-2">
+                            <Label htmlFor="llm-endpoint-dialog-api-kind">
+                                {t('view.tools.llm_endpoints.api_kind')}
+                            </Label>
+                            <Select
+                                value={draft.apiKind}
+                                items={LLM_API_KINDS}
+                                onValueChange={(value) => {
+                                    if (!isLlmApiKind(value)) {
+                                        return;
+                                    }
+                                    setDraft((current) => ({
+                                        ...current,
+                                        apiKind: value,
+                                        detectedModelReasoning: null
+                                    }));
+                                    setDetectedModels([]);
+                                }}
+                            >
+                                <SelectTrigger
+                                    id="llm-endpoint-dialog-api-kind"
+                                    className="w-full"
+                                >
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectGroup>
+                                        {LLM_API_KINDS.map((option) => (
+                                            <SelectItem
+                                                key={option.value}
+                                                value={option.value}
+                                            >
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectGroup>
+                                </SelectContent>
+                            </Select>
+                            <span className="text-muted-foreground text-xs">
+                                {t(
+                                    'view.tools.llm_endpoints.api_kind_description'
+                                )}
+                            </span>
+                        </div>
+                        <div className="grid gap-2">
                             <Label htmlFor="llm-endpoint-dialog-name">
                                 {t('view.tools.llm_endpoints.name')}
                             </Label>
@@ -566,6 +629,28 @@ export function LlmEndpointsDialog({
                                     }))
                                 }
                             />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="llm-endpoint-dialog-headers">
+                                {t('view.tools.llm_endpoints.headers')}
+                            </Label>
+                            <Textarea
+                                id="llm-endpoint-dialog-headers"
+                                value={draft.headersText}
+                                rows={2}
+                                placeholder="X-Custom-Header: value"
+                                onChange={(event) =>
+                                    setDraft((current) => ({
+                                        ...current,
+                                        headersText: event.target.value
+                                    }))
+                                }
+                            />
+                            <span className="text-muted-foreground text-xs">
+                                {t(
+                                    'view.tools.llm_endpoints.headers_description'
+                                )}
+                            </span>
                         </div>
                         <div className="grid gap-2">
                             <div className="flex items-center justify-between gap-2">

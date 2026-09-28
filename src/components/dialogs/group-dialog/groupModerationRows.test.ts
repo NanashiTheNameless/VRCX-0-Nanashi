@@ -125,7 +125,7 @@ describe('groupModerationRows', () => {
         expect(moderationRowSearchText(row, group)).toBe(
             'nested user usr_direct member, role ban 2026-06-22t10:00:00z repeated reports'
         );
-        expect(moderationRowLabel(null)).toBe('—');
+        expect(moderationRowLabel(null)).toBe('-');
     });
 
     it('returns tab-specific actions only when a row resolves to a user id', () => {

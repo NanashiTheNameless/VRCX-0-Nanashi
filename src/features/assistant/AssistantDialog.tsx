@@ -251,7 +251,9 @@ export function AssistantDialog() {
                 id: endpoint.id,
                 baseUrl: null,
                 apiKey: null,
-                persist: true
+                persist: true,
+                apiKind: null,
+                headers: null
             }).catch(() => {});
         }
     }

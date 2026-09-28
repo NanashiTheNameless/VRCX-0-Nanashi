@@ -52,9 +52,11 @@ fn wrist_builder_keeps_renderer_model_free_of_application_entry_shape() {
             local_time: "12:34".to_string(),
         },
         options: WristOverlayRenderOptions::default(),
-        locale: "zh-CN".to_string(),
+        locale: "en".to_string(),
         show_instance_id_in_location: false,
         captured_at_ms: 42,
+        page: Default::default(),
+        players: Vec::new(),
     });
 
     assert_eq!(model.size, OverlaySize::new(512, 512));
@@ -67,8 +69,8 @@ fn wrist_builder_keeps_renderer_model_free_of_application_entry_shape() {
     assert_eq!(model.feed_rows[1].kind, FeedKind::Invite);
     assert_eq!(model.feed_rows[1].severity, FeedSeverity::Important);
     assert_eq!(model.feed_rows[2].accent, FeedAccent::Online);
-    assert_eq!(model.footer.left, "8 名玩家");
-    assert_eq!(model.footer.center, "停留 12m");
+    assert_eq!(model.footer.left, "8 players");
+    assert_eq!(model.footer.center, "Instance 12m");
     assert_eq!(model.footer.right, "12:34");
 }
 
@@ -107,6 +109,8 @@ fn wrist_builder_maps_feed_icon_types_to_matching_accents() {
         locale: "en".to_string(),
         show_instance_id_in_location: false,
         captured_at_ms: 42,
+        page: Default::default(),
+        players: Vec::new(),
     });
 
     assert_eq!(
@@ -158,6 +162,8 @@ fn wrist_builder_preserves_actor_relation_for_renderer_highlighting() {
         locale: "en".to_string(),
         show_instance_id_in_location: false,
         captured_at_ms: 42,
+        page: Default::default(),
+        players: Vec::new(),
     });
 
     assert_eq!(model.feed_rows[0].actor_text, "Favorite User");
@@ -191,6 +197,8 @@ fn wrist_builder_keeps_enough_feed_rows_for_expanded_compact_layout() {
         locale: "en".to_string(),
         show_instance_id_in_location: false,
         captured_at_ms: 42,
+        page: Default::default(),
+        players: Vec::new(),
     });
 
     assert_eq!(model.feed_rows.len(), 18);
@@ -349,6 +357,8 @@ fn now_playing_input(
         locale: "en".to_string(),
         show_instance_id_in_location: false,
         captured_at_ms,
+        page: Default::default(),
+        players: Vec::new(),
     }
 }
 fn activity_entry(

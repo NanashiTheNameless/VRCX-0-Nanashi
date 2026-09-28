@@ -314,20 +314,20 @@ describe('preferencesService characterization', () => {
         await expect(
             setTableLimitsPreference({
                 maxTableSize: 5,
-                searchLimit: 999_999
+                searchLimit: 9_999_999
             })
         ).resolves.toEqual({
             maxTableSize: 100,
-            searchLimit: 100_000
+            searchLimit: 1_000_000
         });
 
         expect(mocks.setMany).toHaveBeenCalledWith([
             ['maxTableSize_v2', '100'],
-            ['searchLimit', '100000']
+            ['searchLimit', '1000000']
         ]);
         expect(usePreferencesStore.getState().tableLimits).toEqual({
             maxTableSize: 100,
-            searchLimit: 100_000
+            searchLimit: 1_000_000
         });
     });
 
@@ -581,22 +581,22 @@ describe('preferencesService characterization', () => {
             return Promise.resolve(values[key] ?? String(fallback ?? ''));
         });
 
-        await setAppLanguagePreference('ko-KR');
+        await setAppLanguagePreference('en-US');
 
-        expect(useShellStore.getState().locale).toBe('ko');
+        expect(useShellStore.getState().locale).toBe('en');
         expect(document.documentElement.setAttribute).toHaveBeenCalledWith(
             'lang',
-            'ko'
+            'en'
         );
-        expect(mocks.setString).toHaveBeenCalledWith('appLanguage', 'ko');
+        expect(mocks.setString).toHaveBeenCalledWith('appLanguage', 'en');
         expect(mocks.applyAppFontPreferences).toHaveBeenCalledWith({
             fontFamily: 'geist',
             customFontFamily: 'Custom Font',
             cjkFontPack: 'noto',
-            locale: 'ko'
+            locale: 'en'
         });
         expect(mocks.appVrOverlayConfigReload).toHaveBeenCalledTimes(1);
-        expect(mocks.appLanguageChanged).toHaveBeenCalledWith('ko');
+        expect(mocks.appLanguageChanged).toHaveBeenCalledWith('en');
     });
 
     it('updates DOM classes for table and accessibility preferences', async () => {
@@ -645,7 +645,7 @@ describe('preferencesService characterization', () => {
     it('falls back translation API config fields before writing them together', async () => {
         await expect(
             setTranslationApiConfigPreference({
-                bioLanguage: 'ja-JP',
+                bioLanguage: 'en-US',
                 translationAPIType: 'openai',
                 translationAPIKey: '  key  ',
                 translationAPIEndpoint: '',
@@ -654,7 +654,7 @@ describe('preferencesService characterization', () => {
                 translationAPIReasoningEffort: ''
             })
         ).resolves.toEqual({
-            bioLanguage: 'ja',
+            bioLanguage: 'en',
             translationAPIType: 'openai',
             translationAPIKey: 'key',
             translationEndpointId: '',
@@ -666,7 +666,7 @@ describe('preferencesService characterization', () => {
         });
 
         expect(mocks.setMany).toHaveBeenCalledWith([
-            ['bioLanguage', 'ja'],
+            ['bioLanguage', 'en'],
             ['translationAPIType', 'openai'],
             ['translationAPIKey', 'key'],
             ['translationEndpointId', ''],

@@ -61,6 +61,19 @@ pub fn avatar_cache_get(
         .map(|row| cache_entity_from_row(row)))
 }
 
+/// Names are not unique identifiers. Callers must treat these as warning-only candidates.
+pub fn avatar_cache_ids_by_name(db: &DatabaseService, name: &str) -> Result<Vec<String>, Error> {
+    ensure_global_store_tables(db)?;
+    Ok(db
+        .execute(
+            "SELECT id FROM cache_avatar WHERE name = @name LIMIT 1000",
+            &ParamsBuilder::new().set("name", name).build(),
+        )?
+        .iter()
+        .map(|row| row_string(row, 0))
+        .collect())
+}
+
 pub fn avatar_cache_find_by_file_id(
     db: &DatabaseService,
     file_id: &str,

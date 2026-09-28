@@ -1,6 +1,7 @@
 pub mod app_launcher;
 pub mod calendar;
 pub mod clipboard;
+pub mod custom_locales;
 pub mod devkit;
 pub(crate) mod dialog;
 pub mod error_log;
@@ -12,9 +13,12 @@ pub mod linux_rendering;
 pub mod media;
 pub mod overlay_notifications;
 pub mod paths;
+pub mod power;
+pub mod profile_merge;
 pub mod registry;
 pub mod screenshots;
 pub mod shell;
+pub mod sounds;
 pub mod startup_bootstrap;
 pub mod theme_debug;
 pub mod tray_shortcut;
@@ -22,3 +26,8 @@ pub mod tts;
 pub mod updater;
 pub mod vrchat_log;
 pub mod window;
+
+pub mod reminders;
+pub mod safety;
+
+pub mod ytdlp;

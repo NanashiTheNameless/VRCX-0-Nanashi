@@ -131,6 +131,12 @@ function overlayActivityDefinitionByKey(
 
 export const OVERLAY_ACTIVITY_TYPE_DEFINITIONS: OverlayActivityTypeDefinition[] =
     [
+        defineType('systemSafety', 'SafetyGroup', BOOLEAN_SCOPES, 'on'),
+        defineType('systemSafety', 'SafetyAvatar', BOOLEAN_SCOPES, 'on'),
+        defineType('systemSafety', 'SafetyCommunity', BOOLEAN_SCOPES, 'on'),
+        defineType('systemSafety', 'SafetyUrl', BOOLEAN_SCOPES, 'on'),
+        defineType('systemSafety', 'Reminder', BOOLEAN_SCOPES, 'on'),
+
         defineType('actionRequired', 'invite', DIRECT_ACTOR_SCOPES, 'friends'),
         defineType(
             'actionRequired',

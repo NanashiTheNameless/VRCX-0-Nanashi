@@ -29,7 +29,9 @@ function endpoint(models: string[]): LlmEndpointDto {
         hasKey: false,
         models,
         modelReasoning: [],
-        lastDetectedAt: null
+        lastDetectedAt: null,
+        apiKind: 'openaiCompatible',
+        headers: []
     };
 }
 
@@ -70,7 +72,9 @@ describe('llmEndpointsStore helpers', () => {
             id: 'ep_1',
             baseUrl: null,
             apiKey: null,
-            persist: true
+            persist: true,
+            apiKind: null,
+            headers: null
         });
 
         expect(mocks.list).toHaveBeenCalledOnce();
@@ -97,7 +101,9 @@ describe('llmEndpointsStore helpers', () => {
             baseUrl: saved.baseUrl,
             apiKey: null,
             models: saved.models,
-            modelReasoning: null
+            modelReasoning: null,
+            apiKind: null,
+            headers: null
         });
         await upsert;
         expect(useLlmEndpointsStore.getState().loading).toBe(true);

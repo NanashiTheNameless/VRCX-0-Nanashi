@@ -14,7 +14,7 @@ updates:
       schedule:
           interval: 'weekly'
       ignore:
-          # Pinned pre-specta-serde — rc.24+ breaks bindings codegen
+          # Pinned pre-specta-serde - rc.24+ breaks bindings codegen
           # (skip_serializing_if rejection + serde_json::Value recursion).
           # Any bump must be coordinated with rewriting the Type impls.
           # Tracking: #<specta-issue>

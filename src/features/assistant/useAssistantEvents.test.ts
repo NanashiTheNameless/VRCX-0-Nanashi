@@ -8,9 +8,7 @@ const mocks = vi.hoisted(() => ({
     subscribe: vi.fn((name: string, handler: (payload: unknown) => void) => {
         mocks.handlers.set(name, handler);
         return Promise.resolve(() => {});
-    }),
-    recordToolError: vi.fn(),
-    recordTurnError: vi.fn()
+    })
 }));
 
 vi.mock('@/platform/tauri/client', () => ({
@@ -19,11 +17,6 @@ vi.mock('@/platform/tauri/client', () => ({
             subscribe: mocks.subscribe
         }
     }
-}));
-
-vi.mock('@/services/telemetry/telemetryAssistantHealth', () => ({
-    recordAssistantToolError: mocks.recordToolError,
-    recordAssistantTurnError: mocks.recordTurnError
 }));
 
 import { useAssistantChatStore } from '@/state/assistantChatStore';

@@ -1,6 +1,6 @@
 const GLOBAL_DATA_CAVEATS: &[&str] = &[
-    "VRCX-0 data is observer-centered and not a global VRChat record.",
-    "Missing rows mean this VRCX-0 profile did not observe the event, not that the event did not happen.",
+    "VRCX-0-Nanashi data is observer-centered and not a global VRChat record.",
+    "Missing rows mean this VRCX-0-Nanashi profile did not observe the event, not that the event did not happen.",
     "Co-presence minutes are useful for relative sorting; join/leave pairing can undercount absolute duration.",
     "Private instances that the owner cannot see may only appear as private and cannot be separated by instance.",
 ];
@@ -39,31 +39,34 @@ pub(crate) fn worlds_visited_caveats() -> Vec<String> {
 
 pub(crate) fn visit_timeline_caveats() -> Vec<String> {
     vec![
-        "Visit bounds and the roster come from this profile's local game log; only what VRCX-0 observed while you were in the instance is included.".into(),
+        "Visit bounds and the roster come from this profile's local game log; only what VRCX-0-Nanashi observed while you were in the instance is included.".into(),
         "The visit you are still in has no leftAt (inProgress=true); an earlier visit without leftAt lost its leave record (crash or truncated log).".into(),
         "A person without leftAt is not known to have stayed: a crash or truncated log drops leave events.".into(),
-        "A person without joinedAt was already inside before you arrived or before VRCX-0 started watching.".into(),
+        "A person without joinedAt was already inside before you arrived or before VRCX-0-Nanashi started watching.".into(),
         "Old rows may lack userId; those people are keyed by display name and cannot be marked isFriend.".into(),
         "sharedMinutes counts a stay with no leave event only up to your own leftAt; it is 0 while the visit is in progress.".into(),
     ]
 }
 
 pub(crate) fn favorite_local_caveats() -> Vec<String> {
-    vec!["This writes only VRCX-0 local favorites and does not change the VRChat account.".into()]
+    vec![
+        "This writes only VRCX-0-Nanashi local favorites and does not change the VRChat account."
+            .into(),
+    ]
 }
 
 pub(crate) fn social_graph_caveats() -> Vec<String> {
     vec![
         "Social graph edges describe friend relationship data, not co-play or co-presence.".into(),
         "Nodes include friends-of-friends; isFriend marks which nodes are the signed-in user's own friends versus second-degree mutuals.".into(),
-        "Only mutual graph snapshots that VRCX-0 has fetched are represented.".into(),
+        "Only mutual graph snapshots that VRCX-0-Nanashi has fetched are represented.".into(),
         "Mutual data is fetched on demand and breaks when a friend opts out of Shared Connections; use refresh_mutual_graph to update.".into(),
     ]
 }
 
 pub(crate) fn friend_circles_caveats() -> Vec<String> {
     vec![
-        "Friend circles use only mutual graph snapshots that VRCX-0 has fetched.".into(),
+        "Friend circles use only mutual graph snapshots that VRCX-0-Nanashi has fetched.".into(),
         "Connected circles are graph components: members are connected through known friendship paths, not necessarily all pairwise friends.".into(),
         "Friends who opt out of Shared Connections or have not been fetched can make circles look smaller or isolated.".into(),
     ]
@@ -79,7 +82,7 @@ pub(crate) fn companions_caveats() -> Vec<String> {
 
 pub(crate) fn invite_history_caveats() -> Vec<String> {
     vec![
-        "Invite history is based on notifications observed by this VRCX-0 profile.".into(),
+        "Invite history is based on notifications observed by this VRCX-0-Nanashi profile.".into(),
         "Sent invite coverage depends on whether the local notification row includes a receiver_user_id.".into(),
     ]
 }
@@ -89,7 +92,7 @@ pub(crate) fn friend_log_caveats() -> Vec<String> {
 }
 
 pub(crate) fn friend_changes_caveats() -> Vec<String> {
-    vec!["Friend changes are observed realtime feed events for this VRCX-0 profile.".into()]
+    vec!["Friend changes are observed realtime feed events for this VRCX-0-Nanashi profile.".into()]
 }
 
 pub(crate) fn fading_friends_caveats() -> Vec<String> {

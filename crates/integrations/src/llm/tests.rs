@@ -504,3 +504,43 @@ fn tool_arguments_accept_delta_and_cumulative_streams() {
         r#"{}{"limit":10}"#
     );
 }
+
+#[test]
+fn azure_urls_keep_query_and_default_api_version() {
+    let client = LlmClient::new(
+        "https://res.openai.azure.com/openai/deployments/gpt-4o",
+        "key",
+        "",
+        None,
+    )
+    .unwrap()
+    .with_api(LlmApiKind::AzureOpenai, Vec::new());
+    assert_eq!(
+        client.openai_url("/chat/completions"),
+        format!(
+            "https://res.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version={AZURE_DEFAULT_API_VERSION}"
+        )
+    );
+    assert_eq!(client.azure_deployment_name().as_deref(), Some("gpt-4o"));
+
+    let pinned = LlmClient::new(
+        "https://res.openai.azure.com/openai/deployments/gpt-4o?api-version=2025-01-01-preview",
+        "key",
+        "",
+        None,
+    )
+    .unwrap()
+    .with_api(LlmApiKind::AzureOpenai, Vec::new());
+    assert_eq!(
+        pinned.openai_url("/chat/completions"),
+        "https://res.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2025-01-01-preview"
+    );
+
+    let v1 = LlmClient::new("https://res.openai.azure.com/openai/v1", "key", "", None)
+        .unwrap()
+        .with_api(LlmApiKind::AzureOpenai, Vec::new());
+    assert_eq!(
+        v1.openai_url("/models"),
+        "https://res.openai.azure.com/openai/v1/models"
+    );
+}

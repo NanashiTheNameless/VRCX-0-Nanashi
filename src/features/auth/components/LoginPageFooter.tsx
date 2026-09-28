@@ -6,10 +6,10 @@ type LoginActions = ReturnType<typeof useLoginPageController>['actions'];
 
 export function LoginPageFooter({
     onOpenGithub,
-    onOpenDiscord
+    onOpenIssues
 }: {
     onOpenGithub: LoginActions['openGithub'];
-    onOpenDiscord: LoginActions['openDiscord'];
+    onOpenIssues: LoginActions['openIssues'];
 }) {
     return (
         <div className="text-muted-foreground/65 mt-4 grid shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-x-2 gap-y-1 text-center text-[0.7rem]">
@@ -29,9 +29,9 @@ export function LoginPageFooter({
                     type="button"
                     variant="link"
                     className="text-muted-foreground/75 h-auto p-0 text-[0.7rem]"
-                    onClick={onOpenDiscord}
+                    onClick={onOpenIssues}
                 >
-                    Discord
+                    Issues
                 </Button>
             </div>
         </div>

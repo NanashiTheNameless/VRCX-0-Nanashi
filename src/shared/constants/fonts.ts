@@ -1,8 +1,13 @@
-export const APP_FONT_DEFAULT_KEY = 'geist';
+// Fork: 0xProto (bundled, SIL OFL 1.1) is the default UI font.
+export const APP_FONT_DEFAULT_KEY = 'oxproto';
 
-export const APP_CJK_FONT_PACK_DEFAULT_KEY = 'noto';
+export const APP_CJK_FONT_PACK_DEFAULT_KEY = 'system';
 
 export const APP_FONT_CONFIG = Object.freeze({
+    oxproto: {
+        cssName: "'0xProto'",
+        cssImport: null
+    },
     inter: {
         cssName: "'Inter Variable', 'Inter'",
         cssImport:

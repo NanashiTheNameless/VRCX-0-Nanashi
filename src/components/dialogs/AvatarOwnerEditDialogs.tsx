@@ -115,7 +115,7 @@ function AvatarOwnerRow({
                         {avatar.releaseStatus || 'unknown'}
                     </span>
                     <span className="text-muted-foreground block truncate text-xs">
-                        {tagText || '—'}
+                        {tagText || '-'}
                     </span>
                 </span>
             </Button>

@@ -53,6 +53,9 @@ vi.mock('../SettingsField', () => ({
     )
 }));
 
+vi.mock('../KeepSystemAwakeSetting', () => ({
+    KeepSystemAwakeSetting: () => null
+}));
 vi.mock('../SettingsViewParts', () => ({
     SettingsTabContent: ({ children }: ChildrenProps) => <div>{children}</div>
 }));

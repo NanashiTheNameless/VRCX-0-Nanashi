@@ -612,7 +612,7 @@ export function ScreenshotGalleryView({
                                     t('dialog.screenshot_metadata.gallery')}
                             </div>
                             <div className="text-muted-foreground truncate text-xs">
-                                {activeFolderPath || '—'}
+                                {activeFolderPath || '-'}
                             </div>
                         </TooltipTrigger>
                         <TooltipContent>{activeFolderPath}</TooltipContent>

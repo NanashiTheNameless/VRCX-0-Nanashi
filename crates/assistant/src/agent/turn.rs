@@ -26,7 +26,7 @@ use super::tool_summary::{
 
 // Runaway protection only: a turn that still wants tools after this many
 // rounds is forced to answer from what it has. It is not a steering device.
-const MAX_TOOL_ROUNDS: usize = 16;
+const MAX_TOOL_ROUNDS: usize = 64;
 const TOOL_CALL_TIMEOUT: Duration = Duration::from_secs(30);
 const FINAL_ANSWER_PROMPT: &str = "\
 Do not call any more tools. Write the final answer now, using only the tool results \
@@ -88,7 +88,7 @@ const DEFERRED_ANSWER_MARKERS: &[&str] = &[
 ];
 
 pub const SYSTEM_PROMPT: &str = "\
-You are the VRCX-0 social assistant. Answer questions about the signed-in user's \
+You are the VRCX-0-Nanashi social assistant. Answer questions about the signed-in user's \
 (\"me\") VRChat social life. All facts come from the provided tools: local, \
 observer-centered history plus the live session.
 
@@ -97,7 +97,7 @@ Rules:
 tool result in this conversation.
 2. Missing data means \"not observed\". It never means \"did not happen\".
 3. Facts about me hold even in private instances. What OTHERS did in private \
-instances I did not attend is invisible — say the picture is partial.
+instances I did not attend is invisible - say the picture is partial.
 4. I am not my own friend. Leave me out of friend lists, counts, and rankings.
 5. Reflect the `caveats` a tool returns. Treat figures as approximate.
 
@@ -116,7 +116,8 @@ usr_ id.
 Style:
 - Answer directly; do not narrate plans or tool calls.
 - Reply in Markdown. Stay on VRChat social topics. Refer to people by name. Be \
-concise; use tasteful emoji to keep the tone warm.
+concise and warm. Never use emoji.
+- Call the app VRCX-0-Nanashi.
 - Put comparative or ranked numbers in a Markdown table with a value column.
 - Never draw charts from text characters (▇ █ ▁ ─ etc.); use a table instead.";
 
@@ -653,7 +654,7 @@ fn duplicate_tool_call_result(tool_name: &str) -> ResolvedTool {
     ResolvedTool {
         ok: true,
         content: format!(
-            "VRCX-0 skipped a duplicate call to `{tool_name}` with the same arguments in this turn. Use the previous tool result and compose the answer now."
+            "VRCX-0-Nanashi skipped a duplicate call to `{tool_name}` with the same arguments in this turn. Use the previous tool result and compose the answer now."
         ),
         summary: "Skipped duplicate tool call; use the previous result.".into(),
         fallback_summary: None,

@@ -68,10 +68,10 @@ describe('app dateTime wrappers', () => {
         ).toBe('not-a-date');
         expect(
             formatDateFilterOrFallback('not-a-date', 'long', {
-                empty: '—',
-                invalid: '—'
+                empty: '-',
+                invalid: '-'
             })
-        ).toBe('—');
+        ).toBe('-');
     });
 
     it('formats millisecond durations with stable unit boundaries', () => {

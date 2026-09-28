@@ -53,7 +53,6 @@ type AdvancedSectionInput = SettingsSectionInput<
     | 'cleanupAppDataDir'
     | 'dismissAppDataDirCleanup'
     | 'setConfigTreeData'
-    | 'migrateLegacyVrcxData'
 >;
 
 export function buildNotificationsSection({
@@ -132,8 +131,7 @@ export function buildAdvancedSection({
     resetAppDataDir,
     cleanupAppDataDir,
     dismissAppDataDirCleanup,
-    setConfigTreeData,
-    migrateLegacyVrcxData
+    setConfigTreeData
 }: AdvancedSectionInput) {
     return {
         avatarAutoCleanupOptions,
@@ -154,14 +152,6 @@ export function buildAdvancedSection({
         resetAppDataDir,
         cleanupAppDataDir,
         dismissAppDataDirCleanup,
-        setConfigTreeData,
-        migrateLegacyVrcxData,
-        onAnonymousUsageTelemetryChange: (checked: boolean) => {
-            saveBoolPreference(
-                'anonymousUsageTelemetry',
-                'anonymousUsageTelemetry',
-                checked
-            );
-        }
+        setConfigTreeData
     };
 }

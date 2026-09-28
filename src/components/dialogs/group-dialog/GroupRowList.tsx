@@ -180,7 +180,7 @@ function PostList({
                                 </Button>
                             ) : null}
                             <pre className="text-muted-foreground inline-block align-top font-sans text-xs whitespace-pre-wrap">
-                                {post.text || '—'}
+                                {post.text || '-'}
                             </pre>
                             <div className="text-muted-foreground mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
                                 {postRoleNames.length ? (

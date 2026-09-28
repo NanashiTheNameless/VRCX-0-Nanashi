@@ -44,6 +44,7 @@ import {
     EntityActionSub,
     EntityOverviewCard
 } from '../EntityDialogScaffold';
+import { SafetyWatchButton } from '../SafetyWatchButton';
 import type { GroupActionStatus, GroupRemoteStatus } from './groupDialogTypes';
 import { GroupTitleLanguages } from './GroupDialogViewParts';
 import { SavedGroupFavoriteButton } from './SavedGroupFavoriteButton';
@@ -108,7 +109,7 @@ function GroupRailMetric({
                 {label}
             </div>
             <div className="truncate text-sm font-medium tabular-nums">
-                {value ?? '—'}
+                {value ?? '-'}
             </div>
         </div>
     );
@@ -305,7 +306,14 @@ export function GroupDialogHeaderSection({
                     ) : null}
                 </div>
                 {group.id ? (
-                    <SavedGroupFavoriteButton groupId={group.id} />
+                    <>
+                        <SavedGroupFavoriteButton groupId={group.id} />
+                        <SafetyWatchButton
+                            kind="group"
+                            id={group.id}
+                            label={group.name || ''}
+                        />
+                    </>
                 ) : null}
                 <EntityActionDropdown busy={actionStatus !== 'idle'}>
                     <EntityActionItem

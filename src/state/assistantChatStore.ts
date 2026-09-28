@@ -437,7 +437,7 @@ export const useAssistantChatStore = create<AssistantChatState>((set) => ({
                 [event.sessionId]: event.entities
             },
             // Auto-open this session's panel when it surfaces entities, but never
-            // force-close it — respect a manual toggle on an empty turn.
+            // force-close it - respect a manual toggle on an empty turn.
             entityPanelOpenBySession:
                 event.entities.length > 0
                     ? {

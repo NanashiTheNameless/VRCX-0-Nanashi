@@ -24,6 +24,7 @@ import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
 import { useSettingsVrTabState } from '../useSettingsVrTabState';
+import { SettingsWristPagesFields } from './SettingsWristPagesFields';
 
 type SettingsVrPrefs = Pick<
     PreferencesSnapshot,
@@ -468,6 +469,9 @@ function SettingsVrTabContent({
                     label={t(
                         'view.settings.vr.wrist_overlay.wrist_feed_overlay'
                     )}
+                    description={t(
+                        'view.settings.vr.wrist_overlay.pages_description'
+                    )}
                 >
                     <Switch
                         checked={wristOverlayEnabled}
@@ -670,6 +674,8 @@ function SettingsVrTabContent({
                         onCheckedChange={onWristOverlayShowBatteryPercentChange}
                     />
                 </Field>
+
+                <SettingsWristPagesFields disabled={!wristOverlayEnabled} />
 
                 <Field
                     label={t(

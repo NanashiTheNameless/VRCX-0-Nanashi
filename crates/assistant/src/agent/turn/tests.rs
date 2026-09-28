@@ -52,6 +52,10 @@ fn system_prompt_keeps_core_boundaries_and_schema_field_names() {
         assert!(SYSTEM_PROMPT.contains(phrase), "missing phrase: {phrase}");
     }
     assert!(!SYSTEM_PROMPT.contains("time_window"));
+    // Fork: fork name and no emoji.
+    assert!(SYSTEM_PROMPT.contains("VRCX-0-Nanashi"));
+    assert!(SYSTEM_PROMPT.contains("Never use emoji"));
+    assert!(!SYSTEM_PROMPT.contains("tasteful emoji"));
 }
 
 #[test]

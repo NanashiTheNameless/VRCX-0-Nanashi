@@ -41,7 +41,7 @@ vi.mock('react-i18next', async (importOriginal) => ({
 
 function translate(key: string, values?: Record<string, string>) {
     if (key === 'dialog.world.info.vrcx_share_text') {
-        return `在 VRCX-0 中打开世界“${values?.name}”：${values?.url}`;
+        return `在 VRCX-0 中打开世界"${values?.name}"：${values?.url}`;
     }
     if (key === 'accessibility.copy_value') {
         return `Copy ${values?.value}`;
@@ -124,9 +124,9 @@ describe('LaunchDialogHost instance sharing', () => {
             launchToken: 'token'
         });
         expect(text).toBe(
-            `在 VRCX-0 中打开世界“${displayedName} #82121”：${link}`
+            `在 VRCX-0 中打开世界"${displayedName} #82121"：${link}`
         );
-        expect(text.split('”：')[0]).not.toContain('wrld_');
+        expect(text.split('"：')[0]).not.toContain('wrld_');
     });
 
     it('does not disable a valid share link while metadata is pending', async () => {

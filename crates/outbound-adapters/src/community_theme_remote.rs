@@ -118,21 +118,9 @@ impl CommunityThemeRemote for ExternalCommunityThemeRemote {
         })
     }
 
-    fn report_install<'a>(&'a self, theme_id: &'a str) -> CommunityThemeRemoteFuture<'a, bool> {
-        Box::pin(async move {
-            let input =
-                protocol::community_theme_install_report_input(theme_id).map_err(protocol_error)?;
-            let response = self
-                .web
-                .execute_external_api_limited(
-                    input,
-                    ExternalApiScope::CommunityTheme,
-                    protocol::COMMUNITY_THEME_REPORT_MAX_BYTES,
-                )
-                .await?;
-            Ok((200..300).contains(&response.status)
-                && response.data.len() <= protocol::COMMUNITY_THEME_REPORT_MAX_BYTES)
-        })
+    // Fork: never report theme installs upstream (install-count analytics).
+    fn report_install<'a>(&'a self, _theme_id: &'a str) -> CommunityThemeRemoteFuture<'a, bool> {
+        Box::pin(async move { Ok(false) })
     }
 }
 

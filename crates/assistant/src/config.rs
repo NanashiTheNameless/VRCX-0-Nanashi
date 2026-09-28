@@ -43,11 +43,23 @@ pub(crate) fn normalize_llm_base_url(raw: &str) -> String {
     value
 }
 
+/// Loopback, private-LAN and link-local hosts count as "local" models: a
+/// model running on this PC or another device on the home network.
 pub(crate) fn is_local_llm_endpoint(base_url: &str) -> bool {
-    matches!(
-        endpoint_host(base_url).as_deref(),
-        Some("localhost" | "127.0.0.1" | "::1")
-    )
+    let Some(host) = endpoint_host(base_url) else {
+        return false;
+    };
+    if host == "localhost" || host.ends_with(".local") || host.ends_with(".lan") {
+        return true;
+    }
+    match host.parse::<std::net::IpAddr>() {
+        Ok(std::net::IpAddr::V4(ip)) => ip.is_loopback() || ip.is_private() || ip.is_link_local(),
+        Ok(std::net::IpAddr::V6(ip)) => {
+            let first = ip.segments()[0];
+            ip.is_loopback() || (first & 0xfe00) == 0xfc00 || (first & 0xffc0) == 0xfe80
+        }
+        Err(_) => false,
+    }
 }
 
 fn endpoint_host(base_url: &str) -> Option<String> {
@@ -104,7 +116,7 @@ pub(crate) fn obfuscate_api_key(plain: &str) -> String {
 }
 
 pub(crate) fn deobfuscate_api_key(stored: &str) -> String {
-    // Keys saved before obfuscation existed carry no prefix — pass them through.
+    // Keys saved before obfuscation existed carry no prefix - pass them through.
     let Some(body) = stored.strip_prefix(API_KEY_OBFUSCATION_PREFIX) else {
         return stored.to_string();
     };
@@ -173,6 +185,13 @@ mod tests {
         assert!(is_local_llm_endpoint("http://user:pass@localhost:1234/v1"));
         assert!(is_local_llm_endpoint("localhost:1234/v1"));
         assert!(is_local_llm_endpoint("localhost:1234/v1?next=https://x"));
+        assert!(is_local_llm_endpoint("http://192.168.1.20:11434"));
+        assert!(is_local_llm_endpoint("http://10.0.0.5:8000/v1"));
+        assert!(is_local_llm_endpoint("http://172.16.4.2:1234/v1"));
+        assert!(is_local_llm_endpoint("http://gpu-box.local:11434"));
+        assert!(is_local_llm_endpoint("http://[fd00::1]:8080/v1"));
+        assert!(!is_local_llm_endpoint("http://172.32.0.1/v1"));
+        assert!(!is_local_llm_endpoint("http://8.8.8.8/v1"));
 
         assert!(!is_local_llm_endpoint("http://127.0.0.1.evil.com/v1"));
         assert!(!is_local_llm_endpoint(

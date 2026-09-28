@@ -18,6 +18,7 @@ dirs = { workspace = true }
 fontdb = "0.24"
 hex = "0.4"
 open = "5"
+rodio = { version = "0.22", default-features = false, features = ["playback", "wav", "mp3", "flac", "vorbis"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 sha2.workspace = true
@@ -42,6 +43,7 @@ windows-sys = { version = "0.61", features = [
     "Win32_System_Memory",
     "Win32_System_Ole",
     "Win32_System_Pipes",
+    "Win32_System_Power",
     "Win32_System_Threading",
     "Win32_UI_Shell",
     "Win32_UI_Input_KeyboardAndMouse",

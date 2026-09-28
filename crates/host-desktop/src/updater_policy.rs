@@ -122,7 +122,7 @@ mod tests {
     #[test]
     fn rejects_unexpected_target() {
         let result = validate_update_request_with_expected_target(
-            "https://github.com/Map1en/VRCX-0/releases/latest/download/latest_windows.json",
+            "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/latest_windows.json",
             "other-target",
             TEST_TARGET,
         );
@@ -133,13 +133,13 @@ mod tests {
     #[test]
     fn accepts_github_release_manifest_assets() {
         assert!(validate_update_request_with_expected_target(
-            "https://github.com/Map1en/VRCX-0/releases/latest/download/latest_windows.json",
+            "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/latest_windows.json",
             TEST_TARGET,
             TEST_TARGET,
         )
         .is_ok());
         assert!(validate_update_request_with_expected_target(
-            "https://github.com/Map1en/VRCX-0/releases/download/v1.0.0/latest_linux_and_macos.json",
+            "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/download/v1.0.0/latest_linux_and_macos.json",
             TEST_TARGET,
             TEST_TARGET,
         )
@@ -149,25 +149,25 @@ mod tests {
     #[test]
     fn rejects_non_github_or_unexpected_manifest_urls() {
         assert!(validate_update_request_with_expected_target(
-            "http://github.com/Map1en/VRCX-0/releases/latest/download/latest_windows.json",
+            "http://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/latest_windows.json",
             TEST_TARGET,
             TEST_TARGET,
         )
         .is_err());
         assert!(validate_update_request_with_expected_target(
-            "https://example.com/Map1en/VRCX-0/releases/latest/download/latest_windows.json",
+            "https://example.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/latest_windows.json",
             TEST_TARGET,
             TEST_TARGET,
         )
         .is_err());
         assert!(validate_update_request_with_expected_target(
-            "https://github.com/Map1en/VRCX-0/releases/latest/download/other.json",
+            "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/other.json",
             TEST_TARGET,
             TEST_TARGET,
         )
         .is_err());
         assert!(validate_update_request_with_expected_target(
-            "https://github.com/Map1en/VRCX-0/archive/latest_windows.json",
+            "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/archive/latest_windows.json",
             TEST_TARGET,
             TEST_TARGET,
         )

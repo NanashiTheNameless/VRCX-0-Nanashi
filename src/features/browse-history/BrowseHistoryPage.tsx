@@ -57,7 +57,7 @@ import {
     buildBrowseHistoryRows
 } from './browseHistoryRows';
 
-const PAGE_LIMIT = 120;
+const PAGE_LIMIT = 500;
 const CARD_MIN_WIDTH = 232;
 type HistoryFilter = 'all' | BrowseHistoryEntityKind;
 

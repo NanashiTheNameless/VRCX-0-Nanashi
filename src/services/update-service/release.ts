@@ -28,7 +28,8 @@ function normalizeGitHubRelease(
         displayVersion: parsedVersion.displayVersion,
         htmlUrl: release.html_url || '',
         tagName: release.tag_name || '',
-        displayName: release.name || `VRCX-0 ${parsedVersion.displayVersion}`,
+        displayName:
+            release.name || `VRCX-0-Nanashi ${parsedVersion.displayVersion}`,
         publishedAt: release.published_at || '',
         body: release.body || '',
         updaterType: 'manual'

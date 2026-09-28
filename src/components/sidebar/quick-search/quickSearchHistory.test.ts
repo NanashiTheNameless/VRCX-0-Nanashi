@@ -62,21 +62,22 @@ describe('quickSearchHistory', () => {
         );
     });
 
-    it('keeps the five most recently opened unique entries', async () => {
-        for (let index = 1; index <= 6; index += 1) {
+    it('keeps the twenty most recently opened unique entries', async () => {
+        for (let index = 1; index <= 21; index += 1) {
             await recordQuickSearchHistory(firstAccount, result(index));
         }
         await recordQuickSearchHistory(firstAccount, result(3));
 
         const history = await loadQuickSearchHistory(firstAccount);
 
-        expect(history.map((entry) => entry.id)).toEqual([
+        // wrld_1 is the oldest and drops out; re-opening wrld_3 moves it first.
+        const expected = [
             'wrld_3',
-            'wrld_6',
-            'wrld_5',
-            'wrld_4',
-            'wrld_2'
-        ]);
+            ...Array.from({ length: 19 }, (_, offset) => `wrld_${21 - offset}`)
+        ].filter((id, index) => index === 0 || id !== 'wrld_3');
+        expected.push('wrld_2');
+        expect(history.map((entry) => entry.id)).toEqual(expected);
+        expect(history).toHaveLength(20);
         expect(mocks.contents).not.toContain('seedData');
         expect(mocks.contents).not.toContain('not persisted');
     });

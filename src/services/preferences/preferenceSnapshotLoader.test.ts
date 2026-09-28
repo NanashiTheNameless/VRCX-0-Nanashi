@@ -162,7 +162,7 @@ describe('preferenceSnapshotLoader', () => {
                 hmdNotificationOpacity: -1,
                 VRCX_tablePageSize: 25,
                 maxTableSize_v2: 5,
-                searchLimit: 999999
+                searchLimit: 9999999
             };
             return Promise.resolve(values[key] ?? Number(fallback));
         });
@@ -206,8 +206,8 @@ describe('preferenceSnapshotLoader', () => {
             hmdNotificationOpacity: 0,
             hmdNotificationPosition: 'left',
             webhookFields: 'event,displayName',
-            appFontFamily: 'geist',
-            appCjkFontPack: 'noto',
+            appFontFamily: 'oxproto',
+            appCjkFontPack: 'system',
             customFontFamily: 'Custom Font',
             proxyEnabled: true,
             proxyServer: '127.0.0.1:7890',
@@ -215,7 +215,7 @@ describe('preferenceSnapshotLoader', () => {
             tablePageSizes: [10, 25, 50],
             tableLimits: {
                 maxTableSize: 100,
-                searchLimit: 100000
+                searchLimit: 1000000
             }
         });
         expect(usePreferencesStore.getState()).toMatchObject({

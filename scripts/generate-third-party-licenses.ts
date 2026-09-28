@@ -47,7 +47,10 @@ const tauriResourceNoticePath = path.join(
     tauriLicenseResourceDir,
     'THIRD_PARTY_NOTICES.txt'
 );
-const bundledFontPackages = Object.freeze(['@fontsource-variable/geist']);
+const bundledFontPackages = Object.freeze([
+    '@fontsource-variable/geist',
+    '@fontsource/jost'
+]);
 
 function isRecord(value: unknown): value is JsonRecord {
     return Boolean(value && typeof value === 'object' && !Array.isArray(value));
@@ -191,7 +194,7 @@ function createThirdPartyNoticeText(
     entries: readonly ThirdPartyLicenseEntry[]
 ): string {
     const lines = [
-        'VRCX-0 Third-Party Notices',
+        'VRCX-0-Nanashi Third-Party Notices',
         '',
         `Generated: ${new Date().toISOString()}`,
         ''
@@ -322,6 +325,20 @@ function main(): void {
     const entries = [
         ...frontendEntries,
         ...bundledFontEntries,
+        {
+            id: 'font-0xproto',
+            name: '0xProto',
+            version: '',
+            license: 'OFL-1.1',
+            sourceType: 'font',
+            sourceLabel: 'Bundled UI and VR overlay font',
+            projectUrl: 'https://github.com/0xType/0xProto',
+            noticeText: fs.readFileSync(
+                path.join(rootDir, 'LICENSES/OFL-1.1-0xProto.txt'),
+                'utf8'
+            ),
+            needsReview: false
+        },
         ...rustEntries
     ].sort((left, right) => left.name.localeCompare(right.name));
     const manifest = {

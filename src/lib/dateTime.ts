@@ -86,12 +86,12 @@ export function formatScreenshotDateTime(
     locale?: string
 ) {
     if (!value) {
-        return '—';
+        return '-';
     }
 
     const date = value instanceof Date ? value : new Date(value);
     if (Number.isNaN(date.getTime())) {
-        return '—';
+        return '-';
     }
 
     const {
@@ -113,7 +113,7 @@ export function formatScreenshotDateTime(
         {
             locale: normalizeDateLocale(locale || appLocale, 'en'),
             hour12: Boolean(dateHour12),
-            fallback: '—'
+            fallback: '-'
         }
     );
 }

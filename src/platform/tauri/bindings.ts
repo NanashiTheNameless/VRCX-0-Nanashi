@@ -193,6 +193,14 @@ const generatedCommands = {
     async appDeepLinkRegistrationRepair(): Promise<boolean | null> {
         return await TAURI_INVOKE('app__deep_link_registration_repair');
     },
+    async appDeepLinkSchemesGet(): Promise<DeepLinkSchemeSettings> {
+        return await TAURI_INVOKE('app__deep_link_schemes_get');
+    },
+    async appDeepLinkSchemesSet(
+        settings: DeepLinkSchemeSettings
+    ): Promise<DeepLinkSchemeSettings> {
+        return await TAURI_INVOKE('app__deep_link_schemes_set', { settings });
+    },
     async appShareCollectionCreate(
         input: ShareCollectionCreateInput
     ): Promise<ShareCollectionCreateResult> {
@@ -376,14 +384,6 @@ const generatedCommands = {
     },
     async appNoteExportCancel(): Promise<NoteExportStatus> {
         return await TAURI_INVOKE('app__note_export_cancel');
-    },
-    async appTelemetryRecordEvent(event: TelemetryClientEvent): Promise<null> {
-        return await TAURI_INVOKE('app__telemetry_record_event', { event });
-    },
-    async appTelemetrySubmitFeedback(content: string): Promise<null> {
-        return await TAURI_INVOKE('app__telemetry_submit_feedback', {
-            content
-        });
     },
     async appProxySettingsTest(
         input: ProxySettingsTestInput
@@ -2543,6 +2543,166 @@ const generatedCommands = {
             moderationType
         });
     },
+    /**
+     * Whether the app currently holds a keep-the-system-awake lock.
+     */
+    async appKeepSystemAwakeGet(): Promise<boolean> {
+        return await TAURI_INVOKE('app__keep_system_awake_get');
+    },
+    async appNotificationSoundTest(
+        path: string,
+        volume: number
+    ): Promise<null> {
+        return await TAURI_INVOKE('app__notification_sound_test', {
+            path,
+            volume
+        });
+    },
+    async appYtdlpStatus(): Promise<YtdlpStatus> {
+        return await TAURI_INVOKE('app__ytdlp_status');
+    },
+    async appYtdlpConfigure(settings: YtdlpSettings): Promise<YtdlpStatus> {
+        return await TAURI_INVOKE('app__ytdlp_configure', { settings });
+    },
+    async appYtdlpUpdate(): Promise<YtdlpStatus> {
+        return await TAURI_INVOKE('app__ytdlp_update');
+    },
+    async appYtdlpRefreshCookies(
+        browser: string,
+        profile: string
+    ): Promise<YtdlpStatus> {
+        return await TAURI_INVOKE('app__ytdlp_refresh_cookies', {
+            browser,
+            profile
+        });
+    },
+    async appYtdlpImportCookies(path: string): Promise<YtdlpStatus> {
+        return await TAURI_INVOKE('app__ytdlp_import_cookies', { path });
+    },
+    async appYtdlpClearCookies(): Promise<YtdlpStatus> {
+        return await TAURI_INVOKE('app__ytdlp_clear_cookies');
+    },
+    async appYtdlpTest(): Promise<YtdlpStatus> {
+        return await TAURI_INVOKE('app__ytdlp_test');
+    },
+    async appRemindersList(): Promise<Reminder[]> {
+        return await TAURI_INVOKE('app__reminders_list');
+    },
+    async appRemindersDelete(id: string): Promise<Reminder[]> {
+        return await TAURI_INVOKE('app__reminders_delete', { id });
+    },
+    async appSafetySettingsGet(): Promise<SafetySettings> {
+        return await TAURI_INVOKE('app__safety_settings_get');
+    },
+    async appSafetySettingsSave(
+        settings: SafetySettings
+    ): Promise<SafetySettings> {
+        return await TAURI_INVOKE('app__safety_settings_save', { settings });
+    },
+    async appSafetyWatchSet(
+        kind: string,
+        id: string,
+        label: string,
+        enabled: boolean
+    ): Promise<SafetySettings> {
+        return await TAURI_INVOKE('app__safety_watch_set', {
+            kind,
+            id,
+            label,
+            enabled
+        });
+    },
+    async appSafetyStatus(): Promise<SafetyStatus> {
+        return await TAURI_INVOKE('app__safety_status');
+    },
+    async appSafetyEntrySources(kind: string, id: string): Promise<string[]> {
+        return await TAURI_INVOKE('app__safety_entry_sources', { kind, id });
+    },
+    async appSafetySourcesRefresh(): Promise<SafetyStatus> {
+        return await TAURI_INVOKE('app__safety_sources_refresh');
+    },
+    async appSafetyRowsInspect(rows: SafetyLogRow[]): Promise<string[][]> {
+        return await TAURI_INVOKE('app__safety_rows_inspect', { rows });
+    },
+    async appSafetyAvatarBlockPreview(
+        sourceId: string,
+        offset: number
+    ): Promise<AvatarBlockPreview> {
+        return await TAURI_INVOKE('app__safety_avatar_block_preview', {
+            sourceId,
+            offset
+        });
+    },
+    async appSafetyGlobalHideStatus(): Promise<GlobalHideStatus> {
+        return await TAURI_INVOKE('app__safety_global_hide_status');
+    },
+    async appSafetyInstanceAvatars(): Promise<InstanceAvatar[]> {
+        return await TAURI_INVOKE('app__safety_instance_avatars');
+    },
+    async appSafetyGlobalHideSetPaused(
+        paused: boolean
+    ): Promise<GlobalHideStatus> {
+        return await TAURI_INVOKE('app__safety_global_hide_set_paused', {
+            paused
+        });
+    },
+    async appSafetyGlobalHideUnblockPreview(): Promise<GlobalHideUnblockPreview> {
+        return await TAURI_INVOKE('app__safety_global_hide_unblock_preview');
+    },
+    async appSafetyGlobalHideUnblockStart(
+        token: string
+    ): Promise<GlobalHideStatus> {
+        return await TAURI_INVOKE('app__safety_global_hide_unblock_start', {
+            token
+        });
+    },
+    async appSafetyGlobalHideUnblockCancel(): Promise<GlobalHideStatus> {
+        return await TAURI_INVOKE('app__safety_global_hide_unblock_cancel');
+    },
+    async appSafetyAvatarBlocksApply(
+        token: string,
+        ids: string[]
+    ): Promise<AvatarBlockResult[]> {
+        return await TAURI_INVOKE('app__safety_avatar_blocks_apply', {
+            token,
+            ids
+        });
+    },
+    async appSafetyAvatarBlocksCancel(): Promise<void> {
+        await TAURI_INVOKE('app__safety_avatar_blocks_cancel');
+    },
+    async appProfileMergeSources(): Promise<ProfileMergeSources> {
+        return await TAURI_INVOKE('app__profile_merge_sources');
+    },
+    async appProfileMergeRun(
+        source: ProfileMergeSourceKind
+    ): Promise<ProfileMergeReport> {
+        return await TAURI_INVOKE('app__profile_merge_run', { source });
+    },
+    async appCustomLocalesList(): Promise<CustomLocaleEntry[]> {
+        return await TAURI_INVOKE('app__custom_locales_list');
+    },
+    async appCustomLocaleSave(
+        code: string,
+        messages: JsonValue
+    ): Promise<CustomLocaleEntry> {
+        return await TAURI_INVOKE('app__custom_locale_save', {
+            code,
+            messages
+        });
+    },
+    async appCustomLocaleDelete(code: string): Promise<null> {
+        return await TAURI_INVOKE('app__custom_locale_delete', { code });
+    },
+    async appCustomLocalesOpenFolder(): Promise<boolean> {
+        return await TAURI_INVOKE('app__custom_locales_open_folder');
+    },
+    /**
+     * Persists the keep-awake preference and applies it. Returns whether the hold is active.
+     */
+    async appKeepSystemAwakeSet(enabled: boolean): Promise<boolean> {
+        return await TAURI_INVOKE('app__keep_system_awake_set', { enabled });
+    },
     async appAppLauncherSnapshotGet(): Promise<AppLauncherSnapshot> {
         return await TAURI_INVOKE('app__app_launcher_snapshot_get');
     },
@@ -3156,6 +3316,17 @@ export type AutoLoginStartInput = { userId?: string };
 export type AutoLoginTerminalOutcome =
     | { status: 'throttled'; snapshot: SavedAuthSnapshot }
     | { status: 'expired'; snapshot: SavedAuthSnapshot };
+export type AvatarBlockEntry = { id: string; name: string };
+export type AvatarBlockPreview = {
+    token: string;
+    accountUserId: string;
+    sourceName: string;
+    updatedAt: string;
+    offset: number;
+    total: number;
+    entries: AvatarBlockEntry[];
+};
+export type AvatarBlockResult = { id: string; outcome: string };
 export type AvatarCacheOutput = {
     id: string;
     authorId: string;
@@ -3568,6 +3739,11 @@ export type CurrentUserUpdateRequest = {
     hasDiscordFriendsOptOut?: boolean | null;
     contentFilters?: ContentFilter[] | null;
 };
+export type CustomLocaleEntry = {
+    code: string;
+    name: string;
+    messages: JsonValue;
+};
 export type DataDirCleanupPending = {
     oldDir: string;
     bytes: number;
@@ -3730,7 +3906,23 @@ export type DeepLinkAction =
           launchToken: string;
       }
     | { type: 'openAvatar'; avatarId: string }
-    | { type: 'importCollection'; collectionId: string };
+    | { type: 'importCollection'; collectionId: string }
+    | { type: 'openUser'; userId: string }
+    | { type: 'openGroup'; groupId: string }
+    /**
+     * Legacy VRCX `vrcx://addavatardb/<url>`: offer to add an avatar search provider.
+     */
+    | { type: 'addAvatarProvider'; url: string };
+export type DeepLinkSchemeSettings = {
+    /**
+     * `vrcx-0://` (upstream VRCX-0 links).
+     */
+    upstream: boolean;
+    /**
+     * `vrcx://` (original VRCX links).
+     */
+    legacy: boolean;
+};
 export type DesktopNotificationActivation = {
     target: DesktopNotificationTarget;
 };
@@ -4634,6 +4826,32 @@ export type GameLogWriteKind =
     | 'Event'
     | 'External';
 export type GameNoVrPayload = { isGameNoVR: boolean };
+/**
+ * Fork: global-hide status for the signed-in account.
+ */
+export type GlobalHideStatus = {
+    signedIn: boolean;
+    sourceNames: string[];
+    listed: number;
+    blockedByApp: number;
+    alreadyBlocked: number;
+    skipped: number;
+    pending: number;
+    today: number;
+    dailyCap: number;
+    paused: boolean;
+    backoffUntil: string;
+    lastError: string;
+    unblockRemaining: number;
+};
+/**
+ * Fork: explicit unblock review (app-made blocks only).
+ */
+export type GlobalHideUnblockPreview = {
+    token: string;
+    accountUserId: string;
+    ids: string[];
+};
 export type GroupBanImportItemResult = {
     userId: string;
     state: GroupBanImportItemState;
@@ -4879,6 +5097,10 @@ export type InstanceActivityRowOutput = {
     userId: string;
     time: number;
 };
+/**
+ * Fork: a player's current avatar name in this instance (from the game log).
+ */
+export type InstanceAvatar = { displayName: string; avatarName: string };
 export type InstanceCreateGroupAccessType = 'members' | 'plus' | 'public';
 export type InstanceCreateMinimumAvatarPerformance = 'Poor' | 'Medium' | 'Good';
 export type InstanceCreateRegion = 'eu' | 'jp' | 'us' | 'use';
@@ -5039,11 +5261,39 @@ export type LinuxRenderingSnapshot = {
     enabled: boolean;
     needsConfirmation: boolean;
 };
+/**
+ * Wire protocol spoken by an LLM endpoint. Providers are grouped by API
+ * family rather than vendor; `OpenaiCompatible` covers OpenAI, OpenRouter,
+ * Groq, Together, vLLM, LM Studio, llama.cpp, Ollama's `/v1`, and similar.
+ */
+export type LlmApiKind =
+    | 'openaiCompatible'
+    | 'anthropic'
+    | 'gemini'
+    | 'ollama'
+    /**
+     * Azure OpenAI: OpenAI format, `api-key` header, `api-version` query.
+     */
+    | 'azureOpenai'
+    /**
+     * Cohere v2 chat (`POST /v2/chat`).
+     */
+    | 'cohere'
+    /**
+     * Amazon Bedrock Converse API with a Bedrock API key (bearer token).
+     */
+    | 'bedrock'
+    /**
+     * Google Vertex AI (Gemini request format, project/location URLs).
+     */
+    | 'vertexAi';
 export type LlmEndpointDetectModelsInput = {
     id: string | null;
     baseUrl: string | null;
     apiKey: string | null;
     persist: boolean | null;
+    apiKind?: LlmApiKind | null;
+    headers?: LlmHeader[] | null;
 };
 export type LlmEndpointDetectModelsResult = {
     models: string[];
@@ -5058,6 +5308,8 @@ export type LlmEndpointDto = {
     models: string[];
     modelReasoning: LlmModelReasoning[];
     lastDetectedAt: string | null;
+    apiKind: LlmApiKind;
+    headers: LlmHeader[];
 };
 export type LlmEndpointUpsertInput = {
     id: string | null;
@@ -5066,7 +5318,13 @@ export type LlmEndpointUpsertInput = {
     apiKey: string | null;
     models: string[];
     modelReasoning: LlmModelReasoning[] | null;
+    apiKind?: LlmApiKind | null;
+    headers?: LlmHeader[] | null;
 };
+/**
+ * Extra HTTP header sent with every request to an endpoint (custom gateways).
+ */
+export type LlmHeader = { name: string; value: string };
 export type LlmModelReasoning = {
     modelId: string;
     supportedEfforts: string[];
@@ -5716,6 +5974,22 @@ export type ProfileDecorationEquipSlot =
     | 'iconFrame'
     | 'profileEffect'
     | 'nameplateEffect';
+/**
+ * Rows added per table, for the result summary.
+ */
+export type ProfileMergeReport = {
+    tablesMerged: number;
+    tablesCreated: number;
+    rowsAdded: number;
+    perTable: Partial<{ [key in string]: number }>;
+    skippedTables: string[];
+    /**
+     * Keys added from the other app's JSON settings file (existing keys kept).
+     */
+    settingsFileKeysAdded: number;
+};
+export type ProfileMergeSourceKind = 'vrcx' | 'vrcx0';
+export type ProfileMergeSources = { vrcx: string | null; vrcx0: string | null };
 export type ProfileRestoreAppVersionCheck = 'compatible';
 export type ProfileRestoreArchiveCheck = 'valid';
 export type ProfileRestoreDataDisposition =
@@ -5929,6 +6203,48 @@ export type RegistryBackupSnapshot = {
     data: RawJson;
 };
 export type ReleaseStatusFilter = 'all' | 'hidden' | 'private' | 'public';
+export type Reminder = {
+    id: string;
+    ownerUserId: string;
+    message: string;
+    trigger: ReminderTrigger;
+    /**
+     * Event reminders: keep firing (with a cooldown) instead of once.
+     */
+    recurring?: boolean;
+    createdAt: string;
+    lastFiredAt?: string;
+    fireCount?: number;
+};
+/**
+ * Fork: what makes an assistant reminder fire (upstream #479).
+ */
+export type ReminderTrigger =
+    /**
+     * A friend comes online.
+     */
+    | { kind: 'friendOnline'; userId: string; displayName: string }
+    /**
+     * A friend goes offline.
+     */
+    | { kind: 'friendOffline'; userId: string; displayName: string }
+    /**
+     * A friend changes location; `world_id` narrows it to one world.
+     */
+    | {
+          kind: 'friendLocation';
+          userId: string;
+          displayName: string;
+          worldId?: string;
+      }
+    /**
+     * A player joins the instance you are in.
+     */
+    | { kind: 'playerJoined'; userId: string; displayName: string }
+    /**
+     * A point in time (RFC 3339, UTC); optionally repeats.
+     */
+    | { kind: 'time'; at: string; repeatMinutes?: number };
 export type RemoteModerationRow = {
     id: string;
     type: string;
@@ -6005,6 +6321,62 @@ export type RuntimeVrchatAuthFailurePayload = {
     realtimeTransport?: RuntimeRealtimeTransportEpoch | null;
 };
 export type RuntimeWorkerErrorPayload = { worker: string; message: string };
+export type SafetyAuditEntry = {
+    accountUserId?: string;
+    eventCreatedAt?: string;
+    location?: string;
+    logKind?: string;
+    avatarId?: string;
+    createdAt: string;
+    eventType: string;
+    userId: string;
+    source: string;
+    message: string;
+    action: string;
+    outcome: string;
+};
+export type SafetyLogRow = {
+    accountUserId: string;
+    kind: string;
+    createdAt: string;
+    userId: string;
+    location: string;
+    url: string;
+    data: string;
+};
+export type SafetySettings = {
+    enabled: boolean;
+    groups: WatchEntry[];
+    avatars: WatchEntry[];
+    urlWarnings: boolean;
+    warnShorteners: boolean;
+    blockedDomains: string[];
+    allowedDomains: string[];
+    sources: SafetySource[];
+};
+export type SafetySource = {
+    id: string;
+    name: string;
+    url: string;
+    format: SourceFormat;
+    enabled: boolean;
+    warn: boolean;
+    blockUsers: boolean;
+    /**
+     * Only explicitly listed groups currently owned by the logged-in user.
+     */
+    banGroupIds: string[];
+    /**
+     * Fork: globally hide (VRChat avatar block) every listed avatar, slowly, in
+     * the background. Avatar-ID sources only. Turning it off never unblocks.
+     */
+    globalHide: boolean;
+};
+export type SafetyStatus = {
+    sources: SourceStatus[];
+    audit: SafetyAuditEntry[];
+    droppedEvents: number;
+};
 export type SavedAuthAutoLoginStatus =
     | 'not-configured'
     | 'missing-last-user'
@@ -6269,6 +6641,17 @@ export type SocialUnfriendBatchTarget = {
     userId: string;
     displayName?: string;
 };
+export type SourceFormat =
+    | 'avatarIds'
+    | 'userIds'
+    | 'domains'
+    | 'githubAvatars';
+export type SourceStatus = {
+    id: string;
+    count: number;
+    updatedAt: string;
+    error: string;
+};
 export type SqliteErrorCategory =
     | 'malformed'
     | 'disk_full'
@@ -6280,21 +6663,6 @@ export type StartupBootstrapSnapshot = {
     systemLanguage: string;
     systemCulture: string;
 };
-export type TelemetryClientEvent =
-    | { type: 'pageVisit'; route: string }
-    | { type: 'toolOpen'; tool: string }
-    | {
-          type: 'routeError';
-          error_class: string;
-          name: string | null;
-          summary: string | null;
-      }
-    | {
-          type: 'assistantToolError';
-          source: string | null;
-          summary: string | null;
-      }
-    | { type: 'assistantTurnError'; code: string; summary: string | null };
 export type ToolCallRecord = { id: string; name: string; arguments: string };
 export type ToolResultRecord = {
     toolCallId: string;
@@ -6774,6 +7142,14 @@ export type VrchatWorldSaveInput = {
     worldId?: string;
     params: WorldUpdateRequest;
 };
+export type WatchEntry = {
+    id: string;
+    /**
+     * Optional exact log-name match. It is warning-only, never proof of identity.
+     */
+    label: string;
+    enabled: boolean;
+};
 export type WebhookDeliveryChannelSnapshot = {
     lastSuccess: WebhookDeliveryRecord | null;
     lastFailure: WebhookDeliveryRecord | null;
@@ -6877,6 +7253,29 @@ export type WorldUpdateRequest = {
     tags?: string[] | null;
     urlList?: string[] | null;
     disabledPropAbilities?: string[] | null;
+};
+export type YtdlpSettings = {
+    enabled: boolean;
+    toolsPath: string;
+    browser: string;
+    profile: string;
+    useCookies: boolean;
+};
+export type YtdlpStatus = {
+    settings: YtdlpSettings;
+    supported: boolean;
+    installed: boolean;
+    version: string;
+    checkedAt: string;
+    cookiesRefreshedAt: string;
+    cookieCount: number;
+    cookieExpiry: number;
+    cookieValidatedAt: string;
+    cookieValidation: string;
+    providerRunning: boolean;
+    busy: boolean;
+    message: string;
+    toolsPath: string;
 };
 
 /** tauri-specta globals **/

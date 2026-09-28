@@ -186,11 +186,11 @@ describe('preferencesStore normalizers', () => {
         expect(
             normalizeTableLimits({
                 maxTableSize: 50,
-                searchLimit: 200000
+                searchLimit: 2000000
             })
         ).toEqual({
             maxTableSize: 100,
-            searchLimit: 100000
+            searchLimit: 1000000
         });
 
         expect(
@@ -333,7 +333,7 @@ describe('preferencesStore normalizers', () => {
             hmdNotificationPosition: 'right',
             tableLimits: {
                 maxTableSize: 5,
-                searchLimit: 999999
+                searchLimit: 9999999
             },
             localFavoriteFriendsGroups: ['VIP', '', null],
             overlayActivityFilters: JSON.stringify({
@@ -379,7 +379,7 @@ describe('preferencesStore normalizers', () => {
             tablePageSizes: [10, 25],
             tableLimits: {
                 maxTableSize: 100,
-                searchLimit: 100000
+                searchLimit: 1000000
             },
             localFavoriteFriendsGroups: ['VIP'],
             wristOverlayStartMode: 'steamvr',

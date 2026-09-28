@@ -14,7 +14,7 @@ use crate::wire::{
     SERVER_SCOPES,
 };
 
-const MAX_ACTIVE_CONNECTIONS: u32 = 8;
+const MAX_ACTIVE_CONNECTIONS: u32 = 64;
 const SEND_TIMEOUT: Duration = Duration::from_secs(10);
 const CLOSE_TIMEOUT: Duration = Duration::from_secs(1);
 

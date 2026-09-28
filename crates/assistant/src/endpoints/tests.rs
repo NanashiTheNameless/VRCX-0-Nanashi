@@ -14,6 +14,56 @@ fn test_endpoint_store(config: AssistantConfig, proxy_url: Option<String>) -> En
 }
 
 #[test]
+fn header_values_are_obfuscated_at_rest_and_legacy_values_migrate_on_save() {
+    let config = test_config();
+    let headers = vec![
+        LlmHeader {
+            name: "Authorization".into(),
+            value: "Bearer test-secret".into(),
+        },
+        LlmHeader {
+            name: "X-Literal".into(),
+            value: "obf1:1234".into(),
+        },
+    ];
+    config
+        .set_json(
+            LLM_ENDPOINTS_CONFIG_KEY,
+            &serde_json::json!([{
+                "id": "ep_headers", "name": "Headers", "baseUrl": "http://localhost:8080/v1",
+                "apiKey": "", "headers": headers
+            }]),
+        )
+        .unwrap();
+    let store = test_endpoint_store(config.clone(), None);
+    assert_eq!(store.list().unwrap()[0].headers, headers);
+
+    let input = || LlmEndpointUpsertInput {
+        id: Some("ep_headers".into()),
+        name: "Headers".into(),
+        base_url: "http://localhost:8080/v1".into(),
+        api_key: None,
+        models: Vec::new(),
+        model_reasoning: None,
+        api_kind: None,
+        headers: None,
+    };
+    assert_eq!(store.upsert(input()).unwrap().headers, headers);
+    let stored = config
+        .get_json(LLM_ENDPOINTS_CONFIG_KEY, Value::Null)
+        .unwrap();
+    assert!(!stored.to_string().contains("test-secret"));
+    assert_eq!(stored[0]["headers"][0]["obfuscated"], true);
+    assert_eq!(store.resolve("ep_headers").unwrap().headers, headers);
+    // Saving again must not double-encode the value.
+    assert_eq!(store.upsert(input()).unwrap().headers, headers);
+    assert_eq!(
+        test_endpoint_store(config, None).list().unwrap()[0].headers,
+        headers
+    );
+}
+
+#[test]
 fn translation_prompt_substitutes_target_lang_in_default_and_custom_prompts() {
     assert_eq!(
         translation_system_prompt(None, "Japanese"),
@@ -179,6 +229,8 @@ fn endpoint_upsert_retains_only_current_models_and_clears_reasoning_on_url_chang
             api_key: None,
             models: vec!["model-b".into()],
             model_reasoning: None,
+            api_kind: None,
+            headers: None,
         })
         .unwrap();
     assert_eq!(filtered.model_reasoning.len(), 1);
@@ -196,6 +248,8 @@ fn endpoint_upsert_retains_only_current_models_and_clears_reasoning_on_url_chang
             api_key: None,
             models: vec!["model-b".into()],
             model_reasoning: None,
+            api_kind: None,
+            headers: None,
         })
         .unwrap();
     assert!(changed.model_reasoning.is_empty());
@@ -212,6 +266,8 @@ fn detected_metadata_only_matches_the_original_url_and_key() {
         models: Vec::new(),
         model_reasoning: Vec::new(),
         last_detected_at: None,
+        api_kind: LlmApiKind::default(),
+        headers: Vec::new(),
     };
 
     assert!(endpoint_matches_detect_target(
@@ -254,6 +310,8 @@ fn endpoint_upsert_persists_provided_reasoning_for_new_endpoints() {
                     mandatory: false,
                 },
             ]),
+            api_kind: None,
+            headers: None,
         })
         .unwrap();
 
@@ -276,6 +334,8 @@ fn upsert_preserves_clears_and_drops_keys_on_provider_change() {
             api_key: Some("sk-old".into()),
             models: vec!["gpt-4o-mini".into()],
             model_reasoning: None,
+            api_kind: None,
+            headers: None,
         })
         .unwrap();
     assert!(saved.has_key);
@@ -290,6 +350,8 @@ fn upsert_preserves_clears_and_drops_keys_on_provider_change() {
             api_key: None,
             models: vec!["gpt-4o-mini".into()],
             model_reasoning: None,
+            api_kind: None,
+            headers: None,
         })
         .unwrap();
     assert!(preserved.has_key);
@@ -303,6 +365,8 @@ fn upsert_preserves_clears_and_drops_keys_on_provider_change() {
             api_key: None,
             models: vec!["model".into()],
             model_reasoning: None,
+            api_kind: None,
+            headers: None,
         })
         .unwrap();
     assert!(!dropped.has_key);
@@ -316,6 +380,8 @@ fn upsert_preserves_clears_and_drops_keys_on_provider_change() {
             api_key: Some(String::new()),
             models: vec!["model".into()],
             model_reasoning: None,
+            api_kind: None,
+            headers: None,
         })
         .unwrap();
     assert!(!cleared.has_key);
@@ -401,6 +467,8 @@ fn delete_clears_last_selection_and_falls_back_translation_endpoint() {
             api_key: Some("sk-first".into()),
             models: vec!["first-model".into()],
             model_reasoning: None,
+            api_kind: None,
+            headers: None,
         })
         .unwrap();
     let second = store
@@ -411,6 +479,8 @@ fn delete_clears_last_selection_and_falls_back_translation_endpoint() {
             api_key: Some("sk-second".into()),
             models: vec!["second-model".into()],
             model_reasoning: None,
+            api_kind: None,
+            headers: None,
         })
         .unwrap();
 

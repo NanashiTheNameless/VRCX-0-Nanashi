@@ -84,46 +84,20 @@ describe('runtimeBootstrapService', () => {
         mocks.hydrateVrcStatus.mockResolvedValue(undefined);
     });
 
-    it('syncs normalized locale state', async () => {
+    it('syncs normalized locale state (English only in this fork)', async () => {
         useShellStore.getState().setLocale('zh_Hant_TW');
 
         const cleanup = startI18nLanguageSync();
 
         expect(document.documentElement.setAttribute).toHaveBeenCalledWith(
             'lang',
-            'zh-TW'
-        );
-        expect(mocks.setI18nLanguage).toHaveBeenCalledWith('zh-TW');
-        await vi.waitFor(() =>
-            expect(useShellStore.getState().timeUnitLabels.h).toBe('zh-TW:h')
-        );
-
-        useShellStore.getState().setLocale('en-US');
-
-        expect(document.documentElement.setAttribute).toHaveBeenLastCalledWith(
-            'lang',
             'en'
         );
-        expect(mocks.setI18nLanguage).toHaveBeenLastCalledWith('en');
+        expect(mocks.setI18nLanguage).toHaveBeenCalledWith('en');
         await vi.waitFor(() =>
             expect(useShellStore.getState().timeUnitLabels.h).toBe('en:h')
         );
 
-        cleanup();
-        useShellStore.getState().setLocale('zh_CN');
-        expect(mocks.setI18nLanguage).toHaveBeenCalledTimes(2);
-    });
-
-    it('ignores a stale locale load that resolves after a newer switch', async () => {
-        useShellStore.getState().setLocale('ja');
-        const cleanup = startI18nLanguageSync();
-
-        useShellStore.getState().setLocale('ko');
-        await vi.waitFor(() =>
-            expect(useShellStore.getState().timeUnitLabels.h).toBe('ko:h')
-        );
-
-        expect(useShellStore.getState().timeUnitLabels.h).toBe('ko:h');
         cleanup();
     });
 

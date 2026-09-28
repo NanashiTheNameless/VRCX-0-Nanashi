@@ -25,7 +25,7 @@ pub struct ToolCallOutcome {
     pub structured: Option<Value>,
 }
 
-/// In-process handle to the VRCX-0 MCP tool surface.
+/// In-process handle to the VRCX-0-Nanashi MCP tool surface.
 ///
 /// Wraps an rmcp client connected to a [`VrcxMcpServer`] over an in-memory
 /// duplex stream: no HTTP, no port, no auth token. Tool definitions and

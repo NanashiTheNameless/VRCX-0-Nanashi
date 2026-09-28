@@ -22,12 +22,12 @@ use super::common::{
 use vrcx_0_core::OwnerId;
 
 const ACTIVITY_CACHE_CAVEAT: &str =
-    "Activity sessions come from this profile's local VRCX-0 activity cache.";
+    "Activity sessions come from this profile's local VRCX-0-Nanashi activity cache.";
 
 #[tool_router(router = activity_tool_router, vis = "pub(crate)")]
 impl VrcxMcpServer {
     #[tool(
-        description = "[L2·analyze] Ranked time-spent-together facts per person, aggregated from the local game log (reliable even inside private instances because you were there). THE tool for \"who I play/spend the most time with\". Defaults to current friends (friendsOnly=true). groupBy=friend ranks total minutes per person; groupBy=friend_world breaks one person's time down by world. For all-time/\"ever\"/\"so far\" questions OMIT timeWindow entirely — never pass a narrow window for an all-time question. Rows are pre-ranked and limited with isFriend; read the top rows, don't loop."
+        description = "[L2·analyze] Ranked time-spent-together facts per person, aggregated from the local game log (reliable even inside private instances because you were there). THE tool for \"who I play/spend the most time with\". Defaults to current friends (friendsOnly=true). groupBy=friend ranks total minutes per person; groupBy=friend_world breaks one person's time down by world. For all-time/\"ever\"/\"so far\" questions OMIT timeWindow entirely - never pass a narrow window for an all-time question. Rows are pre-ranked and limited with isFriend; read the top rows, don't loop."
     )]
     async fn get_copresence_summary(
         &self,
@@ -99,7 +99,7 @@ impl VrcxMcpServer {
     }
 
     #[tool(
-        description = "[L1·query] Reconstruct one instance visit from the local game log: the world/instance, your exact joinedAt and leftAt (UTC, millisecond precision), and everyone observed while you were there — per person, ordered by time shared, with each stay's joinedAt/leftAt (a person who leaves and comes back has several stints). Select the visit with `at`: any UTC timestamp inside it, or the visitedAt of a search_worlds_visited row; add `location` only to disambiguate. Use for \"who was in that room with me\", \"when did X join or leave\", or exact timestamps for a recording. Caveats: the visit you are still in has no leftAt (inProgress=true); a crash or truncated log drops leave events, so a missing leftAt never means the person stayed; a missing joinedAt means the person was already inside before you arrived or before VRCX-0 started watching; old rows may lack userId and are keyed by display name; the roster is capped (truncated=true, peopleObserved keeps the real count) and the summary still covers the whole visit. Pairs with search_worlds_visited to find visits in a period."
+        description = "[L1·query] Reconstruct one instance visit from the local game log: the world/instance, your exact joinedAt and leftAt (UTC, millisecond precision), and everyone observed while you were there - per person, ordered by time shared, with each stay's joinedAt/leftAt (a person who leaves and comes back has several stints). Select the visit with `at`: any UTC timestamp inside it, or the visitedAt of a search_worlds_visited row; add `location` only to disambiguate. Use for \"who was in that room with me\", \"when did X join or leave\", or exact timestamps for a recording. Caveats: the visit you are still in has no leftAt (inProgress=true); a crash or truncated log drops leave events, so a missing leftAt never means the person stayed; a missing joinedAt means the person was already inside before you arrived or before VRCX-0-Nanashi started watching; old rows may lack userId and are keyed by display name; the roster is capped (truncated=true, peopleObserved keeps the real count) and the summary still covers the whole visit. Pairs with search_worlds_visited to find visits in a period."
     )]
     async fn get_visit_timeline(
         &self,
@@ -165,7 +165,7 @@ impl VrcxMcpServer {
         structured_result(activity_streaks_output(offset_minutes, streaks))
     }
     #[tool(
-        description = "[L2·analyze] Friends whose observed co-presence dropped sharply versus the prior equal-length window (fading relationships), ranked by drop; defaults to the last 30 days versus the prior 30 days. Report as an observation (overlap fell — could be schedule, status, or sample size), never as the other person's intent or feelings."
+        description = "[L2·analyze] Friends whose observed co-presence dropped sharply versus the prior equal-length window (fading relationships), ranked by drop; defaults to the last 30 days versus the prior 30 days. Report as an observation (overlap fell - could be schedule, status, or sample size), never as the other person's intent or feelings."
     )]
     async fn get_fading_friends(
         &self,
@@ -291,7 +291,7 @@ impl VrcxMcpServer {
             longest_session_minutes: longest_ms / 60_000,
             by_weekday,
             caveats: vec![
-                "Activity sessions are derived from this profile's local VRCX-0 activity cache."
+                "Activity sessions are derived from this profile's local VRCX-0-Nanashi activity cache."
                     .into(),
             ],
         })
@@ -301,7 +301,7 @@ impl VrcxMcpServer {
         owner_user_id: OwnerId,
         input: FadingFriendsParams,
     ) -> social_aggregates::FadingFriendsInput {
-        let recent_days = input.recent_days.unwrap_or(30).clamp(1, 365);
+        let recent_days = input.recent_days.unwrap_or(30).clamp(1, 3650);
         let now = Utc::now();
         let pivot = now - Duration::days(recent_days);
         let prior_from = pivot - Duration::days(recent_days);

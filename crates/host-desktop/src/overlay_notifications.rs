@@ -208,7 +208,7 @@ fn xs_notification_payload(
         "title": title,
         "content": content,
         "height": height,
-        "sourceApp": "VRCX-0",
+        "sourceApp": "VRCX-0-Nanashi",
         "timeout": timeout,
         "volume": 0.0,
         "audioPath": "",

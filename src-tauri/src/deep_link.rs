@@ -1,8 +1,27 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 
-use vrcx_0_core::vrchat_ids::{is_avatar_id, is_world_id};
+use vrcx_0_core::vrchat_ids::{is_avatar_id, is_group_id, is_user_id, is_world_id};
 
 pub const DEEP_LINK_ARRIVED_EVENT: &str = "deepLinkArrived";
+
+/// Fork: user toggles for the extra schemes (`vrcx-0-nanashi://` is always on).
+pub const UPSTREAM_SCHEME_ENABLED_CONFIG_KEY: &str = "deepLinkUpstreamSchemeEnabled";
+pub const LEGACY_SCHEME_ENABLED_CONFIG_KEY: &str = "deepLinkLegacySchemeEnabled";
+static UPSTREAM_SCHEME_ENABLED: AtomicBool = AtomicBool::new(true);
+static LEGACY_SCHEME_ENABLED: AtomicBool = AtomicBool::new(true);
+
+pub fn set_extra_schemes_enabled(upstream: bool, legacy: bool) {
+    UPSTREAM_SCHEME_ENABLED.store(upstream, Ordering::Release);
+    LEGACY_SCHEME_ENABLED.store(legacy, Ordering::Release);
+}
+
+pub fn extra_schemes_enabled() -> (bool, bool) {
+    (
+        UPSTREAM_SCHEME_ENABLED.load(Ordering::Acquire),
+        LEGACY_SCHEME_ENABLED.load(Ordering::Acquire),
+    )
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, specta::Type)]
 #[serde(
@@ -24,6 +43,13 @@ pub enum DeepLinkAction {
     OpenAvatar { avatar_id: String },
     #[specta(rename_all = "camelCase")]
     ImportCollection { collection_id: String },
+    #[specta(rename_all = "camelCase")]
+    OpenUser { user_id: String },
+    #[specta(rename_all = "camelCase")]
+    OpenGroup { group_id: String },
+    /// Legacy VRCX `vrcx://addavatardb/<url>`: offer to add an avatar search provider.
+    #[specta(rename_all = "camelCase")]
+    AddAvatarProvider { url: String },
 }
 
 #[derive(Default)]
@@ -47,8 +73,20 @@ impl PendingDeepLinks {
 }
 
 pub fn parse_deep_link(value: &str) -> Option<DeepLinkAction> {
-    let url = url::Url::parse(value.trim()).ok()?;
-    if url.scheme() != "vrcx-0" || url.fragment().is_some() {
+    let trimmed = value.trim();
+    if let Some(rest) = strip_scheme_prefix(trimmed, LEGACY_VRCX_SCHEME) {
+        if !LEGACY_SCHEME_ENABLED.load(Ordering::Acquire) {
+            return None;
+        }
+        return parse_legacy_vrcx_deep_link(rest);
+    }
+    let url = url::Url::parse(trimmed).ok()?;
+    let scheme_allowed = match url.scheme() {
+        "vrcx-0-nanashi" => true,
+        "vrcx-0" => UPSTREAM_SCHEME_ENABLED.load(Ordering::Acquire),
+        _ => false,
+    };
+    if !scheme_allowed || url.fragment().is_some() {
         return None;
     }
     if url.host_str() == Some("instance") && url.path() == "/open" {
@@ -66,8 +104,78 @@ pub fn parse_deep_link(value: &str) -> Option<DeepLinkAction> {
         ("collection", "/import") if is_collection_id(&id) => {
             Some(DeepLinkAction::ImportCollection { collection_id: id })
         }
+        ("user", "/open") if is_user_id(&id) => Some(DeepLinkAction::OpenUser { user_id: id }),
+        ("group", "/open") if is_group_id(&id) => Some(DeepLinkAction::OpenGroup { group_id: id }),
         _ => None,
     }
+}
+
+/// Upstream VRCX-0 scheme, still accepted alongside `vrcx-0-nanashi://`.
+pub const UPSTREAM_VRCX_0_SCHEME: &str = "vrcx-0";
+
+/// Scheme used by the original VRCX (`vrcx://<command>/<argument>`).
+pub const LEGACY_VRCX_SCHEME: &str = "vrcx";
+
+fn strip_scheme_prefix<'a>(value: &'a str, scheme: &str) -> Option<&'a str> {
+    let (candidate, rest) = value.split_once("://")?;
+    candidate.eq_ignore_ascii_case(scheme).then_some(rest)
+}
+
+/// Parses the original VRCX launch-command links, e.g.
+/// `vrcx://world/wrld_...`, `vrcx://world/wrld_...:12345~private(usr_...)`,
+/// `vrcx://avatar/avtr_...`, `vrcx://user/usr_...`, `vrcx://group/grp_...`,
+/// `vrcx://addavatardb/https://...`.
+fn parse_legacy_vrcx_deep_link(rest: &str) -> Option<DeepLinkAction> {
+    let (command, argument) = rest.split_once('/')?;
+    let argument = argument.trim_end_matches('/');
+    let argument = percent_encoding::percent_decode_str(argument)
+        .decode_utf8()
+        .ok()?
+        .into_owned();
+    if argument.is_empty() || argument.chars().any(|character| character.is_control()) {
+        return None;
+    }
+    match command.to_ascii_lowercase().as_str() {
+        "world" | "instance" | "local-favorite-world" => parse_legacy_location(&argument),
+        "avatar" | "switchavatar" if is_avatar_id(&argument) => Some(DeepLinkAction::OpenAvatar {
+            avatar_id: argument,
+        }),
+        "user" if is_user_id(&argument) => Some(DeepLinkAction::OpenUser { user_id: argument }),
+        "group" if is_group_id(&argument) => Some(DeepLinkAction::OpenGroup { group_id: argument }),
+        "addavatardb" => {
+            let url = url::Url::parse(&argument).ok()?;
+            matches!(url.scheme(), "https" | "http").then(|| DeepLinkAction::AddAvatarProvider {
+                url: url.to_string(),
+            })
+        }
+        _ => None,
+    }
+}
+
+fn parse_legacy_location(argument: &str) -> Option<DeepLinkAction> {
+    let (world_id, instance_id) = match argument.split_once(':') {
+        Some((world_id, instance_id)) => (world_id, Some(instance_id)),
+        None => (argument, None),
+    };
+    if !is_world_id(world_id) {
+        return None;
+    }
+    let Some(instance_id) = instance_id.filter(|instance_id| !instance_id.is_empty()) else {
+        return Some(DeepLinkAction::OpenWorld {
+            world_id: world_id.to_string(),
+        });
+    };
+    if instance_id.chars().any(|character| {
+        character.is_whitespace() || matches!(character, ':' | '/' | '?' | '#' | '&')
+    }) {
+        return None;
+    }
+    Some(DeepLinkAction::OpenInstance {
+        world_id: world_id.to_string(),
+        instance_id: instance_id.to_string(),
+        short_name: String::new(),
+        launch_token: String::new(),
+    })
 }
 
 fn parse_instance_deep_link(url: &url::Url) -> Option<DeepLinkAction> {
@@ -260,10 +368,81 @@ mod tests {
             "vrcx-0://avatar/open?id=avtr_not-a-vrchat-id",
             "vrcx-0://collection/import?id=abc/../def",
             "vrcx-0://collection/import?id=AbC123z?x=1",
-            "vrcx-0://user/open?id=usr_12345678-1234-1234-1234-1234567890ab",
+            "vrcx-0://user/open?id=usr_not-a-vrchat-id",
+            "vrcx://world/wrld_not-a-vrchat-id",
+            "vrcx://addavatardb/javascript:alert(1)",
+            "vrcx://unknown/wrld_12345678-1234-1234-1234-1234567890ab",
         ] {
             assert_eq!(parse_deep_link(value), None, "{value}");
         }
+    }
+
+    #[test]
+    fn accepts_the_fork_scheme() {
+        assert_eq!(
+            parse_deep_link(
+                "vrcx-0-nanashi://world/open?id=wrld_12345678-1234-1234-1234-1234567890ab"
+            ),
+            Some(DeepLinkAction::OpenWorld {
+                world_id: "wrld_12345678-1234-1234-1234-1234567890ab".into()
+            })
+        );
+    }
+
+    #[test]
+    fn parses_legacy_vrcx_links() {
+        const WORLD: &str = "wrld_12345678-1234-1234-1234-1234567890ab";
+        const AVATAR: &str = "avtr_12345678-1234-1234-1234-1234567890ab";
+        const USER: &str = "usr_12345678-1234-1234-1234-1234567890ab";
+        const GROUP: &str = "grp_12345678-1234-1234-1234-1234567890ab";
+
+        assert_eq!(
+            parse_deep_link(&format!("vrcx://world/{WORLD}")),
+            Some(DeepLinkAction::OpenWorld {
+                world_id: WORLD.into()
+            })
+        );
+        assert_eq!(
+            parse_deep_link(&format!(
+                "vrcx://world/{WORLD}:12345~private({USER})~region(eu)"
+            )),
+            Some(DeepLinkAction::OpenInstance {
+                world_id: WORLD.into(),
+                instance_id: format!("12345~private({USER})~region(eu)"),
+                short_name: String::new(),
+                launch_token: String::new(),
+            })
+        );
+        assert_eq!(
+            parse_deep_link(&format!("vrcx://avatar/{AVATAR}")),
+            Some(DeepLinkAction::OpenAvatar {
+                avatar_id: AVATAR.into()
+            })
+        );
+        assert_eq!(
+            parse_deep_link(&format!("VRCX://user/{USER}/")),
+            Some(DeepLinkAction::OpenUser {
+                user_id: USER.into()
+            })
+        );
+        assert_eq!(
+            parse_deep_link(&format!("vrcx://group/{GROUP}")),
+            Some(DeepLinkAction::OpenGroup {
+                group_id: GROUP.into()
+            })
+        );
+        assert_eq!(
+            parse_deep_link(&format!("vrcx-0://user/open?id={USER}")),
+            Some(DeepLinkAction::OpenUser {
+                user_id: USER.into()
+            })
+        );
+        assert_eq!(
+            parse_deep_link("vrcx://addavatardb/https%3A%2F%2Fexample.com%2Fsearch"),
+            Some(DeepLinkAction::AddAvatarProvider {
+                url: "https://example.com/search".into()
+            })
+        );
     }
 
     #[test]

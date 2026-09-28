@@ -27,7 +27,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 import { EntityDialogTabContent } from '../../EntityDialogScaffold';
 import type { UserDialogProfileRecord } from '../useUserDialogProfileResource';
 
-export const USER_DIALOG_FEED_LIMIT = 50;
+export const USER_DIALOG_FEED_LIMIT = 500;
 
 export function UserDialogFeedPanel({
     active,

@@ -12,11 +12,13 @@ pub mod local_player_moderations;
 pub mod log_scanner;
 #[cfg(any(windows, target_os = "linux"))]
 pub mod overlay_notifications;
+pub mod power;
 pub mod process_status;
 pub mod shell_actions;
 #[cfg(windows)]
 pub mod shortcut_recorder;
 pub mod sidebar_window;
+pub mod sound;
 pub mod system_fonts;
 pub mod system_theme;
 pub mod taskbar_overlay;

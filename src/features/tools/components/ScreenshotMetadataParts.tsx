@@ -87,7 +87,7 @@ export function MetadataAuthorLink({ author }: { author: AuthorDetail }) {
     }, [hint, userId]);
 
     if (!userId) {
-        return <div className="text-sm">{hint || '—'}</div>;
+        return <div className="text-sm">{hint || '-'}</div>;
     }
 
     return (

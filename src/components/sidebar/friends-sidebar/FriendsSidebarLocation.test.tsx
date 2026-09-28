@@ -90,13 +90,7 @@ describe('FriendInstanceTimer', () => {
         }
     );
 
-    it.each([
-        ['en', '1h37m'],
-        ['zh-CN', '1小时37分'],
-        ['zh-TW', '1小時37分'],
-        ['ja', '1時間37分'],
-        ['ko', '1시간37분']
-    ])(
+    it.each([['en', '1h37m']])(
         'uses localized short units in %s without changing the default timer',
         async (locale, expected) => {
             await setI18nLanguage(locale);
@@ -122,9 +116,9 @@ describe('FriendInstanceTimer', () => {
     );
 
     it('shows the full duration on hover without adding a button to the card', async () => {
-        await setI18nLanguage('zh-CN');
+        await setI18nLanguage('en');
         timerState.timeUnitLabels = getTimeUnitLabels(
-            'zh-CN',
+            'en',
             DEFAULT_TIME_UNIT_LABELS
         );
         const { container } = render(
@@ -143,7 +137,7 @@ describe('FriendInstanceTimer', () => {
             fireEvent.mouseMove(trigger);
         }
         await act(() => vi.advanceTimersByTimeAsync(700));
-        const tooltip = screen.getByText('1小时 37分钟', {
+        const tooltip = screen.getByText('1h 37m', {
             selector: '[data-slot="tooltip-content"]'
         });
         expect(tooltip.hasAttribute('data-open')).toBe(true);

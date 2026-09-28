@@ -714,3 +714,23 @@ fn incomplete_player_markers_do_not_panic_or_create_players() {
     assert_eq!(user.display_name, "Name)");
     assert_eq!(user.user_id, "usr_partial");
 }
+
+#[test]
+fn avpro_url_lines_are_preserved_for_local_safety_inspection() {
+    let mut sink = RecordingParseSink::default();
+    let line =
+        "2026.06.21 23:01:00 Log        -  [AVProVideo] Opening 'https://grabify.link/token'";
+    assert!(media::parse_video_change(
+        &mut sink,
+        FILE,
+        line,
+        content(line)
+    ));
+    assert_eq!(
+        sink.payloads(),
+        vec![payload(&[
+            "event",
+            "VideoURL: [AVProVideo] Opening 'https://grabify.link/token'"
+        ])]
+    );
+}

@@ -2,6 +2,7 @@ import { lazy } from 'react';
 
 import { MountOnFirstOpen } from '@/components/hosts/MountOnFirstOpen';
 import { useAssistantChatStore } from '@/state/assistantChatStore';
+import { usePreferencesStore } from '@/state/preferencesStore';
 
 import { useAssistantEvents } from './useAssistantEvents';
 
@@ -14,8 +15,11 @@ const AssistantDialog = lazy(() =>
 export function AssistantDialogHost() {
     useAssistantEvents();
     const open = useAssistantChatStore((state) => state.open);
+    const socialAiEnabled = usePreferencesStore(
+        (state) => state.socialAiEnabled
+    );
     return (
-        <MountOnFirstOpen open={open}>
+        <MountOnFirstOpen open={open && socialAiEnabled}>
             <AssistantDialog />
         </MountOnFirstOpen>
     );

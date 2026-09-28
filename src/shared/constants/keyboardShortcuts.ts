@@ -15,7 +15,7 @@ export const SHORTCUT_GROUPS = [
     {
         titleKey: 'shortcuts.group.layout',
         items: [
-            { labelKey: 'shortcuts.navigation_items', keys: ['Mod', '1–9'] },
+            { labelKey: 'shortcuts.navigation_items', keys: ['Mod', '1-9'] },
             { labelKey: 'nav_tooltip.collapse_nav', keys: ['Mod', 'B'] },
             {
                 labelKey: 'app_menu.hide_friends_sidebar',

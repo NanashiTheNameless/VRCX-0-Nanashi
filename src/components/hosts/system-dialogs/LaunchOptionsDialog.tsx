@@ -19,7 +19,12 @@ import {
     DialogHeader,
     DialogTitle
 } from '@/ui/shadcn/dialog';
-import { Field, FieldGroup, FieldLabel } from '@/ui/shadcn/field';
+import {
+    Field,
+    FieldDescription,
+    FieldGroup,
+    FieldLabel
+} from '@/ui/shadcn/field';
 import {
     InputGroup,
     InputGroupAddon,
@@ -218,6 +223,11 @@ export function LaunchOptionsDialog({
                                 </InputGroupButton>
                             </InputGroupAddon>
                         </InputGroup>
+                        <FieldDescription>
+                            {t(
+                                'dialog.launch_options.path_override_description'
+                            )}
+                        </FieldDescription>
                     </Field>
                 </FieldGroup>
                 <DialogFooter>

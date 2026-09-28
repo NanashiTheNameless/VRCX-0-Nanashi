@@ -156,14 +156,14 @@ fn accepts_cookie_store_with_vrchat_domain() {
 
 #[test]
 fn builds_user_agent_with_version() {
-    assert_eq!(build_vrcx_user_agent("2.9.2"), "VRCX-0/2.9.2");
-    assert_eq!(build_vrcx_user_agent("  2.9.2  "), "VRCX-0/2.9.2");
+    assert_eq!(build_vrcx_user_agent("2.9.2"), "VRCX-0-Nanashi/2.9.2");
+    assert_eq!(build_vrcx_user_agent("  2.9.2  "), "VRCX-0-Nanashi/2.9.2");
 }
 
 #[test]
 fn builds_user_agent_without_version_when_empty() {
-    assert_eq!(build_vrcx_user_agent(""), "VRCX-0");
-    assert_eq!(build_vrcx_user_agent("   "), "VRCX-0");
+    assert_eq!(build_vrcx_user_agent(""), "VRCX-0-Nanashi");
+    assert_eq!(build_vrcx_user_agent("   "), "VRCX-0-Nanashi");
 }
 
 #[tokio::test]
@@ -205,7 +205,7 @@ async fn transport_sends_owned_user_agent_and_ignores_request_override() -> Resu
     assert_eq!(response, (200, "ok".into()));
     assert!(captured
         .lines()
-        .any(|line| line.eq_ignore_ascii_case("user-agent: VRCX-0/2.9.2")));
+        .any(|line| line.eq_ignore_ascii_case("user-agent: VRCX-0-Nanashi/2.9.2")));
     assert!(!captured.contains("caller-override"));
     Ok(())
 }
@@ -399,7 +399,7 @@ fn fresh_http_client_reuses_runtime_cookie_jar() -> Result<()> {
     let built = web.build_standard_request_with(&fresh, &mut request)?;
 
     assert!(Arc::strong_count(&web.jar) > initial_references);
-    assert_eq!(web.user_agent, "VRCX-0/2.9.2");
+    assert_eq!(web.user_agent, "VRCX-0-Nanashi/2.9.2");
     assert!(built.headers().get(reqwest::header::USER_AGENT).is_none());
     drop(fresh);
     assert_eq!(Arc::strong_count(&web.jar), initial_references);

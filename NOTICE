@@ -4,3 +4,7 @@ Portions of this repository originate from VRCX.
 Copyright (c) 2019-2026 pypy and individual contributors.
 Those portions are licensed under the MIT License. The full text is in
 LICENSES/MIT.txt.
+
+Fork (VRCX-0-Nanashi) bundles the 0xProto font (https://github.com/0xType/0xProto),
+Copyright (c) 2026, 0xType Project Authors, licensed under the SIL Open Font License 1.1.
+The full text is in LICENSES/OFL-1.1-0xProto.txt.

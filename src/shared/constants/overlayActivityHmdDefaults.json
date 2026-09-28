@@ -37,5 +37,10 @@
     "BlockedOnPlayerLeft": "off",
     "MutedOnPlayerJoined": "off",
     "MutedOnPlayerLeft": "off",
-    "VideoPlay": "off"
+    "VideoPlay": "off",
+    "SafetyGroup": "on",
+    "SafetyAvatar": "on",
+    "SafetyCommunity": "on",
+    "SafetyUrl": "on",
+    "Reminder": "on"
 }

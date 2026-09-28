@@ -18,10 +18,12 @@ test-utils = [
 ]
 
 [dependencies]
+vrcx-0-ytdlp = { path = "../ytdlp" }
 async-trait = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 specta.workspace = true
+url.workspace = true
 chrono = { workspace = true }
 fs4 = { workspace = true }
 sys-locale.workspace = true

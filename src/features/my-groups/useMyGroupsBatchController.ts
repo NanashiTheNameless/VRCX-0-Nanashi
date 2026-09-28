@@ -204,7 +204,7 @@ export function useMyGroupsBatchController({
                     title: t('view.my_groups.confirm_leave_title', {
                         count: targets.length
                     }),
-                    description: `${describeTargets(targets)} — ${t(
+                    description: `${describeTargets(targets)} - ${t(
                         'view.my_groups.confirm_leave_warning'
                     )}`,
                     confirmText: t('view.my_groups.leave')

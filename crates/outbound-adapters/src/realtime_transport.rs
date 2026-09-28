@@ -28,6 +28,11 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(30);
 const HEARTBEAT_DEADLINE: Duration = Duration::from_secs(90);
 const HEARTBEAT_PING_TIMEOUT: Duration = Duration::from_secs(10);
 const ALIVE_TRAIL_INTERVAL: Duration = Duration::from_secs(300);
+/// Wall-clock time that may pass beyond monotonic time before the loop treats
+/// it as a system sleep. Monotonic clocks pause during suspend on Linux (and
+/// may on other hosts), so without this a socket that died while the PC slept
+/// looks fresh after wake and takes up to HEARTBEAT_DEADLINE to be replaced.
+const SUSPEND_CLOCK_JUMP: Duration = Duration::from_secs(45);
 
 #[derive(Clone)]
 pub struct RealtimeTransportDeps {
@@ -420,6 +425,7 @@ async fn connect_once(
     let mut last_inbound_at = connected_at;
     let mut last_alive_trail_at = connected_at;
     let mut messages_received: u64 = 0;
+    let mut suspend_probe = SuspendProbe::new();
     trail(
         &trail_db_path,
         "connected",
@@ -440,6 +446,12 @@ async fn connect_once(
         );
     }
     let reason = loop {
+        if let Some(slept) = suspend_probe.detect_resume() {
+            break format!(
+                "system resumed from sleep (about {} seconds); reconnecting",
+                slept.as_secs()
+            );
+        }
         if last_inbound_at.elapsed() >= HEARTBEAT_INTERVAL {
             if let Err(reason) = heartbeat(&mut stream, last_inbound_at).await {
                 break reason;
@@ -531,6 +543,46 @@ async fn connect_once(
         connected_secs: connected_at.elapsed().as_secs(),
         silent_secs: last_inbound_at.elapsed().as_secs(),
     })
+}
+
+/// Detects system sleep by comparing wall-clock and monotonic progress.
+struct SuspendProbe {
+    wall: std::time::SystemTime,
+    mono: std::time::Instant,
+}
+
+impl SuspendProbe {
+    fn new() -> Self {
+        Self {
+            wall: std::time::SystemTime::now(),
+            mono: std::time::Instant::now(),
+        }
+    }
+
+    /// Returns roughly how long the system slept since the previous call,
+    /// when that exceeds [`SUSPEND_CLOCK_JUMP`].
+    fn detect_resume(&mut self) -> Option<Duration> {
+        let now_wall = std::time::SystemTime::now();
+        let now_mono = std::time::Instant::now();
+        let slept = suspend_gap(
+            self.wall,
+            now_wall,
+            now_mono.saturating_duration_since(self.mono),
+        );
+        self.wall = now_wall;
+        self.mono = now_mono;
+        slept
+    }
+}
+
+fn suspend_gap(
+    previous_wall: std::time::SystemTime,
+    now_wall: std::time::SystemTime,
+    mono_elapsed: Duration,
+) -> Option<Duration> {
+    let wall_elapsed = now_wall.duration_since(previous_wall).ok()?;
+    let gap = wall_elapsed.checked_sub(mono_elapsed)?;
+    (gap >= SUSPEND_CLOCK_JUMP).then_some(gap)
 }
 
 async fn heartbeat(
@@ -644,7 +696,31 @@ fn log_untyped_message_summary(generation: u64, json: &Value) {
 
 #[cfg(test)]
 mod tests {
-    use super::{timeout_error, wait_for_result_or_cancel};
+    use super::{suspend_gap, timeout_error, wait_for_result_or_cancel, SUSPEND_CLOCK_JUMP};
+
+    #[test]
+    fn wall_clock_jump_beyond_monotonic_time_counts_as_sleep() {
+        let start = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1_000);
+        let mono = std::time::Duration::from_secs(30);
+        assert_eq!(
+            suspend_gap(
+                start,
+                start + std::time::Duration::from_secs(30 + 600),
+                mono
+            ),
+            Some(std::time::Duration::from_secs(600))
+        );
+        assert_eq!(
+            suspend_gap(start, start + std::time::Duration::from_secs(40), mono),
+            None
+        );
+        assert_eq!(
+            suspend_gap(start, start + mono + SUSPEND_CLOCK_JUMP, mono),
+            Some(SUSPEND_CLOCK_JUMP)
+        );
+        // Clock set backwards is not a sleep.
+        assert_eq!(suspend_gap(start + mono, start, mono), None);
+    }
 
     #[tokio::test]
     async fn connect_wait_returns_stopped_when_cancelled() {

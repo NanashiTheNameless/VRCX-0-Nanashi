@@ -54,6 +54,8 @@ pub(crate) fn test_wrist_frame_input(
         locale: config.locale.as_str().to_string(),
         show_instance_id_in_location: config.show_instance_id_in_location,
         captured_at_ms,
+        page: Default::default(),
+        players: Vec::new(),
     }
 }
 

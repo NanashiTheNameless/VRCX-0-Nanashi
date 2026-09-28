@@ -91,7 +91,7 @@ export function UserGroupCard({
             </Avatar>
             <span className="min-w-0 flex-1 overflow-hidden">
                 <span className="flex min-w-0 items-center gap-1 leading-5 font-medium">
-                    <span className="truncate">{label || '—'}</span>
+                    <span className="truncate">{label || '-'}</span>
                     {isOwner ? (
                         <MarkerIcon
                             icon={CrownIcon}

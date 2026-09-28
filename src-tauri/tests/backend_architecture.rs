@@ -277,7 +277,6 @@ fn application_public_api_is_grouped_by_feature_context() {
         "profile",
         "remote",
         "social",
-        "telemetry",
     ] {
         assert!(
             source.contains(&format!("pub mod {context};")),

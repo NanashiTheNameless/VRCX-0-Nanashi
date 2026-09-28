@@ -18,7 +18,7 @@ use super::common::{map_application_query_error, require_current_user_id, struct
 #[tool_router(router = favorites_tool_router, vis = "pub(crate)")]
 impl VrcxMcpServer {
     #[tool(
-        description = "[write·local] Add or remove a VRCX-0 LOCAL favorite for a world, friend, or avatar — local label only, no VRChat account change, no message to anyone; dry_run defaults to true. Use get_favorites to check duplicates first."
+        description = "[write·local] Add or remove a VRCX-0-Nanashi LOCAL favorite for a world, friend, or avatar - local label only, no VRChat account change, no message to anyone; dry_run defaults to true. Use get_favorites to check duplicates first."
     )]
     async fn favorite_local(
         &self,
@@ -38,7 +38,7 @@ impl VrcxMcpServer {
     }
 
     #[tool(
-        description = "[L1·query] List VRCX-0 local favorites. Omit kind or use all to list worlds, friends, and avatars; otherwise filter by world, friend, or avatar. Use before a favorite write to check duplicates."
+        description = "[L1·query] List VRCX-0-Nanashi local favorites. Omit kind or use all to list worlds, friends, and avatars; otherwise filter by world, friend, or avatar. Use before a favorite write to check duplicates."
     )]
     async fn get_favorites(
         &self,
@@ -89,7 +89,7 @@ impl VrcxMcpServer {
             rows,
             summary,
             caveats: vec![
-                "Favorites are VRCX-0 local favorite rows and may differ from remote VRChat favorites until synced."
+                "Favorites are VRCX-0-Nanashi local favorite rows and may differ from remote VRChat favorites until synced."
                     .into(),
             ],
         })
@@ -151,7 +151,7 @@ fn map_favorite_local_error(error: vrcx_0_application_core::Error) -> String {
         | vrcx_0_application_core::Error::Io(_)
         | vrcx_0_application_core::Error::Json(_)) => {
             tracing::warn!("MCP social query failed: {error}");
-            "internal data error while reading local VRCX-0 data".into()
+            "internal data error while reading local VRCX-0-Nanashi data".into()
         }
         error => error.to_string(),
     }
@@ -339,7 +339,10 @@ fn favorite_row_from_value(
 
 fn favorites_summary(kind: FavoriteListKind, count: usize) -> String {
     let noun = if count == 1 { "favorite" } else { "favorites" };
-    format!("Found {count} VRCX-0 local {noun}{}.", kind.summary_scope())
+    format!(
+        "Found {count} VRCX-0-Nanashi local {noun}{}.",
+        kind.summary_scope()
+    )
 }
 
 fn vrchat_favorite_caveats(blocked_by_setting: bool) -> Vec<String> {
@@ -349,7 +352,7 @@ fn vrchat_favorite_caveats(blocked_by_setting: bool) -> Vec<String> {
     ];
     if blocked_by_setting {
         caveats.push(
-            "A real write was requested but VRChat writes are disabled; enable them in VRCX-0 settings first."
+            "A real write was requested but VRChat writes are disabled; enable them in VRCX-0-Nanashi settings first."
                 .into(),
         );
     }
@@ -479,11 +482,11 @@ mod favorite_kind_tests {
     fn favorites_summary_echoes_the_requested_scope() {
         assert_eq!(
             favorites_summary(FavoriteListKind::All, 3),
-            "Found 3 VRCX-0 local favorites across worlds, friends, and avatars."
+            "Found 3 VRCX-0-Nanashi local favorites across worlds, friends, and avatars."
         );
         assert_eq!(
             favorites_summary(FavoriteListKind::Friend, 1),
-            "Found 1 VRCX-0 local favorite for friends."
+            "Found 1 VRCX-0-Nanashi local favorite for friends."
         );
     }
 

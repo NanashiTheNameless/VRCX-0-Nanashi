@@ -9,10 +9,6 @@ import type {
     AssistantTurnEntitiesEvent
 } from '@/platform/tauri/bindings';
 import { tauriClient } from '@/platform/tauri/client';
-import {
-    recordAssistantToolError,
-    recordAssistantTurnError
-} from '@/services/telemetry/telemetryAssistantHealth';
 import { useAssistantChatStore } from '@/state/assistantChatStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
@@ -46,10 +42,6 @@ export function useAssistantEvents(): void {
         // A fast model streams 20-60 tokens/sec; without this each token would
         // trigger a full store update + markdown re-parse + re-render.
         const pendingDeltas = new Map<string, AssistantDeltaEvent>();
-        const toolCallsById = new Map<
-            string,
-            Pick<AssistantToolCallEvent, 'name' | 'args'>
-        >();
         let rafHandle = 0;
         const flushDeltas = () => {
             rafHandle = 0;
@@ -72,7 +64,6 @@ export function useAssistantEvents(): void {
                 rafHandle = 0;
             }
             pendingDeltas.clear();
-            toolCallsById.clear();
         };
         const evictFinishedSessionIfClosed = (sessionId: string) => {
             const current = useAssistantChatStore.getState();
@@ -106,10 +97,6 @@ export function useAssistantEvents(): void {
                     return;
                 }
                 flushNow();
-                toolCallsById.set(event.toolCallId, {
-                    name: event.name,
-                    args: event.args
-                });
                 store.applyToolCall(event);
             },
             assistantToolResult: (event: AssistantToolResultEvent) => {
@@ -118,15 +105,6 @@ export function useAssistantEvents(): void {
                 }
                 flushNow();
                 store.applyToolResult(event);
-                if (!event.ok) {
-                    const tool = toolCallsById.get(event.toolCallId);
-                    recordAssistantToolError({
-                        source: tool?.name,
-                        args: tool?.args,
-                        summary: event.summary
-                    });
-                }
-                toolCallsById.delete(event.toolCallId);
             },
             assistantTurnEntities: (event: AssistantTurnEntitiesEvent) => {
                 if (isCurrentAccountEvent(event)) {
@@ -146,7 +124,6 @@ export function useAssistantEvents(): void {
                 }
                 flushNow();
                 store.applyError(event);
-                recordAssistantTurnError(event.code, event.message);
                 evictFinishedSessionIfClosed(event.sessionId);
             }
         };
@@ -218,7 +195,6 @@ export function useAssistantEvents(): void {
             }
             unsubscribeAuth();
             unsubscribeAssistantScope();
-            toolCallsById.clear();
         };
     }, []);
 }

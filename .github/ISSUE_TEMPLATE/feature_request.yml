@@ -6,12 +6,12 @@ body:
     - type: markdown
       attributes:
           value: |
-              Got an idea? We'd love to hear it! You can also discuss ideas on [Discord](https://discord.gg/fehKP3SVPN).
+              Got an idea? We'd love to hear it! This is a personal fork; general ideas may fit upstream (Map1en/VRCX-0) better. Please write in English; other languages are not supported.
 
     - type: textarea
       attributes:
           label: What would you like to see?
-          description: Describe the feature — what should it do?
+          description: Describe the feature - what should it do?
       validations:
           required: true
     - type: textarea
@@ -21,4 +21,4 @@ body:
     - type: textarea
       attributes:
           label: Anything else?
-          description: Screenshots, examples, links — anything that helps explain your idea.
+          description: Screenshots, examples, links - anything that helps explain your idea.

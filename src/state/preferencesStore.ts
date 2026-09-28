@@ -377,8 +377,8 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     gameLogDisabled: false,
     feedPersistenceDisabled: false,
     avatarAutoCleanup: 'Off',
-    anonymousUsageTelemetry: true,
     udonExceptionLogging: false,
+    socialAiEnabled: false,
     logResourceLoad: false,
     autoLoginDelayEnabled: false,
     autoLoginDelaySeconds: 0,
@@ -419,8 +419,8 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     translationAPIModel: DEFAULT_TRANSLATION_MODEL,
     translationAPIPrompt: '',
     translationAPIReasoningEffort: '',
-    appFontFamily: 'geist',
-    appCjkFontPack: 'noto',
+    appFontFamily: 'oxproto',
+    appCjkFontPack: 'system',
     customFontFamily: '',
     customFontPrimary: '',
     customFontSecondary: '',
@@ -603,8 +603,8 @@ export function normalizePreferenceSnapshot(snapshot: unknown = {}) {
         avatarAutoCleanup: normalizeAvatarAutoCleanupPreference(
             next.avatarAutoCleanup
         ),
-        anonymousUsageTelemetry: normalizeBool(next.anonymousUsageTelemetry),
         udonExceptionLogging: normalizeBool(next.udonExceptionLogging),
+        socialAiEnabled: normalizeBool(next.socialAiEnabled),
         logResourceLoad: normalizeBool(next.logResourceLoad),
         autoLoginDelayEnabled: normalizeBool(next.autoLoginDelayEnabled),
         autoLoginDelaySeconds: normalizeBoundedInt(next.autoLoginDelaySeconds, {
@@ -679,8 +679,8 @@ export function normalizePreferenceSnapshot(snapshot: unknown = {}) {
         translationAPIReasoningEffort: String(
             next.translationAPIReasoningEffort || ''
         ),
-        appFontFamily: String(next.appFontFamily || 'geist'),
-        appCjkFontPack: String(next.appCjkFontPack || 'noto'),
+        appFontFamily: String(next.appFontFamily || 'oxproto'),
+        appCjkFontPack: String(next.appCjkFontPack || 'system'),
         customFontFamily: String(next.customFontFamily || ''),
         customFontPrimary: String(next.customFontPrimary || ''),
         customFontSecondary: String(next.customFontSecondary || ''),

@@ -267,7 +267,7 @@ describe('friends locations row helpers', () => {
             meta: '789'
         });
 
-        // No destination is known yet (just the bare sentinel) — falls back to
+        // No destination is known yet (just the bare sentinel) - falls back to
         // a generic "Traveling" label with the raw sentinel as the meta text.
         const travelingWithoutDestination = resolveLocationSummary({
             location: 'traveling'

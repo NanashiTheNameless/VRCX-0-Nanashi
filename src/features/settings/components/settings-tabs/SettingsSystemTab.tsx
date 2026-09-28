@@ -6,6 +6,7 @@ import { Badge } from '@/ui/shadcn/badge';
 import { Button } from '@/ui/shadcn/button';
 import { Switch } from '@/ui/shadcn/switch';
 
+import { KeepSystemAwakeSetting } from '../KeepSystemAwakeSetting';
 import { LinuxRenderingSetting } from '../LinuxRenderingSetting';
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
@@ -125,6 +126,7 @@ export function SettingsSystemTabContent({
                 {isWindows ? <TrayShortcutSetting /> : null}
                 <PrivacyLockSetting />
                 {hostPlatform === 'linux' ? <LinuxRenderingSetting /> : null}
+                <KeepSystemAwakeSetting />
                 <Field
                     label={t(
                         'view.settings.general.application.background_mode',

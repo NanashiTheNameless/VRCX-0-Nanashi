@@ -17,6 +17,35 @@ pub struct LlmEndpointDetectModelsResult {
     pub model_reasoning: Vec<LlmModelReasoning>,
 }
 
+/// Wire protocol spoken by an LLM endpoint. Providers are grouped by API
+/// family rather than vendor; `OpenaiCompatible` covers OpenAI, OpenRouter,
+/// Groq, Together, vLLM, LM Studio, llama.cpp, Ollama's `/v1`, and similar.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub enum LlmApiKind {
+    #[default]
+    OpenaiCompatible,
+    Anthropic,
+    Gemini,
+    Ollama,
+    /// Azure OpenAI: OpenAI format, `api-key` header, `api-version` query.
+    AzureOpenai,
+    /// Cohere v2 chat (`POST /v2/chat`).
+    Cohere,
+    /// Amazon Bedrock Converse API with a Bedrock API key (bearer token).
+    Bedrock,
+    /// Google Vertex AI (Gemini request format, project/location URLs).
+    VertexAi,
+}
+
+/// Extra HTTP header sent with every request to an endpoint (custom gateways).
+#[derive(Debug, Clone, Default, Serialize, Deserialize, Type, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct LlmHeader {
+    pub name: String,
+    pub value: String,
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct LlmRequestOptions {
     pub reasoning_effort: Option<String>,

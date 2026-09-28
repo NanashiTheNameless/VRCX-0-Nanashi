@@ -69,7 +69,7 @@ export function SelectableTile({
                     aria-disabled={inert || undefined}
                     aria-label={hint ? `${label}. ${hint}` : label}
                     aria-pressed={isCurrent}
-                    title={hint ? `${label} — ${hint}` : label}
+                    title={hint ? `${label} - ${hint}` : label}
                     onClick={inert ? undefined : onClick}
                 />
             }

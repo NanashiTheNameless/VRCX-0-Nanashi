@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
 import { normalizeLanguageCode } from '@/localization/locales';
+import { commands } from '@/platform/tauri/bindings';
 import { tauriClient } from '@/platform/tauri/client';
 import { setWindowTheme, type WindowTheme } from '@/platform/tauri/webview';
 import {
@@ -380,6 +381,65 @@ function resolveCjkFontConfig(
     };
 }
 
+// Fork: installed font families (lowercase), so a font that is installed
+// locally is used instead of downloading it from a font CDN.
+let installedFontFamilies: ReadonlySet<string> = new Set();
+
+function cssFamilyNames(cssNames: string | readonly string[]): string[] {
+    const list = typeof cssNames === 'string' ? cssNames.split(',') : cssNames;
+    return list
+        .map((name) =>
+            name
+                .trim()
+                .replace(/^['"]|['"]$/g, '')
+                .trim()
+        )
+        .filter(Boolean);
+}
+
+/** True when any family in the CSS name list is installed on this device. */
+export function isFontFamilyInstalled(
+    cssNames: string | readonly string[]
+): boolean {
+    return cssFamilyNames(cssNames).some((name) =>
+        installedFontFamilies.has(name.toLowerCase())
+    );
+}
+
+export function setInstalledFontFamilies(families: readonly string[]) {
+    installedFontFamilies = new Set(
+        families.map((family) => family.trim().toLowerCase()).filter(Boolean)
+    );
+}
+
+/** Load installed family names once (best effort, bounded wait). */
+export async function primeInstalledFontFamilies(
+    timeoutMs = 1500
+): Promise<void> {
+    try {
+        const families = await Promise.race([
+            commands.appListSystemFonts(),
+            new Promise<string[]>((resolve) =>
+                window.setTimeout(() => resolve([]), timeoutMs)
+            )
+        ]);
+        if (families.length) {
+            setInstalledFontFamilies(families);
+        }
+    } catch {
+        // Keep the previous (possibly empty) set; online imports still work.
+    }
+}
+
+/** Western font key is available offline (bundled or installed). */
+export function isAppFontAvailableLocally(fontKey: string): boolean {
+    const config = APP_FONT_CONFIG[fontKey as keyof typeof APP_FONT_CONFIG];
+    if (!config) {
+        return false;
+    }
+    return !config.cssImport || isFontFamilyInstalled(config.cssName);
+}
+
 export function applyAppFontPreferences({
     fontFamily = APP_FONT_DEFAULT_KEY,
     customFontFamily = '',
@@ -415,15 +475,24 @@ export function applyAppFontPreferences({
         : resolveCjkFontConfig(normalizedCjk, normalizedLocale);
     const westernFont = fontConfig.cssName;
 
+    // Local-first: skip the CDN import when the family is already installed.
+    const westernImport = isFontFamilyInstalled(westernFont)
+        ? null
+        : fontConfig.cssImport;
+    const cjkImport =
+        cjkConfig.cssNames.length &&
+        cjkConfig.cssNames.every((name) => isFontFamilyInstalled(name))
+            ? null
+            : cjkConfig.cssImport;
     ensureDynamicStyle(
         APP_FONT_STYLE_ATTR,
-        effectiveFont,
-        fontConfig.cssImport
+        westernImport ? effectiveFont : `${effectiveFont}:local`,
+        westernImport
     );
     ensureDynamicStyle(
         APP_CJK_FONT_STYLE_ATTR,
-        cjkConfig.styleKey,
-        cjkConfig.cssImport
+        cjkImport ? cjkConfig.styleKey : `${cjkConfig.styleKey}:local`,
+        cjkImport
     );
 
     document.documentElement.style.setProperty(

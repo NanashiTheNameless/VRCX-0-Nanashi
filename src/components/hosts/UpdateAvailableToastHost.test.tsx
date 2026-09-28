@@ -44,7 +44,8 @@ function updateRelease(
     return {
         displayName: 'VRCX-0 2.7.0',
         tagName: 'v2.7.0',
-        htmlUrl: 'https://github.com/Map1en/VRCX-0/releases/tag/v2.7.0',
+        htmlUrl:
+            'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/tag/v2.7.0',
         publishedAt: '2026-08-20T00:00:00.000Z',
         body: '',
         canonicalVersion: '2.7.0',

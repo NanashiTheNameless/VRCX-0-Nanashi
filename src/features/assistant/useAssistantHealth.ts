@@ -24,7 +24,9 @@ export function useAssistantHealth(endpointId: string | null): AssistantHealth {
                 id: endpointId,
                 baseUrl: null,
                 apiKey: null,
-                persist: false
+                persist: false,
+                apiKind: null,
+                headers: null
             })
             .then(() => {
                 if (active) {

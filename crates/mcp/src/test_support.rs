@@ -617,6 +617,7 @@ fn test_runtime_with_database_and_event_bus(
             tasks.clone(),
         )),
         favorite_mutations,
+        reminders: None,
         tasks,
         caller: crate::runtime::McpCaller::ExternalServer,
     };
