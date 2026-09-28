@@ -107,6 +107,10 @@ export default defineConfig(({ mode }) => {
             VRCX_0_BUILD_BADGE: JSON.stringify(
                 process.env['VRCX_0_BUILD_BADGE'] || ''
             ),
+            // When this frontend was built. A build always precedes its own
+            // release, so the updater can tell which releases are newer even
+            // after this build's release is pruned from GitHub.
+            VRCX_0_BUILD_TIME: JSON.stringify(new Date().toISOString()),
             VRCX_0_DISABLE_UPDATE_CHECK: JSON.stringify(
                 process.env['VRCX_0_DISABLE_UPDATE_CHECK'] === '1'
             ),

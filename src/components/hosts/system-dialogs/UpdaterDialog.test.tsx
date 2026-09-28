@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import {
+    act,
+    cleanup,
+    render,
+    screen,
+    waitFor,
+    within
+} from '@testing-library/react';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -31,6 +38,7 @@ vi.mock('@/services/updateService', () => ({
 }));
 
 vi.mock('@/shared/buildLabel', () => ({
+    getBuildTimeMs: () => null,
     isUpdateCheckDisabledBuild: () => mocks.updateCheckDisabled
 }));
 
@@ -84,6 +92,55 @@ vi.mock('@/ui/shadcn/dialog', async () => {
             React.createElement('header', null, children),
         DialogTitle: ({ children }: React.PropsWithChildren) =>
             React.createElement('h1', null, children)
+    };
+});
+
+vi.mock('@/ui/shadcn/alert-dialog', async () => {
+    const React = await import('react');
+    const Close = React.createContext<() => void>(() => {});
+    const el =
+        (tag: string) =>
+        ({ children }: React.PropsWithChildren) =>
+            React.createElement(tag, null, children);
+
+    return {
+        AlertDialog: ({
+            open,
+            onOpenChange,
+            children
+        }: React.PropsWithChildren<{
+            open: boolean;
+            onOpenChange: (open: boolean) => void;
+        }>) =>
+            open
+                ? React.createElement(
+                      Close.Provider,
+                      { value: () => onOpenChange(false) },
+                      React.createElement(
+                          'div',
+                          { role: 'alertdialog' },
+                          children
+                      )
+                  )
+                : null,
+        AlertDialogContent: el('section'),
+        AlertDialogHeader: el('header'),
+        AlertDialogFooter: el('footer'),
+        AlertDialogTitle: el('h2'),
+        AlertDialogDescription: el('p'),
+        AlertDialogCancel: ({ children }: React.PropsWithChildren) => {
+            const close = React.useContext(Close);
+            return React.createElement(
+                'button',
+                { type: 'button', onClick: close },
+                children
+            );
+        },
+        AlertDialogAction: ({
+            children,
+            onClick
+        }: React.PropsWithChildren<{ onClick?: () => void }>) =>
+            React.createElement('button', { type: 'button', onClick }, children)
     };
 });
 
@@ -228,10 +285,10 @@ describe('UpdaterDialog', () => {
 
         render(<UpdaterDialog open onOpenChange={vi.fn()} />);
 
-        const older = await screen.findByRole('button', { name: '2.5.0' });
+        const older = await screen.findByRole('button', { name: '-1 · 2.5.0' });
         expect(
             screen.getByRole('button', {
-                name: 'dialog.vrcx_updater.installed_version:{"value":"2.6.0"}'
+                name: '0 · dialog.vrcx_updater.installed_version:{"value":"2.6.0"}'
             })
         ).toBeTruthy();
         expect(
@@ -248,11 +305,71 @@ describe('UpdaterDialog', () => {
         await act(async () => {
             screen
                 .getByRole('button', {
-                    name: 'dialog.vrcx_updater.install_selected'
+                    name: 'dialog.vrcx_updater.install_action.downgrade'
+                })
+                .click();
+        });
+        // Nothing is installed until the downgrade is confirmed.
+        expect(mocks.confirmInstall).not.toHaveBeenCalled();
+        const confirmation = screen.getByRole('alertdialog');
+        expect(
+            within(confirmation).getByText(
+                'dialog.vrcx_updater.downgrade_confirm.title:{"value":"2.5.0"}'
+            )
+        ).toBeTruthy();
+
+        await act(async () => {
+            within(confirmation)
+                .getByRole('button', {
+                    name: 'dialog.vrcx_updater.install_action.downgrade'
                 })
                 .click();
         });
         expect(mocks.confirmInstall).toHaveBeenCalledWith('2.5.0');
+        expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('cancels a downgrade without installing anything', async () => {
+        const releases = [
+            { canonicalVersion: '2.6.0', displayVersion: '2.6.0' },
+            { canonicalVersion: '2.5.0', displayVersion: '2.5.0' }
+        ].map((release) => ({ ...release, updaterType: 'tauri' }));
+        mocks.appAppUpdateReleasesList.mockResolvedValue(releases);
+        mocks.toNormalizedReleaseFromSnapshot.mockImplementation(
+            (release: { canonicalVersion?: string } | null) =>
+                releases.find(
+                    (entry) =>
+                        entry.canonicalVersion === release?.canonicalVersion
+                ) ?? releases[0]
+        );
+        mocks.appAppUpdateCheckRun.mockResolvedValue({
+            hasAvailableUpdate: false,
+            error: null,
+            release: { canonicalVersion: '2.6.0' }
+        });
+
+        render(<UpdaterDialog open onOpenChange={vi.fn()} />);
+
+        const older = await screen.findByRole('button', { name: '-1 · 2.5.0' });
+        await act(async () => {
+            older.click();
+        });
+        await act(async () => {
+            screen
+                .getByRole('button', {
+                    name: 'dialog.vrcx_updater.install_action.downgrade'
+                })
+                .click();
+        });
+        await act(async () => {
+            within(screen.getByRole('alertdialog'))
+                .getByRole('button', { name: 'common.actions.cancel' })
+                .click();
+        });
+
+        expect(screen.queryByRole('alertdialog')).toBeNull();
+        expect(mocks.confirmInstall).not.toHaveBeenCalled();
+        expect(mocks.restartApplication).not.toHaveBeenCalled();
     });
 
     it('uses the GitHub update action for preview checks even on installable platforms', () => {

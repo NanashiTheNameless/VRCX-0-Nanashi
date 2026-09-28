@@ -17,6 +17,15 @@ function isLocalDevBuild(): boolean {
     return import.meta.env.DEV;
 }
 
+/** When this frontend was built (ms since epoch), or null if unknown. */
+export function getBuildTimeMs(): number | null {
+    const value =
+        typeof VRCX_0_BUILD_TIME === 'string'
+            ? Date.parse(VRCX_0_BUILD_TIME)
+            : NaN;
+    return Number.isFinite(value) ? value : null;
+}
+
 export function isUpdateCheckDisabledBuild(): boolean {
     return VRCX_0_DISABLE_UPDATE_CHECK;
 }

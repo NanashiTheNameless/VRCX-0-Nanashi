@@ -5736,8 +5736,18 @@
             "other_versions": "Install a specific version",
             "choose_version": "Choose a version",
             "installed_version": "{value} (installed)",
-            "install_selected": "Install and restart",
-            "downgrade_warning": "This is an older version. It may not be able to read data a newer version already upgraded, so export a backup of your data first."
+            "install_action": {
+                "latest": "Update to latest and restart",
+                "upgrade": "Update to this version and restart",
+                "reinstall": "Reinstall and restart",
+                "downgrade": "Downgrade and restart",
+                "unknown": "Install and restart"
+            },
+            "downgrade_warning": "This is an older version. It may not be able to read data a newer version already upgraded, so export a backup of your data first.",
+            "downgrade_confirm": {
+                "title": "Downgrade to {value}?",
+                "auto_update_note": "Your Updates setting will install a newer version again at the next update check. To stay on this version, set Updates to Notify only or Off in Settings first."
+            }
         },
         "change_log": {
             "toast_title": "Updated to {value}",
