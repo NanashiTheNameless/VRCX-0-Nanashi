@@ -2,10 +2,6 @@ name: Setup Rust
 description: Set up Rust and restore the shared CI dependency cache.
 
 inputs:
-    components:
-        description: Comma-separated Rust components to install.
-        required: false
-        default: ''
     target:
         description: Additional Rust compilation target to install.
         required: false
@@ -22,11 +18,6 @@ runs:
     using: composite
     steps:
         - uses: dtolnay/rust-toolchain@stable
-          if: inputs.components == ''
-        - uses: dtolnay/rust-toolchain@stable
-          if: inputs.components != ''
-          with:
-              components: ${{ inputs.components }}
         - if: inputs.target != ''
           env:
               RUST_TARGET: ${{ inputs.target }}
