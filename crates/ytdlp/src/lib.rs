@@ -17,6 +17,11 @@ use std::{
     time::{Duration, Instant},
 };
 
+/// A public video that should stay up: Rick Astley's "Never Gonna Give You
+/// Up". The previous test video (yt-dlp's `BaW_jenozKc`) was removed, which
+/// made every playback check and cookie refresh fail.
+const TEST_VIDEO_URL: &str = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
 struct State {
     settings: Settings,
     manifest: Manifest,
@@ -291,7 +296,7 @@ impl Runtime {
             files::write(&export.0,b"# Netscape HTTP Cookie File\n")?;
             let mut cmd=process::command(&download::native_yt(&self.root,&m));
             cmd.args(["--ignore-config","--no-cache-dir",
-                "--no-plugin-dirs","--no-playlist","--simulate","--skip-download","--socket-timeout","10","--retries","0","--cookies-from-browser"]).arg(s.browser_spec()).arg("--cookies").arg(&export.0).args(["--","https://www.youtube.com/watch?v=BaW_jenozKc"]);
+                "--no-plugin-dirs","--no-playlist","--simulate","--skip-download","--socket-timeout","10","--retries","0","--cookies-from-browser"]).arg(s.browser_spec()).arg("--cookies").arg(&export.0).args(["--",TEST_VIDEO_URL]);
             // Cookie export can succeed even when the metadata request is refused by YouTube.
             let _=process::run(&mut cmd,Duration::from_secs(90)).await?;
             let (count,expiry)=cookies::import(&self.root,&export.0).map_err(|_|"No usable YouTube cookies exported. Check the selected profile. Chromium on Windows may require closing the browser or may prevent decryption; try Firefox or a cookies.txt file.")?;
@@ -351,7 +356,7 @@ impl Runtime {
                 "--no-plugin-dirs","--no-playlist","--simulate","--skip-download","--no-remote-components","--js-runtimes"]).arg(format!("node:{}",node.display())).arg("--plugin-dirs").arg(self.root.join("plugins"));
             let mut args="youtube:player_client=mweb".to_string();
             if s.use_cookies && self.root.join("cookies.obf.json").is_file() { args.push_str(&format!(";nanashi_cookie_file={}",self.root.join("cookies.obf.json").display())); }
-            cmd.arg("--extractor-args").arg(args).args(["--socket-timeout","15","--retries","0","--","https://www.youtube.com/watch?v=BaW_jenozKc"]);
+            cmd.arg("--extractor-args").arg(args).args(["--socket-timeout","15","--retries","0","--",TEST_VIDEO_URL]);
             let (ok,error_line)=process::run_keeping_error_line(&mut cmd,Duration::from_secs(90)).await?;
             m.cookie_validated_at=chrono::Utc::now().to_rfc3339();
             m.cookie_validation=if ok {
