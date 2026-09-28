@@ -9,6 +9,7 @@ export const DEFAULT_LLM_ENDPOINT_PROVIDER_ID = 'openai';
 
 export type LlmEndpointProviderId =
     | 'openai'
+    | 'openai-chat'
     | 'anthropic'
     | 'gemini-native'
     | 'openrouter'
@@ -35,6 +36,7 @@ export const LLM_API_KINDS: { value: LlmApiKind; label: string }[] = [
         value: 'openaiCompatible',
         label: 'OpenAI-compatible (/chat/completions)'
     },
+    { value: 'openaiResponses', label: 'OpenAI native (/responses)' },
     { value: 'anthropic', label: 'Anthropic Messages (/v1/messages)' },
     { value: 'gemini', label: 'Google Gemini (generateContent)' },
     { value: 'ollama', label: 'Ollama native (/api/chat)' },
@@ -99,7 +101,14 @@ export const LLM_ENDPOINT_PROVIDER_PRESETS: LlmEndpointProviderPreset[] = [
     {
         id: 'openai',
         name: 'OpenAI',
-        label: 'OpenAI',
+        label: 'OpenAI (native)',
+        baseUrl: 'https://api.openai.com/v1',
+        apiKind: 'openaiResponses'
+    },
+    {
+        id: 'openai-chat',
+        name: 'OpenAI (OpenAI-compatible)',
+        label: 'OpenAI (OpenAI-compatible)',
         baseUrl: 'https://api.openai.com/v1',
         apiKind: 'openaiCompatible'
     },

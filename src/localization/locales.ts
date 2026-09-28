@@ -6,12 +6,35 @@ const DEFAULT_LANGUAGE_CODE = 'en';
 // Fork: English is built in; user language files (Settings > Interface >
 // Languages) are registered at runtime, so this list is mutable.
 const languageCodes: string[] = [...builtInLanguageCodes];
+let languageCodesSnapshot: readonly string[] = [...languageCodes];
+const languageCodeListeners = new Set<() => void>();
 
 export { languageCodes };
+
+function notifyLanguageCodesChanged() {
+    languageCodesSnapshot = [...languageCodes];
+    for (const listener of languageCodeListeners) {
+        listener();
+    }
+}
+
+/** Subscribe to registered-language changes (for `useSyncExternalStore`). */
+export function subscribeLanguageCodes(listener: () => void) {
+    languageCodeListeners.add(listener);
+    return () => {
+        languageCodeListeners.delete(listener);
+    };
+}
+
+/** Stable snapshot of the registered codes; replaced on every change. */
+export function getLanguageCodesSnapshot(): readonly string[] {
+    return languageCodesSnapshot;
+}
 
 export function registerLanguageCode(code: string) {
     if (!languageCodes.includes(code)) {
         languageCodes.push(code);
+        notifyLanguageCodesChanged();
     }
 }
 
@@ -19,6 +42,7 @@ export function unregisterLanguageCode(code: string) {
     const index = languageCodes.indexOf(code);
     if (index >= 0 && !builtInLanguageCodes.includes(code)) {
         languageCodes.splice(index, 1);
+        notifyLanguageCodesChanged();
     }
 }
 

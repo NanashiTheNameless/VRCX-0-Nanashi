@@ -136,14 +136,22 @@ jobs:
                           # rpm cannot carry a semver prerelease in Version; use Release instead.
                           node -e "require('node:fs').writeFileSync(process.argv[1], JSON.stringify({ version: process.argv[2], bundle: { linux: { rpm: { release: '0.nightly.' + process.argv[3] } } } }))" "$override_config" "${{ needs.prepare.outputs.base_version }}" "${{ needs.prepare.outputs.nightly_sha }}"
                           # mold links the release binary much faster than the default linker.
-                          mold -run npm run tauri:build -- --config src-tauri/tauri.linux.conf.json --no-bundle
+                          mold -run npm run tauri:build -- --config src-tauri/tauri.linux.conf.json --no-bundle -- --timings
                           npm run tauri -- bundle --config src-tauri/tauri.linux.conf.json --bundles appimage deb
                           npm run tauri -- bundle --config "$override_config" --bundles rpm
                           ;;
                       Windows)
-                          npm run tauri:build -- --bundles nsis
+                          npm run tauri:build -- --bundles nsis -- --timings
                           ;;
                   esac
+
+            - uses: actions/upload-artifact@v7
+              if: always()
+              with:
+                  name: cargo-timings-${{ matrix.artifact_name }}
+                  path: target/cargo-timings/cargo-timing.html
+                  if-no-files-found: ignore
+                  retention-days: 14
 
             - name: Prepare Windows release and updater assets
               if: runner.os == 'Windows'
@@ -267,7 +275,17 @@ jobs:
               env:
                   TAURI_UPDATER_PUBLIC_KEY: ${{ vars.TAURI_UPDATER_PUBLIC_KEY }}
                   VRCX_0_WEBKIT_BUILD_TARGET: safari18.2
-              run: npm run tauri:build -- --target "${{ matrix.rust_target }}" --no-bundle
+              # --timings writes target/cargo-timings/cargo-timing.html: per-crate
+              # compile time, to see what dominates the build.
+              run: npm run tauri:build -- --target "${{ matrix.rust_target }}" --no-bundle -- --timings
+
+            - uses: actions/upload-artifact@v7
+              if: always()
+              with:
+                  name: cargo-timings-macos-${{ matrix.rust_target }}
+                  path: target/cargo-timings/cargo-timing.html
+                  if-no-files-found: ignore
+                  retention-days: 14
 
             - uses: actions/upload-artifact@v7
               with:

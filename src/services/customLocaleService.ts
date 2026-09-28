@@ -60,10 +60,77 @@ export async function deleteCustomLocale(code: string): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// Language file metadata. Besides the top-level `language` display name, a file
+// keeps how it was generated under `_meta`, so resuming or filling in missing
+// strings reuses the same settings. API keys are never written here: language
+// files are meant to be shareable.
+
+export const LOCALE_META_KEY = '_meta';
+/** Written for AI-only fields in files made with DeepL or Google. */
+export const LOCALE_META_NOT_APPLICABLE = 'N/A';
+
+export type CustomLocaleMeta = {
+    code?: string;
+    provider?: 'ai' | 'deepl' | 'google';
+    endpointId?: string;
+    model?: string;
+    aiInstructions?: string;
+};
+
+function optionalString(value: unknown): string | undefined {
+    return typeof value === 'string' &&
+        value.trim() &&
+        value.trim() !== LOCALE_META_NOT_APPLICABLE
+        ? value
+        : undefined;
+}
+
+export function readLocaleMeta(messages: unknown): CustomLocaleMeta {
+    const meta = isRecord(messages) ? messages[LOCALE_META_KEY] : undefined;
+    if (!isRecord(meta)) {
+        return {};
+    }
+    const provider = meta.provider;
+    return {
+        code: optionalString(meta.code),
+        provider:
+            provider === 'ai' || provider === 'deepl' || provider === 'google'
+                ? provider
+                : undefined,
+        endpointId: optionalString(meta.endpointId),
+        model: optionalString(meta.model),
+        aiInstructions: optionalString(meta.aiInstructions)
+    };
+}
+
+// Every field is always written so the file shows exactly how it was made.
+export function localeMetaFor(
+    code: string,
+    provider: UiTranslationProvider
+): Record<keyof CustomLocaleMeta, string> {
+    if (provider.kind !== 'ai') {
+        return {
+            code,
+            provider: provider.kind,
+            endpointId: LOCALE_META_NOT_APPLICABLE,
+            model: LOCALE_META_NOT_APPLICABLE,
+            aiInstructions: LOCALE_META_NOT_APPLICABLE
+        };
+    }
+    return {
+        code,
+        provider: 'ai',
+        endpointId: provider.endpointId,
+        model: provider.model,
+        aiInstructions: provider.instructions?.trim() ?? ''
+    };
+}
+
+// ---------------------------------------------------------------------------
 // UI translation: English source -> new custom locale file.
 
 export type UiTranslationProvider =
-    | { kind: 'ai'; endpointId: string; model: string }
+    | { kind: 'ai'; endpointId: string; model: string; instructions?: string }
     | { kind: 'deepl'; key: string }
     | { kind: 'google'; key: string };
 
@@ -102,11 +169,18 @@ export function flattenLocaleStrings(
             if (path !== 'language' && value.trim()) {
                 out.push({ path, text: value });
             }
-        } else {
+        } else if (path !== LOCALE_META_KEY) {
             out.push(...flattenLocaleStrings(value, path));
         }
     }
     return out;
+}
+
+/** English UI strings that `messages` has no translation for. */
+export function countMissingLocaleStrings(messages: unknown): number {
+    return flattenLocaleStrings(fallbackLocaleMessages).filter(
+        (source) => typeof readPath(messages, source.path) !== 'string'
+    ).length;
 }
 
 export function readPath(table: unknown, path: string): unknown {
@@ -165,6 +239,14 @@ export function restoreText(
     });
 }
 
+/** The batch prompt, plus the user's language instructions when given. */
+export function aiBatchPrompt(instructions?: string): string {
+    const extra = instructions?.trim();
+    return extra
+        ? `${AI_BATCH_PROMPT}\nInstructions for the target language from the user: ${extra}`
+        : AI_BATCH_PROMPT;
+}
+
 function overridesFor(provider: UiTranslationProvider): TranslationOverrides {
     if (provider.kind === 'ai') {
         return {
@@ -173,7 +255,7 @@ function overridesFor(provider: UiTranslationProvider): TranslationOverrides {
             key: null,
             endpointId: provider.endpointId,
             model: provider.model,
-            prompt: AI_BATCH_PROMPT,
+            prompt: aiBatchPrompt(provider.instructions),
             reasoningEffort: null
         };
     }
@@ -241,6 +323,7 @@ export async function translateUiToCustomLocale(
         ? structuredClone(existing.messages)
         : {};
     output.language = options.name;
+    output[LOCALE_META_KEY] = localeMetaFor(options.code, options.provider);
 
     const sources = flattenLocaleStrings(fallbackLocaleMessages).filter(
         (source) =>

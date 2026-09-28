@@ -6,7 +6,8 @@ import {
     getValidReasoningEfforts,
     shouldShowReasoningEffortSelector
 } from '@/features/llm/reasoning';
-import { getLanguageName, languageCodes } from '@/localization/index';
+import { getLanguageName } from '@/localization/index';
+import { useLanguageCodes } from '@/localization/useLanguageCodes';
 import type {
     LlmEndpointDto,
     TranslationProvider
@@ -83,6 +84,7 @@ export function TranslationApiDialog({
     onSave: saveTranslationApiConfig
 }: TranslationApiDialogProps) {
     const { t } = useTranslation();
+    const languageCodes = useLanguageCodes();
     const translationProvider = translationDraft.translationAPIType;
     const endpoints = llmEndpoints;
     const selectedEndpoint = endpoints.find(

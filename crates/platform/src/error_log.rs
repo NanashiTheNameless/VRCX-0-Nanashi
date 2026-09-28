@@ -38,18 +38,12 @@ const NETWORK_ERROR_MARKERS: &[&str] = &[
     "update download failed",
 ];
 
-/// Failures logged on purpose for diagnosis; they carry HTTP statuses but are
-/// not background network noise.
-const ALWAYS_KEEP_MARKERS: &[&str] = &["assistant llm request failed"];
+/// Words that introduce an HTTP status, as in `status=404`, `HTTP 502`,
+/// `code: 429` or `API error (400)`.
+const STATUS_KEYWORDS: &[&str] = &["status", "http", "code", "error"];
 
 fn has_network_error_text(message: &str) -> bool {
     let lower = message.to_ascii_lowercase();
-    if ALWAYS_KEEP_MARKERS
-        .iter()
-        .any(|marker| lower.contains(marker))
-    {
-        return false;
-    }
     NETWORK_ERROR_MARKERS
         .iter()
         .any(|marker| lower.contains(marker))
@@ -58,8 +52,32 @@ fn has_network_error_text(message: &str) -> bool {
         || (lower.contains("request failed") && contains_http_error_status(&lower))
 }
 
+/// A standalone 4xx/5xx number right after a status keyword. Digits inside
+/// timestamps (`33.596419`, `.512`), ids or sizes do not count.
 fn contains_http_error_status(message: &str) -> bool {
-    (400..=599).any(|status| message.contains(&status.to_string()))
+    let mut previous_word: Option<&str> = None;
+    for token in message
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .filter(|token| !token.is_empty())
+    {
+        if token.bytes().all(|byte| byte.is_ascii_digit()) {
+            let is_error_status = token.len() == 3
+                && token
+                    .parse::<u16>()
+                    .is_ok_and(|status| (400..=599).contains(&status));
+            if is_error_status && previous_word.is_some_and(|word| STATUS_KEYWORDS.contains(&word))
+            {
+                return true;
+            }
+            // Keep `http` in view across the version in `HTTP/1.1 404`.
+            if token.len() > 1 {
+                previous_word = None;
+            }
+        } else {
+            previous_word = Some(token);
+        }
+    }
+    false
 }
 
 pub fn should_skip_error_log(message: &str) -> bool {
@@ -122,7 +140,10 @@ fn append_error_log_to_file_with_optional_version(
     message: &str,
     app_version: Option<&str>,
 ) {
-    if message.trim().is_empty() || should_skip_error_log(message) {
+    // The noise filter is for frontend console spam; backend `rust:*` entries
+    // (tracing ERROR lines, panics) are always logged on purpose.
+    let backend = source.starts_with("rust:");
+    if message.trim().is_empty() || (!backend && should_skip_error_log(message)) {
         return;
     }
 
@@ -304,10 +325,30 @@ mod tests {
     }
 
     #[test]
-    fn assistant_llm_failures_survive_the_network_noise_filter() {
-        assert!(!should_skip_error_log(
-            "ERROR vrcx_0_assistant::agent::turn: assistant LLM request failed status=400 response={\"error\":\"bad\"}"
+    fn backend_errors_bypass_the_network_noise_filter() {
+        let dir = test_dir("backend");
+        let line = "2026-09-28T16:05:33.596419Z ERROR vrcx_0_assistant::agent::turn: assistant LLM request failed status=400";
+        assert!(should_skip_error_log(line));
+        append_error_log(&dir, "rust:tracing", line);
+        append_error_log(&dir, "frontend:test", line);
+
+        let text = std::fs::read_to_string(dir.join(ERROR_LOG_FILE)).unwrap();
+        assert!(text.contains("[rust:tracing]"));
+        assert!(!text.contains("[frontend:test]"));
+    }
+
+    #[test]
+    fn status_codes_need_a_keyword_and_ignore_timestamp_digits() {
+        assert!(contains_http_error_status("request failed with http 404"));
+        assert!(contains_http_error_status("status=503"));
+        assert!(contains_http_error_status("http/1.1 429 too many requests"));
+        assert!(contains_http_error_status("llm api error (400): bad"));
+        assert!(!contains_http_error_status(
+            "[2026-09-28 04:21:33.512 -05:00] status ok"
         ));
+        assert!(!contains_http_error_status("status: 16:05:33.596419z"));
+        assert!(!contains_http_error_status("status 200, wrote 404 rows"));
+        assert!(!contains_http_error_status("status 4040"));
     }
 
     #[test]

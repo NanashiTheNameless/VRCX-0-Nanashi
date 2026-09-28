@@ -1,6 +1,7 @@
 import { AppToaster } from '@/components/hosts/AppToaster';
 import { BackgroundRouteResumeHost } from '@/components/hosts/BackgroundRouteResumeHost';
 import { CommunityThemeSafetyHost } from '@/components/hosts/CommunityThemeSafetyHost';
+import { CustomLocaleCompletenessHost } from '@/components/hosts/CustomLocaleCompletenessHost';
 import { DialogHost } from '@/components/hosts/DialogHost';
 import { FriendProfileLoadHost } from '@/components/hosts/FriendProfileLoadHost';
 import { LaunchDialogHost } from '@/components/hosts/LaunchDialogHost';
@@ -29,6 +30,7 @@ export function GlobalHosts() {
             <NotificationHost />
             <VrcNotificationCenterHost />
             <PostUpdateChangelogToastHost />
+            <CustomLocaleCompletenessHost />
             <LaunchDialogHost />
             <PreviousInstancesDialogHost />
             <SystemDialogsHost />

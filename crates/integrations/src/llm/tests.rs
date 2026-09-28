@@ -575,7 +575,7 @@ async fn stream_chat_retries_without_reasoning_when_provider_rejects_it() {
     let base_url = format!("http://{}/v1", listener.local_addr().unwrap());
     let server = tokio::spawn(async move {
         let mut bodies = Vec::new();
-        for attempt in 0..2 {
+        for attempt in 0..3 {
             let (mut stream, _) = listener.accept().await.unwrap();
             let mut request = Vec::new();
             let mut chunk = [0_u8; 4096];
@@ -626,17 +626,179 @@ async fn stream_chat_retries_without_reasoning_when_provider_rejects_it() {
     let options = LlmRequestOptions {
         reasoning_effort: Some("high".into()),
     };
-    let turn = client
-        .stream_chat(&[], &[], &options, |_| {})
-        .await
-        .unwrap();
-    assert_eq!(turn.content, "hi");
+    let tools = [ToolDefinition {
+        name: "lookup".into(),
+        description: "Look something up.".into(),
+        parameters: serde_json::json!({ "type": "object" }),
+    }];
+    for _ in 0..2 {
+        let turn = client
+            .stream_chat(&[], &tools, &options, |_| {})
+            .await
+            .unwrap();
+        assert_eq!(turn.content, "hi");
+    }
 
     let bodies = server.await.unwrap();
     let first: Value = serde_json::from_str(&bodies[0]).unwrap();
     let retry: Value = serde_json::from_str(&bodies[1]).unwrap();
+    let next_turn: Value = serde_json::from_str(&bodies[2]).unwrap();
     assert_eq!(first["reasoning"]["effort"], "high");
     assert!(first.get("reasoning_effort").is_none());
     assert!(retry.get("reasoning").is_none());
     assert_eq!(retry["reasoning_effort"], "none");
+    // The rejection is remembered, so the next turn skips the failing request.
+    assert!(next_turn.get("reasoning").is_none());
+    assert_eq!(next_turn["reasoning_effort"], "none");
+}
+
+#[test]
+fn responses_body_converts_chat_history_and_resends_reasoning() {
+    let reasoning = serde_json::json!({
+        "type": "reasoning",
+        "id": "rs_1",
+        "encrypted_content": "opaque",
+        "summary": []
+    });
+    let mut assistant = ChatMessage::assistant("");
+    assistant.tool_calls = vec![ToolCall {
+        id: "call_1".into(),
+        kind: "function".into(),
+        function: FunctionCall {
+            name: "lookup".into(),
+            arguments: r#"{"q":"x"}"#.into(),
+        },
+    }];
+    assistant.reasoning_details = vec![reasoning.clone()];
+    let messages = vec![
+        ChatMessage::system("Be brief."),
+        ChatMessage::user("hi"),
+        assistant,
+        ChatMessage::tool("call_1", "result"),
+    ];
+    let tools = [ToolDefinition {
+        name: "lookup".into(),
+        description: "Look up.".into(),
+        parameters: serde_json::json!({ "type": "object" }),
+    }];
+    let options = LlmRequestOptions {
+        reasoning_effort: Some("high".into()),
+    };
+
+    let body = responses::responses_body("gpt-test", &messages, &tools, &options, true);
+
+    assert_eq!(body["instructions"], "Be brief.");
+    assert_eq!(body["reasoning"]["effort"], "high");
+    assert_eq!(body["store"], false);
+    assert_eq!(body["include"][0], "reasoning.encrypted_content");
+    assert_eq!(body["tools"][0]["type"], "function");
+    assert_eq!(body["tools"][0]["name"], "lookup");
+    let input = body["input"].as_array().unwrap();
+    assert_eq!(
+        input[0],
+        serde_json::json!({ "role": "user", "content": "hi" })
+    );
+    assert_eq!(input[1], reasoning);
+    assert_eq!(input[2]["type"], "function_call");
+    assert_eq!(input[2]["call_id"], "call_1");
+    assert_eq!(input[3]["type"], "function_call_output");
+    assert_eq!(input[3]["output"], "result");
+    assert_eq!(input.len(), 4);
+}
+
+#[test]
+fn responses_stream_collects_text_tool_calls_and_reasoning() {
+    let mut state = responses::ResponsesStreamState::default();
+    let mut streamed = String::new();
+    for line in [
+        r#"data: {"type":"response.output_text.delta","delta":"Hel"}"#,
+        r#"data: {"type":"response.output_text.delta","delta":"lo"}"#,
+        r#"data: {"type":"response.output_item.done","item":{"type":"reasoning","id":"rs_1","encrypted_content":"x"}}"#,
+        r#"data: {"type":"response.output_item.done","item":{"type":"function_call","id":"fc_1","call_id":"call_9","name":"lookup","arguments":"{}"}}"#,
+        "event: response.completed",
+        r#"data: {"type":"response.completed","response":{"output":[]}}"#,
+    ] {
+        state.apply_line(line, &mut |delta: &str| streamed.push_str(delta));
+    }
+    assert!(state.error.is_none());
+    let turn = state.finish();
+    assert_eq!(streamed, "Hello");
+    assert_eq!(turn.content, "Hello");
+    assert_eq!(turn.tool_calls.len(), 1);
+    assert_eq!(turn.tool_calls[0].id, "call_9");
+    assert_eq!(turn.tool_calls[0].function.name, "lookup");
+    assert_eq!(turn.reasoning_details.len(), 1);
+}
+
+#[test]
+fn responses_stream_falls_back_to_completed_output_and_reports_failures() {
+    let mut state = responses::ResponsesStreamState::default();
+    state.apply_line(
+        r#"data: {"type":"response.completed","response":{"output":[{"type":"message","content":[{"type":"output_text","text":"done"}]}]}}"#,
+        &mut |_: &str| {},
+    );
+    assert_eq!(state.finish().content, "done");
+
+    let mut state = responses::ResponsesStreamState::default();
+    state.apply_line(
+        r#"data: {"type":"response.failed","response":{"error":{"message":"boom"}}}"#,
+        &mut |_: &str| {},
+    );
+    assert!(matches!(state.error, Some(LlmError::Api { ref message, .. }) if message == "boom"));
+}
+
+#[tokio::test]
+async fn responses_stream_chat_posts_to_responses_endpoint() {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+    let base_url = format!("http://{}/v1", listener.local_addr().unwrap());
+    let server = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+        let mut request = Vec::new();
+        let mut chunk = [0_u8; 4096];
+        loop {
+            let read = stream.read(&mut chunk).await.unwrap();
+            request.extend_from_slice(&chunk[..read]);
+            let text = String::from_utf8_lossy(&request).to_string();
+            if let Some((head, body)) = text.split_once("\r\n\r\n") {
+                let length = head
+                    .lines()
+                    .find_map(|line| {
+                        let (name, value) = line.split_once(':')?;
+                        name.eq_ignore_ascii_case("content-length")
+                            .then(|| value.trim().parse::<usize>().ok())?
+                    })
+                    .unwrap_or(0);
+                if body.len() >= length || read == 0 {
+                    break;
+                }
+            }
+        }
+        let reply = "data: {\"type\":\"response.output_text.delta\",\"delta\":\"ok\"}\n\n";
+        let response = format!(
+            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{reply}",
+            reply.len()
+        );
+        stream.write_all(response.as_bytes()).await.unwrap();
+        String::from_utf8_lossy(&request).to_string()
+    });
+
+    let client = LlmClient::new(&base_url, "key", "gpt-test", None)
+        .unwrap()
+        .with_api(LlmApiKind::OpenaiResponses, Vec::new());
+    let turn = client
+        .stream_chat(
+            &[ChatMessage::user("hi")],
+            &[],
+            &LlmRequestOptions::default(),
+            |_| {},
+        )
+        .await
+        .unwrap();
+    assert_eq!(turn.content, "ok");
+    let request = server.await.unwrap();
+    assert!(request.starts_with("POST /v1/responses "));
+    assert!(
+        request.contains("authorization: Bearer key")
+            || request.contains("Authorization: Bearer key")
+    );
 }

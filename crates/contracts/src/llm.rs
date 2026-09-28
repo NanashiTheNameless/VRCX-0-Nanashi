@@ -36,6 +36,9 @@ pub enum LlmApiKind {
     Bedrock,
     /// Google Vertex AI (Gemini request format, project/location URLs).
     VertexAi,
+    /// OpenAI Responses API (`POST /responses`): function tools with a
+    /// reasoning effort, which `/chat/completions` rejects on newer models.
+    OpenaiResponses,
 }
 
 /// Extra HTTP header sent with every request to an endpoint (custom gateways).

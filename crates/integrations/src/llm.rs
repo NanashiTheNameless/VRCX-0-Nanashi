@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+use std::sync::{LazyLock, Mutex};
 use std::time::Duration;
 
 use futures_util::StreamExt;
@@ -14,6 +16,7 @@ mod bedrock;
 mod cohere;
 mod gemini;
 mod ollama;
+mod responses;
 use vrcx_0_core::proxy::with_remote_dns;
 
 #[derive(Debug, thiserror::Error)]
@@ -27,6 +30,12 @@ pub enum LlmError {
 }
 
 const AZURE_DEFAULT_API_VERSION: &str = "2024-10-21";
+
+/// `(base_url, model)` pairs that rejected a reasoning effort alongside tools
+/// this session. Later tool requests go straight to `reasoning_effort: "none"`
+/// instead of paying for a rejected request every turn.
+static REASONING_WITH_TOOLS_REJECTED: LazyLock<Mutex<HashSet<(String, String)>>> =
+    LazyLock::new(|| Mutex::new(HashSet::new()));
 
 const OPENROUTER_REASONING_EFFORTS: &[&str] =
     &["max", "xhigh", "high", "medium", "low", "minimal", "none"];
@@ -195,7 +204,7 @@ impl LlmClient {
     /// List the models the configured endpoint advertises (`GET /models`).
     pub async fn list_models(&self) -> Result<LlmEndpointDetectModelsResult, LlmError> {
         match self.api_kind {
-            LlmApiKind::OpenaiCompatible => {}
+            LlmApiKind::OpenaiCompatible | LlmApiKind::OpenaiResponses => {}
             LlmApiKind::Anthropic => return self.anthropic_list_models().await,
             LlmApiKind::Gemini => return self.gemini_list_models().await,
             LlmApiKind::Ollama => return self.ollama_list_models().await,
@@ -281,6 +290,22 @@ impl LlmClient {
         (!name.is_empty()).then(|| name.to_string())
     }
 
+    fn reasoning_rejection_key(&self) -> (String, String) {
+        (self.base_url.clone(), self.model.clone())
+    }
+
+    fn reasoning_with_tools_rejected(&self) -> bool {
+        REASONING_WITH_TOOLS_REJECTED
+            .lock()
+            .is_ok_and(|rejected| rejected.contains(&self.reasoning_rejection_key()))
+    }
+
+    fn remember_reasoning_with_tools_rejected(&self) {
+        if let Ok(mut rejected) = REASONING_WITH_TOOLS_REJECTED.lock() {
+            rejected.insert(self.reasoning_rejection_key());
+        }
+    }
+
     async fn send_chat_request(
         &self,
         body: &ChatRequestBody<'_>,
@@ -308,6 +333,9 @@ impl LlmClient {
             LlmApiKind::Cohere => return self.cohere_complete_chat(messages, options).await,
             LlmApiKind::Bedrock => return self.bedrock_complete_chat(messages, options).await,
             LlmApiKind::VertexAi => return self.gemini_complete_chat(messages, options).await,
+            LlmApiKind::OpenaiResponses => {
+                return self.responses_complete_chat(messages, options).await
+            }
             LlmApiKind::AzureOpenai => {}
         }
         let body = ChatRequestBody {
@@ -382,6 +410,11 @@ impl LlmClient {
                     .gemini_stream_chat(messages, tools, options, on_text)
                     .await
             }
+            LlmApiKind::OpenaiResponses => {
+                return self
+                    .responses_stream_chat(messages, tools, options, on_text)
+                    .await
+            }
             LlmApiKind::AzureOpenai => {}
         }
         let request_tools = tools
@@ -403,6 +436,13 @@ impl LlmClient {
             reasoning: reasoning_request(options),
             reasoning_effort: None,
         };
+        if body.reasoning.is_some()
+            && !body.tools.is_empty()
+            && self.reasoning_with_tools_rejected()
+        {
+            body.reasoning = None;
+            body.reasoning_effort = Some("none");
+        }
 
         let mut response = self.send_chat_request(&body).await?;
         if !response.status().is_success() {
@@ -420,6 +460,9 @@ impl LlmClient {
                 response = %message,
                 "assistant: provider rejected reasoning effort; retrying with it off"
             );
+            if !body.tools.is_empty() {
+                self.remember_reasoning_with_tools_rejected();
+            }
             body.reasoning = None;
             body.reasoning_effort = Some("none");
             response = self.send_chat_request(&body).await?;

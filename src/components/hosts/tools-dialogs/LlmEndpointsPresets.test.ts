@@ -36,6 +36,7 @@ describe('LLM endpoint presets', () => {
             LLM_ENDPOINT_PROVIDER_PRESETS.map((preset) => preset.id)
         ).toEqual([
             'openai',
+            'openai-chat',
             'anthropic',
             'gemini-native',
             'openrouter',
@@ -60,7 +61,8 @@ describe('LLM endpoint presets', () => {
         expect(createEmptyLlmEndpointDraft()).toMatchObject({
             providerId: 'openai',
             name: 'OpenAI',
-            baseUrl: 'https://api.openai.com/v1'
+            baseUrl: 'https://api.openai.com/v1',
+            apiKind: 'openaiResponses'
         });
     });
 
@@ -71,6 +73,12 @@ describe('LLM endpoint presets', () => {
                 'OpenAI'
             )
         ).toBe('openai');
+        expect(
+            findLlmEndpointProviderId(
+                'https://api.openai.com/v1',
+                'OpenAI (OpenAI-compatible)'
+            )
+        ).toBe('openai-chat');
         expect(
             findLlmEndpointProviderId('https://api.deepseek.com/', 'DeepSeek')
         ).toBe('deepseek');

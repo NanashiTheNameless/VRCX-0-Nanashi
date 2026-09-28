@@ -2,8 +2,10 @@
 
 //! Fork: user-supplied UI translations stored as `<data dir>/locales/<code>.json`.
 //! Each file has the same shape as `src/localization/en.json`; an optional
-//! top-level `"language"` string is used as the display name. Missing keys fall
-//! back to English in the frontend.
+//! top-level `"language"` string is used as the display name, and an optional
+//! `"_meta"` object records how the file was generated (code, provider,
+//! endpoint, model, AI instructions; never API keys). The file name is the
+//! authoritative code. Missing keys fall back to English in the frontend.
 
 use std::path::{Path, PathBuf};
 
@@ -146,7 +148,8 @@ mod tests {
         assert_eq!(validate_code(" de ").unwrap(), "de");
         assert!(validate_code("pt-BR").is_ok());
         assert!(validate_code("x-custom1").is_ok());
-        assert!(validate_code("x_custom1").is_err());
+        assert!(validate_code("x_custom1").is_ok());
+        assert!(validate_code("tlh_aa").is_ok());
         assert!(validate_code("en").is_err());
         assert!(validate_code("../evil").is_err());
         assert!(validate_code("a").is_err());

@@ -2,7 +2,8 @@ import type { TFunction } from 'i18next';
 import { ChevronDownIcon, Settings2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { getLanguageName, languageCodes } from '@/localization/index';
+import { getLanguageName } from '@/localization/index';
+import { useLanguageCodes } from '@/localization/useLanguageCodes';
 import {
     isAppFontAvailableLocally,
     supportsConfigurableCjkFontPack
@@ -303,6 +304,7 @@ export function SettingsInterfaceAppearanceCard({
     onReducedMotionAndBlurChange
 }: SettingsInterfaceAppearanceCardProps) {
     const { t } = useTranslation();
+    const languageCodes = useLanguageCodes();
     const notificationLayoutItems: SettingsOptionItem[] =
         notificationLayoutOptions.map(([value, labelKey]: SettingsOption) => ({
             value,

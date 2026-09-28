@@ -1,23 +1,28 @@
 import {
     FolderOpenIcon,
     LanguagesIcon,
+    TriangleAlertIcon,
     RefreshCwIcon,
     Trash2Icon
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { FALLBACK_LOCALE_CODE, getLanguageName } from '@/localization/index';
 import { commands, type CustomLocaleEntry } from '@/platform/tauri/bindings';
 import {
+    countMissingLocaleStrings,
     deleteCustomLocale,
     loadCustomLocales,
-    translateUiToCustomLocale,
-    type UiTranslationProgress,
+    readLocaleMeta,
+    type CustomLocaleMeta,
     type UiTranslationProvider
 } from '@/services/customLocaleService';
 import { setAppLanguagePreference } from '@/services/preferencesService';
 import { toast } from '@/services/toastService';
 import { useLlmEndpointsStore } from '@/state/llmEndpointsStore';
+import { useShellStore } from '@/state/shellStore';
+import { useUiTranslationJobStore } from '@/state/uiTranslationJobStore';
 import { Button } from '@/ui/shadcn/button';
 import { Checkbox } from '@/ui/shadcn/checkbox';
 import { Input } from '@/ui/shadcn/input';
@@ -31,6 +36,7 @@ import {
     SelectTrigger,
     SelectValue
 } from '@/ui/shadcn/select';
+import { Textarea } from '@/ui/shadcn/textarea';
 
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
@@ -52,29 +58,46 @@ export function SettingsCustomLanguagesCard() {
     const { t } = useTranslation();
     const endpoints = useLlmEndpointsStore((state) => state.endpoints);
     const loadEndpoints = useLlmEndpointsStore((state) => state.load);
+    const activeLocale = useShellStore((state) => state.locale);
     const [locales, setLocales] = useState<CustomLocaleEntry[]>([]);
+    const missingByCode = useMemo(
+        () =>
+            new Map(
+                locales.map((entry) => [
+                    entry.code,
+                    countMissingLocaleStrings(entry.messages)
+                ])
+            ),
+        [locales]
+    );
     const [code, setCode] = useState('');
     const [name, setName] = useState('');
-    const [aiLanguageName, setAiLanguageName] = useState('');
+    const [aiInstructions, setAiInstructions] = useState('');
     const [providerKind, setProviderKind] = useState<ProviderKind>('ai');
     const [endpointId, setEndpointId] = useState('');
     const [model, setModel] = useState('');
     const [apiKey, setApiKey] = useState('');
     const [retranslate, setRetranslate] = useState(false);
-    const [progress, setProgress] = useState<UiTranslationProgress | null>(
-        null
-    );
-    const abortRef = useRef<AbortController | null>(null);
-    const running = abortRef.current !== null && progress !== null;
+    const job = useUiTranslationJobStore((state) => state.job);
+    const startJob = useUiTranslationJobStore((state) => state.start);
+    const cancelJob = useUiTranslationJobStore((state) => state.cancel);
+    const progress = job?.progress ?? null;
+    const running = job !== null;
 
     async function reload() {
         setLocales(await loadCustomLocales());
     }
 
     useEffect(() => {
-        void reload();
         loadEndpoints().catch(() => {});
     }, [loadEndpoints]);
+
+    // Load on mount, and pick up the file a background job wrote once it ends.
+    useEffect(() => {
+        if (!running) {
+            void reload();
+        }
+    }, [running]);
 
     const endpoint = endpoints.find((entry) => entry.id === endpointId);
     const modelItems = (endpoint?.models ?? []).map((value) => ({
@@ -92,54 +115,95 @@ export function SettingsCustomLanguagesCard() {
             ? Boolean(endpointId && model)
             : Boolean(apiKey.trim());
 
-    // Non-standard codes (en_pt, qes, tlh_aa, ...) mean little to a model on
-    // their own, so AI providers get an explicit language name when given.
-    function aiTargetLanguage() {
-        const explicit = aiLanguageName.trim();
-        if (explicit) {
-            return explicit;
-        }
-        return name.trim() ? `${name.trim()} (${code.trim()})` : code.trim();
+    function formProvider(): UiTranslationProvider {
+        return providerKind === 'ai'
+            ? { kind: 'ai', endpointId, model, instructions: aiInstructions }
+            : { kind: providerKind, key: apiKey.trim() };
     }
 
-    async function start() {
-        const provider: UiTranslationProvider =
-            providerKind === 'ai'
-                ? { kind: 'ai', endpointId, model }
-                : { kind: providerKind, key: apiKey.trim() };
-        const controller = new AbortController();
-        abortRef.current = controller;
-        setProgress({ done: 0, total: 0, failed: 0 });
-        try {
-            const entry = await translateUiToCustomLocale({
-                code: code.trim(),
-                name: name.trim() || code.trim(),
-                targetLanguage:
-                    providerKind === 'ai' ? aiTargetLanguage() : code.trim(),
-                provider,
-                retranslateExisting: retranslate,
-                signal: controller.signal,
-                onProgress: setProgress
-            });
-            await reload();
-            toast.add({
-                type: 'success',
-                title: t('view.settings.custom_languages.translate_done', {
-                    name: entry.name
-                }),
-                actionProps: {
-                    children: t('view.settings.custom_languages.use_now'),
-                    onClick: () => {
-                        void setAppLanguagePreference(entry.code);
-                    }
-                }
-            });
-        } catch (error) {
-            toast.add({ type: 'error', title: errorMessage(error) });
-        } finally {
-            abortRef.current = null;
-            setProgress(null);
+    function start(
+        provider: UiTranslationProvider = formProvider(),
+        targetCode = code.trim(),
+        targetName = name.trim(),
+        retranslateExisting = retranslate
+    ) {
+        startJob({
+            code: targetCode,
+            name: targetName || targetCode,
+            // Non-standard codes (en_pt, qes, tlh_aa, ...) mean little to a
+            // model on their own, so AI providers also get the display name.
+            targetLanguage:
+                provider.kind === 'ai' && targetName
+                    ? `${targetName} (${targetCode})`
+                    : targetCode,
+            provider,
+            retranslateExisting
+        });
+    }
+
+    // Load a language file's saved name and generation settings into the form.
+    function prefill(entry: CustomLocaleEntry) {
+        const meta = readLocaleMeta(entry.messages);
+        setPrefilledCode(entry.code);
+        setCode(entry.code);
+        setName(entry.name);
+        setAiInstructions(meta.aiInstructions ?? '');
+        if (meta.provider) {
+            setProviderKind(meta.provider);
         }
+        if (meta.provider === 'ai') {
+            setEndpointId(meta.endpointId ?? '');
+            setModel(meta.model ?? '');
+        }
+        return meta;
+    }
+
+    // Typing the code of an existing file loads its saved settings once.
+    const matchedEntry = locales.find((entry) => entry.code === code.trim());
+    const [prefilledCode, setPrefilledCode] = useState('');
+    if (matchedEntry && matchedEntry.code !== prefilledCode) {
+        setPrefilledCode(matchedEntry.code);
+        prefill(matchedEntry);
+    }
+
+    // The provider a file was generated with, when it can be reused as is.
+    // Keys are never saved in the file, so DeepL/Google need the form's key.
+    function savedProvider(
+        meta: CustomLocaleMeta
+    ): UiTranslationProvider | null {
+        if (meta.provider === 'ai') {
+            const known = endpoints.some(
+                (entry) => entry.id === meta.endpointId
+            );
+            return known && meta.endpointId && meta.model
+                ? {
+                      kind: 'ai',
+                      endpointId: meta.endpointId,
+                      model: meta.model,
+                      instructions: meta.aiInstructions
+                  }
+                : null;
+        }
+        if (meta.provider && apiKey.trim()) {
+            return { kind: meta.provider, key: apiKey.trim() };
+        }
+        return !meta.provider && providerReady ? formProvider() : null;
+    }
+
+    // Fill in only the strings the file lacks, with the settings it was made
+    // with; asks for a provider first when those cannot be reused.
+    function generateMissing(entry: CustomLocaleEntry) {
+        const provider = savedProvider(prefill(entry));
+        if (!provider) {
+            toast.add({
+                type: 'info',
+                title: t(
+                    'view.settings.custom_languages.generate_missing_needs_provider'
+                )
+            });
+            return;
+        }
+        start(provider, entry.code, entry.name, false);
     }
 
     async function remove(entry: CustomLocaleEntry) {
@@ -188,23 +252,57 @@ export function SettingsCustomLanguagesCard() {
                 </div>
             }
         >
+            <Field label={getLanguageName(FALLBACK_LOCALE_CODE)}>
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={activeLocale === FALLBACK_LOCALE_CODE}
+                    onClick={() =>
+                        void setAppLanguagePreference(FALLBACK_LOCALE_CODE)
+                    }
+                >
+                    {activeLocale === FALLBACK_LOCALE_CODE
+                        ? t('view.settings.custom_languages.in_use')
+                        : t('view.settings.custom_languages.use_now')}
+                </Button>
+            </Field>
             {locales.length ? (
                 locales.map((entry) => (
                     <Field
                         key={entry.code}
-                        label={`${entry.name} (${entry.code})`}
+                        label={entry.name}
+                        description={entry.code}
                     >
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <Button
                                 type="button"
                                 variant="outline"
                                 size="sm"
+                                disabled={activeLocale === entry.code}
                                 onClick={() =>
                                     void setAppLanguagePreference(entry.code)
                                 }
                             >
-                                {t('view.settings.custom_languages.use_now')}
+                                {activeLocale === entry.code
+                                    ? t('view.settings.custom_languages.in_use')
+                                    : t(
+                                          'view.settings.custom_languages.use_now'
+                                      )}
                             </Button>
+                            {missingByCode.get(entry.code) ? (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={running}
+                                    onClick={() => generateMissing(entry)}
+                                >
+                                    {t(
+                                        'view.settings.custom_languages.generate_missing'
+                                    )}
+                                </Button>
+                            ) : null}
                             <Button
                                 type="button"
                                 variant="outline"
@@ -216,6 +314,15 @@ export function SettingsCustomLanguagesCard() {
                             >
                                 <Trash2Icon data-icon="icon" />
                             </Button>
+                            {missingByCode.get(entry.code) ? (
+                                <span className="text-muted-foreground flex items-center gap-1 text-xs">
+                                    <TriangleAlertIcon className="size-3.5 text-amber-700 dark:text-amber-400" />
+                                    {t(
+                                        'view.settings.custom_languages.missing_strings',
+                                        { count: missingByCode.get(entry.code) }
+                                    )}
+                                </span>
+                            ) : null}
                         </div>
                     </Field>
                 ))
@@ -256,24 +363,25 @@ export function SettingsCustomLanguagesCard() {
                     </div>
                     {providerKind === 'ai' ? (
                         <div className="grid gap-1.5 sm:col-span-2">
-                            <Label htmlFor="custom-language-ai-name">
+                            <Label htmlFor="custom-language-ai-instructions">
                                 {t(
-                                    'view.settings.custom_languages.ai_language'
+                                    'view.settings.custom_languages.ai_instructions'
                                 )}
                             </Label>
-                            <Input
-                                id="custom-language-ai-name"
-                                value={aiLanguageName}
+                            <Textarea
+                                id="custom-language-ai-instructions"
+                                rows={3}
+                                value={aiInstructions}
                                 placeholder={t(
-                                    'view.settings.custom_languages.ai_language_placeholder'
+                                    'view.settings.custom_languages.ai_instructions_placeholder'
                                 )}
                                 onChange={(event) =>
-                                    setAiLanguageName(event.target.value)
+                                    setAiInstructions(event.target.value)
                                 }
                             />
                             <p className="text-muted-foreground text-xs">
                                 {t(
-                                    'view.settings.custom_languages.ai_language_description'
+                                    'view.settings.custom_languages.ai_instructions_description'
                                 )}
                             </p>
                         </div>
@@ -430,7 +538,7 @@ export function SettingsCustomLanguagesCard() {
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={() => abortRef.current?.abort()}
+                            onClick={cancelJob}
                         >
                             {t('view.settings.custom_languages.cancel')}
                         </Button>
@@ -438,7 +546,7 @@ export function SettingsCustomLanguagesCard() {
                     <Button
                         type="button"
                         disabled={running || !codeValid || !providerReady}
-                        onClick={() => void start()}
+                        onClick={() => start()}
                     >
                         {t('view.settings.custom_languages.start')}
                     </Button>

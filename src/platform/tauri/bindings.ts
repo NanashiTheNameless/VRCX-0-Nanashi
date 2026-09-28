@@ -5320,7 +5320,12 @@ export type LlmApiKind =
     /**
      * Google Vertex AI (Gemini request format, project/location URLs).
      */
-    | 'vertexAi';
+    | 'vertexAi'
+    /**
+     * OpenAI Responses API (`POST /responses`): function tools with a
+     * reasoning effort, which `/chat/completions` rejects on newer models.
+     */
+    | 'openaiResponses';
 export type LlmEndpointDetectModelsInput = {
     id: string | null;
     baseUrl: string | null;

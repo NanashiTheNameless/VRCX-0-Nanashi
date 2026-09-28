@@ -1,4 +1,5 @@
-import { getLanguageName, languageCodes } from '@/localization/index';
+import { getLanguageName } from '@/localization/index';
+import { useLanguageCodes } from '@/localization/useLanguageCodes';
 import {
     Select,
     SelectContent,
@@ -17,6 +18,7 @@ export function LoginPageHeader({
     locale,
     onLanguageChange
 }: LoginPageHeaderProps) {
+    const languageCodes = useLanguageCodes();
     return (
         <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0 truncate text-lg font-semibold">
