@@ -1,8 +1,6 @@
 use crate::localization::shell_locale::macos_menu;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
-use tauri::{AppHandle, Emitter};
-
-const MENU_ACTION_EVENT: &str = "macNativeMenuAction";
+use tauri::AppHandle;
 
 pub(crate) fn configure_macos_app_menu(app: &AppHandle, language: &str) -> tauri::Result<()> {
     let app_i18n = macos_menu::app_menu_labels_for_language(language);
@@ -98,7 +96,7 @@ pub(crate) fn configure_macos_app_menu(app: &AppHandle, language: &str) -> tauri
 
 pub(crate) fn emit_menu_action(app: &AppHandle, id: &str) -> tauri::Result<()> {
     if let Some(action) = id.strip_prefix("mac-menu-") {
-        app.emit(MENU_ACTION_EVENT, serde_json::json!({ "action": action }))?;
+        crate::menu_action::emit_menu_action(app, action)?;
     }
     Ok(())
 }

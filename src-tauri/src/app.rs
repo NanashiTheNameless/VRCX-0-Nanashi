@@ -365,6 +365,12 @@ pub fn run() {
                     }
                 }
             }
+            "tray-check-updates" => {
+                restore_or_ensure_main_window(app, "failed to show main window for update check");
+                if let Err(error) = crate::menu_action::emit_menu_action(app, "check-updates") {
+                    tracing::warn!(error = %error, "failed to open the updater from tray");
+                }
+            }
             "tray-privacy-lock" => {
                 engage_privacy_lock_from_tray(app);
             }

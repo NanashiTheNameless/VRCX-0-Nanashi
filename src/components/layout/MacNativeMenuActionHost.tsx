@@ -174,6 +174,7 @@ export function MacNativeMenuActionHost() {
                 action !== 'restart' &&
                 action !== 'github' &&
                 action !== 'report-issue' &&
+                action !== 'check-updates' &&
                 action !== 'changelog' &&
                 action !== 'keyboard-shortcuts' &&
                 action !== 'about' &&
@@ -278,11 +279,9 @@ export function MacNativeMenuActionHost() {
         ]
     );
 
+    // Every platform listens: the tray menu sends actions on this event too
+    // (e.g. "check-updates"). The rest come only from the macOS app menu.
     useEffect(() => {
-        if (hostPlatform !== 'macos') {
-            return undefined;
-        }
-
         let disposed = false;
         let cleanup: (() => void) | null = null;
         tauriEvents

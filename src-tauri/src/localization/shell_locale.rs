@@ -13,6 +13,7 @@ pub(crate) struct TrayLabels {
     pub(crate) rebuild_ui: String,
     pub(crate) sidebar_mode: String,
     pub(crate) disable_theme: String,
+    pub(crate) check_updates: String,
     pub(crate) exit: String,
 }
 
@@ -186,6 +187,7 @@ pub(crate) fn tray_labels_for_language(language: &str) -> TrayLabels {
         rebuild_ui: text(language, ShellKey::NativeShellTrayRebuildUi),
         sidebar_mode: text(language, ShellKey::NativeShellTraySidebarMode),
         disable_theme: text(language, ShellKey::NativeShellTrayDisableTheme),
+        check_updates: text(language, ShellKey::NativeShellMenuAppCheckUpdates),
         exit: text(language, ShellKey::NativeShellTrayExit),
     }
 }

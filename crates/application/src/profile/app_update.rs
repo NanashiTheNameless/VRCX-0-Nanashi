@@ -38,7 +38,7 @@ fn load_updater_proxy_url(config: &dyn ProfileConfigStore) -> Option<String> {
         .unwrap_or_default();
     vrcx_0_application_core::load_proxy_url(raw_enabled.as_deref(), &raw_proxy_url)
 }
-const APP_UPDATE_CHECK_INTERVAL_SECONDS: u64 = 10_800;
+const APP_UPDATE_CHECK_INTERVAL_SECONDS: u64 = 3_600;
 const APP_UPDATE_PROGRESS_EMIT_INTERVAL: Duration = Duration::from_millis(500);
 /// Legacy on/off switch, read only when `autoUpdateVRCX` is unset.
 const CONFIG_AUTO_INSTALL_ON_STARTUP: &str = "autoInstallUpdatesOnStartup";

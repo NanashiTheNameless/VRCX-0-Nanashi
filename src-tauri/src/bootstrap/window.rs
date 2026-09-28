@@ -383,6 +383,13 @@ pub fn refresh_tray_menu(app: &tauri::AppHandle, state: &AppState) -> Result<(),
         let do_not_disturb = state.runtime_host().notification_do_not_disturb_snapshot();
         let privacy_lock = state.runtime_host().privacy_lock().snapshot();
         let open_item = MenuItem::with_id(app, "tray-open", labels.open, true, None::<&str>)?;
+        let check_updates_item = MenuItem::with_id(
+            app,
+            "tray-check-updates",
+            labels.check_updates,
+            true,
+            None::<&str>,
+        )?;
         let background_item = CheckMenuItem::with_id(
             app,
             "tray-toggle-background-mode",
@@ -462,6 +469,9 @@ pub fn refresh_tray_menu(app: &tauri::AppHandle, state: &AppState) -> Result<(),
         let exit_item = MenuItem::with_id(app, "tray-exit", labels.exit, true, None::<&str>)?;
         let menu = Menu::new(app)?;
         menu.append(&open_item)?;
+        if !privacy_lock.locked {
+            menu.append(&check_updates_item)?;
+        }
         menu.append(&background_item)?;
         if !privacy_lock.locked {
             if !privacy_lock.user_id.is_empty() {
