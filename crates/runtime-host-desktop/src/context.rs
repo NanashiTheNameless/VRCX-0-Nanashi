@@ -6,6 +6,7 @@ use vrcx_0_application_activity::notification::{
     normalize_avatar_image_url_128, CachedNotificationUserImageResolver, NotificationConfig,
     RealtimeUserImageResolverSlot,
 };
+#[cfg_attr(target_os = "macos", allow(unused_imports))]
 use vrcx_0_application_activity::{
     OverlayActivityRuntime, OverlayActivitySink, OverlayActivitySinkRegistry,
     OverlayActivitySurface,
@@ -53,6 +54,8 @@ pub(crate) struct DesktopRuntimeServicesDeps {
     pub notification_projection_observers: RealtimeNotificationProjectionObserverRegistry,
 }
 
+// Several fields only back the Windows/Linux VR overlay.
+#[cfg_attr(target_os = "macos", allow(dead_code))]
 pub struct DesktopRuntimeServices {
     /// Fork: used for local notes on the wrist overlay's Players/Notes pages.
     db: Arc<DatabaseService>,

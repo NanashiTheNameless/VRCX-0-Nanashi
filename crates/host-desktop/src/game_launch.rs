@@ -1,3 +1,9 @@
+// Game launch is Windows/Linux only; on macOS these helpers are unused.
+#![cfg_attr(
+    target_os = "macos",
+    allow(dead_code, unused_imports, unused_variables)
+)]
+
 #[cfg(target_os = "windows")]
 use std::path::Path;
 use std::path::PathBuf;

@@ -36,6 +36,7 @@ import configRepository from './configRepository';
 import externalApiRepository from './externalApiRepository';
 
 const AVTRDB_PROVIDER = 'https://api.avtrdb.com/v3/avatar/search/vrcx';
+const VRCDB_PROVIDER = 'https://vrcx.vrcdb.com/avatars/Avatar/VRCX';
 type ConfigFallback = string | number | boolean | null;
 type NormalizedAvatar = { id: string };
 
@@ -231,13 +232,14 @@ describe('AvatarSearchProviderRepository', () => {
             avatarSearchProviderRepository.getConfig()
         ).resolves.toMatchObject({
             enabled: true,
-            providerList: [AVTRDB_PROVIDER],
-            selectedProvider: AVTRDB_PROVIDER
+            providerList: [VRCDB_PROVIDER, AVTRDB_PROVIDER],
+            selectedProvider: VRCDB_PROVIDER,
+            activeProviders: [VRCDB_PROVIDER, AVTRDB_PROVIDER]
         });
 
         expect(configRepository.setString).toHaveBeenCalledWith(
             'VRCX_avatarRemoteDatabaseProviderList',
-            JSON.stringify([AVTRDB_PROVIDER])
+            JSON.stringify([VRCDB_PROVIDER, AVTRDB_PROVIDER])
         );
     });
 

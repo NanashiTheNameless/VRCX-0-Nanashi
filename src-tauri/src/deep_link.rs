@@ -111,6 +111,7 @@ pub fn parse_deep_link(value: &str) -> Option<DeepLinkAction> {
 }
 
 /// Upstream VRCX-0 scheme, still accepted alongside `vrcx-0-nanashi://`.
+#[cfg_attr(target_os = "macos", allow(dead_code))]
 pub const UPSTREAM_VRCX_0_SCHEME: &str = "vrcx-0";
 
 /// Scheme used by the original VRCX (`vrcx://<command>/<argument>`).
