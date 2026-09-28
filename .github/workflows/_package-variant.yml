@@ -8,6 +8,8 @@ on:
                 required: true
                 type: string
 
+# Concurrency belongs to the Preview / Dev Kit caller and covers these jobs too.
+# A second lock using github.workflow here would collide with the caller's lock.
 permissions:
     contents: read
 

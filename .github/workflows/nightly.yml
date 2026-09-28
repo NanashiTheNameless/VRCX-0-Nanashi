@@ -27,7 +27,9 @@ on:
 
 concurrency:
     group: nightly
-    cancel-in-progress: true
+    # Finish the active run (including publication); keep only the newest pending run.
+    cancel-in-progress: false
+    queue: single
 
 permissions:
     contents: read
@@ -256,6 +258,11 @@ jobs:
 
     publish:
         name: Publish Nightly
+        # Share the publication lock with Release, independently of workflow locks.
+        concurrency:
+            group: release-publish
+            cancel-in-progress: false
+            queue: max
         needs:
             - prepare
             - package

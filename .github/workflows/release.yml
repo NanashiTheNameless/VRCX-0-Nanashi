@@ -13,8 +13,10 @@ on:
                     - beta
 
 concurrency:
-    group: ${{ github.ref }}-package
-    cancel-in-progress: true
+    # Explicit releases must finish, even when another ref/version is requested.
+    group: release
+    cancel-in-progress: false
+    queue: max
 
 permissions:
     contents: read
@@ -329,6 +331,11 @@ jobs:
 
     publish-draft:
         name: Publish Draft Release
+        # Serialize release writes with Nightly's rolling update and pruning.
+        concurrency:
+            group: release-publish
+            cancel-in-progress: false
+            queue: max
         needs:
             - prepare
             - package
