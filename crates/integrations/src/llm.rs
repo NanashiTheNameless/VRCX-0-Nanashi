@@ -69,6 +69,9 @@ struct ChatRequestBody<'a> {
     stream: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     reasoning: Option<ReasoningRequest>,
+    /// OpenAI's top-level form; only sent to turn reasoning off after a rejection.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reasoning_effort: Option<&'static str>,
 }
 
 #[derive(Deserialize)]
@@ -313,6 +316,7 @@ impl LlmClient {
             tools: Vec::new(),
             stream: false,
             reasoning: reasoning_request(options),
+            reasoning_effort: None,
         };
 
         let response = self
@@ -397,6 +401,7 @@ impl LlmClient {
             tools: request_tools,
             stream: true,
             reasoning: reasoning_request(options),
+            reasoning_effort: None,
         };
 
         let mut response = self.send_chat_request(&body).await?;
@@ -405,16 +410,18 @@ impl LlmClient {
             let message = response.text().await.unwrap_or_default();
             // Some models (e.g. OpenAI reasoning models on /chat/completions)
             // reject a reasoning effort alongside function tools; retry once
-            // without it rather than failing the turn.
+            // with reasoning off. Omitting the effort is not enough, since the
+            // provider then applies the model's default effort.
             if body.reasoning.is_none() || !is_reasoning_param_rejection(status, &message) {
                 return Err(LlmError::Api { status, message });
             }
             tracing::warn!(
                 model = %self.model,
                 response = %message,
-                "assistant: provider rejected reasoning effort; retrying without it"
+                "assistant: provider rejected reasoning effort; retrying with it off"
             );
             body.reasoning = None;
+            body.reasoning_effort = Some("none");
             response = self.send_chat_request(&body).await?;
             if !response.status().is_success() {
                 let status = response.status().as_u16();

@@ -241,6 +241,7 @@ fn chat_request_body_omits_reasoning_when_effort_is_none() {
         tools: Vec::new(),
         stream: false,
         reasoning: None,
+        reasoning_effort: None,
     };
     let json = serde_json::to_string(&body).unwrap();
     assert!(!json.contains("reasoning"));
@@ -257,6 +258,7 @@ fn chat_request_body_includes_reasoning_effort_verbatim() {
         reasoning: Some(ReasoningRequest {
             effort: "medium".into(),
         }),
+        reasoning_effort: None,
     };
     let json = serde_json::to_string(&body).unwrap();
     assert!(json.contains(r#""reasoning":{"effort":"medium"}"#));
@@ -274,6 +276,7 @@ fn chat_request_body_omits_reasoning_when_effort_is_empty() {
         tools: Vec::new(),
         stream: false,
         reasoning: reasoning_request(&options),
+        reasoning_effort: None,
     };
     let json = serde_json::to_string(&body).unwrap();
     assert!(!json.contains("reasoning"));
@@ -291,6 +294,7 @@ fn streaming_chat_request_body_includes_reasoning_effort_verbatim() {
         tools: Vec::new(),
         stream: true,
         reasoning: reasoning_request(&options),
+        reasoning_effort: None,
     };
 
     let json = serde_json::to_value(body).unwrap();
@@ -621,7 +625,6 @@ async fn stream_chat_retries_without_reasoning_when_provider_rejects_it() {
     let client = LlmClient::new(&base_url, "key", "gpt-test", None).unwrap();
     let options = LlmRequestOptions {
         reasoning_effort: Some("high".into()),
-        ..Default::default()
     };
     let turn = client
         .stream_chat(&[], &[], &options, |_| {})
@@ -630,6 +633,10 @@ async fn stream_chat_retries_without_reasoning_when_provider_rejects_it() {
     assert_eq!(turn.content, "hi");
 
     let bodies = server.await.unwrap();
-    assert!(bodies[0].contains("\"reasoning\""));
-    assert!(!bodies[1].contains("\"reasoning\""));
+    let first: Value = serde_json::from_str(&bodies[0]).unwrap();
+    let retry: Value = serde_json::from_str(&bodies[1]).unwrap();
+    assert_eq!(first["reasoning"]["effort"], "high");
+    assert!(first.get("reasoning_effort").is_none());
+    assert!(retry.get("reasoning").is_none());
+    assert_eq!(retry["reasoning_effort"], "none");
 }
