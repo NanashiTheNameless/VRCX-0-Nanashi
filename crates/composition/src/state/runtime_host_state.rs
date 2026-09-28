@@ -205,6 +205,11 @@ fn prepare_data_dir_migration_startup(
 }
 
 fn open_profile(paths: &AppPaths) -> Result<OpenedProfile> {
+    // Fork: a staged "Import data" replaces files before anything opens them.
+    if let Err(error) = vrcx_0_persistence::data_export::apply_pending_data_import(&paths.app_data)
+    {
+        tracing::error!(error = %error, "failed to apply staged data import");
+    }
     let migration_paths = LegacyMigrationPaths::from_app_data(paths.app_data.clone());
     consume_pending_legacy_migration(&migration_paths)?;
     let pending_profile_restore = consume_pending_profile_restore(&paths.app_data, &paths.db_file)?;

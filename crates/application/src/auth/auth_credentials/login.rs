@@ -63,7 +63,7 @@ pub(crate) async fn saved_credential_login_start_with_api(
     cookies.clear();
     if let Some(cookie) = saved_credential.cookies.as_deref() {
         if let Err(error) = cookies.set(cookie) {
-            tracing::warn!(
+            tracing::error!(
                 error = %error,
                 user_id = %user_id,
                 "failed to restore saved cookies before saved credential login; continuing with password login"

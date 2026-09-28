@@ -111,8 +111,8 @@ pub use profile_bio::{LocalProfileBioStore, VrchatProfileBioRemoteRequests};
 pub use profile_config::LocalProfileConfigStore;
 pub use profile_database_upgrade::LocalDatabaseUpgradeStore;
 pub use profile_merge_runner::{
-    profile_merge_sources, run_profile_merge, run_profile_settings_import, ProfileMergeSourceKind,
-    ProfileMergeSources,
+    discard_data_import, profile_merge_sources, run_data_export, run_profile_merge,
+    run_profile_settings_import, stage_data_import, ProfileMergeSourceKind, ProfileMergeSources,
 };
 pub use quick_search::{LocalQuickSearchDetailStore, VrchatQuickSearchRemoteRequests};
 pub use realtime_remote_requests::VrchatRealtimeRemoteRequests;
@@ -126,6 +126,7 @@ pub use user_dialog_tab_counts::LocalUserDialogTabCountsSource;
 pub use vrc_status::VrcStatusRemoteAdapter;
 pub use vrchat_config::VrchatConfigAdapter;
 pub use vrchat_request::VrchatRequestAdapter;
+pub use vrcx_0_persistence::data_export::{DataExportReport, DataImportSummary};
 pub use vrcx_0_persistence::profile_merge::{ProfileMergeReport, ProfileSettingsImportReport};
 pub use web_client::WebClient as LocalWebClientAdapter;
 pub use world_cache::LocalWorldCacheAdapter;

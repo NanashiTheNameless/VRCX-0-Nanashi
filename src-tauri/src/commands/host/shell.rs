@@ -138,6 +138,23 @@ pub fn app__open_crash_vrc_crash_dumps() -> Result<bool, AppError> {
     Ok(shell_actions::open_crash_dumps_folder()?)
 }
 
+/// Fork: reveal error-log.txt (or the data folder when no log exists yet).
+#[tauri::command(async)]
+#[specta::specta]
+pub fn app__open_error_log_folder(state: State<'_, AppState>) -> Result<(), AppError> {
+    let app_data = state.runtime_host().app_data_path().to_path_buf();
+    let log = app_data.join("error-log.txt");
+    let (path, is_folder) = if log.is_file() {
+        (log, false)
+    } else {
+        (app_data, true)
+    };
+    Ok(shell_actions::open_folder_and_select_item(
+        &path.to_string_lossy(),
+        is_folder,
+    )?)
+}
+
 #[tauri::command(async)]
 #[specta::specta]
 pub fn app__open_folder_and_select_item(

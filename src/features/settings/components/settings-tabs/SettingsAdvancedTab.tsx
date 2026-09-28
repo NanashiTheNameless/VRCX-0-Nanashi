@@ -31,6 +31,7 @@ import { Switch } from '@/ui/shadcn/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import { BrowseHistoryRetentionField } from '../BrowseHistoryRetentionField';
+import { DataExportFields } from '../DataExportFields';
 import { ProfileMergeFields } from '../ProfileMergeFields';
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
@@ -566,6 +567,13 @@ export function SettingsAdvancedTabContent({
                 onLogResourceLoadChange={onLogResourceLoadChange}
                 onUdonExceptionLoggingChange={onUdonExceptionLoggingChange}
             />
+
+            <SettingsCard
+                cardId="advanced.data-export"
+                title={t('view.settings.data_export.header')}
+            >
+                <DataExportFields />
+            </SettingsCard>
 
             <SettingsCard
                 cardId="advanced.import-recovery"

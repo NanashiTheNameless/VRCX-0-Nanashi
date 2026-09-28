@@ -1985,6 +1985,49 @@ impl DesktopRuntimeHostState {
         .map_err(|error| vrcx_0_composition::Error::Custom(error.to_string()))
     }
 
+    /// Fork: export all profile data and settings to one level 9 zip.
+    pub async fn run_data_export(
+        &self,
+        archive: std::path::PathBuf,
+        app_version: String,
+    ) -> Result<vrcx_0_outbound_adapters::DataExportReport> {
+        let database = Arc::clone(self.runtime.database());
+        let storage = Arc::clone(self.runtime.storage());
+        let app_data = self.runtime.paths().app_data.clone();
+        tokio::task::spawn_blocking(move || {
+            vrcx_0_outbound_adapters::run_data_export(
+                &database,
+                &storage,
+                &app_data,
+                &archive,
+                &app_version,
+            )
+        })
+        .await
+        .map_err(|error| vrcx_0_composition::Error::Custom(format!("export task failed: {error}")))?
+        .map_err(|error| vrcx_0_composition::Error::Custom(error.to_string()))
+    }
+
+    /// Fork: validate a data export and stage it for the next start.
+    pub async fn stage_data_import(
+        &self,
+        archive: std::path::PathBuf,
+    ) -> Result<vrcx_0_outbound_adapters::DataImportSummary> {
+        let app_data = self.runtime.paths().app_data.clone();
+        tokio::task::spawn_blocking(move || {
+            vrcx_0_outbound_adapters::stage_data_import(&app_data, &archive)
+        })
+        .await
+        .map_err(|error| vrcx_0_composition::Error::Custom(format!("import task failed: {error}")))?
+        .map_err(|error| vrcx_0_composition::Error::Custom(error.to_string()))
+    }
+
+    /// Fork: drop a staged data import.
+    pub fn discard_data_import(&self) -> Result<()> {
+        vrcx_0_outbound_adapters::discard_data_import(&self.runtime.paths().app_data)
+            .map_err(|error| vrcx_0_composition::Error::Custom(error.to_string()))
+    }
+
     /// Fork: import only settings from VRCX or upstream VRCX-0, replacing ours.
     pub async fn run_profile_settings_import(
         &self,

@@ -131,13 +131,13 @@ impl NonInteractiveAuthRuntime {
                 return Err(error);
             }
             Err(NonInteractiveAuthError::Failed(reason)) => {
-                tracing::warn!(reason, "global cookie auth restore failed");
+                tracing::error!(reason, "global cookie auth restore failed");
             }
         }
 
         if let Some(cookies) = saved_cookies.as_deref() {
             if let Err(error) = self.actions.restore_cookies(cookies) {
-                tracing::warn!(error = %error, "failed to restore saved auth cookies");
+                tracing::error!(error = %error, "failed to restore saved auth cookies");
             } else {
                 match self
                     .actions
@@ -156,7 +156,7 @@ impl NonInteractiveAuthRuntime {
                         return Err(error);
                     }
                     Err(NonInteractiveAuthError::Failed(reason)) => {
-                        tracing::warn!(reason, "saved cookie auth restore failed");
+                        tracing::error!(reason, "saved cookie auth restore failed");
                     }
                 }
             }
@@ -227,7 +227,7 @@ impl NonInteractiveAuthRuntime {
             user_id: user_id.trim().to_string(),
             clear_last_user_logged_in: false,
         }) {
-            tracing::warn!(
+            tracing::error!(
                 error = %error,
                 user_id = %user_id,
                 "failed to clear saved auth after invalid VRChat session"

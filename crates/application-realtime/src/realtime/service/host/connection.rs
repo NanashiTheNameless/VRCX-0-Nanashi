@@ -27,6 +27,10 @@ use super::state::{
 use super::{RealtimeHostRuntime, RealtimeHostRuntimeDeps, RealtimeStopRequest};
 use vrcx_0_core::OwnerId;
 
+/// Set when the realtime connection drops, so the next start is logged as a
+/// reconnect in error-log.txt.
+static REALTIME_DROPPED: AtomicBool = AtomicBool::new(false);
+
 enum RealtimeFriendBaselineStart {
     Supplied(HashMap<String, FriendRecord>),
     PendingOrPreserved,
@@ -301,6 +305,13 @@ impl RealtimeHostRuntime {
             format!("Realtime transport generation {generation} started."),
             0,
         );
+        if REALTIME_DROPPED.swap(false, std::sync::atomic::Ordering::AcqRel) {
+            tracing::warn!(
+                target: "vrcx_0::diagnostic",
+                generation,
+                "realtime connection reconnecting after a drop"
+            );
+        }
         self.deps.tasks.spawn(async move {
             let termination = supervise_realtime_transport(realtime_transport.run(
                 message_sink,
@@ -390,6 +401,13 @@ impl RealtimeHostRuntime {
                 RealtimeTransportTermination::Stopped => None,
             };
             if let Some((status, reason, status_code)) = terminal_status {
+                REALTIME_DROPPED.store(true, std::sync::atomic::Ordering::Release);
+                tracing::error!(
+                    reason = %reason,
+                    status_code = ?status_code,
+                    generation = active.generation,
+                    "realtime connection dropped"
+                );
                 self.deps.sync.record_failure("realtime", reason.clone());
                 self.deps
                     .backend_status

@@ -109,17 +109,24 @@ pub(crate) async fn run_diagnosed(
     }
 }
 
-/// Last meaningful line of installer output, for a short error suffix.
+/// Most useful line of installer output, for a short error suffix: an npm
+/// `ERR!` line, else the `Error:` line of a crash (Node ends crashes with a
+/// bare `Node.js vX` line), else the last line.
 pub(crate) fn last_error_line(output: &str) -> Option<String> {
     let lines: Vec<&str> = output
         .lines()
         .map(str::trim)
-        .filter(|l| !l.is_empty())
+        .filter(|line| !line.is_empty() && !line.starts_with("Node.js v"))
         .collect();
     lines
         .iter()
         .rev()
         .find(|line| line.contains("ERR!") && !line.contains("A complete log"))
+        .or_else(|| {
+            lines
+                .iter()
+                .find(|line| line.contains("Error:") || line.contains("Error ["))
+        })
         .or_else(|| lines.last())
         .map(|line| line.chars().take(300).collect())
 }
@@ -212,5 +219,29 @@ impl Drop for WindowsJob {
         unsafe {
             windows_sys::Win32::Foundation::CloseHandle(self.0);
         }
+    }
+}
+
+#[cfg(test)]
+mod last_error_line_tests {
+    use super::last_error_line;
+
+    #[test]
+    fn prefers_the_crash_error_over_the_node_version_footer() {
+        let output = "node:internal/modules/cjs/loader:1228\n  throw err;\n\nError: Cannot find module 'x'\n    at Module._resolveFilename\n\nNode.js v22.23.3\n";
+        assert_eq!(
+            last_error_line(output).as_deref(),
+            Some("Error: Cannot find module 'x'")
+        );
+    }
+
+    #[test]
+    fn prefers_npm_err_lines() {
+        let output =
+            "npm ERR! code ENOENT\nnpm ERR! A complete log of this run can be found in: x\n";
+        assert_eq!(
+            last_error_line(output).as_deref(),
+            Some("npm ERR! code ENOENT")
+        );
     }
 }

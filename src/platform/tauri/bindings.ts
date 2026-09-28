@@ -2684,6 +2684,24 @@ const generatedCommands = {
     ): Promise<ProfileSettingsImportReport> {
         return await TAURI_INVOKE('app__profile_settings_import', { source });
     },
+    /**
+     * Fork: export all data and settings to `path` (a level 9 zip).
+     */
+    async appDataExport(path: string): Promise<DataExportReport> {
+        return await TAURI_INVOKE('app__data_export', { path });
+    },
+    /**
+     * Fork: validate a data export and stage it; it is applied on the next start.
+     */
+    async appDataImportStage(path: string): Promise<DataImportSummary> {
+        return await TAURI_INVOKE('app__data_import_stage', { path });
+    },
+    /**
+     * Fork: cancel a staged data import.
+     */
+    async appDataImportDiscard(): Promise<null> {
+        return await TAURI_INVOKE('app__data_import_discard');
+    },
     async appCustomLocalesList(): Promise<CustomLocaleEntry[]> {
         return await TAURI_INVOKE('app__custom_locales_list');
     },
@@ -3827,6 +3845,12 @@ export type DataDirMigrationWarning =
     | 'configCopyFailed'
     | 'galleryCopyFailed'
     | 'cacheCleanupFailed';
+export type DataExportReport = { files: number; bytes: number };
+export type DataImportSummary = {
+    files: number;
+    appVersion: string;
+    createdAt: string;
+};
 export type DatabaseUpgradePreflight = {
     status: DatabaseUpgradePreflightStatus;
     fromVersion: number;

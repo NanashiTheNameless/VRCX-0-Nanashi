@@ -8,6 +8,7 @@ pub(crate) mod common;
 pub mod config;
 pub mod cookies;
 pub mod data_dir_migration;
+pub mod data_export;
 mod database;
 mod error;
 pub mod favorites;

@@ -226,7 +226,7 @@ pub(crate) async fn classify_llm(
     {
         Ok(turn) => turn,
         Err(error) => {
-            tracing::warn!(%error, "assistant: intent classify call failed");
+            tracing::error!(%error, "assistant: intent classify call failed");
             return None;
         }
     };

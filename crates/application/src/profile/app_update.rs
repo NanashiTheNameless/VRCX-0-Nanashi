@@ -252,7 +252,7 @@ async fn run_check_inner(context: &AppUpdateCheckContext<'_>) -> Result<CheckOut
                 no_update_outcome("Updater manifest did not confirm an installable update.")
             }
             Err(error) => {
-                tracing::warn!(
+                tracing::error!(
                     error = %error,
                     "updater manifest check failed; falling back to release comparison"
                 );
@@ -286,14 +286,17 @@ async fn run_check(context: &AppUpdateCheckContext<'_>) -> AppUpdateStatusSnapsh
             release: outcome.release,
             should_notify: false,
         },
-        Err(error) => AppUpdateStatusSnapshot {
-            has_available_update: false,
-            checked_at,
-            detail: String::new(),
-            error: Some(error.to_string()),
-            release: None,
-            should_notify: false,
-        },
+        Err(error) => {
+            tracing::error!(error = %error, "app update check failed");
+            AppUpdateStatusSnapshot {
+                has_available_update: false,
+                checked_at,
+                detail: String::new(),
+                error: Some(error.to_string()),
+                release: None,
+                should_notify: false,
+            }
+        }
     }
 }
 
@@ -846,7 +849,7 @@ impl AppUpdateRuntime {
             let runtime = self.clone();
             self.inner.tasks.spawn(async move {
                 if let Err(error) = runtime.ensure_downloaded(&release).await {
-                    tracing::warn!(error = %error, "queued app update download failed");
+                    tracing::error!(error = %error, "queued app update download failed");
                 }
             });
         }
@@ -877,14 +880,14 @@ impl AppUpdateRuntime {
                 match self.install(&release.canonical_version).await {
                     Ok(metadata) => Some(metadata),
                     Err(error) => {
-                        tracing::warn!(error = %error, "auto-install-on-startup install failed");
+                        tracing::error!(error = %error, "auto-install-on-startup install failed");
                         None
                     }
                 }
             }
             Ok(_) => None,
             Err(error) => {
-                tracing::warn!(error = %error, "auto-install-on-startup download failed");
+                tracing::error!(error = %error, "auto-install-on-startup download failed");
                 None
             }
         }
@@ -903,7 +906,7 @@ impl AppUpdateRuntime {
         let runtime = self.clone();
         self.inner.tasks.spawn(async move {
             if let Err(error) = runtime.ensure_downloaded(&release).await {
-                tracing::warn!(error = %error, "auto-background-download failed");
+                tracing::error!(error = %error, "auto-background-download failed");
             }
         });
     }

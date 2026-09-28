@@ -1,3 +1,4 @@
+import { recordErrorLog } from '@/services/errorLogService';
 import { publishPreferenceChanged } from '@/shared/events/preferenceEvents';
 import { isAvatarSearchQueryLongEnough } from '@/shared/utils/avatarSearchQuery';
 import { isRecord } from '@/shared/utils/record';
@@ -463,11 +464,14 @@ async function search({
             ? failure.reason
             : new Error('Avatar search failed for every provider.');
     }
-    for (const result of settled) {
+    settled.forEach((result, index) => {
         if (result.status === 'rejected') {
-            console.warn('Avatar provider search failed:', result.reason);
+            void recordErrorLog('avatar:provider', [
+                `Avatar provider search failed: ${targets[index]}`,
+                result.reason
+            ]);
         }
-    }
+    });
 
     return {
         avatars: mergeAvatarResults(succeeded.map((result) => result.avatars)),

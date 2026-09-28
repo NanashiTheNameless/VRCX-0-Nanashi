@@ -22,6 +22,7 @@ sea-query = { version = "1.0.1", default-features = false, features = [
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
+zip = { workspace = true, features = ["deflate"] }
 specta.workspace = true
 tar = { workspace = true }
 thiserror = { workspace = true }

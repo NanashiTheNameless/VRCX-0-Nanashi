@@ -2,6 +2,8 @@ import { RefreshCwIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { commands } from '@/platform/tauri/bindings';
+import { toast } from '@/services/toastService';
 import { Button } from '@/ui/shadcn/button';
 import { Spinner } from '@/ui/shadcn/spinner';
 import { Switch } from '@/ui/shadcn/switch';
@@ -110,6 +112,31 @@ export function AdvancedTroubleshootingGroup({
             <SettingsSectionHeading
                 title={t('view.settings.general.logging.header')}
             />
+            <Field
+                label={t('view.settings.general.logging.error_log')}
+                description={t(
+                    'view.settings.general.logging.error_log_description'
+                )}
+            >
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                        commands.appOpenErrorLogFolder().catch((error) => {
+                            toast.add({
+                                type: 'error',
+                                title:
+                                    error instanceof Error
+                                        ? error.message
+                                        : String(error)
+                            });
+                        });
+                    }}
+                >
+                    {t('view.settings.general.logging.open_error_log')}
+                </Button>
+            </Field>
             <Field
                 label={t(
                     'view.settings.advanced.advanced.cache_debug.udon_exception_logging'

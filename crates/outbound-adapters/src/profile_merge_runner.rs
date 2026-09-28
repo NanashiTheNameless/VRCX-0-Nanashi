@@ -173,3 +173,37 @@ pub fn run_profile_settings_import(
         Ok(report)
     })
 }
+
+/// Fork: export all profile data and settings to a single zip.
+pub fn run_data_export(
+    db: &DatabaseService,
+    storage: &vrcx_0_persistence::storage::StorageService,
+    app_data: &Path,
+    archive: &Path,
+    app_version: &str,
+) -> Result<vrcx_0_persistence::data_export::DataExportReport, Error> {
+    storage.save().map_err(map_persistence_error)?;
+    db.checkpoint_wal().map_err(map_persistence_error)?;
+    vrcx_0_persistence::data_export::export_data_archive(
+        db.db_path(),
+        app_data,
+        archive,
+        app_version,
+    )
+    .map_err(map_persistence_error)
+}
+
+/// Fork: stage a data export for import on the next start.
+pub fn stage_data_import(
+    app_data: &Path,
+    archive: &Path,
+) -> Result<vrcx_0_persistence::data_export::DataImportSummary, Error> {
+    vrcx_0_persistence::data_export::stage_data_import(archive, app_data)
+        .map_err(map_persistence_error)
+}
+
+/// Fork: drop a staged import that has not been applied yet.
+pub fn discard_data_import(app_data: &Path) -> Result<(), Error> {
+    vrcx_0_persistence::data_export::discard_pending_data_import(app_data)
+        .map_err(map_persistence_error)
+}

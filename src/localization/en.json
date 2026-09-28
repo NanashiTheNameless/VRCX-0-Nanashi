@@ -2559,6 +2559,9 @@
                 },
                 "logging": {
                     "header": "Logging",
+                    "error_log": "Error log",
+                    "error_log_description": "error-log.txt records errors and connection problems, including the provider reply when the Social AI fails. Attach it when reporting a bug; it can contain local paths and account IDs, so review it first.",
+                    "open_error_log": "Show error log",
                     "resource_load": "Log Udon String/Image Load",
                     "auto_login_delay": "Auto-Login Delay",
                     "auto_login_delay_button": "Set Delay Seconds"
@@ -3149,6 +3152,22 @@
                 "cancel": "Cancel",
                 "start": "Translate",
                 "translate_done": "Saved language file: {name}"
+            },
+            "data_export": {
+                "header": "Export & import data",
+                "export_label": "Export all data",
+                "export_description": "Saves your database, settings, custom languages and every other profile file into one compressed .zip. Caches, logs, backups, the yt-dlp tools and your login sessions and saved logins are left out. Keep the file private: it contains your personal data.",
+                "export_button": "Export",
+                "exporting": "Exporting...",
+                "export_done": "Exported {files} files ({megabytes} MB).",
+                "import_label": "Import / restore data",
+                "import_description": "Restores everything from a data export. It is applied when the app restarts; your current database and settings are backed up to the backups folder first.",
+                "import_button": "Import",
+                "importing": "Checking...",
+                "import_confirm_title": "Restore from this data export?",
+                "import_confirm_description": "On the next restart, this profile's data and settings are replaced with the export's. Files not in the export are kept, and you stay signed in on this PC. A backup of the current database and settings is saved to the backups folder first.",
+                "import_staged": "Data export from version {version} is ready ({files} files). Restart to apply it.",
+                "restart_now": "Restart now"
             },
             "profile_merge": {
                 "label": "Merge data from {app}",

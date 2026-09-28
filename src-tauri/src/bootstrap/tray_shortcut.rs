@@ -120,7 +120,7 @@ mod native {
         shortcut_recorder::check(&binding.key, modifiers).map_err(|error| match error {
             ProbeError::InUse => TrayShortcutError::InUse,
             ProbeError::Unavailable(error) => {
-                tracing::warn!(%error, "failed to check the global tray shortcut");
+                tracing::error!(%error, "failed to check the global tray shortcut");
                 TrayShortcutError::Unavailable
             }
         })
@@ -157,12 +157,12 @@ mod native {
                                 }
                             }
                         }) {
-                            tracing::warn!(%error, "failed to dispatch the global tray shortcut");
+                            tracing::error!(%error, "failed to dispatch the global tray shortcut");
                         }
                     });
                 })
                 .map_err(|error| {
-                    tracing::warn!(%error, "failed to register the global tray shortcut");
+                    tracing::error!(%error, "failed to register the global tray shortcut");
                     TrayShortcutError::Unavailable
                 })
         }
@@ -172,7 +172,7 @@ mod native {
                 .global_shortcut()
                 .unregister(shortcut(binding)?)
                 .map_err(|error| {
-                    tracing::warn!(%error, "failed to unregister the global tray shortcut");
+                    tracing::error!(%error, "failed to unregister the global tray shortcut");
                     TrayShortcutError::Unavailable
                 })
         }
@@ -293,7 +293,7 @@ mod native {
             });
         let available = app
             .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-            .map_err(|error| tracing::warn!(%error, "global tray shortcuts are unavailable"))
+            .map_err(|error| tracing::error!(%error, "global tray shortcuts are unavailable"))
             .is_ok();
         let mut runtime = TrayShortcutRuntime::new(binding.clone(), available);
         let startup_notice_pending =

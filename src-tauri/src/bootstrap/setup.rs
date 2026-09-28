@@ -26,7 +26,14 @@ const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(target_os = "windows")]
 const WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: &str = "--disable-back-forward-cache --disable-domain-reliability --disable-features=AutofillServerCommunication,BackgroundFetch,MediaRouter --disable-file-system --disable-notifications --disable-presentation-api --disable-remote-playback-api --disable-shared-workers --disable-speech-api";
 
+/// Log target for notable non-error events that still belong in error-log.txt
+/// (for example a realtime reconnect after a drop).
+pub const DIAGNOSTIC_LOG_TARGET: &str = "vrcx_0::diagnostic";
+
 fn should_capture_gui_error(level: &Level, target: &str) -> bool {
+    if target == DIAGNOSTIC_LOG_TARGET {
+        return level <= &Level::INFO;
+    }
     level == &Level::ERROR
         && (target == "vrcx_0" || target.starts_with("vrcx_0::") || target.starts_with("vrcx_0_"))
 }
@@ -413,6 +420,13 @@ mod tests {
                 "vrcx_0::bootstrap::adapters"
             ));
         }
+        for level in [Level::ERROR, Level::WARN, Level::INFO] {
+            assert!(should_capture_gui_error(&level, "vrcx_0::diagnostic"));
+        }
+        assert!(!should_capture_gui_error(
+            &Level::DEBUG,
+            "vrcx_0::diagnostic"
+        ));
     }
 
     #[cfg(target_os = "windows")]

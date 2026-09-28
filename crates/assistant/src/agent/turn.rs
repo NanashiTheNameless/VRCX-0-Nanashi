@@ -516,6 +516,14 @@ fn finish_cancelled(ctx: &TurnContext) {
 }
 
 fn finish_llm_error(ctx: &TurnContext, error: &AssistantLlmError) {
+    // The UI only shows the status; keep the provider's reply in error-log.txt
+    // so a failed request can be diagnosed.
+    if let AssistantLlmError::Api { status, message } = error {
+        let detail: String = message.chars().take(4000).collect();
+        tracing::error!(status, response = %detail, "assistant LLM request failed");
+    } else {
+        tracing::error!(error = %error, "assistant LLM request failed");
+    }
     let message = llm_error_summary(error);
     finish_error(ctx, "llm", &message);
 }

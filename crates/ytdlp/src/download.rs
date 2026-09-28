@@ -269,7 +269,7 @@ pub(crate) async fn install_provider(root: &Path, manifest: &Manifest) -> Result
     )
     .await?;
     if !ok {
-        tracing::warn!(output = %output, "PO-token provider npm ci failed");
+        tracing::error!(output = %output, "PO-token provider npm ci failed");
         return Err(installer_error(
             "PO-token provider dependency installation failed; retry installation",
             &output,
@@ -283,7 +283,7 @@ pub(crate) async fn install_provider(root: &Path, manifest: &Manifest) -> Result
     )
     .await?;
     if !ok {
-        tracing::warn!(output = %output, "PO-token provider build failed");
+        tracing::error!(output = %output, "PO-token provider build failed");
         return Err(installer_error("PO-token provider build failed", &output));
     }
     files::write(&home.join("ready"), b"1")
