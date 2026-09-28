@@ -5,6 +5,7 @@ import type { AppToastOptions } from '@/services/toastService';
 const mocks = vi.hoisted(() => ({
     toastSuccess: vi.fn(),
     toastError: vi.fn(),
+    toastClose: vi.fn(),
     endSession: vi.fn(),
     startLoginSession: vi.fn(),
     respondLoginSession: vi.fn(),
@@ -33,7 +34,8 @@ vi.mock('@/services/toastService', () => ({
                 default:
                     throw new Error('Unhandled toast type: ' + options.type);
             }
-        }
+        },
+        close: mocks.toastClose
     }
 }));
 
@@ -108,7 +110,8 @@ import { useSessionStore } from '@/state/sessionStore';
 import {
     executeManualLogin,
     executeSavedCredentialLogin,
-    logoutFromReactShell
+    logoutFromReactShell,
+    showAuthFailureToast
 } from './authExecutionService';
 
 function savedCredential(id: string): SavedCredentialSnapshot {
@@ -298,6 +301,47 @@ describe('authExecutionService characterization', () => {
             user(),
             expect.any(Number)
         );
+    });
+
+    it('closes persistent auth failure toasts once a login succeeds', async () => {
+        mocks.toastError
+            .mockReturnValueOnce('failure-1')
+            .mockReturnValueOnce('failure-2');
+        showAuthFailureToast('Network unavailable');
+        showAuthFailureToast('message.auth.offline');
+        expect(mocks.toastError).toHaveBeenCalledWith({
+            type: 'error',
+            title: 'Network unavailable',
+            timeout: 0,
+            data: { closeButton: true }
+        });
+        expect(mocks.toastClose).not.toHaveBeenCalled();
+
+        await executeManualLogin({
+            username: 'self@example.test',
+            password: 'secret'
+        });
+
+        expect(mocks.toastClose).toHaveBeenCalledTimes(2);
+        expect(mocks.toastClose).toHaveBeenCalledWith('failure-1');
+        expect(mocks.toastClose).toHaveBeenCalledWith('failure-2');
+    });
+
+    it('keeps auth failure toasts open when the post-login bootstrap fails', async () => {
+        mocks.toastError.mockReturnValueOnce('failure-1');
+        showAuthFailureToast('Network unavailable');
+        mocks.bootstrapAuthenticatedSession.mockRejectedValueOnce(
+            new Error('bootstrap failed')
+        );
+
+        await expect(
+            executeManualLogin({
+                username: 'self@example.test',
+                password: 'secret'
+            })
+        ).rejects.toThrow('bootstrap failed');
+
+        expect(mocks.toastClose).not.toHaveBeenCalled();
     });
 
     it('does not expose an authenticated frontend session when the backend commit fails', async () => {

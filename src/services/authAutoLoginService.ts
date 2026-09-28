@@ -19,7 +19,8 @@ import { getLoginErrorMessage as getErrorMessage } from './authErrorDisplayServi
 import {
     finalizeSuccessfulLogin,
     resolveLoginSessionState,
-    setSignedOutSessionState
+    setSignedOutSessionState,
+    showAuthFailureToast
 } from './authExecutionService';
 import { applySavedAuthSnapshot } from './authSnapshotService';
 import i18n from './i18nService';
@@ -284,12 +285,9 @@ export async function executeReactAutoLogin(
             await showAuthFailureNotificationSafely(
                 'frontend-auto-login-throttled'
             );
-            toast.add({
-                type: 'error',
-                title: await i18n.t('message.auth.auto_login_failed'),
-                timeout: 0,
-                data: { closeButton: true }
-            });
+            showAuthFailureToast(
+                await i18n.t('message.auth.auto_login_failed')
+            );
             return {
                 status: 'throttled',
                 snapshot: outcome.snapshot
@@ -378,15 +376,12 @@ export async function executeReactAutoLogin(
             'error',
             error instanceof Error ? error.message : String(error)
         );
-        toast.add({
-            type: 'error',
-            title: getErrorMessage(
+        showAuthFailureToast(
+            getErrorMessage(
                 error,
                 await i18n.t('message.auth.auto_login_failed')
-            ),
-            timeout: 0,
-            data: { closeButton: true }
-        });
+            )
+        );
         if (shouldShowManualAuthFailureNotification(authError)) {
             await showAuthFailureNotificationSafely(
                 'frontend-auto-login-failed'
@@ -394,12 +389,7 @@ export async function executeReactAutoLogin(
         }
 
         if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-            toast.add({
-                type: 'error',
-                title: await i18n.t('message.auth.offline'),
-                timeout: 0,
-                data: { closeButton: true }
-            });
+            showAuthFailureToast(await i18n.t('message.auth.offline'));
         }
 
         return {

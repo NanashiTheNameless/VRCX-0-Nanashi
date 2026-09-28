@@ -10,7 +10,8 @@ import { getLoginErrorMessage as getErrorMessage } from '@/services/authErrorDis
 import {
     executeManualLogin,
     executeSavedCredentialLogin,
-    getAuthSnapshotFromExecutionError
+    getAuthSnapshotFromExecutionError,
+    showAuthFailureToast
 } from '@/services/authExecutionService';
 import {
     deleteSavedAuthSnapshot,
@@ -334,15 +335,12 @@ export function useLoginPageState() {
             if (failureSnapshot) {
                 setSnapshot(failureSnapshot);
             }
-            toast.add({
-                type: 'error',
-                title: getErrorMessage(
+            showAuthFailureToast(
+                getErrorMessage(
                     error,
                     t('view.auth.toast.failed_to_authenticate')
-                ),
-                timeout: 0,
-                data: { closeButton: true }
-            });
+                )
+            );
         } finally {
             setIsSubmitting(false);
         }
@@ -381,15 +379,12 @@ export function useLoginPageState() {
             if (failureSnapshot) {
                 setSnapshot(failureSnapshot);
             }
-            toast.add({
-                type: 'error',
-                title: getErrorMessage(
+            showAuthFailureToast(
+                getErrorMessage(
                     error,
                     t('view.auth.toast.failed_to_restore_the_saved_account')
-                ),
-                timeout: 0,
-                data: { closeButton: true }
-            });
+                )
+            );
         } finally {
             setActiveSavedUserId('');
         }

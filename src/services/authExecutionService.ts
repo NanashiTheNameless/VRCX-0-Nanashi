@@ -63,6 +63,26 @@ export function getAuthSnapshotFromExecutionError(
     return authError.authSnapshot ?? null;
 }
 
+const authFailureToastIds = new Set<string>();
+
+export function showAuthFailureToast(title: string): void {
+    authFailureToastIds.add(
+        toast.add({
+            type: 'error',
+            title,
+            timeout: 0,
+            data: { closeButton: true }
+        })
+    );
+}
+
+function closeAuthFailureToasts(): void {
+    for (const id of authFailureToastIds) {
+        toast.close(id);
+    }
+    authFailureToastIds.clear();
+}
+
 type AuthUserRecord = Record<string, unknown> & {
     id?: string;
     displayName?: string;
@@ -376,6 +396,7 @@ export async function finalizeSuccessfulLogin(
         normalizedError.authSnapshot = resolved.snapshot;
         throw normalizedError;
     }
+    closeAuthFailureToasts();
     return resolved.snapshot;
 }
 

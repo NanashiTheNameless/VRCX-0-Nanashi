@@ -8,7 +8,7 @@ import type { AppToastOptions } from '@/services/toastService';
 
 const mocks = vi.hoisted(() => ({
     toastSuccess: vi.fn(),
-    toastError: vi.fn(),
+    showAuthFailureToast: vi.fn(),
     toastInfo: vi.fn(),
     toastDismiss: vi.fn(),
     flashWindow: vi.fn(),
@@ -29,8 +29,6 @@ vi.mock('@/services/toastService', () => ({
             switch (options.type) {
                 case 'success':
                     return mocks.toastSuccess(options);
-                case 'error':
-                    return mocks.toastError(options);
                 case 'info':
                     return mocks.toastInfo(options);
                 default:
@@ -62,7 +60,8 @@ vi.mock('@/repositories/vrchatAuthRepository', () => ({
 vi.mock('./authExecutionService', () => ({
     resolveLoginSessionState: mocks.resolveLoginSessionState,
     finalizeSuccessfulLogin: mocks.finalizeSuccessfulLogin,
-    setSignedOutSessionState: mocks.setSignedOutSessionState
+    setSignedOutSessionState: mocks.setSignedOutSessionState,
+    showAuthFailureToast: mocks.showAuthFailureToast
 }));
 
 vi.mock('./authSnapshotService', () => ({
@@ -268,13 +267,8 @@ describe('authAutoLoginService', () => {
         expect(mocks.appAuthFailureNotificationShow).toHaveBeenCalledWith(
             'frontend-auto-login-throttled'
         );
-        expect(mocks.toastError).toHaveBeenCalledWith(
-            expect.objectContaining({
-                type: 'error',
-                title: 'message.auth.auto_login_failed',
-                timeout: 0,
-                data: expect.objectContaining({ closeButton: true })
-            })
+        expect(mocks.showAuthFailureToast).toHaveBeenCalledWith(
+            'message.auth.auto_login_failed'
         );
         expect(useSessionStore.getState()).toMatchObject({
             sessionPhase: 'signed_out',
@@ -295,7 +289,7 @@ describe('authAutoLoginService', () => {
         expect(mocks.appAuthFailureNotificationShow).toHaveBeenCalledWith(
             'frontend-auto-login-expired'
         );
-        expect(mocks.toastError).not.toHaveBeenCalled();
+        expect(mocks.showAuthFailureToast).not.toHaveBeenCalled();
     });
 
     it('returns a cancelled result when the auto-login delay is aborted before waiting', async () => {
@@ -363,12 +357,9 @@ describe('authAutoLoginService', () => {
         await expect(executeReactAutoLogin(snapshot())).resolves.toMatchObject({
             status: 'failed'
         });
-        expect(mocks.toastError).toHaveBeenCalledExactlyOnceWith({
-            type: 'error',
-            title: 'view.auth.toast.new_location_login',
-            timeout: 0,
-            data: { closeButton: true }
-        });
+        expect(mocks.showAuthFailureToast).toHaveBeenCalledExactlyOnceWith(
+            'view.auth.toast.new_location_login'
+        );
     });
 
     it('does not show a system auth notification when auto-login fails offline', async () => {
@@ -387,23 +378,13 @@ describe('authAutoLoginService', () => {
             status: 'failed'
         });
 
-        expect(mocks.toastError).toHaveBeenNthCalledWith(
+        expect(mocks.showAuthFailureToast).toHaveBeenNthCalledWith(
             1,
-            expect.objectContaining({
-                type: 'error',
-                title: 'Network unavailable',
-                timeout: 0,
-                data: expect.objectContaining({ closeButton: true })
-            })
+            'Network unavailable'
         );
-        expect(mocks.toastError).toHaveBeenNthCalledWith(
+        expect(mocks.showAuthFailureToast).toHaveBeenNthCalledWith(
             2,
-            expect.objectContaining({
-                type: 'error',
-                title: 'message.auth.offline',
-                timeout: 0,
-                data: expect.objectContaining({ closeButton: true })
-            })
+            'message.auth.offline'
         );
         expect(mocks.appAuthFailureNotificationShow).not.toHaveBeenCalled();
     });
@@ -429,13 +410,8 @@ describe('authAutoLoginService', () => {
         expect(mocks.applySavedAuthSnapshot).toHaveBeenCalledWith(
             expect.objectContaining({ lastUserLoggedIn: null })
         );
-        expect(mocks.toastError).toHaveBeenCalledWith(
-            expect.objectContaining({
-                type: 'error',
-                title: 'Saved credentials are no longer valid.',
-                timeout: 0,
-                data: expect.objectContaining({ closeButton: true })
-            })
+        expect(mocks.showAuthFailureToast).toHaveBeenCalledWith(
+            'Saved credentials are no longer valid.'
         );
     });
 });

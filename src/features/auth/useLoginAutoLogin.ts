@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { SavedAuthSnapshot } from '@/repositories/authRepository';
 import { executeReactAutoLogin } from '@/services/authAutoLoginService';
 import { getLoginErrorMessage as getErrorMessage } from '@/services/authErrorDisplayService';
-import { toast } from '@/services/toastService';
+import { showAuthFailureToast } from '@/services/authExecutionService';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
 type LoginAutoLoginOptions = {
@@ -130,15 +130,12 @@ export function useLoginAutoLogin({
                     autoLoginInFlightKeyRef.current = '';
                 }
                 autoLoginSuppressedKeyRef.current = autoLoginSnapshotKey;
-                toast.add({
-                    type: 'error',
-                    title: getErrorMessage(
+                showAuthFailureToast(
+                    getErrorMessage(
                         error,
                         t('view.auth.toast.automatic_login_failed_unexpectedly')
-                    ),
-                    timeout: 0,
-                    data: { closeButton: true }
-                });
+                    )
+                );
             });
 
         return () => {

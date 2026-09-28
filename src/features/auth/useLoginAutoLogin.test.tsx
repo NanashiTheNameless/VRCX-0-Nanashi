@@ -4,11 +4,10 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SavedAuthSnapshot } from '@/repositories/authRepository';
-import type { AppToastOptions } from '@/services/toastService';
 
 const mocks = vi.hoisted(() => ({
     executeAutoLogin: vi.fn(),
-    toastError: vi.fn()
+    showAuthFailureToast: vi.fn()
 }));
 
 vi.mock('react-i18next', () => ({
@@ -19,17 +18,8 @@ vi.mock('@/services/i18nService', () => ({
     default: { t: (key: string) => key }
 }));
 
-vi.mock('@/services/toastService', () => ({
-    toast: {
-        add: (options: AppToastOptions) => {
-            switch (options.type) {
-                case 'error':
-                    return mocks.toastError(options);
-                default:
-                    throw new Error('Unhandled toast type: ' + options.type);
-            }
-        }
-    }
+vi.mock('@/services/authExecutionService', () => ({
+    showAuthFailureToast: mocks.showAuthFailureToast
 }));
 
 vi.mock('@/services/authAutoLoginService', () => ({
@@ -67,7 +57,7 @@ const snapshot: SavedAuthSnapshot = {
 describe('useLoginAutoLogin', () => {
     beforeEach(() => {
         mocks.executeAutoLogin.mockReset();
-        mocks.toastError.mockReset();
+        mocks.showAuthFailureToast.mockReset();
     });
 
     it('applies the snapshot returned by automatic login', async () => {
@@ -151,13 +141,8 @@ describe('useLoginAutoLogin', () => {
         );
 
         await waitFor(() => {
-            expect(mocks.toastError).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    type: 'error',
-                    title: 'Login failed',
-                    timeout: 0,
-                    data: expect.objectContaining({ closeButton: true })
-                })
+            expect(mocks.showAuthFailureToast).toHaveBeenCalledWith(
+                'Login failed'
             );
         });
     });
