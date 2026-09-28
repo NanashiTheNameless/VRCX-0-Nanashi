@@ -1,18 +1,11 @@
 name: Setup Rust
-description: Set up Rust and restore the shared CI dependency cache.
+description: Set up the stable Rust toolchain and an optional extra target.
 
 inputs:
     target:
         description: Additional Rust compilation target to install.
         required: false
         default: ''
-    cache-key:
-        description: Stable cache role including the compilation target.
-        required: true
-    save-cache:
-        description: Whether this job owns saving the cache.
-        required: false
-        default: 'false'
 
 runs:
     using: composite
@@ -23,8 +16,3 @@ runs:
               RUST_TARGET: ${{ inputs.target }}
           run: rustup target add "$RUST_TARGET"
           shell: bash
-        - uses: Swatinem/rust-cache@v2
-          with:
-              workspaces: . -> target
-              shared-key: ${{ inputs.cache-key }}
-              save-if: ${{ inputs.save-cache == 'true' }}

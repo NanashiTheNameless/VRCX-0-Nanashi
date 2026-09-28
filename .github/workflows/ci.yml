@@ -126,9 +126,6 @@ jobs:
               with:
                   node-version: 24.x
             - uses: ./.github/actions/setup-rust
-              with:
-                  cache-key: ci-linux-clippy
-                  save-cache: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
             - run: npm run rust:fmt:check
             - run: mkdir -p dist && printf '<!doctype html><html><body></body></html>' > dist/index.html
             - run: npm run rust:clippy:ci
@@ -151,19 +148,15 @@ jobs:
                     - label: Windows
                       os: windows-latest
                       rust_target: ''
-                      cache_key: ci-windows-x86_64
                     - label: Linux
                       os: ubuntu-24.04
                       rust_target: ''
-                      cache_key: ci-linux-x86_64
                     - label: macOS Apple Silicon
                       os: macos-latest
-                      rust_target: aarch64-apple-darwin
-                      cache_key: ci-macos-aarch64
+                      rust_target: ''
                     - label: macOS Intel
                       os: macos-latest
                       rust_target: x86_64-apple-darwin
-                      cache_key: ci-macos-x86_64
         steps:
             - uses: actions/checkout@v7
             - uses: ./.github/actions/setup-linux-tauri
@@ -173,8 +166,6 @@ jobs:
             - uses: ./.github/actions/setup-rust
               with:
                   target: ${{ matrix.rust_target }}
-                  cache-key: ${{ matrix.cache_key }}
-                  save-cache: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
             - run: mkdir -p dist && printf '<!doctype html><html><body></body></html>' > dist/index.html
             - name: Build Tauri crate
               env:
@@ -204,15 +195,12 @@ jobs:
                 include:
                     - label: Linux
                       os: ubuntu-24.04
-                      cache_key: ci-test-linux-x86_64
                       rust_test_args: --features vrcx-0-vr-overlay/slint-ui
                     - label: Windows
                       os: windows-latest
-                      cache_key: ci-test-windows-x86_64
                       rust_test_args: ''
                     - label: macOS
                       os: macos-latest
-                      cache_key: ci-test-macos-aarch64
                       rust_test_args: --exclude vrcx-0-overlay-runtime --exclude vrcx-0-application-game
         steps:
             - uses: actions/checkout@v7
@@ -225,9 +213,6 @@ jobs:
               with:
                   node-version: 24.x
             - uses: ./.github/actions/setup-rust
-              with:
-                  cache-key: ${{ matrix.cache_key }}
-                  save-cache: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
             - env:
                   RUST_TEST_ARGS: ${{ matrix.rust_test_args }}
               run: npm run rust:test:ci -- $RUST_TEST_ARGS
@@ -245,9 +230,6 @@ jobs:
                   mode: ci
             - uses: ./.github/actions/setup-node
             - uses: ./.github/actions/setup-rust
-              with:
-                  cache-key: ci-linux-bindings
-                  save-cache: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
             - run: npm run generate:tauri-bindings
             - name: Verify bindings.ts is regenerated
               run: git diff --exit-code src/platform/tauri/bindings.ts

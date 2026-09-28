@@ -87,28 +87,14 @@ jobs:
                 include:
                     - platform: windows_x86_64
                       os: windows-latest
-                      rust_target: ''
                     - platform: linux_x86_64
                       os: ubuntu-24.04
-                      rust_target: ''
-                    - platform: macos_universal
-                      os: macos-latest
-                      rust_target: universal-apple-darwin
         steps:
             - uses: actions/checkout@v7
               with:
                   fetch-depth: 0
 
             - uses: dtolnay/rust-toolchain@stable
-
-            - name: Install Rust target
-              if: matrix.rust_target != ''
-              run: |
-                  if [[ "${{ matrix.rust_target }}" == "universal-apple-darwin" ]]; then
-                      rustup target add aarch64-apple-darwin x86_64-apple-darwin
-                  else
-                      rustup target add "${{ matrix.rust_target }}"
-                  fi
 
             # Restore compiled dependencies before the version stamp edits
             # Cargo.lock, so the cache key stays stable between builds.
@@ -177,9 +163,6 @@ jobs:
                           delete config.bundle.windows.certificateThumbprint;
                           delete config.bundle.windows.signCommand;
                       }
-                      if (runnerOs === 'macOS') {
-                          config.bundle.targets = ['dmg'];
-                      }
                   }
 
                   fs.writeFileSync(outputConfigPath, `${JSON.stringify(config, null, 4)}\n`);
@@ -216,19 +199,6 @@ jobs:
                       --config "${{ steps.config.outputs.config }}" \
                       --bundles appimage
 
-            - name: Build macOS DMG
-              if: runner.os == 'macOS'
-              env:
-                  BUILD_SCRIPT: ${{ needs.prepare.outputs.build_script }}
-                  VRCX_0_BUILD_LABEL: ${{ inputs.variant }}
-                  VRCX_0_BUILD_BADGE: ${{ needs.prepare.outputs.display_name }} ${{ needs.prepare.outputs.timestamp }}
-                  VRCX_0_WEBKIT_BUILD_TARGET: safari18.2
-              run: |
-                  npm run "$BUILD_SCRIPT" -- \
-                      --target "${{ matrix.rust_target }}" \
-                      --config "${{ steps.config.outputs.config }}" \
-                      --bundles dmg
-
             - id: collect
               name: Collect package artifact
               env:
@@ -258,15 +228,140 @@ jobs:
                       linux_x86_64)
                           cp target/release/bundle/appimage/*.AppImage "package-assets/${stem}_linux_x86_64.AppImage"
                           ;;
-                      macos_universal)
-                          cp "target/${{ matrix.rust_target }}/release/bundle/dmg/"*.dmg "package-assets/${stem}_${{ matrix.platform }}.dmg"
-                          ;;
                       *)
                           echo "Unknown platform: ${{ matrix.platform }}" >&2
                           exit 1
                           ;;
                   esac
 
+                  echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
+                  ls -la package-assets
+
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: ${{ steps.collect.outputs.artifact_name }}
+                  path: package-assets/*
+                  if-no-files-found: error
+
+    # Each macOS architecture compiles on its own runner in parallel; the
+    # bundle job merges them into one universal app and DMG.
+    macos-binary:
+        name: ${{ needs.prepare.outputs.display_name }} macOS binary (${{ matrix.label }})
+        needs: prepare
+        runs-on: macos-latest
+        defaults:
+            run:
+                shell: bash
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - label: Apple Silicon
+                      rust_target: aarch64-apple-darwin
+                    - label: Intel
+                      rust_target: x86_64-apple-darwin
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+
+            - uses: dtolnay/rust-toolchain@stable
+              with:
+                  targets: ${{ matrix.rust_target }}
+
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  workspaces: . -> target
+                  shared-key: ${{ inputs.variant }}-macos-${{ matrix.rust_target }}
+
+            - uses: ./.github/actions/setup-node
+
+            - name: Validate package version
+              if: inputs.variant == 'devkit'
+              run: |
+                  node scripts/prepare-release-version.ts \
+                      --version "$(node -p "require('./src-tauri/tauri.conf.json').version")" \
+                      --dry-run
+
+            - name: Build binary
+              env:
+                  BUILD_SCRIPT: ${{ needs.prepare.outputs.build_script }}
+                  VRCX_0_BUILD_LABEL: ${{ inputs.variant }}
+                  VRCX_0_BUILD_BADGE: ${{ needs.prepare.outputs.display_name }} ${{ needs.prepare.outputs.timestamp }}
+                  VRCX_0_WEBKIT_BUILD_TARGET: safari18.2
+              run: |
+                  override_config="${RUNNER_TEMP}/tauri-package-override.json"
+                  echo '{"bundle":{"createUpdaterArtifacts":false,"targets":["dmg"]}}' > "$override_config"
+                  npm run "$BUILD_SCRIPT" -- \
+                      --target "${{ matrix.rust_target }}" \
+                      --config "$override_config" \
+                      --no-bundle
+
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: macos-binary-${{ inputs.variant }}-${{ matrix.rust_target }}
+                  path: |
+                      target/${{ matrix.rust_target }}/release/vrcx-0
+                      src-tauri/resources/licenses/THIRD_PARTY_NOTICES.txt
+                  if-no-files-found: error
+                  retention-days: 1
+
+    macos-bundle:
+        name: ${{ needs.prepare.outputs.display_name }} macos_universal
+        needs:
+            - prepare
+            - macos-binary
+        runs-on: macos-latest
+        defaults:
+            run:
+                shell: bash
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: dtolnay/rust-toolchain@stable
+
+            - uses: ./.github/actions/setup-node
+
+            - uses: actions/download-artifact@v8
+              with:
+                  pattern: macos-binary-${{ inputs.variant }}-*
+                  merge-multiple: true
+
+            - name: Merge universal binary
+              run: |
+                  universal_dir="target/universal-apple-darwin/release"
+                  mkdir -p "$universal_dir"
+                  lipo -create \
+                      target/aarch64-apple-darwin/release/vrcx-0 \
+                      target/x86_64-apple-darwin/release/vrcx-0 \
+                      -output "$universal_dir/vrcx-0"
+                  chmod +x "$universal_dir/vrcx-0"
+                  lipo -info "$universal_dir/vrcx-0"
+
+            - name: Bundle DMG
+              run: |
+                  override_config="${RUNNER_TEMP}/tauri-package-override.json"
+                  echo '{"bundle":{"createUpdaterArtifacts":false,"targets":["dmg"]}}' > "$override_config"
+                  npm run tauri -- bundle --target universal-apple-darwin --bundles dmg --config "$override_config"
+
+            - id: collect
+              name: Collect package artifact
+              env:
+                  PACKAGE_VARIANT: ${{ inputs.variant }}
+              run: |
+                  mkdir -p package-assets
+                  version="$(node -p "require('./src-tauri/tauri.conf.json').version")"
+                  timestamp="${{ needs.prepare.outputs.timestamp }}"
+
+                  if [[ "$PACKAGE_VARIANT" == "preview" ]]; then
+                      stem="VRCX-0-Nanashi_${version}_preview_${timestamp}"
+                      artifact_name="preview-macos_universal-${version}-${timestamp}"
+                  else
+                      stem="VRCX-0-Nanashi_${version}_devkit"
+                      artifact_name="devkit-macos_universal-${version}"
+                  fi
+
+                  cp target/universal-apple-darwin/release/bundle/dmg/*.dmg "package-assets/${stem}_macos_universal.dmg"
                   echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
                   ls -la package-assets
 
