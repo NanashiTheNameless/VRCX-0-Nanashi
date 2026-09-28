@@ -58,7 +58,7 @@ const FRIEND_CIRCLES: Playbook = Playbook {
     constraint_prompt: "The user is asking which of their friends know each other (friend \
 groups / circles). Call get_friend_circles exactly once; it returns ready-made \
 mutual-friendship circles with a summary. Narrate from that summary and the circle rows - \
-do NOT attempt graph reasoning yourself. Circles reflect who is friends with whom (mutual \
+do not attempt graph reasoning yourself. Circles reflect who is friends with whom (mutual \
 connections), which is not the same as who plays together.",
 };
 
@@ -67,8 +67,8 @@ const CO_PRESENCE: Playbook = Playbook {
     constraint_prompt: "The user wants to know who they play with or spend the most time with. \
 Call get_copresence_summary once; it returns people ranked by time spent together, computed \
 from the local game log (reliable even for private instances you attended). It defaults to \
-current friends and is already ranked - read the top rows, do NOT loop or re-rank. For an \
-all-time / 'ever' question OMIT timeWindow entirely; only pass a window if the user named a \
+current friends and is already ranked - read the top rows, do not loop or re-rank. For an \
+all-time / 'ever' question omit timeWindow entirely; only pass a window if the user named a \
 period. This measures time played together, which is not the same as who is friends with whom.",
 };
 
@@ -77,7 +77,7 @@ const BEST_TIME: Playbook = Playbook {
     constraint_prompt: "The user wants the best time to log on to find the most friends online. \
 Call get_best_time_to_play once; it returns hour-of-day or weekday buckets ranked by how many \
 distinct friends come online, already in the user's local time. Narrate the peak buckets from \
-the summary; do NOT tally the raw log yourself. This is about the whole friend list, not one \
+the summary; do not tally the raw log yourself. This is about the whole friend list, not one \
 named person.",
 };
 
@@ -104,8 +104,9 @@ const ACTIVITY_TIMELINE: Playbook = Playbook {
     constraint_prompt: "The user wants to know how their own playtime is distributed over time \
 (which months, weeks, or days they played most, or their trend). Call get_activity_timeline \
 once; it buckets the user's own play history by year/month/week/day-of-week/hour-of-day with a \
-ready summary, already in the user's local time. OMIT timeWindow for all history. Narrate the \
-peak buckets from the summary; do NOT add up sessions yourself.",
+ready summary, already in the user's local time. Pass timeWindow for the period the user \
+named; omit it only when they ask about all history. Narrate the peak buckets from the \
+summary; do not add up sessions yourself.",
 };
 
 const SOCIAL_RECAP: Playbook = Playbook {
@@ -113,7 +114,7 @@ const SOCIAL_RECAP: Playbook = Playbook {
     constraint_prompt: "The user wants an overall recap of their recent social activity (their \
 week, month, or a period). Call summarize_social_period once; it composes several analyses - \
 your activity, top companions, new and fading friends, top worlds, best times - into one \
-bundle to narrate. Read the whole bundle and summarize it; do NOT separately call the \
+bundle to narrate. Read the whole bundle and summarize it; do not separately call the \
 individual tools it already includes.",
 };
 

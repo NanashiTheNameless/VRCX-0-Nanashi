@@ -1,5 +1,7 @@
 import {
     fallbackLocaleMessages,
+    getLanguageName,
+    getLoadedLocaleMessages,
     registerCustomLocale,
     unregisterCustomLocale,
     type LocalizedStringTable
@@ -126,6 +128,22 @@ export function localeMetaFor(
     };
 }
 
+/**
+ * The UI language as a model should read it: "Klingon (tlh_aa)" rather than a
+ * bare code, which means little for custom languages, plus that language
+ * file's saved AI instructions.
+ */
+export function describeLanguageForModel(code: string): string {
+    const name = getLanguageName(code);
+    const label = name && name !== code ? `${name} (${code})` : code;
+    const instructions = readLocaleMeta(
+        getLoadedLocaleMessages(code)
+    ).aiInstructions?.trim();
+    return instructions
+        ? `${label}. Language instructions: ${instructions}`
+        : label;
+}
+
 // ---------------------------------------------------------------------------
 // UI translation: English source -> new custom locale file.
 
@@ -150,9 +168,9 @@ const SAVE_EVERY = 200;
 const AI_BATCH_PROMPT = [
     'You translate user-interface strings for a desktop companion app for the game VRChat into {targetLang}.',
     'The user message is a JSON object that maps ids to English strings.',
-    'Reply with ONLY a JSON object that has exactly the same ids mapped to the translated strings.',
-    'Keep every [[n]] token exactly as written, keep product names (VRChat, VRCX, VRCX-0-Nanashi, Steam, Discord) unchanged,',
-    'and use plain ASCII punctuation where the target language allows it.'
+    'Reply with only a JSON object that has exactly the same ids mapped to the translated strings.',
+    'Keep every [[n]] token exactly as written, and keep product names (VRChat, VRCX, VRCX-0-Nanashi, Steam, Discord) unchanged.',
+    "Use the target language's own punctuation and typographic conventions."
 ].join(' ');
 
 export function flattenLocaleStrings(

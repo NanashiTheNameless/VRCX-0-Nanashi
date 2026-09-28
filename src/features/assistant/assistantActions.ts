@@ -1,4 +1,5 @@
 import { commands, type Session } from '@/platform/tauri/bindings';
+import { describeLanguageForModel } from '@/services/customLocaleService';
 import { i18n } from '@/services/i18nService';
 import { useAssistantChatStore } from '@/state/assistantChatStore';
 
@@ -87,7 +88,7 @@ export async function sendMessage(text: string): Promise<void> {
         result = await commands.appAssistantSendMessage(
             sessionId,
             trimmed,
-            i18n.language || null
+            i18n.language ? describeLanguageForModel(i18n.language) : null
         );
     } catch (error) {
         const current = useAssistantChatStore.getState();

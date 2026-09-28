@@ -646,7 +646,8 @@ struct CopresenceSummaryParams {
     /// Time window to search. Accepts {from, to} RFC3339, a four-digit calendar
     /// year, or a relative string ("today", "yesterday", "this week",
     /// "last week", "this month", "last month", or a rolling window like
-    /// "7d", "2w", "3mo"). Resolved in UTC; weeks start Monday. Omit only for
+    /// "7d", "2w", "3mo"). Calendar periods follow the user's local calendar;
+    /// weeks start Monday. Omit only for
     /// all history ("ever", "so far").
     #[serde(default)]
     time_window: TimeWindowParams,

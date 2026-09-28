@@ -2,9 +2,14 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/platform/tauri/bindings', () => ({ commands: {} }));
 
-import { fallbackLocaleMessages } from '@/localization/index';
+import {
+    fallbackLocaleMessages,
+    registerCustomLocale,
+    unregisterCustomLocale
+} from '@/localization/index';
 
 import {
+    describeLanguageForModel,
     LOCALE_META_KEY,
     localeMetaFor,
     readLocaleMeta,
@@ -120,6 +125,21 @@ describe('custom locale helpers', () => {
             model: 'm',
             aiInstructions: ''
         });
+    });
+
+    it('describes the UI language by name, with saved AI instructions', () => {
+        expect(describeLanguageForModel('en')).toBe('English (en)');
+        registerCustomLocale('tlh_aa', 'Klingon', {
+            [LOCALE_META_KEY]: { aiInstructions: ' Warrior tone. ' }
+        });
+        try {
+            expect(describeLanguageForModel('tlh_aa')).toBe(
+                'Klingon (tlh_aa). Language instructions: Warrior tone.'
+            );
+        } finally {
+            unregisterCustomLocale('tlh_aa');
+        }
+        expect(describeLanguageForModel('xx_unknown')).toBe('xx_unknown');
     });
 
     it('does not treat metadata as translatable strings', () => {

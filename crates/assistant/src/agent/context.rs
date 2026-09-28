@@ -1,4 +1,4 @@
-use chrono::{DateTime, Datelike, FixedOffset, Utc};
+use chrono::{DateTime, Datelike, FixedOffset};
 use vrcx_0_contracts::llm::{ChatMessage, FunctionCall, ToolCall};
 
 use crate::entities::Entity;
@@ -54,14 +54,12 @@ pub(crate) enum ContextMode {
 }
 
 fn current_time_directive(now_local: DateTime<FixedOffset>) -> String {
-    let now_utc = now_local.with_timezone(&Utc);
     format!(
-        "Current UTC date: {date} ({weekday}). Resolve relative time periods \
-(\"today\", \"this week\", \"7d\") against this UTC date.\n\
-The user's local timezone is UTC{offset}. Convert the UTC timestamps returned by \
-tools into this timezone when presenting them.",
-        date = now_utc.format("%Y-%m-%d"),
-        weekday = now_utc.weekday(),
+        "Current local date: {date} ({weekday}), timezone UTC{offset}. Calendar periods \
+(\"today\", \"yesterday\", \"this week\") follow this local calendar.\n\
+Tools return timestamps in UTC. Convert them into this timezone when presenting them.",
+        date = now_local.format("%Y-%m-%d"),
+        weekday = now_local.weekday(),
         offset = now_local.format("%:z"),
     )
 }
@@ -108,8 +106,8 @@ fn build_context_messages(
     }
     if let Some(locale) = locale.map(str::trim).filter(|l| !l.is_empty()) {
         system_sections.push(format!(
-            "Write the reply in the language of interface locale \"{locale}\". Keep \
-proper nouns (names, world titles) as-is."
+            "Write the reply in the user's interface language: {locale}. Keep proper nouns \
+(names, world titles) as-is."
         ));
     }
     if mode == ContextMode::Narrator {
@@ -505,12 +503,13 @@ mod tests {
     }
 
     #[test]
-    fn current_time_directive_states_utc_date_and_local_offset() {
-        // 2026-06-28 06:00 at UTC+09:00 is still 2026-06-27 (Saturday) in UTC.
+    fn current_time_directive_states_the_local_date_and_offset() {
+        // 2026-06-28 06:00 at UTC+09:00 is still 2026-06-27 in UTC, but the user's
+        // calendar - which the time-window tools now follow - says Sunday the 28th.
         let now_local = DateTime::parse_from_rfc3339("2026-06-28T06:00:00+09:00").unwrap();
         let directive = current_time_directive(now_local);
-        assert!(directive.contains("2026-06-27"));
-        assert!(directive.contains("Sat"));
+        assert!(directive.contains("Current local date: 2026-06-28 (Sun)"));
+        assert!(!directive.contains("2026-06-27"));
         assert!(directive.contains("UTC+09:00"));
     }
 
