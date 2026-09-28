@@ -159,7 +159,7 @@ export const ConfigKeys = defineConfigKeys({
     notificationTTSNickName: { type: 'bool', default: false },
     notificationIconDot: { type: 'bool', default: true },
     taskbarIconDot: { type: 'bool', default: true },
-    showPostUpdateChangelogToast: { type: 'bool', default: true },
+    showPostUpdateChangelogToast: { type: 'bool', default: false },
     xsNotifications: { type: 'bool', default: false },
     ovrtHudNotifications: { type: 'bool', default: false },
     ovrtWristNotifications: { type: 'bool', default: false },
@@ -316,7 +316,7 @@ export const ConfigKeys = defineConfigKeys({
     avatarRemoteDatabaseProviderList: {
         type: 'string',
         default:
-            '["https://vrcx.vrcdb.com/avatars/Avatar/VRCX","https://api.avtrdb.com/v3/avatar/search/vrcx"]'
+            '["https://vrcx.vrcdb.com/avatars/Avatar/VRCX","https://api.avtrdb.com/v3/avatar/search/vrcx","https://db.vrcnext.com/api/vrcx"]'
     },
     avatarRemoteDatabaseProvider: { type: 'string', default: '' }
 });

@@ -269,7 +269,7 @@ export function DashboardPanelSelectorDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-h-[80vh] overflow-hidden sm:max-w-2xl">
+            <DialogContent className="max-h-[80vh] grid-rows-[auto_minmax(0,1fr)] overflow-hidden sm:max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>
                         {t('view.dashboard.action.select_panel')}

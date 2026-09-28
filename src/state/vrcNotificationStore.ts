@@ -177,15 +177,39 @@ function notificationRowsCapacity(currentLength: number): number {
     return Math.max(NOTIFICATION_ROWS_MAX_ENTRIES, currentLength);
 }
 
+/** Newest first; ties broken by id so the order is stable. */
+function compareRows(left: NotificationRow, right: NotificationRow): number {
+    const leftTime = getNotificationTs(left);
+    const rightTime = getNotificationTs(right);
+    if (leftTime !== rightTime) {
+        return rightTime - leftTime;
+    }
+    return String(right?.id || '').localeCompare(String(left?.id || ''));
+}
+
 function sortRows(rows: NotificationRow[]): NotificationRow[] {
-    return [...rows].sort((left, right) => {
-        const leftTime = getNotificationTs(left);
-        const rightTime = getNotificationTs(right);
-        if (leftTime !== rightTime) {
-            return rightTime - leftTime;
+    return [...rows].sort(compareRows);
+}
+
+/**
+ * Insert `row` into already-sorted `rows` (which must not contain it) with a
+ * binary search, instead of re-sorting the whole list on every live event.
+ */
+function insertSortedRow(
+    rows: NotificationRow[],
+    row: NotificationRow
+): NotificationRow[] {
+    let low = 0;
+    let high = rows.length;
+    while (low < high) {
+        const middle = (low + high) >>> 1;
+        if (compareRows(rows[middle], row) <= 0) {
+            low = middle + 1;
+        } else {
+            high = middle;
         }
-        return String(right?.id || '').localeCompare(String(left?.id || ''));
-    });
+    }
+    return [...rows.slice(0, low), row, ...rows.slice(low)];
 }
 
 function createNotificationStateFromSortedRows(
@@ -446,20 +470,22 @@ export const useVrcNotificationStore = create<VrcNotificationStore>(
                 const existing =
                     state.rows.find((row) => row.id === notification.id) || {};
                 const merged = { ...existing, ...notification };
-                const rows = [
-                    merged,
-                    ...state.rows.filter((row) => row.id !== notification.id)
-                ];
-                const next = createNotificationState(
-                    rows,
-                    state.detail,
-                    notificationRowsCapacity(state.rows.length)
+                const capacity = notificationRowsCapacity(state.rows.length);
+                const rows = insertSortedRow(
+                    state.rows.filter((row) => row.id !== notification.id),
+                    merged
                 );
-                if (next.rows.some((row) => row.id === notification.id)) {
-                    return next;
+                if (rows.indexOf(merged) < capacity) {
+                    return createNotificationStateFromSortedRows(
+                        rows,
+                        state.detail,
+                        capacity
+                    );
                 }
-                return createNotificationState(
-                    [merged, ...next.rows.slice(0, -1)],
+                // It sorts past the cap (e.g. a backfilled old row): keep it
+                // anyway, dropping the last row that would have been kept.
+                return createNotificationStateFromSortedRows(
+                    [...rows.slice(0, capacity - 1), merged],
                     state.detail
                 );
             });

@@ -25,6 +25,7 @@ pub mod text;
 pub mod time;
 pub mod trust;
 pub mod two_factor_method;
+pub mod user_agent;
 pub mod user_facts;
 pub mod vrchat_endpoints;
 pub mod vrchat_ids;

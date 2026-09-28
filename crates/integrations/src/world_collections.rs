@@ -27,6 +27,7 @@ pub async fn create_world_collection(
     payload: &WorldCollectionCreatePayload,
 ) -> Result<WorldCollectionCreateResponse, WorldCollectionShareError> {
     let client = reqwest::Client::builder()
+        .user_agent(vrcx_0_core::user_agent::app_user_agent())
         .timeout(WORLD_COLLECTIONS_UPLOAD_TIMEOUT)
         .build()
         .map_err(|error| {
@@ -64,6 +65,7 @@ pub async fn register_world_revision(
     payload: &WorldOpenRegisterPayload,
 ) -> Result<(), WorldCollectionShareError> {
     let client = reqwest::Client::builder()
+        .user_agent(vrcx_0_core::user_agent::app_user_agent())
         .timeout(WORLD_COLLECTIONS_UPLOAD_TIMEOUT)
         .build()
         .map_err(|error| {
@@ -100,6 +102,7 @@ pub async fn mint_world_collection_token(
     owner_hint: &str,
 ) -> Result<WorldCollectionTokenMintResponse, WorldCollectionShareError> {
     let client = reqwest::Client::builder()
+        .user_agent(vrcx_0_core::user_agent::app_user_agent())
         .timeout(WORLD_COLLECTIONS_FETCH_TIMEOUT)
         .build()
         .map_err(|error| {
@@ -156,6 +159,7 @@ pub async fn fetch_world_collection(
 ) -> Result<WorldCollectionSnapshotResponse, WorldCollectionShareError> {
     let id = validate_collection_shortcode(id)?;
     let client = reqwest::Client::builder()
+        .user_agent(vrcx_0_core::user_agent::app_user_agent())
         .timeout(WORLD_COLLECTIONS_FETCH_TIMEOUT)
         .build()
         .map_err(|error| {

@@ -5,6 +5,21 @@ use std::{
     path::{Path, PathBuf},
 };
 
+/// Drop the Windows verbatim prefix (`\\?\C:\...` becomes `C:\...`, and
+/// `\\?\UNC\server\share` becomes `\\server\share`). Canonicalized paths
+/// carry it, and Node cannot resolve scripts under it: it fails with
+/// `EISDIR: illegal operation on a directory, lstat 'C:'`.
+pub(crate) fn without_verbatim_prefix(path: &Path) -> PathBuf {
+    let text = path.to_string_lossy();
+    if let Some(rest) = text.strip_prefix(r"\\?\UNC\") {
+        return PathBuf::from(format!(r"\\{rest}"));
+    }
+    match text.strip_prefix(r"\\?\") {
+        Some(rest) if rest.as_bytes().get(1) == Some(&b':') => PathBuf::from(rest),
+        _ => path.to_path_buf(),
+    }
+}
+
 pub(crate) fn hash(bytes: &[u8]) -> String {
     Sha256::digest(bytes)
         .iter()
@@ -133,4 +148,28 @@ pub(crate) fn absolute_tools(raw: &str) -> Result<PathBuf, String> {
         return Err("Tools folder must be inside VRChat's application data folder".into());
     }
     Ok(path)
+}
+
+#[cfg(test)]
+mod verbatim_tests {
+    use super::without_verbatim_prefix;
+    use std::path::{Path, PathBuf};
+
+    #[test]
+    fn strips_windows_verbatim_prefixes_only() {
+        assert_eq!(
+            without_verbatim_prefix(Path::new(r"\\?\C:\Users\me\ytdlp")),
+            PathBuf::from(r"C:\Users\me\ytdlp")
+        );
+        assert_eq!(
+            without_verbatim_prefix(Path::new(r"\\?\UNC\server\share\ytdlp")),
+            PathBuf::from(r"\\server\share\ytdlp")
+        );
+        for unchanged in [r"C:\Users\me\ytdlp", "/home/me/ytdlp", r"\\?\Volume{abc}\x"] {
+            assert_eq!(
+                without_verbatim_prefix(Path::new(unchanged)),
+                PathBuf::from(unchanged)
+            );
+        }
+    }
 }

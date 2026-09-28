@@ -9857,6 +9857,7 @@ dependencies = [
  "specta",
  "tokio",
  "tracing",
+ "vrcx-0-core",
  "windows-sys 0.61.2",
  "zip 8.6.0",
 ]

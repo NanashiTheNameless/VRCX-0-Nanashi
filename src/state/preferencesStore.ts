@@ -338,7 +338,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     randomUserColours: false,
     notificationIconDot: true,
     taskbarIconDot: true,
-    showPostUpdateChangelogToast: true,
+    showPostUpdateChangelogToast: false,
     autoUpdateVRCX: 'Auto Install' as AppUpdateMode,
     desktopToast: 'Never',
     afkDesktopToast: false,

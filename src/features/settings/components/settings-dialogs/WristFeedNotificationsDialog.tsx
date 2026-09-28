@@ -490,7 +490,7 @@ function OverlayActivityFilterDialog({
                         );
                         if (category) setSelectedCategory(category);
                     }}
-                    className="grid h-[min(62vh,36rem)] min-h-0 grid-cols-[18rem_minmax(0,1fr)] gap-5 overflow-hidden"
+                    className="grid h-[min(62vh,36rem)] min-h-0 grid-cols-[18rem_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-5 overflow-hidden"
                 >
                     <ScrollArea className="h-full border-r pr-3">
                         <TabsList className="h-fit w-full gap-1">

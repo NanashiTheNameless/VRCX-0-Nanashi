@@ -84,10 +84,8 @@ export function useFavoritesItemActions({
         }
         setAvatarHistoryLoading(true);
         try {
-            const rows = await avatarLocalRepository.getAvatarHistory(
-                currentUserId,
-                100
-            );
+            const rows =
+                await avatarLocalRepository.getAvatarHistory(currentUserId);
             setAvatarHistory(rows);
         } catch (error) {
             toast.add({

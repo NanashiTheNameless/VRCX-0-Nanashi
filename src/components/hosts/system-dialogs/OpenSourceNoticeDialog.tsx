@@ -158,7 +158,7 @@ export function OpenSourceNoticeDialog({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-h-[85vh] overflow-hidden sm:max-w-5xl">
+            <DialogContent className="max-h-[85vh] grid-rows-[auto_minmax(0,1fr)] overflow-hidden sm:max-w-5xl">
                 <DialogHeader>
                     <DialogTitle>{t('dialog.open_source.header')}</DialogTitle>
                     <DialogDescription>

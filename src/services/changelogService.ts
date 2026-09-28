@@ -85,7 +85,7 @@ export async function loadPostUpdateChangelogToastState(
 ) {
     const currentVersion = normalizeVersion(version);
     const [enabled, lastStartedVersion, seenVersion] = await Promise.all([
-        configRepository.getBool(POST_UPDATE_CHANGELOG_TOAST_CONFIG_KEY, true),
+        configRepository.getBool(POST_UPDATE_CHANGELOG_TOAST_CONFIG_KEY, false),
         configRepository.getString(LAST_STARTED_VERSION_CONFIG_KEY, ''),
         configRepository.getString(
             SEEN_POST_UPDATE_CHANGELOG_VERSION_CONFIG_KEY,

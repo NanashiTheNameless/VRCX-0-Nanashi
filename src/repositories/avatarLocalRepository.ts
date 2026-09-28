@@ -74,16 +74,21 @@ async function getAllAvatarTimeSpent(userId: string) {
     return map;
 }
 
-async function getAvatarHistory(userId: string, limit = 100) {
+/** Most recent worn avatars loaded for the history view. */
+export const AVATAR_HISTORY_LIMIT = 1000;
+
+async function getAvatarHistory(userId: string, limit = AVATAR_HISTORY_LIMIT) {
     const normalizedUserId = userId.trim();
     if (!normalizedUserId) {
         return [];
     }
 
-    const normalizedLimit = Number.isFinite(limit) ? Math.trunc(limit) : 100;
+    const normalizedLimit = Number.isFinite(limit)
+        ? Math.trunc(limit)
+        : AVATAR_HISTORY_LIMIT;
     return commands.appAvatarHistoryList(
         normalizedUserId,
-        normalizedLimit || 100
+        normalizedLimit || AVATAR_HISTORY_LIMIT
     );
 }
 

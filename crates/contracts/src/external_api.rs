@@ -154,10 +154,17 @@ fn external_get_input(url: String, headers: HashMap<String, String>) -> External
     }
 }
 
+/// Internal marker asking the web client to send the user agent that carries
+/// the project contact link. The web client removes it; it is never sent.
+pub const IDENTIFY_WITH_CONTACT_HEADER: &str = "X-VRCX-0-Identify-With-Contact";
+
 pub fn avatar_search_get_input(url: &str, vrcx_id: &str) -> ExternalHttpRequestInput {
     external_get_input(
         url.to_string(),
-        HashMap::from([("VRCX-ID".to_string(), vrcx_id.to_string())]),
+        HashMap::from([
+            ("VRCX-ID".to_string(), vrcx_id.to_string()),
+            (IDENTIFY_WITH_CONTACT_HEADER.to_string(), "1".to_string()),
+        ]),
     )
 }
 
@@ -224,18 +231,25 @@ pub fn vrc_status_json_get_input(path: &str) -> ExternalHttpRequestInput {
     )
 }
 
+/// GitHub asks API clients to identify themselves with a way to reach the
+/// developer, so these requests carry the contact user agent.
+fn github_get_input(url: &str, mut headers: HashMap<String, String>) -> ExternalHttpRequestInput {
+    headers.insert(IDENTIFY_WITH_CONTACT_HEADER.to_string(), "1".to_string());
+    external_get_input(url.to_string(), headers)
+}
+
 pub fn github_releases_get_input(
     url: &str,
     headers: HashMap<String, String>,
 ) -> ExternalHttpRequestInput {
-    external_get_input(url.to_string(), headers)
+    github_get_input(url, headers)
 }
 
 pub fn github_contributors_get_input(
     url: &str,
     headers: HashMap<String, String>,
 ) -> ExternalHttpRequestInput {
-    external_get_input(url.to_string(), headers)
+    github_get_input(url, headers)
 }
 
 pub fn image_data_url_get_input(url: &str) -> ExternalHttpRequestInput {

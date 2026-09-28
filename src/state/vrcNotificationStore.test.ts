@@ -56,6 +56,11 @@ import { useRuntimeStore } from './runtimeStore';
 import { useShellStore } from './shellStore';
 import { useVrcNotificationStore } from './vrcNotificationStore';
 
+// The cap tests replay ~2,000 live upserts one by one; each rebuilds the
+// derived unseen/recent lists, so they need more than the 5s default on a
+// busy machine (e.g. alongside the full suite).
+const LIVE_UPSERT_STRESS_TIMEOUT_MS = 15_000;
+
 describe('vrcNotificationStore', () => {
     beforeEach(() => {
         notificationRepositoryMock.queryNotifications.mockReset();
@@ -98,49 +103,57 @@ describe('vrcNotificationStore', () => {
         useVrcNotificationStore.getState().resetVrcNotificationState();
     });
 
-    it('caps live upserts so a long session cannot grow rows without bound', () => {
-        const store = useVrcNotificationStore.getState();
-        for (let index = 0; index < 2050; index += 1) {
+    it(
+        'caps live upserts so a long session cannot grow rows without bound',
+        () => {
+            const store = useVrcNotificationStore.getState();
+            for (let index = 0; index < 2050; index += 1) {
+                store.upsertNotification({
+                    id: `notif_${index}`,
+                    type: 'inviteResponse',
+                    version: 2,
+                    seen: true,
+                    created_at: new Date(1700000000000 + index).toISOString()
+                });
+            }
+
+            const { rows } = useVrcNotificationStore.getState();
+            expect(rows).toHaveLength(2000);
+            expect(rows[0].id).toBe('notif_2049');
+            expect(rows.some((row) => row.id === 'notif_0')).toBe(false);
+        },
+        LIVE_UPSERT_STRESS_TIMEOUT_MS
+    );
+
+    it(
+        'keeps an upserted notification even when it sorts past the cap',
+        () => {
+            const store = useVrcNotificationStore.getState();
+            for (let index = 0; index < 2000; index += 1) {
+                store.upsertNotification({
+                    id: `notif_${index}`,
+                    type: 'inviteResponse',
+                    version: 2,
+                    seen: true,
+                    created_at: new Date(1700000000000 + index).toISOString()
+                });
+            }
+            expect(useVrcNotificationStore.getState().rows).toHaveLength(2000);
+
             store.upsertNotification({
-                id: `notif_${index}`,
+                id: 'notif_backfill',
                 type: 'inviteResponse',
                 version: 2,
-                seen: true,
-                created_at: new Date(1700000000000 + index).toISOString()
+                seen: true
             });
-        }
 
-        const { rows } = useVrcNotificationStore.getState();
-        expect(rows).toHaveLength(2000);
-        expect(rows[0].id).toBe('notif_2049');
-        expect(rows.some((row) => row.id === 'notif_0')).toBe(false);
-    });
-
-    it('keeps an upserted notification even when it sorts past the cap', () => {
-        const store = useVrcNotificationStore.getState();
-        for (let index = 0; index < 2000; index += 1) {
-            store.upsertNotification({
-                id: `notif_${index}`,
-                type: 'inviteResponse',
-                version: 2,
-                seen: true,
-                created_at: new Date(1700000000000 + index).toISOString()
-            });
-        }
-        expect(useVrcNotificationStore.getState().rows).toHaveLength(2000);
-
-        store.upsertNotification({
-            id: 'notif_backfill',
-            type: 'inviteResponse',
-            version: 2,
-            seen: true
-        });
-
-        const { rows } = useVrcNotificationStore.getState();
-        expect(rows).toHaveLength(2000);
-        expect(rows.some((row) => row.id === 'notif_backfill')).toBe(true);
-        expect(rows.some((row) => row.id === 'notif_0')).toBe(false);
-    });
+            const { rows } = useVrcNotificationStore.getState();
+            expect(rows).toHaveLength(2000);
+            expect(rows.some((row) => row.id === 'notif_backfill')).toBe(true);
+            expect(rows.some((row) => row.id === 'notif_0')).toBe(false);
+        },
+        LIVE_UPSERT_STRESS_TIMEOUT_MS
+    );
 
     it('never truncates a list that was loaded from the database', async () => {
         const loaded = Array.from({ length: 2400 }, (_, index) => ({

@@ -33,7 +33,7 @@ pub struct Runtime {
 }
 impl Runtime {
     pub fn new(data_dir: PathBuf, default_tools: String) -> Arc<Self> {
-        let root = data_dir.join("ytdlp");
+        let root = files::without_verbatim_prefix(&data_dir.join("ytdlp"));
         let settings = files::read_json(&root.join("settings.json"));
         let manifest = files::read_json(&root.join("manifest.json"));
         let message = settings
@@ -401,7 +401,7 @@ impl Runtime {
 
 /// Headless recovery entry point for uninstallers. Does not download or read browser cookies.
 pub fn restore_for_uninstall(data_dir: &Path) -> Result<(), String> {
-    let root = data_dir.join("ytdlp");
+    let root = files::without_verbatim_prefix(&data_dir.join("ytdlp"));
     if !root.join("settings.json").is_file() {
         return Ok(());
     }

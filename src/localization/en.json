@@ -1427,7 +1427,7 @@
             "avatars": {
                 "search": "Search",
                 "vrchat_favorites": "VRChat Favorites",
-                "local_favorites": "Local Favorites (VRC+)",
+                "local_favorites": "Local Favorites",
                 "new_group": "New Group",
                 "local_history": "Local History",
                 "styles": "Styles",
@@ -5007,7 +5007,7 @@
         "favorite": {
             "vrchat_favorites": "VRChat Favorites",
             "local_favorites": "Local Favorites",
-            "local_avatar_favorites": "Local Favorites (VRC+)"
+            "local_avatar_favorites": "Local Favorites"
         },
         "social_status": {
             "presets": "Presets"

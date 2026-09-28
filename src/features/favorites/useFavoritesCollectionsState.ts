@@ -207,7 +207,7 @@ export function useFavoritesCollectionsState({
         }
         setAvatarHistoryLoading(true);
         avatarLocalRepository
-            .getAvatarHistory(currentUserId, 100)
+            .getAvatarHistory(currentUserId)
             .then((rows) => {
                 if (active) {
                     setAvatarHistory(rows);

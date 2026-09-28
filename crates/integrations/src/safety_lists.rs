@@ -11,7 +11,9 @@ pub async fn fetch_safety_list(url: &str) -> Result<String, String> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(20))
         .redirect(reqwest::redirect::Policy::none())
-        .user_agent("VRCX-0-Nanashi/safety-lists")
+        .user_agent(vrcx_0_core::user_agent::component_user_agent(
+            "safety-lists",
+        ))
         .build()
         .map_err(|e| e.to_string())?;
     let mut response = client.get(url).send().await.map_err(|e| e.to_string())?;

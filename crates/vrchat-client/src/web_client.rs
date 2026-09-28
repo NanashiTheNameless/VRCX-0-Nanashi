@@ -4,15 +4,15 @@ use std::sync::Arc;
 
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use cookie_store::{CookieStore, RawCookie};
-use reqwest::header::{HeaderName, HeaderValue, CONTENT_TYPE, REFERER};
+use reqwest::header::{HeaderName, HeaderValue, CONTENT_TYPE, REFERER, USER_AGENT};
 use reqwest::multipart::{Form, Part};
 use reqwest::redirect::Policy;
 use reqwest::{Client, Method, Proxy};
+use vrcx_0_contracts::external_api::IDENTIFY_WITH_CONTACT_HEADER;
 use vrcx_0_core::vrchat_endpoints::{VRCHAT_CLOUD_ROOT_HOST, VRCHAT_SITE_HOST};
 use vrcx_0_core::{image_sniff::sniff_image_mime, proxy::with_remote_dns};
 
 pub type Result<T> = std::result::Result<T, WebClientError>;
-pub(crate) const BASE_USER_AGENT: &str = "VRCX-0-Nanashi";
 
 #[derive(Debug, thiserror::Error)]
 pub enum WebClientError {
@@ -40,13 +40,31 @@ pub use crate::cookies::{
     deserialize_cookie_store, deserialize_legacy_cookie_entries, serialize_cookie_store,
 };
 
+/// `<user agent> (+<repo>)`: sent to VRChat and to avatar search databases,
+/// which ask API clients for a way to contact the developer.
+pub(crate) fn contact_user_agent(user_agent: &str) -> String {
+    vrcx_0_core::user_agent::with_contact(user_agent)
+}
+
+/// A URL on one of VRChat's own hosts.
+pub(crate) fn is_vrchat_url(url: &str) -> bool {
+    url::Url::parse(url)
+        .ok()
+        .and_then(|url| url.host_str().map(vrcx_0_core::user_agent::is_vrchat_host))
+        .unwrap_or(false)
+}
+
+/// VRChat's own hosts, or a request that asked for it via the marker header.
+fn wants_contact_user_agent(url: &str, headers: &[(String, String)]) -> bool {
+    headers
+        .iter()
+        .any(|(key, _)| key.eq_ignore_ascii_case(IDENTIFY_WITH_CONTACT_HEADER))
+        || is_vrchat_url(url)
+}
+
+/// `VRCX-0-Nanashi/<version>`, plus `+local` for local builds.
 pub(crate) fn build_vrcx_user_agent(app_version: &str) -> String {
-    let app_version = app_version.trim();
-    if app_version.is_empty() {
-        BASE_USER_AGENT.into()
-    } else {
-        format!("{BASE_USER_AGENT}/{app_version}")
-    }
+    vrcx_0_core::user_agent::product_user_agent(app_version)
 }
 
 #[derive(Clone, Debug)]
@@ -587,6 +605,9 @@ impl WebClient {
             .map_err(|e| Error::Custom(format!("bad method: {e}")))?;
 
         let mut builder = client.request(method.clone(), &request.url);
+        if wants_contact_user_agent(&request.url, &request.headers) {
+            builder = builder.header(USER_AGENT, contact_user_agent(&self.user_agent));
+        }
 
         let mut content_type_override: Option<String> = None;
         for (key, val_str) in &request.headers {
@@ -594,7 +615,9 @@ impl WebClient {
                 content_type_override = Some(val_str.to_string());
                 continue;
             }
-            if key.eq_ignore_ascii_case("user-agent") {
+            if key.eq_ignore_ascii_case("user-agent")
+                || key.eq_ignore_ascii_case(IDENTIFY_WITH_CONTACT_HEADER)
+            {
                 continue;
             }
             if key.eq_ignore_ascii_case("referer") {
@@ -633,6 +656,9 @@ impl WebClient {
             .put(&request.url)
             .header(CONTENT_TYPE, file_mime)
             .body(file_data);
+        if wants_contact_user_agent(&request.url, &request.headers) {
+            builder = builder.header(USER_AGENT, contact_user_agent(&self.user_agent));
+        }
 
         if let Some(md5) = file_md5 {
             let md5_bytes = B64
@@ -645,7 +671,9 @@ impl WebClient {
             if key.eq_ignore_ascii_case("content-type") {
                 continue;
             }
-            if key.eq_ignore_ascii_case("user-agent") {
+            if key.eq_ignore_ascii_case("user-agent")
+                || key.eq_ignore_ascii_case(IDENTIFY_WITH_CONTACT_HEADER)
+            {
                 continue;
             }
             if let (Ok(name), Ok(value)) = (

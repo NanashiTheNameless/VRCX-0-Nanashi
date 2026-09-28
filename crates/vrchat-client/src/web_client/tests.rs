@@ -1,4 +1,11 @@
 use super::*;
+use vrcx_0_core::user_agent::{contact_url, BUILD_METADATA};
+
+/// The user agent for version 2.9.2 as this build sends it: with `+local`
+/// unless built by CI.
+fn ua_292() -> String {
+    format!("VRCX-0-Nanashi/2.9.2{BUILD_METADATA}")
+}
 
 async fn serve_socks5_response() -> (String, tokio::task::JoinHandle<String>) {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -156,14 +163,19 @@ fn accepts_cookie_store_with_vrchat_domain() {
 
 #[test]
 fn builds_user_agent_with_version() {
-    assert_eq!(build_vrcx_user_agent("2.9.2"), "VRCX-0-Nanashi/2.9.2");
-    assert_eq!(build_vrcx_user_agent("  2.9.2  "), "VRCX-0-Nanashi/2.9.2");
+    assert_eq!(build_vrcx_user_agent("2.9.2"), ua_292());
+    assert_eq!(build_vrcx_user_agent("  2.9.2  "), ua_292());
 }
 
 #[test]
 fn builds_user_agent_without_version_when_empty() {
-    assert_eq!(build_vrcx_user_agent(""), "VRCX-0-Nanashi");
-    assert_eq!(build_vrcx_user_agent("   "), "VRCX-0-Nanashi");
+    let expected = if BUILD_METADATA.is_empty() {
+        "VRCX-0-Nanashi"
+    } else {
+        "VRCX-0-Nanashi/local"
+    };
+    assert_eq!(build_vrcx_user_agent(""), expected);
+    assert_eq!(build_vrcx_user_agent("   "), expected);
 }
 
 #[tokio::test]
@@ -205,7 +217,7 @@ async fn transport_sends_owned_user_agent_and_ignores_request_override() -> Resu
     assert_eq!(response, (200, "ok".into()));
     assert!(captured
         .lines()
-        .any(|line| line.eq_ignore_ascii_case("user-agent: VRCX-0-Nanashi/2.9.2")));
+        .any(|line| line.eq_ignore_ascii_case(&format!("user-agent: {}", ua_292()))));
     assert!(!captured.contains("caller-override"));
     Ok(())
 }
@@ -399,8 +411,12 @@ fn fresh_http_client_reuses_runtime_cookie_jar() -> Result<()> {
     let built = web.build_standard_request_with(&fresh, &mut request)?;
 
     assert!(Arc::strong_count(&web.jar) > initial_references);
-    assert_eq!(web.user_agent, "VRCX-0-Nanashi/2.9.2");
-    assert!(built.headers().get(reqwest::header::USER_AGENT).is_none());
+    assert_eq!(web.user_agent, ua_292());
+    // A caller-supplied user agent is ignored; VRChat gets the contact one.
+    assert_eq!(
+        built.headers()[reqwest::header::USER_AGENT],
+        contact_user_agent(&ua_292())
+    );
     drop(fresh);
     assert_eq!(Arc::strong_count(&web.jar), initial_references);
     Ok(())
@@ -422,5 +438,65 @@ fn clear_auth_cookies_drops_auth_keeps_two_factor() -> Result<()> {
     let names: Vec<&str> = store.iter_any().map(|cookie| cookie.name()).collect();
     assert!(!names.contains(&"auth"));
     assert!(names.contains(&"twoFactorAuth"));
+    Ok(())
+}
+
+fn built_user_agent(
+    web: &WebClient,
+    url: &str,
+    headers: Vec<(String, String)>,
+) -> reqwest::Request {
+    let mut request = WebExecuteRequest::new(url.into(), "GET".into());
+    request.headers = headers;
+    web.build_standard_request(&mut request).unwrap()
+}
+
+#[test]
+fn vrchat_and_avatar_search_requests_carry_the_contact_link() -> Result<()> {
+    let web = WebClient::new(None, None, "2.9.2")?;
+    let contact = format!("{} (+{})", ua_292(), contact_url());
+
+    // VRChat's own hosts, matched by domain.
+    for url in [
+        "https://api.vrchat.cloud/api/1/auth/user",
+        "https://vrchat.com/home",
+    ] {
+        let request = built_user_agent(&web, url, Vec::new());
+        assert_eq!(request.headers()[USER_AGENT], contact, "{url}");
+    }
+
+    // Avatar search marks its request; the marker itself is never sent.
+    let request = built_user_agent(
+        &web,
+        "https://db.vrcnext.com/api/vrcx?search=x",
+        vec![
+            (IDENTIFY_WITH_CONTACT_HEADER.into(), "1".into()),
+            ("VRCX-ID".into(), "id".into()),
+        ],
+    );
+    assert_eq!(request.headers()[USER_AGENT], contact);
+    assert!(request
+        .headers()
+        .get(IDENTIFY_WITH_CONTACT_HEADER)
+        .is_none());
+    assert_eq!(request.headers()["VRCX-ID"], "id");
+    Ok(())
+}
+
+#[test]
+fn other_requests_keep_the_plain_user_agent() -> Result<()> {
+    let web = WebClient::new(None, None, "2.9.2")?;
+    for url in [
+        "https://api.github.com/repos/o/r/releases",
+        "https://translation.googleapis.com/language/translate/v2",
+        // Look-alike domains must not match.
+        "https://evilvrchat.com/x",
+        "https://vrchat.com.example.test/x",
+    ] {
+        let request = built_user_agent(&web, url, Vec::new());
+        // No per-request override: the client's default applies when sent.
+        assert!(request.headers().get(USER_AGENT).is_none(), "{url}");
+    }
+    assert_eq!(web.user_agent, ua_292());
     Ok(())
 }

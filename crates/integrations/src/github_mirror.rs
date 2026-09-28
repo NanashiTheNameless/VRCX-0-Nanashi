@@ -11,7 +11,6 @@ const MAX_ZIP_BYTES: usize = 32 * 1024 * 1024;
 const MAX_UNPACKED_BYTES: u64 = 128 * 1024 * 1024;
 const MAX_FILES: usize = 5000;
 const COMMIT_FILE: &str = ".mirror-commit";
-const USER_AGENT: &str = "VRCX-0-Nanashi/community-lists";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum HeadCheck {
@@ -41,7 +40,9 @@ fn client(timeout: Duration) -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
         .timeout(timeout)
         .redirect(reqwest::redirect::Policy::none())
-        .user_agent(USER_AGENT)
+        .user_agent(vrcx_0_core::user_agent::component_user_agent(
+            "community-lists",
+        ))
         .build()
         .map_err(|error| error.to_string())
 }

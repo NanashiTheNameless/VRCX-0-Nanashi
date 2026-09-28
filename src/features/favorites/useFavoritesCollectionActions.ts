@@ -92,10 +92,8 @@ export function useFavoritesCollectionActions({
                 await reloadLocalWorldFavorites();
             }
             if (kind === 'avatar') {
-                const rows = await avatarLocalRepository.getAvatarHistory(
-                    currentUserId,
-                    100
-                );
+                const rows =
+                    await avatarLocalRepository.getAvatarHistory(currentUserId);
                 setAvatarHistory(rows);
             }
             if (!silent) {

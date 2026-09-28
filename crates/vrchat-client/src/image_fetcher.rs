@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
 use crate::cookies::CookieJar;
-use crate::web_client::build_vrcx_user_agent;
+use crate::web_client::{build_vrcx_user_agent, contact_user_agent};
 use bytes::Bytes;
 use reqwest::Client;
 use vrcx_0_core::proxy::with_remote_dns;
@@ -29,6 +29,8 @@ impl vrcx_0_contracts::ApplicationErrorSource for ImageFetchError {
 pub struct ImageFetcher {
     client: Client,
     allowed_hosts: Mutex<HashSet<String>>,
+    /// Sent to VRChat's image hosts in place of the client's plain one.
+    contact_user_agent: String,
 }
 
 impl ImageFetcher {
@@ -37,9 +39,11 @@ impl ImageFetcher {
         proxy_url: Option<&str>,
         app_version: &str,
     ) -> Result<Self> {
+        let user_agent = build_vrcx_user_agent(app_version);
+        let contact_user_agent = contact_user_agent(&user_agent);
         let mut builder = Client::builder()
             .cookie_provider(cookie_jar)
-            .user_agent(build_vrcx_user_agent(app_version))
+            .user_agent(user_agent)
             .pool_max_idle_per_host(10)
             .tcp_keepalive(std::time::Duration::from_secs(60))
             .connect_timeout(std::time::Duration::from_secs(10))
@@ -65,15 +69,18 @@ impl ImageFetcher {
         Ok(Self {
             client,
             allowed_hosts: Mutex::new(hosts),
+            contact_user_agent,
         })
     }
 
     pub async fn fetch_image(&self, url: &str) -> Result<Bytes> {
         let parsed = validate_image_url(url, &self.allowed_hosts.lock().unwrap())?;
 
-        let response = self
-            .client
-            .get(parsed)
+        let mut request = self.client.get(parsed.clone());
+        if parsed.host_str().is_some_and(is_vrchat_image_host) {
+            request = request.header(reqwest::header::USER_AGENT, &self.contact_user_agent);
+        }
+        let response = request
             .send()
             .await
             .map_err(|e| ImageFetchError::Custom(format!("image fetch: {e}")))?;
@@ -92,6 +99,13 @@ impl ImageFetcher {
 
         Ok(bytes)
     }
+}
+
+/// VRChat's domains, plus the legacy CloudFront host VRChat still serves
+/// images from.
+fn is_vrchat_image_host(host: &str) -> bool {
+    vrcx_0_core::user_agent::is_vrchat_host(host)
+        || host.eq_ignore_ascii_case(VRCHAT_LEGACY_CLOUDFRONT_HOST)
 }
 
 fn validate_image_url(url: &str, allowed_hosts: &HashSet<String>) -> Result<reqwest::Url> {
@@ -132,6 +146,7 @@ mod tests {
         ImageFetcher {
             client,
             allowed_hosts: Mutex::new(HashSet::from(["127.0.0.1".into()])),
+            contact_user_agent: String::new(),
         }
     }
 
@@ -221,5 +236,19 @@ mod tests {
 
         assert!(error.to_string().contains("image fetch:"));
         server.await.unwrap();
+    }
+
+    #[test]
+    fn contact_user_agent_goes_to_vrchat_image_hosts_only() {
+        for host in [
+            VRCHAT_API_HOST,
+            VRCHAT_FILES_HOST,
+            VRCHAT_ASSETS_HOST,
+            VRCHAT_LEGACY_CLOUDFRONT_HOST,
+        ] {
+            assert!(is_vrchat_image_host(host), "{host}");
+        }
+        assert!(!is_vrchat_image_host("127.0.0.1"));
+        assert!(!is_vrchat_image_host("example.test"));
     }
 }

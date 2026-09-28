@@ -37,6 +37,8 @@ import externalApiRepository from './externalApiRepository';
 
 const AVTRDB_PROVIDER = 'https://api.avtrdb.com/v3/avatar/search/vrcx';
 const VRCDB_PROVIDER = 'https://vrcx.vrcdb.com/avatars/Avatar/VRCX';
+const VRCNDB_PROVIDER = 'https://db.vrcnext.com/api/vrcx';
+const DISABLED_PROVIDERS_KEY = 'VRCX_0_Nanashi_avatarSearchDisabledProviders';
 type ConfigFallback = string | number | boolean | null;
 type NormalizedAvatar = { id: string };
 
@@ -232,14 +234,14 @@ describe('AvatarSearchProviderRepository', () => {
             avatarSearchProviderRepository.getConfig()
         ).resolves.toMatchObject({
             enabled: true,
-            providerList: [VRCDB_PROVIDER, AVTRDB_PROVIDER],
+            providerList: [VRCDB_PROVIDER, AVTRDB_PROVIDER, VRCNDB_PROVIDER],
             selectedProvider: VRCDB_PROVIDER,
-            activeProviders: [VRCDB_PROVIDER, AVTRDB_PROVIDER]
+            activeProviders: [VRCDB_PROVIDER, AVTRDB_PROVIDER, VRCNDB_PROVIDER]
         });
 
         expect(configRepository.setString).toHaveBeenCalledWith(
             'VRCX_avatarRemoteDatabaseProviderList',
-            JSON.stringify([VRCDB_PROVIDER, AVTRDB_PROVIDER])
+            JSON.stringify([VRCDB_PROVIDER, AVTRDB_PROVIDER, VRCNDB_PROVIDER])
         );
     });
 
@@ -305,7 +307,8 @@ describe('AvatarSearchProviderRepository', () => {
                 ])
             ],
             ['VRCX_avatarRemoteDatabase', 'true'],
-            ['VRCX_avatarRemoteDatabaseProvider', AVTRDB_PROVIDER]
+            ['VRCX_avatarRemoteDatabaseProvider', AVTRDB_PROVIDER],
+            [DISABLED_PROVIDERS_KEY, '[]']
         ]);
         expect(publishPreferenceChanged).toHaveBeenCalledWith(
             'VRCX_avatarRemoteDatabaseProviderList',
@@ -323,6 +326,44 @@ describe('AvatarSearchProviderRepository', () => {
                 ]
             }
         );
+    });
+
+    it('forgets a removed provider was switched off, so re-adding it starts enabled', async () => {
+        const removed = 'https://removed.example.test/search';
+        const stored: Record<string, string> = {
+            [DISABLED_PROVIDERS_KEY]: JSON.stringify([AVTRDB_PROVIDER, removed])
+        };
+        vi.mocked(configRepository.getString).mockImplementation(
+            (key: string, fallback: ConfigFallback = '') =>
+                Promise.resolve(stored[key] ?? String(fallback ?? ''))
+        );
+        vi.mocked(configRepository.setMany).mockImplementation(
+            async (entries) => {
+                for (const [key, value] of entries) {
+                    stored[key] = String(value);
+                }
+            }
+        );
+
+        // Remove `removed`; AVTRDB stays and stays switched off.
+        const saved = await avatarSearchProviderRepository.saveConfig({
+            enabled: true,
+            providerList: [AVTRDB_PROVIDER],
+            selectedProvider: ''
+        });
+        expect(saved.disabledProviders).toEqual([AVTRDB_PROVIDER]);
+        expect(JSON.parse(stored[DISABLED_PROVIDERS_KEY])).toEqual([
+            AVTRDB_PROVIDER
+        ]);
+
+        // Add it back: it is active again.
+        const readded = await avatarSearchProviderRepository.saveConfig({
+            enabled: true,
+            providerList: [AVTRDB_PROVIDER, removed],
+            selectedProvider: ''
+        });
+        expect(readded.disabledProviders).toEqual([AVTRDB_PROVIDER]);
+        expect(readded.activeProviders).toEqual([removed]);
     });
 
     it('searches every provider in parallel and merges duplicate avatars', async () => {

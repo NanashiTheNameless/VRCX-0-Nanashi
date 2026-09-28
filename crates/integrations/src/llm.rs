@@ -168,7 +168,9 @@ impl LlmClient {
         model: impl Into<String>,
         proxy_url: Option<&str>,
     ) -> Result<Self, LlmError> {
-        let mut builder = Client::builder().timeout(Duration::from_secs(180));
+        let mut builder = Client::builder()
+            .timeout(Duration::from_secs(180))
+            .user_agent(vrcx_0_core::user_agent::app_user_agent());
         if let Some(proxy_url) = proxy_url {
             builder = builder.proxy(Proxy::all(with_remote_dns(proxy_url).as_ref())?);
         }

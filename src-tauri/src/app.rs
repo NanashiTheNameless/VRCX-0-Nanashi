@@ -188,6 +188,9 @@ fn install_adaptive_tauri_async_runtime() -> tokio::runtime::Runtime {
 }
 
 pub fn run() {
+    // Only this crate carries the stamped app version; clients built anywhere
+    // else read it for their user agents.
+    vrcx_0_core::user_agent::set_app_version(env!("CARGO_PKG_VERSION"));
     bootstrap::configure_webview2_environment();
 
     let Some(_single_instance_guard) =

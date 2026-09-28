@@ -172,6 +172,10 @@ pub fn avatar_time_spent_add(
     Ok(())
 }
 
+/// Rows returned when the caller passes no positive limit. The history table
+/// itself is never trimmed; only clearing it removes rows.
+const DEFAULT_AVATAR_HISTORY_LIMIT: i64 = 1000;
+
 pub fn avatar_history_list(
     db: &DatabaseService,
     user_id: String,
@@ -193,7 +197,7 @@ pub fn avatar_history_list(
             ),
             &ParamsBuilder::new()
                 .set("current_user_id", user_id)
-                .set("limit", if limit > 0 { limit } else { 100 })
+                .set("limit", if limit > 0 { limit } else { DEFAULT_AVATAR_HISTORY_LIMIT })
                 .build(),
         )?
         .into_iter()

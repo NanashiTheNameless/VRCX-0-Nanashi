@@ -289,7 +289,7 @@ export async function loadPreferenceSnapshot() {
         configRepository.getBool('randomUserColours', false),
         configRepository.getBool('notificationIconDot', true),
         configRepository.getBool('taskbarIconDot', true),
-        configRepository.getBool(POST_UPDATE_CHANGELOG_TOAST_CONFIG_KEY, true),
+        configRepository.getBool(POST_UPDATE_CHANGELOG_TOAST_CONFIG_KEY, false),
         configRepository.getBool('autoInstallUpdatesOnStartup', true),
         configRepository.getString('autoUpdateVRCX', ''),
         configRepository.getString('desktopToast', 'Never'),

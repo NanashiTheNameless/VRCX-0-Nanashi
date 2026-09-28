@@ -45,10 +45,12 @@ interface SearchInput {
 
 const AVTRDB_PROVIDER = 'https://api.avtrdb.com/v3/avatar/search/vrcx';
 const VRCDB_PROVIDER = 'https://vrcx.vrcdb.com/avatars/Avatar/VRCX';
+const VRCNDB_PROVIDER = 'https://db.vrcnext.com/api/vrcx';
 /** Searched by default; each can be switched off individually. */
-const DEFAULT_PROVIDERS = [VRCDB_PROVIDER, AVTRDB_PROVIDER];
+const DEFAULT_PROVIDERS = [VRCDB_PROVIDER, AVTRDB_PROVIDER, VRCNDB_PROVIDER];
 // Adds new default providers once to lists saved before they became defaults.
-const DEFAULTS_MIGRATION_KEY = 'VRCX_0_Nanashi_avatarProviderDefaultsV2';
+// Bump the version when adding a default.
+const DEFAULTS_MIGRATION_KEY = 'VRCX_0_Nanashi_avatarProviderDefaultsV3';
 const DISABLED_PROVIDERS_KEY = 'VRCX_0_Nanashi_avatarSearchDisabledProviders';
 const AVATAR_SEARCH_PROVIDER_PREFERENCE_KEYS = [
     'avatarRemoteDatabase',
@@ -287,6 +289,11 @@ async function saveConfig({
     )
         ? persistedSelectedProvider
         : normalizedProviderList[0] || '';
+    // Removing a provider also forgets that it was switched off, so adding it
+    // back later starts enabled.
+    const disabledProviders = parseDisabledProviders(
+        await configRepository.getString(DISABLED_PROVIDERS_KEY, '[]')
+    ).filter((provider) => normalizedProviderList.includes(provider));
     await configRepository.setMany([
         [
             'VRCX_avatarRemoteDatabaseProviderList',
@@ -298,16 +305,15 @@ async function saveConfig({
                 ? 'true'
                 : 'false'
         ],
-        ['VRCX_avatarRemoteDatabaseProvider', resolvedSelectedProvider]
+        ['VRCX_avatarRemoteDatabaseProvider', resolvedSelectedProvider],
+        [DISABLED_PROVIDERS_KEY, JSON.stringify(disabledProviders)]
     ]);
 
     const savedConfig = withActiveProviders({
         enabled: Boolean(enabled) && normalizedProviderList.length > 0,
         providerList: normalizedProviderList,
         selectedProvider: resolvedSelectedProvider,
-        disabledProviders: parseDisabledProviders(
-            await configRepository.getString(DISABLED_PROVIDERS_KEY, '[]')
-        )
+        disabledProviders
     });
     publishAvatarSearchProviderConfig(savedConfig);
     return savedConfig;

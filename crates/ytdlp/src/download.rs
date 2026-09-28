@@ -19,7 +19,7 @@ fn allowed(host: &str) -> bool {
 }
 fn client() -> Result<reqwest::Client, String> {
     reqwest::Client::builder()
-        .user_agent("VRCX-0-Nanashi yt-dlp integration")
+        .user_agent(vrcx_0_core::user_agent::component_user_agent("yt-dlp"))
         .timeout(Duration::from_secs(180))
         .redirect(reqwest::redirect::Policy::custom(|attempt| {
             if attempt.previous().len() < 5
