@@ -1164,8 +1164,6 @@
         },
         "friends_locations": {
             "online": "Online",
-            "world_friends_one": "{count} friend",
-            "world_friends_other": "{count} friends",
             "view_people": "Friends view",
             "view_worlds": "Worlds view",
             "world_instances_one": "{count} instance",
