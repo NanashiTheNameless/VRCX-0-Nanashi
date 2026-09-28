@@ -52,7 +52,7 @@ export function SettingsInstanceAvatarCheck() {
         setResults(null);
         try {
             const config = await avatarSearchProviderRepository.getConfig();
-            if (!config.enabled || !config.selectedProvider) {
+            if (!config.enabled || !config.activeProviders.length) {
                 setError(t(`${P}.no_provider`));
                 return;
             }
@@ -82,7 +82,7 @@ export function SettingsInstanceAvatarCheck() {
                 let candidates: { id: string; name?: string }[] = [];
                 try {
                     const search = await avatarSearchProviderRepository.search({
-                        provider: config.selectedProvider,
+                        providers: config.activeProviders,
                         query: avatarName
                     });
                     candidates = search.avatars.filter(

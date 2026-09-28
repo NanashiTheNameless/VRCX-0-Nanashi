@@ -91,7 +91,7 @@ export function SettingsSystemTabContent({
         ? ''
         : t('view.settings.general.application.startup_system_description', {
               defaultValue:
-                  'Creates a desktop autostart entry that launches VRCX-0 with --autostart.'
+                  'Creates a desktop autostart entry that launches VRCX-0-Nanashi with --autostart.'
           });
 
     return (
@@ -139,7 +139,7 @@ export function SettingsSystemTabContent({
                         'view.settings.general.application.background_mode_description',
                         {
                             defaultValue:
-                                'When closing VRCX-0 to the system tray, switch to Background Mode for ultra-low memory usage, around one-tenth. Some page state may reset after restore.'
+                                'When closing VRCX-0-Nanashi to the system tray, switch to Background Mode for ultra-low memory usage, around one-tenth. Some page state may reset after restore.'
                         }
                     )}
                 >

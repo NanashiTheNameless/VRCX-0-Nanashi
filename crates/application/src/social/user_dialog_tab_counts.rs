@@ -24,7 +24,8 @@ const FAVORITE_WORLD_PAGE_SIZE: usize = 300;
 const FAVORITE_WORLD_MAX_OFFSET: i32 = ((MAX_PROFILE_PAGES - 1) * FAVORITE_WORLD_PAGE_SIZE) as i32;
 const MY_AVATAR_PAGE_SIZE: usize = 50;
 const MY_AVATAR_MAX_OFFSET: i32 = 5_000;
-pub const DEFAULT_AVATAR_PROVIDER: &str = "https://api.avtrdb.com/v3/avatar/search/vrcx";
+pub const AVTRDB_AVATAR_PROVIDER: &str = "https://api.avtrdb.com/v3/avatar/search/vrcx";
+pub const VRCDB_AVATAR_PROVIDER: &str = "https://vrcx.vrcdb.com/avatars/Avatar/VRCX";
 
 #[derive(Clone)]
 pub struct UserDialogTabCountsDeps {
@@ -462,7 +463,10 @@ fn selected_avatar_provider(source: &dyn UserDialogTabCountsSource) -> Result<Op
     }
     let mut provider_values = match config.providers.into_value() {
         Value::Array(values) => values,
-        _ => vec![Value::String(DEFAULT_AVATAR_PROVIDER.into())],
+        _ => vec![
+            Value::String(VRCDB_AVATAR_PROVIDER.into()),
+            Value::String(AVTRDB_AVATAR_PROVIDER.into()),
+        ],
     };
     let selected = config.selected.trim().to_string();
     if !selected.is_empty()
@@ -489,7 +493,7 @@ fn normalize_avatar_provider(value: &str) -> Option<String> {
     match value.trim() {
         "" | "https://avtr.just-h.party/vrcx_search.php" => None,
         "https://api.avtrdb.com/v1/avatar/search/vrcx"
-        | "https://api.avtrdb.com/v2/avatar/search/vrcx" => Some(DEFAULT_AVATAR_PROVIDER.into()),
+        | "https://api.avtrdb.com/v2/avatar/search/vrcx" => Some(AVTRDB_AVATAR_PROVIDER.into()),
         value => Some(value.to_string()),
     }
 }

@@ -230,6 +230,6 @@ fn zip_entry_plan_skips_paths_without_a_file_name() {
 fn export_file_name_is_short_ascii_and_marks_screenshots() {
     let name = screenshot_export_file_name("20260828-1430", 12);
 
-    assert_eq!(name, "VRCX-0-Shots-20260828-1430-12.zip");
+    assert_eq!(name, "VRCX-0-Nanashi-Shots-20260828-1430-12.zip");
     assert!(name.is_ascii());
 }

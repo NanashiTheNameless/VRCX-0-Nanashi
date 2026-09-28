@@ -676,7 +676,7 @@ fn ensure_upgrade_version_written(conn: &Connection, to_version: i64) -> Result<
     let expected = to_version.to_string();
     if value.as_deref() != Some(expected.as_str()) {
         return Err(Error::Database(format!(
-            "Database upgrade copy does not contain VRCX-0 schema version {to_version}."
+            "Database upgrade copy does not contain VRCX-0-Nanashi schema version {to_version}."
         )));
     }
 

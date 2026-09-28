@@ -232,10 +232,10 @@ jobs:
                   timestamp="${{ needs.prepare.outputs.timestamp }}"
 
                   if [[ "$PACKAGE_VARIANT" == "preview" ]]; then
-                      stem="VRCX-0_${version}_preview_${timestamp}"
+                      stem="VRCX-0-Nanashi_${version}_preview_${timestamp}"
                       artifact_name="preview-${{ matrix.platform }}-${version}-${timestamp}"
                   else
-                      stem="VRCX-0_${version}_devkit"
+                      stem="VRCX-0-Nanashi_${version}_devkit"
                       artifact_name="devkit-${{ matrix.platform }}-${version}"
                   fi
 

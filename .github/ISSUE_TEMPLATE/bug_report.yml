@@ -12,7 +12,7 @@ body:
 
     - type: input
       attributes:
-          label: VRCX-0 version
+          label: VRCX-0-Nanashi version
           description: You can find this in Settings → About (e.g., 2.9.1)
     - type: input
       attributes:
@@ -32,6 +32,6 @@ body:
           label: Screenshots / error log
           description: |
               Screenshots help a lot! If you see an error, the log file is at:
-              - **Windows:** `%APPDATA%\VRCX-0\error-log.txt`
-              - **macOS:** `~/Library/Application Support/VRCX-0/error-log.txt`
-              - **Linux:** `~/.local/share/VRCX-0/error-log.txt`
+              - **Windows:** `%APPDATA%\VRCX-0-Nanashi\error-log.txt`
+              - **macOS:** `~/Library/Application Support/VRCX-0-Nanashi/error-log.txt`
+              - **Linux:** `~/.local/share/VRCX-0-Nanashi/error-log.txt`

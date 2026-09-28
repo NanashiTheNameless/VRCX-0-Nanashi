@@ -61,7 +61,7 @@ fn run_server() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let server = Server::http(&address)?;
     let mut app = AppState::new();
     let mut renderer = DevtoolRenderer::new();
-    println!("VRCX-0 overlay devtool: http://{address}");
+    println!("VRCX-0-Nanashi overlay devtool: http://{address}");
     for mut request in server.incoming_requests() {
         let response = handle_request(&mut app, &mut renderer, &mut request);
         if let Err(error) = request.respond(response) {

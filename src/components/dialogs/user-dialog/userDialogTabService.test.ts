@@ -23,7 +23,7 @@ function repositories(
 ): UserDialogRepositories {
     return {
         avatarSearchProviderRepository: {
-            getConfig: async () => ({ enabled: false, selectedProvider: '' }),
+            getConfig: async () => ({ enabled: false, activeProviders: [] }),
             search: async () => ({
                 avatars: []
             })
@@ -216,13 +216,13 @@ describe('userDialogTabService', () => {
         });
     });
 
-    it('loads another user avatars through the selected search provider', async () => {
+    it('loads another user avatars through every enabled search provider', async () => {
         let searchRequest = null;
         const fakeRepositories = repositories({
             avatarSearchProviderRepository: {
                 getConfig: async () => ({
                     enabled: true,
-                    selectedProvider: 'provider-a'
+                    activeProviders: ['provider-a', 'provider-b']
                 }),
                 search: async (params) => {
                     searchRequest = params;
@@ -248,7 +248,7 @@ describe('userDialogTabService', () => {
             favoriteWorldGroups: []
         });
         expect(searchRequest).toEqual({
-            provider: 'provider-a',
+            providers: ['provider-a', 'provider-b'],
             query: 'usr_target'
         });
 

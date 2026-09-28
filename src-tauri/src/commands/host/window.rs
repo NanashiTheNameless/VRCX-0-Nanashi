@@ -225,7 +225,9 @@ pub fn app__open_devtools(app_handle: AppHandle) -> Result<(), AppError> {
 pub fn app__restart_application(app_handle: AppHandle) -> Result<(), AppError> {
     #[cfg(debug_assertions)]
     {
-        tracing::warn!("app__restart_application ignored in dev build; restart VRCX-0 manually");
+        tracing::warn!(
+            "app__restart_application ignored in dev build; restart VRCX-0-Nanashi manually"
+        );
         let _ = app_handle;
         Ok(())
     }

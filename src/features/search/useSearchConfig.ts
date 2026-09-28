@@ -58,14 +58,24 @@ export function useSearchConfig() {
     );
     const [avatarProviderEnabled, setAvatarProviderEnabled] = useState(false);
     const [avatarProviderList, setAvatarProviderList] = useState<string[]>([]);
-    const [selectedAvatarProvider, setSelectedAvatarProvider] = useState('');
+    const [disabledAvatarProviders, setDisabledAvatarProviders] = useState<
+        string[]
+    >([]);
+    const activeAvatarProviders = useMemo(
+        () =>
+            avatarProviderList.filter(
+                (provider) =>
+                    provider && !disabledAvatarProviders.includes(provider)
+            ),
+        [avatarProviderList, disabledAvatarProviders]
+    );
     const [isAvatarProviderDialogOpen, setIsAvatarProviderDialogOpen] =
         useState(false);
 
     function applyAvatarProviderConfig(config: AvatarSearchProviderConfig) {
         setAvatarProviderEnabled(config.enabled);
         setAvatarProviderList(config.providerList);
-        setSelectedAvatarProvider(config.selectedProvider || '');
+        setDisabledAvatarProviders(config.disabledProviders);
     }
 
     useEffect(() => {
@@ -116,11 +126,14 @@ export function useSearchConfig() {
         };
     }, [t]);
 
-    function handleAvatarProviderChange(provider: string | null) {
-        const nextProvider = provider ?? '';
-        setSelectedAvatarProvider(nextProvider);
+    function handleAvatarProviderToggle(provider: string, enabled: boolean) {
+        setDisabledAvatarProviders((current) =>
+            enabled
+                ? current.filter((entry) => entry !== provider)
+                : [...new Set([...current, provider])]
+        );
         avatarSearchProviderRepository
-            .saveSelectedProvider(nextProvider)
+            .setProviderEnabled(provider, enabled)
             .catch((error: unknown) => {
                 toast.add({
                     type: 'error',
@@ -135,13 +148,14 @@ export function useSearchConfig() {
     }
 
     return {
+        activeAvatarProviders,
         applyAvatarProviderConfig,
         avatarProviderEnabled,
         avatarProviderList,
-        handleAvatarProviderChange,
+        disabledAvatarProviders,
+        handleAvatarProviderToggle,
         isAvatarProviderDialogOpen,
         languageOptionsMap,
-        selectedAvatarProvider,
         setIsAvatarProviderDialogOpen,
         worldCategories
     };

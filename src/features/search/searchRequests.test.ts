@@ -37,7 +37,9 @@ describe('search request helpers', () => {
         const query = '＠Artist  ＃1';
 
         expect(buildUserSearchRequest(query).params.search).toBe(query);
-        expect(buildAvatarSearchRequest(query, 'provider-a').query).toBe(query);
+        expect(buildAvatarSearchRequest(query, ['provider-a']).query).toBe(
+            query
+        );
     });
 
     it('keeps legacy symbol normalization for world and group queries', () => {
@@ -121,8 +123,11 @@ describe('search request helpers', () => {
                 query: 'club'
             }
         });
-        expect(buildAvatarSearchRequest('robot', 'provider-a', 10)).toEqual({
-            provider: 'provider-a',
+        expect(
+            buildAvatarSearchRequest('robot', ['provider-a', 'provider-b'], 10)
+        ).toEqual({
+            provider: 'provider-a, provider-b',
+            providers: ['provider-a', 'provider-b'],
             query: 'robot',
             offset: 10
         });

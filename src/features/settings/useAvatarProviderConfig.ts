@@ -21,7 +21,9 @@ export function useAvatarProviderConfig({ commit }: AvatarProviderConfigDeps) {
         useState<AvatarProviderConfig>({
             enabled: true,
             providerList: [],
-            selectedProvider: ''
+            selectedProvider: '',
+            disabledProviders: [],
+            activeProviders: []
         });
     const avatarProviderConfigRef = useRef(avatarProviderConfig);
     const avatarProviderSaveQueueRef = useRef<Promise<void>>(Promise.resolve());

@@ -44,7 +44,7 @@ fn webhook_test_payload(format: NotificationWebhookFormat, fields: &str) -> Valu
         json!({
             "content": null,
             "embeds": [{
-                "title": "VRCX-0 webhook test",
+                "title": "VRCX-0-Nanashi webhook test",
                 "description": "Webhook delivery is configured.",
                 "timestamp": &timestamp,
             }]
@@ -54,16 +54,16 @@ fn webhook_test_payload(format: NotificationWebhookFormat, fields: &str) -> Valu
             "version": 1,
             "event": "test",
             "category": "systemSafety",
-            "title": "VRCX-0 webhook test",
+            "title": "VRCX-0-Nanashi webhook test",
             "message": "Webhook delivery is configured.",
             "user": {
                 "id": "",
-                "displayName": "VRCX-0",
+                "displayName": "VRCX-0-Nanashi",
             },
-            "location": "VRCX-0 test world public",
+            "location": "VRCX-0-Nanashi test world public",
             "locationId": "wrld_00000000-0000-0000-0000-000000000000:12345",
             "worldId": "wrld_00000000-0000-0000-0000-000000000000",
-            "worldName": "VRCX-0 test world",
+            "worldName": "VRCX-0-Nanashi test world",
             "timestamp": &timestamp,
             "localTime": webhook_local_time_string(&timestamp),
         });

@@ -259,7 +259,7 @@ fn auth_webhook_message(event: &AuthWebhookEvent) -> String {
     match event.kind {
         AuthWebhookEventKind::ReloginFailed => {
             format!(
-                "VRCX-0 could not automatically restore the VRChat session for {}.",
+                "VRCX-0-Nanashi could not automatically restore the VRChat session for {}.",
                 auth_webhook_user_label(event)
             )
         }

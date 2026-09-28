@@ -466,7 +466,7 @@ pub fn plan_screenshot_zip_entries(
 }
 
 pub fn screenshot_export_file_name(timestamp: &str, count: usize) -> String {
-    format!("VRCX-0-Shots-{timestamp}-{count}.zip")
+    format!("VRCX-0-Nanashi-Shots-{timestamp}-{count}.zip")
 }
 
 #[cfg(test)]

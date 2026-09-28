@@ -5,7 +5,7 @@ use vrcx_0_platform::Error;
 pub fn open_calendar_file(ics_content: &str) -> Result<(), Error> {
     validate_calendar_content(ics_content)?;
 
-    let temp_dir = std::env::temp_dir().join("VRCX-0");
+    let temp_dir = std::env::temp_dir().join("VRCX-0-Nanashi");
     std::fs::create_dir_all(&temp_dir)?;
     let ics_path = temp_dir.join("event.ics");
     std::fs::write(&ics_path, ics_content)?;

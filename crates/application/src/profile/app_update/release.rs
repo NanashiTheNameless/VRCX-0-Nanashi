@@ -231,7 +231,7 @@ pub(super) fn normalize_release(
         .name
         .clone()
         .filter(|name| !name.trim().is_empty())
-        .unwrap_or_else(|| format!("VRCX-0 {}", parsed.canonical_version));
+        .unwrap_or_else(|| format!("VRCX-0-Nanashi {}", parsed.canonical_version));
 
     Some(AppUpdateReleaseSnapshot {
         display_name,

@@ -29,8 +29,9 @@ import type { SearchActiveTab, SearchWorldCategory } from '../searchTypes';
 
 type SearchViewOptions = {
     avatarProviderList: string[];
+    disabledAvatarProviders: string[];
     includeCommunityLabs: boolean;
-    onAvatarProviderChange: (value: string | null) => void;
+    onAvatarProviderToggle: (provider: string, enabled: boolean) => void;
     onIncludeCommunityLabsChange: (value: boolean) => void;
     onOpenAvatarProviderSettings: () => void;
     onSearchUserByBioChange: (value: boolean) => void;
@@ -38,7 +39,6 @@ type SearchViewOptions = {
     onWorldCategoryChange: (value: string | null) => void;
     searchUserByBio: boolean;
     searchUserSortByLastLoggedIn: boolean;
-    selectedAvatarProvider: string;
     selectedWorldCategory: string;
     worldCategories: SearchWorldCategory[];
 };
@@ -53,8 +53,9 @@ function SearchViewOptionsMenu({
     const { t } = useTranslation();
     const {
         avatarProviderList,
+        disabledAvatarProviders,
         includeCommunityLabs,
-        onAvatarProviderChange,
+        onAvatarProviderToggle,
         onIncludeCommunityLabsChange,
         onOpenAvatarProviderSettings,
         onSearchUserByBioChange,
@@ -62,7 +63,6 @@ function SearchViewOptionsMenu({
         onWorldCategoryChange,
         searchUserByBio,
         searchUserSortByLastLoggedIn,
-        selectedAvatarProvider,
         selectedWorldCategory,
         worldCategories
     } = options;
@@ -164,34 +164,37 @@ function SearchViewOptionsMenu({
                             {t('view.search.avatar.search_provider')}
                         </FieldLabel>
                         {availableProviders.length ? (
-                            <Select
-                                value={selectedAvatarProvider}
-                                items={availableProviders.map((provider) => ({
-                                    value: provider,
-                                    label: provider
-                                }))}
-                                onValueChange={onAvatarProviderChange}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue
-                                        placeholder={t(
-                                            'view.search.avatar.search_provider'
-                                        )}
-                                    />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        {availableProviders.map((provider) => (
-                                            <SelectItem
-                                                key={provider}
-                                                value={provider}
-                                            >
-                                                {provider}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
+                            <div className="flex flex-col gap-2">
+                                {availableProviders.map((provider, index) => (
+                                    <Field
+                                        key={provider}
+                                        orientation="horizontal"
+                                        className="w-auto"
+                                    >
+                                        <Checkbox
+                                            id={`search-avatar-provider-${index}`}
+                                            checked={
+                                                !disabledAvatarProviders.includes(
+                                                    provider
+                                                )
+                                            }
+                                            onCheckedChange={(checked) =>
+                                                onAvatarProviderToggle(
+                                                    provider,
+                                                    checked === true
+                                                )
+                                            }
+                                        />
+                                        <FieldLabel
+                                            htmlFor={`search-avatar-provider-${index}`}
+                                            className="min-w-0 truncate"
+                                            title={provider}
+                                        >
+                                            {provider}
+                                        </FieldLabel>
+                                    </Field>
+                                ))}
+                            </div>
                         ) : (
                             <span className="text-muted-foreground text-sm">
                                 {t('view.search.avatar.no_provider')}

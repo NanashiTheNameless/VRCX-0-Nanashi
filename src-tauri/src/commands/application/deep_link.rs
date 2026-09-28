@@ -83,7 +83,7 @@ mod macos {
         let status = unsafe { LSSetDefaultHandlerForURLScheme(scheme.0, bundle_identifier.0) };
         if status != 0 {
             return Err(AppError::Custom(format!(
-                "macOS failed to register the VRCX-0 link handler: OSStatus {status}"
+                "macOS failed to register the VRCX-0-Nanashi link handler: OSStatus {status}"
             )));
         }
         Ok(())

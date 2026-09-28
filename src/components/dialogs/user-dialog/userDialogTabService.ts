@@ -36,9 +36,9 @@ type UserDialogAvatarSearchRow = EntityRecord &
 
 export type UserDialogRepositories = {
     avatarSearchProviderRepository: {
-        getConfig(): Promise<{ enabled: boolean; selectedProvider: string }>;
+        getConfig(): Promise<{ enabled: boolean; activeProviders: string[] }>;
         search(input: {
-            provider: string;
+            providers: readonly string[];
             query: string;
         }): Promise<{ avatars: UserDialogAvatarSearchRow[] }>;
     };
@@ -240,13 +240,13 @@ export async function loadUserDialogTabData({
 
         const providerConfig =
             await repositories.avatarSearchProviderRepository.getConfig();
-        if (!providerConfig.enabled || !providerConfig.selectedProvider) {
+        if (!providerConfig.enabled || !providerConfig.activeProviders.length) {
             return { rows: [], favoriteWorldGroups: [] };
         }
 
         const response =
             await repositories.avatarSearchProviderRepository.search({
-                provider: providerConfig.selectedProvider,
+                providers: providerConfig.activeProviders,
                 query: userId
             });
         return {

@@ -183,7 +183,7 @@ pub use user_dialog_tab_counts::{
     get_user_dialog_tab_counts, AvatarProviderConfig, AvatarReleaseStatus, UserDialogCountPage,
     UserDialogFavoriteGroupPage, UserDialogTabCountsDeps, UserDialogTabCountsFuture,
     UserDialogTabCountsInput, UserDialogTabCountsOutput, UserDialogTabCountsRuntime,
-    UserDialogTabCountsSource, DEFAULT_AVATAR_PROVIDER,
+    UserDialogTabCountsSource, AVTRDB_AVATAR_PROVIDER, VRCDB_AVATAR_PROVIDER,
 };
 mod batch_mutation;
 mod instance_invite_batch;

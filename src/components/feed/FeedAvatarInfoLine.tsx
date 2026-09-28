@@ -68,12 +68,12 @@ async function findAvatarByImageUrl({
     }
 
     const config = await avatarSearchProviderRepository.getConfig();
-    if (!config.enabled || !config.selectedProvider) {
+    if (!config.enabled || !config.activeProviders.length) {
         return null;
     }
 
     const response = await avatarSearchProviderRepository.search({
-        provider: config.selectedProvider,
+        providers: config.activeProviders,
         query
     });
 

@@ -1,15 +1,11 @@
 name: Dev Kit
 
+# Manual only: a full three-platform build is too costly to repeat per nightly.
 on:
-    workflow_run:
-        workflows: ['Nightly']
-        types:
-            - completed
     workflow_dispatch:
 
 concurrency:
-    # Each completed nightly gets its own build; manual builds keep the newest per ref.
-    group: ${{ github.workflow }}-${{ github.event.workflow_run.id || github.ref }}
+    group: ${{ github.workflow }}-${{ github.ref }}
     cancel-in-progress: true
 
 permissions:
@@ -18,7 +14,6 @@ permissions:
 jobs:
     package:
         name: Package Dev Kit
-        if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
         uses: ./.github/workflows/_package-variant.yml
         with:
             variant: devkit

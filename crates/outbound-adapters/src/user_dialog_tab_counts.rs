@@ -8,7 +8,8 @@ use url::Url;
 use uuid::Uuid;
 use vrcx_0_application::social::{
     AvatarProviderConfig, AvatarReleaseStatus, UserDialogCountPage, UserDialogFavoriteGroupPage,
-    UserDialogTabCountsFuture, UserDialogTabCountsSource, DEFAULT_AVATAR_PROVIDER,
+    UserDialogTabCountsFuture, UserDialogTabCountsSource, AVTRDB_AVATAR_PROVIDER,
+    VRCDB_AVATAR_PROVIDER,
 };
 use vrcx_0_application_core::{
     vrchat_api::{VrchatApiRequest, VrchatScope},
@@ -60,7 +61,7 @@ impl UserDialogTabCountsSource for LocalUserDialogTabCountsSource {
             providers: config::get_json(
                 &self.db,
                 AVATAR_PROVIDER_LIST_KEY,
-                serde_json::json!([DEFAULT_AVATAR_PROVIDER]),
+                serde_json::json!([VRCDB_AVATAR_PROVIDER, AVTRDB_AVATAR_PROVIDER]),
             )
             .map_err(crate::map_persistence_error)?
             .into(),

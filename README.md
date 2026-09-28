@@ -7,7 +7,7 @@ tracks upstream loosely, and makes opinionated changes upstream may not want. Fo
 official app, support, and community, use [Map1en/VRCX-0](https://github.com/Map1en/VRCX-0).
 Please do not report bugs from this fork to upstream.
 
-VRCX-0 is a desktop companion for VRChat: see where your friends are, keep a history of
+VRCX-0-Nanashi is a desktop companion for VRChat: see where your friends are, keep a history of
 the people you've met and the worlds you've visited, manage your favorites, and more.
 It is a Rust + Tauri rewrite of VRCX.
 

@@ -23,7 +23,7 @@ export function SearchPage({ embedded = false }: { embedded?: boolean } = {}) {
     };
     const isLanding = !searchedByTab[filters.activeTab];
     const avatarProviderConfigured =
-        config.avatarProviderEnabled && Boolean(config.selectedAvatarProvider);
+        config.avatarProviderEnabled && config.activeAvatarProviders.length > 0;
     const needsAvatarProvider =
         filters.activeTab === 'avatar' && !avatarProviderConfigured;
 
@@ -49,8 +49,10 @@ export function SearchPage({ embedded = false }: { embedded?: boolean } = {}) {
                         viewOptions={{
                             avatarProviderList: config.avatarProviderList,
                             includeCommunityLabs: filters.includeCommunityLabs,
-                            onAvatarProviderChange:
-                                config.handleAvatarProviderChange,
+                            disabledAvatarProviders:
+                                config.disabledAvatarProviders,
+                            onAvatarProviderToggle:
+                                config.handleAvatarProviderToggle,
                             onIncludeCommunityLabsChange:
                                 filters.setIncludeCommunityLabs,
                             onOpenAvatarProviderSettings: () =>
@@ -63,8 +65,6 @@ export function SearchPage({ embedded = false }: { embedded?: boolean } = {}) {
                             searchUserByBio: filters.searchUserByBio,
                             searchUserSortByLastLoggedIn:
                                 filters.searchUserSortByLastLoggedIn,
-                            selectedAvatarProvider:
-                                config.selectedAvatarProvider,
                             selectedWorldCategory:
                                 filters.selectedWorldCategory,
                             worldCategories: config.worldCategories

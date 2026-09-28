@@ -127,7 +127,7 @@ impl AppUpdateReleaseCatalogPort for TestAppUpdateReleaseCatalog {
 
 fn update_release_snapshot() -> AppUpdateReleaseSnapshot {
     AppUpdateReleaseSnapshot {
-        display_name: "VRCX-0 2.15.0".into(),
+        display_name: "VRCX-0-Nanashi 2.15.0".into(),
         tag_name: "v2.15.0".into(),
         html_url: "https://example.test/releases/v2.15.0".into(),
         published_at: "2026-07-18T00:00:00Z".into(),

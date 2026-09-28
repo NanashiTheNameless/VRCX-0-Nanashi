@@ -16,7 +16,9 @@ function createInput(
     const avatarProviderConfig: AvatarProviderConfig = {
         enabled: true,
         providerList: [],
-        selectedProvider: ''
+        selectedProvider: '',
+        disabledProviders: [],
+        activeProviders: []
     };
 
     return {
@@ -268,7 +270,9 @@ describe('settingsPageStateSections', () => {
         expect(sections.integrations.avatarProviderConfig).toEqual({
             enabled: true,
             providerList: [],
-            selectedProvider: ''
+            selectedProvider: '',
+            disabledProviders: [],
+            activeProviders: []
         });
         expect(sections.social.feedHiddenUsers).toBe(prefs.feedHiddenUsers);
         expect(sections.notifications.ttsVoices).toEqual([]);

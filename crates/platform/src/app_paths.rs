@@ -432,7 +432,7 @@ fn validate_app_data_dir_for_mode(
     } else if !has_database || !has_config {
         (
             Some(AppDataDirWarningKind::MissingProfileFiles),
-            Some("Data directory does not contain a complete VRCX-0 profile.".to_string()),
+            Some("Data directory does not contain a complete VRCX-0-Nanashi profile.".to_string()),
         )
     } else {
         (None, None)

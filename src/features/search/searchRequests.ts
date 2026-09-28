@@ -108,11 +108,12 @@ export function buildGroupSearchRequest(searchText: string, offset = 0) {
 
 export function buildAvatarSearchRequest(
     searchText: string,
-    provider: string,
+    providers: readonly string[],
     offset = 0
 ) {
     return {
-        provider,
+        provider: providers.join(', '),
+        providers: [...providers],
         query: searchText,
         offset: Math.max(0, offset)
     };

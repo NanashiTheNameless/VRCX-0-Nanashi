@@ -359,7 +359,7 @@ export function UserDialogContent({
                 title={t('dialog.user.error.user_profile_unavailable')}
                 description={
                     detail ||
-                    'VRCX-0 could not resolve a user snapshot for this dialog.'
+                    'VRCX-0-Nanashi could not resolve a user snapshot for this dialog.'
                 }
             />
         );

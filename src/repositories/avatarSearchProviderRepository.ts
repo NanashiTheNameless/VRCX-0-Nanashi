@@ -12,6 +12,10 @@ export type AvatarSearchProviderConfig = {
     enabled: boolean;
     providerList: string[];
     selectedProvider: string;
+    /** Providers the user switched off; every other provider is searched. */
+    disabledProviders: string[];
+    /** `providerList` minus `disabledProviders`, in list order. */
+    activeProviders: string[];
 };
 
 type ProviderItem = Record<string, unknown>;
@@ -31,20 +35,30 @@ interface SaveConfigInput {
 }
 
 interface SearchInput {
-    provider: string;
+    /** Search a single provider (legacy callers). */
+    provider?: string;
+    /** Search these providers in parallel and merge duplicate avatars. */
+    providers?: readonly string[];
     query: string;
 }
 
-const DEFAULT_PROVIDER = 'https://api.avtrdb.com/v3/avatar/search/vrcx';
+const AVTRDB_PROVIDER = 'https://api.avtrdb.com/v3/avatar/search/vrcx';
+const VRCDB_PROVIDER = 'https://vrcx.vrcdb.com/avatars/Avatar/VRCX';
+/** Searched by default; each can be switched off individually. */
+const DEFAULT_PROVIDERS = [VRCDB_PROVIDER, AVTRDB_PROVIDER];
+// Adds new default providers once to lists saved before they became defaults.
+const DEFAULTS_MIGRATION_KEY = 'VRCX_0_Nanashi_avatarProviderDefaultsV2';
+const DISABLED_PROVIDERS_KEY = 'VRCX_0_Nanashi_avatarSearchDisabledProviders';
 const AVATAR_SEARCH_PROVIDER_PREFERENCE_KEYS = [
     'avatarRemoteDatabase',
     'VRCX_avatarRemoteDatabaseProviderList',
-    'VRCX_avatarRemoteDatabaseProvider'
+    'VRCX_avatarRemoteDatabaseProvider',
+    DISABLED_PROVIDERS_KEY
 ];
 const LEGACY_PROVIDER_URLS = new Map<string, string | null>([
     ['https://avtr.just-h.party/vrcx_search.php', null],
-    ['https://api.avtrdb.com/v1/avatar/search/vrcx', DEFAULT_PROVIDER],
-    ['https://api.avtrdb.com/v2/avatar/search/vrcx', DEFAULT_PROVIDER]
+    ['https://api.avtrdb.com/v1/avatar/search/vrcx', AVTRDB_PROVIDER],
+    ['https://api.avtrdb.com/v2/avatar/search/vrcx', AVTRDB_PROVIDER]
 ]);
 
 function normalizeString(value: unknown): string {
@@ -67,7 +81,7 @@ function pick(value: unknown, ...keys: string[]): unknown {
 
 function normalizeProviderList(values: unknown): string[] {
     if (!Array.isArray(values)) {
-        return [DEFAULT_PROVIDER];
+        return [...DEFAULT_PROVIDERS];
     }
 
     const providers: string[] = [];
@@ -149,15 +163,19 @@ async function getConfig(): Promise<AvatarSearchProviderConfig> {
         enabled,
         providerListValue,
         rawSelectedProviderValue,
-        hasProviderList
+        hasProviderList,
+        disabledProvidersValue,
+        defaultsMigrated
     ] = await Promise.all([
         configRepository.getBool('avatarRemoteDatabase', true),
         configRepository.getString(
             'VRCX_avatarRemoteDatabaseProviderList',
-            `["${DEFAULT_PROVIDER}"]`
+            JSON.stringify(DEFAULT_PROVIDERS)
         ),
         configRepository.getString('VRCX_avatarRemoteDatabaseProvider', ''),
-        configRepository.has('VRCX_avatarRemoteDatabaseProviderList')
+        configRepository.has('VRCX_avatarRemoteDatabaseProviderList'),
+        configRepository.getString(DISABLED_PROVIDERS_KEY, '[]'),
+        configRepository.getBool(DEFAULTS_MIGRATION_KEY, false)
     ]);
     const selectedProviderValue = normalizeString(rawSelectedProviderValue);
 
@@ -167,7 +185,16 @@ async function getConfig(): Promise<AvatarSearchProviderConfig> {
     );
     let parsedProviders = Array.isArray(parsedProviderList)
         ? parsedProviderList
-        : [DEFAULT_PROVIDER];
+        : [...DEFAULT_PROVIDERS];
+    if (!defaultsMigrated) {
+        parsedProviders = [
+            ...DEFAULT_PROVIDERS.filter(
+                (provider) => !parsedProviders.includes(provider)
+            ),
+            ...parsedProviders
+        ];
+        await configRepository.setBool(DEFAULTS_MIGRATION_KEY, true);
+    }
 
     if (
         selectedProviderValue &&
@@ -191,11 +218,53 @@ async function getConfig(): Promise<AvatarSearchProviderConfig> {
         ? selectedProviderValue
         : providerList[0] || '';
 
-    return {
+    return withActiveProviders({
         enabled: Boolean(enabled) && providerList.length > 0,
         providerList,
-        selectedProvider
+        selectedProvider,
+        disabledProviders: parseDisabledProviders(disabledProvidersValue)
+    });
+}
+
+function parseDisabledProviders(value: unknown): string[] {
+    const parsed: unknown = safeJsonParse(String(value ?? ''), null);
+    return Array.isArray(parsed)
+        ? Array.from(new Set(parsed.map(normalizeString).filter(Boolean)))
+        : [];
+}
+
+function withActiveProviders(
+    config: Omit<AvatarSearchProviderConfig, 'activeProviders'>
+): AvatarSearchProviderConfig {
+    const disabledProviders = config.disabledProviders.filter((provider) =>
+        config.providerList.includes(provider)
+    );
+    return {
+        ...config,
+        disabledProviders,
+        activeProviders: config.providerList.filter(
+            (provider) => !disabledProviders.includes(provider)
+        )
     };
+}
+
+async function setProviderEnabled(
+    provider: string,
+    enabled: boolean
+): Promise<AvatarSearchProviderConfig> {
+    const normalizedProvider = normalizeString(provider);
+    const current = parseDisabledProviders(
+        await configRepository.getString(DISABLED_PROVIDERS_KEY, '[]')
+    );
+    const next = enabled
+        ? current.filter((entry) => entry !== normalizedProvider)
+        : Array.from(new Set([...current, normalizedProvider]));
+    await configRepository.setString(
+        DISABLED_PROVIDERS_KEY,
+        JSON.stringify(next.filter(Boolean))
+    );
+    publishPreferenceChanged(DISABLED_PROVIDERS_KEY, next);
+    return getConfig();
 }
 
 async function saveConfig({
@@ -231,11 +300,14 @@ async function saveConfig({
         ['VRCX_avatarRemoteDatabaseProvider', resolvedSelectedProvider]
     ]);
 
-    const savedConfig: AvatarSearchProviderConfig = {
+    const savedConfig = withActiveProviders({
         enabled: Boolean(enabled) && normalizedProviderList.length > 0,
         providerList: normalizedProviderList,
-        selectedProvider: resolvedSelectedProvider
-    };
+        selectedProvider: resolvedSelectedProvider,
+        disabledProviders: parseDisabledProviders(
+            await configRepository.getString(DISABLED_PROVIDERS_KEY, '[]')
+        )
+    });
     publishAvatarSearchProviderConfig(savedConfig);
     return savedConfig;
 }
@@ -267,10 +339,10 @@ async function getVrcxId(): Promise<string> {
     return id;
 }
 
-async function search({
-    provider,
-    query
-}: SearchInput): Promise<AvatarSearchProviderResult> {
+async function searchProvider(
+    provider: string,
+    query: string
+): Promise<AvatarSearchProviderResult> {
     const normalizedProvider = normalizeString(provider);
     const normalizedQuery = normalizeString(query);
     if (!normalizedProvider) {
@@ -319,10 +391,98 @@ async function search({
     };
 }
 
+function isBlank(value: unknown): boolean {
+    return (
+        value === undefined ||
+        value === null ||
+        value === '' ||
+        value === '0001-01-01T00:00:00.0000000Z'
+    );
+}
+
+/**
+ * Combine the same avatar reported by several providers: the first provider's
+ * values win, and blanks are filled from later providers.
+ */
+export function mergeAvatarResults(
+    resultLists: readonly (readonly AvatarProfileRecord[])[]
+): AvatarProfileRecord[] {
+    const merged = new Map<string, AvatarProfileRecord>();
+    for (const avatars of resultLists) {
+        for (const avatar of avatars) {
+            if (!avatar.id) {
+                continue;
+            }
+            const existing = merged.get(avatar.id);
+            if (!existing) {
+                merged.set(avatar.id, { ...avatar });
+                continue;
+            }
+            const target = existing as Record<string, unknown>;
+            for (const [key, value] of Object.entries(avatar)) {
+                if (isBlank(target[key]) && !isBlank(value)) {
+                    target[key] = value;
+                }
+            }
+        }
+    }
+    return Array.from(merged.values());
+}
+
+async function search({
+    provider,
+    providers,
+    query
+}: SearchInput): Promise<AvatarSearchProviderResult> {
+    const targets = Array.from(
+        new Set(
+            (providers ?? (provider ? [provider] : []))
+                .map(normalizeString)
+                .filter(Boolean)
+        )
+    );
+    if (targets.length === 0) {
+        throw new Error('Avatar provider is not configured.');
+    }
+    if (targets.length === 1) {
+        return searchProvider(targets[0], query);
+    }
+
+    const settled = await Promise.allSettled(
+        targets.map((target) => searchProvider(target, query))
+    );
+    const succeeded = settled.flatMap((result) =>
+        result.status === 'fulfilled' ? [result.value] : []
+    );
+    if (succeeded.length === 0) {
+        const failure = settled.find(
+            (result): result is PromiseRejectedResult =>
+                result.status === 'rejected'
+        );
+        throw failure?.reason instanceof Error
+            ? failure.reason
+            : new Error('Avatar search failed for every provider.');
+    }
+    for (const result of settled) {
+        if (result.status === 'rejected') {
+            console.warn('Avatar provider search failed:', result.reason);
+        }
+    }
+
+    return {
+        avatars: mergeAvatarResults(succeeded.map((result) => result.avatars)),
+        provider: succeeded.map((result) => result.provider).join(', '),
+        query: succeeded[0].query,
+        status: 200,
+        raw: succeeded.map((result) => result.raw)
+    };
+}
+
 const avatarSearchProviderRepository = Object.freeze({
     getConfig,
     saveConfig,
     saveSelectedProvider,
+    setProviderEnabled,
     getVrcxId,
     search
 });

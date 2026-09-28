@@ -33,7 +33,7 @@ const options = {
     searchText: 'ocean',
     searchUserByBio: false,
     searchUserSortByLastLoggedIn: false,
-    selectedAvatarProvider: '',
+    activeAvatarProviders: [],
     selectedWorldCategory: '',
     setSearchText: vi.fn(),
     setSelectedWorldCategory: vi.fn(),

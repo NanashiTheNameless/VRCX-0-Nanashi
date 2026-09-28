@@ -99,7 +99,7 @@ fn open_profile_lock_file_with_retry(
             }
             Err(std::fs::TryLockError::WouldBlock) => {
                 return Err(crate::Error::Custom(format!(
-                    "VRCX-0 profile is already in use: {}",
+                    "VRCX-0-Nanashi profile is already in use: {}",
                     path.display()
                 )));
             }

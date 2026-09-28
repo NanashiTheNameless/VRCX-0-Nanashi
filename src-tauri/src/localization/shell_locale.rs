@@ -98,7 +98,7 @@ pub(crate) mod macos_menu {
 
     pub(crate) fn app_menu_labels_for_language(language: &str) -> AppMenuLabels {
         AppMenuLabels {
-            title: "VRCX-0".to_string(),
+            title: "VRCX-0-Nanashi".to_string(),
             about: text(language, ShellKey::NativeShellMenuAppAbout),
             settings: text(language, ShellKey::NativeShellMenuAppSettings),
             check_updates: text(language, ShellKey::NativeShellMenuAppCheckUpdates),

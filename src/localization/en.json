@@ -3961,7 +3961,8 @@
                 "hidden": "Hidden",
                 "visible": "Visible",
                 "visibility": "Visibility",
-                "developer": "VRCX-0 Developer"
+                "developer": "Upstream VRCX-0 Developer",
+                "fork_developer": "VRCX-0-Nanashi Developer"
             },
             "actions": {
                 "invite": "Invite",

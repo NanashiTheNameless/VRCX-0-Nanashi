@@ -10,7 +10,7 @@ use super::{WristOverlayFrameInput, WristRuntimeFooter};
 
 const TEST_ENTRY_SOURCE_ID: &str = "vrcx-0-overlay-test";
 const TEST_ENTRY_ACTIVITY_TYPE: &str = "OverlayTest";
-const TEST_ENTRY_TITLE: &str = "VRCX-0";
+const TEST_ENTRY_TITLE: &str = "VRCX-0-Nanashi";
 const TEST_ENTRY_BODY: &str = "Overlay test";
 
 pub(crate) fn test_overlay_entry() -> OverlayActivityEntry {

@@ -8,7 +8,7 @@ export function useSearchPageController() {
     const results = useSearchResults({
         ...filters,
         avatarProviderEnabled: config.avatarProviderEnabled,
-        selectedAvatarProvider: config.selectedAvatarProvider,
+        activeAvatarProviders: config.activeAvatarProviders,
         worldCategories: config.worldCategories
     });
 

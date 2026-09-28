@@ -1,55 +1,68 @@
-VRCX-0 - Disclaimer and Terms of Use
+VRCX-0-Nanashi - Disclaimer and Terms of Use
 
-Please read this notice carefully before installing VRCX-0.
+Please read this notice carefully before installing VRCX-0-Nanashi.
 
-1. Unofficial and Unaffiliated
+1. Unofficial Fork
 
-VRCX-0 is an unofficial, community-developed application. It is not endorsed
-by VRChat and does not reflect the views or opinions of VRChat or of anyone
-officially involved in producing or managing VRChat properties. VRCX-0 is not
-affiliated with, sponsored by, or approved by VRChat Inc.
+VRCX-0-Nanashi is an unofficial fork of VRCX-0, maintained independently by
+NamelessNanashi for personal use. It is not the official VRCX-0 and is not
+endorsed by, affiliated with, or supported by the VRCX-0 developer (Map1en) or
+the VRCX project and its team. Changes made in this fork are not reviewed or
+approved by them. Please do not report problems with this fork to VRCX-0 or
+VRCX; report them to this fork's source repository instead.
 
-2. Trademarks
+2. Unofficial and Unaffiliated with VRChat
+
+VRCX-0-Nanashi is an unofficial, community-developed application. It is not
+endorsed by VRChat and does not reflect the views or opinions of VRChat or of
+anyone officially involved in producing or managing VRChat properties.
+VRCX-0-Nanashi is not affiliated with, sponsored by, or approved by VRChat Inc.
+
+3. Trademarks
 
 VRChat and the VRChat logo are trademarks or service marks of VRChat Inc. All
 other trademarks are the property of their respective owners. Any use of such
-marks within VRCX-0 is for identification and reference purposes only and does
-not imply any endorsement.
+marks within VRCX-0-Nanashi is for identification and reference purposes only
+and does not imply any endorsement.
 
-3. Relationship to VRChat
+4. Relationship to VRChat
 
-VRCX-0 may access network interfaces and services used by the VRChat platform.
-It is not a mod, a cheat, or any other form of modification to the VRChat
-client, and it does not alter, inject into, or otherwise interfere with the
-VRChat game in any way.
+VRCX-0-Nanashi may access network interfaces and services used by the VRChat
+platform. It is not a mod, a cheat, or any other form of modification to the
+VRChat client, and it does not alter, inject into, or otherwise interfere with
+the VRChat game in any way.
 
-4. Compliance with VRChat's Terms
+5. Compliance with VRChat's Terms
 
 Your use of VRChat and its services remains governed by VRChat's Terms of
 Service and its applicable policies. You are solely responsible for ensuring
-that your use of VRCX-0 complies with those terms. The availability or
-operation of VRCX-0 does not represent that its use is permitted by VRChat.
+that your use of VRCX-0-Nanashi complies with those terms. The availability or
+operation of VRCX-0-Nanashi does not represent that its use is permitted by
+VRChat.
 
-5. License
+6. License
 
-VRCX-0 is free and open-source software distributed under the GNU General Public
-License, version 3 (GPL-3.0). Source code and applicable license information are
-available through the project's official source repository.
+VRCX-0-Nanashi is free and open-source software distributed under the GNU
+General Public License, version 3 (GPL-3.0), as is VRCX-0, from which it is
+derived. Source code and applicable license information are available at
+https://github.com/NanashiTheNameless/VRCX-0-Nanashi.
 
-6. No Warranty
+7. No Warranty
 
-VRCX-0 is provided "as is" and "as available", without warranty of any kind,
-whether express or implied, including but not limited to the implied warranties
-of merchantability, fitness for a particular purpose, and non-infringement.
+VRCX-0-Nanashi is provided "as is" and "as available", without warranty of any
+kind, whether express or implied, including but not limited to the implied
+warranties of merchantability, fitness for a particular purpose, and
+non-infringement.
 
-7. Limitation of Liability
+8. Limitation of Liability
 
 To the maximum extent permitted by applicable law, the authors and contributors
-of VRCX-0 shall not be liable for any claim, damages, or other liability arising
-from or in connection with the software or its use. This includes, without
-limitation, any consequences affecting your VRChat account - such as suspension,
-restriction, or termination - and any loss of data, in-game items, or access.
-You install and use VRCX-0 entirely at your own risk.
+of VRCX-0-Nanashi and of VRCX-0 shall not be liable for any claim, damages, or
+other liability arising from or in connection with the software or its use.
+This includes, without limitation, any consequences affecting your VRChat
+account - such as suspension, restriction, or termination - and any loss of
+data, in-game items, or access. You install and use VRCX-0-Nanashi entirely at
+your own risk.
 
 By proceeding with installation, you acknowledge that you have been presented
 with this notice.

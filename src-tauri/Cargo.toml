@@ -3,7 +3,7 @@ name = "vrcx-0"
 version = "3.0.0"
 edition = "2021"
 license.workspace = true
-description = "VRCX-0 desktop shell"
+description = "VRCX-0-Nanashi desktop shell"
 default-run = "vrcx-0"
 
 [[bin]]

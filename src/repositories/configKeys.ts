@@ -314,7 +314,8 @@ export const ConfigKeys = defineConfigKeys({
     // ── Avatar Provider ──────────────────────────────
     avatarRemoteDatabaseProviderList: {
         type: 'string',
-        default: '["https://api.avtrdb.com/v3/avatar/search/vrcx"]'
+        default:
+            '["https://vrcx.vrcdb.com/avatars/Avatar/VRCX","https://api.avtrdb.com/v3/avatar/search/vrcx"]'
     },
     avatarRemoteDatabaseProvider: { type: 'string', default: '' }
 });

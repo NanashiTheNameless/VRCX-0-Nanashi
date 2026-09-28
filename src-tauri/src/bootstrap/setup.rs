@@ -165,7 +165,7 @@ fn initialize_app_state(
                             &format!(
                                 "The local database was corrupted and could not be opened.\n\n\
                                  It was moved to:\n{}\n\n\
-                                 VRCX-0 created a fresh database; please sign in again.",
+                                 VRCX-0-Nanashi created a fresh database; please sign in again.",
                                 quarantined.display()
                             ),
                         );
@@ -220,7 +220,7 @@ fn exit_with_startup_error(app: &tauri::App, error: &AppError) -> ! {
     show_blocking_dialog(
         app,
         MessageDialogKind::Error,
-        &format!("VRCX-0 failed to start.\n\n{error}"),
+        &format!("VRCX-0-Nanashi failed to start.\n\n{error}"),
     );
     std::process::exit(1);
 }
@@ -229,7 +229,7 @@ fn show_blocking_dialog(app: &tauri::App, kind: MessageDialogKind, message: &str
     app.dialog()
         .message(message)
         .kind(kind)
-        .title("VRCX-0")
+        .title("VRCX-0-Nanashi")
         .blocking_show();
 }
 

@@ -126,7 +126,7 @@ impl DesktopDataDirRuntime {
         let directory = app_paths::app_data_dir_state(&self.resolution)?;
         if configured_data_dir_differs(&directory) {
             return Err(vrcx_0_composition::Error::Custom(
-                "Restart VRCX-0 before changing the data directory again.".into(),
+                "Restart VRCX-0-Nanashi before changing the data directory again.".into(),
             ));
         }
         Ok(())

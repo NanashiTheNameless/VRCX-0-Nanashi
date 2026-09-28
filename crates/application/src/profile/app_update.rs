@@ -957,7 +957,7 @@ impl AppUpdateRuntime {
         }
         self.inner
             .background_jobs
-            .mark_running(APP_UPDATE_CHECK_JOB, "Checking for VRCX-0 updates.");
+            .mark_running(APP_UPDATE_CHECK_JOB, "Checking for VRCX-0-Nanashi updates.");
 
         let target = (self.inner.target_resolver)();
         let proxy = load_updater_proxy_url(self.inner.config.as_ref());
@@ -985,7 +985,7 @@ impl AppUpdateRuntime {
             if let Some(installed) = self.maybe_auto_install_on_startup(&snapshot).await {
                 snapshot.has_available_update = false;
                 snapshot.detail = format!(
-                    "Installed VRCX-0 {} automatically on startup.",
+                    "Installed VRCX-0-Nanashi {} automatically on startup.",
                     installed.version
                 );
             }

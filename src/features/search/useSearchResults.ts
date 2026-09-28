@@ -29,25 +29,25 @@ import type {
 import { useSearchPagination } from './useSearchPagination';
 
 export function useSearchResults({
+    activeAvatarProviders,
     activeTab,
     avatarProviderEnabled,
     includeCommunityLabs,
     searchText,
     searchUserByBio,
     searchUserSortByLastLoggedIn,
-    selectedAvatarProvider,
     selectedWorldCategory,
     setSearchText,
     setSelectedWorldCategory,
     worldCategories
 }: {
+    activeAvatarProviders: string[];
     activeTab: SearchActiveTab;
     avatarProviderEnabled: boolean;
     includeCommunityLabs: boolean;
     searchText: string;
     searchUserByBio: boolean;
     searchUserSortByLastLoggedIn: boolean;
-    selectedAvatarProvider: string;
     selectedWorldCategory: string;
     setSearchText: (value: string) => void;
     setSelectedWorldCategory: (value: string) => void;
@@ -268,7 +268,7 @@ export function useSearchResults({
                 });
                 return;
             }
-            if (!avatarProviderEnabled || !selectedAvatarProvider) {
+            if (!avatarProviderEnabled || !activeAvatarProviders.length) {
                 toast.add({
                     type: 'warning',
                     title: t('view.search.avatar.no_provider')
@@ -276,10 +276,11 @@ export function useSearchResults({
                 return;
             }
             runAvatarSearch(
-                buildAvatarSearchRequest(searchText, selectedAvatarProvider)
+                buildAvatarSearchRequest(searchText, activeAvatarProviders)
             );
         }
     }, [
+        activeAvatarProviders,
         activeTab,
         avatarProviderEnabled,
         includeCommunityLabs,
@@ -290,7 +291,6 @@ export function useSearchResults({
         searchText,
         searchUserByBio,
         searchUserSortByLastLoggedIn,
-        selectedAvatarProvider,
         selectedWorldCategory,
         t,
         worldCategories

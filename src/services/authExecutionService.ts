@@ -460,7 +460,7 @@ export async function logoutWithoutConfirmation() {
         runtimeStore.setStartupTask(
             'auth',
             'completed',
-            'Reset VRCX-0 without changing persisted auth state.'
+            'Reset VRCX-0-Nanashi without changing persisted auth state.'
         );
         return true;
     }
@@ -482,7 +482,11 @@ export async function logoutWithoutConfirmation() {
     clearCurrentUserRuntimeAuthState();
     setSignedOutSessionState();
     applySavedAuthSnapshot(snapshot);
-    runtimeStore.setStartupTask('auth', 'completed', 'Signed out from VRCX-0.');
+    runtimeStore.setStartupTask(
+        'auth',
+        'completed',
+        'Signed out from VRCX-0-Nanashi.'
+    );
 
     if (currentUserDisplayName) {
         toast.add({

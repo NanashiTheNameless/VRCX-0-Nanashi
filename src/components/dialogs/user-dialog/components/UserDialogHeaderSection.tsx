@@ -24,7 +24,10 @@ import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { cn } from '@/lib/utils';
 import type { RecentActionType } from '@/services/recentActionService';
 import { useResolvedThemeMode } from '@/services/themeService';
-import { OWNER_USER_ID } from '@/shared/constants/user';
+import {
+    FORK_MAINTAINER_USER_ID,
+    OWNER_USER_ID
+} from '@/shared/constants/user';
 import { Button } from '@/ui/shadcn/button';
 import { CardTitle } from '@/ui/shadcn/card';
 import { Separator } from '@/ui/shadcn/separator';
@@ -646,6 +649,7 @@ export function UserDialogHeaderSection({
         : '';
     const hasProfileBadges = hasRenderableUserProfileBadges(profile);
     const isOwner = profile.id === OWNER_USER_ID;
+    const isForkMaintainer = profile.id === FORK_MAINTAINER_USER_ID;
     const profileBackgroundStyle = appearanceVisibility.profileBackground
         ? resolveProfileBackgroundStyle(profile, resolvedThemeMode === 'dark')
         : undefined;
@@ -776,7 +780,7 @@ export function UserDialogHeaderSection({
                                                     'dialog.user.badges.developer',
                                                     {
                                                         defaultValue:
-                                                            'VRCX-0 Developer'
+                                                            'Upstream VRCX-0 Developer'
                                                     }
                                                 )}
                                             >
@@ -786,8 +790,39 @@ export function UserDialogHeaderSection({
                                     />
                                     <TooltipContent>
                                         {t('dialog.user.badges.developer', {
-                                            defaultValue: 'VRCX-0 Developer'
+                                            defaultValue:
+                                                'Upstream VRCX-0 Developer'
                                         })}
+                                    </TooltipContent>
+                                </Tooltip>
+                            ) : null}
+                            {isForkMaintainer ? (
+                                <Tooltip>
+                                    <TooltipTrigger
+                                        render={
+                                            <span
+                                                className="owner-badge"
+                                                role="img"
+                                                aria-label={t(
+                                                    'dialog.user.badges.fork_developer',
+                                                    {
+                                                        defaultValue:
+                                                            'VRCX-0-Nanashi Developer'
+                                                    }
+                                                )}
+                                            >
+                                                <GemIcon aria-hidden="true" />
+                                            </span>
+                                        }
+                                    />
+                                    <TooltipContent>
+                                        {t(
+                                            'dialog.user.badges.fork_developer',
+                                            {
+                                                defaultValue:
+                                                    'VRCX-0-Nanashi Developer'
+                                            }
+                                        )}
                                     </TooltipContent>
                                 </Tooltip>
                             ) : null}
