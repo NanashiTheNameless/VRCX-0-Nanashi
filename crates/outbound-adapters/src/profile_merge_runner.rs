@@ -183,7 +183,17 @@ pub fn run_data_export(
     app_version: &str,
 ) -> Result<vrcx_0_persistence::data_export::DataExportReport, Error> {
     storage.save().map_err(map_persistence_error)?;
-    db.checkpoint_wal().map_err(map_persistence_error)?;
+    // The snapshot uses SQLite's online backup API, which reads through the WAL,
+    // so open readers keeping the checkpoint busy must not fail the export.
+    match db.checkpoint_wal_passive() {
+        Ok(status) if status.busy => tracing::warn!(
+            log_frames = status.log_frames,
+            checkpointed_frames = status.checkpointed_frames,
+            "data export WAL checkpoint remained busy; continuing with SQLite online backup"
+        ),
+        Ok(_) => {}
+        Err(error) => tracing::warn!(%error, "data export WAL checkpoint failed; continuing"),
+    }
     vrcx_0_persistence::data_export::export_data_archive(
         db.db_path(),
         app_data,

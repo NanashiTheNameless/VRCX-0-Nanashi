@@ -38,8 +38,18 @@ const NETWORK_ERROR_MARKERS: &[&str] = &[
     "update download failed",
 ];
 
+/// Failures logged on purpose for diagnosis; they carry HTTP statuses but are
+/// not background network noise.
+const ALWAYS_KEEP_MARKERS: &[&str] = &["assistant llm request failed"];
+
 fn has_network_error_text(message: &str) -> bool {
     let lower = message.to_ascii_lowercase();
+    if ALWAYS_KEEP_MARKERS
+        .iter()
+        .any(|marker| lower.contains(marker))
+    {
+        return false;
+    }
     NETWORK_ERROR_MARKERS
         .iter()
         .any(|marker| lower.contains(marker))
@@ -290,6 +300,13 @@ mod tests {
     fn realtime_transport_failures_survive_the_network_noise_filter() {
         assert!(!should_skip_error_log(
             "[Realtime] websocket auth rejected while the session was still usable generation=4 code=401"
+        ));
+    }
+
+    #[test]
+    fn assistant_llm_failures_survive_the_network_noise_filter() {
+        assert!(!should_skip_error_log(
+            "ERROR vrcx_0_assistant::agent::turn: assistant LLM request failed status=400 response={\"error\":\"bad\"}"
         ));
     }
 
