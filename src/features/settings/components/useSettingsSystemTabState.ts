@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { POST_UPDATE_CHANGELOG_TOAST_CONFIG_KEY } from '@/services/changelogService';
 import { restartApplication } from '@/services/shellIntegrationService';
 import { toast } from '@/services/toastService';
+import type { AppUpdateMode } from '@/shared/appUpdateMode';
 import { isUpdateCheckDisabledBuild } from '@/shared/buildLabel';
 import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -27,7 +28,7 @@ export function useSettingsSystemTabState() {
             systemWindowFrame: state.systemWindowFrame,
             autoLoginDelayEnabled: state.autoLoginDelayEnabled,
             autoLoginDelaySeconds: state.autoLoginDelaySeconds,
-            autoInstallUpdatesOnStartup: state.autoInstallUpdatesOnStartup,
+            autoUpdateMode: state.autoUpdateVRCX,
             showPostUpdateChangelogToast: state.showPostUpdateChangelogToast,
             backgroundModeEnabled: state.backgroundModeEnabled,
             backgroundModeDelayEnabled: state.backgroundModeDelayEnabled,
@@ -39,6 +40,7 @@ export function useSettingsSystemTabState() {
     const {
         savePreferenceValue,
         saveBoolPreference,
+        saveStringPreference,
         setProxyEnabledPreference,
         setStartAtWindowsStartupPreference,
         setStartAsMinimizedPreference,
@@ -56,7 +58,7 @@ export function useSettingsSystemTabState() {
         systemWindowFrame: prefs.systemWindowFrame,
         autoLoginDelayEnabled: prefs.autoLoginDelayEnabled,
         autoLoginDelaySeconds: prefs.autoLoginDelaySeconds,
-        autoInstallUpdatesOnStartup: prefs.autoInstallUpdatesOnStartup,
+        autoUpdateMode: prefs.autoUpdateMode,
         updateCheckDisabled: isUpdateCheckDisabledBuild(),
         showPostUpdateChangelogToast: prefs.showPostUpdateChangelogToast,
         backgroundModeEnabled: prefs.backgroundModeEnabled,
@@ -122,12 +124,8 @@ export function useSettingsSystemTabState() {
                 enabled
             );
         },
-        onAutoInstallUpdatesOnStartupChange: (enabled: boolean) => {
-            saveBoolPreference(
-                'autoInstallUpdatesOnStartup',
-                'autoInstallUpdatesOnStartup',
-                enabled
-            );
+        onAutoUpdateModeChange: (mode: AppUpdateMode) => {
+            saveStringPreference('autoUpdateVRCX', 'autoUpdateVRCX', mode);
         },
         onPostUpdateChangelogToastChange: (enabled: boolean) => {
             saveBoolPreference(

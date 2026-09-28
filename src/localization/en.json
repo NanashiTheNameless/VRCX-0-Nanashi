@@ -2545,8 +2545,19 @@
                     "background_mode_delay": "Delay Background Mode",
                     "background_mode_delay_description": "Wait before switching - if you reopen the window within the delay, it resumes instantly.",
                     "background_mode_delay_button": "Set Delay Minutes",
-                    "auto_install_updates_on_startup": "Auto-Update on Startup",
-                    "auto_install_updates_on_startup_description": "Automatically download and install updates when the app starts.",
+                    "update_mode": "Updates",
+                    "update_mode_option": {
+                        "off": "Off",
+                        "notify": "Notify only",
+                        "auto_download": "Auto download",
+                        "auto_install": "Auto install on startup"
+                    },
+                    "update_mode_description": {
+                        "off": "No automatic update checks. You can still check manually from the updater.",
+                        "notify": "Check for updates and notify you, but never download on its own.",
+                        "auto_download": "Check for updates and download them in the background; you choose when to install.",
+                        "auto_install": "Check, download in the background, and install a downloaded update when the app starts."
+                    },
                     "check_for_updates_and_update": "Check for Updates and Update",
                     "update_check_disabled": "Disabled",
                     "update_check_disabled_build_description": "This special build has update checks disabled. Use your package manager or contact the maintainer to update VRCX-0-Nanashi.",
@@ -5721,30 +5732,17 @@
         "vrcx_updater": {
             "latest_version": "VRCX-0-Nanashi is up to date",
             "ready_for_update": "Update {value} is ready",
-            "channel": {
-                "label": "Update channel",
-                "stable": "Stable",
-                "beta": "Nightly",
-                "description": "VRCX-0-Nanashi only checks for updates in the installed channel.",
-                "switch_description": "To switch to {channel}, download and install its latest release.",
-                "download_stable": "Download latest Stable",
-                "download_beta": "Download latest Nightly",
-                "no_release": "No release is available in this channel."
-            }
+            "reinstall": "Reinstall / repair",
+            "other_versions": "Install a specific version",
+            "choose_version": "Choose a version",
+            "installed_version": "{value} (installed)",
+            "install_selected": "Install and restart",
+            "downgrade_warning": "This is an older version. It may not be able to read data a newer version already upgraded, so export a backup of your data first."
         },
         "change_log": {
-            "header": "Change Log",
-            "support_title": "If VRCX-0-Nanashi helps you",
-            "support_description": "A GitHub Star is the easiest way to support the project.",
-            "star_on_github": "Star on GitHub",
-            "support_development": "Support development",
-            "loading": "Loading changelog...",
-            "failed_to_load": "Failed to load changelog.",
-            "latest_release": "Latest release",
-            "empty": "No changelog is available for this release.",
             "toast_title": "Updated to {value}",
-            "toast_description": "Review what changed in this version.",
-            "view_changes": "View changes"
+            "toast_description": "See what changed in this version on GitHub.",
+            "view_changes": "View release on GitHub"
         },
         "open_source": {
             "header": "Third-Party Notices",
@@ -6634,7 +6632,7 @@
     "service": {
         "background_maintenance_service": {
             "dynamic": {
-                "version_value_is_available_on_the_value_branch": "Version {value} is available on the {value2} branch"
+                "version_value_is_available": "Version {value} is available"
             }
         },
         "database_upgrade_service": {

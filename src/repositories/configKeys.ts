@@ -18,7 +18,8 @@ export const ConfigKeys = defineConfigKeys({
     appLanguage: { type: 'string', default: null },
     maxTableSize_v2: { type: 'int', default: 500 },
     searchLimit: { type: 'int', default: 50000 },
-    autoUpdateVRCX: { type: 'string', default: 'Auto Download' },
+    autoUpdateVRCX: { type: 'string', default: null },
+    // Legacy: read only as the fallback for an unset autoUpdateVRCX.
     autoInstallUpdatesOnStartup: { type: 'bool', default: true },
     id: { type: 'string', default: '' },
     branch: { type: 'string', default: '' },

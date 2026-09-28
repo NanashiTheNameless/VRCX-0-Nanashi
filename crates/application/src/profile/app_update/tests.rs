@@ -847,3 +847,98 @@ async fn nightly_update_check_picks_the_most_recently_published_build() {
         "3.0.0-Nightly-0000001"
     );
 }
+
+#[test]
+fn update_mode_parses_settings_and_falls_back_to_legacy_toggle() {
+    use super::AppUpdateMode;
+    assert_eq!(AppUpdateMode::from_config("Off", true), AppUpdateMode::Off);
+    assert_eq!(
+        AppUpdateMode::from_config("Notify", true),
+        AppUpdateMode::Notify
+    );
+    assert_eq!(
+        AppUpdateMode::from_config("Auto Download", true),
+        AppUpdateMode::AutoDownload
+    );
+    assert_eq!(
+        AppUpdateMode::from_config(" Auto Install ", false),
+        AppUpdateMode::AutoInstall
+    );
+    // Unset: the legacy on/off switch maps on -> Auto Install, off -> Notify.
+    assert_eq!(
+        AppUpdateMode::from_config("", true),
+        AppUpdateMode::AutoInstall
+    );
+    assert_eq!(AppUpdateMode::from_config("", false), AppUpdateMode::Notify);
+    assert_eq!(
+        AppUpdateMode::from_config("bogus", false),
+        AppUpdateMode::Notify
+    );
+}
+
+#[tokio::test]
+async fn reinstalling_the_running_version_is_allowed() {
+    let mut context = app_update_test_context([InstallOutcome::Success]);
+    Arc::get_mut(&mut context.runtime.inner)
+        .expect("runtime is not shared yet")
+        .build
+        .app_version = TEST_UPDATE_VERSION.into();
+
+    let installed = context
+        .runtime
+        .install(TEST_UPDATE_VERSION)
+        .await
+        .expect("the running version can be reinstalled");
+
+    assert_eq!(installed.version, TEST_UPDATE_VERSION);
+    assert!(context.port.download_requests.lock().unwrap()[0].allow_downgrades);
+}
+
+#[tokio::test]
+async fn an_older_release_of_the_channel_can_be_installed_as_a_downgrade() {
+    let mut context = app_update_test_context([InstallOutcome::Success]);
+    let inner = Arc::get_mut(&mut context.runtime.inner).unwrap();
+    inner.build.app_version = "2.15.0".into();
+    inner.release_catalog = Arc::new(TestAppUpdateReleaseCatalog {
+        releases: vec![
+            release(
+                "v2.15.0",
+                false,
+                vec![asset(
+                    "latest_windows.json",
+                    "uploaded",
+                    "https://example.test/2.15.0.json",
+                )],
+            ),
+            release(
+                "v2.14.0",
+                false,
+                vec![asset(
+                    "latest_windows.json",
+                    "uploaded",
+                    "https://example.test/2.14.0.json",
+                )],
+            ),
+        ],
+    });
+
+    let listed = context
+        .runtime
+        .installable_releases()
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|release| release.canonical_version)
+        .collect::<Vec<_>>();
+    assert_eq!(listed, ["2.15.0", "2.14.0"]);
+
+    let installed = context
+        .runtime
+        .install("2.14.0")
+        .await
+        .expect("an older release can be installed");
+    assert_eq!(installed.version, "2.14.0");
+    let requests = context.port.download_requests.lock().unwrap();
+    assert!(requests[0].allow_downgrades);
+    assert_eq!(requests[0].manifest_url, "https://example.test/2.14.0.json");
+}

@@ -120,9 +120,12 @@ debug = false
 opt-level = 0
 
 [profile.release]
-# Thin LTO with parallel codegen builds far faster than fat LTO with one
-# codegen unit, for a slightly larger binary.
-lto = "thin"
+# No cross-crate LTO: nightly --timings showed thin LTO of the final binary
+# was ~40-50% of every package build, running mostly single-threaded on
+# 3-core runners. Without it, crates optimize in parallel as they build and
+# the final step is just a link; the binary is somewhat larger. Crate-local
+# thin LTO across codegen units still applies.
+lto = false
 opt-level = "s"
 panic = "abort"
 strip = true

@@ -2,8 +2,21 @@ import { useTranslation } from 'react-i18next';
 
 import { PrivacyLockSetting } from '@/features/privacy-lock/PrivacyLockSetting';
 import type { HostPlatform } from '@/platform/tauri/bindings';
+import {
+    APP_UPDATE_MODES,
+    normalizeAppUpdateMode,
+    type AppUpdateMode
+} from '@/shared/appUpdateMode';
 import { Badge } from '@/ui/shadcn/badge';
 import { Button } from '@/ui/shadcn/button';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@/ui/shadcn/select';
 import { Switch } from '@/ui/shadcn/switch';
 
 import { KeepSystemAwakeSetting } from '../KeepSystemAwakeSetting';
@@ -14,8 +27,15 @@ import { SettingsTabContent } from '../SettingsViewParts';
 import { TrayShortcutSetting } from '../TrayShortcutSetting';
 import { useSettingsSystemTabState } from '../useSettingsSystemTabState';
 
+const UPDATE_MODE_KEYS: Record<AppUpdateMode, string> = {
+    Off: 'off',
+    Notify: 'notify',
+    'Auto Download': 'auto_download',
+    'Auto Install': 'auto_install'
+};
+
 type SettingsSystemTabContentProps = {
-    autoInstallUpdatesOnStartup?: boolean;
+    autoUpdateMode: AppUpdateMode;
     autoLoginDelayEnabled?: boolean;
     autoLoginDelaySeconds?: number;
     backgroundModeEnabled?: boolean;
@@ -30,7 +50,7 @@ type SettingsSystemTabContentProps = {
     proxyServer?: string;
     showPostUpdateChangelogToast?: boolean;
     updateCheckDisabled?: boolean;
-    onAutoInstallUpdatesOnStartupChange: (checked: boolean) => void;
+    onAutoUpdateModeChange: (mode: AppUpdateMode) => void;
     onAutoLoginDelayEnabledChange: (checked: boolean) => void;
     onBackgroundModeEnabledChange: (checked: boolean) => void;
     onBackgroundModeDelayEnabledChange: (checked: boolean) => void;
@@ -58,7 +78,7 @@ export function SettingsSystemTabContent({
     systemWindowFrame,
     autoLoginDelayEnabled,
     autoLoginDelaySeconds,
-    autoInstallUpdatesOnStartup,
+    autoUpdateMode,
     updateCheckDisabled = false,
     showPostUpdateChangelogToast,
     backgroundModeEnabled,
@@ -75,7 +95,7 @@ export function SettingsSystemTabContent({
     onBackgroundModeEnabledChange,
     onBackgroundModeDelayEnabledChange,
     onPromptBackgroundModeDelayMinutes,
-    onAutoInstallUpdatesOnStartupChange,
+    onAutoUpdateModeChange,
     onPostUpdateChangelogToastChange,
     onProxyEnabledChange,
     onProxySettings
@@ -218,18 +238,43 @@ export function SettingsSystemTabContent({
                 ) : (
                     <Field
                         label={t(
-                            'view.settings.general.application.auto_install_updates_on_startup'
+                            'view.settings.general.application.update_mode'
                         )}
                         description={t(
-                            'view.settings.general.application.auto_install_updates_on_startup_description'
+                            `view.settings.general.application.update_mode_description.${UPDATE_MODE_KEYS[autoUpdateMode]}`
                         )}
+                        controlId="settings-update-mode"
                     >
-                        <Switch
-                            checked={autoInstallUpdatesOnStartup}
-                            onCheckedChange={
-                                onAutoInstallUpdatesOnStartupChange
+                        <Select
+                            value={autoUpdateMode}
+                            onValueChange={(value) =>
+                                onAutoUpdateModeChange(
+                                    normalizeAppUpdateMode(value)
+                                )
                             }
-                        />
+                        >
+                            <SelectTrigger
+                                id="settings-update-mode"
+                                className="w-56"
+                            >
+                                <SelectValue>
+                                    {t(
+                                        `view.settings.general.application.update_mode_option.${UPDATE_MODE_KEYS[autoUpdateMode]}`
+                                    )}
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    {APP_UPDATE_MODES.map((mode) => (
+                                        <SelectItem key={mode} value={mode}>
+                                            {t(
+                                                `view.settings.general.application.update_mode_option.${UPDATE_MODE_KEYS[mode]}`
+                                            )}
+                                        </SelectItem>
+                                    ))}
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
                     </Field>
                 )}
                 <Field

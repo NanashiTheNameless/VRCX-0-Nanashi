@@ -10,6 +10,7 @@ import { commands } from '@/platform/tauri/bindings';
 import { tauriEvents } from '@/platform/tauri/events';
 import { logoutFromReactShell } from '@/services/authExecutionService';
 import { startBackgroundModeForCurrentSession } from '@/services/backgroundModeService';
+import { releaseNotesUrl } from '@/services/changelogService';
 import { openExternalLink } from '@/services/entityMediaService';
 import {
     setNavbarCollapsedPreference,
@@ -244,7 +245,7 @@ export function MacNativeMenuActionHost() {
                     openExternalLink(links.issues);
                     break;
                 case 'changelog':
-                    openExternalLink(links.releases);
+                    openExternalLink(releaseNotesUrl());
                     break;
                 case 'keyboard-shortcuts':
                     setSystemHostOpen('keyboardShortcutsOpen', true);

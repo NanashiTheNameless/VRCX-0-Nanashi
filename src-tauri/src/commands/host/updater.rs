@@ -31,6 +31,20 @@ pub async fn app__app_update_release_get(
         .map_err(AppError::from)
 }
 
+/// Releases of this build's channel that can be installed in place, newest
+/// first (updates, a reinstall of the running version, or downgrades).
+#[tauri::command]
+#[specta::specta]
+pub async fn app__app_update_releases_list(
+    state: State<'_, AppState>,
+) -> Result<Vec<AppUpdateReleaseSnapshot>, AppError> {
+    state
+        .runtime_host()
+        .installable_app_update_releases()
+        .await
+        .map_err(AppError::from)
+}
+
 #[tauri::command(async)]
 #[specta::specta]
 pub fn app__app_update_download_status_get(

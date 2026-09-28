@@ -40,7 +40,51 @@ fn load_updater_proxy_url(config: &dyn ProfileConfigStore) -> Option<String> {
 }
 const APP_UPDATE_CHECK_INTERVAL_SECONDS: u64 = 10_800;
 const APP_UPDATE_PROGRESS_EMIT_INTERVAL: Duration = Duration::from_millis(500);
+/// Legacy on/off switch, read only when `autoUpdateVRCX` is unset.
 const CONFIG_AUTO_INSTALL_ON_STARTUP: &str = "autoInstallUpdatesOnStartup";
+const CONFIG_UPDATE_MODE: &str = "autoUpdateVRCX";
+
+/// How much the app does on its own about updates. Manual checks from the
+/// updater dialog always work, whatever the mode.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum AppUpdateMode {
+    /// No scheduled checks.
+    Off,
+    /// Scheduled checks and notifications, no download.
+    Notify,
+    /// Also download new versions in the background.
+    AutoDownload,
+    /// Also install a downloaded version on startup.
+    AutoInstall,
+}
+
+impl AppUpdateMode {
+    pub(crate) fn from_config(mode: &str, legacy_auto_install: bool) -> Self {
+        match mode.trim() {
+            "Off" => Self::Off,
+            "Notify" => Self::Notify,
+            "Auto Download" => Self::AutoDownload,
+            "Auto Install" => Self::AutoInstall,
+            // Legacy on/off switch until the frontend migrates it.
+            _ if legacy_auto_install => Self::AutoInstall,
+            _ => Self::Notify,
+        }
+    }
+
+    fn load(config: &dyn ProfileConfigStore) -> Self {
+        let mode = config
+            .get_string(CONFIG_UPDATE_MODE, "")
+            .unwrap_or_default();
+        let legacy_auto_install = config
+            .get_bool(CONFIG_AUTO_INSTALL_ON_STARTUP, true)
+            .unwrap_or(true);
+        Self::from_config(&mode, legacy_auto_install)
+    }
+
+    fn downloads(self) -> bool {
+        matches!(self, Self::AutoDownload | Self::AutoInstall)
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -177,12 +221,13 @@ fn update_available_outcome(
     }
 }
 
-async fn fetch_latest_release(
+/// Every release of `channel` for `target`, newest first.
+async fn fetch_releases(
     release_catalog: &dyn AppUpdateReleaseCatalogPort,
     channel: AppUpdateChannel,
     target: Option<&str>,
     require_installer_asset: bool,
-) -> Result<Option<AppUpdateReleaseSnapshot>> {
+) -> Result<Vec<AppUpdateReleaseSnapshot>> {
     let releases = release_catalog.list_releases().await?;
     let mut normalized: Vec<AppUpdateReleaseSnapshot> = releases
         .iter()
@@ -190,7 +235,21 @@ async fn fetch_latest_release(
         .filter(|release| release.channel == channel)
         .collect();
     normalized.sort_by(compare_releases_newest_first);
-    Ok(normalized.into_iter().next())
+    Ok(normalized)
+}
+
+async fn fetch_latest_release(
+    release_catalog: &dyn AppUpdateReleaseCatalogPort,
+    channel: AppUpdateChannel,
+    target: Option<&str>,
+    require_installer_asset: bool,
+) -> Result<Option<AppUpdateReleaseSnapshot>> {
+    Ok(
+        fetch_releases(release_catalog, channel, target, require_installer_asset)
+            .await?
+            .into_iter()
+            .next(),
+    )
 }
 
 async fn run_check_inner(context: &AppUpdateCheckContext<'_>) -> Result<CheckOutcome> {
@@ -512,7 +571,7 @@ impl AppUpdateRuntime {
     }
 
     pub async fn check_now(&self) -> AppUpdateStatusSnapshot {
-        self.run_check_cycle().await
+        self.run_check_cycle(true).await
     }
 
     pub async fn latest_release_for_channel(
@@ -601,23 +660,51 @@ impl AppUpdateRuntime {
         }
     }
 
+    /// Releases of this build's channel that can be installed in place, newest
+    /// first: updates, a reinstall of the running version, or downgrades.
+    pub async fn installable_releases(&self) -> Result<Vec<AppUpdateReleaseSnapshot>> {
+        let Some(target) = (self.inner.target_resolver)() else {
+            return Ok(Vec::new());
+        };
+        Ok(fetch_releases(
+            self.inner.release_catalog.as_ref(),
+            self.inner.channel,
+            Some(&target),
+            true,
+        )
+        .await?
+        .into_iter()
+        .filter(|release| release.updater_type == AppUpdateDeliveryKind::Tauri)
+        .collect())
+    }
+
     async fn release_for_version(&self, version: &str) -> Result<AppUpdateReleaseSnapshot> {
         let channel = release_channel_for_version(version)
             .ok_or_else(|| Error::Custom("no-pending-update".into()))?;
-        let release = if channel != self.inner.channel {
+        let is_installable = |release: &AppUpdateReleaseSnapshot| {
+            release.canonical_version == version
+                && release.updater_type == AppUpdateDeliveryKind::Tauri
+        };
+        let latest = if channel != self.inner.channel {
             self.latest_release_for_channel(channel).await?
         } else {
             self.snapshot().release
         };
-        match release {
-            Some(release)
-                if release.canonical_version == version
-                    && release.updater_type == AppUpdateDeliveryKind::Tauri =>
-            {
-                Ok(release)
-            }
-            _ => Err(Error::Custom("no-pending-update".into())),
+        if let Some(release) = latest.filter(|release| is_installable(release)) {
+            return Ok(release);
         }
+        // An older release of this channel: a reinstall or a downgrade.
+        if channel == self.inner.channel {
+            if let Some(release) = self
+                .installable_releases()
+                .await?
+                .into_iter()
+                .find(|release| is_installable(release))
+            {
+                return Ok(release);
+            }
+        }
+        Err(Error::Custom("no-pending-update".into()))
     }
 
     fn with_download_state<R>(&self, f: impl FnOnce(&mut DownloadState) -> R) -> R {
@@ -695,8 +782,11 @@ impl AppUpdateRuntime {
             target: release.target.clone(),
             current_version: self.inner.build.app_version.clone(),
             expected_version: release.canonical_version.clone(),
+            // A reinstall (repair) or downgrade picked in the updater dialog is
+            // not newer than the running version.
             allow_downgrades: release.channel != self.inner.channel
-                || release.channel == AppUpdateChannel::Beta,
+                || release.channel == AppUpdateChannel::Beta
+                || !is_release_newer_than_current(release, &self.inner.build.app_version),
             proxy,
         };
         let progress_runtime = self.clone();
@@ -866,15 +956,6 @@ impl AppUpdateRuntime {
         if release.updater_type != AppUpdateDeliveryKind::Tauri {
             return None;
         }
-        let auto_install = self
-            .inner
-            .config
-            .get_bool(CONFIG_AUTO_INSTALL_ON_STARTUP, true)
-            .unwrap_or(true);
-        if !auto_install {
-            return None;
-        }
-
         match self.ensure_downloaded(release).await {
             Ok(status) if status.phase == AppUpdateDownloadPhase::Downloaded => {
                 match self.install(&release.canonical_version).await {
@@ -941,7 +1022,7 @@ impl AppUpdateRuntime {
                 if stop_token.is_stop_requested() {
                     return;
                 }
-                runtime.run_check_cycle().await;
+                runtime.run_check_cycle(false).await;
                 if !sleep_until_due_or_stopped(
                     Duration::from_secs(APP_UPDATE_CHECK_INTERVAL_SECONDS),
                     &stop_token,
@@ -954,8 +1035,18 @@ impl AppUpdateRuntime {
         });
     }
 
-    async fn run_check_cycle(&self) -> AppUpdateStatusSnapshot {
+    /// `manual` checks come from the updater dialog and run in every mode.
+    async fn run_check_cycle(&self, manual: bool) -> AppUpdateStatusSnapshot {
         if self.inner.build.update_check_disabled {
+            return self.snapshot();
+        }
+        let mode = AppUpdateMode::load(self.inner.config.as_ref());
+        if mode == AppUpdateMode::Off && !manual {
+            self.inner.background_jobs.mark_scheduled(
+                APP_UPDATE_CHECK_JOB,
+                "Automatic update checks are off.",
+                APP_UPDATE_CHECK_INTERVAL_SECONDS,
+            );
             return self.snapshot();
         }
         self.inner
@@ -984,7 +1075,7 @@ impl AppUpdateRuntime {
             .inner
             .first_check_done
             .swap(true, AtomicOrdering::AcqRel);
-        if is_first_check {
+        if is_first_check && mode == AppUpdateMode::AutoInstall {
             if let Some(installed) = self.maybe_auto_install_on_startup(&snapshot).await {
                 snapshot.has_available_update = false;
                 snapshot.detail = format!(
@@ -993,7 +1084,7 @@ impl AppUpdateRuntime {
                 );
             }
         }
-        if snapshot.has_available_update {
+        if snapshot.has_available_update && mode.downloads() {
             self.maybe_auto_background_download(&snapshot);
         }
 

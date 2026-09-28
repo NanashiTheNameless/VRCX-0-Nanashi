@@ -8,6 +8,7 @@ type ShellSectionInput = SettingsSectionInput<
 type SystemSectionInput = SettingsSectionInput<
     | 'savePreferenceValue'
     | 'saveBoolPreference'
+    | 'saveStringPreference'
     | 'setProxyEnabledPreference'
     | 'setStartAtWindowsStartupPreference'
     | 'setStartAsMinimizedPreference'
@@ -31,6 +32,7 @@ export function buildShellSection({
 export function buildSystemSection({
     savePreferenceValue,
     saveBoolPreference,
+    saveStringPreference,
     setProxyEnabledPreference,
     setStartAtWindowsStartupPreference,
     setStartAsMinimizedPreference,
@@ -42,6 +44,7 @@ export function buildSystemSection({
     return {
         savePreferenceValue,
         saveBoolPreference,
+        saveStringPreference,
         setProxyEnabledPreference,
         setStartAtWindowsStartupPreference,
         setStartAsMinimizedPreference,

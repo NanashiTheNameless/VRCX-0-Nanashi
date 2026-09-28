@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
     getPreviewStableReleaseUpdateMode: vi.fn(),
     appAppUpdateCheckRun: vi.fn(),
     appAppUpdateReleaseGet: vi.fn(),
+    appAppUpdateReleasesList: vi.fn(),
     toNormalizedReleaseFromSnapshot: vi.fn(),
     confirmInstall: vi.fn(),
     restartApplication: vi.fn(),
@@ -36,7 +37,8 @@ vi.mock('@/shared/buildLabel', () => ({
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
         appAppUpdateCheckRun: mocks.appAppUpdateCheckRun,
-        appAppUpdateReleaseGet: mocks.appAppUpdateReleaseGet
+        appAppUpdateReleaseGet: mocks.appAppUpdateReleaseGet,
+        appAppUpdateReleasesList: mocks.appAppUpdateReleasesList
     }
 }));
 
@@ -102,41 +104,38 @@ vi.mock('@/ui/shadcn/field', async () => {
 
 vi.mock('@/ui/shadcn/select', async () => {
     const React = await import('react');
+    const SelectContext = React.createContext<(value: string) => void>(
+        () => {}
+    );
 
     return {
         Select: ({
             children,
-            value,
-            disabled,
             onValueChange
         }: React.PropsWithChildren<{
             value: string;
-            disabled?: boolean;
             onValueChange: (value: string) => void;
         }>) =>
             React.createElement(
-                'div',
-                null,
-                React.createElement(
-                    'button',
-                    {
-                        type: 'button',
-                        disabled,
-                        onClick: () =>
-                            onValueChange(
-                                value === 'stable' ? 'beta' : 'stable'
-                            )
-                    },
-                    `select:${value}`
-                ),
-                children
+                SelectContext.Provider,
+                { value: onValueChange },
+                React.createElement('div', null, children)
             ),
         SelectContent: ({ children }: React.PropsWithChildren) =>
             React.createElement('div', null, children),
         SelectGroup: ({ children }: React.PropsWithChildren) =>
             React.createElement('div', null, children),
-        SelectItem: ({ children }: React.PropsWithChildren) =>
-            React.createElement('div', null, children),
+        SelectItem: ({
+            children,
+            value
+        }: React.PropsWithChildren<{ value: string }>) => {
+            const onValueChange = React.useContext(SelectContext);
+            return React.createElement(
+                'button',
+                { type: 'button', onClick: () => onValueChange(value) },
+                children
+            );
+        },
         SelectTrigger: ({ children }: React.PropsWithChildren) =>
             React.createElement('div', null, children),
         SelectValue: () => null
@@ -177,7 +176,83 @@ describe('UpdaterDialog', () => {
             shouldNotify: false
         });
         mocks.appAppUpdateReleaseGet.mockResolvedValue(null);
+        mocks.appAppUpdateReleasesList.mockResolvedValue([]);
         mocks.toNormalizedReleaseFromSnapshot.mockReturnValue(null);
+    });
+
+    it('offers a reinstall when up to date and installs the running version', async () => {
+        mocks.toNormalizedReleaseFromSnapshot.mockReturnValue({
+            canonicalVersion: '2.6.0',
+            displayVersion: '2.6.0',
+            updaterType: 'tauri'
+        });
+        mocks.appAppUpdateCheckRun.mockResolvedValue({
+            hasAvailableUpdate: false,
+            error: null,
+            release: {}
+        });
+
+        render(<UpdaterDialog open onOpenChange={vi.fn()} />);
+
+        const reinstall = await screen.findByRole('button', {
+            name: 'dialog.vrcx_updater.reinstall'
+        });
+        await waitFor(() =>
+            expect((reinstall as HTMLButtonElement).disabled).toBe(false)
+        );
+        await act(async () => {
+            reinstall.click();
+        });
+        expect(mocks.confirmInstall).toHaveBeenCalledWith('2.6.0');
+        expect(mocks.restartApplication).toHaveBeenCalled();
+    });
+
+    it('lists installable versions and warns before a downgrade', async () => {
+        const releases = [
+            { canonicalVersion: '2.6.0', displayVersion: '2.6.0' },
+            { canonicalVersion: '2.5.0', displayVersion: '2.5.0' }
+        ].map((release) => ({ ...release, updaterType: 'tauri' }));
+        mocks.appAppUpdateReleasesList.mockResolvedValue(releases);
+        mocks.toNormalizedReleaseFromSnapshot.mockImplementation(
+            (release: { canonicalVersion?: string } | null) =>
+                releases.find(
+                    (entry) =>
+                        entry.canonicalVersion === release?.canonicalVersion
+                ) ?? releases[0]
+        );
+        mocks.appAppUpdateCheckRun.mockResolvedValue({
+            hasAvailableUpdate: false,
+            error: null,
+            release: { canonicalVersion: '2.6.0' }
+        });
+
+        render(<UpdaterDialog open onOpenChange={vi.fn()} />);
+
+        const older = await screen.findByRole('button', { name: '2.5.0' });
+        expect(
+            screen.getByRole('button', {
+                name: 'dialog.vrcx_updater.installed_version:{"value":"2.6.0"}'
+            })
+        ).toBeTruthy();
+        expect(
+            screen.queryByText('dialog.vrcx_updater.downgrade_warning')
+        ).toBeNull();
+
+        await act(async () => {
+            older.click();
+        });
+        expect(
+            screen.getByText('dialog.vrcx_updater.downgrade_warning')
+        ).toBeTruthy();
+
+        await act(async () => {
+            screen
+                .getByRole('button', {
+                    name: 'dialog.vrcx_updater.install_selected'
+                })
+                .click();
+        });
+        expect(mocks.confirmInstall).toHaveBeenCalledWith('2.5.0');
     });
 
     it('uses the GitHub update action for preview checks even on installable platforms', () => {

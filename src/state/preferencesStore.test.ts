@@ -45,16 +45,22 @@ describe('preferencesStore normalizers', () => {
         });
     });
 
-    it('keeps startup auto update enabled by default', () => {
-        expect(DEFAULT_PREFERENCES.autoInstallUpdatesOnStartup).toBe(true);
+    it('auto installs updates by default', () => {
+        expect(DEFAULT_PREFERENCES.autoUpdateVRCX).toBe('Auto Install');
+        expect(normalizePreferenceSnapshot({}).autoUpdateVRCX).toBe(
+            'Auto Install'
+        );
         expect(
-            normalizePreferenceSnapshot({}).autoInstallUpdatesOnStartup
-        ).toBe(true);
+            normalizePreferenceSnapshot({ autoUpdateVRCX: 'Off' })
+                .autoUpdateVRCX
+        ).toBe('Off');
         expect(
-            normalizePreferenceSnapshot({
-                autoInstallUpdatesOnStartup: false
-            }).autoInstallUpdatesOnStartup
-        ).toBe(false);
+            normalizePreferenceSnapshot({ autoUpdateVRCX: 'bogus' })
+                .autoUpdateVRCX
+        ).toBe('Auto Install');
+        expect(DEFAULT_PREFERENCES).not.toHaveProperty(
+            'autoInstallUpdatesOnStartup'
+        );
     });
 
     it('keeps background mode delay disabled with a bounded minute default', () => {

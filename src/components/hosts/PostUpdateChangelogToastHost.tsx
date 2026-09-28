@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 import {
     loadPostUpdateChangelogToastState,
-    markPostUpdateChangelogVersionSeen
+    markPostUpdateChangelogVersionSeen,
+    releaseNotesUrl
 } from '@/services/changelogService';
+import { openExternalLink } from '@/services/shellIntegrationService';
 import { toast } from '@/services/toastService';
 import { formatReleaseDisplayVersion } from '@/shared/utils/releaseVersion';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -14,12 +16,6 @@ export function PostUpdateChangelogToastHost(): null {
     const hasCheckedRef = useRef(false);
     const backendRuntimeSnapshotHydrated = useRuntimeStore(
         (state) => state.shell.backendRuntimeSnapshotHydrated
-    );
-    const setSystemHostOpen = useRuntimeStore(
-        (state) => state.setSystemHostOpen
-    );
-    const setChangelogTargetVersion = useRuntimeStore(
-        (state) => state.setChangelogTargetVersion
     );
 
     useEffect(() => {
@@ -68,8 +64,9 @@ export function PostUpdateChangelogToastHost(): null {
                         onClick: () => {
                             recordSeen();
                             toast.close(toastId);
-                            setChangelogTargetVersion(state.currentVersion);
-                            setSystemHostOpen('changelogOpen', true);
+                            void openExternalLink(
+                                releaseNotesUrl(state.currentVersion)
+                            );
                         }
                     },
                     onClose: recordSeen,
@@ -88,12 +85,7 @@ export function PostUpdateChangelogToastHost(): null {
         return () => {
             cancelled = true;
         };
-    }, [
-        backendRuntimeSnapshotHydrated,
-        setChangelogTargetVersion,
-        setSystemHostOpen,
-        t
-    ]);
+    }, [backendRuntimeSnapshotHydrated, t]);
 
     return null;
 }

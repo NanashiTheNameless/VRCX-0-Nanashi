@@ -5,6 +5,10 @@ import type {
     TranslationProvider
 } from '@/platform/tauri/bindings';
 import {
+    normalizeAppUpdateMode,
+    type AppUpdateMode
+} from '@/shared/appUpdateMode';
+import {
     DEFAULT_OVERLAY_ACTIVITY_FILTERS,
     DEFAULT_HMD_NOTIFICATION_ACTIVITY_FILTERS,
     DEFAULT_TTS_NOTIFICATION_ACTIVITY_FILTERS,
@@ -335,7 +339,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     notificationIconDot: true,
     taskbarIconDot: true,
     showPostUpdateChangelogToast: true,
-    autoInstallUpdatesOnStartup: true,
+    autoUpdateVRCX: 'Auto Install' as AppUpdateMode,
     desktopToast: 'Never',
     afkDesktopToast: false,
     desktopNotificationSound: false,
@@ -508,9 +512,7 @@ export function normalizePreferenceSnapshot(snapshot: unknown = {}) {
         showPostUpdateChangelogToast: normalizeBool(
             next.showPostUpdateChangelogToast
         ),
-        autoInstallUpdatesOnStartup: normalizeBool(
-            next.autoInstallUpdatesOnStartup
-        ),
+        autoUpdateVRCX: normalizeAppUpdateMode(next.autoUpdateVRCX),
         desktopToast: String(next.desktopToast || 'Never'),
         afkDesktopToast: normalizeBool(next.afkDesktopToast),
         desktopNotificationSound: normalizeBool(next.desktopNotificationSound),

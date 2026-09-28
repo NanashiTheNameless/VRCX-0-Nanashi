@@ -4,6 +4,11 @@ import configRepository from '@/repositories/configRepository';
 import storageRepository from '@/repositories/storageRepository';
 import { getPrefetchedSystemCulture } from '@/services/startupBootstrapSnapshot';
 import {
+    isAppUpdateMode,
+    normalizeAppUpdateMode,
+    type AppUpdateMode
+} from '@/shared/appUpdateMode';
+import {
     APP_CJK_FONT_PACK_DEFAULT_KEY,
     APP_FONT_DEFAULT_KEY
 } from '@/shared/constants/fonts';
@@ -83,6 +88,27 @@ function resolveProxyEnabled(
     return String(proxyServer ?? '').trim() !== '';
 }
 
+/**
+ * Replace the legacy on/off `autoInstallUpdatesOnStartup` switch with the
+ * update mode once: on -> Auto Install, off -> Notify. The backend applies the
+ * same mapping until this has run.
+ */
+async function migrateLegacyAutoInstall(
+    storedMode: string,
+    legacyAutoInstall: boolean
+): Promise<AppUpdateMode> {
+    const mode = normalizeAppUpdateMode(storedMode, legacyAutoInstall);
+    if (!isAppUpdateMode(storedMode.trim())) {
+        try {
+            await configRepository.setString('autoUpdateVRCX', mode);
+            await configRepository.remove('autoInstallUpdatesOnStartup');
+        } catch (error) {
+            console.warn('Failed to migrate the auto-update setting:', error);
+        }
+    }
+    return mode;
+}
+
 export async function loadPreferenceSnapshot() {
     const [
         navIsCollapsed,
@@ -125,6 +151,7 @@ export async function loadPreferenceSnapshot() {
         taskbarIconDot,
         showPostUpdateChangelogToast,
         autoInstallUpdatesOnStartup,
+        autoUpdateVRCX,
         desktopToast,
         afkDesktopToast,
         desktopNotificationSound,
@@ -264,6 +291,7 @@ export async function loadPreferenceSnapshot() {
         configRepository.getBool('taskbarIconDot', true),
         configRepository.getBool(POST_UPDATE_CHANGELOG_TOAST_CONFIG_KEY, true),
         configRepository.getBool('autoInstallUpdatesOnStartup', true),
+        configRepository.getString('autoUpdateVRCX', ''),
         configRepository.getString('desktopToast', 'Never'),
         configRepository.getBool('afkDesktopToast', false),
         configRepository.getBool('desktopNotificationSound', false),
@@ -474,7 +502,10 @@ export async function loadPreferenceSnapshot() {
         notificationIconDot: Boolean(notificationIconDot),
         taskbarIconDot: Boolean(taskbarIconDot),
         showPostUpdateChangelogToast: Boolean(showPostUpdateChangelogToast),
-        autoInstallUpdatesOnStartup: Boolean(autoInstallUpdatesOnStartup),
+        autoUpdateVRCX: await migrateLegacyAutoInstall(
+            autoUpdateVRCX,
+            Boolean(autoInstallUpdatesOnStartup)
+        ),
         desktopToast: desktopToast || 'Never',
         afkDesktopToast: Boolean(afkDesktopToast),
         desktopNotificationSound: Boolean(desktopNotificationSound),

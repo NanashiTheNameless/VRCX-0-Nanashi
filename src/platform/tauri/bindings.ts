@@ -2425,6 +2425,13 @@ const generatedCommands = {
     async appAppUpdateCheckRun(): Promise<AppUpdateStatusSnapshot> {
         return await TAURI_INVOKE('app__app_update_check_run');
     },
+    /**
+     * Releases of this build's channel that can be installed in place, newest
+     * first (updates, a reinstall of the running version, or downgrades).
+     */
+    async appAppUpdateReleasesList(): Promise<AppUpdateReleaseSnapshot[]> {
+        return await TAURI_INVOKE('app__app_update_releases_list');
+    },
     async appAppUpdateReleaseGet(
         channel: AppUpdateChannel
     ): Promise<AppUpdateReleaseSnapshot | null> {

@@ -582,6 +582,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::host::linux_rendering::app__confirm_linux_rendering,
             commands::host::window::app__exit_application,
             commands::host::updater::app__app_update_check_run,
+            commands::host::updater::app__app_update_releases_list,
             commands::host::updater::app__app_update_release_get,
             commands::host::updater::app__app_update_download_status_get,
             commands::host::updater::app__app_update_install_confirm,

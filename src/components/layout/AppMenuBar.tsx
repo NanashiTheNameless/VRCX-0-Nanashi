@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { commands } from '@/platform/tauri/bindings';
 import { logoutFromReactShell } from '@/services/authExecutionService';
 import { startBackgroundModeForCurrentSession } from '@/services/backgroundModeService';
+import { releaseNotesUrl } from '@/services/changelogService';
 import { openExternalLink } from '@/services/entityMediaService';
 import {
     exitApplication,
@@ -208,7 +209,7 @@ export function AppMenuBar({ showHelp = true }: { showHelp?: boolean }) {
                             <MenubarGroup>
                                 <MenuItem
                                     onClick={() =>
-                                        setSystemHostOpen('changelogOpen', true)
+                                        void openExternalLink(releaseNotesUrl())
                                     }
                                 >
                                     {t('nav_menu.changelog')}

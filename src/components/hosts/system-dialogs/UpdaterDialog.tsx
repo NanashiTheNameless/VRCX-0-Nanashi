@@ -26,6 +26,14 @@ import {
     DialogTitle
 } from '@/ui/shadcn/dialog';
 import { FieldGroup } from '@/ui/shadcn/field';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@/ui/shadcn/select';
 
 type UpdaterDialogProps = {
     open: boolean;
@@ -42,6 +50,10 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
     const [loading, setLoading] = useState(false);
     const [downloading, setDownloading] = useState(false);
     const [detail, setDetail] = useState('');
+    // Fork: every installable release of this channel, newest first, for
+    // reinstalling (repair) or downgrading.
+    const [versions, setVersions] = useState<NormalizedRelease[]>([]);
+    const [selectedVersion, setSelectedVersion] = useState('');
     const canInstallUpdate = latestRelease?.updaterType === 'tauri';
     const autoDownloadState = useRuntimeStore(
         (state) => state.updateLoop.autoDownloadState
@@ -68,6 +80,31 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
             : '') ||
         '-';
     const isUpToDate = Boolean(latestRelease && !hasNewerRelease);
+    const currentVersion = VERSION || '';
+    const selectedRelease =
+        versions.find(
+            (release) => release.canonicalVersion === selectedVersion
+        ) ?? null;
+    const currentIndex = versions.findIndex(
+        (release) => release.canonicalVersion === currentVersion
+    );
+    const selectedIndex = selectedRelease
+        ? versions.indexOf(selectedRelease)
+        : -1;
+    const isDowngradeSelected =
+        selectedIndex >= 0 &&
+        selectedVersion !== currentVersion &&
+        (currentIndex >= 0 ? selectedIndex > currentIndex : selectedIndex > 0);
+
+    function releaseLabel(release: NormalizedRelease) {
+        const text =
+            release.displayVersion ||
+            formatReleaseDisplayVersion(release.canonicalVersion) ||
+            release.canonicalVersion;
+        return release.canonicalVersion === currentVersion
+            ? t('dialog.vrcx_updater.installed_version', { value: text })
+            : text;
+    }
 
     useEffect(() => {
         if (!open || updateCheckDisabled) {
@@ -78,7 +115,29 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
         setLoading(true);
         setLatestRelease(null);
         setHasNewerRelease(false);
+        setVersions([]);
+        setSelectedVersion('');
         setDetail(t('message.vrcx_updater.checking_update_state'));
+
+        commands
+            .appAppUpdateReleasesList()
+            .then((releases) => {
+                if (active) {
+                    setVersions(
+                        releases
+                            .map((release) =>
+                                toNormalizedReleaseFromSnapshot(release)
+                            )
+                            .filter(
+                                (release): release is NormalizedRelease =>
+                                    release !== null
+                            )
+                    );
+                }
+            })
+            .catch((error: unknown) => {
+                console.warn('Failed to list installable releases:', error);
+            });
 
         commands
             .appAppUpdateCheckRun()
@@ -137,25 +196,24 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
         };
     }, [isPreviewUpdateCheck, open, t, updateCheckDisabled]);
 
-    async function handleInstallUpdate() {
-        if (
-            !canInstallUpdate ||
-            !latestRelease ||
-            !hasNewerRelease ||
-            loading ||
-            showDownloadProgress
-        ) {
+    // Installs `release`: an update, a reinstall of the running version
+    // (repair), or a downgrade.
+    async function handleInstall(release: NormalizedRelease | null) {
+        if (!release || loading || showDownloadProgress || downloading) {
             return;
         }
 
         setDownloading(true);
         setDetail(
             t('host.system_dialogs.dynamic.downloading_value', {
-                value: latestVersionText
+                value:
+                    release.displayVersion ||
+                    formatReleaseDisplayVersion(release.canonicalVersion) ||
+                    release.canonicalVersion
             })
         );
         try {
-            await confirmInstall(latestRelease.canonicalVersion);
+            await confirmInstall(release.canonicalVersion);
             await restartApplication();
         } catch (error) {
             setDetail(
@@ -253,6 +311,76 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
                             </div>
                         </div>
                     ) : null}
+                    {canInstallUpdate &&
+                    !isPreviewUpdateCheck &&
+                    versions.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                            <div className="text-muted-foreground text-xs">
+                                {t('dialog.vrcx_updater.other_versions')}
+                            </div>
+                            <div className="flex gap-2">
+                                <Select
+                                    value={selectedVersion}
+                                    onValueChange={(value) =>
+                                        setSelectedVersion(value ?? '')
+                                    }
+                                >
+                                    <SelectTrigger
+                                        className="min-w-0 flex-1"
+                                        aria-label={t(
+                                            'dialog.vrcx_updater.other_versions'
+                                        )}
+                                    >
+                                        <SelectValue
+                                            placeholder={t(
+                                                'dialog.vrcx_updater.choose_version'
+                                            )}
+                                        >
+                                            {selectedRelease
+                                                ? releaseLabel(selectedRelease)
+                                                : null}
+                                        </SelectValue>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectGroup>
+                                            {versions.map((release) => (
+                                                <SelectItem
+                                                    key={
+                                                        release.canonicalVersion
+                                                    }
+                                                    value={
+                                                        release.canonicalVersion
+                                                    }
+                                                >
+                                                    {releaseLabel(release)}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectGroup>
+                                    </SelectContent>
+                                </Select>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    disabled={
+                                        !selectedRelease ||
+                                        loading ||
+                                        downloading ||
+                                        showDownloadProgress
+                                    }
+                                    onClick={() => {
+                                        void handleInstall(selectedRelease);
+                                    }}
+                                >
+                                    {t('dialog.vrcx_updater.install_selected')}
+                                </Button>
+                            </div>
+                            {isDowngradeSelected ? (
+                                <div className="text-sm text-amber-700 dark:text-amber-400">
+                                    {t('dialog.vrcx_updater.downgrade_warning')}
+                                </div>
+                            ) : null}
+                        </div>
+                    ) : null}
                     {detail ? (
                         <div className="text-muted-foreground text-sm">
                             {userFacingErrorMessage(
@@ -268,15 +396,17 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
                             type="button"
                             disabled={
                                 !latestRelease ||
-                                !hasNewerRelease ||
                                 loading ||
+                                downloading ||
                                 showDownloadProgress
                             }
                             onClick={() => {
-                                handleInstallUpdate();
+                                void handleInstall(latestRelease);
                             }}
                         >
-                            {t('dialog.system.action.install_and_restart')}
+                            {isUpToDate
+                                ? t('dialog.vrcx_updater.reinstall')
+                                : t('dialog.system.action.install_and_restart')}
                         </Button>
                     ) : (
                         <Button

@@ -19,11 +19,6 @@ import { ProfileBackupDialogs } from './system-dialogs/ProfileBackupDialogs';
 import { UpdaterDialog } from './system-dialogs/UpdaterDialog';
 import { UpdateAvailableToastHost } from './UpdateAvailableToastHost';
 
-const ChangelogDialog = lazy(() =>
-    import('./system-dialogs/ChangelogDialog').then((module) => ({
-        default: module.ChangelogDialog
-    }))
-);
 const RegistryBackupDialog = lazy(() =>
     import('./system-dialogs/RegistryBackupDialog').then((module) => ({
         default: module.RegistryBackupDialog
@@ -54,17 +49,11 @@ export function SystemDialogsHost() {
     const updaterOpen = useRuntimeStore(
         (state) => state.systemHosts.updaterOpen
     );
-    const changelogOpen = useRuntimeStore(
-        (state) => state.systemHosts.changelogOpen
-    );
     const keyboardShortcutsOpen = useRuntimeStore(
         (state) => state.systemHosts.keyboardShortcutsOpen
     );
     const proxySettingsOpen = useRuntimeStore(
         (state) => state.systemHosts.proxySettingsOpen
-    );
-    const changelogTargetVersion = useRuntimeStore(
-        (state) => state.changelogTargetVersion
     );
     const registryBackupOpen = useRuntimeStore(
         (state) => state.systemHosts.registryBackupOpen
@@ -83,9 +72,6 @@ export function SystemDialogsHost() {
     );
     const setSystemHostOpen = useRuntimeStore(
         (state) => state.setSystemHostOpen
-    );
-    const setChangelogTargetVersion = useRuntimeStore(
-        (state) => state.setChangelogTargetVersion
     );
     const hostCapabilities = useRuntimeStore((state) => state.hostCapabilities);
 
@@ -135,18 +121,6 @@ export function SystemDialogsHost() {
                     setSystemHostOpen('updaterOpen', open)
                 }
             />
-            <MountOnFirstOpen open={changelogOpen}>
-                <ChangelogDialog
-                    open={changelogOpen}
-                    targetVersion={changelogTargetVersion}
-                    onOpenChange={(open: boolean) => {
-                        setSystemHostOpen('changelogOpen', open);
-                        if (!open) {
-                            setChangelogTargetVersion('');
-                        }
-                    }}
-                />
-            </MountOnFirstOpen>
             <MountOnFirstOpen open={registryBackupOpen}>
                 <RegistryBackupDialog
                     open={registryBackupOpen}

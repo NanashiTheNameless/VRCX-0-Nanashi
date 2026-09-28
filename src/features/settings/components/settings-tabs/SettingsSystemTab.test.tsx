@@ -65,7 +65,8 @@ import { SettingsSystemTabContent as SettingsSystemTab } from './SettingsSystemT
 function noop() {}
 
 const handlers = {
-    onAutoInstallUpdatesOnStartupChange: noop,
+    autoUpdateMode: 'Auto Install' as const,
+    onAutoUpdateModeChange: noop,
     onAutoLoginDelayEnabledChange: noop,
     onBackgroundModeDelayEnabledChange: noop,
     onBackgroundModeEnabledChange: noop,
@@ -140,7 +141,28 @@ describe('SettingsSystemTab updater policy', () => {
             'view.settings.general.application.update_check_disabled_build_description'
         );
         expect(html).not.toContain(
-            'view.settings.general.application.auto_install_updates_on_startup'
+            'view.settings.general.application.update_mode'
+        );
+    });
+
+    it.each([
+        ['Off', 'off'],
+        ['Notify', 'notify'],
+        ['Auto Download', 'auto_download'],
+        ['Auto Install', 'auto_install']
+    ] as const)('shows the %s update mode', (mode, key) => {
+        const html = renderToStaticMarkup(
+            <SettingsSystemTab
+                hostPlatform="windows"
+                {...handlers}
+                autoUpdateMode={mode}
+            />
+        );
+        expect(html).toContain(
+            `view.settings.general.application.update_mode_option.${key}`
+        );
+        expect(html).toContain(
+            `view.settings.general.application.update_mode_description.${key}`
         );
     });
 });

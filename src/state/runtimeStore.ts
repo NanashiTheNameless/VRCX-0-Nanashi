@@ -200,7 +200,6 @@ type RuntimeStore = {
     vrcStatus: VrcStatusState;
     groupInstances: GroupInstancesState;
     systemHosts: Record<string, boolean>;
-    changelogTargetVersion: string;
     databaseUpgrade: {
         open: boolean;
         phase: string;
@@ -259,7 +258,6 @@ type RuntimeStore = {
     setGroupInstancesState(
         patch: Partial<RuntimeStore['groupInstances']>
     ): void;
-    setChangelogTargetVersion(version: string): void;
     setSystemHostOpen(name: string, value: boolean): void;
     setDatabaseUpgradeState(
         patch: Partial<RuntimeStore['databaseUpgrade']>
@@ -499,7 +497,6 @@ type RuntimeStoreState = Omit<
     | 'clearInstanceQueueState'
     | 'setVrcStatusState'
     | 'setGroupInstancesState'
-    | 'setChangelogTargetVersion'
     | 'setSystemHostOpen'
     | 'setDatabaseUpgradeState'
     | 'setDatabaseMaintenanceActive'
@@ -582,7 +579,6 @@ const initialState: RuntimeStoreState = {
     systemHosts: {
         databaseUpgradeOpen: false,
         updaterOpen: false,
-        changelogOpen: false,
         keyboardShortcutsOpen: false,
         proxySettingsOpen: false,
         registryBackupOpen: false,
@@ -601,7 +597,6 @@ const initialState: RuntimeStoreState = {
         llmEndpointsOpen: false,
         profileBackupOpen: false
     },
-    changelogTargetVersion: '',
     databaseUpgrade: {
         open: false,
         phase: 'idle',
@@ -847,11 +842,6 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
                 ...patch
             }
         }));
-    },
-    setChangelogTargetVersion(version: string) {
-        set({
-            changelogTargetVersion: version.trim()
-        });
     },
     setSystemHostOpen(name: string, value: boolean) {
         set((state) => ({
