@@ -12,7 +12,6 @@ src-tauri/resources/licenses/THIRD_PARTY_NOTICES.txt
 # Misc
 AGENTS.md
 CLAUDE.md
-coverage/
 bun.lock
 .codex
 scripts/package-windows-release.ps1

@@ -122,7 +122,6 @@ export default defineConfig(({ mode }) => {
                     '**/.github/**',
                     '**/.husky/**',
                     '**/.vscode/**',
-                    '**/coverage/**',
                     '**/crates/**',
                     '**/docs/**',
                     '**/images/**',

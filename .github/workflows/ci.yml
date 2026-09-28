@@ -105,17 +105,11 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 20
         needs: changes
-        if: needs.changes.outputs.frontend == 'true' || (github.ref == 'refs/heads/master' && github.event_name == 'push')
+        if: needs.changes.outputs.frontend == 'true'
         steps:
             - uses: actions/checkout@v7
             - uses: ./.github/actions/setup-node
-            - run: npm run test -- --coverage
-            - uses: actions/upload-artifact@v7
-              with:
-                  name: ts-coverage-summary
-                  path: coverage/coverage-summary.json
-                  if-no-files-found: error
-                  retention-days: 7
+            - run: npm run test
 
     rust-checks:
         name: Rust Checks
@@ -195,32 +189,6 @@ jobs:
               if: runner.os == 'Linux'
               run: cargo test --manifest-path src-tauri/Cargo.toml --locked --test backend_architecture
 
-    rust-coverage:
-        name: Rust Coverage
-        runs-on: ubuntu-24.04
-        timeout-minutes: 60
-        needs: changes
-        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        steps:
-            - uses: actions/checkout@v7
-            - uses: ./.github/actions/setup-linux-tauri
-              with:
-                  mode: ci
-            - uses: ./.github/actions/setup-rust
-              with:
-                  components: llvm-tools-preview
-                  cache-key: ci-linux-coverage
-                  save-cache: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
-            - uses: taiki-e/install-action@cargo-llvm-cov
-            - name: Generate coverage report
-              run: cargo llvm-cov --workspace --exclude vrcx-0 --locked --json --summary-only > rust-coverage-summary.json
-            - uses: actions/upload-artifact@v7
-              with:
-                  name: rust-coverage-summary
-                  path: rust-coverage-summary.json
-                  if-no-files-found: error
-                  retention-days: 7
-
     rust-tests:
         name: Rust Tests (${{ matrix.label }})
         runs-on: ${{ matrix.os }}
@@ -283,73 +251,6 @@ jobs:
             - run: npm run generate:tauri-bindings
             - name: Verify bindings.ts is regenerated
               run: git diff --exit-code src/platform/tauri/bindings.ts
-
-    combined-coverage:
-        name: Publish Coverage Badge
-        runs-on: ubuntu-latest
-        timeout-minutes: 10
-        needs:
-            - frontend-test
-            - rust-coverage
-        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-        permissions:
-            contents: write
-        steps:
-            - uses: actions/checkout@v7
-            - uses: actions/setup-node@v7
-              with:
-                  node-version: 24.x
-            - uses: actions/download-artifact@v8
-              with:
-                  name: ts-coverage-summary
-                  path: coverage-artifacts/ts
-            - uses: actions/download-artifact@v8
-              with:
-                  name: rust-coverage-summary
-                  path: coverage-artifacts/rust
-            - name: Generate coverage badge
-              run: |
-                  node <<'NODE'
-                  const fs = require('node:fs');
-
-                  const ts = JSON.parse(fs.readFileSync('coverage-artifacts/ts/coverage-summary.json', 'utf8'));
-                  const rust = JSON.parse(fs.readFileSync('coverage-artifacts/rust/rust-coverage-summary.json', 'utf8'));
-
-                  const tsPct = ts.total.lines.pct;
-                  const rustPct = rust.data[0].totals.lines.percent;
-
-                  fs.writeFileSync(
-                      'coverage.json',
-                      JSON.stringify({
-                          schemaVersion: 1,
-                          label: 'coverage',
-                          message: `TS ${tsPct.toFixed(1)}% · Rust ${rustPct.toFixed(1)}%`
-                      }) + '\n'
-                  );
-                  NODE
-            - name: Publish coverage badge to badge-data branch
-              env:
-                  GH_TOKEN: ${{ github.token }}
-              run: |
-                  set -euo pipefail
-                  work="$(mktemp -d)"
-                  cd "$work"
-                  git init -q
-                  git config user.name "github-actions[bot]"
-                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-                  repo_url="https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
-                  if git fetch -q "$repo_url" badge-data 2>/dev/null; then
-                      git checkout -q -b badge-data FETCH_HEAD
-                  else
-                      git checkout -q --orphan badge-data
-                      git rm -rf . --quiet 2>/dev/null || true
-                  fi
-                  cp "$GITHUB_WORKSPACE/coverage.json" coverage.json
-                  git rm -f --ignore-unmatch rust-coverage.json
-                  git add coverage.json
-                  git diff --cached --quiet && exit 0
-                  git commit -q -m "chore(badge): coverage"
-                  git push -q -f "$repo_url" badge-data
 
     ci-success:
         name: CI Success
