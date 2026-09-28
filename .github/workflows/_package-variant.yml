@@ -91,12 +91,9 @@ jobs:
                     - platform: linux_x86_64
                       os: ubuntu-24.04
                       rust_target: ''
-                    - platform: macos_aarch64
+                    - platform: macos_universal
                       os: macos-latest
-                      rust_target: aarch64-apple-darwin
-                    - platform: macos_x86_64
-                      os: macos-latest
-                      rust_target: x86_64-apple-darwin
+                      rust_target: universal-apple-darwin
         steps:
             - uses: actions/checkout@v7
               with:
@@ -106,7 +103,12 @@ jobs:
 
             - name: Install Rust target
               if: matrix.rust_target != ''
-              run: rustup target add "${{ matrix.rust_target }}"
+              run: |
+                  if [[ "${{ matrix.rust_target }}" == "universal-apple-darwin" ]]; then
+                      rustup target add aarch64-apple-darwin x86_64-apple-darwin
+                  else
+                      rustup target add "${{ matrix.rust_target }}"
+                  fi
 
             - uses: ./.github/actions/setup-node
 
@@ -249,7 +251,7 @@ jobs:
                       linux_x86_64)
                           cp target/release/bundle/appimage/*.AppImage "package-assets/${stem}_linux_x86_64.AppImage"
                           ;;
-                      macos_aarch64|macos_x86_64)
+                      macos_universal)
                           cp "target/${{ matrix.rust_target }}/release/bundle/dmg/"*.dmg "package-assets/${stem}_${{ matrix.platform }}.dmg"
                           ;;
                       *)

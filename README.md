@@ -71,12 +71,11 @@ It is a Rust + Tauri rewrite of VRCX.
 Grab the file for your platform from the
 [latest release](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest):
 
-| Platform              | File                                                |
-| --------------------- | --------------------------------------------------- |
-| Windows               | `VRCX-0-Nanashi_<version>_windows_x86_64_setup.exe` |
-| macOS (Apple Silicon) | `VRCX-0-Nanashi_<version>_macos_aarch64.dmg`        |
-| macOS (Intel)         | `VRCX-0-Nanashi_<version>_macos_x86_64.dmg`         |
-| Linux                 | `.AppImage`, `.deb`, or `.rpm`                      |
+| Platform          | File                                                |
+| ----------------- | --------------------------------------------------- |
+| Windows           | `VRCX-0-Nanashi_<version>_windows_x86_64_setup.exe` |
+| macOS (Universal) | `VRCX-0-Nanashi_<version>_macos_universal.dmg`      |
+| Linux             | `.AppImage`, `.deb`, or `.rpm`                      |
 
 Fork builds are not code-signed. On Windows, SmartScreen may warn on first run. On macOS,
 if the first launch is blocked, open **System Settings > Privacy & Security** and click

@@ -92,28 +92,16 @@ jobs:
                           target/release/bundle/rpm/*.rpm
                           target/release/bundle/rpm/*.rpm.sig
                           target/release/bundle/latest_linux_and_macos.json
-                    - label: macOS DMG (Apple Silicon)
+                    - label: macOS DMG (Universal)
                       os: macos-latest
-                      rust_target: aarch64-apple-darwin
-                      dmg_asset_arch: macos_aarch64
-                      updater_asset_name: update_macos_aarch64.app.tar.gz
+                      rust_target: universal-apple-darwin
+                      updater_asset_name: update_macos_universal.app.tar.gz
                       webkit_build_target: safari18.2
-                      artifact_name: macos-aarch64-dmg
+                      artifact_name: macos-universal-dmg
                       artifact_path: |
-                          target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
-                          target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz
-                          target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
-                    - label: macOS DMG (Intel)
-                      os: macos-latest
-                      rust_target: x86_64-apple-darwin
-                      dmg_asset_arch: macos_x86_64
-                      updater_asset_name: update_macos_x86_64.app.tar.gz
-                      webkit_build_target: safari18.2
-                      artifact_name: macos-x86_64-dmg
-                      artifact_path: |
-                          target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
-                          target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz
-                          target/x86_64-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
+                          target/universal-apple-darwin/release/bundle/dmg/*.dmg
+                          target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz
+                          target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
         steps:
             - uses: actions/checkout@v7
 
@@ -121,7 +109,12 @@ jobs:
 
             - name: Install Rust target
               if: matrix.rust_target != ''
-              run: rustup target add "${{ matrix.rust_target }}"
+              run: |
+                  if [[ "${{ matrix.rust_target }}" == "universal-apple-darwin" ]]; then
+                      rustup target add aarch64-apple-darwin x86_64-apple-darwin
+                  else
+                      rustup target add "${{ matrix.rust_target }}"
+                  fi
 
             - uses: ./.github/actions/setup-node
 
@@ -240,7 +233,7 @@ jobs:
               run: |
                   dmg_dir="target/${{ matrix.rust_target }}/release/bundle/dmg"
                   dmg_path="$(find "$dmg_dir" -maxdepth 1 -name '*.dmg' | sort | head -n 1)"
-                  mv "$dmg_path" "$dmg_dir/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_${{ matrix.dmg_asset_arch }}.dmg"
+                  mv "$dmg_path" "$dmg_dir/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_macos_universal.dmg"
 
                   updater_dir="target/${{ matrix.rust_target }}/release/bundle/macos"
                   archive_path="$(find "$updater_dir" -maxdepth 1 -name '*.app.tar.gz' | sort | head -n 1)"
@@ -290,10 +283,10 @@ jobs:
 
             - name: Add macOS updater entries to Linux/macOS manifest
               run: |
+                  # One universal archive serves both Apple Silicon and Intel installs.
                   manifest_path="release-assets/latest_linux_and_macos.json"
+                  archive_name="update_macos_universal.app.tar.gz"
                   for target in macos-aarch64-stable macos-x86_64-stable; do
-                      archive_name="update_${target%-stable}.app.tar.gz"
-                      archive_name="${archive_name//-/_}"
                       node scripts/create-tauri-updater-manifest.ts \
                           --version "${{ needs.prepare.outputs.build_version }}" \
                           --tag "${{ needs.prepare.outputs.tag }}" \
