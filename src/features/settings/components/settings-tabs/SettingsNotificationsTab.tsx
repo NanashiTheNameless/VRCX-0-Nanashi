@@ -24,7 +24,6 @@ import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
 import { useSettingsNotificationsTabState } from '../useSettingsNotificationsTabState';
 import { SettingsCustomSoundsCard } from './SettingsCustomSoundsCard';
-import { SettingsSafetyCard } from './SettingsSafetyCard';
 
 type SettingsOptionList = ReadonlyArray<readonly [string, string]>;
 
@@ -105,7 +104,6 @@ export function SettingsNotificationsTabContent({
 
     return (
         <SettingsTabContent value="notifications">
-            <SettingsSafetyCard />
             <SettingsCustomSoundsCard />
             <SettingsCard
                 cardId="notifications.dnd"

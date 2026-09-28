@@ -55,6 +55,13 @@ vi.mock('react-i18next', async (importOriginal) => ({
 vi.mock('./AdvancedTroubleshootingGroup', () => ({
     AdvancedTroubleshootingGroup: () => <div>troubleshooting</div>
 }));
+// Tested on their own; here only their placement matters.
+vi.mock('./SettingsSafetyCard', () => ({
+    SettingsSafetyCard: () => <div>safety-card</div>
+}));
+vi.mock('./SettingsYtdlpCard', () => ({
+    SettingsYtdlpCard: () => <div>ytdlp-card</div>
+}));
 
 function appDataDirState(
     overrides: Partial<AppDataDirState> = {}

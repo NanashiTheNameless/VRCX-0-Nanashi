@@ -125,7 +125,7 @@ export function SettingsYtdlpCard() {
             JSON.stringify({ ...status.settings, toolsPath: status.toolsPath });
     return (
         <SettingsCard
-            cardId="media.ytdlp"
+            cardId="advanced.ytdlp"
             title={t(`${P}.title`)}
             description={t(`${P}.description`)}
         >

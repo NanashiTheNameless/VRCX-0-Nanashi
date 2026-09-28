@@ -225,7 +225,7 @@ export function SettingsSafetyCard() {
     }
     return (
         <SettingsCard
-            cardId="notifications.safety"
+            cardId="advanced.safety"
             title={t(`${P}.title`)}
             description={t(`${P}.description`)}
         >

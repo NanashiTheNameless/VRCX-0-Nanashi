@@ -39,6 +39,8 @@ import { SettingsTabContent } from '../SettingsViewParts';
 import { useSettingsAdvancedTabState } from '../useSettingsAdvancedTabState';
 import { AdvancedTroubleshootingGroup } from './AdvancedTroubleshootingGroup';
 import type { SettingsAdvancedModel } from './settingsAdvancedTypes';
+import { SettingsSafetyCard } from './SettingsSafetyCard';
+import { SettingsYtdlpCard } from './SettingsYtdlpCard';
 
 type SettingsAdvancedTabContentProps = {
     advanced: SettingsAdvancedModel;
@@ -313,6 +315,8 @@ export function SettingsAdvancedTabContent({
                 <DeepLinkSchemeToggles />
             </SettingsCard>
 
+            <SettingsSafetyCard />
+            <SettingsYtdlpCard />
             <SettingsCard
                 cardId="advanced.storage"
                 title={t('view.settings.advanced.advanced_ui.storage.header')}

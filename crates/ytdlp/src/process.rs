@@ -109,6 +109,63 @@ pub(crate) async fn run_diagnosed(
     }
 }
 
+/// Like `run`, but keeps yt-dlp's last `ERROR:` line from stderr, cleaned by
+/// [`sanitized_error_line`]. Nothing else from the output is kept, because
+/// yt-dlp can print cookie values and signed URLs.
+pub(crate) async fn run_keeping_error_line(
+    cmd: &mut Command,
+    timeout: Duration,
+) -> Result<(bool, Option<String>), String> {
+    cmd.stdout(Stdio::null()).stderr(Stdio::piped());
+    let mut child = spawn(cmd)?;
+    let mut stderr = child.stderr.take().ok_or("Missing process output")?;
+    let result = tokio::time::timeout(timeout, async {
+        let tail = read_tail(&mut stderr).await;
+        let status = child.wait().await.map_err(|e| e.to_string())?;
+        let error = String::from_utf8_lossy(&tail)
+            .lines()
+            .rev()
+            .find(|line| line.trim_start().starts_with("ERROR:"))
+            .map(sanitized_error_line);
+        Ok::<_, String>((status.success(), error))
+    })
+    .await;
+    match result {
+        Ok(Ok(v)) => Ok(v),
+        error => {
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            match error {
+                Ok(Err(e)) => Err(e),
+                _ => Err("Operation timed out".into()),
+            }
+        }
+    }
+}
+
+/// A yt-dlp `ERROR:` line safe to show and log: every URL is cut down to its
+/// scheme and host (dropping paths and query strings that can carry signed
+/// parameters), and the result is capped at 300 characters.
+pub(crate) fn sanitized_error_line(line: &str) -> String {
+    let cleaned = line
+        .trim()
+        .split(' ')
+        .map(|word| match word.find("://") {
+            Some(index) => {
+                let (scheme, rest) = word.split_at(index);
+                let host = rest[3..]
+                    .split(['/', '?', '#', '"', '\'', ')', ','])
+                    .next()
+                    .unwrap_or("");
+                format!("{scheme}://{host}/…")
+            }
+            None => word.to_string(),
+        })
+        .collect::<Vec<_>>()
+        .join(" ");
+    cleaned.chars().take(300).collect()
+}
+
 /// Most useful line of installer output, for a short error suffix: an npm
 /// `ERR!` line, else the `Error:` line of a crash (Node ends crashes with a
 /// bare `Node.js vX` line), else the last line.
@@ -219,6 +276,29 @@ impl Drop for WindowsJob {
         unsafe {
             windows_sys::Win32::Foundation::CloseHandle(self.0);
         }
+    }
+}
+
+#[cfg(test)]
+mod sanitized_error_line_tests {
+    use super::sanitized_error_line;
+
+    #[test]
+    fn cuts_urls_to_their_host_and_keeps_the_message() {
+        assert_eq!(
+            sanitized_error_line(
+                "ERROR: [youtube] BaW_jenozKc: Sign in to confirm you're not a bot. See https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp for details"
+            ),
+            "ERROR: [youtube] BaW_jenozKc: Sign in to confirm you're not a bot. See https://github.com/… for details"
+        );
+        assert_eq!(
+            sanitized_error_line(
+                "ERROR: unable to download https://rr1.googlevideo.com/videoplayback?expire=1&sig=SECRET&n=abc"
+            ),
+            "ERROR: unable to download https://rr1.googlevideo.com/…"
+        );
+        assert!(!sanitized_error_line("ERROR: x https://h.test/p?sig=SECRET").contains("SECRET"));
+        assert_eq!(sanitized_error_line(&"x".repeat(500)).chars().count(), 300);
     }
 }
 

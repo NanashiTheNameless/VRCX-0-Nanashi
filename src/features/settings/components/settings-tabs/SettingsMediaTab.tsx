@@ -16,7 +16,6 @@ import { useSettingsPageSection } from '../../SettingsPageStateContext';
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
-import { SettingsYtdlpCard } from './SettingsYtdlpCard';
 
 export function SettingsMediaTab() {
     const media = useSettingsPageSection('media');
@@ -55,7 +54,6 @@ export function SettingsMediaTab() {
     const { t } = useTranslation();
     return (
         <SettingsTabContent value="media">
-            <SettingsYtdlpCard />
             <SettingsCard
                 cardId="media.screenshots"
                 title={t(

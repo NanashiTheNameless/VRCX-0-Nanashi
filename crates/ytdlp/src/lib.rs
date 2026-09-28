@@ -352,11 +352,27 @@ impl Runtime {
             let mut args="youtube:player_client=mweb".to_string();
             if s.use_cookies && self.root.join("cookies.obf.json").is_file() { args.push_str(&format!(";nanashi_cookie_file={}",self.root.join("cookies.obf.json").display())); }
             cmd.arg("--extractor-args").arg(args).args(["--socket-timeout","15","--retries","0","--","https://www.youtube.com/watch?v=BaW_jenozKc"]);
-            let (ok,_)=process::run(&mut cmd,Duration::from_secs(90)).await?;
+            let (ok,error_line)=process::run_keeping_error_line(&mut cmd,Duration::from_secs(90)).await?;
             m.cookie_validated_at=chrono::Utc::now().to_rfc3339();
-            m.cookie_validation=if ok {"Test video resolved; this does not guarantee all videos or future cookie validity"}else{"Test failed. Refresh cookies or try a separate browser profile; check network access and synchronize system time"}.into();
+            m.cookie_validation=if ok {
+                "Test video resolved; this does not guarantee all videos or future cookie validity".into()
+            } else {
+                let hint="Refresh cookies or try a separate browser profile; check network access and synchronize system time";
+                match &error_line {
+                    Some(line) => format!("Test failed: {line}. {hint}"),
+                    None => format!("Test failed. {hint}"),
+                }
+            };
             self.save_manifest(m)?;
-            if ok {Ok(())}else{Err("Playback check failed; see the status and troubleshooting tips".into())}
+            if ok {
+                Ok(())
+            } else {
+                tracing::error!(error = error_line.as_deref().unwrap_or("(no ERROR line)"), "yt-dlp playback check failed");
+                Err(match error_line {
+                    Some(line) => format!("Playback check failed: {line}"),
+                    None => "Playback check failed; see the status and troubleshooting tips".into(),
+                })
+            }
         }.await;
         self.finish(result)
     }
