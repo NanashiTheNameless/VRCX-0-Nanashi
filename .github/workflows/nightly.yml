@@ -116,6 +116,13 @@ jobs:
                       rustup target add "${{ matrix.rust_target }}"
                   fi
 
+            # Restore compiled dependencies before the version stamp edits
+            # Cargo.lock, so the cache key stays stable between builds.
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  workspaces: . -> target
+                  shared-key: nightly-${{ matrix.artifact_name }}
+
             - uses: ./.github/actions/setup-node
 
             - name: Install Linux package dependencies
@@ -149,7 +156,8 @@ jobs:
                       Linux)
                           # rpm cannot carry a semver prerelease in Version; use Release instead.
                           node -e "require('node:fs').writeFileSync(process.argv[1], JSON.stringify({ version: process.argv[2], bundle: { linux: { rpm: { release: '0.nightly.' + process.argv[3] } } } }))" "$override_config" "${{ needs.prepare.outputs.base_version }}" "${{ needs.prepare.outputs.nightly_sha }}"
-                          npm run tauri:build -- --config src-tauri/tauri.linux.conf.json --no-bundle
+                          # mold links the release binary much faster than the default linker.
+                          mold -run npm run tauri:build -- --config src-tauri/tauri.linux.conf.json --no-bundle
                           npm run tauri -- bundle --config src-tauri/tauri.linux.conf.json --bundles appimage deb
                           npm run tauri -- bundle --config "$override_config" --bundles rpm
                           ;;

@@ -50,6 +50,7 @@ runs:
                   libssl-dev \
                   libxdo-dev \
                   librsvg2-dev \
+                  mold \
                   patchelf \
                   rpm \
                   wget

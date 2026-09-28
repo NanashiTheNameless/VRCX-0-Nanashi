@@ -110,6 +110,13 @@ jobs:
                       rustup target add "${{ matrix.rust_target }}"
                   fi
 
+            # Restore compiled dependencies before the version stamp edits
+            # Cargo.lock, so the cache key stays stable between builds.
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  workspaces: . -> target
+                  shared-key: ${{ inputs.variant }}-${{ matrix.platform }}
+
             - uses: ./.github/actions/setup-node
 
             - uses: ./.github/actions/setup-linux-tauri
@@ -205,7 +212,7 @@ jobs:
                   VRCX_0_BUILD_BADGE: ${{ needs.prepare.outputs.display_name }} ${{ needs.prepare.outputs.timestamp }}
                   VRCX_0_WEBKIT_BUILD_TARGET: safari17.4
               run: |
-                  npm run "$BUILD_SCRIPT" -- \
+                  mold -run npm run "$BUILD_SCRIPT" -- \
                       --config "${{ steps.config.outputs.config }}" \
                       --bundles appimage
 

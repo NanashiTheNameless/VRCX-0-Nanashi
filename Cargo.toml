@@ -120,8 +120,9 @@ debug = false
 opt-level = 0
 
 [profile.release]
-codegen-units = 1
-lto = true
+# Thin LTO with parallel codegen builds far faster than fat LTO with one
+# codegen unit, for a slightly larger binary.
+lto = "thin"
 opt-level = "s"
 panic = "abort"
 strip = true
