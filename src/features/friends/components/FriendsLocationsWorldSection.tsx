@@ -65,8 +65,8 @@ function FriendChip({
             <button
                 type="button"
                 className={cn(
-                    'bg-muted/40 hover:bg-muted focus-visible:ring-ring/50 flex min-w-0 cursor-pointer items-center gap-2 rounded-md pr-3 pl-1 text-sm outline-none focus-visible:ring-3',
-                    twoLine ? 'h-10 max-w-64' : 'h-8 max-w-56'
+                    'hover:bg-muted focus-visible:ring-ring/50 flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md pr-3 pl-1 text-sm outline-none focus-visible:ring-3',
+                    twoLine ? 'h-10' : 'h-8'
                 )}
                 onClick={onOpen}
             >
@@ -129,7 +129,7 @@ export function FriendsLocationsFriendChips({
     );
 
     return (
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+        <div className="-ml-1 grid min-w-0 grid-cols-[repeat(auto-fill,minmax(0,200px))] gap-1.5">
             {friends.map((friend) => (
                 <FriendChip
                     key={friend.id}
@@ -190,14 +190,14 @@ function InstanceRow({
         .join(' · ');
 
     return (
-        <>
+        <div className="flex min-w-0 flex-col gap-1.5">
             <div
                 ref={metaRef}
-                className="text-muted-foreground grid min-h-8 min-w-0 grid-cols-[auto_minmax(0,1fr)] content-center gap-y-0.5 text-xs leading-4"
+                className="text-muted-foreground flex min-w-0 items-center text-xs leading-4"
             >
                 <RegionCodeBadge region={parsed.region} />
-                <span className="col-start-2 flex min-w-0 items-center gap-1.5">
-                    <span className="min-w-0 truncate">{label}</span>
+                <span className="flex min-w-0 items-center gap-1.5">
+                    <span className="shrink-0">{label}</span>
                     {population ? (
                         <Tooltip>
                             <TooltipTrigger
@@ -240,23 +240,26 @@ function InstanceRow({
                         location={instance.location}
                         className="shrink-0"
                     />
+                    {groupName ? (
+                        <span
+                            role="button"
+                            tabIndex={0}
+                            className="hover:text-primary min-w-0 cursor-pointer truncate"
+                            onClick={() => onOpenGroup(instance.groupId)}
+                            onKeyDown={(event) => {
+                                if (
+                                    event.key === 'Enter' ||
+                                    event.key === ' '
+                                ) {
+                                    event.preventDefault();
+                                    onOpenGroup(instance.groupId);
+                                }
+                            }}
+                        >
+                            ({groupName})
+                        </span>
+                    ) : null}
                 </span>
-                {groupName ? (
-                    <span
-                        role="button"
-                        tabIndex={0}
-                        className="hover:text-primary col-start-2 min-w-0 cursor-pointer truncate"
-                        onClick={() => onOpenGroup(instance.groupId)}
-                        onKeyDown={(event) => {
-                            if (event.key === 'Enter' || event.key === ' ') {
-                                event.preventDefault();
-                                onOpenGroup(instance.groupId);
-                            }
-                        }}
-                    >
-                        ({groupName})
-                    </span>
-                ) : null}
             </div>
             <FriendsLocationsFriendChips
                 friends={instance.friends}
@@ -265,7 +268,7 @@ function InstanceRow({
                 twoLine={twoLine}
                 onOpenUser={onOpenUser}
             />
-        </>
+        </div>
     );
 }
 
@@ -316,16 +319,15 @@ export function FriendsLocationsWorldSection({
                     >
                         {name}
                     </button>
-                    <span className="text-muted-foreground ml-auto shrink-0 pl-3 text-xs tabular-nums">
-                        {t('view.friends_locations.world_friends', {
-                            count: group.friendCount
-                        })}
-                        {group.instances.length > 1
-                            ? ` · ${t('view.friends_locations.world_instances', { count: group.instances.length })}`
-                            : null}
-                    </span>
+                    {group.instances.length > 1 ? (
+                        <span className="text-muted-foreground ml-auto shrink-0 pl-3 text-xs tabular-nums">
+                            {t('view.friends_locations.world_instances', {
+                                count: group.instances.length
+                            })}
+                        </span>
+                    ) : null}
                 </div>
-                <div className="grid min-w-0 grid-cols-[fit-content(224px)_minmax(0,1fr)] gap-x-3 gap-y-2">
+                <div className="flex min-w-0 flex-col gap-3">
                     {group.instances.map((instance) => (
                         <InstanceRow
                             key={instance.location}
