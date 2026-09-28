@@ -3,8 +3,9 @@
 //! Fork: "Import from VRCX / VRCX-0" (non-destructive merge).
 
 use tauri::State;
-use vrcx_0_outbound_adapters::{ProfileMergeSourceKind, ProfileMergeSources};
-use vrcx_0_persistence::profile_merge::{ProfileMergeReport, ProfileSettingsImportReport};
+use vrcx_0_outbound_adapters::{
+    ProfileMergeReport, ProfileMergeSourceKind, ProfileMergeSources, ProfileSettingsImportReport,
+};
 
 use crate::error::AppError;
 use crate::state::AppState;

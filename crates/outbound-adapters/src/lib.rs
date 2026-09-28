@@ -126,6 +126,7 @@ pub use user_dialog_tab_counts::LocalUserDialogTabCountsSource;
 pub use vrc_status::VrcStatusRemoteAdapter;
 pub use vrchat_config::VrchatConfigAdapter;
 pub use vrchat_request::VrchatRequestAdapter;
+pub use vrcx_0_persistence::profile_merge::{ProfileMergeReport, ProfileSettingsImportReport};
 pub use web_client::WebClient as LocalWebClientAdapter;
 pub use world_cache::LocalWorldCacheAdapter;
 pub use world_name_resolver::CachedWorldNameResolver;
