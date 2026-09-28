@@ -9511,6 +9511,7 @@ dependencies = [
  "tracing-subscriber",
  "vrcx-0-application-core",
  "vrcx-0-composition",
+ "vrcx-0-core",
  "vrcx-0-platform",
 ]
 

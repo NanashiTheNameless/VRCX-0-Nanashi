@@ -43,6 +43,7 @@ fn build_adaptive_tokio_runtime() -> tokio::runtime::Runtime {
 }
 
 async fn async_main() -> ExitCode {
+    vrcx_0_core::user_agent::set_app_version(&product_app_version());
     init_tls_crypto_provider();
 
     let args: Vec<String> = std::env::args().collect();

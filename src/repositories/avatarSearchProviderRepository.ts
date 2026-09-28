@@ -46,11 +46,26 @@ interface SearchInput {
 const AVTRDB_PROVIDER = 'https://api.avtrdb.com/v3/avatar/search/vrcx';
 const VRCDB_PROVIDER = 'https://vrcx.vrcdb.com/avatars/Avatar/VRCX';
 const VRCNDB_PROVIDER = 'https://db.vrcnext.com/api/vrcx';
-/** Searched by default; each can be switched off individually. */
+/**
+ * Built-in providers: always in the list and cannot be removed or edited,
+ * only switched off.
+ */
 const DEFAULT_PROVIDERS = [VRCDB_PROVIDER, AVTRDB_PROVIDER, VRCNDB_PROVIDER];
-// Adds new default providers once to lists saved before they became defaults.
-// Bump the version when adding a default.
-const DEFAULTS_MIGRATION_KEY = 'VRCX_0_Nanashi_avatarProviderDefaultsV3';
+
+export function isDefaultAvatarProvider(provider: string): boolean {
+    return DEFAULT_PROVIDERS.includes(normalizeString(provider));
+}
+
+/**
+ * `providers` with any missing built-in provider appended, so the user's order
+ * and primary provider stay as they are.
+ */
+function withDefaultProviders(providers: readonly string[]): string[] {
+    return [
+        ...providers,
+        ...DEFAULT_PROVIDERS.filter((provider) => !providers.includes(provider))
+    ];
+}
 const DISABLED_PROVIDERS_KEY = 'VRCX_0_Nanashi_avatarSearchDisabledProviders';
 const AVATAR_SEARCH_PROVIDER_PREFERENCE_KEYS = [
     'avatarRemoteDatabase',
@@ -167,8 +182,7 @@ async function getConfig(): Promise<AvatarSearchProviderConfig> {
         providerListValue,
         rawSelectedProviderValue,
         hasProviderList,
-        disabledProvidersValue,
-        defaultsMigrated
+        disabledProvidersValue
     ] = await Promise.all([
         configRepository.getBool('avatarRemoteDatabase', true),
         configRepository.getString(
@@ -177,8 +191,7 @@ async function getConfig(): Promise<AvatarSearchProviderConfig> {
         ),
         configRepository.getString('VRCX_avatarRemoteDatabaseProvider', ''),
         configRepository.has('VRCX_avatarRemoteDatabaseProviderList'),
-        configRepository.getString(DISABLED_PROVIDERS_KEY, '[]'),
-        configRepository.getBool(DEFAULTS_MIGRATION_KEY, false)
+        configRepository.getString(DISABLED_PROVIDERS_KEY, '[]')
     ]);
     const selectedProviderValue = normalizeString(rawSelectedProviderValue);
 
@@ -189,15 +202,7 @@ async function getConfig(): Promise<AvatarSearchProviderConfig> {
     let parsedProviders = Array.isArray(parsedProviderList)
         ? parsedProviderList
         : [...DEFAULT_PROVIDERS];
-    if (!defaultsMigrated) {
-        parsedProviders = [
-            ...DEFAULT_PROVIDERS.filter(
-                (provider) => !parsedProviders.includes(provider)
-            ),
-            ...parsedProviders
-        ];
-        await configRepository.setBool(DEFAULTS_MIGRATION_KEY, true);
-    }
+    parsedProviders = withDefaultProviders(parsedProviders);
 
     if (
         selectedProviderValue &&
@@ -275,7 +280,9 @@ async function saveConfig({
     providerList,
     selectedProvider = ''
 }: SaveConfigInput): Promise<AvatarSearchProviderConfig> {
-    const normalizedProviderList = normalizeProviderList(providerList);
+    const normalizedProviderList = normalizeProviderList(
+        withDefaultProviders(normalizeProviderList(providerList))
+    );
     const persistedSelectedProvider =
         normalizeString(selectedProvider) ||
         normalizeString(

@@ -15,7 +15,6 @@ use tower_service::Service;
 use url::Url;
 
 const VRCHAT_WEBSOCKET_HOST: &str = "pipeline.vrchat.cloud";
-const BROWSER_WEBSOCKET_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.0";
 const TCP_KEEPALIVE_IDLE: Duration = Duration::from_secs(30);
 const TCP_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(10);
 const TCP_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -150,7 +149,7 @@ pub async fn connect_websocket(
     url: &str,
     options: &RealtimeConnectionOptions,
 ) -> Result<RealtimeWebSocketStream, Error> {
-    let request = build_browser_websocket_request(url, &options.origin)?;
+    let request = build_websocket_request(url, &options.origin)?;
     let websocket_url = parse_url(url, "websocket URL")?;
     let (target_host, target_port) = websocket_target(&websocket_url)?;
     let stream =
@@ -194,13 +193,20 @@ fn websocket_connect_error(context: &str, error: TungsteniteError) -> Error {
     Error::Other(format!("{context}: {error}"))
 }
 
-pub fn build_browser_websocket_request(url: &str, origin: &str) -> Result<Request, Error> {
+/// The realtime websocket identifies as the app, with the contact link, like
+/// the VRChat API requests (it used to pose as a Windows Edge 124 browser).
+pub fn build_websocket_request(url: &str, origin: &str) -> Result<Request, Error> {
     let mut request = url
         .into_client_request()
         .map_err(|error| Error::Other(format!("websocket request: {error}")))?;
-    request
-        .headers_mut()
-        .insert("User-Agent", BROWSER_WEBSOCKET_USER_AGENT.parse().unwrap());
+    let user_agent =
+        vrcx_0_core::user_agent::with_contact(&vrcx_0_core::user_agent::app_user_agent());
+    request.headers_mut().insert(
+        "User-Agent",
+        user_agent
+            .parse()
+            .map_err(|error| Error::Other(format!("websocket user agent: {error}")))?,
+    );
     request
         .headers_mut()
         .insert("Origin", origin.parse().unwrap());

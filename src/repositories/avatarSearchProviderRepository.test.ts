@@ -31,7 +31,9 @@ vi.mock('./avatarProfileRepository', () => ({
 import { publishPreferenceChanged } from '@/shared/events/preferenceEvents';
 
 import avatarProfileRepository from './avatarProfileRepository';
-import avatarSearchProviderRepository from './avatarSearchProviderRepository';
+import avatarSearchProviderRepository, {
+    isDefaultAvatarProvider
+} from './avatarSearchProviderRepository';
 import configRepository from './configRepository';
 import externalApiRepository from './externalApiRepository';
 
@@ -99,6 +101,15 @@ describe('AvatarSearchProviderRepository', () => {
     it('normalizes legacy provider lists and preserves a selected custom provider', async () => {
         const customProvider = 'https://avatars.example.test/search';
         const selectedProvider = 'https://selected.example.test/search';
+        // The user's entries keep their order; missing built-in providers are
+        // appended, then the selected provider.
+        const legacyExpected = [
+            AVTRDB_PROVIDER,
+            customProvider,
+            VRCDB_PROVIDER,
+            VRCNDB_PROVIDER,
+            selectedProvider
+        ];
         vi.mocked(configRepository.getString).mockImplementation(
             (key: string, fallback: ConfigFallback = '') => {
                 if (key === 'VRCX_avatarRemoteDatabaseProviderList') {
@@ -122,15 +133,15 @@ describe('AvatarSearchProviderRepository', () => {
             avatarSearchProviderRepository.getConfig()
         ).resolves.toEqual({
             enabled: true,
-            providerList: [AVTRDB_PROVIDER, customProvider, selectedProvider],
+            providerList: legacyExpected,
             selectedProvider,
             disabledProviders: [],
-            activeProviders: [AVTRDB_PROVIDER, customProvider, selectedProvider]
+            activeProviders: legacyExpected
         });
 
         expect(configRepository.setString).toHaveBeenCalledWith(
             'VRCX_avatarRemoteDatabaseProviderList',
-            JSON.stringify([AVTRDB_PROVIDER, customProvider, selectedProvider])
+            JSON.stringify(legacyExpected)
         );
     });
 
@@ -288,13 +299,17 @@ describe('AvatarSearchProviderRepository', () => {
             enabled: true,
             providerList: [
                 AVTRDB_PROVIDER,
-                'https://custom.example.test/search'
+                'https://custom.example.test/search',
+                VRCDB_PROVIDER,
+                VRCNDB_PROVIDER
             ],
             selectedProvider: AVTRDB_PROVIDER,
             disabledProviders: [],
             activeProviders: [
                 AVTRDB_PROVIDER,
-                'https://custom.example.test/search'
+                'https://custom.example.test/search',
+                VRCDB_PROVIDER,
+                VRCNDB_PROVIDER
             ]
         });
 
@@ -303,7 +318,9 @@ describe('AvatarSearchProviderRepository', () => {
                 'VRCX_avatarRemoteDatabaseProviderList',
                 JSON.stringify([
                     AVTRDB_PROVIDER,
-                    'https://custom.example.test/search'
+                    'https://custom.example.test/search',
+                    VRCDB_PROVIDER,
+                    VRCNDB_PROVIDER
                 ])
             ],
             ['VRCX_avatarRemoteDatabase', 'true'],
@@ -316,13 +333,17 @@ describe('AvatarSearchProviderRepository', () => {
                 enabled: true,
                 providerList: [
                     AVTRDB_PROVIDER,
-                    'https://custom.example.test/search'
+                    'https://custom.example.test/search',
+                    VRCDB_PROVIDER,
+                    VRCNDB_PROVIDER
                 ],
                 selectedProvider: AVTRDB_PROVIDER,
                 disabledProviders: [],
                 activeProviders: [
                     AVTRDB_PROVIDER,
-                    'https://custom.example.test/search'
+                    'https://custom.example.test/search',
+                    VRCDB_PROVIDER,
+                    VRCNDB_PROVIDER
                 ]
             }
         );
@@ -363,7 +384,35 @@ describe('AvatarSearchProviderRepository', () => {
             selectedProvider: ''
         });
         expect(readded.disabledProviders).toEqual([AVTRDB_PROVIDER]);
-        expect(readded.activeProviders).toEqual([removed]);
+        expect(readded.activeProviders).toEqual([
+            removed,
+            VRCDB_PROVIDER,
+            VRCNDB_PROVIDER
+        ]);
+    });
+
+    it('never lets built-in providers be removed, only switched off', async () => {
+        const saved = await avatarSearchProviderRepository.saveConfig({
+            enabled: true,
+            providerList: ['https://custom.example.test/search'],
+            selectedProvider: ''
+        });
+        expect(saved.providerList).toEqual([
+            'https://custom.example.test/search',
+            VRCDB_PROVIDER,
+            AVTRDB_PROVIDER,
+            VRCNDB_PROVIDER
+        ]);
+        for (const provider of [
+            VRCDB_PROVIDER,
+            AVTRDB_PROVIDER,
+            VRCNDB_PROVIDER
+        ]) {
+            expect(isDefaultAvatarProvider(provider)).toBe(true);
+        }
+        expect(
+            isDefaultAvatarProvider('https://custom.example.test/search')
+        ).toBe(false);
     });
 
     it('searches every provider in parallel and merges duplicate avatars', async () => {

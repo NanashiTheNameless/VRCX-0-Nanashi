@@ -1,7 +1,7 @@
 use super::{
-    auth_token_from_response, build_browser_websocket_request, build_transport_url,
-    connect_direct_tcp, connect_http_proxy, connect_socks5_proxy, encode_uri_component,
-    extract_auth_token, normalize_websocket_domain, websocket_connect_error, Error,
+    auth_token_from_response, build_transport_url, build_websocket_request, connect_direct_tcp,
+    connect_http_proxy, connect_socks5_proxy, encode_uri_component, extract_auth_token,
+    normalize_websocket_domain, websocket_connect_error, Error,
 };
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
@@ -42,17 +42,20 @@ fn trims_custom_websocket_domain() {
 }
 
 #[test]
-fn browser_websocket_request_includes_browser_headers() {
-    let request = build_browser_websocket_request(
+fn websocket_request_identifies_as_the_app_with_contact_link() {
+    let request = build_websocket_request(
         "wss://pipeline.vrchat.cloud/?auth=abc",
         "https://app.example",
     )
     .unwrap();
 
-    assert!(request.headers()["User-Agent"]
-        .to_str()
-        .unwrap()
-        .contains("Mozilla/5.0"));
+    let user_agent = request.headers()["User-Agent"].to_str().unwrap();
+    assert!(user_agent.starts_with("VRCX-0-Nanashi"), "{user_agent}");
+    assert!(
+        user_agent.ends_with(&format!("(+{})", vrcx_0_core::user_agent::contact_url())),
+        "{user_agent}"
+    );
+    assert!(!user_agent.contains("Mozilla"));
     assert_eq!(request.headers()["Origin"], "https://app.example");
 }
 

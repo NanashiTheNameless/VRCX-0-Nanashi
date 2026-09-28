@@ -1,6 +1,7 @@
 import { PlusIcon, Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { isDefaultAvatarProvider } from '@/repositories/avatarSearchProviderRepository';
 import { Button } from '@/ui/shadcn/button';
 import {
     Dialog,
@@ -79,6 +80,9 @@ export function AvatarProviderDialog({
                                             id={`settings-avatar-provider-${index}`}
                                             name={`avatarProvider${index}`}
                                             value={provider}
+                                            readOnly={isDefaultAvatarProvider(
+                                                provider
+                                            )}
                                             onChange={(event) =>
                                                 updateAvatarProvider(
                                                     index,
@@ -92,18 +96,24 @@ export function AvatarProviderDialog({
                                                 )
                                             }
                                         />
-                                        <InputGroupAddon align="inline-end">
-                                            <InputGroupButton
-                                                type="button"
-                                                size="icon-xs"
-                                                aria-label={'Remove'}
-                                                onClick={() =>
-                                                    removeAvatarProvider(index)
-                                                }
-                                            >
-                                                <Trash2Icon data-icon="inline-start" />
-                                            </InputGroupButton>
-                                        </InputGroupAddon>
+                                        {isDefaultAvatarProvider(
+                                            provider
+                                        ) ? null : (
+                                            <InputGroupAddon align="inline-end">
+                                                <InputGroupButton
+                                                    type="button"
+                                                    size="icon-xs"
+                                                    aria-label={'Remove'}
+                                                    onClick={() =>
+                                                        removeAvatarProvider(
+                                                            index
+                                                        )
+                                                    }
+                                                >
+                                                    <Trash2Icon data-icon="inline-start" />
+                                                </InputGroupButton>
+                                            </InputGroupAddon>
+                                        )}
                                     </InputGroup>
                                 </Field>
                             )
