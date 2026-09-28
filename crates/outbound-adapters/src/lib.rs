@@ -111,7 +111,8 @@ pub use profile_bio::{LocalProfileBioStore, VrchatProfileBioRemoteRequests};
 pub use profile_config::LocalProfileConfigStore;
 pub use profile_database_upgrade::LocalDatabaseUpgradeStore;
 pub use profile_merge_runner::{
-    profile_merge_sources, run_profile_merge, ProfileMergeSourceKind, ProfileMergeSources,
+    profile_merge_sources, run_profile_merge, run_profile_settings_import, ProfileMergeSourceKind,
+    ProfileMergeSources,
 };
 pub use quick_search::{LocalQuickSearchDetailStore, VrchatQuickSearchRemoteRequests};
 pub use realtime_remote_requests::VrchatRealtimeRemoteRequests;

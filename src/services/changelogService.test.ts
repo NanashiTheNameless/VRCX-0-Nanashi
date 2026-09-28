@@ -65,12 +65,12 @@ This release focuses on the changelog page.
 
         expect(
             parseReleaseChangelog({
-                canonicalVersion: '2.8.0-beta.1',
+                canonicalVersion: '2.8.0-Nightly-0000001',
                 channel: 'beta',
-                displayVersion: '2.8.0-beta.1',
-                htmlUrl: 'https://example.test/v2.8.0-beta.1',
-                tagName: 'v2.8.0-beta.1',
-                displayName: 'VRCX-0 2.8.0-beta.1',
+                displayVersion: '2.8.0-Nightly-0000001',
+                htmlUrl: 'https://example.test/v2.8.0-Nightly-0000001',
+                tagName: 'v2.8.0-Nightly-0000001',
+                displayName: 'VRCX-0 2.8.0-Nightly-0000001',
                 publishedAt: '2026-09-04T00:00:00Z',
                 body,
                 updaterType: 'manual'

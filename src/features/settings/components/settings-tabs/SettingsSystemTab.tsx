@@ -123,7 +123,7 @@ export function SettingsSystemTabContent({
                         onCheckedChange={onCloseToTrayChange}
                     />
                 </Field>
-                {isWindows ? <TrayShortcutSetting /> : null}
+                <TrayShortcutSetting />
                 <PrivacyLockSetting />
                 {hostPlatform === 'linux' ? <LinuxRenderingSetting /> : null}
                 <KeepSystemAwakeSetting />

@@ -38,7 +38,7 @@ fn clamped_friend_note_limit_defaults_then_clamps_into_range() {
         (None, 25),
         (Some(-5), 25),
         (Some(0), 1),
-        (Some(1000), 100),
+        (Some(5000), 1000),
         (Some(40), 40),
     ];
 

@@ -53,7 +53,6 @@ fn hide_to_tray_with_background_policy(window: &tauri::Window, state: &AppState)
     }
 }
 
-#[cfg(windows)]
 pub(crate) fn toggle_main_window_from_shortcut(app: &tauri::AppHandle) {
     use vrcx_0_runtime_host_desktop::tray_shortcut::{
         tray_shortcut_window_action, TrayShortcutWindowAction, TrayShortcutWindowState,

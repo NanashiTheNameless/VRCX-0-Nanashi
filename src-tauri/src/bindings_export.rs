@@ -632,6 +632,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::host::safety::app__safety_avatar_blocks_cancel,
             commands::host::profile_merge::app__profile_merge_sources,
             commands::host::profile_merge::app__profile_merge_run,
+            commands::host::profile_merge::app__profile_settings_import,
             commands::host::custom_locales::app__custom_locales_list,
             commands::host::custom_locales::app__custom_locale_save,
             commands::host::custom_locales::app__custom_locale_delete,

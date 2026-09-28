@@ -41,20 +41,20 @@ afterEach(() => {
 });
 
 describe('prepare-release-version', () => {
-    it('builds stable and beta metadata without changing manifests', () => {
-        expect(buildReleaseMeta('v2.31.4-beta.2')).toEqual({
-            base_version: '2.31.4',
-            build_version: '2.31.4-beta.2',
-            channel: 'beta',
+    it('builds stable and nightly metadata without changing manifests', () => {
+        expect(buildReleaseMeta('v3.0.0-Nightly-abc1234')).toEqual({
+            base_version: '3.0.0',
+            build_version: '3.0.0-Nightly-abc1234',
+            channel: 'nightly',
             prerelease: 'true',
-            beta_number: '2',
-            display_version: '2.31.4-beta.2',
-            tag: 'v2.31.4-beta.2'
+            nightly_sha: 'abc1234',
+            display_version: '3.0.0-Nightly-abc1234',
+            tag: 'v3.0.0-Nightly-abc1234'
         });
         expect(buildReleaseMeta('2.31.4')).toMatchObject({
             channel: 'stable',
             prerelease: 'false',
-            beta_number: ''
+            nightly_sha: ''
         });
         expect(() => buildReleaseMeta('2.31.4-preview.2')).toThrow(
             'Invalid release version: 2.31.4-preview.2'
@@ -70,7 +70,7 @@ describe('prepare-release-version', () => {
             [
                 path.join(import.meta.dirname, 'prepare-release-version.ts'),
                 '--version',
-                'v2.31.4-beta.2',
+                'v3.0.0-Nightly-abc1234',
                 '--dry-run'
             ],
             { encoding: 'utf8', env: releaseScriptEnvironment() }
@@ -79,13 +79,13 @@ describe('prepare-release-version', () => {
         expect(result.status).toBe(0);
         expect(result.stderr).toBe('');
         expect(result.stdout.trim().split(/\r?\n/)).toEqual([
-            'base_version=2.31.4',
-            'build_version=2.31.4-beta.2',
-            'channel=beta',
+            'base_version=3.0.0',
+            'build_version=3.0.0-Nightly-abc1234',
+            'channel=nightly',
             'prerelease=true',
-            'beta_number=2',
-            'display_version=2.31.4-beta.2',
-            'tag=v2.31.4-beta.2'
+            'nightly_sha=abc1234',
+            'display_version=3.0.0-Nightly-abc1234',
+            'tag=v3.0.0-Nightly-abc1234'
         ]);
     });
 });

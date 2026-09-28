@@ -60,6 +60,70 @@ pub(crate) async fn run(cmd: &mut Command, timeout: Duration) -> Result<(bool, V
     }
 }
 
+const DIAGNOSTIC_TAIL_BYTES: usize = 16 * 1024;
+
+async fn read_tail(reader: &mut (impl AsyncReadExt + Unpin)) -> Vec<u8> {
+    let mut tail = Vec::new();
+    let mut chunk = [0u8; 8192];
+    while let Ok(n) = reader.read(&mut chunk).await {
+        if n == 0 {
+            break;
+        }
+        tail.extend_from_slice(&chunk[..n]);
+        if tail.len() > DIAGNOSTIC_TAIL_BYTES {
+            tail.drain(..tail.len() - DIAGNOSTIC_TAIL_BYTES);
+        }
+    }
+    tail
+}
+
+/// Like `run`, but keeps the tail of stdout+stderr for diagnosing installer
+/// steps (npm, tsc). Only use it for commands whose output cannot carry
+/// cookies or signed URLs.
+pub(crate) async fn run_diagnosed(
+    cmd: &mut Command,
+    timeout: Duration,
+) -> Result<(bool, String), String> {
+    cmd.stdout(Stdio::piped()).stderr(Stdio::piped());
+    let mut child = spawn(cmd)?;
+    let mut stdout = child.stdout.take().ok_or("Missing process output")?;
+    let mut stderr = child.stderr.take().ok_or("Missing process output")?;
+    let result = tokio::time::timeout(timeout, async {
+        let (out, err) = tokio::join!(read_tail(&mut stdout), read_tail(&mut stderr));
+        let status = child.wait().await.map_err(|e| e.to_string())?;
+        let mut text = String::from_utf8_lossy(&out).into_owned();
+        text.push_str(&String::from_utf8_lossy(&err));
+        Ok::<_, String>((status.success(), text))
+    })
+    .await;
+    match result {
+        Ok(Ok(v)) => Ok(v),
+        error => {
+            let _ = child.kill().await;
+            let _ = child.wait().await;
+            match error {
+                Ok(Err(e)) => Err(e),
+                _ => Err("Operation timed out".into()),
+            }
+        }
+    }
+}
+
+/// Last meaningful line of installer output, for a short error suffix.
+pub(crate) fn last_error_line(output: &str) -> Option<String> {
+    let lines: Vec<&str> = output
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .collect();
+    lines
+        .iter()
+        .rev()
+        .find(|line| line.contains("ERR!") && !line.contains("A complete log"))
+        .or_else(|| lines.last())
+        .map(|line| line.chars().take(300).collect())
+}
+
 pub(crate) struct ManagedChild {
     child: tokio::process::Child,
     #[cfg(windows)]

@@ -2,13 +2,13 @@ name: Dev Kit
 
 on:
     workflow_run:
-        workflows: ['Release']
+        workflows: ['Nightly']
         types:
             - completed
     workflow_dispatch:
 
 concurrency:
-    # Each completed release gets its own build; manual builds keep the newest per ref.
+    # Each completed nightly gets its own build; manual builds keep the newest per ref.
     group: ${{ github.workflow }}-${{ github.event.workflow_run.id || github.ref }}
     cancel-in-progress: true
 

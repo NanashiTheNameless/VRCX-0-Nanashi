@@ -23,6 +23,11 @@ pub(crate) fn is_edge_hidden(app: &AppHandle) -> bool {
     })
 }
 
+#[cfg(not(windows))]
+pub(crate) fn is_edge_hidden(_app: &AppHandle) -> bool {
+    false
+}
+
 pub(crate) fn snapshot(app: &AppHandle) -> SidebarAutoHideSnapshot {
     #[cfg(any(windows, target_os = "macos"))]
     if let Some(shared) = app.try_state::<native::Shared>() {

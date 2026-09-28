@@ -14,10 +14,6 @@ import {
 } from '@/services/updateService';
 import { isUpdateCheckDisabledBuild } from '@/shared/buildLabel';
 import { links } from '@/shared/constants/link';
-import {
-    releaseChannelForVersion,
-    type ReleaseChannel
-} from '@/shared/utils/releaseVersion';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { Badge } from '@/ui/shadcn/badge';
 import { Button } from '@/ui/shadcn/button';
@@ -29,20 +25,7 @@ import {
     DialogHeader,
     DialogTitle
 } from '@/ui/shadcn/dialog';
-import {
-    Field,
-    FieldDescription,
-    FieldGroup,
-    FieldLabel
-} from '@/ui/shadcn/field';
-import {
-    Select,
-    SelectContent,
-    SelectGroup,
-    SelectItem,
-    SelectTrigger,
-    SelectValue
-} from '@/ui/shadcn/select';
+import { FieldGroup } from '@/ui/shadcn/field';
 
 type UpdaterDialogProps = {
     open: boolean;
@@ -53,10 +36,6 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
     const { t } = useTranslation();
     const isPreviewUpdateCheck = getPreviewStableReleaseUpdateMode().enabled;
     const updateCheckDisabled = isUpdateCheckDisabledBuild();
-    const currentChannel = releaseChannelForVersion(VERSION || '') ?? 'stable';
-
-    const [selectedChannel, setSelectedChannel] =
-        useState<ReleaseChannel>(currentChannel);
     const [latestRelease, setLatestRelease] =
         useState<NormalizedRelease | null>(null);
     const [hasNewerRelease, setHasNewerRelease] = useState(false);
@@ -88,16 +67,7 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
             ? formatReleaseDisplayVersion(latestRelease.canonicalVersion)
             : '') ||
         '-';
-    const isChangingChannel = selectedChannel !== currentChannel;
-    const isUpToDate = Boolean(
-        !isChangingChannel && latestRelease && !hasNewerRelease
-    );
-
-    useEffect(() => {
-        if (!open && !downloading) {
-            setSelectedChannel(currentChannel);
-        }
-    }, [currentChannel, downloading, open]);
+    const isUpToDate = Boolean(latestRelease && !hasNewerRelease);
 
     useEffect(() => {
         if (!open || updateCheckDisabled) {
@@ -110,19 +80,8 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
         setHasNewerRelease(false);
         setDetail(t('message.vrcx_updater.checking_update_state'));
 
-        const request = async () => {
-            if (isChangingChannel) {
-                return {
-                    error: null,
-                    release:
-                        await commands.appAppUpdateReleaseGet(selectedChannel),
-                    hasAvailableUpdate: false
-                };
-            }
-            return commands.appAppUpdateCheckRun();
-        };
-
-        request()
+        commands
+            .appAppUpdateCheckRun()
             .then((snapshot) => {
                 if (!active) {
                     return;
@@ -144,19 +103,15 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
                     snapshot.release
                 );
                 setLatestRelease(nextRelease);
-                setHasNewerRelease(
-                    isChangingChannel ? false : snapshot.hasAvailableUpdate
-                );
+                setHasNewerRelease(snapshot.hasAvailableUpdate);
                 setDetail(
                     nextRelease
                         ? ''
-                        : isChangingChannel
-                          ? t('dialog.vrcx_updater.channel.no_release')
-                          : !isPreviewUpdateCheck
-                            ? t(
-                                  'message.vrcx_updater.no_downloadable_releases_found'
-                              )
-                            : t('message.vrcx_updater.no_releases_found')
+                        : !isPreviewUpdateCheck
+                          ? t(
+                                'message.vrcx_updater.no_downloadable_releases_found'
+                            )
+                          : t('message.vrcx_updater.no_releases_found')
                 );
             })
             .catch((error: unknown) => {
@@ -180,20 +135,13 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
         return () => {
             active = false;
         };
-    }, [
-        isChangingChannel,
-        isPreviewUpdateCheck,
-        open,
-        selectedChannel,
-        t,
-        updateCheckDisabled
-    ]);
+    }, [isPreviewUpdateCheck, open, t, updateCheckDisabled]);
 
     async function handleInstallUpdate() {
         if (
             !canInstallUpdate ||
             !latestRelease ||
-            (!hasNewerRelease && !isChangingChannel) ||
+            !hasNewerRelease ||
             loading ||
             showDownloadProgress
         ) {
@@ -266,81 +214,15 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
                         {t('dialog.system.label.vrcx_0_update')}
                     </DialogTitle>
                     <DialogDescription>
-                        {isChangingChannel
-                            ? t(
-                                  'dialog.vrcx_updater.channel.switch_description',
-                                  {
-                                      channel: t(
-                                          `dialog.vrcx_updater.channel.${selectedChannel}`
-                                      )
-                                  }
-                              )
-                            : isUpToDate
-                              ? t('dialog.vrcx_updater.latest_version')
-                              : t('dialog.system.dynamic.version_summary', {
-                                    current: currentVersionText,
-                                    latest: latestVersionText
-                                })}
+                        {isUpToDate
+                            ? t('dialog.vrcx_updater.latest_version')
+                            : t('dialog.system.dynamic.version_summary', {
+                                  current: currentVersionText,
+                                  latest: latestVersionText
+                              })}
                     </DialogDescription>
                 </DialogHeader>
                 <FieldGroup>
-                    {!isPreviewUpdateCheck ? (
-                        <Field>
-                            <FieldLabel>
-                                {t('dialog.vrcx_updater.channel.label')}
-                            </FieldLabel>
-                            <Select
-                                value={selectedChannel}
-                                disabled={
-                                    downloading ||
-                                    autoDownloadState === 'installing'
-                                }
-                                onValueChange={(value) => {
-                                    if (
-                                        value === 'stable' ||
-                                        value === 'beta'
-                                    ) {
-                                        setSelectedChannel(value);
-                                    }
-                                }}
-                                items={[
-                                    {
-                                        value: 'stable',
-                                        label: t(
-                                            'dialog.vrcx_updater.channel.stable'
-                                        )
-                                    },
-                                    {
-                                        value: 'beta',
-                                        label: t(
-                                            'dialog.vrcx_updater.channel.beta'
-                                        )
-                                    }
-                                ]}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectItem value="stable">
-                                            {t(
-                                                'dialog.vrcx_updater.channel.stable'
-                                            )}
-                                        </SelectItem>
-                                        <SelectItem value="beta">
-                                            {t(
-                                                'dialog.vrcx_updater.channel.beta'
-                                            )}
-                                        </SelectItem>
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
-                            <FieldDescription>
-                                {t('dialog.vrcx_updater.channel.description')}
-                            </FieldDescription>
-                        </Field>
-                    ) : null}
                     <div className="border-input bg-background flex w-full flex-col gap-1 rounded-md border px-3 py-2 text-sm">
                         <div className="text-muted-foreground text-xs">
                             {isUpToDate
@@ -386,7 +268,7 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
                             type="button"
                             disabled={
                                 !latestRelease ||
-                                (!hasNewerRelease && !isChangingChannel) ||
+                                !hasNewerRelease ||
                                 loading ||
                                 showDownloadProgress
                             }
@@ -404,11 +286,7 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
                                 handleOpenReleasePage();
                             }}
                         >
-                            {t(
-                                isChangingChannel
-                                    ? `dialog.vrcx_updater.channel.download_${selectedChannel}`
-                                    : 'nav_menu.update'
-                            )}
+                            {t('nav_menu.update')}
                         </Button>
                     )}
                 </DialogFooter>

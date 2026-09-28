@@ -24,7 +24,7 @@ mod release;
 mod tests;
 
 use self::release::{
-    compare_release_versions, is_release_newer_than_current,
+    compare_releases_newest_first, is_release_newer_than_current,
     is_stable_release_newer_than_preview_build, normalize_release,
     parse_preview_build_timestamp_ms, release_channel_for_version,
 };
@@ -189,9 +189,7 @@ async fn fetch_latest_release(
         .filter_map(|release| normalize_release(release, target, require_installer_asset))
         .filter(|release| release.channel == channel)
         .collect();
-    normalized.sort_by(|left, right| {
-        compare_release_versions(&right.canonical_version, &left.canonical_version)
-    });
+    normalized.sort_by(compare_releases_newest_first);
     Ok(normalized.into_iter().next())
 }
 
@@ -201,7 +199,7 @@ async fn run_check_inner(context: &AppUpdateCheckContext<'_>) -> Result<CheckOut
     {
         let release = fetch_latest_release(
             context.release_catalog,
-            AppUpdateChannel::Stable,
+            context.channel,
             context.target,
             false,
         )
@@ -212,9 +210,9 @@ async fn run_check_inner(context: &AppUpdateCheckContext<'_>) -> Result<CheckOut
             }) {
                 Some(release) => update_available_outcome(
                     release,
-                    "Preview build has a newer Stable release available.",
+                    "Preview build has a newer release available.",
                 ),
-                None => no_update_outcome("No newer Stable release found for this preview build."),
+                None => no_update_outcome("No newer release found for this preview build."),
             },
         );
     }
@@ -240,7 +238,9 @@ async fn run_check_inner(context: &AppUpdateCheckContext<'_>) -> Result<CheckOut
                 target: target.to_string(),
                 current_version: context.app_version.to_string(),
                 expected_version: release.canonical_version.clone(),
-                allow_downgrades: false,
+                // Nightly hashes carry no semver order; the release was already
+                // chosen as the newest by publish date.
+                allow_downgrades: release.channel == AppUpdateChannel::Beta,
                 proxy: context.proxy.map(str::to_string),
             })
             .await;
@@ -446,8 +446,8 @@ pub struct AppUpdateRuntime {
 
 impl AppUpdateRuntime {
     pub fn new(deps: AppUpdateRuntimeDeps) -> Self {
-        let channel = release_channel_for_version(&deps.build.app_version)
-            .unwrap_or(AppUpdateChannel::Stable);
+        // Only nightly builds are published, so every install follows them.
+        let channel = AppUpdateChannel::Beta;
         Self {
             inner: Arc::new(AppUpdateRuntimeInner {
                 release_catalog: deps.release_catalog,
@@ -692,7 +692,8 @@ impl AppUpdateRuntime {
             target: release.target.clone(),
             current_version: self.inner.build.app_version.clone(),
             expected_version: release.canonical_version.clone(),
-            allow_downgrades: release.channel != self.inner.channel,
+            allow_downgrades: release.channel != self.inner.channel
+                || release.channel == AppUpdateChannel::Beta,
             proxy,
         };
         let progress_runtime = self.clone();

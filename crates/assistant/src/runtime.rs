@@ -346,9 +346,23 @@ async fn load_tool_defs(tools: &InProcessMcpTools) -> Result<Vec<ToolDefinition>
         .map(|tool| ToolDefinition {
             name: tool.name,
             description: tool.description,
-            parameters: tool.parameters,
+            parameters: provider_safe_parameters(tool.parameters),
         })
         .collect())
+}
+
+/// OpenAI-compatible providers reject an object schema without `properties`
+/// (HTTP 400 "object schema missing properties"), which is what an argument-
+/// less tool derives to.
+fn provider_safe_parameters(mut parameters: serde_json::Value) -> serde_json::Value {
+    if let Some(schema) = parameters.as_object_mut() {
+        if schema.get("type").and_then(serde_json::Value::as_str) == Some("object") {
+            schema
+                .entry("properties")
+                .or_insert_with(|| serde_json::json!({}));
+        }
+    }
+    parameters
 }
 
 /// Removes the per-session cancel token when a turn task finishes, but only if
@@ -376,6 +390,22 @@ impl Drop for CancelCleanup {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn argumentless_tool_schemas_gain_empty_properties() {
+        assert_eq!(
+            provider_safe_parameters(serde_json::json!({"type": "object"})),
+            serde_json::json!({"type": "object", "properties": {}})
+        );
+        let with_properties = serde_json::json!({
+            "type": "object",
+            "properties": {"id": {"type": "string"}}
+        });
+        assert_eq!(
+            provider_safe_parameters(with_properties.clone()),
+            with_properties
+        );
+    }
 
     #[test]
     fn write_tools_stay_hidden_unless_writes_are_armed() {

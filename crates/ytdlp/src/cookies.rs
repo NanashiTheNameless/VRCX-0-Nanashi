@@ -68,7 +68,10 @@ pub(crate) fn store(root: &Path, raw: &str) -> Result<(usize, i64), String> {
     Ok((count, expiry))
 }
 pub(crate) fn import(root: &Path, path: &Path) -> Result<(usize, i64), String> {
-    let meta = fs::metadata(path).map_err(|_| "Cookie file could not be opened")?;
+    if path.as_os_str().is_empty() {
+        return Err("No cookie file was selected".into());
+    }
+    let meta = fs::metadata(path).map_err(|e| format!("Cookie file could not be opened: {e}"))?;
     if !meta.is_file() || meta.len() > 8 * 1024 * 1024 {
         return Err("Cookie file exceeds 8 MB or is not a file".into());
     }

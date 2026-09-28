@@ -263,6 +263,117 @@ pub fn merge_settings_file(
     Ok(added)
 }
 
+/// Settings copied by an explicit settings import, for the result summary.
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ProfileSettingsImportReport {
+    /// Rows written to this profile's `configs` table.
+    pub configs_imported: u32,
+    /// Keys written from the other app's JSON settings file.
+    pub settings_file_keys_imported: u32,
+}
+
+/// Copy every user preference from the other app's JSON settings file into
+/// the live settings store, replacing values set here. Instance/meta keys are
+/// skipped. Returns the number of keys written.
+pub fn import_settings_file(
+    storage: &crate::storage::StorageService,
+    source_path: &Path,
+) -> Result<u32, Error> {
+    let text = match std::fs::read_to_string(source_path) {
+        Ok(text) => text,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(0),
+        Err(error) => return Err(error.into()),
+    };
+    let values: serde_json::Map<String, serde_json::Value> = match serde_json::from_str(&text) {
+        Ok(values) => values,
+        Err(_) => return Ok(0),
+    };
+    let mut imported = 0;
+    for (key, value) in values {
+        if is_skipped_config_key(&key) {
+            continue;
+        }
+        let value = match value {
+            serde_json::Value::String(text) => text,
+            serde_json::Value::Null => continue,
+            other => other.to_string(),
+        };
+        storage.set(key, value);
+        imported += 1;
+    }
+    Ok(imported)
+}
+
+/// Copy every user preference row from the source database's `configs` table
+/// into the live profile database at `main_path`, replacing values set here.
+/// The source must already be at this app's schema version.
+pub fn import_profile_configs_file(main_path: &Path, source_path: &Path) -> Result<u32, Error> {
+    let conn = Connection::open(main_path).map_err(Error::sqlite)?;
+    import_profile_configs(&conn, source_path)
+}
+
+pub fn import_profile_configs(conn: &Connection, source_path: &Path) -> Result<u32, Error> {
+    conn.busy_timeout(Duration::from_secs(30))
+        .map_err(Error::sqlite)?;
+    conn.execute(
+        &format!("ATTACH DATABASE ?1 AS {SOURCE_SCHEMA}"),
+        [source_path.to_string_lossy().as_ref()],
+    )
+    .map_err(Error::sqlite)?;
+    let result = (|| {
+        if !table_exists_in(conn, SOURCE_SCHEMA, "configs")? || !main_table_exists(conn, "configs")?
+        {
+            return Ok(0);
+        }
+        let rows = {
+            let mut statement = conn
+                .prepare(&format!("SELECT key, value FROM {SOURCE_SCHEMA}.configs"))
+                .map_err(Error::sqlite)?;
+            let rows = statement
+                .query_map([], |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, rusqlite::types::Value>(1)?,
+                    ))
+                })
+                .map_err(Error::sqlite)?
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(Error::sqlite)?;
+            rows
+        };
+        conn.execute_batch("BEGIN IMMEDIATE")
+            .map_err(Error::sqlite)?;
+        let imported = (|| {
+            let mut imported = 0;
+            for (key, value) in rows {
+                if is_skipped_config_key(&key) {
+                    continue;
+                }
+                imported += conn
+                    .execute(
+                        "INSERT OR REPLACE INTO main.configs (key, value) VALUES (?1, ?2)",
+                        rusqlite::params![key, value],
+                    )
+                    .map_err(Error::sqlite)? as u32;
+            }
+            Ok::<_, Error>(imported)
+        })();
+        match imported {
+            Ok(imported) => {
+                conn.execute_batch("COMMIT").map_err(Error::sqlite)?;
+                Ok(imported)
+            }
+            Err(error) => {
+                let _ = conn.execute_batch("ROLLBACK");
+                Err(error)
+            }
+        }
+    })();
+    let _ = conn.execute(&format!("DETACH DATABASE {SOURCE_SCHEMA}"), []);
+    result
+}
+
 /// Open the live profile database at `main_path` and merge `source_path` into it.
 pub fn merge_profile_database_file(
     main_path: &Path,
@@ -469,5 +580,68 @@ mod tests {
         );
         drop(storage);
         let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn settings_import_replaces_existing_values() {
+        let dir = std::env::temp_dir().join(format!(
+            "vrcx-0-nanashi-settings-import-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let storage = crate::storage::StorageService::new(&dir.join("mine.json")).unwrap();
+        storage.set("theme".into(), "dark".into());
+        let source = dir.join("theirs.json");
+        std::fs::write(
+            &source,
+            r#"{"theme":"light","zoom":"110","VRCX_0_databaseVersion":"12","gone":null}"#,
+        )
+        .unwrap();
+
+        assert_eq!(import_settings_file(&storage, &source).unwrap(), 2);
+        assert_eq!(storage.get("theme").as_deref(), Some("light"));
+        assert_eq!(storage.get("zoom").as_deref(), Some("110"));
+        assert_eq!(storage.get("VRCX_0_databaseVersion"), None);
+        drop(storage);
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn config_import_replaces_existing_values_and_skips_meta_keys() {
+        let main_path = temp_path("import-main");
+        let source_path = temp_path("import-source");
+        let main = Connection::open(&main_path).unwrap();
+        main.execute_batch(
+            "CREATE TABLE configs (key TEXT PRIMARY KEY, value TEXT);
+             INSERT INTO configs VALUES ('theme', 'dark');
+             INSERT INTO configs VALUES ('VRCX_0_databaseVersion', '40');",
+        )
+        .unwrap();
+        {
+            let source = Connection::open(&source_path).unwrap();
+            source
+                .execute_batch(
+                    "CREATE TABLE configs (key TEXT PRIMARY KEY, value TEXT);
+                     INSERT INTO configs VALUES ('theme', 'light');
+                     INSERT INTO configs VALUES ('zoom', '110');
+                     INSERT INTO configs VALUES ('VRCX_0_databaseVersion', '12');",
+                )
+                .unwrap();
+        }
+
+        assert_eq!(import_profile_configs(&main, &source_path).unwrap(), 2);
+        let value = |key: &str| -> String {
+            main.query_row("SELECT value FROM configs WHERE key = ?1", [key], |row| {
+                row.get(0)
+            })
+            .unwrap()
+        };
+        assert_eq!(value("theme"), "light");
+        assert_eq!(value("zoom"), "110");
+        assert_eq!(value("VRCX_0_databaseVersion"), "40");
+        drop(main);
+        let _ = std::fs::remove_file(main_path);
+        let _ = std::fs::remove_file(source_path);
     }
 }

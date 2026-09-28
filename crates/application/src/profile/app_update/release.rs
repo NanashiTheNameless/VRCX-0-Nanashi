@@ -13,7 +13,8 @@ pub(super) const TOKYO_UTC_OFFSET_SECONDS: i32 = 9 * 3600;
 const MAX_MAJOR_VERSION: u32 = 99;
 const MAX_MINOR_VERSION: u32 = 999;
 const MAX_PATCH_VERSION: u32 = 999;
-const MAX_BETA_VERSION: u64 = 999_999;
+const NIGHTLY_PREFIX: &str = "Nightly-";
+const NIGHTLY_SHA_LENGTH: usize = 7;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct ParsedReleaseVersion {
@@ -22,18 +23,15 @@ pub(super) struct ParsedReleaseVersion {
     version: Version,
 }
 
-fn has_supported_beta_prerelease(version: &Version) -> bool {
-    let mut identifiers = version.pre.as_str().split('.');
-    if identifiers.next() != Some("beta") {
-        return false;
-    }
-    let Some(number) = identifiers.next().and_then(|value| value.parse().ok()) else {
+/// Nightly builds carry a single `Nightly-<GitSHA7>` prerelease identifier.
+fn has_supported_nightly_prerelease(version: &Version) -> bool {
+    let Some(sha) = version.pre.as_str().strip_prefix(NIGHTLY_PREFIX) else {
         return false;
     };
-    if identifiers.next().is_some() {
-        return false;
-    }
-    (1..=MAX_BETA_VERSION).contains(&number)
+    sha.len() == NIGHTLY_SHA_LENGTH
+        && sha
+            .bytes()
+            .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
 }
 
 pub(super) fn parse_release_version(version: &str) -> Option<ParsedReleaseVersion> {
@@ -50,7 +48,7 @@ pub(super) fn parse_release_version(version: &str) -> Option<ParsedReleaseVersio
     }
     let channel = if version.pre.is_empty() {
         AppUpdateChannel::Stable
-    } else if has_supported_beta_prerelease(&version) {
+    } else if has_supported_nightly_prerelease(&version) {
         AppUpdateChannel::Beta
     } else {
         return None;
@@ -66,20 +64,61 @@ pub(super) fn release_channel_for_version(version: &str) -> Option<AppUpdateChan
     parse_release_version(version).map(|parsed| parsed.channel)
 }
 
+/// Orders by `major.minor.patch`, then stable above nightly. Nightlies that
+/// share a base version compare equal: their commit hashes carry no order, so
+/// callers order them by publish date instead.
 pub(super) fn compare_release_versions(left: &str, right: &str) -> Ordering {
     match (parse_release_version(left), parse_release_version(right)) {
         (None, None) => Ordering::Equal,
         (None, Some(_)) => Ordering::Less,
         (Some(_), None) => Ordering::Greater,
-        (Some(left), Some(right)) => left.version.cmp(&right.version),
+        (Some(left), Some(right)) => (left.version.major, left.version.minor, left.version.patch)
+            .cmp(&(
+                right.version.major,
+                right.version.minor,
+                right.version.patch,
+            ))
+            .then_with(|| {
+                left.version
+                    .pre
+                    .is_empty()
+                    .cmp(&right.version.pre.is_empty())
+            }),
     }
 }
 
+/// `release` must be the newest release of its channel. A nightly with the
+/// same base version as the running nightly is newer whenever it is a
+/// different build.
 pub(super) fn is_release_newer_than_current(
     release: &AppUpdateReleaseSnapshot,
     current_version: &str,
 ) -> bool {
-    compare_release_versions(&release.canonical_version, current_version) == Ordering::Greater
+    match compare_release_versions(&release.canonical_version, current_version) {
+        Ordering::Greater => true,
+        Ordering::Less => false,
+        Ordering::Equal => {
+            release.channel == AppUpdateChannel::Beta
+                && release_channel_for_version(current_version) == Some(AppUpdateChannel::Beta)
+                && parse_release_version(current_version)
+                    .is_some_and(|current| current.canonical_version != release.canonical_version)
+        }
+    }
+}
+
+/// Newest first: highest version, then most recently published.
+pub(super) fn compare_releases_newest_first(
+    left: &AppUpdateReleaseSnapshot,
+    right: &AppUpdateReleaseSnapshot,
+) -> Ordering {
+    compare_release_versions(&right.canonical_version, &left.canonical_version).then_with(|| {
+        let published = |release: &AppUpdateReleaseSnapshot| {
+            DateTime::parse_from_rfc3339(&release.published_at)
+                .map(|published_at| published_at.timestamp_millis())
+                .unwrap_or(i64::MIN)
+        };
+        published(right).cmp(&published(left))
+    })
 }
 
 pub(super) fn is_preview_build_label(build_label: &str) -> bool {

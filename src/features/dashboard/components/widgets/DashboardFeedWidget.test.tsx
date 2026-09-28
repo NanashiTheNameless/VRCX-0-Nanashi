@@ -119,7 +119,7 @@ describe('DashboardFeedWidget', () => {
         expect(mocks.queryFeedLatest).toHaveBeenCalledWith({
             userId: 'usr_self',
             filters: [],
-            maxRows: 100
+            maxRows: 300
         });
         expect(screen.getByText('Friend')).toBeTruthy();
         expect(

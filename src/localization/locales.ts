@@ -22,10 +22,24 @@ export function unregisterLanguageCode(code: string) {
     }
 }
 
+function languageCodeKey(code: string) {
+    return code.trim().replace(/_/g, '-').toLowerCase();
+}
+
+/**
+ * Resolves a stored or system language to a registered code. Codes are not
+ * limited to BCP-47: custom locales may use forms like `en_pt`, `en_ud`,
+ * `enp`, `qes`, `tlh_aa` or `lol_us`, so `_` and `-` are interchangeable and
+ * matching ignores case.
+ */
 export function normalizeLanguageCode(language: string | null | undefined) {
-    const candidate = language?.trim().replace(/_/g, '-') ?? '';
+    const candidate = language?.trim() ?? '';
     if (languageCodes.includes(candidate)) {
         return candidate;
     }
-    return DEFAULT_LANGUAGE_CODE;
+    const key = languageCodeKey(candidate);
+    return (
+        languageCodes.find((code) => languageCodeKey(code) === key) ??
+        DEFAULT_LANGUAGE_CODE
+    );
 }

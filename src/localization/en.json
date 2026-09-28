@@ -2678,6 +2678,8 @@
                 "user_dialog": {
                     "header": "User Dialog",
                     "profile_appearance": "Profile Appearance",
+                    "profile_decorations": "Profile decorations",
+                    "profile_decorations_description": "Show VRChat profile decorations (background, avatar frame, profile and nameplate effects). Turn off to hide them all; the switches below control each one.",
                     "profile_background": "Show Profile Background",
                     "profile_background_description": "Show the gradient or texture selected for the VRChat profile.",
                     "avatar_frame": "Show Avatar Frame",
@@ -3134,6 +3136,9 @@
                 "translate_header": "Translate the UI",
                 "code": "Language code",
                 "name": "Display name",
+                "ai_language": "Language name for the AI",
+                "ai_language_placeholder": "Pirate English, Klingon, Early Modern English with heavy Shakespeare references...",
+                "ai_language_description": "Exactly what the AI should translate into. Useful for non-standard languages whose code means little on its own. Leave empty to use the display name and code.",
                 "provider": "Translate with",
                 "endpoint": "AI endpoint",
                 "model": "Model",
@@ -3155,7 +3160,11 @@
                 "confirm_description": "This copies {app}'s history, notes, favorites and settings you have not set here into this profile. Nothing here is overwritten or deleted, and {app}'s own data is not modified. Caches and login sessions are not copied. A backup is saved to the backups folder first.",
                 "confirm": "Merge",
                 "cancel": "Cancel",
-                "done": "Merged from {app}: {rows} rows added across {tables} tables, plus {settings} settings you had not set."
+                "done": "Merged from {app}: {rows} rows added across {tables} tables, plus {settings} settings you had not set.",
+                "settings_button": "Import settings",
+                "settings_confirm_title": "Import settings from {app}?",
+                "settings_confirm_description": "This replaces this profile's settings with {app}'s. History, notes and favorites are not touched, and {app}'s own data is not modified. A backup is saved to the backups folder first. Restart the app afterwards so every setting takes effect.",
+                "settings_done": "Imported {count} settings from {app}. Restart the app to apply them all."
             },
             "deep_link_schemes": {
                 "upstream": "Open vrcx-0:// links",
@@ -3766,7 +3775,11 @@
             "tagline": "The fast, lightweight VRCX built with Tauri and Rust.",
             "contributors": "Contributors",
             "contributors_error": "Couldn't load the contributor list.",
-            "thanks": "Every translation, test, bug report, and idea comes from the community. Thank you.",
+            "role": {
+                "fork_maintainer": "Fork Maintainer",
+                "upstream_developer": "Upstream Developer"
+            },
+            "thanks": "Every test, bug report, and idea comes from the community. Thank you.",
             "license_line": "Free and open source under GPL-3.0"
         },
         "activity": {
@@ -5684,11 +5697,11 @@
             "channel": {
                 "label": "Update channel",
                 "stable": "Stable",
-                "beta": "Beta",
+                "beta": "Nightly",
                 "description": "VRCX-0-Nanashi only checks for updates in the installed channel.",
                 "switch_description": "To switch to {channel}, download and install its latest release.",
                 "download_stable": "Download latest Stable",
-                "download_beta": "Download latest Beta",
+                "download_beta": "Download latest Nightly",
                 "no_release": "No release is available in this channel."
             }
         },

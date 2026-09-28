@@ -2679,6 +2679,11 @@ const generatedCommands = {
     ): Promise<ProfileMergeReport> {
         return await TAURI_INVOKE('app__profile_merge_run', { source });
     },
+    async appProfileSettingsImport(
+        source: ProfileMergeSourceKind
+    ): Promise<ProfileSettingsImportReport> {
+        return await TAURI_INVOKE('app__profile_settings_import', { source });
+    },
     async appCustomLocalesList(): Promise<CustomLocaleEntry[]> {
         return await TAURI_INVOKE('app__custom_locales_list');
     },
@@ -6071,6 +6076,19 @@ export type ProfileRestoreValidation = {
 export type ProfileRestoreValidationOutcome = {
     validation?: ProfileRestoreValidation | null;
     failure?: ProfileRestoreFailure | null;
+};
+/**
+ * Settings copied by an explicit settings import, for the result summary.
+ */
+export type ProfileSettingsImportReport = {
+    /**
+     * Rows written to this profile's `configs` table.
+     */
+    configsImported: number;
+    /**
+     * Keys written from the other app's JSON settings file.
+     */
+    settingsFileKeysImported: number;
 };
 export type ProxySettingsTestInput = { proxy?: string };
 export type ProxySettingsTestResult = {

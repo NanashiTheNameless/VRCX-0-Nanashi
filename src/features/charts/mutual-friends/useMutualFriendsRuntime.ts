@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
 import { getResolvedThemeMode } from '@/services/themeService';
@@ -6,11 +7,12 @@ import { useRuntimeStore } from '@/state/runtimeStore';
 import { useShellStore } from '@/state/shellStore';
 
 import { mutualFriendUsername } from './mutualFriendsGraphData';
+import { useFriendNameHistory } from './useFriendNameHistory';
 
 export function useMutualFriendsRuntime() {
     const currentUserId = useRuntimeStore((state) => state.auth.currentUserId);
     const friendsById = useFriendRosterStore((state) => state.friendsById);
-    const friendLabelsById = useFriendRosterStore(
+    const rosterLabelsById = useFriendRosterStore(
         useShallow((state) =>
             Object.fromEntries(
                 Object.entries(state.friendsById).map(([id, friend]) => [
@@ -19,6 +21,12 @@ export function useMutualFriendsRuntime() {
                 ])
             )
         )
+    );
+    // Former friends stay in the graph snapshot; keep their last known names.
+    const historicalNamesById = useFriendNameHistory(currentUserId ?? '');
+    const friendLabelsById = useMemo(
+        () => ({ ...historicalNamesById, ...rosterLabelsById }),
+        [historicalNamesById, rosterLabelsById]
     );
     const orderedFriendIds = useFriendRosterStore(
         (state) => state.orderedFriendIds

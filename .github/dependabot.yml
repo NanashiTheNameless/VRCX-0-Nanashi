@@ -21,3 +21,9 @@ updates:
           - dependency-name: 'specta'
           - dependency-name: 'tauri-specta'
           - dependency-name: 'specta-typescript'
+    - package-ecosystem: 'github-actions'
+      directories:
+          - '/'
+          - '/.github/actions/*'
+      schedule:
+          interval: 'weekly'

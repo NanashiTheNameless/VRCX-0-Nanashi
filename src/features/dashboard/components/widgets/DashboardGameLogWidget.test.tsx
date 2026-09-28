@@ -81,7 +81,7 @@ describe('DashboardGameLogWidget', () => {
             expect(mocks.queryGameLog).toHaveBeenLastCalledWith({
                 currentUserId: 'usr_self',
                 filters: ['Location'],
-                limit: 200
+                limit: 500
             });
         });
 
@@ -94,7 +94,7 @@ describe('DashboardGameLogWidget', () => {
             expect(mocks.queryGameLog).toHaveBeenLastCalledWith({
                 currentUserId: 'usr_self',
                 filters: ['Location'],
-                limit: 200
+                limit: 500
             });
         });
     });

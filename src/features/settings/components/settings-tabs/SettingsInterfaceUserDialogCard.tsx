@@ -30,6 +30,18 @@ export function SettingsInterfaceUserDialogCard() {
         onHideUserNotesChange,
         onHideUserMemosChange
     } = settingsInterface;
+    const anyDecorationShown =
+        prefs.showUserDialogProfileBackground ||
+        prefs.showUserDialogAvatarFrame ||
+        prefs.showUserDialogProfileEffect ||
+        prefs.showUserDialogNameplateEffect;
+
+    function setAllDecorations(checked: boolean) {
+        onShowUserDialogProfileBackgroundChange(checked);
+        onShowUserDialogAvatarFrameChange(checked);
+        onShowUserDialogProfileEffectChange(checked);
+        onShowUserDialogNameplateEffectChange(checked);
+    }
 
     return (
         <SettingsCard
@@ -43,6 +55,19 @@ export function SettingsInterfaceUserDialogCard() {
                         'view.settings.appearance.user_dialog.profile_appearance'
                     )}
                 />
+                <Field
+                    label={t(
+                        'view.settings.appearance.user_dialog.profile_decorations'
+                    )}
+                    description={t(
+                        'view.settings.appearance.user_dialog.profile_decorations_description'
+                    )}
+                >
+                    <Switch
+                        checked={anyDecorationShown}
+                        onCheckedChange={setAllDecorations}
+                    />
+                </Field>
                 <Field
                     label={t(
                         'view.settings.appearance.user_dialog.profile_background'

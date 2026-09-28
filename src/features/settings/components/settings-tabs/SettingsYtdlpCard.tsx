@@ -113,7 +113,7 @@ export function SettingsYtdlpCard() {
             null,
             'Netscape cookies|*.txt'
         );
-        if (typeof path === 'string')
+        if (typeof path === 'string' && path.trim())
             await run(() => commands.appYtdlpImportCookies(path));
     }
     const locked = busy || status?.busy === true;

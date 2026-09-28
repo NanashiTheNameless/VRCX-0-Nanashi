@@ -149,7 +149,7 @@ fn url_matching_uses_actual_host_and_boundaries() {
         "https://a.grabify.link./secret",
         "https://safe.test@grabify.link/token",
     ] {
-        assert_eq!(suspicious_url(raw, &blocked, &[], false).unwrap().1, false);
+        assert!(!suspicious_url(raw, &blocked, &[], false).unwrap().1);
     }
     for raw in [
         "https://grabify.link.safe.test/",
@@ -682,14 +682,15 @@ async fn reviewed_avatar_block_requires_explicit_exact_ids_and_is_single_use() {
         .await
         .unwrap();
     assert_eq!(results[0].outcome, "success");
-    let requests = port.requests.lock().unwrap();
-    assert_eq!(requests.len(), 2);
-    assert_eq!(
-        requests[1].path.as_deref(),
-        Some("auth/user/avatarmoderations")
-    );
-    assert_eq!(requests[1].method.as_deref(), Some("POST"));
-    drop(requests);
+    {
+        let requests = port.requests.lock().unwrap();
+        assert_eq!(requests.len(), 2);
+        assert_eq!(
+            requests[1].path.as_deref(),
+            Some("auth/user/avatarmoderations")
+        );
+        assert_eq!(requests[1].method.as_deref(), Some("POST"));
+    }
     assert!(f
         .runtime
         .block_reviewed_avatars(&preview.token, vec![AVATAR.into()])

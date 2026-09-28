@@ -84,7 +84,7 @@ describe('updateService branch release fetching', () => {
                 release({ publishedAt: '2026-06-21T07:00:00Z' }),
                 {
                     ...release({ publishedAt: '2026-06-22T07:00:00Z' }),
-                    tag_name: 'v2.8.0-beta.2',
+                    tag_name: 'v2.8.0-Nightly-0000002',
                     prerelease: true
                 }
             ]
@@ -93,7 +93,7 @@ describe('updateService branch release fetching', () => {
         const releases = await updateService.fetchBranchReleases('beta');
 
         expect(releases.map((item) => item.canonicalVersion)).toEqual([
-            '2.8.0-beta.2'
+            '2.8.0-Nightly-0000002'
         ]);
     });
 });

@@ -1989,6 +1989,24 @@ impl DesktopRuntimeHostState {
         .map_err(|error| vrcx_0_composition::Error::Custom(error.to_string()))
     }
 
+    /// Fork: import only settings from VRCX or upstream VRCX-0, replacing ours.
+    pub async fn run_profile_settings_import(
+        &self,
+        kind: vrcx_0_outbound_adapters::ProfileMergeSourceKind,
+    ) -> Result<vrcx_0_persistence::profile_merge::ProfileSettingsImportReport> {
+        let database = Arc::clone(self.runtime.database());
+        let storage = Arc::clone(self.runtime.storage());
+        let app_data = self.runtime.paths().app_data.clone();
+        tokio::task::spawn_blocking(move || {
+            vrcx_0_outbound_adapters::run_profile_settings_import(
+                &database, &storage, &app_data, kind,
+            )
+        })
+        .await
+        .map_err(|error| vrcx_0_composition::Error::Custom(format!("import task failed: {error}")))?
+        .map_err(|error| vrcx_0_composition::Error::Custom(error.to_string()))
+    }
+
     pub fn start_screenshot_library_scan(
         &self,
         force: bool,

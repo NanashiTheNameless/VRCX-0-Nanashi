@@ -22,6 +22,7 @@ import { Skeleton } from '@/ui/shadcn/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import {
+    ABOUT_CREDITED_PEOPLE,
     useAboutContributors,
     type AboutContributor
 } from './useAboutContributors';
@@ -152,6 +153,29 @@ function ContributorNode({
     );
 }
 
+function AboutCreditedPeople() {
+    const { t } = useTranslation();
+
+    return (
+        <div className="flex flex-wrap items-start justify-center gap-6">
+            {ABOUT_CREDITED_PEOPLE.map((person, index) => (
+                <div
+                    key={person.login}
+                    className="flex flex-col items-center gap-1.5"
+                >
+                    <ContributorNode contributor={person} index={index * 2} />
+                    <span className="text-foreground/85 text-xs font-medium">
+                        {person.login}
+                    </span>
+                    <span className="text-muted-foreground/75 text-[10px] font-medium tracking-[0.12em] uppercase">
+                        {t(`view.about.role.${person.role}`)}
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 function AboutContributorsWall({ open }: { open: boolean }) {
     const { t } = useTranslation();
     const contributorsQuery = useAboutContributors(open);
@@ -236,6 +260,7 @@ export function AboutVrcxDialog({
                 </div>
 
                 <section className="mt-5 flex flex-col items-center gap-3.5 text-center">
+                    <AboutCreditedPeople />
                     <span className="text-muted-foreground/75 text-[10px] font-medium tracking-[0.18em] uppercase">
                         {t('view.about.contributors')}
                     </span>

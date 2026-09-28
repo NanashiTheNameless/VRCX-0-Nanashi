@@ -29,19 +29,20 @@ fn locales_dir(state: &AppState) -> PathBuf {
     state.runtime_host().app_data_path().join(LOCALES_DIR)
 }
 
-/// Locale codes become file names, so keep them to a safe BCP-47-ish subset.
+/// Locale codes become file names, so keep them to a safe subset. Non-standard
+/// codes such as `en_pt`, `enp`, `qes` or `tlh_aa` are allowed.
 fn validate_code(code: &str) -> Result<String, AppError> {
     let code = code.trim();
     let valid = (2..=32).contains(&code.len())
         && code
             .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-' || byte == b'_')
         && !code.eq_ignore_ascii_case("en");
     if valid {
         Ok(code.to_string())
     } else {
         Err(AppError::Custom(
-            "Language code must be 2-32 letters, digits or '-' and must not be \"en\".".into(),
+            "Language code must be 2-32 letters, digits, '-' or '_' and must not be \"en\".".into(),
         ))
     }
 }

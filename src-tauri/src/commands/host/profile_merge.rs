@@ -4,7 +4,7 @@
 
 use tauri::State;
 use vrcx_0_outbound_adapters::{ProfileMergeSourceKind, ProfileMergeSources};
-use vrcx_0_persistence::profile_merge::ProfileMergeReport;
+use vrcx_0_persistence::profile_merge::{ProfileMergeReport, ProfileSettingsImportReport};
 
 use crate::error::AppError;
 use crate::state::AppState;
@@ -22,4 +22,16 @@ pub async fn app__profile_merge_run(
     source: ProfileMergeSourceKind,
 ) -> Result<ProfileMergeReport, AppError> {
     Ok(state.runtime_host().run_profile_merge(source).await?)
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn app__profile_settings_import(
+    state: State<'_, AppState>,
+    source: ProfileMergeSourceKind,
+) -> Result<ProfileSettingsImportReport, AppError> {
+    Ok(state
+        .runtime_host()
+        .run_profile_settings_import(source)
+        .await?)
 }

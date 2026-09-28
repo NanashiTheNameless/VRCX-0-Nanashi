@@ -6,15 +6,16 @@ const rootDir = path.join(import.meta.dirname, '..');
 const tauriConfigPath = path.join(rootDir, 'src-tauri', 'tauri.conf.json');
 const cargoTomlPath = path.join(rootDir, 'src-tauri', 'Cargo.toml');
 const cargoLockPath = path.join(rootDir, 'Cargo.lock');
+// Stable: <major>.<minor>.<patch>. Nightly: <major>.<minor>.<patch>-Nightly-<GitSHA7>.
 const RELEASE_VERSION_PATTERN =
-    /^v?(?<major>[1-9][0-9]{0,1})\.(?<minor>0|[1-9][0-9]{0,2})\.(?<patch>0|[1-9][0-9]{0,2})(?:-beta\.(?<beta>[1-9][0-9]{0,5}))?$/;
+    /^v?(?<major>[1-9][0-9]{0,1})\.(?<minor>0|[1-9][0-9]{0,2})\.(?<patch>0|[1-9][0-9]{0,2})(?:-Nightly-(?<sha>[0-9a-f]{7}))?$/;
 
 type ReleaseMeta = {
     base_version: string;
     build_version: string;
-    channel: 'stable' | 'beta';
+    channel: 'stable' | 'nightly';
     prerelease: 'true' | 'false';
-    beta_number: string;
+    nightly_sha: string;
     display_version: string;
     tag: string;
 };
@@ -47,14 +48,14 @@ function buildReleaseMeta(versionInput: string): ReleaseMeta {
 
     const buildVersion = version.replace(/^v/, '');
     const baseVersion = `${match.groups.major}.${match.groups.minor}.${match.groups.patch}`;
-    const channel = match.groups.beta ? 'beta' : 'stable';
+    const channel = match.groups.sha ? 'nightly' : 'stable';
 
     return {
         base_version: baseVersion,
         build_version: buildVersion,
         channel,
-        prerelease: channel === 'beta' ? 'true' : 'false',
-        beta_number: match.groups.beta || '',
+        prerelease: channel === 'nightly' ? 'true' : 'false',
+        nightly_sha: match.groups.sha || '',
         display_version: buildVersion,
         tag: `v${buildVersion}`
     };

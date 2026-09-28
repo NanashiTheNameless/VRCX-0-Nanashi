@@ -46,10 +46,13 @@ export function normalizeReleaseList(
             (release): release is NormalizedRelease =>
                 release !== null && release.channel === channel
         )
-        .sort((left, right) =>
-            compareReleaseVersions(
-                right.canonicalVersion,
-                left.canonicalVersion
-            )
+        .sort(
+            (left, right) =>
+                compareReleaseVersions(
+                    right.canonicalVersion,
+                    left.canonicalVersion
+                ) ||
+                (Date.parse(right.publishedAt) || 0) -
+                    (Date.parse(left.publishedAt) || 0)
         );
 }

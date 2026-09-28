@@ -112,14 +112,12 @@ describe('SettingsSystemTab updater policy', () => {
         }
     );
 
-    it('shows global tray shortcut settings only on Windows', () => {
+    it('shows global tray shortcut settings on every desktop platform', () => {
         for (const hostPlatform of ['windows', 'macos', 'linux'] as const) {
             const html = renderToStaticMarkup(
                 <SettingsSystemTab hostPlatform={hostPlatform} {...handlers} />
             );
-            expect(html.includes('shortcuts.tray.title')).toBe(
-                hostPlatform === 'windows'
-            );
+            expect(html).toContain('shortcuts.tray.title');
         }
     });
 

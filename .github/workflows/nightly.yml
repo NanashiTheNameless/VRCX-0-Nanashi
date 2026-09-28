@@ -1,17 +1,17 @@
 name: Nightly
 
 # Builds every push to master (no scheduled builds) and publishes it as a
-# prerelease on the beta update channel, so installed nightly builds update
+# prerelease on the nightly update channel, so installed nightly builds update
 # themselves through the in-app updater.
 #
-# Version scheme: <major>.<minor>.<patch + 1>-beta.<run_number>, derived from
-# src-tauri/tauri.conf.json. The patch bump keeps nightlies newer than the
-# stable version they are based on; run_number keeps them strictly increasing.
+# Version scheme: <version>-Nightly-<GitSHA7>, where <version> comes from
+# src-tauri/tauri.conf.json. Nightlies sharing a base version are ordered by
+# publish date by the in-app updater.
 #
 # Also force-moves the `Nightly-Rolling` tag/release to the newest build.
 #
 # Required repository configuration:
-#   vars.TAURI_UPDATER_PUBLIC_KEY           minisign public key (also used by release.yml)
+#   vars.TAURI_UPDATER_PUBLIC_KEY           minisign public key
 #   secrets.TAURI_UPDATER_PRIVATE_KEY       minisign private key
 #   secrets.TAURI_UPDATER_PRIVATE_KEY_PASSWORD
 
@@ -41,13 +41,13 @@ jobs:
         outputs:
             base_version: ${{ steps.version.outputs.base_version }}
             build_version: ${{ steps.version.outputs.build_version }}
-            beta_number: ${{ steps.version.outputs.beta_number }}
+            nightly_sha: ${{ steps.version.outputs.nightly_sha }}
             display_version: ${{ steps.version.outputs.display_version }}
             tag: ${{ steps.version.outputs.tag }}
         steps:
             - uses: actions/checkout@v7
 
-            - uses: actions/setup-node@v6
+            - uses: actions/setup-node@v7
               with:
                   node-version: 24.x
 
@@ -55,9 +55,9 @@ jobs:
               name: Compute nightly version
               run: |
                   base="$(node -p "require('./src-tauri/tauri.conf.json').version.split('-')[0]")"
-                  nightly_base="$(node -e "const [a,b,c]=process.argv[1].split('.').map(Number); console.log([a,b,c+1].join('.'))" "$base")"
+                  sha7="$(git rev-parse --short=7 "$GITHUB_SHA")"
                   node scripts/prepare-release-version.ts \
-                      --version "${nightly_base}-beta.${{ github.run_number }}" \
+                      --version "${base}-Nightly-${sha7}" \
                       --dry-run
 
     package:
@@ -146,6 +146,7 @@ jobs:
 
             - name: Build package
               env:
+                  TAURI_UPDATER_PUBLIC_KEY: ${{ vars.TAURI_UPDATER_PUBLIC_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_UPDATER_PRIVATE_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_UPDATER_PRIVATE_KEY_PASSWORD }}
                   VRCX_0_WEBKIT_BUILD_TARGET: ${{ matrix.webkit_build_target }}
@@ -154,7 +155,7 @@ jobs:
                   case "$RUNNER_OS" in
                       Linux)
                           # rpm cannot carry a semver prerelease in Version; use Release instead.
-                          node -e "require('node:fs').writeFileSync(process.argv[1], JSON.stringify({ version: process.argv[2], bundle: { linux: { rpm: { release: '0.beta.' + process.argv[3] } } } }))" "$override_config" "${{ needs.prepare.outputs.base_version }}" "${{ needs.prepare.outputs.beta_number }}"
+                          node -e "require('node:fs').writeFileSync(process.argv[1], JSON.stringify({ version: process.argv[2], bundle: { linux: { rpm: { release: '0.nightly.' + process.argv[3] } } } }))" "$override_config" "${{ needs.prepare.outputs.base_version }}" "${{ needs.prepare.outputs.nightly_sha }}"
                           npm run tauri:build -- --config src-tauri/tauri.linux.conf.json --no-bundle
                           npm run tauri -- bundle --config src-tauri/tauri.linux.conf.json --bundles appimage deb
                           npm run tauri -- bundle --config "$override_config" --bundles rpm
@@ -258,7 +259,7 @@ jobs:
 
     publish:
         name: Publish Nightly
-        # Share the publication lock with Release, independently of workflow locks.
+        # Serialize publication independently of workflow locks.
         concurrency:
             group: release-publish
             cancel-in-progress: false
@@ -272,7 +273,7 @@ jobs:
         steps:
             - uses: actions/checkout@v7
 
-            - uses: actions/setup-node@v6
+            - uses: actions/setup-node@v7
               with:
                   node-version: 24.x
 
@@ -324,17 +325,18 @@ jobs:
               env:
                   GH_TOKEN: ${{ github.token }}
               run: |
-                  # Rolling tag that always points at the newest nightly build. Its tag
-                  # name is not semver, so the in-app updater ignores it; it exists for
-                  # people who want a stable download URL for the latest build.
+                  # Rolling tag that always points at the newest nightly build and is
+                  # the repository's "latest" release, so releases/latest/download/*
+                  # always serves the newest build. Its tag name is not semver, so the
+                  # in-app release catalog ignores it. GitHub only lets a full
+                  # (non-prerelease) release be marked latest.
                   git tag -f Nightly-Rolling "$GITHUB_SHA"
                   git push -f origin refs/tags/Nightly-Rolling
                   gh release delete Nightly-Rolling --repo "$GITHUB_REPOSITORY" --yes || true
                   gh release create Nightly-Rolling release-assets/* \
                       --repo "$GITHUB_REPOSITORY" \
                       --verify-tag \
-                      --prerelease \
-                      --latest=false \
+                      --latest \
                       --title "Nightly (rolling)" \
                       --notes "Latest nightly build: ${{ needs.prepare.outputs.display_version }} from $GITHUB_SHA."
 
@@ -343,7 +345,7 @@ jobs:
                   GH_TOKEN: ${{ github.token }}
               run: |
                   gh release list --repo "$GITHUB_REPOSITORY" --limit 200 --json tagName,isPrerelease,createdAt \
-                      --jq '[.[] | select(.isPrerelease and (.tagName | test("-beta\\.[0-9]+$")))] | sort_by(.createdAt) | reverse | .[10:] | .[].tagName' \
+                      --jq '[.[] | select(.isPrerelease and (.tagName | test("-(Nightly-[0-9a-f]{7}|beta\\.[0-9]+)$")))] | sort_by(.createdAt) | reverse | .[10:] | .[].tagName' \
                   | while read -r tag; do
                       gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
                   done

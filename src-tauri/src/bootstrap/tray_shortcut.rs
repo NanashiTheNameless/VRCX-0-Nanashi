@@ -1,5 +1,9 @@
+//! Global "show/hide main window" shortcut. Windows records keys with a
+//! low-level hook (so keys the webview never sees still work); Linux (X11) and
+//! macOS record from the focused settings input and register through
+//! tauri-plugin-global-shortcut.
+
 use tauri::AppHandle;
-#[cfg(windows)]
 use tauri::Manager;
 use vrcx_0_runtime_host_desktop::tray_shortcut::{
     TrayShortcutBinding, TrayShortcutError, TrayShortcutRuntime, TrayShortcutSnapshot,
@@ -9,17 +13,12 @@ use vrcx_0_runtime_host_desktop::tray_shortcut::{
 use crate::error::AppError;
 use crate::state::AppState;
 
-#[cfg(windows)]
 const PREFERENCE_KEY: &str = "VRCX_TrayShortcut";
 
 pub(crate) fn setup(app: &AppHandle, state: &AppState) {
-    #[cfg(windows)]
     native::setup(app, state);
-    #[cfg(not(windows))]
-    let _ = (app, state);
 }
 
-#[cfg(windows)]
 async fn on_main_thread<T: Send + 'static>(
     app: &AppHandle,
     action: impl FnOnce(&AppHandle) -> T + Send + 'static,
@@ -36,79 +35,46 @@ async fn on_main_thread<T: Send + 'static>(
 }
 
 pub(crate) async fn snapshot(app: &AppHandle) -> Result<TrayShortcutSnapshot, AppError> {
-    #[cfg(windows)]
-    return on_main_thread(app, native::snapshot).await;
-    #[cfg(not(windows))]
-    {
-        let _ = app;
-        Ok(TrayShortcutRuntime::new(None, false).snapshot())
-    }
+    on_main_thread(app, native::snapshot).await
 }
 
 pub(crate) async fn configure(
     app: &AppHandle,
     binding: Option<TrayShortcutBinding>,
 ) -> Result<TrayShortcutUpdate, AppError> {
-    #[cfg(windows)]
-    return on_main_thread(app, move |app| native::configure(app, binding)).await;
-    #[cfg(not(windows))]
-    {
-        let _ = binding;
-        Ok(TrayShortcutUpdate::Failed {
-            error: TrayShortcutError::Unsupported,
-            snapshot: snapshot(app).await?,
-        })
-    }
+    on_main_thread(app, move |app| native::configure(app, binding)).await
 }
 
 pub(crate) async fn check(
     app: &AppHandle,
     binding: TrayShortcutBinding,
 ) -> Result<Option<TrayShortcutError>, AppError> {
-    #[cfg(windows)]
-    return on_main_thread(app, move |app| native::check(app, binding)).await;
-    #[cfg(not(windows))]
-    {
-        let _ = (app, binding);
-        Ok(Some(TrayShortcutError::Unsupported))
-    }
+    on_main_thread(app, move |app| native::check(app, binding)).await
 }
 
 pub(crate) async fn set_recording(app: &AppHandle, recording: bool) -> Result<bool, AppError> {
-    #[cfg(windows)]
-    return on_main_thread(app, move |app| native::set_recording(app, recording)).await?;
-    #[cfg(not(windows))]
-    {
-        let _ = (app, recording);
-        Ok(false)
-    }
+    on_main_thread(app, move |app| native::set_recording(app, recording)).await?
 }
 
 pub(crate) fn stop_recording(app: &AppHandle) -> Result<(), AppError> {
-    #[cfg(windows)]
     native::set_recording(app, false)?;
-    #[cfg(not(windows))]
-    let _ = app;
     Ok(())
 }
 
 pub(crate) fn take_startup_failure(app: &AppHandle) -> bool {
-    #[cfg(windows)]
     if let Some(shared) = app.try_state::<native::Shared>() {
         return shared
             .startup_notice_pending
             .swap(false, std::sync::atomic::Ordering::AcqRel);
     }
-    #[cfg(not(windows))]
-    let _ = app;
     false
 }
 
-#[cfg(windows)]
 mod native {
     use super::*;
     use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
     use std::sync::Mutex;
+    #[cfg(windows)]
     use tauri::Emitter;
     use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut, ShortcutState};
     use vrcx_0_runtime_host_desktop::tray_shortcut::{TrayShortcutRegistrar, TrayShortcutStatus};
@@ -129,7 +95,14 @@ mod native {
 
     struct Registrar<'a>(&'a AppHandle);
 
-    fn check_windows_shortcut(binding: &TrayShortcutBinding) -> Result<(), TrayShortcutError> {
+    #[cfg(not(windows))]
+    fn check_platform_shortcut(binding: &TrayShortcutBinding) -> Result<(), TrayShortcutError> {
+        // No side-effect-free probe exists here; registration reports conflicts.
+        shortcut(binding).map(|_| ())
+    }
+
+    #[cfg(windows)]
+    fn check_platform_shortcut(binding: &TrayShortcutBinding) -> Result<(), TrayShortcutError> {
         use vrcx_0_host_desktop::shortcut_recorder::{
             self, ProbeError, MOD_ALT, MOD_CONTROL, MOD_SHIFT,
         };
@@ -205,17 +178,17 @@ mod native {
         }
 
         fn check(&self, binding: &TrayShortcutBinding) -> Result<(), TrayShortcutError> {
-            check_windows_shortcut(binding)
+            check_platform_shortcut(binding)
         }
     }
 
     pub(super) fn set_recording(app: &AppHandle, requested: bool) -> Result<bool, AppError> {
-        use vrcx_0_host_desktop::shortcut_recorder::{self, MOD_ALT, MOD_CONTROL, MOD_SHIFT};
         let window = app.get_webview_window("main");
         let recording = requested
             && window
                 .as_ref()
                 .is_some_and(|window| window.is_focused().unwrap_or(false));
+        #[cfg(windows)]
         if !recording {
             vrcx_0_host_desktop::shortcut_recorder::stop();
         }
@@ -229,30 +202,43 @@ mod native {
             };
         };
         shared.recording.store(false, Ordering::Release);
+        #[cfg(windows)]
         if recording {
-            let window =
-                window.ok_or_else(|| AppError::Custom("Main window is unavailable".into()))?;
-            let handle = window
-                .hwnd()
-                .map_err(|error| AppError::Custom(error.to_string()))?
-                .0 as isize;
-            let app = app.clone();
-            shortcut_recorder::start(handle, move |key| {
-                let Some(code) = shortcut_recorder::code_name(key.virtual_key) else {
-                    return;
-                };
-                let binding = TrayShortcutBinding {
-                    key: code,
-                    control: key.modifiers & MOD_CONTROL != 0,
-                    alt: key.modifiers & MOD_ALT != 0,
-                    shift: key.modifiers & MOD_SHIFT != 0,
-                };
-                let _ = app.emit_to("main", "trayShortcutRecorded", binding);
-            })
-            .map_err(AppError::Custom)?;
+            start_windows_recorder(app, window)?;
         }
+        // Elsewhere the focused settings input records keys from the webview;
+        // the flag only keeps the current shortcut from firing meanwhile.
+        #[cfg(not(windows))]
+        let _ = window;
         shared.recording.store(recording, Ordering::Release);
         Ok(recording)
+    }
+
+    #[cfg(windows)]
+    fn start_windows_recorder(
+        app: &AppHandle,
+        window: Option<tauri::WebviewWindow>,
+    ) -> Result<(), AppError> {
+        use vrcx_0_host_desktop::shortcut_recorder::{self, MOD_ALT, MOD_CONTROL, MOD_SHIFT};
+        let window = window.ok_or_else(|| AppError::Custom("Main window is unavailable".into()))?;
+        let handle = window
+            .hwnd()
+            .map_err(|error| AppError::Custom(error.to_string()))?
+            .0 as isize;
+        let app = app.clone();
+        shortcut_recorder::start(handle, move |key| {
+            let Some(code) = shortcut_recorder::code_name(key.virtual_key) else {
+                return;
+            };
+            let binding = TrayShortcutBinding {
+                key: code,
+                control: key.modifiers & MOD_CONTROL != 0,
+                alt: key.modifiers & MOD_ALT != 0,
+                shift: key.modifiers & MOD_SHIFT != 0,
+            };
+            let _ = app.emit_to("main", "trayShortcutRecorded", binding);
+        })
+        .map_err(AppError::Custom)
     }
 
     pub(super) fn snapshot(app: &AppHandle) -> TrayShortcutSnapshot {

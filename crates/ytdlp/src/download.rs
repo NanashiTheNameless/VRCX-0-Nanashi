@@ -259,19 +259,23 @@ pub(crate) async fn install_provider(root: &Path, manifest: &Manifest) -> Result
         std::iter::once(node.parent().unwrap().to_path_buf()).chain(std::env::split_paths(&old)),
     )
     .map_err(|e| e.to_string())?;
-    let (ok, _) = process::run(
+    let (ok, output) = process::run_diagnosed(
         process::command(&node)
             .arg(npm)
-            .args(["ci", "--no-audit", "--no-fund"])
+            .args(["ci", "--no-audit", "--no-fund", "--loglevel=error"])
             .env("PATH", path)
             .current_dir(&server),
         Duration::from_secs(600),
     )
     .await?;
     if !ok {
-        return Err("PO-token provider dependency installation failed; retry installation".into());
+        tracing::warn!(output = %output, "PO-token provider npm ci failed");
+        return Err(installer_error(
+            "PO-token provider dependency installation failed; retry installation",
+            &output,
+        ));
     }
-    let (ok, _) = process::run(
+    let (ok, output) = process::run_diagnosed(
         process::command(&node)
             .arg(server.join("node_modules/typescript/bin/tsc"))
             .current_dir(&server),
@@ -279,9 +283,16 @@ pub(crate) async fn install_provider(root: &Path, manifest: &Manifest) -> Result
     )
     .await?;
     if !ok {
-        return Err("PO-token provider build failed".into());
+        tracing::warn!(output = %output, "PO-token provider build failed");
+        return Err(installer_error("PO-token provider build failed", &output));
     }
     files::write(&home.join("ready"), b"1")
+}
+fn installer_error(summary: &str, output: &str) -> String {
+    match process::last_error_line(output) {
+        Some(line) => format!("{summary} ({line})"),
+        None => summary.to_string(),
+    }
 }
 pub(crate) fn provider_main(root: &Path) -> PathBuf {
     root.join(format!(

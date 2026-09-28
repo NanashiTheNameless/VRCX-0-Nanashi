@@ -55,6 +55,7 @@ export function SettingsCustomLanguagesCard() {
     const [locales, setLocales] = useState<CustomLocaleEntry[]>([]);
     const [code, setCode] = useState('');
     const [name, setName] = useState('');
+    const [aiLanguageName, setAiLanguageName] = useState('');
     const [providerKind, setProviderKind] = useState<ProviderKind>('ai');
     const [endpointId, setEndpointId] = useState('');
     const [model, setModel] = useState('');
@@ -85,11 +86,21 @@ export function SettingsCustomLanguagesCard() {
         label: entry.name
     }));
     const codeValid =
-        /^[A-Za-z0-9-]{2,32}$/.test(code.trim()) && code.trim() !== 'en';
+        /^[A-Za-z0-9_-]{2,32}$/.test(code.trim()) && code.trim() !== 'en';
     const providerReady =
         providerKind === 'ai'
             ? Boolean(endpointId && model)
             : Boolean(apiKey.trim());
+
+    // Non-standard codes (en_pt, qes, tlh_aa, ...) mean little to a model on
+    // their own, so AI providers get an explicit language name when given.
+    function aiTargetLanguage() {
+        const explicit = aiLanguageName.trim();
+        if (explicit) {
+            return explicit;
+        }
+        return name.trim() ? `${name.trim()} (${code.trim()})` : code.trim();
+    }
 
     async function start() {
         const provider: UiTranslationProvider =
@@ -103,7 +114,8 @@ export function SettingsCustomLanguagesCard() {
             const entry = await translateUiToCustomLocale({
                 code: code.trim(),
                 name: name.trim() || code.trim(),
-                targetLanguage: code.trim(),
+                targetLanguage:
+                    providerKind === 'ai' ? aiTargetLanguage() : code.trim(),
                 provider,
                 retranslateExisting: retranslate,
                 signal: controller.signal,
@@ -226,7 +238,7 @@ export function SettingsCustomLanguagesCard() {
                         <Input
                             id="custom-language-code"
                             value={code}
-                            placeholder="de"
+                            placeholder="de, en_pt, tlh_aa"
                             aria-invalid={Boolean(code) && !codeValid}
                             onChange={(event) => setCode(event.target.value)}
                         />
@@ -242,6 +254,30 @@ export function SettingsCustomLanguagesCard() {
                             onChange={(event) => setName(event.target.value)}
                         />
                     </div>
+                    {providerKind === 'ai' ? (
+                        <div className="grid gap-1.5 sm:col-span-2">
+                            <Label htmlFor="custom-language-ai-name">
+                                {t(
+                                    'view.settings.custom_languages.ai_language'
+                                )}
+                            </Label>
+                            <Input
+                                id="custom-language-ai-name"
+                                value={aiLanguageName}
+                                placeholder={t(
+                                    'view.settings.custom_languages.ai_language_placeholder'
+                                )}
+                                onChange={(event) =>
+                                    setAiLanguageName(event.target.value)
+                                }
+                            />
+                            <p className="text-muted-foreground text-xs">
+                                {t(
+                                    'view.settings.custom_languages.ai_language_description'
+                                )}
+                            </p>
+                        </div>
+                    ) : null}
                     <div className="grid gap-1.5">
                         <Label htmlFor="custom-language-provider">
                             {t('view.settings.custom_languages.provider')}

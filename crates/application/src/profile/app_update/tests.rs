@@ -169,7 +169,7 @@ fn app_update_test_context_with_update_check(
     let event_bus = RuntimeEventBus::new();
     let port = Arc::new(MockUpdaterPort::new(install_outcomes));
     let updater_port: Arc<dyn UpdaterPort> = port.clone();
-    let runtime = AppUpdateRuntime::new(AppUpdateRuntimeDeps {
+    let mut runtime = AppUpdateRuntime::new(AppUpdateRuntimeDeps {
         release_catalog: Arc::new(TestAppUpdateReleaseCatalog::default()),
         config,
         event_bus: event_bus.clone(),
@@ -184,6 +184,10 @@ fn app_update_test_context_with_update_check(
         port: updater_port,
         tasks: TaskSupervisor::new(),
     });
+    // Exercise the download/install flow against the stable fixtures below.
+    Arc::get_mut(&mut runtime.inner)
+        .expect("runtime is not shared yet")
+        .channel = AppUpdateChannel::Stable;
     if !update_check_disabled {
         *runtime.inner.status.lock().expect("lock update status") = AppUpdateStatusSnapshot {
             has_available_update: true,
@@ -233,13 +237,13 @@ async fn beta_update_check_ignores_stable_releases() {
     let release_catalog = TestAppUpdateReleaseCatalog {
         releases: vec![
             release("v2.16.0", false, Vec::new()),
-            release("v2.15.0-beta.2", true, Vec::new()),
+            release("v2.15.0-Nightly-0000002", true, Vec::new()),
         ],
     };
     let updater: Arc<dyn UpdaterPort> = Arc::new(MockUpdaterPort::new([]));
     let context = AppUpdateCheckContext {
         release_catalog: &release_catalog,
-        app_version: "2.15.0-beta.1",
+        app_version: "2.15.0-Nightly-0000001",
         build_label: "stable",
         build_badge: "",
         channel: AppUpdateChannel::Beta,
@@ -251,14 +255,17 @@ async fn beta_update_check_ignores_stable_releases() {
     let outcome = run_check_inner(&context).await.unwrap();
 
     assert!(outcome.has_available_update);
-    assert_eq!(outcome.release.unwrap().canonical_version, "2.15.0-beta.2");
+    assert_eq!(
+        outcome.release.unwrap().canonical_version,
+        "2.15.0-Nightly-0000002"
+    );
 }
 
 #[tokio::test]
 async fn stable_update_check_ignores_beta_releases() {
     let release_catalog = TestAppUpdateReleaseCatalog {
         releases: vec![
-            release("v3.0.0-beta.1", true, Vec::new()),
+            release("v3.0.0-Nightly-0000001", true, Vec::new()),
             release("v2.15.0", false, Vec::new()),
         ],
     };
@@ -398,9 +405,9 @@ fn parses_valid_release_versions() {
     let parsed = parse_release_version("2.0.0").expect("valid version parses");
     assert_eq!(parsed.canonical_version, "2.0.0");
 
-    let parsed = parse_release_version("v2.1.0-beta.12").expect("valid beta parses");
+    let parsed = parse_release_version("v2.1.0-Nightly-abc1234").expect("valid nightly parses");
     assert_eq!(parsed.channel, AppUpdateChannel::Beta);
-    assert_eq!(parsed.canonical_version, "2.1.0-beta.12");
+    assert_eq!(parsed.canonical_version, "2.1.0-Nightly-abc1234");
 }
 
 #[test]
@@ -411,8 +418,10 @@ fn rejects_invalid_release_versions() {
     assert!(parse_release_version("01.2.3").is_none());
     assert!(parse_release_version("1.02.3").is_none());
     assert!(parse_release_version("0.1.0").is_none());
-    assert!(parse_release_version("1.2.3-beta.0").is_none());
-    assert!(parse_release_version("1.2.3-beta.1000000").is_none());
+    assert!(parse_release_version("1.2.3-beta.1").is_none());
+    assert!(parse_release_version("1.2.3-Nightly-abc123").is_none());
+    assert!(parse_release_version("1.2.3-Nightly-ABC1234").is_none());
+    assert!(parse_release_version("1.2.3-Nightly-abc1234.1").is_none());
     assert!(parse_release_version("1.2.3-alpha.1").is_none());
     assert!(parse_release_version("abc").is_none());
 }
@@ -426,11 +435,15 @@ fn compares_release_versions_numerically() {
     );
     assert_eq!(compare_release_versions("1.2.3", "1.2.4"), Ordering::Less);
     assert_eq!(
-        compare_release_versions("1.2.3-beta.10", "1.2.3-beta.2"),
+        compare_release_versions("1.2.3-Nightly-fffffff", "1.2.3-Nightly-0000000"),
+        Ordering::Equal
+    );
+    assert_eq!(
+        compare_release_versions("1.2.4-Nightly-0000000", "1.2.3"),
         Ordering::Greater
     );
     assert_eq!(
-        compare_release_versions("1.2.3", "1.2.3-beta.10"),
+        compare_release_versions("1.2.3", "1.2.3-Nightly-fffffff"),
         Ordering::Greater
     );
     assert_eq!(compare_release_versions("bad", "1.0.0"), Ordering::Less);
@@ -515,11 +528,20 @@ fn normalize_release_rejects_unparseable_tag_names() {
 
 #[test]
 fn normalize_release_requires_github_prerelease_state_to_match_the_channel() {
-    assert!(normalize_release(&release("v1.2.3-beta.1", false, Vec::new()), None, false).is_none());
+    assert!(normalize_release(
+        &release("v1.2.3-Nightly-0000001", false, Vec::new()),
+        None,
+        false
+    )
+    .is_none());
     assert!(normalize_release(&release("v1.2.3", true, Vec::new()), None, false).is_none());
 
-    let beta = normalize_release(&release("v1.2.3-beta.1", true, Vec::new()), None, false)
-        .expect("matching beta release normalizes");
+    let beta = normalize_release(
+        &release("v1.2.3-Nightly-0000001", true, Vec::new()),
+        None,
+        false,
+    )
+    .expect("matching beta release normalizes");
     assert_eq!(beta.channel, AppUpdateChannel::Beta);
 }
 
@@ -534,9 +556,9 @@ fn is_release_newer_than_current_compares_canonical_versions() {
 #[tokio::test]
 async fn install_switches_channels_using_the_verified_target_release() {
     for (current, target) in [
-        ("2.14.0", "2.16.0-beta.1"),
-        ("2.16.0-beta.1", "2.15.0"),
-        ("2.17.0", "2.16.0-beta.1"),
+        ("2.14.0", "2.16.0-Nightly-0000001"),
+        ("2.16.0-Nightly-0000001", "2.15.0"),
+        ("2.17.0", "2.16.0-Nightly-0000001"),
     ] {
         let mut context = app_update_test_context([]);
         let inner = Arc::get_mut(&mut context.runtime.inner).unwrap();
@@ -545,7 +567,7 @@ async fn install_switches_channels_using_the_verified_target_release() {
         inner.release_catalog = Arc::new(TestAppUpdateReleaseCatalog {
             releases: vec![release(
                 &format!("v{target}"),
-                target.contains("beta"),
+                target.contains("Nightly"),
                 vec![asset(
                     "latest_windows.json",
                     "uploaded",
@@ -591,7 +613,7 @@ async fn channel_release_selection_uses_the_platform_installation_policy() {
         inner.release_catalog = Arc::new(TestAppUpdateReleaseCatalog {
             releases: vec![
                 release(
-                    "v2.16.0-beta.3",
+                    "v2.16.0-Nightly-0000003",
                     true,
                     vec![asset(
                         "latest_linux_and_macos.json",
@@ -600,7 +622,7 @@ async fn channel_release_selection_uses_the_platform_installation_policy() {
                     )],
                 ),
                 release(
-                    "v2.16.0-beta.2",
+                    "v2.16.0-Nightly-0000002",
                     true,
                     vec![asset(
                         "latest_windows.json",
@@ -609,7 +631,7 @@ async fn channel_release_selection_uses_the_platform_installation_policy() {
                     )],
                 ),
                 release(
-                    "v2.16.0-beta.1",
+                    "v2.16.0-Nightly-0000001",
                     true,
                     vec![asset(
                         "latest_windows.json",
@@ -627,16 +649,16 @@ async fn channel_release_selection_uses_the_platform_installation_policy() {
             .unwrap()
             .expect("channel has a release");
         if target.is_some() {
-            assert_eq!(release.canonical_version, "2.16.0-beta.1");
+            assert_eq!(release.canonical_version, "2.16.0-Nightly-0000001");
             assert_eq!(release.updater_type, AppUpdateDeliveryKind::Tauri);
             let installed = context
                 .runtime
                 .install(&release.canonical_version)
                 .await
                 .expect("older installable release can be installed");
-            assert_eq!(installed.version, "2.16.0-beta.1");
+            assert_eq!(installed.version, "2.16.0-Nightly-0000001");
         } else {
-            assert_eq!(release.canonical_version, "2.16.0-beta.3");
+            assert_eq!(release.canonical_version, "2.16.0-Nightly-0000003");
             assert_eq!(release.updater_type, AppUpdateDeliveryKind::Manual);
         }
     }
@@ -647,7 +669,7 @@ async fn install_waits_for_another_download_before_switching() {
     let context = app_update_test_context([]);
     context.runtime.with_download_state(|state| {
         state.phase = AppUpdateDownloadPhase::Downloading;
-        state.version = Some("2.16.0-beta.1".into());
+        state.version = Some("2.16.0-Nightly-0000001".into());
     });
     let install = context.runtime.install(TEST_UPDATE_VERSION);
     tokio::pin!(install);
@@ -667,7 +689,11 @@ async fn install_waits_for_another_download_before_switching() {
 #[tokio::test]
 async fn install_rejects_a_cross_channel_version_missing_from_the_catalog() {
     let context = app_update_test_context([]);
-    assert!(context.runtime.install("2.16.0-beta.1").await.is_err());
+    assert!(context
+        .runtime
+        .install("2.16.0-Nightly-0000001")
+        .await
+        .is_err());
     assert_eq!(context.port.download_count.load(AtomicOrdering::Relaxed), 0);
 }
 
@@ -763,4 +789,61 @@ async fn background_download_does_not_replace_an_installing_flight() {
 
     assert_eq!(status.phase, AppUpdateDownloadPhase::Installing);
     assert_eq!(context.port.download_count.load(AtomicOrdering::Relaxed), 0);
+}
+
+#[test]
+fn nightly_builds_are_newer_only_when_they_are_a_different_build() {
+    let latest = normalize_release(
+        &release("v3.0.0-Nightly-0a1b2c3", true, Vec::new()),
+        None,
+        false,
+    )
+    .unwrap();
+    assert!(is_release_newer_than_current(
+        &latest,
+        "3.0.0-Nightly-fffffff"
+    ));
+    assert!(!is_release_newer_than_current(
+        &latest,
+        "3.0.0-Nightly-0a1b2c3"
+    ));
+    assert!(is_release_newer_than_current(
+        &latest,
+        "2.9.0-Nightly-fffffff"
+    ));
+    assert!(!is_release_newer_than_current(&latest, "3.0.0"));
+    assert!(!is_release_newer_than_current(
+        &latest,
+        "3.0.1-Nightly-0000000"
+    ));
+}
+
+#[tokio::test]
+async fn nightly_update_check_picks_the_most_recently_published_build() {
+    let mut older = release("v3.0.0-Nightly-fffffff", true, Vec::new());
+    older.published_at = Some("2026-09-01T00:00:00Z".into());
+    let mut newest = release("v3.0.0-Nightly-0000001", true, Vec::new());
+    newest.published_at = Some("2026-09-02T00:00:00Z".into());
+    let release_catalog = TestAppUpdateReleaseCatalog {
+        releases: vec![older, newest],
+    };
+    let updater: Arc<dyn UpdaterPort> = Arc::new(MockUpdaterPort::new([]));
+    let context = AppUpdateCheckContext {
+        release_catalog: &release_catalog,
+        app_version: "3.0.0-Nightly-fffffff",
+        build_label: "",
+        build_badge: "",
+        channel: AppUpdateChannel::Beta,
+        target: None,
+        port: &updater,
+        proxy: None,
+    };
+
+    let outcome = run_check_inner(&context).await.unwrap();
+
+    assert!(outcome.has_available_update);
+    assert_eq!(
+        outcome.release.unwrap().canonical_version,
+        "3.0.0-Nightly-0000001"
+    );
 }

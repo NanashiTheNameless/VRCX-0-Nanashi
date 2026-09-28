@@ -1,6 +1,11 @@
 fn main() {
     println!("cargo:rerun-if-env-changed=TAURI_UPDATER_PUBLIC_KEY");
-    if let Ok(public_key) = std::env::var("TAURI_UPDATER_PUBLIC_KEY") {
+    println!("cargo:rerun-if-changed=tauri.conf.json");
+    let public_key = std::env::var("TAURI_UPDATER_PUBLIC_KEY")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .or_else(configured_updater_public_key);
+    if let Some(public_key) = public_key {
         println!("cargo:rustc-env=TAURI_UPDATER_PUBLIC_KEY={public_key}");
     }
 
@@ -16,4 +21,17 @@ fn main() {
         .expect("failed to create placeholder third-party notice file");
     }
     tauri_build::build();
+}
+
+/// Falls back to the updater public key committed in tauri.conf.json so builds
+/// that do not export TAURI_UPDATER_PUBLIC_KEY can still verify updates.
+fn configured_updater_public_key() -> Option<String> {
+    let config = std::fs::read_to_string("tauri.conf.json").ok()?;
+    let config: serde_json::Value = serde_json::from_str(&config).ok()?;
+    config
+        .pointer("/plugins/updater/pubkey")
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
 }

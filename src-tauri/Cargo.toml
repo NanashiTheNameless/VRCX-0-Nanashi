@@ -1,6 +1,6 @@
 [package]
 name = "vrcx-0"
-version = "2.30.0"
+version = "3.0.0"
 edition = "2021"
 license.workspace = true
 description = "VRCX-0 desktop shell"
@@ -67,11 +67,11 @@ vrcx-0-composition = { path = "../crates/composition" }
 vrcx-0-runtime-host-desktop = { path = "../crates/runtime-host-desktop" }
 vrcx-0-vrchat-client = { path = "../crates/vrchat-client" }
 specta-typescript = "0.0.9"
+tauri-plugin-global-shortcut = "2"
 specta = { workspace = true }
 tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "typescript"] }
 
 [target.'cfg(windows)'.dependencies]
-tauri-plugin-global-shortcut = "2"
 tauri-winrt-notification = "0.8.1"
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
@@ -98,6 +98,7 @@ openxr-overlay = [
 ]
 
 [build-dependencies]
+serde_json = { workspace = true }
 tauri-build = { version = "2", features = [] }
 
 [dev-dependencies]

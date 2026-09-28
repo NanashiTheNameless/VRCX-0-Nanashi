@@ -12,7 +12,8 @@ use vrcx_0_application::profile::DatabaseUpgradeRunStatus;
 use vrcx_0_application_core::Error;
 use vrcx_0_persistence::legacy_migration::snapshot_database;
 use vrcx_0_persistence::profile_merge::{
-    merge_profile_database_file, merge_settings_file, ProfileMergeReport,
+    import_profile_configs_file, import_settings_file, merge_profile_database_file,
+    merge_settings_file, ProfileMergeReport, ProfileSettingsImportReport,
 };
 use vrcx_0_persistence::DatabaseService;
 
@@ -67,12 +68,16 @@ pub fn profile_merge_sources() -> ProfileMergeSources {
     }
 }
 
-pub fn run_profile_merge(
+/// Snapshot the source profile, convert the snapshot to this app's schema,
+/// back up this profile's database, then run `apply` with the snapshot and the
+/// source database path.
+fn with_staged_source<T>(
     db: &DatabaseService,
-    storage: &vrcx_0_persistence::storage::StorageService,
     app_data: &Path,
     kind: ProfileMergeSourceKind,
-) -> Result<ProfileMergeReport, Error> {
+    backup_label: &str,
+    apply: impl FnOnce(&Path, &Path) -> Result<T, Error>,
+) -> Result<T, Error> {
     let source = profile_merge_source_path(kind)
         .ok_or_else(|| Error::Custom("No data found to import from.".into()))?;
     if source == db.db_path() {
@@ -109,12 +114,25 @@ pub fn run_profile_merge(
         let stamp = chrono::Utc::now().format("%Y%m%d-%H%M%S");
         snapshot_database(
             db.db_path(),
-            &backups.join(format!("before-merge-{stamp}.sqlite3")),
+            &backups.join(format!("before-{backup_label}-{stamp}.sqlite3")),
         )
         .map_err(map_persistence_error)?;
+        apply(&snapshot, &source)
+    })();
+    let _ = std::fs::remove_dir_all(&staging);
+    result
+}
+
+pub fn run_profile_merge(
+    db: &DatabaseService,
+    storage: &vrcx_0_persistence::storage::StorageService,
+    app_data: &Path,
+    kind: ProfileMergeSourceKind,
+) -> Result<ProfileMergeReport, Error> {
+    with_staged_source(db, app_data, kind, "merge", |snapshot, source| {
         let mut report =
-            merge_profile_database_file(db.db_path(), &snapshot).map_err(map_persistence_error)?;
-        if let Some(settings) = profile_merge_settings_path(kind, &source) {
+            merge_profile_database_file(db.db_path(), snapshot).map_err(map_persistence_error)?;
+        if let Some(settings) = profile_merge_settings_path(kind, source) {
             report.settings_file_keys_added =
                 merge_settings_file(storage, &settings).map_err(map_persistence_error)?;
         }
@@ -125,7 +143,33 @@ pub fn run_profile_merge(
             "merged external profile data"
         );
         Ok(report)
-    })();
-    let _ = std::fs::remove_dir_all(&staging);
-    result
+    })
+}
+
+/// Import only settings from VRCX or upstream VRCX-0, replacing the values
+/// set in this profile. History, notes and favorites are untouched.
+pub fn run_profile_settings_import(
+    db: &DatabaseService,
+    storage: &vrcx_0_persistence::storage::StorageService,
+    app_data: &Path,
+    kind: ProfileMergeSourceKind,
+) -> Result<ProfileSettingsImportReport, Error> {
+    with_staged_source(db, app_data, kind, "settings-import", |snapshot, source| {
+        let mut report = ProfileSettingsImportReport {
+            configs_imported: import_profile_configs_file(db.db_path(), snapshot)
+                .map_err(map_persistence_error)?,
+            ..ProfileSettingsImportReport::default()
+        };
+        if let Some(settings) = profile_merge_settings_path(kind, source) {
+            report.settings_file_keys_imported =
+                import_settings_file(storage, &settings).map_err(map_persistence_error)?;
+        }
+        tracing::info!(
+            source = %source.display(),
+            configs = report.configs_imported,
+            settings = report.settings_file_keys_imported,
+            "imported external profile settings"
+        );
+        Ok(report)
+    })
 }
