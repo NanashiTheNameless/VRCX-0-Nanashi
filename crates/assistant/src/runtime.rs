@@ -159,6 +159,15 @@ impl AssistantController {
         self.endpoints.translate(input).await
     }
 
+    /// Fork: plain-language reminder draft for the Reminders page.
+    pub async fn draft_reminder(
+        &self,
+        text: &str,
+        now_local: &str,
+    ) -> Result<crate::reminder_draft::ReminderDraft, AssistantError> {
+        self.endpoints.draft_reminder(text, now_local).await
+    }
+
     pub fn list_sessions(&self) -> Vec<SessionSummary> {
         self.sessions.list(&self.owner_user_id())
     }

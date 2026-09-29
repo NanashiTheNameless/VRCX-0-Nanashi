@@ -2578,8 +2578,34 @@ const generatedCommands = {
     async appRemindersList(): Promise<Reminder[]> {
         return await TAURI_INVOKE('app__reminders_list');
     },
+    /**
+     * Fork: create a reminder by hand from Settings.
+     */
+    async appRemindersCreate(
+        message: string,
+        trigger: ReminderTrigger,
+        recurring: boolean
+    ): Promise<Reminder[]> {
+        return await TAURI_INVOKE('app__reminders_create', {
+            message,
+            trigger,
+            recurring
+        });
+    },
     async appRemindersDelete(id: string): Promise<Reminder[]> {
         return await TAURI_INVOKE('app__reminders_delete', { id });
+    },
+    /**
+     * Fork: draft a reminder from plain language with the assistant's default model.
+     */
+    async appRemindersAiDraft(
+        text: string,
+        nowLocal: string
+    ): Promise<ReminderDraft> {
+        return await TAURI_INVOKE('app__reminders_ai_draft', {
+            text,
+            nowLocal
+        });
     },
     async appSafetySettingsGet(): Promise<SafetySettings> {
         return await TAURI_INVOKE('app__safety_settings_get');
@@ -6276,6 +6302,20 @@ export type ReminderTrigger =
      * A point in time (RFC 3339, UTC); optionally repeats.
      */
     | { kind: 'time'; at: string; repeatMinutes?: number };
+
+/**
+ * Fork: draft for a reminder from AI, before the user creates it.
+ */
+export interface ReminderDraft {
+    message: string;
+    kind: string;
+    friendName: string;
+    worldId: string;
+    atLocal: string;
+    repeatMinutes: number;
+    recurring: boolean;
+}
+
 export type RemoteModerationRow = {
     id: string;
     type: string;

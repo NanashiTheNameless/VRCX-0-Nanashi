@@ -42,7 +42,7 @@ export function SettingsCard({
 
     return (
         <Collapsible
-            render={<section />}
+            render={<section data-settings-card-id={cardId} />}
             open={open}
             onOpenChange={(nextOpen) => setOpen(cardId, nextOpen)}
             className={cn('shrink-0', className)}
@@ -60,6 +60,7 @@ export function SettingsCard({
                             <span className="flex min-w-0 flex-col gap-0.5">
                                 <span
                                     id={titleId}
+                                    data-settings-card-title=""
                                     className="font-heading text-sm leading-snug font-semibold"
                                 >
                                     {title}

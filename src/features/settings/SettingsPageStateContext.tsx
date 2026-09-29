@@ -216,3 +216,18 @@ export function useSettingsPageSection<
     const store = useSettingsPageStateStore();
     return useStore(store, (state) => state[section]);
 }
+
+const NO_SETTINGS_PAGE_STORE = createStore<null>(() => null);
+
+/**
+ * Fork: the active settings tab, or null outside the settings page (e.g. a
+ * tab rendered on its own in tests), where every tab counts as active.
+ */
+export function useActiveSettingsTab(): string | null {
+    const store = useContext(SettingsPageStateContext);
+    return useStore(
+        (store ??
+            NO_SETTINGS_PAGE_STORE) as StoreApi<SettingsPageStateSections | null>,
+        (state) => state?.shell.activeSettingsTab ?? null
+    );
+}

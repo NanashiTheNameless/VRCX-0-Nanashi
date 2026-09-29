@@ -145,6 +145,34 @@ impl ReminderRuntime {
             .unwrap_or_default()
     }
 
+    /// Fork: create a reminder for the signed-in account (Settings form).
+    pub fn create_current(
+        &self,
+        message: String,
+        trigger: ReminderTrigger,
+        recurring: bool,
+    ) -> Result<Reminder, String> {
+        let owner = self
+            .current_owner()
+            .ok_or_else(|| "Sign in to create reminders.".to_string())?;
+        match &trigger {
+            ReminderTrigger::Time { at, .. } => {
+                if chrono::DateTime::parse_from_rfc3339(at).is_err() {
+                    return Err("Pick a valid date and time.".into());
+                }
+            }
+            ReminderTrigger::FriendOnline { user_id, .. }
+            | ReminderTrigger::FriendOffline { user_id, .. }
+            | ReminderTrigger::FriendLocation { user_id, .. }
+            | ReminderTrigger::PlayerJoined { user_id, .. } => {
+                if user_id.trim().is_empty() {
+                    return Err("Pick a friend.".into());
+                }
+            }
+        }
+        self.create(&owner, message, trigger, recurring)
+    }
+
     pub fn delete_current(&self, id: &str) -> bool {
         self.current_owner()
             .is_some_and(|owner| self.delete(&owner, id))

@@ -6,6 +6,7 @@ mod error;
 mod events;
 mod playbook;
 mod ports;
+mod reminder_draft;
 mod runtime;
 mod session;
 #[cfg(test)]
@@ -30,6 +31,7 @@ pub use ports::{
     AssistantSessionRuntimeUpdate, AssistantSessionUpsert, AssistantSqliteErrorCategory,
     PersistedAssistantMessage, PersistedAssistantSession,
 };
+pub use reminder_draft::ReminderDraft;
 pub use runtime::{AssistantController, AssistantControllerDeps, SendResult};
 pub use session::{ActiveTurn, Message, Role, Session, SessionSummary, TurnStatus};
 pub use vrcx_0_contracts::llm::{LlmEndpointDetectModelsResult, LlmModelReasoning};

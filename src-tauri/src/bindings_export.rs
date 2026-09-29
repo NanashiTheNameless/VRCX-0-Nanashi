@@ -611,6 +611,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::host::ytdlp::app__ytdlp_clear_cookies,
             commands::host::ytdlp::app__ytdlp_test,
             commands::host::reminders::app__reminders_list,
+            commands::host::reminders::app__reminders_create,
+            commands::host::reminders::app__reminders_ai_draft,
             commands::host::reminders::app__reminders_delete,
             commands::host::safety::app__safety_settings_get,
             commands::host::safety::app__safety_settings_save,

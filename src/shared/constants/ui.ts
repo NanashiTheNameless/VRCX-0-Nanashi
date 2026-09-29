@@ -128,6 +128,15 @@ const navDefinitions = [
         routeName: 'charts-mutual'
     },
     {
+        // Fork: reminders page (list, create by hand or with AI, delete).
+        key: 'reminders',
+        icon: 'lucide:AlarmClock',
+        tooltip: 'view.reminders.title',
+        labelKey: 'view.reminders.title',
+        routeName: 'reminders',
+        defaultFolderId: 'default-folder-social'
+    },
+    {
         // Fork: opens the Social AI chat, or its settings while it is off.
         key: 'social-ai',
         icon: 'lucide:Sparkles',

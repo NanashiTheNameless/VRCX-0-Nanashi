@@ -15,6 +15,34 @@ type LazyRouteImporter<TExportName extends string> = () => Promise<
     Record<TExportName, ComponentType>
 >;
 
+// Fork: every lazy page importer, so page code can be fetched while the app
+// is idle instead of on the first click.
+const routeImporters: Array<() => Promise<unknown>> = [];
+let routePreloadStarted = false;
+
+/** Load all lazy page chunks one at a time, during idle periods. */
+export function preloadRouteChunks(): void {
+    if (routePreloadStarted || typeof window === 'undefined') {
+        return;
+    }
+    routePreloadStarted = true;
+    const queue = [...routeImporters];
+    const whenIdle = (callback: () => void) =>
+        typeof window.requestIdleCallback === 'function'
+            ? window.requestIdleCallback(callback, { timeout: 2000 })
+            : window.setTimeout(callback, 200);
+    const next = () => {
+        const importer = queue.shift();
+        if (!importer) {
+            return;
+        }
+        importer()
+            .catch(() => undefined)
+            .finally(() => whenIdle(next));
+    };
+    whenIdle(next);
+}
+
 export type AppRouteDefinition = {
     path: string;
     element: ReactElement<{ to?: string }>;
@@ -33,6 +61,7 @@ function lazyRouteElement<TExportName extends string>(
         return { default: module[exportName] };
     };
     const RouteComponent = lazy(loadRouteComponent);
+    routeImporters.push(importPage);
 
     return (
         <Suspense fallback={<RouteLoadingFallback />}>
@@ -221,6 +250,15 @@ export const protectedRoutes: AppRouteDefinition[] = [
         element: lazyRouteElement(
             () => import('@/features/friends/FriendListPage'),
             'FriendListPage'
+        )
+    },
+    {
+        path: '/reminders',
+        titleKey: 'view.reminders.title',
+        descriptionKey: 'view.reminders.description',
+        element: lazyRouteElement(
+            () => import('@/features/reminders/RemindersPage'),
+            'RemindersPage'
         )
     },
     {

@@ -418,6 +418,32 @@ impl EndpointStore {
             .await?)
     }
 
+    /// Fork: draft a reminder from plain language with the default model.
+    pub async fn draft_reminder(
+        &self,
+        text: &str,
+        now_local: &str,
+    ) -> Result<crate::reminder_draft::ReminderDraft, AssistantError> {
+        let selection = self.last_selection()?;
+        let (Some(endpoint_id), Some(model)) = (selection.endpoint_id, selection.model) else {
+            return Err(AssistantError::NotConfigured);
+        };
+        let endpoint = self.resolve(&endpoint_id)?;
+        let client = self.llm_client(&endpoint, &model)?;
+        let reply = client
+            .complete_chat(
+                &[
+                    ChatMessage::system(crate::reminder_draft::reminder_draft_system_prompt(
+                        now_local,
+                    )),
+                    ChatMessage::user(text.to_string()),
+                ],
+                &LlmRequestOptions::default(),
+            )
+            .await?;
+        crate::reminder_draft::parse_reminder_draft(&reply)
+    }
+
     pub(crate) fn llm_client(
         &self,
         endpoint: &ResolvedLlmEndpoint,

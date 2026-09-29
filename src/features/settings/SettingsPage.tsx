@@ -10,6 +10,7 @@ import {
     TerminalIcon,
     UsersIcon
 } from 'lucide-react';
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -31,9 +32,14 @@ import { SettingsSystemTab } from './components/settings-tabs/SettingsSystemTab'
 import { SettingsVrTab } from './components/settings-tabs/SettingsVrTab';
 import { SettingsDialogs } from './components/SettingsDialogs';
 import {
+    SettingsSearchInput,
+    SettingsSearchResults
+} from './components/SettingsSearch';
+import {
     SettingsPageStateProvider,
     useSettingsPageSection
 } from './SettingsPageStateContext';
+import { useSettingsSearchActive } from './settingsSearchStore';
 
 const SETTINGS_TAB_ICONS: Record<string, LucideIcon> = {
     system: MonitorIcon,
@@ -58,6 +64,8 @@ export function SettingsPage() {
 function SettingsPageContent() {
     const { t } = useTranslation();
     const shell = useSettingsPageSection('shell');
+    const searching = useSettingsSearchActive();
+    const tabsContainerRef = useRef<HTMLDivElement>(null);
 
     return (
         <PageScaffold className="flex-1">
@@ -71,31 +79,50 @@ function SettingsPageContent() {
                 onValueChange={shell.setActiveSettingsTab}
                 className="flex min-h-0 flex-1 gap-4"
             >
-                <TabsList className="h-fit w-44 shrink-0 gap-0.5 self-start">
-                    {shell.settingsTabs.map(([value, labelKey]) => {
-                        const Icon = SETTINGS_TAB_ICONS[value];
-                        return (
-                            <TabsTrigger
-                                key={value}
-                                value={value}
-                                className="justify-start gap-2.5 px-3 py-1.5"
-                            >
-                                {Icon ? <Icon /> : null}
-                                {t(labelKey)}
-                            </TabsTrigger>
-                        );
-                    })}
-                </TabsList>
+                <div className="flex w-44 shrink-0 flex-col self-start">
+                    <SettingsSearchInput />
+                    <TabsList className="h-fit w-full gap-0.5">
+                        {shell.settingsTabs.map(([value, labelKey]) => {
+                            const Icon = SETTINGS_TAB_ICONS[value];
+                            return (
+                                <TabsTrigger
+                                    key={value}
+                                    value={value}
+                                    className="justify-start gap-2.5 px-3 py-1.5"
+                                >
+                                    {Icon ? <Icon /> : null}
+                                    {t(labelKey)}
+                                </TabsTrigger>
+                            );
+                        })}
+                    </TabsList>
+                </div>
                 <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                    <SettingsSystemTab />
-                    <SettingsInterfaceTab />
-                    <SettingsSocialTab />
-                    <SettingsNotificationsTab />
-                    <SettingsVrTab />
-                    <SettingsMediaTab />
-                    <SettingsAiTab active={shell.activeSettingsTab === 'ai'} />
-                    <SettingsIntegrationsTab />
-                    <SettingsAdvancedTab />
+                    {searching ? (
+                        <SettingsSearchResults
+                            containerRef={tabsContainerRef}
+                        />
+                    ) : null}
+                    <div
+                        ref={tabsContainerRef}
+                        className={
+                            searching
+                                ? 'hidden'
+                                : 'flex min-h-0 min-w-0 flex-1 flex-col'
+                        }
+                    >
+                        <SettingsSystemTab />
+                        <SettingsInterfaceTab />
+                        <SettingsSocialTab />
+                        <SettingsNotificationsTab />
+                        <SettingsVrTab />
+                        <SettingsMediaTab />
+                        <SettingsAiTab
+                            active={shell.activeSettingsTab === 'ai'}
+                        />
+                        <SettingsIntegrationsTab />
+                        <SettingsAdvancedTab />
+                    </div>
                 </div>
             </Tabs>
             <SettingsDialogs />

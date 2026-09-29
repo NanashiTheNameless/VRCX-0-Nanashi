@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Outlet, useLocation } from 'react-router';
+import { useLocation } from 'react-router';
 
+import { preloadRouteChunks } from '@/app/routes';
 import { SidePanel } from '@/components/sidebar/SidePanel';
 import { cn } from '@/lib/utils';
 import { restoreNormalWindowModeForIntent } from '@/services/windowModeService';
@@ -8,6 +9,7 @@ import { useShellStore } from '@/state/shellStore';
 
 import { AppSidebar } from './AppSidebar';
 import { AppStatusBar } from './AppStatusBar';
+import { KeepAliveOutlet } from './KeepAliveOutlet';
 import { useRightSidePanelVisibility } from './useRightSidePanelVisibility';
 
 const sidePanelStorageKey = 'vrcx-main-layout-right-sidebar-width';
@@ -53,6 +55,13 @@ export function AppShellLayout() {
     useEffect(() => {
         sidePanelWidthRef.current = sidePanelWidth;
     }, [sidePanelWidth]);
+
+    // Fork: fetch the other pages' code in the background once the shell is
+    // up, so the first visit to each page does not wait on it.
+    useEffect(() => {
+        const timer = window.setTimeout(preloadRouteChunks, 3000);
+        return () => window.clearTimeout(timer);
+    }, []);
 
     useEffect(() => {
         try {
@@ -178,7 +187,7 @@ export function AppShellLayout() {
                                     sidebarWindowMode && 'hidden'
                                 )}
                             >
-                                <Outlet />
+                                <KeepAliveOutlet />
                             </div>
                             {sidePanelVisible ? (
                                 <>

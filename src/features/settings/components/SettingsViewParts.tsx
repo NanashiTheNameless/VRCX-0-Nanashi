@@ -1,5 +1,11 @@
 import { PlusIcon, XIcon } from 'lucide-react';
-import { useEffect, useRef, useState, type PropsWithChildren } from 'react';
+import {
+    Activity,
+    useEffect,
+    useRef,
+    useState,
+    type PropsWithChildren
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { setTablePageSizesPreference } from '@/services/preferencesService';
@@ -28,6 +34,8 @@ import {
 import { NumberField, NumberFieldInput } from '@/ui/shadcn/number-field';
 import { TabsContent } from '@/ui/shadcn/tabs';
 
+import { useActiveSettingsTab } from '../SettingsPageStateContext';
+import { useSettingsSearchActive } from '../settingsSearchStore';
 import {
     buildTablePageSizeOptions,
     filterTablePageSizeOptions,
@@ -55,12 +63,28 @@ export function SettingsTabContent({
     value,
     children
 }: SettingsTabContentProps) {
+    // Fork: a tab mounts on first visit and then stays mounted but hidden
+    // (no effects), so switching back to it is instant.
+    const activeTab = useActiveSettingsTab();
+    const active = activeTab === null || activeTab === value;
+    const searching = useSettingsSearchActive();
+    const [visited, setVisited] = useState(active);
+    if (active && !visited) {
+        setVisited(true);
+    }
     return (
         <TabsContent
             value={value}
+            keepMounted
+            data-settings-tab={value}
             className="m-0 flex min-h-0 w-full min-w-0 flex-1 flex-col gap-7 overflow-x-hidden overflow-y-auto px-px pt-1 pb-4 data-hidden:hidden [&>[data-slot=card]]:shrink-0"
         >
-            {children}
+            {/* Every tab mounts while searching so the search can see it. */}
+            {visited || searching ? (
+                <Activity mode={active ? 'visible' : 'hidden'}>
+                    {children}
+                </Activity>
+            ) : null}
         </TabsContent>
     );
 }

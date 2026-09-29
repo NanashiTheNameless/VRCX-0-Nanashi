@@ -125,6 +125,7 @@ export function Field({
 
     return (
         <ShadcnField
+            data-settings-search-item=""
             data-disabled={disabled || undefined}
             data-invalid={isInvalid || undefined}
             className={cn(

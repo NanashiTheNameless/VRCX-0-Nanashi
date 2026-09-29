@@ -1215,6 +1215,23 @@
         -webkit-backdrop-filter: none !important;
     }
 
+    /* Fork: menus are translucent over a blur; without the blur they would
+       be hard to read, so make them opaque. */
+    .reduce-effects [data-slot='dropdown-menu-content'],
+    .reduce-effects [data-slot='context-menu-content'],
+    .reduce-effects [data-slot='select-content'],
+    .reduce-effects [data-slot='combobox-content'],
+    .reduce-effects [data-slot='menubar-content'] {
+        background-color: var(--popover) !important;
+    }
+
+    /* Fork: flash the setting a search result jumped to. */
+    .vrcx-0-settings-search-hit {
+        border-radius: var(--radius);
+        outline: 2px solid var(--ring);
+        outline-offset: 2px;
+    }
+
     @keyframes feed-column-row-enter {
         0%,
         40% {

@@ -105,6 +105,7 @@ export const routePathByName = Object.freeze({
     notification: '/notification',
     'my-avatars': '/my-avatars',
     activity: '/activity',
+    reminders: '/reminders',
     'charts-mutual': '/charts/mutual',
     tools: '/tools',
     gallery: '/tools/gallery',
@@ -163,7 +164,13 @@ export function createBaseDefaultNavLayout(t: TranslateKey): NavLayoutEntry[] {
             nameKey: 'nav_tooltip.social',
             name: t('nav_tooltip.social'),
             icon: 'lucide:ContactRound',
-            items: ['friend-log', 'friend-list', 'moderation', 'social-ai']
+            items: [
+                'friend-log',
+                'friend-list',
+                'moderation',
+                'social-ai',
+                'reminders'
+            ]
         },
         { type: 'item', key: 'notification' },
         { type: 'item', key: 'my-avatars' },
