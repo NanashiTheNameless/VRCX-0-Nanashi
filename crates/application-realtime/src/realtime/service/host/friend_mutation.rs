@@ -21,10 +21,10 @@ pub enum SyntheticFriendEventOutcome {
 }
 
 impl RealtimeHostRuntime {
-    pub fn emit_runtime_vrchat_auth_failure(&self, payload: RuntimeVrchatAuthFailurePayload) {
+    pub fn report_vrchat_auth_failure(&self, payload: RuntimeVrchatAuthFailurePayload) {
         self.deps
-            .event_bus
-            .emit_runtime_vrchat_auth_failure(payload);
+            .auth_scope
+            .report_vrchat_auth_failure(&self.deps.event_bus, payload);
     }
 
     pub fn run_scoped_friend_log_removal<T>(

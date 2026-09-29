@@ -1,4 +1,5 @@
 use super::test_support::*;
+use super::types::TopVisitedWorldsInput;
 use super::*;
 use crate::ownership::OwnerId;
 
@@ -108,4 +109,39 @@ fn favorite_local_supports_kind_action_and_dry_run() {
     )
     .unwrap()
     .is_empty());
+}
+
+#[test]
+fn top_visited_worlds_counts_every_visit_under_the_latest_world_name() {
+    let (_dir, db) = test_db("worlds-top-visited");
+    create_game_log_tables(&db);
+    db.execute_non_query(
+        "INSERT INTO gamelog_location (created_at, location, world_id, world_name, time, group_name)
+         VALUES
+         ('2026-06-01T20:00:00Z', 'wrld_a:1', 'wrld_a', 'Zeta Old Name', 600000, ''),
+         ('2026-06-01T21:00:00Z', 'wrld_a:2', 'wrld_a', 'Alpha New Name', 1200000, ''),
+         ('2026-06-01T22:00:00Z', 'wrld_b:1', 'wrld_b', 'Beta', 600000, '')",
+        &Default::default(),
+    )
+    .unwrap();
+
+    let rows = top_visited_worlds(
+        &db,
+        &OwnerId::new("usr_test"),
+        TopVisitedWorldsInput {
+            time_window: TimeWindow {
+                from: None,
+                to: None,
+            },
+            limit: 5,
+        },
+    )
+    .unwrap();
+
+    assert_eq!(rows[0].world_id, "wrld_a");
+    assert_eq!(rows[0].world_name, "Alpha New Name");
+    assert_eq!(rows[0].visits, 2);
+    assert_eq!(rows[0].total_minutes, 30);
+    assert_eq!(rows[0].last_visited_at, "2026-06-01T21:00:00Z");
+    assert_eq!(rows[1].world_id, "wrld_b");
 }

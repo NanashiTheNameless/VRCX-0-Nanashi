@@ -89,9 +89,13 @@ impl DesktopRuntimeServices {
         let tts: Arc<dyn TtsEngine> = Arc::new(SystemTtsEngine::new());
         let notification_desktop_notifier = DesktopNotifierSlot::default();
         let realtime_user_image_resolver = RealtimeUserImageResolverSlot::default();
+        let host = RuntimeHost::new();
+        deps.auth_scope
+            .add_vrchat_auth_failure_observer(Arc::new(host.clone()));
         let notification_do_not_disturb = NotificationDoNotDisturbRuntime::new(
             deps.config.clone(),
             deps.event_bus.clone(),
+            host.clone(),
             deps.tasks.clone(),
         )?;
         let privacy_lock = Arc::new(PrivacyLockRuntime::new(
@@ -99,7 +103,6 @@ impl DesktopRuntimeServices {
             deps.event_bus,
         )?);
         deps.auth_scope.add_observer(privacy_lock.clone());
-        let host = RuntimeHost::new();
         let notification_indicator = Arc::new(RealtimeNotificationIndicator::new(
             Arc::clone(&deps.db),
             deps.config.clone(),

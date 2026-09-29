@@ -450,13 +450,7 @@ pub(super) fn has_persisted_filter_rules(value: &Value) -> bool {
             value
                 .get(*surface)
                 .and_then(Value::as_object)
-                .is_some_and(|surface| {
-                    surface.get("types").and_then(Value::as_object).is_some()
-                        || surface
-                            .get("categories")
-                            .and_then(Value::as_object)
-                            .is_some()
-                })
+                .is_some_and(|surface| surface.get("types").and_then(Value::as_object).is_some())
         })
 }
 
@@ -493,23 +487,15 @@ fn normalize_surface_with_default(
     let types = surface
         .and_then(|surface| surface.get("types"))
         .and_then(Value::as_object);
-    let categories = surface
-        .and_then(|surface| surface.get("categories"))
-        .and_then(Value::as_object);
-    let legacy_favorite_group_keys =
-        normalize_favorite_group_keys(surface.and_then(|surface| surface.get("favoriteGroupKeys")));
     let mut normalized = OverlayActivitySurfaceFilters {
         types: default_types.clone(),
     };
     for definition in ACTIVITY_TYPES {
-        let legacy_rule = legacy_category_rule(definition, categories, &legacy_favorite_group_keys);
         let source = types.and_then(|types| get_type_candidate(types, definition));
-        let fallback_rule = legacy_rule.unwrap_or_else(|| {
-            default_types
-                .get(definition.key)
-                .cloned()
-                .unwrap_or_else(|| default_rule(definition))
-        });
+        let fallback_rule = default_types
+            .get(definition.key)
+            .cloned()
+            .unwrap_or_else(|| default_rule(definition));
         let rule = source
             .map(|source| normalize_rule(source, definition, &fallback_rule))
             .unwrap_or(fallback_rule);
@@ -553,7 +539,7 @@ fn normalize_rule(
     let scope = source
         .get("scope")
         .and_then(Value::as_str)
-        .and_then(|value| parse_scope_for_definition(value, definition))
+        .and_then(parse_scope)
         .filter(|scope| definition.allowed_scopes.contains(scope))
         .unwrap_or(fallback.scope);
     let favorite_group_keys = if scope == OverlayActivityScope::SelectedFavorites {
@@ -586,47 +572,6 @@ fn parse_scope(value: &str) -> Option<OverlayActivityScope> {
     }
 }
 
-fn legacy_category_rule(
-    definition: &ActivityTypeDefinition,
-    categories: Option<&Map<String, Value>>,
-    legacy_favorite_group_keys: &OverlayActivityFavoriteGroupKeys,
-) -> Option<OverlayActivityRule> {
-    let category = categories?
-        .get(category_key(definition.category))?
-        .as_object()?;
-    let category_favorite_group_keys = category
-        .get("favoriteGroupKeys")
-        .map(|value| normalize_favorite_group_keys(Some(value)))
-        .unwrap_or_else(|| legacy_favorite_group_keys.clone());
-    let type_override = category
-        .get("typeOverrides")
-        .and_then(Value::as_object)
-        .and_then(|overrides| get_type_candidate(overrides, definition));
-    let source_scope = type_override
-        .and_then(|value| value.get("scope"))
-        .or_else(|| category.get("scope"));
-    let source_favorite_group_keys = type_override
-        .and_then(|value| value.get("favoriteGroupKeys"))
-        .map(|value| normalize_favorite_group_keys(Some(value)))
-        .unwrap_or(category_favorite_group_keys);
-    let scope = source_scope
-        .and_then(Value::as_str)
-        .and_then(|value| parse_scope_for_definition(value, definition))
-        .filter(|scope| definition.allowed_scopes.contains(scope))
-        .unwrap_or(definition.default_scope);
-    Some(normalize_group_instance_rule(
-        definition,
-        OverlayActivityRule {
-            scope,
-            favorite_group_keys: if scope == OverlayActivityScope::SelectedFavorites {
-                source_favorite_group_keys
-            } else {
-                OverlayActivityFavoriteGroupKeys::All
-            },
-        },
-    ))
-}
-
 fn normalize_group_instance_rule(
     definition: &ActivityTypeDefinition,
     rule: OverlayActivityRule,
@@ -657,51 +602,6 @@ fn get_type_candidate<'a>(
             .iter()
             .find_map(|alias| values.get(*alias))
     })
-}
-
-fn category_key(category: OverlayActivityCategory) -> &'static str {
-    match category {
-        OverlayActivityCategory::ActionRequired => "actionRequired",
-        OverlayActivityCategory::CurrentInstance => "currentInstance",
-        OverlayActivityCategory::FavoriteMovement => "favoriteMovement",
-        OverlayActivityCategory::ProfileChange => "profileChange",
-        OverlayActivityCategory::GroupSocial => "groupSocial",
-        OverlayActivityCategory::SystemSafety => "systemSafety",
-        OverlayActivityCategory::Media => "media",
-    }
-}
-
-fn parse_scope_for_definition(
-    value: &str,
-    definition: &ActivityTypeDefinition,
-) -> Option<OverlayActivityScope> {
-    if let Some(scope) = parse_scope(value) {
-        return Some(scope);
-    }
-    match value {
-        "everyone" | "currentInstance"
-            if definition
-                .allowed_scopes
-                .contains(&OverlayActivityScope::EveryoneInInstance) =>
-        {
-            Some(OverlayActivityScope::EveryoneInInstance)
-        }
-        "friendsAndFavorites"
-            if definition
-                .allowed_scopes
-                .contains(&OverlayActivityScope::Friends) =>
-        {
-            Some(OverlayActivityScope::Friends)
-        }
-        "direct" | "criticalOnly" | "everyone" | "currentInstance"
-            if definition
-                .allowed_scopes
-                .contains(&OverlayActivityScope::On) =>
-        {
-            Some(OverlayActivityScope::On)
-        }
-        _ => None,
-    }
 }
 
 fn normalize_favorite_group_keys(value: Option<&Value>) -> OverlayActivityFavoriteGroupKeys {

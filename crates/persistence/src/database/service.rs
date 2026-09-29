@@ -3,7 +3,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{
-    atomic::{AtomicUsize, Ordering},
+    atomic::{AtomicU64, AtomicUsize, Ordering},
     Arc, Mutex, MutexGuard, RwLock, RwLockReadGuard, TryLockError,
 };
 use std::time::Duration;
@@ -50,6 +50,7 @@ pub struct DatabaseService {
     db_path: PathBuf,
     upgrade_dir: PathBuf,
     inner: RwLock<DatabaseMode>,
+    config_generation: AtomicU64,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -107,7 +108,16 @@ impl DatabaseService {
             db_path: db_path.to_path_buf(),
             upgrade_dir,
             inner: RwLock::new(DatabaseMode::Main(main)),
+            config_generation: AtomicU64::new(0),
         })
+    }
+
+    pub fn config_generation(&self) -> u64 {
+        self.config_generation.load(Ordering::Acquire)
+    }
+
+    pub(crate) fn bump_config_generation(&self) {
+        self.config_generation.fetch_add(1, Ordering::AcqRel);
     }
 
     pub fn db_path(&self) -> &Path {

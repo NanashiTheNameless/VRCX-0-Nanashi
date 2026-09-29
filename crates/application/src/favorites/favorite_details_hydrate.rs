@@ -8,7 +8,8 @@ use serde_json::Value;
 use tokio::sync::Mutex as AsyncMutex;
 use vrcx_0_application_core::{
     vrchat_api::{normalize_text, VrchatApiResponse},
-    Error, Result, RuntimeAuthScope, RuntimeAuthScopeSnapshot, TaskSupervisor, WorldCache,
+    AvatarCache, Error, Result, RuntimeAuthScope, RuntimeAuthScopeSnapshot, TaskSupervisor,
+    WorldCache,
 };
 use vrcx_0_core::json::RawJson;
 use vrcx_0_core::vrchat_json::response_error_message;
@@ -56,17 +57,16 @@ pub struct FavoriteDetailsHydrateOutput {
 }
 
 struct FavoriteDetailsHydrateDeps<'a> {
-    store: &'a dyn super::FavoriteStore,
     remote: &'a dyn super::FavoriteRemote,
     auth_scope: &'a RuntimeAuthScope,
     expected_scope: RuntimeAuthScopeSnapshot,
 }
 
 struct FavoriteDetailsRuntimeInner {
-    store: Arc<dyn super::FavoriteStore>,
     remote: Arc<dyn super::FavoriteRemote>,
     auth_scope: RuntimeAuthScope,
     world_cache: Arc<WorldCache>,
+    avatar_cache: Arc<AvatarCache>,
     world_cards: Arc<FavoriteWorldCardCache>,
     tasks: TaskSupervisor,
     world_sync_gate: AsyncMutex<()>,
@@ -79,18 +79,18 @@ pub struct FavoriteDetailsRuntime {
 
 impl FavoriteDetailsRuntime {
     pub fn new(
-        store: Arc<dyn super::FavoriteStore>,
         remote: Arc<dyn super::FavoriteRemote>,
         auth_scope: RuntimeAuthScope,
         world_cache: Arc<WorldCache>,
+        avatar_cache: Arc<AvatarCache>,
         tasks: TaskSupervisor,
     ) -> Self {
         Self {
             inner: Arc::new(FavoriteDetailsRuntimeInner {
-                store,
                 remote,
                 auth_scope,
                 world_cache,
+                avatar_cache,
                 world_cards: Arc::new(FavoriteWorldCardCache::new()),
                 tasks,
                 world_sync_gate: AsyncMutex::new(()),
@@ -115,14 +115,17 @@ impl FavoriteDetailsRuntime {
         expected_scope: RuntimeAuthScopeSnapshot,
     ) -> Result<FavoriteDetailsHydrateOutput> {
         let deps = FavoriteDetailsHydrateDeps {
-            store: self.inner.store.as_ref(),
             remote: self.inner.remote.as_ref(),
             auth_scope: &self.inner.auth_scope,
             expected_scope,
         };
         let entities = fetch_favorite_avatar_entities(&deps, &input.avatar_tags).await?;
         let details_by_id = filter_details_by_id(entities, &input.favorite_ids);
-        let cached_count = persist_avatar_details(deps.store, &details_by_id);
+        let cached_count = persist_avatar_details(
+            &self.inner.avatar_cache,
+            &deps.expected_scope,
+            &details_by_id,
+        );
         Ok(project_details(
             details_by_id,
             HashMap::new(),
@@ -155,7 +158,6 @@ impl FavoriteDetailsRuntime {
         }
 
         let deps = FavoriteDetailsHydrateDeps {
-            store: self.inner.store.as_ref(),
             remote: self.inner.remote.as_ref(),
             auth_scope: &self.inner.auth_scope,
             expected_scope,
@@ -237,7 +239,6 @@ impl FavoriteDetailsRuntime {
             .spawn_cancellable(move |stop_token| async move {
                 let _guard = runtime.inner.world_sync_gate.lock().await;
                 let deps = FavoriteDetailsHydrateDeps {
-                    store: runtime.inner.store.as_ref(),
                     remote: runtime.inner.remote.as_ref(),
                     auth_scope: &runtime.inner.auth_scope,
                     expected_scope,
@@ -637,7 +638,8 @@ fn filter_details_by_id(entities: Vec<Value>, favorite_ids: &[String]) -> HashMa
 }
 
 fn persist_avatar_details(
-    store: &dyn super::FavoriteStore,
+    avatar_cache: &AvatarCache,
+    scope: &RuntimeAuthScopeSnapshot,
     details_by_id: &HashMap<String, Value>,
 ) -> u32 {
     let writable = details_by_id
@@ -660,7 +662,7 @@ fn persist_avatar_details(
     let existing_ids: Option<HashSet<String>> = if insert_candidates.is_empty() {
         Some(HashSet::new())
     } else {
-        match store.avatar_cache_existing_ids(&insert_candidates) {
+        match avatar_cache.existing_summary_ids(&insert_candidates) {
             Ok(ids) => Some(ids.into_iter().collect()),
             Err(error) => {
                 tracing::warn!("failed to read favorite avatar cache: {error}");
@@ -680,7 +682,7 @@ fn persist_avatar_details(
         .map(|(id, entity, _)| cache_entry_from_entity(entity, id))
         .collect::<Vec<_>>();
 
-    match store.avatar_cache_upsert_many(entries) {
+    match avatar_cache.store_summaries(&scope.current_user_id, &scope.endpoint, entries) {
         Ok(cached_count) => cached_count,
         Err(error) => {
             tracing::warn!("failed to cache favorite avatar details: {error}");

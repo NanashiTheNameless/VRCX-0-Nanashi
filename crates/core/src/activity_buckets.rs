@@ -2,6 +2,8 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use chrono::{Datelike, Timelike, Utc};
 
+use crate::activity_sessions::{merge_sessions_with_gap, ActivitySession};
+
 const MS_PER_MINUTE: i64 = 60_000;
 const MS_PER_DAY: i64 = 86_400_000;
 
@@ -32,6 +34,22 @@ pub struct ActivityStreaks {
     pub last_session_ms: Option<i64>,
     pub total_minutes: i64,
     pub session_count: usize,
+}
+
+pub fn merge_spans(spans: &[(i64, i64)], merge_gap_ms: i64) -> Vec<(i64, i64)> {
+    let sessions = spans
+        .iter()
+        .map(|&(start, end)| ActivitySession {
+            start,
+            end,
+            is_open_tail: false,
+            source_revision: String::new(),
+        })
+        .collect::<Vec<_>>();
+    merge_sessions_with_gap(&[], &sessions, merge_gap_ms)
+        .into_iter()
+        .map(|session| (session.start, session.end))
+        .collect()
 }
 
 pub fn activity_timeline(

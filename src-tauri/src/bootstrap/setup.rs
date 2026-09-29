@@ -11,9 +11,9 @@ use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::Layer;
 
-use crate::deep_link::{parse_deep_link, queue_deep_link_action, DEEP_LINK_ARRIVED_EVENT};
 use crate::error::AppError;
 use crate::state::{AppState, BACKGROUND_MODE_RESUME_ROUTE_STORAGE_KEY};
+use vrcx_0_runtime_host_desktop::deep_link::{parse_deep_link, queue_deep_link_action};
 
 use super::adapters::{
     start_host_services, start_mcp_server_if_enabled, TauriDesktopNotifier, TauriUpdaterPort,
@@ -151,6 +151,7 @@ fn initialize_app_state(
         app_data_dir.clone(),
         database_maintenance_cache_dir.clone(),
         updater_port.clone(),
+        Arc::new(super::adapters::TauriRuntimeTaskExecutor),
     ) {
         Ok(state) => return state,
         Err(error) => error,
@@ -164,7 +165,12 @@ fn initialize_app_state(
                     quarantined = %quarantined.display(),
                     "local database is corrupted; quarantined it to recreate a fresh database"
                 );
-                match AppState::new(app_data_dir, database_maintenance_cache_dir, updater_port) {
+                match AppState::new(
+                    app_data_dir,
+                    database_maintenance_cache_dir,
+                    updater_port,
+                    Arc::new(super::adapters::TauriRuntimeTaskExecutor),
+                ) {
                     Ok(state) => {
                         show_blocking_dialog(
                             app,
@@ -381,7 +387,7 @@ fn show_main_window_for_deep_link(app: &tauri::AppHandle) {
 }
 
 fn emit_deep_link_arrived(app: &tauri::AppHandle) {
-    if let Err(error) = app.emit(DEEP_LINK_ARRIVED_EVENT, serde_json::json!({})) {
+    if let Err(error) = app.emit("deepLinkArrived", serde_json::json!({})) {
         tracing::warn!(error = %error, "failed to emit deep link wake event");
     }
 }

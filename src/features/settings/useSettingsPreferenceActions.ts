@@ -56,9 +56,6 @@ type SettingsPreferenceActionsDeps = {
         setMany(entries: Array<[string, string]>): Promise<void>;
     };
     customFontDraft: CustomFontDraft;
-    databaseMaintenanceRepository: {
-        getTableSizes(userId: string): Promise<Record<string, unknown>>;
-    };
     isValidFontFamilyList: (value: string) => boolean;
     loadTrustColorPreference: () => Promise<PreferencesSnapshot['trustColor']>;
     localFavoriteFriendsGroups: string[];
@@ -169,7 +166,6 @@ export function useSettingsPreferenceActions({
     commit,
     configRepository,
     customFontDraft,
-    databaseMaintenanceRepository,
     isValidFontFamilyList,
     loadTrustColorPreference,
     localFavoriteFriendsGroups,
@@ -422,7 +418,7 @@ export function useSettingsPreferenceActions({
     }
     async function refreshSqliteTableSizes() {
         try {
-            const sizes = await databaseMaintenanceRepository.getTableSizes(
+            const sizes = await commands.appDatabaseMaintenanceTableSizesGet(
                 auth.currentUserId || ''
             );
             setSqliteTableSizes({

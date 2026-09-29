@@ -5,10 +5,10 @@ use std::sync::{Arc, Mutex};
 use serde_json::Value;
 use tokio::sync::{broadcast, watch};
 use vrcx_0_application_core::{
-    FileCache, HostSessionRuntime, InstanceDwellRegistry, LocalGameContextSource,
-    OverlayActivityInputSink, PrintCleanupInputSink, RealtimeNotificationProjectionObserver,
-    RemoteMutationGate, RuntimeAuthScope, RuntimeEventBus, RuntimeSyncEngine, TaskSupervisor,
-    WebClient, WorldCache,
+    FileCache, HostSessionRuntime, InstanceDwellRegistry, LocalGameContextSnapshot,
+    LocalGameContextSource, OverlayActivityInputSink, PrintCleanupInputSink,
+    RealtimeNotificationProjectionObserver, RemoteMutationGate, RuntimeAuthScope, RuntimeEventBus,
+    RuntimeSyncEngine, TaskSupervisor, WebClient, WorldCache,
 };
 use vrcx_0_contracts::feed_live::FeedLiveEntry;
 use vrcx_0_core::friends::FriendRecord;
@@ -302,6 +302,12 @@ pub struct RealtimeHostRuntime {
     pub(super) friend_profile_bulk_cancel_tx: watch::Sender<u64>,
     pub(super) current_user_refresh_inflight:
         Mutex<Option<watch::Receiver<CurrentUserRefreshStatus>>>,
+}
+
+impl RealtimeHostRuntime {
+    pub fn local_game_context_snapshot(&self) -> LocalGameContextSnapshot {
+        self.deps.local_game_context.snapshot()
+    }
 }
 
 pub(super) struct RealtimeHostRuntimeMessageSink {

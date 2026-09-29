@@ -71,6 +71,10 @@ impl ConfigRepository {
     pub fn remove(&self, key: impl Into<ConfigKey>) -> Result<(), Error> {
         remove(&self.db, key.into().as_str())
     }
+
+    pub fn write_generation(&self) -> u64 {
+        self.db.config_generation()
+    }
 }
 
 pub fn ensure_config_table(db: &DatabaseService) -> Result<(), Error> {
@@ -123,6 +127,7 @@ pub fn set_raw(db: &DatabaseService, key: &str, value: &str) -> Result<(), Error
         .set(COL_VALUE, encode_config_value(&key, value))
         .build();
     db.execute_non_query(&upsert_value_sql(), &args)?;
+    db.bump_config_generation();
     Ok(())
 }
 
@@ -144,6 +149,7 @@ pub fn remove(db: &DatabaseService, key: &str) -> Result<(), Error> {
         .set(COL_KEY, resolve_config_key(key))
         .build();
     db.execute_non_query(&delete_value_sql(), &args)?;
+    db.bump_config_generation();
     Ok(())
 }
 

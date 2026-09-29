@@ -42,6 +42,7 @@ mod profile_bio;
 mod profile_config;
 mod profile_database_upgrade;
 mod profile_merge_runner;
+mod proxy_connectivity;
 mod quick_search;
 pub mod realtime_lifecycle_log;
 mod realtime_remote_requests;
@@ -114,6 +115,7 @@ pub use profile_merge_runner::{
     discard_data_import, profile_merge_sources, run_data_export, run_profile_merge,
     run_profile_settings_import, stage_data_import, ProfileMergeSourceKind, ProfileMergeSources,
 };
+pub use proxy_connectivity::ProxyConnectivityAdapter;
 pub use quick_search::{LocalQuickSearchDetailStore, VrchatQuickSearchRemoteRequests};
 pub use realtime_remote_requests::VrchatRealtimeRemoteRequests;
 pub use realtime_store::PersistenceRealtimeStore;

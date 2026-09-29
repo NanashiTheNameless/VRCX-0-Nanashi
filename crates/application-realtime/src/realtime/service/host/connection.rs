@@ -9,7 +9,7 @@ use vrcx_0_contracts::realtime::{NotificationExpiration, RealtimePersistenceBatc
 use vrcx_0_core::friends::{FriendRecord, FriendRosterBaseline};
 use vrcx_0_core::vrchat_endpoints::normalize_vrchat_websocket_endpoint;
 
-use crate::realtime::connection::{supervise_realtime_transport, RealtimeMessageSink};
+use crate::realtime::connection::RealtimeMessageSink;
 use crate::realtime::current_user::RealtimeCurrentUserRuntime;
 use crate::realtime::friends::RealtimeFriendsRuntime;
 use crate::realtime::user_cache::UserCacheRuntime;
@@ -313,15 +313,16 @@ impl RealtimeHostRuntime {
             );
         }
         self.deps.tasks.spawn(async move {
-            let termination = supervise_realtime_transport(realtime_transport.run(
-                message_sink,
-                client_run_id,
-                generation,
-                session_generation,
-                session,
-                cancel_rx,
-            ))
-            .await;
+            let termination = realtime_transport
+                .run(
+                    message_sink,
+                    client_run_id,
+                    generation,
+                    session_generation,
+                    session,
+                    cancel_rx,
+                )
+                .await;
             runtime.finish_realtime_transport(task_transport, termination);
         });
 

@@ -8,17 +8,18 @@ pub fn ensure_realtime_tables(db: &DatabaseService, user_prefix: &str) -> Result
             db.execute_non_query(&sql, &Default::default())?;
         }
         let notification_v1_table = format!("{user_prefix}_notifications");
-        add_column_if_missing(
+        if add_column_if_missing(
             db,
             &notification_v1_table,
             "seen",
             "INTEGER NOT NULL DEFAULT 0",
-        )?;
+        )? {
+            db.execute_non_query(
+                &format!("UPDATE {notification_v1_table} SET seen = 1 WHERE expired = 1"),
+                &Default::default(),
+            )?;
+        }
         add_column_if_missing(db, &notification_v1_table, "location", "TEXT")?;
-        db.execute_non_query(
-            &format!("UPDATE {notification_v1_table} SET seen = 1 WHERE expired = 1 AND seen = 0"),
-            &Default::default(),
-        )?;
         Ok(())
     })
 }

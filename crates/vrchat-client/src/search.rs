@@ -5,9 +5,9 @@ use crate::http_api::{
 };
 use crate::query::serialize_query;
 
-mod params;
-
-pub use params::{GroupSearchParams, UserSearchParams, WorldSearchParams};
+pub use vrcx_0_contracts::vrchat_requests::{
+    GroupSearchParams, UserSearchParams, WorldSearchParams,
+};
 
 pub fn search_worlds_get_input(
     endpoint: String,

@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use crate::{Error, GameStateStore, Result};
-use vrcx_0_core::json::RawJson;
 use vrcx_0_core::time::{iso_millis, now_iso};
 
 const CONFIG_AUTO_BACKUP: &str = "vrcRegistryAutoBackup";
@@ -42,7 +41,6 @@ pub struct RegistryBackupSnapshot {
     pub key: String,
     pub name: String,
     pub date: String,
-    pub data: RawJson,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -410,7 +408,6 @@ fn normalize_backup(backup: StoredRegistryBackup, index: usize) -> RegistryBacku
         key,
         name,
         date: backup.date,
-        data: backup.data.into(),
     }
 }
 

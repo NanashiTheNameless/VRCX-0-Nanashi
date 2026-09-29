@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde_json::{Map, Value};
+use vrcx_0_core::friends::StateBucket;
 use vrcx_0_core::json::JsonExt;
 
 use super::state::RealtimeCurrentUserStateSnapshot;
@@ -20,11 +21,8 @@ pub(super) fn resolve_state_bucket(
             .map(|previous| previous.text_field("state"))
             .unwrap_or_default(),
     ] {
-        match value.trim().to_ascii_lowercase().as_str() {
-            "online" => return Some("online".into()),
-            "active" => return Some("active".into()),
-            "offline" => return Some("offline".into()),
-            _ => {}
+        if let Some(bucket) = StateBucket::normalize(&value) {
+            return Some(bucket.as_str().into());
         }
     }
     None

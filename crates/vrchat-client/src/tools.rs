@@ -7,15 +7,12 @@ use serde_json::Value;
 use crate::http_api::{
     api_input, encode_path_segment, get_input, require_text, HttpApiError, HttpApiRequestInput,
 };
+use crate::query::serialize_query;
 
-mod params;
-mod request;
-
-pub use params::CalendarListParams;
-pub use request::InviteMessageType;
+pub use vrcx_0_contracts::vrchat_requests::{CalendarListParams, InviteMessageType};
 
 pub fn calendars_get_input(endpoint: String, params: CalendarListParams) -> HttpApiRequestInput {
-    get_input(endpoint, "calendar", params.into_query_params())
+    get_input(endpoint, "calendar", serialize_query(&params))
 }
 
 pub fn group_calendar_get_input(
@@ -37,14 +34,14 @@ pub fn following_calendars_get_input(
     endpoint: String,
     params: CalendarListParams,
 ) -> HttpApiRequestInput {
-    get_input(endpoint, "calendar/following", params.into_query_params())
+    get_input(endpoint, "calendar/following", serialize_query(&params))
 }
 
 pub fn featured_calendars_get_input(
     endpoint: String,
     params: CalendarListParams,
 ) -> HttpApiRequestInput {
-    get_input(endpoint, "calendar/featured", params.into_query_params())
+    get_input(endpoint, "calendar/featured", serialize_query(&params))
 }
 
 pub fn group_event_follow_input(

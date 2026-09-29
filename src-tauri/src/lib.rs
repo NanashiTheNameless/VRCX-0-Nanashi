@@ -1,9 +1,7 @@
-mod adapters;
 mod app;
 pub mod bindings_export;
 mod bootstrap;
 mod commands;
-mod deep_link;
 mod desktop_notification_activation;
 mod error;
 mod localization;

@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::proxy::TauriProxyConnectivityAdapter;
 use crate::error::AppError;
 
 #[derive(Debug, Deserialize, specta::Type)]
@@ -23,8 +22,7 @@ pub struct ProxySettingsTestResult {
 pub async fn app__proxy_settings_test(
     input: ProxySettingsTestInput,
 ) -> Result<ProxySettingsTestResult, AppError> {
-    let result = vrcx_0_application_core::test_proxy_connectivity(
-        &TauriProxyConnectivityAdapter,
+    let result = vrcx_0_runtime_host_desktop::test_proxy_connectivity(
         &input.proxy,
         env!("CARGO_PKG_VERSION"),
     )

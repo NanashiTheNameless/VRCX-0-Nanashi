@@ -42,10 +42,6 @@ impl CurrentUserSnapshot {
         self.0.as_ref()
     }
 
-    pub fn shared_value(&self) -> Arc<Value> {
-        Arc::clone(&self.0)
-    }
-
     pub fn id(&self) -> &str {
         self.string_field("id")
     }

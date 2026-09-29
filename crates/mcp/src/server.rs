@@ -1,10 +1,11 @@
 use std::future::{self, Future};
 
 use rmcp::handler::server::router::tool::ToolRouter;
+use rmcp::handler::server::tool::ToolCallContext;
 use rmcp::model::{
-    Implementation, ListResourcesResult, PaginatedRequestParams, ReadResourceRequestParams,
-    ReadResourceResponse, ReadResourceResult, Resource, ResourceContents, ServerCapabilities,
-    ServerConfig,
+    CallToolRequestParams, CallToolResponse, Implementation, ListResourcesResult,
+    PaginatedRequestParams, ReadResourceRequestParams, ReadResourceResponse, ReadResourceResult,
+    Resource, ResourceContents, ServerCapabilities, ServerConfig,
 };
 use rmcp::service::{MaybeSendFuture, RequestContext, RoleServer};
 use rmcp::{tool_handler, ErrorData as RmcpError, ServerHandler};
@@ -54,6 +55,7 @@ Map fuzzy requests to tools, then read each tool's own description for details (
 
 For vague asks, start with summarize_social_period or get_online_friends, then drill in and cross-reference.";
 
+#[derive(Clone)]
 pub(crate) struct VrcxMcpServer {
     pub(crate) runtime: McpRuntime,
     pub(crate) tool_router: ToolRouter<Self>,
@@ -70,6 +72,31 @@ impl ServerHandler for VrcxMcpServer {
         )
         .with_server_info(Implementation::new("vrcx-0", env!("CARGO_PKG_VERSION")))
         .with_instructions(SERVER_INSTRUCTIONS)
+    }
+
+    async fn call_tool(
+        &self,
+        request: CallToolRequestParams,
+        context: RequestContext<RoleServer>,
+    ) -> Result<CallToolResponse, RmcpError> {
+        let server = self.clone();
+        let handle = tokio::runtime::Handle::current();
+        tokio::task::spawn_blocking(move || {
+            handle.block_on(async {
+                let cancelled = context.ct.clone();
+                let call = server
+                    .tool_router
+                    .call(ToolCallContext::new(&server, request, context));
+                tokio::select! {
+                    result = call => result,
+                    () = cancelled.cancelled() => {
+                        Err(RmcpError::internal_error("tool call was cancelled", None))
+                    }
+                }
+            })
+        })
+        .await
+        .map_err(|error| RmcpError::internal_error(format!("tool task failed: {error}"), None))?
     }
 
     fn list_resources(

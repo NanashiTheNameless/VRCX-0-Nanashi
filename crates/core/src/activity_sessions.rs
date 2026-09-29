@@ -1,4 +1,5 @@
 pub const MAX_INFERRED_SPAN_MS: i64 = 24 * 60 * 60 * 1000;
+pub const PLAY_SESSION_MERGE_GAP_MS: i64 = 5 * 60 * 1000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SpanEnd {

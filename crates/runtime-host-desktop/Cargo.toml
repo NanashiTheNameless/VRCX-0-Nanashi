@@ -23,7 +23,8 @@ async-trait = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 specta.workspace = true
-url.workspace = true
+percent-encoding = { workspace = true }
+url = { workspace = true }
 chrono = { workspace = true }
 fs4 = { workspace = true }
 sys-locale.workspace = true
@@ -46,6 +47,8 @@ vrcx-0-persistence = { path = "../persistence" }
 vrcx-0-composition = { path = "../composition" }
 vrcx-0-vrchat-client = { path = "../vrchat-client" }
 vrcx-0-outbound-adapters = { path = "../outbound-adapters" }
+vrcx-0-mcp = { path = "../mcp" }
+vrcx-0-assistant = { path = "../assistant" }
 
 [target.'cfg(any(windows, target_os = "linux"))'.dependencies]
 vrcx-0-overlay-runtime = { path = "../overlay-runtime" }

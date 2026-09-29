@@ -34,7 +34,9 @@ pub fn config_apply_mutations(
             }
         }
         Ok(())
-    })
+    })?;
+    db.bump_config_generation();
+    Ok(())
 }
 
 pub fn config_set_values(
@@ -55,6 +57,7 @@ pub fn config_set_values(
         }
         Ok(())
     })?;
+    db.bump_config_generation();
     Ok(())
 }
 
@@ -73,12 +76,14 @@ pub fn config_list_values(db: &DatabaseService) -> Result<Vec<ConfigReadEntry>, 
 
 pub fn config_remove_value(db: &DatabaseService, key: String) -> Result<i64, Error> {
     ensure_config_table(db)?;
-    db.execute_non_query(
+    let removed = db.execute_non_query(
         "DELETE FROM configs WHERE key = @key",
         &ParamsBuilder::new()
             .set("key", resolve_config_key(&key))
             .build(),
-    )
+    )?;
+    db.bump_config_generation();
+    Ok(removed)
 }
 
 #[cfg(test)]
@@ -89,6 +94,34 @@ mod tests {
     use super::*;
 
     static NEXT_TEST_ID: AtomicU64 = AtomicU64::new(1);
+
+    #[test]
+    fn every_config_write_path_advances_the_config_generation() {
+        let path = std::env::temp_dir().join(format!(
+            "vrcx-0-config-generation-{}-{}.sqlite3",
+            std::process::id(),
+            NEXT_TEST_ID.fetch_add(1, Ordering::Relaxed)
+        ));
+        let db = DatabaseService::new(&path).unwrap();
+        let mut seen = db.config_generation();
+        let mut expect_advanced = |db: &DatabaseService| {
+            let generation = db.config_generation();
+            assert!(generation > seen);
+            seen = generation;
+        };
+
+        super::super::repository::set_string(&db, "themeA", "a").unwrap();
+        expect_advanced(&db);
+        super::super::repository::remove(&db, "themeA").unwrap();
+        expect_advanced(&db);
+        config_apply_mutations(&db, &[ConfigMutation::set("themeB", "b")]).unwrap();
+        expect_advanced(&db);
+        config_remove_value(&db, "themeB".into()).unwrap();
+        expect_advanced(&db);
+
+        drop(db);
+        let _ = fs::remove_file(&path);
+    }
 
     #[test]
     fn applies_set_and_remove_mutations_in_one_write_transaction() {

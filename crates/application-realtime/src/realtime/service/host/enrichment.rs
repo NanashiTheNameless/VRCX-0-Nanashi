@@ -665,7 +665,7 @@ fn notification_id(value: &Value) -> String {
 
 fn sanitize_world_name_fields(object: &mut serde_json::Map<String, Value>) {
     let world_name = object_string(object, "worldName");
-    let world_id = world_enrich::world_id_from_location_or_id(&world_name);
+    let world_id = vrcx_0_core::location::world_id_from_location(&world_name);
     if world_id.is_empty() {
         return;
     }

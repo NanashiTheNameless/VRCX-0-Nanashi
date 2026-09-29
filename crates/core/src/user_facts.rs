@@ -269,12 +269,9 @@ pub fn user_fact_key(endpoint: &Value, user_id: &Value) -> String {
 }
 
 pub fn normalize_state_bucket(value: &Value) -> String {
-    match normalize_fact_text(value).to_ascii_lowercase().as_str() {
-        "online" => "online".to_string(),
-        "active" => "active".to_string(),
-        "offline" => "offline".to_string(),
-        _ => String::new(),
-    }
+    crate::friends::StateBucket::normalize(&normalize_fact_text(value))
+        .map(|bucket| bucket.as_str().to_string())
+        .unwrap_or_default()
 }
 
 fn is_present(value: &Value) -> bool {

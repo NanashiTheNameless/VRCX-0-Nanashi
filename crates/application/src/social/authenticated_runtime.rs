@@ -758,8 +758,9 @@ impl AuthenticatedRuntimeOrchestrator {
         if !self.auth_scope.snapshot().generation_matches(scope) {
             return;
         }
-        self.event_bus
-            .emit_runtime_vrchat_auth_failure(RuntimeVrchatAuthFailurePayload {
+        self.auth_scope.report_vrchat_auth_failure(
+            &self.event_bus,
+            RuntimeVrchatAuthFailurePayload {
                 owner_user_id: OwnerId::new(scope.current_user_id.clone()),
                 endpoint: scope.endpoint.clone(),
                 path: path.to_string(),
@@ -767,7 +768,8 @@ impl AuthenticatedRuntimeOrchestrator {
                 status_code,
                 auth_scope_generation: scope.generation,
                 realtime_transport: None,
-            });
+            },
+        );
     }
 
     fn is_active(

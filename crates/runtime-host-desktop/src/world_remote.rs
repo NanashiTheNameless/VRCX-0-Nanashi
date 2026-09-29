@@ -1,21 +1,18 @@
 use std::sync::Arc;
 
 use vrcx_0_application::remote::{
-    QueryOrder as ApplicationQueryOrder, ReleaseStatusFilter as ApplicationReleaseStatusFilter,
     WorldRemoteFuture, WorldRemoteOperation, WorldRemotePort, WorldRemoteRuntime, WorldRemoteScope,
-    WorldResponseProjectionPort, WorldSearchSort as ApplicationWorldSearchSort,
-    WorldUpdateRequest as ApplicationWorldUpdateRequest,
+    WorldResponseProjectionPort,
 };
 use vrcx_0_application_core::vrchat_api::{execute_api_command, VrchatApiResponse, VrchatScope};
 use vrcx_0_application_core::{
     RemoteMutationGate, RuntimeAuthScope, RuntimeDiagnostics, RuntimeSyncEngine, WebClient,
     WorldCache,
 };
-use vrcx_0_vrchat_client::query::{QueryOrder, ReleaseStatusFilter, WorldSearchSort};
 use vrcx_0_vrchat_client::worlds::{
     world_delete_input, world_list_by_user_get_input, world_persistent_data_delete_input,
     world_persistent_data_exists_input, world_publish_input, world_save_input,
-    world_unpublish_input, WorldUpdateRequest,
+    world_unpublish_input,
 };
 
 pub(crate) struct WorldRemoteRuntimeDeps {
@@ -75,9 +72,9 @@ impl WorldRemotePort for DesktopWorldRemotePort {
                         user_id,
                         n,
                         offset,
-                        world_search_sort(sort),
-                        query_order(order),
-                        release_status_filter(release_status),
+                        sort,
+                        order,
+                        release_status,
                     )?;
                     (
                         "app__vrchat_world_list_by_user_get",
@@ -95,8 +92,7 @@ impl WorldRemotePort for DesktopWorldRemotePort {
                     )
                 }
                 WorldRemoteOperation::Save { world_id, params } => {
-                    let (world_id, request) =
-                        world_save_input(endpoint, world_id, world_update_request(params))?;
+                    let (world_id, request) = world_save_input(endpoint, world_id, params)?;
                     (
                         "app__vrchat_world_save",
                         format!("Saving world {world_id}."),
@@ -157,58 +153,5 @@ struct DesktopWorldResponseProjection {
 impl WorldResponseProjectionPort for DesktopWorldResponseProjection {
     fn hydrate(&self, response: &VrchatApiResponse) {
         self.world_cache.hydrate_response(response);
-    }
-}
-
-fn query_order(value: ApplicationQueryOrder) -> QueryOrder {
-    match value {
-        ApplicationQueryOrder::Ascending => QueryOrder::Ascending,
-        ApplicationQueryOrder::Descending => QueryOrder::Descending,
-    }
-}
-
-fn release_status_filter(value: ApplicationReleaseStatusFilter) -> ReleaseStatusFilter {
-    match value {
-        ApplicationReleaseStatusFilter::All => ReleaseStatusFilter::All,
-        ApplicationReleaseStatusFilter::Hidden => ReleaseStatusFilter::Hidden,
-        ApplicationReleaseStatusFilter::Private => ReleaseStatusFilter::Private,
-        ApplicationReleaseStatusFilter::Public => ReleaseStatusFilter::Public,
-    }
-}
-
-fn world_search_sort(value: ApplicationWorldSearchSort) -> WorldSearchSort {
-    match value {
-        ApplicationWorldSearchSort::CreatedAt => WorldSearchSort::CreatedAt,
-        ApplicationWorldSearchSort::UpdatedAt => WorldSearchSort::UpdatedAt,
-        ApplicationWorldSearchSort::Created => WorldSearchSort::Created,
-        ApplicationWorldSearchSort::Favorites => WorldSearchSort::Favorites,
-        ApplicationWorldSearchSort::Heat => WorldSearchSort::Heat,
-        ApplicationWorldSearchSort::LabsPublicationDate => WorldSearchSort::LabsPublicationDate,
-        ApplicationWorldSearchSort::Magic => WorldSearchSort::Magic,
-        ApplicationWorldSearchSort::Name => WorldSearchSort::Name,
-        ApplicationWorldSearchSort::Order => WorldSearchSort::Order,
-        ApplicationWorldSearchSort::Popularity => WorldSearchSort::Popularity,
-        ApplicationWorldSearchSort::PublicationDate => WorldSearchSort::PublicationDate,
-        ApplicationWorldSearchSort::Random => WorldSearchSort::Random,
-        ApplicationWorldSearchSort::Relevance => WorldSearchSort::Relevance,
-        ApplicationWorldSearchSort::ReportCount => WorldSearchSort::ReportCount,
-        ApplicationWorldSearchSort::ReportScore => WorldSearchSort::ReportScore,
-        ApplicationWorldSearchSort::Shuffle => WorldSearchSort::Shuffle,
-        ApplicationWorldSearchSort::Trust => WorldSearchSort::Trust,
-        ApplicationWorldSearchSort::Updated => WorldSearchSort::Updated,
-    }
-}
-
-fn world_update_request(value: ApplicationWorldUpdateRequest) -> WorldUpdateRequest {
-    WorldUpdateRequest {
-        id: value.id,
-        name: value.name,
-        description: value.description,
-        capacity: value.capacity,
-        recommended_capacity: value.recommended_capacity,
-        preview_youtube_id: value.preview_youtube_id,
-        tags: value.tags,
-        url_list: value.url_list,
-        disabled_prop_abilities: value.disabled_prop_abilities,
     }
 }

@@ -8,21 +8,21 @@ use vrcx_0_contracts::social_aggregates as social;
 use vrcx_0_contracts::FavoriteRow;
 use vrcx_0_core::{FavoriteEntityKind, OwnerId};
 use vrcx_0_mcp::{
-    McpActivityQueryPort, McpActivitySession, McpConfigPort, McpFavoritesQueryPort,
-    McpFeedQueryPort, McpFriendCurrent, McpFriendLocalDataPort, McpFriendMemo, McpInterruptCheck,
-    McpLocalModeration, McpMemoSave, McpMutualGraphMeta, McpMutualGraphPort, McpReminder,
-    McpReminderTrigger, McpRemindersPort, McpSocialHistoryQueryPort,
+    McpActivityQueryPort, McpConfigPort, McpFavoritesQueryPort, McpFeedQueryPort, McpFriendCurrent,
+    McpFriendLocalDataPort, McpFriendMemo, McpInterruptCheck, McpLocalModeration, McpMemoSave,
+    McpMutualGraphMeta, McpMutualGraphPort, McpPlaySpan, McpReminder, McpReminderTrigger,
+    McpRemindersPort, McpSocialHistoryQueryPort,
 };
 use vrcx_0_persistence::{
-    activity, config::ConfigRepository, favorites, friends, local_moderation, memos,
+    activity_page, config::ConfigRepository, favorites, friends, local_moderation, memos,
     social_aggregates, DatabaseService,
 };
 
-pub(crate) struct TauriMcpConfigAdapter {
+pub(crate) struct DesktopMcpConfigAdapter {
     config: ConfigRepository,
 }
 
-pub(crate) struct TauriMcpMutualGraphAdapter {
+pub(crate) struct DesktopMcpMutualGraphAdapter {
     runtime: MutualGraphFetchRuntime,
     db: Arc<DatabaseService>,
     web: Arc<vrcx_0_application_core::WebClient>,
@@ -30,7 +30,7 @@ pub(crate) struct TauriMcpMutualGraphAdapter {
     tasks: vrcx_0_application_core::TaskSupervisor,
 }
 
-impl TauriMcpMutualGraphAdapter {
+impl DesktopMcpMutualGraphAdapter {
     pub(crate) fn new(
         runtime: MutualGraphFetchRuntime,
         db: Arc<DatabaseService>,
@@ -48,7 +48,7 @@ impl TauriMcpMutualGraphAdapter {
     }
 }
 
-impl McpMutualGraphPort for TauriMcpMutualGraphAdapter {
+impl McpMutualGraphPort for DesktopMcpMutualGraphAdapter {
     fn status(&self) -> MutualGraphFetchStatus {
         self.runtime.status()
     }
@@ -95,13 +95,13 @@ impl McpMutualGraphPort for TauriMcpMutualGraphAdapter {
     }
 }
 
-impl TauriMcpConfigAdapter {
+impl DesktopMcpConfigAdapter {
     pub(crate) fn new(config: ConfigRepository) -> Self {
         Self { config }
     }
 }
 
-impl McpConfigPort for TauriMcpConfigAdapter {
+impl McpConfigPort for DesktopMcpConfigAdapter {
     fn get_bool(&self, key: &str, default: bool) -> vrcx_0_application_core::Result<bool> {
         self.config.get_bool(key, default).map_err(Into::into)
     }
@@ -119,17 +119,17 @@ impl McpConfigPort for TauriMcpConfigAdapter {
     }
 }
 
-pub(crate) struct TauriMcpActivityQueryAdapter {
+pub(crate) struct DesktopMcpActivityQueryAdapter {
     db: Arc<DatabaseService>,
 }
 
-impl TauriMcpActivityQueryAdapter {
+impl DesktopMcpActivityQueryAdapter {
     pub(crate) fn new(db: Arc<DatabaseService>) -> Self {
         Self { db }
     }
 }
 
-impl McpActivityQueryPort for TauriMcpActivityQueryAdapter {
+impl McpActivityQueryPort for DesktopMcpActivityQueryAdapter {
     fn copresence_summary(
         &self,
         input: social::CopresenceSummaryInput,
@@ -150,6 +150,15 @@ impl McpActivityQueryPort for TauriMcpActivityQueryAdapter {
         input: social::SearchWorldsVisitedInput,
     ) -> vrcx_0_application_core::Result<social::SearchWorldsVisitedOutput> {
         social_aggregates::search_worlds_visited(self.db.as_ref(), owner_user_id, input)
+            .map_err(Into::into)
+    }
+
+    fn top_visited_worlds(
+        &self,
+        owner_user_id: &OwnerId,
+        input: social::TopVisitedWorldsInput,
+    ) -> vrcx_0_application_core::Result<Vec<social::TopVisitedWorldRow>> {
+        social_aggregates::top_visited_worlds(self.db.as_ref(), owner_user_id, input)
             .map_err(Into::into)
     }
 
@@ -188,36 +197,44 @@ impl McpActivityQueryPort for TauriMcpActivityQueryAdapter {
         social_aggregates::get_friend_log(self.db.as_ref(), input).map_err(Into::into)
     }
 
-    fn activity_sessions(
+    fn play_spans(
         &self,
-        owner_user_id: OwnerId,
-    ) -> vrcx_0_application_core::Result<Vec<McpActivitySession>> {
-        activity::activity_sessions_get(self.db.as_ref(), owner_user_id.to_string())
-            .map(|sessions| {
-                sessions
-                    .into_iter()
-                    .map(|session| McpActivitySession {
-                        start: session.start,
-                        end: session.end,
-                        is_open_tail: session.is_open_tail,
-                    })
-                    .collect()
-            })
-            .map_err(Into::into)
+        owner_user_id: &OwnerId,
+        from_ms: Option<i64>,
+        to_ms: i64,
+        open_location: Option<&str>,
+    ) -> vrcx_0_application_core::Result<Vec<McpPlaySpan>> {
+        activity_page::read_play_spans(
+            self.db.as_ref(),
+            owner_user_id,
+            from_ms,
+            to_ms,
+            open_location,
+        )
+        .map(|spans| {
+            spans
+                .into_iter()
+                .map(|span| McpPlaySpan {
+                    start: span.start_ms,
+                    end: span.end_ms,
+                })
+                .collect()
+        })
+        .map_err(Into::into)
     }
 }
 
-pub(crate) struct TauriMcpSocialHistoryQueryAdapter {
+pub(crate) struct DesktopMcpSocialHistoryQueryAdapter {
     db: Arc<DatabaseService>,
 }
 
-impl TauriMcpSocialHistoryQueryAdapter {
+impl DesktopMcpSocialHistoryQueryAdapter {
     pub(crate) fn new(db: Arc<DatabaseService>) -> Self {
         Self { db }
     }
 }
 
-impl McpSocialHistoryQueryPort for TauriMcpSocialHistoryQueryAdapter {
+impl McpSocialHistoryQueryPort for DesktopMcpSocialHistoryQueryAdapter {
     fn resolve_user(
         &self,
         input: social::ResolveUserInput,
@@ -230,13 +247,6 @@ impl McpSocialHistoryQueryPort for TauriMcpSocialHistoryQueryAdapter {
         input: social::FriendChangesInput,
     ) -> vrcx_0_application_core::Result<social::FriendChangesOutput> {
         social_aggregates::get_friend_changes(self.db.as_ref(), input).map_err(Into::into)
-    }
-
-    fn friend_log(
-        &self,
-        input: social::FriendLogInput,
-    ) -> vrcx_0_application_core::Result<social::FriendLogOutput> {
-        social_aggregates::get_friend_log(self.db.as_ref(), input).map_err(Into::into)
     }
 
     fn friend_log_first_created_at(
@@ -252,20 +262,6 @@ impl McpSocialHistoryQueryPort for TauriMcpSocialHistoryQueryAdapter {
             kind,
         )
         .map_err(Into::into)
-    }
-
-    fn copresence_summary(
-        &self,
-        input: social::CopresenceSummaryInput,
-    ) -> vrcx_0_application_core::Result<social::CopresenceSummaryOutput> {
-        social_aggregates::get_copresence_summary(self.db.as_ref(), input).map_err(Into::into)
-    }
-
-    fn friend_activity_pattern(
-        &self,
-        input: social::FriendActivityPatternInput,
-    ) -> vrcx_0_application_core::Result<social::FriendActivityPatternOutput> {
-        social_aggregates::get_friend_activity_pattern(self.db.as_ref(), input).map_err(Into::into)
     }
 
     fn social_graph(
@@ -297,17 +293,17 @@ impl McpSocialHistoryQueryPort for TauriMcpSocialHistoryQueryAdapter {
     }
 }
 
-pub(crate) struct TauriMcpFriendLocalDataAdapter {
+pub(crate) struct DesktopMcpFriendLocalDataAdapter {
     db: Arc<DatabaseService>,
 }
 
-impl TauriMcpFriendLocalDataAdapter {
+impl DesktopMcpFriendLocalDataAdapter {
     pub(crate) fn new(db: Arc<DatabaseService>) -> Self {
         Self { db }
     }
 }
 
-impl McpFriendLocalDataPort for TauriMcpFriendLocalDataAdapter {
+impl McpFriendLocalDataPort for DesktopMcpFriendLocalDataAdapter {
     fn memo_get_user(
         &self,
         user_id: String,
@@ -398,17 +394,17 @@ fn friend_memo(row: memos::UserMemoOutput) -> McpFriendMemo {
     }
 }
 
-pub(crate) struct TauriMcpFavoritesQueryAdapter {
+pub(crate) struct DesktopMcpFavoritesQueryAdapter {
     db: Arc<DatabaseService>,
 }
 
-impl TauriMcpFavoritesQueryAdapter {
+impl DesktopMcpFavoritesQueryAdapter {
     pub(crate) fn new(db: Arc<DatabaseService>) -> Self {
         Self { db }
     }
 }
 
-impl McpFavoritesQueryPort for TauriMcpFavoritesQueryAdapter {
+impl McpFavoritesQueryPort for DesktopMcpFavoritesQueryAdapter {
     fn favorite_list(
         &self,
         owner_user_id: &OwnerId,
@@ -418,17 +414,17 @@ impl McpFavoritesQueryPort for TauriMcpFavoritesQueryAdapter {
     }
 }
 
-pub(crate) struct TauriMcpFeedQueryAdapter {
+pub(crate) struct DesktopMcpFeedQueryAdapter {
     db: Arc<DatabaseService>,
 }
 
-impl TauriMcpFeedQueryAdapter {
+impl DesktopMcpFeedQueryAdapter {
     pub(crate) fn new(db: Arc<DatabaseService>) -> Self {
         Self { db }
     }
 }
 
-impl McpFeedQueryPort for TauriMcpFeedQueryAdapter {
+impl McpFeedQueryPort for DesktopMcpFeedQueryAdapter {
     fn feed_rows_interruptible(
         &self,
         input: FeedRowsQueryInput,
@@ -444,19 +440,17 @@ impl McpFeedQueryPort for TauriMcpFeedQueryAdapter {
 }
 
 /// Fork: assistant reminder tools backed by the desktop reminder engine.
-pub(crate) struct TauriMcpRemindersAdapter {
-    reminders: Arc<vrcx_0_runtime_host_desktop::reminders::ReminderRuntime>,
+pub(crate) struct DesktopMcpRemindersAdapter {
+    reminders: Arc<crate::reminders::ReminderRuntime>,
 }
 
-impl TauriMcpRemindersAdapter {
-    pub(crate) fn new(
-        reminders: Arc<vrcx_0_runtime_host_desktop::reminders::ReminderRuntime>,
-    ) -> Self {
+impl DesktopMcpRemindersAdapter {
+    pub(crate) fn new(reminders: Arc<crate::reminders::ReminderRuntime>) -> Self {
         Self { reminders }
     }
 }
 
-impl McpRemindersPort for TauriMcpRemindersAdapter {
+impl McpRemindersPort for DesktopMcpRemindersAdapter {
     fn create(
         &self,
         owner_user_id: &OwnerId,

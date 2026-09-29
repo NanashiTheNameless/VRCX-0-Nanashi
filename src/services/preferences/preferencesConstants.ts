@@ -23,26 +23,6 @@ export const DISCORD_BOOL_PREFERENCE_KEYS = new Set<DiscordPreferenceKey>([
     'discordWorldIntegration',
     'discordWorldNameAsDiscordStatus'
 ]);
-export const WRIST_OVERLAY_RUNTIME_CONFIG_KEYS = new Set([
-    'appLanguage',
-    'dtHour12',
-    'wristOverlayStartMode',
-    'wristOverlayButton',
-    'wristOverlayHand',
-    'wristOverlaySize',
-    'wristOverlayHidePrivateWorlds',
-    'wristOverlayDarkBackground',
-    'wristOverlayShowDevices',
-    'wristOverlayShowBatteryPercent',
-    'wristOverlayPages',
-    'wristOverlayPlayersSort',
-    'wristOverlayPageFlipSeconds',
-    'hmdNotificationsEnabled',
-    'hmdNotificationStartMode',
-    'hmdNotificationTimeout',
-    'hmdNotificationOpacity',
-    'hmdNotificationPosition'
-]);
 export const LEGACY_OVERLAY_NOTIFICATION_KEYS = Object.freeze({
     xsNotifications: 'VRCX-0_xsNotifications',
     ovrtHudNotifications: 'VRCX-0_ovrtHudNotifications',

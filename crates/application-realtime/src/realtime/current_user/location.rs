@@ -7,7 +7,7 @@ use vrcx_0_core::text::first_owned;
 
 use super::state::RealtimeCurrentUserStateSnapshot;
 use super::utils::{map_from_json, EventTime};
-use crate::realtime::location_predicates::is_real_instance;
+use vrcx_0_core::location::is_real_instance;
 
 pub(super) fn build_location_patch(
     location: Option<&Value>,

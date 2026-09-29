@@ -7,7 +7,6 @@ use vrcx_0_application::collections::{
     SharedCollectionImportActions, SharedCollectionImportActionsFactory, WorldCollectionFuture,
     WorldCollectionRemote, WorldCollectionStore, WorldMemo,
 };
-use vrcx_0_application_core::vrchat_api::VrchatScope;
 use vrcx_0_application_core::{FavoriteEntityKind, WebClient, WorldCache};
 use vrcx_0_contracts::world_collections::{
     WorldCollectionCreatePayload, WorldCollectionCreateResponse, WorldCollectionSnapshotResponse,
@@ -180,12 +179,10 @@ impl SharedCollectionImportActions for LocalSharedCollectionImportActions {
 
     fn fetch_and_cache_world<'a>(&'a self, world_id: &'a str) -> BoxFuture<'a, crate::Result<()>> {
         Box::pin(async move {
-            let (_, request) = vrcx_0_vrchat_client::worlds::world_get_input(
-                vrcx_0_vrchat_client::http_api::normalize_vrchat_api_endpoint(Some(&self.endpoint)),
-                world_id.to_string(),
-            )
-            .map_err(crate::map_http_api_error)?;
-            let response = self.web.execute_api(request, VrchatScope::Vrchat).await?;
+            let response = self
+                .world_cache
+                .get(self.web.as_ref(), &self.endpoint, world_id, true, false)
+                .await?;
             if !(200..=299).contains(&response.status) {
                 return Err(crate::Error::Custom(format!(
                     "World lookup failed with status {}.",

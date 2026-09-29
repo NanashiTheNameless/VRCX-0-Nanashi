@@ -89,6 +89,15 @@ impl TaskSupervisor {
         Self::default()
     }
 
+    pub fn with_executor(executor: Arc<dyn RuntimeTaskExecutor>) -> Self {
+        Self {
+            inner: Arc::new(TaskSupervisorInner {
+                executor: Mutex::new(Some(executor)),
+                ..TaskSupervisorInner::default()
+            }),
+        }
+    }
+
     pub fn set_executor<E>(&self, executor: E)
     where
         E: RuntimeTaskExecutor + 'static,

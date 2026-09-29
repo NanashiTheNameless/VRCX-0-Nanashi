@@ -38,5 +38,5 @@ pub use resolve::{ResolveUserInput, ResolveUserOutput, ResolvedUserRow};
 pub use visits::{VisitRosterRow, VisitRow, VisitStint, VisitTimelineInput, VisitTimelineOutput};
 pub use worlds::{
     FavoriteAction, FavoriteLocalInput, FavoriteOutput, SearchWorldsVisitedInput,
-    SearchWorldsVisitedOutput, VisitedWorldRow,
+    SearchWorldsVisitedOutput, TopVisitedWorldRow, TopVisitedWorldsInput, VisitedWorldRow,
 };

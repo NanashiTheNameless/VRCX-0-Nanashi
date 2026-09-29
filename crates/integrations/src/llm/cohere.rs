@@ -32,7 +32,11 @@ impl LlmClient {
             "{}/v1/models?endpoint=chat&page_size=1000",
             self.cohere_root()
         );
-        let response = self.cohere_request(self.http.get(&url)).send().await?;
+        let response = self
+            .cohere_request(self.http.get(&url))
+            .timeout(self.request_timeout)
+            .send()
+            .await?;
         let status = response.status();
         let body = response.text().await?;
         if !status.is_success() {
@@ -69,6 +73,7 @@ impl LlmClient {
         let response = self
             .cohere_request(self.http.post(format!("{}/v2/chat", self.cohere_root())))
             .json(&body)
+            .timeout(self.request_timeout)
             .send()
             .await?;
         let status = response.status();

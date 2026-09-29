@@ -21,10 +21,9 @@ pub trait McpConfigPort: Send + Sync {
 pub type McpConfig = Arc<dyn McpConfigPort>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct McpActivitySession {
+pub struct McpPlaySpan {
     pub start: i64,
     pub end: i64,
-    pub is_open_tail: bool,
 }
 
 pub trait McpActivityQueryPort: Send + Sync {
@@ -43,6 +42,12 @@ pub trait McpActivityQueryPort: Send + Sync {
         owner_user_id: &OwnerId,
         input: social::SearchWorldsVisitedInput,
     ) -> vrcx_0_application_core::Result<social::SearchWorldsVisitedOutput>;
+
+    fn top_visited_worlds(
+        &self,
+        owner_user_id: &OwnerId,
+        input: social::TopVisitedWorldsInput,
+    ) -> vrcx_0_application_core::Result<Vec<social::TopVisitedWorldRow>>;
 
     fn fading_friends(
         &self,
@@ -69,10 +74,13 @@ pub trait McpActivityQueryPort: Send + Sync {
         input: social::FriendLogInput,
     ) -> vrcx_0_application_core::Result<social::FriendLogOutput>;
 
-    fn activity_sessions(
+    fn play_spans(
         &self,
-        owner_user_id: OwnerId,
-    ) -> vrcx_0_application_core::Result<Vec<McpActivitySession>>;
+        owner_user_id: &OwnerId,
+        from_ms: Option<i64>,
+        to_ms: i64,
+        open_location: Option<&str>,
+    ) -> vrcx_0_application_core::Result<Vec<McpPlaySpan>>;
 }
 
 pub type McpActivityQueries = Arc<dyn McpActivityQueryPort>;
@@ -88,27 +96,12 @@ pub trait McpSocialHistoryQueryPort: Send + Sync {
         input: social::FriendChangesInput,
     ) -> vrcx_0_application_core::Result<social::FriendChangesOutput>;
 
-    fn friend_log(
-        &self,
-        input: social::FriendLogInput,
-    ) -> vrcx_0_application_core::Result<social::FriendLogOutput>;
-
     fn friend_log_first_created_at(
         &self,
         owner_user_id: &OwnerId,
         target_user_id: &str,
         kind: &str,
     ) -> vrcx_0_application_core::Result<Option<String>>;
-
-    fn copresence_summary(
-        &self,
-        input: social::CopresenceSummaryInput,
-    ) -> vrcx_0_application_core::Result<social::CopresenceSummaryOutput>;
-
-    fn friend_activity_pattern(
-        &self,
-        input: social::FriendActivityPatternInput,
-    ) -> vrcx_0_application_core::Result<social::FriendActivityPatternOutput>;
 
     fn social_graph(
         &self,

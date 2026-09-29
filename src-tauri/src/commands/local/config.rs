@@ -24,7 +24,6 @@ pub fn app__config_list_values(
 pub fn app__config_remove_value(state: State<'_, AppState>, key: String) -> Result<i64, AppError> {
     state
         .runtime_host()
-        .local_data()
         .config_remove_value(key)
         .map_err(AppError::from)
 }
@@ -37,7 +36,6 @@ pub fn app__config_set_values(
 ) -> Result<(), AppError> {
     state
         .runtime_host()
-        .local_data()
         .config_set_values(entries)
         .map_err(AppError::from)
 }

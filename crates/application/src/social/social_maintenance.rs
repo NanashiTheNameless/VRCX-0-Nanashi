@@ -26,7 +26,6 @@ pub const BACKGROUND_MODERATION_CADENCE_SECONDS: u64 = 30 * 60;
 pub const BACKGROUND_PRINT_CLEANUP_CADENCE_SECONDS: u64 = 30 * 60;
 
 const SOCIAL_MAINTENANCE_SLEEP_CHUNK: Duration = Duration::from_secs(1);
-const SOCIAL_MAINTENANCE_STOP_POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 pub trait SocialMaintenanceActions: Send + Sync {
     fn active_scope_key(&self) -> Option<String>;
@@ -271,17 +270,6 @@ impl SocialMaintenanceRuntime {
             running.store(false, Ordering::Release);
             mark_social_maintenance_jobs_stopped(&background_jobs);
         });
-    }
-
-    pub fn wait_stopped(&self, timeout: Duration) -> bool {
-        let deadline = Instant::now() + timeout;
-        while self.running.load(Ordering::Acquire) {
-            if Instant::now() >= deadline {
-                return false;
-            }
-            std::thread::sleep(SOCIAL_MAINTENANCE_STOP_POLL_INTERVAL);
-        }
-        true
     }
 }
 

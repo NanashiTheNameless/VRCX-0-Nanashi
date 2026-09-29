@@ -75,7 +75,11 @@ impl LlmClient {
                 url.push_str("&pageToken=");
                 url.push_str(token);
             }
-            let response = self.gemini_request(self.http.get(&url)).send().await?;
+            let response = self
+                .gemini_request(self.http.get(&url))
+                .timeout(self.request_timeout)
+                .send()
+                .await?;
             let status = response.status();
             let body = response.text().await?;
             if !status.is_success() {
@@ -138,6 +142,7 @@ impl LlmClient {
         let response = self
             .gemini_request(self.http.post(url))
             .json(&body)
+            .timeout(self.request_timeout)
             .send()
             .await?;
         let status = response.status();

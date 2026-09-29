@@ -3,7 +3,7 @@
 //! Fork: "Import from VRCX / VRCX-0" (non-destructive merge).
 
 use tauri::State;
-use vrcx_0_outbound_adapters::{
+use vrcx_0_runtime_host_desktop::profile_merge::{
     DataExportReport, DataImportSummary, ProfileMergeReport, ProfileMergeSourceKind,
     ProfileMergeSources, ProfileSettingsImportReport,
 };

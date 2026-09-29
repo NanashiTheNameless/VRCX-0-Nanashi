@@ -158,3 +158,20 @@ fn limit_is_clamped_to_at_least_one_bucket() {
 
     assert_eq!(output.rows.len(), 1);
 }
+
+#[test]
+fn tolerates_an_out_of_range_utc_offset() {
+    let (_dir, db) = test_db("best-time-min-offset");
+    ensure_realtime_tables(&db, "usrself").unwrap();
+    insert_online_event(&db, "2026-06-01T18:05:00Z", "usr_alice", "Alice");
+
+    let output = get_best_time_to_play(
+        &db,
+        BestTimeToPlayInput {
+            utc_offset_minutes: Some(i64::MIN),
+            ..input(&OwnerId::new("usr_self"), ActivityBucket::HourOfDay)
+        },
+    );
+
+    assert!(output.is_ok());
+}

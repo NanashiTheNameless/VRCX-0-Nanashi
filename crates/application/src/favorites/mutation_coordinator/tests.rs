@@ -10,11 +10,13 @@ use crate::favorites::{
     FavoriteTransferItem, FavoriteTransferLocation, FavoriteTransferMode, FavoriteTransferSource,
     FavoriteTransferTarget,
 };
+use vrcx_0_application_core::MemoryWorldCachePort;
 
 struct Harness {
     coordinator: FavoriteMutationCoordinator,
     store: Arc<TestFavoriteStore>,
     event_bus: RuntimeEventBus,
+    world_cache: Arc<WorldCache>,
 }
 
 fn harness(_name: &str) -> Harness {
@@ -22,6 +24,7 @@ fn harness(_name: &str) -> Harness {
     let auth_scope = RuntimeAuthScope::new();
     auth_scope.set("usr_self", "https://api.vrchat.cloud/api/1");
     let event_bus = RuntimeEventBus::new();
+    let world_cache = Arc::new(WorldCache::new(MemoryWorldCachePort::default()));
     let coordinator = FavoriteMutationCoordinator::new(
         Arc::clone(&store) as Arc<dyn FavoriteStore>,
         Arc::new(TestFavoriteRemote::default()),
@@ -31,12 +34,14 @@ fn harness(_name: &str) -> Harness {
             event_bus.clone(),
             auth_scope,
             Arc::new(RemoteMutationGate::default()),
+            Arc::clone(&world_cache),
         ),
     );
     Harness {
         coordinator,
         store,
         event_bus,
+        world_cache,
     }
 }
 
@@ -288,6 +293,7 @@ async fn remote_group_clear_rejects_scope_replaced_while_request_is_in_flight() 
             event_bus.clone(),
             auth_scope,
             Arc::new(RemoteMutationGate::default()),
+            Arc::new(WorldCache::new(MemoryWorldCachePort::default())),
         ),
     );
 
@@ -307,4 +313,57 @@ async fn remote_group_clear_rejects_scope_replaced_while_request_is_in_flight() 
         "Remote favorite mutation authentication scope changed."
     );
     assert!(event_bus.take_events_for_test().is_empty());
+}
+
+#[tokio::test]
+async fn local_world_transfer_caches_the_world_through_the_world_cache_owner() {
+    let harness = harness("local-world-transfer-cache");
+    harness
+        .store
+        .add(
+            Some(&OwnerId::new("usr_self")),
+            FavoriteEntityKind::World,
+            "wrld_transfer".into(),
+            "Source".into(),
+        )
+        .unwrap();
+
+    let output = harness
+        .coordinator
+        .transfer_selection(FavoriteTransferSelectionInput {
+            batches: vec![FavoriteTransferInput {
+                kind: FavoriteEntityKind::World,
+                mode: FavoriteTransferMode::Copy,
+                source: FavoriteTransferSource {
+                    location: FavoriteTransferLocation::Local,
+                    group: "Source".into(),
+                },
+                target: FavoriteTransferTarget {
+                    location: FavoriteTransferLocation::Local,
+                    group: "Target".into(),
+                    favorite_type: None,
+                },
+                items: vec![FavoriteTransferItem {
+                    key: "local:Source:wrld_transfer".into(),
+                    entity_id: "wrld_transfer".into(),
+                    entity: Some(
+                        json!({
+                            "id": "wrld_transfer",
+                            "name": "Transferred world",
+                            "releaseStatus": "public",
+                            "imageUrl": "https://example.test/world.png"
+                        })
+                        .into(),
+                    ),
+                }],
+            }],
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(output.succeeded, 1);
+    assert_eq!(
+        harness.world_cache.get_name("wrld_transfer").as_deref(),
+        Some("Transferred world")
+    );
 }

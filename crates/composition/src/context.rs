@@ -91,7 +91,12 @@ impl RuntimeHostDesktopAssemblyDeps {
         web: Arc<WebClient>,
         image_cache: Arc<ImageCache>,
     ) -> Self {
-        Self::from_context(Arc::new(RuntimeHostContext::new(db, web, image_cache)))
+        Self::from_context(Arc::new(RuntimeHostContext::new(
+            db,
+            web,
+            image_cache,
+            TaskSupervisor::new(),
+        )))
     }
 
     pub(crate) fn from_context(context: Arc<RuntimeHostContext>) -> Self {
@@ -258,6 +263,7 @@ impl RuntimeHostContext {
         db: Arc<DatabaseService>,
         web: Arc<WebClient>,
         image_cache: Arc<ImageCache>,
+        tasks: TaskSupervisor,
     ) -> Self {
         let config = ConfigRepository::new(Arc::clone(&db));
         let notification_config: Arc<dyn NotificationConfig> = Arc::new(
@@ -282,7 +288,6 @@ impl RuntimeHostContext {
         let diagnostics = RuntimeDiagnostics::new();
         let sync = RuntimeSyncEngine::new();
         let auth_scope = RuntimeAuthScope::new();
-        let tasks = TaskSupervisor::new();
         let session = HostSessionRuntime::new();
         let avatar_cache = Arc::new(AvatarCache::new(
             vrcx_0_outbound_adapters::LocalAvatarCacheAdapter::new(
@@ -359,6 +364,7 @@ impl RuntimeHostContext {
                 Arc::clone(&web),
                 diagnostics.clone(),
                 sync.clone(),
+                Arc::clone(&world_cache),
             ));
         let favorite_mutations = FavoriteMutationCoordinator::new(
             Arc::clone(&favorite_store),
@@ -369,6 +375,7 @@ impl RuntimeHostContext {
                 event_bus.clone(),
                 auth_scope.clone(),
                 Arc::clone(&remote_mutations),
+                Arc::clone(&world_cache),
             ),
         );
         Self {

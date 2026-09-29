@@ -29,7 +29,11 @@ impl LlmClient {
     ) -> Result<LlmEndpointDetectModelsResult, LlmError> {
         let root = self.bedrock_control_plane();
         let url = format!("{root}/foundation-models?byOutputModality=TEXT");
-        let response = self.bedrock_request(self.http.get(&url)).send().await?;
+        let response = self
+            .bedrock_request(self.http.get(&url))
+            .timeout(self.request_timeout)
+            .send()
+            .await?;
         let status = response.status();
         let body = response.text().await?;
         if !status.is_success() {
@@ -56,6 +60,7 @@ impl LlmClient {
                 self.http
                     .get(format!("{root}/inference-profiles?maxResults=1000")),
             )
+            .timeout(self.request_timeout)
             .send()
             .await
         {
@@ -92,6 +97,7 @@ impl LlmClient {
         let response = self
             .bedrock_request(self.http.post(url))
             .json(&bedrock_body(messages, tools))
+            .timeout(self.request_timeout)
             .send()
             .await?;
         let status = response.status();

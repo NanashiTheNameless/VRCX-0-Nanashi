@@ -1,29 +1,4 @@
 use vrcx_0_application::remote::VrchatApiRuntime;
-use vrcx_0_application::remote::{
-    AvatarListSort as ApplicationAvatarListSort,
-    CalendarListParams as ApplicationCalendarListParams,
-    EmojiLoopStyle as ApplicationEmojiLoopStyle, EmojiUploadParams as ApplicationEmojiUploadParams,
-    GroupSearchParams as ApplicationGroupSearchParams,
-    ImageAnimationStyle as ApplicationImageAnimationStyle, ImageMaskTag as ApplicationImageMaskTag,
-    InstanceCreateGroupAccessType as ApplicationInstanceCreateGroupAccessType,
-    InstanceCreateMinimumAvatarPerformance as ApplicationInstanceCreateMinimumAvatarPerformance,
-    InstanceCreateRegion as ApplicationInstanceCreateRegion,
-    InstanceCreateRequest as ApplicationInstanceCreateRequest,
-    InstanceCreateType as ApplicationInstanceCreateType,
-    InventoryItemUpdateRequest as ApplicationInventoryItemUpdateRequest,
-    InventoryListParams as ApplicationInventoryListParams,
-    InventoryOrder as ApplicationInventoryOrder, InviteMessageType as ApplicationInviteMessageType,
-    MediaAssetUploadRequest as ApplicationMediaAssetUploadRequest,
-    MediaFileListParams as ApplicationMediaFileListParams, MediaFileTag as ApplicationMediaFileTag,
-    PrintUploadParams as ApplicationPrintUploadParams,
-    ProfileDecorationEquipSlot as ApplicationProfileDecorationEquipSlot,
-    QueryOrder as ApplicationQueryOrder, ReleaseStatusFilter as ApplicationReleaseStatusFilter,
-    RequestInviteRequest as ApplicationRequestInviteRequest,
-    UserSearchCustomField as ApplicationUserSearchCustomField,
-    UserSearchParams as ApplicationUserSearchParams, UserSearchSort as ApplicationUserSearchSort,
-    WorldSearchParams as ApplicationWorldSearchParams,
-    WorldSearchSort as ApplicationWorldSearchSort,
-};
 use vrcx_0_application_core::vrchat_api::{VrchatApiRequest, VrchatApiResponse, VrchatScope};
 use vrcx_0_application_core::Result;
 use vrcx_0_core::vrchat_endpoints::VRCHAT_API_DEFAULT_ENDPOINT;
@@ -38,9 +13,7 @@ use vrcx_0_vrchat_client::favorites::{favorite_groups_get_input, favorite_worlds
 use vrcx_0_vrchat_client::friends::friend_status_get_input;
 use vrcx_0_vrchat_client::instances::{
     instance_close_input, instance_create_input, instance_get_input, instance_self_invite_input,
-    instance_short_name_get_input, InstanceCreateGroupAccessType,
-    InstanceCreateMinimumAvatarPerformance, InstanceCreateRegion, InstanceCreateRequest,
-    InstanceCreateType,
+    instance_short_name_get_input, InstanceCreateRequest,
 };
 use vrcx_0_vrchat_client::media::{
     asset_upload_input, avatar_gallery_image_upload_input, file_delete_input, files_get_input,
@@ -48,18 +21,14 @@ use vrcx_0_vrchat_client::media::{
     inventory_item_update_input, inventory_items_get_input, inventory_slot_unequip_input,
     inventory_template_get_input, print_delete_input, print_get_input, print_upload_input,
     prints_get_input, reward_redeem_input, sticker_upload_input, tagged_image_upload_input,
-    user_inventory_item_get_input, EmojiLoopStyle, EmojiUploadParams, ImageAnimationStyle,
-    ImageMaskTag, InventoryItemUpdateRequest, InventoryListParams, InventoryOrder,
-    MediaAssetUploadRequest, MediaFileListParams, MediaFileTag, PrintUploadParams,
+    user_inventory_item_get_input, EmojiUploadParams, InventoryItemUpdateRequest,
+    InventoryListParams, MediaAssetUploadRequest, MediaFileListParams, PrintUploadParams,
     ProfileDecorationEquipSlot,
 };
 use vrcx_0_vrchat_client::notifications::{
     boop_send_input, request_invite_photo_input, request_invite_send_input, RequestInviteRequest,
 };
-use vrcx_0_vrchat_client::query::{
-    AvatarListSort, QueryOrder, ReleaseStatusFilter, UserSearchCustomField, UserSearchSort,
-    WorldSearchSort,
-};
+use vrcx_0_vrchat_client::query::{AvatarListSort, QueryOrder, ReleaseStatusFilter};
 use vrcx_0_vrchat_client::search::{
     search_groups_get_input, search_groups_strict_get_input, search_instance_short_name_get_input,
     search_users_get_input, search_worlds_get_input, GroupSearchParams, UserSearchParams,
@@ -234,9 +203,9 @@ impl DesktopVrchatRemoteFacade {
         user: String,
         n: i32,
         offset: i32,
-        sort: ApplicationAvatarListSort,
-        order: ApplicationQueryOrder,
-        release_status: ApplicationReleaseStatusFilter,
+        sort: AvatarListSort,
+        order: QueryOrder,
+        release_status: ReleaseStatusFilter,
     ) -> Result<VrchatApiResponse> {
         let (display_user, request) = avatar_list_by_user_get_input(AvatarListByUserGetInput {
             endpoint: VRCHAT_API_DEFAULT_ENDPOINT.into(),
@@ -244,9 +213,9 @@ impl DesktopVrchatRemoteFacade {
             user,
             n,
             offset,
-            sort: avatar_list_sort(sort),
-            order: query_order(order),
-            release_status: release_status_filter(release_status),
+            sort,
+            order,
+            release_status,
         })?;
         self.execute(
             "app__vrchat_avatar_list_by_user_get",
@@ -306,15 +275,12 @@ impl DesktopVrchatRemoteFacade {
 
     pub async fn instance_create(
         &self,
-        params: ApplicationInstanceCreateRequest,
+        params: InstanceCreateRequest,
     ) -> Result<VrchatApiResponse> {
         self.execute(
             "app__vrchat_instance_create",
             "Creating instance.",
-            instance_create_input(
-                VRCHAT_API_DEFAULT_ENDPOINT.into(),
-                instance_create_request(params),
-            )?,
+            instance_create_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), params)?,
             VrchatScope::Vrchat,
         )
         .await
@@ -359,49 +325,33 @@ impl DesktopVrchatRemoteFacade {
 
     pub async fn search_worlds(
         &self,
-        params: ApplicationWorldSearchParams,
+        params: WorldSearchParams,
         option: Option<String>,
     ) -> Result<VrchatApiResponse> {
         self.execute(
             "app__vrchat_search_worlds_get",
             "Searching worlds.",
-            search_worlds_get_input(
-                VRCHAT_API_DEFAULT_ENDPOINT.into(),
-                world_search_params(params),
-                option,
-            ),
+            search_worlds_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), params, option),
             VrchatScope::Vrchat,
         )
         .await
     }
 
-    pub async fn search_users(
-        &self,
-        params: ApplicationUserSearchParams,
-    ) -> Result<VrchatApiResponse> {
+    pub async fn search_users(&self, params: UserSearchParams) -> Result<VrchatApiResponse> {
         self.execute(
             "app__vrchat_search_users_get",
             "Searching users.",
-            search_users_get_input(
-                VRCHAT_API_DEFAULT_ENDPOINT.into(),
-                user_search_params(params),
-            ),
+            search_users_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), params),
             VrchatScope::Vrchat,
         )
         .await
     }
 
-    pub async fn search_groups(
-        &self,
-        params: ApplicationGroupSearchParams,
-    ) -> Result<VrchatApiResponse> {
+    pub async fn search_groups(&self, params: GroupSearchParams) -> Result<VrchatApiResponse> {
         self.execute(
             "app__vrchat_search_groups_get",
             "Searching groups.",
-            search_groups_get_input(
-                VRCHAT_API_DEFAULT_ENDPOINT.into(),
-                group_search_params(params),
-            ),
+            search_groups_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), params),
             VrchatScope::Vrchat,
         )
         .await
@@ -409,15 +359,12 @@ impl DesktopVrchatRemoteFacade {
 
     pub async fn search_groups_strict(
         &self,
-        params: ApplicationGroupSearchParams,
+        params: GroupSearchParams,
     ) -> Result<VrchatApiResponse> {
         self.execute(
             "app__vrchat_search_groups_strict_get",
             "Strict searching groups.",
-            search_groups_strict_get_input(
-                VRCHAT_API_DEFAULT_ENDPOINT.into(),
-                group_search_params(params),
-            ),
+            search_groups_strict_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), params),
             VrchatScope::Vrchat,
         )
         .await
@@ -452,15 +399,12 @@ impl DesktopVrchatRemoteFacade {
 
     pub async fn following_calendars(
         &self,
-        params: ApplicationCalendarListParams,
+        params: CalendarListParams,
     ) -> Result<VrchatApiResponse> {
         self.execute(
             "app__vrchat_tools_following_calendars_get",
             "Getting followed group calendars.",
-            following_calendars_get_input(
-                VRCHAT_API_DEFAULT_ENDPOINT.into(),
-                calendar_list_params(params),
-            ),
+            following_calendars_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), params),
             VrchatScope::Vrchat,
         )
         .await
@@ -534,12 +478,12 @@ impl DesktopVrchatRemoteFacade {
     pub async fn invite_messages(
         &self,
         current_user_id: String,
-        message_type: ApplicationInviteMessageType,
+        message_type: InviteMessageType,
     ) -> Result<VrchatApiResponse> {
         let (current_user_id, request) = invite_messages_get_input(
             VRCHAT_API_DEFAULT_ENDPOINT.into(),
             current_user_id,
-            invite_message_type(message_type),
+            message_type,
         )?;
         self.execute(
             "app__vrchat_tools_invite_messages_get",
@@ -553,14 +497,14 @@ impl DesktopVrchatRemoteFacade {
     pub async fn edit_invite_message(
         &self,
         current_user_id: String,
-        message_type: ApplicationInviteMessageType,
+        message_type: InviteMessageType,
         slot: i32,
         message: String,
     ) -> Result<VrchatApiResponse> {
         let (slot, request) = invite_message_edit_input(
             VRCHAT_API_DEFAULT_ENDPOINT.into(),
             current_user_id,
-            invite_message_type(message_type),
+            message_type,
             slot,
             message,
         )?;
@@ -576,12 +520,12 @@ impl DesktopVrchatRemoteFacade {
     pub async fn request_invite(
         &self,
         receiver_user_id: String,
-        params: ApplicationRequestInviteRequest,
+        params: RequestInviteRequest,
     ) -> Result<VrchatApiResponse> {
         let (receiver_user_id, request) = request_invite_send_input(
             VRCHAT_API_DEFAULT_ENDPOINT.into(),
             receiver_user_id,
-            request_invite_request(params),
+            params,
         )?;
         self.execute(
             "app__vrchat_request_invite_send",
@@ -595,13 +539,13 @@ impl DesktopVrchatRemoteFacade {
     pub async fn request_invite_photo(
         &self,
         receiver_user_id: String,
-        params: ApplicationRequestInviteRequest,
+        params: RequestInviteRequest,
         image_data: String,
     ) -> Result<VrchatApiResponse> {
         let (receiver_user_id, request) = request_invite_photo_input(
             VRCHAT_API_DEFAULT_ENDPOINT.into(),
             receiver_user_id,
-            request_invite_request(params),
+            params,
             image_data,
         )?;
         let request = self.media.prepare_media_upload_request(request)?;
@@ -635,17 +579,11 @@ impl DesktopVrchatRemoteFacade {
         .await
     }
 
-    pub async fn media_files(
-        &self,
-        params: ApplicationMediaFileListParams,
-    ) -> Result<VrchatApiResponse> {
+    pub async fn media_files(&self, params: MediaFileListParams) -> Result<VrchatApiResponse> {
         self.execute(
             "app__vrchat_media_files_get",
             "Getting media files.",
-            files_get_input(
-                VRCHAT_API_DEFAULT_ENDPOINT.into(),
-                media_file_list_params(params),
-            ),
+            files_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), params),
             VrchatScope::VrchatMedia,
         )
         .await
@@ -714,13 +652,13 @@ impl DesktopVrchatRemoteFacade {
     pub async fn upload_emoji(
         &self,
         image_data: String,
-        params: ApplicationEmojiUploadParams,
+        params: EmojiUploadParams,
     ) -> Result<VrchatApiResponse> {
         let request = image_upload_input(
             VRCHAT_API_DEFAULT_ENDPOINT.into(),
             "file/image",
             image_data,
-            emoji_upload_params(params),
+            params,
             true,
         )?;
         self.execute_media_upload(
@@ -745,13 +683,13 @@ impl DesktopVrchatRemoteFacade {
         &self,
         image_data: String,
         crop_white_border: bool,
-        params: ApplicationPrintUploadParams,
+        params: PrintUploadParams,
     ) -> Result<VrchatApiResponse> {
         let request = print_upload_input(
             VRCHAT_API_DEFAULT_ENDPOINT.into(),
             image_data,
             crop_white_border,
-            print_upload_params(params),
+            params,
         )?;
         self.execute_media_upload(
             "app__vrchat_media_print_upload",
@@ -763,12 +701,9 @@ impl DesktopVrchatRemoteFacade {
 
     pub async fn upload_media_asset(
         &self,
-        input: ApplicationMediaAssetUploadRequest,
+        input: MediaAssetUploadRequest,
     ) -> Result<VrchatApiResponse> {
-        let (asset_kind, request) = asset_upload_input(
-            VRCHAT_API_DEFAULT_ENDPOINT.into(),
-            media_asset_upload_request(input),
-        )?;
+        let (asset_kind, request) = asset_upload_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), input)?;
         self.execute_media_upload(
             "app__vrchat_media_asset_upload",
             format!("Uploading media asset {asset_kind}."),
@@ -814,17 +749,11 @@ impl DesktopVrchatRemoteFacade {
         .await
     }
 
-    pub async fn inventory_items(
-        &self,
-        params: ApplicationInventoryListParams,
-    ) -> Result<VrchatApiResponse> {
+    pub async fn inventory_items(&self, params: InventoryListParams) -> Result<VrchatApiResponse> {
         self.execute(
             "app__vrchat_media_inventory_items_get",
             "Getting inventory items.",
-            inventory_items_get_input(
-                VRCHAT_API_DEFAULT_ENDPOINT.into(),
-                inventory_list_params(params),
-            ),
+            inventory_items_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), params),
             VrchatScope::VrchatMedia,
         )
         .await
@@ -851,13 +780,13 @@ impl DesktopVrchatRemoteFacade {
     pub async fn equip_profile_decoration(
         &self,
         inventory_id: String,
-        equip_slot: ApplicationProfileDecorationEquipSlot,
+        equip_slot: ProfileDecorationEquipSlot,
     ) -> Result<VrchatApiResponse> {
         let detail = format!("Equipping profile decoration {inventory_id}.");
         let request = inventory_item_equip_input(
             VRCHAT_API_DEFAULT_ENDPOINT.into(),
             inventory_id,
-            profile_decoration_equip_slot(equip_slot),
+            equip_slot,
         )?;
         self.execute(
             "app__vrchat_media_profile_decoration_equip",
@@ -870,9 +799,8 @@ impl DesktopVrchatRemoteFacade {
 
     pub async fn unequip_profile_decoration(
         &self,
-        equip_slot: ApplicationProfileDecorationEquipSlot,
+        equip_slot: ProfileDecorationEquipSlot,
     ) -> Result<VrchatApiResponse> {
-        let equip_slot = profile_decoration_equip_slot(equip_slot);
         let detail = format!(
             "Unequipping profile decoration slot {}.",
             equip_slot.as_str()
@@ -910,7 +838,7 @@ impl DesktopVrchatRemoteFacade {
     pub async fn update_inventory_item(
         &self,
         inventory_id: String,
-        params: ApplicationInventoryItemUpdateRequest,
+        params: InventoryItemUpdateRequest,
     ) -> Result<VrchatApiResponse> {
         let detail = format!("Updating inventory item {inventory_id}.");
         let request = inventory_item_update_input(
@@ -975,330 +903,5 @@ impl DesktopVrchatRemoteFacade {
         scope: VrchatScope,
     ) -> Result<VrchatApiResponse> {
         self.api.execute(command, detail, request, scope).await
-    }
-}
-
-fn avatar_list_sort(value: ApplicationAvatarListSort) -> AvatarListSort {
-    match value {
-        ApplicationAvatarListSort::Created => AvatarListSort::Created,
-        ApplicationAvatarListSort::Updated => AvatarListSort::Updated,
-        ApplicationAvatarListSort::Order => AvatarListSort::Order,
-        ApplicationAvatarListSort::CreatedAt => AvatarListSort::CreatedAt,
-        ApplicationAvatarListSort::UpdatedAt => AvatarListSort::UpdatedAt,
-    }
-}
-
-fn query_order(value: ApplicationQueryOrder) -> QueryOrder {
-    match value {
-        ApplicationQueryOrder::Ascending => QueryOrder::Ascending,
-        ApplicationQueryOrder::Descending => QueryOrder::Descending,
-    }
-}
-
-fn release_status_filter(value: ApplicationReleaseStatusFilter) -> ReleaseStatusFilter {
-    match value {
-        ApplicationReleaseStatusFilter::All => ReleaseStatusFilter::All,
-        ApplicationReleaseStatusFilter::Hidden => ReleaseStatusFilter::Hidden,
-        ApplicationReleaseStatusFilter::Private => ReleaseStatusFilter::Private,
-        ApplicationReleaseStatusFilter::Public => ReleaseStatusFilter::Public,
-    }
-}
-
-fn world_search_sort(value: ApplicationWorldSearchSort) -> WorldSearchSort {
-    match value {
-        ApplicationWorldSearchSort::CreatedAt => WorldSearchSort::CreatedAt,
-        ApplicationWorldSearchSort::UpdatedAt => WorldSearchSort::UpdatedAt,
-        ApplicationWorldSearchSort::Created => WorldSearchSort::Created,
-        ApplicationWorldSearchSort::Favorites => WorldSearchSort::Favorites,
-        ApplicationWorldSearchSort::Heat => WorldSearchSort::Heat,
-        ApplicationWorldSearchSort::LabsPublicationDate => WorldSearchSort::LabsPublicationDate,
-        ApplicationWorldSearchSort::Magic => WorldSearchSort::Magic,
-        ApplicationWorldSearchSort::Name => WorldSearchSort::Name,
-        ApplicationWorldSearchSort::Order => WorldSearchSort::Order,
-        ApplicationWorldSearchSort::Popularity => WorldSearchSort::Popularity,
-        ApplicationWorldSearchSort::PublicationDate => WorldSearchSort::PublicationDate,
-        ApplicationWorldSearchSort::Random => WorldSearchSort::Random,
-        ApplicationWorldSearchSort::Relevance => WorldSearchSort::Relevance,
-        ApplicationWorldSearchSort::ReportCount => WorldSearchSort::ReportCount,
-        ApplicationWorldSearchSort::ReportScore => WorldSearchSort::ReportScore,
-        ApplicationWorldSearchSort::Shuffle => WorldSearchSort::Shuffle,
-        ApplicationWorldSearchSort::Trust => WorldSearchSort::Trust,
-        ApplicationWorldSearchSort::Updated => WorldSearchSort::Updated,
-    }
-}
-
-fn user_search_custom_field(value: ApplicationUserSearchCustomField) -> UserSearchCustomField {
-    match value {
-        ApplicationUserSearchCustomField::Bio => UserSearchCustomField::Bio,
-        ApplicationUserSearchCustomField::DisplayName => UserSearchCustomField::DisplayName,
-    }
-}
-
-fn user_search_sort(value: ApplicationUserSearchSort) -> UserSearchSort {
-    match value {
-        ApplicationUserSearchSort::CreatedAt => UserSearchSort::CreatedAt,
-        ApplicationUserSearchSort::Created => UserSearchSort::Created,
-        ApplicationUserSearchSort::LastLogin => UserSearchSort::LastLogin,
-        ApplicationUserSearchSort::NuisanceFactor => UserSearchSort::NuisanceFactor,
-        ApplicationUserSearchSort::Relevance => UserSearchSort::Relevance,
-    }
-}
-
-fn world_search_params(value: ApplicationWorldSearchParams) -> WorldSearchParams {
-    WorldSearchParams {
-        featured: value.featured,
-        sort: value.sort.map(world_search_sort),
-        user: value.user,
-        user_id: value.user_id,
-        n: value.n,
-        order: value.order.map(query_order),
-        offset: value.offset,
-        search: value.search,
-        tag: value.tag,
-        notag: value.notag,
-        release_status: value.release_status.map(release_status_filter),
-        max_unity_version: value.max_unity_version,
-        min_unity_version: value.min_unity_version,
-        platform: value.platform,
-        noplatform: value.noplatform,
-        fuzzy: value.fuzzy,
-        avatar_specific: value.avatar_specific,
-    }
-}
-
-fn user_search_params(value: ApplicationUserSearchParams) -> UserSearchParams {
-    UserSearchParams {
-        search: value.search,
-        developer_type: value.developer_type,
-        n: value.n,
-        offset: value.offset,
-        is_internal_variant: value.is_internal_variant,
-        custom_fields: value.custom_fields.map(user_search_custom_field),
-        sort: value.sort.map(user_search_sort),
-        order: value.order.map(query_order),
-    }
-}
-
-fn group_search_params(value: ApplicationGroupSearchParams) -> GroupSearchParams {
-    GroupSearchParams {
-        query: value.query,
-        offset: value.offset,
-        n: value.n,
-    }
-}
-
-fn instance_create_request(value: ApplicationInstanceCreateRequest) -> InstanceCreateRequest {
-    InstanceCreateRequest {
-        r#type: match value.r#type {
-            ApplicationInstanceCreateType::Friends => InstanceCreateType::Friends,
-            ApplicationInstanceCreateType::Group => InstanceCreateType::Group,
-            ApplicationInstanceCreateType::Hidden => InstanceCreateType::Hidden,
-            ApplicationInstanceCreateType::Private => InstanceCreateType::Private,
-            ApplicationInstanceCreateType::Public => InstanceCreateType::Public,
-        },
-        can_request_invite: value.can_request_invite,
-        world_id: value.world_id,
-        owner_id: value.owner_id,
-        region: match value.region {
-            ApplicationInstanceCreateRegion::Eu => InstanceCreateRegion::Eu,
-            ApplicationInstanceCreateRegion::Jp => InstanceCreateRegion::Jp,
-            ApplicationInstanceCreateRegion::Us => InstanceCreateRegion::Us,
-            ApplicationInstanceCreateRegion::Use => InstanceCreateRegion::Use,
-        },
-        group_access_type: value.group_access_type.map(|value| match value {
-            ApplicationInstanceCreateGroupAccessType::Members => {
-                InstanceCreateGroupAccessType::Members
-            }
-            ApplicationInstanceCreateGroupAccessType::Plus => InstanceCreateGroupAccessType::Plus,
-            ApplicationInstanceCreateGroupAccessType::Public => {
-                InstanceCreateGroupAccessType::Public
-            }
-        }),
-        queue_enabled: value.queue_enabled,
-        role_ids: value.role_ids,
-        age_gate: value.age_gate,
-        display_name: value.display_name,
-        minimum_avatar_performance: value.minimum_avatar_performance.map(|value| match value {
-            ApplicationInstanceCreateMinimumAvatarPerformance::Poor => {
-                InstanceCreateMinimumAvatarPerformance::Poor
-            }
-            ApplicationInstanceCreateMinimumAvatarPerformance::Medium => {
-                InstanceCreateMinimumAvatarPerformance::Medium
-            }
-            ApplicationInstanceCreateMinimumAvatarPerformance::Good => {
-                InstanceCreateMinimumAvatarPerformance::Good
-            }
-        }),
-    }
-}
-
-fn calendar_list_params(value: ApplicationCalendarListParams) -> CalendarListParams {
-    CalendarListParams {
-        n: value.n,
-        offset: value.offset,
-        date: value.date,
-    }
-}
-
-fn invite_message_type(value: ApplicationInviteMessageType) -> InviteMessageType {
-    match value {
-        ApplicationInviteMessageType::Message => InviteMessageType::Message,
-        ApplicationInviteMessageType::Request => InviteMessageType::Request,
-        ApplicationInviteMessageType::RequestResponse => InviteMessageType::RequestResponse,
-        ApplicationInviteMessageType::Response => InviteMessageType::Response,
-    }
-}
-
-fn request_invite_request(value: ApplicationRequestInviteRequest) -> RequestInviteRequest {
-    RequestInviteRequest {
-        request_slot: value.request_slot,
-    }
-}
-
-fn media_file_list_params(value: ApplicationMediaFileListParams) -> MediaFileListParams {
-    MediaFileListParams {
-        n: value.n,
-        offset: value.offset,
-        tag: value.tag.map(|value| match value {
-            ApplicationMediaFileTag::Gallery => MediaFileTag::Gallery,
-            ApplicationMediaFileTag::AvatarGallery => MediaFileTag::AvatarGallery,
-            ApplicationMediaFileTag::Icon => MediaFileTag::Icon,
-            ApplicationMediaFileTag::Emoji => MediaFileTag::Emoji,
-            ApplicationMediaFileTag::EmojiAnimated => MediaFileTag::EmojiAnimated,
-            ApplicationMediaFileTag::Sticker => MediaFileTag::Sticker,
-        }),
-    }
-}
-
-fn image_animation_style(value: ApplicationImageAnimationStyle) -> ImageAnimationStyle {
-    match value {
-        ApplicationImageAnimationStyle::Aura => ImageAnimationStyle::Aura,
-        ApplicationImageAnimationStyle::Bats => ImageAnimationStyle::Bats,
-        ApplicationImageAnimationStyle::Bees => ImageAnimationStyle::Bees,
-        ApplicationImageAnimationStyle::Bounce => ImageAnimationStyle::Bounce,
-        ApplicationImageAnimationStyle::Cloud => ImageAnimationStyle::Cloud,
-        ApplicationImageAnimationStyle::Confetti => ImageAnimationStyle::Confetti,
-        ApplicationImageAnimationStyle::Crying => ImageAnimationStyle::Crying,
-        ApplicationImageAnimationStyle::Dislike => ImageAnimationStyle::Dislike,
-        ApplicationImageAnimationStyle::Fire => ImageAnimationStyle::Fire,
-        ApplicationImageAnimationStyle::Idea => ImageAnimationStyle::Idea,
-        ApplicationImageAnimationStyle::Lasers => ImageAnimationStyle::Lasers,
-        ApplicationImageAnimationStyle::Like => ImageAnimationStyle::Like,
-        ApplicationImageAnimationStyle::Magnet => ImageAnimationStyle::Magnet,
-        ApplicationImageAnimationStyle::Mistletoe => ImageAnimationStyle::Mistletoe,
-        ApplicationImageAnimationStyle::Money => ImageAnimationStyle::Money,
-        ApplicationImageAnimationStyle::Noise => ImageAnimationStyle::Noise,
-        ApplicationImageAnimationStyle::Orbit => ImageAnimationStyle::Orbit,
-        ApplicationImageAnimationStyle::Pizza => ImageAnimationStyle::Pizza,
-        ApplicationImageAnimationStyle::Rain => ImageAnimationStyle::Rain,
-        ApplicationImageAnimationStyle::Rotate => ImageAnimationStyle::Rotate,
-        ApplicationImageAnimationStyle::Shake => ImageAnimationStyle::Shake,
-        ApplicationImageAnimationStyle::Snow => ImageAnimationStyle::Snow,
-        ApplicationImageAnimationStyle::Snowball => ImageAnimationStyle::Snowball,
-        ApplicationImageAnimationStyle::Spin => ImageAnimationStyle::Spin,
-        ApplicationImageAnimationStyle::Splash => ImageAnimationStyle::Splash,
-        ApplicationImageAnimationStyle::Stop => ImageAnimationStyle::Stop,
-        ApplicationImageAnimationStyle::Zzz => ImageAnimationStyle::Zzz,
-    }
-}
-
-fn emoji_upload_params(value: ApplicationEmojiUploadParams) -> EmojiUploadParams {
-    match value {
-        ApplicationEmojiUploadParams::Emoji {
-            animation_style,
-            mask_tag,
-        } => EmojiUploadParams::Emoji {
-            animation_style: image_animation_style(animation_style),
-            mask_tag: match mask_tag {
-                ApplicationImageMaskTag::Square => ImageMaskTag::Square,
-            },
-        },
-        ApplicationEmojiUploadParams::EmojiAnimated {
-            animation_style,
-            mask_tag,
-            frames,
-            frames_over_time,
-            loop_style,
-        } => EmojiUploadParams::EmojiAnimated {
-            animation_style: image_animation_style(animation_style),
-            mask_tag: match mask_tag {
-                ApplicationImageMaskTag::Square => ImageMaskTag::Square,
-            },
-            frames,
-            frames_over_time,
-            loop_style: loop_style.map(|value| match value {
-                ApplicationEmojiLoopStyle::PingPong => EmojiLoopStyle::PingPong,
-            }),
-        },
-    }
-}
-
-fn print_upload_params(value: ApplicationPrintUploadParams) -> PrintUploadParams {
-    PrintUploadParams {
-        note: value.note,
-        timestamp: value.timestamp,
-    }
-}
-
-fn inventory_list_params(value: ApplicationInventoryListParams) -> InventoryListParams {
-    InventoryListParams {
-        n: value.n,
-        offset: value.offset,
-        holder_id: value.holder_id,
-        equip_slot: value.equip_slot,
-        order: value.order.map(|value| match value {
-            ApplicationInventoryOrder::Newest => InventoryOrder::Newest,
-        }),
-        tags: value.tags,
-        types: value.types,
-        flags: value.flags,
-        not_types: value.not_types,
-        not_flags: value.not_flags,
-        archived: value.archived,
-    }
-}
-
-fn profile_decoration_equip_slot(
-    value: ApplicationProfileDecorationEquipSlot,
-) -> ProfileDecorationEquipSlot {
-    match value {
-        ApplicationProfileDecorationEquipSlot::IconFrame => ProfileDecorationEquipSlot::IconFrame,
-        ApplicationProfileDecorationEquipSlot::ProfileEffect => {
-            ProfileDecorationEquipSlot::ProfileEffect
-        }
-        ApplicationProfileDecorationEquipSlot::NameplateEffect => {
-            ProfileDecorationEquipSlot::NameplateEffect
-        }
-    }
-}
-
-fn media_asset_upload_request(
-    value: ApplicationMediaAssetUploadRequest,
-) -> MediaAssetUploadRequest {
-    match value {
-        ApplicationMediaAssetUploadRequest::Gallery { image_data } => {
-            MediaAssetUploadRequest::Gallery { image_data }
-        }
-        ApplicationMediaAssetUploadRequest::Icons { image_data } => {
-            MediaAssetUploadRequest::Icons { image_data }
-        }
-        ApplicationMediaAssetUploadRequest::Emojis { image_data, params } => {
-            MediaAssetUploadRequest::Emojis {
-                image_data,
-                params: emoji_upload_params(params),
-            }
-        }
-        ApplicationMediaAssetUploadRequest::Stickers { image_data } => {
-            MediaAssetUploadRequest::Stickers { image_data }
-        }
-        ApplicationMediaAssetUploadRequest::Prints {
-            image_data,
-            crop_white_border,
-            params,
-        } => MediaAssetUploadRequest::Prints {
-            image_data,
-            crop_white_border,
-            params: print_upload_params(params),
-        },
     }
 }

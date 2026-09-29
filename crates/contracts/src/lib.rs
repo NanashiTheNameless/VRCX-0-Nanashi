@@ -26,6 +26,7 @@ pub mod reminders;
 pub mod social_aggregates;
 mod translation;
 pub mod vrchat_api;
+pub mod vrchat_requests;
 mod web;
 pub mod world_collections;
 

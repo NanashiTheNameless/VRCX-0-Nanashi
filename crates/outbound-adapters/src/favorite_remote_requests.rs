@@ -7,7 +7,7 @@ use vrcx_0_application::favorites::{
 use vrcx_0_application_core::vrchat_api::{
     execute_api_command, VrchatApiRequest, VrchatApiResponse, VrchatScope,
 };
-use vrcx_0_application_core::{RuntimeDiagnostics, RuntimeSyncEngine, WebClient};
+use vrcx_0_application_core::{RuntimeDiagnostics, RuntimeSyncEngine, WebClient, WorldCache};
 use vrcx_0_vrchat_client::avatars::avatar_get_input;
 use vrcx_0_vrchat_client::favorites::{
     favorite_add_input, favorite_avatars_get_input, favorite_delete_input,
@@ -15,12 +15,12 @@ use vrcx_0_vrchat_client::favorites::{
     favorite_worlds_get_input, favorites_get_input,
 };
 use vrcx_0_vrchat_client::users::user_get_input;
-use vrcx_0_vrchat_client::worlds::world_get_input;
 
 pub struct VrchatFavoriteRemote {
     web: Arc<WebClient>,
     diagnostics: RuntimeDiagnostics,
     sync: RuntimeSyncEngine,
+    world_cache: Arc<WorldCache>,
 }
 
 impl VrchatFavoriteRemote {
@@ -28,11 +28,13 @@ impl VrchatFavoriteRemote {
         web: Arc<WebClient>,
         diagnostics: RuntimeDiagnostics,
         sync: RuntimeSyncEngine,
+        world_cache: Arc<WorldCache>,
     ) -> Self {
         Self {
             web,
             diagnostics,
             sync,
+            world_cache,
         }
     }
 
@@ -120,8 +122,9 @@ impl FavoriteRemote for VrchatFavoriteRemote {
         world_id: String,
     ) -> FavoriteRemoteFuture<'a, VrchatApiResponse> {
         Box::pin(async move {
-            let (_, request) = world_get_input(endpoint, world_id)?;
-            self.execute(request, None).await
+            self.world_cache
+                .get(self.web.as_ref(), &endpoint, &world_id, true, false)
+                .await
         })
     }
 

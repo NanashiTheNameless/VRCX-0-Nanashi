@@ -123,7 +123,7 @@ impl specta::Type for AppError {
 impl AppError {
     fn database(
         message: String,
-        sqlite_category: Option<vrcx_0_persistence::SqliteErrorCategory>,
+        sqlite_category: Option<vrcx_0_contracts::SqliteErrorCategory>,
     ) -> Self {
         Self::Database {
             message,
@@ -176,39 +176,13 @@ impl AppError {
     }
 }
 
-impl From<vrcx_0_persistence::SqliteErrorCategory> for SqliteErrorCategory {
-    fn from(value: vrcx_0_persistence::SqliteErrorCategory) -> Self {
+impl From<vrcx_0_contracts::SqliteErrorCategory> for SqliteErrorCategory {
+    fn from(value: vrcx_0_contracts::SqliteErrorCategory) -> Self {
         match value {
-            vrcx_0_persistence::SqliteErrorCategory::Malformed => Self::Malformed,
-            vrcx_0_persistence::SqliteErrorCategory::DiskFull => Self::DiskFull,
-            vrcx_0_persistence::SqliteErrorCategory::Locked => Self::Locked,
-            vrcx_0_persistence::SqliteErrorCategory::IoError => Self::IoError,
-        }
-    }
-}
-
-impl From<vrcx_0_persistence::Error> for AppError {
-    fn from(value: vrcx_0_persistence::Error) -> Self {
-        match value {
-            vrcx_0_persistence::Error::Database(message) => AppError::database(message, None),
-            vrcx_0_persistence::Error::Sqlite { message, category } => {
-                AppError::database(message, category)
-            }
-            vrcx_0_persistence::Error::Io(error) => AppError::Io(error),
-            vrcx_0_persistence::Error::Json(error) => AppError::Json(error),
-            vrcx_0_persistence::Error::InvalidData(message) => {
-                AppError::PersistenceInvalidData(message)
-            }
-            vrcx_0_persistence::Error::Custom(message) => AppError::Custom(message),
-        }
-    }
-}
-
-impl From<vrcx_0_media::Error> for AppError {
-    fn from(value: vrcx_0_media::Error) -> Self {
-        match value {
-            vrcx_0_media::Error::Io(error) => AppError::Io(error),
-            vrcx_0_media::Error::Custom(message) => AppError::Custom(message),
+            vrcx_0_contracts::SqliteErrorCategory::Malformed => Self::Malformed,
+            vrcx_0_contracts::SqliteErrorCategory::DiskFull => Self::DiskFull,
+            vrcx_0_contracts::SqliteErrorCategory::Locked => Self::Locked,
+            vrcx_0_contracts::SqliteErrorCategory::IoError => Self::IoError,
         }
     }
 }
@@ -367,24 +341,6 @@ impl From<vrcx_0_assistant::AssistantError> for AppError {
     }
 }
 
-impl From<vrcx_0_integrations::external_api::ExternalApiError> for AppError {
-    fn from(value: vrcx_0_integrations::external_api::ExternalApiError) -> Self {
-        match value {
-            vrcx_0_integrations::external_api::ExternalApiError::Custom(message) => {
-                AppError::Custom(message)
-            }
-        }
-    }
-}
-
-impl From<vrcx_0_vrchat_client::HttpApiError> for AppError {
-    fn from(value: vrcx_0_vrchat_client::HttpApiError) -> Self {
-        match value {
-            vrcx_0_vrchat_client::HttpApiError::Custom(message) => AppError::Custom(message),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -393,7 +349,7 @@ mod tests {
     fn serializes_structured_database_error_with_sqlite_category() {
         let payload = serde_json::to_value(AppError::database(
             "opaque storage failure".into(),
-            Some(vrcx_0_persistence::SqliteErrorCategory::DiskFull),
+            Some(vrcx_0_contracts::SqliteErrorCategory::DiskFull),
         ))
         .unwrap();
 

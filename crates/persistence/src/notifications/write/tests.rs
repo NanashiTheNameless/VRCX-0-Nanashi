@@ -438,6 +438,35 @@ fn notification_mutations_update_only_the_requested_rows() -> Result<(), Error> 
 }
 
 #[test]
+fn expiring_a_v1_notification_marks_it_seen() -> Result<(), Error> {
+    let (_dir, db) = test_db("notification-v1-expired-seen")?;
+    for id in ["flagged", "expired"] {
+        notification_add_v1(
+            &db,
+            "usr_self".into(),
+            json!({
+                "id": id,
+                "created_at": "2026-05-15T00:00:00Z",
+                "type": "friendRequest"
+            }),
+        )?;
+    }
+
+    notification_update_expired(&db, "usr_self".into(), "flagged".into(), true)?;
+    notification_expire(&db, "usr_self".into(), "expired".into())?;
+
+    for id in ["flagged", "expired"] {
+        let row = rows_by_id(
+            &db,
+            "SELECT expired, seen FROM usrself_notifications WHERE id = @id",
+            id,
+        )?;
+        assert_eq!(row, vec![vec![json!(1), json!(1)]], "{id}");
+    }
+    Ok(())
+}
+
+#[test]
 fn remote_seen_commit_marks_v1_and_v2_seen() -> Result<(), Error> {
     let (_dir, db) = test_db("remote-seen-commit")?;
     notification_add_v1(

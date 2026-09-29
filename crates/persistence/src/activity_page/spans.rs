@@ -9,6 +9,7 @@ use crate::Error;
 use vrcx_0_contracts::activity_page::{
     ActivityLocationSpan as LocationSpan, ActivityWindowSpans as WindowSpans,
 };
+use vrcx_0_core::activity_sessions::{span_duration_ms, SpanEnd};
 
 struct SourceRow {
     left_at: String,
@@ -29,6 +30,73 @@ pub fn read_instance_spans(
         spans: clip_spans(&spans_from_rows(&rows), from_ms, to_ms),
         has_open_tail: false,
     })
+}
+
+pub fn read_play_spans(
+    db: &DatabaseService,
+    owner_user_id: &OwnerId,
+    from_ms: Option<i64>,
+    to_ms: i64,
+    open_location: Option<&str>,
+) -> Result<Vec<LocationSpan>, Error> {
+    let mut spans = read_instance_spans(db, owner_user_id, from_ms, to_ms)?.spans;
+    let Some(location) = open_location else {
+        return Ok(spans);
+    };
+    if let Some(open) = read_open_instance_span(db, owner_user_id, location, to_ms)? {
+        spans.extend(clip_spans(&[open], from_ms, to_ms));
+    }
+    Ok(spans)
+}
+
+fn read_open_instance_span(
+    db: &DatabaseService,
+    owner_user_id: &OwnerId,
+    location: &str,
+    now_ms: i64,
+) -> Result<Option<LocationSpan>, Error> {
+    let location = location.trim();
+    if location.is_empty() {
+        return Ok(None);
+    }
+    ensure_game_log_tables(db)?;
+    let world_id_expr = world_id_from_location_sql("location");
+    let access_expr = access_bucket_sql("location");
+    let rows = db.execute(
+        &format!(
+            "SELECT created_at, time, {world_id_expr} AS world_id,
+                    COALESCE(world_name, '') AS world_name, {access_expr} AS access_bucket
+             FROM gamelog_location
+             WHERE owner_id IN (0, @owner_id) AND location = @location
+             ORDER BY created_at DESC, id DESC
+             LIMIT 1"
+        ),
+        &ParamsBuilder::new()
+            .set("owner_id", owner_id_for_filter(db, owner_user_id)?)
+            .set("location", location)
+            .build(),
+    )?;
+    let Some(row) = rows.first() else {
+        return Ok(None);
+    };
+    if row_i64(row, 1) != 0 {
+        return Ok(None);
+    }
+    let Some(start_ms) = parse_activity_time_ms(&row_string(row, 0)) else {
+        return Ok(None);
+    };
+    let duration_ms = span_duration_ms(start_ms, 0, SpanEnd::OpenTail, now_ms);
+    if duration_ms <= 0 {
+        return Ok(None);
+    }
+    Ok(Some(LocationSpan {
+        start_ms,
+        end_ms: start_ms + duration_ms,
+        world_id: row_string(row, 2),
+        world_name: row_string(row, 3),
+        access_bucket: row_string(row, 4),
+        inferred: true,
+    }))
 }
 
 fn read_source_rows(

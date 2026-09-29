@@ -13,7 +13,6 @@ use serde_json::Value;
 use vrcx_0_application_core::{
     vrchat_api::VrchatApiResponse, FavoriteEntityKind, TaskStopToken, VrchatFavoriteType,
 };
-use vrcx_0_contracts::CacheEntityInput;
 use vrcx_0_core::json::RawJson;
 use vrcx_0_core::vrchat_ids::{is_avatar_id, is_user_id, is_world_id};
 use vrcx_0_core::vrchat_json::response_error_message;
@@ -21,8 +20,8 @@ use vrcx_0_core::vrchat_json::response_error_message;
 use super::local_favorites::read_config_string_array;
 
 use vrcx_0_application_core::{
-    Error, RemoteMutationGate, Result, RuntimeAuthScope, RuntimeAuthScopeSnapshot, RuntimeEventBus,
-    TaskSupervisor, WorldCache,
+    AvatarCache, Error, RemoteMutationGate, Result, RuntimeAuthScope, RuntimeAuthScopeSnapshot,
+    RuntimeEventBus, TaskSupervisor, WorldCache,
 };
 
 use super::local_favorites::local_group_config_key;
@@ -144,6 +143,7 @@ pub struct FavoriteImportRuntime {
     store: Arc<dyn super::FavoriteStore>,
     remote: Arc<dyn super::FavoriteRemote>,
     world_cache: Arc<WorldCache>,
+    avatar_cache: Arc<AvatarCache>,
     event_bus: RuntimeEventBus,
     tasks: TaskSupervisor,
     auth_scope: RuntimeAuthScope,
@@ -155,6 +155,7 @@ pub struct FavoriteImportRuntimeDeps {
     pub store: Arc<dyn super::FavoriteStore>,
     pub remote: Arc<dyn super::FavoriteRemote>,
     pub world_cache: Arc<WorldCache>,
+    pub avatar_cache: Arc<AvatarCache>,
     pub event_bus: RuntimeEventBus,
     pub tasks: TaskSupervisor,
     pub auth_scope: RuntimeAuthScope,
@@ -168,6 +169,7 @@ impl FavoriteImportRuntimeDeps {
         store: Arc<dyn super::FavoriteStore>,
         remote: Arc<dyn super::FavoriteRemote>,
         world_cache: Arc<WorldCache>,
+        avatar_cache: Arc<AvatarCache>,
         event_bus: RuntimeEventBus,
         tasks: TaskSupervisor,
         auth_scope: RuntimeAuthScope,
@@ -178,6 +180,7 @@ impl FavoriteImportRuntimeDeps {
             store,
             remote,
             world_cache,
+            avatar_cache,
             event_bus,
             tasks,
             auth_scope,
@@ -216,6 +219,7 @@ impl FavoriteImportRuntime {
             store: deps.store,
             remote: deps.remote,
             world_cache: deps.world_cache,
+            avatar_cache: deps.avatar_cache,
             event_bus: deps.event_bus,
             tasks: deps.tasks,
             auth_scope: deps.auth_scope,
@@ -445,10 +449,13 @@ impl FavoriteImportRuntime {
         }
         match hydration_cache(kind) {
             FavoriteImportHydrationCache::Avatar => {
-                self.store.cache_upsert(
-                    super::FavoriteCacheKind::Avatar,
-                    cache_entity_from_payload(&payload),
-                )?;
+                if self
+                    .avatar_cache
+                    .hydrate_from_payload(&scope.current_user_id, &scope.endpoint, payload.clone())
+                    .is_none()
+                {
+                    tracing::warn!(avatar_id = %id, "favorite import avatar payload was not cached");
+                }
             }
             FavoriteImportHydrationCache::World => {
                 self.world_cache
@@ -830,33 +837,6 @@ fn is_entity_id(kind: FavoriteImportKind, value: &str) -> bool {
         FavoriteImportKind::Avatar => is_avatar_id(value),
         FavoriteImportKind::World => is_world_id(value),
         FavoriteImportKind::Friend => is_user_id(value),
-    }
-}
-
-fn cache_entity_from_payload(payload: &Value) -> CacheEntityInput {
-    CacheEntityInput {
-        id: payload.get("id").cloned().unwrap_or_default(),
-        author_id: payload.get("authorId").cloned().unwrap_or_default(),
-        author_name: payload.get("authorName").cloned().unwrap_or_default(),
-        created_at: payload
-            .get("created_at")
-            .or_else(|| payload.get("createdAt"))
-            .cloned()
-            .unwrap_or_default(),
-        description: payload.get("description").cloned().unwrap_or_default(),
-        image_url: payload.get("imageUrl").cloned().unwrap_or_default(),
-        name: payload.get("name").cloned().unwrap_or_default(),
-        release_status: payload.get("releaseStatus").cloned().unwrap_or_default(),
-        thumbnail_image_url: payload
-            .get("thumbnailImageUrl")
-            .cloned()
-            .unwrap_or_default(),
-        updated_at: payload
-            .get("updated_at")
-            .or_else(|| payload.get("updatedAt"))
-            .cloned()
-            .unwrap_or_default(),
-        version: payload.get("version").cloned().unwrap_or_default(),
     }
 }
 

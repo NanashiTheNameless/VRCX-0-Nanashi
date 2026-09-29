@@ -1,5 +1,7 @@
 mod ancillary_snapshot;
 mod app_launcher;
+mod assistant_adapters;
+pub mod auth_failure;
 mod autostart;
 mod avatar;
 mod background_image;
@@ -8,6 +10,7 @@ mod context;
 mod current_user_mutation;
 pub mod data_dir;
 mod database_upgrade;
+pub mod deep_link;
 mod external_api;
 mod game_client;
 mod game_log;
@@ -22,15 +25,18 @@ mod integration_api;
 pub mod legacy_migration;
 pub mod local_data;
 mod log_watcher;
+mod mcp_adapters;
 mod media;
 pub mod notification;
 mod privacy_lock;
 mod process_monitor;
 mod profile_backup;
 mod profile_bio;
+mod proxy_connectivity;
 mod registry_backup;
 mod screenshot;
 pub mod sidebar_auto_hide;
+pub mod single_instance;
 mod social;
 mod startup_bootstrap;
 mod state;
@@ -67,17 +73,26 @@ pub use media::DesktopMediaRuntime;
 pub use privacy_lock::{PrivacyLockOutcome, PrivacyLockRuntime, PrivacyLockSnapshot};
 pub use process_monitor::HostGameProcessMonitorActions;
 pub use profile_backup::{DesktopProfileBackupRuntime, DesktopProfileRestoreRequest};
+pub use proxy_connectivity::test_proxy_connectivity;
 pub use registry_backup::HostRegistryBackupActions;
 pub use screenshot::DesktopScreenshotRuntime;
 pub use social::DesktopSocialRuntime;
 pub use startup_bootstrap::{system_culture, system_language, StartupBootstrapSnapshot};
 pub use state::{
-    CurrentUserRefreshOutcome, DesktopAssistantDependencies, DesktopMcpDependencies,
-    DesktopRuntimeBundle, DesktopRuntimeHostOptions, DesktopRuntimeHostState, GameRuntimeBundle,
-    RuntimeJobRecordInput,
+    CurrentUserRefreshOutcome, DesktopRuntimeBundle, DesktopRuntimeHostOptions,
+    DesktopRuntimeHostState, GameRuntimeBundle, RuntimeJobRecordInput,
 };
 pub use vrchat_remote::DesktopVrchatRemoteFacade;
 pub use vrcx_0_composition::{Error, Result};
 
 pub mod reminders;
 pub mod safety;
+
+/// Fork: report types for the profile merge / data export commands, so the
+/// Tauri shell does not depend on `vrcx-0-outbound-adapters` directly.
+pub mod profile_merge {
+    pub use vrcx_0_outbound_adapters::{
+        DataExportReport, DataImportSummary, ProfileMergeReport, ProfileMergeSourceKind,
+        ProfileMergeSources, ProfileSettingsImportReport,
+    };
+}

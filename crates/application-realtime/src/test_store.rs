@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::convert::Infallible;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
@@ -20,8 +21,8 @@ use vrcx_0_contracts::realtime::{
     FriendLogDelete, FriendLogUpsert, RealtimePersistenceBatch, RealtimeWriteCounts,
 };
 use vrcx_0_contracts::FavoriteRow;
+use vrcx_0_core::friend_log::{plan_friend_log_upsert, FriendLogCurrent, FriendLogUpsertInput};
 use vrcx_0_core::json::text_of;
-use vrcx_0_core::trust::trust_level_changed;
 use vrcx_0_core::{FavoriteEntityKind, OwnerId};
 
 use crate::RealtimeStore;
@@ -590,105 +591,53 @@ fn apply_friend_upsert(
     owner: &str,
     entry: &FriendLogUpsert,
 ) -> u64 {
-    let target = entry.target_user_id.trim();
-    if target.is_empty() {
-        return 0;
-    }
     let rows = state.current.entry(owner.to_string()).or_default();
-    if let Some(existing) = rows.iter_mut().find(|row| row.user_id == target) {
-        let old_name = existing.display_name.clone();
-        let old_trust = existing.trust_level.clone();
-        let display_name = normalized_display_name(&entry.display_name, &old_name);
-        let trust_level = if entry.trust_level.trim().is_empty() {
-            old_trust.clone()
-        } else {
-            entry.trust_level.clone()
-        };
-        existing.display_name = display_name.clone();
-        existing.trust_level = trust_level.clone();
-        if entry.friend_number > 0 {
-            existing.friend_number = entry.friend_number;
-        }
-        let friend_number = existing.friend_number;
-        let mut count = 1;
-        if old_name != "Unknown" && display_name != "Unknown" && old_name != display_name {
-            push_history(
-                state,
-                owner,
-                &entry.created_at,
-                "DisplayName",
-                target,
-                &display_name,
-                &old_name,
-                &trust_level,
-                "",
-                friend_number,
-            );
-            count += 1;
-        }
-        if trust_level_changed(&old_trust, &trust_level) {
-            push_history(
-                state,
-                owner,
-                &entry.created_at,
-                "TrustLevel",
-                target,
-                &display_name,
-                "",
-                &trust_level,
-                &old_trust,
-                friend_number,
-            );
-            count += 1;
-        }
-        if entry.force_history {
-            push_history(
-                state,
-                owner,
-                &entry.created_at,
-                "Friend",
-                target,
-                &display_name,
-                "",
-                &trust_level,
-                "",
-                friend_number,
-            );
-            count += 1;
-        }
-        count
-    } else {
-        let friend_number = if entry.friend_number > 0 {
-            entry.friend_number
-        } else {
-            rows.iter().map(|row| row.friend_number).max().unwrap_or(0) + 1
-        };
-        let display_name = normalized_display_name(&entry.display_name, "Unknown");
-        let trust_level = if entry.trust_level.trim().is_empty() {
-            "Visitor".to_string()
-        } else {
-            entry.trust_level.clone()
-        };
-        rows.push(FriendLogCurrentOutput {
-            user_id: target.to_string(),
-            display_name: display_name.clone(),
-            trust_level: trust_level.clone(),
-            friend_number,
-        });
+    let index = rows
+        .iter()
+        .position(|row| row.user_id == entry.target_user_id.trim());
+    let next_friend_number = rows.iter().map(|row| row.friend_number).max().unwrap_or(0) + 1;
+    let Ok(Some(plan)) = plan_friend_log_upsert(
+        FriendLogUpsertInput {
+            target_user_id: &entry.target_user_id,
+            display_name: &entry.display_name,
+            trust_level: &entry.trust_level,
+            friend_number: entry.friend_number,
+            force_history: entry.force_history,
+        },
+        index.map(|index| FriendLogCurrent {
+            display_name: &rows[index].display_name,
+            trust_level: &rows[index].trust_level,
+            friend_number: rows[index].friend_number,
+        }),
+        || Ok::<i64, Infallible>(next_friend_number),
+    ) else {
+        return 0;
+    };
+    let current = FriendLogCurrentOutput {
+        user_id: plan.user_id.clone(),
+        display_name: plan.display_name.clone(),
+        trust_level: plan.trust_level.clone(),
+        friend_number: plan.friend_number,
+    };
+    match index {
+        Some(index) => rows[index] = current,
+        None => rows.push(current),
+    }
+    for history in &plan.history {
         push_history(
             state,
             owner,
             &entry.created_at,
-            "Friend",
-            target,
-            &display_name,
-            "",
-            &trust_level,
-            "",
-            friend_number,
+            history.entry_type,
+            &plan.user_id,
+            &plan.display_name,
+            &history.previous_display_name,
+            &plan.trust_level,
+            &history.previous_trust_level,
+            plan.friend_number,
         );
-        2
     }
+    1 + plan.history.len() as u64
 }
 
 fn apply_friend_delete(

@@ -392,82 +392,11 @@ fn saved_group_instance_scan_seeds_then_delivers_the_new_parsed_location() {
 }
 
 #[test]
-fn legacy_category_filters_normalize_to_type_rules() {
-    let filters = OverlayActivityFilters::from_json(json!({
-        "version": 1,
-        "wrist": {
-            "favoriteGroupKeys": ["fav-a"],
-            "categories": {
-                "actionRequired": {
-                    "scope": "direct",
-                    "typeOverrides": {
-                        "boop": {
-                            "scope": "off"
-                        }
-                    }
-                },
-                "currentInstance": {
-                    "scope": "currentInstance"
-                },
-                "profileChange": {
-                    "scope": "allFavorites",
-                    "typeOverrides": {
-                        "Avatar": {
-                            "scope": "selectedFavorites",
-                            "favoriteGroupKeys": ["fav-b"]
-                        }
-                    }
-                }
-            }
-        }
-    }));
-
-    assert_eq!(
-        filters
-            .rule_for(OverlayActivitySurface::Wrist, "invite")
-            .scope,
-        OverlayActivityScope::On
-    );
-    assert_eq!(
-        filters
-            .rule_for(OverlayActivitySurface::Wrist, "boop")
-            .scope,
-        OverlayActivityScope::Off
-    );
-    assert_eq!(
-        filters
-            .rule_for(OverlayActivitySurface::Wrist, "OnPlayerJoined")
-            .scope,
-        OverlayActivityScope::EveryoneInInstance
-    );
-    assert_eq!(
-        filters
-            .rule_for(OverlayActivitySurface::Wrist, "DisplayName")
-            .scope,
-        OverlayActivityScope::AllFavorites
-    );
-    assert_eq!(
-        filters.rule_for(OverlayActivitySurface::Wrist, "AvatarChange"),
-        OverlayActivityRule {
-            scope: OverlayActivityScope::SelectedFavorites,
-            favorite_group_keys: OverlayActivityFavoriteGroupKeys::Selected(vec![
-                "fav-b".to_string()
-            ])
-        }
-    );
-}
-
-#[test]
 fn persisted_overlay_filter_shape_detection_matches_runtime_loader() {
     assert!(!OverlayActivityFilters::has_persisted_rules(&json!({})));
     assert!(OverlayActivityFilters::has_persisted_rules(&json!({
         "wrist": {
             "types": {}
-        }
-    })));
-    assert!(OverlayActivityFilters::has_persisted_rules(&json!({
-        "wrist": {
-            "categories": {}
         }
     })));
 }

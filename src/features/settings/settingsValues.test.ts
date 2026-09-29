@@ -149,66 +149,6 @@ describe('settingsValues', () => {
         ).toBe(true);
     });
 
-    it('migrates legacy wrist category rules into per-type rules', () => {
-        const filters = normalizeOverlayActivityFilters({
-            wrist: {
-                favoriteGroupKeys: ['group_1'],
-                categories: {
-                    actionRequired: {
-                        scope: 'direct',
-                        typeOverrides: {
-                            boop: {
-                                scope: 'off'
-                            },
-                            'group.queueReady': {
-                                scope: 'criticalOnly'
-                            }
-                        }
-                    },
-                    currentInstance: {
-                        scope: 'everyone',
-                        favoriteGroupKeys: ['group_2']
-                    },
-                    profileChange: {
-                        scope: 'allFavorites',
-                        typeOverrides: {
-                            Avatar: {
-                                scope: 'selectedFavorites',
-                                favoriteGroupKeys: ['group_3']
-                            }
-                        }
-                    }
-                }
-            }
-        });
-
-        expect(filters.wrist.types.invite).toEqual({
-            scope: 'on',
-            favoriteGroupKeys: 'all'
-        });
-        expect(filters.wrist.types.boop).toEqual({
-            scope: 'off',
-            favoriteGroupKeys: 'all'
-        });
-        expect(filters.wrist.types['group.queueReady']).toEqual({
-            scope: 'on',
-            favoriteGroupKeys: 'all'
-        });
-        expect(filters.wrist.types.OnPlayerJoined).toEqual({
-            scope: 'everyoneInInstance',
-            favoriteGroupKeys: 'all'
-        });
-        expect(filters.wrist.types.DisplayName).toEqual({
-            scope: 'allFavorites',
-            favoriteGroupKeys: 'all'
-        });
-        expect(filters.wrist.types.AvatarChange).toEqual({
-            scope: 'selectedFavorites',
-            favoriteGroupKeys: ['group_3']
-        });
-        expect(filters.wrist.types.Avatar).toBeUndefined();
-    });
-
     it('maps wrist activity raw type keys to locale-safe label keys', () => {
         expect(overlayActivityTypeLabelKey('group.queueReady')).toBe(
             'group_queueReady'

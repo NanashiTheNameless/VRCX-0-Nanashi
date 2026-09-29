@@ -83,7 +83,7 @@ function hasPersistedOverlayActivityFilters(value: unknown): boolean {
     }
     const source = asRecord(value);
     const wrist = asRecord(source.wrist);
-    return Boolean(wrist.types || wrist.categories);
+    return Boolean(wrist.types);
 }
 
 export function parseOverlayActivityFiltersPreference(value?: unknown) {

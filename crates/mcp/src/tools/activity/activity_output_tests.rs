@@ -7,11 +7,14 @@ use rmcp::handler::server::wrapper::Parameters;
 use vrcx_0_application::favorites::{FavoriteMutationCoordinator, FavoriteMutationRuntimeDeps};
 use vrcx_0_application::social::MutualGraphFetchRuntime;
 use vrcx_0_application_core::{
-    HostSessionRuntime, NoopPrintCleanupInputSink, RuntimeAuthScope, RuntimeDiagnostics,
-    RuntimeEventBus, RuntimeSyncEngine, TaskSupervisor, UnavailableLocalGameContextSource,
-    WebClient, WorldCache,
+    HostSessionRuntime, LocalGameContextSource, NoopPrintCleanupInputSink, RuntimeAuthScope,
+    RuntimeDiagnostics, RuntimeEventBus, RuntimeSyncEngine, TaskSupervisor,
+    UnavailableLocalGameContextSource, WebClient, WorldCache,
 };
 use vrcx_0_application_realtime::{RealtimeHostRuntime, RealtimeHostRuntimeDeps};
+use vrcx_0_persistence::game_log::{
+    write_batch, GameLogJoinLeaveEntry, GameLogLocationEntry, GameLogWriteBatch,
+};
 use vrcx_0_persistence::{
     config::ConfigRepository, game_log::ensure_game_log_tables, storage::StorageService,
     DatabaseService,
@@ -72,6 +75,21 @@ fn test_server(
     name: &str,
     auth_scope_user_id: &str,
 ) -> Result<(TestDir, VrcxMcpServer), Box<dyn std::error::Error>> {
+    let (dir, server, _) = test_server_with_game_context(
+        name,
+        auth_scope_user_id,
+        Arc::new(UnavailableLocalGameContextSource),
+    )?;
+    Ok((dir, server))
+}
+
+type TestServerWithDatabase = (TestDir, VrcxMcpServer, Arc<DatabaseService>);
+
+fn test_server_with_game_context(
+    name: &str,
+    auth_scope_user_id: &str,
+    local_game_context: Arc<dyn LocalGameContextSource>,
+) -> Result<TestServerWithDatabase, Box<dyn std::error::Error>> {
     let dir = TestDir::new(name);
     let db = Arc::new(DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?);
     ensure_game_log_tables(db.as_ref())?;
@@ -109,6 +127,7 @@ fn test_server(
             Arc::clone(&web),
             diagnostics.clone(),
             sync.clone(),
+            Arc::clone(&world_cache),
         )),
         FavoriteMutationRuntimeDeps::new(
             diagnostics,
@@ -116,6 +135,7 @@ fn test_server(
             event_bus.clone(),
             auth_scope.clone(),
             Arc::clone(&remote_mutations),
+            Arc::clone(&world_cache),
         ),
     );
     let backend_status = vrcx_0_application_core::BackendRuntimeStatusPublisher::new(
@@ -146,7 +166,7 @@ fn test_server(
         session,
         auth_scope.clone(),
         remote_mutations,
-        Arc::new(UnavailableLocalGameContextSource),
+        local_game_context,
         None,
         None,
         world_cache,
@@ -190,7 +210,7 @@ fn test_server(
         tasks,
         caller: crate::runtime::McpCaller::ExternalServer,
     };
-    Ok((dir, VrcxMcpServer::new(runtime)))
+    Ok((dir, VrcxMcpServer::new(runtime), db))
 }
 
 fn ms(value: &str) -> i64 {
@@ -271,4 +291,267 @@ fn timeline_bucket_accepts_camel_and_snake_case() {
 
     assert_eq!(camel.bucket, ActivityTimelineBucketParam::DayOfWeek);
     assert_eq!(snake.bucket, ActivityTimelineBucketParam::HourOfDay);
+}
+
+fn world_visit(minute: usize, world_id: &str, created_on: &str, time: i64) -> GameLogLocationEntry {
+    GameLogLocationEntry {
+        created_at: format!("{created_on}T{:02}:{:02}:00.000Z", minute / 60, minute % 60),
+        location: format!("{world_id}:1"),
+        world_id: world_id.into(),
+        world_name: world_id.into(),
+        time,
+        group_name: String::new(),
+    }
+}
+
+fn seed_locations(db: &DatabaseService, locations: Vec<GameLogLocationEntry>) {
+    write_batch(
+        db,
+        &OwnerId::new("usr_owner"),
+        &GameLogWriteBatch {
+            locations,
+            ..GameLogWriteBatch::default()
+        },
+    )
+    .unwrap();
+}
+
+#[test]
+fn social_period_top_worlds_count_every_visit_in_the_window() {
+    let (_dir, runtime, db) =
+        crate::test_support::test_runtime_with_database("social-period-top-worlds", "usr_owner")
+            .unwrap();
+    let mut locations = (0..150)
+        .map(|minute| world_visit(minute, "wrld_often", "2026-06-01", 60_000))
+        .collect::<Vec<_>>();
+    locations
+        .extend((150..250).map(|minute| world_visit(minute, "wrld_recent", "2026-06-01", 60_000)));
+    seed_locations(db.as_ref(), locations);
+    let server = VrcxMcpServer::new(runtime);
+
+    let output = server
+        .summarize_social_period_output(
+            OwnerId::new("usr_owner"),
+            SummarizeSocialPeriodParams::default(),
+        )
+        .unwrap();
+
+    assert_eq!(output.top_worlds[0].world_id, "wrld_often");
+    assert_eq!(output.top_worlds[0].visits, 150);
+}
+
+#[test]
+fn my_activity_buckets_weekdays_in_the_callers_timezone() {
+    let (_dir, runtime, db) =
+        crate::test_support::test_runtime_with_database("my-activity-local-weekday", "usr_owner")
+            .unwrap();
+    write_batch(
+        db.as_ref(),
+        &OwnerId::new("usr_owner"),
+        &GameLogWriteBatch {
+            join_leave: vec![closed_stay("2026-06-07T21:00:00.000Z", 60)],
+            ..GameLogWriteBatch::default()
+        },
+    )
+    .unwrap();
+    let server = VrcxMcpServer::new(runtime);
+
+    let output = server
+        .get_my_activity_output(
+            OwnerId::new("usr_owner"),
+            MyActivityParams {
+                time_window: None,
+                utc_offset_minutes: Some(540),
+            },
+        )
+        .unwrap();
+
+    assert_eq!(output.by_weekday.get("Mon"), Some(&60));
+    assert_eq!(output.by_weekday.get("Sun"), None);
+    assert!(output
+        .caveats
+        .iter()
+        .any(|caveat| caveat.contains("UTC+09:00")));
+}
+
+#[test]
+fn my_activity_tolerates_an_out_of_range_utc_offset() {
+    let (_dir, runtime, _db) =
+        crate::test_support::test_runtime_with_database("my-activity-huge-offset", "usr_owner")
+            .unwrap();
+    let server = VrcxMcpServer::new(runtime);
+
+    assert!(server
+        .get_my_activity_output(
+            OwnerId::new("usr_owner"),
+            MyActivityParams {
+                time_window: None,
+                utc_offset_minutes: Some(i64::MAX),
+            },
+        )
+        .is_ok());
+}
+
+#[test]
+fn social_period_states_the_best_time_bucket_timezone() {
+    let (_dir, runtime, _db) = crate::test_support::test_runtime_with_database(
+        "social-period-best-time-timezone",
+        "usr_owner",
+    )
+    .unwrap();
+    let server = VrcxMcpServer::new(runtime);
+
+    let output = server
+        .summarize_social_period_output(
+            OwnerId::new("usr_owner"),
+            SummarizeSocialPeriodParams {
+                time_window: None,
+                utc_offset_minutes: Some(540),
+            },
+        )
+        .unwrap();
+
+    assert!(output
+        .caveats
+        .iter()
+        .any(|caveat| caveat.contains("Best-time buckets are in UTC+09:00")));
+}
+
+fn closed_stay(left_at: &str, minutes: i64) -> GameLogJoinLeaveEntry {
+    GameLogJoinLeaveEntry {
+        created_at: left_at.into(),
+        event_type: "OnPlayerLeft".into(),
+        display_name: "Owner".into(),
+        user_id: "usr_owner".into(),
+        location: "wrld_stay:1".into(),
+        world_name: "Stay".into(),
+        time: minutes * 60_000,
+    }
+}
+
+#[test]
+fn my_activity_counts_only_closed_instance_stays() {
+    let (_dir, runtime, db) =
+        crate::test_support::test_runtime_with_database("my-activity-closed-stays", "usr_owner")
+            .unwrap();
+    write_batch(
+        db.as_ref(),
+        &OwnerId::new("usr_owner"),
+        &GameLogWriteBatch {
+            locations: vec![
+                world_visit(0, "wrld_open", "2026-06-07", 0),
+                world_visit(20 * 60, "wrld_stay", "2026-06-07", 0),
+            ],
+            join_leave: vec![closed_stay("2026-06-07T21:00:00.000Z", 60)],
+            ..GameLogWriteBatch::default()
+        },
+    )
+    .unwrap();
+    let server = VrcxMcpServer::new(runtime);
+
+    let output = server
+        .get_my_activity_output(
+            OwnerId::new("usr_owner"),
+            MyActivityParams {
+                time_window: None,
+                utc_offset_minutes: Some(540),
+            },
+        )
+        .unwrap();
+
+    assert_eq!(output.total_minutes, 60);
+    assert_eq!(output.session_count, 1);
+    assert_eq!(output.by_weekday.get("Mon"), Some(&60));
+}
+
+struct FixedLocalGameContext(LocalGameContextSnapshot);
+
+impl LocalGameContextSource for FixedLocalGameContext {
+    fn snapshot(&self) -> LocalGameContextSnapshot {
+        self.0.clone()
+    }
+}
+
+#[test]
+fn my_activity_counts_the_current_stay_while_the_game_is_running() {
+    let (_dir, server, db) = test_server_with_game_context(
+        "my-activity-open-stay",
+        "usr_owner",
+        Arc::new(FixedLocalGameContext(LocalGameContextSnapshot::Available {
+            is_game_running: true,
+            location: "wrld_open:1".into(),
+            destination: String::new(),
+            world_name: "Open".into(),
+            player_user_ids: Vec::new(),
+        })),
+    )
+    .unwrap();
+    let started_at = Utc::now() - chrono::Duration::minutes(90);
+    write_batch(
+        db.as_ref(),
+        &OwnerId::new("usr_owner"),
+        &GameLogWriteBatch {
+            locations: vec![GameLogLocationEntry {
+                created_at: vrcx_0_core::time::iso_millis(started_at),
+                location: "wrld_open:1".into(),
+                world_id: "wrld_open".into(),
+                world_name: "Open".into(),
+                time: 0,
+                group_name: String::new(),
+            }],
+            ..GameLogWriteBatch::default()
+        },
+    )
+    .unwrap();
+
+    let output = server
+        .get_my_activity_output(
+            OwnerId::new("usr_owner"),
+            MyActivityParams {
+                time_window: None,
+                utc_offset_minutes: None,
+            },
+        )
+        .unwrap();
+
+    assert!(
+        (89..=91).contains(&output.total_minutes),
+        "{}",
+        output.total_minutes
+    );
+    assert_eq!(output.session_count, 1);
+}
+
+#[test]
+fn back_to_back_instance_stays_count_as_one_play_session() {
+    let (_dir, runtime, db) =
+        crate::test_support::test_runtime_with_database("my-activity-merged-stays", "usr_owner")
+            .unwrap();
+    write_batch(
+        db.as_ref(),
+        &OwnerId::new("usr_owner"),
+        &GameLogWriteBatch {
+            join_leave: vec![
+                closed_stay("2026-06-07T21:30:00.000Z", 30),
+                closed_stay("2026-06-07T22:00:20.000Z", 30),
+            ],
+            ..GameLogWriteBatch::default()
+        },
+    )
+    .unwrap();
+    let server = VrcxMcpServer::new(runtime);
+
+    let output = server
+        .get_my_activity_output(
+            OwnerId::new("usr_owner"),
+            MyActivityParams {
+                time_window: None,
+                utc_offset_minutes: None,
+            },
+        )
+        .unwrap();
+
+    assert_eq!(output.total_minutes, 60);
+    assert_eq!(output.session_count, 1);
+    assert_eq!(output.longest_session_minutes, 60);
 }

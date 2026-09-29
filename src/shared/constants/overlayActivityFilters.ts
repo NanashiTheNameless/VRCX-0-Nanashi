@@ -489,45 +489,15 @@ function scopeUsesFavoriteGroups(scope: OverlayActivityScope) {
     return scope === 'selectedFavorites';
 }
 
-function mappedLegacyScope(
-    scope: unknown,
-    definition: OverlayActivityTypeDefinition
-): OverlayActivityScope | null {
-    const allowedScopes = definition.allowedScopes;
-    if (isOverlayActivityScope(scope) && allowedScopes.includes(scope)) {
-        return scope;
-    }
-    if (scope === 'everyone' && allowedScopes.includes('everyoneInInstance')) {
-        return 'everyoneInInstance';
-    }
-    if (
-        scope === 'currentInstance' &&
-        allowedScopes.includes('everyoneInInstance')
-    ) {
-        return 'everyoneInInstance';
-    }
-    if (scope === 'friendsAndFavorites' && allowedScopes.includes('friends')) {
-        return 'friends';
-    }
-    if (
-        (scope === 'direct' ||
-            scope === 'criticalOnly' ||
-            scope === 'everyone' ||
-            scope === 'currentInstance') &&
-        allowedScopes.includes('on')
-    ) {
-        return 'on';
-    }
-    return null;
-}
-
 function normalizeScope(
     value: unknown,
     definition: OverlayActivityTypeDefinition,
     fallback: OverlayActivityScope
 ) {
-    const scope = mappedLegacyScope(value, definition);
-    return scope && definition.allowedScopes.includes(scope) ? scope : fallback;
+    return isOverlayActivityScope(value) &&
+        definition.allowedScopes.includes(value)
+        ? value
+        : fallback;
 }
 
 function normalizeRule(
@@ -578,42 +548,6 @@ function getTypeCandidate(
     return null;
 }
 
-function getLegacyTypeRule(
-    definition: OverlayActivityTypeDefinition,
-    categories: Record<string, unknown>,
-    legacyFavoriteGroupKeys: OverlayActivityFavoriteGroupKeys
-): Record<string, unknown> | null {
-    const categoryCandidate = categories[definition.category];
-    if (!isRecord(categoryCandidate)) {
-        return null;
-    }
-    const categoryRule: Record<string, unknown> = categoryCandidate;
-    const categoryFavoriteGroupKeys =
-        'favoriteGroupKeys' in categoryRule
-            ? categoryRule.favoriteGroupKeys
-            : legacyFavoriteGroupKeys;
-    const typeOverrides = isRecord(categoryRule.typeOverrides)
-        ? categoryRule.typeOverrides
-        : {};
-    const typeOverrideCandidate = getTypeCandidate(typeOverrides, definition);
-    if (isRecord(typeOverrideCandidate)) {
-        return {
-            scope:
-                'scope' in typeOverrideCandidate
-                    ? typeOverrideCandidate.scope
-                    : categoryRule.scope,
-            favoriteGroupKeys:
-                'favoriteGroupKeys' in typeOverrideCandidate
-                    ? typeOverrideCandidate.favoriteGroupKeys
-                    : categoryFavoriteGroupKeys
-        };
-    }
-    return {
-        scope: categoryRule.scope,
-        favoriteGroupKeys: categoryFavoriteGroupKeys
-    };
-}
-
 export function normalizeOverlayActivityFilters(
     value: unknown = {}
 ): OverlayActivityFiltersPreference {
@@ -631,12 +565,6 @@ export function normalizeOverlayActivityFilterProfileWithDefinitions(
     const source = isRecord(value) ? value : {};
     const filterProfile = isRecord(source.wrist) ? source.wrist : source;
     const types = isRecord(filterProfile.types) ? filterProfile.types : {};
-    const categories = isRecord(filterProfile.categories)
-        ? filterProfile.categories
-        : {};
-    const legacyFavoriteGroupKeys = normalizeFavoriteGroupKeys(
-        filterProfile.favoriteGroupKeys
-    );
     const defaultTypes =
         fallbackTypes ??
         defaultOverlayActivityTypeRulesFromDefinitions(definitions);
@@ -648,21 +576,10 @@ export function normalizeOverlayActivityFilterProfileWithDefinitions(
     );
     const normalizedKnownTypes = definitions.map((definition) => {
         const defaultRule = defaultTypes[definition.key];
-        const legacyRule = getLegacyTypeRule(
-            definition,
-            categories,
-            legacyFavoriteGroupKeys
-        );
-        const typeCandidate = getTypeCandidate(types, definition);
-        const sourceRule: Record<string, unknown> = typeCandidate
-            ? typeCandidate
-            : legacyRule || {};
-        const fallbackRule = legacyRule
-            ? normalizeRule(definition, legacyRule, defaultRule)
-            : defaultRule;
+        const sourceRule = getTypeCandidate(types, definition) ?? {};
         return [
             definition.key,
-            normalizeRule(definition, sourceRule, fallbackRule)
+            normalizeRule(definition, sourceRule, defaultRule)
         ];
     });
     const normalizedUnknownTypes = Object.entries(types).flatMap(

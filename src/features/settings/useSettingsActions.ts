@@ -2,7 +2,6 @@ import { useTranslation } from 'react-i18next';
 
 import avatarFeedHistoryRepository from '@/repositories/avatarFeedHistoryRepository';
 import configRepository from '@/repositories/configRepository';
-import databaseMaintenanceRepository from '@/repositories/databaseMaintenanceRepository';
 import mediaRepository from '@/repositories/mediaRepository';
 import vrchatAuthRepository from '@/repositories/vrchatAuthRepository';
 import {
@@ -154,7 +153,6 @@ export function useSettingsActions(deps: SettingsActionsDeps) {
         alert,
         configRepository,
         confirm,
-        databaseMaintenanceRepository,
         gameState,
         isValidFontFamilyList,
         language: i18n.language,

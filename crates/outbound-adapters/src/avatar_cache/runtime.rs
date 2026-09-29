@@ -6,7 +6,8 @@ use moka::sync::Cache;
 use serde_json::Value;
 use vrcx_0_core::vrchat_json::AvatarJson;
 use vrcx_0_persistence::avatars::{
-    avatar_cache_find_by_file_id, avatar_cache_get, avatar_cache_upsert, AvatarCacheOutput,
+    avatar_cache_existing_ids, avatar_cache_find_by_file_id, avatar_cache_get, avatar_cache_upsert,
+    avatar_cache_upsert_many, AvatarCacheOutput,
 };
 use vrcx_0_persistence::cache_entities::CacheEntityInput;
 use vrcx_0_persistence::DatabaseService;
@@ -127,6 +128,29 @@ impl AvatarCache {
             tracing::warn!(avatar_id = %summary.id, "AvatarCache upsert failed: {error}");
         }
         Some(avatar)
+    }
+
+    pub fn existing_summary_ids(&self, avatar_ids: &[String]) -> crate::Result<Vec<String>> {
+        avatar_cache_existing_ids(self.db.as_ref(), avatar_ids)
+            .map_err(crate::map_persistence_error)
+    }
+
+    pub fn store_summaries(
+        &self,
+        user_id: &str,
+        endpoint: &str,
+        entries: Vec<CacheEntityInput>,
+    ) -> crate::Result<u32> {
+        let avatar_ids = entries
+            .iter()
+            .filter_map(|entry| entry.id.as_str().map(str::to_string))
+            .collect::<Vec<_>>();
+        let stored = avatar_cache_upsert_many(self.db.as_ref(), entries)
+            .map_err(crate::map_persistence_error)?;
+        for avatar_id in avatar_ids {
+            self.invalidate(user_id, endpoint, &avatar_id);
+        }
+        Ok(stored)
     }
 
     pub async fn resolve(
@@ -288,6 +312,19 @@ impl vrcx_0_application_core::AvatarCachePort for AvatarCache {
         avatar: Value,
     ) -> Option<Arc<Value>> {
         AvatarCache::hydrate_from_payload(self, user_id, endpoint, avatar)
+    }
+
+    fn existing_summary_ids(&self, avatar_ids: &[String]) -> crate::Result<Vec<String>> {
+        AvatarCache::existing_summary_ids(self, avatar_ids)
+    }
+
+    fn store_summaries(
+        &self,
+        user_id: &str,
+        endpoint: &str,
+        entries: Vec<CacheEntityInput>,
+    ) -> crate::Result<u32> {
+        AvatarCache::store_summaries(self, user_id, endpoint, entries)
     }
 
     async fn resolve(

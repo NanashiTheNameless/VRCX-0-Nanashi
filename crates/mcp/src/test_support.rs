@@ -21,16 +21,15 @@ use vrcx_0_persistence::{
 
 use crate::runtime::McpRuntime;
 use crate::{
-    McpActivityQueryPort, McpActivitySession, McpConfigPort, McpFavoritesQueryPort,
-    McpFeedQueryPort, McpFriendCurrent, McpFriendLocalDataPort, McpFriendMemo, McpInterruptCheck,
-    McpLocalModeration, McpMemoSave, McpMutualGraphMeta, McpMutualGraphPort,
-    McpSocialHistoryQueryPort,
+    McpActivityQueryPort, McpConfigPort, McpFavoritesQueryPort, McpFeedQueryPort, McpFriendCurrent,
+    McpFriendLocalDataPort, McpFriendMemo, McpInterruptCheck, McpLocalModeration, McpMemoSave,
+    McpMutualGraphMeta, McpMutualGraphPort, McpPlaySpan, McpSocialHistoryQueryPort,
 };
 use vrcx_0_contracts::social_aggregates as social;
 use vrcx_0_contracts::FavoriteRow;
 use vrcx_0_core::{FavoriteEntityKind, OwnerId};
 use vrcx_0_persistence::{
-    activity, favorites, friends, local_moderation, memos, social_aggregates,
+    activity_page, favorites, friends, local_moderation, memos, social_aggregates,
 };
 
 pub(crate) struct TestMcpConfigAdapter {
@@ -168,6 +167,15 @@ impl McpActivityQueryPort for TestMcpActivityQueryAdapter {
             .map_err(Into::into)
     }
 
+    fn top_visited_worlds(
+        &self,
+        owner_user_id: &OwnerId,
+        input: social::TopVisitedWorldsInput,
+    ) -> vrcx_0_application_core::Result<Vec<social::TopVisitedWorldRow>> {
+        social_aggregates::top_visited_worlds(self.db.as_ref(), owner_user_id, input)
+            .map_err(Into::into)
+    }
+
     fn fading_friends(
         &self,
         input: social::FadingFriendsInput,
@@ -203,22 +211,30 @@ impl McpActivityQueryPort for TestMcpActivityQueryAdapter {
         social_aggregates::get_friend_log(self.db.as_ref(), input).map_err(Into::into)
     }
 
-    fn activity_sessions(
+    fn play_spans(
         &self,
-        owner_user_id: OwnerId,
-    ) -> vrcx_0_application_core::Result<Vec<McpActivitySession>> {
-        activity::activity_sessions_get(self.db.as_ref(), owner_user_id.to_string())
-            .map(|sessions| {
-                sessions
-                    .into_iter()
-                    .map(|session| McpActivitySession {
-                        start: session.start,
-                        end: session.end,
-                        is_open_tail: session.is_open_tail,
-                    })
-                    .collect()
-            })
-            .map_err(Into::into)
+        owner_user_id: &OwnerId,
+        from_ms: Option<i64>,
+        to_ms: i64,
+        open_location: Option<&str>,
+    ) -> vrcx_0_application_core::Result<Vec<McpPlaySpan>> {
+        activity_page::read_play_spans(
+            self.db.as_ref(),
+            owner_user_id,
+            from_ms,
+            to_ms,
+            open_location,
+        )
+        .map(|spans| {
+            spans
+                .into_iter()
+                .map(|span| McpPlaySpan {
+                    start: span.start_ms,
+                    end: span.end_ms,
+                })
+                .collect()
+        })
+        .map_err(Into::into)
     }
 }
 
@@ -247,13 +263,6 @@ impl McpSocialHistoryQueryPort for TestMcpSocialHistoryQueryAdapter {
         social_aggregates::get_friend_changes(self.db.as_ref(), input).map_err(Into::into)
     }
 
-    fn friend_log(
-        &self,
-        input: social::FriendLogInput,
-    ) -> vrcx_0_application_core::Result<social::FriendLogOutput> {
-        social_aggregates::get_friend_log(self.db.as_ref(), input).map_err(Into::into)
-    }
-
     fn friend_log_first_created_at(
         &self,
         owner_user_id: &OwnerId,
@@ -267,20 +276,6 @@ impl McpSocialHistoryQueryPort for TestMcpSocialHistoryQueryAdapter {
             kind,
         )
         .map_err(Into::into)
-    }
-
-    fn copresence_summary(
-        &self,
-        input: social::CopresenceSummaryInput,
-    ) -> vrcx_0_application_core::Result<social::CopresenceSummaryOutput> {
-        social_aggregates::get_copresence_summary(self.db.as_ref(), input).map_err(Into::into)
-    }
-
-    fn friend_activity_pattern(
-        &self,
-        input: social::FriendActivityPatternInput,
-    ) -> vrcx_0_application_core::Result<social::FriendActivityPatternOutput> {
-        social_aggregates::get_friend_activity_pattern(self.db.as_ref(), input).map_err(Into::into)
     }
 
     fn social_graph(
@@ -550,6 +545,7 @@ fn test_runtime_with_database_and_event_bus(
             Arc::clone(&web),
             diagnostics.clone(),
             sync.clone(),
+            Arc::clone(&world_cache),
         )),
         FavoriteMutationRuntimeDeps::new(
             diagnostics,
@@ -557,6 +553,7 @@ fn test_runtime_with_database_and_event_bus(
             event_bus.clone(),
             auth_scope.clone(),
             Arc::clone(&remote_mutations),
+            Arc::clone(&world_cache),
         ),
     );
     let backend_status = vrcx_0_application_core::BackendRuntimeStatusPublisher::new(

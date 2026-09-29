@@ -138,7 +138,7 @@ pub(crate) fn with_tz_caveat(mut caveats: Vec<String>, utc_offset_minutes: i64) 
 /// hour/weekday buckets are computed in the caller's timezone instead of UTC.
 pub(crate) fn tz_offset_modifier(utc_offset_minutes: i64) -> String {
     let sign = if utc_offset_minutes < 0 { '-' } else { '+' };
-    format!("{sign}{} minutes", utc_offset_minutes.abs())
+    format!("{sign}{} minutes", utc_offset_minutes.unsigned_abs())
 }
 
 /// Human-readable timezone label for caveats, e.g. "UTC+09:00" or "UTC".
@@ -147,7 +147,7 @@ pub(crate) fn tz_offset_label(utc_offset_minutes: i64) -> String {
         return "UTC".to_string();
     }
     let sign = if utc_offset_minutes < 0 { '-' } else { '+' };
-    let total = utc_offset_minutes.abs();
+    let total = utc_offset_minutes.unsigned_abs();
     format!("UTC{sign}{:02}:{:02}", total / 60, total % 60)
 }
 

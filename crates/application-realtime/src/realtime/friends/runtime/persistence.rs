@@ -8,8 +8,8 @@ use vrcx_0_contracts::feed_live::FeedLiveEntry;
 use vrcx_0_contracts::realtime::FriendLogUpsert;
 use vrcx_0_core::friends::{FriendRecord, StateBucket};
 
-use crate::realtime::location_predicates::is_real_instance;
 use crate::realtime::RealtimeFriendOutput;
+use vrcx_0_core::location::is_real_instance;
 
 use super::event_patch::record_string;
 use super::utils::{first_non_empty, first_owned, parse_location, string_or_previous, JsonExt};

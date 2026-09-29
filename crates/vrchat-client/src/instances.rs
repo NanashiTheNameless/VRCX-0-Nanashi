@@ -62,7 +62,7 @@ pub fn instance_create_input(
     endpoint: String,
     params: InstanceCreateRequest,
 ) -> Result<HttpApiRequestInput, HttpApiError> {
-    let params = params.validated()?;
+    let params = request::validated_instance_create_request(params)?;
     Ok(api_input(endpoint, "POST", "instances", json!(params)))
 }
 

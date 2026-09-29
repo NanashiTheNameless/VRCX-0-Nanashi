@@ -1,8 +1,8 @@
 use super::*;
 use serde_json::json;
-use vrcx_0_application_core::MemoryWorldCachePort;
+use vrcx_0_application_core::{AvatarCache, MemoryWorldCachePort, NoopAvatarCachePort};
 
-use crate::favorites::test_support::{TestFavoriteRemote, TestFavoriteStore};
+use crate::favorites::test_support::TestFavoriteRemote;
 
 const HYDRATE_TEST_ENDPOINT: &str = "https://api.vrchat.cloud/api/1";
 
@@ -48,10 +48,10 @@ impl WorldHydrateHarness {
         let world_cache = Arc::new(WorldCache::new(MemoryWorldCachePort::default()));
         let scope = auth_scope.snapshot();
         let runtime = FavoriteDetailsRuntime::new(
-            Arc::new(TestFavoriteStore::default()),
             Arc::clone(&remote) as Arc<dyn super::super::FavoriteRemote>,
             auth_scope.clone(),
             Arc::clone(&world_cache),
+            Arc::new(AvatarCache::new(NoopAvatarCachePort)),
             TaskSupervisor::new(),
         );
         Self {

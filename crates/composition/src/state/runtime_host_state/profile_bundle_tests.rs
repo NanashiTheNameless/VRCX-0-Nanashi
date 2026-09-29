@@ -44,6 +44,28 @@ impl Drop for TestDir {
     }
 }
 
+fn cli_options(
+    app_data: PathBuf,
+    profile: RuntimeHostProfile,
+    task_executor: Option<Arc<dyn RuntimeTaskExecutor>>,
+) -> RuntimeHostOptions {
+    RuntimeHostOptions {
+        realtime_origin: "http://localhost:9000".into(),
+        launched_from_autostart: false,
+        app_data_dir: AppDataDirResolution {
+            current_dir: app_data.clone(),
+            default_dir: app_data.clone(),
+            persisted_dir: None,
+            cli_dir: Some(app_data),
+            source: AppDataDirSource::Cli,
+        },
+        app_version: "0.0.0-test".into(),
+        profile,
+        database_maintenance_cache_dir: None,
+        task_executor,
+    }
+}
+
 fn switched_journal(source: &Path, target: &Path) -> PendingDataDirMigration {
     let mut journal = PendingDataDirMigration::copying(
         source.to_string_lossy().into_owned(),
@@ -90,6 +112,7 @@ fn switched_data_dir_migration_finishes_before_profile_startup() -> Result<()> {
         app_version: "0.0.0-test".into(),
         profile: RuntimeHostProfile::HeadlessData,
         database_maintenance_cache_dir: None,
+        task_executor: None,
     })?;
 
     assert!(app_data_paths_match(&builder.paths.app_data, &target));
@@ -119,6 +142,7 @@ fn migrated_database_open_failure_rolls_back_to_source() -> Result<()> {
         app_version: "0.0.0-test".into(),
         profile: RuntimeHostProfile::HeadlessData,
         database_maintenance_cache_dir: None,
+        task_executor: None,
     })?;
 
     assert!(app_data_paths_match(&builder.paths.app_data, &source));
@@ -195,20 +219,11 @@ fn headless_data_constructs_no_game_or_desktop_bundle_and_stops_idempotently() -
     let dir = TestDir::new("headless-profile");
     let app_data = dir.path.join("app-data");
     std::fs::create_dir_all(&app_data)?;
-    let state = RuntimeHostState::new(RuntimeHostOptions {
-        realtime_origin: "http://localhost:9000".into(),
-        launched_from_autostart: false,
-        app_data_dir: AppDataDirResolution {
-            current_dir: app_data.clone(),
-            default_dir: app_data.clone(),
-            persisted_dir: None,
-            cli_dir: Some(app_data),
-            source: AppDataDirSource::Cli,
-        },
-        app_version: "0.0.0-test".into(),
-        profile: RuntimeHostProfile::HeadlessData,
-        database_maintenance_cache_dir: None,
-    })?;
+    let state = RuntimeHostState::new(cli_options(
+        app_data,
+        RuntimeHostProfile::HeadlessData,
+        None,
+    ))?;
     assert!(state.profile_extension.is_none());
     assert!(!state.paths.app_data.join("metadataCache.db").exists());
     state
@@ -228,31 +243,64 @@ fn desktop_idle_stop_still_cleans_up_profile_services() -> Result<()> {
     let app_data = dir.path.join("app-data");
     std::fs::create_dir_all(&app_data)?;
     let extension = Arc::new(TestProfileExtension::default());
-    let state = RuntimeHostStateBuilder::new(RuntimeHostOptions {
-        realtime_origin: "http://localhost:9000".into(),
-        launched_from_autostart: false,
-        app_data_dir: AppDataDirResolution {
-            current_dir: app_data.clone(),
-            default_dir: app_data.clone(),
-            persisted_dir: None,
-            cli_dir: Some(app_data),
-            source: AppDataDirSource::Cli,
-        },
-        app_version: "0.0.0-test".into(),
-        profile: RuntimeHostProfile::Desktop,
-        database_maintenance_cache_dir: None,
-    })?
-    .finish(RuntimeHostComposition {
-        local_game_context: Arc::new(UnavailableLocalGameContextSource),
-        group_order_source: Arc::new(UnavailableGroupOrderSource),
-        friend_projection_observer: None,
-        profile_extension: Some(extension.clone()),
-    })?;
+    let state =
+        RuntimeHostStateBuilder::new(cli_options(app_data, RuntimeHostProfile::Desktop, None))?
+            .finish(RuntimeHostComposition {
+                local_game_context: Arc::new(UnavailableLocalGameContextSource),
+                group_order_source: Arc::new(UnavailableGroupOrderSource),
+                friend_projection_observer: None,
+                profile_extension: Some(extension.clone()),
+            })?;
 
     let before = state.backend_runtime.snapshot();
     assert_eq!(before.phase, BackendRuntimePhase::Idle);
     let stopped = state.stop_backend_runtime("application-exit");
     assert_eq!(stopped.updated_at, before.updated_at);
     assert_eq!(extension.stop_count.load(Ordering::Acquire), 1);
+    Ok(())
+}
+
+struct CountingTaskExecutor {
+    spawned: Arc<AtomicUsize>,
+}
+
+struct FinishedTaskHandle;
+
+impl vrcx_0_application_core::RuntimeTaskHandle for FinishedTaskHandle {
+    fn abort(&self) {}
+
+    fn is_finished(&self) -> bool {
+        true
+    }
+
+    fn join_or_abort(&mut self, _timeout: std::time::Duration) {}
+}
+
+impl RuntimeTaskExecutor for CountingTaskExecutor {
+    fn spawn(
+        &self,
+        _task: vrcx_0_application_core::RuntimeTask,
+    ) -> Box<dyn vrcx_0_application_core::RuntimeTaskHandle> {
+        self.spawned.fetch_add(1, Ordering::AcqRel);
+        Box::new(FinishedTaskHandle)
+    }
+}
+
+#[test]
+fn construction_time_tasks_run_on_the_provided_executor() -> Result<()> {
+    let dir = TestDir::new("construction-executor");
+    let app_data = dir.path.join("app-data");
+    std::fs::create_dir_all(&app_data)?;
+    let spawned = Arc::new(AtomicUsize::new(0));
+
+    let _state = RuntimeHostState::new(cli_options(
+        app_data,
+        RuntimeHostProfile::HeadlessData,
+        Some(Arc::new(CountingTaskExecutor {
+            spawned: Arc::clone(&spawned),
+        })),
+    ))?;
+
+    assert!(spawned.load(Ordering::Acquire) > 0);
     Ok(())
 }

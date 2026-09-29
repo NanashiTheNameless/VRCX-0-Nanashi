@@ -4,6 +4,7 @@ pub mod activity_sessions;
 pub mod avatar;
 pub mod derived_keys;
 pub mod favorite_kind;
+pub mod friend_log;
 pub mod friends;
 pub mod game_log_parser;
 pub mod game_log_sessions;

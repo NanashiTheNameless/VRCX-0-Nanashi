@@ -10,8 +10,11 @@ use vrcx_0_application_core::{
 };
 
 use super::types::{
-    CurrentUserProfileUpdateRequest, CurrentUserUpdateRequest, VrchatCurrentUserBadgeInput,
-    VrchatCurrentUserProfileUpdateInput, VrchatCurrentUserTagsInput, VrchatCurrentUserUpdateInput,
+    VrchatCurrentUserBadgeInput, VrchatCurrentUserProfileUpdateInput, VrchatCurrentUserTagsInput,
+    VrchatCurrentUserUpdateInput,
+};
+use vrcx_0_contracts::vrchat_requests::{
+    CurrentUserProfileUpdateRequest, CurrentUserUpdateRequest,
 };
 
 const CURRENT_USER_REMOTE_MUTATION_INTERVAL: Duration = Duration::from_millis(250);

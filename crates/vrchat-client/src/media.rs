@@ -9,15 +9,10 @@ use crate::http_api::{
 };
 use crate::query::serialize_query;
 
-mod params;
-mod request;
-
-pub use params::{
-    EmojiLoopStyle, EmojiUploadParams, ImageAnimationStyle, ImageMaskTag, InventoryListParams,
-    InventoryOrder, MediaFileListParams, MediaFileTag, PrintUploadParams,
-};
-pub use request::{
-    InventoryItemUpdateRequest, MediaAssetUploadRequest, ProfileDecorationEquipSlot,
+pub use vrcx_0_contracts::vrchat_requests::{
+    EmojiLoopStyle, EmojiUploadParams, ImageAnimationStyle, ImageMaskTag,
+    InventoryItemUpdateRequest, InventoryListParams, InventoryOrder, MediaAssetUploadRequest,
+    MediaFileListParams, MediaFileTag, PrintUploadParams, ProfileDecorationEquipSlot,
 };
 
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Eq, Serialize, specta::Type)]
