@@ -4585,8 +4585,7 @@
                 "add_domain": "Add domain"
             },
             "loading": {
-                "loading_world_profile": "Loading world profile",
-                "fetching_the_current_vrchat_world_snapshot_for_this_dialog": "Loading world details"
+                "loading_world_profile": "Loading world profile"
             },
             "error": {
                 "world_profile_unavailable": "World profile unavailable",
@@ -4976,7 +4975,9 @@
                 "loaded_of_total": "Loaded {loaded} of {total}",
                 "search_results": "{count} results",
                 "export_loaded": "Export loaded ({count})",
-                "export_all": "Export all ({count})"
+                "export_all": "Export all ({count})",
+                "failed_to_load": "Failed to load members",
+                "failed_to_search": "Failed to search members"
             },
             "gallery": {
                 "header": "Photos"
@@ -5815,7 +5816,8 @@
             "send": "Send",
             "recent": "Recent",
             "inventory_emojis": "Inventory",
-            "no_inventory_emojis": "No emojis in your inventory yet"
+            "no_inventory_emojis": "No emojis in your inventory yet",
+            "failed_to_load_emojis": "Failed to load emojis"
         },
         "vrcx_updater": {
             "latest_version": "VRCX-0-Nanashi is up to date",

@@ -1,32 +1,7 @@
-use std::time::Duration;
-
 use super::test_support::*;
 use super::*;
-use vrcx_0_application_core::{
-    RealtimeEntryCorrectionStream, RuntimeTask, RuntimeTaskExecutor, RuntimeTaskHandle,
-};
+use vrcx_0_application_core::RealtimeEntryCorrectionStream;
 use vrcx_0_core::OwnerId;
-
-#[derive(Clone, Copy)]
-struct DiscardWorldCacheTaskExecutor;
-
-struct FinishedWorldCacheTaskHandle;
-
-impl RuntimeTaskExecutor for DiscardWorldCacheTaskExecutor {
-    fn spawn(&self, _task: RuntimeTask) -> Box<dyn RuntimeTaskHandle> {
-        Box::new(FinishedWorldCacheTaskHandle)
-    }
-}
-
-impl RuntimeTaskHandle for FinishedWorldCacheTaskHandle {
-    fn abort(&self) {}
-
-    fn is_finished(&self) -> bool {
-        true
-    }
-
-    fn join_or_abort(&mut self, _timeout: Duration) {}
-}
 
 #[test]
 fn enrich_projection_world_names_returns_unresolved_world_ids() -> Result<()> {
@@ -103,33 +78,6 @@ fn feed_entry_correction_id_matches_frontend_golden_vectors() {
     for (entry, expected) in vectors {
         assert_eq!(entry.correction_id(), expected);
     }
-}
-
-#[test]
-fn world_cache_name_lookup_does_not_fallback_to_db_hot_path() -> Result<()> {
-    let cache =
-        vrcx_0_application_core::WorldCache::new(vrcx_0_application_core::NoopWorldCachePort);
-
-    assert_eq!(cache.get_name("wrld_db_only"), None);
-    Ok(())
-}
-
-#[test]
-fn realtime_start_does_not_preload_world_cache_rows() -> Result<()> {
-    let (_dir, runtime, active_session) = runtime_with_active_session("world-cache-starts-empty")?;
-    runtime.set_task_executor_for_test(DiscardWorldCacheTaskExecutor);
-
-    runtime.runtime().start(
-        active_session.user_id,
-        active_session.endpoint,
-        active_session.websocket,
-        1,
-        json!({"id": "usr_self"}),
-        Default::default(),
-    )?;
-
-    assert_eq!(runtime.runtime().world_cache.get_name("wrld_db_only"), None);
-    Ok(())
 }
 
 #[test]

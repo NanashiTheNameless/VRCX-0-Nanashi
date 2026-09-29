@@ -74,10 +74,10 @@ describe('useGroupMembersPagination', () => {
             { initialProps: baseProps }
         );
 
-        await waitFor(() => expect(result.current.status).toBe('loading'));
+        await waitFor(() => expect(result.current.status).toBe('running'));
         rerender({ ...baseProps, enabled: false });
 
-        expect(result.current.status).toBe('idle');
+        expect(result.current.status).toBe('');
         expect(result.current.rows).toEqual([]);
 
         await act(async () => {
@@ -85,7 +85,7 @@ describe('useGroupMembersPagination', () => {
             await request.promise;
         });
 
-        expect(result.current.status).toBe('idle');
+        expect(result.current.status).toBe('');
         expect(result.current.rows).toEqual([]);
     });
 

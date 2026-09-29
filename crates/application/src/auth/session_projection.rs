@@ -136,26 +136,6 @@ mod tests {
     }
 
     #[test]
-    fn cloning_a_projection_shares_the_current_user_snapshot() {
-        let projection = establish_authenticated_session_projection(
-            &AuthenticatedSessionProjection::default(),
-            &session(),
-            7,
-        );
-        let cloned = projection.clone();
-        let first = projection.session.as_ref().unwrap();
-        let second = cloned.session.as_ref().unwrap();
-
-        assert!(first
-            .current_user_snapshot
-            .shares_storage_with(&second.current_user_snapshot));
-        assert_eq!(
-            serde_json::to_value(cloned).unwrap()["session"]["currentUserSnapshot"]["id"],
-            "usr_owner"
-        );
-    }
-
-    #[test]
     fn clearing_projection_advances_revision_and_removes_the_session() {
         let established = establish_authenticated_session_projection(
             &AuthenticatedSessionProjection::default(),

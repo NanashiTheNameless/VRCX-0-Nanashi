@@ -3,8 +3,7 @@ import {
     type DatabaseUpgradePreflight,
     type DatabaseUpgradeProgress,
     type DatabaseUpgradeRunResult,
-    type DatabaseUpgradeStatus,
-    type LegacyVrcxMigrationStatus
+    type DatabaseUpgradeStatus
 } from '@/platform/tauri/bindings';
 import configRepository from '@/repositories/configRepository';
 import i18n from '@/services/i18nService';
@@ -403,28 +402,6 @@ export async function startFreshDatabaseAfterUpgradeFailure(): Promise<boolean> 
     }
 }
 
-async function getLegacyMigrationStatus(): Promise<LegacyVrcxMigrationStatus> {
-    try {
-        return commands.appGetLegacyVrcxMigrationStatus();
-    } catch (error) {
-        console.warn('Legacy VRCX migration status check failed:', error);
-    }
-
-    try {
-        const available = Boolean(await commands.appCheckLegacyVrcxAvailable());
-        return {
-            detected: available,
-            available
-        };
-    } catch (error) {
-        console.warn('Legacy VRCX availability check failed:', error);
-        return {
-            detected: false,
-            available: false
-        };
-    }
-}
-
 export async function initializeDatabaseUpgradeFlow(): Promise<boolean> {
     let preflight: DatabaseUpgradePreflight;
     try {
@@ -467,7 +444,8 @@ export async function initializeDatabaseUpgradeFlow(): Promise<boolean> {
         );
     }
 
-    const legacyMigrationStatus = await getLegacyMigrationStatus();
+    const legacyMigrationStatus =
+        await commands.appGetLegacyVrcxMigrationStatus();
 
     if (legacyMigrationStatus.available) {
         setUpgradeState({

@@ -1,23 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-    buildGroupAuditLogCsv,
-    GROUP_AUDIT_LOG_EXPORT_COLUMNS
-} from './groupModerationCsv';
+import { buildGroupAuditLogCsv } from './groupModerationCsv';
 
 describe('groupModerationCsv', () => {
-    it('lists the export columns in a fixed order', () => {
-        expect(
-            GROUP_AUDIT_LOG_EXPORT_COLUMNS.map((column) => column.key)
-        ).toEqual([
-            'created_at',
-            'eventType',
-            'actorDisplayName',
-            'description',
-            'data'
-        ]);
-    });
-
     it('builds a CSV header and rows for the selected columns only', () => {
         const csv = buildGroupAuditLogCsv(
             [

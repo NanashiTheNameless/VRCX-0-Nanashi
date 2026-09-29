@@ -396,6 +396,7 @@ async fn a_non_missing_credentials_cookie_failure_never_attempts_a_fallback() {
 async fn throttled_attempt_clears_auth_cookies_and_last_user() {
     let (_dir, config, web, _db) = test_env("throttled");
     seed_saved_credential(&config, &web, "usr_saved");
+    web.set_cookies("auth=live").unwrap();
     let throttle = AutoLoginThrottle::new();
     let now = Instant::now();
     throttle.record_attempt("usr_saved", now);
@@ -430,6 +431,7 @@ async fn throttled_attempt_clears_auth_cookies_and_last_user() {
             .unwrap_or_default(),
         ""
     );
+    assert!(web.get_cookies().is_empty());
 }
 
 #[test]
@@ -450,36 +452,21 @@ fn invalid_credentials_failure_deletes_the_saved_credential() {
 }
 
 #[test]
-fn session_invalidated_failure_clears_auth_cookies_and_last_user() {
-    let (_dir, config, web, _db) = test_env("cleanup-session-invalidated");
-    seed_saved_credential(&config, &web, "usr_saved");
-
-    let snapshot = apply_failure_cleanup(
-        &web,
-        &config,
-        "usr_saved",
+fn session_invalidated_and_missing_credentials_failures_clear_auth_cookies_and_last_user() {
+    for kind in [
         LoginFailureKind::SessionInvalidated,
-    )
-    .unwrap();
-
-    assert_eq!(snapshot.last_user_logged_in, None);
-    assert_eq!(snapshot.saved_credentials_list.len(), 1);
-}
-
-#[test]
-fn missing_credentials_failure_clears_auth_cookies_and_last_user() {
-    let (_dir, config, web, _db) = test_env("cleanup-missing-credentials");
-    seed_saved_credential(&config, &web, "usr_saved");
-
-    let snapshot = apply_failure_cleanup(
-        &web,
-        &config,
-        "usr_saved",
         LoginFailureKind::MissingCredentials,
-    )
-    .unwrap();
+    ] {
+        let (_dir, config, web, _db) = test_env("cleanup-clears-last-user");
+        seed_saved_credential(&config, &web, "usr_saved");
+        web.set_cookies("auth=live").unwrap();
 
-    assert_eq!(snapshot.last_user_logged_in, None);
+        let snapshot = apply_failure_cleanup(&web, &config, "usr_saved", kind).unwrap();
+
+        assert_eq!(snapshot.last_user_logged_in, None);
+        assert_eq!(snapshot.saved_credentials_list.len(), 1);
+        assert!(web.get_cookies().is_empty());
+    }
 }
 
 #[test]

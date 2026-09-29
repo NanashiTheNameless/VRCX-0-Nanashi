@@ -91,17 +91,11 @@ function applyRgb(enabled: boolean): void {
 
 export function setRgb(enabled: boolean): void {
     applyRgb(enabled);
-    try {
-        if (enabled) {
-            localStorage.setItem(RGB_STORAGE_KEY, 'true');
-        } else {
-            localStorage.removeItem(RGB_STORAGE_KEY);
-        }
-    } catch {}
+    if (enabled) {
+        localStorage.setItem(RGB_STORAGE_KEY, 'true');
+    } else {
+        localStorage.removeItem(RGB_STORAGE_KEY);
+    }
 }
 
-try {
-    applyRgb(localStorage.getItem(RGB_STORAGE_KEY) === 'true');
-} catch {
-    applyRgb(false);
-}
+applyRgb(localStorage.getItem(RGB_STORAGE_KEY) === 'true');

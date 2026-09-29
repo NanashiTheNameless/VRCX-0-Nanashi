@@ -1,4 +1,12 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const mocks = vi.hoisted(() => ({
+    refreshLocalFavoritesForKinds: vi.fn<(kinds: string[]) => Promise<void>>()
+}));
+
+vi.mock('@/services/favoriteLocalRefreshService', () => ({
+    refreshLocalFavoritesForKinds: mocks.refreshLocalFavoritesForKinds
+}));
 
 import { useFavoriteRevisionStore } from '@/state/favoriteRevisionStore';
 import { useFavoriteStore } from '@/state/favoriteStore';
@@ -31,6 +39,8 @@ function favoritesChanged(
 
 describe('handleFavoritesChangedEvent', () => {
     beforeEach(() => {
+        mocks.refreshLocalFavoritesForKinds.mockReset();
+        mocks.refreshLocalFavoritesForKinds.mockResolvedValue(undefined);
         resetFavoritesChangedEventDelivery();
         useFavoriteStore.getState().resetFavorites();
         useFavoriteStore.getState().setFavoritesSnapshot({
@@ -71,6 +81,19 @@ describe('handleFavoritesChangedEvent', () => {
             pendingRemote: false,
             pendingUnknown: false
         });
+        expect(mocks.refreshLocalFavoritesForKinds).not.toHaveBeenCalled();
+    });
+
+    it('reloads the changed local favorite kind when the delta requires a refresh', () => {
+        handleFavoritesChangedEvent(
+            favoritesChanged({
+                requiresRefresh: true
+            })
+        );
+
+        expect(mocks.refreshLocalFavoritesForKinds).toHaveBeenCalledWith([
+            'friend'
+        ]);
     });
 
     it('ignores a delta emitted for a replaced account scope', () => {

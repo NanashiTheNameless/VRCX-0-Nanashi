@@ -13,11 +13,6 @@ const mocks = vi.hoisted(() => ({
     status: vi.fn()
 }));
 
-vi.mock('react-i18next', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('react-i18next')>()),
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
         appIntegrationApiStatus: mocks.status,

@@ -244,22 +244,24 @@ fn apply_friend_request_accept_locally_reports_remote_ok_local_failed_when_persi
 }
 
 #[test]
-fn write_friend_request_history_records_friend_request_type() {
-    let fixture = fixture("send-request-history-only");
+fn write_friend_request_history_records_the_given_request_type() {
+    let fixture = fixture("friend-request-history-only");
 
-    let outcome = write_friend_request_history(
-        &fixture.deps(),
-        &OwnerId::new("usr_self"),
-        "usr_target",
-        "Target",
-        "FriendRequest",
-    );
+    for history_type in ["FriendRequest", "CancelFriendRequest"] {
+        let outcome = write_friend_request_history(
+            &fixture.deps(),
+            &OwnerId::new("usr_self"),
+            "usr_target",
+            "Target",
+            history_type,
+        );
 
-    assert_eq!(outcome.status, SocialFriendMutationStatus::Applied);
-    assert_eq!(
-        history_rows(&fixture.runtime, "usr_self", "usr_target", "FriendRequest"),
-        1
-    );
+        assert_eq!(outcome.status, SocialFriendMutationStatus::Applied);
+        assert_eq!(
+            history_rows(&fixture.runtime, "usr_self", "usr_target", history_type),
+            1
+        );
+    }
 }
 
 #[test]
@@ -370,28 +372,4 @@ fn previous_generation_401_does_not_invalidate_reauthenticated_same_scope() {
         .take_events_for_test()
         .iter()
         .all(|event| event.name != "runtimeVrchatAuthFailure"));
-}
-
-#[test]
-fn write_friend_request_history_records_cancel_friend_request_type() {
-    let fixture = fixture("cancel-request-history-only");
-
-    let outcome = write_friend_request_history(
-        &fixture.deps(),
-        &OwnerId::new("usr_self"),
-        "usr_target",
-        "Target",
-        "CancelFriendRequest",
-    );
-
-    assert_eq!(outcome.status, SocialFriendMutationStatus::Applied);
-    assert_eq!(
-        history_rows(
-            &fixture.runtime,
-            "usr_self",
-            "usr_target",
-            "CancelFriendRequest"
-        ),
-        1
-    );
 }

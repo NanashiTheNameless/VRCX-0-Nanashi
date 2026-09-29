@@ -17,7 +17,7 @@ import {
     ToolbarTabs,
     type ToolbarSegmentOption
 } from '@/components/layout/ToolbarControls';
-import type { ActivityCompanionOrder } from '@/repositories/activityPageRepository';
+import type { ActivityCompanionOrder } from '@/platform/tauri/bindings';
 import configRepository from '@/repositories/configRepository';
 import { getResolvedThemeMode } from '@/services/themeService';
 import { usePreferencesStore } from '@/state/preferencesStore';

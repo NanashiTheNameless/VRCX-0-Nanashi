@@ -1,18 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const repositoryMocks = vi.hoisted(() => ({
+const commandMocks = vi.hoisted(() => ({
     fetchImageDataUrl: vi.fn(),
     getFileBase64: vi.fn()
 }));
 
-vi.mock('@/repositories/externalApiRepository', () => ({
-    default: {
-        fetchImageDataUrl: repositoryMocks.fetchImageDataUrl
-    }
-}));
-vi.mock('@/repositories/mediaRepository', () => ({
-    default: {
-        getFileBase64: repositoryMocks.getFileBase64
+vi.mock('@/platform/tauri/bindings', () => ({
+    commands: {
+        appExternalApiImageDataUrlGet: commandMocks.fetchImageDataUrl,
+        appGetFileBase64: commandMocks.getFileBase64
     }
 }));
 
@@ -38,7 +34,7 @@ describe('fullscreenImageDownload', () => {
 
     it('loads HTTP images through the Rust fetch boundary', async () => {
         const blob = new Blob(['image'], { type: 'image/png' });
-        repositoryMocks.fetchImageDataUrl.mockResolvedValue({
+        commandMocks.fetchImageDataUrl.mockResolvedValue({
             data: 'data:image/png;base64,aW1hZ2U='
         });
         const fetchMock = vi.fn().mockResolvedValue({
@@ -49,9 +45,9 @@ describe('fullscreenImageDownload', () => {
         await expect(
             fetchImageBlob('https://example.com/image.png')
         ).resolves.toBe(blob);
-        expect(repositoryMocks.fetchImageDataUrl).toHaveBeenCalledWith(
-            'https://example.com/image.png'
-        );
+        expect(commandMocks.fetchImageDataUrl).toHaveBeenCalledWith({
+            url: 'https://example.com/image.png'
+        });
         expect(fetchMock).toHaveBeenCalledWith(
             'data:image/png;base64,aW1hZ2U='
         );
@@ -70,7 +66,7 @@ describe('fullscreenImageDownload', () => {
             fetchImageBlob('data:text/plain;base64,dGV4dA==')
         ).rejects.toThrow('Unexpected image type: text/plain');
 
-        repositoryMocks.fetchImageDataUrl.mockResolvedValue({
+        commandMocks.fetchImageDataUrl.mockResolvedValue({
             data: 'not-a-data-url'
         });
         await expect(
@@ -79,7 +75,7 @@ describe('fullscreenImageDownload', () => {
     });
 
     it('prefers a local source path when preparing a download', async () => {
-        repositoryMocks.getFileBase64.mockResolvedValue('local-base64');
+        commandMocks.getFileBase64.mockResolvedValue('local-base64');
 
         await expect(
             getDownloadImageBase64({
@@ -87,10 +83,10 @@ describe('fullscreenImageDownload', () => {
                 url: 'https://example.com/ignored.png'
             })
         ).resolves.toBe('local-base64');
-        expect(repositoryMocks.getFileBase64).toHaveBeenCalledWith(
+        expect(commandMocks.getFileBase64).toHaveBeenCalledWith(
             'C:\\screenshots\\capture.png'
         );
-        expect(repositoryMocks.fetchImageDataUrl).not.toHaveBeenCalled();
+        expect(commandMocks.fetchImageDataUrl).not.toHaveBeenCalled();
     });
 
     it('removes the data-URL prefix when preparing a remote download', async () => {

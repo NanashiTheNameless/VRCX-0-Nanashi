@@ -1,5 +1,6 @@
 import { clearEntityQueryCache } from '@/lib/entityQueryCache';
 import {
+    commands,
     type AuthenticatedRuntimeSession,
     type LoginFailureKind,
     type LoginSessionState
@@ -8,7 +9,6 @@ import authRepository, {
     type SavedAuthSnapshot,
     type SavedCredentialRecord
 } from '@/repositories/authRepository';
-import vrchatAuthRepository from '@/repositories/vrchatAuthRepository';
 import { toast } from '@/services/toastService';
 import { clearUserDialogCaches } from '@/services/userDialogSessionCacheService';
 import { isRecord } from '@/shared/utils/record';
@@ -321,7 +321,9 @@ async function completeTwoFactorChallenge(
                 continue;
             }
 
-            await vrchatAuthRepository.cancelLoginSession(challengeAttemptId);
+            await commands.appVrchatAuthSessionCancel({
+                attemptId: challengeAttemptId
+            });
             ensureCurrentAuthAttempt(attempt);
             throw createAuthExecutionError(
                 'Two-factor verification was cancelled.',
@@ -329,7 +331,7 @@ async function completeTwoFactorChallenge(
             );
         }
 
-        const next = await vrchatAuthRepository.respondLoginSession({
+        const next = await commands.appVrchatAuthSessionRespond({
             attemptId: challengeAttemptId,
             method: mode,
             code: result.value
@@ -522,9 +524,9 @@ async function executeLoginAttempt({
         resolved = await resolveLoginSessionState(
             state,
             async (challengeAttemptId) => {
-                await vrchatAuthRepository.cancelLoginSession(
-                    challengeAttemptId
-                );
+                await commands.appVrchatAuthSessionCancel({
+                    attemptId: challengeAttemptId
+                });
                 ensureCurrentAuthAttempt(attempt);
                 return startSession();
             },
@@ -566,7 +568,7 @@ export async function executeManualLogin({
             ? 'Authenticated and refreshed saved credentials.'
             : 'Authenticated.',
         startSession: () =>
-            vrchatAuthRepository.startLoginSession({
+            commands.appVrchatAuthSessionStart({
                 mode: 'basic',
                 username: loginParams.username,
                 password: loginParams.password,
@@ -596,7 +598,7 @@ export async function executeSavedCredentialLogin(
         startupDetail: `Authenticating ${displayName}.`,
         successDetail: 'Authenticated with a saved account.',
         startSession: () =>
-            vrchatAuthRepository.startLoginSession({
+            commands.appVrchatAuthSessionStart({
                 mode: 'savedCredential',
                 userId
             }),

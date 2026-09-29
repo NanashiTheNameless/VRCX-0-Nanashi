@@ -560,23 +560,6 @@ mod tests {
     }
 
     #[test]
-    fn builds_notification_select_sql_with_ordering_and_optional_limit() {
-        assert_eq!(
-            notification_select_sql(
-                "usr_notifications",
-                &["id", "created_at", "type"],
-                " WHERE type IN (@type_0)",
-                true,
-            ),
-            "SELECT id, created_at, type FROM usr_notifications WHERE type IN (@type_0) ORDER BY created_at DESC, id DESC LIMIT @limit"
-        );
-        assert_eq!(
-            notification_select_sql("usr_notifications_v2", &["id"], "", false),
-            "SELECT id FROM usr_notifications_v2 ORDER BY created_at DESC, id DESC"
-        );
-    }
-
-    #[test]
     fn parses_notification_dates_and_expiration_boundaries() {
         let now = Utc.with_ymd_and_hms(2026, 6, 22, 10, 30, 0).unwrap();
 

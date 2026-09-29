@@ -5,10 +5,6 @@ import { cloneElement } from 'react';
 import type { PropsWithChildren, ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({
-    getPlayerDetailFromInstance: vi.fn().mockResolvedValue([])
-}));
-
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({
         t: (key: string, values?: { count?: number }) =>
@@ -58,12 +54,6 @@ vi.mock('@/ui/shadcn/avatar', () => ({
     AvatarGroup: ({ children }: PropsWithChildren) => <div>{children}</div>,
     AvatarImage: ({ src }: { src?: string }) => <img src={src} alt="" />,
     AvatarFallback: ({ children }: PropsWithChildren) => <span>{children}</span>
-}));
-
-vi.mock('@/repositories/gameLogRepository', () => ({
-    default: {
-        getPlayerDetailFromInstance: mocks.getPlayerDetailFromInstance
-    }
 }));
 
 vi.mock('@/services/gameLogUserDialogService', () => ({
@@ -195,7 +185,7 @@ describe('GameLogSessionsView', () => {
         ).toEqual(['Bob', 'Alice']);
     });
 
-    it('uses the batched duration rows without querying each session', () => {
+    it('shows the session duration accumulated from batched player rows', () => {
         render(
             <GameLogSessionsView
                 isGameRunning={false}
@@ -242,6 +232,5 @@ describe('GameLogSessionsView', () => {
         );
 
         expect(screen.getByText(/2m/)).not.toBeNull();
-        expect(mocks.getPlayerDetailFromInstance).not.toHaveBeenCalled();
     });
 });

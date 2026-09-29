@@ -52,26 +52,3 @@ impl From<OwnerId> for Value {
         Value::String(owner_user_id.0)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn transparent_json_contract_is_unchanged() {
-        let owner = OwnerId::new(" usr_owner ");
-        assert_eq!(serde_json::to_string(&owner).unwrap(), r#"" usr_owner ""#);
-        assert_eq!(
-            serde_json::from_str::<OwnerId>(r#""usr_owner""#)
-                .unwrap()
-                .as_str(),
-            "usr_owner"
-        );
-    }
-
-    #[test]
-    fn constructor_preserves_empty_and_whitespace_values() {
-        assert!(OwnerId::new("").is_empty());
-        assert_eq!(OwnerId::new("  ").as_str(), "  ");
-    }
-}

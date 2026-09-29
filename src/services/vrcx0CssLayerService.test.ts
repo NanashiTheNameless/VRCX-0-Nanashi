@@ -131,17 +131,4 @@ describe('vrcx0CssLayerService', () => {
         );
         expect(renderedLayers()).toEqual(['vrcx-0-rgb']);
     });
-
-    it('keeps the current session active when storage is unavailable', async () => {
-        const service = await loadCssLayerService();
-        localStorage.setItem.mockImplementationOnce(() => {
-            throw new Error('storage unavailable');
-        });
-
-        expect(() => service.setRgb(true)).not.toThrow();
-        expect(document.documentElement.classList.contains(RGB_CLASS)).toBe(
-            true
-        );
-        expect(renderedLayers()).toEqual(['vrcx-0-rgb']);
-    });
 });

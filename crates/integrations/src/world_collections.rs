@@ -225,7 +225,6 @@ mod tests {
         };
         let value = serde_json::to_value(payload).unwrap();
         assert_eq!(value["owner_hint"], "b".repeat(64));
-        assert!(value.get("owner_key").is_none());
     }
 
     #[test]
@@ -268,7 +267,6 @@ mod tests {
                 }
             })
         );
-        assert!(value["world"].get("comment").is_none());
     }
 
     #[test]

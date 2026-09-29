@@ -28,7 +28,7 @@ use process::{
     local_launch_strategy, normalized_process_path_for_platform, process_name_for_run,
     process_name_from_target_for_platform, shell_launch_pid_is_trackable,
     should_close_untracked_matching_processes, should_skip_entry, tracked_shell_process_id,
-    tracked_stop_pids, LaunchFailure, LocalLaunchStrategy, ShellExecuteVerb,
+    tracked_stop_pids, LocalLaunchStrategy, ShellExecuteVerb,
 };
 use process::{
     launch_entry, now_timestamp, refresh_runs, stop_close_by_vrcx_session, stop_tracked_run,

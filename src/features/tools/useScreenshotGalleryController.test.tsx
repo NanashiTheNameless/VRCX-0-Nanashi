@@ -9,11 +9,6 @@ import {
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('react-i18next', () => {
-    const translation = { t: (key: string) => key };
-    return { useTranslation: () => translation };
-});
-
 vi.mock('@/repositories/configRepository', () => ({
     default: {
         getString: vi.fn().mockResolvedValue(''),
@@ -21,7 +16,6 @@ vi.mock('@/repositories/configRepository', () => ({
     }
 }));
 
-vi.mock('@/repositories/mediaRepository', () => ({ default: {} }));
 vi.mock('@/services/screenshotLibraryScanService', () => ({}));
 vi.mock('@/services/toastService', () => ({ toast: { add: vi.fn() } }));
 

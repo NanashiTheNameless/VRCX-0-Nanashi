@@ -282,23 +282,6 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn avatar_bitmap_cache_uses_bounded_moka_storage() {
-        let cache = AvatarBitmapCache::new();
-        assert_eq!(
-            cache.success.policy().max_capacity(),
-            Some(HMD_AVATAR_CACHE_CAPACITY)
-        );
-        for index in 0..HMD_AVATAR_CACHE_CAPACITY * 2 {
-            let url = format!("https://images.example/avatar/{index}");
-            let user_id = format!("usr_friend_{index}");
-            cache.store_success(&url, &user_id, test_avatar_bitmap());
-        }
-        cache.success.run_pending_tasks();
-
-        assert!(cache.success.entry_count() <= HMD_AVATAR_CACHE_CAPACITY);
-    }
-
-    #[test]
     fn avatar_bitmap_cache_rejects_stale_fetch_results_after_clear() {
         let cache = AvatarBitmapCache::new();
         let generation = cache.generation();

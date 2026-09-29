@@ -110,7 +110,7 @@ describe('sidebar auto-hide', () => {
         );
     });
 
-    it('blocks for visible menus and dialogs but not closed overlays', async () => {
+    it('blocks for an open menu and releases it once the menu is closed', async () => {
         const service = await import('./sidebarAutoHideService');
         const menu = document.createElement('div');
         menu.setAttribute('role', 'menu');

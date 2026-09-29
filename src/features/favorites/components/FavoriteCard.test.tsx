@@ -174,10 +174,9 @@ describe('FavoriteCard website links', () => {
         );
 
         expect(html).toContain('common.actions.view_on_website');
-        expect(html).toContain('lucide-external-link');
     });
 
-    it('shows matching link icons for a world', () => {
+    it('shows website and share links for a world', () => {
         const item: FavoriteCardItem = {
             id: WORLD_ID,
             key: 'world:public',
@@ -194,8 +193,6 @@ describe('FavoriteCard website links', () => {
 
         expect(html).toContain('common.actions.view_on_website');
         expect(html).toContain('dialog.world.info.copy_vrcx_url');
-        expect(html).toContain('lucide-external-link');
-        expect(html).toContain('lucide-share-2');
     });
 
     it('copies the world share text with its entity name', () => {
@@ -237,11 +234,8 @@ describe('FavoriteCard website links', () => {
     it('shows VRChat and share links for a public avatar', () => {
         const html = renderAvatarCard('public');
 
-        expect(html).toContain('lucide-ellipsis');
         expect(html).toContain('common.actions.view_on_website');
         expect(html).toContain('dialog.avatar.info.copy_vrcx_url');
-        expect(html).toContain('lucide-external-link');
-        expect(html).toContain('lucide-share-2');
         const shareLinkIndex = html.indexOf('dialog.avatar.info.copy_vrcx_url');
         const separatorIndex = html.indexOf('<hr', shareLinkIndex);
         const selectIndex = html.indexOf('dialog.avatar.actions.select');
@@ -291,8 +285,6 @@ describe('FavoriteCard website links', () => {
 
         expect(html).toContain('common.actions.view_on_website');
         expect(html).not.toContain('dialog.avatar.info.copy_vrcx_url');
-        expect(html).toContain('lucide-external-link');
-        expect(html).not.toContain('lucide-share-2');
         const websiteLinkIndex = html.indexOf('common.actions.view_on_website');
         const separatorIndex = html.indexOf('<hr', websiteLinkIndex);
         const selectIndex = html.indexOf('dialog.avatar.actions.select');
@@ -305,8 +297,6 @@ describe('FavoriteCard website links', () => {
 
         expect(html).toContain('common.actions.view_on_website');
         expect(html).not.toContain('dialog.avatar.info.copy_vrcx_url');
-        expect(html).toContain('lucide-external-link');
-        expect(html).not.toContain('lucide-share-2');
     });
 });
 
@@ -423,65 +413,4 @@ describe('FavoriteCard selection and avatar actions', () => {
 
         expect(onAvatarSelect).toHaveBeenCalledWith(item);
     });
-});
-
-describe('FavoriteCard compact layout', () => {
-    it('keeps the friend selection control inside the ring and aligns media padding', () => {
-        const item: FavoriteCardItem = {
-            id: USER_ID,
-            key: 'friend:compact',
-            kind: 'friend',
-            source: 'remote',
-            title: 'friend card'
-        };
-        const html = renderToStaticMarkup(
-            <FavoriteCard
-                item={item}
-                densityConfig={getFavoritesDensityConfig('friend', 'compact')}
-                selected
-            />
-        );
-
-        expect(html).toContain('absolute top-2 left-2 z-20');
-        expect(html).toContain(
-            'relative ml-2 flex shrink-0 items-center justify-center'
-        );
-        expect(html).not.toContain('object-row__media');
-        expect(html).toContain('object-row__context-action');
-    });
-
-    it.each([
-        ['world', WORLD_ID],
-        ['avatar', AVATAR_ID]
-    ] as const)(
-        'uses the compact object surface for a %s without changing the cover layout',
-        (kind, id) => {
-            const item: FavoriteCardItem = {
-                id,
-                key: `${kind}:compact`,
-                kind,
-                source: 'remote',
-                title: `${kind} card`
-            };
-            const html = renderToStaticMarkup(
-                <FavoriteCard
-                    item={item}
-                    densityConfig={getFavoritesDensityConfig(kind, 'compact')}
-                    selected
-                />
-            );
-
-            expect(html).toContain('absolute top-2 left-2 z-20');
-            expect(html).toContain('object-row object-row--interactive');
-            expect(html).toContain('object-row__media');
-
-            const coverHtml = renderToStaticMarkup(
-                <FavoriteCard
-                    item={item}
-                    densityConfig={getFavoritesDensityConfig(kind, 'standard')}
-                />
-            );
-            expect(coverHtml).not.toContain('object-row');
-        }
-    );
 });

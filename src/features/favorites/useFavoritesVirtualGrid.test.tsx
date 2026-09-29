@@ -44,7 +44,6 @@ describe('useFavoritesVirtualGrid', () => {
 
         expect(result.current.gridPadding).toBe(2);
         expect(result.current.gridGap).toBe(4);
-        expect(result.current.gridGap + result.current.gridPadding * 2).toBe(8);
         expect(result.current.gridMinWidth).toBe(244);
         expect(result.current.cardHeight).toBe(60);
         expect(result.current.visibleRows[0]?.cellHeight).toBe(64);

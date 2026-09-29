@@ -284,8 +284,8 @@ mod tests {
 
     #[test]
     fn stable_daily_index_matches_char_code_sum_modulo() {
-        let seed: u32 = "2026-07-30".chars().map(|value| value as u32).sum();
-        assert_eq!(stable_daily_index("2026-07-30", 7), (seed as usize) % 7);
+        assert_eq!(stable_daily_index("2026-07-30", 7), 4);
+        assert_eq!(stable_daily_index("2026-07-31", 7), 5);
         assert_eq!(stable_daily_index("2026-07-30", 0), 0);
     }
 }

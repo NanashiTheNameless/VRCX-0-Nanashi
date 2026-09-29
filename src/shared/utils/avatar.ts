@@ -1,5 +1,3 @@
-import { getPlatformInfo } from './avatarPlatform';
-
 const DEFAULT_AVATAR_FILE_ID = 'file_0e8c4e32-7444-44ea-ade4-313c010d4bae';
 
 function stripDefaultAvatarImage<T extends Record<string, unknown>>(
@@ -16,16 +14,6 @@ function stripDefaultAvatarImage<T extends Record<string, unknown>>(
         });
     }
     return record;
-}
-
-function parseAvatarUrl(avatar: string): string | null {
-    const url = new URL(avatar);
-    const urlPath = url.pathname;
-    if (urlPath.substring(5, 13) === '/avatar/') {
-        const avatarId = urlPath.substring(13);
-        return avatarId;
-    }
-    return null;
 }
 
 function compareUnityVersion(
@@ -68,9 +56,4 @@ function compareUnityVersion(
     return false;
 }
 
-export {
-    stripDefaultAvatarImage,
-    parseAvatarUrl,
-    getPlatformInfo,
-    compareUnityVersion
-};
+export { stripDefaultAvatarImage, compareUnityVersion };

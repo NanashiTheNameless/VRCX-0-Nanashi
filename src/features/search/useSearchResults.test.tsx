@@ -13,9 +13,6 @@ const { getGroups, toastAdd } = vi.hoisted(() => ({
     getGroups: vi.fn(),
     toastAdd: vi.fn()
 }));
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
 vi.mock('@/repositories/vrchatSearchRepository', () => ({
     default: { getGroups }
 }));

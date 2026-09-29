@@ -11,14 +11,13 @@ vi.mock('./configRepository', () => ({
         setString: vi.fn(),
         setBool: vi.fn(),
         setMany: vi.fn(),
-        has: vi.fn(),
-        remove: vi.fn()
+        has: vi.fn()
     }
 }));
 
-vi.mock('./externalApiRepository', () => ({
-    default: {
-        searchAvatarProvider: vi.fn()
+vi.mock('@/platform/tauri/bindings', () => ({
+    commands: {
+        appExternalApiAvatarSearchGet: vi.fn()
     }
 }));
 
@@ -28,6 +27,7 @@ vi.mock('./avatarProfileRepository', () => ({
     }
 }));
 
+import { commands } from '@/platform/tauri/bindings';
 import { publishPreferenceChanged } from '@/shared/events/preferenceEvents';
 
 import avatarProfileRepository from './avatarProfileRepository';
@@ -35,7 +35,6 @@ import avatarSearchProviderRepository, {
     isDefaultAvatarProvider
 } from './avatarSearchProviderRepository';
 import configRepository from './configRepository';
-import externalApiRepository from './externalApiRepository';
 
 const AVTRDB_PROVIDER = 'https://api.avtrdb.com/v3/avatar/search/vrcx';
 const VRCDB_PROVIDER = 'https://vrcx.vrcdb.com/avatars/Avatar/VRCX';
@@ -56,14 +55,11 @@ describe('AvatarSearchProviderRepository', () => {
         vi.mocked(configRepository.setBool).mockResolvedValue(null);
         vi.mocked(configRepository.setMany).mockResolvedValue(undefined);
         vi.mocked(configRepository.has).mockResolvedValue(true);
-        vi.mocked(configRepository.remove).mockResolvedValue(0);
-        vi.mocked(externalApiRepository.searchAvatarProvider).mockResolvedValue(
-            {
-                status: 200,
-                data: '[]',
-                raw: []
-            }
-        );
+        vi.mocked(commands.appExternalApiAvatarSearchGet).mockResolvedValue({
+            status: 200,
+            data: '[]',
+            raw: []
+        });
         vi.mocked(avatarProfileRepository.normalize).mockImplementation(
             (avatarInput: unknown) => {
                 const avatar = (avatarInput ?? {}) as Record<string, unknown>;
@@ -145,28 +141,6 @@ describe('AvatarSearchProviderRepository', () => {
         );
     });
 
-    it('does not remove the stored selected-provider key while reading config, so the selection cannot be wiped back to the default on the next read', async () => {
-        const selectedProvider = 'https://selected.example.test/search';
-        vi.mocked(configRepository.getString).mockImplementation(
-            (key: string, fallback: ConfigFallback = '') => {
-                if (key === 'VRCX_avatarRemoteDatabaseProviderList') {
-                    return Promise.resolve(
-                        JSON.stringify([AVTRDB_PROVIDER, selectedProvider])
-                    );
-                }
-                if (key === 'VRCX_avatarRemoteDatabaseProvider') {
-                    return Promise.resolve(selectedProvider);
-                }
-                return Promise.resolve(String(fallback ?? ''));
-            }
-        );
-
-        const config = await avatarSearchProviderRepository.getConfig();
-
-        expect(config.selectedProvider).toBe(selectedProvider);
-        expect(configRepository.remove).not.toHaveBeenCalled();
-    });
-
     it('builds provider search requests and deduplicates normalized avatar ids', async () => {
         vi.mocked(configRepository.getString).mockImplementation(
             (key: string, fallback: ConfigFallback = '') => {
@@ -176,39 +150,37 @@ describe('AvatarSearchProviderRepository', () => {
                 return Promise.resolve(String(fallback ?? ''));
             }
         );
-        vi.mocked(externalApiRepository.searchAvatarProvider).mockResolvedValue(
-            {
-                status: 200,
-                data: JSON.stringify([
-                    {
-                        Id: 'avtr_alpha',
-                        Name: 'Alpha',
-                        AuthorName: 'Creator A',
-                        image_url: 'https://cdn.example.test/alpha.png'
-                    },
-                    {
-                        _id: 'avtr_alpha',
-                        Name: 'Duplicate Alpha'
-                    },
-                    {
-                        avatarId: 'avtr_beta',
-                        author_id: 'usr_beta',
-                        CreatedAt: '2024-01-01T00:00:00Z',
-                        updatedAt: '2024-01-02T00:00:00Z'
-                    }
-                ]),
-                raw: { provider: true }
-            }
-        );
+        vi.mocked(commands.appExternalApiAvatarSearchGet).mockResolvedValue({
+            status: 200,
+            data: JSON.stringify([
+                {
+                    Id: 'avtr_alpha',
+                    Name: 'Alpha',
+                    AuthorName: 'Creator A',
+                    image_url: 'https://cdn.example.test/alpha.png'
+                },
+                {
+                    _id: 'avtr_alpha',
+                    Name: 'Duplicate Alpha'
+                },
+                {
+                    avatarId: 'avtr_beta',
+                    author_id: 'usr_beta',
+                    CreatedAt: '2024-01-01T00:00:00Z',
+                    updatedAt: '2024-01-02T00:00:00Z'
+                }
+            ]),
+            raw: { provider: true }
+        });
 
         const result = await avatarSearchProviderRepository.search({
             provider: ' https://avatars.example.test/search ',
             query: ' alpha '
         });
 
-        const request = vi.mocked(externalApiRepository.searchAvatarProvider)
-            .mock.calls[0][0];
-        const url = new URL(request.url);
+        const request = vi.mocked(commands.appExternalApiAvatarSearchGet).mock
+            .calls[0][0];
+        const url = new URL(request.url ?? '');
         expect(`${url.origin}${url.pathname}`).toBe(
             'https://avatars.example.test/search'
         );
@@ -279,9 +251,7 @@ describe('AvatarSearchProviderRepository', () => {
             status: 200
         });
 
-        expect(
-            externalApiRepository.searchAvatarProvider
-        ).toHaveBeenCalledTimes(1);
+        expect(commands.appExternalApiAvatarSearchGet).toHaveBeenCalledTimes(1);
     });
 
     it('publishes normalized config after saving provider preferences', async () => {

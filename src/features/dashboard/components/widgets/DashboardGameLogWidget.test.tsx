@@ -31,11 +31,6 @@ vi.mock('@/lib/useThrottledValue', () => ({
     }
 }));
 
-vi.mock('react-i18next', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('react-i18next')>()),
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/repositories/gameLogRepository', () => ({
     GAME_LOG_FILTER_TYPES: [],
     default: { queryGameLog: mocks.queryGameLog }
@@ -179,11 +174,6 @@ describe('DashboardGameLogWidget', () => {
             )
         );
         expect(eventTypes).toHaveLength(3);
-        expect(
-            eventTypes.every((eventType) =>
-                eventType.classList.contains('text-right')
-            )
-        ).toBe(true);
         const affinitySlot = view.container.querySelector(
             '[data-dashboard-widget-affinity-slot]'
         );

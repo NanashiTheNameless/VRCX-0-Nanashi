@@ -137,7 +137,9 @@ describe('avatarWearTimeService', () => {
                 $previousAvatarSwapTime: 3000
             }
         });
+    });
 
+    it('clears the swap time when the snapshot switches to another user without an avatar', () => {
         expect(
             buildAvatarWearSnapshotUpdate({
                 previousSnapshot: {

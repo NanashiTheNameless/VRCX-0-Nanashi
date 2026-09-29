@@ -189,59 +189,6 @@ async function queryNotifications({
     return rows.map(normalizeNotificationListRow);
 }
 
-async function addNotificationToDatabase({
-    userId,
-    notification
-}: NotificationUserOptions & { notification?: NotificationRecord } = {}) {
-    const normalizedUserId = normalizeUserId(userId);
-    if (!normalizedUserId) {
-        return;
-    }
-
-    const notificationDetails = isRecord(notification?.details)
-        ? notification.details
-        : {};
-    const entry: NotificationRecord & { details: Record<string, unknown> } = {
-        id: '',
-        created_at: '',
-        type: '',
-        senderUserId: '',
-        senderUsername: '',
-        receiverUserId: '',
-        message: '',
-        ...notification,
-        details: {
-            worldId: '',
-            worldName: '',
-            imageUrl: '',
-            inviteMessage: '',
-            requestMessage: '',
-            responseMessage: '',
-            ...notificationDetails
-        }
-    };
-    if (entry.imageUrl && !entry.details.imageUrl) {
-        entry.details.imageUrl = entry.imageUrl;
-    }
-    if (!entry.created_at || !entry.type || !entry.id) {
-        throw new Error('Notification is missing required field');
-    }
-
-    await commands.appNotificationAddV1(normalizedUserId, entry);
-}
-
-async function addNotificationV2ToDatabase({
-    userId,
-    notification
-}: NotificationUserOptions & { notification?: NotificationRecord } = {}) {
-    const normalizedUserId = normalizeUserId(userId);
-    if (!normalizedUserId || !notification?.id) {
-        return;
-    }
-
-    await commands.appNotificationAddV2(normalizedUserId, notification);
-}
-
 async function expireNotificationV2({
     userId,
     id
@@ -377,8 +324,6 @@ async function sendBoop({
 }
 
 const notificationPersistenceRepository = Object.freeze({
-    addNotificationToDatabase,
-    addNotificationV2ToDatabase,
     expireNotificationV2,
     queryNotifications,
     deleteNotification,
@@ -390,5 +335,5 @@ const notificationPersistenceRepository = Object.freeze({
     updateNotificationExpired
 });
 
-export { addNotificationToDatabase, queryNotifications };
+export { queryNotifications };
 export default notificationPersistenceRepository;

@@ -584,6 +584,17 @@ const generatedCommands = {
             rules
         });
     },
+    async appPresenceAutomationRuleEnabledSet(
+        kind: PresenceAutomationRuleKind,
+        ruleId: string,
+        enabled: boolean
+    ): Promise<RawJson[]> {
+        return await TAURI_INVOKE('app__presence_automation_rule_enabled_set', {
+            kind,
+            ruleId,
+            enabled
+        });
+    },
     async appFavoritesTransferSelection(
         input: FavoriteTransferSelectionInput
     ): Promise<FavoriteTransferSelectionResult> {
@@ -1159,15 +1170,6 @@ const generatedCommands = {
             notification
         });
     },
-    async appNotificationAddV2(
-        userId: string,
-        notification: JsonValue
-    ): Promise<null> {
-        return await TAURI_INVOKE('app__notification_add_v2', {
-            userId,
-            notification
-        });
-    },
     async appNotificationV2Expire(userId: string, id: string): Promise<null> {
         return await TAURI_INVOKE('app__notification_v2_expire', {
             userId,
@@ -1527,10 +1529,12 @@ const generatedCommands = {
     ): Promise<HttpApiExecuteResponse> {
         return await TAURI_INVOKE('app__vrchat_group_get', { input });
     },
-    async appVrchatGroupMemberGet(
+    async appVrchatGroupMemberRoleIdsGet(
         input: VrchatGroupUserInput
-    ): Promise<HttpApiExecuteResponse> {
-        return await TAURI_INVOKE('app__vrchat_group_member_get', { input });
+    ): Promise<string[] | null> {
+        return await TAURI_INVOKE('app__vrchat_group_member_role_ids_get', {
+            input
+        });
     },
     async appVrchatGroupInviteDelete(
         input: VrchatGroupUserInput
@@ -2434,9 +2438,6 @@ const generatedCommands = {
             version
         });
     },
-    async appCheckLegacyVrcxAvailable(): Promise<boolean> {
-        return await TAURI_INVOKE('app__check_legacy_vrcx_available');
-    },
     async appGetLegacyVrcxForceMigrationStatus(): Promise<LegacyVrcxMigrationStatus> {
         return await TAURI_INVOKE(
             'app__get_legacy_vrcx_force_migration_status'
@@ -2765,6 +2766,15 @@ const generatedCommands = {
     ): Promise<AppLauncherSnapshot> {
         return await TAURI_INVOKE('app__app_launcher_entries_set', { entries });
     },
+    async appAppLauncherEntryEnabledSet(
+        entryId: string,
+        enabled: boolean
+    ): Promise<AppLauncherSnapshot> {
+        return await TAURI_INVOKE('app__app_launcher_entry_enabled_set', {
+            entryId,
+            enabled
+        });
+    },
     async appAppLauncherEntryTest(
         entryId: string
     ): Promise<AppLauncherSnapshot> {
@@ -3039,7 +3049,6 @@ export type ActivityPageView = {
     utcOffsetMinutes: number;
     windowFromMs: number;
     windowToMs: number;
-    hasOpenTail: boolean;
     summary: ActivityPageSummary;
     previous: ActivityPagePreviousSummary;
     series: ActivityPageSeries;
@@ -3066,11 +3075,7 @@ export type ActivityPageWorlds = {
     returningWorldMinutes: number;
 };
 export type ActivitySeriesBucket = 'day' | 'week';
-export type ActivitySeriesPoint = {
-    startDate: string;
-    minutes: number;
-    inferred: boolean;
-};
+export type ActivitySeriesPoint = { startDate: string; minutes: number };
 export type ActivityViewBuildInput = {
     ownerUserId: OwnerId;
     targetUserId: string;

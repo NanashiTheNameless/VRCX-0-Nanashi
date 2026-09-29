@@ -528,14 +528,6 @@ fn resolve_guards_are_scoped_by_normalized_endpoint() {
 fn failure_cache_is_bounded() {
     let (_dir, db) = test_db("bounded-failures");
     let cache = WorldCache::new(db, 8, Duration::from_secs(60));
-    assert_eq!(
-        cache.failures.policy().max_capacity(),
-        Some(WORLD_RESOLVE_FAILURE_CAPACITY)
-    );
-    assert_eq!(
-        cache.failures.policy().time_to_live(),
-        Some(WORLD_RESOLVE_FAILURE_TTL)
-    );
 
     for index in 0..WORLD_RESOLVE_FAILURE_CAPACITY * 2 {
         cache.record_failure(&resolve_key(

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
-import externalApiRepository from '@/repositories/externalApiRepository';
+import { commands } from '@/platform/tauri/bindings';
 import { links } from '@/shared/constants/link';
 import { HOUR_MS } from '@/shared/constants/time';
 import { isRecord } from '@/shared/utils/record';
@@ -87,11 +87,12 @@ export function useAboutContributors(enabled: boolean) {
     return useQuery({
         queryKey: ['about-contributors'],
         queryFn: async () => {
-            const response =
-                await externalApiRepository.fetchGithubContributors({
+            const response = await commands.appExternalApiGithubContributorsGet(
+                {
                     url: links.contributorsApi,
                     headers: { Accept: 'application/vnd.github+json' }
-                });
+                }
+            );
             if (response.status !== 200) {
                 throw new Error(
                     `GitHub contributors request failed (${response.status}).`

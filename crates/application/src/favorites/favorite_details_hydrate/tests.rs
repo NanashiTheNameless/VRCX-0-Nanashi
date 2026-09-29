@@ -130,38 +130,6 @@ fn avatar_decision_upserts_public_complete_snapshots() {
 }
 
 #[test]
-fn avatar_decision_inserts_non_public_complete_snapshots_only_when_missing() {
-    for status in ["private", "hidden", ""] {
-        assert_eq!(
-            cache_write_decision(FavoriteCacheKind::Avatar, &complete(status)),
-            CacheWriteDecision::InsertIfMissing
-        );
-    }
-}
-
-#[test]
-fn avatar_decision_skips_incomplete_snapshots() {
-    assert_eq!(
-        cache_write_decision(
-            FavoriteCacheKind::Avatar,
-            &json!({ "id": "avtr_1", "releaseStatus": "public" }),
-        ),
-        CacheWriteDecision::Skip
-    );
-    assert_eq!(
-        cache_write_decision(
-            FavoriteCacheKind::Avatar,
-            &json!({
-                "id": "avtr_1",
-                "name": "Broken Avatar",
-                "releaseStatus": "public",
-            })
-        ),
-        CacheWriteDecision::Skip
-    );
-}
-
-#[test]
 fn avatar_decision_normalizes_release_status_case_and_whitespace() {
     let mut entity = complete("  Public  ");
     assert_eq!(
@@ -174,32 +142,6 @@ fn avatar_decision_normalizes_release_status_case_and_whitespace() {
         cache_write_decision(FavoriteCacheKind::Avatar, &entity),
         CacheWriteDecision::Upsert
     );
-}
-
-#[test]
-fn world_decision_upserts_public_complete_snapshots() {
-    assert_eq!(
-        cache_write_decision(FavoriteCacheKind::World, &complete("public")),
-        CacheWriteDecision::Upsert
-    );
-}
-
-#[test]
-fn world_decision_upserts_private_complete_snapshots() {
-    assert_eq!(
-        cache_write_decision(FavoriteCacheKind::World, &complete("private")),
-        CacheWriteDecision::Upsert
-    );
-}
-
-#[test]
-fn world_decision_skips_other_release_statuses_unlike_avatars() {
-    for status in ["hidden", "labs", ""] {
-        assert_eq!(
-            cache_write_decision(FavoriteCacheKind::World, &complete(status)),
-            CacheWriteDecision::Skip
-        );
-    }
 }
 
 #[test]

@@ -85,6 +85,36 @@ fn counts_only_online_events_and_ranks_friends_within_a_bucket() {
 }
 
 #[test]
+fn ranks_buckets_by_distinct_friends_before_online_event_count() {
+    let (_dir, db) = test_db("best-time-rank-buckets");
+    ensure_realtime_tables(&db, "usrself").unwrap();
+    insert_online_event(&db, "2026-06-01T20:05:00Z", "usr_alice", "Alice");
+    insert_online_event(&db, "2026-06-02T20:30:00Z", "usr_bob", "Bob");
+    for created_at in [
+        "2026-06-01T09:00:00Z",
+        "2026-06-02T09:00:00Z",
+        "2026-06-03T09:00:00Z",
+    ] {
+        insert_online_event(&db, created_at, "usr_carol", "Carol");
+    }
+
+    let output = get_best_time_to_play(
+        &db,
+        input(&OwnerId::new("usr_self"), ActivityBucket::HourOfDay),
+    )
+    .unwrap();
+
+    assert_eq!(
+        output
+            .rows
+            .iter()
+            .map(|row| (row.bucket.as_str(), row.distinct_friends, row.online_events))
+            .collect::<Vec<_>>(),
+        vec![("20", 2, 2), ("09", 1, 3)]
+    );
+}
+
+#[test]
 fn truncates_top_friends_to_five_but_keeps_true_distinct_count() {
     let (_dir, db) = test_db("best-time-truncate");
     ensure_realtime_tables(&db, "usrself").unwrap();

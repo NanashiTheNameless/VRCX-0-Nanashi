@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { browseHistoryRepository } from '@/repositories/browseHistoryRepository';
+import { commands } from '@/platform/tauri/bindings';
 import { toast } from '@/services/toastService';
 import {
     Select,
@@ -35,8 +35,8 @@ export function BrowseHistoryRetentionField() {
 
     useEffect(() => {
         let active = true;
-        void browseHistoryRepository
-            .getRetentionDays()
+        void commands
+            .appBrowseHistoryRetentionDaysGet()
             .then((days) => {
                 if (active) {
                     setRetentionDays(days);
@@ -59,7 +59,7 @@ export function BrowseHistoryRetentionField() {
         }
         const previous = retentionDays;
         setRetentionDays(next);
-        void browseHistoryRepository.setRetentionDays(next).catch(() => {
+        void commands.appBrowseHistoryRetentionDaysSet(next).catch(() => {
             setRetentionDays(previous);
             toast.add({
                 type: 'error',

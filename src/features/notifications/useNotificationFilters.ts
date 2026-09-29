@@ -2,11 +2,9 @@ import { useDeferredValue, useEffect, useState } from 'react';
 
 import configRepository from '@/repositories/configRepository';
 import { NOTIFICATION_TYPES } from '@/repositories/notificationPersistenceRepository';
+import { safeJsonParse } from '@/shared/utils/json';
 
-import {
-    safeJsonParse,
-    sanitizeNotificationFilters
-} from './notificationTableState';
+import { sanitizeNotificationFilters } from './notificationTableState';
 
 const NOTIFICATION_TABLE_FILTERS_CONFIG_KEY = 'VRCX_notificationTableFilters';
 

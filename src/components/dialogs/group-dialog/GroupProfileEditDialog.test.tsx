@@ -6,14 +6,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import type { GroupProfileRecord } from '@/domain/entities/group';
 
-vi.mock('react-i18next', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('react-i18next')>();
-    return {
-        ...actual,
-        useTranslation: () => ({ t: (key: string) => key })
-    };
-});
-
 vi.mock('@/state/vrchatConfigStore', () => ({
     useVrchatConfigStore: <T,>(selector: (state: { snapshot: null }) => T) =>
         selector({ snapshot: null })
@@ -108,6 +100,24 @@ describe('GroupProfileEditDialog', () => {
     });
 
     it('only lets open groups prompt instance visitors to join', () => {
+        const joinPromptDisabled = () =>
+            screen
+                .getByRole('checkbox', {
+                    name: 'dialog.group.edit.allow_join_prompt'
+                })
+                .getAttribute('aria-disabled');
+
+        render(
+            <GroupProfileEditDialog
+                open
+                onOpenChange={vi.fn()}
+                group={createGroup({ joinState: 'open' })}
+                onSave={vi.fn()}
+            />
+        );
+        expect(joinPromptDisabled()).not.toBe('true');
+        cleanup();
+
         render(
             <GroupProfileEditDialog
                 open
@@ -116,13 +126,6 @@ describe('GroupProfileEditDialog', () => {
                 onSave={vi.fn()}
             />
         );
-
-        expect(
-            screen
-                .getByRole('checkbox', {
-                    name: 'dialog.group.edit.allow_join_prompt'
-                })
-                .getAttribute('aria-disabled')
-        ).toBe('true');
+        expect(joinPromptDisabled()).toBe('true');
     });
 });

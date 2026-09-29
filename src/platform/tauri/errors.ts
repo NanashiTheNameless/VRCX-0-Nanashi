@@ -6,15 +6,6 @@ import type {
     SqliteErrorCategory
 } from './bindings';
 
-export class PlatformUnavailableError extends Error {
-    constructor(
-        message = 'Tauri platform APIs are unavailable in this runtime'
-    ) {
-        super(message);
-        this.name = 'PlatformUnavailableError';
-    }
-}
-
 export class PlatformCommandError extends Error {
     readonly code: AppErrorCode;
     readonly sqliteCategory?: SqliteErrorCategory;

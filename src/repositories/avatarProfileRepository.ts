@@ -40,24 +40,6 @@ const avatarProfileRepository = Object.freeze({
     deleteAvatarModeration
 });
 
-export {
-    normalize,
-    getAvatarProfile,
-    findAvatarByImageUrl,
-    getAvatarGallery,
-    getAvatarsByUser,
-    getAllAvatarsByUser,
-    selectAvatar,
-    selectFallbackAvatar,
-    saveAvatar,
-    getAvatarStyles,
-    deleteAvatar,
-    createImposter,
-    deleteImposter,
-    getAvatarModerations,
-    sendAvatarModeration,
-    deleteAvatarModeration
-};
 export type {
     AvatarGalleryFile,
     AvatarModerationRecord,

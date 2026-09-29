@@ -207,27 +207,3 @@ fn validate_frame_rejects_mismatched_rgba_length() {
 
     assert!(validate_frame(&frame).is_err());
 }
-
-#[test]
-fn tracked_device_resolution_errors_keep_typed_classification_and_diagnostics() {
-    let unavailable = TrackedDeviceResolutionError::Unavailable {
-        device_hint: "left-hand".into(),
-        left: "none".into(),
-        right: "2".into(),
-        connected: "index=2".into(),
-    };
-
-    assert!(matches!(
-        &unavailable,
-        TrackedDeviceResolutionError::Unavailable { .. }
-    ));
-    assert_eq!(
-        unavailable.to_string(),
-        "tracked device 'left-hand' is unavailable; controller_roles={left:none, right:2}; connected_devices=[index=2]"
-    );
-
-    let unknown = TrackedDeviceResolutionError::UnknownHint {
-        device_hint: "waist".into(),
-    };
-    assert_eq!(unknown.to_string(), "unknown tracked device hint 'waist'");
-}

@@ -76,6 +76,17 @@ fn unknown_names_and_blank_trust_keep_the_existing_values() {
     assert_eq!(plan.display_name, "Kept Name");
     assert_eq!(plan.trust_level, "Visitor");
     assert!(plan.history.is_empty());
+
+    let plan = plan_friend_log_upsert(
+        upsert("Kept Name", ""),
+        Some(current("Kept Name", "Known User")),
+        || Ok::<i64, ()>(99),
+    )
+    .unwrap()
+    .unwrap();
+
+    assert_eq!(plan.trust_level, "Known User");
+    assert!(plan.history.is_empty());
 }
 
 #[test]

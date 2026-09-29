@@ -330,7 +330,18 @@ mod tests {
 
     #[test]
     fn player_count_changes_do_not_create_new_instance_events() {
-        let runtime = OverlayActivityRuntime::new();
+        let mut filters = OverlayActivityFilters::default();
+        filters.wrist.types.insert(
+            "group.instanceOpened".into(),
+            OverlayActivityRule {
+                scope: OverlayActivityScope::AllFavorites,
+                favorite_group_keys: OverlayActivityFavoriteGroupKeys::All,
+            },
+        );
+        let runtime = OverlayActivityRuntime::with_filters(filters);
+        runtime.set_group_favorite_groups(super::super::OverlayFavoriteGroups::from_map(
+            [("group:collection".into(), vec!["grp_test".into()])].into(),
+        ));
         assert!(runtime
             .ingest_group_instance_scan(
                 "scope",

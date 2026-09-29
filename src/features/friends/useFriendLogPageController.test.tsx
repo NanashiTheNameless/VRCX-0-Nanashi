@@ -19,10 +19,6 @@ import { useFriendLogColumns } from './components/FriendLogColumns';
 import type { FriendLogRow } from './friendLogRows';
 import { useFriendLogPageController } from './useFriendLogPageController';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
         appFriendLogNamesResolve: vi.fn(),

@@ -1,4 +1,7 @@
-import type { GroupProfileRecord } from '@/domain/entities/group';
+import type {
+    GroupProfileRecord,
+    GroupRoleRecord
+} from '@/domain/entities/group';
 import {
     entityQueryPolicies,
     fetchCachedData,
@@ -24,7 +27,7 @@ import {
     unwrapVrchatGroupResponse
 } from './shared';
 
-function normalizeGroupRoles(values: unknown): GroupRecord[] {
+function normalizeGroupRoles(values: unknown): GroupRoleRecord[] {
     if (!Array.isArray(values)) {
         return [];
     }
@@ -38,6 +41,11 @@ function normalizeGroupRoles(values: unknown): GroupRecord[] {
             id: normalizeEntityId(role.id),
             name: normalizeText(role.name),
             description: normalizeText(role.description),
+            order:
+                typeof role.order === 'number' && Number.isFinite(role.order)
+                    ? role.order
+                    : undefined,
+            isManagementRole: role.isManagementRole === true,
             permissions: normalizeArray(role.permissions)
         }));
 }

@@ -47,18 +47,14 @@ function createMaintenanceActions({
     const prefs = createDefaultSettingsPrefs();
     return createSettingsMaintenanceActions({
         alert: async () => ({ ok: true, reason: 'ok' }),
-        avatarFeedHistoryRepository: {
-            cleanupAvatarFeedHistory
-        },
+        cleanupAvatarFeedHistory,
         commit: async () => true,
         confirm,
         gameState: {
             isGameRunning
         },
-        mediaRepository: {
-            cropAllPrints: async () => null,
-            getUgcPhotoLocation: async () => ''
-        },
+        cropAllPrints: async () => null,
+        getUgcPhotoLocation: async () => '',
         prefs: {
             ...prefs,
             desktopNotificationActivityFilters:

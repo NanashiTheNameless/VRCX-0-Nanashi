@@ -525,29 +525,13 @@ mod tests {
     }
 
     #[test]
-    fn account_group_rename_does_not_rewrite_shared_rows_with_same_name() {
+    fn account_group_rename_targets_account_config_key_when_shared_realm_has_same_name() {
         let store = TestFavoriteStore::default();
         write_config_string_array(&store, "localFavoriteFriendGroups", &["same".into()]).unwrap();
         write_config_string_array(&store, "localFavoriteFriendGroups:usr_a", &["same".into()])
             .unwrap();
-        store
-            .add(
-                None,
-                FavoriteEntityKind::Friend,
-                "usr_shared".into(),
-                "same".into(),
-            )
-            .unwrap();
-        store
-            .add(
-                Some(&OwnerId::new("usr_a")),
-                FavoriteEntityKind::Friend,
-                "usr_account".into(),
-                "same".into(),
-            )
-            .unwrap();
 
-        rename_local_favorite_group(
+        let write = rename_local_favorite_group(
             &store,
             &OwnerId::new("usr_a"),
             FavoriteEntityKind::Friend,
@@ -556,19 +540,11 @@ mod tests {
         )
         .unwrap();
 
-        let mut rows = store
-            .list(Some(&OwnerId::new("usr_a")), FavoriteEntityKind::Friend)
-            .unwrap()
-            .into_iter()
-            .map(|row| (row.user_id.unwrap_or_default(), row.group_name))
-            .collect::<Vec<_>>();
-        rows.sort();
+        assert_eq!(write.config_key, "localFavoriteFriendGroups:usr_a");
+        assert_eq!(write.group_names, vec!["account-only"]);
         assert_eq!(
-            rows,
-            vec![
-                ("usr_account".into(), "account-only".into()),
-                ("usr_shared".into(), "same".into()),
-            ]
+            read_config_string_array(&store, "localFavoriteFriendGroups").unwrap(),
+            vec!["same"]
         );
     }
 }

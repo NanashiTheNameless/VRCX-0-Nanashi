@@ -1,6 +1,8 @@
 import type { ColumnSizingState, OnChangeFn } from '@tanstack/react-table';
 import { useCallback, useMemo, useRef, useState } from 'react';
 
+import { safeJsonParse } from '@/shared/utils/json';
+
 const DATA_TABLE_STORAGE_PREFIX = 'vrcx-0:table:';
 type PersistedTableState = Record<string, unknown>;
 type TableColumnSizing = Record<string, number>;
@@ -37,27 +39,8 @@ export function usePersistedTableColumnSizing({
     return [columnSizing, setColumnSizing];
 }
 
-function getBrowserLocalStorage() {
-    if (typeof window === 'undefined' || !window.localStorage) {
-        return null;
-    }
-    return window.localStorage;
-}
-
 export function getDataTableStorageKey(tableId: string): string {
     return `${DATA_TABLE_STORAGE_PREFIX}${tableId}`;
-}
-
-export function safeJsonParse(value: unknown): unknown | null {
-    if (!value) {
-        return null;
-    }
-
-    try {
-        return JSON.parse(String(value));
-    } catch {
-        return null;
-    }
 }
 
 export function readPersistedTableState(
@@ -67,19 +50,10 @@ export function readPersistedTableState(
         return {};
     }
 
-    const localStorage = getBrowserLocalStorage();
-    if (!localStorage) {
-        return {};
-    }
-
-    try {
-        const parsed = safeJsonParse(localStorage.getItem(storageKey));
-        return parsed && typeof parsed === 'object'
-            ? Object.fromEntries(Object.entries(parsed))
-            : {};
-    } catch {
-        return {};
-    }
+    const parsed = safeJsonParse(localStorage.getItem(storageKey));
+    return parsed && typeof parsed === 'object'
+        ? Object.fromEntries(Object.entries(parsed))
+        : {};
 }
 
 export function writePersistedTableState(
@@ -90,24 +64,14 @@ export function writePersistedTableState(
         return;
     }
 
-    const localStorage = getBrowserLocalStorage();
-    if (!localStorage) {
-        return;
-    }
-
-    try {
-        const current = readPersistedTableState(storageKey);
-        localStorage.setItem(
-            storageKey,
-            JSON.stringify({
-                ...current,
-                ...patch,
-                updatedAt: Date.now()
-            })
-        );
-    } catch {
-        // no-op
-    }
+    localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+            ...readPersistedTableState(storageKey),
+            ...patch,
+            updatedAt: Date.now()
+        })
+    );
 }
 
 export function sanitizeTableColumnSizing(

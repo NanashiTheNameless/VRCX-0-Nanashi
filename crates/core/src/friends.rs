@@ -367,13 +367,6 @@ mod tests {
         }))
         .unwrap();
 
-        assert!(!record.display_name.is_heap_allocated());
-        assert!(!record.state.is_heap_allocated());
-        assert!(!record.platform.is_heap_allocated());
-        assert!(!record.last_platform.is_heap_allocated());
-        assert!(!record.status.is_heap_allocated());
-        assert!(record.status_description.is_heap_allocated());
-
         let serialized = serde_json::to_value(record).unwrap();
         assert_eq!(serialized["displayName"], "Friend");
         assert_eq!(serialized["state"], "online");
@@ -466,12 +459,6 @@ mod state_bucket_tests {
         ] {
             assert_eq!(StateBucket::normalize(bucket.as_str()), Some(bucket));
         }
-    }
-
-    #[test]
-    fn matches_compares_against_the_bucket_string_value() {
-        assert!(StateBucket::Online.matches("online"));
-        assert!(!StateBucket::Online.matches("active"));
     }
 }
 

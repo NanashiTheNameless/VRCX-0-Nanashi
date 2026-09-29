@@ -8,22 +8,11 @@ import {
     normalizeSelfStatusInput,
     normalizeSocialStatusPreset,
     normalizeStatusHistoryRows,
-    normalizeUserId,
-    selfStatusBaseOptions
+    normalizeUserId
 } from './userProfileFields';
 
 describe('userProfileFields', () => {
     it('prepares supported self-status values for saving', () => {
-        expect(selfStatusBaseOptions.map((option) => option.value)).toEqual([
-            'join me',
-            'active',
-            'ask me',
-            'busy'
-        ]);
-        expect(
-            selfStatusBaseOptions.find((option) => option.value === 'busy')
-                ?.labelKey
-        ).toBe('dialog.user.status.busy');
         expect(normalizeSelfStatusInput('joinme')).toBe('join me');
         expect(normalizeSelfStatusInput('AskMe')).toBe('ask me');
         expect(normalizeSelfStatusInput(' BUSY ')).toBe('busy');

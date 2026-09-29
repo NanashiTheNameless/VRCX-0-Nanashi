@@ -40,27 +40,3 @@ vrcx_0_runtime_event::runtime_event_payload!(
     IntegrationApiStartFailedPayload,
     "integrationApiStartFailed"
 );
-
-#[cfg(test)]
-mod tests {
-    use vrcx_0_runtime_event::RuntimeEventPayload;
-
-    use super::{IntegrationApiStartFailedPayload, IntegrationApiStartFailureReason};
-
-    #[test]
-    fn start_failure_keeps_the_event_name_and_camel_case_wire_shape() {
-        let payload = IntegrationApiStartFailedPayload {
-            port: 27272,
-            reason: IntegrationApiStartFailureReason::PortInUse,
-        };
-
-        assert_eq!(
-            IntegrationApiStartFailedPayload::EVENT_NAME,
-            "integrationApiStartFailed"
-        );
-        assert_eq!(
-            serde_json::to_value(payload).unwrap(),
-            serde_json::json!({ "port": 27272, "reason": "portInUse" })
-        );
-    }
-}

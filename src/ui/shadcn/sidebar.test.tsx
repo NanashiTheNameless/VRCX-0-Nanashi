@@ -52,25 +52,17 @@ describe('Sidebar positioning', () => {
 });
 
 describe('Sidebar transitions', () => {
-    it('disables group-label and menu-button layout transitions when instant', () => {
-        const markup = renderSidebarTransitions(true);
+    it('disables group-label and menu-button layout transitions only when instant', () => {
+        const instant = renderSidebarTransitions(true);
+        const animated = renderSidebarTransitions(false);
 
-        expect(getSlotClassName(markup, 'sidebar-group-label')).toContain(
-            'transition-none'
-        );
-        expect(getSlotClassName(markup, 'sidebar-menu-button')).toContain(
-            'transition-none'
-        );
-    });
-
-    it('keeps group-label and menu-button layout transitions aligned at 200ms', () => {
-        const markup = renderSidebarTransitions(false);
-
-        expect(getSlotClassName(markup, 'sidebar-group-label')).toContain(
-            'transition-[margin,opacity] duration-200'
-        );
-        expect(getSlotClassName(markup, 'sidebar-menu-button')).toContain(
-            'transition-[width,height,padding,color,background-color] duration-200'
-        );
+        for (const slot of ['sidebar-group-label', 'sidebar-menu-button']) {
+            expect(getSlotClassName(instant, slot)).toContain(
+                'transition-none'
+            );
+            expect(getSlotClassName(animated, slot)).not.toContain(
+                'transition-none'
+            );
+        }
     });
 });

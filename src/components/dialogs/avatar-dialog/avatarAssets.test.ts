@@ -2,25 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
     avatarGalleryImageUrl,
-    defaultAvatarSideData,
     isCacheCandidatePackage,
     resolveAssetBundleArgs
 } from './avatarAssets';
 
 describe('avatarAssets', () => {
-    it('creates default side data and resolves gallery image urls', () => {
-        expect(defaultAvatarSideData()).toEqual({
-            galleryRows: [],
-            galleryImages: [],
-            fileAnalysis: {},
-            cache: {
-                inCache: false,
-                cacheSize: '',
-                cacheLocked: false,
-                cachePath: ''
-            }
-        });
-
+    it('resolves gallery image urls from the latest version', () => {
         expect(
             avatarGalleryImageUrl({
                 url: 'https://example.test/root.png',
@@ -120,29 +107,5 @@ describe('avatarAssets', () => {
         expect(
             resolveAssetBundleArgs({ assetUrl: 'not a file url' }, '')
         ).toBeNull();
-    });
-
-    it('falls back to unfiltered package selection when sdk filtering rejects every package', () => {
-        expect(
-            resolveAssetBundleArgs(
-                {
-                    unityPackages: [
-                        {
-                            platform: 'standalonewindows',
-                            variant: 'standard',
-                            unitySortNumber: '20220307000',
-                            assetUrl:
-                                'https://api.vrchat.cloud/api/1/file/file_future/2/file?v=5'
-                        }
-                    ]
-                },
-                '2022.3.6f1'
-            )
-        ).toEqual({
-            fileId: 'file_future',
-            fileVersion: 2,
-            variant: 'security',
-            variantVersion: 5
-        });
     });
 });

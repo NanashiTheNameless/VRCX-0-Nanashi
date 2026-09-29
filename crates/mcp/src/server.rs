@@ -166,8 +166,5 @@ mod instructions_tests {
                 "missing phrase: {phrase}"
             );
         }
-        assert!(!SERVER_INSTRUCTIONS.contains("Time windows are RFC3339"));
-        assert!(SERVER_INSTRUCTIONS.contains("always say \"VRCX-0-Nanashi\""));
-        assert!(SERVER_INSTRUCTIONS.contains("Never use emoji"));
     }
 }

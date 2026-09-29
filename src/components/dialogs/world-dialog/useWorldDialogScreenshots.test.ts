@@ -19,9 +19,9 @@ const mocks = vi.hoisted(() => ({
     unsubscribe: vi.fn()
 }));
 
-vi.mock('@/repositories/mediaRepository', () => ({
-    default: {
-        getWorldScreenshots: mocks.getWorldScreenshots
+vi.mock('@/platform/tauri/bindings', () => ({
+    commands: {
+        appGetWorldScreenshots: mocks.getWorldScreenshots
     }
 }));
 

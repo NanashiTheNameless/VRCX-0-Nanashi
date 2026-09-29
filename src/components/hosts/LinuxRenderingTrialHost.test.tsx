@@ -28,9 +28,6 @@ vi.mock('@/platform/tauri/bindings', () => ({
 vi.mock('@/services/shellIntegrationService', () => ({
     restartApplication: mocks.restart
 }));
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
 vi.mock('@/state/runtimeStore', () => ({
     useRuntimeStore: (
         selector: (state: {

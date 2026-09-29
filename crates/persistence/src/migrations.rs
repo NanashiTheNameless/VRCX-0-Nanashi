@@ -12,15 +12,3 @@ use crate::migration::Migration;
 pub fn migrations() -> Vec<Migration> {
     Vec::new()
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn list_ascends_strictly_from_one() {
-        let versions: Vec<i64> = migrations().iter().map(|entry| entry.version).collect();
-        assert!(versions.first().is_none_or(|first| *first == 1));
-        assert!(versions.windows(2).all(|pair| pair[1] > pair[0]));
-    }
-}

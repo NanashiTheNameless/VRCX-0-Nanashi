@@ -173,10 +173,12 @@ mod tests {
             &opts(true),
         );
         cache.record_user(&json!({ "id": "usr_x", "displayName": "X" }), &opts(false));
-        cache.record_user(&json!({ "id": "usr_y", "displayName": "Y" }), &opts(false));
         assert!(cache
             .get_user("https://api.example.test", "usr_friend")
             .is_some());
+        assert!(cache
+            .get_user("https://api.example.test", "usr_x")
+            .is_none());
     }
 
     #[test]
@@ -189,12 +191,6 @@ mod tests {
                 ..opts(false)
             },
         );
-        assert!(cache
-            .get_user("https://api.example.test", "usr_self")
-            .is_some());
-        cache.record_user(&json!({ "id": "usr_x", "displayName": "X" }), &opts(false));
-        cache.record_user(&json!({ "id": "usr_y", "displayName": "Y" }), &opts(false));
-
         assert!(cache
             .get_user("https://api.example.test", "usr_self")
             .is_some());

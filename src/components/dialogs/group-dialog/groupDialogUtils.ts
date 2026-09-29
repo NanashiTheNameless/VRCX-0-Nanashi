@@ -13,6 +13,7 @@ import {
     convertFileUrlToImageUrl,
     userImage
 } from '@/services/entityMediaService';
+import { PROFILE_LIST_LIMIT } from '@/shared/constants/profileLimits';
 import { isRecord } from '@/shared/utils/record';
 import { replaceBioSymbols } from '@/shared/utils/string';
 
@@ -218,9 +219,9 @@ export function groupProfileUpdateFromGroup(
         shortCode: group.shortCode,
         description: group.description,
         joinState,
-        languages: group.languages.slice(0, 3),
+        languages: group.languages.slice(0, PROFILE_LIST_LIMIT),
         rules: group.rules,
-        links: group.links.slice(0, 3),
+        links: group.links.slice(0, PROFILE_LIST_LIMIT),
         iconId: group.iconId || null,
         bannerId: group.bannerId || null,
         allowGroupJoinPrompt: group.allowGroupJoinPrompt === true

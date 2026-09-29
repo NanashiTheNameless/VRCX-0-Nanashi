@@ -6,12 +6,9 @@ import type {
 import {
     getDataTableStorageKey,
     readPersistedTableState,
-    safeJsonParse,
     writePersistedTableState
 } from '@/components/data-table/dataTablePersistence';
 import { isRecord } from '@/shared/utils/record';
-
-export { safeJsonParse };
 
 export const PLAYER_LIST_STORAGE_KEY = getDataTableStorageKey('playerList');
 

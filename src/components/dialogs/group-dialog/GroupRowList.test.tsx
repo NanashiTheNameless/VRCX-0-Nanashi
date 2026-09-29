@@ -40,9 +40,6 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
     };
 });
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
 vi.mock('@/lib/useKnownUser', () => ({
     useKnownUserFact: () => mocks.knownUser
 }));

@@ -8,7 +8,6 @@ const mocks = vi.hoisted(() => ({
     getInt: vi.fn(),
     getArray: vi.fn(),
     getObject: vi.fn(),
-    setBool: vi.fn(),
     setString: vi.fn(),
     storageGetString: vi.fn(),
     configureRecentActionCooldown: vi.fn(),
@@ -29,7 +28,6 @@ vi.mock('@/repositories/configRepository', () => ({
         getInt: mocks.getInt,
         getArray: mocks.getArray,
         getObject: mocks.getObject,
-        setBool: mocks.setBool,
         setString: mocks.setString
     }
 }));
@@ -114,29 +112,12 @@ describe('preferenceSnapshotLoader', () => {
         mocks.getObject.mockImplementation((_key: string, fallback: unknown) =>
             Promise.resolve(fallback)
         );
-        mocks.setBool.mockResolvedValue(undefined);
         mocks.setString.mockResolvedValue(undefined);
         mocks.storageGetString.mockImplementation(
             (_key: string, fallback = '') =>
                 Promise.resolve(String(fallback ?? ''))
         );
         mocks.appSystemCulture.mockResolvedValue('ja-JP');
-    });
-
-    it('only reads the backend-seeded HMD notification preference', async () => {
-        mocks.getBool.mockImplementation((key: string, fallback = false) =>
-            Promise.resolve(
-                key === 'hmdNotificationsEnabled' ? false : Boolean(fallback)
-            )
-        );
-
-        const snapshot = await loadPreferenceSnapshot();
-
-        expect(mocks.setBool).not.toHaveBeenCalledWith(
-            'hmdNotificationsEnabled',
-            expect.anything()
-        );
-        expect(snapshot.hmdNotificationsEnabled).toBe(false);
     });
 
     it('loads and normalizes shell, proxy, table, and notification preferences', async () => {

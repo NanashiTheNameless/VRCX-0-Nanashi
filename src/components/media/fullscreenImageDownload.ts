@@ -1,5 +1,4 @@
-import externalApiRepository from '@/repositories/externalApiRepository';
-import mediaRepository from '@/repositories/mediaRepository';
+import { commands } from '@/platform/tauri/bindings';
 
 function isHttpUrl(url: string) {
     try {
@@ -20,7 +19,7 @@ async function dataUrlToBlob(dataUrl: string): Promise<Blob> {
 }
 
 async function fetchImageBlobViaRust(url: string): Promise<Blob> {
-    const response = await externalApiRepository.fetchImageDataUrl(url);
+    const response = await commands.appExternalApiImageDataUrlGet({ url });
     const dataUrl = typeof response.data === 'string' ? response.data : '';
 
     if (!dataUrl.startsWith('data:image/')) {
@@ -74,7 +73,7 @@ export async function getDownloadImageBase64({
     url?: string;
 }): Promise<string> {
     if (sourcePath) {
-        return mediaRepository.getFileBase64(sourcePath);
+        return commands.appGetFileBase64(sourcePath);
     }
 
     const blob = await fetchImageBlob(url);

@@ -30,6 +30,8 @@ import { useFeedFilters } from '../useFeedFilters';
 import { FeedToolbar } from './FeedToolbar';
 import { FeedViewModeToggle } from './FeedViewModeToggle';
 
+vi.unmock('react-i18next');
+
 const i18n = createInstance();
 
 beforeAll(async () => {

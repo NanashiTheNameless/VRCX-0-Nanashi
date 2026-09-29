@@ -258,14 +258,3 @@ fn query_request_without_body_does_not_emit_body_option() {
     assert!(request.body.is_none());
     assert_eq!(request.method, "DELETE");
 }
-
-#[test]
-fn execute_response_serializes_body_once() {
-    let response = execute_response(429, r#"{"error":"slow down"}"#.into());
-    let value = serde_json::to_value(response).unwrap();
-
-    assert_eq!(value["status"], 429);
-    assert_eq!(value["data"], r#"{"error":"slow down"}"#);
-    assert!(value.get("policy").is_none());
-    assert!(value.get("raw").is_none());
-}

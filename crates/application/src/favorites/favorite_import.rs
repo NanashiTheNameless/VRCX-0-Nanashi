@@ -815,11 +815,6 @@ fn hydration_cache(kind: FavoriteImportKind) -> FavoriteImportHydrationCache {
     }
 }
 
-#[cfg(test)]
-fn kind_name(kind: FavoriteImportKind) -> &'static str {
-    kind.as_str()
-}
-
 fn kind_label(kind: FavoriteImportKind) -> &'static str {
     match kind {
         FavoriteImportKind::Avatar => "Avatar",
@@ -847,56 +842,6 @@ mod tests {
     const AVATAR_ID: &str = "avtr_00000000-0000-0000-0000-000000000001";
     const WORLD_ID: &str = "wrld_00000000-0000-0000-0000-000000000002";
     const FRIEND_ID: &str = "usr_00000000-0000-0000-0000-000000000003";
-
-    #[test]
-    fn entity_by_location_matrix_preserves_hydration_and_write_ownership() {
-        let rows = [
-            (
-                FavoriteImportKind::Avatar,
-                FavoriteImportHydrationCache::Avatar,
-                "avatar",
-                VrchatFavoriteType::Avatar,
-            ),
-            (
-                FavoriteImportKind::World,
-                FavoriteImportHydrationCache::World,
-                "world",
-                VrchatFavoriteType::World,
-            ),
-            (
-                FavoriteImportKind::Friend,
-                FavoriteImportHydrationCache::None,
-                "friend",
-                VrchatFavoriteType::Friend,
-            ),
-        ];
-        for (kind, expected_cache, expected_kind, favorite_type) in rows {
-            assert_eq!(hydration_cache(kind), expected_cache);
-            assert_eq!(kind_name(kind), expected_kind);
-            for location in [
-                FavoriteImportLocation::Remote,
-                FavoriteImportLocation::Local,
-            ] {
-                let prepared = prepare_favorite_import(FavoriteImportStartInput {
-                    kind,
-                    operation: FavoriteImportOperation::Import,
-                    ids: vec![match kind {
-                        FavoriteImportKind::Avatar => AVATAR_ID,
-                        FavoriteImportKind::World => WORLD_ID,
-                        FavoriteImportKind::Friend => FRIEND_ID,
-                    }
-                    .into()],
-                    target: Some(FavoriteImportTarget {
-                        location,
-                        group: "target".into(),
-                        favorite_type: Some(favorite_type),
-                    }),
-                })
-                .unwrap();
-                assert_eq!(prepared.target.unwrap().location, location);
-            }
-        }
-    }
 
     #[test]
     fn prepare_deduplicates_and_rejects_ids_from_other_entity_types() {

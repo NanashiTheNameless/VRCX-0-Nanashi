@@ -82,7 +82,7 @@ export function GroupModerationWorkspace({
     const isMembersTab = activeTab === 'members';
     const rows = isMembersTab ? members.rows : tabData.rows;
     const loading = isMembersTab
-        ? members.status === 'loading'
+        ? members.status === 'running'
         : tabData.status === 'running';
     const error = isMembersTab ? members.error : tabData.error;
     const reload = useCallback(() => {

@@ -7,14 +7,6 @@ import type { NotificationCategories } from '@/state/vrcNotificationStore';
 
 import { NotificationDrawerList } from './NotificationDrawerList';
 
-vi.mock('react-i18next', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('react-i18next')>();
-    return {
-        ...actual,
-        useTranslation: () => ({ t: (key: string) => key })
-    };
-});
-
 afterEach(cleanup);
 
 describe('NotificationDrawerList', () => {

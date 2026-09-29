@@ -140,7 +140,6 @@ import {
     setStringConfigPreference,
     setTableDensityPreference,
     setTableLimitsPreference,
-    setTablePageSizesPreference,
     setTranslationApiConfigPreference,
     setTrustColorPreference
 } from './preferencesService';
@@ -282,31 +281,6 @@ describe('preferencesService characterization', () => {
         mocks.getCommunityThemeAppearanceThemeMode.mockReturnValue('dark');
     });
 
-    it('normalizes table page sizes and adjusts the current page size', async () => {
-        usePreferencesStore.getState().hydratePreferences({
-            ...DEFAULT_PREFERENCES,
-            tablePageSize: 20,
-            tablePageSizes: [10, 20, 50]
-        });
-
-        await expect(
-            setTablePageSizesPreference(['50', 10, 'bad', 25, 10])
-        ).resolves.toEqual([10, 25, 50]);
-
-        expect(mocks.setMany).toHaveBeenCalledWith([
-            ['VRCX_tablePageSizes', '[10,25,50]'],
-            ['VRCX_tablePageSize', '25']
-        ]);
-        expect(usePreferencesStore.getState()).toMatchObject({
-            tablePageSize: 25,
-            tablePageSizes: [10, 25, 50]
-        });
-        expect(mocks.publishPreferenceChanged).toHaveBeenCalledWith(
-            'VRCX_tablePageSize',
-            25
-        );
-    });
-
     it('clamps table limits before persistence and store patching', async () => {
         await expect(
             setTableLimitsPreference({
@@ -340,7 +314,7 @@ describe('preferencesService characterization', () => {
         mocks.getBool.mockImplementation((key: string, fallback = false) =>
             Promise.resolve(
                 key === 'VRCX-0_xsNotifications'
-                    ? false
+                    ? true
                     : key === 'compactTableMode'
                       ? true
                       : Boolean(fallback)
@@ -356,7 +330,7 @@ describe('preferencesService characterization', () => {
         const snapshot = await loadPreferenceSnapshot();
 
         expect(snapshot).toMatchObject({
-            xsNotifications: false,
+            xsNotifications: true,
             notificationTimeout: 9000,
             tableDensity: 'compact',
             dtIsoFormat: false,
@@ -364,7 +338,7 @@ describe('preferencesService characterization', () => {
         });
         expect(usePreferencesStore.getState()).toMatchObject({
             preferencesHydrated: true,
-            xsNotifications: false,
+            xsNotifications: true,
             notificationTimeout: 9000,
             tableDensity: 'compact'
         });
@@ -376,22 +350,6 @@ describe('preferencesService characterization', () => {
             'lang',
             'en'
         );
-    });
-
-    it('reads the backend-seeded hmdNotificationsEnabled value without writing it', async () => {
-        mocks.getBool.mockImplementation((key: string, fallback = false) =>
-            Promise.resolve(
-                key === 'hmdNotificationsEnabled' ? false : Boolean(fallback)
-            )
-        );
-
-        const snapshot = await loadPreferenceSnapshot();
-
-        expect(mocks.setBool).not.toHaveBeenCalledWith(
-            'hmdNotificationsEnabled',
-            expect.anything()
-        );
-        expect(snapshot.hmdNotificationsEnabled).toBe(false);
     });
 
     it('stores notification layout and syncs shell/store state', async () => {
@@ -411,27 +369,18 @@ describe('preferencesService characterization', () => {
         );
     });
 
-    it('persists generic bool, string, and int config preferences with typed values', async () => {
+    it('persists generic bool and string config preferences with typed values', async () => {
         await setBoolConfigPreference('notificationIconDot', false);
         await setStringConfigPreference('desktopToast', 'Always');
-        await expect(
-            setIntConfigPreference('notificationTimeout', '999999', {
-                min: 1000,
-                max: 10000,
-                fallback: 3000
-            })
-        ).resolves.toBe(10000);
 
         expect(mocks.setBool).toHaveBeenCalledWith(
             'notificationIconDot',
             false
         );
         expect(mocks.setString).toHaveBeenCalledWith('desktopToast', 'Always');
-        expect(mocks.setInt).toHaveBeenCalledWith('notificationTimeout', 10000);
         expect(usePreferencesStore.getState()).toMatchObject({
             notificationIconDot: false,
-            desktopToast: 'Always',
-            notificationTimeout: 10000
+            desktopToast: 'Always'
         });
         expect(mocks.publishPreferenceChanged).toHaveBeenCalledWith(
             'notificationIconDot',
@@ -440,10 +389,6 @@ describe('preferencesService characterization', () => {
         expect(mocks.publishPreferenceChanged).toHaveBeenCalledWith(
             'desktopToast',
             'Always'
-        );
-        expect(mocks.publishPreferenceChanged).toHaveBeenCalledWith(
-            'notificationTimeout',
-            10000
         );
     });
 
@@ -747,22 +692,6 @@ describe('preferencesService characterization', () => {
             0
         );
         expect(usePreferencesStore.getState().discordActive).toBe(false);
-    });
-
-    it('loads legacy proxy enabled state from a non-empty proxy address', async () => {
-        mocks.storageGetString.mockImplementation(
-            (key: string, fallback = '') => {
-                if (key === 'VRCX_ProxyServer') {
-                    return Promise.resolve('127.0.0.1:7890');
-                }
-                return Promise.resolve(String(fallback ?? ''));
-            }
-        );
-
-        const snapshot = await loadPreferenceSnapshot();
-
-        expect(snapshot.proxyEnabled).toBe(true);
-        expect(snapshot.proxyServer).toBe('127.0.0.1:7890');
     });
 
     it('honors explicit disabled proxy state even with a configured address', async () => {

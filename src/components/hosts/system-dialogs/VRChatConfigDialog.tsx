@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { cn } from '@/lib/utils';
-import { assetBundleRepository } from '@/repositories/assetBundleRepository';
+import { commands } from '@/platform/tauri/bindings';
 import {
     openExternalLink,
     openFolderSelectorDialog,
@@ -218,10 +218,9 @@ export function VRChatConfigDialog({
     const [loading, setLoading] = useState(false);
 
     async function refreshCacheSize() {
-        const nextCacheSize = await assetBundleRepository
-            .getCacheSize()
+        const cacheBytes = await commands
+            .assetBundleGetCacheSize()
             .catch(() => 0);
-        const cacheBytes = Number(nextCacheSize) || 0;
         setCacheSizeBytes(cacheBytes);
         setCacheSize(
             cacheBytes > 0
@@ -326,7 +325,7 @@ export function VRChatConfigDialog({
         setLoading(true);
         try {
             const removed =
-                await assetBundleRepository.sweepCache(maxSizeBytes);
+                await commands.assetBundleSweepCacheToSize(maxSizeBytes);
             toast.add({
                 type: 'success',
                 title: Array.isArray(removed)
@@ -363,7 +362,7 @@ export function VRChatConfigDialog({
         }
         setLoading(true);
         try {
-            await assetBundleRepository.deleteAllCache();
+            await commands.assetBundleDeleteAllCache();
             toast.add({ type: 'success', title: t('message.cache.deleted') });
             await refreshCacheSize();
         } catch (error) {

@@ -35,23 +35,3 @@ open_string_enum! {
         VrcPlusGift => "vrcplus.gift",
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use serde_json::json;
-
-    use super::NotificationKind;
-
-    #[test]
-    fn notification_kinds_preserve_unknown_wire_values() {
-        let known: NotificationKind = serde_json::from_value(json!("boop")).unwrap();
-        let unknown: NotificationKind = serde_json::from_value(json!("future.notice")).unwrap();
-
-        assert_eq!(known, NotificationKind::Boop);
-        assert_eq!(unknown.as_str(), "future.notice");
-        assert_eq!(
-            serde_json::to_value(unknown).unwrap(),
-            json!("future.notice")
-        );
-    }
-}

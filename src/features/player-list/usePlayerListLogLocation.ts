@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import type { LogLocationSnapshot } from '@/platform/tauri/bindings';
-import { getCurrentLogLocation } from '@/repositories/gameLogWatcherRepository';
+import { commands, type LogLocationSnapshot } from '@/platform/tauri/bindings';
 
 import { isLiveLocation } from './playerListRows';
 
@@ -45,7 +44,8 @@ export function usePlayerListLogLocation({
             };
         }
 
-        getCurrentLogLocation()
+        commands
+            .logWatcherGetCurrentLocation()
             .then((snapshot) => {
                 if (!active) {
                     return;

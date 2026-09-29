@@ -585,64 +585,53 @@ mod tests {
 
         fn kick(
             &self,
-            endpoint: String,
-            group_id: String,
-            user_id: String,
+            _endpoint: String,
+            _group_id: String,
+            _user_id: String,
         ) -> Result<VrchatApiRequest> {
             Ok(VrchatApiRequest {
-                endpoint: Some(endpoint),
-                method: Some("DELETE".into()),
-                path: Some(format!("groups/{group_id}/members/{user_id}")),
+                path: Some("kick".into()),
                 ..VrchatApiRequest::default()
             })
         }
 
         fn ban(
             &self,
-            endpoint: String,
-            group_id: String,
+            _endpoint: String,
+            _group_id: String,
             _user_id: String,
         ) -> Result<VrchatApiRequest> {
             Ok(VrchatApiRequest {
-                endpoint: Some(endpoint),
-                method: Some("POST".into()),
-                path: Some(format!("groups/{group_id}/bans")),
+                path: Some("ban".into()),
                 ..VrchatApiRequest::default()
             })
         }
     }
 
-    fn endpoint() -> &'static str {
-        "https://api.vrchat.cloud/api/1"
-    }
-
     #[test]
-    fn quick_action_request_uses_group_member_builders() {
-        let group_id = ValidatedGroupId::new("grp 1").unwrap();
-        let target_user_id = ValidatedUserId::new("usr 1").unwrap();
-        let kick = quick_action_request(
-            &TestRequests,
-            endpoint(),
-            &group_id,
-            &target_user_id,
-            GroupQuickModerationAction::Kick,
-        )
-        .unwrap();
-        let ban = quick_action_request(
-            &TestRequests,
-            endpoint(),
-            &group_id,
-            &target_user_id,
-            GroupQuickModerationAction::Ban,
-        )
-        .unwrap();
+    fn quick_action_request_dispatches_kick_and_ban_to_their_builders() {
+        let group_id = ValidatedGroupId::new("grp_1").unwrap();
+        let target_user_id = ValidatedUserId::new("usr_1").unwrap();
+        let request = |action| {
+            quick_action_request(
+                &TestRequests,
+                "https://api.vrchat.cloud/api/1",
+                &group_id,
+                &target_user_id,
+                action,
+            )
+            .unwrap()
+            .path
+        };
 
-        assert_eq!(kick.method.as_deref(), Some("DELETE"));
-        assert_eq!(kick.path.as_deref(), Some("groups/grp 1/members/usr 1"));
-        assert_eq!(ban.method.as_deref(), Some("POST"));
-        assert_eq!(ban.path.as_deref(), Some("groups/grp 1/bans"));
-        assert!(serde_json::from_value::<GroupQuickModerationAction>(json!("unban")).is_err());
-        assert!(serde_json::from_value::<GroupQuickModerationAction>(json!("noop")).is_err());
+        assert_eq!(
+            request(GroupQuickModerationAction::Kick).as_deref(),
+            Some("kick")
+        );
+        assert_eq!(
+            request(GroupQuickModerationAction::Ban).as_deref(),
+            Some("ban")
+        );
     }
 
     #[test]

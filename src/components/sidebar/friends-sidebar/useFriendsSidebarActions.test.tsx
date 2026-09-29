@@ -3,11 +3,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('react-i18next', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('react-i18next')>()),
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/services/dialogService', () => ({
     openUserDialog: vi.fn()
 }));
@@ -18,8 +13,6 @@ vi.mock('@/repositories/configRepository', () => ({
         setArray: vi.fn().mockResolvedValue(undefined)
     }
 }));
-
-import { openUserDialog } from '@/services/dialogService';
 
 import { useFriendsSidebarActions } from './useFriendsSidebarActions';
 
@@ -51,6 +44,5 @@ describe('useFriendsSidebarActions', () => {
             status: 'busy',
             statusDescription: 'Focusing'
         });
-        expect(openUserDialog).not.toHaveBeenCalled();
     });
 });

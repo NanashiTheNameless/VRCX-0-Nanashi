@@ -129,8 +129,11 @@ impl DesktopGroupRuntime {
         Ok(application::get_posts(self.api_deps(), input).await?)
     }
 
-    pub async fn member(&self, input: VrchatGroupUserInput) -> Result<VrchatApiResponse> {
-        Ok(application::get_member(self.api_deps(), input).await?)
+    pub async fn member_role_ids(
+        &self,
+        input: VrchatGroupUserInput,
+    ) -> Result<Option<Vec<String>>> {
+        Ok(application::get_member_role_ids(self.api_deps(), input).await?)
     }
 
     pub async fn members(&self, input: VrchatGroupMembersInput) -> Result<VrchatApiResponse> {

@@ -93,7 +93,7 @@ describe('realtimePresenceService projection boundary', () => {
         });
     });
 
-    it('applies runtime friend projection without frontend persistence writes', async () => {
+    it('applies friend patches to the roster without touching current-user friend buckets', async () => {
         const { useFriendRosterStore } =
             await import('@/state/friendRosterStore');
         const { useRuntimeStore } = await import('@/state/runtimeStore');
@@ -182,9 +182,14 @@ describe('realtimePresenceService projection boundary', () => {
             feedEntries: [],
             friendLogChanged: false
         });
+        flushRealtimeRosterUpdates();
         expect(
             useFriendLocationTimeStore.getState().byUserId.usr_friend
-        ).toBeDefined();
+        ).toEqual({
+            location: 'wrld_test:1',
+            source: 'realtime',
+            sinceMs: 1_700_000_000_000
+        });
 
         handleRealtimeFriendProjection({
             generation: 7,
@@ -412,7 +417,7 @@ describe('realtimePresenceService projection boundary', () => {
         });
     });
 
-    it('applies runtime notification projection and runtime delivery', async () => {
+    it('stores a notification projection upsert and flags the notification menu', async () => {
         const { useShellStore } = await import('@/state/shellStore');
         const { useVrcNotificationStore } =
             await import('@/state/vrcNotificationStore');
@@ -578,9 +583,7 @@ describe('realtimePresenceService projection boundary', () => {
         );
     });
 
-    it('does not sync roster buckets from partial current-user projection', async () => {
-        const { useFriendRosterStore } =
-            await import('@/state/friendRosterStore');
+    it('keeps the existing current-user friend buckets when a partial patch omits them', async () => {
         const { useRuntimeStore } = await import('@/state/runtimeStore');
         const { handleRealtimeCurrentUserProjection } =
             await import('./realtimePresenceService');
@@ -596,14 +599,6 @@ describe('realtimePresenceService projection boundary', () => {
                 offlineFriends: []
             }
         });
-        useFriendRosterStore.getState().applyFriendPatch({
-            userId: 'usr_friend',
-            patch: {
-                id: 'usr_friend',
-                displayName: 'Friend',
-                state: 'offline'
-            }
-        });
 
         handleRealtimeCurrentUserProjection({
             generation: 7,
@@ -617,20 +612,21 @@ describe('realtimePresenceService projection boundary', () => {
                 displayName: 'New Self',
                 status: 'active',
                 friends: ['usr_friend'],
-                onlineFriends: ['usr_friend'],
+                onlineFriends: [],
                 activeFriends: [],
-                offlineFriends: []
+                offlineFriends: ['usr_friend']
             }
         });
 
-        expect(useFriendRosterStore.getState()).toMatchObject({
-            onlineIds: [],
-            offlineIds: ['usr_friend'],
-            friendsById: {
-                usr_friend: {
-                    state: 'offline'
-                }
-            }
+        expect(
+            useRuntimeStore.getState().auth.currentUserSnapshot
+        ).toMatchObject({
+            displayName: 'New Self',
+            status: 'active',
+            friends: ['usr_friend'],
+            onlineFriends: ['usr_friend'],
+            activeFriends: [],
+            offlineFriends: []
         });
     });
 

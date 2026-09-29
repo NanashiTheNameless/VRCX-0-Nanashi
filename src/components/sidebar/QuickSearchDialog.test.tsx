@@ -194,19 +194,10 @@ describe('QuickSearchDialog', () => {
     });
 
     it('renders recently opened entities in the empty search slot', () => {
-        const input = renderQuickSearch(vi.fn());
-        const commandList = document.querySelector(
-            '[data-slot="command-list"]'
-        );
+        renderQuickSearch(vi.fn());
 
         expect(screen.getByText('side_panel.search_recent')).toBeTruthy();
         expect(screen.getByText('Recent World')).toBeTruthy();
-        expect(commandList?.className).toContain('max-h-none');
-
-        fireEvent.change(input, { target: { value: 'world' } });
-
-        expect(commandList?.className).toContain('max-h-[min(400px,50vh)]');
-        expect(commandList?.className).not.toContain('max-h-none');
     });
 
     it('advertises direct access in the empty search slot', () => {

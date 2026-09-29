@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { commands } from '@/platform/tauri/bindings';
 
-import { getCurrentInstanceSnapshot } from './currentInstanceRosterRepository';
+import currentInstanceRosterRepository from './currentInstanceRosterRepository';
 
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
@@ -29,7 +29,7 @@ describe('currentInstanceRosterRepository', () => {
             players: []
         });
 
-        await getCurrentInstanceSnapshot({
+        await currentInstanceRosterRepository.getCurrentInstanceSnapshot({
             currentLocation: ' wrld_live:123 '
         });
 
@@ -77,9 +77,10 @@ describe('currentInstanceRosterRepository', () => {
             ]
         });
 
-        const snapshot = await getCurrentInstanceSnapshot({
-            currentLocation: 'wrld_live:123'
-        });
+        const snapshot =
+            await currentInstanceRosterRepository.getCurrentInstanceSnapshot({
+                currentLocation: 'wrld_live:123'
+            });
 
         expect(snapshot.players.map((player) => player.displayName)).toEqual([
             'Zed',

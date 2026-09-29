@@ -36,7 +36,7 @@ const toastMocks = vi.hoisted(() => ({
     success: vi.fn()
 }));
 
-vi.mock('@/repositories/mediaRepository', () => ({
+vi.mock('@/repositories/vrchatMediaRepository', () => ({
     default: mediaMocks
 }));
 vi.mock('@/services/backgroundMaintenanceSessionService', () => ({
@@ -54,11 +54,6 @@ vi.mock('@/state/runtimeStore', () => ({
             getState: () => runtimeState
         }
     )
-}));
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: (key: string) => key
-    })
 }));
 vi.mock('@/services/toastService', () => ({
     toast: {
@@ -334,6 +329,16 @@ describe('useInventoryPageState', () => {
         firstMutation.resolve({ json: { ok: true } });
         await act(async () => {
             await pendingMutation;
+        });
+
+        await act(async () => {
+            await result.current.setProfileDecorationEquipped(secondItem);
+        });
+        expect(mediaMocks.equipProfileDecoration).toHaveBeenCalledTimes(2);
+        expect(mediaMocks.equipProfileDecoration).toHaveBeenLastCalledWith({
+            expectedUserId: 'usr_self',
+            inventoryId: 'inv_frame_b',
+            equipSlot: 'iconFrame'
         });
     });
 

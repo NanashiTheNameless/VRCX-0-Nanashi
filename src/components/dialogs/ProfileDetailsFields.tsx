@@ -1,6 +1,11 @@
 import { PlusIcon, XIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { PROFILE_LIST_LIMIT } from '@/shared/constants/profileLimits';
+import {
+    languageOptionLabel,
+    normalizeProfileLanguageKeys
+} from '@/shared/utils/userLanguage';
 import { Button } from '@/ui/shadcn/button';
 import {
     Combobox,
@@ -22,33 +27,7 @@ import {
     InputGroupInput
 } from '@/ui/shadcn/input-group';
 
-import {
-    languageOptionLabel,
-    normalizeLanguageKey
-} from './user-dialog/userProfileFields';
-
 type LanguageOption = { key: string; value: string };
-
-const PROFILE_LIST_LIMIT = 3;
-
-function normalizeLanguageComboboxValues(values: unknown) {
-    const nextKeys: string[] = [];
-    const seen = new Set<string>();
-
-    for (const value of Array.isArray(values) ? values : []) {
-        const key = normalizeLanguageKey(value);
-        if (!key || seen.has(key)) {
-            continue;
-        }
-        nextKeys.push(key);
-        seen.add(key);
-        if (nextKeys.length >= PROFILE_LIST_LIMIT) {
-            break;
-        }
-    }
-
-    return nextKeys;
-}
 
 export function ProfileLanguagesField({
     languageRows,
@@ -101,7 +80,7 @@ export function ProfileLanguagesField({
                 value={selectedLanguageKeys}
                 itemToStringLabel={(key) => languageLabelByKey.get(key) || key}
                 onValueChange={(values: string[]) =>
-                    onChange(normalizeLanguageComboboxValues(values))
+                    onChange(normalizeProfileLanguageKeys(values))
                 }
             >
                 <ComboboxChips ref={languageComboboxAnchor} className="w-full">

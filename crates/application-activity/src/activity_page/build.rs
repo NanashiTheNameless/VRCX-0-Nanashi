@@ -42,14 +42,12 @@ pub fn activity_page_view_build(
 
         match build_fresh(store, &input, range_days, &cursor, &window) {
             Ok(view) => {
-                if !view.has_open_tail {
-                    store.write_cached_page(
-                        &input.owner_user_id,
-                        range_days,
-                        PAYLOAD_VERSION,
-                        &view,
-                    )?;
-                }
+                store.write_cached_page(
+                    &input.owner_user_id,
+                    range_days,
+                    PAYLOAD_VERSION,
+                    &view,
+                )?;
                 Ok(view)
             }
             Err(error) => match cached {
@@ -83,7 +81,6 @@ fn is_reusable(
         && cached.view.people.order == input.companion_order
         && cached.view.window_from_ms == window.from_ms.unwrap_or(0)
         && cached.view.window_to_ms == window.to_ms
-        && !cached.view.has_open_tail
 }
 
 fn empty_activity_page_view(input: &ActivityPageBuildInput) -> ActivityPageView {
@@ -121,14 +118,13 @@ fn build_fresh(
     let to_ms = window.to_ms;
     let from_ms = window.from_ms;
     let previous_from_ms = from_ms.map(|from_ms| from_ms - range_days * DAY_MS);
-    let window_spans = store.read_instance_spans(&input.owner_user_id, from_ms, to_ms)?;
-    let spans = window_spans.spans;
+    let spans = store.read_instance_spans(&input.owner_user_id, from_ms, to_ms)?;
 
     let previous = match (previous_from_ms, from_ms) {
         (Some(previous_from_ms), Some(from_ms)) => {
             let previous_spans =
                 store.read_instance_spans(&input.owner_user_id, Some(previous_from_ms), from_ms)?;
-            summarize_previous(&previous_spans.spans, input.utc_offset_minutes)
+            summarize_previous(&previous_spans, input.utc_offset_minutes)
         }
         _ => Default::default(),
     };
@@ -148,7 +144,6 @@ fn build_fresh(
         utc_offset_minutes: input.utc_offset_minutes,
         window_from_ms: from_ms.unwrap_or(0),
         window_to_ms: to_ms,
-        has_open_tail: window_spans.has_open_tail,
         summary: summarize(&spans, window_days, input.utc_offset_minutes),
         previous,
         series: series(

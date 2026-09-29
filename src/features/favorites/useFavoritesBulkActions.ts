@@ -10,7 +10,6 @@ import type {
     FavoriteTransferSelectionResult
 } from '@/platform/tauri/bindings';
 import { commands } from '@/platform/tauri/bindings';
-import favoriteTransferRepository from '@/repositories/favoriteTransferRepository';
 import { toast } from '@/services/toastService';
 import { useModalStore } from '@/state/modalStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -241,11 +240,9 @@ export function useFavoritesBulkActions({
         });
         let result: FavoriteTransferSelectionResult;
         try {
-            result = await favoriteTransferRepository.transferFavoriteSelection(
-                {
-                    batches: transferBatches
-                }
-            );
+            result = await commands.appFavoritesTransferSelection({
+                batches: transferBatches
+            });
         } catch (error) {
             result = {
                 total: selectedContentItems.length,

@@ -3,7 +3,6 @@ use std::time::Duration;
 use chrono::Utc;
 use serde_json::json;
 
-use super::helpers::stable_hash;
 use super::*;
 
 fn files_custom_source(paths: &[&str]) -> BackgroundImageCustomSource {
@@ -30,20 +29,6 @@ fn custom_snapshot(image_path: &str) -> BackgroundImageSnapshot {
         resolved_at: String::new(),
         resolved_for_key: String::new(),
     }
-}
-
-#[test]
-fn stable_hash_is_deterministic() {
-    assert_eq!(stable_hash(""), 2166136261);
-    assert_eq!(stable_hash("a"), 0xe40c292c);
-    assert_eq!(stable_hash("files:C:\\img\\a.png:2026-07-30"), {
-        let mut hash: u32 = 2166136261;
-        for unit in "files:C:\\img\\a.png:2026-07-30".encode_utf16() {
-            hash ^= unit as u32;
-            hash = hash.wrapping_mul(16777619);
-        }
-        hash
-    });
 }
 
 #[test]

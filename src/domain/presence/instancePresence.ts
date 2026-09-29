@@ -1,9 +1,4 @@
-import { hasGroupIdPrefix } from '@/shared/constants/vrchatIds';
-import {
-    normalizeLocationValue,
-    parseLocation,
-    resolveFriendPresenceLocation
-} from '@/shared/utils/location';
+import { normalizeLocationValue, parseLocation } from '@/shared/utils/location';
 import { isRecord } from '@/shared/utils/record';
 
 type InstancePresenceSource =
@@ -52,17 +47,6 @@ interface InstancePresenceFact {
     playersById: Record<string, InstancePlayerFact>;
 }
 
-interface InstanceRosterModelInput {
-    location?: string;
-    currentUser?: unknown;
-    friends?: unknown[];
-    instanceUsers?: unknown[];
-    playerSnapshot?: { players?: unknown[] } | null;
-    ownerUser?: unknown;
-    ownerGroup?: unknown;
-    instanceCreatorLabel?: string;
-}
-
 interface RosterUserRow {
     id: string;
     userId: string;
@@ -71,8 +55,6 @@ interface RosterUserRow {
     location?: string;
     joinedAt?: string;
     $location_at?: string;
-    $subtitle?: string;
-    isFriend?: boolean;
     [key: string]: unknown;
 }
 
@@ -153,27 +135,17 @@ function instancePresenceKey(
     return key ? `${endpointText(endpoint)}::${key}` : '';
 }
 
-function createRosterRow(
-    user: unknown,
-    fallback: Record<string, unknown> = {}
-): RosterUserRow {
+function createRosterRow(user: unknown): RosterUserRow {
     const source = record(user);
     const nested = record(source.user);
-    const id = firstText(userId(source), fallback.id, fallback.userId);
-    const name = firstText(
-        displayName(source),
-        fallback.displayName,
-        fallback.display_name,
-        id
-    );
+    const id = userId(source);
+    const name = firstText(displayName(source), id);
     const joinedAt = firstText(
         source.joinedAt,
         source.joined_at,
         source.locationAt,
         source.location_at,
-        source.$location_at,
-        fallback.joinedAt,
-        fallback.joined_at
+        source.$location_at
     );
 
     return {
@@ -187,56 +159,8 @@ function createRosterRow(
                   joinedAt,
                   $location_at: joinedAt
               }
-            : {}),
-        ...(fallback.subtitle
-            ? { $subtitle: firstText(fallback.subtitle) }
-            : {}),
-        ...(fallback.isFriend ? { isFriend: true } : {})
+            : {})
     };
-}
-
-function rowKey(user: RosterUserRow): string {
-    return user.id || (user.displayName ? `display:${user.displayName}` : '');
-}
-
-function valuePresent(value: unknown): boolean {
-    return value !== undefined && value !== null && value !== '';
-}
-
-function mergeRosterRow(
-    existing: RosterUserRow | undefined,
-    incoming: RosterUserRow
-) {
-    if (!existing) {
-        return incoming;
-    }
-    const merged: RosterUserRow = { ...incoming, ...existing };
-    for (const [key, value] of Object.entries(incoming)) {
-        if (!valuePresent(merged[key]) && valuePresent(value)) {
-            merged[key] = value;
-        }
-    }
-    return merged;
-}
-
-function addRosterRow(
-    rowsByKey: Map<string, RosterUserRow>,
-    user: unknown,
-    fallback: Record<string, unknown> = {}
-) {
-    const row = createRosterRow(user, fallback);
-    const key = rowKey(row);
-    if (!key) {
-        return;
-    }
-    rowsByKey.set(key, mergeRosterRow(rowsByKey.get(key), row));
-}
-
-function sameInstance(user: unknown, location: string): boolean {
-    const explicit = resolveFriendPresenceLocation(user, {
-        requireInstance: true
-    });
-    return instanceLocationKey(explicit) === instanceLocationKey(location);
 }
 
 function buildInstancePresenceFact({
@@ -296,83 +220,6 @@ function buildInstancePresenceFact({
         playersById
     };
     return fact;
-}
-
-function buildInstanceRosterModel({
-    location = '',
-    currentUser = null,
-    friends = [],
-    instanceUsers = [],
-    playerSnapshot = null,
-    ownerUser = null,
-    ownerGroup = null,
-    instanceCreatorLabel = 'Instance creator'
-}: InstanceRosterModelInput = {}) {
-    const parsed = parseLocation(normalizeLocationValue(location));
-    const rowsByKey = new Map<string, RosterUserRow>();
-
-    if (!parsed.isRealInstance || !parsed.worldId || !parsed.instanceName) {
-        return {
-            ownerId: '',
-            ownerIsGroup: false,
-            rows: [],
-            friendCount: 0,
-            playerCount: 0
-        };
-    }
-
-    if (currentUser && sameInstance(currentUser, location)) {
-        addRosterRow(rowsByKey, currentUser);
-    }
-    for (const friend of Array.isArray(friends) ? friends : []) {
-        if (sameInstance(friend, location)) {
-            addRosterRow(rowsByKey, friend, { isFriend: true });
-        }
-    }
-    for (const user of Array.isArray(instanceUsers) ? instanceUsers : []) {
-        addRosterRow(rowsByKey, user);
-    }
-    for (const player of Array.isArray(playerSnapshot?.players)
-        ? playerSnapshot.players
-        : []) {
-        addRosterRow(rowsByKey, player);
-    }
-
-    const ownerGroupId = firstText(
-        record(ownerGroup).id,
-        record(ownerGroup).groupId,
-        hasGroupIdPrefix(parsed.groupId) ? parsed.groupId : ''
-    );
-    const ownerUserId = firstText(userId(ownerUser), parsed.userId);
-    const ownerId = firstText(ownerGroupId, ownerUserId);
-    const ownerIsGroup = Boolean(ownerGroupId || hasGroupIdPrefix(ownerId));
-    const ownerRow =
-        !ownerIsGroup && (ownerUser || ownerUserId)
-            ? createRosterRow(
-                  ownerUser || {
-                      id: ownerUserId,
-                      displayName: ownerUserId
-                  },
-                  { subtitle: instanceCreatorLabel }
-              )
-            : null;
-    const ownerRowId = ownerRow?.id || '';
-    if (ownerRow) {
-        addRosterRow(rowsByKey, ownerRow);
-    }
-    const mergedOwnerRow = ownerRowId ? rowsByKey.get(ownerRowId) : null;
-    const playerRows = Array.from(rowsByKey.values()).filter(
-        (row) => !ownerRowId || row.id !== ownerRowId
-    );
-    const rows = mergedOwnerRow ? [mergedOwnerRow, ...playerRows] : playerRows;
-
-    return {
-        ownerId,
-        ownerIsGroup,
-        rows,
-        friendCount: rows.filter((row) => row.isFriend).length,
-        playerCount: rows.length
-    };
 }
 
 function sameUnknownLeaf(a: unknown, b: unknown): boolean {
@@ -436,9 +283,8 @@ function sameInstancePresenceFact(
 
 export {
     buildInstancePresenceFact,
-    buildInstanceRosterModel,
     instanceLocationKey,
     instancePresenceKey,
     sameInstancePresenceFact
 };
-export type { InstancePresenceFact, InstancePresenceFactInput, RosterUserRow };
+export type { InstancePresenceFact, InstancePresenceFactInput };

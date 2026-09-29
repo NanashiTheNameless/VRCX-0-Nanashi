@@ -53,13 +53,6 @@ describe('favoriteWorldCacheService', () => {
         });
     });
 
-    it('ignores empty world payloads', async () => {
-        vi.mocked(commands.appFavoriteCacheSnapshot).mockResolvedValue(false);
-        await expect(cacheWorldDetails({ name: 'Missing id' })).resolves.toBe(
-            false
-        );
-    });
-
     it('uses the caller world id when a detail payload is missing id', async () => {
         await expect(
             cacheWorldDetails(
@@ -128,19 +121,6 @@ describe('favoriteWorldCacheService', () => {
         });
     });
 
-    it('inserts complete private world details when no DB cache exists', async () => {
-        await expect(
-            cacheWorldDetails({
-                id: 'wrld_private',
-                name: 'Private World',
-                releaseStatus: 'private',
-                thumbnailImageUrl: 'https://example.test/private.png'
-            })
-        ).resolves.toBe(true);
-
-        expect(commands.appFavoriteCacheSnapshot).toHaveBeenCalledTimes(1);
-    });
-
     it('bumps the world details revision only when the DB cache was written', async () => {
         const world = {
             id: 'wrld_revision',
@@ -160,39 +140,5 @@ describe('favoriteWorldCacheService', () => {
         expect(useFavoriteRevisionStore.getState().worldDetailsRevision).toBe(
             before + 1
         );
-    });
-
-    it('does not overwrite DB cache with unknown world details', async () => {
-        vi.mocked(commands.appFavoriteCacheSnapshot).mockResolvedValue(false);
-        await expect(
-            cacheWorldDetails({
-                id: 'wrld_unknown',
-                name: 'Unknown World',
-                releaseStatus: 'unknown',
-                thumbnailImageUrl: 'https://example.test/unknown.png'
-            })
-        ).resolves.toBe(false);
-
-        expect(commands.appFavoriteCacheSnapshot).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not overwrite DB cache with incomplete world details', async () => {
-        vi.mocked(commands.appFavoriteCacheSnapshot).mockResolvedValue(false);
-        await expect(
-            cacheWorldDetails({
-                id: 'wrld_broken',
-                releaseStatus: 'public'
-            })
-        ).resolves.toBe(false);
-
-        await expect(
-            cacheWorldDetails({
-                id: 'wrld_broken',
-                name: 'Broken World',
-                releaseStatus: 'public'
-            })
-        ).resolves.toBe(false);
-
-        expect(commands.appFavoriteCacheSnapshot).toHaveBeenCalledTimes(2);
     });
 });

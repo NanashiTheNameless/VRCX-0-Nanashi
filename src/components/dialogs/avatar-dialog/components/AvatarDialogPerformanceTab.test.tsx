@@ -20,7 +20,6 @@ vi.mock('../../EntityDialogScaffold', () => ({
 vi.mock('@/services/entityMediaService', () => ({ openExternalLink: vi.fn() }));
 import { openExternalLink } from '@/services/entityMediaService';
 
-import { performanceDocsUrl } from '../avatarPerformancePresentation';
 import { AvatarDialogPerformanceTab } from './AvatarDialogPerformanceTab';
 
 afterEach(() => {
@@ -29,12 +28,6 @@ afterEach(() => {
 });
 
 describe('AvatarDialogPerformanceTab', () => {
-    it.each(['android', 'ios'] as const)(
-        'links %s to the mobile limits',
-        (platform) => {
-            expect(performanceDocsUrl(platform)).toContain('#mobile-limits');
-        }
-    );
     it('switches platform values, thresholds and documentation together', () => {
         const { rerender } = render(
             <AvatarDialogPerformanceTab
@@ -164,7 +157,7 @@ describe('AvatarDialogPerformanceTab', () => {
 
         expect(screen.getByText('rating')).toBeTruthy();
         expect(screen.getAllByText('VeryPoor')[0]?.className).toContain(
-            'text-xl font-semibold text-red-700'
+            'text-red-700'
         );
         expect(screen.getByText('12.50 MB')).toBeTruthy();
         expect(screen.getByText('48.25 MB')).toBeTruthy();

@@ -49,11 +49,11 @@ vi.mock('@/repositories/authRepository', () => ({
     }
 }));
 
-vi.mock('@/repositories/vrchatAuthRepository', () => ({
-    default: {
-        startLoginSession: mocks.startLoginSession,
-        respondLoginSession: mocks.respondLoginSession,
-        cancelLoginSession: mocks.cancelLoginSession
+vi.mock('@/platform/tauri/bindings', () => ({
+    commands: {
+        appVrchatAuthSessionStart: mocks.startLoginSession,
+        appVrchatAuthSessionRespond: mocks.respondLoginSession,
+        appVrchatAuthSessionCancel: mocks.cancelLoginSession
     }
 }));
 
@@ -389,7 +389,7 @@ describe('authExecutionService characterization', () => {
         expect(useSessionStore.getState().sessionPhase).toBe('authenticating');
     });
 
-    it('prefers email OTP and finishes login after the challenge resolves', async () => {
+    it('prompts with the email OTP copy and finishes login after the challenge resolves', async () => {
         mocks.startLoginSession.mockResolvedValueOnce(
             challengeState(['emailOtp'], 'emailOtp')
         );
@@ -417,7 +417,7 @@ describe('authExecutionService characterization', () => {
         );
     });
 
-    it('deletes saved credentials when VRChat rejects them', async () => {
+    it('maps rejected saved credentials to AUTH_SAVED_CREDENTIALS_INVALID and signs out with the backend snapshot', async () => {
         mocks.startLoginSession.mockResolvedValueOnce(
             failedState(
                 'Invalid Username/Email or Password',
@@ -698,7 +698,9 @@ describe('authExecutionService characterization', () => {
 
             expect(mocks.startLoginSession).toHaveBeenCalledTimes(2);
             expect(mocks.cancelLoginSession).toHaveBeenCalledTimes(1);
-            expect(mocks.cancelLoginSession).toHaveBeenCalledWith('attempt-1');
+            expect(mocks.cancelLoginSession).toHaveBeenCalledWith({
+                attemptId: 'attempt-1'
+            });
             expect(mocks.otpPrompt).toHaveBeenCalledTimes(2);
             expect(
                 mocks.otpPrompt.mock.calls.map(([prompt]) => prompt.mode)
@@ -789,13 +791,15 @@ describe('authExecutionService characterization', () => {
             });
 
             expect(mocks.cancelLoginSession).toHaveBeenCalledTimes(1);
-            expect(mocks.cancelLoginSession).toHaveBeenCalledWith('attempt-1');
+            expect(mocks.cancelLoginSession).toHaveBeenCalledWith({
+                attemptId: 'attempt-1'
+            });
             expect(mocks.respondLoginSession).not.toHaveBeenCalled();
         });
     });
 
-    describe('saved-credential login always disables credential saving', () => {
-        it('starts the saved-credential session without any client-side credential persistence', async () => {
+    describe('saved-credential login', () => {
+        it('starts a saved-credential session by user id and applies the returned snapshot', async () => {
             mocks.startLoginSession.mockResolvedValueOnce(
                 authenticatedState('usr_saved')
             );
@@ -826,7 +830,7 @@ describe('authExecutionService characterization', () => {
             });
         });
 
-        it('clears the last-logged-in target for a session-recovery failure while keeping the saved credential', async () => {
+        it('rejects with the typed failure and applies the backend snapshot for a session-invalidated failure', async () => {
             const nextSnapshot = savedSnapshot({
                 credentialId: 'usr_saved',
                 lastUserLoggedIn: null

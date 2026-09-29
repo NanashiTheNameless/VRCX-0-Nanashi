@@ -19,7 +19,6 @@ pub enum LegacyMigrationRequestMode {
 
 #[derive(Clone)]
 pub struct DesktopLegacyMigrationRuntime {
-    available: bool,
     status: LegacyVrcxMigrationStatus,
     source: Option<LegacyVrcxSource>,
     paths: LegacyMigrationPaths,
@@ -28,23 +27,17 @@ pub struct DesktopLegacyMigrationRuntime {
 
 impl DesktopLegacyMigrationRuntime {
     pub fn new(
-        available: bool,
         status: LegacyVrcxMigrationStatus,
         source: Option<LegacyVrcxSource>,
         paths: LegacyMigrationPaths,
         database_upgrade: DesktopDatabaseUpgradeRuntime,
     ) -> Self {
         Self {
-            available,
             status,
             source,
             paths,
             database_upgrade,
         }
-    }
-
-    pub fn available(&self) -> bool {
-        self.available
     }
 
     pub fn status(&self) -> LegacyVrcxMigrationStatus {

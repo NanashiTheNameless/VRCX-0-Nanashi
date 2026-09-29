@@ -12,8 +12,7 @@ import { FadeInImage } from '@/components/media/FadeInImage';
 import { normalizeSidebarFilterQuery } from '@/components/sidebar/friends-sidebar/friendsSidebarModel';
 import { useVirtualSidebarRows } from '@/components/sidebar/useVirtualSidebarRows';
 import type { FriendRecord } from '@/domain/friends/types';
-import { entityQueryPolicies, queryKeys } from '@/lib/entityQueryCache';
-import groupProfileRepository from '@/repositories/groupProfileRepository';
+import { groupProfileQueryOptions } from '@/lib/groupProfileQuery';
 import { openGroupDialog } from '@/services/dialogService';
 import {
     convertFileUrlToImageUrl,
@@ -58,23 +57,6 @@ function estimateWorldRoomsRowSize(row: WorldRoomsSidebarRow) {
         default:
             return 50;
     }
-}
-
-function useGroupProfileQuery(groupId: string) {
-    const endpoint = useRuntimeStore((state) => state.auth.currentUserEndpoint);
-    return useQuery({
-        queryKey: queryKeys.group(groupId, false, endpoint),
-        queryFn: () =>
-            groupProfileRepository.fetchGroupProfile({
-                groupId,
-                includeRoles: false
-            }),
-        enabled: Boolean(groupId),
-        staleTime: entityQueryPolicies.group.staleTime,
-        gcTime: entityQueryPolicies.group.gcTime,
-        retry: entityQueryPolicies.group.retry,
-        refetchOnWindowFocus: entityQueryPolicies.group.refetchOnWindowFocus
-    });
 }
 
 function RoomFriends({ friends }: { friends: FriendRecord[] }) {
@@ -153,7 +135,8 @@ function WorldRoomItem({
         refreshKey: `${refreshKey}|${room.friends.length}`
     });
     const groupId = parsedLocation.groupId || '';
-    const group = useGroupProfileQuery(groupId).data;
+    const endpoint = useRuntimeStore((state) => state.auth.currentUserEndpoint);
+    const group = useQuery(groupProfileQueryOptions(groupId, endpoint)).data;
     const groupName = group?.name || '';
     const groupIconUrl = convertFileUrlToImageUrl(group?.iconUrl, 128);
     const showGroupName = Boolean(groupId && groupName);

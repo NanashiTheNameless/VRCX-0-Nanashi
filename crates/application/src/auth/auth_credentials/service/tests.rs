@@ -62,12 +62,6 @@ fn saved_snapshot_redacts_passwords_and_cookies() -> vrcx_0_application_core::Re
     );
     assert!(credential.has_login_credentials);
     assert!(credential.has_cookies);
-    assert!(serialized_snapshot
-        .pointer("/savedCredentialsList/0/loginParams/endpoint")
-        .is_none());
-    assert!(serialized_snapshot
-        .pointer("/savedCredentialsList/0/loginParams/websocket")
-        .is_none());
 
     Ok(())
 }

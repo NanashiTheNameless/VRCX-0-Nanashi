@@ -4,10 +4,6 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { PropsWithChildren, ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/ui/shadcn/hover-card', () => ({
     HoverCard: ({ children }: PropsWithChildren) => <div>{children}</div>,
     HoverCardTrigger: ({ render }: { render: ReactElement }) => render,

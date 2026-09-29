@@ -331,7 +331,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn refresh_uses_semantic_remote_without_web_client() {
+    async fn refresh_merges_status_and_component_summary_into_an_issue_snapshot() {
         let remote = Arc::new(RecordingVrcStatusRemote {
             status_calls: AtomicUsize::new(0),
             summary_calls: AtomicUsize::new(0),

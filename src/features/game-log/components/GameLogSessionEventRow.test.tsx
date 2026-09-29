@@ -317,6 +317,7 @@ describe('SessionEventGroups player durations', () => {
         expect(
             screen.getByText('count-only').closest('button')?.textContent
         ).toContain('3');
+        expect(screen.getAllByText('count-only')).toHaveLength(1);
     });
 
     it('fails explicitly when player rows are mounted without an affinity provider', () => {

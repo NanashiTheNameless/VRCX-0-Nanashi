@@ -20,6 +20,7 @@ import type { CurrentUserProfileUpdateRequest } from '@/platform/tauri/bindings'
 import userProfileRepository from '@/repositories/userProfileRepository';
 import currentUserProfileService from '@/services/currentUserProfileService';
 import { toast } from '@/services/toastService';
+import { PROFILE_LIST_LIMIT } from '@/shared/constants/profileLimits';
 import {
     mergeCurrentUserMediaFields,
     profileMediaFileUrl,
@@ -29,6 +30,7 @@ import {
 } from '@/shared/utils/currentUserMedia';
 import { mergeCurrentUserPresenceFields } from '@/shared/utils/currentUserPresence';
 import { extractFileId } from '@/shared/utils/fileUtils';
+import { normalizeProfileLanguageKeys } from '@/shared/utils/userLanguage';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
 import { useSpokenLanguageSelection } from '../useSpokenLanguageSelection';
@@ -37,10 +39,7 @@ import {
     mergeUserDialogProfileAppearance,
     preserveUserDialogProfileAppearance
 } from './userDialogProfileAppearance';
-import {
-    normalizeLanguageKey,
-    normalizeProfileLanguageRows
-} from './userProfileFields';
+import { normalizeProfileLanguageRows } from './userProfileFields';
 import type { UserDialogProfileRecord } from './useUserDialogProfileResource';
 
 function setSelfActionStatus(
@@ -85,20 +84,6 @@ function normalizeStringArray(values: unknown) {
     return rows;
 }
 
-function normalizeLanguageKeys(values: unknown) {
-    const keys: string[] = [];
-    const seen = new Set<string>();
-    for (const value of Array.isArray(values) ? values : []) {
-        const key = normalizeLanguageKey(value);
-        if (!key || seen.has(key)) {
-            continue;
-        }
-        keys.push(key);
-        seen.add(key);
-    }
-    return keys.slice(0, 3);
-}
-
 function normalizeBioLinks(values: unknown) {
     return (Array.isArray(values) ? values : [])
         .map((value) =>
@@ -109,7 +94,7 @@ function normalizeBioLinks(values: unknown) {
                       .slice(0, 1000)
         )
         .filter(Boolean)
-        .slice(0, 3);
+        .slice(0, PROFILE_LIST_LIMIT);
 }
 
 function normalizeProfileBioLinks(profile: Record<string, unknown>) {
@@ -172,7 +157,7 @@ export function useUserDialogSelfActions({
         createProfileDetailsDraft
     );
     const profileDetailsLanguageKeys = useMemo(
-        () => normalizeLanguageKeys(profileDetailsDraft.languageKeys),
+        () => normalizeProfileLanguageKeys(profileDetailsDraft.languageKeys),
         [profileDetailsDraft.languageKeys]
     );
     const {
@@ -379,7 +364,7 @@ export function useUserDialogSelfActions({
         setProfileDetailsDraft({
             languageKeys: currentLanguageRows
                 .map((language) => language.key)
-                .slice(0, 3),
+                .slice(0, PROFILE_LIST_LIMIT),
             bio: String(profile.bio || ''),
             bioLinks: bioLinks.length ? bioLinks : [''],
             pronouns: normalizeProfilePronouns(profile)
@@ -392,7 +377,7 @@ export function useUserDialogSelfActions({
             return;
         }
 
-        const nextLanguageKeys = normalizeLanguageKeys(
+        const nextLanguageKeys = normalizeProfileLanguageKeys(
             profileDetailsDraft.languageKeys
         );
         const addLanguageKeys = nextLanguageKeys.filter(

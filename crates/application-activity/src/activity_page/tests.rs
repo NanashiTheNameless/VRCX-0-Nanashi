@@ -2,9 +2,7 @@ use super::*;
 use std::cell::{Cell, RefCell};
 use std::collections::BTreeSet;
 use vrcx_0_application_core::{Error, Result};
-use vrcx_0_contracts::activity_page::{
-    ActivityLocationSpan, ActivityWindowSpans, CachedActivityPage,
-};
+use vrcx_0_contracts::activity_page::{ActivityLocationSpan, CachedActivityPage};
 use vrcx_0_contracts::social_aggregates::{
     CopresenceSummaryInput, CopresenceSummaryOutput, FadingFriendsInput, FadingFriendsOutput,
 };
@@ -67,22 +65,18 @@ impl ActivityPageStore for Store {
         _: &OwnerId,
         from: Option<i64>,
         to: i64,
-    ) -> Result<ActivityWindowSpans> {
+    ) -> Result<Vec<ActivityLocationSpan>> {
         self.called("spans");
         if self.fail_source.get() {
             return Err(Error::Custom("source failed".into()));
         }
-        Ok(ActivityWindowSpans {
-            spans: vec![ActivityLocationSpan {
-                start_ms: from.unwrap_or(to - 3_600_000),
-                end_ms: from.unwrap_or(to - 3_600_000) + 3_600_000,
-                world_id: "wrld_a".into(),
-                world_name: "A".into(),
-                access_bucket: "public".into(),
-                inferred: false,
-            }],
-            has_open_tail: false,
-        })
+        Ok(vec![ActivityLocationSpan {
+            start_ms: from.unwrap_or(to - 3_600_000),
+            end_ms: from.unwrap_or(to - 3_600_000) + 3_600_000,
+            world_id: "wrld_a".into(),
+            world_name: "A".into(),
+            access_bucket: "public".into(),
+        }])
     }
     fn first_source_created_at(&self, _: &OwnerId) -> Result<String> {
         self.called("coverage");

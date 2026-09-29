@@ -59,9 +59,11 @@ describe('profileBackupStore', () => {
             }
         };
 
+        useProfileBackupStore.getState().applyStatus(status(2));
         useProfileBackupStore.getState().beginRestoreValidation();
         useProfileBackupStore.getState().showRestoreConfirmation(validation);
 
+        expect(useProfileBackupStore.getState().status).toEqual(status(2));
         expect(useProfileBackupStore.getState().restoreFlow).toBe('confirm');
         expect(useProfileBackupStore.getState().restoreValidation).toEqual(
             validation

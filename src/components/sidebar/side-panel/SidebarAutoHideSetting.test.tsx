@@ -10,12 +10,6 @@ import { useSidebarAutoHideStore } from '@/state/sidebarAutoHideStore';
 
 import { SidebarAutoHideSetting } from './SidebarAutoHideSetting';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-vi.mock('@/services/sidebarAutoHideService', () => ({
-    setSidebarAutoHideEnabled: vi.fn()
-}));
 vi.mock('@/services/shellIntegrationService', () => ({
     setTaskbarOverlayNotification: vi.fn(),
     setTrayIconNotification: vi.fn()
@@ -55,9 +49,6 @@ describe('sidebar auto-hide setting', () => {
                 'side_panel.settings.auto_hide.label'
             );
             expect(container.querySelector('[role="switch"]')).not.toBeNull();
-            expect(
-                container.querySelector('[data-slot="separator"]')
-            ).toBeNull();
             await act(async () => {
                 useShellStore.setState({ windowDisplayMode: 'normal' });
             });

@@ -10,14 +10,11 @@ const mocks = vi.hoisted(() => ({
     appDatabaseUpgradeRetry: vi.fn(),
     appDatabaseUpgradeFailureLogPath: vi.fn(),
     appDatabaseUpgradeStartFresh: vi.fn(),
-    appOpenVrcxAppDataFolder: vi.fn(),
     appGetLegacyVrcxMigrationStatus: vi.fn(),
-    appCheckLegacyVrcxAvailable: vi.fn(),
     appRequestLegacyMigration: vi.fn(),
     configReload: vi.fn(),
     confirmLegacyVrcxProcessState: vi.fn(),
     confirm: vi.fn(),
-    openExternalLink: vi.fn(),
     t: vi.fn(),
     showSQLiteErrorDialog: vi.fn()
 }));
@@ -44,15 +41,13 @@ vi.mock('@/platform/tauri/bindings', () => ({
         appDatabaseUpgradeFailureLogPath:
             mocks.appDatabaseUpgradeFailureLogPath,
         appDatabaseUpgradeStartFresh: mocks.appDatabaseUpgradeStartFresh,
-        appOpenVrcxAppDataFolder: mocks.appOpenVrcxAppDataFolder,
         appGetLegacyVrcxMigrationStatus: mocks.appGetLegacyVrcxMigrationStatus,
-        appCheckLegacyVrcxAvailable: mocks.appCheckLegacyVrcxAvailable,
         appRequestLegacyMigration: mocks.appRequestLegacyMigration
     }
 }));
 
 vi.mock('@/services/shellIntegrationService', () => ({
-    openExternalLink: mocks.openExternalLink
+    openExternalLink: vi.fn()
 }));
 
 vi.mock('@/services/legacyVrcxMigrationService', () => ({
@@ -89,9 +84,7 @@ import { useSessionStore } from '@/state/sessionStore';
 
 import {
     confirmLegacyDatabaseMigration,
-    createDatabaseUpgradeGitHubIssue,
     initializeDatabaseUpgradeFlow,
-    openDatabaseUpgradeFailureLogFolder,
     retryDatabaseUpgrade,
     startFreshDatabaseAfterUpgradeFailure,
     skipLegacyDatabaseMigration
@@ -150,16 +143,13 @@ describe('databaseUpgradeService', () => {
         mocks.appDatabaseUpgradeStartFresh.mockResolvedValue(
             'C:/VRCX-0/database-upgrade-recovery/backup'
         );
-        mocks.appOpenVrcxAppDataFolder.mockResolvedValue(true);
         mocks.appGetLegacyVrcxMigrationStatus.mockResolvedValue(
             unavailableLegacyStatus()
         );
-        mocks.appCheckLegacyVrcxAvailable.mockResolvedValue(false);
         mocks.appRequestLegacyMigration.mockResolvedValue(false);
         mocks.confirmLegacyVrcxProcessState.mockResolvedValue(false);
         mocks.configReload.mockResolvedValue(undefined);
         mocks.confirm.mockResolvedValue({ ok: true, reason: 'confirmed' });
-        mocks.openExternalLink.mockResolvedValue(undefined);
         mocks.t.mockImplementation(
             (key: string, params?: Record<string, unknown>) =>
                 params ? `${key}:${JSON.stringify(params)}` : key
@@ -494,20 +484,6 @@ describe('databaseUpgradeService', () => {
             freshStartAvailable: true,
             detail: 'service.database_upgrade_service.error.newer_schema_requires_newer_app:{"value":19,"value2":18}'
         });
-    });
-
-    it('opens the error-log folder and links to the new GitHub issue page', async () => {
-        useRuntimeStore.getState().setDatabaseUpgradeState({
-            failureLogPath: 'C:/VRCX-0/error-log.txt'
-        });
-
-        await openDatabaseUpgradeFailureLogFolder();
-        await createDatabaseUpgradeGitHubIssue();
-
-        expect(mocks.appOpenVrcxAppDataFolder).toHaveBeenCalledTimes(1);
-        expect(mocks.openExternalLink).toHaveBeenCalledWith(
-            'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/issues/new?template=bug_report.yml'
-        );
     });
 
     it('archives a failed database and requests a fresh-start restart after confirmation', async () => {

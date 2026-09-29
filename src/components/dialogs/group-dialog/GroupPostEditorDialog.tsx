@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { FadeInImage } from '@/components/media/FadeInImage';
 import type { GroupProfileRecord } from '@/domain/entities/group';
 import { cn } from '@/lib/utils';
-import mediaRepository from '@/repositories/mediaRepository';
+import vrchatMediaRepository from '@/repositories/vrchatMediaRepository';
 import { Button } from '@/ui/shadcn/button';
 import { Checkbox } from '@/ui/shadcn/checkbox';
 import {
@@ -60,7 +60,7 @@ export function GroupPostEditorDialog({
     const { t } = useTranslation();
 
     const [galleryRows, setGalleryRows] = useState<
-        Awaited<ReturnType<typeof mediaRepository.getFileList>>['json']
+        Awaited<ReturnType<typeof vrchatMediaRepository.getFileList>>['json']
     >([]);
     const [galleryStatus, setGalleryStatus] = useState('idle');
     const [galleryError, setGalleryError] = useState('');
@@ -75,7 +75,7 @@ export function GroupPostEditorDialog({
         setGalleryStatus('running');
         setGalleryError('');
         try {
-            const response = await mediaRepository.getFileList({
+            const response = await vrchatMediaRepository.getFileList({
                 n: 100,
                 tag: 'gallery'
             });

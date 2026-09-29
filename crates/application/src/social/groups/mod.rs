@@ -1,4 +1,5 @@
 mod group_ban_import;
+mod member_role_ids;
 mod membership_batch;
 mod moderation_batch;
 mod permissions;
@@ -11,6 +12,7 @@ pub use group_ban_import::{
     GroupBanImportActions, GroupBanImportFuture, GroupBanImportItemResult, GroupBanImportItemState,
     GroupBanImportRuntime, GroupBanImportStartInput, GroupBanImportState, GroupBanImportStatus,
 };
+pub use member_role_ids::get_member_role_ids;
 pub use membership_batch::{
     run_group_membership_batch, GroupMembershipBatchAction, GroupMembershipBatchCoordinator,
     GroupMembershipBatchInput, GroupMembershipBatchItemResult, GroupMembershipBatchItemState,
@@ -32,7 +34,7 @@ pub use quick_moderation::{
 pub use service::{
     add_member_role, ban_member, block_group, cancel_request, create_post, delete_group,
     delete_invite, delete_post, edit_post, get_audit_log_types, get_bans, get_gallery, get_group,
-    get_invites, get_join_requests, get_logs, get_member, get_members, get_posts, get_user_groups,
+    get_invites, get_join_requests, get_logs, get_members, get_posts, get_user_groups,
     get_user_instances, join_group, kick_member, leave_group, remove_member_role,
     respond_join_request, search_members, send_invite, set_member_props, set_representation,
     unban_member, unblock_group, update_group, GroupApiDeps, GroupBuiltRequest,

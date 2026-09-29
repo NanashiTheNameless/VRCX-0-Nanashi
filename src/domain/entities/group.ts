@@ -1,9 +1,10 @@
 import type { EntityRecord } from './shared';
 
-type GroupRoleRecord = EntityRecord & {
+export type GroupRoleRecord = EntityRecord & {
     id?: string;
     name?: string;
     description?: string;
+    order?: number;
     isManagementRole?: boolean;
     isSelfAssignable?: boolean;
     permissions?: string[];

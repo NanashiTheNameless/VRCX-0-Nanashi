@@ -265,12 +265,11 @@ describe('useFavoriteRemoteDetails', () => {
         expect(mocks.appFavoriteDetailsHydrate).toHaveBeenCalledTimes(1);
     });
 
-    it('stays ready without calling the backend when disabled or without ids', async () => {
+    it('stays ready without calling the backend when there are no ids', async () => {
         const { result } = renderHook(() =>
             useFavoriteRemoteDetails({
                 type: 'world',
-                favoriteIds: [],
-                enabled: true
+                favoriteIds: []
             })
         );
 

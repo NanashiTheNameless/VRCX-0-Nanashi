@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 
 import mutualGraphPersistenceRepository from '@/repositories/mutualGraphPersistenceRepository';
 import { useResolvedThemeMode } from '@/services/themeService';
@@ -16,13 +16,13 @@ import {
     mutualFriendsCommunityPalette,
     mutualFriendsNeutralCommunityColor
 } from './mutualFriendsPalette';
-import { readExcludedMutualFriendIds } from './mutualFriendsSettings';
 import type {
     MutualFriendCommunity,
     MutualFriendLink,
     MutualFriendSnapshot
 } from './mutualFriendsTypes';
 import { useMutualFriendLabels } from './useMutualFriendLabels';
+import { useMutualFriendsExclusionStore } from './useMutualFriendsExclusionStore';
 
 const EMPTY_COMMUNITY_INDEX: ReadonlyMap<string, number> = new Map();
 const EMPTY_COMMUNITIES: readonly MutualFriendCommunity[] = [];
@@ -53,7 +53,9 @@ export function useMutualFriendGraphContext(
         (state) => state.orderedFriendIds
     );
     const isDarkMode = useResolvedThemeMode() === 'dark';
-    const [excludedFriendIds] = useState(readExcludedMutualFriendIds);
+    const excludedFriendIds = useMutualFriendsExclusionStore(
+        (state) => state.excludedFriendIds
+    );
     const snapshotQuery = useQuery({
         queryKey: [
             'mutual-graph-snapshot',

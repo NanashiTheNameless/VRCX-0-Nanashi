@@ -22,17 +22,6 @@ describe('groupModerationRows', () => {
         ]
     };
 
-    it('builds moderation tab metadata from locale keys', () => {
-        expect(getGroupModerationTabs(t).map((tab) => tab.value)).toEqual([
-            'members',
-            'bans',
-            'invites',
-            'requests',
-            'blocked',
-            'logs'
-        ]);
-    });
-
     it('disables moderation tabs that the current member cannot access', () => {
         const tabs = getGroupModerationTabs(t, {
             myMember: {
@@ -92,16 +81,6 @@ describe('groupModerationRows', () => {
                 tabs.map((tab) => ({ ...tab, disabled: true }))
             )
         ).toBe('');
-    });
-
-    it('keeps the active tab when it remains enabled after permission metadata changes', () => {
-        const tabs = getGroupModerationTabs(t, {
-            myMember: {
-                permissions: ['group-bans-manage', 'group-audit-view']
-            }
-        });
-
-        expect(resolveGroupModerationActiveTab('bans', tabs)).toBe('bans');
     });
 
     it('resolves user-facing row fields from nested and fallback moderation data', () => {

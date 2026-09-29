@@ -1,8 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
-import avatarFeedHistoryRepository from '@/repositories/avatarFeedHistoryRepository';
+import { commands } from '@/platform/tauri/bindings';
 import configRepository from '@/repositories/configRepository';
-import mediaRepository from '@/repositories/mediaRepository';
 import vrchatAuthRepository from '@/repositories/vrchatAuthRepository';
 import {
     addFeedHiddenUserPreference,
@@ -149,7 +148,7 @@ export function useSettingsActions(deps: SettingsActionsDeps) {
         DEFAULT_SEARCH_LIMIT,
         applyAppFontPreferences,
         auth,
-        avatarFeedHistoryRepository,
+        cleanupAvatarFeedHistory: commands.appAvatarFeedHistoryCleanup,
         alert,
         configRepository,
         confirm,
@@ -157,7 +156,8 @@ export function useSettingsActions(deps: SettingsActionsDeps) {
         isValidFontFamilyList,
         language: i18n.language,
         loadTrustColorPreference,
-        mediaRepository,
+        cropAllPrints: commands.appCropAllPrints,
+        getUgcPhotoLocation: commands.appGetUgcPhotoLocation,
         normalizeAppCjkFontPack,
         normalizeAppFontFamily,
         normalizePreferenceSnapshot,

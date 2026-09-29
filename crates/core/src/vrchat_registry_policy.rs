@@ -180,6 +180,7 @@ mod tests {
         assert!(is_allowed_registry_key("LOGGING_ENABLED"));
         assert!(is_allowed_registry_key("VRC_DEBUG_LOGGING"));
         assert!(is_allowed_registry_key("VRC_TEST"));
+        assert!(is_allowed_registry_key("VRC_Input:Mode"));
         assert!(is_allowed_registry_key("UnityGraphicsQuality"));
         assert!(is_allowed_registry_key("playerHeight_h56066313"));
         assert!(is_allowed_registry_key("playerHeight"));
@@ -192,7 +193,6 @@ mod tests {
         assert!(!is_allowed_registry_key("Bad/Key"));
         assert!(!is_allowed_registry_key("Bad\\Key"));
         assert!(!is_allowed_registry_key("Bad\"Key"));
-        assert!(!is_allowed_registry_key(""));
     }
 
     #[test]

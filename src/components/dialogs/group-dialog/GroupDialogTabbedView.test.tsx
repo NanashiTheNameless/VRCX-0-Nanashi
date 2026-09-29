@@ -26,10 +26,6 @@ const mocks = vi.hoisted(() => ({
     getAllGroupPosts: vi.fn()
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('react-router', () => ({
     useNavigate: () => vi.fn()
 }));

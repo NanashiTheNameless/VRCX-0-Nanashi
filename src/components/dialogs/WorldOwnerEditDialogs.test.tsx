@@ -8,14 +8,6 @@ import type { WorldProfileRecord } from '@/domain/entities/world';
 
 import { type WorldTagsUpdate, WorldTagsDialog } from './WorldOwnerEditDialogs';
 
-vi.mock('react-i18next', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('react-i18next')>();
-    return {
-        ...actual,
-        useTranslation: () => ({ t: (key: string) => key })
-    };
-});
-
 afterEach(cleanup);
 
 function createWorld(
@@ -80,7 +72,6 @@ describe('WorldTagsDialog', () => {
             debug.compareDocumentPosition(authorTags) &
                 Node.DOCUMENT_POSITION_FOLLOWING
         ).toBeTruthy();
-        expect(screen.queryByText('Third Person')).toBeNull();
     });
 
     it('converts the positive controls back to VRChat disabled tags on save', async () => {
@@ -176,35 +167,6 @@ describe('WorldTagsDialog', () => {
                 disabledPropAbilities: ['future_ability', 'player_movement']
             })
         );
-    });
-
-    it('uses translation keys for content and default-content options', () => {
-        render(
-            <WorldTagsDialog
-                open
-                onOpenChange={vi.fn()}
-                world={createWorld([])}
-                onSave={vi.fn()}
-            />
-        );
-
-        const optionTranslationKeys = [
-            'dialog.world.tags.content_horror',
-            'dialog.world.tags.content_gore',
-            'dialog.world.tags.content_violence',
-            'dialog.world.tags.content_adult',
-            'dialog.world.tags.content_sex',
-            'dialog.gallery_icons.emoji',
-            'dialog.gallery_icons.stickers',
-            'dialog.world.tags.pedestals',
-            'dialog.gallery_icons.prints',
-            'dialog.inventory.drones',
-            'dialog.inventory.items'
-        ];
-
-        for (const name of optionTranslationKeys) {
-            expect(screen.getByRole('checkbox', { name })).toBeTruthy();
-        }
     });
 
     it('keeps content tag checkboxes and raw input in sync like avatars', async () => {

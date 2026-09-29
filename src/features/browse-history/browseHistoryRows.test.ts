@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { BrowseHistoryItemOutput } from '@/repositories/browseHistoryRepository';
+import type { BrowseHistoryItemOutput } from '@/platform/tauri/bindings';
 
 import {
     BROWSE_HISTORY_CARD_HEIGHT,

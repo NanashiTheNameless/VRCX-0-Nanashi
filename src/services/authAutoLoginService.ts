@@ -5,7 +5,6 @@ import {
 } from '@/platform/tauri/bindings';
 import { flashWindow } from '@/platform/tauri/webview';
 import type { SavedAuthSnapshot } from '@/repositories/authRepository';
-import vrchatAuthRepository from '@/repositories/vrchatAuthRepository';
 import { toast } from '@/services/toastService';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
@@ -268,7 +267,7 @@ export async function executeReactAutoLogin(
             );
         }
 
-        const outcome = await vrchatAuthRepository.autoLoginStart({
+        const outcome = await commands.appVrchatAuthAutoLoginStart({
             userId: throttleKey
         });
         ensureCurrentAuthAttempt(attempt);
@@ -316,9 +315,11 @@ export async function executeReactAutoLogin(
         }
 
         async function restartChallenge(challengeAttemptId: string) {
-            await vrchatAuthRepository.cancelLoginSession(challengeAttemptId);
+            await commands.appVrchatAuthSessionCancel({
+                attemptId: challengeAttemptId
+            });
             ensureCurrentAuthAttempt(attempt);
-            return vrchatAuthRepository.startLoginSession({
+            return commands.appVrchatAuthSessionStart({
                 mode: 'savedCredential',
                 userId: throttleKey
             });

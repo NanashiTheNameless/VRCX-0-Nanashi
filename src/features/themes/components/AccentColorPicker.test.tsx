@@ -4,10 +4,6 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 import { AccentColorPicker } from './AccentColorPicker';
 
 afterEach(cleanup);
@@ -63,16 +59,12 @@ describe('AccentColorPicker custom color', () => {
         const customButton = screen.getByRole('button', {
             name: 'view.themes.accent.custom'
         });
-        const neutralButton = screen.getByRole('button', {
-            name: 'view.settings.appearance.theme_color.default'
-        });
         const swatch = customButton.querySelector('[aria-hidden="true"]');
 
-        expect(customButton.parentElement).toBe(neutralButton.parentElement);
         expect((swatch as HTMLSpanElement).style.backgroundColor).toBe(
             'rgb(18, 52, 86)'
         );
-        expect(customButton.getAttribute('data-variant')).toBe('default');
+        expect(customButton.getAttribute('aria-pressed')).toBe('true');
 
         rerender(
             <AccentColorPicker
@@ -82,7 +74,7 @@ describe('AccentColorPicker custom color', () => {
             />
         );
 
-        expect(customButton.getAttribute('data-variant')).toBe('outline');
+        expect(customButton.getAttribute('aria-pressed')).toBe('false');
         await user.click(customButton);
         expect(updateThemeColor).toHaveBeenCalledWith('#123456');
     });
@@ -102,7 +94,7 @@ describe('AccentColorPicker custom color', () => {
             name: 'view.themes.accent.custom'
         });
 
-        expect(customButton.getAttribute('data-variant')).toBe('default');
+        expect(customButton.getAttribute('aria-pressed')).toBe('true');
 
         await user.clear(textInput);
         await user.type(textInput, '#nope');
@@ -119,7 +111,7 @@ describe('AccentColorPicker custom color', () => {
             />
         );
 
-        expect(customButton.getAttribute('data-variant')).toBe('default');
+        expect(customButton.getAttribute('aria-pressed')).toBe('true');
         expect((customButton as HTMLButtonElement).disabled).toBe(true);
         expect(
             (

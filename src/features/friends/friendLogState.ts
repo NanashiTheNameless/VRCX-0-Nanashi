@@ -3,7 +3,6 @@ import type { SortingState } from '@tanstack/react-table';
 import {
     getDataTableStorageKey,
     readPersistedTableState,
-    safeJsonParse,
     writePersistedTableState
 } from '@/components/data-table/dataTablePersistence';
 import { DATE_AND_TYPE_SORT_COLUMN_IDS } from '@/components/data-table/sortRowsByDateAndType';
@@ -11,6 +10,7 @@ import {
     FRIEND_LOG_TYPES,
     type FriendLogType
 } from '@/domain/friends/friendLog';
+import { safeJsonParse } from '@/shared/utils/json';
 
 export const DEFAULT_PAGE_SIZES = [10, 15, 20, 25, 50, 100];
 export const COLUMN_IDS = [

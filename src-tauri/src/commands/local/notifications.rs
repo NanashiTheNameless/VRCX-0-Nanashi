@@ -29,22 +29,6 @@ pub fn app__notification_add_v1(
 
 #[tauri::command(async)]
 #[specta::specta]
-pub fn app__notification_add_v2(
-    state: State<'_, AppState>,
-    user_id: String,
-    notification: Value,
-) -> Result<(), AppError> {
-    state
-        .runtime_host()
-        .local_data()
-        .notification_add_v2(user_id, notification)
-        .map_err(AppError::from)?;
-    state.runtime_host().refresh_tray_notification();
-    Ok(())
-}
-
-#[tauri::command(async)]
-#[specta::specta]
 pub fn app__notification_delete(
     state: State<'_, AppState>,
     user_id: String,

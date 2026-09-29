@@ -3,64 +3,6 @@ mod tests {
     use super::super::*;
 
     #[test]
-    fn websocket_friend_update_still_emits_status_feed() {
-        let runtime = RealtimeFriendsRuntime::default();
-        runtime.set_baseline(
-            FriendRosterBaseline {
-                current_user_id: "usr_self".into(),
-                friends_by_id: [(
-                    "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "online".into(),
-                        location: "wrld_old:123".into(),
-                        status: "join me".into(),
-                        status_description: "Old status".into(),
-                        ..FriendRecord::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-                ..FriendRosterBaseline::default()
-            },
-            1,
-            0,
-        );
-
-        let RealtimeFriendApplyResult::Output(output) =
-            runtime.apply_ws_message(&RealtimeWsMessagePayload {
-                json: json!({
-                    "type": "friend-update",
-                    "content": {
-                        "userId": "usr_friend",
-                        "user": {
-                            "id": "usr_friend",
-                            "displayName": "Friend",
-                            "state": "online",
-                            "status": "active",
-                            "statusDescription": "Fresh WS status"
-                        }
-                    }
-                }),
-                raw: "{}".into(),
-                received_at: "2026-05-15T00:00:01Z".into(),
-            })
-        else {
-            panic!("friend-update should produce an output");
-        };
-
-        assert_eq!(
-            output.persistence.feed_entries[0].to_json()["type"],
-            "Status"
-        );
-        assert_eq!(
-            output.projection.feed_entries[0].to_json()["type"],
-            "Status"
-        );
-    }
-
-    #[test]
     fn websocket_friend_update_with_offline_status_does_not_emit_status_feed() {
         let runtime = RealtimeFriendsRuntime::default();
         runtime.set_baseline(
@@ -170,6 +112,7 @@ mod tests {
             first.persistence.feed_entries[0].to_json()["type"],
             "Status"
         );
+        assert_eq!(first.projection.feed_entries[0].to_json()["type"], "Status");
 
         let RealtimeFriendApplyResult::Output(second) =
             runtime.apply_ws_message(&RealtimeWsMessagePayload {

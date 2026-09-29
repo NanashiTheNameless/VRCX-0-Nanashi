@@ -43,9 +43,9 @@ vi.mock('@/services/toastService', () => ({
     }
 }));
 
-vi.mock('@/repositories/shareCollectionRepository', () => ({
-    default: {
-        createShareCollection: mocks.createShareCollection
+vi.mock('@/platform/tauri/bindings', () => ({
+    commands: {
+        appShareCollectionCreate: mocks.createShareCollection
     }
 }));
 

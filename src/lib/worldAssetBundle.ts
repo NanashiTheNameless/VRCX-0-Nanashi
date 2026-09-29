@@ -1,4 +1,4 @@
-import { assetBundleRepository } from '@/repositories/assetBundleRepository';
+import { commands } from '@/platform/tauri/bindings';
 import { compareUnityVersion } from '@/shared/utils/avatar';
 import {
     extractFileId,
@@ -119,7 +119,7 @@ export async function readWorldCacheInfo(
     if (!args) {
         return defaultWorldCacheInfo();
     }
-    const cacheInfo = await assetBundleRepository.checkVRChatCache(
+    const cacheInfo = await commands.assetBundleCheckVrchatCache(
         args.fileId,
         args.fileVersion,
         args.variant,

@@ -256,32 +256,14 @@ mod tests {
     use super::{overlay_icon_size, render_dot_premultiplied_bgra, DOT_RGB};
 
     #[test]
-    fn falls_back_to_sixteen_pixels_when_the_system_metric_is_unusable() {
+    fn overlay_icon_size_keeps_usual_metrics_and_clamps_unusable_ones() {
         assert_eq!(overlay_icon_size(0), 16);
         assert_eq!(overlay_icon_size(-4), 16);
-    }
-
-    #[test]
-    fn keeps_the_usual_dpi_scaled_small_icon_sizes() {
         for metric in [16, 20, 24, 32] {
             assert_eq!(overlay_icon_size(metric), metric as u32);
         }
-    }
-
-    #[test]
-    fn clamps_absurd_system_metrics() {
         assert_eq!(overlay_icon_size(4), 8);
         assert_eq!(overlay_icon_size(512), 64);
-    }
-
-    #[test]
-    fn renders_one_pixel_per_icon_cell() {
-        for size in [8u32, 16, 24, 64] {
-            assert_eq!(
-                render_dot_premultiplied_bgra(size).len(),
-                (size * size) as usize
-            );
-        }
     }
 
     #[test]

@@ -429,20 +429,6 @@ fn delete_thumbnail_cache_record_removes_only_matching_entry() {
 }
 
 #[test]
-fn thumbnail_last_used_map_reflects_recorded_entries() {
-    let dir = TestDir::new("thumbnail-last-used-map");
-    let cache = open_cache(&dir);
-    cache.record_thumbnail_cache("source-1.png", "thumb-1.webp", "key-1", 100, 1000);
-    cache.record_thumbnail_cache("source-2.png", "thumb-2.webp", "key-2", 100, 2000);
-
-    let map = cache.thumbnail_last_used_map();
-
-    assert_eq!(map.len(), 2);
-    assert!(map.contains_key("thumb-1.webp"));
-    assert!(map.contains_key("thumb-2.webp"));
-}
-
-#[test]
 fn clear_all_removes_metadata_library_and_thumbnail_records() -> Result<()> {
     let dir = TestDir::new("clear-all");
     let cache = open_cache(&dir);

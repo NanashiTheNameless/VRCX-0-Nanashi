@@ -10,7 +10,6 @@ vi.mock('@/platform/tauri/bindings', () => ({
 
 import {
     ensureUserTables,
-    initUserTablesUncached,
     normalizeUserTablePrefix
 } from './userSessionRepository';
 
@@ -64,13 +63,5 @@ describe('userSessionRepository', () => {
             userPrefix: 'usrretry'
         });
         expect(commandMocks.appUserTablesEnsure).toHaveBeenCalledTimes(2);
-    });
-
-    it('supports an uncached initialization path', async () => {
-        await initUserTablesUncached(' usr_uncached ');
-
-        expect(commandMocks.appUserTablesEnsure).toHaveBeenCalledWith(
-            'usr_uncached'
-        );
     });
 });

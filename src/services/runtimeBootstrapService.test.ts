@@ -99,6 +99,29 @@ describe('runtimeBootstrapService', () => {
         );
 
         cleanup();
+        useShellStore.getState().setLocale('zh_CN');
+        expect(mocks.setI18nLanguage).toHaveBeenCalledTimes(2);
+    });
+
+    it('ignores a stale locale load that resolves after a newer switch', async () => {
+        const staleLoad = deferred<void>();
+        mocks.setI18nLanguage.mockImplementation((locale: string) =>
+            locale === 'ja' ? staleLoad.promise : Promise.resolve()
+        );
+        useShellStore.getState().setLocale('ja');
+        const cleanup = startI18nLanguageSync();
+
+        useShellStore.getState().setLocale('ko');
+        await vi.waitFor(() =>
+            expect(useShellStore.getState().timeUnitLabels.h).toBe('ko:h')
+        );
+
+        staleLoad.resolve();
+        await staleLoad.promise;
+        await Promise.resolve();
+
+        expect(useShellStore.getState().timeUnitLabels.h).toBe('ko:h');
+        cleanup();
     });
 
     it('shares React runtime startup across consumers', async () => {

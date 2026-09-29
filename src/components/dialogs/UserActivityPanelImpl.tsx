@@ -37,11 +37,6 @@ export type UserActivityPanelProps = {
     active?: boolean;
 };
 
-export {
-    getDisplayDayLabels,
-    getRangeDays
-} from './user-dialog/userActivityPanelModel';
-
 export function UserActivityPanel({
     profile,
     active = false

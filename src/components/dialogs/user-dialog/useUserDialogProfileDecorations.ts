@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 import { resolveProfileDecorationMutation } from '@/domain/entities/inventory';
 import type { CurrentUserProfileUpdateRequest } from '@/platform/tauri/bindings';
-import mediaRepository, {
-    type InventoryItemRecord
-} from '@/repositories/mediaRepository';
 import userProfileRepository from '@/repositories/userProfileRepository';
+import vrchatMediaRepository, {
+    type InventoryItemRecord
+} from '@/repositories/vrchatMediaRepository';
 import { refreshCurrentUser } from '@/services/backgroundMaintenanceSessionService';
 import { toast } from '@/services/toastService';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -154,7 +154,7 @@ export function useUserDialogProfileDecorations({
         setLoading(true);
         try {
             const { items: rows, truncated } =
-                await mediaRepository.collectInventoryItems({
+                await vrchatMediaRepository.collectInventoryItems({
                     types: [...PROFILE_DECORATION_SLOTS],
                     notFlags: ['ugc'],
                     archived: false
@@ -259,12 +259,12 @@ export function useUserDialogProfileDecorations({
 
             const isUnequip = mutation.action === 'unequip';
             if (isUnequip) {
-                await mediaRepository.unequipProfileDecoration({
+                await vrchatMediaRepository.unequipProfileDecoration({
                     expectedUserId: target.userId,
                     equipSlot: mutation.equipSlot
                 });
             } else {
-                await mediaRepository.equipProfileDecoration({
+                await vrchatMediaRepository.equipProfileDecoration({
                     expectedUserId: target.userId,
                     inventoryId: mutation.inventoryId,
                     equipSlot: mutation.equipSlot

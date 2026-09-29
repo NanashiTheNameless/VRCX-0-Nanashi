@@ -23,10 +23,6 @@ vi.mock('@/services/toastService', () => ({
     toast: { add: mocks.toastAdd }
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 const CURRENT_LOCATION = 'wrld_current:1';
 
 function renderPreviousInstances(

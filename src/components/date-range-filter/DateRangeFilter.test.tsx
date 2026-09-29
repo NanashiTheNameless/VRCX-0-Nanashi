@@ -6,10 +6,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { DateRangeFilter } from './DateRangeFilter';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 describe('DateRangeFilter tooltip composition', () => {
     afterEach(cleanup);
 

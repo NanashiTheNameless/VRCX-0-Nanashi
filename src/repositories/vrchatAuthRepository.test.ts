@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const commandMocks = vi.hoisted(() => ({
     appVrchatAuthConfigGet: vi.fn(),
-    appVrchatAuthConfigRefresh: vi.fn(),
     appVrchatAuthCurrentUserGet: vi.fn(),
     appVrchatAuthSessionStart: vi.fn(),
     appVrchatAuthSessionRespond: vi.fn(),
@@ -17,15 +16,7 @@ vi.mock('@/platform/tauri/bindings', () => ({
 
 import { DEFAULT_VRCHAT_API_ENDPOINT } from '@/shared/vrchatEndpoint';
 
-import {
-    cancelLoginSession,
-    getConfig,
-    getCurrentUser,
-    getFileAnalysis,
-    respondLoginSession,
-    startLoginSession,
-    refreshConfig
-} from './vrchatAuthRepository';
+import vrchatAuthRepository from './vrchatAuthRepository';
 
 function response(status = 200, data: unknown = { id: 'usr_1' }) {
     return {
@@ -56,7 +47,9 @@ describe('vrchatAuthRepository', () => {
     });
 
     it('unwraps auth responses against the canonical VRChat endpoint', async () => {
-        await expect(getCurrentUser()).resolves.toMatchObject({
+        await expect(
+            vrchatAuthRepository.getCurrentUser()
+        ).resolves.toMatchObject({
             json: {
                 id: 'usr_1'
             },
@@ -65,74 +58,6 @@ describe('vrchatAuthRepository', () => {
         });
 
         expect(commandMocks.appVrchatAuthCurrentUserGet).toHaveBeenCalledWith();
-    });
-
-    it('uses distinct snapshot and force-refresh config commands', async () => {
-        await getConfig();
-        await refreshConfig();
-
-        expect(commandMocks.appVrchatAuthConfigGet).toHaveBeenCalledTimes(1);
-        expect(commandMocks.appVrchatAuthConfigRefresh).toHaveBeenCalledTimes(
-            1
-        );
-    });
-
-    it('passes typed login-session payloads to the Tauri bridge', async () => {
-        await startLoginSession({
-            mode: 'basic',
-            username: 'user@example.test',
-            password: '123',
-            saveCredentials: true
-        });
-        await startLoginSession({
-            mode: 'savedCredential',
-            userId: '456'
-        });
-        await respondLoginSession({
-            attemptId: 'attempt-1',
-            method: 'totp',
-            code: '111111'
-        });
-        await cancelLoginSession('attempt-1');
-
-        expect(commandMocks.appVrchatAuthSessionStart).toHaveBeenCalledWith({
-            mode: 'basic',
-            username: 'user@example.test',
-            password: '123',
-            saveCredentials: true
-        });
-        expect(commandMocks.appVrchatAuthSessionStart).toHaveBeenCalledWith({
-            mode: 'savedCredential',
-            userId: '456'
-        });
-        expect(commandMocks.appVrchatAuthSessionRespond).toHaveBeenCalledWith({
-            attemptId: 'attempt-1',
-            method: 'totp',
-            code: '111111'
-        });
-        expect(commandMocks.appVrchatAuthSessionCancel).toHaveBeenCalledWith({
-            attemptId: 'attempt-1'
-        });
-        expect(commandMocks.appVrchatAuthSessionCancel).toHaveBeenCalledTimes(
-            1
-        );
-    });
-
-    it('returns login-session states untouched instead of unwrapping them', async () => {
-        const failed = {
-            status: 'failed',
-            reason: 'Invalid Username/Email or Password',
-            kind: 'invalidCredentials'
-        };
-        commandMocks.appVrchatAuthSessionStart.mockResolvedValueOnce(failed);
-
-        await expect(
-            startLoginSession({
-                mode: 'basic',
-                username: 'user@example.test',
-                password: 'secret'
-            })
-        ).resolves.toBe(failed);
     });
 
     it('builds file-analysis requests with numeric versions and encoded error endpoints', async () => {
@@ -145,7 +70,7 @@ describe('vrchatAuthRepository', () => {
         );
 
         await expect(
-            getFileAnalysis({
+            vrchatAuthRepository.getFileAnalysis({
                 fileId: 'file 1',
                 version: 2,
                 variant: 'Quest/Android'
@@ -172,7 +97,7 @@ describe('vrchatAuthRepository', () => {
             })
         );
 
-        await expect(getConfig()).rejects.toMatchObject({
+        await expect(vrchatAuthRepository.getConfig()).rejects.toMatchObject({
             message: 'Forbidden',
             status: 403,
             endpoint: 'config'

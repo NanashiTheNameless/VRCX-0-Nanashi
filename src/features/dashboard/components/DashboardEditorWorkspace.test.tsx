@@ -6,11 +6,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { DashboardRow } from '@/repositories/dashboardRepository';
 import { TooltipProvider } from '@/ui/shadcn/tooltip';
 
-vi.mock('react-i18next', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('react-i18next')>()),
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('./DashboardViewParts', () => ({
     DashboardPanelPreviewForPanel: () => <div>preview</div>,
     DashboardPanelSelectorDialog: ({ open }: { open: boolean }) => (
@@ -59,22 +54,6 @@ describe('DashboardEditorWorkspace', () => {
         expect(props.onDirectionChange).toHaveBeenCalledWith(0, 'horizontal');
     });
 
-    it('keeps real previews inside a fixed-height editor viewport', () => {
-        renderWorkspace([
-            { id: 'row-1', direction: 'horizontal', panels: ['feed'] }
-        ]);
-
-        const previewButton = screen.getByRole('button', {
-            name: 'dashboard.registry.feed'
-        });
-        const previewPanel = previewButton.parentElement;
-        const rowViewport = previewPanel?.parentElement;
-
-        expect(previewPanel?.classList.contains('h-full')).toBe(true);
-        expect(previewPanel?.classList.contains('min-h-0')).toBe(true);
-        expect(rowViewport?.classList.contains('h-[28rem]')).toBe(true);
-    });
-
     it('inserts a selected layout at the chosen row boundary and opens panel selection', () => {
         const props = renderWorkspace([
             { id: 'row-1', direction: 'horizontal', panels: ['feed'] }
@@ -93,19 +72,6 @@ describe('DashboardEditorWorkspace', () => {
 
         expect(props.onAddRow).toHaveBeenCalledWith(1, 'horizontal', 0);
         expect(screen.getByTestId('panel-selector').textContent).toBe('true');
-    });
-
-    it('renders the row insertion trigger as a visible control', () => {
-        renderWorkspace([
-            { id: 'row-1', direction: 'horizontal', panels: ['feed'] }
-        ]);
-
-        const addButton = screen.getAllByRole('button', {
-            name: 'view.dashboard.action.add_row'
-        })[0];
-
-        expect(addButton.classList.contains('bg-card')).toBe(true);
-        expect(addButton.classList.contains('shadow-sm')).toBe(true);
     });
 
     it('collapses a split row by removing only its second panel slot', () => {

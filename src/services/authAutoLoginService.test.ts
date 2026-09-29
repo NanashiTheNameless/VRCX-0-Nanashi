@@ -41,20 +41,15 @@ vi.mock('@/services/toastService', () => ({
 
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
-        appAuthFailureNotificationShow: mocks.appAuthFailureNotificationShow
+        appAuthFailureNotificationShow: mocks.appAuthFailureNotificationShow,
+        appVrchatAuthAutoLoginStart: mocks.autoLoginStart,
+        appVrchatAuthSessionCancel: mocks.cancelLoginSession,
+        appVrchatAuthSessionStart: mocks.startLoginSession
     }
 }));
 
 vi.mock('@/platform/tauri/webview', () => ({
     flashWindow: mocks.flashWindow
-}));
-
-vi.mock('@/repositories/vrchatAuthRepository', () => ({
-    default: {
-        autoLoginStart: mocks.autoLoginStart,
-        cancelLoginSession: mocks.cancelLoginSession,
-        startLoginSession: mocks.startLoginSession
-    }
 }));
 
 vi.mock('./authExecutionService', () => ({
@@ -230,7 +225,7 @@ describe('authAutoLoginService', () => {
         );
     });
 
-    it('prompts for a two-factor code when the saved-credential fallback requires it', async () => {
+    it('delegates a two-factor challenge outcome to the shared login-session resolver', async () => {
         mocks.autoLoginStart.mockResolvedValueOnce({
             status: 'challenge',
             attemptId: 'attempt-1',
@@ -362,7 +357,7 @@ describe('authAutoLoginService', () => {
         );
     });
 
-    it('does not show a system auth notification when auto-login fails offline', async () => {
+    it('adds the offline hint toast and skips the system notification for a network failure while offline', async () => {
         Object.defineProperty(navigator, 'onLine', {
             configurable: true,
             value: false

@@ -106,16 +106,18 @@ describe('favoriteStore', () => {
             ]
         });
         expect(
-            useFavoriteStore.getState().getRemoteFavoriteByObjectId('usr_a')
+            useFavoriteStore.getState().remoteFavoritesByObjectId.usr_a
         ).toMatchObject({
             id: 'fvrt_record_1'
         });
 
         store.removeRemoteFavorite('usr_a');
 
+        expect(useFavoriteStore.getState().remoteFavoritesById).toEqual({});
+        expect(useFavoriteStore.getState().remoteFavoritesByObjectId).toEqual(
+            {}
+        );
         expect(useFavoriteStore.getState()).toMatchObject({
-            remoteFavoritesById: {},
-            remoteFavoritesByObjectId: {},
             favoriteFriendIds: [],
             favoriteFriendGroups: [
                 {
@@ -252,8 +254,8 @@ describe('favoriteStore', () => {
             })
         ).not.toThrow();
 
+        expect(useFavoriteStore.getState().localFriendFavorites).toEqual({});
         expect(useFavoriteStore.getState()).toMatchObject({
-            localFriendFavorites: {},
             localFriendFavoriteGroups: [],
             localFriendFavoritesList: []
         });
@@ -276,11 +278,9 @@ describe('favoriteStore', () => {
             invalidAction as Parameters<typeof store.addLocalFavorite>[0]
         );
 
-        expect(useFavoriteStore.getState()).toMatchObject({
-            localFriendFavorites: {
-                Friends: ['usr_1']
-            },
-            localAvatarFavorites: {}
+        expect(useFavoriteStore.getState().localFriendFavorites).toEqual({
+            Friends: ['usr_1']
         });
+        expect(useFavoriteStore.getState().localAvatarFavorites).toEqual({});
     });
 });

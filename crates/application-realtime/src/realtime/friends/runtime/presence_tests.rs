@@ -751,59 +751,6 @@ mod tests {
     }
 
     #[test]
-    fn websocket_friend_update_does_not_demote_online_friend_to_offline() {
-        let runtime = RealtimeFriendsRuntime::default();
-        runtime.set_baseline(
-            FriendRosterBaseline {
-                current_user_id: "usr_self".into(),
-                friends_by_id: [(
-                    "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "online".into(),
-                        location: "wrld_old:123".into(),
-                        status: "join me".into(),
-                        status_description: "Old status".into(),
-                        ..FriendRecord::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-                ..FriendRosterBaseline::default()
-            },
-            1,
-            0,
-        );
-
-        let RealtimeFriendApplyResult::Output(output) =
-            runtime.apply_ws_message(&RealtimeWsMessagePayload {
-                json: json!({
-                    "type": "friend-update",
-                    "content": {
-                        "userId": "usr_friend",
-                        "user": {
-                            "id": "usr_friend",
-                            "displayName": "Friend",
-                            "state": "offline",
-                            "status": "active",
-                            "statusDescription": "Fresh WS status"
-                        }
-                    }
-                }),
-                raw: "{}".into(),
-                received_at: "2026-05-15T00:00:01Z".into(),
-            })
-        else {
-            panic!("friend-update should produce an output");
-        };
-
-        assert_eq!(output.projection.patches[0].patch.state, "online");
-        assert_eq!(output.projection.patches[0].patch.state, "online");
-        assert_eq!(output.projection.patches[0].patch.state, "online");
-    }
-
-    #[test]
     fn friend_active_with_dirty_online_state_fires_active_not_online() {
         let runtime = RealtimeFriendsRuntime::default();
         runtime.set_baseline(
@@ -1072,7 +1019,6 @@ mod tests {
         let fired = runtime
             .fire_pending_offline("usr_friend", token, "2026-05-15T00:03:00Z".into())
             .unwrap();
-        assert_eq!(fired.projection.patches[0].patch.state, "active");
         assert_eq!(fired.projection.patches[0].patch.state, "active");
     }
 

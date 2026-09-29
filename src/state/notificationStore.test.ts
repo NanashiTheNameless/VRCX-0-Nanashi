@@ -33,7 +33,7 @@ describe('pushNotification', () => {
     });
 });
 
-describe('markAllRead / markNotificationRead / dismissNotification', () => {
+describe('markAllRead / dismissNotification', () => {
     it('marks every notification read at once, e.g. for a "mark all as read" action', () => {
         useNotificationStore.getState().pushNotification({ title: 'A' });
         useNotificationStore.getState().pushNotification({ title: 'B' });
@@ -45,22 +45,6 @@ describe('markAllRead / markNotificationRead / dismissNotification', () => {
                 .getState()
                 .items.every((item) => item.read === true)
         ).toBe(true);
-    });
-
-    it('marks only the targeted notification read, leaving the rest of the unread badge count intact', () => {
-        useNotificationStore.getState().pushNotification({ title: 'A' });
-        useNotificationStore.getState().pushNotification({ title: 'B' });
-        const [readTarget, untouched] = useNotificationStore.getState().items;
-
-        useNotificationStore.getState().markNotificationRead(readTarget.id);
-
-        const { items } = useNotificationStore.getState();
-        expect(items.find((item) => item.id === readTarget.id)?.read).toBe(
-            true
-        );
-        expect(items.find((item) => item.id === untouched.id)?.read).toBe(
-            false
-        );
     });
 
     it('removes a dismissed notification from the list entirely', () => {
@@ -97,10 +81,6 @@ describe('setPanelOpen', () => {
 
     it('does not re-trigger the mark-all-read side effect when the panel was already closed', () => {
         useNotificationStore.getState().pushNotification({ title: 'A' });
-        useNotificationStore
-            .getState()
-            .markNotificationRead(useNotificationStore.getState().items[0].id);
-        useNotificationStore.getState().pushNotification({ title: 'B' });
 
         useNotificationStore.getState().setPanelOpen(false);
 

@@ -16,12 +16,7 @@ const mocks = vi.hoisted(() => ({
     selectFolder: vi.fn(),
     selectSaveFile: vi.fn(),
     toastError: vi.fn(),
-    translate: (key: string) => key,
     validateRestore: vi.fn()
-}));
-
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: mocks.translate })
 }));
 
 vi.mock('@/services/toastService', () => ({
@@ -147,7 +142,7 @@ describe('useProfileBackupSettings', () => {
         );
     });
 
-    it('enables automatic backups without a confirmation', async () => {
+    it('enables automatic backups into the saved folder without asking for one', async () => {
         render(<HookHarness onValue={(value) => (current = value)} />);
 
         await waitFor(() => {

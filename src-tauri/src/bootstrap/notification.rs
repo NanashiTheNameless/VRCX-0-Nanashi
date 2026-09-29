@@ -174,19 +174,3 @@ fn auth_failure_notification_labels_for_language(language: &str) -> AuthFailureN
 pub(super) fn tray_labels(state: &AppState) -> TrayLabels {
     shell_locale::tray_labels_for_language(&app_language(state))
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn auth_failure_notification_labels_fall_back_to_english() {
-        let english = auth_failure_notification_labels_for_language("en").title;
-        for language in ["zh-CN", "zh-TW", "ja"] {
-            assert_eq!(
-                auth_failure_notification_labels_for_language(language).title,
-                english
-            );
-        }
-    }
-}

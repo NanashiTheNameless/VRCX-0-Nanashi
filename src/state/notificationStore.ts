@@ -21,7 +21,6 @@ interface NotificationStoreState {
     isPanelOpen: boolean;
     pushNotification: (notification: NotificationInput) => void;
     markAllRead: () => void;
-    markNotificationRead: (id: string) => void;
     dismissNotification: (id: string) => void;
     setPanelOpen: (isPanelOpen: boolean) => void;
     resetNotificationState: () => void;
@@ -48,13 +47,6 @@ export const useNotificationStore = create<NotificationStoreState>((set) => ({
     markAllRead() {
         set((state) => ({
             items: state.items.map((item) => ({ ...item, read: true }))
-        }));
-    },
-    markNotificationRead(id) {
-        set((state) => ({
-            items: state.items.map((item) =>
-                item.id === id ? { ...item, read: true } : item
-            )
         }));
     },
     dismissNotification(id) {

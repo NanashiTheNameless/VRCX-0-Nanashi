@@ -483,13 +483,6 @@ export const useFavoriteStore = create<FavoriteStore>((set, get) => ({
             return state;
         });
     },
-    getRemoteFavoriteByObjectId(objectId) {
-        const normalizedObjectId = objectId.trim();
-        if (!normalizedObjectId) {
-            return null;
-        }
-        return get().remoteFavoritesByObjectId[normalizedObjectId] ?? null;
-    },
     isInAnyLocalFriendGroup(userId) {
         const normalizedUserId =
             typeof userId === 'string'

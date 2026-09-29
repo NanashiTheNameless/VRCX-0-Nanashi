@@ -22,61 +22,26 @@ type WindowDisplayMode = 'normal' | 'sidebar';
 const WINDOW_DISPLAY_MODE_STORAGE_KEY = 'vrcx-main-window-display-mode';
 
 function loadWindowDisplayMode(): WindowDisplayMode {
-    if (typeof window === 'undefined') {
-        return 'normal';
-    }
-    try {
-        return window.localStorage.getItem(WINDOW_DISPLAY_MODE_STORAGE_KEY) ===
-            'sidebar'
-            ? 'sidebar'
-            : 'normal';
-    } catch {
-        return 'normal';
-    }
+    return localStorage.getItem(WINDOW_DISPLAY_MODE_STORAGE_KEY) === 'sidebar'
+        ? 'sidebar'
+        : 'normal';
 }
 
 function saveWindowDisplayMode(windowDisplayMode: WindowDisplayMode): void {
-    if (typeof window === 'undefined') {
-        return;
-    }
-    try {
-        window.localStorage.setItem(
-            WINDOW_DISPLAY_MODE_STORAGE_KEY,
-            windowDisplayMode
-        );
-    } catch {
-        return;
-    }
+    localStorage.setItem(WINDOW_DISPLAY_MODE_STORAGE_KEY, windowDisplayMode);
 }
 
 const WINDOW_ALWAYS_ON_TOP_STORAGE_KEY = 'vrcx-main-window-always-on-top';
 
 function loadWindowAlwaysOnTop(): boolean {
-    if (typeof window === 'undefined') {
-        return false;
-    }
-    try {
-        return (
-            window.localStorage.getItem(WINDOW_ALWAYS_ON_TOP_STORAGE_KEY) ===
-            'true'
-        );
-    } catch {
-        return false;
-    }
+    return localStorage.getItem(WINDOW_ALWAYS_ON_TOP_STORAGE_KEY) === 'true';
 }
 
 function saveWindowAlwaysOnTop(windowAlwaysOnTop: boolean): void {
-    if (typeof window === 'undefined') {
-        return;
-    }
-    try {
-        window.localStorage.setItem(
-            WINDOW_ALWAYS_ON_TOP_STORAGE_KEY,
-            String(windowAlwaysOnTop)
-        );
-    } catch {
-        return;
-    }
+    localStorage.setItem(
+        WINDOW_ALWAYS_ON_TOP_STORAGE_KEY,
+        String(windowAlwaysOnTop)
+    );
 }
 
 type ShellStore = {

@@ -8,10 +8,6 @@ const mocks = vi.hoisted(() => ({
     refreshRollbackState: vi.fn()
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/lib/useProfileBackupSettings', () => ({
     useProfileBackupSettings: () => ({
         settings: {

@@ -198,35 +198,20 @@ fn target_group_must_not_be_empty() {
 }
 
 #[test]
-fn exact_same_local_group_is_rejected() {
-    let mut input = transfer_input(
-        FavoriteTransferLocation::Local,
-        FavoriteTransferLocation::Local,
-        FavoriteTransferMode::Move,
-    );
-    input.target.group = "source".to_string();
+fn exact_same_local_group_is_rejected_for_move_and_copy() {
+    for mode in [FavoriteTransferMode::Move, FavoriteTransferMode::Copy] {
+        let mut input = transfer_input(
+            FavoriteTransferLocation::Local,
+            FavoriteTransferLocation::Local,
+            mode,
+        );
+        input.target.group = "source".to_string();
 
-    let result = favorite_transfer_plan_for_item(&input, &item("wrld_1"));
+        let result = favorite_transfer_plan_for_item(&input, &item("wrld_1"));
 
-    assert!(result
-        .unwrap_err()
-        .to_string()
-        .contains("same favorite group"));
-}
-
-#[test]
-fn exact_same_local_group_is_rejected_for_copy_too() {
-    let mut input = transfer_input(
-        FavoriteTransferLocation::Local,
-        FavoriteTransferLocation::Local,
-        FavoriteTransferMode::Copy,
-    );
-    input.target.group = "source".to_string();
-
-    let result = favorite_transfer_plan_for_item(&input, &item("wrld_1"));
-
-    assert!(result
-        .unwrap_err()
-        .to_string()
-        .contains("same favorite group"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("same favorite group"));
+    }
 }

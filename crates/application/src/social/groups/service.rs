@@ -129,7 +129,17 @@ pub(super) async fn execute_group_api_raw(
     deps.remote.send(input, VrchatScope::Vrchat).await
 }
 
-async fn execute_group_api(
+pub(super) fn build_member_request(
+    deps: &GroupApiDeps,
+    input: VrchatGroupUserInput,
+) -> Result<VrchatApiRequest> {
+    Ok(deps
+        .remote_requests
+        .build(GroupRemoteRequest::GetMember(input))?
+        .request)
+}
+
+pub(super) async fn execute_group_api(
     deps: &GroupApiDeps,
     command: &str,
     detail: impl Into<String>,
@@ -212,22 +222,6 @@ pub async fn get_posts(
         &deps,
         "app__vrchat_group_posts_get",
         format!("Getting posts for group {}.", built.primary_id),
-        built.request,
-    )
-    .await
-}
-
-pub async fn get_member(
-    deps: GroupApiDeps,
-    input: VrchatGroupUserInput,
-) -> Result<VrchatApiResponse> {
-    let built = deps
-        .remote_requests
-        .build(GroupRemoteRequest::GetMember(input))?;
-    execute_group_api(
-        &deps,
-        "app__vrchat_group_member_get",
-        format!("Getting a member of group {}.", built.primary_id),
         built.request,
     )
     .await

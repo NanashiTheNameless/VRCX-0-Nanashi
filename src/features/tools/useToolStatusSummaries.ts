@@ -8,17 +8,18 @@ import {
     getTimeWindow,
     normalizeContextRule,
     normalizeTimeRule,
-    ruleTitle,
-    type PresenceAutomationRule
+    ruleTitle
 } from '@/components/hosts/tools-dialogs/presence-automation/presenceAutomationDialogUtils';
 import { formatDateTime } from '@/lib/dateTime';
 import {
     commands,
     type PresenceAutomationRuleKind
 } from '@/platform/tauri/bindings';
-import appLauncherRepository from '@/repositories/appLauncherRepository';
 import configRepository from '@/repositories/configRepository';
-import { getCurrentAppLauncherSnapshot } from '@/services/appLauncherSnapshotService';
+import {
+    getCurrentAppLauncherSnapshot,
+    setAppLauncherEntryEnabled
+} from '@/services/appLauncherSnapshotService';
 import {
     getProfileBackupSettings,
     setProfileBackupSettings
@@ -30,7 +31,7 @@ import {
 import { isRecord } from '@/shared/utils/record';
 import { useProfileBackupStore } from '@/state/profileBackupStore';
 
-export type ToolStatusItem = {
+type ToolStatusItem = {
     id: string;
     label: string;
     description: string;
@@ -53,15 +54,15 @@ const presenceRuleConfigKeys: Record<PresenceAutomationRuleKind, string> = {
     context: 'presenceAutomationContextRules'
 };
 
-async function savePresenceRuleEnabled(
+async function setPresenceRuleEnabled(
     kind: PresenceAutomationRuleKind,
-    rules: readonly PresenceAutomationRule[],
     ruleId: string,
     enabled: boolean
 ) {
-    const savedRules = await commands.appPresenceAutomationRulesSet(
+    const savedRules = await commands.appPresenceAutomationRuleEnabledSet(
         kind,
-        rules.map((rule) => (rule.id === ruleId ? { ...rule, enabled } : rule))
+        ruleId,
+        enabled
     );
     configRepository.applyServerEntry(
         presenceRuleConfigKeys[kind],
@@ -74,58 +75,48 @@ function timeRuleItems(
     rules: readonly unknown[] | null,
     t: TFunction
 ): ToolStatusItem[] {
-    const normalizedRules = (rules ?? [])
+    return (rules ?? [])
         .filter(isRecord)
-        .map(normalizeTimeRule);
-    return normalizedRules.map((rule) => {
-        const timeWindow = getTimeWindow(rule);
-        return {
-            id: rule.id,
-            label: ruleTitle(
-                rule,
-                t,
-                'view.tools.social_automation.schedule_rule_default'
-            ),
-            description: `${timeWindow.start} - ${timeWindow.end} / ${daysSummary(
-                timeWindow.days,
-                t
-            )}`,
-            enabled: rule.enabled !== false,
-            setEnabled: (enabled) =>
-                savePresenceRuleEnabled(
-                    'time',
-                    normalizedRules,
-                    rule.id,
-                    enabled
-                )
-        };
-    });
+        .map(normalizeTimeRule)
+        .map((rule) => {
+            const timeWindow = getTimeWindow(rule);
+            return {
+                id: rule.id,
+                label: ruleTitle(
+                    rule,
+                    t,
+                    'view.tools.social_automation.schedule_rule_default'
+                ),
+                description: `${timeWindow.start} - ${timeWindow.end} / ${daysSummary(
+                    timeWindow.days,
+                    t
+                )}`,
+                enabled: rule.enabled !== false,
+                setEnabled: (enabled) =>
+                    setPresenceRuleEnabled('time', rule.id, enabled)
+            };
+        });
 }
 
 function contextRuleItems(
     rules: readonly unknown[] | null,
     t: TFunction
 ): ToolStatusItem[] {
-    const normalizedRules = (rules ?? [])
+    return (rules ?? [])
         .filter(isRecord)
-        .map(normalizeContextRule);
-    return normalizedRules.map((rule) => ({
-        id: rule.id,
-        label: ruleTitle(
-            rule,
-            t,
-            'view.tools.social_automation.room_rule_default'
-        ),
-        description: t(contextPresetLabelKeyFromValue(rule.preset)),
-        enabled: rule.enabled !== false,
-        setEnabled: (enabled) =>
-            savePresenceRuleEnabled(
-                'context',
-                normalizedRules,
-                rule.id,
-                enabled
-            )
-    }));
+        .map(normalizeContextRule)
+        .map((rule) => ({
+            id: rule.id,
+            label: ruleTitle(
+                rule,
+                t,
+                'view.tools.social_automation.room_rule_default'
+            ),
+            description: t(contextPresetLabelKeyFromValue(rule.preset)),
+            enabled: rule.enabled !== false,
+            setEnabled: (enabled) =>
+                setPresenceRuleEnabled('context', rule.id, enabled)
+        }));
 }
 
 export function countPresenceRules(rules: readonly unknown[] | null): {
@@ -220,7 +211,7 @@ async function loadToolStatusSummaries(
             toggle: {
                 enabled: appLauncher.enabled,
                 setEnabled: async (nextEnabled) => {
-                    await appLauncherRepository.setEnabled(nextEnabled);
+                    await commands.appAppLauncherEnabledSet(nextEnabled);
                     publishToolsStatusUpdated();
                 }
             },
@@ -230,13 +221,7 @@ async function loadToolStatusSummaries(
                 description: t(`dialog.app_launcher.scope_${entry.scope}`),
                 enabled: entry.enabled,
                 setEnabled: async (enabled) => {
-                    await appLauncherRepository.setEntries(
-                        entries.map((current) =>
-                            current.id === entry.id
-                                ? { ...current, enabled }
-                                : current
-                        )
-                    );
+                    await setAppLauncherEntryEnabled(entry.id, enabled);
                     publishToolsStatusUpdated();
                 }
             }))

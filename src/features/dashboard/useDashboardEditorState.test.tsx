@@ -5,11 +5,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 import type { Dashboard } from '@/repositories/dashboardRepository';
 
-vi.mock('react-i18next', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('react-i18next')>()),
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 import { useDashboardEditorState } from './useDashboardEditorState';
 
 const dashboard: Dashboard = {

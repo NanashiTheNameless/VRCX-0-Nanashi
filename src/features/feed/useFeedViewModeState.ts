@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import configRepository from '@/repositories/configRepository';
+import { safeJsonParse } from '@/shared/utils/json';
 
 import {
     DEFAULT_FEED_COLUMN_DENSITY,
@@ -14,7 +15,6 @@ import {
     sanitizeFeedColumnsConfig,
     sanitizeFeedViewMode
 } from './feedColumnsState';
-import { safeJsonParse } from './feedTableState';
 
 export function useFeedViewModeState() {
     const [ready, setReady] = useState(false);

@@ -36,9 +36,6 @@ const mocks = vi.hoisted(() => ({
     unsubscribe: vi.fn()
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
         appSetTrayShortcut: mocks.set,

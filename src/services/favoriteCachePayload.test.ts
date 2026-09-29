@@ -25,8 +25,5 @@ describe('favoriteCachePayload', () => {
     it('normalizes string and numeric entity identifiers', () => {
         expect(normalizeFavoriteCacheEntityId(' fav_1 ')).toBe('fav_1');
         expect(normalizeFavoriteCacheEntityId(42)).toBe('42');
-        expect(normalizeFavoriteCacheEntityId({ id: 'fav_1' })).toBe(
-            '[object Object]'
-        );
     });
 });

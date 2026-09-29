@@ -1,8 +1,8 @@
-import type {
-    AppLauncherSnapshot,
-    AppLauncherSnapshotEvent
+import {
+    commands,
+    type AppLauncherSnapshot,
+    type AppLauncherSnapshotEvent
 } from '@/platform/tauri/bindings';
-import appLauncherRepository from '@/repositories/appLauncherRepository';
 
 type AppLauncherSnapshotListener = (snapshot: AppLauncherSnapshot) => void;
 
@@ -37,10 +37,22 @@ export function subscribeAppLauncherSnapshot(
     };
 }
 
+export async function setAppLauncherEntryEnabled(
+    entryId: string,
+    enabled: boolean
+): Promise<AppLauncherSnapshot> {
+    const snapshot = await commands.appAppLauncherEntryEnabledSet(
+        entryId,
+        enabled
+    );
+    snapshotSequence += 1;
+    return publishSnapshot(snapshot);
+}
+
 export async function getCurrentAppLauncherSnapshot(): Promise<AppLauncherSnapshot> {
     snapshotSequence += 1;
     const requestSequence = snapshotSequence;
-    const snapshot = await appLauncherRepository.snapshot();
+    const snapshot = await commands.appAppLauncherSnapshotGet();
     if (requestSequence !== snapshotSequence && latestSnapshot) {
         return latestSnapshot;
     }

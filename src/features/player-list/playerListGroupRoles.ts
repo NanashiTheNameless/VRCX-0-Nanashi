@@ -1,5 +1,4 @@
 import type { GroupProfileRecord } from '@/domain/entities/group';
-import { isRecord } from '@/shared/utils/record';
 
 export interface PlayerGroupRole {
     id: string;
@@ -29,18 +28,6 @@ export function playerGroupRoster(
         });
     }
     return { ownerId: group.ownerId, roles };
-}
-
-export function playerGroupMemberRoleIds(member: unknown): string[] | null {
-    if (
-        !isRecord(member) ||
-        typeof member.userId !== 'string' ||
-        !member.userId
-    )
-        return null;
-    return Array.isArray(member.roleIds)
-        ? member.roleIds.filter((id): id is string => typeof id === 'string')
-        : [];
 }
 
 export function playerGroupRoles(

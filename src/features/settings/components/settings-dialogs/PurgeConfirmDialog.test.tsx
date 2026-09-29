@@ -9,12 +9,6 @@ import type {
 } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: (key: string) => key
-    })
-}));
-
 vi.mock('@/ui/shadcn/button', () => ({
     Button: ({
         children,
@@ -113,11 +107,6 @@ const confirmLabel =
 
 describe('PurgeConfirmDialog', () => {
     afterEach(cleanup);
-
-    it('does not render purge controls while closed', () => {
-        render(<PurgeConfirmDialog {...createProps({ open: false })} />);
-        expect(screen.queryByRole('button', { name: confirmLabel })).toBeNull();
-    });
 
     it('marks irreversible purge as destructive and preserves cancel', () => {
         const props = createProps();

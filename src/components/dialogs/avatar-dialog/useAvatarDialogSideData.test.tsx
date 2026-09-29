@@ -94,10 +94,10 @@ describe('useAvatarDialogSideData', () => {
         ]);
     });
 
-    it('starts cache and file analysis without Gallery and settles them independently', async () => {
+    it('settles gallery and file analysis independently', async () => {
         const gallery = deferred<Array<{ url: string }>>();
         const fileAnalysis = deferred<{
-            fileAnalysis: Record<string, never>;
+            fileAnalysis: Record<string, { _fileSize: string }>;
             pending: boolean;
         }>();
         mocks.getAvatarGallery.mockReturnValue(gallery.promise);
@@ -118,19 +118,28 @@ describe('useAvatarDialogSideData', () => {
             expect(result.current.fileAnalysisStatus).toBe('running');
             expect(result.current.galleryStatus).toBe('running');
         });
-        expect(mocks.loadFileAnalysisForUnityPackages).toHaveBeenCalledOnce();
 
         await act(async () => {
             gallery.resolve([{ url: 'https://example.test/gallery.png' }]);
-            fileAnalysis.resolve({ fileAnalysis: {}, pending: false });
             await gallery.promise;
+        });
+
+        await waitFor(() => {
+            expect(result.current.galleryStatus).toBe('ready');
+        });
+        expect(result.current.fileAnalysisStatus).toBe('running');
+
+        const analysis = { standalonewindows: { _fileSize: '12.50 MB' } };
+        await act(async () => {
+            fileAnalysis.resolve({ fileAnalysis: analysis, pending: false });
             await fileAnalysis.promise;
         });
 
         await waitFor(() => {
-            expect(result.current.fileAnalysisStatus).toBe('error');
-            expect(result.current.galleryStatus).toBe('ready');
+            expect(result.current.fileAnalysisStatus).toBe('ready');
         });
+        expect(result.current.avatarSideData.fileAnalysis).toEqual(analysis);
+        expect(result.current.galleryStatus).toBe('ready');
     });
 
     it('still reads cache when no file analysis package is available', async () => {

@@ -181,6 +181,12 @@ describe('ProfileRestoreResultHost', () => {
         const preventDefault = vi.fn();
         options.actionProps.onClick({ preventDefault });
         expect(preventDefault).toHaveBeenCalledTimes(1);
+        expect(useModalStore.getState().alertDialog).toMatchObject({
+            open: true,
+            title: 'Clear rollback data?',
+            description: 'This cannot be undone.',
+            cancelText: 'Cancel'
+        });
         expect(mocks.clearRollback).not.toHaveBeenCalled();
 
         view.rerender(<ProfileRestoreResultHost />);

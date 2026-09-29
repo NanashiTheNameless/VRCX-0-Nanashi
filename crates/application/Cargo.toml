@@ -41,5 +41,6 @@ specta.workspace = true
 
 [dev-dependencies]
 async-trait = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
 vrcx-0-application-core = { path = "../application-core", features = ["test-utils"] }
 vrcx-0-application-realtime = { path = "../application-realtime", features = ["test-utils"] }

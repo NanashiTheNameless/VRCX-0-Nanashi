@@ -374,7 +374,7 @@ mod tests {
     }
 
     #[test]
-    fn classifier_request_uses_one_leading_system_message_without_no_think() {
+    fn classifier_request_uses_one_leading_system_message() {
         let messages = classify_messages("什麼時候是拜訪線上好友的最佳時機？");
 
         let roles: Vec<&str> = messages
@@ -382,11 +382,6 @@ mod tests {
             .map(|message| message.role.as_str())
             .collect();
         assert_eq!(roles, vec!["system", "user"]);
-        assert!(!messages[0]
-            .content
-            .as_deref()
-            .unwrap()
-            .contains("/no_think"));
     }
 
     #[test]

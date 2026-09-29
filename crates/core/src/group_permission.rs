@@ -32,24 +32,3 @@ open_string_enum! {
         RolesManage => "group-roles-manage",
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use serde_json::json;
-
-    use super::GroupPermission;
-
-    #[test]
-    fn group_permissions_preserve_unknown_wire_values() {
-        let known: GroupPermission = serde_json::from_value(json!("group-bans-manage")).unwrap();
-        let unknown: GroupPermission =
-            serde_json::from_value(json!("group-future-manage")).unwrap();
-
-        assert_eq!(known, GroupPermission::BansManage);
-        assert_eq!(unknown.as_str(), "group-future-manage");
-        assert_eq!(
-            serde_json::to_value(unknown).unwrap(),
-            json!("group-future-manage")
-        );
-    }
-}

@@ -1,4 +1,5 @@
 import { languageKeys } from '@/shared/constants/language';
+import { PROFILE_LIST_LIMIT } from '@/shared/constants/profileLimits';
 import { isRecord } from '@/shared/utils/record';
 
 export type LanguageOption = {
@@ -94,6 +95,23 @@ export function normalizeLanguageKey(value: unknown): string {
     return normalizeLanguageText(value)
         .toLowerCase()
         .replace(/^language_/, '');
+}
+
+export function normalizeProfileLanguageKeys(values: unknown): string[] {
+    const keys: string[] = [];
+    const seen = new Set<string>();
+    for (const value of Array.isArray(values) ? values : []) {
+        const key = normalizeLanguageKey(value);
+        if (!key || seen.has(key)) {
+            continue;
+        }
+        keys.push(key);
+        seen.add(key);
+        if (keys.length >= PROFILE_LIST_LIMIT) {
+            break;
+        }
+    }
+    return keys;
 }
 
 export function languageDisplayName(option: LanguageOption): string {

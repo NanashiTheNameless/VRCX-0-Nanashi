@@ -15,9 +15,6 @@ const mocks = vi.hoisted(() => ({
     }
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
 vi.mock('@/services/dialogService', () => ({ openUserDialog: vi.fn() }));
 vi.mock('@/services/themeService', () => ({
     getResolvedThemeMode: () => 'dark'

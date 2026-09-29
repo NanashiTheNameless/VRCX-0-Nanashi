@@ -22,7 +22,6 @@ members = [
     "crates/composition",
     "crates/runtime-host-desktop",
     "crates/overlay-runtime",
-    "crates/overlay-devtool",
     "crates/headless",
     "crates/mcp",
     "crates/integration-api",

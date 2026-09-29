@@ -211,13 +211,4 @@ mod tests {
         delete_collection(&db, &owner_a, "collection-b").unwrap();
         assert_eq!(snapshot(&db, &owner_a).unwrap().collections.len(), 1);
     }
-
-    #[test]
-    fn schema_ensure_is_idempotent() {
-        let (_dir, db) = test_db("saved-group-schema-idempotent");
-        let owner = OwnerId::new("usr_owner");
-
-        assert!(snapshot(&db, &owner).unwrap().collections.is_empty());
-        assert!(snapshot(&db, &owner).unwrap().collections.is_empty());
-    }
 }

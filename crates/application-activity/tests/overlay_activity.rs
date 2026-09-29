@@ -53,12 +53,6 @@ fn activity_type_definitions_are_exported_from_backend() {
         group_instance_opened.default_scope,
         OverlayActivityScope::Off
     );
-    assert!(definitions
-        .iter()
-        .all(|definition| definition.key != "PortalSpawn"));
-    assert!(definitions
-        .iter()
-        .all(|definition| definition.key != "ChatBoxMessage"));
     assert_eq!(
         definitions
             .iter()

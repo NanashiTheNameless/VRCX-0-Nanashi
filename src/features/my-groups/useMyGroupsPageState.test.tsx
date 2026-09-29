@@ -38,10 +38,6 @@ const toastMocks = vi.hoisted(() => ({
     error: vi.fn()
 }));
 
-const translationMocks = vi.hoisted(() => ({
-    t: (key: string) => key
-}));
-
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: commandMocks
 }));
@@ -54,11 +50,6 @@ vi.mock('@/repositories/configRepository', () => ({
 vi.mock('@/state/runtimeStore', () => ({
     useRuntimeStore: (selector: (state: typeof runtimeState) => unknown) =>
         selector(runtimeState)
-}));
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: translationMocks.t
-    })
 }));
 vi.mock('@/services/toastService', () => ({
     toast: {
@@ -176,16 +167,26 @@ describe('useMyGroupsPageState', () => {
         });
     });
 
-    it('uses edit mode as the only reorder mode', async () => {
+    it('reorders only in edit mode, which restores the in-game order view', async () => {
         const { result } = renderHook(() => useMyGroupsPageState());
 
         await waitFor(() => {
             expect(result.current.status).toBe('ready');
         });
-        expect(result.current.orderEditable).toBe(false);
+        await act(async () => {
+            await result.current.moveGroup('grp_a', 'grp_b');
+        });
+        expect(commandMocks.appVrchatGroupOrderSet).not.toHaveBeenCalled();
 
+        act(() => {
+            result.current.setSearch('alp');
+            result.current.setSort('alphabetical');
+        });
         act(() => result.current.enterEditMode());
+
         expect(result.current.orderEditable).toBe(true);
+        expect(result.current.search).toBe('');
+        expect(result.current.sort).toBe('inGame');
 
         act(() => result.current.exitEditMode());
         expect(result.current.orderEditable).toBe(false);

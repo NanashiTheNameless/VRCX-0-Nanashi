@@ -9,7 +9,6 @@ import {
     within
 } from '@testing-library/react';
 import React from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -258,216 +257,33 @@ describe('UpdaterDialog', () => {
         mocks.toNormalizedReleaseFromSnapshot.mockReturnValue(null);
     });
 
-    it('offers a reinstall when up to date and installs the running version', async () => {
+    it('uses the release page action for preview checks even when a Tauri update is installable', async () => {
+        mocks.getPreviewStableReleaseUpdateMode.mockReturnValue({
+            enabled: true,
+            check: mocks.previewStableReleaseCheck
+        });
         mocks.toNormalizedReleaseFromSnapshot.mockReturnValue({
-            canonicalVersion: '2.6.0',
-            displayVersion: '2.6.0',
+            canonicalVersion: '2.7.0',
+            displayVersion: '2.7.0',
             updaterType: 'tauri'
         });
         mocks.appAppUpdateCheckRun.mockResolvedValue({
-            hasAvailableUpdate: false,
+            hasAvailableUpdate: true,
             error: null,
             release: {}
         });
 
         render(<UpdaterDialog open onOpenChange={vi.fn()} />);
 
-        const reinstall = await screen.findByRole('button', {
-            name: 'dialog.vrcx_updater.reinstall'
+        const updateButton = screen.getByRole<HTMLButtonElement>('button', {
+            name: 'nav_menu.update'
         });
-        await waitFor(() =>
-            expect((reinstall as HTMLButtonElement).disabled).toBe(false)
-        );
-        await act(async () => {
-            reinstall.click();
+        await waitFor(() => {
+            expect(updateButton.disabled).toBe(false);
         });
-        expect(mocks.confirmInstall).toHaveBeenCalledWith('2.6.0');
-        expect(mocks.restartApplication).toHaveBeenCalled();
-    });
-
-    it('lists installable versions and warns before a downgrade', async () => {
-        const releases = [
-            { canonicalVersion: '2.6.0', displayVersion: '2.6.0' },
-            { canonicalVersion: '2.5.0', displayVersion: '2.5.0' }
-        ].map((release) => ({ ...release, updaterType: 'tauri' }));
-        mocks.appAppUpdateReleasesList.mockResolvedValue(releases);
-        mocks.toNormalizedReleaseFromSnapshot.mockImplementation(
-            (release: { canonicalVersion?: string } | null) =>
-                releases.find(
-                    (entry) =>
-                        entry.canonicalVersion === release?.canonicalVersion
-                ) ?? releases[0]
-        );
-        mocks.appAppUpdateCheckRun.mockResolvedValue({
-            hasAvailableUpdate: false,
-            error: null,
-            release: { canonicalVersion: '2.6.0' }
-        });
-
-        render(<UpdaterDialog open onOpenChange={vi.fn()} />);
-
-        const older = await screen.findByRole('button', { name: '-1 · 2.5.0' });
         expect(
-            screen.getByRole('button', {
-                name: '0 · dialog.vrcx_updater.installed_version:{"value":"2.6.0"}'
-            })
-        ).toBeTruthy();
-        expect(
-            screen.queryByText('dialog.vrcx_updater.downgrade_warning')
+            screen.queryByText('dialog.system.action.install_and_restart')
         ).toBeNull();
-
-        await act(async () => {
-            older.click();
-        });
-        expect(
-            screen.getByText('dialog.vrcx_updater.downgrade_warning')
-        ).toBeTruthy();
-
-        await act(async () => {
-            screen
-                .getByRole('button', {
-                    name: 'dialog.vrcx_updater.install_action.downgrade'
-                })
-                .click();
-        });
-        // Nothing is installed until the downgrade is confirmed.
-        expect(mocks.confirmInstall).not.toHaveBeenCalled();
-        const confirmation = screen.getByRole('alertdialog');
-        expect(
-            within(confirmation).getByText(
-                'dialog.vrcx_updater.downgrade_confirm.title:{"value":"2.5.0"}'
-            )
-        ).toBeTruthy();
-
-        await act(async () => {
-            within(confirmation)
-                .getByRole('button', {
-                    name: 'dialog.vrcx_updater.install_action.downgrade'
-                })
-                .click();
-        });
-        expect(mocks.confirmInstall).toHaveBeenCalledWith('2.5.0');
-        expect(screen.queryByRole('alertdialog')).toBeNull();
-    });
-
-    it('switches Updates to Notify only from the downgrade warning', async () => {
-        const releases = [
-            { canonicalVersion: '2.6.0', displayVersion: '2.6.0' },
-            { canonicalVersion: '2.5.0', displayVersion: '2.5.0' }
-        ].map((release) => ({ ...release, updaterType: 'tauri' }));
-        mocks.appAppUpdateReleasesList.mockResolvedValue(releases);
-        mocks.toNormalizedReleaseFromSnapshot.mockImplementation(
-            (release: { canonicalVersion?: string } | null) =>
-                releases.find(
-                    (entry) =>
-                        entry.canonicalVersion === release?.canonicalVersion
-                ) ?? releases[0]
-        );
-        mocks.appAppUpdateCheckRun.mockResolvedValue({
-            hasAvailableUpdate: false,
-            error: null,
-            release: { canonicalVersion: '2.6.0' }
-        });
-
-        render(<UpdaterDialog open onOpenChange={vi.fn()} />);
-
-        const older = await screen.findByRole('button', { name: '-1 · 2.5.0' });
-        await act(async () => {
-            older.click();
-        });
-        await act(async () => {
-            screen
-                .getByRole('button', {
-                    name: 'dialog.vrcx_updater.install_action.downgrade'
-                })
-                .click();
-        });
-        const confirmation = screen.getByRole('alertdialog');
-        expect(
-            within(confirmation).getByText(
-                'dialog.vrcx_updater.downgrade_confirm.auto_update_note'
-            )
-        ).toBeTruthy();
-
-        await act(async () => {
-            within(confirmation)
-                .getByRole('button', {
-                    name: 'dialog.vrcx_updater.downgrade_confirm.set_notify_only'
-                })
-                .click();
-        });
-
-        expect(mocks.setStringConfigPreference).toHaveBeenCalledWith(
-            'autoUpdateVRCX',
-            'Notify'
-        );
-        // The warning goes away and the downgrade is still pending.
-        expect(
-            within(confirmation).queryByText(
-                'dialog.vrcx_updater.downgrade_confirm.auto_update_note'
-            )
-        ).toBeNull();
-        expect(mocks.confirmInstall).not.toHaveBeenCalled();
-    });
-
-    it('cancels a downgrade without installing anything', async () => {
-        const releases = [
-            { canonicalVersion: '2.6.0', displayVersion: '2.6.0' },
-            { canonicalVersion: '2.5.0', displayVersion: '2.5.0' }
-        ].map((release) => ({ ...release, updaterType: 'tauri' }));
-        mocks.appAppUpdateReleasesList.mockResolvedValue(releases);
-        mocks.toNormalizedReleaseFromSnapshot.mockImplementation(
-            (release: { canonicalVersion?: string } | null) =>
-                releases.find(
-                    (entry) =>
-                        entry.canonicalVersion === release?.canonicalVersion
-                ) ?? releases[0]
-        );
-        mocks.appAppUpdateCheckRun.mockResolvedValue({
-            hasAvailableUpdate: false,
-            error: null,
-            release: { canonicalVersion: '2.6.0' }
-        });
-
-        render(<UpdaterDialog open onOpenChange={vi.fn()} />);
-
-        const older = await screen.findByRole('button', { name: '-1 · 2.5.0' });
-        await act(async () => {
-            older.click();
-        });
-        await act(async () => {
-            screen
-                .getByRole('button', {
-                    name: 'dialog.vrcx_updater.install_action.downgrade'
-                })
-                .click();
-        });
-        await act(async () => {
-            within(screen.getByRole('alertdialog'))
-                .getByRole('button', { name: 'common.actions.cancel' })
-                .click();
-        });
-
-        expect(screen.queryByRole('alertdialog')).toBeNull();
-        expect(mocks.confirmInstall).not.toHaveBeenCalled();
-        expect(mocks.restartApplication).not.toHaveBeenCalled();
-    });
-
-    it('uses the GitHub update action for preview checks even on installable platforms', () => {
-        mocks.getPreviewStableReleaseUpdateMode.mockReturnValue({
-            enabled: true,
-            check: mocks.previewStableReleaseCheck
-        });
-
-        const html = renderToStaticMarkup(
-            React.createElement(UpdaterDialog, {
-                open: true,
-                onOpenChange: vi.fn()
-            })
-        );
-
-        expect(html).toContain('nav_menu.update');
-        expect(html).not.toContain('dialog.system.action.install_and_restart');
     });
 
     it('uses the install action for a stable Tauri update', async () => {

@@ -6,7 +6,7 @@ import { isRecord } from '@/shared/utils/record';
 
 const BOOP_EMOJI_KINDS = ['default', 'file', 'inventory'] as const;
 
-export type BoopEmojiKind = (typeof BOOP_EMOJI_KINDS)[number];
+type BoopEmojiKind = (typeof BOOP_EMOJI_KINDS)[number];
 
 export interface BoopEmojiChoice {
     kind: BoopEmojiKind;

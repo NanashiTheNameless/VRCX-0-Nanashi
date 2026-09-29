@@ -54,5 +54,4 @@ const authRepository = Object.freeze({
     getSavedAuthSnapshot
 });
 
-export { deleteSavedCredential, endSession };
 export default authRepository;

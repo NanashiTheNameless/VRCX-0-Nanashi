@@ -1,4 +1,4 @@
-import { assetBundleRepository } from '@/repositories/assetBundleRepository';
+import { commands } from '@/platform/tauri/bindings';
 
 import { defaultAvatarSideData, resolveAssetBundleArgs } from './avatarAssets';
 
@@ -10,7 +10,7 @@ export async function readAvatarCacheInfo(
     if (!args) {
         return defaultAvatarSideData().cache;
     }
-    const cacheInfo = await assetBundleRepository.checkVRChatCache(
+    const cacheInfo = await commands.assetBundleCheckVrchatCache(
         args.fileId,
         args.fileVersion,
         args.variant,

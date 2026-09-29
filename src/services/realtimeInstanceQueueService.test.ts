@@ -124,6 +124,26 @@ describe('realtimeInstanceQueueService', () => {
         expect(useRuntimeStore.getState().instanceQueue.active).toBe(false);
     });
 
+    it('clears the active queue and announces it with the cached label when it becomes ready', () => {
+        useRuntimeStore.getState().setInstanceQueueState({
+            active: true,
+            instanceLocation: 'wrld_current:123',
+            label: 'Current Queue'
+        });
+
+        handleRealtimeInstanceQueueProjection(
+            queueProjection('ready', 'wrld_current:123')
+        );
+
+        expect(useRuntimeStore.getState().instanceQueue.active).toBe(false);
+        expect(mocks.success).toHaveBeenCalledWith(
+            expect.objectContaining({
+                type: 'success',
+                title: 'Instance ready to join Current Queue'
+            })
+        );
+    });
+
     it('uses location hints when a queue label is not already cached', () => {
         useRuntimeStore.getState().setAuthBootstrap({
             currentUserEndpoint: 'https://api.vrchat.cloud/api/1'

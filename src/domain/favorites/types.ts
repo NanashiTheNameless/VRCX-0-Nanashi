@@ -115,6 +115,5 @@ export type FavoriteStore = FavoriteStoreState & {
     ): void;
     removeRemoteFavorite(objectId: string): void;
     addRemoteFavorite(json?: Record<string, unknown> | null): void;
-    getRemoteFavoriteByObjectId(objectId: string): FavoriteRecord | null;
     isInAnyLocalFriendGroup(userId: string): boolean;
 };

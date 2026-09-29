@@ -3,21 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AppUpdateDeliveryKind } from '@/platform/tauri/bindings';
 
 const mocks = vi.hoisted(() => ({
-    getConfigString: vi.fn(),
-    setConfigString: vi.fn(),
     isHostCapabilityAvailable: vi.fn(),
     formatReleaseDisplayVersion: vi.fn(),
     toNormalizedReleaseFromSnapshot: vi.fn(),
     runRuntimeTelemetryJob: vi.fn(),
     appRegistryBackupMaintenanceRun: vi.fn(),
     pushNotification: vi.fn()
-}));
-
-vi.mock('@/repositories/configRepository', () => ({
-    default: {
-        getString: mocks.getConfigString,
-        setString: mocks.setConfigString
-    }
 }));
 
 vi.mock('@/platform/tauri/bindings', () => ({
@@ -127,8 +118,6 @@ describe('backgroundMaintenanceService update checks', () => {
         vi.clearAllMocks();
         vi.stubGlobal('VERSION', '2.6.0');
         useRuntimeStore.getState().resetRuntimeState();
-        mocks.getConfigString.mockResolvedValue('Stable');
-        mocks.setConfigString.mockResolvedValue(undefined);
         mocks.isHostCapabilityAvailable.mockReturnValue(false);
         mocks.formatReleaseDisplayVersion.mockImplementation((value: unknown) =>
             String(value || '')
@@ -226,20 +215,6 @@ describe('backgroundMaintenanceService update checks', () => {
         expect(useRuntimeStore.getState().updateLoop.hasAvailableUpdate).toBe(
             true
         );
-    });
-
-    it('notifies again when the backend marks a newer release as should-notify', async () => {
-        await handleAppUpdateStatusEvent(
-            statusSnapshot(TAURI_RELEASE_SNAPSHOT, true)
-        );
-        await handleAppUpdateStatusEvent(
-            statusSnapshot(
-                { ...TAURI_RELEASE_SNAPSHOT, canonicalVersion: '2.8.0' },
-                true
-            )
-        );
-
-        expect(mocks.pushNotification).toHaveBeenCalledTimes(2);
     });
 
     it('clears the update loop state when no release is available', async () => {

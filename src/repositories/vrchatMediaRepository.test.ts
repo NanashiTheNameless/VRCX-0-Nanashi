@@ -52,7 +52,7 @@ describe('vrchatMediaRepository', () => {
         );
     });
 
-    it('normalizes file query params and preserves response metadata', async () => {
+    it('forwards file query params and echoes them with the response metadata', async () => {
         commandMocks.appVrchatMediaFilesGet.mockResolvedValueOnce(
             success([{ id: 'file_1' }])
         );
@@ -261,9 +261,9 @@ describe('vrchatMediaRepository', () => {
         }>();
     });
 
-    it('collects inventory items through the typed collect command', async () => {
+    it('collects inventory items and drops entries without a string id', async () => {
         commandMocks.appVrchatMediaInventoryItemsCollect.mockResolvedValueOnce({
-            items: [{ id: 'inv_1' }],
+            items: [{ id: 'inv_1' }, null, ['inv_array'], { id: 42 }, {}],
             truncated: true
         });
 
@@ -282,7 +282,7 @@ describe('vrchatMediaRepository', () => {
         });
     });
 
-    it('equips an owned profile decoration with the authenticated user target', async () => {
+    it('equips a profile decoration by inventory id and slot without sending the owner id', async () => {
         await vrchatMediaRepository.equipProfileDecoration({
             expectedUserId: ' usr_self ',
             inventoryId: ' inv_frame ',
@@ -329,9 +329,6 @@ describe('vrchatMediaRepository', () => {
         ).rejects.toThrow('requires a user id');
         expect(
             commandMocks.appVrchatMediaProfileDecorationEquip
-        ).not.toHaveBeenCalled();
-        expect(
-            commandMocks.appVrchatMediaProfileDecorationUnequip
         ).not.toHaveBeenCalled();
     });
 

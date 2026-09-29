@@ -13,11 +13,6 @@ const mocks = vi.hoisted(() => ({
     copyTextToClipboard: vi.fn().mockResolvedValue(true)
 }));
 
-vi.mock('react-i18next', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('react-i18next')>()),
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/services/clipboardService', () => ({
     copyTextToClipboard: mocks.copyTextToClipboard
 }));

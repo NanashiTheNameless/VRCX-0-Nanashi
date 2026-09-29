@@ -72,14 +72,19 @@ describe('assistantChatStore', () => {
 
         useAssistantChatStore.getState().setOpen(false);
 
-        expect(useAssistantChatStore.getState()).toMatchObject({
+        const state = useAssistantChatStore.getState();
+        expect(state).toMatchObject({
             open: false,
-            activeSessionId: 'session-completed',
-            messagesBySession: { 'session-running': [] },
-            surfacedEntitiesBySession: { 'session-running': [] },
-            entityPanelOpenBySession: { 'session-running': true },
-            busySessions: { 'session-running': true }
+            activeSessionId: 'session-completed'
         });
+        expect(state.messagesBySession).toEqual({ 'session-running': [] });
+        expect(state.surfacedEntitiesBySession).toEqual({
+            'session-running': []
+        });
+        expect(state.entityPanelOpenBySession).toEqual({
+            'session-running': true
+        });
+        expect(state.busySessions).toEqual({ 'session-running': true });
     });
 
     it('removes every mirror owned by a deleted session', () => {
@@ -119,18 +124,19 @@ describe('assistantChatStore', () => {
 
         useAssistantChatStore.getState().removeSession('session-1');
 
-        expect(useAssistantChatStore.getState()).toMatchObject({
+        const state = useAssistantChatStore.getState();
+        expect(state).toMatchObject({
             activeSessionId: null,
             sessions: [
                 {
                     id: 'session-2'
                 }
-            ],
-            messagesBySession: { 'session-2': [] },
-            surfacedEntitiesBySession: { 'session-2': [] },
-            entityPanelOpenBySession: { 'session-2': false },
-            busySessions: { 'session-2': false }
+            ]
         });
+        expect(state.messagesBySession).toEqual({ 'session-2': [] });
+        expect(state.surfacedEntitiesBySession).toEqual({ 'session-2': [] });
+        expect(state.entityPanelOpenBySession).toEqual({ 'session-2': false });
+        expect(state.busySessions).toEqual({ 'session-2': false });
     });
 
     it('folds persisted tool rows into the assistant reply that follows them', () => {
@@ -305,15 +311,16 @@ describe('assistantChatStore', () => {
 
         useAssistantChatStore.getState().resetAssistantChatState();
 
-        expect(useAssistantChatStore.getState()).toMatchObject({
+        const state = useAssistantChatStore.getState();
+        expect(state).toMatchObject({
             open: false,
             authScopeVersion: authScopeVersion + 1,
             sessions: [],
-            activeSessionId: null,
-            messagesBySession: {},
-            surfacedEntitiesBySession: {},
-            entityPanelOpenBySession: {},
-            busySessions: {}
+            activeSessionId: null
         });
+        expect(state.messagesBySession).toEqual({});
+        expect(state.surfacedEntitiesBySession).toEqual({});
+        expect(state.entityPanelOpenBySession).toEqual({});
+        expect(state.busySessions).toEqual({});
     });
 });

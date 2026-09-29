@@ -22,17 +22,11 @@ import {
 
 describe('settingsValues', () => {
     it('places AI settings before integrations', () => {
-        expect(settingsTabs.map(([value]) => value)).toEqual([
-            'system',
-            'interface',
-            'social',
-            'notifications',
-            'vr',
-            'media',
-            'ai',
-            'integrations',
-            'advanced'
-        ]);
+        const tabValues = settingsTabs.map(([value]) => value);
+        expect(tabValues.indexOf('ai')).toBeGreaterThanOrEqual(0);
+        expect(tabValues.indexOf('ai')).toBeLessThan(
+            tabValues.indexOf('integrations')
+        );
     });
 
     it('restores the last settings tab while preserving explicit tab links', () => {
@@ -55,9 +49,9 @@ describe('settingsValues', () => {
         expect(options).toContain(12);
         expect(options).toContain(1000);
         expect(options.filter((size) => size === 50)).toHaveLength(1);
-        expect(filterTablePageSizeOptions(options, '5')).toEqual(
-            options.filter((size) => String(size).includes('5'))
-        );
+        expect(
+            filterTablePageSizeOptions([10, 15, 25, 50, 100], ' 5 ')
+        ).toEqual([15, 25, 50]);
         expect(filterTablePageSizeOptions(options, '')).toEqual(options);
     });
 

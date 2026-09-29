@@ -144,10 +144,12 @@ describe('modalStore', () => {
         await expect(second).resolves.toMatchObject({ ok: true });
     });
 
-    it('returns the current prompt value when close dismisses it', async () => {
-        const result = useModalStore.getState().openPrompt();
+    it('returns the typed prompt value when the prompt is dismissed', async () => {
+        const result = useModalStore.getState().prompt();
         useModalStore.getState().updatePromptValue('typed value');
-        useModalStore.getState().closePrompt();
+        useModalStore
+            .getState()
+            .handlePromptDismiss(useModalStore.getState().promptDialog.value);
 
         await expect(result).resolves.toEqual({
             ok: false,
@@ -157,17 +159,25 @@ describe('modalStore', () => {
         expect(useModalStore.getState().promptDialog.open).toBe(false);
     });
 
-    it('normalizes OTP modes and resolves the submitted value', async () => {
+    it('falls back to TOTP for unsupported OTP modes and returns the typed value on dismiss', async () => {
+        const unsupportedMode = {
+            mode: 'sms'
+        } as unknown as Parameters<
+            ReturnType<typeof useModalStore.getState>['otpPrompt']
+        >[0];
         const fallbackMode = useModalStore
             .getState()
-            .otpPrompt({ mode: 'totp', value: 'old' });
+            .otpPrompt(unsupportedMode);
         expect(useModalStore.getState().otpDialog.mode).toBe('totp');
         useModalStore.getState().handleOtpCancel();
         await fallbackMode;
 
-        const result = useModalStore.getState().openOtp({ mode: 'emailOtp' });
+        const result = useModalStore.getState().otpPrompt({ mode: 'emailOtp' });
+        expect(useModalStore.getState().otpDialog.mode).toBe('emailOtp');
         useModalStore.getState().updateOtpValue('123456');
-        useModalStore.getState().closeOtp();
+        useModalStore
+            .getState()
+            .handleOtpDismiss(useModalStore.getState().otpDialog.value);
 
         await expect(result).resolves.toEqual({
             ok: false,

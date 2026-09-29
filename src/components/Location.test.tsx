@@ -2,7 +2,6 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { AppToastOptions } from '@/services/toastService';
 import type { Button } from '@/ui/shadcn/button';
 
 const mocks = vi.hoisted(() => ({
@@ -19,30 +18,11 @@ const mocks = vi.hoisted(() => ({
         preferencesHydrated: true,
         isAgeGatedInstancesVisible: false,
         showInstanceIdInLocation: false
-    },
-    showLaunchDialog: vi.fn(),
-    copyTextToClipboard: vi.fn(),
-    openGroupDialog: vi.fn(),
-    openWorldDialog: vi.fn(),
-    directAccessParse: vi.fn(),
-    selfInviteToInstance: vi.fn(),
-    toastSuccess: vi.fn(),
-    toastError: vi.fn()
+    }
 }));
 
-vi.mock('@/services/toastService', () => ({
-    toast: {
-        add: (options: AppToastOptions) => {
-            switch (options.type) {
-                case 'success':
-                    return mocks.toastSuccess(options);
-                case 'error':
-                    return mocks.toastError(options);
-                default:
-                    throw new Error('Unhandled toast type: ' + options.type);
-            }
-        }
-    }
+vi.mock('@/services/i18nService', () => ({
+    default: { t: (key: string) => key }
 }));
 
 vi.mock('@/components/location/LocationContextMenu', async () => {
@@ -73,34 +53,6 @@ vi.mock('@/components/location/useLocationPreviousInstancesDialog', () => ({
     })
 }));
 
-vi.mock('@/services/clipboardService', () => ({
-    copyTextToClipboard: mocks.copyTextToClipboard
-}));
-
-vi.mock('@/services/dialogService', () => ({
-    openGroupDialog: mocks.openGroupDialog,
-    openWorldDialog: mocks.openWorldDialog
-}));
-
-vi.mock('@/services/directAccessService', () => ({
-    directAccessParse: mocks.directAccessParse
-}));
-
-vi.mock('@/services/launchService', () => ({
-    selfInviteToInstance: mocks.selfInviteToInstance
-}));
-
-vi.mock('@/state/launchStore', () => ({
-    useLaunchStore: <T,>(
-        selector: (state: {
-            showLaunchDialog: typeof mocks.showLaunchDialog;
-        }) => T
-    ) =>
-        selector({
-            showLaunchDialog: mocks.showLaunchDialog
-        })
-}));
-
 vi.mock('@/state/preferencesStore', () => ({
     usePreferencesStore: <T,>(
         selector: (state: typeof mocks.preferencesState) => T
@@ -109,8 +61,6 @@ vi.mock('@/state/preferencesStore', () => ({
 
 vi.mock('react-i18next', () => {
     const translations: Record<string, string> = {
-        'component.location.toast.failed_to_send_self_invite':
-            'Failed to send self invite',
         'component.region_code_badge.dynamic.region_value': 'Region',
         'dialog.new_instance.access_type_group': 'Group',
         'dialog.new_instance.access_type_public': 'Public',
@@ -121,9 +71,7 @@ vi.mock('react-i18next', () => {
         'dialog.user.info.instance_closed': 'Instance closed',
         'location.offline': 'Offline',
         'location.private': 'Private',
-        'location.traveling': 'Traveling',
-        'message.invite.self_sent': 'Self invite sent',
-        'message.world.url_copied': 'World URL copied'
+        'location.traveling': 'Traveling'
     };
 
     return {
@@ -219,14 +167,6 @@ describe('Location', () => {
         mocks.preferencesState.preferencesHydrated = true;
         mocks.preferencesState.isAgeGatedInstancesVisible = false;
         mocks.preferencesState.showInstanceIdInLocation = false;
-        mocks.showLaunchDialog.mockReset();
-        mocks.copyTextToClipboard.mockReset();
-        mocks.openGroupDialog.mockReset();
-        mocks.openWorldDialog.mockReset();
-        mocks.directAccessParse.mockReset();
-        mocks.selfInviteToInstance.mockReset();
-        mocks.toastSuccess.mockReset();
-        mocks.toastError.mockReset();
     });
 
     it('renders a world instance with region, access type, group, and instance id', () => {

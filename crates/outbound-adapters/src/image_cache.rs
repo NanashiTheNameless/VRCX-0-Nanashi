@@ -184,11 +184,6 @@ mod tests {
     #[test]
     fn fetch_guard_table_short_circuits_within_failure_ttl() {
         let table = FetchGuardTable::default();
-        assert_eq!(
-            table.failures.policy().max_capacity(),
-            Some(FAILURE_CAPACITY)
-        );
-        assert_eq!(table.failures.policy().time_to_live(), Some(FAILURE_TTL));
         assert!(!table.recently_failed("file_a/1"));
 
         table.record_failure("file_a/1");

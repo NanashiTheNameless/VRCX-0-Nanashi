@@ -79,7 +79,7 @@ impl McpRuntime {
 
     pub(crate) fn current_user_id(&self) -> Option<String> {
         let from_auth = self.auth_scope.snapshot().current_user_id;
-        current_user_id_from_sources(&from_auth, None)
+        current_user_id_from_sources(&from_auth)
     }
 
     pub(crate) fn current_endpoint(&self) -> String {
@@ -91,10 +91,7 @@ impl McpRuntime {
     }
 }
 
-fn current_user_id_from_sources(
-    auth_scope_user_id: &str,
-    _realtime_user_id: Option<&str>,
-) -> Option<String> {
+fn current_user_id_from_sources(auth_scope_user_id: &str) -> Option<String> {
     let auth_scope_user_id = auth_scope_user_id.trim();
     if !auth_scope_user_id.is_empty() {
         return Some(auth_scope_user_id.to_string());
@@ -107,23 +104,13 @@ mod tests {
     use super::{current_user_id_from_sources, McpCaller};
 
     #[test]
-    fn current_user_owner_prefers_auth_scope_over_realtime_snapshot() {
-        let owner = current_user_id_from_sources(" usr_auth ", Some("usr_ws"));
-
-        assert_eq!(owner.as_deref(), Some("usr_auth"));
-    }
-
-    #[test]
-    fn current_user_owner_does_not_fall_back_to_realtime_when_auth_scope_is_empty() {
-        let owner = current_user_id_from_sources(" ", Some(" usr_ws "));
-
-        assert_eq!(owner, None);
-    }
-
-    #[test]
-    fn current_user_owner_stays_empty_when_all_sources_are_empty() {
-        assert_eq!(current_user_id_from_sources("", None), None);
-        assert_eq!(current_user_id_from_sources(" ", Some(" ")), None);
+    fn current_user_owner_is_the_trimmed_auth_scope_user_or_none_when_blank() {
+        assert_eq!(
+            current_user_id_from_sources(" usr_auth ").as_deref(),
+            Some("usr_auth")
+        );
+        assert_eq!(current_user_id_from_sources(""), None);
+        assert_eq!(current_user_id_from_sources(" "), None);
     }
 
     #[test]

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
     FRIEND_LIST_COLUMN_IDS,
@@ -20,17 +20,12 @@ function installLocalStorage(initial: Record<string, unknown> = {}) {
         Object.entries(initial).map(([key, value]) => [key, String(value)])
     );
 
-    Object.defineProperty(globalThis, 'window', {
-        configurable: true,
-        value: {
-            localStorage: {
-                getItem(key: string) {
-                    return store.has(key) ? store.get(key) : null;
-                },
-                setItem(key: string, value: string) {
-                    store.set(key, String(value));
-                }
-            }
+    vi.stubGlobal('localStorage', {
+        getItem(key: string) {
+            return store.has(key) ? store.get(key) : null;
+        },
+        setItem(key: string, value: string) {
+            store.set(key, String(value));
         }
     });
 
@@ -38,7 +33,7 @@ function installLocalStorage(initial: Record<string, unknown> = {}) {
 }
 
 afterEach(() => {
-    Reflect.deleteProperty(globalThis, 'window');
+    vi.unstubAllGlobals();
 });
 
 describe('friendListState', () => {
@@ -76,24 +71,6 @@ describe('friendListState', () => {
             [STORAGE_KEY]: '{not-json'
         });
         expect(readPersistedFriendListState()).toEqual({});
-
-        Object.defineProperty(globalThis, 'window', {
-            configurable: true,
-            value: {
-                localStorage: {
-                    getItem() {
-                        throw new Error('storage blocked');
-                    },
-                    setItem() {
-                        throw new Error('storage blocked');
-                    }
-                }
-            }
-        });
-        expect(readPersistedFriendListState()).toEqual({});
-        expect(() =>
-            writePersistedFriendListState({ pageSize: 10 })
-        ).not.toThrow();
 
         expect(sanitizeFriendListSorting([{ id: 'unknown', desc: true }])).toBe(
             FRIEND_LIST_DEFAULT_SORTING

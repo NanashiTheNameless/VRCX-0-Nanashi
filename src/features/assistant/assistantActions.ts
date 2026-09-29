@@ -1,6 +1,5 @@
 import { commands, type Session } from '@/platform/tauri/bindings';
-import { describeLanguageForModel } from '@/services/customLocaleService';
-import { i18n } from '@/services/i18nService';
+import i18n from '@/services/i18nService';
 import { useAssistantChatStore } from '@/state/assistantChatStore';
 
 export async function refreshSessions(): Promise<void> {

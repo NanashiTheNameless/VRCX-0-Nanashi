@@ -172,7 +172,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn avatar_views_read_known_and_unknown_values_without_mutating_json() {
+    fn avatar_views_read_known_and_unknown_values() {
         let value = json!({
             "releaseStatus": "public",
             "performance": {
@@ -182,10 +182,8 @@ mod tests {
             "unityPackages": [{
                 "performanceRating": "VeryPoor",
                 "platform": "standalonewindows"
-            }],
-            "futureField": {"kept": true}
+            }]
         });
-        let original = value.clone();
         let avatar = AvatarJson::new(&value);
         let unity_package = UnityPackageJson::new(&value["unityPackages"][0]);
 
@@ -202,7 +200,6 @@ mod tests {
             unity_package.performance_rating(),
             Some(PerformanceRating::VeryPoor)
         );
-        assert_eq!(value, original);
     }
 
     #[test]

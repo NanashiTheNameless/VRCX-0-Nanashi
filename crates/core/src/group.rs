@@ -91,41 +91,4 @@ mod tests {
             ("visible", GroupUserVisibility::Visible),
         ]);
     }
-
-    #[test]
-    fn group_response_states_preserve_unknown_wire_values() {
-        let join_state: GroupJoinState = serde_json::from_value(json!("future-join")).unwrap();
-        let privacy: GroupPrivacy = serde_json::from_value(json!("future-privacy")).unwrap();
-        let member_status: GroupMemberStatus =
-            serde_json::from_value(json!("future-member")).unwrap();
-        let visibility: GroupUserVisibility =
-            serde_json::from_value(json!("future-visibility")).unwrap();
-
-        assert_eq!(join_state, GroupJoinState::Unknown("future-join".into()));
-        assert_eq!(privacy, GroupPrivacy::Unknown("future-privacy".into()));
-        assert_eq!(
-            member_status,
-            GroupMemberStatus::Unknown("future-member".into())
-        );
-        assert_eq!(
-            visibility,
-            GroupUserVisibility::Unknown("future-visibility".into())
-        );
-        assert_eq!(
-            serde_json::to_value(join_state).unwrap(),
-            json!("future-join")
-        );
-        assert_eq!(
-            serde_json::to_value(privacy).unwrap(),
-            json!("future-privacy")
-        );
-        assert_eq!(
-            serde_json::to_value(member_status).unwrap(),
-            json!("future-member")
-        );
-        assert_eq!(
-            serde_json::to_value(visibility).unwrap(),
-            json!("future-visibility")
-        );
-    }
 }

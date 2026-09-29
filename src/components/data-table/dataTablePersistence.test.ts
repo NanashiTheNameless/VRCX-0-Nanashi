@@ -4,7 +4,6 @@ import {
     getDataTableStorageKey,
     readPersistedTableState,
     sanitizeTableColumnSizing,
-    safeJsonParse,
     writePersistedTableState
 } from './dataTablePersistence';
 
@@ -18,10 +17,7 @@ function installLocalStorage(initial: Record<string, unknown> = {}) {
             values.set(key, String(value));
         })
     };
-    Object.defineProperty(globalThis, 'window', {
-        configurable: true,
-        value: { localStorage }
-    });
+    vi.stubGlobal('localStorage', localStorage);
     return { localStorage, values };
 }
 
@@ -33,7 +29,7 @@ describe('data table persistence helpers', () => {
 
     afterEach(() => {
         vi.useRealTimers();
-        Reflect.deleteProperty(globalThis, 'window');
+        vi.unstubAllGlobals();
     });
 
     it('uses the vrcx-0 table namespace for generated storage keys', () => {
@@ -46,9 +42,6 @@ describe('data table persistence helpers', () => {
             'vrcx-0:table:bad': '{not-json'
         });
 
-        expect(safeJsonParse('{"sorting":[]}')).toEqual({ sorting: [] });
-        expect(safeJsonParse('bad')).toBeNull();
-        expect(safeJsonParse('')).toBeNull();
         expect(readPersistedTableState('vrcx-0:table:feed')).toEqual({
             pageSize: 25
         });
@@ -97,26 +90,5 @@ describe('data table persistence helpers', () => {
             expander: 40,
             detail: 320
         });
-    });
-
-    it('treats localStorage failures as optional table state', () => {
-        Object.defineProperty(globalThis, 'window', {
-            configurable: true,
-            value: {
-                localStorage: {
-                    getItem() {
-                        throw new Error('storage blocked');
-                    },
-                    setItem() {
-                        throw new Error('storage blocked');
-                    }
-                }
-            }
-        });
-
-        expect(readPersistedTableState('vrcx-0:table:feed')).toEqual({});
-        expect(() =>
-            writePersistedTableState('vrcx-0:table:feed', { pageSize: 10 })
-        ).not.toThrow();
     });
 });

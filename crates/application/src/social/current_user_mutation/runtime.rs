@@ -152,7 +152,3 @@ impl CurrentUserMutationRuntime {
         Ok(response)
     }
 }
-
-#[cfg(test)]
-pub(super) const TEST_CURRENT_USER_REMOTE_MUTATION_INTERVAL: Duration =
-    CURRENT_USER_REMOTE_MUTATION_INTERVAL;

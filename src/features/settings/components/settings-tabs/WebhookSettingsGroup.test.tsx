@@ -1,12 +1,8 @@
-import React from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+// @vitest-environment jsdom
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: (key: string) => key
-    })
-}));
+import { cleanup, render, screen } from '@testing-library/react';
+import type React from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/ui/shadcn/button', async () => {
     const React = await import('react');
@@ -153,8 +149,10 @@ import { WebhookSettingsGroup } from './WebhookSettingsGroup';
 const noop = () => {};
 
 describe('WebhookSettingsGroup', () => {
+    afterEach(cleanup);
+
     it('keeps webhook URL and test controls enabled when only auth events are enabled', () => {
-        const html = renderToStaticMarkup(
+        render(
             <WebhookSettingsGroup
                 prefs={{
                     webhookEnabled: false,
@@ -177,15 +175,15 @@ describe('WebhookSettingsGroup', () => {
             />
         );
 
-        expect(html).toContain('id="settings-webhook-url"');
-        expect(html).not.toContain(
-            'id="settings-webhook-url" class="w-full max-w-lg" disabled=""'
-        );
-        expect(html).toContain(
-            'view.settings.notifications.notifications.webhook.send_test'
-        );
-        expect(html).not.toContain(
-            '<button type="button" variant="outline" disabled="">view.settings.notifications.notifications.webhook.send_test</button>'
-        );
+        const urlInput = document.getElementById('settings-webhook-url');
+        expect(urlInput).toBeInstanceOf(HTMLInputElement);
+        expect((urlInput as HTMLInputElement).disabled).toBe(false);
+        expect(
+            (
+                screen.getByRole('button', {
+                    name: 'view.settings.notifications.notifications.webhook.send_test'
+                }) as HTMLButtonElement
+            ).disabled
+        ).toBe(false);
     });
 });

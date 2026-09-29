@@ -19,12 +19,6 @@ const storeMocks = vi.hoisted(() => ({
     } as AssistantStoreState
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: (key: string) => key
-    })
-}));
-
 vi.mock('@/ui/shadcn/scroll-area', async () => {
     const React = await import('react');
 
@@ -91,12 +85,5 @@ describe('EntityPanel', () => {
 
         expect(html).toContain('data-user-id="usr_friend"');
         expect(html).toContain('data-seed-state=""');
-    });
-
-    it('keeps assistant entity cards at the sidebar hover-card width', () => {
-        const html = renderToStaticMarkup(<EntityPanel />);
-
-        expect(html).toContain('w-72');
-        expect(html).toContain('max-w-full');
     });
 });

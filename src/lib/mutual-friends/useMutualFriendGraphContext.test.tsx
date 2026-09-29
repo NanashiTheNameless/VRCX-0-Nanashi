@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, renderHook, waitFor } from '@testing-library/react';
+import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import type { PropsWithChildren } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -20,6 +20,7 @@ import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
 import { useMutualFriendGraphContext } from './useMutualFriendGraphContext';
+import { useMutualFriendsExclusionStore } from './useMutualFriendsExclusionStore';
 
 const FRIEND_IDS = ['usr_a', 'usr_b', 'usr_c', 'usr_d'];
 
@@ -80,6 +81,7 @@ afterEach(async () => {
     await clearEntityQueryCache();
     mocks.getSnapshot.mockReset();
     useFriendRosterStore.getState().resetRoster();
+    useMutualFriendsExclusionStore.getState().setExcludedFriendIds([]);
 });
 
 describe('useMutualFriendGraphContext', () => {
@@ -135,5 +137,24 @@ describe('useMutualFriendGraphContext', () => {
         expect(grouped.result.current.communityIndexById.get('usr_a')).toBe(
             grouped.result.current.communityIndexById.get('usr_c')
         );
+    });
+
+    it('drops a friend as soon as it is hidden from the mutual friends graph', async () => {
+        mocks.getSnapshot.mockResolvedValue(
+            snapshotWithFetched(['usr_a', 'usr_b'])
+        );
+        const view = renderContext();
+        await waitFor(() =>
+            expect(view.result.current.nodeById.has('usr_c')).toBe(true)
+        );
+
+        act(() => {
+            useMutualFriendsExclusionStore
+                .getState()
+                .setExcludedFriendIds(['usr_c']);
+        });
+
+        expect(view.result.current.nodeById.has('usr_c')).toBe(false);
+        expect(view.result.current.nodeById.has('usr_a')).toBe(true);
     });
 });

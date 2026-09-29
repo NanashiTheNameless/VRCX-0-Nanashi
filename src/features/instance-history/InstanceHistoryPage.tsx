@@ -57,6 +57,7 @@ import {
     sanitizeInstanceHistoryMode
 } from '@/features/instance-history/instanceHistoryDayMode';
 import { formatCompactDateTime, timeToText } from '@/lib/dateTime';
+import { useTodayDate } from '@/lib/useTodayDate';
 import { cn } from '@/lib/utils';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useUserFactsStore } from '@/state/userFactsStore';
@@ -114,6 +115,7 @@ export function InstanceHistoryPage({
 }: { embedded?: boolean } = {}) {
     const { t } = useTranslation();
     const [searchParams, setSearchParams] = useSearchParams();
+    const todayDate = useTodayDate();
     const currentUserId = useRuntimeStore((state) => state.auth.currentUserId);
     const currentUserDisplayName = useRuntimeStore(
         (state) => state.auth.currentUserDisplayName
@@ -540,7 +542,7 @@ export function InstanceHistoryPage({
                 confirmLabel={t('common.actions.confirm')}
                 formatValue={formatCompactDateTime}
                 minuteStep={15}
-                disabled={{ after: new Date() }}
+                disabled={{ after: todayDate }}
             />
         </Tooltip>
     );

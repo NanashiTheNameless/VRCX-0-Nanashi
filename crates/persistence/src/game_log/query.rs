@@ -725,10 +725,63 @@ pub fn get_last_game_log_date(db: &DatabaseService) -> Result<String, Error> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn join_leave_range_sql_orders_same_timestamp_rows_by_id() {
-        let sql = join_leave_entries_for_location_range_sql(true);
+    struct TestDir {
+        path: std::path::PathBuf,
+    }
 
-        assert!(sql.contains("ORDER BY \"created_at\" ASC, \"id\" ASC"));
+    impl TestDir {
+        fn new(name: &str) -> Self {
+            let nonce = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let path =
+                std::env::temp_dir().join(format!("vrcx-0-{name}-{}-{nonce}", std::process::id()));
+            std::fs::create_dir_all(&path).unwrap();
+            Self { path }
+        }
+    }
+
+    impl Drop for TestDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
+    }
+
+    #[test]
+    fn join_leave_range_orders_rows_by_created_at_then_id() -> Result<(), Error> {
+        let dir = TestDir::new("gamelog-join-leave-range-order");
+        let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
+        ensure_game_log_tables(&db)?;
+        for (id, created_at, display_name) in [
+            (7, "2026-05-14T01:00:02.000Z", "d"),
+            (3, "2026-05-14T01:00:01.000Z", "b"),
+            (9, "2026-05-14T01:00:01.000Z", "c"),
+            (1, "2026-05-14T01:00:02.000Z", "a"),
+            (5, "2026-05-14T01:00:01.000Z", "e"),
+        ] {
+            db.execute_non_query(
+                "INSERT INTO gamelog_join_leave (id, created_at, type, display_name, location, user_id, time) VALUES (@id, @createdAt, 'OnPlayerJoined', @displayName, 'wrld_test:1', '', 0)",
+                &ParamsBuilder::new()
+                    .set("id", id)
+                    .set("createdAt", created_at)
+                    .set("displayName", display_name)
+                    .build(),
+            )?;
+        }
+
+        let rows = get_join_leave_entries_for_location_range(
+            &db,
+            &OwnerId::new("usr_test"),
+            "wrld_test:1",
+            "2026-05-14T00:00:00.000Z",
+            "2026-05-14T02:00:00.000Z",
+        )?;
+
+        assert_eq!(
+            rows.iter().map(|row| row.id).collect::<Vec<_>>(),
+            vec![3, 5, 9, 1, 7]
+        );
+        Ok(())
     }
 }

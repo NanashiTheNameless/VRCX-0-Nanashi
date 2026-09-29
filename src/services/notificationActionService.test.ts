@@ -292,22 +292,6 @@ describe('notificationActionService', () => {
         });
     });
 
-    it('still delegates cleanup when the invite location is incomplete', async () => {
-        const { acceptRequestInviteNotification } =
-            await import('./notificationActionService');
-
-        await acceptRequestInviteNotification({
-            currentUserId: 'usr_self',
-            notification,
-            instanceId: '',
-            worldId: 'wrld_1'
-        });
-
-        expect(mocks.appNotificationRequestInviteAccept).toHaveBeenCalledWith(
-            expect.objectContaining({ instanceId: '' })
-        );
-    });
-
     it('wraps the photo invite response command in the upload timeout', async () => {
         const pending = deferred<NotificationActionOutcome>();
         mocks.appNotificationInviteResponseSend.mockReturnValue(
@@ -369,26 +353,15 @@ describe('notificationActionService', () => {
         );
     });
 
-    it('accepts and expires a friend request through one backend command', async () => {
-        const accepted = deferred<{
-            status: 'accepted';
-            outcome: { status: string; targetUserId: string };
-        }>();
-        mocks.appSocialFriendRequestNotificationAccept.mockReturnValue(
-            accepted.promise
-        );
+    it('accepts a friend request through one backend command using the sender username', async () => {
         const { acceptFriendRequestNotification } =
             await import('./notificationActionService');
 
-        const action = acceptFriendRequestNotification({
-            notification
-        });
-
-        accepted.resolve({
-            status: 'accepted',
-            outcome: { status: 'applied', targetUserId: 'usr_sender' }
-        });
-        await expect(action).resolves.toEqual({
+        await expect(
+            acceptFriendRequestNotification({
+                notification
+            })
+        ).resolves.toEqual({
             status: 'accepted',
             outcome: { status: 'applied', targetUserId: 'usr_sender' }
         });
@@ -400,7 +373,6 @@ describe('notificationActionService', () => {
             targetUserId: 'usr_sender',
             targetDisplayName: 'Sender'
         });
-        expect(mocks.expireNotification).not.toHaveBeenCalled();
     });
 
     it('treats a missing remote friend request as resolved locally', async () => {
@@ -416,35 +388,6 @@ describe('notificationActionService', () => {
                 notification
             })
         ).resolves.toEqual({ status: 'not-found' });
-
-        expect(mocks.expireNotification).not.toHaveBeenCalled();
-    });
-
-    it('reports a remote-ok-local-failed outcome without swallowing it', async () => {
-        mocks.appSocialFriendRequestNotificationAccept.mockResolvedValue({
-            status: 'accepted',
-            outcome: {
-                status: 'remoteOkLocalFailed',
-                targetUserId: 'usr_sender',
-                localError: 'database failed'
-            }
-        });
-        const { acceptFriendRequestNotification } =
-            await import('./notificationActionService');
-
-        await expect(
-            acceptFriendRequestNotification({
-                notification
-            })
-        ).resolves.toEqual({
-            status: 'accepted',
-            outcome: {
-                status: 'remoteOkLocalFailed',
-                targetUserId: 'usr_sender',
-                localError: 'database failed'
-            }
-        });
-        expect(mocks.expireNotification).not.toHaveBeenCalled();
     });
 
     it('rejects invalid action input before crossing the command boundary', async () => {

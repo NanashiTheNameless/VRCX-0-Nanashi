@@ -13,10 +13,6 @@ import { GameLogToolbar } from './GameLogToolbar';
 
 const mocks = vi.hoisted(() => ({ picker: vi.fn() }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/components/data-table/TableColumnVisibilityMenu', () => ({
     TableColumnVisibilityMenu: () => <button>Columns</button>
 }));
@@ -92,7 +88,6 @@ describe('GameLogToolbar', () => {
         render(<ToolbarHarness {...createProps()} />);
         const user = userEvent.setup();
         const trigger = screen.getByRole('button', { name: dateRangeLabel });
-        expect(trigger.hasAttribute('title')).toBe(false);
         await user.hover(trigger);
         expect(
             (

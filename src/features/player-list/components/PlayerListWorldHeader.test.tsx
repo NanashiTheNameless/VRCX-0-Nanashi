@@ -77,12 +77,6 @@ vi.mock('@/state/runtimeStore', () => ({
         })
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: (key: string) => key
-    })
-}));
-
 vi.mock('@/components/LocationWorld', () => ({
     LocationWorld: () => <div />
 }));

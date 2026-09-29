@@ -27,19 +27,4 @@ mod tests {
             assert_eq!(serde_json::to_value(status).unwrap(), json!(value));
         }
     }
-
-    #[test]
-    fn serde_preserves_unknown_world_release_status() {
-        let status: ReleaseStatus = serde_json::from_value(json!("future")).unwrap();
-
-        assert_eq!(status, ReleaseStatus::Unknown("future".into()));
-        assert_eq!(serde_json::to_value(status).unwrap(), json!("future"));
-    }
-
-    #[test]
-    fn query_only_all_value_is_not_an_entity_status() {
-        let status: ReleaseStatus = serde_json::from_value(json!("all")).unwrap();
-
-        assert_eq!(status, ReleaseStatus::Unknown("all".into()));
-    }
 }

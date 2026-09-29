@@ -36,11 +36,11 @@ import { useScrollViewportMetrics } from '@/lib/useScrollViewportMetrics';
 import { useTodayDate } from '@/lib/useTodayDate';
 import { cn } from '@/lib/utils';
 import {
-    browseHistoryRepository,
+    commands,
     type BrowseHistoryCursor,
     type BrowseHistoryEntityKind,
     type BrowseHistoryItemOutput
-} from '@/repositories/browseHistoryRepository';
+} from '@/platform/tauri/bindings';
 import { toast } from '@/services/toastService';
 import { useModalStore } from '@/state/modalStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -107,8 +107,8 @@ export function BrowseHistoryPage() {
         setLoadError(false);
         setCursor(null);
 
-        void browseHistoryRepository
-            .query({
+        void commands
+            .appBrowseHistoryQuery({
                 ownerUserId,
                 entityKind,
                 search: deferredSearch,
@@ -186,8 +186,8 @@ export function BrowseHistoryPage() {
         loadMoreLockedRef.current = true;
         setLoadingMore(true);
         const requestVersion = requestVersionRef.current;
-        void browseHistoryRepository
-            .query({
+        void commands
+            .appBrowseHistoryQuery({
                 ownerUserId,
                 entityKind,
                 search: deferredSearch,
@@ -258,8 +258,12 @@ export function BrowseHistoryPage() {
             if (!ownerUserId) {
                 return Promise.resolve(false);
             }
-            return browseHistoryRepository
-                .delete(ownerUserId, item.entityKind, item.entityId)
+            return commands
+                .appBrowseHistoryDelete(
+                    ownerUserId,
+                    item.entityKind,
+                    item.entityId
+                )
                 .then(() => {
                     setItems((current) =>
                         current.filter(
@@ -296,7 +300,7 @@ export function BrowseHistoryPage() {
             return;
         }
         try {
-            await browseHistoryRepository.clear(ownerUserId, entityKind);
+            await commands.appBrowseHistoryClear(ownerUserId, entityKind);
             setItems([]);
             setCursor(null);
         } catch {

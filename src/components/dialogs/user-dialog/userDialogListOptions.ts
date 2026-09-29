@@ -60,21 +60,13 @@ export type UserDialogMutualView = 'list' | 'graph';
 const MUTUAL_VIEW_STORAGE_KEY = 'VRCX_UserDialogMutualView';
 
 export function readUserDialogMutualView(): UserDialogMutualView {
-    try {
-        return localStorage.getItem(MUTUAL_VIEW_STORAGE_KEY) === 'graph'
-            ? 'graph'
-            : 'list';
-    } catch {
-        return 'list';
-    }
+    return localStorage.getItem(MUTUAL_VIEW_STORAGE_KEY) === 'graph'
+        ? 'graph'
+        : 'list';
 }
 
 export function writeUserDialogMutualView(view: UserDialogMutualView) {
-    try {
-        localStorage.setItem(MUTUAL_VIEW_STORAGE_KEY, view);
-    } catch {
-        // localStorage may be unavailable; the view falls back to the list.
-    }
+    localStorage.setItem(MUTUAL_VIEW_STORAGE_KEY, view);
 }
 
 export const userDialogAvatarSortingOptions = [

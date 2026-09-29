@@ -648,7 +648,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn stops_at_first_failure_without_attempting_later_items() {
+    async fn stops_at_first_failure_keeping_earlier_successes_and_skipping_later_items() {
         let actions = FakeActions {
             fail_user_id: Some("usr_2".into()),
             ..Default::default()
@@ -666,28 +666,9 @@ mod tests {
             actions.attempts.lock().unwrap().as_slice(),
             &["usr_1", "usr_2"]
         );
-        assert_eq!(result.succeeded, 1);
-        assert_eq!(result.failed, 1);
-        assert_eq!(result.items[2].state, NoteExportItemState::NotAttempted);
-    }
-
-    #[tokio::test]
-    async fn successful_items_remain_successful_after_a_later_failure() {
-        let actions = FakeActions {
-            fail_user_id: Some("usr_2".into()),
-            ..Default::default()
-        };
-        let result = run_note_export_with_interval(
-            &actions,
-            vec![item("usr_1"), item("usr_2")],
-            Duration::ZERO,
-            || false,
-            |_| {},
-        )
-        .await;
-
         assert_eq!(result.items[0].state, NoteExportItemState::Succeeded);
         assert_eq!(result.items[1].state, NoteExportItemState::Failed);
+        assert_eq!(result.items[2].state, NoteExportItemState::NotAttempted);
         assert_eq!(result.processed, 2);
         assert_eq!(result.succeeded, 1);
         assert_eq!(result.failed, 1);

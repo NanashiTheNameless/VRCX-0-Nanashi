@@ -8,8 +8,8 @@ use crate::common::ParamsBuilder;
 use crate::config::{config_list_values, migrate_sensitive_config_obfuscation, ConfigKey};
 
 use super::{
-    ensure_config_table, get_bool, get_json, get_raw, get_string, remove, set_bool, set_json,
-    set_raw, set_string, ConfigRepository,
+    ensure_config_table, get_bool, get_json, get_raw, get_string, remove, set_bool, set_raw,
+    set_string, ConfigRepository,
 };
 
 struct TestDir {
@@ -113,14 +113,6 @@ fn remove_deletes_existing_values() -> Result<(), Error> {
     assert_eq!(get_raw(&test_db.db, "customKey")?, Some("value".into()));
     remove(&test_db.db, "customKey")?;
     assert_eq!(get_raw(&test_db.db, "customKey")?, None);
-
-    set_bool(&test_db.db, "enabled", true)?;
-    set_json(&test_db.db, "payload", &serde_json::json!({ "ok": true }))?;
-    assert!(get_bool(&test_db.db, "enabled", false)?);
-    assert_eq!(
-        get_json(&test_db.db, "payload", serde_json::json!({}))?,
-        serde_json::json!({ "ok": true })
-    );
     Ok(())
 }
 

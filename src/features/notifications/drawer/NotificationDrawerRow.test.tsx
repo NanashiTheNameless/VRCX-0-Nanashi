@@ -9,14 +9,6 @@ import { openSender } from '../notificationCenterUtils';
 import type { NotificationDrawerHandlers } from './NotificationDrawerList';
 import { NotificationDrawerRow } from './NotificationDrawerRow';
 
-vi.mock('react-i18next', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('react-i18next')>();
-    return {
-        ...actual,
-        useTranslation: () => ({ t: (key: string) => key })
-    };
-});
-
 vi.mock('../useNotificationActorImage', () => ({
     useNotificationActorImage: () => ''
 }));
@@ -117,7 +109,7 @@ describe('NotificationDrawerRow', () => {
         expect(screen.queryByText('view.notification.feed.unread')).toBeNull();
     });
 
-    it('keeps friend request accept and mark-read actions available', () => {
+    it('orders friend request actions as accept, decline, mark read', () => {
         const notification: NotificationRow = {
             id: 'not_friend',
             type: 'friendRequest',
@@ -127,7 +119,18 @@ describe('NotificationDrawerRow', () => {
             version: 1
         };
         const handlers = renderNotification(notification);
+        const actionLabels = [
+            'view.notification.actions.accept',
+            'view.notification.actions.decline',
+            'view.notification.action.mark_seen'
+        ];
 
+        expect(
+            screen
+                .getAllByRole('button')
+                .map((button) => button.textContent ?? '')
+                .filter((label) => actionLabels.includes(label))
+        ).toEqual(actionLabels);
         fireEvent.click(
             screen.getByRole('button', {
                 name: 'view.notification.actions.accept'

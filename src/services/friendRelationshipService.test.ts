@@ -46,11 +46,33 @@ describe('friendRelationshipService.deleteFriend', () => {
                 }
             });
             return {
-                status: 'remoteOkLocalFailed',
+                status: 'applied',
                 targetUserId: 'usr_target',
-                localError:
-                    'Social mutation authentication scope changed during request.'
+                localError: null
             };
+        });
+
+        const result = await deleteFriend({
+            currentUserId: 'usr_self',
+            endpoint: 'https://api.example.test',
+            userId: 'usr_target'
+        });
+
+        expect(result.stale).toBe(true);
+        expect(
+            useRuntimeStore.getState().auth.currentUserSnapshot
+        ).toMatchObject({
+            friends: ['usr_target']
+        });
+        expect(friendLogMocks.signalChanged).not.toHaveBeenCalled();
+    });
+
+    it('treats a backend auth-scope-change local error as stale for the same account', async () => {
+        commandMocks.unfriend.mockResolvedValue({
+            status: 'remoteOkLocalFailed',
+            targetUserId: 'usr_target',
+            localError:
+                'Social mutation authentication scope changed during request.'
         });
 
         const result = await deleteFriend({

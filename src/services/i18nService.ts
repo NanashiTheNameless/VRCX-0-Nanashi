@@ -16,7 +16,7 @@ const i18nResources = {
     [FALLBACK_LOCALE_CODE]: { translation: fallbackLocaleMessages }
 };
 
-export const i18n = createInstance();
+const i18n = createInstance();
 const i18nReady = i18n.use(initReactI18next).init({
     lng: 'en',
     fallbackLng: 'en',

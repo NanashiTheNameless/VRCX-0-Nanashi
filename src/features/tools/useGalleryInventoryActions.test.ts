@@ -31,7 +31,6 @@ function useActions(overrides: Partial<GalleryInventoryActionDeps> = {}) {
     };
     const currentUserSnapshot = {
         id: 'usr_self',
-        $isVRCPlus: false,
         tags: []
     };
     const actions = useGalleryInventoryActions({
@@ -81,7 +80,7 @@ function useActions(overrides: Partial<GalleryInventoryActionDeps> = {}) {
 }
 
 describe('useGalleryInventoryActions', () => {
-    it('allows a non-VRC+ user to set profile icons and banners', async () => {
+    it('updates the profile icon and banner, rereads the profile, then refreshes the current user snapshot', async () => {
         const {
             actions,
             updateCurrentUserProfile,

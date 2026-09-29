@@ -10,7 +10,6 @@ import {
     calendarDateKey,
     calendarLocaleForLanguage,
     dateKeyToLocalDate,
-    formatCalendarRequestDate,
     monthDateFromKey
 } from './groupCalendarModel';
 
@@ -67,14 +66,6 @@ describe('groupCalendarModel date helpers', () => {
         );
         expect(format(monthDateFromKey('bad-date'), 'yyyy-MM-dd')).toBe(
             monthKey
-        );
-    });
-
-    it('formats calendar request dates with the existing local timestamp shape', () => {
-        const value = new Date('2026-03-04T05:06:07.000Z');
-
-        expect(formatCalendarRequestDate(value)).toBe(
-            format(value, "yyyy-MM-dd'T'HH:mm:ss'Z'")
         );
     });
 

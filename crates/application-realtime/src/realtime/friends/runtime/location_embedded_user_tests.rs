@@ -50,7 +50,6 @@ mod tests {
         let patch = &output.projection.patches[0].patch;
         assert_eq!(output.projection.patches[0].patch.state, "online");
         assert_eq!(output.persistence.feed_entries[0].to_json()["type"], "GPS");
-        assert_eq!(patch.state, "online");
         assert_eq!(patch.location, "wrld_2:456");
         assert!(output.profile_refetch_user_ids.is_empty());
         assert_eq!(
@@ -66,7 +65,7 @@ mod tests {
     }
 
     #[test]
-    fn friend_location_embedded_user_keeps_online_bucket_for_offline_location() {
+    fn friend_location_offline_offline_alias_is_not_online_proof() {
         let runtime = RealtimeFriendsRuntime::default();
         runtime.set_baseline(
             FriendRosterBaseline {
@@ -98,8 +97,7 @@ mod tests {
                         "location": "offline:offline",
                         "user": {
                             "id": "usr_friend",
-                            "displayName": "Friend",
-                            "stateBucket": "online"
+                            "displayName": "Friend"
                         }
                     }
                 }),
@@ -111,6 +109,10 @@ mod tests {
         };
 
         assert_eq!(output.projection.patches[0].patch.state, "online");
+        assert_eq!(
+            output.projection.patches[0].state_bucket_authority,
+            FriendStateBucketAuthority::Preserve
+        );
         assert!(output.persistence.feed_entries.is_empty());
         assert_eq!(
             runtime

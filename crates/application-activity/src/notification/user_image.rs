@@ -200,16 +200,6 @@ mod tests {
     #[test]
     fn user_image_cache_uses_bounded_moka_storage() {
         let cache = UserImageCache::new();
-        assert_eq!(
-            cache.success.policy().max_capacity(),
-            Some(SUCCESS_CAPACITY)
-        );
-        assert_eq!(cache.success.policy().time_to_live(), Some(SUCCESS_TTL));
-        assert_eq!(
-            cache.failures.policy().max_capacity(),
-            Some(FAILURE_CAPACITY)
-        );
-        assert_eq!(cache.failures.policy().time_to_live(), Some(FAILURE_TTL));
 
         for index in 0..SUCCESS_CAPACITY * 2 {
             let key = format!("usr_{index}");

@@ -82,12 +82,3 @@ export async function syncCommunityThemeAccentControl(): Promise<void> {
     root.removeAttribute(COMMUNITY_THEME_ACCENT_ATTR);
     await applySavedThemeColor();
 }
-
-export function isCommunityThemeAccentControlled(): boolean {
-    const state = useCommunityThemeStore.getState();
-    return communityThemeControlsAccent(
-        state.enabled,
-        state.installedTheme,
-        state.localPreview
-    );
-}

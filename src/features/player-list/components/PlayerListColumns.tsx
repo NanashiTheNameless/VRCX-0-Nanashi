@@ -327,7 +327,7 @@ function PlatformCell({ row }: { row: AppRow<PlayerListRow> }) {
     );
 }
 
-export function languageTooltipLabel(
+function languageTooltipLabel(
     entry: PlayerListLanguageRow | null | undefined,
     code: string
 ) {

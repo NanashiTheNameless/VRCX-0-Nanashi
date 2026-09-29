@@ -10,6 +10,7 @@ import type { MetadataContext } from './locationMetadataTypes';
 const WORLD_ID = 'wrld_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
 const GROUP_ID = 'grp_11111111-2222-3333-4444-555555555555';
 const INSTANCE_ID = '12345';
+const OTHER_GROUP_ID = 'grp_66666666-7777-8888-9999-000000000000';
 const LOCATION = `${WORLD_ID}:${INSTANCE_ID}~group(${GROUP_ID})~groupAccessType(members)`;
 
 function createContext(): MetadataContext {
@@ -29,7 +30,7 @@ describe('locationMetadataResolution', () => {
             {
                 currentLocation: LOCATION,
                 hint: `${WORLD_ID}:${INSTANCE_ID}`,
-                groupHint: GROUP_ID
+                groupHint: OTHER_GROUP_ID
             },
             0
         );

@@ -16,12 +16,8 @@ import {
     mutualFriendsNeutralCommunityColor
 } from '@/lib/mutual-friends/mutualFriendsPalette';
 import { buildMutualFriendExcludePickerOptions } from '@/lib/mutual-friends/mutualFriendsPicker';
-import {
-    normalizeExcludedMutualFriendIds,
-    normalizeMutualFriendId,
-    readExcludedMutualFriendIds,
-    writeExcludedMutualFriendIds
-} from '@/lib/mutual-friends/mutualFriendsSettings';
+import { normalizeMutualFriendId } from '@/lib/mutual-friends/mutualFriendsSettings';
+import { useMutualFriendsExclusionStore } from '@/lib/mutual-friends/useMutualFriendsExclusionStore';
 import { useMutualFriendsLayoutSettings } from '@/lib/mutual-friends/useMutualFriendsLayoutSettings';
 import { useMutualFriendsSigmaLifecycle } from '@/lib/mutual-friends/useMutualFriendsSigmaLifecycle';
 import { commands } from '@/platform/tauri/bindings';
@@ -48,8 +44,14 @@ export function useMutualFriendsPageState() {
     const currentUserIdRef = useRef(currentUserId);
     const [selectedNodeId, setSelectedNodeId] = useState('');
     const selectedNodeIdRef = useRef('');
-    const [excludedFriendIds, setExcludedFriendIds] = useState(
-        readExcludedMutualFriendIds
+    const excludedFriendIds = useMutualFriendsExclusionStore(
+        (state) => state.excludedFriendIds
+    );
+    const setExcludedFriendIds = useMutualFriendsExclusionStore(
+        (state) => state.setExcludedFriendIds
+    );
+    const toggleExcludedFriendId = useMutualFriendsExclusionStore(
+        (state) => state.toggleExcludedFriendId
     );
     const [nodeRefreshId, setNodeRefreshId] = useState('');
     const [reloadToken, setReloadToken] = useState(0);
@@ -77,10 +79,6 @@ export function useMutualFriendsPageState() {
         currentUserIdRef,
         reloadToken: reloadToken + backfillRevision
     });
-
-    useEffect(() => {
-        writeExcludedMutualFriendIds(excludedFriendIds);
-    }, [excludedFriendIds]);
 
     const baseGraph = useMemo(
         () =>
@@ -156,11 +154,6 @@ export function useMutualFriendsPageState() {
         [currentUserId, friendsById, snapshot.snapshotData.snapshot]
     );
 
-    const normalizedExcludedFriendIds = useMemo(
-        () => normalizeExcludedMutualFriendIds(excludedFriendIds),
-        [excludedFriendIds]
-    );
-
     const selectedNode = useMemo(
         () =>
             baseGraph.nodes.find((node) => node.id === selectedNodeId) ?? null,
@@ -213,19 +206,6 @@ export function useMutualFriendsPageState() {
             reloadSnapshot: snapshot.reloadSnapshot,
             setDetail: snapshot.setDetail
         });
-
-    function toggleExcludedFriendId(friendId: string) {
-        const normalizedId = normalizeMutualFriendId(friendId);
-        if (!normalizedId) {
-            return;
-        }
-        setExcludedFriendIds((current) => {
-            const normalizedCurrent = normalizeExcludedMutualFriendIds(current);
-            return normalizedCurrent.includes(normalizedId)
-                ? normalizedCurrent.filter((id) => id !== normalizedId)
-                : [...normalizedCurrent, normalizedId];
-        });
-    }
 
     async function handleRefreshSelectedNode() {
         if (!currentUserId || !selectedNode?.id || nodeRefreshId) {
@@ -317,9 +297,8 @@ export function useMutualFriendsPageState() {
         },
         exclusions: {
             excludePickerOptions,
-            excludedFriendIds: normalizedExcludedFriendIds,
-            setExcludedFriendIds: (next: string[]) =>
-                setExcludedFriendIds(normalizeExcludedMutualFriendIds(next))
+            excludedFriendIds,
+            setExcludedFriendIds
         },
         fetch: {
             fetchProgress

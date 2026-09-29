@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 use vrcx_0_application_core::Result;
-use vrcx_0_contracts::activity_page::{ActivityPageView, ActivityWindowSpans, CachedActivityPage};
+use vrcx_0_contracts::activity_page::{ActivityLocationSpan, ActivityPageView, CachedActivityPage};
 use vrcx_0_contracts::social_aggregates::{
     CopresenceSummaryInput, CopresenceSummaryOutput, FadingFriendsInput, FadingFriendsOutput,
 };
@@ -30,7 +30,7 @@ pub trait ActivityPageStore {
         owner: &OwnerId,
         from_ms: Option<i64>,
         to_ms: i64,
-    ) -> Result<ActivityWindowSpans>;
+    ) -> Result<Vec<ActivityLocationSpan>>;
     fn first_source_created_at(&self, owner: &OwnerId) -> Result<String>;
     fn world_ids_before(&self, owner: &OwnerId, before_ms: i64) -> Result<BTreeSet<String>>;
     fn encountered_user_ids(

@@ -19,10 +19,6 @@ const mocks = vi.hoisted(() => ({
     toastWarning: vi.fn()
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/services/toastService', () => ({
     toast: {
         add: (options: AppToastOptions) => {
@@ -199,16 +195,30 @@ describe('useUserDialogActions friend request mutations', () => {
             targetDisplayName: 'Target'
         });
         expect(mocks.bumpRevision).toHaveBeenCalledTimes(1);
+    });
 
-        mocks.bumpRevision.mockClear();
-        mocks.findIncoming.mockResolvedValue({ id: 'not_friend_request' });
+    it('accepts and declines an incoming request through its notification instead of the cancel command', async () => {
+        const notification = { id: 'frq_incoming' };
+        mocks.findIncoming.mockResolvedValue(notification);
         mocks.acceptIncoming.mockResolvedValue({
             status: 'accepted',
             outcome: { status: 'applied', targetUserId: 'usr_target' }
         });
+
         await act(() => actions().updateFriendRequest('accept'));
+
+        expect(mocks.acceptIncoming).toHaveBeenCalledWith({
+            notification,
+            targetUser: props.profile
+        });
+
         await act(() => actions().updateFriendRequest('decline'));
-        expect(mocks.appSocialFriendRequestCancel).toHaveBeenCalledTimes(1);
+
+        expect(mocks.hideIncoming).toHaveBeenCalledWith({
+            currentUserId: 'usr_self',
+            notification
+        });
+        expect(mocks.appSocialFriendRequestCancel).not.toHaveBeenCalled();
     });
 
     it('does not signal a friend-log change when the remote request fails', async () => {

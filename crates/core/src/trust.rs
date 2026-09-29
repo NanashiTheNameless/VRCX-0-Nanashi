@@ -132,25 +132,6 @@ mod tests {
     }
 
     #[test]
-    fn no_tags_is_untrusted_visitor() {
-        let trust = compute_trust_level(&[], "");
-        assert_eq!(trust.rank, TrustRank::Visitor);
-        assert_eq!(trust.trust_level(), "Visitor");
-        assert_eq!(trust.trust_class(), "x-tag-untrusted");
-        assert_eq!(trust.trust_sort_num(), 1.0);
-        assert!(!trust.is_moderator);
-    }
-
-    #[test]
-    fn veteran_tag_is_highest_base_rank() {
-        let trust = compute_trust_level(&tags(&["system_trust_veteran"]), "");
-        assert_eq!(trust.rank, TrustRank::TrustedUser);
-        assert_eq!(trust.trust_level(), "Trusted User");
-        assert_eq!(trust.trust_class(), "x-tag-veteran");
-        assert_eq!(trust.trust_sort_num(), 5.0);
-    }
-
-    #[test]
     fn moderator_and_troll_adjust_sort_num() {
         let moderator = compute_trust_level(&tags(&["system_trust_known"]), "internal");
         assert!(moderator.is_moderator);

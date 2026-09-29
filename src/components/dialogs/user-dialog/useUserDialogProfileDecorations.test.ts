@@ -32,7 +32,7 @@ const toastMocks = vi.hoisted(() => ({
     success: vi.fn()
 }));
 
-vi.mock('@/repositories/mediaRepository', () => ({
+vi.mock('@/repositories/vrchatMediaRepository', () => ({
     default: mediaMocks
 }));
 vi.mock('@/services/backgroundMaintenanceSessionService', () => ({
@@ -44,11 +44,6 @@ vi.mock('@/repositories/userProfileRepository', () => ({
 vi.mock('@/state/runtimeStore', () => ({
     useRuntimeStore: (selector: (state: typeof runtimeState) => unknown) =>
         selector(runtimeState)
-}));
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: (key: string) => key
-    })
 }));
 vi.mock('@/services/toastService', () => ({
     toast: {
@@ -411,7 +406,10 @@ describe('useUserDialogProfileDecorations', () => {
                 resolveEquip = () => resolve({ json: { ok: true } });
             })
         );
-        const { result, rerender } = renderHook(() => useProfileDecorations());
+        const onProfileUpdated = vi.fn();
+        const { result, rerender } = renderHook(() =>
+            useProfileDecorations({ onProfileUpdated })
+        );
         await waitFor(() => expect(result.current.isReady).toBe(true));
 
         act(() => {
@@ -424,6 +422,7 @@ describe('useUserDialogProfileDecorations', () => {
         resolveEquip?.();
         await waitFor(() => expect(result.current.pendingKey).toBe(''));
 
+        expect(onProfileUpdated).not.toHaveBeenCalled();
         expect(result.current.itemsBySlot.iconFrame).toEqual([]);
         expect(result.current.appearanceOverrides).toEqual({});
     });

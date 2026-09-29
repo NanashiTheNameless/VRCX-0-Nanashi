@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { isFriendProfileLoadStatusVisible } from './statusBarFriendProfileLoad';
 
 describe('statusBarFriendProfileLoad', () => {
-    it('shows every active and terminal task state independently of dialog state', () => {
+    it('shows active and terminal task states and hides idle', () => {
         for (const status of [
             'running',
             'cancelling',

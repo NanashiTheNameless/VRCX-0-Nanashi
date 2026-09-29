@@ -9,10 +9,6 @@ import {
 } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/services/dialogService', () => ({
     openAvatarDialog: vi.fn()
 }));
@@ -94,50 +90,5 @@ describe('My Avatars view parts', () => {
         expect(
             within(menu).getByText('common.actions.view_details')
         ).toBeTruthy();
-    });
-
-    it('keeps a grid card without a thumbnail stretched to the full column width', () => {
-        const { container } = render(
-            <MyAvatarGridCard
-                avatar={{
-                    id: 'avtr_without_thumbnail',
-                    name: 'Avatar Without Thumbnail',
-                    releaseStatus: 'private'
-                }}
-                densityConfig={getMyAvatarsGridDensityConfig('standard')}
-                isUpdating={false}
-                onAction={vi.fn<MyAvatarActionHandler>()}
-            />
-        );
-
-        const cardButton = container.querySelector('.group\\/card > button');
-
-        expect(cardButton).toBeTruthy();
-        expect(cardButton?.classList.contains('w-full')).toBe(true);
-    });
-
-    it('stretches a thumbnail across the full grid card', () => {
-        const { container } = render(
-            <MyAvatarGridCard
-                avatar={{
-                    id: 'avtr_with_thumbnail',
-                    name: 'Avatar With Thumbnail',
-                    releaseStatus: 'private',
-                    thumbnailImageUrl: 'https://example.test/thumbnail.png'
-                }}
-                densityConfig={getMyAvatarsGridDensityConfig('standard')}
-                isUpdating={false}
-                onAction={vi.fn<MyAvatarActionHandler>()}
-            />
-        );
-
-        const cardButton = container.querySelector('.group\\/card > button');
-        const thumbnail = screen.getByRole('img', {
-            name: 'Avatar With Thumbnail'
-        });
-
-        expect(cardButton?.classList.contains('w-full')).toBe(true);
-        expect(thumbnail.classList.contains('w-full')).toBe(true);
-        expect(thumbnail.classList.contains('object-cover')).toBe(true);
     });
 });

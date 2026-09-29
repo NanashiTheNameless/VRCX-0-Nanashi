@@ -19,16 +19,14 @@ describe('friendListDisplay', () => {
         expect(languageTooltipLabel({}, '')).toBe('');
     });
 
-    it('shows status text, indicator state, and sort rank for friend status badges', () => {
+    it('shows status text and indicator state for friend status badges', () => {
         const active = resolveFriendStatusMeta({
             status: 'active',
             statusDescription: '',
             state: 'online'
         });
         expect(active.label).toBe('');
-        expect(active.badgeVariant).toBe('outline');
         expect(active.showIndicator).toBe(true);
-        expect(active.sortRank).toEqual(expect.any(Number));
 
         const custom = resolveFriendStatusMeta({
             status: 'busy',
@@ -36,8 +34,19 @@ describe('friendListDisplay', () => {
         });
         expect(custom.label).toBe('Do not disturb');
 
-        const empty = resolveFriendStatusMeta(null);
-        expect(empty.badgeVariant).toBe('outline');
-        expect(empty.showIndicator).toBe(false);
+        expect(resolveFriendStatusMeta(null).showIndicator).toBe(false);
+    });
+
+    it('ranks join me, active, ask me, busy, then offline friends for sorting', () => {
+        const ranks = [
+            { status: 'join me', state: 'online' },
+            { status: 'active', state: 'online' },
+            { status: 'ask me', state: 'online' },
+            { status: 'busy', state: 'online' },
+            { status: 'active', state: 'offline' }
+        ].map((friend) => resolveFriendStatusMeta(friend).sortRank);
+
+        expect([...ranks].sort((left, right) => left - right)).toEqual(ranks);
+        expect(new Set(ranks).size).toBe(ranks.length);
     });
 });

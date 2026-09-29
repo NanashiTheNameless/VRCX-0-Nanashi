@@ -39,7 +39,6 @@ export {
     fallbackLanguageOptions,
     languageDisplayName,
     languageOptionLabel,
-    normalizeLanguageKey,
     normalizeLanguageOptionsFromConfig,
     normalizeProfileLanguageRows
 } from '@/shared/utils/userLanguage';

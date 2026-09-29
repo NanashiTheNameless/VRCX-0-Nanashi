@@ -606,10 +606,10 @@ export function GroupDialogTabbedView({
                 ? await groupMembers.loadAll().catch((error: unknown) => {
                       toast.add({
                           type: 'error',
-                          title:
-                              error instanceof Error
-                                  ? error.message
-                                  : 'Failed to load members.'
+                          title: userFacingErrorMessage(
+                              error,
+                              t('dialog.group.members.failed_to_load')
+                          )
                       });
                       return null;
                   })

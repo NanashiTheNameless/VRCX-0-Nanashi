@@ -3,15 +3,12 @@ import { useTranslation } from 'react-i18next';
 
 import type { LoadStatus } from '@/domain/shared/types';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
-import type {
-    GroupQuickModerationGroup,
-    GroupQuickModerationOutput
-} from '@/platform/tauri/bindings';
 import {
-    getGroupQuickModeration,
-    runGroupQuickModerationAction,
-    type GroupQuickModerationAction
-} from '@/repositories/groupQuickModerationRepository';
+    commands,
+    type GroupQuickModerationAction,
+    type GroupQuickModerationGroup,
+    type GroupQuickModerationOutput
+} from '@/platform/tauri/bindings';
 import { toast } from '@/services/toastService';
 
 import {
@@ -147,11 +144,12 @@ export function useUserDialogGroupModeration({
         loadRequestRef.current = requestId;
         setGroupsStatus('running');
         setGroupsError('');
-        getGroupQuickModeration({
-            endpoint,
-            currentUserId: normalizedCurrentUserId,
-            targetUserId: normalizedTargetUserId
-        })
+        commands
+            .appUserGroupQuickModerationGet({
+                endpoint,
+                currentUserId: normalizedCurrentUserId,
+                targetUserId: normalizedTargetUserId
+            })
             .then((output) => {
                 if (loadRequestRef.current !== requestId) {
                     return;
@@ -213,7 +211,7 @@ export function useUserDialogGroupModeration({
         groupId: string,
         action: GroupQuickModerationAction
     ) {
-        await runGroupQuickModerationAction({
+        await commands.appUserGroupQuickModerationAction({
             endpoint,
             currentUserId: normalizedCurrentUserId,
             targetUserId: normalizedTargetUserId,

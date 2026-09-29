@@ -1,42 +1,43 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+// @vitest-environment jsdom
+
+import { act, cleanup, render } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppToastOptions } from '@/services/toastService';
 
 const mocks = vi.hoisted(() => ({
-    toastInfo: vi.fn(),
-    toastSuccess: vi.fn(),
-    toastDismiss: vi.fn()
+    toastAdd: vi.fn<(options: AppToastOptions) => void>(),
+    toastClose: vi.fn<(id: string) => void>(),
+    openOrInstall: vi.fn<(options: { toastId: string }) => Promise<void>>(),
+    t: (key: string, values?: Record<string, unknown>) =>
+        values ? `${key}:${JSON.stringify(values)}` : key
+}));
+
+vi.mock('react-i18next', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('react-i18next')>()),
+    useTranslation: () => ({ t: mocks.t })
 }));
 
 vi.mock('@/services/toastService', () => ({
-    toast: {
-        add: (options: AppToastOptions) => {
-            switch (options.type) {
-                case 'info':
-                    return mocks.toastInfo(options);
-                case 'success':
-                    return mocks.toastSuccess(options);
-                default:
-                    throw new Error('Unhandled toast type: ' + options.type);
-            }
-        },
-        close: mocks.toastDismiss
-    }
+    toast: { add: mocks.toastAdd, close: mocks.toastClose }
 }));
 
-vi.mock('@/services/updateInstallService', () => ({
-    UPDATE_AVAILABLE_TOAST_ID: 'vrcx-update-available',
-    openOrInstallLatestAvailableUpdate: vi.fn()
+vi.mock('@/services/updateInstallService', async (importOriginal) => ({
+    ...(await importOriginal<
+        typeof import('@/services/updateInstallService')
+    >()),
+    openOrInstallLatestAvailableUpdate: mocks.openOrInstall
 }));
 
-import {
-    showUpdateAvailableToast,
-    showUpdateReadyToast
-} from './UpdateAvailableToastHost';
+import { useRuntimeStore } from '@/state/runtimeStore';
 
-type UpdateLoopRelease = Parameters<
-    typeof showUpdateAvailableToast
->[0]['latestUpdaterRelease'];
+import { UpdateAvailableToastHost } from './UpdateAvailableToastHost';
+
+type UpdateLoopRelease = NonNullable<
+    ReturnType<
+        typeof useRuntimeStore.getState
+    >['updateLoop']['latestUpdaterRelease']
+>;
 
 function updateRelease(
     overrides: Partial<UpdateLoopRelease> = {}
@@ -55,72 +56,149 @@ function updateRelease(
         target: '',
         updaterType: 'manual',
         currentVersion: '2.6.0',
-        latestVersion: '2.7.0',
+        latestVersion: 'v2.7.0',
         title: 'VRCX-0 2.7.0',
         ...overrides
     };
 }
 
-describe('showUpdateAvailableToast', () => {
+type ToastActionClickEvent = Parameters<
+    NonNullable<NonNullable<AppToastOptions['actionProps']>['onClick']>
+>[0];
+
+function lastToast(): AppToastOptions {
+    const call = mocks.toastAdd.mock.calls.at(-1);
+    if (!call) {
+        throw new Error('No toast was shown');
+    }
+    return call[0];
+}
+
+describe('UpdateAvailableToastHost', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mocks.openOrInstall.mockResolvedValue(undefined);
+        useRuntimeStore.getState().resetRuntimeState();
     });
 
-    it('shows a bottom-right update toast wired to the supplied update action', () => {
-        const onUpdate = vi.fn();
+    afterEach(() => {
+        cleanup();
+        useRuntimeStore.getState().resetRuntimeState();
+    });
 
-        showUpdateAvailableToast({
-            latestUpdaterRelease: updateRelease(),
-            t: (key) => key,
-            onUpdate
+    it('shows the available update version without its v prefix and opens the update from the action', () => {
+        useRuntimeStore.getState().setUpdateLoopState({
+            hasAvailableUpdate: true,
+            latestUpdaterRelease: updateRelease()
         });
 
-        expect(mocks.toastInfo).toHaveBeenCalledWith(
-            expect.objectContaining({
-                type: 'info',
-                title: 'service.background_maintenance.label.vrcx_update_available',
-                id: 'vrcx-update-available',
-                description: '2.7.0',
-                timeout: 0,
-                position: 'bottom-right',
-                actionProps: expect.objectContaining({
-                    children: 'nav_menu.update'
-                })
-            })
-        );
+        render(<UpdateAvailableToastHost />);
 
-        const options = mocks.toastInfo.mock.calls[0][0];
-        options.actionProps.onClick();
-        expect(onUpdate).toHaveBeenCalled();
+        const options = lastToast();
+        expect(options).toMatchObject({
+            type: 'info',
+            title: 'service.background_maintenance.label.vrcx_update_available',
+            id: 'vrcx-update-available',
+            description: '2.7.0',
+            timeout: 0,
+            position: 'bottom-right'
+        });
+        options.actionProps?.onClick?.(
+            new MouseEvent('click') as unknown as ToastActionClickEvent
+        );
+        expect(mocks.openOrInstall).toHaveBeenCalledExactlyOnceWith({
+            toastId: 'vrcx-update-available'
+        });
     });
 
-    it('shows a ready toast for a downloaded update without using the info toast', () => {
-        const onUpdate = vi.fn();
-
-        showUpdateReadyToast({
+    it('shows the ready toast once the latest Tauri update has been downloaded', () => {
+        useRuntimeStore.getState().setUpdateLoopState({
+            hasAvailableUpdate: true,
+            autoDownloadUiVisible: true,
             latestUpdaterRelease: updateRelease({ updaterType: 'tauri' }),
-            t: (key, values) =>
-                values ? `${key}:${JSON.stringify(values)}` : key,
-            onUpdate
+            autoDownloadState: 'downloaded',
+            downloadedVersion: '2.7.0'
         });
 
-        expect(mocks.toastSuccess).toHaveBeenCalledWith(
-            expect.objectContaining({
-                type: 'success',
-                title: 'dialog.vrcx_updater.ready_for_update:{"value":"2.7.0"}',
-                id: 'vrcx-update-available',
-                timeout: 0,
-                position: 'bottom-right',
-                actionProps: expect.objectContaining({
-                    children: 'nav_menu.update'
-                })
-            })
-        );
-        expect(mocks.toastInfo).not.toHaveBeenCalled();
+        render(<UpdateAvailableToastHost />);
 
-        const options = mocks.toastSuccess.mock.calls[0][0];
-        expect(options.description).toBeUndefined();
-        options.actionProps.onClick();
-        expect(onUpdate).toHaveBeenCalled();
+        expect(mocks.toastAdd).toHaveBeenCalledOnce();
+        expect(lastToast()).toMatchObject({
+            type: 'success',
+            title: 'dialog.vrcx_updater.ready_for_update:{"value":"2.7.0"}',
+            id: 'vrcx-update-available',
+            description: undefined
+        });
+    });
+
+    it('keeps the available toast when the downloaded version is not the latest release', () => {
+        useRuntimeStore.getState().setUpdateLoopState({
+            hasAvailableUpdate: true,
+            autoDownloadUiVisible: true,
+            latestUpdaterRelease: updateRelease({ updaterType: 'tauri' }),
+            autoDownloadState: 'downloaded',
+            downloadedVersion: '2.6.5'
+        });
+
+        render(<UpdateAvailableToastHost />);
+
+        expect(lastToast()).toMatchObject({
+            type: 'info',
+            description: '2.7.0'
+        });
+    });
+
+    it('replaces the available toast with the ready toast when the download finishes', () => {
+        useRuntimeStore.getState().setUpdateLoopState({
+            hasAvailableUpdate: true,
+            autoDownloadUiVisible: true,
+            latestUpdaterRelease: updateRelease({ updaterType: 'tauri' }),
+            autoDownloadState: 'downloading',
+            downloadedVersion: '2.7.0'
+        });
+
+        render(<UpdateAvailableToastHost />);
+        expect(lastToast()).toMatchObject({ type: 'info' });
+
+        act(() => {
+            useRuntimeStore
+                .getState()
+                .setUpdateLoopState({ autoDownloadState: 'downloaded' });
+        });
+
+        expect(lastToast()).toMatchObject({
+            type: 'success',
+            id: 'vrcx-update-available'
+        });
+    });
+
+    it('closes the update toast while the Tauri download UI is hidden and when the update disappears', () => {
+        useRuntimeStore.getState().setUpdateLoopState({
+            hasAvailableUpdate: true,
+            autoDownloadUiVisible: false,
+            latestUpdaterRelease: updateRelease({ updaterType: 'tauri' })
+        });
+
+        render(<UpdateAvailableToastHost />);
+        expect(mocks.toastAdd).not.toHaveBeenCalled();
+        expect(mocks.toastClose).toHaveBeenCalledWith('vrcx-update-available');
+
+        act(() => {
+            useRuntimeStore
+                .getState()
+                .setUpdateLoopState({ autoDownloadUiVisible: true });
+        });
+        expect(mocks.toastAdd).toHaveBeenCalledOnce();
+
+        mocks.toastClose.mockClear();
+        act(() => {
+            useRuntimeStore
+                .getState()
+                .setUpdateLoopState({ hasAvailableUpdate: false });
+        });
+        expect(mocks.toastClose).toHaveBeenCalledExactlyOnceWith(
+            'vrcx-update-available'
+        );
+        expect(mocks.toastAdd).toHaveBeenCalledOnce();
     });
 });

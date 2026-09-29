@@ -14,9 +14,6 @@ const mocks = vi.hoisted(() => ({
     readWorldCacheInfo: vi.fn()
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
 vi.mock('@/lib/fileAnalysis', () => ({
     getFileAnalysisForUnityPackages: mocks.getFileAnalysisForUnityPackages
 }));

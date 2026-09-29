@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
     EMPTY_FALLBACKS,
+    filterRemoteEntityCacheFallbacksById,
     getRemoteEntityCacheFallbackIds,
     loadRemoteEntityCacheFallbacksById,
     useRemoteEntityCacheFallbackLoader
@@ -70,6 +71,20 @@ describe('remoteEntityCacheFallbacks', () => {
         await expect(
             loadRemoteEntityCacheFallbacksById(['wrld_a'], async () => ({}))
         ).resolves.toBe(EMPTY_FALLBACKS);
+    });
+
+    it('filters stale fallback rows when the current ids change', () => {
+        const fallbacks = filterRemoteEntityCacheFallbacksById(
+            {
+                wrld_old: { id: 'wrld_old', name: 'Old World' },
+                wrld_new: { id: 'wrld_new', name: 'New World' }
+            },
+            ['wrld_new']
+        );
+
+        expect(fallbacks).toEqual({
+            wrld_new: { id: 'wrld_new', name: 'New World' }
+        });
     });
 
     it('ignores stale async results after the requested id set changes', async () => {

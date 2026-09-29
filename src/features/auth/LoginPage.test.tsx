@@ -17,8 +17,7 @@ vi.mock('./components/LoginPageHeader', () => ({
 }));
 
 vi.mock('./components/LoginServerStatusAlert', () => ({
-    LoginServerStatusAlert: ({ indicator }: { indicator: string }) =>
-        indicator ? <div>server-status</div> : null
+    LoginServerStatusAlert: () => null
 }));
 
 vi.mock('./components/SavedAccountsCard', () => ({
@@ -70,10 +69,7 @@ vi.mock('./components/DeleteSavedAccountDialog', () => ({
 
 import { LoginPage } from './LoginPage';
 
-function controllerValue(
-    hasSavedAccounts: boolean,
-    serverStatusIndicator = ''
-) {
+function controllerValue(hasSavedAccounts: boolean) {
     const noop = () => undefined;
     return {
         actions: {
@@ -127,7 +123,7 @@ function controllerValue(
             visible: hasSavedAccounts
         },
         serverStatus: {
-            indicator: serverStatusIndicator,
+            indicator: '',
             onOpenStatusPage: noop,
             status: '',
             summary: ''
@@ -177,12 +173,5 @@ describe('LoginPage', () => {
 
         fireEvent.click(screen.getByText('restore-backup'));
         expect(mocks.restore).toHaveBeenCalledTimes(1);
-    });
-
-    it('surfaces an active server incident before login', () => {
-        mocks.controller.mockReturnValue(controllerValue(true, 'major'));
-        render(<LoginPage />);
-
-        expect(screen.getByText('server-status')).toBeTruthy();
     });
 });

@@ -8,10 +8,6 @@ const mocks = vi.hoisted(() => ({
     queryLatestSessions: vi.fn()
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/lib/useThrottledValue', () => ({
     useThrottledValue: (value: number) => value
 }));

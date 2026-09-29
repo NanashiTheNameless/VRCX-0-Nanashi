@@ -75,21 +75,6 @@ export function scheduleKeyboardSidebarToggleCleanup(
     };
 }
 
-export function resolveDelayedNavMenuCollapsed(
-    sidebarOpen: boolean,
-    currentNavMenuCollapsed: boolean,
-    elapsedMs: number,
-    immediate = false
-): boolean {
-    if (immediate) {
-        return !sidebarOpen;
-    }
-    if (elapsedMs < NAV_MENU_COLLAPSE_DELAY_MS) {
-        return currentNavMenuCollapsed;
-    }
-    return !sidebarOpen;
-}
-
 export function useDelayedNavMenuCollapsed(
     sidebarOpen: boolean,
     immediate = false
@@ -105,13 +90,7 @@ export function useDelayedNavMenuCollapsed(
         }
 
         const timeoutId = window.setTimeout(() => {
-            setNavMenuCollapsed((currentNavMenuCollapsed) =>
-                resolveDelayedNavMenuCollapsed(
-                    sidebarOpen,
-                    currentNavMenuCollapsed,
-                    NAV_MENU_COLLAPSE_DELAY_MS
-                )
-            );
+            setNavMenuCollapsed(!sidebarOpen);
         }, NAV_MENU_COLLAPSE_DELAY_MS);
 
         return () => {

@@ -168,7 +168,7 @@ mod tests {
     use vrcx_0_persistence::config as config_store;
     use vrcx_0_persistence::DatabaseService;
 
-    use super::{should_focus_game_window, INSTANCE_JOIN_REMOTE_MUTATION_INTERVAL};
+    use super::should_focus_game_window;
 
     struct TestDir {
         path: PathBuf,
@@ -197,14 +197,6 @@ mod tests {
 
     fn database(dir: &TestDir) -> DatabaseService {
         DatabaseService::new(&dir.path.join("VRCX-0.sqlite3")).unwrap()
-    }
-
-    #[test]
-    fn join_remote_mutation_interval_stays_at_250_milliseconds() {
-        assert_eq!(
-            INSTANCE_JOIN_REMOTE_MUTATION_INTERVAL,
-            std::time::Duration::from_millis(250)
-        );
     }
 
     #[test]

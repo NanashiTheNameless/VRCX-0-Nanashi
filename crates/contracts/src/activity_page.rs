@@ -52,7 +52,6 @@ pub struct ActivityPagePreviousSummary {
 pub struct ActivitySeriesPoint {
     pub start_date: String,
     pub minutes: i64,
-    pub inferred: bool,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
@@ -137,7 +136,6 @@ pub struct ActivityPageView {
     pub utc_offset_minutes: i64,
     pub window_from_ms: i64,
     pub window_to_ms: i64,
-    pub has_open_tail: bool,
     pub summary: ActivityPageSummary,
     pub previous: ActivityPagePreviousSummary,
     pub series: ActivityPageSeries,
@@ -157,13 +155,6 @@ pub struct ActivityLocationSpan {
     pub world_id: String,
     pub world_name: String,
     pub access_bucket: String,
-    pub inferred: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct ActivityWindowSpans {
-    pub spans: Vec<ActivityLocationSpan>,
-    pub has_open_tail: bool,
 }
 
 #[derive(Clone, Debug)]

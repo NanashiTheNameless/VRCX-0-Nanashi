@@ -4,12 +4,6 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps, PropsWithChildren } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: (key: string) => key
-    })
-}));
-
 vi.mock('@/components/dialogs/AvatarDialogContent', () => ({
     AvatarDialogContent: () => null
 }));

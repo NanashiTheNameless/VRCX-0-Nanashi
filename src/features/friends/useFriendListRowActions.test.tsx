@@ -9,7 +9,6 @@ import type { AppToastOptions } from '@/services/toastService';
 import type { FriendListRow } from './friendListRows';
 
 const mocks = vi.hoisted(() => ({
-    applyFriendPatch: vi.fn(),
     confirm: vi.fn(),
     deleteFriend: vi.fn(),
     deleteFriends: vi.fn(),
@@ -36,10 +35,6 @@ const mocks = vi.hoisted(() => ({
     toastError: vi.fn(),
     toastSuccess: vi.fn(),
     toastWarning: vi.fn()
-}));
-
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
 }));
 
 vi.mock('@/services/toastService', () => ({
@@ -152,8 +147,7 @@ function renderActions() {
     return {
         ...hook,
         deletingFriendIds: () => deletingFriendIds,
-        selectedFriendIds: () => selectedFriendIds,
-        setDeletingFriendIds
+        selectedFriendIds: () => selectedFriendIds
     };
 }
 
@@ -189,11 +183,15 @@ describe('useFriendListRowActions', () => {
 
     it('locks the row, removes the selection, and warns on partial success', async () => {
         mocks.confirm.mockResolvedValue({ ok: true, value: undefined });
-        mocks.deleteFriend.mockResolvedValue({
-            stale: false,
-            localError: new Error('local persistence failed')
-        });
         const rendered = renderActions();
+        let deletingDuringRequest: string[] = [];
+        mocks.deleteFriend.mockImplementation(async () => {
+            deletingDuringRequest = [...rendered.deletingFriendIds()];
+            return {
+                stale: false,
+                localError: new Error('local persistence failed')
+            };
+        });
 
         await act(async () =>
             rendered.result.current.confirmDeleteFriend(friend)
@@ -206,8 +204,8 @@ describe('useFriendListRowActions', () => {
             currentUserId: 'usr_self'
         });
         expect(rendered.selectedFriendIds()).not.toContain('usr_friend');
+        expect(deletingDuringRequest).toEqual(['usr_friend']);
         expect(rendered.deletingFriendIds()).not.toContain('usr_friend');
-        expect(rendered.setDeletingFriendIds).toHaveBeenCalledTimes(2);
         expect(mocks.toastWarning).toHaveBeenCalledWith(
             expect.objectContaining({
                 type: 'warning',

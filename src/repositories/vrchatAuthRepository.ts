@@ -1,11 +1,6 @@
 import {
     commands,
-    type AutoLoginStartInput,
-    type AutoLoginOutcome,
     type HttpApiExecuteResponse,
-    type LoginSessionRespondInput,
-    type LoginSessionStartInput as StartLoginSessionInput,
-    type LoginSessionState,
     type VrchatAuthFileAnalysisInput
 } from '@/platform/tauri/bindings';
 import { DEFAULT_VRCHAT_API_ENDPOINT } from '@/shared/vrchatEndpoint';
@@ -43,30 +38,6 @@ async function getCurrentUser() {
     return unwrapVrchatAuthResponse<AuthRecord>(response, 'auth/user');
 }
 
-async function startLoginSession(
-    input: StartLoginSessionInput
-): Promise<LoginSessionState> {
-    return commands.appVrchatAuthSessionStart(input);
-}
-
-async function respondLoginSession(
-    input: LoginSessionRespondInput
-): Promise<LoginSessionState> {
-    return commands.appVrchatAuthSessionRespond(input);
-}
-
-async function cancelLoginSession(
-    attemptId: string
-): Promise<LoginSessionState> {
-    return commands.appVrchatAuthSessionCancel({ attemptId });
-}
-
-async function autoLoginStart({
-    userId
-}: AutoLoginStartInput): Promise<AutoLoginOutcome> {
-    return commands.appVrchatAuthAutoLoginStart({ userId });
-}
-
 async function getOnlineVisits() {
     const response = await commands.appVrchatAuthVisitsGet();
     return unwrapVrchatAuthResponse<unknown[]>(response, 'visits');
@@ -92,21 +63,8 @@ const vrchatAuthRepository = Object.freeze({
     getConfig,
     refreshConfig,
     getCurrentUser,
-    startLoginSession,
-    respondLoginSession,
-    cancelLoginSession,
-    autoLoginStart,
     getOnlineVisits,
     getFileAnalysis
 });
 
-export {
-    getConfig,
-    refreshConfig,
-    getCurrentUser,
-    startLoginSession,
-    respondLoginSession,
-    cancelLoginSession,
-    getFileAnalysis
-};
 export default vrchatAuthRepository;

@@ -18,6 +18,3 @@ where
         self.inner.emit(event, payload);
     }
 }
-
-#[cfg(test)]
-mod tests;

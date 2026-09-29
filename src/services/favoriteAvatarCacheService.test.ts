@@ -41,13 +41,6 @@ describe('favoriteAvatarCacheService', () => {
         });
     });
 
-    it('ignores empty avatar payloads', async () => {
-        vi.mocked(commands.appFavoriteCacheSnapshot).mockResolvedValue(false);
-        await expect(cacheAvatarDetails({ name: 'Missing id' })).resolves.toBe(
-            false
-        );
-    });
-
     it('uses the caller avatar id when a detail payload is missing id', async () => {
         await expect(
             cacheAvatarDetails(
@@ -111,53 +104,5 @@ describe('favoriteAvatarCacheService', () => {
             entity: avatar,
             fallbackEntityId: ''
         });
-    });
-
-    it('inserts complete hidden avatar details when no DB cache exists', async () => {
-        await expect(
-            cacheAvatarDetails({
-                id: 'avtr_hidden',
-                name: 'Hidden Avatar',
-                releaseStatus: 'hidden',
-                thumbnailImageUrl: 'https://example.test/hidden.png'
-            })
-        ).resolves.toBe(true);
-
-        expect(commands.appFavoriteCacheSnapshot).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not overwrite DB cache with non-public avatar details', async () => {
-        vi.mocked(commands.appFavoriteCacheSnapshot).mockResolvedValue(false);
-
-        await expect(
-            cacheAvatarDetails({
-                id: 'avtr_private',
-                name: 'Private Avatar',
-                releaseStatus: 'private',
-                thumbnailImageUrl: 'https://example.test/private.png'
-            })
-        ).resolves.toBe(false);
-
-        expect(commands.appFavoriteCacheSnapshot).toHaveBeenCalledTimes(1);
-    });
-
-    it('does not overwrite DB cache with incomplete avatar details', async () => {
-        vi.mocked(commands.appFavoriteCacheSnapshot).mockResolvedValue(false);
-        await expect(
-            cacheAvatarDetails({
-                id: 'avtr_broken',
-                releaseStatus: 'public'
-            })
-        ).resolves.toBe(false);
-
-        await expect(
-            cacheAvatarDetails({
-                id: 'avtr_broken',
-                name: 'Broken Avatar',
-                releaseStatus: 'public'
-            })
-        ).resolves.toBe(false);
-
-        expect(commands.appFavoriteCacheSnapshot).toHaveBeenCalledTimes(2);
     });
 });

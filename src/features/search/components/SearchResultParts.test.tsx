@@ -9,12 +9,6 @@ import { openGroupDialog } from '@/services/dialogService';
 
 import { GroupRow, WorldCard } from './SearchResultParts';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: (key: string) => key
-    })
-}));
-
 vi.mock('@/components/media/FadeInImage', () => ({
     FadeInImage: () => null
 }));

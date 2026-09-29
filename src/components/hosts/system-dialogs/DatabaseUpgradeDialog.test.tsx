@@ -20,12 +20,6 @@ const mocks = vi.hoisted(() => ({
     restartApplication: vi.fn()
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: (key: string) => key
-    })
-}));
-
 vi.mock('@/services/databaseUpgradeService', () => mocks);
 
 vi.mock('@/ui/shadcn/button', () => ({
@@ -78,16 +72,11 @@ describe('DatabaseUpgradeDialog', () => {
             progressTotal: 100
         });
 
-        const { container } = render(<DatabaseUpgradeDialog open />);
+        render(<DatabaseUpgradeDialog open />);
 
         expect(
             screen.getByRole('progressbar').getAttribute('aria-valuenow')
         ).toBeNull();
-        expect(
-            container.querySelector(
-                '.indeterminate-progress [data-slot="progress-indicator"]'
-            )
-        ).not.toBeNull();
     });
 
     it('holds back the stage detail until the upgrade has run long enough', () => {

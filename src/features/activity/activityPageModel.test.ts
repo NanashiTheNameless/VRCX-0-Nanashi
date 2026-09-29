@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ActivityPageAccessSlice } from '@/repositories/activityPageRepository';
+import type { ActivityPageAccessSlice } from '@/platform/tauri/bindings';
 
 import {
     accessShare,

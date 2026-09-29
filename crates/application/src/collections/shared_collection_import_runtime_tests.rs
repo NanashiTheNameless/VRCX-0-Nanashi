@@ -48,20 +48,6 @@ fn same_auth_scope_hydration_keeps_active_run_running() {
 }
 
 #[test]
-fn status_snapshot_retains_running_progress_for_hydration() {
-    let mut inner = running_inner();
-    inner.status.processed = 1;
-    inner.status.imported = 1;
-
-    let hydrated = inner.status.clone();
-
-    assert_eq!(hydrated.run_id, "run-1");
-    assert_eq!(hydrated.processed, 1);
-    assert_eq!(hydrated.imported, 1);
-    assert_eq!(hydrated.total, 2);
-}
-
-#[test]
 fn cancelled_terminal_with_imports_is_prepared_once() {
     let mut inner = running_inner();
     let result = SharedCollectionImportResult {

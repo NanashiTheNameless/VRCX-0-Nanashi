@@ -5,6 +5,7 @@ import type {
     WindowGeometry,
     WindowWorkArea
 } from '@/platform/tauri/webview';
+import { safeJsonParse } from '@/shared/utils/json';
 import { isRecord } from '@/shared/utils/record';
 import { isCriticalTaskActive } from '@/state/criticalTaskStore';
 import { useDialogStore } from '@/state/dialogStore';
@@ -40,57 +41,29 @@ function clamp(value: number, minimum: number, maximum: number): number {
     return Math.min(maximum, Math.max(minimum, value));
 }
 
-function readStoredValue(key: string): string {
-    if (typeof window === 'undefined') {
-        return '';
-    }
-    try {
-        return window.localStorage.getItem(key) ?? '';
-    } catch {
-        return '';
-    }
-}
-
-function writeStoredValue(key: string, value: string): void {
-    if (typeof window === 'undefined') {
-        return;
-    }
-    try {
-        window.localStorage.setItem(key, value);
-    } catch {
-        return;
-    }
-}
-
 function readSavedNormalWindowBounds(): SavedNormalWindowBounds | null {
-    const raw = readStoredValue(NORMAL_WINDOW_BOUNDS_STORAGE_KEY);
-    if (!raw) {
+    const value = safeJsonParse(
+        localStorage.getItem(NORMAL_WINDOW_BOUNDS_STORAGE_KEY)
+    );
+    if (
+        !isRecord(value) ||
+        value.version !== 1 ||
+        typeof value.x !== 'number' ||
+        typeof value.y !== 'number' ||
+        typeof value.width !== 'number' ||
+        !Number.isFinite(value.x) ||
+        !Number.isFinite(value.y) ||
+        !Number.isFinite(value.width) ||
+        value.width < SIDEBAR_WINDOW_MIN_WIDTH
+    ) {
         return null;
     }
-    try {
-        const value: unknown = JSON.parse(raw);
-        if (
-            !isRecord(value) ||
-            value.version !== 1 ||
-            typeof value.x !== 'number' ||
-            typeof value.y !== 'number' ||
-            typeof value.width !== 'number' ||
-            !Number.isFinite(value.x) ||
-            !Number.isFinite(value.y) ||
-            !Number.isFinite(value.width) ||
-            value.width < SIDEBAR_WINDOW_MIN_WIDTH
-        ) {
-            return null;
-        }
-        return {
-            version: 1,
-            x: value.x,
-            y: value.y,
-            width: value.width
-        };
-    } catch {
-        return null;
-    }
+    return {
+        version: 1,
+        x: value.x,
+        y: value.y,
+        width: value.width
+    };
 }
 
 function saveNormalWindowBounds(geometry: WindowGeometry): void {
@@ -100,12 +73,15 @@ function saveNormalWindowBounds(geometry: WindowGeometry): void {
         y: geometry.outerPosition.y,
         width: geometry.innerSize.width / geometry.scaleFactor
     };
-    writeStoredValue(NORMAL_WINDOW_BOUNDS_STORAGE_KEY, JSON.stringify(bounds));
+    localStorage.setItem(
+        NORMAL_WINDOW_BOUNDS_STORAGE_KEY,
+        JSON.stringify(bounds)
+    );
 }
 
 function readSidebarWindowWidth(): number | null {
     const width = Number.parseFloat(
-        readStoredValue(SIDEBAR_WINDOW_WIDTH_STORAGE_KEY)
+        localStorage.getItem(SIDEBAR_WINDOW_WIDTH_STORAGE_KEY) ?? ''
     );
     return Number.isFinite(width)
         ? clamp(width, SIDEBAR_WINDOW_MIN_WIDTH, SIDEBAR_WINDOW_MAX_WIDTH)
@@ -118,7 +94,7 @@ function saveSidebarWindowWidth(geometry: WindowGeometry): void {
         SIDEBAR_WINDOW_MIN_WIDTH,
         SIDEBAR_WINDOW_MAX_WIDTH
     );
-    writeStoredValue(SIDEBAR_WINDOW_WIDTH_STORAGE_KEY, String(width));
+    localStorage.setItem(SIDEBAR_WINDOW_WIDTH_STORAGE_KEY, String(width));
 }
 
 function containsPoint(area: WindowWorkArea, x: number, y: number): boolean {

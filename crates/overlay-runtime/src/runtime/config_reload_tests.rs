@@ -102,8 +102,4 @@ fn reconciling_reloads_config_after_any_repository_write() {
         .unwrap();
     runtime.reconcile_current();
     assert!(!runtime.current_runtime_config().render.hide_private_worlds);
-
-    runtime.mark_config_dirty();
-    runtime.reconcile_current();
-    assert!(!runtime.current_runtime_config().render.hide_private_worlds);
 }

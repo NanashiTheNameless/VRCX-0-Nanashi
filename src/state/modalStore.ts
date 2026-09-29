@@ -77,9 +77,6 @@ type ModalStore = {
         options?: BoopDialogOptions
     ): Promise<ModalResult<BoopEmojiChoice | null>>;
     otpPrompt(options?: OtpDialogOptions): Promise<ModalResult<string>>;
-    openAlert(options?: AlertDialogOptions): Promise<ModalResult<never>>;
-    openPrompt(options?: PromptDialogOptions): Promise<ModalResult<string>>;
-    openOtp(options?: OtpDialogOptions): Promise<ModalResult<string>>;
     openImagePreview(options?: ImageDialogOptions): void;
     updatePromptValue(value: string): void;
     updateOtpValue(value: string): void;
@@ -97,10 +94,6 @@ type ModalStore = {
     handleOtpOk(value?: string): void;
     handleOtpCancel(value?: string): void;
     handleOtpDismiss(value?: string): void;
-    closeAlert(): void;
-    closePrompt(): void;
-    closeBoop(): void;
-    closeOtp(): void;
     closeImagePreview(): void;
     resetModalState(): void;
 };
@@ -337,15 +330,6 @@ export const useModalStore = create<ModalStore>((set, get) => {
         otpPrompt(options?: OtpDialogOptions) {
             return openBaseOtp(options);
         },
-        openAlert(options?: AlertDialogOptions) {
-            return openBaseAlert('alert', options);
-        },
-        openPrompt(options?: PromptDialogOptions) {
-            return openBasePrompt(options);
-        },
-        openOtp(options?: OtpDialogOptions) {
-            return openBaseOtp(options);
-        },
         openImagePreview(options: ImageDialogOptions = {}) {
             set({
                 imageDialog: {
@@ -502,38 +486,6 @@ export const useModalStore = create<ModalStore>((set, get) => {
 
             set({ otpDialog: createOtpDialogState() });
             resolveOtp(createResult(false, 'dismiss', value ?? ''));
-        },
-        closeAlert() {
-            if (pendingAlert) {
-                get().handleDismiss();
-                return;
-            }
-
-            set({ alertDialog: createAlertDialogState() });
-        },
-        closePrompt() {
-            if (pendingPrompt) {
-                get().handlePromptDismiss(get().promptDialog.value);
-                return;
-            }
-
-            set({ promptDialog: createPromptDialogState() });
-        },
-        closeBoop() {
-            if (pendingBoop) {
-                get().handleBoopDismiss();
-                return;
-            }
-
-            set({ boopDialog: createBoopDialogState() });
-        },
-        closeOtp() {
-            if (pendingOtp) {
-                get().handleOtpDismiss(get().otpDialog.value);
-                return;
-            }
-
-            set({ otpDialog: createOtpDialogState() });
         },
         closeImagePreview() {
             set({ imageDialog: createImageDialogState() });

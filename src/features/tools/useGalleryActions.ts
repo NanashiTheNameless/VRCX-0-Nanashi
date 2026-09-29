@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 
-import mediaRepository from '@/repositories/mediaRepository';
 import userProfileRepository from '@/repositories/userProfileRepository';
+import vrchatMediaRepository from '@/repositories/vrchatMediaRepository';
 import { toast } from '@/services/toastService';
 import {
     readFileAsBase64,
@@ -37,7 +37,7 @@ export function useGalleryActions(deps: GalleryControllerDeps) {
         confirm,
         getLocalTimestampString,
         isRuntimeAuthTarget,
-        mediaRepository,
+        mediaRepository: vrchatMediaRepository,
         parseEmojiUploadSettings,
         prompt,
         readFileAsBase64,

@@ -134,12 +134,28 @@ describe('feed column rows', () => {
 
     it('uses the Rust cache snapshot and disables older paging without persistence', async () => {
         mocks.preferences.feedPersistenceDisabled = true;
+        mocks.queryFeedLatest.mockResolvedValue({
+            rows: [{ userId: 'usr_cached' }],
+            maxSequence: 0,
+            persistedCursor: {
+                createdAt: '2026-08-10T00:00:00Z',
+                sourceRank: 50,
+                rowId: 42
+            },
+            persistedHasMore: true
+        });
         const column = createColumn('disabled');
         const { result } = renderHook(() => useFeedColumnRows(column));
         await flush();
 
         expect(mocks.queryFeedLatest).toHaveBeenCalledTimes(1);
+        expect(result.current.rows.map((row) => row.userId)).toEqual([
+            'usr_cached'
+        ]);
         expect(result.current.hasMore).toBe(false);
+        act(() => result.current.loadOlder());
+        await flush();
+        expect(mocks.queryFeedPage).not.toHaveBeenCalled();
     });
 
     it('pages from the persisted cursor when live rows fill the latest result', async () => {

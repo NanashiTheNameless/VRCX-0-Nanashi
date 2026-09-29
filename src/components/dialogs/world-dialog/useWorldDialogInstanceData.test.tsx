@@ -60,13 +60,33 @@ describe('useWorldDialogInstanceData', () => {
 
         expect(mocks.getInstance).toHaveBeenCalledOnce();
 
+        const nextSourceRevision = [{ location: target.location }];
         rerender({
-            sourceRevision: [{ location: target.location }],
+            sourceRevision: nextSourceRevision,
             targets: [{ ...target }]
         });
 
         await waitFor(() => {
             expect(mocks.getInstance).toHaveBeenCalledTimes(2);
+        });
+
+        rerender({
+            sourceRevision: nextSourceRevision,
+            targets: [
+                {
+                    location: 'wrld_test:67890',
+                    worldId: 'wrld_test',
+                    instanceId: '67890'
+                }
+            ]
+        });
+
+        await waitFor(() => {
+            expect(mocks.getInstance).toHaveBeenCalledTimes(3);
+        });
+        expect(mocks.getInstance).toHaveBeenLastCalledWith({
+            worldId: 'wrld_test',
+            instanceId: '67890'
         });
     });
 });

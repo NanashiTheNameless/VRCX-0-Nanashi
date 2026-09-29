@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import mediaRepository from '@/repositories/mediaRepository';
+import { commands } from '@/platform/tauri/bindings';
 import { toast } from '@/services/toastService';
 import { useModalStore } from '@/state/modalStore';
 
@@ -67,8 +67,7 @@ export function useScreenshotBulkDelete({
         const { cancelled, deleted, failed, lastError } =
             await runGalleryBulkDelete({
                 assetIds: paths,
-                deleteAsset: (path) =>
-                    mediaRepository.deleteScreenshotFile(path),
+                deleteAsset: (path) => commands.appDeleteScreenshotFile(path),
                 isCancelled: () => cancelledRef.current,
                 isScopeValid: () => scopeKeyRef.current === startedScopeKey,
                 onDeleted: (path) => deletedPaths.push(path),

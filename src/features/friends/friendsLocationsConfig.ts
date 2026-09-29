@@ -1,3 +1,5 @@
+import { safeJsonParse } from '@/shared/utils/json';
+
 export const FRIENDS_LOCATIONS_SEGMENTS = [
     { value: 'online', labelKey: 'view.friends_locations.online' },
     { value: 'favorite', labelKey: 'view.friends_locations.favorite' },
@@ -29,20 +31,8 @@ export function buildFriendsLocationsSegmentOptions(
     }));
 }
 
-export function safeJsonParse<T>(value: unknown, fallback: T): unknown | T {
-    if (!value) {
-        return fallback;
-    }
-
-    try {
-        return JSON.parse(String(value));
-    } catch {
-        return fallback;
-    }
-}
-
 export function parseConfigArray(value: unknown): string[] {
-    const parsed = Array.isArray(value) ? value : safeJsonParse(value, []);
+    const parsed = Array.isArray(value) ? value : safeJsonParse(value);
     return Array.isArray(parsed)
         ? parsed.filter(
               (entry): entry is string =>

@@ -191,7 +191,7 @@ impl JsonExt for Map<String, Value> {
 
 #[cfg(test)]
 mod tests {
-    use super::{i64_of, scalar_text_of, text_of, trimmed_text_of, JsonExt};
+    use super::{trimmed_text_of, JsonExt};
     use serde_json::json;
 
     #[test]
@@ -245,18 +245,6 @@ mod tests {
         assert_eq!(value.i64_field("float"), None);
         assert_eq!(value.i64_field("bad"), None);
         assert_eq!(value.i64_field("missing"), None);
-    }
-
-    #[test]
-    fn free_functions_match_field_accessors() {
-        let value = json!({"a": " x "});
-        let object = value.as_object().unwrap();
-
-        assert_eq!(text_of(object.get("a")), " x ");
-        assert_eq!(scalar_text_of(object.get("a")), Some("x".to_string()));
-        assert_eq!(i64_of(None), None);
-        assert_eq!(object.text_field("a"), " x ");
-        assert_eq!(object.trimmed_string("a"), Some("x".to_string()));
     }
 
     #[test]

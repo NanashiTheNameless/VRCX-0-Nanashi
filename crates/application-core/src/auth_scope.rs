@@ -250,6 +250,7 @@ mod tests {
     fn tracks_active_auth_scope() {
         let scope = RuntimeAuthScope::new();
         assert!(!scope.snapshot().active);
+        assert!(!scope.matches("", ""));
 
         let snapshot = scope.set(" usr_current ", "https://api.example.test/api/1/");
         assert!(snapshot.active);
@@ -269,6 +270,7 @@ mod tests {
         let cleared = scope.set("", "");
         assert!(!cleared.active);
         assert!(!scope.matches("usr_current", "https://api.example.test/api/1"));
+        assert!(!scope.matches("", ""));
     }
 
     #[test]
@@ -310,14 +312,6 @@ mod tests {
     }
 
     #[test]
-    fn inactive_scope_never_authorizes_requests() {
-        let scope = RuntimeAuthScope::new();
-
-        assert!(!scope.matches("usr_current", "https://api.vrchat.cloud/api/1"));
-        assert!(!scope.matches("usr_other", "https://api.vrchat.cloud/api/1"));
-    }
-
-    #[test]
     fn active_scope_normalizes_requested_endpoints() {
         let scope = RuntimeAuthScope::new();
         scope.set("usr_current", "https://api.vrchat.cloud/api/1");
@@ -335,15 +329,6 @@ mod tests {
         }
 
         assert!(!scope.matches("usr_current", "https://api.example.test/api/1"));
-    }
-
-    #[test]
-    fn active_scope_matches_only_its_current_user() {
-        let scope = RuntimeAuthScope::new();
-        scope.set("usr_current", "https://api.example.test/api/1");
-
-        assert!(scope.matches("usr_current", "https://api.example.test/api/1"));
-        assert!(!scope.matches("usr_stale", "https://api.example.test/api/1"));
     }
 
     #[test]

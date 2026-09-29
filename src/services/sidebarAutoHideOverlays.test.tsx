@@ -39,9 +39,6 @@ import {
     observeSidebarAutoHideInteractions
 } from './sidebarAutoHideService';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
 vi.mock('@/services/shellIntegrationService', () => ({
     setTaskbarOverlayNotification: vi.fn(),
     setTrayIconNotification: vi.fn()

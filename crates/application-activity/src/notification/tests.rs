@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use super::{
-    generic_webhook_payload, normalize_avatar_image_url_128, parse_webhook_fields,
-    CachedNotificationUserImageResolver, RealtimeUserImageResolverSlot, RenderedNotification,
+    generic_webhook_payload, parse_webhook_fields, CachedNotificationUserImageResolver,
+    RealtimeUserImageResolverSlot, RenderedNotification,
 };
 use crate::{
     OverlayActivityActorRelation, OverlayActivityCategory, OverlayActivityContent,
@@ -98,30 +98,7 @@ impl CachedNotificationUserImageResolver for FakeCachedResolver {
 }
 
 #[test]
-fn realtime_image_resolver_reads_the_realtime_cache() {
-    let endpoint = "https://api.vrchat.cloud/api/1";
-    let cached: Arc<dyn CachedNotificationUserImageResolver> = Arc::new(FakeCachedResolver {
-        url: Some(
-            "https://api.vrchat.cloud/api/1/file/file_1234abcd-0000-1111-2222-abcdefabcdef/2/file"
-                .into(),
-        ),
-    });
-    let resolver = RealtimeUserImageResolverSlot::default();
-    resolver.set(&cached);
-    let image_url = resolver
-        .cached_url(endpoint, "usr_traveler")
-        .map(|url| normalize_avatar_image_url_128(&url, endpoint));
-
-    assert_eq!(
-        image_url.as_deref(),
-        Some(
-            "https://api.vrchat.cloud/api/1/image/file_1234abcd-0000-1111-2222-abcdefabcdef/2/128"
-        )
-    );
-}
-
-#[test]
-fn realtime_image_resolver_returns_none_when_endpoint_is_missing() {
+fn realtime_image_resolver_returns_none_when_slot_is_unset() {
     let resolver = RealtimeUserImageResolverSlot::default();
     let image_url = resolver.cached_url("", "usr_traveler");
 
@@ -130,14 +107,19 @@ fn realtime_image_resolver_returns_none_when_endpoint_is_missing() {
 
 #[test]
 fn realtime_user_image_resolver_does_not_retain_owner() {
-    let owner: Arc<dyn CachedNotificationUserImageResolver> =
-        Arc::new(FakeCachedResolver { url: None });
+    let owner: Arc<dyn CachedNotificationUserImageResolver> = Arc::new(FakeCachedResolver {
+        url: Some("https://img.example/usr_traveler.png".into()),
+    });
     let weak_owner = Arc::downgrade(&owner);
     let resolver = RealtimeUserImageResolverSlot::default();
 
     resolver.set(&owner);
+    assert_eq!(
+        resolver.cached_url("", "usr_traveler").as_deref(),
+        Some("https://img.example/usr_traveler.png")
+    );
     drop(owner);
 
     assert!(weak_owner.upgrade().is_none());
-    assert_eq!(resolver.cached_url("", "usr_missing"), None);
+    assert_eq!(resolver.cached_url("", "usr_traveler"), None);
 }

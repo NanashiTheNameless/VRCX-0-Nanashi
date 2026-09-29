@@ -11,13 +11,6 @@ import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { getFriendsLocationsDensityConfig } from '../friendsLocationsDensity';
 import { FriendLocationCard } from './FriendLocationCard';
 
-vi.mock('react-i18next', () => ({
-    initReactI18next: {
-        type: '3rdParty',
-        init: () => {}
-    },
-    useTranslation: () => ({ t: (key: string) => key })
-}));
 vi.mock('@/components/Location', () => ({
     Location: ({ location }: { location: string }) => (
         <span data-location={location} />
@@ -79,21 +72,6 @@ describe('FriendLocationCard presentation', () => {
 
             expect(getByText('Friend')).toBeTruthy();
             expect(container.querySelector('[data-location]')).not.toBeNull();
-            if (density === 'dense') {
-                const header = container.querySelector(
-                    '[data-slot="card-header"]'
-                );
-                expect(
-                    header?.classList.contains(
-                        'w-[var(--friend-card-avatar-size)]'
-                    )
-                ).toBe(true);
-                expect(
-                    header?.parentElement?.style.getPropertyValue(
-                        '--friend-card-avatar-size'
-                    )
-                ).toBe(`${densityConfig.avatarSize}px`);
-            }
             expect(Boolean(queryByText('Exploring worlds'))).toBe(
                 densityConfig.showStatusDescription
             );
@@ -264,9 +242,6 @@ describe('FriendLocationCard local mode', () => {
                         ?.querySelector('[data-epoch]')
                         ?.getAttribute('data-format')
                 ).toBe(density === 'dense' ? 'short' : 'default');
-                expect(name.parentElement?.classList.contains('flex-col')).toBe(
-                    density !== 'dense'
-                );
             }
         }
     );

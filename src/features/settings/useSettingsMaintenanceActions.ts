@@ -1,7 +1,4 @@
-import type {
-    AppDataDirState,
-    AvatarFeedCleanupOutcome
-} from '@/platform/tauri/bindings';
+import type { AppDataDirState, commands } from '@/platform/tauri/bindings';
 import { formatDataDirMigrationBytes } from '@/services/dataDirMigrationI18n';
 import {
     cleanupMigratedDataDir,
@@ -63,19 +60,13 @@ type SettingsMaintenanceActionsDeps = {
         optimistic?: () => PreferenceRollback
     ) => Promise<boolean>;
     confirm: (options: SettingsConfirmOptions) => Promise<SettingsDialogResult>;
-    avatarFeedHistoryRepository: {
-        cleanupAvatarFeedHistory(
-            cutoffDate: string | null
-        ): Promise<AvatarFeedCleanupOutcome>;
-    };
+    cleanupAvatarFeedHistory: typeof commands.appAvatarFeedHistoryCleanup;
     gameState: {
         isGameRunning: boolean | null;
     };
     language?: string;
-    mediaRepository: {
-        cropAllPrints(path: string): Promise<null>;
-        getUgcPhotoLocation(path: string): Promise<string>;
-    };
+    cropAllPrints: typeof commands.appCropAllPrints;
+    getUgcPhotoLocation: typeof commands.appGetUgcPhotoLocation;
     prefs: SettingsPrefs;
     prompt: (options: SettingsPromptOptions) => Promise<SettingsDialogResult>;
     purgePeriod: string;
@@ -104,10 +95,11 @@ type SettingsMaintenanceActionsDeps = {
 export function createSettingsMaintenanceActions({
     commit,
     confirm,
-    avatarFeedHistoryRepository,
+    cleanupAvatarFeedHistory,
     gameState,
     language,
-    mediaRepository,
+    cropAllPrints,
+    getUgcPhotoLocation,
     prefs,
     prompt,
     purgePeriod,
@@ -379,10 +371,7 @@ export function createSettingsMaintenanceActions({
         setPurgeInProgress(true);
         useRuntimeStore.getState().setDatabaseMaintenanceActive(true);
         try {
-            const outcome =
-                await avatarFeedHistoryRepository.cleanupAvatarFeedHistory(
-                    cutoffDate
-                );
+            const outcome = await cleanupAvatarFeedHistory(cutoffDate);
             setPurgeDialogOpen(false);
             if (outcome.status === 'optimizationFailed') {
                 toast.add({
@@ -453,10 +442,10 @@ export function createSettingsMaintenanceActions({
         if (!result.ok) {
             return;
         }
-        const ugcFolderPath = await mediaRepository.getUgcPhotoLocation(
+        const ugcFolderPath = await getUgcPhotoLocation(
             prefs.userGeneratedContentPath
         );
-        await mediaRepository.cropAllPrints(ugcFolderPath);
+        await cropAllPrints(ugcFolderPath);
         toast.add({
             type: 'success',
             title: t('view.settings.label.existing_saved_prints_cropped')

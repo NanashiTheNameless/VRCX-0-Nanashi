@@ -185,7 +185,7 @@ mod tests {
     }
 
     #[test]
-    fn load_proxy_url_keeps_invalid_address_configured() {
+    fn load_proxy_url_falls_back_to_direct_for_invalid_address() {
         assert_eq!(load_proxy_url(Some("true"), "https://127.0.0.1:7890"), None);
     }
 }

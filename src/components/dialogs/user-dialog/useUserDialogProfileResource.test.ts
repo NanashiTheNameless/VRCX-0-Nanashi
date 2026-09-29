@@ -25,7 +25,6 @@ vi.mock('@/repositories/userProfileRepository', async (importOriginal) => {
     };
 });
 
-import { preserveProfileIdentity } from './userDialogProfileSnapshot';
 import {
     mergeLocalSnapshotIntoProfile,
     mergeUserDialogLocalSnapshot,
@@ -478,28 +477,5 @@ describe('mergeLocalSnapshotIntoProfile', () => {
         expect(
             mergeUserDialogLocalSnapshot({ seedData, knownTargetUser })
         ).toBe(seedData);
-    });
-
-    it('reuses identity only for the active target', () => {
-        const currentProfile = {
-            id: 'usr_current',
-            displayName: 'Current'
-        };
-        const equalProfile = { ...currentProfile };
-        const nextTargetProfile = {
-            id: 'usr_next',
-            displayName: 'Next'
-        };
-
-        expect(
-            preserveProfileIdentity(currentProfile, equalProfile, 'usr_current')
-        ).toBe(currentProfile);
-        expect(
-            preserveProfileIdentity(
-                currentProfile,
-                nextTargetProfile,
-                'usr_next'
-            )
-        ).toBe(nextTargetProfile);
     });
 });

@@ -376,9 +376,12 @@ mod tests {
 
     #[test]
     fn compares_equivalent_cache_paths_after_normalizing_their_parent() {
-        let cache_path = std::env::temp_dir();
-        let equivalent_path = cache_path.join(".");
+        let cache_path = temporary_test_directory("missing-cache");
+        let equivalent_path = std::env::temp_dir()
+            .join(".")
+            .join(cache_path.file_name().unwrap());
 
+        assert!(!cache_path.exists());
         assert!(cache_paths_equal(&cache_path, &equivalent_path));
     }
 

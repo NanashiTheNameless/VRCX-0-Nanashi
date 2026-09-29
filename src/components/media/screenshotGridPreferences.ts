@@ -96,40 +96,20 @@ export function sortScreenshotGridImages<
 const DENSITY_STORAGE_KEY = 'VRCX_ScreenshotGridDensity';
 const SORT_STORAGE_KEY = 'VRCX_ScreenshotGridSort';
 
-function readPreference(key: string): string | null {
-    if (typeof window === 'undefined') {
-        return null;
-    }
-    try {
-        return window.localStorage.getItem(key);
-    } catch {
-        return null;
-    }
-}
-
-function writePreference(key: string, value: string) {
-    if (typeof window === 'undefined') {
-        return;
-    }
-    try {
-        window.localStorage.setItem(key, value);
-    } catch {
-        // no-op
-    }
-}
-
 export function readScreenshotGridDensity(): ScreenshotGridDensity {
-    return sanitizeScreenshotGridDensity(readPreference(DENSITY_STORAGE_KEY));
+    return sanitizeScreenshotGridDensity(
+        localStorage.getItem(DENSITY_STORAGE_KEY)
+    );
 }
 
 export function writeScreenshotGridDensity(value: ScreenshotGridDensity) {
-    writePreference(DENSITY_STORAGE_KEY, value);
+    localStorage.setItem(DENSITY_STORAGE_KEY, value);
 }
 
 export function readScreenshotGridSort(): ScreenshotGridSort {
-    return sanitizeScreenshotGridSort(readPreference(SORT_STORAGE_KEY));
+    return sanitizeScreenshotGridSort(localStorage.getItem(SORT_STORAGE_KEY));
 }
 
 export function writeScreenshotGridSort(value: ScreenshotGridSort) {
-    writePreference(SORT_STORAGE_KEY, value);
+    localStorage.setItem(SORT_STORAGE_KEY, value);
 }

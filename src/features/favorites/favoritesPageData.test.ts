@@ -184,18 +184,13 @@ describe('favorites page data helpers', () => {
         ]);
     });
 
-    it('stops treating a world as loading once the backend reports it unavailable', () => {
-        const items = buildWorldItems({});
-
-        expect(items[0]?.isLoadingDetail).toBe(false);
-    });
-
-    it('keeps a world unavailable when the backend resolved nothing for it', () => {
+    it('keeps a world unavailable and not loading when the backend resolved nothing for it', () => {
         const items = buildWorldItems({});
 
         expect(items).toEqual([
             expect.objectContaining({
                 id: 'wrld_favorite',
+                isLoadingDetail: false,
                 title: 'view.favorites.empty.world_fallback',
                 seedData: null,
                 isPrivate: false,
@@ -322,28 +317,6 @@ describe('favorites page data helpers', () => {
             expect.objectContaining({
                 id: 'avtr_favorite',
                 title: 'Live Avatar',
-                isPrivate: false,
-                isUnavailable: false
-            })
-        ]);
-    });
-
-    it('prefers remote world details over stale cached details', () => {
-        const items = buildWorldItems({
-            remoteWorldDetail: {
-                name: 'Fresh Public World',
-                authorName: 'Juniper',
-                releaseStatus: 'public'
-            }
-        });
-
-        expect(items).toEqual([
-            expect.objectContaining({
-                id: 'wrld_favorite',
-                title: 'Fresh Public World',
-                seedData: expect.objectContaining({
-                    releaseStatus: 'public'
-                }),
                 isPrivate: false,
                 isUnavailable: false
             })

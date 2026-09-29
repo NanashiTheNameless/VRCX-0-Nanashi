@@ -35,7 +35,12 @@ pub(super) fn summarize(
         window_days,
         active_days: active_days(spans, utc_offset_minutes),
         session_count: i64::try_from(sessions.len()).unwrap_or(i64::MAX),
-        longest_session_minutes: longest_recorded_session_ms(&sessions, spans) / MINUTE_MS,
+        longest_session_minutes: sessions
+            .iter()
+            .map(|session| session.end - session.start)
+            .max()
+            .unwrap_or(0)
+            / MINUTE_MS,
     }
 }
 
@@ -51,21 +56,6 @@ pub(super) fn summarize_previous(
         active_days: active_days(spans, utc_offset_minutes),
         has_data: true,
     }
-}
-
-fn longest_recorded_session_ms(sessions: &[ActivitySession], spans: &[LocationSpan]) -> i64 {
-    sessions
-        .iter()
-        .filter(|session| !session_covers_inferred_span(session, spans))
-        .map(|session| session.end - session.start)
-        .max()
-        .unwrap_or(0)
-}
-
-fn session_covers_inferred_span(session: &ActivitySession, spans: &[LocationSpan]) -> bool {
-    spans
-        .iter()
-        .any(|span| span.inferred && span.start_ms < session.end && span.end_ms > session.start)
 }
 
 pub(super) fn access_split(spans: &[LocationSpan]) -> Vec<ActivityPageAccessSlice> {
@@ -98,10 +88,6 @@ pub(super) fn series(
         ActivitySeriesBucket::Day => day,
         ActivitySeriesBucket::Week => week_start(day),
     };
-    let inferred: BTreeSet<NaiveDate> = inferred_local_days(spans, utc_offset_minutes)
-        .into_iter()
-        .map(bucket_key)
-        .collect();
     let mut totals: BTreeMap<NaiveDate, i64> = BTreeMap::new();
     for (day, millis) in millis_by_local_day(spans, utc_offset_minutes) {
         *totals.entry(bucket_key(day)).or_insert(0) += millis;
@@ -113,7 +99,6 @@ pub(super) fn series(
             .map(|(start, millis)| ActivitySeriesPoint {
                 start_date: start.format("%Y-%m-%d").to_string(),
                 minutes: millis / MINUTE_MS,
-                inferred: inferred.contains(&start),
             })
             .collect(),
     }
@@ -259,15 +244,6 @@ fn millis_by_local_day<'a>(
     totals
 }
 
-fn inferred_local_days(spans: &[LocationSpan], utc_offset_minutes: i64) -> BTreeSet<NaiveDate> {
-    millis_by_local_day(
-        spans.iter().filter(|span| span.inferred),
-        utc_offset_minutes,
-    )
-    .into_keys()
-    .collect()
-}
-
 fn local_date(shifted_ms: i64) -> Option<NaiveDate> {
     DateTime::<Utc>::from_timestamp_millis(shifted_ms).map(|value| value.date_naive())
 }
@@ -290,7 +266,6 @@ mod tests {
             world_id: world_id.into(),
             world_name: format!("{world_id} name"),
             access_bucket: access.into(),
-            inferred: false,
         }
     }
 
@@ -388,45 +363,6 @@ mod tests {
         assert_eq!(slices[0].access, "public");
         assert_eq!(slices[0].minutes, 120);
         assert_eq!(slices[1].access, "friends");
-    }
-
-    #[test]
-    fn longest_session_ignores_sessions_that_lean_on_inferred_time() {
-        let mut inferred = span(BASE + 10 * HOUR, BASE + 40 * HOUR, "wrld_b", "friends");
-        inferred.inferred = true;
-        let spans = vec![span(BASE, BASE + 2 * HOUR, "wrld_a", "public"), inferred];
-
-        assert_eq!(summarize(&spans, 30, 0).longest_session_minutes, 120);
-    }
-
-    #[test]
-    fn longest_session_is_zero_when_every_session_is_inferred() {
-        let mut inferred = span(BASE, BASE + 40 * HOUR, "wrld_a", "public");
-        inferred.inferred = true;
-
-        assert_eq!(summarize(&[inferred], 30, 0).longest_session_minutes, 0);
-    }
-
-    #[test]
-    fn series_flags_only_the_buckets_an_inferred_span_touches() {
-        let midnight = BASE - BASE.rem_euclid(DAY_MS);
-        let mut inferred = span(
-            midnight + 25 * HOUR,
-            midnight + 26 * HOUR,
-            "wrld_b",
-            "public",
-        );
-        inferred.inferred = true;
-        let spans = vec![
-            span(midnight + HOUR, midnight + 2 * HOUR, "wrld_a", "public"),
-            inferred,
-        ];
-
-        let points = series(&spans, ActivitySeriesBucket::Day, 0).points;
-
-        assert_eq!(points.len(), 2);
-        assert!(!points[0].inferred);
-        assert!(points[1].inferred);
     }
 
     #[test]

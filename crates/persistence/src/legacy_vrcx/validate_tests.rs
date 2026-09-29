@@ -274,10 +274,3 @@ fn dedupe_paths_keeps_first_occurrence_order_and_distinct_case() {
         ]
     );
 }
-
-#[test]
-fn legacy_vrcx_dirs_only_returns_vrcx_named_candidates() {
-    for dir in legacy_vrcx_dirs() {
-        assert!(dir.ends_with("VRCX"), "unexpected candidate: {dir:?}");
-    }
-}

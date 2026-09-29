@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { ScreenshotExportProgress } from '@/platform/tauri/bindings';
-import mediaRepository from '@/repositories/mediaRepository';
+import {
+    commands,
+    type ScreenshotExportProgress
+} from '@/platform/tauri/bindings';
 import { subscribeScreenshotExportProgress } from '@/services/screenshotExportService';
 import { toast } from '@/services/toastService';
 
@@ -42,14 +44,14 @@ export function useScreenshotZipExport() {
                 ),
                 cancelLabel: t('common.actions.cancel'),
                 onCancel: () => {
-                    mediaRepository.cancelScreenshotExport().catch(() => {});
+                    commands.appCancelScreenshotExport().catch(() => {});
                 }
             });
             session.progressToast.update(progress);
         });
 
         try {
-            const outputPath = await mediaRepository.exportScreenshotsZip(
+            const outputPath = await commands.appExportScreenshotsZip(
                 paths,
                 groupByFolder
             );

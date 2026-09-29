@@ -56,11 +56,9 @@ pub(super) use vrcx_0_application::social::{
 #[cfg(test)]
 mod web_ua_tests {
     use super::{
-        web_ua_app_version, BACKGROUND_CURRENT_USER_CADENCE_SECONDS,
-        BACKGROUND_CURRENT_USER_REFRESH_JOB, BACKGROUND_GROUP_INSTANCE_CADENCE_SECONDS,
-        BACKGROUND_GROUP_INSTANCE_REFRESH_JOB, BACKGROUND_MODERATION_CADENCE_SECONDS,
-        BACKGROUND_MODERATION_REFRESH_JOB, BACKGROUND_SOCIAL_BASELINE_CADENCE_SECONDS,
-        BACKGROUND_SOCIAL_BASELINE_REFRESH_JOB,
+        web_ua_app_version, BACKGROUND_CURRENT_USER_REFRESH_JOB,
+        BACKGROUND_GROUP_INSTANCE_REFRESH_JOB, BACKGROUND_MODERATION_REFRESH_JOB,
+        BACKGROUND_PRINT_CLEANUP_JOB, BACKGROUND_SOCIAL_BASELINE_REFRESH_JOB,
     };
     use crate::RuntimeHostProfile;
 
@@ -80,32 +78,16 @@ mod web_ua_tests {
     }
 
     #[test]
-    fn social_maintenance_refreshes_keep_independent_job_slots_and_cadences() {
-        assert_eq!(
-            [
-                (
-                    BACKGROUND_CURRENT_USER_REFRESH_JOB,
-                    BACKGROUND_CURRENT_USER_CADENCE_SECONDS,
-                ),
-                (
-                    BACKGROUND_GROUP_INSTANCE_REFRESH_JOB,
-                    BACKGROUND_GROUP_INSTANCE_CADENCE_SECONDS,
-                ),
-                (
-                    BACKGROUND_SOCIAL_BASELINE_REFRESH_JOB,
-                    BACKGROUND_SOCIAL_BASELINE_CADENCE_SECONDS,
-                ),
-                (
-                    BACKGROUND_MODERATION_REFRESH_JOB,
-                    BACKGROUND_MODERATION_CADENCE_SECONDS,
-                ),
-            ],
-            [
-                ("backgroundCurrentUserRefresh", 300),
-                ("backgroundGroupInstanceRefresh", 300),
-                ("backgroundSocialBaselineRefresh", 3_600),
-                ("backgroundModerationRefresh", 1_800),
-            ]
-        );
+    fn background_maintenance_jobs_use_distinct_job_slots() {
+        let jobs = [
+            BACKGROUND_CURRENT_USER_REFRESH_JOB,
+            BACKGROUND_GROUP_INSTANCE_REFRESH_JOB,
+            BACKGROUND_SOCIAL_BASELINE_REFRESH_JOB,
+            BACKGROUND_MODERATION_REFRESH_JOB,
+            BACKGROUND_PRINT_CLEANUP_JOB,
+        ];
+        let unique = jobs.iter().collect::<std::collections::HashSet<_>>();
+
+        assert_eq!(unique.len(), jobs.len());
     }
 }

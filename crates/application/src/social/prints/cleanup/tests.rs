@@ -1,7 +1,7 @@
 use super::{
     clamp_print_limit, favorite_limit_for_print_limit, is_print_created_content_refresh,
     print_list_items_from_json, select_prints_to_delete, CleanupWarningKind, PrintCleanupDeps,
-    PrintCleanupQueue, PrintCleanupTrigger, PrintListItem, PRINT_CLEANUP_DEBOUNCE,
+    PrintCleanupQueue, PrintCleanupTrigger, PrintListItem,
 };
 use serde_json::json;
 use std::collections::{HashMap, HashSet};
@@ -151,7 +151,7 @@ fn detects_print_created_content_refresh_messages() {
 }
 
 #[test]
-fn cleanup_queue_uses_2500ms_debounce_and_keeps_one_flight_pending() {
+fn cleanup_queue_keeps_one_flight_pending() {
     let supervisor = TaskSupervisor::new();
     let executor = CountingTaskExecutor::default();
     let spawned = Arc::clone(&executor.spawned);
@@ -164,7 +164,6 @@ fn cleanup_queue_uses_2500ms_debounce_and_keeps_one_flight_pending() {
         reason: "test".into(),
     };
 
-    assert_eq!(PRINT_CLEANUP_DEBOUNCE, Duration::from_millis(2500));
     queue.schedule(&supervisor, deps.clone(), trigger.clone());
     queue.schedule(&supervisor, deps.clone(), trigger.clone());
     queue.schedule(&supervisor, deps, trigger);

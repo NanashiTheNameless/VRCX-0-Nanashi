@@ -10,10 +10,6 @@ const mocks = vi.hoisted(() => ({
     openImagePreview: vi.fn()
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/services/toastService', () => ({
     toast: { add: vi.fn() }
 }));

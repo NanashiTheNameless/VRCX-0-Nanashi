@@ -77,7 +77,7 @@ describe('userDialogRows', () => {
             {
                 id: 'avtr_b',
                 name: 'Birch',
-                updated_at: '2026-02-01T00:00:00.000Z',
+                updated_at: '2026-04-01T00:00:00.000Z',
                 created_at: '2024-01-01T00:00:00.000Z'
             }
         ];
@@ -88,8 +88,8 @@ describe('userDialogRows', () => {
             'avtr_c'
         ]);
         expect(sortAvatarRows(rows, 'update').map((row) => row.id)).toEqual([
-            'avtr_a',
             'avtr_b',
+            'avtr_a',
             'avtr_c'
         ]);
         expect(sortAvatarRows(rows, 'createdAt').map((row) => row.id)).toEqual([

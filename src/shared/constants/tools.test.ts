@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
     getToolsByCategory,
-    knownToolKeys,
     toolCategories,
     toolDefinitionMap,
     toolNavDefinitions
@@ -55,29 +54,6 @@ describe('tool catalog categories', () => {
             debug: ['vrchat-log'],
             other: ['llm-endpoints', 'social-ai', 'edit-invite-message']
         });
-    });
-});
-
-describe('profile backup tool', () => {
-    it('opens the dedicated backup dialog from the data catalog', () => {
-        const tool = toolDefinitionMap.get('profile-backup');
-
-        expect(tool).toMatchObject({
-            category: 'data',
-            titleKey: 'profile_backup.header',
-            descriptionKey: 'profile_backup.tools_description',
-            navEligible: true,
-            action: {
-                type: 'dialog',
-                dialogKey: 'profile-backup'
-            }
-        });
-        expect(knownToolKeys.has('profile-backup')).toBe(true);
-        expect(
-            toolNavDefinitions.some(
-                (definition) => definition.key === 'tool-profile-backup'
-            )
-        ).toBe(true);
     });
 });
 

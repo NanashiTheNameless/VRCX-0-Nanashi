@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
     latestUpdaterRelease: {
         title: 'VRCX-0 2.7.0',
         currentVersion: 'Preview 20260621-1530',
-        latestVersion: '2.7.0',
+        latestVersion: 'v2.7.0-latest',
         canonicalVersion: '2.7.0',
         publishedAt: '2026-06-21T07:00:00Z',
         updaterType: 'manual'
@@ -24,8 +24,6 @@ vi.mock('react-i18next', () => ({
         t: (key: string) =>
             ({
                 'nav_menu.update': 'Update',
-                'nav_menu.update_downloading': 'Downloading...',
-                'nav_menu.update_downloaded': 'Restart',
                 'message.vrcx_updater.current_version': 'Current Version',
                 'message.vrcx_updater.latest_version': 'Latest Version',
                 'message.vrcx_updater.released': 'Released'
@@ -121,7 +119,7 @@ describe('TitleBarUpdateButton', () => {
         expect(html).toContain('Update');
         expect(html).toContain('VRCX-0 2.7.0');
         expect(html).toContain('Preview 20260621-1530');
-        expect(html).toContain('2.7.0');
+        expect(html).toContain('v2.7.0-latest');
         expect(html).toContain('data-variant="secondary"');
     });
 
@@ -137,11 +135,10 @@ describe('TitleBarUpdateButton', () => {
         );
 
         expect(html).toContain('Update');
-        expect(html).not.toContain('Restart');
         expect(html).toContain('data-variant="default"');
     });
 
-    it('shows an elongated downloading pill with size and progress while downloading', () => {
+    it('shows the downloaded size and progress while downloading the matching update', () => {
         mocks.updateLoop.autoDownloadState = 'downloading';
         mocks.updateLoop.downloadedVersion = '2.7.0';
         mocks.updateLoop.downloadProgress = 42;
@@ -154,7 +151,6 @@ describe('TitleBarUpdateButton', () => {
         );
 
         expect(html).toContain('Update');
-        expect(html).not.toContain('Downloading...');
         expect(html).toContain('12 MB');
         expect(html).toContain('42%');
     });

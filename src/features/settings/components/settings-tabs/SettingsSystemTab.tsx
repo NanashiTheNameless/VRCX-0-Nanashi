@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next';
 
-import { PrivacyLockSetting } from '@/features/privacy-lock/PrivacyLockSetting';
 import type { HostPlatform } from '@/platform/tauri/bindings';
 import {
     APP_UPDATE_MODES,
@@ -21,6 +20,7 @@ import { Switch } from '@/ui/shadcn/switch';
 
 import { KeepSystemAwakeSetting } from '../KeepSystemAwakeSetting';
 import { LinuxRenderingSetting } from '../LinuxRenderingSetting';
+import { PrivacyLockSetting } from '../PrivacyLockSetting';
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';

@@ -1,4 +1,6 @@
 import { MINUTE_MS, MINUTES_PER_DAY } from '@/shared/constants/time';
+import { safeJsonParse } from '@/shared/utils/json';
+import { isRecord } from '@/shared/utils/record';
 
 const STORAGE_KEY = 'VRCX_recentActions';
 export type RecentActionType =
@@ -32,35 +34,14 @@ function readActions(): Record<string, number> {
     if (cachedActions) {
         return cachedActions;
     }
-    if (typeof window === 'undefined' || !window.localStorage) {
-        cachedActions = {};
-        return cachedActions;
-    }
-    let next: Record<string, number> = {};
-    try {
-        const parsed = JSON.parse(
-            window.localStorage.getItem(STORAGE_KEY) || '{}'
-        );
-        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-            next = parsed;
-        }
-    } catch {
-        next = {};
-    }
-    cachedActions = next;
-    return next;
+    const parsed = safeJsonParse(localStorage.getItem(STORAGE_KEY));
+    cachedActions = isRecord(parsed) ? (parsed as Record<string, number>) : {};
+    return cachedActions;
 }
 
 function writeActions(actions: Record<string, number>): void {
-    cachedActions = actions && typeof actions === 'object' ? actions : {};
-    if (typeof window === 'undefined' || !window.localStorage) {
-        return;
-    }
-    try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cachedActions));
-    } catch {
-        cachedActions = actions && typeof actions === 'object' ? actions : {};
-    }
+    cachedActions = actions;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(cachedActions));
 }
 
 function actionKey(

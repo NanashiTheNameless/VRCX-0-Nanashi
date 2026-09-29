@@ -3,13 +3,6 @@
 import { renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('react-i18next', () => {
-    const translate = (key: string) => key;
-    return {
-        useTranslation: () => ({ t: translate })
-    };
-});
-
 vi.mock('./FeedTableParts', () => ({
     FeedDetailCell: () => null,
     FeedUserLink: () => null,

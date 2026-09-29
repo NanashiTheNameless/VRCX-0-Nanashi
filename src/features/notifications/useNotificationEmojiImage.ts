@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { resolveInventoryImageUrl } from '@/domain/entities/inventory';
 import { entityQueryPolicies, queryKeys } from '@/lib/entityQueryCache';
-import mediaRepository from '@/repositories/mediaRepository';
+import vrchatMediaRepository from '@/repositories/vrchatMediaRepository';
 import { convertFileUrlToImageUrl } from '@/services/entityMediaService';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
@@ -18,7 +18,7 @@ export function useNotificationEmojiImage(
     const itemQuery = useQuery({
         queryKey: queryKeys.boopEmoji(userId, inventoryId, endpoint),
         queryFn: () =>
-            mediaRepository.getUserInventoryItem({ userId, inventoryId }),
+            vrchatMediaRepository.getUserInventoryItem({ userId, inventoryId }),
         enabled: Boolean(userId && inventoryId),
         ...entityQueryPolicies.boopEmojiLookup
     });

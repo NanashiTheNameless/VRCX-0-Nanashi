@@ -811,18 +811,6 @@ fn concurrent_reads_survive_a_vacuum_instead_of_failing_busy() -> Result<(), Err
 }
 
 #[test]
-fn page_stats_come_from_a_single_snapshot() -> Result<(), Error> {
-    let dir = TestDir::new("vacuum-stats");
-    let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
-
-    let (free_pages, page_count) = read_page_stats(&db)?;
-    assert!(page_count > 0);
-    assert!(free_pages >= 0);
-    assert!(free_pages <= page_count);
-    Ok(())
-}
-
-#[test]
 fn import_upstream_print_favorites_merges_rows_into_config_and_drops_table() -> Result<(), Error> {
     let (_dir, db) = cleanup_test_db("import-upstream-print-favorites")?;
     crate::config::set_json(

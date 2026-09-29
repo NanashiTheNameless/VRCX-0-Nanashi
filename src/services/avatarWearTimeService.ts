@@ -12,10 +12,6 @@ type TimerOptions = {
     now?: number;
 };
 
-type StopTimerOptions = TimerOptions & {
-    fallbackStartedAt?: number;
-};
-
 function normalizeAvatarId(value: unknown): string {
     return typeof value === 'string'
         ? value.trim()
@@ -109,9 +105,7 @@ function startCurrentAvatarWearTimer({ now = Date.now() }: TimerOptions = {}) {
     });
 }
 
-async function stopCurrentAvatarWearTimer(
-    _options: StopTimerOptions = {}
-): Promise<void> {
+async function stopCurrentAvatarWearTimer(): Promise<void> {
     const runtimeStore = useRuntimeStore.getState();
     const snapshot = runtimeStore.auth.currentUserSnapshot;
     if (!snapshot || typeof snapshot !== 'object') {

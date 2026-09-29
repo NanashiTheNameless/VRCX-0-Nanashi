@@ -11,9 +11,6 @@ const mocks = vi.hoisted(() => ({
     getUserGroups: vi.fn()
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
 vi.mock('@/repositories/myAvatarRepository', () => ({
     default: { getMyAvatars: mocks.getMyAvatars }
 }));

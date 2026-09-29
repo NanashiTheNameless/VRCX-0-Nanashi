@@ -1,5 +1,7 @@
-import type { ScreenshotLibraryScanStatus } from '@/platform/tauri/bindings';
-import mediaRepository from '@/repositories/mediaRepository';
+import {
+    commands,
+    type ScreenshotLibraryScanStatus
+} from '@/platform/tauri/bindings';
 
 type ScreenshotLibraryScanStatusListener = (
     status: ScreenshotLibraryScanStatus
@@ -53,7 +55,7 @@ export function subscribeScreenshotLibraryScanStatus(
 export async function getCurrentScreenshotLibraryScanStatus(): Promise<ScreenshotLibraryScanStatus | null> {
     const requestSequence = beginStatusRequest();
     return applyStatusResponse(
-        await mediaRepository.getScreenshotLibraryStatus(),
+        await commands.appGetScreenshotLibraryStatus(),
         requestSequence
     );
 }
@@ -63,7 +65,7 @@ export async function startScreenshotLibraryScan(
 ): Promise<ScreenshotLibraryScanStatus | null> {
     const requestSequence = beginStatusRequest();
     return applyStatusResponse(
-        await mediaRepository.startScreenshotLibraryScan(force),
+        await commands.appStartScreenshotLibraryScan(force),
         requestSequence
     );
 }

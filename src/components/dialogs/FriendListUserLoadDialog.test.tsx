@@ -13,12 +13,6 @@ const controls = vi.hoisted(() => ({
     buttons: [] as CapturedButton[]
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: (key: string) => key
-    })
-}));
-
 vi.mock('@/ui/shadcn/button', async () => {
     const React = await import('react');
 

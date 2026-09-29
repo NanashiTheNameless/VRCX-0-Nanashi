@@ -296,25 +296,9 @@ mod tests {
     use vrcx_0_application_core::{RuntimeEventBus, RuntimeEventPayload, RuntimeEventSink};
 
     use super::{
-        CrashRelaunchDecisionPayload, EmptyEventPayload, GameClientEvent,
-        GameLogPersistenceFallbackPayload, GameLogSideEffectEvent, GameLogSideEffectObserver,
-        GameLogSideEffectSink, NowPlayingPayload, NowPlayingSnapshot,
+        CrashRelaunchDecisionPayload, EmptyEventPayload, GameClientEvent, GameLogSideEffectEvent,
+        GameLogSideEffectObserver, GameLogSideEffectSink, NowPlayingPayload, NowPlayingSnapshot,
     };
-
-    #[test]
-    fn persistence_fallback_exposes_diagnostics_without_raw_rows() {
-        assert_eq!(
-            serde_json::to_value(GameLogPersistenceFallbackPayload {
-                attempted_row_count: 3,
-                error: "database is locked".into(),
-            })
-            .unwrap(),
-            json!({
-                "attemptedRowCount": 3,
-                "error": "database is locked",
-            })
-        );
-    }
 
     #[test]
     fn now_playing_reset_preserves_empty_payload_object() {

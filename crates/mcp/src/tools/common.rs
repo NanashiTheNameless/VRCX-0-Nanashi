@@ -599,10 +599,14 @@ mod time_window_tests {
 
     #[test]
     fn parses_object_form() {
-        let value = serde_json::json!({ "from": "2026-01-01T00:00:00Z", "to": null });
-        let window = time_window_from_value(&value).unwrap();
-        assert_eq!(window.from.as_deref(), Some("2026-01-01T00:00:00Z"));
-        assert_eq!(window.to, None);
+        for value in [
+            serde_json::json!({ "from": "2026-01-01T00:00:00Z", "to": null }),
+            serde_json::json!({ "from": "2026-01-01T00:00:00Z" }),
+        ] {
+            let window = time_window_from_value(&value).unwrap();
+            assert_eq!(window.from.as_deref(), Some("2026-01-01T00:00:00Z"));
+            assert_eq!(window.to, None);
+        }
     }
 
     #[test]
@@ -747,13 +751,6 @@ mod time_window_tests {
                 "from bound should be set for {value}"
             );
         }
-    }
-
-    #[test]
-    fn valid_rfc3339_bounds_pass_through() {
-        let value = serde_json::json!({ "from": "2025-07-11T10:00:00Z" });
-        let window = time_window_from_value(&value).unwrap();
-        assert_eq!(window.from.as_deref(), Some("2025-07-11T10:00:00Z"));
     }
 
     #[test]

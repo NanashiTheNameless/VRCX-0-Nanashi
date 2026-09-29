@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
     createBaseDefaultNavLayout,
     getNavShortcutEntries,
-    routePathByName,
     type NavMenuItem
 } from './navMenuModel';
 
@@ -14,7 +13,6 @@ describe('navMenuModel defaults', () => {
             (entry) => entry.type === 'item' && entry.key === 'search'
         );
 
-        expect(routePathByName['browse-history']).toBe('/browse-history');
         expect(layout[searchIndex + 1]).toEqual({
             type: 'item',
             key: 'browse-history'

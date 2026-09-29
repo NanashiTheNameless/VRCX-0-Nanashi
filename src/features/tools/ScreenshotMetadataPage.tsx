@@ -6,7 +6,10 @@ import { useSearchParams } from 'react-router';
 import { PageScaffold } from '@/components/layout/PageScaffold';
 import { ToolPageHeader } from '@/components/layout/ToolPageHeader';
 import { convertFileSrc } from '@/platform/tauri/assets';
-import mediaRepository from '@/repositories/mediaRepository';
+import { commands } from '@/platform/tauri/bindings';
+import mediaFileRepository from '@/repositories/mediaFileRepository';
+import vrchatMediaRepository from '@/repositories/vrchatMediaRepository';
+import { openFolderAndSelectItem } from '@/services/shellIntegrationService';
 import { toast } from '@/services/toastService';
 import { withUploadTimeout } from '@/shared/utils/imageUpload';
 import { useModalStore } from '@/state/modalStore';
@@ -207,7 +210,7 @@ export function ScreenshotMetadataPage() {
 
             try {
                 const rawMetadata = recordFromUnknown(
-                    await mediaRepository.getScreenshotMetadata(path)
+                    await mediaFileRepository.getScreenshotMetadata(path)
                 );
 
                 if (metadataRequestRef.current !== requestId) {
@@ -229,7 +232,7 @@ export function ScreenshotMetadataPage() {
                     return;
                 }
 
-                const extra = await mediaRepository.getExtraScreenshotData(
+                const extra = await mediaFileRepository.getExtraScreenshotData(
                     sourceFile,
                     withCarousel
                 );
@@ -330,10 +333,7 @@ export function ScreenshotMetadataPage() {
         }
 
         try {
-            await mediaRepository.openFolderAndSelectItem(
-                metadata.filePath,
-                false
-            );
+            await openFolderAndSelectItem(metadata.filePath, false);
         } catch (error) {
             toast.add({
                 type: 'error',
@@ -351,7 +351,7 @@ export function ScreenshotMetadataPage() {
         }
 
         try {
-            await mediaRepository.copyImageToClipboard(metadata.filePath);
+            await commands.appCopyImageToClipboard(metadata.filePath);
             toast.add({
                 type: 'success',
                 title: t('message.image.copied_to_clipboard')
@@ -388,7 +388,7 @@ export function ScreenshotMetadataPage() {
 
         try {
             const deleted =
-                await mediaRepository.deleteScreenshotMetadata(filePath);
+                await commands.appDeleteScreenshotMetadata(filePath);
             if (!deleted) {
                 toast.add({
                     type: 'error',
@@ -438,7 +438,7 @@ export function ScreenshotMetadataPage() {
         setIsDeletingFile(true);
 
         try {
-            await mediaRepository.deleteScreenshotFile(filePath);
+            await commands.appDeleteScreenshotFile(filePath);
             toast.add({
                 type: 'success',
                 title: t('message.screenshot_metadata.file_deleted')
@@ -476,11 +476,11 @@ export function ScreenshotMetadataPage() {
 
         setIsUploadingScreenshot(true);
         try {
-            const base64Body = await mediaRepository.getFileBase64(
+            const base64Body = await commands.appGetFileBase64(
                 metadata.filePath
             );
             await withUploadTimeout(
-                mediaRepository.uploadGalleryImage(base64Body)
+                vrchatMediaRepository.uploadGalleryImage(base64Body)
             );
             toast.add({
                 type: 'success',
@@ -524,7 +524,7 @@ export function ScreenshotMetadataPage() {
         setSearchViewMode('results');
 
         try {
-            const results = await mediaRepository.findScreenshotsBySearch(
+            const results = await commands.appFindScreenshotsBySearch(
                 query,
                 selectedSearchType.index
             );

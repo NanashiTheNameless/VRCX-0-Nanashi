@@ -33,16 +33,17 @@ describe('navigation cache', () => {
         const { useNavigationCacheStore } =
             await import('./navigationCacheStore');
         await useNavigationCacheStore.getState().hydrate();
-        expect(useNavigationCacheStore.getState()).toMatchObject({
+        const state = useNavigationCacheStore.getState();
+        expect(state).toMatchObject({
             hydrated: true,
-            lastRoute: '/settings?tab=appearance',
-            folders: { favorites: false, tools: true },
-            settingsCards: {
-                'system.application': false,
-                'advanced.troubleshooting': true
-            },
-            toolRows: { 'status-schedule': false }
+            lastRoute: '/settings?tab=appearance'
         });
+        expect(state.folders).toEqual({ favorites: false, tools: true });
+        expect(state.settingsCards).toEqual({
+            'system.application': false,
+            'advanced.troubleshooting': true
+        });
+        expect(state.toolRows).toEqual({ 'status-schedule': false });
         expect(fs.writeTextFile).not.toHaveBeenCalled();
     });
 

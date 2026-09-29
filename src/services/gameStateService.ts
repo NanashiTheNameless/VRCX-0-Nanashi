@@ -34,12 +34,8 @@ async function handleGameStopped(
         );
     });
 
-    const startedAt = Date.parse(previousGameState.lastGameStartedAt || '');
     try {
-        await stopCurrentAvatarWearTimer({
-            fallbackStartedAt: Number.isFinite(startedAt) ? startedAt : 0,
-            now: Date.now()
-        });
+        await stopCurrentAvatarWearTimer();
     } catch (error) {
         console.warn('Game stop side effect failed:', error);
     }

@@ -35,7 +35,7 @@ import { formatDateFilter } from '@/lib/dateTime';
 import type {
     InventoryItemRecord,
     MediaFileRecord
-} from '@/repositories/mediaRepository';
+} from '@/repositories/vrchatMediaRepository';
 import { openExternalLink } from '@/services/entityMediaService';
 import { IMAGE_UPLOAD_ACCEPT } from '@/shared/constants/imageUpload';
 import { Badge } from '@/ui/shadcn/badge';

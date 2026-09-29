@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { useSearchParams } from 'react-router';
 
-import type {
-    ScreenshotFolderTree,
-    ScreenshotLibraryImage
+import {
+    commands,
+    type ScreenshotFolderTree,
+    type ScreenshotLibraryImage,
+    type ScreenshotLibraryScanStatus
 } from '@/platform/tauri/bindings';
 import configRepository from '@/repositories/configRepository';
-import type { ScreenshotLibraryStatus } from '@/repositories/mediaFileRepository';
-import mediaRepository from '@/repositories/mediaRepository';
 import {
     getCurrentScreenshotLibraryScanStatus,
     startScreenshotLibraryScan,
@@ -70,7 +70,7 @@ export function useScreenshotGalleryController({
         setIsGalleryFolderPreferenceLoaded
     ] = useState(false);
     const [scanStatus, setScanStatus] =
-        useState<ScreenshotLibraryStatus | null>(null);
+        useState<ScreenshotLibraryScanStatus | null>(null);
     const [galleryScanError, setGalleryScanError] = useState('');
     const [galleryTreeError, setGalleryTreeError] = useState('');
     const [galleryImagesError, setGalleryImagesError] = useState('');
@@ -168,7 +168,7 @@ export function useScreenshotGalleryController({
         }: { preferPopulated?: boolean } = {}) => {
             setIsGalleryTreeLoading(true);
             try {
-                const tree = await mediaRepository.getScreenshotFolderTree();
+                const tree = await commands.appGetScreenshotFolderTree();
                 setFolderTree(tree || null);
                 setGalleryTreeError('');
                 const folderPathSet = getGalleryFolderPathSet(tree);
@@ -209,7 +209,7 @@ export function useScreenshotGalleryController({
     );
 
     const applyScanStatus = useCallback(
-        (status: ScreenshotLibraryStatus) => {
+        (status: ScreenshotLibraryScanStatus) => {
             setScanStatus(status);
             setGalleryScanError(status.error || '');
             if (status.running) {
@@ -338,8 +338,8 @@ export function useScreenshotGalleryController({
         const requestedFolder = selectedGalleryFolder;
         setIsGalleryImagesLoading(true);
 
-        mediaRepository
-            .getScreenshotFolderImages(requestedFolder)
+        commands
+            .appGetScreenshotFolderImages(requestedFolder)
             .then((images) => {
                 if (galleryRequestRef.current === requestId) {
                     setGalleryImagesError('');

@@ -83,15 +83,7 @@ describe('domainIngestionService', () => {
         });
     });
 
-    it('records game runtime presence without trusting API private location over it', async () => {
-        recordCurrentUserSnapshot(
-            {
-                id: 'usr_self',
-                displayName: 'Self',
-                location: 'private'
-            },
-            { endpoint: 'api' }
-        );
+    it('records the game runtime location for the current user and the instance presence', async () => {
         recordGameRuntimePresence({
             endpoint: 'api',
             currentUserId: 'usr_self',
@@ -257,6 +249,12 @@ describe('domainIngestionService', () => {
             user: { id: 'usr_test', displayName: 'User' },
             source: 'profile'
         });
+        expect(
+            Object.keys(useInstancePresenceStore.getState().presenceByKey)
+        ).not.toHaveLength(0);
+        expect(
+            Object.keys(useLocationHintStore.getState().hintsByKey)
+        ).not.toHaveLength(0);
 
         resetDomainFacts();
 

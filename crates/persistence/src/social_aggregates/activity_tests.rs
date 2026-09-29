@@ -118,51 +118,6 @@ fn friend_activity_pattern_merges_renamed_user_buckets() {
 }
 
 #[test]
-fn best_time_to_play_ranks_buckets_by_distinct_friends() {
-    let (_dir, db) = test_db("best-time");
-    ensure_realtime_tables(&db, "usrself").unwrap();
-    for (user_id, display_name, created_at) in [
-        ("usr_alice", "Alice", "2026-06-01T20:05:00Z"),
-        ("usr_bob", "Bob", "2026-06-02T20:30:00Z"),
-        ("usr_alice", "Alice", "2026-06-03T20:45:00Z"),
-        ("usr_carol", "Carol", "2026-06-04T09:00:00Z"),
-    ] {
-        db.execute_non_query(
-                "INSERT INTO usrself_feed_online_offline
-                    (created_at, user_id, display_name, type, location, world_name, time, group_name)
-                 VALUES (@created_at, @user_id, @display_name, 'Online', '', '', 0, '')",
-                &crate::common::ParamsBuilder::new()
-                    .set("created_at", created_at)
-                    .set("user_id", user_id)
-                    .set("display_name", display_name)
-                    .build(),
-            )
-            .unwrap();
-    }
-
-    let output = get_best_time_to_play(
-        &db,
-        BestTimeToPlayInput {
-            owner_user_id: OwnerId::new("usr_self"),
-            time_window: TimeWindow::all(),
-            bucket: ActivityBucket::HourOfDay,
-            limit: None,
-            utc_offset_minutes: None,
-        },
-    )
-    .unwrap();
-
-    assert_eq!(output.rows.len(), 2);
-    let top = &output.rows[0];
-    assert_eq!(top.bucket, "20");
-    assert_eq!(top.label, "20:00-21:00");
-    assert_eq!(top.distinct_friends, 2);
-    assert_eq!(top.online_events, 3);
-    assert_eq!(top.top_friends[0].user_id, "usr_alice");
-    assert_eq!(top.top_friends[0].online_events, 2);
-}
-
-#[test]
 fn best_time_renamed_user_shows_latest_name() {
     let (_dir, db) = test_db("best-time-renamed");
     ensure_realtime_tables(&db, "usrself").unwrap();

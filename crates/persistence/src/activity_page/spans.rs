@@ -6,9 +6,7 @@ use crate::ownership::{owner_id_for_filter, OwnerId};
 use crate::social_aggregates::{access_bucket_sql, world_id_from_location_sql};
 use crate::Error;
 
-use vrcx_0_contracts::activity_page::{
-    ActivityLocationSpan as LocationSpan, ActivityWindowSpans as WindowSpans,
-};
+use vrcx_0_contracts::activity_page::ActivityLocationSpan as LocationSpan;
 use vrcx_0_core::activity_sessions::{span_duration_ms, SpanEnd};
 
 struct SourceRow {
@@ -24,12 +22,9 @@ pub fn read_instance_spans(
     owner_user_id: &OwnerId,
     from_ms: Option<i64>,
     to_ms: i64,
-) -> Result<WindowSpans, Error> {
+) -> Result<Vec<LocationSpan>, Error> {
     let rows = read_source_rows(db, owner_user_id, from_ms, to_ms)?;
-    Ok(WindowSpans {
-        spans: clip_spans(&spans_from_rows(&rows), from_ms, to_ms),
-        has_open_tail: false,
-    })
+    Ok(clip_spans(&spans_from_rows(&rows), from_ms, to_ms))
 }
 
 pub fn read_play_spans(
@@ -39,7 +34,7 @@ pub fn read_play_spans(
     to_ms: i64,
     open_location: Option<&str>,
 ) -> Result<Vec<LocationSpan>, Error> {
-    let mut spans = read_instance_spans(db, owner_user_id, from_ms, to_ms)?.spans;
+    let mut spans = read_instance_spans(db, owner_user_id, from_ms, to_ms)?;
     let Some(location) = open_location else {
         return Ok(spans);
     };
@@ -95,7 +90,6 @@ fn read_open_instance_span(
         world_id: row_string(row, 2),
         world_name: row_string(row, 3),
         access_bucket: row_string(row, 4),
-        inferred: true,
     }))
 }
 
@@ -179,7 +173,6 @@ fn spans_from_rows(rows: &[SourceRow]) -> Vec<LocationSpan> {
             world_id: row.world_id.clone(),
             world_name: row.world_name.clone(),
             access_bucket: row.access_bucket.clone(),
-            inferred: false,
         });
     }
     spans
@@ -202,7 +195,6 @@ fn clip_spans(spans: &[LocationSpan], from_ms: Option<i64>, to_ms: i64) -> Vec<L
             world_id: span.world_id.clone(),
             world_name: span.world_name.clone(),
             access_bucket: span.access_bucket.clone(),
-            inferred: span.inferred,
         });
     }
     clipped
@@ -233,7 +225,6 @@ mod tests {
         assert_eq!((spans[0].end_ms - spans[0].start_ms), HOUR);
         assert_eq!(spans[0].start_ms, BASE + 2 * HOUR);
         assert_eq!(spans[0].end_ms, BASE + 3 * HOUR);
-        assert!(!spans[0].inferred);
     }
 
     #[test]
@@ -251,7 +242,6 @@ mod tests {
             world_id: "wrld_a".into(),
             world_name: "Alpha".into(),
             access_bucket: "public".into(),
-            inferred: false,
         }];
 
         let clipped = clip_spans(&spans, Some(BASE + 2 * HOUR), BASE + 5 * HOUR);
@@ -269,7 +259,6 @@ mod tests {
             world_id: "wrld_a".into(),
             world_name: "Alpha".into(),
             access_bucket: "public".into(),
-            inferred: false,
         }];
 
         assert!(clip_spans(&spans, Some(BASE + 2 * HOUR), BASE + 5 * HOUR).is_empty());

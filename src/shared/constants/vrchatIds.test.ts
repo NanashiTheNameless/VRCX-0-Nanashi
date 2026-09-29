@@ -8,22 +8,10 @@ import {
     isAvatarId,
     isGroupId,
     isUserId,
-    isWorldId,
-    VRCHAT_ID_PREFIX
+    isWorldId
 } from './vrchatIds';
 
 describe('vrchatIds', () => {
-    it('exposes shared VRChat ID prefixes', () => {
-        expect(VRCHAT_ID_PREFIX).toMatchObject({
-            user: 'usr_',
-            world: 'wrld_',
-            avatar: 'avtr_',
-            group: 'grp_',
-            file: 'file_',
-            instance: 'inst_'
-        });
-    });
-
     it('validates strict UUID-backed IDs by entity type', () => {
         expect(isUserId('usr_12345678-1234-1234-1234-1234567890ab')).toBe(true);
         expect(isWorldId('wrld_12345678-1234-1234-1234-1234567890ab')).toBe(

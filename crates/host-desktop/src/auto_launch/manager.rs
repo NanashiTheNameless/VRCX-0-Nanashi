@@ -77,6 +77,30 @@ impl AutoAppLaunchManager {
         snapshot
     }
 
+    pub fn set_entry_enabled<E>(
+        &self,
+        entry_id: &str,
+        enabled: bool,
+        persist: impl FnOnce(&[AppLauncherEntry]) -> Result<(), E>,
+    ) -> Result<AppLauncherSnapshot, E> {
+        let mut delayed = Vec::new();
+        let snapshot = {
+            let mut inner = self.inner.lock().unwrap();
+            let mut entries = inner.entries.clone();
+            for entry in entries.iter_mut().filter(|entry| entry.id == entry_id) {
+                entry.enabled = enabled;
+            }
+            persist(&entries)?;
+            inner.generation = inner.generation.saturating_add(1);
+            inner.entries = entries;
+            reconcile_active_session_entries(&mut inner, self, &mut delayed);
+            refresh_runs(&mut inner);
+            inner.snapshot()
+        };
+        spawn_delayed_launches(delayed);
+        Ok(snapshot)
+    }
+
     pub fn on_game_started(&self, is_steamvr_running: bool) {
         let mut delayed = Vec::new();
         {

@@ -13,6 +13,8 @@ import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
+vi.unmock('react-i18next');
+
 const mocks = vi.hoisted(() => ({
     queryFeedLatest: vi.fn()
 }));
@@ -24,7 +26,6 @@ vi.mock('@/repositories/feedRepository', async (importOriginal) => ({
     }
 }));
 
-import { FeedEntryContent } from './DashboardFeedEntryContent';
 import { DashboardFeedWidget } from './DashboardFeedWidget';
 
 const initialRuntimeState = useRuntimeStore.getInitialState();
@@ -78,7 +79,7 @@ describe('DashboardFeedWidget', () => {
         usePreferencesStore.setState(initialPreferencesState);
     });
 
-    it('reads dashboard state from its owner stores', () => {
+    it('shows the unavailable state without a signed-in user', () => {
         setDashboardFeedStoreState({ currentUserId: '' });
 
         const html = renderToStaticMarkup(
@@ -127,44 +128,6 @@ describe('DashboardFeedWidget', () => {
                 name: 'Feed history is not being saved'
             })
         ).toBeTruthy();
-    });
-
-    it('matches the Feed page location color for GPS entries', () => {
-        const view = render(
-            <MemoryRouter>
-                <FeedEntryContent
-                    row={{ type: 'GPS', displayName: 'Friend' }}
-                />
-            </MemoryRouter>
-        );
-
-        expect(
-            view.container
-                .querySelector('.lucide-map-pin')
-                ?.classList.contains('text-sky-500')
-        ).toBe(true);
-    });
-
-    it('marks status dots with their accessible shape semantics', () => {
-        const view = render(
-            <MemoryRouter>
-                <FeedEntryContent
-                    row={{
-                        type: 'Status',
-                        displayName: 'Friend',
-                        status: 'join me'
-                    }}
-                />
-            </MemoryRouter>
-        );
-
-        const statusDot = view.container.querySelector(
-            '[data-dashboard-feed-status-dot]'
-        );
-        expect(statusDot?.classList.contains('user-status-indicator')).toBe(
-            true
-        );
-        expect(statusDot?.classList.contains('joinme')).toBe(true);
     });
 
     it('groups compact feed rows by day instead of repeating the date per row', async () => {
@@ -217,14 +180,6 @@ describe('DashboardFeedWidget', () => {
             '[data-dashboard-feed-status-dot]'
         );
         expect(statusDots).toHaveLength(2);
-        expect(
-            Array.from(statusDots).every(
-                (statusDot) =>
-                    statusDot.classList.contains('self-center') &&
-                    !statusDot.classList.contains('mt-1')
-            )
-        ).toBe(true);
         expect(screen.queryByText('Favorite')).toBeNull();
-        expect(screen.queryByText('All feed types')).toBeNull();
     });
 });

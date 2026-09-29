@@ -5,7 +5,7 @@ import {
     readWorldCacheInfo,
     resolveWorldAssetBundleArgs
 } from '@/lib/worldAssetBundle';
-import { assetBundleRepository } from '@/repositories/assetBundleRepository';
+import { commands } from '@/platform/tauri/bindings';
 import memoPersistenceRepository from '@/repositories/memoPersistenceRepository';
 import worldProfileRepository from '@/repositories/worldProfileRepository';
 import { copyTextToClipboard } from '@/services/clipboardService';
@@ -326,7 +326,7 @@ export function useWorldActions({
                 });
                 return;
             }
-            await assetBundleRepository.deleteCache(
+            await commands.assetBundleDeleteCache(
                 args.fileId,
                 args.fileVersion,
                 args.variant,

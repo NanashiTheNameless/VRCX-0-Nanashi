@@ -1,17 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { isOnlineFriend } from './friends-locations-rows/presence';
-import * as friendsLocationsRows from './friendsLocationsRows';
 import {
-    buildFavoriteGroupLabelsByFriendId,
     buildSameInstanceGroups,
-    compareFavoriteGroups,
     isFriendInPrivateLocation,
     normalizeDisplayText,
     normalizeFriendsLocationId,
     partitionFriendsByPrivateLocation,
     resolveDisplayWorldName,
-    resolveFavoriteGroupLabels,
     resolveFriendsLocationsCurrentInviteLocation,
     resolveFriendGroupName,
     resolveLocationSummary,
@@ -25,37 +21,6 @@ import {
 } from './friendsLocationsSearch';
 
 describe('friends locations row helpers', () => {
-    it('keeps the public helper facade stable', () => {
-        expect(Object.keys(friendsLocationsRows).sort()).toEqual([
-            'buildFavoriteGroupLabelsByFriendId',
-            'buildFriendSections',
-            'buildSameInstanceGroups',
-            'buildSameInstanceSections',
-            'compareFavoriteGroups',
-            'isFriendInPrivateLocation',
-            'isRawWorldReference',
-            'isSentinelLocationValue',
-            'isShareableInstanceLocation',
-            'normalizeDisplayText',
-            'normalizeFriendsLocationId',
-            'partitionFriendsByPrivateLocation',
-            'resolveDisplayWorldName',
-            'resolveFavoriteGroupLabels',
-            'resolveFriendGroupName',
-            'resolveFriendTravelingWorldId',
-            'resolveFriendTravelingWorldName',
-            'resolveFriendWorldName',
-            'resolveFriendsLocationsCurrentInviteLocation',
-            'resolveInstanceSectionDescriptor',
-            'resolveLocationSummary',
-            'resolveLocationTarget',
-            'resolvePresenceLocation',
-            'resolveWorldDialogTarget',
-            'resolveWorldIdCandidate',
-            'uniqueFriendsById'
-        ]);
-    });
-
     it('normalizes ids and display text from strings and location-like objects', () => {
         expect(normalizeFriendsLocationId('  usr_1  ')).toBe('usr_1');
         expect(normalizeFriendsLocationId({ tag: 'wrld_1:123' })).toBe(
@@ -125,27 +90,12 @@ describe('friends locations row helpers', () => {
         expect(isOnlineFriend({ state: 'offline' })).toBe(false);
     });
 
-    it('builds favorite ids and labels from remote and local favorite groups', () => {
-        const labels = buildFavoriteGroupLabelsByFriendId({
-            favoriteFriendGroups: [
-                { key: 'group_a', displayName: 'Best Friends' }
-            ],
-            groupedFavoriteFriendIdsByGroupKey: { group_a: ['usr_1'] },
-            localFriendFavorites: { Local: ['usr_2'] }
-        });
-        const favoriteIds = buildFriendsLocationsFavoriteIdSet(['usr_1'], {
-            Local: ['usr_2', '']
-        });
-
-        expect(labels.get('usr_1')).toEqual(['Best Friends']);
-        expect(labels.get('usr_2')).toEqual(['Local: Local']);
-        expect([...favoriteIds]).toEqual(['usr_1', 'usr_2']);
-        expect(
-            resolveFavoriteGroupLabels({ id: 'usr_1' }, labels, favoriteIds)
-        ).toEqual(['Best Friends']);
-        expect(
-            resolveFavoriteGroupLabels({ id: 'usr_2' }, new Map(), favoriteIds)
-        ).toEqual(['Favorites']);
+    it('combines remote and local favorite friend ids without empty entries', () => {
+        expect([
+            ...buildFriendsLocationsFavoriteIdSet(['usr_1'], {
+                Local: ['usr_2', '']
+            })
+        ]).toEqual(['usr_1', 'usr_2']);
     });
 
     it('groups friends who share the same concrete instance location', () => {
@@ -255,8 +205,6 @@ describe('friends locations row helpers', () => {
             'wrld_123:456'
         );
 
-        // The friend's `location` still holds a real instance tag but a known
-        // travelingToLocation destination takes priority for the summary.
         const travelingWithDestination = resolveLocationSummary({
             location: 'traveling',
             travelingToLocation: 'wrld_456:789~region(use)',
@@ -267,8 +215,6 @@ describe('friends locations row helpers', () => {
             meta: '789'
         });
 
-        // No destination is known yet (just the bare sentinel) - falls back to
-        // a generic "Traveling" label with the raw sentinel as the meta text.
         const travelingWithoutDestination = resolveLocationSummary({
             location: 'traveling'
         });
@@ -277,10 +223,6 @@ describe('friends locations row helpers', () => {
             meta: 'traveling'
         });
 
-        // resolveLocationTarget resolves the destination world id from
-        // travelingToWorld when the location is still the bare sentinel, so
-        // routing/section grouping can key off the world the friend is
-        // heading to instead of losing the location entirely.
         const travelingTarget = resolveLocationTarget({
             location: 'traveling',
             travelingToWorld: 'wrld_456'
@@ -304,21 +246,5 @@ describe('friends locations row helpers', () => {
             visibleLocation: [visible],
             privateLocation: [privateFriend]
         });
-    });
-
-    it('sorts favorite groups by configured order before display label', () => {
-        const rows = [
-            { key: 'group_b', label: 'Beta' },
-            { key: 'group_a', label: 'Alpha' },
-            { key: 'group_c', label: 'Aardvark' }
-        ];
-
-        expect(
-            [...rows]
-                .sort((left, right) =>
-                    compareFavoriteGroups(left, right, ['group_b'])
-                )
-                .map((row) => row.key)
-        ).toEqual(['group_b', 'group_c', 'group_a']);
     });
 });

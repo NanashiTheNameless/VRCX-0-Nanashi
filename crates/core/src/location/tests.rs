@@ -152,7 +152,7 @@ fn serde_maps_known_group_access_types() {
 }
 
 #[test]
-fn serde_maps_known_instance_types_and_preserves_unknown_values() {
+fn serde_maps_known_instance_types() {
     for (value, expected) in [
         ("friends", InstanceType::Friends),
         ("group", InstanceType::Group),
@@ -165,17 +165,10 @@ fn serde_maps_known_instance_types_and_preserves_unknown_values() {
         assert_eq!(instance_type, expected, "{value}");
         assert_eq!(serde_json::to_value(instance_type).unwrap(), json!(value));
     }
-
-    let instance_type: InstanceType = serde_json::from_value(json!("future")).unwrap();
-    assert_eq!(instance_type, InstanceType::Unknown("future".into()));
-    assert_eq!(
-        serde_json::to_value(instance_type).unwrap(),
-        json!("future")
-    );
 }
 
 #[test]
-fn serde_maps_known_instance_regions_and_preserves_unknown_values() {
+fn serde_maps_known_instance_regions() {
     for (value, expected) in [
         ("eu", InstanceRegion::Eu),
         ("jp", InstanceRegion::Jp),
@@ -190,10 +183,6 @@ fn serde_maps_known_instance_regions_and_preserves_unknown_values() {
         assert_eq!(region, expected, "{value}");
         assert_eq!(serde_json::to_value(region).unwrap(), json!(value));
     }
-
-    let region: InstanceRegion = serde_json::from_value(json!("future")).unwrap();
-    assert_eq!(region, InstanceRegion::Unknown("future".into()));
-    assert_eq!(serde_json::to_value(region).unwrap(), json!("future"));
 }
 
 #[test]

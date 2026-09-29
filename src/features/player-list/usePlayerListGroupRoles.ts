@@ -3,56 +3,11 @@ import { useMemo, useState } from 'react';
 
 import { commands } from '@/platform/tauri/bindings';
 import groupProfileRepository from '@/repositories/groupProfileRepository';
-import {
-    isVrchatRequestError,
-    unwrapVrchatResponse
-} from '@/repositories/vrchatRequest';
-import { createConcurrencyLimiter } from '@/shared/utils/concurrency';
 import { parseLocation } from '@/shared/utils/location';
-import { executeWithBackoff } from '@/shared/utils/retry';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
-import {
-    playerGroupMemberRoleIds,
-    playerGroupRoles,
-    playerGroupRoster
-} from './playerListGroupRoles';
+import { playerGroupRoles, playerGroupRoster } from './playerListGroupRoles';
 import type { PlayerListRow } from './playerListTypes';
-
-const MEMBER_LOOKUP_CONCURRENCY = 3;
-const MEMBER_LOOKUP_RETRIES = 3;
-
-const limitMemberLookup = createConcurrencyLimiter(MEMBER_LOOKUP_CONCURRENCY);
-
-async function fetchMemberRoleIds(
-    groupId: string,
-    userId: string,
-    signal: AbortSignal
-): Promise<string[] | null> {
-    try {
-        const json = await limitMemberLookup(() =>
-            executeWithBackoff(
-                async () =>
-                    unwrapVrchatResponse(
-                        await commands.appVrchatGroupMemberGet({
-                            groupId,
-                            userId
-                        }),
-                        'group member'
-                    ).json,
-                {
-                    maxRetries: MEMBER_LOOKUP_RETRIES,
-                    shouldRetry: (error) =>
-                        isVrchatRequestError(error) && error.status === 429,
-                    isCancelled: () => signal.aborted
-                }
-            )
-        );
-        return playerGroupMemberRoleIds(json);
-    } catch {
-        return null;
-    }
-}
 
 export function usePlayerListGroupRoles(
     location: string,
@@ -95,7 +50,8 @@ export function usePlayerListGroupRoles(
             retry: false,
             staleTime: Infinity,
             refetchOnWindowFocus: false,
-            queryFn: ({ signal }) => fetchMemberRoleIds(groupId, userId, signal)
+            queryFn: () =>
+                commands.appVrchatGroupMemberRoleIdsGet({ groupId, userId })
         })),
         combine: (results) => results.map((result) => result.data)
     });

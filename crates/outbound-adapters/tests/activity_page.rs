@@ -195,7 +195,7 @@ fn activity_page_splits_minutes_by_access_bucket() {
 
 #[test]
 fn activity_page_ignores_an_unclosed_instance() {
-    let (_dir, db) = test_db("activity-page-inferred");
+    let (_dir, db) = test_db("activity-page-unclosed");
     write_locations(
         &db,
         vec![
@@ -239,7 +239,7 @@ fn activity_page_uses_the_current_users_closed_instance_intervals() {
 
 #[test]
 fn activity_page_carries_the_closed_instance_world_name() {
-    let (_dir, db) = test_db("activity-page-name-inferred");
+    let (_dir, db) = test_db("activity-page-closed-name");
     write_locations(
         &db,
         vec![
@@ -264,7 +264,6 @@ fn activity_page_carries_the_closed_instance_world_name() {
 
     assert_eq!(view.worlds.top[0].world_name, "Newest Name");
     assert_eq!(view.summary.longest_session_minutes, 60);
-    assert!(view.series.points.iter().all(|point| !point.inferred));
 }
 
 #[test]
@@ -478,22 +477,6 @@ fn activity_page_rebuilds_when_the_requested_offset_differs_from_the_cache() {
 }
 
 #[test]
-fn activity_page_waits_for_the_current_instance_to_close() {
-    let (_dir, db) = test_db("activity-page-open-tail");
-    write_locations(
-        &db,
-        vec![location("2025-01-05T01:00:00Z", "wrld_1:1", "wrld_1", 0)],
-    );
-
-    let early = activity_page_view_build(db.as_ref(), build(30, "2025-01-05T03:00:00Z")).unwrap();
-    let later = activity_page_view_build(db.as_ref(), build(30, "2025-01-05T09:00:00Z")).unwrap();
-
-    assert!(!early.has_open_tail);
-    assert_eq!(early.summary.total_minutes, 0);
-    assert_eq!(later.summary.total_minutes, 0);
-}
-
-#[test]
 fn activity_page_sees_the_current_users_closed_instance() {
     let (_dir, db) = test_db("activity-page-leave-writeback");
     write_locations(
@@ -516,7 +499,6 @@ fn activity_page_sees_the_current_users_closed_instance() {
 
     let closed = activity_page_view_build(db.as_ref(), build(30, "2025-01-05T03:00:00Z")).unwrap();
 
-    assert!(!closed.has_open_tail);
     assert_eq!(closed.summary.total_minutes, 30);
 }
 

@@ -1175,12 +1175,4 @@ mod tests {
         assert_eq!(kind_equivalent_favorite_types("friend"), &["friend"]);
         assert!(kind_equivalent_favorite_types("unknown").is_empty());
     }
-
-    #[test]
-    fn favorite_group_count_key_joins_type_and_group_with_colon() {
-        assert_eq!(
-            favorite_group_count_key("world", "MyGroup"),
-            "world:MyGroup"
-        );
-    }
 }

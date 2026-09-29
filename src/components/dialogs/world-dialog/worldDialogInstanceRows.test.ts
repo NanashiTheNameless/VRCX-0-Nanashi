@@ -281,7 +281,6 @@ describe('worldDialogInstanceRows', () => {
                 usr_departed: {
                     id: 'usr_departed',
                     state: 'offline',
-                    stateBucket: 'offline',
                     location
                 }
             },
@@ -294,7 +293,7 @@ describe('worldDialogInstanceRows', () => {
         expect(result.displayInstanceRows[0].users).toEqual([]);
     });
 
-    it('removes a stale instance row after the friend moves elsewhere', () => {
+    it('drops a friend from a stale instance row after they move elsewhere', () => {
         const result = buildWorldDialogDisplayInstanceRows({
             creatorGroupsById: {},
             currentInstanceDetails: {},

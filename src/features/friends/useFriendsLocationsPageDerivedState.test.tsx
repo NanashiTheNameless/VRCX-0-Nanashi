@@ -13,10 +13,6 @@ import {
 import * as friendSections from './friendsLocationsSections';
 import { useFriendsLocationsPageDerivedState } from './useFriendsLocationsPageDerivedState';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('./useFriendsLocationsWorldSummaries', () => ({
     useFriendsLocationsWorldSummaries: () => new Map()
 }));
@@ -369,10 +365,10 @@ describe('useFriendsLocationsPageDerivedState', () => {
         );
 
         expect(
-            sort.mock.calls.flatMap(([friends]) =>
-                friends.map((friend) => friend.id)
+            sort.mock.calls.map(([friends]) =>
+                friends.map((friend) => friend.id).sort()
             )
-        ).not.toContain(unrelated.id);
+        ).toEqual([['usr_a', 'usr_m', 'usr_z']]);
         expect(
             result.current.visibleVirtualRows.flatMap((row) =>
                 row.type === 'cards'

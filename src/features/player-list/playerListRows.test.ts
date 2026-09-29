@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeString } from '@/shared/utils/string';
-
 import {
     buildPlayerSourceRows,
     buildPlayerDialogSeedData,
@@ -10,9 +8,7 @@ import {
 } from './playerListRows';
 
 describe('playerListRows', () => {
-    it('normalizes ids and timestamps used by the current instance list', () => {
-        expect(normalizeString(' usr_1 ')).toBe('usr_1');
-        expect(normalizeString(null)).toBe('');
+    it('parses numeric and ISO timestamps used by the current instance list', () => {
         expect(parseTimeMs(1234)).toBe(1234);
         expect(parseTimeMs('1234')).toBe(1234);
         expect(parseTimeMs('2026-01-02T03:04:05.000Z')).toBe(
@@ -122,10 +118,14 @@ describe('playerListRows', () => {
         ).toEqual([{ id: 'usr_self', displayName: 'Self from source' }]);
     });
 
-    it('does not add the current user when the list is not a live running instance', () => {
+    it('drops the roster and the current user outside a live running instance', () => {
+        const playerRows = [
+            { userId: 'usr_self', displayName: 'Current User' },
+            { userId: 'usr_a', displayName: 'A' }
+        ];
         expect(
             buildPlayerSourceRows({
-                playerRows: [],
+                playerRows,
                 currentUserId: 'usr_self',
                 currentUserSnapshot: { displayName: 'Current User' },
                 isGameRunning: true,
@@ -141,7 +141,7 @@ describe('playerListRows', () => {
 
         expect(
             buildPlayerSourceRows({
-                playerRows: [],
+                playerRows,
                 currentUserId: 'usr_self',
                 currentUserSnapshot: { displayName: 'Current User' },
                 isGameRunning: false,

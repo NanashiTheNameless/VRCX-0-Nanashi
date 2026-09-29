@@ -27,7 +27,6 @@ const mocks = vi.hoisted(() => ({
     handleScreenshotLibraryScanStatusEvent: vi.fn(),
     handleGameRunningUpdate: vi.fn<() => Promise<void>>(),
     isHostCapabilityAvailable: vi.fn<(name: string) => boolean>(),
-    refreshHostCapabilities: vi.fn(),
     pushSharedFeedNotification: vi.fn<() => Promise<void>>(),
     showSQLiteErrorDialog: vi.fn<() => Promise<void>>(),
     handleBrowserFocus: vi.fn<() => Promise<void>>(),
@@ -42,8 +41,7 @@ const mocks = vi.hoisted(() => ({
     desktopNotificationActivationUnsubscribe: vi.fn(),
     handleRuntimeAuthFailure: vi.fn(),
     applyAuthenticatedSessionProjection:
-        vi.fn<(projection: unknown) => Promise<boolean>>(),
-    loadVrcNotifications: vi.fn()
+        vi.fn<(projection: unknown) => Promise<boolean>>()
 }));
 
 vi.mock('@/platform/tauri/bindings', () => ({
@@ -133,14 +131,6 @@ vi.mock('./desktopNotificationActivationService', () => ({
 
 vi.mock('./authSessionRecoveryService', () => ({
     handleRuntimeAuthFailure: mocks.handleRuntimeAuthFailure
-}));
-
-vi.mock('@/state/vrcNotificationStore', () => ({
-    useVrcNotificationStore: {
-        getState: () => ({
-            loadForCurrentUser: mocks.loadVrcNotifications
-        })
-    }
 }));
 
 import { useDataDirMigrationStore } from '@/state/dataDirMigrationStore';
@@ -404,15 +394,11 @@ async function bindCapturedRuntimeEvents(): Promise<{
 function setBackendRealtimeOwner({
     userId = 'usr_owner',
     authReady = true,
-    sessionReady = true,
-    friendProfileLoadStatus,
-    friendProfileLoadRunId = 1
+    sessionReady = true
 }: {
     userId?: string;
     authReady?: boolean;
     sessionReady?: boolean;
-    friendProfileLoadStatus?: 'running' | 'cancelling';
-    friendProfileLoadRunId?: number;
 } = {}): BackendRuntimeSnapshot {
     const snapshot: BackendRuntimeSnapshot = {
         ...createBackendRuntimeSnapshot(),
@@ -441,12 +427,6 @@ function setBackendRealtimeOwner({
             currentUserId: userId,
             currentUserEndpoint: 'https://api.vrchat.cloud/api/1',
             currentUserWebsocket: 'wss://pipeline.vrchat.cloud'
-        });
-    }
-    if (friendProfileLoadStatus) {
-        useRuntimeStore.getState().setFriendProfileLoadState({
-            runId: friendProfileLoadRunId,
-            status: friendProfileLoadStatus
         });
     }
     if (sessionReady) {
@@ -479,7 +459,6 @@ describe('runtimeEventBridgeService', () => {
         );
         mocks.runtimeGroupInstancesRefresh.mockResolvedValue(null);
         mocks.handleGameRunningUpdate.mockResolvedValue(undefined);
-        mocks.loadVrcNotifications.mockResolvedValue([]);
         mocks.hydrateFavoriteImportRuntimeStatus.mockResolvedValue(undefined);
         mocks.pushSharedFeedNotification.mockResolvedValue(undefined);
         mocks.bindDeepLinkEvents.mockResolvedValue(mocks.deepLinkUnsubscribe);
@@ -518,13 +497,15 @@ describe('runtimeEventBridgeService', () => {
         }
     });
 
-    it('refreshes browser status without a manual process query', async () => {
-        mocks.isHostCapabilityAvailable.mockReturnValue(true);
+    it('records the browser focus time and refreshes VRChat status on focus', async () => {
         mocks.handleBrowserFocus.mockResolvedValue(undefined);
         const { handlers } = await bindCapturedRuntimeEvents();
 
         handlers.get('browserFocus')?.(null);
 
+        expect(useRuntimeStore.getState().gameState.lastBrowserFocusAt).toEqual(
+            expect.any(String)
+        );
         expect(mocks.handleBrowserFocus).toHaveBeenCalledTimes(1);
     });
 
@@ -1100,6 +1081,11 @@ describe('runtimeEventBridgeService', () => {
         );
 
         await bindRuntimeEvents();
+        expect(useProfileBackupStore.getState().status).toMatchObject({
+            revision: 3,
+            phase: 'snapshot',
+            percent: 15
+        });
         handlers.get('profileBackupStatus')?.({
             revision: 4,
             state: 'running',
@@ -1226,6 +1212,11 @@ describe('runtimeEventBridgeService', () => {
         );
 
         await bindRuntimeEvents();
+        expect(useDataDirMigrationStore.getState().status).toMatchObject({
+            revision: 2,
+            phase: 'copying',
+            percent: 20
+        });
         handlers.get('dataDirMigration')?.({
             revision: 3,
             state: 'running',
@@ -1546,58 +1537,53 @@ describe('runtimeEventBridgeService', () => {
         secondBinding.cleanup();
     });
 
-    it.each(['running', 'cancelling'] as const)(
-        'coalesces friend profile projections into one roster update while profile loading is %s',
-        async (status) => {
-            const { handlers, cleanup } = await bindCapturedRuntimeEvents();
-            setBackendRealtimeOwner({
-                friendProfileLoadStatus: status
+    it('delivers every owned friend and user projection once the roster queue flushes', async () => {
+        const { handlers, cleanup } = await bindCapturedRuntimeEvents();
+        setBackendRealtimeOwner();
+
+        for (const userId of ['usr_a', 'usr_b']) {
+            handlers.get('realtimeUserProjection')?.({
+                users: [
+                    {
+                        id: userId,
+                        endpoint: 'api.vrchat.cloud',
+                        displayName: userId
+                    }
+                ]
             });
-
-            for (const userId of ['usr_a', 'usr_b']) {
-                handlers.get('realtimeUserProjection')?.({
-                    users: [
-                        {
+            handlers.get('realtimeFriendProjection')?.({
+                generation: 1,
+                baselineRevision: 1,
+                patches: [
+                    {
+                        userId,
+                        patch: {
                             id: userId,
-                            endpoint: 'api.vrchat.cloud',
-                            displayName: userId
-                        }
-                    ]
-                });
-                handlers.get('realtimeFriendProjection')?.({
-                    generation: 1,
-                    baselineRevision: 1,
-                    patches: [
-                        {
-                            userId,
-                            patch: {
-                                id: userId,
-                                displayName: userId,
-                                state: 'offline'
-                            },
-                            stateBucket: 'offline',
-                            stateBucketAuthority: 'preserve'
-                        }
-                    ],
-                    removals: [],
-                    feedEntries: [],
-                    friendLogChanged: false
-                });
-            }
-            flushRealtimeRosterUpdates();
-
-            expect(
-                Object.keys(useFriendRosterStore.getState().friendsById)
-            ).toEqual(['usr_a', 'usr_b']);
-            expect(
-                Object.values(useUserFactsStore.getState().usersByKey).map(
-                    (user) => user.id
-                )
-            ).toEqual(['usr_a', 'usr_b']);
-
-            cleanup();
+                            displayName: userId,
+                            state: 'offline'
+                        },
+                        stateBucket: 'offline',
+                        stateBucketAuthority: 'preserve'
+                    }
+                ],
+                removals: [],
+                feedEntries: [],
+                friendLogChanged: false
+            });
         }
-    );
+        flushRealtimeRosterUpdates();
+
+        expect(
+            Object.keys(useFriendRosterStore.getState().friendsById)
+        ).toEqual(['usr_a', 'usr_b']);
+        expect(
+            Object.values(useUserFactsStore.getState().usersByKey).map(
+                (user) => user.id
+            )
+        ).toEqual(['usr_a', 'usr_b']);
+
+        cleanup();
+    });
 
     it('drops realtime projections from a superseded realtime generation', async () => {
         const { handlers, cleanup } = await bindCapturedRuntimeEvents();

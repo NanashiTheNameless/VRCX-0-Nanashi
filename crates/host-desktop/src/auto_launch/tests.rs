@@ -138,10 +138,6 @@ fn app_launcher_untracked_close_fallback_requires_matching_exe_path() {
     );
 
     let linux_target = "/home/User/.local/share/Steam/steamapps/common/Tool/Tool.AppImage";
-    assert_eq!(
-        normalized_process_path_for_platform(linux_target, false),
-        normalized_process_path_for_platform(linux_target, false)
-    );
     assert_ne!(
         normalized_process_path_for_platform(
             "/home/user/.local/share/Steam/steamapps/common/Tool/Tool.AppImage",
@@ -176,16 +172,6 @@ fn app_launcher_normalization_makes_duplicate_ids_unique() {
 fn app_launcher_json_invalid_config_falls_back_to_empty_entries() {
     let entries = deserialize_app_launcher_entries(serde_json::json!({ "bad": true }));
     assert!(entries.is_empty());
-}
-
-#[test]
-fn app_launcher_json_round_trips_entries() {
-    let entry = normalize_app_launcher_entries(vec![local_entry("local")])
-        .into_iter()
-        .next()
-        .unwrap();
-    let value = serde_json::to_value(vec![entry.clone()]).unwrap();
-    assert_eq!(deserialize_app_launcher_entries(value), vec![entry]);
 }
 
 #[test]
@@ -300,18 +286,6 @@ fn app_launcher_windows_launch_strategy_elevates_only_explicit_entries() {
 }
 
 #[test]
-fn app_launcher_launch_failure_preserves_os_error_code() {
-    let elevation = LaunchFailure::from_io("Tool.exe", std::io::Error::from_raw_os_error(740));
-    assert_eq!(elevation.os_error_code, Some(740));
-
-    let cancelled = LaunchFailure::from_io("Tool.exe", std::io::Error::from_raw_os_error(1223));
-    assert_eq!(cancelled.os_error_code, Some(1223));
-
-    let denied = LaunchFailure::from_io("Tool.exe", std::io::Error::from_raw_os_error(5));
-    assert_eq!(denied.os_error_code, Some(5));
-}
-
-#[test]
 fn app_launcher_shell_pid_failure_preserves_os_error_code() {
     let failure =
         tracked_shell_process_id("Tool.exe", 0, std::io::Error::from_raw_os_error(6)).unwrap_err();
@@ -340,11 +314,15 @@ fn app_launcher_always_policy_does_not_skip_existing_process() {
 }
 
 #[test]
-fn app_launcher_stop_policy_uses_only_tracked_pids() {
+fn app_launcher_stop_pids_merge_root_pid_with_tracked_pids() {
     let mut run = new_run("run", &local_entry("local"), false);
     run.root_pid = Some(42);
     run.tracked_pids = vec![10, 42, 99];
     assert_eq!(tracked_stop_pids(&run), vec![10, 42, 99]);
+
+    run.root_pid = Some(7);
+    run.tracked_pids = vec![99, 10];
+    assert_eq!(tracked_stop_pids(&run), vec![7, 10, 99]);
 }
 
 #[test]
@@ -568,4 +546,35 @@ fn app_launcher_args_split_preserves_quoted_values() {
         vec!["--flag", "two words", r#""literal""#]
     );
     assert!(split_command_line_args(r#""unterminated"#).is_err());
+}
+
+#[test]
+fn app_launcher_entry_toggle_changes_only_that_entry_and_persists_it() {
+    let manager = AutoAppLaunchManager::new(true, vec![local_entry("obs"), local_entry("discord")]);
+    let mut persisted = Vec::new();
+
+    let snapshot = manager
+        .set_entry_enabled("discord", false, |entries| {
+            persisted = entries.to_vec();
+            Ok::<(), String>(())
+        })
+        .unwrap();
+
+    let enabled_by_id: Vec<(&str, bool)> = snapshot
+        .entries
+        .iter()
+        .map(|entry| (entry.id.as_str(), entry.enabled))
+        .collect();
+    assert_eq!(enabled_by_id, vec![("obs", true), ("discord", false)]);
+    assert_eq!(persisted, snapshot.entries);
+}
+
+#[test]
+fn app_launcher_entry_toggle_keeps_entries_when_saving_fails() {
+    let manager = AutoAppLaunchManager::new(true, vec![local_entry("obs")]);
+
+    let result = manager.set_entry_enabled("obs", false, |_| Err("disk full".to_string()));
+
+    assert_eq!(result.unwrap_err(), "disk full");
+    assert!(manager.snapshot().entries[0].enabled);
 }

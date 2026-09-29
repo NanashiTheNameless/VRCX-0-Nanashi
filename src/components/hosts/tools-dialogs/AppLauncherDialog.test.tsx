@@ -31,12 +31,12 @@ vi.mock('react-i18next', () => ({
     })
 }));
 
-vi.mock('@/repositories/appLauncherRepository', () => ({
-    default: {
-        snapshot: mocks.snapshot,
-        setEnabled: mocks.setEnabled,
-        setEntries: mocks.setEntries,
-        pickTarget: mocks.pickTarget
+vi.mock('@/platform/tauri/bindings', () => ({
+    commands: {
+        appAppLauncherSnapshotGet: mocks.snapshot,
+        appAppLauncherEnabledSet: mocks.setEnabled,
+        appAppLauncherEntriesSet: mocks.setEntries,
+        appAppLauncherTargetPick: mocks.pickTarget
     }
 }));
 

@@ -23,12 +23,6 @@ impl LegacyMigrationLifecycle for TauriLegacyMigrationLifecycle {
 
 #[tauri::command(async)]
 #[specta::specta]
-pub fn app__check_legacy_vrcx_available(state: State<'_, AppState>) -> bool {
-    state.runtime_host().legacy_migration().available()
-}
-
-#[tauri::command(async)]
-#[specta::specta]
 pub fn app__get_legacy_vrcx_migration_status(
     state: State<'_, AppState>,
 ) -> LegacyVrcxMigrationStatus {

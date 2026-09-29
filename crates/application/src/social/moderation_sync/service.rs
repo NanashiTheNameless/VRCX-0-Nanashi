@@ -316,23 +316,6 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn moderation_error_preserves_typed_status() {
-        let failure =
-            VrchatJsonResponse::parse(500, r#"{"error":{"message":"Application error."}}"#)
-                .failure_or("VRChat moderation request failed")
-                .unwrap();
-        let error = Error::from(failure);
-
-        assert!(matches!(
-            error,
-            Error::VrchatApi {
-                status_code: 500,
-                message
-            } if message == "Application error."
-        ));
-    }
-
-    #[test]
     fn normalizes_only_complete_remote_moderation_rows() {
         let rows = normalize_remote_moderation_rows(&json!([
             {

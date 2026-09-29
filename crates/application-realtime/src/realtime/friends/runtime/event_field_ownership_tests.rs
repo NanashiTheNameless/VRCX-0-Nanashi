@@ -87,7 +87,6 @@ mod tests {
 
         let patch = &output.projection.patches[0];
         assert_eq!(patch.patch.state, "online");
-        assert_eq!(patch.patch.state, "online");
         assert_eq!(patch.patch.location, "wrld_home:42~region(jp)");
         assert_eq!(patch.patch.world_id, "wrld_home");
         assert_eq!(patch.patch.platform, "standalonewindows");
@@ -356,7 +355,6 @@ mod tests {
 
         let friend = snapshot_friend(&runtime);
         assert_eq!(friend.state, "active");
-        assert_eq!(friend.state, "active");
         assert_eq!(friend.location, "offline");
         assert_eq!(friend.status, "busy");
     }
@@ -421,8 +419,6 @@ mod tests {
         };
 
         let patch = &output.projection.patches[0];
-        assert_eq!(patch.patch.state, "online");
-        assert_eq!(patch.patch.state, "online");
         assert_eq!(patch.patch.state, "online");
         assert_eq!(patch.patch.location, "wrld_1:123~region(jp)");
         assert_eq!(patch.patch.status, "active");

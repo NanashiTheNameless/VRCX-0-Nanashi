@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
-    activityPageRepository,
+    commands,
     type ActivityCompanionOrder,
     type ActivityPageView
-} from '@/repositories/activityPageRepository';
+} from '@/platform/tauri/bindings';
 
 import {
     rangeDaysFor,
@@ -40,7 +40,7 @@ export function useActivityPageResource(
             setLoading(true);
             setError('');
             try {
-                const next = await activityPageRepository.view({
+                const next = await commands.appActivityPageView({
                     ownerUserId,
                     rangeDays: rangeDaysFor(range),
                     utcOffsetMinutes: utcOffsetMinutes(),

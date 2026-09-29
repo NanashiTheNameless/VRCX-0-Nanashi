@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { entityQueryPolicies, queryKeys } from '@/lib/entityQueryCache';
-import groupProfileRepository from '@/repositories/groupProfileRepository';
+import { groupProfileQueryOptions } from '@/lib/groupProfileQuery';
 import userProfileRepository from '@/repositories/userProfileRepository';
 import {
     convertFileUrlToImageUrl,
@@ -35,19 +35,7 @@ export function useNotificationActorImage(actor: NotificationActor): string {
             entityQueryPolicies.userAvatarLookup.refetchOnWindowFocus
     });
 
-    const groupQuery = useQuery({
-        queryKey: queryKeys.group(groupId, false, endpoint),
-        queryFn: () =>
-            groupProfileRepository.fetchGroupProfile({
-                groupId,
-                includeRoles: false
-            }),
-        enabled: Boolean(groupId),
-        staleTime: entityQueryPolicies.group.staleTime,
-        gcTime: entityQueryPolicies.group.gcTime,
-        retry: entityQueryPolicies.group.retry,
-        refetchOnWindowFocus: entityQueryPolicies.group.refetchOnWindowFocus
-    });
+    const groupQuery = useQuery(groupProfileQueryOptions(groupId, endpoint));
 
     if (actor.kind === 'group') {
         return (

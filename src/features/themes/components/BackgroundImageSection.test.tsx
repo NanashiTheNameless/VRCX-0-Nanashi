@@ -16,10 +16,6 @@ const mocks = vi.hoisted(() => ({
     toastError: vi.fn()
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/services/toastService', () => ({
     toast: {
         add: (options: AppToastOptions) => {

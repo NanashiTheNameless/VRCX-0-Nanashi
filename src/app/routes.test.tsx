@@ -12,14 +12,6 @@ type RouteLike = {
 };
 
 describe('protectedRoutes', () => {
-    it('registers the browse history page', () => {
-        expect(
-            protectedRoutes.some(
-                (route: RouteLike) => route.path === '/browse-history'
-            )
-        ).toBe(true);
-    });
-
     it('redirects the charts landing route to mutual friends', () => {
         const chartsRoute = protectedRoutes.find(
             (route: RouteLike) => route.path === '/charts'

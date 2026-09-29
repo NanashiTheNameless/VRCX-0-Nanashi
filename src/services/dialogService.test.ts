@@ -18,9 +18,9 @@ vi.mock('@/services/userFactAccessService', () => ({
     recordUserProfile: vi.fn()
 }));
 
-vi.mock('@/repositories/browseHistoryRepository', () => ({
-    browseHistoryRepository: {
-        record: recordBrowseHistory
+vi.mock('@/platform/tauri/bindings', () => ({
+    commands: {
+        appBrowseHistoryRecord: recordBrowseHistory
     }
 }));
 

@@ -1,21 +1,3 @@
-const GLOBAL_DATA_CAVEATS: &[&str] = &[
-    "VRCX-0-Nanashi data is observer-centered and not a global VRChat record.",
-    "Missing rows mean this VRCX-0-Nanashi profile did not observe the event, not that the event did not happen.",
-    "Co-presence minutes are useful for relative sorting; join/leave pairing can undercount absolute duration.",
-    "Private instances that the owner cannot see may only appear as private and cannot be separated by instance.",
-];
-
-pub fn global_caveats() -> Vec<String> {
-    GLOBAL_DATA_CAVEATS
-        .iter()
-        .map(|value| (*value).to_string())
-        .collect()
-}
-
-pub fn data_caveats_resource() -> String {
-    global_caveats().join("\n")
-}
-
 pub(crate) fn copresence_caveats() -> Vec<String> {
     vec![
         "Co-presence total_minutes can be systemically low; use it for relative sorting, not exact duration.".into(),

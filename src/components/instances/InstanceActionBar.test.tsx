@@ -30,7 +30,6 @@ const mocks = vi.hoisted(() => ({
     confirm: vi.fn(),
     getInstance: vi.fn(),
     closeInstance: vi.fn(),
-    selfInvite: vi.fn(),
     toastSuccess: vi.fn(),
     toastError: vi.fn()
 }));
@@ -53,8 +52,7 @@ vi.mock('@/services/toastService', () => ({
 vi.mock('@/repositories/vrchatInstanceRepository', () => ({
     default: {
         getInstance: mocks.getInstance,
-        closeInstance: mocks.closeInstance,
-        selfInvite: mocks.selfInvite
+        closeInstance: mocks.closeInstance
     }
 }));
 
@@ -176,7 +174,6 @@ describe('InstanceActionBar', () => {
         mocks.confirm.mockReset();
         mocks.getInstance.mockReset();
         mocks.closeInstance.mockReset();
-        mocks.selfInvite.mockReset();
         mocks.toastSuccess.mockReset();
         mocks.toastError.mockReset();
     });
@@ -244,28 +241,6 @@ describe('InstanceActionBar', () => {
         );
     });
 
-    it('renders the close-instance marker as a neutral icon button', () => {
-        const html = renderActionBar({
-            target: { location: 'wrld_test:12345' },
-            instance: {
-                ownerId: 'usr_self',
-                userCount: 2,
-                capacity: 16
-            },
-            showLaunch: false,
-            showInvite: false,
-            showRefresh: false
-        });
-        const closeButton = html.match(
-            /<button[^>]*aria-label="Close instance"[^>]*>.*?<\/button>/
-        )?.[0];
-
-        expect(closeButton).toContain('data-slot="button"');
-        expect(closeButton).toContain('data-variant="ghost"');
-        expect(closeButton).toContain('data-size="icon-xs"');
-        expect(html).not.toContain('>Close instance</button>');
-    });
-
     it('keeps the close action outside the instance-info tooltip', () => {
         render(
             <InstanceActionBar
@@ -299,9 +274,7 @@ describe('InstanceActionBar', () => {
         ).toBeNull();
     });
 
-    it('uses the original VRCX close-instance confirmation copy', () => {
-        mocks.confirm.mockResolvedValue({ ok: false });
-
+    function renderClosableInstance() {
         render(
             <InstanceActionBar
                 target={{ location: 'wrld_test:12345' }}
@@ -315,14 +288,41 @@ describe('InstanceActionBar', () => {
                 showRefresh={false}
             />
         );
-
         fireEvent.click(screen.getByRole('button', { name: 'Close instance' }));
+    }
+
+    it('asks for destructive confirmation before closing', () => {
+        mocks.confirm.mockResolvedValue({ ok: false });
+
+        renderClosableInstance();
 
         expect(mocks.confirm).toHaveBeenCalledWith({
             title: 'Confirm',
             description:
                 'Continue? Close Instance, nobody will be able to join',
             destructive: true
+        });
+        expect(mocks.closeInstance).not.toHaveBeenCalled();
+    });
+
+    it('closes the instance once the confirmation is accepted', async () => {
+        mocks.confirm.mockResolvedValue({ ok: true });
+        mocks.closeInstance.mockResolvedValue({ json: null });
+
+        renderClosableInstance();
+
+        await waitFor(() => {
+            expect(mocks.closeInstance).toHaveBeenCalledWith({
+                location: 'wrld_test:12345',
+                hardClose: false
+            });
+        });
+        await waitFor(() => {
+            expect(mocks.toastSuccess).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    title: 'dialog.instance.label.instance_closed'
+                })
+            );
         });
     });
 

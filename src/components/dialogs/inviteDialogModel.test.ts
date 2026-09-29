@@ -11,18 +11,18 @@ import {
 
 describe('inviteDialogModel', () => {
     const friendsById = {
-        usr_bucket_online: {
-            id: 'usr_bucket_online',
+        usr_online_display: {
+            id: 'usr_online_display',
             state: 'online',
             ref: {
-                displayName: 'Bucket Online'
+                displayName: 'Online Display'
             }
         },
-        usr_state_online: {
-            id: 'usr_state_online',
+        usr_online_username: {
+            id: 'usr_online_username',
             state: 'online',
             ref: {
-                username: 'State Online'
+                username: 'Online Username'
             }
         },
         usr_offline: {
@@ -37,20 +37,20 @@ describe('inviteDialogModel', () => {
         }
     };
 
-    it('keeps unique online friend ids from state bucket or state', () => {
+    it('keeps unique online friend ids in input order', () => {
         expect(
             onlineFriendIdsFromGroup(
                 [
-                    ' usr_bucket_online ',
-                    'usr_state_online',
-                    'usr_bucket_online',
+                    ' usr_online_display ',
+                    'usr_online_username',
+                    'usr_online_display',
                     'usr_offline',
                     '',
                     'usr_missing'
                 ],
                 friendsById
             )
-        ).toEqual(['usr_bucket_online', 'usr_state_online']);
+        ).toEqual(['usr_online_display', 'usr_online_username']);
     });
 
     it('resolves display names through self and friend fallbacks', () => {
@@ -70,12 +70,12 @@ describe('inviteDialogModel', () => {
         expect(
             displayNameForUser('usr_self', friendsById, { id: 'usr_self' })
         ).toBe('usr_self');
-        expect(displayNameForUser('usr_bucket_online', friendsById, null)).toBe(
-            'Bucket Online'
-        );
-        expect(displayNameForUser('usr_state_online', friendsById, null)).toBe(
-            'State Online'
-        );
+        expect(
+            displayNameForUser('usr_online_display', friendsById, null)
+        ).toBe('Online Display');
+        expect(
+            displayNameForUser('usr_online_username', friendsById, null)
+        ).toBe('Online Username');
         expect(displayNameForUser('usr_name_only', friendsById, null)).toBe(
             'Name Only'
         );
@@ -120,21 +120,21 @@ describe('inviteDialogModel', () => {
                 ],
                 groupedFavoriteFriendIdsByGroupKey: {
                     group_remote: [
-                        'usr_bucket_online',
-                        ' usr_state_online ',
+                        'usr_online_display',
+                        ' usr_online_username ',
                         ''
                     ],
-                    group_duplicate: ['usr_bucket_online']
+                    group_duplicate: ['usr_online_display']
                 },
                 localFriendFavoriteGroups: ['Local Group', 'Shared Group'],
                 localFriendFavorites: {
-                    'Local Group': ['usr_bucket_online', 'usr_name_only'],
-                    'Shared Group': ['usr_bucket_online']
+                    'Local Group': ['usr_online_display', 'usr_name_only'],
+                    'Shared Group': ['usr_online_display']
                 }
             })
         ).toEqual({
-            usr_bucket_online: ['Remote Group', 'Shared Group', 'Local Group'],
-            usr_state_online: ['Remote Group'],
+            usr_online_display: ['Remote Group', 'Shared Group', 'Local Group'],
+            usr_online_username: ['Remote Group'],
             usr_name_only: ['Local Group']
         });
     });
@@ -143,15 +143,15 @@ describe('inviteDialogModel', () => {
         expect(
             buildFriendsInCurrentInstanceIds({
                 currentLocationPlayerIds: [
-                    ' usr_bucket_online ',
-                    'usr_bucket_online',
+                    ' usr_online_display ',
+                    'usr_online_display',
                     'usr_offline',
                     'usr_missing',
                     ''
                 ],
                 friendsById
             })
-        ).toEqual(['usr_bucket_online', 'usr_offline']);
+        ).toEqual(['usr_online_display', 'usr_offline']);
     });
 
     it('builds favorite group labels from local favorites keys when group list is missing', () => {
@@ -161,12 +161,12 @@ describe('inviteDialogModel', () => {
                 groupedFavoriteFriendIdsByGroupKey: {},
                 localFriendFavoriteGroups: undefined,
                 localFriendFavorites: {
-                    'Group A': ['usr_bucket_online'],
-                    'Group B': ['usr_bucket_online', 'usr_name_only']
+                    'Group A': ['usr_online_display'],
+                    'Group B': ['usr_online_display', 'usr_name_only']
                 }
             })
         ).toEqual({
-            usr_bucket_online: ['Group A', 'Group B'],
+            usr_online_display: ['Group A', 'Group B'],
             usr_name_only: ['Group B']
         });
     });
@@ -180,10 +180,10 @@ describe('inviteDialogModel', () => {
                 ],
                 groupedFavoriteFriendIdsByGroupKey: {
                     remote_online: [
-                        'usr_bucket_online',
+                        'usr_online_display',
                         'usr_offline',
-                        'usr_state_online',
-                        'usr_bucket_online'
+                        'usr_online_username',
+                        'usr_online_display'
                     ],
                     remote_empty: ['usr_offline']
                 },
@@ -199,7 +199,7 @@ describe('inviteDialogModel', () => {
                 {
                     key: 'remote:remote_online',
                     label: 'Remote Online',
-                    userIds: ['usr_bucket_online', 'usr_state_online']
+                    userIds: ['usr_online_display', 'usr_online_username']
                 }
             ],
             local: [
@@ -222,7 +222,7 @@ describe('inviteDialogModel', () => {
                 groupedFavoriteFriendIdsByGroupKey: {},
                 localFriendFavoriteGroups: undefined,
                 localFriendFavorites: {
-                    'Group A': ['usr_bucket_online']
+                    'Group A': ['usr_online_display']
                 },
                 friendsById
             })

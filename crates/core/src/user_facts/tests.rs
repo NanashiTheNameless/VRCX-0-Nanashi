@@ -309,6 +309,25 @@ fn self_fields_are_owned_by_current_user() {
             .and_then(Value::as_bool),
         Some(false)
     );
+
+    let game_runtime = merge_user_fact(
+        None,
+        &json!({ "id": "usr_1", "isBoopingEnabled": true }),
+        &opts("gameRuntime"),
+    );
+    let after = merge_user_fact(
+        Some(&game_runtime.fact),
+        &json!({ "id": "usr_1", "isBoopingEnabled": false }),
+        &opts("currentUser"),
+    );
+    assert_eq!(
+        after
+            .fact
+            .fields
+            .get("isBoopingEnabled")
+            .and_then(Value::as_bool),
+        Some(false)
+    );
 }
 
 #[test]

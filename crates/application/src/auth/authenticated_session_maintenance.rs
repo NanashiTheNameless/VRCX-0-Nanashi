@@ -84,19 +84,6 @@ fn authenticated_session_maintenance_scope_matches(
 mod tests {
     use super::*;
 
-    struct FailingMaintenance;
-
-    impl AuthenticatedSessionMaintenance for FailingMaintenance {
-        fn run_avatar_cleanup(&self, _user_id: &str, _now: DateTime<Utc>) -> Result<()> {
-            Err(vrcx_0_application_core::Error::Custom("frozen".into()))
-        }
-    }
-
-    #[test]
-    fn cleanup_failure_does_not_escape_authenticated_session_maintenance() {
-        run_authenticated_session_maintenance(&FailingMaintenance, "usr_self");
-    }
-
     #[test]
     fn maintenance_scope_rejects_account_switches_and_logout() {
         let auth_scope = RuntimeAuthScope::new();

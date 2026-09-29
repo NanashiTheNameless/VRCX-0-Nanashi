@@ -15,12 +15,6 @@ vi.mock('react-easy-crop', async () => {
     };
 });
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: (key: string) => key
-    })
-}));
-
 vi.mock('@/ui/shadcn/button', async () => {
     const React = await import('react');
 

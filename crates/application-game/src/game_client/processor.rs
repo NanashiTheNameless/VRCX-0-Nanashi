@@ -439,19 +439,71 @@ mod tests {
         }
     }
 
-    #[test]
-    fn crash_relaunch_location_comes_from_the_game_log_source() {
-        let location = "wrld_current:instance";
-        let source = FakeLocationSource {
-            snapshot: Some(LogLocationSnapshot {
-                location: location.into(),
-                world_name: "Current World".into(),
-                created_at: "2026-09-01T00:00:00Z".into(),
-                file_name: "output_log_current.txt".into(),
-            }),
-        };
+    struct IdleGameClientActions;
 
-        assert_eq!(current_location_from_source(&source), location);
+    impl GameClientActions for IdleGameClientActions {
+        fn is_game_running(&self) -> bool {
+            false
+        }
+
+        fn is_steamvr_running(&self) -> bool {
+            false
+        }
+
+        fn start_game(&self, _arguments: &str) -> Result<bool> {
+            Ok(true)
+        }
+
+        fn start_game_from_path(&self, _path: &str, _arguments: &str) -> Result<bool> {
+            Ok(true)
+        }
+    }
+
+    #[test]
+    fn crash_relaunch_rejoins_the_game_log_location() {
+        let location = "wrld_current:12345";
+        let store = Arc::new(crate::ports::TestGameStateStore::default());
+        crate::GameStateStore::set_bool(store.as_ref(), "relaunchVRChatAfterCrash", true).unwrap();
+        let event_bus = RuntimeEventBus::new();
+        let processor = GameClientProcessor::new(
+            GameClientProcessorDeps {
+                store,
+                event_bus: event_bus.clone(),
+                backend_status: BackendRuntimeStatusPublisher::new(
+                    vrcx_0_application_core::BackendRuntime::new(
+                        vrcx_0_application_core::RuntimeHostProfile::Desktop,
+                    ),
+                    event_bus,
+                ),
+                tasks: TaskSupervisor::new(),
+                session: HostSessionRuntime::new(),
+                auth_scope: RuntimeAuthScope::new(),
+                actions: Arc::new(IdleGameClientActions),
+                cache_actions: Arc::new(NoopGameClientCacheActions),
+                location_source: Arc::new(FakeLocationSource {
+                    snapshot: Some(LogLocationSnapshot {
+                        location: location.into(),
+                        world_name: "Current World".into(),
+                        created_at: "2026-09-01T00:00:00Z".into(),
+                        file_name: "output_log_current.txt".into(),
+                    }),
+                }),
+                window_actions: Arc::new(NoopGameClientWindowActions),
+                debug_logging_actions: Arc::new(FakeDebugLoggingActions {
+                    enabled: Some(true),
+                    repair_succeeds: false,
+                    repair_attempts: AtomicUsize::new(0),
+                }),
+            },
+            Arc::new(Mutex::new(GameClientState::default())),
+        );
+
+        let plan = processor.prepare_game_stopped().unwrap().unwrap();
+
+        assert_eq!(plan.location, location);
+        assert!(plan
+            .launch_arguments
+            .starts_with("vrchat://launch?id=wrld_current:12345"));
     }
 
     #[test]

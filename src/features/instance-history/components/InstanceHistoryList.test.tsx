@@ -9,11 +9,6 @@ const virtualizerMocks = vi.hoisted(() => ({
     scrollKeyToView: vi.fn()
 }));
 
-vi.mock('react-i18next', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('react-i18next')>()),
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/components/instances/InstanceActionBar', () => ({
     InstanceActionBar: () => null
 }));

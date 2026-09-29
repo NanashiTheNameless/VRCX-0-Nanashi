@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 
 import { FadeInImage } from '@/components/media/FadeInImage';
 import { cn } from '@/lib/utils';
-import type { MediaFileRecord } from '@/repositories/mediaRepository';
+import type { MediaFileRecord } from '@/repositories/vrchatMediaRepository';
 import {
     buildEmojiKeyframes,
     getEmojiAnimationName,

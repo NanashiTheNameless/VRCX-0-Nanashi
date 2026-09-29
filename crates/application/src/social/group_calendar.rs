@@ -493,7 +493,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn calendar_orchestration_uses_semantic_remote_without_web_client() {
+    async fn calendar_load_merges_all_following_and_featured_pages_with_group_names() {
         let remote = Arc::new(RecordingGroupCalendarRemote::default());
         let auth_scope = RuntimeAuthScope::new();
         auth_scope.set("usr_calendar", "https://api.example.test/api/1/");

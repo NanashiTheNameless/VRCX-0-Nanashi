@@ -15,10 +15,7 @@ vi.mock('@/repositories/vrchatAuthRepository', () => ({
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useVrchatConfigStore } from '@/state/vrchatConfigStore';
 
-import {
-    loadVrchatConfigSnapshot,
-    resetVrchatConfigSnapshot
-} from './vrchatConfigService';
+import { loadVrchatConfigSnapshot } from './vrchatConfigService';
 
 function setAuth(userId: string, endpoint: string): void {
     useRuntimeStore.getState().setAuthBootstrap({
@@ -81,14 +78,6 @@ describe('vrchatConfigService', () => {
         request.resolve({ json: { sdkUnityVersion: 'stale' } });
 
         await expect(loading).resolves.toBeNull();
-        expect(useVrchatConfigStore.getState().snapshot).toBeNull();
-    });
-
-    it('clears the frontend session snapshot', () => {
-        useVrchatConfigStore.getState().setSnapshot({ sdkUnityVersion: 'old' });
-
-        resetVrchatConfigSnapshot();
-
         expect(useVrchatConfigStore.getState().snapshot).toBeNull();
     });
 });

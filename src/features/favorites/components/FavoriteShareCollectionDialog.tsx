@@ -11,9 +11,10 @@ import { useTranslation } from 'react-i18next';
 
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { useCriticalTask } from '@/lib/useCriticalTask';
-import shareCollectionRepository, {
+import {
+    commands,
     type ShareCollectionCreateResult
-} from '@/repositories/shareCollectionRepository';
+} from '@/platform/tauri/bindings';
 import { copyTextToClipboard } from '@/services/clipboardService';
 import { openExternalLink } from '@/services/entityMediaService';
 import { toast } from '@/services/toastService';
@@ -372,13 +373,12 @@ export function FavoriteShareCollectionDialog({
         const submittedWorldCount = shareWorlds.worldIds.length;
         setSharing(true);
         try {
-            const nextResult =
-                await shareCollectionRepository.createShareCollection({
-                    title,
-                    listed,
-                    includeNotes,
-                    worldIds: shareWorlds.worldIds
-                });
+            const nextResult = await commands.appShareCollectionCreate({
+                title,
+                listed,
+                includeNotes,
+                worldIds: shareWorlds.worldIds
+            });
             setSkippedWorldCount(
                 shareWorlds.skippedWorlds.length +
                     Math.max(submittedWorldCount - nextResult.worldCount, 0)

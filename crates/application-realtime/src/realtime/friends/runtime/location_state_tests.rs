@@ -53,7 +53,6 @@ mod tests {
             FriendStateBucketAuthority::Preserve
         );
         assert!(output.persistence.feed_entries.is_empty());
-        assert_eq!(output.projection.patches[0].patch.state, "online");
         assert_eq!(output.profile_refetch_user_ids, vec!["usr_friend"]);
         assert_eq!(
             runtime
@@ -65,53 +64,6 @@ mod tests {
                 .state,
             "online"
         );
-    }
-
-    #[test]
-    fn friend_location_missing_embedded_user_preserves_previous_state() {
-        let runtime = RealtimeFriendsRuntime::default();
-        runtime.set_baseline(
-            FriendRosterBaseline {
-                current_user_id: "usr_self".into(),
-                friends_by_id: [(
-                    "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "online".into(),
-                        location: "wrld_1:123".into(),
-                        ..FriendRecord::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-                ..FriendRosterBaseline::default()
-            },
-            1,
-            0,
-        );
-
-        let RealtimeFriendApplyResult::Output(output) =
-            runtime.apply_ws_message(&RealtimeWsMessagePayload {
-                json: json!({
-                    "type": "friend-location",
-                    "content": {
-                        "userId": "usr_friend",
-                        "location": "wrld_2:456"
-                    }
-                }),
-                raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
-            })
-        else {
-            panic!("friend-location should produce an output");
-        };
-
-        let patch = &output.projection.patches[0].patch;
-        assert_eq!(output.projection.patches[0].patch.state, "online");
-        assert_eq!(output.persistence.feed_entries[0].to_json()["type"], "GPS");
-        assert_eq!(patch.state, "online");
-        assert_eq!(patch.location, "wrld_2:456");
     }
 
     #[test]

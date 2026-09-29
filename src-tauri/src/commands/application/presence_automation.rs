@@ -27,3 +27,16 @@ pub fn app__presence_automation_rules_set(
         .runtime_host()
         .set_presence_automation_rules(kind, rules)?)
 }
+
+#[tauri::command(async)]
+#[specta::specta]
+pub fn app__presence_automation_rule_enabled_set(
+    state: State<'_, AppState>,
+    kind: PresenceAutomationRuleKind,
+    rule_id: String,
+    enabled: bool,
+) -> Result<Vec<RawJson>, AppError> {
+    Ok(state
+        .runtime_host()
+        .set_presence_automation_rule_enabled(kind, &rule_id, enabled)?)
+}

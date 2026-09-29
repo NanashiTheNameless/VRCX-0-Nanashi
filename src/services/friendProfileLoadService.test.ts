@@ -5,7 +5,8 @@ import { useRuntimeStore } from '@/state/runtimeStore';
 
 const mocks = vi.hoisted(() => ({
     appFriendProfileLoadStart: vi.fn(),
-    appFriendProfileLoadCancel: vi.fn()
+    appFriendProfileLoadCancel: vi.fn(),
+    toastAdd: vi.fn()
 }));
 
 vi.mock('@/platform/tauri/bindings', () => ({
@@ -13,6 +14,14 @@ vi.mock('@/platform/tauri/bindings', () => ({
         appFriendProfileLoadStart: mocks.appFriendProfileLoadStart,
         appFriendProfileLoadCancel: mocks.appFriendProfileLoadCancel
     }
+}));
+
+vi.mock('@/services/toastService', () => ({
+    toast: { add: mocks.toastAdd }
+}));
+
+vi.mock('./i18nService', () => ({
+    default: { t: (key: string) => key }
 }));
 
 import {
@@ -64,6 +73,7 @@ describe('friendProfileLoadService', () => {
         useRuntimeStore.getState().resetRuntimeState();
         mocks.appFriendProfileLoadStart.mockReset();
         mocks.appFriendProfileLoadCancel.mockReset();
+        mocks.toastAdd.mockReset();
         vi.useRealTimers();
     });
 
@@ -82,13 +92,17 @@ describe('friendProfileLoadService', () => {
         });
     });
 
-    it('toasts and stays idle when the backend reports nothing to load', async () => {
+    it('shows the already-loaded toast when the backend completes with nothing to load', async () => {
         mocks.appFriendProfileLoadStart.mockResolvedValue(
             completedPayload({ total: 0, processed: 0, loaded: 0 })
         );
 
         await startFriendProfileLoad();
 
+        expect(mocks.toastAdd).toHaveBeenCalledWith({
+            type: 'success',
+            title: 'view.friend_list.label.friend_details_are_already_loaded'
+        });
         expect(useRuntimeStore.getState().friendProfileLoad).toMatchObject({
             status: 'completed',
             totalFriends: 0

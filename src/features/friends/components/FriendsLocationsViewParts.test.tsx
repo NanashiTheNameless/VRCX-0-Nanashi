@@ -11,10 +11,6 @@ import { useFriendLocationTimeStore } from '@/state/friendLocationTimeStore';
 
 import type { FriendLocationCardLocationModel } from './FriendLocationCard';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/components/Location', () => ({
     Location: () => <span />
 }));

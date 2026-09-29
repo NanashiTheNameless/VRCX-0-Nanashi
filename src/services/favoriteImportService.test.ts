@@ -189,25 +189,6 @@ describe('favoriteImportService typed worker adapter', () => {
         });
     });
 
-    it('provides config for each supported favorite import type', async () => {
-        const { useFavoriteImportStore } =
-            await import('@/state/favoriteImportStore');
-        const { getFavoriteImportTypeConfig, openFavoriteImportDialog } =
-            await import('./favoriteImportService');
-
-        expect(getFavoriteImportTypeConfig('avatar')).toMatchObject({
-            label: 'Avatar'
-        });
-        expect(getFavoriteImportTypeConfig('world')).toMatchObject({
-            label: 'World'
-        });
-        expect(getFavoriteImportTypeConfig('friend')).toMatchObject({
-            label: 'Friend'
-        });
-        openFavoriteImportDialog({ type: 'avatar' });
-        expect(useFavoriteImportStore.getState().type).toBe('avatar');
-    });
-
     it('shows backend local duplicate failures without removing the preview row', async () => {
         const { useFavoriteImportStore } =
             await import('@/state/favoriteImportStore');

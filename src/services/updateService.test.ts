@@ -1,26 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-    fetchGithubReleases: vi.fn(),
-    appAppUpdateDownloadStatusGet: vi.fn(),
-    appAppUpdateInstallConfirm: vi.fn()
-}));
-
-vi.mock('@/repositories/externalApiRepository', () => ({
-    default: {
-        fetchGithubReleases: mocks.fetchGithubReleases
-    }
+    fetchGithubReleases: vi.fn()
 }));
 
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
-        appAppUpdateDownloadStatusGet: mocks.appAppUpdateDownloadStatusGet,
-        appAppUpdateInstallConfirm: mocks.appAppUpdateInstallConfirm
+        appExternalApiGithubReleasesGet: mocks.fetchGithubReleases
     }
 }));
 
-import { confirmInstall, getDownloadStatus } from './updateService';
-import * as updateService from './updateService';
+import { fetchBranchReleases, fetchLatestBranchRelease } from './updateService';
 
 function release({ publishedAt }: { publishedAt: string }) {
     return {
@@ -35,20 +25,6 @@ function release({ publishedAt }: { publishedAt: string }) {
     };
 }
 
-describe('updateService facade', () => {
-    it('preserves the public runtime exports', () => {
-        expect(Object.keys(updateService).sort()).toEqual([
-            'confirmInstall',
-            'fetchBranchReleases',
-            'fetchLatestBranchRelease',
-            'formatReleaseDisplayVersion',
-            'getDownloadStatus',
-            'getPreviewStableReleaseUpdateMode',
-            'toNormalizedReleaseFromSnapshot'
-        ]);
-    });
-});
-
 describe('updateService branch release fetching', () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -60,7 +36,7 @@ describe('updateService branch release fetching', () => {
             data: [release({ publishedAt: '2026-06-21T07:00:00Z' })]
         });
 
-        const releases = await updateService.fetchBranchReleases('stable');
+        const releases = await fetchBranchReleases('stable');
 
         expect(releases).toHaveLength(1);
         expect(releases[0].canonicalVersion).toBe('2.7.0');
@@ -72,9 +48,9 @@ describe('updateService branch release fetching', () => {
             data: []
         });
 
-        await expect(
-            updateService.fetchLatestBranchRelease('stable')
-        ).rejects.toThrow('GitHub release request failed (500).');
+        await expect(fetchLatestBranchRelease('stable')).rejects.toThrow(
+            'GitHub release request failed (500).'
+        );
     });
 
     it('keeps only matching GitHub prereleases in the beta branch', async () => {
@@ -90,39 +66,10 @@ describe('updateService branch release fetching', () => {
             ]
         });
 
-        const releases = await updateService.fetchBranchReleases('beta');
+        const releases = await fetchBranchReleases('beta');
 
         expect(releases.map((item) => item.canonicalVersion)).toEqual([
             '2.8.0-Nightly-0000002'
         ]);
-    });
-});
-
-describe('updateService backend-owned download/install commands', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
-
-    it('delegates download status and install to the thin backend commands', async () => {
-        mocks.appAppUpdateDownloadStatusGet.mockResolvedValue({
-            phase: 'idle',
-            version: null,
-            downloadedBytes: 0,
-            totalBytes: 0,
-            percent: 0,
-            error: null
-        });
-        mocks.appAppUpdateInstallConfirm.mockResolvedValue({
-            currentVersion: '2.6.0',
-            version: '2.7.0',
-            date: null,
-            body: null
-        });
-
-        await getDownloadStatus();
-        await confirmInstall('2.7.0');
-
-        expect(mocks.appAppUpdateDownloadStatusGet).toHaveBeenCalled();
-        expect(mocks.appAppUpdateInstallConfirm).toHaveBeenCalledWith('2.7.0');
     });
 });

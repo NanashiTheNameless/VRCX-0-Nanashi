@@ -3,17 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const serviceMocks = vi.hoisted(() => ({
     getFriendLogCurrent: vi.fn(),
     socialFriendRosterBaselineGet: vi.fn(),
-    vrchatUserGet: vi.fn(),
-    vrchatFriendStatusGet: vi.fn(),
     signalFriendLogChanged: vi.fn()
 }));
 
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
         appSocialFriendRosterBaselineGet:
-            serviceMocks.socialFriendRosterBaselineGet,
-        appVrchatUserGet: serviceMocks.vrchatUserGet,
-        appVrchatFriendStatusGet: serviceMocks.vrchatFriendStatusGet
+            serviceMocks.socialFriendRosterBaselineGet
     }
 }));
 
@@ -63,10 +59,6 @@ describe('friendBootstrapService startup seed and reconciliation', () => {
             sessionPhase: 'ready'
         });
         serviceMocks.getFriendLogCurrent.mockResolvedValue([]);
-        serviceMocks.vrchatUserGet.mockResolvedValue({
-            status: 200,
-            data: {}
-        });
         serviceMocks.socialFriendRosterBaselineGet.mockResolvedValue({
             stale: false,
             count: 0,

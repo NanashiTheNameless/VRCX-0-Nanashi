@@ -10,7 +10,6 @@ fn avatar_search_contract_sets_expected_headers() {
     );
     assert_eq!(input.method, Some(ExternalHttpMethod::Get));
     let headers = input.headers.unwrap();
-    assert!(!headers.contains_key("Referer"));
     assert_eq!(headers.get("VRCX-ID").map(String::as_str), Some("abc"));
 }
 
@@ -66,14 +65,13 @@ fn youtube_contract_builds_fixed_endpoint_and_query() {
 }
 
 #[test]
-fn status_contract_uses_status_origin_without_referer() {
+fn status_contract_uses_status_origin() {
     let input = vrc_status_json_get_input("/status.json");
 
     assert_eq!(
         input.url.as_deref(),
         Some("https://status.vrchat.com/api/v2/status.json")
     );
-    assert!(!input.headers.unwrap().contains_key("Referer"));
 }
 
 #[test]

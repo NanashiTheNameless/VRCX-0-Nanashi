@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-    buildLegacyInstanceTag,
-    getLaunchURL,
-    isRealInstance
-} from './instance';
+import { buildLegacyInstanceTag, isRealInstance } from './instance';
 import { parseLocation } from './location';
 
 describe('instance utils', () => {
@@ -60,21 +56,5 @@ describe('instance utils', () => {
             ageGate: true,
             strict: false
         });
-    });
-
-    it('builds launch URLs with encoded world, instance, and short name values', () => {
-        expect(
-            getLaunchURL({
-                worldId: 'wrld_123',
-                instanceId: '12345~friends(usr_owner)',
-                shortName: 'abc 123'
-            })
-        ).toBe(
-            'https://vrchat.com/home/launch?worldId=wrld_123&instanceId=12345~friends(usr_owner)&shortName=abc%20123'
-        );
-
-        expect(getLaunchURL({ worldId: 'wrld_123' })).toBe(
-            'https://vrchat.com/home/launch?worldId=wrld_123'
-        );
     });
 });

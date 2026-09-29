@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { AppErrorPayload } from './bindings';
-import {
-    PlatformCommandError,
-    PlatformUnavailableError,
-    normalizePlatformError
-} from './errors';
+import { PlatformCommandError, normalizePlatformError } from './errors';
 
 describe('tauri errors', () => {
     it('keeps Error instances when no extra fallback context is needed', () => {
@@ -99,14 +95,5 @@ describe('tauri errors', () => {
             message: 'invalid snapshot',
             cause: rawError
         });
-    });
-
-    it('uses a specific name for unavailable platform APIs', () => {
-        const error = new PlatformUnavailableError();
-
-        expect(error.name).toBe('PlatformUnavailableError');
-        expect(error.message).toBe(
-            'Tauri platform APIs are unavailable in this runtime'
-        );
     });
 });

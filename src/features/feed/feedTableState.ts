@@ -3,11 +3,8 @@ import type { SortingState } from '@tanstack/react-table';
 import {
     getDataTableStorageKey,
     readPersistedTableState,
-    safeJsonParse,
     writePersistedTableState
 } from '@/components/data-table/dataTablePersistence';
-
-export { safeJsonParse };
 
 export const FEED_TABLE_DEFAULT_PAGE_SIZES = [10, 15, 20, 25, 50, 100];
 export const FEED_TABLE_DEFAULT_SORTING: SortingState = [];

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { ScreenshotLibraryImage } from '@/platform/tauri/bindings';
-import mediaRepository from '@/repositories/mediaRepository';
+import {
+    commands,
+    type ScreenshotLibraryImage
+} from '@/platform/tauri/bindings';
 import {
     getCurrentScreenshotLibraryScanStatus,
     startScreenshotLibraryScan,
@@ -17,7 +19,7 @@ import {
 export type WorldWorldScreenshots = ScreenshotLibraryImage[];
 
 type ScreenshotScanStatus = Awaited<
-    ReturnType<typeof mediaRepository.getScreenshotLibraryStatus>
+    ReturnType<typeof commands.appGetScreenshotLibraryStatus>
 >;
 
 export function useWorldDialogScreenshots({
@@ -77,7 +79,7 @@ export function useWorldDialogScreenshots({
         const loadWorldScreenshots = async () => {
             try {
                 const nextScreenshots =
-                    await mediaRepository.getWorldScreenshots(worldId);
+                    await commands.appGetWorldScreenshots(worldId);
                 if (!isCurrent()) {
                     return;
                 }

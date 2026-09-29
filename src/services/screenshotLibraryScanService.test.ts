@@ -5,10 +5,10 @@ const mocks = vi.hoisted(() => ({
     startScreenshotLibraryScan: vi.fn()
 }));
 
-vi.mock('@/repositories/mediaRepository', () => ({
-    default: {
-        getScreenshotLibraryStatus: mocks.getScreenshotLibraryStatus,
-        startScreenshotLibraryScan: mocks.startScreenshotLibraryScan
+vi.mock('@/platform/tauri/bindings', () => ({
+    commands: {
+        appGetScreenshotLibraryStatus: mocks.getScreenshotLibraryStatus,
+        appStartScreenshotLibraryScan: mocks.startScreenshotLibraryScan
     }
 }));
 

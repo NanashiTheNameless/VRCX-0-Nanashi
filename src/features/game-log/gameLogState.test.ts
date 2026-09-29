@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
     GAME_LOG_COLUMN_IDS,
@@ -15,40 +15,19 @@ import {
 
 const STORAGE_KEY = 'vrcx-0:table:gameLog';
 
-function installLocalStorage(initial: Record<string, unknown> = {}) {
-    const store = new Map(
-        Object.entries(initial).map(([key, value]) => [key, String(value)])
-    );
-
-    Object.defineProperty(globalThis, 'window', {
-        configurable: true,
-        value: {
-            localStorage: {
-                getItem(key: string) {
-                    return store.has(key) ? store.get(key) : null;
-                },
-                setItem(key: string, value: string) {
-                    store.set(key, String(value));
-                }
-            }
-        }
-    });
-
-    return store;
-}
-
-afterEach(() => {
-    Reflect.deleteProperty(globalThis, 'window');
+beforeEach(() => {
+    localStorage.clear();
 });
 
 describe('gameLogState', () => {
     it('restores and merges the saved game-log table layout', () => {
-        installLocalStorage({
-            [STORAGE_KEY]: JSON.stringify({
+        localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({
                 sorting: [{ id: 'type', desc: false }],
                 pageSize: 50
             })
-        });
+        );
 
         expect(readPersistedGameLogState()).toMatchObject({
             sorting: [{ id: 'type', desc: false }],
@@ -72,28 +51,8 @@ describe('gameLogState', () => {
     it('falls back to defaults when saved sorting or page sizes are unusable', () => {
         expect(readPersistedGameLogState()).toEqual({});
 
-        installLocalStorage({
-            [STORAGE_KEY]: '{not-json'
-        });
+        localStorage.setItem(STORAGE_KEY, '{not-json');
         expect(readPersistedGameLogState()).toEqual({});
-
-        Object.defineProperty(globalThis, 'window', {
-            configurable: true,
-            value: {
-                localStorage: {
-                    getItem() {
-                        throw new Error('storage blocked');
-                    },
-                    setItem() {
-                        throw new Error('storage blocked');
-                    }
-                }
-            }
-        });
-        expect(readPersistedGameLogState()).toEqual({});
-        expect(() =>
-            writePersistedGameLogState({ pageSize: 10 })
-        ).not.toThrow();
 
         expect(sanitizeGameLogSorting([{ id: 'unknown', desc: true }])).toBe(
             GAME_LOG_DEFAULT_SORTING

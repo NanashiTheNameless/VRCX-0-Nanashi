@@ -4,6 +4,7 @@ import { vrcxInstanceDeepLink } from '@/shared/constants/vrcxDeepLinks';
 import { useLaunchStore } from '@/state/launchStore';
 
 const mocks = vi.hoisted(() => ({
+    getGroupsStrictSearch: vi.fn(),
     getInstanceFromShortName: vi.fn(),
     openInstanceInGame: vi.fn(),
     openWorldDialog: vi.fn()
@@ -16,7 +17,10 @@ vi.mock('@/repositories/vrchatInstanceRepository', () => ({
 }));
 
 vi.mock('@/repositories/vrchatSearchRepository', () => ({
-    default: { getInstanceFromShortName: mocks.getInstanceFromShortName }
+    default: {
+        getGroupsStrictSearch: mocks.getGroupsStrictSearch,
+        getInstanceFromShortName: mocks.getInstanceFromShortName
+    }
 }));
 
 vi.mock('@/services/dialogService', () => ({
@@ -106,9 +110,6 @@ describe('directAccessService', () => {
     ])(
         'opens world details before the instance dialog for %s',
         async (input) => {
-            mocks.getInstanceFromShortName.mockRejectedValue(
-                new Error('unavailable')
-            );
             mocks.openWorldDialog.mockImplementationOnce(() => {
                 expect(useLaunchStore.getState().launchDialog.open).toBe(false);
             });
@@ -191,7 +192,9 @@ describe('directAccessService', () => {
                 directAccessParse('https://vrch.at/AbCd1234')
             ).resolves.toBe(true);
             expect(useLaunchStore.getState().launchDialog.open).toBe(false);
-            expect(mocks.openWorldDialog).toHaveBeenCalled();
+            expect(mocks.openWorldDialog).toHaveBeenCalledWith(
+                expect.objectContaining({ worldId: WORLD_ID })
+            );
         }
     );
 
@@ -307,12 +310,30 @@ describe('directAccessParse detect mode', () => {
         });
     });
 
-    it('keeps mixed case payloads intact', async () => {
+    it('searches group short codes with their original casing', async () => {
+        const dialogService = await import('@/services/dialogService');
+        mocks.getGroupsStrictSearch.mockResolvedValue({
+            json: [
+                {
+                    id: 'grp_12345678-1234-1234-1234-1234567890ab',
+                    name: 'VRCX Group',
+                    shortCode: 'VRCX',
+                    discriminator: '1234'
+                }
+            ]
+        });
+
         await expect(
-            directAccessParse('https://vrc.group/VRCX.1234', 'detect')
+            directAccessParse('https://vrc.group/VRCX.1234')
         ).resolves.toBe(true);
-        await expect(directAccessParse('VRCX.1234', 'detect')).resolves.toBe(
-            true
+
+        expect(mocks.getGroupsStrictSearch).toHaveBeenCalledWith({
+            query: 'VRCX.1234'
+        });
+        expect(dialogService.openGroupDialog).toHaveBeenCalledWith(
+            expect.objectContaining({
+                groupId: 'grp_12345678-1234-1234-1234-1234567890ab'
+            })
         );
     });
 });

@@ -143,12 +143,6 @@ describe('shellStore tray notification ownership', () => {
 });
 
 describe('shellStore settings navigation state', () => {
-    it('keeps the last selected settings tab for the next page mount', () => {
-        useShellStore.getState().setLastSettingsTab('notifications');
-
-        expect(useShellStore.getState().lastSettingsTab).toBe('notifications');
-    });
-
     it('persists the selected window display mode', () => {
         useShellStore.getState().setWindowDisplayMode('sidebar');
 

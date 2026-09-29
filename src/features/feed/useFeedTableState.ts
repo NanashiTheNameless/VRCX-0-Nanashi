@@ -10,6 +10,7 @@ import {
     getTablePageSizePreference,
     getTablePageSizesPreference
 } from '@/services/preferencesService';
+import { safeJsonParse } from '@/shared/utils/json';
 import { usePreferencesStore } from '@/state/preferencesStore';
 
 import {
@@ -17,7 +18,6 @@ import {
     FEED_TABLE_DEFAULT_PAGE_SIZES as DEFAULT_PAGE_SIZES,
     readPersistedFeedTableState as readPersistedState,
     resolveFeedPageSize as resolvePageSize,
-    safeJsonParse,
     sanitizeFeedPageSizes as sanitizePageSizes,
     sanitizeFeedSorting as sanitizeSorting,
     writePersistedFeedTableState as writePersistedState

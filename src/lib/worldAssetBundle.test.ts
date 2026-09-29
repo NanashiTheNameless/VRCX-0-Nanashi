@@ -4,19 +4,15 @@ const mocks = vi.hoisted(() => ({
     checkVRChatCache: vi.fn()
 }));
 
-vi.mock('@/repositories/assetBundleRepository', () => ({
-    assetBundleRepository: {
-        checkVRChatCache: mocks.checkVRChatCache
-    },
-    default: {
-        checkVRChatCache: mocks.checkVRChatCache
+vi.mock('@/platform/tauri/bindings', () => ({
+    commands: {
+        assetBundleCheckVrchatCache: mocks.checkVRChatCache
     }
 }));
 
-import { assetBundleRepository } from '@/repositories/assetBundleRepository';
+import { commands } from '@/platform/tauri/bindings';
 
 import {
-    defaultWorldCacheInfo,
     readWorldCacheInfo,
     resolveWorldAssetBundleArgs
 } from './worldAssetBundle';
@@ -26,15 +22,6 @@ function assetUrl(fileId: string, version: number, variantVersion: number = 0) {
 }
 
 describe('worldAssetBundle', () => {
-    it('returns the stable default cache info shape', () => {
-        expect(defaultWorldCacheInfo()).toEqual({
-            inCache: false,
-            cacheSize: '',
-            cacheLocked: false,
-            cachePath: ''
-        });
-    });
-
     it('selects the newest compatible standalone windows package from the end', () => {
         const args = resolveWorldAssetBundleArgs(
             {
@@ -139,7 +126,7 @@ describe('worldAssetBundle', () => {
     });
 
     it('reads visible VRChat cache size, lock state, and cache path', async () => {
-        vi.mocked(assetBundleRepository.checkVRChatCache).mockResolvedValue({
+        vi.mocked(commands.assetBundleCheckVrchatCache).mockResolvedValue({
             Item1: 2 * 1048576,
             Item2: true,
             Item3: 'C:\\VRChat\\Cache-WindowsPlayer\\asset\\version'
@@ -165,7 +152,7 @@ describe('worldAssetBundle', () => {
             cachePath: 'C:\\VRChat\\Cache-WindowsPlayer\\asset\\version'
         });
 
-        expect(assetBundleRepository.checkVRChatCache).toHaveBeenCalledWith(
+        expect(commands.assetBundleCheckVrchatCache).toHaveBeenCalledWith(
             'file_world',
             8,
             'security',

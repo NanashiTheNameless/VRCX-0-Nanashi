@@ -8,7 +8,7 @@ import type { WorldHoverCardSeed } from '@/components/world-hover-card/WorldHove
 import type {
     ActivityPageWorldRow,
     ActivityPageWorlds
-} from '@/repositories/activityPageRepository';
+} from '@/platform/tauri/bindings';
 import { openWorldDialog } from '@/services/dialogService';
 
 import { useActivityWorldNames } from '../useActivityWorldNames';

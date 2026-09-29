@@ -768,7 +768,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn tab_count_orchestration_uses_semantic_source_without_web_client() {
+    async fn other_user_tab_counts_aggregate_every_source_with_public_world_paging() {
         let source = Arc::new(RecordingUserDialogTabCountsSource::default());
         let auth_scope = RuntimeAuthScope::new();
         auth_scope.set("usr_self", "https://api.example.test/api/1/");

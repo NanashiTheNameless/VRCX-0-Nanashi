@@ -9,9 +9,6 @@ import type { FriendLogRow } from '../friendLogRows';
 import { useFriendLogColumns } from './FriendLogColumns';
 import { FriendLogVirtualList } from './FriendLogVirtualList';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
 vi.mock('./FriendLogViewParts', () => ({
     FriendLogTypeIndicator: ({ type }: { type: string }) => <span>{type}</span>,
     SortButton: () => <button>Sort</button>,

@@ -28,17 +28,6 @@ async fn tool_wait_returns_when_the_budget_expires() {
 }
 
 #[test]
-fn hidden_tools_are_not_dispatchable() {
-    let tool_defs = vec![crate::test_support::tool_def(
-        "get_online_friends",
-        serde_json::json!({"type": "object"}),
-    )];
-
-    assert!(tool_is_available(&tool_defs, "get_online_friends"));
-    assert!(!tool_is_available(&tool_defs, "favorite_vrchat"));
-}
-
-#[test]
 fn system_prompt_keeps_core_boundaries_and_schema_field_names() {
     for phrase in [
         "not observed",
@@ -218,9 +207,7 @@ fn empty_final_answer_without_tools_still_allows_no_answer_error() {
 }
 
 #[test]
-fn empty_answer_retry_prompt_matches_available_context() {
-    assert_eq!(final_answer_retry_prompt(true), FINAL_ANSWER_PROMPT);
-    assert_eq!(final_answer_retry_prompt(false), DIRECT_ANSWER_RETRY_PROMPT);
+fn direct_answer_retry_prompt_does_not_mention_tool_results() {
     assert!(!DIRECT_ANSWER_RETRY_PROMPT.contains("tool results"));
 }
 

@@ -2,10 +2,6 @@ import { commands } from '@/platform/tauri/bindings';
 import type { AppDataDirState } from '@/platform/tauri/bindings';
 import { tauriClient } from '@/platform/tauri/client';
 import type { WindowResizeDirection } from '@/platform/tauri/webview';
-import {
-    openFileSelectorDialog as openFileSelectorDialogRequest,
-    openFolderAndSelectItem as openFolderAndSelectItemRequest
-} from '@/repositories/mediaFileRepository';
 
 export async function openExternalLink(url: string): Promise<void> {
     await commands.appOpenLink(url);
@@ -46,7 +42,7 @@ export async function openFolderAndSelectItem(
     path: string,
     isFolder: boolean
 ): Promise<void> {
-    await openFolderAndSelectItemRequest(path, isFolder);
+    await commands.appOpenFolderAndSelectItem(path, isFolder);
 }
 
 export async function openFolderSelectorDialog(
@@ -61,7 +57,7 @@ export async function openFileSelectorDialog(
     defaultExt: string,
     defaultFilter: string
 ): Promise<string> {
-    const selected = await openFileSelectorDialogRequest(
+    const selected = await commands.appOpenFileSelectorDialog(
         defaultPath,
         defaultExt,
         defaultFilter

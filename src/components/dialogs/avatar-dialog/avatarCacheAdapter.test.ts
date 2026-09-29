@@ -4,27 +4,24 @@ const mocks = vi.hoisted(() => ({
     checkVRChatCache: vi.fn()
 }));
 
-vi.mock('@/repositories/assetBundleRepository', () => ({
-    assetBundleRepository: {
-        checkVRChatCache: mocks.checkVRChatCache
-    },
-    default: {
-        checkVRChatCache: mocks.checkVRChatCache
+vi.mock('@/platform/tauri/bindings', () => ({
+    commands: {
+        assetBundleCheckVrchatCache: mocks.checkVRChatCache
     }
 }));
 
-import { assetBundleRepository } from '@/repositories/assetBundleRepository';
+import { commands } from '@/platform/tauri/bindings';
 
 import { defaultAvatarSideData } from './avatarAssets';
 import { readAvatarCacheInfo } from './avatarCacheAdapter';
 
 describe('avatarCacheAdapter', () => {
     beforeEach(() => {
-        vi.mocked(assetBundleRepository.checkVRChatCache).mockReset();
+        vi.mocked(commands.assetBundleCheckVrchatCache).mockReset();
     });
 
     it('reads avatar cache info using resolved bundle args', async () => {
-        vi.mocked(assetBundleRepository.checkVRChatCache).mockResolvedValue({
+        vi.mocked(commands.assetBundleCheckVrchatCache).mockResolvedValue({
             Item1: 2097152,
             Item2: true,
             Item3: 'C:/cache/avatar'
@@ -51,7 +48,7 @@ describe('avatarCacheAdapter', () => {
             cacheLocked: true,
             cachePath: 'C:/cache/avatar'
         });
-        expect(assetBundleRepository.checkVRChatCache).toHaveBeenCalledWith(
+        expect(commands.assetBundleCheckVrchatCache).toHaveBeenCalledWith(
             'file_cache',
             4,
             'security',
@@ -63,11 +60,11 @@ describe('avatarCacheAdapter', () => {
         await expect(
             readAvatarCacheInfo({ assetUrl: '' }, '')
         ).resolves.toEqual(defaultAvatarSideData().cache);
-        expect(assetBundleRepository.checkVRChatCache).not.toHaveBeenCalled();
+        expect(commands.assetBundleCheckVrchatCache).not.toHaveBeenCalled();
     });
 
     it('reads cache info with unfiltered bundle args when the SDK version is unavailable', async () => {
-        vi.mocked(assetBundleRepository.checkVRChatCache).mockResolvedValue({
+        vi.mocked(commands.assetBundleCheckVrchatCache).mockResolvedValue({
             Item1: 1048576,
             Item2: false,
             Item3: 'C:/cache/fallback'
@@ -94,7 +91,7 @@ describe('avatarCacheAdapter', () => {
             cacheLocked: false,
             cachePath: 'C:/cache/fallback'
         });
-        expect(assetBundleRepository.checkVRChatCache).toHaveBeenCalledWith(
+        expect(commands.assetBundleCheckVrchatCache).toHaveBeenCalledWith(
             'file_config-fallback',
             6,
             'security',

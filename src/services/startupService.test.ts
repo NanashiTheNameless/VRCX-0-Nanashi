@@ -9,9 +9,7 @@ const mocks = vi.hoisted(() => ({
     configGetString: vi.fn(),
     configSetString: vi.fn(),
     refreshSavedAuthSnapshot: vi.fn(),
-    initializeBackgroundImage: vi.fn(),
     runStartupMaintenance: vi.fn(),
-    initializeCommunityThemes: vi.fn(),
     initializeDatabaseUpgradeFlow: vi.fn(),
     initializeHostCapabilities: vi.fn(),
     loadPreferenceSnapshot: vi.fn(),
@@ -48,16 +46,8 @@ vi.mock('./authSnapshotService', () => ({
     refreshSavedAuthSnapshot: mocks.refreshSavedAuthSnapshot
 }));
 
-vi.mock('./background-image/backgroundImageService', () => ({
-    initializeBackgroundImage: mocks.initializeBackgroundImage
-}));
-
 vi.mock('./backgroundMaintenanceService', () => ({
     runStartupMaintenance: mocks.runStartupMaintenance
-}));
-
-vi.mock('./communityThemeService', () => ({
-    initializeCommunityThemes: mocks.initializeCommunityThemes
 }));
 
 vi.mock('./databaseUpgradeService', () => ({
@@ -144,9 +134,7 @@ describe('startupService', () => {
         );
         mocks.configSetString.mockResolvedValue(undefined);
         mocks.refreshSavedAuthSnapshot.mockResolvedValue(undefined);
-        mocks.initializeBackgroundImage.mockResolvedValue(undefined);
         mocks.runStartupMaintenance.mockResolvedValue(undefined);
-        mocks.initializeCommunityThemes.mockResolvedValue(undefined);
         mocks.initializeDatabaseUpgradeFlow.mockResolvedValue(true);
         mocks.initializeHostCapabilities.mockResolvedValue(undefined);
         mocks.loadPreferenceSnapshot.mockResolvedValue(undefined);
@@ -182,13 +170,6 @@ describe('startupService', () => {
             status: 'pending',
             detail: 'Runtime bootstrap is ready. Authenticated session services start after login.'
         });
-    });
-
-    it('leaves community and background projection hydration to the runtime event bridge', async () => {
-        await initializeReactRuntime();
-
-        expect(mocks.initializeCommunityThemes).not.toHaveBeenCalled();
-        expect(mocks.initializeBackgroundImage).not.toHaveBeenCalled();
     });
 
     it('canonicalizes and persists a saved locale before applying font preferences', async () => {

@@ -12,14 +12,6 @@ const mocks = vi.hoisted(() => ({
     loadNewInstanceGroups: vi.fn().mockResolvedValue([])
 }));
 
-vi.mock('react-i18next', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('react-i18next')>();
-    return {
-        ...actual,
-        useTranslation: () => ({ t: (key: string) => key })
-    };
-});
-
 vi.mock('@/services/toastService', () => ({
     toast: { add: vi.fn() }
 }));

@@ -393,31 +393,6 @@ fn friend_log_upsert_current_skips_history_on_update_unless_forced() {
 }
 
 #[test]
-fn friend_log_delete_current_array_deletes_the_only_target_row() {
-    let (_dir, db) = test_db("delete-current-single");
-    friend_log_replace_current(
-        &db,
-        "usr_self".into(),
-        vec![current_entry("usr_alice", "Alice", Some("Known"), 1)],
-        FriendLogReplaceOptionsInput::default(),
-    )
-    .unwrap();
-
-    let result = friend_log_delete_current_array(
-        &db,
-        "usr_self".into(),
-        vec!["usr_alice".into()],
-        FriendLogDeleteOptionsInput::default(),
-    )
-    .unwrap();
-
-    assert_eq!(result.count, 1);
-    assert!(friend_log_current_list(&db, "usr_self".into())
-        .unwrap()
-        .is_empty());
-}
-
-#[test]
 fn friend_log_history_add_skips_entries_missing_type_or_user_id() {
     let (_dir, db) = test_db("history-add-skip");
 
@@ -509,18 +484,6 @@ fn friend_log_history_query_filters_by_target_user_and_types() {
     .unwrap();
     assert_eq!(alice_trust_level_only.len(), 1);
     assert_eq!(alice_trust_level_only[0].r#type, "TrustLevel");
-}
-
-#[test]
-fn current_friend_trust_level_defaults_to_visitor_and_keeps_explicit_levels() {
-    assert_eq!(
-        current_friend_trust_level(&current_entry("usr_a", "Alice", None, 1)),
-        "Visitor"
-    );
-    assert_eq!(
-        current_friend_trust_level(&current_entry("usr_a", "Alice", Some("Trusted"), 1)),
-        "Trusted"
-    );
 }
 
 #[test]

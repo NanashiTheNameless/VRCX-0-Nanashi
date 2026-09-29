@@ -46,7 +46,8 @@ vi.mock('@/platform/tauri/bindings', () => ({
         appDrainPendingDeepLinks: mocks.appDrainPendingDeepLinks,
         appFavoriteLocalSnapshot: mocks.appFavoriteLocalSnapshot,
         appSharedCollectionImportStart: mocks.appSharedCollectionImportStart,
-        appSharedCollectionImportStatus: mocks.appSharedCollectionImportStatus
+        appSharedCollectionImportStatus: mocks.appSharedCollectionImportStatus,
+        appShareCollectionPreview: mocks.previewSharedCollection
     }
 }));
 
@@ -55,12 +56,6 @@ vi.mock('@/platform/tauri/client', () => ({
         events: {
             subscribe: mocks.subscribe
         }
-    }
-}));
-
-vi.mock('@/repositories/shareCollectionRepository', () => ({
-    default: {
-        previewSharedCollection: mocks.previewSharedCollection
     }
 }));
 
@@ -517,7 +512,12 @@ describe('deepLinkService', () => {
         });
 
         return vi.waitFor(() => {
-            expect(mocks.toastError).toHaveBeenCalled();
+            expect(mocks.toastError).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    type: 'error',
+                    title: 'deep_link.import_collection.toast.empty'
+                })
+            );
             expect(mocks.prompt).not.toHaveBeenCalled();
         });
     });

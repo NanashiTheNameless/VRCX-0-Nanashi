@@ -13,10 +13,11 @@ import {
     resolveInventoryImageUrl,
     resolveInventoryName
 } from '@/domain/entities/inventory';
+import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { cn } from '@/lib/utils';
-import mediaRepository, {
+import vrchatMediaRepository, {
     type InventoryItemRecord
-} from '@/repositories/mediaRepository';
+} from '@/repositories/vrchatMediaRepository';
 import { getRecentBoopEmojis } from '@/services/boopRecentService';
 import { convertFileUrlToImageUrl } from '@/services/entityMediaService';
 import {
@@ -108,7 +109,7 @@ function normalizeInventoryEmoji(
 }
 
 async function fetchCustomEmojis(): Promise<BoopEmojiChoice[]> {
-    const { json } = await mediaRepository.getFileList({
+    const { json } = await vrchatMediaRepository.getFileList({
         n: 100,
         tag: 'emoji'
     });
@@ -121,7 +122,7 @@ async function fetchCustomEmojis(): Promise<BoopEmojiChoice[]> {
 }
 
 async function fetchInventoryEmojis(): Promise<BoopEmojiChoice[]> {
-    const { items } = await mediaRepository.collectInventoryItems({
+    const { items } = await vrchatMediaRepository.collectInventoryItems({
         types: ['emoji'],
         notFlags: ['ugc'],
         archived: false
@@ -133,10 +134,13 @@ function useEmojiRows(
     fetchRows: () => Promise<BoopEmojiChoice[]>,
     enabled: boolean
 ) {
+    const { t } = useTranslation();
     const [rows, setRows] = useState<BoopEmojiChoice[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const requestIdRef = useRef(0);
+    const failedMessageRef = useRef('');
+    failedMessageRef.current = t('dialog.boop_dialog.failed_to_load_emojis');
 
     const load = useCallback(async () => {
         const requestId = ++requestIdRef.current;
@@ -151,9 +155,7 @@ function useEmojiRows(
             if (requestIdRef.current === requestId) {
                 setRows([]);
                 setError(
-                    nextError instanceof Error
-                        ? nextError.message
-                        : 'Failed to load emojis.'
+                    userFacingErrorMessage(nextError, failedMessageRef.current)
                 );
             }
         } finally {

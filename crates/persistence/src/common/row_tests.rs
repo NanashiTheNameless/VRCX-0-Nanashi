@@ -59,24 +59,6 @@ fn row_string_stringifies_non_string_scalars() {
 }
 
 #[test]
-fn row_value_returns_null_for_missing_column() {
-    let row: Vec<serde_json::Value> = vec![];
-    assert_eq!(row_value(&row, 0), &serde_json::Value::Null);
-}
-
-#[test]
-fn row_json_clones_the_value_at_index() {
-    let row = vec![json!({"a": 1})];
-    assert_eq!(row_json(&row, 0), json!({"a": 1}));
-}
-
-#[test]
-fn row_json_returns_null_for_missing_column() {
-    let row: Vec<serde_json::Value> = vec![];
-    assert_eq!(row_json(&row, 0), serde_json::Value::Null);
-}
-
-#[test]
 fn strict_row_value_errors_on_missing_column() {
     let row: Vec<serde_json::Value> = vec![];
     let result = strict_row_value(&row, 2);

@@ -11,13 +11,9 @@ const tauriMock = vi.hoisted(() => ({
 
 vi.mock('@/platform/tauri/bindings', () => ({ commands: tauriMock.commands }));
 
-import * as groupProfileExports from './groupProfileRepository';
-import type {
-    GroupAuditLogRow,
-    GroupMemberRow
-} from './groupProfileRepository';
+import groupProfileRepository from './groupProfileRepository';
 
-const { default: groupProfileRepository, normalize } = groupProfileExports;
+const { normalize } = groupProfileRepository;
 
 describe('GroupProfileRepository', () => {
     beforeEach(() => {
@@ -28,20 +24,6 @@ describe('GroupProfileRepository', () => {
                 data: '{"ok":true}'
             });
         }
-    });
-
-    it('keeps the frozen facade aligned with public named exports', () => {
-        expect(Object.isFrozen(groupProfileRepository)).toBe(true);
-        expect(groupProfileExports.default).toBe(groupProfileRepository);
-        expect(
-            Object.keys(groupProfileExports)
-                .filter((key) => key !== 'default')
-                .toSorted()
-        ).toEqual(
-            Object.keys(groupProfileRepository)
-                .filter((key) => key !== 'fetchGroupProfile')
-                .toSorted()
-        );
     });
 
     it('normalizes group profile fields, counts, roles, and public group URL', () => {
@@ -146,55 +128,6 @@ describe('GroupProfileRepository', () => {
                 userId: 'usr_redacted'
             })
         ).resolves.toMatchObject({ json: { instances: wrappedRows } });
-    });
-
-    it('models member nullability and open audit-log data without real account data', () => {
-        const member = {
-            acceptedByDisplayName: null,
-            acceptedById: 'usr_actor_redacted',
-            bannedAt: null,
-            createdAt: '2026-01-01T00:00:00.000Z',
-            groupId: 'grp_redacted',
-            hasJoinedFromPurchase: false,
-            id: 'gmem_redacted',
-            isRepresenting: false,
-            isSubscribedToAnnouncements: true,
-            isSubscribedToEventAnnouncements: false,
-            joinedAt: '2026-01-01T00:00:00.000Z',
-            lastPostReadAt: null,
-            managerNotes: '',
-            membershipStatus: 'member',
-            mRoleIds: [],
-            roleIds: ['grol_redacted'],
-            user: {
-                currentAvatarImageUrl: '',
-                currentAvatarTags: [],
-                currentAvatarThumbnailImageUrl: '',
-                displayName: 'Member',
-                iconUrl: '',
-                id: 'usr_member_redacted',
-                profilePicOverride: '',
-                thumbnailUrl: '',
-                userIcon: ''
-            },
-            userId: 'usr_member_redacted',
-            visibility: 'visible'
-        } satisfies GroupMemberRow;
-        const log = {
-            actorDisplayName: 'Actor',
-            actorId: 'usr_actor_redacted',
-            created_at: '2026-01-01T00:00:00.000Z',
-            data: {},
-            description: 'Member joined',
-            eventType: 'group.member.join',
-            groupId: 'grp_redacted',
-            id: 'gaud_redacted',
-            targetId: 'usr_member_redacted'
-        } satisfies GroupAuditLogRow;
-
-        expect(member.acceptedByDisplayName).toBeNull();
-        expect(member.lastPostReadAt).toBeNull();
-        expect(log.data).toEqual({});
     });
 
     it('resolves the real group id from users/{id}/groups rows, not the gmem_ membership id', async () => {

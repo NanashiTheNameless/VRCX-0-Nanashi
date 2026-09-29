@@ -105,12 +105,3 @@ fn notify_tauri_single_instance_window() -> bool {
 fn encode_wide(value: &str) -> Vec<u16> {
     value.encode_utf16().chain(std::iter::once(0)).collect()
 }
-
-#[cfg(test)]
-mod tests {
-    #[cfg(not(target_os = "windows"))]
-    #[test]
-    fn non_windows_keeps_the_early_gate_non_blocking() {
-        assert!(super::try_acquire_or_notify_existing().is_some());
-    }
-}

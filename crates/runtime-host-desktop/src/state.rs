@@ -324,6 +324,23 @@ impl DesktopRuntimeHostState {
                 Arc::clone(builder.desktop_assembly().instance_dwell())
                     as Arc<dyn InstanceRosterObserver>,
             ]));
+        let telemetry = TelemetryRuntime::new(TelemetryRuntimeDeps {
+            environment: Arc::new(vrcx_0_outbound_adapters::LocalTelemetryEnvironment::new(
+                builder.desktop_assembly().config().clone(),
+                Arc::clone(builder.desktop_assembly().database()),
+                builder.paths().app_data.clone(),
+                Arc::new(|| {
+                    vrcx_0_host_desktop::system_theme::current_system_theme_category()
+                        .unwrap_or_default()
+                        .to_string()
+                }),
+            )),
+            transport: Arc::new(vrcx_0_outbound_adapters::HttpTelemetryTransport::production()),
+            tasks: builder.desktop_assembly().tasks().clone(),
+            backend_runtime: builder.backend_runtime().clone(),
+            auth_scope: builder.desktop_assembly().auth_scope().clone(),
+            app_version: app_version.clone(),
+        });
         let profile_config: Arc<dyn vrcx_0_application::profile::ProfileConfigStore> =
             Arc::new(vrcx_0_outbound_adapters::LocalProfileConfigStore::new(
                 Arc::clone(builder.database()),
@@ -665,7 +682,6 @@ impl DesktopRuntimeHostState {
             runtime.paths().app_data.join("error-log.txt"),
         );
         let legacy_migration = DesktopLegacyMigrationRuntime::new(
-            runtime.legacy_vrcx_available(),
             runtime.legacy_vrcx_migration_status().clone(),
             runtime.legacy_vrcx_source().clone(),
             vrcx_0_contracts::LegacyMigrationPaths::from_app_data(runtime.paths().app_data.clone()),
@@ -1773,6 +1789,22 @@ impl DesktopRuntimeHostState {
         )?)
     }
 
+    pub fn set_presence_automation_rule_enabled(
+        &self,
+        kind: PresenceAutomationRuleKind,
+        rule_id: &str,
+        enabled: bool,
+    ) -> Result<Vec<RawJson>> {
+        let store = crate::game_state_store::PersistenceGameStateStore::new(Arc::clone(
+            self.runtime.database(),
+        ));
+        Ok(
+            vrcx_0_application_game::presence_automation_rule_enabled_set(
+                &store, kind, rule_id, enabled,
+            )?,
+        )
+    }
+
     pub fn set_overlay_activity_filters(
         &self,
         filters: vrcx_0_application_activity::notification::OverlayActivityPreferenceFilters,
@@ -2299,6 +2331,23 @@ impl DesktopRuntimeHostState {
             &serde_json::to_value(&entries)?,
         )?;
         Ok(self.game.auto_launch.set_entries(entries))
+    }
+
+    pub fn set_app_launcher_entry_enabled(
+        &self,
+        entry_id: &str,
+        enabled: bool,
+    ) -> Result<AppLauncherSnapshot> {
+        let config = self.runtime.desktop_assembly().config();
+        Ok(self
+            .game
+            .auto_launch
+            .set_entry_enabled(entry_id, enabled, |entries| {
+                config.set_json(
+                    APP_LAUNCHER_ENTRIES_CONFIG_KEY,
+                    &serde_json::to_value(entries)?,
+                )
+            })?)
     }
 
     pub fn test_app_launcher_entry(&self, entry_id: &str) -> Result<AppLauncherSnapshot> {
@@ -3262,35 +3311,6 @@ mod background {
             assert_eq!(full_runs.get(), 1);
             assert_eq!(followup_runs.get(), 1);
             assert_eq!(foreground.detail, "foreground-followup");
-        }
-
-        #[test]
-        fn a_cloned_registry_backup_handle_lists_backups_on_another_thread() {
-            let nonce = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos();
-            let dir = std::env::temp_dir().join(format!(
-                "vrcx-0-registry-backup-runtime-{}-{nonce}",
-                std::process::id()
-            ));
-            std::fs::create_dir_all(&dir).unwrap();
-            let registry_backup = RegistryBackupRuntime {
-                database: Arc::new(
-                    vrcx_0_persistence::DatabaseService::new(&dir.join("VRCX-0.sqlite3")).unwrap(),
-                ),
-                state: Arc::new(Mutex::new(RegistryBackupMaintenanceState::default())),
-            };
-
-            let handle = registry_backup.clone();
-            let backups = std::thread::spawn(move || handle.list())
-                .join()
-                .unwrap()
-                .unwrap();
-
-            assert!(backups.is_empty());
-            drop(registry_backup);
-            let _ = std::fs::remove_dir_all(&dir);
         }
     }
 

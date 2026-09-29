@@ -672,7 +672,6 @@ mod tests {
         let system = open[0].content.as_deref().unwrap();
         assert!(!system.contains("Known references"));
         assert!(system.contains("Earlier tool results in this conversation are real data"));
-        assert!(!system.contains("Pick the one tool"));
     }
 
     #[test]

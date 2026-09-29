@@ -16,14 +16,14 @@ import {
 } from '@/components/data-table/DataTableView';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { cn } from '@/lib/utils';
-import type {
-    AppLauncherEntry,
-    AppLauncherEntryKind,
-    AppLauncherPickedTarget,
-    AppLauncherRun,
-    AppLauncherSnapshot
+import {
+    commands,
+    type AppLauncherEntry,
+    type AppLauncherEntryKind,
+    type AppLauncherPickedTarget,
+    type AppLauncherRun,
+    type AppLauncherSnapshot
 } from '@/platform/tauri/bindings';
-import appLauncherRepository from '@/repositories/appLauncherRepository';
 import {
     getCurrentAppLauncherSnapshot,
     subscribeAppLauncherSnapshot
@@ -284,7 +284,7 @@ export function AppLauncherDialog({
     ): Promise<AppLauncherSnapshot | null> => {
         setSaving(true);
         try {
-            const next = await appLauncherRepository.setEntries(nextEntries);
+            const next = await commands.appAppLauncherEntriesSet(nextEntries);
             setSnapshot(next);
             publishToolsStatusUpdated();
             return next;
@@ -305,7 +305,7 @@ export function AppLauncherDialog({
     const updateEnabled = async (enabled: boolean) => {
         setSaving(true);
         try {
-            setSnapshot(await appLauncherRepository.setEnabled(enabled));
+            setSnapshot(await commands.appAppLauncherEnabledSet(enabled));
             publishToolsStatusUpdated();
         } catch (error) {
             toast.add({
@@ -366,7 +366,7 @@ export function AppLauncherDialog({
     const addApp = async () => {
         setSaving(true);
         try {
-            const picked = await appLauncherRepository.pickTarget();
+            const picked = await commands.appAppLauncherTargetPick('auto');
             if (!picked) {
                 return;
             }
@@ -403,7 +403,7 @@ export function AppLauncherDialog({
         }
         setSaving(true);
         try {
-            const picked = await appLauncherRepository.pickTarget();
+            const picked = await commands.appAppLauncherTargetPick('auto');
             if (!picked) {
                 return;
             }

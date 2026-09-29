@@ -59,7 +59,7 @@ describe('localWorldFavoritesService', () => {
         expect(mocks.appFavoriteLocalSnapshot).toHaveBeenCalledWith('world');
     });
 
-    it('preserves the default empty group returned by the old baseline flow', async () => {
+    it('defaults to an empty Favorites group when no groups or favorites exist', async () => {
         await expect(loadLocalWorldFavoritesSnapshot()).resolves.toEqual({
             favoritesByGroup: { Favorites: [] },
             groupNames: ['Favorites']

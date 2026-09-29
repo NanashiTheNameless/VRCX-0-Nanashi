@@ -130,36 +130,6 @@ fn rename_with_config_merges_into_existing_group_despite_unique_index() {
 }
 
 #[test]
-fn write_transaction_rolls_back_favorite_write_on_error() {
-    let (_dir, db) = test_db("favorite-tx-rollback");
-    favorite_add(
-        &db,
-        None,
-        FavoriteEntityKind::Friend,
-        "usr_1".into(),
-        "keep".into(),
-    )
-    .unwrap();
-
-    let result = db.write_transaction(|tx| {
-        tx.execute_non_query(
-            "UPDATE favorite_friend SET group_name = @new WHERE group_name = @old",
-            &ParamsBuilder::new()
-                .set("new", "changed")
-                .set("old", "keep")
-                .build(),
-        )?;
-        Err::<(), Error>(Error::Custom("forced failure".into()))
-    });
-
-    assert!(result.is_err());
-    assert_eq!(
-        group_names(&db, FavoriteEntityKind::Friend),
-        vec!["keep".to_string()]
-    );
-}
-
-#[test]
 fn delete_removes_favorites_and_rewrites_config_atomically() {
     let (_dir, db) = test_db("favorite-delete-with-config");
     favorite_add(

@@ -631,24 +631,6 @@ fn blank_display_name_persists_unknown_not_user_id() -> Result<(), crate::Error>
 }
 
 #[test]
-fn rejects_feed_entry_types_without_a_database_table() {
-    let dir = TestDir::new("realtime-invalid-feed");
-    let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3")).unwrap();
-
-    let error = write_realtime_batch(
-        &db,
-        &OwnerId::new("usr_self"),
-        &RealtimePersistenceBatch {
-            feed_entries: vec![untabled_entry("2026-05-15T00:00:00Z")],
-            ..RealtimePersistenceBatch::default()
-        },
-    )
-    .unwrap_err();
-
-    assert!(matches!(error, crate::Error::InvalidData(_)));
-}
-
-#[test]
 fn rejects_trust_feed_without_matching_friend_log_upsert() {
     let dir = TestDir::new("realtime-unpaired-trust-feed");
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3")).unwrap();

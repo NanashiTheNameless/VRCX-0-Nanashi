@@ -2,17 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
     buildFavoriteExportCsv,
-    FAVORITES_EXPORT_ALL_VALUE,
-    FAVORITES_EXPORT_NONE_VALUE,
     getFavoriteExportFieldOptions
 } from './favoritesExport';
 
 describe('favorite export helpers', () => {
-    it('keeps export select sentinel values stable', () => {
-        expect(FAVORITES_EXPORT_ALL_VALUE).toBe('__all__');
-        expect(FAVORITES_EXPORT_NONE_VALUE).toBe('__none__');
-    });
-
     it('returns friend export fields for friends and entity fields for worlds or avatars', () => {
         expect(
             getFavoriteExportFieldOptions('friend').map(

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { setRightSidebarOpenPreference } from '@/services/preferencesService';
+import { safeJsonParse } from '@/shared/utils/json';
 import { isRecord } from '@/shared/utils/record';
 import { useShellStore } from '@/state/shellStore';
 
@@ -14,46 +15,29 @@ const sidePanelRouteOpenStateEvent =
 type SidePanelRouteOpenState = Record<string, boolean>;
 
 function readSidePanelRouteOpenState(): SidePanelRouteOpenState {
-    if (typeof window === 'undefined') {
+    const value = safeJsonParse(
+        localStorage.getItem(sidePanelRouteOpenStateStorageKey)
+    );
+    if (!isRecord(value)) {
         return {};
     }
-    try {
-        const value = JSON.parse(
-            window.localStorage.getItem(sidePanelRouteOpenStateStorageKey) ||
-                '{}'
-        );
-        if (!value || typeof value !== 'object' || Array.isArray(value)) {
-            return {};
-        }
-        return Object.fromEntries(
-            Object.entries(value).filter(
-                (entry): entry is [string, boolean] =>
-                    typeof entry[1] === 'boolean'
-            )
-        );
-    } catch {
-        return {};
-    }
+    return Object.fromEntries(
+        Object.entries(value).filter(
+            (entry): entry is [string, boolean] => typeof entry[1] === 'boolean'
+        )
+    );
 }
 
 function writeSidePanelRouteOpenState(routeKey: string, open: boolean) {
-    if (typeof window === 'undefined') {
-        return;
-    }
-
     const nextState: SidePanelRouteOpenState = {
         ...readSidePanelRouteOpenState(),
         [routeKey]: Boolean(open)
     };
 
-    try {
-        window.localStorage.setItem(
-            sidePanelRouteOpenStateStorageKey,
-            JSON.stringify(nextState)
-        );
-    } catch {
-        // no-op
-    }
+    localStorage.setItem(
+        sidePanelRouteOpenStateStorageKey,
+        JSON.stringify(nextState)
+    );
 
     window.dispatchEvent(
         new CustomEvent(sidePanelRouteOpenStateEvent, {
@@ -73,10 +57,6 @@ export function useRightSidePanelVisibility(pathname: string) {
         : rightSidebarOpen;
 
     useEffect(() => {
-        if (typeof window === 'undefined') {
-            return undefined;
-        }
-
         const handleRouteStateChange = (event: Event) => {
             const detail =
                 event instanceof CustomEvent && isRecord(event.detail)

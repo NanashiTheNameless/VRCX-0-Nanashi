@@ -2,31 +2,6 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('react-i18next', () => {
-    const translations: Record<string, string> = {
-        'common.actions.refresh': 'Refresh',
-        'dialog.group.empty.no_rows': 'No rows',
-        'dialog.group.label.actions': 'Actions',
-        'dialog.group.label.date': 'Date',
-        'dialog.group.label.page': 'Page',
-        'dialog.group.dynamic.search_value': 'Search logs',
-        'dialog.group_member_moderation.created_at': 'Created At',
-        'dialog.group_member_moderation.data': 'Data',
-        'dialog.group_member_moderation.description': 'Description',
-        'dialog.group_member_moderation.display_name': 'Display Name',
-        'dialog.group_member_moderation.filter_type': 'Filter Type',
-        'dialog.group_member_moderation.type': 'Type',
-        'table.pagination.next': 'Next',
-        'table.pagination.previous': 'Previous'
-    };
-
-    return {
-        useTranslation: () => ({
-            t: (key: string) => translations[key] || key
-        })
-    };
-});
-
 vi.mock('@/lib/dateTime', () => ({
     formatDateFilter: (value: string) => `formatted:${value}`
 }));
@@ -55,91 +30,6 @@ vi.mock('@/ui/shadcn/button', async () => {
     };
 });
 
-vi.mock('@/ui/shadcn/dropdown-menu', async () => {
-    const React = await import('react');
-
-    type ChildrenProps = React.PropsWithChildren<Record<string, unknown>>;
-
-    return {
-        DropdownMenu: ({ children }: ChildrenProps) =>
-            React.createElement('div', null, children),
-        DropdownMenuCheckboxItem: ({
-            children,
-            checked
-        }: ChildrenProps & { checked?: boolean }) =>
-            React.createElement(
-                'button',
-                { 'data-checked': checked ? 'true' : 'false' },
-                children
-            ),
-        DropdownMenuContent: ({ children }: ChildrenProps) =>
-            React.createElement('div', null, children),
-        DropdownMenuTrigger: ({ children }: ChildrenProps) =>
-            React.createElement(React.Fragment, null, children)
-    };
-});
-
-vi.mock('@/ui/shadcn/input', async () => {
-    const React = await import('react');
-
-    return {
-        Input: (props: Record<string, unknown>) =>
-            React.createElement('input', props)
-    };
-});
-
-vi.mock('@/ui/shadcn/select', async () => {
-    const React = await import('react');
-
-    type ChildrenProps = React.PropsWithChildren<Record<string, unknown>>;
-
-    return {
-        Select: ({ children }: ChildrenProps) =>
-            React.createElement('div', null, children),
-        SelectContent: ({ children }: ChildrenProps) =>
-            React.createElement('div', null, children),
-        SelectGroup: ({ children }: ChildrenProps) =>
-            React.createElement('div', null, children),
-        SelectItem: ({ children, value }: ChildrenProps & { value?: string }) =>
-            React.createElement('option', { value }, children),
-        SelectTrigger: ({ children }: ChildrenProps) =>
-            React.createElement('button', null, children),
-        SelectValue: () => React.createElement('span', null, '25')
-    };
-});
-
-vi.mock('@/ui/shadcn/table', async () => {
-    const React = await import('react');
-
-    type ChildrenProps = React.PropsWithChildren<Record<string, unknown>>;
-
-    return {
-        Table: ({ children }: ChildrenProps) =>
-            React.createElement('table', null, children),
-        TableBody: ({ children }: ChildrenProps) =>
-            React.createElement('tbody', null, children),
-        TableCell: ({ children, colSpan }: ChildrenProps) =>
-            React.createElement('td', { colSpan }, children),
-        TableHead: ({ children }: ChildrenProps) =>
-            React.createElement('th', null, children),
-        TableHeader: ({ children }: ChildrenProps) =>
-            React.createElement('thead', null, children),
-        TableRow: ({ children }: ChildrenProps) =>
-            React.createElement('tr', null, children)
-    };
-});
-
-vi.mock('@/ui/shadcn/tabs', async () => {
-    const React = await import('react');
-
-    type ChildrenProps = React.PropsWithChildren<Record<string, unknown>>;
-
-    return {
-        TabsContent: ({ children }: ChildrenProps) =>
-            React.createElement('div', null, children)
-    };
-});
-
 import type { AppCellContext } from '@/components/data-table/appTable';
 import { openUserDialog } from '@/services/dialogService';
 
@@ -148,7 +38,6 @@ import {
     filterGroupAuditLogs,
     formatGroupAuditLogTypeName,
     type GroupModerationLogRow,
-    groupAuditLogActorDialogArgs,
     openGroupAuditLogActor,
     toggleGroupAuditLogType
 } from './GroupModerationLogsPanel';
@@ -188,18 +77,7 @@ describe('GroupModerationLogsPanel', () => {
         expect(filterGroupAuditLogs([row], 'Moderator Alice')).toEqual([]);
     });
 
-    it('builds actor dialog args from the actor fields', () => {
-        expect(groupAuditLogActorDialogArgs(row)).toEqual({
-            seedData: {
-                displayName: 'Moderator Alice',
-                id: 'usr_actor'
-            },
-            title: 'Moderator Alice',
-            userId: 'usr_actor'
-        });
-    });
-
-    it('opens the actor user dialog from the log row actor fields', () => {
+    it('opens the actor user dialog from the log row actor fields and skips rows without an actor', () => {
         vi.mocked(openUserDialog).mockClear();
 
         openGroupAuditLogActor(row);
@@ -212,6 +90,12 @@ describe('GroupModerationLogsPanel', () => {
             title: 'Moderator Alice',
             userId: 'usr_actor'
         });
+
+        vi.mocked(openUserDialog).mockClear();
+
+        openGroupAuditLogActor({ ...row, actorId: '  ' });
+
+        expect(openUserDialog).not.toHaveBeenCalled();
     });
 
     it('renders dedicated log columns including target location and raw data', () => {
@@ -242,7 +126,3 @@ describe('GroupModerationLogsPanel', () => {
         expect(html).toContain('data-location="wrld_target"');
     });
 });
-
-vi.mock('@/services/toastService', () => ({
-    toast: { add: vi.fn(), close: vi.fn() }
-}));

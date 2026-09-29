@@ -10,10 +10,6 @@ const mocks = vi.hoisted(() => ({
     showAuthFailureToast: vi.fn()
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/services/i18nService', () => ({
     default: { t: (key: string) => key }
 }));

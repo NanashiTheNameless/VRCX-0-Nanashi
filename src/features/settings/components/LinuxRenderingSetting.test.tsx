@@ -32,10 +32,6 @@ vi.mock('@/services/shellIntegrationService', () => ({
     restartApplication: mocks.restart
 }));
 vi.mock('@/services/toastService', () => ({ toast: { add: mocks.toast } }));
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 import { useCriticalTaskStore } from '@/state/criticalTaskStore';
 
 import { LinuxRenderingSetting } from './LinuxRenderingSetting';

@@ -10,16 +10,8 @@ import type {
     FeedTableInstance
 } from '@/components/feed/feedTypes';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/components/feed/FeedDetailCell', () => ({
     FeedDetailCell: () => <span>detail</span>
-}));
-
-vi.mock('@/components/feed/FeedLocationLink', () => ({
-    FeedLocationLink: () => <span>world</span>
 }));
 
 vi.mock('@/components/feed/FeedTypeIndicator', () => ({
@@ -100,12 +92,6 @@ describe('FeedVirtualListShell', () => {
             '[data-feed-list-summary]'
         );
         expect(summary?.textContent).toContain('timeusertypedetail');
-        expect(summary?.className).toContain(
-            'h-[var(--vrcx-0-table-row-height)]'
-        );
-        expect(summary?.className).not.toContain(
-            'min-h-[var(--vrcx-0-table-row-height)]'
-        );
     });
 
     it('renders static labels instead of sortable headers', () => {

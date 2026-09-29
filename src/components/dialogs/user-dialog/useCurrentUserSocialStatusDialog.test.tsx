@@ -3,10 +3,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/repositories/configRepository', () => ({
     default: {
         getArray: vi.fn().mockResolvedValue([]),

@@ -5,10 +5,6 @@ import { SortableContext } from '@dnd-kit/sortable';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/services/dialogService', () => ({
     openGroupDialog: vi.fn()
 }));
@@ -75,7 +71,7 @@ function renderCard({
 describe('MyGroupCard', () => {
     afterEach(cleanup);
 
-    it('uses the shared gallery card shell and edit overlays', () => {
+    it('shows selection and order overlays instead of row actions in edit mode', () => {
         const onToggleSelected = vi.fn();
         const { container } = renderCard({
             editMode: true,
@@ -93,14 +89,10 @@ describe('MyGroupCard', () => {
         fireEvent.click(checkbox);
         expect(onToggleSelected).toHaveBeenCalledWith('grp_example');
 
-        const card = container.querySelector('button[aria-pressed="true"]');
-        expect(card?.className).toContain('h-full');
-        expect(card?.className).toContain('rounded-object');
-        expect(card?.className).toContain('ring-object-selected-border');
-
-        const order = screen.getByText('3');
-        expect(order.className).toContain('top-1');
-        expect(order.className).toContain('right-1');
+        expect(
+            container.querySelector('button[aria-pressed="true"]')
+        ).not.toBeNull();
+        expect(screen.getByText('3')).toBeTruthy();
     });
 
     it('shows ownership and visibility beside the name outside edit mode', () => {
@@ -117,11 +109,10 @@ describe('MyGroupCard', () => {
         ).toBeTruthy();
     });
 
-    it('keeps every row action trigger hidden while a batch action is busy', () => {
+    it('disables the row action trigger while a batch action is busy', () => {
         renderCard({ editMode: false, actionsDisabled: true });
 
         const trigger = screen.getByLabelText('view.my_groups.row_actions');
         expect(trigger.hasAttribute('disabled')).toBe(true);
-        expect(trigger.className).toContain('disabled:invisible');
     });
 });

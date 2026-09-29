@@ -15,7 +15,7 @@ import { FadeInImage } from '@/components/media/FadeInImage';
 import { TileShell } from '@/components/tile/TileShell';
 import { cn } from '@/lib/utils';
 import type { MediaFileTag } from '@/platform/tauri/bindings';
-import mediaRepository from '@/repositories/mediaRepository';
+import vrchatMediaRepository from '@/repositories/vrchatMediaRepository';
 import { toast } from '@/services/toastService';
 import {
     TILE_CHECK,
@@ -24,7 +24,7 @@ import {
 import { Button } from '@/ui/shadcn/button';
 
 type MediaFile = Awaited<
-    ReturnType<typeof mediaRepository.getFileList>
+    ReturnType<typeof vrchatMediaRepository.getFileList>
 >['json'][number];
 
 export interface ProfileMediaSection<TField extends string> {
@@ -235,7 +235,7 @@ export function ProfileMediaPanel<TField extends string>({
                 [section.fileTag]: true
             }));
             try {
-                const { json } = await mediaRepository.getFileList({
+                const { json } = await vrchatMediaRepository.getFileList({
                     n: 100,
                     tag: section.fileTag
                 });

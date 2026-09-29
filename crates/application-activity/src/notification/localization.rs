@@ -377,12 +377,4 @@ mod tests {
 
         assert!(!display.contains("#12345"));
     }
-
-    #[test]
-    fn access_labels_are_shared_for_the_same_locale() {
-        let first = OverlayLocalizer::new(OverlayLocale::En);
-        let second = OverlayLocalizer::new(OverlayLocale::En);
-
-        assert!(std::ptr::eq(first.access_labels(), second.access_labels()));
-    }
 }

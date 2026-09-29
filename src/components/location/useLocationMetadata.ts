@@ -2,9 +2,8 @@ import { useQueries } from '@tanstack/react-query';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { GroupInstanceRecord } from '@/domain/entities/group';
-import { entityQueryPolicies, queryKeys } from '@/lib/entityQueryCache';
+import { groupProfileQueryOptions } from '@/lib/groupProfileQuery';
 import gameLogRepository from '@/repositories/gameLogRepository';
-import groupProfileRepository from '@/repositories/groupProfileRepository';
 import worldProfileRepository from '@/repositories/worldProfileRepository';
 import { parseLocation, type ParsedLocation } from '@/shared/utils/location';
 import { normalizeString } from '@/shared/utils/string';
@@ -197,19 +196,9 @@ export function useLocationMetadataBatch(
         };
     }, [currentEndpoint, worldIdsKey]);
     const groupProfilesById = useQueries({
-        queries: groupIds.map((groupId) => ({
-            queryKey: queryKeys.group(groupId, false, currentEndpoint),
-            queryFn: () =>
-                groupProfileRepository.fetchGroupProfile({
-                    groupId,
-                    includeRoles: false
-                }),
-            enabled: Boolean(groupId),
-            staleTime: entityQueryPolicies.group.staleTime,
-            gcTime: entityQueryPolicies.group.gcTime,
-            retry: entityQueryPolicies.group.retry,
-            refetchOnWindowFocus: entityQueryPolicies.group.refetchOnWindowFocus
-        })),
+        queries: groupIds.map((groupId) =>
+            groupProfileQueryOptions(groupId, currentEndpoint)
+        ),
         combine: (results) =>
             mapQueryResults<LocationGroupProfile>(groupIds, results)
     });

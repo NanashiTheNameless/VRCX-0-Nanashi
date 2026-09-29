@@ -392,33 +392,53 @@ fn rejects_invalid_file_md5_before_building_upload_request() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn fresh_http_client_reuses_runtime_cookie_jar() -> Result<()> {
-    let web = WebClient::new(None, None, "2.9.2")?;
-    let initial_references = Arc::strong_count(&web.jar);
-    let fresh = build_http_client(
-        Arc::clone(&web.jar),
-        web.proxy_url.as_deref(),
-        &web.user_agent,
-    )?;
-    let mut request = WebExecuteRequest::new(
-        "https://api.vrchat.cloud/api/1/auth/user".into(),
-        "GET".into(),
-    );
-    request
-        .headers
-        .push(("user-agent".into(), "caller-override".into()));
-    let built = web.build_standard_request_with(&fresh, &mut request)?;
+#[tokio::test]
+async fn fresh_standard_request_sends_runtime_cookie_jar() -> Result<()> {
+    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+    use tokio::net::TcpListener;
 
-    assert!(Arc::strong_count(&web.jar) > initial_references);
-    assert_eq!(web.user_agent, ua_292());
-    // A caller-supplied user agent is ignored; VRChat gets the contact one.
-    assert_eq!(
-        built.headers()[reqwest::header::USER_AGENT],
-        contact_user_agent(&ua_292())
-    );
-    drop(fresh);
-    assert_eq!(Arc::strong_count(&web.jar), initial_references);
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let server = tokio::spawn(async move {
+        let (stream, _) = listener.accept().await.unwrap();
+        let mut stream = BufReader::new(stream);
+        let mut request = String::new();
+        loop {
+            let mut line = String::new();
+            stream.read_line(&mut line).await.unwrap();
+            request.push_str(&line);
+            if line == "\r\n" {
+                break;
+            }
+        }
+        stream
+            .get_mut()
+            .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nok")
+            .await
+            .unwrap();
+        request
+    });
+
+    let web = WebClient::new(None, None, env!("CARGO_PKG_VERSION"))?;
+    let url = reqwest::Url::parse(&format!("http://{address}/")).unwrap();
+    web.jar.update(|store| {
+        store
+            .insert_raw(&RawCookie::parse("auth=token").unwrap(), &url)
+            .unwrap();
+    });
+
+    let response = web
+        .execute_fresh_standard(WebExecuteRequest::new(
+            format!("http://{address}/auth/user"),
+            "GET".into(),
+        ))
+        .await?;
+    let captured = server.await.unwrap();
+
+    assert_eq!(response, (200, "ok".into()));
+    assert!(captured
+        .lines()
+        .any(|line| line.eq_ignore_ascii_case("cookie: auth=token")));
     Ok(())
 }
 

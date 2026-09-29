@@ -1,12 +1,6 @@
 // @vitest-environment jsdom
 
-import {
-    act,
-    cleanup,
-    fireEvent,
-    render,
-    waitFor
-} from '@testing-library/react';
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppToastOptions } from '@/services/toastService';
@@ -70,15 +64,10 @@ vi.mock('@/services/directAccessService', () => ({
     tryOpenLaunchLocation: mocks.tryOpenLaunchLocation
 }));
 
-import { useRuntimeStore } from '@/state/runtimeStore';
-
 import { LaunchModeContextMenuGroup } from './LaunchModeContextMenuGroup';
 
 beforeEach(() => {
     vi.clearAllMocks();
-    useRuntimeStore.setState((state) => ({
-        gameState: { ...state.gameState, isGameRunning: false }
-    }));
 });
 
 describe('LaunchModeContextMenuGroup', () => {
@@ -182,30 +171,6 @@ describe('LaunchModeContextMenuGroup', () => {
             'token'
         );
         expect(mocks.launchVrchat).not.toHaveBeenCalled();
-    });
-
-    it('keeps the in-game action available when the detected game state changes', () => {
-        const { getByRole } = render(
-            <LaunchModeContextMenuGroup
-                disabled={false}
-                errorMessage="Failed"
-                location="wrld_test:123"
-            />
-        );
-        const openInGame = getByRole('button', { name: 'Open In-Game' });
-        expect(openInGame.hasAttribute('disabled')).toBe(false);
-        act(() =>
-            useRuntimeStore.setState((state) => ({
-                gameState: { ...state.gameState, isGameRunning: true }
-            }))
-        );
-        expect(openInGame.hasAttribute('disabled')).toBe(false);
-        act(() =>
-            useRuntimeStore.setState((state) => ({
-                gameState: { ...state.gameState, isGameRunning: false }
-            }))
-        );
-        expect(openInGame.hasAttribute('disabled')).toBe(false);
     });
 
     it('reports unsuccessful in-game opens without falling back to launching', async () => {

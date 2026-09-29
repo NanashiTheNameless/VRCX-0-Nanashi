@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
     mergeActivityTimestampsIntoProfile,
-    mergeSnapshotIntoCurrentProfile
+    mergeSnapshotIntoCurrentProfile,
+    preserveProfileIdentity
 } from './userDialogProfileSnapshot';
 
 describe('mergeActivityTimestampsIntoProfile', () => {
@@ -135,5 +136,30 @@ describe('mergeSnapshotIntoCurrentProfile', () => {
         });
 
         expect(merged?.bannerUrl).toBe('https://image/file_old/1/1024');
+    });
+});
+
+describe('preserveProfileIdentity', () => {
+    it('reuses identity only for the active target', () => {
+        const currentProfile = {
+            id: 'usr_current',
+            displayName: 'Current'
+        };
+        const equalProfile = { ...currentProfile };
+        const nextTargetProfile = {
+            id: 'usr_next',
+            displayName: 'Next'
+        };
+
+        expect(
+            preserveProfileIdentity(currentProfile, equalProfile, 'usr_current')
+        ).toBe(currentProfile);
+        expect(
+            preserveProfileIdentity(
+                currentProfile,
+                nextTargetProfile,
+                'usr_next'
+            )
+        ).toBe(nextTargetProfile);
     });
 });

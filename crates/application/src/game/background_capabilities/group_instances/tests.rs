@@ -329,25 +329,6 @@ fn merge_replaces_fallback_name_with_fetched_profile_name() {
 }
 
 #[test]
-fn hydration_adds_minimal_fallback_when_profile_is_unavailable() {
-    let instance = json!({
-        "groupId": "grp_missing",
-        "location": "wrld_test:1"
-    });
-
-    let hydrated = hydrate_group_instance(instance, &HashMap::new());
-
-    assert_eq!(
-        hydrated["group"],
-        json!({
-            "id": "grp_missing",
-            "groupId": "grp_missing",
-            "name": "grp_missing"
-        })
-    );
-}
-
-#[test]
 fn hydration_leaves_instance_unchanged_without_group_id() {
     let instance = json!({
         "ownerId": "usr_owner",

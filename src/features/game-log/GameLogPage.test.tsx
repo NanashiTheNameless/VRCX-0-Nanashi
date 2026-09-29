@@ -13,18 +13,6 @@ const mocks = vi.hoisted<{
     sessions: GameLogSession[];
 }>(() => ({ viewMode: 'table', sessions: [] }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: (key: string) =>
-            ({
-                'view.game_log.label.game_log_is_disabled':
-                    'You have turned off GameLog writing',
-                'view.game_log.action.enable_game_log_ingestion_in_settings_before_this_page_can_load_local_vrchat_activity':
-                    'New records are not saved; history remains available.'
-            })[key] ?? key
-    })
-}));
-
 vi.mock('@/components/dialogs/PreviousInstancesTableDialog', () => ({
     PreviousInstancesTableDialog: () => null
 }));
@@ -154,11 +142,11 @@ describe('GameLogPage', () => {
         render(<GameLogPage />);
 
         expect(
-            screen.getByText('You have turned off GameLog writing')
+            screen.getByText('view.game_log.label.game_log_is_disabled')
         ).toBeTruthy();
         expect(
             screen.getByText(
-                'New records are not saved; history remains available.'
+                'view.game_log.action.enable_game_log_ingestion_in_settings_before_this_page_can_load_local_vrchat_activity'
             )
         ).toBeTruthy();
         expect(screen.getByText('History rows: 2')).toBeTruthy();

@@ -144,19 +144,34 @@ export const SidePanel = forwardRef<HTMLElement, SidePanelProps>(
         useEffect(() => {
             let active = true;
             Promise.all([
-                configRepository.getBool('sidebarGroupByInstance', true),
-                configRepository.getBool('isHideFriendsInSameInstance', true),
-                configRepository.getBool('isSameInstanceAboveFavorites', false),
-                configRepository.getBool('isSidebarDivideByFriendGroup', false),
+                configRepository.getBool(
+                    'sidebarGroupByInstance',
+                    defaultPrefs.sidebarGroupByInstance
+                ),
+                configRepository.getBool(
+                    'isHideFriendsInSameInstance',
+                    defaultPrefs.isHideFriendsInSameInstance
+                ),
+                configRepository.getBool(
+                    'isSameInstanceAboveFavorites',
+                    defaultPrefs.isSameInstanceAboveFavorites
+                ),
+                configRepository.getBool(
+                    'isSidebarDivideByFriendGroup',
+                    defaultPrefs.isSidebarDivideByFriendGroup
+                ),
                 configRepository.getString(
                     'sidebarSortMethod1',
-                    'Sort by Status'
+                    defaultPrefs.sidebarSortMethod1
                 ),
                 configRepository.getString(
                     'sidebarSortMethod2',
-                    'Sort Alphabetically'
+                    defaultPrefs.sidebarSortMethod2
                 ),
-                configRepository.getString('sidebarSortMethod3', ''),
+                configRepository.getString(
+                    'sidebarSortMethod3',
+                    defaultPrefs.sidebarSortMethod3
+                ),
                 configRepository.getString('sidebarFavoriteGroups', '[]'),
                 configRepository.getString('sidebarFavoriteGroupOrder', '[]')
             ])

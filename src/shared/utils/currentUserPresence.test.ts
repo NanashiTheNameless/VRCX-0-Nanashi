@@ -75,7 +75,7 @@ describe('mergeCurrentUserPresenceFields', () => {
 
         const result = mergeCurrentUserPresenceFields(nextUser, previousUser);
 
-        expect((result as Record<string, unknown>)['displayName']).toBe('Next');
+        expect(result).toBe(nextUser);
     });
 
     it('returns nextUser unchanged when previousUser is not an object', () => {

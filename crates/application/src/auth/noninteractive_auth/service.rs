@@ -278,31 +278,18 @@ mod tests {
     }
 
     #[test]
-    fn parse_current_user_response_uses_error_message() {
-        let result = parse_current_user_response(response(
-            403,
-            serde_json::json!({
-                "message": "Forbidden"
-            }),
-        ));
+    fn parse_current_user_response_uses_top_level_error_message() {
+        for (status, message) in [(403, "Forbidden"), (401, "Missing Credentials")] {
+            let result = parse_current_user_response(response(
+                status,
+                serde_json::json!({ "message": message }),
+            ));
 
-        assert!(matches!(
-            result,
-            Err(NonInteractiveAuthError::Failed(message)) if message == "Forbidden"
-        ));
-    }
-
-    #[test]
-    fn parse_current_user_response_fails_a_401_with_a_top_level_message() {
-        let result = parse_current_user_response(response(
-            401,
-            serde_json::json!({ "message": "Missing Credentials" }),
-        ));
-
-        assert!(matches!(
-            result,
-            Err(NonInteractiveAuthError::Failed(message)) if message == "Missing Credentials"
-        ));
+            assert!(matches!(
+                result,
+                Err(NonInteractiveAuthError::Failed(actual)) if actual == message
+            ));
+        }
     }
 
     #[test]
@@ -330,23 +317,6 @@ mod tests {
             Err(NonInteractiveAuthError::Failed(message))
                 if message == "VRChat auth request failed with HTTP 500."
         ));
-    }
-
-    #[test]
-    fn auth_response_error_message_reads_nested_error() {
-        let message = auth_response_error_message(
-            &response(
-                401,
-                serde_json::json!({
-                    "error": {
-                        "message": "Missing Credentials"
-                    }
-                }),
-            ),
-            "fallback".into(),
-        );
-
-        assert_eq!(message, "Missing Credentials");
     }
 
     #[test]

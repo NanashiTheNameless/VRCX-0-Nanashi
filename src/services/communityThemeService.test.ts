@@ -201,28 +201,9 @@ describe('communityThemeService', () => {
         vi.unstubAllGlobals();
     });
 
-    it('keeps the public facade and registers projection refresh handlers', async () => {
+    it('registers projection refresh handlers with the appearance coordinator', async () => {
         const { service } = await loadCommunityThemeService();
 
-        expect(Object.keys(service).sort()).toEqual([
-            'clearCommunityThemeOverrideCss',
-            'deleteInstalledCommunityTheme',
-            'disableCommunityThemeOverrideCss',
-            'disableInstalledCommunityTheme',
-            'enableInstalledCommunityTheme',
-            'getCommunityThemeOverrideCssSnapshot',
-            'initializeCommunityThemes',
-            'installCommunityTheme',
-            'isCommunityThemeAccentControlled',
-            'loadCatalog',
-            'loadCommunityThemeStats',
-            'loadLocalCommunityThemePreview',
-            'reportCommunityThemeInstall',
-            'saveCommunityThemeOverrideCss',
-            'startLocalCommunityThemePreviewWatch',
-            'stopLocalCommunityThemePreview',
-            'stopLocalCommunityThemePreviewWatch'
-        ]);
         expect(
             mocks.registerCommunityThemeAppearanceHandlers
         ).toHaveBeenCalledWith({
@@ -232,29 +213,17 @@ describe('communityThemeService', () => {
         });
     });
 
-    it('loads backend-owned catalog and stats endpoints', async () => {
+    it('stores the backend catalog and clears the loading state', async () => {
         const catalog = {
             sourceUrl: CATALOG_URL,
             schemaVersion: 1,
             themes: []
         };
         mocks.appCommunityThemeCatalogGet.mockResolvedValueOnce(catalog);
-        mocks.appCommunityThemeStatsGet.mockResolvedValueOnce({
-            'theme-a': { downloads: 7 }
-        });
         const { service, useCommunityThemeStore } =
             await loadCommunityThemeService();
 
         await expect(service.loadCatalog()).resolves.toEqual(catalog);
-        await expect(service.loadCommunityThemeStats()).resolves.toEqual({
-            'theme-a': { downloads: 7 }
-        });
-        await expect(
-            service.reportCommunityThemeInstall('theme-a')
-        ).resolves.toBe(true);
-        expect(mocks.appCommunityThemeInstallReport).toHaveBeenCalledWith(
-            'theme-a'
-        );
         expect(useCommunityThemeStore.getState()).toMatchObject({
             catalogUrl: CATALOG_URL,
             catalog: [],

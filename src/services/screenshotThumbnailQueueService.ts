@@ -1,4 +1,4 @@
-import mediaRepository from '@/repositories/mediaRepository';
+import { commands } from '@/platform/tauri/bindings';
 
 const MAX_ACTIVE_THUMBNAIL_REQUESTS = 2;
 
@@ -32,8 +32,8 @@ function runNextThumbnailRequest() {
         }
         task.started = true;
         activeRequests += 1;
-        mediaRepository
-            .ensureScreenshotThumbnail(task.path)
+        commands
+            .appEnsureScreenshotThumbnail(task.path)
             .then(task.resolve, task.reject)
             .finally(() => {
                 activeRequests -= 1;

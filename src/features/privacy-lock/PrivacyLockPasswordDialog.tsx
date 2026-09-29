@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import type { PrivacyLockOutcome } from '@/platform/tauri/bindings';
 import {
     changePrivacyLockPassword,
@@ -171,10 +172,10 @@ export function PrivacyLockPasswordDialog({
             return outcome;
         } catch (error) {
             setErrors({
-                form:
-                    error instanceof Error
-                        ? error.message
-                        : t('privacy_lock.error.failed')
+                form: userFacingErrorMessage(
+                    error,
+                    t('privacy_lock.error.failed')
+                )
             });
         } finally {
             setSubmitting(false);

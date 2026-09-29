@@ -5,7 +5,6 @@ import { useShallow } from 'zustand/react/shallow';
 import { languageCodes } from '@/localization/index';
 import { commands, type LlmEndpointDto } from '@/platform/tauri/bindings';
 import configRepository from '@/repositories/configRepository';
-import externalApiRepository from '@/repositories/externalApiRepository';
 import {
     setDiscordBoolPreference,
     setTranslationApiConfigPreference,
@@ -289,9 +288,9 @@ export function useSettingsIntegrations({ commit }: SettingsIntegrationsDeps) {
         if (!apiKey) {
             return;
         }
-        const response = await externalApiRepository.fetchYoutubeVideoMetadata({
+        const response = await commands.appExternalApiYoutubeVideoMetadataGet({
             videoId: 'dQw4w9WgXcQ',
-            apiKey
+            apiKey: apiKey.trim()
         });
         const payload = parseWebJson(response);
         const items = isRecord(payload) ? payload.items : null;

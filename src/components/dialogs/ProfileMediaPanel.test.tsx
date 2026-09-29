@@ -10,14 +10,9 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-    t: (key: string) => key,
     getFileList: vi.fn()
 }));
-vi.mock('react-i18next', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('react-i18next')>()),
-    useTranslation: () => ({ t: mocks.t })
-}));
-vi.mock('@/repositories/mediaRepository', () => ({
+vi.mock('@/repositories/vrchatMediaRepository', () => ({
     default: { getFileList: mocks.getFileList }
 }));
 

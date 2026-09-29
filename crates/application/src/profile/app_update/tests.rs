@@ -13,9 +13,9 @@ use vrcx_0_application_core::{
 };
 
 use super::release::{
-    compare_release_versions, is_preview_build_label, is_release_newer_than_current,
-    normalize_release, parse_preview_badge_timestamp_ms, parse_preview_build_timestamp_ms,
-    parse_release_version, TOKYO_UTC_OFFSET_SECONDS,
+    compare_release_versions, is_preview_build_label, normalize_release,
+    parse_preview_badge_timestamp_ms, parse_preview_build_timestamp_ms, parse_release_version,
+    TOKYO_UTC_OFFSET_SECONDS,
 };
 use super::{
     run_check_inner, up_to_date_outcome, AppUpdateBuildInfo, AppUpdateCatalogAsset,
@@ -207,32 +207,6 @@ fn app_update_test_context_with_update_check(
 }
 
 #[tokio::test]
-async fn update_check_uses_semantic_release_catalog_without_a_web_client() {
-    let release_catalog = TestAppUpdateReleaseCatalog {
-        releases: vec![release("v2.15.0", false, Vec::new())],
-    };
-    let updater: Arc<dyn UpdaterPort> = Arc::new(MockUpdaterPort::new([]));
-    let context = AppUpdateCheckContext {
-        release_catalog: &release_catalog,
-        app_version: "2.14.0",
-        build_label: "stable",
-        build_badge: "",
-        channel: AppUpdateChannel::Stable,
-        target: None,
-        port: &updater,
-        proxy: None,
-    };
-
-    let outcome = run_check_inner(&context).await.unwrap();
-
-    assert!(outcome.has_available_update);
-    assert_eq!(
-        outcome.release.unwrap().canonical_version,
-        TEST_UPDATE_VERSION
-    );
-}
-
-#[tokio::test]
 async fn beta_update_check_ignores_stable_releases() {
     let release_catalog = TestAppUpdateReleaseCatalog {
         releases: vec![
@@ -283,6 +257,7 @@ async fn stable_update_check_ignores_beta_releases() {
 
     let outcome = run_check_inner(&context).await.unwrap();
 
+    assert!(outcome.has_available_update);
     assert_eq!(
         outcome.release.unwrap().canonical_version,
         TEST_UPDATE_VERSION
@@ -543,14 +518,6 @@ fn normalize_release_requires_github_prerelease_state_to_match_the_channel() {
     )
     .expect("matching beta release normalizes");
     assert_eq!(beta.channel, AppUpdateChannel::Beta);
-}
-
-#[test]
-fn is_release_newer_than_current_compares_canonical_versions() {
-    let newer = normalize_release(&release("v2.0.0", false, Vec::new()), None, false).unwrap();
-    assert!(is_release_newer_than_current(&newer, "1.9.9"));
-    assert!(!is_release_newer_than_current(&newer, "2.0.0"));
-    assert!(!is_release_newer_than_current(&newer, "2.0.1"));
 }
 
 #[tokio::test]

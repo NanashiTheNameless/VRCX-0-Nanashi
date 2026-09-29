@@ -2,15 +2,6 @@ use vrcx_0_contracts::vrchat_api::{VrchatRequestBody, VrchatUpload};
 
 use super::*;
 
-struct FakePreprocessor;
-
-impl MediaUploadPreprocessor for FakePreprocessor {
-    fn prepare(&self, mut input: VrchatApiRequest) -> Result<VrchatApiRequest> {
-        input.path = Some("prepared".into());
-        Ok(input)
-    }
-}
-
 fn image_request(image_data: String) -> VrchatApiRequest {
     VrchatApiRequest {
         body: VrchatRequestBody::Upload(VrchatUpload::Image {
@@ -20,13 +11,6 @@ fn image_request(image_data: String) -> VrchatApiRequest {
         }),
         ..Default::default()
     }
-}
-
-#[test]
-fn prepare_delegates_to_the_consumer_owned_port() {
-    let output = prepare_media_upload_request(&FakePreprocessor, VrchatApiRequest::default())
-        .expect("prepare request");
-    assert_eq!(output.path.as_deref(), Some("prepared"));
 }
 
 #[test]

@@ -24,29 +24,13 @@ import { useGalleryRuntimeState } from './useGalleryRuntimeState';
 const GALLERY_GRID_DENSITY_STORAGE_KEY = 'VRCX_GalleryGridDensity';
 
 function readGalleryGridDensityPreference() {
-    if (typeof window === 'undefined') {
-        return sanitizeGalleryGridDensity();
-    }
-
-    try {
-        return sanitizeGalleryGridDensity(
-            window.localStorage.getItem(GALLERY_GRID_DENSITY_STORAGE_KEY)
-        );
-    } catch {
-        return sanitizeGalleryGridDensity();
-    }
+    return sanitizeGalleryGridDensity(
+        localStorage.getItem(GALLERY_GRID_DENSITY_STORAGE_KEY)
+    );
 }
 
 function writeGalleryGridDensityPreference(value: GalleryGridDensity) {
-    if (typeof window === 'undefined') {
-        return;
-    }
-
-    try {
-        window.localStorage.setItem(GALLERY_GRID_DENSITY_STORAGE_KEY, value);
-    } catch {
-        // no-op
-    }
+    localStorage.setItem(GALLERY_GRID_DENSITY_STORAGE_KEY, value);
 }
 
 export function useGalleryPageController() {

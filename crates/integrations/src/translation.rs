@@ -164,6 +164,15 @@ mod tests {
         let url = input.url.unwrap();
         assert!(url.starts_with("https://translation.googleapis.com/language/translate/v2?key="));
         assert!(!url.contains("k ey+&"));
+        let parsed = Url::parse(&url).unwrap();
+        assert_eq!(
+            parsed
+                .query_pairs()
+                .find(|(name, _)| name == "key")
+                .map(|(_, value)| value.into_owned())
+                .as_deref(),
+            Some("k ey+&")
+        );
         let body: Value = serde_json::from_str(input.body.unwrap().as_str().unwrap()).unwrap();
         assert_eq!(
             body,

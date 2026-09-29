@@ -31,10 +31,6 @@ type InputGroupButtonMockProps = PropsWithChildren<
         Pick<ComponentProps<typeof InputGroupButton>, 'size'>
 >;
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/ui/shadcn/button', () => ({
     Button: ({
         children,

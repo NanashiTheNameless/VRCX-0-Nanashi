@@ -5,6 +5,7 @@ import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { StatusDot } from '@/components/layout/status-bar/StatusBarParts';
+import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import type { PrivacyLockOutcome } from '@/platform/tauri/bindings';
 import { logoutWithoutConfirmation } from '@/services/authExecutionService';
 import { startBackgroundModeForCurrentSession } from '@/services/backgroundModeService';
@@ -25,10 +26,6 @@ import { LockCodeInput } from './LockCodeInput';
 import { privacyLockOutcomeMessage } from './privacyLockOutcomeMessage';
 
 const LAYER_CLASS = 'vrcx-0-app-overlay fixed z-[10000]';
-
-function errorMessage(error: unknown, fallback: string) {
-    return error instanceof Error ? error.message : fallback;
-}
 
 export function PrivacyLockOverlay() {
     const phase = usePrivacyLockPhase();
@@ -86,7 +83,9 @@ function LockedPanel() {
         try {
             await run();
         } catch (error) {
-            setActionError(errorMessage(error, t('privacy_lock.error.failed')));
+            setActionError(
+                userFacingErrorMessage(error, t('privacy_lock.error.failed'))
+            );
         } finally {
             setPendingAction(null);
         }
@@ -178,7 +177,9 @@ function useLockSubmit(run: (value: string) => Promise<PrivacyLockOutcome>) {
             }
             setError(privacyLockOutcomeMessage(t, outcome));
         } catch (failure) {
-            setError(errorMessage(failure, t('privacy_lock.error.failed')));
+            setError(
+                userFacingErrorMessage(failure, t('privacy_lock.error.failed'))
+            );
         } finally {
             setSubmitting(false);
         }

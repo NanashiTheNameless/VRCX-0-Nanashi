@@ -52,13 +52,6 @@ describe('entityQueryCache', () => {
         ).toEqual(['world', 'wrld_123', 'persistData', 'usr_123']);
     });
 
-    it('keeps instance reads live and file analysis cached for two hours', () => {
-        expect(entityQueryPolicies.instance.staleTime).toBe(0);
-        expect(entityQueryPolicies.fileAnalysis.staleTime).toBe(
-            2 * 60 * 60 * 1000
-        );
-    });
-
     it('retains observed user profiles and releases them five minutes after the last observer leaves', async () => {
         vi.useFakeTimers();
         const key = queryKeys.user('usr_observed');

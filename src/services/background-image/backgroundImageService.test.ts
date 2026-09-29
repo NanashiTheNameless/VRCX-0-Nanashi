@@ -214,8 +214,17 @@ describe('backgroundImageService', () => {
 
     it('disables community themes before applying an enabling configure result', async () => {
         mocks.appBackgroundImageConfigure.mockResolvedValue(dailyProjection());
+        let enabledWhenDisablingThemes: boolean | null = null;
+        mocks.disableCommunityThemesForBackgroundImage.mockImplementationOnce(
+            async () => {
+                enabledWhenDisablingThemes =
+                    useBackgroundImageStore.getState().enabled;
+            }
+        );
 
         await expect(setBackgroundImageMode('daily')).resolves.toBe(true);
+
+        expect(enabledWhenDisablingThemes).toBe(false);
 
         expect(mocks.appBackgroundImageConfigure).toHaveBeenCalledWith({
             kind: 'enableDaily',

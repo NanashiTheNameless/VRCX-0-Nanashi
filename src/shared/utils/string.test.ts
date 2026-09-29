@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-    localeIncludes,
-    normalizeString,
-    removeEmojis,
-    replaceBioSymbols
-} from './string';
+import { localeIncludes, normalizeString, replaceBioSymbols } from './string';
 
 describe('string utils', () => {
     it('matches locale-aware substrings with the supplied comparer', () => {
@@ -27,12 +22,10 @@ describe('string utils', () => {
         expect(normalizeString(true)).toBe('true');
     });
 
-    it('normalizes bio symbols and removes emoji code points', () => {
+    it('normalizes bio symbols', () => {
         expect(replaceBioSymbols('Hi  ＠＃≺tag≻＼path  ')).toBe(
             'Hi @#<tag>\\path'
         );
         expect(replaceBioSymbols(null)).toBe('');
-        expect(removeEmojis('Hello 😊 world ✨')).toBe('Hello world');
-        expect(removeEmojis(null)).toBe('');
     });
 });

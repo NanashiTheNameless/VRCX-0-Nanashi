@@ -19,7 +19,6 @@ vi.mock('@/platform/tauri/bindings', () => ({
 import { queryClient } from '@/lib/queryClient';
 
 import avatarProfileRepository from './avatarProfileRepository';
-import * as avatarProfileExports from './avatarProfileRepository';
 
 beforeEach(() => {
     vi.resetAllMocks();
@@ -99,8 +98,8 @@ describe('AvatarProfileRepository', () => {
         });
     });
 
-    it('applies local snapshot metadata through the named normalization export', () => {
-        const avatar = avatarProfileExports.normalize(
+    it('applies local snapshot metadata during normalization', () => {
+        const avatar = avatarProfileRepository.normalize(
             {
                 id: ' avtr_local ',
                 authorId: ' usr_author '
@@ -125,39 +124,6 @@ describe('AvatarProfileRepository', () => {
             $memo: ' local memo ',
             $isCached: true
         });
-    });
-
-    it('keeps the frozen facade wired to every named function export', () => {
-        const repositoryFunctionNames: Array<
-            keyof typeof avatarProfileRepository
-        > = [
-            'normalize',
-            'getAvatarProfile',
-            'findAvatarByImageUrl',
-            'getAvatarGallery',
-            'getAvatarsByUser',
-            'getAllAvatarsByUser',
-            'selectAvatar',
-            'selectFallbackAvatar',
-            'saveAvatar',
-            'getAvatarStyles',
-            'deleteAvatar',
-            'createImposter',
-            'deleteImposter',
-            'getAvatarModerations',
-            'sendAvatarModeration',
-            'deleteAvatarModeration'
-        ];
-
-        expect(Object.isFrozen(avatarProfileRepository)).toBe(true);
-        expect(Object.keys(avatarProfileRepository)).toEqual(
-            repositoryFunctionNames
-        );
-        for (const name of repositoryFunctionNames) {
-            expect(avatarProfileRepository[name]).toBe(
-                avatarProfileExports[name]
-            );
-        }
     });
 
     it('finds one persisted avatar by image URL without listing the avatar table', async () => {

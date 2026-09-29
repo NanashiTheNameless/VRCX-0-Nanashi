@@ -114,32 +114,6 @@ fn activity_heatmap_overlap_excludes_cross_midnight_hours_before_percent() {
 }
 
 #[test]
-fn activity_normalize_config_extends_to_long_ranges() {
-    let cfg_180 = activity_normalize_config(false, 180);
-    assert_eq!(cfg_180.target_coverage, 0.3);
-    assert_eq!(cfg_180.target_volume, 45.0);
-    assert_eq!(cfg_180.range_days, 180.0);
-
-    let cfg_365 = activity_normalize_config(false, 365);
-    assert_eq!(cfg_365.target_coverage, 0.35);
-    assert_eq!(cfg_365.target_volume, 40.0);
-    assert_eq!(cfg_365.range_days, 365.0);
-}
-
-#[test]
-fn overlap_normalize_config_extends_to_long_ranges() {
-    let cfg_180 = overlap_normalize_config(180);
-    assert_eq!(cfg_180.target_coverage, 0.2);
-    assert_eq!(cfg_180.target_volume, 18.0);
-    assert_eq!(cfg_180.range_days, 180.0);
-
-    let cfg_365 = overlap_normalize_config(365);
-    assert_eq!(cfg_365.target_coverage, 0.22);
-    assert_eq!(cfg_365.target_volume, 16.0);
-    assert_eq!(cfg_365.range_days, 365.0);
-}
-
-#[test]
 fn normalize_buckets_confidence_uses_effective_range_days() {
     let mut buckets = vec![0.0; 168];
     for slot in buckets.iter_mut().take(40) {

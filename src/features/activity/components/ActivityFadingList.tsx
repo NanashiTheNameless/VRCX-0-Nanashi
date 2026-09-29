@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
 import { formatDateFilterOrFallback } from '@/lib/dateTime';
 import { cn } from '@/lib/utils';
-import type { ActivityPageFadingRow } from '@/repositories/activityPageRepository';
+import type { ActivityPageFadingRow } from '@/platform/tauri/bindings';
 import { openUserDialog } from '@/services/dialogService';
 
 const VISIBLE_ROWS = 5;

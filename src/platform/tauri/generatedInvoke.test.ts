@@ -66,16 +66,4 @@ describe('generatedInvoke', () => {
         ]);
         expect(mocks.notifySQLiteError).toHaveBeenCalledWith(normalizedError);
     });
-
-    it('normalizes non-Error command rejections into Error', async () => {
-        const normalizedError = new Error('normalized command failure');
-        mocks.invokeTauri.mockRejectedValue('legacy command failure');
-        mocks.normalizePlatformError.mockReturnValue(normalizedError);
-
-        await expect(invoke('app__example')).rejects.toBe(normalizedError);
-        expect(mocks.normalizePlatformError).toHaveBeenCalledWith(
-            'legacy command failure',
-            'Tauri command failed: app__example'
-        );
-    });
 });

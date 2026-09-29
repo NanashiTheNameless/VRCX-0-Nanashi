@@ -149,14 +149,15 @@ describe('authSessionRecoveryService public guardrails', () => {
         expect(recoveryMocks.endSession).not.toHaveBeenCalled();
     });
 
-    it('keeps the last user target when typed runtime recovery prepares auto-login', async () => {
+    it('ends the invalidated session with the typed scope and applies the returned snapshot', async () => {
+        const returnedSnapshot = savedSnapshot('usr_1');
+        recoveryMocks.endSession.mockResolvedValueOnce(returnedSnapshot);
         useSessionStore.getState().setSessionState({
             sessionPhase: 'ready',
             isLoggedIn: true
         });
         useRuntimeStore.getState().setAuthBootstrap({
-            currentUserId: 'usr_1',
-            lastUserLoggedIn: 'usr_1'
+            currentUserId: 'usr_1'
         });
 
         const recovery = handleRuntimeAuthFailure(failure());
@@ -170,10 +171,7 @@ describe('authSessionRecoveryService public guardrails', () => {
             expectedRealtimeTransport: null
         });
         expect(recoveryMocks.applySavedAuthSnapshot).toHaveBeenCalledWith(
-            expect.objectContaining({
-                lastUserLoggedIn: 'usr_1',
-                autoLoginStatus: 'available'
-            })
+            returnedSnapshot
         );
     });
 

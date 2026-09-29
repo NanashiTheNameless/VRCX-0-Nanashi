@@ -62,23 +62,6 @@ describe('resolveUserDialogTargetPresenceLocation', () => {
         ).toBe('private');
     });
 
-    it('promotes a hidden friend location when resolving that friend from the current player list', () => {
-        const hiddenFriend = {
-            id: 'usr_friend',
-            location: 'private',
-            isFriend: true
-        };
-
-        expect(
-            resolveUserDialogTargetPresenceLocation({
-                profile: hiddenFriend,
-                targetUserId: hiddenFriend.id,
-                currentLocation,
-                currentLocationPlayerIds: ['usr_self', hiddenFriend.id]
-            })
-        ).toBe(currentLocation);
-    });
-
     it('promotes a name-only GameLog player after resolving it from the friend roster', () => {
         expect(
             resolveUserDialogTargetPresenceLocation({

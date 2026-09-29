@@ -4,21 +4,6 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { ComponentProps, PropsWithChildren, ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: (key: string) => key
-    })
-}));
-
-vi.mock('../favoriteTransfer', () => ({
-    isFavoriteMoveTargetOverCapacity: (
-        target: { count?: number; capacity?: number },
-        selectedCount: number
-    ) =>
-        typeof target.capacity === 'number' &&
-        (target.count ?? 0) + selectedCount > target.capacity
-}));
-
 vi.mock('@/ui/shadcn/button', () => ({
     Button: ({
         children,

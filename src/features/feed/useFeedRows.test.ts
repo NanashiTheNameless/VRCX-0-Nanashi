@@ -462,14 +462,31 @@ describe('useFeedRows', () => {
         expect(result.current.rows).toEqual([{ userId: 'usr_latest' }]);
     });
 
-    it('uses the Rust latest snapshot when persistence is disabled', async () => {
+    it('uses the Rust latest snapshot and disables older paging when persistence is disabled', async () => {
         mocks.preferences.feedPersistenceDisabled = true;
+        mocks.queryFeedLatest.mockResolvedValue({
+            rows: [{ userId: 'usr_cached' }],
+            maxSequence: 0,
+            persistedCursor: {
+                createdAt: '2026-05-15T00:00:00.000Z',
+                sourceRank: 60,
+                rowId: 80
+            },
+            persistedHasMore: true
+        });
         const { result } = renderFeedRows();
         await flush();
 
         expect(result.current.loadStatus).toBe('ready');
+        expect(result.current.rows.map((row) => row.userId)).toEqual([
+            'usr_cached'
+        ]);
         expect(mocks.queryFeedLatest).toHaveBeenCalledTimes(1);
         expect(mocks.queryFeed).not.toHaveBeenCalled();
+        expect(result.current.hasMore).toBe(false);
+        act(() => result.current.loadOlder());
+        await flush();
+        expect(mocks.queryFeedPage).not.toHaveBeenCalled();
     });
 
     it('accepts restarted Rust sequences after the persistence mode changes', async () => {

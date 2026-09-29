@@ -50,6 +50,16 @@ describe('gameStateService lifecycle transitions', () => {
     });
 
     it('starts a new game session by clearing location mirrors and starting avatar timing', async () => {
+        useRuntimeStore.getState().setGameState({
+            isGameRunning: false,
+            isSteamVRRunning: false,
+            currentLocation: 'wrld_old:123',
+            currentWorldId: 'wrld_old',
+            currentWorldName: 'Old World',
+            currentDestination: 'wrld_next:456',
+            currentLocationStartedAt: '2026-06-08T09:00:00.000Z',
+            currentLocationPlayerIds: ['usr_friend']
+        });
         useRuntimeStore.getState().setNowPlayingState({
             url: 'https://video.example/test',
             name: 'Video',
@@ -88,7 +98,11 @@ describe('gameStateService lifecycle transitions', () => {
         expect(mocks.appRuntimeDiscordReconcileRequest).toHaveBeenCalledTimes(
             1
         );
-        expect(useNotificationStore.getState().items).toEqual([]);
+        expect(useNotificationStore.getState().items[0]).toMatchObject({
+            level: 'info',
+            title: 'VRChat running',
+            message: 'SteamVR is running.'
+        });
     });
 
     it('stops a game session by clearing stale local current-user presence and stopping avatar timing', async () => {
@@ -157,10 +171,7 @@ describe('gameStateService lifecycle transitions', () => {
         expect(mocks.appRuntimeDiscordReconcileRequest).toHaveBeenCalledTimes(
             1
         );
-        expect(mocks.stopCurrentAvatarWearTimer).toHaveBeenCalledWith({
-            fallbackStartedAt: Date.parse('2026-06-08T09:00:00.000Z'),
-            now: Date.parse('2026-06-08T10:00:00.000Z')
-        });
+        expect(mocks.stopCurrentAvatarWearTimer).toHaveBeenCalledTimes(1);
         expect(useNotificationStore.getState().items[0]).toMatchObject({
             level: 'info',
             title: 'VRChat stopped',

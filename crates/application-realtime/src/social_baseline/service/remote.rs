@@ -346,6 +346,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     #[test]
     fn social_error_message_keeps_http_status() {
@@ -357,21 +358,39 @@ mod tests {
 
     #[tokio::test]
     async fn fetch_paged_array_pages_with_concurrency_five_until_the_first_short_page() {
-        let rows = fetch_paged_array_with_page_fetcher(50, None, |_, offset| async move {
-            let count = if offset < 250 {
-                50
-            } else if offset == 250 {
-                12
-            } else {
-                0
-            };
-            Ok((0..count)
-                .map(|index| json!({ "offset": offset, "index": index }))
-                .collect())
+        let in_flight = Arc::new(AtomicUsize::new(0));
+        let max_in_flight = Arc::new(AtomicUsize::new(0));
+        let rows = fetch_paged_array_with_page_fetcher(50, None, {
+            let in_flight = Arc::clone(&in_flight);
+            let max_in_flight = Arc::clone(&max_in_flight);
+            move |_, offset| {
+                let in_flight = Arc::clone(&in_flight);
+                let max_in_flight = Arc::clone(&max_in_flight);
+                async move {
+                    let current = in_flight.fetch_add(1, Ordering::SeqCst) + 1;
+                    max_in_flight.fetch_max(current, Ordering::SeqCst);
+                    tokio::task::yield_now().await;
+                    in_flight.fetch_sub(1, Ordering::SeqCst);
+                    let count = if offset < 250 {
+                        50
+                    } else if offset == 250 {
+                        12
+                    } else {
+                        0
+                    };
+                    Ok((0..count)
+                        .map(|index| json!({ "offset": offset, "index": index }))
+                        .collect())
+                }
+            }
         })
         .await
         .unwrap();
 
+        assert_eq!(
+            max_in_flight.load(Ordering::SeqCst),
+            PAGED_ARRAY_CONCURRENCY
+        );
         assert_eq!(rows.len(), 262);
         assert_eq!(
             rows.first().and_then(|row| row.get("offset")),

@@ -5,11 +5,6 @@ import userEvent from '@testing-library/user-event';
 import type { PropsWithChildren, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('react-i18next', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('react-i18next')>()),
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/components/user-hover-card/UserHoverCard', () => ({
     UserHoverCard: ({ children }: PropsWithChildren) => children
 }));

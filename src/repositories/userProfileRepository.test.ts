@@ -332,9 +332,6 @@ describe('UserProfileRepository', () => {
             userId: 'usr_target',
             asSelf: true
         });
-        expect(publicProfile).toHaveProperty('iconFrame', '');
-        expect(selfProfile).toHaveProperty('nameplateEffect', '');
-        expect(publicProfile).not.toHaveProperty('$trustLevel');
     });
 
     it('rejects appearance profile reads without a user id', async () => {

@@ -357,10 +357,11 @@ fn activity_view_build_friend_probe_hit_is_stable() {
     add_presence(&db, owner, friend, "2025-01-05T02:00:00Z", "Offline");
 
     let first = build_friend_view(&db, owner, friend, 7, "2025-01-06T00:00:00Z");
-    let second = build_friend_view(&db, owner, friend, 7, "2025-01-06T00:00:00Z");
+    let second = build_friend_view(&db, owner, friend, 7, "2025-01-06T06:00:00Z");
 
     assert!(first.has_any_data);
     assert!(second.has_any_data);
+    assert_eq!(second.built_at, first.built_at);
     assert_activity_output_eq(&first, &second);
 }
 

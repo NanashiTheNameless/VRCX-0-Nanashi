@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { TAG_COLORS } from '@/shared/constants/tags';
+
 import {
     getMyAvatarPlatformInfo,
     resolveMyAvatarActionDisabled,
@@ -47,7 +49,7 @@ describe('myAvatarsDisplay', () => {
         expect(resolveMyAvatarActionDisabled({}, false)).toBe(true);
     });
 
-    it('builds visible tag badge colors from custom or built-in tag data', () => {
+    it('derives badge text from custom colors and gives tags without one a stable non-default palette color', () => {
         const customStyle = resolveMyAvatarTagBadgeStyle({
             tag: 'favorite',
             color: 'rgb(10 20 30 / 0.6)'
@@ -61,7 +63,15 @@ describe('myAvatarsDisplay', () => {
             tag: 'content_gore'
         });
 
-        expect(fallbackStyle.backgroundColor).toBeTruthy();
-        expect(fallbackStyle.color).toBeTruthy();
+        expect(resolveMyAvatarTagBadgeStyle({ tag: 'content_gore' })).toEqual(
+            fallbackStyle
+        );
+        expect(
+            TAG_COLORS.slice(1).some(
+                (color) =>
+                    color.bg === fallbackStyle.backgroundColor &&
+                    color.text === fallbackStyle.color
+            )
+        ).toBe(true);
     });
 });

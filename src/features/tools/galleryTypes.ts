@@ -84,7 +84,7 @@ export type GalleryActionDeps = GalleryControllerDeps & {
     confirm(request: DialogRequest): Promise<DialogResult>;
     getLocalTimestampString(): string;
     isRuntimeAuthTarget(authTarget: GalleryAuthTarget): boolean;
-    mediaRepository: typeof import('@/repositories/mediaRepository').default;
+    mediaRepository: typeof import('@/repositories/vrchatMediaRepository').default;
     parseEmojiUploadSettings(
         fileName: string,
         settings?: Partial<EmojiUploadSettings>

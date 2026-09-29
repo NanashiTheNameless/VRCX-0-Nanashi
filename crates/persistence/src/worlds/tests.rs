@@ -54,7 +54,7 @@ fn world_entry(id: &str, name: &str) -> CacheEntityInput {
 }
 
 #[test]
-fn get_many_fetches_requested_world_rows_in_one_query() {
+fn get_many_returns_requested_world_rows() {
     let (_dir, db) = test_db("get-many");
     world_cache_upsert(db.as_ref(), world_entry("wrld_a", "World A")).unwrap();
     world_cache_upsert(db.as_ref(), world_entry("wrld_b", "World B")).unwrap();
@@ -143,7 +143,7 @@ fn cache_upsert_rejects_invalid_entity_ids_without_writing_rows() {
 }
 
 #[test]
-fn cache_upsert_many_persists_a_typical_favourites_page_in_one_pass() {
+fn cache_upsert_many_persists_a_typical_favourites_page() {
     let (_dir, db) = test_db("upsert-many");
 
     let entries = (0..300)

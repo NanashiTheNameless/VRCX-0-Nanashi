@@ -1,8 +1,8 @@
 import type { ChangeEvent } from 'react';
 
-import { assetBundleRepository } from '@/repositories/assetBundleRepository';
+import { commands } from '@/platform/tauri/bindings';
 import avatarProfileRepository from '@/repositories/avatarProfileRepository';
-import mediaRepository from '@/repositories/mediaRepository';
+import vrchatMediaRepository from '@/repositories/vrchatMediaRepository';
 import { openFolderAndSelectItem } from '@/services/shellIntegrationService';
 import { toast } from '@/services/toastService';
 import {
@@ -96,9 +96,9 @@ export function createAvatarImageUploadActions({
         try {
             const base64Body = await readFileAsBase64(blob);
             const base64File =
-                await mediaRepository.resizeImageToFitLimits(base64Body);
+                await commands.appResizeImageToFitLimits(base64Body);
             const result = await withUploadTimeout(
-                mediaRepository.uploadAvatarImageLegacy({
+                vrchatMediaRepository.uploadAvatarImageLegacy({
                     avatarId,
                     imageUrl:
                         selectedAvatar.imageUrl ||
@@ -204,7 +204,7 @@ export function createAvatarCacheActions({
         actionStatusRef.current = 'cache';
         setActionStatus('cache');
         try {
-            await assetBundleRepository.deleteCache(
+            await commands.assetBundleDeleteCache(
                 args.fileId,
                 args.fileVersion,
                 args.variant,
@@ -282,7 +282,7 @@ export function createAvatarGalleryUploadActions({
         setActionStatus('gallery-upload');
         try {
             const base64Body = await readFileAsBase64(file);
-            await mediaRepository.uploadAvatarGalleryImage(
+            await vrchatMediaRepository.uploadAvatarGalleryImage(
                 base64Body,
                 targetAvatarId
             );

@@ -1,143 +1,118 @@
-import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
+// @vitest-environment jsdom
+
+import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
     NAV_MENU_COLLAPSE_DELAY_MS,
-    PREFERS_REDUCED_MOTION_MEDIA_QUERY,
-    resolveDelayedNavMenuCollapsed,
     scheduleKeyboardSidebarToggleCleanup,
     subscribeToReducedMotionChanges,
     type ReducedMotionMediaQuery,
+    useDelayedNavMenuCollapsed,
     useSidebarInstantTransition
 } from './navMenuCollapse';
 
-function SidebarInstantTransitionProbe({
-    keyboardToggleActive,
-    reducedMotionAndBlur
-}: {
-    keyboardToggleActive: boolean;
-    reducedMotionAndBlur: boolean;
-}) {
-    const instantSidebarTransition = useSidebarInstantTransition(
-        keyboardToggleActive,
-        reducedMotionAndBlur
-    );
-    return createElement('span', null, instantSidebarTransition ? 'yes' : 'no');
-}
-
-function renderSidebarInstantTransition({
-    keyboardToggleActive,
-    prefersReducedMotion,
-    reducedMotionAndBlur
-}: {
-    keyboardToggleActive: boolean;
-    prefersReducedMotion: boolean;
-    reducedMotionAndBlur: boolean;
-}): string {
+function stubReducedMotion(prefersReducedMotion: boolean) {
     const mediaQuery: ReducedMotionMediaQuery = {
         matches: prefersReducedMotion,
         addEventListener() {},
         removeEventListener() {}
     };
-    vi.stubGlobal('window', {
-        matchMedia: () => mediaQuery
-    });
-    return renderToStaticMarkup(
-        createElement(SidebarInstantTransitionProbe, {
-            keyboardToggleActive,
-            reducedMotionAndBlur
-        })
-    );
+    vi.stubGlobal('matchMedia', () => mediaQuery);
 }
 
 describe('navMenuCollapse', () => {
     afterEach(() => {
+        vi.useRealTimers();
         vi.unstubAllGlobals();
     });
 
-    it('keeps expanded menu content during the sidebar collapse transition', () => {
-        expect(resolveDelayedNavMenuCollapsed(false, false, 0)).toBe(false);
-        expect(
-            resolveDelayedNavMenuCollapsed(
-                false,
-                false,
-                NAV_MENU_COLLAPSE_DELAY_MS - 1
-            )
-        ).toBe(false);
-    });
-
-    it('switches to collapsed menu content after the collapse transition', () => {
-        expect(
-            resolveDelayedNavMenuCollapsed(
-                false,
-                false,
-                NAV_MENU_COLLAPSE_DELAY_MS
-            )
-        ).toBe(true);
-    });
-
-    it('keeps collapsed menu content during the sidebar expand transition', () => {
-        expect(resolveDelayedNavMenuCollapsed(true, true, 0)).toBe(true);
-        expect(
-            resolveDelayedNavMenuCollapsed(
-                true,
-                true,
-                NAV_MENU_COLLAPSE_DELAY_MS - 1
-            )
-        ).toBe(true);
-    });
-
-    it('switches to expanded menu content after the expand transition', () => {
-        expect(
-            resolveDelayedNavMenuCollapsed(
-                true,
-                true,
-                NAV_MENU_COLLAPSE_DELAY_MS
-            )
-        ).toBe(false);
-    });
-
-    it('switches immediately for a keyboard collapse', () => {
-        expect(resolveDelayedNavMenuCollapsed(false, false, 0, true)).toBe(
-            true
+    it('keeps expanded menu content until the collapse transition finishes', () => {
+        vi.useFakeTimers();
+        const { result, rerender } = renderHook(
+            ({ sidebarOpen }) => useDelayedNavMenuCollapsed(sidebarOpen),
+            { initialProps: { sidebarOpen: true } }
         );
+        expect(result.current).toBe(false);
+
+        rerender({ sidebarOpen: false });
+        act(() => vi.advanceTimersByTime(NAV_MENU_COLLAPSE_DELAY_MS - 1));
+        expect(result.current).toBe(false);
+
+        act(() => vi.advanceTimersByTime(1));
+        expect(result.current).toBe(true);
     });
 
-    it('switches immediately for a keyboard expand', () => {
-        expect(resolveDelayedNavMenuCollapsed(true, true, 0, true)).toBe(false);
+    it('keeps collapsed menu content until the expand transition finishes', () => {
+        vi.useFakeTimers();
+        const { result, rerender } = renderHook(
+            ({ sidebarOpen }) => useDelayedNavMenuCollapsed(sidebarOpen),
+            { initialProps: { sidebarOpen: false } }
+        );
+        expect(result.current).toBe(true);
+
+        rerender({ sidebarOpen: true });
+        act(() => vi.advanceTimersByTime(NAV_MENU_COLLAPSE_DELAY_MS - 1));
+        expect(result.current).toBe(true);
+
+        act(() => vi.advanceTimersByTime(1));
+        expect(result.current).toBe(false);
     });
 
-    it('uses each source in the production instant-transition hook', () => {
-        expect(
-            renderSidebarInstantTransition({
-                keyboardToggleActive: true,
-                prefersReducedMotion: false,
-                reducedMotionAndBlur: false
-            })
-        ).toContain('yes');
-        expect(
-            renderSidebarInstantTransition({
-                keyboardToggleActive: false,
-                prefersReducedMotion: false,
-                reducedMotionAndBlur: true
-            })
-        ).toContain('yes');
-        expect(
-            renderSidebarInstantTransition({
-                keyboardToggleActive: false,
-                prefersReducedMotion: true,
-                reducedMotionAndBlur: false
-            })
-        ).toContain('yes');
-        expect(
-            renderSidebarInstantTransition({
-                keyboardToggleActive: false,
-                prefersReducedMotion: false,
-                reducedMotionAndBlur: false
-            })
-        ).toContain('no');
+    it('switches immediately for keyboard collapse and expand', () => {
+        vi.useFakeTimers();
+        const { result, rerender } = renderHook(
+            ({ sidebarOpen }) => useDelayedNavMenuCollapsed(sidebarOpen, true),
+            { initialProps: { sidebarOpen: true } }
+        );
+        expect(result.current).toBe(false);
+
+        rerender({ sidebarOpen: false });
+        expect(result.current).toBe(true);
+
+        rerender({ sidebarOpen: true });
+        expect(result.current).toBe(false);
     });
+
+    it('does not apply a pending delayed switch after the sidebar is reopened', () => {
+        vi.useFakeTimers();
+        const { result, rerender } = renderHook(
+            ({ sidebarOpen }) => useDelayedNavMenuCollapsed(sidebarOpen),
+            { initialProps: { sidebarOpen: true } }
+        );
+
+        rerender({ sidebarOpen: false });
+        act(() => vi.advanceTimersByTime(NAV_MENU_COLLAPSE_DELAY_MS - 1));
+        rerender({ sidebarOpen: true });
+        act(() => vi.advanceTimersByTime(1));
+        expect(result.current).toBe(false);
+        act(() => vi.advanceTimersByTime(NAV_MENU_COLLAPSE_DELAY_MS));
+        expect(result.current).toBe(false);
+    });
+
+    it.each([
+        [true, false, false, true],
+        [false, true, false, true],
+        [false, false, true, true],
+        [false, false, false, false]
+    ])(
+        'resolves instant sidebar transitions from keyboard=%s, blur=%s, reduced motion=%s',
+        (
+            keyboardToggleActive,
+            reducedMotionAndBlur,
+            prefersReducedMotion,
+            expected
+        ) => {
+            stubReducedMotion(prefersReducedMotion);
+            const { result } = renderHook(() =>
+                useSidebarInstantTransition(
+                    keyboardToggleActive,
+                    reducedMotionAndBlur
+                )
+            );
+            expect(result.current).toBe(expected);
+        }
+    );
 
     it('responds to operating-system reduced-motion changes', () => {
         const listeners = new Set<(event: { matches: boolean }) => void>();
@@ -160,9 +135,6 @@ describe('navMenuCollapse', () => {
         unsubscribe();
         listeners.forEach((listener) => listener({ matches: false }));
 
-        expect(PREFERS_REDUCED_MOTION_MEDIA_QUERY).toBe(
-            '(prefers-reduced-motion: reduce)'
-        );
         expect(changes).toEqual([true]);
     });
 

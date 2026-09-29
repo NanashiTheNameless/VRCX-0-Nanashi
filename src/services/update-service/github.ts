@@ -1,4 +1,4 @@
-import externalApiRepository from '@/repositories/externalApiRepository';
+import { commands } from '@/platform/tauri/bindings';
 import { isPreviewBuildLabel } from '@/shared/buildLabel';
 import { GITHUB_RELEASES_URL } from '@/shared/constants/settings';
 import type { ReleaseChannel } from '@/shared/utils/releaseVersion';
@@ -19,7 +19,7 @@ export function getPreviewStableReleaseUpdateMode(): PreviewStableReleaseUpdateM
 export async function fetchBranchReleases(
     channel: ReleaseChannel
 ): Promise<NormalizedRelease[]> {
-    const response = await externalApiRepository.fetchGithubReleases({
+    const response = await commands.appExternalApiGithubReleasesGet({
         url: GITHUB_RELEASES_URL,
         headers: {
             Accept: 'application/vnd.github+json'

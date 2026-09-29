@@ -559,39 +559,13 @@ const gameLog = {
     async deleteGameLogEntry(input: GameLogDatabaseRow) {
         switch (input.type) {
             case 'VideoPlay':
-                await this.deleteGameLogVideoPlay(input);
-                break;
             case 'Event':
-                await this.deleteGameLogEvent(input);
-                break;
             case 'External':
-                await this.deleteGameLogExternal(input);
-                break;
             case 'StringLoad':
             case 'ImageLoad':
-                await this.deleteGameLogResourceLoad(input);
+                await commands.appGameLogEntryDelete(input.type, input);
                 break;
         }
-    },
-
-    async deleteGameLogVideoPlay(input: GameLogEntry) {
-        await commands.appGameLogEntryDelete('VideoPlay', input);
-    },
-
-    async deleteGameLogEvent(input: GameLogEntry) {
-        await commands.appGameLogEntryDelete('Event', input);
-    },
-
-    async deleteGameLogExternal(input: GameLogEntry) {
-        await commands.appGameLogEntryDelete('External', input);
-    },
-
-    async deleteGameLogResourceLoad(input: GameLogEntry) {
-        const kind =
-            input.type === 'StringLoad' || input.type === 'ImageLoad'
-                ? input.type
-                : 'ResourceLoad';
-        await commands.appGameLogEntryDelete(kind, input);
     }
 };
 

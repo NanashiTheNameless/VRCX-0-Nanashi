@@ -265,7 +265,18 @@ describe('authenticatedRuntimeService', () => {
             'pipeline-connecting'
         );
 
-        applyAuthenticatedRuntimePhaseSnapshot(phaseSnapshot());
+        applyAuthenticatedRuntimePhaseSnapshot(
+            phaseSnapshot({
+                phase: 'starting',
+                realtime: {
+                    status: 'running',
+                    attempt: 1,
+                    retryDelaySeconds: null,
+                    detail: 'Realtime is starting.',
+                    lastError: null
+                }
+            })
+        );
 
         expect(useSessionStore.getState().transportStatus).toBe(
             'pipeline-connected'
@@ -279,13 +290,13 @@ describe('authenticatedRuntimeService', () => {
         applyAuthenticatedRuntimePhaseSnapshot(phaseSnapshot());
 
         handleAuthenticatedRuntimeRealtimeStatus({
-            status: 'connected',
+            status: 'error',
             websocketDomain: 'wss://pipeline.example.test',
             at: '2026-07-17T00:00:01.000Z',
             clientRunId: 7,
             generation: 10,
             sessionGeneration: 4,
-            reason: null,
+            reason: 'stale generation',
             statusCode: null
         });
         expect(useSessionStore.getState().transportStatus).toBe(
@@ -293,13 +304,13 @@ describe('authenticatedRuntimeService', () => {
         );
 
         handleAuthenticatedRuntimeRealtimeStatus({
-            status: 'connected',
+            status: 'error',
             websocketDomain: 'wss://pipeline.example.test',
             at: '2026-07-17T00:00:01.500Z',
             clientRunId: 8,
             generation: 11,
             sessionGeneration: 4,
-            reason: null,
+            reason: 'other client run',
             statusCode: null
         });
         expect(useSessionStore.getState().transportStatus).toBe(
@@ -307,7 +318,7 @@ describe('authenticatedRuntimeService', () => {
         );
 
         handleAuthenticatedRuntimeRealtimeStatus({
-            status: 'connected',
+            status: 'disconnected',
             websocketDomain: 'wss://pipeline.example.test',
             at: '2026-07-17T00:00:01.750Z',
             clientRunId: 7,
@@ -319,22 +330,25 @@ describe('authenticatedRuntimeService', () => {
         expect(useSessionStore.getState().transportStatus).toBe(
             'pipeline-connected'
         );
+        expect(useRuntimeStore.getState().transport.websocketConnected).toBe(
+            true
+        );
 
         handleAuthenticatedRuntimeRealtimeStatus({
-            status: 'connected',
+            status: 'error',
             websocketDomain: 'wss://pipeline.example.test',
             at: '2026-07-17T00:00:02.000Z',
             clientRunId: 7,
             generation: 11,
             sessionGeneration: 4,
-            reason: null,
+            reason: 'connection lost',
             statusCode: null
         });
         expect(useSessionStore.getState().transportStatus).toBe(
-            'pipeline-connected'
+            'pipeline-error'
         );
         expect(useRuntimeStore.getState().transport.websocketConnected).toBe(
-            true
+            false
         );
     });
 
@@ -367,6 +381,14 @@ describe('authenticatedRuntimeService', () => {
 
         applyAuthenticatedRuntimePhaseSnapshot(
             phaseSnapshot({
+                phase: 'starting',
+                realtime: {
+                    status: 'running',
+                    attempt: 2,
+                    retryDelaySeconds: null,
+                    detail: 'Realtime is starting.',
+                    lastError: null
+                },
                 realtimeTransport: {
                     generation: 12,
                     clientRunId: 7,

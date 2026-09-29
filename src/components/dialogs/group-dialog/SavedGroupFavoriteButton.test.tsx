@@ -18,10 +18,6 @@ const mocks = vi.hoisted(() => ({
     prompt: vi.fn()
 }));
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
         appSavedGroupCollectionCreate: mocks.createCollection,
@@ -97,7 +93,7 @@ describe('SavedGroupFavoriteButton', () => {
         cleanup();
     });
 
-    it('creates the first collection through the modal prompt instead of an input inside the menu', async () => {
+    it('creates the first collection from a modal prompt and adds the group to it', async () => {
         const createdSnapshot = {
             collections: [
                 {
@@ -115,7 +111,6 @@ describe('SavedGroupFavoriteButton', () => {
         render(<SavedGroupFavoriteButton groupId="grp_test" />);
 
         await waitFor(() => expect(mocks.getFavorites).toHaveBeenCalledOnce());
-        expect(screen.queryByRole('textbox')).toBeNull();
 
         fireEvent.click(
             screen.getByRole('button', {

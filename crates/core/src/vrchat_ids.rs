@@ -37,49 +37,51 @@ mod tests {
     use super::{is_avatar_id, is_group_id, is_user_id, is_world_id};
 
     #[test]
-    fn accepts_canonical_world_ids() {
-        assert!(is_world_id("wrld_12345678-1234-1234-1234-1234567890ab"));
-    }
-
-    #[test]
-    fn rejects_noncanonical_world_ids() {
-        for value in [
-            "",
-            "legacy-world-id",
-            "wrld_not-a-vrchat-id",
-            "usr_12345678-1234-1234-1234-1234567890ab",
-        ] {
-            assert!(!is_world_id(value), "{value}");
+    fn validates_canonical_prefixed_ids() {
+        type Validator = fn(&str) -> bool;
+        let cases: [(Validator, &str, bool); 15] = [
+            (
+                is_world_id,
+                "wrld_12345678-1234-1234-1234-1234567890ab",
+                true,
+            ),
+            (is_world_id, "", false),
+            (is_world_id, "legacy-world-id", false),
+            (is_world_id, "wrld_not-a-vrchat-id", false),
+            (
+                is_world_id,
+                "usr_12345678-1234-1234-1234-1234567890ab",
+                false,
+            ),
+            (is_user_id, "usr_12345678-1234-1234-1234-1234567890ab", true),
+            (is_user_id, "", false),
+            (is_user_id, "usr_not-a-vrchat-id", false),
+            (
+                is_user_id,
+                "wrld_12345678-1234-1234-1234-1234567890ab",
+                false,
+            ),
+            (
+                is_avatar_id,
+                "avtr_12345678-1234-1234-1234-1234567890ab",
+                true,
+            ),
+            (is_avatar_id, "", false),
+            (is_avatar_id, "avtr_not-a-vrchat-id", false),
+            (
+                is_avatar_id,
+                "wrld_12345678-1234-1234-1234-1234567890ab",
+                false,
+            ),
+            (
+                is_group_id,
+                "grp_12345678-1234-1234-1234-1234567890ab",
+                true,
+            ),
+            (is_group_id, "grp_not-a-vrchat-id", false),
+        ];
+        for (validate, value, expected) in cases {
+            assert_eq!(validate(value), expected, "{value}");
         }
-    }
-
-    #[test]
-    fn validates_canonical_user_ids() {
-        assert!(is_user_id("usr_12345678-1234-1234-1234-1234567890ab"));
-        for value in [
-            "",
-            "usr_not-a-vrchat-id",
-            "wrld_12345678-1234-1234-1234-1234567890ab",
-        ] {
-            assert!(!is_user_id(value), "{value}");
-        }
-    }
-
-    #[test]
-    fn validates_canonical_avatar_ids() {
-        assert!(is_avatar_id("avtr_12345678-1234-1234-1234-1234567890ab"));
-        for value in [
-            "",
-            "avtr_not-a-vrchat-id",
-            "wrld_12345678-1234-1234-1234-1234567890ab",
-        ] {
-            assert!(!is_avatar_id(value), "{value}");
-        }
-    }
-
-    #[test]
-    fn validates_canonical_group_ids() {
-        assert!(is_group_id("grp_12345678-1234-1234-1234-1234567890ab"));
-        assert!(!is_group_id("grp_not-a-vrchat-id"));
     }
 }

@@ -203,23 +203,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn webhook_format_selects_exactly_one_payload_family() {
+    fn webhook_format_is_selected_only_when_enabled_with_a_url() {
         let mut preferences = enabled_preferences();
-        assert_eq!(
-            select_notification_webhook_format(&preferences),
-            Some(NotificationWebhookFormat::Generic)
-        );
-
         preferences.format = NotificationWebhookFormat::Discord;
         assert_eq!(
             select_notification_webhook_format(&preferences),
             Some(NotificationWebhookFormat::Discord)
         );
-    }
 
-    #[test]
-    fn disabled_or_empty_webhook_configuration_does_not_send() {
-        let mut preferences = enabled_preferences();
         preferences.enabled = false;
         assert_eq!(select_notification_webhook_format(&preferences), None);
 

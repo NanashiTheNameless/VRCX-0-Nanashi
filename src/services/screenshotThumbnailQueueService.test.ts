@@ -4,9 +4,9 @@ const mocks = vi.hoisted(() => ({
     ensureScreenshotThumbnail: vi.fn<(path: string) => Promise<unknown>>()
 }));
 
-vi.mock('@/repositories/mediaRepository', () => ({
-    default: {
-        ensureScreenshotThumbnail: mocks.ensureScreenshotThumbnail
+vi.mock('@/platform/tauri/bindings', () => ({
+    commands: {
+        appEnsureScreenshotThumbnail: mocks.ensureScreenshotThumbnail
     }
 }));
 
@@ -71,6 +71,7 @@ describe('screenshotThumbnailQueue', () => {
         expect(mocks.ensureScreenshotThumbnail).toHaveBeenCalledTimes(1);
 
         first.cancel();
+        second.cancel();
         task.resolve('thumbnail');
 
         await expect(first.promise).resolves.toBe('thumbnail');

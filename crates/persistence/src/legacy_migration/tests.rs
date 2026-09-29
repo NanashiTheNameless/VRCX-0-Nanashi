@@ -165,6 +165,65 @@ fn startup_installs_staged_snapshot_without_reopening_legacy_source() {
     assert!(!paths.app_data.join(STAGING_DIRECTORY).exists());
 }
 
+fn create_configs(connection: &Connection) {
+    connection
+        .execute_batch("CREATE TABLE IF NOT EXISTS configs (key TEXT PRIMARY KEY, value TEXT)")
+        .unwrap();
+}
+
+fn read_config(path: &Path, key: &str) -> Option<String> {
+    Connection::open(path)
+        .unwrap()
+        .query_row("SELECT value FROM configs WHERE key = ?1", [key], |row| {
+            row.get(0)
+        })
+        .ok()
+}
+
+#[test]
+fn staged_install_keeps_the_telemetry_install_id_of_the_replaced_database() {
+    let dir = TestDir::new("legacy-keeps-install-id");
+    let paths = dir.app_paths();
+    let legacy_db = dir.path.join("VRCX").join("VRCX.sqlite3");
+    let source_connection = open_test_database(&legacy_db);
+    create_configs(&source_connection);
+    source_connection
+        .execute(
+            "INSERT INTO configs (key, value) VALUES ('config:vrcx_lastvrcxversion', '2025.12.01')",
+            [],
+        )
+        .unwrap();
+    drop(source_connection);
+    let target_connection = open_test_database(&paths.db_file);
+    create_configs(&target_connection);
+    target_connection
+        .execute(
+            "INSERT INTO configs (key, value) VALUES ('config:vrcx_telemetryinstallid', 'install-before'), ('config:vrcx_telemetryconfigreportedversion', '2.31.0')",
+            [],
+        )
+        .unwrap();
+    drop(target_connection);
+    prepare_legacy_migration(&paths, &source(legacy_db, None), |_| {}).unwrap();
+
+    consume_pending_legacy_migration_with_discovery(&paths, || {
+        LegacyVrcxDiscovery::without_source(LegacyVrcxMigrationStatus::unavailable())
+    })
+    .unwrap();
+
+    assert_eq!(
+        read_config(&paths.db_file, "config:vrcx_telemetryinstallid").as_deref(),
+        Some("install-before")
+    );
+    assert_eq!(
+        read_config(&paths.db_file, "config:vrcx_lastvrcxversion").as_deref(),
+        Some("2025.12.01")
+    );
+    assert_eq!(
+        read_config(&paths.db_file, "config:vrcx_telemetryconfigreportedversion"),
+        None
+    );
+}
+
 #[test]
 fn old_pending_flag_uses_online_backup_compatibility_fallback() {
     let dir = TestDir::new("legacy-old-flag");

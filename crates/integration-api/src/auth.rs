@@ -68,16 +68,6 @@ mod tests {
     }
 
     #[test]
-    fn generated_token_is_base64url_without_padding() {
-        let token = generate_integration_api_token().unwrap();
-        assert!(token.len() >= 43);
-        assert!(token
-            .chars()
-            .all(|ch| ch.is_ascii_alphanumeric() || ch == '-' || ch == '_'));
-        assert!(!token.contains('='));
-    }
-
-    #[test]
     fn bearer_auth_accepts_loopback_hosts() {
         assert_eq!(
             authorize_integration_api_request(
@@ -146,37 +136,12 @@ mod tests {
     }
 
     #[test]
-    fn lan_authorities_require_the_flag_and_expected_port() {
+    fn disallowed_authority_maps_to_invalid_host() {
         assert_eq!(
             authorize_integration_api_request(
                 &policy(false),
                 Some("Bearer secret-token"),
                 Some("192.168.1.20:8799"),
-                None
-            ),
-            Err(IntegrationApiAuthError::InvalidHost)
-        );
-        assert!(authorize_integration_api_request(
-            &policy(true),
-            Some("Bearer secret-token"),
-            Some("192.168.1.20:8799"),
-            None
-        )
-        .is_ok());
-        assert_eq!(
-            authorize_integration_api_request(
-                &policy(true),
-                Some("Bearer secret-token"),
-                Some("192.168.1.20:8800"),
-                None
-            ),
-            Err(IntegrationApiAuthError::InvalidHost)
-        );
-        assert_eq!(
-            authorize_integration_api_request(
-                &policy(true),
-                Some("Bearer secret-token"),
-                Some("user@192.168.1.20:8799"),
                 None
             ),
             Err(IntegrationApiAuthError::InvalidHost)

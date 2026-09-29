@@ -1,15 +1,9 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import { SidebarProvider } from '@/ui/shadcn/sidebar';
 
 import { AppNavFooter } from './AppNavMenuSections';
-
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({
-        t: (key: string) => key
-    })
-}));
 
 describe('AppNavFooter', () => {
     it('highlights the settings menu while the settings page is open', () => {
@@ -26,7 +20,6 @@ describe('AppNavFooter', () => {
         );
 
         expect(markup).toContain('data-active=""');
-        expect(markup).toContain('nav_tooltip.settings');
     });
 
     it('shows settings and sidebar shortcut keys while hints are visible', () => {

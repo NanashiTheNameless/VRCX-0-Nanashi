@@ -3,7 +3,7 @@ import type {
     InventoryItemRecord,
     MediaFileRecord,
     MediaPrintRecord
-} from '@/repositories/mediaRepository';
+} from '@/repositories/vrchatMediaRepository';
 
 export type GalleryTab = 'gallery' | 'icons' | 'prints';
 export type GalleryAssetTab = GalleryTab | 'inventory';

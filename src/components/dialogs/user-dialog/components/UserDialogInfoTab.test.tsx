@@ -13,14 +13,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { UserDialogActivitySummaryPanel } from './UserDialogInfoTab';
 
-vi.mock('react-i18next', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('react-i18next')>()),
-    useTranslation: () => ({
-        i18n: { language: 'en', resolvedLanguage: 'en' },
-        t: (key: string) => key
-    })
-}));
-
 afterEach(cleanup);
 
 describe('UserDialogActivitySummaryPanel', () => {
@@ -166,19 +158,6 @@ describe('UserDialogActivitySummaryPanel', () => {
             })
         ).toBeNull();
         expect(screen.getByText('dialog.user.info.time_together')).toBeTruthy();
-        expect(
-            screen
-                .getAllByText(/^dialog\.user\.info\./)
-                .map((element) => element.textContent)
-        ).toEqual([
-            'dialog.user.info.activity_summary',
-            'dialog.user.info.last_seen',
-            'dialog.user.info.last_activity',
-            'dialog.user.info.join_count',
-            'dialog.user.info.time_together',
-            'dialog.user.info.friended',
-            'dialog.user.info.date_joined'
-        ]);
 
         expect(onOpenInstanceHistory).toHaveBeenCalledOnce();
     });

@@ -233,7 +233,7 @@ describe('Friend History browsing and search', () => {
         expect(result.current.loadOlderFailed).toBe(false);
     });
 
-    it('discards a late older page after switching search or account', async () => {
+    it('discards a late older page after switching to search', async () => {
         const { result, rerender } = renderHook(useFriendLogRows, {
             initialProps: initial
         });

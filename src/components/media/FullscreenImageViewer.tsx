@@ -11,7 +11,7 @@ import {
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import mediaRepository from '@/repositories/mediaRepository';
+import { commands } from '@/platform/tauri/bindings';
 import { toast } from '@/services/toastService';
 import { Button } from '@/ui/shadcn/button';
 import { Dialog, DialogContent, DialogTitle } from '@/ui/shadcn/dialog';
@@ -89,7 +89,7 @@ export function FullscreenImageViewer({
 
         try {
             if (sourcePath) {
-                await mediaRepository.copyImageToClipboard(sourcePath);
+                await commands.appCopyImageToClipboard(sourcePath);
                 toast.add({
                     type: 'success',
                     title: t('message.image.copied_to_clipboard')
@@ -137,7 +137,7 @@ export function FullscreenImageViewer({
                 sourcePath: sourcePath ?? undefined,
                 url: fullSizeUrl
             });
-            const savedPath = await mediaRepository.saveImageFile(
+            const savedPath = await commands.appSaveImageFile(
                 resolvedFileName,
                 base64Data
             );

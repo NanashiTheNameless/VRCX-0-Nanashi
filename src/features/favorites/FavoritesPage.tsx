@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import { PageScaffold } from '@/components/layout/PageScaffold';
 import type { FavoriteKind } from '@/domain/favorites/types';
+import { commands } from '@/platform/tauri/bindings';
 import configRepository from '@/repositories/configRepository';
-import shareCollectionRepository from '@/repositories/shareCollectionRepository';
 import { toast } from '@/services/toastService';
 import {
     ResizableHandle,
@@ -70,7 +70,7 @@ function FavoritesPage({
     );
     const handleOpenManageShares = useStableEvent(async () => {
         try {
-            await shareCollectionRepository.openShareCollectionManage();
+            await commands.appShareCollectionOpenManage();
         } catch (error) {
             toast.add({
                 type: 'error',

@@ -10,7 +10,8 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import type { WorldProfileRecord } from '@/domain/entities/world';
-import mediaRepository from '@/repositories/mediaRepository';
+import { commands } from '@/platform/tauri/bindings';
+import vrchatMediaRepository from '@/repositories/vrchatMediaRepository';
 import worldProfileRepository from '@/repositories/worldProfileRepository';
 import { toast } from '@/services/toastService';
 import {
@@ -112,9 +113,9 @@ export function useWorldImageUpload({
         try {
             const base64Body = await readFileAsBase64(blob);
             const base64File =
-                await mediaRepository.resizeImageToFitLimits(base64Body);
+                await commands.appResizeImageToFitLimits(base64Body);
             const result = await withUploadTimeout(
-                mediaRepository.uploadWorldImageLegacy({
+                vrchatMediaRepository.uploadWorldImageLegacy({
                     worldId: selectedWorldId,
                     imageUrl:
                         selectedWorld.imageUrl ||

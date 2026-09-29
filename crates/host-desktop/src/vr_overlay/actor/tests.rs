@@ -80,19 +80,6 @@ fn handle_reports_surfaces_the_backend_shows() {
         .expect("stop overlay actor");
 }
 
-#[test]
-fn timeout_error_display_names_command_and_wait() {
-    let error = OverlayCommandError::Timeout {
-        command: "show",
-        waited: Duration::from_millis(25),
-    };
-
-    assert_eq!(
-        error.to_string(),
-        "overlay command timed out after 25ms: show"
-    );
-}
-
 struct BlockingCommandBackend {
     release: Arc<AtomicBool>,
 }

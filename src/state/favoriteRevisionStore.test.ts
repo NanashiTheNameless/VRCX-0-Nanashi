@@ -89,15 +89,15 @@ describe('favoriteRevisionStore', () => {
         const store = useFavoriteRevisionStore.getState();
 
         store.bumpRevision({
-            kind: 'world',
-            local: true,
-            remote: false,
-            requiresRefresh: true
-        });
-        store.bumpRevision({
             kind: 'avatar',
             local: false,
             remote: true,
+            requiresRefresh: true
+        });
+        store.bumpRevision({
+            kind: 'world',
+            local: true,
+            remote: false,
             requiresRefresh: true
         });
 
@@ -108,13 +108,13 @@ describe('favoriteRevisionStore', () => {
         const store = useFavoriteRevisionStore.getState();
 
         store.bumpRevision({
-            kind: 'friend',
+            kind: 'unknown',
             local: true,
             remote: false,
             requiresRefresh: true
         });
         store.bumpRevision({
-            kind: 'unknown',
+            kind: 'friend',
             local: true,
             remote: false,
             requiresRefresh: true

@@ -29,13 +29,12 @@ describe('currentInstanceRosterService', () => {
         vi.clearAllMocks();
     });
 
-    it('reads the authoritative backend roster for current-instance dialogs', async () => {
+    it('trims the requested location and defaults a missing player count to zero', async () => {
         mocks.getCurrentInstanceSnapshot.mockResolvedValueOnce({
             context: {
                 createdAt: '2026-08-01T01:00:00.000Z',
                 groupName: '',
                 location: `${worldId}:1~region(jp)`,
-                playerCount: 1,
                 playerFactsKnown: true,
                 source: 'runtime',
                 time: 0,
@@ -44,16 +43,17 @@ describe('currentInstanceRosterService', () => {
             },
             players: [runtimePlayer]
         });
+
         await expect(
             loadCurrentInstanceRoster({
-                currentLocation: `${worldId}:1~region(jp)`
+                currentLocation: `  ${worldId}:1~region(jp)  `
             })
         ).resolves.toEqual({
             context: {
                 createdAt: '2026-08-01T01:00:00.000Z',
                 groupName: '',
                 location: `${worldId}:1~region(jp)`,
-                playerCount: 1,
+                playerCount: 0,
                 playerFactsKnown: true,
                 source: 'runtime',
                 time: 0,
@@ -62,38 +62,6 @@ describe('currentInstanceRosterService', () => {
             },
             players: [runtimePlayer]
         });
-        expect(mocks.getCurrentInstanceSnapshot).toHaveBeenCalledTimes(1);
-    });
-
-    it('preserves the backend response without inventing another roster', async () => {
-        mocks.getCurrentInstanceSnapshot.mockResolvedValueOnce({
-            context: {
-                createdAt: '2026-08-01T00:00:00.000Z',
-                groupName: '',
-                location: `${worldId}:1~region(jp)`,
-                playerCount: 1,
-                source: 'runtime',
-                time: 0,
-                worldId,
-                worldName: 'Recovered World'
-            },
-            players: [
-                {
-                    id: 'usr_recovered',
-                    userId: 'usr_recovered',
-                    displayName: 'Recovered Player',
-                    joinedAt: '2026-08-01T00:00:00.000Z',
-                    joinedAtMs: Date.parse('2026-08-01T00:00:00.000Z')
-                }
-            ]
-        });
-
-        const result = await loadCurrentInstanceRoster({
-            currentLocation: `${worldId}:1~region(jp)`
-        });
-
-        expect(result.context.source).toBe('runtime');
-        expect(result.players[0]?.displayName).toBe('Recovered Player');
         expect(mocks.getCurrentInstanceSnapshot).toHaveBeenCalledWith({
             currentLocation: `${worldId}:1~region(jp)`
         });

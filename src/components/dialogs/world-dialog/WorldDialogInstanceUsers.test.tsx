@@ -51,10 +51,6 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
     };
 });
 
-vi.mock('react-i18next', () => ({
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock(
     '@/components/sidebar/friends-sidebar/friendsSidebarModel',
     async (importOriginal) => ({
@@ -332,7 +328,7 @@ describe('InstanceUserTiles', () => {
         expect(screen.queryByText('Friend signature')).toBeNull();
     });
 
-    it('shows the Creator label instead of a timer for a non-friend creator', () => {
+    it('shows the Creator label instead of a status for a non-friend creator', () => {
         render(
             <InstanceUserTiles
                 instance={{
@@ -347,7 +343,6 @@ describe('InstanceUserTiles', () => {
         expect(
             screen.getByText('dialog.world.instances.instance_creator')
         ).toBeTruthy();
-        expect(screen.queryByText('10m')).toBeNull();
         expect(screen.queryByText('dialog.user.status.active')).toBeNull();
     });
 
@@ -430,29 +425,5 @@ describe('InstanceUserTiles', () => {
 
         expect(screen.getByText('10m')).toBeTruthy();
         expect(screen.queryByText('Do not disturb')).toBeNull();
-    });
-
-    it('ignores a legacy presence dwell start for a non-friend creator', () => {
-        mocks.knownCreatorUser = {
-            id: 'usr_non_friend_owner',
-            displayName: 'Non-friend Owner',
-            $location_at: 1_700_000_030_000
-        };
-
-        render(
-            <InstanceUserTiles
-                instance={{
-                    location: 'wrld_test:123',
-                    creatorUserId: 'usr_non_friend_owner'
-                }}
-                visibleUserIds={new Set()}
-                showInstanceDuration
-            />
-        );
-
-        expect(
-            screen.getByText('dialog.world.instances.instance_creator')
-        ).toBeTruthy();
-        expect(screen.queryByText('10m')).toBeNull();
     });
 });

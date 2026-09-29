@@ -119,7 +119,7 @@ describe('WorldProfileRepository', () => {
         });
     });
 
-    it('returns full fetched worlds without maintaining a frontend mirror', async () => {
+    it('requests and returns the full world payload for full reads', async () => {
         tauriMock.commands.appWorldGet.mockResolvedValue({
             status: 200,
             data: JSON.stringify({
@@ -151,6 +151,11 @@ describe('WorldProfileRepository', () => {
             ],
             instances: [['123', 4]]
         });
+        expect(tauriMock.commands.appWorldGet).toHaveBeenCalledWith({
+            worldId: 'wrld_full',
+            force: false,
+            full: true
+        });
     });
 
     it('delegates ordinary world reads to Rust', async () => {
@@ -176,71 +181,7 @@ describe('WorldProfileRepository', () => {
         });
     });
 
-    it('uses local world cache before remote fetch for non-dialog reads', async () => {
-        tauriMock.commands.appWorldGet.mockResolvedValue({
-            status: 200,
-            data: JSON.stringify({
-                id: 'wrld_local',
-                name: 'Local Cache World',
-                authorId: 'usr_author',
-                authorName: 'Author',
-                created_at: '2026-01-01',
-                description: 'Cached details',
-                imageUrl: 'image.png',
-                releaseStatus: 'public',
-                thumbnailImageUrl: 'thumb.png',
-                updated_at: '2026-01-02',
-                version: 1
-            })
-        });
-
-        const world = await worldProfileRepository.getWorldProfile({
-            worldId: 'wrld_local'
-        });
-
-        expect(world.name).toBe('Local Cache World');
-        expect(tauriMock.commands.appWorldGet).toHaveBeenCalledWith({
-            worldId: 'wrld_local',
-            force: false,
-            full: false
-        });
-    });
-
-    it('fetches remote data for full reads instead of mirrored or local summary cache', async () => {
-        tauriMock.commands.appWorldGet.mockResolvedValue({
-            status: 200,
-            data: JSON.stringify({
-                id: 'wrld_full_bypass',
-                name: 'Remote Full World',
-                unityPackages: [
-                    {
-                        platform: 'standalonewindows',
-                        assetUrl: 'https://example.test/world.bundle'
-                    }
-                ]
-            })
-        });
-
-        const world = await worldProfileRepository.getWorldProfile({
-            worldId: 'wrld_full_bypass',
-            full: true
-        });
-
-        expect(world.name).toBe('Remote Full World');
-        expect(world.unityPackages).toEqual([
-            {
-                platform: 'standalonewindows',
-                assetUrl: 'https://example.test/world.bundle'
-            }
-        ]);
-        expect(tauriMock.commands.appWorldGet).toHaveBeenCalledWith({
-            worldId: 'wrld_full_bypass',
-            force: false,
-            full: true
-        });
-    });
-
-    it('fetches remote data for dialog reads instead of using summary cache', async () => {
+    it('requests the full world payload for dialog reads', async () => {
         tauriMock.commands.appWorldGet.mockResolvedValue({
             status: 200,
             data: JSON.stringify({

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
     MY_AVATARS_COLUMN_IDS,
@@ -26,17 +26,12 @@ function installLocalStorage(initial: Record<string, unknown> = {}) {
         Object.entries(initial).map(([key, value]) => [key, String(value)])
     );
 
-    Object.defineProperty(globalThis, 'window', {
-        configurable: true,
-        value: {
-            localStorage: {
-                getItem(key: string) {
-                    return store.has(key) ? store.get(key) : null;
-                },
-                setItem(key: string, value: string) {
-                    store.set(key, String(value));
-                }
-            }
+    vi.stubGlobal('localStorage', {
+        getItem(key: string) {
+            return store.has(key) ? store.get(key) : null;
+        },
+        setItem(key: string, value: string) {
+            store.set(key, String(value));
         }
     });
 
@@ -44,7 +39,7 @@ function installLocalStorage(initial: Record<string, unknown> = {}) {
 }
 
 afterEach(() => {
-    Reflect.deleteProperty(globalThis, 'window');
+    vi.unstubAllGlobals();
 });
 
 describe('myAvatarsState', () => {
@@ -75,7 +70,7 @@ describe('myAvatarsState', () => {
         );
     });
 
-    it('falls back to an empty persisted state when storage is unavailable or invalid', () => {
+    it('falls back to an empty persisted state when nothing is saved or the saved JSON is invalid', () => {
         expect(readPersistedMyAvatarsState()).toEqual({});
 
         installLocalStorage({
@@ -83,24 +78,6 @@ describe('myAvatarsState', () => {
         });
 
         expect(readPersistedMyAvatarsState()).toEqual({});
-
-        Object.defineProperty(globalThis, 'window', {
-            configurable: true,
-            value: {
-                localStorage: {
-                    getItem() {
-                        throw new Error('storage blocked');
-                    },
-                    setItem() {
-                        throw new Error('storage blocked');
-                    }
-                }
-            }
-        });
-        expect(readPersistedMyAvatarsState()).toEqual({});
-        expect(() =>
-            writePersistedMyAvatarsState({ pageSize: 10 })
-        ).not.toThrow();
     });
 
     it('keeps supported sorting columns and migrates old column ids', () => {

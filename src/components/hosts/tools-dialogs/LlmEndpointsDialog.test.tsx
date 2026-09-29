@@ -30,7 +30,8 @@ const mocks = vi.hoisted(() => ({
     load: vi.fn(),
     upsert: vi.fn(),
     deleteEndpoint: vi.fn(),
-    detectModels: vi.fn()
+    detectModels: vi.fn(),
+    toastAdd: vi.fn()
 }));
 
 vi.mock('react-i18next', () => ({
@@ -40,7 +41,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('@/services/toastService', () => ({
-    toast: { add: vi.fn() }
+    toast: { add: mocks.toastAdd }
 }));
 
 vi.mock('@/state/llmEndpointsStore', () => ({
@@ -158,6 +159,7 @@ describe('LlmEndpointsDialog', () => {
         mocks.upsert.mockReset();
         mocks.deleteEndpoint.mockReset();
         mocks.detectModels.mockReset();
+        mocks.toastAdd.mockReset();
         mocks.load.mockResolvedValue([]);
         mocks.upsert.mockResolvedValue({});
         mocks.detectModels.mockResolvedValue({
@@ -246,7 +248,11 @@ describe('LlmEndpointsDialog', () => {
             });
         });
 
-        expect(screen.queryByText('stale-model')).toBeNull();
+        expect(mocks.toastAdd).not.toHaveBeenCalledWith(
+            expect.objectContaining({
+                title: 'view.tools.llm_endpoints.models_detected'
+            })
+        );
     });
 
     it('preserves existing reasoning metadata when saving without detection', async () => {

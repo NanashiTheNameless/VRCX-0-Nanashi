@@ -2,7 +2,6 @@ import { registerCommunityThemeAppearanceHandlers } from './appearanceConflictCo
 import { refreshCommunityThemeProjection } from './community-theme/installedThemes';
 import { stopLocalCommunityThemePreview } from './community-theme/localPreview';
 
-export { isCommunityThemeAccentControlled } from './community-theme/appearanceControl';
 export {
     deleteInstalledCommunityTheme,
     disableInstalledCommunityTheme,

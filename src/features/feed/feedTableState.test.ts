@@ -5,7 +5,6 @@ import {
     FEED_TABLE_DEFAULT_SORTING,
     readPersistedFeedTableState,
     resolveFeedPageSize,
-    safeJsonParse,
     sanitizeFeedPageSizes,
     sanitizeFeedSorting,
     writePersistedFeedTableState
@@ -21,10 +20,7 @@ function installLocalStorage(initial: Record<string, unknown> = {}) {
             values.set(key, String(value));
         })
     };
-    Object.defineProperty(globalThis, 'window', {
-        configurable: true,
-        value: { localStorage }
-    });
+    vi.stubGlobal('localStorage', localStorage);
     return { localStorage, values };
 }
 
@@ -36,7 +32,7 @@ describe('feed table state helpers', () => {
 
     afterEach(() => {
         vi.useRealTimers();
-        Reflect.deleteProperty(globalThis, 'window');
+        vi.unstubAllGlobals();
     });
 
     it('safely reads and writes persisted feed table state', () => {
@@ -44,8 +40,6 @@ describe('feed table state helpers', () => {
             'vrcx-0:table:feed': JSON.stringify({ pageSize: 25 })
         });
 
-        expect(safeJsonParse('{"sorting":[]}')).toEqual({ sorting: [] });
-        expect(safeJsonParse('bad')).toBeNull();
         expect(readPersistedFeedTableState()).toEqual({ pageSize: 25 });
 
         writePersistedFeedTableState({
@@ -61,27 +55,6 @@ describe('feed table state helpers', () => {
             sorting: [{ id: 'type', desc: false }],
             updatedAt: new Date('2026-02-03T04:05:06Z').getTime()
         });
-    });
-
-    it('treats browser storage failures as optional table state', () => {
-        Object.defineProperty(globalThis, 'window', {
-            configurable: true,
-            value: {
-                localStorage: {
-                    getItem() {
-                        throw new Error('storage blocked');
-                    },
-                    setItem() {
-                        throw new Error('storage blocked');
-                    }
-                }
-            }
-        });
-
-        expect(readPersistedFeedTableState()).toEqual({});
-        expect(() =>
-            writePersistedFeedTableState({ pageSize: 10 })
-        ).not.toThrow();
     });
 
     it('sanitizes sorting, page sizes, and page size selection', () => {

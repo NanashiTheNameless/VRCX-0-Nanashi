@@ -23,11 +23,6 @@ const mocks = vi.hoisted(() => ({
     queryData: null as Record<string, unknown> | null
 }));
 
-vi.mock('react-i18next', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('react-i18next')>()),
-    useTranslation: () => ({ t: (key: string) => key })
-}));
-
 vi.mock('@tanstack/react-query', async (importOriginal) => {
     const actual =
         await importOriginal<typeof import('@tanstack/react-query')>();

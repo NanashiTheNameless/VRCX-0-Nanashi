@@ -875,14 +875,6 @@ impl LocalDataRuntime {
         )?)
     }
 
-    pub fn notification_add_v2(&self, user_id: String, notification: Value) -> Result<()> {
-        Ok(vrcx_0_persistence::notifications::notification_add_v2(
-            self.db.as_ref(),
-            user_id,
-            notification,
-        )?)
-    }
-
     pub fn notification_delete(&self, user_id: String, id: String) -> Result<()> {
         Ok(vrcx_0_persistence::notifications::notification_delete(
             self.db.as_ref(),

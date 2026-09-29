@@ -427,19 +427,6 @@ fn resolution_and_scale_changes_on_same_monitor_do_not_reveal_hidden_window() {
 }
 
 #[test]
-fn recovery_geometry_survives_failed_native_attempt_until_reset() {
-    let start = Instant::now();
-    let mut machine = SidebarAutoHide::default();
-    let mut sample = sample();
-    hide(&mut machine, &mut sample, start);
-    let expected = Some(Point { x: 0.0, y: 100.0 });
-    assert_eq!(recovery(&machine), expected);
-    assert_eq!(recovery(&machine), expected);
-    assert_eq!(machine.reset(), expected);
-    assert_eq!(recovery(&machine), None);
-}
-
-#[test]
 fn failed_animated_final_frame_preserves_recovery_geometry() {
     let start = Instant::now();
     let mut machine = SidebarAutoHide::default();

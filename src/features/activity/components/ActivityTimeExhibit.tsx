@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type {
     ActivityPageSeries,
     ActivityPageSummary
-} from '@/repositories/activityPageRepository';
+} from '@/platform/tauri/bindings';
 
 import { averageMinutesPerDay } from '../activityPageModel';
 import { useCountUp } from '../useCountUp';

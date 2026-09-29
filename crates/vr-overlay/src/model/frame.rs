@@ -55,14 +55,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn expected_byte_len_returns_rgba_byte_count_for_normal_sizes() {
-        assert_eq!(
-            RgbaFrame::expected_byte_len(OverlaySize::new(16, 8)),
-            Some(16 * 8 * 4)
-        );
-    }
-
-    #[test]
     fn expected_byte_len_allows_zero_sized_frames() {
         assert_eq!(
             RgbaFrame::expected_byte_len(OverlaySize::new(0, 0)),
@@ -71,16 +63,13 @@ mod tests {
     }
 
     #[test]
-    fn expected_byte_len_returns_none_when_dimensions_overflow_usize() {
+    fn is_valid_len_checks_exact_rgba_buffer_size() {
+        let size = OverlaySize::new(2, 3);
+        assert_eq!(RgbaFrame::expected_byte_len(size), Some(2 * 3 * 4));
         assert_eq!(
             RgbaFrame::expected_byte_len(OverlaySize::new(u32::MAX, u32::MAX)),
             None
         );
-    }
-
-    #[test]
-    fn is_valid_len_checks_exact_rgba_buffer_size() {
-        let size = OverlaySize::new(2, 3);
         assert!(RgbaFrame::new(size, vec![0; 2 * 3 * 4]).is_valid_len());
         assert!(!RgbaFrame::new(size, vec![0; 2 * 3 * 4 - 1]).is_valid_len());
         assert!(!RgbaFrame::new(OverlaySize::new(u32::MAX, u32::MAX), Vec::new()).is_valid_len());

@@ -173,27 +173,6 @@ impl UserQueryCache {
 mod tests {
     use super::*;
 
-    #[test]
-    fn negative_query_results_use_quarter_capacity_weight() {
-        let key = cache_key(
-            UserQueryKind::Dialog,
-            "https://api.vrchat.cloud/api/1",
-            "usr_test",
-        );
-        let success = Arc::new(VrchatApiResponse {
-            status: 200,
-            data: "{}".into(),
-        });
-        let failure = Arc::new(VrchatApiResponse {
-            status: 404,
-            data: "{}".into(),
-        });
-
-        assert_eq!(cache_entry_weight(&key, &success), 1);
-        assert_eq!(cache_entry_weight(&key, &failure), NEGATIVE_ENTRY_WEIGHT);
-        assert_eq!(QUERY_CAPACITY / u64::from(NEGATIVE_ENTRY_WEIGHT), 32);
-    }
-
     #[tokio::test]
     async fn negative_query_results_are_bounded_to_quarter_capacity() {
         let cache = UserQueryCache::new();

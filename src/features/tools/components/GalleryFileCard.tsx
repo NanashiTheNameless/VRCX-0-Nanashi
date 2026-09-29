@@ -1,7 +1,7 @@
 import { CheckIcon, EyeIcon, ImageIcon, Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import type { MediaFileRecord } from '@/repositories/mediaRepository';
+import type { MediaFileRecord } from '@/repositories/vrchatMediaRepository';
 import { extractFileId } from '@/shared/utils/fileUtils';
 
 import type { FileAssetTab, FileTabDefinition } from '../galleryConstants';

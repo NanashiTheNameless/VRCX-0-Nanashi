@@ -6,10 +6,10 @@ import type {
 import {
     getDataTableStorageKey,
     readPersistedTableState,
-    safeJsonParse,
     writePersistedTableState
 } from '@/components/data-table/dataTablePersistence';
 import { moderationTypes } from '@/shared/constants/moderation';
+import { safeJsonParse } from '@/shared/utils/json';
 import { isRecord } from '@/shared/utils/record';
 
 import type { ModerationRow } from './moderationPageTypes';

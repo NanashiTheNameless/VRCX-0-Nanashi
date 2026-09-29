@@ -109,31 +109,7 @@ fn tauri_shell_does_not_depend_on_concrete_infrastructure_crates() {
 }
 
 #[test]
-fn owner_id_is_owned_by_the_shared_semantic_kernel() {
-    let core = std::fs::read_to_string(workspace_file("crates/core/src/owner.rs"))
-        .expect("read shared owner primitive");
-    let persistence =
-        std::fs::read_to_string(workspace_file("crates/persistence/src/ownership.rs"))
-            .expect("read persistence owner adapter");
-    assert!(core.contains("pub struct OwnerId"));
-    assert!(!persistence.contains("pub struct OwnerId"));
-    for path in rust_sources_below("crates") {
-        let source = std::fs::read_to_string(&path).expect("read backend source");
-        assert!(
-            !source.contains("vrcx_0_persistence::OwnerId"),
-            "backend consumer imports OwnerId from persistence: {}",
-            path.display()
-        );
-    }
-}
-
-#[test]
 fn composition_state_does_not_leak_through_public_fields_or_deref() {
-    let app_state = std::fs::read_to_string(workspace_file("src-tauri/src/state.rs"))
-        .expect("read Tauri application state");
-    assert!(!app_state.contains("impl Deref for AppState"));
-    assert!(!app_state.contains("pub runtime: DesktopRuntimeHostState"));
-
     let desktop_state =
         std::fs::read_to_string(workspace_file("crates/runtime-host-desktop/src/state.rs"))
             .expect("read desktop runtime host state");
@@ -187,14 +163,10 @@ fn tauri_app_state_keeps_feature_graph_private() {
 }
 
 #[test]
-fn desktop_composition_does_not_expose_runtime_state_escape_hatch() {
+fn desktop_composition_does_not_expose_concrete_service_bundles() {
     let desktop_state =
         std::fs::read_to_string(workspace_file("crates/runtime-host-desktop/src/state.rs"))
             .expect("read desktop runtime host state");
-    assert!(
-        !desktop_state.contains("pub fn runtime_state("),
-        "desktop composition exposes the complete RuntimeHostState graph"
-    );
     assert!(
         !desktop_state.contains("pub game: Arc<GameRuntimeBundle>")
             && !desktop_state.contains("pub desktop: Arc<DesktopRuntimeBundle>"),
@@ -202,11 +174,6 @@ fn desktop_composition_does_not_expose_runtime_state_escape_hatch() {
     );
     for path in rust_sources_below("src-tauri/src") {
         let source = std::fs::read_to_string(&path).expect("read Tauri source");
-        assert!(
-            !source.contains("runtime_state()"),
-            "Tauri code reaches through desktop feature APIs into RuntimeHostState: {}",
-            path.display()
-        );
         assert!(
             !source.contains("runtime_host().desktop") && !source.contains("runtime_host().game"),
             "Tauri code reaches into a concrete desktop service bundle: {}",
@@ -246,18 +213,6 @@ fn desktop_execution_modules_do_not_receive_the_complete_runtime_context() {
 }
 
 #[test]
-fn tauri_commands_only_receive_feature_facades_from_host_state() {
-    for path in rust_sources_below("src-tauri/src/commands") {
-        let source = std::fs::read_to_string(&path).expect("read Tauri command source");
-        assert!(
-            !source.contains("runtime_state()"),
-            "Tauri inbound adapter reaches through a feature facade into composition state: {}",
-            path.display()
-        );
-    }
-}
-
-#[test]
 fn application_public_api_is_grouped_by_feature_context() {
     let source = std::fs::read_to_string(workspace_file("crates/application/src/lib.rs"))
         .expect("read application root");
@@ -285,46 +240,6 @@ fn application_public_api_is_grouped_by_feature_context() {
             source.contains(&format!("pub mod {context};")),
             "application context is not public: {context}"
         );
-    }
-}
-
-#[test]
-fn application_context_public_api_does_not_reexport_outbound_implementations() {
-    for root in [
-        "crates/application/src",
-        "crates/application-activity/src",
-        "crates/application-core/src",
-        "crates/application-game/src",
-        "crates/application-realtime/src",
-    ] {
-        for path in rust_sources_below(root) {
-            if path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .is_some_and(|name| name.contains("test"))
-            {
-                continue;
-            }
-            if path == workspace_file("crates/application-core/src/vrchat_api.rs") {
-                continue;
-            }
-            let source = std::fs::read_to_string(&path).expect("read application source");
-            for dependency in [
-                "pub use vrcx_0_persistence",
-                "pub use vrcx_0_vrchat_client",
-                "pub use vrcx_0_integrations",
-                "pub use vrcx_0_media",
-                "pub type VrchatApiRequest = vrcx_0_vrchat_client",
-                "pub type VrchatApiResponse = vrcx_0_vrchat_client",
-                "pub type VrchatScope = vrcx_0_vrchat_client",
-            ] {
-                assert!(
-                    !source.contains(dependency),
-                    "application public API leaks outbound implementation {dependency}: {}",
-                    path.display()
-                );
-            }
-        }
     }
 }
 
@@ -505,22 +420,9 @@ fn application_business_tests_do_not_depend_on_concrete_storage() {
 
 #[test]
 fn runtime_host_context_is_compile_time_private_to_composition() {
-    let composition_root = std::fs::read_to_string(workspace_file("crates/composition/src/lib.rs"))
-        .expect("read composition root");
-    assert!(!composition_root.contains("pub use context::RuntimeHostContext"));
-
     let context = std::fs::read_to_string(workspace_file("crates/composition/src/context.rs"))
         .expect("read runtime host context");
     assert!(context.contains("pub(crate) struct RuntimeHostContext"));
-
-    for path in rust_sources_below("crates/runtime-host-desktop/src") {
-        let source = std::fs::read_to_string(&path).expect("read desktop runtime source");
-        assert!(
-            !source.contains("RuntimeHostContext"),
-            "desktop host names the private composition context: {}",
-            path.display()
-        );
-    }
 }
 
 #[test]

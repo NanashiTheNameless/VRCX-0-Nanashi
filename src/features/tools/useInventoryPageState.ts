@@ -3,10 +3,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { resolveProfileDecorationMutation } from '@/domain/entities/inventory';
-import mediaRepository, {
+import vrchatMediaRepository, {
     type InventoryItemRecord,
     type MediaFileRecord
-} from '@/repositories/mediaRepository';
+} from '@/repositories/vrchatMediaRepository';
 import { refreshCurrentUser } from '@/services/backgroundMaintenanceSessionService';
 import { toast } from '@/services/toastService';
 import { VRCHAT_API_DEFAULT_PAGE_SIZE } from '@/shared/constants/pagination';
@@ -85,7 +85,7 @@ async function loadInventoryFileRows(
 ) {
     const nextRows: InventoryRow[] = [];
     for (const tag of definition.fileTags || []) {
-        const { json } = await mediaRepository.getFileList({
+        const { json } = await vrchatMediaRepository.getFileList({
             n: VRCHAT_API_DEFAULT_PAGE_SIZE,
             tag
         });
@@ -110,9 +110,10 @@ async function loadInventoryRows(definition: InventoryTabDefinition) {
     if (definition.source === 'empty') {
         return [];
     }
-    const { items, truncated } = await mediaRepository.collectInventoryItems({
-        ...definition.params
-    });
+    const { items, truncated } =
+        await vrchatMediaRepository.collectInventoryItems({
+            ...definition.params
+        });
     if (truncated) {
         console.warn('Inventory listing truncated at the page limit.');
     }
@@ -285,13 +286,13 @@ export function useInventoryPageState() {
         settings: InventoryUploadSettings
     ) {
         if (target === 'emojis') {
-            return mediaRepository.uploadEmoji(
+            return vrchatMediaRepository.uploadEmoji(
                 base64Body,
                 buildEmojiUploadParams(settings)
             );
         }
         if (target === 'stickers') {
-            return mediaRepository.uploadSticker(base64Body);
+            return vrchatMediaRepository.uploadSticker(base64Body);
         }
         throw new Error(`Unsupported inventory upload target: ${target}`);
     }
@@ -424,7 +425,7 @@ export function useInventoryPageState() {
         const authTarget = getInventoryAuthTarget();
         setMutatingKey(`file:${normalizedFileId}`);
         try {
-            await mediaRepository.deleteFile(normalizedFileId);
+            await vrchatMediaRepository.deleteFile(normalizedFileId);
             if (isCurrentInventoryAuthTarget(authTarget)) {
                 setRowsByScope((current) => ({
                     ...current,
@@ -465,9 +466,12 @@ export function useInventoryPageState() {
         const authTarget = getInventoryAuthTarget();
         setMutatingKey(`inventory:${normalizedInventoryId}`);
         try {
-            await mediaRepository.updateInventoryItem(normalizedInventoryId, {
-                isArchived: Boolean(archived)
-            });
+            await vrchatMediaRepository.updateInventoryItem(
+                normalizedInventoryId,
+                {
+                    isArchived: Boolean(archived)
+                }
+            );
             if (isCurrentInventoryAuthTarget(authTarget)) {
                 toast.add({
                     type: 'success',
@@ -502,7 +506,9 @@ export function useInventoryPageState() {
         const authTarget = getInventoryAuthTarget();
         setMutatingKey(`inventory:${normalizedInventoryId}`);
         try {
-            await mediaRepository.consumeInventoryBundle(normalizedInventoryId);
+            await vrchatMediaRepository.consumeInventoryBundle(
+                normalizedInventoryId
+            );
             if (isCurrentInventoryAuthTarget(authTarget)) {
                 toast.add({
                     type: 'success',
@@ -553,12 +559,12 @@ export function useInventoryPageState() {
         try {
             try {
                 if (isUnequip) {
-                    await mediaRepository.unequipProfileDecoration({
+                    await vrchatMediaRepository.unequipProfileDecoration({
                         expectedUserId: authTarget.userId,
                         equipSlot: mutation.equipSlot
                     });
                 } else {
-                    await mediaRepository.equipProfileDecoration({
+                    await vrchatMediaRepository.equipProfileDecoration({
                         expectedUserId: authTarget.userId,
                         inventoryId: mutation.inventoryId,
                         equipSlot: mutation.equipSlot
@@ -626,7 +632,7 @@ export function useInventoryPageState() {
         }
         setMutatingKey('inventory:redeem');
         try {
-            await mediaRepository.redeemReward(code);
+            await vrchatMediaRepository.redeemReward(code);
             if (isCurrentInventoryAuthTarget(authTarget)) {
                 toast.add({
                     type: 'success',

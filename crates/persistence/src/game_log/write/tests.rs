@@ -55,19 +55,6 @@ fn test_db(name: &str) -> Result<TestDatabase, Error> {
 }
 
 #[test]
-fn creates_all_game_log_tables_from_schema_builder() -> Result<(), Error> {
-    let test_db = test_db("store-gamelog-schema-builder")?;
-    let db = &test_db.db;
-
-    let rows = db.execute(
-    "SELECT COUNT(*) FROM sqlite_schema WHERE type = 'table' AND name IN ('gamelog_location', 'gamelog_join_leave', 'gamelog_portal_spawn', 'gamelog_video_play', 'gamelog_resource_load', 'gamelog_event', 'gamelog_external')",
-    &Default::default(),
-)?;
-    assert_eq!(rows[0][0], serde_json::json!(7));
-    Ok(())
-}
-
-#[test]
 fn writes_core_game_log_rows_with_parameterized_sql() -> Result<(), Error> {
     let test_db = test_db("store-gamelog-writes")?;
     let db = &test_db.db;
@@ -746,11 +733,22 @@ fn get_last_location_returns_latest_by_id() -> Result<(), Error> {
             group_name: "".into(),
         },
     )?;
+    insert_location(
+        db,
+        &GameLogLocationEntry {
+            created_at: "2026-05-14T08:00:00.000Z".into(),
+            location: "wrld_c:1".into(),
+            world_id: "wrld_c".into(),
+            world_name: "C".into(),
+            time: 0,
+            group_name: "".into(),
+        },
+    )?;
 
     let last = crate::game_log::get_last_game_log_location(db)?;
     assert_eq!(
         last.map(|entry| entry.location),
-        Some("wrld_b:1".to_string())
+        Some("wrld_c:1".to_string())
     );
     Ok(())
 }

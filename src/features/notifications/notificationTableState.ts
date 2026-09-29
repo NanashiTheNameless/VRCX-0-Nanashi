@@ -1,11 +1,8 @@
 import {
     getDataTableStorageKey,
     readPersistedTableState,
-    safeJsonParse,
     writePersistedTableState
 } from '@/components/data-table/dataTablePersistence';
-
-export { safeJsonParse };
 
 export const NOTIFICATION_TABLE_DEFAULT_PAGE_SIZES = [10, 15, 20, 25, 50, 100];
 

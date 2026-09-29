@@ -219,12 +219,9 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    #[ignore = "requires VRCX0_WS_TRACE"]
     fn ws_trace_replay_matches_after_state() {
-        let Ok(path) = env::var("VRCX0_WS_TRACE") else {
-            eprintln!("VRCX0_WS_TRACE not set; skipping ws-trace replay");
-            return;
-        };
+        let path = env::var("VRCX0_WS_TRACE").expect("VRCX0_WS_TRACE must be set");
         let raw = fs::read_to_string(&path).expect("read ws-trace file");
 
         let dump_path = env::var("VRCX0_REPLAY_DUMP").ok();

@@ -6,9 +6,9 @@ const mocks = vi.hoisted(() => ({
     snapshot: vi.fn()
 }));
 
-vi.mock('@/repositories/appLauncherRepository', () => ({
-    default: {
-        snapshot: mocks.snapshot
+vi.mock('@/platform/tauri/bindings', () => ({
+    commands: {
+        appAppLauncherSnapshotGet: mocks.snapshot
     }
 }));
 

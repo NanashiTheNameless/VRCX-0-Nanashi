@@ -1,3 +1,5 @@
+import { safeJsonParse } from '@/shared/utils/json';
+
 import type {
     MutualFriendsLayoutSettingKey,
     MutualFriendsLayoutSettings
@@ -57,22 +59,14 @@ export function normalizeExcludedMutualFriendIds(value: unknown): string[] {
 }
 
 export function readExcludedMutualFriendIds() {
-    try {
-        const value = localStorage.getItem(MUTUAL_GRAPH_EXCLUDED_FRIENDS_KEY);
-        const parsed: unknown = value ? JSON.parse(value) : [];
-        return normalizeExcludedMutualFriendIds(parsed);
-    } catch {
-        return [];
-    }
+    return normalizeExcludedMutualFriendIds(
+        safeJsonParse(localStorage.getItem(MUTUAL_GRAPH_EXCLUDED_FRIENDS_KEY))
+    );
 }
 
 export function writeExcludedMutualFriendIds(value: unknown) {
-    try {
-        localStorage.setItem(
-            MUTUAL_GRAPH_EXCLUDED_FRIENDS_KEY,
-            JSON.stringify(normalizeExcludedMutualFriendIds(value))
-        );
-    } catch {
-        // localStorage may be unavailable; hidden mutual friends are optional UI state.
-    }
+    localStorage.setItem(
+        MUTUAL_GRAPH_EXCLUDED_FRIENDS_KEY,
+        JSON.stringify(normalizeExcludedMutualFriendIds(value))
+    );
 }

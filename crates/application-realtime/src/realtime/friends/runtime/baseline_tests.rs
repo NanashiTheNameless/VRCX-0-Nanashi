@@ -164,57 +164,63 @@ mod tests {
     }
 
     #[test]
-    fn placeholder_baseline_refresh_uses_official_list_bucket() {
-        let runtime = RealtimeFriendsRuntime::default();
-        runtime.set_baseline(
-            FriendRosterBaseline {
-                current_user_id: "usr_self".into(),
-                friends_by_id: [(
-                    "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "active".into(),
-                        ..FriendRecord::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-                ..FriendRosterBaseline::default()
-            },
-            1,
-            0,
-        );
-        runtime.set_baseline(
-            FriendRosterBaseline {
-                current_user_id: "usr_self".into(),
-                friends_by_id: [(
-                    "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "online".into(),
-                        extra: [("$profileSource".to_string(), json!("placeholder"))]
-                            .into_iter()
-                            .collect(),
-                        ..FriendRecord::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-                ..FriendRosterBaseline::default()
-            },
-            1,
-            1,
-        );
+    fn baseline_refresh_follows_official_list_state() {
+        for (previous_state, next_location, placeholder) in [
+            ("active", "", true),
+            ("offline", "", true),
+            ("active", "wrld_929c02a8:1", false),
+        ] {
+            let runtime = RealtimeFriendsRuntime::default();
+            runtime.set_baseline(
+                FriendRosterBaseline {
+                    current_user_id: "usr_self".into(),
+                    friends_by_id: [(
+                        "usr_friend".to_string(),
+                        FriendRecord {
+                            id: "usr_friend".into(),
+                            display_name: "Friend".into(),
+                            state: previous_state.into(),
+                            ..FriendRecord::default()
+                        },
+                    )]
+                    .into_iter()
+                    .collect(),
+                    ..FriendRosterBaseline::default()
+                },
+                1,
+                0,
+            );
+            let mut next = FriendRecord {
+                id: "usr_friend".into(),
+                display_name: "Friend".into(),
+                state: "online".into(),
+                location: next_location.into(),
+                ..FriendRecord::default()
+            };
+            if placeholder {
+                next.extra
+                    .insert("$profileSource".to_string(), json!("placeholder"));
+            }
+            runtime.set_baseline(
+                FriendRosterBaseline {
+                    current_user_id: "usr_self".into(),
+                    friends_by_id: [("usr_friend".to_string(), next)].into_iter().collect(),
+                    ..FriendRosterBaseline::default()
+                },
+                1,
+                1,
+            );
 
-        let snapshot = runtime.snapshot().expect("baseline present");
-        let friend = snapshot
-            .friends_by_id
-            .get("usr_friend")
-            .expect("friend present");
-        assert_eq!(friend.state, "online");
-        assert_eq!(friend.state, "online");
+            let snapshot = runtime.snapshot().expect("baseline present");
+            let friend = snapshot
+                .friends_by_id
+                .get("usr_friend")
+                .expect("friend present");
+            assert_eq!(
+                friend.state, "online",
+                "{previous_state} -> online (placeholder: {placeholder})"
+            );
+        }
     }
 
     #[test]
@@ -288,59 +294,6 @@ mod tests {
     }
 
     #[test]
-    fn placeholder_baseline_refresh_follows_official_list_state() {
-        let runtime = RealtimeFriendsRuntime::default();
-        runtime.set_baseline(
-            FriendRosterBaseline {
-                current_user_id: "usr_self".into(),
-                friends_by_id: [(
-                    "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "offline".into(),
-                        ..FriendRecord::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-                ..FriendRosterBaseline::default()
-            },
-            1,
-            0,
-        );
-        runtime.set_baseline(
-            FriendRosterBaseline {
-                current_user_id: "usr_self".into(),
-                friends_by_id: [(
-                    "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "online".into(),
-                        extra: [("$profileSource".to_string(), json!("placeholder"))]
-                            .into_iter()
-                            .collect(),
-                        ..FriendRecord::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-                ..FriendRosterBaseline::default()
-            },
-            1,
-            1,
-        );
-
-        let snapshot = runtime.snapshot().expect("baseline present");
-        let friend = snapshot
-            .friends_by_id
-            .get("usr_friend")
-            .expect("friend present");
-        assert_eq!(friend.state, "online");
-    }
-
-    #[test]
     fn unwatermarked_baseline_preserves_inflight_ws_state() {
         let runtime = RealtimeFriendsRuntime::default();
         runtime.set_baseline(
@@ -407,57 +360,6 @@ mod tests {
         assert_eq!(friend.state, "online");
         assert_eq!(friend.extra.get("pendingOffline"), Some(&json!(false)));
         assert!(effects.schedules.is_empty());
-    }
-
-    #[test]
-    fn in_world_baseline_overrides_stale_active() {
-        let runtime = RealtimeFriendsRuntime::default();
-        runtime.set_baseline(
-            FriendRosterBaseline {
-                current_user_id: "usr_self".into(),
-                friends_by_id: [(
-                    "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "active".into(),
-                        ..FriendRecord::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-                ..FriendRosterBaseline::default()
-            },
-            1,
-            0,
-        );
-        runtime.set_baseline(
-            FriendRosterBaseline {
-                current_user_id: "usr_self".into(),
-                friends_by_id: [(
-                    "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "online".into(),
-                        location: "wrld_929c02a8:1".into(),
-                        ..FriendRecord::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-                ..FriendRosterBaseline::default()
-            },
-            1,
-            1,
-        );
-
-        let snapshot = runtime.snapshot().expect("baseline present");
-        let friend = snapshot
-            .friends_by_id
-            .get("usr_friend")
-            .expect("friend present");
-        assert_eq!(friend.state, "online");
     }
 
     #[test]

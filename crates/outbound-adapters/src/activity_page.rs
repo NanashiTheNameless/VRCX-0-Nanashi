@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use vrcx_0_application_activity::activity_page::ActivityPageStore;
 use vrcx_0_application_core::Result;
-use vrcx_0_contracts::activity_page::{ActivityPageView, ActivityWindowSpans, CachedActivityPage};
+use vrcx_0_contracts::activity_page::{ActivityLocationSpan, ActivityPageView, CachedActivityPage};
 use vrcx_0_contracts::social_aggregates::{
     CopresenceSummaryInput, CopresenceSummaryOutput, FadingFriendsInput, FadingFriendsOutput,
 };
@@ -56,7 +56,7 @@ impl ActivityPageStore for LocalActivityPageStore<'_> {
         owner: &OwnerId,
         from_ms: Option<i64>,
         to_ms: i64,
-    ) -> Result<ActivityWindowSpans> {
+    ) -> Result<Vec<ActivityLocationSpan>> {
         Ok(activity_page::read_instance_spans(
             self.db, owner, from_ms, to_ms,
         )?)

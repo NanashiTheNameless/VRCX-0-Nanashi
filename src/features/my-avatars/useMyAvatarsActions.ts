@@ -2,9 +2,9 @@ import type { ChangeEvent, Dispatch, RefObject, SetStateAction } from 'react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { AvatarUpdateRequest } from '@/platform/tauri/bindings';
-import mediaRepository from '@/repositories/mediaRepository';
+import { commands, type AvatarUpdateRequest } from '@/platform/tauri/bindings';
 import myAvatarRepository from '@/repositories/myAvatarRepository';
+import vrchatMediaRepository from '@/repositories/vrchatMediaRepository';
 import { selectAvatar as selectCurrentAvatar } from '@/services/avatarSelectionService';
 import { toast } from '@/services/toastService';
 import {
@@ -458,12 +458,12 @@ export function useMyAvatarsActions({
                 return;
             }
             const base64File =
-                await mediaRepository.resizeImageToFitLimits(base64Body);
+                await commands.appResizeImageToFitLimits(base64Body);
             if (!isRuntimeAuthTarget(authTarget)) {
                 return;
             }
             const result = await withUploadTimeout(
-                mediaRepository.uploadAvatarImageLegacy({
+                vrchatMediaRepository.uploadAvatarImageLegacy({
                     avatarId,
                     imageUrl: avatar.imageUrl || avatar.thumbnailImageUrl || '',
                     base64File
