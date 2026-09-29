@@ -209,6 +209,7 @@ mod tests {
 
     #[tokio::test]
     async fn image_fetcher_returns_success_bodies_and_rejects_error_statuses() {
+        vrcx_0_core::tls::install_crypto_provider();
         let fetcher = local_fetcher(Client::new());
         let (ok_url, ok_server) = serve_once("200 OK", "image-bytes", Duration::ZERO).await;
         assert_eq!(
@@ -226,6 +227,7 @@ mod tests {
 
     #[tokio::test]
     async fn image_fetcher_honors_the_configured_read_timeout() {
+        vrcx_0_core::tls::install_crypto_provider();
         let client = Client::builder()
             .read_timeout(Duration::from_millis(20))
             .build()

@@ -91,6 +91,24 @@ jobs:
                           target/release/bundle/rpm/*.rpm.sig
                           target/release/bundle/latest_linux_and_macos.json
         steps:
+            # Defender scans every file the cache restore, build and cache save
+            # touch; on hosted Windows runners that made saving the Rust cache
+            # alone take ~3 minutes. The runner is discarded after the job.
+            - name: Exclude build folders from Defender
+              if: runner.os == 'Windows'
+              shell: pwsh
+              run: |
+                  try {
+                      Add-MpPreference -ExclusionPath @(
+                          "${{ github.workspace }}",
+                          "$env:USERPROFILE\.cargo",
+                          "$env:USERPROFILE\.rustup",
+                          "$env:RUNNER_TEMP"
+                      )
+                  } catch {
+                      Write-Host "Defender exclusion skipped: $_"
+                  }
+
             - uses: actions/checkout@v7
 
             - uses: dtolnay/rust-toolchain@stable
