@@ -285,4 +285,18 @@ describe('SettingsAdvancedTab data directory states', () => {
             })
         ).toBeNull();
     });
+
+    it('hides the deep link scheme settings on Linux', () => {
+        commandMocks.appDeepLinkSchemesGet.mockClear();
+        renderTab(createModel({ hostPlatform: 'linux' }));
+
+        expect(commandMocks.appDeepLinkSchemesGet).not.toHaveBeenCalled();
+    });
+
+    it('shows the deep link scheme settings on Windows', () => {
+        commandMocks.appDeepLinkSchemesGet.mockClear();
+        renderTab(createModel({ hostPlatform: 'windows' }));
+
+        expect(commandMocks.appDeepLinkSchemesGet).toHaveBeenCalled();
+    });
 });

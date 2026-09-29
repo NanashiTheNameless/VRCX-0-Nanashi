@@ -59,6 +59,17 @@ Tools return timestamps in UTC. Convert them into this timezone when presenting 
     )
 }
 
+/// Fork: write tools are hidden while writes are off, so tell the model why
+/// and how the user can turn them on instead of letting it claim it cannot.
+const WRITES_DISABLED_PROMPT: &str = "\
+Write actions are switched off in this chat, so create_reminder, delete_reminder, \
+favorite_local, favorite_vrchat and set_friend_note are not available to you. If the user \
+asks for a reminder, a favorite or a friend note (or to delete one), do not say you cannot \
+do reminders. Tell them write actions are off for this chat and how to turn them on: open \
+the chat settings (the sliders icon next to the model name at the top of the Social AI \
+window), switch on \"Allow write actions\", then ask again. You can still list reminders \
+with list_reminders.";
+
 pub(super) fn build_context(
     ctx: &TurnContext,
     route: Option<playbook::Playbook>,
@@ -76,6 +87,7 @@ pub(super) fn build_context(
         &surfaced,
         route,
         now_local,
+        ctx.allow_writes,
     )
 }
 
@@ -86,6 +98,7 @@ fn build_context_messages(
     surfaced: &[Entity],
     route: Option<playbook::Playbook>,
     now_local: DateTime<FixedOffset>,
+    allow_writes: bool,
 ) -> Vec<ChatMessage> {
     let history_prompt = match mode {
         ContextMode::Narrator => NARRATOR_HISTORY_PROMPT,
@@ -99,6 +112,9 @@ fn build_context_messages(
     ];
     if let Some(pb) = route {
         system_sections.push(pb.constraint_prompt().to_string());
+    }
+    if !allow_writes {
+        system_sections.push(WRITES_DISABLED_PROMPT.to_string());
     }
     if let Some(locale) = locale.map(str::trim).filter(|l| !l.is_empty()) {
         system_sections.push(format!(
@@ -595,6 +611,31 @@ mod tests {
     }
 
     #[test]
+    fn writes_disabled_context_explains_how_to_enable_write_actions() {
+        let history = vec![message(Role::User, "remind me when Alice comes online")];
+        let now = DateTime::parse_from_rfc3339("2026-06-28T06:00:00+09:00").unwrap();
+        let system_of = |allow_writes| {
+            build_context_messages(
+                ContextMode::Open,
+                None,
+                &history,
+                &[],
+                None,
+                now,
+                allow_writes,
+            )[0]
+            .content
+            .clone()
+            .unwrap()
+        };
+
+        let locked = system_of(false);
+        assert!(locked.contains("Write actions are switched off"));
+        assert!(locked.contains("Allow write actions"));
+        assert!(!system_of(true).contains("Write actions are switched off"));
+    }
+
+    #[test]
     fn build_context_uses_one_leading_system_message_per_mode() {
         let history = vec![message(Role::User, "he常去哪?")];
         let now = DateTime::parse_from_rfc3339("2026-06-28T06:00:00+09:00").unwrap();
@@ -606,6 +647,7 @@ mod tests {
             &[entity("usr_1", "Alice")],
             playbook::classify_keyword("best time to play"),
             now,
+            true,
         );
         let roles: Vec<&str> = narrator.iter().map(|m| m.role.as_str()).collect();
         assert_eq!(roles, vec!["system", "user"]);
@@ -623,6 +665,7 @@ mod tests {
             &[entity("usr_1", "Alice")],
             None,
             now,
+            true,
         );
         let roles: Vec<&str> = open.iter().map(|m| m.role.as_str()).collect();
         assert_eq!(roles, vec!["system", "user"]);

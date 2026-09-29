@@ -129,23 +129,9 @@ export function startThemeModeSync() {
         }
     );
 
-    if (!window.matchMedia) {
-        return unsubscribeThemeMode;
-    }
-
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleChange = () => {
-        if (useShellStore.getState().themeMode === 'system') {
-            syncThemeMode('system', 'System theme sync failed');
-        }
-    };
-
-    mediaQuery.addEventListener('change', handleChange);
-
-    return () => {
-        unsubscribeThemeMode();
-        mediaQuery.removeEventListener('change', handleChange);
-    };
+    // Fork: OS theme changes are not followed; the OS preference is only
+    // read once, at startup, while no theme is configured.
+    return unsubscribeThemeMode;
 }
 
 export function startI18nLanguageSync() {

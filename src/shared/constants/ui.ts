@@ -128,6 +128,16 @@ const navDefinitions = [
         routeName: 'charts-mutual'
     },
     {
+        // Fork: opens the Social AI chat, or its settings while it is off.
+        key: 'social-ai',
+        icon: 'lucide:Sparkles',
+        tooltip: 'assistant.title',
+        labelKey: 'assistant.title',
+        routeName: null,
+        action: { type: 'tool' as const, toolKey: 'social-ai' },
+        defaultFolderId: 'default-folder-social'
+    },
+    {
         key: 'tools',
         icon: 'lucide:Wrench',
         tooltip: 'nav_tooltip.tools',

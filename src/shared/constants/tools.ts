@@ -66,6 +66,10 @@ type ToolAction =
     | {
           type: 'dialog';
           dialogKey: ToolDialogKey;
+      }
+    // Fork: open the Social AI chat.
+    | {
+          type: 'assistant';
       };
 
 interface ToolCategory {
@@ -238,6 +242,16 @@ const toolDefinitions: ToolDefinition[] = [
         descriptionKey: 'view.tools.system_tools.llm_endpoints_description',
         navEligible: true,
         action: { type: 'dialog', dialogKey: 'llm-endpoints' }
+    },
+    {
+        key: 'social-ai',
+        category: 'other',
+        iconKey: 'sparkles',
+        navIcon: 'lucide:Sparkles',
+        titleKey: 'assistant.title',
+        descriptionKey: 'view.tools.system_tools.social_ai_description',
+        navEligible: true,
+        action: { type: 'assistant' }
     },
     {
         key: 'crash-dumps',

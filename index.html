@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html class="dark">
     <head>
         <meta charset="utf-8" />
         <meta
@@ -10,6 +10,16 @@
         <meta http-equiv="Cache-Control" content="no-cache" />
 
         <title>VRCX-0-Nanashi</title>
+
+        <!-- Fork: paint dark before CSS/JS load so a rebuilt window (e.g. leaving
+             background mode) never flashes white; the theme service then applies
+             the chosen theme. -->
+        <style>
+            html:not(.vrcx-0-theme-ready) {
+                background: #0a0a0a;
+                color-scheme: dark;
+            }
+        </style>
 
         <link rel="preconnect" href="https://api.vrchat.cloud" />
         <link rel="preconnect" href="https://files.vrchat.cloud" />

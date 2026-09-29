@@ -132,6 +132,8 @@ pub(crate) struct TurnContext {
     pub locale: Option<String>,
     pub cancel: CancellationToken,
     pub apply_playbook: bool,
+    /// Fork: whether write tools (reminders, favorites, notes) are exposed.
+    pub allow_writes: bool,
     pub options: LlmRequestOptions,
 }
 

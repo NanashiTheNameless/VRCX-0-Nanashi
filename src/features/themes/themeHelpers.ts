@@ -8,8 +8,8 @@ import type { ThemeMode } from '@/state/shellStore';
 
 export type ThemeSource = 'built-in' | 'background' | 'community';
 
+// Fork: no "System" choice; the OS preference only seeds the first startup.
 export const THEME_MODE_OPTIONS = [
-    'system',
     'light',
     'dark'
 ] as const satisfies readonly ThemeMode[];

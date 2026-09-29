@@ -2016,7 +2016,8 @@
                 "registry_backup": "VRChat Registry Backup",
                 "registry_backup_description": "Create or restore a VRChat registry backup",
                 "llm_endpoints": "AI Connections",
-                "llm_endpoints_description": "AI connections for Social AI and translation"
+                "llm_endpoints_description": "AI connections for Social AI and translation",
+                "social_ai_description": "Chat with an AI about your friends, activity and worlds"
             },
             "vrchat_log": {
                 "title": "VRChat Log Viewer",

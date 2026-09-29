@@ -17,9 +17,14 @@ struct Fixture {
 }
 impl Fixture {
     fn new() -> Self {
+        // A counter keeps parallel tests apart: macOS clocks only resolve to
+        // microseconds, so two fixtures could otherwise share one database
+        // file and fail with "database is locked".
+        static NEXT_FIXTURE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let dir = std::env::temp_dir().join(format!(
-            "vrcx-safety-{}-{}",
+            "vrcx-safety-{}-{}-{}",
             std::process::id(),
+            NEXT_FIXTURE.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()

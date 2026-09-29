@@ -213,6 +213,11 @@ fn present_main_window(app: &tauri::AppHandle) {
     }
 }
 
+/// Fork: dark fill shown before the page paints, so a rebuilt window (e.g.
+/// leaving background mode) does not flash white. Matches the dark theme's
+/// `--background`.
+const STARTUP_BACKGROUND: tauri::window::Color = tauri::window::Color(10, 10, 10, 255);
+
 pub(super) fn create_main_window(
     app: &tauri::AppHandle,
     proxy_url: Option<&str>,
@@ -243,10 +248,16 @@ pub(super) fn create_main_window(
             == Some("true");
         if !system_frame {
             builder = builder.transparent(true).shadow(false);
+        } else {
+            builder = builder.background_color(STARTUP_BACKGROUND);
         }
         builder = builder.initialization_script(format!(
             "window.__VRCX_SYSTEM_WINDOW_FRAME__ = {system_frame};"
         ));
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        builder = builder.background_color(STARTUP_BACKGROUND);
     }
     #[cfg(target_os = "macos")]
     {

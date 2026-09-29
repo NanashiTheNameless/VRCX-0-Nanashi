@@ -298,6 +298,7 @@ impl AssistantController {
             locale,
             cancel,
             apply_playbook: should_apply_playbook(session.playbook_mode, &endpoint.base_url),
+            allow_writes: session.allow_writes,
             options,
         };
 

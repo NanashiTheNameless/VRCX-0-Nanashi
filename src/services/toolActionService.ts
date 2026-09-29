@@ -15,6 +15,8 @@ import {
     type ToolDefinition,
     type ToolRouteName
 } from '@/shared/constants/tools';
+import { useAssistantChatStore } from '@/state/assistantChatStore';
+import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
 type Navigate = (to: string) => void;
@@ -189,6 +191,15 @@ export async function triggerToolByKey(
             setSystemHostOpen('vrchatConfigOpen', true);
             return;
         }
+    }
+
+    if (action.type === 'assistant') {
+        if (!usePreferencesStore.getState().socialAiEnabled) {
+            navigate('/settings?tab=ai');
+            return;
+        }
+        useAssistantChatStore.getState().setOpen(true);
+        return;
     }
 
     if (action.type === 'dialog') {

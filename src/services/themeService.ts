@@ -3,7 +3,6 @@ import { useCallback, useSyncExternalStore } from 'react';
 import { normalizeLanguageCode } from '@/localization/locales';
 import { commands } from '@/platform/tauri/bindings';
 import { tauriClient } from '@/platform/tauri/client';
-import { setWindowTheme, type WindowTheme } from '@/platform/tauri/webview';
 import {
     APP_FONT_DEFAULT_KEY,
     APP_CJK_FONT_PACK_DEFAULT_KEY,
@@ -33,15 +32,6 @@ type AppFontPreferenceInput = {
     locale?: string;
 };
 type ZoomLevelInput = string | number | null | undefined;
-
-const NATIVE_THEME_VALUES: Readonly<Record<ThemeMode, WindowTheme | null>> =
-    Object.freeze({
-        system: null,
-        light: 'light',
-        dark: 'dark'
-    });
-let nativeThemeSyncQueue: Promise<void> = Promise.resolve();
-let themeApplySequence = 0;
 
 const COMMUNITY_THEME_FIXED_THEME_MODE: ThemeMode = 'dark';
 const APP_FONT_STYLE_ATTR = 'data-vrcx-app-font';
@@ -509,38 +499,22 @@ export function applyAppFontPreferences({
     };
 }
 
-function syncNativeTheme(themeMode: ThemeMode): Promise<void> {
-    const normalized = resolveEffectiveThemeMode(themeMode);
-    const sync = nativeThemeSyncQueue.then(async () => {
-        await setWindowTheme(NATIVE_THEME_VALUES[normalized]);
-    });
-
-    nativeThemeSyncQueue = sync.catch(() => undefined);
-    return sync;
-}
-
+// Fork: the native window theme is never touched; the OS preference only
+// decides light or dark for the `system` mode. (Flipping the GTK theme
+// crashed WebKitGTK on Linux.)
 export async function applyThemeMode(themeMode: string): Promise<void> {
-    const sequence = ++themeApplySequence;
     const normalized = resolveThemeMode(themeMode);
     const effectiveThemeMode = resolveEffectiveThemeMode(normalized);
-
-    if (effectiveThemeMode === 'system') {
-        await syncNativeTheme(effectiveThemeMode);
-        if (sequence !== themeApplySequence) {
-            return;
-        }
-    }
 
     const resolvedTheme = getResolvedThemeMode(effectiveThemeMode);
     const shouldUseDarkClass = resolvedTheme === 'dark';
 
+    // Fork: drop the pre-load dark fill from index.html now the theme is set.
+    document.documentElement.classList.toggle('vrcx-0-theme-ready', true);
     document.documentElement.classList.toggle('dark', shouldUseDarkClass);
     document.documentElement.setAttribute('data-theme', resolvedTheme);
 
     useShellStore.getState().setThemeMode(effectiveThemeMode);
-    if (effectiveThemeMode !== 'system') {
-        await syncNativeTheme(effectiveThemeMode);
-    }
 }
 
 export async function setCommunityThemeAppearanceControl(

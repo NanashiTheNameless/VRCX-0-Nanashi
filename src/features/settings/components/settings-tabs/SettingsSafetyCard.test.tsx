@@ -46,6 +46,8 @@ vi.mock('../SettingsCard', () => ({
         <section>{children}</section>
     )
 }));
+import { useNavigationCacheStore } from '@/state/navigationCacheStore';
+
 import { SettingsSafetyCard } from './SettingsSafetyCard';
 const initial: SafetySettings = {
     enabled: true,
@@ -197,11 +199,15 @@ describe('safety settings', () => {
             ],
             droppedEvents: 0
         });
+        useNavigationCacheStore.setState({ hydrated: true, settingsCards: {} });
         render(<SettingsSafetyCard />);
         await screen.findByDisplayValue('Test list');
         fireEvent.click(screen.getByText('refresh_sources'));
         await screen.findByText('HTTP 503');
-        expect(screen.getByText('URL was not opened')).toBeTruthy();
+        // The history starts collapsed.
+        expect(screen.queryByText('URL was not opened')).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: 'history' }));
+        expect(await screen.findByText('URL was not opened')).toBeTruthy();
         expect(mocks.refresh).toHaveBeenCalledOnce();
     });
 });

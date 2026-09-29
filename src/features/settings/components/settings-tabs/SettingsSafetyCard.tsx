@@ -1,6 +1,8 @@
+import { ChevronDownIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { cn } from '@/lib/utils';
 import {
     commands,
     type SafetySettings,
@@ -10,7 +12,13 @@ import {
     type WatchEntry
 } from '@/platform/tauri/bindings';
 import { useModalStore } from '@/state/modalStore';
+import { useNavigationCacheStore } from '@/state/navigationCacheStore';
 import { Button } from '@/ui/shadcn/button';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger
+} from '@/ui/shadcn/collapsible';
 import { Input } from '@/ui/shadcn/input';
 import {
     Select,
@@ -29,6 +37,7 @@ import { SettingsGlobalHide } from './SettingsGlobalHide';
 import { SettingsInstanceAvatarCheck } from './SettingsInstanceAvatarCheck';
 
 const P = 'view.settings.safety';
+const SAFETY_HISTORY_CARD_ID = 'safety.history';
 const formats: SourceFormat[] = [
     'avatarIds',
     'userIds',
@@ -130,6 +139,12 @@ export function SettingsSafetyCard() {
     const [settings, setSettings] = useState<SafetySettings | null>(null);
     const [saved, setSaved] = useState('');
     const [status, setStatus] = useState<SafetyStatus | null>(null);
+    const historyOpen = useNavigationCacheStore(
+        (state) => state.settingsCards[SAFETY_HISTORY_CARD_ID] ?? false
+    );
+    const setSettingsCardOpen = useNavigationCacheStore(
+        (state) => state.setSettingsCardOpen
+    );
     const [refreshing, setRefreshing] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
@@ -551,43 +566,65 @@ export function SettingsSafetyCard() {
                         </p>
                     </>
                 )}
-                <div className="flex items-center gap-2">
-                    <span className="font-medium">{t(`${P}.history`)}</span>
-                    <Button
-                        variant="outline"
-                        onClick={() =>
-                            void run(async () =>
-                                setStatus(await commands.appSafetyStatus())
-                            )
-                        }
-                    >
-                        {t(`${P}.refresh_history`)}
-                    </Button>
-                </div>
-                {!!status?.droppedEvents && (
-                    <p role="alert">
-                        {t(`${P}.dropped`, { count: status.droppedEvents })}
-                    </p>
-                )}
-                <div className="max-h-80 space-y-2 overflow-auto">
-                    {status?.audit.map((entry, index) => (
-                        <div
-                            key={`${entry.createdAt}-${index}`}
-                            className="rounded border p-2 text-sm"
+                {/* Fork: the history starts collapsed; its open state is remembered. */}
+                <Collapsible
+                    open={historyOpen}
+                    onOpenChange={(nextOpen) =>
+                        setSettingsCardOpen(SAFETY_HISTORY_CARD_ID, nextOpen)
+                    }
+                    className="space-y-2"
+                >
+                    <div className="flex items-center gap-2">
+                        <CollapsibleTrigger className="hover:text-foreground flex items-center gap-1 font-medium">
+                            <ChevronDownIcon
+                                aria-hidden="true"
+                                className={cn(
+                                    'text-muted-foreground size-4 transition-transform motion-reduce:transition-none',
+                                    !historyOpen && '-rotate-90'
+                                )}
+                            />
+                            {t(`${P}.history`)}
+                        </CollapsibleTrigger>
+                        <Button
+                            variant="outline"
+                            onClick={() =>
+                                void run(async () =>
+                                    setStatus(await commands.appSafetyStatus())
+                                )
+                            }
                         >
-                            <p>{entry.message}</p>
-                            <p className="text-muted-foreground">
-                                {entry.createdAt} | {entry.source} |{' '}
-                                {entry.action}: {entry.outcome}
+                            {t(`${P}.refresh_history`)}
+                        </Button>
+                    </div>
+                    <CollapsibleContent className="space-y-2">
+                        {!!status?.droppedEvents && (
+                            <p role="alert">
+                                {t(`${P}.dropped`, {
+                                    count: status.droppedEvents
+                                })}
                             </p>
+                        )}
+                        <div className="max-h-80 space-y-2 overflow-auto">
+                            {status?.audit.map((entry, index) => (
+                                <div
+                                    key={`${entry.createdAt}-${index}`}
+                                    className="rounded border p-2 text-sm"
+                                >
+                                    <p>{entry.message}</p>
+                                    <p className="text-muted-foreground">
+                                        {entry.createdAt} | {entry.source} |{' '}
+                                        {entry.action}: {entry.outcome}
+                                    </p>
+                                </div>
+                            ))}
+                            {!status?.audit.length && (
+                                <p className="text-muted-foreground text-sm">
+                                    {t(`${P}.no_history`)}
+                                </p>
+                            )}
                         </div>
-                    ))}
-                    {!status?.audit.length && (
-                        <p className="text-muted-foreground text-sm">
-                            {t(`${P}.no_history`)}
-                        </p>
-                    )}
-                </div>
+                    </CollapsibleContent>
+                </Collapsible>
             </fieldset>
         </SettingsCard>
     );

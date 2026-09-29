@@ -25,6 +25,7 @@ import {
     applyThemeColor,
     applyThemeMode,
     applyZoomLevel,
+    getResolvedThemeMode,
     resolveThemeColor,
     resolveThemeMode
 } from './themeService';
@@ -118,7 +119,14 @@ export async function initializeReactRuntime() {
         ) {
             await configRepository.setString('appLanguage', normalizedLocale);
         }
-        const resolvedThemeMode = resolveThemeMode(themeMode);
+        let resolvedThemeMode = resolveThemeMode(themeMode);
+        // Fork: the OS light/dark preference only picks the theme when none
+        // is configured yet; the choice is then saved and the OS is not
+        // followed afterwards.
+        if (resolvedThemeMode === 'system') {
+            resolvedThemeMode = getResolvedThemeMode('system');
+            await configRepository.setString('ThemeMode', resolvedThemeMode);
+        }
         await runNonCriticalStartupSync(
             'theme',
             applyThemeMode(resolvedThemeMode)

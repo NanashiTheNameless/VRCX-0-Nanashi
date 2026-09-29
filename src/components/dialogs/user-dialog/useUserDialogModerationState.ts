@@ -4,6 +4,7 @@ import userSessionRepository from '@/repositories/userSessionRepository';
 import vrchatModerationRepository from '@/repositories/vrchatModerationRepository';
 import { refreshModerationSync } from '@/services/moderationSyncService';
 import { getVrchatUserModeration } from '@/services/shellIntegrationService';
+import { useRuntimeStore } from '@/state/runtimeStore';
 
 export type ModerationState = {
     block: boolean;
@@ -37,6 +38,9 @@ export function useUserDialogModerationState({
     normalizedUserId,
     reloadToken
 }: UserDialogModerationStateOptions) {
+    const vrchatPathDiscoveryAvailable = useRuntimeStore(
+        (state) => state.hostCapabilities.vrchatPathDiscovery.available
+    );
     const [moderationState, setModerationState] = useState<ModerationState>(
         () => ({
             block: false,
@@ -160,7 +164,10 @@ export function useUserDialogModerationState({
         if (
             !normalizedUserId ||
             !normalizedCurrentUserId ||
-            isTargetCurrentUser
+            isTargetCurrentUser ||
+            // Fork: the local override file is unreachable without VRChat path
+            // discovery (e.g. Linux), so don't make a call that always fails.
+            !vrchatPathDiscoveryAvailable
         ) {
             setAvatarOverrideState({ hideAvatar: false, showAvatar: false });
             return () => {
@@ -194,7 +201,8 @@ export function useUserDialogModerationState({
         isTargetCurrentUser,
         normalizedCurrentUserId,
         normalizedUserId,
-        reloadToken
+        reloadToken,
+        vrchatPathDiscoveryAvailable
     ]);
 
     return {

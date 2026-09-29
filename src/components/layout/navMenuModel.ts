@@ -33,6 +33,8 @@ export type NavDefinition = {
     routeParams?: Record<string, string>;
     path?: string;
     action?: { type: 'tool'; toolKey: string } | null;
+    /** Fork: folder a newly added entry joins when a saved layout lacks it. */
+    defaultFolderId?: string;
 };
 
 type NavLayoutItem = {
@@ -161,7 +163,7 @@ export function createBaseDefaultNavLayout(t: TranslateKey): NavLayoutEntry[] {
             nameKey: 'nav_tooltip.social',
             name: t('nav_tooltip.social'),
             icon: 'lucide:ContactRound',
-            items: ['friend-log', 'friend-list', 'moderation']
+            items: ['friend-log', 'friend-list', 'moderation', 'social-ai']
         },
         { type: 'item', key: 'notification' },
         { type: 'item', key: 'my-avatars' },
@@ -416,6 +418,23 @@ function sanitizeNavLayout({
     }
 
     for (const definition of appendDefinitions) {
+        const folder = definition.defaultFolderId
+            ? normalized.find(
+                  (entry): entry is NavLayoutFolder =>
+                      entry.type === 'folder' &&
+                      entry.id === definition.defaultFolderId
+              )
+            : undefined;
+        if (
+            folder &&
+            !usedKeys.has(definition.key) &&
+            !hiddenSet.has(definition.key) &&
+            definitionMap.has(definition.key)
+        ) {
+            folder.items.push(definition.key);
+            usedKeys.add(definition.key);
+            continue;
+        }
         appendItemEntry(definition.key);
     }
 

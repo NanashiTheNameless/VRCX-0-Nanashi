@@ -312,7 +312,8 @@ export function SettingsAdvancedTabContent({
                     </Field>
                 ) : null}
                 <DeepLinkRegistrationField />
-                <DeepLinkSchemeToggles />
+                {/* Fork: the scheme toggles have no effect on Linux, so hide them. */}
+                {hostPlatform !== 'linux' ? <DeepLinkSchemeToggles /> : null}
             </SettingsCard>
 
             <SettingsSafetyCard />

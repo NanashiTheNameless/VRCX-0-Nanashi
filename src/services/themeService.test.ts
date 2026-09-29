@@ -56,53 +56,27 @@ describe('themeService theme mode', () => {
         vi.unstubAllGlobals();
     });
 
-    it('releases a forced native theme before resolving system mode', async () => {
-        let nativeTheme: 'dark' | 'system' = 'dark';
+    it('resolves system mode from the OS preference without touching the native theme', async () => {
         const { toggleDarkClass, setRootAttribute } = stubThemeEnvironment(
-            () => nativeTheme === 'dark'
+            () => true
         );
-
-        mocks.setWindowTheme.mockImplementation(
-            async (value: string | null) => {
-                if (value === null) {
-                    nativeTheme = 'system';
-                }
-                return null;
-            }
-        );
-        useShellStore.setState({ themeMode: 'dark' });
+        useShellStore.setState({ themeMode: 'light' });
 
         await applyThemeMode('system');
 
-        expect(mocks.setWindowTheme).toHaveBeenCalledWith(null);
-        expect(toggleDarkClass).toHaveBeenCalledWith('dark', false);
-        expect(setRootAttribute).toHaveBeenCalledWith('data-theme', 'light');
+        expect(mocks.setWindowTheme).not.toHaveBeenCalled();
+        expect(toggleDarkClass).toHaveBeenCalledWith('dark', true);
+        expect(setRootAttribute).toHaveBeenCalledWith('data-theme', 'dark');
         expect(useShellStore.getState().themeMode).toBe('system');
     });
 
-    it('keeps the latest explicit theme while system sync is pending', async () => {
-        let releaseSystemTheme: (() => void) | undefined;
+    it('applies explicit themes without touching the native theme', async () => {
         const { toggleDarkClass } = stubThemeEnvironment(() => false);
-
-        mocks.setWindowTheme.mockImplementation((value: string | null) => {
-            if (value === null) {
-                return new Promise<null>((resolve) => {
-                    releaseSystemTheme = () => resolve(null);
-                });
-            }
-            return Promise.resolve(null);
-        });
         useShellStore.setState({ themeMode: 'light' });
 
-        const pendingSystemTheme = applyThemeMode('system');
-        await vi.waitFor(() =>
-            expect(mocks.setWindowTheme).toHaveBeenCalledWith(null)
-        );
-        const pendingDarkTheme = applyThemeMode('dark');
-        releaseSystemTheme?.();
-        await Promise.all([pendingSystemTheme, pendingDarkTheme]);
+        await applyThemeMode('dark');
 
-        expect(mocks.setWindowTheme).toHaveBeenLastCalledWith('dark');
+        expect(mocks.setWindowTheme).not.toHaveBeenCalled();
         expect(useShellStore.getState().themeMode).toBe('dark');
         expect(toggleDarkClass).toHaveBeenLastCalledWith('dark', true);
     });
