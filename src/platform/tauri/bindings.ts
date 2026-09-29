@@ -1271,11 +1271,6 @@ const generatedCommands = {
     async appRuntimeDiscordReconcileRequest(): Promise<number> {
         return await TAURI_INVOKE('app__runtime_discord_reconcile_request');
     },
-    async appRuntimeBackgroundJobRecord(
-        input: RuntimeJobRecordInput
-    ): Promise<void> {
-        await TAURI_INVOKE('app__runtime_background_job_record', { input });
-    },
     async appExternalApiAvatarSearchGet(
         input: ExternalApiAvatarSearchInput
     ): Promise<ExternalApiExecuteResponse> {
@@ -2603,11 +2598,9 @@ const generatedCommands = {
             recurring
         });
     },
-    async appRemindersDelete(id: string): Promise<Reminder[]> {
-        return await TAURI_INVOKE('app__reminders_delete', { id });
-    },
     /**
-     * Fork: draft a reminder from plain language with the assistant's default model.
+     * Fork: turn a plain-language request into a reminder draft for review.
+     * `nowLocal` is the user's local time, e.g. `2026-09-29T21:05 (Tuesday, -05:00)`.
      */
     async appRemindersAiDraft(
         text: string,
@@ -2617,6 +2610,9 @@ const generatedCommands = {
             text,
             nowLocal
         });
+    },
+    async appRemindersDelete(id: string): Promise<Reminder[]> {
+        return await TAURI_INVOKE('app__reminders_delete', { id });
     },
     async appSafetySettingsGet(): Promise<SafetySettings> {
         return await TAURI_INVOKE('app__safety_settings_get');
@@ -6301,6 +6297,21 @@ export type Reminder = {
     lastFiredAt?: string;
     fireCount?: number;
 };
+export type ReminderDraft = {
+    message: string;
+    kind: string;
+    /**
+     * Display name as the user wrote it; the app matches it to a friend.
+     */
+    friendName: string;
+    worldId: string;
+    /**
+     * Local wall-clock time, `YYYY-MM-DDTHH:MM`, for `time` reminders.
+     */
+    atLocal: string;
+    repeatMinutes: number;
+    recurring: boolean;
+};
 /**
  * Fork: what makes an assistant reminder fire (upstream #479).
  */
@@ -6330,20 +6341,6 @@ export type ReminderTrigger =
      * A point in time (RFC 3339, UTC); optionally repeats.
      */
     | { kind: 'time'; at: string; repeatMinutes?: number };
-
-/**
- * Fork: draft for a reminder from AI, before the user creates it.
- */
-export interface ReminderDraft {
-    message: string;
-    kind: string;
-    friendName: string;
-    worldId: string;
-    atLocal: string;
-    repeatMinutes: number;
-    recurring: boolean;
-}
-
 export type RemoteModerationRow = {
     id: string;
     type: string;
@@ -6371,13 +6368,6 @@ export type RuntimeGroupInstancesStatus =
     | 'running'
     | 'ready'
     | 'error';
-export type RuntimeJobRecordInput = {
-    name: string;
-    owner?: string;
-    cadenceSeconds?: number | null;
-    status: RuntimeOperationStatus;
-    detail?: string;
-};
 export type RuntimeNotificationLevel = 'info' | 'warning' | 'error';
 export type RuntimeNotificationPayload = {
     level: RuntimeNotificationLevel;

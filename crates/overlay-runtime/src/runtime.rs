@@ -194,6 +194,9 @@ struct VrOverlayFrameInput {
     config: VrOverlayRuntimeConfig,
     devices: Vec<VrDeviceSnapshot>,
     wrist_visible: bool,
+    /// Total wrist menu presses seen so far. Any change means the user pressed
+    /// the menu button, including while the menu was already open.
+    wrist_activations: u64,
     test_mode: bool,
 }
 
@@ -815,9 +818,15 @@ impl VrOverlayRuntime {
             .lock()
             .map(|devices| devices.clone())
             .unwrap_or_default();
-        let wrist_visible = wrist_surface_ids(config.hand)
+        let wrist_ids = wrist_surface_ids(config.hand);
+        let wrist_visible = wrist_ids
             .iter()
             .any(|surface_id| manager.is_surface_visible(surface_id));
+        let wrist_activations = wrist_ids
+            .iter()
+            .map(|surface_id| manager.wrist_activation_count(surface_id))
+            .max()
+            .unwrap_or_default();
         let frame = match self
             .frame_producer
             .lock()
@@ -828,6 +837,7 @@ impl VrOverlayRuntime {
                     config,
                     devices,
                     wrist_visible,
+                    wrist_activations,
                     test_mode: self.is_test_mode(),
                 })
             }) {
@@ -935,8 +945,7 @@ impl GameProcessEventSink for VrOverlayRuntime {
 struct RuntimeWristFrameProducer {
     services: Arc<dyn VrOverlayRuntimeServices>,
     page: WristPage,
-    was_visible: bool,
-    hidden_at: Option<Instant>,
+    presses: WristPressState,
 }
 
 impl RuntimeWristFrameProducer {
@@ -944,26 +953,53 @@ impl RuntimeWristFrameProducer {
         Self {
             services,
             page: WristPage::Feed,
-            was_visible: false,
-            hidden_at: None,
+            presses: WristPressState::default(),
         }
     }
+}
 
-    /// Track wrist visibility for inactivity timeout.
-    fn track_page(&mut self, _config: &VrOverlayRuntimeConfig, visible: bool, now: Instant) {
-        // When visible, we had recent interaction so no hidden_at time
-        if visible {
-            self.hidden_at = None;
-        } else {
-            self.hidden_at = Some(now);
+/// Tracks menu presses so the page can follow them.
+#[derive(Clone, Copy, Debug, Default)]
+struct WristPressState {
+    /// Menu presses seen on the previous frame. The first frame only records a
+    /// baseline; the overlay is closed then, so it is not treated as a press.
+    last_activations: Option<u64>,
+    /// Whether a press has already opened the menu.
+    opened: bool,
+}
+
+/// Fork: the first press opens the first configured page and every later press
+/// moves to the next one, while the backend restarts the inactivity timeout. The
+/// menu never has to be closed and reopened to switch pages.
+fn track_wrist_page(
+    config: &VrOverlayRuntimeConfig,
+    page: &mut WristPage,
+    state: &mut WristPressState,
+    activations: u64,
+) {
+    if state.last_activations != Some(activations) {
+        let is_press = state.last_activations.is_some();
+        state.last_activations = Some(activations);
+        if is_press {
+            *page = if state.opened {
+                config.wrist_pages.next_after(*page)
+            } else {
+                config.wrist_pages.first()
+            };
+            state.opened = true;
         }
-        self.was_visible = visible;
     }
+    *page = config.wrist_pages.normalize(*page);
 }
 
 impl VrOverlayFrameProducer for RuntimeWristFrameProducer {
     fn next_frame(&mut self, input: VrOverlayFrameInput) -> Result<RgbaFrame, String> {
-        self.track_page(&input.config, input.wrist_visible, Instant::now());
+        track_wrist_page(
+            &input.config,
+            &mut self.page,
+            &mut self.presses,
+            input.wrist_activations,
+        );
         let page = self.page;
         let frame_input = if input.test_mode {
             test_wrist_frame_input(
@@ -1265,37 +1301,68 @@ fn sort_wrist_players(rows: &mut [(Option<i64>, WristPlayerRow)], sort: WristPla
 mod wrist_page_tests {
     use super::*;
 
+    fn config_with(pages: &str) -> VrOverlayRuntimeConfig {
+        let mut config = VrOverlayRuntimeConfig::default();
+        config.wrist_pages = WristPageOrder::from_config(pages);
+        config
+    }
+
     #[test]
-    fn button_press_while_open_keeps_same_page_and_resets_timeout() {
-        let order = WristPageOrder::default();
-        let start = Instant::now();
-        let at = |secs| start + Duration::from_secs(secs);
+    fn each_press_advances_the_page_without_closing_the_menu() {
+        let config = config_with("feed,players,notes");
+        let mut page = WristPage::Feed;
+        let mut state = WristPressState::default();
 
-        // First press: menu opens on Feed page
-        let (page, hidden) = next_wrist_page(
-            &order,
-            Duration::from_secs(15),
-            WristPage::Feed,
-            false,
-            None,
-            true,
-            at(0),
-        );
+        // Nothing pressed yet.
+        track_wrist_page(&config, &mut page, &mut state, 0);
         assert_eq!(page, WristPage::Feed);
-        assert_eq!(hidden, None);
 
-        // Second press while already open: page stays same, no hidden time
-        let (page, hidden) = next_wrist_page(
-            &order,
-            Duration::from_secs(15),
-            page,
-            true,
-            hidden,
-            true,
-            at(2),
-        );
+        // The first press opens on the first configured page.
+        track_wrist_page(&config, &mut page, &mut state, 1);
         assert_eq!(page, WristPage::Feed);
-        assert_eq!(hidden, None); // Timeout is reset, not tracking hide time
+
+        // Pressing again while the menu is still open advances the page.
+        track_wrist_page(&config, &mut page, &mut state, 2);
+        assert_eq!(page, WristPage::Players);
+        track_wrist_page(&config, &mut page, &mut state, 3);
+        assert_eq!(page, WristPage::Notes);
+
+        // And wraps around.
+        track_wrist_page(&config, &mut page, &mut state, 4);
+        assert_eq!(page, WristPage::Feed);
+    }
+
+    #[test]
+    fn frames_without_a_press_keep_the_current_page() {
+        let config = config_with("feed,players,notes");
+        let mut page = WristPage::Feed;
+        let mut state = WristPressState::default();
+
+        track_wrist_page(&config, &mut page, &mut state, 0);
+        track_wrist_page(&config, &mut page, &mut state, 1);
+        track_wrist_page(&config, &mut page, &mut state, 2);
+        assert_eq!(page, WristPage::Players);
+
+        // The menu stays open on the same page until the user presses again.
+        for _ in 0..5 {
+            track_wrist_page(&config, &mut page, &mut state, 2);
+        }
+        assert_eq!(page, WristPage::Players);
+    }
+
+    #[test]
+    fn hidden_pages_are_skipped_when_cycling() {
+        let config = config_with("feed,notes");
+        let mut page = WristPage::Feed;
+        let mut state = WristPressState::default();
+
+        track_wrist_page(&config, &mut page, &mut state, 0);
+        track_wrist_page(&config, &mut page, &mut state, 1);
+        assert_eq!(page, WristPage::Feed);
+        track_wrist_page(&config, &mut page, &mut state, 2);
+        assert_eq!(page, WristPage::Notes);
+        track_wrist_page(&config, &mut page, &mut state, 3);
+        assert_eq!(page, WristPage::Feed);
     }
 
     fn row(name: &str) -> WristPlayerRow {

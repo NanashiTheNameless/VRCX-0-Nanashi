@@ -80,7 +80,7 @@ pub use social::DesktopSocialRuntime;
 pub use startup_bootstrap::{system_culture, system_language, StartupBootstrapSnapshot};
 pub use state::{
     CurrentUserRefreshOutcome, DesktopRuntimeBundle, DesktopRuntimeHostOptions,
-    DesktopRuntimeHostState, GameRuntimeBundle, RuntimeJobRecordInput,
+    DesktopRuntimeHostState, GameRuntimeBundle,
 };
 pub use vrchat_remote::DesktopVrchatRemoteFacade;
 pub use vrcx_0_composition::{Error, Result};

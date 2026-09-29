@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::{
     mpsc::{self, RecvTimeoutError},
     Arc, Mutex,
@@ -52,6 +53,11 @@ pub trait OverlayBackend: Send + 'static {
     fn visible_surface_ids(&self) -> Vec<OverlaySurfaceId> {
         Vec::new()
     }
+    /// How many times the wrist menu was opened on each surface, including
+    /// presses while it was already open.
+    fn wrist_activation_counts(&self) -> Vec<(OverlaySurfaceId, u64)> {
+        Vec::new()
+    }
     fn snapshot_devices(&mut self) -> Result<Vec<VrDeviceSnapshot>, String>;
     fn tick(&mut self) -> TickOutcome {
         TickOutcome::Continue
@@ -65,6 +71,7 @@ pub struct OverlayActorHandle {
     status: Arc<Mutex<OverlayServiceStatus>>,
     runtime_quit_at: Arc<Mutex<Option<Instant>>>,
     visible_surfaces: Arc<Mutex<Vec<OverlaySurfaceId>>>,
+    wrist_activations: Arc<Mutex<HashMap<String, u64>>>,
 }
 
 enum OverlayActorMessage {
@@ -110,9 +117,11 @@ impl OverlayActorHandle {
         let status = Arc::new(Mutex::new(OverlayServiceStatus::default()));
         let runtime_quit_at = Arc::new(Mutex::new(None));
         let visible_surfaces = Arc::new(Mutex::new(Vec::new()));
+        let wrist_activations = Arc::new(Mutex::new(HashMap::new()));
         let actor_status = Arc::clone(&status);
         let actor_runtime_quit_at = Arc::clone(&runtime_quit_at);
         let actor_visible_surfaces = Arc::clone(&visible_surfaces);
+        let actor_wrist_activations = Arc::clone(&wrist_activations);
         thread::Builder::new()
             .name("vrcx-vr-overlay".to_string())
             .spawn(move || {
@@ -122,6 +131,7 @@ impl OverlayActorHandle {
                     actor_status,
                     actor_runtime_quit_at,
                     actor_visible_surfaces,
+                    actor_wrist_activations,
                 )
             })
             .expect("spawn VR overlay actor thread");
@@ -130,6 +140,7 @@ impl OverlayActorHandle {
             status,
             runtime_quit_at,
             visible_surfaces,
+            wrist_activations,
         }
     }
 
@@ -200,6 +211,14 @@ impl OverlayActorHandle {
             .lock()
             .is_ok_and(|visible| visible.contains(surface_id))
     }
+
+    pub fn wrist_activation_count(&self, surface_id: &OverlaySurfaceId) -> u64 {
+        self.wrist_activations
+            .lock()
+            .ok()
+            .and_then(|counts| counts.get(surface_id.as_str()).copied())
+            .unwrap_or_default()
+    }
 }
 
 fn receive_with_timeout<T>(
@@ -251,6 +270,7 @@ fn run_actor<B>(
     status: Arc<Mutex<OverlayServiceStatus>>,
     runtime_quit_at: Arc<Mutex<Option<Instant>>>,
     visible_surfaces: Arc<Mutex<Vec<OverlaySurfaceId>>>,
+    wrist_activations: Arc<Mutex<HashMap<String, u64>>>,
 ) where
     B: OverlayBackend,
 {
@@ -258,6 +278,7 @@ fn run_actor<B>(
     let mut last_tick_at = Instant::now();
     loop {
         publish_visible_surfaces(&backend, &visible_surfaces);
+        publish_wrist_activations(&backend, &wrist_activations);
         let tick_interval = overlay_tick_interval(backend.needs_high_frequency_tick());
         match receiver.recv_timeout(tick_interval) {
             Ok(message) => {
@@ -318,6 +339,22 @@ where
     let next = backend.visible_surface_ids();
     if let Ok(mut visible) = visible_surfaces.lock() {
         *visible = next;
+    }
+}
+
+fn publish_wrist_activations<B>(backend: &B, wrist_activations: &Mutex<HashMap<String, u64>>)
+where
+    B: OverlayBackend,
+{
+    let counts = backend
+        .wrist_activation_counts()
+        .into_iter()
+        .map(|(surface_id, count)| (surface_id.as_str().to_string(), count))
+        .collect::<HashMap<_, _>>();
+    if let Ok(mut published) = wrist_activations.lock() {
+        if *published != counts {
+            *published = counts;
+        }
     }
 }
 

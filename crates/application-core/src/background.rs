@@ -168,16 +168,6 @@ impl RuntimeBackgroundJobs {
         }
     }
 
-    pub fn register_frontend_job_catalog(&self) {
-        self.register_job(
-            "startupMaintenance",
-            "frontend",
-            None,
-            RuntimeOperationStatus::Scheduled,
-            "Startup maintenance is initiated by the frontend bootstrap because it may open UI.",
-        );
-    }
-
     pub fn mark_running(&self, name: &str, detail: impl Into<String>) {
         self.upsert_status(
             name,

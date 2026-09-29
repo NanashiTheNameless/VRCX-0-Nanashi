@@ -130,27 +130,10 @@ pub(crate) fn build_desktop_runtime_services_deps(
     }
 }
 
-#[derive(Clone, Debug, serde::Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct RuntimeJobRecordInput {
-    pub name: String,
-    #[serde(default = "default_frontend_owner")]
-    pub owner: String,
-    #[serde(default)]
-    pub cadence_seconds: Option<u64>,
-    pub status: RuntimeOperationStatus,
-    #[serde(default)]
-    pub detail: String,
-}
-
 #[derive(serde::Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CurrentUserRefreshOutcome {
     pub applied: bool,
-}
-
-fn default_frontend_owner() -> String {
-    "frontend".into()
 }
 
 pub struct DesktopRuntimeHostOptions {
@@ -324,23 +307,6 @@ impl DesktopRuntimeHostState {
                 Arc::clone(builder.desktop_assembly().instance_dwell())
                     as Arc<dyn InstanceRosterObserver>,
             ]));
-        let telemetry = TelemetryRuntime::new(TelemetryRuntimeDeps {
-            environment: Arc::new(vrcx_0_outbound_adapters::LocalTelemetryEnvironment::new(
-                builder.desktop_assembly().config().clone(),
-                Arc::clone(builder.desktop_assembly().database()),
-                builder.paths().app_data.clone(),
-                Arc::new(|| {
-                    vrcx_0_host_desktop::system_theme::current_system_theme_category()
-                        .unwrap_or_default()
-                        .to_string()
-                }),
-            )),
-            transport: Arc::new(vrcx_0_outbound_adapters::HttpTelemetryTransport::production()),
-            tasks: builder.desktop_assembly().tasks().clone(),
-            backend_runtime: builder.backend_runtime().clone(),
-            auth_scope: builder.desktop_assembly().auth_scope().clone(),
-            app_version: app_version.clone(),
-        });
         let profile_config: Arc<dyn vrcx_0_application::profile::ProfileConfigStore> =
             Arc::new(vrcx_0_outbound_adapters::LocalProfileConfigStore::new(
                 Arc::clone(builder.database()),
@@ -1537,36 +1503,6 @@ impl DesktopRuntimeHostState {
 
     pub async fn refresh_runtime_group_instances(&self) {
         self.runtime.refresh_runtime_group_instances().await;
-    }
-
-    pub fn record_runtime_job(&self, input: RuntimeJobRecordInput) {
-        let name = input.name.trim();
-        if name.is_empty() {
-            return;
-        }
-        let detail = input.detail.trim();
-        let jobs = self.runtime.desktop_assembly().background_jobs();
-        jobs.register_job(
-            name,
-            input.owner.trim(),
-            input.cadence_seconds,
-            input.status,
-            detail,
-        );
-        match input.status {
-            RuntimeOperationStatus::Running => jobs.mark_running(name, detail),
-            RuntimeOperationStatus::Completed | RuntimeOperationStatus::Idle => {
-                jobs.mark_completed(name, detail)
-            }
-            RuntimeOperationStatus::Error => jobs.mark_failed(name, detail),
-            status => jobs.register_job(
-                name,
-                input.owner.trim(),
-                input.cadence_seconds,
-                status,
-                detail,
-            ),
-        }
     }
 
     pub fn saved_auth_snapshot(&self) -> Result<SavedAuthSnapshot> {

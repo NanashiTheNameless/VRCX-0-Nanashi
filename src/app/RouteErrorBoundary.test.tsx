@@ -3,14 +3,6 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const telemetryMocks = vi.hoisted(() => ({
-    recordRouteError: vi.fn()
-}));
-
-vi.mock('@/services/telemetry/telemetryPageReach', () => ({
-    recordRouteError: telemetryMocks.recordRouteError
-}));
-
 import { classifyRouteError, RouteErrorBoundary } from './RouteErrorBoundary';
 
 function ThrowingRoute({ shouldThrow }: { shouldThrow: boolean }) {
@@ -44,11 +36,12 @@ describe('RouteErrorBoundary', () => {
     afterEach(() => {
         cleanup();
         vi.restoreAllMocks();
-        telemetryMocks.recordRouteError.mockReset();
     });
 
-    it('shows the fallback and records a render crash when a route throws', () => {
-        vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    it('shows the fallback and logs a render crash when a route throws', () => {
+        const consoleError = vi
+            .spyOn(console, 'error')
+            .mockImplementation(() => undefined);
 
         render(
             <RouteErrorBoundary resetKey="route-a" fallback={<p>fallback</p>}>
@@ -58,8 +51,8 @@ describe('RouteErrorBoundary', () => {
 
         expect(screen.getByText('fallback')).toBeTruthy();
         expect(screen.queryByText('content')).toBeNull();
-        expect(telemetryMocks.recordRouteError).toHaveBeenCalledWith(
-            'render_crash',
+        expect(consoleError).toHaveBeenCalledWith(
+            'Route render_crash:',
             expect.any(TypeError)
         );
     });

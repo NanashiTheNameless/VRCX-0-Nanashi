@@ -136,7 +136,7 @@ function normalizeText(value: unknown): string {
         : String(value ?? '').trim();
 }
 
-function normalizeBoundedInt(
+export function normalizeBoundedInt(
     value: unknown,
     {
         min = Number.MIN_SAFE_INTEGER,
@@ -597,9 +597,9 @@ export function normalizePreferenceSnapshot(snapshot: unknown = {}) {
         wristOverlayShowBatteryPercent: normalizeBool(
             next.wristOverlayShowBatteryPercent
         ),
-        wristOverlayTimeoutSeconds: normalizeNumber(
+        wristOverlayTimeoutSeconds: normalizeBoundedInt(
             next.wristOverlayTimeoutSeconds,
-            15
+            { min: 5, max: 255, fallback: 15 }
         ),
         relaunchVRChatAfterCrash: normalizeBool(next.relaunchVRChatAfterCrash),
         vrcQuitFix: normalizeBool(next.vrcQuitFix),

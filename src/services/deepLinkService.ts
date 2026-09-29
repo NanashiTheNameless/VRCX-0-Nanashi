@@ -4,6 +4,7 @@ import type {
     SharedCollectionImportStatus
 } from '@/platform/tauri/bindings';
 import { tauriClient } from '@/platform/tauri/client';
+import avatarSearchProviderRepository from '@/repositories/avatarSearchProviderRepository';
 import { toast } from '@/services/toastService';
 import { isCollectionShortcode } from '@/shared/constants/collectionShare';
 import {

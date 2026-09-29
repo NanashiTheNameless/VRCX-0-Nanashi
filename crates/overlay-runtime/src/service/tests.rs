@@ -290,6 +290,7 @@ fn surface_config(value: &str) -> OverlaySurfaceConfig {
         },
         activation_button: OverlayActivationButton::Grip,
         force_visible: false,
+        visible_duration_ms: 15_000,
     }
 }
 

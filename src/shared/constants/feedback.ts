@@ -1,1 +1,0 @@
-export const FEEDBACK_SUBMIT_COOLDOWN_MS = 60_000;

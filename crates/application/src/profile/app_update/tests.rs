@@ -13,9 +13,9 @@ use vrcx_0_application_core::{
 };
 
 use super::release::{
-    compare_release_versions, is_preview_build_label, normalize_release,
-    parse_preview_badge_timestamp_ms, parse_preview_build_timestamp_ms, parse_release_version,
-    TOKYO_UTC_OFFSET_SECONDS,
+    compare_release_versions, is_preview_build_label, is_release_newer_than_current,
+    normalize_release, parse_preview_badge_timestamp_ms, parse_preview_build_timestamp_ms,
+    parse_release_version, TOKYO_UTC_OFFSET_SECONDS,
 };
 use super::{
     run_check_inner, up_to_date_outcome, AppUpdateBuildInfo, AppUpdateCatalogAsset,

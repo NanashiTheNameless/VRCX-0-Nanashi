@@ -7,8 +7,6 @@ import i18n from '@/services/i18nService';
 import { useModalStore } from '@/state/modalStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
-import { runRuntimeTelemetryJob } from './runtimeJobTelemetryService';
-
 let inFlightMaintenance: Promise<void> | null = null;
 
 async function runRegistryBackupMaintenance(reason: string) {
@@ -74,11 +72,5 @@ export async function runForegroundUpdateRegistryBackupMaintenance() {
 }
 
 export async function runStartupMaintenance() {
-    await runRuntimeTelemetryJob(
-        {
-            name: 'startupMaintenance',
-            detail: 'Running startup registry maintenance.'
-        },
-        () => runRegistryBackupMaintenance('foreground-startup')
-    );
+    await runRegistryBackupMaintenance('foreground-startup');
 }

@@ -375,6 +375,14 @@ impl OverlayBackend for OpenVrOverlayBackend {
             .collect()
     }
 
+    fn wrist_activation_counts(&self) -> Vec<(OverlaySurfaceId, u64)> {
+        self.surfaces
+            .iter()
+            .filter(|(_, surface)| surface_uses_wrist_policy(&surface.config))
+            .map(|(surface_id, surface)| (surface_id.clone(), surface.policy.activations()))
+            .collect()
+    }
+
     fn tick(&mut self) -> TickOutcome {
         if self.poll_runtime_quit() || self.poll_overlay_events() {
             self.clear_runtime_handles();

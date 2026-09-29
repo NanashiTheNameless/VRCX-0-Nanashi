@@ -32,9 +32,20 @@ export type WristPageId = 'feed' | 'players' | 'notes';
 type PageRow = { id: WristPageId; shown: boolean };
 
 const ALL_PAGES: WristPageId[] = ['feed', 'players', 'notes'];
-const TIMEOUT_SECONDS = [5, 10, 15, 20, 30, 60] as const;
+const MIN_TIMEOUT_SECONDS = 5;
+const MAX_TIMEOUT_SECONDS = 255;
 const SORTS = ['name', 'joined'] as const;
 type PlayersSort = (typeof SORTS)[number];
+
+export function clampTimeoutSeconds(value: number): number {
+    if (!Number.isFinite(value)) {
+        return 15;
+    }
+    return Math.min(
+        MAX_TIMEOUT_SECONDS,
+        Math.max(MIN_TIMEOUT_SECONDS, Math.round(value))
+    );
+}
 
 /** Shown pages in order first, then the hidden ones; mirrors the Rust parser. */
 export function parseWristPages(value: string): PageRow[] {
@@ -79,17 +90,13 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
         void Promise.all([
             configRepository.getString(PAGES_KEY, 'feed,players,notes'),
             configRepository.getString(SORT_KEY, 'name'),
-            configRepository.getNumber(TIMEOUT_KEY, 15)
+            configRepository.getInt(TIMEOUT_KEY, 15)
         ])
             .then(([pages, players, seconds]) => {
                 if (!active) return;
                 setRows(parseWristPages(pages));
                 setSort(players === 'joined' ? 'joined' : 'name');
-                setTimeout(
-                    TIMEOUT_SECONDS.includes(seconds as number)
-                        ? (seconds as number)
-                        : 15
-                );
+                setTimeout(clampTimeoutSeconds(seconds));
             })
             .catch(() => {});
         return () => {
@@ -102,7 +109,7 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
     }
 
     async function saveNumber(key: string, value: number) {
-        await configRepository.setNumber(key, value);
+        await configRepository.setInt(key, value);
     }
 
     function updateRows(next: PageRow[]) {
@@ -223,19 +230,18 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
             >
                 <NumberField
                     value={timeout}
-                    min={5}
-                    max={300}
+                    min={MIN_TIMEOUT_SECONDS}
+                    max={MAX_TIMEOUT_SECONDS}
                     step={5}
                     id="settings-wrist-overlay-timeout"
                     className="w-32"
                     onValueChange={(value) => {
-                        if (
-                            value !== null &&
-                            TIMEOUT_SECONDS.includes(value as number)
-                        ) {
-                            setTimeout(value);
-                            void saveNumber(TIMEOUT_KEY, value);
+                        if (value === null) {
+                            return;
                         }
+                        const seconds = clampTimeoutSeconds(value);
+                        setTimeout(seconds);
+                        void saveNumber(TIMEOUT_KEY, seconds);
                     }}
                 >
                     <NumberFieldGroup>

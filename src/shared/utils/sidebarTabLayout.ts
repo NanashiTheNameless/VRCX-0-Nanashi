@@ -365,7 +365,7 @@ export function sidebarTabFallbackIcon(
     if (item.type === 'page') {
         switch (item.page) {
             case 'reminders':
-                return 'lucide:Clock';
+                return 'lucide:AlarmClock';
             case 'chartsMutual':
                 return 'lucide:UsersRound';
             case 'tools':
@@ -381,12 +381,6 @@ export function sidebarTabFallbackIcon(
     return DEFAULT_NAV_ICON_KEY;
 }
 
-function isSidebarPageTabLayoutItem(
-    item: SidebarTabLayoutItem
-): item is SidebarPageTabLayoutItem {
-    return item.type === 'page';
-}
-
 function normalizePageTab(
     page: SidebarPageTabLayoutItem['page'],
     source?: Record<string, unknown>
@@ -394,6 +388,7 @@ function normalizePageTab(
     const icon = normalizeNavIconKey(
         source?.icon,
         sidebarTabFallbackIcon({
+            id: `page-${page}`,
             type: 'page',
             page,
             labelKey: '',

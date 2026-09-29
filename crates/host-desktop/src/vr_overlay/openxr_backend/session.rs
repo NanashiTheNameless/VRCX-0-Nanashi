@@ -51,6 +51,7 @@ pub(super) fn run(
     commands: Receiver<SessionCommand>,
     init_reply: Sender<Result<(), BackendStartError>>,
     visible_surfaces: &Mutex<Vec<OverlaySurfaceId>>,
+    wrist_activations: &Mutex<HashMap<String, u64>>,
 ) {
     let context = match SessionContext::initialize() {
         Ok(context) => context,
@@ -60,7 +61,7 @@ pub(super) fn run(
         }
     };
     let _ = init_reply.send(Ok(()));
-    match context.run_loop(commands, visible_surfaces) {
+    match context.run_loop(commands, visible_surfaces, wrist_activations) {
         Ok(()) => tracing::debug!("OpenXR overlay session stopped"),
         Err(error) => tracing::warn!(error = %error, "OpenXR overlay session ended"),
     }
@@ -192,10 +193,12 @@ impl SessionContext {
         mut self,
         commands: Receiver<SessionCommand>,
         visible_surfaces: &Mutex<Vec<OverlaySurfaceId>>,
+        wrist_activations: &Mutex<HashMap<String, u64>>,
     ) -> Result<(), String> {
         let mut event_buffer = xr::EventDataBuffer::new();
         loop {
             self.publish_visible_surfaces(visible_surfaces);
+            self.publish_wrist_activations(wrist_activations);
             loop {
                 match commands.try_recv() {
                     Ok(SessionCommand::Stop) => {
@@ -265,6 +268,24 @@ impl SessionContext {
         if let Ok(mut published) = visible_surfaces.lock() {
             if !published.iter().eq(visible_ids.clone()) {
                 *published = visible_ids.cloned().collect();
+            }
+        }
+    }
+
+    fn publish_wrist_activations(&self, wrist_activations: &Mutex<HashMap<String, u64>>) {
+        let counts = self
+            .surfaces
+            .iter()
+            .map(|(surface_id, surface)| {
+                (
+                    surface_id.as_str().to_string(),
+                    surface.policy.activations(),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        if let Ok(mut published) = wrist_activations.lock() {
+            if *published != counts {
+                *published = counts;
             }
         }
     }

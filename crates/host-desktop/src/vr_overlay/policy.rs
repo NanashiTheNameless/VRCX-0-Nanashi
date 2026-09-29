@@ -6,6 +6,7 @@ const DEFAULT_VISIBLE_DURATION: Duration = Duration::from_secs(10);
 pub(super) struct WristVisibilityPolicy {
     visible_duration: Duration,
     opened_until: Option<Instant>,
+    activations: u64,
 }
 
 impl Default for WristVisibilityPolicy {
@@ -19,11 +20,21 @@ impl WristVisibilityPolicy {
         Self {
             visible_duration,
             opened_until: None,
+            activations: 0,
         }
     }
 
+    /// Every press, including one while the menu is already open: the press
+    /// restarts the timeout instead of being ignored.
     pub fn open(&mut self, now: Instant) {
         self.opened_until = Some(now + self.visible_duration);
+        self.activations = self.activations.wrapping_add(1);
+    }
+
+    /// How many times the menu was opened, so the frame producer can tell a new
+    /// press from the menu simply staying open.
+    pub fn activations(&self) -> u64 {
+        self.activations
     }
 
     pub fn close(&mut self) {
@@ -78,5 +89,21 @@ mod tests {
         policy.open(now);
         policy.close();
         assert!(!policy.evaluate(now, true));
+    }
+
+    #[test]
+    fn pressing_while_open_restarts_the_timeout_and_counts_the_press() {
+        let mut policy = WristVisibilityPolicy::new(VISIBLE);
+        let now = Instant::now();
+        policy.open(now);
+        assert_eq!(policy.activations(), 1);
+
+        let later = now + VISIBLE - Duration::from_millis(1);
+        policy.open(later);
+        assert_eq!(policy.activations(), 2);
+
+        // The window restarts, so it is still open well past the original end.
+        assert!(policy.evaluate(later + VISIBLE, true));
+        assert!(!policy.evaluate(later + VISIBLE + Duration::from_millis(1), true));
     }
 }

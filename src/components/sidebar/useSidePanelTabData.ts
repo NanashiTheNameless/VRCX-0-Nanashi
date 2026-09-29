@@ -1,11 +1,11 @@
 import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
 
 import { buildFavoriteCollectionFriendIdSet } from '@/components/sidebar/friends-sidebar/favoriteCollectionSidebarRows';
 import {
     getVisibleSidebarTabs,
-    type FavoriteGroupItem
+    type FavoriteGroupItem,
+    type SidebarTabLayoutItem
 } from '@/shared/utils/sidebarTabLayout';
 import { useFavoriteStore } from '@/state/favoriteStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
@@ -29,7 +29,6 @@ export function useSidePanelTabData({
     setActiveTab
 }: SidePanelTabDataInput) {
     const { t } = useTranslation();
-    const navigate = useNavigate();
     const friendsById = useFriendRosterStore((state) => state.friendsById);
     const onlineIds = useFriendRosterStore((state) => state.onlineIds);
     const favoriteLoadStatus = useFavoriteStore((state) => state.loadStatus);
@@ -109,31 +108,16 @@ export function useSidePanelTabData({
     const tabItems = useMemo<SidePanelTabItem[]>(
         () =>
             visibleTabLayout
-                .filter((item) => {
-                    // Exclude page tabs from sidebar display - they're handled as separate nav items
-                    if (item.type === 'page') return false;
-                    return true;
-                })
+                // Page tabs are rendered as their own nav section in SidePanel.
+                .filter(
+                    (
+                        item
+                    ): item is Exclude<
+                        SidebarTabLayoutItem,
+                        { type: 'page' }
+                    > => item.type !== 'page'
+                )
                 .map((item) => {
-                    if (item.type === 'page') {
-                        // Page tabs navigate to their routes instead of showing inline content
-                        const label =
-                            item.page === 'reminders'
-                                ? t('view.reminders.title')
-                                : item.page === 'chartsMutual'
-                                  ? t('app.routes.charts_mutual')
-                                  : t('app.routes.tools');
-                        return {
-                            value: item.id,
-                            label,
-                            railCountLabel: '',
-                            title: label,
-                            icon: item.icon,
-                            layoutItem: item,
-                            navigateTo: `/${item.page}`,
-                            isPageTab: true
-                        };
-                    }
                     if (item.type === 'favoriteCollection') {
                         const count = customTabCountById.get(item.id) || 0;
                         const countLabel = String(count);

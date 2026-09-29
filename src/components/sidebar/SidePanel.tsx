@@ -370,16 +370,7 @@ export const SidePanel = forwardRef<HTMLElement, SidePanelProps>(
                 <Tabs
                     orientation="vertical"
                     value={activeTab}
-                    onValueChange={(value) => {
-                        const tabItem = tabItems.find(
-                            (item) => item.value === value
-                        );
-                        if (tabItem?.navigateTo) {
-                            navigate(tabItem.navigateTo);
-                        } else {
-                            setActiveTab(value);
-                        }
-                    }}
+                    onValueChange={setActiveTab}
                     className="flex min-h-0 min-w-0 flex-1 gap-0 overflow-hidden"
                 >
                     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pb-2 pl-2">

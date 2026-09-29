@@ -29,6 +29,7 @@ import { normalizeTrustColors } from '@/shared/utils/trustColors';
 import {
     normalizeAutoDeletePrintsLimit,
     normalizeBackgroundModeDelayMinutes,
+    normalizeBoundedInt,
     normalizeFeedTimeDisplayMode,
     normalizeFeedHiddenUsers,
     normalizeHmdNotificationPosition,
@@ -186,6 +187,7 @@ export async function loadPreferenceSnapshot() {
         wristOverlayDarkBackground,
         wristOverlayShowDevices,
         wristOverlayShowBatteryPercent,
+        wristOverlayTimeoutSeconds,
         relaunchVRChatAfterCrash,
         vrcQuitFix,
         focusVrchatOnJoin,
@@ -332,6 +334,7 @@ export async function loadPreferenceSnapshot() {
         configRepository.getBool('wristOverlayDarkBackground', true),
         configRepository.getBool('wristOverlayShowDevices', true),
         configRepository.getBool('wristOverlayShowBatteryPercent', false),
+        configRepository.getInt('wristOverlayTimeoutSeconds', 15),
         configRepository.getBool('relaunchVRChatAfterCrash', false),
         configRepository.getBool('vrcQuitFix', true),
         configRepository.getBool('focusVrchatOnJoin', false),
@@ -561,6 +564,10 @@ export async function loadPreferenceSnapshot() {
         wristOverlayDarkBackground: Boolean(wristOverlayDarkBackground),
         wristOverlayShowDevices: Boolean(wristOverlayShowDevices),
         wristOverlayShowBatteryPercent: Boolean(wristOverlayShowBatteryPercent),
+        wristOverlayTimeoutSeconds: normalizeBoundedInt(
+            wristOverlayTimeoutSeconds,
+            { min: 5, max: 255, fallback: 15 }
+        ),
         relaunchVRChatAfterCrash: Boolean(relaunchVRChatAfterCrash),
         vrcQuitFix: Boolean(vrcQuitFix),
         focusVrchatOnJoin: Boolean(focusVrchatOnJoin),

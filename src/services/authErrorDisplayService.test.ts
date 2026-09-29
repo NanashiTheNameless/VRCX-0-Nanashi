@@ -11,7 +11,7 @@ describe('login error localization', () => {
         ],
         [
             'Missing Credentials',
-            'Missing valid login credentials. Please sign in again.'
+            'Sign-in credentials are missing. Please sign in again.'
         ],
         [
             'The stored browser session still requires interactive verification.',
@@ -36,7 +36,7 @@ describe('login error localization', () => {
             code: 'AUTH_SAVED_CREDENTIALS_INVALID'
         });
         expect(getLoginErrorMessage(error, 'Login failed')).toBe(
-            'Saved login credentials are no longer valid. The saved account has been removed. Please sign in again.'
+            'Saved sign-in credentials are no longer valid. The saved account has been removed. Please sign in again.'
         );
         expect(error.message).toBe('Original diagnostic message');
     });

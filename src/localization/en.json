@@ -193,6 +193,14 @@
                 "import_failed": "Failed to import shared collection"
             },
             "unknown_author": "Unknown author"
+        },
+        "add_avatar_provider": {
+            "title": "Add avatar search provider?",
+            "description": "A link wants to add {url} as an avatar search provider. Your avatar search queries will be sent to it.",
+            "confirm": "Add provider",
+            "cancel": "Cancel",
+            "added": "Avatar search provider added",
+            "already_added": "Avatar search provider is already added"
         }
     },
     "language": "English (en)",
@@ -758,7 +766,8 @@
         },
         "action": {
             "close_window": "Close"
-        }
+        },
+        "upstream_project": "Upstream VRCX-0"
     },
     "shortcuts": {
         "tray": {
@@ -1218,7 +1227,11 @@
                 "end": "End",
                 "game_log_is_disabled": "Game log recording is turned off",
                 "showing_summary_one": "Showing <b>{shown}</b> of <b>{count}</b> game log entry",
-                "showing_summary_other": "Showing <b>{shown}</b> of <b>{count}</b> game log entries"
+                "showing_summary_other": "Showing <b>{shown}</b> of <b>{count}</b> game log entries",
+                "showing": "Showing",
+                "of": "of",
+                "game_log_row": "game log entry",
+                "game_log_rows": "game log entries"
             },
             "success": {
                 "game_log_row_deleted": "Game log entry deleted",
@@ -1322,7 +1335,10 @@
                 "make_private": "Make private",
                 "avatar_made_public": "Avatar made public",
                 "avatar_made_private": "Avatar made private",
-                "untitled_avatar": "Untitled avatar"
+                "untitled_avatar": "Untitled avatar",
+                "showing": "Showing",
+                "of": "of",
+                "avatars": "avatars"
             },
             "action": {
                 "select_style": "Select style",
@@ -1590,7 +1606,11 @@
             "label": {
                 "showing_summary_one": "Showing <b>{shown}</b> of <b>{count}</b> log entry",
                 "showing_summary_other": "Showing <b>{shown}</b> of <b>{count}</b> log entries",
-                "broaden_the_type_filters_or_search_query_to_see_more_history": "Broaden the type filters or search query to see more history"
+                "broaden_the_type_filters_or_search_query_to_see_more_history": "Broaden the type filters or search query to see more history",
+                "showing": "Showing",
+                "of": "of",
+                "log_row": "log row",
+                "log_rows": "log rows"
             },
             "empty": {
                 "no_friend_history_rows_match_the_current_filters": "No friend history entries match the current filters"
@@ -1761,7 +1781,10 @@
                 "try_a_different_segment_or_broaden_the_search_query": "Try a different tab or a broader search",
                 "the_current_search_filters_excluded_every_friend_in_the_roster": "No friends match your search.",
                 "world": "World",
-                "group": "Group"
+                "group": "Group",
+                "showing": "Showing",
+                "of": "of",
+                "friends": "friends"
             },
             "success": {
                 "friend_detail_loading_cancelled": "Friend detail loading cancelled",
@@ -2004,7 +2027,8 @@
                 "registry_backup": "VRChat Registry Backup",
                 "registry_backup_description": "Create or restore a VRChat registry backup",
                 "llm_endpoints": "AI Connections",
-                "llm_endpoints_description": "AI connections for Social AI and translation"
+                "llm_endpoints_description": "AI connections for Social AI and translation",
+                "social_ai_description": "Chat with an AI about your friends, activity and worlds"
             },
             "vrchat_log": {
                 "title": "VRChat Log Viewer",
@@ -2254,7 +2278,13 @@
                 "no_models_detected": "No models detected",
                 "detect_failed": "Failed to detect models",
                 "deleted": "Endpoint deleted",
-                "delete_failed": "Failed to delete endpoint"
+                "delete_failed": "Failed to delete endpoint",
+                "api_kind": "API type",
+                "api_kind_description": "The request format the server speaks. Most providers, LM Studio, llama.cpp and vLLM use OpenAI-compatible. Local and LAN servers (http://, 192.168.x.x) work with no API key. Azure: base URL is the deployment URL (add ?api-version=... to pin a version). Bedrock: use a Bedrock API key and the bedrock-runtime URL for your region. Vertex AI: use an express-mode API key or a gcloud access token.",
+                "headers": "Extra headers",
+                "headers_description": "Optional. One per line as Name: value. Sent with every request, for gateways that need custom auth.",
+                "show_key": "Show key",
+                "hide_key": "Hide key"
             },
             "filter_placeholder": "Filter tools",
             "filter_empty": "No tools match",
@@ -2279,21 +2309,7 @@
                 "ai": "AI",
                 "vr": "VR",
                 "media": "Media",
-                "integrations": "Integrations",
-                "feedback": "Feedback"
-            },
-            "feedback": {
-                "title": "Send feedback",
-                "description": "Anonymous by default. Bug reports and suggestions both welcome.",
-                "privacy_note": "No account info is attached.",
-                "placeholder": "Describe what happened, what you expected, and how to reproduce it...",
-                "submit": "Send",
-                "submitting": "Sending…",
-                "thanks": "Thanks for your feedback!",
-                "cooldown": "You can send again in {seconds}s",
-                "reply_note": "Need a reply? Include your email address in your feedback.",
-                "more_help": "You can also contact us or attach logs via:",
-                "error_generic": "Couldn't send feedback. Please try again later."
+                "integrations": "Integrations"
             },
             "ai": {
                 "header": "Social AI",
@@ -2303,7 +2319,44 @@
                 "default_model_unset": "No model available",
                 "setup_hint": "Social AI needs an OpenAI-compatible connection before it can answer anything.",
                 "playbook_mode_description": "How much freedom the model gets when analyzing your data.",
-                "endpoints_description": "Shared by Social AI and translation."
+                "endpoints_description": "Shared by Social AI and translation.",
+                "enable": "Enable Social AI",
+                "enable_description": "Shows the Social AI button and chat. Off by default; nothing is sent to an AI service while disabled.",
+                "reminders": {
+                    "title": "Reminders",
+                    "description": "Reminders fire as \"Assistant reminder\" notifications (desktop, VR, sound) even with Social AI closed. Create one here, or ask the assistant with write actions turned on.",
+                    "empty": "No reminders yet.",
+                    "new": "New reminder",
+                    "message": "Message",
+                    "message_placeholder": "What should the reminder say?",
+                    "when": "When",
+                    "kind_friend_online": "A friend comes online",
+                    "kind_friend_offline": "A friend goes offline",
+                    "kind_friend_location": "A friend changes location",
+                    "kind_player_joined": "Someone joins my instance",
+                    "kind_time": "At a time",
+                    "friend": "Friend",
+                    "friend_placeholder": "Search friends",
+                    "friend_empty": "No friends found",
+                    "world_id": "Only in world (optional)",
+                    "world_id_placeholder": "wrld_...",
+                    "at": "Date and time",
+                    "repeat_minutes": "Repeat every (minutes, 0 = once)",
+                    "repeats": "Keep firing, not just once",
+                    "create": "Create reminder",
+                    "created": "Reminder created",
+                    "delete": "Delete",
+                    "recurring": "repeats",
+                    "fired_one": "fired once",
+                    "fired_other": "fired {count} times",
+                    "trigger_online": "When {name} comes online",
+                    "trigger_offline": "When {name} goes offline",
+                    "trigger_location": "When {name} changes location",
+                    "trigger_location_world": "When {name} goes to {world}",
+                    "trigger_joined": "When {name} joins your instance",
+                    "trigger_time": "At {at}",
+                    "trigger_time_repeat": "At {at}, then every {minutes} minutes"
+                }
             },
             "social": {
                 "interaction": {
@@ -2364,7 +2417,28 @@
                     "hide_private_worlds": "Hide Private Worlds",
                     "vr_device_status": "VR Device Status",
                     "battery_percentage": "Battery Percentage",
-                    "wrist_feed_notifications": "Wrist Overlay Notification Filters"
+                    "wrist_feed_notifications": "Wrist Overlay Notification Filters",
+                    "pages": {
+                        "label": "Pages",
+                        "description": "Turn pages on or off and set their order. The first page is shown when the overlay starts.",
+                        "names": {
+                            "feed": "Feed",
+                            "players": "Players",
+                            "notes": "Notes"
+                        },
+                        "move_up": "Move up",
+                        "move_down": "Move down",
+                        "players_sort": "Players and Notes order",
+                        "sort": {
+                            "name": "By name",
+                            "joined": "Most recent join first"
+                        },
+                        "timeout": "Menu timeout",
+                        "timeout_description": "How long the wrist menu stays open after the last interaction before it closes. Pressing the menu button while it is open switches to the next page and restarts this timer, so you never have to close and reopen it.",
+                        "seconds_one": "1 second",
+                        "seconds_other": "{count} seconds"
+                    },
+                    "pages_description": "The wrist menu shows the feed, the players in your instance and the players you have notes on. It closes 15 seconds after the last interaction by default; change that timeout under Pages below."
                 },
                 "test_mode": {
                     "header": "Overlay Test",
@@ -2493,7 +2567,22 @@
                     "check_for_updates_and_update": "Check for Updates and Update",
                     "update_check_disabled": "Disabled",
                     "update_check_disabled_build_description": "This special build has update checks disabled. Use your package manager or contact the maintainer to update VRCX-0.",
-                    "proxy": "Proxy Settings"
+                    "proxy": "Proxy Settings",
+                    "keep_system_awake": "Keep PC Awake for Live Updates",
+                    "keep_system_awake_description": "Stops the PC from going to sleep on its own while VRCX-0-Nanashi is running, so friend updates and notifications keep arriving. The screen can still turn off. Manually choosing Sleep, closing a laptop lid, or low battery can still put the PC to sleep.",
+                    "update_mode": "Updates",
+                    "update_mode_option": {
+                        "off": "Off",
+                        "notify": "Notify only",
+                        "auto_download": "Auto download",
+                        "auto_install": "Auto install on startup"
+                    },
+                    "update_mode_description": {
+                        "off": "No automatic update checks. You can still check manually from the updater.",
+                        "notify": "Check for updates and notify you, but never download on its own.",
+                        "auto_download": "Check for updates and download them in the background; you choose when to install.",
+                        "auto_install": "Check, download in the background, and install a downloaded update when the app starts."
+                    }
                 },
                 "favorites": {
                     "header": "Favorite Groups Filter",
@@ -2504,7 +2593,10 @@
                     "header": "Logging",
                     "resource_load": "Log Udon String/Image Load",
                     "auto_login_delay": "Auto Sign-In Delay",
-                    "auto_login_delay_button": "Set Delay (Seconds)"
+                    "auto_login_delay_button": "Set Delay (Seconds)",
+                    "error_log": "Error log",
+                    "error_log_description": "error-log.txt records errors and connection problems, including the provider reply when the Social AI fails. Attach it when reporting a bug; it can contain local paths and account IDs, so review it first.",
+                    "open_error_log": "Show error log"
                 },
                 "automation": {
                     "change_status_description": "Override Status Description",
@@ -2635,7 +2727,9 @@
                     "vrcx_memos": "Local Notes",
                     "vrcx_memos_description": "Shows local notes saved in VRCX-0",
                     "recent_action_cooldown": "Recent Action Icon",
-                    "recent_action_cooldown_description": "Show a clock icon on recent invite and request actions."
+                    "recent_action_cooldown_description": "Show a clock icon on recent invite and request actions.",
+                    "profile_decorations": "Profile decorations",
+                    "profile_decorations_description": "Show VRChat profile decorations (background, avatar frame, profile and nameplate effects). Turn off to hide them all; the switches below control each one."
                 },
                 "user_colors": {
                     "header": "User Colors",
@@ -2772,6 +2866,27 @@
                         "tts_voice_preview": "Notification text-to-speech voice selected",
                         "tts_test_failed": "Could not play text-to-speech"
                     }
+                },
+                "custom_sounds": {
+                    "header": "Custom Notification Sounds",
+                    "description": "Choose a local WAV, MP3, FLAC, or OGG file for each event and audience. Favorites use the first enabled rule in this order: favorites, friends, anyone. Disabled or empty rules are skipped. Sounds work in background mode and respect Do Not Disturb and privacy lock. Save changes to apply them; Test sound previews immediately.",
+                    "event": "Event",
+                    "audience": "Audience",
+                    "anyone": "Anyone",
+                    "friend": "Friends",
+                    "favorite": "Favorite friends",
+                    "add": "Add sound",
+                    "enabled": "Enabled",
+                    "file": "Audio file",
+                    "file_placeholder": "Choose an audio file",
+                    "browse": "Browse",
+                    "volume": "Volume",
+                    "test": "Test sound",
+                    "remove": "Remove sound",
+                    "empty": "No custom sounds configured.",
+                    "missing_file": "Choose a file for each enabled rule before saving.",
+                    "save": "Save sounds",
+                    "unsaved": "Unsaved changes"
                 }
             },
             "discord_presence": {
@@ -2867,13 +2982,6 @@
                     "auto_cache_management": {
                         "header": "Auto Manage Cache on Exit",
                         "description": "Automatically clean up old cache data when closing VRChat."
-                    },
-                    "improvement": {
-                        "header": "Help Improve VRCX-0"
-                    },
-                    "anonymous_usage_telemetry": {
-                        "header": "Collect Anonymous Usage Information",
-                        "description": "Collect only necessary anonymous information to help improve VRCX-0."
                     },
                     "save_instance_prints_to_file": {
                         "header": "Save Instance Prints to File",
@@ -3047,6 +3155,227 @@
             },
             "dynamic": {
                 "value_value": "{value} {value2}"
+            },
+            "search": {
+                "placeholder": "Search settings",
+                "clear": "Clear search",
+                "results": "{count} results",
+                "no_results": "No settings match \"{query}\"."
+            },
+            "custom_languages": {
+                "header": "Languages",
+                "description": "Extra UI languages loaded from JSON files in the data folder's locales directory. Each file uses the same keys as the built-in English file; missing strings stay in English. Support is only offered in English; custom languages are not officially supported.",
+                "reload": "Reload",
+                "open_folder": "Open folder",
+                "empty": "No custom language files yet.",
+                "use_now": "Use this language",
+                "in_use": "In use",
+                "delete": "Delete language file",
+                "translate_header": "Translate the UI",
+                "code": "Language code",
+                "name": "Display name",
+                "ai_instructions": "Language instructions for the AI",
+                "ai_instructions_placeholder": "Pirate speak with lots of \"arr\"; or: Early Modern English with heavy Shakespeare references; or: formal Japanese (keigo)...",
+                "ai_instructions_description": "Optional. Extra guidance for the AI about the language, dialect, tone or style. The display name and code are always sent as the target language.",
+                "provider": "Translate with",
+                "endpoint": "AI endpoint",
+                "model": "Model",
+                "api_key": "API key",
+                "retranslate": "Retranslate strings that are already translated",
+                "translate_description": "Translates every English UI string and saves the result as a new language file. Placeholders are protected; a string whose placeholders do not survive stays in English. Progress is saved as it goes, so you can cancel and resume later. This may take a while and uses your provider quota.",
+                "progress": "{done} of {total} strings ({failed} left in English)",
+                "cancel": "Cancel",
+                "start": "Translate",
+                "translate_done": "Saved language file: {name}",
+                "missing_strings": "{count} strings missing (shown in English)",
+                "generate_missing": "Generate missing",
+                "generate_missing_needs_provider": "Choose a translation provider below, then press Generate missing again.",
+                "missing_toast_title": "{name} is missing {count} strings",
+                "missing_toast_description": "Those strings are shown in English. You can generate them from Settings.",
+                "missing_toast_action": "Generate"
+            },
+            "data_export": {
+                "header": "Export & import data",
+                "export_label": "Export all data",
+                "export_description": "Saves your database, settings, custom languages and every other profile file into one compressed .zip. Caches, logs, backups, the yt-dlp tools and your login sessions and saved logins are left out. Keep the file private: it contains your personal data.",
+                "export_button": "Export",
+                "exporting": "Exporting...",
+                "export_done": "Exported {files} files ({megabytes} MB).",
+                "import_label": "Import / restore data",
+                "import_description": "Restores everything from a data export. It is applied when the app restarts; your current database and settings are backed up to the backups folder first.",
+                "import_button": "Import",
+                "importing": "Checking...",
+                "import_confirm_title": "Restore from this data export?",
+                "import_confirm_description": "On the next restart, this profile's data and settings are replaced with the export's. Files not in the export are kept, and you stay signed in on this PC. A backup of the current database and settings is saved to the backups folder first.",
+                "import_staged": "Data export from version {version} is ready ({files} files). Restart to apply it.",
+                "restart_now": "Restart now"
+            },
+            "profile_merge": {
+                "label": "Merge data from {app}",
+                "description": "Adds data from {path} to this profile without changing or deleting anything already here (existing settings, notes and favorites win). A backup of this profile's database is saved first.",
+                "not_found": "No {app} data found on this PC.",
+                "button": "Merge",
+                "running": "Merging...",
+                "confirm_title": "Merge data from {app}?",
+                "confirm_description": "This copies {app}'s history, notes, favorites and settings you have not set here into this profile. Nothing here is overwritten or deleted, and {app}'s own data is not modified. Caches and login sessions are not copied. A backup is saved to the backups folder first.",
+                "confirm": "Merge",
+                "cancel": "Cancel",
+                "done": "Merged from {app}: {rows} rows added across {tables} tables, plus {settings} settings you had not set.",
+                "settings_button": "Import settings",
+                "settings_confirm_title": "Import settings from {app}?",
+                "settings_confirm_description": "This replaces this profile's settings with {app}'s. History, notes and favorites are not touched, and {app}'s own data is not modified. A backup is saved to the backups folder first. Restart the app afterwards so every setting takes effect.",
+                "settings_done": "Imported {count} settings from {app}. Restart the app to apply them all."
+            },
+            "deep_link_schemes": {
+                "upstream": "Open vrcx-0:// links",
+                "upstream_description": "Handle upstream VRCX-0 links in this app. Turn off to leave them to upstream VRCX-0.",
+                "legacy": "Open vrcx:// links",
+                "legacy_description": "Handle original VRCX links in this app. Turn off to leave them to VRCX."
+            },
+            "safety": {
+                "title": "Safety watchlists and warnings",
+                "description": "Flag groups and avatars, choose community lists, and inspect logged URL hosts without opening them.",
+                "enabled": "Enable safety checks",
+                "groups": "Watched groups",
+                "avatars": "Watched avatars",
+                "groups_id": "Group ID",
+                "avatars_id": "Avatar ID",
+                "groups_label": "Group name (optional)",
+                "avatars_label": "Exact avatar name from the game log",
+                "add": "Add",
+                "remove": "Remove",
+                "watch": "Watch",
+                "unwatch": "Stop watching",
+                "listed": "Community list: {sources}",
+                "avatar_limit": "Group checks use public memberships only. Your own avatar ID is checked against the VRChat API when a matching live switch is logged. Other players' logs expose names, not IDs: those alerts use configured names or cached metadata and remain unverified. Unknown or renamed avatars may not match. User/avatar profiles show exact ID community-list matches.",
+                "url_warnings": "Warn about suspicious URL hosts",
+                "url_description": "Checks logged video and resource URLs locally. No DNS lookups, URL fetching, or redirect following. A warning is a host-list match, not proof of malicious content.",
+                "shorteners": "Warn about URL shorteners with unknown destinations",
+                "blocked_domains": "Warning domains (one hostname per line; includes subdomains)",
+                "allowed_domains": "Allowed domains (overrides warnings, including subdomains)",
+                "sources_description": "Sources are disabled until you enable them. Save, then refresh to download. Lists refresh daily; failures retain the last usable copy. Automatic actions stop after a failed refresh or 48 hours without a successful refresh. Community entries are claims, not verified findings.",
+                "manual_actions": "User-ID lists can automatically block users or ban them from selected groups you own, on live joins only. Avatar lists support reviewed batches of exact global avatar blocks. Name matches never authorize moderation. Individual instance kicks have no supported public API and remain in-game actions.",
+                "source_enabled": "Enable this source",
+                "source_name": "Source name",
+                "source_url": "HTTPS source URL",
+                "source_format": "Source format",
+                "new_source": "New source",
+                "add_source": "Add source",
+                "warn": "Warn on matches",
+                "block": "Automatically block matching users",
+                "ban_groups": "Automatically ban from these owned group IDs (one per line)",
+                "formats": {
+                    "avatarIds": "Avatar IDs (text or JSON array)",
+                    "userIds": "User IDs (text or JSON array)",
+                    "domains": "Domains (one hostname per line)",
+                    "githubAvatars": "GitHub avatar-list directory"
+                },
+                "source_status": "{count} cached entries · Last success: {date}",
+                "never": "Never",
+                "save": "Save safety settings",
+                "refresh_sources": "Refresh saved sources",
+                "unsaved": "Unsaved changes",
+                "channels": "Warning delivery follows the System & Safety filters for wrist, desktop and VR overlays. Custom sounds can be assigned to each safety warning type.",
+                "confirm_title": "Enable automatic community-list actions?",
+                "confirm_description": "On matching live joins, these sources will perform the following actions on your account. Community lists may contain false positives. Every attempt and result is recorded.\n\n{sources}",
+                "history": "Safety history",
+                "refresh_history": "Refresh history",
+                "no_history": "No safety events recorded.",
+                "dropped": "{count} events were skipped because the processing queue was full.",
+                "refreshing": "Refreshing sources...",
+                "avatar_blocks_description": "Review exact IDs before blocking avatars across all instances. Up to 25 selected IDs per batch, one request per second. No avatars are blocked merely by enabling or refreshing a source.",
+                "review_avatar_blocks": "Review avatar blocks",
+                "avatar_review_account": "Account: {account} | Source: {source}",
+                "avatar_review_page": "Entries {start}-{end} of {total}. This preview expires in five minutes.",
+                "avatar_name_unknown": "Name not cached",
+                "select_page": "Select this page",
+                "previous_page": "Previous page",
+                "next_page": "Next page",
+                "block_selected": "Block selected avatars",
+                "avatar_block_confirm_title": "Block these exact avatar IDs?",
+                "avatar_block_confirm": "Block the following avatars on account {account} across all instances, based on source {source}. Community claims may be wrong. This does not block users or prove who is wearing an avatar. Every attempt is logged. You can unblock an avatar from its profile.\n\n{ids}",
+                "avatar_blocks_running": "Applying reviewed avatar blocks. Stopping prevents remaining requests; already sent requests may still complete.",
+                "stop_remaining": "Stop remaining blocks",
+                "log_badge": "Safety warning",
+                "log_badges_unavailable": "Safety badges could not be loaded.",
+                "global_hide": {
+                    "toggle": "Globally hide these avatars",
+                    "toggle_description": "Blocks every listed avatar for your account in the background, slowly (one every 10-15 seconds, at most 300 a day, backing off when VRChat is busy). Turning this off stops new blocks; it never unblocks anything.",
+                    "header": "Global avatar hiding",
+                    "sign_in": "Sign in to see progress.",
+                    "summary": "{blocked} blocked by this app, {pending} pending, {already} already blocked by you, {skipped} skipped (removed avatars), {listed} listed.",
+                    "today": "Today: {today} of {cap} blocks.",
+                    "paused": "Paused.",
+                    "backoff": "Waiting until {until} (VRChat was busy or returned errors).",
+                    "last_error": "Last error: {error}",
+                    "unblocking": "Unblocking {count} avatars this app blocked...",
+                    "pause": "Pause",
+                    "resume": "Resume",
+                    "stop_unblock": "Stop unblocking",
+                    "unblock_button": "Unblock avatars this app blocked",
+                    "nothing_to_unblock": "This app has not blocked any avatars for this account.",
+                    "unblock_title": "Unblock avatars this app blocked?",
+                    "unblock_description": "This removes {count} avatar blocks that this app added, one every 10-15 seconds. Avatars you blocked yourself are not touched. Global hiding stays on unless you turn it off, so turn it off first if you do not want them blocked again.",
+                    "unblock_confirm": "Unblock",
+                    "cancel": "Cancel"
+                },
+                "instance_check": {
+                    "header": "Check avatars in this instance",
+                    "description": "Looks up the avatar names of players in your current instance with your avatar search provider (one name every 2 seconds) and shows any result whose ID is on an enabled avatar list. Names are not unique, so blocking is offered only when exactly one matching result is listed, and it always asks first.",
+                    "check": "Check avatars",
+                    "cancel": "Cancel",
+                    "no_provider": "Set up an avatar search provider in Settings first.",
+                    "progress": "Checked {done} of {total} avatar names...",
+                    "none": "No listed avatars found in this instance.",
+                    "match": "{player} is wearing \"{name}\", which matches a listed avatar:",
+                    "ambiguous": "More than one listed avatar has this name, so it cannot be blocked from here. Check the IDs manually.",
+                    "block_button": "Block this avatar",
+                    "block_title": "Block this avatar for your account?",
+                    "block_description": "\"{name}\" was resolved by name to {id}, listed in {sources}. Name lookups can be wrong. Block this exact avatar ID?",
+                    "block_confirm": "Block avatar",
+                    "blocked": "Blocked."
+                }
+            },
+            "ytdlp": {
+                "title": "VRChat video playback helper",
+                "description": "Opt-in yt-dlp master updates and a local PO-token provider for VRChat video players. No video caching or browser extension.",
+                "loading": "Loading playback settings...",
+                "unsupported": "Available on Windows and Linux/Proton.",
+                "enable": "Enable yt-dlp integration",
+                "enable_description": "Off by default. While enabled, checks master builds daily and repairs the managed Tools files if VRChat replaces them. Keep this app running for token generation.",
+                "enable_title": "Install the VRChat playback helper?",
+                "enable_confirm": "Download yt-dlp master, Node.js and the pinned bgutil token provider and its dependencies. Back up and manage yt-dlp.exe and yt-dlp.conf in {path}. A token service runs on this computer while enabled. This does not read browser cookies.",
+                "install": "Install and enable",
+                "tools": "VRChat Tools folder",
+                "tools_help": "Detected from VRChat application data, including Steam/Proton on Linux. Start VRChat once to create it. Disable and restore before changing folders.",
+                "cookies": "Allow use of YouTube cookies",
+                "cookies_opt_in": "Separate opt-in. Saving this switch does not read any browser. Select a browser and explicitly refresh, or supply your own cookies.txt below. Cookies are never refreshed automatically.",
+                "save": "Save / install settings",
+                "restore": "Disable and restore originals",
+                "unsaved": "Save these settings before importing or refreshing cookies.",
+                "cookie_source": "Choose a cookie source",
+                "cookie_help": "Only YouTube cookies are retained, obfuscated on disk. Obfuscation is not encryption. A browser export briefly uses a private temporary file. Visiting YouTube again can rotate cookies; a separate browser profile is recommended. Chromium on Windows may require closing the browser or may prevent cookie decryption. Firefox or a Netscape cookies.txt file is an alternative.",
+                "browser": "Browser to read",
+                "choose_browser": "Select a browser...",
+                "profile": "Browser profile name or path (optional)",
+                "default_profile": "Default profile",
+                "refresh": "Read and refresh cookies",
+                "import": "Import cookies.txt",
+                "read_title": "Read YouTube cookies from this browser?",
+                "read_confirm": "Use yt-dlp to read {browser}, profile {profile}, and retain only its unexpired YouTube cookies. It will make a metadata-only YouTube request and will not download video. Cookies from other sites are discarded.",
+                "update": "Check / repair installation",
+                "test": "Test YouTube playback",
+                "clear": "Forget stored cookies",
+                "version": "yt-dlp master: {version}",
+                "not_installed": "Not installed",
+                "provider": "Token provider: {state}",
+                "running": "Running locally",
+                "stopped": "Stopped",
+                "last_update": "Last update check: {time}",
+                "cookie_status": "Stored YouTube cookies: {count}. Last import/refresh: {time}",
+                "cookie_expiry": "Earliest known cookie expiry: {time} (session cookies can expire sooner)",
+                "never": "Never",
+                "limits": "Cookie expiry does not prove YouTube will accept the session. Playback tests resolve one test video without downloading it. If playback fails, check your network, refresh cookies if opted in, and synchronize system time. SABR-only videos require a streaming relay and are not supported by this direct-URL helper. Disable and restore before uninstalling the app."
             }
         },
         "dashboard": {
@@ -3519,7 +3848,11 @@
             "contributors": "Contributors",
             "contributors_error": "Couldn't load the contributor list.",
             "thanks": "Every translation, test, bug report, and idea comes from the community. Thank you.",
-            "license_line": "Free and open source under GPL-3.0"
+            "license_line": "Free and open source under GPL-3.0",
+            "role": {
+                "fork_maintainer": "Fork Maintainer",
+                "upstream_developer": "Upstream Developer"
+            }
         },
         "activity": {
             "title": "Activity",
@@ -3632,6 +3965,21 @@
             "empty_title": "No groups yet",
             "empty_description": "Groups you join in VRChat show up here.",
             "empty_search": "No group matches your search."
+        },
+        "reminders": {
+            "title": "Reminders",
+            "description": "Get notified when friends come online, move, or at a time.",
+            "ai_title": "Create with AI",
+            "ai_description": "Describe the reminder in your own words. The AI fills in the form below for you to check before creating.",
+            "ai_placeholder": "e.g. tell me when Alice comes online, or remind me in 30 minutes to take a break",
+            "ai_draft": "Fill in form",
+            "ai_drafting": "Thinking...",
+            "ai_drafted": "Check the form, then create the reminder.",
+            "ai_friend_unmatched": "No single friend matched \"{name}\"; pick one.",
+            "ai_not_configured": "Choose a default model for Social AI first.",
+            "ai_open_settings": "Open AI settings",
+            "list_title": "Your reminders",
+            "manage": "Manage reminders"
         }
     },
     "dialog": {
@@ -3702,7 +4050,8 @@
                 "hidden": "Hidden",
                 "visible": "Visible",
                 "visibility": "Visibility",
-                "developer": "VRCX-0 Developer"
+                "developer": "VRCX-0 Developer",
+                "fork_developer": "VRCX-0-Nanashi Developer"
             },
             "actions": {
                 "invite": "Invite",
@@ -4229,7 +4578,8 @@
                 "add_domain": "Add domain"
             },
             "loading": {
-                "loading_world_profile": "Loading world profile"
+                "loading_world_profile": "Loading world profile",
+                "fetching_the_current_vrchat_world_snapshot_for_this_dialog": "Loading world details"
             },
             "error": {
                 "world_profile_unavailable": "World profile unavailable",
@@ -4819,7 +5169,8 @@
             "path_override": "VRChat Path Override",
             "vrchat_docs": "VRChat Docs",
             "unity_manual": "Unity Manual",
-            "save": "Save"
+            "save": "Save",
+            "path_override_description": "Windows: pick VRChat's launch.exe (or the folder that contains it) to start VRChat directly from its install folder instead of through Steam. Leave empty to launch through Steam, falling back to VRChat's own launcher if Steam is not found. Note: a Steam copy of VRChat may still start Steam itself. Linux: this is the Steam root folder (with steam.sh), since VRChat runs through Proton."
         },
         "invite": {
             "add_self": "Add Self",
@@ -5299,7 +5650,12 @@
                 "BlockedOnPlayerLeft": "Blocked Player Left",
                 "MutedOnPlayerJoined": "Muted Player Joined",
                 "MutedOnPlayerLeft": "Muted Player Left",
-                "VideoPlay": "Video Play"
+                "VideoPlay": "Video Play",
+                "SafetyGroup": "Watched group",
+                "SafetyAvatar": "Watched avatar",
+                "SafetyCommunity": "Community list match",
+                "SafetyUrl": "Suspicious URL",
+                "Reminder": "Assistant reminder"
             },
             "favorite_groups": {
                 "menu_label": "Favorite groups",
@@ -5469,6 +5825,24 @@
                 "download_stable": "Download latest Stable",
                 "download_beta": "Download latest Beta",
                 "no_release": "No release is available in this channel."
+            },
+            "reinstall": "Reinstall / repair",
+            "other_versions": "Install a specific version",
+            "choose_version": "Choose a version",
+            "installed_version": "{value} (installed)",
+            "install_action": {
+                "latest": "Update to latest and restart",
+                "upgrade": "Update to this version and restart",
+                "reinstall": "Reinstall and restart",
+                "downgrade": "Downgrade and restart",
+                "unknown": "Install and restart"
+            },
+            "downgrade_warning": "This is an older version. It may not be able to read data a newer version already upgraded, so export a backup of your data first.",
+            "downgrade_confirm": {
+                "title": "Downgrade to {value}?",
+                "auto_update_note": "Your Updates setting will install a newer version again at the next update check. To stay on this version, set Updates to Notify only or Off in Settings first.",
+                "set_notify_only": "Set Updates to Notify only",
+                "set_notify_only_failed": "Could not change the Updates setting"
             }
         },
         "change_log": {
@@ -5520,7 +5894,8 @@
             "action": {
                 "clear_table": "Clear table",
                 "clear_errors": "Clear errors",
-                "exclude": "Exclude"
+                "exclude": "Exclude",
+                "import": "import"
             },
             "description": {
                 "paste_exported_ids_process_the_list_then_import_to_a_vrchat_or_local_favorite_group": "Paste exported IDs, process the list, then import to a VRChat favorite group or a local favorite group"
@@ -5535,7 +5910,8 @@
                 "actions": "Actions",
                 "import_to": "Import to",
                 "local": "Local",
-                "select_group": "Select a group"
+                "select_group": "Select a group",
+                "rows_yet": "rows yet"
             },
             "status": {
                 "processing": "Processing",
@@ -5550,7 +5926,8 @@
             "empty": {
                 "avatar": "No avatars to import yet",
                 "world": "No worlds to import yet",
-                "friend": "No friends to import yet"
+                "friend": "No friends to import yet",
+                "no_parsed": "Nothing to import"
             },
             "title": {
                 "avatar": "Import Avatars",
@@ -6379,7 +6756,8 @@
     "service": {
         "background_maintenance_service": {
             "dynamic": {
-                "version_value_is_available_on_the_value_branch": "Version {value} is available in the {value2} channel"
+                "version_value_is_available_on_the_value_branch": "Version {value} is available in the {value2} channel",
+                "version_value_is_available": "Version {value} is available"
             }
         },
         "database_upgrade_service": {

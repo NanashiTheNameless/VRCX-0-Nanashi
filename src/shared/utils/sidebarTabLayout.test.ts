@@ -37,6 +37,32 @@ describe('saved sidebar layout with world tabs', () => {
                 systemTab: 'groups',
                 icon: 'lucide:UsersRound',
                 visible: true
+            },
+            // Fork: the dedicated left-navigation page tabs are part of every
+            // saved layout, so they have to be saved for a faithful round trip.
+            {
+                id: 'page-chartsMutual',
+                type: 'page',
+                page: 'chartsMutual',
+                labelKey: 'app.routes.charts_mutual',
+                icon: 'lucide:UsersRound',
+                visible: true
+            },
+            {
+                id: 'page-reminders',
+                type: 'page',
+                page: 'reminders',
+                labelKey: 'view.reminders.title',
+                icon: 'lucide:AlarmClock',
+                visible: true
+            },
+            {
+                id: 'page-tools',
+                type: 'page',
+                page: 'tools',
+                labelKey: 'app.routes.tools',
+                icon: 'lucide:Wrench',
+                visible: true
             }
         ];
 

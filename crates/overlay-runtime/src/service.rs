@@ -111,6 +111,11 @@ pub trait VrOverlayServiceControl {
     fn is_surface_visible(&self, _surface_id: &OverlaySurfaceId) -> bool {
         false
     }
+    /// Total wrist menu presses, including presses while the menu was already
+    /// open. A change in this value means the user pressed the menu button.
+    fn wrist_activation_count(&self, _surface_id: &OverlaySurfaceId) -> u64 {
+        0
+    }
     fn should_stop_when_ineligible(&self) -> bool {
         self.is_running()
     }
@@ -569,6 +574,13 @@ impl VrOverlayServiceControl for HostVrOverlayService {
         self.actor
             .as_ref()
             .is_some_and(|actor| actor.is_surface_visible(surface_id))
+    }
+
+    fn wrist_activation_count(&self, surface_id: &OverlaySurfaceId) -> u64 {
+        self.actor
+            .as_ref()
+            .map(|actor| actor.wrist_activation_count(surface_id))
+            .unwrap_or_default()
     }
 
     fn stop(&mut self) {

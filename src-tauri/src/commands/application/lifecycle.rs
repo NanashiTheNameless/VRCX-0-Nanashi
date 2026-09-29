@@ -7,7 +7,7 @@ use crate::state::AppState;
 use vrcx_0_runtime_host_desktop::notification::{
     NotificationDoNotDisturbMode, NotificationDoNotDisturbSnapshot,
 };
-use vrcx_0_runtime_host_desktop::{AncillaryRuntimeSnapshot, RuntimeJobRecordInput};
+use vrcx_0_runtime_host_desktop::AncillaryRuntimeSnapshot;
 
 #[tauri::command]
 #[specta::specta]
@@ -41,13 +41,4 @@ pub async fn app__runtime_group_instances_refresh(
 #[specta::specta]
 pub fn app__runtime_discord_reconcile_request(state: State<'_, AppState>) -> u64 {
     state.runtime_host().request_discord_reconcile()
-}
-
-#[tauri::command(async)]
-#[specta::specta]
-pub fn app__runtime_background_job_record(
-    state: State<'_, AppState>,
-    input: RuntimeJobRecordInput,
-) {
-    state.runtime_host().record_runtime_job(input);
 }

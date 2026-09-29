@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     mpsc::{self, Sender},
@@ -48,6 +49,7 @@ struct Worker {
     commands: Sender<SessionCommand>,
     alive: Arc<AtomicBool>,
     visible_surfaces: Arc<Mutex<Vec<OverlaySurfaceId>>>,
+    wrist_activations: Arc<Mutex<HashMap<String, u64>>>,
     join: Option<JoinHandle<()>>,
 }
 
@@ -156,10 +158,17 @@ impl OverlayBackend for OpenXrOverlayBackend {
         let thread_alive = Arc::clone(&alive);
         let visible_surfaces = Arc::new(Mutex::new(Vec::new()));
         let thread_visible_surfaces = Arc::clone(&visible_surfaces);
+        let wrist_activations = Arc::new(Mutex::new(HashMap::new()));
+        let thread_wrist_activations = Arc::clone(&wrist_activations);
         let join = thread::Builder::new()
             .name("vrcx-xr-overlay".to_string())
             .spawn(move || {
-                session::run(command_receiver, init_sender, &thread_visible_surfaces);
+                session::run(
+                    command_receiver,
+                    init_sender,
+                    &thread_visible_surfaces,
+                    &thread_wrist_activations,
+                );
                 thread_alive.store(false, Ordering::Release);
             })
             .map_err(|error| {
@@ -174,6 +183,7 @@ impl OverlayBackend for OpenXrOverlayBackend {
                     commands: command_sender,
                     alive,
                     visible_surfaces,
+                    wrist_activations,
                     join: Some(join),
                 });
                 Ok(())
@@ -226,6 +236,20 @@ impl OverlayBackend for OpenXrOverlayBackend {
 
     fn snapshot_devices(&mut self) -> Result<Vec<VrDeviceSnapshot>, String> {
         self.request(|reply| SessionCommand::SnapshotDevices { reply })
+    }
+
+    fn wrist_activation_counts(&self) -> Vec<(OverlaySurfaceId, u64)> {
+        self.worker()
+            .ok()
+            .and_then(|worker| {
+                worker.wrist_activations.lock().ok().map(|counts| {
+                    counts
+                        .iter()
+                        .map(|(surface_id, count)| (OverlaySurfaceId::new(surface_id), *count))
+                        .collect()
+                })
+            })
+            .unwrap_or_default()
     }
 
     fn visible_surface_ids(&self) -> Vec<OverlaySurfaceId> {

@@ -6,7 +6,6 @@ const mocks = vi.hoisted(() => ({
     isHostCapabilityAvailable: vi.fn(),
     formatReleaseDisplayVersion: vi.fn(),
     toNormalizedReleaseFromSnapshot: vi.fn(),
-    runRuntimeTelemetryJob: vi.fn(),
     appRegistryBackupMaintenanceRun: vi.fn(),
     pushNotification: vi.fn()
 }));
@@ -19,10 +18,6 @@ vi.mock('@/platform/tauri/bindings', () => ({
 
 vi.mock('./hostCapabilityService', () => ({
     isHostCapabilityAvailable: mocks.isHostCapabilityAvailable
-}));
-
-vi.mock('./runtimeJobTelemetryService', () => ({
-    runRuntimeTelemetryJob: mocks.runRuntimeTelemetryJob
 }));
 
 vi.mock('./updateService', () => ({
@@ -124,9 +119,6 @@ describe('backgroundMaintenanceService update checks', () => {
         );
         mocks.toNormalizedReleaseFromSnapshot.mockImplementation(
             toNormalizedRelease
-        );
-        mocks.runRuntimeTelemetryJob.mockImplementation(
-            async (_metadata: unknown, task: () => Promise<unknown>) => task()
         );
     });
 

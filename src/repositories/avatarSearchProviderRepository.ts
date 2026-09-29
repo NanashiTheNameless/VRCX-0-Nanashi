@@ -1,4 +1,5 @@
 import { commands } from '@/platform/tauri/bindings';
+import { recordErrorLog } from '@/services/errorLogService';
 import { publishPreferenceChanged } from '@/shared/events/preferenceEvents';
 import { isAvatarSearchQueryLongEnough } from '@/shared/utils/avatarSearchQuery';
 import { isRecord } from '@/shared/utils/record';

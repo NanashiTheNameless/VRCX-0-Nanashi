@@ -102,9 +102,6 @@ impl RuntimeHostState {
         self.runtime_context
             .runtime
             .set_host_services_started(true, "Runtime host services installed.");
-        self.runtime_context
-            .background_jobs
-            .register_frontend_job_catalog();
         self.runtime_context.background_jobs.register_job(
             "startupRecovery",
             "rust-host",

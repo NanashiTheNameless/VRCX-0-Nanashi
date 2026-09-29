@@ -386,24 +386,24 @@ describe('AvatarSearchProviderRepository', () => {
     });
 
     it('searches every provider in parallel and merges duplicate avatars', async () => {
-        vi.mocked(
-            externalApiRepository.searchAvatarProvider
-        ).mockImplementation(async ({ url }: { url: string }) => {
-            const avatars = url.startsWith('https://a.example.test')
-                ? [
-                      { id: 'avtr_shared', name: 'Shared', authorName: '' },
-                      { id: 'avtr_only_a', name: 'Only A' }
-                  ]
-                : [
-                      {
-                          id: 'avtr_shared',
-                          name: 'Other Name',
-                          authorName: 'Author From B'
-                      },
-                      { id: 'avtr_only_b', name: 'Only B' }
-                  ];
-            return { status: 200, data: JSON.stringify(avatars), raw: '' };
-        });
+        vi.mocked(commands.appExternalApiAvatarSearchGet).mockImplementation(
+            async ({ url }) => {
+                const avatars = url?.startsWith('https://a.example.test')
+                    ? [
+                          { id: 'avtr_shared', name: 'Shared', authorName: '' },
+                          { id: 'avtr_only_a', name: 'Only A' }
+                      ]
+                    : [
+                          {
+                              id: 'avtr_shared',
+                              name: 'Other Name',
+                              authorName: 'Author From B'
+                          },
+                          { id: 'avtr_only_b', name: 'Only B' }
+                      ];
+                return { status: 200, data: JSON.stringify(avatars), raw: '' };
+            }
+        );
 
         const result = await avatarSearchProviderRepository.search({
             providers: [
@@ -425,16 +425,15 @@ describe('AvatarSearchProviderRepository', () => {
     });
 
     it('keeps results from working providers when another provider fails', async () => {
-        vi.mocked(
-            externalApiRepository.searchAvatarProvider
-        ).mockImplementation(async ({ url }: { url: string }) =>
-            url.startsWith('https://down.example.test')
-                ? { status: 500, data: '', raw: '' }
-                : {
-                      status: 200,
-                      data: JSON.stringify([{ id: 'avtr_ok', name: 'Ok' }]),
-                      raw: ''
-                  }
+        vi.mocked(commands.appExternalApiAvatarSearchGet).mockImplementation(
+            async ({ url }) =>
+                url?.startsWith('https://down.example.test')
+                    ? { status: 500, data: '', raw: '' }
+                    : {
+                          status: 200,
+                          data: JSON.stringify([{ id: 'avtr_ok', name: 'Ok' }]),
+                          raw: ''
+                      }
         );
 
         const result = await avatarSearchProviderRepository.search({

@@ -156,6 +156,10 @@ where
         self.service.is_surface_visible(surface_id)
     }
 
+    pub fn wrist_activation_count(&self, surface_id: &OverlaySurfaceId) -> u64 {
+        self.service.wrist_activation_count(surface_id)
+    }
+
     pub fn into_inner(self) -> S {
         self.service
     }

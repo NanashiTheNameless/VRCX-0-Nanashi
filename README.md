@@ -16,7 +16,8 @@ It is a Rust + Tauri rewrite of VRCX.
 - **No telemetry.** Usage stats, heartbeats, crash reporting, the in-app feedback form,
   and community theme install-count pings are removed entirely.
 - **Social AI is off by default.** Turn it on under Settings > AI. Nothing is sent to an
-  AI service while it is disabled. Supports OpenAI-compatible, Anthropic, Google Gemini and
+  AI service while it is disabled. The chat is also on the left navigation as **Social AI**.
+  Supports OpenAI-compatible, Anthropic, Google Gemini and
   Ollama APIs, local or LAN models with no key, and custom headers.
 - **Keeps the PC awake** (optional, on by default) so live updates keep arriving while the app
   sits in the tray; the screen can still turn off.
@@ -45,10 +46,13 @@ It is a Rust + Tauri rewrite of VRCX.
   Instance kicks remain unavailable.
 - **Assistant reminders.** Ask the assistant (with writes turned on) to tell you when a friend comes
   online, goes offline, moves or joins you, or at a time. Reminders are saved, fire as normal
-  notifications with the chat closed, and are listed under Settings > AI.
-- **Wrist overlay pages.** Hide and show the wrist overlay again quickly (3 seconds by default) to
-  switch between the feed, the players in your instance, and the players you have notes on. Under
-  Settings > VR you choose which pages appear, their order, the player order and the switch window.
+  notifications with the chat closed, and have their own **Reminders** entry in the left
+  navigation (and a card under Settings > AI).
+- **Wrist overlay pages.** The wrist menu shows the feed, the players in your instance, and the
+  players you have notes on. Under Settings > VR you choose which pages appear, their order and
+  the player order. The menu closes after 15 seconds without interaction by default; set the menu
+  timeout anywhere from 5 to 255 seconds. Pressing the menu button while the menu is already open
+  switches to the next page and restarts that timer - you never have to close and reopen it.
 - **Launch without Steam.** Set the VRChat install folder in Launch Options to start VRChat directly.
 - **Import from VRCX or VRCX-0.** Merges the other app's database and adds settings you have not set
   here yet.

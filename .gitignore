@@ -33,3 +33,5 @@ githide/
 # Python plugin test artifacts
 __pycache__/
 *.pyc
+
+.kilo

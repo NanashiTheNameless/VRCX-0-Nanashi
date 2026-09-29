@@ -19,7 +19,8 @@ use vrcx_0_application_core::{
     FriendProjection, HostSessionProjection, ParsedLocation, PrintAutoCleanupEvent,
     RealtimeCurrentUserProjection, RealtimeEntryCorrection, RealtimeInstanceClosedProjection,
     RealtimeInstanceQueueProjection, RealtimeNotificationProjection, RealtimeProjectionSync,
-    RealtimeUserProjection, RuntimeVrchatAuthFailurePayload, VrcStatusSnapshot,
+    RealtimeUserProjection, RuntimeOperationStatus, RuntimeVrchatAuthFailurePayload,
+    VrcStatusSnapshot,
 };
 use vrcx_0_application_game::{
     GameClientEvent, GameLogPersistenceFallbackPayload, GameLogProjection, GameLogSideEffectEvent,
@@ -105,6 +106,7 @@ pub fn builder() -> Builder<tauri::Wry> {
         .typ::<AssistantErrorEvent>()
         .typ::<BackendRuntimeEventPayloadMap>()
         .typ::<BackendRuntimeTelemetry>()
+        .typ::<RuntimeOperationStatus>()
         .typ::<vrcx_0_runtime_host_desktop::deep_link::DeepLinkAction>()
         .typ::<FriendProjection>()
         .typ::<GameLogProjection>()
@@ -371,7 +373,6 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::host::paths::app__mark_data_dir_cleanup_prompted,
             commands::application::lifecycle::app__runtime_group_instances_refresh,
             commands::application::lifecycle::app__runtime_discord_reconcile_request,
-            commands::application::lifecycle::app__runtime_background_job_record,
             commands::integrations::external_api::service::app__external_api_avatar_search_get,
             commands::integrations::external_api::service::app__external_api_github_contributors_get,
             commands::integrations::external_api::service::app__external_api_github_releases_get,
