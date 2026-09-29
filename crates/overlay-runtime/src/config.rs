@@ -5,7 +5,6 @@ use super::eligibility::WristOverlayStartMode;
 use super::localization::OverlayLocale;
 use super::runtime::{
     HmdNotificationConfig, HmdNotificationPosition, VrOverlayRuntimeConfig, WristOverlayHand,
-    DEFAULT_WRIST_PAGE_FLIP_SECS,
 };
 use super::service::OverlayBackendPreference;
 use super::{WristOverlayRenderOptions, WristOverlaySizePreset, WristPageOrder, WristPlayersSort};
@@ -22,7 +21,7 @@ pub const VR_OVERLAY_SHOW_DEVICES_CONFIG_KEY: &str = "wristOverlayShowDevices";
 pub const VR_OVERLAY_SHOW_BATTERY_PERCENT_CONFIG_KEY: &str = "wristOverlayShowBatteryPercent";
 pub const VR_OVERLAY_PAGES_CONFIG_KEY: &str = "wristOverlayPages";
 pub const VR_OVERLAY_PLAYERS_SORT_CONFIG_KEY: &str = "wristOverlayPlayersSort";
-pub const VR_OVERLAY_PAGE_FLIP_SECONDS_CONFIG_KEY: &str = "wristOverlayPageFlipSeconds";
+pub const VR_OVERLAY_TIMEOUT_SECONDS_CONFIG_KEY: &str = "wristOverlayTimeoutSeconds";
 pub const HMD_NOTIFICATIONS_ENABLED_CONFIG_KEY: &str = "hmdNotificationsEnabled";
 pub const HMD_NOTIFICATION_START_MODE_CONFIG_KEY: &str = "hmdNotificationStartMode";
 pub const HMD_NOTIFICATION_TIMEOUT_CONFIG_KEY: &str = "hmdNotificationTimeout";
@@ -114,13 +113,13 @@ pub(super) fn load_runtime_config(config: &ConfigRepository) -> VrOverlayRuntime
         .get_string(VR_OVERLAY_PLAYERS_SORT_CONFIG_KEY, "name")
         .map(|value| WristPlayersSort::from_config(&value))
         .unwrap_or_default();
-    let wrist_page_flip_secs = config
-        .get_raw(VR_OVERLAY_PAGE_FLIP_SECONDS_CONFIG_KEY)
+    let wrist_timeout_secs = config
+        .get_raw(VR_OVERLAY_TIMEOUT_SECONDS_CONFIG_KEY)
         .ok()
         .flatten()
         .and_then(|value| value.trim().parse::<u8>().ok())
-        .unwrap_or(DEFAULT_WRIST_PAGE_FLIP_SECS)
-        .clamp(1, 10);
+        .unwrap_or(15)
+        .clamp(5, 255);
 
     VrOverlayRuntimeConfig {
         start_mode,
@@ -146,6 +145,6 @@ pub(super) fn load_runtime_config(config: &ConfigRepository) -> VrOverlayRuntime
         show_instance_id_in_location,
         wrist_pages,
         wrist_players_sort,
-        wrist_page_flip_secs,
+        wrist_timeout_secs,
     }
 }

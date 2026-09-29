@@ -374,6 +374,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     wristOverlayDarkBackground: true,
     wristOverlayShowDevices: true,
     wristOverlayShowBatteryPercent: false,
+    wristOverlayTimeoutSeconds: 15,
     relaunchVRChatAfterCrash: false,
     vrcQuitFix: true,
     focusVrchatOnJoin: false,
@@ -595,6 +596,10 @@ export function normalizePreferenceSnapshot(snapshot: unknown = {}) {
         wristOverlayShowDevices: normalizeBool(next.wristOverlayShowDevices),
         wristOverlayShowBatteryPercent: normalizeBool(
             next.wristOverlayShowBatteryPercent
+        ),
+        wristOverlayTimeoutSeconds: normalizeNumber(
+            next.wristOverlayTimeoutSeconds,
+            15
         ),
         relaunchVRChatAfterCrash: normalizeBool(next.relaunchVRChatAfterCrash),
         vrcQuitFix: normalizeBool(next.vrcQuitFix),

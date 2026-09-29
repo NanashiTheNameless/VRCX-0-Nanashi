@@ -195,10 +195,10 @@ export const ConfigKeys = defineConfigKeys({
     wristOverlayDarkBackground: { type: 'bool', default: true },
     wristOverlayShowDevices: { type: 'bool', default: true },
     wristOverlayShowBatteryPercent: { type: 'bool', default: false },
-    // Fork: customizable wrist pages.
+    // Fork: customizable wrist pages and inactivity timeout.
     wristOverlayPages: { type: 'string', default: 'feed,players,notes' },
     wristOverlayPlayersSort: { type: 'string', default: 'name' },
-    wristOverlayPageFlipSeconds: { type: 'string', default: '3' },
+    wristOverlayTimeoutSeconds: { type: 'int', default: 15 },
 
     // ── Settings - VR Background ─────────────────────
     // ── Auto State Change ────────────────────────────

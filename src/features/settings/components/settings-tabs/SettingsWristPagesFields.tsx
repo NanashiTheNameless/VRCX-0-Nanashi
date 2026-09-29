@@ -5,6 +5,13 @@ import { useTranslation } from 'react-i18next';
 import configRepository from '@/repositories/configRepository';
 import { Button } from '@/ui/shadcn/button';
 import {
+    NumberField,
+    NumberFieldDecrement,
+    NumberFieldGroup,
+    NumberFieldIncrement,
+    NumberFieldInput
+} from '@/ui/shadcn/number-field';
+import {
     Select,
     SelectContent,
     SelectGroup,
@@ -19,13 +26,13 @@ import { Field } from '../SettingsField';
 const P = 'view.settings.vr.wrist_overlay.pages';
 const PAGES_KEY = 'wristOverlayPages';
 const SORT_KEY = 'wristOverlayPlayersSort';
-const FLIP_KEY = 'wristOverlayPageFlipSeconds';
+const TIMEOUT_KEY = 'wristOverlayTimeoutSeconds';
 
 export type WristPageId = 'feed' | 'players' | 'notes';
 type PageRow = { id: WristPageId; shown: boolean };
 
 const ALL_PAGES: WristPageId[] = ['feed', 'players', 'notes'];
-const FLIP_SECONDS = ['1', '2', '3', '4', '5', '6', '8', '10'];
+const TIMEOUT_SECONDS = [5, 10, 15, 20, 30, 60] as const;
 const SORTS = ['name', 'joined'] as const;
 type PlayersSort = (typeof SORTS)[number];
 
@@ -58,27 +65,31 @@ export function serializeWristPages(rows: PageRow[]): string {
 }
 
 // Fork: choose which wrist pages exist, their order, the players order and how
-// fast a hide-then-show must be to switch pages.
+// long the menu stays open before closing due to inactivity.
 export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
     const { t } = useTranslation();
     const [rows, setRows] = useState<PageRow[]>(() =>
         parseWristPages('feed,players,notes')
     );
     const [sort, setSort] = useState<PlayersSort>('name');
-    const [flip, setFlip] = useState('3');
+    const [timeout, setTimeout] = useState<number>(15);
 
     useEffect(() => {
         let active = true;
         void Promise.all([
             configRepository.getString(PAGES_KEY, 'feed,players,notes'),
             configRepository.getString(SORT_KEY, 'name'),
-            configRepository.getString(FLIP_KEY, '3')
+            configRepository.getNumber(TIMEOUT_KEY, 15)
         ])
             .then(([pages, players, seconds]) => {
                 if (!active) return;
                 setRows(parseWristPages(pages));
                 setSort(players === 'joined' ? 'joined' : 'name');
-                setFlip(FLIP_SECONDS.includes(seconds) ? seconds : '3');
+                setTimeout(
+                    TIMEOUT_SECONDS.includes(seconds as number)
+                        ? (seconds as number)
+                        : 15
+                );
             })
             .catch(() => {});
         return () => {
@@ -88,6 +99,10 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
 
     async function save(key: string, value: string) {
         await configRepository.setString(key, value);
+    }
+
+    async function saveNumber(key: string, value: number) {
+        await configRepository.setNumber(key, value);
     }
 
     function updateRows(next: PageRow[]) {
@@ -201,43 +216,34 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
             </Field>
 
             <Field
-                label={t(`${P}.flip_window`)}
-                description={t(`${P}.flip_window_description`)}
-                controlId="settings-wrist-overlay-page-flip"
-                disabled={disabled || shownCount < 2}
+                label={t(`${P}.timeout`)}
+                description={t(`${P}.timeout_description`)}
+                controlId="settings-wrist-overlay-timeout"
+                disabled={disabled}
             >
-                <Select<string>
-                    value={flip}
-                    items={FLIP_SECONDS.map((value) => ({
-                        value,
-                        label: t(`${P}.seconds`, { count: Number(value) })
-                    }))}
-                    disabled={disabled || shownCount < 2}
+                <NumberField
+                    value={timeout}
+                    min={5}
+                    max={300}
+                    step={5}
+                    id="settings-wrist-overlay-timeout"
+                    className="w-32"
                     onValueChange={(value) => {
-                        if (value) {
-                            setFlip(value);
-                            void save(FLIP_KEY, value);
+                        if (
+                            value !== null &&
+                            TIMEOUT_SECONDS.includes(value as number)
+                        ) {
+                            setTimeout(value);
+                            void saveNumber(TIMEOUT_KEY, value);
                         }
                     }}
                 >
-                    <SelectTrigger
-                        id="settings-wrist-overlay-page-flip"
-                        className="w-56"
-                    >
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectGroup>
-                            {FLIP_SECONDS.map((value) => (
-                                <SelectItem key={value} value={value}>
-                                    {t(`${P}.seconds`, {
-                                        count: Number(value)
-                                    })}
-                                </SelectItem>
-                            ))}
-                        </SelectGroup>
-                    </SelectContent>
-                </Select>
+                    <NumberFieldGroup>
+                        <NumberFieldDecrement />
+                        <NumberFieldInput />
+                        <NumberFieldIncrement />
+                    </NumberFieldGroup>
+                </NumberField>
             </Field>
         </>
     );

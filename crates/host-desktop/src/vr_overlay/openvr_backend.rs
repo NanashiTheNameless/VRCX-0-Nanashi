@@ -261,7 +261,9 @@ impl OverlayBackend for OpenVrOverlayBackend {
                 back_loading: false,
                 config: config.clone(),
                 transform_device: None,
-                policy: WristVisibilityPolicy::default(),
+                policy: WristVisibilityPolicy::new(Duration::from_millis(
+                    config.visible_duration_ms,
+                )),
                 visible: false,
                 active: true,
                 pending_frame: None,

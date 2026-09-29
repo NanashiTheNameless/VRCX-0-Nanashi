@@ -53,6 +53,14 @@ pub struct OverlaySurfaceConfig {
     pub activation_button: OverlayActivationButton,
     #[serde(default)]
     pub force_visible: bool,
+    /// Inactivity timeout in milliseconds. When the overlay is shown, it will
+    /// remain visible for this duration after the last interaction.
+    #[serde(default = "default_visible_duration_ms")]
+    pub visible_duration_ms: u64,
+}
+
+fn default_visible_duration_ms() -> u64 {
+    15000 // 15 seconds as default
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]

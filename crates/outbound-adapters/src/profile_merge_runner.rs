@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 use vrcx_0_application::profile::DatabaseUpgradeRunStatus;
 use vrcx_0_application_core::Error;
-use vrcx_0_persistence::legacy_migration::snapshot_database;
+use vrcx_0_persistence::legacy_migration::copy_database_snapshot;
 use vrcx_0_persistence::profile_merge::{
     import_profile_configs_file, import_settings_file, merge_profile_database_file,
     merge_settings_file, ProfileMergeReport, ProfileSettingsImportReport,
@@ -90,7 +90,7 @@ fn with_staged_source<T>(
     std::fs::create_dir_all(&staging).map_err(|error| Error::Custom(error.to_string()))?;
     let result = (|| {
         let snapshot = staging.join(STAGED_DB_FILE);
-        snapshot_database(&source, &snapshot).map_err(map_persistence_error)?;
+        copy_database_snapshot(&source, &snapshot, |_, _| {}).map_err(map_persistence_error)?;
         {
             let staged = DatabaseService::new(&snapshot).map_err(map_persistence_error)?;
             let upgrade = run_database_upgrade_with_progress(&staged, |_| {});
@@ -112,9 +112,10 @@ fn with_staged_source<T>(
         let backups = app_data.join("backups");
         std::fs::create_dir_all(&backups).map_err(|error| Error::Custom(error.to_string()))?;
         let stamp = chrono::Utc::now().format("%Y%m%d-%H%M%S");
-        snapshot_database(
+        copy_database_snapshot(
             db.db_path(),
             &backups.join(format!("before-{backup_label}-{stamp}.sqlite3")),
+            |_, _| {},
         )
         .map_err(map_persistence_error)?;
         apply(&snapshot, &source)

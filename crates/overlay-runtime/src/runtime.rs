@@ -140,7 +140,9 @@ pub(super) struct VrOverlayRuntimeConfig {
     /// Fork: customizable wrist pages (Settings > VR).
     pub(crate) wrist_pages: WristPageOrder,
     pub(crate) wrist_players_sort: WristPlayersSort,
-    pub(crate) wrist_page_flip_secs: u8,
+    /// Inactivity timeout in seconds. When the wrist menu is shown, it will
+    /// remain visible for this duration after the last interaction.
+    pub(crate) wrist_timeout_secs: u8,
 }
 
 impl Default for VrOverlayRuntimeConfig {
@@ -157,7 +159,7 @@ impl Default for VrOverlayRuntimeConfig {
             show_instance_id_in_location: false,
             wrist_pages: WristPageOrder::default(),
             wrist_players_sort: WristPlayersSort::Name,
-            wrist_page_flip_secs: DEFAULT_WRIST_PAGE_FLIP_SECS,
+            wrist_timeout_secs: 15, // Default to 15 seconds
         }
     }
 }
@@ -930,10 +932,6 @@ impl GameProcessEventSink for VrOverlayRuntime {
     }
 }
 
-/// Fork: showing the wrist again within this many seconds after hiding it flips to the
-/// next page (configurable 1-10).
-pub(crate) const DEFAULT_WRIST_PAGE_FLIP_SECS: u8 = 3;
-
 struct RuntimeWristFrameProducer {
     services: Arc<dyn VrOverlayRuntimeServices>,
     page: WristPage,
@@ -951,44 +949,15 @@ impl RuntimeWristFrameProducer {
         }
     }
 
-    /// Hide-then-show within the flip window = next page (double tap of the wrist
-    /// button). Frames are sampled about once a second, so the window is generous.
-    fn track_page(&mut self, config: &VrOverlayRuntimeConfig, visible: bool, now: Instant) {
-        let (page, hidden_at) = next_wrist_page(
-            &config.wrist_pages,
-            Duration::from_secs(u64::from(config.wrist_page_flip_secs)),
-            self.page,
-            self.was_visible,
-            self.hidden_at,
-            visible,
-            now,
-        );
-        self.page = page;
-        self.hidden_at = hidden_at;
+    /// Track wrist visibility for inactivity timeout.
+    fn track_page(&mut self, _config: &VrOverlayRuntimeConfig, visible: bool, now: Instant) {
+        // When visible, we had recent interaction so no hidden_at time
+        if visible {
+            self.hidden_at = None;
+        } else {
+            self.hidden_at = Some(now);
+        }
         self.was_visible = visible;
-    }
-}
-
-/// Hide-then-show within `flip_window` advances to the next shown page. Returns
-/// the new page and the time the wrist was last hidden.
-fn next_wrist_page(
-    order: &WristPageOrder,
-    flip_window: Duration,
-    page: WristPage,
-    was_visible: bool,
-    hidden_at: Option<Instant>,
-    visible: bool,
-    now: Instant,
-) -> (WristPage, Option<Instant>) {
-    // Pages can be turned off while shown; fall back to the first shown page.
-    let page = order.normalize(page);
-    if visible && !was_visible {
-        let flip = hidden_at.is_some_and(|hidden| now.duration_since(hidden) <= flip_window);
-        (if flip { order.next_after(page) } else { page }, hidden_at)
-    } else if !visible && was_visible {
-        (page, Some(now))
-    } else {
-        (page, hidden_at)
     }
 }
 
@@ -1130,6 +1099,7 @@ fn wrist_surface_config(
     button: OverlayActivationButton,
     force_visible: bool,
 ) -> OverlaySurfaceConfig {
+    let timeout_ms = 15000; // Default 15 seconds
     OverlaySurfaceConfig {
         surface_id: OverlaySurfaceId::new(surface_id),
         size: size.overlay_size(),
@@ -1139,10 +1109,12 @@ fn wrist_surface_config(
         },
         activation_button: button,
         force_visible,
+        visible_duration_ms: timeout_ms,
     }
 }
 
 fn hmd_surface_config(position: HmdNotificationPosition) -> OverlaySurfaceConfig {
+    let timeout_ms = 5_000; // Default 5 seconds for HMD notifications
     OverlaySurfaceConfig {
         surface_id: OverlaySurfaceId::new(MAIN_SURFACE_ID),
         size: OverlaySize::new(960, 528),
@@ -1152,6 +1124,7 @@ fn hmd_surface_config(position: HmdNotificationPosition) -> OverlaySurfaceConfig
         },
         activation_button: OverlayActivationButton::Grip,
         force_visible: false,
+        visible_duration_ms: timeout_ms,
     }
 }
 
@@ -1292,41 +1265,37 @@ fn sort_wrist_players(rows: &mut [(Option<i64>, WristPlayerRow)], sort: WristPla
 mod wrist_page_tests {
     use super::*;
 
-    const WINDOW: Duration = Duration::from_secs(3);
-
     #[test]
-    fn hide_then_show_quickly_flips_the_page() {
+    fn button_press_while_open_keeps_same_page_and_resets_timeout() {
         let order = WristPageOrder::default();
         let start = Instant::now();
         let at = |secs| start + Duration::from_secs(secs);
-        let step = |page, was, hidden, visible, now| {
-            next_wrist_page(&order, WINDOW, page, was, hidden, visible, now)
-        };
-        let (page, hidden) = step(WristPage::Feed, false, None, true, at(0));
-        assert_eq!(page, WristPage::Feed);
-        let (page, hidden) = step(page, true, hidden, false, at(2));
-        assert_eq!(hidden, Some(at(2)));
-        let (page, hidden) = step(page, false, hidden, true, at(3));
-        assert_eq!(page, WristPage::Players);
-        let (page, hidden) = step(page, true, hidden, false, at(4));
-        // Shown again too late: stays on the same page.
-        let (page, _) = step(page, false, hidden, true, at(20));
-        assert_eq!(page, WristPage::Players);
-    }
 
-    #[test]
-    fn custom_order_and_window_are_respected() {
-        let order = WristPageOrder::from_config("notes,feed");
-        let start = Instant::now();
-        let at = |secs| start + Duration::from_secs(secs);
-        let window = Duration::from_secs(6);
-        // Players was turned off while shown: falls back to the first shown page.
-        let (page, _) =
-            next_wrist_page(&order, window, WristPage::Players, true, None, true, at(0));
-        assert_eq!(page, WristPage::Notes);
-        let (page, hidden) = next_wrist_page(&order, window, page, true, None, false, at(1));
-        let (page, _) = next_wrist_page(&order, window, page, false, hidden, true, at(6));
-        assert_eq!(page, WristPage::Feed, "5 s is inside a 6 s window");
+        // First press: menu opens on Feed page
+        let (page, hidden) = next_wrist_page(
+            &order,
+            Duration::from_secs(15),
+            WristPage::Feed,
+            false,
+            None,
+            true,
+            at(0),
+        );
+        assert_eq!(page, WristPage::Feed);
+        assert_eq!(hidden, None);
+
+        // Second press while already open: page stays same, no hidden time
+        let (page, hidden) = next_wrist_page(
+            &order,
+            Duration::from_secs(15),
+            page,
+            true,
+            hidden,
+            true,
+            at(2),
+        );
+        assert_eq!(page, WristPage::Feed);
+        assert_eq!(hidden, None); // Timeout is reset, not tracking hide time
     }
 
     fn row(name: &str) -> WristPlayerRow {

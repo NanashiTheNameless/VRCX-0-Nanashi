@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { forwardRef, useEffect, useState, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
 
 import { getNavIconComponent } from '@/components/layout/navIconRegistry';
 import { cn } from '@/lib/utils';
@@ -18,6 +19,7 @@ import { SECOND_MS } from '@/shared/constants/time';
 import {
     sidebarTabFallbackIcon,
     type SidebarFavoriteCollectionTabLayoutItem,
+    type SidebarPageTabLayoutItem,
     type SidebarTabLayout,
     type SidebarWorldRoomsTabLayoutItem
 } from '@/shared/utils/sidebarTabLayout';
@@ -123,6 +125,7 @@ export const SidePanel = forwardRef<HTMLElement, SidePanelProps>(
         ref
     ) {
         const { t } = useTranslation();
+        const navigate = useNavigate();
         const { activeTab, setActiveTab } = useSidePanelActiveTab();
         const [prefs, setPrefs] = useState(defaultPrefs);
         const [isRefreshing, setIsRefreshing] = useState(false);
@@ -367,7 +370,16 @@ export const SidePanel = forwardRef<HTMLElement, SidePanelProps>(
                 <Tabs
                     orientation="vertical"
                     value={activeTab}
-                    onValueChange={setActiveTab}
+                    onValueChange={(value) => {
+                        const tabItem = tabItems.find(
+                            (item) => item.value === value
+                        );
+                        if (tabItem?.navigateTo) {
+                            navigate(tabItem.navigateTo);
+                        } else {
+                            setActiveTab(value);
+                        }
+                    }}
                     className="flex min-h-0 min-w-0 flex-1 gap-0 overflow-hidden"
                 >
                     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pb-2 pl-2">
@@ -628,6 +640,37 @@ export const SidePanel = forwardRef<HTMLElement, SidePanelProps>(
                         </div>
                     </div>
                 </Tabs>
+                {/* Page tabs that navigate instead of showing inline content */}
+                <nav className="border-border flex w-full flex-col gap-0 border-t p-1">
+                    {visibleTabLayout
+                        .filter(
+                            (item): item is SidebarPageTabLayoutItem =>
+                                item.type === 'page'
+                        )
+                        .map((item) => {
+                            const Icon = getNavIconComponent(
+                                item.icon,
+                                sidebarTabFallbackIcon(item)
+                            );
+                            return (
+                                <button
+                                    key={item.id}
+                                    type="button"
+                                    className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm"
+                                    onClick={() => navigate(`/${item.page}`)}
+                                >
+                                    {Icon ? <Icon className="size-4" /> : null}
+                                    <span className="truncate">
+                                        {item.page === 'reminders'
+                                            ? t('view.reminders.title')
+                                            : item.page === 'chartsMutual'
+                                              ? t('app.routes.charts_mutual')
+                                              : t('app.routes.tools')}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                </nav>
                 <SidePanelFavoriteGroupOrderDialog
                     open={favoriteGroupOrderDialogOpen}
                     onOpenChange={setFavoriteGroupOrderDialogOpen}

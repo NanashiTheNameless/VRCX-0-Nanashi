@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 use zip::write::SimpleFileOptions;
 use zip::{CompressionMethod, ZipArchive, ZipWriter};
 
-use crate::legacy_migration::snapshot_database;
+use crate::legacy_migration::copy_database_snapshot;
 use crate::Error;
 
 pub const DATA_EXPORT_FORMAT: &str = "vrcx-0-nanashi-data-export";
@@ -207,7 +207,7 @@ pub fn export_data_archive(
     fs::create_dir_all(&staging)?;
     let result = (|| {
         let snapshot = staging.join(DATABASE_FILE);
-        snapshot_database(db_file, &snapshot)?;
+        copy_database_snapshot(db_file, &snapshot, |_, _| {})?;
         strip_login_sessions(&snapshot)?;
 
         let mut files = Vec::new();
