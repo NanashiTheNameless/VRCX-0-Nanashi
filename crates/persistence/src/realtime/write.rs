@@ -7,19 +7,12 @@ use crate::game_log::{ensure_game_log_tables, GameLogLocationEntry, GameLogLocat
 use crate::ownership::{owner_id_get_or_insert, OwnerId, OwnerRowId};
 use crate::Error;
 use vrcx_0_contracts::feed_live::FeedLiveEntry;
-use vrcx_0_core::trust::trust_level_changed;
+use vrcx_0_contracts::friend_log::FriendLogCurrentOutput;
+use vrcx_0_core::friend_log::{plan_friend_log_upsert, FriendLogCurrent, FriendLogUpsertInput};
 
 use super::schema::{ensure_realtime_tables, normalize_user_table_prefix};
 use super::types::*;
 use vrcx_0_core::text::first_non_empty;
-
-#[derive(Clone, Debug, Default)]
-struct ExistingFriendLogRow {
-    user_id: String,
-    display_name: String,
-    trust_level: String,
-    friend_number: i64,
-}
 
 struct FriendLogHistoryEntry<'a> {
     created_at: &'a str,
@@ -153,46 +146,40 @@ fn upsert_friend_log_current(
         &format!(
             "SELECT user_id, display_name, trust_level, friend_number FROM {user_prefix}_friend_log_current WHERE user_id = @user_id LIMIT 1"
         ),
-        &ParamsBuilder::new().set("user_id", target_user_id.clone()).build(),
+        &ParamsBuilder::new().set("user_id", target_user_id).build(),
     )?;
     let existing = existing_rows
         .first()
         .map(|row| existing_friend_log_row(row));
-    let friend_number = if entry.friend_number > 0 {
-        entry.friend_number
-    } else if let Some(existing) = existing.as_ref() {
-        existing.friend_number
-    } else {
-        next_friend_number(tx, user_prefix)?
+    let Some(plan) = plan_friend_log_upsert(
+        FriendLogUpsertInput {
+            target_user_id: &entry.target_user_id,
+            display_name: &entry.display_name,
+            trust_level: &entry.trust_level,
+            friend_number: entry.friend_number,
+            force_history: entry.force_history,
+        },
+        existing.as_ref().map(|existing| FriendLogCurrent {
+            display_name: &existing.display_name,
+            trust_level: &existing.trust_level,
+            friend_number: existing.friend_number,
+        }),
+        || next_friend_number(tx, user_prefix),
+    )?
+    else {
+        return Ok(0);
     };
-    let existing_display_name = existing
-        .as_ref()
-        .map(|existing| existing.display_name.trim())
-        .unwrap_or("");
-    let entry_display_name = entry.display_name.trim();
-    let display_name = if !entry_display_name.is_empty() && entry_display_name != "Unknown" {
-        entry_display_name
-    } else if !existing_display_name.is_empty() && existing_display_name != "Unknown" {
-        existing_display_name
-    } else {
-        "Unknown"
-    };
-    let existing_trust_level = existing
-        .as_ref()
-        .map(|existing| existing.trust_level.trim())
-        .unwrap_or("");
-    let trust_level =
-        first_non_empty([entry.trust_level.as_str(), existing_trust_level, "Visitor"]);
+    let params = ParamsBuilder::new()
+        .set("user_id", plan.user_id.clone())
+        .set("display_name", plan.display_name.clone())
+        .set("trust_level", plan.trust_level.clone())
+        .set("friend_number", plan.friend_number)
+        .build();
     let insert_count = tx.execute_non_query(
         &format!(
             "INSERT OR IGNORE INTO {user_prefix}_friend_log_current (user_id, display_name, trust_level, friend_number) VALUES (@user_id, @display_name, @trust_level, @friend_number)"
         ),
-        &ParamsBuilder::new()
-            .set("user_id", target_user_id.clone())
-            .set("display_name", display_name)
-            .set("trust_level", trust_level)
-            .set("friend_number", friend_number)
-            .build(),
+        &params,
     )?;
     let mut affected = affected_count(insert_count);
     if insert_count <= 0 {
@@ -200,78 +187,22 @@ fn upsert_friend_log_current(
             &format!(
                 "UPDATE {user_prefix}_friend_log_current SET display_name = @display_name, trust_level = @trust_level, friend_number = CASE WHEN @friend_number > 0 THEN @friend_number ELSE friend_number END WHERE user_id = @user_id"
             ),
-            &ParamsBuilder::new()
-                .set("user_id", target_user_id.clone())
-                .set("display_name", display_name)
-                .set("trust_level", trust_level)
-                .set("friend_number", friend_number)
-                .build(),
+            &params,
         )?));
-        let renamed = !existing_display_name.is_empty()
-            && existing_display_name != "Unknown"
-            && display_name != "Unknown"
-            && display_name != existing_display_name;
-        if renamed {
-            affected = affected.saturating_add(add_friend_log_history(
-                tx,
-                user_prefix,
-                &FriendLogHistoryEntry {
-                    created_at: &entry.created_at,
-                    entry_type: "DisplayName",
-                    user_id: &target_user_id,
-                    display_name,
-                    previous_display_name: existing_display_name,
-                    trust_level,
-                    previous_trust_level: "",
-                    friend_number,
-                },
-            )?);
-        }
-        if trust_level_changed(existing_trust_level, trust_level) {
-            affected = affected.saturating_add(add_friend_log_history(
-                tx,
-                user_prefix,
-                &FriendLogHistoryEntry {
-                    created_at: &entry.created_at,
-                    entry_type: "TrustLevel",
-                    user_id: &target_user_id,
-                    display_name,
-                    previous_display_name: "",
-                    trust_level,
-                    previous_trust_level: existing_trust_level,
-                    friend_number,
-                },
-            )?);
-        }
-        if entry.force_history {
-            affected = affected.saturating_add(add_friend_log_history(
-                tx,
-                user_prefix,
-                &FriendLogHistoryEntry {
-                    created_at: &entry.created_at,
-                    entry_type: "Friend",
-                    user_id: &target_user_id,
-                    display_name,
-                    previous_display_name: "",
-                    trust_level,
-                    previous_trust_level: "",
-                    friend_number,
-                },
-            )?);
-        }
-    } else {
+    }
+    for history in &plan.history {
         affected = affected.saturating_add(add_friend_log_history(
             tx,
             user_prefix,
             &FriendLogHistoryEntry {
                 created_at: &entry.created_at,
-                entry_type: "Friend",
-                user_id: &target_user_id,
-                display_name,
-                previous_display_name: "",
-                trust_level,
-                previous_trust_level: "",
-                friend_number,
+                entry_type: history.entry_type,
+                user_id: &plan.user_id,
+                display_name: &plan.display_name,
+                previous_display_name: &history.previous_display_name,
+                trust_level: &plan.trust_level,
+                previous_trust_level: &history.previous_trust_level,
+                friend_number: plan.friend_number,
             },
         )?);
     }
@@ -582,7 +513,7 @@ fn expire_notification(
             .build(),
     )?);
     affected = affected.saturating_add(affected_count(tx.execute_non_query(
-        &format!("UPDATE {user_prefix}_notifications SET expired = 1 WHERE id = @id"),
+        &format!("UPDATE {user_prefix}_notifications SET expired = 1, seen = 1 WHERE id = @id"),
         &ParamsBuilder::new().set("id", id).build(),
     )?));
     Ok(affected)
@@ -829,8 +760,8 @@ fn next_friend_number(
     })
 }
 
-fn existing_friend_log_row(row: &[Value]) -> ExistingFriendLogRow {
-    ExistingFriendLogRow {
+fn existing_friend_log_row(row: &[Value]) -> FriendLogCurrentOutput {
+    FriendLogCurrentOutput {
         user_id: row
             .first()
             .and_then(Value::as_str)

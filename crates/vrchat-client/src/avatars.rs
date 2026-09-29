@@ -8,9 +8,7 @@ use crate::http_api::{
 };
 use crate::query::{AvatarListSort, QueryOrder, ReleaseStatusFilter};
 
-mod request;
-
-pub use request::{AvatarReleaseStatus, AvatarUpdateRequest};
+pub use vrcx_0_contracts::vrchat_requests::{AvatarReleaseStatus, AvatarUpdateRequest};
 
 pub fn avatar_get_input(
     endpoint: String,

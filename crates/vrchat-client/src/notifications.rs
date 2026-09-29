@@ -7,9 +7,7 @@ use crate::http_api::{
     HttpApiRequestBody, HttpApiRequestInput, HttpApiUpload,
 };
 
-mod request;
-
-pub use request::RequestInviteRequest;
+pub use vrcx_0_contracts::vrchat_requests::RequestInviteRequest;
 
 pub fn notifications_v1_get_input(endpoint: String, n: i32, offset: i32) -> HttpApiRequestInput {
     get_input(

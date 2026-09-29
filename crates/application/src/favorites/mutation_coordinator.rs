@@ -3,7 +3,7 @@ use std::sync::Arc;
 use vrcx_0_application_core::{
     FavoriteChangeScope, FavoritesChangedPayload, RemoteMutationGate, RuntimeAuthScope,
     RuntimeAuthScopeSnapshot, RuntimeDiagnostics, RuntimeEventBus, RuntimeOperationStatus,
-    RuntimeSyncEngine,
+    RuntimeSyncEngine, WorldCache,
 };
 use vrcx_0_contracts::social_aggregates::{FavoriteLocalInput, FavoriteOutput};
 use vrcx_0_core::FavoriteEntityKind;
@@ -37,6 +37,7 @@ pub struct FavoriteMutationCoordinator {
     event_bus: RuntimeEventBus,
     auth_scope: RuntimeAuthScope,
     remote_mutations: Arc<RemoteMutationGate>,
+    world_cache: Arc<WorldCache>,
 }
 
 #[derive(Clone)]
@@ -46,6 +47,7 @@ pub struct FavoriteMutationRuntimeDeps {
     event_bus: RuntimeEventBus,
     auth_scope: RuntimeAuthScope,
     remote_mutations: Arc<RemoteMutationGate>,
+    world_cache: Arc<WorldCache>,
 }
 
 impl FavoriteMutationRuntimeDeps {
@@ -55,6 +57,7 @@ impl FavoriteMutationRuntimeDeps {
         event_bus: RuntimeEventBus,
         auth_scope: RuntimeAuthScope,
         remote_mutations: Arc<RemoteMutationGate>,
+        world_cache: Arc<WorldCache>,
     ) -> Self {
         Self {
             diagnostics,
@@ -62,6 +65,7 @@ impl FavoriteMutationRuntimeDeps {
             event_bus,
             auth_scope,
             remote_mutations,
+            world_cache,
         }
     }
 }
@@ -80,6 +84,7 @@ impl FavoriteMutationCoordinator {
             event_bus: runtime.event_bus,
             auth_scope: runtime.auth_scope,
             remote_mutations: runtime.remote_mutations,
+            world_cache: runtime.world_cache,
         }
     }
 
@@ -274,6 +279,7 @@ impl FavoriteMutationCoordinator {
             &FavoriteTransferDeps {
                 store: self.store.as_ref(),
                 remote: self.remote.as_ref(),
+                world_cache: self.world_cache.as_ref(),
                 mutation,
             },
             input,

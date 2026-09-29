@@ -18,13 +18,14 @@ with tools this turn]";
 const MISSING_TOOL_RESULT: &str = "\
 [no result recorded: this call was cancelled or failed before it completed]";
 
-const NARRATOR_PROMPT: &str = "\
+const TOOLS_PROMPT: &str = "\
 Tools:
-- Pick the one tool whose description fits the question. Use several tools only for \
-broad questions.
-- Ranked tools pre-sort and limit rows. Read the top rows and answer. Do not call \
-more tools to enumerate everyone.
+- Choose tools by their descriptions. Multi-step investigation is fine: resolve a \
+person, drill into their companions or activity, compare periods, then answer.
+- Ranked tools pre-sort and limit rows; mention truncation or limited coverage when \
+it matters.";
 
+const NARRATOR_HISTORY_PROMPT: &str = "\
 History:
 - Your earlier replies are not data. Never reuse their numbers, rankings, time \
 windows, or social claims - recompute with tools this turn.
@@ -32,13 +33,7 @@ windows, or social claims - recompute with tools this turn.
 honor stated preferences, and understand follow-ups. Prefer the ids from the \
 \"Known references\" note.";
 
-const OPEN_PROMPT: &str = "\
-Tools:
-- Choose tools by their descriptions. Multi-step investigation is fine: resolve a \
-person, drill into their companions or activity, compare periods, then answer.
-- Ranked tools pre-sort and limit rows; mention truncation or limited coverage when \
-it matters.
-
+const OPEN_HISTORY_PROMPT: &str = "\
 History:
 - Earlier tool results in this conversation are real data. Reuse their ids, rows, and \
 numbers to answer follow-ups without re-querying when the question is about the same \
@@ -92,13 +87,14 @@ fn build_context_messages(
     route: Option<playbook::Playbook>,
     now_local: DateTime<FixedOffset>,
 ) -> Vec<ChatMessage> {
-    let mode_prompt = match mode {
-        ContextMode::Narrator => NARRATOR_PROMPT,
-        ContextMode::Open => OPEN_PROMPT,
+    let history_prompt = match mode {
+        ContextMode::Narrator => NARRATOR_HISTORY_PROMPT,
+        ContextMode::Open => OPEN_HISTORY_PROMPT,
     };
     let mut system_sections = vec![
         SYSTEM_PROMPT.to_string(),
-        mode_prompt.to_string(),
+        TOOLS_PROMPT.to_string(),
+        history_prompt.to_string(),
         current_time_directive(now_local),
     ];
     if let Some(pb) = route {
@@ -618,6 +614,7 @@ mod tests {
         assert!(system.contains("zh-CN"));
         assert!(system.contains("Your earlier replies are not data"));
         assert!(!system.contains("Earlier tool results in this conversation are real data"));
+        assert!(system.contains("Multi-step investigation is fine"));
 
         let open = build_context_messages(
             ContextMode::Open,

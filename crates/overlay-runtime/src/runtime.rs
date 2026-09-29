@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
+    atomic::{AtomicBool, AtomicU64, Ordering},
     Arc, Condvar, Mutex, Weak,
 };
 use std::thread::{self, ThreadId};
@@ -260,6 +260,8 @@ pub struct VrOverlayRuntime {
     wrist_frame_release_requested: AtomicBool,
     hmd_frame_release_requested: AtomicBool,
     device_refresh_requested: AtomicBool,
+    config_dirty: AtomicBool,
+    config_generation: AtomicU64,
     backend_available: bool,
     pub(crate) services: Option<Arc<dyn VrOverlayRuntimeServices>>,
     config: Mutex<VrOverlayRuntimeConfig>,
@@ -349,6 +351,9 @@ impl VrOverlayRuntime {
         } else {
             HostVrOverlayService::new_noop(service_configs)
         };
+        let config_generation = services
+            .as_ref()
+            .map_or(0, |services| services.config().write_generation());
         Self {
             enabled: AtomicBool::new(false),
             test_mode: AtomicBool::new(false),
@@ -358,6 +363,8 @@ impl VrOverlayRuntime {
             wrist_frame_release_requested: AtomicBool::new(false),
             hmd_frame_release_requested: AtomicBool::new(false),
             device_refresh_requested: AtomicBool::new(false),
+            config_dirty: AtomicBool::new(false),
+            config_generation: AtomicU64::new(config_generation),
             backend_available,
             services,
             manager: Mutex::new(VrOverlayManager::new(service)),
@@ -381,7 +388,7 @@ impl VrOverlayRuntime {
             tracing::warn!("no VR overlay backend is available in this build");
         }
         self.enabled.store(enabled, Ordering::Release);
-        self.reconcile_current_with_device_refresh(true);
+        self.reconcile(true, true);
         if !enabled && !self.current_runtime_config().hmd.enabled {
             self.release_frame_producer();
         }
@@ -394,7 +401,7 @@ impl VrOverlayRuntime {
         if !test_mode {
             self.clear_hmd_toasts();
         }
-        self.reconcile_current_with_device_refresh(true);
+        self.reconcile(true, true);
         if !test_mode && !self.enabled.load(Ordering::Acquire) {
             self.release_frame_producer();
         }
@@ -427,7 +434,7 @@ impl VrOverlayRuntime {
                 let now = Instant::now();
                 let refresh_devices =
                     now >= next_device_refresh || runtime.consume_device_refresh_request();
-                runtime.reconcile_current_with_device_refresh(refresh_devices);
+                runtime.reconcile(refresh_devices, false);
                 if refresh_devices {
                     next_device_refresh = now + WRIST_DEVICE_REFRESH_INTERVAL;
                 }
@@ -462,10 +469,6 @@ impl VrOverlayRuntime {
 }
 
 impl VrOverlayRuntime {
-    pub fn is_backend_available(&self) -> bool {
-        self.backend_available
-    }
-
     pub fn stop_detached(&self) {
         if let Ok(mut manager) = self.manager.lock() {
             manager.stop_detached();
@@ -588,18 +591,38 @@ impl VrOverlayRuntime {
         }
         self.steamvr_running
             .store(steamvr_running, Ordering::Release);
-        self.reconcile_current_with_device_refresh(true);
+        self.reconcile(true, false);
     }
 
     pub fn reconcile_current(&self) {
-        self.reconcile_current_with_device_refresh(false);
+        self.reconcile(false, false);
     }
 
-    fn reconcile_current_with_device_refresh(&self, refresh_devices: bool) {
+    pub fn mark_config_dirty(&self) {
+        self.config_dirty.store(true, Ordering::Release);
+        self.refresh_wake.notify();
+    }
+
+    fn config_generation_advanced(&self) -> bool {
+        let Some(services) = &self.services else {
+            return false;
+        };
+        let generation = services.config().write_generation();
+        self.config_generation.swap(generation, Ordering::AcqRel) != generation
+    }
+
+    fn reconcile(&self, refresh_devices: bool, reload_config: bool) {
         if self.is_refresh_thread() {
             self.consume_slint_renderer_release_requests();
         }
-        let changed_config = self.changed_runtime_config();
+        let changed_config = if reload_config
+            || self.config_dirty.swap(false, Ordering::AcqRel)
+            || self.config_generation_advanced()
+        {
+            self.changed_runtime_config()
+        } else {
+            None
+        };
         if let Ok(mut manager) = self.manager.lock() {
             let mut config = self.current_runtime_config();
             if let Some(next_config) = changed_config {
@@ -1332,3 +1355,5 @@ mod wrist_page_tests {
 
 #[cfg(test)]
 mod activity_sink_tests;
+#[cfg(test)]
+mod config_reload_tests;

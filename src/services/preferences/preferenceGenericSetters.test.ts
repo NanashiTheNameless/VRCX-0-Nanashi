@@ -4,7 +4,6 @@ const mocks = vi.hoisted(() => ({
     appLanguageChanged: vi.fn(),
     appRestartApplication: vi.fn(),
     appSetStartup: vi.fn(),
-    appVrOverlayConfigReload: vi.fn(),
     appFeedPersistenceSetDisabled: vi.fn(),
     getBool: vi.fn(),
     getString: vi.fn(),
@@ -35,7 +34,6 @@ vi.mock('@/platform/tauri/bindings', () => ({
         appLanguageChanged: mocks.appLanguageChanged,
         appRestartApplication: mocks.appRestartApplication,
         appSetStartup: mocks.appSetStartup,
-        appVrOverlayConfigReload: mocks.appVrOverlayConfigReload,
         appFeedPersistenceSetDisabled: mocks.appFeedPersistenceSetDisabled
     }
 }));
@@ -159,7 +157,6 @@ describe('preferenceGenericSetters', () => {
         mocks.storageSetString.mockResolvedValue(undefined);
         mocks.appSetStartup.mockResolvedValue(false);
         mocks.appRestartApplication.mockResolvedValue(undefined);
-        mocks.appVrOverlayConfigReload.mockResolvedValue(undefined);
         mocks.appFeedPersistenceSetDisabled.mockResolvedValue(undefined);
         useFeedLiveStore.getState().resetFeedLive();
         mocks.readRecentActionCooldown.mockReturnValue({

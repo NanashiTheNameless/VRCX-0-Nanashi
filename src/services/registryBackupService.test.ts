@@ -50,8 +50,7 @@ const commandMocks = [
 const backup = {
     key: 'backup-key',
     name: 'Before update',
-    date: '2026-07-15T12:00:00Z',
-    data: null
+    date: '2026-07-15T12:00:00Z'
 };
 
 describe('registryBackupService', () => {

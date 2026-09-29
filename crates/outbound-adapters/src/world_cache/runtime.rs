@@ -166,6 +166,17 @@ impl WorldCache {
         Some(summary)
     }
 
+    pub fn store_from_payload(&self, world_value: &Value) -> crate::Result<Option<String>> {
+        let Some((summary, entry)) = self.hydrate_summary_from_payload_with_entry(world_value)
+        else {
+            return Ok(None);
+        };
+        if let Some(entry) = entry {
+            world_cache_upsert(self.db.as_ref(), entry).map_err(crate::map_persistence_error)?;
+        }
+        Ok(Some(summary.name))
+    }
+
     fn hydrate_summary_from_payload_with_entry(
         &self,
         world_value: &Value,
@@ -501,6 +512,10 @@ impl vrcx_0_application_core::WorldCachePort for WorldCache {
         world_value: &Value,
     ) -> Option<vrcx_0_contracts::WorldSummaryOutput> {
         WorldCache::hydrate_summary_from_payload(self, world_value)
+    }
+
+    fn store_from_payload(&self, world_value: &Value) -> crate::Result<Option<String>> {
+        WorldCache::store_from_payload(self, world_value)
     }
 
     fn hydrate_favorite_payloads(&self, world_values: &[Value]) -> Vec<Option<Value>> {

@@ -4,10 +4,10 @@ use vrcx_0_vrchat_client::web_client::{WebClient, WebExecuteRequest};
 
 const VRC_STATUS_TEST_URL: &str = "https://status.vrchat.com/api/v2/status.json";
 
-pub(crate) struct TauriProxyConnectivityAdapter;
+pub struct ProxyConnectivityAdapter;
 
 #[async_trait]
-impl ProxyConnectivityPort for TauriProxyConnectivityAdapter {
+impl ProxyConnectivityPort for ProxyConnectivityAdapter {
     async fn execute(
         &self,
         normalized_proxy: Option<String>,

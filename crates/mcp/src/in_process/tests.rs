@@ -406,3 +406,71 @@ async fn online_friends_tool_honors_custom_states_and_location_redaction() {
     assert!(structured["rows"][0]["worldName"].is_null());
     assert!(structured["rows"][0]["instanceAccessType"].is_null());
 }
+
+struct TokioTaskExecutor;
+
+struct TokioTaskHandle(tokio::task::JoinHandle<()>);
+
+impl RuntimeTaskExecutor for TokioTaskExecutor {
+    fn spawn(&self, task: RuntimeTask) -> Box<dyn RuntimeTaskHandle> {
+        Box::new(TokioTaskHandle(tokio::spawn(task)))
+    }
+}
+
+impl RuntimeTaskHandle for TokioTaskHandle {
+    fn abort(&self) {
+        self.0.abort();
+    }
+
+    fn is_finished(&self) -> bool {
+        self.0.is_finished()
+    }
+
+    fn join_or_abort(&mut self, _timeout: Duration) {
+        self.0.abort();
+    }
+}
+
+struct GatedFavoritesQueries {
+    release: std::sync::Mutex<std::sync::mpsc::Receiver<()>>,
+}
+
+impl crate::ports::McpFavoritesQueryPort for GatedFavoritesQueries {
+    fn favorite_list(
+        &self,
+        _owner_user_id: &OwnerId,
+        _kind: vrcx_0_core::FavoriteEntityKind,
+    ) -> vrcx_0_application_core::Result<Vec<vrcx_0_contracts::FavoriteRow>> {
+        match self
+            .release
+            .lock()
+            .unwrap()
+            .recv_timeout(Duration::from_secs(2))
+        {
+            Ok(()) | Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => Ok(Vec::new()),
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => Err(
+                vrcx_0_application_core::Error::Custom("the query was never released".into()),
+            ),
+        }
+    }
+}
+
+#[tokio::test]
+async fn blocking_tool_queries_leave_the_async_runtime_free() {
+    let (_dir, mut runtime) = test_runtime("in-process-blocking-query", "usr_owner").unwrap();
+    let (release_tx, release_rx) = std::sync::mpsc::channel();
+    runtime.favorites_queries = std::sync::Arc::new(GatedFavoritesQueries {
+        release: std::sync::Mutex::new(release_rx),
+    });
+    runtime.tasks.set_executor(TokioTaskExecutor);
+    let tools = spawn_in_process_tools(runtime).await.unwrap();
+
+    let release = async move {
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        let _ = release_tx.send(());
+    };
+    let (outcome, ()) = tokio::join!(tools.call_tool("get_favorites", None), release);
+
+    let outcome = outcome.unwrap();
+    assert!(!outcome.is_error, "{}", outcome.text);
+}

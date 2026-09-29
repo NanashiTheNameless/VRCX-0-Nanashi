@@ -344,21 +344,12 @@ describe('preferencesStore normalizers', () => {
             localFavoriteFriendsGroups: ['VIP', '', null],
             overlayActivityFilters: JSON.stringify({
                 wrist: {
-                    favoriteGroupKeys: ['group_1'],
-                    categories: {
-                        profileChange: {
-                            scope: 'allFavorites',
-                            favoriteGroupKeys: ['group_2'],
-                            typeOverrides: {
-                                Avatar: {
-                                    scope: 'off'
-                                },
-                                Bio: {
-                                    scope: 'selectedFavorites',
-                                    favoriteGroupKeys: ['group_3']
-                                }
-                            },
-                            priority: 'low'
+                    types: {
+                        DisplayName: { scope: 'allFavorites' },
+                        AvatarChange: { scope: 'off' },
+                        Bio: {
+                            scope: 'selectedFavorites',
+                            favoriteGroupKeys: ['group_3', '']
                         }
                     }
                 }

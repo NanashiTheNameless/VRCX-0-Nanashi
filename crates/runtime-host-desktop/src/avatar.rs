@@ -7,7 +7,7 @@ use vrcx_0_application::avatars::{
     AvatarRemoteMutation, AvatarRemoteMutationDeps, AvatarSelectionMutationOutcome,
     MyAvatarByIdInput, MyAvatarsDeps, MyAvatarsInput,
 };
-use vrcx_0_application::remote::AvatarUpdateRequest as ApplicationAvatarUpdateRequest;
+use vrcx_0_application::remote::AvatarUpdateRequest;
 use vrcx_0_application_core::vrchat_api::VrchatApiResponse;
 use vrcx_0_application_core::{
     AuthenticatedMutationContext, AvatarCache, RemoteMutationGate, RuntimeAuthScope,
@@ -124,7 +124,7 @@ impl DesktopAvatarRuntime {
     pub async fn save(
         &self,
         avatar_id: String,
-        params: ApplicationAvatarUpdateRequest,
+        params: AvatarUpdateRequest,
     ) -> Result<VrchatApiResponse> {
         let deps = self.mutation_deps()?;
         let avatar_id = avatar_id.trim().to_string();

@@ -232,6 +232,14 @@ mod tests {
             assert!(indicator.state.try_lock().is_ok());
             self.tray_calls.lock().unwrap().push(notify);
         }
+
+        fn vrchat_auth_failed(
+            &self,
+            _failure: &vrcx_0_application_core::RuntimeVrchatAuthFailurePayload,
+        ) {
+        }
+
+        fn refresh_tray_menu(&self) {}
     }
 
     struct Fixture {

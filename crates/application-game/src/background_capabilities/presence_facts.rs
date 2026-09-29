@@ -2,7 +2,9 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use serde::Serialize;
-use vrcx_0_core::location::{normalize_instance_type, parse_location, ParsedLocation};
+use vrcx_0_core::location::{
+    is_real_instance, normalize_instance_type, parse_location, ParsedLocation,
+};
 
 use crate::{GameStateStore, NowPlayingSnapshot, PlayerState, Result, RuntimeSnapshot};
 
@@ -75,7 +77,7 @@ pub fn build_background_presence_facts(
         .to_string();
     let parsed_location = parse_location(&current_location);
     let instance_type = normalize_instance_type(&parsed_location);
-    let has_live_location = is_live_current_location(&current_location);
+    let has_live_location = is_real_instance(&current_location);
     let players = if game_snapshot.ready {
         normalize_runtime_players(&game_snapshot.players)
     } else {
@@ -254,14 +256,6 @@ fn check_can_invite(location: &str, parsed: &ParsedLocation, current_user_id: &s
     true
 }
 
-fn is_live_current_location(location: &str) -> bool {
-    let normalized = location.trim();
-    !normalized.is_empty()
-        && normalized != "offline"
-        && normalized != "private"
-        && normalized != "traveling"
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -343,5 +337,40 @@ mod roster_tests {
         .unwrap();
         assert!(facts.players.is_empty());
         assert!(facts.player_facts_known);
+    }
+
+    #[test]
+    fn sentinel_locations_do_not_count_as_a_live_instance() {
+        let store = crate::ports::TestGameStateStore::default();
+        for location in [
+            "traveling:traveling",
+            "private:private",
+            "OFFLINE",
+            ":",
+            "local:1234",
+        ] {
+            let facts = build_background_presence_facts(
+                &store,
+                BackgroundPresenceFactsInput {
+                    session: Default::default(),
+                    is_game_running: true,
+                    is_steamvr_running: false,
+                    is_game_no_vr: true,
+                    last_game_started_at: None,
+                    game_log_snapshot: Arc::new(RuntimeSnapshot {
+                        ready: true,
+                        has_player_events: true,
+                        location: location.into(),
+                        ..Default::default()
+                    }),
+                    now_playing: Arc::new(NowPlayingSnapshot::default()),
+                    friend_user_ids: &HashSet::new(),
+                    favorite_friend_groups_by_key: &HashMap::new(),
+                    favorite_world_groups_by_key: &HashMap::new(),
+                },
+            )
+            .unwrap();
+            assert!(!facts.player_facts_known, "{location}");
+        }
     }
 }

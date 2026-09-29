@@ -9,9 +9,7 @@ use vrcx_0_application_core::{
 
 use vrcx_0_contracts::game_log::{GameLogJoinLeaveEntry, GameLogWriteBatch};
 use vrcx_0_core::game_log_parser::GameLogEvent;
-use vrcx_0_core::location::{
-    is_meaningful_world_name, world_id_from_location as world_id_from_location_or_id,
-};
+use vrcx_0_core::location::{is_meaningful_world_name, world_id_from_location};
 
 use crate::game_log::host::GameLogHostActions;
 use crate::game_log::ingest::{
@@ -674,7 +672,7 @@ impl GameLogProcessor {
         if is_meaningful_world_name(current_world_name) {
             return None;
         }
-        let world_id = world_id_from_location_or_id(location);
+        let world_id = world_id_from_location(location);
         if world_id.is_empty() {
             return None;
         }

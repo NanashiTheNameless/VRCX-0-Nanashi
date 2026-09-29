@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-    appVrOverlayConfigReload: vi.fn(),
     appLanguageChanged: vi.fn(),
     appRestartApplication: vi.fn(),
     appOverlayActivityDefinitionsGet: vi.fn(),
@@ -40,7 +39,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
-        appVrOverlayConfigReload: mocks.appVrOverlayConfigReload,
         appLanguageChanged: mocks.appLanguageChanged,
         appRestartApplication: mocks.appRestartApplication,
         appOverlayActivityDefinitionsGet:
@@ -272,7 +270,6 @@ describe('preferencesService characterization', () => {
         mocks.appOverlayActivityDefinitionsGet.mockResolvedValue([]);
         mocks.appOverlayActivityFiltersSet.mockResolvedValue(undefined);
         mocks.appNotificationActivityFiltersSet.mockResolvedValue(undefined);
-        mocks.appVrOverlayConfigReload.mockResolvedValue(undefined);
         mocks.appLanguageChanged.mockResolvedValue(undefined);
         mocks.appRestartApplication.mockResolvedValue(undefined);
         mocks.appDisableVrchatRichPresence.mockResolvedValue({ changed: true });
@@ -595,7 +592,6 @@ describe('preferencesService characterization', () => {
             cjkFontPack: 'noto',
             locale: 'en'
         });
-        expect(mocks.appVrOverlayConfigReload).toHaveBeenCalledTimes(1);
         expect(mocks.appLanguageChanged).toHaveBeenCalledWith('en');
     });
 

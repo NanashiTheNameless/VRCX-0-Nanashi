@@ -192,15 +192,18 @@ fn emit_note_export_auth_failure(
     if !scope.generation_matches(expected_scope) {
         return;
     }
-    event_bus.emit_runtime_vrchat_auth_failure(RuntimeVrchatAuthFailurePayload {
-        owner_user_id: OwnerId::new(scope.current_user_id),
-        endpoint: scope.endpoint,
-        path: path.to_string(),
-        reason: reason.to_string(),
-        status_code,
-        auth_scope_generation: scope.generation,
-        realtime_transport: None,
-    });
+    auth_scope.report_vrchat_auth_failure(
+        event_bus,
+        RuntimeVrchatAuthFailurePayload {
+            owner_user_id: OwnerId::new(scope.current_user_id),
+            endpoint: scope.endpoint,
+            path: path.to_string(),
+            reason: reason.to_string(),
+            status_code,
+            auth_scope_generation: scope.generation,
+            realtime_transport: None,
+        },
+    );
 }
 
 fn note_save_response_error(status: i32, data: &str) -> Option<String> {

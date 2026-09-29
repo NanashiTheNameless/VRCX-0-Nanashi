@@ -15,8 +15,7 @@ import { normalizeTableDensity, type TableDensity } from '@/state/shellStore';
 
 import {
     DEFAULT_TABLE_PAGE_SIZE,
-    LEGACY_OVERLAY_NOTIFICATION_KEYS,
-    WRIST_OVERLAY_RUNTIME_CONFIG_KEYS
+    LEGACY_OVERLAY_NOTIFICATION_KEYS
 } from './preferencesConstants';
 import type {
     PreferenceKey,
@@ -71,16 +70,6 @@ export function patchPreferenceValue(
 
 export async function appLanguageChanged(language: string) {
     await commands.appLanguageChanged(language);
-}
-
-export async function reloadWristOverlayRuntimeConfigIfNeeded(key: string) {
-    const normalizedKey = normalizePreferenceKey(key);
-    if (!WRIST_OVERLAY_RUNTIME_CONFIG_KEYS.has(normalizedKey)) {
-        return;
-    }
-    await commands.appVrOverlayConfigReload().catch((error) => {
-        console.warn('Failed to reload wrist overlay runtime config:', error);
-    });
 }
 
 export function normalizeStringList(value: unknown): string[] {

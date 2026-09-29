@@ -5,12 +5,11 @@ use serde_json::{json, Value};
 use url::Url;
 pub use vrcx_0_contracts::vrchat_api::{
     classify_vrchat_auth_failure, classify_vrchat_response as classify_api_response,
-    parse_vrchat_json as parse_api_json, vrchat_auth_error_message,
-    vrchat_response as execute_response, VrchatAuthFailureKind, VrchatFailure as VrchatApiFailure,
+    vrchat_auth_error_message, vrchat_response as execute_response, VrchatAuthFailureKind,
     VrchatJsonResponse as ApiJsonResponse, VrchatRequest as HttpApiRequestInput,
     VrchatRequestBody as HttpApiRequestBody, VrchatResponse as HttpApiExecuteResponse,
-    VrchatResponseClass as ApiResponseClass, VrchatResponsePolicy as ApiResponsePolicy,
-    VrchatScope as ApiScope, VrchatUpload as HttpApiUpload,
+    VrchatResponseClass as ApiResponseClass, VrchatScope as ApiScope,
+    VrchatUpload as HttpApiUpload,
 };
 pub use vrcx_0_core::text::normalize_text;
 pub use vrcx_0_core::vrchat_endpoints::normalize_vrchat_api_endpoint;

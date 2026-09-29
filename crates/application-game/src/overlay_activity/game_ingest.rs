@@ -4,7 +4,7 @@ use vrcx_0_application_activity::{
     OverlayActivityRuntime,
 };
 use vrcx_0_contracts::game_log::GameLogJoinLeaveEntry;
-use vrcx_0_core::location::world_id_from_location as world_id_from_location_or_id;
+use vrcx_0_core::location::world_id_from_location;
 
 use crate::game_log::video::VideoInput;
 use crate::game_log::GameLogIngestOutput;
@@ -54,7 +54,7 @@ impl OverlayActivityGameIngestExt for OverlayActivityRuntime {
                 favorite_subject: OverlayActivityFavoriteSubject::UserId(entry.user_id.clone()),
                 payload: json!({
                     "location": entry.location,
-                    "worldId": world_id_from_location_or_id(&entry.location),
+                    "worldId": world_id_from_location(&entry.location),
                     "worldName": entry.world_name,
                     "time": entry.time,
                 })
@@ -121,7 +121,7 @@ pub(crate) fn video_activity_candidate(input: &VideoInput) -> OverlayActivityCan
         "videoUrl": input.video_url,
         "videoId": input.video_id,
         "videoName": input.video_name,
-        "worldId": world_id_from_location_or_id(&input.location),
+        "worldId": world_id_from_location(&input.location),
         "worldName": input.world_name,
         "thumbnailUrl": input.thumbnail_url,
     });

@@ -536,6 +536,25 @@ fn interrupted_upgrade_replacement_restores_original_before_retry() -> Result<()
 }
 
 #[test]
+fn stale_pre_upgrade_backup_without_an_upgrade_status_is_not_restored() -> Result<(), Error> {
+    let dir = TestDir::new("database-upgrade-stale-backup");
+    let db_path = interrupt_upgrade_between_replacement_renames(&dir)?;
+    std::fs::remove_file(dir.path.join("db-upgrade").join("upgrade-active.json"))?;
+
+    let db = DatabaseService::new(&db_path)?;
+
+    assert!(db
+        .execute("SELECT value FROM recovery_items", &HashMap::new())
+        .is_err());
+    assert!(dir
+        .path
+        .join("db-upgrade")
+        .join("VRCX-0-before-upgrade.sqlite3")
+        .exists());
+    Ok(())
+}
+
+#[test]
 fn interrupted_upgrade_replacement_restores_original_over_a_recreated_database() -> Result<(), Error>
 {
     let dir = TestDir::new("database-upgrade-interrupted-recreated");

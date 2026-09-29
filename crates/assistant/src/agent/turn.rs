@@ -231,7 +231,6 @@ pub(crate) async fn run_turn(ctx: TurnContext) {
                     call,
                     tool_defs,
                     ctx.tool_defs.as_slice(),
-                    &user_text,
                     utc_offset_minutes,
                     &mut dispatched_tools,
                 )
@@ -376,14 +375,12 @@ fn prepare_call<'a>(
     call: &'a ToolCall,
     tool_defs: &[ToolDefinition],
     all_tool_defs: &[ToolDefinition],
-    user_text: &str,
     utc_offset_minutes: i64,
     dispatched_tools: &mut HashSet<String>,
 ) -> PreparedCall<'a> {
     let arguments = normalize_tool_arguments(
         &call.function.name,
         parse_arguments(&call.function.arguments),
-        user_text,
         tool_accepts_utc_offset(all_tool_defs, &call.function.name).then_some(utc_offset_minutes),
     );
     let signature = tool_call_signature(&call.function.name, arguments.as_ref());

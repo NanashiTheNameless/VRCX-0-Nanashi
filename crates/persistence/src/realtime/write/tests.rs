@@ -9,7 +9,8 @@ use crate::realtime::ensure_realtime_tables;
 
 use super::{
     normalize_user_table_prefix, write_realtime_batch, FriendLogDelete, FriendLogUpsert,
-    NotificationV2Update, RealtimePersistenceBatch, SelfProfileField, SelfProfileLogEntry,
+    NotificationExpiration, NotificationV2Update, RealtimePersistenceBatch, SelfProfileField,
+    SelfProfileLogEntry,
 };
 use crate::ownership::OwnerId;
 use vrcx_0_contracts::feed_live::FeedLiveEntry;
@@ -738,6 +739,45 @@ fn realtime_schema_adds_v1_seen_column_and_backfills_expired_rows() -> Result<()
             vec![json!("expired"), json!(1)]
         ]
     );
+    Ok(())
+}
+
+#[test]
+fn expiring_a_v1_notification_marks_it_seen() -> Result<(), crate::Error> {
+    let dir = TestDir::new("realtime-notification-v1-expire-seen");
+    let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
+    let owner = OwnerId::new("usr_self");
+    write_realtime_batch(
+        &db,
+        &owner,
+        &RealtimePersistenceBatch {
+            notification_v1_upserts: vec![json!({
+                "id": "notif_v1",
+                "createdAt": "2026-05-15T00:00:00Z",
+                "type": "friendRequest",
+                "senderUserId": "usr_sender",
+            })],
+            ..RealtimePersistenceBatch::default()
+        },
+    )?;
+
+    write_realtime_batch(
+        &db,
+        &owner,
+        &RealtimePersistenceBatch {
+            notification_expirations: vec![NotificationExpiration {
+                id: "notif_v1".into(),
+                expired_at: "2026-05-15T01:00:00Z".into(),
+            }],
+            ..RealtimePersistenceBatch::default()
+        },
+    )?;
+
+    let rows = db.execute(
+        "SELECT expired, seen FROM usrself_notifications WHERE id = 'notif_v1'",
+        &Default::default(),
+    )?;
+    assert_eq!(rows, vec![vec![json!(1), json!(1)]]);
     Ok(())
 }
 

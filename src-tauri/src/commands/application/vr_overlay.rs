@@ -30,17 +30,6 @@ pub async fn app__vr_overlay_test_mode_set(
     .await
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn app__vr_overlay_config_reload(
-    app: AppHandle,
-) -> Result<VrOverlayRuntimeSnapshot, AppError> {
-    run_vr_overlay_task(app, "VR overlay config reload task", |state| {
-        Ok(state.runtime_host().reload_vr_overlay_config()?)
-    })
-    .await
-}
-
 async fn run_vr_overlay_task<Run>(
     app: AppHandle,
     task_name: &'static str,

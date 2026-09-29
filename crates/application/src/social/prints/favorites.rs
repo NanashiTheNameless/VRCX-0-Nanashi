@@ -112,8 +112,13 @@ pub fn effective_favorite_limit(store: &dyn PrintFavoritesStore) -> Result<i64> 
 }
 
 fn read_favorite_ids(store: &dyn PrintFavoritesStore, user_id: &str) -> Result<Vec<String>> {
-    let user_id = require_text(user_id, PRINT_FAVORITES_OWNER_REQUIRED)?;
-    let ids = match store.favorite_ids(&user_id)? {
+    let user_id = user_id.trim();
+    let stored = if user_id.is_empty() {
+        None
+    } else {
+        store.favorite_ids(user_id)?
+    };
+    let ids = match stored {
         Some(ids) => ids,
         None => store.legacy_favorite_ids()?,
     };
@@ -348,7 +353,13 @@ mod tests {
             read_favorite_ids(&store, "usr_a").expect("read"),
             vec!["prnt_a", "prnt_b"]
         );
-        assert!(read_favorite_ids(&store, "  ").is_err());
+        assert_eq!(
+            read_favorite_ids(&store, "  ").expect("read"),
+            vec!["prnt_a", "prnt_b"]
+        );
+        assert!(set_print_favorite(&store, "  ", "prnt_c", true).is_err());
+        assert!(ensure_print_deletable(&store, "  ", "prnt_c").is_ok());
+        assert!(ensure_print_deletable(&store, "  ", "prnt_a").is_err());
     }
 
     #[test]

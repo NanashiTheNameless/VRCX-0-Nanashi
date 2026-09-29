@@ -802,3 +802,84 @@ async fn responses_stream_chat_posts_to_responses_endpoint() {
             || request.contains("Authorization: Bearer key")
     );
 }
+
+#[tokio::test]
+async fn streamed_answers_outlasting_the_timeout_arrive_complete_while_chunks_keep_flowing() {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+    let base_url = format!("http://{}/v1", listener.local_addr().unwrap());
+    let server = tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+        let mut request = Vec::new();
+        let mut chunk = [0_u8; 4096];
+        while !request.windows(4).any(|window| window == b"\r\n\r\n") {
+            let read = stream.read(&mut chunk).await.unwrap();
+            request.extend_from_slice(&chunk[..read]);
+        }
+        stream
+            .write_all(
+                b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n",
+            )
+            .await
+            .unwrap();
+        for piece in ["a", "b", "c", "d", "e", "f"] {
+            tokio::time::sleep(Duration::from_millis(150)).await;
+            let line =
+                format!("data: {{\"choices\":[{{\"delta\":{{\"content\":\"{piece}\"}}}}]}}\n\n");
+            if stream.write_all(line.as_bytes()).await.is_err() {
+                return;
+            }
+        }
+        let _ = stream.write_all(b"data: [DONE]\n\n").await;
+    });
+    let client =
+        LlmClient::with_timeout(base_url, "", "model", None, Duration::from_millis(500)).unwrap();
+
+    let turn = client
+        .stream_chat(
+            &[ChatMessage::user("hi")],
+            &[],
+            &LlmRequestOptions::default(),
+            |_| {},
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(turn.content, "abcdef");
+    server.await.unwrap();
+}
+
+#[tokio::test]
+async fn non_streaming_completions_still_stop_at_the_overall_timeout() {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+    let base_url = format!("http://{}/v1", listener.local_addr().unwrap());
+    tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+        let mut request = Vec::new();
+        let mut chunk = [0_u8; 4096];
+        while !request.windows(4).any(|window| window == b"\r\n\r\n") {
+            let read = stream.read(&mut chunk).await.unwrap();
+            request.extend_from_slice(&chunk[..read]);
+        }
+        let _ = stream
+            .write_all(
+                b"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nConnection: close\r\n\r\n",
+            )
+            .await;
+        for _ in 0..20 {
+            tokio::time::sleep(Duration::from_millis(150)).await;
+            if stream.write_all(b" ").await.is_err() {
+                return;
+            }
+        }
+    });
+    let client =
+        LlmClient::with_timeout(base_url, "", "model", None, Duration::from_millis(500)).unwrap();
+
+    let started = std::time::Instant::now();
+    let result = client
+        .complete_chat(&[ChatMessage::user("hi")], &LlmRequestOptions::default())
+        .await;
+
+    assert!(result.is_err());
+    assert!(started.elapsed() < Duration::from_secs(2));
+}

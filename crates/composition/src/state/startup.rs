@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::time::{Duration, Instant};
 
 use super::{
     current_user_from_cookie, run_background_group_instance_refresh, AtomicFlagGuard,
@@ -58,18 +57,6 @@ impl RuntimeHostState {
             snapshot.clone(),
         );
         snapshot
-    }
-
-    pub fn wait_for_gui_background_capability_loops_stopped(&self, timeout: Duration) -> bool {
-        let deadline = Instant::now() + timeout;
-        if !self.social_maintenance.wait_stopped(timeout) {
-            return false;
-        }
-        let remaining = deadline.saturating_duration_since(Instant::now());
-        self.profile_extension
-            .as_ref()
-            .map(|extension| extension.wait_for_profile_maintenance_stopped(remaining))
-            .unwrap_or(true)
     }
 
     pub fn clear_backend_authenticated_session(

@@ -60,9 +60,7 @@ pub use vrcx_0_persistence::game_log::{
     GameLogQuery, GameLogQueryOutput, GameLogWriteKind,
 };
 pub use vrcx_0_persistence::local_moderation::LocalModerationOutput;
-pub use vrcx_0_persistence::maintenance::{
-    BrokenGameLogDisplayNameOutput, MaintenanceTableSizesOutput, UserTableContextOutput,
-};
+pub use vrcx_0_persistence::maintenance::{MaintenanceTableSizesOutput, UserTableContextOutput};
 pub use vrcx_0_persistence::memos::{
     AvatarMemoOutput, MemoSaveResult, UserMemoOutput, UserNoteOutput, WorldMemoOutput,
 };
@@ -575,31 +573,6 @@ impl LocalDataRuntime {
 
     pub fn config_set_values(&self, entries: Vec<ConfigWriteEntry>) -> Result<()> {
         vrcx_0_application::profile::set_config_values(self.profile_config.as_ref(), entries)
-    }
-
-    pub fn broken_game_log_display_names(&self) -> Result<Vec<BrokenGameLogDisplayNameOutput>> {
-        Ok(
-            vrcx_0_persistence::maintenance::database_maintenance_broken_game_log_display_names_get(
-                self.db.as_ref(),
-            )?,
-        )
-    }
-
-    pub fn broken_leave_entries(&self) -> Result<Vec<Value>> {
-        Ok(
-            vrcx_0_persistence::maintenance::database_maintenance_broken_leave_entries_get(
-                self.db.as_ref(),
-            )?,
-        )
-    }
-
-    pub fn max_friend_log_number(&self, user_id: String) -> Result<i64> {
-        Ok(
-            vrcx_0_persistence::maintenance::database_maintenance_max_friend_log_number_get(
-                self.db.as_ref(),
-                user_id,
-            )?,
-        )
     }
 
     pub fn maintenance_table_sizes(&self, user_id: String) -> Result<MaintenanceTableSizesOutput> {

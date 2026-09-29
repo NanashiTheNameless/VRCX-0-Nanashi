@@ -3,14 +3,12 @@ use std::{collections::HashMap, time::Duration};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use vrcx_0_application_core::{FavoriteEntityKind, VrchatFavoriteType};
-use vrcx_0_contracts::{vrchat_api::parse_vrchat_json, CacheEntityInput};
+use vrcx_0_contracts::vrchat_api::parse_vrchat_json;
 use vrcx_0_core::json::RawJson;
 
-use vrcx_0_application_core::{AuthenticatedMutationContext, Error, Result};
+use vrcx_0_application_core::{AuthenticatedMutationContext, Error, Result, WorldCache};
 
-use super::cache_policy::{
-    cache_entry_from_entity, cache_write_decision, CacheWriteDecision, FavoriteCacheKind,
-};
+use super::cache_policy::cache_world_snapshot;
 use vrcx_0_application_core::vrchat_api::normalize_text;
 use vrcx_0_core::OwnerId;
 
@@ -142,6 +140,7 @@ pub struct FavoriteTransferSelectionResult {
 pub(super) struct FavoriteTransferDeps<'a> {
     pub store: &'a dyn super::FavoriteStore,
     pub remote: &'a dyn super::FavoriteRemote,
+    pub world_cache: &'a WorldCache,
     pub mutation: AuthenticatedMutationContext<'a>,
 }
 
@@ -712,9 +711,7 @@ fn add_local_favorite(
         normalize_text(&item.entity_id),
         normalize_text(&input.target.group),
     )?;
-    if let Err(error) = cache_world_snapshot_if_safe(deps.store, input, item) {
-        tracing::warn!("failed to cache transferred favorite world snapshot: {error}");
-    }
+    cache_world_snapshot_if_safe(deps.world_cache, input, item);
     Ok(affected)
 }
 
@@ -736,9 +733,7 @@ fn add_local_fallback_favorite(
         normalize_text(&item.entity_id),
         FAVORITE_RECOVERED_GROUP.to_string(),
     )?;
-    if let Err(error) = cache_world_snapshot_if_safe(deps.store, input, item) {
-        tracing::warn!("failed to cache local fallback favorite world snapshot: {error}");
-    }
+    cache_world_snapshot_if_safe(deps.world_cache, input, item);
     Ok(affected)
 }
 
@@ -1035,28 +1030,18 @@ fn ensure_vrchat_response_ok(status: i32, data: &str, action: &str) -> Result<()
 }
 
 fn cache_world_snapshot_if_safe(
-    store: &dyn super::FavoriteStore,
+    world_cache: &WorldCache,
     input: &FavoriteTransferInput,
     item: &FavoriteTransferItem,
-) -> Result<()> {
+) {
     if input.kind != FavoriteEntityKind::World {
-        return Ok(());
+        return;
     }
-    let Some(entity) = item.entity.as_ref().map(RawJson::as_value) else {
-        return Ok(());
-    };
-    let Some(entry) = build_world_cache_entry(entity, &item.entity_id) else {
-        return Ok(());
-    };
-    store.cache_upsert(FavoriteCacheKind::World, entry)?;
-    Ok(())
-}
-
-fn build_world_cache_entry(world: &Value, fallback_world_id: &str) -> Option<CacheEntityInput> {
-    if cache_write_decision(FavoriteCacheKind::World, world) != CacheWriteDecision::Upsert {
-        return None;
+    if let Some(entity) = item.entity.as_ref().map(RawJson::as_value) {
+        if let Err(error) = cache_world_snapshot(world_cache, entity, &item.entity_id) {
+            tracing::warn!("failed to cache transferred favorite world snapshot: {error}");
+        }
     }
-    Some(cache_entry_from_entity(world, fallback_world_id))
 }
 
 fn string_field(value: &Value, keys: &[&str]) -> Option<String> {
@@ -1178,66 +1163,6 @@ mod tests {
             error.to_string(),
             "VRChat favorite transfer failed during delete remote favorite."
         );
-    }
-
-    #[test]
-    fn build_world_cache_entry_rejects_unknown_release_status() {
-        let world = serde_json::json!({
-            "id": "wrld_1",
-            "releaseStatus": "unknown",
-            "name": "Test",
-            "thumbnailImageUrl": "https://example.test/thumb.png",
-        });
-
-        assert!(build_world_cache_entry(&world, "wrld_fallback").is_none());
-    }
-
-    #[test]
-    fn build_world_cache_entry_rejects_missing_image() {
-        let world = serde_json::json!({
-            "id": "wrld_1",
-            "releaseStatus": "public",
-            "name": "Test",
-        });
-
-        assert!(build_world_cache_entry(&world, "wrld_fallback").is_none());
-    }
-
-    #[test]
-    fn build_world_cache_entry_falls_back_to_provided_world_id() {
-        let world = serde_json::json!({
-            "releaseStatus": "public",
-            "name": "Test",
-            "imageUrl": "https://example.test/image.png",
-        });
-
-        let entry = build_world_cache_entry(&world, "wrld_fallback").unwrap();
-
-        assert_eq!(entry.id, Value::String("wrld_fallback".to_string()));
-    }
-
-    #[test]
-    fn build_world_cache_entry_builds_entry_from_full_payload() {
-        let world = serde_json::json!({
-            "id": "wrld_1",
-            "releaseStatus": "public",
-            "name": "Test World",
-            "thumbnailImageUrl": "https://example.test/thumb.png",
-            "imageUrl": "https://example.test/image.png",
-            "authorId": "usr_1",
-            "authorName": "Author",
-            "createdAt": "2026-01-01T00:00:00Z",
-            "updatedAt": "2026-01-02T00:00:00Z",
-            "description": "A world",
-            "version": 3,
-        });
-
-        let entry = build_world_cache_entry(&world, "wrld_fallback").unwrap();
-
-        assert_eq!(entry.id, Value::String("wrld_1".to_string()));
-        assert_eq!(entry.name, Value::String("Test World".to_string()));
-        assert_eq!(entry.author_id, Value::String("usr_1".to_string()));
-        assert_eq!(entry.version, serde_json::json!(3));
     }
 
     #[test]

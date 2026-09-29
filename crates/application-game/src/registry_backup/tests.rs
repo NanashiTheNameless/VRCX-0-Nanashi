@@ -203,6 +203,26 @@ fn maintenance_result_does_not_serialize_stored_backup_data() {
 }
 
 #[test]
+fn listed_backups_do_not_serialize_stored_registry_data() {
+    let dir = TestDir::new("lightweight-list");
+    let db = dir.open_db();
+    write_backups(
+        &db,
+        &[StoredRegistryBackup {
+            name: "Large Backup".into(),
+            date: "2026-08-01T00:00:00.000Z".into(),
+            data: json!({"uniqueLargePayloadMarker": [1, 2, 3]}),
+        }],
+    )
+    .unwrap();
+
+    let serialized = serde_json::to_value(registry_backup_list(&db).unwrap()).unwrap();
+
+    assert_eq!(serialized[0]["name"], "Large Backup");
+    assert!(!serialized.to_string().contains("uniqueLargePayloadMarker"));
+}
+
+#[test]
 fn maintenance_run_creates_auto_backup_when_registry_present_and_no_recent_backup() {
     let dir = TestDir::new("create");
     let db = dir.open_db();

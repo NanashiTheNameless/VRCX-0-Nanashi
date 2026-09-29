@@ -234,11 +234,7 @@ fn nested_object_str<'a>(object: &'a serde_json::Map<String, Value>, path: &[&st
 fn first_world_id<const N: usize>(values: [&str; N]) -> String {
     values
         .into_iter()
-        .map(world_id_from_location_or_id)
+        .map(world_id_from_location)
         .find(|value| !value.is_empty())
         .unwrap_or_default()
-}
-
-pub fn world_id_from_location_or_id(value: &str) -> String {
-    world_id_from_location(value)
 }

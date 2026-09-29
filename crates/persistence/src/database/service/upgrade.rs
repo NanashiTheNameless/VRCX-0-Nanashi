@@ -237,6 +237,18 @@ impl DatabaseService {
             }
         }
 
+        let pre_upgrade_path = pre_upgrade_database_path(&self.upgrade_dir);
+        for path in [self.active_status_path(), pre_upgrade_path.clone()] {
+            if let Err(error) = self.remove_file_if_exists(&path) {
+                tracing::warn!(
+                    "Failed to remove finished database upgrade artifact {}: {error}",
+                    path.display()
+                );
+            }
+        }
+        if let Err(error) = remove_sidecars(&pre_upgrade_path) {
+            tracing::warn!("Failed to remove pre-upgrade database sidecars: {error}");
+        }
         if let Err(error) = self.remove_upgrade_dir() {
             tracing::warn!("Failed to clean database upgrade directory: {error}");
         }
@@ -615,9 +627,10 @@ pub(super) fn restore_interrupted_replacement(
     upgrade_dir: &Path,
 ) -> Result<(), Error> {
     let pre_upgrade_path = pre_upgrade_database_path(upgrade_dir);
-    if !pre_upgrade_path.exists()
-        || (db_path.exists() && !matches!(unfinished_upgrade_status(upgrade_dir), Ok(Some(_))))
-    {
+    if !pre_upgrade_path.exists() || !upgrade_status_recorded(upgrade_dir)? {
+        return Ok(());
+    }
+    if db_path.exists() && !matches!(unfinished_upgrade_status(upgrade_dir), Ok(Some(_))) {
         return Ok(());
     }
     remove_sidecars(db_path)?;
@@ -627,6 +640,18 @@ pub(super) fn restore_interrupted_replacement(
         db_path.display()
     );
     Ok(())
+}
+
+fn upgrade_status_recorded(upgrade_dir: &Path) -> Result<bool, Error> {
+    for path in [
+        active_status_file(upgrade_dir),
+        failed_status_file(upgrade_dir),
+    ] {
+        if path.exists() || status_temporary_path(&path)?.exists() {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 fn unfinished_upgrade_reason(status: &DatabaseUpgradeStatus) -> String {

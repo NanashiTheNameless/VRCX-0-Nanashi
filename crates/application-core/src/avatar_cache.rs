@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use serde_json::Value;
-use vrcx_0_contracts::AvatarCacheOutput;
+use vrcx_0_contracts::{AvatarCacheOutput, CacheEntityInput};
 
 use crate::{Result, WebClient};
 
@@ -28,6 +28,13 @@ pub trait AvatarCachePort: Send + Sync {
         endpoint: &str,
         avatar: Value,
     ) -> Option<Arc<Value>>;
+    fn existing_summary_ids(&self, avatar_ids: &[String]) -> Result<Vec<String>>;
+    fn store_summaries(
+        &self,
+        user_id: &str,
+        endpoint: &str,
+        entries: Vec<CacheEntityInput>,
+    ) -> Result<u32>;
     async fn resolve(
         &self,
         web: &WebClient,
@@ -83,6 +90,19 @@ impl AvatarCache {
         avatar: Value,
     ) -> Option<Arc<Value>> {
         self.inner.hydrate_from_payload(user_id, endpoint, avatar)
+    }
+
+    pub fn existing_summary_ids(&self, avatar_ids: &[String]) -> Result<Vec<String>> {
+        self.inner.existing_summary_ids(avatar_ids)
+    }
+
+    pub fn store_summaries(
+        &self,
+        user_id: &str,
+        endpoint: &str,
+        entries: Vec<CacheEntityInput>,
+    ) -> Result<u32> {
+        self.inner.store_summaries(user_id, endpoint, entries)
     }
 
     pub async fn resolve(

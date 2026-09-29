@@ -43,6 +43,7 @@ const OPENROUTER_REASONING_EFFORTS: &[&str] =
 #[derive(Clone)]
 pub struct LlmClient {
     http: Client,
+    request_timeout: Duration,
     base_url: String,
     api_key: String,
     model: String,
@@ -168,9 +169,26 @@ impl LlmClient {
         model: impl Into<String>,
         proxy_url: Option<&str>,
     ) -> Result<Self, LlmError> {
+        Self::with_timeout(
+            base_url,
+            api_key,
+            model,
+            proxy_url,
+            Duration::from_secs(180),
+        )
+    }
+
+    fn with_timeout(
+        base_url: impl Into<String>,
+        api_key: impl Into<String>,
+        model: impl Into<String>,
+        proxy_url: Option<&str>,
+        timeout: Duration,
+    ) -> Result<Self, LlmError> {
         vrcx_0_core::tls::install_crypto_provider();
         let mut builder = Client::builder()
-            .timeout(Duration::from_secs(180))
+            .connect_timeout(timeout)
+            .read_timeout(timeout)
             .user_agent(vrcx_0_core::user_agent::app_user_agent());
         if let Some(proxy_url) = proxy_url {
             builder = builder.proxy(Proxy::all(with_remote_dns(proxy_url).as_ref())?);
@@ -179,6 +197,7 @@ impl LlmClient {
         let base_url = base_url.into();
         Ok(Self {
             http,
+            request_timeout: timeout,
             base_url: normalize_base_url(&base_url),
             api_key: api_key.into(),
             model: model.into(),
@@ -226,6 +245,7 @@ impl LlmClient {
         let url = self.openai_url("/models");
         let response = self
             .with_extra_headers(self.authorized(self.http.get(&url)))
+            .timeout(self.request_timeout)
             .send()
             .await?;
         let status = response.status();
@@ -355,6 +375,7 @@ impl LlmClient {
                 self.authorized(self.http.post(self.openai_url("/chat/completions"))),
             )
             .json(&body)
+            .timeout(self.request_timeout)
             .send()
             .await?;
 

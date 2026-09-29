@@ -24,7 +24,11 @@ impl LlmClient {
         options: &LlmRequestOptions,
     ) -> Result<String, LlmError> {
         let body = responses_body(&self.model, messages, &[], options, false);
-        let response = self.send_responses_request(&body).await?;
+        let response = self
+            .responses_request(&body)
+            .timeout(self.request_timeout)
+            .send()
+            .await?;
         let status = response.status();
         let text = response.text().await?;
         if !status.is_success() {
@@ -58,7 +62,7 @@ impl LlmClient {
         F: FnMut(&str),
     {
         let body = responses_body(&self.model, messages, tools, options, true);
-        let response = self.send_responses_request(&body).await?;
+        let response = self.responses_request(&body).send().await?;
         if !response.status().is_success() {
             let status = response.status().as_u16();
             let message = response.text().await.unwrap_or_default();
@@ -84,12 +88,9 @@ impl LlmClient {
         Ok(state.finish())
     }
 
-    async fn send_responses_request(&self, body: &Value) -> Result<reqwest::Response, LlmError> {
-        Ok(self
-            .with_extra_headers(self.authorized(self.http.post(self.openai_url("/responses"))))
+    fn responses_request(&self, body: &Value) -> reqwest::RequestBuilder {
+        self.with_extra_headers(self.authorized(self.http.post(self.openai_url("/responses"))))
             .json(body)
-            .send()
-            .await?)
     }
 }
 

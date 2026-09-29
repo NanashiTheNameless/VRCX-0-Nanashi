@@ -2,10 +2,13 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use futures_util::future::BoxFuture;
-use serde::{de::Error as _, Deserialize, Deserializer, Serialize};
+use serde::{de::Error as _, Deserialize, Deserializer};
 use vrcx_0_application_core::vrchat_api::{require_text, VrchatApiResponse};
 use vrcx_0_application_core::{
     AuthenticatedMutationContext, RemoteMutationGate, Result, RuntimeAuthScope,
+};
+use vrcx_0_contracts::vrchat_requests::{
+    QueryOrder, ReleaseStatusFilter, WorldSearchSort, WorldUpdateRequest,
 };
 
 const WORLD_REMOTE_MUTATION_INTERVAL: Duration = Duration::from_millis(250);
@@ -19,109 +22,6 @@ where
         return Err(D::Error::custom("value must be non-negative"));
     }
     Ok(value)
-}
-
-fn deserialize_optional_nonnegative_i32<'de, D>(
-    deserializer: D,
-) -> std::result::Result<Option<i32>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let value = Option::<i32>::deserialize(deserializer)?;
-    if value.is_some_and(|value| value < 0) {
-        return Err(D::Error::custom("value must be non-negative"));
-    }
-    Ok(value)
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
-pub enum QueryOrder {
-    #[serde(rename = "ascending")]
-    Ascending,
-    #[serde(rename = "descending")]
-    Descending,
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
-pub enum ReleaseStatusFilter {
-    #[serde(rename = "all")]
-    All,
-    #[serde(rename = "hidden")]
-    Hidden,
-    #[serde(rename = "private")]
-    Private,
-    #[serde(rename = "public")]
-    Public,
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
-pub enum WorldSearchSort {
-    #[serde(rename = "_created_at")]
-    CreatedAt,
-    #[serde(rename = "_updated_at")]
-    UpdatedAt,
-    #[serde(rename = "created")]
-    Created,
-    #[serde(rename = "favorites")]
-    Favorites,
-    #[serde(rename = "heat")]
-    Heat,
-    #[serde(rename = "labsPublicationDate")]
-    LabsPublicationDate,
-    #[serde(rename = "magic")]
-    Magic,
-    #[serde(rename = "name")]
-    Name,
-    #[serde(rename = "order")]
-    Order,
-    #[serde(rename = "popularity")]
-    Popularity,
-    #[serde(rename = "publicationDate")]
-    PublicationDate,
-    #[serde(rename = "random")]
-    Random,
-    #[serde(rename = "relevance")]
-    Relevance,
-    #[serde(rename = "reportCount")]
-    ReportCount,
-    #[serde(rename = "reportScore")]
-    ReportScore,
-    #[serde(rename = "shuffle")]
-    Shuffle,
-    #[serde(rename = "trust")]
-    Trust,
-    #[serde(rename = "updated")]
-    Updated,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct WorldUpdateRequest {
-    pub id: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        deserialize_with = "deserialize_optional_nonnegative_i32"
-    )]
-    pub capacity: Option<i32>,
-    #[serde(
-        default,
-        skip_serializing_if = "Option::is_none",
-        deserialize_with = "deserialize_optional_nonnegative_i32"
-    )]
-    pub recommended_capacity: Option<i32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub preview_youtube_id: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub tags: Option<Vec<String>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub url_list: Option<Vec<String>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub disabled_prop_abilities: Option<Vec<String>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

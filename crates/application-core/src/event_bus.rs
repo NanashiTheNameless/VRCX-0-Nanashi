@@ -226,10 +226,6 @@ impl RuntimeEventBus {
         std::mem::take(&mut *self.events.lock().unwrap())
     }
 
-    pub fn emit_runtime_vrchat_auth_failure(&self, payload: RuntimeVrchatAuthFailurePayload) {
-        self.emit(payload);
-    }
-
     pub fn emit_realtime_user_projection(&self, payload: RealtimeUserProjection) {
         self.emit(payload);
     }

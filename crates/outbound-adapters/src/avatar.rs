@@ -4,10 +4,6 @@ use vrcx_0_application::avatars::{
     AvatarCacheStore, AvatarFeedCleanupStore, AvatarRemote, AvatarRemoteFuture,
     AvatarRemoteMutation, MyAvatarsStore,
 };
-use vrcx_0_application::remote::{
-    AvatarReleaseStatus as ApplicationAvatarReleaseStatus,
-    AvatarUpdateRequest as ApplicationAvatarUpdateRequest,
-};
 use vrcx_0_application_core::vrchat_api::{execute_api_command, VrchatApiResponse, VrchatScope};
 use vrcx_0_application_core::{Error, RuntimeDiagnostics, RuntimeSyncEngine, WebClient};
 use vrcx_0_contracts::{AvatarTagOutput, AvatarTimeSpentOutput};
@@ -16,7 +12,7 @@ use vrcx_0_vrchat_client::avatars::{
     avatar_delete_input, avatar_impostor_create_input, avatar_impostor_delete_input,
     avatar_list_by_user_get_input, avatar_moderation_delete_input, avatar_moderation_send_input,
     avatar_moderations_get_input, avatar_save_input, avatar_select_fallback_input,
-    avatar_select_input, AvatarListByUserGetInput, AvatarReleaseStatus, AvatarUpdateRequest,
+    avatar_select_input, AvatarListByUserGetInput,
 };
 use vrcx_0_vrchat_client::query::{AvatarListSort, QueryOrder, ReleaseStatusFilter};
 
@@ -154,12 +150,7 @@ impl AvatarRemote for VrchatAvatarRemote {
                     fallback: true,
                 } => avatar_select_fallback_input(endpoint.to_string(), avatar_id)?.1,
                 AvatarRemoteMutation::Save { avatar_id, params } => {
-                    avatar_save_input(
-                        endpoint.to_string(),
-                        avatar_id,
-                        avatar_update_request(params),
-                    )?
-                    .1
+                    avatar_save_input(endpoint.to_string(), avatar_id, params)?.1
                 }
                 AvatarRemoteMutation::Delete { avatar_id } => {
                     avatar_delete_input(endpoint.to_string(), avatar_id)?.1
@@ -207,21 +198,6 @@ fn parse_my_avatar_page(status: i32, data: &str) -> crate::Result<Vec<serde_json
     match payload {
         serde_json::Value::Array(rows) => Ok(rows),
         _ => Ok(Vec::new()),
-    }
-}
-
-fn avatar_update_request(value: ApplicationAvatarUpdateRequest) -> AvatarUpdateRequest {
-    AvatarUpdateRequest {
-        id: value.id,
-        name: value.name,
-        description: value.description,
-        primary_style: value.primary_style,
-        secondary_style: value.secondary_style,
-        tags: value.tags,
-        release_status: value.release_status.map(|value| match value {
-            ApplicationAvatarReleaseStatus::Public => AvatarReleaseStatus::Public,
-            ApplicationAvatarReleaseStatus::Private => AvatarReleaseStatus::Private,
-        }),
     }
 }
 

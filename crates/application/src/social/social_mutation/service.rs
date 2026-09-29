@@ -568,7 +568,7 @@ fn emit_current_scope_auth_failure(
         return;
     }
     deps.realtime
-        .emit_runtime_vrchat_auth_failure(RuntimeVrchatAuthFailurePayload {
+        .report_vrchat_auth_failure(RuntimeVrchatAuthFailurePayload {
             owner_user_id: OwnerId::new(scope.current_user_id),
             endpoint: scope.endpoint,
             path: path.to_string(),

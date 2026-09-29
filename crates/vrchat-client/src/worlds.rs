@@ -7,9 +7,7 @@ use crate::http_api::{
 };
 use crate::query::{QueryOrder, ReleaseStatusFilter, WorldSearchSort};
 
-mod request;
-
-pub use request::WorldUpdateRequest;
+pub use vrcx_0_contracts::vrchat_requests::WorldUpdateRequest;
 
 pub fn world_get_input(
     endpoint: String,

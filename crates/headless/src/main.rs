@@ -75,6 +75,7 @@ async fn async_main() -> ExitCode {
         app_version: product_app_version(),
         profile: RuntimeHostProfile::HeadlessData,
         database_maintenance_cache_dir: None,
+        task_executor: Some(Arc::new(TokioRuntimeTaskExecutor)),
     }) {
         Ok(state) => state,
         Err(error) => {
@@ -90,7 +91,6 @@ async fn async_main() -> ExitCode {
     let (fatal_tx, mut fatal_rx) = mpsc::unbounded_channel();
     let console_sink = ConsoleRuntimeEventSink::new(fatal_tx, app_data_dir.current_dir.clone());
     state.set_event_sink(console_sink.clone());
-    state.set_task_executor(TokioRuntimeTaskExecutor);
 
     match state.start_headless_backend_runtime(cli_login_prompt).await {
         Ok(_) => {}

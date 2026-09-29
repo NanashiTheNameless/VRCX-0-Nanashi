@@ -1,7 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use chrono::{DateTime, Datelike, Duration, NaiveDate, Utc};
-use vrcx_0_core::activity_sessions::{merge_sessions_with_gap, ActivitySession};
+use vrcx_0_core::activity_sessions::{
+    merge_sessions_with_gap, ActivitySession, PLAY_SESSION_MERGE_GAP_MS,
+};
 
 use super::activity_iso_from_ms;
 use vrcx_0_contracts::activity_page::ActivityLocationSpan as LocationSpan;
@@ -13,8 +15,6 @@ use vrcx_0_contracts::activity_page::{
 pub(super) const WEEK_BUCKET_MIN_RANGE_DAYS: i64 = 180;
 const DAY_MS: i64 = 86_400_000;
 const MINUTE_MS: i64 = 60_000;
-
-const WORLD_SPAN_MERGE_GAP_MS: i64 = 5 * 60 * 1000;
 
 pub(super) fn series_bucket_for_range(range_days: i64) -> ActivitySeriesBucket {
     if range_days == 0 || range_days >= WEEK_BUCKET_MIN_RANGE_DAYS {
@@ -207,7 +207,7 @@ fn merged_sessions(spans: &[LocationSpan]) -> Vec<ActivitySession> {
             source_revision: String::new(),
         })
         .collect();
-    merge_sessions_with_gap(&[], &sessions, WORLD_SPAN_MERGE_GAP_MS)
+    merge_sessions_with_gap(&[], &sessions, PLAY_SESSION_MERGE_GAP_MS)
 }
 
 pub(super) fn present_minutes(spans: &[LocationSpan]) -> i64 {

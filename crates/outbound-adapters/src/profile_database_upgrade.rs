@@ -74,6 +74,7 @@ impl DatabaseUpgradeStore for LocalDatabaseUpgradeStore {
 const UPSTREAM_CLEANUP_SCHEMA_VERSION: i64 = 16;
 const COPRESENCE_DURATION_REPAIR_KEY: &str = "copresenceDurationRepairV1Done";
 const EMPTY_LEAVE_LOCATION_REPAIR_KEY: &str = "emptyLeaveLocationRepairV1Done";
+const EXPIRED_NOTIFICATION_SEEN_REPAIR_KEY: &str = "expiredNotificationSeenRepairV1Done";
 const ONE_TIME_DATA_REPAIRS: &[(&str, DatabaseMaintenanceTask)] = &[
     (
         EMPTY_LEAVE_LOCATION_REPAIR_KEY,
@@ -82,6 +83,10 @@ const ONE_TIME_DATA_REPAIRS: &[(&str, DatabaseMaintenanceTask)] = &[
     (
         COPRESENCE_DURATION_REPAIR_KEY,
         DatabaseMaintenanceTask::RepairZeroCopresenceDurations,
+    ),
+    (
+        EXPIRED_NOTIFICATION_SEEN_REPAIR_KEY,
+        DatabaseMaintenanceTask::RepairExpiredNotificationsSeen,
     ),
 ];
 const LEGACY_DATA_CLEANUP_TASKS: &[DatabaseMaintenanceTask] = &[
@@ -156,30 +161,21 @@ pub fn database_upgrade_preflight(db: &DatabaseService) -> Result<DatabaseUpgrad
 
     let schema_version = read_vrcx0_schema_version(db)?;
     let migrations = migration_preview(db)?;
-    let (status, from_version, to_version) = if schema_version > VRCX0_SCHEMA_VERSION {
-        (
-            DatabaseUpgradePreflightStatus::NewerSchema,
-            schema_version,
-            VRCX0_SCHEMA_VERSION,
-        )
-    } else if migrations.status == PreviewStatus::NewerSchema {
-        (
-            DatabaseUpgradePreflightStatus::NewerSchema,
-            migrations.current_version,
-            migrations.target_version,
-        )
-    } else if schema_version < VRCX0_SCHEMA_VERSION || migrations.status == PreviewStatus::Pending {
-        (
-            DatabaseUpgradePreflightStatus::UpgradeRequired,
-            migrations.current_version,
-            migrations.target_version,
-        )
+    let (from_version, to_version) = if schema_version <= VRCX0_SCHEMA_VERSION
+        && migrations.status == PreviewStatus::NewerSchema
+    {
+        (migrations.current_version, migrations.target_version)
     } else {
-        (
-            DatabaseUpgradePreflightStatus::Current,
-            migrations.current_version,
-            migrations.target_version,
-        )
+        (schema_version, VRCX0_SCHEMA_VERSION)
+    };
+    let status = if schema_version > VRCX0_SCHEMA_VERSION
+        || migrations.status == PreviewStatus::NewerSchema
+    {
+        DatabaseUpgradePreflightStatus::NewerSchema
+    } else if schema_version < VRCX0_SCHEMA_VERSION || migrations.status == PreviewStatus::Pending {
+        DatabaseUpgradePreflightStatus::UpgradeRequired
+    } else {
+        DatabaseUpgradePreflightStatus::Current
     };
 
     Ok(DatabaseUpgradePreflight {
@@ -195,13 +191,6 @@ pub fn database_upgrade_preflight(db: &DatabaseService) -> Result<DatabaseUpgrad
 
 fn migration_preview(db: &DatabaseService) -> Result<Preview, Error> {
     Ok(preview_migrations(db, &migrations())?)
-}
-
-fn target_migration_version() -> i64 {
-    migrations()
-        .last()
-        .map(|migration| migration.version)
-        .unwrap_or(0)
 }
 
 #[cfg(test)]
@@ -543,7 +532,7 @@ fn success_result(status: DatabaseUpgradeRunStatus, from_version: i64) -> Databa
     DatabaseUpgradeRunResult {
         status,
         from_version,
-        to_version: target_migration_version(),
+        to_version: VRCX0_SCHEMA_VERSION,
         failed_stage: None,
         error: None,
         failed_upgrade: None,
@@ -574,7 +563,7 @@ fn recover_failed_upgrade(
     let telemetry_to_version = active_upgrade
         .as_ref()
         .map(|status| status.to_version)
-        .unwrap_or_else(target_migration_version);
+        .unwrap_or(VRCX0_SCHEMA_VERSION);
     log_database_upgrade_failure(
         failure.stage,
         &operation,
@@ -604,7 +593,7 @@ fn recover_failed_upgrade(
     DatabaseUpgradeRunResult {
         status: DatabaseUpgradeRunStatus::Failed,
         from_version: failure.from_version,
-        to_version: target_migration_version(),
+        to_version: VRCX0_SCHEMA_VERSION,
         failed_stage: Some(failure.stage),
         error: Some(error),
         failed_upgrade,

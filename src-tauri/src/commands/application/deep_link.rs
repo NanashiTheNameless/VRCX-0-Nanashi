@@ -5,9 +5,9 @@ use tauri::{AppHandle, State};
 #[cfg(any(windows, target_os = "linux"))]
 use tauri_plugin_deep_link::DeepLinkExt;
 
-use crate::deep_link::DeepLinkAction;
 use crate::error::AppError;
 use crate::state::AppState;
+use vrcx_0_runtime_host_desktop::deep_link::DeepLinkAction;
 
 const APP_DEEP_LINK_SCHEME: &str = "vrcx-0-nanashi";
 
@@ -132,10 +132,17 @@ pub fn app__deep_link_registration_repair(app: AppHandle) -> Result<Option<bool>
             .register(APP_DEEP_LINK_SCHEME)
             .map_err(|error| AppError::Custom(error.to_string()))?;
         // Also claim upstream VRCX-0 and original VRCX schemes so their links open here.
-        let (upstream_enabled, legacy_enabled) = crate::deep_link::extra_schemes_enabled();
+        let (upstream_enabled, legacy_enabled) =
+            vrcx_0_runtime_host_desktop::deep_link::extra_schemes_enabled();
         for (scheme, enabled) in [
-            (crate::deep_link::UPSTREAM_VRCX_0_SCHEME, upstream_enabled),
-            (crate::deep_link::LEGACY_VRCX_SCHEME, legacy_enabled),
+            (
+                vrcx_0_runtime_host_desktop::deep_link::UPSTREAM_VRCX_0_SCHEME,
+                upstream_enabled,
+            ),
+            (
+                vrcx_0_runtime_host_desktop::deep_link::LEGACY_VRCX_SCHEME,
+                legacy_enabled,
+            ),
         ] {
             if !enabled {
                 continue;
@@ -171,18 +178,29 @@ pub(crate) fn apply_deep_link_scheme_settings(
     state: &AppState,
 ) -> DeepLinkSchemeSettings {
     let settings = DeepLinkSchemeSettings {
-        upstream: state
-            .runtime_host()
-            .config_bool(crate::deep_link::UPSTREAM_SCHEME_ENABLED_CONFIG_KEY, true),
-        legacy: state
-            .runtime_host()
-            .config_bool(crate::deep_link::LEGACY_SCHEME_ENABLED_CONFIG_KEY, true),
+        upstream: state.runtime_host().config_bool(
+            vrcx_0_runtime_host_desktop::deep_link::UPSTREAM_SCHEME_ENABLED_CONFIG_KEY,
+            true,
+        ),
+        legacy: state.runtime_host().config_bool(
+            vrcx_0_runtime_host_desktop::deep_link::LEGACY_SCHEME_ENABLED_CONFIG_KEY,
+            true,
+        ),
     };
-    crate::deep_link::set_extra_schemes_enabled(settings.upstream, settings.legacy);
+    vrcx_0_runtime_host_desktop::deep_link::set_extra_schemes_enabled(
+        settings.upstream,
+        settings.legacy,
+    );
     #[cfg(any(windows, target_os = "linux"))]
     for (scheme, enabled) in [
-        (crate::deep_link::UPSTREAM_VRCX_0_SCHEME, settings.upstream),
-        (crate::deep_link::LEGACY_VRCX_SCHEME, settings.legacy),
+        (
+            vrcx_0_runtime_host_desktop::deep_link::UPSTREAM_VRCX_0_SCHEME,
+            settings.upstream,
+        ),
+        (
+            vrcx_0_runtime_host_desktop::deep_link::LEGACY_VRCX_SCHEME,
+            settings.legacy,
+        ),
     ] {
         let result = if enabled {
             app.deep_link().register(scheme)
@@ -201,7 +219,7 @@ pub(crate) fn apply_deep_link_scheme_settings(
 #[tauri::command(async)]
 #[specta::specta]
 pub fn app__deep_link_schemes_get() -> DeepLinkSchemeSettings {
-    let (upstream, legacy) = crate::deep_link::extra_schemes_enabled();
+    let (upstream, legacy) = vrcx_0_runtime_host_desktop::deep_link::extra_schemes_enabled();
     DeepLinkSchemeSettings { upstream, legacy }
 }
 
@@ -213,11 +231,11 @@ pub fn app__deep_link_schemes_set(
     settings: DeepLinkSchemeSettings,
 ) -> Result<DeepLinkSchemeSettings, AppError> {
     state.runtime_host().set_config_bool(
-        crate::deep_link::UPSTREAM_SCHEME_ENABLED_CONFIG_KEY,
+        vrcx_0_runtime_host_desktop::deep_link::UPSTREAM_SCHEME_ENABLED_CONFIG_KEY,
         settings.upstream,
     )?;
     state.runtime_host().set_config_bool(
-        crate::deep_link::LEGACY_SCHEME_ENABLED_CONFIG_KEY,
+        vrcx_0_runtime_host_desktop::deep_link::LEGACY_SCHEME_ENABLED_CONFIG_KEY,
         settings.legacy,
     )?;
     Ok(apply_deep_link_scheme_settings(&app, &state))

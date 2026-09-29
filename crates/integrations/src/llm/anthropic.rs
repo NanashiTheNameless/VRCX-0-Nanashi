@@ -32,7 +32,11 @@ impl LlmClient {
         &self,
     ) -> Result<LlmEndpointDetectModelsResult, LlmError> {
         let url = format!("{}/models?limit=1000", self.base_url);
-        let response = self.anthropic_request(self.http.get(&url)).send().await?;
+        let response = self
+            .anthropic_request(self.http.get(&url))
+            .timeout(self.request_timeout)
+            .send()
+            .await?;
         let status = response.status();
         let body = response.text().await?;
         if !status.is_success() {
@@ -69,6 +73,7 @@ impl LlmClient {
         let response = self
             .anthropic_request(self.http.post(format!("{}/messages", self.base_url)))
             .json(&body)
+            .timeout(self.request_timeout)
             .send()
             .await?;
         let status = response.status();

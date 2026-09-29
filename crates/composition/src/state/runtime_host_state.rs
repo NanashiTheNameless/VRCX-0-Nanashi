@@ -28,7 +28,8 @@ use vrcx_0_application::social::{
 use vrcx_0_application_activity::ActivityWarmupRuntime;
 use vrcx_0_application_core::{
     BackendRuntime, BackendRuntimeStatusPublisher, BackgroundCapabilitySession, ImageCache,
-    RuntimeTaskExecutor, TaskStopReport, UnavailableLocalGameContextSource, WebClient,
+    RuntimeTaskExecutor, TaskStopReport, TaskSupervisor, UnavailableLocalGameContextSource,
+    WebClient,
 };
 use vrcx_0_application_realtime::{
     FriendProjectionSink, RealtimeCurrentUserSnapshotSink, RealtimeHostRuntime,
@@ -66,6 +67,7 @@ pub struct RuntimeHostOptions {
     pub app_version: String,
     pub profile: RuntimeHostProfile,
     pub database_maintenance_cache_dir: Option<PathBuf>,
+    pub task_executor: Option<Arc<dyn RuntimeTaskExecutor>>,
 }
 
 pub(super) fn web_ua_app_version(app_version: &str, profile: RuntimeHostProfile) -> String {
@@ -273,6 +275,7 @@ impl RuntimeHostStateBuilder {
             app_version,
             profile,
             database_maintenance_cache_dir,
+            task_executor,
         } = options;
         let prepared_migration = prepare_data_dir_migration_startup(&mut app_data_dir)?;
         let mut paths = AppPaths::from_app_data(app_data_dir.current_dir.clone());
@@ -324,10 +327,14 @@ impl RuntimeHostStateBuilder {
                 Arc::clone(&web),
             )?,
         )));
+        let tasks = task_executor
+            .map(TaskSupervisor::with_executor)
+            .unwrap_or_default();
         let runtime_context = Arc::new(RuntimeHostContext::new(
             Arc::clone(&db),
             Arc::clone(&web),
             Arc::clone(&image_cache),
+            tasks,
         ));
         let desktop_assembly =
             RuntimeHostDesktopAssemblyDeps::from_context(Arc::clone(&runtime_context));
@@ -551,6 +558,7 @@ impl RuntimeHostStateBuilder {
             Arc::clone(&self.runtime_context.favorite_store),
             Arc::clone(&self.runtime_context.favorite_remote),
             Arc::clone(&self.runtime_context.world_cache),
+            Arc::clone(&self.runtime_context.avatar_cache),
             self.runtime_context.event_bus.clone(),
             self.runtime_context.tasks.clone(),
             self.runtime_context.auth_scope.clone(),
@@ -677,13 +685,6 @@ impl RuntimeHostStateBuilder {
 }
 
 impl RuntimeHostState {
-    pub fn set_task_executor<E>(&self, executor: E)
-    where
-        E: RuntimeTaskExecutor + 'static,
-    {
-        self.runtime_context.tasks.set_executor(executor);
-    }
-
     pub fn stop_runtime_tasks(&self) -> TaskStopReport {
         self.runtime_context.tasks.stop_all()
     }

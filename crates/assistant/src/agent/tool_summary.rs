@@ -21,7 +21,6 @@ const SUMMARY_LIMIT: usize = 240;
 pub(super) fn normalize_tool_arguments(
     tool_name: &str,
     arguments: Option<Map<String, Value>>,
-    user_text: &str,
     ensure_utc_offset: Option<i64>,
 ) -> Option<Map<String, Value>> {
     let mut arguments = arguments.unwrap_or_default();
@@ -31,7 +30,7 @@ pub(super) fn normalize_tool_arguments(
     }
     match tool_name {
         "get_copresence_summary" => {
-            ensure_limit(&mut arguments, ranked_limit_for_user_text(user_text));
+            ensure_limit(&mut arguments, 10);
         }
         "get_friend_changes" | "get_invite_history" | "search_worlds_visited" => {
             ensure_limit(&mut arguments, 25);
@@ -83,41 +82,6 @@ fn ensure_limit(arguments: &mut Map<String, Value>, limit: i64) {
         .is_some_and(|value| value > 0);
     if !has_valid_limit {
         arguments.insert("limit".into(), Value::from(limit));
-    }
-}
-
-fn ranked_limit_for_user_text(user_text: &str) -> i64 {
-    let normalized = user_text.to_lowercase();
-    let asks_single_winner = [
-        "一番",
-        "いちばん",
-        "最も",
-        "最多",
-        "誰",
-        "だれ",
-        "who",
-        "most",
-        "best",
-    ]
-    .iter()
-    .any(|needle| normalized.contains(needle));
-    let asks_list = [
-        "top ",
-        "top",
-        "ランキング",
-        "rank",
-        "list",
-        "一覧",
-        "人たち",
-        "people",
-    ]
-    .iter()
-    .any(|needle| normalized.contains(needle));
-
-    if asks_single_winner && !asks_list {
-        3
-    } else {
-        10
     }
 }
 
@@ -338,24 +302,18 @@ pub(super) fn truncate(text: &str) -> String {
 mod tests {
     use super::*;
     #[test]
-    fn copresence_top_question_gets_floor_limit_when_model_omits_it() {
-        let arguments = normalize_tool_arguments(
-            "get_copresence_summary",
-            Some(serde_json::Map::new()),
-            "今までで一番あっている人は誰かな",
-            None,
-        )
-        .unwrap();
+    fn copresence_gets_a_default_limit_when_the_model_omits_it() {
+        let arguments =
+            normalize_tool_arguments("get_copresence_summary", Some(serde_json::Map::new()), None)
+                .unwrap();
 
-        assert_eq!(arguments.get("limit").and_then(Value::as_i64), Some(3));
+        assert_eq!(arguments.get("limit").and_then(Value::as_i64), Some(10));
         assert!(!arguments.contains_key("utcOffsetMinutes"));
     }
 
     #[test]
     fn utc_offset_is_injected_when_the_tool_accepts_it_and_the_model_omits_it() {
-        let arguments =
-            normalize_tool_arguments("get_best_time_to_play", None, "best time", Some(540))
-                .unwrap();
+        let arguments = normalize_tool_arguments("get_best_time_to_play", None, Some(540)).unwrap();
 
         assert_eq!(
             arguments.get("utcOffsetMinutes").and_then(Value::as_i64),
@@ -372,7 +330,6 @@ mod tests {
                     serde_json::from_value(serde_json::json!({ "utcOffsetMinutes": explicit }))
                         .unwrap(),
                 ),
-                "best time",
                 Some(540),
             )
             .unwrap();
@@ -391,7 +348,6 @@ mod tests {
             Some(
                 serde_json::from_value(serde_json::json!({ "utc_offset_minutes": "600" })).unwrap(),
             ),
-            "timeline",
             Some(540),
         )
         .unwrap();
@@ -407,7 +363,6 @@ mod tests {
             Some(
                 serde_json::from_value(serde_json::json!({ "utcOffsetMinutes": "later" })).unwrap(),
             ),
-            "timeline",
             Some(540),
         )
         .unwrap();
@@ -420,16 +375,10 @@ mod tests {
 
     #[test]
     fn tool_call_signature_includes_normalized_arguments() {
-        let first =
-            normalize_tool_arguments("get_copresence_summary", None, "who have I met most", None)
+        let first = normalize_tool_arguments("get_copresence_summary", None, None).unwrap();
+        let second =
+            normalize_tool_arguments("get_copresence_summary", Some(serde_json::Map::new()), None)
                 .unwrap();
-        let second = normalize_tool_arguments(
-            "get_copresence_summary",
-            Some(serde_json::Map::new()),
-            "who have I met most",
-            None,
-        )
-        .unwrap();
 
         assert_eq!(
             tool_call_signature("get_copresence_summary", Some(&first)),
@@ -448,7 +397,6 @@ mod tests {
                 }))
                 .unwrap(),
             ),
-            "activity",
             Some(540),
         )
         .unwrap();
@@ -465,7 +413,6 @@ mod tests {
         let arguments = normalize_tool_arguments(
             "recall_encounter",
             Some(serde_json::from_value(serde_json::json!({ "limit": "many" })).unwrap()),
-            "encounters",
             None,
         )
         .unwrap();

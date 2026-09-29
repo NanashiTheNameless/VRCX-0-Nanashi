@@ -1,6 +1,6 @@
 use vrcx_0_contracts::{
     social_aggregates::{FavoriteLocalInput, FavoriteOutput},
-    CacheEntityInput, FavoriteRow,
+    FavoriteRow,
 };
 
 use vrcx_0_application_core::{
@@ -64,10 +64,6 @@ pub trait FavoriteStore: Send + Sync {
         group_name: &str,
         groups: &[String],
     ) -> Result<i64>;
-    fn cache_exists(&self, kind: super::FavoriteCacheKind, id: String) -> Result<bool>;
-    fn cache_upsert(&self, kind: super::FavoriteCacheKind, entry: CacheEntityInput) -> Result<i64>;
-    fn avatar_cache_existing_ids(&self, avatar_ids: &[String]) -> Result<Vec<String>>;
-    fn avatar_cache_upsert_many(&self, entries: Vec<CacheEntityInput>) -> Result<u32>;
     fn mutate_local(
         &self,
         owner_user_id: &OwnerId,

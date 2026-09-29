@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import configRepository from '@/repositories/configRepository';
-import { reloadWristOverlayRuntimeConfigIfNeeded } from '@/services/preferences/preferencesCore';
 import { Button } from '@/ui/shadcn/button';
 import {
     Select,
@@ -89,7 +88,6 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
 
     async function save(key: string, value: string) {
         await configRepository.setString(key, value);
-        await reloadWristOverlayRuntimeConfigIfNeeded(key);
     }
 
     function updateRows(next: PageRow[]) {

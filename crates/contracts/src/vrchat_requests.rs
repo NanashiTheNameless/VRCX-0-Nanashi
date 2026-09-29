@@ -1,6 +1,5 @@
 use serde::{de::Error as _, Deserialize, Deserializer, Serialize};
-
-use super::{QueryOrder, ReleaseStatusFilter, WorldSearchSort};
+use vrcx_0_core::friends::UserStatus;
 
 fn deserialize_optional_nonnegative_i32<'de, D>(
     deserializer: D,
@@ -484,6 +483,249 @@ pub enum InviteMessageType {
     Request,
     RequestResponse,
     Response,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+pub enum QueryOrder {
+    #[serde(rename = "ascending")]
+    Ascending,
+    #[serde(rename = "descending")]
+    Descending,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+pub enum ReleaseStatusFilter {
+    #[serde(rename = "all")]
+    All,
+    #[serde(rename = "hidden")]
+    Hidden,
+    #[serde(rename = "private")]
+    Private,
+    #[serde(rename = "public")]
+    Public,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+pub enum WorldSearchSort {
+    #[serde(rename = "_created_at")]
+    CreatedAt,
+    #[serde(rename = "_updated_at")]
+    UpdatedAt,
+    #[serde(rename = "created")]
+    Created,
+    #[serde(rename = "favorites")]
+    Favorites,
+    #[serde(rename = "heat")]
+    Heat,
+    #[serde(rename = "labsPublicationDate")]
+    LabsPublicationDate,
+    #[serde(rename = "magic")]
+    Magic,
+    #[serde(rename = "name")]
+    Name,
+    #[serde(rename = "order")]
+    Order,
+    #[serde(rename = "popularity")]
+    Popularity,
+    #[serde(rename = "publicationDate")]
+    PublicationDate,
+    #[serde(rename = "random")]
+    Random,
+    #[serde(rename = "relevance")]
+    Relevance,
+    #[serde(rename = "reportCount")]
+    ReportCount,
+    #[serde(rename = "reportScore")]
+    ReportScore,
+    #[serde(rename = "shuffle")]
+    Shuffle,
+    #[serde(rename = "trust")]
+    Trust,
+    #[serde(rename = "updated")]
+    Updated,
+}
+
+impl ProfileDecorationEquipSlot {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::IconFrame => "iconFrame",
+            Self::ProfileEffect => "profileEffect",
+            Self::NameplateEffect => "nameplateEffect",
+        }
+    }
+}
+
+impl AvatarListSort {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Created => "created",
+            Self::Updated => "updated",
+            Self::Order => "order",
+            Self::CreatedAt => "_created_at",
+            Self::UpdatedAt => "_updated_at",
+        }
+    }
+}
+
+impl QueryOrder {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Ascending => "ascending",
+            Self::Descending => "descending",
+        }
+    }
+}
+
+impl ReleaseStatusFilter {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::All => "all",
+            Self::Hidden => "hidden",
+            Self::Private => "private",
+            Self::Public => "public",
+        }
+    }
+}
+
+impl WorldSearchSort {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::CreatedAt => "_created_at",
+            Self::UpdatedAt => "_updated_at",
+            Self::Created => "created",
+            Self::Favorites => "favorites",
+            Self::Heat => "heat",
+            Self::LabsPublicationDate => "labsPublicationDate",
+            Self::Magic => "magic",
+            Self::Name => "name",
+            Self::Order => "order",
+            Self::Popularity => "popularity",
+            Self::PublicationDate => "publicationDate",
+            Self::Random => "random",
+            Self::Relevance => "relevance",
+            Self::ReportCount => "reportCount",
+            Self::ReportScore => "reportScore",
+            Self::Shuffle => "shuffle",
+            Self::Trust => "trust",
+            Self::Updated => "updated",
+        }
+    }
+}
+
+impl InviteMessageType {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Message => "message",
+            Self::Request => "request",
+            Self::RequestResponse => "requestResponse",
+            Self::Response => "response",
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct WorldUpdateRequest {
+    pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_optional_nonnegative_i32"
+    )]
+    pub capacity: Option<i32>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_optional_nonnegative_i32"
+    )]
+    pub recommended_capacity: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub preview_youtube_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url_list: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disabled_prop_abilities: Option<Vec<String>>,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+pub enum ContentFilter {
+    #[serde(rename = "content_adult")]
+    Adult,
+    #[serde(rename = "content_gore")]
+    Gore,
+    #[serde(rename = "content_horror")]
+    Horror,
+    #[serde(rename = "content_sex")]
+    Sex,
+    #[serde(rename = "content_violence")]
+    Violence,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ProfileBackgroundType {
+    Default,
+    Gradient,
+    Texture,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ProfileBannerType {
+    AvatarBanner,
+    CustomImage,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CurrentUserProfileUpdateRequest {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bio: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bio_links: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user_icon: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub banner_type: Option<ProfileBannerType>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub banner_custom_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_type: Option<ProfileBackgroundType>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_gradient_bottom: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_gradient_top: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub background_texture_id: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CurrentUserUpdateRequest {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub home_location: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<UserStatus>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status_description: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pronouns: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub allow_avatar_copying: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_booping_enabled: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub has_shared_connections_opt_out: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub has_discord_friends_opt_out: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub content_filters: Option<Vec<ContentFilter>>,
 }
 
 #[cfg(test)]

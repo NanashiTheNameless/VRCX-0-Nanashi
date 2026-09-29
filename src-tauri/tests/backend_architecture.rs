@@ -83,24 +83,27 @@ fn named_struct_body<'a>(source: &'a str, declaration: &str) -> &'a str {
 fn vrchat_commands_do_not_access_transport_implementation_directly() {
     for path in rust_sources_below("src-tauri/src/commands/vrchat") {
         let source = std::fs::read_to_string(&path).expect("read VRChat command source");
-        for transport in ["VrchatApiRequest", "vrcx_0_vrchat_client"] {
-            assert!(
-                !source.contains(transport),
-                "VRChat transport implementation {transport} leaked into Tauri command {}",
-                path.display()
-            );
-        }
+        assert!(
+            !source.contains("VrchatApiRequest"),
+            "VRChat transport request type leaked into Tauri command {}",
+            path.display()
+        );
     }
 }
 
 #[test]
-fn local_commands_do_not_access_persistence_directly() {
-    for path in rust_sources_below("src-tauri/src/commands/local") {
-        let source = std::fs::read_to_string(&path).expect("read local command source");
+fn tauri_shell_does_not_depend_on_concrete_infrastructure_crates() {
+    let dependencies = normal_dependency_names("vrcx-0");
+    for forbidden in [
+        "vrcx-0-persistence",
+        "vrcx-0-vrchat-client",
+        "vrcx-0-integrations",
+        "vrcx-0-media",
+        "vrcx-0-outbound-adapters",
+    ] {
         assert!(
-            !source.contains("vrcx_0_persistence"),
-            "local inbound adapter accesses persistence directly: {}",
-            path.display()
+            !dependencies.contains(forbidden),
+            "Tauri inbound adapter depends on concrete infrastructure crate {forbidden}"
         );
     }
 }
@@ -558,25 +561,6 @@ fn mcp_and_assistant_do_not_construct_from_complete_host_state() {
             !source.contains("RuntimeHostState"),
             "runtime depends on the complete host service graph: {path}"
         );
-    }
-}
-
-#[test]
-fn tauri_commands_do_not_access_outbound_infrastructure_directly() {
-    for path in rust_sources_below("src-tauri/src/commands") {
-        let source = std::fs::read_to_string(&path).expect("read Tauri command source");
-        for dependency in [
-            "vrcx_0_persistence",
-            "vrcx_0_vrchat_client",
-            "vrcx_0_integrations",
-            "vrcx_0_media",
-        ] {
-            assert!(
-                !source.contains(dependency),
-                "Tauri inbound adapter accesses outbound infrastructure {dependency}: {}",
-                path.display()
-            );
-        }
     }
 }
 

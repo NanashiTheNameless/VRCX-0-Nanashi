@@ -96,28 +96,28 @@ fn has_log_timestamp_prefix(bytes: &[u8]) -> bool {
 pub fn convert_log_time_to_iso8601(line: &str) -> String {
     let date_str = match line.get(..LOG_TIMESTAMP_LEN) {
         Some(value) => value,
-        None => {
-            return chrono::Utc::now()
-                .format("%Y-%m-%dT%H:%M:%S%.3fZ")
-                .to_string()
-        }
+        None => return crate::time::now_iso(),
     };
 
     match chrono::NaiveDateTime::parse_from_str(date_str, LOG_TIME_FORMAT) {
-        Ok(local_dt) => {
-            let local_aware = chrono::TimeZone::from_local_datetime(&chrono::Local, &local_dt);
-            match local_aware.single() {
-                Some(dt) => dt
-                    .with_timezone(&chrono::Utc)
-                    .format("%Y-%m-%dT%H:%M:%S%.3fZ")
-                    .to_string(),
-                None => format!("{}", local_dt.format("%Y-%m-%dT%H:%M:%S%.3fZ")),
-            }
-        }
-        Err(_) => chrono::Utc::now()
-            .format("%Y-%m-%dT%H:%M:%S%.3fZ")
-            .to_string(),
+        Ok(local_dt) => crate::time::iso_millis(log_time_to_utc(&chrono::Local, local_dt)),
+        Err(_) => crate::time::now_iso(),
     }
+}
+
+fn log_time_to_utc<Tz: chrono::TimeZone>(
+    tz: &Tz,
+    local: chrono::NaiveDateTime,
+) -> chrono::DateTime<chrono::Utc> {
+    if let Some(dt) = tz.from_local_datetime(&local).latest() {
+        return dt.with_timezone(&chrono::Utc);
+    }
+    let offset_before_gap = tz
+        .from_local_datetime(&(local - chrono::TimeDelta::hours(1)))
+        .latest()
+        .map(|dt| chrono::Offset::fix(dt.offset()).local_minus_utc())
+        .unwrap_or(0);
+    (local - chrono::TimeDelta::seconds(i64::from(offset_before_gap))).and_utc()
 }
 
 pub fn clean_location(value: &str) -> String {
@@ -517,6 +517,96 @@ mod tests {
                 "wrld_test:123",
                 "测试世界",
             ])
+        );
+    }
+
+    #[derive(Clone, Copy)]
+    struct UsEasternZone2026;
+
+    impl UsEasternZone2026 {
+        fn offset_at_utc(utc: &chrono::NaiveDateTime) -> chrono::FixedOffset {
+            let dst_start = chrono::NaiveDate::from_ymd_opt(2026, 3, 8)
+                .unwrap()
+                .and_hms_opt(7, 0, 0)
+                .unwrap();
+            let dst_end = chrono::NaiveDate::from_ymd_opt(2026, 11, 1)
+                .unwrap()
+                .and_hms_opt(6, 0, 0)
+                .unwrap();
+            let hours = if (dst_start..dst_end).contains(utc) {
+                -4
+            } else {
+                -5
+            };
+            chrono::FixedOffset::east_opt(hours * 3600).unwrap()
+        }
+    }
+
+    impl chrono::TimeZone for UsEasternZone2026 {
+        type Offset = chrono::FixedOffset;
+
+        fn from_offset(_offset: &chrono::FixedOffset) -> Self {
+            Self
+        }
+
+        fn offset_from_local_date(
+            &self,
+            local: &chrono::NaiveDate,
+        ) -> chrono::MappedLocalTime<chrono::FixedOffset> {
+            self.offset_from_local_datetime(&local.and_hms_opt(12, 0, 0).unwrap())
+        }
+
+        fn offset_from_local_datetime(
+            &self,
+            local: &chrono::NaiveDateTime,
+        ) -> chrono::MappedLocalTime<chrono::FixedOffset> {
+            let valid = [-4, -5]
+                .into_iter()
+                .map(|hours| chrono::FixedOffset::east_opt(hours * 3600).unwrap())
+                .filter(|offset| Self::offset_at_utc(&(*local - *offset)) == *offset)
+                .collect::<Vec<_>>();
+            match valid.as_slice() {
+                [] => chrono::MappedLocalTime::None,
+                [offset] => chrono::MappedLocalTime::Single(*offset),
+                [earliest, latest, ..] => chrono::MappedLocalTime::Ambiguous(*earliest, *latest),
+            }
+        }
+
+        fn offset_from_utc_date(&self, utc: &chrono::NaiveDate) -> chrono::FixedOffset {
+            Self::offset_at_utc(&utc.and_hms_opt(12, 0, 0).unwrap())
+        }
+
+        fn offset_from_utc_datetime(&self, utc: &chrono::NaiveDateTime) -> chrono::FixedOffset {
+            Self::offset_at_utc(utc)
+        }
+    }
+
+    fn utc_log_time(local: &str) -> String {
+        let local = chrono::NaiveDateTime::parse_from_str(local, super::LOG_TIME_FORMAT).unwrap();
+        crate::time::iso_millis(super::log_time_to_utc(&UsEasternZone2026, local))
+    }
+
+    #[test]
+    fn converts_unambiguous_local_log_times_to_utc() {
+        assert_eq!(
+            utc_log_time("2026.06.21 22:10:00"),
+            "2026-06-22T02:10:00.000Z"
+        );
+    }
+
+    #[test]
+    fn ambiguous_fall_back_log_times_use_standard_time() {
+        assert_eq!(
+            utc_log_time("2026.11.01 01:30:00"),
+            "2026-11-01T06:30:00.000Z"
+        );
+    }
+
+    #[test]
+    fn skipped_spring_forward_log_times_use_the_offset_before_the_gap() {
+        assert_eq!(
+            utc_log_time("2026.03.08 02:30:00"),
+            "2026-03-08T07:30:00.000Z"
         );
     }
 }

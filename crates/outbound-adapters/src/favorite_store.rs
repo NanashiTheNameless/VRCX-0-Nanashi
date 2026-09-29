@@ -1,20 +1,15 @@
 use std::sync::Arc;
 
-use vrcx_0_application::favorites::{FavoriteCacheKind, FavoriteMoveResult, FavoriteStore};
+use vrcx_0_application::favorites::{FavoriteMoveResult, FavoriteStore};
 use vrcx_0_application_core::Result;
 use vrcx_0_contracts::{
     social_aggregates::{FavoriteLocalInput, FavoriteOutput},
-    CacheEntityInput, FavoriteRow,
+    FavoriteRow,
 };
 use vrcx_0_core::{FavoriteEntityKind, OwnerId};
 use vrcx_0_persistence::{
-    avatars::{
-        avatar_cache_existing_ids, avatar_cache_get, avatar_cache_upsert, avatar_cache_upsert_many,
-    },
     config::{get_json, resolve_config_key, set_json},
-    favorites, social_aggregates,
-    worlds::{world_cache_get, world_cache_upsert},
-    DatabaseService,
+    favorites, social_aggregates, DatabaseService,
 };
 
 pub struct LocalFavoriteStore {
@@ -130,34 +125,6 @@ impl FavoriteStore for LocalFavoriteStore {
             groups,
         )
         .map_err(Into::into)
-    }
-
-    fn cache_exists(&self, kind: FavoriteCacheKind, id: String) -> Result<bool> {
-        match kind {
-            FavoriteCacheKind::Avatar => {
-                avatar_cache_get(self.db.as_ref(), id).map(|row| row.is_some())
-            }
-            FavoriteCacheKind::World => {
-                world_cache_get(self.db.as_ref(), id).map(|row| row.is_some())
-            }
-        }
-        .map_err(Into::into)
-    }
-
-    fn cache_upsert(&self, kind: FavoriteCacheKind, entry: CacheEntityInput) -> Result<i64> {
-        match kind {
-            FavoriteCacheKind::Avatar => avatar_cache_upsert(self.db.as_ref(), entry),
-            FavoriteCacheKind::World => world_cache_upsert(self.db.as_ref(), entry),
-        }
-        .map_err(Into::into)
-    }
-
-    fn avatar_cache_existing_ids(&self, avatar_ids: &[String]) -> Result<Vec<String>> {
-        avatar_cache_existing_ids(self.db.as_ref(), avatar_ids).map_err(Into::into)
-    }
-
-    fn avatar_cache_upsert_many(&self, entries: Vec<CacheEntityInput>) -> Result<u32> {
-        avatar_cache_upsert_many(self.db.as_ref(), entries).map_err(Into::into)
     }
 
     fn mutate_local(

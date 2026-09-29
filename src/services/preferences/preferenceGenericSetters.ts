@@ -57,7 +57,6 @@ import {
     patchPreferences,
     patchPreferenceValue,
     publishPreferenceChanged,
-    reloadWristOverlayRuntimeConfigIfNeeded,
     resolveTablePageSize,
     setDocumentLanguage
 } from './preferencesCore';
@@ -89,7 +88,6 @@ export async function setAppLanguagePreference(language: string | null) {
         cjkFontPack,
         locale: nextLanguage
     });
-    await reloadWristOverlayRuntimeConfigIfNeeded('appLanguage');
     await appLanguageChanged(nextLanguage);
 }
 
@@ -334,7 +332,6 @@ export async function setBoolConfigPreference(
     }
     patchPreferenceValue(key, enabled);
     publishPreferenceChanged(key, enabled);
-    await reloadWristOverlayRuntimeConfigIfNeeded(key);
 }
 
 export async function setGameLogPersistenceDisabledPreference(
@@ -359,7 +356,6 @@ export async function setStringConfigPreference(
     await configRepository.setString(key, value);
     patchPreferenceValue(key, value);
     publishPreferenceChanged(key, value);
-    await reloadWristOverlayRuntimeConfigIfNeeded(key);
 }
 
 export async function setIntConfigPreference(

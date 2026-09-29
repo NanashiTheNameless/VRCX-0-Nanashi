@@ -183,7 +183,7 @@ impl VrcxMcpServer {
             .map(|kind| kind.as_str().to_string())
             .collect();
         self.runtime
-            .social_history_queries
+            .activity_queries
             .friend_log(social_aggregates::FriendLogInput {
                 owner_user_id,
                 target_user_id: input.target,
@@ -370,7 +370,7 @@ impl VrcxMcpServer {
             self.friend_relationship_profile(&owner_user_id, &user_id, time_window_params.clone())?;
         let copresence = self
             .runtime
-            .social_history_queries
+            .activity_queries
             .copresence_summary(social_aggregates::CopresenceSummaryInput {
                 time_window: time_window.clone(),
                 group_by: social_aggregates::CopresenceGroupBy::Friend,
@@ -387,7 +387,7 @@ impl VrcxMcpServer {
             .find(|row| row.user_id == user_id);
         let activity_pattern = self
             .runtime
-            .social_history_queries
+            .activity_queries
             .friend_activity_pattern(social_aggregates::FriendActivityPatternInput {
                 owner_user_id: owner_user_id.clone(),
                 user_id: Some(user_id.clone()),

@@ -349,14 +349,19 @@ pub fn notification_update_expired(
         return Ok(());
     }
     let table = format!("{user_prefix}_notifications");
-    let sql = update_by_key_sql(&table, &["expired"], "id");
-    db.execute_non_query(
-        &sql,
-        &ParamsBuilder::new()
-            .set("id", id)
-            .set("expired", if expired { 1 } else { 0 })
-            .build(),
-    )?;
+    let params = ParamsBuilder::new().set("id", id);
+    let (sql, params) = if expired {
+        (
+            update_by_key_sql(&table, &["expired", "seen"], "id"),
+            params.set("expired", 1).set("seen", 1),
+        )
+    } else {
+        (
+            update_by_key_sql(&table, &["expired"], "id"),
+            params.set("expired", 0),
+        )
+    };
+    db.execute_non_query(&sql, &params.build())?;
     Ok(())
 }
 
@@ -392,7 +397,7 @@ pub fn notification_expire(db: &DatabaseService, user_id: String, id: String) ->
     let now = now_iso();
     let v1_table = format!("{user_prefix}_notifications");
     let v2_table = format!("{user_prefix}_notifications_v2");
-    let expire_v1_sql = update_by_key_sql(&v1_table, &["expired"], "id");
+    let expire_v1_sql = update_by_key_sql(&v1_table, &["expired", "seen"], "id");
     let expire_v2_sql = update_by_key_sql(&v2_table, &["expires_at", "seen"], "id");
     db.write_transaction(|tx| {
         tx.execute_non_query(
@@ -400,6 +405,7 @@ pub fn notification_expire(db: &DatabaseService, user_id: String, id: String) ->
             &ParamsBuilder::new()
                 .set("id", id.clone())
                 .set("expired", 1)
+                .set("seen", 1)
                 .build(),
         )?;
         tx.execute_non_query(

@@ -82,6 +82,8 @@ mod router_tests {
             "get_best_time_to_play",
             "get_activity_timeline",
             "get_activity_streaks",
+            "get_my_activity",
+            "summarize_social_period",
         ] {
             let tool = tools
                 .iter()

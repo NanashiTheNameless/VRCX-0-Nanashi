@@ -227,14 +227,6 @@ impl BackendRuntime {
         })
     }
 
-    pub fn set_error(&self, message: impl Into<String>) -> BackendRuntimeSnapshot {
-        let message = message.into();
-        self.update(|state| {
-            state.phase = BackendRuntimePhase::Error;
-            state.last_error = Some(message);
-        })
-    }
-
     pub fn set_authenticating(&self) -> BackendRuntimeSnapshot {
         self.update(|state| {
             state.phase = BackendRuntimePhase::Authenticating;

@@ -1230,26 +1230,16 @@ fn failed_write_recovers_before_later_records_advance_history() -> Result<()> {
         },
     ))])?;
     store.set_fail_writes(true);
-    let writing = processor.clone();
-    let worker = std::thread::spawn(move || {
-        writing.handle_jobs(vec![GameLogWorkerJob::Event(event(
-            "2026-05-14T04:00:10.000Z",
-            GameLogEventKind::PlayerJoined {
-                user_id: "usr_other".into(),
-                display_name: "Other".into(),
-            },
-        ))])
-    });
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
-    while processor.deps.snapshot.snapshot().players.is_empty()
-        && std::time::Instant::now() < deadline
-    {
-        std::thread::sleep(std::time::Duration::from_millis(10));
-    }
-    std::thread::sleep(std::time::Duration::from_millis(450));
+    let failed = processor.handle_jobs(vec![GameLogWorkerJob::Event(event(
+        "2026-05-14T04:00:10.000Z",
+        GameLogEventKind::PlayerJoined {
+            user_id: "usr_other".into(),
+            display_name: "Other".into(),
+        },
+    ))]);
     let events = processor.deps.event_bus.take_events_for_test();
     store.set_fail_writes(false);
-    assert!(worker.join().unwrap().is_err());
+    assert!(failed.is_err());
     processor.handle_jobs(vec![GameLogWorkerJob::Event(event(
         "2026-05-14T04:00:10.000Z",
         GameLogEventKind::PlayerJoined {

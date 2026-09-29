@@ -105,7 +105,7 @@ pub fn builder() -> Builder<tauri::Wry> {
         .typ::<AssistantErrorEvent>()
         .typ::<BackendRuntimeEventPayloadMap>()
         .typ::<BackendRuntimeTelemetry>()
-        .typ::<crate::deep_link::DeepLinkAction>()
+        .typ::<vrcx_0_runtime_host_desktop::deep_link::DeepLinkAction>()
         .typ::<FriendProjection>()
         .typ::<GameLogProjection>()
         .typ::<HostSessionProjection>()
@@ -247,7 +247,6 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::application::favorite_transfer::app__favorites_remove_selection,
             commands::application::vr_overlay::app__vr_overlay_enabled_set,
             commands::application::vr_overlay::app__vr_overlay_test_mode_set,
-            commands::application::vr_overlay::app__vr_overlay_config_reload,
             commands::application::registry_backup::app__registry_backup_list,
             commands::application::registry_backup::app__registry_backup_create,
             commands::application::registry_backup::app__registry_backup_restore,
@@ -280,9 +279,6 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::local::browse_history::app__browse_history_retention_days_set,
             commands::local::database_maintenance::app__user_tables_ensure,
             commands::local::database_maintenance::app__database_maintenance_table_sizes_get,
-            commands::local::database_maintenance::app__database_maintenance_max_friend_log_number_get,
-            commands::local::database_maintenance::app__database_maintenance_broken_leave_entries_get,
-            commands::local::database_maintenance::app__database_maintenance_broken_game_log_display_names_get,
             commands::local::avatars::app__avatar_get,
             commands::local::avatars::app__avatar_find_by_image_url,
             commands::local::avatars::app__avatar_history_list,

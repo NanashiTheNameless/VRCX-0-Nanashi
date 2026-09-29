@@ -39,29 +39,23 @@ tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-autostart = "2"
 tauri-plugin-window-state = "2"
 percent-encoding = { workspace = true }
-url = { workspace = true }
 tauri-plugin-updater = "2.10.1"
 sha2.workspace = true
 vrcx-0-core = { path = "../crates/core" }
-vrcx-0-persistence = { path = "../crates/persistence" }
-vrcx-0-integrations = { path = "../crates/integrations" }
 vrcx-0-platform = { path = "../crates/platform" }
 vrcx-0-host-desktop = { path = "../crates/host-desktop" }
 vrcx-0-i18n = { path = "../crates/i18n" }
-vrcx-0-media = { path = "../crates/media" }
 vrcx-0-application = { path = "../crates/application" }
 vrcx-0-contracts = { path = "../crates/contracts" }
 vrcx-0-application-activity = { path = "../crates/application-activity" }
 vrcx-0-application-core = { path = "../crates/application-core" }
 vrcx-0-application-realtime = { path = "../crates/application-realtime" }
 vrcx-0-application-game = { path = "../crates/application-game" }
-vrcx-0-outbound-adapters = { path = "../crates/outbound-adapters" }
 vrcx-0-mcp = { path = "../crates/mcp" }
 vrcx-0-integration-api = { path = "../crates/integration-api" }
 vrcx-0-assistant = { path = "../crates/assistant" }
 vrcx-0-composition = { path = "../crates/composition" }
 vrcx-0-runtime-host-desktop = { path = "../crates/runtime-host-desktop" }
-vrcx-0-vrchat-client = { path = "../crates/vrchat-client" }
 specta-typescript = "0.0.9"
 tauri-plugin-global-shortcut = "2"
 specta = { workspace = true }

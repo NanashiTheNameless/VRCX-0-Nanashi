@@ -122,7 +122,7 @@ pub fn parse_location(tag: &str) -> ParsedLocation {
         }
         _ => {}
     }
-    if raw.is_empty() || raw.starts_with("local") {
+    if !is_real_instance(&raw) {
         return parsed;
     }
     parsed.is_real_instance = true;
@@ -183,6 +183,22 @@ pub fn parse_location(tag: &str) -> ParsedLocation {
         parsed.world_id = raw;
     }
     parsed
+}
+
+pub fn is_real_instance(location: &str) -> bool {
+    let location = location.trim().to_ascii_lowercase();
+    if location.is_empty() || location.starts_with("local") {
+        return false;
+    }
+    !matches!(
+        location.as_str(),
+        ":" | "offline"
+            | "offline:offline"
+            | "traveling"
+            | "traveling:traveling"
+            | "private"
+            | "private:private"
+    )
 }
 
 pub fn world_id_from_location(tag: &str) -> String {

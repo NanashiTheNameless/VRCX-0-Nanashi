@@ -4,7 +4,6 @@ pub(crate) mod event_kind;
 pub(crate) mod friends;
 pub(crate) mod instance_queue;
 pub(crate) mod invite_automation;
-pub(crate) mod location_predicates;
 pub(crate) mod notifications;
 mod output;
 mod print_content_refresh;

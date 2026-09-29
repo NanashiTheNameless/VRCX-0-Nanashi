@@ -3,8 +3,6 @@ use std::sync::Mutex;
 
 use vrcx_0_core::vrchat_ids::{is_avatar_id, is_group_id, is_user_id, is_world_id};
 
-pub const DEEP_LINK_ARRIVED_EVENT: &str = "deepLinkArrived";
-
 /// Fork: user toggles for the extra schemes (`vrcx-0-nanashi://` is always on).
 pub const UPSTREAM_SCHEME_ENABLED_CONFIG_KEY: &str = "deepLinkUpstreamSchemeEnabled";
 pub const LEGACY_SCHEME_ENABLED_CONFIG_KEY: &str = "deepLinkLegacySchemeEnabled";
@@ -222,7 +220,7 @@ fn parse_instance_deep_link(url: &url::Url) -> Option<DeepLinkAction> {
     })
 }
 
-pub(crate) fn queue_deep_link_action(
+pub fn queue_deep_link_action(
     pending: &PendingDeepLinks,
     action: DeepLinkAction,
     after_queue: impl FnOnce(),

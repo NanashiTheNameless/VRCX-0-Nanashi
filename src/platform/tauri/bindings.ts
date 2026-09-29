@@ -608,9 +608,6 @@ const generatedCommands = {
             testMode
         });
     },
-    async appVrOverlayConfigReload(): Promise<VrOverlayRuntimeSnapshot> {
-        return await TAURI_INVOKE('app__vr_overlay_config_reload');
-    },
     async appRegistryBackupList(): Promise<RegistryBackupSnapshot[]> {
         return await TAURI_INVOKE('app__registry_backup_list');
     },
@@ -763,26 +760,6 @@ const generatedCommands = {
         return await TAURI_INVOKE('app__database_maintenance_table_sizes_get', {
             userId
         });
-    },
-    async appDatabaseMaintenanceMaxFriendLogNumberGet(
-        userId: string
-    ): Promise<number> {
-        return await TAURI_INVOKE(
-            'app__database_maintenance_max_friend_log_number_get',
-            { userId }
-        );
-    },
-    async appDatabaseMaintenanceBrokenLeaveEntriesGet(): Promise<JsonValue[]> {
-        return await TAURI_INVOKE(
-            'app__database_maintenance_broken_leave_entries_get'
-        );
-    },
-    async appDatabaseMaintenanceBrokenGameLogDisplayNamesGet(): Promise<
-        BrokenGameLogDisplayNameOutput[]
-    > {
-        return await TAURI_INVOKE(
-            'app__database_maintenance_broken_game_log_display_names_get'
-        );
     },
     async appAvatarGet(input: AvatarGetInput): Promise<RawJson | null> {
         return await TAURI_INVOKE('app__avatar_get', { input });
@@ -3612,10 +3589,6 @@ export type BatchMutationResult = {
     items: BatchMutationItemResult[];
     lastError: string | null;
 };
-export type BrokenGameLogDisplayNameOutput = {
-    id: JsonValue;
-    displayName: JsonValue;
-};
 export type BrowseHistoryCursor = {
     lastViewedAt: string;
     entityKind: BrowseHistoryEntityKind;
@@ -6259,7 +6232,6 @@ export type RegistryBackupSnapshot = {
     key: string;
     name: string;
     date: string;
-    data: RawJson;
 };
 export type ReleaseStatusFilter = 'all' | 'hidden' | 'private' | 'public';
 export type Reminder = {

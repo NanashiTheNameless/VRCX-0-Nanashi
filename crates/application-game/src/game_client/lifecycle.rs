@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use vrcx_0_core::location::is_real_instance;
+
 const CRASH_RELAUNCH_DEDUPE_MS: i64 = 120_000;
 const NOVR_RELAUNCH_DELAY: Duration = Duration::from_secs(2);
 const VR_RELAUNCH_DELAY: Duration = Duration::from_secs(8);
@@ -62,23 +64,6 @@ fn build_launch_arguments(location: &str, launch_arguments: &str, desktop_mode: 
         args.push("--no-vr".into());
     }
     args.join(" ")
-}
-
-fn is_real_instance(location: &str) -> bool {
-    if location.is_empty() {
-        return false;
-    }
-    match location {
-        ":"
-        | "offline"
-        | "offline:offline"
-        | "private"
-        | "private:private"
-        | "traveling"
-        | "traveling:traveling" => return false,
-        _ => {}
-    }
-    !location.starts_with("local")
 }
 
 #[cfg(test)]

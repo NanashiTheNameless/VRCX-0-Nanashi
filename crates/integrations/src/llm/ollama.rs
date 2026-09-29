@@ -28,7 +28,11 @@ impl LlmClient {
         &self,
     ) -> Result<LlmEndpointDetectModelsResult, LlmError> {
         let url = format!("{}/api/tags", self.ollama_root());
-        let response = self.ollama_request(self.http.get(&url)).send().await?;
+        let response = self
+            .ollama_request(self.http.get(&url))
+            .timeout(self.request_timeout)
+            .send()
+            .await?;
         let status = response.status();
         let body = response.text().await?;
         if !status.is_success() {
@@ -70,6 +74,7 @@ impl LlmClient {
         let response = self
             .ollama_request(self.http.post(format!("{}/api/chat", self.ollama_root())))
             .json(&body)
+            .timeout(self.request_timeout)
             .send()
             .await?;
         let status = response.status();

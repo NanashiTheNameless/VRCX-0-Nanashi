@@ -14,9 +14,9 @@ use vrcx_0_contracts::llm::{
 use vrcx_0_core::OwnerId;
 use vrcx_0_persistence::{assistant, config::ConfigRepository, DatabaseService};
 
-pub(crate) struct TauriAssistantLlmClientFactory;
+pub(crate) struct DesktopAssistantLlmClientFactory;
 
-impl AssistantLlmClientFactoryPort for TauriAssistantLlmClientFactory {
+impl AssistantLlmClientFactoryPort for DesktopAssistantLlmClientFactory {
     fn create(
         &self,
         input: AssistantLlmClientInput,
@@ -28,16 +28,18 @@ impl AssistantLlmClientFactoryPort for TauriAssistantLlmClientFactory {
             input.proxy_url.as_deref(),
         )
         .map(|client| client.with_api(input.api_kind, input.headers))
-        .map(|inner| Arc::new(TauriAssistantLlmClient { inner }) as Arc<dyn AssistantLlmClientPort>)
+        .map(|inner| {
+            Arc::new(DesktopAssistantLlmClient { inner }) as Arc<dyn AssistantLlmClientPort>
+        })
         .map_err(llm_error)
     }
 }
 
-struct TauriAssistantLlmClient {
+struct DesktopAssistantLlmClient {
     inner: vrcx_0_integrations::llm::LlmClient,
 }
 
-impl AssistantLlmClientPort for TauriAssistantLlmClient {
+impl AssistantLlmClientPort for DesktopAssistantLlmClient {
     fn list_models(&self) -> AssistantLlmFuture<'_, LlmEndpointDetectModelsResult> {
         Box::pin(async { self.inner.list_models().await.map_err(llm_error) })
     }
@@ -71,17 +73,17 @@ impl AssistantLlmClientPort for TauriAssistantLlmClient {
     }
 }
 
-pub(crate) struct TauriAssistantConfigAdapter {
+pub(crate) struct DesktopAssistantConfigAdapter {
     config: ConfigRepository,
 }
 
-impl TauriAssistantConfigAdapter {
+impl DesktopAssistantConfigAdapter {
     pub(crate) fn new(config: ConfigRepository) -> Self {
         Self { config }
     }
 }
 
-impl AssistantConfigPort for TauriAssistantConfigAdapter {
+impl AssistantConfigPort for DesktopAssistantConfigAdapter {
     fn get_bool(&self, key: &str, default: bool) -> AssistantPortResult<bool> {
         self.config.get_bool(key, default).map_err(port_error)
     }
@@ -107,17 +109,17 @@ impl AssistantConfigPort for TauriAssistantConfigAdapter {
     }
 }
 
-pub(crate) struct TauriAssistantSessionPersistenceAdapter {
+pub(crate) struct DesktopAssistantSessionPersistenceAdapter {
     db: Arc<DatabaseService>,
 }
 
-impl TauriAssistantSessionPersistenceAdapter {
+impl DesktopAssistantSessionPersistenceAdapter {
     pub(crate) fn new(db: Arc<DatabaseService>) -> Self {
         Self { db }
     }
 }
 
-impl AssistantSessionPersistencePort for TauriAssistantSessionPersistenceAdapter {
+impl AssistantSessionPersistencePort for DesktopAssistantSessionPersistenceAdapter {
     fn load_sessions(
         &self,
         owner_user_id: &OwnerId,

@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::time::Duration;
 
 use vrcx_0_application_core::LocalGameContextSource;
 use vrcx_0_application_realtime::FriendProjectionObserver;
@@ -12,10 +11,6 @@ pub trait RuntimeHostProfileExtension: Send + Sync {
     fn stop_profile_services(&self) {}
 
     fn start_profile_maintenance(&self, _state: &RuntimeHostState) {}
-
-    fn wait_for_profile_maintenance_stopped(&self, _timeout: Duration) -> bool {
-        true
-    }
 }
 
 pub struct RuntimeHostComposition {

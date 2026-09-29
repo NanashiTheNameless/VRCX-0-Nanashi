@@ -15,6 +15,7 @@ pub trait WorldCachePort: Send + Sync {
     fn search_summaries(&self, query: &str, limit: i64) -> Result<Vec<WorldSummaryOutput>>;
     fn hydrate_from_payload(&self, world_value: &Value) -> Option<String>;
     fn hydrate_summary_from_payload(&self, world_value: &Value) -> Option<WorldSummaryOutput>;
+    fn store_from_payload(&self, world_value: &Value) -> Result<Option<String>>;
     fn hydrate_favorite_payloads(&self, world_values: &[Value]) -> Vec<Option<Value>>;
     async fn resolve_name(&self, web: &WebClient, endpoint: &str, world_id: &str)
         -> Option<String>;
@@ -78,6 +79,10 @@ impl WorldCache {
 
     pub fn hydrate_summary_from_payload(&self, world_value: &Value) -> Option<WorldSummaryOutput> {
         self.inner.hydrate_summary_from_payload(world_value)
+    }
+
+    pub fn store_from_payload(&self, world_value: &Value) -> Result<Option<String>> {
+        self.inner.store_from_payload(world_value)
     }
 
     pub fn hydrate_favorite_payloads<'a>(
