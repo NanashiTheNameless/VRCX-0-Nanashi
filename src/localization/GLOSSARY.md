@@ -258,16 +258,16 @@ the app and across releases.
 | Downloading...                     | 下载中...                  | 下載中...             | ダウンロード中...                    |
 | Edit Dashboard                     | 编辑仪表板                 | 編輯儀錶板            | ダッシュボードを編集                 |
 | Edit Details                       | 编辑详情                   | 編輯詳細資訊          | 詳細を編集                           |
-| Edit Note and Local Note           | 编辑在线备注与本地备注     | 編輯備註與本機備註    | ノートとローカルノートを編集         |
+| Edit Note and Local Note           | 编辑线上备注与本地备注     | 編輯備註與本機備註    | ノートとローカルノートを編集         |
 | Export Friends List                | 导出好友列表               | 匯出好友列表          | フレンドリストをエクスポート         |
 | Export Own Avatars                 | 导出自己创建的模型 ID 列表 | 匯出個人角色          | 自分のアバターをエクスポート         |
 | Favorite groups                    | 收藏分组                   | 收藏群組              | お気に入りグループ                   |
 | Feed                               | 好友动态                   | 好友動態              | フィード                             |
-| Feed Widget                        | 动态小部件                 | 動態小工具            | フィード                             |
-| Folders                            | 文件夹                     | 捷徑                  | フォルダー                           |
-| Friend History                     | 好友日志                   | 好友紀錄              | フレンドログ                         |
+| Feed Widget                        | 动态小组件                 | 動態小工具            | フィード                             |
+| Folders                            | 文件夹                     | 捷徑                  | フォルダ                             |
+| Friend History                     | 好友历史                   | 好友紀錄              | フレンドログ                         |
 | Game Log                           | 游戏日志                   | 遊戲紀錄              | ゲームログ                           |
-| Game Log Widget                    | 游戏日志小部件             | 遊戲紀錄小工具        | ゲームログ                           |
+| Game Log Widget                    | 游戏日志小组件             | 遊戲紀錄小工具        | ゲームログ                           |
 | GitHub                             | 在 GitHub 上查看           | 在 GitHub 上查看      | GitHub                               |
 | Group Announcement                 | 群组公告                   | 群組公告              | お知らせ                             |
 | Group Change                       | 群组变动                   | 群組變更              | グループ変更                         |
@@ -281,7 +281,7 @@ the app and across releases.
 | Info                               | 信息                       | 資訊                  | 情報                                 |
 | Instance Creator                   | 房间建立者                 | 房間建立者            | インスタンス作成者                   |
 | Instance History                   | 房间历史                   | 房間歷史              | インスタンス履歴                     |
-| Instance Widget                    | 房间小部件                 | 房間小工具            | インスタンス                         |
+| Instance Widget                    | 房间小组件                 | 房間小工具            | インスタンス                         |
 | Integration API                    | 应用集成 API               | 應用程式整合 API      | アプリ連携 API                       |
 | Interactive Friends Panel          | 交互好友面板               | 互動好友面板          | インタラクティブフレンドパネル       |
 | Join Count                         | 见面的次数                 | 加入次數              | 参加した回数                         |

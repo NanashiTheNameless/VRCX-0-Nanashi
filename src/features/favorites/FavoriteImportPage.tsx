@@ -224,8 +224,6 @@ export function FavoriteImportPage() {
         localWorldFavorites.groupNames
     ]);
 
-    const label = config?.label || 'Favorite';
-
     const detectedCount = useMemo(() => {
         if (!config) {
             return 0;
@@ -310,7 +308,7 @@ export function FavoriteImportPage() {
                     />
                     <PageHeader className="min-w-0 p-0">
                         <PageTitle>
-                            {label} {t('dialog.favorite_import.action.import')}
+                            {t(`dialog.favorite_import.title.${activeKind}`)}
                         </PageTitle>
                         <PageDescription>
                             {t(
@@ -485,11 +483,7 @@ export function FavoriteImportPage() {
                                             className="text-muted-foreground h-24 text-center"
                                         >
                                             {t(
-                                                'dialog.favorite_import.empty.no_parsed'
-                                            )}{' '}
-                                            {label.toLowerCase()}{' '}
-                                            {t(
-                                                'dialog.favorite_import.label.rows_yet'
+                                                `dialog.favorite_import.empty.${activeKind}`
                                             )}
                                         </DataTableCell>
                                     </DataTableRow>

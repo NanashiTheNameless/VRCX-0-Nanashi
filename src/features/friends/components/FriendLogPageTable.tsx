@@ -1,5 +1,5 @@
 import type { PaginationState } from '@tanstack/react-table';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 
 import type { AppTable } from '@/components/data-table/appTable';
 import {
@@ -72,19 +72,14 @@ export function FriendLogPageTable({
 
             <PageFooter>
                 <div className="text-muted-foreground text-sm">
-                    {t('view.friend_log.label.showing')}{' '}
-                    <span className="text-foreground font-medium">
-                        {table.getRowModel().rows.length}
-                    </span>{' '}
-                    {t('view.friend_log.label.of')}{' '}
-                    <span className="text-foreground font-medium">
-                        {orderedRowsLength}
-                    </span>{' '}
-                    {t(
-                        orderedRowsLength === 1
-                            ? 'view.friend_log.label.log_row'
-                            : 'view.friend_log.label.log_rows'
-                    )}
+                    <Trans
+                        i18nKey="view.friend_log.label.showing_summary"
+                        count={orderedRowsLength}
+                        values={{ shown: table.getRowModel().rows.length }}
+                        components={{
+                            b: <span className="text-foreground font-medium" />
+                        }}
+                    />
                 </div>
                 <DataTablePagination
                     table={table}

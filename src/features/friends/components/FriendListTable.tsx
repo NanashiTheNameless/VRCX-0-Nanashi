@@ -1,6 +1,6 @@
 import type { PaginationState } from '@tanstack/react-table';
 import { memo } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 
 import type { AppRow, AppTable } from '@/components/data-table/appTable';
 import {
@@ -165,19 +165,18 @@ export function FriendListTable({
 
                     <PageFooter>
                         <div className="text-muted-foreground text-sm">
-                            {t('view.friend_list.label.showing')}{' '}
-                            <span className="text-foreground font-medium">
-                                {table.getRowModel().rows.length}
-                            </span>{' '}
-                            {t('view.friend_list.label.of')}{' '}
-                            <span className="text-foreground font-medium">
-                                {filteredRowsLength}
-                            </span>{' '}
-                            {t(
-                                filteredRowsLength === 1
-                                    ? 'view.friend_list.label.friend'
-                                    : 'view.friend_list.label.friends'
-                            )}
+                            <Trans
+                                i18nKey="view.friend_list.label.showing_summary"
+                                count={filteredRowsLength}
+                                values={{
+                                    shown: table.getRowModel().rows.length
+                                }}
+                                components={{
+                                    b: (
+                                        <span className="text-foreground font-medium" />
+                                    )
+                                }}
+                            />
                         </div>
                         <DataTablePagination
                             table={table}

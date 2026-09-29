@@ -1,6 +1,6 @@
 import type { PaginationState } from '@tanstack/react-table';
 import type { KeyboardEvent, MouseEvent } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 
 import type { AppTable } from '@/components/data-table/appTable';
 import {
@@ -205,19 +205,14 @@ export function MyAvatarsTableView({
             </DataTableSurface>
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div className="text-muted-foreground text-sm">
-                    {t('view.my_avatars.label.showing')}{' '}
-                    <span className="text-foreground font-medium">
-                        {table.getRowModel().rows.length}
-                    </span>{' '}
-                    {t('view.my_avatars.label.of')}{' '}
-                    <span className="text-foreground font-medium">
-                        {filteredCount}
-                    </span>{' '}
-                    {t(
-                        filteredCount === 1
-                            ? 'view.my_avatars.label.avatar'
-                            : 'view.my_avatars.label.avatars'
-                    )}
+                    <Trans
+                        i18nKey="view.my_avatars.label.showing_summary"
+                        count={filteredCount}
+                        values={{ shown: table.getRowModel().rows.length }}
+                        components={{
+                            b: <span className="text-foreground font-medium" />
+                        }}
+                    />
                 </div>
                 <DataTablePagination
                     table={table}
