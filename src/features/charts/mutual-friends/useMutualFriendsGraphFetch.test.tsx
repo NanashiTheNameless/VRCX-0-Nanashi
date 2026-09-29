@@ -44,6 +44,7 @@ vi.mock('@/services/mutualGraphFetchService', () => ({
 }));
 
 import { useFriendRosterStore } from '@/state/friendRosterStore';
+import { useRoomMutualScanStore } from '@/state/roomMutualScanStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
 import { useMutualFriendsGraphFetch } from './useMutualFriendsGraphFetch';
@@ -88,6 +89,24 @@ describe('useMutualFriendsGraphFetch', () => {
             }
         });
         mocks.startMutualGraphFetch.mockResolvedValue(undefined);
+    });
+
+    it('holds the friend graph fetch while a room is being checked for mutual friends', async () => {
+        setLoadedFriendRoster();
+        useRoomMutualScanStore.getState().setRunning(true);
+        const { result } = renderGraphFetch();
+
+        await act(async () => {
+            await result.current.handleFetchGraph();
+        });
+
+        expect(mocks.startMutualGraphFetch).not.toHaveBeenCalled();
+        expect(mocks.toastInfo).toHaveBeenCalledWith(
+            expect.objectContaining({
+                title: 'mutual_graph_hint.room_scan_running'
+            })
+        );
+        useRoomMutualScanStore.getState().setRunning(false);
     });
 
     it('loads the friend roster before starting an empty mutual graph fetch', async () => {

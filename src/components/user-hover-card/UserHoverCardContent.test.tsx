@@ -63,6 +63,10 @@ vi.mock('./useUserHoverCardData', () => ({
     })
 }));
 
+vi.mock('./UserHoverCardMutuals', () => ({
+    UserHoverCardMutuals: () => null
+}));
+
 import { UserHoverCardContent } from './UserHoverCardContent';
 
 function countOccurrences(text: string, needle: string): number {

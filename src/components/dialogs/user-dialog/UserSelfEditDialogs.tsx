@@ -1,4 +1,4 @@
-import { BookmarkIcon, HistoryIcon, PlusIcon, XIcon } from 'lucide-react';
+import { BookmarkIcon, HistoryIcon, XIcon } from 'lucide-react';
 import { Fragment } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,18 +6,6 @@ import { useTranslation } from 'react-i18next';
 import type { UserStatus } from '@/platform/tauri/bindings';
 import { userStatusIndicatorClassName } from '@/shared/utils/userStatus';
 import { Button } from '@/ui/shadcn/button';
-import {
-    Combobox,
-    ComboboxChip,
-    ComboboxChips,
-    ComboboxChipsInput,
-    ComboboxContent,
-    ComboboxEmpty,
-    ComboboxItem,
-    ComboboxList,
-    ComboboxValue,
-    useComboboxAnchor
-} from '@/ui/shadcn/combobox';
 import {
     Dialog,
     DialogContent,
@@ -55,12 +43,12 @@ import {
     ToggleGroupSeparator
 } from '@/ui/shadcn/toggle-group';
 
-import type { useCurrentUserSocialStatusDialog } from './useCurrentUserSocialStatusDialog';
 import {
-    languageOptionLabel,
-    normalizeLanguageKey,
-    normalizeSelfStatusInput
-} from './userProfileFields';
+    ProfileLanguagesField,
+    ProfileLinksField
+} from '../ProfileDetailsFields';
+import type { useCurrentUserSocialStatusDialog } from './useCurrentUserSocialStatusDialog';
+import { normalizeSelfStatusInput } from './userProfileFields';
 import type {
     SocialStatusDraft,
     SocialStatusPreset
@@ -72,25 +60,6 @@ type StatusOption = { value: UserStatus; label: string };
 type SocialStatusDialogController = ReturnType<
     typeof useCurrentUserSocialStatusDialog
 >['dialog'];
-
-function normalizeLanguageComboboxValues(values: unknown) {
-    const nextKeys: string[] = [];
-    const seen = new Set<string>();
-
-    for (const value of Array.isArray(values) ? values : []) {
-        const key = normalizeLanguageKey(value);
-        if (!key || seen.has(key)) {
-            continue;
-        }
-        nextKeys.push(key);
-        seen.add(key);
-        if (nextKeys.length >= 3) {
-            break;
-        }
-    }
-
-    return nextKeys;
-}
 
 function UserSocialStatusDialog({
     open,
@@ -446,39 +415,10 @@ export function UserProfileDetailsDialog({
     onSave: () => void;
 }) {
     const { t } = useTranslation();
-    const languageComboboxAnchor = useComboboxAnchor();
 
     const busy = actionStatus !== 'idle';
-    const bioLinks = draft.bioLinks?.length ? draft.bioLinks : [''];
     const bioLength = String(draft.bio || '').length;
     const pronounsLength = String(draft.pronouns || '').length;
-    const selectedLanguageKeys = languageRows.map((language) => language.key);
-    const languageLabelByKey = new Map(
-        [...languageRows, ...availableLanguageOptions].map((language) => [
-            language.key,
-            languageOptionLabel(language)
-        ])
-    );
-    const selectableLanguageKeys =
-        selectedLanguageKeys.length >= 3
-            ? []
-            : availableLanguageOptions.map((option) => option.key);
-    const languageInputDisabled =
-        busy ||
-        languageOptionsStatus === 'running' ||
-        selectedLanguageKeys.length >= 3 ||
-        !availableLanguageOptions.length;
-    const languageInputPlaceholder =
-        languageOptionsStatus === 'running'
-            ? t('dialog.user.loading.loading_languages')
-            : t('dialog.user.action.select_language');
-
-    function handleLanguageValueChange(values: string[]) {
-        setDraft((current) => ({
-            ...current,
-            languageKeys: normalizeLanguageComboboxValues(values)
-        }));
-    }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange} disablePointerDismissal>
@@ -496,89 +436,20 @@ export function UserProfileDetailsDialog({
                 <ScrollArea className="-mx-1 min-h-0 px-1">
                     <FieldGroup className="gap-4 pb-3">
                         <div className="grid gap-4 sm:grid-cols-2">
-                            <Field>
-                                <div className="flex items-center justify-between gap-2">
-                                    <FieldLabel>
-                                        {t('dialog.user.label.languages')}
-                                    </FieldLabel>
-                                    <span className="text-muted-foreground text-xs tabular-nums">
-                                        {languageRows.length}/3
-                                    </span>
-                                </div>
-                                <Combobox
-                                    multiple
-                                    autoHighlight
-                                    items={selectableLanguageKeys}
-                                    value={selectedLanguageKeys}
-                                    itemToStringLabel={(key) =>
-                                        languageLabelByKey.get(key) || key
-                                    }
-                                    onValueChange={handleLanguageValueChange}
-                                >
-                                    <ComboboxChips
-                                        ref={languageComboboxAnchor}
-                                        className="w-full"
-                                    >
-                                        <ComboboxValue>
-                                            {(values: string[]) => (
-                                                <>
-                                                    {values.map((value) => (
-                                                        <ComboboxChip
-                                                            key={value}
-                                                            showRemove={!busy}
-                                                        >
-                                                            <span className="max-w-36 truncate">
-                                                                {languageLabelByKey.get(
-                                                                    value
-                                                                ) || value}
-                                                            </span>
-                                                        </ComboboxChip>
-                                                    ))}
-                                                    <ComboboxChipsInput
-                                                        disabled={
-                                                            languageInputDisabled
-                                                        }
-                                                        placeholder={
-                                                            values.length
-                                                                ? ''
-                                                                : languageInputPlaceholder
-                                                        }
-                                                        aria-label={t(
-                                                            'dialog.user.action.select_language'
-                                                        )}
-                                                    />
-                                                </>
-                                            )}
-                                        </ComboboxValue>
-                                    </ComboboxChips>
-                                    <ComboboxContent
-                                        anchor={languageComboboxAnchor}
-                                    >
-                                        <ComboboxEmpty>
-                                            {t('dialog.user.empty.no_results')}
-                                        </ComboboxEmpty>
-                                        <ComboboxList>
-                                            {(key) => (
-                                                <ComboboxItem
-                                                    key={key}
-                                                    value={key}
-                                                >
-                                                    {languageLabelByKey.get(
-                                                        key
-                                                    ) || key}
-                                                </ComboboxItem>
-                                            )}
-                                        </ComboboxList>
-                                    </ComboboxContent>
-                                </Combobox>
-                                {languageOptionsStatus === 'error' ? (
-                                    <FieldDescription>
-                                        {t(
-                                            'dialog.user.label.vrchat_language_list_unavailable_using_local_language_codes'
-                                        )}
-                                    </FieldDescription>
-                                ) : null}
-                            </Field>
+                            <ProfileLanguagesField
+                                languageRows={languageRows}
+                                availableLanguageOptions={
+                                    availableLanguageOptions
+                                }
+                                languageOptionsStatus={languageOptionsStatus}
+                                busy={busy}
+                                onChange={(languageKeys) => {
+                                    setDraft((current) => ({
+                                        ...current,
+                                        languageKeys
+                                    }));
+                                }}
+                            />
                             <Field>
                                 <div className="flex items-center justify-between gap-2">
                                     <FieldLabel htmlFor="user-profile-pronouns">
@@ -609,115 +480,21 @@ export function UserProfileDetailsDialog({
                             </Field>
                         </div>
                         <Separator className="-my-1" />
-                        <Field>
-                            <div className="flex items-center justify-between gap-2">
-                                <FieldLabel>
-                                    {t('dialog.user.label.bio_links')}
-                                </FieldLabel>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-muted-foreground text-xs tabular-nums">
-                                        {bioLinks.length}/3
-                                    </span>
-                                    {bioLinks.length < 3 ? (
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="xs"
-                                            disabled={busy}
-                                            onClick={() => {
-                                                setDraft((current) => ({
-                                                    ...current,
-                                                    bioLinks: [
-                                                        ...(current.bioLinks
-                                                            ?.length
-                                                            ? current.bioLinks
-                                                            : ['']),
-                                                        ''
-                                                    ].slice(0, 3)
-                                                }));
-                                            }}
-                                        >
-                                            <PlusIcon data-icon="inline-start" />
-                                            {t(
-                                                'dialog.user.action.add_bio_link'
-                                            )}
-                                        </Button>
-                                    ) : null}
-                                </div>
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                {bioLinks.map((link, index) => (
-                                    <InputGroup key={index}>
-                                        <InputGroupInput
-                                            value={link}
-                                            placeholder={`https://example.com/${index + 1}`}
-                                            maxLength={1000}
-                                            disabled={busy}
-                                            onChange={(event) => {
-                                                const nextValue =
-                                                    event.target.value.slice(
-                                                        0,
-                                                        1000
-                                                    );
-                                                setDraft((current) => {
-                                                    const nextBioLinks = [
-                                                        ...(current.bioLinks
-                                                            ?.length
-                                                            ? current.bioLinks
-                                                            : [''])
-                                                    ];
-                                                    nextBioLinks[index] =
-                                                        nextValue;
-                                                    return {
-                                                        ...current,
-                                                        bioLinks:
-                                                            nextBioLinks.slice(
-                                                                0,
-                                                                3
-                                                            )
-                                                    };
-                                                });
-                                            }}
-                                        />
-                                        <InputGroupAddon align="inline-end">
-                                            <InputGroupButton
-                                                type="button"
-                                                size="icon-xs"
-                                                disabled={
-                                                    busy || bioLinks.length <= 1
-                                                }
-                                                aria-label={t(
-                                                    'dialog.user.action.remove_bio_link'
-                                                )}
-                                                onClick={() => {
-                                                    setDraft((current) => {
-                                                        const nextBioLinks = [
-                                                            ...(current.bioLinks
-                                                                ?.length
-                                                                ? current.bioLinks
-                                                                : [''])
-                                                        ];
-                                                        nextBioLinks.splice(
-                                                            index,
-                                                            1
-                                                        );
-                                                        return {
-                                                            ...current,
-                                                            bioLinks:
-                                                                nextBioLinks.length
-                                                                    ? nextBioLinks
-                                                                    : ['']
-                                                        };
-                                                    });
-                                                }}
-                                            >
-                                                <XIcon data-icon="inline-start" />
-                                            </InputGroupButton>
-                                        </InputGroupAddon>
-                                    </InputGroup>
-                                ))}
-                            </div>
-                        </Field>
+                        <ProfileLinksField
+                            label={t('dialog.user.label.bio_links')}
+                            addLabel={t('dialog.user.action.add_bio_link')}
+                            removeLabel={t(
+                                'dialog.user.action.remove_bio_link'
+                            )}
+                            links={draft.bioLinks}
+                            busy={busy}
+                            onChange={(bioLinks) => {
+                                setDraft((current) => ({
+                                    ...current,
+                                    bioLinks
+                                }));
+                            }}
+                        />
                         <Separator className="-my-1" />
                         <Field>
                             <div className="flex items-center justify-between gap-2">

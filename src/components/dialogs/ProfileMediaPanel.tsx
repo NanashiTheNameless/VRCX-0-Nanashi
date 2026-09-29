@@ -21,53 +21,19 @@ import {
     TILE_CHECK,
     TILE_CHECK_ANCHOR
 } from '@/shared/constants/selectableTile';
-import {
-    PROFILE_MEDIA_URL_FIELD,
-    type ProfileMediaField
-} from '@/shared/utils/currentUserMedia';
-import { extractFileId } from '@/shared/utils/fileUtils';
 import { Button } from '@/ui/shadcn/button';
 
-import type { UserDialogProfileRecord } from '../useUserDialogProfileResource';
-
-type ProfileMediaFieldName = ProfileMediaField;
 type MediaFile = Awaited<
     ReturnType<typeof mediaRepository.getFileList>
 >['json'][number];
 
-interface MediaSection {
-    key: string;
-    fieldName: ProfileMediaFieldName;
+export interface ProfileMediaSection<TField extends string> {
+    fieldName: TField;
     fileTag: MediaFileTag;
-    assetKey: string;
     titleKey: string;
-    clearKey: string;
+    clearKey?: string;
     useKey: string;
-    cardClass: string;
 }
-
-const MEDIA_SECTIONS: MediaSection[] = [
-    {
-        key: 'banner',
-        fieldName: 'banner',
-        fileTag: 'gallery',
-        assetKey: 'gallery',
-        titleKey: 'dialog.user.profile_media.banner',
-        clearKey: 'dialog.gallery_icons.clear_banner',
-        useKey: 'dialog.gallery_icons.use_banner',
-        cardClass: 'h-20 w-[6.667rem] sm:h-24 sm:w-32'
-    },
-    {
-        key: 'profile-icon',
-        fieldName: 'userIcon',
-        fileTag: 'icon',
-        assetKey: 'icons',
-        titleKey: 'dialog.user.profile_media.profile_icon',
-        clearKey: 'dialog.gallery_icons.clear_profile_icon',
-        useKey: 'dialog.gallery_icons.use_profile_icon',
-        cardClass: 'size-20 sm:size-24'
-    }
-];
 
 function getLatestFileUrl(file: MediaFile) {
     const versions = Array.isArray(file?.versions) ? file.versions : [];
@@ -98,7 +64,7 @@ function getUsefulDisplayName(file: MediaFile) {
     return visibleName;
 }
 
-function ProfileMediaThumbnail({
+function ProfileMediaThumbnail<TField extends string>({
     file,
     section,
     currentFileId,
@@ -107,11 +73,11 @@ function ProfileMediaThumbnail({
     onUse
 }: {
     file: MediaFile;
-    section: MediaSection;
+    section: ProfileMediaSection<TField>;
     currentFileId: string;
     disabled: boolean;
     mutatingKey: string;
-    onUse: (fieldName: ProfileMediaFieldName, fileId: string) => void;
+    onUse: (fieldName: TField, fileId: string) => void;
 }) {
     const { t } = useTranslation();
     const imageUrl = getLatestFileUrl(file);
@@ -124,7 +90,12 @@ function ProfileMediaThumbnail({
     return (
         <TileShell
             selected={isCurrent}
-            className={cn('shrink-0 p-0', section.cardClass)}
+            className={cn(
+                'shrink-0 p-0',
+                section.fileTag === 'icon'
+                    ? 'size-20 sm:size-24'
+                    : 'h-20 w-[6.667rem] sm:h-24 sm:w-32'
+            )}
             render={
                 <Button
                     type="button"
@@ -160,31 +131,26 @@ function ProfileMediaThumbnail({
     );
 }
 
-function ProfileMediaSection({
+function ProfileMediaSectionCard<TField extends string>({
     section,
     files,
     loading,
-    profile,
+    currentFileId,
     busy,
     mutatingKey,
     onUse,
     onClear
 }: {
-    section: MediaSection;
+    section: ProfileMediaSection<TField>;
     files: MediaFile[];
     loading: boolean;
-    profile: UserDialogProfileRecord;
+    currentFileId: string;
     busy: boolean;
     mutatingKey: string;
-    onUse: (fieldName: ProfileMediaFieldName, fileId: string) => void;
-    onClear: (fieldName: ProfileMediaFieldName) => void;
+    onUse: (fieldName: TField, fileId: string) => void;
+    onClear: (fieldName: TField) => void;
 }) {
     const { t } = useTranslation();
-    const rawCurrentValue =
-        profile?.[PROFILE_MEDIA_URL_FIELD[section.fieldName]];
-    const currentValue =
-        typeof rawCurrentValue === 'string' ? rawCurrentValue : '';
-    const currentFileId = extractFileId(currentValue);
 
     return (
         <div className="bg-card/40 flex min-w-0 flex-col gap-3 rounded-lg border p-3">
@@ -194,16 +160,18 @@ function ProfileMediaSection({
                         {t(section.titleKey)}
                     </div>
                 </div>
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="shrink-0 self-start"
-                    disabled={!currentValue || busy}
-                    onClick={() => onClear(section.fieldName)}
-                >
-                    <XIcon data-icon="inline-start" />
-                    {t(section.clearKey)}
-                </Button>
+                {section.clearKey ? (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 self-start"
+                        disabled={!currentFileId || busy}
+                        onClick={() => onClear(section.fieldName)}
+                    >
+                        <XIcon data-icon="inline-start" />
+                        {t(section.clearKey)}
+                    </Button>
+                ) : null}
             </div>
             {loading ? (
                 <LoadingState className="min-h-32" />
@@ -235,30 +203,25 @@ function ProfileMediaSection({
     );
 }
 
-export function UserDialogProfileMediaPanel({
-    profile,
+export function ProfileMediaPanel<TField extends string>({
+    title,
+    sections,
+    currentFileIds,
     actionStatus,
     onBack,
-    onSetProfileMediaField
+    onSetField
 }: {
-    profile: UserDialogProfileRecord;
+    title: string;
+    sections: readonly ProfileMediaSection<TField>[];
+    currentFileIds: Record<TField, string>;
     actionStatus: string;
     onBack: () => void;
-    onSetProfileMediaField: (
-        fieldName: ProfileMediaFieldName,
-        fileId: string
-    ) => void | Promise<void>;
+    onSetField: (fieldName: TField, fileId: string) => unknown;
 }) {
     const { t } = useTranslation();
     const [filesBySection, setFilesBySection] = useState<
-        Record<
-            string,
-            Awaited<ReturnType<typeof mediaRepository.getFileList>>['json']
-        >
-    >({
-        gallery: [],
-        icons: []
-    });
+        Record<string, MediaFile[]>
+    >({});
     const [loadingBySection, setLoadingBySection] = useState<
         Record<string, boolean>
     >({});
@@ -266,10 +229,10 @@ export function UserDialogProfileMediaPanel({
     const busy = actionStatus !== 'idle';
 
     const refreshSection = useCallback(
-        async (section: MediaSection) => {
+        async (section: ProfileMediaSection<TField>) => {
             setLoadingBySection((current) => ({
                 ...current,
-                [section.assetKey]: true
+                [section.fileTag]: true
             }));
             try {
                 const { json } = await mediaRepository.getFileList({
@@ -278,7 +241,7 @@ export function UserDialogProfileMediaPanel({
                 });
                 setFilesBySection((current) => ({
                     ...current,
-                    [section.assetKey]: Array.isArray(json)
+                    [section.fileTag]: Array.isArray(json)
                         ? [...json].reverse()
                         : []
                 }));
@@ -295,7 +258,7 @@ export function UserDialogProfileMediaPanel({
             } finally {
                 setLoadingBySection((current) => ({
                     ...current,
-                    [section.assetKey]: false
+                    [section.fileTag]: false
                 }));
             }
         },
@@ -303,29 +266,26 @@ export function UserDialogProfileMediaPanel({
     );
 
     useEffect(() => {
-        for (const section of MEDIA_SECTIONS) {
+        for (const section of sections) {
             refreshSection(section);
         }
-    }, [profile?.id, refreshSection]);
+    }, [sections, refreshSection]);
 
-    async function applyProfileMedia(
-        fieldName: ProfileMediaFieldName,
-        fileId: string
-    ) {
+    async function applyProfileMedia(fieldName: TField, fileId: string) {
         const key = `${fieldName}:${fileId}`;
         setMutatingKey(key);
         try {
-            await onSetProfileMediaField(fieldName, fileId);
+            await onSetField(fieldName, fileId);
         } finally {
             setMutatingKey((current) => (current === key ? '' : current));
         }
     }
 
-    async function clearProfileMedia(fieldName: ProfileMediaFieldName) {
+    async function clearProfileMedia(fieldName: TField) {
         const key = `${fieldName}:clear`;
         setMutatingKey(key);
         try {
-            await onSetProfileMediaField(fieldName, '');
+            await onSetField(fieldName, '');
         } finally {
             setMutatingKey((current) => (current === key ? '' : current));
         }
@@ -340,21 +300,19 @@ export function UserDialogProfileMediaPanel({
                         onClick={onBack}
                     />
                     <PageHeader className="min-w-0 p-0">
-                        <PageTitle>
-                            {t('dialog.user.actions.edit_profile_media')}
-                        </PageTitle>
+                        <PageTitle>{title}</PageTitle>
                     </PageHeader>
                 </PageToolbarRow>
             </PageToolbar>
             <div className="min-h-0 flex-1 overflow-y-auto pr-1">
                 <div className="flex flex-col gap-3">
-                    {MEDIA_SECTIONS.map((section) => (
-                        <ProfileMediaSection
-                            key={section.key}
+                    {sections.map((section) => (
+                        <ProfileMediaSectionCard
+                            key={section.fieldName}
                             section={section}
-                            files={filesBySection[section.assetKey] || []}
-                            loading={loadingBySection[section.assetKey]}
-                            profile={profile}
+                            files={filesBySection[section.fileTag] || []}
+                            loading={loadingBySection[section.fileTag]}
+                            currentFileId={currentFileIds[section.fieldName]}
                             busy={busy}
                             mutatingKey={mutatingKey}
                             onUse={(fieldName, fileId) => {

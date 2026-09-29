@@ -31,6 +31,33 @@ pub struct GroupPostMutation {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+pub enum GroupProfileJoinState {
+    #[serde(rename = "closed")]
+    Closed,
+    #[serde(rename = "invite")]
+    Invite,
+    #[serde(rename = "open")]
+    Open,
+    #[serde(rename = "request")]
+    Request,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GroupProfileUpdate {
+    pub name: String,
+    pub short_code: String,
+    pub description: String,
+    pub join_state: GroupProfileJoinState,
+    pub languages: Vec<String>,
+    pub rules: String,
+    pub links: Vec<String>,
+    pub icon_id: Option<String>,
+    pub banner_id: Option<String>,
+    pub allow_group_join_prompt: bool,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
 pub enum GroupMemberVisibility {
     #[serde(rename = "friends")]
     Friends,
@@ -152,6 +179,14 @@ pub struct VrchatGroupLogsInput {
     pub offset: i32,
     #[serde(default)]
     pub event_types: String,
+}
+
+#[derive(Debug, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct VrchatGroupUpdateInput {
+    #[serde(default)]
+    pub group_id: String,
+    pub params: GroupProfileUpdate,
 }
 
 #[derive(Debug, Deserialize, specta::Type)]

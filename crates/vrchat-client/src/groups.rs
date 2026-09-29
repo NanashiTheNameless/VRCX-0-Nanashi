@@ -4,8 +4,8 @@ use serde_json::Value;
 use vrcx_0_core::vrchat_endpoints::VRCHAT_API_DEFAULT_ENDPOINT;
 
 use crate::http_api::{
-    api_input, encode_path_segment, get_input, normalize_text, object_body, require_text,
-    HttpApiError, HttpApiRequestInput,
+    api_input, encode_path_segment, get_input, normalize_text, object_body, query_input,
+    require_text, HttpApiError, HttpApiRequestInput,
 };
 
 mod params;
@@ -14,6 +14,7 @@ mod request;
 pub use params::GroupMemberSort;
 pub use request::{
     GroupMemberPatch, GroupMemberVisibility, GroupPostMutation, GroupPostVisibility,
+    GroupProfileJoinState, GroupProfileUpdate,
 };
 
 fn group_path(group_id: &str, suffix: &str) -> String {
@@ -283,6 +284,36 @@ pub fn current_user_group_instances_get_input(
             endpoint,
             format!("users/{}/instances/groups", encode_path_segment(&user_id)),
             HashMap::new(),
+        ),
+    ))
+}
+
+pub fn profile_update_input(
+    group_id: String,
+    params: GroupProfileUpdate,
+) -> Result<(String, HttpApiRequestInput), HttpApiError> {
+    let group_id = require_text(group_id, "VrchatGroupUpdate requires groupId.")?;
+    let params = params.validated()?;
+    Ok((
+        group_id.clone(),
+        api_input(
+            VRCHAT_API_DEFAULT_ENDPOINT.into(),
+            "PUT",
+            group_path(&group_id, ""),
+            Some(serde_json::json!(params)),
+        ),
+    ))
+}
+
+pub fn delete_input(group_id: String) -> Result<(String, HttpApiRequestInput), HttpApiError> {
+    let group_id = require_text(group_id, "VrchatGroupDelete requires groupId.")?;
+    Ok((
+        group_id.clone(),
+        query_input(
+            VRCHAT_API_DEFAULT_ENDPOINT.into(),
+            "DELETE",
+            group_path(&group_id, ""),
+            HashMap::from([("hardDelete".to_string(), Value::Bool(false))]),
         ),
     ))
 }
@@ -746,6 +777,90 @@ mod tests {
             image_id: None,
         };
         assert!(post_create_input("grp_1".into(), public_post).is_err());
+    }
+
+    fn profile_update() -> GroupProfileUpdate {
+        GroupProfileUpdate {
+            name: " Group ".into(),
+            short_code: "GRP1".into(),
+            description: "Description".into(),
+            join_state: GroupProfileJoinState::Request,
+            languages: vec!["eng".into()],
+            rules: String::new(),
+            links: vec![" https://example.com ".into()],
+            icon_id: Some("file_icon".into()),
+            banner_id: None,
+            allow_group_join_prompt: false,
+        }
+    }
+
+    #[test]
+    fn group_profile_update_puts_every_field() {
+        let (group_id, request) = profile_update_input("grp_1".into(), profile_update()).unwrap();
+
+        assert_eq!(group_id, "grp_1");
+        assert_eq!(request.method.as_deref(), Some("PUT"));
+        assert_eq!(request.path.as_deref(), Some("groups/grp%5F1"));
+        assert_eq!(
+            request.body.as_json(),
+            Some(&serde_json::json!({
+                "name": "Group",
+                "shortCode": "GRP1",
+                "description": "Description",
+                "joinState": "request",
+                "languages": ["eng"],
+                "rules": "",
+                "links": ["https://example.com"],
+                "iconId": "file_icon",
+                "bannerId": null,
+                "allowGroupJoinPrompt": false,
+            }))
+        );
+    }
+
+    #[test]
+    fn group_profile_update_rejects_invalid_fields() {
+        let invalid = [
+            GroupProfileUpdate {
+                name: "ab".into(),
+                ..profile_update()
+            },
+            GroupProfileUpdate {
+                short_code: "grp1".into(),
+                ..profile_update()
+            },
+            GroupProfileUpdate {
+                links: vec!["a".into(), "b".into(), "c".into(), "d".into()],
+                ..profile_update()
+            },
+            GroupProfileUpdate {
+                languages: vec![" ".into()],
+                ..profile_update()
+            },
+            GroupProfileUpdate {
+                banner_id: Some("banner".into()),
+                ..profile_update()
+            },
+        ];
+        for params in invalid {
+            assert!(profile_update_input("grp_1".into(), params).is_err());
+        }
+    }
+
+    #[test]
+    fn group_delete_soft_deletes_the_group() {
+        let (group_id, request) = delete_input("grp_1".into()).unwrap();
+
+        assert_eq!(group_id, "grp_1");
+        assert_eq!(request.method.as_deref(), Some("DELETE"));
+        assert_eq!(request.path.as_deref(), Some("groups/grp%5F1"));
+        assert_eq!(
+            request
+                .query_params
+                .as_ref()
+                .and_then(|params| params.get("hardDelete")),
+            Some(&Value::Bool(false))
+        );
     }
 
     #[test]

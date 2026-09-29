@@ -30,17 +30,15 @@ import {
 import { mergeCurrentUserPresenceFields } from '@/shared/utils/currentUserPresence';
 import { extractFileId } from '@/shared/utils/fileUtils';
 import { useRuntimeStore } from '@/state/runtimeStore';
-import { useVrchatConfigStore } from '@/state/vrchatConfigStore';
 
+import { useSpokenLanguageSelection } from '../useSpokenLanguageSelection';
 import { useCurrentUserSocialStatusDialog } from './useCurrentUserSocialStatusDialog';
 import {
     mergeUserDialogProfileAppearance,
     preserveUserDialogProfileAppearance
 } from './userDialogProfileAppearance';
 import {
-    fallbackLanguageOptions,
     normalizeLanguageKey,
-    normalizeLanguageOptionsFromConfig,
     normalizeProfileLanguageRows
 } from './userProfileFields';
 import type { UserDialogProfileRecord } from './useUserDialogProfileResource';
@@ -173,17 +171,16 @@ export function useUserDialogSelfActions({
     const [profileDetailsDraft, setProfileDetailsDraft] = useState(
         createProfileDetailsDraft
     );
-    const vrchatConfig = useVrchatConfigStore((state) => state.snapshot);
-    const languageOptions = useMemo(() => {
-        const options = normalizeLanguageOptionsFromConfig(vrchatConfig);
-        return options.length ? options : fallbackLanguageOptions();
-    }, [vrchatConfig]);
-    const languageOptionsStatus = vrchatConfig ? 'ready' : 'error';
-
-    const languageOptionsMap = useMemo(
-        () => new Map(languageOptions.map((option) => [option.key, option])),
-        [languageOptions]
+    const profileDetailsLanguageKeys = useMemo(
+        () => normalizeLanguageKeys(profileDetailsDraft.languageKeys),
+        [profileDetailsDraft.languageKeys]
     );
+    const {
+        languageOptionsMap,
+        languageRows: profileDetailsLanguageRows,
+        availableLanguageOptions,
+        languageOptionsStatus
+    } = useSpokenLanguageSelection(profileDetailsLanguageKeys);
     const currentLanguageRows = useMemo(
         () =>
             normalizeProfileLanguageRows(
@@ -202,29 +199,6 @@ export function useUserDialogSelfActions({
     const currentLanguageKeys = useMemo(
         () => currentLanguageRows.map((language) => language.key),
         [currentLanguageRows]
-    );
-    const profileDetailsLanguageKeys = useMemo(
-        () => normalizeLanguageKeys(profileDetailsDraft.languageKeys),
-        [profileDetailsDraft.languageKeys]
-    );
-    const profileDetailsLanguageRows = useMemo(
-        () =>
-            profileDetailsLanguageKeys.map((key) => ({
-                key,
-                value: languageOptionsMap.get(key)?.value || key.toUpperCase()
-            })),
-        [languageOptionsMap, profileDetailsLanguageKeys]
-    );
-    const profileDetailsLanguageKeySet = useMemo(
-        () => new Set(profileDetailsLanguageKeys),
-        [profileDetailsLanguageKeys]
-    );
-    const availableLanguageOptions = useMemo(
-        () =>
-            languageOptions.filter(
-                (option) => !profileDetailsLanguageKeySet.has(option.key)
-            ),
-        [languageOptions, profileDetailsLanguageKeySet]
     );
     const { dialog: socialStatusDialog, openDialog: editSelfStatus } =
         useCurrentUserSocialStatusDialog({

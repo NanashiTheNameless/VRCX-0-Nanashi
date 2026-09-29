@@ -14,6 +14,11 @@ const repositoryMocks = vi.hoisted(() => ({
     getUserGroups: vi.fn()
 }));
 
+const configMocks = vi.hoisted(() => ({
+    getBool: vi.fn(),
+    setBool: vi.fn()
+}));
+
 const runtimeState = vi.hoisted(() => ({
     auth: {
         currentUserId: 'usr_self'
@@ -43,6 +48,9 @@ vi.mock('@/platform/tauri/bindings', () => ({
 vi.mock('@/repositories/groupProfileRepository', () => ({
     default: repositoryMocks
 }));
+vi.mock('@/repositories/configRepository', () => ({
+    default: configMocks
+}));
 vi.mock('@/state/runtimeStore', () => ({
     useRuntimeStore: (selector: (state: typeof runtimeState) => unknown) =>
         selector(runtimeState)
@@ -66,6 +74,7 @@ vi.mock('@/services/toastService', () => ({
 }));
 
 import { groupIdForRow } from '@/components/dialogs/user-dialog/userDialogGroupRows';
+import { useMyGroupsRevisionStore } from '@/state/myGroupsRevisionStore';
 
 import { useMyGroupsPageState } from './useMyGroupsPageState';
 
@@ -77,6 +86,7 @@ const groups = [
 describe('useMyGroupsPageState', () => {
     beforeEach(() => {
         vi.resetAllMocks();
+        useMyGroupsRevisionStore.setState({ revision: 0 });
         runtimeState.auth.currentUserId = 'usr_self';
         runtimeState.gameState.isGameRunning = false;
         runtimeState.hostCapabilities.registryPrefs.available = true;
@@ -87,9 +97,49 @@ describe('useMyGroupsPageState', () => {
             'grp_a'
         ]);
         commandMocks.appVrchatGroupOrderSet.mockResolvedValue(true);
+        configMocks.getBool.mockImplementation(
+            async (_key: string, defaultValue: boolean) => defaultValue
+        );
+        configMocks.setBool.mockResolvedValue(null);
     });
 
     afterEach(cleanup);
+
+    it('reloads fresh groups after a group changes outside the page', async () => {
+        const { result } = renderHook(() => useMyGroupsPageState());
+        await waitFor(() => {
+            expect(result.current.visibleGroups).toHaveLength(2);
+        });
+        repositoryMocks.getUserGroups.mockResolvedValue([groups[1]]);
+
+        act(() => {
+            useMyGroupsRevisionStore.getState().bumpRevision();
+        });
+
+        await waitFor(() => {
+            expect(result.current.visibleGroups.map(groupIdForRow)).toEqual([
+                'grp_b'
+            ]);
+        });
+        expect(repositoryMocks.getUserGroups).toHaveBeenLastCalledWith({
+            userId: 'usr_self',
+            force: true
+        });
+    });
+
+    it('loads fresh groups when opened after a group changed elsewhere', async () => {
+        useMyGroupsRevisionStore.getState().bumpRevision();
+
+        const { result } = renderHook(() => useMyGroupsPageState());
+
+        await waitFor(() => {
+            expect(result.current.status).toBe('ready');
+        });
+        expect(repositoryMocks.getUserGroups).toHaveBeenCalledWith({
+            userId: 'usr_self',
+            force: true
+        });
+    });
 
     it('shows groups in the in-game order by default', async () => {
         const { result } = renderHook(() => useMyGroupsPageState());
@@ -167,6 +217,61 @@ describe('useMyGroupsPageState', () => {
         expect(result.current.visibleGroups.map(groupIdForRow)).toEqual([
             'grp_b',
             'grp_a'
+        ]);
+    });
+
+    it('splits own and joined groups into sections', async () => {
+        repositoryMocks.getUserGroups.mockResolvedValue([
+            { id: 'grp_a', name: 'Alpha', ownerId: 'usr_self' },
+            { id: 'grp_b', name: 'Beta', ownerId: 'usr_other' }
+        ]);
+        const { result } = renderHook(() => useMyGroupsPageState());
+
+        await waitFor(() => {
+            expect(
+                result.current.sections.map((section) => ({
+                    key: section.key,
+                    ids: section.groups.map(groupIdForRow)
+                }))
+            ).toEqual([
+                { key: 'own', ids: ['grp_a'] },
+                { key: 'joined', ids: ['grp_b'] }
+            ]);
+        });
+    });
+
+    it('restores and persists collapsed sections', async () => {
+        configMocks.getBool.mockImplementation(async (key: string) =>
+            key === 'VRCX_MyGroupsJoinedSectionOpen' ? false : true
+        );
+        repositoryMocks.getUserGroups.mockResolvedValue([
+            { id: 'grp_a', name: 'Alpha', ownerId: 'usr_self' },
+            { id: 'grp_b', name: 'Beta', ownerId: 'usr_other' }
+        ]);
+        const { result } = renderHook(() => useMyGroupsPageState());
+
+        const openState = () =>
+            result.current.sections.map((section) => [
+                section.key,
+                section.open
+            ]);
+
+        await waitFor(() => {
+            expect(openState()).toEqual([
+                ['own', true],
+                ['joined', false]
+            ]);
+        });
+
+        act(() => result.current.toggleSection('own'));
+
+        expect(configMocks.setBool).toHaveBeenCalledWith(
+            'VRCX_MyGroupsOwnSectionOpen',
+            false
+        );
+        expect(openState()).toEqual([
+            ['own', false],
+            ['joined', false]
         ]);
     });
 });

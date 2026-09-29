@@ -4,6 +4,10 @@ import type {
     GroupProfileRecord
 } from '@/domain/entities/group';
 import { formatDateFilter } from '@/lib/dateTime';
+import type {
+    GroupProfileJoinState,
+    GroupProfileUpdate
+} from '@/platform/tauri/bindings';
 import type { GroupCalendarEventRecord } from '@/repositories/vrchatToolsRepository';
 import {
     convertFileUrlToImageUrl,
@@ -11,6 +15,8 @@ import {
 } from '@/services/entityMediaService';
 import { isRecord } from '@/shared/utils/record';
 import { replaceBioSymbols } from '@/shared/utils/string';
+
+import type { ProfileMediaSection } from '../ProfileMediaPanel';
 
 export function firstArray<T>(...values: (T[] | null | undefined)[]): T[];
 export function firstArray(...values: unknown[]) {
@@ -168,6 +174,57 @@ export function hasGroupPermission(group: unknown, permission: string) {
                 (role.permissions.includes('*') ||
                     role.permissions.includes(permission))
         );
+}
+
+export const GROUP_JOIN_STATES: readonly GroupProfileJoinState[] = [
+    'open',
+    'request',
+    'invite',
+    'closed'
+];
+
+export function isGroupJoinState(
+    value: unknown
+): value is GroupProfileJoinState {
+    return GROUP_JOIN_STATES.some((joinState) => joinState === value);
+}
+
+export const GROUP_PROFILE_MEDIA_SECTIONS: readonly ProfileMediaSection<
+    'bannerId' | 'iconId'
+>[] = [
+    {
+        fieldName: 'bannerId',
+        fileTag: 'gallery',
+        titleKey: 'dialog.group.label.banner',
+        useKey: 'dialog.group.actions.use_banner'
+    },
+    {
+        fieldName: 'iconId',
+        fileTag: 'icon',
+        titleKey: 'dialog.group.label.group_icon',
+        useKey: 'dialog.group.actions.use_group_icon'
+    }
+];
+
+export function groupProfileUpdateFromGroup(
+    group: GroupProfileRecord
+): GroupProfileUpdate | null {
+    const joinState = group.joinState;
+    if (!isGroupJoinState(joinState)) {
+        return null;
+    }
+    return {
+        name: group.name,
+        shortCode: group.shortCode,
+        description: group.description,
+        joinState,
+        languages: group.languages.slice(0, 3),
+        rules: group.rules,
+        links: group.links.slice(0, 3),
+        iconId: group.iconId || null,
+        bannerId: group.bannerId || null,
+        allowGroupJoinPrompt: group.allowGroupJoinPrompt === true
+    };
 }
 
 export type GroupModerationTabValue =

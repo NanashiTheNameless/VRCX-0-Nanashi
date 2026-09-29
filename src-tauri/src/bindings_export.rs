@@ -435,6 +435,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::vrchat::groups::service::app__vrchat_group_member_unban,
             commands::vrchat::groups::service::app__vrchat_group_members_get,
             commands::vrchat::groups::service::app__vrchat_group_members_search,
+            commands::vrchat::groups::service::app__vrchat_group_update,
+            commands::vrchat::groups::service::app__vrchat_group_delete,
             commands::vrchat::groups::service::app__vrchat_group_post_create,
             commands::vrchat::groups::service::app__vrchat_group_post_delete,
             commands::vrchat::groups::service::app__vrchat_group_post_edit,

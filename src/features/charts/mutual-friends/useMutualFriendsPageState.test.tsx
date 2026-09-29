@@ -2,11 +2,11 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { MUTUAL_GRAPH_LAYOUT_DEFAULTS } from '@/lib/mutual-friends/mutualFriendsSettings';
+import { useMutualFriendsSigmaLifecycle } from '@/lib/mutual-friends/useMutualFriendsSigmaLifecycle';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 
-import { MUTUAL_GRAPH_LAYOUT_DEFAULTS } from './mutualFriendsSettings';
 import { useMutualFriendsPageState } from './useMutualFriendsPageState';
-import { useMutualFriendsSigmaLifecycle } from './useMutualFriendsSigmaLifecycle';
 
 const mocks = vi.hoisted(() => ({
     snapshotData: {
@@ -28,12 +28,12 @@ vi.mock('./useMutualFriendsSnapshot', () => ({
 vi.mock('./useMutualFriendsGraphFetch', () => ({
     useMutualFriendsGraphFetch: () => ({})
 }));
-vi.mock('./useMutualFriendsLayoutSettings', () => ({
+vi.mock('@/lib/mutual-friends/useMutualFriendsLayoutSettings', () => ({
     useMutualFriendsLayoutSettings: () => ({
         layoutSettings: MUTUAL_GRAPH_LAYOUT_DEFAULTS
     })
 }));
-vi.mock('./useMutualFriendsSigmaLifecycle', () => ({
+vi.mock('@/lib/mutual-friends/useMutualFriendsSigmaLifecycle', () => ({
     useMutualFriendsSigmaLifecycle: vi.fn(() => ({
         isLayoutRunning: false,
         setGraphElementRef: () => {}

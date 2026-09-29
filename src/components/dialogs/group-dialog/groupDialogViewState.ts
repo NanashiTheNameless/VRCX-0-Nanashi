@@ -18,6 +18,9 @@ export function buildGroupDialogViewState({
         group.myMember?.membershipStatus || group.membershipStatus
     ).toLowerCase();
     const isMember = memberStatus === 'member';
+    const isOwner = Boolean(currentUserId) && group.ownerId === currentUserId;
+    const canLeave = isMember && !isOwner;
+    const canDelete = isMember && isOwner && group.memberCount <= 1;
     const isBlocked = memberStatus === 'userblocked';
     const isRepresenting = Boolean(group.myMember?.isRepresenting);
     const isSubscribedToAnnouncements = Boolean(
@@ -49,7 +52,9 @@ export function buildGroupDialogViewState({
 
     return {
         bannerUrl,
+        canDelete,
         canJoin,
+        canLeave,
         currentUserId,
         iconUrl,
         isBlocked,

@@ -3,9 +3,9 @@ import { useCallback, useState } from 'react';
 import {
     MUTUAL_GRAPH_DEFAULT_VIEW_FILTERS,
     MUTUAL_GRAPH_MIN_DEGREE_LIMITS
-} from './mutualFriendsFilters';
-import { clampMutualGraphNumber } from './mutualFriendsSettings';
-import type { MutualFriendsViewFilters } from './mutualFriendsTypes';
+} from '@/lib/mutual-friends/mutualFriendsFilters';
+import { clampMutualGraphNumber } from '@/lib/mutual-friends/mutualFriendsSettings';
+import type { MutualFriendsViewFilters } from '@/lib/mutual-friends/mutualFriendsTypes';
 
 export function useMutualFriendsViewFilters() {
     const [filters, setFilters] = useState<MutualFriendsViewFilters>(

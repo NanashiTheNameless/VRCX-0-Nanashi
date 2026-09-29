@@ -1,5 +1,26 @@
 import type { UserStatus } from '@/platform/tauri/bindings';
+import type { ProfileMediaField } from '@/shared/utils/currentUserMedia';
 import { normalizeUserStatus } from '@/shared/utils/friendStatus';
+
+import type { ProfileMediaSection } from '../ProfileMediaPanel';
+
+export const USER_PROFILE_MEDIA_SECTIONS: readonly ProfileMediaSection<ProfileMediaField>[] =
+    [
+        {
+            fieldName: 'banner',
+            fileTag: 'gallery',
+            titleKey: 'dialog.user.profile_media.banner',
+            clearKey: 'dialog.gallery_icons.clear_banner',
+            useKey: 'dialog.gallery_icons.use_banner'
+        },
+        {
+            fieldName: 'userIcon',
+            fileTag: 'icon',
+            titleKey: 'dialog.user.profile_media.profile_icon',
+            clearKey: 'dialog.gallery_icons.clear_profile_icon',
+            useKey: 'dialog.gallery_icons.use_profile_icon'
+        }
+    ];
 
 export const statusPresetsConfigKey = 'VRCX_statusPresets';
 export const maxStatusPresets = 10;

@@ -58,6 +58,9 @@ export function GroupDialogContent({
                 onLeave: () => {
                     actions.leaveGroup();
                 },
+                onDelete: () => {
+                    actions.deleteGroup();
+                },
                 onCancelRequest: () => {
                     actions.cancelJoinRequest();
                 },
@@ -80,7 +83,8 @@ export function GroupDialogContent({
                 },
                 onBlock: (enabled: boolean) => {
                     actions.updateGroupBlock(enabled);
-                }
+                },
+                onUpdateProfile: actions.updateGroupProfile
             }}
         />
     );

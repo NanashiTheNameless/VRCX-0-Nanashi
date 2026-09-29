@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import type { MutualFriendsSnapshotStatus } from '@/lib/mutual-friends/mutualFriendsTypes';
 import mutualGraphPersistenceRepository from '@/repositories/mutualGraphPersistenceRepository';
-
-import type { MutualFriendsSnapshotStatus } from './mutualFriendsTypes';
 
 type MutualFriendsSnapshotData = Awaited<
     ReturnType<typeof mutualGraphPersistenceRepository.getSnapshot>

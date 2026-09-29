@@ -10,14 +10,14 @@ import { useTranslation } from 'react-i18next';
 import { FadeInImage } from '@/components/media/FadeInImage';
 import type { FriendRecord } from '@/domain/friends/types';
 import { formatDateFilter } from '@/lib/dateTime';
+import type {
+    MutualFriendCommunity,
+    MutualFriendNode
+} from '@/lib/mutual-friends/mutualFriendsTypes';
 import { userImage } from '@/services/entityMediaService';
 import { Button } from '@/ui/shadcn/button';
 import { Spinner } from '@/ui/shadcn/spinner';
 
-import type {
-    MutualFriendCommunity,
-    MutualFriendNode
-} from '../../mutual-friends/mutualFriendsTypes';
 import { MutualFriendsSurface } from './MutualFriendsSurface';
 
 export function MutualFriendsNodeCard({

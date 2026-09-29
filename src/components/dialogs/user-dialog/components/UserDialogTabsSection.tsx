@@ -312,6 +312,7 @@ export function UserDialogTabsSection({
                 activitySummarySection={activitySummarySection}
             />
             <UserDialogMutualTab
+                profile={profile}
                 mutualFriends={mutualFriends}
                 filteredMutualFriends={filteredMutualFriends}
                 visibleMutualFriends={visibleMutualFriends}

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import { normalize } from '@/repositories/group-profile/profile';
+
 import {
+    groupProfileUpdateFromGroup,
     hasGroupModerationPermission,
     hasGroupPermission
 } from './groupDialogUtils';
@@ -124,5 +127,46 @@ describe('group dialog permissions', () => {
                 }
             })
         ).toBe(false);
+    });
+});
+
+describe('group profile update', () => {
+    it('carries every editable field from the group snapshot', () => {
+        expect(
+            groupProfileUpdateFromGroup(
+                normalize({
+                    id: 'grp_1',
+                    name: 'Group',
+                    shortCode: 'GRP',
+                    description: 'Description',
+                    joinState: 'request',
+                    languages: ['eng', 'jpn', 'kor', 'zho'],
+                    rules: 'Rules',
+                    links: ['https://example.com'],
+                    iconId: 'file_icon',
+                    bannerId: '',
+                    allowGroupJoinPrompt: true
+                })
+            )
+        ).toEqual({
+            name: 'Group',
+            shortCode: 'GRP',
+            description: 'Description',
+            joinState: 'request',
+            languages: ['eng', 'jpn', 'kor'],
+            rules: 'Rules',
+            links: ['https://example.com'],
+            iconId: 'file_icon',
+            bannerId: null,
+            allowGroupJoinPrompt: true
+        });
+    });
+
+    it('refuses to build an update without a known join state', () => {
+        expect(
+            groupProfileUpdateFromGroup(
+                normalize({ id: 'grp_1', name: 'Group', joinState: '' })
+            )
+        ).toBeNull();
     });
 });

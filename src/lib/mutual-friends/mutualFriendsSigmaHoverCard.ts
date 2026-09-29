@@ -1,6 +1,5 @@
 import { formatDateFilter } from '@/lib/dateTime';
-
-import type { MutualFriendsGraphTheme } from './mutualFriendsPalette';
+import type { MutualFriendsGraphTheme } from '@/lib/mutual-friends/mutualFriendsPalette';
 
 interface HoverCardNodeData {
     x: number;

@@ -3,29 +3,31 @@ import { createNodeBorderProgram } from '@sigma/node-border';
 import Graph from 'graphology';
 import Sigma from 'sigma';
 
-import { runGraphLayoutWorker } from './graphLayoutWorkerClient';
-import { isMutualFriendNodeUnavailable } from './mutualFriendsFilters';
+import { runGraphLayoutWorker } from '@/lib/mutual-friends/graphLayoutWorkerClient';
 import {
     communityColor,
     type MutualFriendsGraphTheme
-} from './mutualFriendsPalette';
-import { truncateMutualFriendLabel } from './mutualFriendsPicker';
+} from '@/lib/mutual-friends/mutualFriendsPalette';
 import {
     clampMutualGraphNumber,
     MUTUAL_GRAPH_LAYOUT_DEFAULTS,
     MUTUAL_GRAPH_LAYOUT_LIMITS
-} from './mutualFriendsSettings';
+} from '@/lib/mutual-friends/mutualFriendsSettings';
+import type {
+    MutualFriendGraph,
+    MutualFriendsLayoutSettings
+} from '@/lib/mutual-friends/mutualFriendsTypes';
+
+import { isMutualFriendNodeUnavailable } from './mutualFriendsFilters';
+import { truncateMutualFriendLabel } from './mutualFriendsPicker';
 import { mixGraphColors } from './mutualFriendsSigmaColors';
 import {
     drawMutualFriendHoverCard,
     type HoverCardStrings
 } from './mutualFriendsSigmaHoverCard';
-import type {
-    MutualFriendGraph,
-    MutualFriendsLayoutSettings
-} from './mutualFriendsTypes';
 
 const NODE_LABEL_THRESHOLD = 10;
+const UNASSIGNED_COMMUNITY = -1;
 const LABEL_DENSITY = 0.7;
 const LABEL_GRID_CELL_SIZE = 140;
 const SELECTED_SIZE_SCALE = 1.35;
@@ -318,13 +320,15 @@ export async function buildSigmaGraph({
     layoutSettings,
     communityIndexById,
     namedCommunityIndexes,
-    theme
+    theme,
+    forceLabels = false
 }: {
     graph: MutualFriendGraph;
     layoutSettings: MutualFriendsLayoutSettings;
-    communityIndexById: Map<string, number>;
+    communityIndexById: ReadonlyMap<string, number>;
     namedCommunityIndexes: ReadonlySet<number>;
     theme: MutualFriendsGraphTheme;
+    forceLabels?: boolean;
 }) {
     const graph = new Graph<
         MutualFriendsNodeAttributes,
@@ -341,7 +345,8 @@ export async function buildSigmaGraph({
 
     for (const node of sourceGraph.nodes) {
         const baseSize = 4 + (maxDegree ? (node.degree / maxDegree) * 18 : 0);
-        const community = communityIndexById.get(node.id) ?? 0;
+        const community =
+            communityIndexById.get(node.id) ?? UNASSIGNED_COMMUNITY;
         graph.addNode(node.id, {
             label: truncateMutualFriendLabel(node.label, 20),
             fullLabel: node.label,
@@ -354,6 +359,7 @@ export async function buildSigmaGraph({
             community,
             communityNamed: namedCommunityIndexes.has(community),
             ringColor: NODE_RING_COLOR,
+            forceLabel: forceLabels,
             type: isMutualFriendNodeUnavailable(node) ? 'hollow' : 'border',
             zIndex: 1
         });
@@ -365,9 +371,18 @@ export async function buildSigmaGraph({
         }
         const key = [link.source, link.target].sort().join('__');
         if (!graph.hasEdge(key)) {
+            const sourceCommunity = graph.getNodeAttribute(
+                link.source,
+                'community'
+            );
+            const targetCommunity = graph.getNodeAttribute(
+                link.target,
+                'community'
+            );
             const crossCommunity =
-                graph.getNodeAttribute(link.source, 'community') !==
-                graph.getNodeAttribute(link.target, 'community');
+                sourceCommunity !== targetCommunity &&
+                sourceCommunity !== UNASSIGNED_COMMUNITY &&
+                targetCommunity !== UNASSIGNED_COMMUNITY;
             graph.addEdgeWithKey(key, link.source, link.target, {
                 crossCommunity,
                 size: crossCommunity
@@ -438,7 +453,7 @@ export function renderSigmaGraph({
     selectedNodeIdRef: { current: string };
     crossCommunityOnlyRef: { current: boolean };
     onSelectNode: (nodeId: string) => void;
-    onOpenNode: (nodeId: string) => void;
+    onOpenNode?: (nodeId: string) => void;
     hoverCardStringsRef: { current: HoverCardStrings };
 }) {
     let sigma = instanceRef.current;
@@ -548,7 +563,10 @@ export function renderSigmaGraph({
         if (stayLit) {
             result.color = baseColor;
             result.ringColor = NODE_RING_COLOR;
-            result.forceLabel = isSelected || (isNeighbor && dim > 0.5);
+            result.forceLabel =
+                data.forceLabel === true ||
+                isSelected ||
+                (isNeighbor && dim > 0.5);
             result.zIndex = isSelected ? 3 : 2;
             return result;
         }
@@ -610,6 +628,7 @@ export function renderSigmaGraph({
 
     renderer.removeAllListeners();
     renderer.on('enterNode', ({ node }) => {
+        container.style.cursor = 'pointer';
         hovered = node;
         neighbors = graph.hasNode(node)
             ? new Set(graph.neighbors(node))
@@ -622,6 +641,7 @@ export function renderSigmaGraph({
         );
     });
     renderer.on('leaveNode', () => {
+        container.style.cursor = '';
         runTransition(
             hoverTransition,
             0,
@@ -635,15 +655,15 @@ export function renderSigmaGraph({
             }
         );
     });
-    renderer.on('clickNode', ({ node }) => {
-        if (node) {
+    renderer.on('clickNode', ({ node, event }) => {
+        if (node && event.original.detail <= 1) {
             onSelectNode(node);
         }
     });
     renderer.on('doubleClickNode', (event) => {
         event.preventSigmaDefault();
         if (event.node) {
-            onOpenNode(event.node);
+            onOpenNode?.(event.node);
         }
     });
 
@@ -673,6 +693,7 @@ export function renderSigmaGraph({
             repaint();
         },
         dispose() {
+            container.style.cursor = '';
             cancelTransition(hoverTransition);
             cancelTransition(selectionTransition);
         }

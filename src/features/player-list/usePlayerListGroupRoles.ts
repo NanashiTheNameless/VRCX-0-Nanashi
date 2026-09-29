@@ -7,6 +7,7 @@ import {
     isVrchatRequestError,
     unwrapVrchatResponse
 } from '@/repositories/vrchatRequest';
+import { createConcurrencyLimiter } from '@/shared/utils/concurrency';
 import { parseLocation } from '@/shared/utils/location';
 import { executeWithBackoff } from '@/shared/utils/retry';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -21,23 +22,7 @@ import type { PlayerListRow } from './playerListTypes';
 const MEMBER_LOOKUP_CONCURRENCY = 3;
 const MEMBER_LOOKUP_RETRIES = 3;
 
-function createLimiter(limit: number) {
-    let active = 0;
-    const waiting: Array<() => void> = [];
-    return async <T>(task: () => Promise<T>): Promise<T> => {
-        if (active >= limit)
-            await new Promise<void>((resolve) => waiting.push(resolve));
-        active++;
-        try {
-            return await task();
-        } finally {
-            active--;
-            waiting.shift()?.();
-        }
-    };
-}
-
-const limitMemberLookup = createLimiter(MEMBER_LOOKUP_CONCURRENCY);
+const limitMemberLookup = createConcurrencyLimiter(MEMBER_LOOKUP_CONCURRENCY);
 
 async function fetchMemberRoleIds(
     groupId: string,

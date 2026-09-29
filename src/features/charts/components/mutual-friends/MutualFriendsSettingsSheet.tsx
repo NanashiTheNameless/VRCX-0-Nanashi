@@ -2,7 +2,13 @@ import { RotateCcwIcon, Settings2Icon, XIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { MutualFriendsLayoutControls } from '@/components/mutual-friends/MutualFriendsLayoutControls';
 import { FriendMultiSelectList } from '@/components/search/FriendMultiSelectList';
+import type {
+    MutualFriendPickerOption,
+    MutualFriendsLayoutSettingKey,
+    MutualFriendsLayoutSettings
+} from '@/lib/mutual-friends/mutualFriendsTypes';
 import { preserveAppTitleBarOnOpenChange } from '@/lib/overlayTitlebar';
 import { Button } from '@/ui/shadcn/button';
 import { Separator } from '@/ui/shadcn/separator';
@@ -15,53 +21,6 @@ import {
     SheetTitle,
     SheetTrigger
 } from '@/ui/shadcn/sheet';
-
-import { MUTUAL_GRAPH_LAYOUT_LIMITS } from '../../mutual-friends/mutualFriendsSettings';
-import type {
-    MutualFriendPickerOption,
-    MutualFriendsLayoutSettingKey,
-    MutualFriendsLayoutSettings
-} from '../../mutual-friends/mutualFriendsTypes';
-import { CommitSlider } from './CommitSlider';
-
-interface LayoutControl {
-    key: MutualFriendsLayoutSettingKey;
-    labelKey: string;
-    helpKey: string;
-    step: number;
-    format: (value: number) => string;
-}
-
-const layoutControls: LayoutControl[] = [
-    {
-        key: 'layoutIterations',
-        labelKey: 'view.charts.mutual_friend.settings.layout_iterations',
-        helpKey: 'view.charts.mutual_friend.settings.layout_iterations_help',
-        step: 100,
-        format: (value) => String(value)
-    },
-    {
-        key: 'layoutSpacing',
-        labelKey: 'view.charts.mutual_friend.settings.layout_spacing',
-        helpKey: 'view.charts.mutual_friend.settings.layout_spacing_help',
-        step: 1,
-        format: (value) => String(value)
-    },
-    {
-        key: 'edgeCurvature',
-        labelKey: 'view.charts.mutual_friend.settings.edge_curvature',
-        helpKey: 'view.charts.mutual_friend.settings.edge_curvature_help',
-        step: 0.01,
-        format: (value) => value.toFixed(2)
-    },
-    {
-        key: 'communitySeparation',
-        labelKey: 'view.charts.mutual_friend.settings.community_separation',
-        helpKey: 'view.charts.mutual_friend.settings.community_separation_help',
-        step: 0.1,
-        format: (value) => value.toFixed(1)
-    }
-];
 
 function SettingsStat({ label, value }: { label: string; value: number }) {
     return (
@@ -170,27 +129,10 @@ export function MutualFriendsSettingsSheet({
                                     'view.charts.mutual_friend.settings.layout_section'
                                 )}
                             </SectionLabel>
-                            {layoutControls.map((control) => (
-                                <CommitSlider
-                                    key={control.key}
-                                    label={t(control.labelKey)}
-                                    help={t(control.helpKey)}
-                                    format={control.format}
-                                    min={
-                                        MUTUAL_GRAPH_LAYOUT_LIMITS[control.key]
-                                            .min
-                                    }
-                                    max={
-                                        MUTUAL_GRAPH_LAYOUT_LIMITS[control.key]
-                                            .max
-                                    }
-                                    step={control.step}
-                                    value={layoutSettings[control.key]}
-                                    onCommit={(next) =>
-                                        setLayoutSetting(control.key, next)
-                                    }
-                                />
-                            ))}
+                            <MutualFriendsLayoutControls
+                                layoutSettings={layoutSettings}
+                                setLayoutSetting={setLayoutSetting}
+                            />
                         </section>
 
                         <Separator />

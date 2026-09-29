@@ -5,9 +5,14 @@ import type { GroupInstanceRecord } from '@/domain/entities/group';
 import type { EntityRecord } from '@/domain/entities/shared';
 import type { LoadStatus } from '@/domain/shared/types';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
-import type { GroupMemberPatch } from '@/platform/tauri/bindings';
+import { commands } from '@/platform/tauri/bindings';
+import type {
+    GroupMemberPatch,
+    GroupProfileUpdate
+} from '@/platform/tauri/bindings';
 import gameLogRepository from '@/repositories/gameLogRepository';
 import groupProfileRepository from '@/repositories/groupProfileRepository';
+import { unwrapVrchatResponse } from '@/repositories/vrchatRequest';
 import { enrichEntityDialogHistory } from '@/services/dialogService';
 import { recordLocationHintsFromInstances } from '@/services/domainIngestionService';
 import { toast } from '@/services/toastService';
@@ -15,6 +20,7 @@ import { normalizeString } from '@/shared/utils/string';
 import { useDialogStore } from '@/state/dialogStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useModalStore } from '@/state/modalStore';
+import { useMyGroupsRevisionStore } from '@/state/myGroupsRevisionStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
 import type { GroupActionStatus } from './groupDialogTypes';
@@ -84,6 +90,10 @@ export function useGroupDialogState({
     const confirm = useModalStore((state) => state.confirm);
     const updateEntityDialogMetadata = useDialogStore(
         (state) => state.updateEntityDialogMetadata
+    );
+    const closeDialog = useDialogStore((state) => state.closeDialog);
+    const bumpMyGroupsRevision = useMyGroupsRevisionStore(
+        (state) => state.bumpRevision
     );
     const [group, setGroup] = useState(() =>
         seedData ? groupProfileRepository.normalize(seedData) : null
@@ -346,6 +356,7 @@ export function useGroupDialogState({
                     commitGroupSnapshot(response.json);
                 }
             });
+            bumpMyGroupsRevision();
             toast.add({
                 type: 'success',
                 title:
@@ -368,7 +379,7 @@ export function useGroupDialogState({
     }
 
     async function leaveGroup() {
-        if (!viewState.isMember || actionStatusRef.current !== 'idle') {
+        if (!viewState.canLeave || actionStatusRef.current !== 'idle') {
             return;
         }
 
@@ -399,6 +410,7 @@ export function useGroupDialogState({
                     commitGroupSnapshot(response.json);
                 }
             });
+            bumpMyGroupsRevision();
             toast.add({
                 type: 'success',
                 title: t('dialog.group.label.group_left')
@@ -410,6 +422,56 @@ export function useGroupDialogState({
                     error instanceof Error
                         ? error.message
                         : t('dialog.group.toast.failed_to_leave_group')
+            });
+        } finally {
+            actionStatusRef.current = 'idle';
+            setActionStatus('idle');
+        }
+    }
+
+    async function deleteGroup() {
+        if (!viewState.canDelete || actionStatusRef.current !== 'idle') {
+            return;
+        }
+
+        actionStatusRef.current = 'delete';
+        setActionStatus('delete');
+        const result = await confirm({
+            title: t('dialog.group.modal.delete_group'),
+            description: t('dialog.group.dynamic.delete_value', {
+                value: group?.name || group?.id
+            }),
+            destructive: true,
+            confirmText: t('dialog.group.modal.delete'),
+            cancelText: t('common.actions.cancel')
+        });
+
+        if (!result.ok) {
+            actionStatusRef.current = 'idle';
+            setActionStatus('idle');
+            return;
+        }
+
+        try {
+            unwrapVrchatResponse(
+                await commands.appVrchatGroupDelete({
+                    groupId: normalizedGroupId
+                }),
+                `groups/${encodeURIComponent(normalizedGroupId)}`
+            );
+            bumpMyGroupsRevision();
+            toast.add({
+                type: 'success',
+                title: t('dialog.group.toast.group_deleted')
+            });
+            closeDialog();
+        } catch (error) {
+            toast.add({
+                type: 'error',
+                title: userFacingErrorMessage(
+                    error,
+                    t('dialog.group.toast.failed_to_delete_group')
+                )
             });
         } finally {
             actionStatusRef.current = 'idle';
@@ -492,6 +554,7 @@ export function useGroupDialogState({
                 isRepresenting: enabled
             });
             await refreshGroupProfile();
+            bumpMyGroupsRevision();
             toast.add({
                 type: 'success',
                 title: enabled
@@ -535,6 +598,7 @@ export function useGroupDialogState({
                 params
             });
             await refreshGroupProfile();
+            bumpMyGroupsRevision();
             toast.add({ type: 'success', title: label });
         } catch (error) {
             toast.add({
@@ -610,6 +674,45 @@ export function useGroupDialogState({
         }
     }
 
+    async function updateGroupProfile(params: GroupProfileUpdate) {
+        if (actionStatusRef.current !== 'idle') {
+            return false;
+        }
+
+        actionStatusRef.current = 'profile';
+        setActionStatus('profile');
+        try {
+            const response = unwrapVrchatResponse(
+                await commands.appVrchatGroupUpdate({
+                    groupId: normalizedGroupId,
+                    params
+                }),
+                `groups/${encodeURIComponent(normalizedGroupId)}`
+            );
+            await refreshGroupProfile().catch(() => {
+                commitGroupSnapshot(response.json);
+            });
+            bumpMyGroupsRevision();
+            toast.add({
+                type: 'success',
+                title: t('dialog.group.toast.group_profile_updated')
+            });
+            return true;
+        } catch (error) {
+            toast.add({
+                type: 'error',
+                title: userFacingErrorMessage(
+                    error,
+                    t('dialog.group.toast.failed_to_update_group_profile')
+                )
+            });
+            return false;
+        } finally {
+            actionStatusRef.current = 'idle';
+            setActionStatus('idle');
+        }
+    }
+
     return {
         status: groupDialogStatus.ready,
         group,
@@ -621,11 +724,13 @@ export function useGroupDialogState({
         viewState,
         actions: {
             cancelJoinRequest,
+            deleteGroup,
             joinGroup,
             leaveGroup,
             refreshGroup,
             updateGroupBlock,
             updateGroupMemberProps,
+            updateGroupProfile,
             updateGroupRepresentation
         },
         labels: {

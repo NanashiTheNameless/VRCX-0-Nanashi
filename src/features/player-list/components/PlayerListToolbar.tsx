@@ -27,6 +27,7 @@ const FILTER_SCOPES = [
 
 type PlayerListToolbarProps = {
     groupSelector: ReactNode;
+    mutualScan: ReactNode;
     counts: PlayerListScopeCounts;
     onQueryChange: (query: string) => void;
     onResetLayout: () => void;
@@ -36,6 +37,7 @@ type PlayerListToolbarProps = {
 
 export function PlayerListToolbar({
     groupSelector,
+    mutualScan,
     counts,
     onQueryChange,
     onResetLayout,
@@ -71,6 +73,7 @@ export function PlayerListToolbar({
                 />
 
                 <ToolbarActions>
+                    {mutualScan}
                     {groupSelector}
                     <TableColumnVisibilityMenu
                         table={table}

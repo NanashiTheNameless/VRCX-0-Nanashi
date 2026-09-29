@@ -475,5 +475,61 @@ describe('UserProfileRepository', () => {
             rows: [{ id: 'usr_mutual', futureField: 'keep' }],
             persisted: true
         });
+        expect(
+            getCachedQueryData(
+                queryKeys.userMutualFriends(
+                    'usr_target',
+                    DEFAULT_VRCHAT_API_ENDPOINT
+                )
+            )
+        ).toEqual([{ id: 'usr_mutual', futureField: 'keep' }]);
+    });
+
+    it('keeps at most three mutual friend requests in flight and skips aborted ones', async () => {
+        const pending: Array<() => void> = [];
+        let inFlight = 0;
+        let maxInFlight = 0;
+        vi.mocked(
+            tauriMock.commands.appUserMutualFriendsListGet
+        ).mockImplementation(() => {
+            inFlight += 1;
+            maxInFlight = Math.max(maxInFlight, inFlight);
+            return new Promise((resolve) => {
+                pending.push(() => {
+                    inFlight -= 1;
+                    resolve({ rows: [], persisted: false });
+                });
+            });
+        });
+        const aborted = new AbortController();
+        const settled = Promise.allSettled([
+            ...['usr_1', 'usr_2', 'usr_3', 'usr_4'].map((userId) =>
+                userProfileRepository.getAllMutualFriends({ userId })
+            ),
+            userProfileRepository.getAllMutualFriends({
+                userId: 'usr_aborted',
+                signal: aborted.signal
+            })
+        ]);
+        aborted.abort();
+
+        while (pending.length) {
+            await Promise.resolve();
+            pending.shift()?.();
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+        const results = await settled;
+
+        expect(maxInFlight).toBe(3);
+        expect(
+            tauriMock.commands.appUserMutualFriendsListGet
+        ).toHaveBeenCalledTimes(4);
+        expect(results.map((result) => result.status)).toEqual([
+            'fulfilled',
+            'fulfilled',
+            'fulfilled',
+            'fulfilled',
+            'rejected'
+        ]);
     });
 });

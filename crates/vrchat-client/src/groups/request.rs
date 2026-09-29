@@ -47,6 +47,78 @@ impl GroupPostMutation {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+pub enum GroupProfileJoinState {
+    #[serde(rename = "closed")]
+    Closed,
+    #[serde(rename = "invite")]
+    Invite,
+    #[serde(rename = "open")]
+    Open,
+    #[serde(rename = "request")]
+    Request,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GroupProfileUpdate {
+    pub name: String,
+    pub short_code: String,
+    pub description: String,
+    pub join_state: GroupProfileJoinState,
+    pub languages: Vec<String>,
+    pub rules: String,
+    pub links: Vec<String>,
+    pub icon_id: Option<String>,
+    pub banner_id: Option<String>,
+    pub allow_group_join_prompt: bool,
+}
+
+const GROUP_PROFILE_LIST_LIMIT: usize = 3;
+
+impl GroupProfileUpdate {
+    pub(super) fn validated(mut self) -> Result<Self, HttpApiError> {
+        self.name = require_text(self.name, "VrchatGroupUpdate requires name.")?;
+        if self.name.chars().count() < 3 {
+            return Err(HttpApiError::Custom(
+                "VrchatGroupUpdate name must be at least 3 characters.".into(),
+            ));
+        }
+        let short_code_len = self.short_code.chars().count();
+        if !(3..=6).contains(&short_code_len)
+            || !self
+                .short_code
+                .chars()
+                .all(|ch| ch.is_ascii_uppercase() || ch.is_ascii_digit())
+        {
+            return Err(HttpApiError::Custom(
+                "VrchatGroupUpdate shortCode must be 3-6 uppercase letters or digits.".into(),
+            ));
+        }
+        if self.languages.len() > GROUP_PROFILE_LIST_LIMIT
+            || self.links.len() > GROUP_PROFILE_LIST_LIMIT
+        {
+            return Err(HttpApiError::Custom(
+                "VrchatGroupUpdate allows at most 3 languages and 3 links.".into(),
+            ));
+        }
+        for value in self.languages.iter_mut().chain(self.links.iter_mut()) {
+            *value = require_text(
+                value.as_str(),
+                "VrchatGroupUpdate languages and links cannot contain blank values.",
+            )?;
+        }
+        for file_id in [&self.icon_id, &self.banner_id].into_iter().flatten() {
+            if !file_id.starts_with("file_") {
+                return Err(HttpApiError::Custom(
+                    "VrchatGroupUpdate iconId and bannerId must begin with file_.".into(),
+                ));
+            }
+        }
+        Ok(self)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
 pub enum GroupMemberVisibility {
     #[serde(rename = "friends")]
     Friends,

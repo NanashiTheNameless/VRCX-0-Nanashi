@@ -1624,6 +1624,16 @@ const generatedCommands = {
             input
         });
     },
+    async appVrchatGroupUpdate(
+        input: VrchatGroupUpdateInput
+    ): Promise<HttpApiExecuteResponse> {
+        return await TAURI_INVOKE('app__vrchat_group_update', { input });
+    },
+    async appVrchatGroupDelete(
+        input: VrchatGroupIdInput
+    ): Promise<HttpApiExecuteResponse> {
+        return await TAURI_INVOKE('app__vrchat_group_delete', { input });
+    },
     async appVrchatGroupPostCreate(
         input: VrchatGroupPostCreateInput
     ): Promise<HttpApiExecuteResponse> {
@@ -5024,6 +5034,19 @@ export type GroupPostMutation = {
     imageId: string | null;
 };
 export type GroupPostVisibility = 'group' | 'public';
+export type GroupProfileJoinState = 'closed' | 'invite' | 'open' | 'request';
+export type GroupProfileUpdate = {
+    name: string;
+    shortCode: string;
+    description: string;
+    joinState: GroupProfileJoinState;
+    languages: string[];
+    rules: string;
+    links: string[];
+    iconId: string | null;
+    bannerId: string | null;
+    allowGroupJoinPrompt: boolean;
+};
 export type GroupQuickModerationAction = 'kick' | 'ban';
 export type GroupQuickModerationActionInput = {
     currentUserId?: string;
@@ -7016,6 +7039,10 @@ export type VrchatGroupProfileInput = {
 export type VrchatGroupRepresentationInput = {
     groupId?: string;
     isRepresenting?: boolean;
+};
+export type VrchatGroupUpdateInput = {
+    groupId?: string;
+    params: GroupProfileUpdate;
 };
 export type VrchatGroupUserGroupsInput = { userId?: string };
 export type VrchatGroupUserInput = { groupId?: string; userId?: string };

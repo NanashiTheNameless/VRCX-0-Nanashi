@@ -2,8 +2,8 @@ import type {
     GraphLayoutPositions,
     GraphLayoutRequest,
     GraphLayoutResponse
-} from '../graphLayoutTypes';
-import GraphLayoutWorker from '../graphLayoutWorker.js?worker&inline';
+} from './graphLayoutTypes';
+import GraphLayoutWorker from './graphLayoutWorker.js?worker&inline';
 
 export type { GraphLayoutRequest };
 

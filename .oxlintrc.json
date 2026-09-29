@@ -151,9 +151,7 @@
             }
         },
         {
-            "files": [
-                "src/features/charts/mutual-friends/graphLayoutWorkerClient.ts"
-            ],
+            "files": ["src/lib/mutual-friends/graphLayoutWorkerClient.ts"],
             "rules": {
                 "import/default": "off"
             }

@@ -82,7 +82,8 @@ describe('playerListState', () => {
                 avatar: false,
                 timer: true,
                 unknown: false,
-                displayName: 'yes'
+                displayName: 'yes',
+                mutualFriends: true
             })
         ).toEqual({ avatar: false, timer: true });
 
@@ -91,9 +92,32 @@ describe('playerListState', () => {
         ).toEqual([
             'note',
             'avatar',
-            ...PLAYER_LIST_COLUMN_IDS.filter(
-                (columnId) => !['note', 'avatar'].includes(columnId)
-            )
+            'timer',
+            'displayName',
+            'mutualFriends',
+            'rank',
+            'groupRoles',
+            'status',
+            'icon',
+            'platform',
+            'language',
+            'bioLink'
+        ]);
+        expect(
+            sanitizePlayerListColumnOrder(['displayName', 'timer', 'avatar'])
+        ).toEqual([
+            'displayName',
+            'mutualFriends',
+            'rank',
+            'groupRoles',
+            'status',
+            'icon',
+            'platform',
+            'language',
+            'bioLink',
+            'note',
+            'timer',
+            'avatar'
         ]);
     });
 

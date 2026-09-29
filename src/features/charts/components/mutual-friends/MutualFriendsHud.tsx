@@ -2,11 +2,11 @@ import { RefreshCcwIcon, SearchIcon, XIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { MutualFriendsFetchProgress } from '@/lib/mutual-friends/mutualFriendsTypes';
 import { Button } from '@/ui/shadcn/button';
 import { Input } from '@/ui/shadcn/input';
 import { Spinner } from '@/ui/shadcn/spinner';
 
-import type { MutualFriendsFetchProgress } from '../../mutual-friends/mutualFriendsTypes';
 import { MutualFriendsSurface } from './MutualFriendsSurface';
 
 function FetchProgressPill({

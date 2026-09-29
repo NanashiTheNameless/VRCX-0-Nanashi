@@ -15,6 +15,7 @@ import {
     ToolbarStatus,
     ToolbarViews
 } from '@/components/layout/ToolbarControls';
+import { useRoomMutualScanStore } from '@/state/roomMutualScanStore';
 import { Button } from '@/ui/shadcn/button';
 import { DropdownMenuGroup, DropdownMenuItem } from '@/ui/shadcn/dropdown-menu';
 import { Spinner } from '@/ui/shadcn/spinner';
@@ -87,6 +88,9 @@ export function FriendListToolbar({
         onSearchFilterChange,
         onToggleFavoritesOnly
     } = toolbarCommands;
+    const roomMutualScanRunning = useRoomMutualScanStore(
+        (state) => state.running
+    );
     const statusDetail = isMutualFetching
         ? t('view.friend_list.loading.loading_mutual_friends_progress', {
               current: mutualProgress?.current ?? 0,
@@ -172,7 +176,10 @@ export function FriendListToolbar({
                         type="button"
                         variant="outline"
                         disabled={
-                            isMutualOptOut || isMutualFetching || !currentUserId
+                            isMutualOptOut ||
+                            isMutualFetching ||
+                            roomMutualScanRunning ||
+                            !currentUserId
                         }
                         onClick={onLoadMutualFriends}
                     >

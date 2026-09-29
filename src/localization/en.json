@@ -166,7 +166,10 @@
         "note_local": "Local note",
         "note_synced": "VRChat note",
         "last_online": "Last online {duration} ago",
-        "in_private_world": "In a private world"
+        "in_private_world": "In a private world",
+        "mutual_friends": "{count} mutual friends",
+        "no_mutual_friends": "No mutual friends",
+        "name_separator": ", "
     },
     "deep_link": {
         "add_avatar_provider": {
@@ -3527,6 +3530,18 @@
             },
             "toast": {
                 "failed_to_look_up_this_player": "Failed to look up this player"
+            },
+            "mutual_friends": {
+                "query": "Check mutual friends",
+                "graph_fetch_running": "The mutual friend graph is being fetched. Check again when it finishes.",
+                "summary": "{count} players share friends with you",
+                "circles_prefix": "mostly from the communities of",
+                "circles_suffix": "",
+                "cell_tooltip": "{names} · {count} mutual friends",
+                "cell_tooltip_circle": "{names} · {count} mutual friends · mostly from {circle}'s community",
+                "requery": "Check again",
+                "show": "Show results",
+                "hide": "Hide"
             }
         },
         "auth": {
@@ -3950,6 +3965,8 @@
             "group_count": "{count} group(s)",
             "edit_mode": "Edit",
             "exit_edit_mode": "Done",
+            "section_own": "Own Groups",
+            "section_joined": "Joined Groups",
             "order_hint": "Drag groups to set the order VRChat shows them in.",
             "order_game_running": "VRChat is running. Order changes may be overwritten when the game exits.",
             "order_unavailable": "Group order is unavailable: {reason}",
@@ -4212,6 +4229,9 @@
                     "alphabetical": "Alphabetical",
                     "last_active": "Last Active",
                     "friend_order": "Friend Order"
+                },
+                "view": {
+                    "list": "List"
                 }
             },
             "activity": {
@@ -4887,7 +4907,12 @@
                 "moderation_tools": "Moderation Tools",
                 "leave": "Leave Group",
                 "block": "Block Group",
-                "unblock": "Unblock Group"
+                "unblock": "Unblock Group",
+                "edit_profile": "Edit Group Details",
+                "edit_profile_media": "Edit Banner and Icon",
+                "use_banner": "Use as banner",
+                "use_group_icon": "Use as group icon",
+                "delete": "Delete Group"
             },
             "overview": {
                 "header": "Overview",
@@ -4997,7 +5022,9 @@
                 "name_a_z": "Name A-Z",
                 "name_z_a": "Name Z-A",
                 "role": "Role",
-                "all_roles": "All roles"
+                "all_roles": "All roles",
+                "banner": "Banner",
+                "group_icon": "Group Icon"
             },
             "success": {
                 "group_join_request_cancelled": "Group join request cancelled",
@@ -5027,7 +5054,11 @@
                 "group_post_created": "Group post created",
                 "failed_to_save_group_post": "Failed to save group post",
                 "failed_to_send_group_invite": "Failed to send group invite",
-                "failed_to_delete_group_post": "Failed to delete group post"
+                "failed_to_delete_group_post": "Failed to delete group post",
+                "group_profile_updated": "Group updated",
+                "failed_to_update_group_profile": "Failed to update group",
+                "group_deleted": "Group deleted",
+                "failed_to_delete_group": "Failed to delete group"
             },
             "modal": {
                 "leave_group": "Leave group?",
@@ -5036,7 +5067,9 @@
                 "delete_group_post": "Delete group post?",
                 "block_group": "Block group?",
                 "unblock_group": "Unblock group?",
-                "invite_to_group": "Invite to Group"
+                "invite_to_group": "Invite to Group",
+                "delete_group": "Delete group?",
+                "delete": "Delete"
             },
             "dynamic": {
                 "leave_value": "Leave {value}?",
@@ -5044,7 +5077,19 @@
                 "value_completed": "{value} completed",
                 "search_value": "Search {value}",
                 "no_value": "No {value}",
-                "value_copied": "{value} copied"
+                "value_copied": "{value} copied",
+                "delete_value": "Delete {value}? Everyone loses access to the group."
+            },
+            "edit": {
+                "short_code": "Short Code",
+                "short_code_hint": "3–6 uppercase letters or numbers. Changing it also changes the group link.",
+                "add_link": "Add Link",
+                "remove_link": "Remove Link",
+                "join_state_open": "Anyone",
+                "join_state_request": "Request to Join",
+                "join_state_invite": "Invite Only",
+                "join_state_closed": "Closed",
+                "allow_join_prompt": "Prompt people in group instances to join"
             }
         },
         "favorite": {
@@ -6324,7 +6369,8 @@
             "bioLink": "Bio Links",
             "note": "Note",
             "user": "User",
-            "location": "Location"
+            "location": "Location",
+            "mutualFriends": "Mutual friends"
         },
         "friendLog": {
             "date": "Date",
@@ -6846,5 +6892,9 @@
         "restore": "Restore and restart",
         "keep": "Display is normal, keep",
         "failed": "Could not change the rendering setting. Please try again."
+    },
+    "mutual_graph_hint": {
+        "build": "No mutual friend graph yet · Build it",
+        "room_scan_running": "Checking mutual friends for this instance. Try again when it finishes."
     }
 }

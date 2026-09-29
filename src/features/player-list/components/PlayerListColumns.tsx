@@ -5,6 +5,7 @@ import {
     HandIcon,
     HeartIcon,
     IdCardIcon,
+    LockIcon,
     MessageSquareXIcon,
     ShieldCheckIcon,
     StarIcon,
@@ -28,11 +29,14 @@ import {
 } from '@/components/data-table/DataTableView';
 import { BioLinkFavicon } from '@/components/media/BioLinkFavicon';
 import { FadeInImage } from '@/components/media/FadeInImage';
+import { MutualFriendAvatars } from '@/components/mutual-friends/MutualFriendAvatars';
+import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
 import { timeToText } from '@/lib/dateTime';
 import { cn } from '@/lib/utils';
 import { getNameColour, openExternalLink } from '@/services/entityMediaService';
 import { usePreferencesStore } from '@/state/preferencesStore';
 import { Button } from '@/ui/shadcn/button';
+import { Spinner } from '@/ui/shadcn/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import {
@@ -81,9 +85,79 @@ function DisplayNameCell({
             : undefined;
 
     return (
-        <span className="block min-w-0 truncate text-sm" style={style}>
-            {row.original.displayName}
-        </span>
+        <UserHoverCard userId={row.original.userId} side="right" align="start">
+            <span className="block min-w-0 truncate text-sm" style={style}>
+                {row.original.displayName}
+            </span>
+        </UserHoverCard>
+    );
+}
+
+function MutualFriendsCell({ row }: { row: AppRow<PlayerListRow> }) {
+    const { t } = useTranslation();
+    const mutuals = row.original.mutuals;
+    if (!mutuals) {
+        return null;
+    }
+    if (mutuals.status === 'idle') {
+        return (
+            <span className="text-muted-foreground">
+                {DATA_TABLE_EMPTY_VALUE}
+            </span>
+        );
+    }
+    if (mutuals.status === 'loading') {
+        return <Spinner className="text-muted-foreground size-3.5" />;
+    }
+    if (mutuals.status !== 'ready') {
+        return (
+            <PlayerFlag
+                Icon={LockIcon}
+                label={t('view.charts.mutual_friend.label.mutuals_unavailable')}
+                className="text-muted-foreground"
+                iconClassName="size-3.5"
+            />
+        );
+    }
+    if (!mutuals.count) {
+        return null;
+    }
+    const names = mutuals.friends
+        .map((friend) => friend.displayName)
+        .join(t('user_hover_card.name_separator'));
+    return (
+        <Tooltip>
+            <TooltipTrigger
+                render={
+                    <span className="flex min-w-0 items-center gap-1.5">
+                        <MutualFriendAvatars friends={mutuals.friends} />
+                        {mutuals.community ? (
+                            <span
+                                className="size-2 shrink-0 rounded-full"
+                                style={{
+                                    backgroundColor: mutuals.community.color
+                                }}
+                            />
+                        ) : null}
+                        <span className="text-sm tabular-nums">
+                            {mutuals.count}
+                        </span>
+                    </span>
+                }
+            />
+            <TooltipContent>
+                {mutuals.community
+                    ? t('view.player_list.mutual_friends.cell_tooltip_circle', {
+                          names,
+                          count: mutuals.count,
+                          circle: mutuals.community.label
+                      })
+                    : t('view.player_list.mutual_friends.cell_tooltip', {
+                          names,
+                          count: mutuals.count
+                      })}
+            </TooltipContent>
+        </Tooltip>
     );
 }
 
@@ -432,6 +506,25 @@ export function usePlayerListColumns(): AppColumnDef<PlayerListRow>[] {
                         {row.original.trustLevel || ''}
                     </span>
                 )
+            },
+            {
+                id: 'mutualFriends',
+                size: 140,
+                enableHiding: false,
+                meta: { label: t('table.playerList.mutualFriends') },
+                accessorFn: (row) =>
+                    row.mutuals?.status === 'ready'
+                        ? row.mutuals.count
+                        : undefined,
+                sortUndefined: 'last',
+                sortDescFirst: true,
+                header: ({ column }) => (
+                    <SortButton
+                        column={column}
+                        label={t('table.playerList.mutualFriends')}
+                    />
+                ),
+                cell: ({ row }) => <MutualFriendsCell row={row} />
             },
             {
                 id: 'groupRoles',

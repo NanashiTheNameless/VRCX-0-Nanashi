@@ -1,37 +1,37 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { assignMutualFriendCommunities } from '@/lib/mutual-friends/mutualFriendsCommunities';
+import {
+    applyMutualFriendsViewFilters,
+    countIsolatedMutualFriendNodes,
+    countUnknownMutualFriendNodes
+} from '@/lib/mutual-friends/mutualFriendsFilters';
+import {
+    buildMutualFriendsBaseGraph,
+    buildMutualFriendsCoverage
+} from '@/lib/mutual-friends/mutualFriendsGraphData';
+import {
+    mutualFriendsCommunityPalette,
+    mutualFriendsNeutralCommunityColor
+} from '@/lib/mutual-friends/mutualFriendsPalette';
+import { buildMutualFriendExcludePickerOptions } from '@/lib/mutual-friends/mutualFriendsPicker';
+import {
+    normalizeExcludedMutualFriendIds,
+    normalizeMutualFriendId,
+    readExcludedMutualFriendIds,
+    writeExcludedMutualFriendIds
+} from '@/lib/mutual-friends/mutualFriendsSettings';
+import { useMutualFriendsLayoutSettings } from '@/lib/mutual-friends/useMutualFriendsLayoutSettings';
+import { useMutualFriendsSigmaLifecycle } from '@/lib/mutual-friends/useMutualFriendsSigmaLifecycle';
 import { commands } from '@/platform/tauri/bindings';
 import { openUserDialog } from '@/services/dialogService';
 import { toast } from '@/services/toastService';
 import { useModalStore } from '@/state/modalStore';
 import { useMutualGraphRevisionStore } from '@/state/mutualGraphRevisionStore';
 
-import { assignMutualFriendCommunities } from './mutualFriendsCommunities';
-import {
-    applyMutualFriendsViewFilters,
-    countIsolatedMutualFriendNodes,
-    countUnknownMutualFriendNodes
-} from './mutualFriendsFilters';
-import {
-    buildMutualFriendsBaseGraph,
-    buildMutualFriendsCoverage
-} from './mutualFriendsGraphData';
-import {
-    mutualFriendsCommunityPalette,
-    mutualFriendsNeutralCommunityColor
-} from './mutualFriendsPalette';
-import { buildMutualFriendExcludePickerOptions } from './mutualFriendsPicker';
-import {
-    normalizeExcludedMutualFriendIds,
-    normalizeMutualFriendId,
-    readExcludedMutualFriendIds,
-    writeExcludedMutualFriendIds
-} from './mutualFriendsSettings';
 import { useMutualFriendsGraphFetch } from './useMutualFriendsGraphFetch';
-import { useMutualFriendsLayoutSettings } from './useMutualFriendsLayoutSettings';
 import { useMutualFriendsRuntime } from './useMutualFriendsRuntime';
-import { useMutualFriendsSigmaLifecycle } from './useMutualFriendsSigmaLifecycle';
 import { useMutualFriendsSnapshot } from './useMutualFriendsSnapshot';
 import { useMutualFriendsViewFilters } from './useMutualFriendsViewFilters';
 

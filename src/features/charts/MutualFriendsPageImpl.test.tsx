@@ -13,6 +13,9 @@ vi.mock('@/components/layout/PageScaffold', () => ({
     )
 }));
 
+vi.mock('./components/mutual-friends/MutualFriendsAutoFetch', () => ({
+    MutualFriendsAutoFetch: () => null
+}));
 vi.mock('./components/mutual-friends/MutualFriendsHud', () => ({
     MutualFriendsHud: (props: { canFetch: boolean }) => {
         mocks.hud(props);

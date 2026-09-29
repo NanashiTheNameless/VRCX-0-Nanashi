@@ -16,6 +16,7 @@ import {
     type HttpApiExecuteResponse
 } from '@/platform/tauri/bindings';
 import { stripDefaultAvatarImage } from '@/shared/utils/avatar';
+import { createConcurrencyLimiter } from '@/shared/utils/concurrency';
 import { isRecord } from '@/shared/utils/record';
 import {
     computeTrustLevel,
@@ -52,7 +53,7 @@ type UserRepresentedGroup = Record<string, unknown> & {
     shortCode?: string;
 };
 
-type UserMutualFriendRow = UserRecord & {
+export type UserMutualFriendRow = UserRecord & {
     bannerColor?: string;
     bannerType?: string;
     bannerUrl?: string;
@@ -72,6 +73,15 @@ type UserMutualFriendRow = UserRecord & {
 interface UserEndpointInput {
     userId?: string;
 }
+
+interface MutualFriendsInput extends UserEndpointInput {
+    signal?: AbortSignal;
+}
+
+const MUTUAL_FRIENDS_REQUEST_CONCURRENCY = 3;
+const limitMutualFriendsRequest = createConcurrencyLimiter(
+    MUTUAL_FRIENDS_REQUEST_CONCURRENCY
+);
 
 interface UserProfileInput extends UserEndpointInput {
     force?: boolean;
@@ -329,7 +339,7 @@ async function getRepresentedGroup({ userId, force = false }: UserGroupsInput) {
     });
 }
 
-async function getAllMutualFriends({ userId }: UserEndpointInput) {
+async function getAllMutualFriends({ userId, signal }: MutualFriendsInput) {
     const normalizedUserId = userId?.trim() ?? '';
     if (!normalizedUserId) {
         throw new Error(
@@ -337,12 +347,23 @@ async function getAllMutualFriends({ userId }: UserEndpointInput) {
         );
     }
 
-    const { rows, persisted } = await commands.appUserMutualFriendsListGet({
-        userId: normalizedUserId
+    const { rows, persisted } = await limitMutualFriendsRequest(() => {
+        signal?.throwIfAborted();
+        return commands.appUserMutualFriendsListGet({
+            userId: normalizedUserId
+        });
     });
     const candidates: unknown[] = rows;
+    const mutualFriendRows = candidates.filter(isUserMutualFriendRow);
+    setCachedQueryData(
+        queryKeys.userMutualFriends(
+            normalizedUserId,
+            DEFAULT_VRCHAT_API_ENDPOINT
+        ),
+        mutualFriendRows
+    );
     return {
-        rows: candidates.filter(isUserMutualFriendRow),
+        rows: mutualFriendRows,
         persisted
     };
 }

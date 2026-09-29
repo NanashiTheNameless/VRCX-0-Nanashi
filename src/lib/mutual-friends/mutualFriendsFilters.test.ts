@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
+import type { MutualFriendGraph } from '@/lib/mutual-friends/mutualFriendsTypes';
+
 import {
     applyMutualFriendsViewFilters,
     countIsolatedMutualFriendNodes,
     countUnknownMutualFriendNodes,
     MUTUAL_GRAPH_DEFAULT_VIEW_FILTERS
 } from './mutualFriendsFilters';
-import type { MutualFriendGraph } from './mutualFriendsTypes';
 
 function buildNode(
     id: string,

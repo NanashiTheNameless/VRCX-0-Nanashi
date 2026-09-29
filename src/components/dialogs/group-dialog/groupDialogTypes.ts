@@ -8,7 +8,10 @@ import type {
     GroupProfileRecord
 } from '@/domain/entities/group';
 import type { LoadStatus, RemoteTabStatus } from '@/domain/shared/types';
-import type { GroupMemberVisibility } from '@/platform/tauri/bindings';
+import type {
+    GroupMemberVisibility,
+    GroupProfileUpdate
+} from '@/platform/tauri/bindings';
 import type { GroupCalendarEventRecord } from '@/repositories/vrchatToolsRepository';
 
 import type { GroupDialogMembersModel } from './useGroupDialogMembers';
@@ -22,7 +25,9 @@ export type GroupActionStatus =
     | 'refresh'
     | 'represent'
     | 'member-props'
-    | 'block';
+    | 'block'
+    | 'profile'
+    | 'delete';
 
 export type GroupRemoteTab = 'posts' | 'photos';
 type GroupRemoteStatusValue = RemoteTabStatus;
@@ -68,6 +73,8 @@ export type GroupDialogView = {
     memberStatus: string;
     joinState: string;
     canJoin: boolean;
+    canLeave: boolean;
+    canDelete: boolean;
 };
 
 export type GroupDialogControls = {
@@ -77,11 +84,13 @@ export type GroupDialogControls = {
     onRefresh: () => void;
     onJoin: () => void;
     onLeave: () => void;
+    onDelete: () => void;
     onCancelRequest: () => void;
     onRepresent: (enabled: boolean) => void;
     onSubscribe: (enabled: boolean) => void;
     onVisibility: (visibility: GroupMemberVisibility) => void;
     onBlock: (enabled: boolean) => void;
+    onUpdateProfile: (params: GroupProfileUpdate) => Promise<boolean>;
 };
 
 export type GroupDialogTabModel = {

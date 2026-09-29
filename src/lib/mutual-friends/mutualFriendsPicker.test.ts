@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import type { FriendRecord } from '@/domain/friends/types';
+import { MUTUAL_GRAPH_EMPTY_USER_ID } from '@/lib/mutual-friends/mutualFriendsSettings';
 
 import {
     buildMutualFriendExcludePickerOptions,
     buildMutualFriendPickerOption,
     truncateMutualFriendLabel
 } from './mutualFriendsPicker';
-import { MUTUAL_GRAPH_EMPTY_USER_ID } from './mutualFriendsSettings';
 
 function friend(patch: Partial<FriendRecord> = {}): FriendRecord {
     return {

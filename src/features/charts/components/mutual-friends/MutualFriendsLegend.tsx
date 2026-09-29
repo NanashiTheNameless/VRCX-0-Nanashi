@@ -1,16 +1,16 @@
 import { useTranslation } from 'react-i18next';
 
+import { CommitSlider } from '@/components/mutual-friends/CommitSlider';
 import { formatDateFilter } from '@/lib/dateTime';
-import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
-
-import { MUTUAL_GRAPH_MIN_DEGREE_LIMITS } from '../../mutual-friends/mutualFriendsFilters';
+import { MUTUAL_GRAPH_MIN_DEGREE_LIMITS } from '@/lib/mutual-friends/mutualFriendsFilters';
 import type {
     MutualFriendCommunity,
     MutualFriendsCoverage,
     MutualFriendsIsolatedCounts
-} from '../../mutual-friends/mutualFriendsTypes';
-import { CommitSlider } from './CommitSlider';
+} from '@/lib/mutual-friends/mutualFriendsTypes';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
+
 import { MutualFriendsSurface } from './MutualFriendsSurface';
 
 export function MutualFriendsLegend({

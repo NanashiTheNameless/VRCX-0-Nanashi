@@ -19,6 +19,7 @@ import { toast } from '@/services/toastService';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useModalStore } from '@/state/modalStore';
 import { useMutualGraphRevisionStore } from '@/state/mutualGraphRevisionStore';
+import { useRoomMutualScanStore } from '@/state/roomMutualScanStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
 import {
@@ -507,7 +508,11 @@ export function useFriendListRowActions({
     }
 
     async function loadMutualFriends() {
-        if (!currentUserId || isMutualFetching) {
+        if (
+            !currentUserId ||
+            isMutualFetching ||
+            useRoomMutualScanStore.getState().running
+        ) {
             return;
         }
         if (currentUserSnapshot?.hasSharedConnectionsOptOut) {

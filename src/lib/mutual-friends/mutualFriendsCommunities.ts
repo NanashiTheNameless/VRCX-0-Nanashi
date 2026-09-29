@@ -27,7 +27,16 @@ function createSeededRandom(seed: number) {
 export function assignMutualFriendCommunities(
     graph: MutualFriendGraph,
     palette: string[],
-    neutralColor: string
+    neutralColor: string,
+    {
+        resolution = 1,
+        namedLimit: namedCommunityLimit = MUTUAL_GRAPH_NAMED_COMMUNITY_LIMIT,
+        minNamedSize = MIN_NAMED_COMMUNITY_SIZE
+    }: {
+        resolution?: number;
+        namedLimit?: number;
+        minNamedSize?: number;
+    } = {}
 ): MutualFriendCommunityAssignment {
     const communityIndexById = new Map<string, number>();
     if (!graph.nodes.length) {
@@ -56,7 +65,8 @@ export function assignMutualFriendCommunities(
     const rawCommunities: Record<string, number | string> =
         graphologyGraph.size > 0
             ? louvain(graphologyGraph, {
-                  rng: createSeededRandom(LOUVAIN_SEED)
+                  rng: createSeededRandom(LOUVAIN_SEED),
+                  resolution
               })
             : {};
 
@@ -83,10 +93,7 @@ export function assignMutualFriendCommunities(
         return left[0].localeCompare(right[0]);
     });
 
-    const namedLimit = Math.min(
-        MUTUAL_GRAPH_NAMED_COMMUNITY_LIMIT,
-        palette.length
-    );
+    const namedLimit = Math.min(namedCommunityLimit, palette.length);
 
     const communities: MutualFriendCommunity[] = ranked.map(
         ([, memberIds], index) => {
@@ -99,8 +106,7 @@ export function assignMutualFriendCommunities(
                     : best
             );
             const isNamed =
-                index < namedLimit &&
-                memberIds.length >= MIN_NAMED_COMMUNITY_SIZE;
+                index < namedLimit && memberIds.length >= minNamedSize;
             return {
                 index,
                 size: memberIds.length,

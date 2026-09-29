@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { buildMutualFriendsGraphTheme } from './mutualFriendsPalette';
+import { buildMutualFriendsGraphTheme } from '@/lib/mutual-friends/mutualFriendsPalette';
+import type {
+    MutualFriendGraph,
+    MutualFriendsLayoutSettings
+} from '@/lib/mutual-friends/mutualFriendsTypes';
+
 import {
     applyMutualFriendsCommunitySeparation,
     applyMutualFriendsEdgeCurvature,
@@ -13,22 +18,19 @@ import {
     type SigmaGraphController,
     type SigmaInstance
 } from './mutualFriendsSigmaGraph';
-import type {
-    MutualFriendGraph,
-    MutualFriendsLayoutSettings
-} from './mutualFriendsTypes';
 
 interface SigmaLifecycleOptions {
     graph: MutualFriendGraph;
     layoutSettings: MutualFriendsLayoutSettings;
-    communityIndexById: Map<string, number>;
+    communityIndexById: ReadonlyMap<string, number>;
     namedCommunityIndexes: ReadonlySet<number>;
     resolvedTheme: string;
     crossCommunityOnly: boolean;
     selectedNodeId: string;
     selectedNodeIdRef: { current: string };
     onSelectNode: (nodeId: string) => void;
-    onOpenNode: (nodeId: string) => void;
+    onOpenNode?: (nodeId: string) => void;
+    forceLabels?: boolean;
 }
 
 export function useMutualFriendsSigmaLifecycle({
@@ -41,7 +43,8 @@ export function useMutualFriendsSigmaLifecycle({
     selectedNodeId,
     selectedNodeIdRef,
     onSelectNode,
-    onOpenNode
+    onOpenNode,
+    forceLabels = false
 }: SigmaLifecycleOptions) {
     const { t } = useTranslation();
     const containerRef = useRef<HTMLElement | null>(null);
@@ -150,7 +153,8 @@ export function useMutualFriendsSigmaLifecycle({
             },
             communityIndexById,
             namedCommunityIndexes,
-            theme: themeRef.current
+            theme: themeRef.current,
+            forceLabels
         })
             .then((builtGraph) => {
                 if (!active || containerRef.current !== container) {
@@ -172,7 +176,7 @@ export function useMutualFriendsSigmaLifecycle({
                     selectedNodeIdRef,
                     crossCommunityOnlyRef,
                     onSelectNode: (nodeId) => selectNodeRef.current(nodeId),
-                    onOpenNode: (nodeId) => openNodeRef.current(nodeId),
+                    onOpenNode: (nodeId) => openNodeRef.current?.(nodeId),
                     hoverCardStringsRef
                 });
             })
@@ -196,6 +200,7 @@ export function useMutualFriendsSigmaLifecycle({
     }, [
         graph,
         communityIndexById,
+        forceLabels,
         namedCommunityIndexes,
         layoutIterations,
         layoutSpacing,

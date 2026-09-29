@@ -6,10 +6,10 @@ import {
     EmptyState as AppEmptyState,
     LoadingState as AppLoadingState
 } from '@/components/layout/PageScaffold';
+import type { MutualFriendsSnapshotStatus } from '@/lib/mutual-friends/mutualFriendsTypes';
 import { Button } from '@/ui/shadcn/button';
 import { Spinner } from '@/ui/shadcn/spinner';
 
-import type { MutualFriendsSnapshotStatus } from '../../mutual-friends/mutualFriendsTypes';
 import { MutualFriendsSurface } from './MutualFriendsSurface';
 
 export function MutualFriendsLayoutBadge() {

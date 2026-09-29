@@ -19,6 +19,7 @@ export const PLAYER_LIST_COLUMN_IDS = [
     'avatar',
     'timer',
     'displayName',
+    'mutualFriends',
     'rank',
     'groupRoles',
     'status',
@@ -30,12 +31,15 @@ export const PLAYER_LIST_COLUMN_IDS = [
 ];
 
 const PLAYER_LIST_SORTABLE_COLUMN_IDS = [
+    'mutualFriends',
     'groupRoles',
     'timer',
     'displayName',
     'rank',
     'platform'
 ];
+
+export const PLAYER_LIST_MUTUAL_FRIENDS_COLUMN_ID = 'mutualFriends';
 
 export const DEFAULT_PLAYER_LIST_SORTING = [{ id: 'timer', desc: true }];
 
@@ -70,7 +74,10 @@ export function sanitizePlayerListColumnVisibility(
         return visibility;
     }
     for (const columnId of PLAYER_LIST_COLUMN_IDS) {
-        if (typeof value[columnId] === 'boolean') {
+        if (
+            columnId !== PLAYER_LIST_MUTUAL_FRIENDS_COLUMN_ID &&
+            typeof value[columnId] === 'boolean'
+        ) {
             visibility[columnId] = value[columnId];
         }
     }
@@ -91,8 +98,19 @@ export function sanitizePlayerListColumnOrder(value: unknown): string[] {
         ordered.push(columnId);
         seen.add(columnId);
     }
-    const missing = PLAYER_LIST_COLUMN_IDS.filter(
-        (columnId) => !ordered.includes(columnId)
-    );
-    return [...ordered, ...missing];
+    PLAYER_LIST_COLUMN_IDS.forEach((columnId, index) => {
+        if (seen.has(columnId)) {
+            return;
+        }
+        const previous = PLAYER_LIST_COLUMN_IDS.slice(0, index)
+            .reverse()
+            .find((candidate) => seen.has(candidate));
+        ordered.splice(
+            previous ? ordered.indexOf(previous) + 1 : 0,
+            0,
+            columnId
+        );
+        seen.add(columnId);
+    });
+    return ordered;
 }

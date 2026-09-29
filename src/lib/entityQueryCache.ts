@@ -242,6 +242,8 @@ export const queryKeys = Object.freeze({
         withEndpoint(['avatar', 'styles'], endpoint),
     representedGroup: (userId: string, endpoint: string = '') =>
         withEndpoint(['user', userId, 'representedGroup'], endpoint),
+    userMutualFriends: (userId: string, endpoint: string = '') =>
+        withEndpoint(['user', userId, 'mutualFriends'], endpoint),
     userDialogTabCounts: (
         params: UserDialogTabCountQueryParams,
         endpoint: string = ''

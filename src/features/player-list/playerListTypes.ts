@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 
+import type { MutualFriendAvatar } from '@/components/mutual-friends/MutualFriendAvatars';
 import type {
     FriendProfileFields,
     FriendRecordInput
@@ -8,6 +9,7 @@ import type {
     CurrentInstanceRosterContext,
     CurrentInstanceRosterPlayer
 } from '@/domain/instances/currentInstanceRoster';
+import type { MutualFriendCommunity } from '@/lib/mutual-friends/mutualFriendsTypes';
 import type { LocalModerationOutput } from '@/platform/tauri/bindings';
 
 import type { PlayerGroupRole } from './playerListGroupRoles';
@@ -75,8 +77,18 @@ export type PlayerListSourceRow = PlayerListRecord &
 
 export type PlayerListContext = Partial<CurrentInstanceRosterContext>;
 
+export type PlayerListMutuals =
+    | { status: 'idle' | 'loading' | 'unavailable' }
+    | {
+          status: 'ready';
+          count: number;
+          friends: MutualFriendAvatar[];
+          community: MutualFriendCommunity | null;
+      };
+
 export type PlayerListRow = PlayerListSourceRow & {
     groupRoles?: PlayerGroupRole[] | null;
+    mutuals?: PlayerListMutuals | null;
     displayName: string;
     userId: string;
     userRef: PlayerListProfileRecord | null;

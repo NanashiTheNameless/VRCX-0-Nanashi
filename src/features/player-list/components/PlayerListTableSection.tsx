@@ -12,11 +12,14 @@ import {
     filterPlayerListRows,
     type PlayerListFilterScope
 } from '../playerListFilters';
+import { PLAYER_LIST_MUTUAL_FRIENDS_COLUMN_ID } from '../playerListState';
 import type { PlayerListRow, PlayerListSourceRow } from '../playerListTypes';
 import { usePlayerListGroupRoles } from '../usePlayerListGroupRoles';
+import { usePlayerListMutuals } from '../usePlayerListMutuals';
 import { usePlayerListTableState } from '../usePlayerListTableState';
 import { usePlayerListColumns } from './PlayerListColumns';
 import { PlayerListGroupSelector } from './PlayerListGroupSelector';
+import { PlayerListMutualScan } from './PlayerListMutualScan';
 import { PlayerListToolbar } from './PlayerListToolbar';
 import {
     PlayerListEmptyState,
@@ -118,6 +121,7 @@ export function PlayerListTableSection({
         filteredRows,
         isGameRunning && tableState.columnVisibility.groupRoles !== false
     );
+    const mutuals = usePlayerListMutuals(filterContextKey, groupRoles.rows);
     const tableColumns = usePlayerListColumns();
     const [query, setQuery] = useState('');
     const [filterScope, setFilterScope] =
@@ -133,8 +137,8 @@ export function PlayerListTableSection({
         [filteredRows]
     );
     const visibleRows = useMemo(
-        () => filterPlayerListRows(groupRoles.rows, query, filterScope),
-        [filterScope, groupRoles.rows, query]
+        () => filterPlayerListRows(mutuals.rows, query, filterScope),
+        [filterScope, mutuals.rows, query]
     );
     const table = useAppTable<PlayerListRow>({
         data: visibleRows,
@@ -142,7 +146,10 @@ export function PlayerListTableSection({
         state: {
             columnOrder: tableState.columnOrder,
             columnSizing: tableState.columnSizing,
-            columnVisibility: tableState.columnVisibility,
+            columnVisibility: {
+                ...tableState.columnVisibility,
+                [PLAYER_LIST_MUTUAL_FRIENDS_COLUMN_ID]: mutuals.scan.visible
+            },
             sorting: tableState.sorting
         },
         onSortingChange: tableState.setSorting,
@@ -210,6 +217,9 @@ export function PlayerListTableSection({
                     className="flex min-h-0 flex-1 flex-col gap-0"
                 >
                     <PlayerListToolbar
+                        mutualScan={
+                            <PlayerListMutualScan scan={mutuals.scan} />
+                        }
                         groupSelector={
                             <PlayerListGroupSelector
                                 value={groupRoles.selectedGroup}

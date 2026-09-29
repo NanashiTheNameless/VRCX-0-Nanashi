@@ -77,7 +77,46 @@ vi.mock('../EntityDialogScaffold', () => ({
 }));
 
 vi.mock('./GroupDialogHeaderSection', () => ({
-    GroupDialogHeaderSection: () => null
+    GroupDialogHeaderSection: ({
+        headerCommands,
+        headerModel
+    }: {
+        headerCommands: {
+            onEditProfile: () => void;
+            onEditProfileMedia: () => void;
+        };
+        headerModel: { canEditProfile: boolean };
+    }) =>
+        headerModel.canEditProfile ? (
+            <div>
+                <button type="button" onClick={headerCommands.onEditProfile}>
+                    Edit details
+                </button>
+                <button
+                    type="button"
+                    onClick={headerCommands.onEditProfileMedia}
+                >
+                    Edit banner and icon
+                </button>
+            </div>
+        ) : null
+}));
+
+vi.mock('../ProfileMediaPanel', () => ({
+    ProfileMediaPanel: ({
+        onSetField
+    }: {
+        onSetField: (field: string, fileId: string) => void;
+    }) => (
+        <button type="button" onClick={() => onSetField('iconId', 'file_new')}>
+            Pick new icon
+        </button>
+    )
+}));
+
+vi.mock('./GroupProfileEditDialog', () => ({
+    GroupProfileEditDialog: ({ open }: { open: boolean }) =>
+        open ? <div>Group details editor</div> : null
 }));
 
 vi.mock('./GroupDialogTabPanels', () => ({
@@ -173,7 +212,9 @@ const groupResource: GroupDialogResource = {
 
 const groupView: GroupDialogView = {
     bannerUrl: '',
+    canDelete: false,
     canJoin: false,
+    canLeave: true,
     iconUrl: '',
     isBlocked: false,
     isMember: true,
@@ -187,8 +228,10 @@ const groupView: GroupDialogView = {
 
 const groupControls: GroupDialogControls = {
     onBlock: vi.fn(),
+    onUpdateProfile: vi.fn(),
     onCancelRequest: vi.fn(),
     onJoin: vi.fn(),
+    onDelete: vi.fn(),
     onLeave: vi.fn(),
     onPreviousInstancesChange: vi.fn(),
     onRefresh: vi.fn(),
@@ -196,6 +239,98 @@ const groupControls: GroupDialogControls = {
     onSubscribe: vi.fn(),
     onVisibility: vi.fn()
 };
+
+const editableGroup: GroupProfileRecord = {
+    ...group,
+    description: 'About us',
+    joinState: 'request',
+    languages: ['eng'],
+    links: ['https://example.com'],
+    rules: 'Be kind',
+    iconId: 'file_old_icon',
+    bannerId: 'file_banner',
+    allowGroupJoinPrompt: false,
+    myMember: { permissions: ['group-data-manage'] }
+};
+
+describe('GroupDialogTabbedView profile editing', () => {
+    afterEach(cleanup);
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mocks.getAllGroupPosts.mockResolvedValue([]);
+        mocks.getGroupCalendar.mockResolvedValue({ results: [] });
+        mocks.getFollowingGroupCalendars.mockResolvedValue({ results: [] });
+    });
+
+    it('replaces only the icon when a group data manager picks a new one', async () => {
+        const onUpdateProfile = vi.fn().mockResolvedValue(true);
+        render(
+            <GroupDialogTabbedView
+                groupControls={{ ...groupControls, onUpdateProfile }}
+                groupResource={{ ...groupResource, group: editableGroup }}
+                groupView={groupView}
+            />
+        );
+
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Edit banner and icon' })
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'Pick new icon' }));
+
+        await waitFor(() =>
+            expect(onUpdateProfile).toHaveBeenCalledWith({
+                name: 'Test Group',
+                shortCode: 'TEST',
+                description: 'About us',
+                joinState: 'request',
+                languages: ['eng'],
+                rules: 'Be kind',
+                links: ['https://example.com'],
+                iconId: 'file_new',
+                bannerId: 'file_banner',
+                allowGroupJoinPrompt: false
+            })
+        );
+    });
+
+    it('opens the details editor for a group data manager', () => {
+        render(
+            <GroupDialogTabbedView
+                groupControls={groupControls}
+                groupResource={{ ...groupResource, group: editableGroup }}
+                groupView={groupView}
+            />
+        );
+
+        fireEvent.click(screen.getByRole('button', { name: 'Edit details' }));
+
+        expect(screen.getByText('Group details editor')).not.toBeNull();
+    });
+
+    it('does not offer profile editing to moderators without group data permission', () => {
+        render(
+            <GroupDialogTabbedView
+                groupControls={groupControls}
+                groupResource={{
+                    ...groupResource,
+                    group: {
+                        ...editableGroup,
+                        myMember: { permissions: ['group-bans-manage'] }
+                    }
+                }}
+                groupView={groupView}
+            />
+        );
+
+        expect(
+            screen.queryByRole('button', { name: 'Edit details' })
+        ).toBeNull();
+        expect(
+            screen.queryByRole('button', { name: 'Edit banner and icon' })
+        ).toBeNull();
+    });
+});
 
 describe('GroupDialogTabbedView remote loading', () => {
     afterEach(cleanup);

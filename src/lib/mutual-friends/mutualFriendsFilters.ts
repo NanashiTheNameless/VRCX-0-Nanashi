@@ -4,7 +4,7 @@ import type {
     MutualFriendNode,
     MutualFriendsIsolatedCounts,
     MutualFriendsViewFilters
-} from './mutualFriendsTypes';
+} from '@/lib/mutual-friends/mutualFriendsTypes';
 
 export const MUTUAL_GRAPH_MIN_DEGREE_LIMITS = { min: 0, max: 20 };
 

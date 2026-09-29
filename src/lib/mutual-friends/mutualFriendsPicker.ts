@@ -1,14 +1,13 @@
 import type { FriendRosterById } from '@/domain/friends/types';
-
-import { mutualFriendUsername } from './mutualFriendsGraphData';
+import { mutualFriendUsername } from '@/lib/mutual-friends/mutualFriendsGraphData';
 import {
     isValidMutualFriendId,
     normalizeMutualFriendId
-} from './mutualFriendsSettings';
+} from '@/lib/mutual-friends/mutualFriendsSettings';
 import type {
     MutualFriendPickerOption,
     MutualFriendSnapshot
-} from './mutualFriendsTypes';
+} from '@/lib/mutual-friends/mutualFriendsTypes';
 
 export function truncateMutualFriendLabel(value: string, maxLength = 18) {
     const text = value;

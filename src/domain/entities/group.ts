@@ -210,6 +210,7 @@ export type GroupDialogInstanceRow = GroupInstanceRecord & {
 };
 
 export type GroupProfileRecord = EntityRecord & {
+    allowGroupJoinPrompt?: boolean;
     announcement?: GroupAnnouncementRecord;
     id: string;
     name: string;

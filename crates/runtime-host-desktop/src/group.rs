@@ -10,7 +10,7 @@ use vrcx_0_application::social::{
     VrchatGroupMemberRoleInput, VrchatGroupMembersInput, VrchatGroupMembersSearchInput,
     VrchatGroupPagedInput, VrchatGroupPostCreateInput, VrchatGroupPostDeleteInput,
     VrchatGroupPostEditInput, VrchatGroupProfileInput, VrchatGroupRepresentationInput,
-    VrchatGroupUserGroupsInput, VrchatGroupUserInput,
+    VrchatGroupUpdateInput, VrchatGroupUserGroupsInput, VrchatGroupUserInput,
 };
 use vrcx_0_application_core::vrchat_api::VrchatApiResponse;
 use vrcx_0_application_core::{
@@ -176,6 +176,14 @@ impl DesktopGroupRuntime {
         input: VrchatGroupUserGroupsInput,
     ) -> Result<VrchatApiResponse> {
         Ok(application::get_user_instances(self.api_deps(), input).await?)
+    }
+
+    pub async fn update(&self, input: VrchatGroupUpdateInput) -> Result<VrchatApiResponse> {
+        Ok(application::update_group(self.api_deps(), input).await?)
+    }
+
+    pub async fn delete(&self, input: VrchatGroupIdInput) -> Result<VrchatApiResponse> {
+        Ok(application::delete_group(self.api_deps(), input).await?)
     }
 
     pub async fn create_post(

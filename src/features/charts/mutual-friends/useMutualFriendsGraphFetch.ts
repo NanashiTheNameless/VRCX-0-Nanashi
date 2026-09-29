@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { MutualFriendsFetchProgress } from '@/lib/mutual-friends/mutualFriendsTypes';
 import { bootstrapFriendRoster } from '@/services/friendBootstrapService';
 import {
     cancelMutualGraphFetch,
@@ -8,9 +9,8 @@ import {
 } from '@/services/mutualGraphFetchService';
 import { toast } from '@/services/toastService';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
+import { useRoomMutualScanStore } from '@/state/roomMutualScanStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
-
-import type { MutualFriendsFetchProgress } from './mutualFriendsTypes';
 
 interface GraphFetchOptions {
     currentUserId: string;
@@ -130,6 +130,13 @@ export function useMutualFriendsGraphFetch({
             runtimeState.mutualGraph.status === 'running' ||
             runtimeState.mutualGraph.status === 'cancelling'
         ) {
+            return;
+        }
+        if (useRoomMutualScanStore.getState().running) {
+            toast.add({
+                type: 'info',
+                title: t('mutual_graph_hint.room_scan_running')
+            });
             return;
         }
         const ownerUserId = currentUserId;

@@ -21,6 +21,7 @@ import {
     userDialogGroupSortingOptions,
     type UserDialogGroupSort
 } from '@/components/dialogs/user-dialog/userDialogListOptions';
+import { ListSectionHeader } from '@/components/layout/ListSectionHeader';
 import {
     EmptyState,
     LoadingState,
@@ -54,9 +55,15 @@ import { MyGroupCard } from './components/MyGroupCard';
 import { MyGroupsSelectionBar } from './components/MyGroupsSelectionBar';
 import { useMyGroupsBatchController } from './useMyGroupsBatchController';
 import {
+    isOwnGroup as isOwnGroupForUser,
     useMyGroupsPageState,
+    type MyGroupsSection,
     type MyGroupRow as MyGroupRowModel
 } from './useMyGroupsPageState';
+import type { MyGroupsSectionKey } from './useMyGroupsSectionPreferences';
+
+const GROUP_GRID_CLASS_NAME =
+    'grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-2';
 
 export function MyGroupsPage() {
     const { t } = useTranslation();
@@ -83,7 +90,14 @@ export function MyGroupsPage() {
         state.selectedIds.has(groupIdForRow(group))
     );
     const isOwnGroup = (group: MyGroupRowModel) =>
-        Boolean(group.ownerId) && group.ownerId === state.currentUserId;
+        isOwnGroupForUser(group, state.currentUserId);
+    const orderIndexById = new Map(
+        state.visibleGroups.map((group, index) => [groupIdForRow(group), index])
+    );
+    const sectionTitles: Record<MyGroupsSectionKey, string> = {
+        own: t('view.my_groups.section_own'),
+        joined: t('view.my_groups.section_joined')
+    };
     const toBatchTargets = (groups: MyGroupRowModel[]) =>
         groups.map((group) => ({
             groupId: groupIdForRow(group),
@@ -104,6 +118,57 @@ export function MyGroupsPage() {
             void state.moveGroup(String(active.id), String(over.id));
         }
         releaseDragClickSuppression();
+    }
+
+    function renderGroupCard(group: MyGroupRowModel) {
+        const groupId = groupIdForRow(group);
+        return (
+            <MyGroupCard
+                key={groupId}
+                group={group}
+                editMode={state.editMode}
+                orderEditable={state.orderEditable}
+                orderIndex={orderIndexById.get(groupId) ?? 0}
+                orderBusy={state.orderSaving}
+                selected={state.selectedIds.has(groupId)}
+                actionsDisabled={batch.busy}
+                isOwner={isOwnGroup(group)}
+                onToggleSelected={(targetId) => {
+                    if (!dragClickSuppressedRef.current) {
+                        state.toggleSelected(targetId);
+                    }
+                }}
+                onSetVisibility={(target, visibility: GroupMemberVisibility) =>
+                    void batch.setVisibility(
+                        toBatchTargets([target]),
+                        visibility
+                    )
+                }
+                onLeave={(target) =>
+                    void batch.leaveGroups(toBatchTargets([target]))
+                }
+            />
+        );
+    }
+
+    function renderSection(section: MyGroupsSection, sectionIndex: number) {
+        return (
+            <section key={section.key}>
+                <ListSectionHeader
+                    id={section.key}
+                    title={sectionTitles[section.key]}
+                    count={section.groups.length}
+                    open={section.open}
+                    isFirst={sectionIndex === 0}
+                    onToggle={() => state.toggleSection(section.key)}
+                />
+                {section.open ? (
+                    <div className={cn(GROUP_GRID_CLASS_NAME, 'pt-1')}>
+                        {section.groups.map(renderGroupCard)}
+                    </div>
+                ) : null}
+            </section>
+        );
     }
 
     return (
@@ -230,67 +295,29 @@ export function MyGroupsPage() {
                             onDragEnd={handleDragEnd}
                             onDragCancel={releaseDragClickSuppression}
                         >
-                            <SortableContext
-                                items={state.visibleGroups.map((group) =>
-                                    groupIdForRow(group)
-                                )}
-                                strategy={rectSortingStrategy}
-                            >
-                                <div
-                                    className={cn(
-                                        'grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-2 p-0.5',
-                                        state.editMode && 'pb-14'
+                            {state.editMode ? (
+                                <SortableContext
+                                    items={state.visibleGroups.map((group) =>
+                                        groupIdForRow(group)
                                     )}
+                                    strategy={rectSortingStrategy}
                                 >
-                                    {state.visibleGroups.map((group, index) => {
-                                        const groupId = groupIdForRow(group);
-                                        return (
-                                            <MyGroupCard
-                                                key={groupId}
-                                                group={group}
-                                                editMode={state.editMode}
-                                                orderEditable={
-                                                    state.orderEditable
-                                                }
-                                                orderIndex={index}
-                                                orderBusy={state.orderSaving}
-                                                selected={state.selectedIds.has(
-                                                    groupId
-                                                )}
-                                                actionsDisabled={batch.busy}
-                                                isOwner={isOwnGroup(group)}
-                                                onToggleSelected={(
-                                                    targetId
-                                                ) => {
-                                                    if (
-                                                        !dragClickSuppressedRef.current
-                                                    ) {
-                                                        state.toggleSelected(
-                                                            targetId
-                                                        );
-                                                    }
-                                                }}
-                                                onSetVisibility={(
-                                                    target,
-                                                    visibility: GroupMemberVisibility
-                                                ) =>
-                                                    void batch.setVisibility(
-                                                        toBatchTargets([
-                                                            target
-                                                        ]),
-                                                        visibility
-                                                    )
-                                                }
-                                                onLeave={(target) =>
-                                                    void batch.leaveGroups(
-                                                        toBatchTargets([target])
-                                                    )
-                                                }
-                                            />
-                                        );
-                                    })}
+                                    <div
+                                        className={cn(
+                                            GROUP_GRID_CLASS_NAME,
+                                            'p-0.5 pb-14'
+                                        )}
+                                    >
+                                        {state.visibleGroups.map(
+                                            renderGroupCard
+                                        )}
+                                    </div>
+                                </SortableContext>
+                            ) : (
+                                <div className="flex flex-col gap-1 p-0.5">
+                                    {state.sections.map(renderSection)}
                                 </div>
-                            </SortableContext>
+                            )}
                         </DndContext>
                     </ScrollArea>
                 ) : (
