@@ -1,5 +1,5 @@
 import { PanelRightIcon, Settings2Icon, XIcon } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
@@ -18,7 +18,10 @@ import {
 } from '@/platform/tauri/bindings';
 import { toast } from '@/services/toastService';
 import { useAssistantChatStore } from '@/state/assistantChatStore';
-import { useLlmEndpointsStore } from '@/state/llmEndpointsStore';
+import {
+    firstEndpointModel,
+    useLlmEndpointsStore
+} from '@/state/llmEndpointsStore';
 import { Button } from '@/ui/shadcn/button';
 import {
     Dialog,
@@ -88,6 +91,8 @@ const DEFAULT_RUNTIME_SELECTION: AssistantRuntimeSelection = {
 
 const PLAYBOOK_MODES: PlaybookMode[] = ['auto', 'guided', 'open'];
 
+const DEFAULT_SELECTION_KEY = 'default';
+
 function selectionFromSession(session: Session): AssistantRuntimeSelection {
     return {
         endpointId: session.endpointId,
@@ -119,6 +124,11 @@ export function AssistantDialog() {
     const [assistantReasoningEffort, setAssistantReasoningEffort] =
         useState('');
     const [endpointsLoaded, setEndpointsLoaded] = useState(false);
+    // Fork: which selection (the default, or a session id) has loaded, so the
+    // first-endpoint fallback never runs before a saved choice arrives.
+    const [loadedSelectionKey, setLoadedSelectionKey] = useState<string | null>(
+        null
+    );
 
     const open = useAssistantChatStore((state) => state.open);
     const setOpen = useAssistantChatStore((state) => state.setOpen);
@@ -187,6 +197,7 @@ export function AssistantDialog() {
     useEffect(() => {
         if (!activeSessionId && runtimeStatus?.lastSelection) {
             setRuntimeSelection(runtimeStatus.lastSelection);
+            setLoadedSelectionKey(DEFAULT_SELECTION_KEY);
         }
     }, [runtimeStatus, activeSessionId]);
 
@@ -200,6 +211,7 @@ export function AssistantDialog() {
             .then((session) => {
                 if (active && session) {
                     setRuntimeSelection(selectionFromSession(session));
+                    setLoadedSelectionKey(activeSessionId);
                 }
             })
             .catch(() => {});
@@ -239,6 +251,20 @@ export function AssistantDialog() {
             toast.add({ type: 'error', title: errorMessage(error) });
         }
     }
+
+    const selectFirstModel = useEffectEvent(() => {
+        const first = firstEndpointModel(endpoints);
+        if (first) {
+            void updateRuntimeSelection(first);
+        }
+    });
+    const selectionLoaded =
+        loadedSelectionKey === (activeSessionId ?? DEFAULT_SELECTION_KEY);
+    useEffect(() => {
+        if (open && endpointsLoaded && selectionLoaded && !hasRuntime) {
+            selectFirstModel();
+        }
+    }, [open, endpointsLoaded, selectionLoaded, hasRuntime]);
 
     function refreshSelectableModels() {
         const stale = endpoints.filter(

@@ -35,6 +35,19 @@ export function mergeModels(...lists: string[][]): string[] {
     return [...new Set(models)];
 }
 
+/**
+ * Fork: the default pick for endpoint selectors, the first endpoint that
+ * lists a model, with that model.
+ */
+export function firstEndpointModel(
+    endpoints: readonly LlmEndpointDto[]
+): { endpointId: string; model: string } | null {
+    const endpoint = endpoints.find((entry) => entry.models.length > 0);
+    return endpoint
+        ? { endpointId: endpoint.id, model: endpoint.models[0] }
+        : null;
+}
+
 function errorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
 }

@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { commands } from '@/platform/tauri/bindings';
 import { openExternalLink } from '@/services/entityMediaService';
+import { setStringConfigPreference } from '@/services/preferencesService';
 import { restartApplication } from '@/services/shellIntegrationService';
+import { toast } from '@/services/toastService';
 import {
     confirmInstall,
     formatReleaseDisplayVersion,
@@ -80,6 +82,27 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
     const autoUpdateMode = usePreferencesStore((state) => state.autoUpdateVRCX);
     const autoUpdateWillUndoDowngrade =
         autoUpdateMode === 'Auto Download' || autoUpdateMode === 'Auto Install';
+    const [savingUpdateMode, setSavingUpdateMode] = useState(false);
+
+    // Fork: switch Updates to Notify only from the downgrade warning.
+    async function setUpdatesToNotifyOnly() {
+        setSavingUpdateMode(true);
+        try {
+            await setStringConfigPreference('autoUpdateVRCX', 'Notify');
+        } catch (error) {
+            toast.add({
+                type: 'error',
+                title: userFacingErrorMessage(
+                    error,
+                    t(
+                        'dialog.vrcx_updater.downgrade_confirm.set_notify_only_failed'
+                    )
+                )
+            });
+        } finally {
+            setSavingUpdateMode(false);
+        }
+    }
     const canInstallUpdate = latestRelease?.updaterType === 'tauri';
     const autoDownloadState = useRuntimeStore(
         (state) => state.updateLoop.autoDownloadState
@@ -493,11 +516,28 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
                             {t('dialog.vrcx_updater.downgrade_warning')}
                         </AlertDialogDescription>
                         {autoUpdateWillUndoDowngrade ? (
-                            <AlertDialogDescription>
-                                {t(
-                                    'dialog.vrcx_updater.downgrade_confirm.auto_update_note'
-                                )}
-                            </AlertDialogDescription>
+                            <>
+                                <AlertDialogDescription>
+                                    {t(
+                                        'dialog.vrcx_updater.downgrade_confirm.auto_update_note'
+                                    )}
+                                </AlertDialogDescription>
+                                <div>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        disabled={savingUpdateMode}
+                                        onClick={() =>
+                                            void setUpdatesToNotifyOnly()
+                                        }
+                                    >
+                                        {t(
+                                            'dialog.vrcx_updater.downgrade_confirm.set_notify_only'
+                                        )}
+                                    </Button>
+                                </div>
+                            </>
                         ) : null}
                     </AlertDialogHeader>
                     <AlertDialogFooter>

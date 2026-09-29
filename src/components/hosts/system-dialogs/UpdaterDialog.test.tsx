@@ -21,6 +21,8 @@ const mocks = vi.hoisted(() => ({
     toNormalizedReleaseFromSnapshot: vi.fn(),
     confirmInstall: vi.fn(),
     restartApplication: vi.fn(),
+    setStringConfigPreference: vi.fn(),
+    toastAdd: vi.fn(),
     updateCheckDisabled: false
 }));
 
@@ -56,6 +58,14 @@ vi.mock('@/services/entityMediaService', () => ({
 
 vi.mock('@/services/shellIntegrationService', () => ({
     restartApplication: mocks.restartApplication
+}));
+
+vi.mock('@/services/preferencesService', () => ({
+    setStringConfigPreference: mocks.setStringConfigPreference
+}));
+
+vi.mock('@/services/toastService', () => ({
+    toast: { add: mocks.toastAdd }
 }));
 
 vi.mock('@/ui/shadcn/button', async () => {
@@ -199,6 +209,7 @@ vi.mock('@/ui/shadcn/select', async () => {
     };
 });
 
+import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
 import { UpdaterDialog } from './UpdaterDialog';
@@ -212,6 +223,16 @@ describe('UpdaterDialog', () => {
         vi.clearAllMocks();
         mocks.updateCheckDisabled = false;
         mocks.confirmInstall.mockResolvedValue({});
+        mocks.setStringConfigPreference.mockImplementation(
+            async (key: string, value: string) => {
+                usePreferencesStore
+                    .getState()
+                    .patchPreferences({ [key]: value });
+            }
+        );
+        usePreferencesStore
+            .getState()
+            .patchPreferences({ autoUpdateVRCX: 'Auto Install' });
         vi.stubGlobal('VERSION', '2.6.0');
         useRuntimeStore.getState().resetRuntimeState();
         useRuntimeStore.getState().setHostCapabilities({
@@ -327,6 +348,66 @@ describe('UpdaterDialog', () => {
         });
         expect(mocks.confirmInstall).toHaveBeenCalledWith('2.5.0');
         expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+
+    it('switches Updates to Notify only from the downgrade warning', async () => {
+        const releases = [
+            { canonicalVersion: '2.6.0', displayVersion: '2.6.0' },
+            { canonicalVersion: '2.5.0', displayVersion: '2.5.0' }
+        ].map((release) => ({ ...release, updaterType: 'tauri' }));
+        mocks.appAppUpdateReleasesList.mockResolvedValue(releases);
+        mocks.toNormalizedReleaseFromSnapshot.mockImplementation(
+            (release: { canonicalVersion?: string } | null) =>
+                releases.find(
+                    (entry) =>
+                        entry.canonicalVersion === release?.canonicalVersion
+                ) ?? releases[0]
+        );
+        mocks.appAppUpdateCheckRun.mockResolvedValue({
+            hasAvailableUpdate: false,
+            error: null,
+            release: { canonicalVersion: '2.6.0' }
+        });
+
+        render(<UpdaterDialog open onOpenChange={vi.fn()} />);
+
+        const older = await screen.findByRole('button', { name: '-1 · 2.5.0' });
+        await act(async () => {
+            older.click();
+        });
+        await act(async () => {
+            screen
+                .getByRole('button', {
+                    name: 'dialog.vrcx_updater.install_action.downgrade'
+                })
+                .click();
+        });
+        const confirmation = screen.getByRole('alertdialog');
+        expect(
+            within(confirmation).getByText(
+                'dialog.vrcx_updater.downgrade_confirm.auto_update_note'
+            )
+        ).toBeTruthy();
+
+        await act(async () => {
+            within(confirmation)
+                .getByRole('button', {
+                    name: 'dialog.vrcx_updater.downgrade_confirm.set_notify_only'
+                })
+                .click();
+        });
+
+        expect(mocks.setStringConfigPreference).toHaveBeenCalledWith(
+            'autoUpdateVRCX',
+            'Notify'
+        );
+        // The warning goes away and the downgrade is still pending.
+        expect(
+            within(confirmation).queryByText(
+                'dialog.vrcx_updater.downgrade_confirm.auto_update_note'
+            )
+        ).toBeNull();
+        expect(mocks.confirmInstall).not.toHaveBeenCalled();
     });
 
     it('cancels a downgrade without installing anything', async () => {

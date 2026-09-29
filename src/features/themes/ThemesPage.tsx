@@ -69,7 +69,7 @@ export function ThemesPage() {
             </PageHeader>
             <PageBody>
                 <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-                    <div className="mx-auto flex w-full max-w-6xl flex-col gap-3">
+                    <div className="flex w-full flex-col gap-3">
                         <ThemeSourceSelector
                             customCssBadge={customCssBadge}
                             visibleSource={visibleSource}

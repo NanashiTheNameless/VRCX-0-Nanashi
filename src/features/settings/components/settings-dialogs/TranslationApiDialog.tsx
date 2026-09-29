@@ -1,3 +1,4 @@
+import { useEffect, useEffectEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -109,6 +110,48 @@ export function TranslationApiDialog({
               getModelReasoning(selectedEndpoint ?? null, selectedModel || null)
           ) ?? '')
         : '';
+    function selectEndpoint(endpointId: string) {
+        setTranslationDraftValue('translationEndpointId', endpointId);
+        const endpoint = endpoints.find((item) => item.id === endpointId);
+        if (endpoint) {
+            const currentModel = translationDraft.translationAPIModel;
+            const nextModel =
+                endpoint.models.length > 0 &&
+                !endpoint.models.includes(currentModel)
+                    ? endpoint.models[0]
+                    : currentModel;
+            if (nextModel !== currentModel) {
+                setTranslationDraftValue('translationAPIModel', nextModel);
+            }
+            normalizeReasoningEffortForModel(
+                endpoint,
+                nextModel,
+                translationDraft.translationAPIReasoningEffort,
+                setTranslationDraftValue
+            );
+        }
+        fetchTranslationModels(endpointId);
+    }
+
+    // Fork: default to the first endpoint while none (or a deleted one) is
+    // selected; the user can still pick another.
+    const selectFirstEndpoint = useEffectEvent(() => {
+        const first = endpoints[0];
+        if (first) {
+            selectEndpoint(first.id);
+        }
+    });
+    const needsEndpoint =
+        translationApiDialogOpen &&
+        translationProvider === 'openai' &&
+        endpoints.length > 0 &&
+        !selectedEndpoint;
+    useEffect(() => {
+        if (needsEndpoint) {
+            selectFirstEndpoint();
+        }
+    }, [needsEndpoint]);
+
     const apiKeyLabel =
         translationProvider === 'deepl'
             ? t('dialog.translation_api.deepl.api_key')
@@ -242,40 +285,9 @@ export function TranslationApiDialog({
                                         label: endpoint.name
                                     }))}
                                     disabled={!endpoints.length}
-                                    onValueChange={(value) => {
-                                        const endpointId = value ?? '';
-                                        setTranslationDraftValue(
-                                            'translationEndpointId',
-                                            endpointId
-                                        );
-                                        const endpoint = endpoints.find(
-                                            (item) => item.id === endpointId
-                                        );
-                                        if (endpoint) {
-                                            const currentModel =
-                                                translationDraft.translationAPIModel;
-                                            const nextModel =
-                                                endpoint.models.length > 0 &&
-                                                !endpoint.models.includes(
-                                                    currentModel
-                                                )
-                                                    ? endpoint.models[0]
-                                                    : currentModel;
-                                            if (nextModel !== currentModel) {
-                                                setTranslationDraftValue(
-                                                    'translationAPIModel',
-                                                    nextModel
-                                                );
-                                            }
-                                            normalizeReasoningEffortForModel(
-                                                endpoint,
-                                                nextModel,
-                                                translationDraft.translationAPIReasoningEffort,
-                                                setTranslationDraftValue
-                                            );
-                                        }
-                                        fetchTranslationModels(endpointId);
-                                    }}
+                                    onValueChange={(value) =>
+                                        selectEndpoint(value ?? '')
+                                    }
                                 >
                                     <SelectTrigger
                                         id="settings-translation-endpoint-id"

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { RuntimeModelSelect } from '@/features/assistant/components/RuntimeModelSelect';
@@ -11,6 +11,7 @@ import { setBoolConfigPreference } from '@/services/preferencesService';
 import { toast } from '@/services/toastService';
 import { useAssistantChatStore } from '@/state/assistantChatStore';
 import {
+    firstEndpointModel,
     openLlmEndpointsManager,
     useLlmEndpointsStore
 } from '@/state/llmEndpointsStore';
@@ -57,6 +58,7 @@ export function AssistantSettingsGroup({
     const [followCustomProxy, setFollowCustomProxy] = useState(true);
     const [proxyLoading, setProxyLoading] = useState(false);
     const [endpointsLoaded, setEndpointsLoaded] = useState(false);
+    const [selectionLoaded, setSelectionLoaded] = useState(false);
     const socialAiEnabled = usePreferencesStore(
         (state) => state.socialAiEnabled
     );
@@ -81,6 +83,7 @@ export function AssistantSettingsGroup({
             .then((status) => {
                 if (!stale) {
                     setSelection(status.lastSelection);
+                    setSelectionLoaded(true);
                 }
             })
             .catch(() => {});
@@ -114,6 +117,23 @@ export function AssistantSettingsGroup({
             toast.add({ type: 'error', title: errorMessage(error) });
         }
     }
+
+    // Fork: default to the first endpoint once the saved selection is known
+    // to be empty; the user can still pick another model.
+    const selectFirstModel = useEffectEvent(() => {
+        const first = firstEndpointModel(endpoints);
+        if (first) {
+            void updateSelection(first);
+        }
+    });
+    const selectionUsable =
+        Boolean(selection.model) &&
+        endpoints.some((endpoint) => endpoint.id === selection.endpointId);
+    useEffect(() => {
+        if (active && endpointsLoaded && selectionLoaded && !selectionUsable) {
+            selectFirstModel();
+        }
+    }, [active, endpointsLoaded, selectionLoaded, selectionUsable]);
 
     async function updateSocialAiEnabled(enabled: boolean) {
         if (!enabled) {

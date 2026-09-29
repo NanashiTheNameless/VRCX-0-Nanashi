@@ -100,6 +100,14 @@ export function SettingsCustomLanguagesCard() {
     }, [running]);
 
     const endpoint = endpoints.find((entry) => entry.id === endpointId);
+
+    // Fork: default to the first endpoint (and its first model) while none,
+    // or a deleted one, is selected; the user can still pick another.
+    const firstEndpoint = endpoints[0];
+    if (providerKind === 'ai' && firstEndpoint && !endpoint) {
+        setEndpointId(firstEndpoint.id);
+        setModel(firstEndpoint.models[0] ?? '');
+    }
     const modelItems = (endpoint?.models ?? []).map((value) => ({
         value,
         label: value

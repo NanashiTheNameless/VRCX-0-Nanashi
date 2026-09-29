@@ -58,7 +58,7 @@ export function SettingsTabContent({
     return (
         <TabsContent
             value={value}
-            className="m-0 flex min-h-0 w-full max-w-[820px] min-w-0 flex-1 flex-col gap-7 overflow-x-hidden overflow-y-auto px-px pt-1 pb-4 data-hidden:hidden [&>[data-slot=card]]:shrink-0"
+            className="m-0 flex min-h-0 w-full min-w-0 flex-1 flex-col gap-7 overflow-x-hidden overflow-y-auto px-px pt-1 pb-4 data-hidden:hidden [&>[data-slot=card]]:shrink-0"
         >
             {children}
         </TabsContent>

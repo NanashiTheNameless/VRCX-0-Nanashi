@@ -278,8 +278,20 @@ describe('LlmEndpointsDialog', () => {
             })
         );
         const apiKeyInput = inputByLabel('view.tools.llm_endpoints.api_key');
-        expect(apiKeyInput.type).toBe('text');
+        expect(apiKeyInput.type).toBe('password');
         expect(apiKeyInput.value).toBe('sk-existing');
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'view.tools.llm_endpoints.show_key'
+            })
+        );
+        expect(apiKeyInput.type).toBe('text');
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'view.tools.llm_endpoints.hide_key'
+            })
+        );
+        expect(apiKeyInput.type).toBe('password');
         fireEvent.click(
             await screen.findByRole('button', {
                 name: 'common.actions.save'

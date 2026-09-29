@@ -1,5 +1,7 @@
 import {
     AlertTriangleIcon,
+    EyeIcon,
+    EyeOffIcon,
     PlusIcon,
     RefreshCwIcon,
     SquarePenIcon,
@@ -39,6 +41,12 @@ import {
     DialogTitle
 } from '@/ui/shadcn/dialog';
 import { Input } from '@/ui/shadcn/input';
+import {
+    InputGroup,
+    InputGroupAddon,
+    InputGroupButton,
+    InputGroupInput
+} from '@/ui/shadcn/input-group';
 import { Label } from '@/ui/shadcn/label';
 import {
     Select,
@@ -160,6 +168,7 @@ export function LlmEndpointsDialog({
     const [detectedModels, setDetectedModels] = useState<string[]>([]);
     const [modelQuery, setModelQuery] = useState('');
     const [saving, setSaving] = useState(false);
+    const [showApiKey, setShowApiKey] = useState(false);
     const modelsAnchor = useComboboxAnchor();
     const baseUrlValid = isValidBaseUrl(draft.baseUrl);
     const modelOptions = mergeModels(detectedModels, draft.models);
@@ -202,6 +211,7 @@ export function LlmEndpointsDialog({
     function openAddView() {
         setDraft(createEmptyLlmEndpointDraft());
         setDetectedModels([]);
+        setShowApiKey(false);
         setModelQuery('');
         setView('edit');
     }
@@ -209,6 +219,7 @@ export function LlmEndpointsDialog({
     function openEditView(endpoint: LlmEndpointDto) {
         setDraft(draftFromEndpoint(endpoint));
         setDetectedModels([]);
+        setShowApiKey(false);
         setModelQuery('');
         setView('edit');
     }
@@ -610,25 +621,50 @@ export function LlmEndpointsDialog({
                                     </Button>
                                 ) : null}
                             </div>
-                            <Input
-                                id="llm-endpoint-dialog-api-key"
-                                type="text"
-                                value={draft.apiKey}
-                                disabled={draft.clearKey}
-                                placeholder={
-                                    draft.id
-                                        ? t(
-                                              'view.tools.llm_endpoints.key_preserve_placeholder'
-                                          )
-                                        : 'sk-...'
-                                }
-                                onChange={(event) =>
-                                    setDraft((current) => ({
-                                        ...current,
-                                        apiKey: event.target.value
-                                    }))
-                                }
-                            />
+                            <InputGroup>
+                                <InputGroupInput
+                                    id="llm-endpoint-dialog-api-key"
+                                    type={showApiKey ? 'text' : 'password'}
+                                    autoComplete="off"
+                                    spellCheck={false}
+                                    value={draft.apiKey}
+                                    disabled={draft.clearKey}
+                                    placeholder={
+                                        draft.id
+                                            ? t(
+                                                  'view.tools.llm_endpoints.key_preserve_placeholder'
+                                              )
+                                            : 'sk-...'
+                                    }
+                                    onChange={(event) =>
+                                        setDraft((current) => ({
+                                            ...current,
+                                            apiKey: event.target.value
+                                        }))
+                                    }
+                                />
+                                <InputGroupAddon align="inline-end">
+                                    <InputGroupButton
+                                        size="icon-xs"
+                                        aria-label={t(
+                                            showApiKey
+                                                ? 'view.tools.llm_endpoints.hide_key'
+                                                : 'view.tools.llm_endpoints.show_key'
+                                        )}
+                                        aria-pressed={showApiKey}
+                                        disabled={draft.clearKey}
+                                        onClick={() =>
+                                            setShowApiKey((current) => !current)
+                                        }
+                                    >
+                                        {showApiKey ? (
+                                            <EyeOffIcon />
+                                        ) : (
+                                            <EyeIcon />
+                                        )}
+                                    </InputGroupButton>
+                                </InputGroupAddon>
+                            </InputGroup>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="llm-endpoint-dialog-headers">

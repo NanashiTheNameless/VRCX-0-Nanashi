@@ -268,7 +268,9 @@ fn wait_for_status(
     runtime: &LocalProfileBackupPort,
     expected: ProfileBackupState,
 ) -> ProfileBackupStatus {
-    let deadline = std::time::Instant::now() + Duration::from_secs(5);
+    // Generous: loaded CI runners (Windows especially) can take several
+    // seconds to snapshot and compress; a pass returns as soon as it lands.
+    let deadline = std::time::Instant::now() + Duration::from_secs(30);
     loop {
         let status = runtime.current_status();
         if status.state == expected {

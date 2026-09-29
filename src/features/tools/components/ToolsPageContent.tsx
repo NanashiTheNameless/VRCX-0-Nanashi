@@ -813,7 +813,7 @@ export function ToolsPageContent({ embedded = false }: { embedded?: boolean }) {
                 ref={scrollRef}
                 className="relative mt-4 min-h-0 flex-1 overflow-y-auto"
             >
-                <div className="mx-auto grid w-full max-w-5xl grid-cols-[11rem_minmax(0,1fr)] gap-6 pb-6">
+                <div className="grid w-full grid-cols-[11rem_minmax(0,1fr)] gap-6 pb-6">
                     <Tabs
                         orientation="vertical"
                         value={activeSectionId}

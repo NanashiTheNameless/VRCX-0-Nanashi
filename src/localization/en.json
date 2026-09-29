@@ -2261,6 +2261,8 @@
                 "delete": "Delete endpoint",
                 "api_key": "API key",
                 "clear_key": "Clear key",
+                "show_key": "Show key",
+                "hide_key": "Hide key",
                 "key_preserve_placeholder": "Leave blank to keep the saved key",
                 "saved": "Endpoint saved",
                 "saved_unusable": "Saved, but no models were found for this endpoint.",
@@ -5746,7 +5748,9 @@
             "downgrade_warning": "This is an older version. It may not be able to read data a newer version already upgraded, so export a backup of your data first.",
             "downgrade_confirm": {
                 "title": "Downgrade to {value}?",
-                "auto_update_note": "Your Updates setting will install a newer version again at the next update check. To stay on this version, set Updates to Notify only or Off in Settings first."
+                "auto_update_note": "Your Updates setting will install a newer version again at the next update check. To stay on this version, set Updates to Notify only or Off in Settings first.",
+                "set_notify_only": "Set Updates to Notify only",
+                "set_notify_only_failed": "Could not change the Updates setting"
             }
         },
         "change_log": {
