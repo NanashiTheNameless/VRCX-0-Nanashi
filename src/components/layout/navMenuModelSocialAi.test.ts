@@ -34,7 +34,8 @@ describe('Social AI nav entry', () => {
             'friend-log',
             'friend-list',
             'moderation',
-            'social-ai'
+            'social-ai',
+            'reminders'
         ]);
     });
 
@@ -60,6 +61,7 @@ describe('Social AI nav entry', () => {
             'friend-log',
             'friend-list',
             'moderation',
+            'reminders',
             'social-ai'
         ]);
         expect(model.layout).not.toContainEqual({
@@ -79,7 +81,7 @@ describe('Social AI nav entry', () => {
                     items: ['friend-log']
                 }
             ],
-            hiddenKeys: ['social-ai']
+            hiddenKeys: ['social-ai', 'reminders']
         });
 
         const model = await loadNavMenuModel({ t });

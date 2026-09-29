@@ -1,16 +1,13 @@
 import { useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
+import { mutualFriendUsername } from '@/lib/mutual-friends/mutualFriendsGraphData';
 import { getResolvedThemeMode } from '@/services/themeService';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useShellStore } from '@/state/shellStore';
 
-import { mutualFriendUsername } from './mutualFriendsGraphData';
-import {
-    buildFriendNameHistory,
-    useFriendNameHistory
-} from './useFriendNameHistory';
+import { useFriendNameHistory } from './useFriendNameHistory';
 
 export function useMutualFriendsRuntime() {
     const currentUserId = useRuntimeStore((state) => state.auth.currentUserId);
