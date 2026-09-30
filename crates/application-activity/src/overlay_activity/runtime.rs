@@ -1,4 +1,5 @@
 use std::collections::{BTreeSet, HashMap, HashSet, VecDeque};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -149,6 +150,8 @@ pub(super) struct OverlayActivityRuntimeInner {
     sink: Mutex<Option<Arc<dyn OverlayActivitySink>>>,
     observer: Mutex<Option<OverlayActivityCandidateObserver>>,
     group_notification_inputs_revision: AtomicU64,
+    /// Optional path to persist wrist overlay feed entries.
+    persistence_path: Option<PathBuf>,
 }
 
 /// Fork: sees every candidate before filtering (used by assistant reminders).
@@ -212,20 +215,107 @@ impl Default for OverlayActivityRuntime {
 
 impl OverlayActivityRuntime {
     pub fn new() -> Self {
-        Self {
+        Self::with_persistence(None)
+    }
+
+    pub fn with_persistence(persistence_path: Option<PathBuf>) -> Self {
+        let runtime = Self {
             inner: Arc::new(OverlayActivityRuntimeInner {
                 state: Mutex::new(OverlayActivityState::default()),
                 sink: Mutex::new(None),
                 observer: Mutex::new(None),
                 group_notification_inputs_revision: AtomicU64::new(0),
+                persistence_path,
             }),
-        }
+        };
+        runtime.load_persisted_entries();
+        runtime
     }
 
     pub fn with_filters(filters: OverlayActivityFilters) -> Self {
         let runtime = Self::new();
         runtime.set_filters(filters);
         runtime
+    }
+
+    pub fn with_filters_and_persistence(
+        filters: OverlayActivityFilters,
+        persistence_path: Option<PathBuf>,
+    ) -> Self {
+        let runtime = Self::with_persistence(persistence_path);
+        runtime.set_filters(filters);
+        runtime
+    }
+
+    fn persistence_path(&self) -> Option<PathBuf> {
+        self.inner.persistence_path.clone()
+    }
+
+    fn load_persisted_entries(&self) {
+        let Some(path) = self.persistence_path() else {
+            return;
+        };
+        if !path.exists() {
+            return;
+        }
+        let content = match std::fs::read_to_string(&path) {
+            Ok(content) => content,
+            Err(error) => {
+                tracing::warn!(error = %error, path = %path.display(), "failed to read persisted overlay activity entries");
+                return;
+            }
+        };
+        let entries: Vec<OverlayActivityEntry> = match serde_json::from_str(&content) {
+            Ok(entries) => entries,
+            Err(error) => {
+                tracing::warn!(error = %error, path = %path.display(), "failed to parse persisted overlay activity entries");
+                return;
+            }
+        };
+        if let Ok(mut state) = self.inner.state.lock() {
+            state.entries = entries.into_iter().collect();
+            // Update next_sequence to avoid conflicts
+            let max_sequence = state.entries.iter().map(|e| e.sequence).max().unwrap_or(0);
+            state.next_sequence = max_sequence.saturating_add(1);
+            tracing::info!(
+                count = state.entries.len(),
+                "loaded persisted overlay activity entries for wrist overlay"
+            );
+        }
+    }
+
+    fn save_entries(&self) {
+        let Some(path) = self.persistence_path() else {
+            return;
+        };
+        let entries = {
+            let Ok(state) = self.inner.state.lock() else {
+                return;
+            };
+            state.entries.iter().cloned().collect::<Vec<_>>()
+        };
+        if entries.is_empty() {
+            // Don't write empty files, remove if exists
+            let _ = std::fs::remove_file(&path);
+            return;
+        }
+        let content = match serde_json::to_string(&entries) {
+            Ok(content) => content,
+            Err(error) => {
+                tracing::warn!(error = %error, "failed to serialize overlay activity entries for persistence");
+                return;
+            }
+        };
+        // Write atomically using a temp file
+        let temp_path = path.with_extension("json.tmp");
+        if let Err(error) = std::fs::write(&temp_path, content) {
+            tracing::warn!(error = %error, "failed to write overlay activity entries temp file");
+            return;
+        }
+        if let Err(error) = std::fs::rename(&temp_path, &path) {
+            tracing::warn!(error = %error, "failed to rename overlay activity entries temp file");
+            let _ = std::fs::remove_file(&temp_path);
+        }
     }
 
     pub fn set_filters(&self, filters: OverlayActivityFilters) {
@@ -258,6 +348,7 @@ impl OverlayActivityRuntime {
         };
         self.invalidate_group_notification_inputs();
         self.emit_snapshot(snapshot);
+        self.save_entries();
     }
 
     pub fn group_notification_inputs_revision(&self) -> u64 {
@@ -386,6 +477,7 @@ impl OverlayActivityRuntime {
         };
         self.invalidate_group_notification_inputs();
         self.emit_snapshot(snapshot);
+        self.save_entries();
     }
 
     pub fn ingest_candidate(
@@ -505,6 +597,7 @@ impl OverlayActivityRuntime {
         };
         if let Some(snapshot) = snapshot {
             self.emit_snapshot(snapshot);
+            self.save_entries();
         }
         if let Some(delivery) = delivery {
             self.emit_delivery(delivery);

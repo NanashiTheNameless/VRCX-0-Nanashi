@@ -1,3 +1,4 @@
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -96,6 +97,7 @@ impl RuntimeHostDesktopAssemblyDeps {
             web,
             image_cache,
             TaskSupervisor::new(),
+            std::env::temp_dir().join("vrcx-test"),
         )))
     }
 
@@ -264,6 +266,7 @@ impl RuntimeHostContext {
         web: Arc<WebClient>,
         image_cache: Arc<ImageCache>,
         tasks: TaskSupervisor,
+        app_data_dir: PathBuf,
     ) -> Self {
         let config = ConfigRepository::new(Arc::clone(&db));
         let notification_config: Arc<dyn NotificationConfig> = Arc::new(
@@ -307,9 +310,10 @@ impl RuntimeHostContext {
             Arc::clone(&db),
             FILE_CACHE_WORKING_CAPACITY,
         ));
-        let overlay_activity = OverlayActivityRuntime::with_filters(load_overlay_activity_filters(
-            notification_config.as_ref(),
-        ));
+        let overlay_activity = OverlayActivityRuntime::with_filters_and_persistence(
+            load_overlay_activity_filters(notification_config.as_ref()),
+            Some(app_data_dir.join("overlay_activity_wrist.json")),
+        );
         let overlay_activity_sinks = OverlayActivitySinkRegistry::default();
         let notification_projection_observers =
             RealtimeNotificationProjectionObserverRegistry::default();

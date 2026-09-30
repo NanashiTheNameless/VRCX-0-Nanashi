@@ -329,6 +329,7 @@ impl RuntimeHostStateBuilder {
             Arc::clone(&web),
             Arc::clone(&image_cache),
             tasks,
+            paths.app_data.clone(),
         ));
         let desktop_assembly =
             RuntimeHostDesktopAssemblyDeps::from_context(Arc::clone(&runtime_context));
