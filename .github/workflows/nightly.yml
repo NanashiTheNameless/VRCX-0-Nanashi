@@ -77,7 +77,7 @@ jobs:
                       artifact_name: windows-installer
                       artifact_path: |
                           target/release/bundle/nsis/*_windows_x86_64_setup.exe
-                          target/release/bundle/latest_windows.json
+                          target/release/bundle/manifest_windows.json
                     - label: Linux Packages
                       os: ubuntu-24.04
                       webkit_build_target: safari17.4
@@ -89,7 +89,7 @@ jobs:
                           target/release/bundle/deb/*.deb.sig
                           target/release/bundle/rpm/*.rpm
                           target/release/bundle/rpm/*.rpm.sig
-                          target/release/bundle/latest_linux_and_macos.json
+                          target/release/bundle/manifest_linux.json
         steps:
             # Defender scans every file the cache restore, build and cache save
             # touch; on hosted Windows runners that made saving the Rust cache
@@ -192,13 +192,13 @@ jobs:
                       --target "windows-x86_64-stable" \
                       --asset-name "$(basename "$setup_path")" \
                       --signature-file "${setup_path}.sig" \
-                      --out "$bundle_dir/latest_windows.json"
+                      --out "$bundle_dir/manifest_windows.json"
 
             - name: Prepare Linux release and updater assets
               if: runner.os == 'Linux'
               run: |
                   bundle_dir="target/release/bundle"
-                  manifest_path="$bundle_dir/latest_linux_and_macos.json"
+                  manifest_path="$bundle_dir/manifest_linux.json"
                   version="${{ needs.prepare.outputs.build_version }}"
 
                   rename_asset() {
@@ -446,10 +446,25 @@ jobs:
                   find release-assets -mindepth 1 -type d -empty -delete
                   find release-assets -type f | sort
 
-            - name: Add macOS updater entries to Linux/macOS manifest
+            - name: Build the updater manifest
               run: |
+                  # One manifest holds every platform, so the app fetches a single
+                  # asset instead of a per-platform pair.
+                  manifest_path="release-assets/version_manifest.json"
+                  for fragment in release-assets/manifest_windows.json release-assets/manifest_linux.json; do
+                      if [[ ! -f "$fragment" ]]; then
+                          echo "Missing updater manifest fragment: $fragment" >&2
+                          exit 1
+                      fi
+                  done
+                  node scripts/create-tauri-updater-manifest.ts \
+                      --version "${{ needs.prepare.outputs.build_version }}" \
+                      --tag "${{ needs.prepare.outputs.tag }}" \
+                      --base release-assets/manifest_windows.json \
+                      --base release-assets/manifest_linux.json \
+                      --out "$manifest_path"
+
                   # One universal archive serves both Apple Silicon and Intel installs.
-                  manifest_path="release-assets/latest_linux_and_macos.json"
                   archive_name="VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_macos_universal.app.tar.gz"
                   for target in macos-aarch64-stable macos-x86_64-stable; do
                       node scripts/create-tauri-updater-manifest.ts \
@@ -461,9 +476,23 @@ jobs:
                           --base "$manifest_path" \
                           --out "$manifest_path"
                   done
+                  rm -f release-assets/manifest_windows.json release-assets/manifest_linux.json
 
             - name: Remove updater signatures from GitHub release assets
               run: find release-assets -type f -name '*.sig' -delete
+
+            - name: Create the nightly tag when it does not exist
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  # A rerun of a failed publication, or a release whose tag was
+                  # deleted, must not block on a missing tag.
+                  tag="${{ needs.prepare.outputs.tag }}"
+                  if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/${tag}" >/dev/null 2>&1; then
+                      gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+                          -f ref="refs/tags/${tag}" \
+                          -f sha="$GITHUB_SHA"
+                  fi
 
             - uses: softprops/action-gh-release@v3
               with:
@@ -472,7 +501,6 @@ jobs:
                   name: Nightly ${{ needs.prepare.outputs.display_version }}
                   body: |
                       Automated nightly build of ${{ github.sha }}.
-                      Installed nightly builds update to this automatically.
                   draft: false
                   prerelease: true
                   make_latest: false
@@ -488,15 +516,27 @@ jobs:
                   # always serves the newest build. Its tag name is not semver, so the
                   # in-app release catalog ignores it. GitHub only lets a full
                   # (non-prerelease) release be marked latest.
-                  git tag -f Nightly-Rolling "$GITHUB_SHA"
-                  git push -f origin refs/tags/Nightly-Rolling
-                  gh release delete Nightly-Rolling --repo "$GITHUB_REPOSITORY" --yes || true
-                  gh release create Nightly-Rolling release-assets/* \
-                      --repo "$GITHUB_REPOSITORY" \
-                      --verify-tag \
-                      --latest \
-                      --title "Nightly (rolling)" \
-                      --notes "Latest nightly build: ${{ needs.prepare.outputs.display_version }} from $GITHUB_SHA."
+                  # The ref is created when missing and moved otherwise, so a fresh
+                  # repository and a rerun both work without a local git push.
+                  if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/Nightly-Rolling" >/dev/null 2>&1; then
+                      gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/Nightly-Rolling" \
+                          -f sha="$GITHUB_SHA" -F force=true >/dev/null
+                  else
+                      gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+                          -f ref="refs/tags/Nightly-Rolling" \
+                          -f sha="$GITHUB_SHA" >/dev/null
+                  fi
+                  if gh release view Nightly-Rolling --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                      gh release upload Nightly-Rolling release-assets/* \
+                          --repo "$GITHUB_REPOSITORY" --clobber
+                  else
+                      gh release create Nightly-Rolling release-assets/* \
+                          --repo "$GITHUB_REPOSITORY" \
+                          --verify-tag \
+                          --latest \
+                          --title "Nightly (rolling)" \
+                          --notes "Latest nightly build: ${{ needs.prepare.outputs.display_version }} from $GITHUB_SHA."
+                  fi
 
             - name: Prune old nightlies (keep 10)
               env:

@@ -471,26 +471,34 @@ fn parse_preview_build_timestamp_requires_preview_label() {
 }
 
 #[test]
-fn normalize_release_requires_matching_installer_asset_when_required() {
-    let release = release(
+fn normalize_release_requires_an_uploaded_manifest_asset_when_required() {
+    let catalog_release = release(
         "v1.2.3",
         false,
         vec![asset(
-            "latest_windows.json",
+            "version_manifest.json",
             "uploaded",
-            "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/download/v1.2.3/latest_windows.json",
+            "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/download/v1.2.3/version_manifest.json",
         )],
     );
 
-    let normalized = normalize_release(&release, Some("windows-x86_64-stable"), true)
-        .expect("release with matching asset normalizes");
-    assert_eq!(normalized.updater_type, AppUpdateDeliveryKind::Tauri);
-    assert_eq!(normalized.target, "windows-x86_64-stable");
-    assert!(!normalized.manifest_url.is_empty());
+    // One manifest carries every platform, so any supported target resolves it.
+    for target in [
+        "windows-x86_64-stable",
+        "linux-x86_64-appimage-stable",
+        "macos-aarch64-stable",
+    ] {
+        let normalized = normalize_release(&catalog_release, Some(target), true)
+            .unwrap_or_else(|| panic!("release with a manifest normalizes for {target}"));
+        assert_eq!(normalized.updater_type, AppUpdateDeliveryKind::Tauri);
+        assert_eq!(normalized.target, target);
+        assert!(!normalized.manifest_url.is_empty());
+    }
 
-    assert!(normalize_release(&release, Some("macos-aarch64-stable"), true).is_none());
-    let notify_only = normalize_release(&release, Some("macos-aarch64-stable"), false)
-        .expect("notify-only normalize succeeds without a matching asset");
+    let without_manifest = release("v1.2.3", false, Vec::new());
+    assert!(normalize_release(&without_manifest, Some("windows-x86_64-stable"), true).is_none());
+    let notify_only = normalize_release(&without_manifest, Some("windows-x86_64-stable"), false)
+        .expect("notify-only normalize succeeds without a manifest asset");
     assert_eq!(notify_only.updater_type, AppUpdateDeliveryKind::Manual);
     assert!(notify_only.manifest_url.is_empty());
 }
@@ -536,9 +544,9 @@ async fn install_switches_channels_using_the_verified_target_release() {
                 &format!("v{target}"),
                 target.contains("Nightly"),
                 vec![asset(
-                    "latest_windows.json",
+                    "version_manifest.json",
                     "uploaded",
-                    "https://example.test/latest_windows.json",
+                    "https://example.test/version_manifest.json",
                 )],
             )],
         });
@@ -558,7 +566,7 @@ async fn install_switches_channels_using_the_verified_target_release() {
         assert!(requests[0].allow_downgrades);
         assert_eq!(
             requests[0].manifest_url,
-            "https://example.test/latest_windows.json"
+            "https://example.test/version_manifest.json"
         );
         assert_eq!(
             context
@@ -579,20 +587,12 @@ async fn channel_release_selection_uses_the_platform_installation_policy() {
         inner.target_resolver = Arc::new(move || target.map(str::to_string));
         inner.release_catalog = Arc::new(TestAppUpdateReleaseCatalog {
             releases: vec![
-                release(
-                    "v2.16.0-Nightly-0000003",
-                    true,
-                    vec![asset(
-                        "latest_linux_and_macos.json",
-                        "uploaded",
-                        "https://example.test/linux.json",
-                    )],
-                ),
+                release("v2.16.0-Nightly-0000003", true, Vec::new()),
                 release(
                     "v2.16.0-Nightly-0000002",
                     true,
                     vec![asset(
-                        "latest_windows.json",
+                        "version_manifest.json",
                         "uploading",
                         "https://example.test/pending.json",
                     )],
@@ -601,9 +601,9 @@ async fn channel_release_selection_uses_the_platform_installation_policy() {
                     "v2.16.0-Nightly-0000001",
                     true,
                     vec![asset(
-                        "latest_windows.json",
+                        "version_manifest.json",
                         "uploaded",
-                        "https://example.test/windows.json",
+                        "https://example.test/installable.json",
                     )],
                 ),
             ],
@@ -616,6 +616,8 @@ async fn channel_release_selection_uses_the_platform_installation_policy() {
             .unwrap()
             .expect("channel has a release");
         if target.is_some() {
+            // Releases without a finished manifest are not installable, so the
+            // newest installable one wins instead of the newest release.
             assert_eq!(release.canonical_version, "2.16.0-Nightly-0000001");
             assert_eq!(release.updater_type, AppUpdateDeliveryKind::Tauri);
             let installed = context
@@ -872,7 +874,7 @@ async fn an_older_release_of_the_channel_can_be_installed_as_a_downgrade() {
                 "v2.15.0",
                 false,
                 vec![asset(
-                    "latest_windows.json",
+                    "version_manifest.json",
                     "uploaded",
                     "https://example.test/2.15.0.json",
                 )],
@@ -881,7 +883,7 @@ async fn an_older_release_of_the_channel_can_be_installed_as_a_downgrade() {
                 "v2.14.0",
                 false,
                 vec![asset(
-                    "latest_windows.json",
+                    "version_manifest.json",
                     "uploaded",
                     "https://example.test/2.14.0.json",
                 )],

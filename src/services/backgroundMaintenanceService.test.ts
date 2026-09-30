@@ -70,7 +70,7 @@ const TAURI_RELEASE_SNAPSHOT: ReleaseSnapshotFixture = {
     displayVersion: '2.7.0',
     channel: 'stable',
     manifestUrl:
-        'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/latest_windows.json',
+        'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/version_manifest.json',
     target: 'windows-x86_64-stable',
     updaterType: 'tauri'
 };

@@ -121,7 +121,7 @@ mod tests {
     fn catalog_response_maps_github_json_to_application_releases() {
         let releases = parse_catalog_response(
             200,
-            r#"[{"tag_name":"v2.15.0","prerelease":false,"assets":[{"state":"uploaded","name":"latest_windows.json","browser_download_url":"https://example.test/latest.json"}]}]"#,
+            r#"[{"tag_name":"v2.15.0","prerelease":false,"assets":[{"state":"uploaded","name":"version_manifest.json","browser_download_url":"https://example.test/version_manifest.json"}]}]"#,
         )
         .unwrap();
 
@@ -130,7 +130,7 @@ mod tests {
         assert_eq!(releases[0].assets.len(), 1);
         assert_eq!(
             releases[0].assets[0].browser_download_url.as_deref(),
-            Some("https://example.test/latest.json")
+            Some("https://example.test/version_manifest.json")
         );
     }
 

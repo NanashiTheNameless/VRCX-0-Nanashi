@@ -69,7 +69,7 @@ function tauriRelease() {
     return {
         updaterType: 'tauri' as const,
         manifestUrl:
-            'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/latest_windows.json',
+            'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/version_manifest.json',
         target: 'windows-x86_64-stable',
         channel: 'stable' as const,
         htmlUrl:
@@ -138,7 +138,7 @@ describe('openOrInstallLatestAvailableUpdate', () => {
             latestUpdaterRelease: {
                 updaterType: 'tauri',
                 manifestUrl:
-                    'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/latest_windows.json',
+                    'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/version_manifest.json',
                 target: 'windows-x86_64-stable',
                 htmlUrl:
                     'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/tag/v2.7.0',

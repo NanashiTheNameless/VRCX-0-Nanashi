@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
     readBaseManifest,
+    readBaseManifests,
     releaseAssetUrl,
     validateTarget
 } from './create-tauri-updater-manifest';
@@ -132,6 +133,103 @@ describe('create-tauri-updater-manifest', () => {
         });
         expect(() => readBaseManifest(basePath, '2.31.5')).toThrow(
             'Base manifest version 2.31.4 does not match 2.31.5.'
+        );
+    });
+
+    it('merges every base manifest into one set of platform entries', () => {
+        const directory = createTemporaryDirectory();
+        const windowsPath = path.join(directory, 'manifest_windows.json');
+        const linuxPath = path.join(directory, 'manifest_linux.json');
+        const outputPath = path.join(directory, 'version_manifest.json');
+        fs.writeFileSync(
+            windowsPath,
+            JSON.stringify({
+                version: '2.31.4',
+                notes: 'Release notes',
+                pub_date: '2026-01-01T00:00:00.000Z',
+                platforms: {
+                    'windows-x86_64-stable': {
+                        signature: 'windows-signature',
+                        url: 'https://example.test/windows'
+                    }
+                }
+            })
+        );
+        fs.writeFileSync(
+            linuxPath,
+            JSON.stringify({
+                version: '2.31.4',
+                notes: 'Release notes',
+                pub_date: '2026-01-01T00:00:00.000Z',
+                platforms: {
+                    'linux-x86_64-deb-stable': {
+                        signature: 'linux-signature',
+                        url: 'https://example.test/linux'
+                    }
+                }
+            })
+        );
+
+        const result = spawnSync(
+            process.execPath,
+            [
+                path.join(
+                    import.meta.dirname,
+                    'create-tauri-updater-manifest.ts'
+                ),
+                '--version',
+                '2.31.4',
+                '--base',
+                windowsPath,
+                '--base',
+                linuxPath,
+                '--out',
+                outputPath
+            ],
+            { encoding: 'utf8', env: releaseScriptEnvironment() }
+        );
+
+        expect(result.status).toBe(0);
+        expect(JSON.parse(fs.readFileSync(outputPath, 'utf8'))).toEqual({
+            version: '2.31.4',
+            notes: 'Release notes',
+            pub_date: '2026-01-01T00:00:00.000Z',
+            platforms: {
+                'windows-x86_64-stable': {
+                    signature: 'windows-signature',
+                    url: 'https://example.test/windows'
+                },
+                'linux-x86_64-deb-stable': {
+                    signature: 'linux-signature',
+                    url: 'https://example.test/linux'
+                }
+            }
+        });
+    });
+
+    it('rejects base manifests that disagree on a platform', () => {
+        const directory = createTemporaryDirectory();
+        const firstPath = path.join(directory, 'first.json');
+        const secondPath = path.join(directory, 'second.json');
+        const shared = {
+            'windows-x86_64-stable': {
+                signature: 'windows-signature',
+                url: 'https://example.test/windows'
+            }
+        };
+        fs.writeFileSync(
+            firstPath,
+            JSON.stringify({ version: '2.31.4', platforms: shared })
+        );
+        fs.writeFileSync(
+            secondPath,
+            JSON.stringify({ version: '2.31.4', platforms: shared })
+        );
+
+        expect(() =>
+            readBaseManifests([firstPath, secondPath], '2.31.4')
+        ).toThrow(
+            'Duplicate updater target across base manifests: windows-x86_64-stable.'
         );
     });
 

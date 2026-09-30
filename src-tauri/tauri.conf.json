@@ -88,8 +88,7 @@
         "updater": {
             "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDc2RkU0RTAyMjA2NTBDQ0MKUldUTURHVWdBazcrZGpZaXpiTE9xYTJ1aGpQNURYMHBqOG5WRnhhVHdQSmdWU2EyMHc2ckRPNXIK",
             "endpoints": [
-                "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/latest_linux_and_macos.json",
-                "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/latest_windows.json"
+                "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest/download/version_manifest.json"
             ],
             "windows": {
                 "installMode": "passive"

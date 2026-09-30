@@ -30,6 +30,29 @@ function readArg(argName: string, fallback = ''): string {
     return fallback;
 }
 
+function readArgs(argName: string): string[] {
+    const prefix = `--${argName}=`;
+    const values: string[] = [];
+    for (const argument of process.argv) {
+        if (argument.startsWith(prefix)) {
+            values.push(argument.slice(prefix.length));
+        }
+    }
+
+    for (let index = 0; index < process.argv.length; index += 1) {
+        if (process.argv[index] === `--${argName}`) {
+            const value = process.argv[index + 1];
+            if (value !== undefined && !value.startsWith('--')) {
+                values.push(value);
+            }
+        }
+    }
+
+    return values
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0);
+}
+
 function requireArg(argName: string): string {
     const value = readArg(argName).trim();
     if (!value) {
@@ -89,34 +112,68 @@ function readBaseManifest(
     return manifest as UpdaterManifest;
 }
 
+function readBaseManifests(
+    basePaths: string[],
+    version: string
+): UpdaterManifest | null {
+    const manifests = basePaths
+        .map((basePath) => readBaseManifest(basePath, version))
+        .filter((manifest): manifest is UpdaterManifest => manifest !== null);
+    const [first, ...rest] = manifests;
+    if (!first) {
+        return null;
+    }
+    for (const manifest of rest) {
+        for (const [target, platform] of Object.entries(manifest.platforms)) {
+            if (first.platforms[target] !== undefined) {
+                throw new Error(
+                    `Duplicate updater target across base manifests: ${target}.`
+                );
+            }
+            first.platforms[target] = platform;
+        }
+    }
+    return first;
+}
+
 function main(): void {
     const version = requireArg('version');
-    const tag = requireArg('tag');
-    const target = requireArg('target');
-    const assetName = requireArg('asset-name');
-    const signatureFile = requireArg('signature-file');
     const out = requireArg('out');
     const notesFile = readArg('notes-file');
-    const base = readArg('base');
+    const bases = readArgs('base');
+    const target = readArg('target');
 
-    validateTarget(target);
-
-    const signature = fs.readFileSync(signatureFile, 'utf8').trim();
-    if (!signature) {
-        throw new Error(`Signature file is empty: ${signatureFile}`);
+    const merged = readBaseManifests(bases, version);
+    if (!merged && !target) {
+        throw new Error(
+            'Nothing to write: pass --target or at least one --base.'
+        );
     }
 
-    const manifest: UpdaterManifest = readBaseManifest(base, version) || {
+    const manifest: UpdaterManifest = merged ?? {
         version,
         notes: readNotes(notesFile),
         pub_date: new Date().toISOString(),
         platforms: {}
     };
-    const platform: UpdaterPlatform = {
-        signature,
-        url: releaseAssetUrl(tag, assetName)
-    };
-    manifest.platforms[target] = platform;
+
+    if (target) {
+        const tag = requireArg('tag');
+        const assetName = requireArg('asset-name');
+        const signatureFile = requireArg('signature-file');
+        validateTarget(target);
+
+        const signature = fs.readFileSync(signatureFile, 'utf8').trim();
+        if (!signature) {
+            throw new Error(`Signature file is empty: ${signatureFile}`);
+        }
+
+        const platform: UpdaterPlatform = {
+            signature,
+            url: releaseAssetUrl(tag, assetName)
+        };
+        manifest.platforms[target] = platform;
+    }
 
     fs.mkdirSync(path.dirname(out), { recursive: true });
     fs.writeFileSync(out, `${JSON.stringify(manifest, null, 4)}\n`);
@@ -135,4 +192,4 @@ if (
     }
 }
 
-export { readBaseManifest, releaseAssetUrl, validateTarget };
+export { readBaseManifest, readBaseManifests, releaseAssetUrl, validateTarget };
