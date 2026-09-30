@@ -130,7 +130,9 @@ describe('useProfileBackupSettings', () => {
 
         expect(mocks.selectSaveFile).toHaveBeenCalledWith(
             'D:\\Backups',
-            expect.stringMatching(/^VRCX-0-backup-\d{8}-\d{6}\.vrcx0backup$/),
+            expect.stringMatching(
+                /^VRCX-0-Nanashi-backup-\d{8}-\d{6}\.vrcx0backup$/
+            ),
             '.vrcx0backup',
             'profile_backup.file_filter (*.vrcx0backup)|*.vrcx0backup'
         );
@@ -221,7 +223,7 @@ describe('useProfileBackupSettings', () => {
                     revision: 5,
                     kind: 'auto',
                     succeeded: true,
-                    fileName: 'VRCX-0-auto.vrcx0backup',
+                    fileName: 'VRCX-0-Nanashi-auto.vrcx0backup',
                     errorCode: null
                 }
             });
@@ -260,7 +262,7 @@ describe('useProfileBackupSettings', () => {
                     revision: 6,
                     kind: 'auto',
                     succeeded: true,
-                    fileName: 'VRCX-0-auto.vrcx0backup',
+                    fileName: 'VRCX-0-Nanashi-auto.vrcx0backup',
                     errorCode: null
                 }
             });

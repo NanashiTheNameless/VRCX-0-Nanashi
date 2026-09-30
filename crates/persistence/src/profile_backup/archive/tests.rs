@@ -97,11 +97,11 @@ fn profile_backup_version_parser_handles_release_suffix_and_rejects_invalid_valu
 #[test]
 fn profile_backup_rotation_only_removes_old_auto_files() {
     let paths = [
-        "VRCX-0-backup-auto-20260714-073000.vrcx0backup",
-        "VRCX-0-backup-auto-20260713-073000.vrcx0backup",
-        "VRCX-0-backup-auto-20260712-073000.vrcx0backup",
-        "VRCX-0-backup-20260711-073000.vrcx0backup",
-        "VRCX-0-backup-auto-20260710-073000.vrcx0backup.tmp",
+        "VRCX-0-Nanashi-backup-auto-20260714-073000.vrcx0backup",
+        "VRCX-0-Nanashi-backup-auto-20260713-073000.vrcx0backup",
+        "VRCX-0-Nanashi-backup-auto-20260712-073000.vrcx0backup",
+        "VRCX-0-Nanashi-backup-20260711-073000.vrcx0backup",
+        "VRCX-0-Nanashi-backup-auto-20260710-073000.vrcx0backup.tmp",
         "notes.txt",
     ]
     .into_iter()
@@ -111,7 +111,7 @@ fn profile_backup_rotation_only_removes_old_auto_files() {
     assert_eq!(
         select_auto_backups_for_removal(paths, 2),
         vec![PathBuf::from(
-            "VRCX-0-backup-auto-20260712-073000.vrcx0backup"
+            "VRCX-0-Nanashi-backup-auto-20260712-073000.vrcx0backup"
         )]
     );
 }

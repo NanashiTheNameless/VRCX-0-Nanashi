@@ -1302,9 +1302,10 @@ mod wrist_page_tests {
     use super::*;
 
     fn config_with(pages: &str) -> VrOverlayRuntimeConfig {
-        let mut config = VrOverlayRuntimeConfig::default();
-        config.wrist_pages = WristPageOrder::from_config(pages);
-        config
+        VrOverlayRuntimeConfig {
+            wrist_pages: WristPageOrder::from_config(pages),
+            ..Default::default()
+        }
     }
 
     #[test]

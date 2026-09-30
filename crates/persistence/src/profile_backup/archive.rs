@@ -14,7 +14,7 @@ use super::{
 };
 
 const MANIFEST_VERSION: u32 = 1;
-const AUTO_BACKUP_PREFIX: &str = "VRCX-0-backup-auto-";
+const AUTO_BACKUP_PREFIX: &str = "VRCX-0-Nanashi-backup-auto-";
 const BACKUP_SUFFIX: &str = ".vrcx0backup";
 
 pub fn create_backup_archive(

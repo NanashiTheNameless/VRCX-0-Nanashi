@@ -777,7 +777,7 @@ export function UserDialogHeaderSection({
                                                 className="owner-badge"
                                                 role="img"
                                                 aria-label={t(
-                                                    'dialog.user.badges.developer',
+                                                    'dialog.user.badges.upstream_developer',
                                                     {
                                                         defaultValue:
                                                             'Upstream VRCX-0 Developer'
@@ -789,10 +789,13 @@ export function UserDialogHeaderSection({
                                         }
                                     />
                                     <TooltipContent>
-                                        {t('dialog.user.badges.developer', {
-                                            defaultValue:
-                                                'Upstream VRCX-0 Developer'
-                                        })}
+                                        {t(
+                                            'dialog.user.badges.upstream_developer',
+                                            {
+                                                defaultValue:
+                                                    'Upstream VRCX-0 Developer'
+                                            }
+                                        )}
                                     </TooltipContent>
                                 </Tooltip>
                             ) : null}

@@ -420,7 +420,7 @@ pub(super) fn backup_file_name(kind: ProfileBackupKind, now: DateTime<Local>) ->
         ""
     };
     format!(
-        "VRCX-0-backup-{marker}{}.vrcx0backup",
+        "VRCX-0-Nanashi-backup-{marker}{}.vrcx0backup",
         now.format("%Y%m%d-%H%M%S")
     )
 }

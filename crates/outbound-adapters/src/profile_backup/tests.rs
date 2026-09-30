@@ -300,11 +300,11 @@ fn backup_names_keep_manual_files_out_of_auto_rotation_pattern() {
         .unwrap();
     assert_eq!(
         backup_file_name(ProfileBackupKind::Manual, now),
-        "VRCX-0-backup-20260714-073000.vrcx0backup"
+        "VRCX-0-Nanashi-backup-20260714-073000.vrcx0backup"
     );
     assert_eq!(
         backup_file_name(ProfileBackupKind::Auto, now),
-        "VRCX-0-backup-auto-20260714-073000.vrcx0backup"
+        "VRCX-0-Nanashi-backup-auto-20260714-073000.vrcx0backup"
     );
 }
 
@@ -501,7 +501,8 @@ fn manual_backup_rejects_the_automatic_rotation_namespace() {
     fs::create_dir_all(&target).unwrap();
     let runtime = test_runtime(&dir);
 
-    let outcome = runtime.run_manual(target.join("VRCX-0-backup-auto-20260715-120000.vrcx0backup"));
+    let outcome =
+        runtime.run_manual(target.join("VRCX-0-Nanashi-backup-auto-20260715-120000.vrcx0backup"));
 
     assert!(!outcome.accepted);
     assert_eq!(

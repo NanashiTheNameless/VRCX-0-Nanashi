@@ -2,9 +2,6 @@ import { CoffeeIcon, HeartIcon, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-// Fork: wordmark font bundled locally (was loaded from Google Fonts at runtime).
-import '@fontsource/jost/500.css';
-
 import { cn } from '@/lib/utils';
 import { openExternalLink } from '@/services/entityMediaService';
 import { links } from '@/shared/constants/link';
@@ -234,10 +231,7 @@ export function AboutVrcxDialog({
                 className="gap-0 px-7 pt-8 pb-6 sm:max-w-[560px]"
             >
                 <div className="flex flex-col items-center text-center">
-                    <DialogTitle
-                        className="text-4xl leading-none font-medium tracking-normal select-none"
-                        style={{ fontFamily: "'Jost', var(--font-sans)" }}
-                    >
+                    <DialogTitle className="text-4xl leading-none font-medium tracking-normal select-none">
                         VRCX-0-Nanashi
                     </DialogTitle>
                     <DialogDescription className="mt-3 text-[13px]">

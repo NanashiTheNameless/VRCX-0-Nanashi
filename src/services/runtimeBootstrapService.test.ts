@@ -35,6 +35,10 @@ vi.mock('./vrcStatusService', () => ({
     hydrateVrcStatus: mocks.hydrateVrcStatus
 }));
 
+import {
+    registerLanguageCode,
+    unregisterLanguageCode
+} from '@/localization/locales';
 import { DEFAULT_TIME_UNIT_LABELS, useShellStore } from '@/state/shellStore';
 
 import {
@@ -99,29 +103,40 @@ describe('runtimeBootstrapService', () => {
         );
 
         cleanup();
+        // Cleanup unsubscribes, so a later locale change must not sync again.
         useShellStore.getState().setLocale('zh_CN');
-        expect(mocks.setI18nLanguage).toHaveBeenCalledTimes(2);
+        expect(mocks.setI18nLanguage).toHaveBeenCalledTimes(1);
     });
 
     it('ignores a stale locale load that resolves after a newer switch', async () => {
-        const staleLoad = deferred<void>();
-        mocks.setI18nLanguage.mockImplementation((locale: string) =>
-            locale === 'ja' ? staleLoad.promise : Promise.resolve()
-        );
-        useShellStore.getState().setLocale('ja');
-        const cleanup = startI18nLanguageSync();
+        // The fork ships English only, so every other code normalizes to "en"
+        // and two switches would be indistinguishable. Registering codes the
+        // way a user-loaded translation file does makes the race real.
+        registerLanguageCode('ja');
+        registerLanguageCode('ko');
+        try {
+            const staleLoad = deferred<void>();
+            mocks.setI18nLanguage.mockImplementation((locale: string) =>
+                locale === 'ja' ? staleLoad.promise : Promise.resolve()
+            );
+            useShellStore.setState({ locale: 'ja' });
+            const cleanup = startI18nLanguageSync();
 
-        useShellStore.getState().setLocale('ko');
-        await vi.waitFor(() =>
-            expect(useShellStore.getState().timeUnitLabels.h).toBe('ko:h')
-        );
+            useShellStore.getState().setLocale('ko');
+            await vi.waitFor(() =>
+                expect(useShellStore.getState().timeUnitLabels.h).toBe('ko:h')
+            );
 
-        staleLoad.resolve();
-        await staleLoad.promise;
-        await Promise.resolve();
+            staleLoad.resolve();
+            await staleLoad.promise;
+            await Promise.resolve();
 
-        expect(useShellStore.getState().timeUnitLabels.h).toBe('ko:h');
-        cleanup();
+            expect(useShellStore.getState().timeUnitLabels.h).toBe('ko:h');
+            cleanup();
+        } finally {
+            unregisterLanguageCode('ja');
+            unregisterLanguageCode('ko');
+        }
     });
 
     it('shares React runtime startup across consumers', async () => {

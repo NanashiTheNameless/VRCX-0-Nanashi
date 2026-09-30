@@ -30,7 +30,7 @@ function manualBackupDefaultFileName(now: Date): string {
         String(now.getMinutes()).padStart(2, '0'),
         String(now.getSeconds()).padStart(2, '0')
     ].join('');
-    return `VRCX-0-backup-${date}-${time}.vrcx0backup`;
+    return `VRCX-0-Nanashi-backup-${date}-${time}.vrcx0backup`;
 }
 
 function clampInteger(value: string, min: number, max: number): number {

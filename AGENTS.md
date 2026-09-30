@@ -1,0 +1,222 @@
+# AGENTS.md
+
+Guidance for coding agents working in this repository.
+
+## What this repo is
+
+VRCX-0-Nanashi is a personal fork of [Map1en/VRCX-0](https://github.com/Map1en/VRCX-0),
+a VRChat client. It is a Tauri app: a React frontend in `src/` and a Rust backend
+split across many crates in `crates/`, wired together by `src-tauri/`.
+
+The fork is maintained by one person. Read `CONTRIBUTING.md` before proposing
+changes, and treat it as authoritative where this file is silent.
+
+The React frontend lives in `src/features/<domain>/`. The Rust backend is a Cargo
+workspace of 26 crates under `crates/`, plus `src-tauri` (27 members total).
+`crates/overlay-devtool` is left over on disk and is not a workspace member;
+`cargo` will not build it.
+
+## Fork invariants
+
+These are the things that make this a _separate app_ rather than a rebrand. Do
+not "fix" any of them toward upstream, and check them before changing anything
+that touches identity, packaging, or networking defaults.
+
+| Concern              | Value                                        | Lives in                                                                                              |
+| -------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Product name         | `VRCX-0-Nanashi`                             | `src-tauri/tauri.conf.json`                                                                           |
+| App identifier       | `dev.namelessnanashi.vrcx-0-nanashi`         | `src-tauri/tauri.conf.json`                                                                           |
+| Data directory       | `VRCX-0-Nanashi`                             | `crates/platform/src/app_paths.rs`                                                                    |
+| Own deep-link scheme | `vrcx-0-nanashi://`                          | `src-tauri/tauri.conf.json`, `src-tauri/src/commands/application/deep_link.rs`                        |
+| Also accepted        | `vrcx-0://`, `vrcx://`                       | same                                                                                                  |
+| Update source        | `NanashiTheNameless/VRCX-0-Nanashi` releases | `crates/outbound-adapters/src/github_release_catalog.rs`, `crates/host-desktop/src/updater_policy.rs` |
+| User agent           | `NanashiTheNameless/VRCX-0-Nanashi`          | `crates/core/src/user_agent.rs`                                                                       |
+| Export format id     | `vrcx-0-nanashi-data-export`                 | `crates/persistence/src/data_export.rs`                                                               |
+
+Two rules follow from "coexists with upstream VRCX-0":
+
+- **Never write to the upstream data folder.** On first launch the app copies
+  VRCX-0's folder (caches excluded) into its own. Import and migration paths are
+  read-only against the other app.
+- **Upstream bug reports do not belong here.** If a fix is not fork-specific,
+  say so rather than folding it in, and do not add upstream trackers, issue
+  templates, or telemetry that would report upstream problems.
+
+## Feature areas you are most likely to touch
+
+`README.md` is the user-facing list. The parts most likely to be damaged by an
+unrelated edit, with where they live:
+
+- **Reminders** - `src/features/reminders/`,
+  `crates/runtime-host-desktop/src/reminders.rs`. Has a dedicated
+  left-navigation entry _and_ a Settings card; both are intentional.
+- **Wrist overlay pages** - `crates/overlay-runtime/`, `src/features/settings/.../SettingsWristPagesFields.tsx`.
+  Behavior is a configurable inactivity timeout (default 15s, 5-255s), and
+  pressing the menu button while it is open switches page and restarts the
+  timer. The older hide/show flip mechanism was deliberately deleted; do not
+  reintroduce it.
+- **Safety watchlists** - `src/features/settings/...`, `crates/runtime-host-desktop/src/safety/`.
+  Destructive actions are opt-in and reviewed on purpose. A name match alone must
+  never block; that is a safety rule, not a rough edge.
+- **Social AI** - `crates/assistant/`, `src/features/assistant/`. Off by default;
+  nothing may be sent anywhere while disabled. OpenAI-compatible, Responses API,
+  Anthropic, Gemini and Ollama paths all exist.
+- **yt-dlp / media** - `crates/ytdlp/`, `YTDLP_SETUP.md`. Cookie use is opt-in
+  and backs up originals.
+- **Updater** - `crates/host-desktop/src/updater_policy.rs`. Fork releases, plus
+  reinstall/downgrade and per-version selection.
+
+## Things that look like bugs but are not
+
+- Missing `keys.contains("telemetry")`-style guards in profile merge, and stale
+  `vrcx_telemetry*` config keys being ignored, are deliberate: the fork has no
+  telemetry to carry across migrations.
+- The hand-maintained `navIconEntries` list in `src/shared/constants/navIcons.ts`
+  and the component map in `src/components/layout/navIconRegistry.ts` must stay
+  in sync. An icon present in only one of them silently renders as a generic
+  circle. There is a test for this.
+- Sidebar layouts always contain the default page tabs
+  (`page-chartsMutual`, `page-reminders`, `page-tools`). They are rendered as a
+  separate nav section, which is why they are excluded from the tab list in
+  `src/components/sidebar/useSidePanelTabData.ts`.
+- `RuntimeBackgroundJobs` tracks local job state for background loops. It
+  transmits nothing.
+
+## Ground rules
+
+- **No developer telemetry.** This fork has no analytics, no crash reporting, no
+  usage reporting, and no feedback upload. Do not add any, and do not "restore"
+  something that looks like it. VRChat heartbeats, realtime/session events, auth
+  refresh, and API polling are core functionality, not telemetry, and must never
+  be removed on that basis. When a name is ambiguous, check the destination: if
+  it talks to VRChat, GitHub, or a user-configured AI endpoint, keep it.
+- **English only.** No bundled translations. `src/localization/en.json` is the
+  only locale file. Do not add locale files.
+- **Plain ASCII punctuation** in UI strings and docs. No em/en dashes, curly
+  quotes, or emoji.
+- **Smallest reasonable change.** Do not rearchitect adjacent code, upgrade
+  unrelated dependencies, or reformat files you did not otherwise touch.
+- Non-fork-specific fixes usually belong upstream. Say so rather than folding
+  them in.
+
+## Commands
+
+Frontend (Node):
+
+```
+npm run typecheck      # tsc for app + node configs
+npm run lint           # oxlint, --deny-warnings
+npm run format         # oxfmt (write); format:check to verify
+npm test               # vitest run
+npm run build          # vite build + license generation
+```
+
+Rust:
+
+```
+npm run rust:fmt             # cargo fmt --all
+npm run rust:fmt:check
+npm run rust:check -- <crate>
+npm run rust:test -- <crate>
+npm run rust:test:ci         # cargo test --workspace --exclude vrcx-0 --locked
+npm run rust:clippy:ci       # clippy with -D warnings
+```
+
+Full check before submitting:
+
+```
+npm run rust:fmt:check && npm run format:check
+npm run lint && npm run typecheck
+npm run rust:test:ci && npm test
+```
+
+A pre-commit hook runs formatting (`lint-staged.config.mjs` applies
+`npm run format` and `npm run rust:fmt` to all staged files).
+
+`cargo test --workspace` includes the `vrcx-0` crate, which needs a Tauri
+runtime and fails in headless environments. Always use `rust:test:ci`, which
+excludes it.
+
+## Bindings
+
+`src/platform/tauri/bindings.ts` is generated. Never hand-edit it.
+
+```
+npm run generate:tauri-bindings
+```
+
+Regenerate after adding, removing, or changing any `#[tauri::command]` or any
+`specta::Type` reachable from one. Specta only emits types reachable from the
+command surface, so deleting the last command that used a type silently drops it
+from the generated file and breaks the frontend at type-check time. If that
+happens, re-export the type explicitly with `.typ::<T>()` in
+`src-tauri/src/bindings_export.rs`.
+
+Note that `bindings.ts` is large; avoid reading it wholesale. Grep for the
+symbol you need.
+
+## Architecture
+
+Dependency direction is roughly inward, and should stay that way:
+
+```
+src-tauri  ->  composition  ->  application*  ->  application-core
+                                              ->  contracts
+                    outbound-adapters / persistence / integrations / vrchat-client
+```
+
+- `crates/contracts` - shared value types and ports. No I/O.
+- `crates/application-core` - process-wide state, event bus, task supervisor,
+  background jobs.
+- `crates/application`, `application-realtime`, `application-game`,
+  `application-activity` - use cases by domain.
+- `crates/outbound-adapters` - everything that talks to the network or disk.
+- `crates/composition` - wires the above together into a runtime.
+- `crates/runtime-host-desktop` - the host-specific runtime facade the Tauri
+  commands call.
+- `src-tauri/src/commands` - thin Tauri command wrappers. Keep them thin;
+  logic belongs in the application crates.
+- `crates/overlay-runtime`, `crates/host-desktop` - VR overlay.
+- `crates/i18n` - Rust-side message lookup.
+
+State crosses the Tauri boundary as snapshots and events over a local event
+bus, not as shared mutable handles. The frontend subscribes in
+`src/services/runtimeEventBridgeService.ts`.
+
+Many crates use nested module folders where each file is a sibling
+(`foo.rs` plus `foo/`). Keep that convention when adding modules.
+
+## Tests
+
+- Rust tests live beside the code in `#[cfg(test)] mod tests`; integration
+  tests go in `crates/<crate>/tests/`.
+- Frontend tests are `*.test.ts` / `*.test.tsx` beside the source.
+- `src/test/setup.ts` runs before every test file. It stubs `react-i18next` so
+  `t()` returns the key, and defines an in-memory `localStorage` for the node
+  environment. Several stores read `localStorage` at module scope, so if the
+  node environment does not have it, ~65 test files fail at import with
+  `Cannot read properties of undefined (reading 'getItem')`. This is wired
+  through `setupFiles` in `vitest.config.mts`; removing that key breaks the
+  suite in exactly that way.
+- Assert real behavior. Do not write assertions that only exercise mocks, and
+  do not relax an assertion to make a test pass. If a test disagrees with
+  intended behavior, find out which one is wrong and say which.
+- When you change a default or a normalization, update the tests that pin the
+  old value. Those failures are usually correct signals, not noise.
+
+## Conventions
+
+- Rust: `cargo fmt` defaults, `clippy -D warnings`. Prefer existing helpers over
+  new abstractions.
+- TypeScript: run `npm run format` before committing; oxfmt is opinionated.
+- Commits follow Conventional Commits, e.g.
+  `fix(overlay): restart the wrist menu timer on every press`. Many are scoped
+  by crate or subsystem.
+- Comments should explain why, not what. Do not add comments that were not asked
+  for.
+
+## Environment notes
+
+- Linux: avoid native GTK/WebKit theme changes; they have caused crashes. Do not
+  reintroduce live OS-theme switching.
+- `README.md` documents fork features. Keep it accurate when behavior changes.

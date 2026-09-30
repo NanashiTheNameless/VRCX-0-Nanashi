@@ -5,7 +5,7 @@
         "theme_catalog_title": "No themes are available right now",
         "theme_catalog_description": "Community themes will appear here when the catalog is available.",
         "installed_themes_title": "No community themes installed",
-        "installed_themes_description": "Browse the catalog and install a theme to give VRCX-0 a different look.",
+        "installed_themes_description": "Browse the catalog and install a theme to give VRCX-0-Nanashi a different look.",
         "browse_themes": "Browse themes",
         "app_launcher_title": "Choose what starts with VRChat",
         "app_launcher_description": "Add an app or shortcut and choose when you want it to open.",
@@ -182,7 +182,7 @@
                 "title": "Import world collection?",
                 "description": "\"{title}\" by {author} · {count} worlds",
                 "worlds_preview": "Includes: {names}",
-                "confirm": "Import to VRCX-0",
+                "confirm": "Import to VRCX-0-Nanashi",
                 "cancel": "Cancel"
             },
             "toast": {
@@ -208,7 +208,7 @@
         "title": "Change data folder",
         "description": "Choose which data to use in the new folder.",
         "completed_title": "Restart to finish changing folders",
-        "completed_description": "Restart VRCX-0 to start using the new folder.",
+        "completed_description": "Restart VRCX-0-Nanashi to start using the new folder.",
         "error_short": "Couldn't change the data folder",
         "start": "Copy and switch",
         "restart_now": "Restart now",
@@ -225,8 +225,8 @@
         },
         "target": {
             "empty": "The selected folder is empty.",
-            "existingProfile": "The VRCX-0 data already in this folder will be replaced. A copy will be kept before it's replaced.",
-            "foreignContent": "This folder contains other files. VRCX-0 will only change its own files."
+            "existingProfile": "The VRCX-0-Nanashi data already in this folder will be replaced. A copy will be kept before it's replaced.",
+            "foreignContent": "This folder contains other files. VRCX-0-Nanashi will only change its own files."
         },
         "phase": {
             "preparing": "Preparing data…",
@@ -239,15 +239,15 @@
             "operationBusy": "Another backup, restore, or data move is already running.",
             "databaseUnavailable": "Your data can't be copied right now. Try again later.",
             "pendingRestore": "Finish or cancel the pending profile restore first.",
-            "pendingLegacyMigration": "A VRCX data migration is pending. Restart VRCX-0 to finish it first.",
-            "pendingMigration": "A data folder move is already pending. Restart VRCX-0 to finish it.",
+            "pendingLegacyMigration": "A VRCX data migration is pending. Restart VRCX-0-Nanashi to finish it first.",
+            "pendingMigration": "A data folder move is already pending. Restart VRCX-0-Nanashi to finish it.",
             "cleanupConflict": "Clean up or retain the old data before moving back to that folder.",
             "insufficientSpace": "There is not enough free space to move the data.",
-            "invalidAdoptionTarget": "This folder has no VRCX-0 data to use. Choose a different folder.",
-            "invalidFreshStartTarget": "This folder already has VRCX-0 data. Choose a different folder to start fresh.",
-            "copyFailed": "Couldn't copy your data. VRCX-0 is still using the original folder.",
-            "commitFailed": "Couldn't save the copied data. VRCX-0 is still using the original folder.",
-            "pointerCommitFailed": "The new data folder could not be activated. Restart VRCX-0 to retry safely.",
+            "invalidAdoptionTarget": "This folder has no VRCX-0-Nanashi data to use. Choose a different folder.",
+            "invalidFreshStartTarget": "This folder already has VRCX-0-Nanashi data. Choose a different folder to start fresh.",
+            "copyFailed": "Couldn't copy your data. VRCX-0-Nanashi is still using the original folder.",
+            "commitFailed": "Couldn't save the copied data. VRCX-0-Nanashi is still using the original folder.",
+            "pointerCommitFailed": "The new data folder could not be activated. Restart VRCX-0-Nanashi to retry safely.",
             "io": "A data folder file could not be read or written."
         },
         "warning": {
@@ -258,27 +258,27 @@
         "result": {
             "succeeded": "Data folder changed",
             "failed_title": "The new data folder could not be used",
-            "database_open_failed": "VRCX-0 continued using the original folder. Your data was not affected.",
+            "database_open_failed": "VRCX-0-Nanashi continued using the original folder. Your data was not affected.",
             "interrupted_title": "Folder change interrupted",
-            "interrupted": "VRCX-0 continued using the original folder. You can try again."
+            "interrupted": "VRCX-0-Nanashi continued using the original folder. You can try again."
         },
         "cleanup": {
             "ready_title": "Data folder changed",
             "ready_description": "The old data is still stored at {path}.",
             "action": "Clean up old data",
             "action_with_size": "Clean up old data ({size})",
-            "confirm_title": "Permanently delete old VRCX-0 data?",
-            "confirm_description": "This deletes about {size} of known VRCX-0 files from {path}. Unknown files are left untouched. This cannot be undone.",
-            "completed": "Old VRCX-0 data cleaned up",
+            "confirm_title": "Permanently delete old VRCX-0-Nanashi data?",
+            "confirm_description": "This deletes about {size} of known VRCX-0-Nanashi files from {path}. Unknown files are left untouched. This cannot be undone.",
+            "completed": "Old VRCX-0-Nanashi data cleaned up",
             "freed": "Freed {size}.",
             "completed_with_skipped": "Freed {size}; {count} items could not be removed.",
             "settings_title": "Old data is ready to clean up",
-            "settings_description": "Old VRCX-0 data remains at {path} ({size}).",
+            "settings_description": "Old VRCX-0-Nanashi data remains at {path} ({size}).",
             "dismiss": "Keep it and stop reminding me",
             "dismissed": "Cleanup reminders disabled"
         },
         "running_title": "Changing data folder",
-        "running_description": "Keep VRCX-0 open until this finishes.",
+        "running_description": "Keep VRCX-0-Nanashi open until this finishes.",
         "start_existing": "Use existing data",
         "start_fresh": "Start fresh",
         "new_folder": "New folder",
@@ -290,7 +290,7 @@
     },
     "profile_backup": {
         "header": "Backup & restore",
-        "tools_description": "Back up and restore your VRCX-0 data",
+        "tools_description": "Back up and restore your VRCX-0-Nanashi data",
         "automatic": "Automatic backups",
         "automatic_description": "Save backups to the selected folder on a regular schedule.",
         "automatic_on": "On",
@@ -313,9 +313,9 @@
         "backup_now": "Back up now",
         "backup_now_confirm": "Create backup",
         "restore": "Restore data",
-        "restore_description": "Select a VRCX-0 backup file to restore. VRCX-0 will check it and restart.",
+        "restore_description": "Select a VRCX-0-Nanashi backup file to restore. VRCX-0-Nanashi will check it and restart.",
         "restore_from_backup": "Restore from backup",
-        "file_filter": "VRCX-0 backups",
+        "file_filter": "VRCX-0-Nanashi backups",
         "automatic_running": "Automatic backup in progress",
         "manual_running": "Backup in progress",
         "retryable_short": "Backup not saved",
@@ -326,19 +326,19 @@
         "discard_backup": "Discard this backup",
         "dismiss_error": "Dismiss",
         "validating_restore": "Checking the backup",
-        "restore_validation_description": "VRCX-0 is copying and checking the backup before it can be restored.",
+        "restore_validation_description": "VRCX-0-Nanashi is copying and checking the backup before it can be restored.",
         "restore_progress_copy": "Copying the backup",
         "restore_progress_extract": "Extracting the database",
         "restore_progress_database_check": "Checking database integrity",
         "restore_progress_verify_staging": "Verifying the prepared data",
         "preparing_restore": "Preparing to restore",
-        "restore_prepare_description": "VRCX-0 is checking the prepared data before restarting.",
+        "restore_prepare_description": "VRCX-0-Nanashi is checking the prepared data before restarting.",
         "restore_confirm_title": "Restore from this backup?",
-        "restore_confirm_description": "Your current data will be replaced and VRCX-0 will restart. A copy is kept in case something goes wrong.",
+        "restore_confirm_description": "Your current data will be replaced and VRCX-0-Nanashi will restart. A copy is kept in case something goes wrong.",
         "restore_and_restart": "Restore and restart",
-        "restarting_to_restore": "VRCX-0 is restarting to restore the backup",
+        "restarting_to_restore": "VRCX-0-Nanashi is restarting to restore the backup",
         "created_at": "Created",
-        "app_version": "VRCX-0 version",
+        "app_version": "VRCX-0-Nanashi version",
         "database_version": "Database version",
         "source_file": "Backup file",
         "backup_verified": "Backup verified",
@@ -355,22 +355,22 @@
         "rollback_cleanup_succeeded": "Rollback data cleared",
         "restore_failed_title": "The backup could not be restored",
         "restore_failed_unchanged": "Your current data was not changed.",
-        "restore_failed_rolled_back": "VRCX-0 returned to the data from before the restore.",
+        "restore_failed_rolled_back": "VRCX-0-Nanashi returned to the data from before the restore.",
         "settings_load_failed": "Could not load backup settings",
         "settings_save_failed": "Could not save backup settings",
         "folder_selection_failed": "Could not select the backup folder",
         "file_selection_failed": "Could not select a backup file",
         "backup_start_failed": "Could not start the backup",
         "restore_validation_failed": "Could not check the backup",
-        "restore_request_failed": "Could not restart VRCX-0 to restore the backup",
+        "restore_request_failed": "Could not restart VRCX-0-Nanashi to restore the backup",
         "action_failed": "The backup action could not be completed",
         "error": {
             "busy": "Another backup or restore is already in progress.",
             "delivery_pending": "The previous backup is still waiting to be saved to its destination. Retry or discard it before starting a new backup.",
-            "pending_restore": "A restore is ready to finish after VRCX-0 restarts.",
+            "pending_restore": "A restore is ready to finish after VRCX-0-Nanashi restarts.",
             "directory_unavailable": "The backup location is unavailable. Check the drive or network connection.",
-            "permission_denied": "VRCX-0 does not have permission to save to this location. Choose another folder.",
-            "local_disk_full": "There is not enough free space in the VRCX-0 data location to create the backup.",
+            "permission_denied": "VRCX-0-Nanashi does not have permission to save to this location. Choose another folder.",
+            "local_disk_full": "There is not enough free space in the VRCX-0-Nanashi data location to create the backup.",
             "target_disk_full": "There is not enough free space in the backup location.",
             "device_removed": "The backup location was disconnected. Reconnect the drive and try again.",
             "already_exists": "A backup with the same name already exists. Try again in a moment.",
@@ -379,14 +379,14 @@
             "package_failed": "The backup file could not be created.",
             "io": "The backup file could not be read or written.",
             "unknown": "An unexpected backup error occurred.",
-            "invalid_archive": "This file is not a valid VRCX-0 backup.",
-            "unsupported_manifest": "This backup format is not supported by this version of VRCX-0.",
+            "invalid_archive": "This file is not a valid VRCX-0-Nanashi backup.",
+            "unsupported_manifest": "This backup format is not supported by this version of VRCX-0-Nanashi.",
             "checksum_mismatch": "The backup is damaged or has been changed.",
             "validation_expired": "This backup check has expired. Select the backup again.",
-            "newer_app_version": "This backup was created by a newer version of VRCX-0. Update VRCX-0 and try again.",
-            "newer_database_version": "This backup uses a newer database format. Update VRCX-0 and try again.",
+            "newer_app_version": "This backup was created by a newer version of VRCX-0-Nanashi. Update VRCX-0-Nanashi and try again.",
+            "newer_database_version": "This backup uses a newer database format. Update VRCX-0-Nanashi and try again.",
             "database_corrupt": "The database in this backup is damaged.",
-            "not_vrcx0_profile": "This file does not contain VRCX-0 backup data."
+            "not_vrcx0_profile": "This file does not contain VRCX-0-Nanashi backup data."
         },
         "rollback_error": {
             "busy": "Another backup or restore operation is in progress. Try again when it finishes.",
@@ -411,6 +411,7 @@
             "reset": "Reset",
             "back": "Back",
             "view_details": "View Details",
+            "edit": "Edit",
             "view_profile": "View Profile",
             "configure": "Configure",
             "refresh": "Refresh",
@@ -508,7 +509,7 @@
     },
     "nativeShell": {
         "tray": {
-            "open": "Open VRCX-0",
+            "open": "Open VRCX-0-Nanashi",
             "backgroundMode": "Background Mode",
             "lock": "Lock",
             "doNotDisturb": "Do Not Disturb",
@@ -524,7 +525,7 @@
         "notification": {
             "backgroundModeStarted": {
                 "title": "Background Mode started",
-                "body": "VRCX-0 is running in Background Mode."
+                "body": "VRCX-0-Nanashi is running in Background Mode."
             },
             "authFailure": {
                 "title": "VRChat sign-in expired",
@@ -533,13 +534,13 @@
         },
         "menu": {
             "app": {
-                "about": "About VRCX-0",
+                "about": "About VRCX-0-Nanashi",
                 "settings": "Settings...",
                 "checkUpdates": "Check for Updates",
-                "restart": "Restart VRCX-0",
+                "restart": "Restart VRCX-0-Nanashi",
                 "startBackgroundMode": "Switch to Background Mode",
                 "logout": "Sign Out",
-                "quit": "Quit VRCX-0"
+                "quit": "Quit VRCX-0-Nanashi"
             },
             "view": {
                 "title": "View",
@@ -580,7 +581,7 @@
                 "reportIssue": "Report Issue",
                 "qqGroup": "QQ Group",
                 "openDevtools": "Open DevTools",
-                "supportVrcx": "Support VRCX-0"
+                "supportVrcx": "Support VRCX-0-Nanashi"
             }
         }
     },
@@ -729,10 +730,10 @@
         "devkit_build_badge": "Dev Kit",
         "settings": "Settings...",
         "check_updates": "Check for Updates",
-        "restart": "Restart VRCX-0",
+        "restart": "Restart VRCX-0-Nanashi",
         "start_background_mode": "Switch to Background Mode",
         "logout": "Sign Out",
-        "quit": "Quit VRCX-0",
+        "quit": "Quit VRCX-0-Nanashi",
         "quick_search": "Quick Search",
         "keyboard_shortcuts": "Keyboard Shortcuts",
         "show_friends_sidebar": "Show Friends Sidebar",
@@ -747,11 +748,11 @@
         "report_issue": "Report Issue",
         "community": "Community",
         "open_source_licenses": "Third-Party Notices",
-        "about": "About VRCX-0",
+        "about": "About VRCX-0-Nanashi",
         "messages": {
             "zoom_failed": "Failed to apply zoom",
-            "logout_failed": "Failed to sign out of VRCX-0",
-            "restart_failed": "Failed to restart VRCX-0",
+            "logout_failed": "Failed to sign out of VRCX-0-Nanashi",
+            "restart_failed": "Failed to restart VRCX-0-Nanashi",
             "open_devtools_failed": "Failed to open DevTools"
         },
         "label": {
@@ -767,7 +768,7 @@
         "action": {
             "close_window": "Close"
         },
-        "upstream_project": "Upstream VRCX-0"
+        "upstream_project": "Upstream VRCX-0-Nanashi"
     },
     "shortcuts": {
         "tray": {
@@ -775,8 +776,8 @@
             "checking": "Checking shortcut…",
             "background_hint": "Hiding uses the Background Mode and delay settings.",
             "global": "Global",
-            "title": "Show / Hide VRCX-0",
-            "description": "Show or hide VRCX-0 from any app. VRCX-0 keeps running when hidden.",
+            "title": "Show / Hide VRCX-0-Nanashi",
+            "description": "Show or hide VRCX-0-Nanashi from any app. VRCX-0-Nanashi keeps running when hidden.",
             "configure": "Set Global Shortcut",
             "unset": "Not set",
             "inactive": "Not active",
@@ -830,18 +831,18 @@
         },
         "setup": {
             "create_title": "Set a lock password",
-            "create_description": "The lock hides VRCX-0 behind this 4-digit password while it keeps running. It is not encryption — it only keeps someone at your PC from browsing around.",
+            "create_description": "The lock hides VRCX-0-Nanashi behind this 4-digit password while it keeps running. It is not encryption — it only keeps someone at your PC from browsing around.",
             "change_title": "Change lock password",
             "change_description": "Enter your current lock password, then choose a new one.",
             "clear_title": "Remove lock password",
-            "clear_description": "Enter your VRChat account password to remove the lock password. It is only checked against the password saved locally in VRCX-0; nothing is sent to the VRChat servers."
+            "clear_description": "Enter your VRChat account password to remove the lock password. It is only checked against the password saved locally in VRCX-0-Nanashi; nothing is sent to the VRChat servers."
         },
         "recover": {
-            "description": "Enter your VRChat account password to remove the lock. It is only checked against the password saved locally in VRCX-0; nothing is sent to the VRChat servers."
+            "description": "Enter your VRChat account password to remove the lock. It is only checked against the password saved locally in VRCX-0-Nanashi; nothing is sent to the VRChat servers."
         },
         "settings": {
             "label": "Privacy Lock",
-            "description": "Hide the window behind a lock password while VRCX-0 keeps recording. Lock from the tray menu or the account menu in the sidebar.",
+            "description": "Hide the window behind a lock password while VRCX-0-Nanashi keeps recording. Lock from the tray menu or the account menu in the sidebar.",
             "status_set": "Password set",
             "status_unset": "No password"
         },
@@ -1012,8 +1013,8 @@
         }
     },
     "support_vrcx": {
-        "title": "Support VRCX-0",
-        "description": "Support future VRCX-0 development through GitHub Sponsors or Ko-fi."
+        "title": "Support VRCX-0-Nanashi",
+        "description": "Support future VRCX-0-Nanashi development through GitHub Sponsors or Ko-fi."
     },
     "view": {
         "login": {
@@ -1542,7 +1543,7 @@
                     "listed_description": "Let other people discover this collection on the homepage. If turned off, anyone with the share link can still view it.",
                     "include_notes": "Include my notes",
                     "include_notes_description": "Copy your local world notes to the shared page as comments. You can edit them later on the website.",
-                    "account_connection": "Shares are connected to the VRChat account currently signed in to VRCX-0. No separate website sign-in is required; sharing is provided by VRCX-0, not VRChat.",
+                    "account_connection": "Shares are connected to the VRChat account currently signed in to VRCX-0-Nanashi. No separate website sign-in is required; sharing is provided by VRCX-0-Nanashi, not VRChat.",
                     "worlds": "{count}/{total} worlds ready",
                     "truncated": "First {cap} worlds only.",
                     "share_url": "Share link",
@@ -1986,7 +1987,7 @@
             "export": {
                 "header": "Export",
                 "export_notes": "Export Local Notes to VRChat",
-                "export_notes_description": "Export your VRCX-0 notes to VRChat notes",
+                "export_notes_description": "Export your VRCX-0-Nanashi notes to VRChat notes",
                 "discord_names": "Discord Names",
                 "export_friend_list": "Export Friends List",
                 "export_own_avatars": "Export My Avatars"
@@ -2008,8 +2009,8 @@
             },
             "shortcuts": {
                 "header": "Folders",
-                "vrcx_data": "VRCX-0 Data",
-                "vrcx_data_description": "Open the VRCX-0 data folder",
+                "vrcx_data": "VRCX-0-Nanashi Data",
+                "vrcx_data_description": "Open the VRCX-0-Nanashi data folder",
                 "vrchat_data": "VRChat Data",
                 "vrchat_data_description": "Open the VRChat data folder",
                 "crash_dumps": "Crash Dumps",
@@ -2245,7 +2246,7 @@
             "llm_endpoints": {
                 "title": "LLM Endpoints",
                 "description": "Shared OpenAI-compatible connections for Social AI and translation.",
-                "follow_custom_proxy": "Use VRCX-0 Custom Proxy",
+                "follow_custom_proxy": "Use VRCX-0-Nanashi Custom Proxy",
                 "follow_custom_proxy_description": "LLM requests use it when configured; otherwise, the system proxy applies.",
                 "add": "Add endpoint",
                 "empty_description": "Add an OpenAI-compatible endpoint for Social AI and OpenAI-compatible translation.",
@@ -2355,7 +2356,16 @@
                     "trigger_location_world": "When {name} goes to {world}",
                     "trigger_joined": "When {name} joins your instance",
                     "trigger_time": "At {at}",
-                    "trigger_time_repeat": "At {at}, then every {minutes} minutes"
+                    "trigger_time_repeat": "At {at}, then every {minutes} minutes",
+                    "ai_title": "Create with AI",
+                    "ai_description": "Describe the reminder in your own words. It fills the form below so you can review it, and nothing is created until you save it yourself.",
+                    "ai_placeholder": "For example: remind me when Camila comes online, or ping me every Friday at 5pm",
+                    "ai_draft": "Draft reminder",
+                    "ai_drafting": "Drafting",
+                    "ai_drafted": "Draft ready. Check the form below, then save it.",
+                    "ai_not_configured": "Social AI is off, so it cannot fill in the form for you. Turn it on in Settings > AI, or create the reminder by hand below.",
+                    "ai_open_settings": "Open Social AI settings",
+                    "ai_friend_unmatched": "No friend named \"{name}\" matched. Pick the friend yourself before saving."
                 }
             },
             "social": {
@@ -2442,7 +2452,7 @@
                 },
                 "test_mode": {
                     "header": "Overlay Test",
-                    "description": "Forces the wrist overlay and HMD notification to show a test card so you can check placement, size and opacity while wearing the headset. It is never saved and turns off when VRCX-0 restarts.",
+                    "description": "Forces the wrist overlay and HMD notification to show a test card so you can check placement, size and opacity while wearing the headset. It is never saved and turns off when VRCX-0-Nanashi restarts.",
                     "force_display": "Force Overlay Display",
                     "requires_steamvr": "Requires SteamVR to be running."
                 }
@@ -2459,7 +2469,7 @@
             "integrations": {
                 "mcp_server": {
                     "header": "MCP Server",
-                    "description": "Let trusted MCP clients access your VRCX-0 data. Localhost only by default.",
+                    "description": "Let trusted MCP clients access your VRCX-0-Nanashi data. Localhost only by default.",
                     "enable": "Enable MCP server",
                     "enable_description": "Start a token-protected MCP server on localhost.",
                     "allow_vrchat_writes": "Allow VRChat account writes",
@@ -2491,7 +2501,7 @@
                 },
                 "integration_api": {
                     "header": "Integration API",
-                    "description": "Share selected VRCX-0 information with trusted apps. The server only listens while VRChat is running.",
+                    "description": "Share selected VRCX-0-Nanashi information with trusted apps. The server only listens while VRChat is running.",
                     "enable": "Enable Integration API",
                     "enable_description": "Start a token-protected WebSocket stream when VRChat is running.",
                     "information_types": "Shared information",
@@ -2549,13 +2559,13 @@
                     "header": "Application",
                     "startup": "Start at Windows Startup",
                     "startup_system": "Start at System Startup",
-                    "startup_system_description": "Creates a desktop autostart entry that launches VRCX-0 with --autostart.",
+                    "startup_system_description": "Creates a desktop autostart entry that launches VRCX-0-Nanashi with --autostart.",
                     "minimized": "Start Minimized at System Startup",
                     "tray": "Minimize to Tray When Closing",
                     "tray_description": "Close to the system tray instead of quitting.",
                     "system_window_frame": "Window Compatibility Mode",
                     "system_window_frame_description": "Use the standard system window style. Turn this on if you see flickering or the desktop showing through.",
-                    "system_window_frame_saved": "Saved. Restart VRCX-0 to apply.",
+                    "system_window_frame_saved": "Saved. Restart VRCX-0-Nanashi to apply.",
                     "system_window_frame_restart_now": "Restart now",
                     "background_mode": "Background Mode in Tray",
                     "background_mode_description": "Saves ~90% memory while in the tray. Some page states may reset when restored.",
@@ -2566,7 +2576,7 @@
                     "auto_install_updates_on_startup_description": "Automatically download and install updates when the app starts.",
                     "check_for_updates_and_update": "Check for Updates and Update",
                     "update_check_disabled": "Disabled",
-                    "update_check_disabled_build_description": "This special build has update checks disabled. Use your package manager or contact the maintainer to update VRCX-0.",
+                    "update_check_disabled_build_description": "This special build has update checks disabled. Use your package manager or contact the maintainer to update VRCX-0-Nanashi.",
                     "proxy": "Proxy Settings",
                     "keep_system_awake": "Keep PC Awake for Live Updates",
                     "keep_system_awake_description": "Stops the PC from going to sleep on its own while VRCX-0-Nanashi is running, so friend updates and notifications keep arriving. The screen can still turn off. Manually choosing Sleep, closing a laptop lid, or low battery can still put the PC to sleep.",
@@ -2623,7 +2633,7 @@
                     "font_family_custom_secondary": "Fallback font (optional)",
                     "font_family_custom_secondary_description": "Used when the app font does not contain a character.",
                     "font_family_custom_detection_unavailable_title": "Installed fonts unavailable",
-                    "font_family_custom_detection_unavailable": "VRCX-0 could not read the fonts installed on this device. Enter a CSS font stack instead.",
+                    "font_family_custom_detection_unavailable": "VRCX-0-Nanashi could not read the fonts installed on this device. Enter a CSS font stack instead.",
                     "font_family_custom_detection_unavailable_toast": "Installed fonts are unavailable. Use a CSS font stack instead.",
                     "font_family_custom_mode_label": "Font source",
                     "font_family_custom_mode_installed": "Installed fonts",
@@ -2660,7 +2670,7 @@
                     "table_page_sizes_error": "Page size must be a number between 1 and 1000",
                     "show_notification_icon_dot": "Tray Notification Dot",
                     "show_taskbar_icon_dot": "Taskbar Notification Dot",
-                    "show_taskbar_icon_dot_description": "Show a red dot on the VRCX-0 taskbar button while notifications are unread.",
+                    "show_taskbar_icon_dot_description": "Show a red dot on the VRCX-0-Nanashi taskbar button while notifications are unread.",
                     "striped_data_table_mode": "Striped Tables",
                     "reduced_motion_and_blur": "Reduce Effects",
                     "reduced_motion_and_blur_description": "Turn off animations, transitions, and background blur for better performance on lower-end devices.",
@@ -2725,7 +2735,7 @@
                     "vrchat_notes": "VRChat Notes",
                     "vrchat_notes_description": "Shows notes stored in VRChat",
                     "vrcx_memos": "Local Notes",
-                    "vrcx_memos_description": "Shows local notes saved in VRCX-0",
+                    "vrcx_memos_description": "Shows local notes saved in VRCX-0-Nanashi",
                     "recent_action_cooldown": "Recent Action Icon",
                     "recent_action_cooldown_description": "Show a clock icon on recent invite and request actions.",
                     "profile_decorations": "Profile decorations",
@@ -2763,7 +2773,7 @@
                     "post_update_changelog_prompt_description": "Show what's new after an update is installed.",
                     "do_not_disturb": {
                         "header": "Do Not Disturb",
-                        "description": "Temporarily pauses desktop notifications, TTS, XSOverlay, OVR Toolkit, and VRCX-0 HMD popups. Webhooks, the wrist overlay feed, and notification history keep working.",
+                        "description": "Temporarily pauses desktop notifications, TTS, XSOverlay, OVR Toolkit, and VRCX-0-Nanashi HMD popups. Webhooks, the wrist overlay feed, and notification history keep working.",
                         "end_on_game_start": "Turn off when VRChat starts",
                         "end_on_game_start_description": "Only applies when VRChat changes from stopped to running. You can turn Do Not Disturb on again while playing."
                     },
@@ -2797,7 +2807,7 @@
                         "header": "Webhook Notifications",
                         "enabled": "Enable Webhook Delivery",
                         "auth_events_enabled": "Send Automatic Sign-In Failure Notifications",
-                        "auth_events_description": "Send a notification when VRCX-0 cannot automatically restore a dropped background sign-in.",
+                        "auth_events_description": "Send a notification when VRCX-0-Nanashi cannot automatically restore a dropped background sign-in.",
                         "url": "Webhook URL",
                         "url_placeholder": "https://example.com/webhook",
                         "format": "Payload Format",
@@ -2817,10 +2827,10 @@
                         "delivery_contract_title": "How delivery works",
                         "delivery_contract_http": "Only HTTP 2xx counts as success. Each attempt times out after 10 seconds, response bodies are limited to 64 KiB, and transient failures are retried up to twice.",
                         "delivery_contract_auth": "Field selection and activity filters apply only to activity notifications. Automatic sign-in failure alerts always use a fixed, minimal payload and have their own switch.",
-                        "delivery_contract_queue": "Pending deliveries are kept in memory only. If too many queue up, some events may be dropped, and nothing is retried after VRCX-0 restarts. Delivery status also resets on restart.",
-                        "delivery_contract_secret": "Webhook URLs often contain credentials. Treat this URL as a secret and protect the local VRCX-0 profile and its backups.",
+                        "delivery_contract_queue": "Pending deliveries are kept in memory only. If too many queue up, some events may be dropped, and nothing is retried after VRCX-0-Nanashi restarts. Delivery status also resets on restart.",
+                        "delivery_contract_secret": "Webhook URLs often contain credentials. Treat this URL as a secret and protect the local VRCX-0-Nanashi profile and its backups.",
                         "examples_title": "Webhook Payload Fields and Examples",
-                        "examples_description": "Choose Generic JSON fields and inspect what VRCX-0 sends for each webhook payload format.",
+                        "examples_description": "Choose Generic JSON fields and inspect what VRCX-0-Nanashi sends for each webhook payload format.",
                         "comments_note": "The examples show the request body shape; the field notes here explain usage and are not sent.",
                         "generic_example": "Generic JSON example",
                         "discord_example": "Discord example",
@@ -2918,12 +2928,12 @@
                         "quit_description": "After VRChat exits, close any VRChat processes that are still running.",
                         "focus_on_join_header": "Bring VRChat to the front",
                         "focus_on_join_description": "Switch to VRChat when you join an instance. Desktop mode only.",
-                        "deep_link_registration": "Open VRCX-0 links",
-                        "deep_link_registered": "VRCX-0 links are set to open in VRCX-0 for this user.",
-                        "deep_link_not_registered": "This system is not set up to open VRCX-0 links, or the setup points to an invalid installation.",
+                        "deep_link_registration": "Open VRCX-0-Nanashi links",
+                        "deep_link_registered": "VRCX-0-Nanashi links are set to open in VRCX-0-Nanashi for this user.",
+                        "deep_link_not_registered": "This system is not set up to open VRCX-0-Nanashi links, or the setup points to an invalid installation.",
                         "deep_link_repair": "Fix",
-                        "deep_link_repair_success": "VRCX-0 links can now be opened",
-                        "deep_link_repair_failed": "Could not fix VRCX-0 link opening"
+                        "deep_link_repair_success": "VRCX-0-Nanashi links can now be opened",
+                        "deep_link_repair_failed": "Could not fix VRCX-0-Nanashi link opening"
                     },
                     "storage": {
                         "header": "Storage & cleanup",
@@ -2934,7 +2944,7 @@
                         "cache_header": "Clean VRChat cache automatically",
                         "cache_description": "Remove old VRChat asset cache data when VRChat closes.",
                         "keep_avatar_data": "Keep avatar history for",
-                        "avatar_cleanup_description": "Checked weekly when VRCX-0 starts."
+                        "avatar_cleanup_description": "Checked weekly when VRCX-0-Nanashi starts."
                     },
                     "troubleshooting": {
                         "header": "Troubleshooting",
@@ -2955,13 +2965,8 @@
                     "import_recovery": {
                         "header": "Import & recovery",
                         "import_from_vrcx": "Import from VRCX",
-                        "description": "Replace the current VRCX-0 configuration and database with data from the default VRCX data folder.",
+                        "description": "Replace the current VRCX-0-Nanashi configuration and database with data from the default VRCX data folder.",
                         "review": "Review import…"
-                    },
-                    "usage_data": {
-                        "header": "Usage data",
-                        "share": "Share anonymous usage data",
-                        "description": "Share only the anonymous information needed to help improve VRCX-0."
                     },
                     "danger": {
                         "avatar_history": "Avatar history",
@@ -2999,7 +3004,7 @@
                     },
                     "delete_all_screenshot_metadata": {
                         "button": "Remove Screenshot Metadata",
-                        "ask": "Are you sure you want to delete all VRChat & VRCX-0 screenshot metadata from your VRChat Pictures folder?",
+                        "ask": "Are you sure you want to delete all VRChat & VRCX-0-Nanashi screenshot metadata from your VRChat Pictures folder?",
                         "confirm": "This permanently deletes all screenshot metadata and cannot be undone. This includes all prints, subfolders, and other files in your VRChat Pictures folder. Back up anything important before proceeding.",
                         "confirm_yes": "Yes",
                         "confirm_no": "No"
@@ -3039,13 +3044,13 @@
                         "choose": "Choose Folder",
                         "reset": "Reset to Default",
                         "restart": "Restart",
-                        "restart_hint": "Changes apply after restarting VRCX-0.",
+                        "restart_hint": "Changes apply after restarting VRCX-0-Nanashi.",
                         "source_cli": "Command line override",
                         "source_persisted": "custom folder",
                         "source_default": "default folder",
                         "cli_override": "This launch is using --data-dir. Start without the command-line override to change the saved directory.",
-                        "saved_restart_required": "Data directory saved. Restart VRCX-0 to apply it.",
-                        "reset_saved": "Data directory reset. Restart VRCX-0 to apply it.",
+                        "saved_restart_required": "Data directory saved. Restart VRCX-0-Nanashi to apply it.",
+                        "reset_saved": "Data directory reset. Restart VRCX-0-Nanashi to apply it.",
                         "failed_to_load": "Failed to load data directory settings."
                     },
                     "cache_debug": {
@@ -3091,19 +3096,19 @@
                         "purge_confirm_title": "Purge Avatar History",
                         "purge_confirm_description_1": "This will permanently delete avatar history from the database and reclaim disk space.",
                         "purge_confirm_description_2": "This action cannot be undone!",
-                        "purge_confirm_description_3": "VRCX-0 will restart after the operation completes.",
+                        "purge_confirm_description_3": "VRCX-0-Nanashi will restart after the operation completes.",
                         "purge_confirm_alert": "It is strongly recommended to back up your database file before proceeding!",
                         "purge_confirm_button": "Purge & Restart",
                         "purge_complete": "Avatar history purged. Restarting…",
                         "purge_failed": "Purge failed: {error}",
                         "purge_optimization_failed": "Avatar history was purged, but the database could not be optimized: {error}",
                         "legacy_migration": "Migrate VRCX Data",
-                        "legacy_migration_description": "Replace the current VRCX-0 configuration and database with data from the fixed VRCX data folder.",
-                        "legacy_migration_confirm_title": "Replace VRCX-0 data with VRCX data?",
-                        "legacy_migration_confirm_description": "This will delete and replace the current VRCX-0 settings and local database with the data found at {path}. VRCX-0 will restart to complete the migration. The original VRCX data will not be modified.",
+                        "legacy_migration_description": "Replace the current VRCX-0-Nanashi configuration and database with data from the fixed VRCX data folder.",
+                        "legacy_migration_confirm_title": "Replace VRCX-0-Nanashi data with VRCX data?",
+                        "legacy_migration_confirm_description": "This will delete and replace the current VRCX-0-Nanashi settings and local database with the data found at {path}. VRCX-0-Nanashi will restart to complete the migration. The original VRCX data will not be modified.",
                         "legacy_migration_confirm": "Migrate and Restart",
                         "legacy_migration_not_available": "No supported VRCX database was found.",
-                        "legacy_migration_restart_manually": "Migration is ready. Restart VRCX-0 to complete it.",
+                        "legacy_migration_restart_manually": "Migration is ready. Restart VRCX-0-Nanashi to complete it.",
                         "legacy_migration_failed": "Failed to start VRCX migration: {error}"
                     },
                     "user_content": {
@@ -3481,8 +3486,8 @@
                 "no_players_reconstructed_for_this_instance_yet": "No current players found yet",
                 "enable_game_log_ingestion_in_settings_before_current_players_can_be_reconstructed": "Enable game log in Settings to see current players.",
                 "start_vrchat_and_let_vrcx_receive_game_log_events_before_this_page_can_rebuild_the_current_instance": "Start VRChat and join an instance. Players in the same instance will appear here, and the list will update as people join or leave.",
-                "stay_in_the_instance_until_local_join_leave_events_are_recorded": "Stay in the instance until VRCX-0 detects player activity. This list will update automatically.",
-                "current_players_follow_live_instance_locations": "Current players will appear after VRCX-0 detects your next location.",
+                "stay_in_the_instance_until_local_join_leave_events_are_recorded": "Stay in the instance until VRCX-0-Nanashi detects player activity. This list will update automatically.",
+                "current_players_follow_live_instance_locations": "Current players will appear after VRCX-0-Nanashi detects your next location.",
                 "local_join_leave_history_has_no_current_players": "The local join/leave history does not have any current players for the active location yet."
             },
             "label": {
@@ -3772,7 +3777,7 @@
             },
             "source": {
                 "built_in": "Default",
-                "built_in_description": "Use VRCX-0's default light and dark themes.",
+                "built_in_description": "Use VRCX-0-Nanashi's default light and dark themes.",
                 "background": "Background image",
                 "community": "Community theme"
             },
@@ -3844,7 +3849,7 @@
             }
         },
         "about": {
-            "tagline": "The fast, lightweight VRCX built with Tauri and Rust.",
+            "tagline": "A fast, lightweight companion application for VRChat, built with Tauri and Rust.",
             "contributors": "Contributors",
             "contributors_error": "Couldn't load the contributor list.",
             "thanks": "Every translation, test, bug report, and idea comes from the community. Thank you.",
@@ -3900,7 +3905,7 @@
                 "failed_to_load": "Could not load your activity"
             },
             "caveat": {
-                "recorded_since": "Activity is only recorded while VRCX-0 is running (since {date})."
+                "recorded_since": "Activity is only recorded while VRCX-0-Nanashi is running (since {date})."
             },
             "worlds": {
                 "visit_count": "{count} visits",
@@ -4021,8 +4026,8 @@
             "run_error_elevation_required": "Administrator permission is required (Windows error {code}). Turn on “Run as administrator”.",
             "run_error_elevation_cancelled": "Administrator permission was cancelled (Windows error {code}).",
             "run_error_failed": "The app could not be started.",
-            "stop_locked_steam": "Launched by Steam; VRCX-0 can’t close it.",
-            "stop_locked_admin": "Runs as administrator; VRCX-0 can’t close it.",
+            "stop_locked_steam": "Launched by Steam; VRCX-0-Nanashi can’t close it.",
+            "stop_locked_admin": "Runs as administrator; VRCX-0-Nanashi can’t close it.",
             "remove_app": "Remove app",
             "remove_confirm": "Remove {name} from App Launcher?",
             "name_required": "Name is required",
@@ -4050,8 +4055,8 @@
                 "hidden": "Hidden",
                 "visible": "Visible",
                 "visibility": "Visibility",
-                "developer": "VRCX-0 Developer",
-                "fork_developer": "VRCX-0-Nanashi Developer"
+                "fork_developer": "VRCX-0-Nanashi Developer",
+                "upstream_developer": "Upstream VRCX-0 Developer"
             },
             "actions": {
                 "invite": "Invite",
@@ -4500,8 +4505,8 @@
                 "copy_url": "Copy URL",
                 "url": "VRChat URL",
                 "vrcx_url": "Share Link",
-                "vrcx_url_description": "This link opens directly in the VRCX-0 app",
-                "vrcx_share_text": "Open world “{name}” in VRCX-0: {url}",
+                "vrcx_url_description": "This link opens directly in the VRCX-0-Nanashi app",
+                "vrcx_share_text": "Open world “{name}” in VRCX-0-Nanashi: {url}",
                 "copy_vrcx_url": "Copy Share Link",
                 "youtube_preview": "YouTube Preview",
                 "author_tags": "Author Tags",
@@ -4709,8 +4714,8 @@
                 "url": "VRChat Link",
                 "copy_url": "Copy URL",
                 "vrcx_url": "Share Link",
-                "vrcx_url_description": "This link opens directly in the VRCX-0 app",
-                "vrcx_share_text": "Open avatar “{name}” in VRCX-0: {url}",
+                "vrcx_url_description": "This link opens directly in the VRCX-0-Nanashi app",
+                "vrcx_share_text": "Open avatar “{name}” in VRCX-0-Nanashi: {url}",
                 "copy_vrcx_url": "Copy Share Link",
                 "created_at": "Created At",
                 "last_updated": "Last Updated",
@@ -5141,7 +5146,7 @@
             "header": "Launch",
             "short_url": "Short URL",
             "share": "Share",
-            "share_description": "Copy the VRCX-0 share link. Anyone who opens it gets a preview and can open the instance in the client.",
+            "share_description": "Copy the VRCX-0-Nanashi share link. Anyone who opens it gets a preview and can open the instance in the client.",
             "more_copy_options": "More copy options",
             "invite": "Invite",
             "open_ingame": "Open in-game",
@@ -5262,14 +5267,14 @@
         },
         "note_export": {
             "header": "Note Export",
-            "description1": "This process will export all of your VRCX-0 local notes and import them into VRChat notes.",
+            "description1": "This process will export all of your VRCX-0-Nanashi local notes and import them into VRChat notes.",
             "description2": "Be warned of the following limitations:",
             "description3": "- VRChat limits how quickly notes can be updated, so exporting may take a while.",
             "description4": "- Character limit of 256 per note.",
             "description5": "- Profanity filter applies.",
             "description6": "- Line breaks aren't supported and will be replaced with spaces.",
             "description7": "- This will overwrite any existing VRChat notes for these users.",
-            "description8": "- Any edits made here won't affect VRCX-0 local notes, but will affect VRChat notes once exported.",
+            "description8": "- Any edits made here won't affect VRCX-0-Nanashi local notes, but will affect VRChat notes once exported.",
             "refresh": "Refresh",
             "export": "Export",
             "cancel": "Cancel",
@@ -5814,13 +5819,13 @@
             "failed_to_load_emojis": "Failed to load emojis"
         },
         "vrcx_updater": {
-            "latest_version": "VRCX-0 is up to date",
+            "latest_version": "VRCX-0-Nanashi is up to date",
             "ready_for_update": "Update {value} is ready",
             "channel": {
                 "label": "Update channel",
                 "stable": "Stable",
                 "beta": "Beta",
-                "description": "VRCX-0 only checks for updates in the installed channel.",
+                "description": "VRCX-0-Nanashi only checks for updates in the installed channel.",
                 "switch_description": "To switch to {channel}, download and install its latest release.",
                 "download_stable": "Download latest Stable",
                 "download_beta": "Download latest Beta",
@@ -5847,7 +5852,7 @@
         },
         "change_log": {
             "header": "Change Log",
-            "support_title": "If VRCX-0 helps you",
+            "support_title": "If VRCX-0-Nanashi helps you",
             "support_description": "A GitHub Star is the easiest way to support the project.",
             "star_on_github": "Star on GitHub",
             "support_development": "Support development",
@@ -5958,7 +5963,7 @@
         },
         "system": {
             "label": {
-                "vrcx_0_update": "VRCX-0 Update",
+                "vrcx_0_update": "VRCX-0-Nanashi Update",
                 "fps_144": "--fps=144"
             },
             "action": {
@@ -6100,13 +6105,13 @@
             "description": "Enter the proxy server address and port. Supports 127.0.0.1:7890, http://127.0.0.1:7890, and socks5://127.0.0.1:7890.",
             "restart": "Save & Restart",
             "enabled": "Enable proxy",
-            "enabled_description": "When enabled with no address, VRCX-0 connects directly and keeps the proxy switch on.",
+            "enabled_description": "When enabled with no address, VRCX-0-Nanashi connects directly and keeps the proxy switch on.",
             "address": "Proxy address",
             "address_description": "Leave blank to connect directly while keeping the proxy switch enabled.",
             "test": "Test",
             "configure": "Configure",
             "configure_empty": "Configure address",
-            "saved_restart_required": "Proxy settings saved. Restart VRCX-0 to apply network proxy changes.",
+            "saved_restart_required": "Proxy settings saved. Restart VRCX-0-Nanashi to apply network proxy changes.",
             "test_success": "Proxy test succeeded (HTTP {status}).",
             "test_failed": "Proxy test failed: {message}"
         },
@@ -6119,7 +6124,7 @@
         },
         "table_entries_settings": {
             "header": "Table Size Limits",
-            "description": "Limit how many entries VRCX-0 loads from the database into the UI. Large values may impact RAM usage and performance.",
+            "description": "Limit how many entries VRCX-0-Nanashi loads from the database into the UI. Large values may impact RAM usage and performance.",
             "table_max_entries": "Max Table Entries",
             "table_max_entries_error": "Enter a number between {min} and {max}",
             "table_max_entries_hint": "Valid range: {min} – {max}",
@@ -6139,7 +6144,7 @@
             "auto_login_success": "Signed in automatically",
             "auto_login_failed": "Failed to sign in automatically",
             "session_expired": "VRChat session expired. Returning to sign-in.",
-            "session_restore_available": "If a saved account is available, VRCX-0 will try to sign in again automatically.",
+            "session_restore_available": "If a saved account is available, VRCX-0-Nanashi will try to sign in again automatically.",
             "offline": "You're offline"
         },
         "vrcx_updater": {
@@ -6166,14 +6171,14 @@
         },
         "database": {
             "migration_found_title": "Existing VRCX database detected",
-            "migration_found_description": "An existing VRCX database was found on this computer. Would you like to migrate it to VRCX-0? The original VRCX data will not be modified",
+            "migration_found_description": "An existing VRCX database was found on this computer. Would you like to migrate it to VRCX-0-Nanashi? The original VRCX data will not be modified",
             "legacy_vrcx_running_title": "VRCX is running",
-            "legacy_vrcx_running_description": "VRCX-0 detected that VRCX is still running. Close it, then select Retry. Forcing the migration may fail.",
+            "legacy_vrcx_running_description": "VRCX-0-Nanashi detected that VRCX is still running. Close it, then select Retry. Forcing the migration may fail.",
             "legacy_vrcx_check_again": "Retry",
             "legacy_vrcx_force_migration": "Force Migration",
             "migration_skip": "Skip",
             "migration_restarting_title": "Migrating data",
-            "migration_restarting": "VRCX-0 will restart to complete the migration...",
+            "migration_restarting": "VRCX-0-Nanashi will restart to complete the migration...",
             "upgrade_in_progress_title": "Database upgrade in progress",
             "maintenance_in_progress_title": "Database maintenance in progress",
             "maintenance_in_progress_description": "Reclaiming disk space. Database access is paused until this finishes.",
@@ -6203,12 +6208,12 @@
             "database_upload_warning": "This database may contain private account and activity data. Do not upload it to GitHub.",
             "use_new_database": "Start with new database",
             "fresh_start_confirm_title": "Start with a new database?",
-            "fresh_start_confirm_description": "VRCX-0 will keep the current database and failed upgrade files in a recovery folder, then restart with a new empty database. Settings, local history, and saved account data will not appear in the new database.",
-            "fresh_start_restarting": "Archiving the current database and restarting VRCX-0...",
+            "fresh_start_confirm_description": "VRCX-0-Nanashi will keep the current database and failed upgrade files in a recovery folder, then restart with a new empty database. Settings, local history, and saved account data will not appear in the new database.",
+            "fresh_start_restarting": "Archiving the current database and restarting VRCX-0-Nanashi...",
             "fresh_start_failed": "Could not create a new database.",
-            "upgrade_keep_open": "Please keep VRCX-0 open until this finishes.",
+            "upgrade_keep_open": "Please keep VRCX-0-Nanashi open until this finishes.",
             "failure_reason": "Reason",
-            "restart_app": "Restart VRCX-0"
+            "restart_app": "Restart VRCX-0-Nanashi"
         },
         "file": {
             "not_image": "File isn't an image",
@@ -6680,7 +6685,7 @@
             "modal": {
                 "launch_vrchat": "Launch VRChat",
                 "launch": "Launch",
-                "vrchat_is_already_running_continue_launching_this_instance": "VRChat is already running. VRCX-0 will send another launch request to the running client. If multiple clients are open, the game log, current location, player list, and some background services may be unreliable. Continue?"
+                "vrchat_is_already_running_continue_launching_this_instance": "VRChat is already running. VRCX-0-Nanashi will send another launch request to the running client. If multiple clients are open, the game log, current location, player list, and some background services may be unreliable. Continue?"
             },
             "dynamic": {
                 "value_copied": "{value} copied"
@@ -6766,15 +6771,15 @@
             },
             "error": {
                 "failed_upgrade_description": "The previous database upgrade failed. This database cannot be used until it is repaired manually.",
-                "apply_upgrade_failed": "VRCX-0 failed to apply a local database upgrade",
-                "legacy_migration_restart_failed": "VRCX-0 couldn't restart to migrate your existing VRCX data. You can try again, or skip to continue with the current database.",
-                "newer_schema_requires_newer_app": "This database uses schema version {value}, but this VRCX-0 version only supports up to {value2}. Install the latest VRCX-0 version to open it."
+                "apply_upgrade_failed": "VRCX-0-Nanashi failed to apply a local database upgrade",
+                "legacy_migration_restart_failed": "VRCX-0-Nanashi couldn't restart to migrate your existing VRCX data. You can try again, or skip to continue with the current database.",
+                "newer_schema_requires_newer_app": "This database uses schema version {value}, but this VRCX-0-Nanashi version only supports up to {value2}. Install the latest VRCX-0-Nanashi version to open it."
             },
             "success": {
                 "database_update_complete": "Database update complete"
             },
             "action": {
-                "refresh_config_failed_after_upgrade": "VRCX-0 upgraded the database, but failed to refresh local configuration. Please restart the application",
+                "refresh_config_failed_after_upgrade": "VRCX-0-Nanashi upgraded the database, but failed to refresh local configuration. Please restart the application",
                 "requesting_legacy_migration": "Preparing to migrate your existing VRCX data...",
                 "skipping_legacy_migration": "Skipping migration and setting up your database..."
             }
@@ -6799,7 +6804,7 @@
         "background_maintenance": {
             "label": {
                 "vrchat_registry_backup": "VRChat Registry Backup",
-                "vrcx_update_available": "VRCX-0 update available"
+                "vrcx_update_available": "VRCX-0-Nanashi update available"
             },
             "description": {
                 "registry_backup_restore_description": "VRChat registry settings are missing, and a saved backup is available. Restore it before starting VRChat."
@@ -6809,7 +6814,7 @@
     "repository": {
         "sqlite_repository": {
             "modal": {
-                "please_repair_or_delete_your_database_file_by_fo": "Please repair or delete your database file. See the VRCX-0 database repair instructions for details.",
+                "please_repair_or_delete_your_database_file_by_fo": "Please repair or delete your database file. See the VRCX-0-Nanashi database repair instructions for details.",
                 "your_database_is_corrupted": "Your database is corrupted",
                 "disk_full_description": "The disk containing the database is full",
                 "disk_full_title": "Disk containing database is full",
@@ -6908,11 +6913,11 @@
     },
     "linux_rendering": {
         "title": "Hardware acceleration (experimental)",
-        "description": "Applies after restarting VRCX-0. After enabling, confirm within 30 seconds of startup; otherwise acceleration is turned off and VRCX-0 restarts.",
-        "saved": "Saved. Restart VRCX-0 to apply.",
+        "description": "Applies after restarting VRCX-0-Nanashi. After enabling, confirm within 30 seconds of startup; otherwise acceleration is turned off and VRCX-0-Nanashi restarts.",
+        "saved": "Saved. Restart VRCX-0-Nanashi to apply.",
         "restart_now": "Restart now",
         "confirm_title": "Is the interface displaying correctly?",
-        "confirm_description": "Without confirmation within 30 seconds of startup, VRCX-0 turns off hardware acceleration and restarts.",
+        "confirm_description": "Without confirmation within 30 seconds of startup, VRCX-0-Nanashi turns off hardware acceleration and restarts.",
         "restore": "Restore and restart",
         "keep": "Looks good, keep it",
         "failed": "Could not change the rendering setting. Please try again."
