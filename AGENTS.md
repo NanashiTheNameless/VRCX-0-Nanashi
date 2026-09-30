@@ -13,8 +13,9 @@ changes, and treat it as authoritative where this file is silent.
 
 The React frontend lives in `src/features/<domain>/`. The Rust backend is a Cargo
 workspace of 26 crates under `crates/`, plus `src-tauri` (27 members total).
-`crates/overlay-devtool` is left over on disk and is not a workspace member;
-`cargo` will not build it.
+
+npm is the only supported package manager. `package-lock.json` is the sole
+lockfile; CI runs `npm ci`. Do not reintroduce a pnpm or yarn lockfile.
 
 ## Fork invariants
 

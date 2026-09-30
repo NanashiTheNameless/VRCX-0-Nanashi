@@ -26,6 +26,19 @@ pub struct LinuxRenderingSnapshot {
 #[cfg(target_os = "linux")]
 static ENVIRONMENT_OVERRIDE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 
+/// Whether `WEBKIT_DISABLE_DMABUF_RENDERER` is set to a value that actually
+/// disables the DMABUF renderer. WebKit treats "0" as disabled-by-false, so
+/// only a truthy value hands rendering control to the environment.
+#[cfg(target_os = "linux")]
+fn environment_override_active() -> bool {
+    std::env::var(DMABUF_RENDERER_ENV)
+        .map(|value| {
+            let value = value.trim();
+            !value.is_empty() && !matches!(value, "0" | "false" | "False" | "FALSE" | "no" | "off")
+        })
+        .unwrap_or(false)
+}
+
 #[derive(Default)]
 pub struct LinuxRenderingState {
     trial_deadline: Mutex<Option<Instant>>,
@@ -37,7 +50,12 @@ pub fn apply_webkit_workaround() {
     {
         use webkit2gtk_nvidia_quirk::{apply_workaround_with_options, ApplyWorkaroundOptions};
 
-        let _ = ENVIRONMENT_OVERRIDE.set(std::env::var_os(DMABUF_RENDERER_ENV).is_some());
+        // Only a truthy value counts as an external override. `resolve` sets
+        // this variable in our own process environment before WebKit starts,
+        // and a restart re-execs with it still set, so testing mere presence
+        // would treat our own "0" (acceleration on) as an override and leave
+        // the settings snapshot unresolved forever.
+        let _ = ENVIRONMENT_OVERRIDE.set(environment_override_active());
         apply_workaround_with_options(ApplyWorkaroundOptions::default());
     }
 }
@@ -165,4 +183,44 @@ fn write_mode(app: &AppHandle, mode: &str) -> Result<(), String> {
     let host = state.runtime_host();
     host.storage_set(STORAGE_KEY.to_string(), mode.to_string());
     host.storage_flush().map_err(|error| error.to_string())
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::environment_override_active;
+
+    // `resolve` writes this variable in our own environment before WebKit
+    // starts, and a restart re-execs with it still set. Presence alone must
+    // not be read as an override, or the settings snapshot never resolves.
+    #[test]
+    fn own_disabling_values_are_not_treated_as_an_override() {
+        let previous = std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").ok();
+        for value in ["0", "", "false", "off", "no"] {
+            std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", value);
+            assert!(
+                !environment_override_active(),
+                "{value:?} must not count as an environment override"
+            );
+        }
+        match previous {
+            Some(value) => std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", value),
+            None => std::env::remove_var("WEBKIT_DISABLE_DMABUF_RENDERER"),
+        }
+    }
+
+    #[test]
+    fn genuinely_disabling_values_are_an_override() {
+        let previous = std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").ok();
+        for value in ["1", "true", "yes", "on"] {
+            std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", value);
+            assert!(
+                environment_override_active(),
+                "{value:?} must count as an environment override"
+            );
+        }
+        match previous {
+            Some(value) => std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", value),
+            None => std::env::remove_var("WEBKIT_DISABLE_DMABUF_RENDERER"),
+        }
+    }
 }

@@ -85,7 +85,7 @@ export function GalleryFileCard({
             imageFit={tab === 'gallery' ? 'cover' : 'contain'}
             isCurrent={isCurrent}
             currentLabel={t('dialog.gallery_icons.current')}
-            menuLabel={t('aria.more')}
+            menuLabel={t('accessibility.more')}
             placeholderIcon={ImageIcon}
             hideContent
             selectable

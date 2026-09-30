@@ -13,6 +13,11 @@ export default defineConfig({
     test: {
         environment: 'node',
         setupFiles: ['src/test/setup.ts'],
+        // The userEvent-driven integration tests drive dozens of pointer
+        // actions per test. They pass in ~2-3s alone but scale past the 5s
+        // default when the suite runs in parallel, so the default fails them
+        // intermittently and the aborted runs corrupt the tests that follow.
+        testTimeout: 20000,
         exclude: [...configDefaults.exclude, '.claude/**']
     }
 });
