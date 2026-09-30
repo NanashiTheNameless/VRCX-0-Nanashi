@@ -155,7 +155,7 @@ impl Default for VrOverlayRuntimeConfig {
             hmd: HmdNotificationConfig::default(),
             render: WristOverlayRenderOptions::default(),
             locale: OverlayLocale::default(),
-            dt_hour12: false,
+            dt_hour12: true,
             show_instance_id_in_location: false,
             wrist_pages: WristPageOrder::default(),
             wrist_players_sort: WristPlayersSort::Name,
@@ -1112,6 +1112,7 @@ fn wrist_surface_configs(
                 config.render.size,
                 config.button,
                 force_visible,
+                config.wrist_timeout_secs,
             )
         })
         .collect()
@@ -1134,8 +1135,9 @@ fn wrist_surface_config(
     size: WristOverlaySizePreset,
     button: OverlayActivationButton,
     force_visible: bool,
+    timeout_secs: u8,
 ) -> OverlaySurfaceConfig {
-    let timeout_ms = 15000; // Default 15 seconds
+    let timeout_ms = u64::from(timeout_secs) * 1_000;
     OverlaySurfaceConfig {
         surface_id: OverlaySurfaceId::new(surface_id),
         size: size.overlay_size(),

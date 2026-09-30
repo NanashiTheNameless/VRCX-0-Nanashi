@@ -355,7 +355,7 @@ export async function loadPreferenceSnapshot() {
         storageRepository.getString('VRCX_CloseToTray', 'false'),
         storageRepository.getString('VRCX_SystemWindowFrame', 'false'),
         configRepository.getBool('dtIsoFormat', false),
-        configRepository.getBool('dtHour12', false),
+        configRepository.getBool('dtHour12', true),
         configRepository.getObject('VRCX_trustColor', null),
         getPrefetchedSystemCulture() ??
             commands

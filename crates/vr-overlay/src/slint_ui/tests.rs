@@ -402,7 +402,8 @@ fn wrist_feed_item_preserves_actor_detail_and_muted_media_detail() {
     assert_eq!(favorite_item.actor.to_string(), "Ada");
     assert_eq!(favorite_item.detail.to_string(), "invited you");
     assert!(favorite_item.show_accent);
-    assert!(!media_item.has_actor);
+    assert!(media_item.has_actor);
+    assert_eq!(media_item.actor.to_string(), "Player");
     assert_eq!(media_item.detail.to_string(), "Muted media row");
     assert_eq!(
         media_item.detail_color,

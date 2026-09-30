@@ -329,7 +329,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     showUserDialogNameplateEffect: true,
     weekStartsOn: 1,
     dtIsoFormat: false,
-    dtHour12: false,
+    dtHour12: true,
     hideUserNotes: false,
     hideUserMemos: false,
     friendLogNotificationDot: true,

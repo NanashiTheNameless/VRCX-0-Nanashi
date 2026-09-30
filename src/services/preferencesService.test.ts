@@ -334,7 +334,7 @@ describe('preferencesService characterization', () => {
             notificationTimeout: 9000,
             tableDensity: 'compact',
             dtIsoFormat: false,
-            dtHour12: false
+            dtHour12: true
         });
         expect(usePreferencesStore.getState()).toMatchObject({
             preferencesHydrated: true,

@@ -317,7 +317,7 @@ fn wrist_feed_model(rows: &[FeedLine], dark_background: bool) -> ModelRc<WristFe
 
 pub(super) fn wrist_feed_item(row: &FeedLine, dark_background: bool) -> WristFeedItem {
     let actor = row.actor_text.trim();
-    let (actor, detail, has_actor) = if actor.is_empty() || row.relation == FeedRelation::None {
+    let (actor, detail, has_actor) = if actor.is_empty() {
         ("", row.detail.trim().to_string(), false)
     } else {
         (actor, detail_without_actor(row.detail.trim(), actor), true)

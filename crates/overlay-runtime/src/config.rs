@@ -100,8 +100,8 @@ pub(super) fn load_runtime_config(config: &ConfigRepository) -> VrOverlayRuntime
         .map(|value| OverlayLocale::from_config(&value))
         .unwrap_or_default();
     let dt_hour12 = config
-        .get_bool(DATE_TIME_HOUR12_CONFIG_KEY, false)
-        .unwrap_or(false);
+        .get_bool(DATE_TIME_HOUR12_CONFIG_KEY, true)
+        .unwrap_or(true);
     let show_instance_id_in_location = config
         .get_bool(SHOW_INSTANCE_ID_IN_LOCATION_CONFIG_KEY, false)
         .unwrap_or(false);

@@ -70,7 +70,7 @@ export const ConfigKeys = defineConfigKeys({
     customFontSecondary: { type: 'string', default: '' },
     customFontOverride: { type: 'string', default: '' },
     cjkFontPack: { type: 'string', default: 'system' },
-    dtHour12: { type: 'bool', default: false },
+    dtHour12: { type: 'bool', default: true },
     dtIsoFormat: { type: 'bool', default: false },
     hideNicknames: { type: 'bool', default: false },
     showInstanceIdInLocation: { type: 'bool', default: false },
