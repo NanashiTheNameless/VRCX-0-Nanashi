@@ -386,8 +386,8 @@ jobs:
                       echo "Missing macOS updater archive or signature in $updater_dir" >&2
                       exit 1
                   fi
-                  mv "$archive_path" "$updater_dir/update_macos_universal.app.tar.gz"
-                  mv "${archive_path}.sig" "$updater_dir/update_macos_universal.app.tar.gz.sig"
+                  mv "$archive_path" "$updater_dir/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_macos_universal.app.tar.gz"
+                  mv "${archive_path}.sig" "$updater_dir/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_macos_universal.app.tar.gz.sig"
 
             - uses: actions/upload-artifact@v7
               with:
@@ -450,7 +450,7 @@ jobs:
               run: |
                   # One universal archive serves both Apple Silicon and Intel installs.
                   manifest_path="release-assets/latest_linux_and_macos.json"
-                  archive_name="update_macos_universal.app.tar.gz"
+                  archive_name="VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_macos_universal.app.tar.gz"
                   for target in macos-aarch64-stable macos-x86_64-stable; do
                       node scripts/create-tauri-updater-manifest.ts \
                           --version "${{ needs.prepare.outputs.build_version }}" \
