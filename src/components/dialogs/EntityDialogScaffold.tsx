@@ -189,7 +189,7 @@ function EntityDialogTabContent({
             value={value}
             keepMounted={forceMount || undefined}
             className={cn(
-                'm-0 min-h-0 flex-1 overflow-auto pt-4 data-hidden:hidden',
+                'm-0 min-h-0 flex-1 overflow-auto px-1 pt-4 pb-1 data-hidden:hidden',
                 className
             )}
         >
@@ -240,7 +240,7 @@ function EntityMemoTextarea({
 
     return (
         <div className="box-border flex w-full cursor-default items-center p-1.5 text-sm">
-            <div className="flex-1 overflow-hidden">
+            <div className="min-w-0 flex-1">
                 <span className="block truncate leading-5 font-medium">
                     {label}
                 </span>
@@ -560,7 +560,7 @@ function EntityInfoBlock({
                 'group/info-item flex items-start rounded-lg px-2 py-1.5 text-left text-sm transition-colors outline-none [&>svg:not([class*=size-])]:size-3.5',
                 full ? 'w-full' : wide ? 'w-80' : 'w-44',
                 onClick
-                    ? 'hover:bg-muted active:bg-muted/70 focus-visible:border-ring focus-visible:ring-ring/50 cursor-pointer focus-visible:ring-3'
+                    ? 'focus-visible:border-ring focus-visible:ring-ring/50 cursor-pointer hover:bg-(--state-hover-surface) focus-visible:ring-3 active:bg-(--state-pressed-surface)'
                     : 'cursor-default'
             )}
         >

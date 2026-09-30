@@ -62,7 +62,7 @@ export function DashboardWidgetTimelineRow({
     return (
         <>
             {startsDay ? <DashboardWidgetDayDivider value={value} /> : null}
-            <div className="hover:bg-muted/35 grid min-h-8 grid-cols-[4.75rem_minmax(0,1fr)] items-center gap-2 px-2 py-1 text-sm">
+            <div className="grid min-h-8 grid-cols-[4.75rem_minmax(0,1fr)] items-center gap-2 px-2 py-1 text-sm hover:bg-(--state-hover-surface)">
                 <DashboardWidgetTime value={value} />
                 {children}
             </div>

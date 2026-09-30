@@ -262,7 +262,7 @@ export function GroupDialogHeaderSection({
                                         <Button
                                             type="button"
                                             variant="ghost"
-                                            className="hover:text-primary h-auto min-w-0 flex-1 justify-start overflow-hidden p-0 text-left text-lg leading-tight font-semibold whitespace-normal hover:bg-transparent"
+                                            className="h-auto min-w-0 flex-1 justify-start overflow-hidden p-0 text-left text-lg leading-tight font-semibold whitespace-normal hover:bg-transparent"
                                             onClick={onCopyGroupName}
                                         >
                                             <span className="line-clamp-2 min-w-0 break-words">
@@ -301,7 +301,7 @@ export function GroupDialogHeaderSection({
                                     <Button
                                         type="button"
                                         variant="ghost"
-                                        className="text-muted-foreground hover:text-primary h-auto max-w-full justify-start gap-1 p-0 text-xs font-normal hover:bg-transparent"
+                                        className="text-muted-foreground hover:text-foreground h-auto max-w-full justify-start gap-1 p-0 text-xs font-normal hover:bg-transparent"
                                         onClick={onOpenOwner}
                                     >
                                         <UserIcon data-icon="inline-start" />

@@ -43,7 +43,7 @@ export function SessionSidebar() {
                             key={session.id}
                             className={cn(
                                 'group flex items-center gap-1 rounded-md text-sm',
-                                'hover:bg-card/60',
+                                'hover:bg-(--state-hover-surface)',
                                 session.id === activeSessionId &&
                                     'bg-card text-foreground'
                             )}

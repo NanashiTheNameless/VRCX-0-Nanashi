@@ -253,7 +253,7 @@ export function FeedColumnsManagerDialog({
                                 <PlusIcon data-icon="icon" />
                             </Button>
                         </div>
-                        <div className="flex min-h-0 flex-col gap-1 overflow-y-auto">
+                        <div className="flex min-h-0 flex-col gap-1 overflow-y-auto p-1">
                             {draftColumns.map((column) => (
                                 <div
                                     key={column.id}
@@ -294,7 +294,7 @@ export function FeedColumnsManagerDialog({
                         </div>
                     </div>
                     {selectedColumn ? (
-                        <FieldGroup className="gap-4 overflow-y-auto pr-1">
+                        <FieldGroup className="-mx-1 gap-4 overflow-y-auto px-1">
                             <Field>
                                 <FieldLabel htmlFor="feed-column-title">
                                     {t('view.feed.columns.title')}

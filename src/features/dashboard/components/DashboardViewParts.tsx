@@ -275,7 +275,7 @@ export function DashboardPanelSelectorDialog({
                         {t('view.dashboard.action.select_panel')}
                     </DialogTitle>
                 </DialogHeader>
-                <div className="min-h-0 overflow-y-auto">
+                <div className="min-h-0 overflow-y-auto p-1">
                     <div className="grid gap-2 sm:grid-cols-2">
                         <Button
                             type="button"

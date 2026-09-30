@@ -176,7 +176,7 @@ export function FriendsLocationsCollapsibleGroupHeader({
         <Button
             type="button"
             variant="ghost"
-            className="aria-expanded:hover:bg-muted h-auto w-full cursor-pointer justify-start gap-2 px-2 py-2 text-left text-sm font-semibold select-none aria-expanded:bg-transparent"
+            className="h-auto w-full cursor-pointer justify-start gap-2 px-2 py-2 text-left text-sm font-semibold select-none aria-expanded:bg-transparent aria-expanded:hover:bg-(--state-hover-surface)"
             aria-expanded={!section.collapsed}
             onClick={() => onToggle(section.groupKey)}
         >

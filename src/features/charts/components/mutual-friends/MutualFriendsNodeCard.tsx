@@ -87,7 +87,7 @@ export function MutualFriendsNodeCard({
                 <button
                     type="button"
                     onClick={onFocusCommunity}
-                    className="hover:bg-foreground/5 mt-3 flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors duration-150 ease-out active:translate-y-px"
+                    className="mt-3 flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left transition-colors duration-150 ease-out hover:bg-(--state-hover-surface) active:translate-y-px"
                 >
                     <span
                         className="size-2.5 shrink-0 rounded-full"

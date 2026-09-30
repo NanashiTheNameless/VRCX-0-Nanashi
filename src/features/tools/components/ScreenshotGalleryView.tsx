@@ -572,7 +572,7 @@ export function ScreenshotGalleryView({
                 </div>
                 <nav
                     aria-label={t('dialog.screenshot_metadata.folders')}
-                    className="min-h-0 flex-1 overflow-auto pr-1"
+                    className="min-h-0 flex-1 overflow-auto p-1"
                 >
                     {isTreeLoading ? (
                         <div className="flex flex-col gap-2">

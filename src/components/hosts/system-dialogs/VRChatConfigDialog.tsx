@@ -465,7 +465,7 @@ export function VRChatConfigDialog({
                         {t('dialog.config_json.description2')}
                     </DialogDescription>
                 </DialogHeader>
-                <div className="min-h-0 overflow-y-auto pr-1">
+                <div className="-mx-1 min-h-0 overflow-y-auto px-1">
                     <FieldGroup className="gap-6">
                         <FieldSet>
                             <FieldLegend>

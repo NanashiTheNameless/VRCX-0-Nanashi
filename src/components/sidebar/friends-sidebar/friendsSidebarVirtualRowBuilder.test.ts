@@ -97,8 +97,7 @@ describe('friendsSidebarVirtualRowBuilder', () => {
             'footer'
         ]);
         expect(rows[0]).toMatchObject({
-            type: 'section',
-            count: 2
+            type: 'section'
         });
         expect(rows[1]).toMatchObject({
             type: 'instance-header',

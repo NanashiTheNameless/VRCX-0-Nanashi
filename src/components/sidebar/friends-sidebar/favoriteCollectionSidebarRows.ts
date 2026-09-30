@@ -156,7 +156,6 @@ export function buildFavoriteCollectionSidebarVirtualRows({
         pushSection(nextRows, {
             id: 'sameInstance',
             title: t('side_panel.same_instance'),
-            count: sameInstanceGroups.length,
             open: openGroups.sameInstance
         });
         if (openGroups.sameInstance) {

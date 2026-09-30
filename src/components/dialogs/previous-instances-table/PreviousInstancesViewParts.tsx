@@ -267,7 +267,7 @@ export function InstanceOwnerCell({
         <Button
             type="button"
             variant="ghost"
-            className="hover:text-primary h-auto max-w-full justify-start p-0 text-left text-xs hover:bg-transparent"
+            className="h-auto max-w-full justify-start p-0 text-left text-xs hover:bg-transparent"
             onClick={() =>
                 openUserDialog({
                     userId,
@@ -316,7 +316,7 @@ function PreviousInstancePlayerNameButton({
             <Button
                 type="button"
                 variant="ghost"
-                className="hover:text-primary h-auto max-w-full min-w-0 justify-start p-0 text-left hover:bg-transparent"
+                className="h-auto max-w-full min-w-0 justify-start p-0 text-left hover:bg-transparent"
                 onClick={() => {
                     if (userId) {
                         openUserDialog({

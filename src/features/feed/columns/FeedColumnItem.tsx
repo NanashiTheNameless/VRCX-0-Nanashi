@@ -87,7 +87,7 @@ export function FeedColumnItem(props: FeedColumnItemProps) {
         <>
             <div
                 className={cn(
-                    'border-border/35 hover:bg-accent/20 group/feed-column-item bg-background/20 flex min-w-0 items-start border-b transition-colors',
+                    'border-border/35 group/feed-column-item bg-background/20 flex min-w-0 items-start border-b transition-colors hover:bg-(--state-hover-surface)',
                     animateEntry && 'feed-column-row-new',
                     densityConfig.rowPaddingClassName
                 )}

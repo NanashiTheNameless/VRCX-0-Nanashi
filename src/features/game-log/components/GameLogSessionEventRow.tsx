@@ -167,7 +167,7 @@ function PlayerNameButton({ item }: { item: GameLogSessionMember }) {
         <Button
             type="button"
             variant="ghost"
-            className="hover:text-primary h-auto min-w-0 justify-start p-0 text-left font-medium hover:bg-transparent"
+            className="h-auto min-w-0 justify-start p-0 text-left font-medium hover:bg-transparent"
             onClick={() => {
                 openGameLogUser(item, t);
             }}
@@ -191,7 +191,7 @@ function PlayerActivityRow({
     showDuration: boolean;
 }) {
     return (
-        <div className="hover:bg-muted/35 grid min-h-7 grid-cols-[4.75rem_1rem_minmax(0,1fr)_5rem] items-center gap-2 rounded-md px-2 py-0.5 text-sm">
+        <div className="grid min-h-7 grid-cols-[4.75rem_1rem_minmax(0,1fr)_5rem] items-center gap-2 rounded-md px-2 py-0.5 text-sm hover:bg-(--state-hover-surface)">
             <EventTime value={item.created_at} />
             <AffinityBadge
                 isFriend={item?.isFriend}
@@ -233,7 +233,7 @@ function SinglePlayerActivityRow({
     return (
         <div
             className={cn(
-                'hover:bg-muted/35 grid min-h-8 items-center gap-2 rounded-md px-2 py-1 text-sm',
+                'grid min-h-8 items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-(--state-hover-surface)',
                 PLAYER_EVENT_GRID_CLASS
             )}
         >
@@ -331,7 +331,7 @@ function GroupActivityRow({
                         variant="ghost"
                         size="sm"
                         className={cn(
-                            'hover:bg-muted/35 grid min-h-8 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm',
+                            'grid min-h-8 w-full items-center gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-(--state-hover-surface)',
                             PLAYER_EVENT_GRID_CLASS
                         )}
                     >
@@ -390,7 +390,7 @@ function VideoActivityRow({ event }: { event: GameLogSessionEvent }) {
         <ContextMenu>
             <ContextMenuTrigger
                 render={
-                    <div className="hover:bg-muted/35 grid min-h-8 grid-cols-[4.75rem_1rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-1 text-sm">
+                    <div className="grid min-h-8 grid-cols-[4.75rem_1rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-1 text-sm hover:bg-(--state-hover-surface)">
                         <EventTime value={event.created_at} />
                         <VideoIcon className="text-muted-foreground size-3.5 shrink-0" />
                         <div className="flex min-w-0 items-center gap-1.5">

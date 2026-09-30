@@ -190,7 +190,7 @@ export function useGameLogColumns({
                                     <Button
                                         type="button"
                                         variant="ghost"
-                                        className="hover:text-primary h-auto max-w-full min-w-0 p-0 text-left text-sm hover:bg-transparent"
+                                        className="h-auto max-w-full min-w-0 p-0 text-left text-sm hover:bg-transparent"
                                         onClick={() => {
                                             openGameLogUser(row.original, t);
                                         }}
@@ -272,7 +272,7 @@ export function useGameLogColumns({
                                             <Button
                                                 type="button"
                                                 variant="ghost"
-                                                className="hover:text-primary h-auto min-w-0 p-0 text-left text-sm hover:bg-transparent"
+                                                className="h-auto min-w-0 p-0 text-left text-sm hover:bg-transparent"
                                                 onClick={() =>
                                                     openWorldDialog({
                                                         worldId: worldTarget,

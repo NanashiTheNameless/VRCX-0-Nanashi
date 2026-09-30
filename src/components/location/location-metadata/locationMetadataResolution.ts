@@ -83,8 +83,10 @@ export function createEmptyMetadata(
         instanceName: '',
         isClosed: false,
         groupName: '',
+        groupNamePending: false,
         worldName: '',
-        worldNameHint: ''
+        worldNameHint: '',
+        worldNamePending: false
     };
 }
 
@@ -198,8 +200,11 @@ export function resolveEntryMetadata(
         cachedInstances,
         currentEndpoint,
         groupProfilesById,
+        pendingGroupIds,
         locationHintsByKey,
         localWorldNamesById,
+        settledLocalWorldIds,
+        settledWorldProfileIds,
         worldProfilesById
     }: MetadataContext
 ): LocationMetadata {
@@ -227,11 +232,14 @@ export function resolveEntryMetadata(
         readInstanceDisplayName(cachedInstance) ||
         normalizeString(entry.instanceName) ||
         normalizeString(entry.locationInfo?.instanceName);
-    const groupName =
+    const knownGroupName =
         normalizeGroupNameHint(entry.groupHint, entry.groupId) ||
         queryGroupName ||
-        cachedGroupName ||
-        entry.groupId;
+        cachedGroupName;
+    const groupNamePending = Boolean(
+        entry.groupId && !knownGroupName && pendingGroupIds.has(entry.groupId)
+    );
+    const groupName = knownGroupName || (groupNamePending ? '' : entry.groupId);
     const queryWorldName = normalizeWorldNameHint(
         worldProfilesById.get(entry.worldId)?.name,
         entry.locationInfo,
@@ -266,8 +274,17 @@ export function resolveEntryMetadata(
             locationHint?.isClosed
         ),
         groupName,
+        groupNamePending,
         worldName,
-        worldNameHint
+        worldNameHint,
+        worldNamePending: Boolean(
+            entry.worldId &&
+            !worldName &&
+            !(
+                settledLocalWorldIds.has(entry.worldId) &&
+                settledWorldProfileIds.has(entry.worldId)
+            )
+        )
     };
 }
 

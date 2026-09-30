@@ -2,6 +2,7 @@ import { AlertTriangleIcon, LockIcon } from 'lucide-react';
 import type { ReactElement, ReactNode, SyntheticEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { LocationPendingText } from '@/components/location/LocationPendingText';
 import { RegionCodeBadge } from '@/components/location/RegionCodeBadge';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/ui/shadcn/spinner';
@@ -33,10 +34,12 @@ export function LocationDisplay({
     className = '',
     disableTooltip = false,
     groupName = '',
+    groupNamePending = false,
     instanceName = '',
     isAgeRestricted = false,
     isClosed = false,
     isLocationLink = false,
+    isPending = false,
     isTraveling = false,
     onOpenGroup,
     onOpenLocation,
@@ -54,10 +57,12 @@ export function LocationDisplay({
     className?: string;
     disableTooltip?: boolean;
     groupName?: string;
+    groupNamePending?: boolean;
     instanceName?: string;
     isAgeRestricted?: boolean;
     isClosed?: boolean;
     isLocationLink?: boolean;
+    isPending?: boolean;
     isTraveling?: boolean;
     onOpenGroup?: (event: SyntheticEvent<HTMLElement>) => void;
     onOpenLocation?: (event: SyntheticEvent<HTMLElement>) => void;
@@ -107,7 +112,8 @@ export function LocationDisplay({
                         disabled={
                             disableTooltip ||
                             !tooltipContent ||
-                            shouldShowInstanceId
+                            shouldShowInstanceId ||
+                            isPending
                         }
                         content={tooltipContent}
                     >
@@ -123,7 +129,7 @@ export function LocationDisplay({
                             className={cn(
                                 'x-location inline-flex max-w-full min-w-0 flex-nowrap items-center truncate overflow-hidden text-left',
                                 isLocationLink
-                                    ? 'hover:text-primary cursor-pointer text-inherit underline-offset-4'
+                                    ? 'hover:text-foreground cursor-pointer text-inherit'
                                     : 'cursor-default'
                             )}
                             onClick={onOpenLocation}
@@ -138,41 +144,51 @@ export function LocationDisplay({
                                 />
                             ) : null}
                             <span className="min-w-0 flex-1 truncate">
-                                {canHighlightWorldName ? (
-                                    <>
-                                        <span className={worldNameClassName}>
-                                            {worldName}
-                                        </span>
-                                        <span>
-                                            {text.slice(worldName.length)}
-                                        </span>
-                                    </>
-                                ) : (
-                                    <span>{text}</span>
-                                )}
-                                {shouldShowInstanceId && instanceName ? (
-                                    <span className="ml-1">{`· #${instanceName}`}</span>
-                                ) : null}
-                                {showGroupLink && groupName ? (
-                                    <span
-                                        role="button"
-                                        tabIndex={0}
-                                        className="hover:text-primary ml-0.5 cursor-pointer"
-                                        onClick={onOpenGroup}
-                                        onKeyDown={(event) => {
-                                            event.stopPropagation();
-                                            if (
-                                                event.key === 'Enter' ||
-                                                event.key === ' '
-                                            ) {
-                                                event.preventDefault();
-                                                onOpenGroup?.(event);
-                                            }
-                                        }}
-                                    >
-                                        ({groupName})
-                                    </span>
-                                ) : null}
+                                <LocationPendingText pending={isPending}>
+                                    {canHighlightWorldName ? (
+                                        <>
+                                            <span
+                                                className={worldNameClassName}
+                                            >
+                                                {worldName}
+                                            </span>
+                                            <span>
+                                                {text.slice(worldName.length)}
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <span>{text}</span>
+                                    )}
+                                    {shouldShowInstanceId && instanceName ? (
+                                        <span className="ml-1">{`· #${instanceName}`}</span>
+                                    ) : null}
+                                    {showGroupLink &&
+                                    (groupName || groupNamePending) ? (
+                                        <LocationPendingText
+                                            pending={groupNamePending}
+                                            placeholderClassName="ml-1 w-16"
+                                        >
+                                            <span
+                                                role="button"
+                                                tabIndex={0}
+                                                className="ml-0.5 cursor-pointer"
+                                                onClick={onOpenGroup}
+                                                onKeyDown={(event) => {
+                                                    event.stopPropagation();
+                                                    if (
+                                                        event.key === 'Enter' ||
+                                                        event.key === ' '
+                                                    ) {
+                                                        event.preventDefault();
+                                                        onOpenGroup?.(event);
+                                                    }
+                                                }}
+                                            >
+                                                ({groupName})
+                                            </span>
+                                        </LocationPendingText>
+                                    ) : null}
+                                </LocationPendingText>
                             </span>
                         </LocationTrigger>
                     </LocationTooltip>

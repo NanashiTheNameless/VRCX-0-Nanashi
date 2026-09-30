@@ -11,8 +11,10 @@ const mocks = vi.hoisted(() => ({
         instanceName: '12345',
         isClosed: false,
         groupName: '',
+        groupNamePending: false,
         worldName: 'Test World',
-        worldNameHint: ''
+        worldNameHint: '',
+        worldNamePending: false
     },
     preferencesState: {
         preferencesHydrated: true,
@@ -162,8 +164,10 @@ describe('Location', () => {
         mocks.metadata.instanceName = '12345';
         mocks.metadata.isClosed = false;
         mocks.metadata.groupName = '';
+        mocks.metadata.groupNamePending = false;
         mocks.metadata.worldName = 'Test World';
         mocks.metadata.worldNameHint = '';
+        mocks.metadata.worldNamePending = false;
         mocks.preferencesState.preferencesHydrated = true;
         mocks.preferencesState.isAgeGatedInstancesVisible = false;
         mocks.preferencesState.showInstanceIdInLocation = false;
@@ -201,6 +205,42 @@ describe('Location', () => {
 
         expect(html).toContain('loading');
         expect(html).toContain('Test World · Public');
+    });
+
+    it('shows a placeholder instead of the raw world id while the name is pending', () => {
+        mocks.metadata.worldName = '';
+        mocks.metadata.worldNamePending = true;
+
+        const html = renderLocation({
+            location: 'wrld_test:12345~region(jp)'
+        });
+
+        expect(html).toContain('data-slot="location-pending"');
+        expect(html).not.toContain('wrld_test');
+    });
+
+    it('shows the world name with a group placeholder while the group is pending', () => {
+        mocks.metadata.groupNamePending = true;
+
+        const html = renderLocation({
+            location: 'wrld_test:12345~region(jp)~group(grp_test)',
+            showGroupLink: true
+        });
+
+        expect(html).toContain('Test World · Group');
+        expect(html).toContain('data-slot="location-pending"');
+        expect(html).not.toContain('grp_test');
+    });
+
+    it('falls back to the raw world id once the lookup settles without a name', () => {
+        mocks.metadata.worldName = '';
+
+        const html = renderLocation({
+            location: 'wrld_test:12345~region(jp)'
+        });
+
+        expect(html).not.toContain('data-slot="location-pending"');
+        expect(html).toContain('wrld_test · Public');
     });
 
     it('renders sentinel location labels without world metadata', () => {

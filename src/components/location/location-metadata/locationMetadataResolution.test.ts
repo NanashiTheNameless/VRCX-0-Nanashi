@@ -18,8 +18,11 @@ function createContext(): MetadataContext {
         cachedInstances: new Map(),
         currentEndpoint: 'https://api.vrchat.cloud/api/1',
         groupProfilesById: new Map(),
+        pendingGroupIds: new Set(),
         locationHintsByKey: {},
         localWorldNamesById: new Map(),
+        settledLocalWorldIds: new Set(),
+        settledWorldProfileIds: new Set(),
         worldProfilesById: new Map()
     };
 }
@@ -74,6 +77,54 @@ describe('locationMetadataResolution', () => {
         expect(resolveEntryMetadata(entry, context)).toMatchObject({
             groupName: 'Profile Group',
             worldName: 'Profile World'
+        });
+    });
+
+    it('keeps the world name pending until every lookup has settled', () => {
+        const context = createContext();
+        const entry = normalizeMetadataEntry({ currentLocation: LOCATION }, 0);
+
+        expect(resolveEntryMetadata(entry, context).worldNamePending).toBe(
+            true
+        );
+
+        context.settledLocalWorldIds.add(WORLD_ID);
+        expect(resolveEntryMetadata(entry, context).worldNamePending).toBe(
+            true
+        );
+
+        context.settledWorldProfileIds.add(WORLD_ID);
+        expect(resolveEntryMetadata(entry, context)).toMatchObject({
+            worldName: '',
+            worldNamePending: false
+        });
+    });
+
+    it('is not pending once any source provides a world name', () => {
+        const context = createContext();
+        context.localWorldNamesById.set(WORLD_ID, 'Local World');
+        const entry = normalizeMetadataEntry({ currentLocation: LOCATION }, 0);
+
+        expect(resolveEntryMetadata(entry, context)).toMatchObject({
+            worldName: 'Local World',
+            worldNamePending: false
+        });
+    });
+
+    it('hides the raw group id while the group profile is still loading', () => {
+        const context = createContext();
+        context.pendingGroupIds.add(GROUP_ID);
+        const entry = normalizeMetadataEntry({ currentLocation: LOCATION }, 0);
+
+        expect(resolveEntryMetadata(entry, context)).toMatchObject({
+            groupName: '',
+            groupNamePending: true
+        });
+
+        context.pendingGroupIds.clear();
+        expect(resolveEntryMetadata(entry, context)).toMatchObject({
+            groupName: GROUP_ID,
+            groupNamePending: false
         });
     });
 });

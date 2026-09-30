@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { LocationPendingText } from '@/components/location/LocationPendingText';
 import { RegionCodeBadge } from '@/components/location/RegionCodeBadge';
 import type { LocationMetadata } from '@/components/location/useLocationMetadata';
 import { normalizeStateBucket } from '@/domain/users/userFacts';
@@ -235,6 +236,7 @@ export function StaticSidebarLocation({
         accessTypeLabel,
         t
     });
+    const isPending = metadata?.worldNamePending === true;
     const instanceName = String(metadata?.instanceName || '');
     const tooltipContent = instanceName
         ? `${t('dialog.new_instance.instance_id')}: #${instanceName}`
@@ -337,7 +339,7 @@ export function StaticSidebarLocation({
             className={cn(
                 'x-location inline-flex max-w-full min-w-0 flex-nowrap items-center truncate overflow-hidden text-left',
                 isLocationLink
-                    ? 'hover:text-primary cursor-pointer text-inherit underline-offset-4'
+                    ? 'hover:text-foreground cursor-pointer text-inherit'
                     : 'cursor-default'
             )}
         >
@@ -350,21 +352,29 @@ export function StaticSidebarLocation({
                 />
             ) : null}
             <span className="min-w-0 flex-1 truncate">
-                <span>{text}</span>
-                {showInstanceName ? (
-                    <span className="ml-1">{`\u00b7 #${instanceName}`}</span>
-                ) : null}
-                {showGroupLink && metadata?.groupName ? (
-                    <span
-                        role="button"
-                        tabIndex={0}
-                        className="hover:text-primary focus-visible:ring-ring/50 ml-0.5 cursor-pointer text-left font-normal text-inherit focus-visible:ring-[3px] focus-visible:outline-none"
-                        onClick={openGroup}
-                        onKeyDown={openGroupFromKeyboard}
-                    >
-                        ({String(metadata.groupName)})
-                    </span>
-                ) : null}
+                <LocationPendingText pending={isPending}>
+                    <span>{text}</span>
+                    {showInstanceName ? (
+                        <span className="ml-1">{`\u00b7 #${instanceName}`}</span>
+                    ) : null}
+                    {showGroupLink &&
+                    (metadata?.groupName || metadata?.groupNamePending) ? (
+                        <LocationPendingText
+                            pending={metadata.groupNamePending}
+                            placeholderClassName="ml-1 w-16"
+                        >
+                            <span
+                                role="button"
+                                tabIndex={0}
+                                className="hover:text-foreground focus-visible:ring-ring/50 ml-0.5 cursor-pointer text-left font-normal text-inherit focus-visible:ring-[3px] focus-visible:outline-none"
+                                onClick={openGroup}
+                                onKeyDown={openGroupFromKeyboard}
+                            >
+                                ({String(metadata.groupName)})
+                            </span>
+                        </LocationPendingText>
+                    ) : null}
+                </LocationPendingText>
             </span>
         </span>
     );
@@ -378,7 +388,12 @@ export function StaticSidebarLocation({
         >
             <RegionCodeBadge region={String(metadata?.region || '')} />
             <StaticLocationTooltip
-                disabled={!tooltips || !tooltipContent || showInstanceName}
+                disabled={
+                    !tooltips ||
+                    !tooltipContent ||
+                    showInstanceName ||
+                    isPending
+                }
                 content={tooltipContent}
             >
                 <span className="inline-flex max-w-full min-w-0">

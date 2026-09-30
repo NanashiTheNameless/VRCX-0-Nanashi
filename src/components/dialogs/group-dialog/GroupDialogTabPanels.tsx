@@ -266,7 +266,7 @@ export function GroupDialogTabPanels({
         >
             <EntityDialogTabContent
                 value="overview"
-                className="flex flex-col gap-4 px-px pt-3 pb-px"
+                className="flex flex-col gap-4 pt-3"
             >
                 {bannerUrl && !bannerFailed ? (
                     <Button
@@ -523,7 +523,7 @@ export function GroupDialogTabPanels({
             </EntityDialogTabContent>
             <EntityDialogTabContent
                 value="events"
-                className="flex flex-col gap-3 px-px pt-3 pb-px"
+                className="flex flex-col gap-3 pt-3"
             >
                 <GroupEventsTab
                     events={groupEvents}

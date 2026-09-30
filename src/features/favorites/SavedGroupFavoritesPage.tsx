@@ -352,7 +352,7 @@ export function SavedGroupFavoritesPage() {
                                     ) : null}
                                 </div>
                             </div>
-                            <div className="min-h-0 min-w-0 flex-1 overflow-auto pr-1">
+                            <div className="min-h-0 min-w-0 flex-1 overflow-auto p-1">
                                 {loading && !snapshot.collections.length ? (
                                     <EmptyState
                                         variant="panel"

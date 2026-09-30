@@ -78,9 +78,9 @@ the app and across releases.
 | Face Mirror                    | 表情镜                 | 臉部鏡子{ln}          | フェイスミラー{ln}                   |
 | Fallback                       | 备用模型               | 後備角色              | フォールバック                       |
 | Favorite                       | 收藏                   | 收藏                  | お気に入り                           |
-| Favorite Avatars               | 模型收藏               | 收藏的角色            | お気に入りのアバター                 |
-| Favorite Friends               | 收藏的好友             | 收藏的好友            | フレンドをお気に入りに加える         |
-| Favorite Worlds                | 收藏的世界             | 收藏的世界            | お気に入りのワールド                 |
+| Favorite Avatars               | 模型收藏               | 收藏角色              | お気に入りのアバター                 |
+| Favorite Friends               | 好友收藏               | 收藏好友              | フレンドをお気に入りに加える         |
+| Favorite Worlds                | 世界收藏               | 收藏世界              | お気に入りのワールド                 |
 | Favorites                      | 收藏数                 | 收藏                  | お気に入り数                         |
 | Favorites List                 | 收藏列表               | 列表                  | お気に入りリスト                     |
 | Filter                         | 筛选                   | 篩選                  | フィルター                           |

@@ -314,10 +314,6 @@ export function buildFriendsSidebarVirtualRows({
         pushSection(nextRows, {
             id: 'sameInstance',
             title: t('side_panel.same_instance'),
-            count: instanceEntries.reduce(
-                (total, entry) => total + entry.count,
-                0
-            ),
             open: openGroups.sameInstance
         });
         if (openGroups.sameInstance) {

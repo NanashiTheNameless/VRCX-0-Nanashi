@@ -73,7 +73,10 @@ export function InstanceHeaderRow({
                     aria-label={t('side_panel.you_are_here')}
                 />
             ) : null}
-            <Badge variant="outline" className="ml-1.5">
+            <Badge
+                variant="outline"
+                className="text-muted-foreground ml-1.5 font-normal tabular-nums"
+            >
                 {count}
             </Badge>
         </div>

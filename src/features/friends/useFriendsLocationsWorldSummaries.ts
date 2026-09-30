@@ -52,7 +52,7 @@ export function useFriendsLocationsWorldSummaries(
                     ] as const;
                 } catch {
                     requestedRef.current.delete(worldId);
-                    return null;
+                    return [worldId, { name: '', thumbnailUrl: '' }] as const;
                 }
             })
         ).then((entries) => {
@@ -61,10 +61,8 @@ export function useFriendsLocationsWorldSummaries(
             }
             setSummaries((current) => {
                 const next = new Map(current);
-                for (const entry of entries) {
-                    if (entry) {
-                        next.set(entry[0], entry[1]);
-                    }
+                for (const [worldId, summary] of entries) {
+                    next.set(worldId, summary);
                 }
                 return next;
             });

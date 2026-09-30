@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AffinityBadge } from '@/components/affinity/AffinityBadge';
 import { InstanceVisitedBadge } from '@/components/instances/InstanceVisitedBadge';
+import { LocationPendingText } from '@/components/location/LocationPendingText';
 import { RegionCodeBadge } from '@/components/location/RegionCodeBadge';
 import { useInstancePopulation } from '@/components/location/useInstancePopulation';
 import { useLocationMetadata } from '@/components/location/useLocationMetadata';
@@ -65,7 +66,7 @@ function FriendChip({
             <button
                 type="button"
                 className={cn(
-                    'hover:bg-muted focus-visible:ring-ring/50 flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md pr-3 pl-1 text-sm outline-none focus-visible:ring-3',
+                    'focus-visible:ring-ring/50 flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md pr-3 pl-1 text-sm outline-none hover:bg-(--state-hover-surface) focus-visible:ring-3',
                     twoLine ? 'h-10' : 'h-8'
                 )}
                 onClick={onOpen}
@@ -129,7 +130,7 @@ export function FriendsLocationsFriendChips({
     );
 
     return (
-        <div className="-ml-1 grid min-w-0 grid-cols-[repeat(auto-fill,minmax(0,200px))] gap-1.5">
+        <div className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(0,200px))] gap-1.5">
             {friends.map((friend) => (
                 <FriendChip
                     key={friend.id}
@@ -181,7 +182,9 @@ function InstanceRow({
         enabled: parsed.isRealInstance,
         refreshKey: instance.friends.length
     });
-    const groupName = metadata.groupName || instance.groupName;
+    const groupName = metadata.groupNamePending
+        ? ''
+        : metadata.groupName || instance.groupName;
     const label = [
         translateAccessType(parsed.accessTypeName, t, accessTypeLocaleKeyMap),
         parsed.instanceName ? `#${parsed.instanceName}` : ''
@@ -240,24 +243,30 @@ function InstanceRow({
                         location={instance.location}
                         className="shrink-0"
                     />
-                    {groupName ? (
-                        <span
-                            role="button"
-                            tabIndex={0}
-                            className="hover:text-primary min-w-0 cursor-pointer truncate"
-                            onClick={() => onOpenGroup(instance.groupId)}
-                            onKeyDown={(event) => {
-                                if (
-                                    event.key === 'Enter' ||
-                                    event.key === ' '
-                                ) {
-                                    event.preventDefault();
-                                    onOpenGroup(instance.groupId);
-                                }
-                            }}
+                    {groupName || metadata.groupNamePending ? (
+                        <LocationPendingText
+                            pending={metadata.groupNamePending}
+                            className="flex min-w-0"
+                            placeholderClassName="w-16"
                         >
-                            ({groupName})
-                        </span>
+                            <span
+                                role="button"
+                                tabIndex={0}
+                                className="hover:text-foreground min-w-0 cursor-pointer truncate"
+                                onClick={() => onOpenGroup(instance.groupId)}
+                                onKeyDown={(event) => {
+                                    if (
+                                        event.key === 'Enter' ||
+                                        event.key === ' '
+                                    ) {
+                                        event.preventDefault();
+                                        onOpenGroup(instance.groupId);
+                                    }
+                                }}
+                            >
+                                ({groupName})
+                            </span>
+                        </LocationPendingText>
                     ) : null}
                 </span>
             </div>
@@ -284,6 +293,7 @@ export function FriendsLocationsWorldSection({
 }: FriendsLocationsWorldSectionProps) {
     const { t } = useTranslation();
     const name = summary?.name || group.nameHint || group.worldId;
+    const namePending = !summary && !group.nameHint;
     const thumbnailWidth = densityConfig.worldThumbnailWidth;
     const thumbnailHeight = Math.round((thumbnailWidth * 3) / 4);
 
@@ -314,10 +324,15 @@ export function FriendsLocationsWorldSection({
                 <div className="flex h-6 min-w-0 items-baseline gap-2.5">
                     <button
                         type="button"
-                        className="hover:text-foreground/80 focus-visible:text-foreground/80 min-w-0 cursor-pointer truncate text-left text-sm font-semibold outline-none"
+                        className="focus-visible:ring-ring/50 min-w-0 cursor-pointer truncate rounded-sm text-left text-sm font-semibold outline-none focus-visible:ring-3"
                         onClick={() => onOpenWorld(group, name)}
                     >
-                        {name}
+                        <LocationPendingText
+                            pending={namePending}
+                            placeholderClassName="h-3.5 w-32"
+                        >
+                            {name}
+                        </LocationPendingText>
                     </button>
                     {group.instances.length > 1 ? (
                         <span className="text-muted-foreground ml-auto shrink-0 pl-3 text-xs tabular-nums">

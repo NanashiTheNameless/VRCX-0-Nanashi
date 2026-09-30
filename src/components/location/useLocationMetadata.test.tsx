@@ -34,7 +34,10 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
         await importOriginal<typeof import('@tanstack/react-query')>();
     return {
         ...actual,
-        useQueries: () => mocks.groupProfilesById
+        useQueries: () => ({
+            groupProfilesById: mocks.groupProfilesById,
+            pendingGroupIds: new Set()
+        })
     };
 });
 
@@ -113,6 +116,35 @@ describe('useLocationMetadataBatch', () => {
             'Stable World'
         );
         expect(mocks.getWorldProfile).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the world name pending until both lookups settle without a name', async () => {
+        let rejectProfile!: (error: Error) => void;
+        mocks.getWorldProfile.mockReturnValueOnce(
+            new Promise((_, reject) => {
+                rejectProfile = reject;
+            })
+        );
+
+        const { result } = renderHook(() =>
+            useLocationMetadataBatch(metadataEntries())
+        );
+
+        await waitFor(() => {
+            expect(mocks.getWorldNameByWorldId).toHaveBeenCalledTimes(1);
+        });
+        expect(result.current.get(`friend:${WORLD_ID}`)?.worldNamePending).toBe(
+            true
+        );
+
+        rejectProfile(new Error('offline'));
+
+        await waitFor(() => {
+            expect(
+                result.current.get(`friend:${WORLD_ID}`)?.worldNamePending
+            ).toBe(false);
+        });
+        expect(result.current.get(`friend:${WORLD_ID}`)?.worldName).toBe('');
     });
 
     it('treats reordered world ids as the same request set', async () => {

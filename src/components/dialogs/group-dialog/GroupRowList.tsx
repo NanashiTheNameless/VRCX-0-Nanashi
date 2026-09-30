@@ -107,7 +107,7 @@ export function GroupPostUserButton({
         <Button
             type="button"
             variant="ghost"
-            className="hover:text-primary h-auto max-w-full justify-start gap-1 p-0 text-left text-xs hover:bg-transparent"
+            className="h-auto max-w-full justify-start gap-1 p-0 text-left text-xs hover:bg-transparent"
             onClick={() =>
                 openUserDialog({
                     userId,
@@ -324,7 +324,7 @@ function PhotoGalleryRows({
                             {gallery.description}
                         </div>
                     ) : null}
-                    <div className="grid max-h-[60vh] gap-4 overflow-y-auto pt-2 sm:grid-cols-2 lg:grid-cols-3">
+                    <div className="grid max-h-[60vh] gap-4 overflow-y-auto p-1 pt-2 sm:grid-cols-2 lg:grid-cols-3">
                         {galleryRows.map((row, index) => {
                             const image = getGroupRowImage(row, 'photos');
                             return (

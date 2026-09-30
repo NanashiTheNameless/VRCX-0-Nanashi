@@ -215,7 +215,7 @@ function WorldRoomItem({
                         {showGroupName ? (
                             <button
                                 type="button"
-                                className="hover:text-primary min-w-0 cursor-pointer truncate text-left font-medium"
+                                className="hover:text-foreground min-w-0 cursor-pointer truncate text-left font-medium"
                                 onClick={() =>
                                     openGroupDialog({
                                         groupId,
@@ -384,7 +384,7 @@ export function WorldRoomsSidebar({
             ref={viewportRef}
             className="relative h-full overflow-auto overflow-x-hidden"
         >
-            <div className="px-1.5 pb-2.5">
+            <div className="px-1.5 pt-1 pb-2.5">
                 <div
                     className="relative w-full"
                     style={{ height: `${totalSize}px` }}

@@ -43,7 +43,7 @@ export function EntityPanel() {
                                             worldId: entity.id
                                         })
                                     }
-                                    className="hover:bg-card/60 flex w-full items-center gap-2 p-3 text-left text-sm"
+                                    className="flex w-full items-center gap-2 p-3 text-left text-sm hover:bg-(--state-hover-surface)"
                                 >
                                     <GlobeIcon className="text-muted-foreground size-4" />
                                     <span className="truncate">

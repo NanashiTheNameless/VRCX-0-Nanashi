@@ -106,7 +106,7 @@ export function InstanceHistoryRow({
         <div
             className={cn(
                 'group relative flex min-h-9 items-center rounded-md',
-                selected ? 'bg-muted/80' : 'hover:bg-muted/60'
+                selected ? 'bg-muted/80' : 'hover:bg-(--state-hover-surface)'
             )}
         >
             {selected ? (

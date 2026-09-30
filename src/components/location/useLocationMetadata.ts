@@ -108,6 +108,9 @@ export function useLocationMetadataBatch(
     const [worldProfilesById, setWorldProfilesById] = useState(
         () => new Map<string, LocationWorldProfile>()
     );
+    const [settledWorldProfileIds, setSettledWorldProfileIds] = useState(
+        () => new Set<string>()
+    );
     const worldProfilesByIdRef = useRef(worldProfilesById);
     const worldProfilesEndpointRef = useRef(currentEndpoint);
     const worldProfileRequestsRef = useRef(
@@ -126,6 +129,7 @@ export function useLocationMetadataBatch(
         if (endpointChanged) {
             worldProfilesEndpointRef.current = currentEndpoint;
             worldProfilesByIdRef.current = new Map();
+            setSettledWorldProfileIds(new Set());
         }
 
         const retainedProfiles = new Map<string, LocationWorldProfile>();
@@ -190,18 +194,35 @@ export function useLocationMetadataBatch(
             }
             worldProfilesByIdRef.current = nextProfiles;
             setWorldProfilesById(nextProfiles);
+            setSettledWorldProfileIds((currentIds) => {
+                const nextIds = new Set(currentIds);
+                for (const worldId of missingWorldIds) {
+                    nextIds.add(worldId);
+                }
+                return nextIds;
+            });
         });
         return () => {
             active = false;
         };
     }, [currentEndpoint, worldIdsKey]);
-    const groupProfilesById = useQueries({
+    const { groupProfilesById, pendingGroupIds } = useQueries({
         queries: groupIds.map((groupId) =>
             groupProfileQueryOptions(groupId, currentEndpoint)
         ),
-        combine: (results) =>
-            mapQueryResults<LocationGroupProfile>(groupIds, results)
+        combine: (results) => ({
+            groupProfilesById: mapQueryResults<LocationGroupProfile>(
+                groupIds,
+                results
+            ),
+            pendingGroupIds: new Set(
+                groupIds.filter((_, index) => results[index]?.isPending)
+            )
+        })
     });
+    const [settledLocalWorldIds, setSettledLocalWorldIds] = useState(
+        () => new Set<string>()
+    );
     const localWorldNameRequestIdsRef = useRef(new Set<string>());
     const mountedRef = useRef(true);
 
@@ -263,6 +284,13 @@ export function useLocationMetadataBatch(
             if (!mountedRef.current) {
                 return;
             }
+            setSettledLocalWorldIds((currentIds) => {
+                const nextIds = new Set(currentIds);
+                for (const worldId of worldIdsToLoad) {
+                    nextIds.add(worldId);
+                }
+                return nextIds;
+            });
             setLocalWorldNamesById((currentNames) => {
                 let changed = false;
                 const nextNames = new Map(currentNames);
@@ -294,8 +322,11 @@ export function useLocationMetadataBatch(
                     cachedInstances,
                     currentEndpoint,
                     groupProfilesById,
+                    pendingGroupIds,
                     locationHintsByKey,
                     localWorldNamesById,
+                    settledLocalWorldIds,
+                    settledWorldProfileIds,
                     worldProfilesById
                 })
             );
@@ -308,6 +339,9 @@ export function useLocationMetadataBatch(
         locationHintsByKey,
         localWorldNamesById,
         normalizedEntries,
+        pendingGroupIds,
+        settledLocalWorldIds,
+        settledWorldProfileIds,
         worldProfilesById
     ]);
 }

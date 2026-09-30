@@ -14,6 +14,7 @@ import {
     worldDialogTarget,
     type LocationObjectRecord
 } from '@/components/location/locationModel';
+import { LocationPendingText } from '@/components/location/LocationPendingText';
 import { RegionCodeBadge } from '@/components/location/RegionCodeBadge';
 import { useLocationMetadata } from '@/components/location/useLocationMetadata';
 import { cn } from '@/lib/utils';
@@ -77,18 +78,25 @@ export function InstanceLocationSummary({
         t,
         accessTypeLocaleKeyMap
     );
-    const { region, instanceName, isClosed, groupName, worldName } =
-        useLocationMetadata({
-            locationInfo: locObj,
-            currentLocation,
-            endpoint,
-            hint,
-            worldNameHint: locationObjectWorldName(locObj),
-            groupHint:
-                normalizeLocationText(groupHint || grouphint) ||
-                locationObjectGroupName(locObj),
-            instanceName: locObj.instanceName
-        });
+    const {
+        region,
+        instanceName,
+        isClosed,
+        groupName,
+        groupNamePending,
+        worldName,
+        worldNamePending
+    } = useLocationMetadata({
+        locationInfo: locObj,
+        currentLocation,
+        endpoint,
+        hint,
+        worldNameHint: locationObjectWorldName(locObj),
+        groupHint:
+            normalizeLocationText(groupHint || grouphint) ||
+            locationObjectGroupName(locObj),
+        instanceName: locObj.instanceName
+    });
     const isUnlocked = Boolean(
         (worldDialogShortName &&
             locObj.shortName &&
@@ -204,15 +212,19 @@ export function InstanceLocationSummary({
                 <Button
                     type="button"
                     variant="ghost"
-                    className="hover:text-primary h-auto min-w-0 shrink justify-start gap-1.5 p-0 text-left font-normal text-inherit hover:bg-transparent"
+                    className="hover:text-foreground h-auto min-w-0 shrink justify-start gap-1.5 p-0 text-left font-normal text-inherit hover:bg-transparent"
                     onClick={openLocationWorldDialog}
                 >
                     {isUnlocked ? (
                         <UnlockIcon data-icon="inline-start" />
                     ) : null}
                     <span className="min-w-0 truncate">
-                        {locationLabel}
-                        {instanceName ? ` #${instanceName}` : ''}
+                        <LocationPendingText
+                            pending={showWorldName && worldNamePending}
+                        >
+                            {locationLabel}
+                            {instanceName ? ` #${instanceName}` : ''}
+                        </LocationPendingText>
                     </span>
                 </Button>
             ) : (
@@ -221,24 +233,34 @@ export function InstanceLocationSummary({
                         <UnlockIcon className="mr-1.5 size-4 shrink-0" />
                     ) : null}
                     <span className="min-w-0 truncate">
-                        {locationLabel}
-                        {instanceName ? ` #${instanceName}` : ''}
+                        <LocationPendingText
+                            pending={showWorldName && worldNamePending}
+                        >
+                            {locationLabel}
+                            {instanceName ? ` #${instanceName}` : ''}
+                        </LocationPendingText>
                     </span>
                 </span>
             )}
-            {showGroupName && groupName ? (
-                interactive ? (
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        className="hover:text-primary ml-0.5 h-auto min-w-0 shrink justify-start p-0 text-left font-normal text-inherit hover:bg-transparent"
-                        onClick={openLocationGroupDialog}
-                    >
-                        <span className="truncate">({groupName})</span>
-                    </Button>
-                ) : (
-                    <span className="ml-0.5 truncate">({groupName})</span>
-                )
+            {showGroupName && (groupName || groupNamePending) ? (
+                <LocationPendingText
+                    pending={groupNamePending}
+                    className="flex min-w-0"
+                    placeholderClassName="ml-1 w-16"
+                >
+                    {interactive ? (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            className="hover:text-foreground ml-0.5 h-auto min-w-0 shrink justify-start p-0 text-left font-normal text-inherit hover:bg-transparent"
+                            onClick={openLocationGroupDialog}
+                        >
+                            <span className="truncate">({groupName})</span>
+                        </Button>
+                    ) : (
+                        <span className="ml-0.5 truncate">({groupName})</span>
+                    )}
+                </LocationPendingText>
             ) : null}
             {isClosed ? (
                 disableTooltip ? (

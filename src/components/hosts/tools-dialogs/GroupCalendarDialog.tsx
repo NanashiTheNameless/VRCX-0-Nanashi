@@ -126,7 +126,7 @@ function GroupCalendarDayButton({
             locale={locale}
             className={cn(
                 className,
-                'text-foreground hover:bg-accent/40 hover:text-foreground data-[selected-single=true]:bg-accent/30! data-[selected-single=true]:text-foreground! data-[selected-single=true]:ring-muted-foreground/60 h-(--cell-size) min-h-(--cell-size) items-center justify-between gap-0.5 rounded-md bg-transparent p-1.5 transition-colors data-[selected-single=true]:ring-1 sm:gap-1 sm:p-2'
+                'text-foreground hover:text-foreground data-[selected-single=true]:bg-accent/30! data-[selected-single=true]:text-foreground! data-[selected-single=true]:ring-muted-foreground/60 h-(--cell-size) min-h-(--cell-size) items-center justify-between gap-0.5 rounded-md bg-transparent p-1.5 transition-colors hover:bg-(--state-hover-surface) data-[selected-single=true]:ring-1 sm:gap-1 sm:p-2'
             )}
             aria-label={`${dateKey}, ${eventText}, ${followedText}`}
         >

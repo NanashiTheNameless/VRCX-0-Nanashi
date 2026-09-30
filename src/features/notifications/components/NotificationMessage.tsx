@@ -28,7 +28,7 @@ export function NotificationMessage({
             {message.slice(0, index)}
             <button
                 type="button"
-                className="cursor-pointer text-left underline underline-offset-2"
+                className="hover:text-foreground cursor-pointer text-left font-medium"
                 onClick={() => openUserDialog({ userId, title: name })}
             >
                 {name}

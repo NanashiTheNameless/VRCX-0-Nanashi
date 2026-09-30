@@ -646,7 +646,7 @@ export function WorldNewInstanceDialog({
                                             anchor={displayNameAnchorRef}
                                             className="w-80 p-1"
                                         >
-                                            <div className="flex max-h-64 flex-col gap-1 overflow-y-auto">
+                                            <div className="flex max-h-64 flex-col gap-1 overflow-y-auto p-1">
                                                 {displayNamePresets.map(
                                                     (name) => (
                                                         <Button

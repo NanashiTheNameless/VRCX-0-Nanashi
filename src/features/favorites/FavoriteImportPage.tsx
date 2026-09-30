@@ -320,7 +320,7 @@ export function FavoriteImportPage() {
             </PageToolbar>
 
             <PageBody className="flex-row gap-3 max-lg:flex-col">
-                <div className="flex w-80 shrink-0 flex-col gap-2 max-lg:w-full">
+                <div className="flex w-80 shrink-0 flex-col gap-2 p-1 max-lg:w-full">
                     <Textarea
                         className="min-h-40 flex-1 resize-none font-mono text-xs max-lg:min-h-32"
                         placeholder={t(

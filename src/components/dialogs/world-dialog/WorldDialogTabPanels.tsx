@@ -136,10 +136,7 @@ function WorldScreenshotsGrid({
                     count: safeScreenshots.length
                 })}
             </Badge>
-            <div
-                ref={viewportRef}
-                className="min-h-0 flex-1 overflow-auto pr-1"
-            >
+            <div ref={viewportRef} className="min-h-0 flex-1 overflow-auto p-1">
                 <div className="relative" style={{ height: totalHeight }}>
                     {visibleRows.map((row) => (
                         <div
@@ -225,7 +222,7 @@ export function WorldDialogTabPanels({
         >
             <EntityDialogTabContent
                 value="instances"
-                className="flex flex-col gap-3 px-px pt-3 pb-px"
+                className="flex flex-col gap-3 pt-3"
             >
                 <div className="flex flex-wrap items-center gap-1.5">
                     <Badge variant="outline">
@@ -395,7 +392,7 @@ export function WorldDialogTabPanels({
             </EntityDialogTabContent>
             <EntityDialogTabContent
                 value="screenshots"
-                className="flex min-h-0 flex-col gap-3 px-px pt-3 pb-px"
+                className="flex min-h-0 flex-col gap-3 pt-3"
             >
                 <div className="flex shrink-0 justify-end">
                     <Button

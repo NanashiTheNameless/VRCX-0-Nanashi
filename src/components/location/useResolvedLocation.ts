@@ -61,8 +61,10 @@ export function useResolvedLocation({
         instanceName,
         isClosed,
         groupName,
+        groupNamePending,
         worldName,
-        worldNameHint
+        worldNameHint,
+        worldNamePending
     } = useLocationMetadata({
         locationInfo: parsedLocation,
         currentLocation,
@@ -108,9 +110,11 @@ export function useResolvedLocation({
         instanceName,
         isClosed,
         groupName,
+        groupNamePending,
         worldName,
         worldNameHint,
         isTraveling,
+        isPending: worldNamePending,
         hasShortNameHint,
         isAgeRestricted,
         isLocationLink,

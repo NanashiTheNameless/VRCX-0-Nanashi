@@ -132,7 +132,7 @@ function DashboardEditorCanvasPanel({
             </div>
             <button
                 type="button"
-                className="focus-visible:ring-ring/50 hover:bg-primary/[0.03] absolute inset-0 z-10 cursor-pointer rounded-lg outline-none focus-visible:ring-[3px]"
+                className="focus-visible:ring-ring/50 absolute inset-0 z-10 cursor-pointer rounded-lg outline-none hover:bg-(--state-hover-surface) focus-visible:ring-[3px] focus-visible:ring-inset"
                 aria-label={label}
                 aria-pressed={selected}
                 onClick={onSelect}

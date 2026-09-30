@@ -51,7 +51,7 @@ export function SearchUserTabPanel({
             <div className="flex min-h-0 flex-col" style={{ flex: 9 }}>
                 <div
                     className={cn(
-                        'flex min-h-0 flex-1 flex-col overflow-y-auto',
+                        'flex min-h-0 flex-1 flex-col overflow-y-auto p-1',
                         pagination.show && 'pb-14'
                     )}
                 >
@@ -112,7 +112,7 @@ export function SearchWorldTabPanel({
             <div className="flex min-h-0 flex-col" style={{ flex: 9 }}>
                 <div
                     className={cn(
-                        'flex min-h-0 flex-1 flex-col overflow-y-auto',
+                        'flex min-h-0 flex-1 flex-col overflow-y-auto p-1',
                         pagination.show && 'pb-14'
                     )}
                 >
@@ -171,7 +171,7 @@ export function SearchAvatarTabPanel({
             <div className="flex min-h-0 flex-col" style={{ flex: 9 }}>
                 <div
                     className={cn(
-                        'flex min-h-0 flex-1 flex-col overflow-y-auto',
+                        'flex min-h-0 flex-1 flex-col overflow-y-auto p-1',
                         pagination.show && 'pb-14'
                     )}
                 >
@@ -229,7 +229,7 @@ export function SearchGroupTabPanel({
         >
             <div
                 className={cn(
-                    'flex min-h-0 flex-1 flex-col overflow-y-auto',
+                    'flex min-h-0 flex-1 flex-col overflow-y-auto p-1',
                     pagination.show && 'pb-14'
                 )}
                 style={{ flex: 9 }}

@@ -708,8 +708,8 @@ function EntryDetailsPanel({
             <div className="truncate pb-3 text-sm font-medium">
                 {entry.name || shortTarget(entry)}
             </div>
-            <ScrollArea className="min-h-0 flex-1">
-                <FieldGroup className="gap-4 pr-1">
+            <ScrollArea className="-mx-1 min-h-0 flex-1">
+                <FieldGroup className="gap-4 px-1">
                     {errorKey && run ? (
                         <Field>
                             <FieldError>

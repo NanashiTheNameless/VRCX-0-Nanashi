@@ -986,6 +986,16 @@
         border-color: var(--vrcx-0-table-border);
     }
 
+    [data-slot='dialog-content'] .vrcx-0-data-table {
+        --vrcx-0-table-surface: var(--popover);
+        --vrcx-0-table-header-surface: var(--popover);
+    }
+
+    .entity-dialog .vrcx-0-data-table {
+        --vrcx-0-table-surface: var(--entity-dialog-ground);
+        --vrcx-0-table-header-surface: var(--entity-dialog-ground);
+    }
+
     [data-slot='input-group'].vrcx-0-toolbar-control[data-vrcx-0-control='toolbar'],
     [data-slot='button'].vrcx-0-toolbar-control[data-vrcx-0-control='toolbar'] {
         color: var(--content-primary);

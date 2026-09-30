@@ -109,7 +109,7 @@ export function NotificationDrawerList({
                 )}
                 <button
                     type="button"
-                    className="text-muted-foreground hover:text-foreground hover:bg-accent/50 flex w-full items-center justify-center gap-1 px-4 py-3 text-xs font-medium transition-colors"
+                    className="text-muted-foreground hover:text-foreground flex w-full items-center justify-center gap-1 px-4 py-3 text-xs font-medium transition-colors hover:bg-(--state-hover-surface)"
                     onClick={onNavigateToTable}
                 >
                     {t('side_panel.notification_center.view_more')}

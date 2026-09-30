@@ -433,8 +433,8 @@ export function UserProfileDetailsDialog({
                         )}
                     </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="-mx-1 min-h-0 px-1">
-                    <FieldGroup className="gap-4 pb-3">
+                <ScrollArea className="-mx-1 min-h-0">
+                    <FieldGroup className="gap-4 px-1 pb-3">
                         <div className="grid gap-4 sm:grid-cols-2">
                             <ProfileLanguagesField
                                 languageRows={languageRows}

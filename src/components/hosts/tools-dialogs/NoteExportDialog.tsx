@@ -458,7 +458,9 @@ export function NoteExportDialog({
                                     key={row.id}
                                     className={cn(
                                         'bg-card/40 flex gap-3 rounded-lg border p-3 transition-colors',
-                                        skipped ? 'opacity-55' : 'hover:bg-card'
+                                        skipped
+                                            ? 'opacity-55'
+                                            : 'hover:bg-(--state-hover-surface)'
                                     )}
                                 >
                                     {thumbUrl ? (
@@ -495,7 +497,7 @@ export function NoteExportDialog({
                                             <Button
                                                 type="button"
                                                 variant="ghost"
-                                                className="hover:text-primary h-auto min-w-0 justify-start truncate p-0 font-medium hover:bg-transparent"
+                                                className="h-auto min-w-0 justify-start truncate p-0 font-medium hover:bg-transparent"
                                                 onClick={() =>
                                                     openUserDialog({
                                                         userId: row.id,

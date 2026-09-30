@@ -147,7 +147,7 @@ export function NotificationRow({
         view.body === typeLabel || view.body === view.headline ? '' : view.body;
 
     return (
-        <div className="group hover:bg-muted/40 flex items-start gap-3 rounded-lg px-2 py-2.5 transition-colors duration-150 ease-out">
+        <div className="group flex items-start gap-3 rounded-lg px-2 py-2.5 transition-colors duration-150 ease-out hover:bg-(--state-hover-surface)">
             <span className="mt-1.5 flex w-2 shrink-0 justify-center">
                 {view.unseen ? (
                     <span className="bg-primary size-2 rounded-full">

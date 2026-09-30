@@ -269,7 +269,7 @@ export function GroupEventCard({
                                         <Button
                                             type="button"
                                             variant="ghost"
-                                            className="text-muted-foreground hover:text-primary h-auto max-w-full justify-start p-0 text-left text-xs font-normal hover:bg-transparent"
+                                            className="text-muted-foreground hover:text-foreground h-auto max-w-full justify-start p-0 text-left text-xs font-normal hover:bg-transparent"
                                             onClick={stopAndRun(() =>
                                                 openGroupDialog({ groupId })
                                             )}
@@ -282,7 +282,7 @@ export function GroupEventCard({
                                     <Button
                                         type="button"
                                         variant="ghost"
-                                        className="hover:text-primary h-auto max-w-full justify-start p-0 text-left text-sm font-medium hover:bg-transparent"
+                                        className="h-auto max-w-full justify-start p-0 text-left text-sm font-medium hover:bg-transparent"
                                         onClick={stopAndRun(() =>
                                             openGroupDialog({ groupId })
                                         )}

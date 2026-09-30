@@ -453,7 +453,7 @@ function UserDialogNotesPanel({
             <div
                 role="button"
                 tabIndex={0}
-                className="hover:bg-muted focus-visible:border-ring focus-visible:ring-ring/50 rounded-md p-2 text-left transition-colors outline-none focus-visible:ring-3"
+                className="focus-visible:border-ring focus-visible:ring-ring/50 rounded-md p-2 text-left transition-colors outline-none hover:bg-(--state-hover-surface) focus-visible:ring-3"
                 onClick={onEditMemo}
                 onKeyDown={(event) => handlePanelKeyDown(event, onEditMemo)}
             >
@@ -560,7 +560,7 @@ function UserDialogProfileLinksPanel({
                     <Button
                         type="button"
                         variant="ghost"
-                        className="hover:text-primary h-auto max-w-full justify-start gap-2 p-0 text-left text-xs font-normal whitespace-normal text-inherit hover:bg-transparent"
+                        className="hover:text-foreground h-auto max-w-full justify-start gap-2 p-0 text-left text-xs font-normal whitespace-normal text-inherit hover:bg-transparent"
                         onClick={() =>
                             openGroupDialog({
                                 groupId: representedGroup.groupId,
@@ -848,7 +848,7 @@ export function UserDialogInfoTab({
     const { profile, bioLinks } = bioSection;
 
     return (
-        <EntityDialogTabContent value="info" className="px-px pt-3 pb-px">
+        <EntityDialogTabContent value="info" className="pt-3">
             <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
                 <div className="flex min-w-0 flex-col gap-4">
                     <UserDialogPresenceSection

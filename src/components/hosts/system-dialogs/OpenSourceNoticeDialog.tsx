@@ -166,7 +166,7 @@ export function OpenSourceNoticeDialog({
                         <code>{noticePath}</code>
                     </DialogDescription>
                 </DialogHeader>
-                <div className="flex min-h-0 flex-col gap-4 overflow-hidden">
+                <div className="flex min-h-0 flex-col gap-4">
                     <Input
                         value={searchQuery}
                         placeholder={t('dialog.open_source.search_placeholder')}

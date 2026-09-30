@@ -214,7 +214,7 @@ export function DataDirMigrationDialog() {
                                     key={value}
                                     htmlFor={`${id}-${value}`}
                                     className={cn(
-                                        'hover:bg-muted/40 flex cursor-pointer items-start gap-3 rounded-md border p-3',
+                                        'flex cursor-pointer items-start gap-3 rounded-md border p-3 hover:bg-(--state-hover-surface)',
                                         mode === value &&
                                             'border-primary bg-primary/5'
                                     )}

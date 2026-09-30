@@ -304,7 +304,7 @@ export function createGroupAuditLogColumns(
                     <Button
                         type="button"
                         variant="ghost"
-                        className="hover:text-primary h-auto w-full min-w-0 justify-start truncate p-0 text-left font-medium hover:bg-transparent"
+                        className="h-auto w-full min-w-0 justify-start truncate p-0 text-left font-medium hover:bg-transparent"
                         onClick={() => openGroupAuditLogActor(row.original)}
                     >
                         {actorArgs.title}

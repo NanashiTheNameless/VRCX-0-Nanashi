@@ -219,7 +219,7 @@ export function CustomFontDialog({
                 <Tabs
                     value={mode}
                     onValueChange={handleModeChange}
-                    className="min-h-0 overflow-y-auto pr-1"
+                    className="-mx-1 min-h-0 overflow-y-auto px-1"
                 >
                     <FieldGroup>
                         <Field>

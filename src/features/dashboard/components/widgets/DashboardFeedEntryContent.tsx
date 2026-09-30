@@ -116,7 +116,7 @@ function FeedUserName({
             type="button"
             variant="ghost"
             className={cn(
-                'hover:text-primary h-auto shrink-0 cursor-pointer justify-start p-0 text-left font-normal',
+                'h-auto shrink-0 cursor-pointer justify-start p-0 text-left font-normal',
                 className
             )}
             onClick={() => openFeedUser(row, friend)}

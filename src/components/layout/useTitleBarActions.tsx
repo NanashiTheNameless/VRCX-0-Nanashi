@@ -88,7 +88,7 @@ export function TitleBarButton({
                         size={size}
                         aria-label={label}
                         className={cn(
-                            'text-muted-foreground hover:bg-muted/40 hover:text-foreground',
+                            'text-muted-foreground hover:text-foreground hover:bg-(--state-hover-surface)',
                             className
                         )}
                         onClick={onClick}
@@ -434,7 +434,7 @@ export function useTitleBarActions(
                                     variant: 'ghost',
                                     size: 'icon-sm'
                                 }),
-                                'text-muted-foreground hover:bg-muted/40 hover:text-foreground size-7 min-w-7 rounded-md px-0'
+                                'text-muted-foreground hover:text-foreground size-7 min-w-7 rounded-md px-0 hover:bg-(--state-hover-surface)'
                             )}
                         />
                     </span>

@@ -167,7 +167,7 @@ export function CurrentWorldHeader({
                     <Button
                         type="button"
                         variant="ghost"
-                        className="hover:text-primary h-auto max-w-full justify-start p-0 text-left text-base font-semibold hover:bg-transparent"
+                        className="h-auto max-w-full justify-start p-0 text-left text-base font-semibold hover:bg-transparent"
                         onClick={() =>
                             openWorldDialog({
                                 worldId: worldDialogTarget,
@@ -184,7 +184,7 @@ export function CurrentWorldHeader({
                             <Button
                                 type="button"
                                 variant="ghost"
-                                className="text-muted-foreground hover:text-primary h-auto min-w-0 justify-start p-0 font-mono text-xs hover:bg-transparent"
+                                className="text-muted-foreground hover:text-foreground h-auto min-w-0 justify-start p-0 font-mono text-xs hover:bg-transparent"
                                 onClick={() =>
                                     authorId &&
                                     openUserDialog({

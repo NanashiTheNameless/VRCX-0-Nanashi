@@ -224,7 +224,7 @@ export function MediaAssetTile({
                     type="button"
                     variant="ghost"
                     className={cn(
-                        'block h-auto w-full rounded-none p-0',
+                        'block h-auto w-full rounded-none p-0 focus-visible:ring-inset',
                         TILE_MOTION
                     )}
                     onClick={

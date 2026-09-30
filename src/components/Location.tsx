@@ -84,9 +84,11 @@ export function Location({
         instanceName: resolvedInstanceName,
         isClosed,
         groupName,
+        groupNamePending,
         worldName,
         worldNameHint,
         isTraveling,
+        isPending,
         hasShortNameHint,
         isAgeRestricted,
         isLocationLink,
@@ -243,10 +245,12 @@ export function Location({
             className={className}
             disableTooltip={disableTooltip}
             groupName={groupName}
+            groupNamePending={groupNamePending}
             instanceName={resolvedInstanceName}
             isAgeRestricted={isAgeRestricted}
             isClosed={isClosed}
             isLocationLink={isLocationLink}
+            isPending={isPending}
             isTraveling={isTraveling}
             onOpenGroup={openGroup}
             onOpenLocation={openWorld}

@@ -6,8 +6,10 @@ export type LocationMetadata = {
     instanceName: string;
     isClosed: boolean;
     groupName: string;
+    groupNamePending: boolean;
     worldName: string;
     worldNameHint: string;
+    worldNamePending: boolean;
 };
 
 export type LocationMetadataEntry = {
@@ -75,7 +77,10 @@ export type MetadataContext = {
     cachedInstances: Map<string, LocationCacheRecord>;
     currentEndpoint: string;
     groupProfilesById: Map<string, LocationGroupProfile>;
+    pendingGroupIds: Set<string>;
     locationHintsByKey: Record<string, LocationHintRecord | undefined>;
     localWorldNamesById: Map<string, string>;
+    settledLocalWorldIds: Set<string>;
+    settledWorldProfileIds: Set<string>;
     worldProfilesById: Map<string, LocationWorldProfile>;
 };

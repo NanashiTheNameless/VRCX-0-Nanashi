@@ -382,7 +382,7 @@ export function AvatarContentTagsDialog({
                             <Spinner className="text-muted-foreground" />
                         ) : null}
                     </div>
-                    <div className="flex max-h-72 min-h-16 flex-wrap items-start overflow-auto">
+                    <div className="flex max-h-72 min-h-16 flex-wrap items-start overflow-auto p-1">
                         {ownAvatars
                             .filter(
                                 (

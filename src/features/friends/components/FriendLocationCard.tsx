@@ -634,7 +634,7 @@ export function FriendLocationCard({
                     <Card
                         size="sm"
                         className={cn(
-                            'bg-object-surface ring-border hover:bg-object-surface-hover focus-visible:ring-ring/50 relative h-full rounded-lg transition-colors duration-(--motion-fast) ease-(--ease-out-ui) outline-none focus-visible:ring-3 motion-reduce:transition-none',
+                            'bg-object-surface ring-border hover:bg-object-surface-hover focus-visible:ring-ring/50 relative h-full rounded-lg transition-colors duration-(--motion-fast) ease-(--ease-out-ui) outline-none focus-visible:ring-3 focus-visible:ring-inset motion-reduce:transition-none',
                             canOpenUser && 'cursor-pointer',
                             isDense
                                 ? 'flex-row items-center gap-[calc(var(--friend-card-gap)+2px)] rounded-lg p-[var(--friend-card-padding)]'

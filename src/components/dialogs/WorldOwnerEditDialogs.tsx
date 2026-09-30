@@ -272,8 +272,8 @@ function WorldDetailsDialog({
                         )}
                     </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="-mx-1 min-h-0 px-1">
-                    <FieldGroup className="gap-4 pb-3">
+                <ScrollArea className="-mx-1 min-h-0">
+                    <FieldGroup className="gap-4 px-1 pb-3">
                         <Field>
                             <FieldLabel htmlFor="world-details-name">
                                 {t('dialog.world.info.name')}

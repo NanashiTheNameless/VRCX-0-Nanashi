@@ -18,7 +18,7 @@ export function MutualGraphBuildHint({
         <button
             type="button"
             className={cn(
-                'text-muted-foreground hover:text-foreground shrink-0 cursor-pointer text-xs underline-offset-2 hover:underline',
+                'text-muted-foreground hover:text-foreground shrink-0 cursor-pointer text-xs',
                 className
             )}
             onClick={() => {
