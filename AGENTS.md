@@ -76,10 +76,11 @@ unrelated edit, with where they live:
   and the component map in `src/components/layout/navIconRegistry.ts` must stay
   in sync. An icon present in only one of them silently renders as a generic
   circle. There is a test for this.
-- Sidebar layouts always contain the default page tabs
-  (`page-chartsMutual`, `page-reminders`, `page-tools`). They are rendered as a
-  separate nav section, which is why they are excluded from the tab list in
-  `src/components/sidebar/useSidePanelTabData.ts`.
+- The right side panel's tab layout only holds the friends and groups system
+  tabs, favorite collections and pinned world rooms. Reminders, the mutual
+  friends graph and Tools are left-navigation entries
+  (`createBaseDefaultNavLayout` in `src/components/layout/navMenuModel.ts`), not
+  side panel tabs, and must not be re-added to the panel.
 - `RuntimeBackgroundJobs` tracks local job state for background loops. It
   transmits nothing.
 

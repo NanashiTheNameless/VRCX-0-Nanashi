@@ -34,20 +34,10 @@ export interface SidebarWorldRoomsTabLayoutItem {
     visible: boolean;
 }
 
-export interface SidebarPageTabLayoutItem {
-    id: string;
-    type: 'page';
-    page: 'reminders' | 'chartsMutual' | 'tools';
-    labelKey: string;
-    icon: string;
-    visible: boolean;
-}
-
 export type SidebarTabLayoutItem =
     | SidebarSystemTabLayoutItem
     | SidebarFavoriteCollectionTabLayoutItem
-    | SidebarWorldRoomsTabLayoutItem
-    | SidebarPageTabLayoutItem;
+    | SidebarWorldRoomsTabLayoutItem;
 
 export type SidebarTabLayout = SidebarTabLayoutItem[];
 
@@ -181,7 +171,6 @@ export function normalizeSidebarTabLayout(value: unknown): SidebarTabLayout {
     const seenSystemTabs = new Set<SidebarSystemTabId>();
     const seenCustomIds = new Set<string>();
     const seenWorldIds = new Set<string>();
-    const seenPageTabs = new Set<SidebarPageTabLayoutItem['page']>();
 
     for (const rawItem of sourceItems) {
         if (!isRecord(rawItem)) {
@@ -221,22 +210,6 @@ export function normalizeSidebarTabLayout(value: unknown): SidebarTabLayout {
             if (worldTab) {
                 nextLayout.push(worldTab);
             }
-            continue;
-        }
-
-        if (item.type === 'page') {
-            const page = normalizeText(
-                item.page || item.id
-            ) as SidebarPageTabLayoutItem['page'];
-            if (
-                (page === 'reminders' ||
-                    page === 'chartsMutual' ||
-                    page === 'tools') &&
-                !seenPageTabs.has(page)
-            ) {
-                nextLayout.push(normalizePageTab(page, item));
-                seenPageTabs.add(page);
-            }
         }
     }
 
@@ -245,18 +218,6 @@ export function normalizeSidebarTabLayout(value: unknown): SidebarTabLayout {
     }
     if (!seenSystemTabs.has(SYSTEM_TAB_GROUPS)) {
         nextLayout.push(normalizeSystemTab(SYSTEM_TAB_GROUPS));
-    }
-
-    // Add default page tabs in order: chartsMutual, reminders, tools
-    const defaultPageOrder: SidebarPageTabLayoutItem['page'][] = [
-        'chartsMutual',
-        'reminders',
-        'tools'
-    ];
-    for (const page of defaultPageOrder) {
-        if (!seenPageTabs.has(page)) {
-            nextLayout.push(normalizePageTab(page));
-        }
     }
 
     return nextLayout;
@@ -354,23 +315,10 @@ export function moveSidebarTab(
 }
 
 export function sidebarTabFallbackIcon(
-    item:
-        | SidebarSystemTabLayoutItem
-        | SidebarFavoriteCollectionTabLayoutItem
-        | SidebarPageTabLayoutItem
+    item: SidebarSystemTabLayoutItem | SidebarFavoriteCollectionTabLayoutItem
 ): string {
     if (item.type === 'favoriteCollection') {
         return 'lucide:UserStar';
-    }
-    if (item.type === 'page') {
-        switch (item.page) {
-            case 'reminders':
-                return 'lucide:AlarmClock';
-            case 'chartsMutual':
-                return 'lucide:UsersRound';
-            case 'tools':
-                return 'lucide:Wrench';
-        }
     }
     if (item.systemTab === SYSTEM_TAB_GROUPS) {
         return 'lucide:UsersRound';
@@ -379,34 +327,4 @@ export function sidebarTabFallbackIcon(
         return 'lucide:UserRound';
     }
     return DEFAULT_NAV_ICON_KEY;
-}
-
-function normalizePageTab(
-    page: SidebarPageTabLayoutItem['page'],
-    source?: Record<string, unknown>
-): SidebarPageTabLayoutItem {
-    const icon = normalizeNavIconKey(
-        source?.icon,
-        sidebarTabFallbackIcon({
-            id: `page-${page}`,
-            type: 'page',
-            page,
-            labelKey: '',
-            icon: '',
-            visible: true
-        })
-    );
-    return {
-        id: `page-${page}`,
-        type: 'page',
-        page,
-        labelKey:
-            page === 'reminders'
-                ? 'view.reminders.title'
-                : page === 'chartsMutual'
-                  ? 'app.routes.charts_mutual'
-                  : 'app.routes.tools',
-        icon,
-        visible: source?.visible !== false
-    };
 }

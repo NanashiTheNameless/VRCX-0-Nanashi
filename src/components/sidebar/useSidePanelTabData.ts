@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { buildFavoriteCollectionFriendIdSet } from '@/components/sidebar/friends-sidebar/favoriteCollectionSidebarRows';
 import {
     getVisibleSidebarTabs,
-    type FavoriteGroupItem,
-    type SidebarTabLayoutItem
+    type FavoriteGroupItem
 } from '@/shared/utils/sidebarTabLayout';
 import { useFavoriteStore } from '@/state/favoriteStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
@@ -107,65 +106,55 @@ export function useSidePanelTabData({
     ]);
     const tabItems = useMemo<SidePanelTabItem[]>(
         () =>
-            visibleTabLayout
-                // Page tabs are rendered as their own nav section in SidePanel.
-                .filter(
-                    (
-                        item
-                    ): item is Exclude<
-                        SidebarTabLayoutItem,
-                        { type: 'page' }
-                    > => item.type !== 'page'
-                )
-                .map((item) => {
-                    if (item.type === 'favoriteCollection') {
-                        const count = customTabCountById.get(item.id) || 0;
-                        const countLabel = String(count);
-                        const title = `${item.name} ${countLabel}`;
-                        return {
-                            value: item.id,
-                            label: item.name,
-                            railCountLabel: countLabel,
-                            title,
-                            icon: item.icon,
-                            layoutItem: item
-                        };
-                    }
-                    if (item.type === 'worldRooms') {
-                        return {
-                            value: item.id,
-                            label: item.name,
-                            railCountLabel: '',
-                            title: item.name,
-                            icon: '',
-                            layoutItem: item
-                        };
-                    }
-                    if (item.systemTab === 'groups') {
-                        const label = t('side_panel.groups');
-                        const countLabel = String(groupInstances.length);
-                        const title = `${label} ${countLabel}`;
-                        return {
-                            value: 'groups',
-                            label,
-                            railCountLabel: countLabel,
-                            title,
-                            icon: item.icon,
-                            layoutItem: item
-                        };
-                    }
-                    const label = t('side_panel.friends');
-                    const countLabel = `${onlineIds.length}/${totalFriendCount}`;
-                    const title = `${label} ${countLabel}`;
+            visibleTabLayout.map((item) => {
+                if (item.type === 'favoriteCollection') {
+                    const count = customTabCountById.get(item.id) || 0;
+                    const countLabel = String(count);
+                    const title = `${item.name} ${countLabel}`;
                     return {
-                        value: 'friends',
-                        label,
-                        railCountLabel: String(onlineIds.length),
+                        value: item.id,
+                        label: item.name,
+                        railCountLabel: countLabel,
                         title,
                         icon: item.icon,
                         layoutItem: item
                     };
-                }),
+                }
+                if (item.type === 'worldRooms') {
+                    return {
+                        value: item.id,
+                        label: item.name,
+                        railCountLabel: '',
+                        title: item.name,
+                        icon: '',
+                        layoutItem: item
+                    };
+                }
+                if (item.systemTab === 'groups') {
+                    const label = t('side_panel.groups');
+                    const countLabel = String(groupInstances.length);
+                    const title = `${label} ${countLabel}`;
+                    return {
+                        value: 'groups',
+                        label,
+                        railCountLabel: countLabel,
+                        title,
+                        icon: item.icon,
+                        layoutItem: item
+                    };
+                }
+                const label = t('side_panel.friends');
+                const countLabel = `${onlineIds.length}/${totalFriendCount}`;
+                const title = `${label} ${countLabel}`;
+                return {
+                    value: 'friends',
+                    label,
+                    railCountLabel: String(onlineIds.length),
+                    title,
+                    icon: item.icon,
+                    layoutItem: item
+                };
+            }),
         [
             customTabCountById,
             groupInstances.length,

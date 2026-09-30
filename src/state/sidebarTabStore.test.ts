@@ -13,9 +13,6 @@ vi.mock('@/repositories/configRepository', () => ({
 }));
 
 const WORLD_ID = 'wrld_11111111-1111-1111-1111-111111111111';
-// Fork: normalizeSidebarTabLayout always appends the dedicated left-navigation
-// page tabs, so they are part of every saved layout.
-const PAGE_TAB_IDS = ['page-chartsMutual', 'page-reminders', 'page-tools'];
 const FAVORITE_TAB = {
     id: 'favorite-a',
     type: 'favoriteCollection',
@@ -53,7 +50,6 @@ describe('pinning a world to the sidebar', () => {
             'friends',
             'favorite-a',
             'groups',
-            ...PAGE_TAB_IDS,
             worldTab?.id
         ]);
         expect(worldTab).toMatchObject({
@@ -138,12 +134,7 @@ describe('unpinning a world from the sidebar', () => {
         const ids = store.useSidebarTabStore
             .getState()
             .tabLayout.map((item) => item.id);
-        expect(ids).toEqual([
-            'friends',
-            'favorite-a',
-            'groups',
-            ...PAGE_TAB_IDS
-        ]);
+        expect(ids).toEqual(['friends', 'favorite-a', 'groups']);
         expect(savedLayout().map((item) => item.id)).toEqual(ids);
     });
 
@@ -179,8 +170,7 @@ describe('customizing sidebar tabs', () => {
             layout.map((item) => [item.id, item.visible]);
         const expectedVisibility = [
             ['friends', true],
-            ['groups', false],
-            ...PAGE_TAB_IDS.map((id) => [id, true])
+            ['groups', false]
         ];
         expect(
             visibility(store.useSidebarTabStore.getState().tabLayout)

@@ -46,7 +46,6 @@ import {
     DEFAULT_SIDEBAR_TAB_LAYOUT,
     type FavoriteGroupItem,
     type SidebarFavoriteCollectionTabLayoutItem,
-    type SidebarPageTabLayoutItem,
     type SidebarTabLayout,
     type SidebarTabLayoutItem,
     createFavoriteCollectionTab,
@@ -112,27 +111,13 @@ function isFriendsTab(item: SidebarTabLayoutItem) {
     return item.type === 'system' && item.systemTab === 'friends';
 }
 
-function pageTabLabel(
-    page: SidebarPageTabLayoutItem['page'],
-    t: (key: string) => string
-) {
-    return page === 'reminders'
-        ? t('view.reminders.title')
-        : page === 'chartsMutual'
-          ? t('app.routes.charts_mutual')
-          : t('app.routes.tools');
-}
-
 function getTabLabel(item: SidebarTabLayoutItem, t: (key: string) => string) {
-    if (item.type === 'system') {
-        return item.systemTab === 'groups'
-            ? t('side_panel.groups')
-            : t('side_panel.friends');
+    if (item.type !== 'system') {
+        return item.name;
     }
-    if (item.type === 'page') {
-        return pageTabLabel(item.page, t);
-    }
-    return item.name;
+    return item.systemTab === 'groups'
+        ? t('side_panel.groups')
+        : t('side_panel.friends');
 }
 
 function NavIconSelect({
@@ -479,10 +464,7 @@ export function SidePanelCustomTabsDialog({
                                 <div className="flex flex-col gap-2">
                                     {draftLayout.map((item, index) => {
                                         const label = getTabLabel(item, t);
-                                        const isCustom =
-                                            item.type ===
-                                                'favoriteCollection' ||
-                                            item.type === 'worldRooms';
+                                        const isCustom = item.type !== 'system';
                                         const isFriends = isFriendsTab(item);
                                         const selectedCount =
                                             item.type === 'favoriteCollection'
