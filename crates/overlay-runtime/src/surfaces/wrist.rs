@@ -505,9 +505,9 @@ fn player_lines(players: &[WristPlayerRow], notes_only: bool) -> Vec<FeedLine> {
                 }
                 if !status_parts.is_empty() {
                     if !detail.is_empty() {
-                        detail = format!("{} | {}", detail, status_parts.join(" · "));
+                        detail = format!("{} | {}", detail, status_parts.join(" / "));
                     } else {
-                        detail = status_parts.join(" · ");
+                        detail = status_parts.join(" / ");
                     }
                 }
             }

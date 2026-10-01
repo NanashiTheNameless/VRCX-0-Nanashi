@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 use vrcx_0_core::friends::FriendRecord;
-use vrcx_0_core::presence::PresenceEntry;
+use vrcx_0_core::presence::{PresenceEntry, PresenceView};
 pub use vrcx_0_core::realtime::{
     RealtimeSessionContext, RealtimeWsMessagePayload, RealtimeWsStatus, RealtimeWsStatusPayload,
 };
@@ -53,6 +53,7 @@ pub struct FriendRosterSnapshot {
 pub struct RealtimeFriendRecordSnapshot {
     pub endpoint: String,
     pub record: FriendRecord,
+    pub presence: PresenceView,
 }
 
 #[derive(Debug, PartialEq)]

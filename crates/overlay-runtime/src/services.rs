@@ -4,6 +4,7 @@ use vrcx_0_application_activity::OverlayActivityRuntime;
 use vrcx_0_application_core::{RuntimeAuthScope, TaskSupervisor, WebClient, WorldCache};
 use vrcx_0_application_game::{NowPlayingSnapshot, RuntimeSnapshot};
 use vrcx_0_core::friends::FriendRecord;
+use vrcx_0_core::presence::PresenceView;
 use vrcx_0_persistence::config::ConfigRepository;
 
 pub trait VrOverlayRuntimeServices: Send + Sync {
@@ -34,7 +35,7 @@ pub trait VrOverlayRuntimeServices: Send + Sync {
     fn friend_records(
         &self,
         _user_ids: &[String],
-    ) -> std::collections::HashMap<String, FriendRecord> {
+    ) -> std::collections::HashMap<String, (FriendRecord, PresenceView)> {
         std::collections::HashMap::new()
     }
 }

@@ -1186,10 +1186,12 @@ pub(super) fn build_wrist_frame_input(
             .map(|player| player.user_id.clone())
             .collect();
         let notes = services.user_notes(&ids);
+        let friends = services.friend_records(&ids);
         let mut rows: Vec<(Option<i64>, WristPlayerRow)> = game_log
             .players
             .iter()
             .map(|player| {
+                let friend = friends.get(&player.user_id);
                 (
                     player.join_time_ms,
                     WristPlayerRow {
@@ -1199,10 +1201,16 @@ pub(super) fn build_wrist_frame_input(
                             .join_time_ms
                             .map(|joined| compact_duration((captured_at_ms - joined).max(0)))
                             .unwrap_or_default(),
-                        is_friend: false,
-                        state: String::new(),
-                        platform: String::new(),
-                        status_description: String::new(),
+                        is_friend: friend.is_some(),
+                        state: friend
+                            .map(|(_, presence)| presence.section().as_str().to_string())
+                            .unwrap_or_default(),
+                        platform: friend
+                            .map(|(_, presence)| presence.platform().to_string())
+                            .unwrap_or_default(),
+                        status_description: friend
+                            .map(|(record, _)| record.status_description.to_string())
+                            .unwrap_or_default(),
                     },
                 )
             })

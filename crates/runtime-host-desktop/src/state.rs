@@ -686,6 +686,9 @@ impl DesktopRuntimeHostState {
         desktop
             .services
             .set_realtime_user_image_resolver(runtime.realtime_runtime());
+        desktop
+            .services
+            .set_wrist_realtime_runtime(runtime.realtime_runtime());
         start_integration_api_input_task(
             Arc::clone(runtime.desktop_assembly().database()),
             runtime.desktop_assembly().event_bus().clone(),

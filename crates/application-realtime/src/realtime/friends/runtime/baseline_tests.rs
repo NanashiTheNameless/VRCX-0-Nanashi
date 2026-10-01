@@ -108,6 +108,7 @@ mod tests {
         assert_eq!(snapshot.endpoint, "https://api.example.test");
         assert_eq!(snapshot.record.id, "usr_friend");
         assert_eq!(snapshot.record.display_name, "Friend");
+        assert_eq!(snapshot.presence.section().as_str(), "active");
         assert!(runtime.current_friend_record("usr_stranger").is_none());
     }
 
@@ -723,5 +724,10 @@ mod tests {
         let snapshot = serde_json::to_value(&snapshot).unwrap();
         assert_eq!(snapshot["presenceById"]["usr_friend"], presence);
         assert_eq!(snapshot["generation"], 1);
+        let current = runtime.current_friend_record("usr_friend").unwrap();
+        assert_eq!(current.presence.section().as_str(), "online");
+        assert_eq!(current.presence.platform(), "android");
+        runtime.clear();
+        assert!(runtime.current_friend_record("usr_friend").is_none());
     }
 }

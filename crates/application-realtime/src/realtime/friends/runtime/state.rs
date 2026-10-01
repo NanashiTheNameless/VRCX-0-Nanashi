@@ -402,9 +402,11 @@ impl RealtimeFriendsRuntime {
         }
         let state = self.lock_state();
         let roster = state.roster.as_ref()?;
+        let entry = roster.entries.get(user_id)?;
         Some(RealtimeFriendRecordSnapshot {
             endpoint: roster.endpoint.clone(),
-            record: roster.entries.get(user_id)?.record.clone(),
+            record: entry.record.clone(),
+            presence: presence_view(&entry.presence),
         })
     }
 

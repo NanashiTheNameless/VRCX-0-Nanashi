@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, Weak};
 
 use vrcx_0_application::auth::AuthCredentialStore;
 use vrcx_0_application_activity::notification::{
@@ -77,6 +77,7 @@ pub struct DesktopRuntimeServices {
     notification_desktop_notifier: DesktopNotifierSlot,
     realtime_user_image_resolver: RealtimeUserImageResolverSlot,
     realtime_user_image_resolver_owner: Mutex<Option<Arc<dyn CachedNotificationUserImageResolver>>>,
+    wrist_realtime_runtime: Mutex<Weak<RealtimeHostRuntime>>,
     game_log_snapshot: RuntimeSnapshotStore,
     now_playing: Arc<Mutex<Arc<NowPlayingSnapshot>>>,
 }
@@ -148,6 +149,7 @@ impl DesktopRuntimeServices {
             notification_desktop_notifier,
             realtime_user_image_resolver,
             realtime_user_image_resolver_owner: Mutex::new(None),
+            wrist_realtime_runtime: Mutex::new(Weak::new()),
             game_log_snapshot: RuntimeSnapshotStore::default(),
             now_playing: Arc::new(Mutex::new(Arc::new(NowPlayingSnapshot::default()))),
         })
@@ -192,6 +194,13 @@ impl DesktopRuntimeServices {
                 "failed to retain realtime notification image resolver"
             ),
         }
+    }
+
+    pub fn set_wrist_realtime_runtime(&self, runtime: &Arc<RealtimeHostRuntime>) {
+        *self
+            .wrist_realtime_runtime
+            .lock()
+            .unwrap_or_else(|e| e.into_inner()) = Arc::downgrade(runtime);
     }
 
     pub fn game_log_snapshot_handle(&self) -> RuntimeSnapshotStore {
@@ -358,6 +367,34 @@ impl VrOverlayRuntimeServices for DesktopRuntimeServices {
                     .map(|memo| (id.clone(), memo.memo))
             })
             .filter(|(_, memo)| !memo.trim().is_empty())
+            .collect()
+    }
+
+    fn friend_records(
+        &self,
+        user_ids: &[String],
+    ) -> std::collections::HashMap<
+        String,
+        (
+            vrcx_0_core::friends::FriendRecord,
+            vrcx_0_core::presence::PresenceView,
+        ),
+    > {
+        let runtime = self
+            .wrist_realtime_runtime
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .upgrade();
+        let Some(runtime) = runtime else {
+            return std::collections::HashMap::new();
+        };
+        user_ids
+            .iter()
+            .filter_map(|id| {
+                runtime
+                    .current_friend_record(id)
+                    .map(|snapshot| (id.clone(), (snapshot.record, snapshot.presence)))
+            })
             .collect()
     }
 }

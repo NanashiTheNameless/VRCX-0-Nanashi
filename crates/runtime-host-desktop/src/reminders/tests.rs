@@ -102,6 +102,75 @@ fn one_time_event_reminder_fires_once_and_is_removed() {
 }
 
 #[test]
+fn live_friend_feed_fires_reminders_through_the_overlay_observer() {
+    use vrcx_0_application_core::{FeedLiveEntry, FriendProjection};
+
+    for (kind, trigger) in [
+        (
+            "Online",
+            ReminderTrigger::FriendOnline {
+                user_id: FRIEND.into(),
+                display_name: "Friend".into(),
+            },
+        ),
+        (
+            "Offline",
+            ReminderTrigger::FriendOffline {
+                user_id: FRIEND.into(),
+                display_name: "Friend".into(),
+            },
+        ),
+        (
+            "GPS",
+            ReminderTrigger::FriendLocation {
+                user_id: FRIEND.into(),
+                display_name: "Friend".into(),
+                world_id: "wrld_target".into(),
+            },
+        ),
+    ] {
+        let f = Fixture::new();
+        let reminder = f
+            .runtime
+            .create(SELF, "say hi".into(), trigger, false)
+            .unwrap();
+        f.runtime.overlay.set_friend_user_ids([FRIEND]);
+        f.runtime
+            .overlay
+            .set_location_hidden_user_ids([FRIEND.to_string()].into_iter().collect());
+        let entry: FeedLiveEntry = serde_json::from_value(json!({
+            "type": kind,
+            "created_at": Utc::now().to_rfc3339(),
+            "userId": FRIEND,
+            "displayName": "Friend Now",
+            "location": "wrld_target:1",
+            "previousLocation": "wrld_previous:1",
+            "worldName": "Target",
+            "groupName": "",
+            "time": 0
+        }))
+        .unwrap();
+        f.runtime
+            .overlay
+            .ingest_friend_projection(&FriendProjection::new(0, 0), &[entry]);
+
+        assert!(f.runtime.list(SELF).is_empty(), "{kind} reminder must fire");
+        let snapshot = f.runtime.overlay.snapshot();
+        let delivered = snapshot
+            .entries
+            .iter()
+            .find(|entry| entry.activity_type == "Reminder")
+            .expect("reminder must reach the wrist feed");
+        assert_eq!(delivered.actor_user_id, FRIEND);
+        assert!(delivered.source_id.contains(&reminder.id));
+        assert!(!snapshot
+            .entries
+            .iter()
+            .any(|entry| entry.activity_type == "GPS"));
+    }
+}
+
+#[test]
 fn stale_events_other_accounts_and_signed_out_never_fire() {
     let f = Fixture::new();
     f.online();
