@@ -13,8 +13,6 @@ export struct HmdToastItem {
 
 export component HmdToastPanel inherits Window {
     default-font-family: "0xProto";
-    width: 960px;
-    height: 528px;
     background: transparent;
 
     in property <bool> dark-background: true;
@@ -25,10 +23,13 @@ export component HmdToastPanel inherits Window {
     property <color> avatar-surface-color: #ffffff0d;
     property <color> action-color: #d7dce3;
 
+    // Card width is root.width minus margins (50px each side = 100px total)
+    property <length> card-width: root.width - 100px;
+
     for toast[index] in root.toasts : Rectangle {
-        x: (root.width - 860px) / 2;
+        x: (root.width - root.card-width) / 2;
         y: root.height - 20px - 112px - index * 124px;
-        width: 860px;
+        width: root.card-width;
         height: 112px;
         background: root.card-color;
         border-color: root.card-border-color;

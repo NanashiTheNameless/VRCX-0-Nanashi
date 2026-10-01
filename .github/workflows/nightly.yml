@@ -526,7 +526,14 @@ jobs:
                           -f ref="refs/tags/Nightly-Rolling" \
                           -f sha="$GITHUB_SHA" >/dev/null
                   fi
+                  # Delete all existing assets from Nightly-Rolling so it only ever
+                  # contains the single latest build's assets.
                   if gh release view Nightly-Rolling --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                      gh api "repos/$GITHUB_REPOSITORY/releases/tags/Nightly-Rolling" \
+                          --jq '.assets[].id' \
+                          | while read -r asset_id; do
+                              gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$asset_id" || true
+                          done
                       gh release upload Nightly-Rolling release-assets/* \
                           --repo "$GITHUB_REPOSITORY" --clobber
                   else

@@ -685,12 +685,7 @@
     }
 
     .vrcx-0-app-overlay {
-        inset-inline: var(--vrcx-0-overlay-gutter, 0);
-        top: calc(2rem + var(--vrcx-0-overlay-gutter, 0rem));
-        bottom: var(--vrcx-0-overlay-gutter, 0);
-        border-end-start-radius: var(--vrcx-0-overlay-bottom-radius, 0);
-        border-end-end-radius: var(--vrcx-0-overlay-bottom-radius, 0);
-        corner-shape: superellipse(2);
+        inset: 0;
     }
 
     .vrcx-0-app-drawer-viewport {

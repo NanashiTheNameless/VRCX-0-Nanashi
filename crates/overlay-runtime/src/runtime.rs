@@ -1200,6 +1200,9 @@ pub(super) fn build_wrist_frame_input(
                             .map(|joined| compact_duration((captured_at_ms - joined).max(0)))
                             .unwrap_or_default(),
                         is_friend: false,
+                        state: String::new(),
+                        platform: String::new(),
+                        status_description: String::new(),
                     },
                 )
             })

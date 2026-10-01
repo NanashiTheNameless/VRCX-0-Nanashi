@@ -16,6 +16,96 @@ use super::super::localization::{OverlayLocale, OverlayLocalizer, OverlayPanelLo
 
 const MAX_FEED_ROWS: usize = 24;
 
+/// Maximum wrist overlay width (2x normal preset = 1024px).
+/// Preset width (compact=448, normal=512, large=640) is used as minimum.
+const MAX_WRIST_WIDTH: u32 = 1024;
+
+/// Maximum wrist overlay height to prevent oversized overlays in VR.
+/// Compact=448, Normal=512, Large=640. Cap at Large preset height.
+const MAX_WRIST_HEIGHT: u32 = 640;
+
+/// Estimate the pixel width of a text string using average character width.
+/// This is a rough approximation since we don't have font metrics in Rust.
+fn estimate_text_width(text: &str, font_size: f32) -> f32 {
+    // Average character width is roughly 0.6 * font_size for variable-width fonts
+    text.chars().count() as f32 * font_size * 0.6
+}
+
+/// Calculate the required wrist overlay width based on content.
+fn calculate_wrist_width(input: &WristOverlayFrameInput) -> u32 {
+    let preset_width = input.options.size.overlay_size().width as f32;
+    let mut max_width: f32 = preset_width;
+
+    // Header: device labels + battery percentages
+    // Layout: 18px left padding + device labels + 18px right padding
+    let mut header_width: f32 = 36.0; // padding
+    for device in &input.devices {
+        let label_width = estimate_text_width(&device.label, 14.0);
+        let percent_width = device
+            .battery_percent
+            .map_or(0.0, |pct| estimate_text_width(&format!("{}%", pct), 12.0));
+        let battery_width = if device.battery_percent.is_some() {
+            23.0
+        } else {
+            0.0
+        };
+        header_width += label_width + percent_width + battery_width + 10.0; // spacing
+    }
+    max_width = max_width.max(header_width);
+
+    // Feed lines: time (42px) + actor + detail
+    // Layout: 14px left + 42px time + 8px spacing + actor + 5px spacing + detail + 14px right
+    const FEED_BASE_WIDTH: f32 = 14.0 + 42.0 + 8.0 + 5.0 + 14.0; // ~83px base
+    for entry in &input.activity.entries {
+        let actor = entry.actor_display_name.trim();
+        let detail = entry.content.detail.trim();
+        let actor_width = if !actor.is_empty() {
+            estimate_text_width(actor, 16.0)
+        } else {
+            0.0
+        };
+        let detail_width = estimate_text_width(detail, 16.0);
+        let line_width = FEED_BASE_WIDTH + actor_width + detail_width;
+        max_width = max_width.max(line_width);
+    }
+
+    // Now playing title
+    if let Some(np) = &input.now_playing {
+        let title = np.title.trim();
+        if !title.is_empty() {
+            // 18px left + title + 18px right + ellipsis space
+            let title_width = estimate_text_width(title, 14.0) + 36.0 + 30.0;
+            max_width = max_width.max(title_width);
+        }
+    }
+
+    // Footer: player_count + instance_duration + local_time (computed same as build_wrist_surface_model)
+    let footer_left = match input.page {
+        WristPage::Feed => format!("{} players", input.footer.player_count),
+        WristPage::Players => format!("Players ({})", input.players.len()),
+        WristPage::Notes => format!(
+            "Notes ({})",
+            input
+                .players
+                .iter()
+                .filter(|p| !p.note.trim().is_empty())
+                .count()
+        ),
+    };
+    let footer_center = input.footer.instance_duration.clone();
+    let footer_right = input.footer.local_time.clone();
+    let footer_width = 36.0
+        + estimate_text_width(&footer_left, 12.0)
+        + 60.0 // center space
+        + estimate_text_width(&footer_center, 12.0)
+        + 60.0 // center space
+        + estimate_text_width(&footer_right, 12.0);
+    max_width = max_width.max(footer_width);
+
+    // Clamp to bounds (preset width as minimum, MAX_WRIST_WIDTH as maximum)
+    max_width.clamp(preset_width, MAX_WRIST_WIDTH as f32) as u32
+}
+
 #[derive(
     Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type,
 )]
@@ -206,6 +296,12 @@ pub struct WristPlayerRow {
     pub note: String,
     pub joined_text: String,
     pub is_friend: bool,
+    /// Presence state: "online", "offline", "busy", etc.
+    pub state: String,
+    /// Platform: "standalonewindows" (PC VR), "android" (Quest), "windows" (Desktop)
+    pub platform: String,
+    /// Status description (e.g., "In VRChat", "In a private world")
+    pub status_description: String,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -351,8 +447,11 @@ pub fn build_wrist_surface_model(input: WristOverlayFrameInput) -> WristSurfaceM
                 .count()
         ),
     };
+    let calculated_width = calculate_wrist_width(&input);
+    let preset_height = input.options.size.overlay_size().height;
+    let safe_height = preset_height.min(MAX_WRIST_HEIGHT);
     WristSurfaceModel {
-        size: input.options.size.overlay_size(),
+        size: OverlaySize::new(calculated_width, safe_height),
         dark_background: input.options.dark_background,
         show_battery_percent: input.options.show_battery_percent,
         devices: if input.options.show_devices {
@@ -382,18 +481,49 @@ fn player_lines(players: &[WristPlayerRow], notes_only: bool) -> Vec<FeedLine> {
         .iter()
         .filter(|player| !notes_only || !player.note.trim().is_empty())
         .take(MAX_FEED_ROWS)
-        .map(|player| FeedLine {
-            time_text: player.joined_text.clone(),
-            kind: FeedKind::Instance,
-            actor_text: player.display_name.clone(),
-            detail: player.note.trim().replace('\n', " "),
-            relation: if player.is_friend {
-                FeedRelation::Friend
-            } else {
-                FeedRelation::None
-            },
-            severity: FeedSeverity::Normal,
-            accent: FeedAccent::None,
+        .map(|player| {
+            let mut detail = player.note.trim().replace('\n', " ");
+            // Add status indicator for friends
+            if player.is_friend
+                && (!player.state.is_empty() || !player.status_description.is_empty())
+            {
+                let mut status_parts = Vec::new();
+                if !player.state.is_empty() {
+                    status_parts.push(player.state.clone());
+                }
+                if !player.platform.is_empty() {
+                    let platform_label = match player.platform.as_str() {
+                        "standalonewindows" => "PC VR",
+                        "android" => "Quest",
+                        "windows" => "Desktop",
+                        _ => &player.platform,
+                    };
+                    status_parts.push(platform_label.to_string());
+                }
+                if !player.status_description.is_empty() {
+                    status_parts.push(player.status_description.clone());
+                }
+                if !status_parts.is_empty() {
+                    if !detail.is_empty() {
+                        detail = format!("{} | {}", detail, status_parts.join(" · "));
+                    } else {
+                        detail = status_parts.join(" · ");
+                    }
+                }
+            }
+            FeedLine {
+                time_text: player.joined_text.clone(),
+                kind: FeedKind::Instance,
+                actor_text: player.display_name.clone(),
+                detail,
+                relation: if player.is_friend {
+                    FeedRelation::Friend
+                } else {
+                    FeedRelation::None
+                },
+                severity: FeedSeverity::Normal,
+                accent: FeedAccent::None,
+            }
         })
         .collect();
     if !lines.is_empty() {
@@ -751,6 +881,9 @@ mod page_tests {
             note: note.into(),
             joined_text: "5m".into(),
             is_friend: false,
+            state: String::new(),
+            platform: String::new(),
+            status_description: String::new(),
         }
     }
 

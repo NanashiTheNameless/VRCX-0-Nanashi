@@ -3,6 +3,7 @@ use std::sync::Arc;
 use vrcx_0_application_activity::OverlayActivityRuntime;
 use vrcx_0_application_core::{RuntimeAuthScope, TaskSupervisor, WebClient, WorldCache};
 use vrcx_0_application_game::{NowPlayingSnapshot, RuntimeSnapshot};
+use vrcx_0_core::friends::FriendRecord;
 use vrcx_0_persistence::config::ConfigRepository;
 
 pub trait VrOverlayRuntimeServices: Send + Sync {
@@ -26,6 +27,14 @@ pub trait VrOverlayRuntimeServices: Send + Sync {
 
     /// Fork: local notes for these user ids (for the wrist Players/Notes pages).
     fn user_notes(&self, _user_ids: &[String]) -> std::collections::HashMap<String, String> {
+        std::collections::HashMap::new()
+    }
+
+    /// Fork: friend records for these user ids (for the wrist Players/Notes pages).
+    fn friend_records(
+        &self,
+        _user_ids: &[String],
+    ) -> std::collections::HashMap<String, FriendRecord> {
         std::collections::HashMap::new()
     }
 }
