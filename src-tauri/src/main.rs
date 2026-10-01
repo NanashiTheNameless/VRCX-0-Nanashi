@@ -1,7 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 fn maybe_rename_appimage() -> PathBuf {
     let executable = std::env::current_exe().unwrap_or_default();
@@ -24,38 +23,34 @@ fn maybe_rename_appimage() -> PathBuf {
     executable
 }
 
-fn update_autostart_desktop(exe_path: &Path) {
-    if let Some(config_dir) = dirs::config_dir() {
-        let autostart_dir = config_dir.join("autostart");
-        let desktop_file = autostart_dir.join("vrcx-0-nanashi.desktop");
-        if desktop_file.exists() {
-            if let Ok(content) = fs::read_to_string(&desktop_file) {
-                // Replace the Exec line with current path
-                let new_content = content
-                    .lines()
-                    .map(|line| {
-                        if line.starts_with("Exec=") {
-                            format!("Exec={}", exe_path.display())
-                        } else if line.starts_with("TryExec=") {
-                            format!("TryExec={}", exe_path.display())
-                        } else {
-                            line.to_string()
-                        }
-                    })
-                    .collect::<Vec<_>>()
-                    .join("\n");
-                if let Err(e) = fs::write(&desktop_file, new_content) {
-                    eprintln!("Failed to update autostart desktop file: {e}");
-                }
-            }
-        }
-    }
-}
-
 fn main() {
     let exe_path = maybe_rename_appimage();
-    // Always update autostart desktop entry to point to current executable
-    update_autostart_desktop(&exe_path);
+    #[cfg(target_os = "linux")]
+    if let Err(error) =
+        vrcx_0_platform::autostart::refresh_current_entries("VRCX-0-Nanashi", &exe_path, false)
+    {
+        eprintln!("Failed to update autostart desktop file: {error}");
+    }
+    #[cfg(not(target_os = "linux"))]
+    let _ = exe_path;
+
+    #[cfg(target_os = "linux")]
+    if std::env::args().any(|arg| arg == "--appimage-smoke-test") {
+        let environment = tauri::Env::default();
+        let relaunch =
+            tauri::process::current_binary(&environment).expect("resolve AppImage relaunch path");
+        println!(
+            "{}",
+            serde_json::json!({
+                "appimage": environment.appimage.as_ref().map(PathBuf::from),
+                "appdir": environment.appdir.as_ref().map(PathBuf::from),
+                "executable": std::env::current_exe().expect("resolve mounted executable"),
+                "relaunchPath": relaunch,
+                "updaterPath": environment.appimage.as_ref().map(PathBuf::from),
+            })
+        );
+        return;
+    }
 
     if std::env::args().any(|arg| arg == "--restore-ytdlp") {
         let result =

@@ -212,7 +212,7 @@ function ColumnShell({
     children: ReactNode;
 }) {
     return (
-        <div className="flex min-h-0 flex-col gap-2">
+        <div className="flex min-h-0 flex-col gap-2 overflow-hidden">
             <div className="flex items-baseline gap-2 px-1">
                 <span className="text-xs font-medium tracking-wide uppercase">
                     {title}
@@ -546,7 +546,7 @@ export function CustomNavDialogLayoutEditor({
     );
 
     return (
-        <div className="grid min-h-0 flex-1 gap-4 sm:grid-cols-[minmax(0,1fr)_15rem]">
+        <div className="grid min-h-0 flex-1 gap-4 overflow-hidden sm:grid-cols-[minmax(0,1fr)_15rem]">
             <ColumnShell
                 title={t('nav_menu.custom_nav.visible_items')}
                 count={visibleCount}

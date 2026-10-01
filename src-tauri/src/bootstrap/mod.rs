@@ -10,7 +10,7 @@ pub(crate) mod sidebar_auto_hide;
 pub(crate) mod tray_shortcut;
 mod window;
 
-pub(crate) use autostart::request_startup_foreground;
+pub(crate) use autostart::{enable_autostart, request_startup_foreground};
 pub(crate) use background_delay::{arm_background_delay, cancel_background_delay};
 pub(crate) use notification::{
     show_auth_failure_notification_after_backend_start_error, show_auth_failure_notification_once,

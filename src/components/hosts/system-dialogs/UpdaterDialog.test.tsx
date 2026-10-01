@@ -408,6 +408,41 @@ describe('UpdaterDialog', () => {
         expect(mocks.confirmInstall).toHaveBeenCalledExactlyOnceWith('2.7.0');
     });
 
+    it('shows installation errors and allows a retry without restarting', async () => {
+        const release = {
+            canonicalVersion: '2.7.0',
+            displayVersion: '2.7.0',
+            updaterType: 'tauri'
+        };
+        mocks.toNormalizedReleaseFromSnapshot.mockReturnValue(release);
+        mocks.appAppUpdateCheckRun.mockResolvedValue({
+            hasAvailableUpdate: true,
+            release,
+            error: null
+        });
+        const message =
+            'Failed to install pending update: Permission denied (os error 13)';
+        mocks.confirmInstall.mockRejectedValue(
+            new Error(
+                `Tauri command failed: app__app_update_install_confirm: ${message}`
+            )
+        );
+        render(<UpdaterDialog open onOpenChange={vi.fn()} />);
+        const installButton = await screen.findByRole<HTMLButtonElement>(
+            'button',
+            { name: 'dialog.system.action.install_and_restart' }
+        );
+        await waitFor(() => expect(installButton.disabled).toBe(false));
+        await act(async () => installButton.click());
+        expect(screen.getByText(message)).toBeTruthy();
+        expect(mocks.toastAdd).toHaveBeenCalledWith({
+            type: 'error',
+            description: message
+        });
+        expect(installButton.disabled).toBe(false);
+        expect(mocks.restartApplication).not.toHaveBeenCalled();
+    });
+
     it('shows the disabled build state without running an update check', async () => {
         mocks.updateCheckDisabled = true;
 

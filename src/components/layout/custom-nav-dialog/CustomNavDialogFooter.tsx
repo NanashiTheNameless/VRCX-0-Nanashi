@@ -23,7 +23,7 @@ export function CustomNavDialogFooter({
     const { t } = useTranslation();
 
     return (
-        <DialogFooter className="items-center justify-between sm:justify-between">
+        <DialogFooter className="bg-popover relative z-10 shrink-0 items-center justify-between sm:justify-between">
             <div className="flex flex-wrap gap-2">
                 <Button
                     type="button"

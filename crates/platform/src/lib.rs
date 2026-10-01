@@ -1,6 +1,8 @@
 pub mod app_paths;
 #[cfg(target_os = "linux")]
 pub mod appimage;
+#[cfg(target_os = "linux")]
+pub mod autostart;
 pub mod error;
 pub mod error_log;
 pub mod host_capabilities;

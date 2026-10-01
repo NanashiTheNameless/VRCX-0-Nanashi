@@ -41,7 +41,10 @@ function serializeValue(
     seen: Set<unknown> = new Set<unknown>()
 ): string {
     if (value instanceof Error) {
-        const details = value.stack || value.message || value.name;
+        const summary = [value.name, value.message].filter(Boolean).join(': ');
+        const details = value.stack?.includes(summary)
+            ? value.stack
+            : [summary, value.stack].filter(Boolean).join('\n');
         const diagnosticFields: string[] = [];
         if (isRecord(value)) {
             for (const key of [

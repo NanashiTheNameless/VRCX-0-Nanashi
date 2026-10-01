@@ -276,12 +276,18 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
             await confirmInstall(release.canonicalVersion);
             await restartApplication();
         } catch (error) {
-            setDetail(
-                userFacingErrorMessage(
-                    error,
-                    t('message.vrcx_updater.failed_install')
-                )
+            const details = error instanceof Error ? error.message : error;
+            const message = userFacingErrorMessage(
+                typeof details === 'string'
+                    ? details.replace(
+                          /^Tauri command failed: [a-zA-Z0-9_]+:\s*/,
+                          ''
+                      )
+                    : details,
+                t('message.vrcx_updater.failed_install')
             );
+            setDetail(message);
+            toast.add({ type: 'error', description: message });
         } finally {
             setDownloading(false);
         }

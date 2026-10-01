@@ -473,9 +473,15 @@ fn updater_metadata_from(update: &Update) -> UpdaterMetadata {
     }
 }
 
+fn is_update_transport_error(error: &tauri_plugin_updater::Error) -> bool {
+    matches!(error, tauri_plugin_updater::Error::Reqwest(error)
+        if error.is_request() || error.is_body() || error.is_decode() || error.is_timeout())
+}
+
 async fn find_update(
     app_handle: &tauri::AppHandle,
     request: &UpdaterCheckRequest,
+    http1_only: bool,
 ) -> ApplicationResult<Option<Update>> {
     let endpoint = vrcx_0_host_desktop::updater_policy::validate_update_request(
         &request.manifest_url,
@@ -505,6 +511,10 @@ async fn find_update(
             release.version == expected_manifest_version
         });
 
+    if http1_only {
+        builder = builder.configure_client(|client| client.http1_only());
+    }
+
     if let Some(proxy_url) = request
         .proxy
         .as_deref()
@@ -531,7 +541,7 @@ impl UpdaterPort for TauriUpdaterPort {
         &self,
         request: UpdaterCheckRequest,
     ) -> ApplicationResult<Option<UpdaterMetadata>> {
-        Ok(find_update(&self.app_handle, &request)
+        Ok(find_update(&self.app_handle, &request, false)
             .await?
             .as_ref()
             .map(updater_metadata_from))
@@ -542,32 +552,51 @@ impl UpdaterPort for TauriUpdaterPort {
         request: UpdaterCheckRequest,
         on_progress: UpdaterProgressCallback,
     ) -> ApplicationResult<UpdaterDownloadOutcome> {
-        let Some(update) = find_update(&self.app_handle, &request).await? else {
-            return Err(ApplicationError::Custom(
-                "No installable update was found.".into(),
-            ));
+        let mut http1_only = false;
+        let (update, bytes) = loop {
+            let Some(update) = find_update(&self.app_handle, &request, http1_only).await? else {
+                return Err(ApplicationError::Custom(
+                    "No installable update was found.".into(),
+                ));
+            };
+            let mut first_chunk = true;
+            let progress_started = on_progress.clone();
+            let progress_finished = on_progress.clone();
+            let result = update
+                .download(
+                    move |chunk_length, content_length| {
+                        if first_chunk {
+                            first_chunk = false;
+                            progress_started(UpdaterDownloadProgress::Started { content_length });
+                        }
+                        progress_started(UpdaterDownloadProgress::Progress { chunk_length });
+                    },
+                    move || {
+                        progress_finished(UpdaterDownloadProgress::Finished);
+                    },
+                )
+                .await;
+            match result {
+                Ok(bytes) => break (update, bytes),
+                Err(error)
+                    if cfg!(target_os = "linux")
+                        && !http1_only
+                        && is_update_transport_error(&error) =>
+                {
+                    tracing::warn!(error = %error, "update transport failed; retrying with HTTP/1.1");
+                    http1_only = true;
+                    on_progress(UpdaterDownloadProgress::Started {
+                        content_length: None,
+                    });
+                }
+                Err(error) => {
+                    return Err(ApplicationError::Custom(format!(
+                        "Failed to download update: {error}"
+                    )));
+                }
+            }
         };
         let metadata = updater_metadata_from(&update);
-        let mut first_chunk = true;
-        let progress_started = on_progress.clone();
-        let progress_finished = on_progress;
-        let bytes = update
-            .download(
-                move |chunk_length, content_length| {
-                    if first_chunk {
-                        first_chunk = false;
-                        progress_started(UpdaterDownloadProgress::Started { content_length });
-                    }
-                    progress_started(UpdaterDownloadProgress::Progress { chunk_length });
-                },
-                move || {
-                    progress_finished(UpdaterDownloadProgress::Finished);
-                },
-            )
-            .await
-            .map_err(|error| {
-                ApplicationError::Custom(format!("Failed to download update: {error}"))
-            })?;
         let sha256: [u8; 32] = Sha256::digest(&bytes).into();
         let cache_dir = update_cache_dir(&self.app_handle)?;
         tokio::fs::create_dir_all(&cache_dir)

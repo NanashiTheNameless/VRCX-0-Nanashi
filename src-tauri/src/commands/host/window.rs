@@ -278,8 +278,7 @@ pub fn app__set_startup(
             }
             let autolaunch = self.0.autolaunch();
             if enabled {
-                autolaunch
-                    .enable()
+                crate::bootstrap::enable_autostart(&self.0)
                     .map_err(|error| format!("enable autostart: {error}"))
             } else {
                 autolaunch

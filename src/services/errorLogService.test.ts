@@ -63,4 +63,26 @@ describe('errorLogService', () => {
             ...appendedEntry('sqliteCategory: malformed')
         );
     });
+    it('preserves error messages when WebKit stacks contain only frames', async () => {
+        const error = Object.assign(
+            new Error('Failed to install pending update: Permission denied'),
+            {
+                code: 'custom',
+                stack: 'o@tauri://localhost/assets/bindings.js:1:325'
+            }
+        );
+        await recordErrorLog('rust:command', [
+            'command: app__app_update_install_confirm',
+            error
+        ]);
+        expect(mocks.invokeTauri).toHaveBeenCalledWith(
+            ...appendedEntry(error.message)
+        );
+        expect(mocks.invokeTauri).toHaveBeenCalledWith(
+            ...appendedEntry(error.stack)
+        );
+        expect(mocks.invokeTauri).toHaveBeenCalledWith(
+            ...appendedEntry('code: custom')
+        );
+    });
 });

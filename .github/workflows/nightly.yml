@@ -221,6 +221,13 @@ jobs:
                       --signature-file "${appimage_path}.sig" \
                       --out "$manifest_path"
 
+            - name: Smoke test packaged AppImage
+              if: runner.os == 'Linux'
+              run: |
+                  python3 scripts/smoke-appimage.py \
+                      "target/release/bundle/appimage/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_linux_x86_64.AppImage" \
+                      --version "${{ needs.prepare.outputs.build_version }}"
+
             - uses: actions/upload-artifact@v7
               with:
                   name: nightly-${{ matrix.artifact_name }}

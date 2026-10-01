@@ -75,13 +75,11 @@ It is a Rust + Tauri rewrite of VRCX.
 Grab the file for your platform from the
 [latest release](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest):
 
-| Platform                | File                                                |
-| ----------------------- | --------------------------------------------------- |
-| Windows                 | `VRCX-0-Nanashi_<version>_windows_x86_64_setup.exe` |
-| macOS (Universal)       | `VRCX-0-Nanashi_<version>_macos_universal.dmg`      |
-| Linux (AppImage)        | `VRCX-0-Nanashi_<version>_linux_x86_64.AppImage`    |
-| Linux (Debian/Ubuntu)   | `VRCX-0-Nanashi_<version>_linux_x86_64.deb`         |
-| Linux (Fedora/openSUSE) | `VRCX-0-Nanashi_<version>_linux_x86_64.rpm`         |
+| Platform          | File                                                |
+| ----------------- | --------------------------------------------------- |
+| Windows           | `VRCX-0-Nanashi_<version>_windows_x86_64_setup.exe` |
+| macOS (Universal) | `VRCX-0-Nanashi_<version>_macos_universal.dmg`      |
+| Linux (AppImage)  | `VRCX-0-Nanashi_<version>_linux_x86_64.AppImage`    |
 
 Fork builds are not code-signed. On Windows, SmartScreen may warn on first run. On macOS,
 if the first launch is blocked, open **System Settings > Privacy & Security** and click
@@ -128,6 +126,10 @@ Build for release (skip code signing and installer):
 ```bash
 npm run tauri:build -- --no-sign --no-bundle
 ```
+
+Release builds run `scripts/smoke-appimage.py` against the packaged AppImage before
+uploading it. The check covers renaming, repeat launches, autostart arguments, and
+the paths used for updates and relaunching without opening the app interface.
 
 ## Credits
 

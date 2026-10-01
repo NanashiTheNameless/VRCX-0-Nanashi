@@ -163,11 +163,15 @@ mod tests {
             body.len()
         );
         let task = tokio::spawn(async move {
-            let (mut socket, _) = listener.accept().await.unwrap();
-            let mut request = [0_u8; 1024];
-            let _ = socket.read(&mut request).await;
-            tokio::time::sleep(delay).await;
-            let _ = socket.write_all(response.as_bytes()).await;
+            tokio::time::timeout(Duration::from_secs(5), async {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let mut request = [0_u8; 1024];
+                let _ = socket.read(&mut request).await;
+                tokio::time::sleep(delay).await;
+                let _ = socket.write_all(response.as_bytes()).await;
+            })
+            .await
+            .expect("image test server did not finish within five seconds");
         });
         (format!("http://{address}/image.png"), task)
     }
@@ -210,7 +214,7 @@ mod tests {
     #[tokio::test]
     async fn image_fetcher_returns_success_bodies_and_rejects_error_statuses() {
         vrcx_0_core::tls::install_crypto_provider();
-        let fetcher = local_fetcher(Client::new());
+        let fetcher = local_fetcher(Client::builder().no_proxy().build().unwrap());
         let (ok_url, ok_server) = serve_once("200 OK", "image-bytes", Duration::ZERO).await;
         assert_eq!(
             fetcher.fetch_image(&ok_url).await.unwrap().as_ref(),
@@ -229,16 +233,20 @@ mod tests {
     async fn image_fetcher_honors_the_configured_read_timeout() {
         vrcx_0_core::tls::install_crypto_provider();
         let client = Client::builder()
+            .no_proxy()
             .read_timeout(Duration::from_millis(20))
             .build()
             .unwrap();
         let fetcher = local_fetcher(client);
         let (url, server) = serve_once("200 OK", "late", Duration::from_millis(200)).await;
 
-        let error = fetcher.fetch_image(&url).await.unwrap_err();
-
+        let result = tokio::time::timeout(Duration::from_secs(2), fetcher.fetch_image(&url)).await;
+        server.abort();
+        let _ = server.await;
+        let error = result
+            .expect("configured read timeout did not fire")
+            .unwrap_err();
         assert!(error.to_string().contains("image fetch:"));
-        server.await.unwrap();
     }
 
     #[test]

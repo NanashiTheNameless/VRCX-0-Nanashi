@@ -41,11 +41,34 @@ pub(crate) fn request_startup_foreground() {
     STARTUP_FOREGROUND_REQUESTED.store(true, Ordering::Release);
 }
 
+pub(crate) fn enable_autostart(app: &tauri::AppHandle) -> Result<(), String> {
+    let autolaunch = app.autolaunch();
+    #[cfg(target_os = "linux")]
+    let already_enabled = autolaunch.is_enabled().map_err(|error| error.to_string())?;
+    #[cfg(not(target_os = "linux"))]
+    let already_enabled = false;
+    if !already_enabled {
+        autolaunch.enable().map_err(|error| error.to_string())?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        let executable =
+            tauri::process::current_binary(&app.env()).map_err(|error| error.to_string())?;
+        vrcx_0_platform::autostart::refresh_current_entries(
+            &app.package_info().name,
+            &executable,
+            true,
+        )
+        .map_err(|error| error.to_string())?;
+    }
+    Ok(())
+}
+
 pub(super) fn sync_autostart_from_db(app: &tauri::App, state: &AppState) {
     #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
     {
         if db_config_bool(state, "config:vrcx_startatwindowsstartup") == Some(true) {
-            if let Err(error) = app.autolaunch().enable() {
+            if let Err(error) = enable_autostart(app.handle()) {
                 tracing::warn!(error = %error, "failed to synchronize autostart preference");
             }
         }

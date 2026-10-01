@@ -237,6 +237,12 @@ jobs:
                   echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
                   ls -la package-assets
 
+            - name: Smoke test packaged AppImage
+              if: runner.os == 'Linux'
+              run: |
+                  python3 scripts/smoke-appimage.py package-assets/*.AppImage \
+                      --version "${{ steps.version.outputs.version }}"
+
             - uses: actions/upload-artifact@v7
               with:
                   name: ${{ steps.collect.outputs.artifact_name }}

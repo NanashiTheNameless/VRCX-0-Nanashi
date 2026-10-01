@@ -659,7 +659,7 @@ export function CustomNavDialog({
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="flex max-h-[85vh] flex-col gap-4 overflow-hidden sm:max-w-3xl">
-                <DialogHeader>
+                <DialogHeader className="shrink-0">
                     <DialogTitle>
                         {t('nav_menu.custom_nav.dialog_title')}
                     </DialogTitle>

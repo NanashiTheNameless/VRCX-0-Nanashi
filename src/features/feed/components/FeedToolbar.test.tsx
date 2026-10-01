@@ -277,7 +277,7 @@ async function selectDateRange(
     return calendar;
 }
 
-describe('Feed compound search', { timeout: 10_000 }, () => {
+describe('Feed compound search', () => {
     it('discards unconfirmed date edits when the shared date picker reopens', async () => {
         const user = userEvent.setup();
         renderFilters();
