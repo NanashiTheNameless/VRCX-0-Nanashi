@@ -423,7 +423,6 @@ export function usePlayerListColumns(): AppColumnDef<PlayerListRow>[] {
                 size: 72,
                 minSize: 72,
                 maxSize: 72,
-                enableResizing: false,
                 meta: { label: t('table.playerList.avatar') },
                 header: () => (
                     <DataTableHeaderLabel>
@@ -437,6 +436,8 @@ export function usePlayerListColumns(): AppColumnDef<PlayerListRow>[] {
             {
                 id: 'timer',
                 size: 96,
+                minSize: 64,
+                maxSize: 160,
                 meta: {
                     label: t('table.playerList.timer'),
                     tableHeadClassName: DATA_TABLE_NUMERIC_HEADER_CLASS_NAME,
@@ -461,6 +462,8 @@ export function usePlayerListColumns(): AppColumnDef<PlayerListRow>[] {
             {
                 id: 'displayName',
                 size: 280,
+                minSize: 160,
+                maxSize: 600,
                 enableHiding: false,
                 meta: {
                     label: t('table.playerList.displayName'),
@@ -491,6 +494,8 @@ export function usePlayerListColumns(): AppColumnDef<PlayerListRow>[] {
             {
                 id: 'rank',
                 size: 120,
+                minSize: 80,
+                maxSize: 200,
                 meta: { label: t('table.playerList.rank') },
                 accessorFn: (row) => row.trustSortNum,
                 header: ({ column }) => (
@@ -510,6 +515,8 @@ export function usePlayerListColumns(): AppColumnDef<PlayerListRow>[] {
             {
                 id: 'mutualFriends',
                 size: 140,
+                minSize: 80,
+                maxSize: 280,
                 enableHiding: false,
                 meta: { label: t('table.playerList.mutualFriends') },
                 accessorFn: (row) =>
@@ -529,6 +536,8 @@ export function usePlayerListColumns(): AppColumnDef<PlayerListRow>[] {
             {
                 id: 'groupRoles',
                 size: 180,
+                minSize: 100,
+                maxSize: 400,
                 meta: { label: t('table.playerList.groupRoles') },
                 accessorFn: (row) => playerGroupRoleOrder(row.groupRoles),
                 sortUndefined: 'last',
@@ -555,6 +564,8 @@ export function usePlayerListColumns(): AppColumnDef<PlayerListRow>[] {
             {
                 id: 'status',
                 size: 220,
+                minSize: 120,
+                maxSize: 500,
                 meta: { label: t('table.playerList.status') },
                 accessorFn: (row) => resolveStatusMeta(row).label,
                 header: () => (
@@ -568,6 +579,8 @@ export function usePlayerListColumns(): AppColumnDef<PlayerListRow>[] {
             {
                 id: 'icon',
                 size: 160,
+                minSize: 80,
+                maxSize: 320,
                 meta: { label: t('table.playerList.icon') },
                 header: () => (
                     <DataTableHeaderLabel>
@@ -580,6 +593,8 @@ export function usePlayerListColumns(): AppColumnDef<PlayerListRow>[] {
             {
                 id: 'platform',
                 size: 120,
+                minSize: 80,
+                maxSize: 240,
                 meta: { label: t('table.playerList.platform') },
                 accessorFn: (row) => row.platformLabel,
                 header: ({ column }) => (
@@ -593,6 +608,8 @@ export function usePlayerListColumns(): AppColumnDef<PlayerListRow>[] {
             {
                 id: 'language',
                 size: 120,
+                minSize: 60,
+                maxSize: 240,
                 meta: { label: t('table.playerList.language') },
                 accessorFn: (row) =>
                     row.languages
@@ -609,6 +626,8 @@ export function usePlayerListColumns(): AppColumnDef<PlayerListRow>[] {
             {
                 id: 'bioLink',
                 size: 120,
+                minSize: 60,
+                maxSize: 240,
                 meta: {
                     label: t('table.playerList.bioLink'),
                     tableCellClassName: DATA_TABLE_CONTROL_CELL_CLASS_NAME
@@ -625,6 +644,8 @@ export function usePlayerListColumns(): AppColumnDef<PlayerListRow>[] {
             {
                 id: 'note',
                 size: 180,
+                minSize: 100,
+                maxSize: 400,
                 meta: { label: t('table.playerList.note') },
                 accessorFn: (row) => row.note || '',
                 header: () => (
