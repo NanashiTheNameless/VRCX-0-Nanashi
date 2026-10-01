@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::sync::{LazyLock, Mutex};
 use std::time::Duration;
+use vrcx_0_http_client::{Policy as HttpPolicy, RequestBuilderExt};
 
 use futures_util::StreamExt;
 use reqwest::{Client, Proxy};
@@ -23,6 +24,8 @@ use vrcx_0_core::proxy::with_remote_dns;
 pub enum LlmError {
     #[error("LLM transport error: {0}")]
     Http(#[from] reqwest::Error),
+    #[error("LLM transport error: {0}")]
+    Transport(#[from] vrcx_0_http_client::Error),
     #[error("LLM API error ({status}): {message}")]
     Api { status: u16, message: String },
     #[error("LLM not configured")]
@@ -43,6 +46,7 @@ const OPENROUTER_REASONING_EFFORTS: &[&str] =
 #[derive(Clone)]
 pub struct LlmClient {
     http: Client,
+    proxy_configured: bool,
     request_timeout: Duration,
     base_url: String,
     api_key: String,
@@ -186,7 +190,7 @@ impl LlmClient {
         timeout: Duration,
     ) -> Result<Self, LlmError> {
         vrcx_0_core::tls::install_crypto_provider();
-        let mut builder = Client::builder()
+        let mut builder = vrcx_0_http_client::builder()
             .connect_timeout(timeout)
             .read_timeout(timeout)
             .user_agent(vrcx_0_core::user_agent::app_user_agent());
@@ -197,6 +201,7 @@ impl LlmClient {
         let base_url = base_url.into();
         Ok(Self {
             http,
+            proxy_configured: proxy_url.is_some(),
             request_timeout: timeout,
             base_url: normalize_base_url(&base_url),
             api_key: api_key.into(),
@@ -246,7 +251,7 @@ impl LlmClient {
         let response = self
             .with_extra_headers(self.authorized(self.http.get(&url)))
             .timeout(self.request_timeout)
-            .send()
+            .send_with_policy(HttpPolicy::sensitive(self.proxy_configured))
             .await?;
         let status = response.status();
         if !status.is_success() {
@@ -338,7 +343,7 @@ impl LlmClient {
                 self.authorized(self.http.post(self.openai_url("/chat/completions"))),
             )
             .json(body)
-            .send()
+            .send_with_policy(HttpPolicy::sensitive(self.proxy_configured))
             .await?)
     }
 
@@ -376,7 +381,7 @@ impl LlmClient {
             )
             .json(&body)
             .timeout(self.request_timeout)
-            .send()
+            .send_with_policy(HttpPolicy::sensitive(self.proxy_configured))
             .await?;
 
         let status = response.status();

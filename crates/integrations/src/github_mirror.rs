@@ -6,6 +6,7 @@
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+use vrcx_0_http_client::{Policy as HttpPolicy, RequestBuilderExt};
 
 const MAX_ZIP_BYTES: usize = 32 * 1024 * 1024;
 const MAX_UNPACKED_BYTES: u64 = 128 * 1024 * 1024;
@@ -38,7 +39,7 @@ fn valid_sha(value: &str) -> bool {
 
 fn client(timeout: Duration) -> Result<reqwest::Client, String> {
     vrcx_0_core::tls::install_crypto_provider();
-    reqwest::Client::builder()
+    vrcx_0_http_client::builder()
         .timeout(timeout)
         .redirect(reqwest::redirect::Policy::none())
         .user_agent(vrcx_0_core::user_agent::component_user_agent(
@@ -59,11 +60,15 @@ pub async fn github_head(owner: &str, repo: &str, etag: Option<&str>) -> Result<
         .get(format!(
             "https://api.github.com/repos/{owner}/{repo}/commits/HEAD"
         ))
+        .timeout(Duration::from_secs(20))
         .header("Accept", "application/vnd.github.sha");
     if let Some(etag) = etag.filter(|value| !value.is_empty()) {
         request = request.header("If-None-Match", etag);
     }
-    let response = request.send().await.map_err(|error| error.to_string())?;
+    let response = request
+        .send_with_policy(HttpPolicy::sensitive(false).without_redirects())
+        .await
+        .map_err(|error| error.to_string())?;
     if response.status() == reqwest::StatusCode::NOT_MODIFIED {
         return Ok(HeadCheck::NotModified);
     }
@@ -95,7 +100,8 @@ async fn download_commit_zip(owner: &str, repo: &str, sha: &str) -> Result<Vec<u
         .get(format!(
             "https://codeload.github.com/{owner}/{repo}/zip/{sha}"
         ))
-        .send()
+        .timeout(Duration::from_secs(60))
+        .send_with_policy(HttpPolicy::sensitive(false).without_redirects())
         .await
         .map_err(|error| error.to_string())?;
     if !response.status().is_success() {

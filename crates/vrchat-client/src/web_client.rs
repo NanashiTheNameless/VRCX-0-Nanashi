@@ -6,7 +6,6 @@ use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use cookie_store::{CookieStore, RawCookie};
 use reqwest::header::{HeaderName, HeaderValue, CONTENT_TYPE, REFERER, USER_AGENT};
 use reqwest::multipart::{Form, Part};
-use reqwest::redirect::Policy;
 use reqwest::{Client, Method, Proxy};
 use vrcx_0_contracts::external_api::IDENTIFY_WITH_CONTACT_HEADER;
 use vrcx_0_core::vrchat_endpoints::{VRCHAT_CLOUD_ROOT_HOST, VRCHAT_SITE_HOST};
@@ -256,17 +255,8 @@ fn build_http_client(
     proxy_url: Option<&str>,
     user_agent: &str,
 ) -> Result<Client> {
-    build_http_client_with_redirects(jar, proxy_url, user_agent, true)
-}
-
-fn build_http_client_with_redirects(
-    jar: Arc<CookieJar>,
-    proxy_url: Option<&str>,
-    user_agent: &str,
-    follow_redirects: bool,
-) -> Result<Client> {
     vrcx_0_core::tls::install_crypto_provider();
-    let mut builder = Client::builder()
+    let mut builder = vrcx_0_http_client::builder()
         .cookie_provider(jar)
         .user_agent(user_agent)
         .gzip(true)
@@ -277,9 +267,6 @@ fn build_http_client_with_redirects(
         .tcp_keepalive(std::time::Duration::from_secs(60))
         .connect_timeout(std::time::Duration::from_secs(10))
         .read_timeout(std::time::Duration::from_secs(30));
-    if !follow_redirects {
-        builder = builder.redirect(Policy::none());
-    }
 
     if let Some(url) = proxy_url {
         builder = builder.no_proxy().proxy(
@@ -322,9 +309,9 @@ async fn execute_request(
     client: &Client,
     request: reqwest::Request,
     response_body_limit: Option<usize>,
+    policy: vrcx_0_http_client::Policy,
 ) -> Result<(i32, String)> {
-    let mut response = client
-        .execute(request)
+    let mut response = vrcx_0_http_client::execute(client, request, policy)
         .await
         .map_err(|e| Error::Custom(e.to_string()))?;
     let status = response.status().as_u16() as i32;
@@ -549,15 +536,24 @@ impl WebClient {
                 "fresh HTTP client execution does not support uploads".into(),
             ));
         }
-        let client = build_http_client_with_redirects(
+        let client = build_http_client(
             Arc::clone(&self.jar),
             self.proxy_url.as_deref(),
             &self.user_agent,
-            follow_redirects,
         )?;
         let response_body_limit = request.response_body_limit;
         let request = self.build_standard_request_with(&client, &mut request)?;
-        execute_request(&client, request, response_body_limit).await
+        execute_request(
+            &client,
+            request,
+            response_body_limit,
+            if follow_redirects {
+                vrcx_0_http_client::Policy::sensitive(self.proxy_url.is_some())
+            } else {
+                vrcx_0_http_client::Policy::sensitive(self.proxy_url.is_some()).without_redirects()
+            },
+        )
+        .await
     }
 
     async fn do_execute(&self, mut request: WebExecuteRequest) -> Result<(i32, String)> {
@@ -590,7 +586,13 @@ impl WebClient {
             }
         };
 
-        execute_request(&self.client, request, response_body_limit).await
+        execute_request(
+            &self.client,
+            request,
+            response_body_limit,
+            vrcx_0_http_client::Policy::sensitive(self.proxy_url.is_some()),
+        )
+        .await
     }
 
     fn build_standard_request(&self, request: &mut WebExecuteRequest) -> Result<reqwest::Request> {

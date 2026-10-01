@@ -5,6 +5,7 @@ edition = "2021"
 license.workspace = true
 
 [dependencies]
+vrcx-0-http-client = { path = "../http-client" }
 base64.workspace = true
 chrono.workspace = true
 reqwest = { workspace = true, features = ["json", "stream"] }

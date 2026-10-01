@@ -260,6 +260,9 @@ fn llm_error(error: vrcx_0_integrations::llm::LlmError) -> AssistantLlmError {
         vrcx_0_integrations::llm::LlmError::Http(error) => {
             AssistantLlmError::Http(error.to_string())
         }
+        vrcx_0_integrations::llm::LlmError::Transport(error) => {
+            AssistantLlmError::Http(error.to_string())
+        }
         vrcx_0_integrations::llm::LlmError::Api { status, message } => {
             AssistantLlmError::Api { status, message }
         }

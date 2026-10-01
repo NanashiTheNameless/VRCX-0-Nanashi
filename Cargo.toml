@@ -3,6 +3,7 @@ members = [
     "src-tauri",
     "crates/i18n",
     "crates/core",
+    "crates/http-client",
     "crates/persistence",
     "crates/integrations",
     "crates/vrchat-client",
@@ -32,6 +33,7 @@ default-members = [
     "src-tauri",
     "crates/i18n",
     "crates/core",
+    "crates/http-client",
     "crates/persistence",
     "crates/integrations",
     "crates/vrchat-client",
@@ -75,12 +77,12 @@ iana-time-zone = "0.1"
 machine-uid = "0.6"
 percent-encoding = "2"
 proptest = "1"
-# No bundled crypto provider: the app installs ring (vrcx_0_core::tls). The
-# default provider, AWS-LC, builds a large C library that dominated CI time.
+# The app installs ring (vrcx_0_core::tls); reqwest's HTTP/3 feature also builds AWS-LC.
 reqwest = { version = "0.13", default-features = false, features = [
     "rustls-no-provider",
     "charset",
     "http2",
+    "http3",
     "system-proxy",
 ] }
 regex = "1"

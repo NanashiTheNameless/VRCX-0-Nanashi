@@ -97,13 +97,13 @@ async fn socks5_proxy_resolves_default_web_destination_remotely() -> Result<()> 
 
     let result = web
         .execute(WebExecuteRequest::new(
-            "http://api.test.invalid/status".into(),
+            "http://api.localhost/status".into(),
             "GET".into(),
         ))
         .await?;
 
     assert_eq!(result, (200, "ok".into()));
-    assert_eq!(server.await.unwrap(), "api.test.invalid");
+    assert_eq!(server.await.unwrap(), "api.localhost");
     Ok(())
 }
 

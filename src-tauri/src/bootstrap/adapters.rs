@@ -481,7 +481,6 @@ fn is_update_transport_error(error: &tauri_plugin_updater::Error) -> bool {
 async fn find_update(
     app_handle: &tauri::AppHandle,
     request: &UpdaterCheckRequest,
-    http1_only: bool,
 ) -> ApplicationResult<Option<Update>> {
     let endpoint = vrcx_0_host_desktop::updater_policy::validate_update_request(
         &request.manifest_url,
@@ -511,9 +510,7 @@ async fn find_update(
             release.version == expected_manifest_version
         });
 
-    if http1_only {
-        builder = builder.configure_client(|client| client.http1_only());
-    }
+    builder = builder.configure_client(|client| client.http2_prior_knowledge());
 
     if let Some(proxy_url) = request
         .proxy
@@ -541,7 +538,7 @@ impl UpdaterPort for TauriUpdaterPort {
         &self,
         request: UpdaterCheckRequest,
     ) -> ApplicationResult<Option<UpdaterMetadata>> {
-        Ok(find_update(&self.app_handle, &request, false)
+        Ok(find_update(&self.app_handle, &request)
             .await?
             .as_ref()
             .map(updater_metadata_from))
@@ -552,9 +549,9 @@ impl UpdaterPort for TauriUpdaterPort {
         request: UpdaterCheckRequest,
         on_progress: UpdaterProgressCallback,
     ) -> ApplicationResult<UpdaterDownloadOutcome> {
-        let mut http1_only = false;
+        let mut retried = false;
         let (update, bytes) = loop {
-            let Some(update) = find_update(&self.app_handle, &request, http1_only).await? else {
+            let Some(update) = find_update(&self.app_handle, &request).await? else {
                 return Err(ApplicationError::Custom(
                     "No installable update was found.".into(),
                 ));
@@ -580,11 +577,11 @@ impl UpdaterPort for TauriUpdaterPort {
                 Ok(bytes) => break (update, bytes),
                 Err(error)
                     if cfg!(target_os = "linux")
-                        && !http1_only
+                        && !retried
                         && is_update_transport_error(&error) =>
                 {
-                    tracing::warn!(error = %error, "update transport failed; retrying with HTTP/1.1");
-                    http1_only = true;
+                    tracing::warn!(error = %error, "update transport failed; retrying with HTTP/2");
+                    retried = true;
                     on_progress(UpdaterDownloadProgress::Started {
                         content_length: None,
                     });

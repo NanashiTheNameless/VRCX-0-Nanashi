@@ -1,4 +1,5 @@
 use std::time::Duration;
+use vrcx_0_http_client::{Policy as HttpPolicy, RequestBuilderExt};
 
 pub use vrcx_0_contracts::world_collections::{
     WorldCollectionCreatePayload, WorldCollectionCreateResponse, WorldCollectionPayloadWorld,
@@ -27,7 +28,7 @@ pub async fn create_world_collection(
     payload: &WorldCollectionCreatePayload,
 ) -> Result<WorldCollectionCreateResponse, WorldCollectionShareError> {
     vrcx_0_core::tls::install_crypto_provider();
-    let client = reqwest::Client::builder()
+    let client = vrcx_0_http_client::builder()
         .user_agent(vrcx_0_core::user_agent::app_user_agent())
         .timeout(WORLD_COLLECTIONS_UPLOAD_TIMEOUT)
         .build()
@@ -38,9 +39,10 @@ pub async fn create_world_collection(
         })?;
     let response = client
         .post(WORLD_COLLECTIONS_API_ENDPOINT)
+        .timeout(WORLD_COLLECTIONS_UPLOAD_TIMEOUT)
         .bearer_auth(token)
         .json(payload)
-        .send()
+        .send_with_policy(HttpPolicy::sensitive(false))
         .await
         .map_err(|error| {
             WorldCollectionShareError::Custom(format!("share collection upload failed: {error}"))
@@ -66,7 +68,7 @@ pub async fn register_world_revision(
     payload: &WorldOpenRegisterPayload,
 ) -> Result<(), WorldCollectionShareError> {
     vrcx_0_core::tls::install_crypto_provider();
-    let client = reqwest::Client::builder()
+    let client = vrcx_0_http_client::builder()
         .user_agent(vrcx_0_core::user_agent::app_user_agent())
         .timeout(WORLD_COLLECTIONS_UPLOAD_TIMEOUT)
         .build()
@@ -75,9 +77,10 @@ pub async fn register_world_revision(
         })?;
     let response = client
         .post(WORLD_OPEN_REGISTER_ENDPOINT)
+        .timeout(WORLD_COLLECTIONS_UPLOAD_TIMEOUT)
         .bearer_auth(token)
         .json(payload)
-        .send()
+        .send_with_policy(HttpPolicy::sensitive(false))
         .await
         .map_err(|error| {
             WorldCollectionShareError::Custom(format!("world open register failed: {error}"))
@@ -104,7 +107,7 @@ pub async fn mint_world_collection_token(
     owner_hint: &str,
 ) -> Result<WorldCollectionTokenMintResponse, WorldCollectionShareError> {
     vrcx_0_core::tls::install_crypto_provider();
-    let client = reqwest::Client::builder()
+    let client = vrcx_0_http_client::builder()
         .user_agent(vrcx_0_core::user_agent::app_user_agent())
         .timeout(WORLD_COLLECTIONS_FETCH_TIMEOUT)
         .build()
@@ -115,10 +118,11 @@ pub async fn mint_world_collection_token(
         })?;
     let response = client
         .post(WORLD_COLLECTIONS_TOKEN_MINT_ENDPOINT)
+        .timeout(WORLD_COLLECTIONS_FETCH_TIMEOUT)
         .json(&WorldCollectionTokenMintRequest {
             owner_hint: owner_hint.to_string(),
         })
-        .send()
+        .send_with_policy(HttpPolicy::sensitive(false))
         .await
         .map_err(|error| {
             WorldCollectionShareError::Custom(format!(
@@ -162,7 +166,7 @@ pub async fn fetch_world_collection(
 ) -> Result<WorldCollectionSnapshotResponse, WorldCollectionShareError> {
     let id = validate_collection_shortcode(id)?;
     vrcx_0_core::tls::install_crypto_provider();
-    let client = reqwest::Client::builder()
+    let client = vrcx_0_http_client::builder()
         .user_agent(vrcx_0_core::user_agent::app_user_agent())
         .timeout(WORLD_COLLECTIONS_FETCH_TIMEOUT)
         .build()
@@ -172,9 +176,14 @@ pub async fn fetch_world_collection(
             ))
         })?;
     let url = format!("{WORLD_COLLECTIONS_API_ENDPOINT}/{id}");
-    let response = client.get(url).send().await.map_err(|error| {
-        WorldCollectionShareError::Custom(format!("share collection fetch failed: {error}"))
-    })?;
+    let response = client
+        .get(url)
+        .timeout(WORLD_COLLECTIONS_FETCH_TIMEOUT)
+        .send_with_policy(HttpPolicy::public())
+        .await
+        .map_err(|error| {
+            WorldCollectionShareError::Custom(format!("share collection fetch failed: {error}"))
+        })?;
     let status = response.status();
     if !status.is_success() {
         let body = response.text().await.unwrap_or_default();

@@ -19,6 +19,16 @@ It is a Rust + Tauri rewrite of VRCX.
   AI service while it is disabled. The chat is also on the left navigation as **Social AI**.
   Supports OpenAI-compatible, Anthropic, Google Gemini and
   Ollama APIs, local or LAN models with no key, and custom headers.
+- **HTTP protocol preference.** App-managed HTTP clients try HTTP/3 when a direct
+  HTTPS connection supports it, then HTTP/2. Remote sensitive requests (VRChat,
+  AI, uploads, safety lists and executable downloads) cannot use HTTP/1.1.
+  Localhost and private IP addresses can use HTTP/1.1, including local AI services;
+  a local proxy does not exempt a remote destination. Public world collection
+  reads can also fall back to HTTP/1.1. Proxy connections use TCP negotiation;
+  HTTP/3 never bypasses a proxy. AI prompts and uploads are not replayed after
+  transport failures. The Tauri updater SDK uses HTTP/2 with signature verification
+  and fails if that transport fails. WebSocket handshakes, WebView resources and
+  external yt-dlp processes retain their own protocol handling.
 - **Keeps the PC awake** (optional, on by default) so live updates keep arriving while the app
   sits in the tray; the screen can still turn off.
 - **Custom notification sounds.** Under Settings > Notifications, choose an audio file and

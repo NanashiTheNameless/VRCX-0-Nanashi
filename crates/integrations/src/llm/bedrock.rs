@@ -7,6 +7,7 @@
 //! `converse` call and the reply is emitted as a single text chunk.
 
 use serde_json::{json, Map, Value};
+use vrcx_0_http_client::{Policy as HttpPolicy, RequestBuilderExt};
 
 use super::{
     AssistantTurn, ChatMessage, FunctionCall, LlmClient, LlmEndpointDetectModelsResult, LlmError,
@@ -32,7 +33,7 @@ impl LlmClient {
         let response = self
             .bedrock_request(self.http.get(&url))
             .timeout(self.request_timeout)
-            .send()
+            .send_with_policy(HttpPolicy::sensitive(self.proxy_configured))
             .await?;
         let status = response.status();
         let body = response.text().await?;
@@ -61,7 +62,7 @@ impl LlmClient {
                     .get(format!("{root}/inference-profiles?maxResults=1000")),
             )
             .timeout(self.request_timeout)
-            .send()
+            .send_with_policy(HttpPolicy::sensitive(self.proxy_configured))
             .await
         {
             if let Ok(profiles) = response.json::<Value>().await {
@@ -98,7 +99,7 @@ impl LlmClient {
             .bedrock_request(self.http.post(url))
             .json(&bedrock_body(messages, tools))
             .timeout(self.request_timeout)
-            .send()
+            .send_with_policy(HttpPolicy::sensitive(self.proxy_configured))
             .await?;
         let status = response.status();
         let text = response.text().await?;

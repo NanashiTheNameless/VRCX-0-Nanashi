@@ -9,6 +9,7 @@ use vrcx_0_core::proxy::with_remote_dns;
 use vrcx_0_core::vrchat_endpoints::{
     VRCHAT_API_HOST, VRCHAT_ASSETS_HOST, VRCHAT_FILES_HOST, VRCHAT_LEGACY_CLOUDFRONT_HOST,
 };
+use vrcx_0_http_client::{Policy as HttpPolicy, RequestBuilderExt};
 
 pub type Result<T> = std::result::Result<T, ImageFetchError>;
 
@@ -28,6 +29,7 @@ impl vrcx_0_contracts::ApplicationErrorSource for ImageFetchError {
 
 pub struct ImageFetcher {
     client: Client,
+    proxy_configured: bool,
     allowed_hosts: Mutex<HashSet<String>>,
     /// Sent to VRChat's image hosts in place of the client's plain one.
     contact_user_agent: String,
@@ -42,7 +44,7 @@ impl ImageFetcher {
         let user_agent = build_vrcx_user_agent(app_version);
         let contact_user_agent = contact_user_agent(&user_agent);
         vrcx_0_core::tls::install_crypto_provider();
-        let mut builder = Client::builder()
+        let mut builder = vrcx_0_http_client::builder()
             .cookie_provider(cookie_jar)
             .user_agent(user_agent)
             .pool_max_idle_per_host(10)
@@ -69,6 +71,7 @@ impl ImageFetcher {
 
         Ok(Self {
             client,
+            proxy_configured: proxy_url.is_some(),
             allowed_hosts: Mutex::new(hosts),
             contact_user_agent,
         })
@@ -82,7 +85,7 @@ impl ImageFetcher {
             request = request.header(reqwest::header::USER_AGENT, &self.contact_user_agent);
         }
         let response = request
-            .send()
+            .send_with_policy(HttpPolicy::sensitive(self.proxy_configured))
             .await
             .map_err(|e| ImageFetchError::Custom(format!("image fetch: {e}")))?;
 
@@ -146,6 +149,7 @@ mod tests {
     fn local_fetcher(client: Client) -> ImageFetcher {
         ImageFetcher {
             client,
+            proxy_configured: false,
             allowed_hosts: Mutex::new(HashSet::from(["127.0.0.1".into()])),
             contact_user_agent: String::new(),
         }

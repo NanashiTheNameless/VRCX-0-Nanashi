@@ -4,6 +4,7 @@ use std::{
     path::{Path, PathBuf},
     time::Duration,
 };
+use vrcx_0_http_client::{Policy as HttpPolicy, RequestBuilderExt};
 
 pub(crate) const PROVIDER_VERSION: &str = "2.0.0";
 fn allowed(host: &str) -> bool {
@@ -19,19 +20,9 @@ fn allowed(host: &str) -> bool {
 }
 fn client() -> Result<reqwest::Client, String> {
     vrcx_0_core::tls::install_crypto_provider();
-    reqwest::Client::builder()
+    vrcx_0_http_client::builder()
         .user_agent(vrcx_0_core::user_agent::component_user_agent("yt-dlp"))
         .timeout(Duration::from_secs(180))
-        .redirect(reqwest::redirect::Policy::custom(|attempt| {
-            if attempt.previous().len() < 5
-                && attempt.url().scheme() == "https"
-                && attempt.url().host_str().is_some_and(allowed)
-            {
-                attempt.follow()
-            } else {
-                attempt.stop()
-            }
-        }))
         .build()
         .map_err(|e| e.to_string())
 }
@@ -42,7 +33,12 @@ pub(crate) async fn fetch(url: &str, limit: usize) -> Result<Vec<u8>, String> {
     }
     let mut response = client()?
         .get(parsed)
-        .send()
+        .timeout(Duration::from_secs(180))
+        .send_with_policy(HttpPolicy {
+            max_redirects: 5,
+            allow_redirect: |url| url.scheme() == "https" && url.host_str().is_some_and(allowed),
+            ..HttpPolicy::sensitive(false)
+        })
         .await
         .map_err(|_| "Download failed; check the network")?;
     if !response.status().is_success() {

@@ -8,6 +8,7 @@
 
 use futures_util::StreamExt;
 use serde_json::{json, Map, Value};
+use vrcx_0_http_client::{Policy as HttpPolicy, RequestBuilderExt};
 
 use super::{
     drain_complete_lines, take_remaining_line, AssistantTurn, ChatMessage, FunctionCall, LlmClient,
@@ -78,7 +79,7 @@ impl LlmClient {
             let response = self
                 .gemini_request(self.http.get(&url))
                 .timeout(self.request_timeout)
-                .send()
+                .send_with_policy(HttpPolicy::sensitive(self.proxy_configured))
                 .await?;
             let status = response.status();
             let body = response.text().await?;
@@ -143,7 +144,7 @@ impl LlmClient {
             .gemini_request(self.http.post(url))
             .json(&body)
             .timeout(self.request_timeout)
-            .send()
+            .send_with_policy(HttpPolicy::sensitive(self.proxy_configured))
             .await?;
         let status = response.status();
         let text = response.text().await?;
@@ -188,7 +189,7 @@ impl LlmClient {
         let response = self
             .gemini_request(self.http.post(url))
             .json(&body)
-            .send()
+            .send_with_policy(HttpPolicy::sensitive(self.proxy_configured))
             .await?;
         if !response.status().is_success() {
             let status = response.status().as_u16();

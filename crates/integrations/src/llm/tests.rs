@@ -381,12 +381,12 @@ fn assistant_tool_call_message_resends_reasoning_details_unchanged() {
 #[tokio::test]
 async fn socks5_proxy_resolves_llm_destination_remotely() {
     let (proxy_url, server) = serve_socks5_models().await;
-    let client = LlmClient::new("http://llm.test.invalid/v1", "", "", Some(&proxy_url)).unwrap();
+    let client = LlmClient::new("http://llm.localhost/v1", "", "", Some(&proxy_url)).unwrap();
 
     let result = client.list_models().await.unwrap();
 
     assert_eq!(result.models, vec!["remote-dns-model"]);
-    assert_eq!(server.await.unwrap(), "llm.test.invalid");
+    assert_eq!(server.await.unwrap(), "llm.localhost");
 }
 
 #[test]

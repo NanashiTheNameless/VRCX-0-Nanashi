@@ -6,6 +6,7 @@ license.workspace = true
 description = "VRChat API client"
 
 [dependencies]
+vrcx-0-http-client = { path = "../http-client" }
 base64 = { workspace = true }
 bytes = { workspace = true }
 futures-util = "0.3"

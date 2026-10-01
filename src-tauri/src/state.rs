@@ -94,6 +94,8 @@ impl AppState {
         updater_port: Arc<dyn UpdaterPort>,
         task_executor: Arc<dyn vrcx_0_application_core::RuntimeTaskExecutor>,
     ) -> Result<Self, AppError> {
+        let async_runtime = tauri::async_runtime::handle();
+        let _runtime_guard = async_runtime.inner().enter();
         let launched_from_autostart = std::env::args().any(|arg| arg == "--autostart");
         let runtime = DesktopRuntimeHostState::new(DesktopRuntimeHostOptions {
             realtime_origin: realtime_origin(),
