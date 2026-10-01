@@ -21,6 +21,8 @@ use super::adapters::{
 use super::autostart::{apply_autostart_window_state_if_needed, sync_autostart_from_db};
 use super::shared::app_language;
 use super::window::{configure_tray, configure_windows_webview_settings, create_main_window};
+use vrcx_0_application_core::ports::NoopUpdaterPort;
+use vrcx_0_host_desktop::host_capabilities::{current_host_capabilities, LinuxPackageKind};
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(target_os = "windows")]
@@ -135,7 +137,7 @@ fn append_browser_arguments(
 fn initialize_app_state(
     app: &tauri::App,
     app_data_dir: vrcx_0_platform::app_paths::AppDataDirResolution,
-    updater_port: Arc<TauriUpdaterPort>,
+    updater_port: Arc<dyn vrcx_0_application_core::ports::UpdaterPort>,
 ) -> AppState {
     let database_maintenance_cache_dir = match app.path().app_cache_dir() {
         Ok(path) => Some(path),
@@ -250,7 +252,17 @@ pub fn setup_app_with_data_dir(
     app: &mut tauri::App,
     app_data_dir: vrcx_0_platform::app_paths::AppDataDirResolution,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let updater_port = Arc::new(TauriUpdaterPort::new(app.handle().clone()));
+    // Tauri updater only supports AppImage on Linux. For deb/rpm packages,
+    // use NoopUpdaterPort since in-place updates aren't supported.
+    let updater_port: Arc<dyn vrcx_0_application_core::ports::UpdaterPort> =
+        if cfg!(target_os = "linux") {
+            match current_host_capabilities().linux_package_kind {
+                LinuxPackageKind::Appimage => Arc::new(TauriUpdaterPort::new(app.handle().clone())),
+                _ => Arc::new(NoopUpdaterPort),
+            }
+        } else {
+            Arc::new(TauriUpdaterPort::new(app.handle().clone()))
+        };
     let app_state = initialize_app_state(app, app_data_dir, updater_port);
     let language = app_language(&app_state);
     app.manage(app_state);

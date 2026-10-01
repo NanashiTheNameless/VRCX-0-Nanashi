@@ -64,7 +64,7 @@ function requireArg(argName: string): string {
 function validateTarget(target: string): void {
     if (
         /^windows-x86_64-stable$/.test(target) === false &&
-        /^linux-x86_64-(appimage|deb|rpm)-stable$/.test(target) === false &&
+        /^linux-x86_64-appimage-stable$/.test(target) === false &&
         /^macos-(aarch64|x86_64)-stable$/.test(target) === false
     ) {
         throw new Error(`Invalid updater target: ${target}`);

@@ -78,17 +78,13 @@ jobs:
                       artifact_path: |
                           target/release/bundle/nsis/*_windows_x86_64_setup.exe
                           target/release/bundle/manifest_windows.json
-                    - label: Linux Packages
+                    - label: Linux AppImage
                       os: ubuntu-24.04
                       webkit_build_target: safari17.4
-                      artifact_name: linux-packages
+                      artifact_name: linux-appimage
                       artifact_path: |
                           target/release/bundle/appimage/*.AppImage
                           target/release/bundle/appimage/*.AppImage.sig
-                          target/release/bundle/deb/*.deb
-                          target/release/bundle/deb/*.deb.sig
-                          target/release/bundle/rpm/*.rpm
-                          target/release/bundle/rpm/*.rpm.sig
                           target/release/bundle/manifest_linux.json
         steps:
             # Defender scans every file the cache restore, build and cache save
@@ -151,15 +147,11 @@ jobs:
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_UPDATER_PRIVATE_KEY_PASSWORD }}
                   VRCX_0_WEBKIT_BUILD_TARGET: ${{ matrix.webkit_build_target }}
               run: |
-                  override_config="${RUNNER_TEMP}/tauri-nightly-override.json"
                   case "$RUNNER_OS" in
                       Linux)
-                          # rpm cannot carry a semver prerelease in Version; use Release instead.
-                          node -e "require('node:fs').writeFileSync(process.argv[1], JSON.stringify({ version: process.argv[2], bundle: { linux: { rpm: { release: '0.nightly.' + process.argv[3] } } } }))" "$override_config" "${{ needs.prepare.outputs.base_version }}" "${{ needs.prepare.outputs.nightly_sha }}"
                           # mold links the release binary much faster than the default linker.
                           mold -run npm run tauri:build -- --config src-tauri/tauri.linux.conf.json --no-bundle -- --timings
-                          npm run tauri -- bundle --config src-tauri/tauri.linux.conf.json --bundles appimage deb
-                          npm run tauri -- bundle --config "$override_config" --bundles rpm
+                          npm run tauri -- bundle --config src-tauri/tauri.linux.conf.json --bundles appimage
                           ;;
                       Windows)
                           npm run tauri:build -- --bundles nsis -- --timings
@@ -219,26 +211,15 @@ jobs:
                   }
 
                   appimage_path="$bundle_dir/appimage/VRCX-0-Nanashi_${version}_linux_x86_64.AppImage"
-                  deb_path="$bundle_dir/deb/VRCX-0-Nanashi_${version}_linux_x86_64.deb"
-                  rpm_path="$bundle_dir/rpm/VRCX-0-Nanashi_${version}_linux_x86_64.rpm"
                   rename_asset "$(find "$bundle_dir/appimage" -maxdepth 1 -name '*.AppImage' | sort | head -n 1)" "$appimage_path"
-                  rename_asset "$(find "$bundle_dir/deb" -maxdepth 1 -name '*.deb' | sort | head -n 1)" "$deb_path"
-                  rename_asset "$(find "$bundle_dir/rpm" -maxdepth 1 -name '*.rpm' | sort | head -n 1)" "$rpm_path"
 
-                  base_arg=()
-                  for pair in "appimage:$appimage_path" "deb:$deb_path" "rpm:$rpm_path"; do
-                      kind="${pair%%:*}"
-                      path="${pair#*:}"
-                      node scripts/create-tauri-updater-manifest.ts \
-                          --version "$version" \
-                          --tag "${{ needs.prepare.outputs.tag }}" \
-                          --target "linux-x86_64-${kind}-stable" \
-                          --asset-name "$(basename "$path")" \
-                          --signature-file "${path}.sig" \
-                          "${base_arg[@]}" \
-                          --out "$manifest_path"
-                      base_arg=(--base "$manifest_path")
-                  done
+                  node scripts/create-tauri-updater-manifest.ts \
+                      --version "$version" \
+                      --tag "${{ needs.prepare.outputs.tag }}" \
+                      --target "linux-x86_64-appimage-stable" \
+                      --asset-name "$(basename "$appimage_path")" \
+                      --signature-file "${appimage_path}.sig" \
+                      --out "$manifest_path"
 
             - uses: actions/upload-artifact@v7
               with:
