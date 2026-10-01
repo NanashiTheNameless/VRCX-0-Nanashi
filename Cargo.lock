@@ -9128,6 +9128,7 @@ dependencies = [
  "async-trait",
  "cargo_metadata 0.23.1",
  "chrono",
+ "dirs 6.0.0",
  "image",
  "percent-encoding",
  "semver",

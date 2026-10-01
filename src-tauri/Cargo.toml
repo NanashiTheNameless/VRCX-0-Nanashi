@@ -41,6 +41,7 @@ tauri-plugin-window-state = "2"
 percent-encoding = { workspace = true }
 tauri-plugin-updater = "2.10.1"
 sha2.workspace = true
+dirs = "6"
 vrcx-0-core = { path = "../crates/core" }
 vrcx-0-platform = { path = "../crates/platform" }
 vrcx-0-host-desktop = { path = "../crates/host-desktop" }
