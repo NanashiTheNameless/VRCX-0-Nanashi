@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 fn maybe_rename_appimage() -> PathBuf {
     let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::new());
@@ -40,7 +40,7 @@ fn maybe_rename_appimage() -> PathBuf {
     exe_path
 }
 
-fn update_autostart_desktop(exe_path: &PathBuf) {
+fn update_autostart_desktop(exe_path: &Path) {
     if let Some(config_dir) = dirs::config_dir() {
         let autostart_dir = config_dir.join("autostart");
         let desktop_file = autostart_dir.join("vrcx-0-nanashi.desktop");
