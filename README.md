@@ -89,6 +89,10 @@ if the first launch is blocked, open **System Settings > Privacy & Security** an
 
 ### Linux
 
+On first launch, the AppImage removes its build version from the standard download
+filename, leaving `VRCX-0-Nanashi_linux_x86_64.AppImage`. Custom filenames are kept,
+and an existing file with the destination name is never replaced.
+
 Hardware acceleration for the app interface is off by default. Turn it on under
 **Settings > System > Hardware acceleration (experimental)**; if the interface doesn't
 display properly, the app turns it back off automatically. Setting

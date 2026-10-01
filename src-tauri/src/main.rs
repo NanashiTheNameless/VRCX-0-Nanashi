@@ -4,40 +4,24 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 fn maybe_rename_appimage() -> PathBuf {
-    let exe_path = std::env::current_exe().unwrap_or_else(|_| PathBuf::new());
-    let file_name = exe_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    // Check if it's an AppImage with version in name: VRCX-0-Nanashi_3.0.0_amd64.AppImage
-    // Only rename if the middle part looks like a semantic version (digits and dots)
-    // This avoids renaming user-customized names like "VRCX-0-Nanashi.AppImage" or "MyApp.AppImage"
-    if file_name.ends_with(".AppImage") && file_name.contains("_") {
-        let parts: Vec<&str> = file_name.split('_').collect();
-        if parts.len() >= 3 {
-            // Expected: [productName, version, arch.AppImage]
-            let base_name = parts[0];
-            let version_part = parts[parts.len() - 2];
-            let arch_part = parts.last().unwrap();
-
-            // Check if version_part looks like a semantic version (e.g., "3.0.0", "3.0.0-beta.1")
-            let is_version = version_part.chars().all(|c| {
-                c.is_ascii_digit() || c == '.' || c == '-' || c == '+' || c.is_ascii_alphabetic()
-            });
-            let has_digits = version_part.chars().any(|c| c.is_ascii_digit());
-
-            if is_version && has_digits {
-                let new_name = format!("{}_{}", base_name, arch_part);
-                let new_path = exe_path.with_file_name(&new_name);
-                // Only rename if target doesn't exist (user hasn't already created it)
-                if !new_path.exists() {
-                    if let Err(e) = fs::rename(&exe_path, &new_path) {
-                        eprintln!("Failed to rename AppImage: {e}");
-                    } else {
-                        return new_path;
-                    }
-                }
-            }
+    let executable = std::env::current_exe().unwrap_or_default();
+    #[cfg(target_os = "linux")]
+    {
+        let appimage = std::env::var_os("APPIMAGE")
+            .filter(|value| !value.is_empty())
+            .map(PathBuf::from);
+        let path = vrcx_0_platform::appimage::prepare_executable_path(
+            &executable,
+            appimage.as_deref(),
+            env!("CARGO_PKG_VERSION"),
+        );
+        if appimage.is_some() {
+            std::env::set_var("APPIMAGE", &path);
         }
+        path
     }
-    exe_path
+    #[cfg(not(target_os = "linux"))]
+    executable
 }
 
 fn update_autostart_desktop(exe_path: &Path) {
