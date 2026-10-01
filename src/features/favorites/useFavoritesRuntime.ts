@@ -1,9 +1,7 @@
 import { useMemo } from 'react';
 
-import { checkCanInvite } from '@/shared/utils/invite';
+import { useCurrentInviteContext } from '@/lib/useCurrentInviteContext';
 import { useRuntimeStore } from '@/state/runtimeStore';
-
-import { resolveCurrentInviteLocation } from './favoritesItems';
 
 export function useFavoritesRuntime() {
     const currentEndpoint = useRuntimeStore(
@@ -31,24 +29,11 @@ export function useFavoritesRuntime() {
         }),
         [isGameRunning, runtimeCurrentDestination, runtimeCurrentLocation]
     );
-    const currentInviteLocation = useMemo(
-        () => resolveCurrentInviteLocation(gameState, currentUserSnapshot),
-        [currentUserSnapshot, gameState]
-    );
-    const canInviteFromCurrentLocation = useMemo(
-        () =>
-            checkCanInvite(currentInviteLocation, {
-                currentUserId: normalizedCurrentUserId,
-                lastLocationStr: currentInviteLocation,
-                cachedInstances: new Map()
-            }),
-        [currentInviteLocation, normalizedCurrentUserId]
-    );
-    const canSendInvite = Boolean(
-        gameState.isGameRunning &&
-        currentInviteLocation &&
-        canInviteFromCurrentLocation
-    );
+    const {
+        currentInviteLocation,
+        canInviteFromCurrentLocation,
+        canSendInvite
+    } = useCurrentInviteContext();
 
     return {
         canBoop: Boolean(currentUserSnapshot?.isBoopingEnabled),

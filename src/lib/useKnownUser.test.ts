@@ -24,9 +24,11 @@ vi.mock('@/state/runtimeStore', () => ({
         selector(runtimeState)
 }));
 
+import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useUserFactsStore } from '@/state/userFactsStore';
+import { onlinePresence, pendingPresence } from '@/test/presenceFixtures';
 
-import { useKnownUserFacts } from './useKnownUser';
+import { useKnownUserFact, useKnownUserFacts } from './useKnownUser';
 
 const endpoint = runtimeState.auth.currentUserEndpoint;
 
@@ -45,6 +47,7 @@ function replaceFact(userId: string, displayName: string) {
 describe('useKnownUserFacts', () => {
     beforeEach(() => {
         useUserFactsStore.getState().resetUserFacts();
+        useFriendRosterStore.getState().resetRoster();
     });
 
     it('resolves facts for the requested user ids', () => {
@@ -79,5 +82,44 @@ describe('useKnownUserFacts', () => {
         replaceFact('usr_1', 'Alicia');
 
         expect(result.current.usr_1?.displayName).toBe('Alicia');
+    });
+
+    it('reads friend presence from the roster instead of the stateless fact view', () => {
+        act(() => {
+            useUserFactsStore.getState().replaceUserFacts([
+                {
+                    id: 'usr_friend',
+                    endpoint,
+                    displayName: 'Friend',
+                    $presence: onlinePresence('wrld_a:1')
+                },
+                {
+                    id: 'usr_stranger',
+                    endpoint,
+                    $presence: onlinePresence('wrld_b:2')
+                }
+            ]);
+            useFriendRosterStore.getState().applyFriendPatch({
+                userId: 'usr_friend',
+                patch: { id: 'usr_friend' },
+                presence: { rev: 1, view: pendingPresence('wrld_a:1') }
+            });
+        });
+        const userIds = ['usr_friend', 'usr_stranger'];
+        const { result } = renderHook(() => ({
+            facts: useKnownUserFacts(userIds),
+            fact: useKnownUserFact('usr_friend')
+        }));
+
+        expect(result.current.facts.usr_friend?.$presence).toEqual(
+            pendingPresence('wrld_a:1')
+        );
+        expect(result.current.facts.usr_friend?.displayName).toBe('Friend');
+        expect(result.current.fact?.$presence).toEqual(
+            pendingPresence('wrld_a:1')
+        );
+        expect(result.current.facts.usr_stranger?.$presence).toEqual(
+            onlinePresence('wrld_b:2')
+        );
     });
 });

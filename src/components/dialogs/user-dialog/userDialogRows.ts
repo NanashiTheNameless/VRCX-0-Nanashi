@@ -1,9 +1,10 @@
+import { presenceOf, presenceSection } from '@/domain/friends/presence';
 import { formatDateFilterOrFallback, timeToText } from '@/lib/dateTime';
 import { hasGroupIdPrefix } from '@/shared/constants/vrchatIds';
 import {
     compareByDisplayName,
     compareByFriendOrder,
-    compareByLastActiveRef,
+    compareByLastActive,
     type ComparableRecord,
     type Comparator
 } from '@/shared/utils/compare';
@@ -179,7 +180,7 @@ export function sortMutualFriendRows<T extends ComparableRecord>(
 ) {
     const comparers: Record<UserDialogMutualFriendSort, Comparator> = {
         alphabetical: compareByDisplayName,
-        lastActive: compareByLastActiveRef,
+        lastActive: compareByLastActive,
         friendOrder: compareByFriendOrder
     };
     const comparer = comparers[sortBy];
@@ -325,7 +326,8 @@ export function formatCountText(count: number, max: unknown) {
 export function resolveStatusStateText(
     profile: UserDialogRow | null | undefined
 ) {
-    const state = normalizedText(profile?.state);
+    const presence = presenceOf(profile);
+    const state = presence ? presenceSection(presence) : '';
     const status = normalizedText(profile?.status);
     if (state && status && state.toLowerCase() !== status.toLowerCase()) {
         return `${state} / ${status}`;

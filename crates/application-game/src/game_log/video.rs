@@ -1,15 +1,18 @@
 use crate::overlay_activity::video_activity_candidate;
+use std::sync::{Arc, Mutex};
+
 use chrono::Utc;
 use serde_json::Value;
 use url::Url;
 use vrcx_0_application_activity::OverlayActivityCandidate;
 use vrcx_0_contracts::game_log::{GameLogVideoPlayEntry, GameLogWriteBatch};
 
+use crate::game_log::runtime_state::parse_event_time_ms;
 use crate::Result;
 use crate::RuntimeGameEventBusExt;
 use crate::{
-    GameLogPersistenceFallbackPayload, GameLogSideEffectEvent, GameLogSideEffectSink,
-    NowPlayingPayload, RuntimeEventBus, RuntimeGameLogEventPayload, VideoMetadataPort,
+    GameLogPersistenceFallbackPayload, NowPlayingPayload, RuntimeEventBus,
+    RuntimeGameLogEventPayload, VideoMetadataPort,
 };
 use vrcx_0_application_core::BackendRuntimeStatusPublisher;
 use vrcx_0_core::location::world_id_from_location;
@@ -45,15 +48,81 @@ struct YouTubeMetadata {
     thumbnail_url: String,
 }
 
-pub async fn handle_video_play(
+pub(crate) struct VideoPlayed {
+    pub(crate) activity: OverlayActivityCandidate,
+    pub(crate) now_playing: NowPlayingPayload,
+}
+
+#[derive(Clone, Default)]
+pub(crate) struct NowPlayingClock(Arc<Mutex<NowPlayingTrack>>);
+
+#[derive(Default)]
+struct NowPlayingTrack {
+    generation: u64,
+    playing: bool,
+    length_seconds: i64,
+}
+
+impl NowPlayingClock {
+    pub(crate) fn begin(&self) -> u64 {
+        let mut track = self.lock();
+        *track = NowPlayingTrack {
+            generation: track.generation + 1,
+            ..NowPlayingTrack::default()
+        };
+        track.generation
+    }
+
+    pub(crate) fn play(&self, generation: u64, length_seconds: i64) -> bool {
+        let mut track = self.lock();
+        if track.generation != generation {
+            return false;
+        }
+        track.playing = true;
+        track.length_seconds = length_seconds;
+        true
+    }
+
+    pub(crate) fn resync(&self) -> Option<(u64, i64)> {
+        let mut track = self.lock();
+        if !track.playing {
+            return None;
+        }
+        track.generation += 1;
+        Some((track.generation, track.length_seconds))
+    }
+
+    pub(crate) fn finish(&self, generation: u64) -> bool {
+        let mut track = self.lock();
+        if track.generation != generation || !track.playing {
+            return false;
+        }
+        *track = NowPlayingTrack {
+            generation: track.generation + 1,
+            ..NowPlayingTrack::default()
+        };
+        true
+    }
+
+    fn lock(&self) -> std::sync::MutexGuard<'_, NowPlayingTrack> {
+        self.0.lock().unwrap_or_else(|error| error.into_inner())
+    }
+}
+
+pub(crate) fn now_playing_ends_at_ms(payload: &NowPlayingPayload) -> Option<i64> {
+    let length_seconds = payload.length.filter(|length| *length > 0)?;
+    parse_event_time_ms(&payload.started_at)
+        .map(|started_ms| started_ms + (length_seconds - payload.position) * 1000)
+}
+
+pub(crate) async fn handle_video_play(
     store: &dyn crate::GameStateStore,
     video_metadata: &dyn VideoMetadataPort,
     event_bus: &RuntimeEventBus,
     backend_status: &BackendRuntimeStatusPublisher,
-    side_effect_sink: &GameLogSideEffectSink,
     owner_user_id: &OwnerId,
     mut input: VideoInput,
-) -> Result<Option<OverlayActivityCandidate>> {
+) -> Result<Option<VideoPlayed>> {
     if input.video_url.trim().is_empty() {
         return Ok(None);
     }
@@ -129,28 +198,29 @@ pub async fn handle_video_play(
     event_bus.emit_runtime_game_log_event(RuntimeGameLogEventPayload { raw: raw_row });
 
     let activity = video_activity_candidate(&input);
-    side_effect_sink.emit(GameLogSideEffectEvent::NowPlaying(Box::new(
-        NowPlayingPayload {
-            url: Some(input.video_url.clone()),
-            name: Some(input.video_name.clone()),
-            source: Some(input.video_id.clone()),
-            display_name: Some(input.display_name),
-            user_id: Some(input.user_id),
-            location: Some(input.location),
-            thumbnail_url: Some(input.thumbnail_url),
-            length: Some(input.video_length),
-            position: input.video_pos,
-            started_at: input.created_at.clone(),
-            created_at: Some(input.created_at),
-            activity_type: Some("VideoPlay".into()),
-            video_url: Some(input.video_url),
-            video_name: Some(input.video_name),
-            video_id: Some(input.video_id),
-            updated_at: Utc::now().to_rfc3339(),
-        },
-    )));
+    let now_playing = NowPlayingPayload {
+        url: Some(input.video_url.clone()),
+        name: Some(input.video_name.clone()),
+        source: Some(input.video_id.clone()),
+        display_name: Some(input.display_name),
+        user_id: Some(input.user_id),
+        location: Some(input.location),
+        thumbnail_url: Some(input.thumbnail_url),
+        length: Some(input.video_length),
+        position: input.video_pos,
+        started_at: input.created_at.clone(),
+        created_at: Some(input.created_at),
+        activity_type: Some("VideoPlay".into()),
+        video_url: Some(input.video_url),
+        video_name: Some(input.video_name),
+        video_id: Some(input.video_id),
+        updated_at: Utc::now().to_rfc3339(),
+    };
 
-    Ok(Some(activity))
+    Ok(Some(VideoPlayed {
+        activity,
+        now_playing,
+    }))
 }
 
 async fn lookup_youtube_video(
@@ -492,9 +562,10 @@ fn parse_i64_lossy(value: &str) -> i64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        convert_youtube_duration_to_seconds, parse_provider_video, parse_youtube_video_id,
-        ProviderVideoEvent,
+        convert_youtube_duration_to_seconds, now_playing_ends_at_ms, parse_provider_video,
+        parse_youtube_video_id, NowPlayingClock, ProviderVideoEvent,
     };
+    use crate::NowPlayingPayload;
 
     #[test]
     fn parses_youtube_ids_from_common_urls() {
@@ -571,5 +642,45 @@ mod tests {
     fn converts_youtube_duration() {
         assert_eq!(convert_youtube_duration_to_seconds("PT1H2M3S".into()), 3723);
         assert_eq!(convert_youtube_duration_to_seconds("PT42S".into()), 42);
+    }
+
+    #[test]
+    fn only_the_latest_video_announces_and_ends_now_playing() {
+        let clock = NowPlayingClock::default();
+        let first = clock.begin();
+        let second = clock.begin();
+        assert!(!clock.play(first, 60));
+        assert!(clock.play(second, 60));
+
+        let (synced, length) = clock.resync().expect("a video is playing");
+        assert_eq!(length, 60);
+        assert!(!clock.finish(second));
+        assert!(clock.finish(synced));
+        assert!(clock.resync().is_none());
+    }
+
+    #[test]
+    fn a_reset_before_the_metadata_lookup_finishes_cancels_the_announcement() {
+        let clock = NowPlayingClock::default();
+        let video = clock.begin();
+        clock.begin();
+        assert!(!clock.play(video, 60));
+        assert!(clock.resync().is_none());
+    }
+
+    #[test]
+    fn now_playing_ends_after_the_remaining_length() {
+        let payload = |length| NowPlayingPayload {
+            length,
+            position: 15,
+            started_at: "2026-05-14T00:00:00.000Z".into(),
+            ..Default::default()
+        };
+        assert_eq!(
+            now_playing_ends_at_ms(&payload(Some(60))),
+            crate::game_log::runtime_state::parse_event_time_ms("2026-05-14T00:00:45.000Z")
+        );
+        assert_eq!(now_playing_ends_at_ms(&payload(Some(0))), None);
+        assert_eq!(now_playing_ends_at_ms(&payload(None)), None);
     }
 }

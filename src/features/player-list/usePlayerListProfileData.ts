@@ -5,7 +5,6 @@ import type { UserProfileRecord } from '@/domain/entities/user';
 import { entityQueryPolicies, queryKeys } from '@/lib/entityQueryCache';
 import { useKnownUserFacts } from '@/lib/useKnownUser';
 import userProfileRepository from '@/repositories/userProfileRepository';
-import vrchatFriendRepository from '@/repositories/vrchatFriendRepository';
 import { normalizeString } from '@/shared/utils/string';
 import { normalizeLanguageOptionsFromConfig } from '@/shared/utils/userLanguage';
 import { useVrchatConfigStore } from '@/state/vrchatConfigStore';
@@ -95,16 +94,11 @@ export function usePlayerListProfileData({
             return {
                 enabled: Boolean(userId),
                 gcTime: entityQueryPolicies.userAvatarLookup.gcTime,
-                queryFn: async () => {
-                    const response = await vrchatFriendRepository.getUser({
+                queryFn: () =>
+                    userProfileRepository.getUserProfile({
                         userId,
                         isFriend: Boolean(knownUsersById[userId]?.isFriend)
-                    });
-                    const profile = userProfileRepository.normalize(
-                        response.json
-                    );
-                    return profile;
-                },
+                    }),
                 queryKey: queryKeys.user(userId, currentUserEndpoint),
                 refetchOnWindowFocus: false,
                 retry: 1,

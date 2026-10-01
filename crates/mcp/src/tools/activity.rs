@@ -452,7 +452,7 @@ impl VrcxMcpServer {
     }
 
     fn open_play_location(&self) -> Option<String> {
-        match self.runtime.realtime_runtime.local_game_context_snapshot() {
+        match self.runtime.realtime_runtime.local_game_context() {
             LocalGameContextSnapshot::Available {
                 is_game_running: true,
                 location,

@@ -1,3 +1,5 @@
+import type { PresenceView } from '@/domain/friends/presence';
+
 import { parseLocation } from './location';
 
 type ParsedInviteLocation = ReturnType<typeof parseLocation>;
@@ -36,7 +38,7 @@ export type LocalInstanceActionGateTarget = {
     key: string;
     userId: string;
     location: string;
-    stateBucket?: string;
+    presenceKind?: PresenceView['kind'];
     isCurrentUser?: boolean;
 };
 
@@ -254,9 +256,7 @@ function evaluateLocalInstanceActionGates({
                 ),
                 canSelfInvite,
                 canRequestInvite:
-                    normalizeInviteLocationValue(
-                        target.stateBucket
-                    ).toLowerCase() === 'online' && !isCurrentUser,
+                    target.presenceKind === 'online' && !isCurrentUser,
                 canInvite: Boolean(
                     isGameRunning &&
                     !isCurrentUser &&

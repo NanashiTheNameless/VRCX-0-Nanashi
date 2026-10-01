@@ -1,9 +1,8 @@
 use std::sync::{Arc, Mutex};
 
 use serde_json::Value;
-use vrcx_0_application::game::refresh_background_current_user;
-use vrcx_0_application_core::{BackendRuntime, RuntimeBackgroundJobs, WebClient};
-use vrcx_0_application_realtime::{RealtimeHostRuntime, RealtimeSessionContext};
+use vrcx_0_application_core::{BackendRuntime, RuntimeBackgroundJobs};
+use vrcx_0_application_realtime::RealtimeHostRuntime;
 
 use crate::RuntimeHostContext;
 
@@ -15,7 +14,6 @@ use super::super::{
 };
 
 pub(in crate::state) async fn run_background_current_user_refresh(
-    web: &Arc<WebClient>,
     session_slot: &Arc<Mutex<AuthenticatedSessionProjection>>,
     realtime_runtime: &Arc<RealtimeHostRuntime>,
     runtime_context: &Arc<RuntimeHostContext>,
@@ -34,22 +32,8 @@ pub(in crate::state) async fn run_background_current_user_refresh(
         );
         return;
     };
-    let remote = vrcx_0_outbound_adapters::VrchatBackgroundGroupRemote::new(Arc::clone(web));
-    match refresh_background_current_user(&remote, &session).await {
-        Ok(updated_user) => {
-            let accepted = realtime_runtime
-                .sync_current_user_snapshot(
-                    RealtimeSessionContext::new(
-                        session.current_user_id.clone(),
-                        session.endpoint.clone(),
-                        session.websocket.clone(),
-                    ),
-                    session.auth_scope_generation,
-                    None,
-                    updated_user.clone(),
-                    Value::Null,
-                )
-                .unwrap_or(false);
+    match realtime_runtime.refresh_current_user_now(Value::Null).await {
+        Ok(accepted) => {
             if !background_capability_session_matches(session_slot, &session) {
                 tracing::warn!("ignored stale background current user refresh");
             } else if !accepted {

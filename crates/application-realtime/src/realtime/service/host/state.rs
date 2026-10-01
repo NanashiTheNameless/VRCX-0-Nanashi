@@ -11,19 +11,16 @@ use vrcx_0_application_core::{
     RuntimeSyncEngine, TaskSupervisor, WebClient, WorldCache,
 };
 use vrcx_0_contracts::feed_live::FeedLiveEntry;
-use vrcx_0_core::friends::FriendRecord;
+use vrcx_0_core::friends::FriendBaselineEntry;
 use vrcx_0_core::vrchat_endpoints::normalize_vrchat_api_endpoint;
 
 use super::feed::FeedLiveCache;
 use crate::realtime::current_user::RealtimeCurrentUserRuntime;
-use crate::realtime::friends::RealtimeFriendsRuntime;
+use crate::realtime::friends::{baseline_friend_view, RealtimeFriendsRuntime};
 use crate::realtime::invite_automation::runtime::InviteAutomationState;
-use crate::realtime::user_cache::UserCacheRuntime;
+use crate::realtime::user_facts::UserFactStore;
 use crate::realtime::user_query_cache::UserQueryCache;
-use crate::realtime::{
-    FriendProjection, FriendStateBucketAuthority, RealtimeSessionContext,
-    RealtimeTransportLifecycleEvent,
-};
+use crate::realtime::{FriendProjection, RealtimeSessionContext, RealtimeTransportLifecycleEvent};
 use crate::world_enrich::PendingEntryCorrection;
 use vrcx_0_core::OwnerId;
 
@@ -33,7 +30,7 @@ pub(super) struct FriendOwnerGuard<'a> {
 
 pub(super) enum FriendLogMutation {
     Remove { user_id: String },
-    Upsert { record: Box<FriendRecord> },
+    Upsert { entry: Box<FriendBaselineEntry> },
 }
 
 pub(super) type CurrentUserRefreshStatus = Option<std::result::Result<bool, String>>;
@@ -58,56 +55,54 @@ impl ScopedFriendLogMutation {
     }
 
     pub(super) fn apply(self, baseline: &mut FriendBaselineState) {
-        let Some(pending) = baseline.pending.as_mut() else {
+        let Some(queued) = baseline.queued.as_mut() else {
             return;
         };
-        if pending.session.user_id.trim() != self.owner_user_id.as_str()
-            || normalize_vrchat_api_endpoint(Some(&pending.session.endpoint)) != self.endpoint
+        if queued.session.user_id.trim() != self.owner_user_id.as_str()
+            || normalize_vrchat_api_endpoint(Some(&queued.session.endpoint)) != self.endpoint
         {
             return;
         }
 
         match self.mutation {
             FriendLogMutation::Remove { user_id } => {
-                pending.friends_by_id.remove(&user_id);
-                pending
+                queued.friends_by_id.remove(&user_id);
+                queued
                     .projection
                     .patches
                     .retain(|patch| patch.user_id != user_id);
-                if !pending
+                if !queued
                     .projection
                     .removals
                     .iter()
                     .any(|removed_user_id| removed_user_id == &user_id)
                 {
-                    pending.projection.removals.push(user_id);
+                    queued.projection.removals.push(user_id);
                 }
             }
-            FriendLogMutation::Upsert { record } => {
-                let record = *record;
-                let user_id = record.id.clone();
-                pending
-                    .friends_by_id
-                    .insert(user_id.clone(), record.clone());
-                pending
+            FriendLogMutation::Upsert { entry } => {
+                let user_id = entry.record.id.clone();
+                let (record, presence) = baseline_friend_view(&entry);
+                queued.friends_by_id.insert(user_id.clone(), *entry);
+                queued
                     .projection
                     .removals
                     .retain(|removed_user_id| removed_user_id != &user_id);
-                pending
+                queued
                     .projection
                     .patches
                     .retain(|existing| existing.user_id != user_id);
-                pending
+                queued
                     .projection
                     .patches
                     .push(crate::realtime::FriendProjectionPatch {
                         user_id,
-                        patch: record,
-                        state_bucket_authority: FriendStateBucketAuthority::Explicit,
+                        presence,
+                        record,
                     });
             }
         }
-        pending.projection.friend_log_changed = true;
+        queued.projection.friend_log_changed = true;
     }
 }
 
@@ -121,9 +116,9 @@ pub(super) struct ActiveRealtimeContext {
 }
 
 #[derive(Clone, Debug)]
-pub(super) struct PendingFriendBaseline {
+pub(super) struct QueuedFriendBaseline {
     pub(super) session: RealtimeSessionContext,
-    pub(super) friends_by_id: HashMap<String, FriendRecord>,
+    pub(super) friends_by_id: HashMap<String, FriendBaselineEntry>,
     pub(super) feed_entries: Vec<FeedLiveEntry>,
     pub(super) projection: FriendProjection,
 }
@@ -137,7 +132,7 @@ pub(super) struct ConnectionState {
 #[derive(Default)]
 pub(super) struct FriendBaselineState {
     pub(super) friend_log_sequence: u64,
-    pub(super) pending: Option<PendingFriendBaseline>,
+    pub(super) queued: Option<QueuedFriendBaseline>,
 }
 
 #[derive(Default)]
@@ -147,7 +142,6 @@ pub(super) struct FriendProfileState {
 
 #[derive(Default)]
 pub(super) struct WorldEnrichmentState {
-    pub(super) fetches: HashMap<String, i64>,
     pub(super) inflight: HashSet<String>,
     pub(super) pending_corrections: HashMap<String, Vec<PendingEntryCorrection>>,
 }
@@ -289,7 +283,7 @@ pub struct RealtimeHostRuntime {
     pub(super) transport_lifecycle_tx: broadcast::Sender<RealtimeTransportLifecycleEvent>,
     pub(super) friends: RealtimeFriendsRuntime,
     pub(super) current_user: RealtimeCurrentUserRuntime,
-    pub(super) user_cache: UserCacheRuntime,
+    pub(super) user_facts: UserFactStore,
     pub(super) user_query_cache: UserQueryCache,
     pub(super) world_cache: Arc<WorldCache>,
     pub(super) friend_owner_lock: Mutex<()>,
@@ -305,7 +299,7 @@ pub struct RealtimeHostRuntime {
 }
 
 impl RealtimeHostRuntime {
-    pub fn local_game_context_snapshot(&self) -> LocalGameContextSnapshot {
+    pub fn local_game_context(&self) -> LocalGameContextSnapshot {
         self.deps.local_game_context.snapshot()
     }
 }

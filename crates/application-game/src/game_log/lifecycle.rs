@@ -53,11 +53,7 @@ pub fn handle_vrc_quit(
     }
 }
 
-pub fn emit_video_sync(
-    side_effect_sink: &GameLogSideEffectSink,
-    timestamp: &str,
-    created_at: &str,
-) {
+pub(crate) fn video_sync_payload(timestamp: &str, created_at: &str) -> NowPlayingPayload {
     let position = timestamp
         .replace(',', "")
         .parse::<i64>()
@@ -65,12 +61,10 @@ pub fn emit_video_sync(
         .filter(|value| *value >= 0)
         .unwrap_or(0);
 
-    side_effect_sink.emit(GameLogSideEffectEvent::NowPlaying(Box::new(
-        NowPlayingPayload {
-            position,
-            started_at: created_at.into(),
-            updated_at: Utc::now().to_rfc3339(),
-            ..Default::default()
-        },
-    )));
+    NowPlayingPayload {
+        position,
+        started_at: created_at.into(),
+        updated_at: Utc::now().to_rfc3339(),
+        ..Default::default()
+    }
 }

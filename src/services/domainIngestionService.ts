@@ -19,8 +19,6 @@ interface RecordKnownUserOptions extends UserFactMergeOptions {
 
 interface GameRuntimePresenceInput {
     endpoint?: string;
-    currentUserId?: string | null;
-    currentUserSnapshot?: Record<string, unknown> | null;
     currentLocation?: string;
     currentDestination?: string;
     currentLocationStartedAt?: string | null;
@@ -91,8 +89,6 @@ function recordCurrentUserSnapshot(
 
 function recordGameRuntimePresence({
     endpoint = '',
-    currentUserId = '',
-    currentUserSnapshot = null,
     currentLocation = '',
     currentDestination = '',
     currentLocationStartedAt = '',
@@ -101,31 +97,7 @@ function recordGameRuntimePresence({
 }: GameRuntimePresenceInput = {}) {
     const rawCurrentLocation = text(currentLocation);
     const location = rawCurrentLocation || text(currentDestination);
-    const currentLocationState = parseLocation(rawCurrentLocation);
-    const isTraveling = currentLocationState.isTraveling;
-    const travelingToLocation = isTraveling ? text(currentDestination) : '';
-    const currentUser = record(currentUserSnapshot);
-    const userId = text(currentUserId || currentUser.id || currentUser.userId);
-    if (userId) {
-        recordKnownUser(
-            {
-                ...currentUser,
-                id: userId,
-                location: isTraveling ? 'traveling' : location,
-                ...(travelingToLocation
-                    ? {
-                          travelingToLocation,
-                          $travelingToTime: currentLocationStartedAt
-                      }
-                    : { $location_at: currentLocationStartedAt })
-            },
-            {
-                endpoint,
-                source: 'gameRuntime',
-                isCurrentUser: true
-            }
-        );
-    }
+    const isTraveling = parseLocation(rawCurrentLocation).isTraveling;
     if (isTraveling) {
         return;
     }

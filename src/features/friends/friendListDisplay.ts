@@ -1,9 +1,7 @@
+import { userStatusDotClassName } from '@/domain/friends/presence';
 import { normalizeProfileLanguageRows } from '@/shared/utils/userLanguage';
 import type { LanguageOption } from '@/shared/utils/userLanguage';
-import {
-    userStatusIndicatorClassName,
-    userStatusSortRank
-} from '@/shared/utils/userStatus';
+import { userStatusSortRank } from '@/shared/utils/userStatus';
 
 export function languageCodeLabel(languageKey: string) {
     const key = languageKey
@@ -33,19 +31,10 @@ function resolveFriendStatusLabel(friend: unknown) {
 }
 
 export function resolveFriendStatusMeta(friend: unknown) {
-    const statusForIndicator = friend || {};
-    const indicatorClassName = userStatusIndicatorClassName(
-        statusForIndicator,
-        {
-            showOffline: true,
-            className: 'mr-1'
-        }
-    );
     return {
         badgeVariant: 'outline',
-        indicatorClassName,
+        statusDotClassName: userStatusDotClassName(friend),
         label: resolveFriendStatusLabel(friend),
-        showIndicator: Boolean(indicatorClassName),
-        sortRank: userStatusSortRank(statusForIndicator || 'offline')
+        sortRank: userStatusSortRank(friend || 'offline')
     };
 }

@@ -12,36 +12,17 @@ use super::test_support::*;
 use super::*;
 use crate::realtime::UserQueryKind;
 use vrcx_0_application_core::vrchat_api::VrchatApiResponse;
-use vrcx_0_application_core::{
-    RuntimeAuthScope, RuntimeTask, RuntimeTaskExecutor, RuntimeTaskHandle,
-};
-use vrcx_0_core::friends::FriendRecord;
-
-#[derive(Clone, Copy)]
-struct DiscardTaskExecutor;
-
-struct FinishedTaskHandle;
-
-impl RuntimeTaskExecutor for DiscardTaskExecutor {
-    fn spawn(&self, _task: RuntimeTask) -> Box<dyn RuntimeTaskHandle> {
-        Box::new(FinishedTaskHandle)
-    }
-}
-
-impl RuntimeTaskHandle for FinishedTaskHandle {
-    fn abort(&self) {}
-
-    fn is_finished(&self) -> bool {
-        true
-    }
-
-    fn join_or_abort(&mut self, _timeout: Duration) {}
-}
+use vrcx_0_application_core::RuntimeAuthScope;
+use vrcx_0_core::friends::{FriendBaselineEntry, FriendRecord};
 
 fn friend_record(extra: serde_json::Value) -> FriendRecord {
     let mut value = extra;
     value["id"] = json!(value["id"].as_str().unwrap_or("usr_test"));
     serde_json::from_value(value).unwrap()
+}
+
+fn friend_entry(extra: serde_json::Value) -> FriendBaselineEntry {
+    serde_json::from_value(extra).unwrap()
 }
 
 #[test]
@@ -184,7 +165,7 @@ fn start_completes_immediately_when_no_targets() -> Result<()> {
                 let mut map = HashMap::new();
                 map.insert(
                     "usr_a".to_string(),
-                    friend_record(json!({"id": "usr_a", "date_joined": "2026-01-01"})),
+                    friend_entry(json!({"id": "usr_a", "date_joined": "2026-01-01"})),
                 );
                 map
             },
@@ -239,11 +220,11 @@ async fn unexpected_exit_and_same_account_replacement_keep_bulk_worker_active() 
     let friends_by_id = HashMap::from([
         (
             "usr_a".to_string(),
-            friend_record(json!({"id": "usr_a", "displayName": "A"})),
+            friend_entry(json!({"id": "usr_a", "displayName": "A"})),
         ),
         (
             "usr_b".to_string(),
-            friend_record(json!({"id": "usr_b", "displayName": "B"})),
+            friend_entry(json!({"id": "usr_b", "displayName": "B"})),
         ),
     ]);
     runtime.runtime().friends.set_baseline(
@@ -448,7 +429,7 @@ async fn explicit_stop_keeps_a_real_worker_cancelled_after_it_exits() -> Result<
             websocket: active_session.websocket.clone(),
             friends_by_id: HashMap::from([(
                 "usr_a".to_string(),
-                friend_record(json!({"id": "usr_a", "displayName": "A"})),
+                friend_entry(json!({"id": "usr_a", "displayName": "A"})),
             )]),
         },
         7,
@@ -606,7 +587,7 @@ fn session_replacement_cancels_old_run_without_blocking_the_new_owner() -> Resul
 }
 
 #[test]
-fn bulk_profile_refresh_applies_when_friend_sequence_matches() -> Result<()> {
+fn bulk_profile_refresh_applies_when_friend_rev_matches() -> Result<()> {
     let (_dir, runtime, active_session) =
         runtime_with_active_session("friend-profile-bulk-load-refresh")?;
     runtime.runtime().friends.set_baseline(
@@ -618,7 +599,7 @@ fn bulk_profile_refresh_applies_when_friend_sequence_matches() -> Result<()> {
                 let mut map = HashMap::new();
                 map.insert(
                     "usr_friend".to_string(),
-                    friend_record(json!({"id": "usr_friend", "displayName": "Friend"})),
+                    friend_entry(json!({"id": "usr_friend", "displayName": "Friend"})),
                 );
                 map
             },
@@ -626,10 +607,10 @@ fn bulk_profile_refresh_applies_when_friend_sequence_matches() -> Result<()> {
         7,
         1,
     );
-    let expected_sequence = runtime
+    let expected_rev = runtime
         .runtime()
         .friends
-        .friend_state_sequence_for_user(7, "usr_friend")
+        .friend_rev_of(7, "usr_friend")
         .expect("friend should have a causal sequence");
     let profile = json!({
         "id": "usr_friend",
@@ -645,7 +626,7 @@ fn bulk_profile_refresh_applies_when_friend_sequence_matches() -> Result<()> {
         profile.clone(),
         FriendProfileRefreshExpectation {
             generation: 6,
-            sequence: expected_sequence,
+            rev: expected_rev,
         },
     )?);
     assert!(runtime.runtime().apply_friend_profile_refresh(
@@ -654,7 +635,7 @@ fn bulk_profile_refresh_applies_when_friend_sequence_matches() -> Result<()> {
         profile,
         FriendProfileRefreshExpectation {
             generation: 7,
-            sequence: expected_sequence,
+            rev: expected_rev,
         },
     )?);
 
@@ -666,7 +647,7 @@ fn bulk_profile_refresh_applies_when_friend_sequence_matches() -> Result<()> {
 }
 
 #[test]
-fn bulk_profile_refresh_is_discarded_when_friend_sequence_advanced() -> Result<()> {
+fn bulk_profile_refresh_is_discarded_when_friend_rev_advanced() -> Result<()> {
     let (_dir, runtime, active_session) =
         runtime_with_active_session("friend-profile-bulk-load-refresh-stale")?;
     runtime.runtime().friends.set_baseline(
@@ -678,7 +659,7 @@ fn bulk_profile_refresh_is_discarded_when_friend_sequence_advanced() -> Result<(
                 let mut map = HashMap::new();
                 map.insert(
                     "usr_friend".to_string(),
-                    friend_record(json!({"id": "usr_friend", "displayName": "Friend"})),
+                    friend_entry(json!({"id": "usr_friend", "displayName": "Friend"})),
                 );
                 map
             },
@@ -686,10 +667,10 @@ fn bulk_profile_refresh_is_discarded_when_friend_sequence_advanced() -> Result<(
         7,
         1,
     );
-    let stale_sequence = runtime
+    let stale_rev = runtime
         .runtime()
         .friends
-        .friend_state_sequence_for_user(7, "usr_friend")
+        .friend_rev_of(7, "usr_friend")
         .expect("friend should have a causal sequence");
 
     // A websocket update advances the friend-state sequence past the captured one.
@@ -723,7 +704,7 @@ fn bulk_profile_refresh_is_discarded_when_friend_sequence_advanced() -> Result<(
         }),
         FriendProfileRefreshExpectation {
             generation: 7,
-            sequence: stale_sequence,
+            rev: stale_rev,
         },
     )?);
 
@@ -747,7 +728,7 @@ async fn cached_user_response_is_not_replayed_into_friend_state() -> Result<()> 
                 let mut map = HashMap::new();
                 map.insert(
                     "usr_friend".to_string(),
-                    friend_record(json!({"id": "usr_friend", "displayName": "Friend"})),
+                    friend_entry(json!({"id": "usr_friend", "displayName": "Friend"})),
                 );
                 map
             },
@@ -829,7 +810,7 @@ async fn cached_user_response_does_not_revert_display_name() -> Result<()> {
                 let mut map = HashMap::new();
                 map.insert(
                     "usr_friend".to_string(),
-                    friend_record(json!({"id": "usr_friend", "displayName": "Friend"})),
+                    friend_entry(json!({"id": "usr_friend", "displayName": "Friend"})),
                 );
                 map
             },
@@ -843,10 +824,10 @@ async fn cached_user_response_does_not_revert_display_name() -> Result<()> {
         .tasks
         .set_executor(DiscardTaskExecutor);
 
-    let rename_sequence = runtime
+    let rename_rev = runtime
         .runtime()
         .friends
-        .friend_state_sequence_for_user(7, "usr_friend")
+        .friend_rev_of(7, "usr_friend")
         .expect("friend should have a causal sequence");
     assert!(runtime.runtime().apply_friend_profile_refresh(
         active_session.endpoint.clone(),
@@ -859,7 +840,7 @@ async fn cached_user_response_does_not_revert_display_name() -> Result<()> {
         }),
         FriendProfileRefreshExpectation {
             generation: 7,
-            sequence: rename_sequence,
+            rev: rename_rev,
         },
     )?);
 

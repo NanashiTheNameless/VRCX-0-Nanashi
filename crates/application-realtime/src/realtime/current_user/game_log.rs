@@ -1,17 +1,16 @@
 use serde_json::{Map, Value};
 use vrcx_0_contracts::game_log::GameLogLocationTimeUpdate;
 use vrcx_0_contracts::realtime::RealtimePersistenceBatch;
-use vrcx_0_core::derived_keys;
 use vrcx_0_core::location::parse_location;
-use vrcx_0_core::text::first_owned;
 
-use crate::realtime::RealtimeCurrentUserAuthority;
+use vrcx_0_application_core::LocalGameContextSnapshot;
 
+use super::location::build_location_patch;
 use super::location::location_game_log_entry;
 use super::state::{
     RealtimeCurrentUserState, RealtimeCurrentUserStateSnapshot, RemoteGameLogInterval,
 };
-use super::utils::EventTime;
+use crate::realtime::event_time::EventTime;
 use vrcx_0_core::location::is_real_instance;
 
 pub(super) fn reconcile_remote_game_log_interval(
@@ -61,15 +60,21 @@ pub(super) fn close_remote_game_log_interval(
         });
 }
 
-pub(super) fn game_log_authority_patch(
-    authority: &RealtimeCurrentUserAuthority,
+pub(super) fn local_game_location_patch(
+    game: &LocalGameContextSnapshot,
 ) -> Option<Map<String, Value>> {
-    if !authority.is_game_running() {
+    let LocalGameContextSnapshot::Available {
+        is_game_running: true,
+        location: game_log_location,
+        destination: game_log_destination,
+        world_name,
+        ..
+    } = game
+    else {
         return None;
-    }
-    let game_log = authority.game_log()?;
-    let game_log_location = game_log.location.trim();
-    let game_log_destination = game_log.destination.trim();
+    };
+    let game_log_location = game_log_location.trim();
+    let game_log_destination = game_log_destination.trim();
     let (location, traveling_to_location) = if game_log_location.eq_ignore_ascii_case("traveling")
         && is_real_instance(game_log_destination)
     {
@@ -79,37 +84,12 @@ pub(super) fn game_log_authority_patch(
     } else {
         return None;
     };
-    let parsed = parse_location(location);
-    let parsed_traveling = parse_location(traveling_to_location);
-    let world_id = first_owned([parsed.world_id.clone(), parsed_traveling.world_id.clone()]);
-    let mut patch = Map::new();
-    patch.insert("location".into(), Value::String(location.to_string()));
-    patch.insert("worldId".into(), Value::String(world_id));
-    patch.insert(
-        "instanceId".into(),
-        Value::String(parsed.instance_id.clone()),
+    let mut patch = build_location_patch(
+        Some(&Value::from(location)),
+        Some(&Value::from(traveling_to_location)),
+        Some(&Value::from(parse_location(traveling_to_location).world_id)),
     );
-    patch.insert(
-        "travelingToLocation".into(),
-        Value::String(traveling_to_location.to_string()),
-    );
-    patch.insert(
-        "travelingToWorld".into(),
-        Value::String(parsed_traveling.world_id.clone()),
-    );
-    patch.insert(
-        "travelingToInstance".into(),
-        Value::String(parsed_traveling.instance_id.clone()),
-    );
-    patch.insert(
-        derived_keys::LOCATION_PROJECTION.into(),
-        parsed.to_frontend_value(location),
-    );
-    patch.insert(
-        derived_keys::TRAVELING_TO_LOCATION_PROJECTION.into(),
-        parsed_traveling.to_frontend_value(traveling_to_location),
-    );
-    let world_name = game_log.world_name.trim();
+    let world_name = world_name.trim();
     if !world_name.is_empty() {
         patch.insert("worldName".into(), Value::String(world_name.to_string()));
     }

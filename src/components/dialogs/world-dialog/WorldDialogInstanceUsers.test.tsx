@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useFriendLocationTimeStore } from '@/state/friendLocationTimeStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
+import { activePresence, onlinePresence } from '@/test/presenceFixtures';
 
 type QueryOptions = {
     enabled?: boolean;
@@ -119,11 +120,15 @@ vi.mock('@/shared/utils/userStatus', () => ({
         user: unknown,
         t: (key: string, options?: { defaultValue: string }) => string
     ) => {
-        const state =
-            user && typeof user === 'object' && 'state' in user
-                ? String(user.state)
+        const presence =
+            user && typeof user === 'object' && '$presence' in user
+                ? user.$presence
+                : null;
+        const kind =
+            presence && typeof presence === 'object' && 'kind' in presence
+                ? String(presence.kind)
                 : '';
-        return state ? t(`dialog.user.status.${state}`) : '';
+        return kind ? t(`dialog.user.status.${kind}`) : '';
     }
 }));
 
@@ -275,13 +280,11 @@ describe('InstanceUserTiles', () => {
     it('shows the timer for a friend creator', () => {
         useFriendRosterStore.getState().applyFriendPatch({
             userId: 'usr_friend_owner',
+            presence: { rev: 1, view: onlinePresence('wrld_test:123') },
             patch: {
                 id: 'usr_friend_owner',
-                displayName: 'Friend Owner',
-                state: 'online',
-                location: 'wrld_test:123'
-            },
-            stateBucketAuthority: 'explicit'
+                displayName: 'Friend Owner'
+            }
         });
         useFriendLocationTimeStore.getState().replaceSnapshot([
             {
@@ -306,8 +309,7 @@ describe('InstanceUserTiles', () => {
                     users: [
                         {
                             id: 'usr_friend_owner',
-                            state: 'online',
-                            location: 'wrld_test:123'
+                            $presence: onlinePresence('wrld_test:123')
                         }
                     ]
                 }}
@@ -333,7 +335,7 @@ describe('InstanceUserTiles', () => {
             <InstanceUserTiles
                 instance={{
                     creatorUserId: 'usr_non_friend_owner',
-                    creatorUser: { state: 'active' }
+                    creatorUser: { $presence: activePresence() }
                 }}
                 visibleUserIds={new Set()}
                 showInstanceDuration
@@ -349,13 +351,11 @@ describe('InstanceUserTiles', () => {
     it('shows the instance timer instead of the status signature', () => {
         useFriendRosterStore.getState().applyFriendPatch({
             userId: 'usr_friend',
+            presence: { rev: 1, view: onlinePresence('wrld_test:123') },
             patch: {
                 id: 'usr_friend',
-                displayName: 'Friend',
-                state: 'online',
-                location: 'wrld_test:123'
-            },
-            stateBucketAuthority: 'explicit'
+                displayName: 'Friend'
+            }
         });
         useFriendLocationTimeStore.getState().replaceSnapshot([
             {
@@ -372,8 +372,7 @@ describe('InstanceUserTiles', () => {
                         {
                             id: 'usr_friend',
                             displayName: 'Friend',
-                            state: 'online',
-                            location: 'wrld_test:123',
+                            $presence: onlinePresence('wrld_test:123'),
                             statusDescription: 'World hopping'
                         }
                     ]
@@ -389,13 +388,11 @@ describe('InstanceUserTiles', () => {
     it('uses the displayed instance for an online friend with a hidden presence location', () => {
         useFriendRosterStore.getState().applyFriendPatch({
             userId: 'usr_friend',
+            presence: { rev: 1, view: onlinePresence('private') },
             patch: {
                 id: 'usr_friend',
-                displayName: 'Friend',
-                state: 'online',
-                location: 'private'
-            },
-            stateBucketAuthority: 'explicit'
+                displayName: 'Friend'
+            }
         });
         useFriendLocationTimeStore.getState().replaceSnapshot([
             {
@@ -412,8 +409,7 @@ describe('InstanceUserTiles', () => {
                         {
                             id: 'usr_friend',
                             displayName: 'Friend',
-                            state: 'online',
-                            location: 'private',
+                            $presence: onlinePresence('private'),
                             statusDescription: 'Do not disturb'
                         }
                     ]

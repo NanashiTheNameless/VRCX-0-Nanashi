@@ -2,6 +2,7 @@ use serde::Serialize;
 pub use vrcx_0_contracts::feed_live::FeedLiveEntry;
 use vrcx_0_core::friends::FriendRecord;
 use vrcx_0_core::json::{RawJson, RawJsonObject};
+use vrcx_0_core::presence::PresenceEntry;
 
 use crate::FriendLocationTime;
 
@@ -11,19 +12,12 @@ pub struct RealtimeUserProjection {
     pub users: Vec<RawJson>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub enum FriendStateBucketAuthority {
-    Explicit,
-    Preserve,
-}
-
 #[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct FriendProjectionPatch {
     pub user_id: String,
-    pub patch: FriendRecord,
-    pub state_bucket_authority: FriendStateBucketAuthority,
+    pub record: FriendRecord,
+    pub presence: PresenceEntry,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
@@ -35,8 +29,6 @@ pub struct FriendProjection {
     pub patches: Vec<FriendProjectionPatch>,
     #[serde(default)]
     pub removals: Vec<String>,
-    #[serde(default)]
-    pub feed_entries: Vec<FeedLiveEntry>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub location_time_snapshot: Option<Vec<FriendLocationTime>>,
     pub friend_log_changed: bool,
@@ -49,7 +41,6 @@ impl FriendProjection {
             baseline_revision,
             patches: Vec::new(),
             removals: Vec::new(),
-            feed_entries: Vec::new(),
             location_time_snapshot: None,
             friend_log_changed: false,
         }
@@ -111,7 +102,6 @@ pub struct RealtimeEntryCorrection {
 pub struct RealtimeCurrentUserProjection {
     pub generation: u64,
     pub patch: RawJsonObject,
-    pub snapshot: RawJsonObject,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub game_state_patch: Option<RawJsonObject>,
 }

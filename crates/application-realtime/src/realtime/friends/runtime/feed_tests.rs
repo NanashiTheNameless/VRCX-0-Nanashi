@@ -10,14 +10,19 @@ mod tests {
                 current_user_id: "usr_self".into(),
                 friends_by_id: [(
                     "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "online".into(),
-                        location: "wrld_old:123".into(),
-                        status: "join me".into(),
-                        status_description: "Old status".into(),
-                        ..FriendRecord::default()
+                    FriendBaselineEntry {
+                        record: FriendRecord {
+                            id: "usr_friend".into(),
+                            display_name: "Friend".into(),
+                            status: "join me".into(),
+                            status_description: "Old status".into(),
+                            ..FriendRecord::default()
+                        },
+                        presence: FriendBaselinePresence {
+                            state: "online".into(),
+                            location: "wrld_old:123".into(),
+                            ..FriendBaselinePresence::default()
+                        },
                     },
                 )]
                 .into_iter()
@@ -51,10 +56,10 @@ mod tests {
         };
 
         assert!(output.persistence.feed_entries.is_empty());
-        assert!(output.projection.feed_entries.is_empty());
-        assert_eq!(output.projection.patches[0].patch.status, "offline");
+        assert!(output.joining.is_empty());
+        assert_eq!(output.projection.patches[0].record.status, "offline");
         assert_eq!(
-            output.projection.patches[0].patch.status_description,
+            output.projection.patches[0].record.status_description,
             "Fresh offline status"
         );
     }
@@ -67,14 +72,19 @@ mod tests {
                 current_user_id: "usr_self".into(),
                 friends_by_id: [(
                     "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "online".into(),
-                        location: "wrld_old:123".into(),
-                        status: "join me".into(),
-                        status_description: "Old status".into(),
-                        ..FriendRecord::default()
+                    FriendBaselineEntry {
+                        record: FriendRecord {
+                            id: "usr_friend".into(),
+                            display_name: "Friend".into(),
+                            status: "join me".into(),
+                            status_description: "Old status".into(),
+                            ..FriendRecord::default()
+                        },
+                        presence: FriendBaselinePresence {
+                            state: "online".into(),
+                            location: "wrld_old:123".into(),
+                            ..FriendBaselinePresence::default()
+                        },
                     },
                 )]
                 .into_iter()
@@ -112,19 +122,15 @@ mod tests {
             first.persistence.feed_entries[0].to_json()["type"],
             "Status"
         );
-        assert_eq!(first.projection.feed_entries[0].to_json()["type"], "Status");
 
-        let RealtimeFriendApplyResult::Output(second) =
+        assert!(matches!(
             runtime.apply_ws_message(&RealtimeWsMessagePayload {
                 json: payload,
                 raw: "{}".into(),
                 received_at: "2026-05-15T00:01:01Z".into(),
-            })
-        else {
-            panic!("duplicate friend-update should still produce a projection output");
-        };
-        assert!(second.persistence.feed_entries.is_empty());
-        assert!(second.projection.feed_entries.is_empty());
+            }),
+            RealtimeFriendApplyResult::Ignored
+        ));
     }
 
     #[test]
@@ -135,14 +141,19 @@ mod tests {
                 current_user_id: "usr_self".into(),
                 friends_by_id: [(
                     "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "online".into(),
-                        location: "wrld_old:123".into(),
-                        status: "active".into(),
-                        status_description: "A".into(),
-                        ..FriendRecord::default()
+                    FriendBaselineEntry {
+                        record: FriendRecord {
+                            id: "usr_friend".into(),
+                            display_name: "Friend".into(),
+                            status: "active".into(),
+                            status_description: "A".into(),
+                            ..FriendRecord::default()
+                        },
+                        presence: FriendBaselinePresence {
+                            state: "online".into(),
+                            location: "wrld_old:123".into(),
+                            ..FriendBaselinePresence::default()
+                        },
                     },
                 )]
                 .into_iter()

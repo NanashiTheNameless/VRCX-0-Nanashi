@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { FriendRecord } from '@/domain/friends/types';
 import { MUTUAL_GRAPH_EMPTY_USER_ID } from '@/lib/mutual-friends/mutualFriendsSettings';
+import { offlinePresence } from '@/test/presenceFixtures';
 
 import {
     buildMutualFriendExcludePickerOptions,
@@ -14,8 +15,7 @@ function friend(patch: Partial<FriendRecord> = {}): FriendRecord {
         id: 'usr_1',
         displayName: 'Friend',
         tags: [],
-        state: 'offline',
-        stateBucket: 'offline',
+        $presence: offlinePresence,
         $trustLevel: 'Visitor',
         $friendNumber: 0,
         $trustClass: 'x-tag-untrusted',

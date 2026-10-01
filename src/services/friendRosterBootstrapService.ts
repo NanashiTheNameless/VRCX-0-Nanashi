@@ -2,68 +2,23 @@ import {
     commands,
     type SocialFriendRosterBaselineOutput
 } from '@/platform/tauri/bindings';
-import friendLogRepository from '@/repositories/friendLogRepository';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useSessionStore } from '@/state/sessionStore';
 
 import {
-    buildFriendStateMap,
-    buildSeedRosterFriendsById,
     getDisplayName,
-    hasCompleteFriendStateSnapshot,
     isRecord,
-    normalizeFriendsById,
-    normalizeStringArray,
     normalizeUserId,
+    rosterSnapshotInput,
     type FriendBootstrapOptions,
-    type FriendBootstrapResult,
-    type FriendBootstrapSnapshot,
-    type FriendLogBootstrapRow
+    type FriendBootstrapResult
 } from './friendBootstrapModel';
 import { signalFriendLogChanged } from './friendLogMutationService';
 import { flushRealtimeRosterUpdates } from './realtimeRosterUpdateQueue';
 import { syncStartupServicesTask } from './startupServicesStatus';
 
 const activeBootstraps = new Map<string, Promise<FriendBootstrapResult>>();
-
-async function seedFriendRosterFromCurrentUserSnapshot({
-    normalizedUserId,
-    endpoint,
-    websocket,
-    currentUserSnapshot,
-    detail
-}: {
-    normalizedUserId: string;
-    endpoint: string;
-    websocket: string;
-    currentUserSnapshot: unknown;
-    detail: string;
-}) {
-    if (!hasCompleteFriendStateSnapshot(currentUserSnapshot)) {
-        return false;
-    }
-
-    const stateById = buildFriendStateMap(currentUserSnapshot);
-    let friendLogRows: FriendLogBootstrapRow[] = [];
-    try {
-        friendLogRows =
-            await friendLogRepository.getFriendLogCurrent(normalizedUserId);
-    } catch (error) {
-        console.warn('Failed to seed friend roster from friend log:', error);
-    }
-
-    if (!isCurrentBootstrapTarget(normalizedUserId, endpoint, websocket)) {
-        return false;
-    }
-
-    useFriendRosterStore.getState().setRosterSeedSnapshot({
-        currentUserId: normalizedUserId,
-        friendsById: buildSeedRosterFriendsById(stateById, friendLogRows),
-        detail
-    });
-    return true;
-}
 
 function bootstrapTargetKey(
     userId: string,
@@ -129,13 +84,6 @@ async function runFriendBootstrap({
         );
     if (!preserveLoadedState) {
         useSessionStore.getState().setFriendsLoaded(false);
-        await seedFriendRosterFromCurrentUserSnapshot({
-            normalizedUserId,
-            endpoint: normalizedEndpoint,
-            websocket: realtimeWebsocket,
-            currentUserSnapshot: currentSnapshot,
-            detail: `Loading the full friend roster baseline for ${displayName}.`
-        });
     }
 
     const result: SocialFriendRosterBaselineOutput =
@@ -147,20 +95,8 @@ async function runFriendBootstrap({
             isFirstLoad: !preserveLoadedState
         });
 
-    const snapshot: FriendBootstrapSnapshot | null = isRecord(result.snapshot)
-        ? {
-              ...result.snapshot,
-              friendsById: normalizeFriendsById(result.snapshot.friendsById),
-              orderedFriendIds: normalizeStringArray(
-                  result.snapshot.orderedFriendIds
-              ),
-              onlineIds: normalizeStringArray(result.snapshot.onlineIds),
-              activeIds: normalizeStringArray(result.snapshot.activeIds),
-              offlineIds: normalizeStringArray(result.snapshot.offlineIds),
-              detail: normalizeUserId(result.snapshot.detail)
-          }
-        : null;
-    const detail = String(result.detail || snapshot?.detail || '');
+    const snapshot = result.snapshot;
+    const detail = result.detail;
 
     if (result.stale || !snapshot) {
         if (
@@ -206,15 +142,11 @@ async function runFriendBootstrap({
         useFriendRosterStore.getState().setRosterReady(detail);
     } else {
         flushRealtimeRosterUpdates();
-        useFriendRosterStore.getState().setRosterSnapshot({
-            currentUserId: normalizedUserId,
-            friendsById: snapshot.friendsById ?? {},
-            orderedFriendIds: snapshot.orderedFriendIds ?? [],
-            onlineIds: snapshot.onlineIds ?? [],
-            activeIds: snapshot.activeIds ?? [],
-            offlineIds: snapshot.offlineIds ?? [],
-            detail
-        });
+        useFriendRosterStore
+            .getState()
+            .setRosterSnapshot(
+                rosterSnapshotInput(normalizedUserId, snapshot, detail)
+            );
     }
     useSessionStore.getState().setFriendsLoaded(true);
     syncStartupServicesTask([detail]);

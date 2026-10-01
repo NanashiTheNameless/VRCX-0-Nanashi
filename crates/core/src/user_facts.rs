@@ -1,12 +1,13 @@
 use crate::derived_keys;
-use std::collections::HashMap;
+use crate::presence::PresenceView;
+use std::collections::HashSet;
 
 use serde_json::{Map, Number, Value};
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct UserFact {
     pub fields: Map<String, Value>,
-    field_ranks: HashMap<&'static str, u8>,
+    observed: HashSet<&'static str>,
     pub updated_at: String,
 }
 
@@ -24,7 +25,7 @@ impl UserFact {
 
     pub fn to_object(&self) -> Map<String, Value> {
         let mut object = self.fields.clone();
-        apply_derived_fields(&mut object);
+        insert_derived_trust_fields(&mut object);
         object.insert("updatedAt".into(), Value::String(self.updated_at.clone()));
         object
     }
@@ -102,6 +103,21 @@ fn insert_derived_location_fields(object: &mut Map<String, Value>) {
 pub fn apply_derived_fields(object: &mut Map<String, Value>) {
     insert_derived_trust_fields(object);
     insert_derived_location_fields(object);
+    object.insert(derived_keys::PRESENCE.into(), presence_value(object));
+}
+
+fn presence_value(profile: &Map<String, Value>) -> Value {
+    serde_json::to_value(PresenceView::from_profile(profile))
+        .expect("PresenceView serializes to JSON")
+}
+
+fn has_presence_evidence(profile: &Map<String, Value>) -> bool {
+    ["state", "location"].iter().any(|key| {
+        profile
+            .get(*key)
+            .and_then(Value::as_str)
+            .is_some_and(|text| !text.trim().is_empty())
+    })
 }
 
 #[derive(Clone, Debug)]
@@ -130,115 +146,46 @@ pub struct UserFactMergeResult {
     pub changed: bool,
 }
 
-fn base_source_rank(source: &str) -> u8 {
-    match source {
-        "seed" => 10,
-        "instance" => 20,
-        "playerSnapshot" => 35,
-        "friend" => 50,
-        "profile" => 70,
-        "realtime" => 75,
-        "currentUser" => 85,
-        "gameRuntime" => 90,
-        _ => 0,
-    }
-}
+const PLACEHOLDER_SOURCES: [&str; 3] = ["seed", "instance", "playerSnapshot"];
 
-fn profile_source_rank(source: &str) -> u8 {
-    match source {
-        "seed" => 10,
-        "instance" => 20,
-        "playerSnapshot" => 30,
-        "realtime" => 40,
-        "friend" => 55,
-        "profile" => 80,
-        "currentUser" => 90,
-        "gameRuntime" => 50,
-        _ => 0,
-    }
-}
-
-fn presence_source_rank(source: &str) -> u8 {
-    match source {
-        "seed" => 10,
-        "instance" => 45,
-        "playerSnapshot" => 60,
-        "profile" => 40,
-        "currentUser" => 65,
-        "friend" => 70,
-        "realtime" => 80,
-        "gameRuntime" => 90,
-        _ => 0,
-    }
-}
-
-#[derive(Clone, Copy)]
-enum FieldClass {
-    Identity,
-    Presence,
-    Profile,
-    SelfOwned,
-}
-
-const USER_FACT_FIELDS: &[(&str, FieldClass)] = &[
-    ("id", FieldClass::Identity),
-    ("username", FieldClass::Profile),
-    ("displayName", FieldClass::Profile),
-    ("iconUrl", FieldClass::Profile),
-    ("currentAvatar", FieldClass::Profile),
-    ("currentAvatarImageUrl", FieldClass::Profile),
-    ("currentAvatarThumbnailImageUrl", FieldClass::Profile),
-    ("currentAvatarName", FieldClass::Profile),
-    ("friendNumber", FieldClass::Profile),
-    ("tags", FieldClass::Profile),
-    ("platform", FieldClass::Profile),
-    ("last_platform", FieldClass::Profile),
-    ("developerType", FieldClass::Profile),
-    ("status", FieldClass::Presence),
-    ("statusDescription", FieldClass::Presence),
-    ("state", FieldClass::Presence),
-    ("location", FieldClass::Presence),
-    ("travelingToLocation", FieldClass::Presence),
-    ("locationAt", FieldClass::Presence),
-    ("travelingToTime", FieldClass::Presence),
-    ("pendingOffline", FieldClass::Presence),
-    ("isBoopingEnabled", FieldClass::SelfOwned),
-    ("hasSharedConnectionsOptOut", FieldClass::SelfOwned),
+const USER_FACT_FIELDS: &[&str] = &[
+    "id",
+    "username",
+    "displayName",
+    "iconUrl",
+    "currentAvatar",
+    "currentAvatarImageUrl",
+    "currentAvatarThumbnailImageUrl",
+    "currentAvatarName",
+    "friendNumber",
+    "tags",
+    "platform",
+    "last_platform",
+    "developerType",
+    "status",
+    "statusDescription",
+    "isBoopingEnabled",
+    "hasSharedConnectionsOptOut",
+    derived_keys::PRESENCE,
 ];
 
-fn user_fact_field(field: &str) -> Option<(&'static str, FieldClass)> {
+fn user_fact_field(field: &str) -> Option<&'static str> {
     USER_FACT_FIELDS
         .iter()
-        .find(|(name, _)| *name == field)
+        .find(|name| **name == field)
         .copied()
-}
-
-fn rank_for_field(class: FieldClass, source: &str) -> u8 {
-    match class {
-        FieldClass::Presence => presence_source_rank(source),
-        FieldClass::Profile => profile_source_rank(source),
-        FieldClass::SelfOwned if source == "currentUser" || source == "gameRuntime" => 95,
-        FieldClass::Identity | FieldClass::SelfOwned => base_source_rank(source),
-    }
 }
 
 fn resolve_field(raw: &str) -> Option<&'static str> {
     match raw {
         "display_name" | "name" => Some("displayName"),
         "user_id" | "userId" => Some("id"),
-        derived_keys::TRAVELING_TO_LOCATION_PROJECTION => Some("travelingToLocation"),
-        "location_at"
-        | derived_keys::LOCATION_UPDATED_AT
-        | "joinedAt"
-        | "joined_at"
-        | derived_keys::ONLINE_FOR => Some("locationAt"),
-        derived_keys::TRAVELING_TO_TIME => Some("travelingToTime"),
         derived_keys::FRIEND_NUMBER => Some("friendNumber"),
-        other => user_fact_field(other).map(|(name, _)| name),
+        other => user_fact_field(other),
     }
 }
 
-pub fn normalize_fact_text(value: &Value) -> String {
+fn normalize_fact_text(value: &Value) -> String {
     match value {
         Value::String(text) => text.trim().to_string(),
         Value::Null => String::new(),
@@ -266,12 +213,6 @@ pub fn user_fact_key(endpoint: &Value, user_id: &Value) -> String {
     } else {
         format!("{}::{}", normalize_endpoint(endpoint), normalized_user_id)
     }
-}
-
-pub fn normalize_state_bucket(value: &Value) -> String {
-    crate::friends::StateBucket::normalize(&normalize_fact_text(value))
-        .map(|bucket| bucket.as_str().to_string())
-        .unwrap_or_default()
 }
 
 fn is_present(value: &Value) -> bool {
@@ -323,6 +264,9 @@ fn normalize_fact_patch(input: &Value) -> Map<String, Value> {
                 }
             }
         }
+    }
+    if has_presence_evidence(object) {
+        patch.insert(derived_keys::PRESENCE.into(), presence_value(object));
     }
     patch
 }
@@ -384,7 +328,7 @@ pub fn merge_user_fact_owned(
                 fields.insert("endpoint".into(), Value::String(endpoint.clone()));
                 fields
             },
-            field_ranks: HashMap::new(),
+            observed: HashSet::new(),
             updated_at: updated_at.clone(),
         },
     };
@@ -411,24 +355,22 @@ pub fn merge_user_fact_owned(
         changed = true;
     }
 
+    let placeholder = PLACEHOLDER_SOURCES.contains(&options.source.as_str());
     for (field, value) in &patch {
         if field == "id" || !is_present(value) {
             continue;
         }
-        let Some((field_name, class)) = user_fact_field(field) else {
+        let Some(field_name) = user_fact_field(field) else {
             continue;
         };
-        let rank = rank_for_field(class, &options.source);
-        let existing_rank = fact.field_ranks.get(field_name).copied().unwrap_or(0);
-        if rank < existing_rank {
+        if placeholder && fact.observed.contains(field_name) {
             continue;
+        }
+        if !placeholder {
+            fact.observed.insert(field_name);
         }
         if fact.fields.get(field) != Some(value) {
             fact.fields.insert(field.clone(), value.clone());
-            changed = true;
-        }
-        if existing_rank != rank {
-            fact.field_ranks.insert(field_name, rank);
             changed = true;
         }
     }
@@ -438,10 +380,6 @@ pub fn merge_user_fact_owned(
     }
 
     UserFactMergeResult { fact, changed }
-}
-
-pub fn number_value(value: i64) -> Value {
-    Value::Number(Number::from(value))
 }
 
 #[cfg(test)]

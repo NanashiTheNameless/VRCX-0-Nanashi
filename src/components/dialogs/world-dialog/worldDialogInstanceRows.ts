@@ -1,8 +1,9 @@
 import { finiteLocationNumber } from '@/components/location/locationModel';
 import type { EntityRecord } from '@/domain/entities/shared';
 import type { WorldProfileRecord } from '@/domain/entities/world';
+import { resolveFriendPresenceLocation } from '@/domain/friends/presence';
 import {
-    isExplicitlyOfflineFriend,
+    isOfflineOrLeavingFriend,
     resolveObservedPlayerUserId
 } from '@/domain/friends/sameInstanceFriends';
 import type {
@@ -10,10 +11,7 @@ import type {
     CurrentInstanceRosterPlayer
 } from '@/domain/instances/currentInstanceRoster';
 import { hasGroupIdPrefix } from '@/shared/constants/vrchatIds';
-import {
-    parseLocation,
-    resolveFriendPresenceLocation
-} from '@/shared/utils/location';
+import { parseLocation } from '@/shared/utils/location';
 import { isRecord } from '@/shared/utils/record';
 
 import {
@@ -155,7 +153,7 @@ export function buildWorldDialogDisplayInstanceRows({
             };
         })
         .filter(
-            (player) => !isExplicitlyOfflineFriend(friendsById[player.userId])
+            (player) => !isOfflineOrLeavingFriend(friendsById[player.userId])
         );
     const currentInstanceRow: WorldDialogInstanceRow | null =
         parsedCurrentInstanceLocation?.worldId &&
@@ -275,10 +273,11 @@ export function buildWorldDialogDisplayInstanceRows({
                 : [currentInstanceRow, ...normalizedInstanceRows]
             : normalizedInstanceRows;
     const friendLocations = Object.values(friendsById || {})
-        .filter((friend) => !isExplicitlyOfflineFriend(friend))
+        .filter((friend) => !isOfflineOrLeavingFriend(friend))
         .map((friend) => ({
             friend,
             location: resolveFriendPresenceLocation(friend, {
+                preferTraveling: true,
                 requireInstance: true
             })
         }));
@@ -351,10 +350,11 @@ export function buildWorldDialogDisplayInstanceRows({
             const userId = firstText(user.id, user.userId);
             const friend = friendsById[userId];
             const friendLocation = resolveFriendPresenceLocation(friend, {
+                preferTraveling: true,
                 requireInstance: true
             });
             return Boolean(
-                !isExplicitlyOfflineFriend(friend) &&
+                !isOfflineOrLeavingFriend(friend) &&
                 (!friendLocation || sameLocationTag(friendLocation, location))
             );
         });

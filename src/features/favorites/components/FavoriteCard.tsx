@@ -19,7 +19,6 @@ import {
     TILE_SELECT_TOGGLE_VISIBLE
 } from '@/shared/constants/selectableTile';
 import type { LocalInstanceActionGates } from '@/shared/utils/invite';
-import { resolveFriendPresenceLocation } from '@/shared/utils/location';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { Checkbox } from '@/ui/shadcn/checkbox';
 
@@ -150,9 +149,7 @@ const FavoriteCard = memo(function FavoriteCard({
         canUseWorldActions ||
         canCopyWorldId
     );
-    const friendLocation = isFriendCard
-        ? resolveFriendPresenceLocation(item.seedData || item)
-        : '';
+    const friendLocation = isFriendCard ? item.location || '' : '';
     const friendShowsLocation = Boolean(
         friendLocation && friendLocation !== 'offline'
     );
@@ -170,12 +167,7 @@ const FavoriteCard = memo(function FavoriteCard({
           }
         : null;
     const statusDotClassName = friendStatusSource
-        ? resolveSidebarStatusDotClassName(
-              friendStatusSource,
-              currentUserSnapshot,
-              isCurrentUser,
-              { isGameRunning }
-          )
+        ? resolveSidebarStatusDotClassName(friendStatusSource)
         : '';
     const isSelectionActive = Boolean(selectionActive);
     const shiftPressedRef = useRef(false);

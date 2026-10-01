@@ -6,13 +6,13 @@ use vrcx_0_application_core::{RuntimeAuthScopeSnapshot, RuntimeOperationStatus};
 use tokio::sync::{broadcast, watch};
 use vrcx_0_application_core::{Error, Result};
 use vrcx_0_contracts::realtime::{NotificationExpiration, RealtimePersistenceBatch};
-use vrcx_0_core::friends::{FriendRecord, FriendRosterBaseline};
+use vrcx_0_core::friends::{FriendBaselineEntry, FriendRosterBaseline};
 use vrcx_0_core::vrchat_endpoints::normalize_vrchat_websocket_endpoint;
 
 use crate::realtime::connection::RealtimeMessageSink;
 use crate::realtime::current_user::RealtimeCurrentUserRuntime;
 use crate::realtime::friends::RealtimeFriendsRuntime;
-use crate::realtime::user_cache::UserCacheRuntime;
+use crate::realtime::user_facts::UserFactStore;
 use crate::realtime::user_query_cache::UserQueryCache;
 use crate::realtime::{
     FriendProjection, RealtimeCachedUserProfile, RealtimeFriendOutput,
@@ -32,7 +32,7 @@ use vrcx_0_core::OwnerId;
 static REALTIME_DROPPED: AtomicBool = AtomicBool::new(false);
 
 enum RealtimeFriendBaselineStart {
-    Supplied(HashMap<String, FriendRecord>),
+    Supplied(HashMap<String, FriendBaselineEntry>),
     PendingOrPreserved,
 }
 
@@ -57,7 +57,7 @@ impl RealtimeHostRuntime {
             transport_lifecycle_tx,
             friends: RealtimeFriendsRuntime::new(instance_dwell),
             current_user: RealtimeCurrentUserRuntime::new(),
-            user_cache: UserCacheRuntime::new(),
+            user_facts: UserFactStore::new(),
             user_query_cache: UserQueryCache::new(),
             world_cache,
             friend_owner_lock: Mutex::new(()),
@@ -123,7 +123,7 @@ impl RealtimeHostRuntime {
         websocket: String,
         client_run_id: u64,
         current_user_snapshot: serde_json::Value,
-        friends_by_id: HashMap<String, FriendRecord>,
+        friends_by_id: HashMap<String, FriendBaselineEntry>,
     ) -> Result<RealtimeTransportStartResult> {
         self.start_with_friend_baseline(
             user_id,
@@ -173,8 +173,10 @@ impl RealtimeHostRuntime {
             RealtimeFriendBaselineStart::PendingOrPreserved => None,
         };
         let auth_scope_generation = self.deps.auth_scope.snapshot().generation;
-        let mut pending_feed_entries = Vec::new();
-        let mut pending_projection = FriendProjection::new(0, 0);
+        let mut queued_feed_entries = Vec::new();
+        let mut queued_projection = FriendProjection::new(0, 0);
+        let mut start_effects = None;
+        let mut preserved_wakes = Vec::new();
         let friend_owner = self.lock_friend_owner();
         let generation = {
             let mut state = self
@@ -197,21 +199,20 @@ impl RealtimeHostRuntime {
                 .state
                 .lock()
                 .map_err(|error| Error::Custom(format!("realtime state lock: {error}")))?;
-            let mut pending_friends = None;
-            if let Some(pending) = state.friend_baseline.pending.take() {
-                if pending.session == session {
-                    pending_friends = Some(pending.friends_by_id);
-                    pending_feed_entries = pending.feed_entries;
-                    pending_projection = pending.projection;
+            let mut queued_friends = None;
+            if let Some(queued) = state.friend_baseline.queued.take() {
+                if queued.session == session {
+                    queued_friends = Some(queued.friends_by_id);
+                    queued_feed_entries = queued.feed_entries;
+                    queued_projection = queued.projection;
                 }
             }
             state.friend_profile.refetches.clear();
-            state.world_enrichment.fetches.clear();
             state.world_enrichment.inflight.clear();
             state.world_enrichment.pending_corrections.clear();
             state.automation.invite.clear_all();
             let friend_user_ids =
-                if let Some(friends_by_id) = pending_friends.or_else(|| supplied_friends.take()) {
+                if let Some(friends_by_id) = queued_friends.or_else(|| supplied_friends.take()) {
                     if self
                         .friends
                         .session_context()
@@ -220,7 +221,7 @@ impl RealtimeHostRuntime {
                         self.friends.clear();
                     }
                     let friend_user_ids = friends_by_id.keys().cloned().collect::<Vec<_>>();
-                    self.friends.set_baseline(
+                    let effects = self.friends.set_baseline_with_effects(
                         FriendRosterBaseline {
                             current_user_id: session.user_id.clone(),
                             endpoint: session.endpoint.clone(),
@@ -229,10 +230,13 @@ impl RealtimeHostRuntime {
                         },
                         generation,
                         0,
+                        None,
+                        chrono::Utc::now().timestamp_millis(),
                     );
+                    start_effects = Some(effects);
                     friend_user_ids
                 } else {
-                    let Some(friend_user_ids) = self
+                    let Some((friend_user_ids, wakes)) = self
                         .friends
                         .restart_preserving_baseline(&session, generation)
                     else {
@@ -244,9 +248,10 @@ impl RealtimeHostRuntime {
                                 .into(),
                         ));
                     };
+                    preserved_wakes = wakes;
                     friend_user_ids
                 };
-            pending_projection.location_time_snapshot = Some(self.deps.instance_dwell.snapshot());
+            queued_projection.location_time_snapshot = Some(self.deps.instance_dwell.snapshot());
             state.connection.active_context = Some(ActiveRealtimeContext {
                 session: session.clone(),
                 auth_scope_generation,
@@ -263,27 +268,44 @@ impl RealtimeHostRuntime {
         }
         let baseline_revision = self
             .friends
-            .baseline_causal_watermark()
-            .baseline_revision
-            .unwrap_or(0);
-        pending_projection.generation = generation;
-        pending_projection.baseline_revision = baseline_revision;
-        self.apply_friend_output_owned(
-            &friend_owner,
-            RealtimeFriendOutput::from_projection(
-                OwnerId::new(session.user_id.clone()),
-                pending_projection,
-            ),
-        );
+            .roster_revision()
+            .map_or(0, |(_, baseline_revision)| baseline_revision);
+        queued_projection.generation = generation;
+        queued_projection.baseline_revision = baseline_revision;
+        let owner_user_id = OwnerId::new(session.user_id.clone());
+        match start_effects {
+            Some(effects) => {
+                let snapshot = self
+                    .friends
+                    .snapshot()
+                    .filter(|snapshot| snapshot.generation == generation);
+                self.apply_friend_baseline_effects_owned(
+                    &friend_owner,
+                    &owner_user_id,
+                    queued_projection,
+                    snapshot.as_ref(),
+                    effects,
+                );
+            }
+            None => {
+                self.apply_friend_output_owned(
+                    &friend_owner,
+                    RealtimeFriendOutput::from_projection(owner_user_id, queued_projection),
+                );
+                for wake in preserved_wakes {
+                    self.schedule_friend_wake(generation, wake);
+                }
+            }
+        }
         self.apply_reconciled_friend_feed_entries_owned(
             &friend_owner,
             &OwnerId::new(session.user_id.clone()),
             generation,
             baseline_revision,
-            pending_feed_entries,
+            queued_feed_entries,
         );
         drop(friend_owner);
-        self.user_cache.clear();
+        self.user_facts.clear();
         self.user_query_cache.clear();
         self.record_baseline_friends_into_cache();
         let message_sink: Arc<dyn RealtimeMessageSink> = Arc::new(RealtimeHostRuntimeMessageSink {
@@ -329,6 +351,7 @@ impl RealtimeHostRuntime {
         if self.deps.session.snapshot().is_game_running {
             self.sync_current_user_game_running_state(generation, true);
         }
+        self.refresh_current_user_local_presence();
 
         Ok(transport)
     }
@@ -386,8 +409,8 @@ impl RealtimeHostRuntime {
                 self.cancel_friend_profile_bulk_load_for_session(&active.session);
             }
             if let Some(output) = final_current_user_output {
-                if preserve_snapshot {
-                    self.apply_current_user_snapshot_sink(&active, &output.projection);
+                if preserve_snapshot && active.generation == output.projection.generation {
+                    self.apply_current_user_snapshot_sink(&active, &output.snapshot);
                 }
                 self.apply_current_user_output(output);
             }
@@ -451,15 +474,8 @@ impl RealtimeHostRuntime {
         self.friends.friend_user_ids_snapshot()
     }
 
-    pub fn friend_roster_snapshot(
-        &self,
-        previous_order: &[String],
-    ) -> serde_json::Result<Option<crate::realtime::RealtimeFriendRosterSnapshot>> {
-        self.friends.roster_snapshot(previous_order)
-    }
-
-    pub fn friend_session_context(&self) -> Option<RealtimeSessionContext> {
-        self.friends.session_context()
+    pub fn friend_roster_snapshot(&self) -> Option<crate::realtime::RealtimeFriendRosterSnapshot> {
+        self.friends.roster_snapshot()
     }
 
     pub fn current_user_snapshot(&self) -> Option<serde_json::Value> {
@@ -492,7 +508,7 @@ impl RealtimeHostRuntime {
         if endpoint.is_empty() {
             return Vec::new();
         }
-        self.user_cache
+        self.user_facts
             .get_users(&endpoint, user_ids)
             .into_iter()
             .map(|(user_id, user)| RealtimeCachedUserProfile {
@@ -579,9 +595,8 @@ impl RealtimeHostRuntime {
                 None => {
                     if !request.has_scope() {
                         state.connection.generation = state.connection.generation.saturating_add(1);
-                        state.friend_baseline.pending = None;
+                        state.friend_baseline.queued = None;
                         state.friend_profile.refetches.clear();
-                        state.world_enrichment.fetches.clear();
                         state.world_enrichment.inflight.clear();
                         state.world_enrichment.pending_corrections.clear();
                         let _ = self.cancel_tx.send(state.connection.generation);
@@ -611,9 +626,8 @@ impl RealtimeHostRuntime {
                         self.current_user_transport_finalization_output(active.generation);
                     state.connection.generation = state.connection.generation.saturating_add(1);
                     state.connection.active_context = None;
-                    state.friend_baseline.pending = None;
+                    state.friend_baseline.queued = None;
                     state.friend_profile.refetches.clear();
-                    state.world_enrichment.fetches.clear();
                     state.world_enrichment.inflight.clear();
                     state.world_enrichment.pending_corrections.clear();
                     let _ = self.cancel_tx.send(state.connection.generation);
@@ -643,7 +657,7 @@ impl RealtimeHostRuntime {
         else {
             self.cancel_friend_profile_bulk_load_for_stop_request(&request);
             if !request.has_scope() {
-                self.user_cache.clear();
+                self.user_facts.clear();
                 self.user_query_cache.clear();
                 self.world_cache.clear_working();
                 self.reset_feed_live_cache();
@@ -652,7 +666,7 @@ impl RealtimeHostRuntime {
         };
         self.cancel_friend_profile_bulk_load_for_session(&stopped_active.session);
 
-        self.user_cache.clear();
+        self.user_facts.clear();
         self.user_query_cache.clear();
         self.world_cache.clear_working();
         self.reset_feed_live_cache();

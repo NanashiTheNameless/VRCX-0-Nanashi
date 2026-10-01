@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { useThrottledValue } from '@/lib/useThrottledValue';
 import gameLogRepository, {
@@ -11,7 +12,7 @@ import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useSessionStore } from '@/state/sessionStore';
 
-import { buildGameLogFavoriteIdSet, getGameLogRowKey } from './gameLogRows';
+import { getGameLogRowKey } from './gameLogRows';
 import { GAME_LOG_LIVE_REFRESH_THROTTLE_MS } from './gameLogTypes';
 import type {
     GameLogLoadStatus,
@@ -69,11 +70,7 @@ export function useGameLogRows({
         (state) => state.favoriteFriendIds
     );
     const favoriteIdSet = useMemo(
-        () =>
-            buildGameLogFavoriteIdSet(
-                remoteFavoriteFriendIds,
-                localFriendFavorites
-            ),
+        () => buildFavoriteIdSet(remoteFavoriteFriendIds, localFriendFavorites),
         [localFriendFavorites, remoteFavoriteFriendIds]
     );
     const requestIdRef = useRef(0);

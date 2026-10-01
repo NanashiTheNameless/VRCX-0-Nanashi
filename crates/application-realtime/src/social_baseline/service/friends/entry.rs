@@ -2,13 +2,12 @@ use std::collections::HashMap;
 use vrcx_0_core::derived_keys;
 
 use serde_json::Value;
-use vrcx_0_application_core::Result;
-use vrcx_0_core::friends::FriendRecord;
-use vrcx_0_core::trust::{compute_trust_level, compute_user_platform};
+use vrcx_0_core::friends::StateBucket;
+use vrcx_0_core::trust::compute_trust_level;
 
 use super::super::{
     json, object_field, object_field_normalized, object_field_string, value_as_i64,
-    value_as_string, Map, Ordering,
+    value_as_string, Map,
 };
 use super::profile::{
     fallback_friend_user, float_value, get_display_name, get_meaningful_display_name, number_value,
@@ -17,7 +16,7 @@ use super::profile::{
 
 fn normalize_friend_entry(
     friend: Option<Value>,
-    state_bucket: &str,
+    state_bucket: StateBucket,
     existing_row: &Value,
 ) -> Value {
     let user_id = object_field_normalized(existing_row, &["userId", "user_id"]);
@@ -82,22 +81,13 @@ fn normalize_friend_entry(
         }
     };
 
-    let platform = source
-        .get("platform")
-        .map(value_as_string)
-        .unwrap_or_default();
-    let last_platform = source
-        .get("last_platform")
-        .or_else(|| source.get("lastPlatform"))
-        .map(value_as_string)
-        .unwrap_or_default();
     let mut object = match source {
         Value::Object(object) => object,
         _ => Map::new(),
     };
     object.insert("displayName".into(), Value::String(display_name));
     // location never participates in bucketing; the /auth/user list bucket is the only authority.
-    object.insert("state".into(), Value::String(state_bucket.to_string()));
+    object.insert("state".into(), state_bucket.as_str().into());
     object.insert(
         derived_keys::FRIEND_NUMBER.into(),
         number_value(friend_number),
@@ -120,128 +110,12 @@ fn normalize_friend_entry(
         derived_keys::IS_PROBABLE_TROLL.into(),
         Value::Bool(trust.is_probable_troll),
     );
-    object.insert(
-        derived_keys::PLATFORM.into(),
-        Value::String(compute_user_platform(&platform, &last_platform)),
-    );
     Value::Object(object)
-}
-
-fn compare_friend_entries(left: &Value, right: &Value) -> Ordering {
-    let left_number = value_as_i64(
-        object_field(left, "friendNumber")
-            .or_else(|| object_field(left, derived_keys::FRIEND_NUMBER)),
-    );
-    let right_number = value_as_i64(
-        object_field(right, "friendNumber")
-            .or_else(|| object_field(right, derived_keys::FRIEND_NUMBER)),
-    );
-    let left_has_number = left_number > 0;
-    let right_has_number = right_number > 0;
-
-    if left_has_number != right_has_number {
-        return if left_has_number {
-            Ordering::Less
-        } else {
-            Ordering::Greater
-        };
-    }
-    if left_has_number && right_has_number && left_number != right_number {
-        return left_number.cmp(&right_number);
-    }
-
-    let left_name = object_field_string(left, &["displayName", "id"]);
-    let right_name = object_field_string(right, &["displayName", "id"]);
-    let name_comparison = compare_display_text(&left_name, &right_name);
-    if name_comparison != Ordering::Equal {
-        return name_comparison;
-    }
-    compare_display_text(
-        &object_field_string(left, &["id"]),
-        &object_field_string(right, &["id"]),
-    )
-}
-
-fn compare_display_text(left: &str, right: &str) -> Ordering {
-    let left_primary = display_text_primary_key(left);
-    let right_primary = display_text_primary_key(right);
-    let primary = left_primary.cmp(&right_primary);
-    if primary != Ordering::Equal {
-        return primary;
-    }
-
-    let left_lower = left.to_lowercase();
-    let right_lower = right.to_lowercase();
-    let secondary = left_lower.cmp(&right_lower);
-    if secondary != Ordering::Equal {
-        return secondary;
-    }
-
-    left.cmp(right)
-}
-
-fn display_text_primary_key(value: &str) -> String {
-    let mut output = String::new();
-    for character in value.to_lowercase().chars() {
-        output.push_str(match character {
-            'à' | 'á' | 'â' | 'ã' | 'ä' | 'å' | 'ā' | 'ă' | 'ą' | 'ǎ' | 'ǟ' => "a",
-            'æ' => "ae",
-            'ç' | 'ć' | 'ĉ' | 'ċ' | 'č' => "c",
-            'ð' | 'ď' | 'đ' => "d",
-            'è' | 'é' | 'ê' | 'ë' | 'ē' | 'ĕ' | 'ė' | 'ę' | 'ě' => "e",
-            'ƒ' => "f",
-            'ĝ' | 'ğ' | 'ġ' | 'ģ' => "g",
-            'ĥ' | 'ħ' => "h",
-            'ì' | 'í' | 'î' | 'ï' | 'ĩ' | 'ī' | 'ĭ' | 'į' | 'ı' => "i",
-            'ĵ' => "j",
-            'ķ' | 'ĸ' => "k",
-            'ĺ' | 'ļ' | 'ľ' | 'ŀ' | 'ł' => "l",
-            'ñ' | 'ń' | 'ņ' | 'ň' | 'ŉ' => "n",
-            'ò' | 'ó' | 'ô' | 'õ' | 'ö' | 'ø' | 'ō' | 'ŏ' | 'ő' => "o",
-            'œ' => "oe",
-            'ŕ' | 'ŗ' | 'ř' => "r",
-            'ś' | 'ŝ' | 'ş' | 'š' | 'ſ' => "s",
-            'ß' => "ss",
-            'ţ' | 'ť' | 'ŧ' => "t",
-            'ù' | 'ú' | 'û' | 'ü' | 'ũ' | 'ū' | 'ŭ' | 'ů' | 'ű' | 'ų' => "u",
-            'ŵ' => "w",
-            'ý' | 'ÿ' | 'ŷ' => "y",
-            'ź' | 'ż' | 'ž' => "z",
-            _ => {
-                output.push(character);
-                continue;
-            }
-        });
-    }
-    output
-}
-
-fn build_bucket_ids(
-    included_ids: &[String],
-    friends_by_id: &Map<String, Value>,
-    state_bucket: &str,
-) -> Vec<String> {
-    let mut ids = included_ids
-        .iter()
-        .filter(|user_id| {
-            friends_by_id
-                .get(*user_id)
-                .map(|friend| object_field_string(friend, &["state"]) == state_bucket)
-                .unwrap_or(false)
-        })
-        .cloned()
-        .collect::<Vec<_>>();
-    ids.sort_by(|left_id, right_id| {
-        let left = friends_by_id.get(left_id).unwrap_or(&Value::Null);
-        let right = friends_by_id.get(right_id).unwrap_or(&Value::Null);
-        compare_friend_entries(left, right)
-    });
-    ids
 }
 
 pub(super) fn build_fast_roster_records(
     expected_ids: &[String],
-    state_by_id: &HashMap<String, String>,
+    state_by_id: &HashMap<String, StateBucket>,
     mut fetched_friends_by_id: HashMap<String, RemoteFriendProfile>,
 ) -> Map<String, Value> {
     let friend_order_numbers = expected_ids
@@ -264,8 +138,8 @@ pub(super) fn build_fast_roster_records(
         });
         let state_bucket = state_by_id
             .get(friend_id)
-            .map(String::as_str)
-            .unwrap_or("offline");
+            .copied()
+            .unwrap_or(StateBucket::Offline);
         let mut normalized_friend = normalize_friend_entry(friend, state_bucket, &existing_row);
         if let Some(object) = normalized_friend.as_object_mut() {
             object.insert(
@@ -283,57 +157,10 @@ pub(super) fn build_fast_roster_records(
     friends_by_id
 }
 
-pub(super) fn build_fast_roster_snapshot(
-    user_id: &str,
-    expected_ids: &[String],
-    state_by_id: &HashMap<String, String>,
-    fetched_friends_by_id: HashMap<String, RemoteFriendProfile>,
-) -> Value {
-    let friends_by_id = build_fast_roster_records(expected_ids, state_by_id, fetched_friends_by_id);
-    build_roster_snapshot(user_id, expected_ids, friends_by_id)
-}
-
-pub(super) fn build_roster_snapshot_from_records(
-    user_id: &str,
-    records_by_id: &HashMap<String, FriendRecord>,
-) -> Result<Value> {
-    let mut friends_by_id = Map::new();
-    for (friend_id, record) in records_by_id {
-        friends_by_id.insert(friend_id.clone(), serde_json::to_value(record)?);
-    }
-    let included_ids = records_by_id.keys().cloned().collect::<Vec<_>>();
-    Ok(build_roster_snapshot(user_id, &included_ids, friends_by_id))
-}
-
-fn build_roster_snapshot(
-    user_id: &str,
-    included_ids: &[String],
-    friends_by_id: Map<String, Value>,
-) -> Value {
-    let online_ids = build_bucket_ids(included_ids, &friends_by_id, "online");
-    let active_ids = build_bucket_ids(included_ids, &friends_by_id, "active");
-    let offline_ids = build_bucket_ids(included_ids, &friends_by_id, "offline");
-    let mut ordered_friend_ids = Vec::new();
-    ordered_friend_ids.extend(online_ids.clone());
-    ordered_friend_ids.extend(active_ids.clone());
-    ordered_friend_ids.extend(offline_ids.clone());
-
-    let detail = String::new();
-    json!({
-        "currentUserId": user_id,
-        "friendsById": friends_by_id,
-        "orderedFriendIds": ordered_friend_ids,
-        "onlineIds": online_ids,
-        "activeIds": active_ids,
-        "offlineIds": offline_ids,
-        "detail": detail
-    })
-}
-
-pub(super) fn infer_state_from_platform(platform: &str) -> &'static str {
+pub(super) fn infer_state_from_platform(platform: &str) -> StateBucket {
     match platform {
-        "" | "offline" => "offline",
-        "web" => "active",
-        _ => "online",
+        "" | "offline" => StateBucket::Offline,
+        "web" => StateBucket::Active,
+        _ => StateBucket::Online,
     }
 }

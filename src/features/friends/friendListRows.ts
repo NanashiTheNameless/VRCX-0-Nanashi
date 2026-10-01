@@ -1,11 +1,8 @@
-import type { FavoriteGroupMap } from '@/domain/favorites/types';
+import { presenceSection } from '@/domain/friends/presence';
 import type {
-    FriendPatchEntry,
     FriendProfileFields,
-    FriendRecordInput,
-    FriendRosterBucket
+    FriendRecordInput
 } from '@/domain/friends/types';
-import type { GameLogAllUserStatsRow } from '@/repositories/gameLogPersistenceRepository';
 import removeConfusables, { removeWhitespace } from '@/services/confusables';
 
 const FRIEND_LIST_DEFAULT_SEARCH_FILTER_IDS = [
@@ -26,30 +23,7 @@ export type FriendListRow = FriendRecordInput &
         friendNumber?: number;
         memo?: string;
         note?: string;
-        state?: FriendRosterBucket;
-        stateBucket?: FriendRosterBucket;
     };
-
-export type FriendListUserStatsRow = GameLogAllUserStatsRow;
-
-export type FriendListUserStats = {
-    displayName: string;
-    joinCount: number;
-    lastSeen: string;
-    timeSpent: number;
-};
-
-export type FriendListStatsPatch = FriendPatchEntry & {
-    userId: string;
-    patch: {
-        $joinCount?: number;
-        $lastSeen?: string;
-        $mutualCount: number;
-        $mutualOptedOut: boolean;
-        $timeSpent?: number;
-    };
-    stateBucketAuthority: 'preserve';
-};
 
 type FriendNumberSource = {
     $friendNumber?: number | string;
@@ -68,85 +42,6 @@ type FriendListFilterInput = {
 
 export function normalizeFriendListId(value: string | null | undefined) {
     return (value ?? '').trim();
-}
-
-export function buildFriendListFavoriteIdSet(
-    remoteFavoriteIds: readonly string[] = [],
-    localFriendFavorites: FavoriteGroupMap = {}
-): Set<string> {
-    const set = new Set<string>();
-    for (const id of remoteFavoriteIds ?? []) {
-        const normalized = normalizeFriendListId(id);
-        if (normalized) {
-            set.add(normalized);
-        }
-    }
-    for (const values of Object.values(localFriendFavorites ?? {})) {
-        for (const id of values) {
-            const normalized = normalizeFriendListId(id);
-            if (normalized) {
-                set.add(normalized);
-            }
-        }
-    }
-    return set;
-}
-
-export function buildFriendListUserStatsById(
-    statsRows: readonly FriendListUserStatsRow[],
-    rosterRows: readonly FriendListRow[]
-): Map<string, FriendListUserStats> {
-    const dataByDisplayName = new Map<string, string>();
-    const friendsByDisplayName = new Map<string, string>();
-    const statsById = new Map<string, FriendListUserStats>();
-
-    for (const row of statsRows) {
-        const displayName = row.displayName.trim();
-        const userId = normalizeFriendListId(row.userId);
-        if (displayName && userId) {
-            dataByDisplayName.set(displayName, userId);
-        }
-    }
-
-    for (const friend of rosterRows) {
-        const displayName = String(friend?.displayName || '').trim();
-        const userId = normalizeFriendListId(friend?.id);
-        if (displayName && userId) {
-            friendsByDisplayName.set(displayName, userId);
-        }
-    }
-
-    for (const row of statsRows) {
-        const displayName = row.displayName.trim();
-        const userId =
-            normalizeFriendListId(row.userId) ||
-            normalizeFriendListId(dataByDisplayName.get(displayName)) ||
-            normalizeFriendListId(friendsByDisplayName.get(displayName));
-        if (!userId) {
-            continue;
-        }
-
-        const current = statsById.get(userId);
-        const next: FriendListUserStats = {
-            lastSeen: row.lastSeen,
-            timeSpent: row.timeSpent,
-            joinCount: row.joinCount,
-            displayName
-        };
-        if (!current) {
-            statsById.set(userId, next);
-            continue;
-        }
-
-        if (Date.parse(next.lastSeen) > Date.parse(current.lastSeen)) {
-            current.lastSeen = next.lastSeen;
-        }
-        current.timeSpent += next.timeSpent;
-        current.joinCount += next.joinCount;
-        current.displayName = next.displayName || current.displayName;
-    }
-
-    return statsById;
 }
 
 export function friendNumberForSort(friend: FriendNumberSource) {
@@ -215,7 +110,7 @@ export function matchesFriendListSearch(
 
     if (
         filters.has('status') &&
-        `${friend?.statusDescription || ''} ${friend?.status || ''} ${friend?.stateBucket || ''}`
+        `${friend?.statusDescription || ''} ${friend?.status || ''} ${friend?.$presence ? presenceSection(friend.$presence) : ''}`
             .toLowerCase()
             .includes(loweredQuery)
     ) {

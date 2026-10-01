@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { offlinePresence } from '@/test/presenceFixtures';
+
 import {
     applyFactDerivedFields,
     mergeRosterFriendFacts
@@ -13,8 +15,7 @@ function friend(patch: Partial<FriendRecord> = {}): FriendRecord {
         id: 'usr_1',
         displayName: 'Friend',
         tags: [],
-        state: 'offline',
-        stateBucket: 'offline',
+        $presence: offlinePresence,
         $trustLevel: 'Visitor',
         $friendNumber: 0,
         $trustClass: 'x-tag-untrusted',
@@ -37,11 +38,11 @@ function fact(patch: Partial<UserFact>): UserFact {
 }
 
 describe('friendRosterFacts', () => {
-    it('lets UserFact win for derived trust/platform fields', () => {
+    it('lets UserFact win for derived trust fields but keeps the live roster platform', () => {
         const rosterFriend = friend({
             $trustClass: 'x-tag-untrusted',
             $trustLevel: 'Visitor',
-            $platform: ''
+            $platform: 'android'
         });
         const merged = applyFactDerivedFields(
             rosterFriend,
@@ -53,7 +54,7 @@ describe('friendRosterFacts', () => {
         );
         expect(merged.$trustClass).toBe('x-tag-veteran');
         expect(merged.$trustLevel).toBe('Trusted User');
-        expect(merged.$platform).toBe('standalonewindows');
+        expect(merged.$platform).toBe('android');
     });
 
     it('keeps the roster value as first-frame fallback when UserFact is missing', () => {
@@ -69,11 +70,11 @@ describe('friendRosterFacts', () => {
         const merged = applyFactDerivedFields(
             rosterFriend,
             fact({
-                $platform: 'standalonewindows'
+                $trustLevel: 'Trusted User'
             })
         );
         expect(merged.$trustClass).toBe('x-tag-veteran');
-        expect(merged.$platform).toBe('standalonewindows');
+        expect(merged.$trustLevel).toBe('Trusted User');
     });
 
     it('returns the same friend reference when nothing changed', () => {

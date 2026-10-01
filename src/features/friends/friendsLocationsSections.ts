@@ -1,27 +1,24 @@
 import type { FavoriteGroupMap } from '@/domain/favorites/types';
-import { getFriendsSortFunction, sortStatus } from '@/shared/utils/friend';
+import {
+    compareByActiveStatus,
+    getFriendsSortFunction,
+    type FriendSortContext
+} from '@/shared/utils/friend';
 import type { FriendSortMethod } from '@/shared/utils/friend';
-import { userStatusFromValue } from '@/shared/utils/friendStatus';
 import { isRecord } from '@/shared/utils/record';
+import { normalizeString } from '@/shared/utils/string';
 
 import {
     type FriendLocationFriend,
+    type FriendLocationTarget,
     type SameInstanceGroup,
-    normalizeFriendsLocationId as normalizeId,
+    locationTarget,
     resolveLocationSummary,
-    resolveLocationTarget
+    friendLocationTarget,
+    summarizeLocation
 } from './friendsLocationsRows';
 
 type TranslationFn = (key: string, options?: Record<string, unknown>) => string;
-
-type FriendSectionRecord = Record<string, unknown> & {
-    displayName?: string | null;
-    id?: string | null;
-    name?: string | null;
-    ref?: FriendSectionRecord | null;
-    status?: string | null;
-    username?: string | null;
-};
 
 type FavoriteGroupOption = {
     key?: string;
@@ -124,7 +121,7 @@ function appendLabel(
     friendId: string,
     label: string
 ) {
-    const normalizedFriendId = normalizeId(friendId);
+    const normalizedFriendId = normalizeString(friendId);
     const normalizedLabel = label.trim();
     if (!normalizedFriendId || !normalizedLabel) {
         return;
@@ -146,7 +143,7 @@ export function buildFavoriteGroupLabelsByFriendId({
     const labelsByFriendId: FavoriteGroupLabelsByFriendId = new Map();
 
     for (const group of favoriteFriendGroups ?? []) {
-        const groupKey = normalizeId(group?.key);
+        const groupKey = normalizeString(group?.key);
         if (!groupKey) {
             continue;
         }
@@ -202,86 +199,30 @@ export function compareFavoriteGroups(
     );
 }
 
-function readFriendRef(
-    friend: FriendLocationFriend | null | undefined
-): FriendSectionRecord {
-    if (!isRecord(friend)) {
-        return {};
-    }
-    return isRecord(friend.ref) ? friend.ref : friend;
-}
-
-function readFriendStatusSource(
-    friend: FriendLocationFriend | null | undefined
-) {
-    const ref = readFriendRef(friend);
-    if (!ref || ref === friend) {
-        return isRecord(friend) ? friend : {};
-    }
-    return {
-        ...friend,
-        ...ref
-    };
-}
-
-function activeStatusSortValue(friend: FriendLocationFriend) {
-    const source = readFriendStatusSource(friend);
-    const status = userStatusFromValue(source?.status);
-    if (status === 'join me' || status === 'ask me' || status === 'busy') {
-        return status;
-    }
-    return 'active';
-}
-
-function compareByActiveStatus(
-    left: FriendLocationFriend,
-    right: FriendLocationFriend
-) {
-    return sortStatus(
-        activeStatusSortValue(left),
-        activeStatusSortValue(right)
-    );
-}
-
-function toLegacyFriendSortRow(friend: FriendLocationFriend) {
-    const ref = readFriendRef(friend);
-    const source = isRecord(friend) ? friend : {};
-    return {
-        ...source,
-        name:
-            source.name ||
-            source.displayName ||
-            source.username ||
-            source.id ||
-            '',
-        ref: ref && ref !== friend ? { ...source, ...ref } : source
-    };
-}
-
 export function sortFriendsBySidebarPrefs<TFriend extends FriendLocationFriend>(
     friends: TFriend[],
-    sortMethods: readonly string[] | null | undefined
+    sortMethods: readonly string[] | null | undefined,
+    sortContext?: FriendSortContext
 ) {
     const methods = [...(sortMethods ?? [])].filter(isFriendSortMethod);
     if (!methods.length) {
         return friends;
     }
 
-    const sort = getFriendsSortFunction(methods);
-    return [...friends].sort((left, right) =>
-        sort(
-            toLegacyFriendSortRow(left) as Parameters<typeof sort>[0],
-            toLegacyFriendSortRow(right) as Parameters<typeof sort>[1]
-        )
-    );
+    const sort = getFriendsSortFunction(methods, sortContext);
+    return [...friends].sort(sort);
 }
 
 export function sortActiveFriendsBySidebarPrefs<
     TFriend extends FriendLocationFriend
->(friends: TFriend[], sortMethods: readonly string[] | null | undefined) {
-    return [...sortFriendsBySidebarPrefs(friends, sortMethods)].sort(
-        compareByActiveStatus
-    );
+>(
+    friends: TFriend[],
+    sortMethods: readonly string[] | null | undefined,
+    sortContext?: FriendSortContext
+) {
+    return [
+        ...sortFriendsBySidebarPrefs(friends, sortMethods, sortContext)
+    ].sort(compareByActiveStatus);
 }
 
 function resolveFavoriteGroupLabels(
@@ -290,7 +231,7 @@ function resolveFavoriteGroupLabels(
     favoriteIds: Set<string>,
     t?: TranslationFn | null
 ) {
-    const friendId = normalizeId(isRecord(friend) ? friend.id : '');
+    const friendId = normalizeString(isRecord(friend) ? friend.id : '');
     if (!friendId) {
         return [];
     }
@@ -306,11 +247,10 @@ function resolveFavoriteGroupLabels(
 }
 
 function resolveInstanceSectionDescriptor(
-    friend: FriendLocationFriend,
+    target: FriendLocationTarget,
+    summary: ReturnType<typeof summarizeLocation>,
     t?: TranslationFn | null
 ): FriendsLocationSectionDescriptor {
-    const target = resolveLocationTarget(friend);
-    const summary = resolveLocationSummary(friend, t);
     const descriptor: FriendsLocationSectionDescriptor = {
         key: 'instance:unknown',
         title: '',
@@ -385,11 +325,8 @@ export function buildSameInstanceSections<
     return sameInstanceGroups
         .map(({ location, friends }) => {
             const descriptor = resolveInstanceSectionDescriptor(
-                {
-                    ...friends[0],
-                    location,
-                    travelingToLocation: ''
-                },
+                locationTarget(location),
+                summarizeLocation(location, friends[0], t),
                 t
             );
 
@@ -490,7 +427,11 @@ export function buildFriendSections<TFriend extends FriendLocationFriend>({
 
         upsertSection(
             sectionsByKey,
-            resolveInstanceSectionDescriptor(friend, t),
+            resolveInstanceSectionDescriptor(
+                friendLocationTarget(friend),
+                resolveLocationSummary(friend, t),
+                t
+            ),
             friend
         );
     }

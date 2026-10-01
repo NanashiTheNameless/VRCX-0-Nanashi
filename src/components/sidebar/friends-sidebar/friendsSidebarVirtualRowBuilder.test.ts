@@ -12,7 +12,6 @@ describe('friendsSidebarVirtualRowBuilder', () => {
             currentUserId: 'usr_me',
             favoriteGroupSections: [],
             favoriteRows: [],
-            gameState: {},
             loadStatus: 'running',
             offlineRows: [],
             onlineRows: [],
@@ -52,10 +51,6 @@ describe('friendsSidebarVirtualRowBuilder', () => {
                 }
             ],
             favoriteRows: [{ id: 'usr_favorite' }],
-            gameState: {
-                isGameRunning: true,
-                currentLocation: 'wrld_live:1'
-            },
             loadStatus: 'ready',
             offlineRows: [{ id: 'usr_offline' }],
             onlineRows: [{ id: 'usr_online' }],
@@ -125,10 +120,6 @@ describe('friendsSidebarVirtualRowBuilder', () => {
             currentUserId: 'usr_me',
             favoriteGroupSections: [],
             favoriteRows: [],
-            gameState: {
-                isGameRunning: true,
-                currentLocation: 'wrld_live:1'
-            },
             loadStatus: 'ready',
             offlineRows: [],
             onlineRows: [],

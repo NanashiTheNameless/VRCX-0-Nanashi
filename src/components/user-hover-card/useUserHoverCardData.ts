@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { SidebarFriendRecord } from '@/components/sidebar/friends-sidebar/friendsSidebarModel';
+import { localGameLocation } from '@/domain/friends/presence';
 import { useFriendLocationTimeEpoch } from '@/lib/useFriendLocationTimeEpoch';
 import { useNowMs } from '@/lib/useNowMs';
 import memoPersistenceRepository from '@/repositories/memoPersistenceRepository';
@@ -9,6 +10,7 @@ import vrchatInstanceRepository from '@/repositories/vrchatInstanceRepository';
 import worldProfileRepository from '@/repositories/worldProfileRepository';
 import { convertFileUrlToImageUrl } from '@/services/entityMediaService';
 import { normalizeString as normalizeId } from '@/shared/utils/string';
+import { useFriendLocationTimeStore } from '@/state/friendLocationTimeStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -46,7 +48,9 @@ export function useUserHoverCardData({
     const normalizedUserId =
         normalizedInputUserId || normalizeId(effectiveSeed?.id);
 
-    const isFriend = Boolean(effectiveSeed);
+    const isFriend = useFriendRosterStore((state) =>
+        Boolean(normalizedUserId && state.friendsById[normalizedUserId])
+    );
 
     const [profile, setProfile] = useState<UserHoverCardProfile | null>(null);
     const [memo, setMemo] = useState('');
@@ -58,14 +62,20 @@ export function useUserHoverCardData({
         ReturnType<typeof worldProfileRepository.getWorldProfile>
     > | null>(null);
 
+    const localLocation = useFriendLocationTimeStore((state) =>
+        normalizedUserId
+            ? localGameLocation(state.byUserId[normalizedUserId])
+            : ''
+    );
     const model = useMemo(
         () =>
             buildUserHoverCardModel({
                 seed: effectiveSeed,
                 profile,
+                localLocation,
                 nowMs
             }),
-        [effectiveSeed, nowMs, profile]
+        [effectiveSeed, localLocation, nowMs, profile]
     );
     const instanceEpoch = useFriendLocationTimeEpoch(
         normalizedUserId,

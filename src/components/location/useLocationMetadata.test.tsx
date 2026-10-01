@@ -71,7 +71,12 @@ vi.mock('@/state/runtimeStore', () => ({
     ) => selector(mocks.runtimeState)
 }));
 
-import { useLocationMetadataBatch } from './useLocationMetadata';
+import { parseLocation } from '@/shared/utils/location';
+
+import {
+    useLocationMetadata,
+    useLocationMetadataBatch
+} from './useLocationMetadata';
 
 function metadataEntries(worldIds: readonly string[] = [WORLD_ID]) {
     return worldIds.map((worldId) => ({
@@ -229,5 +234,24 @@ describe('useLocationMetadataBatch', () => {
                 result.current.get(`friend:${SECOND_WORLD_ID}`)?.worldName
             ).toBe('Second World');
         });
+    });
+
+    it('looks up the local world name once while a caller passes a fresh location object every render', async () => {
+        mocks.getWorldProfile.mockImplementation(
+            () => new Promise(() => undefined)
+        );
+
+        renderHook(() =>
+            useLocationMetadata({
+                locationInfo: parseLocation(`${WORLD_ID}:12345`),
+                currentLocation: `${WORLD_ID}:12345`
+            })
+        );
+
+        await waitFor(() => {
+            expect(mocks.getWorldNameByWorldId).toHaveBeenCalledTimes(1);
+        });
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        expect(mocks.getWorldNameByWorldId).toHaveBeenCalledTimes(1);
     });
 });

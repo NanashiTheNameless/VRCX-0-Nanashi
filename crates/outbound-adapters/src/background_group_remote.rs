@@ -19,23 +19,6 @@ impl VrchatBackgroundGroupRemote {
 }
 
 impl BackgroundGroupRemote for VrchatBackgroundGroupRemote {
-    fn current_user<'a>(&'a self, endpoint: &'a str) -> BackgroundGroupRemoteFuture<'a, Value> {
-        Box::pin(async move {
-            let request = vrcx_0_vrchat_client::auth::current_user_get_input(
-                normalize_vrchat_api_endpoint(Some(endpoint)),
-            );
-            let response = self.web.execute_api(request, VrchatScope::Vrchat).await?;
-            if !(200..=299).contains(&response.status) {
-                return Err(Error::Custom(format!(
-                    "current user refresh returned HTTP {}",
-                    response.status
-                )));
-            }
-            serde_json::from_str(&response.data)
-                .map_err(|_| Error::Custom("current user refresh returned invalid JSON".into()))
-        })
-    }
-
     fn group_instances<'a>(
         &'a self,
         endpoint: &'a str,

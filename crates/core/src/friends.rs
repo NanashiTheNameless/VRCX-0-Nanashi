@@ -83,10 +83,6 @@ impl StateBucket {
     pub fn normalize(value: &str) -> Option<Self> {
         Self::from_exact(value.trim().to_ascii_lowercase().as_str())
     }
-
-    pub fn matches(self, value: &str) -> bool {
-        value == self.as_str()
-    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, specta::Type)]
@@ -99,18 +95,6 @@ pub struct FriendRecord {
     pub display_name: CompactString,
     #[serde(default)]
     pub username: String,
-    #[serde(default)]
-    #[specta(type = String)]
-    pub state: CompactString,
-    #[serde(default)]
-    pub location: String,
-    #[serde(default)]
-    pub traveling_to_location: String,
-    #[serde(default)]
-    pub world_id: String,
-    #[serde(default)]
-    #[specta(type = String)]
-    pub platform: CompactString,
     #[serde(default, alias = "last_platform")]
     #[specta(type = String)]
     pub last_platform: CompactString,
@@ -160,16 +144,7 @@ impl FriendRecord {
         if self.id.is_empty() {
             return None;
         }
-
-        self.state = StateBucket::normalize(self.state.as_str())
-            .unwrap_or(StateBucket::Offline)
-            .as_str()
-            .into();
         Some(self)
-    }
-
-    pub fn resolved_state_bucket(&self) -> Option<StateBucket> {
-        StateBucket::normalize(self.state.as_str())
     }
 
     pub fn is_placeholder(&self) -> bool {
@@ -189,14 +164,73 @@ impl FriendRecord {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
+pub const FRIEND_PRESENCE_KEYS: &[&str] = &[
+    "state",
+    "location",
+    "travelingToLocation",
+    "worldId",
+    "instanceId",
+    "travelingToWorld",
+    "travelingToInstance",
+    "platform",
+    "pendingOffline",
+    "locationUpdatedAt",
+    "travelingToTime",
+    derived_keys::LOCATION_PROJECTION,
+    derived_keys::TRAVELING_TO_LOCATION_PROJECTION,
+    derived_keys::LOCATION_UPDATED_AT,
+    derived_keys::LOCATION_TAG,
+    derived_keys::PREVIOUS_LOCATION,
+    derived_keys::PREVIOUS_LOCATION_UPDATED_AT,
+    derived_keys::TRAVELING_TO_TIME,
+];
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Deserialize)]
+#[serde(default, rename_all = "camelCase")]
+pub struct FriendBaselinePresence {
+    pub state: CompactString,
+    pub location: String,
+    pub traveling_to_location: String,
+    pub platform: CompactString,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Deserialize)]
+#[serde(try_from = "Map<String, Value>")]
+pub struct FriendBaselineEntry {
+    pub record: FriendRecord,
+    pub presence: FriendBaselinePresence,
+}
+
+impl TryFrom<Map<String, Value>> for FriendBaselineEntry {
+    type Error = serde_json::Error;
+
+    fn try_from(mut user: Map<String, Value>) -> Result<Self, Self::Error> {
+        let presence = FRIEND_PRESENCE_KEYS
+            .iter()
+            .filter_map(|key| user.remove_entry(*key))
+            .collect();
+        Ok(Self {
+            presence: serde_json::from_value(Value::Object(presence))?,
+            record: serde_json::from_value(Value::Object(user))?,
+        })
+    }
+}
+
+impl FriendBaselineEntry {
+    pub fn normalized(self, fallback_user_id: &str) -> Option<Self> {
+        Some(Self {
+            record: self.record.normalized(fallback_user_id)?,
+            presence: self.presence,
+        })
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct FriendRosterBaseline {
     pub current_user_id: String,
     pub endpoint: String,
     pub websocket: String,
-    #[serde(default)]
-    pub friends_by_id: HashMap<String, FriendRecord>,
+    pub friends_by_id: HashMap<String, FriendBaselineEntry>,
 }
 
 impl FriendRosterBaseline {
@@ -207,11 +241,11 @@ impl FriendRosterBaseline {
         self.friends_by_id = self
             .friends_by_id
             .into_iter()
-            .filter_map(|(user_id, record)| {
+            .filter_map(|(user_id, entry)| {
                 let normalized_user_id = normalize_user_id(&user_id);
-                record
+                entry
                     .normalized(&normalized_user_id)
-                    .map(|record| (record.id.clone(), record))
+                    .map(|entry| (entry.record.id.clone(), entry))
             })
             .collect();
         self
@@ -220,10 +254,6 @@ impl FriendRosterBaseline {
 
 pub fn normalize_user_id(value: &str) -> String {
     value.trim().to_string()
-}
-
-pub fn normalize_state_bucket(value: &str) -> Option<String> {
-    StateBucket::normalize(value).map(|bucket| bucket.as_str().to_string())
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
@@ -295,7 +325,10 @@ pub fn meaningful_display_name(
 
 #[cfg(test)]
 mod tests {
-    use super::{meaningful_display_name, FriendRecord, FriendRosterBaseline};
+    use super::{
+        meaningful_display_name, FriendBaselineEntry, FriendBaselinePresence, FriendRecord,
+        FriendRosterBaseline, FRIEND_PRESENCE_KEYS,
+    };
     use serde_json::{json, Value};
 
     #[test]
@@ -332,10 +365,15 @@ mod tests {
             websocket: " wss://ws.example.test ".into(),
             friends_by_id: [(
                 " usr_friend ".to_string(),
-                FriendRecord {
-                    display_name: "Friend".into(),
-                    state: "online".into(),
-                    ..FriendRecord::default()
+                FriendBaselineEntry {
+                    record: FriendRecord {
+                        display_name: "Friend".into(),
+                        ..FriendRecord::default()
+                    },
+                    presence: FriendBaselinePresence {
+                        state: "online".into(),
+                        ..FriendBaselinePresence::default()
+                    },
                 },
             )]
             .into_iter()
@@ -347,9 +385,52 @@ mod tests {
         assert_eq!(baseline.endpoint, "https://api.example.test");
         assert_eq!(baseline.websocket, "wss://ws.example.test");
         let friend = baseline.friends_by_id.get("usr_friend").unwrap();
-        assert_eq!(friend.id, "usr_friend");
-        assert_eq!(friend.state, "online");
-        assert_eq!(friend.display_name_or_id(), "Friend");
+        assert_eq!(friend.record.id, "usr_friend");
+        assert_eq!(friend.record.display_name_or_id(), "Friend");
+        assert_eq!(friend.presence.state, "online");
+    }
+
+    #[test]
+    fn baseline_entry_moves_presence_out_of_the_record() {
+        let entry: FriendBaselineEntry = serde_json::from_value(json!({
+            "id": "usr_friend",
+            "displayName": "Friend",
+            "state": "online",
+            "location": "wrld_a:1",
+            "travelingToLocation": "wrld_b:2",
+            "worldId": "wrld_a",
+            "instanceId": "1",
+            "platform": "standalonewindows",
+            "$location": { "tag": "wrld_a:1" },
+            "last_platform": "android",
+            "futureField": "preserved"
+        }))
+        .unwrap();
+
+        assert_eq!(
+            entry.presence,
+            FriendBaselinePresence {
+                state: "online".into(),
+                location: "wrld_a:1".into(),
+                traveling_to_location: "wrld_b:2".into(),
+                platform: "standalonewindows".into(),
+            }
+        );
+        assert_eq!(entry.record.last_platform, "android");
+        let serialized = serde_json::to_value(&entry.record).unwrap();
+        for key in FRIEND_PRESENCE_KEYS {
+            assert!(serialized.get(*key).is_none(), "{key} leaked");
+        }
+        assert_eq!(serialized["futureField"], "preserved");
+    }
+
+    #[test]
+    fn baseline_entry_rejects_non_string_presence_like_the_record_did() {
+        assert!(serde_json::from_value::<FriendBaselineEntry>(json!({
+            "id": "usr_friend",
+            "state": 1
+        }))
+        .is_err());
     }
 
     #[test]
@@ -358,8 +439,6 @@ mod tests {
         let record: FriendRecord = serde_json::from_value(json!({
             "id": "usr_friend",
             "displayName": "Friend",
-            "state": "online",
-            "platform": "standalonewindows",
             "last_platform": "android",
             "status": "join me",
             "statusDescription": status_description,
@@ -369,8 +448,6 @@ mod tests {
 
         let serialized = serde_json::to_value(record).unwrap();
         assert_eq!(serialized["displayName"], "Friend");
-        assert_eq!(serialized["state"], "online");
-        assert_eq!(serialized["platform"], "standalonewindows");
         assert_eq!(serialized["lastPlatform"], "android");
         assert_eq!(serialized["status"], "join me");
         assert_eq!(serialized["statusDescription"], status_description);

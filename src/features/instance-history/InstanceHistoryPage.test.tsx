@@ -246,13 +246,27 @@ vi.mock('@/ui/shadcn/input', async () => {
     };
 });
 
-vi.mock('@/ui/shadcn/popover', () => ({
-    Popover: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-    PopoverContent: ({ children }: { children?: ReactNode }) => (
-        <div>{children}</div>
-    ),
-    PopoverTrigger: ({ render }: { render: ReactNode }) => render
-}));
+vi.mock('@/ui/shadcn/popover', async () => {
+    const { useEffect } = await import('react');
+    return {
+        Popover: ({
+            children,
+            onOpenChange
+        }: {
+            children?: ReactNode;
+            onOpenChange?: (open: boolean) => void;
+        }) => {
+            useEffect(() => {
+                onOpenChange?.(true);
+            }, [onOpenChange]);
+            return <div>{children}</div>;
+        },
+        PopoverContent: ({ children }: { children?: ReactNode }) => (
+            <div>{children}</div>
+        ),
+        PopoverTrigger: ({ render }: { render: ReactNode }) => render
+    };
+});
 
 vi.mock('@/ui/shadcn/resizable', () => ({
     ResizableHandle: () => null,

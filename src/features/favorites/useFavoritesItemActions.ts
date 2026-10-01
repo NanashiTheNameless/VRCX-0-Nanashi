@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { FavoriteKind } from '@/domain/favorites/types';
+import { resolveFriendPresenceLocation } from '@/domain/friends/presence';
 import type { FriendRecord, FriendRosterById } from '@/domain/friends/types';
 import type { AvatarCacheOutput } from '@/platform/tauri/bindings';
 import avatarLocalRepository from '@/repositories/avatarLocalRepository';
@@ -22,7 +23,6 @@ import { parseLocation } from '@/shared/utils/location';
 import { useModalStore } from '@/state/modalStore';
 
 import { normalizeFavoriteEntityId as normalizeEntityId } from './favoritesItems';
-import { resolveFavoritePresenceLocation } from './favoritesPageData';
 import type {
     FavoriteGroupView,
     FavoriteItem,
@@ -156,7 +156,9 @@ export function useFavoritesItemActions({
 
     async function launchFavoriteFriendLocation(item: FavoriteItem) {
         const friend = getFavoriteFriend(item);
-        const location = resolveFavoritePresenceLocation(friend);
+        const location = resolveFriendPresenceLocation(friend, {
+            preferTraveling: false
+        });
         const parsedLocation = parseLocation(location);
         if (
             !parsedLocation.isRealInstance ||
@@ -196,7 +198,9 @@ export function useFavoritesItemActions({
 
     async function selfInviteFavoriteFriendLocation(item: FavoriteItem) {
         const friend = getFavoriteFriend(item);
-        const location = resolveFavoritePresenceLocation(friend);
+        const location = resolveFriendPresenceLocation(friend, {
+            preferTraveling: false
+        });
         const parsedLocation = parseLocation(location);
         if (
             !parsedLocation.isRealInstance ||

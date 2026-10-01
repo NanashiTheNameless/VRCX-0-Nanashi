@@ -1,34 +1,9 @@
-import type { FavoriteGroupMap } from '@/domain/favorites/types';
+import { normalizeString } from '@/shared/utils/string';
 
 import {
-    normalizeFriendsLocationId,
-    resolveLocationSummary
+    resolveLocationSummary,
+    friendLocationTarget
 } from './friendsLocationsRows';
-
-export function buildFriendsLocationsFavoriteIdSet(
-    remoteFavoriteIds: readonly string[] = [],
-    localFriendFavorites: FavoriteGroupMap = {}
-): Set<string> {
-    const ids = new Set<string>();
-
-    for (const id of remoteFavoriteIds ?? []) {
-        const normalized = normalizeFriendsLocationId(id);
-        if (normalized) {
-            ids.add(normalized);
-        }
-    }
-
-    for (const groupIds of Object.values(localFriendFavorites ?? {})) {
-        for (const id of groupIds) {
-            const normalized = normalizeFriendsLocationId(id);
-            if (normalized) {
-                ids.add(normalized);
-            }
-        }
-    }
-
-    return ids;
-}
 
 export function matchesFriendLocationSearch(
     friend: Record<string, unknown> | null | undefined,
@@ -40,6 +15,7 @@ export function matchesFriendLocationSearch(
     }
 
     const location = resolveLocationSummary(friend);
+    const target = friendLocationTarget(friend);
     const query = searchQuery.trim().toLowerCase();
     if (!query) {
         return true;
@@ -55,19 +31,14 @@ export function matchesFriendLocationSearch(
         String(friend?.statusDescription || '')
             .toLowerCase()
             .includes(query) ||
-        String(friend?.worldId || '')
-            .toLowerCase()
-            .includes(query) ||
-        String(friend?.location || '')
-            .toLowerCase()
-            .includes(query) ||
+        target.worldId.toLowerCase().includes(query) ||
+        target.rawLocation.toLowerCase().includes(query) ||
         String(location.label || '')
             .toLowerCase()
             .includes(query) ||
         String(location.meta || '')
             .toLowerCase()
             .includes(query) ||
-        (query === 'favorite' &&
-            favoriteIds.has(normalizeFriendsLocationId(friend?.id)))
+        (query === 'favorite' && favoriteIds.has(normalizeString(friend?.id)))
     );
 }

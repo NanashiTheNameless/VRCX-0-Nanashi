@@ -9,10 +9,17 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { resolveLocationTarget } from '@/components/location/locationModel';
 import { LocationPendingText } from '@/components/location/LocationPendingText';
 import { RegionCodeBadge } from '@/components/location/RegionCodeBadge';
 import type { LocationMetadata } from '@/components/location/useLocationMetadata';
-import { normalizeStateBucket } from '@/domain/users/userFacts';
+import {
+    localGameLocation,
+    presenceLocationTag,
+    presenceOf,
+    presenceSection,
+    presenceTravelingTag
+} from '@/domain/friends/presence';
 import { cn } from '@/lib/utils';
 import { openGroupDialog, openWorldDialog } from '@/services/dialogService';
 import { accessTypeLocaleKeyMap } from '@/shared/constants/accessType';
@@ -29,15 +36,7 @@ import { useShellStore } from '@/state/shellStore';
 import { Spinner } from '@/ui/shadcn/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
-import {
-    clearStaleOfflineLocation,
-    readFriendRef,
-    readFriendRefLocation,
-    readFriendRefTravelingLocation,
-    readFriendStatusSource,
-    resolvePresenceLocation,
-    type SidebarFriendRecord
-} from './friendsSidebarModel';
+import type { SidebarFriendRecord } from './friendsSidebarModel';
 import type { SidebarVirtualRow } from './friendsSidebarVirtualRowBuilder';
 import { SidebarLocationMenu } from './SidebarLocationMenu';
 
@@ -45,40 +44,18 @@ function recordValue(value: unknown): Record<string, unknown> | null {
     return isRecord(value) ? value : null;
 }
 
-function sidebarLocationTarget(location: unknown, traveling: unknown = '') {
-    const normalizedLocation = normalizeId(location);
-    if (
-        typeof traveling !== 'undefined' &&
-        normalizedLocation === 'traveling'
-    ) {
-        return normalizeId(traveling);
-    }
-    return normalizedLocation;
-}
-
 function friendLocationHint(
     displaySource: SidebarFriendRecord | null | undefined
 ) {
-    return normalizeId(
-        displaySource?.worldName ||
-            displaySource?.$worldName ||
-            displaySource?.travelingToWorld ||
-            displaySource?.$travelingToWorld
-    );
+    return normalizeId(displaySource?.worldName);
 }
 
 function friendGroupHint(
     displaySource: SidebarFriendRecord | null | undefined
 ) {
-    const location = recordValue(displaySource?.$location);
-    const group = recordValue(location?.group);
     const sourceGroup = recordValue(displaySource?.group);
     return normalizeId(
         displaySource?.groupName ||
-            displaySource?.$groupName ||
-            location?.groupName ||
-            group?.name ||
-            group?.displayName ||
             sourceGroup?.name ||
             sourceGroup?.displayName
     );
@@ -95,53 +72,34 @@ export function resolveFriendRowLocationState({
     isGroupByInstance?: boolean;
     locationTime?: FriendLocationTimeEntry | null;
 }) {
-    const displaySource = readFriendRef(friend);
-    const statusSource = readFriendStatusSource(friend);
-    const localLocation =
-        !isCurrentUser &&
-        isGroupByInstance &&
-        locationTime?.source === 'gameLog'
-            ? locationTime.location
-            : '';
+    const presence = presenceOf(friend);
+    const localLocation = isCurrentUser ? '' : localGameLocation(locationTime);
     const friendState = localLocation
         ? 'online'
-        : normalizeStateBucket(statusSource?.state);
-    const friendStateBucket = friendState;
-    const apiFriendLocation = isCurrentUser
-        ? resolvePresenceLocation(friend)
-        : readFriendRefLocation(friend);
-    const projectedFriendLocation = normalizeId(locationTime?.location);
-    const useProjectedFriendLocation = Boolean(
-        !isCurrentUser &&
-        locationSentinel(apiFriendLocation) === 'private' &&
-        parseLocation(projectedFriendLocation).isRealInstance
-    );
-    const rawFriendLocation =
-        localLocation ||
-        (useProjectedFriendLocation
-            ? projectedFriendLocation
-            : apiFriendLocation);
-    const friendLocation = clearStaleOfflineLocation(
-        rawFriendLocation,
-        friendState
-    );
+        : presence
+          ? presenceSection(presence)
+          : '';
+    const apiFriendLocation =
+        !presence || presence.kind === 'active'
+            ? ''
+            : presenceLocationTag(presence, { preferTraveling: false });
+    const friendLocation = localLocation || apiFriendLocation;
     const parsedFriendLocation = parseLocation(friendLocation);
     const isTraveling = locationSentinel(friendLocation) === 'traveling';
     const displayLocation = isTraveling ? 'traveling' : friendLocation;
-    const displayTraveling = isTraveling
-        ? readFriendRefTravelingLocation(friend) || undefined
-        : undefined;
+    const displayTraveling =
+        isTraveling && presence
+            ? presenceTravelingTag(presence) || undefined
+            : undefined;
+    const isPendingOffline = presence?.kind === 'pendingOffline';
     const isActiveOrOffline =
-        friendState === 'active' ||
-        friendState === 'offline' ||
-        friendStateBucket === 'active' ||
-        friendStateBucket === 'offline';
+        friendState === 'active' || friendState === 'offline';
     const groupByInstanceTimerVisible = Boolean(
         isGroupByInstance && !isActiveOrOffline
     );
     const showLocationSubline = Boolean(
         displayLocation &&
-        !statusSource?.pendingOffline &&
+        !isPendingOffline &&
         !groupByInstanceTimerVisible &&
         (!isActiveOrOffline ||
             parsedFriendLocation.isRealInstance ||
@@ -149,8 +107,7 @@ export function resolveFriendRowLocationState({
     );
 
     return {
-        displaySource,
-        statusSource,
+        isPendingOffline,
         friendState,
         friendLocation,
         parsedFriendLocation,
@@ -159,12 +116,12 @@ export function resolveFriendRowLocationState({
         displayTraveling,
         groupByInstanceTimerVisible,
         showLocationSubline,
-        metadataCurrentLocation: sidebarLocationTarget(
+        metadataCurrentLocation: resolveLocationTarget(
             displayLocation,
             displayTraveling
         ),
-        metadataHint: friendLocationHint(displaySource),
-        metadataGroupHint: friendGroupHint(displaySource)
+        metadataHint: friendLocationHint(friend),
+        metadataGroupHint: friendGroupHint(friend)
     };
 }
 
@@ -217,7 +174,7 @@ export function StaticSidebarLocation({
     const sidebarWindowMode = useShellStore(
         (state) => state.windowDisplayMode === 'sidebar'
     );
-    const currentLocation = sidebarLocationTarget(location, traveling);
+    const currentLocation = resolveLocationTarget(location, traveling);
     const parsedLocation = useMemo(
         () => parseLocation(currentLocation),
         [currentLocation]
@@ -433,7 +390,7 @@ export function buildSidebarLocationMetadataEntry(
     > = {}
 ) {
     if (row?.type === 'instance-header') {
-        const currentLocation = sidebarLocationTarget(row.location);
+        const currentLocation = resolveLocationTarget(row.location, '');
         return {
             key: row.key,
             locationInfo: parseLocation(currentLocation),

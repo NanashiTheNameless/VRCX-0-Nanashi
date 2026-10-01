@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use serde_json::Value;
 use vrcx_0_contracts::realtime::RealtimePersistenceBatch;
 
@@ -17,8 +19,8 @@ use vrcx_0_core::realtime::RealtimeWsMessagePayload;
 use crate::realtime::connection::RealtimeMessageSink;
 #[cfg(test)]
 use crate::realtime::{
-    PendingOfflineTimerAction, RealtimeFriendApplyResult, RealtimeFriendOutput,
-    RealtimeTransportStartResult, RealtimeTransportTermination,
+    RealtimeFriendApplyResult, RealtimeFriendOutput, RealtimeTransportStartResult,
+    RealtimeTransportTermination,
 };
 #[cfg(test)]
 use crate::social_baseline::service::{reconcile_friend_roster_records, FriendStatusVerdicts};
@@ -35,6 +37,7 @@ mod friend_avatar_change;
 mod friend_avatar_change_tests;
 #[cfg(test)]
 mod friend_baseline_tests;
+mod friend_events;
 mod friend_feed_entry;
 #[cfg(test)]
 mod friend_feed_entry_tests;
@@ -45,7 +48,6 @@ mod friend_profile;
 mod friend_profile_bulk_load;
 #[cfg(test)]
 mod friend_profile_bulk_load_tests;
-mod friend_queue;
 mod game_process;
 mod message_dispatch;
 #[cfg(test)]
@@ -59,10 +61,30 @@ mod world_cache;
 #[cfg(test)]
 mod world_cache_tests;
 
-pub use current_user::RealtimeCurrentUserRefreshExpectation;
+async fn sleep_until(at_ms: i64) {
+    while let Ok(remaining_ms @ 1..) = u64::try_from(at_ms - chrono::Utc::now().timestamp_millis())
+    {
+        tokio::time::sleep(Duration::from_millis(remaining_ms)).await;
+    }
+}
+
 pub use friend_mutation::SyntheticFriendEventOutcome;
 pub use friend_profile_bulk_load::{FriendProfileBulkLoadStatus, FriendProfileLoadStatusPayload};
 pub use state::{
     RealtimeCurrentUserSnapshotSink, RealtimeHostRuntime, RealtimeHostRuntimeDeps,
     RealtimeStopRequest,
 };
+
+#[cfg(test)]
+mod sleep_until_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn sleep_until_waits_for_the_wall_clock_deadline() {
+        let at_ms = chrono::Utc::now().timestamp_millis() + 50;
+
+        sleep_until(at_ms).await;
+
+        assert!(chrono::Utc::now().timestamp_millis() >= at_ms);
+    }
+}

@@ -85,9 +85,7 @@ export function UserHoverCardContent({
     const nameColour = String(
         model.userColour || getTrustColor(model.trustSource, trustColor)
     );
-    const statusText = model.statusKey
-        ? t(`dialog.user.status.${model.statusKey}`)
-        : '';
+    const statusText = model.statusKey ? t(model.statusKey) : '';
     const statusDotClassName = model.statusDotClassName || '';
     const hasStatusDescription = Boolean(model.statusDescription);
     const isOffline = model.variant === 'offline';

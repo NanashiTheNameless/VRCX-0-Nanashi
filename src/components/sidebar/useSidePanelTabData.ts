@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { buildFavoriteCollectionFriendIdSet } from '@/components/sidebar/friends-sidebar/favoriteCollectionSidebarRows';
+import { resolveSelectedFavoriteGroupKeys } from '@/domain/favorites/favoriteGroupSelection';
 import {
     getVisibleSidebarTabs,
     type FavoriteGroupItem
@@ -181,15 +182,14 @@ export function useSidePanelTabData({
         () => favoriteGroupItems.map((group) => group.key),
         [favoriteGroupItems]
     );
-    const resolvedSidebarFavoriteGroups = useMemo(() => {
-        const configured = Array.isArray(prefs.sidebarFavoriteGroups)
-            ? prefs.sidebarFavoriteGroups.filter(Boolean)
-            : [];
-        if (!configured.length) {
-            return allFavoriteGroupKeys;
-        }
-        return configured.filter((key) => allFavoriteGroupKeys.includes(key));
-    }, [allFavoriteGroupKeys, prefs.sidebarFavoriteGroups]);
+    const resolvedSidebarFavoriteGroups = useMemo(
+        () =>
+            resolveSelectedFavoriteGroupKeys(
+                prefs.sidebarFavoriteGroups,
+                allFavoriteGroupKeys
+            ),
+        [allFavoriteGroupKeys, prefs.sidebarFavoriteGroups]
+    );
     const selectedFavoriteGroupLabel = useMemo(() => {
         const firstKey = resolvedSidebarFavoriteGroups[0];
         const firstGroup = favoriteGroupItems.find(

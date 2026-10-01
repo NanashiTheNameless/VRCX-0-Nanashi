@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    offlinePresence,
+    onlinePresence,
+    pendingPresence,
+    travelingPresence
+} from '@/test/presenceFixtures';
+
+import {
     buildSidebarLocationMetadataEntry,
     resolveFriendRowLocationState
 } from './FriendsSidebarLocation';
@@ -8,12 +15,8 @@ import {
 describe('resolveFriendRowLocationState', () => {
     it('keeps local room timing visible without a remote traveling indicator', () => {
         for (const remote of [
-            { state: 'offline', location: 'offline' },
-            {
-                state: 'online',
-                location: 'traveling',
-                travelingToLocation: 'wrld_other:2'
-            }
+            { $presence: offlinePresence },
+            { $presence: travelingPresence('wrld_other:2') }
         ]) {
             const state = resolveFriendRowLocationState({
                 friend: { id: 'usr_friend', ...remote },
@@ -34,9 +37,7 @@ describe('resolveFriendRowLocationState', () => {
         const state = resolveFriendRowLocationState({
             friend: {
                 id: 'usr_friend',
-                state: 'online',
-                location: 'private',
-                pendingOffline: true
+                $presence: pendingPresence('private')
             },
             isGroupByInstance: true
         });
@@ -49,8 +50,7 @@ describe('resolveFriendRowLocationState', () => {
         const state = resolveFriendRowLocationState({
             friend: {
                 id: 'usr_friend',
-                state: 'offline',
-                location: 'private'
+                $presence: offlinePresence
             },
             isGroupByInstance: true
         });
@@ -58,16 +58,15 @@ describe('resolveFriendRowLocationState', () => {
         expect(state.groupByInstanceTimerVisible).toBe(false);
     });
 
-    it('uses the backend-projected room when a busy friend API location is private', () => {
+    it('uses the local game room when a busy friend API location is private', () => {
         const friend = {
             id: 'usr_busy',
-            state: 'online',
             status: 'busy',
-            location: 'private'
+            $presence: onlinePresence('private')
         };
         const locationTime = {
             location: 'wrld_current:123',
-            source: 'realtime' as const,
+            source: 'gameLog' as const,
             sinceMs: 1_700_000_000_000
         };
         const state = resolveFriendRowLocationState({
@@ -97,9 +96,8 @@ describe('resolveFriendRowLocationState', () => {
         const state = resolveFriendRowLocationState({
             friend: {
                 id: 'usr_busy',
-                state: 'online',
                 status: 'busy',
-                location: 'private'
+                $presence: onlinePresence('private')
             },
             locationTime: {
                 location: 'private',
@@ -117,8 +115,7 @@ describe('resolveFriendRowLocationState', () => {
         const state = resolveFriendRowLocationState({
             friend: {
                 id: 'usr_remote',
-                state: 'online',
-                location: 'wrld_remote:456'
+                $presence: onlinePresence('wrld_remote:456')
             },
             locationTime: {
                 location: 'wrld_current:123',
@@ -135,9 +132,7 @@ describe('resolveFriendRowLocationState', () => {
         const state = resolveFriendRowLocationState({
             friend: {
                 id: 'usr_traveling',
-                state: 'online',
-                location: 'traveling',
-                travelingToLocation: 'wrld_destination:789'
+                $presence: travelingPresence('wrld_destination:789')
             },
             locationTime: {
                 location: 'wrld_destination:789',

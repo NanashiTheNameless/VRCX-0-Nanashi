@@ -1,6 +1,10 @@
 use vrcx_0_core::game_log_parser::{GameLogEvent, GameLogEventKind};
+use vrcx_0_core::game_process::GameProcessEvent;
 
-use super::{GameLogIngestEngine, GameLogIngestOptions, GameLogIngestOutput, GameLogSideEffect};
+use super::{
+    GameLogIngestEngine, GameLogIngestOptions, GameLogIngestOutput, GameLogProcessEvent,
+    GameLogSideEffect,
+};
 
 fn event(created_at: &str, kind: GameLogEventKind) -> GameLogEvent {
     GameLogEvent {
@@ -230,6 +234,53 @@ fn leaving_room_resets_now_playing_for_world_switch_and_rejoin() {
             [GameLogSideEffect::Video(_)]
         ));
     }
+}
+
+#[test]
+fn videos_from_a_closed_game_never_stay_now_playing() {
+    let video = |at: &str| {
+        event(
+            at,
+            GameLogEventKind::VideoPlay {
+                video_url: format!("https://example.test/{at}.mp4"),
+                display_name: "Player".into(),
+            },
+        )
+    };
+    let game_closed = GameLogProcessEvent {
+        process: GameProcessEvent {
+            is_game_running: false,
+            is_steamvr_running: false,
+            game_changed: false,
+        },
+        changed_at: "2026-05-14T00:10:00.000Z".into(),
+    };
+
+    let mut scanned_first = GameLogIngestEngine::default();
+    scanned_first.ingest_events(
+        &[video("2026-05-14T00:01:00.000Z")],
+        GameLogIngestOptions::default(),
+    );
+    assert_eq!(
+        scanned_first
+            .handle_process_event(game_closed.clone())
+            .side_effects,
+        vec![GameLogSideEffect::NowPlayingReset]
+    );
+
+    let mut closed_first = GameLogIngestEngine::default();
+    closed_first.handle_process_event(game_closed);
+    let output = closed_first.ingest_events(
+        &[video("2026-05-14T00:01:00.000Z")],
+        GameLogIngestOptions::default(),
+    );
+    assert!(matches!(
+        output.side_effects.as_slice(),
+        [
+            GameLogSideEffect::Video(_),
+            GameLogSideEffect::NowPlayingReset
+        ]
+    ));
 }
 
 #[test]

@@ -1,4 +1,3 @@
-import type { FavoriteGroupMap } from '@/domain/favorites/types';
 import { parseLocation } from '@/shared/utils/location';
 
 import type {
@@ -22,30 +21,6 @@ const GAME_LOG_UNACTIONABLE_TYPES = new Set([
 
 export function normalizeGameLogId(value: string | number | null | undefined) {
     return typeof value === 'number' ? String(value) : (value ?? '').trim();
-}
-
-export function buildGameLogFavoriteIdSet(
-    remoteFavoriteIds: readonly string[] | null | undefined,
-    localFriendFavorites: FavoriteGroupMap | null | undefined
-) {
-    const ids = new Set<string>();
-
-    for (const id of remoteFavoriteIds ?? []) {
-        const normalized = normalizeGameLogId(id);
-        if (normalized) {
-            ids.add(normalized);
-        }
-    }
-
-    for (const groupIds of Object.values(localFriendFavorites ?? {})) {
-        for (const id of groupIds) {
-            const normalized = normalizeGameLogId(id);
-            if (normalized) {
-                ids.add(normalized);
-            }
-        }
-    }
-    return ids;
 }
 
 export function describeGameLogDetail(row: GameLogRowView | null | undefined) {

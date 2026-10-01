@@ -172,6 +172,7 @@ export function buildPlayerSourceRows({
             joinedAtMs,
             lastDurationMs: 0,
             ref: currentUserSnapshot,
+            $presence: currentUserSnapshot.$presence,
             source: 'runtime'
         });
         knownKeys.add(currentUserKey);

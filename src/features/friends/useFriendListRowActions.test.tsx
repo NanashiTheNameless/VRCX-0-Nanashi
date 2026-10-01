@@ -96,6 +96,8 @@ vi.mock('@/services/mutualGraphFetchService', () => ({
     startMutualGraphFetch: vi.fn()
 }));
 
+import { useFriendStatsStore } from '@/state/friendStatsStore';
+
 import { useFriendListRowActions } from './useFriendListRowActions';
 
 type MutualSnapshot = {
@@ -113,8 +115,7 @@ function deferred<Value>() {
 
 const friend: FriendListRow = {
     id: 'usr_friend',
-    displayName: 'Friend',
-    stateBucket: 'online'
+    displayName: 'Friend'
 };
 
 function renderActions() {
@@ -154,6 +155,7 @@ function renderActions() {
 describe('useFriendListRowActions', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        useFriendStatsStore.getState().reset();
         mocks.runtimeState.auth.currentUserId = 'usr_self';
         mocks.runtimeState.auth.currentUserEndpoint =
             'https://api.vrchat.cloud/api/1';
@@ -215,7 +217,7 @@ describe('useFriendListRowActions', () => {
         expect(mocks.toastSuccess).not.toHaveBeenCalled();
     });
 
-    it('preserves current presence when applying completed mutual stats', async () => {
+    it('stores completed mutual stats for the friend list', async () => {
         mocks.runtimeState.mutualGraph = {
             runId: 1,
             status: 'completed',
@@ -234,13 +236,11 @@ describe('useFriendListRowActions', () => {
             await Promise.resolve();
         });
 
-        expect(mocks.friendState.applyFriendPatch).toHaveBeenCalledWith({
-            userId: 'usr_friend',
-            patch: {
-                $mutualCount: 1,
-                $mutualOptedOut: false
-            },
-            stateBucketAuthority: 'preserve'
+        expect(useFriendStatsStore.getState()).toMatchObject({
+            ownerUserId: 'usr_self',
+            byUserId: {
+                usr_friend: { mutualCount: 1, mutualOptedOut: false }
+            }
         });
     });
 

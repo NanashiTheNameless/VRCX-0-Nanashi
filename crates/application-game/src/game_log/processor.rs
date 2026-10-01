@@ -18,6 +18,7 @@ use crate::game_log::ingest::{
 };
 use crate::game_log::instance_media::InstanceMediaQueue;
 use crate::game_log::runtime_state::{RuntimeSnapshot, RuntimeSnapshotStore};
+use crate::game_log::video::NowPlayingClock;
 use crate::overlay_activity::OverlayActivityGameIngestExt;
 use crate::GameLogEventOrigin;
 use crate::RuntimeAuthScope;
@@ -161,6 +162,7 @@ pub struct GameLogProcessor {
     deps: GameLogProcessorDeps,
     engine: Arc<Mutex<GameLogIngestEngine>>,
     media_queue: InstanceMediaQueue,
+    now_playing: NowPlayingClock,
     persistence_resume_after_ms: Arc<AtomicI64>,
     stop_requested: Arc<AtomicBool>,
     scan_cursor: Arc<Mutex<Option<crate::GameLogScanCursor>>>,
@@ -208,6 +210,7 @@ impl GameLogProcessor {
             deps,
             engine: Arc::new(Mutex::new(engine)),
             media_queue: InstanceMediaQueue::new(),
+            now_playing: NowPlayingClock::default(),
             persistence_resume_after_ms: Arc::new(AtomicI64::new(i64::MIN)),
         }
     }
@@ -335,7 +338,11 @@ impl GameLogProcessor {
     }
 
     fn side_effect_deps(&self) -> GameLogSideEffectDeps {
-        GameLogSideEffectDeps::new(&self.deps, self.media_queue.clone())
+        GameLogSideEffectDeps::new(
+            &self.deps,
+            self.media_queue.clone(),
+            self.now_playing.clone(),
+        )
     }
 
     fn ingest_events_now(&self, events: &[GameLogEvent], origin: GameLogEventOrigin) -> Result<()> {

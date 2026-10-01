@@ -22,7 +22,7 @@ const FRIEND_PROFILE_REFETCH_THROTTLE_MS: i64 = 10_000;
 #[derive(Clone, Copy)]
 pub(super) struct FriendProfileRefreshExpectation {
     pub(super) generation: u64,
-    pub(super) sequence: u64,
+    pub(super) rev: u64,
 }
 
 impl RealtimeHostRuntime {
@@ -42,56 +42,73 @@ impl RealtimeHostRuntime {
             return Ok(false);
         }
         let requested_endpoint = endpoint.trim().to_string();
-        let owner = self.lock_friend_owner();
-        let active = {
-            let state = self
-                .state
-                .lock()
-                .map_err(|error| Error::Custom(format!("realtime state lock: {error}")))?;
-            let Some(active) = state.connection.active_context.clone() else {
-                return Ok(false);
-            };
-            if expectation.generation != active.generation
-                || active.session.endpoint != requested_endpoint
-                || !self.is_message_current_locked(
-                    &state,
-                    active.generation,
-                    active.session_generation,
-                    &active.session,
-                )
-            {
-                return Ok(false);
-            }
-            active
+        let Some(active) = self
+            .state
+            .lock()
+            .map_err(|error| Error::Custom(format!("realtime state lock: {error}")))?
+            .connection
+            .active_context
+            .clone()
+        else {
+            return Ok(false);
         };
-        if !self
-            .friends
-            .has_friend(active.generation, &normalized_user_id)
+        if expectation.generation != active.generation
+            || active.session.endpoint != requested_endpoint
+            || !self.apply_refetched_friend_profile(
+                &active,
+                &normalized_user_id,
+                expectation.rev,
+                profile,
+            )
         {
             return Ok(false);
         }
-        match self.friends.apply_refetched_user_profile_if_sequence(
+        let runtime = Arc::clone(self);
+        self.deps.tasks.spawn(async move {
+            runtime
+                .user_query_cache
+                .invalidate_user(&requested_endpoint, &normalized_user_id)
+                .await;
+        });
+        Ok(true)
+    }
+
+    fn apply_refetched_friend_profile(
+        self: &Arc<Self>,
+        active: &ActiveRealtimeContext,
+        user_id: &str,
+        rev: u64,
+        profile: Value,
+    ) -> bool {
+        let owner = self.lock_friend_owner();
+        let current = match self.state.lock() {
+            Ok(state) => self.is_message_current_locked(
+                &state,
+                active.generation,
+                active.session_generation,
+                &active.session,
+            ),
+            Err(error) => {
+                tracing::warn!("realtime state lock failed: {error}");
+                false
+            }
+        };
+        if !current {
+            return false;
+        }
+        match self.friends.apply_refetched_user_profile_if_rev(
             active.generation,
-            &normalized_user_id,
-            expectation.sequence,
+            user_id,
+            rev,
             profile,
             &chrono::Utc::now().to_rfc3339(),
         ) {
             RealtimeFriendApplyResult::Output(output) => {
                 self.apply_friend_output_owned(&owner, *output);
-                let runtime = Arc::clone(self);
-                let endpoint = requested_endpoint.clone();
-                let user_id = normalized_user_id.clone();
-                self.deps.tasks.spawn(async move {
-                    runtime
-                        .user_query_cache
-                        .invalidate_user(&endpoint, &user_id)
-                        .await;
-                });
-                Ok(true)
+                true
             }
             RealtimeFriendApplyResult::MissingBaseline | RealtimeFriendApplyResult::Ignored => {
-                Ok(false)
+                false
             }
         }
     }
@@ -135,7 +152,7 @@ impl RealtimeHostRuntime {
             is_friend,
             ..Default::default()
         };
-        if let Some(output) = self.user_cache.record_user(profile, &options) {
+        if let Some(output) = self.user_facts.record_user(profile, &options) {
             self.emit_user_cache_changes(vec![output.user]);
         }
     }
@@ -164,7 +181,7 @@ impl RealtimeHostRuntime {
             .filter_map(|record| {
                 let value = serde_json::to_value(record)
                     .expect("FriendRecord contains only JSON-serializable fields");
-                self.user_cache
+                self.user_facts
                     .record_user(&value, options)
                     .map(|output| output.user)
             })
@@ -174,7 +191,7 @@ impl RealtimeHostRuntime {
     pub(super) fn record_baseline_friends_into_cache(&self) {
         let Some(changed) = self.friends.with_user_cache_records(|endpoint, records| {
             self.collect_friend_record_cache_changes(
-                records.values(),
+                records,
                 &UserFactMergeOptions {
                     endpoint: endpoint.to_string(),
                     source: "friend".into(),
@@ -220,7 +237,7 @@ impl RealtimeHostRuntime {
                     .unwrap_or(false),
                 ..Default::default()
             };
-            if let Some(output) = self.user_cache.record_user(user, &options) {
+            if let Some(output) = self.user_facts.record_user(user, &options) {
                 changed.push(output.user);
             }
         }
@@ -267,7 +284,7 @@ impl RealtimeHostRuntime {
             .deps
             .remote_requests
             .user(endpoint.clone(), user_id_input)?;
-        let refresh_expectation = self.capture_friend_state_sequence(&user_id);
+        let refresh_expectation = self.capture_friend_rev(&user_id);
         if options.cache_policy == UserQueryCachePolicy::Refresh {
             self.user_query_cache
                 .invalidate_user(&endpoint, &user_id)
@@ -326,10 +343,7 @@ impl RealtimeHostRuntime {
         Ok(value)
     }
 
-    fn capture_friend_state_sequence(
-        &self,
-        user_id: &str,
-    ) -> Option<FriendProfileRefreshExpectation> {
+    fn capture_friend_rev(&self, user_id: &str) -> Option<FriendProfileRefreshExpectation> {
         let generation = {
             let state = self.state.lock().ok()?;
             state
@@ -339,11 +353,8 @@ impl RealtimeHostRuntime {
                 .map(|active| active.generation)?
         };
         self.friends
-            .friend_state_sequence_for_user(generation, user_id)
-            .map(|sequence| FriendProfileRefreshExpectation {
-                generation,
-                sequence,
-            })
+            .friend_rev_of(generation, user_id)
+            .map(|rev| FriendProfileRefreshExpectation { generation, rev })
     }
 
     pub async fn invalidate_user_query_cache(&self, endpoint: &str, user_id: &str) {
@@ -437,9 +448,7 @@ impl RealtimeHostRuntime {
                 if recent {
                     continue;
                 }
-                let Some(expected_sequence) = self
-                    .friends
-                    .friend_state_sequence_for_user(active.generation, &user_id)
+                let Some(expected_rev) = self.friends.friend_rev_of(active.generation, &user_id)
                 else {
                     continue;
                 };
@@ -447,16 +456,16 @@ impl RealtimeHostRuntime {
                     .friend_profile
                     .refetches
                     .insert(user_id.clone(), now_ms);
-                refetches.push((user_id, expected_sequence));
+                refetches.push((user_id, expected_rev));
             }
             (active, refetches)
         };
-        for (user_id, expected_sequence) in refetches {
+        for (user_id, expected_rev) in refetches {
             let runtime = Arc::clone(self);
             let active = active.clone();
             self.deps.tasks.spawn(async move {
                 runtime
-                    .refetch_friend_profile(active, user_id, expected_sequence)
+                    .refetch_friend_profile(active, user_id, expected_rev)
                     .await;
             });
         }
@@ -466,7 +475,7 @@ impl RealtimeHostRuntime {
         self: Arc<Self>,
         active: ActiveRealtimeContext,
         user_id: String,
-        expected_sequence: u64,
+        expected_rev: u64,
     ) {
         {
             let state = match self.state.lock() {
@@ -527,42 +536,7 @@ impl RealtimeHostRuntime {
             );
             return;
         }
-        let applied = {
-            let owner = self.lock_friend_owner();
-            {
-                let state = match self.state.lock() {
-                    Ok(state) => state,
-                    Err(error) => {
-                        tracing::warn!("realtime state lock failed: {error}");
-                        return;
-                    }
-                };
-                if !self.is_message_current_locked(
-                    &state,
-                    active.generation,
-                    active.session_generation,
-                    &active.session,
-                ) {
-                    return;
-                }
-            }
-            match self.friends.apply_refetched_user_profile_if_sequence(
-                active.generation,
-                &user_id,
-                expected_sequence,
-                profile,
-                &chrono::Utc::now().to_rfc3339(),
-            ) {
-                RealtimeFriendApplyResult::Output(output) => {
-                    self.apply_friend_output_owned(&owner, *output);
-                    true
-                }
-                RealtimeFriendApplyResult::MissingBaseline | RealtimeFriendApplyResult::Ignored => {
-                    false
-                }
-            }
-        };
-        if applied {
+        if self.apply_refetched_friend_profile(&active, &user_id, expected_rev, profile) {
             self.user_query_cache
                 .invalidate_user(&active.session.endpoint, &user_id)
                 .await;

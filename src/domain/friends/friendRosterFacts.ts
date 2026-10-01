@@ -8,8 +8,7 @@ const FACT_DERIVED_FIELDS = [
     '$trustSortNum',
     '$isModerator',
     '$isTroll',
-    '$isProbableTroll',
-    '$platform'
+    '$isProbableTroll'
 ] as const;
 
 function applyFactDerivedFields(

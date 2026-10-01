@@ -231,8 +231,6 @@ export function useWorldDialogCurrentInstance({
                 if (isCurrentLiveInstance) {
                     recordGameRuntimePresence({
                         endpoint: currentEndpoint,
-                        currentUserId,
-                        currentUserSnapshot,
                         currentLocation: normalizedWorldId,
                         currentLocationStartedAt:
                             currentLocationStartedAt ||

@@ -3,12 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
 import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
+import { localGameLocation } from '@/domain/friends/presence';
+import { resolveObservedPlayerUserIds } from '@/domain/friends/sameInstanceFriends';
 import { recordKnownUser } from '@/services/domainIngestionService';
 import { userImage } from '@/services/entityMediaService';
 import { subscribeRecentActions } from '@/services/recentActionService';
 import { dialogTargetKey } from '@/services/userDialogSessionCacheService';
 import { isRecord } from '@/shared/utils/record';
 import { useDialogStore } from '@/state/dialogStore';
+import { useFriendLocationTimeStore } from '@/state/friendLocationTimeStore';
 
 import { UserDialogContentDialogs } from './user-dialog/components/UserDialogContentDialogs';
 import {
@@ -144,7 +147,6 @@ export function UserDialogContent({
     } = useUserDialogProfileResource({
         currentEndpoint,
         currentUserSnapshot,
-        gameState,
         isFriend: isKnownFriend,
         isTargetCurrentUser,
         activitySnapshot,
@@ -164,15 +166,16 @@ export function UserDialogContent({
     }, [targetIdentity]);
 
     const currentGameLocation = normalizeUserId(gameState?.currentLocation);
-    const currentGameDestination = normalizeUserId(
-        gameState?.currentDestination
-    );
     const currentSnapshotLocation = normalizeUserId(
         currentUserSnapshot?.$locationTag || currentUserSnapshot?.location
+    );
+    const localLocation = useFriendLocationTimeStore((state) =>
+        localGameLocation(state.byUserId[normalizedUserId])
     );
     const presenceLocation = resolveUserDialogTargetPresenceLocation({
         profile,
         targetUserId: normalizedUserId,
+        localLocation,
         currentLocation: currentGameLocation || currentSnapshotLocation,
         currentLocationPlayerIds: gameState?.currentLocationPlayerIds,
         currentLocationPlayers: gameState?.currentLocationPlayers,
@@ -232,11 +235,13 @@ export function UserDialogContent({
     } = useUserDialogSupplementalData({
         activeUserTargetRef,
         currentEndpoint,
-        currentGameDestination,
-        currentGameLocation,
-        currentSnapshotLocation,
         currentUserId,
         currentUserSnapshot,
+        inCurrentWorld: resolveObservedPlayerUserIds(
+            gameState?.currentLocationPlayerIds,
+            gameState?.currentLocationPlayers,
+            friendsById
+        ).includes(normalizedUserId),
         isTargetCurrentUser,
         normalizedUserId,
         openNonce,
@@ -279,9 +284,7 @@ export function UserDialogContent({
         }
     }, [currentEndpoint, isCurrentUser, isFriend, profile]);
     const friendRequestState = resolveFriendRequestState(profile);
-    const platform = resolvePlatformMeta(
-        profile?.$platform || profile?.platform || profile?.last_platform
-    );
+    const platform = resolvePlatformMeta(profile?.$platform);
     const PlatformIcon = platform.icon;
     const imageUrl = userImage(profile, 512);
     const { memo, editMemo, memoDialog } = useUserDialogMemoState({

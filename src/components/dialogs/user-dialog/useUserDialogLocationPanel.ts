@@ -14,7 +14,6 @@ import {
     mergeInstanceUser as mergeLocationUser,
     mergeInstanceUserRows as mergeLocationUserRows,
     pushInstanceUserSource as pushLocationUserSource,
-    resolvePresenceLocation,
     userDisplayName,
     type InstanceRosterRow
 } from '@/domain/instances/instanceRoster';
@@ -27,14 +26,16 @@ import {
     recordLocationHintsFromInstances
 } from '@/services/domainIngestionService';
 import { hasUserIdPrefix } from '@/shared/constants/vrchatIds';
-import { checkCanInvite } from '@/shared/utils/invite';
+import {
+    checkCanInvite,
+    resolveCurrentInviteLocation
+} from '@/shared/utils/invite';
 import { parseLocation } from '@/shared/utils/location';
 import { normalizeString } from '@/shared/utils/string';
 
 import {
     buildCachedInstanceMap,
-    locationCacheKey,
-    resolveCurrentInviteLocation
+    locationCacheKey
 } from './userDialogContentHelpers';
 import {
     loadLocationOwner,
@@ -42,10 +43,7 @@ import {
     resolveOwnerId,
     resolveOwnerSeed
 } from './userDialogLocationOwner';
-import {
-    filterVisibleUserDialogLocationUsers,
-    shouldIncludeUserDialogLocationFriend
-} from './userDialogLocationUsers';
+import { filterVisibleUserDialogLocationUsers } from './userDialogLocationUsers';
 import { normalizeUserId } from './userProfileFields';
 
 const locationUserProfileFetchConcurrency = 4;
@@ -275,8 +273,7 @@ export function useUserDialogLocationPanel({
     useEffect(() => {
         let active = true;
 
-        const activeLocation =
-            presenceLocation || resolvePresenceLocation(profile);
+        const activeLocation = presenceLocation;
         const parsedLocation = parseLocation(activeLocation);
         if (
             !profile?.id ||
@@ -365,15 +362,6 @@ export function useUserDialogLocationPanel({
             if (!userIsAtLocation(friend)) {
                 continue;
             }
-            if (
-                !shouldIncludeUserDialogLocationFriend({
-                    currentLocationMatches,
-                    currentLocationPlayerIds,
-                    friend
-                })
-            ) {
-                continue;
-            }
             const friendId = locationUserId(friend);
             if (friendId) {
                 visibleFriendIds.add(friendId);
@@ -381,33 +369,19 @@ export function useUserDialogLocationPanel({
             mergeLocationUser(rowsById, friend);
         }
 
-        const locationMetadata = record(profile?.$location);
-        pushLocationUserSource(
-            [
-                locationMetadata.users,
-                locationMetadata.players,
-                locationMetadata.friends
-            ],
-            (user) => mergeLocationUser(rowsById, user)
-        );
-
         const canFetchInstance = Boolean(
             parsedLocation.worldId && parsedLocation.instanceId
         );
         const ownerId = resolveOwnerId(
-            locationMetadata,
+            null,
             parsedLocation.userId,
             parsedLocation.groupId
         );
-        const ownerSeed = resolveOwnerSeed(
-            locationMetadata,
-            ownerId,
-            knownUsersById
-        );
+        const ownerSeed = resolveOwnerSeed(null, ownerId, knownUsersById);
         const ownerPromise = loadLocationOwner({
             ownerId,
             ownerSeed,
-            groupFallback: resolveGroupFallback(locationMetadata, ownerId)
+            groupFallback: resolveGroupFallback(null, ownerId)
         });
         let instancePromise: Promise<Record<string, unknown> | null>;
         if (canFetchInstance) {
@@ -517,21 +491,17 @@ export function useUserDialogLocationPanel({
                         endpoint: currentEndpoint,
                         instances: [
                             {
-                                ...locationMetadata,
+                                ...parsedLocation,
                                 ...instance,
                                 location: activeLocation,
                                 worldId: parsedLocation.worldId,
                                 instanceId: parsedLocation.instanceId,
-                                users:
-                                    instance?.users ||
-                                    locationMetadata.users ||
-                                    locationMetadata.friends,
+                                users: instance?.users,
                                 players:
                                     instance?.players ||
                                     (snapshotPlayers.length
                                         ? snapshotPlayers
-                                        : null) ||
-                                    locationMetadata.players,
+                                        : undefined),
                                 usersById: instance?.usersById,
                                 userIds: instance?.userIds
                             }
@@ -544,8 +514,6 @@ export function useUserDialogLocationPanel({
                     if (currentLocationMatches) {
                         recordGameRuntimePresence({
                             endpoint: currentEndpoint,
-                            currentUserId: normalizedCurrentUserId,
-                            currentUserSnapshot,
                             currentLocation: snapshotLocation,
                             currentLocationStartedAt:
                                 gameState?.currentLocationStartedAt ||
@@ -554,8 +522,7 @@ export function useUserDialogLocationPanel({
                             currentLocationPlayers: snapshotPlayers,
                             currentWorldName:
                                 playerSnapshot?.context?.worldName ||
-                                normalizeString(instance?.worldName) ||
-                                normalizeString(locationMetadata.worldName)
+                                normalizeString(instance?.worldName)
                         });
                     }
 
@@ -699,8 +666,7 @@ export function useUserDialogLocationPanel({
     ]);
 
     function refreshLocationPanel(requestLocation: string): void {
-        const activeLocation =
-            presenceLocation || resolvePresenceLocation(profile);
+        const activeLocation = presenceLocation;
         if (
             requestLocation &&
             activeLocation &&

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useFriendLocationTimeStore } from '@/state/friendLocationTimeStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
+import { offlinePresence, onlinePresence } from '@/test/presenceFixtures';
 
 const mocks = vi.hoisted(() => ({
     openRow: vi.fn()
@@ -79,12 +80,10 @@ import { EntityList } from './UserDialogEntityList';
 function seedInstanceDwell(userId: string) {
     useFriendRosterStore.getState().applyFriendPatch({
         userId,
+        presence: { rev: 1, view: onlinePresence('wrld_test:1') },
         patch: {
-            id: userId,
-            state: 'online',
-            location: 'wrld_test:1'
-        },
-        stateBucketAuthority: 'explicit'
+            id: userId
+        }
     });
     useFriendLocationTimeStore.getState().replaceSnapshot([
         {
@@ -161,13 +160,11 @@ describe('UserDialog EntityList', () => {
     it('shows the instance timer instead of the status signature', () => {
         useFriendRosterStore.getState().applyFriendPatch({
             userId: 'usr_friend',
+            presence: { rev: 1, view: onlinePresence('wrld_test:1') },
             patch: {
                 id: 'usr_friend',
-                displayName: 'Friend',
-                state: 'online',
-                location: 'wrld_test:1'
-            },
-            stateBucketAuthority: 'explicit'
+                displayName: 'Friend'
+            }
         });
         useFriendLocationTimeStore.getState().replaceSnapshot([
             {
@@ -184,8 +181,7 @@ describe('UserDialog EntityList', () => {
                     {
                         id: 'usr_friend',
                         displayName: 'Friend',
-                        state: 'online',
-                        location: 'wrld_test:1',
+                        $presence: onlinePresence('wrld_test:1'),
                         statusDescription: 'World hopping'
                     }
                 ]}
@@ -200,13 +196,11 @@ describe('UserDialog EntityList', () => {
     it('uses the displayed instance for an online friend with a hidden presence location', () => {
         useFriendRosterStore.getState().applyFriendPatch({
             userId: 'usr_friend',
+            presence: { rev: 1, view: onlinePresence('private') },
             patch: {
                 id: 'usr_friend',
-                displayName: 'Friend',
-                state: 'online',
-                location: 'private'
-            },
-            stateBucketAuthority: 'explicit'
+                displayName: 'Friend'
+            }
         });
         useFriendLocationTimeStore.getState().replaceSnapshot([
             {
@@ -223,8 +217,7 @@ describe('UserDialog EntityList', () => {
                     {
                         id: 'usr_friend',
                         displayName: 'Friend',
-                        state: 'online',
-                        location: 'private',
+                        $presence: onlinePresence('private'),
                         statusDescription: 'Do not disturb'
                     }
                 ]}
@@ -250,8 +243,7 @@ describe('UserDialog EntityList', () => {
                         $isInstanceCreator: true,
                         $subtitle: 'dialog.user.info.instance_creator',
                         statusDescription: 'Friend signature',
-                        state: 'online',
-                        location: 'wrld_test:1'
+                        $presence: onlinePresence('wrld_test:1')
                     }
                 ]}
                 showInstanceDuration
@@ -280,8 +272,7 @@ describe('UserDialog EntityList', () => {
                         isFriend: false,
                         $isInstanceCreator: true,
                         statusDescription: 'Owner signature',
-                        state: 'online',
-                        location: 'wrld_test:1'
+                        $presence: onlinePresence('wrld_test:1')
                     }
                 ]}
                 showInstanceDuration
@@ -309,7 +300,7 @@ describe('UserDialog EntityList', () => {
                         isFriend: false,
                         $isInstanceCreator: true,
                         statusDescription: '',
-                        state: 'offline'
+                        $presence: offlinePresence
                     }
                 ]}
                 showInstanceDuration

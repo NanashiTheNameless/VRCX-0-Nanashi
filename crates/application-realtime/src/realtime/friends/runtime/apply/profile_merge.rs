@@ -1,87 +1,19 @@
 use serde_json::{Map, Value};
-use vrcx_0_application_core::{FriendProjectionPatch, FriendStateBucketAuthority};
 use vrcx_0_core::friends::{FriendRecord, OptionalCompactString};
-
-use super::super::utils::parse_location;
 use vrcx_0_core::json::JsonExt;
 
-#[derive(Clone, Debug)]
-pub(in crate::realtime::friends::runtime) enum FriendRecordPatch {
-    Fields(Map<String, Value>),
-    Full(Box<FriendRecord>),
-}
-
-impl FriendRecordPatch {
-    pub(in crate::realtime::friends::runtime) fn from_value(value: &Value) -> Self {
-        Self::Fields(value.as_object().cloned().unwrap_or_default())
-    }
-
-    pub(in crate::realtime::friends::runtime) fn from_record(record: &FriendRecord) -> Self {
-        Self::Full(Box::new(record.clone()))
-    }
-
-    pub(in crate::realtime::friends::runtime) fn set_pending_offline(
-        &mut self,
-        pending_offline: bool,
-    ) {
-        let extra = match self {
-            Self::Fields(fields) => fields,
-            Self::Full(record) => &mut record.extra,
-        };
-        extra.insert("pendingOffline".into(), Value::Bool(pending_offline));
-    }
-
-    fn apply_to(&self, target: &mut FriendRecord) {
-        match self {
-            Self::Fields(fields) => apply_fields(target, fields),
-            Self::Full(record) => {
-                let previous_dates = OPTIONAL_FIELDS
-                    .iter()
-                    .map(|field| (field.get)(target).clone())
-                    .collect::<Vec<_>>();
-                let mut existing_extra = std::mem::take(&mut target.extra);
-                *target = record.as_ref().clone();
-                for (field, previous) in OPTIONAL_FIELDS.iter().zip(previous_dates) {
-                    if (field.get)(target).is_missing() {
-                        (field.set)(target, previous);
-                    }
-                }
-                existing_extra.extend(std::mem::take(&mut target.extra));
-                target.extra = existing_extra;
-            }
-        }
-    }
-}
-
-pub(super) struct FriendRecordTransition {
-    pub(super) next: FriendRecord,
-    pub(super) projection: FriendProjectionPatch,
-    pub(super) was_traveling: bool,
-}
-
-pub(super) fn apply_friend_patch(
+pub(in crate::realtime::friends::runtime) fn merge_profile(
     previous: Option<&FriendRecord>,
     user_id: &str,
-    patch: &FriendRecordPatch,
-    state_bucket: &str,
-    state_bucket_authority: FriendStateBucketAuthority,
-) -> FriendRecordTransition {
+    patch: &Value,
+) -> FriendRecord {
     let mut next = previous.cloned().unwrap_or_default();
-    let was_traveling = parse_location(&next.location).is_traveling;
-    patch.apply_to(&mut next);
-    next.id = user_id.to_string();
-    next.state = state_bucket.into();
-    sanitize_extra(&mut next);
-
-    FriendRecordTransition {
-        projection: FriendProjectionPatch {
-            user_id: user_id.to_string(),
-            patch: next.clone(),
-            state_bucket_authority,
-        },
-        next,
-        was_traveling,
+    if let Some(fields) = patch.as_object() {
+        apply_fields(&mut next, fields);
     }
+    next.id = user_id.to_string();
+    sanitize_extra(&mut next);
+    next
 }
 
 struct NamedField {
@@ -105,31 +37,6 @@ const NAMED_FIELDS: &[NamedField] = &[
         keys: &["username"],
         get: |record| &record.username,
         set: |record, value| record.username = value.into(),
-    },
-    NamedField {
-        keys: &["state"],
-        get: |record| &record.state,
-        set: |record, value| record.state = value.into(),
-    },
-    NamedField {
-        keys: &["location"],
-        get: |record| &record.location,
-        set: |record, value| record.location = value.into(),
-    },
-    NamedField {
-        keys: &["travelingToLocation"],
-        get: |record| &record.traveling_to_location,
-        set: |record, value| record.traveling_to_location = value.into(),
-    },
-    NamedField {
-        keys: &["worldId"],
-        get: |record| &record.world_id,
-        set: |record, value| record.world_id = value.into(),
-    },
-    NamedField {
-        keys: &["platform"],
-        get: |record| &record.platform,
-        set: |record, value| record.platform = value.into(),
     },
     NamedField {
         keys: &["lastPlatform", "last_platform"],
@@ -285,74 +192,32 @@ mod tests {
     }
 
     #[test]
-    fn transition_normalizes_aliases_and_preserves_unknown_fields() {
+    fn merge_normalizes_aliases_and_preserves_unknown_fields() {
         let previous = FriendRecord {
             id: "usr_x".into(),
-            state: "active".into(),
-            location: "offline".into(),
             status_description: "hi".into(),
             date_joined: "2026-01-01".into(),
             last_activity: "2026-01-02T03:04:05.000Z".into(),
             ..FriendRecord::default()
         };
-        let patch = FriendRecordPatch::from_value(&json!({
-            "last_platform": "standalonewindows",
-            "location": "traveling",
-            "statusDescription": Value::Null,
-            "last_activity": null,
-            "last_login": "2026-01-03T03:04:05.000Z",
-            "$location": { "tag": "traveling" }
-        }));
-        let transition = apply_friend_patch(
+        let next = merge_profile(
             Some(&previous),
             "usr_x",
-            &patch,
-            "online",
-            FriendStateBucketAuthority::Explicit,
+            &json!({
+                "last_platform": "standalonewindows",
+                "statusDescription": Value::Null,
+                "last_activity": null,
+                "last_login": "2026-01-03T03:04:05.000Z",
+                "bannerColor": "red"
+            }),
         );
 
-        assert_eq!(transition.next.last_platform, "standalonewindows");
-        assert_eq!(transition.next.location, "traveling");
-        assert_eq!(transition.next.status_description, "hi");
-        assert_eq!(transition.next.date_joined.as_str(), Some("2026-01-01"));
-        assert!(transition.next.last_activity.is_null());
-        assert_eq!(
-            transition.next.last_login.as_str(),
-            Some("2026-01-03T03:04:05.000Z")
-        );
-        assert_eq!(transition.next.extra["$location"]["tag"], "traveling");
-        assert!(transition
-            .projection
-            .patch
-            .extra
-            .get("last_platform")
-            .is_none());
-    }
-
-    #[test]
-    fn full_record_patch_preserves_dates_missing_from_replacement() {
-        let previous = FriendRecord {
-            state: "active".into(),
-            id: "usr_x".into(),
-            date_joined: "2026-01-01".into(),
-            last_login: "2026-01-02T03:04:05.000Z".into(),
-            ..FriendRecord::default()
-        };
-        let replacement = FriendRecord {
-            id: "usr_x".into(),
-            last_login: OptionalCompactString::null(),
-            ..FriendRecord::default()
-        };
-
-        let transition = apply_friend_patch(
-            Some(&previous),
-            "usr_x",
-            &FriendRecordPatch::from_record(&replacement),
-            "offline",
-            FriendStateBucketAuthority::Explicit,
-        );
-
-        assert_eq!(transition.next.date_joined.as_str(), Some("2026-01-01"));
-        assert!(transition.next.last_login.is_null());
+        assert_eq!(next.last_platform, "standalonewindows");
+        assert_eq!(next.status_description, "hi");
+        assert_eq!(next.date_joined.as_str(), Some("2026-01-01"));
+        assert!(next.last_activity.is_null());
+        assert_eq!(next.last_login.as_str(), Some("2026-01-03T03:04:05.000Z"));
+        assert_eq!(next.extra["bannerColor"], "red");
+        assert!(next.extra.get("last_platform").is_none());
     }
 }

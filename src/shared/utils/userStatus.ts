@@ -1,4 +1,4 @@
-import { hasWorldIdPrefix } from '@/shared/constants/vrchatIds';
+import { presenceOf, presenceStatusKey } from '@/domain/friends/presence';
 
 type UserStatusSource = Record<string, unknown>;
 
@@ -47,69 +47,10 @@ function resolveUserPresenceStatus(value: unknown) {
         return normalizePresenceText(value);
     }
     const record = asUserStatusSource(value);
-    const source = asUserStatusSource(
-        record.ref && typeof record.ref === 'object' ? record.ref : record
-    );
-    if (record.pendingOffline || source?.pendingOffline) {
-        return 'offline';
-    }
-    const lastLocation =
-        record.lastLocation ||
-        record.last_location ||
-        record.$lastLocation ||
-        source?.lastLocation ||
-        source?.last_location ||
-        source?.$lastLocation;
-    const recordLocation = asUserStatusSource(record.$location);
-    const sourceLocation = asUserStatusSource(source.$location);
-    const lastLocationRecord = asUserStatusSource(lastLocation);
-    const status = normalizePresenceText(record.status || source?.status);
-    const state = normalizePresenceText(record.state || source?.state);
-    const location = normalizePresenceText(
-        record.location ||
-            recordLocation.tag ||
-            record.$locationTag ||
-            source?.location ||
-            sourceLocation.tag ||
-            source?.$locationTag ||
-            (typeof lastLocation === 'string'
-                ? lastLocation
-                : lastLocationRecord.location ||
-                  lastLocationRecord.tag ||
-                  asUserStatusSource(lastLocationRecord.$location).tag)
-    );
-    if (state === 'offline' || status === 'offline' || location === 'offline') {
-        return 'offline';
-    }
-    if (
-        !status &&
-        !state &&
-        (location === 'private' || location === 'traveling')
-    ) {
-        return location;
-    }
-    if (status === 'join me') {
-        return 'join me';
-    }
-    if (status === 'ask me') {
-        return 'ask me';
-    }
-    if (status === 'busy') {
-        return 'busy';
-    }
-    if (state === 'active') {
-        return 'state-active';
-    }
-    if (state === 'online') {
-        return 'active';
-    }
-    if (status === 'active') {
-        return 'active';
-    }
-    if (hasWorldIdPrefix(location)) {
-        return 'active';
-    }
-    return status || state;
+    const presence = presenceOf(record);
+    return presence
+        ? presenceStatusKey(presence, record.status)
+        : normalizePresenceText(record.status);
 }
 
 function userStatusIndicatorClassName(
@@ -150,9 +91,6 @@ function userStatusSortRank(value: unknown) {
     if (status === 'active') {
         return 1;
     }
-    if (status === 'state-active') {
-        return 4;
-    }
     if (status === 'ask me') {
         return 2;
     }
@@ -161,9 +99,6 @@ function userStatusSortRank(value: unknown) {
     }
     if (status === 'offline') {
         return 5;
-    }
-    if (status === 'private' || status === 'traveling') {
-        return 4;
     }
     return 4;
 }
@@ -190,8 +125,19 @@ const statusLabelFallbacks: Readonly<Record<string, string>> = Object.freeze({
     traveling: 'Traveling'
 });
 
-function userStatusLabel(value: unknown, t?: TranslateFn) {
+function labelStatus(value: unknown) {
     const status = resolveUserPresenceStatus(value);
+    return status !== 'offline' && presenceOf(value)?.kind === 'active'
+        ? 'state-active'
+        : status;
+}
+
+function userStatusLabelKey(value: unknown): string {
+    return statusLabelKeys[labelStatus(value)] ?? '';
+}
+
+function userStatusLabel(value: unknown, t?: TranslateFn) {
+    const status = labelStatus(value);
     if (!status) {
         return '';
     }
@@ -207,5 +153,6 @@ export {
     resolveUserPresenceStatus,
     userStatusIndicatorClassName,
     userStatusLabel,
+    userStatusLabelKey,
     userStatusSortRank
 };

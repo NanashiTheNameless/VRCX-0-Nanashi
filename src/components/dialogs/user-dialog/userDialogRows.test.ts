@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { useShellStore } from '@/state/shellStore';
+import { activePresence } from '@/test/presenceFixtures';
 
 import {
     groupIdForRow,
@@ -361,10 +362,16 @@ describe('userDialogRows', () => {
         ).toBe('World');
         expect(worldOccupantSubtitle({ occupants: 12 })).toBe('(12)');
         expect(
-            resolveStatusStateText({ state: 'active', status: 'join me' })
+            resolveStatusStateText({
+                $presence: activePresence(),
+                status: 'join me'
+            })
         ).toBe('active / join me');
         expect(
-            resolveStatusStateText({ state: 'active', status: 'active' })
+            resolveStatusStateText({
+                $presence: activePresence(),
+                status: 'active'
+            })
         ).toBe('active');
         expect(
             resolveTabValue([{ value: 'info' }, { value: 'groups' }], 'groups')

@@ -3,17 +3,13 @@ import type {
     RealtimeWsStatusPayload,
     RuntimeVrchatAuthFailurePayload
 } from '@/platform/tauri/bindings';
-import { isRecord } from '@/shared/utils/record';
 import { normalizeVrchatEndpointKey } from '@/shared/vrchatEndpoint';
 import { useFavoriteStore } from '@/state/favoriteStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useSessionStore } from '@/state/sessionStore';
 
-import {
-    normalizeFriendsById,
-    normalizeStringArray
-} from './friendBootstrapModel';
+import { rosterSnapshotInput } from './friendBootstrapModel';
 import { signalFriendLogChanged } from './friendLogMutationService';
 import { flushRealtimeRosterUpdates } from './realtimeRosterUpdateQueue';
 import { syncStartupServicesTask } from './startupServicesStatus';
@@ -84,7 +80,7 @@ function applyFriendStep(snapshot: AuthenticatedRuntimePhaseSnapshot): void {
     }
 
     const output = snapshot.friendBaseline;
-    const baseline = isRecord(output?.snapshot) ? output.snapshot : null;
+    const baseline = output?.snapshot ?? null;
     const baselineKey = `${snapshot.runId}:${snapshot.friendBaselineRevision}`;
     if (
         snapshot.friends.status !== 'ready' ||
@@ -95,15 +91,15 @@ function applyFriendStep(snapshot: AuthenticatedRuntimePhaseSnapshot): void {
     }
 
     flushRealtimeRosterUpdates();
-    useFriendRosterStore.getState().setRosterSnapshot({
-        currentUserId: snapshot.userId,
-        friendsById: normalizeFriendsById(baseline.friendsById),
-        orderedFriendIds: normalizeStringArray(baseline.orderedFriendIds),
-        onlineIds: normalizeStringArray(baseline.onlineIds),
-        activeIds: normalizeStringArray(baseline.activeIds),
-        offlineIds: normalizeStringArray(baseline.offlineIds),
-        detail: output?.detail || snapshot.friends.detail
-    });
+    useFriendRosterStore
+        .getState()
+        .setRosterSnapshot(
+            rosterSnapshotInput(
+                snapshot.userId,
+                baseline,
+                output?.detail || snapshot.friends.detail
+            )
+        );
     useSessionStore.getState().setFriendsLoaded(true);
     if (output?.friendLogChanged) {
         signalFriendLogChanged();

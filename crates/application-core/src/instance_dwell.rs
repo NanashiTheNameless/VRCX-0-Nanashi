@@ -4,7 +4,6 @@ use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
 use vrcx_0_contracts::InstanceRosterSnapshot;
-use vrcx_0_core::friends::{FriendRecord, StateBucket};
 use vrcx_0_core::location::parse_location;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type)]
@@ -21,6 +20,13 @@ pub struct FriendLocationTime {
 pub enum FriendLocationTimeSource {
     GameLog,
     Realtime,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FriendPlace {
+    Present { location: String, since_ms: i64 },
+    Traveling { destination: String, since_ms: i64 },
+    Elsewhere { location: String },
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -79,62 +85,35 @@ fn normalized(value: &str) -> &str {
     value.trim()
 }
 
-fn is_pending_offline(record: &FriendRecord) -> bool {
-    record
-        .extra
-        .get("pendingOffline")
-        .and_then(serde_json::Value::as_bool)
-        .unwrap_or(false)
-}
-
-fn observed_entry(record: &FriendRecord, observed_ms: i64) -> FriendLocationEntry {
-    if !StateBucket::Online.matches(&record.state) {
-        return FriendLocationEntry {
-            location: normalized(&record.location).to_string(),
-            since_ms: None,
-            phase: FriendLocationPhase::Inactive,
-            local_conflict: false,
-        };
-    }
-
-    let parsed = parse_location(&record.location);
-    if parsed.is_traveling {
-        let location = normalized(&record.traveling_to_location).to_string();
-        return FriendLocationEntry {
-            since_ms: (!location.is_empty()).then_some(observed_ms),
-            location,
-            phase: FriendLocationPhase::Traveling,
-            local_conflict: false,
-        };
-    }
-    if parsed.is_real_instance {
-        return FriendLocationEntry {
-            location: normalized(&record.location).to_string(),
-            since_ms: Some(observed_ms),
-            phase: FriendLocationPhase::Present,
-            local_conflict: false,
-        };
-    }
-
+fn observed_entry(place: &FriendPlace) -> FriendLocationEntry {
+    let (location, since_ms, phase) = match place {
+        FriendPlace::Present { location, since_ms } => (
+            location.as_str(),
+            Some(*since_ms),
+            FriendLocationPhase::Present,
+        ),
+        FriendPlace::Traveling {
+            destination,
+            since_ms,
+        } => (
+            destination.as_str(),
+            (!destination.trim().is_empty()).then_some(*since_ms),
+            FriendLocationPhase::Traveling,
+        ),
+        FriendPlace::Elsewhere { location } => {
+            (location.as_str(), None, FriendLocationPhase::Inactive)
+        }
+    };
     FriendLocationEntry {
-        location: normalized(&record.location).to_string(),
-        since_ms: None,
-        phase: FriendLocationPhase::Inactive,
+        location: normalized(location).to_string(),
+        since_ms,
+        phase,
         local_conflict: false,
     }
 }
 
-fn update_friend_entry(
-    state: &mut InstanceDwellState,
-    user_id: &str,
-    record: &FriendRecord,
-    observed_ms: i64,
-) {
-    if is_pending_offline(record) && state.friends.contains_key(user_id) {
-        return;
-    }
-
-    let mut next = observed_entry(record, observed_ms);
+fn update_friend_entry(state: &mut InstanceDwellState, user_id: &str, place: &FriendPlace) {
+    let mut next = observed_entry(place);
     next.local_conflict = state.local_roster.joins.contains_key(user_id)
         && state.local_roster.location != next.location;
     if let Some(previous) = state.friends.get(user_id) {
@@ -276,8 +255,7 @@ impl InstanceDwellRegistry {
 
     pub fn sync_friends(
         &self,
-        friends_by_id: &HashMap<String, FriendRecord>,
-        observed_ms: i64,
+        friends_by_id: &HashMap<String, FriendPlace>,
     ) -> Option<Vec<FriendLocationTime>> {
         let mut state = self.state.lock().unwrap_or_else(|error| error.into_inner());
         let previous = snapshot_locked(&state);
@@ -288,18 +266,17 @@ impl InstanceDwellRegistry {
             .local_roster
             .arrival_starts
             .retain(|user_id, _| friends_by_id.contains_key(user_id));
-        for (user_id, record) in friends_by_id {
-            update_friend_entry(&mut state, user_id, record, observed_ms);
+        for (user_id, place) in friends_by_id {
+            update_friend_entry(&mut state, user_id, place);
         }
         let next = snapshot_locked(&state);
         (next != previous).then_some(next)
     }
 
-    pub fn observe_friend_record(
+    pub fn observe_friend(
         &self,
         user_id: &str,
-        record: &FriendRecord,
-        observed_ms: i64,
+        place: &FriendPlace,
     ) -> Option<Vec<FriendLocationTime>> {
         let user_id = normalized(user_id);
         if user_id.is_empty() {
@@ -307,7 +284,7 @@ impl InstanceDwellRegistry {
         }
         let mut state = self.state.lock().unwrap_or_else(|error| error.into_inner());
         let previous = snapshot_locked(&state);
-        update_friend_entry(&mut state, user_id, record, observed_ms);
+        update_friend_entry(&mut state, user_id, place);
         let next = snapshot_locked(&state);
         (next != previous).then_some(next)
     }
@@ -383,6 +360,9 @@ impl vrcx_0_contracts::InstanceRosterObserver for InstanceDwellRegistry {
 mod tests {
     use super::*;
     use vrcx_0_contracts::InstanceRosterMember;
+    use vrcx_0_core::friends::{
+        FriendBaselineEntry, FriendBaselinePresence, FriendRecord, StateBucket,
+    };
 
     fn roster(location: &str, members: &[(&str, i64)]) -> InstanceRosterSnapshot {
         InstanceRosterSnapshot {
@@ -403,12 +383,49 @@ mod tests {
         }
     }
 
-    fn friend(user_id: &str, state: &str, location: &str) -> FriendRecord {
-        FriendRecord {
-            id: user_id.to_string(),
-            state: state.into(),
-            location: location.to_string(),
-            ..FriendRecord::default()
+    fn place_from_record(entry: &FriendBaselineEntry, observed_ms: i64) -> FriendPlace {
+        let record = &entry.presence;
+        let parsed = parse_location(&record.location);
+        if StateBucket::normalize(&record.state) != Some(StateBucket::Online)
+            || !(parsed.is_traveling || parsed.is_real_instance)
+        {
+            return FriendPlace::Elsewhere {
+                location: record.location.clone(),
+            };
+        }
+        if parsed.is_traveling {
+            return FriendPlace::Traveling {
+                destination: record.traveling_to_location.clone(),
+                since_ms: observed_ms,
+            };
+        }
+        FriendPlace::Present {
+            location: record.location.clone(),
+            since_ms: observed_ms,
+        }
+    }
+
+    fn places_from_records(
+        records: &HashMap<String, FriendBaselineEntry>,
+        observed_ms: i64,
+    ) -> HashMap<String, FriendPlace> {
+        records
+            .iter()
+            .map(|(user_id, record)| (user_id.clone(), place_from_record(record, observed_ms)))
+            .collect()
+    }
+
+    fn friend(user_id: &str, state: &str, location: &str) -> FriendBaselineEntry {
+        FriendBaselineEntry {
+            record: FriendRecord {
+                id: user_id.to_string(),
+                ..FriendRecord::default()
+            },
+            presence: FriendBaselinePresence {
+                state: state.into(),
+                location: location.to_string(),
+                ..FriendBaselinePresence::default()
+            },
         }
     }
 
@@ -433,7 +450,7 @@ mod tests {
             let started_at = 1_000;
             let entered_at = started_at + 30 * 60_000;
             let observed_join = entered_at + 12_000;
-            registry.observe_friend_record("usr_a", &record, started_at);
+            registry.observe_friend("usr_a", &place_from_record(&record, started_at));
             if publish_empty_roster_first {
                 registry.observe_roster(&entered_roster("wrld_a:1", entered_at, &[]));
             }
@@ -447,7 +464,7 @@ mod tests {
                 FriendLocationTimeSource::GameLog
             );
             registry.observe_roster(&local);
-            registry.observe_friend_record("usr_a", &record, observed_join + 60_000);
+            registry.observe_friend("usr_a", &place_from_record(&record, observed_join + 60_000));
             assert_eq!(registry.snapshot()[0].since_ms, Some(started_at));
             registry.observe_roster(&InstanceRosterSnapshot::default());
             assert_eq!(registry.snapshot()[0].since_ms, Some(started_at));
@@ -457,8 +474,14 @@ mod tests {
     #[test]
     fn inherited_local_start_is_stable_through_remote_changes_and_other_joins() {
         let registry = InstanceDwellRegistry::new();
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 1_000);
-        registry.observe_friend_record("usr_b", &friend("usr_b", "online", "wrld_b:2"), 1_000);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 1_000),
+        );
+        registry.observe_friend(
+            "usr_b",
+            &place_from_record(&friend("usr_b", "online", "wrld_b:2"), 1_000),
+        );
         registry.observe_roster(&entered_roster("wrld_a:1", 5_000, &[("usr_a", 6_000)]));
 
         for record in [
@@ -467,7 +490,7 @@ mod tests {
             friend("usr_a", "online", "wrld_b:2"),
             friend("usr_a", "online", "wrld_a:1"),
         ] {
-            registry.observe_friend_record("usr_a", &record, 9_000);
+            registry.observe_friend("usr_a", &place_from_record(&record, 9_000));
             registry.observe_roster(&entered_roster(
                 "wrld_a:1",
                 5_000,
@@ -483,7 +506,7 @@ mod tests {
     #[test]
     fn local_arrival_only_inherits_present_time_known_before_self_entry() {
         let mut traveling = friend("usr_a", "online", "traveling");
-        traveling.traveling_to_location = "wrld_a:1".into();
+        traveling.presence.traveling_to_location = "wrld_a:1".into();
         for (record, observed_at) in [
             (traveling, 1_000),
             (friend("usr_a", "online", "wrld_a:2"), 1_000),
@@ -493,14 +516,17 @@ mod tests {
             (friend("usr_a", "online", "wrld_a:1"), 5_001),
         ] {
             let registry = InstanceDwellRegistry::new();
-            registry.observe_friend_record("usr_a", &record, observed_at);
+            registry.observe_friend("usr_a", &place_from_record(&record, observed_at));
             registry.observe_roster(&entered_roster("wrld_a:1", 5_000, &[("usr_a", 6_000)]));
             assert_eq!(registry.snapshot()[0].since_ms, Some(6_000));
         }
 
         for entered_at in ["", "invalid"] {
             let registry = InstanceDwellRegistry::new();
-            registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 1_000);
+            registry.observe_friend(
+                "usr_a",
+                &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 1_000),
+            );
             registry.observe_roster(&InstanceRosterSnapshot {
                 entered_at: entered_at.into(),
                 ..roster("wrld_a:1", &[("usr_a", 6_000)])
@@ -513,10 +539,13 @@ mod tests {
     fn remote_departure_before_local_observation_cancels_the_arrival_start() {
         let registry = InstanceDwellRegistry::new();
         let record = friend("usr_a", "online", "wrld_a:1");
-        registry.observe_friend_record("usr_a", &record, 1_000);
+        registry.observe_friend("usr_a", &place_from_record(&record, 1_000));
         registry.observe_roster(&entered_roster("wrld_a:1", 5_000, &[]));
-        registry.observe_friend_record("usr_a", &friend("usr_a", "offline", "offline"), 5_100);
-        registry.observe_friend_record("usr_a", &record, 5_200);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "offline", "offline"), 5_100),
+        );
+        registry.observe_friend("usr_a", &place_from_record(&record, 5_200));
         registry.observe_roster(&entered_roster("wrld_a:1", 5_000, &[("usr_a", 6_000)]));
         assert_eq!(registry.snapshot()[0].since_ms, Some(6_000));
     }
@@ -525,7 +554,10 @@ mod tests {
     fn a_new_local_join_cannot_reuse_an_inherited_start() {
         for publish_leave_first in [false, true] {
             let registry = InstanceDwellRegistry::new();
-            registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 1_000);
+            registry.observe_friend(
+                "usr_a",
+                &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 1_000),
+            );
             registry.observe_roster(&entered_roster("wrld_a:1", 5_000, &[("usr_a", 6_000)]));
             assert_eq!(registry.snapshot()[0].since_ms, Some(1_000));
             if publish_leave_first {
@@ -540,7 +572,10 @@ mod tests {
     fn a_batched_departure_cancels_arrival_and_same_timestamp_rejoin_starts() {
         for observed_locally_first in [false, true] {
             let registry = InstanceDwellRegistry::new();
-            registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 1_000);
+            registry.observe_friend(
+                "usr_a",
+                &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 1_000),
+            );
             registry.observe_roster(&entered_roster("wrld_a:1", 5_000, &[]));
             if observed_locally_first {
                 registry.observe_roster(&entered_roster("wrld_a:1", 5_000, &[("usr_a", 6_000)]));
@@ -557,7 +592,10 @@ mod tests {
     #[test]
     fn self_reentry_to_the_same_instance_gets_a_new_arrival_context() {
         let registry = InstanceDwellRegistry::new();
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 1_000);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 1_000),
+        );
         registry.observe_roster(&entered_roster("wrld_a:1", 5_000, &[("usr_a", 6_000)]));
         registry.observe_roster(&entered_roster("wrld_a:1", 9_000, &[("usr_a", 10_000)]));
         assert_eq!(registry.snapshot()[0].since_ms, Some(1_000));
@@ -568,9 +606,9 @@ mod tests {
         for publish_self_leave_first in [false, true] {
             let registry = InstanceDwellRegistry::new();
             let record = friend("usr_a", "online", "wrld_b:2");
-            registry.observe_friend_record("usr_a", &record, 1_000);
+            registry.observe_friend("usr_a", &place_from_record(&record, 1_000));
             registry.observe_roster(&entered_roster("wrld_a:1", 5_000, &[("usr_a", 6_000)]));
-            registry.observe_friend_record("usr_a", &record, 7_000);
+            registry.observe_friend("usr_a", &place_from_record(&record, 7_000));
             if publish_self_leave_first {
                 registry.observe_roster(&roster("traveling", &[]));
             }
@@ -587,10 +625,10 @@ mod tests {
             if roster_first {
                 registry.observe_roster(&local);
             }
-            registry.sync_friends(
+            registry.sync_friends(&places_from_records(
                 &HashMap::from([("usr_a".into(), friend("usr_a", "online", "wrld_a:1"))]),
                 5_000,
-            );
+            ));
             registry.observe_roster(&local);
             assert_eq!(registry.snapshot()[0].since_ms, Some(2_000));
         }
@@ -599,7 +637,10 @@ mod tests {
     #[test]
     fn replayed_departures_cancel_arrival_starts_without_restarting_remote_time() {
         let registry = InstanceDwellRegistry::new();
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 1_000);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 1_000),
+        );
         registry.observe_roster(&InstanceRosterSnapshot {
             replayed_departed_user_ids: vec!["usr_a".into()],
             ..entered_roster("wrld_a:1", 5_000, &[])
@@ -614,21 +655,21 @@ mod tests {
         for removal in 0..3 {
             let registry = InstanceDwellRegistry::new();
             let record = friend("usr_a", "online", "wrld_a:1");
-            registry.observe_friend_record("usr_a", &record, 1_000);
+            registry.observe_friend("usr_a", &place_from_record(&record, 1_000));
             registry.observe_roster(&entered_roster("wrld_a:1", 5_000, &[]));
             match removal {
                 0 => {
                     registry.forget_friend("usr_a");
                 }
                 1 => {
-                    registry.sync_friends(&HashMap::new(), 5_100);
+                    registry.sync_friends(&places_from_records(&HashMap::new(), 5_100));
                 }
                 _ => {
                     registry.clear();
                     registry.observe_roster(&entered_roster("wrld_a:1", 5_000, &[]));
                 }
             }
-            registry.observe_friend_record("usr_a", &record, 5_200);
+            registry.observe_friend("usr_a", &place_from_record(&record, 5_200));
             registry.observe_roster(&entered_roster("wrld_a:1", 5_000, &[("usr_a", 6_000)]));
             assert_eq!(registry.snapshot()[0].since_ms, Some(6_000));
         }
@@ -648,7 +689,9 @@ mod tests {
             ),
         ]);
 
-        let snapshot = registry.sync_friends(&friends, 5_000).unwrap();
+        let snapshot = registry
+            .sync_friends(&places_from_records(&friends, 5_000))
+            .unwrap();
 
         assert_eq!(snapshot.len(), 2);
         assert_eq!(snapshot[0].user_id, "usr_offline");
@@ -657,17 +700,20 @@ mod tests {
         assert_eq!(snapshot[1].location, "wrld_a:1");
         assert_eq!(snapshot[1].since_ms, Some(5_000));
 
-        assert_eq!(registry.sync_friends(&HashMap::new(), 6_000), Some(vec![]));
+        assert_eq!(
+            registry.sync_friends(&places_from_records(&HashMap::new(), 6_000)),
+            Some(vec![])
+        );
     }
 
     #[test]
     fn repeated_observation_in_the_same_instance_keeps_the_start() {
         let registry = InstanceDwellRegistry::new();
         let record = friend("usr_a", "online", "wrld_a:1");
-        registry.observe_friend_record("usr_a", &record, 1_000);
+        registry.observe_friend("usr_a", &place_from_record(&record, 1_000));
 
         assert_eq!(
-            registry.observe_friend_record("usr_a", &record, 8_000),
+            registry.observe_friend("usr_a", &place_from_record(&record, 8_000)),
             None
         );
         assert_eq!(registry.snapshot()[0].since_ms, Some(1_000));
@@ -676,7 +722,10 @@ mod tests {
     #[test]
     fn local_mode_ignores_remote_location_and_state_changes() {
         let registry = InstanceDwellRegistry::new();
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 500);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 500),
+        );
         registry.observe_roster(&roster("wrld_a:1", &[("usr_a", 1_000)]));
 
         for record in [
@@ -684,7 +733,7 @@ mod tests {
             friend("usr_a", "offline", "offline"),
             friend("usr_a", "online", "wrld_b:2"),
         ] {
-            registry.observe_friend_record("usr_a", &record, 18_001_000);
+            registry.observe_friend("usr_a", &place_from_record(&record, 18_001_000));
             let snapshot = registry.snapshot();
             assert_eq!(snapshot[0].location, "wrld_a:1");
             assert_eq!(snapshot[0].since_ms, Some(1_000));
@@ -695,7 +744,7 @@ mod tests {
     fn local_mode_friend_leave_restarts_remote_time_without_another_ws_event() {
         let registry = InstanceDwellRegistry::new();
         let record = friend("usr_a", "online", "wrld_a:1");
-        registry.observe_friend_record("usr_a", &record, 500);
+        registry.observe_friend("usr_a", &place_from_record(&record, 500));
         registry.observe_roster(&roster("wrld_a:1", &[("usr_a", 1_000)]));
         let before_leave = chrono::Utc::now().timestamp_millis();
 
@@ -707,12 +756,11 @@ mod tests {
         let restarted_at = registry.snapshot()[0].since_ms.unwrap();
         assert!(restarted_at >= before_leave);
         assert!(restarted_at <= chrono::Utc::now().timestamp_millis());
-        registry.observe_friend_record("usr_a", &record, restarted_at + 5_000);
+        registry.observe_friend("usr_a", &place_from_record(&record, restarted_at + 5_000));
         assert_eq!(registry.snapshot()[0].since_ms, Some(restarted_at));
-        registry.observe_friend_record(
+        registry.observe_friend(
             "usr_a",
-            &friend("usr_a", "online", "wrld_b:2"),
-            restarted_at + 8_000,
+            &place_from_record(&friend("usr_a", "online", "wrld_b:2"), restarted_at + 8_000),
         );
         assert_eq!(registry.snapshot()[0].since_ms, Some(restarted_at + 8_000));
     }
@@ -729,7 +777,10 @@ mod tests {
             },
         ] {
             let registry = InstanceDwellRegistry::new();
-            registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 5_000);
+            registry.observe_friend(
+                "usr_a",
+                &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 5_000),
+            );
             registry.observe_roster(&roster("wrld_a:1", &[("usr_a", 1_000)]));
 
             registry.observe_roster(&next);
@@ -742,7 +793,10 @@ mod tests {
     #[test]
     fn local_mode_new_join_replaces_the_previous_visit_even_in_one_snapshot() {
         let registry = InstanceDwellRegistry::new();
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 500);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 500),
+        );
         registry.observe_roster(&roster("wrld_a:1", &[("usr_a", 1_000)]));
 
         registry.observe_roster(&roster("wrld_a:1", &[("usr_a", 20_000)]));
@@ -753,9 +807,15 @@ mod tests {
     #[test]
     fn moving_to_another_instance_restarts_the_timer() {
         let registry = InstanceDwellRegistry::new();
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 1_000);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 1_000),
+        );
         let snapshot = registry
-            .observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_b:2"), 7_000)
+            .observe_friend(
+                "usr_a",
+                &place_from_record(&friend("usr_a", "online", "wrld_b:2"), 7_000),
+            )
             .unwrap();
 
         assert_eq!(snapshot[0].location, "wrld_b:2");
@@ -766,14 +826,14 @@ mod tests {
     fn traveling_arrival_restarts_the_timer_even_for_the_same_target() {
         let registry = InstanceDwellRegistry::new();
         let mut traveling = friend("usr_a", "online", "traveling");
-        traveling.traveling_to_location = "wrld_a:1".to_string();
-        registry.observe_friend_record("usr_a", &traveling, 1_000);
+        traveling.presence.traveling_to_location = "wrld_a:1".to_string();
+        registry.observe_friend("usr_a", &place_from_record(&traveling, 1_000));
         assert_eq!(registry.snapshot()[0].location, "wrld_a:1");
         assert_eq!(registry.snapshot()[0].since_ms, Some(1_000));
 
         let arrived = friend("usr_a", "online", "wrld_a:1");
         let snapshot = registry
-            .observe_friend_record("usr_a", &arrived, 7_000)
+            .observe_friend("usr_a", &place_from_record(&arrived, 7_000))
             .unwrap();
 
         assert_eq!(snapshot[0].location, "wrld_a:1");
@@ -784,26 +844,30 @@ mod tests {
     fn pending_offline_preserves_the_start_until_offline_is_confirmed() {
         let registry = InstanceDwellRegistry::new();
         let online = friend("usr_a", "online", "wrld_a:1");
-        registry.observe_friend_record("usr_a", &online, 1_000);
+        registry.observe_friend("usr_a", &place_from_record(&online, 1_000));
         let mut pending = online.clone();
         pending
+            .record
             .extra
             .insert("pendingOffline".into(), serde_json::Value::Bool(true));
 
         assert_eq!(
-            registry.observe_friend_record("usr_a", &pending, 5_000),
+            registry.observe_friend("usr_a", &place_from_record(&pending, 5_000)),
             None
         );
         assert_eq!(registry.snapshot()[0].since_ms, Some(1_000));
 
         assert_eq!(
-            registry.observe_friend_record("usr_a", &online, 6_000),
+            registry.observe_friend("usr_a", &place_from_record(&online, 6_000)),
             None
         );
         assert_eq!(registry.snapshot()[0].since_ms, Some(1_000));
 
         let snapshot = registry
-            .observe_friend_record("usr_a", &friend("usr_a", "offline", "offline"), 7_000)
+            .observe_friend(
+                "usr_a",
+                &place_from_record(&friend("usr_a", "offline", "offline"), 7_000),
+            )
             .unwrap();
         assert_eq!(snapshot[0].since_ms, None);
     }
@@ -811,10 +875,19 @@ mod tests {
     #[test]
     fn returning_online_restarts_even_when_the_location_is_unchanged() {
         let registry = InstanceDwellRegistry::new();
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 1_000);
-        registry.observe_friend_record("usr_a", &friend("usr_a", "offline", "wrld_a:1"), 5_000);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 1_000),
+        );
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "offline", "wrld_a:1"), 5_000),
+        );
         let snapshot = registry
-            .observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 8_000)
+            .observe_friend(
+                "usr_a",
+                &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 8_000),
+            )
             .unwrap();
 
         assert_eq!(snapshot[0].since_ms, Some(8_000));
@@ -827,7 +900,7 @@ mod tests {
             "usr_friend".to_string(),
             friend("usr_friend", "online", "private"),
         )]);
-        registry.sync_friends(&friends, 5_000);
+        registry.sync_friends(&places_from_records(&friends, 5_000));
 
         registry.observe_roster(&roster(
             "wrld_a:1",
@@ -846,7 +919,10 @@ mod tests {
     #[test]
     fn local_roster_replaces_the_start_with_the_current_join() {
         let registry = InstanceDwellRegistry::new();
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 5_000);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 5_000),
+        );
 
         registry.observe_roster(&roster("wrld_a:1", &[("usr_a", 1_000)]));
         assert_eq!(registry.snapshot()[0].since_ms, Some(1_000));
@@ -857,7 +933,10 @@ mod tests {
     #[test]
     fn game_exit_restores_remote_time_and_rejects_stale_local_rosters() {
         let registry = InstanceDwellRegistry::new();
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 5_000);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 5_000),
+        );
         registry.observe_roster(&roster("wrld_a:1", &[("usr_a", 1_000)]));
 
         vrcx_0_contracts::InstanceRosterObserver::on_game_running(&registry, false);
@@ -876,11 +955,17 @@ mod tests {
     fn self_leaving_releases_local_mode_to_the_latest_remote_presence() {
         let registry = InstanceDwellRegistry::new();
         registry.observe_roster(&roster("wrld_a:1", &[("usr_a", 1_000)]));
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 5_000);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 5_000),
+        );
         let mut traveling = friend("usr_a", "online", "traveling");
-        traveling.traveling_to_location = "wrld_a:1".into();
-        registry.observe_friend_record("usr_a", &traveling, 7_000);
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 9_000);
+        traveling.presence.traveling_to_location = "wrld_a:1".into();
+        registry.observe_friend("usr_a", &place_from_record(&traveling, 7_000));
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 9_000),
+        );
 
         registry.observe_roster(&InstanceRosterSnapshot::default());
 
@@ -890,10 +975,16 @@ mod tests {
     #[test]
     fn friend_leaving_restarts_the_latest_remote_instance_time() {
         let registry = InstanceDwellRegistry::new();
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 5_000);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 5_000),
+        );
         registry.observe_roster(&roster("wrld_a:1", &[("usr_a", 1_000)]));
 
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_b:2"), 9_000);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_b:2"), 9_000),
+        );
         assert_eq!(registry.snapshot()[0].location, "wrld_a:1");
         let before_leave = chrono::Utc::now().timestamp_millis();
         registry.observe_roster(&InstanceRosterSnapshot {
@@ -908,7 +999,10 @@ mod tests {
     #[test]
     fn new_instance_roster_does_not_reuse_previous_instance_members() {
         let registry = InstanceDwellRegistry::new();
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_b:2"), 100_000);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_b:2"), 100_000),
+        );
         registry.observe_roster(&roster("wrld_a:1", &[("usr_a", 1_000)]));
 
         registry.observe_roster(&roster("wrld_b:2", &[]));
@@ -922,7 +1016,10 @@ mod tests {
     #[test]
     fn game_exit_discards_roster_members_before_the_next_instance() {
         let registry = InstanceDwellRegistry::new();
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_b:2"), 100_000);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_b:2"), 100_000),
+        );
         registry.observe_roster(&roster("wrld_a:1", &[("usr_a", 1_000)]));
 
         vrcx_0_contracts::InstanceRosterObserver::on_game_running(&registry, false);
@@ -938,10 +1035,9 @@ mod tests {
     fn game_start_in_another_instance_preserves_remote_friend_timers() {
         let registry = InstanceDwellRegistry::new();
         for (user_id, observed_ms) in [("usr_a", 1_000), ("usr_b", 2_000)] {
-            registry.observe_friend_record(
+            registry.observe_friend(
                 user_id,
-                &friend(user_id, "online", "wrld_friends:1"),
-                observed_ms,
+                &place_from_record(&friend(user_id, "online", "wrld_friends:1"), observed_ms),
             );
         }
         vrcx_0_contracts::InstanceRosterObserver::on_game_running(&registry, false);
@@ -959,10 +1055,9 @@ mod tests {
     #[test]
     fn local_roster_overrides_conflicting_remote_presence() {
         let registry = InstanceDwellRegistry::new();
-        registry.observe_friend_record(
+        registry.observe_friend(
             "usr_remote",
-            &friend("usr_remote", "online", "wrld_far:9"),
-            3_000,
+            &place_from_record(&friend("usr_remote", "online", "wrld_far:9"), 3_000),
         );
         registry.observe_roster(&roster("wrld_a:1", &[("usr_remote", 1_000)]));
 
@@ -973,10 +1068,16 @@ mod tests {
     #[test]
     fn forgetting_and_clearing_remove_tracked_friends() {
         let registry = InstanceDwellRegistry::new();
-        registry.observe_friend_record("usr_a", &friend("usr_a", "online", "wrld_a:1"), 1_000);
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 1_000),
+        );
         assert_eq!(registry.forget_friend("usr_a").unwrap(), []);
 
-        registry.observe_friend_record("usr_b", &friend("usr_b", "online", "wrld_b:2"), 2_000);
+        registry.observe_friend(
+            "usr_b",
+            &place_from_record(&friend("usr_b", "online", "wrld_b:2"), 2_000),
+        );
         registry.clear();
         assert!(registry.snapshot().is_empty());
         assert_eq!(registry.tracked_count(), (0, 0));
@@ -987,12 +1088,17 @@ mod tests {
         let registry = InstanceDwellRegistry::new();
         let friends = HashMap::from([("usr_a".to_string(), friend("usr_a", "online", "wrld_a:1"))]);
 
-        registry.sync_friends(&friends, 1_000);
-        assert_eq!(registry.sync_friends(&friends, 5_000), None);
+        registry.sync_friends(&places_from_records(&friends, 1_000));
+        assert_eq!(
+            registry.sync_friends(&places_from_records(&friends, 5_000)),
+            None
+        );
         assert_eq!(registry.snapshot()[0].since_ms, Some(1_000));
 
         registry.clear();
-        let snapshot = registry.sync_friends(&friends, 8_000).unwrap();
+        let snapshot = registry
+            .sync_friends(&places_from_records(&friends, 8_000))
+            .unwrap();
         assert_eq!(snapshot[0].since_ms, Some(8_000));
     }
 }

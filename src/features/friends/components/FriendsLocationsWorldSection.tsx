@@ -17,14 +17,13 @@ import { userImage } from '@/services/entityMediaService';
 import { accessTypeLocaleKeyMap } from '@/shared/constants/accessType';
 import { parseLocation, translateAccessType } from '@/shared/utils/location';
 import { normalizeString } from '@/shared/utils/string';
-import { useRuntimeStore } from '@/state/runtimeStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/ui/shadcn/avatar';
 import { Skeleton } from '@/ui/shadcn/skeleton';
 import { Spinner } from '@/ui/shadcn/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import type { getFriendsLocationsDensityConfig } from '../friendsLocationsDensity';
-import { resolveLocationTarget } from '../friendsLocationsRows';
+import { friendLocationTarget } from '../friendsLocationsRows';
 import type {
     FriendsLocationsWorldGroup,
     FriendsLocationsWorldInstance
@@ -35,7 +34,6 @@ type FriendsLocationsWorldSectionProps = {
     group: FriendsLocationsWorldGroup;
     summary?: FriendsLocationsWorldSummary;
     densityConfig: ReturnType<typeof getFriendsLocationsDensityConfig>;
-    currentUserId?: string | null;
     favoriteIds: ReadonlySet<string>;
     onOpenWorld: (group: FriendsLocationsWorldGroup, name: string) => void;
     onOpenGroup: (groupId: string) => void;
@@ -56,7 +54,7 @@ function FriendChip({
     onOpen: () => void;
 }) {
     const avatarUrl = userImage(friend);
-    const isTraveling = resolveLocationTarget(friend).isTraveling;
+    const isTraveling = friendLocationTarget(friend).isTraveling;
     const statusDescription = twoLine
         ? normalizeString(friend.statusDescription)
         : '';
@@ -111,24 +109,15 @@ function FriendChip({
 
 export function FriendsLocationsFriendChips({
     friends,
-    currentUserId,
     favoriteIds,
     twoLine,
     onOpenUser
 }: {
     friends: FriendRecord[];
-    currentUserId?: string | null;
     favoriteIds: ReadonlySet<string>;
     twoLine: boolean;
     onOpenUser: (friend: FriendRecord) => void;
 }) {
-    const currentUserSnapshot = useRuntimeStore(
-        (state) => state.auth.currentUserSnapshot
-    );
-    const isGameRunning = useRuntimeStore(
-        (state) => state.gameState.isGameRunning === true
-    );
-
     return (
         <div className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(0,200px))] gap-1.5">
             {friends.map((friend) => (
@@ -139,9 +128,9 @@ export function FriendsLocationsFriendChips({
                     twoLine={twoLine}
                     statusDotClassName={resolveSidebarStatusDotClassName(
                         friend,
-                        currentUserSnapshot,
-                        friend.id === currentUserId,
-                        { hideNonFriend: false, isGameRunning }
+                        {
+                            hideNonFriend: false
+                        }
                     )}
                     onOpen={() => onOpenUser(friend)}
                 />
@@ -152,14 +141,12 @@ export function FriendsLocationsFriendChips({
 
 function InstanceRow({
     instance,
-    currentUserId,
     favoriteIds,
     twoLine,
     onOpenGroup,
     onOpenUser
 }: {
     instance: FriendsLocationsWorldInstance;
-    currentUserId?: string | null;
     favoriteIds: ReadonlySet<string>;
     twoLine: boolean;
     onOpenGroup: (groupId: string) => void;
@@ -272,7 +259,6 @@ function InstanceRow({
             </div>
             <FriendsLocationsFriendChips
                 friends={instance.friends}
-                currentUserId={currentUserId}
                 favoriteIds={favoriteIds}
                 twoLine={twoLine}
                 onOpenUser={onOpenUser}
@@ -285,7 +271,6 @@ export function FriendsLocationsWorldSection({
     group,
     summary,
     densityConfig,
-    currentUserId,
     favoriteIds,
     onOpenWorld,
     onOpenGroup,
@@ -347,7 +332,6 @@ export function FriendsLocationsWorldSection({
                         <InstanceRow
                             key={instance.location}
                             instance={instance}
-                            currentUserId={currentUserId}
                             favoriteIds={favoriteIds}
                             twoLine={densityConfig.worldChipLines === 2}
                             onOpenGroup={onOpenGroup}

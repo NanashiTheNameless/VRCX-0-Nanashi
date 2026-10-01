@@ -45,7 +45,6 @@ import {
     StaticSidebarLocation
 } from './FriendsSidebarLocation';
 import {
-    readFriendRef,
     resolveSidebarStatusDotClassName,
     resolveTrustNameColour,
     type SidebarFriendRecord
@@ -64,7 +63,7 @@ export function resolveFriendRowDisplay(
         trustColor?: TrustColorMap;
     }
 ) {
-    const displaySource = readFriendRef(friend);
+    const displaySource = friend;
     const nameStyle: CSSProperties =
         randomUserColours && friend?.id
             ? { color: getNameColour(friend.id, isDarkMode) }
@@ -115,8 +114,6 @@ type FriendRowAppearance = {
     randomUserColours?: boolean;
     isDarkMode?: boolean;
     trustColor?: TrustColorMap;
-    currentUserSnapshot?: SidebarFriendRecord | null;
-    isGameRunning?: boolean | null;
     recentActionVersion?: number;
     locationMetadata?: LocationMetadata | null;
     showInstanceIdInLocation?: boolean;
@@ -167,8 +164,6 @@ export function FriendRow({
         randomUserColours = false,
         isDarkMode = false,
         trustColor = TRUST_COLOR_DEFAULTS,
-        currentUserSnapshot = null,
-        isGameRunning = undefined,
         recentActionVersion = 0,
         locationMetadata = null,
         showInstanceIdInLocation = false,
@@ -181,14 +176,11 @@ export function FriendRow({
             isDarkMode,
             trustColor
         });
-    const statusDotClassName = resolveSidebarStatusDotClassName(
-        friend,
-        currentUserSnapshot,
-        isCurrentUser,
-        { isGameRunning }
-    );
+    const statusDotClassName = resolveSidebarStatusDotClassName(friend, {
+        hideNonFriend: !isCurrentUser
+    });
     const {
-        statusSource,
+        isPendingOffline,
         friendLocation,
         parsedFriendLocation,
         isTraveling,
@@ -212,7 +204,7 @@ export function FriendRow({
         parsedFriendLocation.worldId &&
         parsedFriendLocation.instanceId
     );
-    const subline = statusSource?.pendingOffline
+    const subline = isPendingOffline
         ? t('side_panel.pending_offline')
         : String(displaySource?.statusDescription || '');
 

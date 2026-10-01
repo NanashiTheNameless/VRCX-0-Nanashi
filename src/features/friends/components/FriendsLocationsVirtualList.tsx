@@ -71,7 +71,6 @@ export function FriendsLocationsVirtualList({
                             group={group}
                             summary={derived.worldSummaries.get(group.worldId)}
                             densityConfig={derived.densityConfig}
-                            currentUserId={runtime.currentUserId}
                             favoriteIds={derived.favoriteIds}
                             onOpenWorld={locationCommands.openWorldGroup}
                             onOpenGroup={(groupId) =>
@@ -101,7 +100,6 @@ export function FriendsLocationsVirtualList({
                             {privateCollapsed ? null : (
                                 <FriendsLocationsFriendChips
                                     friends={derived.privateWorldFriends}
-                                    currentUserId={runtime.currentUserId}
                                     favoriteIds={derived.favoriteIds}
                                     twoLine={worldChipsTwoLine}
                                     onOpenUser={locationCommands.openFriendUser}

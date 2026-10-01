@@ -5,8 +5,7 @@ import {
     filterNotificationRows,
     getCachedInstanceLocation,
     matchesNotificationSearch,
-    normalizeWorldTarget,
-    resolveCurrentInviteLocation
+    normalizeWorldTarget
 } from './notificationRows';
 
 describe('notification row helpers', () => {
@@ -24,25 +23,9 @@ describe('notification row helpers', () => {
         expect(filterNotificationRows(rows, [], '')).toEqual(rows);
     });
 
-    it('normalizes world targets and current invite location fallbacks', () => {
+    it('normalizes world targets', () => {
         expect(normalizeWorldTarget('wrld_123:456~private')).toBe('wrld_123');
         expect(normalizeWorldTarget('wrld_123')).toBe('wrld_123');
-        expect(
-            resolveCurrentInviteLocation(
-                {
-                    isGameRunning: true,
-                    currentLocation: 'traveling',
-                    currentDestination: 'wrld_dest:1'
-                },
-                { location: 'wrld_profile:2' }
-            )
-        ).toBe('wrld_dest:1');
-        expect(
-            resolveCurrentInviteLocation(
-                { isGameRunning: true },
-                { $locationTag: 'wrld_profile:2' }
-            )
-        ).toBe('wrld_profile:2');
     });
 
     it('normalizes cached instances', () => {

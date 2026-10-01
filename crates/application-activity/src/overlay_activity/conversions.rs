@@ -17,10 +17,10 @@ impl OverlayActivityRuntime {
     pub fn ingest_friend_projection(
         &self,
         projection: &FriendProjection,
+        feed_entries: &[FeedLiveEntry],
     ) -> Vec<OverlayActivityEntry> {
         self.apply_friend_membership_projection(projection);
-        projection
-            .feed_entries
+        feed_entries
             .iter()
             .filter_map(friend_feed_candidate)
             .filter_map(|candidate| self.ingest_candidate(candidate))

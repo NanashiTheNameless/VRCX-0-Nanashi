@@ -3,21 +3,28 @@ use std::collections::HashMap;
 use super::friend_profile::FriendProfileRefreshExpectation;
 use super::test_support::*;
 use super::*;
-use vrcx_0_core::friends::FriendRecord;
+use vrcx_0_core::friends::{FriendBaselineEntry, FriendBaselinePresence, FriendRecord};
+use vrcx_0_core::presence::PresenceView;
 use vrcx_0_core::OwnerId;
 
 #[test]
 fn sync_friend_snapshot_debounces_online_to_offline() -> Result<()> {
     let (_dir, runtime, active_session) = runtime_with_active_session("baseline-projection")?;
+    runtime.set_task_executor_for_test(DiscardTaskExecutor);
     let mut initial_friends = HashMap::new();
     initial_friends.insert(
         "usr_friend".to_string(),
-        FriendRecord {
-            id: "usr_friend".to_string(),
-            display_name: "Friend".into(),
-            state: "online".into(),
-            location: "wrld_old:123".to_string(),
-            ..FriendRecord::default()
+        FriendBaselineEntry {
+            record: FriendRecord {
+                id: "usr_friend".to_string(),
+                display_name: "Friend".into(),
+                ..FriendRecord::default()
+            },
+            presence: FriendBaselinePresence {
+                state: "online".into(),
+                location: "wrld_old:123".to_string(),
+                ..FriendBaselinePresence::default()
+            },
         },
     );
     runtime
@@ -41,12 +48,17 @@ fn sync_friend_snapshot_debounces_online_to_offline() -> Result<()> {
     let mut refreshed_friends = HashMap::new();
     refreshed_friends.insert(
         "usr_friend".to_string(),
-        FriendRecord {
-            id: "usr_friend".to_string(),
-            display_name: "Friend".into(),
-            state: "offline".into(),
-            location: "offline".to_string(),
-            ..FriendRecord::default()
+        FriendBaselineEntry {
+            record: FriendRecord {
+                id: "usr_friend".to_string(),
+                display_name: "Friend".into(),
+                ..FriendRecord::default()
+            },
+            presence: FriendBaselinePresence {
+                state: "offline".into(),
+                location: "offline".to_string(),
+                ..FriendBaselinePresence::default()
+            },
         },
     );
     let result = runtime.runtime().sync_friend_snapshot(
@@ -66,32 +78,31 @@ fn sync_friend_snapshot_debounces_online_to_offline() -> Result<()> {
     assert_eq!(projection.payload["baselineRevision"], 1);
     assert_eq!(projection.payload["patches"].as_array().unwrap().len(), 1);
     assert_eq!(projection.payload["patches"][0]["userId"], "usr_friend");
-    assert_eq!(projection.payload["patches"][0]["patch"]["state"], "online");
-    assert_eq!(projection.payload["patches"][0]["patch"]["state"], "online");
-    assert_eq!(
-        projection.payload["patches"][0]["patch"]["location"],
-        "wrld_old:123"
-    );
-    assert_eq!(
-        projection.payload["patches"][0]["patch"]["pendingOffline"],
-        true
-    );
+    let view = &projection.payload["patches"][0]["presence"]["view"];
+    assert_eq!(view["kind"], "pendingOffline");
+    assert_eq!(view["place"]["location"]["tag"], "wrld_old:123");
     Ok(())
 }
 
 #[test]
-fn sync_friend_snapshot_persists_feed_when_refresh_confirms_pending_offline() -> Result<()> {
+fn sync_friend_snapshot_keeps_a_pending_offline_until_its_deadline() -> Result<()> {
     let (_dir, runtime, active_session) =
         runtime_with_active_session("baseline-confirmed-offline-feed")?;
+    runtime.set_task_executor_for_test(DiscardTaskExecutor);
     let mut initial_friends = HashMap::new();
     initial_friends.insert(
         "usr_friend".to_string(),
-        FriendRecord {
-            id: "usr_friend".to_string(),
-            display_name: "Friend".into(),
-            state: "online".into(),
-            location: "wrld_old:123".to_string(),
-            ..FriendRecord::default()
+        FriendBaselineEntry {
+            record: FriendRecord {
+                id: "usr_friend".to_string(),
+                display_name: "Friend".into(),
+                ..FriendRecord::default()
+            },
+            presence: FriendBaselinePresence {
+                state: "online".into(),
+                location: "wrld_old:123".to_string(),
+                ..FriendBaselinePresence::default()
+            },
         },
     );
     runtime
@@ -119,12 +130,17 @@ fn sync_friend_snapshot_persists_feed_when_refresh_confirms_pending_offline() ->
     let mut refreshed_friends = HashMap::new();
     refreshed_friends.insert(
         "usr_friend".to_string(),
-        FriendRecord {
-            id: "usr_friend".to_string(),
-            display_name: "Friend Fresh Name".into(),
-            state: "offline".into(),
-            location: "offline".to_string(),
-            ..FriendRecord::default()
+        FriendBaselineEntry {
+            record: FriendRecord {
+                id: "usr_friend".to_string(),
+                display_name: "Friend Fresh Name".into(),
+                ..FriendRecord::default()
+            },
+            presence: FriendBaselinePresence {
+                state: "offline".into(),
+                location: "offline".to_string(),
+                ..FriendBaselinePresence::default()
+            },
         },
     );
     runtime.runtime().sync_friend_snapshot_with_watermark(
@@ -138,27 +154,30 @@ fn sync_friend_snapshot_persists_feed_when_refresh_confirms_pending_offline() ->
     let projection = events
         .iter()
         .find(|event| event.name == "realtimeFriendProjection")
-        .expect("confirmed offline refresh should emit a friend projection");
+        .expect("the refresh should emit a friend projection");
     assert_eq!(
-        projection.payload["patches"][0]["patch"]["state"],
-        "offline"
+        projection.payload["patches"][0]["presence"]["view"]["kind"],
+        "pendingOffline"
     );
     assert_eq!(
-        projection.payload["patches"][0]["patch"]["displayName"],
+        projection.payload["patches"][0]["record"]["displayName"],
         "Friend Fresh Name"
     );
-    assert_eq!(
-        projection.payload["patches"][0]["patch"]["pendingOffline"],
-        false
-    );
-    assert!(projection.payload["feedEntries"]
-        .as_array()
-        .unwrap()
-        .is_empty());
+    assert!(events
+        .iter()
+        .all(|event| event.name != "realtimeFeedProjection"));
+
+    let fired = runtime
+        .runtime()
+        .friends
+        .wake("usr_friend", "2026-05-15T00:03:00Z")
+        .expect("the pending offline finalizes at its deadline");
+    runtime.runtime().apply_friend_output(fired);
+    let events = runtime.runtime().deps.event_bus.take_events_for_test();
     let feed_projection = events
         .iter()
         .find(|event| event.name == "realtimeFeedProjection")
-        .expect("confirmed offline refresh should emit a Feed projection");
+        .expect("the deadline should emit the Offline Feed projection");
     assert_eq!(
         feed_projection.payload["upserts"].as_array().unwrap().len(),
         1
@@ -204,6 +223,7 @@ fn sync_friend_snapshot_persists_feed_when_refresh_confirms_pending_offline() ->
                 vip_list: Vec::new(),
                 scoped_user_ids: Vec::new(),
                 excluded_user_ids: Vec::new(),
+                location_hidden_user_ids: Vec::new(),
                 max_entries: 10,
                 date_from: String::new(),
                 date_to: String::new(),
@@ -219,17 +239,23 @@ fn host_watermark_preserves_pending_created_after_capture() -> Result<()> {
     for (state_bucket, location) in [("online", "wrld_old:123"), ("offline", "offline")] {
         let (_dir, runtime, active_session) =
             runtime_with_active_session(&format!("host-stale-watermark-{state_bucket}"))?;
+        runtime.set_task_executor_for_test(DiscardTaskExecutor);
         runtime.runtime().sync_friend_snapshot(
             active_session.clone(),
             Some(7),
             [(
                 "usr_friend".to_string(),
-                FriendRecord {
-                    id: "usr_friend".to_string(),
-                    display_name: "Friend".into(),
-                    state: "online".into(),
-                    location: "wrld_old:123".to_string(),
-                    ..FriendRecord::default()
+                FriendBaselineEntry {
+                    record: FriendRecord {
+                        id: "usr_friend".to_string(),
+                        display_name: "Friend".into(),
+                        ..FriendRecord::default()
+                    },
+                    presence: FriendBaselinePresence {
+                        state: "online".into(),
+                        location: "wrld_old:123".to_string(),
+                        ..FriendBaselinePresence::default()
+                    },
                 },
             )]
             .into_iter()
@@ -250,9 +276,10 @@ fn host_watermark_preserves_pending_created_after_capture() -> Result<()> {
         else {
             panic!("friend-offline should produce an output");
         };
-        let PendingOfflineTimerAction::Schedule { token, .. } = pending_output.timer_action else {
-            panic!("friend-offline should schedule a timer");
-        };
+        assert!(
+            pending_output.wake.is_some(),
+            "friend-offline should schedule a timer"
+        );
         runtime.runtime().apply_friend_output(*pending_output);
         runtime.runtime().deps.event_bus.take_events_for_test();
 
@@ -261,12 +288,17 @@ fn host_watermark_preserves_pending_created_after_capture() -> Result<()> {
             stale_watermark,
             [(
                 "usr_friend".to_string(),
-                FriendRecord {
-                    id: "usr_friend".to_string(),
-                    display_name: "Friend".into(),
-                    state: state_bucket.into(),
-                    location: location.to_string(),
-                    ..FriendRecord::default()
+                FriendBaselineEntry {
+                    record: FriendRecord {
+                        id: "usr_friend".to_string(),
+                        display_name: "Friend".into(),
+                        ..FriendRecord::default()
+                    },
+                    presence: FriendBaselinePresence {
+                        state: state_bucket.into(),
+                        location: location.to_string(),
+                        ..FriendBaselinePresence::default()
+                    },
                 },
             )]
             .into_iter()
@@ -275,9 +307,9 @@ fn host_watermark_preserves_pending_created_after_capture() -> Result<()> {
         )?;
 
         let snapshot = runtime.runtime().friend_snapshot().unwrap();
-        let friend = snapshot.friends_by_id.get("usr_friend").unwrap();
-        assert_eq!(friend.state, "online");
-        assert_eq!(friend.extra.get("pendingOffline"), Some(&json!(true)));
+        let view = &snapshot.presence_by_id["usr_friend"].view;
+        assert_eq!(view.section().as_str(), "online");
+        assert!(matches!(view, PresenceView::PendingOffline { .. }));
         assert!(runtime
             .runtime()
             .deps
@@ -288,7 +320,7 @@ fn host_watermark_preserves_pending_created_after_capture() -> Result<()> {
         let fired = runtime
             .runtime()
             .friends
-            .fire_pending_offline("usr_friend", token, "2026-05-15T00:03:00Z".into())
+            .wake("usr_friend", "2026-05-15T00:03:00Z")
             .expect("the original pending timer should remain active");
         assert_eq!(
             fired.persistence.feed_entries[0].to_json()["type"],
@@ -302,17 +334,23 @@ fn host_watermark_preserves_pending_created_after_capture() -> Result<()> {
 fn host_watermark_preserves_online_cancellation_after_capture() -> Result<()> {
     let (_dir, runtime, active_session) =
         runtime_with_active_session("host-online-cancel-watermark")?;
+    runtime.set_task_executor_for_test(DiscardTaskExecutor);
     runtime.runtime().sync_friend_snapshot(
         active_session.clone(),
         Some(7),
         [(
             "usr_friend".to_string(),
-            FriendRecord {
-                id: "usr_friend".to_string(),
-                display_name: "Friend".into(),
-                state: "online".into(),
-                location: "wrld_old:123".to_string(),
-                ..FriendRecord::default()
+            FriendBaselineEntry {
+                record: FriendRecord {
+                    id: "usr_friend".to_string(),
+                    display_name: "Friend".into(),
+                    ..FriendRecord::default()
+                },
+                presence: FriendBaselinePresence {
+                    state: "online".into(),
+                    location: "wrld_old:123".to_string(),
+                    ..FriendBaselinePresence::default()
+                },
             },
         )]
         .into_iter()
@@ -332,9 +370,10 @@ fn host_watermark_preserves_online_cancellation_after_capture() -> Result<()> {
     else {
         panic!("friend-offline should produce an output");
     };
-    let PendingOfflineTimerAction::Schedule { token, .. } = pending_output.timer_action else {
-        panic!("friend-offline should schedule a timer");
-    };
+    assert!(
+        pending_output.wake.is_some(),
+        "friend-offline should schedule a timer"
+    );
     runtime.runtime().apply_friend_output(*pending_output);
     let stale_watermark = runtime.runtime().capture_friend_baseline_watermark()?;
     let active = runtime
@@ -374,12 +413,17 @@ fn host_watermark_preserves_online_cancellation_after_capture() -> Result<()> {
         stale_watermark,
         [(
             "usr_friend".to_string(),
-            FriendRecord {
-                id: "usr_friend".to_string(),
-                display_name: "Friend".into(),
-                state: "offline".into(),
-                location: "offline".to_string(),
-                ..FriendRecord::default()
+            FriendBaselineEntry {
+                record: FriendRecord {
+                    id: "usr_friend".to_string(),
+                    display_name: "Friend".into(),
+                    ..FriendRecord::default()
+                },
+                presence: FriendBaselinePresence {
+                    state: "offline".into(),
+                    location: "offline".to_string(),
+                    ..FriendBaselinePresence::default()
+                },
             },
         )]
         .into_iter()
@@ -388,11 +432,14 @@ fn host_watermark_preserves_online_cancellation_after_capture() -> Result<()> {
     )?;
 
     let snapshot = outcome.snapshot.expect("canonical friend snapshot");
-    let friend = snapshot.friends_by_id.get("usr_friend").unwrap();
+    let view = &snapshot.presence_by_id["usr_friend"].view;
     assert!(outcome.result.accepted);
-    assert_eq!(friend.state, "online");
-    assert_eq!(friend.location, "wrld_new:456");
-    assert_ne!(friend.extra.get("pendingOffline"), Some(&json!(true)));
+    assert_eq!(view.section().as_str(), "online");
+    assert_eq!(
+        view.place().expect("online place").location.tag,
+        "wrld_new:456"
+    );
+    assert!(!matches!(view, PresenceView::PendingOffline { .. }));
     assert!(runtime
         .runtime()
         .deps
@@ -403,7 +450,7 @@ fn host_watermark_preserves_online_cancellation_after_capture() -> Result<()> {
     assert!(runtime
         .runtime()
         .friends
-        .fire_pending_offline("usr_friend", token, "2026-05-15T00:03:00Z".into())
+        .wake("usr_friend", "2026-05-15T00:03:00Z")
         .is_none());
     Ok(())
 }
@@ -412,12 +459,17 @@ fn host_watermark_preserves_online_cancellation_after_capture() -> Result<()> {
 fn causal_sync_returns_canonical_snapshot_after_newer_friend_delete() -> Result<()> {
     let (_dir, runtime, active_session) =
         runtime_with_active_session("canonical-after-friend-delete")?;
-    let stale_friend = FriendRecord {
-        id: "usr_friend".to_string(),
-        display_name: "Friend".into(),
-        state: "online".into(),
-        location: "wrld_old:123".to_string(),
-        ..FriendRecord::default()
+    let stale_friend = FriendBaselineEntry {
+        record: FriendRecord {
+            id: "usr_friend".to_string(),
+            display_name: "Friend".into(),
+            ..FriendRecord::default()
+        },
+        presence: FriendBaselinePresence {
+            state: "online".into(),
+            location: "wrld_old:123".to_string(),
+            ..FriendBaselinePresence::default()
+        },
     };
     runtime.runtime().sync_friend_snapshot(
         active_session.clone(),
@@ -501,11 +553,16 @@ fn causal_sync_returns_canonical_snapshot_after_newer_friend_delete() -> Result<
 fn causal_watermark_rejects_baseline_after_local_friend_log_mutation() -> Result<()> {
     let (_dir, runtime, active_session) =
         runtime_with_active_session("local-friend-log-watermark")?;
-    let friend = FriendRecord {
-        id: "usr_friend".to_string(),
-        display_name: "Friend".into(),
-        state: "online".into(),
-        ..FriendRecord::default()
+    let friend = FriendBaselineEntry {
+        record: FriendRecord {
+            id: "usr_friend".to_string(),
+            display_name: "Friend".into(),
+            ..FriendRecord::default()
+        },
+        presence: FriendBaselinePresence {
+            state: "online".into(),
+            ..FriendBaselinePresence::default()
+        },
     };
     runtime.runtime().sync_friend_snapshot(
         active_session.clone(),
@@ -604,7 +661,6 @@ fn roster(user_id: &str) -> HashMap<String, FriendRecord> {
     [(
         user_id.to_string(),
         FriendRecord {
-            state: "online".into(),
             id: user_id.into(),
             display_name: "Friend".into(),
             extra: [("$trustLevel".into(), json!("Known"))]
@@ -617,6 +673,23 @@ fn roster(user_id: &str) -> HashMap<String, FriendRecord> {
     .collect()
 }
 
+fn baseline_entries(
+    records: HashMap<String, FriendRecord>,
+) -> HashMap<String, FriendBaselineEntry> {
+    records
+        .into_iter()
+        .map(|(user_id, record)| {
+            (
+                user_id,
+                FriendBaselineEntry {
+                    record,
+                    ..FriendBaselineEntry::default()
+                },
+            )
+        })
+        .collect()
+}
+
 #[test]
 fn relationship_candidates_cover_both_diff_directions_after_init() -> Result<()> {
     let dir = TestDir::new("relationship-candidates");
@@ -626,7 +699,6 @@ fn relationship_candidates_cover_both_diff_directions_after_init() -> Result<()>
     friends_by_id.insert(
         "usr_placeholder".to_string(),
         FriendRecord {
-            state: "offline".into(),
             id: "usr_placeholder".into(),
             extra: [("$profileSource".into(), json!("placeholder"))]
                 .into_iter()
@@ -635,7 +707,8 @@ fn relationship_candidates_cover_both_diff_directions_after_init() -> Result<()>
         },
     );
 
-    let mut candidates = friend_log_relationship_candidates(&db, "usr_self", &friends_by_id);
+    let mut candidates =
+        friend_log_relationship_candidates(&db, "usr_self", &baseline_entries(friends_by_id));
     candidates.sort();
 
     assert_eq!(candidates, vec!["usr_dropped", "usr_new"]);
@@ -647,7 +720,12 @@ fn relationship_candidates_stay_empty_before_friend_log_init() -> Result<()> {
     let dir = TestDir::new("relationship-candidates-uninitialized");
     let db = TestRealtimeStore::new(dir.path.join("VRCX-0.sqlite3"));
 
-    assert!(friend_log_relationship_candidates(&db, "usr_self", &roster("usr_new")).is_empty());
+    assert!(friend_log_relationship_candidates(
+        &db,
+        "usr_self",
+        &baseline_entries(roster("usr_new"))
+    )
+    .is_empty());
     Ok(())
 }
 
@@ -759,7 +837,6 @@ fn reconcile_records_display_name_change_for_existing_friend() -> Result<()> {
     let friends_by_id: HashMap<String, FriendRecord> = [(
         "usr_friend".to_string(),
         FriendRecord {
-            state: "online".into(),
             id: "usr_friend".into(),
             display_name: "New Name".into(),
             ..FriendRecord::default()
@@ -835,7 +912,6 @@ fn reconcile_records_and_projects_trust_only_change_once() -> Result<()> {
     let friends_by_id = [(
         "usr_friend".to_string(),
         FriendRecord {
-            state: "offline".into(),
             id: "usr_friend".into(),
             display_name: "Friend".into(),
             extra: [("$trustLevel".into(), json!("Trusted User"))]
@@ -919,7 +995,6 @@ fn reconcile_skips_placeholder_records() -> Result<()> {
     let friends_by_id = [(
         "usr_friend".to_string(),
         FriendRecord {
-            state: "online".into(),
             id: "usr_friend".into(),
             display_name: "usr_friend".into(),
             extra: [
@@ -998,7 +1073,6 @@ fn init_seeds_placeholder_without_trust_and_reconcile_fills_it_silently() -> Res
     let fetched_roster: HashMap<String, FriendRecord> = [(
         "usr_friend".to_string(),
         FriendRecord {
-            state: "online".into(),
             id: "usr_friend".into(),
             display_name: "Friend".into(),
             extra: [("$trustLevel".into(), json!("Trusted User"))]
@@ -1058,7 +1132,6 @@ fn reconcile_updates_legacy_equivalent_trust_without_history_or_feed() -> Result
     let friends_by_id = [(
         "usr_friend".to_string(),
         FriendRecord {
-            state: "offline".into(),
             id: "usr_friend".into(),
             display_name: "Friend".into(),
             extra: [("$trustLevel".into(), json!("Trusted User"))]
@@ -1104,7 +1177,6 @@ fn first_time_baseline_init_fills_current_roster_without_history_or_feed() -> Re
         (
             "usr_a_friend".to_string(),
             FriendRecord {
-                state: "online".into(),
                 id: "usr_a_friend".into(),
                 display_name: "A Friend".into(),
                 extra: [("$trustLevel".into(), json!("Trusted User"))]
@@ -1116,7 +1188,6 @@ fn first_time_baseline_init_fills_current_roster_without_history_or_feed() -> Re
         (
             "usr_b_friend".to_string(),
             FriendRecord {
-                state: "online".into(),
                 id: "usr_b_friend".into(),
                 display_name: "B Friend".into(),
                 ..FriendRecord::default()
@@ -1177,7 +1248,6 @@ fn first_time_baseline_init_failure_leaves_flag_unset_for_retry() -> Result<()> 
     let friends_by_id: HashMap<String, FriendRecord> = [(
         "usr_friend".to_string(),
         FriendRecord {
-            state: "online".into(),
             id: "usr_friend".into(),
             display_name: "Friend".into(),
             ..FriendRecord::default()
@@ -1228,7 +1298,6 @@ fn first_time_init_treats_friend_accepted_during_init_window_as_preexisting() ->
         (
             "usr_established".to_string(),
             FriendRecord {
-                state: "offline".into(),
                 id: "usr_established".into(),
                 display_name: "Established".into(),
                 ..FriendRecord::default()
@@ -1237,7 +1306,6 @@ fn first_time_init_treats_friend_accepted_during_init_window_as_preexisting() ->
         (
             "usr_just_accepted".to_string(),
             FriendRecord {
-                state: "online".into(),
                 id: "usr_just_accepted".into(),
                 display_name: "JustAccepted".into(),
                 ..FriendRecord::default()
@@ -1297,14 +1365,19 @@ fn active_baseline_trust_change_fans_out_after_atomic_persistence() -> Result<()
         },
     )?;
     let watermark = runtime.runtime().capture_friend_baseline_watermark()?;
-    let friend = FriendRecord {
-        state: "online".into(),
-        id: "usr_friend".into(),
-        display_name: "Friend".into(),
-        extra: [("$trustLevel".into(), json!("Trusted User"))]
-            .into_iter()
-            .collect(),
-        ..FriendRecord::default()
+    let friend = FriendBaselineEntry {
+        record: FriendRecord {
+            id: "usr_friend".into(),
+            display_name: "Friend".into(),
+            extra: [("$trustLevel".into(), json!("Trusted User"))]
+                .into_iter()
+                .collect(),
+            ..FriendRecord::default()
+        },
+        presence: FriendBaselinePresence {
+            state: "online".into(),
+            ..FriendBaselinePresence::default()
+        },
     };
 
     let outcome = runtime.runtime().sync_friend_snapshot_with_watermark(
@@ -1360,14 +1433,19 @@ fn active_baseline_uses_runtime_feed_persistence_state() -> Result<()> {
         false,
     )?;
     let watermark = runtime.runtime().capture_friend_baseline_watermark()?;
-    let friend = FriendRecord {
-        state: "online".into(),
-        id: "usr_friend".into(),
-        display_name: "Friend".into(),
-        extra: [("$trustLevel".into(), json!("Trusted User"))]
-            .into_iter()
-            .collect(),
-        ..FriendRecord::default()
+    let friend = FriendBaselineEntry {
+        record: FriendRecord {
+            id: "usr_friend".into(),
+            display_name: "Friend".into(),
+            extra: [("$trustLevel".into(), json!("Trusted User"))]
+                .into_iter()
+                .collect(),
+            ..FriendRecord::default()
+        },
+        presence: FriendBaselinePresence {
+            state: "online".into(),
+            ..FriendBaselinePresence::default()
+        },
     };
 
     let outcome = runtime.runtime().sync_friend_snapshot_with_watermark(
@@ -1402,12 +1480,17 @@ fn causal_watermark_rejects_superseded_baseline() -> Result<()> {
     let friend = |display_name: &str| {
         [(
             "usr_friend".to_string(),
-            FriendRecord {
-                id: "usr_friend".to_string(),
-                display_name: display_name.into(),
-                state: "online".into(),
-                location: "wrld_1:123".to_string(),
-                ..FriendRecord::default()
+            FriendBaselineEntry {
+                record: FriendRecord {
+                    id: "usr_friend".to_string(),
+                    display_name: display_name.into(),
+                    ..FriendRecord::default()
+                },
+                presence: FriendBaselinePresence {
+                    state: "online".into(),
+                    location: "wrld_1:123".to_string(),
+                    ..FriendBaselinePresence::default()
+                },
             },
         )]
         .into_iter()
@@ -1470,7 +1553,7 @@ fn causal_baseline_from_stopped_generation_is_not_cached() -> Result<()> {
         .lock()
         .unwrap()
         .friend_baseline
-        .pending
+        .queued
         .is_none());
     Ok(())
 }
@@ -1512,11 +1595,16 @@ fn sync_friend_snapshot_emits_projection_for_active_removals() -> Result<()> {
     let mut initial_friends = HashMap::new();
     initial_friends.insert(
         "usr_removed".to_string(),
-        FriendRecord {
-            id: "usr_removed".to_string(),
-            display_name: "Removed Friend".into(),
-            state: "offline".into(),
-            ..FriendRecord::default()
+        FriendBaselineEntry {
+            record: FriendRecord {
+                id: "usr_removed".to_string(),
+                display_name: "Removed Friend".into(),
+                ..FriendRecord::default()
+            },
+            presence: FriendBaselinePresence {
+                state: "offline".into(),
+                ..FriendBaselinePresence::default()
+            },
         },
     );
     runtime
@@ -1528,7 +1616,7 @@ fn sync_friend_snapshot_emits_projection_for_active_removals() -> Result<()> {
     );
     assert!(runtime
         .runtime()
-        .user_cache
+        .user_facts
         .get_user(&active_session.endpoint, "usr_removed")
         .is_some());
     runtime.runtime().deps.event_bus.take_events_for_test();
@@ -1562,7 +1650,7 @@ fn sync_friend_snapshot_emits_projection_for_active_removals() -> Result<()> {
         .is_empty());
     assert!(runtime
         .runtime()
-        .user_cache
+        .user_facts
         .get_user(&active_session.endpoint, "usr_removed")
         .is_none());
     assert!(runtime
@@ -1578,22 +1666,27 @@ fn apply_friend_profile_refresh_updates_existing_friend_only() -> Result<()> {
     let mut friends_by_id = HashMap::new();
     friends_by_id.insert(
         "usr_friend".to_string(),
-        FriendRecord {
-            id: "usr_friend".to_string(),
-            display_name: "Friend".into(),
-            state: "online".into(),
-            location: "wrld_old:123".to_string(),
-            ..FriendRecord::default()
+        FriendBaselineEntry {
+            record: FriendRecord {
+                id: "usr_friend".to_string(),
+                display_name: "Friend".into(),
+                ..FriendRecord::default()
+            },
+            presence: FriendBaselinePresence {
+                state: "online".into(),
+                location: "wrld_old:123".to_string(),
+                ..FriendBaselinePresence::default()
+            },
         },
     );
     runtime
         .runtime()
         .sync_friend_snapshot(active_session.clone(), Some(7), friends_by_id)?;
 
-    let friend_sequence = runtime
+    let friend_rev = runtime
         .runtime()
         .friends
-        .friend_state_sequence_for_user(7, "usr_friend")
+        .friend_rev_of(7, "usr_friend")
         .expect("friend should have a causal sequence");
     let updated = runtime.runtime().apply_friend_profile_refresh(
         active_session.endpoint.clone(),
@@ -1606,7 +1699,7 @@ fn apply_friend_profile_refresh_updates_existing_friend_only() -> Result<()> {
         }),
         FriendProfileRefreshExpectation {
             generation: 7,
-            sequence: friend_sequence,
+            rev: friend_rev,
         },
     )?;
     let stranger_added = runtime.runtime().apply_friend_profile_refresh(
@@ -1619,7 +1712,7 @@ fn apply_friend_profile_refresh_updates_existing_friend_only() -> Result<()> {
         }),
         FriendProfileRefreshExpectation {
             generation: 7,
-            sequence: 0,
+            rev: 0,
         },
     )?;
 
@@ -1628,7 +1721,15 @@ fn apply_friend_profile_refresh_updates_existing_friend_only() -> Result<()> {
     assert!(updated);
     assert!(!stranger_added);
     assert_eq!(friend.display_name, "Fresh Friend");
-    assert_eq!(friend.location, "wrld_fresh:456");
+    assert_eq!(
+        snapshot.presence_by_id["usr_friend"]
+            .view
+            .place()
+            .expect("online place")
+            .location
+            .tag,
+        "wrld_fresh:456"
+    );
     assert!(!snapshot.friends_by_id.contains_key("usr_stranger"));
     Ok(())
 }
@@ -1641,24 +1742,16 @@ fn friend_projection_clears_feed_entries_when_persistence_fails() -> Result<()> 
 
     let mut output = RealtimeFriendOutput::from_projection(
         OwnerId::new(active_session.user_id.clone()),
-        FriendProjection {
-            generation: 7,
-            feed_entries: vec![feed_entry.clone()],
-            ..FriendProjection::new(7, 0)
-        },
+        FriendProjection::new(7, 0),
     );
     output.persistence.feed_entries.push(feed_entry);
     runtime.runtime().apply_friend_output(output);
 
     let events = runtime.runtime().deps.event_bus.take_events_for_test();
-    let projection = events
+    let _projection = events
         .iter()
         .find(|event| event.name == "realtimeFriendProjection")
         .expect("friend projection should still be emitted after persistence failure");
-    assert_eq!(
-        projection.payload["feedEntries"].as_array().unwrap().len(),
-        0
-    );
     assert!(events
         .iter()
         .all(|event| event.name != "realtimeFeedProjection"));
@@ -1674,11 +1767,16 @@ fn repeated_friend_delete_retries_after_persistence_failure_without_duplicate_fe
         Some(7),
         [(
             "usr_friend".to_string(),
-            FriendRecord {
-                id: "usr_friend".into(),
-                display_name: "Friend".into(),
-                state: "offline".into(),
-                ..FriendRecord::default()
+            FriendBaselineEntry {
+                record: FriendRecord {
+                    id: "usr_friend".into(),
+                    display_name: "Friend".into(),
+                    ..FriendRecord::default()
+                },
+                presence: FriendBaselinePresence {
+                    state: "offline".into(),
+                    ..FriendBaselinePresence::default()
+                },
             },
         )]
         .into_iter()
@@ -1767,11 +1865,7 @@ fn disabled_feed_persistence_keeps_projection_and_other_batch_writes() -> Result
         .collect::<Vec<_>>();
     let mut output = RealtimeFriendOutput::from_projection(
         OwnerId::new(active_session.user_id.clone()),
-        FriendProjection {
-            generation: 7,
-            feed_entries: feed_entries.clone(),
-            ..FriendProjection::new(7, 0)
-        },
+        FriendProjection::new(7, 0),
     );
     output.persistence.feed_entries = feed_entries;
     output.persistence.friend_log_upserts.push(FriendLogUpsert {
@@ -1785,14 +1879,10 @@ fn disabled_feed_persistence_keeps_projection_and_other_batch_writes() -> Result
     runtime.runtime().apply_friend_output(output);
 
     let events = runtime.runtime().deps.event_bus.take_events_for_test();
-    let projection = events
+    let _projection = events
         .iter()
         .find(|event| event.name == "realtimeFriendProjection")
         .expect("disabled persistence should still emit the live projection");
-    assert!(projection.payload["feedEntries"]
-        .as_array()
-        .unwrap()
-        .is_empty());
     let feed_projection = events
         .iter()
         .find(|event| event.name == "realtimeFeedProjection")
@@ -1822,11 +1912,7 @@ fn disabled_feed_persistence_keeps_projection_and_other_batch_writes() -> Result
     let enabled_entry = feed_entry_of("Online", "2026-06-21T00:00:10.000Z");
     let mut enabled_output = RealtimeFriendOutput::from_projection(
         OwnerId::new(active_session.user_id.clone()),
-        FriendProjection {
-            generation: 7,
-            feed_entries: vec![enabled_entry.clone()],
-            ..FriendProjection::new(7, 0)
-        },
+        FriendProjection::new(7, 0),
     );
     enabled_output.persistence.feed_entries.push(enabled_entry);
     runtime.runtime().apply_friend_output(enabled_output);
@@ -1846,12 +1932,17 @@ fn emit_friend_log_changed_carries_the_active_baseline_scope() -> Result<()> {
     let mut friends = HashMap::new();
     friends.insert(
         "usr_friend".to_string(),
-        FriendRecord {
-            id: "usr_friend".to_string(),
-            display_name: "Friend".into(),
-            state: "online".into(),
-            location: "wrld_home:1".to_string(),
-            ..FriendRecord::default()
+        FriendBaselineEntry {
+            record: FriendRecord {
+                id: "usr_friend".to_string(),
+                display_name: "Friend".into(),
+                ..FriendRecord::default()
+            },
+            presence: FriendBaselinePresence {
+                state: "online".into(),
+                location: "wrld_home:1".to_string(),
+                ..FriendBaselinePresence::default()
+            },
         },
     );
     runtime
@@ -1860,12 +1951,17 @@ fn emit_friend_log_changed_carries_the_active_baseline_scope() -> Result<()> {
     let mut refreshed = HashMap::new();
     refreshed.insert(
         "usr_friend".to_string(),
-        FriendRecord {
-            id: "usr_friend".to_string(),
-            display_name: "Friend".into(),
-            state: "offline".into(),
-            location: "offline".to_string(),
-            ..FriendRecord::default()
+        FriendBaselineEntry {
+            record: FriendRecord {
+                id: "usr_friend".to_string(),
+                display_name: "Friend".into(),
+                ..FriendRecord::default()
+            },
+            presence: FriendBaselinePresence {
+                state: "offline".into(),
+                location: "offline".to_string(),
+                ..FriendBaselinePresence::default()
+            },
         },
     );
     let refreshed_result =

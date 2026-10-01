@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { onlinePresence, travelingPresence } from '@/test/presenceFixtures';
+
 import {
     instanceLocation,
     mergeGroupInstances,
@@ -14,8 +16,7 @@ describe('groupInstances', () => {
         expect(normalizeLocation('wrld_1:2')).toBe('wrld_1:2');
         expect(
             userGroupLocation({
-                location: 'traveling',
-                travelingToLocation: 'wrld_2:1~group(grp_target)'
+                $presence: travelingPresence('wrld_2:1~group(grp_target)')
             })
         ).toBe('wrld_2:1~group(grp_target)');
         expect(
@@ -43,29 +44,34 @@ describe('groupInstances', () => {
                 currentUserSnapshot: {
                     id: 'usr_self',
                     displayName: 'Self',
-                    location: currentLocation
+                    $presence: onlinePresence(currentLocation)
                 },
                 friendsById: {
                     usr_existing: {
                         id: 'usr_existing',
                         displayName: 'Existing Duplicate',
-                        location: 'wrld_base:base~group(grp_target)'
+                        $presence: onlinePresence(
+                            'wrld_base:base~group(grp_target)'
+                        )
                     },
                     usr_friend: {
                         id: 'usr_friend',
                         displayName: 'Friend',
-                        location: 'wrld_base:base~group(grp_target)'
+                        $presence: onlinePresence(
+                            'wrld_base:base~group(grp_target)'
+                        )
                     },
                     usr_traveling: {
                         id: 'usr_traveling',
                         displayName: 'Traveling',
-                        location: 'traveling',
-                        travelingToLocation: currentLocation
+                        $presence: travelingPresence(currentLocation)
                     },
                     usr_wrong_group: {
                         id: 'usr_wrong_group',
                         displayName: 'Wrong Group',
-                        location: 'wrld_wrong:1~group(grp_other)'
+                        $presence: onlinePresence(
+                            'wrld_wrong:1~group(grp_other)'
+                        )
                     }
                 }
             }

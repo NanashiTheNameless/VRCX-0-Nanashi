@@ -2,11 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import userProfileRepository from '@/repositories/userProfileRepository';
 import { enrichEntityDialogHistory } from '@/services/dialogService';
-import {
-    buildCurrentUserPresenceView,
-    mergeCurrentUserPresenceFields,
-    type CurrentUserPresenceGameState
-} from '@/shared/utils/currentUserPresence';
+import { mergeCurrentUserPresenceFields } from '@/shared/utils/currentUserPresence';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 
 import {
@@ -50,7 +46,6 @@ export function useUserDialogProfileResource({
     activitySnapshot = null,
     currentEndpoint,
     currentUserSnapshot,
-    gameState,
     isFriend = false,
     isTargetCurrentUser,
     localSnapshot,
@@ -71,16 +66,6 @@ export function useUserDialogProfileResource({
     const normalizedActivitySnapshot = useMemo(
         () => normalizeTargetSnapshot(activitySnapshot, normalizedUserId),
         [activitySnapshot, normalizedUserId]
-    );
-    const normalizedGameState = useMemo<CurrentUserPresenceGameState | null>(
-        () =>
-            gameState
-                ? {
-                      ...gameState,
-                      isGameRunning: gameState.isGameRunning === true
-                  }
-                : null,
-        [gameState]
     );
     const localSnapshotRef = useRef(normalizedLocalSnapshot);
     localSnapshotRef.current = normalizedLocalSnapshot;
@@ -103,19 +88,19 @@ export function useUserDialogProfileResource({
             : null
     );
     const profile = useMemo(() => {
-        const base = isTargetCurrentUser
-            ? buildCurrentUserPresenceView(activeBaseProfile, {
-                  currentUserSnapshot: currentUserPresenceSnapshot,
-                  gameState: normalizedGameState
-              })
-            : activeBaseProfile;
+        const base =
+            isTargetCurrentUser && activeBaseProfile
+                ? mergeCurrentUserPresenceFields(
+                      activeBaseProfile,
+                      currentUserPresenceSnapshot
+                  )
+                : activeBaseProfile;
         return overlayFriendPresence(base, friendPresenceSource);
     }, [
         activeBaseProfile,
         currentUserPresenceSnapshot,
         isTargetCurrentUser,
-        friendPresenceSource,
-        normalizedGameState
+        friendPresenceSource
     ]);
     const profileRef = useRef(profile);
     profileRef.current = profile;

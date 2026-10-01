@@ -1,9 +1,8 @@
 import { BellIcon, CheckCheckIcon, RefreshCcwIcon, XIcon } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { InviteMessageDialog } from '@/components/dialogs/InviteMessageDialog';
-import type { GroupInstanceRecord } from '@/domain/entities/group';
 import { BoopReplyDialog } from '@/features/notifications/components/NotificationViewParts';
 import { NotificationDrawerList } from '@/features/notifications/drawer/NotificationDrawerList';
 import type {
@@ -17,8 +16,6 @@ import { preserveAppTitleBarOnOpenChange } from '@/lib/overlayTitlebar';
 import { cn } from '@/lib/utils';
 import { openWorldDialog } from '@/services/dialogService';
 import { toast } from '@/services/toastService';
-import { checkCanInvite } from '@/shared/utils/invite';
-import { useRuntimeStore } from '@/state/runtimeStore';
 import { useShellStore } from '@/state/shellStore';
 import { useVrcNotificationStore } from '@/state/vrcNotificationStore';
 import { Badge } from '@/ui/shadcn/badge';
@@ -33,10 +30,7 @@ import {
 import { Spinner } from '@/ui/shadcn/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
-import {
-    buildCachedInstanceMap,
-    resolveCurrentInviteLocation
-} from './notificationCenterUtils';
+import { useNotificationRuntime } from './useNotificationRuntime';
 
 type InviteResponseSlotPayload = {
     imageData: string;
@@ -46,45 +40,16 @@ type InviteResponseSlotPayload = {
     };
 };
 
-const EMPTY_GROUP_INSTANCES: GroupInstanceRecord[] = [];
-
 export function VrcNotificationCenterHost() {
     const { t } = useTranslation();
     const notificationTypeLabel = useNotificationTypeLabel();
-    const currentUserId = useRuntimeStore((state) => state.auth.currentUserId);
-    const endpoint = useRuntimeStore((state) => state.auth.currentUserEndpoint);
-    const currentUserLocationTag = useRuntimeStore(
-        (state) => state.auth.currentUserSnapshot?.$locationTag
-    );
-    const currentUserLocation = useRuntimeStore(
-        (state) => state.auth.currentUserSnapshot?.location
-    );
-    const isLocalUserVrcPlusSupporter = useRuntimeStore((state) => {
-        const tags = state.auth.currentUserSnapshot?.tags;
-        return Boolean(
-            state.auth.currentUserSnapshot?.$isVRCPlus ||
-            (Array.isArray(tags) && tags.includes('system_supporter')) ||
-            globalThis?.$debug?.debugVrcPlus
-        );
-    });
-    const currentLocation = useRuntimeStore(
-        (state) => state.gameState.currentLocation
-    );
-    const currentDestination = useRuntimeStore(
-        (state) => state.gameState.currentDestination
-    );
-    const isGameRunning = useRuntimeStore(
-        (state) => state.gameState.isGameRunning
-    );
-    const groupInstancesEndpoint = useRuntimeStore(
-        (state) => state.groupInstances.endpoint
-    );
-    const groupInstancesUserId = useRuntimeStore(
-        (state) => state.groupInstances.userId
-    );
-    const groupInstances = useRuntimeStore(
-        (state) => state.groupInstances.instances
-    );
+    const {
+        canInviteFromCurrentLocation,
+        currentInviteLocation,
+        currentUserId,
+        endpoint,
+        isLocalUserVrcPlusSupporter
+    } = useNotificationRuntime();
     const sidebarWindowMode = useShellStore(
         (state) => state.windowDisplayMode === 'sidebar'
     );
@@ -103,44 +68,6 @@ export function VrcNotificationCenterHost() {
         useState<NotificationDialogRequest>(null);
     const [boopReplyRequest, setBoopReplyRequest] =
         useState<NotificationRow | null>(null);
-    const groupInstanceRows =
-        groupInstancesUserId === currentUserId &&
-        groupInstancesEndpoint === endpoint
-            ? groupInstances
-            : EMPTY_GROUP_INSTANCES;
-    const gameState = useMemo(
-        () => ({
-            currentLocation,
-            currentDestination,
-            isGameRunning
-        }),
-        [currentDestination, currentLocation, isGameRunning]
-    );
-    const currentUserSnapshot = useMemo(
-        () => ({
-            $locationTag: currentUserLocationTag,
-            location: currentUserLocation
-        }),
-        [currentUserLocation, currentUserLocationTag]
-    );
-    const currentInviteLocation = useMemo(
-        () => resolveCurrentInviteLocation(gameState, currentUserSnapshot),
-        [currentUserSnapshot, gameState]
-    );
-    const cachedInstances = useMemo(
-        () => buildCachedInstanceMap(groupInstanceRows),
-        [groupInstanceRows]
-    );
-    const canInviteFromCurrentLocation = useMemo(
-        () =>
-            checkCanInvite(currentInviteLocation, {
-                currentUserId: currentUserId ?? '',
-                lastLocationStr: currentInviteLocation,
-                cachedInstances
-            }),
-        [cachedInstances, currentInviteLocation, currentUserId]
-    );
-
     const {
         acceptFriendRequest,
         acceptRequestInvite,

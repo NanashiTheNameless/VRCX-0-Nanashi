@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveUserPresenceStatus, userStatusSortRank } from './userStatus';
+import {
+    activePresence,
+    offlinePresence,
+    onlinePresence,
+    pendingPresence
+} from '@/test/presenceFixtures';
+
+import {
+    resolveUserPresenceStatus,
+    userStatusLabelKey,
+    userStatusSortRank
+} from './userStatus';
 
 describe('userStatus', () => {
     it('normalizes legacy compact status strings', () => {
@@ -13,50 +24,50 @@ describe('userStatus', () => {
         );
     });
 
-    it('treats pending offline and offline fields as offline', () => {
+    it('treats pending offline and offline presence as offline', () => {
         expect(
             resolveUserPresenceStatus({
-                pendingOffline: true,
+                $presence: pendingPresence(),
                 status: 'join me'
             })
         ).toBe('offline');
-        expect(
-            resolveUserPresenceStatus({ state: 'active', location: 'offline' })
-        ).toBe('offline');
-        expect(
-            resolveUserPresenceStatus({
-                ref: { state: 'online', location: 'offline:offline' }
-            })
-        ).toBe('offline');
+        expect(resolveUserPresenceStatus({ $presence: offlinePresence })).toBe(
+            'offline'
+        );
     });
 
     it('prioritizes explicit social status before active location', () => {
         expect(
             resolveUserPresenceStatus({
                 status: 'join me',
-                location: 'wrld_123:1'
+                $presence: onlinePresence('wrld_123:1')
             })
         ).toBe('join me');
         expect(
             resolveUserPresenceStatus({
                 status: 'ask me',
-                location: 'wrld_123:1'
+                $presence: onlinePresence('wrld_123:1')
             })
         ).toBe('ask me');
         expect(
             resolveUserPresenceStatus({
                 status: 'busy',
-                location: 'wrld_123:1'
+                $presence: onlinePresence('wrld_123:1')
             })
         ).toBe('busy');
-        expect(resolveUserPresenceStatus({ location: 'wrld_123:1' })).toBe(
-            'active'
-        );
+        expect(
+            resolveUserPresenceStatus({
+                $presence: onlinePresence('wrld_123:1')
+            })
+        ).toBe('active');
     });
 
     it('keeps state active distinct from online active for presence ordering', () => {
-        expect(resolveUserPresenceStatus({ state: 'active' })).toBe(
+        expect(resolveUserPresenceStatus({ $presence: activePresence() })).toBe(
             'state-active'
+        );
+        expect(resolveUserPresenceStatus({ $presence: onlinePresence() })).toBe(
+            'active'
         );
     });
 
@@ -67,5 +78,57 @@ describe('userStatus', () => {
         expect(userStatusSortRank('busy')).toBe(3);
         expect(userStatusSortRank('private')).toBe(4);
         expect(userStatusSortRank('offline')).toBe(5);
+    });
+
+    it('resolves from the presence view before raw presence fields', () => {
+        expect(
+            resolveUserPresenceStatus({
+                state: 'online',
+                location: 'offline',
+                $presence: onlinePresence()
+            })
+        ).toBe('active');
+        expect(
+            resolveUserPresenceStatus({
+                status: 'join me',
+                $presence: pendingPresence()
+            })
+        ).toBe('offline');
+        expect(
+            resolveUserPresenceStatus({
+                status: 'join me',
+                $presence: activePresence()
+            })
+        ).toBe('join me');
+        expect(resolveUserPresenceStatus({ $presence: activePresence() })).toBe(
+            'state-active'
+        );
+        expect(
+            resolveUserPresenceStatus({
+                status: 'busy',
+                $presence: onlinePresence()
+            })
+        ).toBe('busy');
+    });
+
+    it('labels an active user as active and a leaving user as offline', () => {
+        expect(
+            userStatusLabelKey({
+                status: 'join me',
+                $presence: activePresence()
+            })
+        ).toBe('dialog.user.status.active');
+        expect(
+            userStatusLabelKey({
+                status: 'join me',
+                $presence: pendingPresence()
+            })
+        ).toBe('dialog.user.status.offline');
+        expect(
+            userStatusLabelKey({
+                status: 'join me',
+                $presence: onlinePresence()
+            })
+        ).toBe('dialog.user.status.join_me');
     });
 });

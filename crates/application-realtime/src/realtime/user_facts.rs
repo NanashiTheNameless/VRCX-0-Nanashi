@@ -7,15 +7,15 @@ use vrcx_0_core::user_facts::{
     merge_user_fact_owned, normalize_user_id, user_fact_key, UserFact, UserFactMergeOptions,
 };
 
-pub(crate) struct UserCacheRuntime {
+pub(crate) struct UserFactStore {
     users: Mutex<HashMap<String, UserFact>>,
 }
 
-pub(crate) struct UserCacheOutput {
+pub(crate) struct UserFactOutput {
     pub user: RawJsonObject,
 }
 
-impl UserCacheRuntime {
+impl UserFactStore {
     pub(crate) fn new() -> Self {
         Self {
             users: Mutex::new(HashMap::new()),
@@ -55,7 +55,7 @@ impl UserCacheRuntime {
         &self,
         value: &Value,
         options: &UserFactMergeOptions,
-    ) -> Option<UserCacheOutput> {
+    ) -> Option<UserFactOutput> {
         let user_id = Self::extract_user_id(value);
         if user_id.is_empty() {
             return None;
@@ -71,7 +71,7 @@ impl UserCacheRuntime {
         let mut users = self.lock_users();
         let result = merge_user_fact_owned(users.remove(&key), value, options);
         let pinned = is_pinned(&result.fact);
-        let output = result.changed.then(|| UserCacheOutput {
+        let output = result.changed.then(|| UserFactOutput {
             user: result.fact.to_object().into(),
         });
         if pinned {
@@ -142,7 +142,7 @@ mod tests {
 
     #[test]
     fn non_friend_record_returns_output_without_being_retained() {
-        let cache = UserCacheRuntime::new();
+        let cache = UserFactStore::new();
         let out = cache.record_user(
             &json!({ "id": "usr_1", "displayName": "Alice" }),
             &opts(false),
@@ -159,7 +159,7 @@ mod tests {
 
     #[test]
     fn unchanged_friend_record_returns_none() {
-        let cache = UserCacheRuntime::new();
+        let cache = UserFactStore::new();
         cache.record_user(&json!({ "id": "usr_1", "state": "online" }), &opts(true));
         let again = cache.record_user(&json!({ "id": "usr_1", "state": "online" }), &opts(true));
         assert!(again.is_none());
@@ -167,7 +167,7 @@ mod tests {
 
     #[test]
     fn friends_are_retained_while_non_friends_are_not() {
-        let cache = UserCacheRuntime::new();
+        let cache = UserFactStore::new();
         cache.record_user(
             &json!({ "id": "usr_friend", "displayName": "F" }),
             &opts(true),
@@ -183,7 +183,7 @@ mod tests {
 
     #[test]
     fn current_user_is_retained() {
-        let cache = UserCacheRuntime::new();
+        let cache = UserFactStore::new();
         cache.record_user(
             &json!({ "id": "usr_self", "displayName": "Self" }),
             &UserFactMergeOptions {
@@ -198,7 +198,7 @@ mod tests {
 
     #[test]
     fn clear_drops_retained_users() {
-        let cache = UserCacheRuntime::new();
+        let cache = UserFactStore::new();
         cache.record_user(
             &json!({ "id": "usr_friend", "displayName": "F" }),
             &opts(true),

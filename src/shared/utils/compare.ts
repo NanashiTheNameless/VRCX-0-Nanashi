@@ -1,31 +1,23 @@
+import {
+    presenceOf,
+    presencePlace,
+    presenceSection
+} from '@/domain/friends/presence';
+
 import { sortStatus } from './friendStatus';
 
 type ComparableFieldValue = string | number | undefined;
 
-type ComparableRef = Record<string, ComparableFieldValue> & {
-    $online_for?: ComparableFieldValue;
-    last_activity?: ComparableFieldValue;
-    last_login?: ComparableFieldValue;
-    location?: string;
-    state?: string;
-    status?: string;
-};
-
 type ComparableRecord = Record<string, unknown> & {
     $friendNumber?: number;
-    $lastSeen?: ComparableFieldValue;
-    $location_at?: ComparableFieldValue;
-    $online_for?: ComparableFieldValue;
     created_at?: string;
     displayName?: string;
     id?: string;
     last_activity?: ComparableFieldValue;
     last_login?: ComparableFieldValue;
-    location?: string;
     memberCount?: number;
-    name?: string;
-    ref?: ComparableRef;
-    state?: string;
+    name?: string | null;
+    status?: string | null;
     updated_at?: string;
 };
 type Comparator = (a: ComparableRecord, b: ComparableRecord) => number;
@@ -47,6 +39,26 @@ function isGreaterThan(
         return false;
     }
     return a > b;
+}
+
+function isOnlineRecord(record: ComparableRecord): boolean {
+    const presence = presenceOf(record);
+    return presence ? presenceSection(presence) === 'online' : false;
+}
+
+function recordPlace(record: ComparableRecord) {
+    const presence = presenceOf(record);
+    return presence ? presencePlace(presence)?.location : null;
+}
+
+function activityValue(
+    record: ComparableRecord,
+    field: string
+): ComparableFieldValue {
+    const value = record[field];
+    return typeof value === 'string' || typeof value === 'number'
+        ? value
+        : undefined;
 }
 
 function compareByName(a: ComparableRecord, b: ComparableRecord): number {
@@ -83,67 +95,56 @@ function compareByMemberCount(
 }
 
 function compareByPrivate(a: ComparableRecord, b: ComparableRecord): number {
-    if (typeof a.ref === 'undefined' || typeof b.ref === 'undefined') {
+    const aPrivate = recordPlace(a)?.isPrivate === true;
+    const bPrivate = recordPlace(b)?.isPrivate === true;
+    if (aPrivate === bPrivate) {
         return 0;
     }
-    if (a.ref.location === 'private' && b.ref.location === 'private') {
-        return 0;
-    } else if (a.ref.location === 'private') {
-        return 1;
-    } else if (b.ref.location === 'private') {
-        return -1;
-    }
-    return 0;
+    return aPrivate ? 1 : -1;
 }
 
 function compareByStatus(a: ComparableRecord, b: ComparableRecord): number {
-    if (typeof a.ref === 'undefined' || typeof b.ref === 'undefined') {
-        return 0;
-    }
-    const aOffline = a.ref.state === 'offline';
-    const bOffline = b.ref.state === 'offline';
+    const aOffline = presenceOf(a)?.kind === 'offline';
+    const bOffline = presenceOf(b)?.kind === 'offline';
     if (aOffline && !bOffline) {
         return 1;
     }
     if (!aOffline && bOffline) {
         return -1;
     }
-    if (a.ref.status === b.ref.status) {
+    if (a.status === b.status) {
         return 0;
     }
-    return sortStatus(a.ref.status ?? '', b.ref.status ?? '');
+    return sortStatus(a.status ?? '', b.status ?? '');
+}
+
+function onlineSince(record: ComparableRecord) {
+    const presence = presenceOf(record);
+    const since =
+        presence?.kind === 'online' || presence?.kind === 'pendingOffline'
+            ? presence.onlineSinceMs
+            : null;
+    return since ?? 0;
 }
 
 function compareByLastActive(a: ComparableRecord, b: ComparableRecord): number {
-    if (a.state === 'online' && b.state === 'online') {
-        if (
-            a.ref?.$online_for &&
-            b.ref?.$online_for &&
-            a.ref.$online_for === b.ref.$online_for
-        ) {
+    if (isOnlineRecord(a) && isOnlineRecord(b)) {
+        const aSince = onlineSince(a);
+        const bSince = onlineSince(b);
+        if (aSince && bSince && aSince === bSince) {
             return compareByActivityField(a, b, 'last_login');
         }
-        return compareByActivityField(a, b, '$online_for');
+        return compareActivityValues(aSince, bSince);
     }
 
     return compareByActivityField(a, b, 'last_activity');
 }
 
-function compareByLastActiveRef(
-    a: ComparableRecord,
-    b: ComparableRecord
-): number {
-    if (a.state === 'online' && b.state === 'online') {
-        if (a.$online_for && b.$online_for && a.$online_for === b.$online_for) {
-            return isLessThan(a.last_login, b.last_login) ? 1 : -1;
-        }
-        return isLessThan(a.$online_for, b.$online_for) ? 1 : -1;
+function compareByLastSeen(aLastSeen?: string, bLastSeen?: string): number {
+    if (!aLastSeen || !bLastSeen) {
+        return Number(!aLastSeen) - Number(!bLastSeen);
     }
-    return isLessThan(a.last_activity, b.last_activity) ? 1 : -1;
-}
-
-function compareByLastSeen(a: ComparableRecord, b: ComparableRecord): number {
-    return compareByActivityField(a, b, '$lastSeen');
+    return compareActivityValues(aLastSeen, bLastSeen);
 }
 
 function compareByActivityField(
@@ -151,55 +152,56 @@ function compareByActivityField(
     b: ComparableRecord,
     field: string
 ): number {
-    if (typeof a.ref === 'undefined' || typeof b.ref === 'undefined') {
-        return 0;
-    }
+    return compareActivityValues(
+        activityValue(a, field),
+        activityValue(b, field)
+    );
+}
 
+function compareActivityValues(
+    aValue: ComparableFieldValue,
+    bValue: ComparableFieldValue
+): number {
     // When the field is just and empty string, it means they've been
     // in whatever active state for the longest
-    if (
-        isLessThan(a.ref[field], b.ref[field]) ||
-        (a.ref[field] !== '' && b.ref[field] === '')
-    ) {
+    if (isLessThan(aValue, bValue) || (aValue !== '' && bValue === '')) {
         return 1;
     }
-    if (
-        isGreaterThan(a.ref[field], b.ref[field]) ||
-        (a.ref[field] === '' && b.ref[field] !== '')
-    ) {
+    if (isGreaterThan(aValue, bValue) || (aValue === '' && bValue !== '')) {
         return -1;
     }
     return 0;
 }
 
-function compareByLocationAt(a: ComparableRecord, b: ComparableRecord): number {
-    if (a.location === 'traveling' && b.location === 'traveling') {
+function compareByLocationAt(
+    a: ComparableRecord,
+    b: ComparableRecord,
+    aStaySinceMs?: number,
+    bStaySinceMs?: number
+): number {
+    const aTraveling = recordPlace(a)?.isTraveling === true;
+    const bTraveling = recordPlace(b)?.isTraveling === true;
+    if (aTraveling !== bTraveling) {
+        return aTraveling ? 1 : -1;
+    }
+    if (aTraveling) {
         return 0;
     }
-    if (a.location === 'traveling') {
-        return 1;
-    }
-    if (b.location === 'traveling') {
+    if (isLessThan(aStaySinceMs, bStaySinceMs)) {
         return -1;
     }
-    if (isLessThan(a.$location_at, b.$location_at)) {
-        return -1;
-    }
-    if (isGreaterThan(a.$location_at, b.$location_at)) {
+    if (isGreaterThan(aStaySinceMs, bStaySinceMs)) {
         return 1;
     }
     return 0;
 }
 
 function compareByLocation(a: ComparableRecord, b: ComparableRecord): number {
-    if (typeof a.ref === 'undefined' || typeof b.ref === 'undefined') {
-        return 0;
-    }
-    if (a.state !== 'online' || b.state !== 'online') {
+    if (!isOnlineRecord(a) || !isOnlineRecord(b)) {
         return 0;
     }
 
-    return (a.ref.location ?? '').localeCompare(b.ref.location ?? '');
+    return (recordPlace(a)?.tag ?? '').localeCompare(recordPlace(b)?.tag ?? '');
 }
 
 function compareByFriendOrder(
@@ -219,7 +221,6 @@ export {
     compareByPrivate,
     compareByStatus,
     compareByLastActive,
-    compareByLastActiveRef,
     compareByLastSeen,
     compareByLocationAt,
     compareByLocation,

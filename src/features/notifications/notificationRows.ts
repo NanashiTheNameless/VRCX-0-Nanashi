@@ -2,7 +2,6 @@ import type { GroupInstanceRecord } from '@/domain/entities/group';
 import type { NotificationRow } from '@/repositories/notificationPersistenceRepository';
 import { parseLocation } from '@/shared/utils/location';
 import { isRecord } from '@/shared/utils/record';
-export { resolveCurrentInviteLocation } from '@/shared/utils/invite';
 
 type CachedInstanceLike = Record<string, unknown> & {
     closedAt?: string | null;

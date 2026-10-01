@@ -2,16 +2,13 @@ use std::sync::Arc;
 
 use serde_json::Value;
 use tokio::sync::watch;
-use vrcx_0_application_core::{Error, LocalGameContextSnapshot, Result};
+use vrcx_0_application_core::{Error, Result};
 use vrcx_0_contracts::vrchat_api::VrchatScope as ApiScope;
 
-use crate::realtime::{
-    PendingOfflineTimerAction, RealtimeCurrentUserAuthority, RealtimeCurrentUserGameLogContext,
-    RealtimeCurrentUserOutput, RealtimeSessionContext,
-};
+use crate::realtime::RealtimeCurrentUserOutput;
 
 use super::state::{ActiveRealtimeContext, CurrentUserRefreshStatus};
-use super::RealtimeHostRuntime;
+use super::{sleep_until, RealtimeHostRuntime};
 
 #[derive(Clone, Copy, Debug)]
 pub struct RealtimeCurrentUserRefreshExpectation {
@@ -21,23 +18,15 @@ pub struct RealtimeCurrentUserRefreshExpectation {
 }
 
 impl RealtimeHostRuntime {
-    pub(super) fn schedule_current_user_pending_offline(
-        self: &Arc<Self>,
-        generation: u64,
-        timer_action: PendingOfflineTimerAction,
-    ) {
-        let PendingOfflineTimerAction::Schedule { token, delay, .. } = timer_action else {
-            return;
-        };
+    pub(super) fn schedule_current_user_wake(self: &Arc<Self>, generation: u64, at_ms: i64) {
         let runtime = Arc::clone(self);
         self.deps.tasks.spawn(async move {
-            tokio::time::sleep(delay).await;
+            sleep_until(at_ms).await;
             let now = chrono::Utc::now().to_rfc3339();
-            let Some(output) = runtime.current_user.fire_pending_offline(
+            let Some(output) = runtime.current_user.wake_pending_offline(
                 generation,
-                token,
                 now,
-                runtime.current_user_authority(),
+                runtime.local_game_context(),
             ) else {
                 return;
             };
@@ -45,108 +34,25 @@ impl RealtimeHostRuntime {
         });
     }
 
-    pub fn sync_current_user_snapshot(
-        &self,
-        requested_session: RealtimeSessionContext,
-        auth_scope_generation: u64,
-        generation: Option<u64>,
-        snapshot: serde_json::Value,
-        overlay_patch: serde_json::Value,
-    ) -> Result<bool> {
-        let active = {
-            let state = self
-                .state
-                .lock()
-                .map_err(|error| Error::Custom(format!("realtime state lock: {error}")))?;
-            let Some(active) = state.connection.active_context.clone() else {
-                return Ok(false);
-            };
-            let auth_scope = self.deps.auth_scope.snapshot();
-            if active.auth_scope_generation != auth_scope_generation
-                || !auth_scope.active
-                || auth_scope.generation != auth_scope_generation
-                || auth_scope.current_user_id != requested_session.user_id
-                || auth_scope.endpoint != requested_session.endpoint
-                || active.session != requested_session
-                || generation
-                    .map(|generation| generation != active.generation)
-                    .unwrap_or(false)
-                || !self
-                    .deps
-                    .session
-                    .is_realtime_generation_active(active.session_generation)
-            {
-                return Ok(false);
-            }
-            active
-        };
-
-        let Some(output) = self.current_user.apply_refreshed_snapshot(
-            active.generation,
-            snapshot,
-            overlay_patch,
-            self.current_user_authority(),
-        ) else {
-            return Ok(false);
-        };
-        self.apply_current_user_output(output);
-        Ok(true)
-    }
-
     pub(super) fn refresh_current_user_snapshot_after_update(
         self: &Arc<Self>,
         generation: u64,
-        session: RealtimeSessionContext,
         overlay_patch: serde_json::Map<String, Value>,
     ) {
         let runtime = Arc::clone(self);
         self.deps.tasks.spawn(async move {
-            let request = match runtime
-                .deps
-                .remote_requests
-                .current_user(session.endpoint.clone())
+            if !runtime
+                .active_current_user_context()
+                .is_some_and(|active| active.generation == generation)
             {
-                Ok(request) => request,
-                Err(error) => {
-                    tracing::warn!("Realtime current user refresh input failed: {error}");
-                    return;
-                }
-            };
-            let response = match runtime
-                .deps
-                .web
-                .execute_api(request, ApiScope::Vrchat)
-                .await
-            {
-                Ok(result) => result,
-                Err(error) => {
-                    tracing::warn!("Realtime current user refresh failed: {error}");
-                    return;
-                }
-            };
-            if !(200..300).contains(&response.status) {
-                tracing::warn!(
-                    status = response.status,
-                    "Realtime current user refresh returned non-success"
-                );
                 return;
             }
-            let snapshot = match serde_json::from_str::<Value>(&response.data) {
-                Ok(snapshot) => snapshot,
-                Err(error) => {
-                    tracing::warn!("Realtime current user refresh json failed: {error}");
-                    return;
-                }
-            };
-            let Some(output) = runtime.current_user.apply_refreshed_snapshot(
-                generation,
-                snapshot,
-                serde_json::Value::Object(overlay_patch),
-                runtime.current_user_authority(),
-            ) else {
-                return;
-            };
-            runtime.apply_current_user_output(output);
+            if let Err(error) = runtime
+                .refresh_current_user_once(Value::Object(overlay_patch))
+                .await
+            {
+                tracing::warn!("Realtime current user refresh failed: {error}");
+            }
         });
     }
 
@@ -166,7 +72,7 @@ impl RealtimeHostRuntime {
         &self,
         expectation: RealtimeCurrentUserRefreshExpectation,
         snapshot: Value,
-        response_authority_fields: &[&str],
+        overlay_patch: Value,
     ) -> bool {
         if !self
             .active_current_user_context()
@@ -178,9 +84,8 @@ impl RealtimeHostRuntime {
             expectation.generation,
             expectation.sequence,
             snapshot,
-            Value::Null,
-            response_authority_fields,
-            self.current_user_authority(),
+            overlay_patch,
+            self.local_game_context(),
         ) else {
             return false;
         };
@@ -259,29 +164,15 @@ impl RealtimeHostRuntime {
         }
         let snapshot = serde_json::from_str::<Value>(&response.data)
             .map_err(|error| Error::Custom(format!("current user refresh json: {error}")))?;
-        let expectation = RealtimeCurrentUserRefreshExpectation {
-            generation: active.generation,
-            session_generation: active.session_generation,
-            sequence,
-        };
-        if !self
-            .active_current_user_context()
-            .is_some_and(|current| self.current_user_context_matches(&current, &expectation))
-        {
-            return Ok(false);
-        }
-        let Some(output) = self.current_user.apply_refreshed_snapshot_if_sequence(
-            expectation.generation,
-            expectation.sequence,
+        Ok(self.apply_current_user_refreshed_snapshot_if_sequence(
+            RealtimeCurrentUserRefreshExpectation {
+                generation: active.generation,
+                session_generation: active.session_generation,
+                sequence,
+            },
             snapshot,
             overlay_patch,
-            &[],
-            self.current_user_authority(),
-        ) else {
-            return Ok(false);
-        };
-        self.apply_current_user_output(output);
-        Ok(true)
+        ))
     }
 
     pub(super) fn active_current_user_context(&self) -> Option<ActiveRealtimeContext> {
@@ -308,25 +199,17 @@ impl RealtimeHostRuntime {
             && active.session_generation == expectation.session_generation
     }
 
-    pub(super) fn current_user_authority(&self) -> RealtimeCurrentUserAuthority {
-        let local_game_context = self.deps.local_game_context.snapshot();
-        match local_game_context {
-            LocalGameContextSnapshot::Unavailable => RealtimeCurrentUserAuthority::Unavailable,
-            LocalGameContextSnapshot::Available {
-                is_game_running,
-                location,
-                destination,
-                world_name,
-                ..
-            } => RealtimeCurrentUserAuthority::Available {
-                is_game_running,
-                game_log: Some(RealtimeCurrentUserGameLogContext {
-                    location,
-                    destination,
-                    world_name,
-                }),
-            },
-        }
+    pub fn refresh_current_user_local_presence(&self) {
+        let Some(active) = self.active_current_user_context() else {
+            return;
+        };
+        let Some(output) = self
+            .current_user
+            .refresh_local_presence(active.generation, self.local_game_context())
+        else {
+            return;
+        };
+        self.apply_current_user_output(output);
     }
 
     pub(super) fn sync_current_user_game_running_state(
@@ -346,11 +229,8 @@ impl RealtimeHostRuntime {
         generation: u64,
         is_game_running: bool,
     ) -> Option<RealtimeCurrentUserOutput> {
-        let authority = self
-            .current_user_authority()
-            .with_game_running(is_game_running);
-        self.current_user
-            .apply_game_running_state(generation, authority)
+        let game = self.local_game_context().with_game_running(is_game_running);
+        self.current_user.apply_game_running_state(generation, game)
     }
 
     pub(super) fn current_user_transport_finalization_output(
@@ -358,7 +238,7 @@ impl RealtimeHostRuntime {
         generation: u64,
     ) -> Option<RealtimeCurrentUserOutput> {
         self.current_user
-            .finalize_transport(generation, self.current_user_authority())
+            .finalize_transport(generation, self.local_game_context())
     }
 
     pub(super) fn current_user_transport_interruption_output(
@@ -366,90 +246,6 @@ impl RealtimeHostRuntime {
         generation: u64,
     ) -> Option<RealtimeCurrentUserOutput> {
         self.current_user
-            .interrupt_transport(generation, self.current_user_authority())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::realtime::service::host::test_support::runtime_with_active_session;
-    use serde_json::json;
-
-    #[test]
-    fn sync_accepts_a_snapshot_for_the_current_auth_scope_generation() -> Result<()> {
-        let (_dir, test_runtime, session) = runtime_with_active_session("current-user-auth-scope")?;
-        let runtime = test_runtime.runtime();
-        let auth_scope_generation = test_runtime.auth_scope().snapshot().generation;
-        let generation = runtime
-            .state
-            .lock()
-            .unwrap()
-            .connection
-            .active_context
-            .as_ref()
-            .expect("active realtime context")
-            .generation;
-        runtime.current_user.set_snapshot(
-            session.user_id.clone(),
-            generation,
-            json!({ "id": session.user_id, "displayName": "Current User" }),
-        );
-
-        let accepted = runtime.sync_current_user_snapshot(
-            session.clone(),
-            auth_scope_generation,
-            None,
-            json!({ "id": session.user_id, "displayName": "Updated User" }),
-            Value::Null,
-        )?;
-
-        assert!(accepted);
-        assert_eq!(
-            runtime.current_user_snapshot().unwrap()["displayName"],
-            "Updated User"
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn sync_rejects_a_snapshot_from_a_previous_auth_scope_generation() -> Result<()> {
-        let (_dir, test_runtime, session) =
-            runtime_with_active_session("stale-current-user-auth-scope")?;
-        let runtime = test_runtime.runtime();
-        let stale_auth_scope_generation = test_runtime.auth_scope().snapshot().generation;
-        test_runtime.auth_scope().set("", "");
-        let replacement_scope = test_runtime
-            .auth_scope()
-            .set(&session.user_id, &session.endpoint);
-        {
-            let mut state = runtime.state.lock().unwrap();
-            let active = state
-                .connection
-                .active_context
-                .as_mut()
-                .expect("active realtime context");
-            active.auth_scope_generation = replacement_scope.generation;
-            runtime.current_user.set_snapshot(
-                session.user_id.clone(),
-                active.generation,
-                json!({ "id": session.user_id, "displayName": "Current User" }),
-            );
-        }
-
-        let accepted = runtime.sync_current_user_snapshot(
-            session.clone(),
-            stale_auth_scope_generation,
-            None,
-            json!({ "id": session.user_id, "displayName": "Stale User" }),
-            Value::Null,
-        )?;
-
-        assert!(!accepted);
-        assert_eq!(
-            runtime.current_user_snapshot().unwrap()["displayName"],
-            "Current User"
-        );
-        Ok(())
+            .interrupt_transport(generation, self.local_game_context())
     }
 }

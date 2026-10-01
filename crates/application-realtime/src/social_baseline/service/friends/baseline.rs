@@ -6,25 +6,20 @@ use vrcx_0_application_core::{Error, Result};
 use vrcx_0_contracts::feed_live::FeedLiveEntry;
 use vrcx_0_contracts::friend_log::{FriendLogCurrentEntryInput, FriendLogReplaceOptionsInput};
 use vrcx_0_contracts::realtime::{FriendLogDelete, FriendLogUpsert, RealtimePersistenceBatch};
-use vrcx_0_core::friends::FriendRecord;
+use vrcx_0_core::friends::{FriendBaselineEntry, FriendRecord, StateBucket};
 use vrcx_0_core::trust::{trust_level_changed, trust_level_differs};
 
 use crate::realtime::friends::trust_level_feed_entry;
 
 use super::super::{
-    auth_scope_matches, execute_vrchat_json_request, extend_unique,
-    fetch_friend_statuses_concurrent, normalize_text, object_field_string,
-    refetch_users_concurrent, stale_friend_output, value_as_string, CurrentUserSnapshotView,
-    FriendBaselineSyncOutcome, Ordering, RawJson, SocialBaselineDeps,
+    auth_scope_matches, execute_vrchat_json_request, fetch_friend_statuses_concurrent,
+    normalize_text, object_field_string, refetch_users_concurrent, stale_friend_output,
+    value_as_string, FriendBaselineSyncOutcome, Ordering, SocialBaselineDeps,
     SocialFriendRosterBaselineInput, SocialFriendRosterBaselineOutput,
 };
-use super::entry::{
-    build_fast_roster_records, build_fast_roster_snapshot, build_roster_snapshot_from_records,
-    infer_state_from_platform,
-};
-use super::profile::{
-    fetch_all_friends, insert_fetched_friend, normalize_state_bucket, RemoteFriendProfile,
-};
+use super::current_user_snapshot::CurrentUserSnapshotView;
+use super::entry::{build_fast_roster_records, infer_state_from_platform};
+use super::profile::{fetch_all_friends, insert_fetched_friend, RemoteFriendProfile};
 use vrcx_0_core::OwnerId;
 
 #[derive(Clone, Debug, Default)]
@@ -50,7 +45,7 @@ pub(crate) async fn verify_friend_log_relationship_changes(
     deps: &SocialBaselineDeps,
     endpoint: &str,
     user_id: &str,
-    friends_by_id: &HashMap<String, FriendRecord>,
+    friends_by_id: &HashMap<String, FriendBaselineEntry>,
 ) -> FriendStatusVerdicts {
     let candidates =
         friend_log_relationship_candidates(deps.store.as_ref(), user_id, friends_by_id);
@@ -65,7 +60,7 @@ pub(crate) async fn verify_friend_log_relationship_changes(
 pub(crate) fn friend_log_relationship_candidates(
     store: &dyn crate::RealtimeStore,
     user_id: &str,
-    friends_by_id: &HashMap<String, FriendRecord>,
+    friends_by_id: &HashMap<String, FriendBaselineEntry>,
 ) -> Vec<String> {
     if !store
         .get_bool(&format!("friendLogInit_{user_id}"), false)
@@ -85,7 +80,7 @@ pub(crate) fn friend_log_relationship_candidates(
         .iter()
         .filter(|(friend_id, entry)| {
             friend_id.as_str() != user_id
-                && !entry.is_placeholder()
+                && !entry.record.is_placeholder()
                 && !existing_ids.contains(friend_id.as_str())
         })
         .map(|(friend_id, _)| friend_id.clone());
@@ -98,7 +93,7 @@ pub(crate) fn friend_log_relationship_candidates(
 
 pub(super) fn collect_suspicious_friend_ids(
     expected_ids: &[String],
-    state_by_id: &HashMap<String, String>,
+    state_by_id: &HashMap<String, StateBucket>,
     fetched_friends_by_id: &HashMap<String, RemoteFriendProfile>,
 ) -> Vec<String> {
     let mut suspicious = Vec::new();
@@ -108,8 +103,8 @@ pub(super) fn collect_suspicious_friend_ids(
         };
         let list_state = state_by_id
             .get(friend_id)
-            .map(String::as_str)
-            .unwrap_or("offline");
+            .copied()
+            .unwrap_or(StateBucket::Offline);
         let inferred = infer_state_from_platform(&object_field_string(&profile.raw, &["platform"]));
         let location = object_field_string(&profile.raw, &["location"]);
         if inferred != list_state || location == "traveling" {
@@ -119,67 +114,9 @@ pub(super) fn collect_suspicious_friend_ids(
     suspicious
 }
 
-pub async fn build_friend_roster_baseline(
+pub(crate) async fn build_friend_roster_baseline(
     deps: SocialBaselineDeps,
     input: SocialFriendRosterBaselineInput,
-) -> Result<SocialFriendRosterBaselineOutput> {
-    Ok(build_friend_roster_baseline_inner(
-        deps,
-        input,
-        FriendRosterBuildOptions {
-            reconcile_friend_log: true,
-            retain_raw_snapshot: true,
-        },
-    )
-    .await?
-    .output)
-}
-
-pub async fn build_friend_roster_baseline_deferred(
-    deps: SocialBaselineDeps,
-    input: SocialFriendRosterBaselineInput,
-) -> Result<SocialFriendRosterBaselineOutput> {
-    Ok(build_friend_roster_baseline_inner(
-        deps,
-        input,
-        FriendRosterBuildOptions {
-            reconcile_friend_log: false,
-            retain_raw_snapshot: true,
-        },
-    )
-    .await?
-    .output)
-}
-
-pub(crate) async fn build_friend_roster_baseline_deferred_internal(
-    deps: SocialBaselineDeps,
-    input: SocialFriendRosterBaselineInput,
-) -> Result<BuiltFriendRosterBaseline> {
-    build_friend_roster_baseline_inner(
-        deps,
-        input,
-        FriendRosterBuildOptions {
-            reconcile_friend_log: false,
-            retain_raw_snapshot: false,
-        },
-    )
-    .await
-}
-
-pub(crate) struct BuiltFriendRosterBaseline {
-    pub(crate) output: SocialFriendRosterBaselineOutput,
-    pub(crate) friends_by_id: Option<Result<HashMap<String, FriendRecord>>>,
-}
-
-struct FriendRosterBuildOptions {
-    reconcile_friend_log: bool,
-    retain_raw_snapshot: bool,
-}
-
-async fn build_friend_roster_baseline_inner(
-    deps: SocialBaselineDeps,
-    input: SocialFriendRosterBaselineInput,
-    options: FriendRosterBuildOptions,
 ) -> Result<BuiltFriendRosterBaseline> {
     let cached_current_user =
         CurrentUserSnapshotView::from_raw(input.current_user_snapshot.as_value());
@@ -213,7 +150,6 @@ async fn build_friend_roster_baseline_inner(
     let CurrentUserSnapshotView {
         mut state_by_id,
         state_order_ids,
-        friend_ids: snapshot_friend_ids,
         has_friend_list,
         ..
     } = current_user;
@@ -223,10 +159,7 @@ async fn build_friend_roster_baseline_inner(
             friends_by_id: None,
         });
     }
-    let mut expected_ids = Vec::new();
-    let mut expected_seen = HashSet::new();
-    extend_unique(&mut expected_ids, &mut expected_seen, state_order_ids);
-    extend_unique(&mut expected_ids, &mut expected_seen, snapshot_friend_ids);
+    let expected_ids = state_order_ids;
 
     let online_friends = fetch_all_friends(&deps, &input.endpoint, false).await?;
     let offline_friends = fetch_all_friends(&deps, &input.endpoint, true).await?;
@@ -240,7 +173,7 @@ async fn build_friend_roster_baseline_inner(
             &mut fetched_friend_ids_ordered,
             &mut fetched_friend_ids_seen,
             friend,
-            Some("online"),
+            Some(StateBucket::Online),
         );
     }
     for friend in offline_friends {
@@ -249,7 +182,7 @@ async fn build_friend_roster_baseline_inner(
             &mut fetched_friend_ids_ordered,
             &mut fetched_friend_ids_seen,
             friend,
-            Some("offline"),
+            Some(StateBucket::Offline),
         );
     }
 
@@ -272,126 +205,48 @@ async fn build_friend_roster_baseline_inner(
     if !refetch_ids.is_empty() {
         let repaired = refetch_users_concurrent(&deps, &input.endpoint, refetch_ids).await;
         for (repaired_id, user) in repaired {
-            let repaired_bucket = normalize_state_bucket(&object_field_string(&user, &["state"]));
+            let repaired_bucket = StateBucket::normalize(&object_field_string(&user, &["state"]));
             let Some(mut profile) = RemoteFriendProfile::from_raw(user, None) else {
                 continue;
             };
             profile.source_state_bucket = fetched_friends_by_id
                 .get(&repaired_id)
-                .and_then(|existing| existing.source_state_bucket.clone());
+                .and_then(|existing| existing.source_state_bucket);
             fetched_friends_by_id.insert(repaired_id.clone(), profile);
-            if !repaired_bucket.is_empty() {
-                state_by_id.insert(repaired_id, repaired_bucket);
+            if let Some(bucket) = repaired_bucket {
+                state_by_id.insert(repaired_id, bucket);
             }
         }
     }
 
-    let detail = String::new();
-    let (count, snapshot, friends_by_id) = if options.retain_raw_snapshot {
-        let snapshot = build_fast_roster_snapshot(
-            &user_id,
-            &expected_ids,
-            &state_by_id,
-            fetched_friends_by_id,
-        );
-        let count = snapshot
-            .get("orderedFriendIds")
-            .and_then(Value::as_array)
-            .map_or(0, Vec::len);
-        let friends_by_id = snapshot
-            .get("friendsById")
-            .cloned()
-            .ok_or_else(|| Error::Custom("Friend roster baseline has no friendsById map.".into()))
-            .and_then(|value| serde_json::from_value(value).map_err(Error::from));
-        (count, Some(RawJson::from(snapshot)), friends_by_id)
-    } else {
-        let friends_by_id =
-            build_fast_roster_records(&expected_ids, &state_by_id, fetched_friends_by_id);
-        let count = friends_by_id.len();
-        let friends_by_id =
-            serde_json::from_value(Value::Object(friends_by_id)).map_err(Error::from);
-        (count, None, friends_by_id)
-    };
+    let friends_by_id =
+        build_fast_roster_records(&expected_ids, &state_by_id, fetched_friends_by_id);
+    let count = friends_by_id.len();
+    let friends_by_id = serde_json::from_value(Value::Object(friends_by_id))?;
 
-    let mut output = SocialFriendRosterBaselineOutput {
+    let output = SocialFriendRosterBaselineOutput {
         user_id,
         stale: false,
         count: u32::try_from(count).unwrap_or(u32::MAX),
-        detail,
-        snapshot,
+        detail: String::new(),
+        snapshot: None,
         friend_log_changed: false,
     };
-    if options.reconcile_friend_log {
-        match &friends_by_id {
-            Ok(friends_by_id) => {
-                output.friend_log_changed = reconcile_friend_roster_baseline(
-                    &deps,
-                    &input.endpoint,
-                    &output.user_id,
-                    friends_by_id,
-                    Some(&expected_ids),
-                )
-                .await;
-            }
-            Err(error) => tracing::warn!(
-                error = %error,
-                "Friend roster baseline friendsById decode failed during reconciliation"
-            ),
-        }
-    }
     Ok(BuiltFriendRosterBaseline {
         output,
         friends_by_id: Some(friends_by_id),
     })
 }
 
-async fn reconcile_friend_roster_baseline(
-    deps: &SocialBaselineDeps,
-    endpoint: &str,
-    user_id: &str,
-    friends_by_id: &HashMap<String, FriendRecord>,
-    roster_order: Option<&[String]>,
-) -> bool {
-    let verdicts =
-        verify_friend_log_relationship_changes(deps, endpoint, user_id, friends_by_id).await;
-    let feed_persistence_disabled = deps
-        .store
-        .get_bool("feedPersistenceDisabled", false)
-        .unwrap_or(false);
-    reconcile_friend_roster_records(
-        deps.store.as_ref(),
-        user_id,
-        friends_by_id,
-        roster_order,
-        feed_persistence_disabled,
-        &verdicts,
-    )
-    .changed
+pub(crate) struct BuiltFriendRosterBaseline {
+    pub(crate) output: SocialFriendRosterBaselineOutput,
+    pub(crate) friends_by_id: Option<HashMap<String, FriendBaselineEntry>>,
 }
 
-fn replace_friend_roster_baseline_snapshot(
-    output: &mut SocialFriendRosterBaselineOutput,
-    friends_by_id: &HashMap<String, FriendRecord>,
-) -> Result<()> {
-    output.count = u32::try_from(friends_by_id.len()).unwrap_or(u32::MAX);
-    output.snapshot = Some(RawJson::from(build_roster_snapshot_from_records(
-        &output.user_id,
-        friends_by_id,
-    )?));
-    Ok(())
-}
-
-pub fn apply_friend_roster_baseline_sync_outcome(
+pub(crate) fn apply_friend_roster_baseline_sync_outcome(
     output: &mut SocialFriendRosterBaselineOutput,
     outcome: FriendBaselineSyncOutcome,
-) -> Result<bool> {
-    Ok(apply_friend_roster_baseline_sync_outcome_and_take_friends(output, outcome)?.is_some())
-}
-
-pub(crate) fn apply_friend_roster_baseline_sync_outcome_and_take_friends(
-    output: &mut SocialFriendRosterBaselineOutput,
-    outcome: FriendBaselineSyncOutcome,
-) -> Result<Option<HashMap<String, FriendRecord>>> {
+) -> Option<HashMap<String, FriendRecord>> {
     let FriendBaselineSyncOutcome {
         result,
         snapshot,
@@ -402,11 +257,12 @@ pub(crate) fn apply_friend_roster_baseline_sync_outcome_and_take_friends(
         output.snapshot = None;
         output.friend_log_changed = false;
         output.detail = "Superseded friend roster baseline.".into();
-        return Ok(None);
+        return None;
     };
-    replace_friend_roster_baseline_snapshot(output, &snapshot.friends_by_id)?;
+    output.count = u32::try_from(snapshot.friends_by_id.len()).unwrap_or(u32::MAX);
+    output.snapshot = Some(snapshot.to_roster_snapshot());
     output.friend_log_changed = friend_log_changed;
-    Ok(Some(snapshot.friends_by_id))
+    Some(snapshot.friends_by_id)
 }
 
 #[derive(Default)]

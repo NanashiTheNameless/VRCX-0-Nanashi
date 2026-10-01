@@ -10,6 +10,7 @@ import { queryClient as appQueryClient } from '@/lib/queryClient';
 import { MINUTE_MS } from '@/shared/constants/time';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
+import { onlinePresence } from '@/test/presenceFixtures';
 
 const mocks = vi.hoisted(() => ({
     getWorldProfile: vi.fn()
@@ -75,7 +76,9 @@ describe('world rooms tab in the sidebar rail', () => {
                 usr_a: {
                     id: 'usr_a',
                     displayName: 'Alice',
-                    location: `${WORLD_ID}:33333~hidden(usr_owner)~region(jp)`
+                    $presence: onlinePresence(
+                        `${WORLD_ID}:33333~hidden(usr_owner)~region(jp)`
+                    )
                 } as FriendRecord
             }
         });

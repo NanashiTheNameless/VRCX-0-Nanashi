@@ -29,6 +29,7 @@ import {
 } from '@/services/entityMediaService';
 import type { UserDialogPreviousInstance } from '@/services/userDialogSessionCacheService';
 import type { UserDialogRelationshipEvent } from '@/services/userDialogSessionCacheService';
+import { parseLocation } from '@/shared/utils/location';
 import { Button } from '@/ui/shadcn/button';
 import {
     Card,
@@ -51,9 +52,6 @@ import { EntityList } from '../UserDialogViewParts';
 
 type OpenGroupDialog =
     (typeof import('@/services/dialogService'))['openGroupDialog'];
-type UserDialogInfoProfile = UserProfileEntity & {
-    $location?: { groupName?: string; shortName?: string };
-};
 type PresenceModel = {
     visiblePresenceLocation?: string;
     locationInstance?: EntityRecord & {
@@ -97,11 +95,10 @@ export type UserDialogPresenceSectionProps = {
         onRefreshLocation?: (requestLocation: string) => void;
         onShowInstanceHistory?: () => void;
     };
-    profile: UserDialogInfoProfile;
 };
 
 export type UserDialogNotesSectionProps = {
-    profile: UserDialogInfoProfile;
+    profile: UserProfileEntity;
     hideUserNotes: boolean;
     memo: string;
     hideUserMemos: boolean;
@@ -109,7 +106,7 @@ export type UserDialogNotesSectionProps = {
 };
 
 export type UserDialogBioSectionProps = {
-    profile: UserDialogInfoProfile;
+    profile: UserProfileEntity;
     bioLinks: string[];
 };
 
@@ -119,7 +116,7 @@ export type UserDialogProfileLinksSectionProps = {
     representedGroupStatus: string;
     representedGroup: RepresentedGroup | null;
     openGroupDialog: OpenGroupDialog;
-    profile: UserDialogInfoProfile;
+    profile: UserProfileEntity;
     visibleHomeLocationTarget: string;
 };
 
@@ -132,7 +129,7 @@ export type UserDialogActivitySummarySectionProps = {
     onOpenFeed?: () => void;
     onOpenInstanceHistory?: () => void;
     presenceActivityAt: string | null | undefined;
-    profile: UserDialogInfoProfile;
+    profile: UserProfileEntity;
     userTimeSpent: number | null | undefined;
     userJoinCount: number | null | undefined;
 };
@@ -328,8 +325,7 @@ function handlePanelKeyDown(
 
 function UserDialogPresenceSection({
     presence,
-    actions,
-    profile
+    actions
 }: UserDialogPresenceSectionProps) {
     const { t } = useTranslation();
     const {
@@ -367,11 +363,7 @@ function UserDialogPresenceSection({
                                     locationInstance?.recommendedCapacity
                             }}
                             currentUserId={currentUserId}
-                            grouphint={
-                                locationInstance?.groupName ||
-                                profile.$location?.groupName ||
-                                ''
-                            }
+                            grouphint={locationInstance?.groupName || ''}
                             endpoint={currentEndpoint}
                             hint={locationWorldTitle}
                             instanceClickAction="world"
@@ -384,7 +376,8 @@ function UserDialogPresenceSection({
                                 location: visiblePresenceLocation,
                                 shortName:
                                     locationInstance?.shortName ||
-                                    profile?.$location?.shortName ||
+                                    parseLocation(visiblePresenceLocation)
+                                        .shortName ||
                                     '',
                                 worldName: locationWorldTitle
                             }}
@@ -854,7 +847,6 @@ export function UserDialogInfoTab({
                     <UserDialogPresenceSection
                         presence={presenceSection.presence}
                         actions={presenceSection.actions}
-                        profile={presenceSection.profile}
                     />
                     <UserDialogNotesPanel
                         profile={notesSection.profile}

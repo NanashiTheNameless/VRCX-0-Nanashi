@@ -1,7 +1,7 @@
 use vrcx_0_application_core::OverlayActivityInputSink;
 use vrcx_0_application_core::{
-    FriendProjection, RealtimeInstanceClosedProjection, RealtimeInstanceQueueProjection,
-    RealtimeNotificationProjection,
+    FeedLiveEntry, FriendProjection, RealtimeInstanceClosedProjection,
+    RealtimeInstanceQueueProjection, RealtimeNotificationProjection,
 };
 
 use super::OverlayActivityRuntime;
@@ -15,8 +15,12 @@ impl OverlayActivityInputSink for OverlayActivityRuntime {
         OverlayActivityRuntime::set_delivery_armed(self, armed);
     }
 
-    fn ingest_friend_projection(&self, projection: &FriendProjection) {
-        OverlayActivityRuntime::ingest_friend_projection(self, projection);
+    fn ingest_friend_projection(
+        &self,
+        projection: &FriendProjection,
+        feed_entries: &[FeedLiveEntry],
+    ) {
+        OverlayActivityRuntime::ingest_friend_projection(self, projection, feed_entries);
     }
 
     fn ingest_notification_projection(&self, projection: &RealtimeNotificationProjection) {

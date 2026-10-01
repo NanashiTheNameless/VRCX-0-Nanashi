@@ -4260,6 +4260,7 @@ export type FeedLatestQueryInput = {
     favoriteUserIds?: string[];
     scopedUserIds?: string[];
     excludedUserIds?: string[];
+    locationHiddenUserIds?: string[];
     favoritesOnly?: boolean;
     maxRows: number;
 };
@@ -4429,6 +4430,7 @@ export type FeedRowsQueryInput = {
     vipList?: string[];
     scopedUserIds?: string[];
     excludedUserIds?: string[];
+    locationHiddenUserIds?: string[];
     maxEntries: number;
     dateFrom?: string;
     dateTo?: string;
@@ -4441,6 +4443,7 @@ export type FeedSearchQueryInput = {
     favoriteUserIds?: string[];
     scopedUserIds?: string[];
     excludedUserIds?: string[];
+    locationHiddenUserIds?: string[];
     favoritesOnly?: boolean;
     dateFrom?: string;
     dateTo?: string;
@@ -4523,14 +4526,13 @@ export type FriendProjection = {
     baselineRevision: number;
     patches?: FriendProjectionPatch[];
     removals?: string[];
-    feedEntries?: FeedLiveEntry[];
     locationTimeSnapshot?: FriendLocationTime[] | null;
     friendLogChanged: boolean;
 };
 export type FriendProjectionPatch = {
     userId: string;
-    patch: FriendRecord;
-    stateBucketAuthority: FriendStateBucketAuthority;
+    record: FriendRecord;
+    presence: PresenceEntry;
 };
 export type FriendRecord = Partial<{
     [key in string]:
@@ -4544,11 +4546,6 @@ export type FriendRecord = Partial<{
     id?: string;
     displayName?: string;
     username?: string;
-    state?: string;
-    location?: string;
-    travelingToLocation?: string;
-    worldId?: string;
-    platform?: string;
     lastPlatform?: string;
     status?: string;
     statusDescription?: string;
@@ -4558,7 +4555,12 @@ export type FriendRecord = Partial<{
     last_login?: string | null;
     last_mobile?: string | null;
 };
-export type FriendStateBucketAuthority = 'explicit' | 'preserve';
+export type FriendRosterSnapshot = {
+    currentUserId: string;
+    friendsById: Partial<{ [key in string]: FriendRecord }>;
+    presenceById: Partial<{ [key in string]: PresenceEntry }>;
+    generation: number;
+};
 export type GameClientEvent =
     | { kind: 'crashRelaunchDecision'; payload: CrashRelaunchDecisionPayload }
     | { kind: 'debugLoggingOutcome'; payload: DebugLoggingOutcome }
@@ -5312,6 +5314,7 @@ export type InviteMessageType =
     | 'requestResponse'
     | 'response';
 export type JsonValue = unknown;
+export type LeaveTarget = 'offline' | 'active';
 export type LegacyVrcxMigrationStatus = {
     detected: boolean;
     available: boolean;
@@ -5958,6 +5961,28 @@ export type PlayerState = {
     joinTimeMs: number | null;
 };
 export type PresenceAutomationRuleKind = 'time' | 'context';
+export type PresenceEntry = { rev: number; view: PresenceView };
+export type PresencePlace = {
+    location: ParsedLocation;
+    travelingTo: ParsedLocation | null;
+};
+export type PresenceView =
+    | {
+          kind: 'online';
+          place: PresencePlace;
+          platform: string;
+          onlineSinceMs: number | null;
+      }
+    | {
+          kind: 'pendingOffline';
+          place: PresencePlace;
+          platform: string;
+          onlineSinceMs: number | null;
+          target: LeaveTarget;
+          deadlineMs: number;
+      }
+    | { kind: 'active'; platform: string }
+    | { kind: 'offline' };
 export type PrintAutoCleanupEvent = {
     deleted: number;
     remaining: number;
@@ -6193,7 +6218,6 @@ export type RawJsonObject = Partial<{ [key in string]: JsonValue }>;
 export type RealtimeCurrentUserProjection = {
     generation: number;
     patch: RawJsonObject;
-    snapshot: RawJsonObject;
     gameStatePatch?: RawJsonObject | null;
 };
 export type RealtimeEntryCorrection = {
@@ -6697,7 +6721,7 @@ export type SocialFriendRosterBaselineOutput = {
     stale: boolean;
     count: number;
     detail: string;
-    snapshot: RawJson | null;
+    snapshot: FriendRosterSnapshot | null;
     friendLogChanged: boolean;
 };
 export type SocialUnfriendBatchInput = {

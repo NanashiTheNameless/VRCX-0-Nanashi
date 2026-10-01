@@ -22,6 +22,7 @@ use crate::social_baseline::{
     build_favorites_baseline_from_friend_records, SocialBaselineDeps,
     SocialFavoritesBaselineRequest,
 };
+use crate::world_enrich::is_meaningful_world_name;
 
 use super::message_dispatch::json_string_field;
 use super::RealtimeHostRuntime;
@@ -158,8 +159,10 @@ impl RealtimeHostRuntime {
         }
 
         let world_name = self
-            .fetch_and_cache_world(session.endpoint.clone(), world_id.clone())
+            .world_cache
+            .resolve_name(&self.deps.web, &session.endpoint, &world_id)
             .await
+            .filter(|name| is_meaningful_world_name(name))
             .unwrap_or_else(|| world_id.clone());
         let (_, request) = self.deps.remote_requests.invite_send(
             session.endpoint.clone(),
@@ -223,7 +226,7 @@ impl RealtimeHostRuntime {
         &self,
         session: &RealtimeSessionContext,
     ) -> InviteLocationFacts {
-        let local_game_context = self.deps.local_game_context.snapshot();
+        let local_game_context = self.local_game_context();
         let closed_locations = self
             .state
             .lock()

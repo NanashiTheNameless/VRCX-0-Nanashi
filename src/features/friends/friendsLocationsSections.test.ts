@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    offlinePresence,
+    onlinePresence,
+    travelingPresence
+} from '@/test/presenceFixtures';
+
+import {
     buildFavoriteGroupLabelsByFriendId,
     buildFriendSections,
     compareFavoriteGroups,
@@ -91,25 +97,24 @@ describe('friends locations section helpers', () => {
             {
                 id: 'usr_offline',
                 displayName: 'Offline',
-                location: 'offline'
+                $presence: offlinePresence
             },
             {
                 id: 'usr_public',
                 displayName: 'Public',
-                location: 'wrld_public:123~group(grp_1)',
+                $presence: onlinePresence('wrld_public:123~group(grp_1)'),
                 worldName: 'Club Orion',
                 groupName: 'Orion Group'
             },
             {
                 id: 'usr_private',
                 displayName: 'Private',
-                location: 'private'
+                $presence: onlinePresence('private')
             },
             {
                 id: 'usr_traveling',
                 displayName: 'Traveling',
-                location: 'traveling',
-                travelingToWorld: 'wrld_next'
+                $presence: travelingPresence()
             }
         ];
 
@@ -133,7 +138,7 @@ describe('friends locations section helpers', () => {
             (section) => section.key === 'instance:traveling:traveling'
         );
         expect(travelingSection?.title).toBe('Traveling');
-        expect(travelingSection?.worldId).toBe('wrld_next');
+        expect(travelingSection?.worldId).toBe('');
     });
 
     it('sorts friends by sidebar preferences without mutating the input array', () => {

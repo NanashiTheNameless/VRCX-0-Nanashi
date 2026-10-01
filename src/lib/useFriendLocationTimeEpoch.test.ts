@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
+import {
+    activePresence,
+    offlinePresence,
+    onlinePresence,
+    pendingPresence
+} from '@/test/presenceFixtures';
+
 import { resolveFriendLocationTimeEpoch } from './useFriendLocationTimeEpoch';
 
 const entry = {
@@ -13,7 +20,7 @@ describe('resolveFriendLocationTimeEpoch', () => {
         const localEntry = { ...entry, source: 'gameLog' as const };
         expect(
             resolveFriendLocationTimeEpoch(
-                { state: 'offline' },
+                offlinePresence,
                 localEntry,
                 entry.location
             )
@@ -26,7 +33,7 @@ describe('resolveFriendLocationTimeEpoch', () => {
     it('returns the backend time only for an online matching friend', () => {
         expect(
             resolveFriendLocationTimeEpoch(
-                { state: 'online' },
+                onlinePresence(entry.location),
                 entry,
                 'wrld_test:1'
             )
@@ -36,7 +43,7 @@ describe('resolveFriendLocationTimeEpoch', () => {
     it('rejects mismatched locations', () => {
         expect(
             resolveFriendLocationTimeEpoch(
-                { state: 'online' },
+                onlinePresence(entry.location),
                 entry,
                 'wrld_other:2'
             )
@@ -44,10 +51,7 @@ describe('resolveFriendLocationTimeEpoch', () => {
     });
 
     it('keeps the backend time while an offline transition is pending', () => {
-        const pendingFriend = {
-            state: 'online',
-            pendingOffline: true
-        };
+        const pendingFriend = pendingPresence(entry.location);
 
         expect(
             resolveFriendLocationTimeEpoch(pendingFriend, entry, entry.location)
@@ -57,14 +61,14 @@ describe('resolveFriendLocationTimeEpoch', () => {
     it('rejects offline, active, and removed friends', () => {
         expect(
             resolveFriendLocationTimeEpoch(
-                { state: 'offline' },
+                offlinePresence,
                 entry,
                 entry.location
             )
         ).toBe(0);
         expect(
             resolveFriendLocationTimeEpoch(
-                { state: 'active' },
+                activePresence(),
                 entry,
                 entry.location
             )

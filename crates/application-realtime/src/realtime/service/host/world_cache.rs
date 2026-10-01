@@ -5,85 +5,10 @@ use crate::world_enrich::is_meaningful_world_name;
 use crate::world_enrich::{
     resolved_display_location, PendingEntryCorrection, PendingWorldNameResolution,
 };
-use serde_json::Value;
-use vrcx_0_contracts::vrchat_api::VrchatScope as ApiScope;
 
 use super::RealtimeHostRuntime;
 
-const WORLD_NAME_FETCH_THROTTLE_MS: i64 = 600_000;
-
-pub(super) enum WorldNameFetchOutcome {
-    Found(String),
-    RetryableFailure,
-    PermanentFailure,
-}
-
 impl RealtimeHostRuntime {
-    pub(super) async fn fetch_and_cache_world(
-        &self,
-        endpoint: String,
-        world_id: String,
-    ) -> Option<String> {
-        let world_id = world_id.trim().to_string();
-        if world_id.is_empty() {
-            return None;
-        }
-        if let Some(name) = self.world_cache.get_name(&world_id) {
-            return Some(name);
-        }
-        match self.fetch_and_cache_world_once(endpoint, world_id).await {
-            WorldNameFetchOutcome::Found(name) => Some(name),
-            WorldNameFetchOutcome::RetryableFailure | WorldNameFetchOutcome::PermanentFailure => {
-                None
-            }
-        }
-    }
-
-    pub(super) async fn fetch_and_cache_world_once(
-        &self,
-        endpoint: String,
-        world_id: String,
-    ) -> WorldNameFetchOutcome {
-        let world_id = world_id.trim().to_string();
-        if world_id.is_empty() {
-            return WorldNameFetchOutcome::PermanentFailure;
-        }
-        let Ok((_, request)) = self.deps.remote_requests.world(endpoint, world_id.clone()) else {
-            return WorldNameFetchOutcome::PermanentFailure;
-        };
-        let response = match self.deps.web.execute_api(request, ApiScope::Vrchat).await {
-            Ok(response) => response,
-            Err(error) => {
-                tracing::warn!(world_id = %world_id, "Realtime world lookup failed: {error}");
-                return WorldNameFetchOutcome::RetryableFailure;
-            }
-        };
-        if !(200..=299).contains(&response.status) {
-            tracing::warn!(
-                world_id = %world_id,
-                status = response.status,
-                "Realtime world lookup returned non-success"
-            );
-            if (500..600).contains(&response.status) {
-                return WorldNameFetchOutcome::RetryableFailure;
-            }
-            return WorldNameFetchOutcome::PermanentFailure;
-        }
-        let world = match serde_json::from_str::<Value>(&response.data) {
-            Ok(value) => value,
-            Err(error) => {
-                tracing::warn!(world_id = %world_id, "Realtime world lookup json failed: {error}");
-                return WorldNameFetchOutcome::PermanentFailure;
-            }
-        };
-        let name = string_value(&world, "name");
-        if !is_meaningful_world_name(&name) {
-            return WorldNameFetchOutcome::PermanentFailure;
-        }
-        let _ = self.world_cache.hydrate_from_payload(&world);
-        WorldNameFetchOutcome::Found(name)
-    }
-
     pub(super) fn schedule_world_name_warm(
         self: &Arc<Self>,
         pending_worlds: Vec<PendingWorldNameResolution>,
@@ -116,7 +41,6 @@ impl RealtimeHostRuntime {
         if candidates.is_empty() {
             return;
         }
-        let now_ms = chrono::Utc::now().timestamp_millis();
         let fetch_ids = {
             let mut state = match self.state.lock() {
                 Ok(state) => state,
@@ -125,38 +49,23 @@ impl RealtimeHostRuntime {
                     return;
                 }
             };
-            prune_expired_world_name_fetches(&mut state.world_enrichment.fetches, now_ms);
             let mut fetch_ids = Vec::new();
             for pending in candidates {
-                let recent = state
-                    .world_enrichment
-                    .fetches
-                    .get(&pending.world_id)
-                    .map(|last_ms| now_ms.saturating_sub(*last_ms) < WORLD_NAME_FETCH_THROTTLE_MS)
-                    .unwrap_or(false);
-                let in_flight = state.world_enrichment.inflight.contains(&pending.world_id);
                 if let Some(entry) = pending.entry {
-                    if !recent || in_flight {
-                        state
-                            .world_enrichment
-                            .pending_corrections
-                            .entry(pending.world_id.clone())
-                            .or_default()
-                            .push(entry);
-                    }
+                    state
+                        .world_enrichment
+                        .pending_corrections
+                        .entry(pending.world_id.clone())
+                        .or_default()
+                        .push(entry);
                 }
-                if recent {
-                    continue;
-                }
-                state
-                    .world_enrichment
-                    .fetches
-                    .insert(pending.world_id.clone(), now_ms);
-                state
+                if state
                     .world_enrichment
                     .inflight
-                    .insert(pending.world_id.clone());
-                fetch_ids.push(pending.world_id);
+                    .insert(pending.world_id.clone())
+                {
+                    fetch_ids.push(pending.world_id);
+                }
             }
             fetch_ids
         };
@@ -165,8 +74,10 @@ impl RealtimeHostRuntime {
             let endpoint = endpoint.clone();
             self.deps.tasks.spawn(async move {
                 let world_name = runtime
-                    .fetch_and_cache_world(endpoint, world_id.clone())
-                    .await;
+                    .world_cache
+                    .resolve_name(&runtime.deps.web, &endpoint, &world_id)
+                    .await
+                    .filter(|name| is_meaningful_world_name(name));
                 runtime.resolve_pending_world_corrections(&world_id, world_name.as_deref());
             });
         }
@@ -219,46 +130,5 @@ impl RealtimeHostRuntime {
                 id: entry.id,
                 fields,
             });
-    }
-}
-
-fn prune_expired_world_name_fetches(
-    fetches: &mut std::collections::HashMap<String, i64>,
-    now_ms: i64,
-) {
-    fetches.retain(|_, last_ms| now_ms.saturating_sub(*last_ms) < WORLD_NAME_FETCH_THROTTLE_MS);
-}
-
-fn string_value(value: &Value, key: &str) -> String {
-    value
-        .get(key)
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .map(ToString::to_string)
-        .unwrap_or_default()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::collections::HashMap;
-
-    #[test]
-    fn world_fetch_throttle_prunes_expired_entries_and_keeps_recent_ones() {
-        let now_ms = 1_000_000;
-        let mut fetches = HashMap::from([
-            (
-                "wrld_expired".to_string(),
-                now_ms - WORLD_NAME_FETCH_THROTTLE_MS,
-            ),
-            ("wrld_recent".to_string(), now_ms - 1),
-            ("wrld_future".to_string(), now_ms + 1),
-        ]);
-
-        prune_expired_world_name_fetches(&mut fetches, now_ms);
-
-        assert!(!fetches.contains_key("wrld_expired"));
-        assert!(fetches.contains_key("wrld_recent"));
-        assert!(fetches.contains_key("wrld_future"));
     }
 }

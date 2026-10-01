@@ -17,12 +17,10 @@ import { selfInviteToInstance } from '@/services/launchService';
 import { toast } from '@/services/toastService';
 import type { LocalInstanceActionGates } from '@/shared/utils/invite';
 import { parseLocation } from '@/shared/utils/location';
+import { normalizeString } from '@/shared/utils/string';
 import { useModalStore } from '@/state/modalStore';
 
-import {
-    normalizeFriendsLocationId as normalizeId,
-    resolveWorldDialogTarget
-} from './friendsLocationsRows';
+import { resolveWorldDialogTarget } from './friendsLocationsRows';
 import type { FriendsLocationsWorldGroup } from './friendsLocationsWorlds';
 
 type FriendsLocationsSectionActionTarget = Record<string, unknown> & {
@@ -35,7 +33,7 @@ type FriendsLocationsLocationActionSummary = {
 };
 
 function getFriendActionLabel(friend: FriendRecord, fallback: string): string {
-    return friend.displayName || normalizeId(friend.username) || fallback;
+    return friend.displayName || normalizeString(friend.username) || fallback;
 }
 
 export function useFriendsLocationsActions({
@@ -149,8 +147,8 @@ export function useFriendsLocationsActions({
     }
 
     async function sendFriendInvite(friend: FriendRecord) {
-        const friendId = normalizeId(friend?.id || friend?.userId);
-        if (!friendId || friendId === normalizeId(currentUserId)) {
+        const friendId = normalizeString(friend?.id || friend?.userId);
+        if (!friendId || friendId === normalizeString(currentUserId)) {
             return;
         }
         if (!currentInviteLocation) {
@@ -211,8 +209,8 @@ export function useFriendsLocationsActions({
     }
 
     async function requestFriendInvite(friend: FriendRecord) {
-        const friendId = normalizeId(friend?.id || friend?.userId);
-        if (!friendId || friendId === normalizeId(currentUserId)) {
+        const friendId = normalizeString(friend?.id || friend?.userId);
+        if (!friendId || friendId === normalizeString(currentUserId)) {
             return;
         }
         const result = await confirm({
@@ -244,8 +242,8 @@ export function useFriendsLocationsActions({
     }
 
     async function sendFriendBoop(friend: FriendRecord) {
-        const friendId = normalizeId(friend?.id || friend?.userId);
-        if (!friendId || friendId === normalizeId(currentUserId)) {
+        const friendId = normalizeString(friend?.id || friend?.userId);
+        if (!friendId || friendId === normalizeString(currentUserId)) {
             return;
         }
         try {
@@ -309,7 +307,7 @@ export function useFriendsLocationsActions({
     ) {
         openWorldDialog({
             worldId: resolveWorldDialogTarget(target),
-            title: normalizeId(location.label) || undefined
+            title: normalizeString(location.label) || undefined
         });
     }
 

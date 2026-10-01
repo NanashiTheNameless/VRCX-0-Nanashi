@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
+
 import {
-    buildGameLogFavoriteIdSet,
     canDeleteGameLogRow,
     collectGameLogSessionFriends,
     describeGameLogDetail,
@@ -147,7 +148,7 @@ describe('gameLogRows', () => {
     });
 
     it('resolves session affinity from local and remote favorites', () => {
-        const favoriteIds = buildGameLogFavoriteIdSet(
+        const favoriteIds = buildFavoriteIdSet(
             ['usr_remote', ' usr_trimmed '],
             {
                 favorite: ['usr_favorite', ' usr_trimmed ']

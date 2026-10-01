@@ -11,7 +11,7 @@
                 "key": "public-online",
                 "userId": "usr_public",
                 "location": "wrld_public:12345",
-                "stateBucket": "online",
+                "presenceKind": "online",
                 "isCurrentUser": false,
                 "expected": {
                     "canJoin": true,
@@ -25,7 +25,7 @@
                 "key": "friends-stranger",
                 "userId": "usr_stranger",
                 "location": "wrld_friends:12345~friends(usr_stranger)",
-                "stateBucket": "online",
+                "presenceKind": "online",
                 "isCurrentUser": false,
                 "expected": {
                     "canJoin": false,
@@ -39,7 +39,7 @@
                 "key": "friends-owner-is-friend-active",
                 "userId": "usr_other",
                 "location": "wrld_friends:12345~friends(usr_friend)",
-                "stateBucket": "active",
+                "presenceKind": "active",
                 "isCurrentUser": false,
                 "expected": {
                     "canJoin": true,
@@ -53,7 +53,7 @@
                 "key": "invite-plus-online",
                 "userId": "usr_other",
                 "location": "wrld_private:12345~private(usr_other)~canRequestInvite",
-                "stateBucket": "online",
+                "presenceKind": "online",
                 "isCurrentUser": false,
                 "expected": {
                     "canJoin": false,
@@ -67,7 +67,7 @@
                 "key": "invite-online",
                 "userId": "usr_invite",
                 "location": "wrld_invite:12345~private(usr_invite)",
-                "stateBucket": "online",
+                "presenceKind": "online",
                 "isCurrentUser": false,
                 "expected": {
                     "canJoin": false,
@@ -81,7 +81,7 @@
                 "key": "group-online",
                 "userId": "usr_group",
                 "location": "wrld_group:12345~group(grp_team)~groupAccessType(members)",
-                "stateBucket": "online",
+                "presenceKind": "online",
                 "isCurrentUser": false,
                 "expected": {
                     "canJoin": true,
@@ -95,7 +95,7 @@
                 "key": "closed-online",
                 "userId": "usr_closed",
                 "location": "wrld_closed:1",
-                "stateBucket": "online",
+                "presenceKind": "online",
                 "isCurrentUser": false,
                 "expected": {
                     "canJoin": false,
@@ -109,7 +109,7 @@
                 "key": "invalid-online",
                 "userId": "usr_invalid",
                 "location": "private",
-                "stateBucket": "online",
+                "presenceKind": "online",
                 "isCurrentUser": false,
                 "expected": {
                     "canJoin": false,
@@ -120,10 +120,24 @@
                 }
             },
             {
+                "key": "pending-offline",
+                "userId": "usr_other",
+                "location": "wrld_public:12345",
+                "presenceKind": "pendingOffline",
+                "isCurrentUser": false,
+                "expected": {
+                    "canJoin": true,
+                    "canOpenInGame": true,
+                    "canSelfInvite": true,
+                    "canRequestInvite": false,
+                    "canInvite": true
+                }
+            },
+            {
                 "key": "current-user-online",
                 "userId": "usr_me",
                 "location": "wrld_public:12345",
-                "stateBucket": "online",
+                "presenceKind": "online",
                 "isCurrentUser": false,
                 "expected": {
                     "canJoin": true,
@@ -147,7 +161,7 @@
                 "key": "public-online",
                 "userId": "usr_friend",
                 "location": "wrld_public:54321",
-                "stateBucket": "online",
+                "presenceKind": "online",
                 "isCurrentUser": false,
                 "expected": {
                     "canJoin": true,

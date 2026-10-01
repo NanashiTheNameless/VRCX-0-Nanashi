@@ -31,6 +31,7 @@ import { BioLinkFavicon } from '@/components/media/BioLinkFavicon';
 import { FadeInImage } from '@/components/media/FadeInImage';
 import { MutualFriendAvatars } from '@/components/mutual-friends/MutualFriendAvatars';
 import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
+import { UserStatusDot } from '@/components/UserStatusDot';
 import { timeToText } from '@/lib/dateTime';
 import { cn } from '@/lib/utils';
 import { getNameColour, openExternalLink } from '@/services/entityMediaService';
@@ -166,9 +167,11 @@ function StatusCell({ row }: { row: AppRow<PlayerListRow> }) {
 
     return (
         <span className="flex w-full min-w-0 items-center gap-2">
-            {status.indicatorClassName ? (
-                <i className={status.indicatorClassName} />
-            ) : null}
+            <UserStatusDot
+                statusDotClassName={status.statusDotClassName}
+                className="size-2.5 shrink-0"
+                variant="inline"
+            />
             <span className="min-w-0 truncate text-sm">{status.label}</span>
         </span>
     );

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { offlinePresence, onlinePresence } from '@/test/presenceFixtures';
+
 import { resolveUserDialogTargetPresenceLocation } from './userDialogContentHelpers';
 
 describe('resolveUserDialogTargetPresenceLocation', () => {
@@ -8,20 +10,17 @@ describe('resolveUserDialogTargetPresenceLocation', () => {
             resolveUserDialogTargetPresenceLocation({
                 profile: {
                     id: 'usr_target',
-                    state: 'offline',
-                    stateBucket: 'offline',
-                    location: 'wrld_old:123'
+                    $presence: offlinePresence
                 },
                 targetUserId: 'usr_target',
+                localLocation: '',
                 currentLocation: 'wrld_old:123',
                 currentLocationPlayerIds: ['usr_target'],
                 currentLocationPlayers: [],
                 friendsById: {
                     usr_target: {
                         id: 'usr_target',
-                        state: 'offline',
-                        stateBucket: 'offline',
-                        location: 'wrld_old:123'
+                        $presence: offlinePresence
                     }
                 }
             })
@@ -32,8 +31,12 @@ describe('resolveUserDialogTargetPresenceLocation', () => {
     it('uses the current instance for a private user observed in its player list', () => {
         expect(
             resolveUserDialogTargetPresenceLocation({
-                profile: { id: 'usr_target', location: 'private' },
+                profile: {
+                    id: 'usr_target',
+                    $presence: onlinePresence('private')
+                },
                 targetUserId: 'usr_target',
+                localLocation: '',
                 currentLocation,
                 currentLocationPlayerIds: ['usr_self', 'usr_target']
             })
@@ -43,8 +46,9 @@ describe('resolveUserDialogTargetPresenceLocation', () => {
     it('uses the current instance for an offline non-friend observed in its player list', () => {
         expect(
             resolveUserDialogTargetPresenceLocation({
-                profile: { id: 'usr_target', location: 'offline' },
+                profile: { id: 'usr_target', $presence: offlinePresence },
                 targetUserId: 'usr_target',
+                localLocation: '',
                 currentLocation,
                 currentLocationPlayerIds: ['usr_target']
             })
@@ -54,8 +58,12 @@ describe('resolveUserDialogTargetPresenceLocation', () => {
     it('keeps a hidden location when the user is not in the current player list', () => {
         expect(
             resolveUserDialogTargetPresenceLocation({
-                profile: { id: 'usr_target', location: 'private' },
+                profile: {
+                    id: 'usr_target',
+                    $presence: onlinePresence('private')
+                },
                 targetUserId: 'usr_target',
+                localLocation: '',
                 currentLocation,
                 currentLocationPlayerIds: ['usr_other']
             })
@@ -68,9 +76,10 @@ describe('resolveUserDialogTargetPresenceLocation', () => {
                 profile: {
                     id: 'usr_friend',
                     displayName: 'Hidden Friend',
-                    location: 'private'
+                    $presence: onlinePresence('private')
                 },
                 targetUserId: 'usr_friend',
+                localLocation: '',
                 currentLocation,
                 currentLocationPlayerIds: [],
                 currentLocationPlayers: [
@@ -92,13 +101,29 @@ describe('resolveUserDialogTargetPresenceLocation', () => {
         ).toBe(currentLocation);
     });
 
+    it('uses the local game room over any presence for a friend in my instance', () => {
+        expect(
+            resolveUserDialogTargetPresenceLocation({
+                profile: { id: 'usr_target', $presence: offlinePresence },
+                targetUserId: 'usr_target',
+                localLocation: currentLocation,
+                currentLocation,
+                currentLocationPlayerIds: []
+            })
+        ).toBe(currentLocation);
+    });
+
     it('keeps a visible presence location instead of overriding it', () => {
         const visibleLocation = 'wrld_visible:456';
 
         expect(
             resolveUserDialogTargetPresenceLocation({
-                profile: { id: 'usr_target', location: visibleLocation },
+                profile: {
+                    id: 'usr_target',
+                    $presence: onlinePresence(visibleLocation)
+                },
                 targetUserId: 'usr_target',
+                localLocation: '',
                 currentLocation,
                 currentLocationPlayerIds: ['usr_target']
             })
@@ -108,8 +133,12 @@ describe('resolveUserDialogTargetPresenceLocation', () => {
     it('does not expose a location after the current instance stops being concrete', () => {
         expect(
             resolveUserDialogTargetPresenceLocation({
-                profile: { id: 'usr_target', location: 'private' },
+                profile: {
+                    id: 'usr_target',
+                    $presence: onlinePresence('private')
+                },
                 targetUserId: 'usr_target',
+                localLocation: '',
                 currentLocation: 'traveling',
                 currentLocationPlayerIds: ['usr_target']
             })

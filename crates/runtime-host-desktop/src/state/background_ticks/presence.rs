@@ -5,7 +5,6 @@ use vrcx_0_application_game::{
     build_background_presence_facts, run_background_presence_automation,
     BackgroundPresenceAutomationState, BackgroundPresenceFactsInput,
 };
-use vrcx_0_application_realtime::RealtimeSessionContext;
 
 use super::BackgroundTickContext;
 use super::{
@@ -71,6 +70,9 @@ pub(in crate::state) async fn run_background_presence_tick(
             return;
         }
     };
+    let refresh_expectation = context
+        .realtime_runtime
+        .capture_current_user_refresh_expectation();
     let result = match run_background_presence_automation(
         &game_state_store,
         &background_remote,
@@ -96,21 +98,15 @@ pub(in crate::state) async fn run_background_presence_tick(
         }
     };
     if let Some(updated_user) = result.updated_user.clone() {
-        let overlay_patch = result.patch.clone();
-        let accepted = context
-            .realtime_runtime
-            .sync_current_user_snapshot(
-                RealtimeSessionContext::new(
-                    session_identity.current_user_id.clone(),
-                    session_identity.endpoint.clone(),
-                    session_identity.websocket.clone(),
-                ),
-                session_identity.auth_scope_generation,
-                None,
-                updated_user.into_value(),
-                overlay_patch.into_value(),
-            )
-            .unwrap_or(false);
+        let accepted = refresh_expectation.is_some_and(|expectation| {
+            context
+                .realtime_runtime
+                .apply_current_user_refreshed_snapshot_if_sequence(
+                    expectation,
+                    updated_user.into_value(),
+                    result.patch.clone().into_value(),
+                )
+        });
         if !background_capability_session_matches(context.session_slot, &session_identity) {
             tracing::warn!("ignored stale background presence automation user update");
         } else if !accepted {

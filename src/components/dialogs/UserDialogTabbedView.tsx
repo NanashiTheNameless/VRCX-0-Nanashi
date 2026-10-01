@@ -16,7 +16,6 @@ import { vrchatUserUrl } from '@/shared/constants/vrchatWebUrls';
 import { extractFileId } from '@/shared/utils/fileUtils';
 import { parseLocation } from '@/shared/utils/location';
 import { usePreferencesStore } from '@/state/preferencesStore';
-import { useRuntimeStore } from '@/state/runtimeStore';
 
 import {
     EntityDialogScaffold,
@@ -303,12 +302,6 @@ export function UserDialogTabbedView({
     } = useUserDialogTabbedRuntimeState();
     const { copyUserText, openDiscordProfile } =
         useUserDialogClipboardActions();
-    const currentUserSnapshot = useRuntimeStore(
-        (state) => state.auth.currentUserSnapshot
-    );
-    const isGameRunning = useRuntimeStore(
-        (state) => state.gameState.isGameRunning === true
-    );
 
     useEffect(() => {
         const intervalId = window.setInterval(() => {
@@ -427,12 +420,9 @@ export function UserDialogTabbedView({
             : null,
         nowMs
     });
-    const statusDotClassName = resolveSidebarStatusDotClassName(
-        profile,
-        currentUserSnapshot,
-        isCurrentUser,
-        { hideNonFriend: false, isGameRunning }
-    );
+    const statusDotClassName = resolveSidebarStatusDotClassName(profile, {
+        hideNonFriend: false
+    });
     const currentAvatarDisplayName = String(
         profile.currentAvatarName || profile.avatarName || ''
     ).trim();
@@ -453,14 +443,8 @@ export function UserDialogTabbedView({
     const visiblePresenceParsedLocation = visiblePresenceLocation
         ? parseLocation(visiblePresenceLocation)
         : null;
-    const projectedLocation = record(profile.$location);
-    const projectedWorld = record(projectedLocation.world);
     const locationWorldTitle = normalizedText(
-        profile.worldName ||
-            profile.$worldName ||
-            projectedLocation.worldName ||
-            projectedLocation.name ||
-            projectedWorld.name
+        profile.worldName || profile.$worldName
     );
     const { locationInstanceUsers, locationOwnerId } = useMemo(
         () =>

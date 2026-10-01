@@ -1,16 +1,13 @@
 import { AppleIcon, MonitorIcon, RectangleGogglesIcon } from 'lucide-react';
 
+import { resolveFriendPresenceLocation } from '@/domain/friends/presence';
 import {
-    isExplicitlyOfflineFriend,
+    isOfflineOrLeavingFriend,
     resolveObservedPlayerUserIds
 } from '@/domain/friends/sameInstanceFriends';
 import type { CurrentInstanceRosterPlayer } from '@/domain/instances/currentInstanceRoster';
 import { hasGroupIdPrefix } from '@/shared/constants/vrchatIds';
-import {
-    parseLocation,
-    resolveFriendPresenceLocation
-} from '@/shared/utils/location';
-export { resolveCurrentInviteLocation } from '@/shared/utils/invite';
+import { parseLocation } from '@/shared/utils/location';
 
 import { normalizeUserId } from './userProfileFields';
 
@@ -121,13 +118,10 @@ export function resolvePlatformMeta(platform: unknown) {
     };
 }
 
-export function resolvePresenceLocation(profile: unknown) {
-    return resolveFriendPresenceLocation(profile);
-}
-
 export function resolveUserDialogTargetPresenceLocation({
     profile,
     targetUserId,
+    localLocation,
     currentLocation,
     currentLocationPlayerIds,
     currentLocationPlayers,
@@ -135,16 +129,22 @@ export function resolveUserDialogTargetPresenceLocation({
 }: {
     profile: unknown;
     targetUserId: string;
+    localLocation: string;
     currentLocation: string;
     currentLocationPlayerIds: readonly string[];
     currentLocationPlayers?: readonly CurrentInstanceRosterPlayer[];
     friendsById?: Record<string, unknown>;
 }) {
-    const presenceLocation = resolvePresenceLocation(profile);
+    if (localLocation) {
+        return localLocation;
+    }
+    const presenceLocation = resolveFriendPresenceLocation(profile, {
+        preferTraveling: true
+    });
     const normalizedTargetUserId = normalizeUserId(targetUserId);
     if (
         normalizedTargetUserId &&
-        isExplicitlyOfflineFriend(friendsById[normalizedTargetUserId])
+        isOfflineOrLeavingFriend(friendsById[normalizedTargetUserId])
     ) {
         return 'offline';
     }

@@ -1,14 +1,10 @@
-import {
-    buildCurrentUserPresenceView,
-    type CurrentUserPresenceRecord
-} from '@/shared/utils/currentUserPresence';
+import type { CurrentUserPresenceRecord } from '@/shared/utils/currentUserPresence';
 import { normalizeString as normalizeId } from '@/shared/utils/string';
 
-import {
-    resolveCurrentUserStateBucket,
-    type SameInstanceGroup,
-    type SidebarFriendRecord,
-    type SidebarPreferences
+import type {
+    SameInstanceGroup,
+    SidebarFriendRecord,
+    SidebarPreferences
 } from './friendsSidebarModel';
 import type { FriendsSidebarOpenGroups } from './useFriendsSidebarPreferences';
 
@@ -56,28 +52,6 @@ type FavoriteGroupSection = {
     label: string;
     rows: readonly SidebarFriendRecord[];
 };
-
-type SidebarGameState = Record<string, unknown> & {
-    isGameRunning?: boolean | null;
-    currentLocation?: string | null;
-    currentDestination?: string | null;
-    currentWorldId?: string | null;
-};
-
-const STOPPED_GAME_CURRENT_USER_PRESENCE_FIELDS = [
-    'location',
-    '$location',
-    '$locationTag',
-    '$location_at',
-    'locationUpdatedAt',
-    'worldId',
-    'instanceId',
-    'travelingToLocation',
-    'travelingToWorld',
-    'travelingToInstance',
-    '$travelingToLocation',
-    '$travelingToTime'
-];
 
 function pushSection(
     nextRows: SidebarVirtualRow[],
@@ -174,51 +148,15 @@ function buildFavoriteRows({
     return nextRows;
 }
 
-function stripStoppedGameCurrentUserPresence(
-    currentUser: CurrentUserPresenceRecord | null | undefined,
-    gameState: SidebarGameState | null | undefined
-) {
-    if (!currentUser || gameState?.isGameRunning !== false) {
-        return currentUser;
-    }
-    const strippedUser: CurrentUserPresenceRecord = { ...currentUser };
-    for (const field of STOPPED_GAME_CURRENT_USER_PRESENCE_FIELDS) {
-        delete strippedUser[field];
-    }
-    return strippedUser;
-}
-
-export function buildCurrentUserDisplayRecord(
-    currentUser: CurrentUserPresenceRecord | null | undefined,
-    gameState: SidebarGameState | null | undefined
-): SidebarFriendRecord | null {
-    if (!currentUser) {
-        return null;
-    }
-    const currentUserRow = buildCurrentUserPresenceView(currentUser, {
-        gameState
-    });
-    const currentUserDisplayRow = stripStoppedGameCurrentUserPresence(
-        currentUserRow,
-        gameState
-    );
-    return {
-        ...currentUserDisplayRow,
-        stateBucket: resolveCurrentUserStateBucket(currentUserDisplayRow)
-    };
-}
-
 function buildCurrentUserRows({
     currentUser,
     currentUserId,
-    gameState,
     sectionKey = 'me',
     isGroupByInstance = false,
     showSkeleton = true
 }: {
     currentUser: CurrentUserPresenceRecord | null | undefined;
     currentUserId?: string | null;
-    gameState: SidebarGameState | null | undefined;
     sectionKey?: string;
     isGroupByInstance?: boolean;
     showSkeleton?: boolean;
@@ -236,16 +174,12 @@ function buildCurrentUserRows({
         );
     }
 
-    const currentUserDisplayRecord = buildCurrentUserDisplayRecord(
-        currentUser,
-        gameState
-    );
-
-    return buildFriendRows(
-        sectionKey,
-        currentUserDisplayRecord ? [currentUserDisplayRecord] : [],
-        { currentUserId, isCurrentUser: true, isGroupByInstance }
-    );
+    const currentUserRow: SidebarFriendRecord = { ...currentUser };
+    return buildFriendRows(sectionKey, [currentUserRow], {
+        currentUserId,
+        isCurrentUser: true,
+        isGroupByInstance
+    });
 }
 
 export function buildFriendsSidebarVirtualRows({
@@ -254,7 +188,6 @@ export function buildFriendsSidebarVirtualRows({
     currentUserId,
     favoriteGroupSections,
     favoriteRows,
-    gameState,
     loadStatus,
     offlineRows,
     onlineRows,
@@ -269,7 +202,6 @@ export function buildFriendsSidebarVirtualRows({
     currentUserId?: string | null;
     favoriteGroupSections: FavoriteGroupSection[];
     favoriteRows: readonly SidebarFriendRecord[];
-    gameState: SidebarGameState | null | undefined;
     loadStatus?: string;
     offlineRows: readonly SidebarFriendRecord[];
     onlineRows: readonly SidebarFriendRecord[];
@@ -297,7 +229,6 @@ export function buildFriendsSidebarVirtualRows({
                 ? buildCurrentUserRows({
                       currentUser,
                       currentUserId,
-                      gameState,
                       sectionKey: `${sectionKey}:currentUser`,
                       isGroupByInstance: true,
                       showSkeleton: false

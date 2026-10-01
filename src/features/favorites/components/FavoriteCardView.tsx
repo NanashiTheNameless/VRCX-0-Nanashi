@@ -377,11 +377,7 @@ export function FavoriteCardView({
                         <Location
                             location={friendLocation}
                             traveling={item.travelingToLocation}
-                            hint={
-                                item.seedData?.worldName ||
-                                item.seedData?.travelingToWorld ||
-                                ''
-                            }
+                            hint={item.seedData?.worldName || ''}
                             grouphint={item.seedData?.groupName || ''}
                             link={false}
                             asButton={false}

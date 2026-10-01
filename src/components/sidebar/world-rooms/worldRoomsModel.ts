@@ -1,5 +1,6 @@
 import { resolveInstanceRows } from '@/components/dialogs/world-dialog/WorldDialogViewParts';
 import type { WorldProfileRecord } from '@/domain/entities/world';
+import { presenceLiveInstanceTag } from '@/domain/friends/presence';
 import type { FriendRecord } from '@/domain/friends/types';
 import { parseLocation } from '@/shared/utils/location';
 
@@ -68,7 +69,9 @@ export function buildWorldRoomRows({
     }
 
     for (const friend of friends) {
-        const location = friend.location ?? '';
+        const location = presenceLiveInstanceTag(friend.$presence, {
+            preferTraveling: false
+        });
         const key = worldInstanceKey(location, worldId);
         if (key) {
             ensureRow(key, location).friends.push(friend);

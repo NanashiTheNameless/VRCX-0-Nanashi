@@ -1,3 +1,5 @@
+import type { PresenceView } from '@/domain/friends/presence';
+
 type UserFactSource =
     | 'seed'
     | 'instance'
@@ -5,19 +7,7 @@ type UserFactSource =
     | 'friend'
     | 'profile'
     | 'realtime'
-    | 'currentUser'
-    | 'gameRuntime';
-
-const USER_STATE_BUCKETS = ['online', 'active', 'offline'] as const;
-
-type UserStateBucket = (typeof USER_STATE_BUCKETS)[number] | '';
-
-interface UserFactLocation extends Record<string, unknown> {
-    tag?: string;
-    worldId?: string;
-    instanceId?: string;
-    groupId?: string;
-}
+    | 'currentUser';
 
 interface UserFactMergeOptions {
     endpoint?: string;
@@ -39,11 +29,6 @@ interface UserFact {
     currentAvatarName?: string;
     status?: string;
     statusDescription?: string;
-    state?: string;
-    location?: string;
-    travelingToLocation?: string;
-    locationAt?: number | string | null;
-    travelingToTime?: number | string | null;
     friendNumber?: number;
     isCurrentUser?: boolean;
     isFriend?: boolean;
@@ -60,11 +45,7 @@ interface UserFact {
     $isTroll?: boolean;
     $isProbableTroll?: boolean;
     $platform?: string;
-    pendingOffline?: boolean;
-    stateBucket?: UserStateBucket;
-    $location?: UserFactLocation;
-    $travelingToLocation?: UserFactLocation;
-    $travelingToTime?: number | string | null;
+    $presence?: PresenceView;
     memo?: string;
     note?: string;
     updatedAt: string;
@@ -91,19 +72,5 @@ function userFactKey(endpoint: unknown, userId: unknown): string {
         : '';
 }
 
-function isUserStateBucket(value: string): value is UserStateBucket {
-    return USER_STATE_BUCKETS.some((bucket) => bucket === value);
-}
-
-function normalizeStateBucket(value: unknown): UserStateBucket {
-    const normalized = normalizeText(value).toLowerCase();
-    return isUserStateBucket(normalized) ? normalized : '';
-}
-
-export {
-    normalizeEndpoint,
-    normalizeStateBucket,
-    normalizeUserId,
-    userFactKey
-};
+export { normalizeEndpoint, normalizeUserId, userFactKey };
 export type { UserFact, UserFactMergeOptions, UserFactSource };

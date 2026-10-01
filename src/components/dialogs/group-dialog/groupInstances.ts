@@ -3,6 +3,7 @@ import type {
     GroupInstanceRecord
 } from '@/domain/entities/group';
 import type { EntityRecord } from '@/domain/entities/shared';
+import { presenceLiveInstanceTag, presenceOf } from '@/domain/friends/presence';
 import type { FriendRosterById } from '@/domain/friends/types';
 import { groupInstanceLocation } from '@/domain/instances/groupInstanceFacts';
 import { parseLocation } from '@/shared/utils/location';
@@ -12,8 +13,6 @@ import type { CurrentUserSnapshotState } from '@/state/runtimeStore';
 type InstanceUser = EntityRecord & {
     displayName?: string;
     id?: string;
-    location?: string;
-    travelingToLocation?: string;
     userId?: string;
 };
 
@@ -48,11 +47,10 @@ export function normalizeLocation(value: unknown) {
 }
 
 export function userGroupLocation(user: InstanceUser | null | undefined) {
-    const location = normalizeLocation(user?.location);
-    if (location === 'traveling') {
-        return normalizeLocation(user?.travelingToLocation);
-    }
-    return location;
+    const presence = presenceOf(user);
+    return presence
+        ? presenceLiveInstanceTag(presence, { preferTraveling: true })
+        : '';
 }
 
 export function instanceLocation(instance: GroupInstanceRecord) {

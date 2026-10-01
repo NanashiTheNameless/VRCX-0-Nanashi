@@ -5,7 +5,7 @@ use super::projection::{
     FriendProjection, RealtimeCurrentUserProjection, RealtimeInstanceClosedProjection,
     RealtimeNotificationProjection,
 };
-use super::runtime_types::PendingOfflineTimerAction;
+use vrcx_0_core::json::RawJsonObject;
 use vrcx_0_core::OwnerId;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -17,12 +17,28 @@ pub struct FriendIconChange {
     pub created_at: String,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FriendWake {
+    pub user_id: String,
+    pub at_ms: i64,
+}
+
+impl FriendWake {
+    pub(crate) fn at(user_id: &str, at_ms: i64) -> Self {
+        Self {
+            user_id: user_id.to_string(),
+            at_ms,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct RealtimeFriendOutput {
     pub owner_user_id: OwnerId,
     pub projection: FriendProjection,
     pub persistence: RealtimePersistenceBatch,
-    pub timer_action: PendingOfflineTimerAction,
+    pub joining: Vec<FeedLiveEntry>,
+    pub wake: Option<FriendWake>,
     pub profile_refetch_user_ids: Vec<String>,
     pub icon_changes: Vec<FriendIconChange>,
 }
@@ -40,10 +56,23 @@ impl RealtimeFriendOutput {
             owner_user_id,
             projection,
             persistence: RealtimePersistenceBatch::default(),
-            timer_action: PendingOfflineTimerAction::None,
+            joining: Vec::new(),
+            wake: None,
             profile_refetch_user_ids: Vec::new(),
             icon_changes: Vec::new(),
         }
+    }
+
+    pub(crate) fn from_baseline(
+        owner_user_id: OwnerId,
+        projection: FriendProjection,
+        feed_entries: Vec<FeedLiveEntry>,
+        joining: Vec<FeedLiveEntry>,
+    ) -> Self {
+        let mut output = Self::from_projection(owner_user_id, projection);
+        output.persistence.feed_entries = feed_entries;
+        output.joining = joining;
+        output
     }
 }
 
@@ -58,8 +87,9 @@ pub struct RealtimeNotificationOutput {
 pub struct RealtimeCurrentUserOutput {
     pub owner_user_id: OwnerId,
     pub projection: RealtimeCurrentUserProjection,
+    pub snapshot: RawJsonObject,
     pub persistence: RealtimePersistenceBatch,
-    pub timer_action: PendingOfflineTimerAction,
+    pub wake_at_ms: Option<i64>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

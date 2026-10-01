@@ -1,10 +1,6 @@
 import { create } from 'zustand';
 
-import {
-    normalizeStateBucket,
-    userFactKey,
-    type UserFact
-} from '@/domain/users/userFacts';
+import { userFactKey, type UserFact } from '@/domain/users/userFacts';
 import { evictOverflow } from '@/state/storeEviction';
 
 type UserFactInput = Omit<Partial<UserFact>, 'endpoint' | 'id' | 'updatedAt'> &
@@ -16,7 +12,6 @@ type UserFactInput = Omit<Partial<UserFact>, 'endpoint' | 'id' | 'updatedAt'> &
     };
 
 interface UserFactsStoreState {
-    version: number;
     usersByKey: Record<string, UserFact>;
     userIdsByEndpoint: Record<string, Set<string>>;
     order: string[];
@@ -28,9 +23,8 @@ const USER_FACTS_NON_FRIEND_CAPACITY = 1000;
 
 const initialState: Pick<
     UserFactsStoreState,
-    'version' | 'usersByKey' | 'userIdsByEndpoint' | 'order'
+    'usersByKey' | 'userIdsByEndpoint' | 'order'
 > = {
-    version: 0,
     usersByKey: {},
     userIdsByEndpoint: {},
     order: []
@@ -64,12 +58,6 @@ function isUserFactInput(value: unknown): value is UserFactInput {
     );
 }
 
-function isNormalizedStateBucket(
-    value: unknown
-): value is UserFact['stateBucket'] {
-    return value === undefined || normalizeStateBucket(value) === value;
-}
-
 function isStoredUserFact(
     user: UserFactInput,
     key: string,
@@ -80,8 +68,7 @@ function isStoredUserFact(
         user.id.trim() === userId &&
         typeof user.endpoint === 'string' &&
         user.endpoint.trim() === endpointFromKey(key) &&
-        typeof user.updatedAt === 'string' &&
-        isNormalizedStateBucket(user.stateBucket)
+        typeof user.updatedAt === 'string'
     );
 }
 
@@ -165,7 +152,6 @@ export const useUserFactsStore = create<UserFactsStoreState>((set) => ({
                 );
             }
             const nextState = {
-                version: state.version + 1,
                 usersByKey,
                 userIdsByEndpoint,
                 order

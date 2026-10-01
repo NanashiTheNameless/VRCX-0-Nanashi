@@ -15,7 +15,6 @@ pub type BackgroundGroupRemoteFuture<'a, T> = BoxFuture<'a, Result<T>>;
 pub type BackgroundGroupProfileFuture<'a> = BoxFuture<'a, Option<Value>>;
 
 pub trait BackgroundGroupRemote: Send + Sync {
-    fn current_user<'a>(&'a self, endpoint: &'a str) -> BackgroundGroupRemoteFuture<'a, Value>;
     fn group_instances<'a>(
         &'a self,
         endpoint: &'a str,
@@ -128,13 +127,6 @@ impl RuntimeGroupInstancesProjection {
 
 impl vrcx_0_application_core::RuntimeEventPayload for RuntimeGroupInstancesProjection {
     const EVENT_NAME: &'static str = "runtimeGroupInstancesProjection";
-}
-
-pub async fn refresh_background_current_user(
-    remote: &dyn BackgroundGroupRemote,
-    session: &BackgroundCapabilitySessionIdentity,
-) -> Result<Value> {
-    remote.current_user(&session.endpoint).await
 }
 
 pub async fn refresh_background_group_instances(

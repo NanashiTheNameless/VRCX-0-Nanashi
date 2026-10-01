@@ -157,22 +157,14 @@ mod favorites;
 mod friends;
 mod remote;
 
-use favorites::CurrentUserSnapshotView;
 pub use favorites::{
     build_favorites_baseline, build_favorites_baseline_from_friend_ids,
     build_favorites_baseline_from_friend_records,
 };
 #[cfg(test)]
 pub(crate) use friends::friend_log_relationship_candidates;
-pub use friends::{
-    apply_friend_roster_baseline_sync_outcome, build_friend_roster_baseline,
-    build_friend_roster_baseline_deferred, FriendStatusVerdicts,
-};
-use friends::{
-    apply_friend_roster_baseline_sync_outcome_and_take_friends,
-    build_friend_roster_baseline_deferred_internal, build_friend_state_map,
-    build_snapshot_friend_ids,
-};
+pub use friends::FriendStatusVerdicts;
+use friends::{apply_friend_roster_baseline_sync_outcome, build_friend_roster_baseline};
 pub(crate) use friends::{
     reconcile_friend_roster_records, verify_friend_log_relationship_changes,
     FriendRosterReconcileOutcome,
@@ -193,7 +185,7 @@ pub async fn build_synced_friend_roster_baseline(
     let endpoint = input.endpoint.clone();
     let websocket = input.websocket.clone();
     let watermark = runtime.capture_friend_baseline_watermark()?;
-    let baseline = build_friend_roster_baseline_deferred_internal(deps.clone(), input).await?;
+    let baseline = build_friend_roster_baseline(deps.clone(), input).await?;
     let mut output = baseline.output;
     let Some(friends_by_id) = baseline.friends_by_id else {
         return Ok(SyncedFriendRosterBaseline {
@@ -201,7 +193,6 @@ pub async fn build_synced_friend_roster_baseline(
             friends_by_id: None,
         });
     };
-    let friends_by_id = friends_by_id?;
     let verdicts =
         verify_friend_log_relationship_changes(&deps, &endpoint, &output.user_id, &friends_by_id)
             .await;
@@ -212,8 +203,7 @@ pub async fn build_synced_friend_roster_baseline(
         friends_by_id,
         verdicts,
     )?;
-    let Some(friends_by_id) =
-        apply_friend_roster_baseline_sync_outcome_and_take_friends(&mut output, outcome)?
+    let Some(friends_by_id) = apply_friend_roster_baseline_sync_outcome(&mut output, outcome)
     else {
         return Ok(SyncedFriendRosterBaseline {
             output,

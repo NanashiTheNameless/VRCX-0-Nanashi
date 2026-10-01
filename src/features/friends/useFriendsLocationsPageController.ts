@@ -1,58 +1,38 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 
+import { presenceLiveInstanceTag } from '@/domain/friends/presence';
+import type { FriendRecord } from '@/domain/friends/types';
 import { useScrollViewportMetrics } from '@/lib/useScrollViewportMetrics';
 import {
     buildLocalInstanceActionGateMap,
     evaluateLocalInstanceActionGates,
     type LocalInstanceActionGateTarget
 } from '@/shared/utils/invite';
+import { normalizeString } from '@/shared/utils/string';
 
 import type { FriendsLocationsSegment } from './friendsLocationsConfig';
-import {
-    normalizeFriendsLocationId as normalizeId,
-    resolvePresenceLocation
-} from './friendsLocationsRows';
 import { useFriendsLocationsActions } from './useFriendsLocationsActions';
 import { useFriendsLocationsPageDerivedState } from './useFriendsLocationsPageDerivedState';
 import { useFriendsLocationsPreferences } from './useFriendsLocationsPreferences';
 import { useFriendsLocationsRosterState } from './useFriendsLocationsRosterState';
 import { useFriendsLocationsRuntime } from './useFriendsLocationsRuntime';
 
-type GateFriendRecord = Record<string, unknown> & {
-    id?: string;
-    state?: string;
-    stateBucket?: string;
-    userId?: string;
-};
-
-function stringField(value: unknown): string {
-    return typeof value === 'string'
-        ? value.trim()
-        : String(value ?? '').trim();
-}
-
-function isGateFriendRecord(value: unknown): value is GateFriendRecord {
-    return Boolean(value && typeof value === 'object');
-}
-
 function buildLocationGateTarget(
-    friend: unknown,
+    friend: FriendRecord,
     currentUserId?: string | null
 ): LocalInstanceActionGateTarget | null {
-    if (!isGateFriendRecord(friend)) {
-        return null;
-    }
-    const location = resolvePresenceLocation(friend);
+    const location = presenceLiveInstanceTag(friend.$presence, {
+        preferTraveling: false
+    });
     if (!location) {
         return null;
     }
-    const userId = normalizeId(friend.id || friend.userId);
     return {
         key: location,
-        userId,
+        userId: friend.id,
         location,
-        stateBucket: stringField(friend.stateBucket || friend.state),
-        isCurrentUser: userId === normalizeId(currentUserId)
+        presenceKind: friend.$presence.kind,
+        isCurrentUser: friend.id === normalizeString(currentUserId)
     };
 }
 

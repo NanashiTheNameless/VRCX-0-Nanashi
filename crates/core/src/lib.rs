@@ -17,6 +17,7 @@ pub mod location;
 pub mod notification_kind;
 mod open_string_enum;
 pub mod owner;
+pub mod presence;
 pub mod proxy;
 pub mod realtime;
 pub mod release_status;

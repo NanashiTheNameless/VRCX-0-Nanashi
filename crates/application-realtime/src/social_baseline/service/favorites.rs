@@ -5,16 +5,14 @@ use vrcx_0_application_core::{Error, Result};
 use vrcx_0_contracts::FavoriteRow;
 use vrcx_0_core::friends::FriendRecord;
 
-use super::friends::{FriendStateMap, SnapshotFriendIds};
 use super::{
-    auth_scope_matches, build_friend_state_map, build_snapshot_friend_ids,
-    execute_vrchat_json_request, fetch_paged_array, get_config_array, json, normalize_endpoint,
-    normalize_text, object_field, object_field_normalized, object_field_string,
+    auth_scope_matches, execute_vrchat_json_request, fetch_paged_array, get_config_array, json,
+    normalize_endpoint, normalize_text, object_field, object_field_normalized, object_field_string,
     stale_favorites_output, unique_values, value_as_i64, value_as_string, BTreeMap, Map, RawJson,
     SocialBaselineDeps, SocialFavoritesBaselineInput, SocialFavoritesBaselineOutput,
     SocialFavoritesBaselineRequest, FAVORITES_PAGE_SIZE, FAVORITE_GROUPS_PAGE_SIZE,
 };
-use crate::{FavoriteBaselineSnapshot, FavoriteGroupOutput};
+use crate::social_baseline::types::{FavoriteBaselineSnapshot, FavoriteGroupOutput};
 use vrcx_0_core::OwnerId;
 
 const MAX_FAVORITE_GROUPS_KEY: &str = "maxFavoriteGroups";
@@ -317,34 +315,6 @@ impl<'a> FriendRosterView<'a> {
     }
 }
 
-pub(super) struct CurrentUserSnapshotView {
-    pub(super) user_id: String,
-    pub(super) state_by_id: HashMap<String, String>,
-    pub(super) state_order_ids: Vec<String>,
-    pub(super) friend_ids: Vec<String>,
-    pub(super) has_friend_list: bool,
-}
-
-impl CurrentUserSnapshotView {
-    pub(super) fn from_raw(snapshot: &Value) -> Self {
-        let FriendStateMap {
-            state_by_id,
-            ordered_ids: state_order_ids,
-        } = build_friend_state_map(snapshot);
-        let SnapshotFriendIds {
-            friend_ids,
-            has_friend_list,
-        } = build_snapshot_friend_ids(snapshot);
-        Self {
-            user_id: object_field_string(snapshot, &["id"]),
-            state_by_id,
-            state_order_ids,
-            friend_ids,
-            has_friend_list,
-        }
-    }
-}
-
 fn build_remote_favorite_snapshot(
     remote_favorites: Vec<Value>,
     friend_roster: &FriendRosterView<'_>,
@@ -518,9 +488,8 @@ async fn build_favorites_baseline_inner(
     request: SocialFavoritesBaselineRequest,
     friend_roster: FriendRosterView<'_>,
 ) -> Result<SocialFavoritesBaselineOutput> {
-    let current_user = CurrentUserSnapshotView::from_raw(request.current_user_snapshot.as_value());
     let user_id = normalize_text(if request.user_id.is_empty() {
-        current_user.user_id
+        object_field_string(request.current_user_snapshot.as_value(), &["id"])
     } else {
         request.user_id.clone()
     });

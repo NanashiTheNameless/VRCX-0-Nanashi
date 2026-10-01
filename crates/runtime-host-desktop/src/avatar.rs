@@ -13,10 +13,7 @@ use vrcx_0_application_core::{
     AuthenticatedMutationContext, AvatarCache, RemoteMutationGate, RuntimeAuthScope,
     RuntimeDiagnostics, RuntimeSyncEngine, WebClient,
 };
-use vrcx_0_application_realtime::{
-    RealtimeHostRuntime, CURRENT_USER_AVATAR_RESPONSE_AUTHORITY_FIELDS,
-    CURRENT_USER_FALLBACK_AVATAR_RESPONSE_AUTHORITY_FIELDS,
-};
+use vrcx_0_application_realtime::RealtimeHostRuntime;
 use vrcx_0_persistence::DatabaseService;
 
 #[derive(Clone)]
@@ -97,7 +94,6 @@ impl DesktopAvatarRuntime {
                 avatar_id,
                 fallback: false,
             },
-            CURRENT_USER_AVATAR_RESPONSE_AUTHORITY_FIELDS,
         )
         .await?)
     }
@@ -116,7 +112,6 @@ impl DesktopAvatarRuntime {
                 avatar_id,
                 fallback: true,
             },
-            CURRENT_USER_FALLBACK_AVATAR_RESPONSE_AUTHORITY_FIELDS,
         )
         .await?)
     }

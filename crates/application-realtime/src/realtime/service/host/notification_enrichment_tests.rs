@@ -445,6 +445,7 @@ fn notification_avatar_fallback_preserves_existing_image_and_skips_group_sender(
 fn unresolved_person_location_notification_persists_without_runtime_projection() -> Result<()> {
     let (_dir, runtime, active_session) =
         runtime_with_active_session("notification-unresolved-basic")?;
+    runtime.set_task_executor_for_test(DiscardTaskExecutor);
     let notification = json!({
         "id": "notif-unresolved",
         "createdAt": "2026-06-21T00:00:00.000Z",
@@ -513,8 +514,8 @@ fn unresolved_person_location_notification_persists_without_runtime_projection()
             .lock()
             .unwrap()
             .world_enrichment
-            .fetches
-            .contains_key("wrld_missing"),
+            .inflight
+            .contains("wrld_missing"),
         "notification resolver failures should register async world warm"
     );
     Ok(())
@@ -622,18 +623,23 @@ fn notification_facts_prefer_the_current_friend_record() -> Result<()> {
             endpoint: endpoint.clone(),
             friends_by_id: [(
                 "usr_target".to_string(),
-                vrcx_0_core::friends::FriendRecord {
-                    id: "usr_target".into(),
-                    display_name: "Current Friend".into(),
-                    location: "wrld_target:instance~region(jp)".into(),
-                    icon_url: "https://images.example/current.png".into(),
-                    extra: json!({
-                        "world": { "name": "Current World" }
-                    })
-                    .as_object()
-                    .cloned()
-                    .unwrap(),
-                    ..vrcx_0_core::friends::FriendRecord::default()
+                vrcx_0_core::friends::FriendBaselineEntry {
+                    record: vrcx_0_core::friends::FriendRecord {
+                        id: "usr_target".into(),
+                        display_name: "Current Friend".into(),
+                        icon_url: "https://images.example/current.png".into(),
+                        extra: json!({
+                            "world": { "name": "Current World" }
+                        })
+                        .as_object()
+                        .cloned()
+                        .unwrap(),
+                        ..vrcx_0_core::friends::FriendRecord::default()
+                    },
+                    presence: vrcx_0_core::friends::FriendBaselinePresence {
+                        location: "wrld_target:instance~region(jp)".into(),
+                        ..vrcx_0_core::friends::FriendBaselinePresence::default()
+                    },
                 },
             )]
             .into_iter()

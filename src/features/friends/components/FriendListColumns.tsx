@@ -15,6 +15,7 @@ import {
 } from '@/components/data-table/DataTableView';
 import { BioLinkFavicon } from '@/components/media/BioLinkFavicon';
 import { FadeInImage } from '@/components/media/FadeInImage';
+import { UserStatusDot } from '@/components/UserStatusDot';
 import { formatDateFilter, timeToText } from '@/lib/dateTime';
 import { cn } from '@/lib/utils';
 import {
@@ -268,9 +269,11 @@ export function useFriendListColumns({
                     const status = resolveStatusMeta(row.original);
                     return (
                         <span className="flex min-w-0 items-center gap-2">
-                            {status.showIndicator ? (
-                                <i className={status.indicatorClassName} />
-                            ) : null}
+                            <UserStatusDot
+                                statusDotClassName={status.statusDotClassName}
+                                className="size-2.5 shrink-0"
+                                variant="inline"
+                            />
                             {status.label ? (
                                 <span className="truncate">{status.label}</span>
                             ) : null}

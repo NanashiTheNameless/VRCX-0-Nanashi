@@ -568,12 +568,9 @@ export function DashboardInstanceWidget({
                 const isFavorite = normalizedUserId
                     ? favoriteIdSet.has(normalizedUserId)
                     : false;
-                const platform =
-                    friend?.$platform ||
-                    friend?.platform ||
-                    friend?.last_platform ||
-                    '';
-                const platformMeta = resolvePlatformMeta(platform);
+                const platformMeta = resolvePlatformMeta(
+                    friend?.$platform || ''
+                );
                 const languageEntries = resolveLanguageEntries(friend);
 
                 return {

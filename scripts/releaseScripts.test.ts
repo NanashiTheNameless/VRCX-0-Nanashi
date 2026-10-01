@@ -94,7 +94,15 @@ describe('prepare-release-version', () => {
 describe('create-tauri-updater-manifest', () => {
     it('validates supported targets and encodes release asset URLs', () => {
         expect(() => validateTarget('windows-x86_64-stable')).not.toThrow();
-        expect(() => validateTarget('linux-x86_64-deb-stable')).not.toThrow();
+        expect(() =>
+            validateTarget('linux-x86_64-appimage-stable')
+        ).not.toThrow();
+        expect(() => validateTarget('linux-x86_64-deb-stable')).toThrow(
+            'Invalid updater target: linux-x86_64-deb-stable'
+        );
+        expect(() => validateTarget('linux-x86_64-rpm-stable')).toThrow(
+            'Invalid updater target: linux-x86_64-rpm-stable'
+        );
         expect(() => validateTarget('macos-aarch64-stable')).not.toThrow();
         expect(() => validateTarget('windows-aarch64-stable')).toThrow(
             'Invalid updater target: windows-aarch64-stable'

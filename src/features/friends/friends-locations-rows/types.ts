@@ -1,10 +1,8 @@
-import type { SameInstanceLastLocation } from '@/domain/friends/sameInstanceFriends';
 import type {
     FriendProfileFields,
     FriendRecord,
     FriendRecordInput
 } from '@/domain/friends/types';
-import type { InstanceRosterTimestamp } from '@/domain/instances/instanceRoster';
 import type { parseLocation } from '@/shared/utils/location';
 
 export type TranslationFn = (
@@ -13,11 +11,8 @@ export type TranslationFn = (
 ) => string;
 
 export type FriendLocationRecord = FriendRecordInput &
-    Omit<Partial<FriendProfileFields>, '$location' | '$travelingToLocation'> & {
-        $groupName?: string | null;
+    Partial<FriendProfileFields> & {
         $location?: FriendLocationRecord | null;
-        $travelingToLocation?: FriendLocationRecord | string | null;
-        $travelingToWorld?: string | null;
         group?: FriendLocationRecord | null;
         groupName?: string | null;
         instanceId?: string | null;
@@ -27,13 +22,8 @@ export type FriendLocationRecord = FriendRecordInput &
         isTraveling?: boolean | null;
         locationName?: string | null;
         name?: string | null;
-        ref?: FriendLocationRecord | null;
         shortCode?: string | null;
-        stateBucket?: string;
         tag?: string | null;
-        travelingToLocation?: string | null;
-        travelingToTime?: InstanceRosterTimestamp | null;
-        travelingToWorld?: string | null;
         world?: FriendLocationRecord | null;
         worldId?: string | null;
         worldName?: string | null;
@@ -41,8 +31,6 @@ export type FriendLocationRecord = FriendRecordInput &
     };
 
 export type FriendLocationFriend = FriendRecord | FriendLocationRecord;
-
-export type FriendsLocationsLastLocation = SameInstanceLastLocation;
 
 export type SameInstanceGroup<
     TFriend extends FriendLocationFriend = FriendLocationFriend

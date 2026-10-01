@@ -163,8 +163,6 @@ export function useCurrentInstanceRoster({
                     currentLocationPlayers: result.players,
                     currentLocationStartedAt:
                         nextContext.createdAt || playerListStartedAt || '',
-                    currentUserId,
-                    currentUserSnapshot,
                     currentWorldName: nextContext.worldName,
                     endpoint: currentUserEndpoint
                 });

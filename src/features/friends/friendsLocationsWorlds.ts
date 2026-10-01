@@ -4,7 +4,7 @@ import { isSameInstanceLocation } from '@/domain/instances/instanceRoster';
 import {
     resolveFriendGroupName,
     resolveFriendWorldName,
-    resolveLocationTarget
+    friendLocationTarget
 } from './friendsLocationsRows';
 
 export type FriendsLocationsViewMode = 'people' | 'worlds';
@@ -35,7 +35,8 @@ export type FriendsLocationsWorldGroup = {
 
 export function buildFriendWorldGroups(
     friends: readonly FriendRecord[],
-    currentLocation: string
+    currentLocation: string,
+    localLocationOf: (friendId: string) => string
 ): FriendsLocationsWorldGroup[] {
     const groupsByWorldId = new Map<string, FriendsLocationsWorldGroup>();
     const instancesByLocation = new Map<
@@ -44,7 +45,7 @@ export function buildFriendWorldGroups(
     >();
 
     for (const friend of friends) {
-        const target = resolveLocationTarget(friend);
+        const target = friendLocationTarget(friend, localLocationOf(friend.id));
         if (!target.worldId || target.isOffline || target.isPrivate) {
             continue;
         }

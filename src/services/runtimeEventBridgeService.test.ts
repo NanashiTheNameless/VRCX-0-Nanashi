@@ -1557,17 +1557,14 @@ describe('runtimeEventBridgeService', () => {
                 patches: [
                     {
                         userId,
-                        patch: {
+                        record: {
                             id: userId,
-                            displayName: userId,
-                            state: 'offline'
+                            displayName: userId
                         },
-                        stateBucket: 'offline',
-                        stateBucketAuthority: 'preserve'
+                        stateBucket: 'offline'
                     }
                 ],
                 removals: [],
-                feedEntries: [],
                 friendLogChanged: false
             });
         }
@@ -1598,17 +1595,14 @@ describe('runtimeEventBridgeService', () => {
             patches: [
                 {
                     userId: 'usr_stale',
-                    patch: {
+                    record: {
                         id: 'usr_stale',
-                        displayName: 'usr_stale',
-                        state: 'online'
+                        displayName: 'usr_stale'
                     },
-                    stateBucket: 'online',
-                    stateBucketAuthority: 'explicit'
+                    stateBucket: 'online'
                 }
             ],
             removals: [],
-            feedEntries: [],
             friendLogChanged: false
         });
 
@@ -1620,17 +1614,14 @@ describe('runtimeEventBridgeService', () => {
             patches: [
                 {
                     userId: 'usr_live',
-                    patch: {
+                    record: {
                         id: 'usr_live',
-                        displayName: 'usr_live',
-                        state: 'online'
+                        displayName: 'usr_live'
                     },
-                    stateBucket: 'online',
-                    stateBucketAuthority: 'explicit'
+                    stateBucket: 'online'
                 }
             ],
             removals: [],
-            feedEntries: [],
             friendLogChanged: false
         });
 

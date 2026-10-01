@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use serde_json::Value;
 use vrcx_0_application_core::Result;
+use vrcx_0_core::friends::StateBucket;
 
 use super::super::{
     fetch_paged_array, json, object_field_normalized, object_field_string, unique_push, Number,
@@ -11,18 +12,15 @@ use super::super::{
 pub(super) struct RemoteFriendProfile {
     pub(super) id: String,
     pub(super) raw: Value,
-    pub(super) source_state_bucket: Option<String>,
+    pub(super) source_state_bucket: Option<StateBucket>,
 }
 
 impl RemoteFriendProfile {
-    pub(super) fn from_raw(raw: Value, source_state_bucket: Option<&str>) -> Option<Self> {
+    pub(super) fn from_raw(raw: Value, source_state_bucket: Option<StateBucket>) -> Option<Self> {
         let id = object_field_normalized(&raw, &["id"]);
         if id.is_empty() {
             return None;
         }
-        let source_state_bucket = source_state_bucket
-            .map(normalize_state_bucket)
-            .filter(|value| !value.is_empty());
         Some(Self {
             id,
             raw,
@@ -53,7 +51,7 @@ pub(super) fn insert_fetched_friend(
     fetched_friend_ids_ordered: &mut Vec<String>,
     fetched_friend_ids_seen: &mut HashSet<String>,
     friend: Value,
-    source_state_bucket: Option<&str>,
+    source_state_bucket: Option<StateBucket>,
 ) {
     let Some(friend) = RemoteFriendProfile::from_raw(friend, source_state_bucket) else {
         return;
@@ -68,8 +66,8 @@ pub(super) fn insert_fetched_friend(
         .get(&friend_id)
         .map(|existing| {
             friend.source_state_bucket.is_none()
-                || existing.source_state_bucket.as_deref() != Some("online")
-                || friend.source_state_bucket.as_deref() == Some("online")
+                || existing.source_state_bucket != Some(StateBucket::Online)
+                || friend.source_state_bucket == Some(StateBucket::Online)
         })
         .unwrap_or(true);
     if should_replace {
@@ -129,8 +127,4 @@ pub(super) fn get_meaningful_display_name(user: &Value, user_id: &str) -> String
         &resolved_user_id,
     )
     .unwrap_or_default()
-}
-
-pub(super) fn normalize_state_bucket(value: &str) -> String {
-    vrcx_0_core::friends::normalize_state_bucket(value).unwrap_or_default()
 }

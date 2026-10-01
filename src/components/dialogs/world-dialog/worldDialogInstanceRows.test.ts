@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { offlinePresence, onlinePresence } from '@/test/presenceFixtures';
+
 import { buildWorldDialogDisplayInstanceRows } from './worldDialogInstanceRows';
 
 describe('worldDialogInstanceRows', () => {
@@ -11,19 +13,23 @@ describe('worldDialogInstanceRows', () => {
                 usr_friend: {
                     id: 'usr_friend',
                     displayName: 'Friend',
-                    location:
+                    $presence: onlinePresence(
                         'wrld_test:friends-room~friends(usr_owner)~region(jp)'
+                    )
                 },
                 usr_roommate: {
                     id: 'usr_roommate',
                     displayName: 'Roommate',
-                    location:
+                    $presence: onlinePresence(
                         'wrld_test:friends-room~friends(usr_owner)~region(jp)'
+                    )
                 },
                 usr_other_world: {
                     id: 'usr_other_world',
                     displayName: 'Elsewhere',
-                    location: 'wrld_other:friends-room~friends(usr_owner)'
+                    $presence: onlinePresence(
+                        'wrld_other:friends-room~friends(usr_owner)'
+                    )
                 }
             },
             instanceRows: [
@@ -104,13 +110,14 @@ describe('worldDialogInstanceRows', () => {
                 usr_friend: {
                     id: 'usr_friend',
                     displayName: 'Friend',
-                    location:
+                    $presence: onlinePresence(
                         'wrld_test:live~group(grp_live)~groupAccessType(public)'
+                    )
                 },
                 usr_elsewhere: {
                     id: 'usr_elsewhere',
                     displayName: 'Elsewhere',
-                    location: 'wrld_other:1'
+                    $presence: onlinePresence('wrld_other:1')
                 }
             },
             instanceRows: [
@@ -184,8 +191,9 @@ describe('worldDialogInstanceRows', () => {
                 usr_dup: {
                     id: 'usr_dup',
                     displayName: 'Dup',
-                    location:
+                    $presence: onlinePresence(
                         'wrld_test:live~group(grp_live)~groupAccessType(public)'
+                    )
                 }
             },
             instanceRows: [],
@@ -231,16 +239,14 @@ describe('worldDialogInstanceRows', () => {
                 usr_busy: {
                     id: 'usr_busy',
                     displayName: 'Busy Friend',
-                    state: 'online',
                     status: 'busy',
-                    location: 'private'
+                    $presence: onlinePresence('private')
                 },
                 usr_ask: {
                     id: 'usr_ask',
                     displayName: 'Ask Friend',
-                    state: 'online',
                     status: 'ask me',
-                    location: 'private'
+                    $presence: onlinePresence('private')
                 }
             },
             instanceRows: [],
@@ -280,8 +286,7 @@ describe('worldDialogInstanceRows', () => {
             friendsById: {
                 usr_departed: {
                     id: 'usr_departed',
-                    state: 'offline',
-                    location
+                    $presence: offlinePresence
                 }
             },
             instanceRows: [],
@@ -301,8 +306,7 @@ describe('worldDialogInstanceRows', () => {
             friendsById: {
                 usr_departed: {
                     id: 'usr_departed',
-                    state: 'online',
-                    location: 'wrld_elsewhere:456'
+                    $presence: onlinePresence('wrld_elsewhere:456')
                 }
             },
             instanceRows: [

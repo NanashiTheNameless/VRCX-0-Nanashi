@@ -36,7 +36,7 @@ use vrcx_0_application_core::{
     MemoryFileCachePort, MemoryWorldCachePort, NoopPrintCleanupInputSink, NoopWebClientPort,
     Result, RuntimeAuthScope, RuntimeEventForTest, RuntimeTaskExecutor,
 };
-use vrcx_0_core::friends::FriendRecord;
+use vrcx_0_core::friends::FriendBaselineEntry;
 use vrcx_0_core::realtime::RealtimeWsMessagePayload;
 
 #[cfg(test)]
@@ -136,7 +136,7 @@ impl TestRealtimeHostRuntime {
     pub fn prepare_pending_friend_baseline(
         &self,
         session: &RealtimeSessionContext,
-        friends_by_id: HashMap<String, FriendRecord>,
+        friends_by_id: HashMap<String, FriendBaselineEntry>,
     ) -> Result<()> {
         self.runtime.state.lock().unwrap().connection.active_context = None;
         self.runtime.friends.clear();
@@ -207,6 +207,34 @@ impl TestRealtimeHostRuntime {
 }
 
 #[cfg(test)]
+#[derive(Clone, Copy)]
+pub(super) struct DiscardTaskExecutor;
+
+#[cfg(test)]
+struct FinishedTaskHandle;
+
+#[cfg(test)]
+impl RuntimeTaskExecutor for DiscardTaskExecutor {
+    fn spawn(
+        &self,
+        _task: vrcx_0_application_core::RuntimeTask,
+    ) -> Box<dyn vrcx_0_application_core::RuntimeTaskHandle> {
+        Box::new(FinishedTaskHandle)
+    }
+}
+
+#[cfg(test)]
+impl vrcx_0_application_core::RuntimeTaskHandle for FinishedTaskHandle {
+    fn abort(&self) {}
+
+    fn is_finished(&self) -> bool {
+        true
+    }
+
+    fn join_or_abort(&mut self, _timeout: std::time::Duration) {}
+}
+
+#[cfg(test)]
 pub(super) mod config_store {
     use vrcx_0_application_core::Result;
 
@@ -262,6 +290,7 @@ pub fn feed_lookup_input(user_id: String) -> FeedRowsQueryInput {
         vip_list: Vec::new(),
         scoped_user_ids: Vec::new(),
         excluded_user_ids: Vec::new(),
+        location_hidden_user_ids: Vec::new(),
         max_entries: 20,
         date_from: String::new(),
         date_to: String::new(),
@@ -281,11 +310,16 @@ pub fn seed_friend_baseline(
             websocket: active_session.websocket.clone(),
             friends_by_id: [(
                 "usr_friend".to_string(),
-                vrcx_0_core::friends::FriendRecord {
-                    id: "usr_friend".into(),
-                    display_name: "Friend".into(),
-                    state: "online".into(),
-                    ..vrcx_0_core::friends::FriendRecord::default()
+                vrcx_0_core::friends::FriendBaselineEntry {
+                    record: vrcx_0_core::friends::FriendRecord {
+                        id: "usr_friend".into(),
+                        display_name: "Friend".into(),
+                        ..vrcx_0_core::friends::FriendRecord::default()
+                    },
+                    presence: vrcx_0_core::friends::FriendBaselinePresence {
+                        state: "online".into(),
+                        ..vrcx_0_core::friends::FriendBaselinePresence::default()
+                    },
                 },
             )]
             .into_iter()
@@ -316,6 +350,7 @@ struct TestActivitySinkState {
     delivery_armed: bool,
     friend_user_ids: Vec<String>,
     friend_projections: Vec<FriendProjection>,
+    friend_feed_entries: Vec<FeedLiveEntry>,
     notification_projections: Vec<RealtimeNotificationProjection>,
 }
 
@@ -331,6 +366,10 @@ impl TestActivitySink {
 
     pub(super) fn take_friend_projections(&self) -> Vec<FriendProjection> {
         std::mem::take(&mut self.lock_state().friend_projections)
+    }
+
+    pub(super) fn take_friend_feed_entries(&self) -> Vec<FeedLiveEntry> {
+        std::mem::take(&mut self.lock_state().friend_feed_entries)
     }
 
     pub(super) fn notification_by_id(&self, id: &str) -> Option<serde_json::Value> {
@@ -354,10 +393,14 @@ impl OverlayActivityInputSink for TestActivitySink {
         self.lock_state().delivery_armed = armed;
     }
 
-    fn ingest_friend_projection(&self, projection: &FriendProjection) {
-        self.lock_state()
-            .friend_projections
-            .push(projection.clone());
+    fn ingest_friend_projection(
+        &self,
+        projection: &FriendProjection,
+        feed_entries: &[FeedLiveEntry],
+    ) {
+        let mut state = self.lock_state();
+        state.friend_projections.push(projection.clone());
+        state.friend_feed_entries.extend_from_slice(feed_entries);
     }
 
     fn ingest_notification_projection(&self, projection: &RealtimeNotificationProjection) {

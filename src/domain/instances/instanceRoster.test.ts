@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { offlinePresence, onlinePresence } from '@/test/presenceFixtures';
+
 import {
     buildInstanceRosterRows,
     mergeInstanceUser,
@@ -95,8 +97,7 @@ describe('instanceRoster', () => {
             displayName: 'Full profile name',
             iconUrl: 'profile.webp',
             location: 'wrld_old:11111',
-            state: 'offline',
-            stateBucket: 'offline',
+            $presence: offlinePresence,
             status: 'busy',
             statusDescription: 'Old description'
         });
@@ -106,8 +107,7 @@ describe('instanceRoster', () => {
                 id: 'usr_self',
                 displayName: 'Snapshot name',
                 location: 'wrld_live:22222',
-                state: 'online',
-                stateBucket: 'online',
+                $presence: onlinePresence('wrld_live:22222'),
                 status: 'join me',
                 statusDescription: ''
             },
@@ -119,8 +119,7 @@ describe('instanceRoster', () => {
             displayName: 'Full profile name',
             iconUrl: 'profile.webp',
             location: 'wrld_live:22222',
-            state: 'online',
-            stateBucket: 'online',
+            $presence: onlinePresence('wrld_live:22222'),
             status: 'join me',
             statusDescription: ''
         });

@@ -278,9 +278,6 @@ export function useLocationMetadataBatch(
                     .catch(() => [worldId, ''])
             )
         ).then((results) => {
-            for (const [worldId] of results) {
-                localWorldNameRequestIdsRef.current.delete(worldId);
-            }
             if (!mountedRef.current) {
                 return;
             }

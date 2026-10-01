@@ -12,14 +12,14 @@ import { FadeInImage } from '@/components/media/FadeInImage';
 import { resolveSidebarStatusDotClassName } from '@/components/sidebar/friends-sidebar/friendsSidebarModel';
 import { UserDetailTile } from '@/components/UserDetailTile';
 import type { EntityRecord } from '@/domain/entities/shared';
+import {
+    presenceOf,
+    presencePlace,
+    resolveFriendPresenceLocation
+} from '@/domain/friends/presence';
 import { useNowMs } from '@/lib/useNowMs';
 import { cn } from '@/lib/utils';
-import {
-    locationSentinel,
-    resolveFriendPresenceLocation
-} from '@/shared/utils/location';
 import { userStatusLabel } from '@/shared/utils/userStatus';
-import { useRuntimeStore } from '@/state/runtimeStore';
 import { Button } from '@/ui/shadcn/button';
 
 import { groupIdForRow } from '../userDialogGroupRows';
@@ -56,12 +56,6 @@ export function EntityList({
     groupMarkers?: UserGroupCardMarkers;
 }) {
     const { t } = useTranslation();
-    const currentUserSnapshot = useRuntimeStore(
-        (state) => state.auth.currentUserSnapshot
-    );
-    const isGameRunning = useRuntimeStore(
-        (state) => state.gameState.isGameRunning === true
-    );
     const nowMs = useNowMs({ active: kind === 'user' });
 
     if (loading) {
@@ -119,27 +113,26 @@ export function EntityList({
                 const RowFallbackIcon =
                     kind === 'avatar' ? PersonStandingIcon : UserIcon;
                 const userId = kind === 'user' ? userIdForRow(row) : '';
-                const isTraveling =
-                    kind === 'user' &&
-                    locationSentinel(row.location) === 'traveling';
+                const rowPresence = kind === 'user' ? presenceOf(row) : null;
+                const isTraveling = rowPresence
+                    ? presencePlace(rowPresence)?.location.isTraveling === true
+                    : false;
                 const timerLocation =
                     kind === 'user'
                         ? isTraveling
-                            ? resolveFriendPresenceLocation(row)
+                            ? resolveFriendPresenceLocation(row, {
+                                  preferTraveling: true
+                              })
                             : instanceLocation.trim() ||
-                              resolveFriendPresenceLocation(row)
+                              resolveFriendPresenceLocation(row, {
+                                  preferTraveling: true
+                              })
                         : '';
-                const isCurrentUserRow = Boolean(
-                    userId && userId === currentUserSnapshot?.id
-                );
                 const dotClassName =
                     kind === 'user'
-                        ? resolveSidebarStatusDotClassName(
-                              row,
-                              currentUserSnapshot,
-                              isCurrentUserRow,
-                              { hideNonFriend: false, isGameRunning }
-                          )
+                        ? resolveSidebarStatusDotClassName(row, {
+                              hideNonFriend: false
+                          })
                         : '';
                 const isPrivateWorld =
                     kind === 'world' && row?.releaseStatus === 'private';

@@ -25,6 +25,7 @@ import type {
     FeedRow
 } from '@/components/feed/feedTypes';
 import { LaunchModeContextMenuGroup } from '@/components/launch/LaunchModeContextMenuGroup';
+import { resolveFriendPresenceLocation } from '@/domain/friends/presence';
 import { formatDateFilter, formatDateTime } from '@/lib/dateTime';
 import { useKnownUserFact } from '@/lib/useKnownUser';
 import { cn } from '@/lib/utils';
@@ -36,10 +37,7 @@ import {
     openWorldDialog
 } from '@/services/dialogService';
 import { userImage } from '@/services/entityMediaService';
-import {
-    parseLocation,
-    resolveFriendPresenceLocation
-} from '@/shared/utils/location';
+import { parseLocation } from '@/shared/utils/location';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/ui/shadcn/avatar';
@@ -54,10 +52,6 @@ import {
 } from '@/ui/shadcn/context-menu';
 
 import { FeedExpandedRow } from './FeedExpandedRow';
-
-function resolvePresenceLocation(profile: unknown) {
-    return resolveFriendPresenceLocation(profile);
-}
 
 function formatTimestampParts(value: string | null | undefined) {
     if (!value) {
@@ -116,9 +110,6 @@ function FeedUserLink({
         (state) => state.auth.currentUserEndpoint
     );
     const currentUserId = useRuntimeStore((state) => state.auth.currentUserId);
-    const currentUserSnapshot = useRuntimeStore(
-        (state) => state.auth.currentUserSnapshot
-    );
     const friend = useFriendRosterStore((state) =>
         userId ? state.friendsById[userId] || null : null
     );
@@ -136,7 +127,9 @@ function FeedUserLink({
         displayUser,
         cachedDisplayName
     );
-    const location = resolvePresenceLocation(friend || knownUser);
+    const location = resolveFriendPresenceLocation(friend || knownUser, {
+        preferTraveling: true
+    });
     const parsedLocation = parseLocation(location);
     const worldTarget = parsedLocation.worldId || '';
     const worldDialogTarget =
@@ -147,10 +140,7 @@ function FeedUserLink({
     const isCurrentUser = Boolean(
         userId && userId === normalizeId(currentUserId)
     );
-    const canRequestInvite = canRequestInviteFromFeedFriend(
-        friend,
-        currentUserSnapshot
-    );
+    const canRequestInvite = canRequestInviteFromFeedFriend(friend);
     const canUseFriendLocation = Boolean(
         !isCurrentUser &&
         parsedLocation.isRealInstance &&

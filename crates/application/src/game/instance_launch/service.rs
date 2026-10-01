@@ -4,6 +4,7 @@ use serde_json::Value;
 use vrcx_0_core::text::first_non_empty_owned;
 use vrcx_0_core::{
     location::{parse_location, GroupAccessType, ParsedLocation},
+    presence::PresenceKind,
     vrchat_endpoints::VRCHAT_API_DEFAULT_ENDPOINT,
 };
 
@@ -80,7 +81,7 @@ pub fn evaluate_instance_action_gates(
             .map(|target| {
                 let location = target.location.trim().to_string();
                 let parsed = parse_location(&location);
-                let is_online = target.state_bucket.trim().eq_ignore_ascii_case("online");
+                let is_online = target.presence_kind == PresenceKind::Online;
                 let is_current_user =
                     target.is_current_user || same_non_empty(&target.user_id, &current_user_id);
                 let can_self_invite = check_can_invite_self(

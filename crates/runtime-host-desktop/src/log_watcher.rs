@@ -1,11 +1,12 @@
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock, Weak};
 
 use vrcx_0_application_core::{InstanceRosterObserver, InstanceRosterSnapshot};
 use vrcx_0_application_game::LogLocationSnapshotScanner;
 pub use vrcx_0_application_game::{
     GameLogEvent, GameLogEventOrigin, GameLogEventSink, LogLocationSnapshot, LogWatcher,
 };
+use vrcx_0_application_realtime::RealtimeHostRuntime;
 
 #[derive(Default)]
 pub struct HostLogLocationSnapshotScanner;
@@ -38,4 +39,25 @@ impl InstanceRosterObserver for HostInstanceRosterFanout {
             observer.on_game_running(running);
         }
     }
+}
+
+#[derive(Default)]
+pub struct CurrentUserLocalPresenceObserver {
+    realtime: OnceLock<Weak<RealtimeHostRuntime>>,
+}
+
+impl CurrentUserLocalPresenceObserver {
+    pub fn bind(&self, realtime: &Arc<RealtimeHostRuntime>) {
+        let _ = self.realtime.set(Arc::downgrade(realtime));
+    }
+}
+
+impl InstanceRosterObserver for CurrentUserLocalPresenceObserver {
+    fn on_instance_roster(&self, _snapshot: InstanceRosterSnapshot) {
+        if let Some(realtime) = self.realtime.get().and_then(Weak::upgrade) {
+            realtime.refresh_current_user_local_presence();
+        }
+    }
+
+    fn on_game_running(&self, _running: bool) {}
 }

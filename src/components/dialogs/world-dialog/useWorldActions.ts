@@ -14,7 +14,9 @@ import { tryOpenLaunchLocation } from '@/services/directAccessService';
 import { persistFavoriteWorldDetails } from '@/services/favoriteWorldCacheService';
 import { openFolderAndSelectItem } from '@/services/shellIntegrationService';
 import { toast } from '@/services/toastService';
+import { mergeCurrentUserPresenceFields } from '@/shared/utils/currentUserPresence';
 import { normalizeString } from '@/shared/utils/string';
+import { useRuntimeStore } from '@/state/runtimeStore';
 import { useVrchatConfigStore } from '@/state/vrchatConfigStore';
 
 import type { WorldWorldSideData } from './useWorldDialogData';
@@ -214,7 +216,10 @@ export function useWorldActions({
                         nextUser.displayName ||
                         nextUser.username ||
                         nextUser.id,
-                    currentUserSnapshot: nextUser
+                    currentUserSnapshot: mergeCurrentUserPresenceFields(
+                        nextUser,
+                        useRuntimeStore.getState().auth.currentUserSnapshot
+                    )
                 });
             }
             toast.add({

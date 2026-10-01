@@ -11,6 +11,32 @@ pub enum LocalGameContextSnapshot {
     },
 }
 
+impl LocalGameContextSnapshot {
+    pub const fn is_available(&self) -> bool {
+        matches!(self, Self::Available { .. })
+    }
+
+    pub const fn is_game_running(&self) -> bool {
+        matches!(
+            self,
+            Self::Available {
+                is_game_running: true,
+                ..
+            }
+        )
+    }
+
+    pub fn with_game_running(mut self, value: bool) -> Self {
+        if let Self::Available {
+            is_game_running, ..
+        } = &mut self
+        {
+            *is_game_running = value;
+        }
+        self
+    }
+}
+
 pub trait LocalGameContextSource: Send + Sync {
     fn snapshot(&self) -> LocalGameContextSnapshot;
 }

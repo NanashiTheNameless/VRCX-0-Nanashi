@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { useShellStore } from '@/state/shellStore';
+import { activePresence } from '@/test/presenceFixtures';
 
 import type { UserDialogAvatarReleaseStatus } from './userDialogListOptions';
 import {
@@ -192,7 +193,7 @@ describe('userDialogViewData', () => {
         const summary = buildUserDialogProfileSummary({
             profile: {
                 id: 'usr_me',
-                state: 'active',
+                $presence: activePresence(),
                 status: 'join me',
                 previousDisplayNames: [{ displayName: 'Profile Name' }],
                 tags: ['language_jpn'],

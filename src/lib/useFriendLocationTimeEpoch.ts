@@ -1,17 +1,19 @@
+import { presenceSection, type PresenceView } from '@/domain/friends/presence';
 import type { FriendLocationTimeEntry } from '@/state/friendLocationTimeStore';
 import { useFriendLocationTimeStore } from '@/state/friendLocationTimeStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 
 export function resolveFriendLocationTimeEpoch(
-    friend: { state?: string } | null | undefined,
+    presence: PresenceView | null | undefined,
     entry: FriendLocationTimeEntry | null | undefined,
     location: string
 ): number {
     const expectedLocation = location.trim();
     if (
-        !friend ||
+        !presence ||
         !entry ||
-        (entry.source !== 'gameLog' && friend.state !== 'online') ||
+        (entry.source !== 'gameLog' &&
+            presenceSection(presence) !== 'online') ||
         entry.location !== expectedLocation ||
         !entry.sinceMs
     ) {
@@ -25,11 +27,13 @@ export function useFriendLocationTimeEpoch(
     location: string
 ): number {
     const normalizedUserId = userId.trim();
-    const friend = useFriendRosterStore((state) =>
-        normalizedUserId ? (state.friendsById[normalizedUserId] ?? null) : null
+    const presence = useFriendRosterStore((state) =>
+        normalizedUserId
+            ? (state.friendsById[normalizedUserId]?.$presence ?? null)
+            : null
     );
     const entry = useFriendLocationTimeStore((state) =>
         normalizedUserId ? (state.byUserId[normalizedUserId] ?? null) : null
     );
-    return resolveFriendLocationTimeEpoch(friend, entry, location);
+    return resolveFriendLocationTimeEpoch(presence, entry, location);
 }

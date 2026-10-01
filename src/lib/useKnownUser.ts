@@ -1,12 +1,14 @@
 import { useCallback, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 
+import type { PresenceView } from '@/domain/friends/presence';
 import {
     normalizeEndpoint,
     normalizeUserId,
     userFactKey,
     type UserFact
 } from '@/domain/users/userFacts';
+import { useFriendRosterStore } from '@/state/friendRosterStore';
 import {
     useRuntimeStore,
     type CurrentUserSnapshotState
@@ -34,6 +36,27 @@ function normalizeUserIdList(
         ids.push(userId);
     }
     return ids;
+}
+
+const rosterPresenceFacts = new WeakMap<
+    UserFact,
+    { view: PresenceView; fact: UserFact }
+>();
+
+function withRosterPresence(
+    fact: UserFact,
+    view: PresenceView | undefined
+): UserFact {
+    if (!view || fact.$presence === view) {
+        return fact;
+    }
+    const cached = rosterPresenceFacts.get(fact);
+    if (cached?.view === view) {
+        return cached.fact;
+    }
+    const next = { ...fact, $presence: view };
+    rosterPresenceFacts.set(fact, { view, fact: next });
+    return next;
 }
 
 function currentSnapshotToUserFact(
@@ -79,12 +102,17 @@ function useKnownUserFact(
             ? state.auth.currentUserSnapshot
             : null
     );
+    const rosterPresence = useFriendRosterStore((state) =>
+        normalizedUserId
+            ? state.friendsById[normalizedUserId]?.$presence
+            : undefined
+    );
     return (
         currentSnapshotToUserFact(
             currentUserSnapshot,
             normalizedUserId,
             endpoint
-        ) || fact
+        ) || (fact ? withRosterPresence(fact, rosterPresence) : null)
     );
 }
 
@@ -141,7 +169,29 @@ function useKnownUserFacts(
         ]
     );
 
-    return useUserFactsStore(useShallow(selectUserFacts));
+    const factsById = useUserFactsStore(useShallow(selectUserFacts));
+    const rosterPresenceById = useFriendRosterStore(
+        useShallow((state) => {
+            const views: Record<string, PresenceView> = {};
+            for (const userId of normalizedUserIds) {
+                const view = state.friendsById[userId]?.$presence;
+                if (view) {
+                    views[userId] = view;
+                }
+            }
+            return views;
+        })
+    );
+    return useMemo(() => {
+        const usersById: Record<string, UserFact> = {};
+        for (const [userId, fact] of Object.entries(factsById)) {
+            usersById[userId] = withRosterPresence(
+                fact,
+                rosterPresenceById[userId]
+            );
+        }
+        return usersById;
+    }, [factsById, rosterPresenceById]);
 }
 
 export { useKnownUserFact, useKnownUserFacts };

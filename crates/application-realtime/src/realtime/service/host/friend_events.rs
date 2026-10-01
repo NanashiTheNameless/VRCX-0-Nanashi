@@ -3,10 +3,12 @@ use std::sync::Arc;
 use vrcx_0_core::realtime::RealtimeWsMessagePayload;
 
 use crate::realtime::event_kind::RealtimeWsEventKind;
-use crate::realtime::{FriendProjection, RealtimeFriendApplyResult, RealtimeSessionContext};
+use crate::realtime::{
+    FriendProjection, FriendWake, RealtimeFriendApplyResult, RealtimeSessionContext,
+};
 
 use super::state::RealtimeHostRuntimeState;
-use super::RealtimeHostRuntime;
+use super::{sleep_until, RealtimeHostRuntime};
 
 impl RealtimeHostRuntime {
     fn is_friend_output_current_locked(
@@ -113,9 +115,32 @@ impl RealtimeHostRuntime {
         self.is_friend_output_current_locked(&state, projection)
     }
 
-    pub(super) fn fire_pending_offline(self: &Arc<Self>, user_id: &str, token: u64, now: String) {
+    pub(super) fn schedule_friend_wake(self: &Arc<Self>, generation: u64, wake: FriendWake) {
+        let runtime = Arc::clone(self);
+        self.deps.tasks.spawn(async move {
+            sleep_until(wake.at_ms).await;
+            runtime.wake_friend(generation, &wake.user_id);
+        });
+    }
+
+    pub(super) fn wake_friend(self: &Arc<Self>, generation: u64, user_id: &str) {
         let owner = self.lock_friend_owner();
-        if let Some(output) = self.friends.fire_pending_offline(user_id, token, now) {
+        let current = match self.state.lock() {
+            Ok(state) => state
+                .connection
+                .active_context
+                .as_ref()
+                .is_some_and(|active| active.generation == generation),
+            Err(error) => {
+                tracing::warn!("realtime state lock failed: {error}");
+                false
+            }
+        };
+        if !current {
+            return;
+        }
+        let now = chrono::Utc::now().to_rfc3339();
+        if let Some(output) = self.friends.wake(user_id, &now) {
             self.apply_friend_output_owned(&owner, output);
         }
     }

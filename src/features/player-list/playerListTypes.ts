@@ -46,7 +46,6 @@ export type PlayerListProfileRecord = FriendRecordInput &
         memo?: string | null;
         $moderations?: PlayerListModerationRecord | null;
         moderations?: PlayerListModerationRecord | null;
-        stateBucket?: string;
         isFriend?: boolean;
         isChatBoxMuted?: boolean;
         timeoutTime?: number | null;

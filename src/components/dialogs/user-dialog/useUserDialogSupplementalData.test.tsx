@@ -22,10 +22,11 @@ vi.mock('@/repositories/userProfileRepository', () => ({
 }));
 
 import { clearUserDialogCaches } from '@/services/userDialogSessionCacheService';
+import { onlinePresence } from '@/test/presenceFixtures';
 
 import { useUserDialogSupplementalData } from './useUserDialogSupplementalData';
 
-function input(profile: Record<string, unknown>) {
+function input(profile: Record<string, unknown>, inCurrentWorld = false) {
     return {
         activeUserTargetRef: {
             current: {
@@ -34,9 +35,7 @@ function input(profile: Record<string, unknown>) {
             }
         },
         currentEndpoint: 'https://api.example.test',
-        currentGameDestination: '',
-        currentGameLocation: 'wrld_current:1',
-        currentSnapshotLocation: '',
+        inCurrentWorld,
         currentUserId: 'usr_self',
         currentUserSnapshot: {
             id: 'usr_self',
@@ -156,11 +155,17 @@ describe('useUserDialogSupplementalData', () => {
         const baseProfile: Record<string, unknown> = {
             id: 'usr_target',
             displayName: 'Initial Name',
-            location: 'wrld_other:2'
+            $presence: onlinePresence('wrld_other:2')
         };
         const { rerender, result } = renderHook(
-            ({ profile }) => useUserDialogSupplementalData(input(profile)),
-            { initialProps: { profile: baseProfile } }
+            ({ profile, inCurrentWorld = false }) =>
+                useUserDialogSupplementalData(input(profile, inCurrentWorld)),
+            {
+                initialProps: {
+                    profile: baseProfile,
+                    inCurrentWorld: false
+                }
+            }
         );
 
         await waitFor(() => {
@@ -183,7 +188,8 @@ describe('useUserDialogSupplementalData', () => {
                 ...baseProfile,
                 displayName: 'Merged Name',
                 currentAvatarImageUrl: 'https://example.test/avatar.png'
-            }
+            },
+            inCurrentWorld: false
         });
 
         await waitFor(() => {
@@ -200,9 +206,9 @@ describe('useUserDialogSupplementalData', () => {
         rerender({
             profile: {
                 ...baseProfile,
-                displayName: 'Merged Name',
-                location: 'wrld_current:1'
-            }
+                displayName: 'Merged Name'
+            },
+            inCurrentWorld: true
         });
 
         await waitFor(() => {

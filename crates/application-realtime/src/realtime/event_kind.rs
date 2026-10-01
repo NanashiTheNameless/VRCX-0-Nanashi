@@ -35,10 +35,6 @@ impl RealtimeWsEventKind {
         Self::deserialize(payload.json.get("type")?).ok()
     }
 
-    pub(crate) fn from_name(name: &str) -> Self {
-        Self::known(name).unwrap_or_else(|| Self::Unknown(name.into()))
-    }
-
     fn known(name: &str) -> Option<Self> {
         match name {
             "friend-add" => Some(Self::FriendAdd),

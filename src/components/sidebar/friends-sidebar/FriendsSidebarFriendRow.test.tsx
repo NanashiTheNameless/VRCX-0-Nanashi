@@ -18,9 +18,13 @@ vi.mock('@/components/user-hover-card/UserHoverCard', () => ({
 }));
 
 vi.mock('@/components/UserDetailTile', () => ({
-    UserDetailContent: ({ subline }: { subline?: ReactNode }) => (
-        <div>{subline}</div>
-    )
+    UserDetailContent: ({
+        subline,
+        statusDotClassName
+    }: {
+        subline?: ReactNode;
+        statusDotClassName?: string;
+    }) => <div data-status-dot={statusDotClassName}>{subline}</div>
 }));
 
 vi.mock('@/ui/shadcn/context-menu', () => ({
@@ -40,6 +44,8 @@ vi.mock('./FriendsSidebarActionItems', () => ({
     CurrentUserActionItems: () => null,
     FriendActionItems: () => null
 }));
+
+import { activePresence } from '@/test/presenceFixtures';
 
 import { FriendRow } from './FriendsSidebarFriendRow';
 
@@ -62,5 +68,22 @@ describe('FriendsSidebarFriendRow instance timer', () => {
 
         expect(html).toContain('data-user-id="usr_a"');
         expect(html).toContain('data-location="wrld_friends:1"');
+    });
+
+    it('shows the status dot for the current user even though VRChat marks the self record as not a friend', () => {
+        const html = renderToStaticMarkup(
+            <FriendRow
+                friend={{
+                    id: 'usr_self',
+                    displayName: 'Self',
+                    status: 'active',
+                    isFriend: false,
+                    $presence: activePresence()
+                }}
+                rowModel={{ isCurrentUser: true }}
+            />
+        );
+
+        expect(html).toContain('data-status-dot="user-status-indicator');
     });
 });

@@ -65,16 +65,17 @@ pub use event_bus::{
 };
 pub use events::{
     FeedLiveEntry, FriendProfileBulkLoadStatus, FriendProfileLoadStatusPayload, FriendProjection,
-    FriendProjectionPatch, FriendStateBucketAuthority, PrintAutoCleanupEvent,
-    RealtimeCurrentUserProjection, RealtimeEntryCorrection, RealtimeEntryCorrectionFields,
-    RealtimeEntryCorrectionStream, RealtimeInstanceClosedProjection, RealtimeInstanceQueueKind,
-    RealtimeInstanceQueueProjection, RealtimeNotificationProjection, RealtimeNotificationUpsert,
-    RealtimeUserProjection,
+    FriendProjectionPatch, PrintAutoCleanupEvent, RealtimeCurrentUserProjection,
+    RealtimeEntryCorrection, RealtimeEntryCorrectionFields, RealtimeEntryCorrectionStream,
+    RealtimeInstanceClosedProjection, RealtimeInstanceQueueKind, RealtimeInstanceQueueProjection,
+    RealtimeNotificationProjection, RealtimeNotificationUpsert, RealtimeUserProjection,
 };
 pub use favorite_kind::{FavoriteChangeScope, FavoriteEntityKind, VrchatFavoriteType};
 pub use file_cache::{FileCache, FileCachePort};
 pub use image_cache::{save_ugc_image_to_file, ImageCache, ImageCachePort};
-pub use instance_dwell::{FriendLocationTime, FriendLocationTimeSource, InstanceDwellRegistry};
+pub use instance_dwell::{
+    FriendLocationTime, FriendLocationTimeSource, FriendPlace, InstanceDwellRegistry,
+};
 pub use interruptible_sleep::sleep_interruptibly;
 pub use ports::{
     BackgroundCapabilitySession, BackgroundCapabilitySessionIdentity, CurrentUserSnapshot,

@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use vrcx_0_application_core::vrchat_api::VrchatApiResponse;
 use vrcx_0_application_core::Result;
+use vrcx_0_core::presence::PresenceKind;
 
 pub type InstanceLaunchApiFuture<'a> = BoxFuture<'a, Result<VrchatApiResponse>>;
 
@@ -88,7 +89,7 @@ pub struct InstanceActionGateTarget {
     #[serde(default)]
     pub location: String,
     #[serde(default)]
-    pub state_bucket: String,
+    pub presence_kind: PresenceKind,
     #[serde(default)]
     pub is_current_user: bool,
 }

@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-    buildUserDialogLocationUsers,
-    shouldIncludeUserDialogLocationFriend
-} from './userDialogLocationUsers';
+import { offlinePresence, onlinePresence } from '@/test/presenceFixtures';
+
+import { buildUserDialogLocationUsers } from './userDialogLocationUsers';
 
 describe('buildUserDialogLocationUsers', () => {
     const t = (key: string) => key;
@@ -101,13 +100,13 @@ describe('buildUserDialogLocationUsers', () => {
                     id: 'usr_busy',
                     displayName: 'Busy Friend',
                     status: 'busy',
-                    location: 'private'
+                    $presence: onlinePresence('private')
                 },
                 usr_ask: {
                     id: 'usr_ask',
                     displayName: 'Ask Friend',
                     status: 'ask me',
-                    location: 'private'
+                    $presence: onlinePresence('private')
                 }
             },
             locationInstance: {},
@@ -134,9 +133,7 @@ describe('buildUserDialogLocationUsers', () => {
             friendsById: {
                 usr_friend: {
                     id: 'usr_friend',
-                    state: 'offline',
-                    stateBucket: 'offline',
-                    location: 'wrld_current:123'
+                    $presence: offlinePresence
                 }
             },
             locationInstance: {},
@@ -159,8 +156,7 @@ describe('buildUserDialogLocationUsers', () => {
             friendsById: {
                 usr_friend: {
                     id: 'usr_friend',
-                    state: 'online',
-                    location: 'wrld_elsewhere:456'
+                    $presence: onlinePresence('wrld_elsewhere:456')
                 }
             },
             locationInstance: {},
@@ -178,63 +174,5 @@ describe('buildUserDialogLocationUsers', () => {
         });
 
         expect(result.locationInstanceUsers).toEqual([]);
-    });
-
-    it('keeps the original private inactive friend guard outside the observed current roster', () => {
-        const friend = {
-            id: 'usr_friend',
-            state: 'active',
-            location: 'private'
-        };
-
-        expect(
-            shouldIncludeUserDialogLocationFriend({
-                currentLocationMatches: false,
-                currentLocationPlayerIds: new Set(['usr_friend']),
-                friend
-            })
-        ).toBe(false);
-        expect(
-            shouldIncludeUserDialogLocationFriend({
-                currentLocationMatches: true,
-                currentLocationPlayerIds: new Set(['usr_friend']),
-                friend
-            })
-        ).toBe(true);
-    });
-
-    it.each(['busy', 'ask me'])(
-        'keeps an observed %s friend despite a private remote presence',
-        (status) => {
-            const friend = {
-                id: 'usr_friend',
-                state: 'active',
-                status,
-                location: 'private'
-            };
-
-            expect(
-                shouldIncludeUserDialogLocationFriend({
-                    currentLocationMatches: true,
-                    currentLocationPlayerIds: new Set(['usr_friend']),
-                    friend
-                })
-            ).toBe(true);
-        }
-    );
-
-    it('rejects an offline friend even when the stale observed roster still contains them', () => {
-        expect(
-            shouldIncludeUserDialogLocationFriend({
-                currentLocationMatches: true,
-                currentLocationPlayerIds: new Set(['usr_friend']),
-                friend: {
-                    id: 'usr_friend',
-                    state: 'offline',
-                    stateBucket: 'offline',
-                    location: 'wrld_current:123'
-                }
-            })
-        ).toBe(false);
     });
 });

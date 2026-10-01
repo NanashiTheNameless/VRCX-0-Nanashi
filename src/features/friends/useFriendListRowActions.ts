@@ -7,16 +7,17 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import mutualGraphPersistenceRepository from '@/repositories/mutualGraphPersistenceRepository';
 import { openUserDialog } from '@/services/dialogService';
 import {
     openFriendProfileLoadDialog,
     startFriendProfileLoad
 } from '@/services/friendProfileLoadService';
 import friendRelationshipService from '@/services/friendRelationshipService';
+import { loadFriendMutualStats } from '@/services/friendStatsService';
 import { startMutualGraphFetch } from '@/services/mutualGraphFetchService';
 import { toast } from '@/services/toastService';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
+import { useFriendStatsStore } from '@/state/friendStatsStore';
 import { useModalStore } from '@/state/modalStore';
 import { useMutualGraphRevisionStore } from '@/state/mutualGraphRevisionStore';
 import { useRoomMutualScanStore } from '@/state/roomMutualScanStore';
@@ -65,9 +66,6 @@ export function useFriendListRowActions({
     const currentUserSnapshot = useRuntimeStore(
         (state) => state.auth.currentUserSnapshot
     );
-    const applyFriendPatch = useFriendRosterStore(
-        (state) => state.applyFriendPatch
-    );
     const confirm = useModalStore((state) => state.confirm);
     const mutualGraphRunId = useRuntimeStore(
         (state) => state.mutualGraph.runId
@@ -101,8 +99,13 @@ export function useFriendListRowActions({
 
     const applyCachedMutualFriendStats = useCallback(
         async ({ endpoint, ownerUserId, runId }: MutualGraphSnapshotScope) => {
-            const { snapshot, meta } =
-                await mutualGraphPersistenceRepository.getSnapshot(ownerUserId);
+            const friendIds = Object.keys(
+                useFriendRosterStore.getState().friendsById
+            );
+            const mutualById = await loadFriendMutualStats(
+                ownerUserId,
+                friendIds
+            );
             const runtimeState = useRuntimeStore.getState();
             if (
                 runtimeState.auth.currentUserId !== ownerUserId ||
@@ -118,28 +121,11 @@ export function useFriendListRowActions({
             ) {
                 return;
             }
-            const friendsById = useFriendRosterStore.getState().friendsById;
-            for (const friendId of Object.keys(friendsById)) {
-                const mutualIds =
-                    snapshot instanceof Map ? snapshot.get(friendId) : [];
-                const metadata =
-                    meta instanceof Map ? meta.get(friendId) : null;
-                const linkCount = Array.isArray(mutualIds)
-                    ? mutualIds.length
-                    : 0;
-                applyFriendPatch({
-                    userId: friendId,
-                    patch: {
-                        $mutualCount: Number.isFinite(metadata?.totalCount)
-                            ? Number(metadata?.totalCount)
-                            : linkCount,
-                        $mutualOptedOut: Boolean(metadata?.optedOut)
-                    },
-                    stateBucketAuthority: 'preserve'
-                });
-            }
+            useFriendStatsStore
+                .getState()
+                .applyMutualStats(ownerUserId, mutualById);
         },
-        [applyFriendPatch]
+        []
     );
 
     useEffect(() => {

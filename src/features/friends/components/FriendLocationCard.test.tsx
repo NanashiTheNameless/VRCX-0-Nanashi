@@ -7,6 +7,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { FriendRecord } from '@/domain/friends/types';
 import { useFriendLocationTimeStore } from '@/state/friendLocationTimeStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
+import {
+    offlinePresence,
+    onlinePresence,
+    travelingPresence
+} from '@/test/presenceFixtures';
 
 import { getFriendsLocationsDensityConfig } from '../friendsLocationsDensity';
 import { FriendLocationCard } from './FriendLocationCard';
@@ -44,9 +49,7 @@ describe('FriendLocationCard presentation', () => {
         displayName: 'Friend',
         statusDescription: 'Exploring worlds',
         tags: [],
-        state: 'online',
-        stateBucket: 'online',
-        location: 'wrld_test:123',
+        $presence: onlinePresence('wrld_test:123'),
         $trustLevel: '',
         $friendNumber: 0,
         $trustClass: '',
@@ -147,17 +150,18 @@ describe('FriendLocationCard local mode', () => {
         useFriendRosterStore.setState({ friendsById: {} });
     });
 
-    it.each(['offline', 'traveling', 'wrld_remote:2'])(
-        'renders the local room and elapsed timer despite the raw %s ref',
-        (remoteLocation) => {
+    it.each([
+        ['offline', offlinePresence],
+        ['traveling', travelingPresence('wrld_remote:2')],
+        ['wrld_remote:2', onlinePresence('wrld_remote:2')]
+    ])(
+        'renders the local room and elapsed timer despite the remote %s place',
+        (_remoteLocation, remotePresence) => {
             const friend: FriendRecord = {
                 id: 'usr_friend',
                 displayName: 'Friend',
                 tags: [],
-                state: remoteLocation === 'offline' ? 'offline' : 'online',
-                stateBucket:
-                    remoteLocation === 'offline' ? 'offline' : 'online',
-                location: remoteLocation,
+                $presence: remotePresence,
                 $trustLevel: '',
                 $friendNumber: 0,
                 $trustClass: '',
@@ -180,20 +184,10 @@ describe('FriendLocationCard local mode', () => {
             ]);
             const { container, rerender, getByText } = render(
                 <FriendLocationCard
-                    friend={{
-                        ...friend,
-                        ref: {
-                            id: friend.id,
-                            state: friend.state,
-                            stateBucket: friend.state,
-                            location: friend.location,
-                            travelingToLocation: 'wrld_remote:2'
-                        }
-                    }}
+                    friend={friend}
                     location={{
                         raw: 'wrld_local:1',
                         timerLocation: 'wrld_local:1',
-                        traveling: false,
                         source: 'gameLog'
                     }}
                 />
@@ -220,7 +214,6 @@ describe('FriendLocationCard local mode', () => {
                         location={{
                             raw: 'wrld_local:1',
                             timerLocation: 'wrld_local:1',
-                            traveling: false,
                             source: 'gameLog'
                         }}
                         presentation={{

@@ -1,22 +1,28 @@
+import {
+    localGameLocation,
+    presenceLiveInstanceTag,
+    presenceOf
+} from '@/domain/friends/presence';
 import type {
     FriendProfileFields,
-    FriendRecordInput,
-    FriendRosterBucket
+    FriendRecordInput
 } from '@/domain/friends/types';
 import { hasUserIdPrefix } from '@/shared/constants/vrchatIds';
 import { isRealInstance } from '@/shared/utils/instance';
-import {
-    getFriendsLocations,
-    normalizeLocationValue,
-    type FriendListMembership
-} from '@/shared/utils/location';
+import { normalizeLocationValue } from '@/shared/utils/location';
 import { isRecord } from '@/shared/utils/record';
 
 type FriendPresenceRecord = FriendRecordInput &
     Partial<FriendProfileFields> & {
         ref?: FriendPresenceRecord | null;
-        stateBucket?: FriendRosterBucket;
     };
+
+type FriendListMembershipValue = boolean | object | null | undefined;
+type FriendListMembership =
+    | ReadonlySet<string>
+    | ReadonlyMap<string, FriendListMembershipValue>
+    | readonly string[]
+    | Readonly<Record<string, FriendListMembershipValue>>;
 
 type SameInstanceLastLocation = {
     friendList?: FriendListMembership;
@@ -48,27 +54,24 @@ function asRecord(value: unknown): FriendPresenceRecord | null {
     return isRecord(value) ? value : null;
 }
 
-function friendPresenceSource(friend: unknown): FriendPresenceRecord | null {
-    const direct = asRecord(friend);
-    if (!direct) {
-        return null;
+function isLastLocationFriend(
+    lastLocation: SameInstanceLastLocation | null | undefined,
+    friend: FriendPresenceRecord | null
+): boolean {
+    const friendId = text(friend?.id) || text(friend?.userId);
+    const friendList = lastLocation?.friendList;
+    if (!friendId || !friendList) {
+        return false;
     }
-    const ref = asRecord(direct.ref);
-    if (!ref) {
-        return direct;
+    if (friendList instanceof Set || friendList instanceof Map) {
+        return friendList.has(friendId);
     }
-    return {
-        ...ref,
-        ...direct,
-        ref: null
-    };
-}
-
-function normalizeFriendState(value: unknown): string {
-    const normalized = String(value ?? '')
-        .trim()
-        .toLowerCase();
-    return normalized.includes(':') ? normalized.split(':')[0] : normalized;
+    if (Array.isArray(friendList)) {
+        return friendList.some(
+            (candidate) => normalizeLocationValue(candidate) === friendId
+        );
+    }
+    return Boolean(Reflect.get(friendList, friendId));
 }
 
 function text(value: unknown): string {
@@ -104,7 +107,7 @@ function resolveObservedPlayerUserId(
         return '';
     }
     for (const [friendId, friend] of Object.entries(friendsById)) {
-        const friendSource = friendPresenceSource(friend);
+        const friendSource = asRecord(friend);
         if (
             text(
                 friendSource?.displayName ||
@@ -145,30 +148,33 @@ function resolveObservedPlayerUserIds(
 }
 
 function isOnlineSameInstanceFriend(friend: unknown): boolean {
-    const source = friendPresenceSource(friend);
-    return normalizeFriendState(source?.state) === 'online';
+    return presenceOf(friend)?.kind === 'online';
 }
 
-function isExplicitlyOfflineFriend(friend: unknown): boolean {
-    const source = friendPresenceSource(friend);
-    return Boolean(
-        source?.pendingOffline ||
-        normalizeFriendState(source?.state) === 'offline'
-    );
+function isOfflineOrLeavingFriend(friend: unknown): boolean {
+    const kind = presenceOf(friend)?.kind;
+    return kind === 'offline' || kind === 'pendingOffline';
 }
 
 function resolveSameInstanceFriendLocation(
     friend: unknown,
     lastLocation: SameInstanceLastLocation | null | undefined
 ): string {
-    const source = friendPresenceSource(friend);
-    if (!source) {
+    const presence = presenceOf(friend);
+    if (!presence) {
         return '';
     }
-    const location = normalizeLocationValue(
-        getFriendsLocations([source], lastLocation)
-    );
-    return isRealInstance(location) ? location : '';
+    const liveLocation = presenceLiveInstanceTag(presence, {
+        preferTraveling: true
+    });
+    if (liveLocation || presence.kind !== 'online') {
+        return liveLocation;
+    }
+    const lastLocationValue = normalizeLocationValue(lastLocation?.location);
+    return isRealInstance(lastLocationValue) &&
+        isLastLocationFriend(lastLocation, asRecord(friend))
+        ? lastLocationValue
+        : '';
 }
 
 function buildSameInstanceFriendGroups<TFriend>(
@@ -186,17 +192,19 @@ function buildSameInstanceFriendGroups<TFriend>(
         : OTHER_INSTANCE_MIN_FRIENDS;
 
     for (const friend of friends) {
-        const source = friendPresenceSource(friend);
+        const source = asRecord(friend);
         const time =
             locationTimes?.[
                 firstUserId(source?.id, source?.userId, source?.user_id)
             ];
-        if (time?.source !== 'gameLog' && !isOnlineSameInstanceFriend(friend)) {
+        const localLocation = localGameLocation(time);
+        if (!localLocation && !isOnlineSameInstanceFriend(friend)) {
             continue;
         }
         const location =
-            time?.location ??
-            resolveSameInstanceFriendLocation(friend, lastLocation);
+            localLocation ||
+            (time?.location ??
+                resolveSameInstanceFriendLocation(friend, lastLocation));
         if (!isRealInstance(location)) {
             continue;
         }
@@ -227,7 +235,7 @@ function buildSameInstanceFriendGroups<TFriend>(
 
 export {
     buildSameInstanceFriendGroups,
-    isExplicitlyOfflineFriend,
+    isOfflineOrLeavingFriend,
     resolveObservedPlayerUserId,
     resolveObservedPlayerUserIds,
     resolveSameInstanceFriendLocation

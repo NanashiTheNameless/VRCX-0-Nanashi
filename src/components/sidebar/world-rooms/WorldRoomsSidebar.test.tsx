@@ -16,6 +16,7 @@ import { queryClient as appQueryClient } from '@/lib/queryClient';
 import { MINUTE_MS, SECOND_MS } from '@/shared/constants/time';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
+import { onlinePresence, travelingPresence } from '@/test/presenceFixtures';
 
 const mocks = vi.hoisted(() => ({
     getWorldProfile: vi.fn(),
@@ -219,7 +220,7 @@ describe('world rooms sidebar tab', () => {
             names.map((name) => ({
                 id: `usr_${name}`,
                 displayName: name,
-                location: `${WORLD_ID}:11111~region(jp)`
+                $presence: onlinePresence(`${WORLD_ID}:11111~region(jp)`)
             }))
         );
 
@@ -288,7 +289,9 @@ describe('world rooms sidebar tab', () => {
             {
                 id: 'usr_a',
                 displayName: 'Alice',
-                location: `${WORLD_ID}:33333~hidden(usr_owner)~region(jp)`
+                $presence: onlinePresence(
+                    `${WORLD_ID}:33333~hidden(usr_owner)~region(jp)`
+                )
             }
         ]);
 
@@ -308,8 +311,9 @@ describe('world rooms sidebar tab', () => {
             {
                 id: 'usr_a',
                 displayName: 'Alice',
-                location: 'traveling',
-                travelingToLocation: `${WORLD_ID}:44444~hidden(usr_owner)~region(jp)`
+                $presence: travelingPresence(
+                    `${WORLD_ID}:44444~hidden(usr_owner)~region(jp)`
+                )
             }
         ]);
 

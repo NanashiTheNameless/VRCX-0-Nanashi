@@ -1,8 +1,6 @@
-import { convertFileUrlToImageUrl } from '@/services/entityMediaService';
-export { resolveCurrentInviteLocation } from '@/shared/utils/invite';
-
 import type { FavoriteKind } from '@/domain/favorites/types';
 import type { VrchatFavoriteType } from '@/platform/tauri/bindings';
+import { convertFileUrlToImageUrl } from '@/services/entityMediaService';
 
 type SortableFavoriteItem = {
     id: string;

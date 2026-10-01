@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-    normalizeEndpoint,
-    normalizeStateBucket,
-    normalizeUserId,
-    userFactKey
-} from './userFacts';
+import { normalizeEndpoint, normalizeUserId, userFactKey } from './userFacts';
 
 describe('userFacts', () => {
     it('normalizes user ids and endpoints at the fact boundary', () => {
@@ -24,16 +19,5 @@ describe('userFacts', () => {
         expect(userFactKey('', 'usr_test')).toBe('default::usr_test');
         expect(userFactKey('api', '   ')).toBe('');
         expect(userFactKey('api', null)).toBe('');
-    });
-
-    it.each([
-        [' ONLINE ', 'online'],
-        ['Active', 'active'],
-        ['offline', 'offline'],
-        ['busy', ''],
-        [null, ''],
-        [undefined, '']
-    ])('normalizes state bucket %j to %j', (value, expected) => {
-        expect(normalizeStateBucket(value)).toBe(expected);
     });
 });

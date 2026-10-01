@@ -89,7 +89,7 @@ describe('UserHoverCardContent', () => {
     });
 
     it('renders active status dots with the sidebar ring style', () => {
-        hoverCardData.model.statusKey = 'active';
+        hoverCardData.model.statusKey = 'dialog.user.status.active';
         hoverCardData.model.statusDotClassName = `${STATUS_ONLINE_CLASS} bg-background`;
 
         const html = renderToStaticMarkup(
@@ -104,7 +104,7 @@ describe('UserHoverCardContent', () => {
     });
 
     it('shows the signature without the inline active status when present', () => {
-        hoverCardData.model.statusKey = 'active';
+        hoverCardData.model.statusKey = 'dialog.user.status.active';
         hoverCardData.model.statusDotClassName = `${STATUS_ONLINE_CLASS} bg-background`;
         hoverCardData.model.statusDescription = 'Building worlds tonight';
 

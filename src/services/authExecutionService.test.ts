@@ -12,7 +12,6 @@ const mocks = vi.hoisted(() => ({
     cancelLoginSession: vi.fn(),
     clearEntityQueryCache: vi.fn(),
     applySavedAuthSnapshot: vi.fn(),
-    buildAvatarWearSnapshotUpdate: vi.fn(),
     recordCurrentUserSnapshot: vi.fn(),
     resetDomainFacts: vi.fn(),
     loadVrchatConfigSnapshot: vi.fn(),
@@ -61,10 +60,6 @@ vi.mock('./authSnapshotService', () => ({
     applySavedAuthSnapshot: mocks.applySavedAuthSnapshot
 }));
 
-vi.mock('./avatarWearTimeService', () => ({
-    buildAvatarWearSnapshotUpdate: mocks.buildAvatarWearSnapshotUpdate
-}));
-
 vi.mock('./domainIngestionService', () => ({
     recordCurrentUserSnapshot: mocks.recordCurrentUserSnapshot,
     resetDomainFacts: mocks.resetDomainFacts
@@ -101,10 +96,7 @@ import {
 import { useAssistantChatStore } from '@/state/assistantChatStore';
 import { useFriendLocationTimeStore } from '@/state/friendLocationTimeStore';
 import { useModalStore } from '@/state/modalStore';
-import {
-    type CurrentUserSnapshotState,
-    useRuntimeStore
-} from '@/state/runtimeStore';
+import { useRuntimeStore } from '@/state/runtimeStore';
 import { useSessionStore } from '@/state/sessionStore';
 
 import {
@@ -237,13 +229,6 @@ describe('authExecutionService characterization', () => {
         mocks.cancelLoginSession.mockResolvedValue({ status: 'cancelled' });
         mocks.applySavedAuthSnapshot.mockImplementation(
             (snapshot: SavedAuthSnapshot) => snapshot
-        );
-        mocks.buildAvatarWearSnapshotUpdate.mockImplementation(
-            ({
-                nextSnapshot
-            }: {
-                nextSnapshot: CurrentUserSnapshotState | null;
-            }) => ({ snapshot: nextSnapshot })
         );
         mocks.t.mockImplementation((key: string, values?: { name?: string }) =>
             Promise.resolve(values?.name ? `${key}:${values.name}` : key)

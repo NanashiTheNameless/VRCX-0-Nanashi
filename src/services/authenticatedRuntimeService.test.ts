@@ -57,10 +57,9 @@ function phaseSnapshot(
                         state: 'online'
                     }
                 },
-                orderedFriendIds: ['usr_friend'],
-                onlineIds: ['usr_friend'],
-                activeIds: [],
-                offlineIds: []
+                presenceById: {},
+                currentUserId: 'usr_self',
+                generation: 1
             },
             friendLogChanged: false
         },
@@ -175,10 +174,9 @@ describe('authenticatedRuntimeService', () => {
                                 state: 'online'
                             }
                         },
-                        orderedFriendIds: ['usr_reloaded'],
-                        onlineIds: ['usr_reloaded'],
-                        activeIds: [],
-                        offlineIds: []
+                        presenceById: {},
+                        currentUserId: 'usr_self',
+                        generation: 1
                     },
                     friendLogChanged: false
                 }

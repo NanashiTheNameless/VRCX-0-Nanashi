@@ -1,7 +1,6 @@
 import { collectRuntimeRosterPlayers } from '@/domain/instances/currentInstanceRoster';
 import { commands } from '@/platform/tauri/bindings';
 import type { GameLogProjection } from '@/platform/tauri/bindings';
-import { buildCurrentUserGameStatePresencePatch } from '@/shared/utils/currentUserPresence';
 import { normalizeLocationValue, parseLocation } from '@/shared/utils/location';
 import { normalizeString } from '@/shared/utils/string';
 import { useInstanceJoinHistoryStore } from '@/state/instanceJoinHistoryStore';
@@ -38,12 +37,7 @@ export function applyRuntimeGameLogProjection(projection: GameLogProjection) {
         lastGameLogAt,
         lastGameLogType
     };
-    const runtimeStore = useRuntimeStore.getState();
-    runtimeStore.setGameState(gameStatePatch);
-
-    if (currentLocation || currentDestination) {
-        patchCurrentUserLocationFromGameState(runtimeStore, gameStatePatch);
-    }
+    useRuntimeStore.getState().setGameState(gameStatePatch);
 
     if (currentLocationStartedAt) {
         useInstanceJoinHistoryStore
@@ -54,8 +48,6 @@ export function applyRuntimeGameLogProjection(projection: GameLogProjection) {
     const domainRuntime = useRuntimeStore.getState();
     recordGameRuntimePresence({
         endpoint: domainRuntime.auth.currentUserEndpoint,
-        currentUserId: domainRuntime.auth.currentUserId,
-        currentUserSnapshot: domainRuntime.auth.currentUserSnapshot,
         currentLocation,
         currentDestination,
         currentLocationStartedAt,
@@ -114,44 +106,6 @@ export async function hydrateRuntimeGameLogProjection(): Promise<boolean> {
         lastGameLogType: 'startup-roster'
     });
     return true;
-}
-
-function patchCurrentUserLocationFromGameState(
-    runtimeStore: RuntimeState,
-    gameStatePatch: GameStatePatch
-) {
-    const currentSnapshot = runtimeStore.auth.currentUserSnapshot;
-    if (!currentSnapshot || typeof currentSnapshot !== 'object') {
-        return;
-    }
-
-    const presencePatch = buildCurrentUserGameStatePresencePatch(
-        {
-            ...runtimeStore.gameState,
-            ...gameStatePatch,
-            isGameRunning: true
-        },
-        currentSnapshot
-    );
-    if (!presencePatch) {
-        return;
-    }
-
-    const startedAt = Date.parse(gameStatePatch.currentLocationStartedAt || '');
-    const locationTime = Number.isFinite(startedAt) ? startedAt : Date.now();
-    const timedPresencePatch: Record<string, unknown> = {
-        ...presencePatch,
-        ...(gameStatePatch.currentLocation === 'traveling'
-            ? { $travelingToTime: locationTime }
-            : { $location_at: locationTime })
-    };
-
-    runtimeStore.setAuthBootstrap({
-        currentUserSnapshot: {
-            ...currentSnapshot,
-            ...timedPresencePatch
-        }
-    });
 }
 
 export function resetGameLogSessionState(

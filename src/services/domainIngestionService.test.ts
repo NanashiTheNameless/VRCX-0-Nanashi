@@ -83,14 +83,9 @@ describe('domainIngestionService', () => {
         });
     });
 
-    it('records the game runtime location for the current user and the instance presence', async () => {
+    it('records the instance presence of the game runtime location', async () => {
         recordGameRuntimePresence({
             endpoint: 'api',
-            currentUserId: 'usr_self',
-            currentUserSnapshot: {
-                id: 'usr_self',
-                displayName: 'Self'
-            },
             currentLocation: 'wrld_game:12345',
             currentLocationStartedAt: '2026-01-01T00:00:00.000Z',
             currentLocationPlayers: [
@@ -103,14 +98,6 @@ describe('domainIngestionService', () => {
         });
         await flushPendingUserFactEntries();
 
-        expect(ingestedEntryFor('usr_self', 'gameRuntime')).toMatchObject({
-            user: {
-                id: 'usr_self',
-                location: 'wrld_game:12345'
-            },
-            source: 'gameRuntime',
-            isCurrentUser: true
-        });
         expect(
             useInstancePresenceStore.getState().presenceByKey[
                 'api::wrld_game:12345'
@@ -121,11 +108,6 @@ describe('domainIngestionService', () => {
     it('normalizes player snapshot ids to the real user id and drops synthetic ids for anonymous players', async () => {
         recordGameRuntimePresence({
             endpoint: 'api',
-            currentUserId: 'usr_self',
-            currentUserSnapshot: {
-                id: 'usr_self',
-                displayName: 'Self'
-            },
             currentLocation: 'wrld_game:12345',
             currentLocationStartedAt: '2026-01-01T00:00:00.000Z',
             currentLocationPlayers: [
@@ -159,14 +141,9 @@ describe('domainIngestionService', () => {
         expect(ingestedIds).not.toContain('id:usr_dup');
     });
 
-    it('keeps traveling as a sentinel and does not record destination as current presence', async () => {
+    it('records no instance presence while traveling', async () => {
         recordGameRuntimePresence({
             endpoint: 'api',
-            currentUserId: 'usr_self',
-            currentUserSnapshot: {
-                id: 'usr_self',
-                displayName: 'Self'
-            },
             currentLocation: 'traveling:traveling',
             currentDestination: 'wrld_destination:12345',
             currentLocationStartedAt: '2026-01-01T00:00:00.000Z',
@@ -179,15 +156,6 @@ describe('domainIngestionService', () => {
         });
         await flushPendingUserFactEntries();
 
-        expect(ingestedEntryFor('usr_self', 'gameRuntime')).toMatchObject({
-            user: {
-                id: 'usr_self',
-                location: 'traveling',
-                travelingToLocation: 'wrld_destination:12345'
-            },
-            source: 'gameRuntime',
-            isCurrentUser: true
-        });
         expect(useInstancePresenceStore.getState().presenceByKey).toEqual({});
     });
 

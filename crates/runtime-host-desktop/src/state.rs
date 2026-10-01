@@ -301,11 +301,14 @@ impl DesktopRuntimeHostState {
             integration_api_publisher_channel();
         let instance_roster_observer: Arc<dyn InstanceRosterObserver> =
             Arc::new(integration_api_publisher);
+        let current_user_presence_observer =
+            Arc::new(crate::log_watcher::CurrentUserLocalPresenceObserver::default());
         let game_roster_observer: Arc<dyn InstanceRosterObserver> =
             Arc::new(crate::log_watcher::HostInstanceRosterFanout::new(vec![
                 Arc::clone(&instance_roster_observer),
                 Arc::clone(builder.desktop_assembly().instance_dwell())
                     as Arc<dyn InstanceRosterObserver>,
+                Arc::clone(&current_user_presence_observer) as Arc<dyn InstanceRosterObserver>,
             ]));
         let profile_config: Arc<dyn vrcx_0_application::profile::ProfileConfigStore> =
             Arc::new(vrcx_0_outbound_adapters::LocalProfileConfigStore::new(
@@ -476,6 +479,7 @@ impl DesktopRuntimeHostState {
             friend_projection_observer: Some(friend_projection_observer),
             profile_extension: Some(extension.clone()),
         })?;
+        current_user_presence_observer.bind(runtime.realtime_runtime());
         let realtime_runtime = Arc::downgrade(runtime.realtime_runtime());
         runtime
             .desktop_assembly()

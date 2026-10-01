@@ -1,9 +1,10 @@
 import { useMemo } from 'react';
 
+import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
 import { useFavoriteStore } from '@/state/favoriteStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 
-import { buildGameLogFavoriteIdSet, normalizeGameLogId } from './gameLogRows';
+import { normalizeGameLogId } from './gameLogRows';
 import type { GameLogRow } from './gameLogTypes';
 
 export function useGameLogAnnotations({ rows }: { rows: GameLogRow[] }) {
@@ -17,11 +18,7 @@ export function useGameLogAnnotations({ rows }: { rows: GameLogRow[] }) {
         Object.keys(state.friendsById || {}).join(',')
     );
     const favoriteIdSet = useMemo(
-        () =>
-            buildGameLogFavoriteIdSet(
-                remoteFavoriteFriendIds,
-                localFriendFavorites
-            ),
+        () => buildFavoriteIdSet(remoteFavoriteFriendIds, localFriendFavorites),
         [localFriendFavorites, remoteFavoriteFriendIds]
     );
     const friendIdSet = useMemo(

@@ -1,15 +1,18 @@
-import type { FriendRecordInput } from '@/domain/friends/types';
-import { isUserId } from '@/shared/constants/vrchatIds';
-import { isRecord } from '@/shared/utils/record';
-export { resolveCurrentInviteLocation as resolveFeedCurrentInviteLocation } from '@/shared/utils/invite';
 import type {
     FavoriteGroupMap,
     FavoriteRecord
 } from '@/domain/favorites/types';
 import {
+    presenceCanRequestInvite,
+    presenceOf
+} from '@/domain/friends/presence';
+import type { FriendRecordInput } from '@/domain/friends/types';
+import { isUserId } from '@/shared/constants/vrchatIds';
+import {
     SOLID_USER_STATUS_DOT_CLASS_NAMES,
     userStatusFromValue
 } from '@/shared/utils/friendStatus';
+import { isRecord } from '@/shared/utils/record';
 
 import type { FeedRow } from './feedTypes';
 
@@ -17,23 +20,8 @@ export const UNKNOWN_FEED_USER_DISPLAY_NAME = 'Unknown';
 
 type FeedRecord = Record<string, unknown>;
 type FriendLike = FriendRecordInput | FeedRecord | null | undefined;
-type CurrentUserSnapshotLike =
-    | (FeedRecord & {
-          activeFriends?: string[];
-          offlineFriends?: string[];
-          onlineFriends?: string[];
-      })
-    | null
-    | undefined;
 function recordValue(value: unknown, key: string): unknown {
     return isRecord(value) ? value[key] : undefined;
-}
-
-function recordListIncludes(value: unknown, target: string): boolean {
-    return (
-        Array.isArray(value) &&
-        value.some((entry) => normalizeFeedId(entry) === target)
-    );
 }
 
 export function normalizeFeedId(value: unknown) {
@@ -161,60 +149,9 @@ export function canExpandFeedRow(row: FeedRow): boolean {
     }
 }
 
-export function resolveFeedFriendStateBucket(
-    friend: FriendLike,
-    currentUserSnapshot: CurrentUserSnapshotLike
-) {
-    const friendId = normalizeFeedId(
-        recordValue(friend, 'id') || recordValue(friend, 'userId')
-    );
-    const explicitState = normalizePresenceState(
-        recordValue(friend, 'stateBucket') || recordValue(friend, 'state')
-    );
-    if (
-        explicitState === 'online' ||
-        explicitState === 'active' ||
-        explicitState === 'offline'
-    ) {
-        return explicitState;
-    }
-    if (!friendId) {
-        return '';
-    }
-    if (
-        recordListIncludes(
-            recordValue(currentUserSnapshot, 'onlineFriends'),
-            friendId
-        )
-    ) {
-        return 'online';
-    }
-    if (
-        recordListIncludes(
-            recordValue(currentUserSnapshot, 'activeFriends'),
-            friendId
-        )
-    ) {
-        return 'active';
-    }
-    if (
-        recordListIncludes(
-            recordValue(currentUserSnapshot, 'offlineFriends'),
-            friendId
-        )
-    ) {
-        return 'offline';
-    }
-    return '';
-}
-
-export function canRequestInviteFromFeedFriend(
-    friend: FriendLike,
-    currentUserSnapshot: CurrentUserSnapshotLike
-) {
-    return (
-        resolveFeedFriendStateBucket(friend, currentUserSnapshot) === 'online'
-    );
+export function canRequestInviteFromFeedFriend(friend: FriendLike) {
+    const presence = presenceOf(friend);
+    return Boolean(presence && presenceCanRequestInvite(presence));
 }
 
 export function buildFeedFavoriteIdSet(

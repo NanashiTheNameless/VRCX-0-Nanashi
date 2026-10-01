@@ -17,14 +17,9 @@ function seedRoster(currentUserId: string) {
         friendsById: {
             usr_friend: {
                 id: 'usr_friend',
-                displayName: 'Friend',
-                state: 'online'
+                displayName: 'Friend'
             }
-        },
-        orderedFriendIds: ['usr_friend'],
-        onlineIds: ['usr_friend'],
-        activeIds: [],
-        offlineIds: []
+        }
     });
 }
 
@@ -32,8 +27,7 @@ function friendPatch(displayName: string) {
     return [
         {
             userId: 'usr_friend',
-            patch: { id: 'usr_friend', displayName },
-            stateBucketAuthority: 'preserve' as const
+            patch: { id: 'usr_friend', displayName }
         }
     ];
 }

@@ -135,7 +135,6 @@ impl SocialMaintenanceActions for RuntimeHostSocialMaintenanceActions {
 
     fn refresh_current_user(&self) -> BoxFuture<'_, ()> {
         Box::pin(run_background_current_user_refresh(
-            &self.web,
             &self.session_slot,
             &self.realtime_runtime,
             &self.runtime_context,

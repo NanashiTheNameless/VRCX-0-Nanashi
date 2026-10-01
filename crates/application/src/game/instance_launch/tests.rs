@@ -3,6 +3,7 @@ use super::*;
 use serde::Deserialize;
 use vrcx_0_application_core::{CallRecorder, ScriptedResults};
 use vrcx_0_contracts::vrchat_api::vrchat_response as execute_response;
+use vrcx_0_core::presence::PresenceKind;
 use vrcx_0_core::vrchat_endpoints::VRCHAT_API_DEFAULT_ENDPOINT;
 
 struct MockApi {
@@ -110,7 +111,7 @@ struct GateParityTarget {
     key: String,
     user_id: String,
     location: String,
-    state_bucket: String,
+    presence_kind: PresenceKind,
     is_current_user: bool,
     expected: GateParityExpected,
 }
@@ -417,21 +418,21 @@ fn gate_batch_evaluates_basic_invite_permissions() {
                 key: "public-online".to_string(),
                 user_id: "usr_public".to_string(),
                 location: "wrld_public:12345".to_string(),
-                state_bucket: "online".to_string(),
+                presence_kind: PresenceKind::Online,
                 is_current_user: false,
             },
             InstanceActionGateTarget {
                 key: "friends-stranger".to_string(),
                 user_id: "usr_stranger".to_string(),
                 location: "wrld_friends:12345~friends(usr_stranger)".to_string(),
-                state_bucket: "online".to_string(),
+                presence_kind: PresenceKind::Online,
                 is_current_user: false,
             },
             InstanceActionGateTarget {
                 key: "closed".to_string(),
                 user_id: "usr_closed".to_string(),
                 location: "wrld_closed:1".to_string(),
-                state_bucket: "online".to_string(),
+                presence_kind: PresenceKind::Online,
                 is_current_user: false,
             },
         ],
@@ -467,7 +468,7 @@ fn gate_batch_matches_shared_frontend_parity_cases() {
                     key: target.key.clone(),
                     user_id: target.user_id.clone(),
                     location: target.location.clone(),
-                    state_bucket: target.state_bucket.clone(),
+                    presence_kind: target.presence_kind,
                     is_current_user: target.is_current_user,
                 })
                 .collect(),
@@ -522,7 +523,7 @@ fn gate_batch_blocks_invite_when_game_is_not_running() {
             key: "friend".to_string(),
             user_id: "usr_friend".to_string(),
             location: "wrld_public:12345".to_string(),
-            state_bucket: "online".to_string(),
+            presence_kind: PresenceKind::Online,
             is_current_user: false,
         }],
     });
@@ -544,7 +545,7 @@ fn gate_batch_allows_join_for_non_online_presence_but_not_request_invite() {
             key: "active-friend".to_string(),
             user_id: "usr_friend".to_string(),
             location: "wrld_public:12345".to_string(),
-            state_bucket: "active".to_string(),
+            presence_kind: PresenceKind::Active,
             is_current_user: false,
         }],
     });

@@ -122,7 +122,9 @@ describe('invite permissions', () => {
 
     it('matches the shared backend gate parity cases', () => {
         for (const batch of gateParityCases) {
-            const output = evaluateLocalInstanceActionGates(batch);
+            const output = evaluateLocalInstanceActionGates(
+                batch as Parameters<typeof evaluateLocalInstanceActionGates>[0]
+            );
             expect(output.targets).toEqual(
                 batch.targets.map((target) => ({
                     key: target.key,

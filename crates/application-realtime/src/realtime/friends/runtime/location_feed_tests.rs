@@ -1,21 +1,27 @@
 #[cfg(test)]
 mod tests {
+    use super::super::presence_test_support::location_tag;
     use super::super::*;
 
     #[test]
-    fn friend_location_with_state_change_does_not_emit_gps_feed() {
+    fn friend_location_bringing_friend_online_emits_online_instead_of_gps() {
         let runtime = RealtimeFriendsRuntime::default();
         runtime.set_baseline(
             FriendRosterBaseline {
                 current_user_id: "usr_self".into(),
                 friends_by_id: [(
                     "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "active".into(),
-                        location: "wrld_old:123".into(),
-                        ..FriendRecord::default()
+                    FriendBaselineEntry {
+                        record: FriendRecord {
+                            id: "usr_friend".into(),
+                            display_name: "Friend".into(),
+                            ..FriendRecord::default()
+                        },
+                        presence: FriendBaselinePresence {
+                            state: "active".into(),
+                            location: "wrld_old:123".into(),
+                            ..FriendBaselinePresence::default()
+                        },
                     },
                 )]
                 .into_iter()
@@ -47,71 +53,13 @@ mod tests {
             panic!("friend-location should produce an output");
         };
 
-        assert_eq!(output.projection.patches[0].patch.state, "online");
-        assert_eq!(output.projection.patches[0].patch.location, "wrld_new:456");
-        assert!(output.persistence.feed_entries.is_empty());
-        assert!(output.projection.feed_entries.is_empty());
-    }
-
-    #[test]
-    fn duplicate_friend_location_payload_after_repeat_window_does_not_write_gps_again() {
-        let runtime = RealtimeFriendsRuntime::default();
-        runtime.set_baseline(
-            FriendRosterBaseline {
-                current_user_id: "usr_self".into(),
-                friends_by_id: [(
-                    "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "online".into(),
-                        location: "wrld_old:123".into(),
-                        ..FriendRecord::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-                ..FriendRosterBaseline::default()
-            },
-            1,
-            0,
-        );
-
-        let payload = json!({
-            "type": "friend-location",
-            "content": {
-                "userId": "usr_friend",
-                "location": "wrld_new:456",
-                "user": {
-                    "id": "usr_friend",
-                    "displayName": "Friend",
-                    "state": "online"
-                }
-            }
-        });
-
-        let RealtimeFriendApplyResult::Output(first) =
-            runtime.apply_ws_message(&RealtimeWsMessagePayload {
-                json: payload.clone(),
-                raw: "{}".into(),
-                received_at: "2026-05-15T00:00:01Z".into(),
-            })
-        else {
-            panic!("first friend-location should produce an output");
-        };
-        assert_eq!(first.persistence.feed_entries[0].to_json()["type"], "GPS");
-
-        let RealtimeFriendApplyResult::Output(second) =
-            runtime.apply_ws_message(&RealtimeWsMessagePayload {
-                json: payload,
-                raw: "{}".into(),
-                received_at: "2026-05-15T00:06:01Z".into(),
-            })
-        else {
-            panic!("duplicate friend-location should still produce a projection output");
-        };
-        assert!(second.persistence.feed_entries.is_empty());
-        assert!(second.projection.feed_entries.is_empty());
+        let view = &output.projection.patches[0].presence.view;
+        assert_eq!(view.section().as_str(), "online");
+        assert_eq!(location_tag(view), Some("wrld_new:456"));
+        assert_eq!(output.persistence.feed_entries.len(), 1);
+        let entry = output.persistence.feed_entries[0].to_json();
+        assert_eq!(entry["type"], "Online");
+        assert_eq!(entry["location"], "wrld_new:456");
     }
 
     #[test]
@@ -122,13 +70,18 @@ mod tests {
                 current_user_id: "usr_self".into(),
                 friends_by_id: [(
                     "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "online".into(),
-                        location: "wrld_old:123".into(),
-                        status: "join me".into(),
-                        ..FriendRecord::default()
+                    FriendBaselineEntry {
+                        record: FriendRecord {
+                            id: "usr_friend".into(),
+                            display_name: "Friend".into(),
+                            status: "join me".into(),
+                            ..FriendRecord::default()
+                        },
+                        presence: FriendBaselinePresence {
+                            state: "online".into(),
+                            location: "wrld_old:123".into(),
+                            ..FriendBaselinePresence::default()
+                        },
                     },
                 )]
                 .into_iter()
@@ -211,10 +164,14 @@ mod tests {
             private.persistence.feed_entries[1].to_json()["type"],
             "Status"
         );
-        assert_eq!(private.projection.patches[0].patch.location, "private");
-        assert_eq!(
-            private.projection.patches[0].patch.extra["$location"]["isPrivate"],
-            true
+        let private_view = &private.projection.patches[0].presence.view;
+        assert_eq!(location_tag(private_view), Some("private"));
+        assert!(
+            private_view
+                .place()
+                .expect("online place")
+                .location
+                .is_private
         );
 
         let RealtimeFriendApplyResult::Output(restored) =
@@ -240,11 +197,17 @@ mod tests {
             "Status"
         );
         assert_eq!(
-            restored.projection.patches[0].patch.extra["$location"]["worldId"],
+            restored.projection.patches[0]
+                .presence
+                .view
+                .place()
+                .expect("online place")
+                .location
+                .world_id,
             "wrld_current"
         );
         assert!(!restored.projection.patches[0]
-            .patch
+            .record
             .extra
             .contains_key("$location_at"));
         let location_time = restored
@@ -258,77 +221,6 @@ mod tests {
     }
 
     #[test]
-    fn friend_location_top_level_offline_overrides_stale_embedded_location() {
-        let runtime = RealtimeFriendsRuntime::default();
-        runtime.set_baseline(
-            FriendRosterBaseline {
-                current_user_id: "usr_self".into(),
-                friends_by_id: [(
-                    "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "online".into(),
-                        location: "wrld_1:123".into(),
-                        ..FriendRecord::default()
-                    },
-                )]
-                .into_iter()
-                .collect(),
-                ..FriendRosterBaseline::default()
-            },
-            1,
-            0,
-        );
-
-        let RealtimeFriendApplyResult::Output(output) =
-            runtime.apply_ws_message(&RealtimeWsMessagePayload {
-                json: json!({
-                    "type": "friend-location",
-                    "content": {
-                        "userId": "usr_friend",
-                        "location": "offline",
-                        "user": {
-                            "id": "usr_friend",
-                            "displayName": "Friend",
-                            "stateBucket": "online",
-                            "location": "wrld_stale:456"
-                        }
-                    }
-                }),
-                raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
-            })
-        else {
-            panic!("friend-location should produce an output");
-        };
-
-        assert_eq!(output.projection.patches[0].patch.state, "online");
-        assert_eq!(output.projection.patches[0].patch.location, "offline");
-        assert_eq!(
-            output.projection.patches[0].patch.extra["pendingOffline"],
-            true
-        );
-        assert!(output.persistence.feed_entries.is_empty());
-        assert!(matches!(
-            output.timer_action,
-            PendingOfflineTimerAction::Schedule { .. }
-        ));
-        assert_eq!(output.profile_refetch_user_ids, vec!["usr_friend"]);
-
-        let friend = runtime
-            .snapshot()
-            .unwrap()
-            .friends_by_id
-            .get("usr_friend")
-            .cloned()
-            .unwrap();
-        assert_eq!(friend.state, "online");
-        assert_eq!(friend.location, "offline");
-        assert_eq!(friend.extra["pendingOffline"], true);
-    }
-
-    #[test]
     fn entering_traveling_emits_one_ephemeral_player_joining_entry() {
         let runtime = RealtimeFriendsRuntime::default();
         runtime.set_baseline(
@@ -336,12 +228,17 @@ mod tests {
                 current_user_id: "usr_self".into(),
                 friends_by_id: [(
                     "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "online".into(),
-                        location: "wrld_old:123".into(),
-                        ..FriendRecord::default()
+                    FriendBaselineEntry {
+                        record: FriendRecord {
+                            id: "usr_friend".into(),
+                            display_name: "Friend".into(),
+                            ..FriendRecord::default()
+                        },
+                        presence: FriendBaselinePresence {
+                            state: "online".into(),
+                            location: "wrld_old:123".into(),
+                            ..FriendBaselinePresence::default()
+                        },
                     },
                 )]
                 .into_iter()
@@ -377,20 +274,17 @@ mod tests {
             panic!("entering traveling should produce an output");
         };
         assert!(first.persistence.feed_entries.is_empty());
-        assert_eq!(first.projection.feed_entries.len(), 1);
+        assert_eq!(first.joining.len(), 1);
+        assert_eq!(first.joining[0].to_json()["type"], "OnPlayerJoining");
         assert_eq!(
-            first.projection.feed_entries[0].to_json()["type"],
-            "OnPlayerJoining"
-        );
-        assert_eq!(
-            first.projection.feed_entries[0].to_json()["travelingToLocation"],
+            first.joining[0].to_json()["travelingToLocation"],
             "wrld_current:456"
         );
 
-        let RealtimeFriendApplyResult::Output(second) = apply("2026-07-13T10:00:01Z") else {
-            panic!("repeated traveling should still produce a projection output");
-        };
-        assert!(second.projection.feed_entries.is_empty());
+        assert!(matches!(
+            apply("2026-07-13T10:00:01Z"),
+            RealtimeFriendApplyResult::Ignored
+        ));
     }
 
     #[test]
@@ -401,12 +295,17 @@ mod tests {
                 current_user_id: "usr_self".into(),
                 friends_by_id: [(
                     "usr_friend".to_string(),
-                    FriendRecord {
-                        id: "usr_friend".into(),
-                        display_name: "Friend".into(),
-                        state: "offline".into(),
-                        location: "offline".into(),
-                        ..FriendRecord::default()
+                    FriendBaselineEntry {
+                        record: FriendRecord {
+                            id: "usr_friend".into(),
+                            display_name: "Friend".into(),
+                            ..FriendRecord::default()
+                        },
+                        presence: FriendBaselinePresence {
+                            state: "offline".into(),
+                            location: "offline".into(),
+                            ..FriendBaselinePresence::default()
+                        },
                     },
                 )]
                 .into_iter()
@@ -443,14 +342,7 @@ mod tests {
             output.persistence.feed_entries[0].to_json()["type"],
             "Online"
         );
-        assert_eq!(output.projection.feed_entries.len(), 2);
-        assert_eq!(
-            output.projection.feed_entries[0].to_json()["type"],
-            "Online"
-        );
-        assert_eq!(
-            output.projection.feed_entries[1].to_json()["type"],
-            "OnPlayerJoining"
-        );
+        assert_eq!(output.joining.len(), 1);
+        assert_eq!(output.joining[0].to_json()["type"], "OnPlayerJoining");
     }
 }

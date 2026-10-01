@@ -35,7 +35,6 @@ import {
     type AuthAttempt
 } from './authAttempt';
 import { applySavedAuthSnapshot } from './authSnapshotService';
-import { buildAvatarWearSnapshotUpdate } from './avatarWearTimeService';
 import {
     recordCurrentUserSnapshot,
     resetDomainFacts
@@ -216,13 +215,7 @@ function setCurrentUserRuntimeAuth(
     user: AuthUserRecord | null,
     { endpoint = '', websocket = '' }: Record<string, string> = {}
 ) {
-    const runtimeStore = useRuntimeStore.getState();
-    const { snapshot } = buildAvatarWearSnapshotUpdate({
-        previousSnapshot: runtimeStore.auth.currentUserSnapshot,
-        nextSnapshot: user,
-        isGameRunning: runtimeStore.gameState.isGameRunning
-    });
-    const nextSnapshot = isRecord(snapshot) ? snapshot : null;
+    const nextSnapshot = isRecord(user) ? user : null;
     const currentUserId = normalizeText(nextSnapshot?.id);
 
     resetCurrentUserRuntimeCaches();

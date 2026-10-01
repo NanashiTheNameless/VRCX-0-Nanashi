@@ -23,10 +23,6 @@ import {
 } from '@/services/userDialogSessionCacheService';
 
 import {
-    isSameLocationTag,
-    resolvePresenceLocation
-} from './userDialogContentHelpers';
-import {
     mergePreviousDisplayNames,
     replacePreviousDisplayNameSource
 } from './userDialogRows';
@@ -57,11 +53,9 @@ type UseUserDialogSupplementalDataInput = {
         };
     };
     currentEndpoint: string;
-    currentGameDestination: string;
-    currentGameLocation: string;
-    currentSnapshotLocation: string;
     currentUserId: string | null;
     currentUserSnapshot: DialogRecord | null;
+    inCurrentWorld: boolean;
     isTargetCurrentUser: boolean;
     normalizedUserId: string;
     openNonce: number;
@@ -73,11 +67,9 @@ type UseUserDialogSupplementalDataInput = {
 export function useUserDialogSupplementalData({
     activeUserTargetRef,
     currentEndpoint,
-    currentGameDestination,
-    currentGameLocation,
-    currentSnapshotLocation,
     currentUserId,
     currentUserSnapshot,
+    inCurrentWorld,
     isTargetCurrentUser,
     normalizedUserId,
     openNonce,
@@ -133,7 +125,6 @@ export function useUserDialogSupplementalData({
         profile?.displayName || profile?.username
     );
     const profileId = profile?.id;
-    const profilePresenceLocation = resolvePresenceLocation(profile);
     const profileDisplayNameRef = useRef('');
     profileDisplayNameRef.current = profileDisplayName;
     const representedGroupMatchesTarget =
@@ -348,18 +339,6 @@ export function useUserDialogSupplementalData({
             };
         }
 
-        const currentLocation =
-            currentGameLocation === 'traveling'
-                ? currentGameDestination
-                : currentGameLocation ||
-                  currentGameDestination ||
-                  currentSnapshotLocation;
-        const inCurrentWorld = Boolean(
-            profilePresenceLocation &&
-            currentLocation &&
-            isSameLocationTag(profilePresenceLocation, currentLocation)
-        );
-
         gameLogRepository
             .getUserStats(
                 {
@@ -399,12 +378,9 @@ export function useUserDialogSupplementalData({
             active = false;
         };
     }, [
-        currentGameDestination,
-        currentGameLocation,
-        currentSnapshotLocation,
+        inCurrentWorld,
         openNonce,
         profileId,
-        profilePresenceLocation,
         reloadToken,
         setUserStatsForTarget,
         targetKey

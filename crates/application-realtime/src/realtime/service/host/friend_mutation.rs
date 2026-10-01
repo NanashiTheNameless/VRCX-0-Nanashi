@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use serde_json::Value;
 use vrcx_0_application_core::{Result, RuntimeVrchatAuthFailurePayload};
-use vrcx_0_core::friends::FriendRecord;
+use vrcx_0_core::friends::FriendBaselineEntry;
 
 use crate::realtime::friends::SyntheticFriendEvent;
 use crate::realtime::RealtimeFriendApplyResult;
@@ -17,6 +17,7 @@ pub enum SyntheticFriendEventOutcome {
     Applied,
     PersistFailed,
     MissingBaseline,
+    TransportInactive,
     Ignored,
 }
 
@@ -50,7 +51,7 @@ impl RealtimeHostRuntime {
         &self,
         owner_user_id: &OwnerId,
         endpoint: &str,
-        record: FriendRecord,
+        entry: FriendBaselineEntry,
         mutation: impl FnOnce() -> Result<T>,
     ) -> Result<T> {
         self.run_friend_log_current_mutation_with_effect(
@@ -59,7 +60,7 @@ impl RealtimeHostRuntime {
                 owner_user_id,
                 endpoint,
                 FriendLogMutation::Upsert {
-                    record: Box::new(record),
+                    entry: Box::new(entry),
                 },
             )),
         )
@@ -113,6 +114,15 @@ impl RealtimeHostRuntime {
         event: SyntheticFriendEvent,
         received_at: String,
     ) -> SyntheticFriendEventOutcome {
+        if !self.is_transport_current() {
+            self.friends.apply_scoped_synthetic_event(
+                expected_owner_user_id,
+                expected_endpoint,
+                event,
+                &received_at,
+            );
+            return SyntheticFriendEventOutcome::TransportInactive;
+        }
         match self.friends.apply_scoped_synthetic_event(
             expected_owner_user_id,
             expected_endpoint,
@@ -135,5 +145,23 @@ impl RealtimeHostRuntime {
             }
             RealtimeFriendApplyResult::Ignored => SyntheticFriendEventOutcome::Ignored,
         }
+    }
+
+    fn is_transport_current(&self) -> bool {
+        let Ok(state) = self.state.lock() else {
+            return false;
+        };
+        state
+            .connection
+            .active_context
+            .as_ref()
+            .is_some_and(|active| {
+                self.is_message_current_locked(
+                    &state,
+                    active.generation,
+                    active.session_generation,
+                    &active.session,
+                )
+            })
     }
 }

@@ -1,3 +1,4 @@
+use crate::realtime::FriendRosterSnapshot;
 use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
@@ -135,6 +136,6 @@ pub struct SocialFriendRosterBaselineOutput {
     pub stale: bool,
     pub count: u32,
     pub detail: String,
-    pub snapshot: Option<RawJson>,
+    pub snapshot: Option<FriendRosterSnapshot>,
     pub friend_log_changed: bool,
 }

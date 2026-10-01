@@ -9,12 +9,11 @@ import type {
     PlatformFileAnalysis,
     WorldProfileRecord
 } from '@/domain/entities/world';
+import { userStatusDotClassName } from '@/domain/friends/presence';
 import { convertFileUrlToImageUrl } from '@/services/entityMediaService';
-import { normalizeUserStatus } from '@/shared/utils/friendStatus';
 import { parseLocation } from '@/shared/utils/location';
 import { isRecord } from '@/shared/utils/record';
 import { normalizeString } from '@/shared/utils/string';
-import { userStatusIndicatorClassName } from '@/shared/utils/userStatus';
 
 import type { PlayerListRecord, PlayerListRow } from './playerListTypes';
 
@@ -26,7 +25,7 @@ type PlatformMeta = {
 
 type StatusMeta = {
     badgeVariant: 'default' | 'secondary' | 'outline';
-    indicatorClassName: string;
+    statusDotClassName: string;
     label: string;
 };
 
@@ -34,7 +33,6 @@ type PlayerStatusSource = PlayerListRecord & {
     isCurrentUser?: boolean;
     isFavorite?: boolean;
     isFriend?: boolean;
-    location?: string;
     status?: string;
     statusDescription?: string;
 };
@@ -77,43 +75,13 @@ export function resolvePlatformMeta(platform: unknown): PlatformMeta {
     };
 }
 
-function isLivePlayerLocation(location: string | undefined) {
-    const parsed = parseLocation(location ?? '');
-    return Boolean(
-        parsed.worldId &&
-        !parsed.isOffline &&
-        !parsed.isPrivate &&
-        !parsed.isTraveling
-    );
-}
-
-function resolveStatusIndicatorSource(row: PlayerStatusSource) {
-    if (!row?.isCurrentUser || !isLivePlayerLocation(row.location)) {
-        return row;
-    }
-
-    const status = normalizeUserStatus(row.status);
-    return {
-        location: row.location,
-        state: 'online',
-        stateBucket: 'online',
-        status: status && status !== 'offline' ? status : 'active'
-    };
-}
-
 export function resolveStatusMeta(row: PlayerStatusSource): StatusMeta {
-    const indicatorClassName = userStatusIndicatorClassName(
-        resolveStatusIndicatorSource(row),
-        {
-            showOffline: true,
-            className: 'mr-1'
-        }
-    );
+    const statusDotClassName = userStatusDotClassName(row);
 
     if (row.isCurrentUser || row.isFavorite) {
         return {
             badgeVariant: 'default',
-            indicatorClassName,
+            statusDotClassName,
             label: normalizeString(row.statusDescription)
         };
     }
@@ -121,14 +89,14 @@ export function resolveStatusMeta(row: PlayerStatusSource): StatusMeta {
     if (row.isFriend) {
         return {
             badgeVariant: 'secondary',
-            indicatorClassName,
+            statusDotClassName,
             label: normalizeString(row.statusDescription)
         };
     }
 
     return {
         badgeVariant: 'outline',
-        indicatorClassName,
+        statusDotClassName,
         label: normalizeString(row.statusDescription)
     };
 }

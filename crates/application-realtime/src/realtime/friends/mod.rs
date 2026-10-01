@@ -1,6 +1,8 @@
+mod presence;
 mod runtime;
 
-pub use runtime::{is_friend_event_type, RealtimeFriendsRuntime};
+pub(crate) use presence::baseline_friend_view;
+pub use runtime::RealtimeFriendsRuntime;
 pub(crate) use runtime::{
-    player_joining_feed_entry, trust_level_feed_entry, PendingOfflineSchedule, SyntheticFriendEvent,
+    trust_level_feed_entry, FriendBaselineEffects, RosterDelta, SyntheticFriendEvent,
 };

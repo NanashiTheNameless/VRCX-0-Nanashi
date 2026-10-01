@@ -170,6 +170,7 @@ pub(super) struct OverlayActivityState {
     pub(super) friend_favorite_groups: OverlayFavoriteGroups,
     pub(super) group_favorite_groups: OverlayFavoriteGroups,
     pub(super) friend_user_ids: HashSet<String>,
+    location_hidden_user_ids: HashSet<String>,
     pub(super) group_instance_scope_key: String,
     pub(super) group_instance_baseline: HashMap<String, Vec<String>>,
     current_instance_location: String,
@@ -191,6 +192,7 @@ impl Default for OverlayActivityState {
             friend_favorite_groups: OverlayFavoriteGroups::default(),
             group_favorite_groups: OverlayFavoriteGroups::default(),
             friend_user_ids: HashSet::new(),
+            location_hidden_user_ids: HashSet::new(),
             group_instance_scope_key: String::new(),
             group_instance_baseline: HashMap::new(),
             current_instance_location: String::new(),
@@ -219,9 +221,23 @@ impl OverlayActivityRuntime {
     }
 
     pub fn with_persistence(persistence_path: Option<PathBuf>) -> Self {
+        Self::with_filters_and_persistence(OverlayActivityFilters::default(), persistence_path)
+    }
+
+    pub fn with_filters(filters: OverlayActivityFilters) -> Self {
+        Self::with_filters_and_persistence(filters, None)
+    }
+
+    pub fn with_filters_and_persistence(
+        filters: OverlayActivityFilters,
+        persistence_path: Option<PathBuf>,
+    ) -> Self {
         let runtime = Self {
             inner: Arc::new(OverlayActivityRuntimeInner {
-                state: Mutex::new(OverlayActivityState::default()),
+                state: Mutex::new(OverlayActivityState {
+                    filters,
+                    ..OverlayActivityState::default()
+                }),
                 sink: Mutex::new(None),
                 observer: Mutex::new(None),
                 group_notification_inputs_revision: AtomicU64::new(0),
@@ -229,21 +245,6 @@ impl OverlayActivityRuntime {
             }),
         };
         runtime.load_persisted_entries();
-        runtime
-    }
-
-    pub fn with_filters(filters: OverlayActivityFilters) -> Self {
-        let runtime = Self::new();
-        runtime.set_filters(filters);
-        runtime
-    }
-
-    pub fn with_filters_and_persistence(
-        filters: OverlayActivityFilters,
-        persistence_path: Option<PathBuf>,
-    ) -> Self {
-        let runtime = Self::with_persistence(persistence_path);
-        runtime.set_filters(filters);
         runtime
     }
 
@@ -378,6 +379,12 @@ impl OverlayActivityRuntime {
         }
     }
 
+    pub fn set_location_hidden_user_ids(&self, user_ids: HashSet<String>) {
+        if let Ok(mut state) = self.inner.state.lock() {
+            state.location_hidden_user_ids = user_ids;
+        }
+    }
+
     pub fn set_favorite_groups(&self, favorite_groups: OverlayFavoriteGroups) {
         if let Ok(mut state) = self.inner.state.lock() {
             state.friend_favorite_groups = favorite_groups;
@@ -502,6 +509,13 @@ impl OverlayActivityRuntime {
                 return None;
             }
             clear_joined_delivery_coverage_for_departing_gps(&mut state, &candidate);
+            if candidate.activity_type == "GPS"
+                && state
+                    .location_hidden_user_ids
+                    .contains(&normalize_id(&candidate.actor_user_id))
+            {
+                return None;
+            }
 
             let wrist = surface_matches(
                 &state,

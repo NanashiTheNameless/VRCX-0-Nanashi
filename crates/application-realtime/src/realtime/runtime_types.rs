@@ -1,16 +1,15 @@
 use std::collections::HashMap;
-use std::time::Duration;
 
 use serde::Serialize;
 use vrcx_0_core::friends::FriendRecord;
-use vrcx_0_core::json::RawJson;
+use vrcx_0_core::presence::PresenceEntry;
 pub use vrcx_0_core::realtime::{
     RealtimeSessionContext, RealtimeWsMessagePayload, RealtimeWsStatus, RealtimeWsStatusPayload,
 };
 
 use super::output::RealtimeFriendOutput;
 
-pub(crate) const PENDING_OFFLINE_DELAY: Duration = Duration::from_secs(170);
+pub(crate) const PENDING_OFFLINE_DELAY_MS: i64 = 170_000;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RealtimeCachedUserProfile {
@@ -27,6 +26,27 @@ pub struct RealtimeFriendSnapshot {
     pub generation: u64,
     pub baseline_revision: u64,
     pub friends_by_id: HashMap<String, FriendRecord>,
+    pub presence_by_id: HashMap<String, PresenceEntry>,
+}
+
+impl RealtimeFriendSnapshot {
+    pub(crate) fn to_roster_snapshot(&self) -> FriendRosterSnapshot {
+        FriendRosterSnapshot {
+            current_user_id: self.current_user_id.clone(),
+            friends_by_id: self.friends_by_id.clone(),
+            presence_by_id: self.presence_by_id.clone(),
+            generation: self.generation,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct FriendRosterSnapshot {
+    pub current_user_id: String,
+    pub friends_by_id: HashMap<String, FriendRecord>,
+    pub presence_by_id: HashMap<String, PresenceEntry>,
+    pub generation: u64,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -41,7 +61,7 @@ pub struct RealtimeFriendRosterSnapshot {
     pub endpoint: String,
     pub websocket: String,
     pub friend_count: usize,
-    pub snapshot: RawJson,
+    pub snapshot: FriendRosterSnapshot,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, specta::Type)]
@@ -57,7 +77,7 @@ pub struct FriendBaselineResult {
 pub struct FriendBaselineCausalWatermark {
     pub generation: Option<u64>,
     pub baseline_revision: Option<u64>,
-    pub friend_state_sequence: u64,
+    pub friend_rev: u64,
     pub friend_log_sequence: u64,
 }
 
@@ -124,77 +144,8 @@ pub enum RealtimeTransportLifecycleEvent {
     },
 }
 
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub struct RealtimeCurrentUserGameLogContext {
-    pub location: String,
-    pub destination: String,
-    pub world_name: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub enum RealtimeCurrentUserAuthority {
-    Unavailable,
-    Available {
-        is_game_running: bool,
-        game_log: Option<RealtimeCurrentUserGameLogContext>,
-    },
-}
-
-impl Default for RealtimeCurrentUserAuthority {
-    fn default() -> Self {
-        Self::Available {
-            is_game_running: false,
-            game_log: None,
-        }
-    }
-}
-
-impl RealtimeCurrentUserAuthority {
-    pub const fn is_available(&self) -> bool {
-        matches!(self, Self::Available { .. })
-    }
-
-    pub const fn is_game_running(&self) -> bool {
-        matches!(
-            self,
-            Self::Available {
-                is_game_running: true,
-                ..
-            }
-        )
-    }
-
-    pub fn game_log(&self) -> Option<&RealtimeCurrentUserGameLogContext> {
-        match self {
-            Self::Available { game_log, .. } => game_log.as_ref(),
-            Self::Unavailable => None,
-        }
-    }
-
-    pub fn with_game_running(mut self, value: bool) -> Self {
-        if let Self::Available {
-            is_game_running, ..
-        } = &mut self
-        {
-            *is_game_running = value;
-        }
-        self
-    }
-}
-
 pub enum RealtimeFriendApplyResult {
     Output(Box<RealtimeFriendOutput>),
     MissingBaseline,
     Ignored,
-}
-
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub enum PendingOfflineTimerAction {
-    #[default]
-    None,
-    Schedule {
-        user_id: String,
-        token: u64,
-        delay: Duration,
-    },
 }

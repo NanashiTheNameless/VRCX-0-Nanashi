@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { onlinePresence } from '@/test/presenceFixtures';
+
 import {
     buildPlayerSourceRows,
     buildPlayerDialogSeedData,
@@ -39,7 +41,8 @@ describe('playerListRows', () => {
                 currentUserId: 'usr_self',
                 currentUserSnapshot: {
                     id: 'usr_self',
-                    displayName: 'Current User'
+                    displayName: 'Current User',
+                    $presence: onlinePresence('wrld_live:123')
                 },
                 isGameRunning: true,
                 context: {
@@ -60,8 +63,10 @@ describe('playerListRows', () => {
                 lastDurationMs: 0,
                 ref: {
                     id: 'usr_self',
-                    displayName: 'Current User'
+                    displayName: 'Current User',
+                    $presence: onlinePresence('wrld_live:123')
                 },
+                $presence: onlinePresence('wrld_live:123'),
                 source: 'runtime'
             },
             { userId: 'usr_a', displayName: 'A' },

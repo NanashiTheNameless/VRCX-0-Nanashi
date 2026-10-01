@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const serviceMocks = vi.hoisted(() => ({
-    getFriendLogCurrent: vi.fn(),
     socialFriendRosterBaselineGet: vi.fn(),
     signalFriendLogChanged: vi.fn()
 }));
@@ -13,27 +12,11 @@ vi.mock('@/platform/tauri/bindings', () => ({
     }
 }));
 
-vi.mock('@/repositories/friendLogRepository', () => ({
-    default: {
-        getFriendLogCurrent: serviceMocks.getFriendLogCurrent
-    }
-}));
-
 vi.mock('./friendLogMutationService', () => ({
     signalFriendLogChanged: serviceMocks.signalFriendLogChanged
 }));
 
-function deferred<T>() {
-    let resolve!: (value: T) => void;
-    let reject!: (error: unknown) => void;
-    const promise = new Promise<T>((nextResolve, nextReject) => {
-        resolve = nextResolve;
-        reject = nextReject;
-    });
-    return { promise, resolve, reject };
-}
-
-describe('friendBootstrapService startup seed and reconciliation', () => {
+describe('friendBootstrapService baseline reconciliation', () => {
     beforeEach(async () => {
         vi.clearAllMocks();
 
@@ -58,146 +41,17 @@ describe('friendBootstrapService startup seed and reconciliation', () => {
             isFriendsLoaded: true,
             sessionPhase: 'ready'
         });
-        serviceMocks.getFriendLogCurrent.mockResolvedValue([]);
         serviceMocks.socialFriendRosterBaselineGet.mockResolvedValue({
             stale: false,
             count: 0,
             detail: 'complete',
             snapshot: {
+                currentUserId: 'usr_self',
+                generation: 1,
+                presenceById: {},
                 friendsById: {}
             }
         });
-    });
-
-    it('seeds the visible roster before the Rust baseline completes without marking friends loaded', async () => {
-        const { useFriendRosterStore } =
-            await import('@/state/friendRosterStore');
-        const { useSessionStore } = await import('@/state/sessionStore');
-        const { bootstrapFriendRoster } =
-            await import('./friendBootstrapService');
-        const baseline = deferred<Record<string, unknown>>();
-        serviceMocks.getFriendLogCurrent.mockResolvedValue([
-            {
-                userId: 'usr_online',
-                displayName: 'Online Cache',
-                trustLevel: 'Trusted User',
-                friendNumber: 1
-            },
-            {
-                userId: 'usr_active',
-                displayName: 'Active Cache',
-                trustLevel: 'Known User',
-                friendNumber: 2
-            },
-            {
-                userId: 'usr_deleted',
-                displayName: 'Deleted Cache',
-                trustLevel: 'Visitor',
-                friendNumber: 3
-            }
-        ]);
-        serviceMocks.socialFriendRosterBaselineGet.mockReturnValue(
-            baseline.promise
-        );
-
-        const run = bootstrapFriendRoster({
-            userId: 'usr_self',
-            endpoint: 'https://api.example.test',
-            currentUserSnapshot: {
-                id: 'usr_self',
-                displayName: 'Self',
-                friends: ['usr_online', 'usr_active', 'usr_offline'],
-                offlineFriends: ['usr_offline'],
-                activeFriends: ['usr_active'],
-                onlineFriends: ['usr_online']
-            }
-        });
-
-        let seedError: unknown = null;
-        try {
-            await vi.waitFor(() => {
-                expect(
-                    serviceMocks.socialFriendRosterBaselineGet
-                ).toHaveBeenCalled();
-                expect(
-                    serviceMocks.socialFriendRosterBaselineGet
-                ).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        userId: 'usr_self',
-                        endpoint: 'https://api.example.test',
-                        websocket: 'wss://ws.example.test'
-                    })
-                );
-                expect(
-                    useFriendRosterStore.getState().orderedFriendIds
-                ).toEqual(['usr_online', 'usr_active', 'usr_offline']);
-            });
-        } catch (error) {
-            seedError = error;
-        }
-
-        const seededState = useFriendRosterStore.getState();
-        const seededFriendsLoaded = useSessionStore.getState().isFriendsLoaded;
-
-        baseline.resolve({
-            stale: false,
-            count: 3,
-            detail: 'complete baseline',
-            snapshot: {
-                friendsById: {
-                    usr_online: {
-                        id: 'usr_online',
-                        displayName: 'Online Final',
-                        state: 'online',
-                        location: 'wrld_live:123'
-                    }
-                }
-            }
-        });
-
-        await run;
-
-        if (seedError) {
-            throw seedError;
-        }
-
-        expect(seededState).toMatchObject({
-            loadStatus: 'running',
-            onlineIds: ['usr_online'],
-            activeIds: ['usr_active'],
-            offlineIds: ['usr_offline'],
-            friendsById: {
-                usr_online: {
-                    displayName: 'Online Cache',
-                    state: 'online',
-                    $trustLevel: 'Trusted User'
-                },
-                usr_active: {
-                    displayName: 'Active Cache',
-                    state: 'active',
-                    $trustLevel: 'Known User'
-                },
-                usr_offline: {
-                    displayName: 'usr_offline',
-                    state: 'offline'
-                }
-            }
-        });
-        expect(seededState.friendsById.usr_deleted).toBeUndefined();
-        expect(seededFriendsLoaded).toBe(false);
-
-        expect(useFriendRosterStore.getState()).toMatchObject({
-            loadStatus: 'ready',
-            detail: 'complete baseline',
-            orderedFriendIds: ['usr_online'],
-            friendsById: {
-                usr_online: {
-                    displayName: 'Online Final',
-                    location: 'wrld_live:123'
-                }
-            }
-        });
-        expect(useSessionStore.getState().isFriendsLoaded).toBe(true);
     });
 
     it('marks friends loaded after the fast roster snapshot', async () => {
@@ -211,6 +65,9 @@ describe('friendBootstrapService startup seed and reconciliation', () => {
             count: 2,
             detail: 'fast roster',
             snapshot: {
+                currentUserId: 'usr_self',
+                generation: 1,
+                presenceById: {},
                 friendsById: {
                     usr_online: {
                         id: 'usr_online',
@@ -268,6 +125,9 @@ describe('friendBootstrapService startup seed and reconciliation', () => {
             detail: 'fast roster',
             friendLogChanged: true,
             snapshot: {
+                currentUserId: 'usr_self',
+                generation: 1,
+                presenceById: {},
                 friendsById: {
                     usr_online: {
                         id: 'usr_online',
@@ -302,6 +162,9 @@ describe('friendBootstrapService startup seed and reconciliation', () => {
             detail: 'fast roster',
             friendLogChanged: false,
             snapshot: {
+                currentUserId: 'usr_self',
+                generation: 1,
+                presenceById: {},
                 friendsById: {
                     usr_online: {
                         id: 'usr_online',
@@ -348,6 +211,9 @@ describe('friendBootstrapService startup seed and reconciliation', () => {
             count: 1,
             detail: 'refreshed',
             snapshot: {
+                currentUserId: 'usr_self',
+                generation: 1,
+                presenceById: {},
                 friendsById: {
                     usr_stale: {
                         id: 'usr_stale',
@@ -422,20 +288,12 @@ describe('friendBootstrapService startup seed and reconciliation', () => {
         });
     });
 
-    it('keeps the seeded roster visible when the Rust baseline fails', async () => {
+    it('reports a failed Rust baseline without marking friends loaded', async () => {
         const { useFriendRosterStore } =
             await import('@/state/friendRosterStore');
         const { useSessionStore } = await import('@/state/sessionStore');
         const { bootstrapFriendRoster } =
             await import('./friendBootstrapService');
-        serviceMocks.getFriendLogCurrent.mockResolvedValue([
-            {
-                userId: 'usr_online',
-                displayName: 'Online Cache',
-                trustLevel: 'Trusted User',
-                friendNumber: 1
-            }
-        ]);
         serviceMocks.socialFriendRosterBaselineGet.mockRejectedValue(
             new Error('baseline failed')
         );
@@ -444,45 +302,24 @@ describe('friendBootstrapService startup seed and reconciliation', () => {
             bootstrapFriendRoster({
                 userId: 'usr_self',
                 endpoint: 'https://api.example.test',
-                currentUserSnapshot: {
-                    id: 'usr_self',
-                    friends: ['usr_online'],
-                    offlineFriends: [],
-                    activeFriends: [],
-                    onlineFriends: ['usr_online']
-                }
+                currentUserSnapshot: { id: 'usr_self' }
             })
         ).rejects.toThrow('baseline failed');
 
         expect(useFriendRosterStore.getState()).toMatchObject({
             loadStatus: 'error',
             detail: 'baseline failed',
-            orderedFriendIds: ['usr_online'],
-            onlineIds: ['usr_online'],
-            friendsById: {
-                usr_online: {
-                    displayName: 'Online Cache',
-                    state: 'online'
-                }
-            }
+            friendsById: {}
         });
         expect(useSessionStore.getState().isFriendsLoaded).toBe(false);
     });
 
-    it('keeps the seeded roster visible when the Rust baseline returns stale', async () => {
+    it('reports a stale Rust baseline without marking friends loaded', async () => {
         const { useFriendRosterStore } =
             await import('@/state/friendRosterStore');
         const { useSessionStore } = await import('@/state/sessionStore');
         const { bootstrapFriendRoster } =
             await import('./friendBootstrapService');
-        serviceMocks.getFriendLogCurrent.mockResolvedValue([
-            {
-                userId: 'usr_active',
-                displayName: 'Active Cache',
-                trustLevel: 'Known User',
-                friendNumber: 1
-            }
-        ]);
         serviceMocks.socialFriendRosterBaselineGet.mockResolvedValue({
             stale: true,
             count: 0,
@@ -493,27 +330,14 @@ describe('friendBootstrapService startup seed and reconciliation', () => {
             bootstrapFriendRoster({
                 userId: 'usr_self',
                 endpoint: 'https://api.example.test',
-                currentUserSnapshot: {
-                    id: 'usr_self',
-                    friends: ['usr_active'],
-                    offlineFriends: [],
-                    activeFriends: ['usr_active'],
-                    onlineFriends: []
-                }
+                currentUserSnapshot: { id: 'usr_self' }
             })
         ).rejects.toThrow('Friend roster baseline was stale for usr_self.');
 
         expect(useFriendRosterStore.getState()).toMatchObject({
             loadStatus: 'error',
             detail: 'Friend roster baseline was stale for usr_self.',
-            orderedFriendIds: ['usr_active'],
-            activeIds: ['usr_active'],
-            friendsById: {
-                usr_active: {
-                    displayName: 'Active Cache',
-                    state: 'active'
-                }
-            }
+            friendsById: {}
         });
         expect(useSessionStore.getState().isFriendsLoaded).toBe(false);
     });

@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import type { WorldProfileRecord } from '@/domain/entities/world';
+import type { PresenceView } from '@/domain/friends/presence';
 import type { FriendRecord } from '@/domain/friends/types';
+import {
+    offlinePresence,
+    onlinePresence,
+    pendingPresence,
+    travelingPresence
+} from '@/test/presenceFixtures';
 
 import { buildWorldRoomRows, filterWorldRoomRows } from './worldRoomsModel';
 
@@ -10,10 +17,11 @@ const OTHER_WORLD_ID = 'wrld_22222222-2222-2222-2222-222222222222';
 
 function friend(
     id: string,
-    location: string,
+    place: string | PresenceView,
     extra: Record<string, unknown> = {}
 ) {
-    return { id, displayName: id, location, ...extra } as FriendRecord;
+    const $presence = typeof place === 'string' ? onlinePresence(place) : place;
+    return { id, displayName: id, $presence, ...extra } as FriendRecord;
 }
 
 function world(instances: unknown[]) {
@@ -98,10 +106,7 @@ describe('world room list', () => {
 
     it('shows a traveling friend only after they land in the instance', () => {
         const destination = `${WORLD_ID}:55555~hidden(usr_owner)~region(jp)`;
-        const traveling = friend('usr_a', 'traveling', {
-            travelingToLocation: destination,
-            travelingToWorld: WORLD_ID
-        });
+        const traveling = friend('usr_a', travelingPresence(destination));
 
         expect(rooms({ friends: [traveling] })).toEqual([]);
         expect(
@@ -111,12 +116,16 @@ describe('world room list', () => {
         ).toEqual([destination]);
     });
 
-    it('ignores friends who are private, offline, or in another world', () => {
+    it('ignores friends who are private, offline, possibly offline, or in another world', () => {
         expect(
             rooms({
                 friends: [
                     friend('usr_private', 'private'),
-                    friend('usr_offline', 'offline'),
+                    friend('usr_offline', offlinePresence),
+                    friend(
+                        'usr_pending',
+                        pendingPresence(`${WORLD_ID}:11111~region(jp)`)
+                    ),
                     friend('usr_other', `${OTHER_WORLD_ID}:44444~region(eu)`)
                 ]
             })

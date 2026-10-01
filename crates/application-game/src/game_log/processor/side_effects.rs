@@ -2,7 +2,8 @@ use std::sync::Arc;
 use vrcx_0_application_activity::OverlayActivityRuntime;
 
 use vrcx_0_application_core::{
-    BackendRuntimeStatusPublisher, RuntimeAuthIdentity, RuntimeAuthScope, RuntimeAuthScopeSnapshot,
+    sleep_until_due_or_stopped, BackendRuntimeStatusPublisher, RuntimeAuthIdentity,
+    RuntimeAuthScope, RuntimeAuthScopeSnapshot, TaskStopToken,
 };
 
 use crate::game_log::host::GameLogHostActions;
@@ -12,10 +13,10 @@ use crate::game_log::instance_media::{
 };
 use crate::game_log::lifecycle as runtime_lifecycle;
 use crate::game_log::screenshot as runtime_screenshot;
-use crate::game_log::video as runtime_video;
+use crate::game_log::video::{self as runtime_video, now_playing_ends_at_ms, NowPlayingClock};
 use crate::RuntimeEventBus;
 use crate::{EmptyEventPayload, GameLogSideEffectEvent, GameLogSideEffectSink};
-use crate::{InstanceMediaPort, TaskSupervisor, VideoMetadataPort};
+use crate::{InstanceMediaPort, NowPlayingPayload, TaskSupervisor, VideoMetadataPort};
 
 use super::GameLogProcessorDeps;
 use vrcx_0_core::OwnerId;
@@ -33,12 +34,17 @@ pub(super) struct GameLogSideEffectDeps {
     auth_scope: RuntimeAuthScope,
     auth_scope_snapshot: RuntimeAuthScopeSnapshot,
     media_queue: InstanceMediaQueue,
+    now_playing: NowPlayingClock,
     host_actions: Arc<dyn GameLogHostActions>,
     pub(super) auth_identity: RuntimeAuthIdentity,
 }
 
 impl GameLogSideEffectDeps {
-    pub(super) fn new(deps: &GameLogProcessorDeps, media_queue: InstanceMediaQueue) -> Self {
+    pub(super) fn new(
+        deps: &GameLogProcessorDeps,
+        media_queue: InstanceMediaQueue,
+        now_playing: NowPlayingClock,
+    ) -> Self {
         let auth_scope_snapshot = deps.auth_scope.snapshot();
         let auth_identity = deps.auth_scope.identity();
         Self {
@@ -53,6 +59,7 @@ impl GameLogSideEffectDeps {
             auth_scope: deps.auth_scope.clone(),
             auth_scope_snapshot,
             media_queue,
+            now_playing,
             host_actions: Arc::clone(&deps.host_actions),
             auth_identity,
         }
@@ -79,39 +86,64 @@ pub(super) fn dispatch_side_effect(
 ) {
     match side_effect {
         GameLogSideEffect::Video(input) => {
-            deps.tasks.clone().spawn(async move {
-                match runtime_video::handle_video_play(
-                    deps.store.as_ref(),
-                    deps.video_metadata.as_ref(),
-                    &deps.event_bus,
-                    &deps.backend_status,
-                    &deps.side_effect_sink,
-                    &OwnerId::new(deps.auth_identity.user_id),
-                    input,
-                )
-                .await
-                {
-                    Ok(Some(candidate))
-                        if deliver_activity
-                            && deps
-                                .auth_scope
-                                .snapshot()
-                                .generation_matches(&deps.auth_scope_snapshot) =>
+            let generation = deps.now_playing.begin();
+            deps.tasks
+                .clone()
+                .spawn_cancellable(move |stop_token| async move {
+                    match runtime_video::handle_video_play(
+                        deps.store.as_ref(),
+                        deps.video_metadata.as_ref(),
+                        &deps.event_bus,
+                        &deps.backend_status,
+                        &OwnerId::new(deps.auth_identity.user_id.clone()),
+                        input,
+                    )
+                    .await
                     {
-                        deps.overlay_activity.ingest_candidate(candidate);
+                        Ok(Some(played)) => {
+                            if deliver_activity
+                                && deps
+                                    .auth_scope
+                                    .snapshot()
+                                    .generation_matches(&deps.auth_scope_snapshot)
+                            {
+                                deps.overlay_activity.ingest_candidate(played.activity);
+                            }
+                            if deps
+                                .now_playing
+                                .play(generation, played.now_playing.length.unwrap_or(0))
+                            {
+                                if let Some(ends_at_ms) =
+                                    announce_now_playing(&deps, played.now_playing)
+                                {
+                                    end_now_playing_at(&deps, generation, ends_at_ms, &stop_token)
+                                        .await;
+                                }
+                            }
+                        }
+                        Ok(None) => {}
+                        Err(error) => tracing::warn!("GameLog video side effect failed: {error}"),
                     }
-                    Ok(_) => {}
-                    Err(error) => tracing::warn!("GameLog video side effect failed: {error}"),
-                }
-            });
+                });
         }
         GameLogSideEffect::VideoSync {
             timestamp,
             created_at,
         } => {
-            runtime_lifecycle::emit_video_sync(&deps.side_effect_sink, &timestamp, &created_at);
+            if let Some((generation, length_seconds)) = deps.now_playing.resync() {
+                let mut payload = runtime_lifecycle::video_sync_payload(&timestamp, &created_at);
+                payload.length = Some(length_seconds);
+                if let Some(ends_at_ms) = announce_now_playing(&deps, payload) {
+                    deps.tasks
+                        .clone()
+                        .spawn_cancellable(move |stop_token| async move {
+                            end_now_playing_at(&deps, generation, ends_at_ms, &stop_token).await;
+                        });
+                }
+            }
         }
         GameLogSideEffect::NowPlayingReset => {
+            deps.now_playing.begin();
             deps.emit_side_effect(GameLogSideEffectEvent::NowPlayingReset(
                 EmptyEventPayload::default(),
             ));
@@ -189,5 +221,26 @@ pub(super) fn dispatch_side_effect(
                 tracing::warn!(data, "VRChat Udon exception");
             }
         }
+    }
+}
+
+fn announce_now_playing(deps: &GameLogSideEffectDeps, payload: NowPlayingPayload) -> Option<i64> {
+    let ends_at_ms = now_playing_ends_at_ms(&payload);
+    deps.emit_side_effect(GameLogSideEffectEvent::NowPlaying(Box::new(payload)));
+    ends_at_ms
+}
+
+async fn end_now_playing_at(
+    deps: &GameLogSideEffectDeps,
+    generation: u64,
+    ends_at_ms: i64,
+    stop_token: &TaskStopToken,
+) {
+    let remaining_ms = ends_at_ms - chrono::Utc::now().timestamp_millis();
+    let due = std::time::Duration::from_millis(u64::try_from(remaining_ms).unwrap_or(0));
+    if sleep_until_due_or_stopped(due, stop_token).await && deps.now_playing.finish(generation) {
+        deps.emit_side_effect(GameLogSideEffectEvent::NowPlayingReset(
+            EmptyEventPayload::default(),
+        ));
     }
 }

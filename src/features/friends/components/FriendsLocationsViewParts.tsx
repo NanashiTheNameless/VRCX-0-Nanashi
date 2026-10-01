@@ -9,22 +9,26 @@ import { useTranslation } from 'react-i18next';
 import { CurrentInstanceBadge } from '@/components/instances/CurrentInstanceBadge';
 import { EmptyState } from '@/components/layout/PageScaffold';
 import { Location } from '@/components/Location';
+import {
+    localGameLocation,
+    presenceCanRequestInvite,
+    presenceLiveInstanceTag
+} from '@/domain/friends/presence';
 import type { FriendRecord } from '@/domain/friends/types';
 import { isSameInstanceLocation } from '@/domain/instances/instanceRoster';
 import { cn } from '@/lib/utils';
-import { normalizeLocationValue, parseLocation } from '@/shared/utils/location';
+import { normalizeString } from '@/shared/utils/string';
 import { useFriendLocationTimeStore } from '@/state/friendLocationTimeStore';
 import { Badge } from '@/ui/shadcn/badge';
 import { Button } from '@/ui/shadcn/button';
 
-import { isOnlineFriend } from '../friends-locations-rows/presence';
-import type { FriendLocationRecord } from '../friends-locations-rows/types';
 import type { getFriendsLocationsDensityConfig } from '../friendsLocationsDensity';
 import {
-    normalizeFriendsLocationId as normalizeId,
+    locationTarget,
     resolveFriendGroupName,
     resolveLocationSummary,
-    resolveLocationTarget
+    friendLocationTarget,
+    summarizeLocation
 } from '../friendsLocationsRows';
 import type { FriendsLocationsSection } from '../useFriendsLocationsPageDerivedState';
 import { FriendLocationCard } from './FriendLocationCard';
@@ -32,16 +36,6 @@ import { FriendLocationCard } from './FriendLocationCard';
 type BivariantCallback<Args extends unknown[]> = {
     bivarianceHack(...args: Args): void;
 }['bivarianceHack'];
-
-type FriendsLocationsFriend = FriendRecord & {
-    ref?: FriendLocationSource | null;
-    travelingToLocation?: string | null;
-};
-
-type FriendLocationSource = Pick<
-    FriendLocationRecord,
-    '$travelingToLocation' | 'location' | 'travelingToLocation'
->;
 
 type FriendsLocationsEmptyStateProps = {
     title: string;
@@ -62,7 +56,7 @@ type FriendsLocationsCollapsibleGroupHeaderProps = {
 
 type FriendsLocationCardItemProps = {
     section: FriendsLocationsSection;
-    friend: FriendsLocationsFriend;
+    friend: FriendRecord;
     currentUserId?: string | null;
     densityConfig: ReturnType<typeof getFriendsLocationsDensityConfig>;
     canUseFriendLocation: (location: string) => boolean;
@@ -76,10 +70,6 @@ type FriendsLocationCardItemProps = {
     onRequestInvite: (friend: FriendRecord) => void;
     onSendBoop: (friend: FriendRecord) => void;
 };
-
-function isFriendLocationSource(value: unknown): value is FriendLocationSource {
-    return typeof value === 'object' && value !== null;
-}
 
 export function FriendsLocationsEmptyState({
     title,
@@ -218,48 +208,22 @@ export function FriendsLocationCardItem({
     const locationTime = useFriendLocationTimeStore(
         (state) => state.byUserId[friend.id]
     );
-    const localLocation =
-        locationTime?.source === 'gameLog' ? locationTime.location : '';
-    const locationSource = localLocation ? { location: localLocation } : friend;
-    const location = resolveLocationSummary(locationSource, t);
-    const target = resolveLocationTarget(locationSource);
+    const localLocation = localGameLocation(locationTime);
+    const location = localLocation
+        ? summarizeLocation(localLocation, null, t)
+        : resolveLocationSummary(friend, t);
+    const target = localLocation
+        ? locationTarget(localLocation)
+        : friendLocationTarget(friend);
     const rawLocation = target.rawLocation;
     const groupHint = localLocation ? '' : resolveFriendGroupName(friend);
-    const source = isFriendLocationSource(friend.ref) ? friend.ref : friend;
-    const isTravelingLocation =
-        !localLocation &&
-        normalizeId(source?.location).toLowerCase() === 'traveling';
-    const travelingLocation = localLocation
-        ? ''
-        : normalizeLocationValue(
-              source?.travelingToLocation || source?.$travelingToLocation
-          );
+    const presence = friend.$presence;
     const friendIsCurrentUser =
-        normalizeId(friend?.id || friend?.userId) ===
-        normalizeId(currentUserId);
-    const friendIsOnline = isOnlineFriend(friend);
-    const friendLocationAvailable = canUseFriendLocation(rawLocation);
-    const sectionLocation = normalizeLocationValue(section.rawLocation);
-    const sectionInstanceLocation = parseLocation(sectionLocation)
-        .isRealInstance
-        ? sectionLocation
-        : '';
-    const fallbackTimerLocation =
-        friendIsOnline &&
-        (sectionInstanceLocation ||
-            target.parsed.isRealInstance ||
-            isTravelingLocation)
-            ? isTravelingLocation
-                ? travelingLocation
-                : sectionInstanceLocation || rawLocation
-            : '';
-    let timerLocation = fallbackTimerLocation;
-    if (locationTime) {
-        timerLocation =
-            locationTime.sinceMs !== null && (localLocation || friendIsOnline)
-                ? locationTime.location
-                : '';
-    }
+        normalizeString(friend.id) === normalizeString(currentUserId);
+    const friendLocationAvailable = canUseFriendLocation(
+        localLocation ||
+            presenceLiveInstanceTag(presence, { preferTraveling: false })
+    );
 
     return (
         <FriendLocationCard
@@ -269,9 +233,7 @@ export function FriendsLocationCardItem({
                 label: location.label,
                 groupHint,
                 raw: rawLocation,
-                traveling: isTravelingLocation,
-                travelingTo: travelingLocation,
-                timerLocation
+                timerLocation: locationTime?.location ?? ''
             }}
             presentation={{
                 density: densityConfig,
@@ -281,7 +243,8 @@ export function FriendsLocationCardItem({
             capabilities={{
                 useLocation: !friendIsCurrentUser && friendLocationAvailable,
                 sendInvite: !friendIsCurrentUser && canSendInvite,
-                requestInvite: !friendIsCurrentUser && friendIsOnline,
+                requestInvite:
+                    !friendIsCurrentUser && presenceCanRequestInvite(presence),
                 boop: !friendIsCurrentUser && canBoop
             }}
             actions={{

@@ -204,7 +204,7 @@ impl GameLogIngestEngine {
                     display_name,
                 } => {
                     if let Some(input) = self.prepare_video_play(event, video_url, display_name) {
-                        output.side_effects.push(GameLogSideEffect::Video(input));
+                        self.push_video(&mut output, input);
                     }
                 }
                 GameLogEventKind::VideoSync { timestamp } => {
@@ -221,7 +221,7 @@ impl GameLogIngestEngine {
                     ) {
                         video::ProviderVideoEvent::Video(input) => {
                             if self.accept_video_url(&input.video_url) {
-                                output.side_effects.push(GameLogSideEffect::Video(*input));
+                                self.push_video(&mut output, *input);
                             }
                         }
                         video::ProviderVideoEvent::ResetNowPlaying => {
@@ -308,8 +308,8 @@ impl GameLogIngestEngine {
 
     pub fn handle_process_event(&mut self, event: GameLogProcessEvent) -> GameLogIngestOutput {
         let mut output = GameLogIngestOutput::default();
-        let should_restore_seeded_state =
-            !self.has_seen_process_event && event.process.is_game_running;
+        let first_process_event = !self.has_seen_process_event;
+        let should_restore_seeded_state = first_process_event && event.process.is_game_running;
         self.has_seen_process_event = true;
         self.state.is_game_running = event.process.is_game_running;
         self.state.is_steamvr_running = event.process.is_steamvr_running;
@@ -329,8 +329,23 @@ impl GameLogIngestEngine {
             output.side_effects.push(GameLogSideEffect::NowPlayingReset);
             output.instance_roster_changed = true;
             output.projection = Some(self.state.projection(&event.changed_at, "game-stopped"));
+        } else if first_process_event && !event.process.is_game_running {
+            self.reset_now_playing(&mut output);
         }
         output
+    }
+
+    fn push_video(&mut self, output: &mut GameLogIngestOutput, input: VideoInput) {
+        output.side_effects.push(GameLogSideEffect::Video(input));
+        if self.has_seen_process_event && !self.state.is_game_running {
+            self.reset_now_playing(output);
+        }
+    }
+
+    fn reset_now_playing(&mut self, output: &mut GameLogIngestOutput) {
+        self.state.last_video_url.clear();
+        self.state.now_playing_url.clear();
+        output.side_effects.push(GameLogSideEffect::NowPlayingReset);
     }
 
     fn ingest_location(

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { FavoriteKind } from '@/domain/favorites/types';
+import { presenceOf, presenceLiveInstanceTag } from '@/domain/friends/presence';
 import { reconcilePendingFavoriteRevision } from '@/services/favoriteRevisionReconciliationService';
 import {
     buildLocalInstanceActionGateMap,
@@ -10,7 +11,7 @@ import {
 import { useFavoriteRevisionStore } from '@/state/favoriteRevisionStore';
 
 import { normalizeFavoriteSearchValue } from './favoritesItems';
-import { resolveFavoritePresenceLocation } from './favoritesPageData';
+import type { FavoriteSeedData } from './favoritesTypes';
 import { useFavoritesActions } from './useFavoritesActions';
 import { useFavoritesCollectionsState } from './useFavoritesCollectionsState';
 import {
@@ -24,45 +25,24 @@ import { useFavoritesViewData } from './useFavoritesViewData';
 
 const FAVORITES_REVISION_DEBOUNCE_MS = 400;
 
-type FavoriteSeedRecord = Record<string, unknown> & {
-    state?: string;
-    stateBucket?: string;
-    status?: string | null;
-};
-
-function textValue(value: unknown): string {
-    return typeof value === 'string'
-        ? value.trim()
-        : String(value ?? '').trim();
-}
-
-function isFavoriteSeedRecord(value: unknown): value is FavoriteSeedRecord {
-    return Boolean(value && typeof value === 'object');
-}
-
 export function buildFavoriteGateTarget(item: {
     id: string;
     key: string;
     kind: FavoriteKind;
-    seedData?: unknown;
+    seedData?: FavoriteSeedData | null;
 }): LocalInstanceActionGateTarget | null {
-    if (item.kind !== 'friend') {
+    const presence = presenceOf(item.seedData);
+    if (item.kind !== 'friend' || !presence) {
         return null;
     }
-    const location = resolveFavoritePresenceLocation(item.seedData);
-    if (!location) {
+    if (!presenceLiveInstanceTag(presence, { preferTraveling: true })) {
         return null;
     }
-    const seed = isFavoriteSeedRecord(item.seedData) ? item.seedData : {};
-    const stateBucket =
-        textValue(seed.status).toLowerCase() === 'active'
-            ? 'online'
-            : textValue(seed.stateBucket || seed.state);
     return {
         key: item.key,
         userId: item.id,
-        location,
-        stateBucket,
+        location: presenceLiveInstanceTag(presence, { preferTraveling: false }),
+        presenceKind: presence.kind,
         isCurrentUser: false
     };
 }

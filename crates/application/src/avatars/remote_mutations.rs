@@ -66,7 +66,6 @@ pub async fn select_avatar(
     command: &str,
     detail: String,
     mutation: super::AvatarRemoteMutation,
-    response_authority_fields: &[&str],
 ) -> Result<AvatarSelectionMutationOutcome> {
     let endpoint = deps.mutation.scope().endpoint.clone();
     let (expectation, response) = deps
@@ -89,7 +88,7 @@ pub async fn select_avatar(
                     .apply_current_user_refreshed_snapshot_if_sequence(
                         expectation,
                         snapshot,
-                        response_authority_fields,
+                        serde_json::Value::Null,
                     );
             }
         }

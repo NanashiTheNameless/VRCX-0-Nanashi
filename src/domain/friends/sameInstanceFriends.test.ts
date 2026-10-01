@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { offlinePresence, onlinePresence } from '@/test/presenceFixtures';
+
 import {
     buildSameInstanceFriendGroups,
     resolveObservedPlayerUserId,
@@ -14,8 +16,7 @@ describe('sameInstanceFriends', () => {
     it('groups a locally observed friend independently of remote presence and releases it on leave', () => {
         const friend = {
             id: 'usr_friend',
-            state: 'offline',
-            location: otherLocation
+            $presence: offlinePresence
         };
         const locationTimes = {
             usr_friend: {
@@ -61,8 +62,7 @@ describe('sameInstanceFriends', () => {
     it('does not restore a departed local friend from an older UI player list', () => {
         const friend = {
             id: 'usr_friend',
-            state: 'online',
-            location: 'private'
+            $presence: onlinePresence('private')
         };
         expect(
             buildSameInstanceFriendGroups(
@@ -84,18 +84,15 @@ describe('sameInstanceFriends', () => {
     it('keeps the original two-friend threshold outside the current instance', () => {
         const first = {
             id: 'usr_1',
-            state: 'online',
-            location: otherLocation
+            $presence: onlinePresence(otherLocation)
         };
         const second = {
             id: 'usr_2',
-            state: 'online',
-            location: otherLocation
+            $presence: onlinePresence(otherLocation)
         };
         const solo = {
             id: 'usr_3',
-            state: 'online',
-            location: 'wrld_solo:789'
+            $presence: onlinePresence('wrld_solo:789')
         };
 
         expect(
@@ -114,8 +111,7 @@ describe('sameInstanceFriends', () => {
     it('keeps one friend when the current user is included in that instance', () => {
         const friend = {
             id: 'usr_friend',
-            state: 'online',
-            location: currentLocation
+            $presence: onlinePresence(currentLocation)
         };
 
         expect(
@@ -140,8 +136,7 @@ describe('sameInstanceFriends', () => {
     it('uses the observed current roster for an online friend with a hidden location', () => {
         const friend = {
             id: 'usr_hidden',
-            state: 'online',
-            location: 'private'
+            $presence: onlinePresence('private')
         };
         const lastLocation = {
             location: currentLocation,
@@ -169,8 +164,7 @@ describe('sameInstanceFriends', () => {
             resolveSameInstanceFriendLocation(
                 {
                     id: 'usr_hidden',
-                    state: 'online',
-                    location: 'private'
+                    $presence: onlinePresence('private')
                 },
                 {
                     location: currentLocation,
@@ -185,8 +179,7 @@ describe('sameInstanceFriends', () => {
             resolveSameInstanceFriendLocation(
                 {
                     id: 'usr_visible',
-                    state: 'online',
-                    location: otherLocation
+                    $presence: onlinePresence(otherLocation)
                 },
                 {
                     location: currentLocation,
@@ -199,8 +192,7 @@ describe('sameInstanceFriends', () => {
     it('does not promote an offline friend from the observed roster into the group', () => {
         const friend = {
             id: 'usr_offline',
-            state: 'offline',
-            location: 'private'
+            $presence: offlinePresence
         };
 
         expect(
@@ -211,28 +203,10 @@ describe('sameInstanceFriends', () => {
         ).toEqual([]);
     });
 
-    it('prefers current top-level presence over a stale nested ref', () => {
-        const friend = {
-            id: 'usr_friend',
-            state: 'online',
-            location: currentLocation,
-            ref: {
-                id: 'usr_friend',
-                state: 'offline',
-                location: 'offline'
-            }
-        };
-
-        expect(resolveSameInstanceFriendLocation(friend, null)).toBe(
-            currentLocation
-        );
-    });
-
     it('requires two friends in the current instance when the current user is hidden', () => {
         const friend = {
             id: 'usr_friend',
-            state: 'online',
-            location: currentLocation
+            $presence: onlinePresence(currentLocation)
         };
 
         expect(

@@ -261,8 +261,7 @@ export function UserDialogTabsSection({
         actions: {
             onRefreshLocation,
             onShowInstanceHistory: onOpenInstanceHistory
-        },
-        profile
+        }
     };
     const notesSection: UserDialogNotesSectionProps = {
         profile,

@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 
 use serde_json::json;
@@ -77,8 +78,9 @@ fn trust_level_friend_projection_preserves_new_level_in_overlay_content() {
         }
     })));
     runtime.set_friend_user_ids(["usr_friend"]);
-    runtime.ingest_friend_projection(&FriendProjection {
-        feed_entries: vec![FeedLiveEntry::TrustLevel {
+    runtime.ingest_friend_projection(
+        &FriendProjection::new(0, 0),
+        &[FeedLiveEntry::TrustLevel {
             created_at: "2026-05-31T00:01:00.000Z".into(),
             user_id: "usr_friend".into(),
             display_name: "Friend".into(),
@@ -87,8 +89,7 @@ fn trust_level_friend_projection_preserves_new_level_in_overlay_content() {
             friend_number: 7,
             owner_user_id: String::new(),
         }],
-        ..FriendProjection::new(0, 0)
-    });
+    );
 
     let entries = runtime.snapshot().entries;
     assert_eq!(entries.len(), 1);
@@ -121,22 +122,20 @@ fn player_joining_friend_feed_matches_everyone_in_instance_scope() {
             }
         }
     })));
-    let projection = FriendProjection {
-        feed_entries: vec![FeedLiveEntry::OnPlayerJoining {
-            created_at: "2026-07-13T10:00:00Z".into(),
-            user_id: "usr_joining".into(),
-            display_name: "Joining User".into(),
-            location: "traveling".into(),
-            traveling_to_location: "wrld_current:456".into(),
-            world_name: None,
-            world_id: None,
-            display_location: None,
-            owner_user_id: String::new(),
-        }],
-        ..FriendProjection::new(0, 0)
-    };
+    let projection = FriendProjection::new(0, 0);
+    let feed_entries = vec![FeedLiveEntry::OnPlayerJoining {
+        created_at: "2026-07-13T10:00:00Z".into(),
+        user_id: "usr_joining".into(),
+        display_name: "Joining User".into(),
+        location: "traveling".into(),
+        traveling_to_location: "wrld_current:456".into(),
+        world_name: None,
+        world_id: None,
+        display_location: None,
+        owner_user_id: String::new(),
+    }];
 
-    runtime.ingest_friend_projection(&projection);
+    runtime.ingest_friend_projection(&projection, &feed_entries);
 
     let entries = runtime.snapshot().entries;
     assert_eq!(entries.len(), 1);
@@ -163,27 +162,27 @@ fn friend_projection_feed_entries_do_not_restore_removed_friend_membership() {
     runtime.set_friend_user_ids(["usr_removed"]);
     let projection = FriendProjection {
         removals: vec!["usr_removed".to_string()],
-        feed_entries: vec![
-            FeedLiveEntry::Unfriend {
-                created_at: "2026-05-31T00:01:30.000Z".into(),
-                user_id: "usr_removed".into(),
-                display_name: "Removed User".into(),
-                owner_user_id: String::new(),
-            },
-            FeedLiveEntry::TrustLevel {
-                created_at: "2026-05-31T00:01:31.000Z".into(),
-                user_id: "usr_removed".into(),
-                display_name: "Removed User".into(),
-                trust_level: "Trusted User".into(),
-                previous_trust_level: "Known User".into(),
-                friend_number: 1,
-                owner_user_id: String::new(),
-            },
-        ],
         ..FriendProjection::new(0, 0)
     };
+    let feed_entries = vec![
+        FeedLiveEntry::Unfriend {
+            created_at: "2026-05-31T00:01:30.000Z".into(),
+            user_id: "usr_removed".into(),
+            display_name: "Removed User".into(),
+            owner_user_id: String::new(),
+        },
+        FeedLiveEntry::TrustLevel {
+            created_at: "2026-05-31T00:01:31.000Z".into(),
+            user_id: "usr_removed".into(),
+            display_name: "Removed User".into(),
+            trust_level: "Trusted User".into(),
+            previous_trust_level: "Known User".into(),
+            friend_number: 1,
+            owner_user_id: String::new(),
+        },
+    ];
 
-    runtime.ingest_friend_projection(&projection);
+    runtime.ingest_friend_projection(&projection, &feed_entries);
 
     let entries = runtime.snapshot().entries;
     assert_eq!(entries.len(), 1);
@@ -357,24 +356,22 @@ fn friend_projection_location_content_exposes_raw_and_display_location() {
         }
     })));
     runtime.set_friend_user_ids(["usr_location"]);
-    let projection = FriendProjection {
-        feed_entries: vec![FeedLiveEntry::Gps {
-            created_at: "2026-05-31T00:02:30.000Z".into(),
-            user_id: "usr_location".into(),
-            display_name: "Location User".into(),
-            location: "wrld_world:12345".into(),
-            world_name: "World Name".into(),
-            previous_location: String::new(),
-            time: 0,
-            group_name: "Group Name".into(),
-            world_id: None,
-            display_location: None,
-            owner_user_id: String::new(),
-        }],
-        ..FriendProjection::new(0, 0)
-    };
+    let projection = FriendProjection::new(0, 0);
+    let feed_entries = vec![FeedLiveEntry::Gps {
+        created_at: "2026-05-31T00:02:30.000Z".into(),
+        user_id: "usr_location".into(),
+        display_name: "Location User".into(),
+        location: "wrld_world:12345".into(),
+        world_name: "World Name".into(),
+        previous_location: String::new(),
+        time: 0,
+        group_name: "Group Name".into(),
+        world_id: None,
+        display_location: None,
+        owner_user_id: String::new(),
+    }];
 
-    runtime.ingest_friend_projection(&projection);
+    runtime.ingest_friend_projection(&projection, &feed_entries);
 
     let entries = runtime.snapshot().entries;
     assert_eq!(entries.len(), 1);
@@ -830,6 +827,97 @@ fn dedup_blocks_redelivery_across_surfaces() {
     assert!(runtime.ingest_candidate(first).is_some());
     assert!(runtime.ingest_candidate(duplicate).is_none());
     assert_eq!(sink.take_deliveries().len(), 1);
+}
+
+#[test]
+fn location_hidden_users_skip_gps_on_every_surface_but_keep_other_activity() {
+    let rule = json!({ "scope": "friends", "favoriteGroupKeys": "all" });
+    let surface = json!({ "types": { "GPS": rule, "Status": rule } });
+    let runtime = OverlayActivityRuntime::with_filters(OverlayActivityFilters::from_json(json!({
+        "version": 1,
+        "wrist": surface,
+        "desktop": surface,
+        "vr": surface,
+        "hmd": surface,
+        "webhook": surface,
+        "tts": surface
+    })));
+    let sink = TestOverlayActivitySink::default();
+    runtime.set_sink(sink.clone());
+    runtime.set_delivery_armed(true);
+    runtime.set_friend_user_ids(["usr_hidden", "usr_other"]);
+    runtime.set_location_hidden_user_ids(HashSet::from(["usr_hidden".to_string()]));
+    let observed = Arc::new(Mutex::new(Vec::new()));
+    let observer_entries = Arc::clone(&observed);
+    runtime.set_candidate_observer(Arc::new(move |candidate| {
+        observer_entries.lock().unwrap().push((
+            candidate.activity_type.clone(),
+            candidate.actor_user_id.clone(),
+        ));
+    }));
+
+    assert!(runtime
+        .ingest_candidate(recent_candidate("GPS", "usr_hidden"))
+        .is_none());
+    assert!(sink.take_deliveries().is_empty());
+    assert!(runtime.snapshot().entries.is_empty());
+    assert_eq!(
+        *observed.lock().unwrap(),
+        vec![("GPS".to_string(), "usr_hidden".to_string())]
+    );
+
+    assert!(runtime
+        .ingest_candidate(recent_candidate("Status", "usr_hidden"))
+        .is_some());
+    assert!(runtime
+        .ingest_candidate(recent_candidate("GPS", "usr_other"))
+        .is_some());
+    let delivered = sink
+        .take_deliveries()
+        .into_iter()
+        .map(|delivery| (delivery.entry.activity_type, delivery.entry.actor_user_id))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        delivered,
+        vec![
+            ("Status".to_string(), "usr_hidden".to_string()),
+            ("GPS".to_string(), "usr_other".to_string()),
+        ]
+    );
+}
+
+#[test]
+fn wrist_persistence_survives_location_hidden_filtering() {
+    let path = std::env::temp_dir().join(format!(
+        "vrcx-overlay-merge-{}-{}.json",
+        std::process::id(),
+        chrono::Utc::now().timestamp_nanos_opt().unwrap()
+    ));
+    let rule = json!({ "scope": "friends", "favoriteGroupKeys": "all" });
+    let filters = OverlayActivityFilters::from_json(json!({
+        "version": 1,
+        "wrist": { "types": { "GPS": rule, "Status": rule } }
+    }));
+    let runtime =
+        OverlayActivityRuntime::with_filters_and_persistence(filters.clone(), Some(path.clone()));
+    runtime.set_friend_user_ids(["usr_hidden"]);
+    runtime.set_location_hidden_user_ids(HashSet::from(["usr_hidden".to_string()]));
+    assert!(runtime
+        .ingest_candidate(recent_candidate("GPS", "usr_hidden"))
+        .is_none());
+    let entry = runtime
+        .ingest_candidate(recent_candidate("Status", "usr_hidden"))
+        .expect("non-location activity remains visible");
+    drop(runtime);
+
+    let restored =
+        OverlayActivityRuntime::with_filters_and_persistence(filters, Some(path.clone()));
+    let entries = restored.snapshot().entries;
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0].activity_type, "Status");
+    assert_eq!(entries[0].actor_user_id, "usr_hidden");
+    assert_eq!(entries[0].sequence, entry.sequence);
+    std::fs::remove_file(path).unwrap();
 }
 
 fn candidate(activity_type: &str, user_id: &str) -> OverlayActivityCandidate {

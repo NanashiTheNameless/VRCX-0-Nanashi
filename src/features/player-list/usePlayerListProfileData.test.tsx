@@ -7,8 +7,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({ getUser: vi.fn(), knownUsers: {} }));
 
-vi.mock('@/repositories/vrchatFriendRepository', () => ({
-    default: { getUser: mocks.getUser }
+vi.mock('@/repositories/userProfileRepository', () => ({
+    default: { getUserProfile: mocks.getUser }
 }));
 vi.mock('@/lib/useKnownUser', () => ({
     useKnownUserFacts: () => mocks.knownUsers
@@ -37,12 +37,10 @@ afterEach(async () => {
 describe('usePlayerListProfileData', () => {
     it('reuses normalized query profiles across renders and follows cache updates', async () => {
         mocks.getUser.mockResolvedValue({
-            json: {
-                id: 'usr_one',
-                displayName: 'One',
-                tags: ['system_trust_basic'],
-                bioLinks: ['https://example.com']
-            }
+            id: 'usr_one',
+            displayName: 'One',
+            tags: ['system_trust_basic'],
+            bioLinks: ['https://example.com']
         });
         const props = {
             currentUserId: 'usr_self',

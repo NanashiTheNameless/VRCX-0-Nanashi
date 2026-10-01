@@ -4,7 +4,7 @@ use rmcp::model::CallToolResult;
 use rmcp::{schemars, tool, tool_router};
 use serde::{Deserialize, Serialize};
 use vrcx_0_contracts::social_aggregates;
-use vrcx_0_core::location::parse_location;
+use vrcx_0_core::presence::PresenceView;
 
 use crate::server::VrcxMcpServer;
 use crate::{McpFriendMemo, McpLocalModeration};
@@ -14,6 +14,7 @@ use super::common::{
     resolve_optional_target_or_result, resolve_target_or_result, structured_result,
     TargetResolutionOutcome, TimeWindowParams, WithResolution,
 };
+use super::presence::presence_location_and_platform;
 use vrcx_0_core::OwnerId;
 
 #[tool_router(router = friends_tool_router, vis = "pub(crate)")]
@@ -334,24 +335,27 @@ impl VrcxMcpServer {
             .runtime
             .realtime_runtime
             .friend_snapshot()
-            .and_then(|snapshot| snapshot.friends_by_id.get(&user_id).cloned())
-            .map(|friend| {
-                let parsed = parse_location(&friend.location);
+            .and_then(|snapshot| {
+                let friend = snapshot.friends_by_id.get(&user_id).cloned()?;
+                let view = snapshot
+                    .presence_by_id
+                    .get(&user_id)
+                    .map_or(PresenceView::Offline, |entry| entry.view.clone());
+                Some((friend, view))
+            })
+            .map(|(friend, view)| {
+                let (parsed, platform) = presence_location_and_platform(&view, &friend);
                 let display_name = friend.display_name_or_id();
                 FriendProfileCurrent {
                     user_id: friend.id,
                     display_name,
-                    state: friend.state,
-                    location: friend.location,
+                    state: view.section().as_str().into(),
+                    location: parsed.tag,
                     world_id: parsed.world_id,
                     status: friend.status,
                     status_description: friend.status_description,
                     bio: latest_bio.clone().unwrap_or_default(),
-                    platform: if friend.platform.is_empty() {
-                        friend.last_platform
-                    } else {
-                        friend.platform
-                    },
+                    platform,
                 }
             });
         let note = self

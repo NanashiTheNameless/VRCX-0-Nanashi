@@ -1,7 +1,7 @@
 use vrcx_0_contracts::realtime::{RealtimePersistenceBatch, SelfProfileField, SelfProfileLogEntry};
 
 use super::state::RealtimeCurrentUserStateSnapshot;
-use super::utils::EventTime;
+use crate::realtime::event_time::EventTime;
 
 pub(super) fn append_self_profile_log_entries(
     previous: &RealtimeCurrentUserStateSnapshot,

@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use super::*;
 use serde_json::json;
-use vrcx_0_core::json::RawJson;
+use vrcx_0_application_realtime::FriendRosterSnapshot;
 
 #[test]
 fn typed_favorite_membership_normalizes_ids_and_prefixes_local_groups() {
@@ -141,7 +141,7 @@ fn friend_rebaseline_emits_full_output_without_storing_it_in_phase() {
         stale: false,
         count: 1,
         detail: "Friends ready.".into(),
-        snapshot: Some(RawJson::from(json!({"friendsById": {}}))),
+        snapshot: Some(FriendRosterSnapshot::default()),
         friend_log_changed: false,
     };
 
@@ -154,8 +154,8 @@ fn friend_rebaseline_emits_full_output_without_storing_it_in_phase() {
     assert_eq!(committed.count, 1);
     assert_eq!(committed.detail, "Friends ready.");
     assert_eq!(
-        committed.snapshot.as_ref().unwrap().as_value(),
-        &json!({"friendsById": {}})
+        committed.snapshot.as_ref(),
+        Some(&FriendRosterSnapshot::default())
     );
 
     let emitted = commit_friend_baseline(&mut state, 1, output);
@@ -243,9 +243,7 @@ fn combined_snapshot_reattaches_current_friend_and_favorites_baselines() {
             stale: false,
             count: 1,
             detail: "Friends ready.".into(),
-            snapshot: Some(RawJson::from(json!({
-                "orderedFriendIds": ["usr_friend"]
-            }))),
+            snapshot: Some(FriendRosterSnapshot::default()),
             friend_log_changed: true,
         },
     );
@@ -271,16 +269,11 @@ fn combined_snapshot_reattaches_current_friend_and_favorites_baselines() {
             endpoint: "https://api.example.test".into(),
             websocket: "wss://ws.example.test".into(),
             friend_count: 1,
-            snapshot: json!({
-                "currentUserId": "usr_self",
-                "friendsById": {"usr_friend": {"id": "usr_friend"}},
-                "orderedFriendIds": ["usr_friend"],
-                "onlineIds": [],
-                "activeIds": [],
-                "offlineIds": ["usr_friend"],
-                "detail": ""
-            })
-            .into(),
+            snapshot: FriendRosterSnapshot {
+                current_user_id: "usr_self".into(),
+                generation: 1,
+                ..FriendRosterSnapshot::default()
+            },
         }),
         state.favorites_baseline.clone(),
     );

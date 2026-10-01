@@ -2,9 +2,9 @@ use std::sync::{Arc, Mutex};
 
 use vrcx_0_application::auth::AuthCredentialStore;
 use vrcx_0_application_activity::notification::{
-    extract_file_version, fallback_file_version, load_overlay_activity_filters,
-    normalize_avatar_image_url_128, CachedNotificationUserImageResolver, NotificationConfig,
-    RealtimeUserImageResolverSlot,
+    extract_file_version, fallback_file_version, load_location_hidden_user_ids,
+    load_overlay_activity_filters, normalize_avatar_image_url_128,
+    CachedNotificationUserImageResolver, NotificationConfig, RealtimeUserImageResolverSlot,
 };
 #[cfg_attr(target_os = "macos", allow(unused_imports))]
 use vrcx_0_application_activity::{
@@ -158,6 +158,10 @@ impl DesktopRuntimeServices {
             .set_filters(load_overlay_activity_filters(
                 self.notification_config.as_ref(),
             ));
+        self.overlay_activity
+            .set_location_hidden_user_ids(load_location_hidden_user_ids(
+                self.notification_config.as_ref(),
+            ));
     }
 
     pub fn set_overlay_activity_extra_sink(&self, extra_sink: Arc<dyn OverlayActivitySink>) {
@@ -259,7 +263,7 @@ impl DesktopRuntimeServices {
             return;
         };
         for patch in &projection.patches {
-            if !StateBucket::Online.matches(&patch.patch.state) {
+            if patch.presence.view.section() != StateBucket::Online {
                 continue;
             }
             let user_id = patch.user_id.as_str();

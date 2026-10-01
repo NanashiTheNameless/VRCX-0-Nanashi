@@ -9,12 +9,12 @@ use vrcx_0_contracts::feed_live::FeedLiveEntry;
 use vrcx_0_core::user_facts::UserFactMergeOptions;
 
 use crate::realtime::{
-    FriendProjection, PendingOfflineTimerAction, RealtimeCurrentUserOutput,
-    RealtimeCurrentUserProjection, RealtimeFriendOutput, RealtimeInstanceClosedOutput,
-    RealtimeNotificationOutput, RealtimeSessionContext,
+    FriendProjection, RealtimeCurrentUserOutput, RealtimeFriendOutput,
+    RealtimeInstanceClosedOutput, RealtimeNotificationOutput, RealtimeSessionContext,
 };
 
 use super::RealtimeHostRuntime;
+use vrcx_0_core::json::RawJsonObject;
 use vrcx_0_core::OwnerId;
 
 pub(super) enum FriendOutputApplyOutcome {
@@ -99,21 +99,14 @@ impl RealtimeHostRuntime {
         if feed_entries.is_empty() {
             return;
         }
-        let mut projection = FriendProjection::new(generation, baseline_revision);
-        projection.feed_entries = feed_entries;
+        let projection = FriendProjection::new(generation, baseline_revision);
         if !self.is_friend_projection_current(&projection) {
-            self.friends
-                .clear_baseline_if_revision(projection.generation, projection.baseline_revision);
             return;
         }
         if let Some(activity_sink) = &self.deps.activity_sink {
-            activity_sink.ingest_friend_projection(&projection);
+            activity_sink.ingest_friend_projection(&projection, &feed_entries);
         }
-        self.emit_feed_entries(
-            generation,
-            owner_user_id,
-            std::mem::take(&mut projection.feed_entries),
-        );
+        self.emit_feed_entries(generation, owner_user_id, feed_entries);
     }
 
     pub(super) fn apply_friend_output_owned(
@@ -121,26 +114,23 @@ impl RealtimeHostRuntime {
         _owner: &FriendOwnerGuard<'_>,
         mut output: RealtimeFriendOutput,
     ) -> FriendOutputApplyOutcome {
-        let timer_action = output.timer_action.clone();
+        let wake = output.wake.take();
         let profile_refetch_user_ids = output.profile_refetch_user_ids.clone();
         let icon_changes = std::mem::take(&mut output.icon_changes);
-        let mut projection = output.projection.clone();
+        let projection = output.projection.clone();
         let projection_generation = projection.generation;
         if !self.is_friend_projection_current(&projection) {
-            self.friends
-                .clear_baseline_if_revision(projection.generation, projection.baseline_revision);
             return FriendOutputApplyOutcome::Stale;
         }
-        self.retain_current_instance_joining_entries(
-            &mut projection,
-            output.owner_user_id.as_str(),
-        );
+        let mut joining = std::mem::take(&mut output.joining);
+        self.retain_current_instance_joining_entries(&mut joining, output.owner_user_id.as_str());
+        let mut live_feed = output.persistence.feed_entries.clone();
         let feed_persistence_disabled = self.feed_persistence_disabled.load(Ordering::Relaxed);
         if feed_persistence_disabled {
             output.persistence.feed_entries.clear();
         }
-        let mut world_name_fetch_ids =
-            self.enrich_projection_world_names(&mut projection.feed_entries);
+        let mut world_name_fetch_ids = self.enrich_projection_world_names(&mut live_feed);
+        world_name_fetch_ids.extend(self.enrich_projection_world_names(&mut joining));
         world_name_fetch_ids.extend(self.enrich_persistence_world_names(&mut output.persistence));
         let persisted = match self
             .deps
@@ -162,27 +152,25 @@ impl RealtimeHostRuntime {
                     .sync
                     .record_failure("realtimeFriends", error.to_string());
                 if !feed_persistence_disabled {
-                    projection.feed_entries.clear();
+                    live_feed.clear();
+                    joining.clear();
                 }
                 false
             }
         };
         if let Some(activity_sink) = &self.deps.activity_sink {
-            activity_sink.ingest_friend_projection(&projection);
+            activity_sink
+                .ingest_friend_projection(&projection, &[live_feed.as_slice(), &joining].concat());
         }
-        projection
-            .feed_entries
-            .retain(|entry| !is_player_joining_entry(entry));
-        let feed_entries = std::mem::take(&mut projection.feed_entries);
         if !projection.patches.is_empty() || !projection.removals.is_empty() {
             let endpoint = self.active_endpoint();
             if !projection.removals.is_empty() {
-                self.user_cache
+                self.user_facts
                     .remove_users(&endpoint, &projection.removals);
             }
             if !projection.patches.is_empty() {
                 let changed = self.collect_friend_record_cache_changes(
-                    projection.patches.iter().map(|patch| &patch.patch),
+                    projection.patches.iter().map(|patch| &patch.record),
                     &UserFactMergeOptions {
                         endpoint,
                         source: "realtime".into(),
@@ -195,20 +183,10 @@ impl RealtimeHostRuntime {
             }
         }
         self.emit_friend_projection(projection);
-        self.emit_feed_entries(projection_generation, &output.owner_user_id, feed_entries);
+        self.emit_feed_entries(projection_generation, &output.owner_user_id, live_feed);
 
-        if let PendingOfflineTimerAction::Schedule {
-            user_id,
-            token,
-            delay,
-        } = timer_action
-        {
-            let runtime = Arc::clone(self);
-            self.deps.tasks.spawn(async move {
-                tokio::time::sleep(delay).await;
-                let now = chrono::Utc::now().to_rfc3339();
-                runtime.fire_pending_offline(&user_id, token, now);
-            });
+        if let Some(wake) = wake {
+            self.schedule_friend_wake(projection_generation, wake);
         }
         self.schedule_friend_profile_refetches(projection_generation, profile_refetch_user_ids);
         self.schedule_friend_icon_changes(projection_generation, icon_changes);
@@ -220,13 +198,13 @@ impl RealtimeHostRuntime {
 
     fn retain_current_instance_joining_entries(
         &self,
-        projection: &mut FriendProjection,
+        joining: &mut Vec<FeedLiveEntry>,
         current_user_id: &str,
     ) {
-        if !projection.feed_entries.iter().any(is_player_joining_entry) {
+        if joining.is_empty() {
             return;
         }
-        let local_game_context = self.deps.local_game_context.snapshot();
+        let local_game_context = self.local_game_context();
         let (is_game_running, current_location, player_user_ids) = match &local_game_context {
             LocalGameContextSnapshot::Unavailable => (false, "", &[][..]),
             LocalGameContextSnapshot::Available {
@@ -241,7 +219,7 @@ impl RealtimeHostRuntime {
             ),
         };
         let current_user_id = current_user_id.trim();
-        projection.feed_entries.retain(|entry| {
+        joining.retain(|entry| {
             let FeedLiveEntry::OnPlayerJoining {
                 user_id,
                 traveling_to_location,
@@ -342,6 +320,7 @@ impl RealtimeHostRuntime {
     pub(super) fn apply_current_user_output(&self, mut output: RealtimeCurrentUserOutput) {
         self.enrich_current_user_location_output(&mut output);
         let projection = output.projection;
+        let snapshot = output.snapshot;
         match self
             .deps
             .store
@@ -366,7 +345,7 @@ impl RealtimeHostRuntime {
             .active_current_user_context()
             .filter(|active| active.generation == projection.generation)
         {
-            self.apply_current_user_snapshot_sink(&active, &projection);
+            self.apply_current_user_snapshot_sink(&active, &snapshot);
         }
         self.deps
             .event_bus
@@ -376,16 +355,13 @@ impl RealtimeHostRuntime {
     pub(super) fn apply_current_user_snapshot_sink(
         &self,
         active: &ActiveRealtimeContext,
-        projection: &RealtimeCurrentUserProjection,
+        snapshot: &RawJsonObject,
     ) {
-        if active.generation != projection.generation {
-            return;
-        }
         if let Some(sink) = &self.deps.current_user_snapshot_sink {
             sink(
                 &active.session,
                 active.auth_scope_generation,
-                Value::Object(projection.snapshot.clone().into_map()),
+                Value::Object(snapshot.clone().into_map()),
             );
         }
     }
@@ -437,8 +413,4 @@ impl RealtimeHostRuntime {
             .emit_realtime_instance_closed_projection(projection);
         self.emit_feed_entries(generation, owner_user_id, vec![feed_entry]);
     }
-}
-
-fn is_player_joining_entry(entry: &FeedLiveEntry) -> bool {
-    matches!(entry, FeedLiveEntry::OnPlayerJoining { .. })
 }

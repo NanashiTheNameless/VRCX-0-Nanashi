@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { offlinePresence, onlinePresence } from '@/test/presenceFixtures';
+
 import {
     languageCodeLabel,
     languageTooltipLabel,
@@ -23,10 +25,12 @@ describe('friendListDisplay', () => {
         const active = resolveFriendStatusMeta({
             status: 'active',
             statusDescription: '',
-            state: 'online'
+            $presence: onlinePresence()
         });
         expect(active.label).toBe('');
-        expect(active.showIndicator).toBe(true);
+        expect(active.statusDotClassName).toBe(
+            'user-status-indicator online bg-[var(--status-online)]'
+        );
 
         const custom = resolveFriendStatusMeta({
             status: 'busy',
@@ -34,16 +38,16 @@ describe('friendListDisplay', () => {
         });
         expect(custom.label).toBe('Do not disturb');
 
-        expect(resolveFriendStatusMeta(null).showIndicator).toBe(false);
+        expect(resolveFriendStatusMeta(null).statusDotClassName).toBe('');
     });
 
     it('ranks join me, active, ask me, busy, then offline friends for sorting', () => {
         const ranks = [
-            { status: 'join me', state: 'online' },
-            { status: 'active', state: 'online' },
-            { status: 'ask me', state: 'online' },
-            { status: 'busy', state: 'online' },
-            { status: 'active', state: 'offline' }
+            { status: 'join me', $presence: onlinePresence() },
+            { status: 'active', $presence: onlinePresence() },
+            { status: 'ask me', $presence: onlinePresence() },
+            { status: 'busy', $presence: onlinePresence() },
+            { status: 'active', $presence: offlinePresence }
         ].map((friend) => resolveFriendStatusMeta(friend).sortRank);
 
         expect([...ranks].sort((left, right) => left - right)).toEqual(ranks);

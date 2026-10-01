@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 
 import {
     canRequestInviteFromFeedFriend,
-    normalizeFeedId as normalizeId,
-    resolveFeedCurrentInviteLocation as resolveCurrentInviteLocation
+    normalizeFeedId as normalizeId
 } from '@/components/feed/feedRows';
 import type {
     FeedFriendActionTarget,
     FeedFriendActions,
     FeedLocationActionPayload
 } from '@/components/feed/feedTypes';
+import { useCurrentInviteContext } from '@/lib/useCurrentInviteContext';
 import { openWorldDialog } from '@/services/dialogService';
 import {
     sendBoopToUser,
@@ -23,7 +23,7 @@ import {
     removeFeedHiddenUserPreference
 } from '@/services/preferencesService';
 import { toast } from '@/services/toastService';
-import { checkCanInvite, checkCanInviteSelf } from '@/shared/utils/invite';
+import { checkCanInviteSelf } from '@/shared/utils/invite';
 import { parseLocation } from '@/shared/utils/location';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useModalStore } from '@/state/modalStore';
@@ -40,15 +40,6 @@ export function useFeedFriendActions(): FeedFriendActions {
     const currentUserSnapshot = useRuntimeStore(
         (state) => state.auth.currentUserSnapshot
     );
-    const runtimeCurrentLocation = useRuntimeStore(
-        (state) => state.gameState.currentLocation
-    );
-    const runtimeCurrentDestination = useRuntimeStore(
-        (state) => state.gameState.currentDestination
-    );
-    const isGameRunning = useRuntimeStore(
-        (state) => state.gameState.isGameRunning
-    );
     const friendsById = useFriendRosterStore((state) => state.friendsById);
     const feedHiddenUsers = usePreferencesStore(
         (state) => state.feedHiddenUsers
@@ -64,35 +55,11 @@ export function useFeedFriendActions(): FeedFriendActions {
         () => new Set(feedHiddenUsers),
         [feedHiddenUsers]
     );
-    const currentInviteLocation = useMemo(
-        () =>
-            resolveCurrentInviteLocation(
-                {
-                    currentLocation: runtimeCurrentLocation,
-                    currentDestination: runtimeCurrentDestination,
-                    isGameRunning
-                },
-                currentUserSnapshot
-            ),
-        [
-            currentUserSnapshot,
-            isGameRunning,
-            runtimeCurrentDestination,
-            runtimeCurrentLocation
-        ]
-    );
-    const canInviteFromCurrentLocation = useMemo(
-        () =>
-            checkCanInvite(currentInviteLocation, {
-                currentUserId: normalizedCurrentUserId,
-                lastLocationStr: currentInviteLocation,
-                cachedInstances: new Map()
-            }),
-        [currentInviteLocation, normalizedCurrentUserId]
-    );
-    const canSendInviteFromFeed = Boolean(
-        isGameRunning && currentInviteLocation && canInviteFromCurrentLocation
-    );
+    const {
+        currentInviteLocation,
+        canInviteFromCurrentLocation,
+        canSendInvite: canSendInviteFromFeed
+    } = useCurrentInviteContext();
     const canBoopFromFeed = Boolean(currentUserSnapshot?.isBoopingEnabled);
 
     const isFeedUserHidden = useCallback(
@@ -268,7 +235,7 @@ export function useFeedFriendActions(): FeedFriendActions {
             if (!friendId || friendId === normalizedCurrentUserId) {
                 return;
             }
-            if (!canRequestInviteFromFeedFriend(friend, currentUserSnapshot)) {
+            if (!canRequestInviteFromFeedFriend(friend)) {
                 toast.add({
                     type: 'error',
                     title: t(
@@ -307,7 +274,7 @@ export function useFeedFriendActions(): FeedFriendActions {
                 });
             }
         },
-        [confirm, currentUserSnapshot, normalizedCurrentUserId, t]
+        [confirm, normalizedCurrentUserId, t]
     );
 
     const sendFeedFriendBoop = useCallback(

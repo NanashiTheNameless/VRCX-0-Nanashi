@@ -5,7 +5,7 @@ use serde_json::{json, Map};
 use vrcx_0_application_core::{
     RuntimeTask, RuntimeTaskExecutor, RuntimeTaskHandle, TaskSupervisor,
 };
-use vrcx_0_core::friends::FriendRecord;
+use vrcx_0_core::friends::{FriendBaselineEntry, FriendBaselinePresence, FriendRecord};
 use vrcx_0_persistence::realtime::{
     write_realtime_batch, FriendLogUpsert, RealtimePersistenceBatch,
 };
@@ -36,18 +36,23 @@ impl RuntimeTaskHandle for FinishedTaskHandle {
     fn join_or_abort(&mut self, _timeout: Duration) {}
 }
 
-fn friend(id: &str, display_name: &str, state_bucket: &str, location: &str) -> FriendRecord {
-    FriendRecord {
-        id: id.into(),
-        display_name: display_name.into(),
-        state: state_bucket.into(),
-        location: location.into(),
-        status: "active".into(),
-        ..FriendRecord::default()
+fn friend(id: &str, display_name: &str, state_bucket: &str, location: &str) -> FriendBaselineEntry {
+    FriendBaselineEntry {
+        record: FriendRecord {
+            id: id.into(),
+            display_name: display_name.into(),
+            status: "active".into(),
+            ..FriendRecord::default()
+        },
+        presence: FriendBaselinePresence {
+            state: state_bucket.into(),
+            location: location.into(),
+            ..FriendBaselinePresence::default()
+        },
     }
 }
 
-fn seed_live_friends(runtime: &mut McpRuntime, friends: HashMap<String, FriendRecord>) {
+fn seed_live_friends(runtime: &mut McpRuntime, friends: HashMap<String, FriendBaselineEntry>) {
     runtime.tasks.set_executor(DiscardTaskExecutor);
     runtime
         .realtime_runtime
@@ -342,18 +347,21 @@ async fn online_friends_tool_filters_sorts_and_projects_live_presence() {
     let mut alpha = friend(
         "usr_alpha",
         "Alpha",
-        "active",
+        "online",
         "wrld_alpha:123~group(grp_alpha)",
     );
-    alpha.last_platform = "android".into();
+    alpha.record.last_platform = "android".into();
     alpha
+        .record
         .extra
         .insert("world_name".into(), json!("Alpha World"));
     let mut zulu = friend("usr_zulu", "Zulu", "online", "wrld_zulu:456");
-    zulu.platform = "standalonewindows".into();
-    zulu.extra.insert("worldName".into(), json!("Zulu World"));
-    friends.insert(alpha.id.clone(), alpha);
-    friends.insert(zulu.id.clone(), zulu);
+    zulu.presence.platform = "standalonewindows".into();
+    zulu.record
+        .extra
+        .insert("worldName".into(), json!("Zulu World"));
+    friends.insert(alpha.record.id.clone(), alpha);
+    friends.insert(zulu.record.id.clone(), zulu);
     friends.insert(
         "usr_offline".into(),
         friend("usr_offline", "Offline", "offline", "offline"),
@@ -383,7 +391,7 @@ async fn online_friends_tool_honors_custom_states_and_location_redaction() {
     let offline = friend("usr_offline", "Offline", "offline", "offline");
     seed_live_friends(
         &mut runtime,
-        [(offline.id.clone(), offline)].into_iter().collect(),
+        [(offline.record.id.clone(), offline)].into_iter().collect(),
     );
     let tools = spawn_in_process_tools(runtime).await.unwrap();
 
