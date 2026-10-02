@@ -155,7 +155,7 @@ async fn execute_once(
     policy: Policy,
 ) -> Result<Response, Error> {
     let started = Instant::now();
-    let timeout = *request.timeout();
+    let timeout = request.timeout().copied();
     let origin = request.url().origin().ascii_serialization();
     let tcp = tcp_version(request.url(), policy);
     let use_h3 = supports_h3(request.url(), policy.explicit_proxy).await;
@@ -225,7 +225,7 @@ pub async fn execute(
     policy: Policy,
 ) -> Result<Response, Error> {
     let started = Instant::now();
-    let timeout = *request.timeout();
+    let timeout = request.timeout().copied();
     for redirect_count in 0..=policy.max_redirects {
         if let Some(timeout) = timeout {
             *request.timeout_mut() = Some(timeout.checked_sub(started.elapsed()).ok_or(
