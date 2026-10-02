@@ -10,11 +10,10 @@ use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 
 use chrono::{DateTime, SecondsFormat, Utc};
-use serde_json::{json, Value};
-use vrcx_0_application_activity::{
-    OverlayActivityCandidate, OverlayActivityFavoriteSubject, OverlayActivityRuntime,
-};
+use serde_json::json;
+use vrcx_0_application_activity::ActivityRouter;
 use vrcx_0_application_core::{RuntimeAuthScope, TaskSupervisor};
+use vrcx_0_contracts::activity::{ActivityEvent, ActivityKind, ActivitySubject};
 use vrcx_0_contracts::reminders::{Reminder, ReminderTrigger};
 use vrcx_0_persistence::config::ConfigRepository;
 
@@ -30,7 +29,7 @@ static NEXT_ID: AtomicU32 = AtomicU32::new(0);
 pub struct ReminderRuntime {
     config: ConfigRepository,
     auth: RuntimeAuthScope,
-    overlay: OverlayActivityRuntime,
+    overlay: ActivityRouter,
     reminders: Mutex<Vec<Reminder>>,
 }
 
@@ -38,7 +37,7 @@ impl ReminderRuntime {
     pub(crate) fn new(
         config: ConfigRepository,
         auth: RuntimeAuthScope,
-        overlay: OverlayActivityRuntime,
+        overlay: ActivityRouter,
     ) -> Arc<Self> {
         let reminders = config
             .get_json(REMINDERS_KEY, json!([]))
@@ -195,8 +194,8 @@ impl ReminderRuntime {
         (scope.active && !owner.is_empty()).then(|| owner.to_string())
     }
 
-    fn observe(&self, candidate: &OverlayActivityCandidate, now: DateTime<Utc>) {
-        if candidate.activity_type == "Reminder" || is_stale(&candidate.created_at, now) {
+    fn observe(&self, candidate: &ActivityEvent, now: DateTime<Utc>) {
+        if candidate.kind == ActivityKind::Reminder || is_stale(&candidate.created_at, now) {
             return;
         }
         let Some(owner) = self.current_owner() else {
@@ -222,7 +221,7 @@ impl ReminderRuntime {
         };
         // Deliver with no lock held: ingesting re-enters the observer.
         for (reminder, detail) in fired {
-            self.deliver(&reminder, &detail, candidate.actor_user_id.clone(), now);
+            self.deliver(&reminder, &detail, candidate.actor.user_id.clone(), now);
         }
     }
 
@@ -281,21 +280,21 @@ impl ReminderRuntime {
             format!("{detail}: {}", reminder.message)
         };
         let created_at = now.to_rfc3339_opts(SecondsFormat::Millis, true);
-        self.overlay.ingest_candidate(OverlayActivityCandidate {
-            source_id: format!("reminder:{}:{}", reminder.id, reminder.fire_count),
-            activity_type: "Reminder".into(),
+        let mut event = ActivityEvent::new(
+            ActivityKind::Reminder,
+            format!("reminder:{}:{}", reminder.id, reminder.fire_count),
             created_at,
-            actor_display_name: trigger_display_name(&reminder.trigger).to_string(),
-            favorite_subject: if actor_user_id.is_empty() {
-                OverlayActivityFavoriteSubject::None
-            } else {
-                OverlayActivityFavoriteSubject::UserId(actor_user_id.clone())
-            },
-            actor_user_id,
-            current_instance: false,
-            payload: json!({"title": "Reminder", "message": message, "reminderId": reminder.id})
-                .into(),
-        });
+        );
+        event.actor.display_name = trigger_display_name(&reminder.trigger).to_string();
+        event.subject = if actor_user_id.is_empty() {
+            ActivitySubject::None
+        } else {
+            ActivitySubject::User(actor_user_id.clone())
+        };
+        event.actor.user_id = actor_user_id;
+        event.facts.title = "Reminder".to_string();
+        event.facts.message = message;
+        self.overlay.ingest(event);
     }
 }
 
@@ -340,53 +339,44 @@ fn trigger_display_name(trigger: &ReminderTrigger) -> &str {
     }
 }
 
-fn payload_text<'a>(candidate: &'a OverlayActivityCandidate, key: &str) -> &'a str {
-    candidate
-        .payload
-        .get(key)
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .unwrap_or_default()
-}
-
 /// What happened, when `candidate` satisfies `trigger`.
-fn event_detail(trigger: &ReminderTrigger, candidate: &OverlayActivityCandidate) -> Option<String> {
+fn event_detail(trigger: &ReminderTrigger, candidate: &ActivityEvent) -> Option<String> {
     let (user_id, stored_name, wanted) = match trigger {
         ReminderTrigger::FriendOnline {
             user_id,
             display_name,
-        } => (user_id, display_name, "Online"),
+        } => (user_id, display_name, ActivityKind::Online),
         ReminderTrigger::FriendOffline {
             user_id,
             display_name,
-        } => (user_id, display_name, "Offline"),
+        } => (user_id, display_name, ActivityKind::Offline),
         ReminderTrigger::FriendLocation {
             user_id,
             display_name,
             ..
-        } => (user_id, display_name, "GPS"),
+        } => (user_id, display_name, ActivityKind::Gps),
         ReminderTrigger::PlayerJoined {
             user_id,
             display_name,
-        } => (user_id, display_name, "OnPlayerJoined"),
+        } => (user_id, display_name, ActivityKind::OnPlayerJoined),
         ReminderTrigger::Time { .. } => return None,
     };
-    if candidate.activity_type != wanted || candidate.actor_user_id != *user_id {
+    if candidate.kind != wanted || candidate.actor.user_id != *user_id {
         return None;
     }
-    let name = if candidate.actor_display_name.trim().is_empty() {
+    let name = if candidate.actor.display_name.trim().is_empty() {
         stored_name.as_str()
     } else {
-        candidate.actor_display_name.trim()
+        candidate.actor.display_name.trim()
     };
-    let world_name = payload_text(candidate, "worldName");
+    let world_name = candidate.facts.world_name.trim();
     Some(match trigger {
         ReminderTrigger::FriendOnline { .. } => format!("{name} is online"),
         ReminderTrigger::FriendOffline { .. } => format!("{name} went offline"),
         ReminderTrigger::FriendLocation { world_id, .. } => {
             if !world_id.is_empty() {
-                let location = payload_text(candidate, "location");
-                let actual = vrcx_0_core::location::world_id_from_location(location);
+                let actual =
+                    vrcx_0_core::location::world_id_from_location(&candidate.facts.location);
                 if actual != *world_id {
                     return None;
                 }

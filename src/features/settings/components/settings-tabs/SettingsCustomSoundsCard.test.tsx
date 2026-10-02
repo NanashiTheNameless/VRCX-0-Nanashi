@@ -14,7 +14,8 @@ const mocks = vi.hoisted(() => ({
     get: vi.fn(),
     set: vi.fn(),
     pick: vi.fn(),
-    preview: vi.fn()
+    preview: vi.fn(),
+    definitions: vi.fn()
 }));
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key.split('.').at(-1) })
@@ -25,7 +26,8 @@ vi.mock('@/repositories/configRepository', () => ({
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
         appOpenFileSelectorDialog: mocks.pick,
-        appNotificationSoundTest: mocks.preview
+        appNotificationSoundTest: mocks.preview,
+        appOverlayActivityDefinitionsGet: mocks.definitions
     }
 }));
 vi.mock('../SettingsCard', () => ({
@@ -72,6 +74,10 @@ beforeEach(() => {
     mocks.set.mockResolvedValue(null);
     mocks.pick.mockResolvedValue('/sounds/new.ogg');
     mocks.preview.mockResolvedValue(null);
+    mocks.definitions.mockResolvedValue([
+        { key: 'OnPlayerJoined' },
+        { key: 'Online' }
+    ]);
 });
 afterEach(cleanup);
 

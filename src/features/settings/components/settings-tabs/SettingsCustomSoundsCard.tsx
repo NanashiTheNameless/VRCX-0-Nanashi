@@ -2,11 +2,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { commands } from '@/platform/tauri/bindings';
+import type { ActivityTypeDefinition } from '@/platform/tauri/bindings';
 import configRepository from '@/repositories/configRepository';
-import {
-    OVERLAY_ACTIVITY_TYPE_DEFINITIONS,
-    overlayActivityTypeLabelKey
-} from '@/shared/constants/overlayActivityFilters';
 import { Button } from '@/ui/shadcn/button';
 import { Input } from '@/ui/shadcn/input';
 import {
@@ -36,15 +33,17 @@ export function SettingsCustomSoundsCard() {
     const [saved, setSaved] = useState('');
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
+    const [definitions, setDefinitions] = useState<ActivityTypeDefinition[]>(
+        []
+    );
     const [eventType, setEventType] = useState('OnPlayerJoined');
     const [audience, setAudience] = useState('anyone');
     const ruleKey = eventType + (audience === 'anyone' ? '' : `@${audience}`);
     const eventLabel = (key: string) =>
-        t(
-            `dialog.wrist_feed_notifications.types.${overlayActivityTypeLabelKey(key)}`,
-            { defaultValue: key }
-        );
-    const eventItems = OVERLAY_ACTIVITY_TYPE_DEFINITIONS.map(({ key }) => ({
+        t(`dialog.wrist_feed_notifications.types.${key.replace(/\./g, '_')}`, {
+            defaultValue: key
+        });
+    const eventItems = definitions.map(({ key }) => ({
         value: key,
         label: eventLabel(key)
     }));
@@ -61,6 +60,17 @@ export function SettingsCustomSoundsCard() {
 
     useEffect(() => {
         let active = true;
+        commands
+            .appOverlayActivityDefinitionsGet()
+            .then((loaded) => {
+                if (active) setDefinitions(loaded);
+            })
+            .catch((reason: unknown) => {
+                console.warn(
+                    'Failed to load notification activity definitions:',
+                    reason
+                );
+            });
         configRepository
             .getString('notificationSounds')
             .then((raw) => {

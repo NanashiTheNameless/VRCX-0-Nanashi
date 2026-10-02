@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 use serde::Deserialize;
-use vrcx_0_application_activity::{OverlayActivityActorRelation, OverlayActivityEntry};
+use vrcx_0_application_activity::{ActivityActorRelation, ActivityEntry};
 use vrcx_0_persistence::config::ConfigRepository;
 
 pub const NOTIFICATION_SOUNDS_CONFIG_KEY: &str = "notificationSounds";
@@ -46,18 +46,18 @@ impl NotificationSoundConfig {
     }
 
     /// Sound file and volume for this entry, if a matching enabled rule exists.
-    pub fn resolve(&self, entry: &OverlayActivityEntry) -> Option<(PathBuf, f32)> {
-        let activity_type = entry.activity_type.as_str();
+    pub fn resolve(&self, entry: &ActivityEntry) -> Option<(PathBuf, f32)> {
+        let activity_type = entry.kind.key();
         let mut candidates = Vec::with_capacity(3);
         match entry.actor_relation {
-            OverlayActivityActorRelation::Favorite => {
+            ActivityActorRelation::Favorite => {
                 candidates.push(format!("{activity_type}@favorite"));
                 candidates.push(format!("{activity_type}@friend"));
             }
-            OverlayActivityActorRelation::Friend => {
+            ActivityActorRelation::Friend => {
                 candidates.push(format!("{activity_type}@friend"));
             }
-            OverlayActivityActorRelation::None => {}
+            ActivityActorRelation::None => {}
         }
         candidates.push(activity_type.to_string());
         candidates.iter().find_map(|key| {
@@ -78,19 +78,19 @@ pub fn load_notification_sounds(config: &ConfigRepository) -> NotificationSoundC
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vrcx_0_contracts::activity::ActivityKind;
 
-    fn entry(activity_type: &str, relation: OverlayActivityActorRelation) -> OverlayActivityEntry {
-        OverlayActivityEntry {
+    fn entry(kind: ActivityKind, relation: ActivityActorRelation) -> ActivityEntry {
+        ActivityEntry {
             sequence: 1,
             source_id: "s".into(),
-            activity_type: activity_type.into(),
+            kind,
             category: Default::default(),
             created_at: String::new(),
             actor_user_id: "usr_a".into(),
             actor_display_name: "Ada".into(),
             content: Default::default(),
             actor_relation: relation,
-            payload: Default::default(),
         }
     }
 
@@ -110,20 +110,29 @@ mod tests {
                 .map(|(path, volume)| (path.to_string_lossy().into_owned(), volume))
         };
         assert_eq!(
-            resolve("OnPlayerJoined", OverlayActivityActorRelation::None),
+            resolve(ActivityKind::OnPlayerJoined, ActivityActorRelation::None),
             Some(("/s/any.wav".into(), 0.5))
         );
         assert_eq!(
-            resolve("OnPlayerJoined", OverlayActivityActorRelation::Friend),
+            resolve(ActivityKind::OnPlayerJoined, ActivityActorRelation::Friend),
             Some(("/s/friend.wav".into(), 0.8))
         );
         // Favorite rule disabled -> falls back to the friend rule.
         assert_eq!(
-            resolve("OnPlayerJoined", OverlayActivityActorRelation::Favorite),
+            resolve(
+                ActivityKind::OnPlayerJoined,
+                ActivityActorRelation::Favorite
+            ),
             Some(("/s/friend.wav".into(), 0.8))
         );
-        assert_eq!(resolve("Online", OverlayActivityActorRelation::None), None);
-        assert_eq!(resolve("GPS", OverlayActivityActorRelation::None), None);
+        assert_eq!(
+            resolve(ActivityKind::Online, ActivityActorRelation::None),
+            None
+        );
+        assert_eq!(
+            resolve(ActivityKind::Gps, ActivityActorRelation::None),
+            None
+        );
         assert_eq!(
             NotificationSoundConfig::parse("not json"),
             NotificationSoundConfig::default()

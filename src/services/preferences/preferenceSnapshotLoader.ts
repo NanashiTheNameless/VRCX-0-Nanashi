@@ -12,12 +12,6 @@ import {
     APP_CJK_FONT_PACK_DEFAULT_KEY,
     APP_FONT_DEFAULT_KEY
 } from '@/shared/constants/fonts';
-import {
-    DEFAULT_TTS_NOTIFICATION_ACTIVITY_FILTERS,
-    DEFAULT_WEBHOOK_ACTIVITY_FILTERS,
-    parseHmdOverlayActivityFilterProfile,
-    parseOverlayActivityFilterProfile
-} from '@/shared/constants/overlayActivityFilters';
 import { normalizeAvatarAutoCleanupPreference } from '@/shared/constants/settings';
 import {
     DEFAULT_TRANSLATION_ENDPOINT,
@@ -33,6 +27,7 @@ import {
     normalizeFeedTimeDisplayMode,
     normalizeFeedHiddenUsers,
     normalizeHmdNotificationPosition,
+    normalizeHmdNotificationStyle,
     normalizeNotificationTtsNameMode,
     normalizeOverlayStartMode,
     normalizeTableLimits,
@@ -44,7 +39,6 @@ import {
     normalizeWristOverlayHand,
     normalizeWristOverlaySize,
     normalizeWristOverlayStartMode,
-    parseOverlayActivityFiltersPreference,
     type PreferencesSnapshot,
     usePreferencesStore
 } from '@/state/preferencesStore';
@@ -72,8 +66,6 @@ import {
     applyDataTableStripedClass,
     applyReducedMotionAndBlurClass,
     applyTableDensityClass,
-    getBoolConfigWithLegacy,
-    getIntConfigWithLegacy,
     normalizeStringList,
     setDocumentLanguage
 } from './preferencesCore';
@@ -123,6 +115,7 @@ export async function loadPreferenceSnapshot() {
         accessibleStatusIndicators,
         showNewDashboardButton,
         recentActionCooldownEnabled,
+        autoDeclineFriendRequests,
         recentActionCooldownMinutes,
         screenshotHelper,
         screenshotHelperModifyFilename,
@@ -155,8 +148,10 @@ export async function loadPreferenceSnapshot() {
         autoUpdateVRCX,
         desktopToast,
         afkDesktopToast,
+        overlayToast,
         desktopNotificationSound,
         notificationDoNotDisturbEndOnGameStart,
+        busyStatusDoNotDisturb,
         notificationTTS,
         notificationTTSNickName,
         notificationTTSNameMode,
@@ -173,6 +168,7 @@ export async function loadPreferenceSnapshot() {
         hmdNotificationTimeout,
         hmdNotificationOpacity,
         hmdNotificationPosition,
+        hmdNotificationStyle,
         webhookEnabled,
         webhookAuthEventsEnabled,
         webhookUrl,
@@ -220,12 +216,8 @@ export async function loadPreferenceSnapshot() {
         localFavoriteFriendsGroups,
         feedHiddenUsers,
         feedHiddenUsersHideNotifications,
-        overlayActivityFilters,
-        vrNotificationActivityFilters,
-        hmdNotificationActivityFilters,
-        desktopNotificationActivityFilters,
-        webhookActivityFilters,
-        ttsNotificationActivityFilters,
+        hidePrivateFromFeed,
+        activityFilterProfiles,
         feedTimeDisplayMode,
         youtubeAPI,
         translationAPI,
@@ -265,6 +257,7 @@ export async function loadPreferenceSnapshot() {
         configRepository.getBool('VRCX_accessibleStatusIndicators', false),
         configRepository.getBool('showNewDashboardButton', true),
         configRepository.getBool('recentActionCooldownEnabled', false),
+        configRepository.getBool('autoDeclineFriendRequests', false),
         configRepository.getInt('recentActionCooldownMinutes', 60),
         configRepository.getBool('screenshotHelper', true),
         configRepository.getBool('screenshotHelperModifyFilename', false),
@@ -297,27 +290,30 @@ export async function loadPreferenceSnapshot() {
         configRepository.getString('autoUpdateVRCX', ''),
         configRepository.getString('desktopToast', 'Never'),
         configRepository.getBool('afkDesktopToast', false),
+        configRepository.getString('overlayToast', 'Game Running'),
         configRepository.getBool('desktopNotificationSound', false),
         configRepository.getBool(
             'notificationDoNotDisturbEndOnGameStart',
             true
         ),
+        configRepository.getBool('busyStatusDoNotDisturb', true),
         configRepository.getString('notificationTTS', 'Never'),
         configRepository.getBool('notificationTTSNickName', false),
         configRepository.getString('notificationTTSNameMode', ''),
         configRepository.getString('notificationTTSVoiceNative', ''),
         configRepository.getInt('notificationTTSVolume', 100),
-        getBoolConfigWithLegacy('xsNotifications', false),
-        getBoolConfigWithLegacy('ovrtHudNotifications', false),
-        getBoolConfigWithLegacy('ovrtWristNotifications', false),
-        getBoolConfigWithLegacy('imageNotifications', true),
-        getIntConfigWithLegacy('notificationTimeout', 3000),
-        getIntConfigWithLegacy('notificationOpacity', 100),
+        configRepository.getBool('xsNotifications', false),
+        configRepository.getBool('ovrtHudNotifications', false),
+        configRepository.getBool('ovrtWristNotifications', false),
+        configRepository.getBool('imageNotifications', true),
+        configRepository.getInt('notificationTimeout', 3000),
+        configRepository.getInt('notificationOpacity', 100),
         configRepository.getBool('hmdNotificationsEnabled', false),
         configRepository.getString('hmdNotificationStartMode', 'vrchatVrMode'),
         configRepository.getInt('hmdNotificationTimeout', 5000),
-        configRepository.getInt('hmdNotificationOpacity', 100),
+        configRepository.getInt('hmdNotificationOpacity', 90),
         configRepository.getString('hmdNotificationPosition', 'bottom'),
+        configRepository.getString('hmdNotificationStyle', 'standard'),
         configRepository.getBool('webhookEnabled', false),
         configRepository.getBool('webhookAuthEventsEnabled', true),
         configRepository.getString('webhookUrl', ''),
@@ -380,12 +376,8 @@ export async function loadPreferenceSnapshot() {
         configRepository.getArray('localFavoriteFriendsGroups', []),
         configRepository.getString('feedHiddenUsers', '[]'),
         configRepository.getBool('feedHiddenUsersHideNotifications', true),
-        configRepository.getString('overlayActivityFilters', ''),
-        configRepository.getString('vrNotificationActivityFilters', ''),
-        configRepository.getString('hmdNotificationActivityFilters', ''),
-        configRepository.getString('desktopNotificationActivityFilters', ''),
-        configRepository.getString('webhookActivityFilters', ''),
-        configRepository.getString('ttsNotificationActivityFilters', ''),
+        configRepository.getBool('hidePrivateFromFeed', false),
+        commands.appNotificationActivityFiltersGet(),
         configRepository.getString('feedTimeDisplayMode', 'relative'),
         configRepository.getBool('youtubeAPI', false),
         configRepository.getBool('translationAPI', false),
@@ -473,6 +465,7 @@ export async function loadPreferenceSnapshot() {
         accessibleStatusIndicators: Boolean(accessibleStatusIndicators),
         showNewDashboardButton: Boolean(showNewDashboardButton),
         recentActionCooldownEnabled: Boolean(recentActionCooldownEnabled),
+        autoDeclineFriendRequests: Boolean(autoDeclineFriendRequests),
         recentActionCooldownMinutes: normalizedRecentActionCooldownMinutes,
         screenshotHelper: Boolean(screenshotHelper),
         screenshotHelperModifyFilename: Boolean(screenshotHelperModifyFilename),
@@ -513,10 +506,12 @@ export async function loadPreferenceSnapshot() {
         ),
         desktopToast: desktopToast || 'Never',
         afkDesktopToast: Boolean(afkDesktopToast),
+        overlayToast: overlayToast || 'Game Running',
         desktopNotificationSound: Boolean(desktopNotificationSound),
         notificationDoNotDisturbEndOnGameStart: Boolean(
             notificationDoNotDisturbEndOnGameStart
         ),
+        busyStatusDoNotDisturb: Boolean(busyStatusDoNotDisturb),
         notificationTTS: notificationTTS || 'Never',
         notificationTTSNickName: Boolean(notificationTTSNickName),
         notificationTTSNameMode: normalizeNotificationTtsNameMode(
@@ -546,10 +541,12 @@ export async function loadPreferenceSnapshot() {
             : 5000,
         hmdNotificationOpacity: Number.isFinite(hmdNotificationOpacity)
             ? Math.min(100, Math.max(0, hmdNotificationOpacity))
-            : 100,
+            : 90,
         hmdNotificationPosition: normalizeHmdNotificationPosition(
             hmdNotificationPosition
         ),
+        hmdNotificationStyle:
+            normalizeHmdNotificationStyle(hmdNotificationStyle),
         webhookEnabled: Boolean(webhookEnabled),
         webhookAuthEventsEnabled: Boolean(webhookAuthEventsEnabled),
         webhookUrl: String(webhookUrl || ''),
@@ -611,25 +608,13 @@ export async function loadPreferenceSnapshot() {
         feedHiddenUsersHideNotifications: Boolean(
             feedHiddenUsersHideNotifications
         ),
-        overlayActivityFilters: parseOverlayActivityFiltersPreference(
-            overlayActivityFilters
-        ),
-        vrNotificationActivityFilters: parseOverlayActivityFilterProfile(
-            vrNotificationActivityFilters
-        ),
-        hmdNotificationActivityFilters: parseHmdOverlayActivityFilterProfile(
-            hmdNotificationActivityFilters
-        ),
-        desktopNotificationActivityFilters: parseOverlayActivityFilterProfile(
-            desktopNotificationActivityFilters
-        ),
-        webhookActivityFilters: parseOverlayActivityFilterProfile(
-            webhookActivityFilters || DEFAULT_WEBHOOK_ACTIVITY_FILTERS
-        ),
-        ttsNotificationActivityFilters: parseOverlayActivityFilterProfile(
-            ttsNotificationActivityFilters ||
-                DEFAULT_TTS_NOTIFICATION_ACTIVITY_FILTERS
-        ),
+        hidePrivateFromFeed: Boolean(hidePrivateFromFeed),
+        overlayActivityFilters: activityFilterProfiles.wrist,
+        vrNotificationActivityFilters: activityFilterProfiles.vr,
+        hmdNotificationActivityFilters: activityFilterProfiles.hmd,
+        desktopNotificationActivityFilters: activityFilterProfiles.desktop,
+        webhookActivityFilters: activityFilterProfiles.webhook,
+        ttsNotificationActivityFilters: activityFilterProfiles.tts,
         feedTimeDisplayMode: normalizeFeedTimeDisplayMode(feedTimeDisplayMode),
         youtubeAPI: Boolean(youtubeAPI),
         translationAPI: Boolean(translationAPI),

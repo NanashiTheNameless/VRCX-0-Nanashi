@@ -4,6 +4,7 @@ use vrcx_0_application_core::{
     vrchat_api::{VrchatApiRequest, VrchatApiResponse},
     RemoteMutationGate,
 };
+use vrcx_0_contracts::activity::ActivityKind;
 
 const USER: &str = "usr_11111111-1111-1111-1111-111111111111";
 const SELF: &str = "usr_22222222-2222-2222-2222-222222222222";
@@ -37,8 +38,7 @@ impl Fixture {
         config.ensure_table().unwrap();
         let auth = RuntimeAuthScope::new();
         auth.set(SELF, "https://api.vrchat.cloud/api/1");
-        let (runtime, receiver) =
-            SafetyRuntime::new(config, db, auth, OverlayActivityRuntime::new());
+        let (runtime, receiver) = SafetyRuntime::new(config, db, auth, ActivityRouter::new());
         Self {
             runtime,
             receiver,
@@ -299,7 +299,7 @@ async fn suspicious_url_warns_without_any_network_request_or_secret_in_history()
     assert!(!status.audit[0].message.contains("secret"));
     let entries = f.runtime.overlay.snapshot().entries;
     assert_eq!(entries.len(), 1);
-    assert_eq!(entries[0].activity_type, "SafetyUrl");
+    assert_eq!(entries[0].kind, ActivityKind::SafetyUrl);
 }
 #[tokio::test]
 async fn warn_only_source_never_mutates_and_disabled_source_never_matches() {

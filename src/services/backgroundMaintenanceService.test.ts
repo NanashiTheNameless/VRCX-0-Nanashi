@@ -6,8 +6,7 @@ const mocks = vi.hoisted(() => ({
     isHostCapabilityAvailable: vi.fn(),
     formatReleaseDisplayVersion: vi.fn(),
     toNormalizedReleaseFromSnapshot: vi.fn(),
-    appRegistryBackupMaintenanceRun: vi.fn(),
-    pushNotification: vi.fn()
+    appRegistryBackupMaintenanceRun: vi.fn()
 }));
 
 vi.mock('@/platform/tauri/bindings', () => ({
@@ -29,12 +28,6 @@ vi.mock('./i18nService', () => ({
     default: {
         t: (key: string, values?: Record<string, unknown>) =>
             values ? `${key}:${JSON.stringify(values)}` : key
-    }
-}));
-
-vi.mock('@/state/notificationStore', () => ({
-    useNotificationStore: {
-        getState: () => ({ pushNotification: mocks.pushNotification })
     }
 }));
 
@@ -192,7 +185,6 @@ describe('backgroundMaintenanceService update checks', () => {
         expect(useRuntimeStore.getState().updateLoop.hasAvailableUpdate).toBe(
             true
         );
-        expect(mocks.pushNotification).toHaveBeenCalledTimes(1);
     });
 
     it('does not notify when the backend does not mark the delivered release as should-notify', async () => {
@@ -203,7 +195,6 @@ describe('backgroundMaintenanceService update checks', () => {
             statusSnapshot(TAURI_RELEASE_SNAPSHOT, false)
         );
 
-        expect(mocks.pushNotification).toHaveBeenCalledTimes(1);
         expect(useRuntimeStore.getState().updateLoop.hasAvailableUpdate).toBe(
             true
         );
@@ -233,7 +224,6 @@ describe('backgroundMaintenanceService update checks', () => {
             shouldNotify: false
         });
 
-        expect(mocks.pushNotification).not.toHaveBeenCalled();
         expect(
             useRuntimeStore.getState().updateLoop.lastUpdaterCheckDetail
         ).toBe('network failed');

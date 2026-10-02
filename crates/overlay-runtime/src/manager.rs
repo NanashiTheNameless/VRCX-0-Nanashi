@@ -159,6 +159,9 @@ where
     pub fn wrist_activation_count(&self, surface_id: &OverlaySurfaceId) -> u64 {
         self.service.wrist_activation_count(surface_id)
     }
+    pub fn hmd_user_present(&self) -> Option<bool> {
+        self.service.hmd_user_present()
+    }
 
     pub fn into_inner(self) -> S {
         self.service

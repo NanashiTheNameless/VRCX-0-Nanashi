@@ -38,6 +38,7 @@ import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
 import { useSettingsAdvancedTabState } from '../useSettingsAdvancedTabState';
 import { AdvancedTroubleshootingGroup } from './AdvancedTroubleshootingGroup';
+import { GameLogImportField } from './GameLogImportField';
 import type { SettingsAdvancedModel } from './settingsAdvancedTypes';
 import { SettingsSafetyCard } from './SettingsSafetyCard';
 import { SettingsYtdlpCard } from './SettingsYtdlpCard';
@@ -587,6 +588,7 @@ export function SettingsAdvancedTabContent({
                 )}
             >
                 <ProfileMergeFields />
+                {gameLogPersistenceSupported ? <GameLogImportField /> : null}
             </SettingsCard>
             {/* Danger zone: destructive, irreversible actions kept visually separate at the bottom. */}
             <section className="border-destructive/30 flex shrink-0 flex-col rounded-lg border">

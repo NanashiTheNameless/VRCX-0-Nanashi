@@ -6,10 +6,11 @@ use std::time::{Duration, Instant};
 use chrono::Utc;
 use serde_json::{json, Value};
 use vrcx_0_application::remote::VrchatApiRuntime;
-use vrcx_0_application_activity::{OverlayActivityCandidate, OverlayActivityRuntime};
+use vrcx_0_application_activity::ActivityRouter;
 use vrcx_0_application_core::vrchat_api::VrchatScope;
 use vrcx_0_application_core::{RuntimeAuthScope, RuntimeAuthScopeSnapshot, TaskSupervisor};
 use vrcx_0_application_game::{GameLogEventOrigin, GameLogEventSink, GameLogScanCursor};
+use vrcx_0_contracts::activity::{ActivityEvent, ActivityKind};
 use vrcx_0_core::game_log_parser::{GameLogEvent, GameLogEventKind};
 use vrcx_0_persistence::config::ConfigRepository;
 
@@ -59,7 +60,7 @@ pub struct SafetyRuntime {
     config: ConfigRepository,
     db: Arc<vrcx_0_persistence::DatabaseService>,
     auth: RuntimeAuthScope,
-    overlay: OverlayActivityRuntime,
+    overlay: ActivityRouter,
     state: Mutex<State>,
     sender: tokio::sync::mpsc::Sender<SafetyJob>,
     refresh_lock: tokio::sync::Mutex<()>,
@@ -87,7 +88,7 @@ impl SafetyRuntime {
         config: ConfigRepository,
         db: Arc<vrcx_0_persistence::DatabaseService>,
         auth: RuntimeAuthScope,
-        overlay: OverlayActivityRuntime,
+        overlay: ActivityRouter,
     ) -> (Arc<Self>, tokio::sync::mpsc::Receiver<SafetyJob>) {
         let mut settings: SafetySettings = config
             .get_json(SETTINGS_KEY, json!({}))
@@ -759,10 +760,21 @@ impl SafetyRuntime {
             state.seen.insert(key.clone(), Instant::now());
         }
         self.record(job, kind, source, &message, "warn", "shown");
-        self.overlay.ingest_candidate(OverlayActivityCandidate {
-            source_id: format!("safety:{}:{key}", now()), activity_type: kind.into(), created_at: job.created_at.clone(), actor_user_id: job.user_id.clone(), actor_display_name: job.display_name.clone(), current_instance: true, favorite_subject: Default::default(),
-            payload: json!({"title": "Safety warning", "message": message, "location": job.location, "source": source}).into(),
-        });
+        let Some(kind) = ActivityKind::from_key(kind) else {
+            return;
+        };
+        let mut event = ActivityEvent::new(
+            kind,
+            format!("safety:{}:{key}", now()),
+            job.created_at.clone(),
+        );
+        event.in_current_instance = true;
+        event.actor.user_id = job.user_id.clone();
+        event.actor.display_name = job.display_name.clone();
+        event.facts.title = "Safety warning".to_string();
+        event.facts.message = message.to_string();
+        event.facts.location = job.location.clone();
+        self.overlay.ingest(event);
     }
 
     fn record(

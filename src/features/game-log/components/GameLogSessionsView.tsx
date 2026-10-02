@@ -633,7 +633,7 @@ export function GameLogSessionsView({
                             {t('common.load_more')}...
                         </>
                     ) : hasMore ? (
-                        <span>{t('common.load_more')}...</span>
+                        <span>{t('common.load_more')}</span>
                     ) : (
                         <span>{t('common.no_more')}</span>
                     )}

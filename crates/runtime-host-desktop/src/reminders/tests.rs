@@ -1,4 +1,5 @@
 use super::*;
+use vrcx_0_contracts::activity::{ActivityEvent, ActivityFacts, ActivityKind};
 
 const SELF: &str = "usr_22222222-2222-2222-2222-222222222222";
 const FRIEND: &str = "usr_11111111-1111-1111-1111-111111111111";
@@ -27,8 +28,7 @@ impl Fixture {
         config.ensure_table().unwrap();
         let auth = RuntimeAuthScope::new();
         auth.set(SELF, "https://api.vrchat.cloud/api/1");
-        let runtime =
-            ReminderRuntime::new(config.clone(), auth.clone(), OverlayActivityRuntime::new());
+        let runtime = ReminderRuntime::new(config.clone(), auth.clone(), ActivityRouter::new());
         Self {
             runtime,
             config,
@@ -63,20 +63,27 @@ fn at(value: &str) -> DateTime<Utc> {
 }
 
 fn candidate(
-    kind: &str,
+    kind: ActivityKind,
     user_id: &str,
     created_at: &str,
-    payload: Value,
-) -> OverlayActivityCandidate {
-    OverlayActivityCandidate {
-        source_id: format!("test:{kind}:{created_at}"),
-        activity_type: kind.into(),
-        created_at: created_at.into(),
-        actor_user_id: user_id.into(),
-        actor_display_name: "Friend Now".into(),
-        current_instance: false,
-        favorite_subject: OverlayActivityFavoriteSubject::None,
-        payload: payload.into(),
+    facts: ActivityFacts,
+) -> ActivityEvent {
+    let mut event = ActivityEvent::new(
+        kind,
+        format!("test:{}:{created_at}", kind.key()),
+        created_at,
+    );
+    event.actor.user_id = user_id.into();
+    event.actor.display_name = "Friend Now".into();
+    event.facts = facts;
+    event
+}
+
+fn gps(location: &str, world_name: &str) -> ActivityFacts {
+    ActivityFacts {
+        location: location.into(),
+        world_name: world_name.into(),
+        ..ActivityFacts::default()
     }
 }
 
@@ -86,7 +93,12 @@ fn one_time_event_reminder_fires_once_and_is_removed() {
     f.online();
     let now = at("2026-09-27T12:00:00Z");
     f.runtime.observe(
-        &candidate("Offline", FRIEND, "2026-09-27T12:00:00Z", json!({})),
+        &candidate(
+            ActivityKind::Offline,
+            FRIEND,
+            "2026-09-27T12:00:00Z",
+            ActivityFacts::default(),
+        ),
         now,
     );
     assert_eq!(
@@ -95,7 +107,12 @@ fn one_time_event_reminder_fires_once_and_is_removed() {
         "wrong event type must not fire"
     );
     f.runtime.observe(
-        &candidate("Online", FRIEND, "2026-09-27T12:00:00Z", json!({})),
+        &candidate(
+            ActivityKind::Online,
+            FRIEND,
+            "2026-09-27T12:00:00Z",
+            ActivityFacts::default(),
+        ),
         now,
     );
     assert!(f.runtime.list(SELF).is_empty());
@@ -103,25 +120,23 @@ fn one_time_event_reminder_fires_once_and_is_removed() {
 
 #[test]
 fn live_friend_feed_fires_reminders_through_the_overlay_observer() {
-    use vrcx_0_application_core::{FeedLiveEntry, FriendProjection};
-
     for (kind, trigger) in [
         (
-            "Online",
+            ActivityKind::Online,
             ReminderTrigger::FriendOnline {
                 user_id: FRIEND.into(),
                 display_name: "Friend".into(),
             },
         ),
         (
-            "Offline",
+            ActivityKind::Offline,
             ReminderTrigger::FriendOffline {
                 user_id: FRIEND.into(),
                 display_name: "Friend".into(),
             },
         ),
         (
-            "GPS",
+            ActivityKind::Gps,
             ReminderTrigger::FriendLocation {
                 user_id: FRIEND.into(),
                 display_name: "Friend".into(),
@@ -138,35 +153,32 @@ fn live_friend_feed_fires_reminders_through_the_overlay_observer() {
         f.runtime
             .overlay
             .set_location_hidden_user_ids([FRIEND.to_string()].into_iter().collect());
-        let entry: FeedLiveEntry = serde_json::from_value(json!({
-            "type": kind,
-            "created_at": Utc::now().to_rfc3339(),
-            "userId": FRIEND,
-            "displayName": "Friend Now",
-            "location": "wrld_target:1",
-            "previousLocation": "wrld_previous:1",
-            "worldName": "Target",
-            "groupName": "",
-            "time": 0
-        }))
-        .unwrap();
+        let facts = if kind == ActivityKind::Gps {
+            gps("wrld_target:1", "Target")
+        } else {
+            ActivityFacts::default()
+        };
         f.runtime
             .overlay
-            .ingest_friend_projection(&FriendProjection::new(0, 0), &[entry]);
+            .ingest(candidate(kind, FRIEND, &Utc::now().to_rfc3339(), facts));
 
-        assert!(f.runtime.list(SELF).is_empty(), "{kind} reminder must fire");
+        assert!(
+            f.runtime.list(SELF).is_empty(),
+            "{} reminder must fire",
+            kind.key()
+        );
         let snapshot = f.runtime.overlay.snapshot();
         let delivered = snapshot
             .entries
             .iter()
-            .find(|entry| entry.activity_type == "Reminder")
+            .find(|entry| entry.kind == ActivityKind::Reminder)
             .expect("reminder must reach the wrist feed");
         assert_eq!(delivered.actor_user_id, FRIEND);
         assert!(delivered.source_id.contains(&reminder.id));
         assert!(!snapshot
             .entries
             .iter()
-            .any(|entry| entry.activity_type == "GPS"));
+            .any(|entry| entry.kind == ActivityKind::Gps));
     }
 }
 
@@ -176,13 +188,23 @@ fn stale_events_other_accounts_and_signed_out_never_fire() {
     f.online();
     let now = at("2026-09-27T12:00:00Z");
     f.runtime.observe(
-        &candidate("Online", FRIEND, "2026-09-27T11:00:00Z", json!({})),
+        &candidate(
+            ActivityKind::Online,
+            FRIEND,
+            "2026-09-27T11:00:00Z",
+            ActivityFacts::default(),
+        ),
         now,
     );
     assert_eq!(f.runtime.list(SELF).len(), 1, "backlog must not fire");
     f.auth.set("usr_other", "https://api.vrchat.cloud/api/1");
     f.runtime.observe(
-        &candidate("Online", FRIEND, "2026-09-27T12:00:00Z", json!({})),
+        &candidate(
+            ActivityKind::Online,
+            FRIEND,
+            "2026-09-27T12:00:00Z",
+            ActivityFacts::default(),
+        ),
         now,
     );
     assert_eq!(f.runtime.list(SELF).len(), 1, "other account must not fire");
@@ -203,7 +225,14 @@ fn recurring_event_reminder_keeps_a_cooldown() {
         )
         .unwrap();
     let first = at("2026-09-27T12:00:00Z");
-    let joined = |time: &str| candidate("OnPlayerJoined", FRIEND, time, json!({}));
+    let joined = |time: &str| {
+        candidate(
+            ActivityKind::OnPlayerJoined,
+            FRIEND,
+            time,
+            ActivityFacts::default(),
+        )
+    };
     f.runtime.observe(&joined("2026-09-27T12:00:00Z"), first);
     f.runtime
         .observe(&joined("2026-09-27T12:05:00Z"), at("2026-09-27T12:05:00Z"));
@@ -220,18 +249,13 @@ fn location_reminder_can_require_one_world() {
         display_name: "Friend".into(),
         world_id: "wrld_target".into(),
     };
-    let elsewhere = candidate(
-        "GPS",
-        FRIEND,
-        "",
-        json!({"location": "wrld_other:1", "worldName": "Other"}),
-    );
+    let elsewhere = candidate(ActivityKind::Gps, FRIEND, "", gps("wrld_other:1", "Other"));
     assert_eq!(event_detail(&trigger, &elsewhere), None);
     let there = candidate(
-        "GPS",
+        ActivityKind::Gps,
         FRIEND,
         "",
-        json!({"location": "wrld_target:1~private", "worldName": "Target"}),
+        gps("wrld_target:1~private", "Target"),
     );
     assert_eq!(
         event_detail(&trigger, &there).as_deref(),
@@ -304,11 +328,7 @@ fn next_due_is_strictly_after_now() {
 fn reminders_persist_are_capped_and_delete_is_owner_scoped() {
     let f = Fixture::new();
     let reminder = f.online();
-    let reloaded = ReminderRuntime::new(
-        f.config.clone(),
-        f.auth.clone(),
-        OverlayActivityRuntime::new(),
-    );
+    let reloaded = ReminderRuntime::new(f.config.clone(), f.auth.clone(), ActivityRouter::new());
     assert_eq!(reloaded.list(SELF), vec![reminder.clone()]);
     assert!(!f.runtime.delete("usr_other", &reminder.id));
     assert!(f.runtime.delete(SELF, &reminder.id));

@@ -108,6 +108,9 @@ pub trait VrOverlayServiceControl {
     fn active_backend(&self) -> Option<&'static str> {
         None
     }
+    fn hmd_user_present(&self) -> Option<bool> {
+        None
+    }
     fn is_surface_visible(&self, _surface_id: &OverlaySurfaceId) -> bool {
         false
     }
@@ -581,6 +584,12 @@ impl VrOverlayServiceControl for HostVrOverlayService {
             .as_ref()
             .map(|actor| actor.wrist_activation_count(surface_id))
             .unwrap_or_default()
+    }
+    fn hmd_user_present(&self) -> Option<bool> {
+        self.actor
+            .as_ref()
+            .filter(|actor| actor_is_running(actor))
+            .and_then(OverlayActorHandle::hmd_user_present)
     }
 
     fn stop(&mut self) {
