@@ -51,10 +51,15 @@ async fn serve(response: String) -> (SocketAddr, tokio::task::JoinHandle<String>
         let mut request = Vec::new();
         loop {
             let mut chunk = [0; 4096];
-            let read = tokio::time::timeout(Duration::from_secs(3), stream.read(&mut chunk))
-                .await
-                .unwrap()
-                .unwrap();
+            // A rejected request can still reach this point: the client opens the
+            // TCP connection, then refuses the protocol before sending anything
+            // (hyper answers HTTP/2 over cleartext TCP with UserUnsupportedVersion),
+            // so treat a silent connection as an empty request.
+            let read =
+                match tokio::time::timeout(Duration::from_secs(3), stream.read(&mut chunk)).await {
+                    Ok(Ok(read)) => read,
+                    Ok(Err(_)) | Err(_) => break,
+                };
             request.extend_from_slice(&chunk[..read]);
             if read == 0 || request.windows(4).any(|bytes| bytes == b"\r\n\r\n") {
                 break;
