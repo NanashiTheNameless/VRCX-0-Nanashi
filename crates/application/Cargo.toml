@@ -18,7 +18,6 @@ fastrand = "2"
 futures-util = "0.3"
 hex = "0.4"
 moka = { version = "0.12", features = ["future"] }
-regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 semver = { workspace = true }
@@ -31,13 +30,11 @@ tokio = { workspace = true, features = [
     "time"
 ] }
 tracing = { workspace = true }
-thiserror = { workspace = true }
 uuid = { workspace = true }
 vrcx-0-core = { path = "../core" }
 vrcx-0-contracts = { path = "../contracts" }
 vrcx-0-application-core = { path = "../application-core" }
 vrcx-0-application-realtime = { path = "../application-realtime" }
-vrcx-0-i18n = { path = "../i18n" }
 specta.workspace = true
 
 [dev-dependencies]

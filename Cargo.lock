@@ -9390,13 +9390,11 @@ dependencies = [
  "futures-util",
  "hex",
  "moka",
- "regex",
  "semver",
  "serde",
  "serde_json",
  "sha2 0.11.0",
  "specta",
- "thiserror 2.0.21",
  "tokio",
  "tracing",
  "uuid",
@@ -9404,7 +9402,6 @@ dependencies = [
  "vrcx-0-application-realtime",
  "vrcx-0-contracts",
  "vrcx-0-core",
- "vrcx-0-i18n",
 ]
 
 [[package]]
