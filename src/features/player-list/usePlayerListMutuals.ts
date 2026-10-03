@@ -43,8 +43,10 @@ export function usePlayerListMutuals(
     const friendsById = useFriendRosterStore((state) => state.friendsById);
     const roomScanRunning = useRoomMutualScanStore((state) => state.running);
     const [scan, setScan] = useState<RoomScan | null>(null);
-    const [completedContext, setCompletedContext] = useState('');
-    const [shownContext, setShownContext] = useState('');
+    const [completedContext, setCompletedContext] = useState<string | null>(
+        null
+    );
+    const [shownContext, setShownContext] = useState<string | null>(null);
     const scanRef = useRef<RoomScan | null>(null);
     const activeScan = scan?.context === location ? scan : null;
     const scanCompleted = completedContext === location;
@@ -206,7 +208,9 @@ export function usePlayerListMutuals(
           }
         : null;
     const canStart =
-        !roomScanRunning && !graph.isGraphFetching && pendingIds.length > 0;
+        !roomScanRunning &&
+        !graph.isGraphFetching &&
+        (pendingIds.length > 0 || !columnVisible);
 
     const stopScan = useCallback(() => {
         const current = scanRef.current;
@@ -227,6 +231,11 @@ export function usePlayerListMutuals(
 
     function startScan() {
         if (scanRef.current || !canStart) {
+            return;
+        }
+        if (!pendingIds.length) {
+            setShownContext(location);
+            setCompletedContext(location);
             return;
         }
         const nextScan = { context: location, ids: pendingIds };
@@ -255,7 +264,7 @@ export function usePlayerListMutuals(
             canStart,
             completed: scanCompleted,
             hasPending: pendingIds.length > 0,
-            hide: () => setShownContext(''),
+            hide: () => setShownContext(null),
             show: () => setShownContext(location),
             visible: columnVisible,
             isGraphFetching: graph.isGraphFetching,

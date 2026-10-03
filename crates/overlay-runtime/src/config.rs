@@ -29,6 +29,7 @@ pub const HMD_NOTIFICATION_TIMEOUT_CONFIG_KEY: &str = "hmdNotificationTimeout";
 pub const HMD_NOTIFICATION_OPACITY_CONFIG_KEY: &str = "hmdNotificationOpacity";
 pub const HMD_NOTIFICATION_POSITION_CONFIG_KEY: &str = "hmdNotificationPosition";
 pub const HMD_NOTIFICATION_STYLE_CONFIG_KEY: &str = "hmdNotificationStyle";
+pub const HMD_NOTIFICATION_AVATARS_CONFIG_KEY: &str = "hmdNotificationAvatars";
 const APP_LANGUAGE_CONFIG_KEY: &str = "appLanguage";
 const DATE_TIME_HOUR12_CONFIG_KEY: &str = "dtHour12";
 const SHOW_INSTANCE_ID_IN_LOCATION_CONFIG_KEY: &str = "VRCX_showInstanceIdInLocation";
@@ -142,7 +143,9 @@ pub(super) fn load_runtime_config(
             opacity_percent: hmd_opacity_percent,
             position: hmd_position,
             style: hmd_style,
-            images: services.notification_images_enabled(),
+            avatars: config
+                .get_bool(HMD_NOTIFICATION_AVATARS_CONFIG_KEY, true)
+                .unwrap_or(true),
         },
         render: WristOverlayRenderOptions {
             size,

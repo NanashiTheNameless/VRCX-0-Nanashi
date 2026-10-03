@@ -150,6 +150,7 @@ export async function loadPreferenceSnapshot() {
         afkDesktopToast,
         overlayToast,
         desktopNotificationSound,
+        desktopNotificationAvatars,
         notificationDoNotDisturbEndOnGameStart,
         busyStatusDoNotDisturb,
         notificationTTS,
@@ -169,6 +170,7 @@ export async function loadPreferenceSnapshot() {
         hmdNotificationOpacity,
         hmdNotificationPosition,
         hmdNotificationStyle,
+        hmdNotificationAvatars,
         webhookEnabled,
         webhookAuthEventsEnabled,
         webhookUrl,
@@ -292,6 +294,7 @@ export async function loadPreferenceSnapshot() {
         configRepository.getBool('afkDesktopToast', false),
         configRepository.getString('overlayToast', 'Game Running'),
         configRepository.getBool('desktopNotificationSound', false),
+        configRepository.getBool('desktopNotificationAvatars', true),
         configRepository.getBool(
             'notificationDoNotDisturbEndOnGameStart',
             true
@@ -314,6 +317,7 @@ export async function loadPreferenceSnapshot() {
         configRepository.getInt('hmdNotificationOpacity', 90),
         configRepository.getString('hmdNotificationPosition', 'bottom'),
         configRepository.getString('hmdNotificationStyle', 'standard'),
+        configRepository.getBool('hmdNotificationAvatars', true),
         configRepository.getBool('webhookEnabled', false),
         configRepository.getBool('webhookAuthEventsEnabled', true),
         configRepository.getString('webhookUrl', ''),
@@ -508,6 +512,7 @@ export async function loadPreferenceSnapshot() {
         afkDesktopToast: Boolean(afkDesktopToast),
         overlayToast: overlayToast || 'Game Running',
         desktopNotificationSound: Boolean(desktopNotificationSound),
+        desktopNotificationAvatars: Boolean(desktopNotificationAvatars),
         notificationDoNotDisturbEndOnGameStart: Boolean(
             notificationDoNotDisturbEndOnGameStart
         ),
@@ -547,6 +552,7 @@ export async function loadPreferenceSnapshot() {
         ),
         hmdNotificationStyle:
             normalizeHmdNotificationStyle(hmdNotificationStyle),
+        hmdNotificationAvatars: Boolean(hmdNotificationAvatars),
         webhookEnabled: Boolean(webhookEnabled),
         webhookAuthEventsEnabled: Boolean(webhookAuthEventsEnabled),
         webhookUrl: String(webhookUrl || ''),

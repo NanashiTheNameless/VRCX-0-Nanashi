@@ -1656,7 +1656,8 @@
                 "invite": "Invite",
                 "decline": "Decline",
                 "delete_log": "Delete notification",
-                "decline_with_message": "Decline with message"
+                "decline_with_message": "Decline with message",
+                "ignore_locally": "Ignore locally"
             },
             "filters": {
                 "requestInvite": "Request Invite",
@@ -1741,7 +1742,8 @@
                 "invite_response_sent": "Reply sent",
                 "boop_sent": "Boop sent",
                 "notification_response_sent": "Response sent",
-                "notification_log_entry_deleted": "Notification removed from history"
+                "notification_log_entry_deleted": "Notification removed from history",
+                "notification_ignored_locally": "Ignored locally"
             },
             "error": {
                 "cannot_invite_no_current_vrchat_location_is_available": "Cannot invite: you're not in an instance right now",
@@ -2430,6 +2432,7 @@
                     "style": "Banner Style",
                     "style_standard": "Standard",
                     "style_compact": "Compact",
+                    "friend_icons": "Show Friend Icons",
                     "timeout": "Display Duration",
                     "opacity": "Opacity",
                     "filters": "HMD Notification Filters"
@@ -2824,7 +2827,7 @@
                         "ovrtoolkit_hud_notifications": "OVR Toolkit HUD Notifications",
                         "ovrtoolkit_wrist_notifications": "OVR Toolkit Wrist Notifications",
                         "notification_filters": "VR Overlay Notification Filters",
-                        "user_images": "Show User Icons",
+                        "user_images": "Show Friend Icons",
                         "notification_opacity": "Notification Opacity",
                         "notification_timeout": "Notification Duration"
                     },
@@ -2842,7 +2845,8 @@
                         "when_to_display": "Show Desktop Notifications",
                         "notification_filters": "Desktop Notification Filters",
                         "desktop_notification_while_afk": "Show Notifications While AFK",
-                        "notification_sound": "Notification Sound"
+                        "notification_sound": "Notification Sound",
+                        "friend_icons": "Show Friend Icons"
                     },
                     "webhook": {
                         "header": "Webhook Notifications",
@@ -3742,6 +3746,7 @@
                 "failed_to_delete_notification": "Failed to delete notification",
                 "failed_to_accept_friend_request": "Failed to accept friend request",
                 "failed_to_decline_notification": "Failed to decline notification",
+                "failed_to_ignore_notification": "Failed to ignore notification",
                 "failed_to_send_invite": "Failed to send invite",
                 "invite_response_photo_sent": "Photo reply sent",
                 "invite_response_sent": "Reply sent",

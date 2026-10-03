@@ -28,6 +28,13 @@ fn normalization_matches_shared_locale_cases() {
     }
 }
 
+#[test]
+fn app_locale_resolves_against_every_ui_language() {
+    for code in language_codes() {
+        assert_eq!(resolve_app_locale(&code), code);
+    }
+}
+
 fn language_codes() -> Vec<String> {
     serde_json::from_str(include_str!("../../../src/localization/languageCodes.json"))
         .expect("language codes")

@@ -20,6 +20,7 @@ import { signalFriendLogChanged } from '@/services/friendLogMutationService';
 import {
     acceptFriendRequestNotification,
     acceptRequestInviteNotification,
+    expireNotificationLocally,
     hideRemoteAndExpireNotification,
     sendBoopReplyNotification,
     sendInviteResponseNotification,
@@ -356,6 +357,35 @@ export function useNotificationActions({
         [confirm, currentUserId, notificationTypeLabel, reload, t]
     );
 
+    const ignoreNotificationLocally = useCallback(
+        async (notification: NotificationRow) => {
+            try {
+                await expireNotificationLocally({
+                    currentUserId,
+                    notification
+                });
+                await reload();
+                toast.add({
+                    type: 'success',
+                    title: t(
+                        'view.notification.success.notification_ignored_locally'
+                    )
+                });
+            } catch (error) {
+                toast.add({
+                    type: 'error',
+                    title:
+                        error instanceof Error
+                            ? error.message
+                            : t(
+                                  'view.notifications.toast.failed_to_ignore_notification'
+                              )
+                });
+            }
+        },
+        [currentUserId, reload, t]
+    );
+
     const acceptRequestInvite = useCallback(
         async (notification: NotificationRow) => {
             try {
@@ -542,6 +572,7 @@ export function useNotificationActions({
         acceptRequestInvite,
         deleteNotification,
         hideNotification,
+        ignoreNotificationLocally,
         markAllSeen,
         markSeen,
         notificationTypeIsClickable,

@@ -73,6 +73,7 @@ export function VrcNotificationCenterHost() {
         acceptRequestInvite,
         deleteNotification,
         hideNotification,
+        ignoreNotificationLocally,
         markAllSeen,
         markSeen,
         sendBoopReply,
@@ -265,6 +266,8 @@ export function VrcNotificationCenterHost() {
                             onSendNotificationResponse:
                                 sendNotificationResponse,
                             onHideNotification: hideNotification,
+                            onIgnoreNotificationLocally:
+                                ignoreNotificationLocally,
                             onDeleteNotification: deleteNotification,
                             onMarkSeen: markSeen,
                             onJoinQueueReady: joinQueueReady

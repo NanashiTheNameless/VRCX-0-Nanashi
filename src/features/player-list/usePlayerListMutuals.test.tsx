@@ -229,6 +229,31 @@ describe('usePlayerListMutuals', () => {
         expect(view.result.current.scan.completed).toBe(false);
     });
 
+    it('shows the column without fetching when the room has only friends', () => {
+        const view = renderMutuals([
+            row('usr_self', { isCurrentUser: true }),
+            row('usr_f1', { isFriend: true })
+        ]);
+
+        expect(view.result.current.scan.visible).toBe(false);
+        expect(view.result.current.scan.canStart).toBe(true);
+        act(() => view.result.current.scan.start());
+
+        expect(mocks.getAllMutualFriends).not.toHaveBeenCalled();
+        expect(view.result.current.scan.visible).toBe(true);
+        expect(view.result.current.scan.completed).toBe(true);
+        expect(view.result.current.scan.canStart).toBe(false);
+    });
+
+    it('keeps the column hidden before a query even without a known location', () => {
+        const view = renderHook(() => usePlayerListMutuals('', ROWS), {
+            wrapper: Wrapper
+        });
+
+        expect(view.result.current.scan.visible).toBe(false);
+        expect(view.result.current.scan.completed).toBe(false);
+    });
+
     it('lets finished results be hidden, shown again and re-queried for newcomers', async () => {
         mocks.getAllMutualFriends.mockResolvedValue(mutualRows('usr_f1'));
         const view = renderHook(

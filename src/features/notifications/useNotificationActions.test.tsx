@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
     acceptFriendRequest: vi.fn(),
     confirm: vi.fn(),
     deleteNotification: vi.fn(),
+    expireLocally: vi.fn(),
+    hideRemote: vi.fn(),
     markAllSeen: vi.fn(),
     markSeen: vi.fn(),
     openImagePreview: vi.fn(),
@@ -78,7 +80,8 @@ vi.mock('@/services/friendLogMutationService', () => ({
 vi.mock('@/services/notificationActionService', () => ({
     acceptFriendRequestNotification: mocks.acceptFriendRequest,
     acceptRequestInviteNotification: vi.fn(),
-    hideRemoteAndExpireNotification: vi.fn(),
+    expireNotificationLocally: mocks.expireLocally,
+    hideRemoteAndExpireNotification: mocks.hideRemote,
     sendBoopReplyNotification: vi.fn(),
     sendInviteResponseNotification: vi.fn(),
     sendNotificationButtonResponse: mocks.sendButtonResponse
@@ -153,6 +156,34 @@ describe('useNotificationActions', () => {
             expect.objectContaining({
                 type: 'success',
                 title: 'view.notification.success.notification_log_entry_deleted'
+            })
+        );
+    });
+
+    it('ignores an invite locally without touching VRChat', async () => {
+        mocks.expireLocally.mockResolvedValue(undefined);
+        const invite: NotificationRow = {
+            id: 'not_invite',
+            type: 'invite',
+            senderUserId: 'usr_sender',
+            version: 1
+        };
+        const { result } = renderActions();
+
+        await act(async () => result.current.ignoreNotificationLocally(invite));
+
+        expect(mocks.expireLocally).toHaveBeenCalledWith({
+            currentUserId: 'usr_self',
+            notification: invite
+        });
+        expect(mocks.hideRemote).not.toHaveBeenCalled();
+        expect(mocks.confirm).not.toHaveBeenCalled();
+        expect(mocks.expireLocally.mock.invocationCallOrder[0]).toBeLessThan(
+            mocks.reload.mock.invocationCallOrder[0]
+        );
+        expect(mocks.toastSuccess).toHaveBeenCalledWith(
+            expect.objectContaining({
+                title: 'view.notification.success.notification_ignored_locally'
             })
         );
     });

@@ -71,3 +71,7 @@ fn native_catalog() -> &'static Catalog {
 pub fn text<K: CatalogKey>(language: &str, key: K) -> String {
     native_catalog().text(language, key)
 }
+
+pub fn resolve_app_locale(language: &str) -> String {
+    native_catalog().resolve_locale(language)
+}

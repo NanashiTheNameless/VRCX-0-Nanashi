@@ -140,17 +140,35 @@ export function PlayerListTableSection({
         () => filterPlayerListRows(mutuals.rows, query, filterScope),
         [filterScope, mutuals.rows, query]
     );
+    const mutualsVisible = mutuals.scan.visible;
+    const columns = useMemo(
+        () =>
+            mutualsVisible
+                ? tableColumns
+                : tableColumns.filter(
+                      (column) =>
+                          column.id !== PLAYER_LIST_MUTUAL_FRIENDS_COLUMN_ID
+                  ),
+        [mutualsVisible, tableColumns]
+    );
+    const sorting = useMemo(
+        () =>
+            mutualsVisible
+                ? tableState.sorting
+                : tableState.sorting.filter(
+                      (entry) =>
+                          entry.id !== PLAYER_LIST_MUTUAL_FRIENDS_COLUMN_ID
+                  ),
+        [mutualsVisible, tableState.sorting]
+    );
     const table = useAppTable<PlayerListRow>({
         data: visibleRows,
-        columns: tableColumns,
+        columns,
         state: {
             columnOrder: tableState.columnOrder,
             columnSizing: tableState.columnSizing,
-            columnVisibility: {
-                ...tableState.columnVisibility,
-                [PLAYER_LIST_MUTUAL_FRIENDS_COLUMN_ID]: mutuals.scan.visible
-            },
-            sorting: tableState.sorting
+            columnVisibility: tableState.columnVisibility,
+            sorting
         },
         onSortingChange: tableState.setSorting,
         onColumnVisibilityChange: tableState.setColumnVisibility,

@@ -178,7 +178,7 @@ export function PlayerListGroupSelector({
                         }}
                     </ComboboxValue>
                 </ComboboxTrigger>
-                <ComboboxContent className="bg-popover!">
+                <ComboboxContent align="end" className="bg-popover! w-72">
                     <ComboboxInput
                         showTrigger={false}
                         placeholder={t(

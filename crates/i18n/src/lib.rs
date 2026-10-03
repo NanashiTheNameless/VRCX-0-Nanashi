@@ -15,6 +15,6 @@ include!(concat!(env!("OUT_DIR"), "/native_keys.rs"));
 #[cfg(test)]
 mod tests;
 
-pub use catalog::{text, LocalizedCatalog};
+pub use catalog::{resolve_app_locale, text, LocalizedCatalog};
 pub use locale::{collapse_whitespace, interpolate, resolve_locale};
 pub use message::{render_overlay_message, OverlayMessage};

@@ -30,6 +30,7 @@ function renderNotification(notification: NotificationRow, isUnseen = true) {
         onAcceptRequestInvite: vi.fn(),
         onDeleteNotification: vi.fn(),
         onHideNotification: vi.fn(),
+        onIgnoreNotificationLocally: vi.fn(),
         onJoinQueueReady: vi.fn(),
         onMarkSeen: vi.fn(),
         onSendInviteResponseWithMessage: vi.fn(),

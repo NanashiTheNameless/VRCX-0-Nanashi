@@ -16,6 +16,7 @@ function createHandlers(): NotificationRowActionHandlers {
         onAcceptFriendRequest: vi.fn(),
         onAcceptRequestInvite: vi.fn(),
         onHideNotification: vi.fn(),
+        onIgnoreNotificationLocally: vi.fn(),
         onMarkSeen: vi.fn(),
         onSendInviteResponseWithMessage: vi.fn(),
         onSendNotificationResponse: vi.fn()
@@ -55,6 +56,29 @@ describe('buildOrderedActions', () => {
         ]);
         actions[2]?.onClick();
         expect(handlers.onMarkSeen).toHaveBeenCalledWith(notification);
+    });
+
+    it('offers a local ignore after the remote decline for an invite', () => {
+        const handlers = createHandlers();
+        const notification: NotificationRow = {
+            id: 'notif_invite',
+            type: 'invite',
+            version: 1,
+            senderUserId: 'usr_sender'
+        };
+
+        const actions = buildActions(notification, handlers);
+
+        expect(actions.map((action) => action.key)).toEqual([
+            'decline-with-message',
+            'decline',
+            'ignore-locally'
+        ]);
+        actions[2]?.onClick();
+        expect(handlers.onIgnoreNotificationLocally).toHaveBeenCalledWith(
+            notification
+        );
+        expect(handlers.onHideNotification).not.toHaveBeenCalled();
     });
 
     it('adds a manual reply response for a received boop', () => {
