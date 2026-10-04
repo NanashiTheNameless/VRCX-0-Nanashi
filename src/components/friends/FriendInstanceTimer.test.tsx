@@ -10,21 +10,8 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTimeUnitLabels, setI18nLanguage } from '@/services/i18nService';
-import {
-    DEFAULT_TIME_UNIT_LABELS,
-    type TimeUnitLabels
-} from '@/shared/utils/dateTime';
 
 vi.unmock('react-i18next');
-
-const timerState = vi.hoisted((): { timeUnitLabels: TimeUnitLabels } => ({
-    timeUnitLabels: { y: 'y', d: 'd', h: 'h', m: 'm', s: 's' }
-}));
-
-vi.mock('@/state/shellStore', () => ({
-    useShellStore: <T,>(selector: (state: typeof timerState) => T): T =>
-        selector(timerState)
-}));
 
 import { FriendInstanceTimer } from './FriendInstanceTimer';
 
@@ -33,7 +20,6 @@ const NOW_MS = 1_700_000_000_000;
 describe('FriendInstanceTimer', () => {
     beforeEach(async () => {
         await setI18nLanguage('en');
-        timerState.timeUnitLabels = { ...DEFAULT_TIME_UNIT_LABELS };
         vi.useFakeTimers();
         vi.setSystemTime(NOW_MS);
     });
@@ -96,10 +82,7 @@ describe('FriendInstanceTimer', () => {
         'uses localized short units in %s without changing the default timer',
         async (locale, expected) => {
             await setI18nLanguage(locale);
-            timerState.timeUnitLabels = getTimeUnitLabels(
-                locale,
-                DEFAULT_TIME_UNIT_LABELS
-            );
+            const labels = getTimeUnitLabels();
             const epoch = NOW_MS - 97 * 60_000;
             const { container } = render(
                 <>
@@ -108,7 +91,7 @@ describe('FriendInstanceTimer', () => {
                 </>
             );
             const timers = container.querySelectorAll('.tabular-nums');
-            const fullText = `1${timerState.timeUnitLabels.h} 37${timerState.timeUnitLabels.m}`;
+            const fullText = `1${labels.h} 37${labels.m}`;
             expect(timers[0]?.textContent).toBe(fullText);
             expect(timers[1]?.textContent).toBe(expected);
             expect(container.querySelector('.sr-only')?.textContent).toBe(
@@ -119,10 +102,6 @@ describe('FriendInstanceTimer', () => {
 
     it('shows the full duration on hover without adding a button to the card', async () => {
         await setI18nLanguage('en');
-        timerState.timeUnitLabels = getTimeUnitLabels(
-            'en',
-            DEFAULT_TIME_UNIT_LABELS
-        );
         const { container } = render(
             <FriendInstanceTimer epoch={NOW_MS - 97 * 60_000} format="short" />
         );

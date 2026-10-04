@@ -5,7 +5,8 @@ import { cloneElement } from 'react';
 import type { PropsWithChildren, ReactElement } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('react-i18next', () => ({
+vi.mock('react-i18next', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('react-i18next')>()),
     useTranslation: () => ({
         t: (key: string, values?: { count?: number }) =>
             key === 'view.game_log.sessions.friends_count'

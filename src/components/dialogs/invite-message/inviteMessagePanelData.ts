@@ -1,3 +1,4 @@
+import { timeToText } from '@/lib/dateTime';
 import type { InviteMessageType } from '@/platform/tauri/bindings';
 import vrchatToolsRepository, {
     type InviteMessageRecord
@@ -105,10 +106,7 @@ export function getInviteCooldownLabel(updatedAt: unknown, nowMs: number) {
     if (remainingMs <= 0) {
         return '';
     }
-    const minutes = Math.ceil(remainingMs / MINUTE_MS);
-    return minutes >= 60
-        ? `${Math.floor(minutes / 60)}h ${minutes % 60}m`
-        : `${minutes}m`;
+    return timeToText(Math.ceil(remainingMs / MINUTE_MS) * MINUTE_MS);
 }
 
 export function isInviteMessageOnCooldown(

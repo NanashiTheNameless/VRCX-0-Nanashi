@@ -89,7 +89,7 @@ vi.mock('@/state/runtimeStore', () => ({
         selector(mocks.runtimeState)
 }));
 
-vi.mock('react-i18next', () => {
+vi.mock('react-i18next', async (importOriginal) => {
     const translations: Record<string, string> = {
         'dialog.instance.label.android': 'Android:',
         'dialog.instance.label.ios': 'iOS:',
@@ -105,6 +105,7 @@ vi.mock('react-i18next', () => {
     };
 
     return {
+        ...(await importOriginal<typeof import('react-i18next')>()),
         useTranslation: () => ({
             t: (key: string) => translations[key] || key
         })

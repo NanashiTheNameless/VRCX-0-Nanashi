@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { DEFAULT_TIME_UNIT_LABELS } from '@/shared/utils/dateTime';
+import { setI18nLanguage } from '@/services/i18nService';
 import { useShellStore } from '@/state/shellStore';
 
 import {
@@ -17,13 +17,13 @@ const DAY_MS = 24 * HOUR_MS;
 const YEAR_MS = 365 * DAY_MS;
 
 describe('app dateTime wrappers', () => {
-    beforeEach(() => {
+    beforeEach(async () => {
+        await setI18nLanguage('en');
         useShellStore.setState({
             locale: 'en',
             dateCulture: 'en-gb',
             dateHour12: false,
-            dateIsoFormat: false,
-            timeUnitLabels: DEFAULT_TIME_UNIT_LABELS
+            dateIsoFormat: false
         });
     });
 
@@ -136,17 +136,11 @@ describe('app dateTime wrappers', () => {
         expect(timeToText(Number.NEGATIVE_INFINITY)).toBe('-Infinity');
     });
 
-    it('uses shell-provided duration labels unless explicit labels are passed', () => {
-        useShellStore.getState().setTimeUnitLabels({
-            y: ' years',
-            d: ' days',
-            h: ' hours',
-            m: ' minutes',
-            s: ' seconds'
-        });
+    it('uses the active i18n language duration labels unless explicit labels are passed', async () => {
+        await setI18nLanguage('en');
 
-        expect(timeToText(3_600_000)).toBe('1 hours');
-        expect(timeToText(65_000, true)).toBe('1 minutes 5 seconds');
+        expect(timeToText(15 * HOUR_MS + 48 * MINUTE_MS)).toBe('15h 48m');
+        expect(timeToText(65_000, true)).toBe('1m 5s');
         expect(
             timeToText(
                 YEAR_MS +
@@ -156,7 +150,7 @@ describe('app dateTime wrappers', () => {
                     5 * SECOND_MS,
                 true
             )
-        ).toBe('1 years 2 days 3 hours 4 minutes 5 seconds');
+        ).toBe('1y 2d 3h 4m 5s');
         expect(timeToText(65_000, true, { m: 'm', s: 's' })).toBe('1m 5s');
     });
 });

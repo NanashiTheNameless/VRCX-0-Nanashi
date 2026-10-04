@@ -93,8 +93,8 @@ export function sortScreenshotGridImages<
     );
 }
 
-const DENSITY_STORAGE_KEY = 'VRCX_ScreenshotGridDensity';
-const SORT_STORAGE_KEY = 'VRCX_ScreenshotGridSort';
+const DENSITY_STORAGE_KEY = 'VRCX_0_ScreenshotGridDensity';
+const SORT_STORAGE_KEY = 'VRCX_0_ScreenshotGridSort';
 
 export function readScreenshotGridDensity(): ScreenshotGridDensity {
     return sanitizeScreenshotGridDensity(

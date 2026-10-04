@@ -12,7 +12,7 @@ import { AppStatusBar } from './AppStatusBar';
 import { KeepAliveOutlet } from './KeepAliveOutlet';
 import { useRightSidePanelVisibility } from './useRightSidePanelVisibility';
 
-const sidePanelStorageKey = 'vrcx-main-layout-right-sidebar-width';
+const sidePanelStorageKey = 'VRCX_0_RightSidebarWidth';
 
 function getResponsiveSidePanelWidth(preferredWidth: number): string {
     return `max(var(--vrcx-0-side-panel-min-width), min(${preferredWidth}px, calc(100% - var(--vrcx-0-main-content-preferred-min-width) - var(--vrcx-0-side-panel-resizer-width))))`;

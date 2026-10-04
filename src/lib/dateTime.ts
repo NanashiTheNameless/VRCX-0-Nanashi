@@ -1,3 +1,4 @@
+import { getTimeUnitLabels } from '@/services/i18nService';
 import {
     formatClockWithPreferences,
     formatDateFilterWithPreferences,
@@ -149,6 +150,6 @@ export function timeToText(
     return timeToTextWithLabels(
         sec,
         isNeedSeconds,
-        unitLabels || useShellStore.getState().timeUnitLabels
+        unitLabels || getTimeUnitLabels()
     );
 }

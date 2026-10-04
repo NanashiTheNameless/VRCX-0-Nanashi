@@ -12,7 +12,8 @@ const mocks = vi.hoisted(() => ({
     openRow: vi.fn()
 }));
 
-vi.mock('react-i18next', () => ({
+vi.mock('react-i18next', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('react-i18next')>()),
     useTranslation: () => ({
         t: (key: string, options?: { count?: number }) => {
             if (key === 'host.tools_dialogs.group_moderation.member_count') {

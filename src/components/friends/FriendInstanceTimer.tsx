@@ -2,13 +2,13 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { InstanceRosterTimestamp } from '@/domain/instances/instanceRoster';
+import { timeToText } from '@/lib/dateTime';
 import { useFriendLocationTimeEpoch } from '@/lib/useFriendLocationTimeEpoch';
 import { cn } from '@/lib/utils';
 import {
     timestampMsFromValue,
     timeToTextWithLabels
 } from '@/shared/utils/dateTime';
-import { useShellStore } from '@/state/shellStore';
 import { Spinner } from '@/ui/shadcn/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
@@ -27,7 +27,6 @@ export function FriendInstanceTimer({
     className?: string;
 }) {
     const { t } = useTranslation();
-    const timeUnitLabels = useShellStore((state) => state.timeUnitLabels);
     const [now, setNow] = useState(() => Date.now());
     const normalizedEpoch = timestampMsFromValue(epoch);
     const elapsedMs = normalizedEpoch ? Math.max(0, now - normalizedEpoch) : 0;
@@ -35,9 +34,7 @@ export function FriendInstanceTimer({
     const stepMs = isSubMinute ? SUB_MINUTE_STEP_MS : MINUTE_STEP_MS;
     const displayedMs = Math.floor(elapsedMs / stepMs) * stepMs;
     const nextStepMs = displayedMs + stepMs;
-    const text = normalizedEpoch
-        ? timeToTextWithLabels(displayedMs, isSubMinute, timeUnitLabels)
-        : '-';
+    const text = normalizedEpoch ? timeToText(displayedMs, isSubMinute) : '-';
     const shortText =
         format === 'short' && normalizedEpoch
             ? timeToTextWithLabels(

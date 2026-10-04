@@ -233,8 +233,7 @@ describe('windowModeService', () => {
         expect(mocks.setWindowMaximizable).toHaveBeenCalledWith(false);
         expect(
             JSON.parse(
-                window.localStorage.getItem('vrcx-main-window-normal-bounds') ??
-                    '{}'
+                window.localStorage.getItem('VRCX_0_NormalWindowBounds') ?? '{}'
             )
         ).toMatchObject({
             width: 1200,
@@ -266,7 +265,7 @@ describe('windowModeService', () => {
 
     it('restores the normal width while preserving the sidebar height', async () => {
         window.localStorage.setItem(
-            'vrcx-main-window-normal-bounds',
+            'VRCX_0_NormalWindowBounds',
             JSON.stringify({
                 version: 1,
                 x: 80,
@@ -306,9 +305,9 @@ describe('windowModeService', () => {
         });
         expect(mocks.setWindowBounds).toHaveBeenCalledTimes(1);
         expect(mocks.maximizeWindow).not.toHaveBeenCalled();
-        expect(
-            window.localStorage.getItem('vrcx-main-window-sidebar-width')
-        ).toBe('520');
+        expect(window.localStorage.getItem('VRCX_0_SidebarWindowWidth')).toBe(
+            '520'
+        );
     });
 
     it('returns to sidebar mode when normal-window geometry is unavailable', async () => {
@@ -355,7 +354,7 @@ describe('windowModeService', () => {
     });
 
     it('reuses a previously dragged sidebar width up to the 600px limit', async () => {
-        window.localStorage.setItem('vrcx-main-window-sidebar-width', '1200');
+        window.localStorage.setItem('VRCX_0_SidebarWindowWidth', '1200');
         mocks.getWindowGeometry
             .mockResolvedValueOnce(createGeometry())
             .mockResolvedValueOnce(
@@ -415,7 +414,7 @@ describe('windowModeService', () => {
     });
 
     it('recovers an out-of-range startup window to the saved sidebar width', async () => {
-        window.localStorage.setItem('vrcx-main-window-sidebar-width', '480');
+        window.localStorage.setItem('VRCX_0_SidebarWindowWidth', '480');
         useShellStore.setState({ windowDisplayMode: 'sidebar' });
         mocks.getWindowGeometry.mockResolvedValueOnce(createGeometry());
 
@@ -437,9 +436,9 @@ describe('remembered window display mode', () => {
 
         await restoreNormalWindowMode();
 
-        expect(
-            window.localStorage.getItem('vrcx-main-window-display-mode')
-        ).toBe('normal');
+        expect(window.localStorage.getItem('VRCX_0_WindowDisplayMode')).toBe(
+            'normal'
+        );
     });
 
     it('keeps the remembered sidebar mode while the login screen needs the full window', async () => {
@@ -451,9 +450,9 @@ describe('remembered window display mode', () => {
         await Promise.resolve();
 
         expect(useShellStore.getState().windowDisplayMode).toBe('normal');
-        expect(
-            window.localStorage.getItem('vrcx-main-window-display-mode')
-        ).toBe('sidebar');
+        expect(window.localStorage.getItem('VRCX_0_WindowDisplayMode')).toBe(
+            'sidebar'
+        );
 
         restoreSidebarWindowModeAfterLogin();
         expect(useShellStore.getState().windowDisplayMode).toBe('sidebar');
@@ -526,9 +525,9 @@ describe('remembered window display mode', () => {
 
     it('restores a remembered always-on-top window on startup', async () => {
         await setWindowAlwaysOnTop(true);
-        expect(
-            window.localStorage.getItem('vrcx-main-window-always-on-top')
-        ).toBe('true');
+        expect(window.localStorage.getItem('VRCX_0_WindowAlwaysOnTop')).toBe(
+            'true'
+        );
         mocks.setWindowAlwaysOnTop.mockClear();
 
         await initializeWindowAlwaysOnTop();

@@ -4,14 +4,11 @@ import { initReactI18next } from 'react-i18next';
 import {
     FALLBACK_LOCALE_CODE,
     fallbackLocaleMessages,
-    getLoadedLocaleMessages,
     loadLocaleMessages
 } from '@/localization/index';
 import { normalizeLanguageCode } from '@/localization/locales';
 import type { TimeUnitLabels } from '@/shared/utils/dateTime';
-import { isRecord } from '@/shared/utils/record';
 
-const TIME_UNIT_KEYS = ['y', 'd', 'h', 'm', 's'] as const;
 const i18nResources = {
     [FALLBACK_LOCALE_CODE]: { translation: fallbackLocaleMessages }
 };
@@ -36,51 +33,33 @@ const i18nReady = i18n.use(initReactI18next).init({
 
 export default i18n;
 
-function resolveMessage(messages: unknown, key: string): unknown {
-    return key
-        .split('.')
-        .reduce(
-            (current: unknown, part) =>
-                isRecord(current) ? current[part] : undefined,
-            messages
-        );
-}
-
 function normalizeLocale(locale: string): string {
     return normalizeLanguageCode(locale);
 }
 
+let latestLanguageRequest = 0;
+
 export async function setI18nLanguage(locale: string): Promise<string> {
     const normalizedLocale = normalizeLocale(locale);
+    const request = ++latestLanguageRequest;
     await i18nReady;
     if (!i18n.hasResourceBundle(normalizedLocale, 'translation')) {
         const messages = await loadLocaleMessages(normalizedLocale);
         i18n.addResourceBundle(normalizedLocale, 'translation', messages);
     }
+    if (request !== latestLanguageRequest) {
+        return normalizedLocale;
+    }
     await i18n.changeLanguage(normalizedLocale);
     return normalizedLocale;
 }
 
-export function getTimeUnitLabels(
-    locale: string,
-    defaultLabels: TimeUnitLabels
-): TimeUnitLabels {
-    const localizedMessages =
-        getLoadedLocaleMessages(normalizeLocale(locale)) ?? {};
-    const fallbackMessages = fallbackLocaleMessages;
-    const labels: TimeUnitLabels = { ...defaultLabels };
-
-    for (const unit of TIME_UNIT_KEYS) {
-        const key = `common.time_units.${unit}`;
-        const localized = resolveMessage(localizedMessages, key);
-        const fallback = resolveMessage(fallbackMessages, key);
-        labels[unit] =
-            typeof localized === 'string'
-                ? localized
-                : typeof fallback === 'string'
-                  ? fallback
-                  : defaultLabels[unit];
-    }
-
-    return labels;
+export function getTimeUnitLabels(): TimeUnitLabels {
+    return {
+        y: i18n.t('common.time_units.y'),
+        d: i18n.t('common.time_units.d'),
+        h: i18n.t('common.time_units.h'),
+        m: i18n.t('common.time_units.m'),
+        s: i18n.t('common.time_units.s')
+    };
 }

@@ -18,7 +18,7 @@ describe('user dialog mutual view preference', () => {
         writeUserDialogMutualView('graph');
         expect(readUserDialogMutualView()).toBe('graph');
 
-        localStorage.setItem('VRCX_UserDialogMutualView', 'unknown');
+        localStorage.setItem('VRCX_0_UserDialogMutualView', 'unknown');
         expect(readUserDialogMutualView()).toBe('list');
     });
 });

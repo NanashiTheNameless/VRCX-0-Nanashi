@@ -7,8 +7,7 @@ import { useShellStore } from '@/state/shellStore';
 
 import { getDefaultHiddenSidePanelPath } from './sidePanelRoutes';
 
-const sidePanelRouteOpenStateStorageKey =
-    'vrcx-main-layout-right-sidebar-route-open-state';
+const sidePanelRouteOpenStateStorageKey = 'VRCX_0_RightSidebarRouteOpenState';
 const sidePanelRouteOpenStateEvent =
     'vrcx-main-layout-right-sidebar-route-open-state-change';
 

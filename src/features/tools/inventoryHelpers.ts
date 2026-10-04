@@ -20,7 +20,7 @@ import {
     type GalleryGridDensity
 } from './galleryDensity';
 
-const INVENTORY_GRID_DENSITY_STORAGE_KEY = 'VRCX_InventoryGridDensity';
+const INVENTORY_GRID_DENSITY_STORAGE_KEY = 'VRCX_0_InventoryGridDensity';
 
 export const CATEGORY_ORDER = [
     'emojis',

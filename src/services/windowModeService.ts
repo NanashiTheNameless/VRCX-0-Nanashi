@@ -19,8 +19,8 @@ const DEFAULT_SIDEBAR_WINDOW_WIDTH = 360;
 
 const NORMAL_WINDOW_MIN_HEIGHT = 240;
 const DEFAULT_NORMAL_WINDOW_WIDTH = 1024;
-const NORMAL_WINDOW_BOUNDS_STORAGE_KEY = 'vrcx-main-window-normal-bounds';
-const SIDEBAR_WINDOW_WIDTH_STORAGE_KEY = 'vrcx-main-window-sidebar-width';
+const NORMAL_WINDOW_BOUNDS_STORAGE_KEY = 'VRCX_0_NormalWindowBounds';
+const SIDEBAR_WINDOW_WIDTH_STORAGE_KEY = 'VRCX_0_SidebarWindowWidth';
 
 type SavedNormalWindowBounds = {
     version: 1;

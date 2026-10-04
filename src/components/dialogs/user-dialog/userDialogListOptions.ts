@@ -57,7 +57,7 @@ export type UserDialogMutualFriendSort =
 
 export type UserDialogMutualView = 'list' | 'graph';
 
-const MUTUAL_VIEW_STORAGE_KEY = 'VRCX_UserDialogMutualView';
+const MUTUAL_VIEW_STORAGE_KEY = 'VRCX_0_UserDialogMutualView';
 
 export function readUserDialogMutualView(): UserDialogMutualView {
     return localStorage.getItem(MUTUAL_VIEW_STORAGE_KEY) === 'graph'

@@ -147,9 +147,9 @@ describe('shellStore settings navigation state', () => {
         useShellStore.getState().setWindowDisplayMode('sidebar');
 
         expect(useShellStore.getState().windowDisplayMode).toBe('sidebar');
-        expect(
-            window.localStorage.getItem('vrcx-main-window-display-mode')
-        ).toBe('sidebar');
+        expect(window.localStorage.getItem('VRCX_0_WindowDisplayMode')).toBe(
+            'sidebar'
+        );
 
         useShellStore.getState().setWindowDisplayMode('normal');
     });
