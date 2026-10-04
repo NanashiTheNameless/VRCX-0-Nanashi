@@ -21,29 +21,22 @@ describe('preferencesStore normalizers', () => {
         ).toBe(false);
     });
 
-    it('shows every user dialog appearance layer by default and preserves explicit opt-outs', () => {
+    it('hides every profile decoration layer by default and preserves explicit opt-ins', () => {
         const defaults = {
-            showUserDialogProfileBackground: true,
-            showUserDialogAvatarFrame: true,
-            showUserDialogProfileEffect: true,
-            showUserDialogNameplateEffect: true
-        };
-
-        expect(DEFAULT_PREFERENCES).toMatchObject(defaults);
-        expect(normalizePreferenceSnapshot({})).toMatchObject(defaults);
-        expect(
-            normalizePreferenceSnapshot({
-                showUserDialogProfileBackground: false,
-                showUserDialogAvatarFrame: false,
-                showUserDialogProfileEffect: false,
-                showUserDialogNameplateEffect: false
-            })
-        ).toMatchObject({
             showUserDialogProfileBackground: false,
             showUserDialogAvatarFrame: false,
             showUserDialogProfileEffect: false,
-            showUserDialogNameplateEffect: false
-        });
+            showUserDialogNameplateEffect: false,
+            showSidebarAvatarFrame: false,
+            showSidebarNameplate: false
+        };
+        const optedIn = Object.fromEntries(
+            Object.keys(defaults).map((key) => [key, true])
+        );
+
+        expect(DEFAULT_PREFERENCES).toMatchObject(defaults);
+        expect(normalizePreferenceSnapshot({})).toMatchObject(defaults);
+        expect(normalizePreferenceSnapshot(optedIn)).toMatchObject(optedIn);
     });
 
     it('auto installs updates by default', () => {

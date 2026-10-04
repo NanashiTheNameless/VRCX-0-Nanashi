@@ -235,34 +235,29 @@ describe('preferenceSnapshotLoader', () => {
         );
     });
 
-    it('loads the user dialog appearance visibility preferences', async () => {
-        const disabledKeys = new Set([
+    it('hides profile decorations unless the user turned them on', async () => {
+        const enabledKeys = new Set([
             'showUserDialogProfileBackground',
             'showUserDialogAvatarFrame',
             'showUserDialogProfileEffect',
-            'showUserDialogNameplateEffect'
+            'showUserDialogNameplateEffect',
+            'showSidebarAvatarFrame',
+            'showSidebarNameplate'
         ]);
         mocks.getBool.mockImplementation((key: string, fallback = false) =>
-            Promise.resolve(disabledKeys.has(key) ? false : Boolean(fallback))
+            Promise.resolve(enabledKeys.has(key) ? true : Boolean(fallback))
         );
 
         const snapshot = await loadPreferenceSnapshot();
 
-        for (const key of disabledKeys) {
-            expect(mocks.getBool).toHaveBeenCalledWith(key, true);
+        for (const key of enabledKeys) {
+            expect(mocks.getBool).toHaveBeenCalledWith(key, false);
         }
-        expect(snapshot).toMatchObject({
-            showUserDialogProfileBackground: false,
-            showUserDialogAvatarFrame: false,
-            showUserDialogProfileEffect: false,
-            showUserDialogNameplateEffect: false
-        });
-        expect(usePreferencesStore.getState()).toMatchObject({
-            showUserDialogProfileBackground: false,
-            showUserDialogAvatarFrame: false,
-            showUserDialogProfileEffect: false,
-            showUserDialogNameplateEffect: false
-        });
+        const enabled = Object.fromEntries(
+            [...enabledKeys].map((key) => [key, true])
+        );
+        expect(snapshot).toMatchObject(enabled);
+        expect(usePreferencesStore.getState()).toMatchObject(enabled);
     });
 
     it('shows HMD notifications at 90% opacity and desktop and HMD icons until the user changes them', async () => {

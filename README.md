@@ -31,6 +31,9 @@ It is a Rust + Tauri rewrite of VRCX.
   external yt-dlp processes retain their own protocol handling.
 - **Keeps the PC awake** (optional, on by default) so live updates keep arriving while the app
   sits in the tray; the screen can still turn off.
+- **Profile decorations are hidden by default.** VRChat profile backgrounds, avatar frames,
+  profile and nameplate effects stay off in the user dialog and friends sidebar until turned on
+  under Settings > Interface > Profile Appearance.
 - **Custom notification sounds.** Under Settings > Notifications, choose an audio file and
   volume per event for anyone, friends, or favorite friends. Sounds work in background mode
   and respect Do Not Disturb and privacy lock.
