@@ -12,6 +12,12 @@ const DEFAULT_OVERSCAN = 8;
 
 type VirtualRowKey = string | number;
 
+// A new holder is published whenever a size changes, so React sees a fresh
+// identity even though the map inside is mutated in place.
+function newMapHolder<K, V>() {
+    return { sizes: new Map<K, V>() };
+}
+
 type VirtualSidebarRow = {
     key?: VirtualRowKey;
 };
@@ -81,8 +87,12 @@ export function useVirtualSidebarRows<T extends VirtualSidebarRow>(
         viewportElementRef.current = node;
         setViewportElement(node);
     }, []);
-    const [measuredSizes, setMeasuredSizes] = useState(
-        () => new Map<VirtualRowKey, number>()
+    // Measured sizes are mutated in place and republished through a fresh wrapper
+    // so React still sees a new identity. Copying the map per measured row made a
+    // full scroll-through quadratic, because every newly measured row also
+    // invalidated rowMetrics.
+    const [measured, setMeasured] = useState(() =>
+        newMapHolder<VirtualRowKey, number>()
     );
     const rowObserversRef = useRef(new Map<VirtualRowKey, ResizeObserver>());
     const rowRefCallbacksRef = useRef(new Map<VirtualRowKey, RowRefCallback>());
@@ -103,6 +113,7 @@ export function useVirtualSidebarRows<T extends VirtualSidebarRow>(
         const indexesByKey = new Map<VirtualRowKey, number>();
         const offsets: number[] = [];
         const sizes: number[] = [];
+        const measuredSizes = measured.sizes;
 
         rows.forEach((row, index) => {
             const key = row?.key ?? index;
@@ -121,7 +132,7 @@ export function useVirtualSidebarRows<T extends VirtualSidebarRow>(
         });
 
         return { indexesByKey, offsets, sizes, totalSize };
-    }, [estimateSize, measuredSizes, rows]);
+    }, [estimateSize, measured, rows]);
     const previousLayoutRef = useRef<{
         metrics: VirtualRowMetrics;
         resetKey: string;
@@ -208,13 +219,12 @@ export function useVirtualSidebarRows<T extends VirtualSidebarRow>(
                     return;
                 }
 
-                setMeasuredSizes((current) => {
-                    if (current.get(key) === nextSize) {
+                setMeasured((current) => {
+                    if (current.sizes.get(key) === nextSize) {
                         return current;
                     }
-                    const next = new Map(current);
-                    next.set(key, nextSize);
-                    return next;
+                    current.sizes.set(key, nextSize);
+                    return { sizes: current.sizes };
                 });
             };
 
@@ -259,11 +269,15 @@ export function useVirtualSidebarRows<T extends VirtualSidebarRow>(
             }
         }
 
-        setMeasuredSizes((current) => {
-            const next = new Map(
-                Array.from(current).filter(([key]) => liveKeys.has(key))
-            );
-            return next.size === current.size ? current : next;
+        setMeasured((current) => {
+            let pruned = false;
+            for (const key of current.sizes.keys()) {
+                if (!liveKeys.has(key)) {
+                    current.sizes.delete(key);
+                    pruned = true;
+                }
+            }
+            return pruned ? { sizes: current.sizes } : current;
         });
     }, [rows]);
 
