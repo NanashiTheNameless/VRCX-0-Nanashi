@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseNotificationSounds } from './notificationSounds';
+import {
+    bundledSoundLabel,
+    parseNotificationSounds
+} from './notificationSounds';
 
 describe('notification sound configuration', () => {
+    it('labels built-in sounds from their names', () => {
+        expect(bundledSoundLabel('beep_sine_low')).toBe('Beep Sine Low');
+        expect(bundledSoundLabel('tone')).toBe('Tone');
+    });
     it('uses backend defaults and preserves unknown event names', () => {
         expect(
             parseNotificationSounds('{"rules":{"FutureEvent@friend":{}}}')

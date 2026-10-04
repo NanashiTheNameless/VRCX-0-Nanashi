@@ -34,9 +34,10 @@ It is a Rust + Tauri rewrite of VRCX.
 - **Profile decorations are hidden by default.** VRChat profile backgrounds, avatar frames,
   profile and nameplate effects stay off in the user dialog and friends sidebar until turned on
   under Settings > Interface > Profile Appearance.
-- **Custom notification sounds.** Under Settings > Notifications, choose an audio file and
-  volume per event for anyone, friends, or favorite friends. Sounds work in background mode
-  and respect Do Not Disturb and privacy lock.
+- **Custom notification sounds.** Under Settings > Notifications, choose a built-in sound or
+  an audio file and volume per event for anyone, friends, or favorite friends. Sounds work in
+  background mode and respect Do Not Disturb and privacy lock. Built-in sounds are CC0 clips
+  listed in [crates/host-desktop/sounds](crates/host-desktop/sounds/README.md).
 - **Opt-in VRChat video playback helper.** Settings > Media installs managed yt-dlp master
   updates and a local PO-token provider. Cookie use is a separate opt-in: explicitly select a
   browser to refresh or import your own cookies.txt. Originals are backed up for restore.

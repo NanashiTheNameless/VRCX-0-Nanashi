@@ -15,7 +15,8 @@ const mocks = vi.hoisted(() => ({
     set: vi.fn(),
     pick: vi.fn(),
     preview: vi.fn(),
-    definitions: vi.fn()
+    definitions: vi.fn(),
+    bundled: vi.fn()
 }));
 vi.mock('react-i18next', () => ({
     useTranslation: () => ({ t: (key: string) => key.split('.').at(-1) })
@@ -27,7 +28,8 @@ vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
         appOpenFileSelectorDialog: mocks.pick,
         appNotificationSoundTest: mocks.preview,
-        appOverlayActivityDefinitionsGet: mocks.definitions
+        appOverlayActivityDefinitionsGet: mocks.definitions,
+        appNotificationSoundsBundled: mocks.bundled
     }
 }));
 vi.mock('../SettingsCard', () => ({
@@ -78,6 +80,7 @@ beforeEach(() => {
         { key: 'OnPlayerJoined' },
         { key: 'Online' }
     ]);
+    mocks.bundled.mockResolvedValue(['error_buzz', 'beep_sine_low']);
 });
 afterEach(cleanup);
 

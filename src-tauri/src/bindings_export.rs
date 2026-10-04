@@ -611,6 +611,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::local::local_player_moderations::app__set_vrchat_user_moderation,
             commands::host::power::app__keep_system_awake_get,
             commands::host::sounds::app__notification_sound_test,
+            commands::host::sounds::app__notification_sounds_bundled,
             commands::host::ytdlp::app__ytdlp_status,
             commands::host::ytdlp::app__ytdlp_configure,
             commands::host::ytdlp::app__ytdlp_update,

@@ -8,3 +8,8 @@ LICENSES/MIT.txt.
 Fork (VRCX-0-Nanashi) bundles the 0xProto font (https://github.com/0xType/0xProto),
 Copyright (c) 2026, 0xType Project Authors, licensed under the SIL Open Font License 1.1.
 The full text is in LICENSES/OFL-1.1-0xProto.txt.
+
+Fork (VRCX-0-Nanashi) bundles notification sounds from "UI Sounds" by HaelDB and
+"Interface Beeps" by bart (https://opengameart.org), and "Digital Audio" by Kenney
+(https://kenney.nl), all released under CC0 1.0 Universal. The full text is in
+LICENSES/CC0-1.0.txt; the files are listed in crates/host-desktop/sounds/README.md.

@@ -339,6 +339,36 @@ function main(): void {
             ),
             needsReview: false
         },
+        ...[
+            [
+                'haeldb',
+                'UI Sounds (HaelDB)',
+                'https://opengameart.org/content/ui-sounds-0'
+            ],
+            [
+                'bart',
+                'Interface Beeps (bart)',
+                'https://opengameart.org/content/interface-beeps'
+            ],
+            [
+                'kenney',
+                'Digital Audio (Kenney)',
+                'https://kenney.nl/assets/digital-audio'
+            ]
+        ].map(([id, name, projectUrl]) => ({
+            id: `sounds-${id}`,
+            name,
+            version: '',
+            license: 'CC0-1.0',
+            sourceType: 'sound',
+            sourceLabel: 'Bundled notification sounds',
+            projectUrl,
+            noticeText: fs.readFileSync(
+                path.join(rootDir, 'LICENSES/CC0-1.0.txt'),
+                'utf8'
+            ),
+            needsReview: false
+        })),
         ...rustEntries
     ].sort((left, right) => left.name.localeCompare(right.name));
     const manifest = {

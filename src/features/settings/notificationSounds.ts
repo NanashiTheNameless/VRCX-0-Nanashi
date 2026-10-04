@@ -47,3 +47,14 @@ export function parseNotificationSounds(raw: string): NotificationSounds {
     );
     return { version: 1, rules };
 }
+
+// Fork: a rule path of `bundled:<name>` plays a sound shipped inside the app
+// (names come from `commands.appNotificationSoundsBundled`).
+export const BUNDLED_SOUND_PREFIX = 'bundled:';
+
+export function bundledSoundLabel(name: string): string {
+    return name
+        .split('_')
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+}

@@ -17,6 +17,8 @@ import { Slider } from '@/ui/shadcn/slider';
 import { Switch } from '@/ui/shadcn/switch';
 
 import {
+    BUNDLED_SOUND_PREFIX,
+    bundledSoundLabel,
     parseNotificationSounds,
     type NotificationSoundRule,
     type NotificationSounds
@@ -51,6 +53,11 @@ export function SettingsCustomSoundsCard() {
         value,
         label: t(`${PREFIX}.${value}`)
     }));
+    const [bundled, setBundled] = useState<string[]>([]);
+    const bundledItems = bundled.map((name) => ({
+        value: BUNDLED_SOUND_PREFIX + name,
+        label: bundledSoundLabel(name)
+    }));
     const dirty = config !== null && JSON.stringify(config) !== saved;
     const invalid =
         config !== null &&
@@ -70,6 +77,14 @@ export function SettingsCustomSoundsCard() {
                     'Failed to load notification activity definitions:',
                     reason
                 );
+            });
+        commands
+            .appNotificationSoundsBundled()
+            .then((names) => {
+                if (active) setBundled(names);
+            })
+            .catch((reason: unknown) => {
+                console.warn('Failed to load built-in sounds:', reason);
             });
         configRepository
             .getString('notificationSounds')
@@ -241,6 +256,42 @@ export function SettingsCustomSoundsCard() {
                                     >
                                         {t(`${PREFIX}.browse`)}
                                     </Button>
+                                    <Select
+                                        value={
+                                            rule.path.startsWith(
+                                                BUNDLED_SOUND_PREFIX
+                                            )
+                                                ? rule.path
+                                                : null
+                                        }
+                                        items={bundledItems}
+                                        onValueChange={(path) =>
+                                            path && update(key, { path })
+                                        }
+                                    >
+                                        <SelectTrigger
+                                            aria-label={t(`${PREFIX}.bundled`)}
+                                            className="w-44 shrink-0"
+                                        >
+                                            <SelectValue
+                                                placeholder={t(
+                                                    `${PREFIX}.bundled`
+                                                )}
+                                            />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {bundledItems.map(
+                                                ({ value, label }) => (
+                                                    <SelectItem
+                                                        key={value}
+                                                        value={value}
+                                                    >
+                                                        {label}
+                                                    </SelectItem>
+                                                )
+                                            )}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                                 <Field
                                     label={`${t(`${PREFIX}.volume`)} (${Math.round(rule.volume * 100)}%)`}

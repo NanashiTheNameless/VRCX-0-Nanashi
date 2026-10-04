@@ -2579,6 +2579,12 @@ const generatedCommands = {
             volume
         });
     },
+    /**
+     * Fork: names of the built-in sounds, selectable as `bundled:<name>`.
+     */
+    async appNotificationSoundsBundled(): Promise<string[]> {
+        return await TAURI_INVOKE('app__notification_sounds_bundled');
+    },
     async appYtdlpStatus(): Promise<YtdlpStatus> {
         return await TAURI_INVOKE('app__ytdlp_status');
     },

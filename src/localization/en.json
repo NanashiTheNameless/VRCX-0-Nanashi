@@ -2945,7 +2945,7 @@
                 },
                 "custom_sounds": {
                     "header": "Custom Notification Sounds",
-                    "description": "Choose a local WAV, MP3, FLAC, or OGG file for each event and audience. Favorites use the first enabled rule in this order: favorites, friends, anyone. Disabled or empty rules are skipped. Sounds work in background mode and respect Do Not Disturb and privacy lock. Save changes to apply them; Test sound previews immediately.",
+                    "description": "Choose a built-in sound or a local WAV, MP3, FLAC, or OGG file for each event and audience. Favorites use the first enabled rule in this order: favorites, friends, anyone. Disabled or empty rules are skipped. Sounds work in background mode and respect Do Not Disturb and privacy lock. Save changes to apply them; Test sound previews immediately.",
                     "event": "Event",
                     "audience": "Audience",
                     "anyone": "Anyone",
@@ -2962,7 +2962,8 @@
                     "empty": "No custom sounds configured.",
                     "missing_file": "Choose a file for each enabled rule before saving.",
                     "save": "Save sounds",
-                    "unsaved": "Unsaved changes"
+                    "unsaved": "Unsaved changes",
+                    "bundled": "Built-in sound"
                 }
             },
             "discord_presence": {
