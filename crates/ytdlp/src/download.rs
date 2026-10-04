@@ -37,7 +37,7 @@ pub(crate) async fn fetch(url: &str, limit: usize) -> Result<Vec<u8>, String> {
         .send_with_policy(HttpPolicy {
             max_redirects: 5,
             allow_redirect: |url| url.scheme() == "https" && url.host_str().is_some_and(allowed),
-            ..HttpPolicy::sensitive(false)
+            ..HttpPolicy::public()
         })
         .await
         .map_err(|_| "Download failed; check the network")?;

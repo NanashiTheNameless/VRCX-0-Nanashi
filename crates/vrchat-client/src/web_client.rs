@@ -521,6 +521,29 @@ impl WebClient {
         normalize_execute_result(result)
     }
 
+    /// Fork: credential-free public reads (status, release lists, theme
+    /// catalog, background images) may fall back to HTTP/1.1.
+    pub async fn execute_public(
+        &self,
+        request: WebExecuteRequest,
+        follow_redirects: bool,
+    ) -> Result<(i32, String)> {
+        let policy = vrcx_0_http_client::Policy {
+            explicit_proxy: self.proxy_url.is_some(),
+            ..vrcx_0_http_client::Policy::public()
+        };
+        let policy = if follow_redirects {
+            policy
+        } else {
+            policy.without_redirects()
+        };
+        let result = self
+            .do_execute_fresh_standard_with_policy(request, policy)
+            .await;
+
+        normalize_execute_result(result)
+    }
+
     async fn do_execute_fresh_standard(&self, request: WebExecuteRequest) -> Result<(i32, String)> {
         self.do_execute_fresh_standard_with_redirects(request, true)
             .await
@@ -528,8 +551,23 @@ impl WebClient {
 
     async fn do_execute_fresh_standard_with_redirects(
         &self,
-        mut request: WebExecuteRequest,
+        request: WebExecuteRequest,
         follow_redirects: bool,
+    ) -> Result<(i32, String)> {
+        let policy = vrcx_0_http_client::Policy::sensitive(self.proxy_url.is_some());
+        let policy = if follow_redirects {
+            policy
+        } else {
+            policy.without_redirects()
+        };
+        self.do_execute_fresh_standard_with_policy(request, policy)
+            .await
+    }
+
+    async fn do_execute_fresh_standard_with_policy(
+        &self,
+        mut request: WebExecuteRequest,
+        policy: vrcx_0_http_client::Policy,
     ) -> Result<(i32, String)> {
         if !matches!(&request.upload, WebUploadMode::None) {
             return Err(Error::Custom(
@@ -543,17 +581,7 @@ impl WebClient {
         )?;
         let response_body_limit = request.response_body_limit;
         let request = self.build_standard_request_with(&client, &mut request)?;
-        execute_request(
-            &client,
-            request,
-            response_body_limit,
-            if follow_redirects {
-                vrcx_0_http_client::Policy::sensitive(self.proxy_url.is_some())
-            } else {
-                vrcx_0_http_client::Policy::sensitive(self.proxy_url.is_some()).without_redirects()
-            },
-        )
-        .await
+        execute_request(&client, request, response_body_limit, policy).await
     }
 
     async fn do_execute(&self, mut request: WebExecuteRequest) -> Result<(i32, String)> {

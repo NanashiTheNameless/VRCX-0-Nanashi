@@ -21,7 +21,7 @@ pub async fn fetch_safety_list(url: &str) -> Result<String, String> {
     let mut response = client
         .get(url)
         .timeout(Duration::from_secs(20))
-        .send_with_policy(HttpPolicy::sensitive(false).without_redirects())
+        .send_with_policy(HttpPolicy::public().without_redirects())
         .await
         .map_err(|e| e.to_string())?;
     if !response.status().is_success() {

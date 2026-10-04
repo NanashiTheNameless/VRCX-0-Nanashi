@@ -181,8 +181,14 @@ impl WebClient {
         request: ExternalWebExecuteRequest,
     ) -> Result<(i32, String)> {
         let follow_redirects = request.follow_redirects;
+        let allow_http1 = request.allow_http1;
         let request = external_request_to_transport(request);
-        if follow_redirects {
+        if allow_http1 {
+            self.inner
+                .execute_public(request, follow_redirects)
+                .await
+                .map_err(crate::map_web_client_error)
+        } else if follow_redirects {
             self.inner
                 .execute(request)
                 .await

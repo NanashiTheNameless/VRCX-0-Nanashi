@@ -20,15 +20,18 @@ It is a Rust + Tauri rewrite of VRCX.
   Supports OpenAI-compatible, Anthropic, Google Gemini and
   Ollama APIs, local or LAN models with no key, and custom headers.
 - **HTTP protocol preference.** App-managed HTTP clients try HTTP/3 when a direct
-  HTTPS connection supports it, then HTTP/2. Remote sensitive requests (VRChat,
-  AI, uploads, safety lists and executable downloads) cannot use HTTP/1.1.
-  Localhost and private IP addresses can use HTTP/1.1, including local AI services;
-  a local proxy does not exempt a remote destination. Public world collection
-  reads can also fall back to HTTP/1.1. Proxy connections use TCP negotiation;
-  HTTP/3 never bypasses a proxy. AI prompts and uploads are not replayed after
-  transport failures. The Tauri updater SDK uses HTTP/2 with signature verification
-  and fails if that transport fails. WebSocket handshakes, WebView resources and
-  external yt-dlp processes retain their own protocol handling.
+  HTTPS connection supports it, then HTTP/2. Requests that carry credentials or
+  personal data (VRChat API and images, AI, translation, YouTube metadata, avatar
+  search, webhooks, uploads) cannot use HTTP/1.1 with a remote host. Credential-free
+  downloads and reads can fall back to HTTP/1.1: GitHub downloads (yt-dlp, safety-list
+  mirrors), safety lists, update checks and the updater (still signature-verified),
+  VRChat status, community theme catalog and stats, background image metadata and
+  public world collection reads. Localhost and private IP addresses can always use
+  HTTP/1.1, including local AI services; a local proxy does not exempt a remote
+  destination. Proxy connections use TCP negotiation; HTTP/3 never bypasses a proxy.
+  AI prompts and uploads are not replayed after transport failures. WebSocket
+  handshakes, WebView resources and external yt-dlp processes retain their own
+  protocol handling.
 - **Keeps the PC awake** (optional, on by default) so live updates keep arriving while the app
   sits in the tray; the screen can still turn off.
 - **Profile decorations are hidden by default.** VRChat profile backgrounds, avatar frames,

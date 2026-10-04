@@ -515,8 +515,6 @@ async fn find_update(
             release.version == expected_manifest_version
         });
 
-    builder = builder.configure_client(|client| client.http2_prior_knowledge());
-
     if let Some(proxy_url) = request
         .proxy
         .as_deref()
@@ -585,7 +583,7 @@ impl UpdaterPort for TauriUpdaterPort {
                         && !retried
                         && is_update_transport_error(&error) =>
                 {
-                    tracing::warn!(error = %error, "update transport failed; retrying with HTTP/2");
+                    tracing::warn!(error = %error, "update transport failed; retrying");
                     retried = true;
                     on_progress(UpdaterDownloadProgress::Started {
                         content_length: None,

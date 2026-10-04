@@ -336,3 +336,35 @@ fn non_translation_scopes_reject_authorization_header() {
     )
     .is_err());
 }
+
+#[test]
+fn only_credential_free_scopes_allow_http1() {
+    let allowed = [
+        ExternalApiScope::VrcStatus,
+        ExternalApiScope::UpdateRelease,
+        ExternalApiScope::GithubContributors,
+        ExternalApiScope::BackgroundImage,
+        ExternalApiScope::CommunityTheme,
+    ];
+    let denied = [
+        ExternalApiScope::AvatarSearch,
+        ExternalApiScope::Translation,
+        ExternalApiScope::Youtube,
+        ExternalApiScope::Image,
+    ];
+    assert!(allowed.iter().all(|scope| scope.allows_http1()));
+    assert!(denied.iter().all(|scope| !scope.allows_http1()));
+
+    let status = build_web_execute_request(
+        vrc_status_json_get_input("status.json"),
+        ExternalApiScope::VrcStatus,
+    )
+    .expect("status request");
+    assert!(status.allow_http1);
+    let image = build_web_execute_request(
+        image_data_url_get_input("https://files.vrchat.cloud/a.png"),
+        ExternalApiScope::Image,
+    )
+    .expect("image request");
+    assert!(!image.allow_http1);
+}

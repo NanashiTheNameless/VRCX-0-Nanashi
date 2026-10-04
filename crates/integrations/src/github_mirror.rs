@@ -66,7 +66,7 @@ pub async fn github_head(owner: &str, repo: &str, etag: Option<&str>) -> Result<
         request = request.header("If-None-Match", etag);
     }
     let response = request
-        .send_with_policy(HttpPolicy::sensitive(false).without_redirects())
+        .send_with_policy(HttpPolicy::public().without_redirects())
         .await
         .map_err(|error| error.to_string())?;
     if response.status() == reqwest::StatusCode::NOT_MODIFIED {
@@ -101,7 +101,7 @@ async fn download_commit_zip(owner: &str, repo: &str, sha: &str) -> Result<Vec<u
             "https://codeload.github.com/{owner}/{repo}/zip/{sha}"
         ))
         .timeout(Duration::from_secs(60))
-        .send_with_policy(HttpPolicy::sensitive(false).without_redirects())
+        .send_with_policy(HttpPolicy::public().without_redirects())
         .await
         .map_err(|error| error.to_string())?;
     if !response.status().is_success() {

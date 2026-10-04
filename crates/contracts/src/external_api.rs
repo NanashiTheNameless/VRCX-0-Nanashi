@@ -59,6 +59,20 @@ impl ExternalApiScope {
             Self::CommunityTheme => "externalCommunityTheme",
         }
     }
+
+    /// Fork: scopes that never carry credentials may fall back to HTTP/1.1.
+    /// Translation, YouTube and avatar search send keys or IDs, and generic
+    /// image fetches can reach VRChat's CDN with session cookies.
+    pub const fn allows_http1(self) -> bool {
+        matches!(
+            self,
+            Self::VrcStatus
+                | Self::UpdateRelease
+                | Self::GithubContributors
+                | Self::BackgroundImage
+                | Self::CommunityTheme
+        )
+    }
 }
 
 #[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq, specta::Type)]
@@ -130,6 +144,7 @@ pub struct ExternalWebExecuteRequest {
     pub body: Option<String>,
     pub response_body_limit: Option<usize>,
     pub follow_redirects: bool,
+    pub allow_http1: bool,
 }
 
 impl ExternalWebExecuteRequest {
@@ -141,6 +156,7 @@ impl ExternalWebExecuteRequest {
             body: None,
             response_body_limit: None,
             follow_redirects: true,
+            allow_http1: false,
         }
     }
 }
@@ -276,6 +292,7 @@ pub fn build_web_execute_request_with_policy(
     let mut request =
         ExternalWebExecuteRequest::new(build_request_url(&input, scope, policy)?, method.as_str());
     request.follow_redirects = scope != ExternalApiScope::CommunityTheme;
+    request.allow_http1 = scope.allows_http1();
 
     let headers = sanitize_headers(input.headers.as_ref(), scope)?;
     request.headers = headers.into_iter().collect();
