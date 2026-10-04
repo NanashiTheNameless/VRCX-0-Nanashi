@@ -26,6 +26,7 @@ struct State {
     settings: SafetySettings,
     caches: Vec<SourceCache>,
     audit: VecDeque<SafetyAuditEntry>,
+    global_hide_audit: VecDeque<SafetyAuditEntry>,
     location: String,
     epoch: u64,
     generation: u64,
@@ -103,11 +104,37 @@ impl SafetyRuntime {
             .ok()
             .and_then(|v| serde_json::from_value(v).ok())
             .unwrap_or_default();
-        let audit = config
+        let mut audit: VecDeque<SafetyAuditEntry> = config
             .get_json(AUDIT_KEY, json!([]))
             .ok()
             .and_then(|v| serde_json::from_value(v).ok())
             .unwrap_or_default();
+        let mut global_hide_audit: VecDeque<SafetyAuditEntry> = config
+            .get_json(GLOBAL_HIDE_AUDIT_KEY, json!([]))
+            .ok()
+            .and_then(|v| serde_json::from_value(v).ok())
+            .unwrap_or_default();
+        // Fork: move global-hide entries written before the split out of the alert history.
+        let (moved, kept): (Vec<_>, Vec<_>) = audit
+            .drain(..)
+            .partition(|entry| is_global_hide_action(&entry.action));
+        audit.extend(kept);
+        if !moved.is_empty() {
+            for entry in moved.into_iter().rev() {
+                global_hide_audit.push_front(entry);
+            }
+            while global_hide_audit.len() > AUDIT_LIMIT {
+                global_hide_audit.pop_front();
+            }
+            for (key, entries) in [
+                (AUDIT_KEY, &audit),
+                (GLOBAL_HIDE_AUDIT_KEY, &global_hide_audit),
+            ] {
+                if let Ok(value) = serde_json::to_value(entries) {
+                    let _ = config.set_json(key, &value);
+                }
+            }
+        }
         let global_hide = config
             .get_json(GLOBAL_HIDE_KEY, json!({}))
             .ok()
@@ -125,6 +152,7 @@ impl SafetyRuntime {
                     settings,
                     caches,
                     audit,
+                    global_hide_audit,
                     location: String::new(),
                     epoch: 0,
                     generation: 0,
@@ -281,6 +309,7 @@ impl SafetyRuntime {
                 })
                 .collect(),
             audit: state.audit.iter().rev().cloned().collect(),
+            global_hide_audit: state.global_hide_audit.iter().rev().cloned().collect(),
             dropped_events: state.dropped,
         }
     }
@@ -786,8 +815,47 @@ impl SafetyRuntime {
         action: &str,
         outcome: &str,
     ) {
+        self.record_entry(false, job, kind, source, message, action, outcome);
+    }
+
+    /// Fork: global-hide progress goes to its own history (see `GLOBAL_HIDE_AUDIT_KEY`).
+    fn record_global_hide(
+        &self,
+        job: &SafetyJob,
+        source: &str,
+        message: &str,
+        action: &str,
+        outcome: &str,
+    ) {
+        self.record_entry(
+            true,
+            job,
+            "SafetyCommunity",
+            source,
+            message,
+            action,
+            outcome,
+        );
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn record_entry(
+        &self,
+        global_hide: bool,
+        job: &SafetyJob,
+        kind: &str,
+        source: &str,
+        message: &str,
+        action: &str,
+        outcome: &str,
+    ) {
         let mut state = self.state.lock().unwrap();
-        state.audit.push_back(SafetyAuditEntry {
+        let (audit, key) = if global_hide {
+            (&mut state.global_hide_audit, GLOBAL_HIDE_AUDIT_KEY)
+        } else {
+            (&mut state.audit, AUDIT_KEY)
+        };
+        audit.push_back(SafetyAuditEntry {
             account_user_id: job.scope.current_user_id.clone(),
             event_created_at: job.created_at.clone(),
             location: job.location.clone(),
@@ -801,11 +869,11 @@ impl SafetyRuntime {
             action: action.into(),
             outcome: outcome.into(),
         });
-        while state.audit.len() > 500 {
-            state.audit.pop_front();
+        while audit.len() > AUDIT_LIMIT {
+            audit.pop_front();
         }
-        if let Ok(value) = serde_json::to_value(&state.audit) {
-            if let Err(error) = self.config.set_json(AUDIT_KEY, &value) {
+        if let Ok(value) = serde_json::to_value(&*audit) {
+            if let Err(error) = self.config.set_json(key, &value) {
                 tracing::warn!(%error, "failed to persist safety history");
             }
         }
@@ -1167,6 +1235,12 @@ impl SafetyRuntime {
             );
         }
     }
+}
+
+const AUDIT_LIMIT: usize = 500;
+
+fn is_global_hide_action(action: &str) -> bool {
+    matches!(action, "global hide avatar" | "unblock avatar")
 }
 
 fn cache_is_fresh(cache: &SourceCache) -> bool {

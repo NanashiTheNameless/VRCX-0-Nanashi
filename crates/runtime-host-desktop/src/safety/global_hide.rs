@@ -118,7 +118,11 @@ impl SafetyRuntime {
         }
     }
 
-    fn global_hide_job(&self, scope: &RuntimeAuthScopeSnapshot, avatar_id: &str) -> SafetyJob {
+    pub(super) fn global_hide_job(
+        &self,
+        scope: &RuntimeAuthScopeSnapshot,
+        avatar_id: &str,
+    ) -> SafetyJob {
         SafetyJob {
             queued_at: Instant::now(),
             scope: scope.clone(),
@@ -270,14 +274,7 @@ impl SafetyRuntime {
         let source = names.join(", ");
         let job = self.global_hide_job(&scope, &id);
         let message = format!("Global hide from community list: {id}");
-        self.record(
-            &job,
-            "SafetyCommunity",
-            &source,
-            &message,
-            "global hide avatar",
-            "attempting",
-        );
+        self.record_global_hide(&job, &source, &message, "global hide avatar", "attempting");
         let Ok((_, request)) = vrcx_0_vrchat_client::avatars::avatar_moderation_send_input(
             scope.endpoint.clone(),
             id.clone(),
@@ -322,14 +319,7 @@ impl SafetyRuntime {
                 format!("failed: {error}; backing off")
             }
         };
-        self.record(
-            &job,
-            "SafetyCommunity",
-            &source,
-            &message,
-            "global hide avatar",
-            &outcome,
-        );
+        self.record_global_hide(&job, &source, &message, "global hide avatar", &outcome);
         jittered_interval()
     }
 
@@ -349,14 +339,7 @@ impl SafetyRuntime {
         ) else {
             return IDLE;
         };
-        self.record(
-            &job,
-            "SafetyCommunity",
-            "",
-            &message,
-            "unblock avatar",
-            "attempting",
-        );
+        self.record_global_hide(&job, "", &message, "unblock avatar", "attempting");
         let result = tokio::time::timeout(
             Duration::from_secs(15),
             api.execute_guarded(scope, request, VrchatScope::Vrchat, || {
@@ -396,14 +379,7 @@ impl SafetyRuntime {
                 format!("failed: {error}; backing off")
             }
         };
-        self.record(
-            &job,
-            "SafetyCommunity",
-            "",
-            &message,
-            "unblock avatar",
-            &outcome,
-        );
+        self.record_global_hide(&job, "", &message, "unblock avatar", &outcome);
         jittered_interval()
     }
 

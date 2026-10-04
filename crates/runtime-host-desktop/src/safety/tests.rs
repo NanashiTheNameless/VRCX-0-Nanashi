@@ -879,3 +879,76 @@ fn parses_avatar_lists_from_a_mirror_directory() {
     assert!(entries.contains(a) && entries.contains(b));
     let _ = std::fs::remove_dir_all(dir);
 }
+
+#[test]
+fn global_hide_history_is_kept_apart_from_alerts() {
+    let f = Fixture::new();
+    let scope = f.runtime.auth.snapshot();
+    let alert = f.runtime.global_hide_job(&scope, "");
+    f.runtime
+        .record(&alert, "SafetyUrl", "host", "alert", "warn", "shown");
+    for _ in 0..(AUDIT_LIMIT + 10) {
+        let job = f.runtime.global_hide_job(&scope, AVATAR);
+        f.runtime
+            .record_global_hide(&job, "list", "hide", "global hide avatar", "success");
+    }
+    let status = f.runtime.status();
+    assert_eq!(status.audit.len(), 1);
+    assert_eq!(status.audit[0].message, "alert");
+    assert_eq!(status.global_hide_audit.len(), AUDIT_LIMIT);
+}
+
+#[test]
+fn legacy_global_hide_entries_move_out_of_the_alert_history() {
+    let f = Fixture::new();
+    let scope = f.runtime.auth.snapshot();
+    let entry = |action: &str| SafetyAuditEntry {
+        account_user_id: scope.current_user_id.clone(),
+        event_created_at: String::new(),
+        location: String::new(),
+        log_kind: String::new(),
+        avatar_id: String::new(),
+        created_at: now(),
+        event_type: "SafetyCommunity".into(),
+        user_id: String::new(),
+        source: "list".into(),
+        message: action.into(),
+        action: action.into(),
+        outcome: "success".into(),
+    };
+    let legacy = vec![
+        entry("global hide avatar"),
+        entry("warn"),
+        entry("unblock avatar"),
+    ];
+    f.runtime
+        .config
+        .set_json(AUDIT_KEY, &serde_json::to_value(&legacy).unwrap())
+        .unwrap();
+    let (runtime, _) = SafetyRuntime::new(
+        f.runtime.config.clone(),
+        f.runtime.db.clone(),
+        RuntimeAuthScope::new(),
+        ActivityRouter::new(),
+    );
+    let status = runtime.status();
+    assert_eq!(
+        status
+            .audit
+            .iter()
+            .map(|e| e.action.as_str())
+            .collect::<Vec<_>>(),
+        ["warn"]
+    );
+    assert_eq!(
+        status
+            .global_hide_audit
+            .iter()
+            .map(|e| e.action.as_str())
+            .collect::<Vec<_>>(),
+        ["unblock avatar", "global hide avatar"]
+    );
+    let stored: Vec<SafetyAuditEntry> =
+        serde_json::from_value(f.runtime.config.get_json(AUDIT_KEY, json!([])).unwrap()).unwrap();
+    assert_eq!(stored.len(), 1);
+}

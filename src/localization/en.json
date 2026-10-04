@@ -3378,6 +3378,7 @@
                 "history": "Safety history",
                 "refresh_history": "Refresh history",
                 "no_history": "No safety events recorded.",
+                "global_hide_history": "Global hide history",
                 "dropped": "{count} events were skipped because the processing queue was full.",
                 "refreshing": "Refreshing sources...",
                 "avatar_blocks_description": "Review exact IDs before blocking avatars across all instances. Up to 25 selected IDs per batch, one request per second. No avatars are blocked merely by enabling or refreshing a source.",

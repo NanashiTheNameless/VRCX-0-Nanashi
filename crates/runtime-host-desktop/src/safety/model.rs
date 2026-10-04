@@ -8,6 +8,8 @@ pub const CACHE_KEY: &str = "safetySourceCache";
 pub const AUDIT_KEY: &str = "safetyAudit";
 /// Fork: per-account global-hide progress and provenance (`account user id -> state`).
 pub const GLOBAL_HIDE_KEY: &str = "safetyGlobalHide";
+/// Fork: global-hide block/unblock history, kept apart so it cannot evict alerts.
+pub const GLOBAL_HIDE_AUDIT_KEY: &str = "safetyGlobalHideAudit";
 
 /// Fork: persisted global-hide progress for one VRChat account.
 #[derive(Clone, Debug, Default, Serialize, Deserialize, Type, PartialEq)]
@@ -187,6 +189,7 @@ pub struct SafetyAuditEntry {
 pub struct SafetyStatus {
     pub sources: Vec<SourceStatus>,
     pub audit: Vec<SafetyAuditEntry>,
+    pub global_hide_audit: Vec<SafetyAuditEntry>,
     pub dropped_events: u32,
 }
 #[derive(Clone, Debug, Serialize, Type)]

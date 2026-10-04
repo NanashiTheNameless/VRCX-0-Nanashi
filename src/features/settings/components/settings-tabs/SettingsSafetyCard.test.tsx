@@ -79,11 +79,13 @@ beforeEach(() => {
     mocks.status.mockResolvedValue({
         sources: [],
         audit: [],
+        globalHideAudit: [],
         droppedEvents: 0
     });
     mocks.refresh.mockResolvedValue({
         sources: [],
         audit: [],
+        globalHideAudit: [],
         droppedEvents: 0
     });
     mocks.confirm.mockResolvedValue({ ok: false });
@@ -197,6 +199,17 @@ describe('safety settings', () => {
                     outcome: 'shown'
                 }
             ],
+            globalHideAudit: [
+                {
+                    createdAt: 'today',
+                    eventType: 'SafetyCommunity',
+                    userId: '',
+                    source: 'Test list',
+                    message: 'Global hide from community list',
+                    action: 'global hide avatar',
+                    outcome: 'success'
+                }
+            ],
             droppedEvents: 0
         });
         useNavigationCacheStore.setState({ hydrated: true, settingsCards: {} });
@@ -208,6 +221,10 @@ describe('safety settings', () => {
         expect(screen.queryByText('URL was not opened')).toBeNull();
         fireEvent.click(screen.getByRole('button', { name: 'history' }));
         expect(await screen.findByText('URL was not opened')).toBeTruthy();
+        expect(screen.getByText('global_hide_history')).toBeTruthy();
+        expect(
+            screen.getByText('Global hide from community list')
+        ).toBeTruthy();
         expect(mocks.refresh).toHaveBeenCalledOnce();
     });
 });

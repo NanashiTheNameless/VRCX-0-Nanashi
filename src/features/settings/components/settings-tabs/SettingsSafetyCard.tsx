@@ -623,6 +623,31 @@ export function SettingsSafetyCard() {
                                 </p>
                             )}
                         </div>
+                        {!!status?.globalHideAudit.length && (
+                            <>
+                                <p className="font-medium">
+                                    {t(`${P}.global_hide_history`)}
+                                </p>
+                                <div className="max-h-80 space-y-2 overflow-auto">
+                                    {status.globalHideAudit.map(
+                                        (entry, index) => (
+                                            <div
+                                                key={`${entry.createdAt}-${index}`}
+                                                className="rounded border p-2 text-sm"
+                                            >
+                                                <p>{entry.message}</p>
+                                                <p className="text-muted-foreground">
+                                                    {entry.createdAt} |{' '}
+                                                    {entry.source} |{' '}
+                                                    {entry.action}:{' '}
+                                                    {entry.outcome}
+                                                </p>
+                                            </div>
+                                        )
+                                    )}
+                                </div>
+                            </>
+                        )}
                     </CollapsibleContent>
                 </Collapsible>
             </fieldset>

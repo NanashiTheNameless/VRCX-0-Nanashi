@@ -6598,6 +6598,7 @@ export type SafetySource = {
 export type SafetyStatus = {
     sources: SourceStatus[];
     audit: SafetyAuditEntry[];
+    globalHideAudit: SafetyAuditEntry[];
     droppedEvents: number;
 };
 export type SavedAuthAutoLoginStatus =
