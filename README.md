@@ -46,7 +46,8 @@ It is a Rust + Tauri rewrite of VRCX.
   user/avatar profiles show community-list matches. Warning delivery uses the System & Safety
   filters and custom sounds. Logged URLs are inspected locally without fetching or resolving them.
   Community sources default to warnings; automatic user blocks and bans from selected owned
-  groups require explicit configuration and are recorded in Safety history.
+  groups require explicit configuration and are recorded in Safety history. Players already in
+  the instance when the app starts or a list updates are warned about too, never acted on.
   Game-log tables and sessions show inline warnings without opening logged URLs.
   Group checks cover public memberships. Your own avatar ID can be confirmed through the API;
   other players' avatar alerts use names and explicitly mark the ID as unverified.
@@ -54,7 +55,8 @@ It is a Rust + Tauri rewrite of VRCX.
   per-ID results. A name match alone never blocks: an on-demand instance check looks names up
   with your avatar search provider and offers a confirmed block only when exactly one listed ID
   matches. Avatar lists can also be hidden account-wide at a throttled pace (daily cap, backoff);
-  turning that off never unblocks, and unblocking is a separate reviewed action. Community lists
+  turning that off never unblocks, and unblocking is a separate reviewed action. Its progress has
+  its own history so it never pushes alerts out of Safety history. Community lists
   hosted on GitHub are mirrored locally and refreshed when the repository changes.
   Instance kicks remain unavailable.
 - **Assistant reminders.** Ask the assistant (with writes turned on) to tell you when a friend comes

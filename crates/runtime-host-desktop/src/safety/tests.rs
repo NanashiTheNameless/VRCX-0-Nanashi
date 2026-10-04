@@ -952,3 +952,47 @@ fn legacy_global_hide_entries_move_out_of_the_alert_history() {
         serde_json::from_value(f.runtime.config.get_json(AUDIT_KEY, json!([])).unwrap()).unwrap();
     assert_eq!(stored.len(), 1);
 }
+
+#[tokio::test]
+async fn players_already_present_are_warned_once_without_actions() {
+    let mut f = Fixture::new();
+    f.source(SourceFormat::UserIds, &[USER], true, "");
+    let location = GameLogEventKind::Location {
+        location: "wrld_test:1".into(),
+        world_name: String::new(),
+    };
+    f.observe(location, GameLogEventOrigin::InitialScan);
+    f.observe(join(), GameLogEventOrigin::InitialScan);
+    assert!(f.receiver.try_recv().is_err());
+
+    f.runtime.warn_present_players();
+    f.runtime.warn_present_players();
+    let audit = f.runtime.status().audit;
+    assert_eq!(audit.len(), 1);
+    assert_eq!(audit[0].user_id, USER);
+    assert_eq!(
+        (audit[0].action.as_str(), audit[0].outcome.as_str()),
+        ("warn", "shown")
+    );
+
+    // After a live join warning, the present pass does not warn again.
+    let (api, _) = f.api(json!([]));
+    f.observe(
+        GameLogEventKind::Location {
+            location: "wrld_test:2".into(),
+            world_name: String::new(),
+        },
+        GameLogEventOrigin::Live,
+    );
+    let job = f.join();
+    f.runtime.check(job, &api, &mut HashMap::new()).await;
+    f.runtime.warn_present_players();
+    let warnings = f
+        .runtime
+        .status()
+        .audit
+        .iter()
+        .filter(|entry| entry.action == "warn")
+        .count();
+    assert_eq!(warnings, 2);
+}

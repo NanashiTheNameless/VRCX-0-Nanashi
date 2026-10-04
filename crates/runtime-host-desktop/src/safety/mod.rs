@@ -35,6 +35,8 @@ struct State {
     revision: u64,
     policy_revision: u64,
     seen: HashMap<String, Instant>,
+    /// Fork: (epoch, user id, source id) already warned about this instance visit.
+    warned_present: std::collections::HashSet<(u64, String, String)>,
     dropped: u32,
     avatar_review: Option<avatar_blocks::AvatarReview>,
 }
@@ -161,6 +163,7 @@ impl SafetyRuntime {
                     revision: 0,
                     policy_revision: 0,
                     seen: HashMap::new(),
+                    warned_present: std::collections::HashSet::new(),
                     dropped: 0,
                     avatar_review: None,
                 }),
@@ -560,6 +563,7 @@ impl SafetyRuntime {
                     if let Err(error) = runtime.refresh_sources(false).await {
                         tracing::warn!(%error, "safety list refresh failed");
                     }
+                    runtime.warn_present_players();
                 }
                 ticks += 1;
                 tokio::time::sleep(Duration::from_secs(1)).await;
@@ -576,6 +580,74 @@ impl SafetyRuntime {
                 tokio::time::sleep(Duration::from_secs(1)).await;
             }
         });
+    }
+
+    /// Fork: warn (never act) about listed players who were already in the
+    /// instance when the app started or when a list gained them. Live joins
+    /// are handled in `check`; each player is warned once per source and visit.
+    fn warn_present_players(&self) {
+        let scope = self.auth.snapshot();
+        let settings = self.settings();
+        if !scope.active || !settings.enabled {
+            return;
+        }
+        let pending: Vec<(SafetyJob, String)> = {
+            let mut state = self.state.lock().unwrap();
+            if state.location.is_empty() {
+                return;
+            }
+            let epoch = state.epoch;
+            state
+                .warned_present
+                .retain(|(warned, _, _)| *warned == epoch);
+            let mut pending = Vec::new();
+            for source in settings
+                .sources
+                .iter()
+                .filter(|s| s.enabled && s.warn && s.format == SourceFormat::UserIds)
+            {
+                let Some(cache) = state.caches.iter().find(|c| cache_matches(c, source)) else {
+                    continue;
+                };
+                for (user_id, (display_name, revision)) in &state.players {
+                    let key = (epoch, user_id.clone(), source.id.clone());
+                    if !cache.entries.contains(user_id) || state.warned_present.contains(&key) {
+                        continue;
+                    }
+                    let job = SafetyJob {
+                        queued_at: Instant::now(),
+                        scope: scope.clone(),
+                        epoch,
+                        player_revision: *revision,
+                        policy_revision: state.policy_revision,
+                        is_join: false,
+                        location: state.location.clone(),
+                        created_at: now(),
+                        user_id: user_id.clone(),
+                        display_name: display_name.clone(),
+                        avatar_name: String::new(),
+                        url: String::new(),
+                        log_kind: "Present".into(),
+                        avatar_id: String::new(),
+                    };
+                    pending.push((key, job, source.name.clone()));
+                }
+            }
+            pending
+                .into_iter()
+                .map(|(key, job, name)| {
+                    state.warned_present.insert(key);
+                    (job, name)
+                })
+                .collect()
+        };
+        for (job, source_name) in pending {
+            let message = format!(
+                "{} appears in {} (community claim; verify before acting).",
+                job.display_name, source_name
+            );
+            self.notice(&job, &settings, "SafetyCommunity", &source_name, message);
+        }
     }
 
     fn observe(&self, events: &[GameLogEvent], origin: GameLogEventOrigin) {
@@ -975,6 +1047,11 @@ impl SafetyRuntime {
                     job.display_name, source.name
                 );
                 if source.warn {
+                    self.state.lock().unwrap().warned_present.insert((
+                        job.epoch,
+                        job.user_id.clone(),
+                        source.id.clone(),
+                    ));
                     self.notice(
                         &job,
                         &settings,
