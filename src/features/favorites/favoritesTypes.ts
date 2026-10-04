@@ -44,6 +44,7 @@ export type FavoriteItem = {
     isLoadingDetail?: boolean;
     location?: string;
     orderIndex?: number;
+    customIndex?: number;
     playerCount?: number;
     statusLabel?: string;
     statusVariant?: string;

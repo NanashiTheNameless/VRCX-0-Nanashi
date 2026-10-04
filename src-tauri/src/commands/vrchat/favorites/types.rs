@@ -94,6 +94,22 @@ pub struct LocalFavoriteGroupRenameInput {
     pub(crate) new_group_name: String,
 }
 
+#[derive(Debug, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct LocalFavoriteGroupReorderInput {
+    pub(crate) kind: FavoriteEntityKind,
+    pub(crate) group_names: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct LocalFavoriteReorderInput {
+    pub(crate) kind: FavoriteEntityKind,
+    #[serde(default)]
+    pub(crate) group_name: String,
+    pub(crate) entity_ids: Vec<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use serde_json::json;

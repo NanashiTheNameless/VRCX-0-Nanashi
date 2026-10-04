@@ -43,6 +43,15 @@ impl FavoriteStore for LocalFavoriteStore {
         favorites::favorite_list(self.db.as_ref(), owner_user_id, kind).map_err(Into::into)
     }
 
+    fn list_custom_order(
+        &self,
+        owner_user_id: Option<&OwnerId>,
+        kind: FavoriteEntityKind,
+    ) -> Result<Vec<FavoriteRow>> {
+        favorites::favorite_list_custom_order(self.db.as_ref(), owner_user_id, kind)
+            .map_err(Into::into)
+    }
+
     fn add(
         &self,
         owner_user_id: Option<&OwnerId>,
@@ -85,6 +94,23 @@ impl FavoriteStore for LocalFavoriteStore {
             removed: result.removed,
             added: result.added,
         })
+    }
+
+    fn reorder(
+        &self,
+        owner_user_id: Option<&OwnerId>,
+        kind: FavoriteEntityKind,
+        group_name: String,
+        entity_ids: Vec<String>,
+    ) -> Result<i64> {
+        favorites::favorite_reorder(
+            self.db.as_ref(),
+            owner_user_id,
+            kind,
+            group_name,
+            entity_ids,
+        )
+        .map_err(Into::into)
     }
 
     fn rename_group_with_config(

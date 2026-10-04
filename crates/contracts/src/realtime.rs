@@ -43,11 +43,10 @@ impl SelfProfileField {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SelfProfileLogEntry {
-    pub created_at: String,
+pub struct SelfProfileObservation {
+    pub observed_at: String,
     pub field: SelfProfileField,
     pub value: String,
-    pub previous_value: String,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -78,7 +77,7 @@ pub struct RealtimePersistenceBatch {
     #[serde(default)]
     pub game_log_location_time_updates: Vec<GameLogLocationTimeUpdate>,
     #[serde(default)]
-    pub self_profile_log_entries: Vec<SelfProfileLogEntry>,
+    pub self_profile_observations: Vec<SelfProfileObservation>,
 }
 
 impl RealtimePersistenceBatch {
@@ -95,7 +94,7 @@ impl RealtimePersistenceBatch {
             && self.avatar_time_spent_upserts.is_empty()
             && self.game_log_locations.is_empty()
             && self.game_log_location_time_updates.is_empty()
-            && self.self_profile_log_entries.is_empty()
+            && self.self_profile_observations.is_empty()
     }
 }
 

@@ -1,4 +1,5 @@
 import { UserIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 
 import { FadeInImage } from '@/components/media/FadeInImage';
 import { UserStatusDot } from '@/components/UserStatusDot';
@@ -7,11 +8,13 @@ import { cn } from '@/lib/utils';
 export function UserStatusAvatar({
     imageUrl = '',
     statusDotClassName = '',
-    className = ''
+    className = '',
+    frame
 }: {
     imageUrl?: string;
     statusDotClassName?: string;
     className?: string;
+    frame?: ReactNode;
 }) {
     return (
         <span
@@ -40,6 +43,7 @@ export function UserStatusAvatar({
                     />
                 )}
             </span>
+            {frame}
             <UserStatusDot
                 statusDotClassName={statusDotClassName}
                 className="absolute -right-0.5 -bottom-0.5 z-10 size-3.75"

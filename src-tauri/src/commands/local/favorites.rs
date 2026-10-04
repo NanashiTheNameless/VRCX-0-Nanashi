@@ -29,6 +29,19 @@ pub fn app__favorite_list(
 
 #[tauri::command(async)]
 #[specta::specta]
+pub fn app__favorite_local_custom_order(
+    state: State<'_, AppState>,
+    kind: FavoriteEntityKind,
+) -> Result<Vec<FavoriteRow>, AppError> {
+    state
+        .runtime_host()
+        .local_data()
+        .favorite_custom_order(kind)
+        .map_err(AppError::from)
+}
+
+#[tauri::command(async)]
+#[specta::specta]
 pub fn app__favorite_local_snapshot(
     state: State<'_, AppState>,
     kind: FavoriteEntityKind,

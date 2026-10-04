@@ -38,6 +38,9 @@ export function SearchUserTabPanel({
     const randomUserColours = usePreferencesStore(
         (state) => state.randomUserColours
     );
+    const randomUserColourStyle = usePreferencesStore(
+        (state) => state.randomUserColourStyle
+    );
     const isDarkMode =
         typeof document !== 'undefined' &&
         document.documentElement.classList.contains('dark');
@@ -64,6 +67,9 @@ export function SearchUserTabPanel({
                                     key={user.id}
                                     user={user}
                                     randomUserColours={randomUserColours}
+                                    randomUserColourStyle={
+                                        randomUserColourStyle
+                                    }
                                     isDarkMode={isDarkMode}
                                     languageOptionsMap={languageOptionsMap}
                                 />

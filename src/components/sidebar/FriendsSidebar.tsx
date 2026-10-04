@@ -179,7 +179,10 @@ export function FriendsSidebar({
     const {
         ageGatedInstancesVisible,
         randomUserColours,
+        randomUserColourStyle,
         showInstanceIdInLocation,
+        showSidebarAvatarFrame,
+        showSidebarNameplate,
         trustColor
     } = useFriendsSidebarDisplayPreferences();
     const { openGroups, statusPresets, toggleSection } =
@@ -620,7 +623,7 @@ export function FriendsSidebar({
             if (rightIndex >= 0) {
                 return 1;
             }
-            return String(left).localeCompare(String(right));
+            return 0;
         });
 
         for (const group of orderedRemoteGroups) {
@@ -784,8 +787,11 @@ export function FriendsSidebar({
         ageGatedInstancesVisible,
         isDarkMode,
         randomUserColours,
+        randomUserColourStyle,
         recentActionVersion,
         showInstanceIdInLocation,
+        showSidebarAvatarFrame,
+        showSidebarNameplate,
         trustColor
     };
     const locationView = {

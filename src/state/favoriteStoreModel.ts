@@ -201,10 +201,17 @@ export function flattenFavoriteGroups(
     );
 }
 
-export function getSortedLocalGroupNames(
+export function appendLocalGroupNames(
+    names: readonly string[],
     source: FavoriteGroupMap | null | undefined
 ): string[] {
-    return Object.keys(source || {}).sort();
+    const next = Array.from(new Set(names));
+    for (const groupName of Object.keys(source || {})) {
+        if (!next.includes(groupName)) {
+            next.push(groupName);
+        }
+    }
+    return next;
 }
 
 export function normalizeStringArray(source: unknown): string[] {

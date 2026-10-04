@@ -8,12 +8,12 @@ import type {
 import { createDefaultFavoriteCachedRef } from '@/shared/utils/entityTransforms';
 
 import {
+    appendLocalGroupNames,
     buildRemoteFavoriteCollections,
     cloneFavoriteLimits,
     createLocalFavoriteGroupState,
     deleteLocalFavoriteGroupState,
     flattenFavoriteGroups,
-    getSortedLocalGroupNames,
     hasFavoriteStoreData,
     initialFavoriteStoreState,
     isObjectRecord,
@@ -182,8 +182,10 @@ export const useFavoriteStore = create<FavoriteStore>((set, get) => ({
                 return {
                     ...state,
                     localFriendFavorites,
-                    localFriendFavoriteGroups:
-                        getSortedLocalGroupNames(localFriendFavorites),
+                    localFriendFavoriteGroups: appendLocalGroupNames(
+                        state.localFriendFavoriteGroups,
+                        localFriendFavorites
+                    ),
                     localFriendFavoritesList:
                         flattenFavoriteGroups(localFriendFavorites)
                 };
@@ -208,8 +210,10 @@ export const useFavoriteStore = create<FavoriteStore>((set, get) => ({
                 return {
                     ...state,
                     localAvatarFavorites,
-                    localAvatarFavoriteGroups:
-                        getSortedLocalGroupNames(localAvatarFavorites),
+                    localAvatarFavoriteGroups: appendLocalGroupNames(
+                        state.localAvatarFavoriteGroups,
+                        localAvatarFavorites
+                    ),
                     localAvatarFavoritesList:
                         flattenFavoriteGroups(localAvatarFavorites)
                 };
@@ -229,8 +233,10 @@ export const useFavoriteStore = create<FavoriteStore>((set, get) => ({
                 return {
                     ...state,
                     localFriendFavorites,
-                    localFriendFavoriteGroups:
-                        Object.keys(localFriendFavorites).sort(),
+                    localFriendFavoriteGroups: appendLocalGroupNames(
+                        state.localFriendFavoriteGroups,
+                        localFriendFavorites
+                    ),
                     localFriendFavoritesList:
                         flattenFavoriteGroups(localFriendFavorites)
                 };
@@ -247,8 +253,10 @@ export const useFavoriteStore = create<FavoriteStore>((set, get) => ({
                 return {
                     ...state,
                     localAvatarFavorites,
-                    localAvatarFavoriteGroups:
-                        Object.keys(localAvatarFavorites).sort(),
+                    localAvatarFavoriteGroups: appendLocalGroupNames(
+                        state.localAvatarFavoriteGroups,
+                        localAvatarFavorites
+                    ),
                     localAvatarFavoritesList
                 };
             }
@@ -266,8 +274,10 @@ export const useFavoriteStore = create<FavoriteStore>((set, get) => ({
                 return {
                     ...state,
                     localFriendFavorites,
-                    localFriendFavoriteGroups:
-                        getSortedLocalGroupNames(localFriendFavorites)
+                    localFriendFavoriteGroups: appendLocalGroupNames(
+                        state.localFriendFavoriteGroups,
+                        localFriendFavorites
+                    )
                 };
             }
 
@@ -279,8 +289,10 @@ export const useFavoriteStore = create<FavoriteStore>((set, get) => ({
                 return {
                     ...state,
                     localAvatarFavorites,
-                    localAvatarFavoriteGroups:
-                        getSortedLocalGroupNames(localAvatarFavorites)
+                    localAvatarFavoriteGroups: appendLocalGroupNames(
+                        state.localAvatarFavoriteGroups,
+                        localAvatarFavorites
+                    )
                 };
             }
 
@@ -288,6 +300,12 @@ export const useFavoriteStore = create<FavoriteStore>((set, get) => ({
         });
     },
     renameLocalFavoriteGroup({ kind, groupName, newGroupName }) {
+        const normalizedGroupName = normalizeFavoriteStoreId(groupName);
+        const normalizedNewGroupName = normalizeFavoriteStoreId(newGroupName);
+        const renameGroup = (name: string) =>
+            name === normalizedGroupName && normalizedNewGroupName
+                ? normalizedNewGroupName
+                : name;
         set((state) => {
             if (kind === 'friend') {
                 const localFriendFavorites = renameLocalFavoriteGroupState(
@@ -298,8 +316,10 @@ export const useFavoriteStore = create<FavoriteStore>((set, get) => ({
                 return {
                     ...state,
                     localFriendFavorites,
-                    localFriendFavoriteGroups:
-                        getSortedLocalGroupNames(localFriendFavorites),
+                    localFriendFavoriteGroups: appendLocalGroupNames(
+                        state.localFriendFavoriteGroups.map(renameGroup),
+                        localFriendFavorites
+                    ),
                     localFriendFavoritesList:
                         flattenFavoriteGroups(localFriendFavorites)
                 };
@@ -314,8 +334,10 @@ export const useFavoriteStore = create<FavoriteStore>((set, get) => ({
                 return {
                     ...state,
                     localAvatarFavorites,
-                    localAvatarFavoriteGroups:
-                        getSortedLocalGroupNames(localAvatarFavorites),
+                    localAvatarFavoriteGroups: appendLocalGroupNames(
+                        state.localAvatarFavoriteGroups.map(renameGroup),
+                        localAvatarFavorites
+                    ),
                     localAvatarFavoritesList:
                         flattenFavoriteGroups(localAvatarFavorites)
                 };
@@ -325,6 +347,8 @@ export const useFavoriteStore = create<FavoriteStore>((set, get) => ({
         });
     },
     deleteLocalFavoriteGroup({ kind, groupName }) {
+        const normalizedGroupName = normalizeFavoriteStoreId(groupName);
+        const keepGroup = (name: string) => name !== normalizedGroupName;
         set((state) => {
             if (kind === 'friend') {
                 const localFriendFavorites = deleteLocalFavoriteGroupState(
@@ -334,8 +358,10 @@ export const useFavoriteStore = create<FavoriteStore>((set, get) => ({
                 return {
                     ...state,
                     localFriendFavorites,
-                    localFriendFavoriteGroups:
-                        getSortedLocalGroupNames(localFriendFavorites),
+                    localFriendFavoriteGroups: appendLocalGroupNames(
+                        state.localFriendFavoriteGroups.filter(keepGroup),
+                        localFriendFavorites
+                    ),
                     localFriendFavoritesList:
                         flattenFavoriteGroups(localFriendFavorites)
                 };
@@ -349,8 +375,10 @@ export const useFavoriteStore = create<FavoriteStore>((set, get) => ({
                 return {
                     ...state,
                     localAvatarFavorites,
-                    localAvatarFavoriteGroups:
-                        getSortedLocalGroupNames(localAvatarFavorites),
+                    localAvatarFavoriteGroups: appendLocalGroupNames(
+                        state.localAvatarFavoriteGroups.filter(keepGroup),
+                        localAvatarFavorites
+                    ),
                     localAvatarFavoritesList:
                         flattenFavoriteGroups(localAvatarFavorites)
                 };
@@ -454,12 +482,10 @@ export const useFavoriteStore = create<FavoriteStore>((set, get) => ({
         set((state) => {
             const normalizedFavorites =
                 normalizeFavoriteGroupMap(localFavorites);
-            const normalizedGroups = Array.from(
-                new Set([
-                    ...normalizeStringArray(localFavoriteGroups),
-                    ...getSortedLocalGroupNames(normalizedFavorites)
-                ])
-            ).sort();
+            const normalizedGroups = appendLocalGroupNames(
+                normalizeStringArray(localFavoriteGroups),
+                normalizedFavorites
+            );
             const normalizedList = flattenFavoriteGroups(normalizedFavorites);
 
             if (kind === 'friend') {

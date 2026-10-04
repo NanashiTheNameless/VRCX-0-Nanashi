@@ -73,6 +73,7 @@ function ContextMenuContent({
     return (
         <ContextMenuPrimitive.Portal>
             <ContextMenuPrimitive.Positioner
+                data-slot="menu-positioner"
                 align={align}
                 alignOffset={alignOffset}
                 side={side}

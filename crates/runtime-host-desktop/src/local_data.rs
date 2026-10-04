@@ -596,6 +596,15 @@ impl LocalDataRuntime {
         vrcx_0_application::favorites::list_local_favorites(&store, &self.current_owner(), kind)
     }
 
+    pub fn favorite_custom_order(&self, kind: FavoriteEntityKind) -> Result<Vec<FavoriteRow>> {
+        let store = vrcx_0_outbound_adapters::LocalFavoriteStore::new(Arc::clone(&self.db));
+        vrcx_0_application::favorites::list_local_favorite_custom_order(
+            &store,
+            &self.current_owner(),
+            kind,
+        )
+    }
+
     pub fn favorite_snapshot(&self, kind: FavoriteEntityKind) -> Result<LocalFavoriteSnapshot> {
         let store = vrcx_0_outbound_adapters::LocalFavoriteStore::new(Arc::clone(&self.db));
         vrcx_0_application::favorites::get_local_favorite_snapshot(

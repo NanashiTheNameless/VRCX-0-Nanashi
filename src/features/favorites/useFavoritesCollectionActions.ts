@@ -476,10 +476,29 @@ export function useFavoritesCollectionActions({
         }
     }
 
+    async function handleLocalGroupReorder(
+        groupNames: string[]
+    ): Promise<boolean> {
+        try {
+            await commands.appLocalFavoriteGroupReorder({ kind, groupNames });
+            return true;
+        } catch (error) {
+            toast.add({
+                type: 'error',
+                title:
+                    error instanceof Error
+                        ? error.message
+                        : t('view.favorites.toast.failed_to_save_order')
+            });
+            return false;
+        }
+    }
+
     return {
         exportCurrentFavorites,
         handleLocalGroupDelete,
         handleLocalGroupRename,
+        handleLocalGroupReorder,
         handleRemoveLocalFavorite,
         handleRemoveRemoteFavorite,
         handleRemoteGroupClear,

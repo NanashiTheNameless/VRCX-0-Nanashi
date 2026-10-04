@@ -39,8 +39,8 @@ pub use favorite_transfer::{
     FavoriteTransferTarget,
 };
 pub use local_favorites::{
-    get_local_favorite_snapshot, list_local_favorites, FavoriteMoveResult, FavoriteStore,
-    LocalFavoriteGroupWrite, LocalFavoriteSnapshot,
+    get_local_favorite_snapshot, list_local_favorite_custom_order, list_local_favorites,
+    FavoriteMoveResult, FavoriteStore, LocalFavoriteGroupWrite, LocalFavoriteSnapshot,
 };
 pub use local_world_details::{
     refresh_local_world_details, LocalWorldDetailsRefreshOutput, LocalWorldDetailsRemote,

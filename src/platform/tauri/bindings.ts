@@ -1073,6 +1073,11 @@ const generatedCommands = {
     async appFavoriteList(kind: FavoriteEntityKind): Promise<FavoriteRow[]> {
         return await TAURI_INVOKE('app__favorite_list', { kind });
     },
+    async appFavoriteLocalCustomOrder(
+        kind: FavoriteEntityKind
+    ): Promise<FavoriteRow[]> {
+        return await TAURI_INVOKE('app__favorite_local_custom_order', { kind });
+    },
     async appFavoriteLocalSnapshot(
         kind: FavoriteEntityKind
     ): Promise<LocalFavoriteSnapshot> {
@@ -1497,8 +1502,20 @@ const generatedCommands = {
             input
         });
     },
+    async appLocalFavoriteGroupReorder(
+        input: LocalFavoriteGroupReorderInput
+    ): Promise<string[]> {
+        return await TAURI_INVOKE('app__local_favorite_group_reorder', {
+            input
+        });
+    },
     async appLocalFavoriteRemove(input: LocalFavoriteInput): Promise<number> {
         return await TAURI_INVOKE('app__local_favorite_remove', { input });
+    },
+    async appLocalFavoriteReorder(
+        input: LocalFavoriteReorderInput
+    ): Promise<number> {
+        return await TAURI_INVOKE('app__local_favorite_reorder', { input });
     },
     async appVrchatFriendStatusGet(
         input: VrchatFriendUserInput
@@ -5528,6 +5545,10 @@ export type LocalFavoriteGroupRenameInput = {
     groupName?: string;
     newGroupName?: string;
 };
+export type LocalFavoriteGroupReorderInput = {
+    kind: FavoriteEntityKind;
+    groupNames: string[];
+};
 export type LocalFavoriteGroupWrite = {
     configKey: string;
     groupNames: string[];
@@ -5537,6 +5558,11 @@ export type LocalFavoriteInput = {
     kind: FavoriteEntityKind;
     entityId?: string;
     groupName?: string;
+};
+export type LocalFavoriteReorderInput = {
+    kind: FavoriteEntityKind;
+    groupName?: string;
+    entityIds: string[];
 };
 export type LocalFavoriteSnapshot = {
     favorites: FavoriteRow[];

@@ -10,7 +10,7 @@ use crate::realtime::ensure_realtime_tables;
 use super::{
     normalize_user_table_prefix, write_realtime_batch, AvatarTimeSpentUpsert, FriendLogDelete,
     FriendLogUpsert, NotificationExpiration, NotificationV2Update, RealtimePersistenceBatch,
-    SelfProfileField, SelfProfileLogEntry,
+    SelfProfileField, SelfProfileObservation,
 };
 use crate::ownership::OwnerId;
 use vrcx_0_contracts::feed_live::FeedLiveEntry;
@@ -1012,31 +1012,33 @@ fn rejects_notifications_missing_required_fields() {
 
 fn self_profile_log_rows(db: &DatabaseService) -> Vec<Vec<serde_json::Value>> {
     db.execute(
-        "SELECT field, value, previous_value FROM usrself_self_profile_log ORDER BY id",
+        "SELECT created_at, field, value, previous_value FROM usrself_self_profile_log ORDER BY id",
         &Default::default(),
     )
     .unwrap()
 }
 
-fn self_profile_entry(
+fn self_profile_observation(
+    observed_at: &str,
     field: SelfProfileField,
     value: &str,
-    previous_value: &str,
-) -> SelfProfileLogEntry {
-    SelfProfileLogEntry {
-        created_at: "2026-05-15T00:00:00Z".to_string(),
+) -> SelfProfileObservation {
+    SelfProfileObservation {
+        observed_at: observed_at.to_string(),
         field,
         value: value.to_string(),
-        previous_value: previous_value.to_string(),
     }
 }
 
-fn write_self_profile_log(db: &DatabaseService, entries: Vec<SelfProfileLogEntry>) {
+fn write_self_profile_observations(
+    db: &DatabaseService,
+    observations: Vec<SelfProfileObservation>,
+) {
     write_realtime_batch(
         db,
         &OwnerId::new("usr_self"),
         &RealtimePersistenceBatch {
-            self_profile_log_entries: entries,
+            self_profile_observations: observations,
             ..RealtimePersistenceBatch::default()
         },
     )
@@ -1044,42 +1046,48 @@ fn write_self_profile_log(db: &DatabaseService, entries: Vec<SelfProfileLogEntry
 }
 
 #[test]
-fn writes_one_self_profile_log_row_per_changed_field() {
-    let dir = TestDir::new("self-profile-log-records");
+fn self_profile_observations_log_only_values_that_differ_from_the_latest_row() {
+    let dir = TestDir::new("self-profile-changes");
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3")).unwrap();
 
-    write_self_profile_log(
-        &db,
+    for (observed_at, bio) in [
+        ("2026-05-15T00:00:00Z", "old bio"),
+        ("2026-05-16T00:00:00Z", "old bio"),
+        ("2026-05-17T00:00:00Z", "new bio"),
+        ("2026-05-18T00:00:00Z", "new bio"),
+    ] {
+        write_self_profile_observations(
+            &db,
+            vec![
+                self_profile_observation(observed_at, SelfProfileField::Status, "join me"),
+                self_profile_observation(observed_at, SelfProfileField::Bio, bio),
+            ],
+        );
+    }
+
+    assert_eq!(
+        self_profile_log_rows(&db),
         vec![
-            self_profile_entry(SelfProfileField::Status, "ask me", "join me"),
-            self_profile_entry(SelfProfileField::StatusDescription, "afk", "come vibe"),
-            self_profile_entry(SelfProfileField::Bio, "new bio", ""),
-        ],
+            vec![
+                json!("2026-05-15T00:00:00Z"),
+                json!("status"),
+                json!("join me"),
+                json!(""),
+            ],
+            vec![
+                json!("2026-05-15T00:00:00Z"),
+                json!("bio"),
+                json!("old bio"),
+                json!(""),
+            ],
+            vec![
+                json!("2026-05-17T00:00:00Z"),
+                json!("bio"),
+                json!("new bio"),
+                json!("old bio"),
+            ],
+        ]
     );
-
-    let rows = self_profile_log_rows(&db);
-    assert_eq!(rows.len(), 3);
-    assert_eq!(rows[0][0], json!("status"));
-    assert_eq!(rows[0][1], json!("ask me"));
-    assert_eq!(rows[0][2], json!("join me"));
-    assert_eq!(rows[1][0], json!("statusDescription"));
-    assert_eq!(rows[2][0], json!("bio"));
-}
-
-#[test]
-fn skips_self_profile_log_rows_that_did_not_change() {
-    let dir = TestDir::new("self-profile-log-skips");
-    let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3")).unwrap();
-
-    write_self_profile_log(
-        &db,
-        vec![
-            self_profile_entry(SelfProfileField::Status, "join me", "join me"),
-            self_profile_entry(SelfProfileField::Bio, "", ""),
-        ],
-    );
-
-    assert!(self_profile_log_rows(&db).is_empty());
 }
 
 #[test]

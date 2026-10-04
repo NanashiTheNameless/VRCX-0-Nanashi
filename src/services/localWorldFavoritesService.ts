@@ -13,31 +13,39 @@ function normalize(value: string | null | undefined): string {
 export async function loadLocalWorldFavoritesSnapshot(): Promise<LocalWorldFavoritesSnapshot> {
     const snapshot = await commands.appFavoriteLocalSnapshot('world');
     const favoritesByGroup: FavoriteGroupMap = {};
+    const groupNames: string[] = [];
+    function ensureGroup(groupName: string): string[] {
+        if (!favoritesByGroup[groupName]) {
+            favoritesByGroup[groupName] = [];
+            groupNames.push(groupName);
+        }
+        return favoritesByGroup[groupName];
+    }
+
     for (const groupName of snapshot.groupNames) {
         const normalizedGroupName = normalize(groupName);
         if (normalizedGroupName) {
-            favoritesByGroup[normalizedGroupName] = [];
+            ensureGroup(normalizedGroupName);
         }
     }
 
     for (const row of snapshot.favorites) {
         const worldId = normalize(row.worldId);
-        const groupName = normalize(row.groupName) || 'Favorites';
         if (!worldId) {
             continue;
         }
-        const ids = favoritesByGroup[groupName] || [];
+        const ids = ensureGroup(normalize(row.groupName) || 'Favorites');
         if (!ids.includes(worldId)) {
-            favoritesByGroup[groupName] = [worldId, ...ids];
+            ids.unshift(worldId);
         }
     }
 
-    if (Object.keys(favoritesByGroup).length === 0) {
-        favoritesByGroup.Favorites = [];
+    if (groupNames.length === 0) {
+        ensureGroup('Favorites');
     }
 
     return {
         favoritesByGroup,
-        groupNames: Object.keys(favoritesByGroup).sort()
+        groupNames
     };
 }

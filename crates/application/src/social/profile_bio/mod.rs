@@ -30,6 +30,7 @@ pub trait ProfileBioStore: Send + Sync {
     fn record(&self, owner: &OwnerId, user_id: &str, record: &ProfileBioRecord) -> Result<()>;
     fn mark_checked(&self, owner: &OwnerId, user_id: &str, checked_at: &str) -> Result<()>;
     fn next_stale_friend(&self, owner: &OwnerId, checked_before: &str) -> Result<Option<String>>;
+    fn observe_self_bio(&self, owner: &OwnerId, bio: &str, observed_at: &str) -> Result<()>;
 }
 
 pub trait ProfileBioRemoteRequests: Send + Sync {
@@ -124,11 +125,16 @@ pub fn observe_profile_response(
     response: &VrchatApiResponse,
     now: &str,
 ) -> Result<Option<ProfileBioOutcome>> {
-    let Some(observation) = ProfileBioObservation::from_response(response)
-        .filter(|observation| realtime.is_current_friend(&observation.user_id))
-    else {
+    let Some(observation) = ProfileBioObservation::from_response(response) else {
         return Ok(None);
     };
+    if observation.user_id == owner.as_str() {
+        store.observe_self_bio(owner, &observation.bio, now)?;
+        return Ok(None);
+    }
+    if !realtime.is_current_friend(&observation.user_id) {
+        return Ok(None);
+    }
     observe_profile_bio(store, realtime, owner, &observation, now).map(Some)
 }
 

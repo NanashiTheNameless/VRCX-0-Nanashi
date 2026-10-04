@@ -5,6 +5,8 @@ use vrcx_0_core::realtime::RealtimeWsMessagePayload;
 use vrcx_0_application_core::LocalGameContextSnapshot;
 
 use super::runtime::RealtimeCurrentUserRuntime;
+use crate::realtime::RealtimeCurrentUserOutput;
+use vrcx_0_contracts::realtime::SelfProfileField;
 
 fn game_not_running(available: bool) -> LocalGameContextSnapshot {
     if !available {
@@ -204,6 +206,105 @@ fn refreshed_snapshot_with_stale_sequence_is_dropped() {
         )
         .expect("fresh sequence applies");
     assert_eq!(output.snapshot["bio"], json!("fresh bio"));
+}
+
+fn user_update_message(user: serde_json::Value) -> RealtimeWsMessagePayload {
+    RealtimeWsMessagePayload {
+        json: json!({
+            "type": "user-update",
+            "content": { "userId": "usr_self", "user": user }
+        }),
+        raw: String::new(),
+        received_at: "2026-05-15T00:00:00Z".into(),
+    }
+}
+
+fn self_profile_observations(
+    output: Option<RealtimeCurrentUserOutput>,
+) -> Vec<(SelfProfileField, String)> {
+    output
+        .expect("current user output")
+        .persistence
+        .self_profile_observations
+        .into_iter()
+        .map(|observation| (observation.field, observation.value))
+        .collect()
+}
+
+fn refresh_with(
+    runtime: &RealtimeCurrentUserRuntime,
+    user: serde_json::Value,
+) -> Option<RealtimeCurrentUserOutput> {
+    let sequence = runtime.snapshot_sequence(7).expect("sequence");
+    runtime.apply_refreshed_snapshot_if_sequence(
+        7,
+        sequence,
+        user,
+        json!({}),
+        game_not_running(true),
+    )
+}
+
+fn runtime_with_profile() -> RealtimeCurrentUserRuntime {
+    let runtime = RealtimeCurrentUserRuntime::new();
+    runtime.set_snapshot(
+        "usr_self".into(),
+        7,
+        json!({ "id": "usr_self", "status": "join me", "statusDescription": "hi", "bio": "same" }),
+    );
+    runtime
+}
+
+#[test]
+fn ws_user_update_reports_every_profile_field_it_carries() {
+    let runtime = runtime_with_profile();
+    let update = || {
+        self_profile_observations(runtime.apply_ws_message(
+            7,
+            &user_update_message(json!({
+                "id": "usr_self", "status": "join me", "statusDescription": "hi", "bio": "same"
+            })),
+            game_not_running(true),
+        ))
+    };
+    let expected = vec![
+        (SelfProfileField::Status, "join me".to_string()),
+        (SelfProfileField::StatusDescription, "hi".to_string()),
+        (SelfProfileField::Bio, "same".to_string()),
+    ];
+
+    assert_eq!(update(), expected);
+    assert_eq!(update(), expected);
+}
+
+#[test]
+fn api_refresh_reports_bio_but_leaves_status_to_realtime() {
+    let runtime = runtime_with_profile();
+
+    assert_eq!(
+        self_profile_observations(refresh_with(
+            &runtime,
+            json!({ "id": "usr_self", "status": "busy", "statusDescription": "away", "bio": "edited" }),
+        )),
+        vec![(SelfProfileField::Bio, "edited".to_string())]
+    );
+}
+
+#[test]
+fn updates_without_profile_fields_report_nothing() {
+    let runtime = runtime_with_profile();
+
+    assert!(self_profile_observations(runtime.apply_ws_message(
+        7,
+        &current_user_location_message("wrld_remote:456", "", "2026-05-15T00:00:00Z"),
+        game_not_running(true),
+    ))
+    .is_empty());
+    assert!(self_profile_observations(refresh_with(
+        &runtime,
+        json!({ "id": "usr_self", "bio": null })
+    ))
+    .is_empty());
 }
 
 #[test]

@@ -1,5 +1,8 @@
+import { copyTextToClipboard } from '@/services/clipboardService';
 import { directAccessParse } from '@/services/directAccessService';
+import i18n from '@/services/i18nService';
 import { openExternalLink as openShellExternalLink } from '@/services/shellIntegrationService';
+import { toast } from '@/services/toastService';
 import {
     convertFileUrlToImageUrl as convertFileUrlToImageUrlWithEndpoint,
     getNameColour,
@@ -59,11 +62,20 @@ export async function openExternalLink(
     try {
         await openShellExternalLink(normalizedLink);
     } catch {
-        if (
-            normalizedLink.startsWith('http://') ||
-            normalizedLink.startsWith('https://')
-        ) {
-            window.open(normalizedLink, '_blank', 'noopener,noreferrer');
-        }
+        toast.add({
+            type: 'error',
+            title: i18n.t('message.external_link.open_failed'),
+            description: normalizedLink,
+            timeout: 0,
+            actionProps: {
+                children: i18n.t('message.external_link.copy_link'),
+                onClick: () => {
+                    void copyTextToClipboard(normalizedLink, {
+                        successMessage: i18n.t('message.external_link.copied')
+                    });
+                }
+            },
+            data: { closeButton: true }
+        });
     }
 }

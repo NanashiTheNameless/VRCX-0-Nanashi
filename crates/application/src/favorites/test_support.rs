@@ -217,6 +217,8 @@ impl FavoriteRemote for TestFavoriteRemote {
 
 #[derive(Clone)]
 struct StoredFavorite {
+    id: i64,
+    sort_order: Option<i64>,
     owner_user_id: Option<String>,
     kind: FavoriteEntityKind,
     entity_id: String,
@@ -227,6 +229,7 @@ struct StoredFavorite {
 struct TestFavoriteStoreState {
     configs: HashMap<String, serde_json::Value>,
     favorites: Vec<StoredFavorite>,
+    next_id: i64,
 }
 
 #[derive(Default)]
@@ -237,6 +240,30 @@ pub(super) struct TestFavoriteStore {
 impl TestFavoriteStore {
     fn owner(owner_user_id: Option<&OwnerId>) -> Option<String> {
         owner_user_id.map(|owner| owner.as_str().to_string())
+    }
+
+    fn visible_rows(
+        &self,
+        owner_user_id: Option<&OwnerId>,
+        kind: FavoriteEntityKind,
+    ) -> Vec<StoredFavorite> {
+        let owner = Self::owner(owner_user_id);
+        self.state
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .favorites
+            .iter()
+            .filter(|row| {
+                row.kind == kind && (row.owner_user_id == owner || row.owner_user_id.is_none())
+            })
+            .cloned()
+            .collect()
+    }
+
+    fn rows_to_favorites(rows: Vec<StoredFavorite>) -> Vec<FavoriteRow> {
+        rows.into_iter()
+            .map(|row| FavoriteRow::new(row.kind, String::new(), row.entity_id, row.group_name))
+            .collect()
     }
 }
 
@@ -270,25 +297,19 @@ impl FavoriteStore for TestFavoriteStore {
         owner_user_id: Option<&OwnerId>,
         kind: FavoriteEntityKind,
     ) -> Result<Vec<FavoriteRow>> {
-        let owner = Self::owner(owner_user_id);
-        Ok(self
-            .state
-            .lock()
-            .unwrap_or_else(|error| error.into_inner())
-            .favorites
-            .iter()
-            .filter(|row| {
-                row.kind == kind && (row.owner_user_id == owner || row.owner_user_id.is_none())
-            })
-            .map(|row| {
-                FavoriteRow::new(
-                    row.kind,
-                    String::new(),
-                    row.entity_id.clone(),
-                    row.group_name.clone(),
-                )
-            })
-            .collect())
+        Ok(Self::rows_to_favorites(
+            self.visible_rows(owner_user_id, kind),
+        ))
+    }
+
+    fn list_custom_order(
+        &self,
+        owner_user_id: Option<&OwnerId>,
+        kind: FavoriteEntityKind,
+    ) -> Result<Vec<FavoriteRow>> {
+        let mut rows = self.visible_rows(owner_user_id, kind);
+        rows.sort_by_key(|row| (row.sort_order.unwrap_or(-row.id), row.id));
+        Ok(Self::rows_to_favorites(rows))
     }
 
     fn add(
@@ -308,7 +329,11 @@ impl FavoriteStore for TestFavoriteStore {
         }) {
             return Ok(0);
         }
+        state.next_id += 1;
+        let id = state.next_id;
         state.favorites.push(StoredFavorite {
+            id,
+            sort_order: None,
             owner_user_id,
             kind,
             entity_id,
@@ -347,6 +372,31 @@ impl FavoriteStore for TestFavoriteStore {
         let removed = self.remove(owner_user_id, kind, entity_id.clone(), source_group_name)?;
         let added = self.add(owner_user_id, kind, entity_id, target_group_name)?;
         Ok(FavoriteMoveResult { removed, added })
+    }
+
+    fn reorder(
+        &self,
+        owner_user_id: Option<&OwnerId>,
+        kind: FavoriteEntityKind,
+        group_name: String,
+        entity_ids: Vec<String>,
+    ) -> Result<i64> {
+        let owner = Self::owner(owner_user_id);
+        let mut state = self.state.lock().unwrap_or_else(|error| error.into_inner());
+        let mut affected = 0;
+        for (position, entity_id) in entity_ids.iter().enumerate() {
+            for row in &mut state.favorites {
+                if row.kind == kind
+                    && (row.owner_user_id == owner || row.owner_user_id.is_none())
+                    && row.group_name == group_name
+                    && &row.entity_id == entity_id
+                {
+                    row.sort_order = Some(position as i64);
+                    affected += 1;
+                }
+            }
+        }
+        Ok(affected)
     }
 
     fn rename_group_with_config(

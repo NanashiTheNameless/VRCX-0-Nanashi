@@ -5,6 +5,7 @@ import {
     type LoginFailureKind,
     type LoginSessionState
 } from '@/platform/tauri/bindings';
+import { flashWindow } from '@/platform/tauri/webview';
 import authRepository, {
     type SavedAuthSnapshot,
     type SavedCredentialRecord
@@ -287,6 +288,8 @@ async function completeTwoFactorChallenge(
 ): Promise<ResolvedLoginSession> {
     let mode = normalizeTwoFactorMode(challenge.mode);
     let challengeAttemptId = challenge.attemptId;
+
+    flashWindow().catch(() => {});
 
     while (true) {
         ensureCurrentAuthAttempt(attempt);

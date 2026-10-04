@@ -382,12 +382,14 @@ fn build_local_grouped_ids(
     fallback_group: &str,
 ) -> (BTreeMap<String, Vec<String>>, Vec<String>, Vec<String>) {
     let mut groups = BTreeMap::new();
+    let mut groups_list = Vec::new();
     let mut list = Vec::new();
 
     for group_name in explicit_groups {
         let group_name = normalize_text(group_name);
         if !group_name.is_empty() && !groups.contains_key(&group_name) {
-            groups.insert(group_name, Vec::new());
+            groups.insert(group_name.clone(), Vec::new());
+            groups_list.push(group_name);
         }
     }
 
@@ -403,6 +405,9 @@ fn build_local_grouped_ids(
             continue;
         }
 
+        if !groups.contains_key(&group_name) {
+            groups_list.push(group_name.clone());
+        }
         groups
             .entry(group_name)
             .or_default()
@@ -412,10 +417,9 @@ fn build_local_grouped_ids(
 
     if groups.is_empty() {
         groups.insert(fallback_group.to_string(), Vec::new());
+        groups_list.push(fallback_group.to_string());
     }
 
-    let mut groups_list = groups.keys().cloned().collect::<Vec<_>>();
-    groups_list.sort();
     (groups, groups_list, unique_values(list))
 }
 
@@ -532,11 +536,9 @@ async fn build_favorites_baseline_inner(
     )?;
     let explicit_local_world_groups = get_config_array(&deps, "localFavoriteWorldGroups")?;
     let explicit_local_avatar_groups = get_config_array(&deps, "localFavoriteAvatarGroups")?;
-    let mut explicit_local_friend_groups = get_config_array(&deps, "localFavoriteFriendGroups")?;
-    explicit_local_friend_groups.extend(get_config_array(
-        &deps,
-        &format!("localFavoriteFriendGroups:{user_id}"),
-    )?);
+    let mut explicit_local_friend_groups =
+        get_config_array(&deps, &format!("localFavoriteFriendGroups:{user_id}"))?;
+    explicit_local_friend_groups.extend(get_config_array(&deps, "localFavoriteFriendGroups")?);
     let explicit_local_friend_groups = unique_values(explicit_local_friend_groups);
 
     let favorite_limits = merge_favorite_limits(&favorite_limits_response);
@@ -640,4 +642,35 @@ async fn build_favorites_baseline_inner(
         count: u32::try_from(count).unwrap_or(u32::MAX),
         snapshot: Some(snapshot),
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use vrcx_0_core::FavoriteEntityKind;
+
+    fn avatar_row(avatar_id: &str, group_name: &str) -> FavoriteRow {
+        FavoriteRow::new(
+            FavoriteEntityKind::Avatar,
+            String::new(),
+            avatar_id.into(),
+            group_name.into(),
+        )
+    }
+
+    #[test]
+    fn local_groups_keep_explicit_order_and_append_inferred_groups() {
+        let (groups, groups_list, _) = build_local_grouped_ids(
+            vec![
+                avatar_row("avtr_1", "inferred"),
+                avatar_row("avtr_2", "Zeta"),
+                avatar_row("avtr_3", "Zeta"),
+            ],
+            vec!["Zeta".into(), "Alpha".into()],
+            "Favorites",
+        );
+
+        assert_eq!(groups_list, vec!["Zeta", "Alpha", "inferred"]);
+        assert_eq!(groups["Zeta"], vec!["avtr_3", "avtr_2"]);
+    }
 }

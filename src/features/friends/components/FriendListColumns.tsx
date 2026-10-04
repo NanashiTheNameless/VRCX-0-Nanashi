@@ -23,6 +23,7 @@ import {
     openExternalLink,
     userImage
 } from '@/services/entityMediaService';
+import type { UserNameColourStyle } from '@/shared/utils/entityMedia';
 import { Button } from '@/ui/shadcn/button';
 import { Checkbox } from '@/ui/shadcn/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
@@ -47,6 +48,7 @@ type FriendListColumnsOptions = {
     onConfirmDeleteFriend(friend: FriendListRow): void;
     onToggleSelectedFriend(friendId: string): void;
     randomUserColours: boolean;
+    randomUserColourStyle: UserNameColourStyle;
     selectedFriendIds: Set<string>;
 };
 
@@ -72,6 +74,7 @@ export function useFriendListColumns({
     onConfirmDeleteFriend,
     onToggleSelectedFriend,
     randomUserColours,
+    randomUserColourStyle,
     selectedFriendIds
 }: FriendListColumnsOptions) {
     const { t } = useTranslation();
@@ -211,7 +214,11 @@ export function useFriendListColumns({
                     const nameStyle =
                         randomUserColours && friendId
                             ? {
-                                  color: getNameColour(friendId, isDarkMode)
+                                  color: getNameColour(
+                                      friendId,
+                                      isDarkMode,
+                                      randomUserColourStyle
+                                  )
                               }
                             : undefined;
                     return (
@@ -609,6 +616,7 @@ export function useFriendListColumns({
             onConfirmDeleteFriend,
             onToggleSelectedFriend,
             randomUserColours,
+            randomUserColourStyle,
             selectedFriendIds,
             t
         ]

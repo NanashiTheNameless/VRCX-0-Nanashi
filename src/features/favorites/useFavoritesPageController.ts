@@ -1,3 +1,4 @@
+import { arrayMove } from '@dnd-kit/sortable';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { FavoriteKind } from '@/domain/favorites/types';
@@ -22,6 +23,10 @@ import { useFavoritesLayoutPreferences } from './useFavoritesLayoutPreferences';
 import { useFavoritesRuntime } from './useFavoritesRuntime';
 import { useFavoritesSelectionState } from './useFavoritesSelectionState';
 import { useFavoritesViewData } from './useFavoritesViewData';
+import {
+    moveFavoritesToEdge,
+    useLocalFavoriteCustomOrder
+} from './useLocalFavoriteCustomOrder';
 
 const FAVORITES_REVISION_DEBOUNCE_MS = 400;
 
@@ -67,8 +72,15 @@ export function useFavoritesPageController({ kind }: { kind: FavoriteKind }) {
     const layout = useFavoritesLayoutPreferences(kind);
     const [creatingLocalGroup, setCreatingLocalGroup] = useState(false);
     const [newLocalGroupName, setNewLocalGroupName] = useState('');
+    const [orderEditing, setOrderEditing] = useState(false);
+    const customOrder = useLocalFavoriteCustomOrder({
+        currentUserId: runtime.currentUserId,
+        enabled: layout.sortValue === 'custom',
+        kind
+    });
     const viewData = useFavoritesViewData({
         ...collections.viewDataInputs,
+        customOrderByGroup: customOrder.customOrderByGroup,
         kind,
         searchMode: filters.searchMode,
         searchQuery: filters.searchQuery,
@@ -170,7 +182,70 @@ export function useFavoritesPageController({ kind }: { kind: FavoriteKind }) {
         setExportDialogOpen(false);
         setCreatingLocalGroup(false);
         setNewLocalGroupName('');
+        setOrderEditing(false);
     }, [kind]);
+
+    const canEditOrder =
+        filters.selectedSource === 'local' &&
+        Boolean(viewData.selectedGroup) &&
+        !viewData.hasSearchInput;
+    const orderEditingActive =
+        orderEditing && canEditOrder && layout.sortValue === 'custom';
+    useEffect(() => {
+        if (orderEditing && !orderEditingActive) {
+            setOrderEditing(false);
+        }
+    }, [orderEditing, orderEditingActive]);
+
+    function saveContentOrder(entityIds: string[]) {
+        const groupKey = viewData.selectedGroup?.key;
+        if (orderEditingActive && groupKey) {
+            void customOrder.reorderGroup(groupKey, entityIds);
+        }
+    }
+
+    const order = {
+        canEdit: canEditOrder,
+        editing: orderEditingActive,
+        start() {
+            if (!canEditOrder) {
+                return;
+            }
+            if (layout.sortValue !== 'custom') {
+                layout.handleSortValueChange('custom');
+            }
+            selection.clearSelection();
+            setOrderEditing(true);
+        },
+        stop() {
+            selection.clearSelection();
+            setOrderEditing(false);
+        },
+        moveItem(activeKey: string, overKey: string) {
+            const keys = viewData.contentItems.map((item) => item.key);
+            const fromIndex = keys.indexOf(activeKey);
+            const toIndex = keys.indexOf(overKey);
+            if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) {
+                return;
+            }
+            saveContentOrder(
+                arrayMove(viewData.contentItems, fromIndex, toIndex).map(
+                    (item) => item.id
+                )
+            );
+        },
+        moveSelectionToEdge(edge: 'top' | 'bottom') {
+            saveContentOrder(
+                moveFavoritesToEdge(
+                    viewData.contentItems.map((item) => item.id),
+                    new Set(
+                        selection.selectedContentItems.map((item) => item.id)
+                    ),
+                    edge
+                )
+            );
+        }
+    };
 
     return {
         actions,
@@ -182,6 +257,7 @@ export function useFavoritesPageController({ kind }: { kind: FavoriteKind }) {
         kind,
         layout,
         newLocalGroupName,
+        order,
         runtime,
         selection,
         setCreatingLocalGroup,

@@ -17,18 +17,6 @@ interface WorldFavoriteRow {
     groupName: string;
 }
 
-export interface AvatarFavoriteRow {
-    created_at: string;
-    avatarId: string;
-    groupName: string;
-}
-
-export interface FriendFavoriteRow {
-    created_at: string;
-    userId: string;
-    groupName: string;
-}
-
 interface LocalFavoriteInput {
     kind: LocalFavoriteKind;
     entityId?: string;
@@ -42,16 +30,6 @@ interface LocalFavoriteGroupInput {
 
 interface RenameLocalFavoriteGroupInput extends LocalFavoriteGroupInput {
     newGroupName?: string;
-}
-
-const LOCAL_FAVORITE_GROUP_CONFIG_KEYS = Object.freeze({
-    friend: 'localFavoriteFriendGroups',
-    avatar: 'localFavoriteAvatarGroups',
-    world: 'localFavoriteWorldGroups'
-} satisfies Record<LocalFavoriteKind, string>);
-
-function getLocalFavoriteGroupConfigKey(kind: LocalFavoriteKind): string {
-    return LOCAL_FAVORITE_GROUP_CONFIG_KEYS[kind];
 }
 
 function applyLocalFavoriteGroupWrite(write: {
@@ -72,60 +50,12 @@ function normalizeWorldFavoriteRow(row: FavoriteRow): WorldFavoriteRow {
     };
 }
 
-function normalizeAvatarFavoriteRow(row: FavoriteRow): AvatarFavoriteRow {
-    return {
-        created_at: normalizeEntityId(row.createdAt),
-        avatarId: normalizeEntityId(row.avatarId),
-        groupName: normalizeGroupName(row.groupName)
-    };
-}
-
-function normalizeFriendFavoriteRow(row: FavoriteRow): FriendFavoriteRow {
-    return {
-        created_at: normalizeEntityId(row.createdAt),
-        userId: normalizeEntityId(row.userId),
-        groupName: normalizeGroupName(row.groupName)
-    };
-}
-
 function normalizeEntityId(value?: string | null) {
     return value?.trim() ?? '';
 }
 
 function normalizeGroupName(value?: string | null) {
     return value?.trim() ?? '';
-}
-
-function normalizeGroupList(values: unknown) {
-    return Array.from(
-        new Set(
-            (Array.isArray(values) ? values : [])
-                .map(normalizeGroupName)
-                .filter(Boolean)
-        )
-    ).sort((left, right) => left.localeCompare(right));
-}
-
-async function getExplicitLocalFavoriteGroups(
-    kind: LocalFavoriteKind,
-    currentUserId?: string | null
-) {
-    const key = getLocalFavoriteGroupConfigKey(kind);
-    if (kind !== 'friend') {
-        return normalizeGroupList(await configRepository.getArray(key, []));
-    }
-
-    const normalizedUserId = normalizeEntityId(currentUserId);
-    const [sharedGroups, accountGroups] = await Promise.all([
-        configRepository.getArray(key, []),
-        normalizedUserId
-            ? configRepository.getArray(`${key}:${normalizedUserId}`, [])
-            : Promise.resolve([])
-    ]);
-    return normalizeGroupList([
-        ...(sharedGroups ?? []),
-        ...(accountGroups ?? [])
-    ]);
 }
 
 async function createLocalFavoriteGroup({
@@ -151,18 +81,6 @@ async function createLocalFavoriteGroup({
 async function getWorldFavorites() {
     return (await commands.appFavoriteList('world')).map(
         normalizeWorldFavoriteRow
-    );
-}
-
-async function getAvatarFavorites() {
-    return (await commands.appFavoriteList('avatar')).map(
-        normalizeAvatarFavoriteRow
-    );
-}
-
-async function getFriendFavorites() {
-    return (await commands.appFavoriteList('friend')).map(
-        normalizeFriendFavoriteRow
     );
 }
 
@@ -287,16 +205,12 @@ const favoritePersistenceRepository = Object.freeze({
     addAvatarToFavorites,
     addFriendToLocalFavorites,
     addWorldToFavorites,
-    getExplicitLocalFavoriteGroups,
     createLocalFavoriteGroup,
     getWorldFavorites,
-    getAvatarFavorites,
-    getFriendFavorites,
     addLocalFavorite,
     removeLocalFavorite,
     renameLocalFavoriteGroup,
     deleteLocalFavoriteGroup
 });
 
-export { getExplicitLocalFavoriteGroups };
 export default favoritePersistenceRepository;

@@ -38,6 +38,19 @@ describe('favorite item helpers', () => {
         expect(items.map((item) => item.id)).toEqual(['b', 'a', 'c']);
     });
 
+    it('sorts by custom order with unranked items first in date order', () => {
+        const items = [
+            { id: 'ranked-late', orderIndex: 0, customIndex: 1 },
+            { id: 'new-older', orderIndex: 2 },
+            { id: 'ranked-early', orderIndex: 3, customIndex: 0 },
+            { id: 'new-newer', orderIndex: 1 }
+        ];
+
+        expect(
+            sortFavoriteItems(items, 'custom').map((item) => item.id)
+        ).toEqual(['new-newer', 'new-older', 'ranked-early', 'ranked-late']);
+    });
+
     it('shrinks direct image URLs from 256 to 128 when possible', () => {
         expect(
             shrinkFavoriteImage(

@@ -374,3 +374,119 @@ fn ensure_global_store_tables_preserves_dirty_duplicates_and_promotes_unique_ind
         .unwrap()
         .is_empty());
 }
+
+fn custom_order_ids(db: &DatabaseService, kind: FavoriteEntityKind, group: &str) -> Vec<String> {
+    favorite_list_custom_order(db, None, kind)
+        .unwrap()
+        .into_iter()
+        .filter(|row| row.group_name == group)
+        .map(|row| row.entity_id().to_string())
+        .collect()
+}
+
+#[test]
+fn custom_order_defaults_to_newest_first_and_keeps_new_rows_on_top_after_reorder() {
+    let (_dir, db) = test_db("favorite-custom-order");
+    for world_id in ["wrld_1", "wrld_2", "wrld_3"] {
+        favorite_add(
+            &db,
+            None,
+            FavoriteEntityKind::World,
+            world_id.into(),
+            "group".into(),
+        )
+        .unwrap();
+    }
+    assert_eq!(
+        custom_order_ids(&db, FavoriteEntityKind::World, "group"),
+        vec!["wrld_3", "wrld_2", "wrld_1"]
+    );
+
+    let affected = favorite_reorder(
+        &db,
+        None,
+        FavoriteEntityKind::World,
+        "group".into(),
+        vec!["wrld_1".into(), "wrld_3".into(), "wrld_2".into()],
+    )
+    .unwrap();
+    assert_eq!(affected, 3);
+    assert_eq!(
+        custom_order_ids(&db, FavoriteEntityKind::World, "group"),
+        vec!["wrld_1", "wrld_3", "wrld_2"]
+    );
+
+    favorite_add(
+        &db,
+        None,
+        FavoriteEntityKind::World,
+        "wrld_4".into(),
+        "group".into(),
+    )
+    .unwrap();
+    favorite_move(
+        &db,
+        None,
+        FavoriteEntityKind::World,
+        "wrld_2".into(),
+        "group".into(),
+        "other".into(),
+    )
+    .unwrap();
+    favorite_move(
+        &db,
+        None,
+        FavoriteEntityKind::World,
+        "wrld_2".into(),
+        "other".into(),
+        "group".into(),
+    )
+    .unwrap();
+    assert_eq!(
+        custom_order_ids(&db, FavoriteEntityKind::World, "group"),
+        vec!["wrld_2", "wrld_4", "wrld_1", "wrld_3"]
+    );
+    assert_eq!(
+        favorite_list(&db, None, FavoriteEntityKind::World)
+            .unwrap()
+            .into_iter()
+            .map(|row| row.entity_id().to_string())
+            .collect::<Vec<_>>(),
+        vec!["wrld_1", "wrld_3", "wrld_4", "wrld_2"]
+    );
+}
+
+#[test]
+fn reorder_only_touches_the_named_group() {
+    let (_dir, db) = test_db("favorite-reorder-group-scope");
+    for group in ["a", "b"] {
+        for avatar_id in ["avtr_1", "avtr_2"] {
+            favorite_add(
+                &db,
+                None,
+                FavoriteEntityKind::Avatar,
+                avatar_id.into(),
+                group.into(),
+            )
+            .unwrap();
+        }
+    }
+
+    favorite_reorder(
+        &db,
+        None,
+        FavoriteEntityKind::Avatar,
+        "a".into(),
+        vec!["avtr_1".into(), "avtr_2".into()],
+    )
+    .unwrap();
+
+    assert_eq!(
+        custom_order_ids(&db, FavoriteEntityKind::Avatar, "a"),
+        vec!["avtr_1", "avtr_2"]
+    );
+    assert_eq!(
+        custom_order_ids(&db, FavoriteEntityKind::Avatar, "b"),
+        vec!["avtr_2", "avtr_1"]
+    );
+}

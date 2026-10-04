@@ -14,7 +14,7 @@ use super::game_log::{
 };
 use super::location::{build_location_patch, location_game_state_patch};
 use super::presence::current_user_presence;
-use super::self_profile::append_self_profile_log_entries;
+use super::self_profile::append_self_profile_observations;
 use super::state::{
     CurrentUserPatchOptions, PendingCurrentUserOffline, RealtimeCurrentUserState,
     RealtimeCurrentUserStateSnapshot, CURRENT_USER_REMOTE_PRESENCE_FIELDS,
@@ -154,7 +154,7 @@ pub(super) fn apply_current_user_patch(
     if snapshot.previous_avatar_swap_time != previous.previous_avatar_swap_time {
         state.avatar_wear_checkpoint_ms = 0;
     }
-    append_self_profile_log_entries(&previous, &snapshot, now, &mut persistence);
+    append_self_profile_observations(&patch, now, &mut persistence);
     if !game.is_game_running() && options.reconciles_remote_location {
         copy_current_user_presence_patch(&snapshot, &mut projection_patch);
     }

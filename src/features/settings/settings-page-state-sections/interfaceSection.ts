@@ -1,5 +1,8 @@
 import type { TrustColorKey } from '@/shared/utils/trustColors';
-import { normalizeFeedTimeDisplayMode } from '@/state/preferencesStore';
+import {
+    normalizeFeedTimeDisplayMode,
+    normalizeUserNameColourStyle
+} from '@/state/preferencesStore';
 import type { NotificationLayout, TableDensity } from '@/state/shellStore';
 
 import { notificationLayoutOptions } from '../settingsOptions';
@@ -205,6 +208,20 @@ export function buildInterfaceSection({
                 checked
             );
         },
+        onShowSidebarAvatarFrameChange: (checked: boolean) => {
+            saveBoolPreference(
+                'showSidebarAvatarFrame',
+                'showSidebarAvatarFrame',
+                checked
+            );
+        },
+        onShowSidebarNameplateChange: (checked: boolean) => {
+            saveBoolPreference(
+                'showSidebarNameplate',
+                'showSidebarNameplate',
+                checked
+            );
+        },
         onShowNewDashboardButtonChange: (checked: boolean) => {
             savePreferenceValue('showNewDashboardButton', checked, () =>
                 setShowNewDashboardButtonPreference(checked)
@@ -251,6 +268,13 @@ export function buildInterfaceSection({
                 'randomUserColours',
                 'randomUserColours',
                 checked
+            );
+        },
+        onRandomUserColourStyleChange: (value: string) => {
+            saveStringPreference(
+                'randomUserColourStyle',
+                'randomUserColourStyle',
+                normalizeUserNameColourStyle(value)
             );
         },
         onResetTrustColors: () => {

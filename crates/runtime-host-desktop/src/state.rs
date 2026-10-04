@@ -1106,6 +1106,31 @@ impl DesktopRuntimeHostState {
             .delete_local_group(kind, group_name)?)
     }
 
+    pub fn favorite_local_group_reorder(
+        &self,
+        kind: vrcx_0_application_core::FavoriteEntityKind,
+        group_names: Vec<String>,
+    ) -> Result<Vec<String>> {
+        Ok(self
+            .runtime
+            .desktop_assembly()
+            .favorite_mutations()
+            .reorder_local_groups(kind, group_names)?)
+    }
+
+    pub fn favorite_local_reorder(
+        &self,
+        kind: vrcx_0_application_core::FavoriteEntityKind,
+        group_name: String,
+        entity_ids: Vec<String>,
+    ) -> Result<i64> {
+        Ok(self
+            .runtime
+            .desktop_assembly()
+            .favorite_mutations()
+            .reorder_local(kind, group_name, entity_ids)?)
+    }
+
     pub fn favorite_import_start(
         &self,
         input: FavoriteImportStartInput,

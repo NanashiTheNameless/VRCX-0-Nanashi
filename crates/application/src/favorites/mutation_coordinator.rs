@@ -13,7 +13,8 @@ use super::favorite_transfer::{transfer_favorite_selection, FavoriteTransferDeps
 use super::local_favorites::{
     add_local_favorite_scoped, create_local_favorite_group_scoped,
     delete_local_favorite_group_scoped, remove_local_favorite_scoped,
-    rename_local_favorite_group_scoped, LocalFavoriteMutationDeps,
+    rename_local_favorite_group_scoped, reorder_local_favorite_groups_scoped,
+    reorder_local_favorites_scoped, LocalFavoriteMutationDeps,
 };
 use super::remote_favorites::{
     add_remote_favorite, clear_remote_favorite_group, delete_remote_favorite,
@@ -190,6 +191,32 @@ impl FavoriteMutationCoordinator {
             &self.local_deps("Local favorite mutation")?,
             kind,
             group_name,
+        )
+    }
+
+    pub fn reorder_local_groups(
+        &self,
+        kind: FavoriteEntityKind,
+        group_names: Vec<String>,
+    ) -> Result<Vec<String>> {
+        reorder_local_favorite_groups_scoped(
+            &self.local_deps("Local favorite mutation")?,
+            kind,
+            group_names,
+        )
+    }
+
+    pub fn reorder_local(
+        &self,
+        kind: FavoriteEntityKind,
+        group_name: String,
+        entity_ids: Vec<String>,
+    ) -> Result<i64> {
+        reorder_local_favorites_scoped(
+            &self.local_deps("Local favorite mutation")?,
+            kind,
+            group_name,
+            entity_ids,
         )
     }
 

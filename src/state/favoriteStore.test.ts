@@ -230,17 +230,40 @@ describe('favoriteStore', () => {
         });
     });
 
-    it('setLocalFavoritesForKind sorts the union of explicit groups and map keys', () => {
+    it('setLocalFavoritesForKind keeps the explicit group order and appends map-only groups', () => {
         const store = useFavoriteStore.getState();
 
         store.setLocalFavoritesForKind('avatar', {
-            localFavorites: { Zebra: ['avtr_1'] },
-            localFavoriteGroups: ['Alpha', 'Zebra']
+            localFavorites: { Zebra: ['avtr_1'], Beta: ['avtr_2'] },
+            localFavoriteGroups: ['Zebra', 'Alpha']
         });
 
         expect(useFavoriteStore.getState().localAvatarFavoriteGroups).toEqual([
+            'Zebra',
             'Alpha',
-            'Zebra'
+            'Beta'
+        ]);
+    });
+
+    it('keeps the local group order across create, rename and delete', () => {
+        const store = useFavoriteStore.getState();
+        store.setLocalFavoritesForKind('friend', {
+            localFavorites: {},
+            localFavoriteGroups: ['Zebra', 'Alpha', 'Mid']
+        });
+
+        store.createLocalFavoriteGroup({ kind: 'friend', groupName: 'Beta' });
+        store.renameLocalFavoriteGroup({
+            kind: 'friend',
+            groupName: 'Alpha',
+            newGroupName: 'Omega'
+        });
+        store.deleteLocalFavoriteGroup({ kind: 'friend', groupName: 'Mid' });
+
+        expect(useFavoriteStore.getState().localFriendFavoriteGroups).toEqual([
+            'Zebra',
+            'Omega',
+            'Beta'
         ]);
     });
 

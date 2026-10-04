@@ -1,3 +1,21 @@
+import {
+    closestCenter,
+    DndContext,
+    DragOverlay,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    type DragEndEvent,
+    type DragStartEvent
+} from '@dnd-kit/core';
+import {
+    rectSortingStrategy,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import type { TFunction } from 'i18next';
 import {
     CloudIcon,
@@ -7,12 +25,14 @@ import {
     Share2Icon,
     StarIcon
 } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
 import { isEditableTarget } from '@/components/layout/useGlobalKeyboardShortcuts';
 import type { FavoriteKind } from '@/domain/favorites/types';
+import { cn } from '@/lib/utils';
 import { Button } from '@/ui/shadcn/button';
 import {
     Popover,
@@ -66,6 +86,7 @@ type FavoritesContentPanelProps = {
     filters: FavoritesController['filters'];
     kind: FavoriteKind;
     layout: FavoritesController['layout'];
+    order: FavoritesController['order'];
     selection: FavoritesController['selection'];
     viewData: FavoritesController['viewData'];
     onShareCollectionGroup?(group: FavoriteGroupView): void;
@@ -74,6 +95,43 @@ type FavoritesContentPanelProps = {
     instanceActionGatesByItemKey: FavoritesController['instanceActionGatesByItemKey'];
     onVisibleWorldIdsChange: FavoritesController['setVisibleWorldIds'];
 };
+
+function SortableFavoriteCell({
+    itemKey,
+    padding,
+    children
+}: {
+    itemKey: string;
+    padding: number;
+    children: ReactNode;
+}) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: itemKey });
+    return (
+        <div
+            ref={setNodeRef}
+            className={cn(
+                'min-h-0 min-w-0 [&_.cursor-pointer]:cursor-grab',
+                isDragging && 'opacity-40'
+            )}
+            style={{
+                padding: `${padding}px`,
+                transform: CSS.Translate.toString(transform),
+                transition
+            }}
+            {...attributes}
+            {...listeners}
+        >
+            {children}
+        </div>
+    );
+}
 
 type ShareCollectionButtonProps = {
     group: FavoriteGroupView;
@@ -227,6 +285,7 @@ export function FavoritesGroupRailPanel({
                 onLocalRename={favoriteCommands.handleLocalGroupRename}
                 onLocalDelete={favoriteCommands.handleLocalGroupDelete}
                 onShareCollection={onShareCollectionGroup}
+                onReorder={favoriteCommands.handleLocalGroupReorder}
             />
             {kind === 'avatar' ? (
                 <GroupRailSection
@@ -262,6 +321,7 @@ export function FavoritesContentPanel({
     filters,
     kind,
     layout,
+    order,
     selection,
     viewData,
     onShareCollectionGroup,
@@ -337,10 +397,55 @@ export function FavoritesContentPanel({
     }
     const searchTab = kind === 'friend' ? 'user' : kind;
 
+    const dragClickSuppressedRef = useRef(false);
+    const [activeDragKey, setActiveDragKey] = useState('');
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 6
+            }
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates
+        })
+    );
+    const contentItemKeys = useMemo(
+        () => viewData.contentItems.map((item) => item.key),
+        [viewData.contentItems]
+    );
+    const activeDragItem = activeDragKey
+        ? viewData.contentItems.find((item) => item.key === activeDragKey)
+        : undefined;
+    function releaseDragClickSuppression() {
+        setActiveDragKey('');
+        window.setTimeout(() => {
+            dragClickSuppressedRef.current = false;
+        }, 0);
+    }
+    function handleDragStart({ active }: DragStartEvent) {
+        dragClickSuppressedRef.current = true;
+        setActiveDragKey(String(active.id));
+    }
+    function handleDragEnd({ active, over }: DragEndEvent) {
+        if (over && active.id !== over.id) {
+            order.moveItem(String(active.id), String(over.id));
+        }
+        releaseDragClickSuppression();
+    }
+
     const handleToggleSelect = useStableEvent(
         (itemKey: string, checked: boolean, shift: boolean) => {
+            if (dragClickSuppressedRef.current) {
+                return;
+            }
             selection.selectItem(itemKey, checked, { shift });
         }
+    );
+    const handleMoveSelectionToTop = useStableEvent(() =>
+        order.moveSelectionToEdge('top')
+    );
+    const handleMoveSelectionToBottom = useStableEvent(() =>
+        order.moveSelectionToEdge('bottom')
     );
     const handleClearSelection = useStableEvent(() =>
         selection.clearSelection()
@@ -399,6 +504,83 @@ export function FavoritesContentPanel({
         window.addEventListener('keydown', handleEscapeKeyDown);
         return () => window.removeEventListener('keydown', handleEscapeKeyDown);
     }, [selection.hasSelection, handleEscapeKeyDown]);
+
+    const favoritesGrid = (
+        <div
+            className="relative min-w-0"
+            style={{
+                height: `${virtualGrid.totalHeight}px`
+            }}
+        >
+            {virtualGrid.visibleRows.map((row) => (
+                <div
+                    key={row.key}
+                    className="absolute right-0 left-0 grid min-w-0"
+                    style={{
+                        gap: `${virtualGrid.gridGap}px`,
+                        height: `${row.cellHeight}px`,
+                        gridTemplateColumns: `repeat(${virtualGrid.gridColumnCount}, minmax(${virtualGrid.gridMinWidth}px, 1fr))`,
+                        transform: `translateY(${row.top}px)`
+                    }}
+                >
+                    {row.items.map((item: FavoriteItem) => {
+                        const card = (
+                            <FavoriteCard
+                                item={item}
+                                instanceActionGate={instanceActionGatesByItemKey?.get(
+                                    item.key
+                                )}
+                                selectionActive={
+                                    selection.hasSelection || order.editing
+                                }
+                                selected={selection.selectedKeysSet.has(
+                                    item.key
+                                )}
+                                showGroupLabel={viewData.isSearchActive}
+                                densityConfig={densityConfig}
+                                removing={
+                                    favoriteCommands.removingFavoriteKey ===
+                                    item.key
+                                }
+                                onToggleSelect={handleToggleSelect}
+                                onRemoveLocal={handleCardRemoveLocalFavorite}
+                                onRemoveRemote={handleCardRemoveRemoteFavorite}
+                                onFriendLaunch={handleCardFriendLaunch}
+                                onFriendSelfInvite={handleCardFriendSelfInvite}
+                                onFriendInvite={handleCardFriendInvite}
+                                onFriendRequestInvite={
+                                    handleCardFriendRequestInvite
+                                }
+                                onFriendBoop={handleCardFriendBoop}
+                                onWorldNewInstance={handleCardWorldNewInstance}
+                                onWorldSelfInvite={handleCardWorldSelfInvite}
+                                onAvatarSelect={handleCardAvatarSelect}
+                            />
+                        );
+                        return order.editing ? (
+                            <SortableFavoriteCell
+                                key={item.key}
+                                itemKey={item.key}
+                                padding={virtualGrid.gridPadding}
+                            >
+                                {card}
+                            </SortableFavoriteCell>
+                        ) : (
+                            <div
+                                key={item.key}
+                                className="min-h-0 min-w-0"
+                                style={{
+                                    padding: `${virtualGrid.gridPadding}px`
+                                }}
+                            >
+                                {card}
+                            </div>
+                        );
+                    })}
+                </div>
+            ))}
+        </div>
+    );
 
     return (
         <div className="flex h-full min-h-0 min-w-0 flex-col pl-[26px]">
@@ -470,90 +652,35 @@ export function FavoritesContentPanel({
                                 </Button>
                             ) : null}
                         </FavoritesEmptyState>
-                    ) : (
-                        <div
-                            className="relative min-w-0"
-                            style={{
-                                height: `${virtualGrid.totalHeight}px`
-                            }}
+                    ) : order.editing ? (
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragStart={handleDragStart}
+                            onDragEnd={handleDragEnd}
+                            onDragCancel={releaseDragClickSuppression}
                         >
-                            {virtualGrid.visibleRows.map((row) => (
-                                <div
-                                    key={row.key}
-                                    className="absolute right-0 left-0 grid min-w-0"
-                                    style={{
-                                        gap: `${virtualGrid.gridGap}px`,
-                                        height: `${row.cellHeight}px`,
-                                        gridTemplateColumns: `repeat(${virtualGrid.gridColumnCount}, minmax(${virtualGrid.gridMinWidth}px, 1fr))`,
-                                        transform: `translateY(${row.top}px)`
-                                    }}
-                                >
-                                    {row.items.map((item: FavoriteItem) => (
-                                        <div
-                                            key={item.key}
-                                            className="min-h-0 min-w-0"
-                                            style={{
-                                                padding: `${virtualGrid.gridPadding}px`
-                                            }}
-                                        >
-                                            <FavoriteCard
-                                                item={item}
-                                                instanceActionGate={instanceActionGatesByItemKey?.get(
-                                                    item.key
-                                                )}
-                                                selectionActive={
-                                                    selection.hasSelection
-                                                }
-                                                selected={selection.selectedKeysSet.has(
-                                                    item.key
-                                                )}
-                                                showGroupLabel={
-                                                    viewData.isSearchActive
-                                                }
-                                                densityConfig={densityConfig}
-                                                removing={
-                                                    favoriteCommands.removingFavoriteKey ===
-                                                    item.key
-                                                }
-                                                onToggleSelect={
-                                                    handleToggleSelect
-                                                }
-                                                onRemoveLocal={
-                                                    handleCardRemoveLocalFavorite
-                                                }
-                                                onRemoveRemote={
-                                                    handleCardRemoveRemoteFavorite
-                                                }
-                                                onFriendLaunch={
-                                                    handleCardFriendLaunch
-                                                }
-                                                onFriendSelfInvite={
-                                                    handleCardFriendSelfInvite
-                                                }
-                                                onFriendInvite={
-                                                    handleCardFriendInvite
-                                                }
-                                                onFriendRequestInvite={
-                                                    handleCardFriendRequestInvite
-                                                }
-                                                onFriendBoop={
-                                                    handleCardFriendBoop
-                                                }
-                                                onWorldNewInstance={
-                                                    handleCardWorldNewInstance
-                                                }
-                                                onWorldSelfInvite={
-                                                    handleCardWorldSelfInvite
-                                                }
-                                                onAvatarSelect={
-                                                    handleCardAvatarSelect
-                                                }
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            ))}
-                        </div>
+                            <SortableContext
+                                items={contentItemKeys}
+                                strategy={rectSortingStrategy}
+                            >
+                                {favoritesGrid}
+                            </SortableContext>
+                            <DragOverlay className="cursor-grabbing [&_*]:cursor-grabbing">
+                                {activeDragItem ? (
+                                    <FavoriteCard
+                                        item={activeDragItem}
+                                        selectionActive
+                                        selected={selection.selectedKeysSet.has(
+                                            activeDragItem.key
+                                        )}
+                                        densityConfig={densityConfig}
+                                    />
+                                ) : null}
+                            </DragOverlay>
+                        </DndContext>
+                    ) : (
+                        favoritesGrid
                     )}
                 </div>
                 <FavoritesSelectionBar
@@ -569,6 +696,12 @@ export function FavoritesContentPanel({
                     onCopySelection={handleCopySelection}
                     onMoveSelection={handleMoveSelection}
                     onBulkRemove={handleBulkRemoveSelection}
+                    onMoveToTop={
+                        order.editing ? handleMoveSelectionToTop : undefined
+                    }
+                    onMoveToBottom={
+                        order.editing ? handleMoveSelectionToBottom : undefined
+                    }
                 />
             </div>
         </div>

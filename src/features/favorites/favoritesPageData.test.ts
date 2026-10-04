@@ -439,6 +439,23 @@ describe('favorites page data helpers', () => {
         ]);
     });
 
+    it('orders local items by the custom order and keeps date order for the rest', () => {
+        const ids = (sortValue: 'date' | 'custom') =>
+            buildFavoriteLocalItemsByGroup({
+                kind: 'avatar',
+                localGroups: [{ key: 'Avatars', label: 'Avatars' }],
+                localAvatarFavorites: {
+                    Avatars: ['avtr_new', 'avtr_b', 'avtr_a']
+                },
+                customOrderByGroup: { Avatars: ['avtr_a', 'avtr_b'] },
+                sortValue,
+                t: (key: string) => key
+            })['Avatars'].map((item) => item.id);
+
+        expect(ids('date')).toEqual(['avtr_new', 'avtr_b', 'avtr_a']);
+        expect(ids('custom')).toEqual(['avtr_new', 'avtr_a', 'avtr_b']);
+    });
+
     it('uses occupants from the requested local world detail', () => {
         const items = buildFavoriteLocalItemsByGroup({
             kind: 'world',

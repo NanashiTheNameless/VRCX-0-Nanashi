@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { FavoriteKind } from '@/domain/favorites/types';
+import type { FavoriteGroupMap, FavoriteKind } from '@/domain/favorites/types';
 
 import {
     normalizeFavoriteSearchValue as normalizeSearchValue,
@@ -54,10 +54,12 @@ type FavoritesViewDataInputs = ReturnType<
     selectedGroupKey: string;
     selectedSource: FavoriteSource;
     sortValue: FavoriteSortValue;
+    customOrderByGroup?: FavoriteGroupMap;
 };
 
 export function useFavoritesViewData({
     avatarHistory,
+    customOrderByGroup,
     favoriteAvatarGroups,
     favoriteFriendGroups,
     favoriteWorldGroups,
@@ -197,10 +199,12 @@ export function useFavoritesViewData({
             worldAvailabilityById,
             friendsById,
             knownUsersById,
+            customOrderByGroup,
             sortValue,
             t
         });
     }, [
+        customOrderByGroup,
         friendsById,
         knownUsersById,
         kind,

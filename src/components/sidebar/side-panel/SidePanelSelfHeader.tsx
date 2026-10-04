@@ -20,6 +20,11 @@ import {
 import { useFriendsSidebarActions } from '@/components/sidebar/friends-sidebar/useFriendsSidebarActions';
 import { useFriendsSidebarPreferences } from '@/components/sidebar/friends-sidebar/useFriendsSidebarPreferences';
 import { SidePanelSelfAccountMenu } from '@/components/sidebar/side-panel/SidePanelSelfAccountMenu';
+import {
+    SidebarAvatarFrame,
+    SidebarNameplate,
+    useSidebarDecorationHover
+} from '@/components/sidebar/SidebarProfileDecorations';
 import { useFriendsSidebarDisplayPreferences } from '@/components/sidebar/useFriendsSidebarDisplayPreferences';
 import { useFriendsSidebarRuntimeSnapshot } from '@/components/sidebar/useFriendsSidebarRuntimeSnapshot';
 import { UserStatusAvatar } from '@/components/UserStatusAvatar';
@@ -78,6 +83,7 @@ export function SidePanelSelfHeader() {
     const { t } = useTranslation();
     const [isEditingDescription, setIsEditingDescription] = useState(false);
     const [descriptionDraft, setDescriptionDraft] = useState('');
+    const decorationHover = useSidebarDecorationHover();
     const descriptionInputRef = useRef<HTMLInputElement | null>(null);
     const {
         currentEndpoint,
@@ -89,7 +95,10 @@ export function SidePanelSelfHeader() {
     const {
         ageGatedInstancesVisible,
         randomUserColours,
+        randomUserColourStyle,
         showInstanceIdInLocation,
+        showSidebarAvatarFrame,
+        showSidebarNameplate,
         trustColor
     } = useFriendsSidebarDisplayPreferences();
     const { statusPresets } = useFriendsSidebarPreferences();
@@ -114,6 +123,7 @@ export function SidePanelSelfHeader() {
     const { displaySource, imageUrl, displayName, nameStyle } =
         resolveFriendRowDisplay(selfRow, {
             randomUserColours,
+            randomUserColourStyle,
             isDarkMode,
             trustColor
         });
@@ -158,6 +168,10 @@ export function SidePanelSelfHeader() {
         'component.friends_sidebar.modal.edit_status_description'
     );
     const statusLabel = t(resolveCurrentUserStatusLabelKey(statusValue));
+    const iconFrameId = showSidebarAvatarFrame ? selfRow.iconFrame?.trim() : '';
+    const nameplateId = showSidebarNameplate
+        ? selfRow.nameplateEffect?.trim()
+        : '';
 
     function commitDescription() {
         setIsEditingDescription(false);
@@ -190,11 +204,20 @@ export function SidePanelSelfHeader() {
     };
 
     return (
-        <div className="vrcx-0-side-panel-self ml-2 flex shrink-0 flex-col pt-4 pr-1.5 pb-2 pl-2">
+        <div
+            className="vrcx-0-side-panel-self ml-2 flex shrink-0 items-center pt-4 pb-2 pl-2"
+            {...decorationHover.hoverProps}
+        >
             <ContextMenu>
                 <ContextMenuTrigger
                     render={
-                        <div className="flex w-full min-w-0 items-center gap-2.5 p-1.5">
+                        <div className="relative isolate mr-1.5 flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1.5">
+                            {nameplateId ? (
+                                <SidebarNameplate
+                                    templateId={nameplateId}
+                                    active={decorationHover.active}
+                                />
+                            ) : null}
                             <button
                                 type="button"
                                 aria-label={`${displayName} · ${statusLabel}`}
@@ -208,6 +231,14 @@ export function SidePanelSelfHeader() {
                                         selfRow,
                                         { hideNonFriend: false }
                                     )}
+                                    frame={
+                                        iconFrameId ? (
+                                            <SidebarAvatarFrame
+                                                templateId={iconFrameId}
+                                                active={decorationHover.active}
+                                            />
+                                        ) : null
+                                    }
                                 />
                             </button>
                             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -333,7 +364,6 @@ export function SidePanelSelfHeader() {
                                     </div>
                                 ) : null}
                             </div>
-                            <SidePanelSelfAccountMenu />
                         </div>
                     }
                 />
@@ -341,6 +371,9 @@ export function SidePanelSelfHeader() {
                     {renderActionItems(CONTEXT_MENU_SLOTS, true)}
                 </ContextMenuContent>
             </ContextMenu>
+            <div className="flex w-9 shrink-0 justify-center">
+                <SidePanelSelfAccountMenu />
+            </div>
             <CurrentUserSocialStatusDialog controller={socialStatusDialog} />
         </div>
     );

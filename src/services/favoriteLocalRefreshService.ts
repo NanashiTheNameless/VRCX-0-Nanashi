@@ -1,8 +1,8 @@
 import type { FavoriteGroupMap, FavoriteKind } from '@/domain/favorites/types';
-import favoritePersistenceRepository, {
-    type AvatarFavoriteRow,
-    type FriendFavoriteRow
-} from '@/repositories/favoritePersistenceRepository';
+import {
+    commands,
+    type LocalFavoriteSnapshot
+} from '@/platform/tauri/bindings';
 import { useFavoriteStore } from '@/state/favoriteStore';
 
 const refreshSequences: Record<Exclude<FavoriteKind, 'world'>, number> = {
@@ -10,21 +10,23 @@ const refreshSequences: Record<Exclude<FavoriteKind, 'world'>, number> = {
     avatar: 0
 };
 
-function buildGroupMap<Row extends { groupName: string }>(
-    rows: Row[],
-    idField: keyof Row
+function buildGroupMap(
+    snapshot: LocalFavoriteSnapshot,
+    kind: Exclude<FavoriteKind, 'world'>
 ): FavoriteGroupMap {
     const map: FavoriteGroupMap = {};
-    for (const row of rows) {
-        const groupName = row.groupName;
-        const entityId = String(row[idField] ?? '');
+    for (const row of snapshot.favorites) {
+        const groupName = row.groupName.trim();
+        const entityId = (
+            (kind === 'avatar' ? row.avatarId : row.userId) ?? ''
+        ).trim();
         if (!groupName || !entityId) {
             continue;
         }
         const bucket = map[groupName];
         if (bucket) {
             if (!bucket.includes(entityId)) {
-                bucket.push(entityId);
+                bucket.unshift(entityId);
             }
         } else {
             map[groupName] = [entityId];
@@ -33,46 +35,21 @@ function buildGroupMap<Row extends { groupName: string }>(
     return map;
 }
 
-async function readLocalAvatarFavorites() {
-    const [rows, groups] = await Promise.all([
-        favoritePersistenceRepository.getAvatarFavorites(),
-        favoritePersistenceRepository.getExplicitLocalFavoriteGroups('avatar')
-    ]);
-    return {
-        localFavorites: buildGroupMap<AvatarFavoriteRow>(rows, 'avatarId'),
-        localFavoriteGroups: groups
-    };
-}
-
-async function readLocalFriendFavorites(currentUserId: string | null) {
-    const [rows, groups] = await Promise.all([
-        favoritePersistenceRepository.getFriendFavorites(),
-        favoritePersistenceRepository.getExplicitLocalFavoriteGroups(
-            'friend',
-            currentUserId
-        )
-    ]);
-    return {
-        localFavorites: buildGroupMap<FriendFavoriteRow>(rows, 'userId'),
-        localFavoriteGroups: groups
-    };
-}
-
 async function refreshLocalFavoritesForKind(
     kind: Exclude<FavoriteKind, 'world'>
 ): Promise<void> {
     const sequence = ++refreshSequences[kind];
     const currentUserId = useFavoriteStore.getState().currentUserId;
-    const snapshot =
-        kind === 'avatar'
-            ? await readLocalAvatarFavorites()
-            : await readLocalFriendFavorites(currentUserId);
+    const snapshot = await commands.appFavoriteLocalSnapshot(kind);
     const store = useFavoriteStore.getState();
     if (
         refreshSequences[kind] === sequence &&
         store.currentUserId === currentUserId
     ) {
-        store.setLocalFavoritesForKind(kind, snapshot);
+        store.setLocalFavoritesForKind(kind, {
+            localFavorites: buildGroupMap(snapshot, kind),
+            localFavoriteGroups: snapshot.groupNames
+        });
     }
 }
 

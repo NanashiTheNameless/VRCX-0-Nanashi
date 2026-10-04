@@ -20,6 +20,7 @@ use super::*;
 struct MemoryProfileBioStore {
     records: Mutex<HashMap<(String, String), ProfileBioRecord>>,
     candidates: Mutex<Vec<String>>,
+    self_bios: Mutex<Vec<(String, String, String)>>,
 }
 
 impl ProfileBioStore for MemoryProfileBioStore {
@@ -52,6 +53,15 @@ impl ProfileBioStore for MemoryProfileBioStore {
 
     fn next_stale_friend(&self, _owner: &OwnerId, _checked_before: &str) -> Result<Option<String>> {
         Ok(self.candidates.lock().unwrap().first().cloned())
+    }
+
+    fn observe_self_bio(&self, owner: &OwnerId, bio: &str, observed_at: &str) -> Result<()> {
+        self.self_bios.lock().unwrap().push((
+            owner.as_str().to_string(),
+            bio.to_string(),
+            observed_at.to_string(),
+        ));
+        Ok(())
     }
 }
 
@@ -263,6 +273,34 @@ fn profile_responses_are_observed_only_for_current_friends() -> Result<()> {
     );
     assert_eq!(store.last_seen(&owner, "usr_stranger")?, None);
     assert_eq!(store.last_seen(&owner, "usr_friend")?.unwrap().bio, "hello");
+    Ok(())
+}
+
+#[test]
+fn own_profile_response_is_observed_against_the_self_bio_baseline() -> Result<()> {
+    let (_dir, runtime, owner) = runtime_with_friend("profile-bio-self")?;
+    let store = MemoryProfileBioStore::default();
+    let now = "2026-09-18T00:00:00.000Z";
+
+    let outcome = observe_profile_response(
+        &store,
+        runtime.runtime(),
+        &owner,
+        &profile_response(owner.as_str(), "my bio"),
+        now,
+    )?;
+
+    assert_eq!(outcome, None);
+    assert_eq!(
+        store.self_bios.lock().unwrap().clone(),
+        vec![(
+            owner.as_str().to_string(),
+            "my bio".to_string(),
+            now.to_string()
+        )]
+    );
+    assert_eq!(store.last_seen(&owner, owner.as_str())?, None);
+    assert!(bio_rows(&runtime, &owner).is_empty());
     Ok(())
 }
 

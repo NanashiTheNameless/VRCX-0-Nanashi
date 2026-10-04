@@ -19,7 +19,8 @@ const mocks = vi.hoisted(() => ({
     t: vi.fn(),
     bootstrapAuthenticatedSession: vi.fn(),
     confirm: vi.fn(),
-    otpPrompt: vi.fn()
+    otpPrompt: vi.fn(),
+    flashWindow: vi.fn()
 }));
 
 vi.mock('@/services/toastService', () => ({
@@ -54,6 +55,11 @@ vi.mock('@/platform/tauri/bindings', () => ({
         appVrchatAuthSessionRespond: mocks.respondLoginSession,
         appVrchatAuthSessionCancel: mocks.cancelLoginSession
     }
+}));
+
+vi.mock('@/platform/tauri/webview', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@/platform/tauri/webview')>()),
+    flashWindow: mocks.flashWindow
 }));
 
 vi.mock('./authSnapshotService', () => ({
@@ -237,6 +243,7 @@ describe('authExecutionService characterization', () => {
         mocks.loadVrchatConfigSnapshot.mockResolvedValue({});
         mocks.confirm.mockResolvedValue({ ok: true });
         mocks.otpPrompt.mockResolvedValue({ ok: true, value: '123456' });
+        mocks.flashWindow.mockResolvedValue(undefined);
     });
 
     it('rejects manual login without username or password', async () => {
@@ -657,6 +664,7 @@ describe('authExecutionService characterization', () => {
             expect(
                 mocks.otpPrompt.mock.calls.map(([prompt]) => prompt.mode)
             ).toEqual(['totp', 'otp', 'totp']);
+            expect(mocks.flashWindow).toHaveBeenCalledTimes(1);
             expect(mocks.cancelLoginSession).not.toHaveBeenCalled();
             expect(mocks.respondLoginSession).toHaveBeenCalledTimes(1);
             expect(mocks.respondLoginSession).toHaveBeenCalledWith({

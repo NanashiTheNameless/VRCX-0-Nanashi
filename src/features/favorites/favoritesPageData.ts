@@ -54,6 +54,22 @@ type FavoriteGroupSourceMap = FavoriteGroupMap;
 type FavoriteDetailMap = Record<string, FavoritePageEntityDetail | undefined>;
 type FavoriteProfileMap = Record<string, FavoriteProfileRecord | undefined>;
 type FavoriteSortIndex = Record<string, number | undefined>;
+function withCustomIndex(
+    items: FavoriteItem[],
+    customOrder: readonly string[] | undefined
+): FavoriteItem[] {
+    if (!customOrder?.length) {
+        return items;
+    }
+    const customIndexById = new Map(
+        customOrder.map((entityId, index) => [entityId, index])
+    );
+    return items.map((item) => {
+        const customIndex = customIndexById.get(item.id);
+        return customIndex === undefined ? item : { ...item, customIndex };
+    });
+}
+
 function textValue(value: unknown) {
     return typeof value === 'string'
         ? value
@@ -562,6 +578,7 @@ export function buildFavoriteLocalItemsByGroup({
     worldAvailabilityById = {},
     friendsById,
     knownUsersById = {},
+    customOrderByGroup,
     sortValue = 'name',
     t
 }: {
@@ -570,6 +587,7 @@ export function buildFavoriteLocalItemsByGroup({
     localFriendFavorites?: FavoriteGroupSourceMap;
     localAvatarFavorites?: FavoriteGroupSourceMap;
     localWorldFavorites?: FavoriteGroupSourceMap;
+    customOrderByGroup?: FavoriteGroupSourceMap;
     avatarDetailFallbacksById?: FavoriteDetailMap;
     worldDetailsById?: FavoriteDetailMap;
     worldAvailabilityById?: Record<string, string | undefined>;
@@ -597,7 +615,10 @@ export function buildFavoriteLocalItemsByGroup({
                     t: translate
                 })
             );
-            itemsByGroup[group.key] = sortItems(items, sortValue);
+            itemsByGroup[group.key] = sortItems(
+                withCustomIndex(items, customOrderByGroup?.[group.key]),
+                sortValue
+            );
         }
 
         return itemsByGroup;
@@ -644,7 +665,10 @@ export function buildFavoriteLocalItemsByGroup({
                 orderIndex: index
             };
         });
-        itemsByGroup[group.key] = sortItems(items, sortValue);
+        itemsByGroup[group.key] = sortItems(
+            withCustomIndex(items, customOrderByGroup?.[group.key]),
+            sortValue
+        );
     }
 
     return itemsByGroup;

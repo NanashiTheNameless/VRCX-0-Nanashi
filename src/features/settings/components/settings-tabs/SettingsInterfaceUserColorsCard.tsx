@@ -7,6 +7,7 @@ import {
     TRUST_COLOR_DEFAULTS,
     TRUST_COLOR_ENTRIES
 } from '@/shared/constants/trustColors';
+import { USER_NAME_COLOUR_STYLES } from '@/shared/utils/entityMedia';
 import { isValidTrustColor } from '@/shared/utils/trustColors';
 import type { PreferencesSnapshot } from '@/state/preferencesStore';
 import { Button } from '@/ui/shadcn/button';
@@ -20,18 +21,19 @@ import { Switch } from '@/ui/shadcn/switch';
 
 import type { SettingsPageStateSections } from '../../settingsPageStateSections';
 import { SettingsCard } from '../SettingsCard';
-import { Field } from '../SettingsField';
+import { Field, SegmentedPreference } from '../SettingsField';
 
 type InterfaceState = SettingsPageStateSections['interface'];
 type SettingsPrefs = Pick<
     PreferencesSnapshot,
-    'randomUserColours' | 'trustColor'
+    'randomUserColours' | 'randomUserColourStyle' | 'trustColor'
 >;
 type SettingsInterfaceUserColorsCardProps = {
     prefs: SettingsPrefs;
 } & Pick<
     InterfaceState,
     | 'onRandomUserColoursChange'
+    | 'onRandomUserColourStyleChange'
     | 'onResetTrustColors'
     | 'onSaveTrustColor'
     | 'onTrustColorDraftChange'
@@ -55,6 +57,7 @@ function getTrustColorDraftValue(
 export function SettingsInterfaceUserColorsCard({
     prefs,
     onRandomUserColoursChange,
+    onRandomUserColourStyleChange,
     onResetTrustColors,
     onSaveTrustColor,
     onTrustColorDraftChange
@@ -80,6 +83,24 @@ export function SettingsInterfaceUserColorsCard({
                     onCheckedChange={onRandomUserColoursChange}
                 />
             </Field>
+            {prefs.randomUserColours ? (
+                <Field
+                    label={t(
+                        'view.settings.appearance.user_colors.random_color_style'
+                    )}
+                >
+                    <SegmentedPreference
+                        value={prefs.randomUserColourStyle}
+                        onChange={onRandomUserColourStyleChange}
+                        options={USER_NAME_COLOUR_STYLES.map((style) => ({
+                            value: style,
+                            label: t(
+                                `view.settings.appearance.user_colors.random_color_styles.${style}`
+                            )
+                        }))}
+                    />
+                </Field>
+            ) : null}
             <Collapsible
                 open={trustColorsOpen}
                 onOpenChange={setTrustColorsOpen}

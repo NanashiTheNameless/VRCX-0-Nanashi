@@ -15,6 +15,7 @@ import { Switch } from '@/ui/shadcn/switch';
 import type { SettingsPageStateSections } from '../../settingsPageStateSections';
 import { SettingsCard } from '../SettingsCard';
 import { Field, SegmentedPreference } from '../SettingsField';
+import { SettingsInterfaceProfileAppearanceCard } from './SettingsInterfaceProfileAppearanceCard';
 import { SettingsInterfaceUserDialogCard } from './SettingsInterfaceUserDialogCard';
 
 type InterfaceState = SettingsPageStateSections['interface'];
@@ -114,6 +115,8 @@ export function SettingsInterfaceDisplayCards({
                     />
                 </Field>
             </SettingsCard>
+
+            <SettingsInterfaceProfileAppearanceCard />
 
             <SettingsInterfaceUserDialogCard />
 

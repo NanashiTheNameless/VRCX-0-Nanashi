@@ -1,19 +1,13 @@
 use serde_json::{json, Value};
 
 pub fn normalize_config_string_array(parsed: Value) -> Vec<String> {
-    let mut values = parsed
-        .as_array()
-        .map(|items| {
-            items
-                .iter()
-                .map(config_value_to_string)
-                .map(|value| value.trim().to_string())
-                .filter(|value| !value.is_empty())
-                .collect::<Vec<_>>()
-        })
-        .unwrap_or_default();
-    values.sort();
-    values.dedup();
+    let mut values: Vec<String> = Vec::new();
+    for value in parsed.as_array().into_iter().flatten() {
+        let value = config_value_to_string(value).trim().to_string();
+        if !value.is_empty() && !values.contains(&value) {
+            values.push(value);
+        }
+    }
     values
 }
 

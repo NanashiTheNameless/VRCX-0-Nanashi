@@ -1,7 +1,7 @@
 use serde_json::Value;
 
 use crate::activity::activity_iso_from_ms;
-use crate::common::ParamsBuilder;
+use crate::common::{row_string, ParamsBuilder};
 use crate::database::{DatabaseService, DatabaseWriteTransaction};
 use crate::game_log::{ensure_game_log_tables, GameLogLocationEntry, GameLogLocationTimeUpdate};
 use crate::ownership::{owner_id_get_or_insert, OwnerId, OwnerRowId};
@@ -91,8 +91,8 @@ pub fn write_realtime_batch(
         for update in &batch.game_log_location_time_updates {
             counts.add_game_log_rows(update_game_log_location_time(tx, owner_id, update)?);
         }
-        for entry in &batch.self_profile_log_entries {
-            counts.add_realtime_rows(insert_self_profile_log(tx, &user_prefix, entry)?);
+        for observation in &batch.self_profile_observations {
+            counts.add_realtime_rows(observe_self_profile_field(tx, &user_prefix, observation)?);
         }
         Ok(counts)
     })
@@ -647,12 +647,22 @@ fn mark_notification_seen(
     .map(affected_count)
 }
 
-fn insert_self_profile_log(
+fn observe_self_profile_field(
     tx: &mut DatabaseWriteTransaction<'_>,
     user_prefix: &str,
-    entry: &SelfProfileLogEntry,
+    observation: &SelfProfileObservation,
 ) -> Result<u64, Error> {
-    if entry.value == entry.previous_value {
+    let field = observation.field.as_str();
+    let previous_value = tx
+        .execute(
+            &format!(
+                "SELECT value FROM {user_prefix}_self_profile_log WHERE field = @field ORDER BY id DESC LIMIT 1"
+            ),
+            &ParamsBuilder::new().set("field", field).build(),
+        )?
+        .first()
+        .map(|row| row_string(row, 0));
+    if previous_value.as_deref() == Some(observation.value.as_str()) {
         return Ok(0);
     }
     tx.execute_non_query(
@@ -661,10 +671,10 @@ fn insert_self_profile_log(
              VALUES (@created_at, @field, @value, @previous_value)"
         ),
         &ParamsBuilder::new()
-            .set("created_at", entry.created_at.clone())
-            .set("field", entry.field.as_str())
-            .set("value", entry.value.clone())
-            .set("previous_value", entry.previous_value.clone())
+            .set("created_at", observation.observed_at.clone())
+            .set("field", field)
+            .set("value", observation.value.clone())
+            .set("previous_value", previous_value.unwrap_or_default())
             .build(),
     )
     .map(affected_count)

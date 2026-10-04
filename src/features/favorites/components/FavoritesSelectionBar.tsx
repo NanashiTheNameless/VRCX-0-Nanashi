@@ -1,4 +1,10 @@
-import { CopyIcon, MoveRightIcon, Trash2Icon } from 'lucide-react';
+import {
+    ArrowDownToLineIcon,
+    ArrowUpToLineIcon,
+    CopyIcon,
+    MoveRightIcon,
+    Trash2Icon
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -30,6 +36,8 @@ type FavoritesSelectionBarProps = {
     onCopySelection(target: FavoriteGroupView): void;
     onMoveSelection(target: FavoriteGroupView): void;
     onBulkRemove(): void;
+    onMoveToTop?(): void;
+    onMoveToBottom?(): void;
 };
 
 function favoriteMoveTargetLabel(target: FavoriteGroupView): string {
@@ -122,7 +130,9 @@ function FavoritesSelectionBar({
     onCopyIds,
     onCopySelection,
     onMoveSelection,
-    onBulkRemove
+    onBulkRemove,
+    onMoveToTop,
+    onMoveToBottom
 }: FavoritesSelectionBarProps) {
     const { t } = useTranslation();
 
@@ -144,6 +154,28 @@ function FavoritesSelectionBar({
             onSelectAll={onSelectAll}
             onClearSelection={onClearSelection}
         >
+            {onMoveToTop ? (
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={onMoveToTop}
+                >
+                    <ArrowUpToLineIcon data-icon="inline-start" />
+                    {t('view.favorite.order.move_to_top')}
+                </Button>
+            ) : null}
+            {onMoveToBottom ? (
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={onMoveToBottom}
+                >
+                    <ArrowDownToLineIcon data-icon="inline-start" />
+                    {t('view.favorite.order.move_to_bottom')}
+                </Button>
+            ) : null}
             {showCopyIdsButton ? (
                 <Button
                     type="button"

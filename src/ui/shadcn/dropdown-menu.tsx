@@ -47,6 +47,7 @@ function DropdownMenuContent({
     return (
         <DropdownMenuPrimitive.Portal>
             <DropdownMenuPrimitive.Positioner
+                data-slot="menu-positioner"
                 align={align}
                 alignOffset={alignOffset}
                 side={side}

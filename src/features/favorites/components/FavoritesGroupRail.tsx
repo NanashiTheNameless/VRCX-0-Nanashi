@@ -1,6 +1,28 @@
 import {
+    closestCenter,
+    DndContext,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    type DragEndEvent
+} from '@dnd-kit/core';
+import {
+    restrictToParentElement,
+    restrictToVerticalAxis
+} from '@dnd-kit/modifiers';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    verticalListSortingStrategy
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
     EllipsisIcon,
     GlobeIcon,
+    GripVerticalIcon,
     LockIcon,
     MoreHorizontalIcon,
     PlusIcon,
@@ -9,7 +31,8 @@ import {
     UsersIcon
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { memo } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/layout/PageScaffold';
@@ -283,6 +306,65 @@ function GroupMenu({
     );
 }
 
+function SortableRailRow({
+    id,
+    children
+}: {
+    id: string;
+    children: ReactNode;
+}) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id });
+    return (
+        <div
+            ref={setNodeRef}
+            style={{
+                transform: CSS.Translate.toString(transform),
+                transition
+            }}
+            className={cn(
+                'relative',
+                isDragging &&
+                    'z-10 cursor-grabbing opacity-60 [&_*]:cursor-grabbing'
+            )}
+            {...attributes}
+            {...listeners}
+        >
+            {children}
+        </div>
+    );
+}
+
+function applyGroupOrder(
+    groups: FavoriteGroupView[],
+    order: readonly string[] | null
+): FavoriteGroupView[] {
+    if (!order) {
+        return groups;
+    }
+    const groupsByKey = new Map(groups.map((group) => [group.key, group]));
+    return order
+        .map((key) => groupsByKey.get(key))
+        .filter((group): group is FavoriteGroupView => Boolean(group));
+}
+
+function isSettledGroupOrder(
+    groups: readonly FavoriteGroupView[],
+    order: readonly string[]
+): boolean {
+    return (
+        groups.length !== order.length ||
+        groups.some((group) => !order.includes(group.key)) ||
+        groups.every((group, index) => group.key === order[index])
+    );
+}
+
 type GroupRailSectionProps = {
     title: string;
     icon: LucideIcon;
@@ -312,6 +394,7 @@ type GroupRailSectionProps = {
     onLocalDelete?: FavoriteGroupHandler;
     onHistoryClear?: FavoriteGroupHandler;
     onShareCollection?: FavoriteGroupHandler;
+    onReorder?(groupKeys: string[]): Promise<boolean>;
 };
 
 const GroupRailSection = memo(function GroupRailSection({
@@ -339,11 +422,146 @@ const GroupRailSection = memo(function GroupRailSection({
     onLocalRename,
     onLocalDelete,
     onHistoryClear,
-    onShareCollection
+    onShareCollection,
+    onReorder
 }: GroupRailSectionProps) {
     const { t } = useTranslation();
     const resolvedNewGroupLabel =
         newGroupLabel || t('view.favorite.worlds.new_group');
+    const [pendingOrder, setPendingOrder] = useState<string[] | null>(null);
+    const orderedGroups = useMemo(
+        () => applyGroupOrder(groups, pendingOrder),
+        [groups, pendingOrder]
+    );
+    const dragClickSuppressedRef = useRef(false);
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 6
+            }
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates
+        })
+    );
+
+    useEffect(() => {
+        if (pendingOrder && isSettledGroupOrder(groups, pendingOrder)) {
+            setPendingOrder(null);
+        }
+    }, [groups, pendingOrder]);
+
+    function releaseDragClickSuppression() {
+        window.setTimeout(() => {
+            dragClickSuppressedRef.current = false;
+        }, 0);
+    }
+
+    function handleDragEnd({ active, over }: DragEndEvent) {
+        releaseDragClickSuppression();
+        if (!onReorder || !over || active.id === over.id) {
+            return;
+        }
+        const keys = orderedGroups.map((group) => group.key);
+        const fromIndex = keys.indexOf(String(active.id));
+        const toIndex = keys.indexOf(String(over.id));
+        if (fromIndex < 0 || toIndex < 0) {
+            return;
+        }
+        const nextOrder = arrayMove(keys, fromIndex, toIndex);
+        setPendingOrder(nextOrder);
+        void onReorder(nextOrder).then((saved) => {
+            if (!saved) {
+                setPendingOrder(null);
+            }
+        });
+    }
+
+    function renderGroupRow(group: FavoriteGroupView) {
+        const isActive =
+            selectedSource === group.source && selectedGroupKey === group.key;
+        let hasMenu = Boolean(
+            onShareCollection || onLocalRename || onLocalDelete
+        );
+        if (group.source === 'history') {
+            hasMenu = Boolean(onHistoryClear);
+        } else if (group.source === 'remote') {
+            hasMenu = Boolean(
+                onShareCollection ||
+                onRemoteRename ||
+                onRemoteVisibility ||
+                onRemoteClear
+            );
+        }
+        const visibilityLabel = group.visibility
+            ? getVisibilityLabel(t, group.visibility)
+            : null;
+        return (
+            <div
+                key={`${group.source}:${group.key}`}
+                className={cn(
+                    'group/rail-row flex w-full items-center gap-1 rounded-md transition-colors duration-(--motion-fast) ease-(--ease-out-ui) motion-reduce:transition-none',
+                    isActive
+                        ? 'bg-(--state-selected-surface) hover:bg-(--state-selected-hover-surface)'
+                        : 'hover:bg-(--state-hover-surface)'
+                )}
+            >
+                <Button
+                    type="button"
+                    variant="ghost"
+                    className="h-auto min-w-0 flex-1 justify-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-transparent"
+                    onClick={() => {
+                        if (!dragClickSuppressedRef.current) {
+                            void onSelect(group);
+                        }
+                    }}
+                >
+                    {onReorder && !group.visibility ? (
+                        <span
+                            className="flex size-4 shrink-0 cursor-grab items-center justify-center opacity-0 transition-opacity duration-(--motion-fast) ease-(--ease-out-ui) group-focus-within/rail-row:opacity-100 group-hover/rail-row:opacity-100 active:cursor-grabbing motion-reduce:transition-none"
+                            aria-hidden="true"
+                        >
+                            <GripVerticalIcon className="text-muted-foreground size-4" />
+                        </span>
+                    ) : (
+                        <GroupVisibilityIcon
+                            visibility={group.visibility}
+                            label={visibilityLabel}
+                        />
+                    )}
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                        {group.label}
+                    </span>
+                    <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                        {group.capacity
+                            ? `${group.count ?? 0}/${group.capacity}`
+                            : (group.count ?? 0)}
+                    </span>
+                </Button>
+                {hasMenu ? (
+                    <div
+                        className={cn(
+                            'shrink-0 pr-1 transition-opacity duration-(--motion-fast) ease-(--ease-out-ui) motion-reduce:transition-none',
+                            isActive
+                                ? 'opacity-100'
+                                : 'opacity-0 group-focus-within/rail-row:opacity-100 group-hover/rail-row:opacity-100'
+                        )}
+                    >
+                        <GroupMenu
+                            group={group}
+                            onRemoteRename={onRemoteRename}
+                            onRemoteVisibility={onRemoteVisibility}
+                            onRemoteClear={onRemoteClear}
+                            onLocalRename={onLocalRename}
+                            onLocalDelete={onLocalDelete}
+                            onHistoryClear={onHistoryClear}
+                            onShareCollection={onShareCollection}
+                        />
+                    </div>
+                ) : null}
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col gap-1">
@@ -394,84 +612,33 @@ const GroupRailSection = memo(function GroupRailSection({
                             <Skeleton className="h-3.5 flex-1" />
                         </div>
                     ))
-                ) : groups.length ? (
-                    groups.map((group) => {
-                        const isActive =
-                            selectedSource === group.source &&
-                            selectedGroupKey === group.key;
-                        let hasMenu = Boolean(
-                            onShareCollection || onLocalRename || onLocalDelete
-                        );
-                        if (group.source === 'history') {
-                            hasMenu = Boolean(onHistoryClear);
-                        } else if (group.source === 'remote') {
-                            hasMenu = Boolean(
-                                onShareCollection ||
-                                onRemoteRename ||
-                                onRemoteVisibility ||
-                                onRemoteClear
-                            );
-                        }
-                        const visibilityLabel = group.visibility
-                            ? getVisibilityLabel(t, group.visibility)
-                            : null;
-                        return (
-                            <div
-                                key={`${group.source}:${group.key}`}
-                                className={cn(
-                                    'group/rail-row flex w-full items-center gap-1 rounded-md transition-colors duration-(--motion-fast) ease-(--ease-out-ui) motion-reduce:transition-none',
-                                    isActive
-                                        ? 'bg-(--state-selected-surface) hover:bg-(--state-selected-hover-surface)'
-                                        : 'hover:bg-(--state-hover-surface)'
-                                )}
-                            >
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    className="h-auto min-w-0 flex-1 justify-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-transparent"
-                                    onClick={() => onSelect(group)}
-                                >
-                                    <GroupVisibilityIcon
-                                        visibility={group.visibility}
-                                        label={visibilityLabel}
-                                    />
-                                    <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                                        {group.label}
-                                    </span>
-                                    <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                                        {group.capacity
-                                            ? `${group.count ?? 0}/${group.capacity}`
-                                            : (group.count ?? 0)}
-                                    </span>
-                                </Button>
-                                {hasMenu ? (
-                                    <div
-                                        className={cn(
-                                            'shrink-0 pr-1 transition-opacity duration-(--motion-fast) ease-(--ease-out-ui) motion-reduce:transition-none',
-                                            isActive
-                                                ? 'opacity-100'
-                                                : 'opacity-0 group-focus-within/rail-row:opacity-100 group-hover/rail-row:opacity-100'
-                                        )}
-                                    >
-                                        <GroupMenu
-                                            group={group}
-                                            onRemoteRename={onRemoteRename}
-                                            onRemoteVisibility={
-                                                onRemoteVisibility
-                                            }
-                                            onRemoteClear={onRemoteClear}
-                                            onLocalRename={onLocalRename}
-                                            onLocalDelete={onLocalDelete}
-                                            onHistoryClear={onHistoryClear}
-                                            onShareCollection={
-                                                onShareCollection
-                                            }
-                                        />
-                                    </div>
-                                ) : null}
-                            </div>
-                        );
-                    })
+                ) : orderedGroups.length && onReorder ? (
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        modifiers={[
+                            restrictToVerticalAxis,
+                            restrictToParentElement
+                        ]}
+                        onDragStart={() => {
+                            dragClickSuppressedRef.current = true;
+                        }}
+                        onDragEnd={handleDragEnd}
+                        onDragCancel={releaseDragClickSuppression}
+                    >
+                        <SortableContext
+                            items={orderedGroups.map((group) => group.key)}
+                            strategy={verticalListSortingStrategy}
+                        >
+                            {orderedGroups.map((group) => (
+                                <SortableRailRow key={group.key} id={group.key}>
+                                    {renderGroupRow(group)}
+                                </SortableRailRow>
+                            ))}
+                        </SortableContext>
+                    </DndContext>
+                ) : orderedGroups.length ? (
+                    orderedGroups.map(renderGroupRow)
                 ) : (
                     <EmptyState
                         variant="inline"

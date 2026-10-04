@@ -2,7 +2,7 @@
 
 **A personal fork of [VRCX-0](https://github.com/Map1en/VRCX-0) by Map1en.**
 
-This is not the official VRCX-0. It is maintained by NamelessNanashi for personal use,
+**This is not the official VRCX-0.** It is maintained by NamelessNanashi for personal use,
 tracks upstream loosely, and makes opinionated changes upstream may not want. For the
 official app, support, and community, use [Map1en/VRCX-0](https://github.com/Map1en/VRCX-0).
 Please do not report bugs from this fork to upstream.
@@ -83,7 +83,7 @@ It is a Rust + Tauri rewrite of VRCX.
 ## Install
 
 Grab the file for your platform from the
-[latest release](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/latest):
+[Nightly-Rolling release](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/tag/Nightly-Rolling):
 
 | Platform          | File                                                |
 | ----------------- | --------------------------------------------------- |
@@ -159,5 +159,7 @@ everyone who worked on both.
 
 GNU General Public License v3.0 (GPLv3), same as upstream. See [LICENSE](LICENSE).
 
-This project is not endorsed by VRChat Inc. VRChat and all associated properties are
+This project is not affiliated with or endorsed by [Map1en/VRCX-0](https://github.com/Map1en/VRCX-0).
+
+This project is not affiliated with or endorsed by VRChat Inc. VRChat and all associated properties are
 trademarks or registered trademarks of VRChat Inc.

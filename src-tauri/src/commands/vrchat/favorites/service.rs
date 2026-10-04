@@ -8,9 +8,10 @@ use crate::state::AppState;
 use vrcx_0_application_core::vrchat_api::VrchatApiResponse;
 
 use super::types::{
-    LocalFavoriteGroupInput, LocalFavoriteGroupRenameInput, LocalFavoriteInput,
-    VrchatFavoriteAddInput, VrchatFavoriteDeleteInput, VrchatFavoriteGroupClearInput,
-    VrchatFavoriteGroupSaveInput, VrchatFavoriteGroupsInput, VrchatFavoriteWorldsInput,
+    LocalFavoriteGroupInput, LocalFavoriteGroupRenameInput, LocalFavoriteGroupReorderInput,
+    LocalFavoriteInput, LocalFavoriteReorderInput, VrchatFavoriteAddInput,
+    VrchatFavoriteDeleteInput, VrchatFavoriteGroupClearInput, VrchatFavoriteGroupSaveInput,
+    VrchatFavoriteGroupsInput, VrchatFavoriteWorldsInput,
 };
 
 #[tauri::command]
@@ -189,5 +190,30 @@ pub fn app__local_favorite_group_delete(
     state
         .runtime_host()
         .favorite_local_group_delete(kind, group_name)
+        .map_err(AppError::from)
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub fn app__local_favorite_group_reorder(
+    state: State<'_, AppState>,
+    input: LocalFavoriteGroupReorderInput,
+) -> Result<Vec<String>, AppError> {
+    state
+        .runtime_host()
+        .favorite_local_group_reorder(input.kind, input.group_names)
+        .map_err(AppError::from)
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub fn app__local_favorite_reorder(
+    state: State<'_, AppState>,
+    input: LocalFavoriteReorderInput,
+) -> Result<i64, AppError> {
+    let group_name = require_text(input.group_name, "LocalFavoriteReorder requires groupName.")?;
+    state
+        .runtime_host()
+        .favorite_local_reorder(input.kind, group_name, input.entity_ids)
         .map_err(AppError::from)
 }

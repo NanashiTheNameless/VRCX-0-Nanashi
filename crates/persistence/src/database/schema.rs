@@ -36,6 +36,9 @@ pub(crate) fn ensure_global_store_tables(db: &DatabaseService) -> Result<(), Err
             COL_OWNER_ID,
             "INTEGER NOT NULL DEFAULT 0",
         )?;
+        for table in ["favorite_world", "favorite_avatar", "favorite_friend"] {
+            add_column_if_missing(db, table, "sort_order", "INTEGER")?;
+        }
         ensure_favorite_unique_indexes(db)
     })
 }

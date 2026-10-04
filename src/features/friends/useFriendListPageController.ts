@@ -33,6 +33,9 @@ export function useFriendListPageController() {
     const randomUserColours = usePreferencesStore(
         (state) => state.randomUserColours
     );
+    const randomUserColourStyle = usePreferencesStore(
+        (state) => state.randomUserColourStyle
+    );
     const actions = useFriendListRowActions({
         filteredRows: rows.filteredRows,
         resetTableLayout: tableState.resetTableLayout,
@@ -50,6 +53,7 @@ export function useFriendListPageController() {
         onConfirmDeleteFriend: actions.confirmDeleteFriend,
         onToggleSelectedFriend: actions.toggleSelectedFriend,
         randomUserColours,
+        randomUserColourStyle,
         selectedFriendIds: selection.selectedFriendIds
     });
     const table = useAppTable({

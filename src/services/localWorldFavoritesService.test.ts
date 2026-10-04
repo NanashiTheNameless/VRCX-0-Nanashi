@@ -59,6 +59,17 @@ describe('localWorldFavoritesService', () => {
         expect(mocks.appFavoriteLocalSnapshot).toHaveBeenCalledWith('world');
     });
 
+    it('keeps the backend group order instead of sorting by name', async () => {
+        mocks.appFavoriteLocalSnapshot.mockResolvedValue({
+            groupNames: ['Zeta', '2024', 'Alpha'],
+            favorites: []
+        });
+
+        await expect(loadLocalWorldFavoritesSnapshot()).resolves.toMatchObject({
+            groupNames: ['Zeta', '2024', 'Alpha']
+        });
+    });
+
     it('defaults to an empty Favorites group when no groups or favorites exist', async () => {
         await expect(loadLocalWorldFavoritesSnapshot()).resolves.toEqual({
             favoritesByGroup: { Favorites: [] },

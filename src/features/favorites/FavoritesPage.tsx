@@ -51,6 +51,7 @@ function FavoritesPage({
         filters,
         layout,
         newLocalGroupName,
+        order,
         selection,
         setCreatingLocalGroup,
         setExportDialogOpen,
@@ -59,6 +60,9 @@ function FavoritesPage({
         viewData,
         instanceActionGatesByItemKey
     } = state;
+    const handleToggleOrderEditing = useStableEvent(() =>
+        order.editing ? order.stop() : order.start()
+    );
     const handleGroupRailRefresh = useStableEvent(() =>
         actions.refreshFavorites()
     );
@@ -168,6 +172,9 @@ function FavoritesPage({
                     actions.refreshing ||
                     collections.favoriteLoadStatus === 'running'
                 }
+                canEditOrder={order.canEdit}
+                orderEditing={order.editing}
+                onToggleOrderEditing={handleToggleOrderEditing}
                 onSortValueChange={layout.handleSortValueChange}
                 onSearchChange={filters.setSearchQuery}
                 onSearchModeChange={filters.setSearchMode}
@@ -245,6 +252,7 @@ function FavoritesPage({
                             collections={collections}
                             filters={filters}
                             layout={layout}
+                            order={order}
                             selection={selection}
                             viewData={viewData}
                             onShareCollectionGroup={worldShareHandler}

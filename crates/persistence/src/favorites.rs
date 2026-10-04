@@ -23,13 +23,30 @@ pub fn favorite_list(
     owner_user_id: Option<&OwnerId>,
     kind: FavoriteEntityKind,
 ) -> Result<Vec<FavoriteRow>, Error> {
+    favorite_list_ordered(db, owner_user_id, kind, "id")
+}
+
+pub fn favorite_list_custom_order(
+    db: &DatabaseService,
+    owner_user_id: Option<&OwnerId>,
+    kind: FavoriteEntityKind,
+) -> Result<Vec<FavoriteRow>, Error> {
+    favorite_list_ordered(db, owner_user_id, kind, "COALESCE(sort_order, -id), id")
+}
+
+fn favorite_list_ordered(
+    db: &DatabaseService,
+    owner_user_id: Option<&OwnerId>,
+    kind: FavoriteEntityKind,
+    order_by: &str,
+) -> Result<Vec<FavoriteRow>, Error> {
     ensure_global_store_tables(db)?;
     let (table, column, _) = normalize_kind(kind);
     let owner_id = owner_id_for_kind_read(db, kind, owner_user_id)?;
     Ok(db
         .execute(
             &format!(
-                "SELECT created_at, {column}, group_name FROM {table} {}",
+                "SELECT created_at, {column}, group_name FROM {table} {} ORDER BY {order_by}",
                 visible_owner_where(kind)
             ),
             &ParamsBuilder::new().set("owner_id", owner_id).build(),
@@ -151,6 +168,41 @@ pub fn favorite_move(
                 .build(),
         )?;
         Ok(FavoriteMoveResult { removed, added })
+    })
+}
+
+pub fn favorite_reorder(
+    db: &DatabaseService,
+    owner_user_id: Option<&OwnerId>,
+    kind: FavoriteEntityKind,
+    group_name: String,
+    entity_ids: Vec<String>,
+) -> Result<i64, Error> {
+    ensure_global_store_tables(db)?;
+    let (table, column, _) = normalize_kind(kind);
+    let normalized_group_name = normalize_text(group_name);
+    if normalized_group_name.is_empty() {
+        return Err(Error::Custom("favorite_reorder requires group name".into()));
+    }
+    let owner_id = owner_id_for_kind_read(db, kind, owner_user_id)?;
+    let sql = format!(
+        "UPDATE {table} SET sort_order = @sort_order WHERE {column} = @entity_id AND group_name = @group_name {}",
+        visible_owner_and(kind)
+    );
+    db.write_transaction(|tx| {
+        let mut affected = 0;
+        for (position, entity_id) in entity_ids.into_iter().enumerate() {
+            affected += tx.execute_non_query(
+                &sql,
+                &ParamsBuilder::new()
+                    .set("sort_order", position as i64)
+                    .set("entity_id", normalize_text(entity_id))
+                    .set("group_name", normalized_group_name.clone())
+                    .set("owner_id", owner_id)
+                    .build(),
+            )?;
+        }
+        Ok(affected)
     })
 }
 

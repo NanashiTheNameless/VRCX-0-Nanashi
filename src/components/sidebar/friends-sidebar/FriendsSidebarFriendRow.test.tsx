@@ -19,12 +19,29 @@ vi.mock('@/components/user-hover-card/UserHoverCard', () => ({
 
 vi.mock('@/components/UserDetailTile', () => ({
     UserDetailContent: ({
+        avatarFrame,
         subline,
         statusDotClassName
     }: {
+        avatarFrame?: ReactNode;
         subline?: ReactNode;
         statusDotClassName?: string;
-    }) => <div data-status-dot={statusDotClassName}>{subline}</div>
+    }) => (
+        <div data-status-dot={statusDotClassName}>
+            {avatarFrame}
+            {subline}
+        </div>
+    )
+}));
+
+vi.mock('@/components/sidebar/SidebarProfileDecorations', () => ({
+    SidebarAvatarFrame: ({ templateId }: { templateId: string }) => (
+        <span data-avatar-frame={templateId} />
+    ),
+    SidebarNameplate: ({ templateId }: { templateId: string }) => (
+        <span data-nameplate={templateId} />
+    ),
+    useSidebarDecorationHover: () => ({ active: false, hoverProps: {} })
 }));
 
 vi.mock('@/ui/shadcn/context-menu', () => ({
@@ -85,5 +102,35 @@ describe('FriendsSidebarFriendRow instance timer', () => {
         );
 
         expect(html).toContain('data-status-dot="user-status-indicator');
+    });
+});
+
+describe('FriendsSidebarFriendRow profile decorations', () => {
+    const friend = {
+        id: 'usr_a',
+        displayName: 'Friend',
+        iconFrame: 'invt_frame',
+        nameplateEffect: 'invt_plate'
+    };
+
+    it('renders the avatar frame and nameplate independently when enabled', () => {
+        const frameOnly = renderToStaticMarkup(
+            <FriendRow friend={friend} appearance={{ showAvatarFrame: true }} />
+        );
+        const nameplateOnly = renderToStaticMarkup(
+            <FriendRow friend={friend} appearance={{ showNameplate: true }} />
+        );
+
+        expect(frameOnly).toContain('data-avatar-frame="invt_frame"');
+        expect(frameOnly).not.toContain('data-nameplate');
+        expect(nameplateOnly).toContain('data-nameplate="invt_plate"');
+        expect(nameplateOnly).not.toContain('data-avatar-frame');
+    });
+
+    it('renders no decorations by default', () => {
+        const html = renderToStaticMarkup(<FriendRow friend={friend} />);
+
+        expect(html).not.toContain('data-avatar-frame');
+        expect(html).not.toContain('data-nameplate');
     });
 });

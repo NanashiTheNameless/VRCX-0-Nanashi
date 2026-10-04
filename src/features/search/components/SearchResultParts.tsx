@@ -24,6 +24,7 @@ import {
     openWorldDialog
 } from '@/services/dialogService';
 import { getNameColour, userImage } from '@/services/entityMediaService';
+import type { UserNameColourStyle } from '@/shared/utils/entityMedia';
 import {
     languageOptionLabel,
     type LanguageOption,
@@ -342,11 +343,13 @@ export function WorldCard({ world }: { world: WorldProfileRecord }) {
 export function UserRow({
     user,
     randomUserColours,
+    randomUserColourStyle,
     isDarkMode,
     languageOptionsMap
 }: {
     user: UserProfileRecord;
     randomUserColours: boolean;
+    randomUserColourStyle: UserNameColourStyle;
     isDarkMode: boolean;
     languageOptionsMap: ReadonlyMap<string, LanguageOption>;
 }) {
@@ -354,7 +357,13 @@ export function UserRow({
     const languages = normalizeProfileLanguageRows(user, languageOptionsMap);
     const trustStyle =
         randomUserColours && user?.id
-            ? { color: getNameColour(user.id, isDarkMode) }
+            ? {
+                  color: getNameColour(
+                      user.id,
+                      isDarkMode,
+                      randomUserColourStyle
+                  )
+              }
             : user?.$userColour
               ? { color: user.$userColour }
               : undefined;

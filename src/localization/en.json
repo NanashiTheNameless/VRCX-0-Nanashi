@@ -1174,8 +1174,8 @@
             "view_worlds": "Worlds view",
             "world_instances_one": "{count} instance",
             "world_instances_other": "{count} instances",
-            "instance_population": "Players in instance: {users}",
-            "instance_population_capacity": "Players in instance: {users} / {capacity}",
+            "instance_population": "Users in instance: {users}",
+            "instance_population_capacity": "Users in instance: {users} / {capacity}",
             "other_online": "Other online friends",
             "favorite": "Favorites",
             "same_instance": "Same instance",
@@ -1479,7 +1479,8 @@
                 "local_favorite_group_renamed": "Local favorite group renamed",
                 "the_favorites_baseline_did_not_finish_loading": "Favorites didn't finish loading",
                 "try_a_different_search_term": "Try a different search term",
-                "online_favorites_copy_hint": "VRChat favorites can only be moved between VRChat groups. Items already in your VRChat favorites can't be copied into another VRChat group."
+                "online_favorites_copy_hint": "VRChat favorites can only be moved between VRChat groups. Items already in your VRChat favorites can't be copied into another VRChat group.",
+                "sort_by_custom": "Custom order"
             },
             "success": {
                 "favorite_removed": "Favorite removed",
@@ -1577,6 +1578,13 @@
                     "too_many": "You can share up to {cap} worlds at once. Please split this group first.",
                     "skipped": "Shared. Skipped {count} worlds (not synced or incomplete)."
                 }
+            },
+            "order": {
+                "edit": "Edit order",
+                "exit_edit": "Done",
+                "hint": "Drag cards to reorder them, or select some and move them to the top or bottom.",
+                "move_to_bottom": "Move to bottom",
+                "move_to_top": "Move to top"
             }
         },
         "friend_log": {
@@ -2751,9 +2759,16 @@
                         "placeholder": "Sort Order"
                     }
                 },
+                "profile_appearance": {
+                    "header": "Profile Appearance",
+                    "sidebar": "Sidebar",
+                    "sidebar_avatar_frame": "Show Avatar Frame",
+                    "sidebar_avatar_frame_description": "Show the decorative frame around avatars in the friends sidebar.",
+                    "sidebar_nameplate": "Show Nameplate",
+                    "sidebar_nameplate_description": "Show the nameplate on the right side of friend rows in the friends sidebar."
+                },
                 "user_dialog": {
                     "header": "User Dialog",
-                    "profile_appearance": "Profile Appearance",
                     "profile_background": "Show Profile Background",
                     "profile_background_description": "Show the gradient or texture selected for the VRChat profile.",
                     "avatar_frame": "Show Avatar Frame",
@@ -2762,7 +2777,6 @@
                     "profile_effect_description": "Show the effect applied across the user profile.",
                     "nameplate_effect": "Show Nameplate Effect",
                     "nameplate_effect_description": "Show the effect applied behind the display name.",
-                    "additional_information": "Additional Information",
                     "vrchat_notes": "VRChat Notes",
                     "vrchat_notes_description": "Shows notes stored in VRChat",
                     "vrcx_memos": "Local Notes",
@@ -2770,12 +2784,19 @@
                     "recent_action_cooldown": "Recent Action Icon",
                     "recent_action_cooldown_description": "Show a clock icon on recent invite and request actions.",
                     "profile_decorations": "Profile decorations",
-                    "profile_decorations_description": "Show VRChat profile decorations (background, avatar frame, profile and nameplate effects). Turn off to hide them all; the switches below control each one."
+                    "profile_decorations_description": "Show VRChat profile decorations (background, avatar frame, profile and nameplate effects) in the user dialog and friends sidebar. Turn off to hide them all; the switches below control each one."
                 },
                 "user_colors": {
                     "header": "User Colors",
                     "random_colors_from_user_id": "Use Consistent Colors per User",
                     "random_colors_from_user_id_description": "Assign a consistent color to each user based on their ID.",
+                    "random_color_style": "Color Style",
+                    "random_color_styles": {
+                        "classic": "Classic",
+                        "pastel": "Pastel",
+                        "warm": "Warm",
+                        "cool": "Cool"
+                    },
                     "trust_colors": "Trust Level Colors",
                     "trust_colors_description": "Customize the colors used for trust-level names.",
                     "trust_levels": {
@@ -3659,7 +3680,8 @@
                 "failed_to_create_local_favorite_group": "Failed to create local favorite group",
                 "failed_to_copy_selected_favorites": "Failed to copy selected favorites",
                 "failed_to_move_selected_favorites": "Failed to move selected favorites",
-                "favorites_refresh_unavailable": "Can't refresh favorites without a signed-in account"
+                "favorites_refresh_unavailable": "Can't refresh favorites without a signed-in account",
+                "failed_to_save_order": "Failed to save the order"
             },
             "modal": {
                 "remove_local_favorite": "Remove local favorite?",
@@ -4651,7 +4673,7 @@
                 "enable_focus_view": "Enable focus view",
                 "enable_debugging": "Enable debugging",
                 "enable_third_person_view": "Enable third-person view",
-                "allow_props_to_modify_player_movement": "Allow props to modify player movement",
+                "allow_props_to_modify_player_movement": "Allow props to modify user movement",
                 "add_domain": "Add domain"
             },
             "loading": {
@@ -6373,7 +6395,12 @@
             "vrchat_must_be_closed": "VRChat needs to be closed before this option can be changed"
         },
         "error": "Error",
-        "update_success": "Update successful"
+        "update_success": "Update successful",
+        "external_link": {
+            "open_failed": "Couldn't open the link in your browser",
+            "copy_link": "Copy link",
+            "copied": "Link copied to clipboard"
+        }
     },
     "notifications": {
         "has_joined": "has joined",

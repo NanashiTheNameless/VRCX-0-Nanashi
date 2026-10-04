@@ -19,6 +19,7 @@ import {
     ToolbarViews
 } from '@/components/layout/ToolbarControls';
 import type { FavoriteKind } from '@/domain/favorites/types';
+import { Button } from '@/ui/shadcn/button';
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -62,6 +63,9 @@ type FavoritesToolbarProps = {
     searchMode: FavoriteSearchMode;
     density: FavoritesDensity;
     refreshing: boolean;
+    canEditOrder: boolean;
+    orderEditing: boolean;
+    onToggleOrderEditing: () => void;
     onSortValueChange: (value: FavoriteSortValue) => void;
     onSearchChange: (value: string) => void;
     onSearchModeChange: (mode: FavoriteSearchMode) => void;
@@ -80,6 +84,9 @@ function FavoritesToolbar({
     searchMode,
     density,
     refreshing,
+    canEditOrder,
+    orderEditing,
+    onToggleOrderEditing,
     onSortValueChange,
     onSearchChange,
     onSearchModeChange,
@@ -92,7 +99,8 @@ function FavoritesToolbar({
     const { t } = useTranslation();
     const sortItems: Array<{ value: FavoriteSortValue; label: string }> = [
         { value: 'name', label: t('view.search.avatar.sort_name') },
-        { value: 'date', label: t('view.favorite.label.sort_by_date') }
+        { value: 'date', label: t('view.favorite.label.sort_by_date') },
+        { value: 'custom', label: t('view.favorite.label.sort_by_custom') }
     ];
     const searchModes: Array<{ value: FavoriteSearchMode; label: string }> = [
         { value: 'name', label: t('view.favorite.worlds.search_mode_name') },
@@ -118,7 +126,10 @@ function FavoritesToolbar({
                             )
                         }
                     >
-                        <SelectTrigger className="max-w-56 min-w-40 shrink-0">
+                        <SelectTrigger
+                            className="max-w-56 min-w-40 shrink-0"
+                            disabled={orderEditing}
+                        >
                             <span className="flex min-w-0 items-center gap-2">
                                 <ArrowUpDownIcon className="text-muted-foreground size-4 shrink-0" />
                                 <SelectValue
@@ -146,6 +157,7 @@ function FavoritesToolbar({
                 <ToolbarSearch
                     value={searchQuery}
                     onValueChange={onSearchChange}
+                    disabled={orderEditing}
                     placeholder={
                         kind === 'world' && searchMode === 'tag'
                             ? t('view.favorite.worlds.search_tags')
@@ -193,6 +205,18 @@ function FavoritesToolbar({
                 />
 
                 <ToolbarActions>
+                    {canEditOrder || orderEditing ? (
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={onToggleOrderEditing}
+                        >
+                            {orderEditing
+                                ? t('view.favorite.order.exit_edit')
+                                : t('view.favorite.order.edit')}
+                        </Button>
+                    ) : null}
                     <ToolbarRefreshButton
                         onRefresh={onRefresh}
                         loading={refreshing}
@@ -275,6 +299,11 @@ function FavoritesToolbar({
                     </ToolbarOverflowMenu>
                 </ToolbarActions>
             </PageToolbarRow>
+            {orderEditing ? (
+                <p className="text-muted-foreground px-1.5 text-xs">
+                    {t('view.favorite.order.hint')}
+                </p>
+            ) : null}
         </PageToolbar>
     );
 }
