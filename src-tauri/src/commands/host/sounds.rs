@@ -14,7 +14,7 @@ pub fn app__notification_sound_test(path: String, volume: f32) -> Result<(), App
 }
 
 /// Fork: names of the built-in sounds, selectable as `bundled:<name>`.
-#[tauri::command]
+#[tauri::command(async)]
 #[specta::specta]
 pub fn app__notification_sounds_bundled() -> Vec<String> {
     vrcx_0_host_desktop::sound::bundled_sound_names()
