@@ -107,6 +107,7 @@ impl LocalNotificationPolicy {
         decide_notification_plan(delivery, &settings.preferences, &self.game_state(settings))
     }
 
+    #[cfg_attr(target_os = "macos", allow(dead_code))]
     pub(crate) fn hmd_allowed(&self) -> bool {
         let settings = self.settings();
         !self.paused(&settings)
