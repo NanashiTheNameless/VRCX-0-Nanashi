@@ -28,6 +28,7 @@ const commandMocks = vi.hoisted(() => ({
 }));
 
 const notificationActionMocks = vi.hoisted(() => ({
+    expireNotificationLocally: vi.fn(),
     sendNotificationButtonResponse: vi.fn()
 }));
 
@@ -43,6 +44,8 @@ vi.mock('@/repositories/notificationPersistenceRepository', () => ({
 }));
 
 vi.mock('@/services/notificationActionService', () => ({
+    expireNotificationLocally:
+        notificationActionMocks.expireNotificationLocally,
     sendNotificationButtonResponse:
         notificationActionMocks.sendNotificationButtonResponse
 }));
@@ -67,6 +70,10 @@ describe('vrcNotificationStore', () => {
         commandMocks.markSeenBatch.mockReset();
         commandMocks.sync.mockReset();
         notificationActionMocks.sendNotificationButtonResponse.mockReset();
+        notificationActionMocks.expireNotificationLocally.mockReset();
+        notificationActionMocks.expireNotificationLocally.mockResolvedValue(
+            undefined
+        );
         notificationActionMocks.sendNotificationButtonResponse.mockResolvedValue(
             undefined
         );
@@ -664,6 +671,54 @@ describe('vrcNotificationStore', () => {
                 }
             ]
         });
+    });
+
+    it('ignores pending invites locally on mark-all-seen', async () => {
+        const invite = {
+            id: 'notif_invite',
+            type: 'invite',
+            seen: true,
+            created_at: new Date().toISOString()
+        };
+        const requestInvite = {
+            id: 'notif_request_invite',
+            type: 'requestInvite',
+            seen: true,
+            created_at: new Date().toISOString()
+        };
+        const expiredInvite = {
+            id: 'notif_expired_invite',
+            type: 'invite',
+            seen: true,
+            expired: true,
+            created_at: new Date().toISOString()
+        };
+        useVrcNotificationStore.getState().upsertNotification(invite);
+        useVrcNotificationStore.getState().upsertNotification(requestInvite);
+        useVrcNotificationStore.getState().upsertNotification(expiredInvite);
+        expect(useVrcNotificationStore.getState()).toMatchObject({
+            unseenCount: 0,
+            pendingInviteCount: 2
+        });
+        notificationRepositoryMock.queryNotifications.mockResolvedValue([]);
+
+        await useVrcNotificationStore.getState().markAllSeen();
+
+        expect(
+            notificationActionMocks.expireNotificationLocally.mock.calls
+                .map(([input]) => input.notification.id)
+                .sort()
+        ).toEqual(['notif_invite', 'notif_request_invite']);
+        expect(
+            notificationActionMocks.expireNotificationLocally
+        ).toHaveBeenCalledWith({
+            currentUserId: 'usr_me',
+            notification: expect.objectContaining({ id: 'notif_invite' })
+        });
+        expect(commandMocks.markSeenBatch).not.toHaveBeenCalled();
+        expect(
+            notificationRepositoryMock.queryNotifications
+        ).toHaveBeenCalled();
     });
 
     it('marks non-system v2 notifications read after mark-all-seen', async () => {

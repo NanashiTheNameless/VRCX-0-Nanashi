@@ -26,7 +26,7 @@ export function VrcNotificationPage({
         sourceRowsCount,
         table,
         tableState,
-        unseenCount
+        canMarkAllSeen
     } = useVrcNotificationPageController();
 
     return (
@@ -50,7 +50,7 @@ export function VrcNotificationPage({
                         quickFilter={filters.quickFilter}
                         notificationTypeLabel={notificationTypeLabel}
                         loadStatus={rowsState.loadStatus}
-                        unseenCount={unseenCount}
+                        canMarkAllSeen={canMarkAllSeen}
                         onActiveTypesChange={filters.setActiveTypes}
                         onSearchQueryChange={filters.setSearchQuery}
                         onMarkAllSeen={actions.markAllSeen}

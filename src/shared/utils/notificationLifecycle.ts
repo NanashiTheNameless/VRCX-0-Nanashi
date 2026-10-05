@@ -24,6 +24,14 @@ const ACTIVITY_TYPES = new Set<string>([
     'ignoredFriendRequest'
 ]);
 
+const LOCALLY_IGNORABLE_TYPES = new Set<string>(['invite', 'requestInvite']);
+
+export function canIgnoreNotificationLocally(
+    type: string | null | undefined
+): boolean {
+    return LOCALLY_IGNORABLE_TYPES.has(type ?? '');
+}
+
 export function getNotificationLifecycleBucket(
     type: string | null | undefined
 ): NotificationLifecycleBucket {

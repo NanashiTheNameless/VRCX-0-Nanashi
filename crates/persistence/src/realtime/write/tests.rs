@@ -220,6 +220,42 @@ fn writes_bio_feed_rows() -> Result<(), crate::Error> {
 }
 
 #[test]
+fn writes_bio_feed_rows_into_upstream_v18_layout() -> Result<(), crate::Error> {
+    let dir = TestDir::new("realtime-feed-bio-upstream-v18");
+    let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
+    db.execute_non_query(
+        "CREATE TABLE usrself_feed_bio (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, bio TEXT, previous_bio TEXT, bio_links TEXT DEFAULT '[]', previous_bio_links TEXT DEFAULT '[]')",
+        &Default::default(),
+    )?;
+    let counts = write_realtime_batch(
+        &db,
+        &OwnerId::new("usr_self"),
+        &RealtimePersistenceBatch {
+            feed_entries: vec![FeedLiveEntry::Bio {
+                created_at: "2026-10-05T00:00:00Z".into(),
+                user_id: "usr_friend".into(),
+                display_name: "Friend".into(),
+                bio: "new bio".into(),
+                previous_bio: "old bio".into(),
+                owner_user_id: String::new(),
+            }],
+            ..RealtimePersistenceBatch::default()
+        },
+    )?;
+    assert_eq!(counts.affected_count, 1);
+
+    let feed = db.execute(
+        "SELECT bio, previous_bio, bio_links, previous_bio_links FROM usrself_feed_bio WHERE user_id = @user_id",
+        &ParamsBuilder::new().set("user_id", "usr_friend").build(),
+    )?;
+    assert_eq!(
+        feed[0],
+        vec![json!("new bio"), json!("old bio"), json!("[]"), json!("[]")]
+    );
+    Ok(())
+}
+
+#[test]
 fn writes_remote_location_intervals_and_allows_same_location_after_closed_interval(
 ) -> Result<(), crate::Error> {
     let dir = TestDir::new("realtime-remote-location-interval");

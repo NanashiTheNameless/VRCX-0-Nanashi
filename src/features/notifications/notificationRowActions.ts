@@ -27,6 +27,7 @@ import type {
     NotificationRow
 } from '@/repositories/notificationPersistenceRepository';
 import { hasGroupIdPrefix } from '@/shared/constants/vrchatIds';
+import { canIgnoreNotificationLocally } from '@/shared/utils/notificationLifecycle';
 import { isUnseenNotification } from '@/shared/utils/notificationSeen';
 
 import {
@@ -244,7 +245,7 @@ export function buildOrderedActions({
             onClick: () => handlers.onHideNotification(notification)
         });
     }
-    if (type === 'invite' || type === 'requestInvite') {
+    if (canIgnoreNotificationLocally(type)) {
         actions.push({
             key: 'ignore-locally',
             label: t('view.notification.actions.ignore_locally'),

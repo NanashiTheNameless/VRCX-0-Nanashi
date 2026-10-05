@@ -37,6 +37,7 @@ export function StatusSegment({
     warn = false,
     showDot = true,
     dimWhenInactive = false,
+    icon,
     label,
     value,
     children,
@@ -53,6 +54,7 @@ export function StatusSegment({
     warn?: boolean;
     showDot?: boolean;
     dimWhenInactive?: boolean;
+    icon?: ReactNode;
     label: ReactNode;
     value?: ReactNode;
     children?: ReactNode;
@@ -70,7 +72,8 @@ export function StatusSegment({
 
     const content = (
         <>
-            {showDot ? (
+            {icon}
+            {!icon && showDot ? (
                 <StatusDot
                     active={active}
                     className={dotClassName}

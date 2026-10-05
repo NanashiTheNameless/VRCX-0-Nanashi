@@ -83,17 +83,9 @@ export function useThemesController() {
         activeSource === 'built-in' ? selectedSource : activeSource;
 
     useEffect(() => {
-        loadCatalog().catch((loadError: unknown) => {
-            toast.add({
-                type: 'error',
-                title:
-                    loadError instanceof Error
-                        ? loadError.message
-                        : t('view.community_themes.toast.catalog_failed')
-            });
-        });
+        loadCatalog().catch(() => {});
         setOverrideDraft(getCommunityThemeOverrideCssSnapshot());
-    }, [t]);
+    }, []);
 
     useEffect(() => {
         let disposed = false;

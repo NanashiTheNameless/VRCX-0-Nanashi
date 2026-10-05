@@ -3799,7 +3799,6 @@
                 "css_size": "CSS bytes"
             },
             "toast": {
-                "catalog_failed": "Failed to load community themes.",
                 "theme_enabled": "Community theme enabled.",
                 "theme_disabled": "Community theme disabled.",
                 "theme_deleted": "Installed theme deleted.",

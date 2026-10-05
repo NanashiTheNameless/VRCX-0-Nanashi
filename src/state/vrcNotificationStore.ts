@@ -10,11 +10,15 @@ import type {
     NotificationResponse,
     NotificationRow
 } from '@/repositories/notificationPersistenceRepository';
-import { sendNotificationButtonResponse } from '@/services/notificationActionService';
+import {
+    expireNotificationLocally,
+    sendNotificationButtonResponse
+} from '@/services/notificationActionService';
 import {
     getNotificationCategory,
     getNotificationTs
 } from '@/shared/utils/notificationCategory';
+import { canIgnoreNotificationLocally } from '@/shared/utils/notificationLifecycle';
 import { getDismissResponse } from '@/shared/utils/notificationResponse';
 import {
     isNotificationExpired,
@@ -49,11 +53,12 @@ type NotificationStateSnapshot = {
     rows: NotificationRow[];
     categories: NotificationCategories;
     unseenCount: number;
+    pendingInviteCount: number;
     detail: string;
 };
 type NotificationDerivedState = Pick<
     NotificationStateSnapshot,
-    'categories' | 'unseenCount'
+    'categories' | 'unseenCount' | 'pendingInviteCount'
 >;
 const NOTIFICATION_ROWS_MAX_ENTRIES = 2000;
 
@@ -121,6 +126,7 @@ type VrcNotificationStore = {
     rows: NotificationRow[];
     categories: NotificationCategories;
     unseenCount: number;
+    pendingInviteCount: number;
     isCenterOpen: boolean;
     loadStatus: LoadStatus;
     detail: string;
@@ -151,8 +157,12 @@ function buildNotificationDerivedState(
     const categories = createEmptyCategories();
     const recentCutoff = Date.now() - RECENT_WINDOW_MS;
     let unseenCount = 0;
+    let pendingInviteCount = 0;
 
     for (const notification of rows) {
+        if (isPendingInvite(notification)) {
+            pendingInviteCount += 1;
+        }
         const category = getNotificationCategory(
             String(notification?.type || '')
         );
@@ -170,7 +180,7 @@ function buildNotificationDerivedState(
         }
     }
 
-    return { categories, unseenCount };
+    return { categories, unseenCount, pendingInviteCount };
 }
 
 function notificationRowsCapacity(currentLength: number): number {
@@ -293,6 +303,13 @@ function getUnseenRows(rows: NotificationRow[]): NotificationRow[] {
     return rows.filter(isUnseenNotification);
 }
 
+function isPendingInvite(notification: NotificationRow): boolean {
+    return (
+        canIgnoreNotificationLocally(notification.type) &&
+        !isNotificationExpired(notification)
+    );
+}
+
 function notificationMarkSeenBatchItem(
     notification: NotificationRow
 ): NotificationMarkSeenBatchItem | null {
@@ -349,11 +366,18 @@ function syncShellUnseenCount(unseenCount: number, force = false) {
     }
 }
 
+export function selectCanMarkAllSeen(
+    state: Pick<VrcNotificationStore, 'unseenCount' | 'pendingInviteCount'>
+): boolean {
+    return state.unseenCount > 0 || state.pendingInviteCount > 0;
+}
+
 export const useVrcNotificationStore = create<VrcNotificationStore>(
     (set, get) => ({
         rows: [],
         categories: createEmptyCategories(),
         unseenCount: 0,
+        pendingInviteCount: 0,
         isCenterOpen: false,
         loadStatus: 'idle',
         detail: '',
@@ -364,6 +388,7 @@ export const useVrcNotificationStore = create<VrcNotificationStore>(
                     rows: [],
                     categories: createEmptyCategories(),
                     unseenCount: 0,
+                    pendingInviteCount: 0,
                     loadStatus: 'idle',
                     detail: 'No current user session is available.'
                 });
@@ -410,6 +435,7 @@ export const useVrcNotificationStore = create<VrcNotificationStore>(
                     rows: [],
                     categories: createEmptyCategories(),
                     unseenCount: 0,
+                    pendingInviteCount: 0,
                     loadStatus: 'error',
                     detail: message
                 });
@@ -626,7 +652,11 @@ export const useVrcNotificationStore = create<VrcNotificationStore>(
         async markAllSeen() {
             const auth = getCurrentAuth();
             const unseenRows = getUnseenRows(get().rows);
-            if (!auth.currentUserId || !unseenRows.length) {
+            const pendingInvites = get().rows.filter(isPendingInvite);
+            if (
+                !auth.currentUserId ||
+                (!unseenRows.length && !pendingInvites.length)
+            ) {
                 return;
             }
 
@@ -660,6 +690,20 @@ export const useVrcNotificationStore = create<VrcNotificationStore>(
                     );
                 }
             }
+            for (const notification of pendingInvites) {
+                try {
+                    await expireNotificationLocally({
+                        currentUserId: auth.currentUserId,
+                        notification
+                    });
+                } catch (error) {
+                    failedCount += 1;
+                    console.warn(
+                        'Failed to ignore VRChat notification locally:',
+                        error
+                    );
+                }
+            }
 
             const items = seenRows.flatMap<NotificationMarkSeenBatchItem>(
                 (notification) => {
@@ -669,7 +713,7 @@ export const useVrcNotificationStore = create<VrcNotificationStore>(
             );
             const ids = items.map((item) => item.id);
             if (!ids.length) {
-                if (dismissTargets.length) {
+                if (dismissTargets.length || pendingInvites.length) {
                     await get().loadForCurrentUser();
                 }
                 if (failedCount > 0) {
@@ -707,7 +751,11 @@ export const useVrcNotificationStore = create<VrcNotificationStore>(
                         );
                     }
                 }
-                if (failedCount > 0 || dismissTargets.length) {
+                if (
+                    failedCount > 0 ||
+                    dismissTargets.length ||
+                    pendingInvites.length
+                ) {
                     await get().loadForCurrentUser();
                 }
             } catch (error) {
@@ -736,6 +784,7 @@ export const useVrcNotificationStore = create<VrcNotificationStore>(
                 rows: [],
                 categories: createEmptyCategories(),
                 unseenCount: 0,
+                pendingInviteCount: 0,
                 isCenterOpen: false,
                 loadStatus: 'idle',
                 detail: ''

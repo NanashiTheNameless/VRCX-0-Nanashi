@@ -1,7 +1,10 @@
 import { useMemo } from 'react';
 
 import { useAppTable } from '@/components/data-table/appTable';
-import { useVrcNotificationStore } from '@/state/vrcNotificationStore';
+import {
+    selectCanMarkAllSeen,
+    useVrcNotificationStore
+} from '@/state/vrcNotificationStore';
 
 import type { NotificationFeedHandlers } from './components/NotificationRow';
 import { useNotificationActions } from './useNotificationActions';
@@ -13,7 +16,7 @@ import { useNotificationTableState } from './useNotificationTableState';
 import { useNotificationTypeLabel } from './useNotificationTypeLabel';
 
 export function useVrcNotificationPageController() {
-    const unseenCount = useVrcNotificationStore((state) => state.unseenCount);
+    const canMarkAllSeen = useVrcNotificationStore(selectCanMarkAllSeen);
     const sourceRowsCount = useVrcNotificationStore(
         (state) => state.rows.length
     );
@@ -83,6 +86,6 @@ export function useVrcNotificationPageController() {
         sourceRowsCount,
         table,
         tableState,
-        unseenCount
+        canMarkAllSeen
     };
 }

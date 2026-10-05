@@ -209,11 +209,6 @@ function useAppNavNotifications({
     }, [activeIndex, removeNavNotification]);
 
     async function markAllRead() {
-        const store = useVrcNotificationStore.getState();
-        if (!store.unseenCount) {
-            removeNavNotification('notification');
-            return;
-        }
         try {
             await markAllVrcNotificationsSeen();
             removeNavNotification('notification');

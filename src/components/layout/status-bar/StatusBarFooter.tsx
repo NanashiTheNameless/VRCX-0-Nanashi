@@ -2,6 +2,7 @@ import {
     ClockIcon,
     Minimize2Icon,
     MinusIcon,
+    MusicIcon,
     NetworkIcon,
     PlusIcon
 } from 'lucide-react';
@@ -516,7 +517,9 @@ export const StatusBarFooter = forwardRef<HTMLElement, StatusBarFooterProps>(
                             visible={
                                 visibility.nowPlaying && Boolean(nowPlaying.url)
                             }
-                            active
+                            icon={
+                                <MusicIcon className="text-content-tertiary size-3 shrink-0" />
+                            }
                             label={t('status_bar.now_playing')}
                             value={nowPlaying.name || nowPlaying.url}
                             tooltip={t('status_bar.now_playing_hint')}

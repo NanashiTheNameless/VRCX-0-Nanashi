@@ -7,7 +7,7 @@ pub use vrcx_0_contracts::{LegacyVrcxDiscovery, LegacyVrcxMigrationStatus, Legac
 // Highest upstream VRCX schema generation VRCX-0 knows how to import directly.
 // This is intentionally separate from VRCX-0's own schema generation (see
 // `VRCX0_SCHEMA_VERSION`): the two version spaces must never be compared.
-pub const MAX_IMPORTABLE_UPSTREAM_VERSION: i64 = 17;
+pub const MAX_IMPORTABLE_UPSTREAM_VERSION: i64 = 18;
 
 pub fn discover_legacy_vrcx_migration(
     target_db: &Path,

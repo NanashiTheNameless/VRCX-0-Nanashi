@@ -189,8 +189,8 @@ export function useFavoritesPageController({ kind }: { kind: FavoriteKind }) {
         filters.selectedSource === 'local' &&
         Boolean(viewData.selectedGroup) &&
         !viewData.hasSearchInput;
-    const orderEditingActive =
-        orderEditing && canEditOrder && layout.sortValue === 'custom';
+    const canSaveOrder = canEditOrder && layout.sortValue === 'custom';
+    const orderEditingActive = orderEditing && canSaveOrder;
     useEffect(() => {
         if (orderEditing && !orderEditingActive) {
             setOrderEditing(false);
@@ -199,13 +199,14 @@ export function useFavoritesPageController({ kind }: { kind: FavoriteKind }) {
 
     function saveContentOrder(entityIds: string[]) {
         const groupKey = viewData.selectedGroup?.key;
-        if (orderEditingActive && groupKey) {
+        if (canSaveOrder && groupKey) {
             void customOrder.reorderGroup(groupKey, entityIds);
         }
     }
 
     const order = {
         canEdit: canEditOrder,
+        canMoveSelection: canSaveOrder,
         editing: orderEditingActive,
         start() {
             if (!canEditOrder) {

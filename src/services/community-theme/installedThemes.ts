@@ -109,11 +109,13 @@ export async function loadCatalog(): Promise<CommunityThemeCatalog> {
         store.setCatalog(catalog.sourceUrl, catalog.themes);
         return catalog;
     } catch (error) {
-        store.setError(
-            error instanceof Error
-                ? error.message
-                : 'Failed to load community themes.'
-        );
+        if (!store.catalog.length) {
+            store.setError(
+                error instanceof Error
+                    ? error.message
+                    : 'Failed to load community themes.'
+            );
+        }
         throw error;
     } finally {
         store.setLoading(false);

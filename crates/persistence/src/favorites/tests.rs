@@ -490,3 +490,41 @@ fn reorder_only_touches_the_named_group() {
         vec!["avtr_2", "avtr_1"]
     );
 }
+
+#[test]
+fn friend_reorder_and_custom_order_are_owner_scoped() {
+    let (_dir, db) = test_db("favorite-friend-reorder-owner");
+    let owner_a = OwnerId::new("usr_a".to_string());
+    let owner_b = OwnerId::new("usr_b".to_string());
+    for user_id in ["usr_1", "usr_2"] {
+        for owner in [&owner_a, &owner_b] {
+            favorite_add(
+                &db,
+                Some(owner),
+                FavoriteEntityKind::Friend,
+                user_id.into(),
+                "friends".into(),
+            )
+            .unwrap();
+        }
+    }
+
+    favorite_reorder(
+        &db,
+        Some(&owner_a),
+        FavoriteEntityKind::Friend,
+        "friends".into(),
+        vec!["usr_1".into(), "usr_2".into()],
+    )
+    .unwrap();
+
+    let ids = |owner: &OwnerId| {
+        favorite_list_custom_order(&db, Some(owner), FavoriteEntityKind::Friend)
+            .unwrap()
+            .into_iter()
+            .map(|row| row.entity_id().to_string())
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(ids(&owner_a), vec!["usr_1", "usr_2"]);
+    assert_eq!(ids(&owner_b), vec!["usr_2", "usr_1"]);
+}

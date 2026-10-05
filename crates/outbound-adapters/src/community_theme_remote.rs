@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use futures_util::stream::{self, StreamExt, TryStreamExt};
+use futures_util::stream::{self, StreamExt};
 use vrcx_0_application::profile::{
     CommunityThemeCatalog, CommunityThemeManifest, CommunityThemeRemote,
     CommunityThemeRemoteFuture, CommunityThemeStatsById,
@@ -55,11 +55,15 @@ impl CommunityThemeRemote for ExternalCommunityThemeRemote {
                 .await?;
             let (schema_version, theme_ids) =
                 protocol::parse_community_theme_catalog_index(&body).map_err(protocol_error)?;
-            let themes = stream::iter(theme_ids)
-                .map(|theme_id| async move { self.load_manifest(&theme_id).await })
+            let manifests = stream::iter(theme_ids)
+                .map(|theme_id| async move {
+                    let manifest = self.load_manifest(&theme_id).await;
+                    (theme_id, manifest)
+                })
                 .buffered(8)
-                .try_collect()
-                .await?;
+                .collect()
+                .await;
+            let themes = collect_catalog_manifests(manifests)?;
             Ok(CommunityThemeCatalog {
                 source_url: protocol::COMMUNITY_THEME_CATALOG_URL.into(),
                 schema_version,
@@ -124,6 +128,79 @@ impl CommunityThemeRemote for ExternalCommunityThemeRemote {
     }
 }
 
+fn collect_catalog_manifests(
+    manifests: Vec<(String, crate::Result<CommunityThemeManifest>)>,
+) -> crate::Result<Vec<CommunityThemeManifest>> {
+    let mut themes = Vec::with_capacity(manifests.len());
+    let mut first_error = None;
+    for (theme_id, manifest) in manifests {
+        match manifest {
+            Ok(manifest) => themes.push(manifest),
+            Err(error) => {
+                tracing::warn!(theme_id, error = %error, "failed to load community theme manifest");
+                first_error.get_or_insert(error);
+            }
+        }
+    }
+    match first_error {
+        Some(error) if themes.is_empty() => Err(error),
+        _ => Ok(themes),
+    }
+}
+
 fn protocol_error(error: protocol::CommunityThemeProtocolError) -> Error {
     Error::Custom(error.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use vrcx_0_application::profile::{CommunityThemeAuthor, CommunityThemeManifest};
+    use vrcx_0_application_core::Error;
+
+    use super::collect_catalog_manifests;
+
+    fn manifest(id: &str) -> CommunityThemeManifest {
+        CommunityThemeManifest {
+            id: id.into(),
+            name: id.into(),
+            version: "1.0.0".into(),
+            author: CommunityThemeAuthor {
+                name: "Test".into(),
+                github: "test".into(),
+                url: None,
+            },
+            description: String::new(),
+            tags: Vec::new(),
+            tested_with: String::new(),
+            remote_assets: false,
+            dark_mode: true,
+            accent_mode: false,
+            preview_url: String::new(),
+            readme_url: String::new(),
+        }
+    }
+
+    #[test]
+    fn catalog_skips_manifests_that_fail_to_load() {
+        let themes = collect_catalog_manifests(vec![
+            ("alpha".into(), Ok(manifest("alpha"))),
+            ("broken".into(), Err(Error::Custom("timeout".into()))),
+            ("gamma".into(), Ok(manifest("gamma"))),
+        ])
+        .unwrap();
+
+        let ids: Vec<_> = themes.iter().map(|theme| theme.id.as_str()).collect();
+        assert_eq!(ids, ["alpha", "gamma"]);
+    }
+
+    #[test]
+    fn catalog_fails_when_every_manifest_fails_to_load() {
+        let error = collect_catalog_manifests(vec![
+            ("alpha".into(), Err(Error::Custom("first".into()))),
+            ("beta".into(), Err(Error::Custom("second".into()))),
+        ])
+        .unwrap_err();
+
+        assert!(error.to_string().contains("first"));
+    }
 }

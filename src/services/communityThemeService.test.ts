@@ -232,6 +232,44 @@ describe('communityThemeService', () => {
         });
     });
 
+    it('keeps the loaded catalog without an error when a refresh fails', async () => {
+        const theme = { id: 'theme-a', name: 'Theme A' };
+        mocks.appCommunityThemeCatalogGet
+            .mockResolvedValueOnce({
+                sourceUrl: CATALOG_URL,
+                schemaVersion: 1,
+                themes: [theme]
+            })
+            .mockRejectedValueOnce(new Error('network down'));
+        const { service, useCommunityThemeStore } =
+            await loadCommunityThemeService();
+
+        await service.loadCatalog();
+        await expect(service.loadCatalog()).rejects.toThrow('network down');
+
+        expect(useCommunityThemeStore.getState()).toMatchObject({
+            catalog: [theme],
+            loading: false,
+            error: null
+        });
+    });
+
+    it('reports the error when the catalog has never loaded', async () => {
+        mocks.appCommunityThemeCatalogGet.mockRejectedValueOnce(
+            new Error('network down')
+        );
+        const { service, useCommunityThemeStore } =
+            await loadCommunityThemeService();
+
+        await expect(service.loadCatalog()).rejects.toThrow('network down');
+
+        expect(useCommunityThemeStore.getState()).toMatchObject({
+            catalog: [],
+            loading: false,
+            error: 'network down'
+        });
+    });
+
     it('hydrates CSS and render mirrors from the Rust projection', async () => {
         const theme = installedTheme();
         mocks.appCommunityThemeStateGet.mockResolvedValueOnce(
