@@ -4,8 +4,7 @@ import {
     VRCX_OPEN_RELAY_ORIGIN,
     vrcxAvatarDeepLink,
     vrcxInstanceDeepLink,
-    parseVrcxInstanceLink,
-    vrcxWorldDeepLink
+    parseVrcxInstanceLink
 } from './vrcxDeepLinks';
 
 const UUID = '12345678-1234-1234-1234-1234567890ab';
@@ -59,20 +58,17 @@ describe('vrcxDeepLinks', () => {
         ).toBe('');
     });
 
-    it('builds canonical world and avatar relay links', () => {
-        expect(vrcxWorldDeepLink(`wrld_${UUID}`)).toBe(
-            `${VRCX_OPEN_RELAY_ORIGIN}/world/wrld_${UUID}`
-        );
+    it('builds canonical avatar relay links', () => {
         expect(vrcxAvatarDeepLink(`avtr_${UUID}`)).toBe(
             `${VRCX_OPEN_RELAY_ORIGIN}/avatar/avtr_${UUID}`
         );
     });
 
     it('normalizes surrounding whitespace and rejects invalid ids', () => {
-        expect(vrcxWorldDeepLink(` wrld_${UUID} `)).toBe(
-            `${VRCX_OPEN_RELAY_ORIGIN}/world/wrld_${UUID}`
+        expect(vrcxAvatarDeepLink(` avtr_${UUID} `)).toBe(
+            `${VRCX_OPEN_RELAY_ORIGIN}/avatar/avtr_${UUID}`
         );
-        expect(vrcxWorldDeepLink(`avtr_${UUID}`)).toBe('');
+        expect(vrcxAvatarDeepLink(`wrld_${UUID}`)).toBe('');
         expect(vrcxAvatarDeepLink('avtr_invalid')).toBe('');
     });
 });

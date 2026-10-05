@@ -315,7 +315,6 @@ export const ConfigKeys = defineConfigKeys({
 
     // ── Onboarding ───────────────────────────────────
     onboarding_welcome_seen: { type: 'bool', default: false },
-    worldCollectionShareCoachmarkSeen: { type: 'bool', default: false },
 
     // ── Avatar Provider ──────────────────────────────
     avatarRemoteDatabaseProviderList: {

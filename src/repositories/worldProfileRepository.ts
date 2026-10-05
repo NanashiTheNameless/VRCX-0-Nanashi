@@ -432,15 +432,6 @@ async function hasWorldPersistentData({
     });
 }
 
-function registerWorldOpenShare(worldId: string): void {
-    const normalizedWorldId = worldId.trim();
-    if (!normalizedWorldId) {
-        return;
-    }
-
-    commands.appWorldOpenRegister(normalizedWorldId).catch(() => {});
-}
-
 async function getAllWorldsByUser({
     userId,
     sort = 'updated',
@@ -471,9 +462,7 @@ const worldProfileRepository = Object.freeze({
     unpublishWorld,
     deleteWorldPersistentData,
     hasWorldPersistentData,
-    getAllWorldsByUser,
-    registerWorldOpenShare
+    getAllWorldsByUser
 });
 
-export { registerWorldOpenShare };
 export default worldProfileRepository;

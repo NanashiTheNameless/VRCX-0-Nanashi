@@ -12,7 +12,7 @@ The fork is maintained by one person. Read `CONTRIBUTING.md` before proposing
 changes, and treat it as authoritative where this file is silent.
 
 The React frontend lives in `src/features/<domain>/`. The Rust backend is a Cargo
-workspace of 26 crates under `crates/`, plus `src-tauri` (27 members total).
+workspace of 27 crates under `crates/`, plus `src-tauri` (28 members total).
 
 npm is the only supported package manager. `package-lock.json` is the sole
 lockfile; CI runs `npm ci`. Do not reintroduce a pnpm or yarn lockfile.
@@ -60,10 +60,22 @@ unrelated edit, with where they live:
   Destructive actions are opt-in and reviewed on purpose. A name match alone must
   never block; that is a safety rule, not a rough edge.
 - **Social AI** - `crates/assistant/`, `src/features/assistant/`. Off by default;
-  nothing may be sent anywhere while disabled. OpenAI-compatible, Responses API,
-  Anthropic, Gemini and Ollama paths all exist.
+  nothing may be sent anywhere while disabled. OpenAI-compatible (Chat
+  Completions and Responses), Azure OpenAI, Anthropic, Gemini, Vertex AI,
+  Ollama, Cohere and Bedrock paths all exist (`LlmApiKind` in
+  `crates/contracts/src/llm.rs`).
 - **yt-dlp / media** - `crates/ytdlp/`, `YTDLP_SETUP.md`. Cookie use is opt-in
   and backs up originals.
+- **Notification sounds** - `crates/host-desktop/src/sound.rs`,
+  `crates/host-desktop/sounds/`. Built-in sounds are CC0 only, leveled to
+  -23 LUFS / -1 dBTP, and listed with their sources in `sounds/README.md`,
+  `NOTICE` and `scripts/generate-third-party-licenses.ts`. Nothing plays by
+  default; user files keep working alongside `bundled:<name>`.
+- **HTTP policy** - `crates/http-client/`. Requests carrying credentials or
+  personal data use `Policy::sensitive` (no HTTP/1.1 to remote hosts).
+  Credential-free downloads and reads use `Policy::public`; external API scopes
+  opt in through `ExternalApiScope::allows_http1`. Do not move a scope that can
+  send keys, tokens or VRChat cookies to the public policy.
 - **Updater** - `crates/host-desktop/src/updater_policy.rs`. Fork releases, plus
   reinstall/downgrade and per-version selection.
 
@@ -83,6 +95,14 @@ unrelated edit, with where they live:
   side panel tabs, and must not be re-added to the panel.
 - `RuntimeBackgroundJobs` tracks local job state for background loops. It
   transmits nothing.
+- Shared world collections are import-only. Opening a `worlds.vrcx-0.dev`
+  collection link and importing it works (a credential-free GET), but creating
+  or managing shares, owner tokens, and the world registration that "Copy VRCX
+  world URL" triggered were removed on purpose: they sent world details and a
+  hash of the user's VRChat ID to upstream's service. World "Copy URL" copies
+  the plain VRChat link. Upstream merges will try to bring the export side
+  back; keep it out. Avatar and instance relay links (`open.vrcx-0.dev`) are
+  unrelated and stay.
 
 ## Ground rules
 
@@ -130,14 +150,20 @@ Full check before submitting:
 npm run rust:fmt:check && npm run format:check
 npm run lint && npm run typecheck
 npm run rust:test:ci && npm test
+cargo test -p vrcx-0 --tests
 ```
 
-A pre-commit hook runs formatting (`lint-staged.config.mjs` applies
-`npm run format` and `npm run rust:fmt` to all staged files).
+The husky pre-commit hook (`.husky/pre-commit`) runs lint-staged, which applies
+`npm run format` and `npm run rust:fmt` (`lint-staged.config.mjs`), and then
+`scripts/stage-formatted-files.mjs`, which stages every modified and untracked
+file, not only the ones you staged. Commit from a clean tree, or other work in
+progress ends up in the commit.
 
-`cargo test --workspace` includes the `vrcx-0` crate, which needs a Tauri
-runtime and fails in headless environments. Always use `rust:test:ci`, which
-excludes it.
+`rust:test:ci` excludes the `vrcx-0` crate, but CI still runs that crate's unit
+and integration tests (`src-tauri/tests/backend_architecture.rs`), and they run
+headless with `cargo test -p vrcx-0 --tests`. Run them after adding or changing
+a Tauri command: new commands must be `#[tauri::command(async)]` or async, or
+the main-thread allowlist test fails.
 
 ## Bindings
 

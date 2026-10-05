@@ -72,12 +72,8 @@ export function parseVrcxInstanceLink(input: string): VrcxInstanceLink | null {
     return isVrcxInstanceLink(link) ? link : null;
 }
 
-function entityRelayLink(entity: 'avatar' | 'world', entityId: string): string {
+function entityRelayLink(entity: 'avatar', entityId: string): string {
     return `${VRCX_OPEN_RELAY_ORIGIN}/${entity}/${entityId.trim()}`;
-}
-
-export function vrcxWorldDeepLink(worldId: string): string {
-    return isWorldId(worldId) ? entityRelayLink('world', worldId) : '';
 }
 
 export function vrcxAvatarDeepLink(avatarId: string): string {

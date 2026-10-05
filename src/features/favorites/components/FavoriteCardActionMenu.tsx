@@ -2,7 +2,6 @@ import { ExternalLinkIcon, MoreHorizontalIcon, Share2Icon } from 'lucide-react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { registerWorldOpenShare } from '@/repositories/worldProfileRepository';
 import { copyTextToClipboard } from '@/services/clipboardService';
 import { openExternalLink } from '@/services/entityMediaService';
 import {
@@ -10,10 +9,7 @@ import {
     vrchatUserUrl,
     vrchatWorldUrl
 } from '@/shared/constants/vrchatWebUrls';
-import {
-    vrcxAvatarDeepLink,
-    vrcxWorldDeepLink
-} from '@/shared/constants/vrcxDeepLinks';
+import { vrcxAvatarDeepLink } from '@/shared/constants/vrcxDeepLinks';
 import { Button } from '@/ui/shadcn/button';
 import {
     DropdownMenu,
@@ -72,31 +68,12 @@ export function FavoriteCardActionMenu({
     const userPageUrl = item.kind === 'friend' ? vrchatUserUrl(item.id) : '';
     const worldId = item.kind === 'world' ? item.id : '';
     const worldPageUrl = worldId ? vrchatWorldUrl(worldId) : '';
-    const worldShareUrl = vrcxWorldDeepLink(worldId);
     const avatarId = item.kind === 'avatar' ? item.id : '';
     const avatarPageUrl = avatarId ? vrchatAvatarUrl(avatarId) : '';
     const avatarShareUrl =
         !item.isPrivate && item.seedData?.releaseStatus === 'public'
             ? vrcxAvatarDeepLink(avatarId)
             : '';
-
-    function copyWorldShareLink() {
-        if (!worldShareUrl) {
-            return;
-        }
-        void copyTextToClipboard(
-            t('dialog.world.info.vrcx_share_text', {
-                name: item.title || worldId,
-                url: worldShareUrl
-            }),
-            {
-                successMessage: t('dialog.world.dynamic.value_copied', {
-                    value: t('dialog.world.info.vrcx_url')
-                })
-            }
-        );
-        registerWorldOpenShare(worldId);
-    }
 
     function copyAvatarShareLink() {
         if (!avatarShareUrl) {
@@ -168,11 +145,22 @@ export function FavoriteCardActionMenu({
                                 {t('common.actions.view_on_website')}
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                                disabled={!worldShareUrl}
-                                onClick={copyWorldShareLink}
+                                disabled={!worldPageUrl}
+                                onClick={() => {
+                                    void copyTextToClipboard(worldPageUrl, {
+                                        successMessage: t(
+                                            'dialog.world.dynamic.value_copied',
+                                            {
+                                                value: t(
+                                                    'dialog.world.info.url'
+                                                )
+                                            }
+                                        )
+                                    });
+                                }}
                             >
                                 <Share2Icon data-icon="inline-start" />
-                                {t('dialog.world.info.copy_vrcx_url')}
+                                {t('dialog.world.info.copy_url')}
                             </DropdownMenuItem>
                         </>
                     ) : null}

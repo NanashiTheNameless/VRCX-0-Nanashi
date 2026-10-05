@@ -40,8 +40,6 @@ use vrcx_0_application::auth::{
     VrchatConfigRuntime,
 };
 use vrcx_0_application::collections::{
-    get_or_create_share_owner_token, register_world_open_share, share_collection_create,
-    ShareCollectionCreateInput, ShareCollectionCreateResult, ShareCollectionDeps,
     SharedCollectionImportStartInput, SharedCollectionImportStatus,
 };
 use vrcx_0_application::favorites::{
@@ -106,7 +104,6 @@ const REGISTRY_BACKUP_MAINTENANCE_CADENCE_SECONDS: u64 = 3 * 60 * 60;
 const REGISTRY_BACKUP_FOREGROUND_REUSE_WINDOW: Duration = Duration::from_secs(60);
 const BACKGROUND_OVERLAY_ACTIVITY_CONFIG_CADENCE: Duration = Duration::from_secs(5);
 const DESKTOP_MAINTENANCE_STOP_POLL_INTERVAL: Duration = Duration::from_millis(50);
-const SHARE_EDITOR_ORIGIN: &str = "https://worlds.vrcx-0.dev";
 
 pub(crate) fn build_desktop_runtime_services_deps(
     context: &RuntimeHostDesktopAssemblyDeps,
@@ -659,9 +656,7 @@ impl DesktopRuntimeHostState {
             vrcx_0_contracts::LegacyMigrationPaths::from_app_data(runtime.paths().app_data.clone()),
             database_upgrade.clone(),
         );
-        let world_collections = vrcx_0_outbound_adapters::LocalWorldCollectionAdapter::new(
-            Arc::clone(runtime.database()),
-        );
+        let world_collections = vrcx_0_outbound_adapters::LocalWorldCollectionAdapter;
         let friend_log_name_store =
             vrcx_0_outbound_adapters::LocalFriendLogNameStore::new(Arc::clone(runtime.database()));
         let notification_sync = vrcx_0_outbound_adapters::LocalNotificationSyncAdapter::new(
@@ -1614,51 +1609,6 @@ impl DesktopRuntimeHostState {
         input: LoginSessionEnd,
     ) -> Result<Option<SavedAuthSnapshot>> {
         self.runtime.end_login_session(input).await
-    }
-
-    pub async fn share_collection_create(
-        &self,
-        input: ShareCollectionCreateInput,
-    ) -> Result<ShareCollectionCreateResult> {
-        let auth_scope = self.runtime.desktop_assembly().auth_scope().snapshot();
-        let display_name = self.runtime.snapshot_backend_runtime().auth_display_name;
-        Ok(share_collection_create(
-            ShareCollectionDeps::new(
-                &self.world_collections,
-                &self.world_collections,
-                &auth_scope.current_user_id,
-                &display_name,
-            ),
-            input,
-        )
-        .await?)
-    }
-
-    pub async fn open_shared_collection_manager(&self) -> Result<()> {
-        let auth_scope = self.runtime.desktop_assembly().auth_scope().snapshot();
-        let owner_token = get_or_create_share_owner_token(
-            &self.world_collections,
-            &self.world_collections,
-            &auth_scope.current_user_id,
-        )
-        .await?;
-        let url = format!("{SHARE_EDITOR_ORIGIN}/mine#k={owner_token}");
-        vrcx_0_host_desktop::shell_actions::open_link(&url)
-            .map_err(|error| vrcx_0_composition::Error::Custom(error.to_string()))
-    }
-
-    pub async fn register_world_open_share(&self, world_id: String) {
-        let auth_scope = self.runtime.desktop_assembly().auth_scope().snapshot();
-        if let Err(error) = register_world_open_share(
-            &self.world_collections,
-            &self.world_collections,
-            &auth_scope.current_user_id,
-            &world_id,
-        )
-        .await
-        {
-            tracing::warn!(error = %error, "app__world_open_register: best-effort registration failed");
-        }
     }
 
     pub async fn preview_shared_collection(

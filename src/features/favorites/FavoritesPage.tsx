@@ -1,11 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-
 import { PageScaffold } from '@/components/layout/PageScaffold';
 import type { FavoriteKind } from '@/domain/favorites/types';
-import { commands } from '@/platform/tauri/bindings';
-import configRepository from '@/repositories/configRepository';
-import { toast } from '@/services/toastService';
 import {
     ResizableHandle,
     ResizablePanel,
@@ -13,22 +7,13 @@ import {
 } from '@/ui/shadcn/resizable';
 
 import { FavoriteExportDialog } from './components/FavoriteExportDialog';
-import { FavoriteShareCollectionDialog } from './components/FavoriteShareCollectionDialog';
 import {
     FavoritesContentPanel,
     FavoritesGroupRailPanel
 } from './components/FavoritesPanels';
 import { FavoritesToolbar } from './components/FavoritesToolbar';
-import type { FavoriteGroupView, FavoriteItem } from './favoritesTypes';
-import {
-    buildShareCollectionWorldIds,
-    SHARE_COLLECTION_CLIENT_WORLD_CAP
-} from './shareCollectionDialogModel';
 import { useFavoritesPageController } from './useFavoritesPageController';
 import { useStableEvent } from './useStableEvent';
-
-const WORLD_COLLECTION_SHARE_COACHMARK_SEEN_CONFIG_KEY =
-    'worldCollectionShareCoachmarkSeen';
 
 function FavoritesPage({
     kind,
@@ -37,12 +22,7 @@ function FavoritesPage({
     kind: FavoriteKind;
     embedded?: boolean;
 }) {
-    const { t } = useTranslation();
     const state = useFavoritesPageController({ kind });
-    const [shareCollectionGroup, setShareCollectionGroup] =
-        useState<FavoriteGroupView | null>(null);
-    const [shareCoachmarkOpen, setShareCoachmarkOpen] = useState(false);
-    const shareCoachmarkDismissedRef = useRef(false);
     const {
         actions,
         collections,
@@ -72,92 +52,8 @@ function FavoritesPage({
     const handleExportFavorites = useStableEvent(() =>
         actions.exportCurrentFavorites()
     );
-    const handleOpenManageShares = useStableEvent(async () => {
-        try {
-            await commands.appShareCollectionOpenManage();
-        } catch (error) {
-            toast.add({
-                type: 'error',
-                title:
-                    error instanceof Error && error.message
-                        ? error.message
-                        : t(
-                              'view.favorite.share_collection.toast.open_manage_failed'
-                          )
-            });
-        }
-    });
-    const dismissShareCoachmark = useStableEvent(() => {
-        shareCoachmarkDismissedRef.current = true;
-        setShareCoachmarkOpen(false);
-        void configRepository
-            .setBool(WORLD_COLLECTION_SHARE_COACHMARK_SEEN_CONFIG_KEY, true)
-            .catch(() => undefined);
-    });
     const handleSplitterResize = useStableEvent(layout.handleSplitterResize);
     const handleSplitterLayout = useStableEvent(layout.persistSplitterLayout);
-    const shareCollectionItems = useMemo<FavoriteItem[]>(() => {
-        if (kind !== 'world' || !shareCollectionGroup) {
-            return [];
-        }
-        const itemsByGroup =
-            shareCollectionGroup.source === 'remote'
-                ? viewData.remoteItemsByGroup
-                : viewData.localItemsByGroup;
-        return itemsByGroup[shareCollectionGroup.key] || [];
-    }, [
-        kind,
-        shareCollectionGroup,
-        viewData.localItemsByGroup,
-        viewData.remoteItemsByGroup
-    ]);
-    const handleShareCollectionGroup = useStableEvent(
-        (group: FavoriteGroupView) => {
-            dismissShareCoachmark();
-            const itemsByGroup =
-                group.source === 'remote'
-                    ? viewData.remoteItemsByGroup
-                    : viewData.localItemsByGroup;
-            const groupItems = itemsByGroup[group.key] || [];
-            const { totalWorldIds } = buildShareCollectionWorldIds(groupItems);
-            if (totalWorldIds > SHARE_COLLECTION_CLIENT_WORLD_CAP) {
-                toast.add({
-                    type: 'error',
-                    title: t('view.favorite.share_collection.toast.too_many', {
-                        cap: SHARE_COLLECTION_CLIENT_WORLD_CAP
-                    })
-                });
-                return;
-            }
-            setShareCollectionGroup(group);
-        }
-    );
-    const worldShareHandler =
-        kind === 'world' ? handleShareCollectionGroup : undefined;
-    const manageSharesHandler =
-        kind === 'world' ? handleOpenManageShares : undefined;
-
-    useEffect(() => {
-        if (kind !== 'world') {
-            return;
-        }
-        let cancelled = false;
-        void configRepository
-            .getBool(WORLD_COLLECTION_SHARE_COACHMARK_SEEN_CONFIG_KEY, false)
-            .then((seen) => {
-                if (
-                    !cancelled &&
-                    !seen &&
-                    !shareCoachmarkDismissedRef.current
-                ) {
-                    setShareCoachmarkOpen(true);
-                }
-            })
-            .catch(() => undefined);
-        return () => {
-            cancelled = true;
-        };
-    }, [kind]);
 
     return (
         <PageScaffold embedded={embedded} flushBottom className="flex-1">
@@ -182,7 +78,6 @@ function FavoritesPage({
                 onRefresh={handleGroupRailRefresh}
                 onImport={handleImportFavorites}
                 onExport={handleExportFavorites}
-                onManageShares={manageSharesHandler}
             />
             <FavoriteExportDialog
                 open={exportDialogOpen}
@@ -193,20 +88,6 @@ function FavoritesPage({
                 remoteItemsByGroup={viewData.remoteItemsByGroup}
                 localItemsByGroup={viewData.localItemsByGroup}
                 remoteDetailsStatus={collections.remoteEntityDetails.status}
-            />
-            <FavoriteShareCollectionDialog
-                open={kind === 'world' && Boolean(shareCollectionGroup)}
-                onOpenChange={(nextOpen) => {
-                    if (!nextOpen) {
-                        setShareCollectionGroup(null);
-                    }
-                }}
-                group={shareCollectionGroup}
-                items={shareCollectionItems}
-                remoteWorldDetailsStatus={
-                    collections.remoteEntityDetails.status
-                }
-                onOpenManage={handleOpenManageShares}
             />
 
             <div className="flex h-full min-h-0 min-w-0 flex-1">
@@ -235,7 +116,6 @@ function FavoritesPage({
                             filters={filters}
                             newLocalGroupName={newLocalGroupName}
                             onNewGroupNameChange={setNewLocalGroupName}
-                            onShareCollectionGroup={worldShareHandler}
                             setCreatingLocalGroup={setCreatingLocalGroup}
                             viewData={viewData}
                         />
@@ -255,9 +135,6 @@ function FavoritesPage({
                             order={order}
                             selection={selection}
                             viewData={viewData}
-                            onShareCollectionGroup={worldShareHandler}
-                            shareCoachmarkOpen={shareCoachmarkOpen}
-                            onDismissShareCoachmark={dismissShareCoachmark}
                             instanceActionGatesByItemKey={
                                 instanceActionGatesByItemKey
                             }

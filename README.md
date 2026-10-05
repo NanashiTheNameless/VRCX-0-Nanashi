@@ -15,10 +15,16 @@ It is a Rust + Tauri rewrite of VRCX.
 
 - **No telemetry.** Usage stats, heartbeats, crash reporting, the in-app feedback form,
   and community theme install-count pings are removed entirely.
+- **Shared world collections are import-only.** Collection links from upstream's
+  `worlds.vrcx-0.dev` site can still be opened and imported into a local favorite group,
+  but nothing is uploaded or registered there: sharing your own collections, managing
+  shares, and the silent world registration that ran when copying a world link are
+  removed. Copy URL on a world copies its plain VRChat link.
 - **Social AI is off by default.** Turn it on under Settings > AI. Nothing is sent to an
   AI service while it is disabled. The chat is also on the left navigation as **Social AI**.
-  Supports OpenAI-compatible, Anthropic, Google Gemini and
-  Ollama APIs, local or LAN models with no key, and custom headers.
+  Supports OpenAI-compatible (Chat Completions and Responses), Azure OpenAI, Anthropic,
+  Google Gemini, Vertex AI, Ollama, Cohere and Amazon Bedrock APIs, local or LAN models
+  with no key, and custom headers.
 - **HTTP protocol preference.** App-managed HTTP clients try HTTP/3 when a direct
   HTTPS connection supports it, then HTTP/2. Requests that carry credentials or
   personal data (VRChat API and images, AI, translation, YouTube metadata, avatar
@@ -26,12 +32,12 @@ It is a Rust + Tauri rewrite of VRCX.
   downloads and reads can fall back to HTTP/1.1: GitHub downloads (yt-dlp, safety-list
   mirrors), safety lists, update checks and the updater (still signature-verified),
   VRChat status, community theme catalog and stats, background image metadata and
-  public world collection reads. Localhost and private IP addresses can always use
-  HTTP/1.1, including local AI services; a local proxy does not exempt a remote
-  destination. Proxy connections use TCP negotiation; HTTP/3 never bypasses a proxy.
-  AI prompts and uploads are not replayed after transport failures. WebSocket
-  handshakes, WebView resources and external yt-dlp processes retain their own
-  protocol handling.
+  shared world collection reads.
+  Localhost and private IP addresses can always use HTTP/1.1, including local AI
+  services; a local proxy does not exempt a remote destination. Proxy connections use
+  TCP negotiation; HTTP/3 never bypasses a proxy. AI prompts and uploads are not
+  replayed after transport failures. WebSocket handshakes, WebView resources and
+  external yt-dlp processes retain their own protocol handling.
 - **Keeps the PC awake** (optional, on by default) so live updates keep arriving while the app
   sits in the tray; the screen can still turn off.
 - **Profile decorations are hidden by default.** VRChat profile backgrounds, avatar frames,

@@ -5,7 +5,7 @@ use vrcx_0_contracts::world_collections::WorldCollectionSnapshotWorld;
 use vrcx_0_core::vrchat_ids::is_world_id;
 
 use super::ports::WorldCollectionRemote;
-use super::share_collection::SHARE_COLLECTION_MAX_WORLDS;
+use super::shared_collection_import::SHARED_COLLECTION_IMPORT_MAX_WORLDS;
 use vrcx_0_application_core::Error;
 
 #[derive(Clone, Debug, PartialEq, Serialize, specta::Type)]
@@ -34,7 +34,7 @@ fn normalize_world_ids(worlds: &[WorldCollectionSnapshotWorld]) -> Vec<String> {
         .iter()
         .map(|world| world.world_id.trim())
         .filter(|world_id| is_world_id(world_id) && seen.insert(*world_id))
-        .take(SHARE_COLLECTION_MAX_WORLDS)
+        .take(SHARED_COLLECTION_IMPORT_MAX_WORLDS)
         .map(str::to_string)
         .collect()
 }

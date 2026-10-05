@@ -113,19 +113,15 @@ function compactUrl(url: string) {
 }
 
 function WorldOverviewFacts({
-    onCopyVrcxWorldUrl,
     onCopyWorldId,
     onCopyWorldUrl,
     onOpenWorldPage,
-    vrcxWorldUrl,
     world,
     worldUrl
 }: {
-    onCopyVrcxWorldUrl: () => void;
     onCopyWorldId: () => void;
     onCopyWorldUrl: () => void;
     onOpenWorldPage: () => void;
-    vrcxWorldUrl: string;
     world: WorldProfileRecord;
     worldUrl: string;
 }) {
@@ -170,38 +166,6 @@ function WorldOverviewFacts({
                             onClick={() => {
                                 onCopyWorldUrl?.();
                             }}
-                        />
-                    </EntityFactValue>
-                </EntityFactRow>
-            ) : null}
-            {vrcxWorldUrl ? (
-                <EntityFactRow
-                    label={
-                        <Tooltip>
-                            <TooltipTrigger
-                                render={
-                                    <span
-                                        className="cursor-help underline decoration-dotted underline-offset-2"
-                                        tabIndex={0}
-                                    >
-                                        {t('dialog.world.info.vrcx_url')}
-                                    </span>
-                                }
-                            />
-                            <TooltipContent>
-                                {t('dialog.world.info.vrcx_url_description')}
-                            </TooltipContent>
-                        </Tooltip>
-                    }
-                >
-                    <EntityFactValue
-                        display={compactUrl(vrcxWorldUrl)}
-                        title={vrcxWorldUrl}
-                    >
-                        <EntityFactAction
-                            label={t('dialog.world.info.copy_vrcx_url')}
-                            icon={CopyIcon}
-                            onClick={onCopyVrcxWorldUrl}
                         />
                     </EntityFactValue>
                 </EntityFactRow>
@@ -453,13 +417,11 @@ export function WorldDialogOverviewSection({
         isHomeWorld,
         platformRows,
         visibleTags,
-        vrcxWorldUrl,
         world,
         worldUrl
     } = model;
     const {
         onChangeTab,
-        onCopyVrcxWorldUrl,
         onCopyWorldId,
         onCopyWorldName,
         onCopyWorldUrl,
@@ -675,11 +637,9 @@ export function WorldDialogOverviewSection({
             ) : null}
 
             <WorldOverviewFacts
-                onCopyVrcxWorldUrl={onCopyVrcxWorldUrl}
                 onCopyWorldId={onCopyWorldId}
                 onCopyWorldUrl={onCopyWorldUrl}
                 onOpenWorldPage={onOpenWorldPage}
-                vrcxWorldUrl={vrcxWorldUrl}
                 world={world}
                 worldUrl={worldUrl}
             />

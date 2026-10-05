@@ -1526,59 +1526,6 @@
             "loading": {
                 "loading_favorites_baseline": "Loading favorites"
             },
-            "share_collection": {
-                "title": "Share collection",
-                "subtitle": "Create a shareable page for {group}.",
-                "subtitle_empty": "Create a shareable collection page.",
-                "action": {
-                    "menu": "Share this group",
-                    "share": "Share",
-                    "copy_share_url": "Copy share link",
-                    "open_share_page": "Open page",
-                    "open_manage": "Manage my shares",
-                    "done": "Done",
-                    "open_editor": "Open editor",
-                    "forget": "Remove saved share"
-                },
-                "label": {
-                    "title": "Title",
-                    "listed": "Show on the homepage",
-                    "listed_description": "Let other people discover this collection on the homepage. If turned off, anyone with the share link can still view it.",
-                    "include_notes": "Include my notes",
-                    "include_notes_description": "Copy your local world notes to the shared page as comments. You can edit them later on the website.",
-                    "account_connection": "Shares are connected to the VRChat account currently signed in to VRCX-0-Nanashi. No separate website sign-in is required; sharing is provided by VRCX-0-Nanashi, not VRChat.",
-                    "worlds": "{count}/{total} worlds ready",
-                    "truncated": "First {cap} worlds only.",
-                    "share_url": "Share link",
-                    "manage_hint": "Edit, unlist, or delete this collection anytime from the “Manage my shares” dashboard."
-                },
-                "success": {
-                    "title": "Collection shared",
-                    "description": "{count} worlds are ready to share.",
-                    "ready": "Your share page is ready",
-                    "skipped": "{count} unavailable or incomplete worlds were not included.",
-                    "skipped_incomplete": "{world} was skipped because required information is missing."
-                },
-                "coachmark": {
-                    "title": "Share world collections",
-                    "description": "Turn any world favorite group into a page you can send to others.",
-                    "dismiss": "Got it"
-                },
-                "toast": {
-                    "copy_success": "Share link copied",
-                    "copy_failed": "Failed to copy link",
-                    "create_success": "Collection shared",
-                    "create_failed": "Failed to share collection",
-                    "open_manage_failed": "Failed to open shared collection manager",
-                    "load_failed": "Failed to load shared collections",
-                    "open_failed": "Failed to open editor",
-                    "forget_success": "Saved share removed",
-                    "forget_failed": "Couldn't remove saved share",
-                    "no_worlds": "This group has no worlds to share",
-                    "too_many": "You can share up to {cap} worlds at once. Please split this group first.",
-                    "skipped": "Shared. Skipped {count} worlds (not synced or incomplete)."
-                }
-            },
             "order": {
                 "edit": "Edit order",
                 "exit_edit": "Done",
@@ -4601,9 +4548,7 @@
                 "copy_url": "Copy URL",
                 "url": "VRChat URL",
                 "vrcx_url": "Share Link",
-                "vrcx_url_description": "This link opens directly in the VRCX-0-Nanashi app",
                 "vrcx_share_text": "Open world “{name}” in VRCX-0-Nanashi: {url}",
-                "copy_vrcx_url": "Copy Share Link",
                 "youtube_preview": "YouTube Preview",
                 "author_tags": "Author Tags",
                 "players": "Players",

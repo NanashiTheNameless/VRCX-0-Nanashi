@@ -3,8 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const tauriMock = vi.hoisted(() => ({
     commands: {
         appWorldGet: vi.fn(),
-        appVrchatWorldPersistentDataExists: vi.fn(),
-        appWorldOpenRegister: vi.fn()
+        appVrchatWorldPersistentDataExists: vi.fn()
     }
 }));
 
@@ -30,7 +29,6 @@ describe('WorldProfileRepository', () => {
             status: 404,
             data: '{"error":{"message":"World not found"}}'
         });
-        tauriMock.commands.appWorldOpenRegister.mockResolvedValue(null);
     });
 
     it('normalizes raw world API data into the shape dialogs and lists consume', () => {
@@ -252,30 +250,5 @@ describe('WorldProfileRepository', () => {
             force: true,
             full: false
         });
-    });
-
-    it('fires a best-effort open register call for a valid world id', () => {
-        worldProfileRepository.registerWorldOpenShare('wrld_open');
-
-        expect(tauriMock.commands.appWorldOpenRegister).toHaveBeenCalledWith(
-            'wrld_open'
-        );
-    });
-
-    it('skips the open register call for an empty world id', () => {
-        worldProfileRepository.registerWorldOpenShare('');
-
-        expect(tauriMock.commands.appWorldOpenRegister).not.toHaveBeenCalled();
-    });
-
-    it('swallows open register command failures', async () => {
-        tauriMock.commands.appWorldOpenRegister.mockRejectedValueOnce(
-            new Error('network down')
-        );
-
-        expect(() =>
-            worldProfileRepository.registerWorldOpenShare('wrld_open')
-        ).not.toThrow();
-        await Promise.resolve();
     });
 });

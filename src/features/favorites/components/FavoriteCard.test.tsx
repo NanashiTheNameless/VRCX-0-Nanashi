@@ -7,7 +7,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
     copyTextToClipboard: vi.fn(),
-    registerWorldOpenShare: vi.fn(),
     translate: vi.fn((key: string) => key)
 }));
 
@@ -31,10 +30,6 @@ vi.mock('@/components/user-hover-card/UserHoverCard', () => ({
 
 vi.mock('@/components/UserStatusDot', () => ({
     UserStatusDot: () => null
-}));
-
-vi.mock('@/repositories/worldProfileRepository', () => ({
-    registerWorldOpenShare: mocks.registerWorldOpenShare
 }));
 
 vi.mock('@/services/clipboardService', () => ({
@@ -176,7 +171,7 @@ describe('FavoriteCard website links', () => {
         expect(html).toContain('common.actions.view_on_website');
     });
 
-    it('shows website and share links for a world', () => {
+    it('shows the website and VRChat URL actions but no VRCX share link for a world', () => {
         const item: FavoriteCardItem = {
             id: WORLD_ID,
             key: 'world:public',
@@ -192,13 +187,14 @@ describe('FavoriteCard website links', () => {
         );
 
         expect(html).toContain('common.actions.view_on_website');
-        expect(html).toContain('dialog.world.info.copy_vrcx_url');
+        expect(html).toContain('dialog.world.info.copy_url');
+        expect(html).not.toContain('dialog.world.info.copy_vrcx_url');
     });
 
-    it('copies the world share text with its entity name', () => {
+    it('copies the plain VRChat world link', () => {
         const item: FavoriteCardItem = {
             id: WORLD_ID,
-            key: 'world:copy-share',
+            key: 'world:copy-url',
             kind: 'world',
             source: 'remote',
             title: 'Named world'
@@ -212,23 +208,13 @@ describe('FavoriteCard website links', () => {
         );
 
         fireEvent.click(
-            screen.getByRole('button', {
-                name: 'dialog.world.info.copy_vrcx_url'
-            })
+            screen.getByRole('button', { name: 'dialog.world.info.copy_url' })
         );
 
-        expect(mocks.translate).toHaveBeenCalledWith(
-            'dialog.world.info.vrcx_share_text',
-            {
-                name: 'Named world',
-                url: `https://open.vrcx-0.dev/world/${WORLD_ID}`
-            }
-        );
         expect(mocks.copyTextToClipboard).toHaveBeenCalledWith(
-            'dialog.world.info.vrcx_share_text',
+            `https://vrchat.com/home/world/${WORLD_ID}`,
             expect.any(Object)
         );
-        expect(mocks.registerWorldOpenShare).toHaveBeenCalledWith(WORLD_ID);
     });
 
     it('shows VRChat and share links for a public avatar', () => {

@@ -12,7 +12,6 @@ import type { GroupProfileRecord } from '@/domain/entities/group';
 import type { EntityRecord } from '@/domain/entities/shared';
 import type { WorldProfileRecord } from '@/domain/entities/world';
 import groupProfileRepository from '@/repositories/groupProfileRepository';
-import worldProfileRepository from '@/repositories/worldProfileRepository';
 import { copyTextToClipboard } from '@/services/clipboardService';
 import { openUserDialog } from '@/services/dialogService';
 import {
@@ -20,7 +19,6 @@ import {
     openExternalLink
 } from '@/services/entityMediaService';
 import { vrchatWorldUrl } from '@/shared/constants/vrchatWebUrls';
-import { vrcxWorldDeepLink } from '@/shared/constants/vrcxDeepLinks';
 import { parseLocation } from '@/shared/utils/location';
 import { isRecord } from '@/shared/utils/record';
 import { replaceVrcPackageUrl } from '@/shared/utils/urlUtils';
@@ -80,7 +78,6 @@ export interface WorldDialogHeaderModel {
     previousInstances: WorldPreviousInstances;
     visibleTags: ReturnType<typeof visibleWorldTags>;
     world: WorldProfileRecord;
-    vrcxWorldUrl: string;
     worldUrl: string;
 }
 export interface WorldDialogHeaderCommands {
@@ -92,7 +89,6 @@ export interface WorldDialogHeaderCommands {
     onCopyWorldId: () => void;
     onCopyWorldName: () => void;
     onCopyWorldUrl: () => void;
-    onCopyVrcxWorldUrl: () => void;
     onDelete: () => void;
     onDeleteCache: () => void;
     onDeletePersistentData: () => void;
@@ -439,7 +435,6 @@ export function WorldDialogTabbedView({
     }, [creatorGroupKey, currentEndpoint]);
 
     const worldUrl = world.id ? vrchatWorldUrl(world.id) : '';
-    const vrcxWorldUrl = vrcxWorldDeepLink(world.id);
     const packageUrl = replaceVrcPackageUrl(
         firstText(world.unityPackageUrl, record(world.unityPackage).url)
     );
@@ -487,7 +482,6 @@ export function WorldDialogTabbedView({
         previousInstances,
         visibleTags,
         world,
-        vrcxWorldUrl,
         worldUrl
     };
     const headerCommands: WorldDialogHeaderCommands = {
@@ -501,16 +495,6 @@ export function WorldDialogTabbedView({
             copyWorldText(world.name, t('dialog.world.info.name')),
         onCopyWorldUrl: () =>
             copyWorldText(worldUrl, t('dialog.world.info.url')),
-        onCopyVrcxWorldUrl: () => {
-            copyWorldText(
-                t('dialog.world.info.vrcx_share_text', {
-                    name: world.name,
-                    url: vrcxWorldUrl
-                }),
-                t('dialog.world.info.vrcx_url')
-            );
-            worldProfileRepository.registerWorldOpenShare(world.id);
-        },
         onDelete,
         onDeleteCache,
         onDeletePersistentData,

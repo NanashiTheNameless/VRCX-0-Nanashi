@@ -201,19 +201,8 @@ const generatedCommands = {
     ): Promise<DeepLinkSchemeSettings> {
         return await TAURI_INVOKE('app__deep_link_schemes_set', { settings });
     },
-    async appShareCollectionCreate(
-        input: ShareCollectionCreateInput
-    ): Promise<ShareCollectionCreateResult> {
-        return await TAURI_INVOKE('app__share_collection_create', { input });
-    },
-    async appShareCollectionOpenManage(): Promise<null> {
-        return await TAURI_INVOKE('app__share_collection_open_manage');
-    },
     async appShareCollectionPreview(id: string): Promise<ImportPreview> {
         return await TAURI_INVOKE('app__share_collection_preview', { id });
-    },
-    async appWorldOpenRegister(worldId: string): Promise<null> {
-        return await TAURI_INVOKE('app__world_open_register', { worldId });
     },
     async appSharedCollectionImportStart(
         input: SharedCollectionImportStartInput
@@ -6741,19 +6730,6 @@ export type SessionSummary = {
     busy: boolean;
     updatedAt: string;
 };
-export type ShareCollectionCreateInput = {
-    title: string;
-    listed: boolean;
-    includeNotes: boolean;
-    worldIds: string[];
-};
-export type ShareCollectionCreateResult = {
-    id: string;
-    url: string;
-    worldCount: number;
-    skippedWorlds: ShareCollectionSkippedWorld[];
-};
-export type ShareCollectionSkippedWorld = { worldId: string; name: string };
 export type SharedCollectionImportStartInput = {
     worldIds: string[];
     groupName: string;
