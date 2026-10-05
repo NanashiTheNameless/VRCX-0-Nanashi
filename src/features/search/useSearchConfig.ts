@@ -126,6 +126,23 @@ export function useSearchConfig() {
         };
     }, [t]);
 
+    function enableAvatarSearch() {
+        avatarSearchProviderRepository
+            .saveConfig({ enabled: true, providerList: avatarProviderList })
+            .then(applyAvatarProviderConfig)
+            .catch((error: unknown) => {
+                toast.add({
+                    type: 'error',
+                    title:
+                        error instanceof Error
+                            ? error.message
+                            : t(
+                                  'view.search.toast.failed_to_save_avatar_provider'
+                              )
+                });
+            });
+    }
+
     function handleAvatarProviderToggle(provider: string, enabled: boolean) {
         setDisabledAvatarProviders((current) =>
             enabled
@@ -153,6 +170,7 @@ export function useSearchConfig() {
         avatarProviderEnabled,
         avatarProviderList,
         disabledAvatarProviders,
+        enableAvatarSearch,
         handleAvatarProviderToggle,
         isAvatarProviderDialogOpen,
         languageOptionsMap,

@@ -1,6 +1,16 @@
+import { TriangleAlertIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
 import { PageScaffold } from '@/components/layout/PageScaffold';
 import { AvatarProviderSettingsDialog } from '@/components/search/AvatarProviderSettingsDialog';
 import { cn } from '@/lib/utils';
+import {
+    Alert,
+    AlertAction,
+    AlertDescription,
+    AlertTitle
+} from '@/ui/shadcn/alert';
+import { Button } from '@/ui/shadcn/button';
 import { Tabs } from '@/ui/shadcn/tabs';
 
 import { SearchControlBand } from './components/SearchControlBand';
@@ -14,6 +24,7 @@ import {
 import { useSearchPageController } from './useSearchPageController';
 
 export function SearchPage({ embedded = false }: { embedded?: boolean } = {}) {
+    const { t } = useTranslation();
     const { config, filters, results } = useSearchPageController();
     const searchedByTab: Record<string, boolean> = {
         user: results.hasUserSearched,
@@ -24,8 +35,14 @@ export function SearchPage({ embedded = false }: { embedded?: boolean } = {}) {
     const isLanding = !searchedByTab[filters.activeTab];
     const avatarProviderConfigured =
         config.avatarProviderEnabled && config.activeAvatarProviders.length > 0;
+    const avatarSearchDisabled =
+        filters.activeTab === 'avatar' &&
+        !config.avatarProviderEnabled &&
+        config.activeAvatarProviders.length > 0;
     const needsAvatarProvider =
-        filters.activeTab === 'avatar' && !avatarProviderConfigured;
+        filters.activeTab === 'avatar' &&
+        !avatarProviderConfigured &&
+        !avatarSearchDisabled;
 
     return (
         <PageScaffold embedded={embedded} className="flex-1">
@@ -70,6 +87,29 @@ export function SearchPage({ embedded = false }: { embedded?: boolean } = {}) {
                             worldCategories: config.worldCategories
                         }}
                     />
+                    {avatarSearchDisabled ? (
+                        <Alert className="mt-3">
+                            <TriangleAlertIcon />
+                            <AlertTitle>
+                                {t('view.search.avatar.search_disabled')}
+                            </AlertTitle>
+                            <AlertDescription>
+                                {t(
+                                    'view.search.avatar.search_disabled_description'
+                                )}
+                            </AlertDescription>
+                            <AlertAction>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={config.enableAvatarSearch}
+                                >
+                                    {t('view.search.avatar.turn_on')}
+                                </Button>
+                            </AlertAction>
+                        </Alert>
+                    ) : null}
                     {isLanding && needsAvatarProvider ? (
                         <div className="animate-in fade-in duration-200">
                             <SearchEmptyState

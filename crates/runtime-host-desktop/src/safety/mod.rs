@@ -517,7 +517,15 @@ impl SafetyRuntime {
                 cache.updated_at = now();
                 cache.error = error.unwrap_or_default();
             }
-            Ok(None) => cache.error = error.unwrap_or_default(),
+            Ok(None) => match error {
+                Some(error) => cache.error = error,
+                // A confirmed-unchanged upstream is a successful refresh; without this an
+                // inactive repo ages past the freshness window and disables reviews.
+                None => {
+                    cache.updated_at = now();
+                    cache.error.clear();
+                }
+            },
             Err(parse_error) => cache.error = parse_error,
         }
         state.caches.retain(|c| c.source_id != source.id);

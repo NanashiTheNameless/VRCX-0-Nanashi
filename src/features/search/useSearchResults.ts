@@ -271,7 +271,11 @@ export function useSearchResults({
             if (!avatarProviderEnabled || !activeAvatarProviders.length) {
                 toast.add({
                     type: 'warning',
-                    title: t('view.search.avatar.no_provider')
+                    title: t(
+                        activeAvatarProviders.length
+                            ? 'view.search.avatar.search_disabled'
+                            : 'view.search.avatar.no_provider'
+                    )
                 });
                 return;
             }

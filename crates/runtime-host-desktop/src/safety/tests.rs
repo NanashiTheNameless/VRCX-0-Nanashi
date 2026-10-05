@@ -881,6 +881,44 @@ fn parses_avatar_lists_from_a_mirror_directory() {
 }
 
 #[test]
+fn unchanged_github_mirror_counts_as_a_fresh_refresh() {
+    let f = Fixture::new();
+    let source = SafetySource {
+        id: "mirror".into(),
+        name: "Mirror".into(),
+        url: "https://api.github.com/repos/o/r/contents".into(),
+        enabled: true,
+        format: SourceFormat::GithubAvatars,
+        ..Default::default()
+    };
+    let mut settings = f.runtime.settings();
+    settings.enabled = true;
+    settings.sources = vec![source.clone()];
+    f.runtime.save_settings(settings).unwrap();
+    f.runtime.state.lock().unwrap().caches = vec![SourceCache {
+        source_id: source.id.clone(),
+        url: source.url.clone(),
+        format: source.format,
+        entries: ["avtr_11111111-1111-1111-1111-111111111111".to_string()].into(),
+        updated_at: "2020-01-01T00:00:00Z".into(),
+        commit_sha: "abc".into(),
+        ..Default::default()
+    }];
+    assert!(f.runtime.avatar_block_preview("mirror", 0).is_err());
+
+    f.runtime
+        .store_mirror_cache(&source, Ok(None), "etag", Some("HTTP 503".into()))
+        .unwrap();
+    assert!(f.runtime.avatar_block_preview("mirror", 0).is_err());
+
+    f.runtime
+        .store_mirror_cache(&source, Ok(None), "etag", None)
+        .unwrap();
+    let preview = f.runtime.avatar_block_preview("mirror", 0).unwrap();
+    assert_eq!(preview.total, 1);
+}
+
+#[test]
 fn global_hide_history_is_kept_apart_from_alerts() {
     let f = Fixture::new();
     let scope = f.runtime.auth.snapshot();
