@@ -8,7 +8,11 @@ use super::runtime::{
     WristOverlayHand,
 };
 use super::service::OverlayBackendPreference;
-use super::{WristOverlayRenderOptions, WristOverlaySizePreset, WristPageOrder, WristPlayersSort};
+use super::surfaces::wrist::wrist_anchor_from_config;
+use super::{
+    WristOverlayRenderOptions, WristOverlaySizePreset, WristPageOrder, WristPlacement,
+    WristPlayersSort,
+};
 
 pub const VR_OVERLAY_ENABLED_CONFIG_KEY: &str = "wristOverlayEnabled";
 pub const VR_OVERLAY_BACKEND_CONFIG_KEY: &str = "wristOverlayBackend";
@@ -23,6 +27,12 @@ pub const VR_OVERLAY_SHOW_BATTERY_PERCENT_CONFIG_KEY: &str = "wristOverlayShowBa
 pub const VR_OVERLAY_PAGES_CONFIG_KEY: &str = "wristOverlayPages";
 pub const VR_OVERLAY_PLAYERS_SORT_CONFIG_KEY: &str = "wristOverlayPlayersSort";
 pub const VR_OVERLAY_TIMEOUT_SECONDS_CONFIG_KEY: &str = "wristOverlayTimeoutSeconds";
+pub const VR_OVERLAY_WIDTH_CM_CONFIG_KEY: &str = "wristOverlayWidthCm";
+pub const VR_OVERLAY_ANCHOR_CONFIG_KEY: &str = "wristOverlayAnchor";
+pub const VR_OVERLAY_OFFSET_SIDE_CM_CONFIG_KEY: &str = "wristOverlayOffsetSideCm";
+pub const VR_OVERLAY_OFFSET_UP_CM_CONFIG_KEY: &str = "wristOverlayOffsetUpCm";
+pub const VR_OVERLAY_OFFSET_OUT_CM_CONFIG_KEY: &str = "wristOverlayOffsetOutCm";
+pub const VR_OVERLAY_TILT_DEGREES_CONFIG_KEY: &str = "wristOverlayTiltDegrees";
 pub const HMD_NOTIFICATIONS_ENABLED_CONFIG_KEY: &str = "hmdNotificationsEnabled";
 pub const HMD_NOTIFICATION_START_MODE_CONFIG_KEY: &str = "hmdNotificationStartMode";
 pub const HMD_NOTIFICATION_TIMEOUT_CONFIG_KEY: &str = "hmdNotificationTimeout";
@@ -130,6 +140,40 @@ pub(super) fn load_runtime_config(
         .and_then(|value| value.trim().parse::<u8>().ok())
         .unwrap_or(15)
         .clamp(5, 255);
+    let raw_int = |key: &str| {
+        config
+            .get_raw(key)
+            .ok()
+            .flatten()
+            .and_then(|value| value.trim().parse::<i32>().ok())
+    };
+    let offset_cm = |key: &str| {
+        let max = i32::from(WristPlacement::MAX_OFFSET_CM);
+        raw_int(key).unwrap_or(0).clamp(-max, max) as i8
+    };
+    // Without a saved width, keep the physical size of the old size preset.
+    let default_placement = WristPlacement::for_size(size);
+    let wrist_placement = WristPlacement {
+        width_cm: raw_int(VR_OVERLAY_WIDTH_CM_CONFIG_KEY)
+            .unwrap_or(i32::from(default_placement.width_cm))
+            .clamp(
+                i32::from(WristPlacement::MIN_WIDTH_CM),
+                i32::from(WristPlacement::MAX_WIDTH_CM),
+            ) as u8,
+        anchor: config
+            .get_string(VR_OVERLAY_ANCHOR_CONFIG_KEY, "bottom")
+            .map(|value| wrist_anchor_from_config(&value))
+            .unwrap_or_default(),
+        side_cm: offset_cm(VR_OVERLAY_OFFSET_SIDE_CM_CONFIG_KEY),
+        up_cm: offset_cm(VR_OVERLAY_OFFSET_UP_CM_CONFIG_KEY),
+        out_cm: offset_cm(VR_OVERLAY_OFFSET_OUT_CM_CONFIG_KEY),
+        tilt_degrees: {
+            let max = i32::from(WristPlacement::MAX_TILT_DEGREES);
+            raw_int(VR_OVERLAY_TILT_DEGREES_CONFIG_KEY)
+                .unwrap_or(0)
+                .clamp(-max, max) as i8
+        },
+    };
 
     VrOverlayRuntimeConfig {
         start_mode,
@@ -160,5 +204,6 @@ pub(super) fn load_runtime_config(
         wrist_pages,
         wrist_players_sort,
         wrist_timeout_secs,
+        wrist_placement,
     }
 }

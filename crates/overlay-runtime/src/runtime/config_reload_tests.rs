@@ -24,10 +24,13 @@ use crate::config::{
     HMD_NOTIFICATIONS_ENABLED_CONFIG_KEY, HMD_NOTIFICATION_AVATARS_CONFIG_KEY,
     HMD_NOTIFICATION_OPACITY_CONFIG_KEY, HMD_NOTIFICATION_POSITION_CONFIG_KEY,
     HMD_NOTIFICATION_START_MODE_CONFIG_KEY, HMD_NOTIFICATION_STYLE_CONFIG_KEY,
-    VR_OVERLAY_HIDE_PRIVATE_WORLDS_CONFIG_KEY,
+    VR_OVERLAY_ANCHOR_CONFIG_KEY, VR_OVERLAY_HIDE_PRIVATE_WORLDS_CONFIG_KEY,
+    VR_OVERLAY_OFFSET_OUT_CM_CONFIG_KEY, VR_OVERLAY_OFFSET_SIDE_CM_CONFIG_KEY,
+    VR_OVERLAY_OFFSET_UP_CM_CONFIG_KEY, VR_OVERLAY_SIZE_CONFIG_KEY,
+    VR_OVERLAY_TILT_DEGREES_CONFIG_KEY, VR_OVERLAY_WIDTH_CM_CONFIG_KEY,
 };
 use crate::VrOverlayRuntimeServices;
-use vrcx_0_host_desktop::vr_overlay::OverlayPlacement;
+use vrcx_0_host_desktop::vr_overlay::{OverlayPlacement, WristAnchor};
 
 struct TestServices {
     config: ConfigRepository,
@@ -161,7 +164,6 @@ fn reconciling_reloads_config_after_any_repository_write() {
 fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
     use crate::{build_wrist_surface_model, WristPage, WristPlayersSort};
     use vrcx_0_core::presence::{Place, PresencePlace};
-    use vrcx_0_vr_overlay::FeedRelation;
 
     let (_dir, mut services) = test_services();
     services.game_log.players = vec![
@@ -206,12 +208,12 @@ fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
     assert!(frame.players[0].platform.is_empty());
     assert_eq!(frame.players[1].note, "Local note");
     let model = build_wrist_surface_model(frame);
-    assert_eq!(model.feed_rows[0].relation, FeedRelation::None);
-    assert_eq!(model.feed_rows[1].relation, FeedRelation::Friend);
-    assert_eq!(
-        model.feed_rows[1].detail,
-        "Local note | online / Quest / World hopping"
-    );
+    let cells = model.player_columns.concat();
+    assert!(!cells[0].is_friend);
+    assert!(cells[0].status.is_empty());
+    assert!(cells[1].is_friend);
+    assert_eq!(cells[1].note, "Local note");
+    assert_eq!(cells[1].status, "online / Quest / World hopping");
 
     config.wrist_players_sort = WristPlayersSort::Joined;
     let frame =
@@ -219,11 +221,10 @@ fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
     assert_eq!(frame.players[0].display_name, "Zoe");
     let frame = super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Notes);
     let model = build_wrist_surface_model(frame);
-    assert_eq!(model.feed_rows.len(), 1);
-    assert_eq!(
-        model.feed_rows[0].detail,
-        "Local note | online / Quest / World hopping"
-    );
+    let cells = model.player_columns.concat();
+    assert_eq!(cells.len(), 1);
+    assert_eq!(cells[0].note, "Local note");
+    assert_eq!(cells[0].status, "online / Quest / World hopping");
 
     services.friends.get_mut("usr_friend").unwrap().1 = PresenceView::Offline;
     let frame =
@@ -434,4 +435,41 @@ fn hmd_toasts_follow_the_router_hmd_flag_and_the_hmd_switch() {
     runtime.reconcile_current();
     runtime.ingest_hmd_delivery(delivery("hmd-switched-off", true));
     assert_eq!(queued(), 0);
+}
+
+#[test]
+fn wrist_placement_loads_clamps_and_falls_back_to_the_size_preset() {
+    let (_dir, config, runtime) = test_runtime();
+    runtime.reconcile_current();
+    let placement = runtime.current_runtime_config().wrist_placement;
+    assert_eq!(placement.width_cm, 40);
+    assert_eq!(placement.anchor, WristAnchor::Bottom);
+
+    config
+        .set_string(VR_OVERLAY_SIZE_CONFIG_KEY, "large")
+        .unwrap();
+    runtime.reconcile_current();
+    assert_eq!(
+        runtime.current_runtime_config().wrist_placement.width_cm,
+        48
+    );
+
+    for (key, value) in [
+        (VR_OVERLAY_WIDTH_CM_CONFIG_KEY, "500"),
+        (VR_OVERLAY_ANCHOR_CONFIG_KEY, "top"),
+        (VR_OVERLAY_OFFSET_SIDE_CM_CONFIG_KEY, "-3"),
+        (VR_OVERLAY_OFFSET_UP_CM_CONFIG_KEY, "7"),
+        (VR_OVERLAY_OFFSET_OUT_CM_CONFIG_KEY, "-200"),
+        (VR_OVERLAY_TILT_DEGREES_CONFIG_KEY, "30"),
+    ] {
+        config.set_string(key, value).unwrap();
+    }
+    runtime.reconcile_current();
+    let placement = runtime.current_runtime_config().wrist_placement;
+    assert_eq!(placement.width_cm, 80);
+    assert_eq!(placement.anchor, WristAnchor::Top);
+    assert_eq!(placement.side_cm, -3);
+    assert_eq!(placement.up_cm, 7);
+    assert_eq!(placement.out_cm, -50);
+    assert_eq!(placement.tilt_degrees, 30);
 }

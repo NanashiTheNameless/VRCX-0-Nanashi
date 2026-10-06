@@ -641,7 +641,7 @@ fn create_overlay_session(
 
 fn parse_attachment(placement: &OverlayPlacement) -> Result<Attachment, String> {
     match placement {
-        OverlayPlacement::TrackedDeviceRelative { device_hint } => match device_hint.as_str() {
+        OverlayPlacement::TrackedDeviceRelative { device_hint, .. } => match device_hint.as_str() {
             "left-hand" => Ok(Attachment::Hand(Hand::Left)),
             "right-hand" => Ok(Attachment::Hand(Hand::Right)),
             _ => Err(format!("unknown tracked device hint '{device_hint}'")),

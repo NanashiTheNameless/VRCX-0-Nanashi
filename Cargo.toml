@@ -137,3 +137,61 @@ lto = false
 opt-level = "s"
 panic = "abort"
 strip = true
+
+# The binary stays size-optimized, but CPU-bound hot paths get full
+# optimization: VR overlay software rendering and text shaping, VRChat API
+# JSON, image decoding/resizing, and SQLite. Only these crates rebuild at -O3,
+# so package build time grows little.
+[profile.release.package.i-slint-core]
+opt-level = 3
+
+[profile.release.package.i-slint-renderer-software]
+opt-level = 3
+
+[profile.release.package.parley]
+opt-level = 3
+
+[profile.release.package.harfrust]
+opt-level = 3
+
+[profile.release.package.skrifa]
+opt-level = 3
+
+[profile.release.package.read-fonts]
+opt-level = 3
+
+[profile.release.package.swash]
+opt-level = 3
+
+[profile.release.package.zeno]
+opt-level = 3
+
+[profile.release.package.serde_json]
+opt-level = 3
+
+[profile.release.package.image]
+opt-level = 3
+
+[profile.release.package.png]
+opt-level = 3
+
+[profile.release.package.fdeflate]
+opt-level = 3
+
+[profile.release.package.miniz_oxide]
+opt-level = 3
+
+[profile.release.package.zune-jpeg]
+opt-level = 3
+
+[profile.release.package.image-webp]
+opt-level = 3
+
+[profile.release.package.libwebp-sys]
+opt-level = 3
+
+[profile.release.package.fast_image_resize]
+opt-level = 3
+
+[profile.release.package.libsqlite3-sys]
+opt-level = 3

@@ -6,6 +6,10 @@ pub trait SlintSurfaceHost: Sized {
 
     fn new(size: OverlaySize) -> Result<Self, String>;
     fn size(&self) -> OverlaySize;
+    /// Whether this host can render a model of `size` without being rebuilt.
+    fn accepts_size(&self, size: OverlaySize) -> bool {
+        self.size() == size
+    }
     fn model_size(model: &Self::Model) -> OverlaySize;
     fn window(&self) -> &slint::Window;
     fn write_model(&mut self, model: &Self::Model);
@@ -66,7 +70,7 @@ impl<H: SlintSurfaceHost> SlintSurfaceRenderer<H> {
         let needs_new = self
             .host
             .as_ref()
-            .map(|host| host.size() != size)
+            .map(|host| !host.accepts_size(size))
             .unwrap_or(true);
         if needs_new {
             self.host = Some(H::new(size)?);

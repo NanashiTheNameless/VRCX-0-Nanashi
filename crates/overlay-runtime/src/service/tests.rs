@@ -287,6 +287,7 @@ fn surface_config(value: &str) -> OverlaySurfaceConfig {
         physical_width_meters: 0.22,
         placement: OverlayPlacement::TrackedDeviceRelative {
             device_hint: "left-hand".to_string(),
+            adjust: Default::default(),
         },
         activation_button: OverlayActivationButton::Grip,
         force_visible: false,

@@ -11,4 +11,4 @@ pub use model::{
 #[cfg(feature = "slint-ui")]
 pub use slint_ui::{SlintHmdRenderer, SlintWristRenderer};
 pub use surfaces::main::{AvatarBitmap, MainSurfaceModel, ToastCard};
-pub use surfaces::wrist::WristSurfaceModel;
+pub use surfaces::wrist::{PlayerCell, WristSurfaceModel};

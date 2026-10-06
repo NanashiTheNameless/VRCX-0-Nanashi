@@ -20,6 +20,70 @@ export struct WristFeedItem {
     show-accent: bool,
 }
 
+export struct WristPlayerItem {
+    name: string,
+    joined: string,
+    status: string,
+    note: string,
+    name-color: color,
+    has-status: bool,
+    has-note: bool,
+}
+
+component WristPlayerColumn inherits VerticalLayout {
+    in property <[WristPlayerItem]> cells;
+    in property <color> quiet-color;
+    in property <color> muted-color;
+    in property <color> note-color;
+    alignment: start;
+    spacing: 7px;
+
+    for cell in root.cells : VerticalLayout {
+        // An explicit width lets wrapped text report its real height when the
+        // column is measured.
+        width: root.width;
+        spacing: 1px;
+
+        HorizontalLayout {
+            spacing: 6px;
+
+            Text {
+                horizontal-stretch: 1;
+                width: root.width - joined.preferred-width - 6px;
+                text: cell.name;
+                font-size: 14px;
+                font-weight: 600;
+                wrap: word-wrap;
+                color: cell.name-color;
+            }
+
+            joined := Text {
+                horizontal-stretch: 0;
+                text: cell.joined;
+                font-size: 12px;
+                vertical-alignment: center;
+                color: root.quiet-color;
+            }
+        }
+
+        if cell.has-status : Text {
+            width: root.width;
+            text: cell.status;
+            font-size: 12px;
+            wrap: word-wrap;
+            color: root.muted-color;
+        }
+
+        if cell.has-note : Text {
+            width: root.width;
+            text: cell.note;
+            font-size: 12px;
+            wrap: word-wrap;
+            color: root.note-color;
+        }
+    }
+}
+
 export component WristPanel inherits Window {
     default-font-family: "0xProto";
     background: transparent;
@@ -27,6 +91,12 @@ export component WristPanel inherits Window {
     in property <bool> dark-background: true;
     in property <[WristDeviceItem]> devices: [];
     in property <[WristFeedItem]> feed-lines: [];
+    // Fork: Players / Notes grid, up to four columns.
+    in property <int> player-column-count: 0;
+    in property <[WristPlayerItem]> players-0: [];
+    in property <[WristPlayerItem]> players-1: [];
+    in property <[WristPlayerItem]> players-2: [];
+    in property <[WristPlayerItem]> players-3: [];
     in property <string> footer-left;
     in property <string> footer-center;
     in property <string> footer-right;
@@ -52,6 +122,27 @@ export component WristPanel inherits Window {
     property <length> now-playing-height: root.now-playing-title != ""
         ? root.now-playing-padding * 2 + now-playing-title.preferred-height + 6px + root.now-playing-meter-height
         : 0px;
+    property <bool> has-player-grid: root.player-column-count > 0;
+    property <length> player-grid-spacing: 12px;
+    property <length> player-column-width: root.has-player-grid
+        ? (root.width - 28px - (root.player-column-count - 1) * root.player-grid-spacing) / root.player-column-count
+        : 0px;
+    // Fork: height the Players / Notes grid needs to show every player in full;
+    // the host resizes the window to it. Each column is measured on its own
+    // because a horizontal layout ignores wrapped text when reporting height.
+    // The feed may grow up to twice as tall as the panel is wide; the grid is
+    // never capped so no player is dropped.
+    out property <length> required-height: root.has-player-grid
+        ? root.feed-top
+            + max(players-column-0.preferred-height, players-column-1.preferred-height,
+                players-column-2.preferred-height, players-column-3.preferred-height)
+            + 10px + root.now-playing-height + root.footer-height
+        : (root.feed-row-limit > 0
+            ? root.feed-top + root.feed-row-limit * root.row-height
+            : root.header-height) + root.now-playing-height + root.footer-height;
+    property <int> feed-row-limit: Math.min(
+        root.feed-lines.length,
+        Math.floor((root.width * 2 - root.feed-top - root.now-playing-height - root.footer-height) / root.row-height));
     property <float> visible-rows: Math.min(
         root.feed-lines.length,
         Math.floor((root.height - root.feed-top - root.now-playing-height - root.footer-height) / root.row-height));
@@ -60,9 +151,11 @@ export component WristPanel inherits Window {
         x: 0px;
         y: 0px;
         width: parent.width;
-        height: (root.visible-rows > 0
-            ? root.feed-top + root.visible-rows * root.row-height
-            : root.header-height) + root.now-playing-height + root.footer-height;
+        height: root.has-player-grid
+            ? root.height
+            : (root.visible-rows > 0
+                ? root.feed-top + root.visible-rows * root.row-height
+                : root.header-height) + root.now-playing-height + root.footer-height;
         border-radius: 18px;
         border-width: 1px;
         border-color: root.edge-color;
@@ -151,6 +244,54 @@ export component WristPanel inherits Window {
                     }
                 }
             }
+        }
+
+        players-column-0 := WristPlayerColumn {
+            x: 14px + 0 * (root.player-column-width + root.player-grid-spacing);
+            y: root.feed-top;
+            width: root.player-column-width;
+            height: self.preferred-height;
+            visible: root.has-player-grid;
+            cells: root.players-0;
+            quiet-color: root.quiet-color;
+            muted-color: root.muted-color;
+            note-color: root.now-playing-title-color;
+        }
+
+        players-column-1 := WristPlayerColumn {
+            x: 14px + 1 * (root.player-column-width + root.player-grid-spacing);
+            y: root.feed-top;
+            width: root.player-column-width;
+            height: self.preferred-height;
+            visible: root.has-player-grid;
+            cells: root.players-1;
+            quiet-color: root.quiet-color;
+            muted-color: root.muted-color;
+            note-color: root.now-playing-title-color;
+        }
+
+        players-column-2 := WristPlayerColumn {
+            x: 14px + 2 * (root.player-column-width + root.player-grid-spacing);
+            y: root.feed-top;
+            width: root.player-column-width;
+            height: self.preferred-height;
+            visible: root.has-player-grid;
+            cells: root.players-2;
+            quiet-color: root.quiet-color;
+            muted-color: root.muted-color;
+            note-color: root.now-playing-title-color;
+        }
+
+        players-column-3 := WristPlayerColumn {
+            x: 14px + 3 * (root.player-column-width + root.player-grid-spacing);
+            y: root.feed-top;
+            width: root.player-column-width;
+            height: self.preferred-height;
+            visible: root.has-player-grid;
+            cells: root.players-3;
+            quiet-color: root.quiet-color;
+            muted-color: root.muted-color;
+            note-color: root.now-playing-title-color;
         }
 
         for line[index] in root.feed-lines : Rectangle {

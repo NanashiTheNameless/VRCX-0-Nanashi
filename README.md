@@ -80,6 +80,12 @@ It is a Rust + Tauri rewrite of VRCX.
   the player order. The menu closes after 15 seconds without interaction by default; set the menu
   timeout anywhere from 5 to 255 seconds. Pressing the menu button while the menu is already open
   switches to the next page and restarts that timer - you never have to close and reopen it.
+  The Players and Notes pages list everyone in the instance with all of their details, in up to
+  four columns; the menu grows taller instead of leaving anyone out. The feed can grow up to twice
+  as tall as the menu is wide.
+- **Wrist menu placement.** Under Settings > VR, set the menu's width in centimeters, move it
+  sideways, up or down and out from the wrist, tilt it, and choose which edge stays fixed as it
+  grows (bottom by default, so it grows upward).
 - **Launch without Steam.** Set the VRChat install folder in Launch Options to start VRChat directly.
 - **Import from VRCX or VRCX-0.** Merges the other app's database and adds settings you have not set
   here yet.

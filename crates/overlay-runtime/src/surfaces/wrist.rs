@@ -4,11 +4,13 @@ use vrcx_0_application_activity::{
 };
 use vrcx_0_core::location::world_id_from_location;
 use vrcx_0_core::text::first_non_empty_owned;
-use vrcx_0_host_desktop::vr_overlay::{VrDeviceSnapshot, VrDeviceStatus};
+use vrcx_0_host_desktop::vr_overlay::{
+    VrDeviceSnapshot, VrDeviceStatus, WristAnchor, WristPlacementAdjust,
+};
 use vrcx_0_i18n::OverlayMessage;
 use vrcx_0_vr_overlay::{
     DeviceChip, DeviceRole, DeviceStatus, FeedAccent, FeedKind, FeedLine, FeedRelation,
-    FeedSeverity, OverlayFooter, OverlayNowPlaying, OverlaySize, WristSurfaceModel,
+    FeedSeverity, OverlayFooter, OverlayNowPlaying, OverlaySize, PlayerCell, WristSurfaceModel,
 };
 
 use super::super::localization::{OverlayLocale, OverlayLocalizer, OverlayPanelLocalizer};
@@ -16,12 +18,18 @@ use vrcx_0_contracts::activity::ActivityKind;
 
 const MAX_FEED_ROWS: usize = 24;
 
+/// Players / Notes grid: a new column starts every this many players, up to
+/// `MAX_PLAYER_COLUMNS`; after that columns grow taller. No one is dropped.
+const PLAYERS_PER_COLUMN: usize = 10;
+const MAX_PLAYER_COLUMNS: usize = 4;
+const PLAYER_COLUMN_WIDTH: u32 = 256;
+
 /// Maximum wrist overlay width (2x normal preset = 1024px).
 /// Preset width (compact=448, normal=512, large=640) is used as minimum.
 const MAX_WRIST_WIDTH: u32 = 1024;
 
-/// Maximum wrist overlay height to prevent oversized overlays in VR.
-/// Compact=448, Normal=512, Large=640. Cap at Large preset height.
+/// Initial wrist canvas height. The rendered panel resizes to its content: the
+/// feed up to twice its width, the Players / Notes grid as tall as needed.
 const MAX_WRIST_HEIGHT: u32 = 640;
 
 /// Estimate the pixel width of a text string using average character width.
@@ -148,6 +156,64 @@ impl WristOverlaySizePreset {
             Self::Normal => 0.40,
             Self::Large => 0.48,
         }
+    }
+}
+
+/// Fork: wrist menu placement from Settings > VR, in whole centimeters and
+/// degrees so the runtime config stays comparable.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct WristPlacement {
+    pub width_cm: u8,
+    pub anchor: WristAnchor,
+    pub side_cm: i8,
+    pub up_cm: i8,
+    pub out_cm: i8,
+    pub tilt_degrees: i8,
+}
+
+impl WristPlacement {
+    pub const MIN_WIDTH_CM: u8 = 10;
+    pub const MAX_WIDTH_CM: u8 = 80;
+    pub const MAX_OFFSET_CM: i8 = 50;
+    pub const MAX_TILT_DEGREES: i8 = 90;
+
+    pub fn for_size(size: WristOverlaySizePreset) -> Self {
+        Self {
+            width_cm: (size.physical_width_meters() * 100.0).round() as u8,
+            anchor: WristAnchor::Bottom,
+            side_cm: 0,
+            up_cm: 0,
+            out_cm: 0,
+            tilt_degrees: 0,
+        }
+    }
+
+    pub fn physical_width_meters(self) -> f32 {
+        f32::from(self.width_cm) / 100.0
+    }
+
+    pub fn adjust(self) -> WristPlacementAdjust {
+        WristPlacementAdjust {
+            anchor: self.anchor,
+            side_meters: f32::from(self.side_cm) / 100.0,
+            up_meters: f32::from(self.up_cm) / 100.0,
+            out_meters: f32::from(self.out_cm) / 100.0,
+            tilt_degrees: f32::from(self.tilt_degrees),
+        }
+    }
+}
+
+impl Default for WristPlacement {
+    fn default() -> Self {
+        Self::for_size(WristOverlaySizePreset::Normal)
+    }
+}
+
+pub fn wrist_anchor_from_config(value: &str) -> WristAnchor {
+    match value.trim() {
+        "center" => WristAnchor::Center,
+        "top" => WristAnchor::Top,
+        _ => WristAnchor::Bottom,
     }
 }
 
@@ -430,9 +496,19 @@ pub fn build_wrist_surface_model(input: WristOverlayFrameInput) -> WristSurfaceM
             .take(MAX_FEED_ROWS)
             .map(|entry| feed_line_from_activity(entry, &localizer))
             .collect(),
-        WristPage::Players => player_lines(&input.players, false),
-        WristPage::Notes => player_lines(&input.players, true),
+        WristPage::Players | WristPage::Notes => Vec::new(),
     };
+    let player_cells = match input.page {
+        WristPage::Feed => Vec::new(),
+        WristPage::Players => player_cells(&input.players, false),
+        WristPage::Notes => player_cells(&input.players, true),
+    };
+    let feed_rows = if input.page != WristPage::Feed && player_cells.is_empty() {
+        vec![empty_players_line(input.page == WristPage::Notes)]
+    } else {
+        feed_rows
+    };
+    let player_columns = player_columns(player_cells);
     let footer_left = match input.page {
         WristPage::Feed => localizer.text(&ActivityText::message(
             OverlayMessage::overlay_footer_players(input.footer.player_count),
@@ -447,7 +523,9 @@ pub fn build_wrist_surface_model(input: WristOverlayFrameInput) -> WristSurfaceM
                 .count()
         ),
     };
-    let calculated_width = calculate_wrist_width(&input);
+    let calculated_width = calculate_wrist_width(&input)
+        .max(player_grid_width(player_columns.len()))
+        .min(MAX_WRIST_WIDTH);
     let preset_height = input.options.size.overlay_size().height;
     let safe_height = preset_height.min(MAX_WRIST_HEIGHT);
     WristSurfaceModel {
@@ -464,6 +542,7 @@ pub fn build_wrist_surface_model(input: WristOverlayFrameInput) -> WristSurfaceM
             Vec::new()
         },
         feed_rows,
+        player_columns,
         now_playing: input.now_playing.as_ref().and_then(|now_playing| {
             now_playing_model(now_playing, input.captured_at_ms, input.live_now_playing)
         }),
@@ -475,19 +554,15 @@ pub fn build_wrist_surface_model(input: WristOverlayFrameInput) -> WristSurfaceM
     }
 }
 
-/// Rows for the Players / Notes pages (English-only fork; no localization keys).
-fn player_lines(players: &[WristPlayerRow], notes_only: bool) -> Vec<FeedLine> {
-    let lines: Vec<FeedLine> = players
+/// Every player for the Players / Notes pages, with all of their details
+/// (English-only fork; no localization keys).
+fn player_cells(players: &[WristPlayerRow], notes_only: bool) -> Vec<PlayerCell> {
+    players
         .iter()
         .filter(|player| !notes_only || !player.note.trim().is_empty())
-        .take(MAX_FEED_ROWS)
         .map(|player| {
-            let mut detail = player.note.trim().replace('\n', " ");
-            // Add status indicator for friends
-            if player.is_friend
-                && (!player.state.is_empty() || !player.status_description.is_empty())
-            {
-                let mut status_parts = Vec::new();
+            let mut status_parts = Vec::new();
+            if player.is_friend {
                 if !player.state.is_empty() {
                     status_parts.push(player.state.clone());
                 }
@@ -503,33 +578,39 @@ fn player_lines(players: &[WristPlayerRow], notes_only: bool) -> Vec<FeedLine> {
                 if !player.status_description.is_empty() {
                     status_parts.push(player.status_description.clone());
                 }
-                if !status_parts.is_empty() {
-                    if !detail.is_empty() {
-                        detail = format!("{} | {}", detail, status_parts.join(" / "));
-                    } else {
-                        detail = status_parts.join(" / ");
-                    }
-                }
             }
-            FeedLine {
-                time_text: player.joined_text.clone(),
-                kind: FeedKind::Instance,
-                actor_text: player.display_name.clone(),
-                detail,
-                relation: if player.is_friend {
-                    FeedRelation::Friend
-                } else {
-                    FeedRelation::None
-                },
-                severity: FeedSeverity::Normal,
-                accent: FeedAccent::None,
+            PlayerCell {
+                name: player.display_name.clone(),
+                joined: player.joined_text.clone(),
+                status: status_parts.join(" / "),
+                note: player.note.trim().to_string(),
+                is_friend: player.is_friend,
             }
         })
-        .collect();
-    if !lines.is_empty() {
-        return lines;
+        .collect()
+}
+
+fn player_columns(cells: Vec<PlayerCell>) -> Vec<Vec<PlayerCell>> {
+    if cells.is_empty() {
+        return Vec::new();
     }
-    vec![FeedLine {
+    let columns = cells
+        .len()
+        .div_ceil(PLAYERS_PER_COLUMN)
+        .clamp(1, MAX_PLAYER_COLUMNS);
+    let per_column = cells.len().div_ceil(columns);
+    cells.chunks(per_column).map(<[_]>::to_vec).collect()
+}
+
+fn player_grid_width(columns: usize) -> u32 {
+    if columns <= 1 {
+        return 0;
+    }
+    columns as u32 * PLAYER_COLUMN_WIDTH
+}
+
+fn empty_players_line(notes_only: bool) -> FeedLine {
+    FeedLine {
         time_text: String::new(),
         kind: FeedKind::System,
         actor_text: String::new(),
@@ -542,7 +623,7 @@ fn player_lines(players: &[WristPlayerRow], notes_only: bool) -> Vec<FeedLine> {
         relation: FeedRelation::None,
         severity: FeedSeverity::Normal,
         accent: FeedAccent::None,
-    }]
+    }
 }
 
 fn localized_instance_duration(localizer: &OverlayLocalizer, duration: &str) -> String {
@@ -911,15 +992,40 @@ mod page_tests {
     #[test]
     fn notes_page_lists_only_players_with_notes() {
         let players = vec![player("Ada", "met at the club"), player("Bob", "  ")];
-        let all = player_lines(&players, false);
+        let all = player_cells(&players, false);
         assert_eq!(all.len(), 2);
-        assert_eq!(all[0].actor_text, "Ada");
-        assert_eq!(all[0].detail, "met at the club");
-        let notes = player_lines(&players, true);
+        assert_eq!(all[0].name, "Ada");
+        assert_eq!(all[0].note, "met at the club");
+        let notes = player_cells(&players, true);
         assert_eq!(notes.len(), 1);
-        assert_eq!(notes[0].actor_text, "Ada");
-        let empty = player_lines(&[player("Bob", "")], true);
-        assert_eq!(empty[0].detail, "No one here has a note.");
+        assert_eq!(notes[0].name, "Ada");
+        assert!(player_cells(&[player("Bob", "")], true).is_empty());
+        assert_eq!(empty_players_line(true).detail, "No one here has a note.");
+    }
+
+    #[test]
+    fn player_grid_keeps_every_player_and_their_details() {
+        let players = (0..80)
+            .map(|index| WristPlayerRow {
+                display_name: format!("Player {index}"),
+                note: format!("note {index}"),
+                joined_text: "5m".to_string(),
+                is_friend: true,
+                state: "active".to_string(),
+                platform: "android".to_string(),
+                status_description: "chilling".to_string(),
+            })
+            .collect::<Vec<_>>();
+        let columns = player_columns(player_cells(&players, false));
+        assert_eq!(columns.len(), MAX_PLAYER_COLUMNS);
+        let cells = columns.concat();
+        assert_eq!(cells.len(), 80);
+        assert_eq!(cells[79].name, "Player 79");
+        assert_eq!(cells[79].note, "note 79");
+        assert_eq!(cells[79].status, "active / Quest / chilling");
+        assert_eq!(cells[79].joined, "5m");
+        assert_eq!(player_columns(player_cells(&players[..7], false)).len(), 1);
+        assert_eq!(player_columns(player_cells(&players[..11], false)).len(), 2);
     }
 }
 

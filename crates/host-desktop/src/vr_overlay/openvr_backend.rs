@@ -1010,7 +1010,7 @@ fn resolve_device(
     placement: &OverlayPlacement,
 ) -> Result<TrackedDeviceIndex, TrackedDeviceResolutionError> {
     match placement {
-        OverlayPlacement::TrackedDeviceRelative { device_hint } => {
+        OverlayPlacement::TrackedDeviceRelative { device_hint, .. } => {
             let role = match device_hint.as_str() {
                 "right-hand" => Some(TrackedControllerRole::RightHand),
                 "left-hand" => Some(TrackedControllerRole::LeftHand),

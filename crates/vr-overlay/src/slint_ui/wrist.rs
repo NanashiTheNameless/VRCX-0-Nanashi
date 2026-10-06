@@ -7,14 +7,14 @@ use slint::{
 
 use crate::{
     Color, DeviceChip, DeviceRole, DeviceStatus, FeedAccent, FeedKind, FeedLine, FeedRelation,
-    FeedSeverity, OverlaySize, RgbaFrame, WristSurfaceModel,
+    FeedSeverity, OverlaySize, PlayerCell, RgbaFrame, WristSurfaceModel,
 };
 
 use super::platform::{
     create_component_window, pixel_count, render_window_if_needed, to_slint_color,
 };
 use super::surface::SlintSurfaceHost;
-use super::{WristDeviceItem, WristFeedItem, WristPanel};
+use super::{WristDeviceItem, WristFeedItem, WristPanel, WristPlayerItem};
 
 const WRIST_TEXT: Color = Color::rgba(238, 238, 238, 255);
 const WRIST_FRIEND_TEXT: Color = Color::rgba(246, 246, 246, 255);
@@ -31,6 +31,9 @@ const WRIST_FEED_LOCATION: Color = Color::rgba(14, 165, 233, 255);
 const WRIST_FEED_OFFLINE: Color = Color::rgba(148, 163, 184, 255);
 
 pub struct SlintWristHost {
+    /// Size the model asked for. `size` can be taller when the player grid
+    /// needs more room.
+    base_size: OverlaySize,
     size: OverlaySize,
     window: Rc<MinimalSoftwareWindow>,
     component: WristPanel,
@@ -46,6 +49,7 @@ impl SlintSurfaceHost for SlintWristHost {
         window.set_size(PhysicalSize::new(size.width, size.height));
         component.show().map_err(|error| error.to_string())?;
         Ok(Self {
+            base_size: size,
             size,
             window,
             component,
@@ -55,6 +59,10 @@ impl SlintSurfaceHost for SlintWristHost {
 
     fn size(&self) -> OverlaySize {
         self.size
+    }
+
+    fn accepts_size(&self, size: OverlaySize) -> bool {
+        self.base_size == size
     }
 
     fn model_size(model: &WristSurfaceModel) -> OverlaySize {
@@ -70,6 +78,15 @@ impl SlintSurfaceHost for SlintWristHost {
         self.component.set_devices(wrist_device_model(model));
         self.component
             .set_feed_lines(wrist_feed_model(&model.feed_rows, model.dark_background));
+        let columns = &model.player_columns;
+        let column =
+            |index: usize| wrist_player_cells(columns.get(index).map_or(&[], Vec::as_slice));
+        self.component
+            .set_player_column_count(columns.len().min(4) as i32);
+        self.component.set_players_0(column(0));
+        self.component.set_players_1(column(1));
+        self.component.set_players_2(column(2));
+        self.component.set_players_3(column(3));
         let now_playing = model.now_playing.as_ref();
         self.component.set_now_playing_title(SharedString::from(
             now_playing.map_or("", |value| value.title.as_str()),
@@ -92,7 +109,59 @@ impl SlintSurfaceHost for SlintWristHost {
     }
 
     fn render_if_needed(&mut self) -> Option<RgbaFrame> {
-        render_window_if_needed(&self.window, &mut self.buffer, self.size)
+        // Grid rows are only instantiated by a draw, so the measured height can
+        // change after rendering; redraw until the window fits it.
+        let mut frame = None;
+        for _ in 0..3 {
+            let height = self.target_height();
+            if height != self.size.height {
+                let size = OverlaySize::new(self.base_size.width, height);
+                let pixels = pixel_count(size).ok()?;
+                self.window
+                    .set_size(PhysicalSize::new(size.width, size.height));
+                self.buffer = vec![PremultipliedRgbaColor::default(); pixels];
+                self.size = size;
+                self.window.request_redraw();
+            }
+            frame = render_window_if_needed(&self.window, &mut self.buffer, self.size).or(frame);
+            if self.target_height() == self.size.height {
+                break;
+            }
+        }
+        frame
+    }
+}
+
+impl SlintWristHost {
+    fn target_height(&self) -> u32 {
+        let required = self.component.get_required_height().ceil() as u32;
+        if required > 0 {
+            required
+        } else {
+            self.base_size.height
+        }
+    }
+}
+
+fn wrist_player_cells(cells: &[PlayerCell]) -> ModelRc<WristPlayerItem> {
+    ModelRc::new(VecModel::from(
+        cells.iter().map(wrist_player_item).collect::<Vec<_>>(),
+    ))
+}
+
+fn wrist_player_item(cell: &PlayerCell) -> WristPlayerItem {
+    WristPlayerItem {
+        name: SharedString::from(cell.name.as_str()),
+        joined: SharedString::from(cell.joined.as_str()),
+        status: SharedString::from(cell.status.as_str()),
+        note: SharedString::from(cell.note.as_str()),
+        name_color: to_slint_color(wrist_relation_color(if cell.is_friend {
+            FeedRelation::Friend
+        } else {
+            FeedRelation::None
+        })),
+        has_status: !cell.status.is_empty(),
+        has_note: !cell.note.is_empty(),
     }
 }
 

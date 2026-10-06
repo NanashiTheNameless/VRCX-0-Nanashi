@@ -33,14 +33,16 @@ use super::{
     surfaces::wrist::compact_duration,
     test_preview::test_wrist_frame_input,
     WristOverlayFrameInput, WristOverlayRenderOptions, WristOverlaySizePreset, WristPage,
-    WristPageOrder, WristPlayerRow, WristPlayersSort, WristRuntimeFooter, WristRuntimeNowPlaying,
+    WristPageOrder, WristPlacement, WristPlayerRow, WristPlayersSort, WristRuntimeFooter,
+    WristRuntimeNowPlaying,
 };
 
 pub(crate) use super::config::load_runtime_config;
 pub use super::config::VR_OVERLAY_ENABLED_CONFIG_KEY;
 
 trait VrOverlayFrameProducer: Send {
-    fn next_frame(&mut self, input: VrOverlayFrameInput) -> Result<RgbaFrame, String>;
+    /// `None` when there is nothing new to show, such as while the wrist is hidden.
+    fn next_frame(&mut self, input: VrOverlayFrameInput) -> Result<Option<RgbaFrame>, String>;
 }
 
 type VrOverlayFrameProducerFactory = Box<dyn Fn() -> Box<dyn VrOverlayFrameProducer> + Send + Sync>;
@@ -53,6 +55,9 @@ thread_local! {
 
 const WRIST_DEVICE_REFRESH_INTERVAL: Duration = Duration::from_secs(5);
 const WRIST_FRAME_REFRESH_INTERVAL: Duration = Duration::from_secs(1);
+/// How often the refresh loop checks for a wrist being shown or a menu press,
+/// so a newly shown or switched page is drawn without waiting a full refresh.
+const WRIST_STATE_POLL_INTERVAL: Duration = Duration::from_millis(100);
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum WristOverlayHand {
@@ -167,6 +172,8 @@ pub(super) struct VrOverlayRuntimeConfig {
     /// Inactivity timeout in seconds. When the wrist menu is shown, it will
     /// remain visible for this duration after the last interaction.
     pub(crate) wrist_timeout_secs: u8,
+    /// Fork: wrist menu size, anchor, offsets and tilt (Settings > VR).
+    pub(crate) wrist_placement: WristPlacement,
 }
 
 impl Default for VrOverlayRuntimeConfig {
@@ -184,6 +191,7 @@ impl Default for VrOverlayRuntimeConfig {
             wrist_pages: WristPageOrder::default(),
             wrist_players_sort: WristPlayersSort::Name,
             wrist_timeout_secs: 15, // Default to 15 seconds
+            wrist_placement: WristPlacement::default(),
         }
     }
 }
@@ -448,13 +456,27 @@ impl VrOverlayRuntime {
         tasks.spawn_cancellable_thread("vr-overlay-refresh", move |stop_token| {
             runtime.set_refresh_thread_id(thread::current().id());
             let mut next_device_refresh = Instant::now();
+            let mut next_refresh = Instant::now();
+            let mut last_wrist_state = None;
             let mut refresh_wake_sequence = 0;
             while !stop_token.is_stop_requested() {
-                runtime
-                    .refresh_wake
-                    .wait_timeout(runtime.refresh_interval(), &mut refresh_wake_sequence);
+                let observed_sequence = refresh_wake_sequence;
+                runtime.refresh_wake.wait_timeout(
+                    WRIST_STATE_POLL_INTERVAL
+                        .min(next_refresh.saturating_duration_since(Instant::now())),
+                    &mut refresh_wake_sequence,
+                );
                 if stop_token.is_stop_requested() {
                     break;
+                }
+                let woken = refresh_wake_sequence != observed_sequence;
+                let wrist_state = runtime.wrist_state();
+                let wrist_changed = wrist_state.is_some() && wrist_state != last_wrist_state;
+                if !woken && !wrist_changed && Instant::now() < next_refresh {
+                    continue;
+                }
+                if wrist_state.is_some() {
+                    last_wrist_state = wrist_state;
                 }
                 runtime.consume_slint_renderer_release_requests();
                 if runtime.has_active_surface() || runtime.has_pending_config_change() {
@@ -467,6 +489,7 @@ impl VrOverlayRuntime {
                     }
                 }
                 runtime.report_hmd_afk();
+                next_refresh = Instant::now() + runtime.refresh_interval();
             }
             runtime.clear_refresh_thread_id();
         });
@@ -716,6 +739,20 @@ impl VrOverlayRuntime {
         }
     }
 
+    /// Whether any wrist surface is shown, and the latest menu press count.
+    /// `None` when the manager is busy; the next poll will catch up.
+    fn wrist_state(&self) -> Option<(bool, u64)> {
+        let manager = self.manager.try_lock().ok()?;
+        let ids = wrist_surface_ids(self.current_runtime_config().hand);
+        Some((
+            ids.iter().any(|id| manager.is_surface_visible(id)),
+            ids.iter()
+                .map(|id| manager.wrist_activation_count(id))
+                .max()
+                .unwrap_or_default(),
+        ))
+    }
+
     fn defer_refresh_to_refresh_thread(&self, refresh_devices: bool) {
         if refresh_devices {
             self.device_refresh_requested.store(true, Ordering::Release);
@@ -865,7 +902,8 @@ impl VrOverlayRuntime {
                     test_mode: self.is_test_mode(),
                 })
             }) {
-            Ok(frame) => frame,
+            Ok(Some(frame)) => frame,
+            Ok(None) => return,
             Err(error) => {
                 tracing::warn!(error = %error, "failed to render wrist overlay frame");
                 return;
@@ -1017,13 +1055,16 @@ fn track_wrist_page(
 }
 
 impl VrOverlayFrameProducer for RuntimeWristFrameProducer {
-    fn next_frame(&mut self, input: VrOverlayFrameInput) -> Result<RgbaFrame, String> {
+    fn next_frame(&mut self, input: VrOverlayFrameInput) -> Result<Option<RgbaFrame>, String> {
         track_wrist_page(
             &input.config,
             &mut self.page,
             &mut self.presses,
             input.wrist_activations,
         );
+        if !input.wrist_visible && !input.test_mode {
+            return Ok(None);
+        }
         let page = self.page;
         let frame_input = if input.test_mode {
             test_wrist_frame_input(
@@ -1042,7 +1083,7 @@ impl VrOverlayFrameProducer for RuntimeWristFrameProducer {
             )
         };
         let model = build_wrist_surface_model(frame_input);
-        render_slint_wrist_frame(&model)
+        render_slint_wrist_frame(&model).map(Some)
     }
 }
 
@@ -1080,8 +1121,11 @@ fn clear_slint_hmd_renderer() {
 struct StaticWristFrameProducer;
 
 impl VrOverlayFrameProducer for StaticWristFrameProducer {
-    fn next_frame(&mut self, _input: VrOverlayFrameInput) -> Result<RgbaFrame, String> {
-        Ok(RgbaFrame::new(OverlaySize::new(16, 8), vec![0; 16 * 8 * 4]))
+    fn next_frame(&mut self, _input: VrOverlayFrameInput) -> Result<Option<RgbaFrame>, String> {
+        Ok(Some(RgbaFrame::new(
+            OverlaySize::new(16, 8),
+            vec![0; 16 * 8 * 4],
+        )))
     }
 }
 
@@ -1134,6 +1178,7 @@ fn wrist_surface_configs(
                 surface_id.as_str(),
                 device_hint,
                 config.render.size,
+                config.wrist_placement,
                 config.button,
                 force_visible,
                 config.wrist_timeout_secs,
@@ -1157,6 +1202,7 @@ fn wrist_surface_config(
     surface_id: &str,
     device_hint: &str,
     size: WristOverlaySizePreset,
+    placement: WristPlacement,
     button: OverlayActivationButton,
     force_visible: bool,
     timeout_secs: u8,
@@ -1165,9 +1211,10 @@ fn wrist_surface_config(
     OverlaySurfaceConfig {
         surface_id: OverlaySurfaceId::new(surface_id),
         size: size.overlay_size(),
-        physical_width_meters: size.physical_width_meters(),
+        physical_width_meters: placement.physical_width_meters(),
         placement: OverlayPlacement::TrackedDeviceRelative {
             device_hint: device_hint.to_string(),
+            adjust: placement.adjust(),
         },
         activation_button: button,
         force_visible,

@@ -28,6 +28,7 @@ import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
 import { useSettingsVrTabState } from '../useSettingsVrTabState';
 import { SettingsWristPagesFields } from './SettingsWristPagesFields';
+import { SettingsWristPlacementFields } from './SettingsWristPlacementFields';
 
 type SettingsVrPrefs = Pick<
     PreferencesSnapshot,
@@ -51,7 +52,6 @@ type SettingsVrPrefs = Pick<
     | 'wristOverlayHidePrivateWorlds'
     | 'wristOverlayShowBatteryPercent'
     | 'wristOverlayShowDevices'
-    | 'wristOverlaySize'
     | 'wristOverlayStartMode'
     | 'xsNotifications'
 >;
@@ -61,7 +61,6 @@ type HmdNotificationStyle = SettingsVrPrefs['hmdNotificationStyle'];
 type HmdNotificationStartMode = SettingsVrPrefs['hmdNotificationStartMode'];
 type WristOverlayButton = SettingsVrPrefs['wristOverlayButton'];
 type WristOverlayHand = SettingsVrPrefs['wristOverlayHand'];
-type WristOverlaySize = SettingsVrPrefs['wristOverlaySize'];
 type WristOverlayStartMode = SettingsVrPrefs['wristOverlayStartMode'];
 
 type SettingsVrTabContentProps = {
@@ -93,7 +92,6 @@ type SettingsVrTabContentProps = {
     onWristOverlayHidePrivateWorldsChange: (checked: boolean) => void;
     onWristOverlayShowBatteryPercentChange: (checked: boolean) => void;
     onWristOverlayShowDevicesChange: (checked: boolean) => void;
-    onWristOverlaySizeChange: (value: WristOverlaySize) => void;
     onWristOverlayStartModeChange: (value: WristOverlayStartMode) => void;
     onXsNotificationsChange: (checked: boolean) => void;
 };
@@ -133,12 +131,6 @@ const wristHandOptions = [
     ['both', 'view.settings.vr.wrist_overlay.display_on_both']
 ] as const;
 
-const wristSizeOptions = [
-    ['compact', 'view.settings.vr.wrist_overlay.size_compact'],
-    ['normal', 'view.settings.vr.wrist_overlay.size_normal'],
-    ['large', 'view.settings.vr.wrist_overlay.size_large']
-] as const;
-
 export function SettingsVrTab() {
     const state = useSettingsVrTabState();
     return <SettingsVrTabContent {...state} />;
@@ -170,7 +162,6 @@ function SettingsVrTabContent({
     onWristOverlayStartModeChange,
     onWristOverlayButtonChange,
     onWristOverlayHandChange,
-    onWristOverlaySizeChange,
     onWristOverlayDarkBackgroundChange,
     onWristOverlayHidePrivateWorldsChange,
     onWristOverlayShowDevicesChange,
@@ -734,41 +725,7 @@ function SettingsVrTabContent({
                     </Select>
                 </Field>
 
-                <Field
-                    label={t('view.settings.vr.wrist_overlay.size')}
-                    controlId="settings-wrist-overlay-size"
-                    disabled={!wristOverlayEnabled}
-                >
-                    <Select<WristOverlaySize>
-                        value={prefs.wristOverlaySize}
-                        items={wristSizeOptions.map(([value, labelKey]) => ({
-                            value,
-                            label: t(labelKey)
-                        }))}
-                        disabled={!wristOverlayEnabled}
-                        onValueChange={(value) => {
-                            if (value) {
-                                onWristOverlaySizeChange(value);
-                            }
-                        }}
-                    >
-                        <SelectTrigger
-                            id="settings-wrist-overlay-size"
-                            className="w-56"
-                        >
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectGroup>
-                                {wristSizeOptions.map(([value, labelKey]) => (
-                                    <SelectItem key={value} value={value}>
-                                        {t(labelKey)}
-                                    </SelectItem>
-                                ))}
-                            </SelectGroup>
-                        </SelectContent>
-                    </Select>
-                </Field>
+                <SettingsWristPlacementFields disabled={!wristOverlayEnabled} />
 
                 <Field
                     label={t('view.settings.vr.wrist_overlay.dark_background')}

@@ -6,7 +6,7 @@ use super::{
 use crate::{
     AvatarBitmap, DeviceChip, DeviceRole, DeviceStatus, FeedAccent, FeedKind, FeedLine,
     FeedRelation, FeedSeverity, MainSurfaceModel, OverlayFooter, OverlayNowPlaying, OverlaySize,
-    RgbaFrame, ToastCard, WristSurfaceModel,
+    PlayerCell, RgbaFrame, ToastCard, WristSurfaceModel,
 };
 use std::{sync::Arc, thread};
 
@@ -16,10 +16,73 @@ fn slint_platform_init_is_available_on_each_render_thread() {
     thread::spawn(|| {
         let mut renderer = SlintWristRenderer::new();
         let frame = renderer.render(&sample_wrist_model()).unwrap();
-        assert_eq!(frame.size, OverlaySize::new(512, 512));
+        assert_eq!(frame.size.width, 512);
     })
     .join()
     .unwrap();
+}
+
+fn player_grid_model(players: usize, columns: usize, note: &str) -> WristSurfaceModel {
+    let cells = (0..players)
+        .map(|index| PlayerCell {
+            name: format!("Player number {index}"),
+            joined: "12m".to_string(),
+            status: "active / PC VR / exploring".to_string(),
+            note: note.to_string(),
+            is_friend: index % 2 == 0,
+        })
+        .collect::<Vec<_>>();
+    let per_column = players.div_ceil(columns);
+    WristSurfaceModel {
+        size: OverlaySize::new(1024, 512),
+        feed_rows: Vec::new(),
+        player_columns: cells.chunks(per_column).map(<[_]>::to_vec).collect(),
+        ..sample_wrist_model()
+    }
+}
+
+#[test]
+fn wrist_player_grid_grows_to_fit_every_player() {
+    let mut renderer = SlintWristRenderer::new();
+    let few = renderer.render(&player_grid_model(4, 1, "")).unwrap();
+    let full = renderer.render(&player_grid_model(80, 4, "")).unwrap();
+    let noted = renderer
+        .render(&player_grid_model(
+            80,
+            4,
+            "a long note that has to wrap across several lines in a narrow column",
+        ))
+        .unwrap();
+
+    assert_eq!(full.size.width, 1024);
+    assert!(full.size.height > 512, "{:?}", full.size);
+    assert!(full.size.height > few.size.height);
+    assert!(noted.size.height > full.size.height);
+}
+
+#[test]
+fn wrist_player_grid_wraps_long_names_instead_of_clipping_them() {
+    let mut renderer = SlintWristRenderer::new();
+    let short = renderer.render(&player_grid_model(40, 4, "")).unwrap();
+    let mut model = player_grid_model(40, 4, "");
+    model.player_columns[0][0].name =
+        "An extremely long display name that cannot fit on one line".to_string();
+    let long = renderer.render(&model).unwrap();
+
+    assert!(long.size.height > short.size.height);
+}
+
+#[test]
+fn wrist_player_grid_reuses_its_resized_host() {
+    let mut renderer = SlintWristRenderer::new();
+    let model = player_grid_model(80, 4, "note");
+    let first = renderer.render(&model).unwrap();
+    let mut changed = model.clone();
+    changed.player_columns[0][0].joined = "13m".to_string();
+    let second = renderer.render(&changed).unwrap();
+
+    assert_eq!(first.size, second.size);
+    assert_eq!(renderer.render_count(), 2);
 }
 
 #[test]
@@ -172,7 +235,7 @@ fn slint_hmd_renderer_hides_avatar_placeholder_when_avatar_slot_is_disabled() {
 }
 
 #[test]
-fn wrist_panel_stops_painting_below_the_last_feed_row() {
+fn wrist_panel_height_fits_the_feed_rows() {
     let mut renderer = SlintWristRenderer::new();
     let mut model = sample_wrist_model();
     let alpha_at =
@@ -185,11 +248,12 @@ fn wrist_panel_stops_painting_below_the_last_feed_row() {
     model.feed_rows = (0..8).map(feed_row).collect();
     let tall = renderer.render(&model).unwrap();
 
-    assert!(alpha_at(&empty, 40) > 200);
-    assert_eq!(alpha_at(&empty, 100), 0);
-    assert!(alpha_at(&short, 100) > 200);
-    assert_eq!(alpha_at(&short, 300), 0);
-    assert!(alpha_at(&tall, 300) > 200);
+    assert_eq!(empty.size.height, 44 + 34);
+    assert_eq!(short.size.height, 49 + 2 * 38 + 34);
+    assert_eq!(tall.size.height, 49 + 8 * 38 + 34);
+    for frame in [&empty, &short, &tall] {
+        assert!(alpha_at(frame, frame.size.height - 3) > 200);
+    }
 }
 
 #[test]
@@ -213,10 +277,10 @@ fn wrist_panel_fills_the_width_of_every_overlay_size_preset() {
 }
 
 #[test]
-fn wrist_panel_clamps_the_feed_to_the_rows_that_fit_each_preset() {
+fn wrist_panel_feed_grows_up_to_twice_as_tall_as_it_is_wide() {
     for size in overlay_size_presets() {
-        let capacity = (size.height - 49 - 34) / 38;
-        let panel_bottom = 49 + capacity * 38 + 34;
+        let max_height = size.width * 2;
+        let capacity = (max_height - 49 - 34) / 38;
         let mut renderer = SlintWristRenderer::new();
         let mut model = sample_wrist_model();
         model.size = size;
@@ -225,22 +289,16 @@ fn wrist_panel_clamps_the_feed_to_the_rows_that_fit_each_preset() {
         let frame = renderer.render(&model).unwrap();
         let alpha_at = |y: u32| frame.data[((y * size.width + 250) * 4 + 3) as usize];
 
-        assert!(
-            panel_bottom + 2 < size.height,
-            "clamped panel fills {}x{} with no transparent margin left to assert on",
-            size.width,
-            size.height
-        );
-        assert!(
-            alpha_at(panel_bottom - 2) > 200,
-            "panel ends before its clamped height at {}x{}",
-            size.width,
-            size.height
-        );
+        let panel_height = 49 + capacity * 38 + 34;
+        assert!(panel_height <= max_height);
         assert_eq!(
-            alpha_at(panel_bottom + 2),
-            0,
-            "panel paints past the rows that fit at {}x{}",
+            frame.size.height, panel_height,
+            "at {}x{}",
+            size.width, size.height
+        );
+        assert!(
+            alpha_at(panel_height - 3) > 200,
+            "panel ends before the bottom at {}x{}",
             size.width,
             size.height
         );
@@ -557,6 +615,7 @@ fn sample_wrist_model() -> WristSurfaceModel {
             severity: FeedSeverity::Important,
             accent: FeedAccent::None,
         }],
+        player_columns: Vec::new(),
         now_playing: None,
         footer: OverlayFooter {
             left: "8 players".to_string(),
