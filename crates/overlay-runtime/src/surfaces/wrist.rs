@@ -144,9 +144,9 @@ impl WristOverlaySizePreset {
 
     pub fn physical_width_meters(self) -> f32 {
         match self {
-            Self::Compact => 0.16,
-            Self::Normal => 0.20,
-            Self::Large => 0.24,
+            Self::Compact => 0.32,
+            Self::Normal => 0.40,
+            Self::Large => 0.48,
         }
     }
 }
