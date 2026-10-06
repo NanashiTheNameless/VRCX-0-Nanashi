@@ -32,7 +32,6 @@ const VISIBILITY_MENU_ITEMS: Array<readonly [StatusBarVisibilityKey, string]> =
         ['servers', 'status_bar.servers'],
         ['steamvr', 'SteamVR'],
         ['instanceQueue', 'status_bar.instance_queue'],
-        ['mutualGraph', 'status_bar.mutual_graph'],
         ['ws', 'status_bar.realtime_connection'],
         ['uptime', 'status_bar.app_uptime_short'],
         ['zoom', 'status_bar.zoom'],

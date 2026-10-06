@@ -386,6 +386,7 @@ export function GroupDialogTabPanels({
                         error={groupEventsError}
                         group={group}
                         onOpenEvents={() => onChangeTab('events')}
+                        onToggleFollow={onToggleEventFollow}
                     />
                 </GroupOverviewSection>
 

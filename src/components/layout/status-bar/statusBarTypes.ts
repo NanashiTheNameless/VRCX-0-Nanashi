@@ -16,7 +16,6 @@ export type StatusBarVisibilityKey =
     | 'proxy'
     | 'ws'
     | 'instanceQueue'
-    | 'mutualGraph'
     | 'nowPlaying'
     | 'uptime'
     | 'zoom'

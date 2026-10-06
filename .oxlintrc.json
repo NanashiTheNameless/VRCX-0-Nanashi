@@ -4,7 +4,11 @@
         "correctness": "error"
     },
     "plugins": ["unicorn", "typescript", "oxc", "react", "jsx-a11y", "import"],
-    "ignorePatterns": ["node_modules/**", "src/ui/shadcn/**"],
+    "ignorePatterns": [
+        "node_modules/**",
+        "src/ui/shadcn/**",
+        "src/components/reui/gantt/**"
+    ],
     "options": {
         "reportUnusedDisableDirectives": "error"
     },

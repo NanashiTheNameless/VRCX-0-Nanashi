@@ -2,17 +2,12 @@ import { CalendarIcon, RefreshCwIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { GroupEventCard } from '@/components/hosts/tools-dialogs/GroupEventCard';
-import {
-    getEventGroupId,
-    getEventId
-} from '@/components/hosts/tools-dialogs/toolsDialogUtils';
-import { FadeInImage } from '@/components/media/FadeInImage';
+import { buildEventSeries } from '@/components/hosts/tools-dialogs/groupCalendarModel';
+import { GroupEventRow } from '@/components/hosts/tools-dialogs/GroupEventRow';
+import { getEventId } from '@/components/hosts/tools-dialogs/toolsDialogUtils';
 import type { GroupProfileRecord } from '@/domain/entities/group';
 import type { LoadStatus } from '@/domain/shared/types';
-import { formatDateTime } from '@/lib/dateTime';
 import type { GroupCalendarEventRecord } from '@/repositories/vrchatToolsRepository';
-import { convertFileUrlToImageUrl } from '@/services/entityMediaService';
 import { Button } from '@/ui/shadcn/button';
 import {
     Empty,
@@ -60,46 +55,12 @@ function summaryEventRows(events: GroupCalendarEventRecord[]) {
     return [...upcoming, ...past].slice(0, 3);
 }
 
-function eventBannerUrl(
-    event: GroupCalendarEventRecord,
-    group: GroupProfileRecord
-) {
-    return convertFileUrlToImageUrl(
-        event?.imageUrl ||
-            event?.thumbnailImageUrl ||
-            group?.bannerUrl ||
-            group?.iconUrl ||
-            '',
-        128
+function followingEventIds(events: GroupCalendarEventRecord[]) {
+    return new Set(
+        events
+            .filter((event) => event.userInterest?.isFollowing === true)
+            .map(getEventId)
     );
-}
-
-function eventTimeLabel(event: GroupCalendarEventRecord) {
-    if (!event?.startsAt) {
-        return '';
-    }
-    const start = formatDateTime(
-        event.startsAt,
-        {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        },
-        { fallback: '' }
-    );
-    const end = event.endsAt
-        ? formatDateTime(
-              event.endsAt,
-              {
-                  hour: '2-digit',
-                  minute: '2-digit'
-              },
-              { fallback: '' }
-          )
-        : '';
-    return end ? `${start} - ${end}` : start;
 }
 
 function GroupEventsEmpty({
@@ -126,33 +87,33 @@ function GroupEventsEmpty({
 
 function GroupEventsSection({
     title,
-    events,
+    series,
     emptyTitle,
     group,
+    followingIds,
     onToggleFollow
 }: {
     title: ReactNode;
-    events: GroupCalendarEventRecord[];
+    series: GroupCalendarEventRecord[][];
     emptyTitle: ReactNode;
     group: GroupProfileRecord;
+    followingIds: ReadonlySet<string>;
     onToggleFollow: (event: GroupCalendarEventRecord) => void;
 }) {
     return (
         <section className="flex min-w-0 flex-col gap-2">
             <div className="text-sm font-medium">{title}</div>
-            {events.length ? (
-                <div className="grid gap-3 md:grid-cols-2">
-                    {events.map((event, index) => (
-                        <GroupEventCard
-                            key={`${getEventId(event) || 'event'}:${index}`}
-                            event={event}
-                            mode="grid"
-                            groupName={group.name || getEventGroupId(event)}
+            {series.length ? (
+                <div className="grid gap-2 md:grid-cols-2">
+                    {series.map((events, index) => (
+                        <GroupEventRow
+                            key={`${getEventId(events[0]) || 'event'}:${index}`}
+                            events={events}
+                            groupName={group.name || ''}
                             groupProfile={group}
-                            isFollowing={Boolean(
-                                event?.userInterest?.isFollowing
-                            )}
-                            onToggleFollow={() => onToggleFollow?.(event)}
+                            followingIds={followingIds}
+                            variant="series"
+                            onToggleFollow={onToggleFollow}
                         />
                     ))}
                 </div>
@@ -168,16 +129,19 @@ export function GroupEventSummary({
     status,
     error,
     group,
-    onOpenEvents
+    onOpenEvents,
+    onToggleFollow
 }: {
     events: GroupCalendarEventRecord[];
     status: LoadStatus;
     error: string;
     group: GroupProfileRecord;
     onOpenEvents: () => void;
+    onToggleFollow: (event: GroupCalendarEventRecord) => void;
 }) {
     const { t } = useTranslation();
     const rows = summaryEventRows(events);
+    const followingIds = followingEventIds(events);
 
     if (status === 'running' && !rows.length) {
         return (
@@ -205,42 +169,20 @@ export function GroupEventSummary({
     }
 
     return (
-        <div className="flex flex-col gap-2">
-            {rows.map((event, index) => {
-                const bannerUrl = eventBannerUrl(event, group);
-                return (
-                    <Button
-                        key={`${getEventId(event) || 'event'}:${index}`}
-                        type="button"
-                        variant="ghost"
-                        className="bg-muted/10 hover:bg-muted/25 h-auto w-full justify-start gap-3 rounded-md border p-2 text-left"
-                        onClick={onOpenEvents}
-                    >
-                        <span className="bg-muted flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md">
-                            {bannerUrl ? (
-                                <FadeInImage
-                                    src={bannerUrl}
-                                    alt=""
-                                    className="size-full object-cover"
-                                />
-                            ) : (
-                                <CalendarIcon className="text-muted-foreground size-5" />
-                            )}
-                        </span>
-                        <span className="min-w-0 flex-1 overflow-hidden">
-                            <span className="block truncate text-sm font-medium">
-                                {event?.title ||
-                                    t(
-                                        'dialog.group_calendar.event_card.untitled_event'
-                                    )}
-                            </span>
-                            <span className="text-muted-foreground block truncate text-xs">
-                                {eventTimeLabel(event) || '\u2014'}
-                            </span>
-                        </span>
-                    </Button>
-                );
-            })}
+        <div className="-mx-2 flex flex-col gap-1">
+            {rows.map((event, index) => (
+                <GroupEventRow
+                    key={`${getEventId(event) || 'event'}:${index}`}
+                    events={[event]}
+                    groupName={group.name || ''}
+                    groupProfile={group}
+                    followingIds={followingIds}
+                    variant="series"
+                    onOpen={onOpenEvents}
+                    surface="plain"
+                    onToggleFollow={onToggleFollow}
+                />
+            ))}
         </div>
     );
 }
@@ -264,12 +206,15 @@ export function GroupEventsTab({
     const rows = Array.isArray(events) ? events : [];
     const { upcoming, past } = splitGroupEvents(rows);
     const loading = status === 'running';
+    const followingIds = followingEventIds(rows);
 
     return (
         <div className="flex min-h-0 flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="text-muted-foreground text-sm">
-                    {rows.length} {t('dialog.group.events.header')}
+                    {t('dialog.group_calendar.events_count_short', {
+                        count: rows.length
+                    })}
                 </div>
                 <Button
                     type="button"
@@ -308,16 +253,20 @@ export function GroupEventsTab({
                 <div className="flex min-w-0 flex-col gap-4">
                     <GroupEventsSection
                         title={t('dialog.group.info.upcoming_events')}
-                        events={upcoming}
+                        series={buildEventSeries(upcoming).map(
+                            (entry) => entry.events
+                        )}
                         emptyTitle={t('dialog.group.events.no_upcoming_events')}
                         group={group}
+                        followingIds={followingIds}
                         onToggleFollow={onToggleFollow}
                     />
                     <GroupEventsSection
                         title={t('dialog.group.info.past_events')}
-                        events={past}
+                        series={past.map((event) => [event])}
                         emptyTitle={t('dialog.group.events.no_past_events')}
                         group={group}
+                        followingIds={followingIds}
                         onToggleFollow={onToggleFollow}
                     />
                 </div>

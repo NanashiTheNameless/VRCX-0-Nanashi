@@ -171,6 +171,17 @@
         "no_mutual_friends": "No mutual friends",
         "name_separator": ", "
     },
+    "group_event_hover_card": {
+        "following": "Following",
+        "live": "Live now",
+        "ended": "Ended",
+        "starts_in": "Starts {time}",
+        "interested": "{count} interested",
+        "access": {
+            "public": "Public",
+            "group": "Group members only"
+        }
+    },
     "deep_link": {
         "import_collection": {
             "prompt": {
@@ -5865,19 +5876,18 @@
         "group_calendar": {
             "header": "Group Calendar",
             "loading_events": "Loading events",
-            "description": "Display group events for the selected date.",
+            "description": "Browse events from your groups and featured events.",
+            "today": "Today",
+            "previous_month": "Previous month",
+            "next_month": "Next month",
             "list_view": "List View",
             "calendar_view": "Calendar View",
+            "timeline_view": "Timeline View",
             "no_events": "No events found",
             "search_placeholder": "Search groups or events",
             "search_no_matching": "No matching events found",
             "search_no_this_month": "No events this month",
             "event_card": {
-                "category": "Category",
-                "interested_user": "Interested Users",
-                "close_time": "Close Instance After Event Ends",
-                "created": "Created Date",
-                "description": "Description",
                 "export_to_calendar": "Export to Calendar",
                 "download_ics": "Download .ics",
                 "copied_event_link": "Calendar event URL copied to clipboard",
@@ -5885,7 +5895,19 @@
             },
             "featured_events": "Featured Events",
             "events_count_short": "{count} events",
-            "following_count_short": "{count} followed"
+            "following_count_short": "{count} followed",
+            "timeline": {
+                "previous_day": "Previous day",
+                "next_day": "Next day",
+                "zoom_in": "Zoom in",
+                "zoom_out": "Zoom out",
+                "jump_to_event": "Go to \"{title}\"",
+                "continues": "continues"
+            },
+            "series": {
+                "weekly": "Every {weekday}, {time}",
+                "show_all_dates": "Show all dates"
+            }
         },
         "boop_dialog": {
             "header": "Boop",

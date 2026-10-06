@@ -1,13 +1,17 @@
 import {
-    addYears,
+    addMonths,
     compareAsc,
-    endOfYear,
     format,
     isSameMonth,
-    startOfYear,
-    subYears
+    startOfMonth,
+    subMonths
 } from 'date-fns';
-import { ChevronDownIcon, RefreshCwIcon } from 'lucide-react';
+import {
+    ChevronDownIcon,
+    ChevronLeftIcon,
+    ChevronRightIcon,
+    RefreshCwIcon
+} from 'lucide-react';
 import {
     createContext,
     useContext,
@@ -21,6 +25,8 @@ import type { ComponentProps } from 'react';
 import type { Locale } from 'react-day-picker';
 import { useTranslation } from 'react-i18next';
 
+import { FadeInImage } from '@/components/media/FadeInImage';
+import { formatDateTime } from '@/lib/dateTime';
 import {
     entityQueryPolicies,
     fetchCachedData,
@@ -34,6 +40,8 @@ import vrchatToolsRepository, {
     type GroupCalendarEventRecord,
     type GroupCalendarGroupRecord
 } from '@/repositories/vrchatToolsRepository';
+import { openGroupDialog } from '@/services/dialogService';
+import { convertFileUrlToImageUrl } from '@/services/entityMediaService';
 import { toast } from '@/services/toastService';
 import { isRecord } from '@/shared/utils/record';
 import { replaceBioSymbols } from '@/shared/utils/string';
@@ -60,6 +68,7 @@ import {
 } from '@/ui/shadcn/toggle-group';
 
 import {
+    buildEventSeries,
     buildEventsByDate,
     buildFollowedCountByDate,
     calendarDateKey,
@@ -68,7 +77,8 @@ import {
     formatCalendarRequestDate,
     monthDateFromKey
 } from './groupCalendarModel';
-import { GroupEventCard } from './GroupEventCard';
+import { GroupCalendarTimeline } from './GroupCalendarTimeline';
+import { GroupEventRow } from './GroupEventRow';
 import {
     getEventGroupId,
     getEventId,
@@ -132,31 +142,41 @@ function GroupCalendarDayButton({
         >
             <div
                 className={cn(
-                    'flex h-5 w-full items-center justify-center text-sm leading-none font-semibold tabular-nums sm:h-6 sm:text-[17px]',
+                    'flex h-5 w-full items-center justify-center text-sm leading-none font-semibold tabular-nums sm:text-[15px]',
                     isOutsideDay && 'text-muted-foreground/50'
                 )}
             >
                 {format(dateKeyToLocalDate(dateKey), 'd')}
             </div>
-            <div className="grid h-3.5 w-full grid-cols-2 items-center gap-1.5 text-[10px] leading-none tabular-nums sm:gap-2 sm:text-[11px]">
-                {visibleEventCount ? (
-                    <span className="text-platform-pc min-w-3 text-center font-semibold">
-                        {visibleEventCount}
-                    </span>
-                ) : (
-                    <span aria-hidden="true" />
+            <div
+                aria-hidden="true"
+                className="flex h-2 w-full items-center justify-center gap-0.5"
+            >
+                {Array.from(
+                    { length: Math.min(visibleEventCount, MAX_DAY_DOTS) },
+                    (_, index) => (
+                        <span
+                            key={index}
+                            className={cn(
+                                'size-1 rounded-full',
+                                index < visibleFollowedCount
+                                    ? 'bg-[var(--status-askme)]'
+                                    : 'bg-muted-foreground'
+                            )}
+                        />
+                    )
                 )}
-                {visibleFollowedCount ? (
-                    <span className="min-w-3 text-center font-semibold text-[var(--status-askme)]">
-                        {visibleFollowedCount}
+                {visibleEventCount > MAX_DAY_DOTS ? (
+                    <span className="text-muted-foreground text-[10px] leading-none tabular-nums">
+                        +{visibleEventCount - MAX_DAY_DOTS}
                     </span>
-                ) : (
-                    <span aria-hidden="true" />
-                )}
+                ) : null}
             </div>
         </CalendarDayButton>
     );
 }
+
+const MAX_DAY_DOTS = 3;
 
 const GROUP_CALENDAR_COMPONENTS = {
     DayButton: GroupCalendarDayButton
@@ -187,7 +207,9 @@ export function GroupCalendarDialog({
         monthDateFromKey(selectedDateKey(new Date()))
     );
     const [showFeaturedEvents, setShowFeaturedEvents] = useState(false);
-    const [viewMode, setViewMode] = useState<'timeline' | 'grid'>('timeline');
+    const [viewMode, setViewMode] = useState<'calendar' | 'timeline' | 'list'>(
+        'calendar'
+    );
     const [search, setSearch] = useState('');
     const [events, setEvents] = useState<GroupCalendarEvent[]>([]);
     const [followingIds, setFollowingIds] = useState<string[]>([]);
@@ -201,12 +223,6 @@ export function GroupCalendarDialog({
     const [loading, setLoading] = useState(false);
     const loadRequestRef = useRef(0);
 
-    const calendarNavigationRange = useMemo(() => {
-        return {
-            startMonth: startOfYear(subYears(visibleMonthDate, 100)),
-            endMonth: endOfYear(addYears(visibleMonthDate, 10))
-        };
-    }, [visibleMonthDate]);
     const selectedDateValue = useMemo(
         () => dateKeyToLocalDate(selectedDate),
         [selectedDate]
@@ -228,6 +244,14 @@ export function GroupCalendarDialog({
         }),
         [calendarLocale, calendarTimeZone, eventsByDate, followedCountByDate]
     );
+    const timelineRangeBounds = useMemo(
+        () => ({
+            min: visibleMonthDate,
+            max: startOfMonth(addMonths(visibleMonthDate, 1))
+        }),
+        [visibleMonthDate]
+    );
+    const followingSet = useMemo(() => new Set(followingIds), [followingIds]);
     const selectedDayEvents = useMemo(
         () => eventsByDate[selectedDate] || [],
         [eventsByDate, selectedDate]
@@ -262,10 +286,12 @@ export function GroupCalendarDialog({
             .map(([groupId, groupEvents]) => ({
                 groupId,
                 groupName: groupNames[groupId] || groupId,
-                events: groupEvents.sort((left, right) =>
-                    compareAsc(
-                        new Date(left.startsAt || 0),
-                        new Date(right.startsAt || 0)
+                series: buildEventSeries(
+                    groupEvents.sort((left, right) =>
+                        compareAsc(
+                            new Date(left.startsAt || 0),
+                            new Date(right.startsAt || 0)
+                        )
                     )
                 )
             }))
@@ -393,6 +419,13 @@ export function GroupCalendarDialog({
             .catch(() => {});
     }
 
+    function groupIconUrl(groupId: string) {
+        return convertFileUrlToImageUrl(
+            groupProfiles[groupId]?.iconUrl || '',
+            64
+        );
+    }
+
     async function toggleFollow(event: GroupCalendarEvent) {
         const groupId = getEventGroupId(event);
         const eventId = getEventId(event);
@@ -465,7 +498,7 @@ export function GroupCalendarDialog({
                 }
             }}
         >
-            <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-5xl">
+            <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-7xl">
                 <DialogHeader>
                     <DialogTitle>
                         {t('dialog.group_calendar.header')}
@@ -477,17 +510,56 @@ export function GroupCalendarDialog({
                     </DialogDescription>
                 </DialogHeader>
                 <div className="flex flex-wrap items-center gap-3">
-                    <Input
-                        type="date"
-                        value={selectedDate}
-                        className="w-auto"
-                        onChange={(event) =>
-                            selectDateKey(
-                                event.target.value ||
-                                    selectedDateKey(new Date())
-                            )
-                        }
-                    />
+                    {viewMode === 'timeline' ? null : (
+                        <div className="flex items-center gap-1">
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={t(
+                                    'dialog.group_calendar.previous_month'
+                                )}
+                                onClick={() =>
+                                    handleCalendarMonthChange(
+                                        subMonths(visibleMonthDate, 1)
+                                    )
+                                }
+                            >
+                                <ChevronLeftIcon />
+                            </Button>
+                            <span className="min-w-24 text-center text-sm font-semibold tabular-nums">
+                                {formatDateTime(visibleMonthDate, {
+                                    year: 'numeric',
+                                    month: 'long'
+                                })}
+                            </span>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={t(
+                                    'dialog.group_calendar.next_month'
+                                )}
+                                onClick={() =>
+                                    handleCalendarMonthChange(
+                                        addMonths(visibleMonthDate, 1)
+                                    )
+                                }
+                            >
+                                <ChevronRightIcon />
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                    selectDateKey(selectedDateKey(new Date()))
+                                }
+                            >
+                                {t('dialog.group_calendar.today')}
+                            </Button>
+                        </div>
+                    )}
                     <Field orientation="horizontal" className="w-auto">
                         <Switch
                             id="group-calendar-featured-events"
@@ -512,68 +584,117 @@ export function GroupCalendarDialog({
                         {t('common.actions.refresh')}
                     </Button>
                     <ToggleGroup
+                        className="ml-auto"
                         variant="outline"
                         size="sm"
                         value={viewMode ? [viewMode] : []}
                         onValueChange={(nextValue) => {
                             if (nextValue[0]) {
                                 if (
+                                    nextValue[0] === 'calendar' ||
                                     nextValue[0] === 'timeline' ||
-                                    nextValue[0] === 'grid'
+                                    nextValue[0] === 'list'
                                 ) {
                                     setViewMode(nextValue[0]);
                                 }
                             }
                         }}
                     >
-                        <ToggleGroupItem value="timeline">
+                        <ToggleGroupItem value="calendar">
                             {t('dialog.group_calendar.calendar_view')}
                         </ToggleGroupItem>
                         <ToggleGroupSeparator />
-                        <ToggleGroupItem value="grid">
+                        <ToggleGroupItem value="timeline">
+                            {t('dialog.group_calendar.timeline_view')}
+                        </ToggleGroupItem>
+                        <ToggleGroupSeparator />
+                        <ToggleGroupItem value="list">
                             {t('dialog.group_calendar.list_view')}
                         </ToggleGroupItem>
                     </ToggleGroup>
                 </div>
                 {viewMode === 'timeline' ? (
-                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_32rem]">
-                        <ScrollArea className="h-[52vh] rounded-md border p-4">
-                            {selectedDayEvents.length ? (
-                                selectedDayEvents.map((event) => (
-                                    <GroupEventCard
-                                        key={getEventId(event)}
-                                        event={event}
-                                        mode="timeline"
-                                        groupName={
-                                            groupNames[
-                                                getEventGroupId(event)
-                                            ] || getEventGroupId(event)
-                                        }
-                                        groupProfile={
-                                            groupProfiles[
-                                                getEventGroupId(event)
-                                            ]
-                                        }
-                                        isFollowing={followingIds.includes(
-                                            getEventId(event)
-                                        )}
-                                        onToggleFollow={() => {
-                                            toggleFollow(event);
-                                        }}
-                                    />
-                                ))
-                            ) : (
-                                <Empty className="h-40 border-0 p-4">
-                                    <EmptyHeader>
-                                        <EmptyTitle>
-                                            {t(
-                                                'dialog.group_calendar.no_events'
-                                            )}
-                                        </EmptyTitle>
-                                    </EmptyHeader>
-                                </Empty>
-                            )}
-                        </ScrollArea>
+                    <div className="min-w-0">
+                        <GroupCalendarTimeline
+                            events={events}
+                            groupNames={groupNames}
+                            groupProfiles={groupProfiles}
+                            followingIds={followingIds}
+                            date={selectedDateValue}
+                            rangeBounds={timelineRangeBounds}
+                            timeZone={calendarTimeZone}
+                            locale={calendarLocale}
+                            weekStartsOn={weekStartsOn}
+                            loading={loading}
+                            onDateChange={(nextDate) =>
+                                selectDateKey(
+                                    calendarDateKey(nextDate, calendarTimeZone)
+                                )
+                            }
+                        />
+                    </div>
+                ) : viewMode === 'calendar' ? (
+                    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
+                        <div className="flex min-w-0 flex-col gap-2">
+                            <div className="flex items-baseline gap-2 px-1">
+                                <span className="text-sm font-semibold">
+                                    {formatDateTime(selectedDateValue, {
+                                        month: 'long',
+                                        day: 'numeric',
+                                        weekday: 'long'
+                                    })}
+                                </span>
+                                <span className="text-muted-foreground text-xs tabular-nums">
+                                    {t(
+                                        'dialog.group_calendar.events_count_short',
+                                        { count: selectedDayEvents.length }
+                                    )}
+                                </span>
+                            </div>
+                            <ScrollArea className="h-[48vh]">
+                                {selectedDayEvents.length ? (
+                                    <div className="flex flex-col gap-2 pr-3">
+                                        {selectedDayEvents.map((event) => (
+                                            <GroupEventRow
+                                                key={getEventId(event)}
+                                                events={[event]}
+                                                groupName={
+                                                    groupNames[
+                                                        getEventGroupId(event)
+                                                    ] || getEventGroupId(event)
+                                                }
+                                                groupProfile={
+                                                    groupProfiles[
+                                                        getEventGroupId(event)
+                                                    ]
+                                                }
+                                                followingIds={followingSet}
+                                                variant="day"
+                                                onOpen={() =>
+                                                    openGroupDialog({
+                                                        groupId:
+                                                            getEventGroupId(
+                                                                event
+                                                            )
+                                                    })
+                                                }
+                                                onToggleFollow={toggleFollow}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <Empty className="h-40 border-0 p-4">
+                                        <EmptyHeader>
+                                            <EmptyTitle>
+                                                {t(
+                                                    'dialog.group_calendar.no_events'
+                                                )}
+                                            </EmptyTitle>
+                                        </EmptyHeader>
+                                    </Empty>
+                                )}
+                            </ScrollArea>
+                        </div>
                         <GroupCalendarDayButtonContext.Provider
                             value={calendarDayButtonContextValue}
                         >
@@ -584,20 +705,14 @@ export function GroupCalendarDialog({
                                 month={visibleMonthDate}
                                 onSelect={handleCalendarSelect}
                                 onMonthChange={handleCalendarMonthChange}
-                                captionLayout="dropdown"
-                                navLayout="after"
-                                startMonth={calendarNavigationRange.startMonth}
-                                endMonth={calendarNavigationRange.endMonth}
+                                hideNavigation
                                 timeZone={calendarTimeZone}
                                 locale={calendarLocale}
                                 weekStartsOn={weekStartsOn}
-                                className="mx-auto rounded-lg border p-2 [--cell-size:--spacing(10)] sm:p-3 sm:[--cell-size:--spacing(12)] lg:[--cell-size:--spacing(15)] xl:[--cell-size:--spacing(16)]"
+                                className="mx-auto self-start rounded-lg p-2 [--cell-size:--spacing(10)] sm:p-3 sm:[--cell-size:--spacing(12)]"
                                 classNames={{
                                     month: 'flex w-full flex-col gap-3',
-                                    dropdowns:
-                                        'flex h-(--cell-size) w-full items-center justify-center gap-1.5 text-sm font-semibold sm:text-base',
-                                    caption_label:
-                                        '[&>svg]:text-muted-foreground flex items-center gap-1 rounded-(--cell-radius) text-sm font-semibold select-none [&>svg]:size-3.5 sm:text-base',
+                                    month_caption: 'hidden',
                                     weekdays: 'flex gap-0.5 sm:gap-1',
                                     weekday:
                                         'text-muted-foreground/70 flex-1 rounded-md text-xs font-medium select-none',
@@ -617,17 +732,17 @@ export function GroupCalendarDialog({
                             )}
                             onChange={(event) => setSearch(event.target.value)}
                         />
-                        <ScrollArea className="h-[55vh] rounded-md border p-4">
+                        <ScrollArea className="h-[55vh]">
                             {eventsByGroup.length ? (
                                 eventsByGroup.map((group) => (
                                     <div
                                         key={group.groupId}
-                                        className="mb-4 flex flex-col gap-2"
+                                        className="mb-6 flex flex-col gap-2 pr-3"
                                     >
                                         <Button
                                             type="button"
                                             variant="ghost"
-                                            className="justify-start px-0"
+                                            className="justify-start gap-2 px-1"
                                             onClick={() =>
                                                 setCollapsedGroups(
                                                     (current) => ({
@@ -649,31 +764,47 @@ export function GroupCalendarDialog({
                                                     ] && '-rotate-90'
                                                 )}
                                             />
-                                            {group.groupName}
+                                            {groupIconUrl(group.groupId) ? (
+                                                <FadeInImage
+                                                    src={groupIconUrl(
+                                                        group.groupId
+                                                    )}
+                                                    alt=""
+                                                    loading="lazy"
+                                                    className="size-5 rounded-sm object-cover"
+                                                />
+                                            ) : null}
+                                            <span className="truncate">
+                                                {group.groupName}
+                                            </span>
                                         </Button>
                                         {!collapsedGroups[group.groupId] ? (
-                                            <div className="grid gap-3 md:grid-cols-2">
-                                                {group.events.map((event) => (
-                                                    <GroupEventCard
-                                                        key={getEventId(event)}
-                                                        event={event}
-                                                        mode="grid"
+                                            <div className="grid gap-2 md:grid-cols-2">
+                                                {group.series.map((series) => (
+                                                    <GroupEventRow
+                                                        key={series.key}
+                                                        events={series.events}
                                                         groupName={
                                                             group.groupName
                                                         }
                                                         groupProfile={
                                                             groupProfiles[
-                                                                getEventGroupId(
-                                                                    event
-                                                                )
+                                                                group.groupId
                                                             ]
                                                         }
-                                                        isFollowing={followingIds.includes(
-                                                            getEventId(event)
-                                                        )}
-                                                        onToggleFollow={() => {
-                                                            toggleFollow(event);
-                                                        }}
+                                                        followingIds={
+                                                            followingSet
+                                                        }
+                                                        variant="series"
+                                                        onOpen={() =>
+                                                            openGroupDialog({
+                                                                groupId:
+                                                                    group.groupId
+                                                            })
+                                                        }
+                                                        onToggleFollow={
+                                                            toggleFollow
+                                                        }
                                                     />
                                                 ))}
                                             </div>
