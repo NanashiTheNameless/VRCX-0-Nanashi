@@ -76,8 +76,8 @@ It is a Rust + Tauri rewrite of VRCX.
   notifications with the chat closed, and have their own **Reminders** entry in the left
   navigation (and a card under Settings > AI).
 - **Wrist overlay pages.** The wrist menu shows the feed, the players in your instance, and the
-  players you have notes on. Under Settings > VR you choose which pages appear, their order and
-  the player order. The menu closes after 15 seconds without interaction by default; set the menu
+  players you have notes on. Under Settings > VR you choose which pages appear, their order,
+  whether the newest feed entry is on top or on the bottom, and the player order. The menu closes after 15 seconds without interaction by default; set the menu
   timeout anywhere from 5 to 255 seconds. Pressing the menu button while the menu is already open
   switches to the next page and restarts that timer - you never have to close and reopen it.
   The Players and Notes pages list everyone in the instance with all of their details; when a

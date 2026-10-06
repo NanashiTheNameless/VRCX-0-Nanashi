@@ -27,6 +27,7 @@ const P = 'view.settings.vr.wrist_overlay.pages';
 const PAGES_KEY = 'wristOverlayPages';
 const SORT_KEY = 'wristOverlayPlayersSort';
 const TIMEOUT_KEY = 'wristOverlayTimeoutSeconds';
+const FEED_ORDER_KEY = 'wristOverlayFeedOrder';
 
 export type WristPageId = 'feed' | 'players' | 'notes';
 type PageRow = { id: WristPageId; shown: boolean };
@@ -36,6 +37,8 @@ const MIN_TIMEOUT_SECONDS = 5;
 const MAX_TIMEOUT_SECONDS = 255;
 const SORTS = ['name', 'joined'] as const;
 type PlayersSort = (typeof SORTS)[number];
+const FEED_ORDERS = ['newestTop', 'newestBottom'] as const;
+type FeedOrder = (typeof FEED_ORDERS)[number];
 
 export function clampTimeoutSeconds(value: number): number {
     if (!Number.isFinite(value)) {
@@ -83,6 +86,7 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
         parseWristPages('feed,players,notes')
     );
     const [sort, setSort] = useState<PlayersSort>('name');
+    const [feedOrder, setFeedOrder] = useState<FeedOrder>('newestTop');
     const [timeout, setTimeout] = useState<number>(15);
 
     useEffect(() => {
@@ -90,12 +94,16 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
         void Promise.all([
             configRepository.getString(PAGES_KEY, 'feed,players,notes'),
             configRepository.getString(SORT_KEY, 'name'),
-            configRepository.getInt(TIMEOUT_KEY, 15)
+            configRepository.getInt(TIMEOUT_KEY, 15),
+            configRepository.getString(FEED_ORDER_KEY, 'newestTop')
         ])
-            .then(([pages, players, seconds]) => {
+            .then(([pages, players, seconds, order]) => {
                 if (!active) return;
                 setRows(parseWristPages(pages));
                 setSort(players === 'joined' ? 'joined' : 'name');
+                setFeedOrder(
+                    order === 'newestBottom' ? 'newestBottom' : 'newestTop'
+                );
                 setTimeout(clampTimeoutSeconds(seconds));
             })
             .catch(() => {});
@@ -183,6 +191,44 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
                         </div>
                     ))}
                 </div>
+            </Field>
+
+            <Field
+                label={t(`${P}.feed_order`)}
+                description={t(`${P}.feed_order_description`)}
+                controlId="settings-wrist-overlay-feed-order"
+                disabled={disabled}
+            >
+                <Select<FeedOrder>
+                    value={feedOrder}
+                    items={FEED_ORDERS.map((value) => ({
+                        value,
+                        label: t(`${P}.feed_orders.${value}`)
+                    }))}
+                    disabled={disabled}
+                    onValueChange={(value) => {
+                        if (value) {
+                            setFeedOrder(value);
+                            void save(FEED_ORDER_KEY, value);
+                        }
+                    }}
+                >
+                    <SelectTrigger
+                        id="settings-wrist-overlay-feed-order"
+                        className="w-56"
+                    >
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectGroup>
+                            {FEED_ORDERS.map((value) => (
+                                <SelectItem key={value} value={value}>
+                                    {t(`${P}.feed_orders.${value}`)}
+                                </SelectItem>
+                            ))}
+                        </SelectGroup>
+                    </SelectContent>
+                </Select>
             </Field>
 
             <Field

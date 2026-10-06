@@ -2468,6 +2468,12 @@
                         },
                         "move_up": "Move up",
                         "move_down": "Move down",
+                        "feed_order": "Feed order",
+                        "feed_order_description": "Where the newest feed entry appears. When the feed does not fit, the oldest entries are left out either way.",
+                        "feed_orders": {
+                            "newestTop": "Newest on top",
+                            "newestBottom": "Newest on bottom"
+                        },
                         "players_sort": "Players and Notes order",
                         "sort": {
                             "name": "By name",

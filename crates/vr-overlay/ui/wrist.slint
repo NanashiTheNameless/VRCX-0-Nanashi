@@ -92,6 +92,8 @@ export component WristPanel inherits Window {
     in property <bool> dark-background: true;
     in property <[WristDeviceItem]> devices: [];
     in property <[WristFeedItem]> feed-lines: [];
+    // Fork: newest feed row last; rows that do not fit are skipped from the top.
+    in property <bool> feed-newest-at-bottom: false;
     // Fork: Players / Notes grid, up to six columns.
     in property <int> player-column-count: 0;
     in property <[WristPlayerItem]> players-0: [];
@@ -156,6 +158,7 @@ export component WristPanel inherits Window {
     property <float> visible-rows: Math.min(
         root.feed-lines.length,
         Math.floor((root.height - root.feed-top - root.now-playing-height - root.footer-height) / root.row-height));
+    property <float> feed-skip: root.feed-newest-at-bottom ? Math.max(0, root.feed-lines.length - root.visible-rows) : 0;
 
     Rectangle {
         x: 0px;
@@ -336,10 +339,10 @@ export component WristPanel inherits Window {
 
         for line[index] in root.feed-lines : Rectangle {
             x: 14px;
-            y: root.feed-top + index * root.row-height;
+            y: root.feed-top + (index - root.feed-skip) * root.row-height;
             width: parent.width - 28px;
             height: root.row-height;
-            visible: index < root.visible-rows;
+            visible: index >= root.feed-skip && index < root.feed-skip + root.visible-rows;
 
             if line.show-accent : Rectangle {
                 x: 0px;

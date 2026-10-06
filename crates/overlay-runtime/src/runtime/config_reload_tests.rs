@@ -25,11 +25,12 @@ use crate::config::{
     HMD_NOTIFICATION_OPACITY_CONFIG_KEY, HMD_NOTIFICATION_POSITION_CONFIG_KEY,
     HMD_NOTIFICATION_START_MODE_CONFIG_KEY, HMD_NOTIFICATION_STYLE_CONFIG_KEY,
     HMD_NOTIFICATION_TEXT_PERCENT_CONFIG_KEY, VR_OVERLAY_ANCHOR_CONFIG_KEY,
-    VR_OVERLAY_CONTENT_TEXT_PERCENT_CONFIG_KEY, VR_OVERLAY_FOOTER_TEXT_PERCENT_CONFIG_KEY,
-    VR_OVERLAY_HEADER_TEXT_PERCENT_CONFIG_KEY, VR_OVERLAY_HIDE_PRIVATE_WORLDS_CONFIG_KEY,
-    VR_OVERLAY_MAX_HEIGHT_CM_CONFIG_KEY, VR_OVERLAY_OFFSET_OUT_CM_CONFIG_KEY,
-    VR_OVERLAY_OFFSET_SIDE_CM_CONFIG_KEY, VR_OVERLAY_OFFSET_UP_CM_CONFIG_KEY,
-    VR_OVERLAY_SIZE_CONFIG_KEY, VR_OVERLAY_TILT_DEGREES_CONFIG_KEY, VR_OVERLAY_WIDTH_CM_CONFIG_KEY,
+    VR_OVERLAY_CONTENT_TEXT_PERCENT_CONFIG_KEY, VR_OVERLAY_FEED_ORDER_CONFIG_KEY,
+    VR_OVERLAY_FOOTER_TEXT_PERCENT_CONFIG_KEY, VR_OVERLAY_HEADER_TEXT_PERCENT_CONFIG_KEY,
+    VR_OVERLAY_HIDE_PRIVATE_WORLDS_CONFIG_KEY, VR_OVERLAY_MAX_HEIGHT_CM_CONFIG_KEY,
+    VR_OVERLAY_OFFSET_OUT_CM_CONFIG_KEY, VR_OVERLAY_OFFSET_SIDE_CM_CONFIG_KEY,
+    VR_OVERLAY_OFFSET_UP_CM_CONFIG_KEY, VR_OVERLAY_SIZE_CONFIG_KEY,
+    VR_OVERLAY_TILT_DEGREES_CONFIG_KEY, VR_OVERLAY_WIDTH_CM_CONFIG_KEY,
 };
 use crate::VrOverlayRuntimeServices;
 use vrcx_0_host_desktop::vr_overlay::{OverlayPlacement, WristAnchor};
@@ -458,6 +459,7 @@ fn wrist_placement_loads_clamps_and_falls_back_to_the_size_preset() {
         (512, 1024)
     );
     assert_eq!(render.content_text_percent, 100);
+    assert!(!render.feed_newest_at_bottom);
     assert_eq!(runtime.current_runtime_config().hmd.text_percent, 100);
 
     config
@@ -481,6 +483,7 @@ fn wrist_placement_loads_clamps_and_falls_back_to_the_size_preset() {
         (VR_OVERLAY_FOOTER_TEXT_PERCENT_CONFIG_KEY, "10"),
         (VR_OVERLAY_CONTENT_TEXT_PERCENT_CONFIG_KEY, "999"),
         (HMD_NOTIFICATION_TEXT_PERCENT_CONFIG_KEY, "125"),
+        (VR_OVERLAY_FEED_ORDER_CONFIG_KEY, "newestBottom"),
     ] {
         config.set_string(key, value).unwrap();
     }
@@ -500,4 +503,5 @@ fn wrist_placement_loads_clamps_and_falls_back_to_the_size_preset() {
     assert_eq!(config.render.footer_text_percent, 50);
     assert_eq!(config.render.content_text_percent, 200);
     assert_eq!(config.hmd.text_percent, 125);
+    assert!(config.render.feed_newest_at_bottom);
 }

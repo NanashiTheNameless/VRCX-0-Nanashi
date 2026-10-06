@@ -26,6 +26,7 @@ pub const VR_OVERLAY_SHOW_DEVICES_CONFIG_KEY: &str = "wristOverlayShowDevices";
 pub const VR_OVERLAY_SHOW_BATTERY_PERCENT_CONFIG_KEY: &str = "wristOverlayShowBatteryPercent";
 pub const VR_OVERLAY_PAGES_CONFIG_KEY: &str = "wristOverlayPages";
 pub const VR_OVERLAY_PLAYERS_SORT_CONFIG_KEY: &str = "wristOverlayPlayersSort";
+pub const VR_OVERLAY_FEED_ORDER_CONFIG_KEY: &str = "wristOverlayFeedOrder";
 pub const VR_OVERLAY_TIMEOUT_SECONDS_CONFIG_KEY: &str = "wristOverlayTimeoutSeconds";
 pub const VR_OVERLAY_WIDTH_CM_CONFIG_KEY: &str = "wristOverlayWidthCm";
 pub const VR_OVERLAY_ANCHOR_CONFIG_KEY: &str = "wristOverlayAnchor";
@@ -216,6 +217,9 @@ pub(super) fn load_runtime_config(
             header_text_percent: text_percent(VR_OVERLAY_HEADER_TEXT_PERCENT_CONFIG_KEY),
             footer_text_percent: text_percent(VR_OVERLAY_FOOTER_TEXT_PERCENT_CONFIG_KEY),
             content_text_percent: text_percent(VR_OVERLAY_CONTENT_TEXT_PERCENT_CONFIG_KEY),
+            feed_newest_at_bottom: config
+                .get_string(VR_OVERLAY_FEED_ORDER_CONFIG_KEY, "newestTop")
+                .is_ok_and(|value| value.trim() == "newestBottom"),
             hide_private_worlds,
             dark_background,
             show_devices,

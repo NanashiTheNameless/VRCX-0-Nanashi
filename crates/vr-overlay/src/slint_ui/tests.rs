@@ -348,6 +348,34 @@ fn wrist_panel_fills_the_width_of_every_overlay_size_preset() {
 }
 
 #[test]
+fn wrist_feed_drops_the_oldest_rows_in_either_order() {
+    // Rows that fit at 512px max height, plus three more; only the oldest row
+    // carries an accent, so it is visible exactly when it was not dropped.
+    let capacity = (512 - 49 - 34) / 38;
+    let mut rows = (0..capacity + 3).map(feed_row).collect::<Vec<_>>();
+    rows[0].severity = FeedSeverity::Warning;
+    let oldest_accent_painted = |rows: &[FeedLine], newest_at_bottom: bool| {
+        let mut model = sample_wrist_model();
+        model.feed_newest_at_bottom = newest_at_bottom;
+        model.feed_rows = rows.to_vec();
+        if !newest_at_bottom {
+            model.feed_rows.reverse();
+        }
+        let frame = SlintWristRenderer::new().render(&model).unwrap();
+        (0..frame.size.height).any(|y| {
+            let px = ((y * frame.size.width + 15) * 4) as usize;
+            frame.data[px] > 200 && frame.data[px + 1] < 120
+        })
+    };
+
+    assert!(!oldest_accent_painted(&rows, false));
+    assert!(!oldest_accent_painted(&rows, true));
+    rows.truncate(capacity as usize);
+    assert!(oldest_accent_painted(&rows, false));
+    assert!(oldest_accent_painted(&rows, true));
+}
+
+#[test]
 fn wrist_panel_feed_grows_up_to_the_max_height() {
     for preset in overlay_size_presets() {
         let max_height = preset.width * 2;
@@ -678,6 +706,7 @@ fn sample_wrist_model() -> WristSurfaceModel {
                 priority: 20,
             },
         ],
+        feed_newest_at_bottom: false,
         feed_rows: vec![FeedLine {
             time_text: "16:31".to_string(),
             kind: FeedKind::Invite,

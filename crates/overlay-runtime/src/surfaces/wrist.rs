@@ -156,6 +156,8 @@ pub struct WristOverlayRenderOptions {
     pub header_text_percent: u8,
     pub footer_text_percent: u8,
     pub content_text_percent: u8,
+    /// Fork: newest feed entry on the bottom row instead of the top.
+    pub feed_newest_at_bottom: bool,
     pub hide_private_worlds: bool,
     pub dark_background: bool,
     pub show_devices: bool,
@@ -171,6 +173,7 @@ impl Default for WristOverlayRenderOptions {
             header_text_percent: 100,
             footer_text_percent: 100,
             content_text_percent: 100,
+            feed_newest_at_bottom: false,
             hide_private_worlds: false,
             dark_background: true,
             show_devices: true,
@@ -427,15 +430,23 @@ pub fn build_wrist_surface_model(input: WristOverlayFrameInput) -> WristSurfaceM
         input.show_instance_id_in_location,
     );
     let feed_rows = match input.page {
-        WristPage::Feed => input
-            .activity
-            .entries
-            .iter()
-            .rev()
-            .filter(|entry| !should_hide_private_world(entry, input.options.hide_private_worlds))
-            .take(MAX_FEED_ROWS)
-            .map(|entry| feed_line_from_activity(entry, &localizer))
-            .collect(),
+        WristPage::Feed => {
+            let mut rows: Vec<FeedLine> = input
+                .activity
+                .entries
+                .iter()
+                .rev()
+                .filter(|entry| {
+                    !should_hide_private_world(entry, input.options.hide_private_worlds)
+                })
+                .take(MAX_FEED_ROWS)
+                .map(|entry| feed_line_from_activity(entry, &localizer))
+                .collect();
+            if input.options.feed_newest_at_bottom {
+                rows.reverse();
+            }
+            rows
+        }
         WristPage::Players | WristPage::Notes => Vec::new(),
     };
     let player_cells = match input.page {
@@ -480,6 +491,7 @@ pub fn build_wrist_surface_model(input: WristOverlayFrameInput) -> WristSurfaceM
             Vec::new()
         },
         feed_rows,
+        feed_newest_at_bottom: input.options.feed_newest_at_bottom,
         players: player_cells,
         text: WristTextScale {
             header_percent: input.options.header_text_percent,

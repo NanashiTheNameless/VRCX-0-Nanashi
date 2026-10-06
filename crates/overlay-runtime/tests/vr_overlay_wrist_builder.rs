@@ -65,6 +65,51 @@ fn wrist_builder_keeps_renderer_model_free_of_application_entry_shape() {
 }
 
 #[test]
+fn wrist_builder_puts_the_newest_feed_entry_on_the_chosen_end() {
+    let snapshot = ActivitySnapshot {
+        entries: (1..=3)
+            .map(|sequence| {
+                activity_entry(
+                    sequence,
+                    "Online",
+                    ActivityCategory::FavoriteMovement,
+                    &format!("Entry {sequence}"),
+                )
+            })
+            .collect(),
+    };
+    let details = |newest_at_bottom: bool| {
+        build_wrist_surface_model(WristOverlayFrameInput {
+            activity: snapshot.clone(),
+            devices: Vec::new(),
+            now_playing: None,
+            live_now_playing: false,
+            footer: WristRuntimeFooter::default(),
+            options: WristOverlayRenderOptions {
+                feed_newest_at_bottom: newest_at_bottom,
+                ..Default::default()
+            },
+            locale: "en".to_string(),
+            show_instance_id_in_location: false,
+            captured_at_ms: 42,
+            page: Default::default(),
+            players: Vec::new(),
+        })
+        .feed_rows
+        .into_iter()
+        .map(|row| row.detail)
+        .collect::<Vec<_>>()
+    };
+
+    let top = details(false);
+    let bottom = details(true);
+    assert_eq!(top.len(), 3);
+    assert!(top[0].contains("Entry 3"), "{top:?}");
+    assert!(bottom[2].contains("Entry 3"), "{bottom:?}");
+    assert_eq!(bottom.iter().rev().cloned().collect::<Vec<_>>(), top);
+}
+
+#[test]
 fn wrist_builder_maps_feed_icon_types_to_matching_accents() {
     let snapshot = ActivitySnapshot {
         entries: [

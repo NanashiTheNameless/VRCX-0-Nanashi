@@ -8,6 +8,9 @@ pub struct WristSurfaceModel {
     pub dark_background: bool,
     pub show_battery_percent: bool,
     pub devices: Vec<DeviceChip>,
+    /// Rows are oldest first and the newest sits on the bottom row; rows that
+    /// do not fit are dropped from the top (oldest) instead of the bottom.
+    pub feed_newest_at_bottom: bool,
     pub feed_rows: Vec<FeedLine>,
     /// Fork: Players / Notes pages. Every player is listed in full; the
     /// renderer adds columns, then shrinks the grid text, to fit the height.
