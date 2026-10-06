@@ -13,7 +13,7 @@ use openvr::{
     tracked_device_index, ApplicationType, Context, Overlay, System, TrackedControllerRole,
     TrackedDeviceClass, TrackedDeviceIndex, MAX_TRACKED_DEVICE_COUNT,
 };
-use vrcx_0_vr_overlay::{OverlaySurfaceId, RgbaFrame, MAIN_SURFACE_ID};
+use vrcx_0_vr_overlay::{OverlaySize, OverlaySurfaceId, RgbaFrame, MAIN_SURFACE_ID};
 
 use super::openvr_helpers::{
     frame_fingerprint, load_overlay_fn_table, overlay_button_mask, set_overlay_premultiplied_alpha,
@@ -110,6 +110,7 @@ struct OpenVrSurface {
     config: OverlaySurfaceConfig,
     transform_device: Option<TrackedDeviceIndex>,
     policy: WristVisibilityPolicy,
+    frame_aspect: f32,
     visible: bool,
     active: bool,
     pending_frame: Option<PendingFrame>,
@@ -133,6 +134,10 @@ impl OpenVrSurface {
 
     fn back_handle(&self) -> OverlayHandle {
         self.handles[1 - self.front]
+    }
+
+    fn height_meters(&self) -> f32 {
+        self.config.physical_width_meters * self.frame_aspect
     }
 
     fn take_pending_frame_if_due(&mut self, now: Instant) -> Option<(OverlayHandle, PendingFrame)> {
@@ -164,6 +169,7 @@ struct SurfaceUpdateCandidate {
     config: OverlaySurfaceConfig,
     transform_device: Option<TrackedDeviceIndex>,
     policy: WristVisibilityPolicy,
+    height_meters: f32,
 }
 
 impl OpenVrOverlayBackend {
@@ -267,6 +273,7 @@ impl OverlayBackend for OpenVrOverlayBackend {
                 policy: WristVisibilityPolicy::new(Duration::from_millis(
                     config.visible_duration_ms,
                 )),
+                frame_aspect: frame_aspect(config.size),
                 visible: false,
                 active: true,
                 pending_frame: None,
@@ -572,6 +579,7 @@ impl OpenVrOverlayBackend {
                 config: surface.config.clone(),
                 transform_device: surface.transform_device,
                 policy: surface.policy,
+                height_meters: surface.height_meters(),
             })
             .collect::<Vec<_>>();
 
@@ -593,7 +601,10 @@ impl OpenVrOverlayBackend {
                             .set_transform_tracked_device_relative(
                                 handle,
                                 device,
-                                &surface_transform(&candidate.config.placement),
+                                &surface_transform(
+                                    &candidate.config.placement,
+                                    candidate.height_meters,
+                                ),
                             )
                             .map_err(|error| format!("set overlay transform failed: {error:?}"))?;
                     }
@@ -635,6 +646,11 @@ impl OpenVrOverlayBackend {
             .as_ref()
             .ok_or_else(|| "OpenVR system interface is not started".to_string())?;
         let handles = self.surface_handles(&config.surface_id)?;
+        let height_meters = self
+            .surfaces
+            .get(&config.surface_id)
+            .map_or(frame_aspect(config.size), |surface| surface.frame_aspect)
+            * config.physical_width_meters;
         let overlay = self
             .overlay
             .as_mut()
@@ -662,7 +678,7 @@ impl OpenVrOverlayBackend {
                         .set_transform_tracked_device_relative(
                             handle,
                             device,
-                            &surface_transform(&config.placement),
+                            &surface_transform(&config.placement, height_meters),
                         )
                         .map_err(|error| format!("set overlay transform failed: {error:?}"))?;
                 }
@@ -870,17 +886,30 @@ impl OpenVrOverlayBackend {
         pending_frame: PendingFrame,
     ) -> Result<(), String> {
         let uploaded = self.upload_frame(handle, &pending_frame.frame);
+        let mut reanchor = None;
         if let Some(surface) = self.surfaces.get_mut(surface_id) {
             match uploaded {
                 Ok(()) => {
                     surface.back_loading = true;
                     surface.last_uploaded_frame_fingerprint = Some(pending_frame.fingerprint);
+                    surface.frame_aspect = frame_aspect(pending_frame.frame.size);
+                    reanchor = surface.transform_device.map(|device| {
+                        (
+                            device,
+                            surface_transform(&surface.config.placement, surface.height_meters()),
+                        )
+                    });
                 }
                 Err(_) => {
                     surface.pending_frame = Some(pending_frame);
                     surface.last_visible_frame_upload_at = None;
                 }
             }
+        }
+        if let (Some((device, transform)), Some(overlay)) = (reanchor, self.overlay.as_mut()) {
+            overlay
+                .set_transform_tracked_device_relative(handle, device, &transform)
+                .map_err(|error| format!("set overlay transform failed: {error:?}"))?;
         }
         uploaded
     }
@@ -944,6 +973,10 @@ fn init_start_error(context: &str, error: openvr::InitError) -> BackendStartErro
     } else {
         BackendStartError::transient(message)
     }
+}
+
+fn frame_aspect(size: OverlaySize) -> f32 {
+    size.height as f32 / size.width.max(1) as f32
 }
 
 fn validate_frame(frame: &RgbaFrame) -> Result<(), String> {

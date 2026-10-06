@@ -81,36 +81,8 @@ pub(super) fn is_oculus_tracking_system(value: Option<&str>) -> bool {
         .unwrap_or(false)
 }
 
-pub(super) fn surface_transform(placement: &OverlayPlacement) -> Matrix3x4 {
-    match placement {
-        OverlayPlacement::TrackedDeviceRelative { device_hint } if device_hint == "left-hand" => {
-            Matrix3x4([
-                [0.0, 0.0, -1.0, -0.07],
-                [0.0, -1.0, 0.0, -0.05],
-                [-1.0, 0.0, 0.0, 0.06],
-            ])
-        }
-        OverlayPlacement::TrackedDeviceRelative { device_hint } if device_hint == "right-hand" => {
-            Matrix3x4([
-                [0.0, 0.0, 1.0, 0.07],
-                [0.0, -1.0, 0.0, -0.05],
-                [1.0, 0.0, 0.0, 0.06],
-            ])
-        }
-        OverlayPlacement::HeadLocked {
-            offset_y_meters,
-            distance_meters,
-        } => Matrix3x4([
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, *offset_y_meters],
-            [0.0, 0.0, 1.0, -distance_meters],
-        ]),
-        OverlayPlacement::TrackedDeviceRelative { .. } => Matrix3x4([
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.035],
-            [0.0, 0.0, 1.0, 0.055],
-        ]),
-    }
+pub(super) fn surface_transform(placement: &OverlayPlacement, height_meters: f32) -> Matrix3x4 {
+    Matrix3x4(placement.transform(height_meters))
 }
 
 pub(super) fn is_display_device_class(class: TrackedDeviceClass) -> bool {

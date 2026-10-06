@@ -76,7 +76,6 @@ enum Attachment {
 struct SurfaceState {
     config: OverlaySurfaceConfig,
     attachment: Attachment,
-    pose: xr::Posef,
     swapchain: xr::Swapchain<xr::Vulkan>,
     images: Vec<vk::Image>,
     width: u32,
@@ -348,6 +347,7 @@ impl SessionContext {
                     Attachment::Hand(hand) => self.input.grip_space(hand),
                 };
                 let aspect = surface.height as f32 / surface.width.max(1) as f32;
+                let height_meters = surface.config.physical_width_meters * aspect;
                 quads.push(
                     xr::CompositionLayerQuad::<xr::Vulkan>::new()
                         .layer_flags(xr::CompositionLayerFlags::BLEND_TEXTURE_SOURCE_ALPHA)
@@ -365,10 +365,10 @@ impl SessionContext {
                                     },
                                 }),
                         )
-                        .pose(surface.pose)
+                        .pose(placement_pose(&surface.config.placement, height_meters))
                         .size(xr::Extent2Df {
                             width: surface.config.physical_width_meters,
-                            height: surface.config.physical_width_meters * aspect,
+                            height: height_meters,
                         }),
                 );
             }
@@ -427,7 +427,6 @@ impl SessionContext {
         if let Some(existing) = self.surfaces.get_mut(&config.surface_id) {
             if existing.width == config.size.width && existing.height == config.size.height {
                 existing.attachment = attachment;
-                existing.pose = placement_pose(&config.placement);
                 existing.config = config;
                 return Ok(());
             }
@@ -478,7 +477,6 @@ impl SessionContext {
             config.surface_id.clone(),
             SurfaceState {
                 attachment,
-                pose: placement_pose(&config.placement),
                 swapchain,
                 images,
                 width,
@@ -652,36 +650,8 @@ fn parse_attachment(placement: &OverlayPlacement) -> Result<Attachment, String> 
     }
 }
 
-fn placement_pose(placement: &OverlayPlacement) -> xr::Posef {
-    match placement {
-        OverlayPlacement::TrackedDeviceRelative { device_hint } if device_hint == "left-hand" => {
-            matrix3x4_to_posef([
-                [0.0, 0.0, -1.0, -0.07],
-                [0.0, -1.0, 0.0, -0.05],
-                [-1.0, 0.0, 0.0, 0.06],
-            ])
-        }
-        OverlayPlacement::TrackedDeviceRelative { device_hint } if device_hint == "right-hand" => {
-            matrix3x4_to_posef([
-                [0.0, 0.0, 1.0, 0.07],
-                [0.0, -1.0, 0.0, -0.05],
-                [1.0, 0.0, 0.0, 0.06],
-            ])
-        }
-        OverlayPlacement::HeadLocked {
-            offset_y_meters,
-            distance_meters,
-        } => matrix3x4_to_posef([
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, *offset_y_meters],
-            [0.0, 0.0, 1.0, -distance_meters],
-        ]),
-        OverlayPlacement::TrackedDeviceRelative { .. } => matrix3x4_to_posef([
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.035],
-            [0.0, 0.0, 1.0, 0.055],
-        ]),
-    }
+fn placement_pose(placement: &OverlayPlacement, height_meters: f32) -> xr::Posef {
+    matrix3x4_to_posef(placement.transform(height_meters))
 }
 
 fn matrix3x4_to_posef(m: [[f32; 4]; 3]) -> xr::Posef {

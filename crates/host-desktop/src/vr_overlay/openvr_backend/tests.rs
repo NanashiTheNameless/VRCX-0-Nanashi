@@ -171,6 +171,7 @@ fn test_main_surface(frame: RgbaFrame, last_uploaded_at: Instant) -> OpenVrSurfa
         },
         transform_device: None,
         policy: WristVisibilityPolicy::default(),
+        frame_aspect: 1.0,
         visible: true,
         active: true,
         pending_frame: Some(PendingFrame { frame, fingerprint }),

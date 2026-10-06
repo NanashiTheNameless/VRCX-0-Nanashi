@@ -75,6 +75,55 @@ pub enum OverlayPlacement {
     },
 }
 
+/// Wrist panels keep their bottom edge where a 0.20 m square panel's bottom
+/// edge sat, so a larger or taller panel grows upward instead of downward.
+const WRIST_ANCHOR_HALF_HEIGHT_METERS: f32 = 0.10;
+
+impl OverlayPlacement {
+    /// Row-major 3x4 pose of the overlay's center relative to its attachment.
+    #[cfg_attr(
+        not(all(
+            any(feature = "steamvr-overlay", feature = "openxr-overlay"),
+            any(windows, target_os = "linux")
+        )),
+        allow(dead_code)
+    )]
+    pub(crate) fn transform(&self, height_meters: f32) -> [[f32; 4]; 3] {
+        let mut m = match self {
+            Self::TrackedDeviceRelative { device_hint } if device_hint == "left-hand" => [
+                [0.0, 0.0, -1.0, -0.07],
+                [0.0, -1.0, 0.0, -0.05],
+                [-1.0, 0.0, 0.0, 0.06],
+            ],
+            Self::TrackedDeviceRelative { device_hint } if device_hint == "right-hand" => [
+                [0.0, 0.0, 1.0, 0.07],
+                [0.0, -1.0, 0.0, -0.05],
+                [1.0, 0.0, 0.0, 0.06],
+            ],
+            Self::HeadLocked {
+                offset_y_meters,
+                distance_meters,
+            } => {
+                return [
+                    [1.0, 0.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0, *offset_y_meters],
+                    [0.0, 0.0, 1.0, -distance_meters],
+                ]
+            }
+            Self::TrackedDeviceRelative { .. } => [
+                [1.0, 0.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0, 0.035],
+                [0.0, 0.0, 1.0, 0.055],
+            ],
+        };
+        let shift = height_meters / 2.0 - WRIST_ANCHOR_HALF_HEIGHT_METERS;
+        for row in &mut m {
+            row[3] += row[1] * shift;
+        }
+        m
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum OverlayActivationButton {
@@ -100,4 +149,39 @@ pub enum VrDeviceStatus {
     Charging,
     TrackingWarning,
     Disconnected,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn bottom_edge(placement: &OverlayPlacement, height_meters: f32) -> [f32; 3] {
+        let m = placement.transform(height_meters);
+        std::array::from_fn(|row| m[row][3] - m[row][1] * height_meters / 2.0)
+    }
+
+    #[test]
+    fn wrist_panels_grow_upward_from_a_fixed_bottom_edge() {
+        for hand in ["left-hand", "right-hand"] {
+            let placement = OverlayPlacement::TrackedDeviceRelative {
+                device_hint: hand.to_string(),
+            };
+            let reference = bottom_edge(&placement, 0.20);
+            for height in [0.16, 0.20, 0.40, 0.48] {
+                let edge = bottom_edge(&placement, height);
+                for row in 0..3 {
+                    assert!((edge[row] - reference[row]).abs() < 1e-6, "{hand} {height}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn head_locked_placement_ignores_height() {
+        let placement = OverlayPlacement::HeadLocked {
+            offset_y_meters: -0.3,
+            distance_meters: 1.3,
+        };
+        assert_eq!(placement.transform(0.2), placement.transform(0.9));
+    }
 }
