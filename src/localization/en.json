@@ -2715,7 +2715,14 @@
                     "sidebar_avatar_frame": "Show Avatar Frame",
                     "sidebar_avatar_frame_description": "Show the decorative frame around avatars in the friends sidebar.",
                     "sidebar_nameplate": "Show Nameplate",
-                    "sidebar_nameplate_description": "Show the nameplate on the right side of friend rows in the friends sidebar."
+                    "sidebar_nameplate_description": "Show the nameplate on the right side of friend rows in the friends sidebar.",
+                    "hover_card": "Hover Card",
+                    "hover_card_avatar_frame": "Show Avatar Frame",
+                    "hover_card_avatar_frame_description": "Show the decorative frame around the avatar in user hover cards.",
+                    "hover_card_profile_effect": "Show Profile Effect",
+                    "hover_card_profile_effect_description": "Show the profile effect over user hover cards.",
+                    "hover_card_nameplate": "Show Nameplate",
+                    "hover_card_nameplate_description": "Show the nameplate behind the name in user hover cards."
                 },
                 "user_dialog": {
                     "header": "User Dialog",
@@ -6206,7 +6213,7 @@
         },
         "database": {
             "migration_found_title": "Existing VRCX database detected",
-            "migration_found_description": "An existing VRCX database was found on this computer. Would you like to migrate it to VRCX-0-Nanashi? The original VRCX data will not be modified",
+            "migration_found_description": "An existing VRCX database was found on this computer. Would you like to migrate it to VRCX-0-Nanashi? The original VRCX data will not be modified. Before migrating, make sure VRCX is fully closed, including its tray icon.",
             "legacy_vrcx_running_title": "VRCX is running",
             "legacy_vrcx_running_description": "VRCX-0-Nanashi detected that VRCX is still running. Close it, then select Retry. Forcing the migration may fail.",
             "legacy_vrcx_check_again": "Retry",

@@ -19,7 +19,10 @@ export function SettingsInterfaceProfileAppearanceCard() {
             showUserDialogProfileEffect: state.showUserDialogProfileEffect,
             showUserDialogNameplateEffect: state.showUserDialogNameplateEffect,
             showSidebarAvatarFrame: state.showSidebarAvatarFrame,
-            showSidebarNameplate: state.showSidebarNameplate
+            showSidebarNameplate: state.showSidebarNameplate,
+            showHoverCardAvatarFrame: state.showHoverCardAvatarFrame,
+            showHoverCardProfileEffect: state.showHoverCardProfileEffect,
+            showHoverCardNameplate: state.showHoverCardNameplate
         }))
     );
     const {
@@ -28,7 +31,10 @@ export function SettingsInterfaceProfileAppearanceCard() {
         onShowUserDialogProfileEffectChange,
         onShowUserDialogNameplateEffectChange,
         onShowSidebarAvatarFrameChange,
-        onShowSidebarNameplateChange
+        onShowSidebarNameplateChange,
+        onShowHoverCardAvatarFrameChange,
+        onShowHoverCardProfileEffectChange,
+        onShowHoverCardNameplateChange
     } = settingsInterface;
     const anyDecorationShown =
         prefs.showUserDialogProfileBackground ||
@@ -159,6 +165,53 @@ export function SettingsInterfaceProfileAppearanceCard() {
                     <Switch
                         checked={prefs.showSidebarNameplate}
                         onCheckedChange={onShowSidebarNameplateChange}
+                    />
+                </Field>
+            </FieldGroup>
+
+            <FieldGroup className="gap-0">
+                <SettingsSectionHeading
+                    title={t(
+                        'view.settings.appearance.profile_appearance.hover_card'
+                    )}
+                />
+                <Field
+                    label={t(
+                        'view.settings.appearance.profile_appearance.hover_card_avatar_frame'
+                    )}
+                    description={t(
+                        'view.settings.appearance.profile_appearance.hover_card_avatar_frame_description'
+                    )}
+                >
+                    <Switch
+                        checked={prefs.showHoverCardAvatarFrame}
+                        onCheckedChange={onShowHoverCardAvatarFrameChange}
+                    />
+                </Field>
+                <Field
+                    label={t(
+                        'view.settings.appearance.profile_appearance.hover_card_profile_effect'
+                    )}
+                    description={t(
+                        'view.settings.appearance.profile_appearance.hover_card_profile_effect_description'
+                    )}
+                >
+                    <Switch
+                        checked={prefs.showHoverCardProfileEffect}
+                        onCheckedChange={onShowHoverCardProfileEffectChange}
+                    />
+                </Field>
+                <Field
+                    label={t(
+                        'view.settings.appearance.profile_appearance.hover_card_nameplate'
+                    )}
+                    description={t(
+                        'view.settings.appearance.profile_appearance.hover_card_nameplate_description'
+                    )}
+                >
+                    <Switch
+                        checked={prefs.showHoverCardNameplate}
+                        onCheckedChange={onShowHoverCardNameplateChange}
                     />
                 </Field>
             </FieldGroup>

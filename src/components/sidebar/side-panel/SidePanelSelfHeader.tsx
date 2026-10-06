@@ -5,6 +5,11 @@ import { useTranslation } from 'react-i18next';
 import { CurrentUserSocialStatusDialog } from '@/components/dialogs/user-dialog/UserSelfEditDialogs';
 import { useLocationMetadata } from '@/components/location/useLocationMetadata';
 import {
+    ProfileAvatarFrame,
+    ProfileNameplate,
+    useDecorationHover
+} from '@/components/ProfileDecorations';
+import {
     CurrentUserActionItems,
     resolveCurrentUserStatusLabelKey
 } from '@/components/sidebar/friends-sidebar/FriendsSidebarActionItems';
@@ -20,11 +25,6 @@ import {
 import { useFriendsSidebarActions } from '@/components/sidebar/friends-sidebar/useFriendsSidebarActions';
 import { useFriendsSidebarPreferences } from '@/components/sidebar/friends-sidebar/useFriendsSidebarPreferences';
 import { SidePanelSelfAccountMenu } from '@/components/sidebar/side-panel/SidePanelSelfAccountMenu';
-import {
-    SidebarAvatarFrame,
-    SidebarNameplate,
-    useSidebarDecorationHover
-} from '@/components/sidebar/SidebarProfileDecorations';
 import { useFriendsSidebarDisplayPreferences } from '@/components/sidebar/useFriendsSidebarDisplayPreferences';
 import { useFriendsSidebarRuntimeSnapshot } from '@/components/sidebar/useFriendsSidebarRuntimeSnapshot';
 import { UserStatusAvatar } from '@/components/UserStatusAvatar';
@@ -83,7 +83,7 @@ export function SidePanelSelfHeader() {
     const { t } = useTranslation();
     const [isEditingDescription, setIsEditingDescription] = useState(false);
     const [descriptionDraft, setDescriptionDraft] = useState('');
-    const decorationHover = useSidebarDecorationHover();
+    const decorationHover = useDecorationHover();
     const descriptionInputRef = useRef<HTMLInputElement | null>(null);
     const {
         currentEndpoint,
@@ -213,7 +213,7 @@ export function SidePanelSelfHeader() {
                     render={
                         <div className="relative isolate mr-1.5 flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1.5">
                             {nameplateId ? (
-                                <SidebarNameplate
+                                <ProfileNameplate
                                     templateId={nameplateId}
                                     active={decorationHover.active}
                                 />
@@ -233,7 +233,7 @@ export function SidePanelSelfHeader() {
                                     )}
                                     frame={
                                         iconFrameId ? (
-                                            <SidebarAvatarFrame
+                                            <ProfileAvatarFrame
                                                 templateId={iconFrameId}
                                                 active={decorationHover.active}
                                             />

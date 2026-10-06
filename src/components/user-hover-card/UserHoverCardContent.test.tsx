@@ -14,6 +14,11 @@ const hoverCardData = vi.hoisted(() => {
         statusDotClassName: '',
         statusDescription: '',
         note: '',
+        decorations: {
+            iconFrame: '',
+            profileEffect: '',
+            nameplateEffect: ''
+        },
         onlineForMs: 0,
         instanceEpoch: 0,
         lastOnlineAgoMs: 0,
@@ -67,6 +72,42 @@ vi.mock('./UserHoverCardMutuals', () => ({
     UserHoverCardMutuals: () => null
 }));
 
+vi.mock('@/components/ProfileDecorations', () => ({
+    ProfileAvatarFrame: ({ templateId }: { templateId: string }) => (
+        <span data-avatar-frame={templateId} />
+    ),
+    ProfileEffect: ({ templateId }: { templateId: string }) => (
+        <span data-profile-effect={templateId} />
+    ),
+    ProfileNameplate: ({ templateId }: { templateId: string }) => (
+        <span data-nameplate={templateId} />
+    )
+}));
+
+const decorationPrefs = vi.hoisted(() => ({
+    showHoverCardAvatarFrame: true,
+    showHoverCardProfileEffect: true,
+    showHoverCardNameplate: true
+}));
+
+vi.mock('@/state/preferencesStore', async (importOriginal) => {
+    const actual =
+        await importOriginal<typeof import('@/state/preferencesStore')>();
+    const usePreferencesStore = Object.assign(
+        <T,>(
+            selector: (
+                state: ReturnType<typeof actual.usePreferencesStore.getState>
+            ) => T
+        ) =>
+            selector({
+                ...actual.usePreferencesStore.getState(),
+                ...decorationPrefs
+            }),
+        actual.usePreferencesStore
+    );
+    return { ...actual, usePreferencesStore };
+});
+
 import { UserHoverCardContent } from './UserHoverCardContent';
 
 function countOccurrences(text: string, needle: string): number {
@@ -76,6 +117,11 @@ function countOccurrences(text: string, needle: string): number {
 describe('UserHoverCardContent', () => {
     beforeEach(() => {
         Object.assign(hoverCardData.model, hoverCardData.createModel());
+        Object.assign(decorationPrefs, {
+            showHoverCardAvatarFrame: true,
+            showHoverCardProfileEffect: true,
+            showHoverCardNameplate: true
+        });
     });
 
     it('does not render an online status dot for profile-only cards', () => {
@@ -129,5 +175,30 @@ describe('UserHoverCardContent', () => {
         expect(html.indexOf('Back next week')).toBeLessThan(
             html.indexOf('user_hover_card.last_online')
         );
+    });
+
+    it('renders each profile decoration only while its hover card toggle is on', () => {
+        hoverCardData.model.decorations = {
+            iconFrame: 'invt_frame',
+            profileEffect: 'invt_effect',
+            nameplateEffect: 'invt_plate'
+        };
+        const allOn = renderToStaticMarkup(
+            <UserHoverCardContent userId="usr_1" />
+        );
+        Object.assign(decorationPrefs, {
+            showHoverCardAvatarFrame: false,
+            showHoverCardNameplate: false
+        });
+        const effectOnly = renderToStaticMarkup(
+            <UserHoverCardContent userId="usr_1" />
+        );
+
+        expect(allOn).toContain('data-avatar-frame="invt_frame"');
+        expect(allOn).toContain('data-profile-effect="invt_effect"');
+        expect(allOn).toContain('data-nameplate="invt_plate"');
+        expect(effectOnly).toContain('data-profile-effect="invt_effect"');
+        expect(effectOnly).not.toContain('data-avatar-frame');
+        expect(effectOnly).not.toContain('data-nameplate');
     });
 });

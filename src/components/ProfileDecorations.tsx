@@ -14,7 +14,7 @@ import vrchatMediaRepository, {
 
 function useProfileDecorationItem(templateId: string) {
     return useQuery({
-        queryKey: ['sidebarProfileDecoration', templateId],
+        queryKey: ['profileDecoration', templateId],
         queryFn: async () =>
             (await vrchatMediaRepository.getInventoryTemplate(templateId)).json,
         enabled: Boolean(templateId),
@@ -74,7 +74,7 @@ function DecorationImage({
     );
 }
 
-export function useSidebarDecorationHover() {
+export function useDecorationHover() {
     const [hoverTarget, setHoverTarget] = useState<Element | null>(null);
 
     useEffect(() => {
@@ -109,7 +109,7 @@ export function useSidebarDecorationHover() {
     };
 }
 
-export function SidebarAvatarFrame({
+export function ProfileAvatarFrame({
     templateId,
     active
 }: {
@@ -127,7 +127,25 @@ export function SidebarAvatarFrame({
     );
 }
 
-export function SidebarNameplate({
+export function ProfileEffect({
+    templateId,
+    active
+}: {
+    templateId: string;
+    active: boolean;
+}) {
+    const item = useProfileDecorationItem(templateId);
+    return (
+        <DecorationImage
+            item={item}
+            animated={active}
+            className="absolute inset-x-0 top-0 z-20 aspect-[4/5]"
+            imageClassName="object-cover"
+        />
+    );
+}
+
+export function ProfileNameplate({
     templateId,
     active
 }: {

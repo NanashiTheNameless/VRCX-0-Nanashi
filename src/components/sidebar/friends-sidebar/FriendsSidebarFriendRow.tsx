@@ -7,10 +7,10 @@ import {
 } from '@/components/friends/FriendInstanceTimer';
 import type { LocationMetadata } from '@/components/location/useLocationMetadata';
 import {
-    SidebarAvatarFrame,
-    SidebarNameplate,
-    useSidebarDecorationHover
-} from '@/components/sidebar/SidebarProfileDecorations';
+    ProfileAvatarFrame,
+    ProfileNameplate,
+    useDecorationHover
+} from '@/components/ProfileDecorations';
 import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
 import { UserDetailContent } from '@/components/UserDetailTile';
 import type { InstanceRosterTimestamp } from '@/domain/instances/instanceRoster';
@@ -190,7 +190,7 @@ export function FriendRow({
         showAvatarFrame = false,
         showNameplate = false
     } = appearance || {};
-    const decorationHover = useSidebarDecorationHover();
+    const decorationHover = useDecorationHover();
     const iconFrameId = showAvatarFrame ? friend.iconFrame?.trim() : '';
     const nameplateId = showNameplate ? friend.nameplateEffect?.trim() : '';
     const { displaySource, imageUrl, displayName, nameStyle } =
@@ -247,7 +247,7 @@ export function FriendRow({
             {...decorationHover.hoverProps}
         >
             {nameplateId ? (
-                <SidebarNameplate
+                <ProfileNameplate
                     templateId={nameplateId}
                     active={decorationHover.active}
                 />
@@ -257,7 +257,7 @@ export function FriendRow({
                 statusDotClassName={statusDotClassName}
                 avatarFrame={
                     iconFrameId ? (
-                        <SidebarAvatarFrame
+                        <ProfileAvatarFrame
                             templateId={iconFrameId}
                             active={decorationHover.active}
                         />

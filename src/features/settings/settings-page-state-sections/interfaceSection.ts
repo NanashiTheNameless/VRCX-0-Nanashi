@@ -222,6 +222,27 @@ export function buildInterfaceSection({
                 checked
             );
         },
+        onShowHoverCardAvatarFrameChange: (checked: boolean) => {
+            saveBoolPreference(
+                'showHoverCardAvatarFrame',
+                'showHoverCardAvatarFrame',
+                checked
+            );
+        },
+        onShowHoverCardProfileEffectChange: (checked: boolean) => {
+            saveBoolPreference(
+                'showHoverCardProfileEffect',
+                'showHoverCardProfileEffect',
+                checked
+            );
+        },
+        onShowHoverCardNameplateChange: (checked: boolean) => {
+            saveBoolPreference(
+                'showHoverCardNameplate',
+                'showHoverCardNameplate',
+                checked
+            );
+        },
         onShowNewDashboardButtonChange: (checked: boolean) => {
             savePreferenceValue('showNewDashboardButton', checked, () =>
                 setShowNewDashboardButtonPreference(checked)

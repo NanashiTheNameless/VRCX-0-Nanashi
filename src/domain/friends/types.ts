@@ -14,6 +14,7 @@ export const FRIEND_PROFILE_STRING_FIELDS = [
     'iconFrame',
     'iconUrl',
     'nameplateEffect',
+    'profileEffect',
     'status',
     'statusDescription'
 ] as const;

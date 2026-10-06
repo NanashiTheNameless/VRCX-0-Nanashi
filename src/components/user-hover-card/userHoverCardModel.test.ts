@@ -15,6 +15,28 @@ const NOW = 1_700_000_600_000;
 const REAL_INSTANCE = 'wrld_12345678-1234-1234-1234-123456789012:99999';
 
 describe('buildUserHoverCardModel', () => {
+    it('takes profile decorations from the profile and falls back to the seed', () => {
+        const model = buildUserHoverCardModel({
+            seed: {
+                id: 'usr_1',
+                iconFrame: 'invt_seed_frame',
+                nameplateEffect: 'invt_seed_plate'
+            },
+            profile: {
+                id: 'usr_1',
+                iconFrame: 'invt_profile_frame',
+                profileEffect: 'invt_profile_effect'
+            },
+            nowMs: NOW
+        });
+
+        expect(model.decorations).toEqual({
+            iconFrame: 'invt_profile_frame',
+            profileEffect: 'invt_profile_effect',
+            nameplateEffect: 'invt_seed_plate'
+        });
+    });
+
     it('marks a friend in a real instance', () => {
         const model = buildUserHoverCardModel({
             seed: {

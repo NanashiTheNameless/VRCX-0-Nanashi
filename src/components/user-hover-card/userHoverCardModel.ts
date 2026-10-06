@@ -184,6 +184,17 @@ export function buildUserHoverCardModel({
                 ''
         ).trim(),
         note: String(profileRecord?.note || '').trim(),
+        decorations: {
+            iconFrame: String(
+                identity?.iconFrame || seedFields?.iconFrame || ''
+            ).trim(),
+            profileEffect: String(
+                identity?.profileEffect || seedFields?.profileEffect || ''
+            ).trim(),
+            nameplateEffect: String(
+                identity?.nameplateEffect || seedFields?.nameplateEffect || ''
+            ).trim()
+        },
         onlineForMs: estimatedOnlineMs(state, identity?.last_login, nowMs),
         lastOnlineAgoMs:
             variant === 'offline'

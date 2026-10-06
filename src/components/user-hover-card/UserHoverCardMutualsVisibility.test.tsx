@@ -32,6 +32,11 @@ vi.mock('./useUserHoverCardData', () => ({
             statusDotClassName: '',
             statusDescription: '',
             note: '',
+            decorations: {
+                iconFrame: '',
+                profileEffect: '',
+                nameplateEffect: ''
+            },
             onlineForMs: 0,
             instanceEpoch: 0,
             lastOnlineAgoMs: 0,

@@ -34,14 +34,14 @@ vi.mock('@/components/UserDetailTile', () => ({
     )
 }));
 
-vi.mock('@/components/sidebar/SidebarProfileDecorations', () => ({
-    SidebarAvatarFrame: ({ templateId }: { templateId: string }) => (
+vi.mock('@/components/ProfileDecorations', () => ({
+    ProfileAvatarFrame: ({ templateId }: { templateId: string }) => (
         <span data-avatar-frame={templateId} />
     ),
-    SidebarNameplate: ({ templateId }: { templateId: string }) => (
+    ProfileNameplate: ({ templateId }: { templateId: string }) => (
         <span data-nameplate={templateId} />
     ),
-    useSidebarDecorationHover: () => ({ active: false, hoverProps: {} })
+    useDecorationHover: () => ({ active: false, hoverProps: {} })
 }));
 
 vi.mock('@/ui/shadcn/context-menu', () => ({

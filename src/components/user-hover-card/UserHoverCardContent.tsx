@@ -14,6 +14,11 @@ import { useTranslation } from 'react-i18next';
 import { FriendInstanceTimer } from '@/components/friends/FriendInstanceTimer';
 import { Location } from '@/components/Location';
 import { FadeInImage } from '@/components/media/FadeInImage';
+import {
+    ProfileAvatarFrame,
+    ProfileEffect,
+    ProfileNameplate
+} from '@/components/ProfileDecorations';
 import { UserStatusDot } from '@/components/UserStatusDot';
 import { timeToText } from '@/lib/dateTime';
 import { openUserDialog, openWorldDialog } from '@/services/dialogService';
@@ -21,6 +26,7 @@ import { TRUST_COLOR_ENTRIES } from '@/shared/constants/trustColors';
 import { getTrustColor } from '@/shared/utils/trustColors';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useModalStore } from '@/state/modalStore';
+import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { Skeleton } from '@/ui/shadcn/skeleton';
 
@@ -69,6 +75,15 @@ export function UserHoverCardContent({
         instanceEpoch
     } = useUserHoverCardData({ userId, seed });
     const openImagePreview = useModalStore((state) => state.openImagePreview);
+    const showAvatarFrame = usePreferencesStore(
+        (state) => state.showHoverCardAvatarFrame
+    );
+    const showProfileEffect = usePreferencesStore(
+        (state) => state.showHoverCardProfileEffect
+    );
+    const showNameplate = usePreferencesStore(
+        (state) => state.showHoverCardNameplate
+    );
     const currentUserId = useRuntimeStore((state) => state.auth.currentUserId);
     const isFriend = useFriendRosterStore((state) =>
         Boolean(state.friendsById[userId])
@@ -91,11 +106,19 @@ export function UserHoverCardContent({
     const isOffline = model.variant === 'offline';
     const showInlineStatus = Boolean(statusText) && !hasStatusDescription;
     const showThumbnailBanner = model.variant === 'in-instance';
+    const iconFrameId = showAvatarFrame ? model.decorations.iconFrame : '';
+    const profileEffectId = showProfileEffect
+        ? model.decorations.profileEffect
+        : '';
+    const nameplateId = showNameplate ? model.decorations.nameplateEffect : '';
     const onlineForText =
         model.onlineForMs > 0 ? timeToText(model.onlineForMs) : '';
 
     return (
-        <div className="w-full">
+        <div className="relative isolate w-full">
+            {profileEffectId ? (
+                <ProfileEffect templateId={profileEffectId} active />
+            ) : null}
             {showThumbnailBanner ? (
                 <button
                     type="button"
@@ -122,7 +145,10 @@ export function UserHoverCardContent({
             ) : null}
 
             <div className="space-y-2.5 p-3">
-                <div className="flex items-center gap-2.5">
+                <div className="relative isolate -mx-1.5 flex items-center gap-2.5 rounded-lg px-1.5">
+                    {nameplateId ? (
+                        <ProfileNameplate templateId={nameplateId} active />
+                    ) : null}
                     <button
                         type="button"
                         className="relative flex size-10 shrink-0 rounded-full enabled:cursor-pointer"
@@ -149,6 +175,12 @@ export function UserHoverCardContent({
                                 <UserIcon className="text-muted-foreground size-5" />
                             )}
                         </span>
+                        {iconFrameId ? (
+                            <ProfileAvatarFrame
+                                templateId={iconFrameId}
+                                active
+                            />
+                        ) : null}
                         <UserStatusDot
                             statusDotClassName={statusDotClassName}
                             className="absolute -right-0.5 -bottom-0.5 z-10 size-3.75"

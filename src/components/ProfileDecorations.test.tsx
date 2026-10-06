@@ -9,12 +9,12 @@ import {
 } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { useSidebarDecorationHover } from './SidebarProfileDecorations';
+import { useDecorationHover } from './ProfileDecorations';
 
 afterEach(cleanup);
 
 function HoverProbe() {
-    const { active, hoverProps } = useSidebarDecorationHover();
+    const { active, hoverProps } = useDecorationHover();
     return (
         <div data-testid="row" data-active={String(active)} {...hoverProps}>
             <span data-testid="inner" />
@@ -28,7 +28,7 @@ function movePointerTo(target: Element) {
     });
 }
 
-describe('useSidebarDecorationHover', () => {
+describe('useDecorationHover', () => {
     it('stays active while the pointer moves inside the hovered element', () => {
         render(<HoverProbe />);
         const row = screen.getByTestId('row');
