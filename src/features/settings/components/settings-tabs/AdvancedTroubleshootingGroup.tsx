@@ -1,14 +1,19 @@
 import { RefreshCwIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { commands } from '@/platform/tauri/bindings';
+import {
+    commands,
+    type DeepLinkSchemeSettings,
+    type HostPlatform
+} from '@/platform/tauri/bindings';
 import { toast } from '@/services/toastService';
 import { Button } from '@/ui/shadcn/button';
 import { Spinner } from '@/ui/shadcn/spinner';
 import { Switch } from '@/ui/shadcn/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
+import { DeepLinkRegistrationField } from '../DeepLinkRegistrationField';
 import { SettingsCard } from '../SettingsCard';
 import { Field, JsonTreeView, SettingsSectionHeading } from '../SettingsField';
 import type {
@@ -18,8 +23,78 @@ import type {
 
 type DiagnosticAction = 'config' | 'online' | 'tables';
 
+// Fork: turn the extra link schemes on/off (vrcx-0-nanashi:// is always on).
+function DeepLinkSchemeToggles() {
+    const { t } = useTranslation();
+    const [settings, setSettings] = useState<DeepLinkSchemeSettings | null>(
+        null
+    );
+
+    useEffect(() => {
+        let active = true;
+        commands
+            .appDeepLinkSchemesGet()
+            .then((result) => {
+                if (active) setSettings(result);
+            })
+            .catch(() => {});
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    if (!settings) {
+        return null;
+    }
+
+    async function update(next: DeepLinkSchemeSettings) {
+        setSettings(next);
+        try {
+            setSettings(await commands.appDeepLinkSchemesSet(next));
+        } catch (error: unknown) {
+            setSettings(settings);
+            toast.add({
+                type: 'error',
+                title: error instanceof Error ? error.message : String(error)
+            });
+        }
+    }
+
+    return (
+        <>
+            <Field
+                label={t('view.settings.deep_link_schemes.upstream')}
+                description={t(
+                    'view.settings.deep_link_schemes.upstream_description'
+                )}
+            >
+                <Switch
+                    checked={settings.upstream}
+                    onCheckedChange={(checked) =>
+                        void update({ ...settings, upstream: checked })
+                    }
+                />
+            </Field>
+            <Field
+                label={t('view.settings.deep_link_schemes.legacy')}
+                description={t(
+                    'view.settings.deep_link_schemes.legacy_description'
+                )}
+            >
+                <Switch
+                    checked={settings.legacy}
+                    onCheckedChange={(checked) =>
+                        void update({ ...settings, legacy: checked })
+                    }
+                />
+            </Field>
+        </>
+    );
+}
+
 type AdvancedTroubleshootingGroupProps = {
     configTreeData: Record<string, unknown>;
+    hostPlatform?: HostPlatform;
     onClearConfigTreeData: () => void;
     onLogResourceLoadChange: (checked: boolean) => void;
     onRefreshConfigTreeData: SettingsAdvancedAction;
@@ -34,6 +109,7 @@ type AdvancedTroubleshootingGroupProps = {
 
 export function AdvancedTroubleshootingGroup({
     configTreeData,
+    hostPlatform,
     onClearConfigTreeData,
     onLogResourceLoadChange,
     onRefreshConfigTreeData,
@@ -158,6 +234,9 @@ export function AdvancedTroubleshootingGroup({
                     'view.settings.advanced.advanced_ui.troubleshooting.tools'
                 )}
             />
+            <DeepLinkRegistrationField />
+            {/* Fork: the scheme toggles have no effect on Linux, so hide them. */}
+            {hostPlatform !== 'linux' ? <DeepLinkSchemeToggles /> : null}
             <Field
                 label={t(
                     'view.settings.advanced.advanced_ui.troubleshooting.database_usage'

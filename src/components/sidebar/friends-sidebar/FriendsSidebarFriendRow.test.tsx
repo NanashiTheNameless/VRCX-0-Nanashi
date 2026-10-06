@@ -35,9 +35,13 @@ vi.mock('@/components/UserDetailTile', () => ({
 }));
 
 vi.mock('@/components/ProfileDecorations', () => ({
-    ProfileAvatarFrame: ({ templateId }: { templateId: string }) => (
-        <span data-avatar-frame={templateId} />
-    ),
+    ProfileAvatarFrame: ({
+        templateId,
+        active
+    }: {
+        templateId: string;
+        active: boolean;
+    }) => <span data-avatar-frame={templateId} data-active={active} />,
     ProfileNameplate: ({ templateId }: { templateId: string }) => (
         <span data-nameplate={templateId} />
     ),
@@ -62,7 +66,12 @@ vi.mock('./FriendsSidebarActionItems', () => ({
     FriendActionItems: () => null
 }));
 
-import { activePresence } from '@/test/presenceFixtures';
+import {
+    activePresence,
+    onlinePresence,
+    pendingPresence,
+    travelingPresence
+} from '@/test/presenceFixtures';
 
 import { FriendRow } from './FriendsSidebarFriendRow';
 
@@ -132,5 +141,65 @@ describe('FriendsSidebarFriendRow profile decorations', () => {
 
         expect(html).not.toContain('data-avatar-frame');
         expect(html).not.toContain('data-nameplate');
+    });
+});
+
+describe('FriendsSidebarFriendRow pending offline', () => {
+    it('mutes the whole row only while the friend may be offline', () => {
+        const pending = renderToStaticMarkup(
+            <FriendRow
+                friend={{
+                    id: 'usr_a',
+                    displayName: 'Friend',
+                    $presence: pendingPresence()
+                }}
+            />
+        );
+        const online = renderToStaticMarkup(
+            <FriendRow
+                friend={{
+                    id: 'usr_a',
+                    displayName: 'Friend',
+                    $presence: onlinePresence()
+                }}
+            />
+        );
+
+        expect(pending).toContain('data-pending-offline="true"');
+        expect(pending).toContain('side_panel.pending_offline');
+        expect(online).not.toContain('data-pending-offline=');
+    });
+});
+
+describe('FriendsSidebarFriendRow traveling', () => {
+    const friend = {
+        id: 'usr_a',
+        displayName: 'Friend',
+        iconFrame: 'invt_frame'
+    };
+
+    it('keeps the avatar frame animated while the friend is traveling', () => {
+        const traveling = renderToStaticMarkup(
+            <FriendRow
+                friend={{
+                    ...friend,
+                    $presence: travelingPresence('wrld_next:1')
+                }}
+                appearance={{ showAvatarFrame: true }}
+            />
+        );
+        const settled = renderToStaticMarkup(
+            <FriendRow
+                friend={{ ...friend, $presence: onlinePresence() }}
+                appearance={{ showAvatarFrame: true }}
+            />
+        );
+
+        expect(traveling).toContain(
+            'data-avatar-frame="invt_frame" data-active="true"'
+        );
+        expect(settled).toContain(
+            'data-avatar-frame="invt_frame" data-active="false"'
+        );
     });
 });

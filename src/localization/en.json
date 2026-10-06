@@ -1188,6 +1188,7 @@
             "instance_population": "Users in instance: {users}",
             "instance_population_capacity": "Users in instance: {users} / {capacity}",
             "other_online": "Other online friends",
+            "favorite_friends": "Favorite Friends",
             "favorite": "Favorites",
             "same_instance": "Same instance",
             "active": "Active",
@@ -1200,6 +1201,7 @@
                 "dense": "Dense"
             },
             "show_same_instance_in_online": "Also Show Same-Instance Friends Under Online",
+            "show_favorites_in_online": "Also Show Favorite Friends Under Online",
             "loading_more": "Loading more",
             "busy": "Busy",
             "local_group": "Local: {name}",
@@ -2592,7 +2594,10 @@
             },
             "general": {
                 "application": {
-                    "header": "Application",
+                    "startup_header": "Startup",
+                    "window_header": "Window & Tray",
+                    "updates_header": "Updates",
+                    "network_header": "Login & Network",
                     "startup": "Start at Windows Startup",
                     "startup_system": "Start at System Startup",
                     "startup_system_description": "Creates a desktop autostart entry that launches VRCX-0-Nanashi with --autostart.",
@@ -2759,28 +2764,10 @@
                 "profile_appearance": {
                     "header": "Profile Appearance",
                     "sidebar": "Sidebar",
-                    "sidebar_avatar_frame": "Show Avatar Frame",
-                    "sidebar_avatar_frame_description": "Show the decorative frame around avatars in the friends sidebar.",
-                    "sidebar_nameplate": "Show Nameplate",
-                    "sidebar_nameplate_description": "Show the nameplate on the right side of friend rows in the friends sidebar.",
-                    "hover_card": "Hover Card",
-                    "hover_card_avatar_frame": "Show Avatar Frame",
-                    "hover_card_avatar_frame_description": "Show the decorative frame around the avatar in user hover cards.",
-                    "hover_card_profile_effect": "Show Profile Effect",
-                    "hover_card_profile_effect_description": "Show the profile effect over user hover cards.",
-                    "hover_card_nameplate": "Show Nameplate",
-                    "hover_card_nameplate_description": "Show the nameplate behind the name in user hover cards."
+                    "hover_card": "Hover Card"
                 },
                 "user_dialog": {
                     "header": "User Dialog",
-                    "profile_background": "Show Profile Background",
-                    "profile_background_description": "Show the gradient or texture selected for the VRChat profile.",
-                    "avatar_frame": "Show Avatar Frame",
-                    "avatar_frame_description": "Show the frame around the profile icon.",
-                    "profile_effect": "Show Profile Effect",
-                    "profile_effect_description": "Show the effect applied across the user profile.",
-                    "nameplate_effect": "Show Nameplate Effect",
-                    "nameplate_effect_description": "Show the effect applied behind the display name.",
                     "vrchat_notes": "VRChat Notes",
                     "vrchat_notes_description": "Shows notes stored in VRChat",
                     "vrcx_memos": "Local Notes",
@@ -2788,7 +2775,7 @@
                     "recent_action_cooldown": "Recent Action Icon",
                     "recent_action_cooldown_description": "Show a clock icon on recent invite and request actions.",
                     "profile_decorations": "Profile decorations",
-                    "profile_decorations_description": "Show VRChat profile decorations (background, avatar frame, profile and nameplate effects) in the user dialog and friends sidebar. Turn off to hide them all; the switches below control each one."
+                    "profile_decorations_description": "Show VRChat profile decorations (background, avatar frame, profile and nameplate effects) everywhere they appear. Turn off to hide them all; the options below control each one."
                 },
                 "user_colors": {
                     "header": "User Colors",
@@ -2825,6 +2812,9 @@
                     "layout": "Notification View",
                     "layout_notification_center": "Notification Center",
                     "layout_table": "Notifications Page",
+                    "in_app": {
+                        "header": "In-App Indicators"
+                    },
                     "post_update_changelog_prompt": "Show Update Notes After Updating",
                     "post_update_changelog_prompt_description": "Show what's new after an update is installed.",
                     "test_notification": {
@@ -4038,6 +4028,29 @@
             },
             "avatars": {
                 "all_time": "All time"
+            },
+            "mode": {
+                "overview": "Overview",
+                "journey": "Journey"
+            },
+            "journey": {
+                "alone": "Alone",
+                "open_in_screenshots": "View all screenshots",
+                "others_count_one": "{count} other",
+                "others_count_other": "{count} others",
+                "world_count_one": "{count} world",
+                "world_count_other": "{count} worlds",
+                "friend_count_one": "{count} friend",
+                "friend_count_other": "{count} friends",
+                "photo_count_one": "{count} screenshot",
+                "photo_count_other": "{count} screenshots",
+                "empty": {
+                    "title": "No visits recorded yet",
+                    "description": "A visit shows up here once you leave the world.",
+                    "filtered_title": "No visits in this date range"
+                },
+                "all_dates": "All dates",
+                "screenshots": "Screenshots"
             }
         },
         "my_groups": {

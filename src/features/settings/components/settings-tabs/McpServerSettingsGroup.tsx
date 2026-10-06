@@ -181,7 +181,7 @@ export function McpServerSettingsGroup() {
 
     return (
         <SettingsCard
-            cardId="integrations.mcp"
+            cardId="ai.mcp"
             title={t('view.settings.integrations.mcp_server.header')}
             description={t('view.settings.integrations.mcp_server.description')}
         >

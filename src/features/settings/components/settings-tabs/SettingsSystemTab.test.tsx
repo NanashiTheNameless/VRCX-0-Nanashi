@@ -65,14 +65,17 @@ const handlers = {
     onBackgroundModeDelayEnabledChange: noop,
     onBackgroundModeEnabledChange: noop,
     onCloseToTrayChange: noop,
+    onFocusVrchatOnJoinChange: noop,
     onPostUpdateChangelogToastChange: noop,
     onPromptAutoLoginDelaySeconds: noop,
     onPromptBackgroundModeDelayMinutes: noop,
     onProxyEnabledChange: noop,
     onProxySettings: noop,
+    onRelaunchVRChatAfterCrashChange: noop,
     onStartAsMinimizedChange: noop,
     onStartAtWindowsStartupChange: noop,
-    onSystemWindowFrameChange: noop
+    onSystemWindowFrameChange: noop,
+    onVrcQuitFixChange: noop
 };
 
 describe('SettingsSystemTab updater policy', () => {
@@ -113,6 +116,17 @@ describe('SettingsSystemTab updater policy', () => {
                 <SettingsSystemTab hostPlatform={hostPlatform} {...handlers} />
             );
             expect(html).toContain('shortcuts.tray.title');
+        }
+    });
+
+    it('shows the VRChat focus toggle only on Windows', () => {
+        for (const hostPlatform of ['windows', 'macos', 'linux'] as const) {
+            const html = renderToStaticMarkup(
+                <SettingsSystemTab hostPlatform={hostPlatform} {...handlers} />
+            );
+            expect(html.includes('behavior.focus_on_join_header')).toBe(
+                hostPlatform === 'windows'
+            );
         }
     });
 

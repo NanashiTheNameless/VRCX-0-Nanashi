@@ -26,7 +26,7 @@ use vrcx_0_host_desktop::host_capabilities::{current_host_capabilities, LinuxPac
 
 const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
 #[cfg(target_os = "windows")]
-const WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: &str = "--disable-back-forward-cache --disable-domain-reliability --disable-features=AutofillServerCommunication,BackgroundFetch,MediaRouter --disable-file-system --disable-notifications --disable-presentation-api --disable-remote-playback-api --disable-shared-workers --disable-speech-api";
+const WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: &str = "--disable-back-forward-cache --disable-domain-reliability --disable-features=AutofillServerCommunication,BackgroundFetch,MediaRouter --disable-file-system --disable-notifications --disable-presentation-api --disable-remote-playback-api --disable-shared-workers --disable-speech-api --force-prefers-no-reduced-motion";
 
 /// Log target for notable non-error events that still belong in error-log.txt
 /// (for example a realtime reconnect after a drop).

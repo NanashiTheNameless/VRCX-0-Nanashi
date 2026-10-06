@@ -10,9 +10,6 @@ export function useSettingsAdvancedTabState() {
     const advanced = useSettingsPageSection('advanced');
     const prefs = usePreferencesStore(
         useShallow((state) => ({
-            relaunchVRChatAfterCrash: state.relaunchVRChatAfterCrash,
-            vrcQuitFix: state.vrcQuitFix,
-            focusVrchatOnJoin: state.focusVrchatOnJoin,
             autoSweepVRChatCache: state.autoSweepVRChatCache,
             avatarAutoCleanup: state.avatarAutoCleanup,
             gameLogDisabled: state.gameLogDisabled,
@@ -55,23 +52,6 @@ export function useSettingsAdvancedTabState() {
         onlineVisitCount,
         configTreeData,
         appDataDirState,
-        onRelaunchVRChatAfterCrashChange: (checked: boolean) => {
-            saveBoolPreference(
-                'relaunchVRChatAfterCrash',
-                'VRCX_relaunchVRChatAfterCrash',
-                checked
-            );
-        },
-        onVrcQuitFixChange: (checked: boolean) => {
-            saveBoolPreference('vrcQuitFix', 'vrcQuitFix', checked);
-        },
-        onFocusVrchatOnJoinChange: (checked: boolean) => {
-            saveBoolPreference(
-                'focusVrchatOnJoin',
-                'focusVrchatOnJoin',
-                checked
-            );
-        },
         onAutoSweepVRChatCacheChange: (checked: boolean) => {
             saveBoolPreference(
                 'autoSweepVRChatCache',

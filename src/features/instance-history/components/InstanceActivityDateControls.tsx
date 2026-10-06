@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useTodayDate } from '@/lib/useTodayDate';
+import { usePreferencesStore } from '@/state/preferencesStore';
 import { Button } from '@/ui/shadcn/button';
 import { Calendar } from '@/ui/shadcn/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/shadcn/popover';
@@ -31,6 +32,7 @@ export function InstanceActivityDateControls({
     dataStatus
 }: InstanceActivityDateControlsProps) {
     const { t } = useTranslation();
+    const weekStartsOn = usePreferencesStore((state) => state.weekStartsOn);
     const [open, setOpen] = useState(false);
     const todayDate = useTodayDate();
     const sortedDatesDesc = useMemo(
@@ -133,6 +135,7 @@ export function InstanceActivityDateControls({
                         selected={selectedDateObject}
                         defaultMonth={selectedDateObject}
                         disabled={{ after: todayDate }}
+                        weekStartsOn={weekStartsOn}
                         modifiers={{ hasActivity: availableDateObjects }}
                         modifiersClassNames={{
                             hasActivity:

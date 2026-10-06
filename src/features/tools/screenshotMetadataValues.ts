@@ -11,7 +11,10 @@ import type {
 } from '@/platform/tauri/bindings';
 import { SCREENSHOT_GALLERY_CONFIG_KEYS } from '@/repositories/configKeys';
 import { isRecord } from '@/shared/utils/record';
-import { parseVrchatScreenshotDateFromFileName } from '@/shared/utils/screenshot';
+import {
+    parseVrchatScreenshotDateFromFileName,
+    resolveScreenshotCapturedTime
+} from '@/shared/utils/screenshot';
 
 export const SCREENSHOT_METADATA_SEARCH_TYPES = [
     {
@@ -468,6 +471,11 @@ export function searchResultToLibraryImage(
         worldId: result.metadata?.world?.id || null,
         worldName: result.metadata?.world?.name || null,
         capturedAt: result.metadata?.timestamp || null,
+        capturedAtMs: resolveScreenshotCapturedTime({
+            capturedAt: result.metadata?.timestamp,
+            fileName,
+            modifiedAt: createdAt
+        }),
         metadata: result.metadata,
         error: result.metadata?.error || null
     };

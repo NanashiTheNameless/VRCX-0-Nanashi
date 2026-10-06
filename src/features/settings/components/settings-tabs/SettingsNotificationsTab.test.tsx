@@ -116,6 +116,12 @@ function createProps(overrides: Partial<TabProps> = {}): TabProps {
             ['username', 'tts.username'],
             ['displayName', 'tts.display_name']
         ],
+        notificationLayoutOptions: [['table', 'layout.table']],
+        showTaskbarIconDot: false,
+        onNotificationLayoutChange: vi.fn(),
+        onNotificationIconDotChange: vi.fn(),
+        onTaskbarIconDotChange: vi.fn(),
+        onFriendLogNotificationDotChange: vi.fn(),
         notificationTtsTest: 'Hello from VRCX-0',
         notificationTtsTestVisible: true,
         onAfkDesktopToastChange: vi.fn(),
@@ -135,6 +141,10 @@ function createProps(overrides: Partial<TabProps> = {}): TabProps {
         onSendTestNotification: vi.fn(),
         onSpeakNotificationTts: vi.fn(),
         prefs: {
+            notificationLayout: 'table',
+            notificationIconDot: true,
+            taskbarIconDot: true,
+            friendLogNotificationDot: true,
             desktopToast: 'Always',
             afkDesktopToast: false,
             desktopNotificationSound: true,

@@ -11,6 +11,7 @@ import userEvent from '@testing-library/user-event';
 import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { commands } from '@/platform/tauri/bindings';
 import { useNavigationCacheStore } from '@/state/navigationCacheStore';
 import { TooltipProvider } from '@/ui/shadcn/tooltip';
 
@@ -200,5 +201,25 @@ describe('AdvancedTroubleshootingGroup', () => {
 
         await user.click(screen.getByRole('button', { name: 'Hide' }));
         expect(onClearConfigTreeData).toHaveBeenCalledOnce();
+    });
+
+    it('hides the deep link scheme settings on Linux', () => {
+        const schemesGet = vi
+            .spyOn(commands, 'appDeepLinkSchemesGet')
+            .mockResolvedValue({ upstream: true, legacy: true });
+        renderGroup(createProps({ hostPlatform: 'linux' }));
+
+        expect(schemesGet).not.toHaveBeenCalled();
+        schemesGet.mockRestore();
+    });
+
+    it('shows the deep link scheme settings on Windows', () => {
+        const schemesGet = vi
+            .spyOn(commands, 'appDeepLinkSchemesGet')
+            .mockResolvedValue({ upstream: true, legacy: true });
+        renderGroup(createProps({ hostPlatform: 'windows' }));
+
+        expect(schemesGet).toHaveBeenCalled();
+        schemesGet.mockRestore();
     });
 });

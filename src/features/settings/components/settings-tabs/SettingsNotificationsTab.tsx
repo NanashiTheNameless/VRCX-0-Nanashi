@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { TtsVoice } from '@/platform/tauri/bindings';
@@ -6,6 +6,7 @@ import {
     normalizeNotificationTtsNameMode,
     type PreferencesSnapshot
 } from '@/state/preferencesStore';
+import type { NotificationLayout } from '@/state/shellStore';
 import { Button } from '@/ui/shadcn/button';
 import { Input } from '@/ui/shadcn/input';
 import {
@@ -23,13 +24,19 @@ import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
 import { useSettingsNotificationsTabState } from '../useSettingsNotificationsTabState';
+import { NotificationWebhookSettings } from './NotificationWebhookSettings';
 import { SettingsCustomSoundsCard } from './SettingsCustomSoundsCard';
+import { SettingsNotificationsInAppCard } from './SettingsNotificationsInAppCard';
 
 type SettingsOptionList = ReadonlyArray<readonly [string, string]>;
 
 type SettingsNotificationsPrefs = Pick<
     PreferencesSnapshot,
     | 'afkDesktopToast'
+    | 'notificationLayout'
+    | 'notificationIconDot'
+    | 'taskbarIconDot'
+    | 'friendLogNotificationDot'
     | 'desktopNotificationSound'
     | 'desktopNotificationAvatars'
     | 'desktopToast'
@@ -43,6 +50,13 @@ type SettingsNotificationsPrefs = Pick<
 >;
 
 type SettingsNotificationsTabContentProps = {
+    notificationLayoutOptions: SettingsOptionList;
+    showTaskbarIconDot: boolean;
+    onNotificationLayoutChange: (value: NotificationLayout) => void;
+    onNotificationIconDotChange: (checked: boolean) => void;
+    onTaskbarIconDotChange: (checked: boolean) => void;
+    onFriendLogNotificationDotChange: (checked: boolean) => void;
+    webhookSettings?: ReactNode;
     desktopToastOptions: SettingsOptionList;
     notificationTtsOptions: SettingsOptionList;
     notificationTtsNameModeOptions: SettingsOptionList;
@@ -70,11 +84,23 @@ type SettingsNotificationsTabContentProps = {
 
 export function SettingsNotificationsTab() {
     const state = useSettingsNotificationsTabState();
-    return <SettingsNotificationsTabContent {...state} />;
+    return (
+        <SettingsNotificationsTabContent
+            {...state}
+            webhookSettings={<NotificationWebhookSettings />}
+        />
+    );
 }
 
 export function SettingsNotificationsTabContent({
     prefs,
+    notificationLayoutOptions,
+    showTaskbarIconDot,
+    onNotificationLayoutChange,
+    onNotificationIconDotChange,
+    onTaskbarIconDotChange,
+    onFriendLogNotificationDotChange,
+    webhookSettings,
     desktopToastOptions,
     notificationTtsOptions,
     notificationTtsNameModeOptions,
@@ -113,31 +139,17 @@ export function SettingsNotificationsTabContent({
     return (
         <SettingsTabContent value="notifications">
             <SettingsCustomSoundsCard />
-            <SettingsCard
-                cardId="notifications.test"
-                title={t(
-                    'view.settings.notifications.notifications.test_notification.header'
-                )}
-                description={t(
-                    'view.settings.notifications.notifications.test_notification.description'
-                )}
-            >
-                <Field
-                    label={t(
-                        'view.settings.notifications.notifications.test_notification.send'
-                    )}
-                >
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={onSendTestNotification}
-                    >
-                        {t(
-                            'view.settings.notifications.notifications.test_notification.button'
-                        )}
-                    </Button>
-                </Field>
-            </SettingsCard>
+            <SettingsNotificationsInAppCard
+                prefs={prefs}
+                showTaskbarIconDot={showTaskbarIconDot}
+                notificationLayoutOptions={notificationLayoutOptions}
+                onNotificationLayoutChange={onNotificationLayoutChange}
+                onNotificationIconDotChange={onNotificationIconDotChange}
+                onTaskbarIconDotChange={onTaskbarIconDotChange}
+                onFriendLogNotificationDotChange={
+                    onFriendLogNotificationDotChange
+                }
+            />
             <SettingsCard
                 cardId="notifications.dnd"
                 title={t(
@@ -494,6 +506,32 @@ export function SettingsNotificationsTabContent({
                         </Button>
                     </div>
                 ) : null}
+            </SettingsCard>
+            {webhookSettings}
+            <SettingsCard
+                cardId="notifications.test"
+                title={t(
+                    'view.settings.notifications.notifications.test_notification.header'
+                )}
+                description={t(
+                    'view.settings.notifications.notifications.test_notification.description'
+                )}
+            >
+                <Field
+                    label={t(
+                        'view.settings.notifications.notifications.test_notification.send'
+                    )}
+                >
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={onSendTestNotification}
+                    >
+                        {t(
+                            'view.settings.notifications.notifications.test_notification.button'
+                        )}
+                    </Button>
+                </Field>
             </SettingsCard>
         </SettingsTabContent>
     );

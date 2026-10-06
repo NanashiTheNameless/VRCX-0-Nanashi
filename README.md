@@ -43,8 +43,9 @@ It is a Rust + Tauri rewrite of VRCX.
 - **Keeps the PC awake** (optional, on by default) so live updates keep arriving while the app
   sits in the tray; the screen can still turn off.
 - **Profile decorations are hidden by default.** VRChat profile backgrounds, avatar frames,
-  profile and nameplate effects stay off in the user dialog, friends sidebar and user hover cards
-  until turned on under Settings > Interface > Profile Appearance.
+  profile and nameplate effects stay off in the user dialog, friends sidebar, user hover cards,
+  Friends Locations and the Activity journey until turned on under Settings > Interface >
+  Profile Appearance.
 - **Custom notification sounds.** Under Settings > Notifications, choose a built-in sound or
   an audio file and volume per event for anyone, friends, or favorite friends. Sounds work in
   background mode and respect Do Not Disturb and privacy lock. Built-in sounds are CC0 clips

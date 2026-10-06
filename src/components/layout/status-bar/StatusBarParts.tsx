@@ -5,22 +5,14 @@ import {
     type ReactNode
 } from 'react';
 
+import { dimBlink } from '@/lib/dimBlink';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/shadcn/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 export type StatusDotAlert = 'warn' | 'danger';
 
-const ALERT_BLINK_KEYFRAMES: Keyframe[] = [
-    { opacity: 1 },
-    { opacity: 0.15 },
-    { opacity: 1 }
-];
-const ALERT_BLINK_OPTIONS: KeyframeAnimationOptions = {
-    duration: 1200,
-    iterations: 3,
-    easing: 'ease-in-out'
-};
+const ALERT_BLINK = { opacity: 0.15, halfCycles: 6, halfCycleMs: 600 };
 
 export function StatusDot({
     active,
@@ -41,7 +33,7 @@ export function StatusDot({
         if (!alertState || !dot) {
             return;
         }
-        const blink = dot.animate(ALERT_BLINK_KEYFRAMES, ALERT_BLINK_OPTIONS);
+        const blink = dimBlink(dot, ALERT_BLINK);
         return () => blink.cancel();
     }, [alertState]);
 

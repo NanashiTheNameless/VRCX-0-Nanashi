@@ -43,7 +43,7 @@ type UserDialogTabsSectionProps = {
         };
         info: Omit<UserDialogProfileLinksSectionProps, 'openGroupDialog'> &
             Omit<UserDialogNotesSectionProps, 'onEditMemo'> &
-            UserDialogBioSectionProps &
+            Omit<UserDialogBioSectionProps, 'onEditBio'> &
             Omit<
                 UserDialogActivitySummarySectionProps,
                 'onOpenFeed' | 'onOpenInstanceHistory' | 'previousInstances'
@@ -112,6 +112,7 @@ type UserDialogTabsSectionProps = {
         > & {
             changeTab: (value: string) => void;
             onEditMemo: UserDialogNotesSectionProps['onEditMemo'];
+            onEditSelfProfileDetails: () => void;
             onOpenFeed: () => void;
             onOpenInstanceHistory: () => void;
             onPreviousInstancesChange: HistoryTabProps['onPreviousInstancesChange'];
@@ -195,6 +196,7 @@ export function UserDialogTabsSection({
         changeWorldOrder,
         changeWorldSort,
         onEditMemo,
+        onEditSelfProfileDetails,
         onOpenFeed,
         onOpenInstanceHistory,
         onPreviousInstancesChange,
@@ -272,7 +274,8 @@ export function UserDialogTabsSection({
     };
     const bioSection: UserDialogBioSectionProps = {
         profile,
-        bioLinks
+        bioLinks,
+        onEditBio: isCurrentUser ? onEditSelfProfileDetails : undefined
     };
     const profileLinksSection: UserDialogProfileLinksSectionProps = {
         currentAvatarDisplayName,

@@ -33,6 +33,9 @@ use vrcx_0_core::vrchat_endpoints::VRCHAT_API_DEFAULT_ENDPOINT;
 use vrcx_0_persistence::DatabaseService;
 
 pub use vrcx_0_application_activity::activity_page::{ActivityPageBuildInput, ActivityPageView};
+pub use vrcx_0_contracts::activity_page::{
+    ActivityJourneyDayInput, ActivityJourneyDaysInput, ActivityJourneyVisit,
+};
 pub use vrcx_0_core::OwnerId;
 pub use vrcx_0_persistence::activity::{
     ActivityOverlapViewBuildInput, ActivityOverlapViewOutput, ActivityViewBuildInput,
@@ -364,6 +367,26 @@ impl LocalDataRuntime {
             &vrcx_0_outbound_adapters::LocalActivityPageStore::new(self.db.as_ref()),
             input,
         )
+    }
+
+    pub fn activity_journey_visits(
+        &self,
+        input: ActivityJourneyDayInput,
+    ) -> Result<Vec<ActivityJourneyVisit>> {
+        Ok(vrcx_0_persistence::activity_page::read_journey_visits(
+            self.db.as_ref(),
+            &input.owner_user_id,
+            input.from_ms,
+            input.to_ms,
+        )?)
+    }
+
+    pub fn activity_journey_days(&self, input: ActivityJourneyDaysInput) -> Result<Vec<String>> {
+        Ok(vrcx_0_persistence::activity_page::read_journey_days(
+            self.db.as_ref(),
+            &input.owner_user_id,
+            input.utc_offset_minutes,
+        )?)
     }
 
     pub fn avatar_history_clear(&self, user_id: String) -> Result<()> {

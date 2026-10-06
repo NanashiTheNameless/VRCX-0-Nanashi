@@ -140,6 +140,12 @@ export async function loadPreferenceSnapshot() {
         showHoverCardAvatarFrame,
         showHoverCardProfileEffect,
         showHoverCardNameplate,
+        showFriendsLocationsPeopleAvatarFrame,
+        showFriendsLocationsPeopleNameplate,
+        showFriendsLocationsWorldsAvatarFrame,
+        showFriendsLocationsWorldsNameplate,
+        showActivityJourneyAvatarFrame,
+        showActivityJourneyNameplate,
         weekStartsOn,
         hideUserNotes,
         hideUserMemos,
@@ -290,6 +296,18 @@ export async function loadPreferenceSnapshot() {
         configRepository.getBool('showHoverCardAvatarFrame', false),
         configRepository.getBool('showHoverCardProfileEffect', false),
         configRepository.getBool('showHoverCardNameplate', false),
+        configRepository.getBool(
+            'showFriendsLocationsPeopleAvatarFrame',
+            false
+        ),
+        configRepository.getBool('showFriendsLocationsPeopleNameplate', false),
+        configRepository.getBool(
+            'showFriendsLocationsWorldsAvatarFrame',
+            false
+        ),
+        configRepository.getBool('showFriendsLocationsWorldsNameplate', false),
+        configRepository.getBool('showActivityJourneyAvatarFrame', false),
+        configRepository.getBool('showActivityJourneyNameplate', false),
         configRepository.getInt('weekStartsOn', 1),
         configRepository.getBool('hideUserNotes', false),
         configRepository.getBool('hideUserMemos', false),
@@ -512,6 +530,20 @@ export async function loadPreferenceSnapshot() {
         showHoverCardAvatarFrame: Boolean(showHoverCardAvatarFrame),
         showHoverCardProfileEffect: Boolean(showHoverCardProfileEffect),
         showHoverCardNameplate: Boolean(showHoverCardNameplate),
+        showFriendsLocationsPeopleAvatarFrame: Boolean(
+            showFriendsLocationsPeopleAvatarFrame
+        ),
+        showFriendsLocationsPeopleNameplate: Boolean(
+            showFriendsLocationsPeopleNameplate
+        ),
+        showFriendsLocationsWorldsAvatarFrame: Boolean(
+            showFriendsLocationsWorldsAvatarFrame
+        ),
+        showFriendsLocationsWorldsNameplate: Boolean(
+            showFriendsLocationsWorldsNameplate
+        ),
+        showActivityJourneyAvatarFrame: Boolean(showActivityJourneyAvatarFrame),
+        showActivityJourneyNameplate: Boolean(showActivityJourneyNameplate),
         weekStartsOn: normalizeWeekStartsOn(weekStartsOn),
         hideUserNotes: Boolean(hideUserNotes),
         hideUserMemos: Boolean(hideUserMemos),

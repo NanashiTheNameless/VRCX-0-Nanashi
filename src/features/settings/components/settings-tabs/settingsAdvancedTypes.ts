@@ -6,11 +6,8 @@ export type SettingsAdvancedPrefs = {
     avatarAutoCleanup?: AvatarAutoCleanupPreference;
     gameLogDisabled?: boolean;
     feedPersistenceDisabled?: boolean;
-    focusVrchatOnJoin?: boolean;
     logResourceLoad?: boolean;
-    relaunchVRChatAfterCrash?: boolean;
     udonExceptionLogging?: boolean;
-    vrcQuitFix?: boolean;
 };
 
 export type SettingsAdvancedAction = () => void | Promise<void>;
@@ -27,17 +24,14 @@ export type SettingsAdvancedModel = {
     onDismissAppDataDirCleanup: SettingsAdvancedAction;
     onGameLogDisabledChange: (disabled: boolean) => void;
     onFeedPersistenceDisabledChange: (disabled: boolean) => void;
-    onFocusVrchatOnJoinChange: (checked: boolean) => void;
     onLogResourceLoadChange: (checked: boolean) => void;
     onOpenAppDataDirSelector: SettingsAdvancedAction;
     onOpenPurgeDialog: () => void;
     onRefreshConfigTreeData: SettingsAdvancedAction;
     onRefreshOnlineVisits: SettingsAdvancedAction;
     onRefreshSqliteTableSizes: SettingsAdvancedAction;
-    onRelaunchVRChatAfterCrashChange: (checked: boolean) => void;
     onResetAppDataDir: SettingsAdvancedAction;
     onUdonExceptionLoggingChange: (checked: boolean) => void;
-    onVrcQuitFixChange: (checked: boolean) => void;
     onlineVisitCount: number | null;
     prefs: SettingsAdvancedPrefs;
     sqliteTableSizeRows: ReadonlyArray<readonly [string, string]>;

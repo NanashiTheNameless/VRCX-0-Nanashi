@@ -1,4 +1,4 @@
-import { ChevronRightIcon, ExternalLinkIcon } from 'lucide-react';
+import { ChevronRightIcon, ExternalLinkIcon, PencilIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -45,6 +45,7 @@ import {
     PopoverTrigger
 } from '@/ui/shadcn/popover';
 import { Separator } from '@/ui/shadcn/separator';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import { EntityDialogTabContent } from '../../EntityDialogScaffold';
 import { formatStatsDuration } from '../userDialogRows';
@@ -108,6 +109,7 @@ export type UserDialogNotesSectionProps = {
 export type UserDialogBioSectionProps = {
     profile: UserProfileEntity;
     bioLinks: string[];
+    onEditBio?: () => void;
 };
 
 export type UserDialogProfileLinksSectionProps = {
@@ -613,8 +615,13 @@ function UserDialogProfileLinksPanel({
     );
 }
 
-function UserDialogBioPanel({ profile, bioLinks }: UserDialogBioSectionProps) {
+export function UserDialogBioPanel({
+    profile,
+    bioLinks,
+    onEditBio
+}: UserDialogBioSectionProps) {
     const { t } = useTranslation();
+    const editLabel = t('dialog.user.actions.edit_profile_details');
 
     return (
         <TranslatableText
@@ -623,7 +630,34 @@ function UserDialogBioPanel({ profile, bioLinks }: UserDialogBioSectionProps) {
             density="button"
         >
             {({ action, meta, error, text }) => (
-                <InfoPanel title={t('dialog.user.info.bio')} action={action}>
+                <InfoPanel
+                    title={t('dialog.user.info.bio')}
+                    action={
+                        onEditBio ? (
+                            <div className="flex items-center gap-1">
+                                {action}
+                                <Tooltip>
+                                    <TooltipTrigger
+                                        render={
+                                            <Button
+                                                type="button"
+                                                size="icon-xs"
+                                                variant="outline"
+                                                aria-label={editLabel}
+                                                onClick={onEditBio}
+                                            >
+                                                <PencilIcon data-icon="inline-start" />
+                                            </Button>
+                                        }
+                                    />
+                                    <TooltipContent>{editLabel}</TooltipContent>
+                                </Tooltip>
+                            </div>
+                        ) : (
+                            action
+                        )
+                    }
+                >
                     {meta}
                     <div className="min-w-0">
                         <TextScroll className="h-52 min-w-0">{text}</TextScroll>
@@ -838,7 +872,7 @@ export function UserDialogInfoTab({
     profileLinksSection,
     activitySummarySection
 }: UserDialogInfoTabProps) {
-    const { profile, bioLinks } = bioSection;
+    const { profile, bioLinks, onEditBio } = bioSection;
 
     return (
         <EntityDialogTabContent value="info" className="pt-3">
@@ -855,7 +889,11 @@ export function UserDialogInfoTab({
                         hideUserMemos={notesSection.hideUserMemos}
                         onEditMemo={notesSection.onEditMemo}
                     />
-                    <UserDialogBioPanel profile={profile} bioLinks={bioLinks} />
+                    <UserDialogBioPanel
+                        profile={profile}
+                        bioLinks={bioLinks}
+                        onEditBio={onEditBio}
+                    />
                 </div>
                 <div className="flex min-w-0 flex-col gap-4">
                     <UserDialogProfileLinksPanel

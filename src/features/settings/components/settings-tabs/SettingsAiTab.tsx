@@ -1,5 +1,6 @@
 import { SettingsTabContent } from '../SettingsViewParts';
 import { AssistantSettingsGroup } from './AssistantSettingsGroup';
+import { McpServerSettingsGroup } from './McpServerSettingsGroup';
 import { SettingsRemindersCard } from './SettingsRemindersCard';
 
 type SettingsAiTabProps = {
@@ -11,6 +12,7 @@ export function SettingsAiTab({ active }: SettingsAiTabProps) {
         <SettingsTabContent value="ai">
             <AssistantSettingsGroup active={active} />
             {active ? <SettingsRemindersCard /> : null}
+            <McpServerSettingsGroup />
         </SettingsTabContent>
     );
 }

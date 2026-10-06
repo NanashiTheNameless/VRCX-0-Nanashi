@@ -61,7 +61,6 @@ export function SettingsSocialTab() {
             recentActionCooldownEnabled: state.recentActionCooldownEnabled,
             recentActionCooldownMinutes: state.recentActionCooldownMinutes,
             autoDeclineFriendRequests: state.autoDeclineFriendRequests,
-            friendLogNotificationDot: state.friendLogNotificationDot,
             hideUnfriends: state.hideUnfriends,
             profileBioScanEnabled: state.profileBioScanEnabled,
             feedHiddenUsersHideNotifications:
@@ -80,7 +79,6 @@ export function SettingsSocialTab() {
         onAutoDeclineFriendRequestsChange,
         onFeedHiddenUsersHideNotificationsChange,
         onHidePrivateFromFeedChange,
-        onFriendLogNotificationDotChange,
         onHideUnfriendsChange,
         onProfileBioScanEnabledChange,
         onRemoveFeedHiddenUser,
@@ -212,16 +210,6 @@ export function SettingsSocialTab() {
                 cardId="social.friend-log"
                 title={t('view.settings.appearance.friend_log.header')}
             >
-                <Field
-                    label={t(
-                        'view.settings.appearance.friend_log.show_notification_dot'
-                    )}
-                >
-                    <Switch
-                        checked={prefs.friendLogNotificationDot}
-                        onCheckedChange={onFriendLogNotificationDotChange}
-                    />
-                </Field>
                 <Field
                     label={t(
                         'view.settings.appearance.friend_log.hide_unfriends'

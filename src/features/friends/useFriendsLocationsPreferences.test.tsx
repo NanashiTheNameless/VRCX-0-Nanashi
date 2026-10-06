@@ -96,6 +96,24 @@ describe('useFriendsLocationsPreferences', () => {
         );
     });
 
+    it('shows same-instance and favorite friends in online by default', async () => {
+        const { result } = renderHook(() => useFriendsLocationsPreferences());
+
+        await waitFor(() => expect(result.current.preferencesReady).toBe(true));
+        expect(result.current.showSameInstanceInOnline).toBe(true);
+        expect(result.current.showFavoritesInOnline).toBe(true);
+
+        act(() => {
+            result.current.changeShowFavoritesInOnline(false);
+        });
+
+        expect(result.current.showFavoritesInOnline).toBe(false);
+        expect(mocks.setBool).toHaveBeenCalledWith(
+            'FriendLocationShowFavoritesInOnline',
+            false
+        );
+    });
+
     it('reloads sidebar preferences when they change elsewhere', async () => {
         const { result } = renderHook(() => useFriendsLocationsPreferences());
         await waitFor(() => expect(result.current.preferencesReady).toBe(true));

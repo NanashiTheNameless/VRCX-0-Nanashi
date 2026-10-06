@@ -13,17 +13,33 @@ export function SettingsInterfaceUserDialogCard() {
     const settingsInterface = useSettingsPageSection('interface');
     const prefs = usePreferencesStore(
         useShallow((state) => ({
+            hideNicknames: state.hideNicknames,
             hideUserNotes: state.hideUserNotes,
             hideUserMemos: state.hideUserMemos
         }))
     );
-    const { onHideUserNotesChange, onHideUserMemosChange } = settingsInterface;
+    const {
+        onHideNicknamesChange,
+        onHideUserNotesChange,
+        onHideUserMemosChange
+    } = settingsInterface;
 
     return (
         <SettingsCard
             cardId="interface.user-dialog"
             title={t('view.settings.appearance.user_dialog.header')}
         >
+            <Field
+                label={t('view.settings.appearance.appearance.nicknames')}
+                description={t(
+                    'view.settings.appearance.appearance.nicknames_description'
+                )}
+            >
+                <Switch
+                    checked={!prefs.hideNicknames}
+                    onCheckedChange={onHideNicknamesChange}
+                />
+            </Field>
             <Field
                 label={t('view.settings.appearance.user_dialog.vrchat_notes')}
                 description={t(

@@ -23,7 +23,6 @@ type SettingsInterfaceDisplayPrefs = Pick<
     PreferencesSnapshot,
     | 'showInstanceIdInLocation'
     | 'isAgeGatedInstancesVisible'
-    | 'hideNicknames'
     | 'showNewDashboardButton'
     | 'dtHour12'
     | 'dtIsoFormat'
@@ -36,7 +35,6 @@ type SettingsInterfaceDisplayCardsProps = {
     InterfaceState,
     | 'onShowInstanceIdInLocationChange'
     | 'onAgeGatedInstancesVisibleChange'
-    | 'onHideNicknamesChange'
     | 'onShowNewDashboardButtonChange'
     | 'onOpenTablePageSizes'
     | 'onOpenTableLimits'
@@ -61,7 +59,6 @@ export function SettingsInterfaceDisplayCards({
     prefs,
     onShowInstanceIdInLocationChange,
     onAgeGatedInstancesVisibleChange,
-    onHideNicknamesChange,
     onShowNewDashboardButtonChange,
     onOpenTablePageSizes,
     onOpenTableLimits,
@@ -100,18 +97,6 @@ export function SettingsInterfaceDisplayCards({
                     <Switch
                         checked={prefs.isAgeGatedInstancesVisible}
                         onCheckedChange={onAgeGatedInstancesVisibleChange}
-                    />
-                </Field>
-
-                <Field
-                    label={t('view.settings.appearance.appearance.nicknames')}
-                    description={t(
-                        'view.settings.appearance.appearance.nicknames_description'
-                    )}
-                >
-                    <Switch
-                        checked={!prefs.hideNicknames}
-                        onCheckedChange={onHideNicknamesChange}
                     />
                 </Field>
             </SettingsCard>

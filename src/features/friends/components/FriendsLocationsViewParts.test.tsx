@@ -9,6 +9,7 @@ import type { PresenceView } from '@/domain/friends/presence';
 import type { FriendRecord } from '@/domain/friends/types';
 import { getFriendsLocationsDensityConfig } from '@/features/friends/friendsLocationsDensity';
 import { useFriendLocationTimeStore } from '@/state/friendLocationTimeStore';
+import { usePreferencesStore } from '@/state/preferencesStore';
 import {
     offlinePresence,
     onlinePresence,
@@ -25,9 +26,14 @@ vi.mock('@/components/Location', () => ({
 vi.mock('./FriendLocationCard', () => ({
     FriendLocationCard: ({
         location,
+        presentation,
         capabilities
     }: {
         location?: FriendLocationCardLocationModel;
+        presentation?: {
+            showAvatarFrame?: boolean;
+            showNameplate?: boolean;
+        };
         capabilities?: {
             useLocation?: boolean;
             sendInvite?: boolean;
@@ -45,6 +51,10 @@ vi.mock('./FriendLocationCard', () => ({
                 Boolean(capabilities?.requestInvite)
             )}
             data-can-boop={String(Boolean(capabilities?.boop))}
+            data-show-avatar-frame={String(
+                Boolean(presentation?.showAvatarFrame)
+            )}
+            data-show-nameplate={String(Boolean(presentation?.showNameplate))}
         />
     )
 }));
@@ -372,5 +382,57 @@ describe('FriendsLocationCardItem', () => {
         expect(html).toContain('data-can-send-invite="false"');
         expect(html).toContain('data-can-request-invite="false"');
         expect(html).toContain('data-can-boop="false"');
+    });
+
+    it('applies the friends view decoration preferences to the card', () => {
+        const location = 'wrld_test:123';
+        const friend = friendAt(location);
+        const renderCard = () =>
+            render(
+                <FriendsLocationCardItem
+                    section={{
+                        key: `instance:${location}`,
+                        title: 'World',
+                        description: '',
+                        friends: [friend],
+                        worldId: 'wrld_test',
+                        groupId: '',
+                        rawLocation: location
+                    }}
+                    friend={friend}
+                    currentUserId="usr_self"
+                    densityConfig={getFriendsLocationsDensityConfig('compact')}
+                    canUseFriendLocation={() => true}
+                    canSendInvite
+                    canBoop
+                    onOpenUser={vi.fn()}
+                    onOpenWorld={vi.fn()}
+                    onLaunchLocation={vi.fn()}
+                    onSelfInviteLocation={vi.fn()}
+                    onSendInvite={vi.fn()}
+                    onRequestInvite={vi.fn()}
+                    onSendBoop={vi.fn()}
+                />
+            ).container.innerHTML;
+
+        const defaults = renderCard();
+        cleanup();
+        expect(defaults).toContain('data-show-avatar-frame="false"');
+        expect(defaults).toContain('data-show-nameplate="false"');
+
+        usePreferencesStore.setState({
+            showFriendsLocationsPeopleAvatarFrame: true,
+            showFriendsLocationsPeopleNameplate: true
+        });
+        try {
+            const toggled = renderCard();
+            expect(toggled).toContain('data-show-avatar-frame="true"');
+            expect(toggled).toContain('data-show-nameplate="true"');
+        } finally {
+            usePreferencesStore.setState({
+                showFriendsLocationsPeopleAvatarFrame: false,
+                showFriendsLocationsPeopleNameplate: false
+            });
+        }
     });
 });

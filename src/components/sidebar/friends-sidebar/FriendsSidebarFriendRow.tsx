@@ -5,6 +5,8 @@ import {
     FriendInstanceTimer,
     FriendLocationTimer
 } from '@/components/friends/FriendInstanceTimer';
+import { usePendingOfflineBlink } from '@/components/friends/usePendingOfflineBlink';
+import { useRecentlyOnline } from '@/components/friends/useRecentlyOnline';
 import type { LocationMetadata } from '@/components/location/useLocationMetadata';
 import {
     ProfileAvatarFrame,
@@ -191,6 +193,8 @@ export function FriendRow({
         showNameplate = false
     } = appearance || {};
     const decorationHover = useDecorationHover();
+    const recentlyOnline = useRecentlyOnline(friend.id || '');
+    const decorationActive = decorationHover.active || recentlyOnline;
     const iconFrameId = showAvatarFrame ? friend.iconFrame?.trim() : '';
     const nameplateId = showNameplate ? friend.nameplateEffect?.trim() : '';
     const { displaySource, imageUrl, displayName, nameStyle } =
@@ -228,12 +232,15 @@ export function FriendRow({
         parsedFriendLocation.worldId &&
         parsedFriendLocation.instanceId
     );
+    const podButtonRef =
+        usePendingOfflineBlink<HTMLButtonElement>(isPendingOffline);
     const subline = isPendingOffline
         ? t('side_panel.pending_offline')
         : String(displaySource?.statusDescription || '');
 
     const podButton = (
         <button
+            ref={podButtonRef}
             type="button"
             data-slot="button"
             data-variant="ghost"
@@ -243,13 +250,14 @@ export function FriendRow({
                 className:
                     'relative isolate h-auto w-full min-w-0 justify-start gap-2 p-1.5 text-left font-normal'
             })}
+            data-pending-offline={isPendingOffline || undefined}
             onClick={sidebarWindowMode ? undefined : onOpen}
             {...decorationHover.hoverProps}
         >
             {nameplateId ? (
                 <ProfileNameplate
                     templateId={nameplateId}
-                    active={decorationHover.active}
+                    active={decorationActive}
                 />
             ) : null}
             <UserDetailContent
@@ -259,7 +267,10 @@ export function FriendRow({
                     iconFrameId ? (
                         <ProfileAvatarFrame
                             templateId={iconFrameId}
-                            active={decorationHover.active}
+                            active={
+                                decorationActive ||
+                                (showLocationSubline && isTraveling)
+                            }
                         />
                     ) : null
                 }

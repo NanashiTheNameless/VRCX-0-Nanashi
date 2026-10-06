@@ -10,7 +10,8 @@ use vrcx_0_core::screenshots::{
 };
 use vrcx_0_outbound_adapters::screenshots::{
     self as screenshot, ScreenshotExportOutcome, ScreenshotFolderTree, ScreenshotLibraryImage,
-    ScreenshotLibraryScanStatus, ScreenshotSearchResult,
+    ScreenshotLibraryScanStatus, ScreenshotSearchResult, ScreenshotTimeWindow,
+    ScreenshotWindowImages,
 };
 use vrcx_0_persistence::screenshot_cache::MetadataCacheDb;
 use vrcx_0_platform::app_paths::AppPaths;
@@ -179,6 +180,19 @@ impl DesktopScreenshotRuntime {
         Ok(screenshot::list_world_screenshots(
             &self.cache,
             world_id,
+            &self.photos_root,
+        )?)
+    }
+
+    pub fn screenshots_in_windows(
+        &self,
+        windows: &[ScreenshotTimeWindow],
+        limit_per_window: i64,
+    ) -> Result<Vec<ScreenshotWindowImages>> {
+        Ok(screenshot::list_screenshots_in_windows(
+            &self.cache,
+            windows,
+            limit_per_window,
             &self.photos_root,
         )?)
     }

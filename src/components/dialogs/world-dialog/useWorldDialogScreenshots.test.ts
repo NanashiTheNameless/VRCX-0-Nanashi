@@ -62,6 +62,7 @@ function screenshot(worldId: string) {
         worldId,
         worldName: 'Target World',
         capturedAt: '2026-08-11T00:00:00Z',
+        capturedAtMs: Date.parse('2026-08-11T00:00:00Z'),
         metadata: {
             application: 'VRChat',
             version: 1,

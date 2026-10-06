@@ -6,9 +6,6 @@ type IntegrationsSectionInput = SettingsSectionInput<
     | 'avatarProviderConfig'
     | 'saveDiscordBoolPreference'
     | 'setPrefs'
-    | 'setWebhookNotificationsDialogOpen'
-    | 'saveStringPreference'
-    | 'saveBoolPreference'
     | 'commit'
     | 'setTranslationApiEnabledPreference'
     | 'setIntegrationValue'
@@ -29,9 +26,6 @@ export function buildIntegrationsSection({
     avatarProviderConfig,
     saveDiscordBoolPreference,
     setPrefs,
-    setWebhookNotificationsDialogOpen,
-    saveStringPreference,
-    saveBoolPreference,
     commit,
     setTranslationApiEnabledPreference,
     setIntegrationValue,
@@ -51,9 +45,6 @@ export function buildIntegrationsSection({
         avatarProviderConfig,
         saveDiscordBoolPreference,
         setPrefs,
-        setWebhookNotificationsDialogOpen,
-        saveStringPreference,
-        saveBoolPreference,
         commit,
         setTranslationApiEnabledPreference,
         setIntegrationValue,

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { parseDateInput, toDateInputValue } from '@/lib/dateRange';
 import { useTodayDate } from '@/lib/useTodayDate';
+import { usePreferencesStore } from '@/state/preferencesStore';
 import { Button } from '@/ui/shadcn/button';
 import { Calendar } from '@/ui/shadcn/calendar';
 import { InputGroupButton } from '@/ui/shadcn/input-group';
@@ -49,6 +50,7 @@ export function DateRangeFilter({
         setDateFilterOpen(false);
     }
     const { t } = useTranslation();
+    const weekStartsOn = usePreferencesStore((state) => state.weekStartsOn);
     const hasRange = Boolean(dateFrom || dateTo);
     const label = hasRange
         ? [dateFrom || '...', dateTo || '...'].join(' - ')
@@ -87,6 +89,7 @@ export function DateRangeFilter({
                     defaultMonth={dateDraftRange?.from ?? todayDate}
                     selected={dateDraftRange}
                     disabled={{ after: todayDate }}
+                    weekStartsOn={weekStartsOn}
                     onSelect={setDateDraftRange}
                 />
                 <div className="flex items-center justify-between gap-4 px-3 pb-3">

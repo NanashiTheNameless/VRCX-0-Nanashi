@@ -1,12 +1,6 @@
 import { FolderOpenIcon, MoreHorizontalIcon, Trash2Icon } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import {
-    commands,
-    type DeepLinkSchemeSettings
-} from '@/platform/tauri/bindings';
-import { toast } from '@/services/toastService';
 import { normalizeAvatarAutoCleanupPreference } from '@/shared/constants/settings';
 import { dataDirectoryPathForDisplay } from '@/shared/utils/dataDirectoryPath';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -59,161 +53,6 @@ function DataDirectoryPath({ value }: DataDirectoryPathProps) {
     );
 }
 
-function DeepLinkRegistrationField() {
-    const { t } = useTranslation();
-    const [registered, setRegistered] = useState<boolean | null>();
-    const [repairing, setRepairing] = useState(false);
-
-    useEffect(() => {
-        let active = true;
-
-        commands
-            .appDeepLinkRegistrationStatus()
-            .then((status) => {
-                if (active) {
-                    setRegistered(status);
-                }
-            })
-            .catch(() => {
-                if (active) {
-                    setRegistered(false);
-                }
-            });
-
-        return () => {
-            active = false;
-        };
-    }, []);
-
-    if (registered === undefined || registered === null) {
-        return null;
-    }
-
-    async function repairRegistration() {
-        setRepairing(true);
-        try {
-            const status = await commands.appDeepLinkRegistrationRepair();
-            setRegistered(status);
-            if (status) {
-                toast.add({
-                    type: 'success',
-                    title: t(
-                        'view.settings.advanced.advanced_ui.behavior.deep_link_repair_success'
-                    )
-                });
-            } else {
-                toast.add({
-                    type: 'error',
-                    title: t(
-                        'view.settings.advanced.advanced_ui.behavior.deep_link_repair_failed'
-                    )
-                });
-            }
-        } catch (error: unknown) {
-            toast.add({
-                type: 'error',
-                title: error instanceof Error ? error.message : String(error)
-            });
-        } finally {
-            setRepairing(false);
-        }
-    }
-
-    return (
-        <Field
-            label={t(
-                'view.settings.advanced.advanced_ui.behavior.deep_link_registration'
-            )}
-            description={t(
-                registered
-                    ? 'view.settings.advanced.advanced_ui.behavior.deep_link_registered'
-                    : 'view.settings.advanced.advanced_ui.behavior.deep_link_not_registered'
-            )}
-        >
-            <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={repairing}
-                onClick={() => void repairRegistration()}
-            >
-                {t(
-                    'view.settings.advanced.advanced_ui.behavior.deep_link_repair'
-                )}
-            </Button>
-        </Field>
-    );
-}
-
-// Fork: turn the extra link schemes on/off (vrcx-0-nanashi:// is always on).
-function DeepLinkSchemeToggles() {
-    const { t } = useTranslation();
-    const [settings, setSettings] = useState<DeepLinkSchemeSettings | null>(
-        null
-    );
-
-    useEffect(() => {
-        let active = true;
-        commands
-            .appDeepLinkSchemesGet()
-            .then((result) => {
-                if (active) setSettings(result);
-            })
-            .catch(() => {});
-        return () => {
-            active = false;
-        };
-    }, []);
-
-    if (!settings) {
-        return null;
-    }
-
-    async function update(next: DeepLinkSchemeSettings) {
-        setSettings(next);
-        try {
-            setSettings(await commands.appDeepLinkSchemesSet(next));
-        } catch (error: unknown) {
-            setSettings(settings);
-            toast.add({
-                type: 'error',
-                title: error instanceof Error ? error.message : String(error)
-            });
-        }
-    }
-
-    return (
-        <>
-            <Field
-                label={t('view.settings.deep_link_schemes.upstream')}
-                description={t(
-                    'view.settings.deep_link_schemes.upstream_description'
-                )}
-            >
-                <Switch
-                    checked={settings.upstream}
-                    onCheckedChange={(checked) =>
-                        void update({ ...settings, upstream: checked })
-                    }
-                />
-            </Field>
-            <Field
-                label={t('view.settings.deep_link_schemes.legacy')}
-                description={t(
-                    'view.settings.deep_link_schemes.legacy_description'
-                )}
-            >
-                <Switch
-                    checked={settings.legacy}
-                    onCheckedChange={(checked) =>
-                        void update({ ...settings, legacy: checked })
-                    }
-                />
-            </Field>
-        </>
-    );
-}
-
 export function SettingsAdvancedTab() {
     const state = useSettingsAdvancedTabState();
     return <SettingsAdvancedTabContent advanced={state} />;
@@ -226,7 +65,6 @@ export function SettingsAdvancedTabContent({
         (state) => state.hostCapabilities.runtimeGameLogIngest.supported
     );
     const {
-        hostPlatform,
         prefs,
         avatarAutoCleanupOptions,
         sqliteTableSizes,
@@ -234,9 +72,7 @@ export function SettingsAdvancedTabContent({
         onlineVisitCount,
         configTreeData,
         appDataDirState,
-        onRelaunchVRChatAfterCrashChange,
-        onVrcQuitFixChange,
-        onFocusVrchatOnJoinChange,
+        hostPlatform,
         onAutoSweepVRChatCacheChange,
         onUdonExceptionLoggingChange,
         onLogResourceLoadChange,
@@ -265,58 +101,6 @@ export function SettingsAdvancedTabContent({
 
     return (
         <SettingsTabContent value="advanced">
-            <SettingsCard
-                cardId="advanced.behavior"
-                title={t('view.settings.advanced.advanced_ui.behavior.header')}
-            >
-                <Field
-                    label={t(
-                        'view.settings.advanced.advanced.relaunch_vrchat.header'
-                    )}
-                    description={t(
-                        'view.settings.advanced.advanced.relaunch_vrchat.description'
-                    )}
-                >
-                    <Switch
-                        checked={prefs.relaunchVRChatAfterCrash}
-                        onCheckedChange={onRelaunchVRChatAfterCrashChange}
-                    />
-                </Field>
-
-                <Field
-                    label={t(
-                        'view.settings.advanced.advanced_ui.behavior.quit_header'
-                    )}
-                    description={t(
-                        'view.settings.advanced.advanced_ui.behavior.quit_description'
-                    )}
-                >
-                    <Switch
-                        checked={prefs.vrcQuitFix}
-                        onCheckedChange={onVrcQuitFixChange}
-                    />
-                </Field>
-
-                {hostPlatform === 'windows' ? (
-                    <Field
-                        label={t(
-                            'view.settings.advanced.advanced_ui.behavior.focus_on_join_header'
-                        )}
-                        description={t(
-                            'view.settings.advanced.advanced_ui.behavior.focus_on_join_description'
-                        )}
-                    >
-                        <Switch
-                            checked={prefs.focusVrchatOnJoin}
-                            onCheckedChange={onFocusVrchatOnJoinChange}
-                        />
-                    </Field>
-                ) : null}
-                <DeepLinkRegistrationField />
-                {/* Fork: the scheme toggles have no effect on Linux, so hide them. */}
-                {hostPlatform !== 'linux' ? <DeepLinkSchemeToggles /> : null}
-            </SettingsCard>
-
             <SettingsSafetyCard />
             <SettingsYtdlpCard />
             <SettingsCard
@@ -561,6 +345,7 @@ export function SettingsAdvancedTabContent({
             </SettingsCard>
 
             <AdvancedTroubleshootingGroup
+                hostPlatform={hostPlatform}
                 prefs={prefs}
                 sqliteTableSizes={sqliteTableSizes}
                 sqliteTableSizeRows={sqliteTableSizeRows}

@@ -9,12 +9,13 @@ use crate::Error;
 use vrcx_0_contracts::activity_page::ActivityLocationSpan as LocationSpan;
 use vrcx_0_core::activity_sessions::{span_duration_ms, SpanEnd};
 
-struct SourceRow {
-    left_at: String,
-    time: i64,
-    world_id: String,
-    world_name: String,
-    access_bucket: String,
+pub(super) struct SourceRow {
+    pub(super) left_at: String,
+    pub(super) time: i64,
+    pub(super) location: String,
+    pub(super) world_id: String,
+    pub(super) world_name: String,
+    pub(super) access_bucket: String,
 }
 
 pub fn read_instance_spans(
@@ -93,7 +94,7 @@ fn read_open_instance_span(
     }))
 }
 
-fn read_source_rows(
+pub(super) fn read_source_rows(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
     from_ms: Option<i64>,
@@ -122,6 +123,7 @@ fn read_source_rows(
     let sql = format!(
         "SELECT jl.created_at,
                 jl.time,
+                COALESCE(jl.location, '') AS location,
                 {world_id_expr} AS world_id,
                 COALESCE((
                     SELECT gl.world_name
@@ -148,9 +150,10 @@ fn read_source_rows(
         .map(|row| SourceRow {
             left_at: row_string(&row, 0),
             time: row_i64(&row, 1),
-            world_id: row_string(&row, 2),
-            world_name: row_string(&row, 3),
-            access_bucket: row_string(&row, 4),
+            location: row_string(&row, 2),
+            world_id: row_string(&row, 3),
+            world_name: row_string(&row, 4),
+            access_bucket: row_string(&row, 5),
         })
         .collect())
 }
@@ -211,6 +214,7 @@ mod tests {
         SourceRow {
             left_at: crate::activity::activity_iso_from_ms(BASE + left_offset_ms),
             time,
+            location: "wrld_a:1".into(),
             world_id: "wrld_a".into(),
             world_name: "Alpha".into(),
             access_bucket: "public".into(),

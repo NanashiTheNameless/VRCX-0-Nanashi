@@ -10,6 +10,7 @@ import { useFriendRosterStore } from '@/state/friendRosterStore';
 import {
     offlinePresence,
     onlinePresence,
+    pendingPresence,
     travelingPresence
 } from '@/test/presenceFixtures';
 
@@ -25,6 +26,15 @@ vi.mock('@/components/user-hover-card/UserHoverCard', () => ({
     UserHoverCard: ({ children }: { children: ReactNode }) => children
 }));
 vi.mock('@/services/entityMediaService', () => ({ userImage: () => '' }));
+vi.mock('@/components/ProfileDecorations', () => ({
+    ProfileAvatarFrame: ({ templateId }: { templateId: string }) => (
+        <span data-avatar-frame={templateId} />
+    ),
+    ProfileNameplate: ({ templateId }: { templateId: string }) => (
+        <span data-nameplate={templateId} />
+    ),
+    useDecorationHover: () => ({ active: false, hoverProps: {} })
+}));
 vi.mock('@/components/friends/FriendInstanceTimer', () => ({
     FriendInstanceTimer: ({
         epoch,
@@ -108,6 +118,30 @@ describe('FriendLocationCard presentation', () => {
         }
     );
 
+    it('labels and dims a friend who may be offline without blinking the actions', () => {
+        const animate = vi.fn(() => ({ cancel: vi.fn() }));
+        Object.defineProperty(HTMLElement.prototype, 'animate', {
+            configurable: true,
+            value: animate
+        });
+        const { container, getByText, queryByText } = render(
+            <FriendLocationCard
+                friend={{ ...friend, $presence: pendingPresence() }}
+            />
+        );
+
+        expect(
+            container.querySelector('[data-pending-offline]')
+        ).not.toBeNull();
+        expect(getByText('side_panel.pending_offline')).toBeTruthy();
+        expect(queryByText('Exploring worlds')).toBeNull();
+        const animated = animate.mock.contexts as unknown as Element[];
+        expect(animated.length).toBeGreaterThan(0);
+        expect(
+            animated.some((element) => element.hasAttribute('data-dim-exempt'))
+        ).toBe(false);
+    });
+
     it('does not reserve a description node for a friend without a signature', () => {
         const { container } = render(
             <FriendLocationCard friend={{ ...friend, statusDescription: '' }} />
@@ -140,6 +174,45 @@ describe('FriendLocationCard presentation', () => {
             fireEvent.keyDown(location, { key: 'Enter' });
         }
         expect(openUser).toHaveBeenCalledTimes(3);
+    });
+
+    it('renders the avatar frame and nameplate independently when enabled', () => {
+        const decorated = {
+            ...friend,
+            iconFrame: 'invt_frame',
+            nameplateEffect: 'invt_plate'
+        };
+        const { container, rerender } = render(
+            <FriendLocationCard friend={decorated} />
+        );
+        expect(container.querySelector('[data-avatar-frame]')).toBeNull();
+        expect(container.querySelector('[data-nameplate]')).toBeNull();
+
+        rerender(
+            <FriendLocationCard
+                friend={decorated}
+                presentation={{ showAvatarFrame: true }}
+            />
+        );
+        expect(
+            container
+                .querySelector('[data-avatar-frame]')
+                ?.getAttribute('data-avatar-frame')
+        ).toBe('invt_frame');
+        expect(container.querySelector('[data-nameplate]')).toBeNull();
+
+        rerender(
+            <FriendLocationCard
+                friend={decorated}
+                presentation={{ showNameplate: true }}
+            />
+        );
+        expect(container.querySelector('[data-avatar-frame]')).toBeNull();
+        expect(
+            container
+                .querySelector('[data-nameplate]')
+                ?.getAttribute('data-nameplate')
+        ).toBe('invt_plate');
     });
 });
 

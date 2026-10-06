@@ -38,10 +38,12 @@ type FriendsLocationsToolbarProps = {
     segmentOptions: FriendsLocationsSegmentOption[];
     searchQuery: string;
     showSameInstanceInOnline: boolean;
+    showFavoritesInOnline: boolean;
     density: FriendsLocationsDensity;
     viewMode: FriendsLocationsViewMode;
     onSearchQueryChange: (value: string) => void;
     onShowSameInstanceInOnlineChange: (value: boolean) => void;
+    onShowFavoritesInOnlineChange: (value: boolean) => void;
     onDensityChange: (value: FriendsLocationsDensity) => void;
     onViewModeChange: (value: FriendsLocationsViewMode) => void;
 };
@@ -50,10 +52,12 @@ export function FriendsLocationsToolbar({
     segmentOptions,
     searchQuery,
     showSameInstanceInOnline,
+    showFavoritesInOnline,
     density,
     viewMode,
     onSearchQueryChange,
     onShowSameInstanceInOnlineChange,
+    onShowFavoritesInOnlineChange,
     onDensityChange,
     onViewModeChange
 }: FriendsLocationsToolbarProps) {
@@ -115,6 +119,22 @@ export function FriendsLocationsToolbar({
                                     checked={showSameInstanceInOnline}
                                     onCheckedChange={
                                         onShowSameInstanceInOnlineChange
+                                    }
+                                />
+                            </Field>
+                            <Field orientation="horizontal">
+                                <FieldContent>
+                                    <FieldLabel htmlFor="friends-locations-favorites">
+                                        {t(
+                                            'view.friends_locations.show_favorites_in_online'
+                                        )}
+                                    </FieldLabel>
+                                </FieldContent>
+                                <Switch
+                                    id="friends-locations-favorites"
+                                    checked={showFavoritesInOnline}
+                                    onCheckedChange={
+                                        onShowFavoritesInOnlineChange
                                     }
                                 />
                             </Field>

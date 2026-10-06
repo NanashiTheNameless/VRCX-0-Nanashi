@@ -7,8 +7,15 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { FriendInstanceTimer } from '@/components/friends/FriendInstanceTimer';
+import { usePendingOfflineBlink } from '@/components/friends/usePendingOfflineBlink';
+import { useRecentlyOnline } from '@/components/friends/useRecentlyOnline';
 import { LaunchModeContextMenuGroup } from '@/components/launch/LaunchModeContextMenuGroup';
 import { Location } from '@/components/Location';
+import {
+    ProfileAvatarFrame,
+    ProfileNameplate,
+    useDecorationHover
+} from '@/components/ProfileDecorations';
 import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
 import { UserStatusDot } from '@/components/UserStatusDot';
 import {
@@ -100,6 +107,8 @@ interface FriendLocationCardPresentation {
     density?: FriendLocationCardDensity;
     contentMode?: FriendsLocationsCardContentMode;
     displayInstanceInfo?: boolean;
+    showAvatarFrame?: boolean;
+    showNameplate?: boolean;
 }
 
 interface FriendLocationCardCapabilities {
@@ -146,7 +155,9 @@ export function FriendLocationCard({
     const {
         density: densityConfig = DEFAULT_CARD_DENSITY_CONFIG,
         contentMode = 'full',
-        displayInstanceInfo = true
+        displayInstanceInfo = true,
+        showAvatarFrame = false,
+        showNameplate = false
     } = presentation;
     const {
         useLocation: canUseFriendLocation = false,
@@ -164,6 +175,11 @@ export function FriendLocationCard({
         sendBoop: onSendBoop
     } = actions;
 
+    const decorationHover = useDecorationHover();
+    const recentlyOnline = useRecentlyOnline(normalizeString(friend.id));
+    const decorationActive = decorationHover.active || recentlyOnline;
+    const iconFrameId = showAvatarFrame ? friend.iconFrame?.trim() : '';
+    const nameplateId = showNameplate ? friend.nameplateEffect?.trim() : '';
     const avatarUrl = userImage(friend);
     const presence = friend.$presence;
     const statusDotClassName = presenceDotClassName(presence, friend.status);
@@ -181,6 +197,8 @@ export function FriendLocationCard({
     const travelingValue = localLocation
         ? undefined
         : presenceTravelingTag(presence) || undefined;
+    const isTraveling =
+        travelingValue !== undefined && locationValue === 'traveling';
     const resolvedDensityConfig = densityConfig || DEFAULT_CARD_DENSITY_CONFIG;
     const isDense = resolvedDensityConfig.layout === 'item';
     const resolvedWorldActionLabel =
@@ -199,10 +217,15 @@ export function FriendLocationCard({
         (Boolean(locationValue) ||
             (Boolean(locationLabel) &&
                 normalizeUserStatus(locationLabel) !== 'offline'));
+    const isPendingOffline = presence.kind === 'pendingOffline';
+    const cardRef = usePendingOfflineBlink<HTMLDivElement>(isPendingOffline);
+    const statusText = isPendingOffline
+        ? t('side_panel.pending_offline')
+        : friend.statusDescription;
     const showStatusDescription =
         contentMode !== 'identity' &&
         resolvedDensityConfig.showStatusDescription &&
-        Boolean(friend.statusDescription);
+        Boolean(statusText);
     const hoverUserId = normalizeString(friend.id);
     const instanceEpoch = useFriendLocationTimeEpoch(
         hoverUserId,
@@ -227,6 +250,12 @@ export function FriendLocationCard({
                 <AvatarFallback>
                     <UserIcon aria-hidden="true" />
                 </AvatarFallback>
+                {iconFrameId ? (
+                    <ProfileAvatarFrame
+                        templateId={iconFrameId}
+                        active={decorationActive || isTraveling}
+                    />
+                ) : null}
                 <UserStatusDot
                     statusDotClassName={statusDotClassName}
                     className="absolute -right-0.5 -bottom-0.5 z-10 size-[var(--friend-card-dot-size)]"
@@ -284,13 +313,14 @@ export function FriendLocationCard({
                     statusLineClampClass
                 )}
             >
-                {friend.statusDescription}
+                {statusText}
             </span>
         </CardDescription>
     ) : null;
     const cardActions = (
         <div
             role="presentation"
+            data-dim-exempt
             className="pointer-events-none absolute top-[var(--friend-card-padding)] right-[var(--friend-card-padding)] z-20 flex items-center gap-0.5 opacity-0 transition-opacity duration-(--motion-fast) ease-(--ease-out-ui) group-focus-within/card:pointer-events-auto group-focus-within/card:opacity-100 group-hover/card:pointer-events-auto group-hover/card:opacity-100 motion-reduce:transition-none"
             onClick={(event) => event.stopPropagation()}
             onKeyDown={(event) => event.stopPropagation()}
@@ -373,15 +403,18 @@ export function FriendLocationCard({
             <ContextMenuTrigger
                 render={
                     <Card
+                        ref={cardRef}
                         size="sm"
+                        data-pending-offline={isPendingOffline || undefined}
                         className={cn(
-                            'bg-object-surface border-border focus-visible:ring-ring/50 relative h-full rounded-lg border ring-0 transition-colors duration-(--motion-fast) ease-(--ease-out-ui) outline-none hover:bg-[color-mix(in_oklch,var(--object-surface),var(--foreground)_7%)] focus-visible:ring-3 focus-visible:ring-inset motion-reduce:transition-none',
+                            'bg-object-surface border-border focus-visible:ring-ring/50 relative isolate h-full rounded-lg border ring-0 transition-colors duration-(--motion-fast) ease-(--ease-out-ui) outline-none hover:bg-[color-mix(in_oklch,var(--object-surface),var(--foreground)_7%)] focus-visible:ring-3 focus-visible:ring-inset motion-reduce:transition-none',
                             canOpenUser && 'cursor-pointer',
                             isDense
                                 ? 'flex-row items-center gap-[calc(var(--friend-card-gap)+2px)] rounded-lg p-[var(--friend-card-padding)]'
                                 : 'gap-[var(--friend-card-gap)] py-[var(--friend-card-padding)]'
                         )}
                         onClick={onOpenUser}
+                        {...decorationHover.hoverProps}
                         onKeyDown={(event) => {
                             if (
                                 event.target === event.currentTarget &&
@@ -407,6 +440,12 @@ export function FriendLocationCard({
                             '--friend-card-title-font-size': `${resolvedDensityConfig.titleFontSize}px`
                         }}
                     >
+                        {nameplateId ? (
+                            <ProfileNameplate
+                                templateId={nameplateId}
+                                active={decorationActive}
+                            />
+                        ) : null}
                         {cardActions}
                         {isDense ? (
                             <>

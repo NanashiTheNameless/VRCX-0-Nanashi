@@ -8,6 +8,7 @@ import {
 import type { DateRange } from 'react-day-picker';
 
 import { formatCompactDateTime } from '@/lib/dateTime';
+import { usePreferencesStore } from '@/state/preferencesStore';
 import { Button } from '@/ui/shadcn/button';
 import { Calendar } from '@/ui/shadcn/calendar';
 import { Label } from '@/ui/shadcn/label';
@@ -132,6 +133,7 @@ export function DateTimeRangePicker({
     align = 'start',
     renderTrigger
 }: DateTimeRangePickerProps) {
+    const weekStartsOn = usePreferencesStore((state) => state.weekStartsOn);
     const [open, setOpen] = useState(false);
     const [draftRange, setDraftRange] = useState<DateRange | undefined>(
         undefined
@@ -208,6 +210,7 @@ export function DateTimeRangePicker({
                     max={maxDays}
                     selected={draftRange}
                     disabled={disabled}
+                    weekStartsOn={weekStartsOn}
                     onSelect={setDraftRange}
                 />
                 <div className="grid grid-cols-2 gap-3 px-3 pb-2">

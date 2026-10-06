@@ -1,6 +1,9 @@
+import type { NotificationLayout } from '@/state/shellStore';
+
 import {
     avatarAutoCleanupOptions,
     desktopToastOptions,
+    notificationLayoutOptions,
     notificationTtsNameModeOptions,
     notificationTtsOptions,
     sqliteTableSizeRows
@@ -8,6 +11,11 @@ import {
 import type { SettingsSectionInput } from '../settingsPageStateSectionTypes';
 
 type NotificationsSectionInput = SettingsSectionInput<
+    | 'prefs'
+    | 'commit'
+    | 'setPrefs'
+    | 'setNotificationLayoutPreference'
+    | 'setWebhookNotificationsDialogOpen'
     | 'ttsVoices'
     | 'notificationTtsTestVisible'
     | 'notificationTtsTest'
@@ -56,6 +64,11 @@ type AdvancedSectionInput = SettingsSectionInput<
 >;
 
 export function buildNotificationsSection({
+    prefs,
+    commit,
+    setPrefs,
+    setNotificationLayoutPreference,
+    setWebhookNotificationsDialogOpen,
     ttsVoices,
     notificationTtsTestVisible,
     notificationTtsTest,
@@ -88,7 +101,50 @@ export function buildNotificationsSection({
         saveNotificationTtsVoice,
         setNotificationTtsTestVisible,
         setNotificationTtsTest,
-        speakNotificationTts
+        speakNotificationTts,
+        notificationLayoutOptions,
+        setWebhookNotificationsDialogOpen,
+        onNotificationLayoutChange: (value: NotificationLayout) => {
+            commit(
+                async () => {
+                    const nextLayout =
+                        await setNotificationLayoutPreference(value);
+                    setPrefs((current) => ({
+                        ...current,
+                        notificationLayout: nextLayout
+                    }));
+                },
+                () => {
+                    const previous = prefs.notificationLayout;
+                    setPrefs((current) => ({
+                        ...current,
+                        notificationLayout: value
+                    }));
+                    return () =>
+                        setPrefs((current) => ({
+                            ...current,
+                            notificationLayout: previous
+                        }));
+                }
+            );
+        },
+        onNotificationIconDotChange: (checked: boolean) => {
+            saveBoolPreference(
+                'notificationIconDot',
+                'notificationIconDot',
+                checked
+            );
+        },
+        onTaskbarIconDotChange: (checked: boolean) => {
+            saveBoolPreference('taskbarIconDot', 'taskbarIconDot', checked);
+        },
+        onFriendLogNotificationDotChange: (checked: boolean) => {
+            saveBoolPreference(
+                'friendLogNotificationDot',
+                'friendLogNotificationDot',
+                checked
+            );
+        }
     };
 }
 

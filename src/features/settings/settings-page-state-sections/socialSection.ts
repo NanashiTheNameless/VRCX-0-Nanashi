@@ -82,13 +82,6 @@ export function buildSocialSection({
                 checked
             );
         },
-        onFriendLogNotificationDotChange: (checked: boolean) => {
-            saveBoolPreference(
-                'friendLogNotificationDot',
-                'friendLogNotificationDot',
-                checked
-            );
-        },
         onRecentActionCooldownEnabledChange: (checked: boolean) => {
             savePreferenceValue('recentActionCooldownEnabled', checked, () =>
                 setRecentActionCooldownEnabledPreference(checked)

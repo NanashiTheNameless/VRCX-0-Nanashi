@@ -40,6 +40,7 @@ function image(fileName: string): ScreenshotLibraryImage {
         worldId: null,
         worldName: null,
         capturedAt: null,
+        capturedAtMs: 1,
         metadata: null,
         error: null
     };

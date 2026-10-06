@@ -25,7 +25,9 @@ pub use fading::get_fading_friends;
 pub use friend_log::{get_friend_log, get_friend_log_first_created_at};
 pub use graph::{get_friend_circles, get_social_graph};
 pub use helpers::normalize_access_bucket;
-pub(crate) use helpers::{access_bucket_sql, world_id_from_location_sql};
+pub(crate) use helpers::{
+    access_bucket_sql, current_friend_id_set, tz_offset_modifier, world_id_from_location_sql,
+};
 pub use invites::get_invite_history;
 pub use recall::recall_encounter;
 pub use resolve::resolve_user_by_name;

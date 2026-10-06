@@ -34,7 +34,10 @@ export function useSettingsSystemTabState() {
             backgroundModeDelayEnabled: state.backgroundModeDelayEnabled,
             backgroundModeDelayMinutes: state.backgroundModeDelayMinutes,
             proxyEnabled: state.proxyEnabled,
-            proxyServer: state.proxyServer
+            proxyServer: state.proxyServer,
+            relaunchVRChatAfterCrash: state.relaunchVRChatAfterCrash,
+            vrcQuitFix: state.vrcQuitFix,
+            focusVrchatOnJoin: state.focusVrchatOnJoin
         }))
     );
     const {
@@ -66,6 +69,9 @@ export function useSettingsSystemTabState() {
         backgroundModeDelayMinutes: prefs.backgroundModeDelayMinutes,
         proxyEnabled: prefs.proxyEnabled,
         proxyServer: prefs.proxyServer,
+        relaunchVRChatAfterCrash: prefs.relaunchVRChatAfterCrash,
+        vrcQuitFix: prefs.vrcQuitFix,
+        focusVrchatOnJoin: prefs.focusVrchatOnJoin,
         onStartAtWindowsStartupChange: (enabled: boolean) => {
             savePreferenceValue('isStartAtWindowsStartup', enabled, () =>
                 setStartAtWindowsStartupPreference(enabled)
@@ -132,6 +138,23 @@ export function useSettingsSystemTabState() {
                 'showPostUpdateChangelogToast',
                 POST_UPDATE_CHANGELOG_TOAST_CONFIG_KEY,
                 enabled
+            );
+        },
+        onRelaunchVRChatAfterCrashChange: (checked: boolean) => {
+            saveBoolPreference(
+                'relaunchVRChatAfterCrash',
+                'VRCX_relaunchVRChatAfterCrash',
+                checked
+            );
+        },
+        onVrcQuitFixChange: (checked: boolean) => {
+            saveBoolPreference('vrcQuitFix', 'vrcQuitFix', checked);
+        },
+        onFocusVrchatOnJoinChange: (checked: boolean) => {
+            saveBoolPreference(
+                'focusVrchatOnJoin',
+                'focusVrchatOnJoin',
+                checked
             );
         },
         onPromptAutoLoginDelaySeconds: () => {

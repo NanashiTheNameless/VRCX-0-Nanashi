@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -158,6 +158,7 @@ type FriendsLocationsPageDerivedStateInput = {
     remoteFavoriteFriendIds: string[];
     rosterStatus: string;
     scrollMetrics: FriendsLocationsScrollMetrics;
+    showFavoritesInOnline: boolean;
     showSameInstanceInOnline: boolean;
     sidebarFavoritePrefs: FriendsLocationsFavoritePreferences;
     sidebarSortMethods: string[];
@@ -187,6 +188,7 @@ export function useFriendsLocationsPageDerivedState({
     remoteFavoriteFriendIds,
     rosterStatus,
     scrollMetrics,
+    showFavoritesInOnline,
     showSameInstanceInOnline,
     sidebarFavoritePrefs,
     sidebarSortMethods,
@@ -453,13 +455,16 @@ export function useFriendsLocationsPageDerivedState({
             ),
         [sameInstanceFriends]
     );
+    const onlineSegmentFriends = showFavoritesInOnline
+        ? onlineFriends
+        : onlineNonFavoriteFriends;
     const onlineWithoutSameInstanceFriends = useMemo<FriendRecord[]>(
         () =>
-            onlineNonFavoriteFriends.filter(
+            onlineSegmentFriends.filter(
                 (friend) =>
                     !sameInstanceFriendIds.has(normalizeString(friend?.id))
             ),
-        [onlineNonFavoriteFriends, sameInstanceFriendIds]
+        [onlineSegmentFriends, sameInstanceFriendIds]
     );
     const segmentMap = useMemo<Record<string, FriendRecord[]>>(
         () => ({
@@ -519,7 +524,7 @@ export function useFriendsLocationsPageDerivedState({
         const source =
             activeSegment === 'online'
                 ? showSameInstanceInOnline
-                    ? onlineNonFavoriteFriends
+                    ? onlineSegmentFriends
                     : onlineWithoutSameInstanceFriends
                 : (segmentMap[activeSegment] ?? []);
         return source.filter((friend) =>
@@ -533,153 +538,166 @@ export function useFriendsLocationsPageDerivedState({
         favoriteIds,
         offlineFriends,
         onlineFriends,
-        onlineNonFavoriteFriends,
+        onlineSegmentFriends,
         onlineWithoutSameInstanceFriends,
         segmentMap,
         showSameInstanceInOnline
     ]);
-    const favoriteGroupSections = useMemo<FriendsLocationsSection[]>(() => {
-        if (
-            !sidebarFavoritePrefs.isDivideByGroup ||
-            activeSegment !== 'favorite' ||
-            deferredSearchQuery.trim()
-        ) {
-            return [];
-        }
-        const friendById = new Map<string, FriendRecord>(
-            favoriteFriends.map((friend) => [
-                normalizeString(friend?.id),
-                friend
-            ])
-        );
-        const seen = new Set<string>();
-        const sections: FriendsLocationsSection[] = [];
-        const orderedRemoteGroups = favoriteFriendGroups
-            .map((group): FriendsLocationsFavoriteGroupDescriptor => ({
-                key: normalizeString(group?.key),
-                label:
-                    group?.displayName ||
-                    group?.name ||
-                    normalizeString(group?.key)
-            }))
-            .filter(
-                (group) => group.key && selectedFavoriteGroupKeys.has(group.key)
-            )
-            .sort((left, right) =>
-                compareFavoriteGroups(
-                    left,
-                    right,
-                    sidebarFavoritePrefs.groupOrder
-                )
+    const groupFavoriteFriends = useCallback(
+        (
+            friends: FriendRecord[],
+            keyPrefix: string,
+            ungroupedTitle: string
+        ): FriendsLocationsSection[] => {
+            const friendById = new Map<string, FriendRecord>(
+                friends.map((friend) => [normalizeString(friend?.id), friend])
             );
-        const localGroupNames = localFriendFavoriteGroups.length
-            ? localFriendFavoriteGroups
-            : Object.keys(localFriendFavorites || {});
-        const orderedLocalGroups = localGroupNames
-            .map((groupName): FriendsLocationsFavoriteGroupDescriptor => ({
-                key: `local:${groupName}`,
-                label: groupName
-            }))
-            .filter((group) => selectedFavoriteGroupKeys.has(group.key))
-            .sort((left, right) =>
-                compareFavoriteGroups(
-                    left,
-                    right,
-                    sidebarFavoritePrefs.groupOrder
+            const seen = new Set<string>();
+            const sections: FriendsLocationsSection[] = [];
+            const orderedRemoteGroups = favoriteFriendGroups
+                .map((group): FriendsLocationsFavoriteGroupDescriptor => ({
+                    key: normalizeString(group?.key),
+                    label:
+                        group?.displayName ||
+                        group?.name ||
+                        normalizeString(group?.key)
+                }))
+                .filter(
+                    (group) =>
+                        group.key && selectedFavoriteGroupKeys.has(group.key)
                 )
+                .sort((left, right) =>
+                    compareFavoriteGroups(
+                        left,
+                        right,
+                        sidebarFavoritePrefs.groupOrder
+                    )
+                );
+            const localGroupNames = localFriendFavoriteGroups.length
+                ? localFriendFavoriteGroups
+                : Object.keys(localFriendFavorites || {});
+            const orderedLocalGroups = localGroupNames
+                .map((groupName): FriendsLocationsFavoriteGroupDescriptor => ({
+                    key: `local:${groupName}`,
+                    label: groupName
+                }))
+                .filter((group) => selectedFavoriteGroupKeys.has(group.key))
+                .sort((left, right) =>
+                    compareFavoriteGroups(
+                        left,
+                        right,
+                        sidebarFavoritePrefs.groupOrder
+                    )
+                );
+            for (const group of orderedRemoteGroups) {
+                const friendsInGroup = (
+                    groupedFavoriteFriendIdsByGroupKey?.[group.key] || []
+                )
+                    .map((id) => friendById.get(normalizeString(id)))
+                    .filter(isPresent);
+                if (!friendsInGroup.length) {
+                    continue;
+                }
+                for (const friend of friendsInGroup) {
+                    seen.add(normalizeString(friend?.id));
+                }
+                sections.push({
+                    key: `${keyPrefix}:${group.key}`,
+                    type: 'favoriteGroup',
+                    groupKey: group.key,
+                    title: group.label,
+                    description: '',
+                    friends: sortFriendsBySidebarPrefs(
+                        friendsInGroup,
+                        sidebarSortMethods,
+                        sortContext
+                    ),
+                    worldId: '',
+                    groupId: '',
+                    collapsed: collapsedGroups.has(group.key)
+                });
+            }
+            for (const group of orderedLocalGroups) {
+                const groupName = group.key.slice(6);
+                const friendsInGroup = (localFriendFavorites?.[groupName] || [])
+                    .map((id) => friendById.get(normalizeString(id)))
+                    .filter(isPresent);
+                if (!friendsInGroup.length) {
+                    continue;
+                }
+                for (const friend of friendsInGroup) {
+                    seen.add(normalizeString(friend?.id));
+                }
+                sections.push({
+                    key: `${keyPrefix}:${group.key}`,
+                    type: 'favoriteGroup',
+                    groupKey: group.key,
+                    title: group.label,
+                    description: '',
+                    friends: sortFriendsBySidebarPrefs(
+                        friendsInGroup,
+                        sidebarSortMethods,
+                        sortContext
+                    ),
+                    worldId: '',
+                    groupId: '',
+                    collapsed: collapsedGroups.has(group.key)
+                });
+            }
+            const ungrouped = friends.filter(
+                (friend) => !seen.has(normalizeString(friend?.id))
             );
-        for (const group of orderedRemoteGroups) {
-            const friendsInGroup = (
-                groupedFavoriteFriendIdsByGroupKey?.[group.key] || []
-            )
-                .map((id) => friendById.get(normalizeString(id)))
-                .filter(isPresent);
-            if (!friendsInGroup.length) {
-                continue;
+            if (ungrouped.length) {
+                sections.push({
+                    key: `${keyPrefix}:ungrouped`,
+                    type: 'favoriteGroup',
+                    groupKey: 'ungrouped',
+                    title: ungroupedTitle,
+                    description: '',
+                    friends: sortFriendsBySidebarPrefs(
+                        ungrouped,
+                        sidebarSortMethods,
+                        sortContext
+                    ),
+                    worldId: '',
+                    groupId: '',
+                    collapsed: collapsedGroups.has('ungrouped')
+                });
             }
-            for (const friend of friendsInGroup) {
-                seen.add(normalizeString(friend?.id));
-            }
-            sections.push({
-                key: `favorite:${group.key}`,
-                type: 'favoriteGroup',
-                groupKey: group.key,
-                title: group.label,
-                description: '',
-                friends: sortFriendsBySidebarPrefs(
-                    friendsInGroup,
-                    sidebarSortMethods,
-                    sortContext
-                ),
-                worldId: '',
-                groupId: '',
-                collapsed: collapsedGroups.has(group.key)
-            });
-        }
-        for (const group of orderedLocalGroups) {
-            const groupName = group.key.slice(6);
-            const friendsInGroup = (localFriendFavorites?.[groupName] || [])
-                .map((id) => friendById.get(normalizeString(id)))
-                .filter(isPresent);
-            if (!friendsInGroup.length) {
-                continue;
-            }
-            for (const friend of friendsInGroup) {
-                seen.add(normalizeString(friend?.id));
-            }
-            sections.push({
-                key: `favorite:${group.key}`,
-                type: 'favoriteGroup',
-                groupKey: group.key,
-                title: group.label,
-                description: '',
-                friends: sortFriendsBySidebarPrefs(
-                    friendsInGroup,
-                    sidebarSortMethods,
-                    sortContext
-                ),
-                worldId: '',
-                groupId: '',
-                collapsed: collapsedGroups.has(group.key)
-            });
-        }
-        const ungrouped = favoriteFriends.filter(
-            (friend) => !seen.has(normalizeString(friend?.id))
-        );
-        if (ungrouped.length) {
-            sections.push({
-                key: 'favorite:ungrouped',
-                type: 'favoriteGroup',
-                groupKey: 'ungrouped',
-                title: t('view.friends_locations.favorite'),
-                description: '',
-                friends: sortFriendsBySidebarPrefs(
-                    ungrouped,
-                    sidebarSortMethods,
-                    sortContext
-                ),
-                worldId: '',
-                groupId: '',
-                collapsed: collapsedGroups.has('ungrouped')
-            });
-        }
-        return sections;
-    }, [
-        activeSegment,
-        collapsedGroups,
-        deferredSearchQuery,
-        favoriteFriendGroups,
-        favoriteFriends,
-        groupedFavoriteFriendIdsByGroupKey,
-        localFriendFavoriteGroups,
-        localFriendFavorites,
-        selectedFavoriteGroupKeys,
-        sidebarFavoritePrefs.groupOrder,
-        sidebarFavoritePrefs.isDivideByGroup,
-        sidebarSortMethods,
-        t,
-        sortContext
-    ]);
+            return sections;
+        },
+        [
+            collapsedGroups,
+            favoriteFriendGroups,
+            groupedFavoriteFriendIdsByGroupKey,
+            localFriendFavoriteGroups,
+            localFriendFavorites,
+            selectedFavoriteGroupKeys,
+            sidebarFavoritePrefs.groupOrder,
+            sidebarSortMethods,
+            sortContext
+        ]
+    );
+    const favoriteGroupSections = useMemo<FriendsLocationsSection[]>(
+        () =>
+            sidebarFavoritePrefs.isDivideByGroup &&
+            activeSegment === 'favorite' &&
+            !deferredSearchQuery.trim()
+                ? groupFavoriteFriends(
+                      favoriteFriends,
+                      'favorite',
+                      t('view.friends_locations.favorite')
+                  )
+                : [],
+        [
+            activeSegment,
+            deferredSearchQuery,
+            favoriteFriends,
+            groupFavoriteFriends,
+            sidebarFavoritePrefs.isDivideByGroup,
+            t
+        ]
+    );
     const visibleSections = useMemo<FriendsLocationsSection[]>(() => {
         if (favoriteGroupSections.length) {
             return favoriteGroupSections;
@@ -725,11 +743,19 @@ export function useFriendsLocationsPageDerivedState({
             const remainingFriends = showSameInstanceInOnline
                 ? onlineWithoutSameInstanceFriends
                 : visibleFriends;
+            const onlineFavoriteFriends = remainingFriends.filter((friend) =>
+                onlineFavoriteExclusionIds.has(normalizeString(friend?.id))
+            );
             const {
                 visibleLocation: availableFriends,
                 privateLocation: privateFriends
             } = partitionFriendsByPrivateLocation(
-                remainingFriends,
+                remainingFriends.filter(
+                    (friend) =>
+                        !onlineFavoriteExclusionIds.has(
+                            normalizeString(friend?.id)
+                        )
+                ),
                 (friendId) => localGameLocation(locationTimes[friendId])
             );
             const privateSections: FriendsLocationsSection[] =
@@ -752,6 +778,26 @@ export function useFriendsLocationsPageDerivedState({
                     : [];
             return [
                 ...sameInstanceSections,
+                ...(sidebarFavoritePrefs.isDivideByGroup
+                    ? groupFavoriteFriends(
+                          onlineFavoriteFriends,
+                          'online:favorite',
+                          t('view.friends_locations.favorite_friends')
+                      )
+                    : onlineFavoriteFriends.length
+                      ? [
+                            {
+                                key: 'online:favorites',
+                                title: t(
+                                    'view.friends_locations.favorite_friends'
+                                ),
+                                description: '',
+                                friends: onlineFavoriteFriends,
+                                worldId: '',
+                                groupId: ''
+                            }
+                        ]
+                      : []),
                 ...(availableFriends.length
                     ? [
                           {
@@ -809,11 +855,14 @@ export function useFriendsLocationsPageDerivedState({
         favoriteGroupLabelsByFriendId,
         favoriteGroupSections,
         favoriteIds,
+        groupFavoriteFriends,
         locationTimes,
+        onlineFavoriteExclusionIds,
         onlineWithoutSameInstanceFriends,
         sameInstanceGroups,
         sameInstanceFriends,
         showSameInstanceInOnline,
+        sidebarFavoritePrefs.isDivideByGroup,
         visibleFriends,
         t
     ]);

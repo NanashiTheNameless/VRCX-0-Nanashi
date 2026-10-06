@@ -19,6 +19,7 @@ import { isSameInstanceLocation } from '@/domain/instances/instanceRoster';
 import { cn } from '@/lib/utils';
 import { normalizeString } from '@/shared/utils/string';
 import { useFriendLocationTimeStore } from '@/state/friendLocationTimeStore';
+import { usePreferencesStore } from '@/state/preferencesStore';
 import { Badge } from '@/ui/shadcn/badge';
 import { Button } from '@/ui/shadcn/button';
 
@@ -208,6 +209,12 @@ export function FriendsLocationCardItem({
     const locationTime = useFriendLocationTimeStore(
         (state) => state.byUserId[friend.id]
     );
+    const showAvatarFrame = usePreferencesStore(
+        (state) => state.showFriendsLocationsPeopleAvatarFrame
+    );
+    const showNameplate = usePreferencesStore(
+        (state) => state.showFriendsLocationsPeopleNameplate
+    );
     const localLocation = localGameLocation(locationTime);
     const location = localLocation
         ? summarizeLocation(localLocation, null, t)
@@ -238,7 +245,9 @@ export function FriendsLocationCardItem({
             presentation={{
                 density: densityConfig,
                 contentMode: section.cardContentMode,
-                displayInstanceInfo: section.displayInstanceInfo !== false
+                displayInstanceInfo: section.displayInstanceInfo !== false,
+                showAvatarFrame,
+                showNameplate
             }}
             capabilities={{
                 useLocation: !friendIsCurrentUser && friendLocationAvailable,

@@ -115,7 +115,7 @@ pub fn convert_log_time_to_iso8601(line: &str) -> String {
     }
 }
 
-fn log_time_to_utc<Tz: chrono::TimeZone>(
+pub(crate) fn log_time_to_utc<Tz: chrono::TimeZone>(
     tz: &Tz,
     local: chrono::NaiveDateTime,
 ) -> chrono::DateTime<chrono::Utc> {

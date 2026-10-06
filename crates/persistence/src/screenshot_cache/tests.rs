@@ -69,6 +69,7 @@ fn library_entry(
         world_id: None,
         world_name: None,
         captured_at: None,
+        captured_at_ms: 1000,
         metadata_json: None,
         error: None,
     }
@@ -379,6 +380,51 @@ fn list_world_screenshots_for_root_filters_by_world_id() -> Result<()> {
     assert_eq!(images.len(), 1);
     assert_eq!(images[0].path, "a.png");
     assert_eq!(images[0].world_id.as_deref(), Some("wrld_a"));
+    Ok(())
+}
+
+#[test]
+fn list_screenshots_in_windows_counts_and_limits_each_window() -> Result<()> {
+    let dir = TestDir::new("list-window-screenshots");
+    let cache = open_cache(&dir);
+    let root_str = path_string(&dir.path.join("Screenshots"));
+    let entries = [100, 200, 300, 900]
+        .into_iter()
+        .map(|captured_at_ms| {
+            let name = format!("{captured_at_ms}.png");
+            let mut entry = library_entry(&root_str, &name, &root_str, &name);
+            entry.captured_at_ms = captured_at_ms;
+            entry
+        })
+        .collect::<Vec<_>>();
+    store_entries(&cache, &root_str, &entries)?;
+
+    let windows = cache.list_screenshots_in_windows_for_root(
+        &root_str,
+        &[
+            ScreenshotTimeWindow {
+                from_ms: 100,
+                to_ms: 300,
+            },
+            ScreenshotTimeWindow {
+                from_ms: 400,
+                to_ms: 800,
+            },
+        ],
+        2,
+    )?;
+
+    assert_eq!(windows[0].total, 3);
+    assert_eq!(
+        windows[0]
+            .images
+            .iter()
+            .map(|image| image.captured_at_ms)
+            .collect::<Vec<_>>(),
+        vec![100, 200]
+    );
+    assert_eq!(windows[1].total, 0);
+    assert!(windows[1].images.is_empty());
     Ok(())
 }
 

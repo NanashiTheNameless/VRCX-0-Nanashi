@@ -1271,6 +1271,10 @@
         }
     }
 
+    [data-pending-offline] > :not([data-dim-exempt]) {
+        opacity: 0.6;
+    }
+
     @keyframes feed-row-arrive {
         from {
             background-color: var(--vrcx-0-feed-row-arrival-surface);

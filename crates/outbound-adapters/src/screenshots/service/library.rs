@@ -5,7 +5,7 @@ use super::{
     get_screenshot_metadata, read_png_dimensions, HashSet, MetadataCacheDb, Path, PathBuf,
     PngDimensions, Result, ScreenshotFolderTree, ScreenshotLibraryEntry, ScreenshotLibraryImage,
     ScreenshotLibraryScanStatus, ScreenshotMetadata, ScreenshotSearchResult, ScreenshotSearchType,
-    SCREENSHOT_LIBRARY_INDEX_VERSION,
+    ScreenshotTimeWindow, ScreenshotWindowImages, SCREENSHOT_LIBRARY_INDEX_VERSION,
 };
 use vrcx_0_application_core::{RuntimeEventBus, TaskStopToken, TaskSupervisor};
 use vrcx_0_core::text::contains_lowercase_query_case_insensitive;
@@ -154,6 +154,11 @@ fn screenshot_library_entry_from_path(
             )
         })
         .unwrap_or_default();
+    let captured_at_ms = vrcx_0_core::screenshots::screenshot_captured_at_ms(
+        captured_at.as_deref(),
+        &file_name,
+        modified_at,
+    );
 
     Some(ScreenshotLibraryEntry {
         scan_root: scan_root.to_string(),
@@ -168,6 +173,7 @@ fn screenshot_library_entry_from_path(
         world_id,
         world_name,
         captured_at,
+        captured_at_ms,
         metadata_json,
         error,
     })
@@ -367,6 +373,15 @@ pub fn list_world_screenshots(
     root_path: &str,
 ) -> Result<Vec<ScreenshotLibraryImage>> {
     Ok(cache.list_world_screenshots_for_root(root_path, world_id)?)
+}
+
+pub fn list_screenshots_in_windows(
+    cache: &MetadataCacheDb,
+    windows: &[ScreenshotTimeWindow],
+    limit_per_window: i64,
+    root_path: &str,
+) -> Result<Vec<ScreenshotWindowImages>> {
+    Ok(cache.list_screenshots_in_windows_for_root(root_path, windows, limit_per_window)?)
 }
 
 pub fn forget_screenshot_file(

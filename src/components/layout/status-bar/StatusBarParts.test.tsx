@@ -25,8 +25,8 @@ describe('StatusDot', () => {
         rerender(<StatusDot active={false} alert="warn" />);
         expect(animate).toHaveBeenCalledTimes(1);
         expect(animate).toHaveBeenLastCalledWith(
-            expect.any(Array),
-            expect.objectContaining({ iterations: 3 })
+            [{ opacity: 1 }, { opacity: 0.15 }],
+            expect.objectContaining({ iterations: 6, direction: 'alternate' })
         );
 
         rerender(<StatusDot active={false} alert="danger" />);

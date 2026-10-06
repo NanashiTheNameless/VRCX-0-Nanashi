@@ -84,6 +84,12 @@ export const ConfigKeys = defineConfigKeys({
     showHoverCardAvatarFrame: { type: 'bool', default: false },
     showHoverCardProfileEffect: { type: 'bool', default: false },
     showHoverCardNameplate: { type: 'bool', default: false },
+    showFriendsLocationsPeopleAvatarFrame: { type: 'bool', default: false },
+    showFriendsLocationsPeopleNameplate: { type: 'bool', default: false },
+    showFriendsLocationsWorldsAvatarFrame: { type: 'bool', default: false },
+    showFriendsLocationsWorldsNameplate: { type: 'bool', default: false },
+    showActivityJourneyAvatarFrame: { type: 'bool', default: false },
+    showActivityJourneyNameplate: { type: 'bool', default: false },
     hideUserMemos: { type: 'bool', default: false },
     hideUserNotes: { type: 'bool', default: false },
     compactTableMode: { type: 'bool', default: false },
@@ -278,6 +284,7 @@ export const ConfigKeys = defineConfigKeys({
     FriendLocationCardScale: { type: 'string', default: '1' },
     FriendLocationCardSpacing: { type: 'string', default: '1' },
     FriendLocationDensity: { type: 'string', default: 'compact' },
+    FriendLocationShowFavoritesInOnline: { type: 'bool', default: null },
     FriendLocationShowSameInstance: { type: 'bool', default: null },
     FriendLocationViewMode: { type: 'string', default: 'people' },
     InstanceActivityBarWidth: { type: 'int', default: 25 },
@@ -294,6 +301,8 @@ export const ConfigKeys = defineConfigKeys({
     MutualGraphCommunitySeparation: { type: 'float', default: null },
 
     // ── Activity ─────────────────────────────────────
+    activityPageMode: { type: 'string', default: null },
+    activityJourneyDensity: { type: 'string', default: null },
     activityPageRange: { type: 'string', default: null },
     activityPageShowHomeWorld: { type: 'bool', default: false },
     activityPageCompanionOrder: { type: 'string', default: null },
@@ -356,6 +365,8 @@ export const FAVORITES_LAYOUT_CONFIG_KEYS = Object.freeze({
 });
 
 export const ACTIVITY_PAGE_CONFIG_KEYS = Object.freeze({
+    mode: 'activityPageMode',
+    journeyDensity: 'activityJourneyDensity',
     range: 'activityPageRange',
     showHomeWorld: 'activityPageShowHomeWorld',
     companionOrder: 'activityPageCompanionOrder'

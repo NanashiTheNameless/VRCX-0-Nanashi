@@ -9,7 +9,8 @@ use crate::error::AppError;
 use crate::state::AppState;
 use vrcx_0_core::screenshots::{
     ScreenshotExportProgress, ScreenshotFolderTree, ScreenshotLibraryImage,
-    ScreenshotLibraryScanStatus, ScreenshotSearchResult,
+    ScreenshotLibraryScanStatus, ScreenshotSearchResult, ScreenshotTimeWindow,
+    ScreenshotWindowImages,
 };
 
 use vrcx_0_host_desktop::host_capabilities::{require_host_capability, HostCapability};
@@ -131,6 +132,21 @@ pub async fn app__get_world_screenshots(
     let screenshots = state.runtime_host().screenshots().clone();
     run_blocking("world screenshots", move || {
         screenshots.world_screenshots(&world_id)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn app__get_screenshots_in_windows(
+    state: State<'_, AppState>,
+    windows: Vec<ScreenshotTimeWindow>,
+    limit_per_window: i64,
+) -> Result<Vec<ScreenshotWindowImages>, AppError> {
+    require_host_capability(HostCapability::ScreenshotCache)?;
+    let screenshots = state.runtime_host().screenshots().clone();
+    run_blocking("window screenshots", move || {
+        screenshots.screenshots_in_windows(&windows, limit_per_window)
     })
     .await
 }

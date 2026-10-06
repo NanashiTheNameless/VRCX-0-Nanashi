@@ -1012,6 +1012,16 @@ const generatedCommands = {
     ): Promise<ActivityPageView> {
         return await TAURI_INVOKE('app__activity_page_view', { input });
     },
+    async appActivityJourneyVisits(
+        input: ActivityJourneyDayInput
+    ): Promise<ActivityJourneyVisit[]> {
+        return await TAURI_INVOKE('app__activity_journey_visits', { input });
+    },
+    async appActivityJourneyDays(
+        input: ActivityJourneyDaysInput
+    ): Promise<string[]> {
+        return await TAURI_INVOKE('app__activity_journey_days', { input });
+    },
     async appActivityOverlapView(
         input: ActivityOverlapViewBuildInput
     ): Promise<ActivityOverlapViewOutput> {
@@ -2878,6 +2888,15 @@ const generatedCommands = {
     ): Promise<ScreenshotLibraryImage[]> {
         return await TAURI_INVOKE('app__get_world_screenshots', { worldId });
     },
+    async appGetScreenshotsInWindows(
+        windows: ScreenshotTimeWindow[],
+        limitPerWindow: number
+    ): Promise<ScreenshotWindowImages[]> {
+        return await TAURI_INVOKE('app__get_screenshots_in_windows', {
+            windows,
+            limitPerWindow
+        });
+    },
     async appEnsureScreenshotThumbnail(path: string): Promise<string> {
         return await TAURI_INVOKE('app__ensure_screenshot_thumbnail', { path });
     },
@@ -2995,6 +3014,30 @@ export type ActivityCompanionOrder = 'minutes' | 'days';
 export type ActivityFilterProfile = {
     version: number;
     types: Partial<{ [key in string]: ActivityRule }>;
+};
+export type ActivityJourneyCompanion = {
+    userId: string;
+    displayName: string;
+    isFriend: boolean;
+    sharedMs: number;
+};
+export type ActivityJourneyDayInput = {
+    ownerUserId: OwnerId;
+    fromMs: number;
+    toMs: number;
+};
+export type ActivityJourneyDaysInput = {
+    ownerUserId: OwnerId;
+    utcOffsetMinutes: number;
+};
+export type ActivityJourneyVisit = {
+    location: string;
+    worldId: string;
+    worldName: string;
+    worldImageUrl: string;
+    startMs: number;
+    endMs: number;
+    companions: ActivityJourneyCompanion[];
 };
 export type ActivityKind =
     | 'invite'
@@ -6674,6 +6717,7 @@ export type ScreenshotLibraryImage = {
     worldId: string | null;
     worldName: string | null;
     capturedAt: string | null;
+    capturedAtMs: number;
     metadata: ScreenshotMetadata | null;
     error: string | null;
 };
@@ -6708,6 +6752,11 @@ export type ScreenshotSearchResult = {
     width: number | null;
     height: number | null;
     metadata: ScreenshotMetadata;
+};
+export type ScreenshotTimeWindow = { fromMs: number; toMs: number };
+export type ScreenshotWindowImages = {
+    total: number;
+    images: ScreenshotLibraryImage[];
 };
 export type SendResult = { sessionId: string; turnId: string };
 export type Session = {

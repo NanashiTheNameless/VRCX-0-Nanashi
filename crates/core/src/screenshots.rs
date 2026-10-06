@@ -1,5 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use std::sync::LazyLock;
+
+use regex::Regex;
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -83,8 +86,23 @@ pub struct ScreenshotLibraryImage {
     pub world_id: Option<String>,
     pub world_name: Option<String>,
     pub captured_at: Option<String>,
+    pub captured_at_ms: i64,
     pub metadata: Option<ScreenshotMetadata>,
     pub error: Option<String>,
+}
+
+#[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ScreenshotTimeWindow {
+    pub from_ms: i64,
+    pub to_ms: i64,
+}
+
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ScreenshotWindowImages {
+    pub total: i64,
+    pub images: Vec<ScreenshotLibraryImage>,
 }
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -467,6 +485,48 @@ pub fn plan_screenshot_zip_entries(
 
 pub fn screenshot_export_file_name(timestamp: &str, count: usize) -> String {
     format!("VRCX-0-Nanashi-Shots-{timestamp}-{count}.zip")
+}
+
+static VRCHAT_FILE_NAME_TIME: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"VRChat_(?:\d{3,}x\d{3,}_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})\.(\d+)|(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})\.(\d{3})_\d{3,}x\d{3,})",
+    )
+    .unwrap()
+});
+
+pub fn screenshot_captured_at_ms(
+    timestamp: Option<&str>,
+    file_name: &str,
+    modified_at: i64,
+) -> i64 {
+    captured_at_ms_in(&chrono::Local, timestamp, file_name, modified_at)
+}
+
+fn captured_at_ms_in<Tz: chrono::TimeZone>(
+    tz: &Tz,
+    timestamp: Option<&str>,
+    file_name: &str,
+    modified_at: i64,
+) -> i64 {
+    timestamp
+        .and_then(|value| chrono::DateTime::parse_from_rfc3339(value.trim()).ok())
+        .map(|value| value.timestamp_millis())
+        .or_else(|| {
+            file_name_local_time(file_name)
+                .map(|local| crate::game_log_parser::log_time_to_utc(tz, local).timestamp_millis())
+        })
+        .unwrap_or(modified_at)
+}
+
+fn file_name_local_time(file_name: &str) -> Option<chrono::NaiveDateTime> {
+    let captures = VRCHAT_FILE_NAME_TIME.captures(file_name)?;
+    let offset = if captures.get(1).is_some() { 1 } else { 8 };
+    let part =
+        |index: usize| -> Option<u32> { captures.get(offset + index)?.as_str().parse().ok() };
+    let fraction = captures.get(offset + 6)?.as_str();
+    let millis: u32 = format!("{fraction:0<3}").get(..3)?.parse().ok()?;
+    chrono::NaiveDate::from_ymd_opt(i32::try_from(part(0)?).ok()?, part(1)?, part(2)?)?
+        .and_hms_milli_opt(part(3)?, part(4)?, part(5)?, millis)
 }
 
 #[cfg(test)]

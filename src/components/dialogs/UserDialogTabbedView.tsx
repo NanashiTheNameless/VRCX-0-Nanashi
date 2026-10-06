@@ -721,6 +721,7 @@ export function UserDialogTabbedView({
         changeWorldOrder,
         changeWorldSort,
         onEditMemo,
+        onEditSelfProfileDetails,
         onOpenFeed: openFeed,
         onOpenInstanceHistory: openInstanceHistory,
         onPreviousInstancesChange,

@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { commands } from '@/platform/tauri/bindings';
 import { usePreferencesStore } from '@/state/preferencesStore';
+import { useRuntimeStore } from '@/state/runtimeStore';
 
 import { useSettingsPageSection } from '../SettingsPageStateContext';
 
@@ -11,6 +12,10 @@ export function useSettingsNotificationsTabState() {
     const notifications = useSettingsPageSection('notifications');
     const prefs = usePreferencesStore(
         useShallow((state) => ({
+            notificationLayout: state.notificationLayout,
+            notificationIconDot: state.notificationIconDot,
+            taskbarIconDot: state.taskbarIconDot,
+            friendLogNotificationDot: state.friendLogNotificationDot,
             desktopToast: state.desktopToast,
             afkDesktopToast: state.afkDesktopToast,
             desktopNotificationSound: state.desktopNotificationSound,
@@ -25,7 +30,15 @@ export function useSettingsNotificationsTabState() {
             notificationTTSNickName: state.notificationTTSNickName
         }))
     );
+    const showTaskbarIconDot = useRuntimeStore(
+        (state) => state.hostCapabilities.platform === 'windows'
+    );
     const {
+        notificationLayoutOptions,
+        onNotificationLayoutChange,
+        onNotificationIconDotChange,
+        onTaskbarIconDotChange,
+        onFriendLogNotificationDotChange,
         desktopToastOptions,
         notificationTtsOptions,
         notificationTtsNameModeOptions,
@@ -47,6 +60,12 @@ export function useSettingsNotificationsTabState() {
 
     return {
         prefs,
+        notificationLayoutOptions,
+        showTaskbarIconDot,
+        onNotificationLayoutChange,
+        onNotificationIconDotChange,
+        onTaskbarIconDotChange,
+        onFriendLogNotificationDotChange,
         desktopToastOptions,
         notificationTtsOptions,
         notificationTtsNameModeOptions,

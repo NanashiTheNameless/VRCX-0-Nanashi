@@ -1,14 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useShallow } from 'zustand/react/shallow';
 
-import {
-    commands,
-    type NotificationWebhookFormat,
-    type WebhookDeliverySnapshot
-} from '@/platform/tauri/bindings';
-import { toast } from '@/services/toastService';
-import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { Button } from '@/ui/shadcn/button';
 import { Switch } from '@/ui/shadcn/switch';
@@ -18,27 +9,13 @@ import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
 import { IntegrationApiSettingsGroup } from './IntegrationApiSettingsGroup';
-import { McpServerSettingsGroup } from './McpServerSettingsGroup';
-import { WebhookSettingsGroup } from './WebhookSettingsGroup';
 
 export function SettingsIntegrationsTab() {
     const integrations = useSettingsPageSection('integrations');
-    const prefs = usePreferencesStore(
-        useShallow((state) => ({
-            webhookEnabled: state.webhookEnabled,
-            webhookAuthEventsEnabled: state.webhookAuthEventsEnabled,
-            webhookUrl: state.webhookUrl,
-            webhookFormat: state.webhookFormat,
-            webhookFields: state.webhookFields
-        }))
-    );
     const {
         discordPrefs,
         integrationPrefs,
         avatarProviderConfig,
-        setWebhookNotificationsDialogOpen,
-        saveStringPreference,
-        saveBoolPreference,
         onDiscordActiveChange,
         onDiscordWorldIntegrationChange,
         onDiscordInstanceChange,
@@ -55,98 +32,12 @@ export function SettingsIntegrationsTab() {
         onOpenAvatarProviderDialog
     } = integrations;
     const { t } = useTranslation();
-    const [webhookDeliverySnapshot, setWebhookDeliverySnapshot] =
-        useState<WebhookDeliverySnapshot | null>(null);
-    const [webhookDeliveryLoading, setWebhookDeliveryLoading] = useState(true);
     const setSystemHostOpen = useRuntimeStore(
         (state) => state.setSystemHostOpen
     );
 
-    const refreshWebhookDeliveryStatus = useCallback(
-        async (showError: boolean) => {
-            setWebhookDeliveryLoading(true);
-            try {
-                setWebhookDeliverySnapshot(
-                    await commands.appWebhookDeliverySnapshotGet()
-                );
-            } catch (error: unknown) {
-                if (showError) {
-                    toast.add({
-                        type: 'error',
-                        title:
-                            error instanceof Error
-                                ? error.message
-                                : String(error)
-                    });
-                }
-            } finally {
-                setWebhookDeliveryLoading(false);
-            }
-        },
-        []
-    );
-
-    useEffect(() => {
-        void refreshWebhookDeliveryStatus(false);
-    }, [refreshWebhookDeliveryStatus]);
-
     function openVrchatConfig() {
         setSystemHostOpen('vrchatConfigOpen', true);
-    }
-
-    function saveWebhookEnabled(checked: boolean) {
-        saveBoolPreference('webhookEnabled', 'webhookEnabled', checked);
-    }
-
-    function saveWebhookAuthEventsEnabled(checked: boolean) {
-        saveBoolPreference(
-            'webhookAuthEventsEnabled',
-            'webhookAuthEventsEnabled',
-            checked
-        );
-    }
-
-    function saveWebhookUrl(value: string) {
-        saveStringPreference('webhookUrl', 'webhookUrl', value);
-    }
-
-    function saveWebhookFormat(value: NotificationWebhookFormat) {
-        saveStringPreference('webhookFormat', 'webhookFormat', value);
-    }
-
-    function saveWebhookFields(value: string) {
-        saveStringPreference('webhookFields', 'webhookFields', value);
-    }
-
-    function openWebhookNotificationFilters() {
-        setWebhookNotificationsDialogOpen(true);
-    }
-
-    function sendTestWebhook() {
-        const webhookFormat =
-            prefs.webhookFormat === 'discord' ? 'discord' : 'generic';
-        commands
-            .appWebhookSendTest(
-                String(prefs.webhookUrl || ''),
-                webhookFormat,
-                String(prefs.webhookFields || '')
-            )
-            .then((outcome) => {
-                toast.add({
-                    type: 'success',
-                    title: t(
-                        'view.settings.notifications.notifications.webhook.test_sent',
-                        { status: outcome.status }
-                    )
-                });
-            })
-            .catch((error: unknown) => {
-                toast.add({
-                    type: 'error',
-                    title:
-                        error instanceof Error ? error.message : String(error)
-                });
-            });
     }
 
     return (
@@ -274,24 +165,6 @@ export function SettingsIntegrationsTab() {
                 </Field>
             </SettingsCard>
 
-            <WebhookSettingsGroup
-                prefs={prefs}
-                onWebhookEnabledChange={saveWebhookEnabled}
-                onWebhookAuthEventsEnabledChange={saveWebhookAuthEventsEnabled}
-                onWebhookUrlCommit={saveWebhookUrl}
-                onWebhookFormatChange={saveWebhookFormat}
-                onWebhookFieldsChange={saveWebhookFields}
-                onOpenWebhookNotificationFiltersDialog={
-                    openWebhookNotificationFilters
-                }
-                onTestWebhook={sendTestWebhook}
-                deliverySnapshot={webhookDeliverySnapshot}
-                deliveryStatusLoading={webhookDeliveryLoading}
-                onRefreshDeliveryStatus={() => {
-                    void refreshWebhookDeliveryStatus(true);
-                }}
-            />
-
             <SettingsCard
                 cardId="integrations.translation"
                 title={t(
@@ -396,7 +269,6 @@ export function SettingsIntegrationsTab() {
                 </Field>
             </SettingsCard>
 
-            <McpServerSettingsGroup />
             <IntegrationApiSettingsGroup />
         </SettingsTabContent>
     );

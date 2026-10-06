@@ -449,6 +449,7 @@ fn screenshot_library_scan_repairs_stale_rows_without_metadata() -> Result<()> {
             world_id: None,
             world_name: None,
             captured_at: None,
+            captured_at_ms: modified_at,
             metadata_json: None,
             error: None,
         }],

@@ -53,6 +53,7 @@ import {
     filterPreviousInstanceRowsForDay,
     findActivityRowForPreviousInstanceRow,
     findPreviousInstanceRowForActivityRow,
+    findPreviousInstanceRowForVisit,
     sanitizeInstanceHistoryMode
 } from '@/features/instance-history/instanceHistoryDayMode';
 import { formatCompactDateTime, timeToText } from '@/lib/dateTime';
@@ -137,6 +138,11 @@ export function InstanceHistoryPage({
     const endpoint = normalizeEndpoint(currentEndpoint);
     const paramUserId = normalizeUserId(searchParams.get('id'));
     const paramSearch = searchParams.get('q') || '';
+    const paramDay = searchParams.get('day') || '';
+    const [pendingVisit, setPendingVisit] = useState<{
+        location: string;
+        leftAtMs: number;
+    } | null>(null);
     const activeUserId = paramUserId || normalizeUserId(currentUserId);
     const isSelfScope = activeUserId === normalizeUserId(currentUserId);
     const dateRange = dateRangeState.range;
@@ -328,6 +334,39 @@ export function InstanceHistoryPage({
         nextParams.delete('q');
         setSearchParams(nextParams, { replace: true });
     }, [paramSearch, searchParams, setSearchParams]);
+
+    useEffect(() => {
+        if (!paramDay) {
+            return;
+        }
+        setSelectedDay(paramDay);
+        const location = searchParams.get('location') || '';
+        setPendingVisit(
+            location
+                ? { location, leftAtMs: Number(searchParams.get('at')) || 0 }
+                : null
+        );
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete('day');
+        nextParams.delete('location');
+        nextParams.delete('at');
+        setSearchParams(nextParams, { replace: true });
+    }, [paramDay, searchParams, setSearchParams]);
+
+    useEffect(() => {
+        if (!pendingVisit || rawDayRows.length === 0) {
+            return;
+        }
+        const row = findPreviousInstanceRowForVisit(
+            rawDayRows,
+            pendingVisit.location,
+            pendingVisit.leftAtMs
+        );
+        setPendingVisit(null);
+        if (row) {
+            setDetailRow(row);
+        }
+    }, [pendingVisit, rawDayRows, setDetailRow]);
 
     const [displayedOnlineTime, setDisplayedOnlineTime] = useState(0);
     useEffect(() => {

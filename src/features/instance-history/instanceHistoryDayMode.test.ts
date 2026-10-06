@@ -8,6 +8,7 @@ import {
     filterPreviousInstanceRowsForDay,
     findActivityRowForPreviousInstanceRow,
     findPreviousInstanceRowForActivityRow,
+    findPreviousInstanceRowForVisit,
     sanitizeInstanceHistoryMode,
     selectDefaultInstanceHistoryDay
 } from './instanceHistoryDayMode';
@@ -97,6 +98,31 @@ describe('instanceHistoryDayMode', () => {
                 (row) => row.id
             )
         ).toEqual(['old']);
+    });
+
+    it('finds the visit row by location and nearest leave time', () => {
+        const leaveMs = Date.parse('2024-01-02T03:00:00.000Z');
+        const rows = [
+            { id: 'other', location: 'wrld_other:1', last_ts: leaveMs },
+            {
+                id: 'earlier',
+                location: 'wrld_target:123',
+                last_ts: leaveMs - 3_600_000
+            },
+            {
+                id: 'target',
+                location: 'wrld_target:123',
+                last_ts: leaveMs + 500
+            }
+        ];
+
+        expect(
+            findPreviousInstanceRowForVisit(rows, 'wrld_target:123', leaveMs)
+                ?.id
+        ).toBe('target');
+        expect(
+            findPreviousInstanceRowForVisit(rows, 'wrld_missing:1', leaveMs)
+        ).toBeNull();
     });
 
     it('matches activity rows to previous-instance rows by nearest join in same location', () => {

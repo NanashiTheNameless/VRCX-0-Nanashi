@@ -6,12 +6,12 @@ use std::sync::{Arc, Mutex};
 use rusqlite::{Connection, OptionalExtension};
 use vrcx_0_core::screenshots::{
     ScreenshotFolderInfo, ScreenshotFolderTree, ScreenshotLibraryImage,
-    ScreenshotLibraryScanStatus, ScreenshotMetadata,
+    ScreenshotLibraryScanStatus, ScreenshotMetadata, ScreenshotTimeWindow, ScreenshotWindowImages,
 };
 
 use crate::{Error, Result};
 
-pub const SCREENSHOT_LIBRARY_INDEX_VERSION: i64 = 1;
+pub const SCREENSHOT_LIBRARY_INDEX_VERSION: i64 = 2;
 
 #[derive(Clone, Debug)]
 pub struct ScreenshotLibraryEntry {
@@ -27,6 +27,7 @@ pub struct ScreenshotLibraryEntry {
     pub world_id: Option<String>,
     pub world_name: Option<String>,
     pub captured_at: Option<String>,
+    pub captured_at_ms: i64,
     pub metadata_json: Option<String>,
     pub error: Option<String>,
 }
@@ -125,6 +126,10 @@ impl MetadataCacheDb {
             "ALTER TABLE screenshot_files ADD COLUMN index_version INTEGER NOT NULL DEFAULT 0",
             [],
         );
+        let _ = conn.execute(
+            "ALTER TABLE screenshot_files ADD COLUMN captured_at_ms INTEGER NOT NULL DEFAULT 0",
+            [],
+        );
         conn.execute_batch(
             "CREATE INDEX IF NOT EXISTS idx_screenshot_files_folder_path
                  ON screenshot_files(scan_root, folder_path);
@@ -132,6 +137,8 @@ impl MetadataCacheDb {
                  ON screenshot_files(scan_root, world_id);
              CREATE INDEX IF NOT EXISTS idx_screenshot_files_modified_at
                  ON screenshot_files(scan_root, modified_at);
+             CREATE INDEX IF NOT EXISTS idx_screenshot_files_captured_at_ms
+                 ON screenshot_files(scan_root, captured_at_ms);
              CREATE INDEX IF NOT EXISTS idx_screenshot_thumbnail_cache_source
                  ON screenshot_thumbnail_cache(source_path);",
         )
@@ -265,10 +272,10 @@ impl MetadataCacheDb {
                 .prepare(
                     "INSERT INTO screenshot_files (
                     path, scan_root, folder_path, file_name, size_bytes, modified_at, created_at,
-                    width, height, world_id, world_name, captured_at, metadata_json,
-                    index_version, indexed_at, error
+                    width, height, world_id, world_name, captured_at, captured_at_ms,
+                    metadata_json, index_version, indexed_at, error
                  )
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
                  ON CONFLICT(path) DO UPDATE SET
                     scan_root = excluded.scan_root,
                     folder_path = excluded.folder_path,
@@ -281,6 +288,7 @@ impl MetadataCacheDb {
                     world_id = excluded.world_id,
                     world_name = excluded.world_name,
                     captured_at = excluded.captured_at,
+                    captured_at_ms = excluded.captured_at_ms,
                     metadata_json = excluded.metadata_json,
                     index_version = excluded.index_version,
                     indexed_at = excluded.indexed_at,
@@ -304,6 +312,7 @@ impl MetadataCacheDb {
                     entry.world_id.as_deref(),
                     entry.world_name.as_deref(),
                     entry.captured_at.as_deref(),
+                    entry.captured_at_ms,
                     entry.metadata_json.as_deref(),
                     SCREENSHOT_LIBRARY_INDEX_VERSION,
                     now,
@@ -494,7 +503,8 @@ impl MetadataCacheDb {
         let mut stmt = conn
             .prepare(
                 "SELECT path, folder_path, file_name, size_bytes, modified_at, created_at,
-                    width, height, world_id, world_name, captured_at, error, metadata_json
+                    width, height, world_id, world_name, captured_at, error, metadata_json,
+                    captured_at_ms
              FROM screenshot_files
              WHERE scan_root = ?1 AND folder_path = ?2
               ORDER BY file_name ASC, modified_at ASC",
@@ -573,7 +583,8 @@ impl MetadataCacheDb {
         let mut stmt = conn
             .prepare(
                 "SELECT path, folder_path, file_name, size_bytes, modified_at, created_at,
-                    width, height, world_id, world_name, captured_at, error, metadata_json
+                    width, height, world_id, world_name, captured_at, error, metadata_json,
+                    captured_at_ms
              FROM screenshot_files
              WHERE scan_root = ?1 AND world_id = ?2
               ORDER BY file_name ASC, modified_at ASC",
@@ -584,6 +595,63 @@ impl MetadataCacheDb {
             .map_err(|error| Error::sqlite_with_context("read world screenshots", error))?;
         rows.collect::<rusqlite::Result<Vec<_>>>()
             .map_err(|error| Error::sqlite_with_context("read world screenshot row", error))
+    }
+
+    pub fn list_screenshots_in_windows_for_root(
+        &self,
+        root_path: &str,
+        windows: &[ScreenshotTimeWindow],
+        limit_per_window: i64,
+    ) -> Result<Vec<ScreenshotWindowImages>> {
+        let conn = self.inner.conn.lock().unwrap();
+        let mut count_stmt = conn
+            .prepare(
+                "SELECT COUNT(*) FROM screenshot_files
+             WHERE scan_root = ?1 AND captured_at_ms >= ?2 AND captured_at_ms <= ?3",
+            )
+            .map_err(|error| {
+                Error::sqlite_with_context("prepare window screenshot count", error)
+            })?;
+        let mut image_stmt = conn
+            .prepare(
+                "SELECT path, folder_path, file_name, size_bytes, modified_at, created_at,
+                    width, height, world_id, world_name, captured_at, error, metadata_json,
+                    captured_at_ms
+             FROM screenshot_files
+             WHERE scan_root = ?1 AND captured_at_ms >= ?2 AND captured_at_ms <= ?3
+             ORDER BY captured_at_ms ASC, path ASC
+             LIMIT ?4",
+            )
+            .map_err(|error| Error::sqlite_with_context("prepare window screenshots", error))?;
+        windows
+            .iter()
+            .map(|window| {
+                let total = count_stmt
+                    .query_row(
+                        rusqlite::params![root_path, window.from_ms, window.to_ms],
+                        |row| row.get::<_, i64>(0),
+                    )
+                    .map_err(|error| {
+                        Error::sqlite_with_context("count window screenshots", error)
+                    })?;
+                let images = image_stmt
+                    .query_map(
+                        rusqlite::params![
+                            root_path,
+                            window.from_ms,
+                            window.to_ms,
+                            limit_per_window
+                        ],
+                        Self::map_library_image_row,
+                    )
+                    .map_err(|error| Error::sqlite_with_context("read window screenshots", error))?
+                    .collect::<rusqlite::Result<Vec<_>>>()
+                    .map_err(|error| {
+                        Error::sqlite_with_context("read window screenshot row", error)
+                    })?;
+                Ok(ScreenshotWindowImages { total, images })
+            })
+            .collect()
     }
 
     pub fn record_thumbnail_cache(
@@ -719,6 +787,7 @@ impl MetadataCacheDb {
             world_id: row.get(8)?,
             world_name: row.get(9)?,
             captured_at: row.get(10)?,
+            captured_at_ms: row.get(13)?,
             error: row.get(11)?,
             metadata,
         })

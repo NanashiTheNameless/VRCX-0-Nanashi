@@ -74,6 +74,26 @@ export function filterPreviousInstanceRowsForDay(
         );
 }
 
+export function findPreviousInstanceRowForVisit(
+    rows: InstanceHistoryEntryRow[],
+    location: string,
+    leftAtMs: number
+): InstanceHistoryEntryRow | null {
+    let best: InstanceHistoryEntryRow | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    for (const row of rows) {
+        if (rowLocation(row) !== location) {
+            continue;
+        }
+        const distance = Math.abs(previousInstanceLeaveMs(row) - leftAtMs);
+        if (distance < bestDistance) {
+            best = row;
+            bestDistance = distance;
+        }
+    }
+    return best;
+}
+
 export function activityRowKey(row: InstanceActivityChartRow | null): string {
     const location = row?.location || '';
     const joinMs = Number(row?.joinMs || 0);

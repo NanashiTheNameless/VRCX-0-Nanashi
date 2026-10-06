@@ -47,10 +47,12 @@ export function useFriendsLocationsPageController() {
     );
     const {
         changeDensityPreference,
+        changeShowFavoritesInOnline,
         changeShowSameInstanceInOnline,
         changeViewMode,
         density,
         preferencesReady,
+        showFavoritesInOnline,
         showSameInstanceInOnline,
         sidebarFavoritePrefs,
         sidebarSortMethods,
@@ -69,6 +71,7 @@ export function useFriendsLocationsPageController() {
         activeSegment,
         deferredSearchQuery,
         resetScrollTop,
+        showFavoritesInOnline,
         showSameInstanceInOnline,
         viewMode
     ]);
@@ -93,6 +96,7 @@ export function useFriendsLocationsPageController() {
         remoteFavoriteFriendIds: roster.remoteFavoriteFriendIds,
         rosterStatus: roster.rosterStatus,
         scrollMetrics,
+        showFavoritesInOnline,
         showSameInstanceInOnline,
         sidebarFavoritePrefs,
         sidebarSortMethods,
@@ -149,10 +153,12 @@ export function useFriendsLocationsPageController() {
         },
         preferences: {
             changeDensityPreference,
+            changeShowFavoritesInOnline,
             changeShowSameInstanceInOnline,
             changeViewMode,
             density,
             preferencesReady,
+            showFavoritesInOnline,
             showSameInstanceInOnline,
             viewMode
         },

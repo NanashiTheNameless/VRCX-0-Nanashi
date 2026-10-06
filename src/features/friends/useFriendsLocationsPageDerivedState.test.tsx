@@ -80,6 +80,7 @@ function pageInput(
         remoteFavoriteFriendIds: [],
         rosterStatus: 'ready',
         scrollMetrics: { width: 1_000, viewportHeight: 1_000, scrollTop: 0 },
+        showFavoritesInOnline: true,
         showSameInstanceInOnline: true,
         sidebarFavoritePrefs: {
             isDivideByGroup: false,
@@ -124,6 +125,93 @@ describe('useFriendsLocationsPageDerivedState', () => {
             });
         }
     );
+
+    it.each([
+        [true, ['usr_fav', 'usr_plain']],
+        [false, ['usr_plain']]
+    ] as const)(
+        'shows favorite friends in the online view only when enabled (%s)',
+        (showFavoritesInOnline, expectedIds) => {
+            const input = pageInput([
+                { ...friendAt('wrld_away:1'), id: 'usr_fav', displayName: 'A' },
+                {
+                    ...friendAt('wrld_away:2'),
+                    id: 'usr_plain',
+                    displayName: 'B'
+                }
+            ]);
+            input.activeSegment = 'online';
+            input.remoteFavoriteFriendIds = ['usr_fav'];
+            input.showFavoritesInOnline = showFavoritesInOnline;
+            const { result } = renderHook(() =>
+                useFriendsLocationsPageDerivedState(input)
+            );
+
+            expect(
+                result.current.visibleVirtualRows
+                    .flatMap((row) => (row.type === 'cards' ? row.friends : []))
+                    .map((friend) => friend.id)
+                    .sort()
+            ).toEqual(expectedIds);
+        }
+    );
+
+    it('groups favorite friends under their own online section', () => {
+        const input = pageInput([
+            { ...friendAt('wrld_away:1'), id: 'usr_fav', displayName: 'A' },
+            { ...friendAt('wrld_away:2'), id: 'usr_plain', displayName: 'B' }
+        ]);
+        input.activeSegment = 'online';
+        input.remoteFavoriteFriendIds = ['usr_fav'];
+        const { result } = renderHook(() =>
+            useFriendsLocationsPageDerivedState(input)
+        );
+
+        const sections = result.current.visibleVirtualRows.reduce<
+            Record<string, string[]>
+        >((acc, row) => {
+            if (row.type === 'cards') {
+                acc[row.section.key] = [
+                    ...(acc[row.section.key] ?? []),
+                    ...row.friends.map((friend) => friend.id)
+                ];
+            }
+            return acc;
+        }, {});
+        expect(sections).toEqual({
+            'online:favorites': ['usr_fav'],
+            'online:remaining': ['usr_plain']
+        });
+    });
+
+    it('splits online favorite friends by group when the sidebar divides by group', () => {
+        const input = pageInput([
+            { ...friendAt('wrld_away:1'), id: 'usr_fav', displayName: 'A' },
+            { ...friendAt('wrld_away:2'), id: 'usr_plain', displayName: 'B' }
+        ]);
+        input.activeSegment = 'online';
+        input.localFriendFavoriteGroups = ['Besties'];
+        input.localFriendFavorites = { Besties: ['usr_fav'] };
+        input.sidebarFavoritePrefs = {
+            isDivideByGroup: true,
+            selectedGroups: [],
+            groupOrder: []
+        };
+        const { result } = renderHook(() =>
+            useFriendsLocationsPageDerivedState(input)
+        );
+
+        expect(
+            result.current.visibleVirtualRows.flatMap((row) =>
+                row.type === 'cards'
+                    ? row.friends.map((friend) => [row.section.key, friend.id])
+                    : []
+            )
+        ).toEqual([
+            ['online:favorite:local:Besties', 'usr_fav'],
+            ['online:remaining', 'usr_plain']
+        ]);
+    });
 
     it('does not show a previous account snapshot as the current user', () => {
         const input = pageInput([friendAt('wrld_local:1')]);
@@ -422,6 +510,7 @@ describe('useFriendsLocationsPageDerivedState', () => {
                     viewportHeight: 1000,
                     scrollTop: 0
                 },
+                showFavoritesInOnline: true,
                 showSameInstanceInOnline: true,
                 sidebarFavoritePrefs: {
                     isDivideByGroup: false,
