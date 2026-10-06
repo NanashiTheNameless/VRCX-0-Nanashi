@@ -2391,6 +2391,8 @@
                     "style_standard": "Standard",
                     "style_compact": "Compact",
                     "friend_icons": "Show Friend Icons",
+                    "text_size": "Text size",
+                    "text_size_description": "Cards fit their text: short notifications get small cards and long ones wrap onto more lines.",
                     "timeout": "Display Duration",
                     "opacity": "Opacity",
                     "filters": "HMD Notification Filters"
@@ -2410,7 +2412,15 @@
                     "display_on_both": "Both",
                     "placement": {
                         "width": "Width",
-                        "width_description": "How wide the wrist menu is. Text scales with it.",
+                        "width_description": "How wide the wrist menu is. Text keeps its size; a wider menu fits more per line.",
+                        "height": "Maximum height",
+                        "height_description": "The tallest the wrist menu may grow. It is shorter when there is less to show. When a full instance does not fit, the Players and Notes pages add columns and then use smaller text instead of leaving anyone out.",
+                        "header_text": "Header text size",
+                        "header_text_description": "Size of the device and battery row at the top.",
+                        "footer_text": "Footer text size",
+                        "footer_text_description": "Size of the player count, instance time and clock at the bottom.",
+                        "content_text": "Content text size",
+                        "content_text_description": "Size of the feed, players, notes and now playing.",
                         "side": "Side offset",
                         "side_description": "Move the menu sideways from its default spot on the wrist.",
                         "up": "Vertical offset",
@@ -2429,7 +2439,8 @@
                         "reset": "Placement",
                         "reset_action": "Reset placement",
                         "unit_cm": "{value} cm",
-                        "unit_deg": "{value} deg"
+                        "unit_deg": "{value} deg",
+                        "unit_percent": "{value}%"
                     },
                     "dark_background": "Dark Background",
                     "hide_private_worlds": "Hide Private Worlds",

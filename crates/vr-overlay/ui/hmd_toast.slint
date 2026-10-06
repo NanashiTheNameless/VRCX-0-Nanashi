@@ -14,6 +14,7 @@ export struct HmdToastItem {
 component HmdToastCard inherits Rectangle {
     in property <HmdToastItem> toast;
     in property <bool> compact;
+    in property <float> scale: 1;
     in property <length> min-card-width;
     in property <length> max-card-width;
 
@@ -21,20 +22,28 @@ component HmdToastCard inherits Rectangle {
     property <color> card-border-color: #ffffff24;
     property <color> avatar-surface-color: #ffffff0d;
     property <color> action-color: #d7dce3;
-    property <length> avatar-size: root.compact ? 40px : 70px;
-    property <length> avatar-x: root.compact ? 20px : 24px;
-    property <length> content-x: root.toast.show-avatar ? self.avatar-x + self.avatar-size + (root.compact ? 16px : 24px) : 24px;
-    property <length> star-room: root.toast.is-favorite ? (root.compact ? 26px : 30px) : 0px;
-    property <length> inline-width: actor-text.preferred-width + self.star-room + 12px + action-text.preferred-width;
+    property <length> pad: (root.compact ? 12px : 20px) * root.scale;
+    property <length> right-pad: 24px * root.scale;
+    property <length> avatar-size: (root.compact ? 40px : 70px) * root.scale;
+    property <length> avatar-x: (root.compact ? 20px : 24px) * root.scale;
+    property <length> content-x: root.toast.show-avatar ? self.avatar-x + self.avatar-size + (root.compact ? 16px : 24px) * root.scale : 24px * root.scale;
+    property <length> star-room: root.toast.is-favorite ? (root.compact ? 26px : 30px) * root.scale : 0px;
+    property <length> line-gap: 4px * root.scale;
+    // Fork: cards hug their text and wrap it instead of eliding; the card grows
+    // as tall as its wrapped lines need.
+    property <length> inline-width: actor-text.preferred-width + self.star-room + 12px * root.scale + action-text.preferred-width;
     property <length> stacked-width: max(actor-text.preferred-width + self.star-room, action-text.preferred-width);
-    property <bool> single-line: root.compact && self.content-x + self.inline-width + 24px <= root.max-card-width;
+    property <bool> single-line: root.compact && self.content-x + self.inline-width + self.right-pad <= root.max-card-width;
     property <length> card-width: clamp(
-        self.content-x + (self.single-line ? self.inline-width : self.stacked-width) + 24px,
+        self.content-x + (self.single-line ? self.inline-width : self.stacked-width) + self.right-pad,
         root.min-card-width,
         root.max-card-width);
-    property <length> content-width: self.card-width - self.content-x - 24px;
+    property <length> content-width: self.card-width - self.content-x - self.right-pad;
 
-    height: root.compact ? (self.single-line ? 60px : 84px) : 112px;
+    height: root.single-line
+        ? max(60px * root.scale, root.pad * 2 + max(actor-text.preferred-height, action-text.preferred-height))
+        : max(root.avatar-size + root.pad * 2,
+            root.pad * 2 + actor-text.preferred-height + root.line-gap + action-text.preferred-height);
 
     card := Rectangle {
         x: (parent.width - root.card-width) / 2;
@@ -43,24 +52,24 @@ component HmdToastCard inherits Rectangle {
         background: root.card-color;
         border-color: root.card-border-color;
         border-width: 1px;
-        border-radius: root.compact ? 12px : 14px;
+        border-radius: (root.compact ? 12px : 14px) * root.scale;
         clip: true;
 
         Rectangle {
             x: 0px;
-            y: root.compact ? 10px : 12px;
-            width: 5px;
-            height: parent.height - (root.compact ? 20px : 24px);
-            border-radius: 3px;
+            y: (root.compact ? 10px : 12px) * root.scale;
+            width: 5px * root.scale;
+            height: parent.height - (root.compact ? 20px : 24px) * root.scale;
+            border-radius: 3px * root.scale;
             background: root.toast.severity-color;
         }
 
         Rectangle {
-            x: root.avatar-x - 4px;
-            y: (parent.height - root.avatar-size - 8px) / 2;
-            width: root.avatar-size + 8px;
-            height: root.avatar-size + 8px;
-            border-radius: (root.avatar-size + 8px) / 2;
+            x: root.avatar-x - 4px * root.scale;
+            y: (parent.height - root.avatar-size - 8px * root.scale) / 2;
+            width: root.avatar-size + 8px * root.scale;
+            height: root.avatar-size + 8px * root.scale;
+            border-radius: (root.avatar-size + 8px * root.scale) / 2;
             border-color: root.toast.relation-color;
             border-width: 2px;
             background: root.avatar-surface-color;
@@ -85,25 +94,20 @@ component HmdToastCard inherits Rectangle {
 
         actor-text := Text {
             x: root.content-x;
-            y: root.single-line ? (parent.height - 34px) / 2 : (root.compact ? 9px : 17px);
-            width: root.single-line
-                ? min(self.preferred-width, root.content-width * 0.4)
-                : root.content-width - root.star-room;
-            height: 34px;
+            y: root.single-line ? (parent.height - self.height) / 2 : root.pad;
+            width: root.single-line ? self.preferred-width : root.content-width - root.star-room;
+            height: self.preferred-height;
             text: root.toast.actor;
-            font-size: root.compact ? 22px : 28px;
+            font-size: (root.compact ? 22px : 28px) * root.scale;
             font-weight: 600;
-            vertical-alignment: center;
-            overflow: elide;
+            wrap: word-wrap;
             color: root.toast.relation-color;
         }
 
         if root.toast.is-favorite : Path {
-            property <length> star-size: root.compact ? 18px : 22px;
-            x: min(
-                root.content-x + actor-text.preferred-width + 8px,
-                root.content-x + actor-text.width + 8px);
-            y: actor-text.y + (actor-text.height - self.star-size) / 2;
+            property <length> star-size: (root.compact ? 18px : 22px) * root.scale;
+            x: root.content-x + min(actor-text.preferred-width, actor-text.width) + 8px * root.scale;
+            y: actor-text.y + (min(actor-text.height, (root.compact ? 34px : 40px) * root.scale) - self.star-size) / 2;
             width: self.star-size;
             height: self.star-size;
             viewbox-width: 24;
@@ -117,15 +121,14 @@ component HmdToastCard inherits Rectangle {
         }
 
         action-text := Text {
-            property <length> inline-offset: actor-text.width + root.star-room + 12px;
+            property <length> inline-offset: actor-text.width + root.star-room + 12px * root.scale;
             x: root.single-line ? root.content-x + self.inline-offset : root.content-x;
-            y: root.single-line ? (parent.height - 34px) / 2 : (root.compact ? 45px : 59px);
+            y: root.single-line ? (parent.height - self.height) / 2 : root.pad + actor-text.height + root.line-gap;
             width: root.single-line ? root.content-width - self.inline-offset : root.content-width;
-            height: root.single-line ? 34px : 27px;
+            height: self.preferred-height;
             text: root.toast.action;
-            font-size: 20px;
-            vertical-alignment: center;
-            overflow: elide;
+            font-size: 20px * root.scale;
+            wrap: word-wrap;
             color: root.action-color;
         }
     }
@@ -134,44 +137,31 @@ component HmdToastCard inherits Rectangle {
 export component HmdToastPanel inherits Window {
     // Fork: 0xProto is the fork's default UI font.
     default-font-family: "0xProto";
-    width: 960px;
-    height: 528px;
     background: transparent;
 
     in property <bool> dark-background: true;
     in property <bool> compact: false;
     in property <bool> stack-upward: false;
     in property <[HmdToastItem]> toasts: [];
+    // Fork: HMD text size (Settings > VR).
+    in property <float> text-scale: 1;
+    // Fork: the host sizes the window to this; the newest card's edge stays put.
+    out property <length> required-height: stack.preferred-height;
 
-    // Fork: the panel width is chosen from the content in Rust (clamped to
-    // 960..1280px), so the cards span whatever the window actually is instead
-    // of leaving the extra width as empty margin.
     property <length> panel-padding: 20px;
     property <length> panel-content-width: root.width - self.panel-padding * 2;
-    property <length> min-card-width: min(640px, self.panel-content-width);
+    property <length> min-card-width: min(220px * root.text-scale, self.panel-content-width);
     property <length> max-card-width: self.panel-content-width;
 
-    newest-card := HmdToastCard {
-        visible: false;
-        toast: root.toasts[root.stack-upward ? root.toasts.length - 1 : 0];
-        compact: root.compact;
-        min-card-width: root.min-card-width;
-        max-card-width: root.max-card-width;
-    }
-
-    property <length> anchored-padding: 20px + ((root.compact ? 60px : 112px) - newest-card.height) / 2;
-
-    VerticalLayout {
-        padding-left: root.panel-padding;
-        padding-right: root.panel-padding;
-        padding-top: root.stack-upward ? 20px : root.anchored-padding;
-        padding-bottom: root.stack-upward ? root.anchored-padding : 20px;
-        spacing: root.compact ? 8px : 12px;
+    stack := VerticalLayout {
+        padding: root.panel-padding;
+        spacing: (root.compact ? 8px : 12px) * root.text-scale;
         alignment: root.stack-upward ? end : start;
 
         for toast in root.toasts : HmdToastCard {
             toast: toast;
             compact: root.compact;
+            scale: root.text-scale;
             min-card-width: root.min-card-width;
             max-card-width: root.max-card-width;
         }

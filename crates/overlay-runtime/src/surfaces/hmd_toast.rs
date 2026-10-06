@@ -230,6 +230,7 @@ impl VrOverlayRuntime {
             show_instance_id_in_location: config.show_instance_id_in_location,
             compact: config.hmd.style == HmdNotificationStyle::Compact,
             stack_upward: config.hmd.position.stacks_upward(),
+            text_percent: config.hmd.text_percent,
         });
         render_slint_hmd_frame(&model)
     }

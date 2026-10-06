@@ -164,6 +164,7 @@ fn test_main_surface(frame: RgbaFrame, last_uploaded_at: Instant) -> OpenVrSurfa
             placement: OverlayPlacement::HeadLocked {
                 offset_y_meters: -0.3,
                 distance_meters: 1.3,
+                anchor: None,
             },
             activation_button: OverlayActivationButton::Grip,
             force_visible: false,

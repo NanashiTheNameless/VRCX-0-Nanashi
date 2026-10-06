@@ -12,7 +12,7 @@ use slint::{
         software_renderer::{MinimalSoftwareWindow, PremultipliedRgbaColor, RepaintBufferType},
         Platform, PlatformError, WindowAdapter,
     },
-    ComponentHandle, Image, Rgba8Pixel, SharedPixelBuffer,
+    ComponentHandle, Image, PhysicalSize, Rgba8Pixel, SharedPixelBuffer,
 };
 
 use crate::{AvatarBitmap, OverlaySize, RgbaFrame};
@@ -79,6 +79,33 @@ pub(super) fn render_window_if_needed(
         renderer.render(buffer, size.width as usize);
     });
     redrawn.then(|| RgbaFrame::new(size, pixels_to_rgba(buffer)))
+}
+
+/// Renders at the height the component asks for. Repeated rows are only
+/// instantiated by a draw, so the measured height can change after rendering;
+/// redraw until the window fits it.
+pub(super) fn render_fitting_height(
+    window: &MinimalSoftwareWindow,
+    buffer: &mut Vec<PremultipliedRgbaColor>,
+    size: &mut OverlaySize,
+    required_height: impl Fn() -> u32,
+) -> Option<RgbaFrame> {
+    let mut frame = None;
+    for _ in 0..3 {
+        let height = required_height();
+        if height != size.height {
+            let next = OverlaySize::new(size.width, height);
+            *buffer = vec![PremultipliedRgbaColor::default(); pixel_count(next).ok()?];
+            window.set_size(PhysicalSize::new(next.width, next.height));
+            *size = next;
+            window.request_redraw();
+        }
+        frame = render_window_if_needed(window, buffer, *size).or(frame);
+        if required_height() == size.height {
+            break;
+        }
+    }
+    frame
 }
 
 pub(super) fn ensure_platform() -> Result<(), String> {

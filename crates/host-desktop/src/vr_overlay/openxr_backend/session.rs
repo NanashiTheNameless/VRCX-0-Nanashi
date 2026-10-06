@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use ash::vk::{self, Handle as _};
 use openxr as xr;
 use openxr::sys::Handle as _;
-use vrcx_0_vr_overlay::{OverlaySurfaceId, RgbaFrame};
+use vrcx_0_vr_overlay::{OverlaySize, OverlaySurfaceId, RgbaFrame};
 
 use super::super::{
     policy::WristVisibilityPolicy,
@@ -393,6 +393,14 @@ impl SessionContext {
                 let _ = reply.send(Ok(()));
             }
             SessionCommand::UpdateFrame { surface_id, frame } => {
+                if let Err(error) = self.resize_surface_for(&surface_id, frame.size) {
+                    tracing::warn!(
+                        error = %error,
+                        surface_id = surface_id.as_str(),
+                        "failed to resize overlay swapchain"
+                    );
+                    return;
+                }
                 match self.surfaces.get_mut(&surface_id) {
                     Some(surface) => surface.pending_frame = Some(frame),
                     None => tracing::debug!(
@@ -425,7 +433,7 @@ impl SessionContext {
     fn register_surface(&mut self, config: OverlaySurfaceConfig) -> Result<(), String> {
         let attachment = parse_attachment(&config.placement)?;
         if let Some(existing) = self.surfaces.get_mut(&config.surface_id) {
-            if existing.width == config.size.width && existing.height == config.size.height {
+            if existing.config.size == config.size {
                 existing.attachment = attachment;
                 existing.config = config;
                 return Ok(());
@@ -433,6 +441,58 @@ impl SessionContext {
             self.surfaces.remove(&config.surface_id);
         }
 
+        let width = config.size.width;
+        let height = config.size.height;
+        let (swapchain, images) = self.create_surface_swapchain(width, height)?;
+
+        self.surfaces.insert(
+            config.surface_id.clone(),
+            SurfaceState {
+                attachment,
+                swapchain,
+                images,
+                width,
+                height,
+                policy: WristVisibilityPolicy::default(),
+                pending_frame: None,
+                uploaded: false,
+                visible: false,
+                requested_visible: false,
+                config,
+            },
+        );
+        Ok(())
+    }
+
+    /// Surfaces such as the wrist menu change size with their content, so the
+    /// swapchain follows the size of each new frame.
+    fn resize_surface_for(
+        &mut self,
+        surface_id: &OverlaySurfaceId,
+        size: OverlaySize,
+    ) -> Result<(), String> {
+        let Some(surface) = self.surfaces.get(surface_id) else {
+            return Ok(());
+        };
+        if surface.width == size.width && surface.height == size.height {
+            return Ok(());
+        }
+        let (swapchain, images) = self.create_surface_swapchain(size.width, size.height)?;
+        if let Some(surface) = self.surfaces.get_mut(surface_id) {
+            surface.swapchain = swapchain;
+            surface.images = images;
+            surface.width = size.width;
+            surface.height = size.height;
+            surface.uploaded = false;
+        }
+        Ok(())
+    }
+
+    fn create_surface_swapchain(
+        &self,
+        width: u32,
+        height: u32,
+    ) -> Result<(xr::Swapchain<xr::Vulkan>, Vec<vk::Image>), String> {
         let formats = self
             .session
             .enumerate_swapchain_formats()
@@ -448,9 +508,6 @@ impl SessionContext {
                 .first()
                 .ok_or_else(|| "runtime offered no swapchain formats".to_string())?
         };
-
-        let width = config.size.width;
-        let height = config.size.height;
         let swapchain = self
             .session
             .create_swapchain(&xr::SwapchainCreateInfo {
@@ -472,24 +529,7 @@ impl SessionContext {
             .into_iter()
             .map(vk::Image::from_raw)
             .collect();
-
-        self.surfaces.insert(
-            config.surface_id.clone(),
-            SurfaceState {
-                attachment,
-                swapchain,
-                images,
-                width,
-                height,
-                policy: WristVisibilityPolicy::default(),
-                pending_frame: None,
-                uploaded: false,
-                visible: false,
-                requested_visible: false,
-                config,
-            },
-        );
-        Ok(())
+        Ok((swapchain, images))
     }
 
     fn snapshot_devices(&self) -> Vec<VrDeviceSnapshot> {

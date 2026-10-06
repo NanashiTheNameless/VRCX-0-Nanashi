@@ -11,7 +11,7 @@ use crate::{
 };
 
 use super::platform::{
-    create_component_window, pixel_count, render_window_if_needed, to_slint_color,
+    create_component_window, pixel_count, render_fitting_height, to_slint_color,
 };
 use super::surface::SlintSurfaceHost;
 use super::{WristDeviceItem, WristFeedItem, WristPanel, WristPlayerItem};
@@ -30,14 +30,25 @@ const WRIST_FEED_ONLINE: Color = Color::rgba(46, 211, 25, 255);
 const WRIST_FEED_LOCATION: Color = Color::rgba(14, 165, 233, 255);
 const WRIST_FEED_OFFLINE: Color = Color::rgba(148, 163, 184, 255);
 
+/// Players / Notes grid: a new column starts every this many players, and a
+/// column is never narrower than `MIN_PLAYER_COLUMN_PX` at full text size.
+const PLAYERS_PER_COLUMN: usize = 10;
+const MAX_PLAYER_COLUMNS: usize = 6;
+const MIN_PLAYER_COLUMN_PX: f32 = 170.0;
+/// Smallest grid text, as a fraction of the content text size, tried before
+/// the panel is allowed past its maximum height.
+const MIN_GRID_FIT_SCALE: f32 = 0.3;
+
 pub struct SlintWristHost {
-    /// Size the model asked for. `size` can be taller when the player grid
-    /// needs more room.
+    /// Canvas width and maximum height from the model. `size` is the rendered
+    /// frame, as tall as the content needs.
     base_size: OverlaySize,
     size: OverlaySize,
     window: Rc<MinimalSoftwareWindow>,
     component: WristPanel,
     buffer: Vec<PremultipliedRgbaColor>,
+    players: Vec<PlayerCell>,
+    content_scale: f32,
 }
 
 impl SlintSurfaceHost for SlintWristHost {
@@ -54,6 +65,8 @@ impl SlintSurfaceHost for SlintWristHost {
             window,
             component,
             buffer: vec![PremultipliedRgbaColor::default(); pixel_count(size)?],
+            players: Vec::new(),
+            content_scale: 1.0,
         })
     }
 
@@ -78,15 +91,17 @@ impl SlintSurfaceHost for SlintWristHost {
         self.component.set_devices(wrist_device_model(model));
         self.component
             .set_feed_lines(wrist_feed_model(&model.feed_rows, model.dark_background));
-        let columns = &model.player_columns;
-        let column =
-            |index: usize| wrist_player_cells(columns.get(index).map_or(&[], Vec::as_slice));
+        let scale = |percent: u8| f32::from(percent) / 100.0;
         self.component
-            .set_player_column_count(columns.len().min(4) as i32);
-        self.component.set_players_0(column(0));
-        self.component.set_players_1(column(1));
-        self.component.set_players_2(column(2));
-        self.component.set_players_3(column(3));
+            .set_header_scale(scale(model.text.header_percent));
+        self.component
+            .set_footer_scale(scale(model.text.footer_percent));
+        self.content_scale = scale(model.text.content_percent);
+        self.component.set_content_scale(self.content_scale);
+        self.component
+            .set_max_panel_height(self.base_size.height as f32);
+        self.players = model.players.clone();
+        self.layout_players(0, 1.0);
         let now_playing = model.now_playing.as_ref();
         self.component.set_now_playing_title(SharedString::from(
             now_playing.map_or("", |value| value.title.as_str()),
@@ -109,22 +124,27 @@ impl SlintSurfaceHost for SlintWristHost {
     }
 
     fn render_if_needed(&mut self) -> Option<RgbaFrame> {
-        // Grid rows are only instantiated by a draw, so the measured height can
-        // change after rendering; redraw until the window fits it.
+        if self.players.is_empty() {
+            return self.settle();
+        }
+        let max_columns = self.max_player_columns(1.0);
+        let first = self
+            .players
+            .len()
+            .div_ceil(PLAYERS_PER_COLUMN)
+            .clamp(1, max_columns);
+        let wider = (first..=max_columns).map(|columns| (columns, 1.0));
+        // Smaller text fits more columns, so each step down uses as many as fit.
+        let smaller = (1..)
+            .map(|step| 1.0 - 0.1 * step as f32)
+            .take_while(|scale| *scale >= MIN_GRID_FIT_SCALE - f32::EPSILON)
+            .map(|scale| (self.max_player_columns(scale), scale))
+            .collect::<Vec<_>>();
         let mut frame = None;
-        for _ in 0..3 {
-            let height = self.target_height();
-            if height != self.size.height {
-                let size = OverlaySize::new(self.base_size.width, height);
-                let pixels = pixel_count(size).ok()?;
-                self.window
-                    .set_size(PhysicalSize::new(size.width, size.height));
-                self.buffer = vec![PremultipliedRgbaColor::default(); pixels];
-                self.size = size;
-                self.window.request_redraw();
-            }
-            frame = render_window_if_needed(&self.window, &mut self.buffer, self.size).or(frame);
-            if self.target_height() == self.size.height {
+        for (columns, scale) in wider.chain(smaller) {
+            self.layout_players(columns, scale);
+            frame = self.settle();
+            if self.size.height <= self.base_size.height {
                 break;
             }
         }
@@ -133,13 +153,50 @@ impl SlintSurfaceHost for SlintWristHost {
 }
 
 impl SlintWristHost {
-    fn target_height(&self) -> u32 {
-        let required = self.component.get_required_height().ceil() as u32;
-        if required > 0 {
-            required
+    fn max_player_columns(&self, fit_scale: f32) -> usize {
+        let usable = self.base_size.width as f32 - 28.0;
+        let column = MIN_PLAYER_COLUMN_PX * self.content_scale * fit_scale;
+        ((usable / column).floor() as usize).clamp(1, MAX_PLAYER_COLUMNS.min(self.players.len()))
+    }
+
+    /// Splits the players into `columns` columns in reading order, drawn at
+    /// `scale` times the content text size.
+    fn layout_players(&mut self, columns: usize, scale: f32) {
+        let per_column = if columns == 0 {
+            0
         } else {
-            self.base_size.height
-        }
+            self.players.len().div_ceil(columns)
+        };
+        let column = |index: usize| {
+            let cells = if per_column == 0 {
+                &[][..]
+            } else {
+                self.players.chunks(per_column).nth(index).unwrap_or(&[])
+            };
+            wrist_player_cells(cells)
+        };
+        self.component.set_player_column_count(columns as i32);
+        self.component.set_grid_fit_scale(scale);
+        self.component.set_players_0(column(0));
+        self.component.set_players_1(column(1));
+        self.component.set_players_2(column(2));
+        self.component.set_players_3(column(3));
+        self.component.set_players_4(column(4));
+        self.component.set_players_5(column(5));
+        self.window.request_redraw();
+    }
+
+    fn settle(&mut self) -> Option<RgbaFrame> {
+        let component = &self.component;
+        let base_height = self.base_size.height;
+        render_fitting_height(&self.window, &mut self.buffer, &mut self.size, || {
+            let required = component.get_required_height().ceil() as u32;
+            if required > 0 {
+                required
+            } else {
+                base_height
+            }
+        })
     }
 }
 

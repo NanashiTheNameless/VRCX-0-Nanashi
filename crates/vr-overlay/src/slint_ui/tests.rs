@@ -6,7 +6,7 @@ use super::{
 use crate::{
     AvatarBitmap, DeviceChip, DeviceRole, DeviceStatus, FeedAccent, FeedKind, FeedLine,
     FeedRelation, FeedSeverity, MainSurfaceModel, OverlayFooter, OverlayNowPlaying, OverlaySize,
-    PlayerCell, RgbaFrame, ToastCard, WristSurfaceModel,
+    PlayerCell, RgbaFrame, ToastCard, WristSurfaceModel, WristTextScale,
 };
 use std::{sync::Arc, thread};
 
@@ -22,50 +22,63 @@ fn slint_platform_init_is_available_on_each_render_thread() {
     .unwrap();
 }
 
-fn player_grid_model(players: usize, columns: usize, note: &str) -> WristSurfaceModel {
-    let cells = (0..players)
-        .map(|index| PlayerCell {
-            name: format!("Player number {index}"),
-            joined: "12m".to_string(),
-            status: "active / PC VR / exploring".to_string(),
-            note: note.to_string(),
-            is_friend: index % 2 == 0,
-        })
-        .collect::<Vec<_>>();
-    let per_column = players.div_ceil(columns);
+fn player_grid_model(players: usize, max_height: u32, note: &str) -> WristSurfaceModel {
     WristSurfaceModel {
-        size: OverlaySize::new(1024, 512),
+        size: OverlaySize::new(1024, max_height),
         feed_rows: Vec::new(),
-        player_columns: cells.chunks(per_column).map(<[_]>::to_vec).collect(),
+        players: (0..players)
+            .map(|index| PlayerCell {
+                name: format!("Player number {index}"),
+                joined: "12m".to_string(),
+                status: "active / PC VR / exploring".to_string(),
+                note: note.to_string(),
+                is_friend: index % 2 == 0,
+            })
+            .collect(),
         ..sample_wrist_model()
     }
 }
 
+const LONG_NOTE: &str = "a long note that has to wrap across several lines in a narrow column";
+
 #[test]
-fn wrist_player_grid_grows_to_fit_every_player() {
+fn wrist_player_grid_grows_with_its_players_up_to_the_max_height() {
     let mut renderer = SlintWristRenderer::new();
-    let few = renderer.render(&player_grid_model(4, 1, "")).unwrap();
-    let full = renderer.render(&player_grid_model(80, 4, "")).unwrap();
+    let few = renderer.render(&player_grid_model(4, 4000, "")).unwrap();
+    let full = renderer.render(&player_grid_model(80, 4000, "")).unwrap();
     let noted = renderer
-        .render(&player_grid_model(
-            80,
-            4,
-            "a long note that has to wrap across several lines in a narrow column",
-        ))
+        .render(&player_grid_model(80, 4000, LONG_NOTE))
         .unwrap();
 
     assert_eq!(full.size.width, 1024);
-    assert!(full.size.height > 512, "{:?}", full.size);
     assert!(full.size.height > few.size.height);
     assert!(noted.size.height > full.size.height);
 }
 
 #[test]
+fn wrist_player_grid_adds_columns_then_shrinks_text_to_fit_the_max_height() {
+    let mut renderer = SlintWristRenderer::new();
+    let roomy = renderer
+        .render(&player_grid_model(80, 4000, LONG_NOTE))
+        .unwrap();
+    let fitted = renderer
+        .render(&player_grid_model(80, 900, LONG_NOTE))
+        .unwrap();
+    let tight = renderer
+        .render(&player_grid_model(80, 500, LONG_NOTE))
+        .unwrap();
+
+    assert!(roomy.size.height > 900, "{:?}", roomy.size);
+    assert!(fitted.size.height <= 900, "{:?}", fitted.size);
+    assert!(tight.size.height <= 500, "{:?}", tight.size);
+}
+
+#[test]
 fn wrist_player_grid_wraps_long_names_instead_of_clipping_them() {
     let mut renderer = SlintWristRenderer::new();
-    let short = renderer.render(&player_grid_model(40, 4, "")).unwrap();
-    let mut model = player_grid_model(40, 4, "");
-    model.player_columns[0][0].name =
+    let short = renderer.render(&player_grid_model(40, 4000, "")).unwrap();
+    let mut model = player_grid_model(40, 4000, "");
+    model.players[0].name =
         "An extremely long display name that cannot fit on one line".to_string();
     let long = renderer.render(&model).unwrap();
 
@@ -75,14 +88,41 @@ fn wrist_player_grid_wraps_long_names_instead_of_clipping_them() {
 #[test]
 fn wrist_player_grid_reuses_its_resized_host() {
     let mut renderer = SlintWristRenderer::new();
-    let model = player_grid_model(80, 4, "note");
+    let model = player_grid_model(80, 4000, "note");
     let first = renderer.render(&model).unwrap();
     let mut changed = model.clone();
-    changed.player_columns[0][0].joined = "13m".to_string();
+    changed.players[0].joined = "13m".to_string();
     let second = renderer.render(&changed).unwrap();
 
     assert_eq!(first.size, second.size);
     assert_eq!(renderer.render_count(), 2);
+}
+
+#[test]
+fn wrist_text_scales_resize_their_areas() {
+    let mut renderer = SlintWristRenderer::new();
+    let mut model = sample_wrist_model();
+    model.size = OverlaySize::new(512, 4000);
+    model.feed_rows = (0..4).map(feed_row).collect();
+    let base = renderer.render(&model).unwrap().size.height;
+    for text in [
+        WristTextScale {
+            header_percent: 150,
+            ..Default::default()
+        },
+        WristTextScale {
+            footer_percent: 150,
+            ..Default::default()
+        },
+        WristTextScale {
+            content_percent: 150,
+            ..Default::default()
+        },
+    ] {
+        model.text = text;
+        let height = renderer.render(&model).unwrap().size.height;
+        assert!(height > base, "{text:?}: {height} <= {base}");
+    }
 }
 
 #[test]
@@ -132,56 +172,87 @@ fn hmd_toasts_put_the_newest_card_on_the_inner_edge_of_the_stack() {
     assert_eq!(actors(&model), ["middle", "newest", "latest"]);
 }
 
+const LONG_HMD_ACTION: &str = "joined wrld_4cf5a0c2-7f7b-4e19-9a3a-6b2e5c8d9f01:12345~private(usr_c1644b5b-3ca4-45b4-97c6-a2a0de70d469)~region(jp)";
+
+fn painted_rows(frame: &RgbaFrame) -> (u32, u32) {
+    let column = frame.size.width / 2;
+    let rows = (0..frame.size.height)
+        .filter(|y| frame.data[((y * frame.size.width + column) * 4 + 3) as usize] > 0)
+        .collect::<Vec<_>>();
+    (rows[0], rows[rows.len() - 1])
+}
+
+fn painted_width(frame: &RgbaFrame, row: u32) -> u32 {
+    let columns = (0..frame.size.width)
+        .filter(|x| frame.data[((row * frame.size.width + x) * 4 + 3) as usize] > 0)
+        .collect::<Vec<_>>();
+    columns[columns.len() - 1] - columns[0] + 1
+}
+
 #[test]
-fn compact_hmd_newest_card_keeps_its_center_when_it_wraps_to_two_lines() {
-    let painted_rows = |frame: &RgbaFrame| {
-        let column = frame.size.width / 2;
-        let rows = (0..frame.size.height)
-            .filter(|y| frame.data[((y * frame.size.width + column) * 4 + 3) as usize] > 0)
-            .collect::<Vec<_>>();
-        (rows[0], rows[rows.len() - 1])
-    };
+fn hmd_newest_card_keeps_its_outer_edge_when_it_wraps() {
+    for compact in [false, true] {
+        for stack_upward in [false, true] {
+            let mut renderer = SlintHmdRenderer::new();
+            let mut model = sample_main_model();
+            model.compact = compact;
+            model.stack_upward = stack_upward;
+            model.toasts[0].show_avatar = false;
+            let short = renderer.render(&model).unwrap();
+            let (top, bottom) = painted_rows(&short);
 
-    for stack_upward in [false, true] {
-        let mut renderer = SlintHmdRenderer::new();
-        let mut model = sample_main_model();
-        model.compact = true;
-        model.stack_upward = stack_upward;
-        model.toasts[0].show_avatar = false;
-        let (top, bottom) = painted_rows(&renderer.render(&model).unwrap());
+            model.toasts[0].action = LONG_HMD_ACTION.to_string();
+            let wrapped = renderer.render(&model).unwrap();
+            let (wrapped_top, wrapped_bottom) = painted_rows(&wrapped);
 
-        model.toasts[0].action = "joined wrld_4cf5a0c2-7f7b-4e19-9a3a-6b2e5c8d9f01:12345~private(usr_c1644b5b-3ca4-45b4-97c6-a2a0de70d469)~region(jp)".to_string();
-        let (wrapped_top, wrapped_bottom) = painted_rows(&renderer.render(&model).unwrap());
-
-        assert!(wrapped_bottom - wrapped_top > bottom - top);
-        assert_eq!(
-            wrapped_top + wrapped_bottom,
-            top + bottom,
-            "stack_upward = {stack_upward}"
-        );
+            let label = format!("compact = {compact}, stack_upward = {stack_upward}");
+            assert!(wrapped_bottom - wrapped_top > bottom - top, "{label}");
+            if stack_upward {
+                assert_eq!(
+                    wrapped.size.height - wrapped_bottom,
+                    short.size.height - bottom,
+                    "{label}"
+                );
+            } else {
+                assert_eq!(wrapped_top, top, "{label}");
+            }
+        }
     }
 }
 
 #[test]
-fn short_hmd_cards_keep_the_minimum_width() {
-    let painted_width = |frame: &RgbaFrame, row: u32| {
-        let columns = (0..frame.size.width)
-            .filter(|x| frame.data[((row * frame.size.width + x) * 4 + 3) as usize] > 0)
-            .collect::<Vec<_>>();
-        columns[columns.len() - 1] - columns[0] + 1
-    };
-
+fn hmd_cards_hug_short_text_and_wrap_long_text() {
     for compact in [false, true] {
         let mut renderer = SlintHmdRenderer::new();
         let mut model = sample_main_model();
         model.compact = compact;
         model.toasts[0].show_avatar = false;
         model.toasts[0].action = "online".to_string();
+        let short = renderer.render(&model).unwrap();
+        model.toasts[0].action = LONG_HMD_ACTION.to_string();
+        let long = renderer.render(&model).unwrap();
 
-        let frame = renderer.render(&model).unwrap();
-
-        assert_eq!(painted_width(&frame, 40), 640, "compact = {compact}");
+        let label = format!("compact = {compact}");
+        assert!(painted_width(&short, 40) < 640, "{label}");
+        assert!(
+            painted_width(&long, 40) > painted_width(&short, 40),
+            "{label}"
+        );
+        assert!(long.size.height > short.size.height, "{label}");
+        assert!(painted_width(&long, 40) <= long.size.width - 40, "{label}");
     }
+}
+
+#[test]
+fn hmd_text_size_scales_the_cards() {
+    let mut renderer = SlintHmdRenderer::new();
+    let mut model = sample_main_model();
+    let normal = renderer.render(&model).unwrap();
+    model.text_percent = 150;
+    let large = renderer.render(&model).unwrap();
+
+    assert!(large.size.height > normal.size.height);
+    assert!(painted_width(&large, 40) > painted_width(&normal, 40));
 }
 
 #[test]
@@ -277,9 +348,10 @@ fn wrist_panel_fills_the_width_of_every_overlay_size_preset() {
 }
 
 #[test]
-fn wrist_panel_feed_grows_up_to_twice_as_tall_as_it_is_wide() {
-    for size in overlay_size_presets() {
-        let max_height = size.width * 2;
+fn wrist_panel_feed_grows_up_to_the_max_height() {
+    for preset in overlay_size_presets() {
+        let max_height = preset.width * 2;
+        let size = OverlaySize::new(preset.width, max_height);
         let capacity = (max_height - 49 - 34) / 38;
         let mut renderer = SlintWristRenderer::new();
         let mut model = sample_wrist_model();
@@ -615,7 +687,8 @@ fn sample_wrist_model() -> WristSurfaceModel {
             severity: FeedSeverity::Important,
             accent: FeedAccent::None,
         }],
-        player_columns: Vec::new(),
+        players: Vec::new(),
+        text: WristTextScale::default(),
         now_playing: None,
         footer: OverlayFooter {
             left: "8 players".to_string(),
@@ -632,6 +705,7 @@ fn sample_main_model() -> MainSurfaceModel {
         accent: crate::Color::rgba(94, 234, 212, 255),
         compact: false,
         stack_upward: false,
+        text_percent: 100,
         toasts: vec![ToastCard {
             actor_name: "Ada".to_string(),
             relation: FeedRelation::Favorite,

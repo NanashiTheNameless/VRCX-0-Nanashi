@@ -21,32 +21,56 @@ const ANCHOR_KEY = 'wristOverlayAnchor';
 const ANCHORS = ['bottom', 'center', 'top'] as const;
 type WristAnchor = (typeof ANCHORS)[number];
 
-type NumberSetting = {
-    id: 'width' | 'side' | 'up' | 'out' | 'tilt';
+type SettingId =
+    | 'width'
+    | 'height'
+    | 'header_text'
+    | 'footer_text'
+    | 'content_text'
+    | 'side'
+    | 'up'
+    | 'out'
+    | 'tilt';
+
+export type NumberSetting = {
+    id: SettingId;
     key: string;
     min: number;
     max: number;
-    unit: 'cm' | 'deg';
+    unit: 'cm' | 'deg' | 'percent';
 };
 
-// Mirrors WristPlacement in crates/overlay-runtime/src/surfaces/wrist.rs.
+const TEXT_PERCENT = { min: 50, max: 200, unit: 'percent' } as const;
+const OFFSET_CM = { min: -50, max: 50, unit: 'cm' } as const;
+
+// Mirrors load_runtime_config in crates/overlay-runtime/src/config.rs.
 const NUMBER_SETTINGS: NumberSetting[] = [
     { id: 'width', key: 'wristOverlayWidthCm', min: 10, max: 80, unit: 'cm' },
     {
-        id: 'side',
-        key: 'wristOverlayOffsetSideCm',
-        min: -50,
-        max: 50,
+        id: 'height',
+        key: 'wristOverlayMaxHeightCm',
+        min: 10,
+        max: 160,
         unit: 'cm'
     },
-    { id: 'up', key: 'wristOverlayOffsetUpCm', min: -50, max: 50, unit: 'cm' },
     {
-        id: 'out',
-        key: 'wristOverlayOffsetOutCm',
-        min: -50,
-        max: 50,
-        unit: 'cm'
+        id: 'header_text',
+        key: 'wristOverlayHeaderTextPercent',
+        ...TEXT_PERCENT
     },
+    {
+        id: 'footer_text',
+        key: 'wristOverlayFooterTextPercent',
+        ...TEXT_PERCENT
+    },
+    {
+        id: 'content_text',
+        key: 'wristOverlayContentTextPercent',
+        ...TEXT_PERCENT
+    },
+    { id: 'side', key: 'wristOverlayOffsetSideCm', ...OFFSET_CM },
+    { id: 'up', key: 'wristOverlayOffsetUpCm', ...OFFSET_CM },
+    { id: 'out', key: 'wristOverlayOffsetOutCm', ...OFFSET_CM },
     {
         id: 'tilt',
         key: 'wristOverlayTiltDegrees',
@@ -56,7 +80,13 @@ const NUMBER_SETTINGS: NumberSetting[] = [
     }
 ];
 
-type NumberValues = Record<NumberSetting['id'], number>;
+const HMD_TEXT_SETTING: NumberSetting = {
+    id: 'content_text',
+    key: 'hmdNotificationTextPercent',
+    ...TEXT_PERCENT
+};
+
+type NumberValues = Record<SettingId, number>;
 
 /** Width the old size presets had, used until a width is saved. */
 export function presetWidthCm(size: string): number {
@@ -70,19 +100,86 @@ export function presetWidthCm(size: string): number {
     }
 }
 
-export function clampSetting(setting: NumberSetting, value: number): number {
+/** Value used until one is saved; the height follows the width. */
+export function defaultSettingValue(id: SettingId, widthCm: number): number {
+    switch (id) {
+        case 'width':
+            return widthCm;
+        case 'height':
+            return widthCm * 2;
+        case 'header_text':
+        case 'footer_text':
+        case 'content_text':
+            return 100;
+        default:
+            return 0;
+    }
+}
+
+export function clampSetting(
+    setting: NumberSetting,
+    value: number,
+    fallback = defaultSettingValue(setting.id, 40)
+): number {
     if (!Number.isFinite(value)) {
-        return setting.id === 'width' ? 40 : 0;
+        return fallback;
     }
     return Math.min(setting.max, Math.max(setting.min, Math.round(value)));
 }
 
 function defaultValues(widthCm: number): NumberValues {
-    return { width: widthCm, side: 0, up: 0, out: 0, tilt: 0 };
+    const values = {} as NumberValues;
+    for (const setting of NUMBER_SETTINGS) {
+        values[setting.id] = defaultSettingValue(setting.id, widthCm);
+    }
+    return values;
 }
 
-// Fork: wrist menu size, which edge stays fixed as it grows, offsets from the
-// default spot on the wrist, and tilt.
+function sliderValue(next: number | readonly number[]): number {
+    return Array.isArray(next) ? next[0] : (next as number);
+}
+
+function NumberSliderField({
+    setting,
+    label,
+    description,
+    value,
+    disabled,
+    onDraft,
+    onCommit
+}: {
+    setting: NumberSetting;
+    label: string;
+    description?: string;
+    value: number;
+    disabled: boolean;
+    onDraft: (value: number) => void;
+    onCommit: (value: number) => void;
+}) {
+    const { t } = useTranslation();
+    return (
+        <Field label={label} description={description} disabled={disabled}>
+            <div className="flex w-56 max-w-full items-center justify-end gap-3">
+                <Slider
+                    value={[value]}
+                    min={setting.min}
+                    max={setting.max}
+                    step={1}
+                    disabled={disabled}
+                    aria-label={label}
+                    onValueChange={(next) => onDraft(sliderValue(next))}
+                    onValueCommitted={(next) => onCommit(sliderValue(next))}
+                />
+                <span className="text-muted-foreground w-14 text-right text-sm">
+                    {t(`${P}.unit_${setting.unit}`, { value })}
+                </span>
+            </div>
+        </Field>
+    );
+}
+
+// Fork: wrist menu width and maximum height, text size per area, which edge
+// stays fixed as it grows, offsets from the default spot on the wrist, and tilt.
 export function SettingsWristPlacementFields({
     disabled
 }: {
@@ -96,33 +193,41 @@ export function SettingsWristPlacementFields({
 
     useEffect(() => {
         let active = true;
-        void configRepository
-            .getString(SIZE_KEY, 'normal')
-            .then(async (size) => {
-                const width = presetWidthCm(size);
-                const [anchorValue, ...numbers] = await Promise.all([
-                    configRepository.getString(ANCHOR_KEY, 'bottom'),
-                    ...NUMBER_SETTINGS.map((setting) =>
-                        configRepository.getInt(
-                            setting.key,
-                            setting.id === 'width' ? width : 0
-                        )
+        void (async () => {
+            const preset = presetWidthCm(
+                await configRepository.getString(SIZE_KEY, 'normal')
+            );
+            const width = clampSetting(
+                NUMBER_SETTINGS[0],
+                await configRepository.getInt(NUMBER_SETTINGS[0].key, preset),
+                preset
+            );
+            const [anchorValue, ...numbers] = await Promise.all([
+                configRepository.getString(ANCHOR_KEY, 'bottom'),
+                ...NUMBER_SETTINGS.map((setting) =>
+                    configRepository.getInt(
+                        setting.key,
+                        defaultSettingValue(setting.id, width)
                     )
-                ]);
-                if (!active) return;
-                setPresetWidth(width);
-                setAnchor(
-                    ANCHORS.includes(anchorValue as WristAnchor)
-                        ? (anchorValue as WristAnchor)
-                        : 'bottom'
+                )
+            ]);
+            if (!active) return;
+            setPresetWidth(preset);
+            setAnchor(
+                ANCHORS.includes(anchorValue as WristAnchor)
+                    ? (anchorValue as WristAnchor)
+                    : 'bottom'
+            );
+            const next = defaultValues(width);
+            NUMBER_SETTINGS.forEach((setting, index) => {
+                next[setting.id] = clampSetting(
+                    setting,
+                    numbers[index],
+                    defaultSettingValue(setting.id, width)
                 );
-                const next = defaultValues(width);
-                NUMBER_SETTINGS.forEach((setting, index) => {
-                    next[setting.id] = clampSetting(setting, numbers[index]);
-                });
-                setValues(next);
-            })
-            .catch(() => {});
+            });
+            setValues(next);
+        })().catch(() => {});
         return () => {
             active = false;
         };
@@ -152,45 +257,23 @@ export function SettingsWristPlacementFields({
 
     return (
         <>
-            {NUMBER_SETTINGS.map((setting) => {
-                const value = drafts[setting.id] ?? values[setting.id];
-                return (
-                    <Field
-                        key={setting.id}
-                        label={t(`${P}.${setting.id}`)}
-                        description={t(`${P}.${setting.id}_description`)}
-                        disabled={disabled}
-                    >
-                        <div className="flex w-56 max-w-full items-center justify-end gap-3">
-                            <Slider
-                                value={[value]}
-                                min={setting.min}
-                                max={setting.max}
-                                step={1}
-                                disabled={disabled}
-                                aria-label={t(`${P}.${setting.id}`)}
-                                onValueChange={(next) =>
-                                    setDrafts((current) => ({
-                                        ...current,
-                                        [setting.id]: Array.isArray(next)
-                                            ? next[0]
-                                            : next
-                                    }))
-                                }
-                                onValueCommitted={(next) =>
-                                    commit(
-                                        setting,
-                                        Array.isArray(next) ? next[0] : next
-                                    )
-                                }
-                            />
-                            <span className="text-muted-foreground w-14 text-right text-sm">
-                                {t(`${P}.unit_${setting.unit}`, { value })}
-                            </span>
-                        </div>
-                    </Field>
-                );
-            })}
+            {NUMBER_SETTINGS.map((setting) => (
+                <NumberSliderField
+                    key={setting.id}
+                    setting={setting}
+                    label={t(`${P}.${setting.id}`)}
+                    description={t(`${P}.${setting.id}_description`)}
+                    value={drafts[setting.id] ?? values[setting.id]}
+                    disabled={disabled}
+                    onDraft={(value) =>
+                        setDrafts((current) => ({
+                            ...current,
+                            [setting.id]: value
+                        }))
+                    }
+                    onCommit={(value) => commit(setting, value)}
+                />
+            ))}
 
             <Field
                 label={t(`${P}.anchor`)}
@@ -240,5 +323,45 @@ export function SettingsWristPlacementFields({
                 </Button>
             </Field>
         </>
+    );
+}
+
+// Fork: HMD notification text size; cards grow and shrink with it.
+export function SettingsHmdTextSizeField({ disabled }: { disabled: boolean }) {
+    const { t } = useTranslation();
+    const [value, setValue] = useState(100);
+    const [draft, setDraft] = useState<number | null>(null);
+
+    useEffect(() => {
+        let active = true;
+        void configRepository
+            .getInt(HMD_TEXT_SETTING.key, 100)
+            .then((saved) => {
+                if (active)
+                    setValue(clampSetting(HMD_TEXT_SETTING, saved, 100));
+            })
+            .catch(() => {});
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    return (
+        <NumberSliderField
+            setting={HMD_TEXT_SETTING}
+            label={t('view.settings.vr.hmd_notifications.text_size')}
+            description={t(
+                'view.settings.vr.hmd_notifications.text_size_description'
+            )}
+            value={draft ?? value}
+            disabled={disabled}
+            onDraft={setDraft}
+            onCommit={(raw) => {
+                const next = clampSetting(HMD_TEXT_SETTING, raw, 100);
+                setDraft(null);
+                setValue(next);
+                void configRepository.setInt(HMD_TEXT_SETTING.key, next);
+            }}
+        />
     );
 }

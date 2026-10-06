@@ -26,5 +26,7 @@ pub struct MainSurfaceModel {
     pub accent: Color,
     pub compact: bool,
     pub stack_upward: bool,
+    /// Fork: HMD text size, in percent of the default.
+    pub text_percent: u8,
     pub toasts: Vec<ToastCard>,
 }

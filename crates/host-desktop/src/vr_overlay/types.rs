@@ -74,6 +74,10 @@ pub enum OverlayPlacement {
     HeadLocked {
         offset_y_meters: f32,
         distance_meters: f32,
+        /// Which edge of the panel sits at `offset_y_meters`; `None` is the
+        /// center. An anchored edge stays put as the panel's height changes.
+        #[serde(default)]
+        anchor: Option<WristAnchor>,
     },
 }
 
@@ -187,11 +191,19 @@ impl OverlayPlacement {
             Self::HeadLocked {
                 offset_y_meters,
                 distance_meters,
-            } => [
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, *offset_y_meters],
-                [0.0, 0.0, 1.0, -distance_meters],
-            ],
+                anchor,
+            } => {
+                let center_shift = match anchor {
+                    None | Some(WristAnchor::Center) => 0.0,
+                    Some(WristAnchor::Top) => -height_meters / 2.0,
+                    Some(WristAnchor::Bottom) => height_meters / 2.0,
+                };
+                [
+                    [1.0, 0.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0, offset_y_meters + center_shift],
+                    [0.0, 0.0, 1.0, -distance_meters],
+                ]
+            }
         }
     }
 }
@@ -321,11 +333,19 @@ mod tests {
     }
 
     #[test]
-    fn head_locked_placement_ignores_height() {
-        let placement = OverlayPlacement::HeadLocked {
+    fn head_locked_placement_keeps_its_anchored_edge() {
+        let placement = |anchor| OverlayPlacement::HeadLocked {
             offset_y_meters: -0.3,
             distance_meters: 1.3,
+            anchor,
         };
-        assert_eq!(placement.transform(0.2), placement.transform(0.9));
+        let center = placement(None);
+        assert_eq!(center.transform(0.2), center.transform(0.9));
+        for (anchor, edge) in [(WristAnchor::Top, 0.5), (WristAnchor::Bottom, -0.5)] {
+            for height in [0.2_f32, 0.9] {
+                let m = placement(Some(anchor)).transform(height);
+                assert!((m[1][3] + edge * height - -0.3).abs() < 1e-6);
+            }
+        }
     }
 }

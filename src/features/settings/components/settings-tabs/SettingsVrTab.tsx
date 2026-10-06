@@ -28,7 +28,10 @@ import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
 import { useSettingsVrTabState } from '../useSettingsVrTabState';
 import { SettingsWristPagesFields } from './SettingsWristPagesFields';
-import { SettingsWristPlacementFields } from './SettingsWristPlacementFields';
+import {
+    SettingsHmdTextSizeField,
+    SettingsWristPlacementFields
+} from './SettingsWristPlacementFields';
 
 type SettingsVrPrefs = Pick<
     PreferencesSnapshot,
@@ -516,6 +519,8 @@ function SettingsVrTabContent({
                         onCheckedChange={onHmdNotificationAvatarsChange}
                     />
                 </Field>
+
+                <SettingsHmdTextSizeField disabled={!hmdNotificationsEnabled} />
 
                 <Field
                     label={t('view.settings.vr.hmd_notifications.timeout')}

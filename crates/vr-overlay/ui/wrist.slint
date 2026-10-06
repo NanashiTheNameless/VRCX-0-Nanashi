@@ -32,11 +32,12 @@ export struct WristPlayerItem {
 
 component WristPlayerColumn inherits VerticalLayout {
     in property <[WristPlayerItem]> cells;
+    in property <float> scale: 1;
     in property <color> quiet-color;
     in property <color> muted-color;
     in property <color> note-color;
     alignment: start;
-    spacing: 7px;
+    spacing: 7px * root.scale;
 
     for cell in root.cells : VerticalLayout {
         // An explicit width lets wrapped text report its real height when the
@@ -45,13 +46,13 @@ component WristPlayerColumn inherits VerticalLayout {
         spacing: 1px;
 
         HorizontalLayout {
-            spacing: 6px;
+            spacing: 6px * root.scale;
 
             Text {
                 horizontal-stretch: 1;
-                width: root.width - joined.preferred-width - 6px;
+                width: root.width - joined.preferred-width - 6px * root.scale;
                 text: cell.name;
-                font-size: 14px;
+                font-size: 14px * root.scale;
                 font-weight: 600;
                 wrap: word-wrap;
                 color: cell.name-color;
@@ -60,7 +61,7 @@ component WristPlayerColumn inherits VerticalLayout {
             joined := Text {
                 horizontal-stretch: 0;
                 text: cell.joined;
-                font-size: 12px;
+                font-size: 12px * root.scale;
                 vertical-alignment: center;
                 color: root.quiet-color;
             }
@@ -69,7 +70,7 @@ component WristPlayerColumn inherits VerticalLayout {
         if cell.has-status : Text {
             width: root.width;
             text: cell.status;
-            font-size: 12px;
+            font-size: 12px * root.scale;
             wrap: word-wrap;
             color: root.muted-color;
         }
@@ -77,7 +78,7 @@ component WristPlayerColumn inherits VerticalLayout {
         if cell.has-note : Text {
             width: root.width;
             text: cell.note;
-            font-size: 12px;
+            font-size: 12px * root.scale;
             wrap: word-wrap;
             color: root.note-color;
         }
@@ -91,12 +92,14 @@ export component WristPanel inherits Window {
     in property <bool> dark-background: true;
     in property <[WristDeviceItem]> devices: [];
     in property <[WristFeedItem]> feed-lines: [];
-    // Fork: Players / Notes grid, up to four columns.
+    // Fork: Players / Notes grid, up to six columns.
     in property <int> player-column-count: 0;
     in property <[WristPlayerItem]> players-0: [];
     in property <[WristPlayerItem]> players-1: [];
     in property <[WristPlayerItem]> players-2: [];
     in property <[WristPlayerItem]> players-3: [];
+    in property <[WristPlayerItem]> players-4: [];
+    in property <[WristPlayerItem]> players-5: [];
     in property <string> footer-left;
     in property <string> footer-center;
     in property <string> footer-right;
@@ -104,7 +107,15 @@ export component WristPanel inherits Window {
     in property <string> now-playing-time;
     in property <bool> now-playing-has-progress: false;
     in property <float> now-playing-progress: 0;
+    // Fork: text size per area (Settings > VR), the grid's fit factor from the
+    // host, and the tallest the panel may be.
+    in property <float> header-scale: 1;
+    in property <float> footer-scale: 1;
+    in property <float> content-scale: 1;
+    in property <float> grid-fit-scale: 1;
+    in property <length> max-panel-height: 1024px;
 
+    property <float> grid-scale: root.content-scale * root.grid-fit-scale;
     property <color> background-color: root.dark-background ? #0d1117f2 : #0d1117b8;
     property <color> edge-color: #ffffff24;
     property <color> divider-color: #ffffff1f;
@@ -112,37 +123,36 @@ export component WristPanel inherits Window {
     property <color> quiet-color: root.dark-background ? #7f8996 : #c3cad4;
     property <color> now-playing-title-color: root.dark-background ? #d5dbe4 : #e6ebf1;
     property <color> now-playing-accent-color: #38bdf8;
-    property <length> header-height: 44px;
-    property <length> footer-height: 34px;
-    property <length> row-height: 38px;
-    property <length> feed-top: 49px;
-    property <length> now-playing-padding: 8px;
-    property <length> now-playing-meter-height: 14px;
+    property <length> header-height: 44px * root.header-scale;
+    property <length> footer-height: 34px * root.footer-scale;
+    property <length> row-height: 38px * root.content-scale;
+    property <length> feed-top: root.header-height + 5px * root.content-scale;
+    property <length> now-playing-padding: 8px * root.content-scale;
+    property <length> now-playing-meter-height: 14px * root.content-scale;
     property <bool> now-playing-title-truncated: now-playing-title-measure.preferred-height > now-playing-title.preferred-height;
     property <length> now-playing-height: root.now-playing-title != ""
-        ? root.now-playing-padding * 2 + now-playing-title.preferred-height + 6px + root.now-playing-meter-height
+        ? root.now-playing-padding * 2 + now-playing-title.preferred-height + 6px * root.content-scale + root.now-playing-meter-height
         : 0px;
     property <bool> has-player-grid: root.player-column-count > 0;
-    property <length> player-grid-spacing: 12px;
+    property <length> player-grid-spacing: 12px * root.grid-scale;
     property <length> player-column-width: root.has-player-grid
         ? (root.width - 28px - (root.player-column-count - 1) * root.player-grid-spacing) / root.player-column-count
         : 0px;
-    // Fork: height the Players / Notes grid needs to show every player in full;
-    // the host resizes the window to it. Each column is measured on its own
-    // because a horizontal layout ignores wrapped text when reporting height.
-    // The feed may grow up to twice as tall as the panel is wide; the grid is
-    // never capped so no player is dropped.
+    // Fork: height the panel needs; the host resizes the window to it. The feed
+    // stops at whole rows within max-panel-height. The Players / Notes grid
+    // lists every player; the host adds columns, then shrinks the grid text,
+    // until it fits. Each column is measured on its own because a horizontal
+    // layout ignores wrapped text when reporting height.
     out property <length> required-height: root.has-player-grid
         ? root.feed-top
-            + max(players-column-0.preferred-height, players-column-1.preferred-height,
-                players-column-2.preferred-height, players-column-3.preferred-height)
-            + 10px + root.now-playing-height + root.footer-height
+            + max(players-column-0.preferred-height, players-column-1.preferred-height, players-column-2.preferred-height, players-column-3.preferred-height, players-column-4.preferred-height, players-column-5.preferred-height)
+            + 10px * root.grid-scale + root.now-playing-height + root.footer-height
         : (root.feed-row-limit > 0
             ? root.feed-top + root.feed-row-limit * root.row-height
             : root.header-height) + root.now-playing-height + root.footer-height;
-    property <int> feed-row-limit: Math.min(
+    property <int> feed-row-limit: Math.max(0, Math.min(
         root.feed-lines.length,
-        Math.floor((root.width * 2 - root.feed-top - root.now-playing-height - root.footer-height) / root.row-height));
+        Math.floor((root.max-panel-height - root.feed-top - root.now-playing-height - root.footer-height) / root.row-height)));
     property <float> visible-rows: Math.min(
         root.feed-lines.length,
         Math.floor((root.height - root.feed-top - root.now-playing-height - root.footer-height) / root.row-height));
@@ -180,24 +190,24 @@ export component WristPanel inherits Window {
 
         Rectangle {
             x: 18px;
-            y: 10px;
+            y: 10px * root.header-scale;
             width: parent.width - 36px;
-            height: 24px;
+            height: 24px * root.header-scale;
             clip: true;
 
             HorizontalLayout {
                 x: 0px;
                 y: 0px;
-                height: 24px;
-                spacing: 10px;
+                height: 24px * root.header-scale;
+                spacing: 10px * root.header-scale;
                 alignment: start;
 
                 for device in root.devices : HorizontalLayout {
-                    spacing: 4px;
+                    spacing: 4px * root.header-scale;
 
                     Text {
                         text: device.label;
-                        font-size: 14px;
+                        font-size: 14px * root.header-scale;
                         font-weight: 600;
                         vertical-alignment: center;
                         color: device.label-color;
@@ -205,39 +215,39 @@ export component WristPanel inherits Window {
 
                     if device.show-percent: Text {
                         text: device.percent;
-                        font-size: 12px;
+                        font-size: 12px * root.header-scale;
                         vertical-alignment: center;
                         color: device.percent-color;
                     }
 
                     if device.show-battery: Rectangle {
-                        width: 23px;
+                        width: 23px * root.header-scale;
 
                         Rectangle {
                             x: 0px;
-                            y: 7px;
-                            width: 18px;
-                            height: 10px;
+                            y: 7px * root.header-scale;
+                            width: 18px * root.header-scale;
+                            height: 10px * root.header-scale;
                             border-color: device.battery-color;
                             border-width: 2px;
                             border-radius: 2px;
                             background: transparent;
 
                             Rectangle {
-                                x: 3px;
-                                y: 3px;
-                                width: 12px * device.battery-fill;
-                                height: 4px;
+                                x: 3px * root.header-scale;
+                                y: 3px * root.header-scale;
+                                width: 12px * root.header-scale * device.battery-fill;
+                                height: 4px * root.header-scale;
                                 border-radius: 1px;
                                 background: device.battery-color;
                             }
                         }
 
                         Rectangle {
-                            x: 18px;
-                            y: 10px;
-                            width: 3px;
-                            height: 4px;
+                            x: 18px * root.header-scale;
+                            y: 10px * root.header-scale;
+                            width: 3px * root.header-scale;
+                            height: 4px * root.header-scale;
                             border-radius: 1px;
                             background: device.battery-color;
                         }
@@ -253,6 +263,7 @@ export component WristPanel inherits Window {
             height: self.preferred-height;
             visible: root.has-player-grid;
             cells: root.players-0;
+            scale: root.grid-scale;
             quiet-color: root.quiet-color;
             muted-color: root.muted-color;
             note-color: root.now-playing-title-color;
@@ -265,6 +276,7 @@ export component WristPanel inherits Window {
             height: self.preferred-height;
             visible: root.has-player-grid;
             cells: root.players-1;
+            scale: root.grid-scale;
             quiet-color: root.quiet-color;
             muted-color: root.muted-color;
             note-color: root.now-playing-title-color;
@@ -277,6 +289,7 @@ export component WristPanel inherits Window {
             height: self.preferred-height;
             visible: root.has-player-grid;
             cells: root.players-2;
+            scale: root.grid-scale;
             quiet-color: root.quiet-color;
             muted-color: root.muted-color;
             note-color: root.now-playing-title-color;
@@ -289,6 +302,33 @@ export component WristPanel inherits Window {
             height: self.preferred-height;
             visible: root.has-player-grid;
             cells: root.players-3;
+            scale: root.grid-scale;
+            quiet-color: root.quiet-color;
+            muted-color: root.muted-color;
+            note-color: root.now-playing-title-color;
+        }
+
+        players-column-4 := WristPlayerColumn {
+            x: 14px + 4 * (root.player-column-width + root.player-grid-spacing);
+            y: root.feed-top;
+            width: root.player-column-width;
+            height: self.preferred-height;
+            visible: root.has-player-grid;
+            cells: root.players-4;
+            scale: root.grid-scale;
+            quiet-color: root.quiet-color;
+            muted-color: root.muted-color;
+            note-color: root.now-playing-title-color;
+        }
+
+        players-column-5 := WristPlayerColumn {
+            x: 14px + 5 * (root.player-column-width + root.player-grid-spacing);
+            y: root.feed-top;
+            width: root.player-column-width;
+            height: self.preferred-height;
+            visible: root.has-player-grid;
+            cells: root.players-5;
+            scale: root.grid-scale;
             quiet-color: root.quiet-color;
             muted-color: root.muted-color;
             note-color: root.now-playing-title-color;
@@ -303,9 +343,9 @@ export component WristPanel inherits Window {
 
             if line.show-accent : Rectangle {
                 x: 0px;
-                y: 8px;
+                y: 8px * root.content-scale;
                 width: 3px;
-                height: 22px;
+                height: 22px * root.content-scale;
                 border-radius: 2px;
                 background: line.accent-color;
             }
@@ -313,25 +353,25 @@ export component WristPanel inherits Window {
             Text {
                 x: 11px;
                 y: 0px;
-                width: 42px;
-                height: 37px;
+                width: 42px * root.content-scale;
+                height: root.row-height - 1px;
                 text: line.time;
-                font-size: 13px;
+                font-size: 13px * root.content-scale;
                 vertical-alignment: center;
                 color: root.quiet-color;
             }
 
             HorizontalLayout {
-                x: 62px;
+                x: 11px + 51px * root.content-scale;
                 y: 0px;
-                width: parent.width - 62px;
-                height: 37px;
-                spacing: 5px;
+                width: parent.width - self.x;
+                height: root.row-height - 1px;
+                spacing: 5px * root.content-scale;
 
                 if line.has-actor: Text {
                     horizontal-stretch: 0;
                     text: line.actor;
-                    font-size: 16px;
+                    font-size: 16px * root.content-scale;
                     font-weight: 600;
                     vertical-alignment: center;
                     color: line.actor-color;
@@ -340,7 +380,7 @@ export component WristPanel inherits Window {
                 Text {
                     horizontal-stretch: 1;
                     text: line.detail;
-                    font-size: 16px;
+                    font-size: 16px * root.content-scale;
                     vertical-alignment: center;
                     overflow: elide;
                     color: line.detail-color;
@@ -369,7 +409,7 @@ export component WristPanel inherits Window {
                 height: 0px;
                 visible: false;
                 text: root.now-playing-title;
-                font-size: 14px;
+                font-size: 14px * root.content-scale;
                 wrap: word-wrap;
             }
 
@@ -380,7 +420,7 @@ export component WristPanel inherits Window {
                 height: self.preferred-height;
                 max-lines: 2;
                 text: root.now-playing-title;
-                font-size: 14px;
+                font-size: 14px * root.content-scale;
                 wrap: word-wrap;
                 overflow: clip;
                 vertical-alignment: top;
@@ -394,7 +434,7 @@ export component WristPanel inherits Window {
                 height: now-playing-title.preferred-height / 2;
                 visible: root.now-playing-title-truncated;
                 text: "...";
-                font-size: 14px;
+                font-size: 14px * root.content-scale;
                 horizontal-alignment: right;
                 vertical-alignment: top;
                 color: root.now-playing-title-color;
@@ -402,10 +442,10 @@ export component WristPanel inherits Window {
 
             HorizontalLayout {
                 x: 18px;
-                y: root.now-playing-padding + now-playing-title.preferred-height + 6px;
+                y: root.now-playing-padding + now-playing-title.preferred-height + 6px * root.content-scale;
                 width: parent.width - 36px;
                 height: root.now-playing-meter-height;
-                spacing: 10px;
+                spacing: 10px * root.content-scale;
 
                 Rectangle {
                     horizontal-stretch: 1;
@@ -432,7 +472,7 @@ export component WristPanel inherits Window {
                 Text {
                     horizontal-stretch: 0;
                     text: root.now-playing-time;
-                    font-size: 12px;
+                    font-size: 12px * root.content-scale;
                     vertical-alignment: center;
                     color: root.quiet-color;
                 }
@@ -441,32 +481,32 @@ export component WristPanel inherits Window {
 
         Text {
             x: 18px;
-            y: parent.height - 24px;
-            width: 128px;
-            height: 17px;
+            y: parent.height - root.footer-height + 10px * root.footer-scale;
+            width: self.preferred-width;
+            height: 17px * root.footer-scale;
             text: root.footer-left;
-            font-size: 12px;
+            font-size: 12px * root.footer-scale;
             color: root.muted-color;
         }
 
         Text {
-            x: parent.width / 2 - 90px;
-            y: parent.height - 24px;
-            width: 180px;
-            height: 17px;
+            x: (parent.width - self.width) / 2;
+            y: parent.height - root.footer-height + 10px * root.footer-scale;
+            width: self.preferred-width;
+            height: 17px * root.footer-scale;
             text: root.footer-center;
-            font-size: 12px;
+            font-size: 12px * root.footer-scale;
             horizontal-alignment: center;
             color: root.muted-color;
         }
 
         Text {
-            x: parent.width - 98px;
-            y: parent.height - 24px;
-            width: 80px;
-            height: 17px;
+            x: parent.width - 18px - self.width;
+            y: parent.height - root.footer-height + 10px * root.footer-scale;
+            width: self.preferred-width;
+            height: 17px * root.footer-scale;
             text: root.footer-right;
-            font-size: 12px;
+            font-size: 12px * root.footer-scale;
             horizontal-alignment: right;
             color: root.muted-color;
         }

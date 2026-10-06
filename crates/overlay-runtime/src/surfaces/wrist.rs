@@ -11,6 +11,7 @@ use vrcx_0_i18n::OverlayMessage;
 use vrcx_0_vr_overlay::{
     DeviceChip, DeviceRole, DeviceStatus, FeedAccent, FeedKind, FeedLine, FeedRelation,
     FeedSeverity, OverlayFooter, OverlayNowPlaying, OverlaySize, PlayerCell, WristSurfaceModel,
+    WristTextScale,
 };
 
 use super::super::localization::{OverlayLocale, OverlayLocalizer, OverlayPanelLocalizer};
@@ -18,101 +19,9 @@ use vrcx_0_contracts::activity::ActivityKind;
 
 const MAX_FEED_ROWS: usize = 24;
 
-/// Players / Notes grid: a new column starts every this many players, up to
-/// `MAX_PLAYER_COLUMNS`; after that columns grow taller. No one is dropped.
-const PLAYERS_PER_COLUMN: usize = 10;
-const MAX_PLAYER_COLUMNS: usize = 4;
-const PLAYER_COLUMN_WIDTH: u32 = 256;
-
-/// Maximum wrist overlay width (2x normal preset = 1024px).
-/// Preset width (compact=448, normal=512, large=640) is used as minimum.
-const MAX_WRIST_WIDTH: u32 = 1024;
-
-/// Initial wrist canvas height. The rendered panel resizes to its content: the
-/// feed up to twice its width, the Players / Notes grid as tall as needed.
-const MAX_WRIST_HEIGHT: u32 = 640;
-
-/// Estimate the pixel width of a text string using average character width.
-/// This is a rough approximation since we don't have font metrics in Rust.
-fn estimate_text_width(text: &str, font_size: f32) -> f32 {
-    // Average character width is roughly 0.6 * font_size for variable-width fonts
-    text.chars().count() as f32 * font_size * 0.6
-}
-
-/// Calculate the required wrist overlay width based on content.
-fn calculate_wrist_width(input: &WristOverlayFrameInput) -> u32 {
-    let preset_width = input.options.size.overlay_size().width as f32;
-    let mut max_width: f32 = preset_width;
-
-    // Header: device labels + battery percentages
-    // Layout: 18px left padding + device labels + 18px right padding
-    let mut header_width: f32 = 36.0; // padding
-    for device in &input.devices {
-        let label_width = estimate_text_width(&device.label, 14.0);
-        let percent_width = device
-            .battery_percent
-            .map_or(0.0, |pct| estimate_text_width(&format!("{}%", pct), 12.0));
-        let battery_width = if device.battery_percent.is_some() {
-            23.0
-        } else {
-            0.0
-        };
-        header_width += label_width + percent_width + battery_width + 10.0; // spacing
-    }
-    max_width = max_width.max(header_width);
-
-    // Feed lines: time (42px) + actor + detail
-    // Layout: 14px left + 42px time + 8px spacing + actor + 5px spacing + detail + 14px right
-    const FEED_BASE_WIDTH: f32 = 14.0 + 42.0 + 8.0 + 5.0 + 14.0; // ~83px base
-    for entry in &input.activity.entries {
-        let actor = entry.actor_display_name.trim();
-        let detail = entry.content.detail.trim();
-        let actor_width = if !actor.is_empty() {
-            estimate_text_width(actor, 16.0)
-        } else {
-            0.0
-        };
-        let detail_width = estimate_text_width(detail, 16.0);
-        let line_width = FEED_BASE_WIDTH + actor_width + detail_width;
-        max_width = max_width.max(line_width);
-    }
-
-    // Now playing title
-    if let Some(np) = &input.now_playing {
-        let title = np.title.trim();
-        if !title.is_empty() {
-            // 18px left + title + 18px right + ellipsis space
-            let title_width = estimate_text_width(title, 14.0) + 36.0 + 30.0;
-            max_width = max_width.max(title_width);
-        }
-    }
-
-    // Footer: player_count + instance_duration + local_time (computed same as build_wrist_surface_model)
-    let footer_left = match input.page {
-        WristPage::Feed => format!("{} players", input.footer.player_count),
-        WristPage::Players => format!("Players ({})", input.players.len()),
-        WristPage::Notes => format!(
-            "Notes ({})",
-            input
-                .players
-                .iter()
-                .filter(|p| !p.note.trim().is_empty())
-                .count()
-        ),
-    };
-    let footer_center = input.footer.instance_duration.clone();
-    let footer_right = input.footer.local_time.clone();
-    let footer_width = 36.0
-        + estimate_text_width(&footer_left, 12.0)
-        + 60.0 // center space
-        + estimate_text_width(&footer_center, 12.0)
-        + 60.0 // center space
-        + estimate_text_width(&footer_right, 12.0);
-    max_width = max_width.max(footer_width);
-
-    // Clamp to bounds (preset width as minimum, MAX_WRIST_WIDTH as maximum)
-    max_width.clamp(preset_width, MAX_WRIST_WIDTH as f32) as u32
-}
+/// Fork: wrist canvas pixels per centimeter of physical width, so text stays
+/// the same physical size whatever width and height are chosen.
+pub const WRIST_PX_PER_CM: f32 = 12.8;
 
 #[derive(
     Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type,
@@ -164,6 +73,8 @@ impl WristOverlaySizePreset {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct WristPlacement {
     pub width_cm: u8,
+    /// The tallest the menu may grow; it is shorter when its content is.
+    pub max_height_cm: u8,
     pub anchor: WristAnchor,
     pub side_cm: i8,
     pub up_cm: i8,
@@ -174,12 +85,17 @@ pub struct WristPlacement {
 impl WristPlacement {
     pub const MIN_WIDTH_CM: u8 = 10;
     pub const MAX_WIDTH_CM: u8 = 80;
+    pub const MIN_HEIGHT_CM: u8 = 10;
+    pub const MAX_HEIGHT_CM: u8 = 160;
     pub const MAX_OFFSET_CM: i8 = 50;
     pub const MAX_TILT_DEGREES: i8 = 90;
 
     pub fn for_size(size: WristOverlaySizePreset) -> Self {
+        let width_cm = (size.physical_width_meters() * 100.0).round() as u8;
         Self {
-            width_cm: (size.physical_width_meters() * 100.0).round() as u8,
+            width_cm,
+            // Up to twice as tall as wide, as before the height setting.
+            max_height_cm: width_cm.saturating_mul(2),
             anchor: WristAnchor::Bottom,
             side_cm: 0,
             up_cm: 0,
@@ -190,6 +106,14 @@ impl WristPlacement {
 
     pub fn physical_width_meters(self) -> f32 {
         f32::from(self.width_cm) / 100.0
+    }
+
+    pub fn canvas_width_px(self) -> u16 {
+        (f32::from(self.width_cm) * WRIST_PX_PER_CM).round() as u16
+    }
+
+    pub fn canvas_max_height_px(self) -> u16 {
+        (f32::from(self.max_height_cm) * WRIST_PX_PER_CM).round() as u16
     }
 
     pub fn adjust(self) -> WristPlacementAdjust {
@@ -209,6 +133,10 @@ impl Default for WristPlacement {
     }
 }
 
+/// Text size range for the wrist menu and HMD notifications, in percent.
+pub const MIN_TEXT_PERCENT: u8 = 50;
+pub const MAX_TEXT_PERCENT: u8 = 200;
+
 pub fn wrist_anchor_from_config(value: &str) -> WristAnchor {
     match value.trim() {
         "center" => WristAnchor::Center,
@@ -221,6 +149,13 @@ pub fn wrist_anchor_from_config(value: &str) -> WristAnchor {
 #[serde(rename_all = "camelCase")]
 pub struct WristOverlayRenderOptions {
     pub size: WristOverlaySizePreset,
+    /// Fork: canvas from the placement width and maximum height.
+    pub canvas_width_px: u16,
+    pub canvas_max_height_px: u16,
+    /// Fork: text size per area, in percent (Settings > VR).
+    pub header_text_percent: u8,
+    pub footer_text_percent: u8,
+    pub content_text_percent: u8,
     pub hide_private_worlds: bool,
     pub dark_background: bool,
     pub show_devices: bool,
@@ -231,6 +166,11 @@ impl Default for WristOverlayRenderOptions {
     fn default() -> Self {
         Self {
             size: WristOverlaySizePreset::Normal,
+            canvas_width_px: WristPlacement::default().canvas_width_px(),
+            canvas_max_height_px: WristPlacement::default().canvas_max_height_px(),
+            header_text_percent: 100,
+            footer_text_percent: 100,
+            content_text_percent: 100,
             hide_private_worlds: false,
             dark_background: true,
             show_devices: true,
@@ -508,7 +448,7 @@ pub fn build_wrist_surface_model(input: WristOverlayFrameInput) -> WristSurfaceM
     } else {
         feed_rows
     };
-    let player_columns = player_columns(player_cells);
+
     let footer_left = match input.page {
         WristPage::Feed => localizer.text(&ActivityText::message(
             OverlayMessage::overlay_footer_players(input.footer.player_count),
@@ -523,13 +463,11 @@ pub fn build_wrist_surface_model(input: WristOverlayFrameInput) -> WristSurfaceM
                 .count()
         ),
     };
-    let calculated_width = calculate_wrist_width(&input)
-        .max(player_grid_width(player_columns.len()))
-        .min(MAX_WRIST_WIDTH);
-    let preset_height = input.options.size.overlay_size().height;
-    let safe_height = preset_height.min(MAX_WRIST_HEIGHT);
     WristSurfaceModel {
-        size: OverlaySize::new(calculated_width, safe_height),
+        size: OverlaySize::new(
+            u32::from(input.options.canvas_width_px),
+            u32::from(input.options.canvas_max_height_px),
+        ),
         dark_background: input.options.dark_background,
         show_battery_percent: input.options.show_battery_percent,
         devices: if input.options.show_devices {
@@ -542,7 +480,12 @@ pub fn build_wrist_surface_model(input: WristOverlayFrameInput) -> WristSurfaceM
             Vec::new()
         },
         feed_rows,
-        player_columns,
+        players: player_cells,
+        text: WristTextScale {
+            header_percent: input.options.header_text_percent,
+            footer_percent: input.options.footer_text_percent,
+            content_percent: input.options.content_text_percent,
+        },
         now_playing: input.now_playing.as_ref().and_then(|now_playing| {
             now_playing_model(now_playing, input.captured_at_ms, input.live_now_playing)
         }),
@@ -588,25 +531,6 @@ fn player_cells(players: &[WristPlayerRow], notes_only: bool) -> Vec<PlayerCell>
             }
         })
         .collect()
-}
-
-fn player_columns(cells: Vec<PlayerCell>) -> Vec<Vec<PlayerCell>> {
-    if cells.is_empty() {
-        return Vec::new();
-    }
-    let columns = cells
-        .len()
-        .div_ceil(PLAYERS_PER_COLUMN)
-        .clamp(1, MAX_PLAYER_COLUMNS);
-    let per_column = cells.len().div_ceil(columns);
-    cells.chunks(per_column).map(<[_]>::to_vec).collect()
-}
-
-fn player_grid_width(columns: usize) -> u32 {
-    if columns <= 1 {
-        return 0;
-    }
-    columns as u32 * PLAYER_COLUMN_WIDTH
 }
 
 fn empty_players_line(notes_only: bool) -> FeedLine {
@@ -1016,16 +940,12 @@ mod page_tests {
                 status_description: "chilling".to_string(),
             })
             .collect::<Vec<_>>();
-        let columns = player_columns(player_cells(&players, false));
-        assert_eq!(columns.len(), MAX_PLAYER_COLUMNS);
-        let cells = columns.concat();
+        let cells = player_cells(&players, false);
         assert_eq!(cells.len(), 80);
         assert_eq!(cells[79].name, "Player 79");
         assert_eq!(cells[79].note, "note 79");
         assert_eq!(cells[79].status, "active / Quest / chilling");
         assert_eq!(cells[79].joined, "5m");
-        assert_eq!(player_columns(player_cells(&players[..7], false)).len(), 1);
-        assert_eq!(player_columns(player_cells(&players[..11], false)).len(), 2);
     }
 }
 

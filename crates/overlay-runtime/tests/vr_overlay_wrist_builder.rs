@@ -49,7 +49,7 @@ fn wrist_builder_keeps_renderer_model_free_of_application_entry_shape() {
         players: Vec::new(),
     });
 
-    assert_eq!(model.size, OverlaySize::new(512, 512));
+    assert_eq!(model.size, OverlaySize::new(512, 1024));
     assert!(!model.show_battery_percent);
     assert_eq!(model.devices[0].status, DeviceStatus::LowBattery);
     assert_eq!(model.devices[0].battery_percent, Some(18));

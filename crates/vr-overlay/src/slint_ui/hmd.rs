@@ -8,13 +8,16 @@ use slint::{
 use crate::{FeedRelation, FeedSeverity, MainSurfaceModel, OverlaySize, RgbaFrame, ToastCard};
 
 use super::platform::{
-    cached_avatar_image, create_component_window, pixel_count, render_window_if_needed,
+    cached_avatar_image, create_component_window, pixel_count, render_fitting_height,
     retain_avatar_images, to_slint_color, AvatarImageCache,
 };
 use super::surface::SlintSurfaceHost;
 use super::{HmdToastItem, HmdToastPanel};
 
 pub struct SlintHmdHost {
+    /// Canvas width from the model; `size` is the rendered frame, as tall as
+    /// the cards need.
+    base_size: OverlaySize,
     size: OverlaySize,
     window: Rc<MinimalSoftwareWindow>,
     component: HmdToastPanel,
@@ -31,6 +34,7 @@ impl SlintSurfaceHost for SlintHmdHost {
         window.set_size(PhysicalSize::new(size.width, size.height));
         component.show().map_err(|error| error.to_string())?;
         Ok(Self {
+            base_size: size,
             size,
             window,
             component,
@@ -41,6 +45,10 @@ impl SlintSurfaceHost for SlintHmdHost {
 
     fn size(&self) -> OverlaySize {
         self.size
+    }
+
+    fn accepts_size(&self, size: OverlaySize) -> bool {
+        self.base_size == size
     }
 
     fn model_size(model: &MainSurfaceModel) -> OverlaySize {
@@ -60,11 +68,16 @@ impl SlintSurfaceHost for SlintHmdHost {
         self.component.set_compact(model.compact);
         self.component.set_stack_upward(model.stack_upward);
         self.component
+            .set_text_scale(f32::from(model.text_percent) / 100.0);
+        self.component
             .set_toasts(hmd_toast_model(model, &mut self.avatar_images));
     }
 
     fn render_if_needed(&mut self) -> Option<RgbaFrame> {
-        render_window_if_needed(&self.window, &mut self.buffer, self.size)
+        let component = &self.component;
+        render_fitting_height(&self.window, &mut self.buffer, &mut self.size, || {
+            (component.get_required_height().ceil() as u32).max(1)
+        })
     }
 }
 

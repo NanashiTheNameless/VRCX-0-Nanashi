@@ -24,10 +24,12 @@ use crate::config::{
     HMD_NOTIFICATIONS_ENABLED_CONFIG_KEY, HMD_NOTIFICATION_AVATARS_CONFIG_KEY,
     HMD_NOTIFICATION_OPACITY_CONFIG_KEY, HMD_NOTIFICATION_POSITION_CONFIG_KEY,
     HMD_NOTIFICATION_START_MODE_CONFIG_KEY, HMD_NOTIFICATION_STYLE_CONFIG_KEY,
-    VR_OVERLAY_ANCHOR_CONFIG_KEY, VR_OVERLAY_HIDE_PRIVATE_WORLDS_CONFIG_KEY,
-    VR_OVERLAY_OFFSET_OUT_CM_CONFIG_KEY, VR_OVERLAY_OFFSET_SIDE_CM_CONFIG_KEY,
-    VR_OVERLAY_OFFSET_UP_CM_CONFIG_KEY, VR_OVERLAY_SIZE_CONFIG_KEY,
-    VR_OVERLAY_TILT_DEGREES_CONFIG_KEY, VR_OVERLAY_WIDTH_CM_CONFIG_KEY,
+    HMD_NOTIFICATION_TEXT_PERCENT_CONFIG_KEY, VR_OVERLAY_ANCHOR_CONFIG_KEY,
+    VR_OVERLAY_CONTENT_TEXT_PERCENT_CONFIG_KEY, VR_OVERLAY_FOOTER_TEXT_PERCENT_CONFIG_KEY,
+    VR_OVERLAY_HEADER_TEXT_PERCENT_CONFIG_KEY, VR_OVERLAY_HIDE_PRIVATE_WORLDS_CONFIG_KEY,
+    VR_OVERLAY_MAX_HEIGHT_CM_CONFIG_KEY, VR_OVERLAY_OFFSET_OUT_CM_CONFIG_KEY,
+    VR_OVERLAY_OFFSET_SIDE_CM_CONFIG_KEY, VR_OVERLAY_OFFSET_UP_CM_CONFIG_KEY,
+    VR_OVERLAY_SIZE_CONFIG_KEY, VR_OVERLAY_TILT_DEGREES_CONFIG_KEY, VR_OVERLAY_WIDTH_CM_CONFIG_KEY,
 };
 use crate::VrOverlayRuntimeServices;
 use vrcx_0_host_desktop::vr_overlay::{OverlayPlacement, WristAnchor};
@@ -208,7 +210,7 @@ fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
     assert!(frame.players[0].platform.is_empty());
     assert_eq!(frame.players[1].note, "Local note");
     let model = build_wrist_surface_model(frame);
-    let cells = model.player_columns.concat();
+    let cells = model.players;
     assert!(!cells[0].is_friend);
     assert!(cells[0].status.is_empty());
     assert!(cells[1].is_friend);
@@ -221,7 +223,7 @@ fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
     assert_eq!(frame.players[0].display_name, "Zoe");
     let frame = super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Notes);
     let model = build_wrist_surface_model(frame);
-    let cells = model.player_columns.concat();
+    let cells = model.players;
     assert_eq!(cells.len(), 1);
     assert_eq!(cells[0].note, "Local note");
     assert_eq!(cells[0].status, "online / Quest / World hopping");
@@ -318,26 +320,30 @@ fn the_newest_hmd_card_lands_on_the_same_angle_for_each_position() {
             (HmdNotificationStyle::Standard, 112.0_f32),
             (HmdNotificationStyle::Compact, 60.0),
         ] {
-            let OverlayPlacement::HeadLocked {
-                offset_y_meters,
-                distance_meters,
-            } = hmd_surface_config(position, style).placement
-            else {
-                panic!("HMD notifications are head locked");
-            };
-            let inset =
-                (HMD_SURFACE_SIZE.height as f32 / 2.0 - HMD_STACK_INSET_PX - card_height_px / 2.0)
-                    * meters_per_px;
-            let newest_card_y = if position.stacks_upward() {
-                offset_y_meters - inset
-            } else {
-                offset_y_meters + inset
-            };
-            let newest_card_angle = (newest_card_y / distance_meters).atan().to_degrees();
-            assert!(
-                (newest_card_angle - angle).abs() < 0.01,
-                "{position:?} {style:?}: {newest_card_angle}"
-            );
+            for text_percent in [100_u8, 150] {
+                let OverlayPlacement::HeadLocked {
+                    offset_y_meters,
+                    distance_meters,
+                    anchor,
+                } = hmd_surface_config(position, style, text_percent).placement
+                else {
+                    panic!("HMD notifications are head locked");
+                };
+                let scaled_height = card_height_px * f32::from(text_percent) / 100.0;
+                let inset = (HMD_STACK_INSET_PX + scaled_height / 2.0) * meters_per_px;
+                let newest_card_y = if position.stacks_upward() {
+                    assert_eq!(anchor, Some(WristAnchor::Bottom));
+                    offset_y_meters + inset
+                } else {
+                    assert_eq!(anchor, Some(WristAnchor::Top));
+                    offset_y_meters - inset
+                };
+                let newest_card_angle = (newest_card_y / distance_meters).atan().to_degrees();
+                assert!(
+                    (newest_card_angle - angle).abs() < 0.01,
+                    "{position:?} {style:?} {text_percent}: {newest_card_angle}"
+                );
+            }
         }
     }
 }
@@ -362,6 +368,7 @@ fn hmd_panel_keeps_the_original_angular_width() {
     } = hmd_surface_config(
         HmdNotificationPosition::Bottom,
         HmdNotificationStyle::Standard,
+        100,
     )
     .placement
     else {
@@ -443,7 +450,15 @@ fn wrist_placement_loads_clamps_and_falls_back_to_the_size_preset() {
     runtime.reconcile_current();
     let placement = runtime.current_runtime_config().wrist_placement;
     assert_eq!(placement.width_cm, 40);
+    assert_eq!(placement.max_height_cm, 80);
     assert_eq!(placement.anchor, WristAnchor::Bottom);
+    let render = runtime.current_runtime_config().render;
+    assert_eq!(
+        (render.canvas_width_px, render.canvas_max_height_px),
+        (512, 1024)
+    );
+    assert_eq!(render.content_text_percent, 100);
+    assert_eq!(runtime.current_runtime_config().hmd.text_percent, 100);
 
     config
         .set_string(VR_OVERLAY_SIZE_CONFIG_KEY, "large")
@@ -461,6 +476,11 @@ fn wrist_placement_loads_clamps_and_falls_back_to_the_size_preset() {
         (VR_OVERLAY_OFFSET_UP_CM_CONFIG_KEY, "7"),
         (VR_OVERLAY_OFFSET_OUT_CM_CONFIG_KEY, "-200"),
         (VR_OVERLAY_TILT_DEGREES_CONFIG_KEY, "30"),
+        (VR_OVERLAY_MAX_HEIGHT_CM_CONFIG_KEY, "25"),
+        (VR_OVERLAY_HEADER_TEXT_PERCENT_CONFIG_KEY, "150"),
+        (VR_OVERLAY_FOOTER_TEXT_PERCENT_CONFIG_KEY, "10"),
+        (VR_OVERLAY_CONTENT_TEXT_PERCENT_CONFIG_KEY, "999"),
+        (HMD_NOTIFICATION_TEXT_PERCENT_CONFIG_KEY, "125"),
     ] {
         config.set_string(key, value).unwrap();
     }
@@ -472,4 +492,12 @@ fn wrist_placement_loads_clamps_and_falls_back_to_the_size_preset() {
     assert_eq!(placement.up_cm, 7);
     assert_eq!(placement.out_cm, -50);
     assert_eq!(placement.tilt_degrees, 30);
+    assert_eq!(placement.max_height_cm, 25);
+    let config = runtime.current_runtime_config();
+    assert_eq!(config.render.canvas_width_px, 1024);
+    assert_eq!(config.render.canvas_max_height_px, 320);
+    assert_eq!(config.render.header_text_percent, 150);
+    assert_eq!(config.render.footer_text_percent, 50);
+    assert_eq!(config.render.content_text_percent, 200);
+    assert_eq!(config.hmd.text_percent, 125);
 }

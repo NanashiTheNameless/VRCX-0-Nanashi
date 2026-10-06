@@ -8,7 +8,7 @@ use super::runtime::{
     WristOverlayHand,
 };
 use super::service::OverlayBackendPreference;
-use super::surfaces::wrist::wrist_anchor_from_config;
+use super::surfaces::wrist::{wrist_anchor_from_config, MAX_TEXT_PERCENT, MIN_TEXT_PERCENT};
 use super::{
     WristOverlayRenderOptions, WristOverlaySizePreset, WristPageOrder, WristPlacement,
     WristPlayersSort,
@@ -29,6 +29,11 @@ pub const VR_OVERLAY_PLAYERS_SORT_CONFIG_KEY: &str = "wristOverlayPlayersSort";
 pub const VR_OVERLAY_TIMEOUT_SECONDS_CONFIG_KEY: &str = "wristOverlayTimeoutSeconds";
 pub const VR_OVERLAY_WIDTH_CM_CONFIG_KEY: &str = "wristOverlayWidthCm";
 pub const VR_OVERLAY_ANCHOR_CONFIG_KEY: &str = "wristOverlayAnchor";
+pub const VR_OVERLAY_MAX_HEIGHT_CM_CONFIG_KEY: &str = "wristOverlayMaxHeightCm";
+pub const VR_OVERLAY_HEADER_TEXT_PERCENT_CONFIG_KEY: &str = "wristOverlayHeaderTextPercent";
+pub const VR_OVERLAY_FOOTER_TEXT_PERCENT_CONFIG_KEY: &str = "wristOverlayFooterTextPercent";
+pub const VR_OVERLAY_CONTENT_TEXT_PERCENT_CONFIG_KEY: &str = "wristOverlayContentTextPercent";
+pub const HMD_NOTIFICATION_TEXT_PERCENT_CONFIG_KEY: &str = "hmdNotificationTextPercent";
 pub const VR_OVERLAY_OFFSET_SIDE_CM_CONFIG_KEY: &str = "wristOverlayOffsetSideCm";
 pub const VR_OVERLAY_OFFSET_UP_CM_CONFIG_KEY: &str = "wristOverlayOffsetUpCm";
 pub const VR_OVERLAY_OFFSET_OUT_CM_CONFIG_KEY: &str = "wristOverlayOffsetOutCm";
@@ -151,14 +156,26 @@ pub(super) fn load_runtime_config(
         let max = i32::from(WristPlacement::MAX_OFFSET_CM);
         raw_int(key).unwrap_or(0).clamp(-max, max) as i8
     };
+    let text_percent = |key: &str| {
+        raw_int(key)
+            .unwrap_or(100)
+            .clamp(i32::from(MIN_TEXT_PERCENT), i32::from(MAX_TEXT_PERCENT)) as u8
+    };
     // Without a saved width, keep the physical size of the old size preset.
     let default_placement = WristPlacement::for_size(size);
+    let width_cm = raw_int(VR_OVERLAY_WIDTH_CM_CONFIG_KEY)
+        .unwrap_or(i32::from(default_placement.width_cm))
+        .clamp(
+            i32::from(WristPlacement::MIN_WIDTH_CM),
+            i32::from(WristPlacement::MAX_WIDTH_CM),
+        ) as u8;
     let wrist_placement = WristPlacement {
-        width_cm: raw_int(VR_OVERLAY_WIDTH_CM_CONFIG_KEY)
-            .unwrap_or(i32::from(default_placement.width_cm))
+        width_cm,
+        max_height_cm: raw_int(VR_OVERLAY_MAX_HEIGHT_CM_CONFIG_KEY)
+            .unwrap_or(i32::from(width_cm) * 2)
             .clamp(
-                i32::from(WristPlacement::MIN_WIDTH_CM),
-                i32::from(WristPlacement::MAX_WIDTH_CM),
+                i32::from(WristPlacement::MIN_HEIGHT_CM),
+                i32::from(WristPlacement::MAX_HEIGHT_CM),
             ) as u8,
         anchor: config
             .get_string(VR_OVERLAY_ANCHOR_CONFIG_KEY, "bottom")
@@ -190,9 +207,15 @@ pub(super) fn load_runtime_config(
             avatars: config
                 .get_bool(HMD_NOTIFICATION_AVATARS_CONFIG_KEY, true)
                 .unwrap_or(true),
+            text_percent: text_percent(HMD_NOTIFICATION_TEXT_PERCENT_CONFIG_KEY),
         },
         render: WristOverlayRenderOptions {
             size,
+            canvas_width_px: wrist_placement.canvas_width_px(),
+            canvas_max_height_px: wrist_placement.canvas_max_height_px(),
+            header_text_percent: text_percent(VR_OVERLAY_HEADER_TEXT_PERCENT_CONFIG_KEY),
+            footer_text_percent: text_percent(VR_OVERLAY_FOOTER_TEXT_PERCENT_CONFIG_KEY),
+            content_text_percent: text_percent(VR_OVERLAY_CONTENT_TEXT_PERCENT_CONFIG_KEY),
             hide_private_worlds,
             dark_background,
             show_devices,

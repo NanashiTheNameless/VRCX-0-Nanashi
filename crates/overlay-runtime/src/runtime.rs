@@ -13,7 +13,7 @@ use vrcx_0_application_activity::{ActivityDelivery, ActivitySink, ActivitySnapsh
 use vrcx_0_application_core::{GameProcessEvent, GameProcessEventSink, TaskSupervisor};
 use vrcx_0_core::text::first_non_empty_owned;
 use vrcx_0_host_desktop::vr_overlay::{
-    OverlayActivationButton, OverlayPlacement, OverlaySurfaceConfig, VrDeviceSnapshot,
+    OverlayActivationButton, OverlayPlacement, OverlaySurfaceConfig, VrDeviceSnapshot, WristAnchor,
 };
 use vrcx_0_vr_overlay::{
     MainSurfaceModel, OverlaySize, OverlaySurfaceId, RgbaFrame, SlintHmdRenderer,
@@ -139,6 +139,8 @@ pub(crate) struct HmdNotificationConfig {
     pub(crate) position: HmdNotificationPosition,
     pub(crate) style: HmdNotificationStyle,
     pub(crate) avatars: bool,
+    /// Fork: HMD card text size, in percent.
+    pub(crate) text_percent: u8,
 }
 
 impl Default for HmdNotificationConfig {
@@ -151,6 +153,7 @@ impl Default for HmdNotificationConfig {
             position: HmdNotificationPosition::Bottom,
             style: HmdNotificationStyle::Standard,
             avatars: true,
+            text_percent: 100,
         }
     }
 }
@@ -1157,7 +1160,11 @@ fn overlay_surface_configs(
         configs.extend(wrist_surface_configs(config, force_visible));
     }
     if active_surfaces.hmd {
-        configs.push(hmd_surface_config(config.hmd.position, config.hmd.style));
+        configs.push(hmd_surface_config(
+            config.hmd.position,
+            config.hmd.style,
+            config.hmd.text_percent,
+        ));
     }
     configs
 }
@@ -1222,34 +1229,40 @@ fn wrist_surface_config(
     }
 }
 
+/// HMD pixel density reference: the original 960px panel was 0.991m wide.
 const HMD_SURFACE_SIZE: OverlaySize = OverlaySize::new(960, 528);
 const HMD_SURFACE_DISTANCE_METERS: f32 = 1.2;
 const HMD_SURFACE_WIDTH_METERS: f32 = 0.991;
 const HMD_STACK_INSET_PX: f32 = 20.0;
+/// Fork: room for cards to grow sideways; cards hug their text, so the extra
+/// width only shows for long notifications.
+const HMD_PANEL_WIDTH_PX: u32 = 1280;
 
 fn hmd_surface_config(
     position: HmdNotificationPosition,
     style: HmdNotificationStyle,
+    text_percent: u8,
 ) -> OverlaySurfaceConfig {
     let meters_per_px = HMD_SURFACE_WIDTH_METERS / HMD_SURFACE_SIZE.width as f32;
     let newest_card_y =
         HMD_SURFACE_DISTANCE_METERS * position.newest_card_angle_degrees().to_radians().tan();
-    let newest_card_inset = (HMD_SURFACE_SIZE.height as f32 / 2.0
-        - HMD_STACK_INSET_PX
-        - style.single_card_height_px() / 2.0)
-        * meters_per_px;
-    let offset_y_meters = if position.stacks_upward() {
-        newest_card_y + newest_card_inset
+    // The panel is only as tall as its cards, so the edge holding the newest
+    // card is anchored and the stack grows away from it.
+    let card_half_height = style.single_card_height_px() * f32::from(text_percent) / 100.0 / 2.0;
+    let edge_offset = (HMD_STACK_INSET_PX + card_half_height) * meters_per_px;
+    let (offset_y_meters, anchor) = if position.stacks_upward() {
+        (newest_card_y - edge_offset, WristAnchor::Bottom)
     } else {
-        newest_card_y - newest_card_inset
+        (newest_card_y + edge_offset, WristAnchor::Top)
     };
     OverlaySurfaceConfig {
         surface_id: OverlaySurfaceId::new(MAIN_SURFACE_ID),
-        size: HMD_SURFACE_SIZE,
-        physical_width_meters: HMD_SURFACE_WIDTH_METERS,
+        size: OverlaySize::new(HMD_PANEL_WIDTH_PX, HMD_SURFACE_SIZE.height),
+        physical_width_meters: HMD_PANEL_WIDTH_PX as f32 * meters_per_px,
         placement: OverlayPlacement::HeadLocked {
             offset_y_meters,
             distance_meters: HMD_SURFACE_DISTANCE_METERS,
+            anchor: Some(anchor),
         },
         activation_button: OverlayActivationButton::Grip,
         force_visible: false,
