@@ -14,7 +14,6 @@ const BACKGROUND_IMAGE_EPIC_ORIGIN: &str = "https://epic.gsfc.nasa.gov";
 const BACKGROUND_IMAGE_AIC_ORIGIN: &str = "https://api.artic.edu";
 const BACKGROUND_IMAGE_APOD_ORIGIN: &str = "https://api.nasa.gov";
 const COMMUNITY_THEME_CATALOG_ORIGIN: &str = "https://raw.githubusercontent.com";
-const COMMUNITY_THEME_STATS_ORIGIN: &str = "https://theme.vrcx-0.dev";
 const COMMUNITY_THEME_CATALOG_PATH_PREFIX: &str = "/Map1en/VRCX-0-Community-Themes/master/themes/";
 
 #[derive(Debug, thiserror::Error)]
@@ -416,12 +415,8 @@ fn external_url_allowed(url: &Url, scope: ExternalApiScope, policy: &ExternalApi
                     && url.path().starts_with("/planetary/apod"))
         }
         ExternalApiScope::CommunityTheme => {
-            (origin == COMMUNITY_THEME_CATALOG_ORIGIN
-                && url.path().starts_with(COMMUNITY_THEME_CATALOG_PATH_PREFIX))
-                || (origin == COMMUNITY_THEME_STATS_ORIGIN
-                    && (url.path() == "/v1/themes/stats"
-                        || (url.path().starts_with("/v1/themes/")
-                            && url.path().ends_with("/install"))))
+            origin == COMMUNITY_THEME_CATALOG_ORIGIN
+                && url.path().starts_with(COMMUNITY_THEME_CATALOG_PATH_PREFIX)
         }
     }
 }

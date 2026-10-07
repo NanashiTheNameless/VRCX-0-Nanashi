@@ -9,7 +9,6 @@ import {
     vrchatUserUrl,
     vrchatWorldUrl
 } from '@/shared/constants/vrchatWebUrls';
-import { vrcxAvatarDeepLink } from '@/shared/constants/vrcxDeepLinks';
 import { Button } from '@/ui/shadcn/button';
 import {
     DropdownMenu,
@@ -70,28 +69,6 @@ export function FavoriteCardActionMenu({
     const worldPageUrl = worldId ? vrchatWorldUrl(worldId) : '';
     const avatarId = item.kind === 'avatar' ? item.id : '';
     const avatarPageUrl = avatarId ? vrchatAvatarUrl(avatarId) : '';
-    const avatarShareUrl =
-        !item.isPrivate && item.seedData?.releaseStatus === 'public'
-            ? vrcxAvatarDeepLink(avatarId)
-            : '';
-
-    function copyAvatarShareLink() {
-        if (!avatarShareUrl) {
-            return;
-        }
-        void copyTextToClipboard(
-            t('dialog.avatar.info.vrcx_share_text', {
-                name: item.title || avatarId,
-                url: avatarShareUrl
-            }),
-            {
-                successMessage: t('dialog.avatar.dynamic.value_copied', {
-                    value: t('dialog.avatar.info.vrcx_url')
-                })
-            }
-        );
-    }
-
     return (
         <DropdownMenu>
             <DropdownMenuTrigger
@@ -180,12 +157,24 @@ export function FavoriteCardActionMenu({
                                 <ExternalLinkIcon data-icon="inline-start" />
                                 {t('common.actions.view_on_website')}
                             </DropdownMenuItem>
-                            {avatarShareUrl ? (
-                                <DropdownMenuItem onClick={copyAvatarShareLink}>
-                                    <Share2Icon data-icon="inline-start" />
-                                    {t('dialog.avatar.info.copy_vrcx_url')}
-                                </DropdownMenuItem>
-                            ) : null}
+                            <DropdownMenuItem
+                                disabled={!avatarPageUrl}
+                                onClick={() => {
+                                    void copyTextToClipboard(avatarPageUrl, {
+                                        successMessage: t(
+                                            'dialog.avatar.dynamic.value_copied',
+                                            {
+                                                value: t(
+                                                    'dialog.avatar.info.url'
+                                                )
+                                            }
+                                        )
+                                    });
+                                }}
+                            >
+                                <Share2Icon data-icon="inline-start" />
+                                {t('dialog.avatar.info.copy_url')}
+                            </DropdownMenuItem>
                         </>
                     ) : null}
                 </DropdownMenuGroup>

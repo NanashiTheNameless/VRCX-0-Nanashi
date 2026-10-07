@@ -27,7 +27,6 @@ export function ThemeCatalogCard({
     active,
     installed,
     updateAvailable,
-    downloads,
     loading,
     onInstall
 }: {
@@ -35,7 +34,6 @@ export function ThemeCatalogCard({
     active: boolean;
     installed: boolean;
     updateAvailable: boolean;
-    downloads: number;
     loading: boolean;
     onInstall: () => void;
 }) {
@@ -114,10 +112,6 @@ export function ThemeCatalogCard({
                     <div className="text-muted-foreground">
                         {t('view.community_themes.field.tested_with')}:{' '}
                         {theme.testedWith}
-                    </div>
-                    <div className="text-muted-foreground">
-                        {t('view.community_themes.field.downloads')}:{' '}
-                        {downloads.toLocaleString()}
                     </div>
                 </div>
                 <Button

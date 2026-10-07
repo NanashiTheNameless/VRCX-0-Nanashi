@@ -1,35 +1,37 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-    VRCX_OPEN_RELAY_ORIGIN,
-    vrcxAvatarDeepLink,
-    vrcxInstanceDeepLink,
-    parseVrcxInstanceLink
-} from './vrcxDeepLinks';
+import { VRCX_OPEN_RELAY_ORIGIN, parseVrcxInstanceLink } from './vrcxDeepLinks';
 
 const UUID = '12345678-1234-1234-1234-1234567890ab';
 
 describe('vrcxDeepLinks', () => {
-    it('round trips full instance identifiers and invitation tokens', () => {
+    it('parses full instance identifiers and invitation tokens', () => {
         const input = {
             worldId: `wrld_${UUID}`,
             instanceId: `12345~private(usr_${UUID})~canRequestInvite~region(jp)~nonce(abc)`,
             shortName: 'token+with/symbols=',
             launchToken: 'secure/token+value='
         };
-        const link = vrcxInstanceDeepLink(input);
-        expect(link).toContain(
-            `${VRCX_OPEN_RELAY_ORIGIN}/instance/${input.worldId}?`
-        );
-        expect(parseVrcxInstanceLink(link)).toEqual(input);
-        expect(
-            vrcxInstanceDeepLink({ ...input, instanceId: '12345~region(us)' })
-        ).not.toBe(link);
+        const params = new URLSearchParams({
+            instanceId: input.instanceId,
+            shortName: input.shortName,
+            launchToken: input.launchToken
+        });
         expect(
             parseVrcxInstanceLink(
-                vrcxInstanceDeepLink({ ...input, shortName: '' })
+                `${VRCX_OPEN_RELAY_ORIGIN}/instance/${input.worldId}?${params}`
             )
-        ).toEqual({ ...input, shortName: '' });
+        ).toEqual(input);
+        expect(
+            parseVrcxInstanceLink(
+                `${VRCX_OPEN_RELAY_ORIGIN}/instance/${input.worldId}?instanceId=12345`
+            )
+        ).toEqual({
+            worldId: input.worldId,
+            instanceId: '12345',
+            shortName: '',
+            launchToken: ''
+        });
     });
 
     it('rejects ambiguous or malformed instance links', () => {
@@ -50,25 +52,9 @@ describe('vrcxDeepLinks', () => {
             expect(parseVrcxInstanceLink(link), link).toBeNull();
         }
         expect(
-            vrcxInstanceDeepLink({
-                worldId: 'wrld_invalid',
-                instanceId: '123',
-                shortName: ''
-            })
-        ).toBe('');
-    });
-
-    it('builds canonical avatar relay links', () => {
-        expect(vrcxAvatarDeepLink(`avtr_${UUID}`)).toBe(
-            `${VRCX_OPEN_RELAY_ORIGIN}/avatar/avtr_${UUID}`
-        );
-    });
-
-    it('normalizes surrounding whitespace and rejects invalid ids', () => {
-        expect(vrcxAvatarDeepLink(` avtr_${UUID} `)).toBe(
-            `${VRCX_OPEN_RELAY_ORIGIN}/avatar/avtr_${UUID}`
-        );
-        expect(vrcxAvatarDeepLink(`wrld_${UUID}`)).toBe('');
-        expect(vrcxAvatarDeepLink('avtr_invalid')).toBe('');
+            parseVrcxInstanceLink(
+                `${VRCX_OPEN_RELAY_ORIGIN}/instance/wrld_invalid?instanceId=123`
+            )
+        ).toBeNull();
     });
 });

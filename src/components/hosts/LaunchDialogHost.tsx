@@ -25,7 +25,6 @@ import {
 } from '@/services/launchService';
 import { toast } from '@/services/toastService';
 import { accessTypeLocaleKeyMap } from '@/shared/constants/accessType';
-import { vrcxInstanceDeepLink } from '@/shared/constants/vrcxDeepLinks';
 import { checkCanInvite } from '@/shared/utils/invite';
 import { parseLocation, translateAccessType } from '@/shared/utils/location';
 import {
@@ -51,7 +50,6 @@ import {
     DropdownMenuTrigger
 } from '@/ui/shadcn/dropdown-menu';
 import { Spinner } from '@/ui/shadcn/spinner';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 const emptyDetails: LaunchDialogDetails = {
     tag: '',
@@ -355,18 +353,12 @@ export function LaunchDialogHost() {
         launchDialog.shortName ||
         '';
     const shareLocation = useMemo(() => parseLocation(actionTag), [actionTag]);
-    const { worldName, instanceName } = useLocationMetadata({
+    const { worldName } = useLocationMetadata({
         locationInfo: shareLocation,
         currentLocation: actionTag,
         endpoint: currentEndpoint,
         worldNameHint: details.worldName || launchDialog.worldName,
         instanceName: shareLocation.instanceName
-    });
-    const vrcxInstanceUrl = vrcxInstanceDeepLink({
-        worldId: shareLocation.worldId,
-        instanceId: shareLocation.instanceId,
-        shortName: details.shortName,
-        launchToken: actionLaunchToken
     });
     const canInviteResolvedInstance =
         Boolean(actionTag) &&
@@ -492,38 +484,21 @@ export function LaunchDialogHost() {
                             </Button>
                         </div>
                         <div className="flex gap-0.5">
-                            <Tooltip>
-                                <TooltipTrigger
-                                    render={
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="sm"
-                                            disabled={!vrcxInstanceUrl}
-                                            onClick={() => {
-                                                void copyField(
-                                                    t(
-                                                        'dialog.world.info.vrcx_share_text',
-                                                        {
-                                                            name: `${subtitle} #${instanceName}`,
-                                                            url: vrcxInstanceUrl
-                                                        }
-                                                    ),
-                                                    t(
-                                                        'dialog.world.info.vrcx_url'
-                                                    )
-                                                );
-                                            }}
-                                        >
-                                            <Share2Icon data-icon="inline-start" />
-                                            {t('dialog.launch.share')}
-                                        </Button>
-                                    }
-                                />
-                                <TooltipContent>
-                                    {t('dialog.launch.share_description')}
-                                </TooltipContent>
-                            </Tooltip>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                disabled={!details.url}
+                                onClick={() => {
+                                    void copyField(
+                                        details.url,
+                                        t('dialog.launch.copy.vrchat_link')
+                                    );
+                                }}
+                            >
+                                <Share2Icon data-icon="inline-start" />
+                                {t('dialog.launch.share')}
+                            </Button>
                             <DropdownMenu>
                                 <DropdownMenuTrigger
                                     render={

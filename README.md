@@ -16,12 +16,15 @@ It is a Rust + Tauri rewrite of VRCX.
 ## What this fork changes
 
 - **No telemetry.** Usage stats, heartbeats, crash reporting, the in-app feedback form,
-  and community theme install-count pings are removed entirely.
+  and community theme install-count pings and download counts are removed entirely.
 - **Shared world collections are import-only.** Collection links from upstream's
   `worlds.vrcx-0.dev` site can still be opened and imported into a local favorite group,
   but nothing is uploaded or registered there: sharing your own collections, managing
   shares, and the silent world registration that ran when copying a world link are
   removed. Copy URL on a world copies its plain VRChat link.
+- **No vrcx-0.dev share links.** Avatar and instance share actions copy the plain VRChat
+  link instead of creating an `open.vrcx-0.dev` relay link. Relay links from others still
+  open.
 - **Social AI is off by default.** Turn it on under Settings > AI. Nothing is sent to an
   AI service while it is disabled. The chat is also on the left navigation as **Social AI**.
   Supports OpenAI-compatible (Chat Completions and Responses), Azure OpenAI, Anthropic,

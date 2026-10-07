@@ -217,22 +217,23 @@ describe('FavoriteCard website links', () => {
         );
     });
 
-    it('shows VRChat and share links for a public avatar', () => {
+    it('shows the website and VRChat URL actions but no VRCX share link for a public avatar', () => {
         const html = renderAvatarCard('public');
 
         expect(html).toContain('common.actions.view_on_website');
-        expect(html).toContain('dialog.avatar.info.copy_vrcx_url');
-        const shareLinkIndex = html.indexOf('dialog.avatar.info.copy_vrcx_url');
-        const separatorIndex = html.indexOf('<hr', shareLinkIndex);
+        expect(html).toContain('dialog.avatar.info.copy_url');
+        expect(html).not.toContain('dialog.avatar.info.copy_vrcx_url');
+        const copyUrlIndex = html.indexOf('dialog.avatar.info.copy_url');
+        const separatorIndex = html.indexOf('<hr', copyUrlIndex);
         const selectIndex = html.indexOf('dialog.avatar.actions.select');
-        expect(separatorIndex).toBeGreaterThan(shareLinkIndex);
+        expect(separatorIndex).toBeGreaterThan(copyUrlIndex);
         expect(selectIndex).toBeGreaterThan(separatorIndex);
     });
 
-    it('copies the avatar share text with its entity name', () => {
+    it('copies the plain VRChat avatar link', () => {
         const item: FavoriteCardItem = {
             id: AVATAR_ID,
-            key: 'avatar:copy-share',
+            key: 'avatar:copy-url',
             kind: 'avatar',
             source: 'remote',
             title: 'Named avatar',
@@ -248,20 +249,11 @@ describe('FavoriteCard website links', () => {
         );
 
         fireEvent.click(
-            screen.getByRole('button', {
-                name: 'dialog.avatar.info.copy_vrcx_url'
-            })
+            screen.getByRole('button', { name: 'dialog.avatar.info.copy_url' })
         );
 
-        expect(mocks.translate).toHaveBeenCalledWith(
-            'dialog.avatar.info.vrcx_share_text',
-            {
-                name: 'Named avatar',
-                url: `https://open.vrcx-0.dev/avatar/${AVATAR_ID}`
-            }
-        );
         expect(mocks.copyTextToClipboard).toHaveBeenCalledWith(
-            'dialog.avatar.info.vrcx_share_text',
+            `https://vrchat.com/home/avatar/${AVATAR_ID}`,
             expect.any(Object)
         );
     });

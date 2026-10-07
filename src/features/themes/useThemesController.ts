@@ -3,8 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import type {
     CommunityThemeInstallMetadata,
-    CommunityThemeManifest,
-    CommunityThemeStatsById
+    CommunityThemeManifest
 } from '@/domain/themes/types';
 import { commands } from '@/platform/tauri/bindings';
 import {
@@ -21,7 +20,6 @@ import {
     getCommunityThemeOverrideCssSnapshot,
     installCommunityTheme,
     loadCatalog,
-    loadCommunityThemeStats,
     loadLocalCommunityThemePreview,
     saveCommunityThemeOverrideCss,
     startLocalCommunityThemePreviewWatch,
@@ -67,8 +65,6 @@ export function useThemesController() {
     );
     const [devLoading, setDevLoading] = useState(false);
     const [devSectionOpen, setDevSectionOpen] = useState(false);
-    const [themeStatsById, setThemeStatsById] =
-        useState<CommunityThemeStatsById>({});
     const devWatchEnabled = Boolean(localPreviewWatch.enabled);
     const devError = localPreviewWatch.error;
     const developerToolsAvailable = isDevToolsBuild();
@@ -85,25 +81,6 @@ export function useThemesController() {
     useEffect(() => {
         loadCatalog().catch(() => {});
         setOverrideDraft(getCommunityThemeOverrideCssSnapshot());
-    }, []);
-
-    useEffect(() => {
-        let disposed = false;
-        loadCommunityThemeStats()
-            .then((stats) => {
-                if (!disposed) {
-                    setThemeStatsById(stats);
-                }
-            })
-            .catch(() => {
-                if (!disposed) {
-                    setThemeStatsById({});
-                }
-            });
-
-        return () => {
-            disposed = true;
-        };
     }, []);
 
     useEffect(() => {
@@ -479,7 +456,6 @@ export function useThemesController() {
         devLoading,
         devSectionOpen,
         setDevSectionOpen,
-        themeStatsById,
         devWatchEnabled,
         devError,
         developerToolsAvailable,

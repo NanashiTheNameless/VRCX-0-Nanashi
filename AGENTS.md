@@ -101,8 +101,12 @@ unrelated edit, with where they live:
   world URL" triggered were removed on purpose: they sent world details and a
   hash of the user's VRChat ID to upstream's service. World "Copy URL" copies
   the plain VRChat link. Upstream merges will try to bring the export side
-  back; keep it out. Avatar and instance relay links (`open.vrcx-0.dev`) are
-  unrelated and stay.
+  back; keep it out.
+- No vrcx-0.dev features beyond import. The app never creates
+  `open.vrcx-0.dev` avatar or instance links (avatar and launch dialog share
+  actions copy the plain VRChat link), though pasted relay links still open.
+  Community theme download counts and install reporting (`theme.vrcx-0.dev`)
+  were removed; the theme catalog itself comes from GitHub.
 
 ## Ground rules
 

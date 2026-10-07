@@ -1,9 +1,6 @@
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 
-pub use crate::{
-    CommunityThemeAuthor, CommunityThemeCatalog, CommunityThemeManifest, CommunityThemeStatsById,
-    CommunityThemeStatsEntry,
-};
+pub use crate::{CommunityThemeAuthor, CommunityThemeCatalog, CommunityThemeManifest};
 use serde_json::Value;
 use url::Url;
 
@@ -13,7 +10,6 @@ pub const COMMUNITY_THEME_REPOSITORY_URL: &str =
     "https://github.com/Map1en/VRCX-0-Community-Themes";
 pub const COMMUNITY_THEME_CATALOG_URL: &str =
     "https://raw.githubusercontent.com/Map1en/VRCX-0-Community-Themes/master/themes/index.json";
-pub const COMMUNITY_THEME_STATS_API_URL: &str = "https://theme.vrcx-0.dev";
 pub const COMMUNITY_THEME_CSS_FILE_NAME: &str = "theme.css";
 pub const COMMUNITY_THEME_MANIFEST_FILE_NAME: &str = "theme.json";
 pub const COMMUNITY_THEME_PREVIEW_FILE_NAME: &str = "preview.webp";
@@ -22,7 +18,6 @@ pub const COMMUNITY_THEME_README_FILE_NAME: &str = "README.md";
 pub const COMMUNITY_THEME_CATALOG_MAX_BYTES: usize = 64 * 1024;
 pub const COMMUNITY_THEME_MANIFEST_MAX_BYTES: usize = 64 * 1024;
 pub const COMMUNITY_THEME_CSS_MAX_BYTES: usize = 1024 * 1024;
-pub const COMMUNITY_THEME_STATS_MAX_BYTES: usize = 256 * 1024;
 pub const COMMUNITY_THEME_REPORT_MAX_BYTES: usize = 64 * 1024;
 pub const COMMUNITY_THEME_MAX_COUNT: usize = 128;
 
@@ -66,23 +61,6 @@ pub fn community_theme_css_input(
     Ok(external_request(
         &community_theme_asset_url(theme_id, COMMUNITY_THEME_CSS_FILE_NAME)?,
         ExternalHttpMethod::Get,
-    ))
-}
-
-pub fn community_theme_stats_input() -> ExternalHttpRequestInput {
-    external_request(
-        &format!("{COMMUNITY_THEME_STATS_API_URL}/v1/themes/stats"),
-        ExternalHttpMethod::Get,
-    )
-}
-
-pub fn community_theme_install_report_input(
-    theme_id: &str,
-) -> Result<ExternalHttpRequestInput, CommunityThemeProtocolError> {
-    require_theme_id(theme_id)?;
-    Ok(external_request(
-        &format!("{COMMUNITY_THEME_STATS_API_URL}/v1/themes/{theme_id}/install"),
-        ExternalHttpMethod::Post,
     ))
 }
 
@@ -252,29 +230,6 @@ pub fn parse_community_theme_manifest(
     })
 }
 
-pub fn parse_community_theme_stats(
-    body: &str,
-) -> Result<CommunityThemeStatsById, CommunityThemeProtocolError> {
-    let value: Value = serde_json::from_str(body).map_err(|error| {
-        CommunityThemeProtocolError::Invalid(format!("Invalid community theme stats JSON: {error}"))
-    })?;
-    let Some(entries) = value.as_object() else {
-        return Ok(BTreeMap::new());
-    };
-
-    Ok(entries
-        .iter()
-        .filter(|(theme_id, entry)| is_community_theme_id(theme_id) && entry.as_object().is_some())
-        .map(|(theme_id, entry)| {
-            let downloads = number_value(entry.get("downloads"))
-                .filter(|value| value.is_finite() && *value >= 0.0)
-                .map(|value| value.floor().min(u64::MAX as f64) as u64)
-                .unwrap_or(0);
-            (theme_id.clone(), CommunityThemeStatsEntry { downloads })
-        })
-        .collect())
-}
-
 fn external_request(url: &str, method: ExternalHttpMethod) -> ExternalHttpRequestInput {
     ExternalHttpRequestInput {
         url: Some(url.to_string()),
@@ -397,14 +352,7 @@ mod tests {
     }
 
     #[test]
-    fn normalizes_stats_and_enforces_response_limits() {
-        let stats = parse_community_theme_stats(
-            r#"{"theme-a":{"downloads":"12.9"},"bad/id":{"downloads":5},"theme-b":{}}"#,
-        )
-        .unwrap();
-        assert_eq!(stats["theme-a"].downloads, 12);
-        assert_eq!(stats["theme-b"].downloads, 0);
-        assert!(!stats.contains_key("bad/id"));
+    fn enforces_response_limits() {
         assert!(ensure_community_theme_response(404, "", 10, "catalog").is_err());
         assert!(ensure_community_theme_response(200, "123456", 5, "catalog").is_err());
     }

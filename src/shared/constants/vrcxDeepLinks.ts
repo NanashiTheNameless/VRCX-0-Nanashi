@@ -1,4 +1,4 @@
-import { isAvatarId, isWorldId } from './vrchatIds';
+import { isWorldId } from './vrchatIds';
 
 export const VRCX_OPEN_RELAY_ORIGIN = 'https://open.vrcx-0.dev';
 
@@ -23,18 +23,6 @@ export function isVrcxInstanceLink(input: VrcxInstanceLink): boolean {
             return code < 32 || (code >= 127 && code <= 159);
         })
     );
-}
-
-export function vrcxInstanceDeepLink(input: VrcxInstanceLink): string {
-    if (!isVrcxInstanceLink(input)) {
-        return '';
-    }
-    const params = new URLSearchParams({ instanceId: input.instanceId });
-    if (input.shortName) {
-        params.set('shortName', input.shortName);
-    }
-    if (input.launchToken) params.set('launchToken', input.launchToken);
-    return `${VRCX_OPEN_RELAY_ORIGIN}/instance/${input.worldId}?${params}`;
 }
 
 export function parseVrcxInstanceLink(input: string): VrcxInstanceLink | null {
@@ -70,12 +58,4 @@ export function parseVrcxInstanceLink(input: string): VrcxInstanceLink | null {
         launchToken: url.searchParams.get('launchToken') || ''
     };
     return isVrcxInstanceLink(link) ? link : null;
-}
-
-function entityRelayLink(entity: 'avatar', entityId: string): string {
-    return `${VRCX_OPEN_RELAY_ORIGIN}/${entity}/${entityId.trim()}`;
-}
-
-export function vrcxAvatarDeepLink(avatarId: string): string {
-    return isAvatarId(avatarId) ? entityRelayLink('avatar', avatarId) : '';
 }

@@ -30,6 +30,5 @@ describe('links', () => {
         expect(links.communityThemesIndex).toBe(
             'https://raw.githubusercontent.com/Map1en/VRCX-0-Community-Themes/master/themes/index.json'
         );
-        expect(links.communityThemesStatsApi).toBe('https://theme.vrcx-0.dev');
     });
 });

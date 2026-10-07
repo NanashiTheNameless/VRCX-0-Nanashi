@@ -20,7 +20,7 @@ use super::persistence::{
 use super::remote::{protocol_error, CommunityThemeRemote};
 use super::types::{
     CommunityThemeCatalog, CommunityThemeConfigureInput, CommunityThemeInstallMetadata,
-    CommunityThemeProjection, CommunityThemeStatsById,
+    CommunityThemeProjection,
 };
 use vrcx_0_application_core::{Error, Result};
 
@@ -92,23 +92,6 @@ impl CommunityThemeService {
 
     pub async fn load_catalog(&self) -> Result<CommunityThemeCatalog> {
         self.inner.remote.load_catalog().await
-    }
-
-    pub async fn load_stats(&self) -> Result<CommunityThemeStatsById> {
-        self.inner.remote.load_stats().await
-    }
-
-    pub async fn report_install(&self, theme_id: &str) -> bool {
-        if !protocol::is_community_theme_id(theme_id) {
-            return false;
-        }
-        match self.inner.remote.report_install(theme_id).await {
-            Ok(reported) => reported,
-            Err(error) => {
-                tracing::debug!(theme_id, error = %error, "failed to report community theme install");
-                false
-            }
-        }
     }
 
     pub async fn configure(

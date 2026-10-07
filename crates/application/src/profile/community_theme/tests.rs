@@ -84,14 +84,6 @@ impl CommunityThemeRemote for DelayedCommunityThemeRemote {
     fn load_css<'a>(&'a self, _theme_id: &'a str) -> CommunityThemeRemoteFuture<'a, String> {
         Box::pin(async { Ok(":root { color-scheme: dark; }".into()) })
     }
-
-    fn load_stats(&self) -> CommunityThemeRemoteFuture<'_, CommunityThemeStatsById> {
-        Box::pin(async { Ok(CommunityThemeStatsById::new()) })
-    }
-
-    fn report_install<'a>(&'a self, _theme_id: &'a str) -> CommunityThemeRemoteFuture<'a, bool> {
-        Box::pin(async { Ok(true) })
-    }
 }
 
 fn test_service(remote: Arc<dyn CommunityThemeRemote>) -> CommunityThemeService {

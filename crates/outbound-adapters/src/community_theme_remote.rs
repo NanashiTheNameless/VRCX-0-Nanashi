@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use futures_util::stream::{self, StreamExt};
 use vrcx_0_application::profile::{
-    CommunityThemeCatalog, CommunityThemeManifest, CommunityThemeRemote,
-    CommunityThemeRemoteFuture, CommunityThemeStatsById,
+    CommunityThemeCatalog, CommunityThemeManifest, CommunityThemeRemote, CommunityThemeRemoteFuture,
 };
 use vrcx_0_application_core::{Error, WebClient};
 use vrcx_0_contracts::community_theme_protocol as protocol;
@@ -107,24 +106,6 @@ impl CommunityThemeRemote for ExternalCommunityThemeRemote {
             }
             Ok(body)
         })
-    }
-
-    fn load_stats(&self) -> CommunityThemeRemoteFuture<'_, CommunityThemeStatsById> {
-        Box::pin(async move {
-            let body = self
-                .execute(
-                    protocol::community_theme_stats_input(),
-                    protocol::COMMUNITY_THEME_STATS_MAX_BYTES,
-                    "stats",
-                )
-                .await?;
-            protocol::parse_community_theme_stats(&body).map_err(protocol_error)
-        })
-    }
-
-    // Fork: never report theme installs upstream (install-count analytics).
-    fn report_install<'a>(&'a self, _theme_id: &'a str) -> CommunityThemeRemoteFuture<'a, bool> {
-        Box::pin(async move { Ok(false) })
     }
 }
 

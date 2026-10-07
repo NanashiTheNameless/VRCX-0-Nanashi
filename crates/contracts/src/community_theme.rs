@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
@@ -35,11 +33,3 @@ pub struct CommunityThemeCatalog {
     pub schema_version: u32,
     pub themes: Vec<CommunityThemeManifest>,
 }
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct CommunityThemeStatsEntry {
-    pub downloads: u64,
-}
-
-pub type CommunityThemeStatsById = BTreeMap<String, CommunityThemeStatsEntry>;

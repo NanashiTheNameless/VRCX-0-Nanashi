@@ -1,8 +1,7 @@
 import type {
     CommunityThemeCatalog,
     CommunityThemeInstallMetadata,
-    CommunityThemeManifest,
-    CommunityThemeStatsById
+    CommunityThemeManifest
 } from '@/domain/themes/types';
 import {
     commands,
@@ -120,16 +119,6 @@ export async function loadCatalog(): Promise<CommunityThemeCatalog> {
     } finally {
         store.setLoading(false);
     }
-}
-
-export async function loadCommunityThemeStats(): Promise<CommunityThemeStatsById> {
-    return commands.appCommunityThemeStatsGet();
-}
-
-export async function reportCommunityThemeInstall(
-    themeId: string
-): Promise<boolean> {
-    return commands.appCommunityThemeInstallReport(themeId);
 }
 
 export async function initializeCommunityThemes(

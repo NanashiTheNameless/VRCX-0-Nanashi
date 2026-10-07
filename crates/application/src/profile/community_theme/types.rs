@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub use vrcx_0_contracts::{
-    CommunityThemeAuthor, CommunityThemeCatalog, CommunityThemeManifest, CommunityThemeStatsById,
-    CommunityThemeStatsEntry,
-};
+pub use vrcx_0_contracts::{CommunityThemeAuthor, CommunityThemeCatalog, CommunityThemeManifest};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]

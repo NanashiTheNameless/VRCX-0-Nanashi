@@ -14,8 +14,6 @@ const mocks = vi.hoisted(() => ({
     appCommunityThemeDebugLoadLocalTheme: vi.fn(),
     appCommunityThemeStateGet: vi.fn(),
     appCommunityThemeCatalogGet: vi.fn(),
-    appCommunityThemeStatsGet: vi.fn(),
-    appCommunityThemeInstallReport: vi.fn(),
     appCommunityThemeConfigure: vi.fn(),
     getString: vi.fn(),
     isDevToolsBuild: vi.fn(),
@@ -41,8 +39,6 @@ vi.mock('@/platform/tauri/bindings', () => ({
             mocks.appCommunityThemeDebugLoadLocalTheme,
         appCommunityThemeStateGet: mocks.appCommunityThemeStateGet,
         appCommunityThemeCatalogGet: mocks.appCommunityThemeCatalogGet,
-        appCommunityThemeStatsGet: mocks.appCommunityThemeStatsGet,
-        appCommunityThemeInstallReport: mocks.appCommunityThemeInstallReport,
         appCommunityThemeConfigure: mocks.appCommunityThemeConfigure
     }
 }));
@@ -168,8 +164,6 @@ describe('communityThemeService', () => {
             schemaVersion: 1,
             themes: []
         });
-        mocks.appCommunityThemeStatsGet.mockResolvedValue({});
-        mocks.appCommunityThemeInstallReport.mockResolvedValue(true);
         mocks.appCommunityThemeConfigure.mockResolvedValue(projection(1));
         mocks.appCommunityThemeDebugLoadLocalTheme.mockResolvedValue({
             folderPath: 'C:\\themes\\local',

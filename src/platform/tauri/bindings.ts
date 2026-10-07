@@ -2288,20 +2288,10 @@ const generatedCommands = {
     async appCommunityThemeCatalogGet(): Promise<CommunityThemeCatalog> {
         return await TAURI_INVOKE('app__community_theme_catalog_get');
     },
-    async appCommunityThemeStatsGet(): Promise<
-        Partial<{ [key in string]: CommunityThemeStatsEntry }>
-    > {
-        return await TAURI_INVOKE('app__community_theme_stats_get');
-    },
     async appCommunityThemeConfigure(
         input: CommunityThemeConfigureInput
     ): Promise<CommunityThemeProjection> {
         return await TAURI_INVOKE('app__community_theme_configure', { input });
-    },
-    async appCommunityThemeInstallReport(themeId: string): Promise<boolean> {
-        return await TAURI_INVOKE('app__community_theme_install_report', {
-            themeId
-        });
     },
     async appOpenFileSelectorDialog(
         defaultPath: string | null,
@@ -3896,7 +3886,6 @@ export type CommunityThemeProjection = {
     overrideCss: string;
     overrideCssEnabled: boolean;
 };
-export type CommunityThemeStatsEntry = { downloads: number };
 export type ConfigReadEntry = { key: string; value: string };
 export type ConfigWriteEntry = { key: string; value: string };
 export type ContentFilter =

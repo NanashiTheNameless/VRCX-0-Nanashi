@@ -40,14 +40,6 @@ export type CommunityThemeInstallMetadata = {
     accentMode: boolean;
 };
 
-type CommunityThemeStatsEntry = {
-    downloads: number;
-};
-
-export type CommunityThemeStatsById = Partial<
-    Record<string, CommunityThemeStatsEntry>
->;
-
 export interface CommunityThemeLocalPreview {
     folderPath: string;
     cssPath: string;

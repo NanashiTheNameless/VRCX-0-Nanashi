@@ -11,7 +11,6 @@ import {
     openExternalLink
 } from '@/services/entityMediaService';
 import { vrchatAvatarUrl } from '@/shared/constants/vrchatWebUrls';
-import { vrcxAvatarDeepLink } from '@/shared/constants/vrcxDeepLinks';
 import {
     getPlatformInfo,
     hasAvatarPerformanceDetails
@@ -94,16 +93,12 @@ function AvatarOverviewReferences({
     avatarUrl,
     onCopyAvatarId,
     onCopyAvatarUrl,
-    onCopyVrcxAvatarUrl,
-    vrcxAvatarUrl,
     onOpenAvatarUrl
 }: {
     avatar: AvatarViewRecord;
     avatarUrl: string;
     onCopyAvatarId(): void;
     onCopyAvatarUrl(): void;
-    onCopyVrcxAvatarUrl(): void;
-    vrcxAvatarUrl: string;
     onOpenAvatarUrl(): void;
 }) {
     const { t } = useTranslation();
@@ -147,38 +142,6 @@ function AvatarOverviewReferences({
                     </EntityFactValue>
                 </EntityFactRow>
             ) : null}
-            {vrcxAvatarUrl ? (
-                <EntityFactRow
-                    label={
-                        <Tooltip>
-                            <TooltipTrigger
-                                render={
-                                    <span
-                                        className="cursor-help underline decoration-dotted underline-offset-2"
-                                        tabIndex={0}
-                                    >
-                                        {t('dialog.avatar.info.vrcx_url')}
-                                    </span>
-                                }
-                            />
-                            <TooltipContent>
-                                {t('dialog.avatar.info.vrcx_url_description')}
-                            </TooltipContent>
-                        </Tooltip>
-                    }
-                >
-                    <EntityFactValue
-                        display={compactAvatarUrl(vrcxAvatarUrl)}
-                        title={vrcxAvatarUrl}
-                    >
-                        <EntityFactAction
-                            label={t('dialog.avatar.info.copy_vrcx_url')}
-                            icon={CopyIcon}
-                            onClick={onCopyVrcxAvatarUrl}
-                        />
-                    </EntityFactValue>
-                </EntityFactRow>
-            ) : null}
         </EntityFactList>
     );
 }
@@ -195,8 +158,6 @@ function AvatarDialogOverviewSection({
     onAuthorClick,
     onCopyAvatarId,
     onCopyAvatarUrl,
-    onCopyVrcxAvatarUrl,
-    vrcxAvatarUrl,
     onOpenAvatarUrl
 }: {
     avatar: AvatarViewRecord;
@@ -210,8 +171,6 @@ function AvatarDialogOverviewSection({
     onAuthorClick(): void;
     onCopyAvatarId(): void;
     onCopyAvatarUrl(): void;
-    onCopyVrcxAvatarUrl(): void;
-    vrcxAvatarUrl: string;
     onOpenAvatarUrl(): void;
 }) {
     const { t } = useTranslation();
@@ -309,8 +268,6 @@ function AvatarDialogOverviewSection({
                 avatarUrl={avatarUrl}
                 onCopyAvatarId={onCopyAvatarId}
                 onCopyAvatarUrl={onCopyAvatarUrl}
-                onCopyVrcxAvatarUrl={onCopyVrcxAvatarUrl}
-                vrcxAvatarUrl={vrcxAvatarUrl}
                 onOpenAvatarUrl={onOpenAvatarUrl}
             />
         </EntityOverviewCard>
@@ -370,8 +327,6 @@ export function AvatarDialogTabbedView({
     const openImagePreview = useAvatarDialogPreview();
     const avatarFallbackLabel = t('view.favorites.empty.avatar_fallback');
     const avatarUrl = avatar.id ? vrchatAvatarUrl(avatar.id) : '';
-    const vrcxAvatarUrl =
-        avatar.releaseStatus === 'public' ? vrcxAvatarDeepLink(avatar.id) : '';
     const packageUrl = replaceVrcPackageUrl(
         avatar.unityPackageUrl || avatar.unityPackage?.url || ''
     );
@@ -538,16 +493,6 @@ export function AvatarDialogTabbedView({
                                 t('dialog.avatar.info.url')
                             );
                         }}
-                        onCopyVrcxAvatarUrl={() => {
-                            copyAvatarText(
-                                t('dialog.avatar.info.vrcx_share_text', {
-                                    name: avatar.name,
-                                    url: vrcxAvatarUrl
-                                }),
-                                t('dialog.avatar.info.vrcx_url')
-                            );
-                        }}
-                        vrcxAvatarUrl={vrcxAvatarUrl}
                         onOpenAvatarUrl={() => openExternalLink(avatarUrl)}
                         badges={
                             <AvatarDialogHeaderBadges

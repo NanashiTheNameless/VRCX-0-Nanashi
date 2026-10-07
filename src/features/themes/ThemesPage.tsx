@@ -37,7 +37,6 @@ export function ThemesPage() {
         devLoading,
         devSectionOpen,
         setDevSectionOpen,
-        themeStatsById,
         devWatchEnabled,
         devError,
         developerToolsAvailable,
@@ -91,7 +90,6 @@ export function ThemesPage() {
                                 installedThemeById={installedThemeById}
                                 enabled={enabled}
                                 installedTheme={installedTheme}
-                                themeStatsById={themeStatsById}
                                 loading={loading}
                                 enableTheme={enableTheme}
                                 installTheme={installTheme}

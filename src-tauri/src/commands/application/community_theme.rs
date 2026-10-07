@@ -3,7 +3,6 @@
 use tauri::State;
 use vrcx_0_application::profile::{
     CommunityThemeCatalog, CommunityThemeConfigureInput, CommunityThemeProjection,
-    CommunityThemeStatsById,
 };
 
 use crate::{error::AppError, state::AppState};
@@ -26,14 +25,6 @@ pub async fn app__community_theme_catalog_get(
 
 #[tauri::command]
 #[specta::specta]
-pub async fn app__community_theme_stats_get(
-    state: State<'_, AppState>,
-) -> Result<CommunityThemeStatsById, AppError> {
-    Ok(state.runtime_host().community_theme_stats().await?)
-}
-
-#[tauri::command]
-#[specta::specta]
 pub async fn app__community_theme_configure(
     state: State<'_, AppState>,
     input: CommunityThemeConfigureInput,
@@ -42,16 +33,4 @@ pub async fn app__community_theme_configure(
         .runtime_host()
         .configure_community_theme(input)
         .await?)
-}
-
-#[tauri::command]
-#[specta::specta]
-pub async fn app__community_theme_install_report(
-    state: State<'_, AppState>,
-    theme_id: String,
-) -> Result<bool, AppError> {
-    Ok(state
-        .runtime_host()
-        .report_community_theme_install(&theme_id)
-        .await)
 }

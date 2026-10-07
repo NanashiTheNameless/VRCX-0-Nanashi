@@ -844,21 +844,11 @@ impl DesktopRuntimeHostState {
         Ok(self.desktop.community_theme.load_catalog().await?)
     }
 
-    pub async fn community_theme_stats(
-        &self,
-    ) -> Result<vrcx_0_application::profile::CommunityThemeStatsById> {
-        Ok(self.desktop.community_theme.load_stats().await?)
-    }
-
     pub async fn configure_community_theme(
         &self,
         input: vrcx_0_application::profile::CommunityThemeConfigureInput,
     ) -> Result<vrcx_0_application::profile::CommunityThemeProjection> {
         Ok(self.desktop.community_theme.configure(input).await?)
-    }
-
-    pub async fn report_community_theme_install(&self, theme_id: &str) -> bool {
-        self.desktop.community_theme.report_install(theme_id).await
     }
 
     pub async fn check_for_app_update(

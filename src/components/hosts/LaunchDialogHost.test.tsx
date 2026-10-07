@@ -4,7 +4,6 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { vrcxInstanceDeepLink } from '@/shared/constants/vrcxDeepLinks';
 import { parseLocation } from '@/shared/utils/location';
 import { useLaunchStore } from '@/state/launchStore';
 
@@ -40,9 +39,6 @@ vi.mock('react-i18next', async (importOriginal) => ({
 }));
 
 function translate(key: string, values?: Record<string, string>) {
-    if (key === 'dialog.world.info.vrcx_share_text') {
-        return `在 VRCX-0 中打开世界"${values?.name}"：${values?.url}`;
-    }
     if (key === 'accessibility.copy_value') {
         return `Copy ${values?.value}`;
     }
@@ -77,33 +73,7 @@ afterEach(() => {
 });
 
 describe('LaunchDialogHost instance sharing', () => {
-    it('shares a secure-only token without inventing a short name', async () => {
-        mocks.resolve.mockResolvedValue({
-            tag: location,
-            location,
-            url: '',
-            vrcUrl: '',
-            shortName: '',
-            shortUrl: '',
-            launchToken: 'secureToken',
-            secureOrShortName: 'secureToken',
-            worldName: '',
-            parsed: parseLocation(location)
-        });
-        useLaunchStore.getState().showLaunchDialog(location, '', 'secureToken');
-        render(<LaunchDialogHost />);
-        const button = screen.getByRole('button', {
-            name: 'dialog.launch.share'
-        });
-        await waitFor(() =>
-            expect((button as HTMLButtonElement).disabled).toBe(false)
-        );
-        await userEvent.setup().click(button);
-        const copied = mocks.copy.mock.calls[0][0] as string;
-        expect(copied).toContain('launchToken=secureToken');
-        expect(copied).not.toContain('shortName=');
-    });
-    it('copies the displayed name even when the launch store has no world name', async () => {
+    it('copies the plain VRChat launch link', async () => {
         const user = userEvent.setup();
         render(<LaunchDialogHost />);
         const button = screen.getByRole('button', {
@@ -113,20 +83,9 @@ describe('LaunchDialogHost instance sharing', () => {
             expect((button as HTMLButtonElement).disabled).toBe(false)
         );
         await user.click(button);
-        const text = mocks.copy.mock.calls[0][0] as string;
-        const displayedName = screen.getByText((content) =>
-            content.startsWith(mocks.worldName)
-        ).textContent;
-        const link = vrcxInstanceDeepLink({
-            worldId,
-            instanceId,
-            shortName: 'token',
-            launchToken: 'token'
-        });
-        expect(text).toBe(
-            `在 VRCX-0 中打开世界"${displayedName} #82121"：${link}`
+        expect(mocks.copy.mock.calls[0][0]).toBe(
+            'https://vrchat.com/home/launch'
         );
-        expect(text.split('"：')[0]).not.toContain('wrld_');
     });
 
     it('does not disable a valid share link while metadata is pending', async () => {

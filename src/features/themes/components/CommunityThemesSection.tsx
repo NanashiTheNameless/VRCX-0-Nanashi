@@ -31,7 +31,6 @@ type CommunityThemesSectionProps = Pick<
     | 'installedThemeById'
     | 'enabled'
     | 'installedTheme'
-    | 'themeStatsById'
     | 'loading'
     | 'enableTheme'
     | 'installTheme'
@@ -47,7 +46,6 @@ export function CommunityThemesSection({
     installedThemeById,
     enabled,
     installedTheme,
-    themeStatsById,
     loading,
     enableTheme,
     installTheme,
@@ -132,9 +130,6 @@ export function CommunityThemesSection({
                                     active={active}
                                     installed={Boolean(installedEntry)}
                                     updateAvailable={updateAvailable}
-                                    downloads={
-                                        themeStatsById[theme.id]?.downloads ?? 0
-                                    }
                                     loading={loading}
                                     onInstall={() => {
                                         if (

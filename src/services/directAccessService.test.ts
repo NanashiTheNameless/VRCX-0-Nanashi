@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { vrcxInstanceDeepLink } from '@/shared/constants/vrcxDeepLinks';
+import { VRCX_OPEN_RELAY_ORIGIN } from '@/shared/constants/vrcxDeepLinks';
 import { useLaunchStore } from '@/state/launchStore';
 
 const mocks = vi.hoisted(() => ({
@@ -46,12 +46,9 @@ const LOCATION = `${WORLD_ID}:${INSTANCE_ID}`;
 
 describe('directAccessService', () => {
     it('preserves a secure-only token when opening a shared invitation', async () => {
-        const input = vrcxInstanceDeepLink({
-            worldId: WORLD_ID,
-            instanceId: INSTANCE_ID,
-            shortName: '',
-            launchToken: 'secureToken'
-        });
+        const input = `${VRCX_OPEN_RELAY_ORIGIN}/instance/${WORLD_ID}?${new URLSearchParams(
+            { instanceId: INSTANCE_ID, launchToken: 'secureToken' }
+        )}`;
         await expect(directAccessParse(input)).resolves.toBe(true);
         expect(useLaunchStore.getState().launchDialog).toMatchObject({
             tag: LOCATION,
@@ -61,11 +58,9 @@ describe('directAccessService', () => {
     });
     it('routes external instance shares through the same world and launch flow', async () => {
         useLaunchStore.getState().closeLaunchDialog();
-        const input = vrcxInstanceDeepLink({
-            worldId: WORLD_ID,
-            instanceId: INSTANCE_ID,
-            shortName: 'inviteToken'
-        });
+        const input = `${VRCX_OPEN_RELAY_ORIGIN}/instance/${WORLD_ID}?${new URLSearchParams(
+            { instanceId: INSTANCE_ID, shortName: 'inviteToken' }
+        )}`;
         await expect(directAccessParse(input, 'detect')).resolves.toBe(true);
         expect(mocks.openWorldDialog).not.toHaveBeenCalled();
         expect(useLaunchStore.getState().launchDialog.open).toBe(false);
