@@ -93,6 +93,12 @@ impl SlintSurfaceHost for SlintWristHost {
             .set_feed_lines(wrist_feed_model(&model.feed_rows, model.dark_background));
         self.component
             .set_feed_newest_at_bottom(model.feed_newest_at_bottom);
+        self.component.set_feed_wide_time(
+            model
+                .feed_rows
+                .iter()
+                .any(|row| row.time_text.trim().chars().count() > 5),
+        );
         let scale = |percent: u8| f32::from(percent) / 100.0;
         self.component
             .set_header_scale(scale(model.text.header_percent));

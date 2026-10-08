@@ -162,6 +162,8 @@ pub struct WristOverlayRenderOptions {
     pub dark_background: bool,
     pub show_devices: bool,
     pub show_battery_percent: bool,
+    /// Fork: feed row times follow the app's 12/24-hour setting.
+    pub hour12: bool,
 }
 
 impl Default for WristOverlayRenderOptions {
@@ -178,6 +180,7 @@ impl Default for WristOverlayRenderOptions {
             dark_background: true,
             show_devices: true,
             show_battery_percent: false,
+            hour12: true,
         }
     }
 }
@@ -440,7 +443,7 @@ pub fn build_wrist_surface_model(input: WristOverlayFrameInput) -> WristSurfaceM
                     !should_hide_private_world(entry, input.options.hide_private_worlds)
                 })
                 .take(MAX_FEED_ROWS)
-                .map(|entry| feed_line_from_activity(entry, &localizer))
+                .map(|entry| feed_line_from_activity(entry, &localizer, input.options.hour12))
                 .collect();
             if input.options.feed_newest_at_bottom {
                 rows.reverse();
@@ -619,9 +622,13 @@ fn device_role(label: &str) -> DeviceRole {
     }
 }
 
-fn feed_line_from_activity(entry: &ActivityEntry, localizer: &OverlayLocalizer) -> FeedLine {
+fn feed_line_from_activity(
+    entry: &ActivityEntry,
+    localizer: &OverlayLocalizer,
+    hour12: bool,
+) -> FeedLine {
     FeedLine {
-        time_text: time_text(&entry.created_at),
+        time_text: time_text(&entry.created_at, hour12),
         kind: feed_kind(entry),
         actor_text: feed_actor(entry, localizer),
         detail: feed_detail(entry, localizer),
@@ -848,32 +855,47 @@ fn feed_accent(entry: &ActivityEntry) -> FeedAccent {
     }
 }
 
-fn time_text(value: &str) -> String {
-    time_text_in_timezone(value, &Local).unwrap_or_else(|| raw_time_text(value))
+fn time_text(value: &str, hour12: bool) -> String {
+    time_text_in_timezone(value, &Local, hour12).unwrap_or_else(|| raw_time_text(value, hour12))
 }
 
-fn time_text_in_timezone<Tz>(value: &str, timezone: &Tz) -> Option<String>
+fn time_text_in_timezone<Tz>(value: &str, timezone: &Tz, hour12: bool) -> Option<String>
 where
     Tz: chrono::TimeZone,
 {
     let local_time = DateTime::parse_from_rfc3339(value)
         .ok()?
         .with_timezone(timezone);
-    Some(format!(
-        "{:02}:{:02}",
-        local_time.hour(),
-        local_time.minute()
-    ))
+    Some(clock_text(local_time.hour(), local_time.minute(), hour12))
 }
 
-fn raw_time_text(value: &str) -> String {
+fn raw_time_text(value: &str, hour12: bool) -> String {
     let Some(time_start) = value.find('T').map(|index| index + 1) else {
         return String::new();
     };
-    value
-        .get(time_start..time_start + 5)
-        .unwrap_or_default()
-        .to_string()
+    let Some(raw) = value.get(time_start..time_start + 5) else {
+        return String::new();
+    };
+    let parsed = raw
+        .split_once(':')
+        .and_then(|(hour, minute)| Some((hour.parse::<u32>().ok()?, minute.parse::<u32>().ok()?)))
+        .filter(|(hour, minute)| *hour < 24 && *minute < 60);
+    match parsed {
+        Some((hour, minute)) => clock_text(hour, minute, hour12),
+        None => raw.to_string(),
+    }
+}
+
+pub(crate) fn clock_text(hour: u32, minute: u32, hour12: bool) -> String {
+    if !hour12 {
+        return format!("{hour:02}:{minute:02}");
+    }
+    let period = if hour < 12 { "AM" } else { "PM" };
+    let display_hour = match hour % 12 {
+        0 => 12,
+        value => value,
+    };
+    format!("{display_hour}:{minute:02} {period}")
 }
 
 fn join_non_empty<'a, I>(values: I) -> String
@@ -1019,14 +1041,19 @@ mod tests {
         let daylight_offset = chrono::FixedOffset::west_opt(4 * 60 * 60).unwrap();
 
         assert_eq!(
-            time_text_in_timezone("2026-06-01T12:34:56.000Z", &daylight_offset),
+            time_text_in_timezone("2026-06-01T12:34:56.000Z", &daylight_offset, false),
             Some("08:34".to_string())
+        );
+        assert_eq!(
+            time_text_in_timezone("2026-06-01T20:34:56.000Z", &daylight_offset, true),
+            Some("4:34 PM".to_string())
         );
     }
 
     #[test]
     fn feed_time_falls_back_to_raw_iso_time_for_invalid_timestamps() {
-        assert_eq!(time_text("not-a-dateT12:34:56"), "12:34");
+        assert_eq!(time_text("not-a-dateT12:34:56", false), "12:34");
+        assert_eq!(time_text("not-a-dateT00:05:56", true), "12:05 AM");
     }
 
     #[test]
@@ -1132,7 +1159,7 @@ mod tests {
 
     fn feed_line(entry: &ActivityEntry, locale: &str) -> FeedLine {
         let localizer = OverlayLocalizer::new(OverlayLocale::from_config(locale));
-        feed_line_from_activity(entry, &localizer)
+        feed_line_from_activity(entry, &localizer, true)
     }
 
     fn feed_line_with_instance_id(
@@ -1144,6 +1171,6 @@ mod tests {
             OverlayLocale::from_config(locale),
             show_instance_id,
         );
-        feed_line_from_activity(entry, &localizer)
+        feed_line_from_activity(entry, &localizer, true)
     }
 }

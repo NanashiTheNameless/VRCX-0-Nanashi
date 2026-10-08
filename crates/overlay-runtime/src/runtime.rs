@@ -30,7 +30,7 @@ use super::{
     manager::VrOverlayManager,
     service::{HostVrOverlayService, OverlayBackendPreference},
     surfaces::hmd_toast::{refresh_cached_world_name, HmdToastState},
-    surfaces::wrist::compact_duration,
+    surfaces::wrist::{clock_text, compact_duration},
     test_preview::test_wrist_frame_input,
     WristOverlayFrameInput, WristOverlayRenderOptions, WristOverlaySizePreset, WristPage,
     WristPageOrder, WristPlacement, WristPlayerRow, WristPlayersSort, WristRuntimeFooter,
@@ -1364,19 +1364,7 @@ fn now_ms() -> i64 {
 
 fn local_time_text(hour12: bool) -> String {
     let now = Local::now();
-    format_local_time(now.hour(), now.minute(), hour12)
-}
-
-fn format_local_time(hour: u32, minute: u32, hour12: bool) -> String {
-    if !hour12 {
-        return format!("{hour:02}:{minute:02}");
-    }
-    let period = if hour < 12 { "AM" } else { "PM" };
-    let display_hour = match hour % 12 {
-        0 => 12,
-        value => value,
-    };
-    format!("{display_hour}:{minute:02} {period}")
+    clock_text(now.hour(), now.minute(), hour12)
 }
 
 fn instance_duration_text(location: &str, started_at: &str, now_ms: i64) -> String {

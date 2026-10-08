@@ -94,6 +94,8 @@ export component WristPanel inherits Window {
     in property <[WristFeedItem]> feed-lines: [];
     // Fork: newest feed row last; rows that do not fit are skipped from the top.
     in property <bool> feed-newest-at-bottom: false;
+    // Fork: 12-hour feed times ("12:34 PM") need a wider time column.
+    in property <bool> feed-wide-time: false;
     // Fork: Players / Notes grid, up to six columns.
     in property <int> player-column-count: 0;
     in property <[WristPlayerItem]> players-0: [];
@@ -128,6 +130,7 @@ export component WristPanel inherits Window {
     property <length> header-height: 44px * root.header-scale;
     property <length> footer-height: 34px * root.footer-scale;
     property <length> row-height: 38px * root.content-scale;
+    property <length> feed-time-width: (root.feed-wide-time ? 60px : 42px) * root.content-scale;
     property <length> feed-top: root.header-height + 5px * root.content-scale;
     property <length> now-playing-padding: 8px * root.content-scale;
     property <length> now-playing-meter-height: 14px * root.content-scale;
@@ -356,7 +359,7 @@ export component WristPanel inherits Window {
             Text {
                 x: 11px;
                 y: 0px;
-                width: 42px * root.content-scale;
+                width: root.feed-time-width;
                 height: root.row-height - 1px;
                 text: line.time;
                 font-size: 13px * root.content-scale;
@@ -365,7 +368,7 @@ export component WristPanel inherits Window {
             }
 
             HorizontalLayout {
-                x: 11px + 51px * root.content-scale;
+                x: 11px + root.feed-time-width + 9px * root.content-scale;
                 y: 0px;
                 width: parent.width - self.x;
                 height: root.row-height - 1px;

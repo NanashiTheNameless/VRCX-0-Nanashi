@@ -224,6 +224,7 @@ pub(super) fn load_runtime_config(
             dark_background,
             show_devices,
             show_battery_percent,
+            hour12: dt_hour12,
         },
         locale,
         dt_hour12,
