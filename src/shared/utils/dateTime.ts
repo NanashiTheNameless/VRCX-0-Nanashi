@@ -94,13 +94,14 @@ function toLocalShort(date: Date, dateFormat: string, hour12: boolean) {
         .toLocaleDateString(dateFormat, {
             month: 'short',
             day: 'numeric',
+            year: 'numeric',
             hour: 'numeric',
             minute: '2-digit',
             hourCycle: hour12 ? 'h12' : 'h23'
         })
         .replace(' AM', 'am')
         .replace(' PM', 'pm')
-        .replace(',', '');
+        .replaceAll(',', '');
 }
 
 function toLocalLong(date: Date, dateFormat: string, hour12: boolean) {
@@ -184,6 +185,13 @@ export function formatDateTimeWithPreferences(
     );
     const hour12 = preferences.hour12 ?? preferences.dateHour12 ?? false;
     const formatOptions = { ...options };
+    if (
+        typeof formatOptions.month !== 'undefined' &&
+        typeof formatOptions.day !== 'undefined' &&
+        typeof formatOptions.year === 'undefined'
+    ) {
+        formatOptions.year = 'numeric';
+    }
     if (
         typeof formatOptions.hour !== 'undefined' ||
         typeof formatOptions.minute !== 'undefined' ||

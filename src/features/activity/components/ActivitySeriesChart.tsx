@@ -51,8 +51,7 @@ function buildOption({
             axisLabel: {
                 color: palette['act-axis'],
                 fontSize: 10,
-                hideOverlap: true,
-                formatter: (value: string) => value.slice(5)
+                hideOverlap: true
             }
         },
         yAxis: {

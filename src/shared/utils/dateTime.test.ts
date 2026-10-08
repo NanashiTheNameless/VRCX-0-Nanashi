@@ -33,13 +33,13 @@ describe('dateTime utils', () => {
         ).toBe('2026年6月4日 9:20');
     });
 
-    it('formats Chinese short dates as month and day text', () => {
+    it('formats Chinese short dates as year, month and day text', () => {
         expect(
             formatDateFilterWithPreferences(LOCAL_DATE, 'short', {
                 appLocale: 'zh-CN',
                 dateHour12: false
             })
-        ).toBe('6月4日 9:20');
+        ).toBe('2026年6月4日 9:20');
         expect(
             formatDateFilterWithPreferences(LOCAL_DATE, 'date', {
                 appLocale: 'zh-TW'
@@ -63,25 +63,12 @@ describe('dateTime utils', () => {
     });
 
     it('formats English short dates with the English app locale', () => {
-        const date = new Date(LOCAL_DATE);
-        const expected = date
-            .toLocaleDateString('en', {
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-                hourCycle: 'h23'
-            })
-            .replace(' AM', 'am')
-            .replace(' PM', 'pm')
-            .replace(',', '');
-
         expect(
             formatDateFilterWithPreferences(LOCAL_DATE, 'short', {
                 appLocale: 'en',
                 dateHour12: false
             })
-        ).toBe(expected);
+        ).toBe('Jun 4 2026 09:20');
     });
 
     it('keeps long ISO output when ISO format is enabled', () => {
@@ -184,6 +171,30 @@ describe('dateTime utils', () => {
                 hour12: false
             }).format(date)
         );
+    });
+
+    it('adds the year whenever a month and day are shown', () => {
+        expect(
+            formatDateTimeWithPreferences(
+                LOCAL_DATE,
+                { month: '2-digit', day: '2-digit' },
+                { appLocale: 'en' }
+            )
+        ).toBe('06/04/2026');
+        expect(
+            formatDateTimeWithPreferences(
+                LOCAL_DATE,
+                { year: '2-digit', month: '2-digit', day: '2-digit' },
+                { appLocale: 'en' }
+            )
+        ).toBe('06/04/26');
+        expect(
+            formatDateTimeWithPreferences(
+                LOCAL_DATE,
+                { year: 'numeric', month: 'long' },
+                { appLocale: 'en' }
+            )
+        ).toBe('June 2026');
     });
 
     it('returns fallbacks for empty and invalid dates', () => {

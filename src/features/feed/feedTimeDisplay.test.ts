@@ -36,7 +36,7 @@ describe('feedTimeDisplay', () => {
     it('formats exact feed time with the shared app-locale date helper', () => {
         const value = '2026-06-04T07:20:02';
 
-        expect(formatFeedExactTime(value, 'short')).toBe('6月4日 7:20');
+        expect(formatFeedExactTime(value, 'short')).toBe('2026年6月4日 7:20');
     });
 
     it('uses localized short time for exact feed column labels', () => {
@@ -49,6 +49,6 @@ describe('feedTimeDisplay', () => {
                 t: translate,
                 value
             }).label
-        ).toBe('6月4日 7:20');
+        ).toBe('2026年6月4日 7:20');
     });
 });
