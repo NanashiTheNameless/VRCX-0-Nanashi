@@ -587,6 +587,9 @@ fn fresh_baseline_reconnect_preserves_location_time_without_new_game_logs() -> R
 fn fresh_offline_baseline_keeps_a_pending_offline_through_reconnect() -> Result<()> {
     let (_dir, runtime, active_session) =
         runtime_with_active_session("reconnect-placeholder-offline")?;
+    // The pending offline deadline is derived from a past received_at, so a real
+    // executor would fire its wake immediately and race the assertions below.
+    runtime.set_task_executor_for_test(DiscardTaskExecutor);
     let old_transport = active_transport(&runtime);
     seed_online_friend(&runtime, &active_session, old_transport.generation)?;
     runtime.handle_active_friend_ws_message_for_test(&RealtimeWsMessagePayload {
@@ -623,7 +626,6 @@ fn fresh_offline_baseline_keeps_a_pending_offline_through_reconnect() -> Result<
         None,
         HashMap::from([("usr_friend".into(), placeholder)]),
     )?;
-    runtime.set_task_executor_for_test(DiscardTaskExecutor);
 
     runtime.runtime().start_from_friend_baseline(
         active_session.user_id.clone(),
