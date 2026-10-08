@@ -96,6 +96,11 @@ It is a Rust + Tauri rewrite of VRCX.
 - **Launch without Steam.** Set the VRChat install folder in Launch Options to start VRChat directly.
 - **Import from VRCX or VRCX-0.** Merges the other app's database and adds settings you have not set
   here yet.
+- **One date format everywhere.** Dates show as `hh:mm:ss AM MM/DD/YY` by default. Under
+  Settings > Interface > Time/Date, pick time-first or date-first with MM/DD/YY, DD/MM/YY or
+  YYYY-MM-DD, or the language default. Today's feed entries show only the time.
+- **Resizable feed columns.** In the feed's column view, drag a column's right edge (or focus it
+  and use the arrow keys) to set its width.
 - **Local fonts by default.** Bundled 0xProto and system CJK fonts work offline. Additional
   online font choices are labelled in Settings > Interface.
 - **Legacy VRCX links work.** `vrcx://world/...`, `vrcx://avatar/...`, `vrcx://user/...`,

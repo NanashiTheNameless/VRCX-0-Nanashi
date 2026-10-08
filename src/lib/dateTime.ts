@@ -2,6 +2,7 @@ import { getTimeUnitLabels } from '@/services/i18nService';
 import {
     formatClockWithPreferences,
     formatDateFilterWithPreferences,
+    formatDatePattern,
     formatDateTimeWithPreferences,
     formatRelativeTimeWithPreferences,
     timeToTextWithLabels,
@@ -17,13 +18,14 @@ import {
 import { useShellStore } from '@/state/shellStore';
 
 export function formatDateFilter(dateStr: unknown, format: DateFilterFormat) {
-    const { locale, dateCulture, dateIsoFormat, dateHour12 } =
+    const { locale, dateCulture, dateIsoFormat, dateHour12, dateFormat } =
         useShellStore.getState();
     return formatDateFilterWithPreferences(dateStr, format, {
         appLocale: locale,
         dateCulture,
         dateIsoFormat,
-        dateHour12
+        dateHour12,
+        dateFormat
     });
 }
 
@@ -52,11 +54,13 @@ export function formatDateFilterOrFallback(
 function currentDateTimePreferences(
     overrides: DateTimeFormatPreferences = {}
 ): DateTimeFormatPreferences {
-    const { locale, dateCulture, dateHour12 } = useShellStore.getState();
+    const { locale, dateCulture, dateHour12, dateFormat } =
+        useShellStore.getState();
     return {
         appLocale: locale,
         dateCulture,
         dateHour12,
+        dateFormat,
         ...overrides
     };
 }
@@ -96,6 +100,7 @@ export function formatScreenshotDateTime(
     }
 
     const {
+        dateFormat,
         dateHour12,
         dateIsoFormat,
         locale: appLocale
@@ -103,6 +108,13 @@ export function formatScreenshotDateTime(
 
     if (dateIsoFormat) {
         return formatIsoDateTime(date);
+    }
+    if (dateFormat !== 'locale') {
+        return formatDatePattern(date, dateFormat, Boolean(dateHour12), {
+            date: true,
+            time: true,
+            seconds: true
+        });
     }
 
     return formatDateTimeValue(

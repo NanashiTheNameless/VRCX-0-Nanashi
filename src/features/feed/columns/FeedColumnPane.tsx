@@ -6,7 +6,15 @@ import {
     SettingsIcon,
     Trash2Icon
 } from 'lucide-react';
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+    type KeyboardEvent,
+    type PointerEvent,
+    useEffect,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { getFeedRowId } from '@/components/feed/feedRows';
@@ -28,7 +36,12 @@ import {
 import { Spinner } from '@/ui/shadcn/spinner';
 
 import type { FeedColumnDensityConfig } from '../feedColumnsDensity';
-import type { FeedColumnConfig } from '../feedColumnsState';
+import {
+    clampFeedColumnWidth,
+    type FeedColumnConfig,
+    MAX_FEED_COLUMN_WIDTH,
+    MIN_FEED_COLUMN_WIDTH
+} from '../feedColumnsState';
 import { useFeedNewTopRowKeys } from '../useFeedNewTopRowKeys';
 import { FeedColumnItem } from './FeedColumnItem';
 import { useFeedColumnRows } from './useFeedColumnRows';
@@ -48,8 +61,86 @@ type FeedColumnPaneProps = {
     onDelete(columnId: string): void;
     onEdit(columnId: string): void;
     onOpenPreviousInstances(payload?: FeedLocationActionPayload): void;
+    onResize(columnId: string, width: number): void;
     timeDisplayMode: FeedTimeDisplayModePreference;
 };
+
+type ColumnResizeSession = {
+    pointerId: number;
+    startX: number;
+    startWidth: number;
+};
+
+function useColumnResize(width: number, onCommit: (width: number) => void) {
+    const sessionRef = useRef<ColumnResizeSession | null>(null);
+    const [draftWidth, setDraftWidth] = useState<number | null>(null);
+
+    const start = (event: PointerEvent<HTMLElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        sessionRef.current = {
+            pointerId: event.pointerId,
+            startX: event.clientX,
+            startWidth: width
+        };
+        setDraftWidth(width);
+    };
+
+    const move = (event: PointerEvent<HTMLElement>) => {
+        const session = sessionRef.current;
+        if (!session || session.pointerId !== event.pointerId) {
+            return;
+        }
+        setDraftWidth(
+            clampFeedColumnWidth(
+                session.startWidth + event.clientX - session.startX
+            )
+        );
+    };
+
+    const end = (event: PointerEvent<HTMLElement>) => {
+        const session = sessionRef.current;
+        if (!session || session.pointerId !== event.pointerId) {
+            return;
+        }
+        sessionRef.current = null;
+        event.currentTarget.releasePointerCapture(event.pointerId);
+        const nextWidth = clampFeedColumnWidth(
+            session.startWidth + event.clientX - session.startX
+        );
+        setDraftWidth(null);
+        if (nextWidth !== width) {
+            onCommit(nextWidth);
+        }
+    };
+
+    const keyDown = (event: KeyboardEvent<HTMLElement>) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
+            return;
+        }
+        event.preventDefault();
+        const step = event.shiftKey ? 32 : 16;
+        const nextWidth = clampFeedColumnWidth(
+            width + (event.key === 'ArrowRight' ? step : -step)
+        );
+        if (nextWidth !== width) {
+            onCommit(nextWidth);
+        }
+    };
+
+    return {
+        handlers: {
+            onKeyDown: keyDown,
+            onPointerCancel: end,
+            onPointerDown: start,
+            onPointerMove: move,
+            onPointerUp: end
+        },
+        resizing: draftWidth !== null,
+        width: draftWidth ?? width
+    };
+}
 
 function useColumnViewport(
     rows: FeedRow[],
@@ -185,9 +276,13 @@ export function FeedColumnPane({
     onDelete,
     onEdit,
     onOpenPreviousInstances,
+    onResize,
     timeDisplayMode
 }: FeedColumnPaneProps) {
     const { t } = useTranslation();
+    const resize = useColumnResize(column.width, (width) =>
+        onResize(column.id, width)
+    );
     const { hasMore, loadOlder, loadingOlder, loadStatus, rows } =
         useFeedColumnRows(column);
     const columnRowsResetKey = useMemo(
@@ -236,7 +331,7 @@ export function FeedColumnPane({
     return (
         <section
             className="border-border/60 bg-background/35 group/feed-column relative flex h-full min-h-0 shrink-0 flex-col overflow-hidden rounded-md border"
-            style={{ width: column.width }}
+            style={{ width: resize.width }}
         >
             <div className="border-border/70 bg-muted/20 group/feed-column-header flex shrink-0 flex-col gap-1.5 border-b px-3 py-2">
                 <div className="flex min-w-0 items-start gap-1">
@@ -403,6 +498,21 @@ export function FeedColumnPane({
                     {!hasMore && rows.length ? <div className="h-2" /> : null}
                 </div>
             </div>
+            <div
+                role="slider"
+                tabIndex={0}
+                aria-label={t('accessibility.resize_column', {
+                    column: column.title
+                })}
+                aria-orientation="horizontal"
+                aria-valuemin={MIN_FEED_COLUMN_WIDTH}
+                aria-valuemax={MAX_FEED_COLUMN_WIDTH}
+                aria-valuenow={resize.width}
+                aria-valuetext={`${resize.width} pixels`}
+                data-resizing={resize.resizing ? '' : undefined}
+                className="absolute top-0 right-0 z-30 h-full w-1.5 cursor-col-resize touch-none outline-none after:absolute after:inset-y-1.5 after:left-1/2 after:w-0.5 after:-translate-x-1/2 after:rounded-full after:content-[''] hover:after:bg-(--vrcx-0-resize-accent) focus-visible:after:bg-(--vrcx-0-resize-accent) data-[resizing]:after:bg-(--vrcx-0-resize-accent-active)"
+                {...resize.handlers}
+            />
         </section>
     );
 }

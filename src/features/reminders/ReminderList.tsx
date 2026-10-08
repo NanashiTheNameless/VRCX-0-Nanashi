@@ -2,6 +2,7 @@ import type { TFunction } from 'i18next';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { formatDateFilter } from '@/lib/dateTime';
 import {
     commands,
     type Reminder,
@@ -39,7 +40,7 @@ export function describeReminderTrigger(
         case 'playerJoined':
             return t(`${P}.trigger_joined`, { name: trigger.displayName });
         case 'time': {
-            const at = new Date(trigger.at).toLocaleString();
+            const at = formatDateFilter(trigger.at, 'long');
             return trigger.repeatMinutes
                 ? t(`${P}.trigger_time_repeat`, {
                       at,

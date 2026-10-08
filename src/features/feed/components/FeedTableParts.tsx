@@ -26,7 +26,7 @@ import type {
 } from '@/components/feed/feedTypes';
 import { LaunchModeContextMenuGroup } from '@/components/launch/LaunchModeContextMenuGroup';
 import { resolveFriendPresenceLocation } from '@/domain/friends/presence';
-import { formatDateFilter, formatDateTime } from '@/lib/dateTime';
+import { formatDateFilter } from '@/lib/dateTime';
 import { useKnownUserFact } from '@/lib/useKnownUser';
 import { cn } from '@/lib/utils';
 import userProfileRepository from '@/repositories/userProfileRepository';
@@ -37,6 +37,7 @@ import {
     openWorldDialog
 } from '@/services/dialogService';
 import { userImage } from '@/services/entityMediaService';
+import { dateFromUnknown } from '@/shared/utils/dateTime';
 import { parseLocation } from '@/shared/utils/location';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -51,26 +52,22 @@ import {
     ContextMenuTrigger
 } from '@/ui/shadcn/context-menu';
 
+import { isSameLocalDay } from '../feedTimeDisplay';
 import { FeedExpandedRow } from './FeedExpandedRow';
 
-function formatTimestampParts(value: string | null | undefined) {
-    if (!value) {
-        return { date: '-', time: '' };
+function formatTimestampShort(
+    value: string | null | undefined,
+    nowMs = Date.now()
+) {
+    const parsed = value ? dateFromUnknown(value) : null;
+    if (!parsed) {
+        return '-';
     }
 
-    const date = formatDateTime(value, { month: 'short', day: 'numeric' });
-    if (date === '-') {
-        return { date: '-', time: '' };
-    }
-
-    const time = formatDateTime(value, {
-        hour: 'numeric',
-        minute: '2-digit'
-    })
-        .replace(' AM', 'am')
-        .replace(' PM', 'pm');
-
-    return { date, time };
+    return formatDateFilter(
+        value,
+        isSameLocalDay(parsed.getTime(), nowMs) ? 'time' : 'short'
+    );
 }
 
 function formatTimestampLong(value: string | null | undefined) {
@@ -451,5 +448,5 @@ export {
     FeedUserLink,
     DataTableSortButton as SortButton,
     formatTimestampLong,
-    formatTimestampParts
+    formatTimestampShort
 };

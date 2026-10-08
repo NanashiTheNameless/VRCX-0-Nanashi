@@ -31,6 +31,11 @@ import { MINUTES_PER_DAY } from '@/shared/constants/time';
 import { TRUST_COLOR_DEFAULTS } from '@/shared/constants/trustColors';
 import { DEFAULT_GENERIC_WEBHOOK_FIELDS } from '@/shared/constants/webhook';
 import {
+    DEFAULT_DATE_FORMAT,
+    normalizeDateFormatPreset,
+    type DateFormatPreset
+} from '@/shared/utils/dateTime';
+import {
     USER_NAME_COLOUR_STYLES,
     type UserNameColourStyle
 } from '@/shared/utils/entityMedia';
@@ -341,6 +346,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     weekStartsOn: 1,
     dtIsoFormat: false,
     dtHour12: true,
+    dtDateFormat: DEFAULT_DATE_FORMAT as DateFormatPreset,
     hideUserNotes: false,
     hideUserMemos: false,
     friendLogNotificationDot: true,
@@ -548,6 +554,7 @@ export function normalizePreferenceSnapshot(snapshot: unknown = {}) {
         weekStartsOn: normalizeWeekStartsOn(next.weekStartsOn),
         dtIsoFormat: normalizeBool(next.dtIsoFormat),
         dtHour12: normalizeBool(next.dtHour12),
+        dtDateFormat: normalizeDateFormatPreset(next.dtDateFormat),
         hideUserNotes: normalizeBool(next.hideUserNotes),
         hideUserMemos: normalizeBool(next.hideUserMemos),
         friendLogNotificationDot: normalizeBool(next.friendLogNotificationDot),

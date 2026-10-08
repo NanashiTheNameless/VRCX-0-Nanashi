@@ -57,8 +57,8 @@ describe('UserDialogActivitySummaryPanel', () => {
         const trigger = screen.getByRole('button', {
             name: /dialog.user.info.unfriended/
         });
-        expect(trigger.textContent).toContain('2026');
-        expect(trigger.textContent).not.toContain('2024');
+        expect(trigger.textContent).toContain('/26');
+        expect(trigger.textContent).not.toContain('/24');
         fireEvent.click(trigger);
         const popup = await screen.findByRole('dialog', {
             name: 'dialog.user.info.relationship_history'

@@ -18,7 +18,8 @@ describe('feedTimeDisplay', () => {
             locale: 'zh-CN',
             dateCulture: 'en-gb',
             dateIsoFormat: false,
-            dateHour12: false
+            dateHour12: false,
+            dateFormat: 'locale'
         });
     });
 
@@ -39,16 +40,46 @@ describe('feedTimeDisplay', () => {
         expect(formatFeedExactTime(value, 'short')).toBe('2026年6月4日 7:20');
     });
 
-    it('uses localized short time for exact feed column labels', () => {
-        const value = '2026-06-04T07:20:02';
+    it('shows only the time for exact feed column labels from today', () => {
+        expect(
+            resolveFeedColumnTimeDisplay({
+                mode: 'exact',
+                nowMs: BASE_TIME,
+                t: translate,
+                value: '2026-06-04T07:20:02'
+            }).label
+        ).toBe('7:20');
+    });
+
+    it('keeps the full date for exact feed column labels from earlier days', () => {
+        expect(
+            resolveFeedColumnTimeDisplay({
+                mode: 'exact',
+                nowMs: BASE_TIME,
+                t: translate,
+                value: '2026-06-03T07:20:02'
+            }).label
+        ).toBe('2026年6月3日 7:20');
+    });
+
+    it('follows the selected date format for exact feed column labels', () => {
+        useShellStore.setState({ dateFormat: 'time-mdy', dateHour12: true });
 
         expect(
             resolveFeedColumnTimeDisplay({
                 mode: 'exact',
                 nowMs: BASE_TIME,
                 t: translate,
-                value
+                value: '2026-06-03T19:20:02'
             }).label
-        ).toBe('2026年6月4日 7:20');
+        ).toBe('07:20:02 PM 06/03/26');
+        expect(
+            resolveFeedColumnTimeDisplay({
+                mode: 'exact',
+                nowMs: BASE_TIME,
+                t: translate,
+                value: '2026-06-04T07:20:02'
+            }).label
+        ).toBe('07:20:02 AM');
     });
 });

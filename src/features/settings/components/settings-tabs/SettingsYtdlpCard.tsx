@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { formatDateFilter } from '@/lib/dateTime';
 import {
     commands,
     type YtdlpSettings,
@@ -311,9 +312,10 @@ export function SettingsYtdlpCard() {
                         {status.cookieExpiry > 0 && (
                             <p>
                                 {t(`${P}.cookie_expiry`, {
-                                    time: new Date(
-                                        status.cookieExpiry * 1000
-                                    ).toLocaleString()
+                                    time: formatDateFilter(
+                                        status.cookieExpiry * 1000,
+                                        'long'
+                                    )
                                 })}
                             </p>
                         )}

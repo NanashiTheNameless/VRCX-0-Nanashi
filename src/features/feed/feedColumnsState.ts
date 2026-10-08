@@ -29,8 +29,8 @@ export type FeedColumnConfig = {
     feedTypes: FeedFilterType[];
 };
 
-const MIN_COLUMN_WIDTH = 280;
-const MAX_COLUMN_WIDTH = 420;
+export const MIN_FEED_COLUMN_WIDTH = 240;
+export const MAX_FEED_COLUMN_WIDTH = 960;
 const DEFAULT_COLUMN_WIDTH = 320;
 export const MAX_FEED_COLUMNS = 8;
 
@@ -79,12 +79,19 @@ function createColumnId(): string {
     return `col_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
 }
 
+export function clampFeedColumnWidth(width: number): number {
+    return Math.min(
+        MAX_FEED_COLUMN_WIDTH,
+        Math.max(MIN_FEED_COLUMN_WIDTH, Math.round(width))
+    );
+}
+
 function sanitizeWidth(value: unknown): number {
     const width = Number.parseInt(String(value ?? ''), 10);
     if (!Number.isFinite(width)) {
         return DEFAULT_COLUMN_WIDTH;
     }
-    return Math.min(MAX_COLUMN_WIDTH, Math.max(MIN_COLUMN_WIDTH, width));
+    return clampFeedColumnWidth(width);
 }
 
 function sanitizeFeedTypes(value: unknown): FeedFilterType[] {

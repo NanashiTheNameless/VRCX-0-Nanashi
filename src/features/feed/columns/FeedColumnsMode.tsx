@@ -226,6 +226,13 @@ export function FeedColumnsMode({
             setSelectedColumnId(nextColumns[0]?.id || '');
         }
     };
+    const resizeColumn = (columnId: string, width: number) => {
+        onColumnsChange(
+            columns.map((column) =>
+                column.id === columnId ? { ...column, width } : column
+            )
+        );
+    };
     const restorePresetColumns = () => {
         const presetColumns = createFeedColumnsPresetConfig();
         onColumnsChange(presetColumns);
@@ -338,6 +345,7 @@ export function FeedColumnsMode({
                                                 onOpenPreviousInstances={
                                                     previousInstancesDialog.openPreviousInstancesForLocation
                                                 }
+                                                onResize={resizeColumn}
                                                 timeDisplayMode={
                                                     timeDisplayMode
                                                 }

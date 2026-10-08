@@ -26,7 +26,7 @@ import {
     FeedUserLink,
     SortButton,
     formatTimestampLong,
-    formatTimestampParts
+    formatTimestampShort
 } from './FeedTableParts';
 
 function ExpanderCell({ row }: { row: AppRow<FeedRow> }) {
@@ -54,15 +54,12 @@ function ExpanderCell({ row }: { row: AppRow<FeedRow> }) {
 }
 
 function DateCell({ row }: { row: AppRow<FeedRow> }) {
-    const { date, time } = formatTimestampParts(row.original.created_at);
+    const label = formatTimestampShort(row.original.created_at);
     return (
         <Tooltip>
             <TooltipTrigger
                 render={
-                    <span className="text-sm">
-                        <span>{date}</span>
-                        {time ? <span className="ml-1">{time}</span> : null}
-                    </span>
+                    <span className="text-sm whitespace-nowrap">{label}</span>
                 }
             />
             <TooltipContent side="right">
@@ -127,6 +124,7 @@ export function useFeedColumns(meta: FeedTableMeta): FeedColumns {
             },
             {
                 id: 'created_at',
+                size: 200,
                 enableHiding: false,
                 accessorFn: (row: FeedRow) =>
                     getFeedTableSortValue(row, 'created_at', meta),

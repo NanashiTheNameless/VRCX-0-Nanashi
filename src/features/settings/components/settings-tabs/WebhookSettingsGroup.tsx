@@ -2,6 +2,7 @@ import { CircleHelpIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { formatDateFilter } from '@/lib/dateTime';
 import type {
     NotificationWebhookFormat,
     WebhookDeliveryChannelSnapshot,
@@ -436,7 +437,7 @@ function WebhookDeliveryRecordStatus({
                               )
                             : `HTTP ${record.status}`,
                     attempts: record.attempts,
-                    time: new Date(record.observedAt).toLocaleString()
+                    time: formatDateFilter(record.observedAt, 'long')
                 }
             )}
         </div>

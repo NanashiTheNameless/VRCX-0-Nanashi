@@ -5,6 +5,10 @@ import {
     setTrayIconNotification
 } from '@/services/shellIntegrationService';
 import { DEFAULT_THEME_COLOR_KEY } from '@/shared/constants/themes';
+import {
+    DEFAULT_DATE_FORMAT,
+    type DateFormatPreset
+} from '@/shared/utils/dateTime';
 import { normalizeThemeColor } from '@/shared/utils/themeColor';
 
 const MIN_NAV_WIDTH = 64;
@@ -58,6 +62,7 @@ type ShellStore = {
     dateCulture: string;
     dateIsoFormat: boolean;
     dateHour12: boolean;
+    dateFormat: DateFormatPreset;
     notifiedMenus: string[];
     lastSettingsTab: string;
     shortcutHintsVisible: boolean;
@@ -87,6 +92,7 @@ type ShellStore = {
         dateCulture: string;
         dateIsoFormat: boolean;
         dateHour12: boolean;
+        dateFormat?: DateFormatPreset;
     }): void;
     setLastSettingsTab(lastSettingsTab: string): void;
     setShortcutHintsVisible(visible: boolean): void;
@@ -143,6 +149,7 @@ const initialState: ShellStoreState = {
     dateCulture: 'en-gb',
     dateIsoFormat: false,
     dateHour12: false,
+    dateFormat: DEFAULT_DATE_FORMAT,
     notifiedMenus: [],
     lastSettingsTab: 'system',
     shortcutHintsVisible: false,
@@ -260,12 +267,13 @@ export const useShellStore = create<ShellStore>((set, get) => ({
     setZoomLevel(zoomLevel) {
         set({ zoomLevel });
     },
-    setDatePreferences({ dateCulture, dateIsoFormat, dateHour12 }) {
-        set({
+    setDatePreferences({ dateCulture, dateIsoFormat, dateHour12, dateFormat }) {
+        set((state) => ({
             dateCulture: dateCulture || 'en-gb',
             dateIsoFormat,
-            dateHour12
-        });
+            dateHour12,
+            dateFormat: dateFormat ?? state.dateFormat
+        }));
     },
     setLastSettingsTab(lastSettingsTab) {
         set({ lastSettingsTab });

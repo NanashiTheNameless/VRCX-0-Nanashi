@@ -30,6 +30,7 @@ export function SettingsInterfaceTab() {
             showNewDashboardButton: state.showNewDashboardButton,
             dtHour12: state.dtHour12,
             dtIsoFormat: state.dtIsoFormat,
+            dtDateFormat: state.dtDateFormat,
             weekStartsOn: state.weekStartsOn,
             feedTimeDisplayMode: state.feedTimeDisplayMode,
             randomUserColours: state.randomUserColours,
@@ -59,6 +60,7 @@ export function SettingsInterfaceTab() {
         onOpenTableLimits,
         onHour12Change,
         onIsoFormatChange,
+        onDateFormatChange,
         onWeekStartsOnChange,
         onFeedTimeDisplayModeChange,
         onRandomUserColoursChange,
@@ -101,6 +103,7 @@ export function SettingsInterfaceTab() {
                 onOpenTableLimits={onOpenTableLimits}
                 onHour12Change={onHour12Change}
                 onIsoFormatChange={onIsoFormatChange}
+                onDateFormatChange={onDateFormatChange}
                 onWeekStartsOnChange={onWeekStartsOnChange}
                 onFeedTimeDisplayModeChange={onFeedTimeDisplayModeChange}
             />

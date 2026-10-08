@@ -28,7 +28,7 @@ vi.mock('./FeedTableParts', () => ({
     FeedExpandedRow: () => <div>expanded detail</div>,
     FeedUserLink: () => <button type="button">user</button>,
     formatTimestampLong: () => 'long time',
-    formatTimestampParts: () => ({ date: 'time', time: '' })
+    formatTimestampShort: () => 'time'
 }));
 
 import { FeedVirtualListShell } from './FeedVirtualListShell';

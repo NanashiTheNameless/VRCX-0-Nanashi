@@ -34,6 +34,7 @@ vi.mock('@/state/modalStore', () => ({
     useModalStore: { getState: () => ({ confirm: mocks.confirm }) }
 }));
 vi.mock('react-i18next', () => ({
+    initReactI18next: { type: '3rdParty', init: () => {} },
     useTranslation: () => ({
         t: (key: string, values?: Record<string, unknown>) =>
             key.split('.').at(-1) + (values ? JSON.stringify(values) : '')

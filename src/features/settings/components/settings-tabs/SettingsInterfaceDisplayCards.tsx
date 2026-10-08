@@ -1,5 +1,10 @@
 import { useTranslation } from 'react-i18next';
 
+import {
+    DATE_FORMAT_PRESETS,
+    type DateFormatPreset,
+    formatDatePattern
+} from '@/shared/utils/dateTime';
 import type { PreferencesSnapshot } from '@/state/preferencesStore';
 import { Button } from '@/ui/shadcn/button';
 import {
@@ -26,6 +31,7 @@ type SettingsInterfaceDisplayPrefs = Pick<
     | 'showNewDashboardButton'
     | 'dtHour12'
     | 'dtIsoFormat'
+    | 'dtDateFormat'
     | 'weekStartsOn'
     | 'feedTimeDisplayMode'
 >;
@@ -40,6 +46,7 @@ type SettingsInterfaceDisplayCardsProps = {
     | 'onOpenTableLimits'
     | 'onHour12Change'
     | 'onIsoFormatChange'
+    | 'onDateFormatChange'
     | 'onWeekStartsOnChange'
     | 'onFeedTimeDisplayModeChange'
 >;
@@ -48,6 +55,23 @@ const timeFormatOptions = [
     ['12', 'view.settings.appearance.timedate.time_format_12'],
     ['24', 'view.settings.appearance.timedate.time_format_24']
 ] as const;
+
+const DATE_FORMAT_SAMPLE = new Date(2026, 11, 31, 21, 5, 9);
+
+function dateFormatOptionLabel(
+    preset: DateFormatPreset,
+    hour12: boolean,
+    localeLabel: string
+) {
+    if (preset === 'locale') {
+        return localeLabel;
+    }
+    return formatDatePattern(DATE_FORMAT_SAMPLE, preset, hour12, {
+        date: true,
+        time: true,
+        seconds: true
+    });
+}
 
 const weekStartOptions = [
     ['1', 'common.days.monday'],
@@ -64,10 +88,19 @@ export function SettingsInterfaceDisplayCards({
     onOpenTableLimits,
     onHour12Change,
     onIsoFormatChange,
+    onDateFormatChange,
     onWeekStartsOnChange,
     onFeedTimeDisplayModeChange
 }: SettingsInterfaceDisplayCardsProps) {
     const { t } = useTranslation();
+    const dateFormatOptions = DATE_FORMAT_PRESETS.map((preset) => ({
+        value: preset,
+        label: dateFormatOptionLabel(
+            preset,
+            prefs.dtHour12,
+            t('view.settings.appearance.timedate.date_format_locale')
+        )
+    }));
 
     return (
         <>
@@ -190,6 +223,43 @@ export function SettingsInterfaceDisplayCards({
                                 {timeFormatOptions.map(([value, labelKey]) => (
                                     <SelectItem key={value} value={value}>
                                         {t(labelKey)}
+                                    </SelectItem>
+                                ))}
+                            </SelectGroup>
+                        </SelectContent>
+                    </Select>
+                </Field>
+
+                <Field
+                    label={t('view.settings.appearance.timedate.date_format')}
+                    description={t(
+                        'view.settings.appearance.timedate.date_format_description'
+                    )}
+                    controlId="settings-date-format"
+                >
+                    <Select
+                        value={prefs.dtDateFormat}
+                        items={dateFormatOptions}
+                        onValueChange={(value) => {
+                            if (value !== null) {
+                                onDateFormatChange(value);
+                            }
+                        }}
+                    >
+                        <SelectTrigger
+                            id="settings-date-format"
+                            className="w-56"
+                        >
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectGroup>
+                                {dateFormatOptions.map((option) => (
+                                    <SelectItem
+                                        key={option.value}
+                                        value={option.value}
+                                    >
+                                        {option.label}
                                     </SelectItem>
                                 ))}
                             </SelectGroup>

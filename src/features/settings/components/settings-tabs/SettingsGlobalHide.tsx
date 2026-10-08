@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { formatDateFilter } from '@/lib/dateTime';
 import { commands, type GlobalHideStatus } from '@/platform/tauri/bindings';
 import { useModalStore } from '@/state/modalStore';
 import { Button } from '@/ui/shadcn/button';
@@ -110,9 +111,10 @@ export function SettingsGlobalHide() {
                     ) : status.backoffUntil ? (
                         <p>
                             {t(`${P}.backoff`, {
-                                until: new Date(
-                                    status.backoffUntil
-                                ).toLocaleString()
+                                until: formatDateFilter(
+                                    status.backoffUntil,
+                                    'long'
+                                )
                             })}
                         </p>
                     ) : null}

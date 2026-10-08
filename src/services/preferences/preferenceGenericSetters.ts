@@ -8,6 +8,7 @@ import {
 } from '@/shared/constants/fonts';
 import { MINUTES_PER_DAY } from '@/shared/constants/time';
 import { TRUST_COLOR_DEFAULTS } from '@/shared/constants/trustColors';
+import { normalizeDateFormatPreset } from '@/shared/utils/dateTime';
 import {
     isValidTrustColor,
     normalizeTrustColors
@@ -347,6 +348,20 @@ export async function setFeedPersistenceDisabledPreference(disabled: boolean) {
     useFeedLiveStore.getState().resetFeedLive();
     patchPreferenceValue('feedPersistenceDisabled', disabled);
     publishPreferenceChanged('feedPersistenceDisabled', disabled);
+}
+
+export async function setDateFormatPreference(value: unknown) {
+    const dateFormat = normalizeDateFormatPreset(value);
+    await configRepository.setString('dtDateFormat', dateFormat);
+    const state = useShellStore.getState();
+    state.setDatePreferences({
+        dateCulture: state.dateCulture,
+        dateIsoFormat: state.dateIsoFormat,
+        dateHour12: state.dateHour12,
+        dateFormat
+    });
+    patchPreferenceValue('dtDateFormat', dateFormat);
+    publishPreferenceChanged('dtDateFormat', dateFormat);
 }
 
 export async function setStringConfigPreference(

@@ -11,6 +11,7 @@ export {
     setCloseToTrayPreference,
     setCropInstancePrintsPreference,
     setDataTableStripedPreference,
+    setDateFormatPreference,
     setFeedPersistenceDisabledPreference,
     setGameLogPersistenceDisabledPreference,
     setIntConfigPreference,

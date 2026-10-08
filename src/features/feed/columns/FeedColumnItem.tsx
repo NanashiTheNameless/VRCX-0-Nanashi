@@ -52,7 +52,7 @@ function FeedColumnTime({ label, title }: { label: string; title: string }) {
             <Tooltip>
                 <TooltipTrigger
                     render={
-                        <span className="text-muted-foreground text-[11px] tabular-nums">
+                        <span className="text-muted-foreground text-[11px] whitespace-nowrap tabular-nums">
                             {label}
                         </span>
                     }

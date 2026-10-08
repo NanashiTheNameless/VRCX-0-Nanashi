@@ -30,7 +30,7 @@ import {
     FeedExpandedRow,
     FeedUserLink,
     formatTimestampLong,
-    formatTimestampParts
+    formatTimestampShort
 } from './FeedTableParts';
 
 type FeedVirtualListShellProps = {
@@ -121,14 +121,13 @@ function FeedListHeader({
 }
 
 function FeedListTime({ row }: { row: FeedRow }) {
-    const { date, time } = formatTimestampParts(row.created_at);
+    const label = formatTimestampShort(row.created_at);
     return (
         <Tooltip>
             <TooltipTrigger
                 render={
-                    <span className="text-muted-foreground text-sm tabular-nums">
-                        <span>{date}</span>
-                        {time ? <span className="ml-1">{time}</span> : null}
+                    <span className="text-muted-foreground truncate text-sm whitespace-nowrap tabular-nums">
+                        {label}
                     </span>
                 }
             />

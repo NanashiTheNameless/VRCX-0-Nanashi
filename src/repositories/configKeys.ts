@@ -72,6 +72,7 @@ export const ConfigKeys = defineConfigKeys({
     cjkFontPack: { type: 'string', default: 'system' },
     dtHour12: { type: 'bool', default: true },
     dtIsoFormat: { type: 'bool', default: false },
+    dtDateFormat: { type: 'string', default: 'time-mdy' },
     hideNicknames: { type: 'bool', default: false },
     showInstanceIdInLocation: { type: 'bool', default: false },
     isAgeGatedInstancesVisible: { type: 'bool', default: true },

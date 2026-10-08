@@ -1,3 +1,5 @@
+import { setDateFormatPreference } from '@/services/preferencesService';
+import { normalizeDateFormatPreset } from '@/shared/utils/dateTime';
 import type { TrustColorKey } from '@/shared/utils/trustColors';
 import {
     normalizeFeedTimeDisplayMode,
@@ -261,6 +263,12 @@ export function buildInterfaceSection({
         },
         onIsoFormatChange: (checked: boolean) => {
             saveBoolPreference('dtIsoFormat', 'dtIsoFormat', checked);
+        },
+        onDateFormatChange: (value: string) => {
+            const nextValue = normalizeDateFormatPreset(value);
+            savePreferenceValue('dtDateFormat', nextValue, () =>
+                setDateFormatPreference(nextValue)
+            );
         },
         onWeekStartsOnChange: (value: string) => {
             const nextValue = Number.parseInt(value, 10);

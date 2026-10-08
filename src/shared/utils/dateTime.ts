@@ -24,6 +24,25 @@ export const DEFAULT_TIME_UNIT_LABELS = Object.freeze({
 });
 
 type DateFilterFormat = 'long' | 'short' | 'time' | 'date';
+
+export const DATE_FORMAT_PRESETS = Object.freeze([
+    'time-mdy',
+    'time-dmy',
+    'time-ymd',
+    'mdy-time',
+    'dmy-time',
+    'ymd-time',
+    'locale'
+] as const);
+export type DateFormatPreset = (typeof DATE_FORMAT_PRESETS)[number];
+export const DEFAULT_DATE_FORMAT: DateFormatPreset = 'time-mdy';
+
+export function normalizeDateFormatPreset(value: unknown): DateFormatPreset {
+    return (
+        DATE_FORMAT_PRESETS.find((preset) => preset === value) ??
+        DEFAULT_DATE_FORMAT
+    );
+}
 type TimeUnitLabels = {
     -readonly [Unit in keyof typeof DEFAULT_TIME_UNIT_LABELS]: string;
 };
@@ -33,11 +52,12 @@ type DateFilterPreferences = {
     dateCulture?: string | null;
     dateIsoFormat?: boolean;
     dateHour12?: boolean;
+    dateFormat?: DateFormatPreset;
 };
 
 type DateTimeFormatPreferences = Pick<
     DateFilterPreferences,
-    'appLocale' | 'dateCulture' | 'dateHour12'
+    'appLocale' | 'dateCulture' | 'dateHour12' | 'dateFormat'
 > & {
     hour12?: boolean;
     fallback?: string;
@@ -73,6 +93,96 @@ export function timestampMsFromValue(value: unknown) {
     }
     const parsed = Date.parse(String(value));
     return Number.isFinite(parsed) ? parsed : 0;
+}
+
+type DatePatternParts = {
+    date: boolean;
+    time: boolean;
+    seconds: boolean;
+};
+
+function padTwo(value: number) {
+    return String(value).padStart(2, '0');
+}
+
+function formatPatternDate(date: Date, preset: DateFormatPreset) {
+    const month = padTwo(date.getMonth() + 1);
+    const day = padTwo(date.getDate());
+    if (preset.includes('ymd')) {
+        return `${date.getFullYear()}-${month}-${day}`;
+    }
+    const year = padTwo(date.getFullYear() % 100);
+    return preset.includes('dmy')
+        ? `${day}/${month}/${year}`
+        : `${month}/${day}/${year}`;
+}
+
+function formatPatternTime(date: Date, hour12: boolean, seconds: boolean) {
+    const hours = date.getHours();
+    const clock = [
+        padTwo(hour12 ? hours % 12 || 12 : hours),
+        padTwo(date.getMinutes()),
+        ...(seconds ? [padTwo(date.getSeconds())] : [])
+    ].join(':');
+    if (!hour12) {
+        return clock;
+    }
+    return `${clock} ${hours < 12 ? 'AM' : 'PM'}`;
+}
+
+export function formatDatePattern(
+    date: Date,
+    preset: Exclude<DateFormatPreset, 'locale'>,
+    hour12: boolean,
+    parts: DatePatternParts
+) {
+    const datePart = parts.date ? formatPatternDate(date, preset) : '';
+    const timePart = parts.time
+        ? formatPatternTime(date, hour12, parts.seconds)
+        : '';
+    const ordered = preset.startsWith('time-')
+        ? [timePart, datePart]
+        : [datePart, timePart];
+    return ordered.filter(Boolean).join(' ');
+}
+
+function resolvePatternParts(
+    options: Intl.DateTimeFormatOptions
+): DatePatternParts | null {
+    if (
+        options.weekday !== undefined ||
+        options.era !== undefined ||
+        options.timeZone !== undefined ||
+        options.timeZoneName !== undefined ||
+        options.dayPeriod !== undefined ||
+        options.fractionalSecondDigits !== undefined
+    ) {
+        return null;
+    }
+    const hasDate =
+        options.dateStyle !== undefined ||
+        (options.month !== undefined && options.day !== undefined);
+    const hasTime =
+        options.timeStyle !== undefined || options.hour !== undefined;
+    if (
+        (!hasDate &&
+            (options.year !== undefined ||
+                options.month !== undefined ||
+                options.day !== undefined)) ||
+        (!hasTime &&
+            (options.minute !== undefined || options.second !== undefined)) ||
+        (!hasDate && !hasTime)
+    ) {
+        return null;
+    }
+    return {
+        date: hasDate,
+        time: hasTime,
+        seconds:
+            hasDate ||
+            options.second !== undefined ||
+            (options.timeStyle !== undefined && options.timeStyle !== 'short')
+    };
 }
 
 function toLocalClock(
@@ -150,6 +260,14 @@ export function formatDateFilterWithPreferences(
     if (dateIsoFormat && format === 'long') {
         return formatIsoDateTime(dt);
     }
+    const datePreset = preferences.dateFormat ?? 'locale';
+    if (datePreset !== 'locale') {
+        return formatDatePattern(dt, datePreset, dateHour12, {
+            date: format !== 'time',
+            time: format !== 'date',
+            seconds: true
+        });
+    }
     if (format === 'long') {
         return toLocalLong(dt, dateFormat, dateHour12);
     }
@@ -184,6 +302,13 @@ export function formatDateTimeWithPreferences(
         preferences.appLocale || preferences.dateCulture
     );
     const hour12 = preferences.hour12 ?? preferences.dateHour12 ?? false;
+    const datePreset = preferences.dateFormat ?? 'locale';
+    if (datePreset !== 'locale') {
+        const parts = resolvePatternParts(options);
+        if (parts) {
+            return formatDatePattern(date, datePreset, hour12, parts);
+        }
+    }
     const formatOptions = { ...options };
     if (
         typeof formatOptions.month !== 'undefined' &&

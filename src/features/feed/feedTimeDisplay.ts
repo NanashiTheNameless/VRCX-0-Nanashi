@@ -30,6 +30,12 @@ export function formatFeedRelativeTime(
     });
 }
 
+export function isSameLocalDay(timestampMs: number, nowMs: number) {
+    return (
+        new Date(timestampMs).toDateString() === new Date(nowMs).toDateString()
+    );
+}
+
 export function formatFeedExactTime(
     value: FeedTimestamp,
     format: 'short' | 'long' = 'short'
@@ -39,6 +45,15 @@ export function formatFeedExactTime(
     }
 
     return formatDateFilter(value, format);
+}
+
+function formatFeedCompactTime(value: FeedTimestamp, nowMs: number) {
+    const timestampMs = parseTimestampMs(value);
+    if (timestampMs !== null && isSameLocalDay(timestampMs, nowMs)) {
+        return formatDateFilter(value, 'time');
+    }
+
+    return formatFeedExactTime(value, 'short');
 }
 
 export function resolveFeedColumnTimeDisplay({
@@ -60,7 +75,7 @@ export function resolveFeedColumnTimeDisplay({
     }
 
     return {
-        label: formatFeedExactTime(value, 'short'),
-        title: formatFeedRelativeTime(value, nowMs, t)
+        label: formatFeedCompactTime(value, nowMs),
+        title: `${formatFeedExactTime(value, 'long')} (${formatFeedRelativeTime(value, nowMs, t)})`
     };
 }

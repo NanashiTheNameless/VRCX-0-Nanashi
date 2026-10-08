@@ -49,7 +49,7 @@ describe('feed columns state helpers', () => {
         ).toEqual({
             id: expect.any(String),
             title: 'Custom',
-            width: 420,
+            width: 960,
             friendScope: {
                 kind: 'favorites',
                 groupKeys: ['group-a', 'group-b']

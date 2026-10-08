@@ -19,6 +19,10 @@ import {
 } from '@/shared/constants/settings';
 import { MINUTES_PER_DAY } from '@/shared/constants/time';
 import { DEFAULT_GENERIC_WEBHOOK_FIELDS } from '@/shared/constants/webhook';
+import {
+    DEFAULT_DATE_FORMAT,
+    normalizeDateFormatPreset
+} from '@/shared/utils/dateTime';
 import { normalizeTrustColors } from '@/shared/utils/trustColors';
 import {
     normalizeAutoDeletePrintsLimit,
@@ -220,6 +224,7 @@ export async function loadPreferenceSnapshot() {
         systemWindowFrame,
         dtIsoFormat,
         dtHour12,
+        dtDateFormat,
         trustColor,
         currentCulture,
         proxyEnabledRaw,
@@ -388,6 +393,7 @@ export async function loadPreferenceSnapshot() {
         storageRepository.getString('VRCX_SystemWindowFrame', 'false'),
         configRepository.getBool('dtIsoFormat', false),
         configRepository.getBool('dtHour12', true),
+        configRepository.getString('dtDateFormat', DEFAULT_DATE_FORMAT),
         configRepository.getObject('VRCX_trustColor', null),
         getPrefetchedSystemCulture() ??
             commands
@@ -468,7 +474,8 @@ export async function loadPreferenceSnapshot() {
     useShellStore.getState().setDatePreferences({
         dateCulture: String(currentCulture || ''),
         dateIsoFormat: Boolean(dtIsoFormat),
-        dateHour12: Boolean(dtHour12)
+        dateHour12: Boolean(dtHour12),
+        dateFormat: normalizeDateFormatPreset(dtDateFormat)
     });
     const normalizedRecentActionCooldownMinutes = Number.isFinite(
         recentActionCooldownMinutes
@@ -652,6 +659,7 @@ export async function loadPreferenceSnapshot() {
         systemWindowFrame: systemWindowFrame === 'true',
         dtIsoFormat: Boolean(dtIsoFormat),
         dtHour12: Boolean(dtHour12),
+        dtDateFormat: normalizeDateFormatPreset(dtDateFormat),
         trustColor: normalizeTrustColors(trustColor),
         navPanelWidth: normalizeNavWidth(navPanelWidth),
         navIsCollapsed: Boolean(navIsCollapsed),

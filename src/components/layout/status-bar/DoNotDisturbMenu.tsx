@@ -2,6 +2,7 @@ import { BellOffIcon } from 'lucide-react';
 import { type ReactElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { formatClock } from '@/lib/dateTime';
 import { cn } from '@/lib/utils';
 import {
     commands,
@@ -41,10 +42,7 @@ export function DoNotDisturbMenu(): ReactElement {
     }
     if (endsAt && mode !== 'untilStopped') {
         tooltip = t('status_bar.do_not_disturb_until', {
-            time: new Date(endsAt).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit'
-            })
+            time: formatClock(endsAt)
         });
     }
 

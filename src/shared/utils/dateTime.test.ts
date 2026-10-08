@@ -5,6 +5,7 @@ import {
     formatDateFilterWithPreferences,
     formatDateTimeWithPreferences,
     formatRelativeTimeWithPreferences,
+    normalizeDateFormatPreset,
     timeToTextWithLabels
 } from './dateTime';
 
@@ -195,6 +196,81 @@ describe('dateTime utils', () => {
                 { appLocale: 'en' }
             )
         ).toBe('June 2026');
+    });
+
+    it('formats date filters with the default time-first pattern', () => {
+        const preferences = {
+            appLocale: 'zh-CN',
+            dateFormat: 'time-mdy',
+            dateHour12: true
+        } as const;
+        expect(
+            formatDateFilterWithPreferences(LOCAL_DATE, 'long', preferences)
+        ).toBe('09:20:02 AM 06/04/26');
+        expect(
+            formatDateFilterWithPreferences(LOCAL_DATE, 'short', preferences)
+        ).toBe('09:20:02 AM 06/04/26');
+        expect(
+            formatDateFilterWithPreferences(LOCAL_DATE, 'time', preferences)
+        ).toBe('09:20:02 AM');
+        expect(
+            formatDateFilterWithPreferences(LOCAL_DATE, 'date', preferences)
+        ).toBe('06/04/26');
+        expect(
+            formatDateFilterWithPreferences('2026-06-04T21:05:09', 'long', {
+                ...preferences,
+                dateFormat: 'ymd-time',
+                dateHour12: false
+            })
+        ).toBe('2026-06-04 21:05:09');
+        expect(
+            formatDateFilterWithPreferences('2026-06-04T00:05:09', 'long', {
+                ...preferences,
+                dateFormat: 'dmy-time'
+            })
+        ).toBe('04/06/26 12:05:09 AM');
+    });
+
+    it('applies the date pattern to plain date and time options only', () => {
+        const preferences = {
+            appLocale: 'en',
+            dateFormat: 'time-dmy',
+            dateHour12: false
+        } as const;
+        expect(
+            formatDateTimeWithPreferences(
+                LOCAL_DATE,
+                { month: 'short', day: 'numeric', hour: 'numeric' },
+                preferences
+            )
+        ).toBe('09:20:02 04/06/26');
+        expect(
+            formatDateTimeWithPreferences(
+                LOCAL_DATE,
+                { hour: '2-digit', minute: '2-digit' },
+                preferences
+            )
+        ).toBe('09:20');
+        expect(
+            formatDateTimeWithPreferences(
+                LOCAL_DATE,
+                { year: 'numeric', month: 'long' },
+                preferences
+            )
+        ).toBe('June 2026');
+        expect(
+            formatDateTimeWithPreferences(
+                LOCAL_DATE,
+                { weekday: 'long', month: 'short', day: 'numeric' },
+                preferences
+            )
+        ).toBe('Thursday, Jun 4, 2026');
+    });
+
+    it('falls back to the default preset for unknown date formats', () => {
+        expect(normalizeDateFormatPreset('ymd-time')).toBe('ymd-time');
+        expect(normalizeDateFormatPreset('bogus')).toBe('time-mdy');
+        expect(normalizeDateFormatPreset(undefined)).toBe('time-mdy');
     });
 
     it('returns fallbacks for empty and invalid dates', () => {
