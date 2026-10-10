@@ -1,0 +1,27 @@
+[package]
+name = "vrcx-0-remote-sync"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true
+description = "RemoteSync protocol and client service"
+
+[dependencies]
+base64 = { workspace = true }
+chrono = { workspace = true }
+ed25519-dalek = { version = "3.0.0", features = ["zeroize"] }
+reqwest = { workspace = true, features = ["json"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+sysinfo = "0.39"
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["time", "rt"] }
+url = { workspace = true }
+zeroize = { workspace = true }
+vrcx-0-http-client = { path = "../http-client" }
+vrcx-0-persistence = { path = "../persistence" }
+vrcx-0-nanashi-website-protocol.workspace = true
+
+[dev-dependencies]
+vrcx-0-persistence = { path = "../persistence", features = ["test-utils"] }
+tokio = { workspace = true, features = ["macros", "rt"] }

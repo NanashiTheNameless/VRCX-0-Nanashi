@@ -12,7 +12,10 @@ import { LaunchDialogHost } from './LaunchDialogHost';
 const mocks = vi.hoisted(() => ({
     copy: vi.fn(),
     resolve: vi.fn(),
-    worldName: 'Idle Merchant 掛機商人（V0.3.1）'
+    worldName: 'Idle Merchant 掛機商人（V0.3.1）',
+    configGetString: vi
+        .fn()
+        .mockResolvedValue('https://vrcx.namelessnanashi.dev')
 }));
 
 vi.mock('@/components/location/useLocationMetadata', () => ({
@@ -26,6 +29,9 @@ vi.mock('@/components/dialogs/InstanceInviteDialog', () => ({
 }));
 vi.mock('@/services/clipboardService', () => ({
     copyTextToClipboard: mocks.copy
+}));
+vi.mock('@/repositories/configRepository', () => ({
+    default: { getString: mocks.configGetString }
 }));
 vi.mock('@/services/launchService', () => ({
     resolveLaunchDialogDetails: mocks.resolve,
@@ -101,6 +107,33 @@ describe('LaunchDialogHost instance sharing', () => {
 });
 
 describe('LaunchDialogHost copy menu', () => {
+    it('offers a RemoteSync instance relay link', async () => {
+        const user = userEvent.setup();
+        render(<LaunchDialogHost />);
+        await waitFor(() =>
+            expect(
+                (
+                    screen.getByRole('button', {
+                        name: 'dialog.launch.share'
+                    }) as HTMLButtonElement
+                ).disabled
+            ).toBe(false)
+        );
+        await user.click(
+            screen.getByRole('button', {
+                name: 'dialog.launch.more_copy_options'
+            })
+        );
+        await user.click(
+            await screen.findByRole('menuitem', {
+                name: 'Copy dialog.launch.copy.vrcx_link'
+            })
+        );
+        expect(mocks.copy.mock.calls[0][0]).toContain(
+            'https://vrcx.namelessnanashi.dev/open/instance/'
+        );
+    });
+
     it('copies the raw instance id from the overflow menu', async () => {
         const user = userEvent.setup();
         render(<LaunchDialogHost />);

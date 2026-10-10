@@ -13,9 +13,17 @@ use vrcx_0_persistence::DatabaseService;
 
 const LOCAL_WORLD_FAVORITE_GROUPS_KEY: &str = "localFavoriteWorldGroups";
 
-/// Fork: read-only access to upstream's shared world collections (import only).
-#[derive(Clone, Default)]
-pub struct LocalWorldCollectionAdapter;
+/// Credential-free read access to public collections on the selected RemoteSync instance.
+#[derive(Clone)]
+pub struct LocalWorldCollectionAdapter {
+    api_origin: String,
+}
+
+impl LocalWorldCollectionAdapter {
+    pub fn new(api_origin: String) -> Self {
+        Self { api_origin }
+    }
+}
 
 impl WorldCollectionRemote for LocalWorldCollectionAdapter {
     fn fetch_collection<'a>(
@@ -23,7 +31,7 @@ impl WorldCollectionRemote for LocalWorldCollectionAdapter {
         id: &'a str,
     ) -> WorldCollectionFuture<'a, WorldCollectionSnapshotResponse> {
         Box::pin(async move {
-            vrcx_0_integrations::world_collections::fetch_world_collection(id)
+            vrcx_0_integrations::world_collections::fetch_world_collection(&self.api_origin, id)
                 .await
                 .map_err(|error| crate::Error::Custom(error.to_string()))
         })

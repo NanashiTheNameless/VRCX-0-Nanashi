@@ -142,9 +142,16 @@ pub struct RuntimeVrchatAuthFailurePayload {
     pub realtime_transport: Option<RuntimeRealtimeTransportEpoch>,
 }
 
+#[derive(Clone, Debug, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteSyncImportedPayload {
+    pub owner_user_id: OwnerId,
+}
+
 runtime_event_payload!(FavoritesChangedPayload, "favoritesChanged");
 runtime_event_payload!(VrcStatusSnapshot, "vrcStatus");
 runtime_event_payload!(RuntimeVrchatAuthFailurePayload, "runtimeVrchatAuthFailure");
+runtime_event_payload!(RemoteSyncImportedPayload, "remoteSyncImported");
 runtime_event_payload!(BackendRuntimeTelemetry, "backendRuntimeTelemetry");
 runtime_event_payload!(RealtimeProjectionSync, "realtimeProjectionSync");
 runtime_event_payload!(FriendProjection, "realtimeFriendProjection");

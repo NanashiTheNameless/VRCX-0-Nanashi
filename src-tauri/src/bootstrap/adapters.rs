@@ -365,6 +365,7 @@ pub(super) fn start_host_services(app: &tauri::AppHandle, state: &AppState) {
     state.runtime_host().start_data_services();
     state.runtime_host().start_game_services();
     state.runtime_host().start_desktop_services();
+    crate::commands::application::remote_sync::start_background_sync(app);
 }
 
 #[derive(Clone)]

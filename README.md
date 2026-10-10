@@ -17,14 +17,28 @@ It is a Rust + Tauri rewrite of VRCX.
 
 - **No telemetry.** Usage stats, heartbeats, crash reporting, the in-app feedback form,
   and community theme install-count pings and download counts are removed entirely.
-- **Shared world collections are import-only.** Collection links from upstream's
-  `worlds.vrcx-0.dev` site can still be opened and imported into a local favorite group,
-  but nothing is uploaded or registered there: sharing your own collections, managing
-  shares, and the silent world registration that ran when copying a world link are
-  removed. Copy URL on a world copies its plain VRChat link.
-- **No vrcx-0.dev share links.** Avatar and instance share actions copy the plain VRChat
-  link instead of creating an `open.vrcx-0.dev` relay link. Relay links from others still
-  open.
+- **RemoteSync relay links.** World, avatar, and instance dialogs can copy links through
+  `vrcx.namelessnanashi.dev/open/...`. World and avatar previews stay in the URL fragment,
+  so preview details are not sent to the website. Plain VRChat links remain available.
+  The legacy `open.vrcx-0.dev` relay host is not accepted.
+- **History sync (RemoteSync), off by default.** Under Settings > History Sync, pair this PC
+  with a RemoteSync server (the official one or your own) to keep an end-to-end encrypted copy
+  of your history there and share it between your PCs. The key is created on your PC, never
+  sent to the server, and shown to you as a recovery string. Friend feed, friend log, your own
+  profile changes, avatar wear log and game log are synced, and the same event recorded by two
+  PCs is kept once. Memos, notes, favorites, moderation entries, notifications, avatar history
+  and tags, profile bios and the mutual friends graph are synced too: the later edit wins and
+  a deletion on one PC reaches the others. Nothing on the server can delete local history, and
+  you can move the key to another device, see and sign out connected clients, and delete the
+  server copy from the same settings page.
+- **Shared world collections on the fork's own service.** A world favorite group can be shared
+  as a public page on the RemoteSync website and updated by sharing it again; manage shares on
+  the website. This needs a paired RemoteSync account and sends only what the page shows.
+  Nothing goes to upstream's `vrcx-0.dev` services.
+- **Server and website checks.** Settings > History Sync shows whether the server is the
+  official instance and whether its website runs the official unmodified code. Either check
+  failing shows a warning that explains the risk; neither blocks use, so self-hosted servers
+  keep working.
 - **Social AI is off by default.** Turn it on under Settings > AI. Nothing is sent to an
   AI service while it is disabled. The chat is also on the left navigation as **Social AI**.
   Supports OpenAI-compatible (Chat Completions and Responses), Azure OpenAI, Anthropic,
@@ -171,6 +185,18 @@ Build for release (skip code signing and installer):
 ```bash
 npm run tauri:build -- --no-sign --no-bundle
 ```
+
+The RemoteSync collector is a separate server-side program for people who run a RemoteSync
+server. It is not part of the desktop app and regular users never need it. Build it on Linux
+x86_64 with:
+
+```bash
+cargo build --locked --release -p vrcx-0-nanashi-collector
+```
+
+It only runs when started by the RemoteSync collector supervisor: it takes a VRChat session
+over an inherited descriptor, records to a tmpfs directory, and has no way to send invites,
+messages, or any other action.
 
 Release builds run `scripts/smoke-appimage.py` against the packaged AppImage before
 uploading it. The check covers renaming, repeat launches, autostart arguments, and

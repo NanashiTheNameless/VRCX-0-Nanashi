@@ -79,6 +79,7 @@ pub use registry_backup::HostRegistryBackupActions;
 pub use screenshot::DesktopScreenshotRuntime;
 pub use social::DesktopSocialRuntime;
 pub use startup_bootstrap::{system_culture, system_language, StartupBootstrapSnapshot};
+pub use state::remote_sync;
 pub use state::{
     CurrentUserRefreshOutcome, DesktopRuntimeBundle, DesktopRuntimeHostOptions,
     DesktopRuntimeHostState, GameRuntimeBundle,

@@ -18,6 +18,7 @@ import {
     convertFileUrlToImageUrl,
     openExternalLink
 } from '@/services/entityMediaService';
+import { buildWorldRelayUrl } from '@/services/remoteSyncWebsiteService';
 import { vrchatWorldUrl } from '@/shared/constants/vrchatWebUrls';
 import { parseLocation } from '@/shared/utils/location';
 import { isRecord } from '@/shared/utils/record';
@@ -89,6 +90,7 @@ export interface WorldDialogHeaderCommands {
     onCopyWorldId: () => void;
     onCopyWorldName: () => void;
     onCopyWorldUrl: () => void;
+    onCopyWorldRelayUrl: () => void;
     onDelete: () => void;
     onDeleteCache: () => void;
     onDeletePersistentData: () => void;
@@ -495,6 +497,15 @@ export function WorldDialogTabbedView({
             copyWorldText(world.name, t('dialog.world.info.name')),
         onCopyWorldUrl: () =>
             copyWorldText(worldUrl, t('dialog.world.info.url')),
+        onCopyWorldRelayUrl: async () => {
+            const url = await buildWorldRelayUrl({
+                worldId: world.id,
+                name: world.name,
+                author: world.authorName,
+                imageUrl: world.imageUrl || imageUrl
+            });
+            await copyWorldText(url, t('dialog.world.info.copy_vrcx_url'));
+        },
         onDelete,
         onDeleteCache,
         onDeletePersistentData,

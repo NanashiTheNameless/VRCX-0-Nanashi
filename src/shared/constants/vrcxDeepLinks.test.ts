@@ -19,12 +19,12 @@ describe('vrcxDeepLinks', () => {
         });
         expect(
             parseVrcxInstanceLink(
-                `${VRCX_OPEN_RELAY_ORIGIN}/instance/${input.worldId}?${params}`
+                `${VRCX_OPEN_RELAY_ORIGIN}/open/instance/${input.worldId}?${params}`
             )
         ).toEqual(input);
         expect(
             parseVrcxInstanceLink(
-                `${VRCX_OPEN_RELAY_ORIGIN}/instance/${input.worldId}?instanceId=12345`
+                `${VRCX_OPEN_RELAY_ORIGIN}/open/instance/${input.worldId}?instanceId=12345`
             )
         ).toEqual({
             worldId: input.worldId,
@@ -35,7 +35,7 @@ describe('vrcxDeepLinks', () => {
     });
 
     it('rejects ambiguous or malformed instance links', () => {
-        const base = `${VRCX_OPEN_RELAY_ORIGIN}/instance/wrld_${UUID}`;
+        const base = `${VRCX_OPEN_RELAY_ORIGIN}/open/instance/wrld_${UUID}`;
         for (const link of [
             base,
             `${base}?instanceId=`,
@@ -47,13 +47,14 @@ describe('vrcxDeepLinks', () => {
             `${base}?instanceId=123%0a`,
             `${base}?instanceId=123#fragment`,
             `${base}/extra?instanceId=123`,
-            `${base.replace('open.vrcx-0.dev', 'open.vrcx-0.dev.evil')}?instanceId=123`
+            `https://vrcx.namelessnanashi.dev.evil/open/instance/wrld_${UUID}?instanceId=123`,
+            `https://open.vrcx-0.dev/instance/wrld_${UUID}?instanceId=123`
         ]) {
             expect(parseVrcxInstanceLink(link), link).toBeNull();
         }
         expect(
             parseVrcxInstanceLink(
-                `${VRCX_OPEN_RELAY_ORIGIN}/instance/wrld_invalid?instanceId=123`
+                `${VRCX_OPEN_RELAY_ORIGIN}/open/instance/wrld_invalid?instanceId=123`
             )
         ).toBeNull();
     });

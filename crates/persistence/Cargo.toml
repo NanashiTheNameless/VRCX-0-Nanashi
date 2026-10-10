@@ -7,6 +7,8 @@ description = "SQLite persistence layer"
 
 [features]
 test-utils = []
+# RemoteSync collector CLI only; never enabled by the desktop app.
+collector = []
 
 [dependencies]
 vrcx-0-contracts = { path = "../contracts" }

@@ -6,7 +6,7 @@ use crate::ownership::OwnerId;
 use crate::realtime::{ensure_realtime_tables, normalize_user_table_prefix};
 use crate::Error;
 
-fn ensure_profile_bio_table(
+pub(crate) fn ensure_profile_bio_table(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
 ) -> Result<String, Error> {

@@ -27,7 +27,9 @@ members = [
     "crates/mcp",
     "crates/integration-api",
     "crates/assistant",
-    "crates/ytdlp"
+    "crates/ytdlp",
+    "crates/remote-sync",
+    "crates/collector-cli"
 ]
 default-members = [
     "src-tauri",
@@ -57,7 +59,8 @@ default-members = [
     "crates/mcp",
     "crates/integration-api",
     "crates/assistant",
-    "crates/ytdlp"
+    "crates/ytdlp",
+    "crates/remote-sync"
 ]
 resolver = "2"
 
@@ -65,6 +68,7 @@ resolver = "2"
 license = "GPL-3.0-only"
 
 [workspace.dependencies]
+vrcx-0-nanashi-website-protocol = { git = "https://github.com/NanashiTheNameless/VRCX-0-Nanashi-Website", rev = "377d47977cbdacae62ae3ea3f25792a278eaf73a" }
 async-trait = "0.1"
 base64 = "0.23"
 bytes = "1"
@@ -111,6 +115,7 @@ tokio-util = "0.7"
 tracing = "0.1"
 url = "2"
 uuid = { version = "1", features = ["v4"] }
+zeroize = { version = "1", features = ["derive"] }
 walkdir = "2"
 zip = { version = "8", default-features = false }
 zstd = { version = "0.14", features = ["zstdmt"] }

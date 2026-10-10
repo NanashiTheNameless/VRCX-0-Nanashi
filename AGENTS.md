@@ -12,7 +12,7 @@ The fork is maintained by one person. Read `CONTRIBUTING.md` before proposing
 changes, and treat it as authoritative where this file is silent.
 
 The React frontend lives in `src/features/<domain>/`. The Rust backend is a Cargo
-workspace of 27 crates under `crates/`, plus `src-tauri` (28 members total).
+workspace of 29 crates under `crates/`, plus `src-tauri` (30 members total).
 
 npm is the only supported package manager. `package-lock.json` is the sole
 lockfile; CI runs `npm ci`. Do not reintroduce a pnpm or yarn lockfile.
@@ -23,16 +23,17 @@ These are the things that make this a _separate app_ rather than a rebrand. Do
 not "fix" any of them toward upstream, and check them before changing anything
 that touches identity, packaging, or networking defaults.
 
-| Concern              | Value                                        | Lives in                                                                                              |
-| -------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| Product name         | `VRCX-0-Nanashi`                             | `src-tauri/tauri.conf.json`                                                                           |
-| App identifier       | `dev.namelessnanashi.vrcx-0-nanashi`         | `src-tauri/tauri.conf.json`                                                                           |
-| Data directory       | `VRCX-0-Nanashi`                             | `crates/platform/src/app_paths.rs`                                                                    |
-| Own deep-link scheme | `vrcx-0-nanashi://`                          | `src-tauri/tauri.conf.json`, `src-tauri/src/commands/application/deep_link.rs`                        |
-| Also accepted        | `vrcx-0://`, `vrcx://`                       | same                                                                                                  |
-| Update source        | `NanashiTheNameless/VRCX-0-Nanashi` releases | `crates/outbound-adapters/src/github_release_catalog.rs`, `crates/host-desktop/src/updater_policy.rs` |
-| User agent           | `NanashiTheNameless/VRCX-0-Nanashi`          | `crates/core/src/user_agent.rs`                                                                       |
-| Export format id     | `vrcx-0-nanashi-data-export`                 | `crates/persistence/src/data_export.rs`                                                               |
+| Concern              | Value                                                                                      | Lives in                                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Product name         | `VRCX-0-Nanashi`                                                                           | `src-tauri/tauri.conf.json`                                                                           |
+| App identifier       | `dev.namelessnanashi.vrcx-0-nanashi`                                                       | `src-tauri/tauri.conf.json`                                                                           |
+| Data directory       | `VRCX-0-Nanashi`                                                                           | `crates/platform/src/app_paths.rs`                                                                    |
+| Own deep-link scheme | `vrcx-0-nanashi://`                                                                        | `src-tauri/tauri.conf.json`, `src-tauri/src/commands/application/deep_link.rs`                        |
+| Also accepted        | `vrcx-0://`, `vrcx://`                                                                     | same                                                                                                  |
+| Update source        | `NanashiTheNameless/VRCX-0-Nanashi` releases                                               | `crates/outbound-adapters/src/github_release_catalog.rs`, `crates/host-desktop/src/updater_policy.rs` |
+| User agent           | `NanashiTheNameless/VRCX-0-Nanashi`                                                        | `crates/core/src/user_agent.rs`                                                                       |
+| Export format id     | `vrcx-0-nanashi-data-export`                                                               | `crates/persistence/src/data_export.rs`                                                               |
+| RemoteSync origins   | `https://vrcx.namelessnanashi.dev` (website), `https://vrcx-api.namelessnanashi.dev` (API) | `crates/remote-sync/src/lib.rs`, `src/shared/constants/vrcxDeepLinks.ts`                              |
 
 Two rules follow from "coexists with upstream VRCX-0":
 
@@ -64,6 +65,35 @@ unrelated edit, with where they live:
   Completions and Responses), Azure OpenAI, Anthropic, Gemini, Vertex AI,
   Ollama, Cohere and Bedrock paths all exist (`LlmApiKind` in
   `crates/contracts/src/llm.rs`).
+- **RemoteSync (history sync)** - `crates/remote-sync/`,
+  `crates/persistence/src/remote_sync/`,
+  `crates/runtime-host-desktop/src/state/remote_sync.rs`, Settings > History
+  Sync. The fork's own end-to-end encrypted sync; upstream has no equivalent,
+  so it is not something to align with upstream. Off by default, and while it
+  is off or the PC is not paired no request goes to any sync server. Wire
+  format and crypto come from the `vrcx-0-nanashi-website-protocol` crate
+  (pinned by commit in `Cargo.toml`); do not reimplement them here. A server
+  response is verified before anything is imported, imported rows are never
+  uploaded back, and nothing remote ever deletes local history. Signing out
+  keeps the encryption key on the PC because it may be the only copy.
+  Settings runs two independent checks on the configured server
+  (`app__remote_sync_trust_check`): the code test passes only when the
+  website's files match the build signed with the maintainer's key, wherever
+  it is hosted; the instance test passes only when the server presents a
+  statement signed with the maintainer's instance key that names its own
+  addresses. Neither may ever block syncing or browsing; each failure shows
+  its own warning. Do not merge the two checks or let a user-supplied key
+  satisfy either.
+- **RemoteSync collector** - `crates/collector-cli/` only. A server-side
+  program for operators of a RemoteSync instance, started by the website
+  repo's supervisor; the desktop app does not contain it and regular users
+  never run it. It is a workspace member but not a default member, and the
+  two helpers it needs in shared crates sit behind the `collector` cargo
+  feature of `vrcx-0-composition` and `vrcx-0-persistence`, which nothing
+  else may enable. Do not add collector UI, commands, or settings to the app.
+  It must stay read-only (no command reaches VRChat), take the session only
+  from the inherited descriptor, refuse any data directory that is not
+  tmpfs, and never print or store what the runtime reports.
 - **yt-dlp / media** - `crates/ytdlp/`, `YTDLP_SETUP.md`. Cookie use is opt-in
   and backs up originals.
 - **Notification sounds** - `crates/host-desktop/src/sound.rs`,
@@ -95,16 +125,19 @@ unrelated edit, with where they live:
   side panel tabs, and must not be re-added to the panel.
 - `RuntimeBackgroundJobs` tracks local job state for background loops. It
   transmits nothing.
-- Shared world collections are import-only. Opening a `worlds.vrcx-0.dev`
-  collection link and importing it works (a credential-free GET), but creating
-  or managing shares, owner tokens, and the world registration that "Copy VRCX
-  world URL" triggered were removed on purpose: they sent world details and a
-  hash of the user's VRChat ID to upstream's service. World "Copy URL" copies
-  the plain VRChat link. Upstream merges will try to bring the export side
-  back; keep it out.
-- No vrcx-0.dev features beyond import. The app never creates
-  `open.vrcx-0.dev` avatar or instance links (avatar and launch dialog share
-  actions copy the plain VRChat link), though pasted relay links still open.
+- Shared world collections go to the fork's own service, never upstream's.
+  Sharing a world favorite group (`remote_sync_share_collection` in
+  `crates/runtime-host-desktop/src/state/remote_sync.rs`) posts a public
+  snapshot to the configured RemoteSync API with the paired token, and only
+  when the user asks. It sends world names, authors, descriptions, VRChat
+  image links and, if ticked, the user's world memos; it never sends a VRChat
+  user id or a hash of one. Upstream's owner tokens and the world registration
+  that "Copy VRCX world URL" triggered stay removed. Upstream merges will try
+  to point this back at `worlds.vrcx-0.dev`; keep it on RemoteSync.
+- No vrcx-0.dev features. The app never creates or opens `open.vrcx-0.dev`
+  links. Relay links for worlds, avatars and instances point at the
+  configured RemoteSync website (`/open/...`), carry previews only in the URL
+  fragment, and exist next to the plain VRChat link, which stays available.
   Community theme download counts and install reporting (`theme.vrcx-0.dev`)
   were removed; the theme catalog itself comes from GitHub.
 

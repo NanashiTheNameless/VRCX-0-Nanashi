@@ -30,6 +30,7 @@ pub mod profile_backup;
 pub mod profile_bio;
 pub mod profile_merge;
 pub mod realtime;
+pub mod remote_sync;
 pub mod saved_group_favorites;
 pub mod screenshot_cache;
 pub mod secrets;

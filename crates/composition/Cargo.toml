@@ -6,6 +6,8 @@ license.workspace = true
 description = "Host-neutral application composition root"
 
 [features]
+# RemoteSync collector CLI only; never enabled by the desktop app.
+collector = ["vrcx-0-persistence/collector"]
 default = []
 test-utils = [
     "vrcx-0-application/test-utils",

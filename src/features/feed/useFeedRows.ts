@@ -125,6 +125,7 @@ export function useFeedRows({
                 feedPersistenceDisabled,
                 hiddenUserIds,
                 latestReloadToken,
+                friendLogRevision,
                 maxFeedRows
             }),
         [
@@ -134,6 +135,7 @@ export function useFeedRows({
             feedPersistenceDisabled,
             hiddenUserIds,
             latestReloadToken,
+            friendLogRevision,
             maxFeedRows
         ]
     );
@@ -506,6 +508,7 @@ export function useFeedRows({
         hiddenUserIds,
         isFavoritesLoaded,
         latestReloadToken,
+        friendLogRevision,
         preferencesReady,
         searchMode,
         scopedUserIds,

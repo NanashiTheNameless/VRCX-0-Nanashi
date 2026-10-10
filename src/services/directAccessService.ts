@@ -1,3 +1,4 @@
+import configRepository from '@/repositories/configRepository';
 import vrchatInstanceRepository from '@/repositories/vrchatInstanceRepository';
 import vrchatSearchRepository from '@/repositories/vrchatSearchRepository';
 import {
@@ -7,6 +8,7 @@ import {
     openWorldDialog
 } from '@/services/dialogService';
 import { openInstanceInGame } from '@/services/instanceActionService';
+import { acceptedRelayOrigins } from '@/services/remoteSyncWebsiteService';
 import {
     hasAvatarIdPrefix,
     hasGroupIdPrefix,
@@ -39,19 +41,25 @@ function parseUrlOrNull(value: string) {
 }
 
 function parseVrcxShareLink(
-    input: string
+    input: string,
+    configuredWebsiteOrigin: string
 ): { type: 'avatar' | 'world'; id: string } | null {
     const url = parseUrlOrNull(input);
-    if (!url || url.origin !== VRCX_OPEN_RELAY_ORIGIN) {
+    if (
+        !url ||
+        !acceptedRelayOrigins(configuredWebsiteOrigin).includes(url.origin)
+    ) {
         return null;
     }
 
     const pathParts = url.pathname.split('/');
-    if (pathParts.length !== 3) {
+    const routeOffset = 2;
+    if (pathParts.length !== routeOffset + 2) {
         return null;
     }
 
-    const [, type, id] = pathParts;
+    const type = pathParts[routeOffset];
+    const id = pathParts[routeOffset + 1];
     if (type === 'world' && isWorldId(id)) {
         return { type, id };
     }
@@ -320,7 +328,11 @@ export async function directAccessParse(
         return false;
     }
 
-    const instanceLink = parseVrcxInstanceLink(value);
+    const configuredWebsiteOrigin = configRepository.getCachedString(
+        'remoteSyncWebsiteOrigin',
+        VRCX_OPEN_RELAY_ORIGIN
+    );
+    const instanceLink = parseVrcxInstanceLink(value, configuredWebsiteOrigin);
     if (instanceLink) {
         return accessInstanceLocation(
             `${instanceLink.worldId}:${instanceLink.instanceId}`,
@@ -331,7 +343,7 @@ export async function directAccessParse(
         );
     }
 
-    const vrcxShareLink = parseVrcxShareLink(value);
+    const vrcxShareLink = parseVrcxShareLink(value, configuredWebsiteOrigin);
     if (vrcxShareLink) {
         if (mode === 'detect') {
             return true;

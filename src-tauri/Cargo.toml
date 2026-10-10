@@ -57,6 +57,10 @@ vrcx-0-integration-api = { path = "../crates/integration-api" }
 vrcx-0-assistant = { path = "../crates/assistant" }
 vrcx-0-composition = { path = "../crates/composition" }
 vrcx-0-runtime-host-desktop = { path = "../crates/runtime-host-desktop" }
+vrcx-0-remote-sync = { path = "../crates/remote-sync" }
+vrcx-0-nanashi-website-protocol.workspace = true
+url.workspace = true
+zeroize.workspace = true
 specta-typescript = "0.0.9"
 tauri-plugin-global-shortcut = "2"
 specta = { workspace = true }

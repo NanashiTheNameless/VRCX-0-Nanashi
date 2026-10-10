@@ -447,6 +447,21 @@ pub fn run() {
                 let snapshot = state.runtime_host().backend_runtime_snapshot();
                 if is_background_running(snapshot.mode, snapshot.phase) {
                     api.prevent_exit();
+                    return;
+                }
+                if state.runtime_host().remote_sync_exit_flush_begin() {
+                    api.prevent_exit();
+                    let app_handle = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        if let Some(state) = app_handle.try_state::<AppState>() {
+                            if let Err(error) = state.runtime_host().remote_sync_run().await {
+                                tracing::warn!(%error, "exit history sync flush failed");
+                            }
+                        }
+                        app_handle.exit(0);
+                    });
+                } else if state.runtime_host().remote_sync_exit_flush_in_progress() {
+                    api.prevent_exit();
                 }
             }
         });

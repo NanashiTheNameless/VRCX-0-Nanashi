@@ -157,7 +157,8 @@ pub fn database_maintenance_run(
 
 pub fn ensure_required_database_schema(db: &DatabaseService) -> Result<(), Error> {
     ensure_game_log_tables(db)?;
-    ensure_global_store_tables(db)
+    ensure_global_store_tables(db)?;
+    crate::remote_sync::ensure_remote_sync_tables(db)
 }
 
 fn run_database_maintenance_task(

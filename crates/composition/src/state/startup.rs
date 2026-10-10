@@ -130,6 +130,55 @@ impl RuntimeHostState {
             .await
     }
 
+    /// Fork: starts the headless runtime for the RemoteSync collector from a
+    /// VRChat session handed over by its supervisor. There is no saved
+    /// account and no prompt: the cookies either work or the start fails.
+    /// Returns the VRChat user id the session belongs to.
+    #[cfg(feature = "collector")]
+    pub async fn start_collector_backend_runtime(&self, cookies_b64: &str) -> Result<String> {
+        if self.profile != RuntimeHostProfile::HeadlessData {
+            return Err(crate::Error::Custom(
+                "Collector runtime requires the HeadlessData host profile.".into(),
+            ));
+        }
+        self.web_client()
+            .set_cookies(cookies_b64)
+            .map_err(|error| crate::Error::Custom(error.to_string()))?;
+        self.backend_runtime
+            .set_phase(BackendRuntimePhase::Starting);
+        self.start_data_services();
+        self.backend_runtime.set_authenticating();
+        let session = match current_user_from_cookie(
+            self.runtime_context.login_api.as_ref(),
+            String::new(),
+            vrcx_0_core::vrchat_endpoints::VRCHAT_API_DEFAULT_ENDPOINT.to_string(),
+            vrcx_0_core::vrchat_endpoints::VRCHAT_WEBSOCKET_DEFAULT_ENDPOINT.to_string(),
+        )
+        .await
+        {
+            Ok(session) => session,
+            Err(NonInteractiveAuthError::InteractionRequired(reason)) => {
+                return Err(crate::Error::AuthInteractionRequired(reason));
+            }
+            Err(NonInteractiveAuthError::SessionInvalidated {
+                reason,
+                status_code,
+                ..
+            }) => {
+                return Err(crate::Error::AuthSessionInvalidated {
+                    reason,
+                    status_code,
+                });
+            }
+            Err(NonInteractiveAuthError::Failed(reason)) => {
+                return Err(crate::Error::Custom(reason));
+            }
+        };
+        let user_id = session.user_id.clone();
+        self.start_authenticated_runtime_session(session)?;
+        Ok(user_id)
+    }
+
     async fn start_backend_runtime_inner(
         &self,
         gui_mode: Option<GuiRuntimeMode>,

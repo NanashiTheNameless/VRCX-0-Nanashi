@@ -22,6 +22,7 @@ import {
     HardDriveIcon,
     HistoryIcon,
     SearchXIcon,
+    Share2Icon,
     StarIcon
 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -33,6 +34,14 @@ import { isEditableTarget } from '@/components/layout/useGlobalKeyboardShortcuts
 import type { FavoriteKind } from '@/domain/favorites/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/shadcn/button';
+import {
+    Popover,
+    PopoverContent,
+    PopoverDescription,
+    PopoverHeader,
+    PopoverTitle,
+    PopoverTrigger
+} from '@/ui/shadcn/popover';
 
 import { getFavoritesDensityConfig } from '../favoritesDensity';
 import type { FavoriteGroupView, FavoriteItem } from '../favoritesTypes';
@@ -66,6 +75,7 @@ type FavoritesGroupRailPanelProps = {
     kind: FavoriteKind;
     newLocalGroupName: string;
     onNewGroupNameChange(value: string): void;
+    onShareCollectionGroup?(group: FavoriteGroupView): void;
     setCreatingLocalGroup: FavoritesController['setCreatingLocalGroup'];
     viewData: FavoritesController['viewData'];
 };
@@ -79,6 +89,9 @@ type FavoritesContentPanelProps = {
     order: FavoritesController['order'];
     selection: FavoritesController['selection'];
     viewData: FavoritesController['viewData'];
+    onShareCollectionGroup?(group: FavoriteGroupView): void;
+    shareCoachmarkOpen?: boolean;
+    onDismissShareCoachmark?(): void;
     instanceActionGatesByItemKey: FavoritesController['instanceActionGatesByItemKey'];
     onVisibleWorldIdsChange: FavoritesController['setVisibleWorldIds'];
 };
@@ -120,6 +133,69 @@ function SortableFavoriteCell({
     );
 }
 
+type ShareCollectionButtonProps = {
+    group: FavoriteGroupView;
+    coachmarkOpen: boolean;
+    onShare(group: FavoriteGroupView): void;
+    onDismissCoachmark?(): void;
+};
+
+function ShareCollectionButton({
+    group,
+    coachmarkOpen,
+    onShare,
+    onDismissCoachmark
+}: ShareCollectionButtonProps) {
+    const { t } = useTranslation();
+
+    return (
+        <Popover
+            open={coachmarkOpen}
+            onOpenChange={(open) => {
+                if (!open) {
+                    onDismissCoachmark?.();
+                }
+            }}
+        >
+            <PopoverTrigger
+                render={
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="shrink-0"
+                        onClick={() => onShare(group)}
+                    >
+                        <Share2Icon data-icon="inline-start" />
+                        {t('view.favorite.share_collection.action.menu')}
+                    </Button>
+                }
+            />
+            <PopoverContent align="end" side="bottom">
+                <PopoverHeader>
+                    <PopoverTitle>
+                        {t('view.favorite.share_collection.coachmark.title')}
+                    </PopoverTitle>
+                    <PopoverDescription>
+                        {t(
+                            'view.favorite.share_collection.coachmark.description'
+                        )}
+                    </PopoverDescription>
+                </PopoverHeader>
+                <div className="flex justify-end">
+                    <Button
+                        type="button"
+                        size="sm"
+                        onClick={onDismissCoachmark}
+                    >
+                        {t('view.favorite.share_collection.coachmark.dismiss')}
+                    </Button>
+                </div>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
 export function FavoritesGroupRailPanel({
     collections,
     creatingLocalGroup,
@@ -128,6 +204,7 @@ export function FavoritesGroupRailPanel({
     kind,
     newLocalGroupName,
     onNewGroupNameChange,
+    onShareCollectionGroup,
     setCreatingLocalGroup,
     viewData
 }: FavoritesGroupRailPanelProps) {
@@ -178,6 +255,7 @@ export function FavoritesGroupRailPanel({
                 onRemoteClear={favoriteCommands.handleRemoteGroupClear}
                 onLocalRename={favoriteCommands.handleLocalGroupRename}
                 onLocalDelete={favoriteCommands.handleLocalGroupDelete}
+                onShareCollection={onShareCollectionGroup}
             />
             <GroupRailSection
                 title={viewData.pageConfig.localSectionTitle}
@@ -206,6 +284,7 @@ export function FavoritesGroupRailPanel({
                 onRemoteClear={favoriteCommands.handleRemoteGroupClear}
                 onLocalRename={favoriteCommands.handleLocalGroupRename}
                 onLocalDelete={favoriteCommands.handleLocalGroupDelete}
+                onShareCollection={onShareCollectionGroup}
                 onReorder={favoriteCommands.handleLocalGroupReorder}
             />
             {kind === 'avatar' ? (
@@ -245,6 +324,9 @@ export function FavoritesContentPanel({
     order,
     selection,
     viewData,
+    onShareCollectionGroup,
+    shareCoachmarkOpen,
+    onDismissShareCoachmark,
     instanceActionGatesByItemKey,
     onVisibleWorldIdsChange
 }: FavoritesContentPanelProps) {
@@ -511,6 +593,16 @@ export function FavoritesContentPanel({
                         </small>
                     ) : null}
                 </div>
+                {kind === 'world' &&
+                viewData.selectedGroup &&
+                onShareCollectionGroup ? (
+                    <ShareCollectionButton
+                        group={viewData.selectedGroup}
+                        coachmarkOpen={Boolean(shareCoachmarkOpen)}
+                        onShare={onShareCollectionGroup}
+                        onDismissCoachmark={onDismissShareCoachmark}
+                    />
+                ) : null}
             </div>
             <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
                 <div

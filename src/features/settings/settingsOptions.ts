@@ -142,6 +142,7 @@ export const settingsTabs = [
     ['media', 'view.settings.category.media'],
     ['ai', 'view.settings.category.ai'],
     ['integrations', 'view.settings.category.integrations'],
+    ['history-sync', 'view.settings.category.history_sync'],
     ['advanced', 'view.settings.category.advanced']
 ];
 

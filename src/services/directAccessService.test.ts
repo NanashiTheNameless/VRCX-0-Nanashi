@@ -46,7 +46,7 @@ const LOCATION = `${WORLD_ID}:${INSTANCE_ID}`;
 
 describe('directAccessService', () => {
     it('preserves a secure-only token when opening a shared invitation', async () => {
-        const input = `${VRCX_OPEN_RELAY_ORIGIN}/instance/${WORLD_ID}?${new URLSearchParams(
+        const input = `${VRCX_OPEN_RELAY_ORIGIN}/open/instance/${WORLD_ID}?${new URLSearchParams(
             { instanceId: INSTANCE_ID, launchToken: 'secureToken' }
         )}`;
         await expect(directAccessParse(input)).resolves.toBe(true);
@@ -58,7 +58,7 @@ describe('directAccessService', () => {
     });
     it('routes external instance shares through the same world and launch flow', async () => {
         useLaunchStore.getState().closeLaunchDialog();
-        const input = `${VRCX_OPEN_RELAY_ORIGIN}/instance/${WORLD_ID}?${new URLSearchParams(
+        const input = `${VRCX_OPEN_RELAY_ORIGIN}/open/instance/${WORLD_ID}?${new URLSearchParams(
             { instanceId: INSTANCE_ID, shortName: 'inviteToken' }
         )}`;
         await expect(directAccessParse(input, 'detect')).resolves.toBe(true);
@@ -227,8 +227,8 @@ describe('directAccessParse detect mode', () => {
     it('recognises links and prefixed ids without side effects', async () => {
         const cases = [
             `https://vrchat.com/home/world/${WORLD_ID}`,
-            `https://open.vrcx-0.dev/world/${WORLD_ID}`,
-            `https://open.vrcx-0.dev/avatar/${AVATAR_ID}`,
+            `https://vrcx.namelessnanashi.dev/open/world/${WORLD_ID}`,
+            `https://vrcx.namelessnanashi.dev/open/avatar/${AVATAR_ID}`,
             `https://vrchat.com/home/launch?worldId=${WORLD_ID}`,
             `https://vrchat.com/home/launch?worldId=${WORLD_ID}&instanceId=x`,
             'https://vrchat.com/home/user/usr_id',
@@ -272,13 +272,14 @@ describe('directAccessParse detect mode', () => {
             '   ',
             'hello world',
             'https://vrchat.com/home',
-            'https://open.vrcx-0.dev/world/wrld_invalid',
-            `http://open.vrcx-0.dev/world/${WORLD_ID}`,
-            `https://open.vrcx-0.dev.example.com/world/${WORLD_ID}`,
-            `https://open.vrcx-0.dev//world/${WORLD_ID}`,
-            `https://open.vrcx-0.dev/world/${WORLD_ID}/extra`,
-            `Open world: https://open.vrcx-0.dev/world/${WORLD_ID}`,
-            `https://open.vrcx-0.dev/avatar/${WORLD_ID}`,
+            'https://vrcx.namelessnanashi.dev/open/world/wrld_invalid',
+            `https://open.vrcx-0.dev/world/${WORLD_ID}`,
+            `http://vrcx.namelessnanashi.dev/open/world/${WORLD_ID}`,
+            `https://vrcx.namelessnanashi.dev.example.com/open/world/${WORLD_ID}`,
+            `https://vrcx.namelessnanashi.dev//open/world/${WORLD_ID}`,
+            `https://vrcx.namelessnanashi.dev/open/world/${WORLD_ID}/extra`,
+            `Open world: https://vrcx.namelessnanashi.dev/open/world/${WORLD_ID}`,
+            `https://vrcx.namelessnanashi.dev/open/avatar/${WORLD_ID}`,
             'https://example.com/x'
         ]) {
             await expect(directAccessParse(value, 'detect')).resolves.toBe(
@@ -287,14 +288,18 @@ describe('directAccessParse detect mode', () => {
         }
     });
 
-    it('opens VRCX-0 share links in their matching dialogs', async () => {
+    it('opens RemoteSync website relay links in matching dialogs', async () => {
         const dialogService = await import('@/services/dialogService');
 
         await expect(
-            directAccessParse(`https://open.vrcx-0.dev/world/${WORLD_ID}`)
+            directAccessParse(
+                `https://vrcx.namelessnanashi.dev/open/world/${WORLD_ID}`
+            )
         ).resolves.toBe(true);
         await expect(
-            directAccessParse(`https://open.vrcx-0.dev/avatar/${AVATAR_ID}`)
+            directAccessParse(
+                `https://vrcx.namelessnanashi.dev/open/avatar/${AVATAR_ID}`
+            )
         ).resolves.toBe(true);
 
         expect(mocks.openWorldDialog).toHaveBeenCalledWith({

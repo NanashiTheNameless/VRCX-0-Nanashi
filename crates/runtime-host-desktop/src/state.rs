@@ -91,6 +91,7 @@ use vrcx_0_persistence::screenshot_cache::MetadataCacheDb;
 use vrcx_0_platform::app_paths::AppDataDirResolution;
 
 mod background_ticks;
+pub mod remote_sync;
 
 use background_ticks::{
     run_background_discord_tick, run_background_presence_tick, BackgroundTickContext,
@@ -195,9 +196,9 @@ pub struct DesktopRuntimeHostState {
     vrchat_config: VrchatConfigRuntime,
     database_upgrade: DesktopDatabaseUpgradeRuntime,
     legacy_migration: DesktopLegacyMigrationRuntime,
-    world_collections: vrcx_0_outbound_adapters::LocalWorldCollectionAdapter,
     friend_log_name_store: vrcx_0_outbound_adapters::LocalFriendLogNameStore,
     notification_sync: vrcx_0_outbound_adapters::LocalNotificationSyncAdapter,
+    remote_sync: remote_sync::RemoteSyncShared,
 }
 
 struct DesktopRuntimeProfileExtension {
@@ -656,7 +657,6 @@ impl DesktopRuntimeHostState {
             vrcx_0_contracts::LegacyMigrationPaths::from_app_data(runtime.paths().app_data.clone()),
             database_upgrade.clone(),
         );
-        let world_collections = vrcx_0_outbound_adapters::LocalWorldCollectionAdapter;
         let friend_log_name_store =
             vrcx_0_outbound_adapters::LocalFriendLogNameStore::new(Arc::clone(runtime.database()));
         let notification_sync = vrcx_0_outbound_adapters::LocalNotificationSyncAdapter::new(
@@ -712,9 +712,9 @@ impl DesktopRuntimeHostState {
             vrchat_config,
             database_upgrade,
             legacy_migration,
-            world_collections,
             friend_log_name_store,
             notification_sync,
+            remote_sync: remote_sync::RemoteSyncShared::default(),
         })
     }
 
@@ -1605,10 +1605,12 @@ impl DesktopRuntimeHostState {
         &self,
         id: &str,
     ) -> Result<vrcx_0_application::collections::ImportPreview> {
-        Ok(
-            vrcx_0_application::collections::preview_shared_collection(&self.world_collections, id)
-                .await?,
-        )
+        let adapter =
+            vrcx_0_outbound_adapters::LocalWorldCollectionAdapter::new(self.config_string(
+                "remoteSyncApiOrigin",
+                "https://vrcx-api.namelessnanashi.dev",
+            ));
+        Ok(vrcx_0_application::collections::preview_shared_collection(&adapter, id).await?)
     }
 
     pub fn start_shared_collection_import(
@@ -2148,6 +2150,53 @@ impl DesktopRuntimeHostState {
             .desktop_assembly()
             .config()
             .set_bool(key, value)?)
+    }
+
+    pub fn remote_sync_secret_get(&self, key: &str) -> Result<Option<String>> {
+        let stored = self
+            .runtime
+            .desktop_assembly()
+            .config()
+            .get_string(key, "")?;
+        if stored.is_empty() {
+            return Ok(None);
+        }
+        let credentials = self.runtime.desktop_assembly().auth_credentials();
+        Ok(credentials.open_secret(&stored))
+    }
+
+    pub fn remote_sync_secret_exists(&self, key: &str) -> Result<bool> {
+        Ok(!self
+            .runtime
+            .desktop_assembly()
+            .config()
+            .get_string(key, "")?
+            .is_empty())
+    }
+
+    pub fn remote_sync_secret_set(&self, key: &str, plaintext: &str) -> Result<()> {
+        let credentials = self.runtime.desktop_assembly().auth_credentials();
+        if !credentials.is_encrypting_writes() {
+            return Err(crate::Error::Custom(
+                "RemoteSync secrets cannot be saved because protected credential storage is unavailable.".into(),
+            ));
+        }
+        let sealed = credentials.seal_secret(plaintext);
+        if !sealed.encrypted {
+            return Err(crate::Error::Custom(
+                "RemoteSync secrets cannot be saved without encryption.".into(),
+            ));
+        }
+        self.runtime
+            .desktop_assembly()
+            .config()
+            .set_string(key, &sealed.stored)?;
+        Ok(())
+    }
+
+    pub fn remote_sync_secret_remove(&self, key: &str) -> Result<()> {
+        self.runtime.desktop_assembly().config().remove(key)?;
+        Ok(())
     }
 
     pub fn external_api(&self) -> &ExternalApiRuntime {

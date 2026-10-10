@@ -1,6 +1,7 @@
 import {
     ArrowUpDownIcon,
     DownloadIcon,
+    ExternalLinkIcon,
     ListFilterIcon,
     UploadIcon
 } from 'lucide-react';
@@ -25,6 +26,7 @@ import {
     DropdownMenuContent,
     DropdownMenuGroup,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/ui/shadcn/dropdown-menu';
 import { Field, FieldContent, FieldGroup, FieldLabel } from '@/ui/shadcn/field';
@@ -71,6 +73,7 @@ type FavoritesToolbarProps = {
     onRefresh: () => void;
     onImport: () => void;
     onExport: () => void;
+    onManageShares?: () => void;
 };
 
 function FavoritesToolbar({
@@ -90,7 +93,8 @@ function FavoritesToolbar({
     onDensityChange,
     onRefresh,
     onImport,
-    onExport
+    onExport,
+    onManageShares
 }: FavoritesToolbarProps) {
     const { t } = useTranslation();
     const sortItems: Array<{ value: FavoriteSortValue; label: string }> = [
@@ -279,6 +283,19 @@ function FavoritesToolbar({
                                 {t('view.favorite.export')}
                             </DropdownMenuItem>
                         </DropdownMenuGroup>
+                        {kind === 'world' && onManageShares ? (
+                            <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuGroup>
+                                    <DropdownMenuItem onClick={onManageShares}>
+                                        <ExternalLinkIcon data-icon="inline-start" />
+                                        {t(
+                                            'view.favorite.share_collection.action.open_manage'
+                                        )}
+                                    </DropdownMenuItem>
+                                </DropdownMenuGroup>
+                            </>
+                        ) : null}
                     </ToolbarOverflowMenu>
                 </ToolbarActions>
             </PageToolbarRow>

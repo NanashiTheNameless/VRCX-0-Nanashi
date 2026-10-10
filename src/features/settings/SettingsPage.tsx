@@ -1,6 +1,7 @@
 import {
     BellIcon,
     BotIcon,
+    CloudDownloadIcon,
     ImageIcon,
     type LucideIcon,
     MonitorIcon,
@@ -23,6 +24,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/ui/shadcn/tabs';
 
 import { SettingsAdvancedTab } from './components/settings-tabs/SettingsAdvancedTab';
 import { SettingsAiTab } from './components/settings-tabs/SettingsAiTab';
+import { SettingsHistorySyncTab } from './components/settings-tabs/SettingsHistorySyncTab';
 import { SettingsIntegrationsTab } from './components/settings-tabs/SettingsIntegrationsTab';
 import { SettingsInterfaceTab } from './components/settings-tabs/SettingsInterfaceTab';
 import { SettingsMediaTab } from './components/settings-tabs/SettingsMediaTab';
@@ -50,6 +52,7 @@ const SETTINGS_TAB_ICONS: Record<string, LucideIcon> = {
     vr: RectangleGogglesIcon,
     media: ImageIcon,
     integrations: PlugIcon,
+    'history-sync': CloudDownloadIcon,
     advanced: TerminalIcon
 };
 
@@ -121,6 +124,7 @@ function SettingsPageContent() {
                             active={shell.activeSettingsTab === 'ai'}
                         />
                         <SettingsIntegrationsTab />
+                        <SettingsHistorySyncTab />
                         <SettingsAdvancedTab />
                     </div>
                 </div>

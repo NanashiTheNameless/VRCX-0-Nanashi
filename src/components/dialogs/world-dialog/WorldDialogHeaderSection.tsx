@@ -115,12 +115,14 @@ function compactUrl(url: string) {
 function WorldOverviewFacts({
     onCopyWorldId,
     onCopyWorldUrl,
+    onCopyWorldRelayUrl,
     onOpenWorldPage,
     world,
     worldUrl
 }: {
     onCopyWorldId: () => void;
     onCopyWorldUrl: () => void;
+    onCopyWorldRelayUrl: () => void;
     onOpenWorldPage: () => void;
     world: WorldProfileRecord;
     worldUrl: string;
@@ -166,6 +168,11 @@ function WorldOverviewFacts({
                             onClick={() => {
                                 onCopyWorldUrl?.();
                             }}
+                        />
+                        <EntityFactAction
+                            label={t('dialog.world.info.copy_vrcx_url')}
+                            icon={CopyIcon}
+                            onClick={onCopyWorldRelayUrl}
                         />
                     </EntityFactValue>
                 </EntityFactRow>
@@ -424,6 +431,7 @@ export function WorldDialogOverviewSection({
         onChangeTab,
         onCopyWorldId,
         onCopyWorldName,
+        onCopyWorldRelayUrl,
         onCopyWorldUrl,
         onOpenAuthor,
         onOpenImage,
@@ -639,6 +647,7 @@ export function WorldDialogOverviewSection({
             <WorldOverviewFacts
                 onCopyWorldId={onCopyWorldId}
                 onCopyWorldUrl={onCopyWorldUrl}
+                onCopyWorldRelayUrl={onCopyWorldRelayUrl}
                 onOpenWorldPage={onOpenWorldPage}
                 world={world}
                 worldUrl={worldUrl}

@@ -386,6 +386,41 @@ jobs:
                       target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
                   if-no-files-found: error
 
+    # RemoteSync collector child program. It is a server-side tool for
+    # operators of a RemoteSync instance, published next to the app but never
+    # bundled into it. The website's collector image takes this exact file
+    # together with the version and commit written beside it.
+    collector:
+        name: Collector CLI (Linux x86_64)
+        needs: prepare
+        runs-on: ubuntu-24.04
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: dtolnay/rust-toolchain@stable
+
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  workspaces: . -> target
+                  shared-key: nightly-collector
+
+            - name: Build collector
+              run: cargo build --locked --release -p vrcx-0-nanashi-collector
+
+            - name: Prepare collector release assets
+              run: |
+                  mkdir -p collector-assets
+                  cp target/release/vrcx-0-nanashi-collector collector-assets/vrcx-0-nanashi-headless-linux-amd64
+                  printf '{"appVersion":"%s","appCommit":"%s"}\n' \
+                      "${{ needs.prepare.outputs.build_version }}" "$GITHUB_SHA" \
+                      > collector-assets/vrcx-0-nanashi-headless-linux-amd64.json
+
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: nightly-collector-linux-amd64
+                  path: collector-assets/*
+                  if-no-files-found: error
+
     publish:
         name: Publish Nightly
         # Serialize publication independently of workflow locks.
@@ -397,6 +432,7 @@ jobs:
             - prepare
             - package
             - macos-bundle
+            - collector
         runs-on: ubuntu-24.04
         permissions:
             contents: write

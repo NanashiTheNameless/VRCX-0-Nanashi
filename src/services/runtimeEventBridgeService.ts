@@ -4,9 +4,11 @@ import type {
     BackendRuntimeCombinedSnapshot
 } from '@/platform/tauri/bindings';
 import { useDataDirMigrationStore } from '@/state/dataDirMigrationStore';
+import { useFriendLogStore } from '@/state/friendLogStore';
 import { useProfileBackupStore } from '@/state/profileBackupStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useSessionStore } from '@/state/sessionStore';
+import { useVrcNotificationStore } from '@/state/vrcNotificationStore';
 
 import { handleAppLauncherSnapshotEvent } from './appLauncherSnapshotService';
 import {
@@ -107,6 +109,36 @@ function handleRuntimeEvent(event: RuntimeEvent): void {
 
     if (event.name === 'gameLogPersistenceFallback') {
         handleGameLogPersistenceFallback(event.payload);
+        return;
+    }
+
+    if (event.name === 'remoteSyncImported') {
+        const auth = useRuntimeStore.getState().auth;
+        if (
+            event.payload.ownerUserId.trim() !==
+            (auth.currentUserId ?? '').trim()
+        ) {
+            return;
+        }
+        useFriendLogStore.getState().bumpRevision();
+        void useVrcNotificationStore
+            .getState()
+            .loadForCurrentUser()
+            .catch((error) => {
+                console.warn(
+                    'Failed to refresh notifications after RemoteSync import:',
+                    error
+                );
+            });
+        handleFavoritesChangedEvent({
+            ownerUserId: event.payload.ownerUserId,
+            endpoint: auth.currentUserEndpoint,
+            kind: 'unknown',
+            local: true,
+            remote: true,
+            changes: [],
+            requiresRefresh: true
+        });
         return;
     }
 

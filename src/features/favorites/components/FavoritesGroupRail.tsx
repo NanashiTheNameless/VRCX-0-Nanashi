@@ -27,6 +27,7 @@ import {
     MoreHorizontalIcon,
     PlusIcon,
     RefreshCcwIcon,
+    Share2Icon,
     UsersIcon
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -124,6 +125,7 @@ type GroupMenuProps = {
     onLocalRename?: FavoriteGroupHandler;
     onLocalDelete?: FavoriteGroupHandler;
     onHistoryClear?: FavoriteGroupHandler;
+    onShareCollection?: FavoriteGroupHandler;
 };
 
 function GroupMenu({
@@ -133,7 +135,8 @@ function GroupMenu({
     onRemoteClear,
     onLocalRename,
     onLocalDelete,
-    onHistoryClear
+    onHistoryClear,
+    onShareCollection
 }: GroupMenuProps) {
     const { t } = useTranslation();
 
@@ -195,6 +198,16 @@ function GroupMenu({
                     className="w-52"
                 >
                     <DropdownMenuGroup>
+                        {onShareCollection ? (
+                            <DropdownMenuItem
+                                onClick={() => onShareCollection(group)}
+                            >
+                                <Share2Icon data-icon="inline-start" />
+                                {t(
+                                    'view.favorite.share_collection.action.menu'
+                                )}
+                            </DropdownMenuItem>
+                        ) : null}
                         {onRemoteRename ? (
                             <DropdownMenuItem
                                 onClick={() => onRemoteRename(group)}
@@ -266,6 +279,14 @@ function GroupMenu({
             />
             <DropdownMenuContent side="right" align="start" className="w-48">
                 <DropdownMenuGroup>
+                    {onShareCollection ? (
+                        <DropdownMenuItem
+                            onClick={() => onShareCollection(group)}
+                        >
+                            <Share2Icon data-icon="inline-start" />
+                            {t('view.favorite.share_collection.action.menu')}
+                        </DropdownMenuItem>
+                    ) : null}
                     {onLocalRename ? (
                         <DropdownMenuItem onClick={() => onLocalRename(group)}>
                             {t('view.favorite.rename_tooltip')}
@@ -372,6 +393,7 @@ type GroupRailSectionProps = {
     onLocalRename?: FavoriteGroupHandler;
     onLocalDelete?: FavoriteGroupHandler;
     onHistoryClear?: FavoriteGroupHandler;
+    onShareCollection?: FavoriteGroupHandler;
     onReorder?(groupKeys: string[]): Promise<boolean>;
 };
 
@@ -400,6 +422,7 @@ const GroupRailSection = memo(function GroupRailSection({
     onLocalRename,
     onLocalDelete,
     onHistoryClear,
+    onShareCollection,
     onReorder
 }: GroupRailSectionProps) {
     const { t } = useTranslation();
@@ -457,12 +480,17 @@ const GroupRailSection = memo(function GroupRailSection({
     function renderGroupRow(group: FavoriteGroupView) {
         const isActive =
             selectedSource === group.source && selectedGroupKey === group.key;
-        let hasMenu = Boolean(onLocalRename || onLocalDelete);
+        let hasMenu = Boolean(
+            onShareCollection || onLocalRename || onLocalDelete
+        );
         if (group.source === 'history') {
             hasMenu = Boolean(onHistoryClear);
         } else if (group.source === 'remote') {
             hasMenu = Boolean(
-                onRemoteRename || onRemoteVisibility || onRemoteClear
+                onShareCollection ||
+                onRemoteRename ||
+                onRemoteVisibility ||
+                onRemoteClear
             );
         }
         const visibilityLabel = group.visibility
@@ -527,6 +555,7 @@ const GroupRailSection = memo(function GroupRailSection({
                             onLocalRename={onLocalRename}
                             onLocalDelete={onLocalDelete}
                             onHistoryClear={onHistoryClear}
+                            onShareCollection={onShareCollection}
                         />
                     </div>
                 ) : null}

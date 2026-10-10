@@ -379,6 +379,154 @@ const generatedCommands = {
     ): Promise<ProxySettingsTestResult> {
         return await TAURI_INVOKE('app__proxy_settings_test', { input });
     },
+    async appRemoteSyncCapabilitiesGet(): Promise<RemoteSyncCapabilitiesSnapshot> {
+        return await TAURI_INVOKE('app__remote_sync_capabilities_get');
+    },
+    async appRemoteSyncSettingsGet(): Promise<RemoteSyncSettingsSnapshot> {
+        return await TAURI_INVOKE('app__remote_sync_settings_get');
+    },
+    async appRemoteSyncServerValidate(
+        apiOrigin: string
+    ): Promise<RemoteSyncCapabilitiesSnapshot> {
+        return await TAURI_INVOKE('app__remote_sync_server_validate', {
+            apiOrigin
+        });
+    },
+    async appRemoteSyncSettingsSet(
+        backend: string,
+        apiOrigin: string,
+        websiteOrigin: string
+    ): Promise<null> {
+        return await TAURI_INVOKE('app__remote_sync_settings_set', {
+            backend,
+            apiOrigin,
+            websiteOrigin
+        });
+    },
+    async appRemoteSyncPairStart(
+        deviceLabel: string
+    ): Promise<RemoteSyncPairingStart> {
+        return await TAURI_INVOKE('app__remote_sync_pair_start', {
+            deviceLabel
+        });
+    },
+    async appRemoteSyncPairPoll(
+        deviceCode: string,
+        intervalSeconds: number
+    ): Promise<RemoteSyncPairingPoll> {
+        return await TAURI_INVOKE('app__remote_sync_pair_poll', {
+            deviceCode,
+            intervalSeconds
+        });
+    },
+    async appRemoteSyncAccountGet(): Promise<RemoteSyncAccountSnapshot> {
+        return await TAURI_INVOKE('app__remote_sync_account_get');
+    },
+    async appRemoteSyncWebsiteVerify(): Promise<RemoteSyncWebsiteVerification> {
+        return await TAURI_INVOKE('app__remote_sync_website_verify');
+    },
+    /**
+     * Signs this PC out: the server forgets its token (best effort, so signing
+     * out works offline too) and the token is removed here. The encryption key
+     * stays on this PC, because it may be the only copy.
+     */
+    async appRemoteSyncSignOut(): Promise<null> {
+        return await TAURI_INVOKE('app__remote_sync_sign_out');
+    },
+    async appRemoteSyncStatusGet(): Promise<RemoteSyncStatusSnapshot> {
+        return await TAURI_INVOKE('app__remote_sync_status_get');
+    },
+    /**
+     * Creates this account's encryption key on its first device and returns
+     * the recovery string, which the user must save.
+     */
+    async appRemoteSyncKeyCreate(ownKey: string | null): Promise<string> {
+        return await TAURI_INVOKE('app__remote_sync_key_create', { ownKey });
+    },
+    async appRemoteSyncKeyImport(recoveryString: string): Promise<null> {
+        return await TAURI_INVOKE('app__remote_sync_key_import', {
+            recoveryString
+        });
+    },
+    async appRemoteSyncRecoveryStringGet(): Promise<string> {
+        return await TAURI_INVOKE('app__remote_sync_recovery_string_get');
+    },
+    async appRemoteSyncNow(): Promise<RemoteSyncRunSnapshot> {
+        return await TAURI_INVOKE('app__remote_sync_now');
+    },
+    /**
+     * Checks two separate things about the configured server: whether it is the
+     * maintainer's own instance, and whether its website serves the maintainer's
+     * signed, unmodified code. Neither result blocks anything; the UI explains
+     * what each failure means.
+     */
+    async appRemoteSyncTrustCheck(): Promise<RemoteSyncTrustSnapshot> {
+        return await TAURI_INVOKE('app__remote_sync_trust_check');
+    },
+    async appShareCollectionCreate(
+        input: ShareCollectionCreateInput
+    ): Promise<ShareCollectionCreateResult> {
+        return await TAURI_INVOKE('app__share_collection_create', { input });
+    },
+    async appRemoteSyncDeleteData(keepCollections: boolean): Promise<null> {
+        return await TAURI_INVOKE('app__remote_sync_delete_data', {
+            keepCollections
+        });
+    },
+    async appRemoteSyncClientsGet(): Promise<RemoteSyncClientSnapshot[]> {
+        return await TAURI_INVOKE('app__remote_sync_clients_get');
+    },
+    /**
+     * Signs out one other client, or every other client when `client_id` is
+     * absent, after checking the second-factor code with the server.
+     */
+    async appRemoteSyncClientsRevoke(
+        method: string,
+        code: string,
+        clientId: string | null
+    ): Promise<null> {
+        return await TAURI_INVOKE('app__remote_sync_clients_revoke', {
+            method,
+            code,
+            clientId
+        });
+    },
+    async appRemoteSyncEmailCodeSend(): Promise<null> {
+        return await TAURI_INVOKE('app__remote_sync_email_code_send');
+    },
+    async appRemoteSyncTransferBegin(): Promise<string> {
+        return await TAURI_INVOKE('app__remote_sync_transfer_begin');
+    },
+    async appRemoteSyncTransferPoll(): Promise<boolean> {
+        return await TAURI_INVOKE('app__remote_sync_transfer_poll');
+    },
+    async appRemoteSyncTransferSend(code: string): Promise<null> {
+        return await TAURI_INVOKE('app__remote_sync_transfer_send', { code });
+    },
+    async appRemoteSyncKeyRotate(
+        method: string,
+        code: string
+    ): Promise<string> {
+        return await TAURI_INVOKE('app__remote_sync_key_rotate', {
+            method,
+            code
+        });
+    },
+    async appRemoteSyncCollectorUnlock(
+        days: number,
+        intervalSeconds: number
+    ): Promise<null> {
+        return await TAURI_INVOKE('app__remote_sync_collector_unlock', {
+            days,
+            intervalSeconds
+        });
+    },
+    async appRemoteSyncCollectorLock(): Promise<null> {
+        return await TAURI_INVOKE('app__remote_sync_collector_lock');
+    },
+    async appRemoteSyncCollectorSnapshot(): Promise<CollectorSnapshot> {
+        return await TAURI_INVOKE('app__remote_sync_collector_snapshot');
+    },
     async appMcpServerStatus(): Promise<McpServerStatus> {
         return await TAURI_INVOKE('app__mcp_server_status');
     },
@@ -3615,6 +3763,7 @@ export type BackendRuntimeEventPayloadMap = {
     gameClientEvent: GameClientEvent;
     runtimeWorkerError: RuntimeWorkerErrorPayload;
     runtimeVrchatAuthFailure: RuntimeVrchatAuthFailurePayload;
+    remoteSyncImported: RemoteSyncImportedPayload;
     runtimeGroupInstancesProjection: RuntimeGroupInstancesProjection;
     printsAutoCleanup: PrintAutoCleanupEvent;
     profileBackupStatus: ProfileBackupStatus;
@@ -3823,6 +3972,29 @@ export type ClientConfigSnippets = {
     claudeCodeCommand: string;
     mcpRemoteJson: string;
     genericJson: string;
+};
+export type CollectorLiveFriend = {
+    userId: string;
+    displayName: string;
+    status: string;
+    location: string;
+    platform: string;
+    lastSeenAtMs: number;
+};
+export type CollectorLiveSnapshot = {
+    createdAtMs: number;
+    ownStatus: string;
+    ownStatusDescription: string;
+    ownLocation: string;
+    friends: CollectorLiveFriend[];
+};
+export type CollectorSnapshot = {
+    state: string;
+    sinceMs: number | null;
+    lastChunkAtMs: number | null;
+    lastError: string | null;
+    liveAgeMs: number | null;
+    live: CollectorLiveSnapshot | null;
 };
 export type CommunityThemeAuthor = {
     name: string;
@@ -6515,6 +6687,136 @@ export type RemoteModerationRow = {
     targetDisplayName: string;
     created: string;
 };
+export type RemoteSyncAccountSnapshot = {
+    accountId: string;
+    usageBytes: number;
+    quotaBytes: number | null;
+    collectorAllowed: boolean;
+    syncAllowed: boolean;
+    scopes: string[];
+};
+export type RemoteSyncCapabilitiesSnapshot = {
+    server: string;
+    version: string;
+    commit: string;
+    protocol: number[];
+    registration: string;
+    websiteOrigins: string[];
+    collectorAvailable: boolean;
+    policyUrl: string | null;
+};
+export type RemoteSyncClientAddress = {
+    ip: string;
+    location: string;
+    firstSeenMs: number;
+    lastSeenMs: number;
+};
+export type RemoteSyncClientSnapshot = {
+    clientId: string;
+    kind: string;
+    label: string;
+    clientVersion: string | null;
+    current: boolean;
+    activeNow: boolean;
+    revoked: boolean;
+    lastSeenMs: number | null;
+    address: RemoteSyncClientAddress | null;
+    history: RemoteSyncClientAddress[];
+};
+export type RemoteSyncCodeTrust =
+    /**
+     * Signed by the fork maintainer's key and every listed file matches.
+     */
+    | 'official'
+    /**
+     * The website publishes no signed manifest, so it is not the published build.
+     */
+    | 'unsigned'
+    /**
+     * The signature or a file does not match the published build.
+     */
+    | 'modified'
+    /**
+     * The website could not be reached, so nothing is known.
+     */
+    | 'unreachable';
+export type RemoteSyncImportedPayload = { ownerUserId: OwnerId };
+export type RemoteSyncInstanceTrust =
+    /**
+     * The server presented the maintainer's signed statement for itself.
+     */
+    | 'official'
+    /**
+     * No statement: an instance run by someone else.
+     */
+    | 'unattested'
+    /**
+     * A statement that is forged, altered, or copied from another server.
+     */
+    | 'invalid'
+    | 'unreachable';
+export type RemoteSyncLogSnapshot = {
+    kind: string;
+    message: string;
+    createdAtMs: number;
+};
+export type RemoteSyncPairingPoll =
+    | { status: 'pending'; value: { interval_seconds: number } }
+    | { status: 'approved'; value: { account_id: string } };
+export type RemoteSyncPairingStart = {
+    deviceCode: string;
+    userCode: string;
+    verificationUri: string;
+    expiresIn: number;
+    interval: number;
+};
+export type RemoteSyncRunSnapshot = {
+    createdVault: boolean;
+    pushedRows: number;
+    importedRows: number;
+    matchedRows: number;
+    gaps: number;
+    unknownStreams: string[];
+    cancelled: boolean;
+};
+export type RemoteSyncSettingsSnapshot = {
+    backend: string;
+    apiOrigin: string;
+    websiteOrigin: string;
+    paired: boolean;
+};
+export type RemoteSyncStatusSnapshot = {
+    enabled: boolean;
+    paired: boolean;
+    hasKey: boolean;
+    signedInToVrchat: boolean;
+    vaultId: string | null;
+    lastSyncAtMs: number | null;
+    log: RemoteSyncLogSnapshot[];
+};
+export type RemoteSyncTrustSnapshot = {
+    instance: RemoteSyncInstanceTrust;
+    instanceDetail: string;
+    apiOrigin: string;
+    websiteOrigin: string;
+    code: RemoteSyncCodeTrust;
+    codeDetail: string;
+    version: string | null;
+    sourceCommit: string | null;
+    /**
+     * When this server last passed each test, so a server that used to be
+     * official and no longer is stands out from one that never was.
+     */
+    codeOfficialAtMs: number | null;
+    instanceOfficialAtMs: number | null;
+};
+export type RemoteSyncWebsiteVerification = {
+    verified: boolean;
+    version: string | null;
+    sourceCommit: string | null;
+    filesChecked: number;
+    detail: string;
+};
 export type RequestInviteRequest = { requestSlot?: number | null };
 export type ResolvedFriendLogName = { userId: string; displayName: string };
 export type Role = 'user' | 'assistant' | 'tool_call' | 'tool_result';
@@ -6769,6 +7071,19 @@ export type SessionSummary = {
     busy: boolean;
     updatedAt: string;
 };
+export type ShareCollectionCreateInput = {
+    title: string;
+    listed: boolean;
+    includeNotes: boolean;
+    worldIds: string[];
+};
+export type ShareCollectionCreateResult = {
+    id: string;
+    url: string;
+    worldCount: number;
+    skippedWorlds: ShareCollectionSkippedWorld[];
+};
+export type ShareCollectionSkippedWorld = { worldId: string; name: string };
 export type SharedCollectionImportStartInput = {
     worldIds: string[];
     groupName: string;

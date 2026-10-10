@@ -1,6 +1,6 @@
 import { isWorldId } from './vrchatIds';
 
-export const VRCX_OPEN_RELAY_ORIGIN = 'https://open.vrcx-0.dev';
+export const VRCX_OPEN_RELAY_ORIGIN = 'https://vrcx.namelessnanashi.dev';
 
 export interface VrcxInstanceLink {
     worldId: string;
@@ -25,7 +25,10 @@ export function isVrcxInstanceLink(input: VrcxInstanceLink): boolean {
     );
 }
 
-export function parseVrcxInstanceLink(input: string): VrcxInstanceLink | null {
+export function parseVrcxInstanceLink(
+    input: string,
+    configuredWebsiteOrigin = VRCX_OPEN_RELAY_ORIGIN
+): VrcxInstanceLink | null {
     let url: URL;
     try {
         url = new URL(input);
@@ -33,7 +36,7 @@ export function parseVrcxInstanceLink(input: string): VrcxInstanceLink | null {
         return null;
     }
     if (
-        url.origin !== VRCX_OPEN_RELAY_ORIGIN ||
+        url.origin !== configuredWebsiteOrigin ||
         url.hash ||
         url.username ||
         url.password
@@ -41,7 +44,8 @@ export function parseVrcxInstanceLink(input: string): VrcxInstanceLink | null {
         return null;
     }
     const parts = url.pathname.split('/');
-    if (parts.length !== 3 || parts[1] !== 'instance') {
+    const routeOffset = 2;
+    if (parts.length !== routeOffset + 2 || parts[routeOffset] !== 'instance') {
         return null;
     }
     if (
@@ -52,7 +56,7 @@ export function parseVrcxInstanceLink(input: string): VrcxInstanceLink | null {
         return null;
     }
     const link = {
-        worldId: parts[2],
+        worldId: parts[routeOffset + 1],
         instanceId: url.searchParams.get('instanceId') || '',
         shortName: url.searchParams.get('shortName') || '',
         launchToken: url.searchParams.get('launchToken') || ''

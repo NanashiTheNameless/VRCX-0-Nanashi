@@ -23,6 +23,7 @@ import {
     type LaunchDialogDetails,
     selfInviteToInstance
 } from '@/services/launchService';
+import { buildInstanceRelayUrl } from '@/services/remoteSyncWebsiteService';
 import { toast } from '@/services/toastService';
 import { accessTypeLocaleKeyMap } from '@/shared/constants/accessType';
 import { checkCanInvite } from '@/shared/utils/invite';
@@ -319,6 +320,19 @@ export function LaunchDialogHost() {
         }
     }
 
+    async function copyRelayInstanceLink() {
+        if (!shareLocation.worldId || !shareLocation.instanceId) {
+            return;
+        }
+        const url = await buildInstanceRelayUrl({
+            worldId: shareLocation.worldId,
+            instanceId: shareLocation.instanceId,
+            shortName: details.shortName || '',
+            launchToken: actionLaunchToken
+        });
+        await copyField(url, t('dialog.launch.copy.vrcx_link'));
+    }
+
     async function launchWithMode(nextDesktopMode: boolean) {
         if (isGameRunning) {
             const result = await confirm({
@@ -525,6 +539,18 @@ export function LaunchDialogHost() {
                                               t('dialog.launch.short_url')
                                           )
                                         : null}
+                                    <DropdownMenuItem
+                                        disabled={!shareLocation.instanceId}
+                                        onClick={() => {
+                                            void copyRelayInstanceLink();
+                                        }}
+                                    >
+                                        {t('accessibility.copy_value', {
+                                            value: t(
+                                                'dialog.launch.copy.vrcx_link'
+                                            )
+                                        })}
+                                    </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     {copyMenuItem(
                                         details.location,

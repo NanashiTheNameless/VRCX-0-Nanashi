@@ -10,6 +10,7 @@ import {
     convertFileUrlToImageUrl,
     openExternalLink
 } from '@/services/entityMediaService';
+import { buildAvatarRelayUrl } from '@/services/remoteSyncWebsiteService';
 import { vrchatAvatarUrl } from '@/shared/constants/vrchatWebUrls';
 import {
     getPlatformInfo,
@@ -93,12 +94,14 @@ function AvatarOverviewReferences({
     avatarUrl,
     onCopyAvatarId,
     onCopyAvatarUrl,
+    onCopyAvatarRelayUrl,
     onOpenAvatarUrl
 }: {
     avatar: AvatarViewRecord;
     avatarUrl: string;
     onCopyAvatarId(): void;
     onCopyAvatarUrl(): void;
+    onCopyAvatarRelayUrl(): void;
     onOpenAvatarUrl(): void;
 }) {
     const { t } = useTranslation();
@@ -139,6 +142,11 @@ function AvatarOverviewReferences({
                             icon={CopyIcon}
                             onClick={onCopyAvatarUrl}
                         />
+                        <EntityFactAction
+                            label={t('dialog.avatar.info.copy_vrcx_url')}
+                            icon={CopyIcon}
+                            onClick={onCopyAvatarRelayUrl}
+                        />
                     </EntityFactValue>
                 </EntityFactRow>
             ) : null}
@@ -158,6 +166,7 @@ function AvatarDialogOverviewSection({
     onAuthorClick,
     onCopyAvatarId,
     onCopyAvatarUrl,
+    onCopyAvatarRelayUrl,
     onOpenAvatarUrl
 }: {
     avatar: AvatarViewRecord;
@@ -171,6 +180,7 @@ function AvatarDialogOverviewSection({
     onAuthorClick(): void;
     onCopyAvatarId(): void;
     onCopyAvatarUrl(): void;
+    onCopyAvatarRelayUrl(): void;
     onOpenAvatarUrl(): void;
 }) {
     const { t } = useTranslation();
@@ -268,6 +278,7 @@ function AvatarDialogOverviewSection({
                 avatarUrl={avatarUrl}
                 onCopyAvatarId={onCopyAvatarId}
                 onCopyAvatarUrl={onCopyAvatarUrl}
+                onCopyAvatarRelayUrl={onCopyAvatarRelayUrl}
                 onOpenAvatarUrl={onOpenAvatarUrl}
             />
         </EntityOverviewCard>
@@ -491,6 +502,18 @@ export function AvatarDialogTabbedView({
                             copyAvatarText(
                                 avatarUrl,
                                 t('dialog.avatar.info.url')
+                            );
+                        }}
+                        onCopyAvatarRelayUrl={async () => {
+                            const url = await buildAvatarRelayUrl({
+                                avatarId: avatar.id,
+                                name: avatar.name,
+                                author: avatar.authorName,
+                                imageUrl: avatar.imageUrl || imageUrl
+                            });
+                            copyAvatarText(
+                                url,
+                                t('dialog.avatar.info.copy_vrcx_url')
                             );
                         }}
                         onOpenAvatarUrl={() => openExternalLink(avatarUrl)}

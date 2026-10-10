@@ -5,9 +5,7 @@ pub use vrcx_0_contracts::world_collections::{
     WorldCollectionSnapshotResponse, WorldCollectionSnapshotWorld,
 };
 
-/// Fork: read-only. Shared collections can be imported from upstream's site, but
-/// nothing is uploaded or registered there.
-pub const WORLD_COLLECTIONS_API_ENDPOINT: &str = "https://worlds.vrcx-0.dev/api/collections";
+/// Public collection reads use the configured RemoteSync API instance.
 const WORLD_COLLECTIONS_FETCH_TIMEOUT: Duration = Duration::from_secs(30);
 const COLLECTION_SHORTCODE_MIN_LEN: usize = 6;
 const COLLECTION_SHORTCODE_MAX_LEN: usize = 12;
@@ -33,9 +31,25 @@ pub fn validate_collection_shortcode(id: &str) -> Result<String, WorldCollection
 }
 
 pub async fn fetch_world_collection(
+    api_origin: &str,
     id: &str,
 ) -> Result<WorldCollectionSnapshotResponse, WorldCollectionShareError> {
     let id = validate_collection_shortcode(id)?;
+    let mut origin = url::Url::parse(api_origin)
+        .map_err(|_| WorldCollectionShareError::Custom("Invalid RemoteSync API URL.".into()))?;
+    if origin.scheme() != "https"
+        || origin.host_str().is_none()
+        || !origin.username().is_empty()
+        || origin.password().is_some()
+        || origin.query().is_some()
+        || origin.fragment().is_some()
+        || !matches!(origin.path(), "" | "/")
+    {
+        return Err(WorldCollectionShareError::Custom(
+            "RemoteSync API URL must be an HTTPS origin.".into(),
+        ));
+    }
+    origin.set_path("");
     vrcx_0_core::tls::install_crypto_provider();
     let client = vrcx_0_http_client::builder()
         .user_agent(vrcx_0_core::user_agent::app_user_agent())
@@ -46,7 +60,10 @@ pub async fn fetch_world_collection(
                 "share collection fetch client failed: {error}"
             ))
         })?;
-    let url = format!("{WORLD_COLLECTIONS_API_ENDPOINT}/{id}");
+    let url = format!(
+        "{}/public/v1/collections/{id}",
+        origin.as_str().trim_end_matches('/')
+    );
     let response = client
         .get(url)
         .timeout(WORLD_COLLECTIONS_FETCH_TIMEOUT)
@@ -75,7 +92,7 @@ pub async fn fetch_world_collection(
 
 #[cfg(test)]
 mod tests {
-    use super::WorldCollectionSnapshotResponse;
+    use super::{validate_collection_shortcode, WorldCollectionSnapshotResponse};
 
     #[test]
     fn snapshot_accepts_nullable_note_from_public_api() {
@@ -93,5 +110,13 @@ mod tests {
         .expect("nullable note should match the public API contract");
 
         assert_eq!(snapshot.note, None);
+    }
+
+    #[test]
+    fn collection_codes_are_bounded_alphanumeric_values() {
+        assert_eq!(validate_collection_shortcode("AbC123z").unwrap(), "AbC123z");
+        for code in ["short", "has space", "contains/slash", "toolongcode123"] {
+            assert!(validate_collection_shortcode(code).is_err(), "{code}");
+        }
     }
 }
