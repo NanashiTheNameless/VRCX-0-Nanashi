@@ -237,8 +237,18 @@ mod tests {
         ));
     }
 
+    #[cfg(target_os = "linux")]
     #[test]
     fn ordinary_workspace_filesystem_is_not_tmpfs() {
         assert!(!is_tmpfs(std::path::Path::new(env!("CARGO_MANIFEST_DIR"))).unwrap());
+    }
+
+    #[cfg(not(target_os = "linux"))]
+    #[test]
+    fn tmpfs_check_fails_closed_when_platform_cannot_verify_it() {
+        assert_eq!(
+            is_tmpfs(std::path::Path::new(env!("CARGO_MANIFEST_DIR"))),
+            Err(IpcError::NotTmpfs)
+        );
     }
 }

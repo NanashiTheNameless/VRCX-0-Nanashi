@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { invoke } from '@/platform/tauri/generatedInvoke';
 import { Button } from '@/ui/shadcn/button';
+import { Switch } from '@/ui/shadcn/switch';
 
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
@@ -256,21 +257,13 @@ export function SettingsHistorySyncTab() {
                         'view.settings.history_sync.backend_description'
                     )}
                 >
-                    <select
-                        className="bg-background h-9 rounded-md border px-3 text-sm"
-                        value={backend}
-                        disabled={busy}
-                        onChange={(event) =>
-                            void saveSettings(event.target.value)
+                    <Switch
+                        checked={backend === 'remotesync'}
+                        disabled={busy || !settings}
+                        onCheckedChange={(enabled) =>
+                            void saveSettings(enabled ? 'remotesync' : 'off')
                         }
-                    >
-                        <option value="off">
-                            {t('view.settings.history_sync.off')}
-                        </option>
-                        <option value="remotesync">
-                            {t('view.settings.history_sync.remotesync')}
-                        </option>
-                    </select>
+                    />
                 </Field>
             </SettingsCard>
 
