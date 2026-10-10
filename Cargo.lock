@@ -9994,7 +9994,7 @@ dependencies = [
 [[package]]
 name = "vrcx-0-nanashi-website-protocol"
 version = "0.1.0"
-source = "git+https://github.com/NanashiTheNameless/VRCX-0-Nanashi-Website?rev=7b04fed50fd3a91d077bf05e9527ea83122baabb#7b04fed50fd3a91d077bf05e9527ea83122baabb"
+source = "git+https://github.com/NanashiTheNameless/VRCX-0-Nanashi-Website?rev=656a7a9e9815e0f1acba145b24aaa42c04d0f537#656a7a9e9815e0f1acba145b24aaa42c04d0f537"
 dependencies = [
  "argon2",
  "chacha20poly1305",
