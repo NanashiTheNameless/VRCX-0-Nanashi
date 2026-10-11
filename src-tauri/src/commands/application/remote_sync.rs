@@ -247,8 +247,9 @@ pub async fn app__remote_sync_pair_start(
 pub async fn app__remote_sync_pair_poll(
     state: State<'_, AppState>,
     device_code: String,
-    interval_seconds: u32,
+    interval_seconds: Option<u32>,
 ) -> Result<RemoteSyncPairingPoll, AppError> {
+    let interval_seconds = interval_seconds.unwrap_or(5);
     let poll = client(&state)
         .map_err(|error| AppError::WebClient(error.to_string()))?
         .poll_device(&device_code, interval_seconds)

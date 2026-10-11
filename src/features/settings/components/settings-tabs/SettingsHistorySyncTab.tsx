@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { commands } from '@/platform/tauri/bindings';
 import { invoke } from '@/platform/tauri/generatedInvoke';
 import { Button } from '@/ui/shadcn/button';
 import { Switch } from '@/ui/shadcn/switch';
@@ -45,10 +46,6 @@ type PairingStart = {
     expiresIn: number;
     interval: number;
 };
-
-type PairingPoll =
-    | { status: 'pending'; value: { intervalSeconds: number } }
-    | { status: 'approved'; value: { accountId: string } };
 
 type WebsiteVerification = {
     verified: boolean;
@@ -133,12 +130,9 @@ export function SettingsHistorySyncTab() {
                 return;
             }
             try {
-                const result = await invoke<PairingPoll>(
-                    'app__remote_sync_pair_poll',
-                    {
-                        deviceCode: pairing.deviceCode,
-                        intervalSeconds: pollInterval
-                    }
+                const result = await commands.appRemoteSyncPairPoll(
+                    pairing.deviceCode,
+                    pollInterval
                 );
                 if (result.status === 'approved') {
                     setPairing(undefined);
@@ -150,7 +144,7 @@ export function SettingsHistorySyncTab() {
                     );
                     return;
                 }
-                setPollInterval(result.value.intervalSeconds);
+                setPollInterval(result.value.interval_seconds);
             } catch (cause) {
                 setError(
                     cause instanceof Error ? cause.message : String(cause)
