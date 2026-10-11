@@ -412,7 +412,7 @@ const generatedCommands = {
     },
     async appRemoteSyncPairPoll(
         deviceCode: string,
-        intervalSeconds: number
+        intervalSeconds: number | null
     ): Promise<RemoteSyncPairingPoll> {
         return await TAURI_INVOKE('app__remote_sync_pair_poll', {
             deviceCode,
