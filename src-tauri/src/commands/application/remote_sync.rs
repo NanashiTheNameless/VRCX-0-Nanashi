@@ -242,7 +242,7 @@ pub async fn app__remote_sync_pair_start(
     })
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "camelCase")]
 #[specta::specta]
 pub async fn app__remote_sync_pair_poll(
     state: State<'_, AppState>,
