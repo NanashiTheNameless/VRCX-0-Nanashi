@@ -77,27 +77,40 @@ export function SettingsHistorySyncTab() {
     const [error, setError] = useState<string>();
 
     const refresh = useCallback(async () => {
+        let snapshot: SettingsSnapshot;
         try {
-            const snapshot = await invoke<SettingsSnapshot>(
+            snapshot = await invoke<SettingsSnapshot>(
                 'app__remote_sync_settings_get'
             );
-            setSettings(snapshot);
-            setApiOrigin(snapshot.apiOrigin);
-            setWebsiteOrigin(snapshot.websiteOrigin);
-            if (snapshot.backend === 'remotesync') {
-                const capabilitySnapshot = await invoke<Capabilities>(
-                    'app__remote_sync_capabilities_get'
-                );
-                setCapabilities(capabilitySnapshot);
-                if (snapshot.paired) {
-                    setAccount(
-                        await invoke<Account>('app__remote_sync_account_get')
-                    );
-                }
-            }
         } catch (cause) {
             setError(cause instanceof Error ? cause.message : String(cause));
+            return;
         }
+
+        setSettings(snapshot);
+        setApiOrigin(snapshot.apiOrigin);
+        setWebsiteOrigin(snapshot.websiteOrigin);
+
+        if (snapshot.backend !== 'remotesync') {
+            setCapabilities(undefined);
+            setAccount(undefined);
+            return;
+        }
+
+        if (!snapshot.paired) {
+            setCapabilities(undefined);
+            setAccount(undefined);
+            return;
+        }
+
+        setCapabilities(undefined);
+        void invoke<Capabilities>('app__remote_sync_capabilities_get')
+            .then(setCapabilities)
+            .catch(() => setCapabilities(undefined));
+
+        void invoke<Account>('app__remote_sync_account_get')
+            .then(setAccount)
+            .catch(() => setAccount(undefined));
     }, []);
 
     useEffect(() => {
@@ -164,25 +177,16 @@ export function SettingsHistorySyncTab() {
             if (isChangingServer && !confirmServerChange) {
                 return;
             }
-            const checked =
-                backend === 'remotesync'
-                    ? await invoke<Capabilities>(
-                          'app__remote_sync_server_validate',
-                          { apiOrigin }
-                      )
-                    : undefined;
-            const nextWebsiteOrigin =
-                checked?.websiteOrigins[0] &&
-                websiteOrigin === settings?.websiteOrigin
-                    ? checked.websiteOrigins[0]
-                    : websiteOrigin;
             await invoke('app__remote_sync_settings_set', {
                 backend,
                 apiOrigin,
-                websiteOrigin: nextWebsiteOrigin
+                websiteOrigin
             });
-            setWebsiteOrigin(nextWebsiteOrigin);
-            if (checked) setCapabilities(checked);
+            setSettings((previous) =>
+                previous
+                    ? { ...previous, backend, apiOrigin, websiteOrigin }
+                    : previous
+            );
             setConfirmServerChange(false);
             await refresh();
         } catch (cause) {
