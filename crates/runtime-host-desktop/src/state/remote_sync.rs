@@ -286,6 +286,7 @@ fn syncable_app_setting(key: &str) -> bool {
         "credential",
         "directory",
         "endpoint",
+        "feedlogger",
         "file",
         "folder",
         "historysync",
@@ -1379,6 +1380,12 @@ impl DesktopRuntimeHostState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn recorder_settings_are_never_synced() {
+        assert!(!syncable_app_setting("config:vrcx_feedLogger"));
+        assert!(syncable_app_setting("config:vrcx_theme"));
+    }
 
     fn world(id: &str, name: &str, image_url: &str) -> CachedWorld {
         CachedWorld {

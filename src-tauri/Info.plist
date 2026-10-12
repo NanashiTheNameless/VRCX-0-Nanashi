@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>VRCX-0 connects to the Self-hosted Recorder you run on your local network.</string>
+	<string>VRCX-0-Nanashi connects to the Self-hosted Recorder you run on your local network.</string>
 </dict>
 </plist>

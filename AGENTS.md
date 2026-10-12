@@ -12,7 +12,7 @@ The fork is maintained by one person. Read `CONTRIBUTING.md` before proposing
 changes, and treat it as authoritative where this file is silent.
 
 The React frontend lives in `src/features/<domain>/`. The Rust backend is a Cargo
-workspace of 29 crates under `crates/`, plus `src-tauri` (30 members total).
+workspace of 31 crates under `crates/`, plus `src-tauri` (32 members total).
 
 npm is the only supported package manager. `package-lock.json` is the sole
 lockfile; CI runs `npm ci`. Do not reintroduce a pnpm or yarn lockfile.
@@ -94,6 +94,19 @@ unrelated edit, with where they live:
   It must stay read-only (no command reaches VRChat), take the session only
   from the inherited descriptor, refuse any data directory that is not
   tmpfs, and never print or store what the runtime reports.
+- **Self-hosted recorder (offline logger)** - `crates/logger/`,
+  `crates/logger-protocol/`, `crates/runtime-host-desktop/src/feed_logger.rs`,
+  `src/components/hosts/tools-dialogs/offline-record/`. Upstream's feature,
+  kept. A separate server program the user runs; the app fills its records
+  into the Feed. It and RemoteSync are mutually exclusive: connecting a
+  recorder is refused while History Sync is on and the reverse
+  (`app__feed_logger_settings_save`, `app__remote_sync_settings_set`), and
+  the `feedLogger` config key is never synced. Fork differences to keep
+  through upstream merges: install script, compose file, image and guide
+  link point at this fork; one English README; no beta channel and no
+  stable/beta recorder check, because every recorder the fork publishes is
+  a nightly build. Nightly builds the binaries and calls
+  `logger-image.yml` to publish the image.
 - **yt-dlp / media** - `crates/ytdlp/`, `YTDLP_SETUP.md`. Cookie use is opt-in
   and backs up originals.
 - **Notification sounds** - `crates/host-desktop/src/sound.rs`,
