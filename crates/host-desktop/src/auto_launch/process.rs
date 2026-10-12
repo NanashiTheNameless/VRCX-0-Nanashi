@@ -367,13 +367,30 @@ fn is_process_name_running(name: &str) -> bool {
 }
 
 pub(super) fn refresh_runs(inner: &mut Inner) {
+    let has_running_process = inner
+        .active_session
+        .iter()
+        .flat_map(|session| &session.runs)
+        .chain(&inner.test_runs)
+        .any(|run| {
+            matches!(run.status, AppLauncherRunStatus::Running)
+                && (run.root_pid.is_some() || !run.tracked_pids.is_empty())
+        });
+    let mut system = has_running_process.then(System::new);
+    if let Some(system) = system.as_mut() {
+        system.refresh_processes(ProcessesToUpdate::All, true);
+    }
     if let Some(session) = inner.active_session.as_mut() {
         for run in &mut session.runs {
-            refresh_run_tracking(run);
+            if let Some(system) = system.as_ref() {
+                refresh_run_tracking_with_system(run, system);
+            }
         }
     }
     for run in &mut inner.test_runs {
-        refresh_run_tracking(run);
+        if let Some(system) = system.as_ref() {
+            refresh_run_tracking_with_system(run, system);
+        }
     }
     inner.test_runs.retain(|run| {
         !matches!(
@@ -389,6 +406,17 @@ pub(super) fn refresh_runs(inner: &mut Inner) {
 }
 
 fn refresh_run_tracking(run: &mut AppLauncherRun) {
+    if !matches!(run.status, AppLauncherRunStatus::Running)
+        || (run.root_pid.is_none() && run.tracked_pids.is_empty())
+    {
+        return;
+    }
+    let mut system = System::new();
+    system.refresh_processes(ProcessesToUpdate::All, true);
+    refresh_run_tracking_with_system(run, &system);
+}
+
+fn refresh_run_tracking_with_system(run: &mut AppLauncherRun, sys: &System) {
     if run.root_pid.is_none() && run.tracked_pids.is_empty() {
         return;
     }
@@ -396,16 +424,13 @@ fn refresh_run_tracking(run: &mut AppLauncherRun) {
         return;
     }
 
-    let mut sys = System::new();
-    sys.refresh_processes(ProcessesToUpdate::All, true);
-
     let mut pids: HashSet<u32> = run.tracked_pids.iter().copied().collect();
     if let Some(root_pid) = run.root_pid {
         pids.insert(root_pid);
     }
     let snapshot: Vec<u32> = pids.iter().copied().collect();
     for pid in snapshot {
-        for child in find_child_pids_recursive(&sys, pid) {
+        for child in find_child_pids_recursive(sys, pid) {
             pids.insert(child);
         }
     }

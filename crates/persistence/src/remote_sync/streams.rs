@@ -793,6 +793,39 @@ pub fn export_rows(
         .collect())
 }
 
+/// Counts at most `limit` rows waiting for upload without decoding their
+/// columns into JSON values.
+pub fn pending_row_count(
+    db: &DatabaseService,
+    scope: &StreamScope,
+    spec: &StreamSpec,
+    after_rowid: i64,
+    limit: u32,
+) -> Result<u32, Error> {
+    if limit == 0 {
+        return Ok(0);
+    }
+    let table = scope.table_name(spec);
+    let rows = db.execute(
+        &format!(
+            "SELECT COUNT(*) FROM (SELECT 1 FROM {table} WHERE rowid > @after{owner} AND rowid NOT IN (SELECT local_rowid FROM remote_sync_provenance WHERE stream = @stream) LIMIT @limit)",
+            table = quote(&table),
+            owner = owner_filter(spec),
+        ),
+        &ParamsBuilder::new()
+            .set("after", after_rowid)
+            .set("owner_row_id", scope.owner_row_id)
+            .set("stream", table)
+            .set("limit", limit)
+            .build(),
+    )?;
+    Ok(rows
+        .first()
+        .and_then(|columns| columns.first())
+        .and_then(Value::as_u64)
+        .unwrap_or(0) as u32)
+}
+
 /// Exports every local row in a history stream for a replacement snapshot,
 /// including rows imported from other devices. Normal incremental sync uses
 /// `export_rows` so imported rows are never uploaded a second time.

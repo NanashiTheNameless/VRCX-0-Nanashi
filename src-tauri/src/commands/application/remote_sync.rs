@@ -867,10 +867,8 @@ pub(crate) fn start_background_sync(app: &tauri::AppHandle) {
             let state = app.state::<AppState>();
             let ready = state
                 .runtime_host()
-                .remote_sync_status()
-                .is_ok_and(|status| {
-                    status.enabled && status.paired && status.has_key && status.signed_in_to_vrchat
-                });
+                .remote_sync_background_ready()
+                .unwrap_or(false);
             if state.runtime_host().remote_sync_enabled() {
                 let server = format!(
                     "{}|{}",
@@ -911,10 +909,16 @@ pub(crate) fn start_background_sync(app: &tauri::AppHandle) {
                     .unwrap_or(DEFAULT_SYNC_INTERVAL_MINUTES);
                 let interval = std::time::Duration::from_secs(u64::from(interval_minutes) * 60);
                 let due = last_sync.elapsed() >= interval;
-                let backlog = state
-                    .runtime_host()
-                    .remote_sync_pending_rows(BACKGROUND_SYNC_ROW_THRESHOLD)
-                    .unwrap_or(0);
+                let backlog_app = app.clone();
+                let backlog = tauri::async_runtime::spawn_blocking(move || {
+                    let state = backlog_app.state::<AppState>();
+                    state
+                        .runtime_host()
+                        .remote_sync_pending_rows(BACKGROUND_SYNC_ROW_THRESHOLD)
+                        .unwrap_or(0)
+                })
+                .await
+                .unwrap_or(0);
                 if due || backlog >= BACKGROUND_SYNC_ROW_THRESHOLD {
                     if let Err(error) = state.runtime_host().remote_sync_run().await {
                         tracing::warn!(%error, "background history sync failed");

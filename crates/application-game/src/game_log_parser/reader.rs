@@ -135,6 +135,7 @@ fn parse_opened_log(
     let initial_position = ctx.position;
     ctx.at_end = true;
     let mut line_count = 0;
+    let now_local = Local::now().naive_local();
     loop {
         let line_start = reader.stream_position().unwrap_or(ctx.position);
         line.clear();
@@ -175,7 +176,6 @@ fn parse_opened_log(
             continue;
         }
 
-        let now_local = Local::now().naive_local();
         if line_date > now_local + chrono::Duration::minutes(61) {
             continue;
         }

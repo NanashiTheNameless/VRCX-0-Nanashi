@@ -6,12 +6,14 @@ use super::{
 
 pub struct AutoAppLaunchManager {
     inner: Arc<Mutex<Inner>>,
+    changes: tokio::sync::watch::Sender<u64>,
 }
 
 impl Clone for AutoAppLaunchManager {
     fn clone(&self) -> Self {
         Self {
             inner: Arc::clone(&self.inner),
+            changes: self.changes.clone(),
         }
     }
 }
@@ -36,7 +38,31 @@ impl AutoAppLaunchManager {
                 generation: 0,
                 next_id: 0,
             })),
+            changes: tokio::sync::watch::channel(0).0,
         }
+    }
+
+    pub fn subscribe_changes(&self) -> tokio::sync::watch::Receiver<u64> {
+        self.changes.subscribe()
+    }
+
+    pub fn has_running_processes(&self) -> bool {
+        let inner = self.inner.lock().unwrap();
+        inner
+            .active_session
+            .iter()
+            .flat_map(|session| &session.runs)
+            .chain(&inner.test_runs)
+            .any(|run| {
+                matches!(run.status, AppLauncherRunStatus::Running)
+                    && (run.root_pid.is_some() || !run.tracked_pids.is_empty())
+            })
+    }
+
+    fn notify_changed(&self) {
+        self.changes.send_modify(|generation| {
+            *generation = generation.wrapping_add(1);
+        });
     }
 
     pub fn snapshot(&self) -> AppLauncherSnapshot {
@@ -59,6 +85,7 @@ impl AutoAppLaunchManager {
             refresh_runs(&mut inner);
             inner.snapshot()
         };
+        self.notify_changed();
         spawn_delayed_launches(delayed);
         snapshot
     }
@@ -73,6 +100,7 @@ impl AutoAppLaunchManager {
             refresh_runs(&mut inner);
             inner.snapshot()
         };
+        self.notify_changed();
         spawn_delayed_launches(delayed);
         snapshot
     }
@@ -97,6 +125,7 @@ impl AutoAppLaunchManager {
             refresh_runs(&mut inner);
             inner.snapshot()
         };
+        self.notify_changed();
         spawn_delayed_launches(delayed);
         Ok(snapshot)
     }
@@ -116,6 +145,7 @@ impl AutoAppLaunchManager {
                     started_at,
                     runs: Vec::new(),
                 });
+                self.notify_changed();
                 return;
             }
 
@@ -147,6 +177,7 @@ impl AutoAppLaunchManager {
             }
         }
 
+        self.notify_changed();
         spawn_delayed_launches(delayed);
     }
 
@@ -155,6 +186,8 @@ impl AutoAppLaunchManager {
         inner.generation = inner.generation.saturating_add(1);
         stop_close_by_vrcx_session(&mut inner);
         inner.active_session = None;
+        drop(inner);
+        self.notify_changed();
     }
 
     pub fn on_steamvr_changed(&self, is_steamvr_running: bool) {
@@ -175,6 +208,7 @@ impl AutoAppLaunchManager {
             reconcile_active_session_entries(&mut inner, self, &mut delayed);
             refresh_runs(&mut inner);
         }
+        self.notify_changed();
         spawn_delayed_launches(delayed);
     }
 
@@ -194,7 +228,10 @@ impl AutoAppLaunchManager {
         launch_entry(&mut run, &entry);
         inner.test_runs.push(run);
         refresh_runs(&mut inner);
-        Ok(inner.snapshot())
+        let snapshot = inner.snapshot();
+        drop(inner);
+        self.notify_changed();
+        Ok(snapshot)
     }
 
     pub fn stop_test_run(&self, run_id: &str) -> Result<AppLauncherSnapshot, String> {
@@ -204,7 +241,10 @@ impl AutoAppLaunchManager {
         };
         stop_tracked_run(run);
         refresh_runs(&mut inner);
-        Ok(inner.snapshot())
+        let snapshot = inner.snapshot();
+        drop(inner);
+        self.notify_changed();
+        Ok(snapshot)
     }
 
     #[cfg(test)]
@@ -242,6 +282,8 @@ impl AutoAppLaunchManager {
             return;
         };
         launch_entry(run, &entry);
+        drop(inner);
+        self.notify_changed();
     }
 }
 

@@ -285,6 +285,20 @@ impl DesktopRuntimeHostState {
         self.config_string(BACKEND_KEY, "off") == BACKEND_REMOTESYNC
     }
 
+    /// Checks only the local prerequisites needed before the background
+    /// scheduler considers a sync. Unlike the settings snapshot, this avoids
+    /// loading recent sync history from the database on every scheduler tick.
+    pub fn remote_sync_background_ready(&self) -> Result<bool> {
+        if !self.remote_sync_enabled()
+            || !self.remote_sync_secret_exists(TOKEN_KEY)?
+            || !self.remote_sync_secret_exists(SYNC_SECRET_KEY)?
+        {
+            return Ok(false);
+        }
+        let scope = self.runtime.desktop_assembly().auth_scope().snapshot();
+        Ok(scope.active && !scope.current_user_id.trim().is_empty())
+    }
+
     fn remote_sync_secret(&self) -> Result<Option<SyncSecret>> {
         let Some(stored) = self.remote_sync_secret_get(SYNC_SECRET_KEY)? else {
             return Ok(None);

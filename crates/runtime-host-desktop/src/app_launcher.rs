@@ -23,9 +23,33 @@ pub(crate) fn start_app_launcher_snapshot_events(
     tasks
         .clone()
         .spawn_cancellable(move |stop_token| async move {
+            let mut changes = manager.subscribe_changes();
             let mut previous = manager.snapshot();
             loop {
-                tokio::time::sleep(APP_LAUNCHER_SNAPSHOT_INTERVAL).await;
+                if manager.has_running_processes() {
+                    tokio::select! {
+                        _ = tokio::time::sleep(APP_LAUNCHER_SNAPSHOT_INTERVAL) => {}
+                        changed = changes.changed() => {
+                            if changed.is_err() {
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    tokio::select! {
+                        _ = tokio::time::sleep(APP_LAUNCHER_SNAPSHOT_INTERVAL) => {
+                            if stop_token.is_stop_requested() {
+                                break;
+                            }
+                            continue;
+                        }
+                        changed = changes.changed() => {
+                            if changed.is_err() {
+                                break;
+                            }
+                        }
+                    }
+                }
                 if stop_token.is_stop_requested() {
                     break;
                 }

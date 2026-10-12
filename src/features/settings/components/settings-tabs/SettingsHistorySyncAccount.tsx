@@ -1,8 +1,10 @@
+import { REGEXP_ONLY_DIGITS, REGEXP_ONLY_DIGITS_AND_CHARS } from 'input-otp';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { invoke } from '@/platform/tauri/generatedInvoke';
 import { Button } from '@/ui/shadcn/button';
+import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/ui/shadcn/input-otp';
 
 type Address = {
     ip: string;
@@ -26,6 +28,54 @@ type Client = {
 
 const INPUT_CLASS = 'bg-background h-9 w-full rounded-md border px-3 text-sm';
 const DELETE_WORD = 'DELETE';
+const REAUTH_CODE_LENGTH = 6;
+const REAUTH_RECOVERY_CODE_LENGTH = 8;
+
+type ReauthMethod = 'totp' | 'email' | 'recovery';
+
+function normalizeReauthCode(value: string, method: ReauthMethod) {
+    return method === 'recovery'
+        ? value.replace(/[^a-z0-9]/gi, '').slice(0, REAUTH_RECOVERY_CODE_LENGTH)
+        : value;
+}
+
+function ReauthCodeInput({
+    value,
+    method,
+    onChange
+}: {
+    value: string;
+    method: ReauthMethod;
+    onChange: (value: string) => void;
+}) {
+    const { t } = useTranslation();
+    const recovery = method === 'recovery';
+    const length = recovery ? REAUTH_RECOVERY_CODE_LENGTH : REAUTH_CODE_LENGTH;
+    return (
+        <div className="flex justify-center">
+            <InputOTP
+                value={value}
+                maxLength={length}
+                inputMode={recovery ? 'text' : 'numeric'}
+                pattern={
+                    recovery ? REGEXP_ONLY_DIGITS_AND_CHARS : REGEXP_ONLY_DIGITS
+                }
+                autoComplete="one-time-code"
+                aria-label={t(
+                    'view.settings.history_sync.clients.code_placeholder'
+                )}
+                pasteTransformer={(code) => normalizeReauthCode(code, method)}
+                onChange={(code) => onChange(normalizeReauthCode(code, method))}
+            >
+                <InputOTPGroup>
+                    {Array.from({ length }, (_, index) => (
+                        <InputOTPSlot key={index} index={index} />
+                    ))}
+                </InputOTPGroup>
+            </InputOTP>
+        </div>
+    );
+}
 
 function useTask() {
     const [busy, setBusy] = useState(false);
@@ -116,15 +166,28 @@ export function SettingsHistorySyncAccount({
     const { busy, error, run } = useTask();
     const [clients, setClients] = useState<Client[]>();
     const [historyOf, setHistoryOf] = useState<string>();
-    const [code, setCode] = useState('');
-    const [method, setMethod] = useState('totp');
+    const [clientCode, setClientCode] = useState('');
+    const [clientMethod, setClientMethod] = useState<ReauthMethod>('totp');
+    const [rotateCode, setRotateCode] = useState('');
+    const [rotateMethod, setRotateMethod] = useState<ReauthMethod>('totp');
     const [emailSent, setEmailSent] = useState(false);
+    const [rotateEmailSent, setRotateEmailSent] = useState(false);
     const [transferCode, setTransferCode] = useState('');
     const [transferSent, setTransferSent] = useState(false);
     const [deleteWord, setDeleteWord] = useState('');
     const [keepCollections, setKeepCollections] = useState(true);
     const [rotateWord, setRotateWord] = useState('');
     const [rotatedRecovery, setRotatedRecovery] = useState<string>();
+    const clientCodeReady =
+        clientCode.length ===
+        (clientMethod === 'recovery'
+            ? REAUTH_RECOVERY_CODE_LENGTH
+            : REAUTH_CODE_LENGTH);
+    const rotateCodeReady =
+        rotateCode.length ===
+        (rotateMethod === 'recovery'
+            ? REAUTH_RECOVERY_CODE_LENGTH
+            : REAUTH_CODE_LENGTH);
 
     const loadClients = () =>
         run(async () => {
@@ -133,11 +196,11 @@ export function SettingsHistorySyncAccount({
     const revoke = (clientId: string | null) =>
         run(async () => {
             await invoke('app__remote_sync_clients_revoke', {
-                method,
-                code,
+                method: clientMethod,
+                code: clientCode,
                 clientId
             });
-            setCode('');
+            setClientCode('');
             setClients(await invoke<Client[]>('app__remote_sync_clients_get'));
         });
 
@@ -274,7 +337,9 @@ export function SettingsHistorySyncAccount({
                                                 type="button"
                                                 size="sm"
                                                 variant="outline"
-                                                disabled={busy || !code.trim()}
+                                                disabled={
+                                                    busy || !clientCodeReady
+                                                }
                                                 onClick={() =>
                                                     void revoke(client.clientId)
                                                 }
@@ -293,21 +358,19 @@ export function SettingsHistorySyncAccount({
                                 'view.settings.history_sync.clients.code_description'
                             )}
                         </p>
-                        <input
-                            className={INPUT_CLASS}
-                            value={code}
-                            autoComplete="one-time-code"
-                            placeholder={t(
-                                'view.settings.history_sync.clients.code_placeholder'
-                            )}
-                            onChange={(event) => setCode(event.target.value)}
+                        <ReauthCodeInput
+                            value={clientCode}
+                            method={clientMethod}
+                            onChange={setClientCode}
                         />
                         <select
                             className={INPUT_CLASS}
-                            value={method}
+                            value={clientMethod}
                             onChange={(event) => {
-                                setMethod(event.target.value);
-                                setCode('');
+                                setClientMethod(
+                                    event.target.value as ReauthMethod
+                                );
+                                setClientCode('');
                                 setEmailSent(false);
                             }}
                         >
@@ -327,7 +390,7 @@ export function SettingsHistorySyncAccount({
                                 )}
                             </option>
                         </select>
-                        {method === 'email' ? (
+                        {clientMethod === 'email' ? (
                             <Button
                                 type="button"
                                 size="sm"
@@ -353,7 +416,7 @@ export function SettingsHistorySyncAccount({
                             type="button"
                             size="sm"
                             variant="outline"
-                            disabled={busy || !code.trim()}
+                            disabled={busy || !clientCodeReady}
                             onClick={() => void revoke(null)}
                         >
                             {t(
@@ -377,21 +440,72 @@ export function SettingsHistorySyncAccount({
                     onChange={(event) => setRotateWord(event.target.value)}
                     placeholder="ROTATE"
                 />
+                <select
+                    className={INPUT_CLASS}
+                    value={rotateMethod}
+                    onChange={(event) => {
+                        setRotateMethod(event.target.value as ReauthMethod);
+                        setRotateCode('');
+                        setRotateEmailSent(false);
+                    }}
+                >
+                    <option value="totp">
+                        {t('view.settings.history_sync.clients.method_totp')}
+                    </option>
+                    <option value="email">
+                        {t('view.settings.history_sync.clients.method_email')}
+                    </option>
+                    <option value="recovery">
+                        {t(
+                            'view.settings.history_sync.clients.method_recovery'
+                        )}
+                    </option>
+                </select>
+                {rotateMethod === 'email' ? (
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() =>
+                            void run(async () => {
+                                await invoke(
+                                    'app__remote_sync_email_code_send'
+                                );
+                                setRotateEmailSent(true);
+                            })
+                        }
+                    >
+                        {t(
+                            rotateEmailSent
+                                ? 'view.settings.history_sync.clients.email_resend'
+                                : 'view.settings.history_sync.clients.email_send'
+                        )}
+                    </Button>
+                ) : null}
+                <ReauthCodeInput
+                    value={rotateCode}
+                    method={rotateMethod}
+                    onChange={setRotateCode}
+                />
                 <Button
                     type="button"
                     size="sm"
                     variant="destructive"
-                    disabled={busy || rotateWord !== 'ROTATE' || !code.trim()}
+                    disabled={
+                        busy || rotateWord !== 'ROTATE' || !rotateCodeReady
+                    }
                     onClick={() =>
                         void run(async () => {
                             setRotatedRecovery(
                                 await invoke<string>(
                                     'app__remote_sync_key_rotate',
-                                    { method, code }
+                                    { method: rotateMethod, code: rotateCode }
                                 )
                             );
                             setRotateWord('');
-                            setCode('');
+                            setRotateCode('');
+                            setRotateEmailSent(false);
                             onChanged();
                         })
                     }

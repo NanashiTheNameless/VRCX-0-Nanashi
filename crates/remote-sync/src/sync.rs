@@ -48,15 +48,9 @@ pub fn pending_row_count(
     let mut pending = 0;
     for spec in ROW_STREAMS {
         let after = store::push_cursor_get(db, vault, spec.name).map_err(storage)?;
-        pending += export_rows(
-            db,
-            &scope,
-            spec,
-            after,
-            limit.saturating_sub(pending) as u32,
-        )
-        .map_err(storage)?
-        .len();
+        let remaining = limit.saturating_sub(pending) as u32;
+        pending += store::streams::pending_row_count(db, &scope, spec, after, remaining)
+            .map_err(storage)? as usize;
         if pending >= limit {
             return Ok(pending);
         }
