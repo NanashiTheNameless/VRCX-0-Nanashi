@@ -19,8 +19,8 @@ use vrcx_0_application_core::{
     FriendProjection, HostSessionProjection, ParsedLocation, PrintAutoCleanupEvent,
     RealtimeCurrentUserProjection, RealtimeEntryCorrection, RealtimeInstanceClosedProjection,
     RealtimeInstanceQueueProjection, RealtimeNotificationProjection, RealtimeProjectionSync,
-    RealtimeUserProjection, RemoteSyncImportedPayload, RuntimeOperationStatus,
-    RuntimeVrchatAuthFailurePayload, VrcStatusSnapshot,
+    RealtimeUserProjection, RemoteSyncImportedPayload, RemoteSyncSettingsImportedPayload,
+    RuntimeOperationStatus, RuntimeVrchatAuthFailurePayload, VrcStatusSnapshot,
 };
 use vrcx_0_application_game::{
     GameClientEvent, GameLogPersistenceFallbackPayload, GameLogProjection, GameLogSideEffectEvent,
@@ -64,6 +64,7 @@ struct BackendRuntimeEventPayloadMap {
     runtime_worker_error: RuntimeWorkerErrorPayload,
     runtime_vrchat_auth_failure: RuntimeVrchatAuthFailurePayload,
     remote_sync_imported: RemoteSyncImportedPayload,
+    remote_sync_settings_imported: RemoteSyncSettingsImportedPayload,
     runtime_group_instances_projection: RuntimeGroupInstancesProjection,
     prints_auto_cleanup: PrintAutoCleanupEvent,
     profile_backup_status: ProfileBackupStatus,

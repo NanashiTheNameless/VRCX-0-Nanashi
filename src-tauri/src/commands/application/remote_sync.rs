@@ -12,12 +12,14 @@ use vrcx_0_remote_sync::{
 };
 
 use vrcx_0_runtime_host_desktop::remote_sync::{
-    ACCOUNT_ID_KEY, API_ORIGIN_KEY, BACKEND_KEY, TOKEN_KEY, WEBSITE_ORIGIN_KEY,
+    ACCOUNT_ID_KEY, API_ORIGIN_KEY, BACKEND_KEY, SYNC_INTERVAL_MINUTES_KEY, TOKEN_KEY,
+    WEBSITE_ORIGIN_KEY,
 };
 
 const TRUST_HISTORY_KEY: &str = "remoteSyncTrustHistory";
 const TRUST_RECHECK_MS: i64 = 24 * 60 * 60 * 1000;
-const BACKGROUND_SYNC_INTERVAL: std::time::Duration = std::time::Duration::from_secs(600);
+const DEFAULT_SYNC_INTERVAL_MINUTES: u16 = 10;
+const SYNC_INTERVAL_OPTIONS_MINUTES: [u16; 6] = [1, 5, 10, 15, 30, 60];
 const BACKGROUND_SYNC_CHECK_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60);
 const BACKGROUND_SYNC_ROW_THRESHOLD: usize = 500;
 
@@ -66,6 +68,7 @@ pub struct RemoteSyncSettingsSnapshot {
     pub api_origin: String,
     pub website_origin: String,
     pub paired: bool,
+    pub sync_interval_minutes: u16,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
@@ -134,6 +137,13 @@ pub async fn app__remote_sync_settings_get(
             .remote_sync_secret_get(TOKEN_KEY)
             .map_err(|error| AppError::WebClient(error.to_string()))?
             .is_some(),
+        sync_interval_minutes: state
+            .runtime_host()
+            .config_string(SYNC_INTERVAL_MINUTES_KEY, "10")
+            .parse::<u16>()
+            .ok()
+            .filter(|minutes| SYNC_INTERVAL_OPTIONS_MINUTES.contains(minutes))
+            .unwrap_or(DEFAULT_SYNC_INTERVAL_MINUTES),
     })
 }
 
@@ -171,10 +181,16 @@ pub fn app__remote_sync_settings_set(
     backend: String,
     api_origin: String,
     website_origin: String,
+    sync_interval_minutes: u16,
 ) -> Result<(), AppError> {
     if !matches!(backend.as_str(), "off" | "remotesync") {
         return Err(AppError::WebClient(
             "The selected history sync backend is not available in this app version.".into(),
+        ));
+    }
+    if !SYNC_INTERVAL_OPTIONS_MINUTES.contains(&sync_interval_minutes) {
+        return Err(AppError::WebClient(
+            "Choose a sync interval from the available options.".into(),
         ));
     }
     let api = RemoteSyncClient::new(&api_origin)
@@ -210,6 +226,10 @@ pub fn app__remote_sync_settings_set(
         vrcx_0_runtime_host_desktop::local_data::ConfigWriteEntry {
             key: WEBSITE_ORIGIN_KEY.into(),
             value: website_origin,
+        },
+        vrcx_0_runtime_host_desktop::local_data::ConfigWriteEntry {
+            key: SYNC_INTERVAL_MINUTES_KEY.into(),
+            value: sync_interval_minutes.to_string(),
         },
     ])?;
     Ok(())
@@ -841,7 +861,8 @@ pub(crate) fn start_background_sync(app: &tauri::AppHandle) {
     });
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
-        let mut last_sync = tokio::time::Instant::now() - BACKGROUND_SYNC_INTERVAL;
+        let mut last_sync = tokio::time::Instant::now()
+            - std::time::Duration::from_secs(u64::from(DEFAULT_SYNC_INTERVAL_MINUTES) * 60);
         loop {
             let state = app.state::<AppState>();
             let ready = state
@@ -881,7 +902,15 @@ pub(crate) fn start_background_sync(app: &tauri::AppHandle) {
                 }
             }
             if ready {
-                let due = last_sync.elapsed() >= BACKGROUND_SYNC_INTERVAL;
+                let interval_minutes = state
+                    .runtime_host()
+                    .config_string(SYNC_INTERVAL_MINUTES_KEY, "10")
+                    .parse::<u16>()
+                    .ok()
+                    .filter(|minutes| SYNC_INTERVAL_OPTIONS_MINUTES.contains(minutes))
+                    .unwrap_or(DEFAULT_SYNC_INTERVAL_MINUTES);
+                let interval = std::time::Duration::from_secs(u64::from(interval_minutes) * 60);
+                let due = last_sync.elapsed() >= interval;
                 let backlog = state
                     .runtime_host()
                     .remote_sync_pending_rows(BACKGROUND_SYNC_ROW_THRESHOLD)

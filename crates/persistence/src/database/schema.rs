@@ -278,6 +278,9 @@ fn ensure_user_store_statements(db: &DatabaseService, user_prefix: &str) -> Resu
         format!(
             "CREATE TABLE IF NOT EXISTS {user_prefix}_mutual_graph_meta (friend_id TEXT PRIMARY KEY, last_fetched_at TEXT, opted_out INTEGER DEFAULT 0, total_count INTEGER)"
         ),
+        format!(
+            "CREATE TABLE IF NOT EXISTS {user_prefix}_remote_sync_app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)"
+        ),
     ] {
         db.execute_non_query(&sql, &Default::default())?;
     }

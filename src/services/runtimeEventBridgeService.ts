@@ -3,6 +3,7 @@ import type {
     AncillaryRuntimeSnapshot,
     BackendRuntimeCombinedSnapshot
 } from '@/platform/tauri/bindings';
+import configRepository from '@/repositories/configRepository';
 import { useDataDirMigrationStore } from '@/state/dataDirMigrationStore';
 import { useFriendLogStore } from '@/state/friendLogStore';
 import { useProfileBackupStore } from '@/state/profileBackupStore';
@@ -44,6 +45,7 @@ import {
     hydrateIntegrationApiStatus
 } from './integrationApiService';
 import { handleMutualGraphFetchStatusEvent } from './mutualGraphFetchService';
+import { loadPreferenceSnapshot } from './preferencesService';
 import { handleRealtimeEntryCorrection } from './realtimePresenceService';
 import { runForegroundUpdateRegistryBackupMaintenance } from './registryBackupMaintenanceService';
 import {
@@ -139,6 +141,19 @@ function handleRuntimeEvent(event: RuntimeEvent): void {
             changes: [],
             requiresRefresh: true
         });
+        return;
+    }
+
+    if (event.name === 'remoteSyncSettingsImported') {
+        void configRepository
+            .reload()
+            .then(loadPreferenceSnapshot)
+            .catch((error) => {
+                console.warn(
+                    'Failed to refresh settings after RemoteSync import:',
+                    error
+                );
+            });
         return;
     }
 

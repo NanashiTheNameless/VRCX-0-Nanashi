@@ -952,7 +952,14 @@ impl RemoteSyncClient {
                     "manifest contains a duplicate asset path".into(),
                 ));
             }
-            let url = website.endpoint(&format!("/{path}"));
+            // Static hosts commonly serve the SPA document at `/` without
+            // exposing the build artifact as `/index.html`. The manifest
+            // still names and hashes the exact document bytes.
+            let url = if path == "index.html" {
+                website.endpoint("/")
+            } else {
+                website.endpoint(&format!("/{path}"))
+            };
             let response = website
                 .client
                 .get(url)

@@ -395,12 +395,14 @@ const generatedCommands = {
     async appRemoteSyncSettingsSet(
         backend: string,
         apiOrigin: string,
-        websiteOrigin: string
+        websiteOrigin: string,
+        syncIntervalMinutes: number
     ): Promise<null> {
         return await TAURI_INVOKE('app__remote_sync_settings_set', {
             backend,
             apiOrigin,
-            websiteOrigin
+            websiteOrigin,
+            syncIntervalMinutes
         });
     },
     async appRemoteSyncPairStart(
@@ -3764,6 +3766,7 @@ export type BackendRuntimeEventPayloadMap = {
     runtimeWorkerError: RuntimeWorkerErrorPayload;
     runtimeVrchatAuthFailure: RuntimeVrchatAuthFailurePayload;
     remoteSyncImported: RemoteSyncImportedPayload;
+    remoteSyncSettingsImported: RemoteSyncSettingsImportedPayload;
     runtimeGroupInstancesProjection: RuntimeGroupInstancesProjection;
     printsAutoCleanup: PrintAutoCleanupEvent;
     profileBackupStatus: ProfileBackupStatus;
@@ -6779,11 +6782,13 @@ export type RemoteSyncRunSnapshot = {
     unknownStreams: string[];
     cancelled: boolean;
 };
+export type RemoteSyncSettingsImportedPayload = Record<string, never>;
 export type RemoteSyncSettingsSnapshot = {
     backend: string;
     apiOrigin: string;
     websiteOrigin: string;
     paired: boolean;
+    syncIntervalMinutes: number;
 };
 export type RemoteSyncStatusSnapshot = {
     enabled: boolean;

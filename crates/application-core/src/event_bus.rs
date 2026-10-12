@@ -148,10 +148,17 @@ pub struct RemoteSyncImportedPayload {
     pub owner_user_id: OwnerId,
 }
 
+#[derive(Clone, Debug, Serialize, specta::Type)]
+pub struct RemoteSyncSettingsImportedPayload {}
+
 runtime_event_payload!(FavoritesChangedPayload, "favoritesChanged");
 runtime_event_payload!(VrcStatusSnapshot, "vrcStatus");
 runtime_event_payload!(RuntimeVrchatAuthFailurePayload, "runtimeVrchatAuthFailure");
 runtime_event_payload!(RemoteSyncImportedPayload, "remoteSyncImported");
+runtime_event_payload!(
+    RemoteSyncSettingsImportedPayload,
+    "remoteSyncSettingsImported"
+);
 runtime_event_payload!(BackendRuntimeTelemetry, "backendRuntimeTelemetry");
 runtime_event_payload!(RealtimeProjectionSync, "realtimeProjectionSync");
 runtime_event_payload!(FriendProjection, "realtimeFriendProjection");

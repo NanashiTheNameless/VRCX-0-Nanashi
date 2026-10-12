@@ -2,11 +2,12 @@
 //! store, and nothing here contacts a server unless the backend is set to
 //! RemoteSync and this PC is paired.
 
+use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use base64::{engine::general_purpose::STANDARD, Engine as _};
-use vrcx_0_application_core::RemoteSyncImportedPayload;
+use vrcx_0_application_core::{RemoteSyncImportedPayload, RemoteSyncSettingsImportedPayload};
 use vrcx_0_core::OwnerId;
 use vrcx_0_nanashi_website_protocol as protocol;
 use vrcx_0_persistence::remote_sync::{self as store, SyncLogEntry};
@@ -20,6 +21,7 @@ use crate::{Error, Result};
 
 pub const BACKEND_KEY: &str = "historySyncBackend";
 pub const BACKEND_REMOTESYNC: &str = "remotesync";
+pub const SYNC_INTERVAL_MINUTES_KEY: &str = "remoteSyncIntervalMinutes";
 pub const API_ORIGIN_KEY: &str = "remoteSyncApiOrigin";
 pub const ACCOUNT_ID_KEY: &str = "remoteSyncAccountId";
 pub const TOKEN_KEY: &str = "remoteSyncApiToken";
@@ -197,6 +199,50 @@ fn sync_error(error: impl std::fmt::Display) -> Error {
     Error::Custom(error.to_string())
 }
 
+fn syncable_app_setting(key: &str) -> bool {
+    let key = key.trim().to_ascii_lowercase();
+    let Some(name) = key.strip_prefix("config:vrcx_") else {
+        return false;
+    };
+    ![
+        "apikey",
+        "apitoken",
+        "apiendpoint",
+        "autostart",
+        "auth",
+        "branch",
+        "cookie",
+        "credential",
+        "directory",
+        "endpoint",
+        "file",
+        "folder",
+        "historysync",
+        "id",
+        "llm.endpoints",
+        "mcpserver",
+        "password",
+        "path",
+        "prompt",
+        "proxy",
+        "remotesync",
+        "secret",
+        "shareownerkeys",
+        "startasminimized",
+        "startatwindowsstartup",
+        "token",
+        "translationapi",
+        "webhook",
+        "windowsstartup",
+        "youtubeapi",
+        "vrchatregistry",
+        "savedcredentials",
+        "lastuserloggedin",
+    ]
+    .iter()
+    .any(|fragment| name.contains(fragment))
+}
+
 impl DesktopRuntimeHostState {
     pub fn remote_sync_enabled(&self) -> bool {
         self.config_string(BACKEND_KEY, "off") == BACKEND_REMOTESYNC
@@ -267,6 +313,91 @@ impl DesktopRuntimeHostState {
         self.remote_sync.cancel.store(true, Ordering::Release);
     }
 
+    fn remote_sync_app_settings(&self) -> Result<BTreeMap<String, String>> {
+        Ok(self
+            .local_data
+            .config_list_values()?
+            .into_iter()
+            .filter(|entry| syncable_app_setting(&entry.key))
+            .map(|entry| (entry.key, entry.value))
+            .collect())
+    }
+
+    fn remote_sync_app_settings_prepare(
+        &self,
+        db: &vrcx_0_persistence::DatabaseService,
+        scope: &vrcx_0_persistence::remote_sync::streams::StreamScope,
+        allow_new_settings: bool,
+    ) -> Result<()> {
+        let local = self.remote_sync_app_settings()?;
+        let synced = store::streams::app_settings_list(db, scope)?;
+        let synced_keys = synced
+            .iter()
+            .map(|(key, _, _)| key.clone())
+            .collect::<std::collections::BTreeSet<_>>();
+        for (key, value, _) in synced {
+            match local.get(&key) {
+                Some(local_value) if local_value != &value => {
+                    let updated_at =
+                        chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+                    store::streams::app_settings_upsert(db, scope, &key, local_value, &updated_at)?;
+                }
+                None => store::streams::app_settings_remove(db, scope, &key)?,
+                _ => {}
+            }
+        }
+        if allow_new_settings {
+            for (key, value) in local {
+                if !synced_keys.contains(&key) {
+                    let updated_at =
+                        chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+                    store::streams::app_settings_upsert(db, scope, &key, &value, &updated_at)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn remote_sync_app_settings_apply(
+        &self,
+        db: &vrcx_0_persistence::DatabaseService,
+        scope: &vrcx_0_persistence::remote_sync::streams::StreamScope,
+    ) -> Result<bool> {
+        let synced = store::streams::app_settings_list(db, scope)?;
+        let deleted = store::streams::app_settings_deleted_keys(db, scope)?;
+        let current = self.remote_sync_app_settings()?;
+        let entries = synced
+            .iter()
+            .filter(|(key, value, _)| syncable_app_setting(key) && current.get(key) != Some(value))
+            .map(|(key, value, _)| crate::local_data::ConfigWriteEntry {
+                key: key.clone(),
+                value: value.clone(),
+            })
+            .collect::<Vec<_>>();
+        let mut changed = !entries.is_empty();
+        if changed {
+            self.config_set_values(entries)?;
+        }
+        for key in deleted {
+            if syncable_app_setting(&key) && current.contains_key(&key) {
+                changed |= self.config_remove_value(key)? > 0;
+            }
+        }
+        let current = self.remote_sync_app_settings()?;
+        let synced_keys = synced
+            .iter()
+            .map(|(key, _, _)| key.as_str())
+            .collect::<std::collections::BTreeSet<_>>();
+        for (key, value) in current {
+            if !synced_keys.contains(key.as_str()) {
+                let updated_at =
+                    chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+                store::streams::app_settings_upsert(db, scope, &key, &value, &updated_at)?;
+            }
+        }
+        Ok(changed)
+    }
+
     /// Runs one sync pass for the signed-in VRChat account. Passes never
     /// overlap; a second caller waits for the first.
     pub async fn remote_sync_run(&self) -> Result<SyncReport> {
@@ -306,9 +437,15 @@ impl DesktopRuntimeHostState {
         };
         let signer = self.remote_sync_device_key()?;
         let db = Arc::clone(self.runtime.desktop_assembly().database());
+        let user_id = scope.current_user_id.trim();
+        let stream_scope = store::streams::StreamScope::open(&db, user_id)?;
+        let has_local_vault =
+            store::vault_state_for_user(&db, &identity.api_origin, &identity.account_id, user_id)?
+                .is_some();
+        self.remote_sync_app_settings_prepare(&db, &stream_scope, has_local_vault)?;
         let report = sync_account(
             &AuthorizedClient::new(client, token),
-            db,
+            Arc::clone(&db),
             &secret,
             &signer,
             &identity,
@@ -316,6 +453,14 @@ impl DesktopRuntimeHostState {
         )
         .await
         .map_err(sync_error)?;
+        if !report.cancelled {
+            if self.remote_sync_app_settings_apply(&db, &stream_scope)? {
+                self.runtime
+                    .desktop_assembly()
+                    .event_bus()
+                    .emit(RemoteSyncSettingsImportedPayload {});
+            }
+        }
         if report.imported_rows > 0 {
             let owner = OwnerId::new(scope.current_user_id.trim().to_owned());
             vrcx_0_persistence::activity::activity_self_caches_invalidate(

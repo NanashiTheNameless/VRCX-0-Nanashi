@@ -60,9 +60,9 @@ pub use error::Error;
 #[cfg(any(test, feature = "test-utils"))]
 pub use event_bus::RuntimeEventForTest;
 pub use event_bus::{
-    FavoriteChange, FavoritesChangedPayload, RemoteSyncImportedPayload, RuntimeEventBus,
-    RuntimeEventSink, RuntimeRealtimeTransportEpoch, RuntimeVrchatAuthFailurePayload,
-    VrcStatusSnapshot,
+    FavoriteChange, FavoritesChangedPayload, RemoteSyncImportedPayload,
+    RemoteSyncSettingsImportedPayload, RuntimeEventBus, RuntimeEventSink,
+    RuntimeRealtimeTransportEpoch, RuntimeVrchatAuthFailurePayload, VrcStatusSnapshot,
 };
 pub use events::{
     FeedLiveEntry, FriendProfileBulkLoadStatus, FriendProfileLoadStatusPayload, FriendProjection,

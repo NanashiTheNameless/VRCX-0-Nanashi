@@ -200,6 +200,12 @@ pub const STATE_STREAMS: &[StateSpec] = &[
         Some("last_fetched_at"),
     ),
     state(
+        "app_settings",
+        StreamTable::User("remote_sync_app_settings"),
+        &["key"],
+        Some("updated_at"),
+    ),
+    state(
         "favorite_friend",
         StreamTable::Owned("favorite_friend"),
         &["user_id", "group_name"],
@@ -548,6 +554,99 @@ impl StreamScope {
             StreamTable::Owned(table) | StreamTable::Global(table) => table.to_owned(),
         }
     }
+}
+
+pub fn app_settings_list(
+    db: &DatabaseService,
+    scope: &StreamScope,
+) -> Result<Vec<(String, String, String)>, Error> {
+    let table = scope.table_name(&StreamSpec {
+        name: "app_settings",
+        table: StreamTable::User("remote_sync_app_settings"),
+        key: &["key"],
+        time: "",
+        slack: false,
+    });
+    Ok(db
+        .execute(
+            &format!(
+                "SELECT key, value, updated_at FROM {} ORDER BY key",
+                quote(&table)
+            ),
+            &Default::default(),
+        )?
+        .iter()
+        .map(|row| (row_string(row, 0), row_string(row, 1), row_string(row, 2)))
+        .collect())
+}
+
+pub fn app_settings_upsert(
+    db: &DatabaseService,
+    scope: &StreamScope,
+    key: &str,
+    value: &str,
+    updated_at: &str,
+) -> Result<(), Error> {
+    let table = scope.table_name(&StreamSpec {
+        name: "app_settings",
+        table: StreamTable::User("remote_sync_app_settings"),
+        key: &["key"],
+        time: "",
+        slack: false,
+    });
+    db.execute_non_query(
+        &format!(
+            "INSERT INTO {} (key, value, updated_at) VALUES (@key, @value, @updated_at) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+            quote(&table)
+        ),
+        &ParamsBuilder::new()
+            .set("key", key)
+            .set("value", value)
+            .set("updated_at", updated_at)
+            .build(),
+    )?;
+    Ok(())
+}
+
+pub fn app_settings_remove(
+    db: &DatabaseService,
+    scope: &StreamScope,
+    key: &str,
+) -> Result<(), Error> {
+    let table = scope.table_name(&StreamSpec {
+        name: "app_settings",
+        table: StreamTable::User("remote_sync_app_settings"),
+        key: &["key"],
+        time: "",
+        slack: false,
+    });
+    db.execute_non_query(
+        &format!("DELETE FROM {} WHERE key = @key", quote(&table)),
+        &ParamsBuilder::new().set("key", key).build(),
+    )?;
+    Ok(())
+}
+
+pub fn app_settings_deleted_keys(
+    db: &DatabaseService,
+    scope: &StreamScope,
+) -> Result<Vec<String>, Error> {
+    let table = scope.table_name(&StreamSpec {
+        name: "app_settings",
+        table: StreamTable::User("remote_sync_app_settings"),
+        key: &["key"],
+        time: "",
+        slack: false,
+    });
+    let rows = db.execute(
+        "SELECT row_key FROM remote_sync_tombstone WHERE stream = @stream AND owner_id = 0",
+        &ParamsBuilder::new().set("stream", table).build(),
+    )?;
+    Ok(rows
+        .iter()
+        .filter_map(|row| serde_json::from_str::<Vec<String>>(&row_string(row, 0)).ok())
+        .filter_map(|key| key.into_iter().next())
+        .collect())
 }
 
 /// Stream name carrying the deletions of a state stream.

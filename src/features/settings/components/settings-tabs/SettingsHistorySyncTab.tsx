@@ -17,6 +17,7 @@ type SettingsSnapshot = {
     apiOrigin: string;
     websiteOrigin: string;
     paired: boolean;
+    syncIntervalMinutes: number;
 };
 
 type Capabilities = {
@@ -65,6 +66,7 @@ export function SettingsHistorySyncTab() {
     const [account, setAccount] = useState<Account>();
     const [apiOrigin, setApiOrigin] = useState(OFFICIAL_API);
     const [websiteOrigin, setWebsiteOrigin] = useState(OFFICIAL_WEBSITE);
+    const [syncIntervalMinutes, setSyncIntervalMinutes] = useState(10);
     const [pairing, setPairing] = useState<PairingStart>();
     const [pollInterval, setPollInterval] = useState(5);
     const [pairStartedAt, setPairStartedAt] = useState<number>();
@@ -87,6 +89,7 @@ export function SettingsHistorySyncTab() {
         setSettings(snapshot);
         setApiOrigin(snapshot.apiOrigin);
         setWebsiteOrigin(snapshot.websiteOrigin);
+        setSyncIntervalMinutes(snapshot.syncIntervalMinutes);
 
         if (snapshot.backend !== 'remotesync') {
             setCapabilities(undefined);
@@ -161,24 +164,40 @@ export function SettingsHistorySyncTab() {
         };
     }, [pairStartedAt, pairing, pollInterval, t]);
 
-    async function saveSettings(backend: string) {
+    async function saveSettings(backend: string, saveServer = true) {
         setBusy(true);
         setError(undefined);
         try {
             const isChangingServer =
-                apiOrigin !== settings?.apiOrigin ||
-                websiteOrigin !== settings?.websiteOrigin;
+                saveServer &&
+                (apiOrigin !== settings?.apiOrigin ||
+                    websiteOrigin !== settings?.websiteOrigin);
             if (isChangingServer && !confirmServerChange) {
                 return;
             }
             await invoke('app__remote_sync_settings_set', {
                 backend,
-                apiOrigin,
-                websiteOrigin
+                apiOrigin: saveServer
+                    ? apiOrigin
+                    : (settings?.apiOrigin ?? apiOrigin),
+                websiteOrigin: saveServer
+                    ? websiteOrigin
+                    : (settings?.websiteOrigin ?? websiteOrigin),
+                syncIntervalMinutes
             });
             setSettings((previous) =>
                 previous
-                    ? { ...previous, backend, apiOrigin, websiteOrigin }
+                    ? {
+                          ...previous,
+                          backend,
+                          apiOrigin: saveServer
+                              ? apiOrigin
+                              : previous.apiOrigin,
+                          websiteOrigin: saveServer
+                              ? websiteOrigin
+                              : previous.websiteOrigin,
+                          syncIntervalMinutes
+                      }
                     : previous
             );
             setConfirmServerChange(false);
@@ -274,6 +293,52 @@ export function SettingsHistorySyncTab() {
                     <SettingsHistorySyncTrust
                         serverKey={`${settings?.apiOrigin} ${settings?.websiteOrigin}`}
                     />
+                    <Field
+                        label={t('view.settings.history_sync.sync_interval')}
+                        description={t(
+                            'view.settings.history_sync.sync_interval_description'
+                        )}
+                    >
+                        <div className="flex items-center gap-2">
+                            <select
+                                className="bg-background h-9 rounded-md border px-3 text-sm"
+                                value={syncIntervalMinutes}
+                                disabled={busy}
+                                onChange={(event) =>
+                                    setSyncIntervalMinutes(
+                                        Number(event.target.value)
+                                    )
+                                }
+                            >
+                                {[1, 5, 10, 15, 30, 60].map((minutes) => (
+                                    <option key={minutes} value={minutes}>
+                                        {t(
+                                            minutes === 1
+                                                ? 'view.settings.history_sync.sync_interval_one_minute'
+                                                : 'view.settings.history_sync.sync_interval_minutes',
+                                            { minutes }
+                                        )}
+                                    </option>
+                                ))}
+                            </select>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                disabled={
+                                    busy ||
+                                    syncIntervalMinutes ===
+                                        settings?.syncIntervalMinutes
+                                }
+                                onClick={() =>
+                                    void saveSettings(backend, false)
+                                }
+                            >
+                                {t(
+                                    'view.settings.history_sync.save_sync_interval'
+                                )}
+                            </Button>
+                        </div>
+                    </Field>
                     <Field label={t('view.settings.history_sync.api_url')}>
                         <input
                             className="bg-background h-9 w-full rounded-md border px-3 text-sm"

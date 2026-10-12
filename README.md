@@ -29,8 +29,10 @@ It is a Rust + Tauri rewrite of VRCX.
   PCs is kept once. Memos, notes, favorites, moderation entries, notifications, avatar history
   and tags, profile bios and the mutual friends graph are synced too: the later edit wins and
   a deletion on one PC reaches the others. Nothing on the server can delete local history, and
-  you can move the key to another device, see and sign out connected clients, and delete the
-  server copy from the same settings page.
+  automatic sync pushes and pulls changes on a configurable 1 to 60 minute interval. You can
+  sync non-secret app preferences too; credentials and device-specific paths stay local. You
+  can move the key to another device, see and sign out connected clients, and delete the server
+  copy from the same settings page.
 - **Shared world collections on the fork's own service.** A world favorite group can be shared
   as a public page on the RemoteSync website and updated by sharing it again; manage shares on
   the website. This needs a paired RemoteSync account and sends only what the page shows.
