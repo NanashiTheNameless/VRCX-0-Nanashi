@@ -2420,6 +2420,12 @@
                 "sign_in_to_vrchat": "Sign in to VRChat to sync that account's history.",
                 "sync_now": "Sync now",
                 "syncing": "Syncing...",
+                "progress": {
+                    "connecting": "Connecting to the sync server...",
+                    "reading": "Reading history from the server ({percent}%): {imported} new rows, {matched} already here.",
+                    "uploading": "Uploading history: {sent} rows sent so far.",
+                    "deduplicating": "Removing repeated history from the server..."
+                },
                 "sync_result": "Sent {sent} rows, received {received} new rows, {known} already here.",
                 "sync_log": "Sync log",
                 "trust": {

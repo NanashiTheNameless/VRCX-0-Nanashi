@@ -6788,6 +6788,25 @@ export type RemoteSyncPairingStart = {
     expiresIn: number;
     interval: number;
 };
+export type RemoteSyncPhase =
+    | 'connecting'
+    | 'reading'
+    | 'uploading'
+    | 'deduplicating';
+/**
+ * A running sync pass. Sequences count server chunks: reading started
+ * after `read_from` and ends at `read_total`.
+ */
+export type RemoteSyncProgressSnapshot = {
+    phase: RemoteSyncPhase;
+    readFrom: number;
+    readThrough: number;
+    readTotal: number;
+    importedRows: number;
+    matchedRows: number;
+    pushedRows: number;
+    replacedChunks: number;
+};
 export type RemoteSyncRunSnapshot = {
     createdVault: boolean;
     pushedRows: number;
@@ -6813,6 +6832,7 @@ export type RemoteSyncStatusSnapshot = {
     signedInToVrchat: boolean;
     vaultId: string | null;
     lastSyncAtMs: number | null;
+    progress: RemoteSyncProgressSnapshot | null;
     log: RemoteSyncLogSnapshot[];
 };
 export type RemoteSyncTrustSnapshot = {

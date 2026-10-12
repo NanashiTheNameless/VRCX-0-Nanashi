@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { invoke } from '@/platform/tauri/generatedInvoke';
 import { Button } from '@/ui/shadcn/button';
+import { Progress } from '@/ui/shadcn/progress';
 
 import {
     SettingsHistorySyncAccount,
@@ -16,8 +17,32 @@ type SyncStatus = {
     signedInToVrchat: boolean;
     vaultId: string | null;
     lastSyncAtMs: number | null;
+    progress: SyncProgress | null;
     log: { kind: string; message: string; createdAtMs: number }[];
 };
+
+type SyncProgress = {
+    phase: 'connecting' | 'reading' | 'uploading' | 'deduplicating';
+    readFrom: number;
+    readThrough: number;
+    readTotal: number;
+    importedRows: number;
+    matchedRows: number;
+    pushedRows: number;
+    replacedChunks: number;
+};
+
+const ACTIVE_REFRESH_MS = 1000;
+const IDLE_REFRESH_MS = 5000;
+
+function readPercent(progress: SyncProgress): number {
+    const total = progress.readTotal - progress.readFrom;
+    if (total <= 0) {
+        return 100;
+    }
+    const done = progress.readThrough - progress.readFrom;
+    return Math.min(100, Math.max(0, Math.floor((done / total) * 100)));
+}
 
 type SyncRun = {
     createdVault: boolean;
@@ -111,6 +136,17 @@ export function SettingsHistorySyncPanel({
     useEffect(() => {
         void run(async () => {});
     }, [run]);
+
+    // A pass can also start in the background, so the status is read again
+    // while the panel is open, and more often while a pass is running.
+    const syncing = busy || Boolean(status?.progress);
+    useEffect(() => {
+        const timer = window.setInterval(
+            () => void refresh().catch(() => {}),
+            syncing ? ACTIVE_REFRESH_MS : IDLE_REFRESH_MS
+        );
+        return () => window.clearInterval(timer);
+    }, [refresh, syncing]);
 
     if (!status) return null;
 
@@ -399,6 +435,24 @@ export function SettingsHistorySyncPanel({
                       })
                     : t('view.settings.history_sync.never_synced')}
             </p>
+            {status.progress ? (
+                <div className="space-y-1" role="status">
+                    <p>
+                        {t(
+                            `view.settings.history_sync.progress.${status.progress.phase}`,
+                            {
+                                percent: readPercent(status.progress),
+                                imported: status.progress.importedRows,
+                                matched: status.progress.matchedRows,
+                                sent: status.progress.pushedRows
+                            }
+                        )}
+                    </p>
+                    {status.progress.phase === 'reading' ? (
+                        <Progress value={readPercent(status.progress)} />
+                    ) : null}
+                </div>
+            ) : null}
             {!status.signedInToVrchat ? (
                 <p className="text-muted-foreground">
                     {t('view.settings.history_sync.sign_in_to_vrchat')}
@@ -408,7 +462,7 @@ export function SettingsHistorySyncPanel({
                 <Button
                     type="button"
                     size="sm"
-                    disabled={busy || !status.signedInToVrchat}
+                    disabled={syncing || !status.signedInToVrchat}
                     onClick={() =>
                         void run(async () => {
                             setLastRun(
@@ -418,7 +472,7 @@ export function SettingsHistorySyncPanel({
                         })
                     }
                 >
-                    {busy
+                    {syncing
                         ? t('view.settings.history_sync.syncing')
                         : t('view.settings.history_sync.sync_now')}
                 </Button>

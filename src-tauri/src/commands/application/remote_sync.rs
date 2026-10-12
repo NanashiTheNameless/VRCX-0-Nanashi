@@ -6,6 +6,7 @@ use zeroize::Zeroizing;
 
 use crate::error::AppError;
 use crate::state::AppState;
+use vrcx_0_remote_sync::sync::SyncPhase;
 use vrcx_0_remote_sync::{
     Error as RemoteSyncError, PairPoll, ProtocolCapabilities, RemoteSyncClient,
     WebsiteVerification, OFFICIAL_API, OFFICIAL_WEBSITE,
@@ -396,7 +397,32 @@ pub struct RemoteSyncStatusSnapshot {
     pub signed_in_to_vrchat: bool,
     pub vault_id: Option<String>,
     pub last_sync_at_ms: Option<f64>,
+    pub progress: Option<RemoteSyncProgressSnapshot>,
     pub log: Vec<RemoteSyncLogSnapshot>,
+}
+
+/// A running sync pass. Sequences count server chunks: reading started
+/// after `read_from` and ends at `read_total`.
+#[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteSyncProgressSnapshot {
+    pub phase: RemoteSyncPhase,
+    pub read_from: f64,
+    pub read_through: f64,
+    pub read_total: f64,
+    pub imported_rows: f64,
+    pub matched_rows: f64,
+    pub pushed_rows: f64,
+    pub replaced_chunks: f64,
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum RemoteSyncPhase {
+    Connecting,
+    Reading,
+    Uploading,
+    Deduplicating,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
@@ -572,6 +598,21 @@ pub fn app__remote_sync_status_get(
         signed_in_to_vrchat: status.signed_in_to_vrchat,
         vault_id: status.vault_id,
         last_sync_at_ms: status.last_sync_at_ms.map(|at| at as f64),
+        progress: status.progress.map(|progress| RemoteSyncProgressSnapshot {
+            phase: match progress.phase {
+                SyncPhase::Connecting => RemoteSyncPhase::Connecting,
+                SyncPhase::Reading => RemoteSyncPhase::Reading,
+                SyncPhase::Uploading => RemoteSyncPhase::Uploading,
+                SyncPhase::Deduplicating => RemoteSyncPhase::Deduplicating,
+            },
+            read_from: progress.read_from as f64,
+            read_through: progress.read_through as f64,
+            read_total: progress.read_total as f64,
+            imported_rows: progress.imported_rows as f64,
+            matched_rows: progress.matched_rows as f64,
+            pushed_rows: progress.pushed_rows as f64,
+            replaced_chunks: progress.replaced_chunks as f64,
+        }),
         log: status
             .log
             .into_iter()

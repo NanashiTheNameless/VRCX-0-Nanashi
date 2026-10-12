@@ -12,7 +12,9 @@ use vrcx_0_core::OwnerId;
 use vrcx_0_nanashi_website_protocol as protocol;
 use vrcx_0_persistence::remote_sync::{self as store, SyncLogEntry};
 use vrcx_0_remote_sync::engine::{self, SignerKey, SyncSecret};
-use vrcx_0_remote_sync::sync::{sync_account, AuthorizedClient, SyncIdentity, SyncReport};
+use vrcx_0_remote_sync::sync::{
+    sync_account, AuthorizedClient, SyncIdentity, SyncProgress, SyncProgressSnapshot, SyncReport,
+};
 use vrcx_0_remote_sync::{RemoteSyncClient, OFFICIAL_API};
 use zeroize::Zeroizing;
 
@@ -205,6 +207,7 @@ fn build_share_snapshot(
 pub struct RemoteSyncShared {
     running: tokio::sync::Mutex<()>,
     cancel: AtomicBool,
+    progress: SyncProgress,
     exit_flush_started: AtomicBool,
     /// A key transfer this PC started and is waiting to receive.
     transfer: std::sync::Mutex<Option<(engine::TransferReceiver, String)>>,
@@ -221,6 +224,8 @@ pub struct RemoteSyncStatus {
     pub signed_in_to_vrchat: bool,
     pub vault_id: Option<String>,
     pub last_sync_at_ms: Option<i64>,
+    /// Set while a sync pass is running.
+    pub progress: Option<SyncProgressSnapshot>,
     pub log: Vec<SyncLogEntry>,
 }
 
@@ -620,6 +625,7 @@ impl DesktopRuntimeHostState {
             &signer,
             &identity,
             &self.remote_sync.cancel,
+            &self.remote_sync.progress,
         )
         .await
         .map_err(sync_error)?;
@@ -653,6 +659,7 @@ impl DesktopRuntimeHostState {
             enabled: self.remote_sync_enabled(),
             paired: self.remote_sync_secret_exists(TOKEN_KEY)?,
             has_key: self.remote_sync_secret_exists(SYNC_SECRET_KEY)?,
+            progress: self.remote_sync.progress.snapshot(),
             ..RemoteSyncStatus::default()
         };
         let scope = self.runtime.desktop_assembly().auth_scope().snapshot();

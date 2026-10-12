@@ -4,7 +4,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::future::Future;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering};
 use std::sync::Arc;
 
 use base64::{engine::general_purpose::STANDARD, Engine as _};
@@ -205,6 +205,101 @@ pub struct SyncIdentity {
     pub display_name: String,
     pub device_label: String,
     pub app_version: String,
+}
+
+/// What a running pass is busy with.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SyncPhase {
+    Connecting,
+    Reading,
+    Uploading,
+    Deduplicating,
+}
+
+/// How far a running pass is. Sequences are server chunk sequences: the pass
+/// started reading after `read_from` and has to reach `read_total`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SyncProgressSnapshot {
+    pub phase: SyncPhase,
+    pub read_from: u64,
+    pub read_through: u64,
+    pub read_total: u64,
+    pub imported_rows: u64,
+    pub matched_rows: u64,
+    pub pushed_rows: u64,
+    pub replaced_chunks: u64,
+}
+
+/// Progress of the pass that is running, readable from another thread while
+/// it works. It only counts; nothing a row contains is kept here.
+#[derive(Debug, Default)]
+pub struct SyncProgress {
+    phase: AtomicU8,
+    read_from: AtomicU64,
+    read_through: AtomicU64,
+    read_total: AtomicU64,
+    imported_rows: AtomicU64,
+    matched_rows: AtomicU64,
+    pushed_rows: AtomicU64,
+    replaced_chunks: AtomicU64,
+}
+
+impl SyncProgress {
+    const PHASES: [SyncPhase; 4] = [
+        SyncPhase::Connecting,
+        SyncPhase::Reading,
+        SyncPhase::Uploading,
+        SyncPhase::Deduplicating,
+    ];
+
+    fn begin(&self) -> RunningPass<'_> {
+        for counter in [
+            &self.read_from,
+            &self.read_through,
+            &self.read_total,
+            &self.imported_rows,
+            &self.matched_rows,
+            &self.pushed_rows,
+            &self.replaced_chunks,
+        ] {
+            counter.store(0, Ordering::Relaxed);
+        }
+        self.set_phase(SyncPhase::Connecting);
+        RunningPass(self)
+    }
+
+    fn set_phase(&self, phase: SyncPhase) {
+        let index = Self::PHASES.iter().position(|known| *known == phase);
+        self.phase
+            .store(index.map_or(0, |index| index as u8 + 1), Ordering::Release);
+    }
+
+    /// `None` while no pass is running.
+    pub fn snapshot(&self) -> Option<SyncProgressSnapshot> {
+        let phase = match self.phase.load(Ordering::Acquire) {
+            0 => return None,
+            index => *Self::PHASES.get(index as usize - 1)?,
+        };
+        Some(SyncProgressSnapshot {
+            phase,
+            read_from: self.read_from.load(Ordering::Relaxed),
+            read_through: self.read_through.load(Ordering::Relaxed),
+            read_total: self.read_total.load(Ordering::Relaxed),
+            imported_rows: self.imported_rows.load(Ordering::Relaxed),
+            matched_rows: self.matched_rows.load(Ordering::Relaxed),
+            pushed_rows: self.pushed_rows.load(Ordering::Relaxed),
+            replaced_chunks: self.replaced_chunks.load(Ordering::Relaxed),
+        })
+    }
+}
+
+/// Marks the pass as over when it ends, however it ends.
+struct RunningPass<'a>(&'a SyncProgress);
+
+impl Drop for RunningPass<'_> {
+    fn drop(&mut self) {
+        self.0.phase.store(0, Ordering::Release);
+    }
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -777,6 +872,7 @@ struct Pass<'a, T> {
     vault: &'a Vault,
     scope: &'a StreamScope,
     cancel: &'a AtomicBool,
+    progress: &'a SyncProgress,
 }
 
 async fn push<T: SyncTransport>(
@@ -791,6 +887,7 @@ async fn push<T: SyncTransport>(
         vault,
         scope,
         cancel,
+        progress,
     } = *pass;
     loop {
         if cancel.load(Ordering::Acquire) {
@@ -841,6 +938,9 @@ async fn push<T: SyncTransport>(
                 };
                 store::pending_chunk_put(db, &vault.reference, &pending).map_err(storage)?;
                 report.pushed_rows += draft.body.row_count() as u64;
+                progress
+                    .pushed_rows
+                    .store(report.pushed_rows, Ordering::Relaxed);
                 pending
             }
         };
@@ -1091,8 +1191,15 @@ async fn pull<T: SyncTransport>(
         vault,
         scope,
         cancel,
+        progress,
     } = *pass;
     let mut sequences = store::seen_source_sequences(db, &vault.reference).map_err(storage)?;
+    let started_after = store::vault_state_get(db, &vault.reference)
+        .map_err(storage)?
+        .map(|state| state.pull_cursor)
+        .unwrap_or(0);
+    progress.read_from.store(started_after, Ordering::Relaxed);
+    progress.set_phase(SyncPhase::Reading);
     // Per source, the first and latest sequence of the snapshot being read.
     let mut snapshots = HashMap::<String, (u64, u64)>::new();
     loop {
@@ -1112,6 +1219,8 @@ async fn pull<T: SyncTransport>(
                 "the server returned an older history than this PC already synced".into(),
             ));
         }
+        progress.read_through.store(cursor, Ordering::Relaxed);
+        progress.read_total.store(max_seq, Ordering::Relaxed);
         let verified = engine::verify_batch(
             &bytes,
             cursor,
@@ -1203,6 +1312,13 @@ async fn pull<T: SyncTransport>(
             }
             report.pulled_chunks += 1;
             report.imported_rows += imported.inserted;
+            progress.read_through.store(server_seq, Ordering::Relaxed);
+            progress
+                .imported_rows
+                .fetch_add(imported.inserted, Ordering::Relaxed);
+            progress
+                .matched_rows
+                .fetch_add(imported.matched, Ordering::Relaxed);
             if imported.inserted > 0 {
                 for stream in stream_names {
                     if !report.imported_streams.contains(&stream) {
@@ -1296,7 +1412,9 @@ pub async fn sync_account<T: SyncTransport>(
     signer: &SignerKey,
     identity: &SyncIdentity,
     cancel: &AtomicBool,
+    progress: &SyncProgress,
 ) -> Result<SyncReport, Error> {
+    let _running = progress.begin();
     let scope = StreamScope::open(&db, &identity.vrchat_user_id).map_err(storage)?;
     let vault = resolve_vault(transport, &db, secret, identity).await?;
     // A freshly created vault has no older remote history to compact. Record
@@ -1341,6 +1459,7 @@ pub async fn sync_account<T: SyncTransport>(
         vault: &vault,
         scope: &scope,
         cancel,
+        progress,
     };
     // Other devices add themselves to the manifest before uploading, so it
     // is read again right before their chunks are verified.
@@ -1361,9 +1480,14 @@ pub async fn sync_account<T: SyncTransport>(
     if report.cancelled {
         return Ok(report);
     }
+    progress.set_phase(SyncPhase::Uploading);
     push(&pass, signer, identity, &mut report).await?;
     if !report.cancelled && deduper.is_some() {
+        progress.set_phase(SyncPhase::Deduplicating);
         announce_replacements(transport, &db, &vault, signer, identity, &mut report).await?;
+        progress
+            .replaced_chunks
+            .store(report.replaced_chunks, Ordering::Relaxed);
     }
     if !report.cancelled {
         store::last_sync_set(&db, &vault.reference, now_ms()).map_err(storage)?;

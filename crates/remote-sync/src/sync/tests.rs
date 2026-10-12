@@ -313,6 +313,7 @@ impl Pc {
             &self.signer,
             &self.identity,
             &AtomicBool::new(false),
+            &SyncProgress::default(),
         )
         .await
     }
@@ -680,6 +681,41 @@ async fn a_manifest_older_than_one_already_seen_is_refused() {
 }
 
 #[tokio::test]
+async fn progress_is_reported_while_a_pass_runs_and_cleared_when_it_ends() {
+    let server = FakeServer::default();
+    let secret = SyncSecret::generate().unwrap();
+    let (a, b) = (pc("a"), pc("b"));
+    a.record("2026-10-10T10:00:00.000Z", "first");
+    a.record("2026-10-10T11:00:00.000Z", "second");
+    a.sync(&server, &secret).await.unwrap();
+
+    let progress = SyncProgress::default();
+    assert_eq!(progress.snapshot(), None);
+    let running = progress.begin();
+    assert_eq!(
+        progress.snapshot().map(|snapshot| snapshot.phase),
+        Some(SyncPhase::Connecting)
+    );
+    drop(running);
+
+    // A pass that fails still ends as "not running".
+    server.tamper_with_first_chunk();
+    let failed = sync_account(
+        &server,
+        Arc::clone(&b.db),
+        &secret,
+        &b.signer,
+        &b.identity,
+        &AtomicBool::new(false),
+        &progress,
+    )
+    .await;
+    assert!(failed.is_err());
+    assert_eq!(progress.snapshot(), None);
+    assert_eq!(progress.read_total.load(Ordering::Relaxed), 1);
+}
+
+#[tokio::test]
 async fn a_cancelled_pass_stops_before_touching_the_server_history() {
     let server = FakeServer::default();
     let secret = SyncSecret::generate().unwrap();
@@ -692,6 +728,7 @@ async fn a_cancelled_pass_stops_before_touching_the_server_history() {
         &a.signer,
         &a.identity,
         &AtomicBool::new(true),
+        &SyncProgress::default(),
     )
     .await
     .unwrap();
