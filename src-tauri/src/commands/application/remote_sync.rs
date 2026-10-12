@@ -205,7 +205,7 @@ pub fn app__remote_sync_settings_set(
             .is_some()
     {
         return Err(AppError::WebClient(
-            "The self-hosted recorder is connected. Disconnect it in Tools before turning on History Sync; only one of the two can be on at a time.".into(),
+            "The Self-hosted Recorder is connected. Disconnect it under Tools > Self-hosted Recorder before turning on history sync; only one of the two can be on at a time.".into(),
         ));
     }
     if !SYNC_INTERVAL_OPTIONS_MINUTES.contains(&sync_interval_minutes) {

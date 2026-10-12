@@ -37,10 +37,25 @@ It is a Rust + Tauri rewrite of VRCX.
   preferences too; this is on by default and can be changed under Settings > Sync Options.
   Credentials and device-specific paths stay local. You can move the key to another device, see
   and sign out connected clients, and delete the server copy from the same settings page.
+  History sync and the Self-hosted Recorder cannot be on at the same time.
 - **Shared world collections on the fork's own service.** A world favorite group can be shared
   as a public page on the RemoteSync website and updated by sharing it again; manage shares on
   the website. This needs a paired RemoteSync account and sends only what the page shows.
   Nothing goes to upstream's `vrcx-0.dev` services.
+- **Self-hosted Recorder (experimental), from this fork's builds.** Upstream's recorder is
+  kept: a small server program you run on an always-on Linux machine that logs in to VRChat
+  with your account while the app is closed, so friend activity from that time is filled into
+  the Feed when you come back. Set it up under Tools > Self-hosted Recorder. Nothing is sent
+  until you enter a recorder address and password, and login details only go to your own
+  recorder. In this fork the install script, Docker image
+  (`ghcr.io/nanashithenameless/vrcx-0-logger`) and binaries come from this repository's
+  nightly builds, there is no beta channel, and the app accepts any recorder that speaks a
+  compatible protocol instead of matching stable and beta releases. It is one or the other
+  with history sync: connecting a recorder is refused while history sync is on, turning
+  history sync on is refused while a recorder is connected, and the recorder's address and
+  password are never included in settings sync. Traffic to the recorder is encrypted with the
+  recorder password but uses plain HTTP unless you give an `https://` address, so keep it on
+  your own network or a VPN. See the [recorder guide](crates/logger/README.md).
 - **Server and website checks.** Settings > Sync Options shows whether the server is the
   official instance and whether its website runs the official unmodified code. Either check
   failing shows a warning that explains the risk; neither blocks use, so self-hosted servers
@@ -146,6 +161,11 @@ Grab the file for your platform from the
 | macOS (Universal) | `VRCX-0-Nanashi_<version>_macos_universal.dmg`      |
 | Linux (AppImage)  | `VRCX-0-Nanashi_<version>_linux_x86_64.AppImage`    |
 
+Each nightly release also carries the Self-hosted Recorder for Linux servers as
+`vrcx-0-logger_<version>_linux_x86_64` and `vrcx-0-logger_<version>_linux_aarch64`. Most people
+should use the install script or Docker image described in the
+[recorder guide](crates/logger/README.md) instead of the bare binary.
+
 Fork builds are not code-signed. On Windows, SmartScreen may warn on first run. On macOS,
 if the first launch is blocked, open **System Settings > Privacy & Security** and click
 **Open Anyway**.
@@ -203,6 +223,15 @@ cargo build --locked --release -p vrcx-0-nanashi-collector
 It only runs when started by the RemoteSync collector supervisor: it takes a VRChat session
 over an inherited descriptor, records to a tmpfs directory, and has no way to send invites,
 messages, or any other action.
+
+The Self-hosted Recorder is also a separate program and is not bundled into the desktop app.
+Nightly builds produce static binaries; to build one yourself on Linux:
+
+```bash
+rustup target add x86_64-unknown-linux-musl
+sudo apt install musl-tools
+cargo build --locked --release -p vrcx-0-logger --target x86_64-unknown-linux-musl
+```
 
 Release builds run `scripts/smoke-appimage.py` against the packaged AppImage before
 uploading it. The check covers renaming, repeat launches, autostart arguments, and
