@@ -1,10 +1,9 @@
-import { REGEXP_ONLY_DIGITS, REGEXP_ONLY_DIGITS_AND_CHARS } from 'input-otp';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { invoke } from '@/platform/tauri/generatedInvoke';
 import { Button } from '@/ui/shadcn/button';
-import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/ui/shadcn/input-otp';
+import { Input } from '@/ui/shadcn/input';
 
 type Address = {
     ip: string;
@@ -50,30 +49,24 @@ function ReauthCodeInput({
 }) {
     const { t } = useTranslation();
     const recovery = method === 'recovery';
-    const length = recovery ? REAUTH_RECOVERY_CODE_LENGTH : REAUTH_CODE_LENGTH;
     return (
-        <div className="flex justify-center">
-            <InputOTP
-                value={value}
-                maxLength={length}
-                inputMode={recovery ? 'text' : 'numeric'}
-                pattern={
-                    recovery ? REGEXP_ONLY_DIGITS_AND_CHARS : REGEXP_ONLY_DIGITS
-                }
-                autoComplete="one-time-code"
-                aria-label={t(
-                    'view.settings.history_sync.clients.code_placeholder'
-                )}
-                pasteTransformer={(code) => normalizeReauthCode(code, method)}
-                onChange={(code) => onChange(normalizeReauthCode(code, method))}
-            >
-                <InputOTPGroup>
-                    {Array.from({ length }, (_, index) => (
-                        <InputOTPSlot key={index} index={index} />
-                    ))}
-                </InputOTPGroup>
-            </InputOTP>
-        </div>
+        <Input
+            type="text"
+            name={recovery ? 'recovery-code' : 'one-time-code'}
+            value={value}
+            maxLength={
+                recovery ? REAUTH_RECOVERY_CODE_LENGTH : REAUTH_CODE_LENGTH
+            }
+            inputMode={recovery ? 'text' : 'numeric'}
+            pattern={recovery ? undefined : '[0-9]*'}
+            autoComplete={recovery ? 'off' : 'one-time-code'}
+            aria-label={t(
+                'view.settings.history_sync.clients.code_placeholder'
+            )}
+            onChange={(event) =>
+                onChange(normalizeReauthCode(event.target.value, method))
+            }
+        />
     );
 }
 

@@ -1,4 +1,3 @@
-import { REGEXP_ONLY_DIGITS, REGEXP_ONLY_DIGITS_AND_CHARS } from 'input-otp';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -16,12 +15,6 @@ import {
     DialogTitle
 } from '@/ui/shadcn/dialog';
 import { Input } from '@/ui/shadcn/input';
-import {
-    InputOTP,
-    InputOTPGroup,
-    InputOTPSeparator,
-    InputOTPSlot
-} from '@/ui/shadcn/input-otp';
 import { Textarea } from '@/ui/shadcn/textarea';
 
 const OTP_CODE_LENGTH = 6;
@@ -49,12 +42,6 @@ function getOtpInputValue(
     }
 
     return value ?? '';
-}
-
-function renderOtpSlots(count: number, offset = 0) {
-    return Array.from({ length: count }, (_, index) => (
-        <InputOTPSlot key={offset + index} index={offset + index} />
-    ));
 }
 
 export function ModalHost() {
@@ -267,52 +254,41 @@ export function ModalHost() {
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex justify-center">
-                        <InputOTP
-                            value={otpValue}
+                        <Input
+                            type="text"
+                            name={
+                                otpIsRecoveryCode
+                                    ? 'recovery-code'
+                                    : 'one-time-code'
+                            }
+                            autoComplete={
+                                otpIsRecoveryCode ? 'off' : 'one-time-code'
+                            }
+                            inputMode={otpIsRecoveryCode ? 'text' : 'numeric'}
+                            pattern={otpIsRecoveryCode ? undefined : '[0-9]*'}
                             maxLength={
                                 otpIsRecoveryCode
                                     ? RECOVERY_CODE_LENGTH
                                     : OTP_CODE_LENGTH
                             }
-                            inputMode={otpIsRecoveryCode ? 'text' : 'numeric'}
-                            pattern={
-                                otpIsRecoveryCode
-                                    ? REGEXP_ONLY_DIGITS_AND_CHARS
-                                    : REGEXP_ONLY_DIGITS
-                            }
                             autoFocus
-                            pasteTransformer={
-                                otpIsRecoveryCode
-                                    ? normalizeRecoveryCode
-                                    : undefined
-                            }
-                            onChange={(value) =>
-                                updateOtpValue(
-                                    getOtpInputValue(value, otpDialog.mode)
-                                )
-                            }
-                            onComplete={(value) =>
-                                handleOtpOk(
-                                    getOtpInputValue(value, otpDialog.mode)
-                                )
-                            }
-                        >
-                            {otpIsRecoveryCode ? (
-                                <>
-                                    <InputOTPGroup>
-                                        {renderOtpSlots(4)}
-                                    </InputOTPGroup>
-                                    <InputOTPSeparator />
-                                    <InputOTPGroup>
-                                        {renderOtpSlots(4, 4)}
-                                    </InputOTPGroup>
-                                </>
-                            ) : (
-                                <InputOTPGroup>
-                                    {renderOtpSlots(OTP_CODE_LENGTH)}
-                                </InputOTPGroup>
-                            )}
-                        </InputOTP>
+                            value={otpValue}
+                            onChange={(event) => {
+                                const value = getOtpInputValue(
+                                    event.target.value,
+                                    otpDialog.mode
+                                );
+                                updateOtpValue(value);
+                                if (
+                                    value.length ===
+                                    (otpIsRecoveryCode
+                                        ? RECOVERY_CODE_LENGTH
+                                        : OTP_CODE_LENGTH)
+                                ) {
+                                    handleOtpOk(value);
+                                }
+                            }}
+                        />
                     </div>
                     <DialogFooter>
                         <Button

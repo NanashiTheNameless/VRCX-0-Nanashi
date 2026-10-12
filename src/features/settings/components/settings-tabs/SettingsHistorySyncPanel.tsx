@@ -151,68 +151,101 @@ export function SettingsHistorySyncPanel({
                 <p className="text-muted-foreground">
                     {t('view.settings.history_sync.key_setup_description')}
                 </p>
-                <div className="space-y-2">
-                    <input
-                        className={INPUT_CLASS}
-                        value={ownKey}
-                        placeholder={t(
-                            'view.settings.history_sync.own_key_placeholder'
-                        )}
-                        onChange={(event) => setOwnKey(event.target.value)}
-                    />
-                    <Button
-                        type="button"
-                        size="sm"
-                        disabled={busy}
-                        onClick={() =>
-                            void run(async () => {
-                                const created = await invoke<string>(
-                                    'app__remote_sync_key_create',
-                                    { ownKey: ownKey.trim() || null }
-                                );
-                                setOwnKey('');
-                                setMustConfirmSaved(true);
-                                setRecoveryString(created);
-                            })
-                        }
-                    >
-                        {ownKey.trim()
-                            ? t('view.settings.history_sync.key_use_own')
-                            : t('view.settings.history_sync.key_generate')}
-                    </Button>
-                </div>
-                <div className="space-y-2">
-                    <p className="text-muted-foreground">
-                        {t('view.settings.history_sync.key_import_description')}
-                    </p>
-                    <input
-                        className={INPUT_CLASS}
-                        value={recoveryInput}
-                        placeholder="rss1-..."
-                        onChange={(event) =>
-                            setRecoveryInput(event.target.value)
-                        }
-                    />
-                    <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={busy || !recoveryInput.trim()}
-                        onClick={() =>
-                            void run(async () => {
-                                await invoke('app__remote_sync_key_import', {
-                                    recoveryString: recoveryInput
-                                });
-                                setRecoveryInput('');
-                            })
-                        }
-                    >
-                        {t('view.settings.history_sync.key_import')}
-                    </Button>
-                </div>
-                <SettingsHistorySyncReceiveKey
-                    onReceived={() => void run(async () => {})}
-                />
+                <Button
+                    type="button"
+                    size="sm"
+                    disabled={busy}
+                    onClick={() =>
+                        void run(async () => {
+                            const created = await invoke<string>(
+                                'app__remote_sync_key_create',
+                                { ownKey: null }
+                            );
+                            setMustConfirmSaved(true);
+                            setRecoveryString(created);
+                        })
+                    }
+                >
+                    {t('view.settings.history_sync.key_generate')}
+                </Button>
+                <details className="rounded-md border p-3">
+                    <summary className="cursor-pointer font-medium">
+                        {t('view.settings.history_sync.key_existing_title')}
+                    </summary>
+                    <div className="mt-3 space-y-3">
+                        <SettingsHistorySyncReceiveKey
+                            onReceived={() => void run(async () => {})}
+                        />
+                        <div className="space-y-2">
+                            <p className="text-muted-foreground">
+                                {t(
+                                    'view.settings.history_sync.key_import_description'
+                                )}
+                            </p>
+                            <input
+                                className={INPUT_CLASS}
+                                value={recoveryInput}
+                                placeholder="rss1-..."
+                                onChange={(event) =>
+                                    setRecoveryInput(event.target.value)
+                                }
+                            />
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={busy || !recoveryInput.trim()}
+                                onClick={() =>
+                                    void run(async () => {
+                                        await invoke(
+                                            'app__remote_sync_key_import',
+                                            { recoveryString: recoveryInput }
+                                        );
+                                        setRecoveryInput('');
+                                    })
+                                }
+                            >
+                                {t('view.settings.history_sync.key_import')}
+                            </Button>
+                        </div>
+                        <div className="space-y-2">
+                            <p className="text-muted-foreground">
+                                {t(
+                                    'view.settings.history_sync.key_existing_own_description'
+                                )}
+                            </p>
+                            <input
+                                className={INPUT_CLASS}
+                                value={ownKey}
+                                placeholder={t(
+                                    'view.settings.history_sync.own_key_placeholder'
+                                )}
+                                onChange={(event) =>
+                                    setOwnKey(event.target.value)
+                                }
+                            />
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                disabled={busy || !ownKey.trim()}
+                                onClick={() =>
+                                    void run(async () => {
+                                        const created = await invoke<string>(
+                                            'app__remote_sync_key_create',
+                                            { ownKey: ownKey.trim() }
+                                        );
+                                        setOwnKey('');
+                                        setMustConfirmSaved(true);
+                                        setRecoveryString(created);
+                                    })
+                                }
+                            >
+                                {t('view.settings.history_sync.key_use_own')}
+                            </Button>
+                        </div>
+                    </div>
+                </details>
                 {error ? <p className="text-destructive">{error}</p> : null}
             </div>
         );
