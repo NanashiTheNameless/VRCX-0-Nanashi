@@ -65,6 +65,8 @@ pub fn ensure_remote_sync_tables(db: &DatabaseService) -> Result<(), Error> {
             "CREATE TABLE IF NOT EXISTS remote_sync_compaction (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, journal TEXT NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id))",
             "CREATE TABLE IF NOT EXISTS remote_sync_retention_state (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, max_age_days INTEGER, keep_below_limit_margin_pct INTEGER, applied_server_seq INTEGER NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id))",
             "CREATE TABLE IF NOT EXISTS remote_sync_dedupe_state (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, checked_server_seq INTEGER NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id))",
+            "CREATE TABLE IF NOT EXISTS remote_sync_replaced_chunk (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, server_seq INTEGER NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, replacement_chunk_id TEXT, replacement_source_seq INTEGER, announced INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (api_origin, account_id, vault_id, server_seq))",
+            "CREATE INDEX IF NOT EXISTS remote_sync_replaced_chunk_source_idx ON remote_sync_replaced_chunk (api_origin, account_id, vault_id, source_id, source_seq)",
             "CREATE TABLE IF NOT EXISTS remote_sync_seen_chunk (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id, source_id, source_seq))",
             "CREATE TABLE IF NOT EXISTS remote_sync_coverage (id INTEGER PRIMARY KEY, vrchat_user_id TEXT NOT NULL, started_at_ms INTEGER NOT NULL, extended_at_ms INTEGER NOT NULL, ended_at_ms INTEGER)",
             "CREATE INDEX IF NOT EXISTS remote_sync_coverage_user_idx ON remote_sync_coverage (vrchat_user_id, started_at_ms)",
@@ -212,22 +214,133 @@ pub fn pending_chunk_get(
     }))
 }
 
+const PENDING_CHUNK_PUT: &str = "INSERT OR REPLACE INTO remote_sync_pending_chunk (api_origin, account_id, vault_id, chunk_id, source_seq, blob, cursors) VALUES (@api_origin, @account_id, @vault_id, @chunk_id, @source_seq, @blob, @cursors)";
+
+fn pending_chunk_params(
+    vault: &VaultRef,
+    chunk: &PendingChunk,
+) -> Result<std::collections::HashMap<String, serde_json::Value>, Error> {
+    let cursors = serde_json::to_string(&chunk.cursors)
+        .map_err(|error| Error::Database(error.to_string()))?;
+    Ok(vault_params(vault)
+        .set("chunk_id", chunk.chunk_id.clone())
+        .set("source_seq", to_i64(chunk.source_seq))
+        .set("blob", chunk.blob_base64.clone())
+        .set("cursors", cursors)
+        .build())
+}
+
 pub fn pending_chunk_put(
     db: &DatabaseService,
     vault: &VaultRef,
     chunk: &PendingChunk,
 ) -> Result<(), Error> {
     ensure_remote_sync_tables(db)?;
-    let cursors = serde_json::to_string(&chunk.cursors)
-        .map_err(|error| Error::Database(error.to_string()))?;
+    db.execute_non_query(PENDING_CHUNK_PUT, &pending_chunk_params(vault, chunk)?)?;
+    Ok(())
+}
+
+/// A chunk of another source that this PC, as the deduplicating device,
+/// takes off the server because rows in it are stored there a second time.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReplacedChunk {
+    pub server_seq: u64,
+    pub source_id: String,
+    pub source_seq: u64,
+    /// Chunk id and own source sequence of the chunk holding the rows that
+    /// were kept. Absent when every row was stored elsewhere.
+    pub replacement: Option<(String, u64)>,
+}
+
+/// Records that a chunk is to be replaced, together with the pending upload
+/// of its replacement, so neither exists without the other after a crash.
+pub fn replaced_chunk_queue(
+    db: &DatabaseService,
+    vault: &VaultRef,
+    replaced: &ReplacedChunk,
+    replacement: Option<&PendingChunk>,
+) -> Result<(), Error> {
+    ensure_remote_sync_tables(db)?;
+    let pending = replacement
+        .map(|chunk| pending_chunk_params(vault, chunk))
+        .transpose()?;
+    db.write_transaction(|tx| {
+        tx.execute_non_query(
+            "INSERT OR REPLACE INTO remote_sync_replaced_chunk (api_origin, account_id, vault_id, server_seq, source_id, source_seq, replacement_chunk_id, replacement_source_seq, announced) VALUES (@api_origin, @account_id, @vault_id, @server_seq, @source_id, @source_seq, @replacement_chunk_id, @replacement_source_seq, 0)",
+            &vault_params(vault)
+                .set("server_seq", to_i64(replaced.server_seq))
+                .set("source_id", replaced.source_id.clone())
+                .set("source_seq", to_i64(replaced.source_seq))
+                .set(
+                    "replacement_chunk_id",
+                    replaced.replacement.as_ref().map(|(id, _)| id.clone()),
+                )
+                .set(
+                    "replacement_source_seq",
+                    replaced.replacement.as_ref().map(|(_, seq)| to_i64(*seq)),
+                )
+                .build(),
+        )?;
+        if let Some(pending) = &pending {
+            tx.execute_non_query(PENDING_CHUNK_PUT, pending)?;
+        }
+        Ok(())
+    })
+}
+
+/// Replaced chunks the server and the other PCs have not been told about
+/// yet, leaving out any whose replacement is still waiting to be uploaded.
+pub fn replaced_chunks_unannounced(
+    db: &DatabaseService,
+    vault: &VaultRef,
+) -> Result<Vec<ReplacedChunk>, Error> {
+    ensure_remote_sync_tables(db)?;
+    Ok(db
+        .execute(
+            &format!("SELECT server_seq, source_id, source_seq, replacement_chunk_id, replacement_source_seq FROM remote_sync_replaced_chunk WHERE {VAULT_WHERE} AND announced = 0 AND (replacement_source_seq IS NULL OR replacement_source_seq <= (SELECT push_source_seq FROM remote_sync_state WHERE {VAULT_WHERE})) ORDER BY server_seq"),
+            &vault_params(vault).build(),
+        )?
+        .iter()
+        .map(|row| ReplacedChunk {
+            server_seq: row_i64(row, 0).max(0) as u64,
+            source_id: row_string(row, 1),
+            source_seq: row_i64(row, 2).max(0) as u64,
+            replacement: (!row[3].is_null())
+                .then(|| (row_string(row, 3), row_i64(row, 4).max(0) as u64)),
+        })
+        .collect())
+}
+
+/// Called once the manifest lists the chunks as replaced and the server
+/// dropped them. Chunks with a replacement stay on record, because their
+/// rows now live in a chunk of this PC; the others are forgotten.
+pub fn replaced_chunks_announced(
+    db: &DatabaseService,
+    vault: &VaultRef,
+    through_server_seq: u64,
+) -> Result<(), Error> {
+    db.write_transaction(|tx| {
+        let params = vault_params(vault)
+            .set("through", to_i64(through_server_seq))
+            .build();
+        tx.execute_non_query(
+            &format!("DELETE FROM remote_sync_replaced_chunk WHERE {VAULT_WHERE} AND announced = 0 AND server_seq <= @through AND replacement_source_seq IS NULL"),
+            &params,
+        )?;
+        tx.execute_non_query(
+            &format!("UPDATE remote_sync_replaced_chunk SET announced = 1 WHERE {VAULT_WHERE} AND announced = 0 AND server_seq <= @through AND replacement_source_seq <= (SELECT push_source_seq FROM remote_sync_state WHERE {VAULT_WHERE})"),
+            &params,
+        )?;
+        Ok(())
+    })
+}
+
+/// Forgets every replaced chunk, for when a full snapshot took their place.
+pub fn replaced_chunks_clear(db: &DatabaseService, vault: &VaultRef) -> Result<(), Error> {
+    ensure_remote_sync_tables(db)?;
     db.execute_non_query(
-        "INSERT OR REPLACE INTO remote_sync_pending_chunk (api_origin, account_id, vault_id, chunk_id, source_seq, blob, cursors) VALUES (@api_origin, @account_id, @vault_id, @chunk_id, @source_seq, @blob, @cursors)",
-        &vault_params(vault)
-            .set("chunk_id", chunk.chunk_id.clone())
-            .set("source_seq", to_i64(chunk.source_seq))
-            .set("blob", chunk.blob_base64.clone())
-            .set("cursors", cursors)
-            .build(),
+        &format!("DELETE FROM remote_sync_replaced_chunk WHERE {VAULT_WHERE}"),
+        &vault_params(vault).build(),
     )?;
     Ok(())
 }
@@ -519,6 +632,7 @@ pub fn clear_account_state(
             "remote_sync_pending_chunk",
             "remote_sync_compaction",
             "remote_sync_retention_state",
+            "remote_sync_replaced_chunk",
             "remote_sync_seen_chunk",
             "remote_sync_log",
         ] {
@@ -542,6 +656,7 @@ pub fn clear_vault_state(db: &DatabaseService, vault: &VaultRef) -> Result<(), E
             "remote_sync_pending_chunk",
             "remote_sync_compaction",
             "remote_sync_retention_state",
+            "remote_sync_replaced_chunk",
             "remote_sync_seen_chunk",
         ] {
             tx.execute_non_query(&format!("DELETE FROM {table} WHERE {VAULT_WHERE}"), &params)?;
@@ -554,6 +669,22 @@ pub fn pull_cursor_advance(db: &DatabaseService, vault: &VaultRef, seq: u64) -> 
     db.execute_non_query(
         &format!(
             "UPDATE remote_sync_state SET pull_cursor = MAX(pull_cursor, @seq) WHERE {VAULT_WHERE}"
+        ),
+        &vault_params(vault).set("seq", to_i64(seq)).build(),
+    )?;
+    Ok(())
+}
+
+/// Moves the pull cursor over a chunk this PC just uploaded, but only when
+/// it directly follows the cursor, so that nothing in between is skipped.
+pub fn pull_cursor_advance_over_own(
+    db: &DatabaseService,
+    vault: &VaultRef,
+    seq: u64,
+) -> Result<(), Error> {
+    db.execute_non_query(
+        &format!(
+            "UPDATE remote_sync_state SET pull_cursor = @seq WHERE {VAULT_WHERE} AND pull_cursor = @seq - 1"
         ),
         &vault_params(vault).set("seq", to_i64(seq)).build(),
     )?;

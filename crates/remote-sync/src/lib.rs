@@ -656,6 +656,23 @@ impl RemoteSyncClient {
         .await
     }
 
+    /// Drops single chunks whose rows were re-uploaded in the listed
+    /// replacement chunks, or are all stored elsewhere.
+    pub async fn replace_chunks(
+        &self,
+        token: &str,
+        vault_id: VaultId,
+        request: &api::ReplaceChunksRequest,
+    ) -> Result<(), Error> {
+        self.send_empty(
+            self.client
+                .post(self.endpoint(&format!("/v1/vaults/{vault_id}/chunks:replace")))
+                .json(request),
+            token,
+        )
+        .await
+    }
+
     pub async fn collector_status(
         &self,
         token: &str,

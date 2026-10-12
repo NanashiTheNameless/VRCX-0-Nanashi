@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use chrono::{DateTime, Duration};
 use serde_json::{Map, Value};
 
-use super::{to_i64, vault_params, VaultRef, VAULT_WHERE};
+use super::{push_cursor_get, to_i64, vault_params, VaultRef, VAULT_WHERE};
 use crate::common::{row_i64, row_string, ParamsBuilder};
 use crate::database::{DatabaseService, DatabaseWriteTransaction};
 use crate::game_log::ensure_game_log_tables;
@@ -911,6 +911,16 @@ pub struct ImportSource<'a> {
     pub snapshot_from: Option<u64>,
 }
 
+/// What the deduplicating device needs to tell whether a row it already has
+/// is also still stored on the server in some other chunk.
+pub struct Dedupe<'a> {
+    /// False once any chunk this PC uploaded was replaced, after which its
+    /// own uploads no longer prove that a row is on the server.
+    pub own_chunks_intact: bool,
+    /// Whether the manifest lists this chunk of a source as replaced.
+    pub replaced: &'a (dyn Fn(&str, u64) -> bool + Sync),
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ImportReport {
     /// The chunk had been imported before; nothing was changed.
@@ -918,6 +928,9 @@ pub struct ImportReport {
     pub inserted: u64,
     /// Rows this PC already had, recorded by itself or by another source.
     pub matched: u64,
+    /// Per stream, the positions of matched rows that the server also holds
+    /// in another chunk. Only filled when deduplicating.
+    pub redundant: BTreeMap<String, Vec<usize>>,
     pub invalid_rows: u64,
     pub unknown_streams: Vec<String>,
 }
@@ -935,6 +948,8 @@ struct PreparedStream<'a> {
     table: String,
     columns: Vec<String>,
     rows: &'a [Value],
+    /// Highest row id of this stream that this PC already uploaded.
+    exported_through: i64,
 }
 
 struct PreparedState<'a> {
@@ -952,6 +967,18 @@ pub fn import_chunk(
     scope: &StreamScope,
     source: ImportSource<'_>,
     streams: &BTreeMap<String, Vec<Value>>,
+) -> Result<ImportReport, Error> {
+    import_chunk_deduping(db, scope, source, streams, None)
+}
+
+/// `import_chunk` for the deduplicating device, which also reports the rows
+/// of the chunk that are stored on the server a second time.
+pub fn import_chunk_deduping(
+    db: &DatabaseService,
+    scope: &StreamScope,
+    source: ImportSource<'_>,
+    streams: &BTreeMap<String, Vec<Value>>,
+    dedupe: Option<&Dedupe<'_>>,
 ) -> Result<ImportReport, Error> {
     let mut report = ImportReport::default();
     let mut prepared = Vec::new();
@@ -980,11 +1007,16 @@ pub fn import_chunk(
         };
         let table = scope.table_name(spec);
         let columns = synced_columns(db, &table, spec)?;
+        let exported_through = match dedupe {
+            Some(_) => push_cursor_get(db, source.vault, spec.name)?,
+            None => 0,
+        };
         prepared.push(PreparedStream {
             spec,
             table,
             columns,
             rows,
+            exported_through,
         });
     }
 
@@ -1001,10 +1033,18 @@ pub fn import_chunk(
             .is_empty();
         if !report.replayed {
             for stream in &prepared {
-                for row in stream.rows {
-                    match import_row(tx, scope, &source, stream, row)? {
+                for (index, row) in stream.rows.iter().enumerate() {
+                    match import_row(tx, scope, &source, stream, row, dedupe)? {
                         RowOutcome::Inserted => report.inserted += 1,
                         RowOutcome::Matched => report.matched += 1,
+                        RowOutcome::Redundant => {
+                            report.matched += 1;
+                            report
+                                .redundant
+                                .entry(stream.spec.name.to_owned())
+                                .or_default()
+                                .push(index);
+                        }
                         RowOutcome::Invalid => report.invalid_rows += 1,
                     }
                 }
@@ -1018,7 +1058,7 @@ pub fn import_chunk(
                     };
                     match outcome {
                         RowOutcome::Inserted => report.inserted += 1,
-                        RowOutcome::Matched => report.matched += 1,
+                        RowOutcome::Matched | RowOutcome::Redundant => report.matched += 1,
                         RowOutcome::Invalid => report.invalid_rows += 1,
                     }
                 }
@@ -1042,7 +1082,58 @@ pub fn import_chunk(
 enum RowOutcome {
     Inserted,
     Matched,
+    /// Matched, and the server holds the row in another chunk as well.
+    Redundant,
     Invalid,
+}
+
+/// Whether the local row a chunk row matched is still on the server in a
+/// chunk other than the one being imported. That is the case when it was
+/// imported from a chunk that still exists there, or when this PC recorded
+/// and uploaded it. A row this PC recorded but has not uploaded is not: the
+/// import claims it, and the imported chunk then holds its only copy.
+fn stored_elsewhere(
+    tx: &DatabaseWriteTransaction<'_>,
+    source: &ImportSource<'_>,
+    stream: &PreparedStream<'_>,
+    rowid: i64,
+    dedupe: &Dedupe<'_>,
+) -> Result<bool, Error> {
+    let origin = tx.execute(
+        "SELECT source_id, source_seq FROM remote_sync_provenance WHERE stream = @stream AND local_rowid = @local_rowid",
+        &ParamsBuilder::new()
+            .set("stream", stream.table.clone())
+            .set("local_rowid", rowid)
+            .build(),
+    )?;
+    let Some(origin) = origin.first() else {
+        return Ok(dedupe.own_chunks_intact && rowid <= stream.exported_through);
+    };
+    let (origin_source, origin_seq) = (row_string(origin, 0), row_i64(origin, 1));
+    let chunk = vault_params(source.vault)
+        .set("source_id", origin_source.clone())
+        .set("source_seq", origin_seq)
+        .build();
+    let seen = !tx
+        .execute(
+            &format!("SELECT 1 FROM remote_sync_seen_chunk WHERE {VAULT_WHERE} AND source_id = @source_id AND source_seq = @source_seq"),
+            &chunk,
+        )?
+        .is_empty();
+    if !seen {
+        return Ok(false);
+    }
+    if !(dedupe.replaced)(&origin_source, origin_seq.max(0) as u64) {
+        return Ok(true);
+    }
+    // A chunk this PC replaced lives on in one of its own uploads.
+    Ok(dedupe.own_chunks_intact
+        && !tx
+            .execute(
+                &format!("SELECT 1 FROM remote_sync_replaced_chunk WHERE {VAULT_WHERE} AND source_id = @source_id AND source_seq = @source_seq AND replacement_source_seq IS NOT NULL"),
+                &chunk,
+            )?
+            .is_empty())
 }
 
 fn import_row(
@@ -1051,6 +1142,7 @@ fn import_row(
     source: &ImportSource<'_>,
     stream: &PreparedStream<'_>,
     row: &Value,
+    dedupe: Option<&Dedupe<'_>>,
 ) -> Result<RowOutcome, Error> {
     let spec = stream.spec;
     let Some(object) = row.as_object() else {
@@ -1130,7 +1222,16 @@ fn import_row(
         &params.build(),
     )?;
     let (rowid, outcome) = match existing.first() {
-        Some(found) => (row_i64(found, 0), RowOutcome::Matched),
+        Some(found) => {
+            let rowid = row_i64(found, 0);
+            let outcome = match dedupe {
+                Some(dedupe) if stored_elsewhere(tx, source, stream, rowid, dedupe)? => {
+                    RowOutcome::Redundant
+                }
+                _ => RowOutcome::Matched,
+            };
+            (rowid, outcome)
+        }
         None => {
             let mut names = values
                 .iter()

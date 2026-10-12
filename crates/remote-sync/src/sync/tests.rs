@@ -3,7 +3,7 @@ use std::sync::Mutex;
 
 use vrcx_0_nanashi_website_protocol::api::batch;
 use vrcx_0_persistence::feed::test_support::seed_feed_bio_row;
-use vrcx_0_persistence::remote_sync::streams::stream_spec;
+use vrcx_0_persistence::remote_sync::streams::{import_chunk, stream_spec};
 
 use super::*;
 
@@ -24,6 +24,9 @@ struct FakeServer {
     vaults: Mutex<HashMap<VaultId, FakeVault>>,
     uploads: Mutex<u64>,
     fail_next_upload_response: Mutex<bool>,
+    /// While set, downloads return nothing, as if the PC read the server
+    /// just before another PC's upload arrived.
+    hide_downloads: Mutex<bool>,
 }
 
 fn api_error(status: u16, code: &str) -> Error {
@@ -53,6 +56,15 @@ impl FakeServer {
         let chunk = &mut vaults.values_mut().next().unwrap().chunks[0];
         let last = chunk.2.len() - 1;
         chunk.2[last] ^= 1;
+    }
+
+    fn chunk_seqs(&self) -> Vec<u64> {
+        self.vaults
+            .lock()
+            .unwrap()
+            .values()
+            .flat_map(|vault| vault.chunks.iter().map(|(seq, _, _)| *seq))
+            .collect()
     }
 
     fn delete_everything(&self) {
@@ -162,6 +174,9 @@ impl SyncTransport for FakeServer {
         after: u64,
         limit: u16,
     ) -> Result<(u64, bool, Vec<u8>), Error> {
+        if *self.hide_downloads.lock().unwrap() {
+            return Ok((after, false, Vec::new()));
+        }
         let vaults = self.vaults.lock().unwrap();
         let vault = vaults
             .get(&vault_id)
@@ -206,6 +221,34 @@ impl SyncTransport for FakeServer {
                 .map(|(_, _, blob)| blob.len() as u64)
                 .sum();
         }
+        Ok(())
+    }
+
+    async fn supports_chunk_replace(&self) -> Result<bool, Error> {
+        Ok(true)
+    }
+
+    async fn replace_chunks(
+        &self,
+        vault_id: VaultId,
+        request: vrcx_0_nanashi_website_protocol::api::ReplaceChunksRequest,
+    ) -> Result<(), Error> {
+        let mut vaults = self.vaults.lock().unwrap();
+        let vault = vaults
+            .get_mut(&vault_id)
+            .ok_or_else(|| api_error(404, codes::VAULT_NOT_FOUND))?;
+        for replacement in &request.chunk_ids {
+            if !vault
+                .chunks
+                .iter()
+                .any(|(seq, id, _)| *id == *replacement && !request.remove_seqs.contains(seq))
+            {
+                return Err(api_error(400, "invalid_replacement"));
+            }
+        }
+        vault
+            .chunks
+            .retain(|(seq, _, _)| !request.remove_seqs.contains(seq));
         Ok(())
     }
 
@@ -274,6 +317,26 @@ impl Pc {
         .await
     }
 
+    fn rows(&self) -> usize {
+        let scope = StreamScope::open(&self.db, USER).unwrap();
+        export_rows_for_compaction(&self.db, &scope, stream_spec("feed_bio").unwrap())
+            .unwrap()
+            .len()
+    }
+
+    /// Syncs as if every chunk already on the server arrived a moment too
+    /// late to be read, which is how two PCs come to upload the same event.
+    async fn sync_without_reading(
+        &self,
+        server: &FakeServer,
+        secret: &SyncSecret,
+    ) -> Result<SyncReport, Error> {
+        *server.hide_downloads.lock().unwrap() = true;
+        let report = self.sync(server, secret).await;
+        *server.hide_downloads.lock().unwrap() = false;
+        report
+    }
+
     fn unsent(&self) -> usize {
         let scope = StreamScope::open(&self.db, USER).unwrap();
         let state = store::vault_state_for_user(&self.db, "https://sync.example", "acc_test", USER)
@@ -340,11 +403,144 @@ async fn both_pcs_recording_the_same_event_keep_one_copy() {
     a.sync(&server, &secret).await.unwrap();
     let report = b.sync(&server, &secret).await.unwrap();
     assert_eq!((report.imported_rows, report.matched_rows), (0, 1));
-    // B uploads before it pulls, so its own copy is sent too; every PC
-    // still ends up with a single row.
-    assert_eq!(report.pushed_rows, 1);
+    // B reads before it uploads, so the copy the server already has is not
+    // sent a second time.
+    assert_eq!(report.pushed_rows, 0);
+    assert_eq!(b.unsent(), 0);
     let back = a.sync(&server, &secret).await.unwrap();
-    assert_eq!((back.imported_rows, back.matched_rows), (0, 1));
+    assert_eq!((back.pulled_chunks, back.imported_rows), (0, 0));
+    assert_eq!(server.chunk_count(), 1);
+    assert_eq!((a.rows(), b.rows()), (1, 1));
+}
+
+/// A, the first PC of a vault, is its deduplicating device. B uploads four
+/// events; C recorded the same four and uploads them without having read B.
+async fn vault_with_a_duplicated_chunk(
+    server: &FakeServer,
+    secret: &SyncSecret,
+    extra_rows_on_c: usize,
+) -> (Pc, Pc, Pc) {
+    let (a, b, c) = (pc("a"), pc("b"), pc("c"));
+    a.sync(server, secret).await.unwrap();
+    for hour in 0..4 {
+        b.record(
+            &format!("2026-10-10T1{hour}:00:00.000Z"),
+            &format!("bio {hour}"),
+        );
+        c.record(
+            &format!("2026-10-10T1{hour}:00:02.000Z"),
+            &format!("bio {hour}"),
+        );
+    }
+    for extra in 0..extra_rows_on_c {
+        c.record(
+            &format!("2026-10-11T1{extra}:00:00.000Z"),
+            &format!("only c {extra}"),
+        );
+    }
+    b.sync(server, secret).await.unwrap();
+    c.sync_without_reading(server, secret).await.unwrap();
+    assert_eq!(server.chunk_seqs(), [1, 2]);
+    (a, b, c)
+}
+
+#[tokio::test]
+async fn a_chunk_that_only_repeats_stored_rows_is_dropped_without_a_gap() {
+    let server = FakeServer::default();
+    let secret = SyncSecret::generate().unwrap();
+    let (a, b, c) = vault_with_a_duplicated_chunk(&server, &secret, 0).await;
+
+    let report = a.sync(&server, &secret).await.unwrap();
+    assert_eq!((report.imported_rows, report.matched_rows), (4, 4));
+    assert_eq!((report.replaced_chunks, report.pushed_chunks), (1, 0));
+    assert_eq!(server.chunk_seqs(), [1]);
+
+    // Nobody takes the missing chunk for withheld history, and a new PC
+    // still receives every event once.
+    let new = pc("new");
+    for pc in [&a, &b, &c, &new] {
+        let report = pc.sync(&server, &secret).await.unwrap();
+        assert_eq!((report.gaps, report.replaced_chunks), (0, 0));
+        assert_eq!(pc.rows(), 4);
+    }
+    assert_eq!(server.chunk_seqs(), [1]);
+}
+
+#[tokio::test]
+async fn a_partly_repeated_chunk_is_replaced_by_the_rows_only_it_had() {
+    let server = FakeServer::default();
+    let secret = SyncSecret::generate().unwrap();
+    let (a, b, c) = vault_with_a_duplicated_chunk(&server, &secret, 2).await;
+
+    let report = a.sync(&server, &secret).await.unwrap();
+    assert_eq!((report.imported_rows, report.matched_rows), (6, 4));
+    assert_eq!(report.replaced_chunks, 1);
+    // C's chunk is gone and a chunk of A holds its two own rows.
+    assert_eq!(server.chunk_seqs(), [1, 3]);
+
+    let new = pc("new");
+    for pc in [&a, &b, &c, &new] {
+        let report = pc.sync(&server, &secret).await.unwrap();
+        assert_eq!(report.gaps, 0);
+        assert_eq!(pc.rows(), 6);
+        assert_eq!(pc.unsent(), 0);
+    }
+    assert_eq!(server.chunk_seqs(), [1, 3]);
+}
+
+#[tokio::test]
+async fn a_chunk_with_few_repeated_rows_is_left_alone() {
+    let server = FakeServer::default();
+    let secret = SyncSecret::generate().unwrap();
+    // Four of C's seventeen rows are on the server already: under a quarter.
+    let (a, _b, _c) = vault_with_a_duplicated_chunk(&server, &secret, 13).await;
+    let report = a.sync(&server, &secret).await.unwrap();
+    assert_eq!((report.matched_rows, report.replaced_chunks), (4, 0));
+    assert_eq!(server.chunk_seqs(), [1, 2]);
+    assert_eq!(a.rows(), 17);
+}
+
+#[tokio::test]
+async fn a_chunk_holding_the_only_server_copy_of_a_row_is_kept() {
+    let server = FakeServer::default();
+    let secret = SyncSecret::generate().unwrap();
+    let (a, b) = (pc("a"), pc("b"));
+    a.sync(&server, &secret).await.unwrap();
+    // A recorded the event too but has not uploaded it. Matching B's chunk
+    // means A never will, so B's chunk must stay.
+    a.record("2026-10-10T10:00:00.000Z", "same");
+    b.record("2026-10-10T10:00:03.000Z", "same");
+    b.sync(&server, &secret).await.unwrap();
+
+    let report = a.sync(&server, &secret).await.unwrap();
+    assert_eq!((report.matched_rows, report.pushed_rows), (1, 0));
+    assert_eq!(report.replaced_chunks, 0);
+    assert_eq!(server.chunk_seqs(), [1]);
+    assert_eq!(pc_rows_after_sync(&pc("new"), &server, &secret).await, 1);
+}
+
+async fn pc_rows_after_sync(pc: &Pc, server: &FakeServer, secret: &SyncSecret) -> usize {
+    pc.sync(server, secret).await.unwrap();
+    pc.rows()
+}
+
+#[tokio::test]
+async fn an_interrupted_replacement_finishes_on_the_next_pass_without_losing_rows() {
+    let server = FakeServer::default();
+    let secret = SyncSecret::generate().unwrap();
+    let (a, _b, _c) = vault_with_a_duplicated_chunk(&server, &secret, 2).await;
+
+    // The replacement is stored but its confirmation never arrives.
+    *server.fail_next_upload_response.lock().unwrap() = true;
+    assert!(a.sync(&server, &secret).await.is_err());
+    // The old chunk is still there: it only goes once the new one is known
+    // to be stored.
+    assert_eq!(server.chunk_seqs(), [1, 2, 3]);
+
+    let report = a.sync(&server, &secret).await.unwrap();
+    assert_eq!(report.replaced_chunks, 1);
+    assert_eq!(server.chunk_seqs(), [1, 3]);
+    assert_eq!(pc_rows_after_sync(&pc("new"), &server, &secret).await, 6);
 }
 
 #[tokio::test]

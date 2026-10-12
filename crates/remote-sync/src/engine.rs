@@ -97,8 +97,17 @@ pub fn verify_batch(
             next_cursor = next_cursor.max(frame.seq);
             continue;
         }
+        // Chunks the deduplicating device replaced are listed in the signed
+        // manifest, so their absence is not the server withholding history.
         if frame.seq > expected_server {
-            server_gaps.push((expected_server, frame.seq - 1));
+            for missing in manifest.missing_seqs(expected_server, frame.seq - 1) {
+                server_gaps.push((missing.first, missing.last));
+            }
+        }
+        if manifest.seq_is_replaced(frame.seq) {
+            next_cursor = frame.seq;
+            expected_server = frame.seq.saturating_add(1);
+            continue;
         }
         let opened = chunk::open_chunk(frame.blob, keys.vault_id(), frame.chunk_id, keys, manifest)
             .map_err(|error| Error::Integrity(error.to_string()))?;
@@ -106,7 +115,13 @@ pub fn verify_batch(
             let source = opened.header.source_id.to_string();
             if let Some(previous) = source_sequences.get(&source).copied() {
                 if opened.header.source_seq > previous.saturating_add(1) {
-                    source_gaps.push((source.clone(), previous + 1, opened.header.source_seq - 1));
+                    for missing in manifest.missing_source_seqs(
+                        &opened.header.source_id,
+                        previous + 1,
+                        opened.header.source_seq - 1,
+                    ) {
+                        source_gaps.push((source.clone(), missing.first, missing.last));
+                    }
                 }
             }
             source_sequences

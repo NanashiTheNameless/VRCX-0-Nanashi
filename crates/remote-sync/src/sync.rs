@@ -10,21 +10,23 @@ use std::sync::Arc;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use serde::{Deserialize, Serialize};
 use vrcx_0_nanashi_website_protocol::{
-    api::{codes, ChunkStored, CompactRequest, CreateVaultRequest, VaultInfo},
+    api::{
+        codes, ChunkStored, CompactRequest, CreateVaultRequest, ReplaceChunksRequest, VaultInfo,
+    },
     b64,
-    chunk::{ChunkBody, ChunkDraft, ChunkKind, CoveragePeriod, SignerLookup},
+    chunk::{ChunkBody, ChunkDraft, ChunkHeader, ChunkKind, CoveragePeriod, SignerLookup},
     ids::{ChunkId, SourceId, VaultId},
     keys::{SignerKey, VaultKeys},
-    manifest::{Manifest, ManifestSubject, SignerEntry, SignerKind},
+    manifest::{Manifest, ManifestSubject, SignerEntry, SignerKind, MAX_REPLACED_RANGES},
     secret::SyncSecret,
 };
 use vrcx_0_persistence::remote_sync::{
     self as store,
     streams::{
-        export_rows, export_rows_for_compaction, export_state, import_chunk, ImportSource,
-        StreamScope, DELETED_SUFFIX, ROW_STREAMS, STATE_STREAMS,
+        export_rows, export_rows_for_compaction, export_state, import_chunk_deduping, stream_spec,
+        Dedupe, ImportSource, StreamScope, DELETED_SUFFIX, ROW_STREAMS, STATE_STREAMS,
     },
-    PendingChunk, SyncLogEntry, VaultRef, VaultState,
+    PendingChunk, ReplacedChunk, SyncLogEntry, VaultRef, VaultState,
 };
 use vrcx_0_persistence::DatabaseService;
 use zeroize::Zeroizing;
@@ -37,6 +39,9 @@ const CHUNK_BYTE_LIMIT: usize = 1024 * 1024;
 // reduce round trips when catching up after a long offline period.
 const PULL_BATCH: u16 = 500;
 const MANIFEST_ATTEMPTS: usize = 3;
+// Rewriting a chunk uploads the rows it keeps again. That only pays off when
+// a fair share of the chunk goes away: at least one row in this many.
+const REPLACE_REDUNDANT_SHARE: usize = 4;
 
 /// Number of locally recorded rows waiting to be uploaded, capped at the
 /// background trigger threshold so callers do not scan more than necessary.
@@ -93,6 +98,14 @@ pub trait SyncTransport: Send + Sync {
         &self,
         vault_id: VaultId,
         request: CompactRequest,
+    ) -> impl Future<Output = Result<(), Error>> + Send;
+    /// Whether the server can drop single chunks instead of only everything
+    /// up to a point.
+    fn supports_chunk_replace(&self) -> impl Future<Output = Result<bool, Error>> + Send;
+    fn replace_chunks(
+        &self,
+        vault_id: VaultId,
+        request: ReplaceChunksRequest,
     ) -> impl Future<Output = Result<(), Error>> + Send;
     fn account_usage_and_quota(
         &self,
@@ -162,6 +175,20 @@ impl SyncTransport for AuthorizedClient {
             .await
     }
 
+    async fn supports_chunk_replace(&self) -> Result<bool, Error> {
+        Ok(self.client.capabilities().await?.chunk_replace)
+    }
+
+    async fn replace_chunks(
+        &self,
+        vault_id: VaultId,
+        request: ReplaceChunksRequest,
+    ) -> Result<(), Error> {
+        self.client
+            .replace_chunks(&self.token, vault_id, &request)
+            .await
+    }
+
     async fn account_usage_and_quota(&self) -> Result<Option<(u64, u64)>, Error> {
         let account = self.client.account(&self.token).await?;
         Ok(account
@@ -192,6 +219,9 @@ pub struct SyncReport {
     pub matched_rows: u64,
     /// Rows already present locally that arrived from another paired device.
     pub dedupe_candidates: u64,
+    /// Chunks of other devices taken off the server because rows in them
+    /// were stored there a second time.
+    pub replaced_chunks: u64,
     pub gaps: u64,
     pub unknown_streams: Vec<String>,
     pub invalid_rows: u64,
@@ -629,7 +659,25 @@ async fn finish_compaction<T: SyncTransport>(
         uploaded.push(chunk_id);
     }
 
-    update_compacted_manifest(transport, db, vault, signer, journal.replaces_up_to_seq).await?;
+    // Everything each source sent so far is now in the snapshot, which is
+    // also why its sequence numbers jump for the other PCs.
+    let mut source_seqs: Vec<(SourceId, u64)> = store::seen_source_sequences(db, &vault.reference)
+        .map_err(storage)?
+        .into_iter()
+        .filter_map(|(source, seq)| Some((source.parse().ok()?, seq)))
+        .collect();
+    if let Some(first) = journal.chunks.first() {
+        source_seqs.push((vault.source_id, first.source_seq.saturating_sub(1)));
+    }
+    update_compacted_manifest(
+        transport,
+        db,
+        vault,
+        signer,
+        journal.replaces_up_to_seq,
+        &source_seqs,
+    )
+    .await?;
     transport
         .compact_vault(
             vault.id,
@@ -645,6 +693,7 @@ async fn finish_compaction<T: SyncTransport>(
     store::pull_cursor_advance(db, &vault.reference, journal.replaces_up_to_seq)
         .map_err(storage)?;
     store::compaction_journal_clear(db, &vault.reference).map_err(storage)?;
+    store::replaced_chunks_clear(db, &vault.reference).map_err(storage)?;
     Ok(())
 }
 
@@ -654,6 +703,7 @@ async fn update_compacted_manifest<T: SyncTransport>(
     vault: &Vault,
     signer: &SignerKey,
     replaces_up_to_seq: u64,
+    source_seqs: &[(SourceId, u64)],
 ) -> Result<(), Error> {
     let mut manifest_updated = false;
     for _ in 0..MANIFEST_ATTEMPTS {
@@ -672,7 +722,7 @@ async fn update_compacted_manifest<T: SyncTransport>(
             break;
         }
         let mut next = current.next();
-        next.compacted_through_seq = replaces_up_to_seq;
+        next.compact_through(replaces_up_to_seq, source_seqs.iter().copied());
         let sealed = engine::seal_manifest(&next, &vault.keys)?;
         match transport
             .put_manifest(vault.id, next.manifest_seq, sealed)
@@ -794,14 +844,218 @@ async fn push<T: SyncTransport>(
                 pending
             }
         };
-        let blob = STANDARD
-            .decode(&pending.blob_base64)
-            .map_err(|error| Error::Storage(error.to_string()))?;
-        let chunk_id = pending.chunk_id.parse().map_err(integrity)?;
-        transport.upload_chunk(vault.id, chunk_id, blob).await?;
-        store::pending_chunk_commit(db, &vault.reference, &pending).map_err(storage)?;
+        upload_pending(transport, db, vault, &pending).await?;
         report.pushed_chunks += 1;
     }
+}
+
+/// Uploads a chunk that was stored as pending and commits what waited on it.
+async fn upload_pending<T: SyncTransport>(
+    transport: &T,
+    db: &Arc<DatabaseService>,
+    vault: &Vault,
+    pending: &PendingChunk,
+) -> Result<(), Error> {
+    let blob = STANDARD
+        .decode(&pending.blob_base64)
+        .map_err(|error| Error::Storage(error.to_string()))?;
+    let chunk_id = pending.chunk_id.parse().map_err(integrity)?;
+    let stored = transport.upload_chunk(vault.id, chunk_id, blob).await?;
+    store::pending_chunk_commit(db, &vault.reference, pending).map_err(storage)?;
+    // A chunk stored right after the pull cursor has nothing unread before
+    // it, so this PC does not download its own upload again.
+    store::pull_cursor_advance_over_own(db, &vault.reference, stored.seq).map_err(storage)
+}
+
+/// Present on the deduplicating device when the server can drop single
+/// chunks.
+struct Deduper<'a> {
+    signer: &'a SignerKey,
+    identity: &'a SyncIdentity,
+    view: Arc<DedupeView>,
+}
+
+struct DedupeView {
+    manifest: Manifest,
+    own_chunks_intact: bool,
+}
+
+/// The rows of a chunk to keep on the server, or `None` when the chunk
+/// should stay as it is. A chunk is only rewritten when this PC knows every
+/// stream in it and enough of its rows are stored elsewhere to be worth
+/// uploading the rest again.
+fn rows_to_keep(
+    mut streams: BTreeMap<String, Vec<serde_json::Value>>,
+    redundant: &BTreeMap<String, Vec<usize>>,
+) -> Option<BTreeMap<String, Vec<serde_json::Value>>> {
+    let rows: usize = streams.values().map(Vec::len).sum();
+    let removed: usize = redundant.values().map(Vec::len).sum();
+    if removed == 0
+        || removed * REPLACE_REDUNDANT_SHARE < rows
+        || streams.keys().any(|name| stream_spec(name).is_none())
+    {
+        return None;
+    }
+    for (name, positions) in redundant {
+        if let Some(rows) = streams.get_mut(name) {
+            let mut position = 0;
+            rows.retain(|_| {
+                let keep = positions.binary_search(&position).is_err();
+                position += 1;
+                keep
+            });
+        }
+    }
+    streams.retain(|_, rows| !rows.is_empty());
+    Some(streams)
+}
+
+/// Queues a chunk of another source for removal and uploads the rows it
+/// keeps as a chunk of this PC. The server drops the old chunk later, in
+/// `announce_replacements`, and only once the new one is stored.
+async fn replace_chunk<T: SyncTransport>(
+    pass: &Pass<'_, T>,
+    deduper: &Deduper<'_>,
+    header: &ChunkHeader,
+    server_seq: u64,
+    kept: BTreeMap<String, Vec<serde_json::Value>>,
+) -> Result<(), Error> {
+    let Pass {
+        transport,
+        db,
+        vault,
+        ..
+    } = *pass;
+    let mut replaced = ReplacedChunk {
+        server_seq,
+        source_id: header.source_id.to_string(),
+        source_seq: header.source_seq,
+        replacement: None,
+    };
+    if kept.is_empty() {
+        return store::replaced_chunk_queue(db, &vault.reference, &replaced, None).map_err(storage);
+    }
+    let state = store::vault_state_get(db, &vault.reference)
+        .map_err(storage)?
+        .ok_or_else(|| Error::Storage("sync state is missing".into()))?;
+    let source_seq = state.push_source_seq + 1;
+    let draft = ChunkDraft {
+        vault_id: vault.id,
+        source_id: vault.source_id,
+        source_seq,
+        kind: ChunkKind::Rows,
+        created_at_ms: now_ms(),
+        app_version: deduper.identity.app_version.clone(),
+        coverage: header.coverage.clone(),
+        dropped_rows: header.dropped_rows,
+        body: ChunkBody { streams: kept },
+    };
+    let (chunk_id, blob) = engine::seal_chunk(&draft, deduper.signer, &vault.keys)?;
+    let pending = PendingChunk {
+        chunk_id: chunk_id.to_string(),
+        source_seq,
+        blob_base64: STANDARD.encode(blob),
+        cursors: Vec::new(),
+    };
+    replaced.replacement = Some((pending.chunk_id.clone(), source_seq));
+    store::replaced_chunk_queue(db, &vault.reference, &replaced, Some(&pending))
+        .map_err(storage)?;
+    upload_pending(transport, db, vault, &pending).await
+}
+
+/// Lists the replaced chunks in the manifest, so the other PCs do not take
+/// their absence for missing history, and then has the server drop them.
+/// Repeating any step after an interruption changes nothing.
+async fn announce_replacements<T: SyncTransport>(
+    transport: &T,
+    db: &Arc<DatabaseService>,
+    vault: &Vault,
+    signer: &SignerKey,
+    identity: &SyncIdentity,
+    report: &mut SyncReport,
+) -> Result<(), Error> {
+    let replaced = store::replaced_chunks_unannounced(db, &vault.reference).map_err(storage)?;
+    let (Some(first), Some(last)) = (replaced.first(), replaced.last()) else {
+        return Ok(());
+    };
+    let mut listed = false;
+    for _ in 0..MANIFEST_ATTEMPTS {
+        let (seq, blob) = transport.get_manifest(vault.id).await?;
+        let highest = store::vault_state_get(db, &vault.reference)
+            .map_err(storage)?
+            .map(|state| state.highest_manifest_seq);
+        let current = engine::open_manifest(&blob, seq, &vault.keys, highest)?;
+        if current.dedupe_device_key_id.as_deref() != Some(signer.key_id().as_str()) {
+            // Another device took over. The old chunks stay, which only
+            // leaves rows on the server twice.
+            return Ok(());
+        }
+        let mut next = current.next();
+        for chunk in &replaced {
+            next.mark_replaced(
+                chunk.server_seq,
+                chunk.source_id.parse().map_err(integrity)?,
+                chunk.source_seq,
+            );
+        }
+        if next.replaced_range_count() > MAX_REPLACED_RANGES {
+            // Too many separate holes to list. One snapshot of everything
+            // closes them all.
+            return compact_fully(transport, db, vault, signer, identity).await;
+        }
+        if next.replaced_seqs == current.replaced_seqs
+            && next.replaced_source_seqs == current.replaced_source_seqs
+        {
+            listed = true;
+            break;
+        }
+        let sealed = engine::seal_manifest(&next, &vault.keys)?;
+        match transport
+            .put_manifest(vault.id, next.manifest_seq, sealed)
+            .await
+        {
+            Ok(()) => {
+                store::manifest_seq_advance(db, &vault.reference, next.manifest_seq)
+                    .map_err(storage)?;
+                listed = true;
+                break;
+            }
+            Err(error) if is_api_error(&error, codes::MANIFEST_SEQ_CONFLICT) => continue,
+            Err(error) => return Err(error),
+        }
+    }
+    if !listed {
+        return Err(Error::Transport(
+            "the vault manifest kept changing; try again".into(),
+        ));
+    }
+    let mut chunk_ids = Vec::new();
+    for chunk in &replaced {
+        if let Some((chunk_id, _)) = &chunk.replacement {
+            chunk_ids.push(chunk_id.parse().map_err(integrity)?);
+        }
+    }
+    transport
+        .replace_chunks(
+            vault.id,
+            ReplaceChunksRequest {
+                remove_seqs: replaced.iter().map(|chunk| chunk.server_seq).collect(),
+                chunk_ids,
+            },
+        )
+        .await?;
+    store::replaced_chunks_announced(db, &vault.reference, last.server_seq).map_err(storage)?;
+    report.replaced_chunks += replaced.len() as u64;
+    log(
+        db,
+        &vault.reference,
+        "dedupe",
+        format!(
+            "Replaced {} server chunks that repeated rows stored elsewhere.",
+            replaced.len()
+        ),
+        Some((first.server_seq, last.server_seq)),
+    )
 }
 
 fn log(
@@ -828,6 +1082,7 @@ fn log(
 async fn pull<T: SyncTransport>(
     pass: &Pass<'_, T>,
     manifest: &Manifest,
+    deduper: Option<&Deduper<'_>>,
     report: &mut SyncReport,
 ) -> Result<(), Error> {
     let Pass {
@@ -903,10 +1158,27 @@ async fn pull<T: SyncTransport>(
                 snapshots.remove(&source_id);
                 None
             };
+            // A snapshot is the only copy of what it replaced, so only plain
+            // chunks are checked for rows stored elsewhere.
+            let view = deduper
+                .filter(|_| matches!(opened.header.kind, ChunkKind::Rows))
+                .map(|deduper| Arc::clone(&deduper.view));
+            let header = opened.header;
             let streams: BTreeMap<_, _> = opened.body.streams;
             let stream_names: Vec<String> = streams.keys().cloned().collect();
-            let imported = blocking(move || {
-                import_chunk(
+            let (imported, streams) = blocking(move || {
+                let replaced = |source: &str, seq: u64| {
+                    view.as_ref().is_none_or(|view| {
+                        source
+                            .parse::<SourceId>()
+                            .map_or(true, |id| view.manifest.source_seq_is_replaced(&id, seq))
+                    })
+                };
+                let dedupe = view.as_ref().map(|view| Dedupe {
+                    own_chunks_intact: view.own_chunks_intact,
+                    replaced: &replaced,
+                });
+                let imported = import_chunk_deduping(
                     &worker_db,
                     &worker_scope,
                     ImportSource {
@@ -917,9 +1189,18 @@ async fn pull<T: SyncTransport>(
                         snapshot_from,
                     },
                     &streams,
-                )
+                    dedupe.as_ref(),
+                )?;
+                Ok((imported, streams))
             })
             .await?;
+            if let Some(deduper) = deduper {
+                if imported.invalid_rows == 0 && imported.unknown_streams.is_empty() {
+                    if let Some(kept) = rows_to_keep(streams, &imported.redundant) {
+                        replace_chunk(pass, deduper, &header, server_seq, kept).await?;
+                    }
+                }
+            }
             report.pulled_chunks += 1;
             report.imported_rows += imported.inserted;
             if imported.inserted > 0 {
@@ -931,7 +1212,7 @@ async fn pull<T: SyncTransport>(
             }
             report.matched_rows += imported.matched;
             if is_other_source {
-                report.dedupe_candidates += imported.matched as u64;
+                report.dedupe_candidates += imported.matched;
             }
             for stream in imported.unknown_streams {
                 if !report.unknown_streams.contains(&stream) {
@@ -940,7 +1221,7 @@ async fn pull<T: SyncTransport>(
                 }
             }
             if imported.invalid_rows > 0 {
-                report.invalid_rows += imported.invalid_rows as u64;
+                report.invalid_rows += imported.invalid_rows;
                 log(
                     db,
                     &vault.reference,
@@ -960,40 +1241,29 @@ async fn pull<T: SyncTransport>(
     }
 }
 
-async fn deduplicate_server<T: SyncTransport>(
+/// Replaces the whole server history with one snapshot of what this PC
+/// holds. Single chunks are replaced as they come in, so this only runs when
+/// those replacements left more separate holes than the manifest may list.
+async fn compact_fully<T: SyncTransport>(
     transport: &T,
     db: &Arc<DatabaseService>,
     vault: &Vault,
     signer: &SignerKey,
     identity: &SyncIdentity,
-    manifest: &Manifest,
-    report: &SyncReport,
 ) -> Result<(), Error> {
-    if manifest.dedupe_device_key_id.as_deref() != Some(signer.key_id().as_str()) {
-        return Ok(());
-    }
-    if report.gaps > 0 || report.invalid_rows > 0 || !report.unknown_streams.is_empty() {
-        return Ok(());
-    }
     let info = transport
         .list_vaults()
         .await?
         .into_iter()
         .find(|info| info.vault_id == vault.id)
         .ok_or_else(|| Error::Transport("the synced vault disappeared".into()))?;
-    let checked_seq = store::dedupe_checked_seq_get(db, &vault.reference).map_err(storage)?;
-    if info.max_seq <= checked_seq.unwrap_or(manifest.compacted_through_seq) {
-        return Ok(());
-    }
     let pull_cursor = store::vault_state_get(db, &vault.reference)
         .map_err(storage)?
         .map(|state| state.pull_cursor)
         .unwrap_or(0);
+    // The snapshot must hold everything it replaces. Chunks this PC has not
+    // read yet would be lost, so the next pass tries again.
     if pull_cursor < info.max_seq {
-        return Ok(());
-    }
-    if report.dedupe_candidates == 0 && (checked_seq.is_some() || report.created_vault) {
-        store::dedupe_checked_seq_set(db, &vault.reference, info.max_seq).map_err(storage)?;
         return Ok(());
     }
     let scope = StreamScope::open(db, &identity.vrchat_user_id).map_err(storage)?;
@@ -1009,7 +1279,6 @@ async fn deduplicate_server<T: SyncTransport>(
         serde_json::to_string(&journal).map_err(|error| Error::Storage(error.to_string()))?;
     store::compaction_journal_put(db, &vault.reference, &serialized).map_err(storage)?;
     finish_compaction(transport, db, vault, signer, &journal).await?;
-    store::dedupe_checked_seq_set(db, &vault.reference, info.max_seq).map_err(storage)?;
     log(
         db,
         &vault.reference,
@@ -1060,6 +1329,12 @@ pub async fn sync_account<T: SyncTransport>(
     }
     ensure_manifest(transport, &db, &vault, signer, identity).await?;
     let _ = resume_compaction(transport, &db, &vault, signer).await?;
+    // A chunk left over from an interrupted pass goes up first: nothing new
+    // may be sealed under its sequence number.
+    if let Some(pending) = store::pending_chunk_get(&db, &vault.reference).map_err(storage)? {
+        upload_pending(transport, &db, &vault, &pending).await?;
+        report.pushed_chunks += 1;
+    }
     let pass = Pass {
         transport,
         db: &db,
@@ -1067,16 +1342,28 @@ pub async fn sync_account<T: SyncTransport>(
         scope: &scope,
         cancel,
     };
-    push(&pass, signer, identity, &mut report).await?;
-    if report.cancelled {
-        return Ok(report);
-    }
     // Other devices add themselves to the manifest before uploading, so it
     // is read again right before their chunks are verified.
     let manifest = ensure_manifest(transport, &db, &vault, signer, identity).await?;
-    pull(&pass, &manifest, &mut report).await?;
-    if !report.cancelled {
-        deduplicate_server(transport, &db, &vault, signer, identity, &manifest, &report).await?;
+    let deduplicating = manifest.dedupe_device_key_id.as_deref() == Some(signer.key_id().as_str())
+        && transport.supports_chunk_replace().await.unwrap_or(false);
+    let deduper = deduplicating.then(|| Deduper {
+        signer,
+        identity,
+        view: Arc::new(DedupeView {
+            own_chunks_intact: !manifest.source_has_replaced_seqs(&vault.source_id),
+            manifest: manifest.clone(),
+        }),
+    });
+    // Reading first means a row another device already uploaded is matched
+    // here before this PC would upload its own copy of it.
+    pull(&pass, &manifest, deduper.as_ref(), &mut report).await?;
+    if report.cancelled {
+        return Ok(report);
+    }
+    push(&pass, signer, identity, &mut report).await?;
+    if !report.cancelled && deduper.is_some() {
+        announce_replacements(transport, &db, &vault, signer, identity, &mut report).await?;
     }
     if !report.cancelled {
         store::last_sync_set(&db, &vault.reference, now_ms()).map_err(storage)?;
