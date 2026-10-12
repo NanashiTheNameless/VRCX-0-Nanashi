@@ -3,9 +3,10 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const rootDir = path.join(import.meta.dirname, '..');
-const tauriConfigPath = path.join(rootDir, 'src-tauri', 'tauri.conf.json');
-const cargoTomlPath = path.join(rootDir, 'src-tauri', 'Cargo.toml');
-const cargoLockPath = path.join(rootDir, 'Cargo.lock');
+const VERSIONED_CRATES = [
+    { manifest: 'src-tauri/Cargo.toml', lockName: 'vrcx-0' },
+    { manifest: 'crates/logger/Cargo.toml', lockName: 'vrcx-0-logger' }
+];
 // Stable: <major>.<minor>.<patch>. Nightly: <major>.<minor>.<patch>-Nightly-<GitSHA7>.
 const RELEASE_VERSION_PATTERN =
     /^v?(?<major>[1-9][0-9]{0,1})\.(?<minor>0|[1-9][0-9]{0,2})\.(?<patch>0|[1-9][0-9]{0,2})(?:-Nightly-(?<sha>[0-9a-f]{7}))?$/;
@@ -61,7 +62,20 @@ function buildReleaseMeta(versionInput: string): ReleaseMeta {
     };
 }
 
-function syncVersionToManifests(buildVersion: string): void {
+function replaceVersion(
+    content: string,
+    pattern: RegExp,
+    version: string,
+    description: string
+): string {
+    if (!pattern.test(content)) {
+        throw new Error(`Failed to update ${description} version`);
+    }
+    return content.replace(pattern, `$1"${version}"`);
+}
+
+function syncVersionToManifests(buildVersion: string, root = rootDir): void {
+    const tauriConfigPath = path.join(root, 'src-tauri', 'tauri.conf.json');
     const parsedTauriConfig: unknown = JSON.parse(
         fs.readFileSync(tauriConfigPath, 'utf8')
     );
@@ -75,32 +89,35 @@ function syncVersionToManifests(buildVersion: string): void {
         `${JSON.stringify(tauriConfig, null, 4)}\n`
     );
 
-    const cargoToml = fs.readFileSync(cargoTomlPath, 'utf8');
-    const cargoVersionPattern = /(^\[package\][\s\S]*?^version\s*=\s*)"[^"]+"/m;
-    if (!cargoVersionPattern.test(cargoToml)) {
-        throw new Error(
-            'Failed to update src-tauri/Cargo.toml package version'
+    for (const crate of VERSIONED_CRATES) {
+        const manifestPath = path.join(root, crate.manifest);
+        fs.writeFileSync(
+            manifestPath,
+            replaceVersion(
+                fs.readFileSync(manifestPath, 'utf8'),
+                /(^\[package\][\s\S]*?^version\s*=\s*)"[^"]+"/m,
+                buildVersion,
+                crate.manifest
+            )
         );
     }
-    fs.writeFileSync(
-        cargoTomlPath,
-        cargoToml.replace(cargoVersionPattern, `$1"${buildVersion}"`)
-    );
 
+    const cargoLockPath = path.join(root, 'Cargo.lock');
     if (!fs.existsSync(cargoLockPath)) {
         return;
     }
-
-    const cargoLock = fs.readFileSync(cargoLockPath, 'utf8');
-    const lockVersionPattern =
-        /(\[\[package\]\]\r?\nname = "vrcx-0"\r?\nversion = )"[^"]+"/;
-    if (!lockVersionPattern.test(cargoLock)) {
-        throw new Error('Failed to update Cargo.lock package version');
+    let cargoLock = fs.readFileSync(cargoLockPath, 'utf8');
+    for (const crate of VERSIONED_CRATES) {
+        cargoLock = replaceVersion(
+            cargoLock,
+            new RegExp(
+                `(\\[\\[package\\]\\]\\r?\\nname = "${crate.lockName}"\\r?\\nversion = )"[^"]+"`
+            ),
+            buildVersion,
+            `Cargo.lock ${crate.lockName}`
+        );
     }
-    fs.writeFileSync(
-        cargoLockPath,
-        cargoLock.replace(lockVersionPattern, `$1"${buildVersion}"`)
-    );
+    fs.writeFileSync(cargoLockPath, cargoLock);
 }
 
 function writeOutputs(meta: ReleaseMeta): void {
@@ -134,4 +151,4 @@ if (
     }
 }
 
-export { buildReleaseMeta };
+export { buildReleaseMeta, syncVersionToManifests };

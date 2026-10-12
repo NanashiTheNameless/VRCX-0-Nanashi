@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref } from 'react';
+import { createPortal } from 'react-dom';
 
 import { cn } from '@/lib/utils';
 
@@ -33,18 +34,21 @@ export function ShortcutKey({
 
 export function ShortcutHintPanel({
     className,
-    groups
+    groups,
+    ref
 }: {
     className?: string;
     groups: readonly (readonly ShortcutHintItem[])[];
+    ref?: Ref<HTMLDivElement>;
 }) {
     const visibleGroups = groups.filter((group) => group.length > 0);
     if (visibleGroups.length === 0) {
         return null;
     }
 
-    return (
+    return createPortal(
         <div
+            ref={ref}
             aria-hidden="true"
             className={cn(
                 'bg-popover/95 text-popover-foreground ring-foreground/10 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 pointer-events-none z-[70] max-h-[calc(100vh-4rem)] w-64 overflow-y-auto rounded-lg p-1.5 shadow-lg ring-1 backdrop-blur-md select-none motion-safe:duration-100',
@@ -75,6 +79,7 @@ export function ShortcutHintPanel({
                     ))}
                 </div>
             ))}
-        </div>
+        </div>,
+        document.body
     );
 }

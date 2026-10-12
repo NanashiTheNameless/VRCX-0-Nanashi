@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -13,6 +13,7 @@ import {
 import { formatDateTime } from '@/lib/dateTime';
 import {
     commands,
+    type FeedLoggerProbe,
     type PresenceAutomationRuleKind
 } from '@/platform/tauri/bindings';
 import configRepository from '@/repositories/configRepository';
@@ -20,6 +21,10 @@ import {
     getCurrentAppLauncherSnapshot,
     setAppLauncherEntryEnabled
 } from '@/services/appLauncherSnapshotService';
+import {
+    confirmDisablingBackupWithRecorder,
+    resolveOfflineRecordHealth
+} from '@/services/offlineRecordService';
 import {
     getProfileBackupSettings,
     setProfileBackupSettings
@@ -29,7 +34,9 @@ import {
     TOOLS_STATUS_UPDATED_EVENT
 } from '@/shared/constants/tools';
 import { isRecord } from '@/shared/utils/record';
+import { useOfflineRecordStore } from '@/state/offlineRecordStore';
 import { useProfileBackupStore } from '@/state/profileBackupStore';
+import { useRuntimeStore } from '@/state/runtimeStore';
 
 type ToolStatusItem = {
     id: string;
@@ -41,7 +48,7 @@ type ToolStatusItem = {
 
 export type ToolStatusSummary = {
     label: string;
-    tone: 'active' | 'neutral';
+    tone: 'active' | 'neutral' | 'warning';
     toggle?: {
         enabled: boolean;
         setEnabled: (enabled: boolean) => Promise<void>;
@@ -242,6 +249,12 @@ async function loadToolStatusSummaries(
             toggle: {
                 enabled: backupSettings.autoEnabled,
                 setEnabled: async (nextEnabled) => {
+                    if (
+                        !nextEnabled &&
+                        !(await confirmDisablingBackupWithRecorder())
+                    ) {
+                        return;
+                    }
                     await setProfileBackupSettings({
                         ...backupSettings,
                         autoEnabled: nextEnabled
@@ -264,8 +277,33 @@ async function loadToolStatusSummaries(
     return next;
 }
 
+function offlineRecordStatusSummary(
+    probe: FeedLoggerProbe | null,
+    currentUserId: string | null,
+    t: TFunction
+): ToolStatusSummary | null {
+    const health = resolveOfflineRecordHealth(probe, currentUserId);
+    if (!health) {
+        return null;
+    }
+    if (health.level !== 'ok') {
+        return { label: t(health.messageKey), tone: 'warning' };
+    }
+    const unsynced =
+        probe?.state === 'connected' ? probe.status.unsyncedFrames : 0;
+    return {
+        label:
+            unsynced > 0
+                ? t('offline_record.status_unsynced', { count: unsynced })
+                : t(health.messageKey),
+        tone: 'active'
+    };
+}
+
 export function useToolStatusSummaries(): Map<string, ToolStatusSummary> {
     const { t } = useTranslation();
+    const offlineRecordProbe = useOfflineRecordStore((state) => state.health);
+    const currentUserId = useRuntimeStore((state) => state.auth.currentUserId);
     const backupOutcomeRevision = useProfileBackupStore(
         (state) => state.status.lastOutcome?.revision ?? -1
     );
@@ -292,5 +330,15 @@ export function useToolStatusSummaries(): Map<string, ToolStatusSummary> {
         };
     }, [backupOutcomeRevision, t]);
 
-    return statusByToolKey;
+    return useMemo(() => {
+        const offlineRecord = offlineRecordStatusSummary(
+            offlineRecordProbe,
+            currentUserId,
+            t
+        );
+        if (!offlineRecord) {
+            return statusByToolKey;
+        }
+        return new Map(statusByToolKey).set('offline-record', offlineRecord);
+    }, [currentUserId, offlineRecordProbe, statusByToolKey, t]);
 }

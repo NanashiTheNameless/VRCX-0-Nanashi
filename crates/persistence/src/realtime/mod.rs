@@ -10,4 +10,4 @@ pub use types::{
     NotificationExpiration, NotificationV2Update, RealtimePersistenceBatch, RealtimeWriteCounts,
     SelfProfileField, SelfProfileObservation,
 };
-pub use write::write_realtime_batch;
+pub use write::{insert_backfilled_feed, write_realtime_batch, BackfillWrites};

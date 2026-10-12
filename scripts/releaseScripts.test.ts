@@ -12,12 +12,16 @@ import {
     validateTarget
 } from './create-tauri-updater-manifest';
 import {
+    cargoDependencyClosure,
     createThirdPartyNoticeText,
     normalizeFrontendEntry,
     parseCargoMetadata,
     sanitizeId
 } from './generate-third-party-licenses';
-import { buildReleaseMeta } from './prepare-release-version';
+import {
+    buildReleaseMeta,
+    syncVersionToManifests
+} from './prepare-release-version';
 
 const temporaryDirectories: string[] = [];
 
@@ -39,6 +43,124 @@ afterEach(() => {
     for (const directory of temporaryDirectories.splice(0)) {
         fs.rmSync(directory, { recursive: true, force: true });
     }
+});
+
+describe('recorder third-party notices', () => {
+    it('lists only crates the recorder needs at runtime, including transitive ones', () => {
+        const metadata = parseCargoMetadata({
+            workspace_members: ['vrcx-0-logger', 'vrcx-0'],
+            packages: [
+                'vrcx-0-logger',
+                'vrcx-0',
+                'rustls',
+                'ring',
+                'tauri',
+                'mockito',
+                'cc'
+            ].map((id) => ({ id, name: id, version: '1.0.0' })),
+            resolve: {
+                nodes: [
+                    {
+                        id: 'vrcx-0-logger',
+                        deps: [
+                            { pkg: 'rustls', dep_kinds: [{ kind: null }] },
+                            { pkg: 'mockito', dep_kinds: [{ kind: 'dev' }] },
+                            { pkg: 'cc', dep_kinds: [{ kind: 'build' }] }
+                        ]
+                    },
+                    {
+                        id: 'rustls',
+                        deps: [{ pkg: 'ring', dep_kinds: [{ kind: null }] }]
+                    },
+                    {
+                        id: 'vrcx-0',
+                        deps: [{ pkg: 'tauri', dep_kinds: [{ kind: null }] }]
+                    }
+                ]
+            }
+        });
+
+        expect(
+            [...cargoDependencyClosure(metadata, 'vrcx-0-logger')].sort()
+        ).toEqual(['ring', 'rustls', 'vrcx-0-logger']);
+    });
+});
+
+describe('recorder release version', () => {
+    function releaseCheckout() {
+        const root = createTemporaryDirectory();
+        const manifest = (name: string) =>
+            `[package]\nname = "${name}"\nversion = "0.1.0"\n`;
+        const lockEntry = (name: string) =>
+            `[[package]]\nname = "${name}"\nversion = "0.1.0"\n`;
+        const write = (content: string, ...segments: string[]) => {
+            fs.mkdirSync(path.join(root, ...segments.slice(0, -1)), {
+                recursive: true
+            });
+            fs.writeFileSync(path.join(root, ...segments), content);
+        };
+        write(
+            JSON.stringify({ version: '2.31.0' }),
+            'src-tauri',
+            'tauri.conf.json'
+        );
+        write(manifest('vrcx-0'), 'src-tauri', 'Cargo.toml');
+        write(manifest('vrcx-0-logger'), 'crates', 'logger', 'Cargo.toml');
+        write(
+            manifest('vrcx-0-logger-protocol'),
+            'crates',
+            'logger-protocol',
+            'Cargo.toml'
+        );
+        write(
+            ['vrcx-0-logger-protocol', 'vrcx-0-logger', 'vrcx-0']
+                .map(lockEntry)
+                .join('\n'),
+            'Cargo.lock'
+        );
+        const read = (...segments: string[]) =>
+            fs.readFileSync(path.join(root, ...segments), 'utf8');
+        return { root, read, manifest, lockEntry };
+    }
+
+    it('moves the recorder to the same version as the desktop release', () => {
+        const { root, read } = releaseCheckout();
+
+        syncVersionToManifests('2.32.0-beta.1', root);
+
+        expect(JSON.parse(read('src-tauri', 'tauri.conf.json')).version).toBe(
+            '2.32.0-beta.1'
+        );
+        expect(read('src-tauri', 'Cargo.toml')).toContain(
+            'version = "2.32.0-beta.1"'
+        );
+        expect(read('crates', 'logger', 'Cargo.toml')).toContain(
+            'version = "2.32.0-beta.1"'
+        );
+        expect(read('Cargo.lock')).toContain(
+            'name = "vrcx-0-logger"\nversion = "2.32.0-beta.1"'
+        );
+        expect(read('Cargo.lock')).toContain(
+            'name = "vrcx-0"\nversion = "2.32.0-beta.1"'
+        );
+    });
+
+    it('leaves similarly named crates such as the recorder protocol on their own version', () => {
+        const { root, read, manifest, lockEntry } = releaseCheckout();
+
+        syncVersionToManifests('2.32.0-beta.1', root);
+
+        expect(read('crates', 'logger-protocol', 'Cargo.toml')).toBe(
+            manifest('vrcx-0-logger-protocol')
+        );
+        expect(read('Cargo.lock')).toBe(
+            [
+                lockEntry('vrcx-0-logger-protocol'),
+                lockEntry('vrcx-0-logger').replace('0.1.0', '2.32.0-beta.1'),
+                lockEntry('vrcx-0').replace('0.1.0', '2.32.0-beta.1')
+            ].join('\n')
+        );
+    });
 });
 
 describe('prepare-release-version', () => {
@@ -367,7 +489,8 @@ describe('generate-third-party-licenses', () => {
                     repository: 'https://example.test/dependency',
                     homepage: ''
                 }
-            ]
+            ],
+            resolveNodes: []
         });
     });
 });

@@ -14,10 +14,11 @@ mod vrchat_config;
 
 pub use auth_credentials::{
     delete_saved_credential, migrate_saved_credential_secrets, record_login_success, record_logout,
-    saved_credential_login_start, saved_credential_session_data, saved_snapshot,
-    AuthCredentialStore, LoginSuccessRecordInput, LogoutRecordInput, SavedAuthAutoLoginStatus,
-    SavedAuthSnapshot, SavedCredentialLoginStartInput, SavedCredentialSessionData,
-    SavedCredentialSnapshot, SavedCredentialUser, SavedLoginParamsSnapshot, SealedAuthSecret,
+    saved_credential_login_start, saved_credential_session_data, saved_login_credentials,
+    saved_snapshot, AuthCredentialStore, LoginSuccessRecordInput, LogoutRecordInput,
+    SavedAuthAutoLoginStatus, SavedAuthSnapshot, SavedCredentialLoginStartInput,
+    SavedCredentialSessionData, SavedCredentialSnapshot, SavedCredentialUser,
+    SavedLoginCredentials, SavedLoginParamsSnapshot, SealedAuthSecret,
 };
 pub use authenticated_session_maintenance::{
     run_authenticated_session_maintenance, AuthenticatedSessionMaintenance,

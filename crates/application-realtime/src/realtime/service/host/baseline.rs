@@ -18,7 +18,8 @@ use crate::social_baseline::service::{
 };
 
 use super::state::{
-    ActiveRealtimeContext, FriendOwnerGuard, QueuedFriendBaseline, ScopedFriendLogMutation,
+    ActiveRealtimeContext, FriendOwnerGuard, QueuedFriendBaseline, ReconnectBackfillCheck,
+    ScopedFriendLogMutation,
 };
 use super::RealtimeHostRuntime;
 use vrcx_0_core::OwnerId;
@@ -49,13 +50,17 @@ impl RealtimeHostRuntime {
     ) {
         let FriendBaselineEffects {
             result,
+            reconnected,
             delta,
             schedules,
-            presence_feed_entries,
+            mut presence_feed_entries,
             joining_feed_entries,
             profile_refetch_user_ids,
             location_time_snapshot,
         } = effects;
+        if reconnected && self.reconnect_left_to_backfill() {
+            presence_feed_entries.clear();
+        }
         if let Some(snapshot) = snapshot {
             add_roster_delta(&mut projection, snapshot, &delta);
         }
@@ -83,6 +88,22 @@ impl RealtimeHostRuntime {
             self.schedule_friend_wake(result.generation, wake);
         }
         self.schedule_friend_profile_refetches(result.generation, profile_refetch_user_ids);
+    }
+
+    pub fn set_reconnect_backfill_check(&self, check: ReconnectBackfillCheck) {
+        *self
+            .reconnect_backfill_check
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(check);
+    }
+
+    fn reconnect_left_to_backfill(&self) -> bool {
+        let check = self
+            .reconnect_backfill_check
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone();
+        check.is_some_and(|check| check())
     }
 
     pub fn capture_friend_baseline_watermark(&self) -> Result<FriendBaselineCausalWatermark> {

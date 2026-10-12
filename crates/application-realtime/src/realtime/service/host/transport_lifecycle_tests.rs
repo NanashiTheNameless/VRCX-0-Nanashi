@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use super::test_support::*;
 use super::*;
@@ -1629,5 +1630,84 @@ fn pending_baseline_trust_feed_projects_once_after_start_without_rewriting() -> 
         .friend_baseline
         .queued
         .is_none());
+    Ok(())
+}
+
+fn friend_roster_at(location: &str) -> HashMap<String, FriendBaselineEntry> {
+    let mut roster = online_friend_roster();
+    if let Some(entry) = roster.get_mut("usr_friend") {
+        entry.presence.location = location.into();
+    }
+    roster
+}
+
+fn location_rows(
+    runtime: &TestRealtimeHostRuntime,
+    session: &RealtimeSessionContext,
+) -> Result<usize> {
+    Ok(runtime
+        .database()
+        .feed_rows(vrcx_0_contracts::feed::FeedRowsQueryInput {
+            filters: vec![vrcx_0_contracts::feed::FeedFilter::Gps],
+            ..feed_lookup_input(session.user_id.clone())
+        })?
+        .len())
+}
+
+fn reconnect_with_friend_at(
+    runtime: &TestRealtimeHostRuntime,
+    session: &RealtimeSessionContext,
+    generation: u64,
+    location: &str,
+) -> Result<()> {
+    runtime.runtime().finish_realtime_transport(
+        active_transport(runtime),
+        RealtimeTransportTermination::UnexpectedExit {
+            reason: "websocket stream ended".into(),
+            connected_secs: Some(600),
+        },
+    );
+    runtime
+        .runtime()
+        .sync_friend_snapshot(session.clone(), None, friend_roster_at(location))?;
+    runtime.set_task_executor_for_test(DiscardTaskExecutor);
+    runtime.runtime().start_from_friend_baseline(
+        session.user_id.clone(),
+        session.endpoint.clone(),
+        session.websocket.clone(),
+        generation,
+        json!({"id": session.user_id}),
+    )?;
+    Ok(())
+}
+
+#[test]
+fn a_reconnect_while_the_recorder_may_be_recording_leaves_the_missed_changes_to_the_backfill(
+) -> Result<()> {
+    let (_dir, runtime, session) = runtime_with_active_session("reconnect-covered-by-recorder")?;
+    seed_online_friend(&runtime, &session, active_transport(&runtime).generation)?;
+    let recorder_may_be_recording = Arc::new(AtomicBool::new(true));
+    let check = Arc::clone(&recorder_may_be_recording);
+    runtime
+        .runtime()
+        .set_reconnect_backfill_check(Arc::new(move || check.load(Ordering::SeqCst)));
+
+    reconnect_with_friend_at(&runtime, &session, 2, "wrld_new:456")?;
+    assert_eq!(location_rows(&runtime, &session)?, 0);
+
+    recorder_may_be_recording.store(false, Ordering::SeqCst);
+    reconnect_with_friend_at(&runtime, &session, 3, "wrld_old:123")?;
+    assert_eq!(location_rows(&runtime, &session)?, 1);
+    Ok(())
+}
+
+#[test]
+fn a_reconnect_the_recorder_did_not_cover_still_writes_what_changed() -> Result<()> {
+    let (_dir, runtime, session) = runtime_with_active_session("reconnect-not-covered")?;
+    seed_online_friend(&runtime, &session, active_transport(&runtime).generation)?;
+
+    reconnect_with_friend_at(&runtime, &session, 2, "wrld_new:456")?;
+
+    assert_eq!(location_rows(&runtime, &session)?, 1);
     Ok(())
 }

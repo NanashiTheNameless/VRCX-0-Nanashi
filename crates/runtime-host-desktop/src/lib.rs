@@ -12,6 +12,7 @@ pub mod data_dir;
 mod database_upgrade;
 pub mod deep_link;
 mod external_api;
+pub mod feed_logger;
 mod game_client;
 mod game_log;
 mod game_log_import;
@@ -73,7 +74,9 @@ pub use log_watcher::{
 pub use media::DesktopMediaRuntime;
 pub use privacy_lock::{PrivacyLockOutcome, PrivacyLockRuntime, PrivacyLockSnapshot};
 pub use process_monitor::HostGameProcessMonitorActions;
-pub use profile_backup::{DesktopProfileBackupRuntime, DesktopProfileRestoreRequest};
+pub use profile_backup::{
+    DesktopProfileBackupRuntime, DesktopProfileRestoreRequest, ProfileBackupSettingsError,
+};
 pub use proxy_connectivity::test_proxy_connectivity;
 pub use registry_backup::HostRegistryBackupActions;
 pub use screenshot::DesktopScreenshotRuntime;

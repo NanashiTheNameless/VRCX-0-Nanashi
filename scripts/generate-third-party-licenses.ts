@@ -27,9 +27,15 @@ type CargoMetadataPackage = {
     homepage: string;
 };
 
+type CargoResolveNode = {
+    id: string;
+    normalDependencies: string[];
+};
+
 type CargoMetadata = {
     workspaceMembers: string[];
     packages: CargoMetadataPackage[];
+    resolveNodes: CargoResolveNode[];
 };
 
 const rootDir = path.join(import.meta.dirname, '..');
@@ -191,14 +197,10 @@ function readBundledFontEntries(
 }
 
 function createThirdPartyNoticeText(
-    entries: readonly ThirdPartyLicenseEntry[]
+    entries: readonly ThirdPartyLicenseEntry[],
+    title = 'VRCX-0-Nanashi Third-Party Notices'
 ): string {
-    const lines = [
-        'VRCX-0-Nanashi Third-Party Notices',
-        '',
-        `Generated: ${new Date().toISOString()}`,
-        ''
-    ];
+    const lines = [title, '', `Generated: ${new Date().toISOString()}`, ''];
 
     if (!entries.length) {
         lines.push('No license manifest was available.', '');
@@ -255,29 +257,75 @@ function parseCargoMetadata(value: unknown): CargoMetadata {
               homepage: normalizeWhitespace(pkg.homepage)
           }))
         : [];
-    return { workspaceMembers, packages };
+    const resolve = isRecord(value.resolve) ? value.resolve : {};
+    const resolveNodes = Array.isArray(resolve.nodes)
+        ? resolve.nodes.filter(isRecord).map((node): CargoResolveNode => ({
+              id: normalizeWhitespace(node.id),
+              normalDependencies: (Array.isArray(node.deps) ? node.deps : [])
+                  .filter(isRecord)
+                  .filter(
+                      (dependency) =>
+                          Array.isArray(dependency.dep_kinds) &&
+                          dependency.dep_kinds
+                              .filter(isRecord)
+                              .some((kind) => kind.kind === null)
+                  )
+                  .map((dependency) => normalizeWhitespace(dependency.pkg))
+          }))
+        : [];
+    return { workspaceMembers, packages, resolveNodes };
+}
+
+function cargoDependencyClosure(
+    metadata: CargoMetadata,
+    rootPackageName: string
+): Set<string> {
+    const root = metadata.packages.find((pkg) => pkg.name === rootPackageName);
+    if (!root) {
+        throw new Error(`Cargo package not found: ${rootPackageName}`);
+    }
+    const dependencies = new Map(
+        metadata.resolveNodes.map((node) => [node.id, node.normalDependencies])
+    );
+    const reached = new Set<string>();
+    const pending = [root.id];
+    while (pending.length) {
+        const id = pending.pop()!;
+        if (reached.has(id)) {
+            continue;
+        }
+        reached.add(id);
+        pending.push(...(dependencies.get(id) ?? []));
+    }
+    return reached;
+}
+
+function readCargoMetadata(filterPlatform?: string): CargoMetadata {
+    const args = [
+        'metadata',
+        '--format-version',
+        '1',
+        '--manifest-path',
+        path.join(rootDir, 'Cargo.toml')
+    ];
+    if (filterPlatform) {
+        args.push('--filter-platform', filterPlatform);
+    }
+    const output = execFileSync('cargo', args, {
+        encoding: 'utf8',
+        maxBuffer: 1024 * 1024 * 64
+    });
+    return parseCargoMetadata(JSON.parse(output));
 }
 
 function readRustEntries(): ThirdPartyLicenseEntry[] {
-    const cargoManifestPath = path.join(rootDir, 'Cargo.toml');
-    if (!fs.existsSync(cargoManifestPath)) {
+    if (!fs.existsSync(path.join(rootDir, 'Cargo.toml'))) {
         return [];
     }
 
     let metadata: CargoMetadata;
     try {
-        const output = execFileSync(
-            'cargo',
-            [
-                'metadata',
-                '--format-version',
-                '1',
-                '--manifest-path',
-                cargoManifestPath
-            ],
-            { encoding: 'utf8', maxBuffer: 1024 * 1024 * 64 }
-        );
-        metadata = parseCargoMetadata(JSON.parse(output));
+        metadata = readCargoMetadata();
     } catch (error) {
         console.warn(
             `Skipping Rust dependency licenses (cargo unavailable): ${error instanceof Error ? error.message : String(error)}`
@@ -285,9 +333,17 @@ function readRustEntries(): ThirdPartyLicenseEntry[] {
         return [];
     }
 
+    return rustEntries(metadata);
+}
+
+function rustEntries(
+    metadata: CargoMetadata,
+    includedIds?: ReadonlySet<string>
+): ThirdPartyLicenseEntry[] {
     const workspaceMemberIds = new Set(metadata.workspaceMembers);
     return metadata.packages
         .filter((pkg) => !workspaceMemberIds.has(pkg.id))
+        .filter((pkg) => !includedIds || includedIds.has(pkg.id))
         .map((pkg): ThirdPartyLicenseEntry => {
             const license = normalizeWhitespace(
                 pkg.license || (pkg.licenseFile ? `See ${pkg.licenseFile}` : '')
@@ -313,7 +369,36 @@ function removeIntermediateFrontendManifest(): void {
     }
 }
 
+function writeLoggerNotices(outputPath: string): void {
+    const metadata = readCargoMetadata('x86_64-unknown-linux-musl');
+    const entries = rustEntries(
+        metadata,
+        cargoDependencyClosure(metadata, 'vrcx-0-logger')
+    ).sort((left, right) => left.name.localeCompare(right.name));
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(
+        outputPath,
+        createThirdPartyNoticeText(
+            entries,
+            'VRCX-0 Self-hosted Recorder Third-Party Notices'
+        )
+    );
+    console.log(
+        `Generated recorder third-party notices with ${entries.length} entries.`
+    );
+}
+
 function main(): void {
+    const loggerFlag = process.argv.indexOf('--logger');
+    if (loggerFlag >= 0) {
+        const outputPath = process.argv[loggerFlag + 1];
+        if (!outputPath) {
+            throw new Error('--logger requires an output path');
+        }
+        writeLoggerNotices(path.resolve(outputPath));
+        return;
+    }
+
     fs.mkdirSync(outputDir, { recursive: true });
     fs.mkdirSync(tauriLicenseResourceDir, { recursive: true });
 
@@ -400,6 +485,7 @@ if (
 }
 
 export {
+    cargoDependencyClosure,
     createThirdPartyNoticeText,
     normalizeFrontendEntry,
     parseCargoMetadata,

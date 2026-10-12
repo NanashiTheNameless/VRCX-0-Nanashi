@@ -46,6 +46,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import { DoNotDisturbMenu } from './DoNotDisturbMenu';
+import { OfflineRecordIndicator } from './OfflineRecordIndicator';
 import {
     AppUptimeValue,
     ClockValue,
@@ -876,6 +877,7 @@ export const StatusBarFooter = forwardRef<HTMLElement, StatusBarFooterProps>(
                                 </TooltipContent>
                             </Tooltip>
                         ) : null}
+                        <OfflineRecordIndicator />
                         {proxyEnabled ? (
                             <Popover
                                 open={proxyEditor.open}

@@ -175,7 +175,7 @@ function ToolRow({
         >
             <div
                 className={cn(
-                    'group/tool grid h-9 grid-cols-[1.25rem_16rem_minmax(0,1fr)_auto_1.5rem_1.5rem] items-center gap-3 px-4 text-sm',
+                    'group/tool relative grid h-9 grid-cols-[1.25rem_16rem_minmax(0,1fr)_auto_1.5rem_1.5rem] items-center gap-3 px-4 text-sm',
                     '[&:has([data-slot=dropdown-menu-trigger][aria-expanded=true])]:bg-[var(--vrcx-0-table-row-hover-surface)]',
                     'has-[>button:focus-visible]:bg-[var(--vrcx-0-table-row-hover-surface)]',
                     !editMode &&
@@ -184,7 +184,7 @@ function ToolRow({
             >
                 <button
                     type="button"
-                    className="col-span-3 grid h-full grid-cols-subgrid items-center gap-3 text-left outline-none"
+                    className="col-span-3 grid h-full grid-cols-subgrid items-center gap-3 text-left outline-none after:absolute after:inset-0"
                     aria-disabled={editMode ? true : undefined}
                     onClick={editMode ? undefined : onClick}
                 >
@@ -204,7 +204,9 @@ function ToolRow({
                                 'flex items-center gap-1.5 text-xs whitespace-nowrap tabular-nums',
                                 status.tone === 'active'
                                     ? 'text-primary'
-                                    : 'text-muted-foreground'
+                                    : status.tone === 'warning'
+                                      ? 'text-[var(--status-askme)]'
+                                      : 'text-muted-foreground'
                             )}
                         >
                             {status.toggle ? null : (
@@ -214,7 +216,9 @@ function ToolRow({
                                         'size-1.5 rounded-full',
                                         status.tone === 'active'
                                             ? 'bg-primary'
-                                            : 'bg-muted-foreground/70'
+                                            : status.tone === 'warning'
+                                              ? 'bg-[var(--status-askme)]'
+                                              : 'bg-muted-foreground/70'
                                     )}
                                 />
                             )}
@@ -245,7 +249,7 @@ function ToolRow({
                             type="button"
                             size="icon-xs"
                             variant="secondary"
-                            className="size-6"
+                            className="relative size-6"
                             aria-label={editQuickAccessLabel}
                             onPointerDown={(event) => {
                                 event.stopPropagation();
@@ -269,7 +273,7 @@ function ToolRow({
                                     <Button
                                         type="button"
                                         size="icon-xs"
-                                        className="text-muted-foreground invisible size-6 group-hover/tool:visible group-has-[:focus-visible]/tool:visible aria-expanded:visible"
+                                        className="text-muted-foreground invisible relative size-6 group-hover/tool:visible group-has-[:focus-visible]/tool:visible aria-expanded:visible"
                                         variant="ghost"
                                         aria-label={actionsLabel}
                                         onClick={(event) => {
@@ -320,7 +324,7 @@ function ToolRow({
                             type="button"
                             size="icon-xs"
                             variant="ghost"
-                            className="text-muted-foreground/50 hover:text-foreground aria-expanded:text-muted-foreground/50 aria-expanded:hover:text-foreground size-6 aria-expanded:bg-transparent aria-expanded:hover:bg-(--state-hover-surface)"
+                            className="text-muted-foreground/50 hover:text-foreground aria-expanded:text-muted-foreground/50 aria-expanded:hover:text-foreground relative size-6 aria-expanded:bg-transparent aria-expanded:hover:bg-(--state-hover-surface)"
                             aria-label={showDetailsLabel}
                             aria-expanded={expanded}
                             aria-controls={itemsPanelId}
@@ -347,11 +351,11 @@ function ToolRow({
                     {items.map((item) => (
                         <div
                             key={item.id}
-                            className="group/tool-item grid h-8 grid-cols-[1.25rem_16rem_minmax(0,1fr)_auto_1.5rem_1.5rem] items-center gap-3 px-4 text-sm hover:bg-[var(--vrcx-0-table-row-hover-surface)] has-[>button:focus-visible]:bg-[var(--vrcx-0-table-row-hover-surface)]"
+                            className="group/tool-item relative grid h-8 grid-cols-[1.25rem_16rem_minmax(0,1fr)_auto_1.5rem_1.5rem] items-center gap-3 px-4 text-sm hover:bg-[var(--vrcx-0-table-row-hover-surface)] has-[>button:focus-visible]:bg-[var(--vrcx-0-table-row-hover-surface)]"
                         >
                             <button
                                 type="button"
-                                className="col-span-3 grid h-full grid-cols-subgrid items-center gap-3 text-left outline-none"
+                                className="col-span-3 grid h-full grid-cols-subgrid items-center gap-3 text-left outline-none after:absolute after:inset-0"
                                 onClick={onClick}
                             >
                                 <span aria-hidden="true" />

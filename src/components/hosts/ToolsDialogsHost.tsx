@@ -71,6 +71,14 @@ const ProfileBackupDialog = lazy(() =>
     }))
 );
 
+const OfflineRecordDialog = lazy(() =>
+    import('./tools-dialogs/offline-record/OfflineRecordDialog').then(
+        (module) => ({
+            default: module.OfflineRecordDialog
+        })
+    )
+);
+
 export function ToolsDialogsHost() {
     const presenceScheduleOpen = useRuntimeStore(
         (state) => state.systemHosts.presenceScheduleOpen
@@ -107,6 +115,9 @@ export function ToolsDialogsHost() {
     );
     const profileBackupOpen = useRuntimeStore(
         (state) => state.systemHosts.profileBackupOpen
+    );
+    const offlineRecordOpen = useRuntimeStore(
+        (state) => state.systemHosts.offlineRecordOpen
     );
     const setSystemHostOpen = useRuntimeStore(
         (state) => state.setSystemHostOpen
@@ -209,6 +220,14 @@ export function ToolsDialogsHost() {
                     open={profileBackupOpen}
                     onOpenChange={(open) =>
                         setSystemHostOpen('profileBackupOpen', open)
+                    }
+                />
+            </MountOnFirstOpen>
+            <MountOnFirstOpen open={offlineRecordOpen}>
+                <OfflineRecordDialog
+                    open={offlineRecordOpen}
+                    onOpenChange={(open) =>
+                        setSystemHostOpen('offlineRecordOpen', open)
                     }
                 />
             </MountOnFirstOpen>

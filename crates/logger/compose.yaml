@@ -1,0 +1,18 @@
+services:
+    vrcx-0-logger:
+        image: ghcr.io/map1en/vrcx-0-logger:${VRCX0_LOGGER_TAG:-latest}
+        restart: unless-stopped
+        ports:
+            - '${VRCX0_LOGGER_BIND:-0.0.0.0}:${VRCX0_LOGGER_PORT:-8787}:8787'
+        environment:
+            VRCX0_LOGGER_PASSWORD_FILE: /run/secrets/vrcx0_logger_password
+            VRCX0_LOGGER_RETENTION_DAYS: ${VRCX0_LOGGER_RETENTION_DAYS:-}
+            VRCX0_LOGGER_MAX_STORAGE_MB: ${VRCX0_LOGGER_MAX_STORAGE_MB:-}
+        secrets:
+            - vrcx0_logger_password
+        volumes:
+            - ./data:/data
+
+secrets:
+    vrcx0_logger_password:
+        file: ./password

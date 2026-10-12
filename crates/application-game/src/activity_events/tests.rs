@@ -5,7 +5,7 @@ use vrcx_0_contracts::game_log::{
 };
 
 fn all_events(output: &GameLogIngestOutput) -> Vec<ActivityEvent> {
-    game_log_activity_events(output, |_| true, |_| PlayerModeration::default())
+    game_log_activity_events(output, |_, _| true, |_| PlayerModeration::default())
 }
 
 #[test]

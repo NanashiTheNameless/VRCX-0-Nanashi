@@ -1,0 +1,21 @@
+[package]
+name = "vrcx-0-logger-protocol"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true
+description = "Wire types and request envelope shared by the remote feed logger and the desktop app"
+
+[dependencies]
+argon2 = { version = "0.6", default-features = false, features = ["alloc"] }
+chacha20poly1305 = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+specta = { workspace = true, optional = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+vrcx-0-logger-protocol = { path = ".", features = ["server"] }
+
+[features]
+server = []
+specta = ["dep:specta"]

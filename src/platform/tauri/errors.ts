@@ -3,6 +3,7 @@ import { isRecord } from '@/shared/utils/record';
 import type {
     AppErrorCode,
     AppErrorPayload,
+    FeedLoggerErrorCode,
     SqliteErrorCategory
 } from './bindings';
 
@@ -11,6 +12,7 @@ export class PlatformCommandError extends Error {
     readonly sqliteCategory?: SqliteErrorCategory;
     readonly statusCode?: number;
     readonly port?: number;
+    readonly feedLoggerCode?: FeedLoggerErrorCode;
 
     constructor(payload: AppErrorPayload, cause?: unknown) {
         super(payload.message);
@@ -19,6 +21,7 @@ export class PlatformCommandError extends Error {
         this.sqliteCategory = payload.sqliteCategory ?? undefined;
         this.statusCode = payload.statusCode ?? undefined;
         this.port = payload.port ?? undefined;
+        this.feedLoggerCode = payload.feedLoggerCode ?? undefined;
         this.cause = cause;
     }
 }
@@ -37,6 +40,7 @@ function appErrorCode(value: unknown): AppErrorCode | null {
         case 'auth_session_invalidated':
         case 'integration_api_port_in_use':
         case 'integration_api_bind':
+        case 'feed_logger':
         case 'custom':
             return value;
         default:
@@ -65,6 +69,31 @@ function sqliteErrorCategory(value: unknown): SqliteErrorCategory | undefined {
     }
 }
 
+function feedLoggerErrorCode(value: unknown): FeedLoggerErrorCode | undefined {
+    switch (value) {
+        case 'notConfigured':
+        case 'notSignedIn':
+        case 'syncInProgress':
+        case 'notPresent':
+        case 'noSavedCredentials':
+        case 'loggerTooOld':
+        case 'betaRecorder':
+        case 'backupRequired':
+        case 'accountMismatch':
+        case 'invalidAddress':
+        case 'invalidPassword':
+        case 'unreachable':
+        case 'unauthorized':
+        case 'clientTooOld':
+        case 'rejected':
+        case 'badResponse':
+        case 'storage':
+            return value;
+        default:
+            return undefined;
+    }
+}
+
 function structuredPlatformError(error: unknown): AppErrorPayload | null {
     if (!isRecord(error)) {
         return null;
@@ -82,7 +111,8 @@ function structuredPlatformError(error: unknown): AppErrorPayload | null {
         message: error.message,
         sqliteCategory: sqliteErrorCategory(error.sqliteCategory),
         statusCode,
-        port: typeof error.port === 'number' ? error.port : undefined
+        port: typeof error.port === 'number' ? error.port : undefined,
+        feedLoggerCode: feedLoggerErrorCode(error.feedLoggerCode)
     };
 }
 

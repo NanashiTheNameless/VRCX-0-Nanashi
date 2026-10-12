@@ -29,6 +29,7 @@ use profile::{insert_fetched_friend, RemoteFriendProfile};
 #[cfg(test)]
 use baseline::collect_suspicious_friend_ids;
 
+pub(crate) use baseline::friend_baseline_from_raw;
 #[cfg(test)]
 pub(crate) use baseline::friend_log_relationship_candidates;
 pub use baseline::FriendStatusVerdicts;

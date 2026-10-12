@@ -2,12 +2,13 @@ use serde::Serialize;
 use serde_json::Value;
 use vrcx_0_application_core::vrchat_api::VrchatApiResponse as HttpApiExecuteResponse;
 use vrcx_0_contracts::vrchat_api::vrchat_auth_error_message;
+use vrcx_0_contracts::vrchat_login::{CookieProbeResult, CookieProbeStage};
 use vrcx_0_core::json::{JsonExt, RawJson};
 use vrcx_0_core::vrchat_endpoints::{
     normalize_vrchat_api_endpoint, normalize_vrchat_websocket_endpoint,
 };
 
-use crate::auth::cookie_session::{probe_cookie_session, CookieProbeResult, CookieProbeStage};
+use crate::auth::cookie_session::probe_cookie_session;
 use crate::auth::LoginApi;
 
 #[derive(Clone, Debug, Serialize, specta::Type)]

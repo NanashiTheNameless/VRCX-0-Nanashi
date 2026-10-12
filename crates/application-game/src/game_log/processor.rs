@@ -7,6 +7,7 @@ use vrcx_0_application_core::{
     InstanceRosterSnapshot, RuntimeOperationStatus,
 };
 
+use vrcx_0_contracts::activity::ActivityKind;
 use vrcx_0_contracts::game_log::{GameLogJoinLeaveEntry, GameLogWriteBatch};
 use vrcx_0_core::game_log_parser::GameLogEvent;
 use vrcx_0_core::location::{is_meaningful_world_name, world_id_from_location};
@@ -645,7 +646,9 @@ impl GameLogProcessor {
         );
         let mut events = game_log_activity_events(
             output,
-            |entry| should_deliver_join_leave_overlay_activity(entry, &context, &current_user_id),
+            |entry, kind| {
+                should_deliver_join_leave_overlay_activity(entry, kind, &context, &current_user_id)
+            },
             |entry| {
                 self.deps
                     .store
@@ -806,6 +809,7 @@ impl<'a> OverlayJoinLeaveSuppressionContext<'a> {
 
 fn should_deliver_join_leave_overlay_activity(
     entry: &GameLogJoinLeaveEntry,
+    kind: ActivityKind,
     context: &OverlayJoinLeaveSuppressionContext<'_>,
     current_user_id: &str,
 ) -> bool {
@@ -813,7 +817,7 @@ fn should_deliver_join_leave_overlay_activity(
         return false;
     }
 
-    if is_join_activity_type(&entry.event_type) {
+    if kind == ActivityKind::OnPlayerJoined {
         if let Some(reference_at) = context.join_reference_at(&entry.location) {
             return !is_within_suppression_window(
                 &entry.created_at,
@@ -823,25 +827,16 @@ fn should_deliver_join_leave_overlay_activity(
         }
     }
 
-    if is_left_activity_type(&entry.event_type) {
+    if matches!(
+        kind,
+        ActivityKind::OnPlayerLeft
+            | ActivityKind::BlockedOnPlayerLeft
+            | ActivityKind::MutedOnPlayerLeft
+    ) {
         return !context.is_within_leave_suppression_window(&entry.created_at);
     }
 
     true
-}
-
-fn is_join_activity_type(activity_type: &str) -> bool {
-    matches!(
-        activity_type,
-        "OnPlayerJoined" | "BlockedOnPlayerJoined" | "MutedOnPlayerJoined"
-    )
-}
-
-fn is_left_activity_type(activity_type: &str) -> bool {
-    matches!(
-        activity_type,
-        "OnPlayerLeft" | "BlockedOnPlayerLeft" | "MutedOnPlayerLeft"
-    )
 }
 
 fn is_within_suppression_window(created_at: &str, reference_at: &str, window_ms: i64) -> bool {

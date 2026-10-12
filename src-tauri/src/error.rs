@@ -1,4 +1,6 @@
 use serde::Serialize;
+use vrcx_0_runtime_host_desktop::feed_logger::{FeedLoggerError, FeedLoggerErrorCode};
+use vrcx_0_runtime_host_desktop::ProfileBackupSettingsError;
 
 #[derive(Clone, Copy, Debug, Serialize, specta::Type)]
 #[serde(rename_all = "snake_case")]
@@ -15,6 +17,7 @@ enum AppErrorCode {
     AuthSessionInvalidated,
     IntegrationApiPortInUse,
     IntegrationApiBind,
+    FeedLogger,
     Custom,
 }
 
@@ -38,6 +41,8 @@ struct AppErrorPayload {
     status_code: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     port: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    feed_logger_code: Option<FeedLoggerErrorCode>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -87,6 +92,12 @@ pub enum AppError {
     #[error("Integration API failed to bind port {port}: {message}")]
     IntegrationApiBind { port: u16, message: String },
 
+    #[error("{message}")]
+    FeedLogger {
+        code: FeedLoggerErrorCode,
+        message: String,
+    },
+
     #[error("{0}")]
     Custom(String),
 }
@@ -99,6 +110,10 @@ impl Serialize for AppError {
             sqlite_category: self.sqlite_category(),
             status_code: self.status_code(),
             port: self.port(),
+            feed_logger_code: match self {
+                Self::FeedLogger { code, .. } => Some(*code),
+                _ => None,
+            },
         }
         .serialize(serializer)
     }
@@ -145,6 +160,7 @@ impl AppError {
             Self::AuthSessionInvalidated { .. } => AppErrorCode::AuthSessionInvalidated,
             Self::IntegrationApiPortInUse { .. } => AppErrorCode::IntegrationApiPortInUse,
             Self::IntegrationApiBind { .. } => AppErrorCode::IntegrationApiBind,
+            Self::FeedLogger { .. } => AppErrorCode::FeedLogger,
             Self::Custom(_) => AppErrorCode::Custom,
         }
     }
@@ -268,6 +284,24 @@ impl From<vrcx_0_composition::Error> for AppError {
                 status_code,
             },
             vrcx_0_composition::Error::Custom(message) => AppError::Custom(message),
+        }
+    }
+}
+
+impl From<FeedLoggerError> for AppError {
+    fn from(value: FeedLoggerError) -> Self {
+        Self::FeedLogger {
+            code: value.code(),
+            message: value.to_string(),
+        }
+    }
+}
+
+impl From<ProfileBackupSettingsError> for AppError {
+    fn from(value: ProfileBackupSettingsError) -> Self {
+        match value {
+            ProfileBackupSettingsError::RecorderNeedsBackups(error) => Self::from(error),
+            ProfileBackupSettingsError::Backup(error) => Self::from(error),
         }
     }
 }
@@ -449,6 +483,14 @@ mod tests {
             assert_eq!(payload["code"], code);
             assert_eq!(payload["message"], message);
         }
+    }
+
+    #[test]
+    fn feed_logger_errors_carry_a_code_the_interface_can_translate() {
+        let payload = serde_json::to_value(AppError::from(FeedLoggerError::NotPresent)).unwrap();
+
+        assert_eq!(payload["code"], "feed_logger");
+        assert_eq!(payload["feedLoggerCode"], "notPresent");
     }
 
     #[test]

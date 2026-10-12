@@ -8,8 +8,8 @@ use serde_json::Value;
 use tokio::sync::watch;
 use vrcx_0_vrchat_client::realtime::{
     auth_token_from_response, build_transport_url, classify_websocket_frame, connect_websocket,
-    normalize_websocket_domain, send_websocket_ping, Error as RealtimeTransportError,
-    RealtimeFrame, RealtimeWebSocketStream,
+    heartbeat, normalize_websocket_domain, Error as RealtimeTransportError, RealtimeFrame,
+    HEARTBEAT_INTERVAL,
 };
 
 use vrcx_0_core::realtime::{RealtimeMessageParseOutcome, RealtimeMessageParser};
@@ -24,9 +24,6 @@ use vrcx_0_application_realtime::{
 
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 const AUTH_BOOTSTRAP_TIMEOUT: Duration = Duration::from_secs(30);
-const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(30);
-const HEARTBEAT_DEADLINE: Duration = Duration::from_secs(90);
-const HEARTBEAT_PING_TIMEOUT: Duration = Duration::from_secs(10);
 const ALIVE_TRAIL_INTERVAL: Duration = Duration::from_secs(300);
 /// Wall-clock time that may pass beyond monotonic time before the loop treats
 /// it as a system sleep. Monotonic clocks pause during suspend on Linux (and
@@ -583,26 +580,6 @@ fn suspend_gap(
     let wall_elapsed = now_wall.duration_since(previous_wall).ok()?;
     let gap = wall_elapsed.checked_sub(mono_elapsed)?;
     (gap >= SUSPEND_CLOCK_JUMP).then_some(gap)
-}
-
-async fn heartbeat(
-    stream: &mut RealtimeWebSocketStream,
-    last_inbound_at: tokio::time::Instant,
-) -> std::result::Result<(), String> {
-    let silent = last_inbound_at.elapsed();
-    if silent >= HEARTBEAT_DEADLINE {
-        return Err(format!(
-            "websocket heartbeat timed out after {} seconds",
-            silent.as_secs()
-        ));
-    }
-    match tokio::time::timeout(HEARTBEAT_PING_TIMEOUT, send_websocket_ping(stream)).await {
-        Ok(result) => result.map_err(|error| error.reason()),
-        Err(_) => Err(format!(
-            "websocket ping timed out after {} seconds",
-            HEARTBEAT_PING_TIMEOUT.as_secs()
-        )),
-    }
 }
 
 fn trail(db_path: &std::path::Path, kind: &str, fields: Value) {

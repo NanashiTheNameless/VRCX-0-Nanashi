@@ -163,28 +163,7 @@ pub(crate) async fn build_friend_roster_baseline(
 
     let online_friends = fetch_all_friends(&deps, &input.endpoint, false).await?;
     let offline_friends = fetch_all_friends(&deps, &input.endpoint, true).await?;
-    let mut fetched_friends_by_id: HashMap<String, RemoteFriendProfile> = HashMap::new();
-    let mut fetched_friend_ids_ordered = Vec::new();
-    let mut fetched_friend_ids_seen = HashSet::new();
-    // Fetched `state` is unreliable and must never overwrite the /auth/user list bucket.
-    for friend in online_friends {
-        insert_fetched_friend(
-            &mut fetched_friends_by_id,
-            &mut fetched_friend_ids_ordered,
-            &mut fetched_friend_ids_seen,
-            friend,
-            Some(StateBucket::Online),
-        );
-    }
-    for friend in offline_friends {
-        insert_fetched_friend(
-            &mut fetched_friends_by_id,
-            &mut fetched_friend_ids_ordered,
-            &mut fetched_friend_ids_seen,
-            friend,
-            Some(StateBucket::Offline),
-        );
-    }
+    let mut fetched_friends_by_id = collect_fetched_friends(online_friends, offline_friends);
 
     if !auth_scope_matches(&deps, &user_id, &input.endpoint) {
         return Ok(BuiltFriendRosterBaseline {
@@ -236,6 +215,51 @@ pub(crate) async fn build_friend_roster_baseline(
         output,
         friends_by_id: Some(friends_by_id),
     })
+}
+
+fn collect_fetched_friends(
+    online_friends: Vec<Value>,
+    offline_friends: Vec<Value>,
+) -> HashMap<String, RemoteFriendProfile> {
+    let mut fetched_friends_by_id: HashMap<String, RemoteFriendProfile> = HashMap::new();
+    let mut fetched_friend_ids_ordered = Vec::new();
+    let mut fetched_friend_ids_seen = HashSet::new();
+    // Fetched `state` is unreliable and must never overwrite the /auth/user list bucket.
+    for (friends, bucket) in [
+        (online_friends, StateBucket::Online),
+        (offline_friends, StateBucket::Offline),
+    ] {
+        for friend in friends {
+            insert_fetched_friend(
+                &mut fetched_friends_by_id,
+                &mut fetched_friend_ids_ordered,
+                &mut fetched_friend_ids_seen,
+                friend,
+                Some(bucket),
+            );
+        }
+    }
+    fetched_friends_by_id
+}
+
+pub(crate) fn friend_baseline_from_raw(
+    current_user: &Value,
+    online_friends: Vec<Value>,
+    offline_friends: Vec<Value>,
+) -> Result<Option<HashMap<String, FriendBaselineEntry>>> {
+    let CurrentUserSnapshotView {
+        state_by_id,
+        state_order_ids,
+        has_friend_list,
+        ..
+    } = CurrentUserSnapshotView::from_raw(current_user);
+    if !has_friend_list {
+        return Ok(None);
+    }
+    let fetched_friends_by_id = collect_fetched_friends(online_friends, offline_friends);
+    let friends_by_id =
+        build_fast_roster_records(&state_order_ids, &state_by_id, fetched_friends_by_id);
+    Ok(Some(serde_json::from_value(Value::Object(friends_by_id))?))
 }
 
 pub(crate) struct BuiltFriendRosterBaseline {

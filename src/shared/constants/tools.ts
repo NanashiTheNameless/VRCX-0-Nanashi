@@ -27,7 +27,8 @@ export type ToolDialogKey =
     | 'export-avatars-list'
     | 'edit-invite-messages'
     | 'llm-endpoints'
-    | 'profile-backup';
+    | 'profile-backup'
+    | 'offline-record';
 
 type ToolHostCapabilityKey =
     | 'gameLaunch'
@@ -232,6 +233,16 @@ const toolDefinitions: ToolDefinition[] = [
         descriptionKey: 'profile_backup.tools_description',
         navEligible: true,
         action: { type: 'dialog', dialogKey: 'profile-backup' }
+    },
+    {
+        key: 'offline-record',
+        category: 'data',
+        iconKey: 'radio-tower',
+        navIcon: 'lucide:RadioTower',
+        titleKey: 'offline_record.header',
+        descriptionKey: 'offline_record.tools_description',
+        navEligible: true,
+        action: { type: 'dialog', dialogKey: 'offline-record' }
     },
     {
         key: 'llm-endpoints',

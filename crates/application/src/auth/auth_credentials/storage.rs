@@ -73,6 +73,29 @@ pub fn saved_credential_session_data(
         }))
 }
 
+pub struct SavedLoginCredentials {
+    pub username: String,
+    pub password: String,
+}
+
+pub fn saved_login_credentials(
+    config: &dyn AuthCredentialStore,
+    user_id: &str,
+) -> Result<Option<SavedLoginCredentials>> {
+    let user_id = normalize_text(user_id);
+    if user_id.is_empty() {
+        return Ok(None);
+    }
+    let saved_credentials = read_saved_credentials(config)?;
+    Ok(saved_credentials.get(&user_id).and_then(|record| {
+        let password = record.login_params.password.clone()?;
+        (!record.login_params.username.is_empty()).then(|| SavedLoginCredentials {
+            username: record.login_params.username.clone(),
+            password,
+        })
+    }))
+}
+
 pub(crate) fn saved_credential_password(
     config: &dyn AuthCredentialStore,
     user_id: &str,

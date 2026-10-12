@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use vrcx_0_application::profile::{
     ProfileBackupActionOutcome, ProfileBackupRuntime, ProfileBackupSettings, ProfileBackupStatus,
@@ -7,6 +8,7 @@ use vrcx_0_application::profile::{
 };
 use vrcx_0_platform::app_paths::AppPaths;
 
+use crate::feed_logger::{DesktopFeedLoggerRuntime, FeedLoggerError};
 use crate::{HostFileAccess, Result};
 
 #[derive(Clone)]
@@ -14,6 +16,15 @@ pub struct DesktopProfileBackupRuntime {
     runtime: ProfileBackupRuntime,
     file_access: HostFileAccess,
     app_paths: AppPaths,
+    feed_logger: Arc<DesktopFeedLoggerRuntime>,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ProfileBackupSettingsError {
+    #[error(transparent)]
+    RecorderNeedsBackups(#[from] FeedLoggerError),
+    #[error(transparent)]
+    Backup(#[from] crate::Error),
 }
 
 pub struct DesktopProfileRestoreRequest {
@@ -26,11 +37,13 @@ impl DesktopProfileBackupRuntime {
         runtime: ProfileBackupRuntime,
         file_access: HostFileAccess,
         app_paths: AppPaths,
+        feed_logger: Arc<DesktopFeedLoggerRuntime>,
     ) -> Self {
         Self {
             runtime,
             file_access,
             app_paths,
+            feed_logger,
         }
     }
 
@@ -38,7 +51,12 @@ impl DesktopProfileBackupRuntime {
         self.runtime.settings()
     }
 
-    pub fn set_settings(&self, settings: ProfileBackupSettings) -> Result<ProfileBackupSettings> {
+    pub fn set_settings(
+        &self,
+        settings: ProfileBackupSettings,
+    ) -> std::result::Result<ProfileBackupSettings, ProfileBackupSettingsError> {
+        self.feed_logger
+            .ensure_backup_can_turn_off(settings.auto_enabled)?;
         if let Some(target) = self.runtime.target_dir_requiring_grant(&settings) {
             self.file_access
                 .ensure_write_allowed(&target, &self.app_paths)?;

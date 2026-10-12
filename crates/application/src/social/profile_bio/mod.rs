@@ -1,17 +1,17 @@
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 
 use chrono::{DateTime, Utc};
-use serde_json::Value;
 use vrcx_0_application_core::vrchat_api::{
     classify_api_response, ApiResponseClass, VrchatApiRequest, VrchatApiResponse, VrchatScope,
 };
 use vrcx_0_application_core::Result;
 use vrcx_0_application_realtime::RealtimeHostRuntime;
 use vrcx_0_contracts::feed_live::FeedLiveEntry;
-pub use vrcx_0_contracts::profile_bio::ProfileBioRecord;
+pub use vrcx_0_contracts::profile_bio::{
+    ProfileBioObservation, ProfileBioRecord, PROFILE_BIO_SCAN_INTERVAL, PROFILE_BIO_SCAN_MIN_AGE,
+    PROFILE_BIO_SCAN_PAUSE,
+};
 use vrcx_0_contracts::vrchat_api::VrchatJsonResponse;
-use vrcx_0_core::json::JsonExt;
 use vrcx_0_core::time::iso_millis;
 use vrcx_0_core::OwnerId;
 
@@ -21,9 +21,6 @@ use crate::remote::VrchatRequestPort;
 mod tests;
 
 pub const PROFILE_BIO_SCAN_CONFIG_KEY: &str = "profileBioScanEnabled";
-pub const PROFILE_BIO_SCAN_INTERVAL: Duration = Duration::from_secs(3);
-pub const PROFILE_BIO_SCAN_PAUSE: Duration = Duration::from_secs(5 * 60);
-pub const PROFILE_BIO_SCAN_MIN_AGE: Duration = Duration::from_secs(12 * 60 * 60);
 
 pub trait ProfileBioStore: Send + Sync {
     fn last_seen(&self, owner: &OwnerId, user_id: &str) -> Result<Option<ProfileBioRecord>>;
@@ -37,32 +34,11 @@ pub trait ProfileBioRemoteRequests: Send + Sync {
     fn profile(&self, endpoint: String, user_id: String) -> Result<VrchatApiRequest>;
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ProfileBioObservation {
-    pub user_id: String,
-    pub display_name: String,
-    pub bio: String,
-}
-
-impl ProfileBioObservation {
-    pub fn from_profile(profile: &Value) -> Option<Self> {
-        let user_id = profile.trimmed_text("id");
-        if !user_id.starts_with("usr_") {
-            return None;
-        }
-        Some(Self {
-            user_id,
-            display_name: profile.trimmed_text("displayName"),
-            bio: profile.get("bio")?.as_str()?.trim().to_string(),
-        })
+fn observation_from_response(response: &VrchatApiResponse) -> Option<ProfileBioObservation> {
+    if classify_api_response(response.status).class != ApiResponseClass::Ok {
+        return None;
     }
-
-    fn from_response(response: &VrchatApiResponse) -> Option<Self> {
-        if classify_api_response(response.status).class != ApiResponseClass::Ok {
-            return None;
-        }
-        Self::from_profile(&VrchatJsonResponse::from(response).json)
-    }
+    ProfileBioObservation::from_profile(&VrchatJsonResponse::from(response).json)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -125,7 +101,7 @@ pub fn observe_profile_response(
     response: &VrchatApiResponse,
     now: &str,
 ) -> Result<Option<ProfileBioOutcome>> {
-    let Some(observation) = ProfileBioObservation::from_response(response) else {
+    let Some(observation) = observation_from_response(response) else {
         return Ok(None);
     };
     if observation.user_id == owner.as_str() {
@@ -204,7 +180,7 @@ pub async fn scan_next_profile_bio(
     let response = deps.remote.send(request, VrchatScope::Vrchat).await?;
     let now_iso = iso_millis(now);
     let observation = match classify_api_response(response.status).class {
-        ApiResponseClass::Ok => ProfileBioObservation::from_response(&response),
+        ApiResponseClass::Ok => observation_from_response(&response),
         ApiResponseClass::ClientError => None,
         ApiResponseClass::Auth
         | ApiResponseClass::RateLimited

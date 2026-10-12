@@ -29,6 +29,7 @@ chrono = { workspace = true }
 fs4 = { workspace = true }
 sys-locale.workspace = true
 tokio = { workspace = true, features = ["time", "rt", "macros", "sync"] }
+thiserror = { workspace = true }
 tracing = { workspace = true }
 vrcx-0-application = { path = "../application" }
 vrcx-0-application-activity = { path = "../application-activity" }
@@ -43,6 +44,7 @@ vrcx-0-host-desktop = { path = "../host-desktop" }
 vrcx-0-i18n = { path = "../i18n" }
 vrcx-0-integration-api = { path = "../integration-api" }
 vrcx-0-integrations = { path = "../integrations" }
+vrcx-0-logger-protocol = { path = "../logger-protocol", features = ["specta"] }
 vrcx-0-media = { path = "../media" }
 vrcx-0-persistence = { path = "../persistence" }
 vrcx-0-remote-sync = { path = "../remote-sync" }
@@ -56,3 +58,6 @@ vrcx-0-assistant = { path = "../assistant" }
 
 [target.'cfg(any(windows, target_os = "linux"))'.dependencies]
 vrcx-0-overlay-runtime = { path = "../overlay-runtime" }
+
+[dev-dependencies]
+vrcx-0-application-core = { path = "../application-core", features = ["test-utils"] }

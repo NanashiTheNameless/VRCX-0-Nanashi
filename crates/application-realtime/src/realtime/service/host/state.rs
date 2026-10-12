@@ -22,6 +22,8 @@ use crate::realtime::user_facts::UserFactStore;
 use crate::realtime::user_query_cache::UserQueryCache;
 use crate::realtime::{FriendProjection, RealtimeSessionContext, RealtimeTransportLifecycleEvent};
 use crate::world_enrich::PendingEntryCorrection;
+
+pub type ReconnectBackfillCheck = Arc<dyn Fn() -> bool + Send + Sync>;
 use vrcx_0_core::OwnerId;
 
 pub(super) struct FriendOwnerGuard<'a> {
@@ -290,6 +292,7 @@ pub struct RealtimeHostRuntime {
     pub(super) feed_owner_lock: Mutex<()>,
     pub(super) feed_live_cache: Mutex<FeedLiveCache>,
     pub(super) feed_persistence_disabled: AtomicBool,
+    pub(super) reconnect_backfill_check: Mutex<Option<ReconnectBackfillCheck>>,
     pub(super) notification_apply_lock: tokio::sync::Mutex<()>,
     pub(super) friend_profile_bulk_load:
         Mutex<super::friend_profile_bulk_load::FriendProfileBulkLoadState>,

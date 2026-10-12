@@ -14,6 +14,7 @@ import {
     type ComponentProps,
     useCallback,
     useEffect,
+    useRef,
     type ReactNode
 } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -202,6 +203,18 @@ export function useTitleBarActions(
     );
     const shortcutHintsVisible = useShellStore(
         (state) => state.shortcutHintsVisible
+    );
+    const actionsRef = useRef<HTMLDivElement>(null);
+    const placeShortcutHintPanel = useCallback(
+        (panel: HTMLDivElement | null) => {
+            const anchor = actionsRef.current?.getBoundingClientRect();
+            if (!panel || !anchor) {
+                return;
+            }
+            panel.style.top = `${anchor.bottom}px`;
+            panel.style.right = `${document.documentElement.clientWidth - anchor.right}px`;
+        },
+        []
     );
     const resolvedThemeMode = useResolvedThemeMode();
     const communityThemeEnabled = useCommunityThemeStore(
@@ -450,6 +463,7 @@ export function useTitleBarActions(
 
     const actions = isSessionReady ? (
         <div
+            ref={actionsRef}
             className={cn(
                 'relative flex h-full min-w-0 shrink-0 items-center gap-1',
                 actionsClassName
@@ -535,7 +549,8 @@ export function useTitleBarActions(
             {sidebarWindowModeButton}
             {shortcutHintsVisible ? (
                 <ShortcutHintPanel
-                    className="motion-safe:slide-in-from-top-1 absolute top-[calc(100%+0.5rem)] right-1 origin-top-right"
+                    ref={placeShortcutHintPanel}
+                    className="motion-safe:slide-in-from-top-1 fixed mt-2 mr-1 origin-top-right"
                     groups={[
                         [
                             {

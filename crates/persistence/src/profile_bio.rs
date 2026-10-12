@@ -115,6 +115,23 @@ pub fn profile_bio_next_stale_friend(
         .filter(|user_id| !user_id.is_empty()))
 }
 
+pub fn profile_bio_checked_at_list(
+    db: &DatabaseService,
+    owner_user_id: &OwnerId,
+) -> Result<Vec<(String, String)>, Error> {
+    let user_prefix = ensure_profile_bio_table(db, owner_user_id)?;
+    Ok(db
+        .execute(
+            &format!(
+                "SELECT user_id, checked_at FROM {user_prefix}_profile_bio WHERE checked_at <> ''"
+            ),
+            &Default::default(),
+        )?
+        .iter()
+        .map(|row| (row_string(row, 0), row_string(row, 1)))
+        .collect())
+}
+
 fn require_user_id(user_id: &str) -> Result<String, Error> {
     let user_id = normalize_text(user_id);
     if user_id.is_empty() {

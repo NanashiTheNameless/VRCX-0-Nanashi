@@ -314,6 +314,8 @@ pub fn setup_app_with_data_dir(
     start_host_services(app.handle(), &state);
     start_mcp_server_if_enabled(app.handle());
     wire_deep_links(app.handle());
+    #[cfg(unix)]
+    exit_on_terminate_signal(app.handle());
     state.runtime_host().record_sync(
         "startup",
         RuntimeOperationStatus::Ready,
@@ -322,6 +324,25 @@ pub fn setup_app_with_data_dir(
     );
 
     Ok(())
+}
+
+#[cfg(unix)]
+fn exit_on_terminate_signal(app: &tauri::AppHandle) {
+    use tokio::signal::unix::{signal, SignalKind};
+
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let mut terminate = match signal(SignalKind::terminate()) {
+            Ok(terminate) => terminate,
+            Err(error) => {
+                tracing::warn!(error = %error, "failed to listen for SIGTERM");
+                return;
+            }
+        };
+        if terminate.recv().await.is_some() {
+            crate::commands::host::window::request_application_exit(&app);
+        }
+    });
 }
 
 fn wire_deep_links(app: &tauri::AppHandle) {

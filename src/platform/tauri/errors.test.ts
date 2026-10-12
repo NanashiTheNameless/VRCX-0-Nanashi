@@ -40,6 +40,22 @@ describe('tauri errors', () => {
         ).toBe('Tauri command failed: {"code":"E_FAIL"}');
     });
 
+    it('keeps the recorder error code so the interface can translate it', () => {
+        const normalized = normalizePlatformError(
+            {
+                code: 'feed_logger',
+                message: 'VRCX-0 is not connected to the feed logger right now',
+                feedLoggerCode: 'notPresent'
+            } satisfies AppErrorPayload,
+            'Tauri command failed: app__feed_logger_sync'
+        );
+
+        expect(normalized).toMatchObject({
+            code: 'feed_logger',
+            feedLoggerCode: 'notPresent'
+        });
+    });
+
     it('preserves structured IPC error fields with fallback context', () => {
         const rawError = {
             code: 'database',

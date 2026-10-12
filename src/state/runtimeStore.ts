@@ -595,7 +595,8 @@ const initialState: RuntimeStoreState = {
         exportAvatarsListOpen: false,
         editInviteMessagesOpen: false,
         llmEndpointsOpen: false,
-        profileBackupOpen: false
+        profileBackupOpen: false,
+        offlineRecordOpen: false
     },
     databaseUpgrade: {
         open: false,

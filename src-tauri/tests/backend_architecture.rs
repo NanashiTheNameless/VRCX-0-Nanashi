@@ -493,6 +493,30 @@ fn runtime_event_contract_stays_narrow_for_integration_api() {
 }
 
 #[test]
+fn feed_logger_stays_free_of_the_desktop_stack() {
+    let logger = normal_dependency_names("vrcx-0-logger");
+    for forbidden in [
+        "vrcx-0-host-desktop",
+        "vrcx-0-runtime-host-desktop",
+        "vrcx-0-overlay-runtime",
+        "vrcx-0-vr-overlay",
+    ] {
+        assert!(
+            !logger.contains(forbidden),
+            "feed logger depends on {forbidden}; it must build as a headless Linux binary"
+        );
+    }
+
+    let protocol = normal_dependency_names("vrcx-0-logger-protocol");
+    assert!(
+        protocol
+            .iter()
+            .all(|dependency| !dependency.starts_with("vrcx-0-")),
+        "logger protocol is shared with the desktop app and must not depend on workspace crates"
+    );
+}
+
+#[test]
 fn mcp_and_assistant_depend_only_on_application_capabilities() {
     for package in ["vrcx-0-mcp", "vrcx-0-assistant"] {
         let dependencies = normal_dependency_names(package);

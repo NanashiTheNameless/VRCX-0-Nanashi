@@ -1,13 +1,16 @@
+use std::collections::HashSet;
+
 use serde_json::Value;
 
 use crate::activity::activity_iso_from_ms;
-use crate::common::{row_string, ParamsBuilder};
+use crate::common::{row_i64, row_string, ParamsBuilder};
 use crate::database::{DatabaseService, DatabaseWriteTransaction};
 use crate::game_log::{ensure_game_log_tables, GameLogLocationEntry, GameLogLocationTimeUpdate};
 use crate::ownership::{owner_id_get_or_insert, OwnerId, OwnerRowId};
 use crate::Error;
 use vrcx_0_contracts::feed_live::FeedLiveEntry;
 use vrcx_0_contracts::friend_log::FriendLogCurrentOutput;
+use vrcx_0_contracts::profile_bio::RecordedProfileBio;
 use vrcx_0_core::friend_log::{plan_friend_log_upsert, FriendLogCurrent, FriendLogUpsertInput};
 
 use super::schema::{ensure_realtime_tables, normalize_user_table_prefix};
@@ -314,6 +317,153 @@ fn add_friend_log_history(
             .build(),
     )
     .map(affected_count)
+}
+
+const BACKFILL_DUPLICATE_WINDOW_SECS: i64 = 120;
+
+#[derive(Debug, Default)]
+pub struct BackfillWrites {
+    rows: HashSet<(&'static str, i64)>,
+}
+
+pub fn insert_backfilled_feed(
+    db: &DatabaseService,
+    owner_user_id: &OwnerId,
+    entries: &[FeedLiveEntry],
+    profile_bios: &[RecordedProfileBio],
+    written: &mut BackfillWrites,
+) -> Result<u64, Error> {
+    let owner_user_id = normalize_user_id(owner_user_id.as_str());
+    if owner_user_id.is_empty() {
+        return Err(Error::Database(
+            "Feed backfill requires a current user id.".into(),
+        ));
+    }
+    let user_prefix =
+        crate::profile_bio::ensure_profile_bio_table(db, &OwnerId::new(owner_user_id))?;
+    ensure_realtime_tables(db, &user_prefix)?;
+    let (inserted, rows) = db.write_transaction(|tx| {
+        let mut new_entries = Vec::with_capacity(entries.len());
+        for entry in entries {
+            if let Some(table) = backfilled_entry_table_if_new(tx, &user_prefix, entry, written)? {
+                new_entries.push((table, entry));
+            }
+        }
+        let mut inserted = 0;
+        let mut rows = Vec::with_capacity(new_entries.len());
+        for (table, entry) in new_entries {
+            inserted += insert_feed_entry(tx, &user_prefix, entry)?;
+            let row_id = tx.execute("SELECT last_insert_rowid()", &Default::default())?;
+            rows.push((table, row_id.first().map_or(0, |row| row_i64(row, 0))));
+        }
+        for profile_bio in profile_bios {
+            if let Some(entry) = apply_backfilled_profile_bio(tx, &user_prefix, profile_bio)? {
+                inserted += insert_feed_entry(tx, &user_prefix, &entry)?;
+            }
+        }
+        Ok((inserted, rows))
+    })?;
+    written.rows.extend(rows);
+    Ok(inserted)
+}
+
+fn apply_backfilled_profile_bio(
+    tx: &mut DatabaseWriteTransaction<'_>,
+    user_prefix: &str,
+    profile_bio: &RecordedProfileBio,
+) -> Result<Option<FeedLiveEntry>, Error> {
+    let observation = &profile_bio.observation;
+    let last_seen = tx
+        .execute(
+            &format!("SELECT bio, checked_at FROM {user_prefix}_profile_bio WHERE user_id = @user_id LIMIT 1"),
+            &ParamsBuilder::new()
+                .set("user_id", observation.user_id.clone())
+                .build(),
+        )?
+        .first()
+        .map(|row| (row_string(row, 0), row_string(row, 1)));
+    if last_seen
+        .as_ref()
+        .is_some_and(|(_, checked_at)| *checked_at >= profile_bio.observed_at)
+    {
+        return Ok(None);
+    }
+    tx.execute_non_query(
+        &format!(
+            "INSERT INTO {user_prefix}_profile_bio (user_id, bio, checked_at) VALUES (@user_id, @bio, @checked_at) \
+             ON CONFLICT(user_id) DO UPDATE SET bio = excluded.bio, checked_at = excluded.checked_at"
+        ),
+        &ParamsBuilder::new()
+            .set("user_id", observation.user_id.clone())
+            .set("bio", observation.bio.clone())
+            .set("checked_at", profile_bio.observed_at.clone())
+            .build(),
+    )?;
+    Ok(last_seen
+        .filter(|(previous_bio, _)| *previous_bio != observation.bio)
+        .map(|(previous_bio, _)| FeedLiveEntry::Bio {
+            created_at: profile_bio.observed_at.clone(),
+            user_id: observation.user_id.clone(),
+            display_name: observation.display_name.clone(),
+            bio: observation.bio.clone(),
+            previous_bio,
+            owner_user_id: String::new(),
+        }))
+}
+
+fn backfilled_entry_table_if_new(
+    tx: &mut DatabaseWriteTransaction<'_>,
+    user_prefix: &str,
+    entry: &FeedLiveEntry,
+    written: &BackfillWrites,
+) -> Result<Option<&'static str>, Error> {
+    let (table, same_change, params) = match entry {
+        FeedLiveEntry::Gps { location, .. } => (
+            "feed_gps",
+            "location = @location",
+            ParamsBuilder::new().set("location", location.clone()),
+        ),
+        FeedLiveEntry::Online { .. } | FeedLiveEntry::Offline { .. } => (
+            "feed_online_offline",
+            "type = @type",
+            ParamsBuilder::new().set("type", entry.entry_type()),
+        ),
+        FeedLiveEntry::Status {
+            status,
+            status_description,
+            ..
+        } => (
+            "feed_status",
+            "status = @status AND status_description = @status_description",
+            ParamsBuilder::new()
+                .set("status", status.clone())
+                .set("status_description", status_description.clone()),
+        ),
+        FeedLiveEntry::Avatar {
+            current_avatar_image_url,
+            ..
+        } => (
+            "feed_avatar",
+            "current_avatar_image_url = @current_avatar_image_url",
+            ParamsBuilder::new().set("current_avatar_image_url", current_avatar_image_url.clone()),
+        ),
+        _ => return Ok(None),
+    };
+    let params = params
+        .set("user_id", entry.user_id())
+        .set("created_at", entry.created_at())
+        .set("window", BACKFILL_DUPLICATE_WINDOW_SECS)
+        .build();
+    let nearby = tx.execute(
+        &format!(
+            "SELECT id FROM {user_prefix}_{table} WHERE user_id = @user_id AND {same_change}              AND ABS(julianday(created_at) - julianday(@created_at)) * 86400 <= @window"
+        ),
+        &params,
+    )?;
+    let recorded_elsewhere = nearby
+        .iter()
+        .any(|row| !written.rows.contains(&(table, row_i64(row, 0))));
+    Ok((!recorded_elsewhere).then_some(table))
 }
 
 fn insert_feed_entry(

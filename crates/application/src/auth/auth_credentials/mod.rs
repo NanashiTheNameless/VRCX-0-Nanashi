@@ -11,8 +11,8 @@ pub use service::{delete_saved_credential, record_login_success, record_logout};
 pub use snapshot::saved_snapshot;
 pub(crate) use storage::saved_credential_password;
 pub use storage::{
-    migrate_saved_credential_secrets, saved_credential_session_data, AuthCredentialStore,
-    SealedAuthSecret,
+    migrate_saved_credential_secrets, saved_credential_session_data, saved_login_credentials,
+    AuthCredentialStore, SavedLoginCredentials, SealedAuthSecret,
 };
 pub use types::{
     LoginSuccessRecordInput, LogoutRecordInput, SavedAuthAutoLoginStatus, SavedAuthSnapshot,

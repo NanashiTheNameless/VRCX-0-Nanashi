@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmDisablingBackupWithRecorder } from '@/services/offlineRecordService';
 import { profileBackupErrorKey } from '@/services/profileBackupI18n';
 import {
     getProfileBackupSettings,
@@ -239,6 +240,9 @@ export function useProfileBackupSettings(enabled: boolean) {
         }
         autoEnabledTogglingRef.current = true;
         try {
+            if (!enabled && !(await confirmDisablingBackupWithRecorder())) {
+                return;
+            }
             let nextSettings = settings;
             if (enabled && !settings.autoTargetDir) {
                 const selected = await selectBackupFolder('');

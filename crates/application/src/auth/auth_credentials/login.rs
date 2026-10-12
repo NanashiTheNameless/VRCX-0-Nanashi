@@ -5,9 +5,10 @@ use super::compat::normalize_text;
 use super::service::sync_saved_credential_cookies;
 use super::storage::read_saved_credentials;
 use super::types::SavedCredentialLoginStartInput;
-use crate::auth::cookie_session::{probe_cookie_session, CookieProbeResult};
+use crate::auth::cookie_session::probe_cookie_session;
 use crate::auth::{AuthSessionCookies, LoginApi, LoginRemoteOperation};
 use vrcx_0_application_core::{Error, Result};
+use vrcx_0_contracts::vrchat_login::CookieProbeResult;
 
 pub async fn saved_credential_login_start(
     config: &dyn AuthCredentialStore,

@@ -9,7 +9,7 @@ pub use vrcx_0_core::realtime::{
 
 use super::output::RealtimeFriendOutput;
 
-pub(crate) const PENDING_OFFLINE_DELAY_MS: i64 = 170_000;
+pub const PENDING_OFFLINE_DELAY_MS: i64 = 170_000;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RealtimeCachedUserProfile {

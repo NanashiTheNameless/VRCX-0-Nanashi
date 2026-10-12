@@ -42,6 +42,8 @@ jobs:
                         - '.github/workflows/ci.yml'
                         - '.oxfmtrc.json'
                         - '.oxlintrc.json'
+                        - 'crates/logger/compose.yaml'
+                        - 'crates/logger/install.sh'
                         - 'index.html'
                         - 'package.json'
                         - 'package-lock.json'
@@ -131,6 +133,22 @@ jobs:
             - run: npm run rust:clippy:ci
             - uses: taiki-e/install-action@cargo-deny
             - run: npm run rust:deny
+
+    logger-musl:
+        name: Logger Static Build
+        runs-on: ubuntu-24.04
+        timeout-minutes: 30
+        needs: changes
+        if: needs.changes.outputs.rust == 'true'
+        steps:
+            - uses: actions/checkout@v7
+            - uses: ./.github/actions/setup-rust
+              with:
+                  target: x86_64-unknown-linux-musl
+                  cache-key: ci-logger-musl
+                  save-cache: ${{ github.ref == 'refs/heads/master' && github.event_name == 'push' }}
+            - run: sudo apt-get update && sudo apt-get install -y musl-tools
+            - run: cargo build --locked -p vrcx-0-logger --target x86_64-unknown-linux-musl
 
     tauri-build:
         name: Tauri Build (${{ matrix.label }})
@@ -245,6 +263,7 @@ jobs:
             - frontend-build
             - frontend-test
             - rust-checks
+            - logger-musl
             - tauri-build
             - rust-tests
             - tauri-bindings

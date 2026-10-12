@@ -31,6 +31,7 @@ const mocks = vi.hoisted(() => ({
     handleBrowserFocus: vi.fn<() => Promise<void>>(),
     getBackendRuntimeCombinedSnapshot: vi.fn(),
     getAncillaryRuntimeSnapshot: vi.fn(),
+    feedLoggerStatus: vi.fn(),
     runtimeGroupInstancesRefresh: vi.fn<() => Promise<null>>(),
     bindDeepLinkEvents: vi.fn<() => Promise<() => void>>(),
     drainPendingDeepLinks: vi.fn<() => Promise<void>>(),
@@ -48,6 +49,7 @@ vi.mock('@/platform/tauri/bindings', () => ({
         appBackendRuntimeCombinedSnapshotGet:
             mocks.getBackendRuntimeCombinedSnapshot,
         appAncillaryRuntimeSnapshotGet: mocks.getAncillaryRuntimeSnapshot,
+        appFeedLoggerStatus: mocks.feedLoggerStatus,
         appRuntimeGroupInstancesRefresh: mocks.runtimeGroupInstancesRefresh
     }
 }));
@@ -131,6 +133,7 @@ vi.mock('./authSessionRecoveryService', () => ({
 import { toast } from '@/services/toastService';
 import { useDataDirMigrationStore } from '@/state/dataDirMigrationStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
+import { useOfflineRecordStore } from '@/state/offlineRecordStore';
 import { useProfileBackupStore } from '@/state/profileBackupStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useSessionStore } from '@/state/sessionStore';
@@ -465,6 +468,20 @@ describe('runtimeEventBridgeService', () => {
         mocks.applyAuthenticatedSessionProjection.mockResolvedValue(false);
         mocks.initializeBackgroundImage.mockResolvedValue(undefined);
         mocks.initializeCommunityThemes.mockResolvedValue(undefined);
+        mocks.feedLoggerStatus.mockResolvedValue({ state: 'notConfigured' });
+    });
+
+    it('shows the recorder status as soon as the window opens, for example after background mode', async () => {
+        useOfflineRecordStore.setState({ health: null });
+        mocks.feedLoggerStatus.mockResolvedValue({ state: 'unauthorized' });
+
+        await bindRuntimeEvents();
+
+        await vi.waitFor(() =>
+            expect(useOfflineRecordStore.getState().health).toEqual({
+                state: 'unauthorized'
+            })
+        );
     });
 
     it('hydrates the backend session before deferred appearance projections', async () => {

@@ -1,0 +1,39 @@
+[package]
+name = "vrcx-0-logger"
+version = "2.31.0"
+edition = "2021"
+license.workspace = true
+description = "Self-hosted recorder that keeps VRChat realtime frames while the desktop app is offline"
+
+[[bin]]
+name = "vrcx-0-logger"
+path = "src/main.rs"
+
+[dependencies]
+axum = "0.8"
+chrono = { workspace = true }
+fs4 = { workspace = true }
+futures-util = "0.3"
+reqwest = { workspace = true }
+rusqlite = { workspace = true, features = ["bundled"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = [
+    "macros",
+    "net",
+    "rt-multi-thread",
+    "signal",
+    "sync",
+    "time"
+] }
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+vrcx-0-contracts = { path = "../contracts" }
+vrcx-0-core = { path = "../core" }
+vrcx-0-logger-protocol = { path = "../logger-protocol", features = ["server"] }
+vrcx-0-vrchat-client = { path = "../vrchat-client" }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["test-util"] }
+tower = { version = "0.5", features = ["util"] }

@@ -24,6 +24,7 @@ import {
 import { useFavoriteStore } from '@/state/favoriteStore';
 import { useFeedLiveStore } from '@/state/feedLiveStore';
 import { useFriendLogStore } from '@/state/friendLogStore';
+import { useOfflineRecordStore } from '@/state/offlineRecordStore';
 import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useSessionStore } from '@/state/sessionStore';
@@ -78,6 +79,9 @@ export function useFeedRows({
         (state) => state.feedPersistenceDisabled
     );
     const friendLogRevision = useFriendLogStore((state) => state.revision);
+    const backfillRevision = useOfflineRecordStore(
+        (state) => state.backfillRevision
+    );
     const [rows, setRows] = useState<FeedRow[]>([]);
     const [friendLogSeedNamesById, setFriendLogSeedNamesById] = useState<
         Record<string, string>
@@ -120,6 +124,7 @@ export function useFeedRows({
         () =>
             JSON.stringify({
                 activeFilters,
+                backfillRevision,
                 currentUserId,
                 favoriteUserIds,
                 feedPersistenceDisabled,
@@ -130,6 +135,7 @@ export function useFeedRows({
             }),
         [
             activeFilters,
+            backfillRevision,
             currentUserId,
             favoriteUserIds,
             feedPersistenceDisabled,
@@ -496,6 +502,7 @@ export function useFeedRows({
             });
     }, [
         activeFilters,
+        backfillRevision,
         commitRowsToWindow,
         createMergeOptionsBuilder,
         currentUserId,

@@ -29,6 +29,9 @@ fn validate_config_mutation(key: &str, value: Option<&str>) -> Result<()> {
         "config:vrcx_savedcredentials" => Err(Error::Custom(
             "savedCredentials must be changed through the dedicated auth service.".into(),
         )),
+        "config:vrcx_feedlogger" => Err(Error::Custom(
+            "feedLogger must be changed through the feed logger settings.".into(),
+        )),
         "config:vrcx_avatarautocleanup" => validate_avatar_auto_cleanup(value),
         "config:vrcx_usergeneratedcontentpath" => validate_ugc_path(value.unwrap_or_default()),
         "config:vrcx_translationapiendpoint" => validate_optional_provider_url(
@@ -155,6 +158,7 @@ mod tests {
         let db = MemoryProfileConfigStore::default();
 
         assert!(set_config_values(&db, vec![entry("savedCredentials", "{}")]).is_err());
+        assert!(set_config_values(&db, vec![entry("feedLogger", "{}")]).is_err());
         assert!(remove_config_value(&db, "config:vrcx_savedcredentials".into()).is_err());
     }
 

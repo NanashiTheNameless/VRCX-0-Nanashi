@@ -166,6 +166,7 @@ pub struct DesktopRuntimeBundle {
     pub discord_rpc: Arc<DiscordRpc>,
     pub vr_overlay_runtime: Arc<DesktopVrOverlayRuntime>,
     pub app_update: AppUpdateRuntime,
+    pub feed_logger: Arc<crate::feed_logger::DesktopFeedLoggerRuntime>,
     pub background_image: BackgroundImageService,
     pub community_theme: CommunityThemeService,
     pub integration_api: Arc<DesktopIntegrationApiRuntime>,
@@ -438,6 +439,18 @@ impl DesktopRuntimeHostState {
             discord_rpc,
             vr_overlay_runtime,
             app_update,
+            feed_logger: Arc::new(
+                crate::feed_logger::DesktopFeedLoggerRuntime::new(
+                    Arc::clone(builder.database()),
+                    Arc::clone(builder.desktop_assembly().world_cache()),
+                    builder.desktop_assembly().file_cache().clone(),
+                    Arc::clone(builder.desktop_assembly().web_client()),
+                    builder.desktop_assembly().event_bus().clone(),
+                    builder.desktop_assembly().auth_scope().clone(),
+                    builder.desktop_assembly().auth_credentials_shared(),
+                )
+                .for_app_version(&app_version),
+            ),
             background_image,
             community_theme,
             integration_api: Arc::clone(&integration_api_runtime),
@@ -534,6 +547,7 @@ impl DesktopRuntimeHostState {
             runtime.profile_backup().clone(),
             desktop.host_file_access.clone(),
             runtime.paths().clone(),
+            Arc::clone(&desktop.feed_logger),
         );
         let external_api = ExternalApiRuntime::new(
             Arc::clone(runtime.web_client()),
@@ -849,6 +863,14 @@ impl DesktopRuntimeHostState {
         input: vrcx_0_application::profile::CommunityThemeConfigureInput,
     ) -> Result<vrcx_0_application::profile::CommunityThemeProjection> {
         Ok(self.desktop.community_theme.configure(input).await?)
+    }
+
+    pub async fn leave_feed_logger(&self) {
+        self.desktop.feed_logger.leave().await;
+    }
+
+    pub fn feed_logger(&self) -> &Arc<crate::feed_logger::DesktopFeedLoggerRuntime> {
+        &self.desktop.feed_logger
     }
 
     pub async fn check_for_app_update(
@@ -2081,10 +2103,11 @@ impl DesktopRuntimeHostState {
         self.runtime.desktop_assembly().webhook_delivery_snapshot()
     }
 
-    pub fn stop_for_application_exit(&self, reason: &str) {
+    pub fn stop_for_application_exit(&self, reason: &str, before_task_shutdown: impl FnOnce()) {
         self.ytdlp.stop();
         let _ = vrcx_0_host_desktop::power::set_keep_awake(false);
         self.runtime.stop_backend_runtime(reason);
+        before_task_shutdown();
         self.runtime.desktop_assembly().tasks().stop_all();
     }
 
@@ -2454,6 +2477,7 @@ impl RuntimeHostProfileExtension for DesktopRuntimeProfileExtension {
     fn start_profile_maintenance(&self, state: &RuntimeHostState) {
         self.start_registry_backup_loop(state);
         self.start_desktop_maintenance_loops(state);
+        self.desktop.feed_logger.start_presence_loop(state);
     }
 }
 

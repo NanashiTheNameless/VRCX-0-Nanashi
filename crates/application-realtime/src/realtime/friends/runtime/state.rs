@@ -59,6 +59,7 @@ pub(crate) enum RosterDelta {
 
 pub(crate) struct FriendBaselineEffects {
     pub(crate) result: FriendBaselineResult,
+    pub(crate) reconnected: bool,
     pub(crate) delta: RosterDelta,
     pub(crate) schedules: Vec<FriendWake>,
     pub(crate) presence_feed_entries: Vec<FeedLiveEntry>,
@@ -180,6 +181,7 @@ impl RealtimeFriendsRuntime {
         if new_generation {
             state.friend_rev_by_user.clear();
         }
+        let reconnected = new_generation && existing.is_some();
         let mut presence_feed_entries = Vec::new();
         let mut joining_feed_entries = Vec::new();
         let unseen = Phase::offline();
@@ -326,6 +328,7 @@ impl RealtimeFriendsRuntime {
                 baseline_revision,
                 friend_count: u32::try_from(friend_count).unwrap_or(u32::MAX),
             },
+            reconnected,
             delta,
             schedules,
             presence_feed_entries,

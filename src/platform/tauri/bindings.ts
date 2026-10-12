@@ -374,6 +374,69 @@ const generatedCommands = {
     async appNoteExportCancel(): Promise<NoteExportStatus> {
         return await TAURI_INVOKE('app__note_export_cancel');
     },
+    async appFeedLoggerSettingsGet(): Promise<FeedLoggerSettingsView> {
+        return await TAURI_INVOKE('app__feed_logger_settings_get');
+    },
+    async appFeedLoggerSettingsSave(
+        address: string,
+        password: string
+    ): Promise<FeedLoggerProbe> {
+        return await TAURI_INVOKE('app__feed_logger_settings_save', {
+            address,
+            password
+        });
+    },
+    async appFeedLoggerSettingsClear(): Promise<null> {
+        return await TAURI_INVOKE('app__feed_logger_settings_clear');
+    },
+    async appFeedLoggerStatus(): Promise<FeedLoggerProbe> {
+        return await TAURI_INVOKE('app__feed_logger_status');
+    },
+    async appFeedLoggerPushCredentials(
+        username: string,
+        password: string,
+        savePassword: boolean
+    ): Promise<FeedLoggerSession> {
+        return await TAURI_INVOKE('app__feed_logger_push_credentials', {
+            username,
+            password,
+            savePassword
+        });
+    },
+    async appFeedLoggerPushSavedCredentials(
+        savePassword: boolean
+    ): Promise<FeedLoggerSession> {
+        return await TAURI_INVOKE('app__feed_logger_push_saved_credentials', {
+            savePassword
+        });
+    },
+    async appFeedLoggerSubmitTwoFactor(
+        method: string,
+        code: string
+    ): Promise<FeedLoggerSession> {
+        return await TAURI_INVOKE('app__feed_logger_submit_two_factor', {
+            method,
+            code
+        });
+    },
+    async appFeedLoggerSetWebhook(
+        url: string | null,
+        format: FeedLoggerWebhookFormat
+    ): Promise<null> {
+        return await TAURI_INVOKE('app__feed_logger_set_webhook', {
+            url,
+            format
+        });
+    },
+    async appFeedLoggerTestWebhook(): Promise<null> {
+        return await TAURI_INVOKE('app__feed_logger_test_webhook');
+    },
+    async appFeedLoggerUnpair(): Promise<null> {
+        return await TAURI_INVOKE('app__feed_logger_unpair');
+    },
+    async appFeedLoggerSync(): Promise<FeedLoggerSyncReport> {
+        return await TAURI_INVOKE('app__feed_logger_sync');
+    },
     async appProxySettingsTest(
         input: ProxySettingsTestInput
     ): Promise<ProxySettingsTestResult> {
@@ -3421,6 +3484,7 @@ export type AppErrorCode =
     | 'auth_session_invalidated'
     | 'integration_api_port_in_use'
     | 'integration_api_bind'
+    | 'feed_logger'
     | 'custom';
 export type AppErrorPayload = {
     code: AppErrorCode;
@@ -3428,6 +3492,7 @@ export type AppErrorPayload = {
     sqliteCategory?: SqliteErrorCategory | null;
     statusCode?: number | null;
     port?: number | null;
+    feedLoggerCode?: FeedLoggerErrorCode | null;
 };
 export type AppLauncherEntry = {
     id: string;
@@ -3805,6 +3870,8 @@ export type BackendRuntimeEventPayloadMap = {
     realtimeProjectionSync: RealtimeProjectionSync;
     updateIsGameRunning: HostSessionProjection;
     integrationApiStartFailed: IntegrationApiStartFailedPayload;
+    feedLoggerSync: FeedLoggerSyncEvent;
+    feedLoggerHealth: FeedLoggerProbe;
     notificationDoNotDisturbState: NotificationDoNotDisturbSnapshot;
     privacyLockState: PrivacyLockSnapshot;
 };
@@ -4716,6 +4783,90 @@ export type FeedLiveEntry =
           displayLocation?: string | null;
           ownerUserId: string;
       };
+export type FeedLoggerErrorCode =
+    | 'notConfigured'
+    | 'notSignedIn'
+    | 'syncInProgress'
+    | 'notPresent'
+    | 'noSavedCredentials'
+    | 'loggerTooOld'
+    | 'betaRecorder'
+    | 'backupRequired'
+    | 'accountMismatch'
+    | 'invalidAddress'
+    | 'invalidPassword'
+    | 'unreachable'
+    | 'unauthorized'
+    | 'clientTooOld'
+    | 'rejected'
+    | 'badResponse'
+    | 'storage';
+export type FeedLoggerProbe =
+    | { state: 'notConfigured' }
+    | { state: 'unreachable'; message: string }
+    | { state: 'unauthorized' }
+    | { state: 'clientTooOld' }
+    | { state: 'loggerTooOld' }
+    | { state: 'betaRecorder' }
+    | { state: 'badResponse'; message: string }
+    | { state: 'connected'; status: FeedLoggerStatus };
+export type FeedLoggerSession =
+    | { state: 'noCredentials' }
+    | { state: 'loggingIn' }
+    | { state: 'recording' }
+    | { state: 'reconnecting' }
+    | { state: 'awaitingTwoFactor'; methods: string[] }
+    | { state: 'loginFailed'; reason: string };
+export type FeedLoggerSettingsView = {
+    address: string | null;
+    savedCredentialsAvailable: boolean;
+};
+export type FeedLoggerStatus = {
+    loggerVersion: string;
+    protocolVersion: number;
+    startedAt: number;
+    serverTime: number;
+    session: FeedLoggerSession;
+    accountId: string | null;
+    passwordSaved: boolean;
+    lastLoginAt: number | null;
+    lastError: string | null;
+    storageError: string | null;
+    reloginAttempts: number;
+    connectedSince: number | null;
+    lastSnapshotAt: number | null;
+    unsyncedFrames: number;
+    oldestUnsyncedAt: number | null;
+    newestUnsyncedAt: number | null;
+    lastPullAt: number | null;
+    desktopPresent: boolean;
+    databaseBytes: number;
+    availableBytes: number | null;
+    retentionBytes: number | null;
+    retentionDays: number | null;
+    droppedUnsyncedFrames: number;
+    droppedAfterPasswordChange: number;
+    webhookConfigured: boolean;
+    webhookTarget: string | null;
+    webhookFormat: FeedLoggerWebhookFormat | null;
+    lastWebhookAt: number | null;
+    lastWebhookOk: boolean | null;
+};
+export type FeedLoggerSyncEvent =
+    | { state: 'pulling'; frames: number }
+    | { state: 'writing'; frames: number }
+    | { state: 'finished'; inserted: number; skipped: number }
+    | { state: 'failed'; message: string };
+export type FeedLoggerSyncReport =
+    | { result: 'notConfigured' }
+    | { result: 'accountMismatch'; loggerAccountId: string | null }
+    | {
+          result: 'synced';
+          frames: number;
+          inserted: number;
+          framesWithoutBaseline: number;
+      };
+export type FeedLoggerWebhookFormat = 'discord' | 'text';
 export type FeedQueryMode = 'search' | 'lookup' | 'instance';
 export type FeedReadModelOutput = {
     rows: FeedRowOutput[];

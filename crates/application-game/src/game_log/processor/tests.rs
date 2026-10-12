@@ -1222,6 +1222,68 @@ fn moderated_players_add_blocked_and_muted_join_leave_overlay_activity() -> Resu
 }
 
 #[test]
+fn moderated_players_already_in_instance_alert_despite_join_suppression() -> Result<()> {
+    let (_dir, store, processor) = test_processor("runtime-gamelog-moderated-present")?;
+    store.set_player_moderation(
+        "usr_blocked",
+        crate::PlayerModeration {
+            blocked: true,
+            muted: true,
+        },
+    );
+    test_overlay().set_filters(ActivityFilters::from_json(serde_json::json!({
+        "version": 1,
+        "wrist": { "types": {
+            "OnPlayerJoined": { "scope": "everyoneInInstance", "favoriteGroupKeys": "all" },
+            "BlockedOnPlayerJoined": { "scope": "everyoneInInstance", "favoriteGroupKeys": "all" },
+            "MutedOnPlayerJoined": { "scope": "everyoneInInstance", "favoriteGroupKeys": "all" }
+        } }
+    })));
+
+    processor.handle_jobs(vec![
+        GameLogWorkerJob::Event(event(
+            "2026-05-14T08:20:00.000Z",
+            GameLogEventKind::Location {
+                location: "wrld_public:789".into(),
+                world_name: "Public World".into(),
+            },
+        )),
+        GameLogWorkerJob::Event(event(
+            "2026-05-14T08:20:01.000Z",
+            GameLogEventKind::PlayerJoined {
+                display_name: "Blocked Player".into(),
+                user_id: "usr_blocked".into(),
+            },
+        )),
+        GameLogWorkerJob::Event(event(
+            "2026-05-14T08:20:01.000Z",
+            GameLogEventKind::PlayerJoined {
+                display_name: "Other Player".into(),
+                user_id: "usr_other".into(),
+            },
+        )),
+    ])?;
+
+    let activity_types: Vec<_> = test_overlay()
+        .snapshot()
+        .entries
+        .into_iter()
+        .map(|entry| (entry.kind.key().to_string(), entry.actor_user_id))
+        .collect();
+    assert_eq!(
+        activity_types,
+        [
+            (
+                "BlockedOnPlayerJoined".to_string(),
+                "usr_blocked".to_string()
+            ),
+            ("MutedOnPlayerJoined".to_string(), "usr_blocked".to_string()),
+        ]
+    );
+    Ok(())
+}
+
+#[test]
 fn game_log_presence_enables_current_instance_gps_surface_filtering() -> Result<()> {
     let (_dir, _db, processor) = test_processor("runtime-gamelog-gps-surface-filter")?;
     let overlay = &test_overlay();

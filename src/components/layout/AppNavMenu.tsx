@@ -374,6 +374,16 @@ function useAppNavToolActions({
     return { unpinToolEntry };
 }
 
+function placeCollapsedShortcutHintPanel(panel: HTMLDivElement | null) {
+    const sidebar = document.querySelector(
+        '[data-slot="sidebar-container"][data-side="left"]'
+    );
+    if (!panel || !sidebar) {
+        return;
+    }
+    panel.style.left = `${sidebar.getBoundingClientRect().right}px`;
+}
+
 export function AppNavMenu({ isCollapsed }: { isCollapsed: boolean }) {
     const navigate = useNavigate();
     const location = useLocation();
@@ -613,7 +623,8 @@ export function AppNavMenu({ isCollapsed }: { isCollapsed: boolean }) {
             />
             {shortcutHintsVisible && isCollapsed ? (
                 <ShortcutHintPanel
-                    className="motion-safe:slide-in-from-left-1 fixed bottom-3 left-[calc(var(--sidebar-width-icon)+0.5rem)] origin-bottom-left"
+                    ref={placeCollapsedShortcutHintPanel}
+                    className="motion-safe:slide-in-from-left-1 fixed bottom-3 ml-2 origin-bottom-left"
                     groups={[
                         collapsedNavShortcutItems,
                         collapsedNavUtilityItems

@@ -19,6 +19,9 @@ const BROWSER_WEBSOCKET_USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64;
 const TCP_KEEPALIVE_IDLE: Duration = Duration::from_secs(30);
 const TCP_KEEPALIVE_INTERVAL: Duration = Duration::from_secs(10);
 const TCP_CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+pub const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(30);
+const HEARTBEAT_DEADLINE: Duration = Duration::from_secs(90);
+const HEARTBEAT_PING_TIMEOUT: Duration = Duration::from_secs(10);
 
 pub use vrcx_0_contracts::RealtimeConnectionOptions;
 pub type RealtimeWebSocketStream = WebSocketStream<MaybeTlsStream<TcpStream>>;
@@ -218,7 +221,27 @@ pub fn classify_websocket_frame(frame: Message) -> RealtimeFrame {
     }
 }
 
-pub async fn send_websocket_ping(stream: &mut RealtimeWebSocketStream) -> Result<(), Error> {
+pub async fn heartbeat(
+    stream: &mut RealtimeWebSocketStream,
+    last_inbound_at: tokio::time::Instant,
+) -> Result<(), String> {
+    let silent = last_inbound_at.elapsed();
+    if silent >= HEARTBEAT_DEADLINE {
+        return Err(format!(
+            "websocket heartbeat timed out after {} seconds",
+            silent.as_secs()
+        ));
+    }
+    match tokio::time::timeout(HEARTBEAT_PING_TIMEOUT, send_websocket_ping(stream)).await {
+        Ok(result) => result.map_err(|error| error.reason()),
+        Err(_) => Err(format!(
+            "websocket ping timed out after {} seconds",
+            HEARTBEAT_PING_TIMEOUT.as_secs()
+        )),
+    }
+}
+
+async fn send_websocket_ping(stream: &mut RealtimeWebSocketStream) -> Result<(), Error> {
     stream
         .send(Message::Ping(Default::default()))
         .await

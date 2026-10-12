@@ -14,20 +14,17 @@ pub(crate) fn game_log_activity_events<F, M>(
     mut moderation_of: M,
 ) -> Vec<ActivityEvent>
 where
-    F: FnMut(&GameLogJoinLeaveEntry) -> bool,
+    F: FnMut(&GameLogJoinLeaveEntry, ActivityKind) -> bool,
     M: FnMut(&GameLogJoinLeaveEntry) -> PlayerModeration,
 {
     let mut events = Vec::new();
-    for entry in output
-        .batch
-        .join_leave
-        .iter()
-        .filter(|entry| include_join_leave(entry))
-    {
+    for entry in &output.batch.join_leave {
         let Some(kind) = ActivityKind::from_key(&entry.event_type) else {
             continue;
         };
-        events.push(join_leave_event(entry, kind));
+        if include_join_leave(entry, kind) {
+            events.push(join_leave_event(entry, kind));
+        }
         if entry.user_id.trim().is_empty() {
             continue;
         }
@@ -47,7 +44,7 @@ where
             .into_iter()
             .zip(moderated_kinds)
         {
-            if moderated {
+            if moderated && include_join_leave(entry, kind) {
                 events.push(join_leave_event(entry, kind));
             }
         }

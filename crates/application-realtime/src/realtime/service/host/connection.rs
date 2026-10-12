@@ -64,6 +64,7 @@ impl RealtimeHostRuntime {
             feed_owner_lock: Mutex::new(()),
             feed_live_cache: Mutex::new(super::feed::FeedLiveCache::default()),
             feed_persistence_disabled: AtomicBool::new(feed_persistence_disabled),
+            reconnect_backfill_check: Mutex::new(None),
             notification_apply_lock: tokio::sync::Mutex::new(()),
             friend_profile_bulk_load: Mutex::new(
                 super::friend_profile_bulk_load::FriendProfileBulkLoadState::default(),

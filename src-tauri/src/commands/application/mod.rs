@@ -5,6 +5,7 @@ pub mod community_theme;
 pub mod deep_link;
 pub mod desktop_notification;
 pub mod favorite_transfer;
+pub mod feed_logger;
 pub mod friend_log;
 pub mod frontend_batch;
 pub mod group_calendar;

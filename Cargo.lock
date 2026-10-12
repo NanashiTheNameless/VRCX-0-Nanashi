@@ -9612,6 +9612,7 @@ dependencies = [
  "vrcx-0-host-desktop",
  "vrcx-0-i18n",
  "vrcx-0-integration-api",
+ "vrcx-0-logger-protocol",
  "vrcx-0-mcp",
  "vrcx-0-nanashi-website-protocol",
  "vrcx-0-platform",
@@ -9718,6 +9719,7 @@ dependencies = [
  "vrcx-0-application-core",
  "vrcx-0-contracts",
  "vrcx-0-core",
+ "vrcx-0-logger-protocol",
 ]
 
 [[package]]
@@ -9911,6 +9913,7 @@ dependencies = [
  "vrcx-0-contracts",
  "vrcx-0-core",
  "vrcx-0-http-client",
+ "vrcx-0-logger-protocol",
  "zip 8.6.0",
 ]
 
@@ -9924,6 +9927,42 @@ dependencies = [
  "http",
  "socket2",
  "tokio",
+]
+
+[[package]]
+name = "vrcx-0-logger"
+version = "2.31.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "fs4",
+ "futures-util",
+ "reqwest",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tower",
+ "tracing",
+ "tracing-subscriber",
+ "vrcx-0-contracts",
+ "vrcx-0-core",
+ "vrcx-0-logger-protocol",
+ "vrcx-0-vrchat-client",
+]
+
+[[package]]
+name = "vrcx-0-logger-protocol"
+version = "0.1.0"
+dependencies = [
+ "argon2",
+ "chacha20poly1305",
+ "serde",
+ "serde_json",
+ "specta",
+ "thiserror 2.0.21",
+ "vrcx-0-logger-protocol",
 ]
 
 [[package]]
@@ -10156,6 +10195,7 @@ dependencies = [
  "serde_json",
  "specta",
  "sys-locale",
+ "thiserror 2.0.21",
  "tokio",
  "tracing",
  "url",
@@ -10172,6 +10212,7 @@ dependencies = [
  "vrcx-0-i18n",
  "vrcx-0-integration-api",
  "vrcx-0-integrations",
+ "vrcx-0-logger-protocol",
  "vrcx-0-mcp",
  "vrcx-0-media",
  "vrcx-0-nanashi-website-protocol",
