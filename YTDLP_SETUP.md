@@ -1,6 +1,7 @@
-# VRChat video playback helper
+# Experimental VRChat video playback helper
 
 Open **Settings > Media > VRChat video playback helper**. The feature starts disabled.
+This feature is experimental and may not work with every VRChat or video configuration.
 Enable it and save to install managed yt-dlp **master** builds, Node.js 22, and the pinned
 bgutil PO-token provider. Review the detected VRChat `Tools` folder before installing.
 Linux discovers the VRChat Steam/Proton prefix; a folder override is available.

@@ -2373,6 +2373,9 @@
                 "sync_interval_one_minute": "1 minute",
                 "sync_interval_minutes": "{minutes} minutes",
                 "save_sync_interval": "Save interval",
+                "sync_settings": "Sync app settings",
+                "sync_settings_description": "When enabled, RemoteSync also shares non-secret app preferences between your paired PCs. This is on by default. Credentials, encryption keys, and device-specific paths are never synced.",
+                "save_sync_settings": "Save setting",
                 "server_note": "Use the official service or an HTTPS origin operated by someone you trust.",
                 "server_change_warning": "Changing servers does not move your account or history. The previous server keeps its data until you delete it. A server operator can see account and connection metadata, but cannot read encrypted history. Continue?",
                 "save_server": "Validate and save server",
@@ -3615,8 +3618,8 @@
                 }
             },
             "ytdlp": {
-                "title": "VRChat video playback helper",
-                "description": "Opt-in yt-dlp master updates and a local PO-token provider for VRChat video players. No video caching or browser extension.",
+                "title": "Experimental VRChat video playback helper",
+                "description": "Experimental, opt-in yt-dlp master updates and a local PO-token provider for VRChat video players. No video caching or browser extension.",
                 "loading": "Loading playback settings...",
                 "unsupported": "Available on Windows and Linux/Proton.",
                 "enable": "Enable yt-dlp integration",

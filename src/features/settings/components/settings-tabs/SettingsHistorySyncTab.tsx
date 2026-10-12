@@ -18,6 +18,7 @@ type SettingsSnapshot = {
     websiteOrigin: string;
     paired: boolean;
     syncIntervalMinutes: number;
+    syncSettingsEnabled: boolean;
 };
 
 type Capabilities = {
@@ -67,6 +68,7 @@ export function SettingsHistorySyncTab() {
     const [apiOrigin, setApiOrigin] = useState(OFFICIAL_API);
     const [websiteOrigin, setWebsiteOrigin] = useState(OFFICIAL_WEBSITE);
     const [syncIntervalMinutes, setSyncIntervalMinutes] = useState(10);
+    const [syncSettingsEnabled, setSyncSettingsEnabled] = useState(true);
     const [pairing, setPairing] = useState<PairingStart>();
     const [pollInterval, setPollInterval] = useState(5);
     const [pairStartedAt, setPairStartedAt] = useState<number>();
@@ -90,6 +92,7 @@ export function SettingsHistorySyncTab() {
         setApiOrigin(snapshot.apiOrigin);
         setWebsiteOrigin(snapshot.websiteOrigin);
         setSyncIntervalMinutes(snapshot.syncIntervalMinutes);
+        setSyncSettingsEnabled(snapshot.syncSettingsEnabled);
 
         if (snapshot.backend !== 'remotesync') {
             setCapabilities(undefined);
@@ -164,7 +167,11 @@ export function SettingsHistorySyncTab() {
         };
     }, [pairStartedAt, pairing, pollInterval, t]);
 
-    async function saveSettings(backend: string, saveServer = true) {
+    async function saveSettings(
+        backend: string,
+        saveServer = true,
+        nextSyncSettingsEnabled = syncSettingsEnabled
+    ) {
         setBusy(true);
         setError(undefined);
         try {
@@ -183,7 +190,8 @@ export function SettingsHistorySyncTab() {
                 websiteOrigin: saveServer
                     ? websiteOrigin
                     : (settings?.websiteOrigin ?? websiteOrigin),
-                syncIntervalMinutes
+                syncIntervalMinutes,
+                syncSettingsEnabled: nextSyncSettingsEnabled
             });
             setSettings((previous) =>
                 previous
@@ -196,7 +204,8 @@ export function SettingsHistorySyncTab() {
                           websiteOrigin: saveServer
                               ? websiteOrigin
                               : previous.websiteOrigin,
-                          syncIntervalMinutes
+                          syncIntervalMinutes,
+                          syncSettingsEnabled: nextSyncSettingsEnabled
                       }
                     : previous
             );
@@ -335,6 +344,40 @@ export function SettingsHistorySyncTab() {
                             >
                                 {t(
                                     'view.settings.history_sync.save_sync_interval'
+                                )}
+                            </Button>
+                        </div>
+                    </Field>
+                    <Field
+                        label={t('view.settings.history_sync.sync_settings')}
+                        description={t(
+                            'view.settings.history_sync.sync_settings_description'
+                        )}
+                    >
+                        <div className="flex items-center gap-3">
+                            <Switch
+                                checked={syncSettingsEnabled}
+                                disabled={busy || !settings}
+                                onCheckedChange={setSyncSettingsEnabled}
+                            />
+                            <Button
+                                type="button"
+                                variant="outline"
+                                disabled={
+                                    busy ||
+                                    syncSettingsEnabled ===
+                                        settings?.syncSettingsEnabled
+                                }
+                                onClick={() =>
+                                    void saveSettings(
+                                        backend,
+                                        false,
+                                        syncSettingsEnabled
+                                    )
+                                }
+                            >
+                                {t(
+                                    'view.settings.history_sync.save_sync_settings'
                                 )}
                             </Button>
                         </div>

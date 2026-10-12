@@ -12,8 +12,8 @@ use vrcx_0_remote_sync::{
 };
 
 use vrcx_0_runtime_host_desktop::remote_sync::{
-    ACCOUNT_ID_KEY, API_ORIGIN_KEY, BACKEND_KEY, SYNC_INTERVAL_MINUTES_KEY, TOKEN_KEY,
-    WEBSITE_ORIGIN_KEY,
+    ACCOUNT_ID_KEY, API_ORIGIN_KEY, BACKEND_KEY, SYNC_INTERVAL_MINUTES_KEY,
+    SYNC_SETTINGS_ENABLED_KEY, TOKEN_KEY, WEBSITE_ORIGIN_KEY,
 };
 
 const TRUST_HISTORY_KEY: &str = "remoteSyncTrustHistory";
@@ -69,6 +69,7 @@ pub struct RemoteSyncSettingsSnapshot {
     pub website_origin: String,
     pub paired: bool,
     pub sync_interval_minutes: u16,
+    pub sync_settings_enabled: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
@@ -144,6 +145,10 @@ pub async fn app__remote_sync_settings_get(
             .ok()
             .filter(|minutes| SYNC_INTERVAL_OPTIONS_MINUTES.contains(minutes))
             .unwrap_or(DEFAULT_SYNC_INTERVAL_MINUTES),
+        sync_settings_enabled: state
+            .runtime_host()
+            .config_string(SYNC_SETTINGS_ENABLED_KEY, "true")
+            != "false",
     })
 }
 
@@ -182,6 +187,7 @@ pub fn app__remote_sync_settings_set(
     api_origin: String,
     website_origin: String,
     sync_interval_minutes: u16,
+    sync_settings_enabled: bool,
 ) -> Result<(), AppError> {
     if !matches!(backend.as_str(), "off" | "remotesync") {
         return Err(AppError::WebClient(
@@ -230,6 +236,10 @@ pub fn app__remote_sync_settings_set(
         vrcx_0_runtime_host_desktop::local_data::ConfigWriteEntry {
             key: SYNC_INTERVAL_MINUTES_KEY.into(),
             value: sync_interval_minutes.to_string(),
+        },
+        vrcx_0_runtime_host_desktop::local_data::ConfigWriteEntry {
+            key: SYNC_SETTINGS_ENABLED_KEY.into(),
+            value: sync_settings_enabled.to_string(),
         },
     ])?;
     Ok(())

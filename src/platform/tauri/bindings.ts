@@ -396,13 +396,15 @@ const generatedCommands = {
         backend: string,
         apiOrigin: string,
         websiteOrigin: string,
-        syncIntervalMinutes: number
+        syncIntervalMinutes: number,
+        syncSettingsEnabled: boolean
     ): Promise<null> {
         return await TAURI_INVOKE('app__remote_sync_settings_set', {
             backend,
             apiOrigin,
             websiteOrigin,
-            syncIntervalMinutes
+            syncIntervalMinutes,
+            syncSettingsEnabled
         });
     },
     async appRemoteSyncPairStart(
@@ -6789,6 +6791,7 @@ export type RemoteSyncSettingsSnapshot = {
     websiteOrigin: string;
     paired: boolean;
     syncIntervalMinutes: number;
+    syncSettingsEnabled: boolean;
 };
 export type RemoteSyncStatusSnapshot = {
     enabled: boolean;

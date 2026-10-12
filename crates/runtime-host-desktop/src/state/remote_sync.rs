@@ -22,6 +22,7 @@ use crate::{Error, Result};
 pub const BACKEND_KEY: &str = "historySyncBackend";
 pub const BACKEND_REMOTESYNC: &str = "remotesync";
 pub const SYNC_INTERVAL_MINUTES_KEY: &str = "remoteSyncIntervalMinutes";
+pub const SYNC_SETTINGS_ENABLED_KEY: &str = "remoteSyncSettingsEnabled";
 pub const API_ORIGIN_KEY: &str = "remoteSyncApiOrigin";
 pub const ACCOUNT_ID_KEY: &str = "remoteSyncAccountId";
 pub const TOKEN_KEY: &str = "remoteSyncApiToken";
@@ -285,6 +286,10 @@ impl DesktopRuntimeHostState {
         self.config_string(BACKEND_KEY, "off") == BACKEND_REMOTESYNC
     }
 
+    pub fn remote_sync_settings_enabled(&self) -> bool {
+        self.config_string(SYNC_SETTINGS_ENABLED_KEY, "true") != "false"
+    }
+
     /// Checks only the local prerequisites needed before the background
     /// scheduler considers a sync. Unlike the settings snapshot, this avoids
     /// loading recent sync history from the database on every scheduler tick.
@@ -495,7 +500,9 @@ impl DesktopRuntimeHostState {
         let has_local_vault =
             store::vault_state_for_user(&db, &identity.api_origin, &identity.account_id, user_id)?
                 .is_some();
-        self.remote_sync_app_settings_prepare(&db, &stream_scope, has_local_vault)?;
+        if self.remote_sync_settings_enabled() {
+            self.remote_sync_app_settings_prepare(&db, &stream_scope, has_local_vault)?;
+        }
         let report = sync_account(
             &AuthorizedClient::new(client, token),
             Arc::clone(&db),
@@ -506,7 +513,10 @@ impl DesktopRuntimeHostState {
         )
         .await
         .map_err(sync_error)?;
-        if !report.cancelled && self.remote_sync_app_settings_apply(&db, &stream_scope)? {
+        if self.remote_sync_settings_enabled()
+            && !report.cancelled
+            && self.remote_sync_app_settings_apply(&db, &stream_scope)?
+        {
             self.runtime
                 .desktop_assembly()
                 .event_bus()

@@ -30,8 +30,9 @@ It is a Rust + Tauri rewrite of VRCX.
   and tags, profile bios and the mutual friends graph are synced too: the later edit wins and
   a deletion on one PC reaches the others. Nothing on the server can delete local history, and
   automatic sync pushes and pulls changes on a configurable 1 to 60 minute interval. You can
-  sync non-secret app preferences too; credentials and device-specific paths stay local. You
-  can move the key to another device, see and sign out connected clients, and delete the server
+  sync non-secret app preferences too; this is on by default and can be changed under Settings >
+  History Sync. Credentials and device-specific paths stay local. You can move the key to another
+  device, see and sign out connected clients, and delete the server
   copy from the same settings page.
 - **Shared world collections on the fork's own service.** A world favorite group can be shared
   as a public page on the RemoteSync website and updated by sharing it again; manage shares on
@@ -69,7 +70,7 @@ It is a Rust + Tauri rewrite of VRCX.
   an audio file and volume per event for anyone, friends, or favorite friends. Sounds work in
   background mode and respect Do Not Disturb and privacy lock. Built-in sounds are CC0 clips
   listed in [crates/host-desktop/sounds](crates/host-desktop/sounds/README.md).
-- **Opt-in VRChat video playback helper.** Settings > Media installs managed yt-dlp master
+- **Experimental, opt-in VRChat video playback helper.** Settings > Media installs managed yt-dlp master
   updates and a local PO-token provider. Cookie use is a separate opt-in: explicitly select a
   browser to refresh or import your own cookies.txt. Originals are backed up for restore.
   No video caching or browser extension. See [setup and playback limits](YTDLP_SETUP.md).
