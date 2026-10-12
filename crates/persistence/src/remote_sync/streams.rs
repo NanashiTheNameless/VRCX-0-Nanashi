@@ -618,7 +618,7 @@ pub fn app_settings_remove(
     let table = scope.table_name(&spec.as_stream());
     let params = ParamsBuilder::new()
         .set("stream", table.as_str())
-        .set("owner", tombstone_owner(scope, &spec))
+        .set("owner", tombstone_owner(scope, spec))
         .set(
             "row_key",
             Value::Array(vec![Value::String(key.to_owned())]).to_string(),

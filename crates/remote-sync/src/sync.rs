@@ -1016,6 +1016,12 @@ pub async fn sync_account<T: SyncTransport>(
 ) -> Result<SyncReport, Error> {
     let scope = StreamScope::open(&db, &identity.vrchat_user_id).map_err(storage)?;
     let vault = resolve_vault(transport, &db, secret, identity).await?;
+    // A freshly created vault has no older remote history to compact. Record
+    // that baseline before uploading so an interrupted first upload cannot
+    // turn its retry into an unnecessary full-history rewrite.
+    if vault.created {
+        store::dedupe_checked_seq_set(&db, &vault.reference, 0).map_err(storage)?;
+    }
     let mut report = SyncReport {
         vault_id: vault.reference.vault_id.clone(),
         created_vault: vault.created,
