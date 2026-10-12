@@ -40,6 +40,7 @@ import {
 import { applyFriendProfileLoadStatusPayload } from './friendProfileLoadService';
 import { handleGroupBanImportStatusEvent } from './groupBanImportService';
 import { isHostCapabilityAvailable } from './hostCapabilityService';
+import i18n from './i18nService';
 import {
     handleIntegrationApiStartFailed,
     hydrateIntegrationApiStatus
@@ -87,6 +88,7 @@ import type {
 } from './runtime-event-bridge/types';
 import { handleScreenshotExportProgressEvent } from './screenshotExportService';
 import { handleScreenshotLibraryScanStatusEvent } from './screenshotLibraryScanService';
+import { toast } from './toastService';
 import {
     handleAppUpdateDownloadProgressEvent,
     handleAppUpdateDownloadStatusSnapshot,
@@ -144,6 +146,19 @@ function handleRuntimeEvent(event: RuntimeEvent): void {
             remote: true,
             changes: [],
             requiresRefresh: true
+        });
+        return;
+    }
+
+    if (event.name === 'remoteSyncCollectorStopped') {
+        toast.add({
+            type: 'warning',
+            title: i18n.t('view.settings.history_sync.collector_stopped', {
+                state: event.payload.state
+            }),
+            description: i18n.t(
+                'view.settings.history_sync.collector_stopped_description'
+            )
         });
         return;
     }

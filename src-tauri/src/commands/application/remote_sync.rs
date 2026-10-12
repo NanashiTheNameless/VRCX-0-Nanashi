@@ -969,6 +969,18 @@ pub async fn app__remote_sync_collector_snapshot(
         .await?)
 }
 
+/// Whether the background loop should sync now. A pause wins over both a due
+/// interval and a backlog; the time since the last sync keeps counting, so
+/// the first check after the pause ends is due.
+fn background_sync_due(
+    paused: bool,
+    since_last_sync: std::time::Duration,
+    interval: std::time::Duration,
+    backlog: usize,
+) -> bool {
+    !paused && (since_last_sync >= interval || backlog >= BACKGROUND_SYNC_ROW_THRESHOLD)
+}
+
 /// Syncs in the background while RemoteSync is set up. While the backend is
 /// off or this PC is not paired, a tick does nothing and contacts no server.
 pub(crate) fn start_background_sync(app: &tauri::AppHandle) {
@@ -1018,7 +1030,8 @@ pub(crate) fn start_background_sync(app: &tauri::AppHandle) {
                     }
                 }
             }
-            if ready && !state.runtime_host().remote_sync_paused_for_game() {
+            let paused = state.runtime_host().remote_sync_paused_for_game();
+            if ready && !paused {
                 let interval_minutes = state
                     .runtime_host()
                     .config_string(SYNC_INTERVAL_MINUTES_KEY, "10")
@@ -1027,7 +1040,6 @@ pub(crate) fn start_background_sync(app: &tauri::AppHandle) {
                     .filter(|minutes| SYNC_INTERVAL_OPTIONS_MINUTES.contains(minutes))
                     .unwrap_or(DEFAULT_SYNC_INTERVAL_MINUTES);
                 let interval = std::time::Duration::from_secs(u64::from(interval_minutes) * 60);
-                let due = last_sync.elapsed() >= interval;
                 let backlog_app = app.clone();
                 let backlog = tauri::async_runtime::spawn_blocking(move || {
                     let state = backlog_app.state::<AppState>();
@@ -1038,9 +1050,12 @@ pub(crate) fn start_background_sync(app: &tauri::AppHandle) {
                 })
                 .await
                 .unwrap_or(0);
-                if due || backlog >= BACKGROUND_SYNC_ROW_THRESHOLD {
+                if background_sync_due(paused, last_sync.elapsed(), interval, backlog) {
                     if let Err(error) = state.runtime_host().remote_sync_run().await {
                         tracing::warn!(%error, "background history sync failed");
+                    }
+                    if let Err(error) = state.runtime_host().remote_sync_collector_watch().await {
+                        tracing::debug!(%error, "collector state could not be checked");
                     }
                     last_sync = tokio::time::Instant::now();
                 }
@@ -1048,4 +1063,42 @@ pub(crate) fn start_background_sync(app: &tauri::AppHandle) {
             tokio::time::sleep(BACKGROUND_SYNC_CHECK_INTERVAL).await;
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+
+    const INTERVAL: Duration = Duration::from_secs(600);
+
+    #[test]
+    fn background_sync_runs_when_the_interval_passed_or_a_backlog_built_up() {
+        assert!(background_sync_due(false, INTERVAL, INTERVAL, 0));
+        assert!(background_sync_due(
+            false,
+            Duration::ZERO,
+            INTERVAL,
+            BACKGROUND_SYNC_ROW_THRESHOLD
+        ));
+        assert!(!background_sync_due(
+            false,
+            INTERVAL - Duration::from_secs(1),
+            INTERVAL,
+            BACKGROUND_SYNC_ROW_THRESHOLD - 1
+        ));
+    }
+
+    #[test]
+    fn background_sync_waits_while_paused_and_is_due_once_the_pause_ends() {
+        let long_ago = INTERVAL * 6;
+        assert!(!background_sync_due(true, long_ago, INTERVAL, 0));
+        assert!(!background_sync_due(
+            true,
+            long_ago,
+            INTERVAL,
+            BACKGROUND_SYNC_ROW_THRESHOLD
+        ));
+        assert!(background_sync_due(false, long_ago, INTERVAL, 0));
+    }
 }

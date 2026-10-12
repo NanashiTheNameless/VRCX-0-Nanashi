@@ -189,50 +189,49 @@ export function SettingsHistorySyncTab() {
         };
     }, [pairStartedAt, pairing, pollInterval, t]);
 
+    // Each control saves only its own value; the others keep what is stored,
+    // so a value picked but not saved yet is not written along with it.
     async function saveSettings(
         backend: string,
-        saveServer = true,
-        nextSyncSettingsEnabled = syncSettingsEnabled,
-        nextPauseWhileGameRunning = pauseWhileGameRunning
+        changes: {
+            server?: boolean;
+            syncIntervalMinutes?: number;
+            syncSettingsEnabled?: boolean;
+            pauseWhileGameRunning?: boolean;
+        } = {}
     ) {
         setBusy(true);
         setError(undefined);
         try {
+            const next = {
+                apiOrigin: changes.server
+                    ? apiOrigin
+                    : (settings?.apiOrigin ?? apiOrigin),
+                websiteOrigin: changes.server
+                    ? websiteOrigin
+                    : (settings?.websiteOrigin ?? websiteOrigin),
+                syncIntervalMinutes:
+                    changes.syncIntervalMinutes ??
+                    settings?.syncIntervalMinutes ??
+                    syncIntervalMinutes,
+                syncSettingsEnabled:
+                    changes.syncSettingsEnabled ??
+                    settings?.syncSettingsEnabled ??
+                    syncSettingsEnabled,
+                pauseWhileGameRunning:
+                    changes.pauseWhileGameRunning ??
+                    settings?.pauseWhileGameRunning ??
+                    pauseWhileGameRunning
+            };
             const isChangingServer =
-                saveServer &&
-                (apiOrigin !== settings?.apiOrigin ||
-                    websiteOrigin !== settings?.websiteOrigin);
+                next.apiOrigin !== settings?.apiOrigin ||
+                next.websiteOrigin !== settings?.websiteOrigin;
             if (isChangingServer && !confirmServerChange) {
                 return;
             }
-            await invoke('app__remote_sync_settings_set', {
-                backend,
-                apiOrigin: saveServer
-                    ? apiOrigin
-                    : (settings?.apiOrigin ?? apiOrigin),
-                websiteOrigin: saveServer
-                    ? websiteOrigin
-                    : (settings?.websiteOrigin ?? websiteOrigin),
-                syncIntervalMinutes,
-                syncSettingsEnabled: nextSyncSettingsEnabled,
-                pauseWhileGameRunning: nextPauseWhileGameRunning
-            });
+            await invoke('app__remote_sync_settings_set', { backend, ...next });
             setSettings((previous) =>
-                previous
-                    ? {
-                          ...previous,
-                          backend,
-                          apiOrigin: saveServer
-                              ? apiOrigin
-                              : previous.apiOrigin,
-                          websiteOrigin: saveServer
-                              ? websiteOrigin
-                              : previous.websiteOrigin,
-                          syncIntervalMinutes,
-                          syncSettingsEnabled: nextSyncSettingsEnabled,
-                          pauseWhileGameRunning: nextPauseWhileGameRunning
-                      }
-                    : previous
+                previous ? { ...previous, backend, ...next } : previous
             );
             setConfirmServerChange(false);
             await refresh();
@@ -402,7 +401,9 @@ export function SettingsHistorySyncTab() {
                                         settings?.syncIntervalMinutes
                                 }
                                 onClick={() =>
-                                    void saveSettings(backend, false)
+                                    void saveSettings(backend, {
+                                        syncIntervalMinutes
+                                    })
                                 }
                             >
                                 {t(
@@ -422,13 +423,9 @@ export function SettingsHistorySyncTab() {
                             disabled={busy || !settings}
                             onCheckedChange={(enabled) => {
                                 setPauseWhileGameRunning(enabled);
-                                void saveSettings(
-                                    backend,
-                                    false,
-                                    settings?.syncSettingsEnabled ??
-                                        syncSettingsEnabled,
-                                    enabled
-                                );
+                                void saveSettings(backend, {
+                                    pauseWhileGameRunning: enabled
+                                });
                             }}
                         />
                     </Field>
@@ -491,11 +488,9 @@ export function SettingsHistorySyncTab() {
                                         settings?.syncSettingsEnabled
                                 }
                                 onClick={() =>
-                                    void saveSettings(
-                                        backend,
-                                        false,
+                                    void saveSettings(backend, {
                                         syncSettingsEnabled
-                                    )
+                                    })
                                 }
                             >
                                 {t(
@@ -554,7 +549,9 @@ export function SettingsHistorySyncTab() {
                         <Button
                             type="button"
                             disabled={busy}
-                            onClick={() => void saveSettings(backend)}
+                            onClick={() =>
+                                void saveSettings(backend, { server: true })
+                            }
                         >
                             {t('view.settings.history_sync.save_server')}
                         </Button>

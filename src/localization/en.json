@@ -2631,6 +2631,9 @@
                 "collector_warning": "Pushing auth data sends the saved VRChat auth and two-factor cookies, sealed to the collector. The server operator can use them to read your account activity. The collector is read-only and runs for the selected duration, or until manually locked or stopped when Forever is selected.",
                 "collector_duration": "Collector duration (days)",
                 "collector_forever": "Forever (no time limit)",
+                "collector_interval": "Collector upload interval",
+                "collector_stopped": "The RemoteSync collector stopped ({state})",
+                "collector_stopped_description": "Nothing is being recorded while VRCX-0-Nanashi is closed. Open Settings > Sync Options to push auth data again.",
                 "collector_consent": "I understand and want to unlock or relock the collector.",
                 "collector_unlock": "Push auth data to collector",
                 "collector_lock": "Relock now"

@@ -97,6 +97,7 @@ export function SettingsHistorySyncPanel({
     const [collectorConsent, setCollectorConsent] = useState(false);
     const [collectorForever, setCollectorForever] = useState(false);
     const [collectorDays, setCollectorDays] = useState('7');
+    const [collectorInterval, setCollectorInterval] = useState(60);
     const collectorDaysValue = Number(collectorDays);
     const collectorDaysValid =
         Number.isInteger(collectorDaysValue) &&
@@ -369,6 +370,29 @@ export function SettingsHistorySyncPanel({
                             {t('view.settings.history_sync.collector_forever')}
                         </span>
                     </label>
+                    <label className="flex items-center gap-2">
+                        <span>
+                            {t('view.settings.history_sync.collector_interval')}
+                        </span>
+                        <select
+                            className={INPUT_CLASS + ' max-w-40'}
+                            value={collectorInterval}
+                            onChange={(event) =>
+                                setCollectorInterval(Number(event.target.value))
+                            }
+                        >
+                            {[60, 120, 300, 600, 900].map((seconds) => (
+                                <option key={seconds} value={seconds}>
+                                    {t(
+                                        seconds === 60
+                                            ? 'view.settings.history_sync.sync_interval_one_minute'
+                                            : 'view.settings.history_sync.sync_interval_minutes',
+                                        { minutes: seconds / 60 }
+                                    )}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
                     <label className="flex items-start gap-2">
                         <input
                             type="checkbox"
@@ -398,7 +422,7 @@ export function SettingsHistorySyncPanel({
                                             days: collectorForever
                                                 ? null
                                                 : collectorDaysValue,
-                                            intervalSeconds: 60
+                                            intervalSeconds: collectorInterval
                                         }
                                     );
                                     setCollectorConsent(false);

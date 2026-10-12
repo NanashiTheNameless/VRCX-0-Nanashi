@@ -7,7 +7,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use base64::{engine::general_purpose::STANDARD, Engine as _};
-use vrcx_0_application_core::{RemoteSyncImportedPayload, RemoteSyncSettingsImportedPayload};
+use vrcx_0_application_core::{
+    RemoteSyncCollectorStoppedPayload, RemoteSyncImportedPayload, RemoteSyncSettingsImportedPayload,
+};
 use vrcx_0_core::OwnerId;
 use vrcx_0_nanashi_website_protocol as protocol;
 use vrcx_0_persistence::remote_sync::{self as store, SyncLogEntry};
@@ -210,6 +212,8 @@ pub struct RemoteSyncShared {
     cancel: AtomicBool,
     progress: SyncProgress,
     exit_flush_started: AtomicBool,
+    /// Set once a stopped collector was reported, until it runs again.
+    collector_stop_reported: AtomicBool,
     /// A key transfer this PC started and is waiting to receive.
     transfer: std::sync::Mutex<Option<(engine::TransferReceiver, String)>>,
     /// The open recording period: VRChat user id and coverage row id.
@@ -1164,6 +1168,36 @@ impl DesktopRuntimeHostState {
                     )?;
                 }
             }
+        }
+        Ok(())
+    }
+
+    /// Tells the user once when the server collector stopped on its own.
+    /// A collector the user locked, or never started, is not reported.
+    pub async fn remote_sync_collector_watch(&self) -> Result<()> {
+        use protocol::api::CollectorState;
+        let (client, token) = self.remote_sync_session()?;
+        let (vault_id, _) = self.remote_sync_current_vault()?;
+        let status = client
+            .collector_status(&token, vault_id)
+            .await
+            .map_err(sync_error)?;
+        let reported = &self.remote_sync.collector_stop_reported;
+        match status.state {
+            CollectorState::NeedsUnlock | CollectorState::AuthFailed | CollectorState::Failed => {
+                if !reported.swap(true, Ordering::AcqRel) {
+                    self.runtime.desktop_assembly().event_bus().emit(
+                        RemoteSyncCollectorStoppedPayload {
+                            state: format!("{:?}", status.state).to_ascii_lowercase(),
+                            last_error: status.last_error,
+                        },
+                    );
+                }
+            }
+            CollectorState::Starting | CollectorState::Running => {
+                reported.store(false, Ordering::Release);
+            }
+            CollectorState::Locked | CollectorState::Disabled => {}
         }
         Ok(())
     }

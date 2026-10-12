@@ -3844,6 +3844,7 @@ export type BackendRuntimeEventPayloadMap = {
     runtimeVrchatAuthFailure: RuntimeVrchatAuthFailurePayload;
     remoteSyncImported: RemoteSyncImportedPayload;
     remoteSyncSettingsImported: RemoteSyncSettingsImportedPayload;
+    remoteSyncCollectorStopped: RemoteSyncCollectorStoppedPayload;
     runtimeGroupInstancesProjection: RuntimeGroupInstancesProjection;
     printsAutoCleanup: PrintAutoCleanupEvent;
     profileBackupStatus: ProfileBackupStatus;
@@ -6905,6 +6906,10 @@ export type RemoteSyncCodeTrust =
      * The website could not be reached, so nothing is known.
      */
     | 'unreachable';
+export type RemoteSyncCollectorStoppedPayload = {
+    state: string;
+    lastError: string | null;
+};
 export type RemoteSyncDedupeDevice = { keyId: string; label: string };
 export type RemoteSyncDedupeSnapshot = {
     devices: RemoteSyncDedupeDevice[];

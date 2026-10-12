@@ -32,6 +32,9 @@ use crate::{
 
 const ROW_POLL: Duration = Duration::from_secs(2);
 const ROWS_PER_POLL: u32 = 500;
+/// Rows waiting for the supervisor to read them. One poll returns at most
+/// `ROWS_PER_POLL` rows per stream, so a poll only starts with that much room.
+const ROW_QUEUE: usize = ROWS_PER_POLL as usize * ROW_STREAMS.len() * 2;
 
 /// How the collector ended, for the process exit code.
 pub enum Outcome {
@@ -410,6 +413,17 @@ pub async fn run(
     };
 
     let (_rows_reader, mut rows_writer) = rows.into_split();
+    // The supervisor stops reading rows while an upload is failing. Writing
+    // from the loop below would then block it, and it could no longer answer
+    // the supervisor, which waits for those answers before it reads again.
+    let (row_queue, mut queued_rows) = mpsc::channel::<RowMessage>(ROW_QUEUE);
+    tokio::spawn(async move {
+        while let Some(message) = queued_rows.recv().await {
+            if write_frame(&mut rows_writer, &message).await.is_err() {
+                break;
+            }
+        }
+    });
     let (control_reader, mut control_writer) = control.into_split();
     let mut requests = spawn_control_reader(control_reader);
     let mut poll = tokio::time::interval(ROW_POLL);
@@ -421,15 +435,15 @@ pub async fn run(
     loop {
         tokio::select! {
             _ = poll.tick() => {
-                let Ok(messages) = recorder.new_rows() else { break };
-                let mut closed = false;
-                for message in &messages {
-                    if write_frame(&mut rows_writer, message).await.is_err() {
-                        closed = true;
-                        break;
-                    }
+                if row_queue.is_closed() {
+                    break;
                 }
-                if closed {
+                // Rows that do not fit stay in the database for a later poll.
+                if row_queue.capacity() < ROW_QUEUE / 2 {
+                    continue;
+                }
+                let Ok(messages) = recorder.new_rows() else { break };
+                if messages.into_iter().any(|message| row_queue.try_send(message).is_err()) {
                     break;
                 }
             }

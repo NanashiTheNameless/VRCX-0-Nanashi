@@ -151,10 +151,21 @@ pub struct RemoteSyncImportedPayload {
 #[derive(Clone, Debug, Serialize, specta::Type)]
 pub struct RemoteSyncSettingsImportedPayload {}
 
+#[derive(Clone, Debug, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteSyncCollectorStoppedPayload {
+    pub state: String,
+    pub last_error: Option<String>,
+}
+
 runtime_event_payload!(FavoritesChangedPayload, "favoritesChanged");
 runtime_event_payload!(VrcStatusSnapshot, "vrcStatus");
 runtime_event_payload!(RuntimeVrchatAuthFailurePayload, "runtimeVrchatAuthFailure");
 runtime_event_payload!(RemoteSyncImportedPayload, "remoteSyncImported");
+runtime_event_payload!(
+    RemoteSyncCollectorStoppedPayload,
+    "remoteSyncCollectorStopped"
+);
 runtime_event_payload!(
     RemoteSyncSettingsImportedPayload,
     "remoteSyncSettingsImported"
