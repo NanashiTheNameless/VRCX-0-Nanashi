@@ -9,6 +9,11 @@ on:
                 description: Release tag to publish the logger image from, for example v2.32.0-beta.1
                 required: true
                 type: string
+    workflow_call:
+        inputs:
+            tag:
+                required: true
+                type: string
 
 permissions:
     contents: read

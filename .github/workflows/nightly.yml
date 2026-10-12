@@ -434,6 +434,62 @@ jobs:
                   path: collector-assets/*
                   if-no-files-found: error
 
+    # Self-hosted recorder. A separate server program, built static so it runs
+    # on any Linux host and in the distroless image.
+    logger:
+        name: Logger (${{ matrix.arch }})
+        needs: prepare
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - arch: x86_64
+                      os: ubuntu-24.04
+                      rust_target: x86_64-unknown-linux-musl
+                    - arch: aarch64
+                      os: ubuntu-24.04-arm
+                      rust_target: aarch64-unknown-linux-musl
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: dtolnay/rust-toolchain@stable
+              with:
+                  targets: ${{ matrix.rust_target }}
+
+            - uses: Swatinem/rust-cache@v2
+              with:
+                  workspaces: . -> target
+                  shared-key: nightly-logger-${{ matrix.arch }}
+
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: 24.x
+
+            - name: Install musl toolchain
+              run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+            - name: Stamp nightly version
+              run: node scripts/prepare-release-version.ts --version "${{ needs.prepare.outputs.build_version }}"
+
+            - name: Build logger
+              run: cargo build --locked --release -p vrcx-0-logger --target "${{ matrix.rust_target }}"
+
+            - name: Prepare logger asset
+              run: |
+                  mkdir -p logger-assets
+                  cp "target/${{ matrix.rust_target }}/release/vrcx-0-logger" "logger-assets/vrcx-0-logger_${{ needs.prepare.outputs.build_version }}_linux_${{ matrix.arch }}"
+
+            - name: Generate logger third-party notices
+              if: matrix.arch == 'x86_64'
+              run: node scripts/generate-third-party-licenses.ts --logger "logger-assets/vrcx-0-logger_${{ needs.prepare.outputs.build_version }}_THIRD_PARTY_NOTICES.txt"
+
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: nightly-logger-${{ matrix.arch }}
+                  path: logger-assets/*
+                  if-no-files-found: error
+
     publish:
         name: Publish Nightly
         # Serialize publication independently of workflow locks.
@@ -446,6 +502,7 @@ jobs:
             - package
             - macos-bundle
             - collector
+            - logger
         runs-on: ubuntu-24.04
         permissions:
             contents: write
@@ -591,3 +648,17 @@ jobs:
                   | while read -r tag; do
                       gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes
                   done
+
+    # A release created with the workflow token does not start other
+    # workflows, so the recorder image is published from here.
+    logger-image:
+        name: Publish Logger Image
+        needs:
+            - prepare
+            - publish
+        permissions:
+            contents: read
+            packages: write
+        uses: ./.github/workflows/logger-image.yml
+        with:
+            tag: ${{ needs.prepare.outputs.tag }}

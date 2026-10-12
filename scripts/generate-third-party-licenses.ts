@@ -380,7 +380,7 @@ function writeLoggerNotices(outputPath: string): void {
         outputPath,
         createThirdPartyNoticeText(
             entries,
-            'VRCX-0 Self-hosted Recorder Third-Party Notices'
+            'VRCX-0-Nanashi Self-hosted Recorder Third-Party Notices'
         )
     );
     console.log(
