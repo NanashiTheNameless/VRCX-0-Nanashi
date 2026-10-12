@@ -1,6 +1,6 @@
 services:
     vrcx-0-logger:
-        image: ghcr.io/map1en/vrcx-0-logger:${VRCX0_LOGGER_TAG:-latest}
+        image: ghcr.io/nanashithenameless/vrcx-0-logger:${VRCX0_LOGGER_TAG:-latest}
         restart: unless-stopped
         ports:
             - '${VRCX0_LOGGER_BIND:-0.0.0.0}:${VRCX0_LOGGER_PORT:-8787}:8787'

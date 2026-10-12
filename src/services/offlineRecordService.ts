@@ -14,17 +14,11 @@ import { toast } from './toastService';
 
 export type OfflineRecordHealthLevel = 'ok' | 'warning' | 'error';
 
-const GUIDE_BASE_URL =
-    'https://github.com/Map1en/VRCX-0/blob/master/crates/logger/';
-const GUIDE_FILES: Record<string, string> = {
-    'zh-CN': 'README.zh-CN.md',
-    'zh-TW': 'README.zh-Hant.md',
-    ja: 'README.ja-JP.md',
-    ko: 'README.ko-KR.md'
-};
+const GUIDE_URL =
+    'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/blob/master/crates/logger/README.md';
 
-export function offlineRecordGuideUrl(language: string): string {
-    return `${GUIDE_BASE_URL}${GUIDE_FILES[language] ?? 'README.md'}`;
+export function offlineRecordGuideUrl(): string {
+    return GUIDE_URL;
 }
 
 type OfflineRecordHealth = {

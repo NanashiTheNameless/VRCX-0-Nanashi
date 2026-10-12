@@ -1,18 +1,16 @@
-# VRCX-0 Self-hosted Recorder (experimental)
+# VRCX-0-Nanashi Self-hosted Recorder (experimental)
 
-**English** | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-Hant.md) | [日本語](README.ja-JP.md) | [한국어](README.ko-KR.md)
-
-The Self-hosted Recorder runs on an always-on machine and records friend activity while VRCX-0 is closed. When VRCX-0 starts, the recorded activity is filled into the local Feed.
+The Self-hosted Recorder runs on an always-on machine and records friend activity while VRCX-0-Nanashi is closed. When VRCX-0-Nanashi starts, the recorded activity is filled into the local Feed.
 
 > [!WARNING]
 > Experimental. The recorder logs in to VRChat with your account from a second IP address. Under VRChat's policies and security checks this may cause disconnects or repeated verification, and in the worst case account restrictions or a ban. Use at your own risk. Login details are only sent to your own recorder.
 
 ## Scope
 
-- Filled in: friends going online and offline, location, status and avatar changes. Bio changes when **Keep friend bios up to date** is enabled in VRCX-0.
+- Filled in: friends going online and offline, location, status and avatar changes. Bio changes when **Keep friend bios up to date** is enabled in VRCX-0-Nanashi.
 - One VRChat account per recorder.
 - Not filled in:
-    - about 30 seconds after VRCX-0 crashes, is force-closed, sleeps or loses its connection;
+    - about 30 seconds after VRCX-0-Nanashi crashes, is force-closed, sleeps or loses its connection;
     - offline confirmations still pending when a recording ends;
     - changes while the recorder itself is disconnected from VRChat.
 
@@ -20,17 +18,17 @@ The Self-hosted Recorder runs on an always-on machine and records friend activit
 
 - A Linux machine that stays on (x86_64 or ARM64), such as a NAS, VPS or Raspberry Pi.
 - Docker with Docker Compose v2 (the `docker compose` command). A standalone binary is also available.
-- VRCX-0 must be able to reach the machine over the network.
+- VRCX-0-Nanashi must be able to reach the machine over the network.
 
 ## Install
 
 ### Install script
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/Map1en/VRCX-0/master/crates/logger/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/NanashiTheNameless/VRCX-0-Nanashi/master/crates/logger/install.sh | sh
 ```
 
-The script asks for the install directory, release channel, port, listen address, retention, storage limit and password; press Enter to keep the default shown. It then starts the container and prints the address and password to enter in VRCX-0. Settings are stored in `.env` and the password in `password` inside the install directory.
+The script asks for the install directory, release channel, port, listen address, retention, storage limit and password; press Enter to keep the default shown. It then starts the container and prints the address and password to enter in VRCX-0-Nanashi. Settings are stored in `.env` and the password in `password` inside the install directory.
 
 - Update: run the script again. It asks only for the release channel, with the current one as the default, and keeps `.env`, `password` and `compose.yaml` as they are. To change other settings, edit `.env` and run `docker compose up -d` in the install directory.
 - Stop: append `-s down` (`... | sh -s down`).
@@ -40,26 +38,23 @@ The script asks for the install directory, release channel, port, listen address
 
 ```sh
 mkdir vrcx-0-logger && cd vrcx-0-logger
-curl -fsSLO https://raw.githubusercontent.com/Map1en/VRCX-0/master/crates/logger/compose.yaml
+curl -fsSLO https://raw.githubusercontent.com/NanashiTheNameless/VRCX-0-Nanashi/master/crates/logger/compose.yaml
 printf '%s' 'your-password' > password
 docker compose up -d
 ```
 
-NAS interfaces (Synology Container Manager, Unraid and others): use the image `ghcr.io/map1en/vrcx-0-logger:latest`, map port `8787` and a folder to `/data`, and set `VRCX0_LOGGER_PASSWORD`. On Unraid, map `/data` to a cache or single-disk path such as `/mnt/cache/appdata/vrcx-0-logger`; SQLite can be corrupted on `/mnt/user` shares. If you put the password directly in a Compose file's `environment:`, write `$` as `$$`.
+NAS interfaces (Synology Container Manager, Unraid and others): use the image `ghcr.io/nanashithenameless/vrcx-0-logger:latest`, map port `8787` and a folder to `/data`, and set `VRCX0_LOGGER_PASSWORD`. On Unraid, map `/data` to a cache or single-disk path such as `/mnt/cache/appdata/vrcx-0-logger`; SQLite can be corrupted on `/mnt/user` shares. If you put the password directly in a Compose file's `environment:`, write `$` as `$$`.
 
 ### Release channels
 
-| Tag      | Use with                                      |
-| -------- | --------------------------------------------- |
-| `latest` | stable VRCX-0                                 |
-| `beta`   | beta VRCX-0                                   |
-| `x.y.z`  | a pinned version, for example `2.32.0-beta.1` |
-
-A stable VRCX-0 only connects to a stable recorder.
+| Tag                    | Use                                                 |
+| ---------------------- | --------------------------------------------------- |
+| `latest`               | the newest nightly build                            |
+| `x.y.z-Nightly-<sha7>` | a pinned build, for example `3.0.0-Nightly-abc1234` |
 
 ### Standalone binary
 
-Download `vrcx-0-logger_<version>_linux_<arch>` from [Releases](https://github.com/Map1en/VRCX-0/releases), set the password variable and run it. Use a service manager such as systemd to keep it running.
+Download `vrcx-0-logger_<version>_linux_<arch>` from [Releases](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases), set the password variable and run it. Use a service manager such as systemd to keep it running.
 
 ### Configuration
 
@@ -87,48 +82,47 @@ The standalone binary reads these environment variables; on NAS interfaces, set 
 
 In a container, leave `VRCX0_LOGGER_HOST`, `VRCX0_LOGGER_PORT` and `VRCX0_LOGGER_DATA_DIR` unset and change the port mapping instead.
 
-## Connect from VRCX-0
+## Connect from VRCX-0-Nanashi
 
-**Tools → Self-hosted Recorder**:
+**Tools > Self-hosted Recorder**:
 
 1. Enable automatic backups.
 2. Enter the recorder address, for example `http://192.168.1.10:8787`.
 3. Enter the recorder password.
 4. Log the recorder in to VRChat, including two-factor verification if required.
 
-Traffic between VRCX-0 and the recorder is encrypted with the password. Do not expose the port to the internet; for remote access use a VPN such as Tailscale. On a VPS, set the listen address (`VRCX0_LOGGER_BIND` in `.env`) to the VPN address, or allow the port only through a firewall.
+Traffic between VRCX-0-Nanashi and the recorder is encrypted with the password. Do not expose the port to the internet; for remote access use a VPN such as Tailscale. On a VPS, set the listen address (`VRCX0_LOGGER_BIND` in `.env`) to the VPN address, or allow the port only through a firewall.
 
 ## Operation
 
 - **Status bar**: an icon next to the proxy icon shows the recorder state. Orange: logging in, reconnecting, a different account or an unexpected response. Red: unreachable, wrong password, version mismatch, or VRChat needs a login or two-factor code.
-- **Filling in**: runs automatically when VRCX-0 connects; **Fill in now** starts it manually. Closing VRCX-0 normally hands over to the recorder immediately.
+- **Filling in**: runs automatically when VRCX-0-Nanashi connects; **Fill in now** starts it manually. Closing VRCX-0-Nanashi normally hands over to the recorder immediately.
 - **Webhook**: Discord or any URL accepting POST. Sent when login stops, two-factor verification is needed, records cannot be saved, unsynced records are deleted by the storage limit, and when recording recovers. Each message starts with a type (`login`, `storage`, `recovered`, `test`) and includes the original error when there is one.
 - **Health check**: `GET /health` returns 200 while the recorder can read its database. The image has no shell, so monitor it from outside the container.
 
 ## Upgrade
 
-Run the install script again, or `docker compose pull && docker compose up -d`. Versions do not have to match: update the recorder when VRCX-0 says it needs an update. Until then VRCX-0 stops filling in, and recorded activity is kept.
+Run the install script again, or `docker compose pull && docker compose up -d`. Versions do not have to match: update the recorder when VRCX-0-Nanashi says it needs an update. Until then VRCX-0-Nanashi stops filling in, and recorded activity is kept.
 
 ## Troubleshooting
 
-| Problem              | Check                                                                                                      |
-| -------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Recorder unreachable | Container running, firewall allows the port, address correct. macOS: allow VRCX-0 under **Local Network**. |
-| Wrong password       | The password in VRCX-0 must match the recorder password.                                                   |
-| Different account    | Log the recorder in with the account used in VRCX-0.                                                       |
-| Stable/beta mismatch | Use `latest` with stable VRCX-0 and `beta` with beta VRCX-0.                                               |
-| Logs                 | `docker compose logs` in the install directory.                                                            |
+| Problem              | Check                                                                                                              |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Recorder unreachable | Container running, firewall allows the port, address correct. macOS: allow VRCX-0-Nanashi under **Local Network**. |
+| Wrong password       | The password in VRCX-0-Nanashi must match the recorder password.                                                   |
+| Different account    | Log the recorder in with the account used in VRCX-0-Nanashi.                                                       |
+| Logs                 | `docker compose logs` in the install directory.                                                                    |
 
 ## Data and security
 
 - Records and the VRChat login are stored in the data directory, encrypted with the password.
 - **Remember password on the recorder** lets it log in again after the session expires; when off, only the session token is kept.
-- Changing the password discards unsynced records, the VRChat login and the webhook. Fill in from VRCX-0 first, then edit `password`, run `docker compose up -d --force-recreate`, connect again in VRCX-0 with the new password and log the recorder in to VRChat again.
-- Records are deleted from the recorder after VRCX-0 has pulled them.
+- Changing the password discards unsynced records, the VRChat login and the webhook. Fill in from VRCX-0-Nanashi first, then edit `password`, run `docker compose up -d --force-recreate`, connect again in VRCX-0-Nanashi with the new password and log the recorder in to VRChat again.
+- Records are deleted from the recorder after VRCX-0-Nanashi has pulled them.
 
 ## Removal
 
-In VRCX-0, choose **Disconnect**: it fills in, logs the recorder out of VRChat and removes the recorder settings. Then run `docker compose down` and delete the install directory.
+In VRCX-0-Nanashi, choose **Disconnect**: it fills in, logs the recorder out of VRChat and removes the recorder settings. Then run `docker compose down` and delete the install directory.
 
 ## License
 

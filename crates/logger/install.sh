@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-COMPOSE_URL="${VRCX0_LOGGER_COMPOSE_URL:-https://raw.githubusercontent.com/Map1en/VRCX-0/master/crates/logger/compose.yaml}"
+COMPOSE_URL="${VRCX0_LOGGER_COMPOSE_URL:-https://raw.githubusercontent.com/NanashiTheNameless/VRCX-0-Nanashi/master/crates/logger/compose.yaml}"
 
 fail() {
     echo "error: $*" >&2

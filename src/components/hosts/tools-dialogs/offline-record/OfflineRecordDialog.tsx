@@ -43,7 +43,7 @@ export function OfflineRecordDialog({
     open,
     onOpenChange
 }: OfflineRecordDialogProps) {
-    const { t, i18n } = useTranslation();
+    const { t } = useTranslation();
     const currentUserId = useRuntimeStore((state) => state.auth.currentUserId);
     const setSystemHostOpen = useRuntimeStore(
         (state) => state.setSystemHostOpen
@@ -155,9 +155,9 @@ export function OfflineRecordDialog({
                         type="button"
                         className="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1 text-xs"
                         onClick={() => {
-                            openExternalLink(
-                                offlineRecordGuideUrl(i18n.language)
-                            ).catch(reportError);
+                            openExternalLink(offlineRecordGuideUrl()).catch(
+                                reportError
+                            );
                         }}
                     >
                         <BookOpenIcon className="size-3.5" />

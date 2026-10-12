@@ -124,19 +124,9 @@ describe('recorder errors', () => {
 });
 
 describe('recorder setup guide', () => {
-    it.each([
-        ['zh-CN', 'README.zh-CN.md'],
-        ['zh-TW', 'README.zh-Hant.md'],
-        ['ja', 'README.ja-JP.md'],
-        ['ko', 'README.ko-KR.md'],
-        ['en', 'README.md'],
-        ['fr', 'README.md']
-    ])(
-        'opens the guide for the %s interface language as %s',
-        (language, file) => {
-            expect(offlineRecordGuideUrl(language)).toBe(
-                `https://github.com/Map1en/VRCX-0/blob/master/crates/logger/${file}`
-            );
-        }
-    );
+    it("opens the guide in this fork's repository", () => {
+        expect(offlineRecordGuideUrl()).toBe(
+            'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/blob/master/crates/logger/README.md'
+        );
+    });
 });
