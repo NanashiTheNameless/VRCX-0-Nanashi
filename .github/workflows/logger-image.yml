@@ -6,7 +6,7 @@ on:
     workflow_dispatch:
         inputs:
             tag:
-                description: Release tag to publish the logger image from, for example v2.32.0-beta.1
+                description: Release tag to publish the logger image from, for example v3.0.0-Nightly-abc1234
                 required: true
                 type: string
     workflow_call:
@@ -35,13 +35,8 @@ jobs:
               run: |
                   version="${TAG#v}"
                   image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/vrcx-0-logger"
-                  if [[ "$version" == *-beta.* ]]; then
-                      channel=beta
-                  else
-                      channel=latest
-                  fi
                   echo "version=$version" >> "$GITHUB_OUTPUT"
-                  echo "tags=$image:$version,$image:$channel" >> "$GITHUB_OUTPUT"
+                  echo "tags=$image:$version,$image:latest" >> "$GITHUB_OUTPUT"
 
             - name: Download logger binaries
               env:

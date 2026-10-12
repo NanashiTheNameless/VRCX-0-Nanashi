@@ -161,7 +161,7 @@ describe('one-command recorder install', { timeout: 30_000 }, () => {
         const run = install(box, {
             answers: [
                 'recorder',
-                'beta',
+                '3.0.0-Nightly-abc1234',
                 '9000',
                 '',
                 '30',
@@ -173,7 +173,7 @@ describe('one-command recorder install', { timeout: 30_000 }, () => {
         const dir = path.join(box.root, 'recorder');
         expect(run.status).toBe(0);
         expect(readSettings(dir)).toEqual({
-            VRCX0_LOGGER_TAG: 'beta',
+            VRCX0_LOGGER_TAG: '3.0.0-Nightly-abc1234',
             VRCX0_LOGGER_PORT: '9000',
             VRCX0_LOGGER_BIND: '0.0.0.0',
             VRCX0_LOGGER_RETENTION_DAYS: '30',
@@ -215,7 +215,7 @@ describe('one-command recorder install', { timeout: 30_000 }, () => {
     it('takes defaults from environment variables when there is no terminal', () => {
         const run = install(sandbox(), {
             env: {
-                VRCX0_LOGGER_TAG: 'beta',
+                VRCX0_LOGGER_TAG: '3.0.0-Nightly-abc1234',
                 VRCX0_LOGGER_PORT: '9100',
                 VRCX0_LOGGER_RETENTION_DAYS: '7',
                 VRCX0_LOGGER_PASSWORD: 'from-the-env'
@@ -224,7 +224,7 @@ describe('one-command recorder install', { timeout: 30_000 }, () => {
 
         expect(run.status).toBe(0);
         expect(readSettings(run.installDir)).toMatchObject({
-            VRCX0_LOGGER_TAG: 'beta',
+            VRCX0_LOGGER_TAG: '3.0.0-Nightly-abc1234',
             VRCX0_LOGGER_PORT: '9100',
             VRCX0_LOGGER_RETENTION_DAYS: '7'
         });
@@ -249,11 +249,13 @@ describe('one-command recorder install', { timeout: 30_000 }, () => {
     });
 
     it('accepts a pinned version as the release channel', () => {
-        const run = install(sandbox(), { answers: ['', '2.32.0-beta.1'] });
+        const run = install(sandbox(), {
+            answers: ['', '3.0.0-Nightly-abc1234']
+        });
 
         expect(run.status).toBe(0);
         expect(readSettings(run.installDir).VRCX0_LOGGER_TAG).toBe(
-            '2.32.0-beta.1'
+            '3.0.0-Nightly-abc1234'
         );
     });
 
@@ -297,7 +299,7 @@ describe('one-command recorder install', { timeout: 30_000 }, () => {
     it('asks again on the next run when the first install could not start', () => {
         const box = sandbox();
         const failed = install(box, {
-            answers: ['', 'beta'],
+            answers: ['', '3.0.0-Nightly-abc1234'],
             env: { STUB_DOCKER_FAIL: 'pull' }
         });
         expect(failed.status).not.toBe(0);
@@ -338,7 +340,15 @@ describe('updating an installed recorder', { timeout: 30_000 }, () => {
     it('keeps the settings and password and only pulls and restarts', () => {
         const box = sandbox();
         const first = install(box, {
-            answers: ['', 'beta', '9000', '', '', '', 'keep-this-pw']
+            answers: [
+                '',
+                '3.0.0-Nightly-abc1234',
+                '9000',
+                '',
+                '',
+                '',
+                'keep-this-pw'
+            ]
         });
         const settings = readSettings(first.installDir);
 
@@ -387,7 +397,7 @@ describe('updating an installed recorder', { timeout: 30_000 }, () => {
         fs.writeFileSync(
             path.join(first.installDir, '.env'),
             [
-                'VRCX0_LOGGER_TAG="beta"',
+                'VRCX0_LOGGER_TAG="3.0.0-Nightly-abc1234"',
                 'VRCX0_LOGGER_PORT="9000"',
                 'VRCX0_LOGGER_BIND=0.0.0.0',
                 ''
@@ -397,7 +407,7 @@ describe('updating an installed recorder', { timeout: 30_000 }, () => {
         const again = install(box, { answers: ['', ''] });
 
         expect(again.status).toBe(0);
-        expect(again.stderr).toContain('[beta]');
+        expect(again.stderr).toContain('[3.0.0-Nightly-abc1234]');
         expect(again.calls).toContain('curl http://127.0.0.1:9000/health');
         expect(
             fs.readFileSync(path.join(again.installDir, '.env'), 'utf8')
@@ -437,7 +447,7 @@ describe('updating an installed recorder', { timeout: 30_000 }, () => {
         install(box);
 
         const failed = install(box, {
-            answers: ['', 'beta'],
+            answers: ['', '3.0.0-Nightly-abc1234'],
             env: { STUB_DOCKER_FAIL: 'pull' }
         });
 

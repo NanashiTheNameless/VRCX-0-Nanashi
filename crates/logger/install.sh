@@ -53,11 +53,11 @@ positive_or_empty() {
 
 check_channel() {
     case "$1" in
-        latest | beta) return ;;
-        *[!0-9a-z.-]*) ;;
+        latest) return ;;
+        *[!0-9A-Za-z.-]*) ;;
         [0-9]*.[0-9]*.[0-9]*) return ;;
     esac
-    fail "the release channel must be latest, beta or a version such as 2.32.0"
+    fail "the release channel must be latest or a version such as 3.0.0-Nightly-abc1234"
 }
 
 setting() {
@@ -106,13 +106,13 @@ if [ -s password ]; then
             "${VRCX0_LOGGER_MAX_STORAGE_MB:-1024}"
     fi
     CURRENT_TAG=$(setting VRCX0_LOGGER_TAG)
-    TAG=$(ask "Release channel: latest (stable), beta or a version" "${CURRENT_TAG:-latest}")
+    TAG=$(ask "Release channel: latest or a version" "${CURRENT_TAG:-latest}")
     check_channel "$TAG"
     cp .env .env.previous
     { tr -d '\r' <.env.previous | grep -v '^VRCX0_LOGGER_TAG=' || true; printf 'VRCX0_LOGGER_TAG=%s\n' "$TAG"; } >.env
     echo "Updating the recorder in $(pwd); other settings stay as they are in .env."
 else
-    TAG=$(ask "Release channel: latest (stable) or beta" "${VRCX0_LOGGER_TAG:-latest}")
+    TAG=$(ask "Release channel: latest or a version" "${VRCX0_LOGGER_TAG:-latest}")
     check_channel "$TAG"
     PORT=$(ask "Port" "${VRCX0_LOGGER_PORT:-8787}")
     case "$PORT" in
