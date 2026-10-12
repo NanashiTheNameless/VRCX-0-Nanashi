@@ -4,6 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { invoke } from '@/platform/tauri/generatedInvoke';
 import { Button } from '@/ui/shadcn/button';
 import { Progress } from '@/ui/shadcn/progress';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@/ui/shadcn/select';
 
 import {
     SettingsHistorySyncAccount,
@@ -98,6 +105,13 @@ export function SettingsHistorySyncPanel({
     const [collectorForever, setCollectorForever] = useState(false);
     const [collectorDays, setCollectorDays] = useState('7');
     const [collectorInterval, setCollectorInterval] = useState(60);
+    const collectorIntervalLabel = (seconds: number) =>
+        t(
+            seconds === 60
+                ? 'view.settings.history_sync.sync_interval_one_minute'
+                : 'view.settings.history_sync.sync_interval_minutes',
+            { minutes: seconds / 60 }
+        );
     const collectorDaysValue = Number(collectorDays);
     const collectorDaysValid =
         Number.isInteger(collectorDaysValue) &&
@@ -370,29 +384,40 @@ export function SettingsHistorySyncPanel({
                             {t('view.settings.history_sync.collector_forever')}
                         </span>
                     </label>
-                    <label className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                         <span>
                             {t('view.settings.history_sync.collector_interval')}
                         </span>
-                        <select
-                            className={INPUT_CLASS + ' max-w-40'}
-                            value={collectorInterval}
-                            onChange={(event) =>
-                                setCollectorInterval(Number(event.target.value))
+                        <Select
+                            value={String(collectorInterval)}
+                            onValueChange={(value) =>
+                                setCollectorInterval(Number(value))
                             }
                         >
-                            {[60, 120, 300, 600, 900].map((seconds) => (
-                                <option key={seconds} value={seconds}>
-                                    {t(
-                                        seconds === 60
-                                            ? 'view.settings.history_sync.sync_interval_one_minute'
-                                            : 'view.settings.history_sync.sync_interval_minutes',
-                                        { minutes: seconds / 60 }
-                                    )}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
+                            <SelectTrigger
+                                size="sm"
+                                aria-label={t(
+                                    'view.settings.history_sync.collector_interval'
+                                )}
+                            >
+                                <SelectValue>
+                                    {(value: string) =>
+                                        collectorIntervalLabel(Number(value))
+                                    }
+                                </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                {[60, 120, 300, 600, 900].map((seconds) => (
+                                    <SelectItem
+                                        key={seconds}
+                                        value={String(seconds)}
+                                    >
+                                        {collectorIntervalLabel(seconds)}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <label className="flex items-start gap-2">
                         <input
                             type="checkbox"
