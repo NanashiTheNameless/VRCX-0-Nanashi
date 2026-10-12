@@ -370,22 +370,22 @@ impl DesktopRuntimeHostState {
         let synced = store::streams::app_settings_list(db, scope)?;
         let synced_keys = synced
             .iter()
-            .map(|(key, _, _)| key.clone())
-            .collect::<std::collections::BTreeSet<_>>();
-        for (key, value, _) in synced {
-            match local.get(&key) {
-                Some(local_value) if local_value != &value => {
+            .map(|(key, _, _)| key.as_str())
+            .collect::<std::collections::HashSet<_>>();
+        for (key, value, _) in &synced {
+            match local.get(key) {
+                Some(local_value) if local_value != value => {
                     let updated_at =
                         chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
-                    store::streams::app_settings_upsert(db, scope, &key, local_value, &updated_at)?;
+                    store::streams::app_settings_upsert(db, scope, key, local_value, &updated_at)?;
                 }
-                None => store::streams::app_settings_remove(db, scope, &key)?,
+                None => store::streams::app_settings_remove(db, scope, key)?,
                 _ => {}
             }
         }
         if allow_new_settings {
             for (key, value) in local {
-                if !synced_keys.contains(&key) {
+                if !synced_keys.contains(key.as_str()) {
                     let updated_at =
                         chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
                     store::streams::app_settings_upsert(db, scope, &key, &value, &updated_at)?;
@@ -402,7 +402,7 @@ impl DesktopRuntimeHostState {
     ) -> Result<bool> {
         let synced = store::streams::app_settings_list(db, scope)?;
         let deleted = store::streams::app_settings_deleted_keys(db, scope)?;
-        let current = self.remote_sync_app_settings()?;
+        let mut current = self.remote_sync_app_settings()?;
         let entries = synced
             .iter()
             .filter(|(key, value, _)| syncable_app_setting(key) && current.get(key) != Some(value))
@@ -413,18 +413,20 @@ impl DesktopRuntimeHostState {
             .collect::<Vec<_>>();
         let mut changed = !entries.is_empty();
         if changed {
+            for entry in &entries {
+                current.insert(entry.key.clone(), entry.value.clone());
+            }
             self.config_set_values(entries)?;
         }
         for key in deleted {
-            if syncable_app_setting(&key) && current.contains_key(&key) {
+            if syncable_app_setting(&key) && current.remove(&key).is_some() {
                 changed |= self.config_remove_value(key)? > 0;
             }
         }
-        let current = self.remote_sync_app_settings()?;
         let synced_keys = synced
             .iter()
             .map(|(key, _, _)| key.as_str())
-            .collect::<std::collections::BTreeSet<_>>();
+            .collect::<std::collections::HashSet<_>>();
         for (key, value) in current {
             if !synced_keys.contains(key.as_str()) {
                 let updated_at =
@@ -490,13 +492,11 @@ impl DesktopRuntimeHostState {
         )
         .await
         .map_err(sync_error)?;
-        if !report.cancelled {
-            if self.remote_sync_app_settings_apply(&db, &stream_scope)? {
-                self.runtime
-                    .desktop_assembly()
-                    .event_bus()
-                    .emit(RemoteSyncSettingsImportedPayload {});
-            }
+        if !report.cancelled && self.remote_sync_app_settings_apply(&db, &stream_scope)? {
+            self.runtime
+                .desktop_assembly()
+                .event_bus()
+                .emit(RemoteSyncSettingsImportedPayload {});
         }
         if report.imported_rows > 0 {
             let owner = OwnerId::new(scope.current_user_id.trim().to_owned());
@@ -792,12 +792,14 @@ impl DesktopRuntimeHostState {
     /// confirming the user wants their VRChat session cookie sent sealed to it.
     pub async fn remote_sync_collector_unlock(
         &self,
-        days: u32,
+        days: Option<u32>,
         interval_seconds: u32,
     ) -> Result<()> {
-        if !(1..=30).contains(&days) || !(60..=900).contains(&interval_seconds) {
+        if days.is_some_and(|days| !(1..=30).contains(&days))
+            || !(60..=900).contains(&interval_seconds)
+        {
             return Err(Error::Custom(
-                "Collector duration must be 1 to 30 days and interval 60 to 900 seconds.".into(),
+                "Collector duration must be 1 to 30 days or forever, and interval 60 to 900 seconds.".into(),
             ));
         }
         let (client, token) = self.remote_sync_session()?;
@@ -829,7 +831,7 @@ impl DesktopRuntimeHostState {
             )
         })?;
         let now = chrono::Utc::now().timestamp_millis();
-        let expires_at = now.saturating_add(i64::from(days) * 24 * 60 * 60 * 1000);
+        let expires_at = days.map(|days| now.saturating_add(i64::from(days) * 24 * 60 * 60 * 1000));
         let payload = serde_json::json!({
             "version": 1,
             "vaultPk": protocol::b64::encode(keys.public().vault_pk.as_bytes()),
@@ -868,7 +870,7 @@ impl DesktopRuntimeHostState {
             "RemoteSync collector",
             now.max(collector.keys_valid_since_ms),
         );
-        signer.expires_at_ms = Some(expires_at);
+        signer.expires_at_ms = expires_at;
         manifest.add_signer(signer);
         let next = manifest.next();
         let sealed_manifest = engine::seal_manifest(&next, &keys).map_err(sync_error)?;

@@ -2480,9 +2480,11 @@
                 "collector_unknown": "unknown",
                 "collector_refresh": "Refresh",
                 "collector_friends": "Friends in snapshot",
-                "collector_warning": "Pushing auth data sends the saved VRChat auth and two-factor cookies, sealed to the collector. The server operator can use them to read your account activity. The collector is read-only and runs for seven days by default.",
+                "collector_warning": "Pushing auth data sends the saved VRChat auth and two-factor cookies, sealed to the collector. The server operator can use them to read your account activity. The collector is read-only and runs for the selected duration, or until manually locked or stopped when Forever is selected.",
+                "collector_duration": "Collector duration (days)",
+                "collector_forever": "Forever (no time limit)",
                 "collector_consent": "I understand and want to unlock or relock the collector.",
-                "collector_unlock": "Push auth data to collector (7 days)",
+                "collector_unlock": "Push auth data to collector",
                 "collector_lock": "Relock now"
             },
             "ai": {

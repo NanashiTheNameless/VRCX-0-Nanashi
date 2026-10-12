@@ -68,6 +68,13 @@ export function SettingsHistorySyncPanel({
     const [lastRun, setLastRun] = useState<SyncRun>();
     const [collector, setCollector] = useState<CollectorSnapshot>();
     const [collectorConsent, setCollectorConsent] = useState(false);
+    const [collectorForever, setCollectorForever] = useState(false);
+    const [collectorDays, setCollectorDays] = useState('7');
+    const collectorDaysValue = Number(collectorDays);
+    const collectorDaysValid =
+        Number.isInteger(collectorDaysValue) &&
+        collectorDaysValue >= 1 &&
+        collectorDaysValue <= 30;
 
     const refresh = useCallback(async () => {
         setStatus(await invoke<SyncStatus>('app__remote_sync_status_get'));
@@ -262,6 +269,35 @@ export function SettingsHistorySyncPanel({
                     <p className="text-muted-foreground">
                         {t('view.settings.history_sync.collector_warning')}
                     </p>
+                    <label className="flex items-center gap-2">
+                        <span>
+                            {t('view.settings.history_sync.collector_duration')}
+                        </span>
+                        <input
+                            className={INPUT_CLASS + ' max-w-24'}
+                            type="number"
+                            min={1}
+                            max={30}
+                            step={1}
+                            value={collectorDays}
+                            disabled={collectorForever}
+                            onChange={(event) =>
+                                setCollectorDays(event.target.value)
+                            }
+                        />
+                    </label>
+                    <label className="flex items-center gap-2">
+                        <input
+                            type="checkbox"
+                            checked={collectorForever}
+                            onChange={(event) =>
+                                setCollectorForever(event.target.checked)
+                            }
+                        />
+                        <span>
+                            {t('view.settings.history_sync.collector_forever')}
+                        </span>
+                    </label>
                     <label className="flex items-start gap-2">
                         <input
                             type="checkbox"
@@ -278,12 +314,21 @@ export function SettingsHistorySyncPanel({
                         <Button
                             type="button"
                             size="sm"
-                            disabled={busy || !collectorConsent}
+                            disabled={
+                                busy ||
+                                !collectorConsent ||
+                                (!collectorForever && !collectorDaysValid)
+                            }
                             onClick={() =>
                                 void run(async () => {
                                     await invoke(
                                         'app__remote_sync_collector_unlock',
-                                        { days: 7, intervalSeconds: 300 }
+                                        {
+                                            days: collectorForever
+                                                ? null
+                                                : collectorDaysValue,
+                                            intervalSeconds: 300
+                                        }
                                     );
                                     setCollectorConsent(false);
                                     await refreshCollector();

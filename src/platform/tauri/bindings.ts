@@ -515,7 +515,7 @@ const generatedCommands = {
         });
     },
     async appRemoteSyncCollectorUnlock(
-        days: number,
+        days: number | null,
         intervalSeconds: number
     ): Promise<null> {
         return await TAURI_INVOKE('app__remote_sync_collector_unlock', {
