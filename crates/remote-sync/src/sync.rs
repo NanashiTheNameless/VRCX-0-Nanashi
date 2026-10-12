@@ -70,7 +70,7 @@ pub trait SyncTransport: Send + Sync {
     fn create_vault(
         &self,
         request: CreateVaultRequest,
-    ) -> impl Future<Output = Result<VaultInfo, Error>> + Send;
+    ) -> impl Future<Output = Result<(), Error>> + Send;
     fn get_manifest(
         &self,
         vault_id: VaultId,
@@ -119,7 +119,7 @@ impl SyncTransport for AuthorizedClient {
         self.client.vaults(&self.token).await
     }
 
-    async fn create_vault(&self, request: CreateVaultRequest) -> Result<VaultInfo, Error> {
+    async fn create_vault(&self, request: CreateVaultRequest) -> Result<(), Error> {
         self.client.create_vault(&self.token, &request).await
     }
 

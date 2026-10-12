@@ -500,13 +500,10 @@ impl RemoteSyncClient {
         &self,
         token: &str,
         request: &CreateVaultRequest,
-    ) -> Result<VaultInfo, Error> {
-        self.send_json(
-            self.client
-                .post(self.endpoint("/v1/vaults"))
-                .bearer_auth(token)
-                .json(request),
-            Policy::sensitive(false),
+    ) -> Result<(), Error> {
+        self.send_empty(
+            self.client.post(self.endpoint("/v1/vaults")).json(request),
+            token,
         )
         .await
     }

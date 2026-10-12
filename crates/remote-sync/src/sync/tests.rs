@@ -71,7 +71,7 @@ impl SyncTransport for FakeServer {
             .collect())
     }
 
-    async fn create_vault(&self, request: CreateVaultRequest) -> Result<VaultInfo, Error> {
+    async fn create_vault(&self, request: CreateVaultRequest) -> Result<(), Error> {
         let info = VaultInfo {
             vault_id: request.vault_id,
             vault_pk: request.vault_pk,
@@ -88,7 +88,7 @@ impl SyncTransport for FakeServer {
                 ..FakeVault::default()
             },
         );
-        Ok(info)
+        Ok(())
     }
 
     async fn get_manifest(&self, vault_id: VaultId) -> Result<(u64, Vec<u8>), Error> {
