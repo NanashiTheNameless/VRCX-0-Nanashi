@@ -21,7 +21,7 @@ It is a Rust + Tauri rewrite of VRCX.
   `vrcx.namelessnanashi.dev/open/...`. World and avatar previews stay in the URL fragment,
   so preview details are not sent to the website. Plain VRChat links remain available.
   The legacy `open.vrcx-0.dev` relay host is not accepted.
-- **History sync (RemoteSync), off by default.** Under Settings > History Sync, pair this PC
+- **History sync (RemoteSync), off by default.** Under Settings > Sync Options, pair this PC
   with a RemoteSync server (the official one or your own) to keep an end-to-end encrypted copy
   of your history there and share it between your PCs. The key is created on your PC, never
   sent to the server, and shown to you as a recovery string. Friend feed, friend log, your own
@@ -31,14 +31,14 @@ It is a Rust + Tauri rewrite of VRCX.
   a deletion on one PC reaches the others. Nothing on the server can delete local history, and
   automatic sync pushes and pulls changes on a configurable 1 to 60 minute interval. You can
   sync non-secret app preferences too; this is on by default and can be changed under Settings >
-  History Sync. Credentials and device-specific paths stay local. You can move the key to another
+  Sync Options. Credentials and device-specific paths stay local. You can move the key to another
   device, see and sign out connected clients, and delete the server
   copy from the same settings page.
 - **Shared world collections on the fork's own service.** A world favorite group can be shared
   as a public page on the RemoteSync website and updated by sharing it again; manage shares on
   the website. This needs a paired RemoteSync account and sends only what the page shows.
   Nothing goes to upstream's `vrcx-0.dev` services.
-- **Server and website checks.** Settings > History Sync shows whether the server is the
+- **Server and website checks.** Settings > Sync Options shows whether the server is the
   official instance and whether its website runs the official unmodified code. Either check
   failing shows a warning that explains the risk; neither blocks use, so self-hosted servers
   keep working.

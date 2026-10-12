@@ -1569,7 +1569,7 @@
                     "listed_description": "Let other people find this collection in the website's public directory. If turned off, anyone with the share link can still view it.",
                     "include_notes": "Include my notes",
                     "include_notes_description": "Copy your local world notes to the shared page as comments. You can edit them later on the website.",
-                    "account_connection": "Shares belong to your RemoteSync account, not your VRChat account. Pair this PC under Settings > History Sync first. Shared collections are public: anyone with the link can read them.",
+                    "account_connection": "Shares belong to your RemoteSync account, not your VRChat account. Pair this PC under Settings > Sync Options first. Shared collections are public: anyone with the link can read them.",
                     "worlds": "{count}/{total} worlds ready",
                     "truncated": "First {cap} worlds only.",
                     "share_url": "Share link",
@@ -2357,10 +2357,10 @@
                 "vr": "VR",
                 "media": "Media",
                 "integrations": "Integrations",
-                "history_sync": "History Sync"
+                "history_sync": "Sync Options"
             },
             "history_sync": {
-                "header": "History Sync",
+                "header": "Sync Options",
                 "description": "RemoteSync keeps an end-to-end encrypted copy of your history and non-secret app preferences on a server so your PCs can share them. It is optional and off by default.",
                 "backend": "History sync",
                 "backend_description": "While this is off, nothing is sent to any sync server.",
