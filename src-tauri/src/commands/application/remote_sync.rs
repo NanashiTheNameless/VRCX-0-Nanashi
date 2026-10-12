@@ -21,7 +21,6 @@ const TRUST_RECHECK_MS: i64 = 24 * 60 * 60 * 1000;
 const DEFAULT_SYNC_INTERVAL_MINUTES: u16 = 10;
 const SYNC_INTERVAL_OPTIONS_MINUTES: [u16; 6] = [1, 5, 10, 15, 30, 60];
 const BACKGROUND_SYNC_CHECK_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60);
-const BACKGROUND_SYNC_ROW_THRESHOLD: usize = 500;
 
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -911,11 +910,7 @@ pub(crate) fn start_background_sync(app: &tauri::AppHandle) {
                     .unwrap_or(DEFAULT_SYNC_INTERVAL_MINUTES);
                 let interval = std::time::Duration::from_secs(u64::from(interval_minutes) * 60);
                 let due = last_sync.elapsed() >= interval;
-                let backlog = state
-                    .runtime_host()
-                    .remote_sync_pending_rows(BACKGROUND_SYNC_ROW_THRESHOLD)
-                    .unwrap_or(0);
-                if due || backlog >= BACKGROUND_SYNC_ROW_THRESHOLD {
+                if due {
                     if let Err(error) = state.runtime_host().remote_sync_run().await {
                         tracing::warn!(%error, "background history sync failed");
                     }

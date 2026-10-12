@@ -29,6 +29,43 @@ const SYNC_SECRET_KEY: &str = "remoteSyncSecret";
 const DEVICE_KEY_KEY: &str = "remoteSyncDeviceKey";
 pub const WEBSITE_ORIGIN_KEY: &str = "remoteSyncWebsiteOrigin";
 const SHARED_COLLECTIONS_KEY: &str = "remoteSyncSharedCollections";
+
+fn saved_vrchat_session_cookies(encoded: &str) -> Option<(Option<String>, Option<String>)> {
+    use vrcx_0_vrchat_client::cookies::{
+        deserialize_cookie_store, deserialize_legacy_cookie_entries,
+    };
+
+    if let Some(store) = deserialize_cookie_store(encoded) {
+        let mut auth = None;
+        let mut two_factor_auth = None;
+        for cookie in store.iter_any().filter(|cookie| !cookie.is_expired()) {
+            let target = match cookie.name() {
+                "auth" => &mut auth,
+                "twoFactorAuth" => &mut two_factor_auth,
+                _ => continue,
+            };
+            if target.is_none() {
+                *target = Some(cookie.value().to_owned());
+            }
+        }
+        return Some((auth, two_factor_auth));
+    }
+
+    let entries = deserialize_legacy_cookie_entries(encoded)?;
+    let mut auth = None;
+    let mut two_factor_auth = None;
+    for cookie in entries {
+        let target = match cookie.name.as_str() {
+            "auth" => &mut auth,
+            "twoFactorAuth" => &mut two_factor_auth,
+            _ => continue,
+        };
+        if target.is_none() {
+            *target = Some(cookie.value);
+        }
+    }
+    Some((auth, two_factor_auth))
+}
 const SHARE_MAX_WORLDS: usize = 500;
 const SHARE_IMAGE_PREFIXES: [&str; 2] = ["https://api.vrchat.cloud/", "https://assets.vrchat.com/"];
 
@@ -784,27 +821,13 @@ impl DesktopRuntimeHostState {
         let db = self.runtime.desktop_assembly().database();
         let cookies = vrcx_0_persistence::cookies::get_default_cookies(db)?
             .ok_or_else(|| Error::Custom("No saved VRChat session is available.".into()))?;
-        let raw = base64::engine::general_purpose::STANDARD
-            .decode(cookies)
-            .map_err(|_| Error::Custom("The saved VRChat session could not be read.".into()))?;
-        let entries: Vec<serde_json::Value> = serde_json::from_slice(&raw)
-            .map_err(|_| Error::Custom("The saved VRChat session could not be read.".into()))?;
-        let cookie = |name: &str| {
-            entries
-                .iter()
-                .find(|entry| entry.get("Name").and_then(serde_json::Value::as_str) == Some(name))
-                .and_then(|entry| entry.get("Value"))
-                .and_then(serde_json::Value::as_str)
-                .map(str::to_owned)
-        };
-        let auth = cookie("auth")
-            .filter(|value| !value.is_empty())
-            .ok_or_else(|| {
-                Error::Custom(
-                    "The saved VRChat session has no auth cookie. Sign in again first.".into(),
-                )
-            })?;
-        let two_factor_auth = cookie(" twoFactorAuth").or_else(|| cookie("twoFactorAuth"));
+        let (auth, two_factor_auth) = saved_vrchat_session_cookies(&cookies)
+            .ok_or_else(|| Error::Custom("The saved VRChat session could not be read.".into()))?;
+        let auth = auth.filter(|value| !value.is_empty()).ok_or_else(|| {
+            Error::Custom(
+                "The saved VRChat session has no auth cookie. Sign in again first.".into(),
+            )
+        })?;
         let now = chrono::Utc::now().timestamp_millis();
         let expires_at = now.saturating_add(i64::from(days) * 24 * 60 * 60 * 1000);
         let payload = serde_json::json!({
