@@ -4,6 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { commands } from '@/platform/tauri/bindings';
 import { invoke } from '@/platform/tauri/generatedInvoke';
 import { Button } from '@/ui/shadcn/button';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@/ui/shadcn/select';
 import { Switch } from '@/ui/shadcn/switch';
 
 import { SettingsCard } from '../SettingsCard';
@@ -57,6 +64,11 @@ type WebsiteVerification = {
     detail: string;
 };
 
+type DedupeDevices = {
+    devices: { keyId: string; label: string }[];
+    selectedDeviceKeyId: string | null;
+};
+
 const OFFICIAL_API = 'https://vrcx-api.namelessnanashi.dev';
 const OFFICIAL_WEBSITE = 'https://vrcx.namelessnanashi.dev';
 
@@ -65,6 +77,7 @@ export function SettingsHistorySyncTab() {
     const [settings, setSettings] = useState<SettingsSnapshot>();
     const [capabilities, setCapabilities] = useState<Capabilities>();
     const [account, setAccount] = useState<Account>();
+    const [dedupeDevices, setDedupeDevices] = useState<DedupeDevices>();
     const [apiOrigin, setApiOrigin] = useState(OFFICIAL_API);
     const [websiteOrigin, setWebsiteOrigin] = useState(OFFICIAL_WEBSITE);
     const [syncIntervalMinutes, setSyncIntervalMinutes] = useState(10);
@@ -97,12 +110,14 @@ export function SettingsHistorySyncTab() {
         if (snapshot.backend !== 'remotesync') {
             setCapabilities(undefined);
             setAccount(undefined);
+            setDedupeDevices(undefined);
             return;
         }
 
         if (!snapshot.paired) {
             setCapabilities(undefined);
             setAccount(undefined);
+            setDedupeDevices(undefined);
             return;
         }
 
@@ -114,6 +129,9 @@ export function SettingsHistorySyncTab() {
         void invoke<Account>('app__remote_sync_account_get')
             .then(setAccount)
             .catch(() => setAccount(undefined));
+        void invoke<DedupeDevices>('app__remote_sync_dedupe_devices_get')
+            .then(setDedupeDevices)
+            .catch(() => setDedupeDevices(undefined));
     }, []);
 
     useEffect(() => {
@@ -253,11 +271,29 @@ export function SettingsHistorySyncTab() {
         }
     }
 
+    async function selectDedupeDevice(keyId: string) {
+        setBusy(true);
+        setError(undefined);
+        try {
+            await invoke('app__remote_sync_dedupe_device_set', { keyId });
+            setDedupeDevices((previous) =>
+                previous
+                    ? { ...previous, selectedDeviceKeyId: keyId }
+                    : previous
+            );
+        } catch (cause) {
+            setError(cause instanceof Error ? cause.message : String(cause));
+        } finally {
+            setBusy(false);
+        }
+    }
+
     async function signOut() {
         setBusy(true);
         try {
             await invoke('app__remote_sync_sign_out');
             setAccount(undefined);
+            setDedupeDevices(undefined);
             setSettings((previous) =>
                 previous ? { ...previous, paired: false } : previous
             );
@@ -309,27 +345,47 @@ export function SettingsHistorySyncTab() {
                         )}
                     >
                         <div className="flex items-center gap-2">
-                            <select
-                                className="bg-background h-9 rounded-md border px-3 text-sm"
-                                value={syncIntervalMinutes}
+                            <Select
+                                value={String(syncIntervalMinutes)}
                                 disabled={busy}
-                                onChange={(event) =>
-                                    setSyncIntervalMinutes(
-                                        Number(event.target.value)
-                                    )
+                                onValueChange={(value) =>
+                                    setSyncIntervalMinutes(Number(value))
                                 }
                             >
-                                {[1, 5, 10, 15, 30, 60].map((minutes) => (
-                                    <option key={minutes} value={minutes}>
-                                        {t(
-                                            minutes === 1
-                                                ? 'view.settings.history_sync.sync_interval_one_minute'
-                                                : 'view.settings.history_sync.sync_interval_minutes',
-                                            { minutes }
-                                        )}
-                                    </option>
-                                ))}
-                            </select>
+                                <SelectTrigger
+                                    size="sm"
+                                    aria-label={t(
+                                        'view.settings.history_sync.sync_interval'
+                                    )}
+                                >
+                                    <SelectValue>
+                                        {(value: string) => {
+                                            const minutes = Number(value);
+                                            return t(
+                                                minutes === 1
+                                                    ? 'view.settings.history_sync.sync_interval_one_minute'
+                                                    : 'view.settings.history_sync.sync_interval_minutes',
+                                                { minutes }
+                                            );
+                                        }}
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {[1, 5, 10, 15, 30, 60].map((minutes) => (
+                                        <SelectItem
+                                            key={minutes}
+                                            value={String(minutes)}
+                                        >
+                                            {t(
+                                                minutes === 1
+                                                    ? 'view.settings.history_sync.sync_interval_one_minute'
+                                                    : 'view.settings.history_sync.sync_interval_minutes',
+                                                { minutes }
+                                            )}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                             <Button
                                 type="button"
                                 variant="outline"
@@ -347,6 +403,44 @@ export function SettingsHistorySyncTab() {
                                 )}
                             </Button>
                         </div>
+                    </Field>
+                    <Field
+                        label={t('view.settings.history_sync.dedupe_device')}
+                        description={t(
+                            'view.settings.history_sync.dedupe_device_description'
+                        )}
+                    >
+                        <Select
+                            value={dedupeDevices?.selectedDeviceKeyId ?? ''}
+                            disabled={busy || !dedupeDevices?.devices.length}
+                            onValueChange={(keyId) => {
+                                if (keyId) void selectDedupeDevice(keyId);
+                            }}
+                        >
+                            <SelectTrigger
+                                size="sm"
+                                aria-label={t(
+                                    'view.settings.history_sync.dedupe_device'
+                                )}
+                            >
+                                <SelectValue
+                                    placeholder={t(
+                                        'view.settings.history_sync.dedupe_device_empty'
+                                    )}
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {dedupeDevices?.devices.map((device) => (
+                                    <SelectItem
+                                        key={device.keyId}
+                                        value={device.keyId}
+                                    >
+                                        {device.label} (
+                                        {device.keyId.slice(0, 6)})
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </Field>
                     <Field
                         label={t('view.settings.history_sync.sync_settings')}
@@ -651,6 +745,13 @@ export function SettingsHistorySyncTab() {
                             collectorAllowed={
                                 account?.collectorAllowed ?? false
                             }
+                            onSyncComplete={() => {
+                                void invoke<DedupeDevices>(
+                                    'app__remote_sync_dedupe_devices_get'
+                                )
+                                    .then(setDedupeDevices)
+                                    .catch(() => setDedupeDevices(undefined));
+                            }}
                         />
                     ) : null}
                 </SettingsCard>

@@ -612,25 +612,37 @@ pub fn app_settings_remove(
     db: &DatabaseService,
     scope: &StreamScope,
     key: &str,
+    deleted_at_ms: i64,
 ) -> Result<(), Error> {
-    let table = scope.table_name(&StreamSpec {
-        name: "app_settings",
-        table: StreamTable::User("remote_sync_app_settings"),
-        key: &["key"],
-        time: "",
-        slack: false,
-    });
-    db.execute_non_query(
-        &format!("DELETE FROM {} WHERE key = @key", quote(&table)),
-        &ParamsBuilder::new().set("key", key).build(),
-    )?;
+    let spec = state_spec("app_settings").expect("app settings is a state stream");
+    let table = scope.table_name(&spec.as_stream());
+    let params = ParamsBuilder::new()
+        .set("stream", table.as_str())
+        .set("owner", tombstone_owner(scope, &spec))
+        .set(
+            "row_key",
+            Value::Array(vec![Value::String(key.to_owned())]).to_string(),
+        )
+        .set("deleted_at", deleted_at_ms)
+        .build();
+    db.write_transaction(|tx| {
+        tx.execute_non_query(
+            &format!("DELETE FROM {} WHERE key = @key", quote(&table)),
+            &ParamsBuilder::new().set("key", key).build(),
+        )?;
+        tx.execute_non_query(
+            "INSERT INTO remote_sync_tombstone (stream, owner_id, row_key, deleted_at_ms) VALUES (@stream, @owner, @row_key, @deleted_at) ON CONFLICT (stream, owner_id, row_key) DO UPDATE SET deleted_at_ms = excluded.deleted_at_ms",
+            &params,
+        )?;
+        Ok(())
+    })?;
     Ok(())
 }
 
 pub fn app_settings_deleted_keys(
     db: &DatabaseService,
     scope: &StreamScope,
-) -> Result<Vec<String>, Error> {
+) -> Result<Vec<(String, i64)>, Error> {
     let table = scope.table_name(&StreamSpec {
         name: "app_settings",
         table: StreamTable::User("remote_sync_app_settings"),
@@ -639,13 +651,18 @@ pub fn app_settings_deleted_keys(
         slack: false,
     });
     let rows = db.execute(
-        "SELECT row_key FROM remote_sync_tombstone WHERE stream = @stream AND owner_id = 0",
+        "SELECT row_key, deleted_at_ms FROM remote_sync_tombstone WHERE stream = @stream AND owner_id = 0",
         &ParamsBuilder::new().set("stream", table).build(),
     )?;
     Ok(rows
         .iter()
-        .filter_map(|row| serde_json::from_str::<Vec<String>>(&row_string(row, 0)).ok())
-        .filter_map(|key| key.into_iter().next())
+        .filter_map(|row| {
+            let key = serde_json::from_str::<Vec<String>>(&row_string(row, 0))
+                .ok()?
+                .into_iter()
+                .next()?;
+            Some((key, row_i64(row, 1)))
+        })
         .collect())
 }
 
@@ -679,7 +696,7 @@ fn ensure_tombstone_triggers(db: &DatabaseService, scope: &StreamScope) -> Resul
             };
             for sql in [
                 format!(
-                    "CREATE TRIGGER IF NOT EXISTS {} AFTER DELETE ON {} BEGIN INSERT OR REPLACE INTO remote_sync_tombstone (stream, owner_id, row_key, deleted_at_ms) VALUES ('{literal}', {}, json_array({}), CAST(strftime('%s', 'now') AS INTEGER) * 1000); END",
+                    "CREATE TRIGGER IF NOT EXISTS {} AFTER DELETE ON {} BEGIN INSERT INTO remote_sync_tombstone (stream, owner_id, row_key, deleted_at_ms) VALUES ('{literal}', {}, json_array({}), CAST(strftime('%s', 'now') AS INTEGER) * 1000) ON CONFLICT (stream, owner_id, row_key) DO UPDATE SET deleted_at_ms = MAX(remote_sync_tombstone.deleted_at_ms, excluded.deleted_at_ms); END",
                     quote(&format!("remote_sync_deleted_{table}")),
                     quote(&table),
                     owner_value(spec.table, "OLD"),

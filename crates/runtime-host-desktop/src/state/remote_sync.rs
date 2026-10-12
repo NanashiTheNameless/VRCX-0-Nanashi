@@ -237,6 +237,34 @@ fn sync_error(error: impl std::fmt::Display) -> Error {
     Error::Custom(error.to_string())
 }
 
+fn sync_timestamp_ms(timestamp: &str) -> Option<i64> {
+    chrono::DateTime::parse_from_rfc3339(timestamp)
+        .ok()
+        .map(|time| time.timestamp_millis())
+}
+
+fn sync_timestamp(ms: i64) -> String {
+    chrono::DateTime::from_timestamp_millis(ms)
+        .unwrap_or_else(chrono::Utc::now)
+        .to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+}
+
+fn local_setting_change_time(
+    db: &vrcx_0_persistence::DatabaseService,
+    key: &str,
+) -> Result<Option<i64>> {
+    vrcx_0_persistence::config::config_local_change_time(db, key).map_err(sync_error)
+}
+
+fn local_setting_change_time_set(
+    db: &vrcx_0_persistence::DatabaseService,
+    key: &str,
+    changed_at_ms: i64,
+) -> Result<()> {
+    vrcx_0_persistence::config::config_local_change_time_set(db, key, changed_at_ms)
+        .map_err(sync_error)
+}
+
 fn syncable_app_setting(key: &str) -> bool {
     let key = key.trim().to_ascii_lowercase();
     let Some(name) = key.strip_prefix("config:vrcx_") else {
@@ -387,29 +415,58 @@ impl DesktopRuntimeHostState {
     ) -> Result<()> {
         let local = self.remote_sync_app_settings()?;
         let synced = store::streams::app_settings_list(db, scope)?;
-        let synced_keys = synced
+        let deleted = store::streams::app_settings_deleted_keys(db, scope)?;
+        let synced_by_key = synced
             .iter()
-            .map(|(key, _, _)| key.as_str())
-            .collect::<std::collections::HashSet<_>>();
-        for (key, value, _) in &synced {
+            .map(|(key, value, updated_at)| (key.as_str(), (value.as_str(), updated_at.as_str())))
+            .collect::<std::collections::HashMap<_, _>>();
+        let deleted_by_key = deleted
+            .iter()
+            .map(|(key, deleted_at)| (key.as_str(), *deleted_at))
+            .collect::<std::collections::HashMap<_, _>>();
+
+        for (key, value, updated_at) in &synced {
+            let remote_ms = sync_timestamp_ms(updated_at).unwrap_or_default();
+            let local_ms = local_setting_change_time(db, key)?;
             match local.get(key) {
                 Some(local_value) if local_value != value => {
-                    let updated_at =
-                        chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
-                    store::streams::app_settings_upsert(db, scope, key, local_value, &updated_at)?;
+                    if local_ms.is_some_and(|changed_at| changed_at > remote_ms) {
+                        store::streams::app_settings_upsert(
+                            db,
+                            scope,
+                            key,
+                            local_value,
+                            &sync_timestamp(local_ms.unwrap_or(remote_ms)),
+                        )?;
+                    }
                 }
-                None => store::streams::app_settings_remove(db, scope, key)?,
+                None if local_ms.is_some_and(|changed_at| changed_at > remote_ms) => {
+                    store::streams::app_settings_remove(
+                        db,
+                        scope,
+                        key,
+                        local_ms.unwrap_or(remote_ms),
+                    )?;
+                }
                 _ => {}
             }
         }
-        if allow_new_settings {
-            for (key, value) in local {
-                if !synced_keys.contains(key.as_str()) {
-                    let updated_at =
-                        chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
-                    store::streams::app_settings_upsert(db, scope, &key, &value, &updated_at)?;
-                }
+
+        for (key, value) in &local {
+            if synced_by_key.contains_key(key.as_str()) {
+                continue;
             }
+            let local_ms = local_setting_change_time(db, key)?;
+            if let Some(deleted_at) = deleted_by_key.get(key.as_str()) {
+                if local_ms.is_none_or(|changed_at| changed_at <= *deleted_at) {
+                    continue;
+                }
+            } else if !allow_new_settings && local_ms.is_none() {
+                continue;
+            }
+            let updated_at =
+                sync_timestamp(local_ms.unwrap_or_else(|| chrono::Utc::now().timestamp_millis()));
+            store::streams::app_settings_upsert(db, scope, key, value, &updated_at)?;
         }
         Ok(())
     }
@@ -422,35 +479,88 @@ impl DesktopRuntimeHostState {
         let synced = store::streams::app_settings_list(db, scope)?;
         let deleted = store::streams::app_settings_deleted_keys(db, scope)?;
         let mut current = self.remote_sync_app_settings()?;
-        let entries = synced
-            .iter()
-            .filter(|(key, value, _)| syncable_app_setting(key) && current.get(key) != Some(value))
-            .map(|(key, value, _)| crate::local_data::ConfigWriteEntry {
-                key: key.clone(),
-                value: value.clone(),
-            })
-            .collect::<Vec<_>>();
-        let mut changed = !entries.is_empty();
-        if changed {
-            for entry in &entries {
-                current.insert(entry.key.clone(), entry.value.clone());
+        let mut changed = false;
+        for (key, value, updated_at) in &synced {
+            if !syncable_app_setting(key) {
+                continue;
             }
-            self.config_set_values(entries)?;
+            let remote_ms = sync_timestamp_ms(updated_at).unwrap_or_default();
+            let local_ms = local_setting_change_time(db, key)?;
+            if let Some(local_value) = current.get(key) {
+                if local_value != value && local_ms.is_some_and(|changed_at| changed_at > remote_ms)
+                {
+                    store::streams::app_settings_upsert(
+                        db,
+                        scope,
+                        key,
+                        local_value,
+                        &sync_timestamp(local_ms.unwrap_or(remote_ms)),
+                    )?;
+                    continue;
+                }
+                if local_value != value {
+                    self.config_set_values(vec![crate::local_data::ConfigWriteEntry {
+                        key: key.clone(),
+                        value: value.clone(),
+                    }])?;
+                    current.insert(key.clone(), value.clone());
+                    changed = true;
+                }
+            } else {
+                self.config_set_values(vec![crate::local_data::ConfigWriteEntry {
+                    key: key.clone(),
+                    value: value.clone(),
+                }])?;
+                current.insert(key.clone(), value.clone());
+                changed = true;
+            }
+            local_setting_change_time_set(db, key, remote_ms)?;
         }
-        for key in deleted {
-            if syncable_app_setting(&key) && current.remove(&key).is_some() {
-                changed |= self.config_remove_value(key)? > 0;
+
+        for (key, deleted_at_ms) in &deleted {
+            if !syncable_app_setting(key) {
+                continue;
             }
+            let local_ms = local_setting_change_time(db, key)?;
+            if local_ms.is_some_and(|changed_at| changed_at > *deleted_at_ms) {
+                if let Some(value) = current.get(key) {
+                    store::streams::app_settings_upsert(
+                        db,
+                        scope,
+                        key,
+                        value,
+                        &sync_timestamp(local_ms.unwrap_or(*deleted_at_ms)),
+                    )?;
+                }
+                continue;
+            }
+            if current.remove(key).is_some() {
+                changed |= self.config_remove_value(key.clone())? > 0;
+            }
+            local_setting_change_time_set(db, key, *deleted_at_ms)?;
         }
         let synced_keys = synced
             .iter()
             .map(|(key, _, _)| key.as_str())
             .collect::<std::collections::HashSet<_>>();
+        let deleted_keys = deleted
+            .iter()
+            .map(|(key, _)| key.as_str())
+            .collect::<std::collections::HashSet<_>>();
         for (key, value) in current {
-            if !synced_keys.contains(key.as_str()) {
-                let updated_at =
-                    chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
-                store::streams::app_settings_upsert(db, scope, &key, &value, &updated_at)?;
+            if syncable_app_setting(&key)
+                && !synced_keys.contains(key.as_str())
+                && !deleted_keys.contains(key.as_str())
+            {
+                let changed_at = local_setting_change_time(db, &key)?
+                    .unwrap_or_else(|| chrono::Utc::now().timestamp_millis());
+                store::streams::app_settings_upsert(
+                    db,
+                    scope,
+                    &key,
+                    &value,
+                    &sync_timestamp(changed_at),
+                )?;
             }
         }
         Ok(changed)
@@ -726,6 +836,78 @@ impl DesktopRuntimeHostState {
     pub async fn remote_sync_clients(&self) -> Result<Vec<vrcx_0_remote_sync::ClientInfo>> {
         let (client, token) = self.remote_sync_session()?;
         client.clients(&token).await.map_err(sync_error)
+    }
+
+    pub async fn remote_sync_dedupe_devices_get(
+        &self,
+    ) -> Result<(Vec<(String, String)>, Option<String>)> {
+        let (client, token) = self.remote_sync_session()?;
+        let (vault_id, state) = self.remote_sync_current_vault()?;
+        let manifest = self
+            .remote_sync_manifest(&client, &token, vault_id, &state)
+            .await?;
+        let mut devices = manifest
+            .signers
+            .iter()
+            .filter(|signer| signer.kind == protocol::manifest::SignerKind::Device)
+            .map(|signer| (signer.key_id.clone(), signer.label.clone()))
+            .collect::<Vec<_>>();
+        devices.sort_by(|left, right| left.1.cmp(&right.1).then_with(|| left.0.cmp(&right.0)));
+        Ok((devices, manifest.dedupe_device_key_id))
+    }
+
+    pub async fn remote_sync_dedupe_device_set(&self, key_id: String) -> Result<()> {
+        let _running = self.remote_sync.running.lock().await;
+        let (client, token) = self.remote_sync_session()?;
+        let (vault_id, state) = self.remote_sync_current_vault()?;
+        let account = client.account(&token).await.map_err(sync_error)?;
+        if !account.sync_allowed {
+            return Err(Error::Custom(
+                "RemoteSync was disabled for this account by an administrator.".into(),
+            ));
+        }
+        for _ in 0..3 {
+            let mut manifest = self
+                .remote_sync_manifest(&client, &token, vault_id, &state)
+                .await?;
+            if !manifest.signers.iter().any(|signer| {
+                signer.key_id == key_id && signer.kind == protocol::manifest::SignerKind::Device
+            }) {
+                return Err(Error::Custom(
+                    "Choose a device that is currently paired with this vault.".into(),
+                ));
+            }
+            if manifest.dedupe_device_key_id.as_deref() == Some(key_id.as_str()) {
+                return Ok(());
+            }
+            let previous_seq = manifest.manifest_seq;
+            manifest.manifest_seq += 1;
+            manifest.dedupe_device_key_id = Some(key_id.clone());
+            let secret = self
+                .remote_sync_secret()?
+                .ok_or_else(|| Error::Custom("The RemoteSync encryption key is missing.".into()))?;
+            let keys = protocol::keys::VaultKeys::derive(&secret, vault_id);
+            let blob = engine::seal_manifest(&manifest, &keys).map_err(sync_error)?;
+            match client
+                .put_manifest(&token, vault_id, manifest.manifest_seq, previous_seq, blob)
+                .await
+            {
+                Ok(()) => {
+                    store::manifest_seq_advance(
+                        self.runtime.desktop_assembly().database(),
+                        &state.vault,
+                        manifest.manifest_seq,
+                    )?;
+                    return Ok(());
+                }
+                Err(vrcx_0_remote_sync::Error::Api { code, .. })
+                    if code == protocol::api::codes::MANIFEST_SEQ_CONFLICT => {}
+                Err(error) => return Err(sync_error(error)),
+            }
+        }
+        Err(Error::Custom(
+            "The vault manifest kept changing; try selecting the device again.".into(),
+        ))
     }
 
     /// Signs other clients out. The server only allows this right after a

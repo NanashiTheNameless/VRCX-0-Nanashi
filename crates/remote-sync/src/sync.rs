@@ -15,7 +15,7 @@ use vrcx_0_nanashi_website_protocol::{
     chunk::{ChunkBody, ChunkDraft, ChunkKind, CoveragePeriod, SignerLookup},
     ids::{ChunkId, SourceId, VaultId},
     keys::{SignerKey, VaultKeys},
-    manifest::{Manifest, ManifestSubject, RetentionSettings, SignerEntry, SignerKind},
+    manifest::{Manifest, ManifestSubject, SignerEntry, SignerKind},
     secret::SyncSecret,
 };
 use vrcx_0_persistence::remote_sync::{
@@ -33,7 +33,9 @@ use crate::{engine, Error, RemoteSyncClient};
 
 const CHUNK_ROW_LIMIT: usize = 2000;
 const CHUNK_BYTE_LIMIT: usize = 1024 * 1024;
-const PULL_BATCH: u16 = 200;
+// The server caps pages at 500 chunks and 16 MiB. Use the full chunk limit to
+// reduce round trips when catching up after a long offline period.
+const PULL_BATCH: u16 = 500;
 const MANIFEST_ATTEMPTS: usize = 3;
 
 /// Number of locally recorded rows waiting to be uploaded, capped at the
@@ -188,6 +190,8 @@ pub struct SyncReport {
     pub imported_rows: u64,
     pub imported_streams: Vec<String>,
     pub matched_rows: u64,
+    /// Rows already present locally that arrived from another paired device.
+    pub dedupe_candidates: u64,
     pub gaps: u64,
     pub unknown_streams: Vec<String>,
     pub invalid_rows: u64,
@@ -333,7 +337,9 @@ async fn ensure_manifest<T: SyncTransport>(
         if let Some(manifest) = &current {
             store::manifest_seq_advance(db, &vault.reference, manifest.manifest_seq)
                 .map_err(storage)?;
-            if manifest.signer(&signer.key_id(), now_ms()).is_some() {
+            if manifest.v == vrcx_0_nanashi_website_protocol::manifest::VERSION
+                && manifest.signer(&signer.key_id(), now_ms()).is_some()
+            {
                 return Ok(manifest.clone());
             }
         }
@@ -347,6 +353,9 @@ async fn ensure_manifest<T: SyncTransport>(
                 }),
             ),
         };
+        if current.is_none() {
+            next.dedupe_device_key_id = Some(signer.key_id());
+        }
         next.add_signer(SignerEntry::new(
             &signer.public(),
             SignerKind::Device,
@@ -493,7 +502,6 @@ struct CompactionJournal {
     replaces_up_to_seq: u64,
     chunks: Vec<PendingChunk>,
     dropped_rows: u64,
-    retention: RetentionSettings,
 }
 
 struct CompactionJournalContext<'a> {
@@ -503,8 +511,6 @@ struct CompactionJournalContext<'a> {
     signer: &'a SignerKey,
     identity: &'a SyncIdentity,
     replaces_up_to_seq: u64,
-    retention: RetentionSettings,
-    size_target: Option<u64>,
 }
 
 fn build_compaction_journal(
@@ -517,97 +523,26 @@ fn build_compaction_journal(
         signer,
         identity,
         replaces_up_to_seq,
-        retention,
-        size_target,
     } = context;
     let vault_ref = &vault.reference;
     let vault_id = vault.id;
     let source_id = vault.source_id;
     let keys = &vault.keys;
-    let cutoff_ms = retention
-        .max_age_days
-        .map(|days| now_ms().saturating_sub(i64::from(days).saturating_mul(86_400_000)));
     let mut streams = Vec::<(String, Vec<serde_json::Value>)>::new();
-    let mut history = Vec::<(i64, usize, serde_json::Value)>::new();
-    let mut estimated_bytes = 0u64;
-    let mut age_dropped_rows = 0u64;
     for spec in ROW_STREAMS {
         let rows = export_rows_for_compaction(db, scope, spec).map_err(storage)?;
-        for row in rows {
-            let bytes = serde_json::to_vec(&row).map_or(0, |json| json.len());
-            let at = row_time_ms(&row, spec.time).unwrap_or(i64::MAX);
-            if cutoff_ms.is_some_and(|cutoff| at != i64::MAX && at < cutoff) {
-                age_dropped_rows += 1;
-                continue;
-            }
-            estimated_bytes = estimated_bytes.saturating_add(bytes as u64);
-            history.push((
-                at,
-                streams.len(),
-                serde_json::json!({"stream": spec.name, "row": row, "bytes": bytes}),
-            ));
-        }
+        streams.push((spec.name.to_owned(), rows));
     }
     for spec in STATE_STREAMS {
         let exported = export_state(db, scope, spec).map_err(storage)?;
-        estimated_bytes = estimated_bytes.saturating_add(
-            exported
-                .rows
-                .iter()
-                .chain(exported.deleted.iter())
-                .map(|row| serde_json::to_vec(row).map_or(0, |json| json.len()) as u64)
-                .sum::<u64>(),
-        );
         streams.push((spec.name.to_owned(), exported.rows));
         if !exported.deleted.is_empty() {
             streams.push((format!("{}{DELETED_SUFFIX}", spec.name), exported.deleted));
         }
     }
 
-    let mut kept_history = BTreeMap::<String, Vec<serde_json::Value>>::new();
-    for spec in ROW_STREAMS {
-        kept_history.insert(spec.name.to_owned(), Vec::new());
-    }
-    // The byte target is an estimate of the replacement payload. Remove the
-    // oldest history first; mutable state is always retained.
-    history.sort_by_key(|(at, _, _)| *at);
-    let mut dropped_bytes = 0u64;
-    let mut dropped_rows = age_dropped_rows;
-    let mut remove = vec![false; history.len()];
-    if let Some(target) = size_target {
-        for (index, (at, _, item)) in history.iter().enumerate() {
-            if *at == i64::MAX {
-                continue;
-            }
-            if estimated_bytes.saturating_sub(dropped_bytes) <= target {
-                break;
-            }
-            dropped_bytes = dropped_bytes.saturating_add(item["bytes"].as_u64().unwrap_or(0));
-            dropped_rows += 1;
-            remove[index] = true;
-        }
-    }
-    for (index, (_, _, item)) in history.into_iter().enumerate() {
-        if remove[index] {
-            continue;
-        }
-        if let (Some(name), Some(row)) = (item["stream"].as_str(), item.get("row")) {
-            kept_history
-                .entry(name.to_owned())
-                .or_default()
-                .push(row.clone());
-        }
-    }
-    for (name, rows) in kept_history {
-        if !rows.is_empty() {
-            streams.push((name, rows));
-        }
-    }
-    if streams.is_empty() {
-        streams.push((ROW_STREAMS[0].name.to_owned(), Vec::new()));
-    }
-    // A tiny known-stream chunk lets a full vault compact its old payload
-    // before the larger replacement snapshots are uploaded.
+    // Keep a known stream in the replacement set even when the vault has no
+    // rows, so the server can verify and atomically compact the old range.
     streams.insert(0, (ROW_STREAMS[0].name.to_owned(), Vec::new()));
 
     let state = store::vault_state_get(db, vault_ref)
@@ -639,7 +574,7 @@ fn build_compaction_journal(
                 created_at_ms: now_ms(),
                 app_version: identity.app_version.clone(),
                 coverage: Vec::new(),
-                dropped_rows: if chunks.is_empty() { dropped_rows } else { 0 },
+                dropped_rows: 0,
                 body,
             };
             let (chunk_id, blob) = engine::seal_chunk(&draft, signer, keys)?;
@@ -657,14 +592,13 @@ fn build_compaction_journal(
     }
     if chunks.len() > 10_000 {
         return Err(Error::Storage(
-            "retention would require more than 10000 replacement chunks".into(),
+            "deduplication would require more than 10000 replacement chunks".into(),
         ));
     }
     Ok(CompactionJournal {
         replaces_up_to_seq,
         chunks,
-        dropped_rows,
-        retention,
+        dropped_rows: 0,
     })
 }
 
@@ -672,38 +606,30 @@ async fn finish_compaction<T: SyncTransport>(
     transport: &T,
     db: &Arc<DatabaseService>,
     vault: &Vault,
+    signer: &SignerKey,
     journal: &CompactionJournal,
 ) -> Result<(), Error> {
-    let mut uploaded = Vec::new();
+    let (manifest_seq, manifest_blob) = transport.get_manifest(vault.id).await?;
+    let highest = store::vault_state_get(db, &vault.reference)
+        .map_err(storage)?
+        .map(|state| state.highest_manifest_seq);
+    let current = engine::open_manifest(&manifest_blob, manifest_seq, &vault.keys, highest)?;
+    if current.dedupe_device_key_id.as_deref() != Some(signer.key_id().as_str()) {
+        return Err(Error::Transport(
+            "this device is no longer selected to deduplicate the server".into(),
+        ));
+    }
+    let mut uploaded = Vec::with_capacity(journal.chunks.len());
     for chunk in &journal.chunks {
         let blob = STANDARD
             .decode(&chunk.blob_base64)
             .map_err(|error| Error::Storage(error.to_string()))?;
         let chunk_id = chunk.chunk_id.parse().map_err(integrity)?;
-        match transport
-            .upload_chunk(vault.id, chunk_id, blob.clone())
-            .await
-        {
-            Ok(_) => uploaded.push(chunk_id),
-            Err(error) if is_api_error(&error, codes::QUOTA_EXCEEDED) && !uploaded.is_empty() => {
-                update_compacted_manifest(transport, db, vault, journal.replaces_up_to_seq).await?;
-                transport
-                    .compact_vault(
-                        vault.id,
-                        CompactRequest {
-                            replaces_up_to_seq: journal.replaces_up_to_seq,
-                            chunk_ids: uploaded.clone(),
-                        },
-                    )
-                    .await?;
-                transport.upload_chunk(vault.id, chunk_id, blob).await?;
-                uploaded.push(chunk_id);
-            }
-            Err(error) => return Err(error),
-        }
+        transport.upload_chunk(vault.id, chunk_id, blob).await?;
+        uploaded.push(chunk_id);
     }
 
-    update_compacted_manifest(transport, db, vault, journal.replaces_up_to_seq).await?;
+    update_compacted_manifest(transport, db, vault, signer, journal.replaces_up_to_seq).await?;
     transport
         .compact_vault(
             vault.id,
@@ -718,23 +644,6 @@ async fn finish_compaction<T: SyncTransport>(
     }
     store::pull_cursor_advance(db, &vault.reference, journal.replaces_up_to_seq)
         .map_err(storage)?;
-    let latest_seq = transport
-        .list_vaults()
-        .await?
-        .into_iter()
-        .find(|info| info.vault_id == vault.id)
-        .map(|info| info.max_seq)
-        .ok_or_else(|| Error::Transport("the synced vault disappeared".into()))?;
-    store::retention_state_set(
-        db,
-        &vault.reference,
-        &store::RetentionState {
-            max_age_days: journal.retention.max_age_days,
-            keep_below_limit_margin_pct: journal.retention.keep_below_limit_margin_pct,
-            applied_server_seq: latest_seq,
-        },
-    )
-    .map_err(storage)?;
     store::compaction_journal_clear(db, &vault.reference).map_err(storage)?;
     Ok(())
 }
@@ -743,6 +652,7 @@ async fn update_compacted_manifest<T: SyncTransport>(
     transport: &T,
     db: &Arc<DatabaseService>,
     vault: &Vault,
+    signer: &SignerKey,
     replaces_up_to_seq: u64,
 ) -> Result<(), Error> {
     let mut manifest_updated = false;
@@ -752,6 +662,11 @@ async fn update_compacted_manifest<T: SyncTransport>(
             .map_err(storage)?
             .map(|state| state.highest_manifest_seq);
         let current = engine::open_manifest(&blob, seq, &vault.keys, highest)?;
+        if current.dedupe_device_key_id.as_deref() != Some(signer.key_id().as_str()) {
+            return Err(Error::Transport(
+                "this device is no longer selected to deduplicate the server".into(),
+            ));
+        }
         if current.compacted_through_seq >= replaces_up_to_seq {
             manifest_updated = true;
             break;
@@ -785,7 +700,7 @@ async fn resume_compaction<T: SyncTransport>(
     transport: &T,
     db: &Arc<DatabaseService>,
     vault: &Vault,
-    _signer: &SignerKey,
+    signer: &SignerKey,
 ) -> Result<bool, Error> {
     let Some(serialized) = store::compaction_journal_get(db, &vault.reference).map_err(storage)?
     else {
@@ -793,7 +708,15 @@ async fn resume_compaction<T: SyncTransport>(
     };
     let journal: CompactionJournal = serde_json::from_str(&serialized)
         .map_err(|error| Error::Storage(format!("Compaction journal is unreadable: {error}")))?;
-    finish_compaction(transport, db, vault, &journal).await?;
+    let (manifest_seq, manifest_blob) = transport.get_manifest(vault.id).await?;
+    let highest = store::vault_state_get(db, &vault.reference)
+        .map_err(storage)?
+        .map(|state| state.highest_manifest_seq);
+    let manifest = engine::open_manifest(&manifest_blob, manifest_seq, &vault.keys, highest)?;
+    if manifest.dedupe_device_key_id.as_deref() != Some(signer.key_id().as_str()) {
+        return Ok(false);
+    }
+    finish_compaction(transport, db, vault, signer, &journal).await?;
     Ok(true)
 }
 
@@ -965,6 +888,7 @@ async fn pull<T: SyncTransport>(
             let (worker_db, worker_scope, worker_vault) =
                 (Arc::clone(db), scope.clone(), vault.reference.clone());
             let source_id = opened.header.source_id.to_string();
+            let is_other_source = opened.header.source_id != vault.source_id;
             let source_seq = opened.header.source_seq;
             let streams: BTreeMap<_, _> = opened.body.streams;
             let stream_names: Vec<String> = streams.keys().cloned().collect();
@@ -992,6 +916,9 @@ async fn pull<T: SyncTransport>(
                 }
             }
             report.matched_rows += imported.matched;
+            if is_other_source {
+                report.dedupe_candidates += imported.matched as u64;
+            }
             for stream in imported.unknown_streams {
                 if !report.unknown_streams.contains(&stream) {
                     log(db, &vault.reference, "unknown_stream", format!("Skipped data of an unknown kind: {stream}. A newer app version may be needed."), None)?;
@@ -1019,7 +946,7 @@ async fn pull<T: SyncTransport>(
     }
 }
 
-async fn apply_retention<T: SyncTransport>(
+async fn deduplicate_server<T: SyncTransport>(
     transport: &T,
     db: &Arc<DatabaseService>,
     vault: &Vault,
@@ -1028,13 +955,10 @@ async fn apply_retention<T: SyncTransport>(
     manifest: &Manifest,
     report: &SyncReport,
 ) -> Result<(), Error> {
-    if report.gaps > 0 || report.invalid_rows > 0 || !report.unknown_streams.is_empty() {
+    if manifest.dedupe_device_key_id.as_deref() != Some(signer.key_id().as_str()) {
         return Ok(());
     }
-    let retention = manifest.retention;
-    if !retention.is_valid()
-        || (retention.max_age_days.is_none() && retention.keep_below_limit_margin_pct.is_none())
-    {
+    if report.gaps > 0 || report.invalid_rows > 0 || !report.unknown_streams.is_empty() {
         return Ok(());
     }
     let info = transport
@@ -1043,49 +967,22 @@ async fn apply_retention<T: SyncTransport>(
         .into_iter()
         .find(|info| info.vault_id == vault.id)
         .ok_or_else(|| Error::Transport("the synced vault disappeared".into()))?;
-    if info.max_seq <= manifest.compacted_through_seq {
+    let checked_seq = store::dedupe_checked_seq_get(db, &vault.reference).map_err(storage)?;
+    if info.max_seq <= checked_seq.unwrap_or(manifest.compacted_through_seq) {
         return Ok(());
     }
-    if store::retention_state_get(db, &vault.reference)
+    let pull_cursor = store::vault_state_get(db, &vault.reference)
         .map_err(storage)?
-        .is_some_and(|applied| {
-            applied.max_age_days == retention.max_age_days
-                && applied.keep_below_limit_margin_pct == retention.keep_below_limit_margin_pct
-                && info.max_seq <= applied.applied_server_seq
-        })
-    {
+        .map(|state| state.pull_cursor)
+        .unwrap_or(0);
+    if pull_cursor < info.max_seq {
         return Ok(());
     }
-    let age_cutoff = retention
-        .max_age_days
-        .map(|days| now_ms().saturating_sub(i64::from(days).saturating_mul(86_400_000)));
+    if report.dedupe_candidates == 0 && (checked_seq.is_some() || report.created_vault) {
+        store::dedupe_checked_seq_set(db, &vault.reference, info.max_seq).map_err(storage)?;
+        return Ok(());
+    }
     let scope = StreamScope::open(db, &identity.vrchat_user_id).map_err(storage)?;
-    let mut expired = false;
-    if let Some(cutoff) = age_cutoff {
-        for spec in ROW_STREAMS {
-            if export_rows_for_compaction(db, &scope, spec)
-                .map_err(storage)?
-                .iter()
-                .any(|row| row_time_ms(row, spec.time).is_some_and(|at| at < cutoff))
-            {
-                expired = true;
-                break;
-            }
-        }
-    }
-    let size_target = if retention.keep_below_limit_margin_pct.is_some() {
-        transport
-            .account_usage_and_quota()
-            .await?
-            .and_then(|(usage, quota)| retention.size_target(quota).map(|target| (usage, target)))
-            .filter(|(usage, target)| usage > target)
-            .map(|(_, target)| target)
-    } else {
-        None
-    };
-    if !expired && size_target.is_none() {
-        return Ok(());
-    }
     let journal = build_compaction_journal(CompactionJournalContext {
         db,
         scope: &scope,
@@ -1093,34 +990,17 @@ async fn apply_retention<T: SyncTransport>(
         signer,
         identity,
         replaces_up_to_seq: info.max_seq,
-        retention,
-        size_target,
     })?;
-    if journal.dropped_rows == 0 {
-        store::retention_state_set(
-            db,
-            &vault.reference,
-            &store::RetentionState {
-                max_age_days: retention.max_age_days,
-                keep_below_limit_margin_pct: retention.keep_below_limit_margin_pct,
-                applied_server_seq: info.max_seq,
-            },
-        )
-        .map_err(storage)?;
-        return Ok(());
-    }
     let serialized =
         serde_json::to_string(&journal).map_err(|error| Error::Storage(error.to_string()))?;
     store::compaction_journal_put(db, &vault.reference, &serialized).map_err(storage)?;
-    finish_compaction(transport, db, vault, &journal).await?;
+    finish_compaction(transport, db, vault, signer, &journal).await?;
+    store::dedupe_checked_seq_set(db, &vault.reference, info.max_seq).map_err(storage)?;
     log(
         db,
         &vault.reference,
-        "retention",
-        format!(
-            "Removed {} old history rows from the server copy.",
-            journal.dropped_rows
-        ),
+        "dedupe",
+        "Merged and deduplicated the server history.".into(),
         None,
     )?;
     Ok(())
@@ -1176,7 +1056,7 @@ pub async fn sync_account<T: SyncTransport>(
     let manifest = ensure_manifest(transport, &db, &vault, signer, identity).await?;
     pull(&pass, &manifest, &mut report).await?;
     if !report.cancelled {
-        apply_retention(transport, &db, &vault, signer, identity, &manifest, &report).await?;
+        deduplicate_server(transport, &db, &vault, signer, identity, &manifest, &report).await?;
     }
     if !report.cancelled {
         store::last_sync_set(&db, &vault.reference, now_ms()).map_err(storage)?;

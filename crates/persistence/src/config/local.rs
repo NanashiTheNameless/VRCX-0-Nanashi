@@ -18,7 +18,7 @@ pub fn config_apply_mutations(
                 Some(value) => {
                     let value = encode_config_value(&key, value);
                     tx.execute_non_query(
-                        "INSERT OR REPLACE INTO configs (key, value) VALUES (@key, @value)",
+                        "INSERT INTO configs (key, value) VALUES (@key, @value) ON CONFLICT(key) DO UPDATE SET value = excluded.value WHERE value IS NOT excluded.value",
                         &ParamsBuilder::new()
                             .set("key", key)
                             .set("value", value)
@@ -48,7 +48,7 @@ pub fn config_set_values(
         for entry in &entries {
             let key = resolve_config_key(&entry.key);
             tx.execute_non_query(
-                "INSERT OR REPLACE INTO configs (key, value) VALUES (@key, @value)",
+                "INSERT INTO configs (key, value) VALUES (@key, @value) ON CONFLICT(key) DO UPDATE SET value = excluded.value WHERE value IS NOT excluded.value",
                 &ParamsBuilder::new()
                     .set("key", key.clone())
                     .set("value", encode_config_value(&key, &entry.value))

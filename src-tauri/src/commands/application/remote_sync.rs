@@ -721,6 +721,51 @@ pub struct RemoteSyncClientSnapshot {
     pub history: Vec<RemoteSyncClientAddress>,
 }
 
+#[derive(Clone, Debug, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteSyncDedupeDevice {
+    pub key_id: String,
+    pub label: String,
+}
+
+#[derive(Clone, Debug, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteSyncDedupeSnapshot {
+    pub devices: Vec<RemoteSyncDedupeDevice>,
+    pub selected_device_key_id: Option<String>,
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn app__remote_sync_dedupe_devices_get(
+    state: State<'_, AppState>,
+) -> Result<RemoteSyncDedupeSnapshot, AppError> {
+    let (devices, selected_device_key_id) = state
+        .runtime_host()
+        .remote_sync_dedupe_devices_get()
+        .await?;
+    Ok(RemoteSyncDedupeSnapshot {
+        devices: devices
+            .into_iter()
+            .map(|(key_id, label)| RemoteSyncDedupeDevice { key_id, label })
+            .collect(),
+        selected_device_key_id,
+    })
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn app__remote_sync_dedupe_device_set(
+    state: State<'_, AppState>,
+    key_id: String,
+) -> Result<(), AppError> {
+    state
+        .runtime_host()
+        .remote_sync_dedupe_device_set(key_id)
+        .await?;
+    Ok(())
+}
+
 fn client_address(
     entry: vrcx_0_nanashi_website_protocol::api::ClientIpEntry,
 ) -> RemoteSyncClientAddress {

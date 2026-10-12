@@ -64,6 +64,7 @@ pub fn ensure_remote_sync_tables(db: &DatabaseService) -> Result<(), Error> {
             "CREATE TABLE IF NOT EXISTS remote_sync_pending_chunk (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, chunk_id TEXT NOT NULL, source_seq INTEGER NOT NULL, blob TEXT NOT NULL, cursors TEXT NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id))",
             "CREATE TABLE IF NOT EXISTS remote_sync_compaction (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, journal TEXT NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id))",
             "CREATE TABLE IF NOT EXISTS remote_sync_retention_state (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, max_age_days INTEGER, keep_below_limit_margin_pct INTEGER, applied_server_seq INTEGER NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id))",
+            "CREATE TABLE IF NOT EXISTS remote_sync_dedupe_state (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, checked_server_seq INTEGER NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id))",
             "CREATE TABLE IF NOT EXISTS remote_sync_seen_chunk (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id, source_id, source_seq))",
             "CREATE TABLE IF NOT EXISTS remote_sync_coverage (id INTEGER PRIMARY KEY, vrchat_user_id TEXT NOT NULL, started_at_ms INTEGER NOT NULL, extended_at_ms INTEGER NOT NULL, ended_at_ms INTEGER)",
             "CREATE INDEX IF NOT EXISTS remote_sync_coverage_user_idx ON remote_sync_coverage (vrchat_user_id, started_at_ms)",
@@ -339,12 +340,39 @@ pub fn retention_state_set(
 ) -> Result<(), Error> {
     ensure_remote_sync_tables(db)?;
     db.execute_non_query(
-        "INSERT OR REPLACE INTO remote_sync_retention_state (api_origin, account_id, vault_id, max_age_days, keep_below_limit_margin_pct, applied_server_seq) VALUES (@api_origin, @account_id, @vault_id, @max_age_days, @margin_pct, @applied_seq)",
+        "INSERT INTO remote_sync_retention_state (api_origin, account_id, vault_id, max_age_days, keep_below_limit_margin_pct, applied_server_seq) VALUES (@api_origin, @account_id, @vault_id, @max_age_days, @margin_pct, @applied_seq) ON CONFLICT (api_origin, account_id, vault_id) DO UPDATE SET max_age_days = excluded.max_age_days, keep_below_limit_margin_pct = excluded.keep_below_limit_margin_pct, applied_server_seq = MAX(remote_sync_retention_state.applied_server_seq, excluded.applied_server_seq)",
         &vault_params(vault)
             .set("max_age_days", state.max_age_days.map(i64::from))
             .set("margin_pct", state.keep_below_limit_margin_pct.map(i64::from))
             .set("applied_seq", to_i64(state.applied_server_seq))
             .build(),
+    )?;
+    Ok(())
+}
+
+pub fn dedupe_checked_seq_get(
+    db: &DatabaseService,
+    vault: &VaultRef,
+) -> Result<Option<u64>, Error> {
+    ensure_remote_sync_tables(db)?;
+    Ok(db
+        .execute(
+            &format!("SELECT checked_server_seq FROM remote_sync_dedupe_state WHERE {VAULT_WHERE}"),
+            &vault_params(vault).build(),
+        )?
+        .first()
+        .map(|row| row_i64(row, 0).max(0) as u64))
+}
+
+pub fn dedupe_checked_seq_set(
+    db: &DatabaseService,
+    vault: &VaultRef,
+    seq: u64,
+) -> Result<(), Error> {
+    ensure_remote_sync_tables(db)?;
+    db.execute_non_query(
+        "INSERT INTO remote_sync_dedupe_state (api_origin, account_id, vault_id, checked_server_seq) VALUES (@api_origin, @account_id, @vault_id, @seq) ON CONFLICT (api_origin, account_id, vault_id) DO UPDATE SET checked_server_seq = MAX(remote_sync_dedupe_state.checked_server_seq, excluded.checked_server_seq)",
+        &vault_params(vault).set("seq", to_i64(seq)).build(),
     )?;
     Ok(())
 }

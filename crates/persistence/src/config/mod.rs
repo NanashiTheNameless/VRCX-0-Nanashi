@@ -9,7 +9,7 @@ pub use local::{
 };
 pub use obfuscation::migrate_sensitive_config_obfuscation;
 pub use repository::{
-    ensure_config_table, get_bool, get_json, get_raw, get_string, remove, set_bool, set_json,
-    set_string, ConfigRepository,
+    config_local_change_time, config_local_change_time_set, ensure_config_table, get_bool,
+    get_json, get_raw, get_string, remove, set_bool, set_json, set_string, ConfigRepository,
 };
 pub use types::{resolve_config_key, ConfigKey, ConfigMutation, ConfigReadEntry, ConfigWriteEntry};

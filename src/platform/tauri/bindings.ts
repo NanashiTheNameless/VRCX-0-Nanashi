@@ -495,6 +495,14 @@ const generatedCommands = {
             clientId
         });
     },
+    async appRemoteSyncDedupeDevicesGet(): Promise<RemoteSyncDedupeSnapshot> {
+        return await TAURI_INVOKE('app__remote_sync_dedupe_devices_get');
+    },
+    async appRemoteSyncDedupeDeviceSet(keyId: string): Promise<null> {
+        return await TAURI_INVOKE('app__remote_sync_dedupe_device_set', {
+            keyId
+        });
+    },
     async appRemoteSyncEmailCodeSend(): Promise<null> {
         return await TAURI_INVOKE('app__remote_sync_email_code_send');
     },
@@ -6745,6 +6753,11 @@ export type RemoteSyncCodeTrust =
      * The website could not be reached, so nothing is known.
      */
     | 'unreachable';
+export type RemoteSyncDedupeDevice = { keyId: string; label: string };
+export type RemoteSyncDedupeSnapshot = {
+    devices: RemoteSyncDedupeDevice[];
+    selectedDeviceKeyId: string | null;
+};
 export type RemoteSyncImportedPayload = { ownerUserId: OwnerId };
 export type RemoteSyncInstanceTrust =
     /**

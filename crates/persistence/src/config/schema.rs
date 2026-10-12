@@ -1,4 +1,4 @@
-use sea_query::{ColumnDef, Expr, ExprTrait, OnConflict, Query, SqliteQueryBuilder, Table};
+use sea_query::{ColumnDef, Expr, ExprTrait, Query, SqliteQueryBuilder, Table};
 
 use crate::common::{ident, named_param};
 
@@ -30,16 +30,7 @@ pub(super) fn select_value_sql() -> String {
 }
 
 pub(super) fn upsert_value_sql() -> String {
-    Query::insert()
-        .into_table(ident(TABLE_CONFIGS))
-        .columns([ident(COL_KEY), ident(COL_VALUE)])
-        .values_panic([named_param(COL_KEY), named_param(COL_VALUE)])
-        .on_conflict(
-            OnConflict::column(ident(COL_KEY))
-                .update_column(ident(COL_VALUE))
-                .to_owned(),
-        )
-        .to_string(SqliteQueryBuilder)
+    "INSERT INTO configs (key, value) VALUES (@key, @value) ON CONFLICT(key) DO UPDATE SET value = excluded.value WHERE value IS NOT excluded.value".into()
 }
 
 pub(super) fn delete_value_sql() -> String {

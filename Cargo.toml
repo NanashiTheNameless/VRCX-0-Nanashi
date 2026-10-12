@@ -68,7 +68,7 @@ resolver = "2"
 license = "GPL-3.0-only"
 
 [workspace.dependencies]
-vrcx-0-nanashi-website-protocol = { git = "https://github.com/NanashiTheNameless/VRCX-0-Nanashi-Website", rev = "d532b8a0ff8c984b12f911044f2531a1d7c53872" }
+vrcx-0-nanashi-website-protocol = { git = "https://github.com/NanashiTheNameless/VRCX-0-Nanashi-Website", rev = "4a2ec06" }
 async-trait = "0.1"
 base64 = "0.23"
 bytes = "1"

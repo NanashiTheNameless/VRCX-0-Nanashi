@@ -80,8 +80,71 @@ impl ConfigRepository {
 pub fn ensure_config_table(db: &DatabaseService) -> Result<(), Error> {
     db.ensure_schema_once("config", || {
         db.execute_non_query(&create_configs_sql(), &Default::default())?;
+        db.execute_non_query(
+            "CREATE TABLE IF NOT EXISTS config_local_changes (key TEXT PRIMARY KEY, changed_at_ms INTEGER NOT NULL)",
+            &Default::default(),
+        )?;
+        for (name, operation, row) in [
+            (
+                "config_local_change_insert",
+                "INSERT",
+                "NEW",
+            ),
+            (
+                "config_local_change_update",
+                "UPDATE OF value",
+                "NEW",
+            ),
+            (
+                "config_local_change_delete",
+                "DELETE",
+                "OLD",
+            ),
+        ] {
+            let changed = if operation == "UPDATE OF value" {
+                " AND OLD.value IS NOT NEW.value"
+            } else {
+                ""
+            };
+            db.execute_non_query(
+                &format!(
+                    "CREATE TRIGGER IF NOT EXISTS {name} AFTER {operation} ON configs WHEN substr(lower({row}.key), 1, 12) = 'config:vrcx_'{changed} BEGIN INSERT INTO config_local_changes (key, changed_at_ms) VALUES ({row}.key, CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)) ON CONFLICT(key) DO UPDATE SET changed_at_ms = excluded.changed_at_ms; END"
+                ),
+                &Default::default(),
+            )?;
+        }
         Ok(())
     })
+}
+
+pub fn config_local_change_time(db: &DatabaseService, key: &str) -> Result<Option<i64>, Error> {
+    ensure_config_table(db)?;
+    Ok(db
+        .execute(
+            "SELECT changed_at_ms FROM config_local_changes WHERE key = @key",
+            &ParamsBuilder::new()
+                .set("key", resolve_config_key(key))
+                .build(),
+        )?
+        .first()
+        .and_then(|row| row.first())
+        .and_then(serde_json::Value::as_i64))
+}
+
+pub fn config_local_change_time_set(
+    db: &DatabaseService,
+    key: &str,
+    changed_at_ms: i64,
+) -> Result<(), Error> {
+    ensure_config_table(db)?;
+    db.execute_non_query(
+        "INSERT INTO config_local_changes (key, changed_at_ms) VALUES (@key, @changed_at_ms) ON CONFLICT(key) DO UPDATE SET changed_at_ms = excluded.changed_at_ms",
+        &ParamsBuilder::new()
+            .set("key", resolve_config_key(key))
+            .set("changed_at_ms", changed_at_ms)
+            .build(),
+    )?;
+    Ok(())
 }
 
 pub fn get_raw(db: &DatabaseService, key: &str) -> Result<Option<String>, Error> {

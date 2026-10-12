@@ -228,6 +228,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::application::remote_sync::app__remote_sync_delete_data,
             commands::application::remote_sync::app__remote_sync_clients_get,
             commands::application::remote_sync::app__remote_sync_clients_revoke,
+            commands::application::remote_sync::app__remote_sync_dedupe_devices_get,
+            commands::application::remote_sync::app__remote_sync_dedupe_device_set,
             commands::application::remote_sync::app__remote_sync_email_code_send,
             commands::application::remote_sync::app__remote_sync_transfer_begin,
             commands::application::remote_sync::app__remote_sync_transfer_poll,

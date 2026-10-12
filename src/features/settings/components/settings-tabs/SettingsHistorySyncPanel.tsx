@@ -52,10 +52,12 @@ const INPUT_CLASS =
 
 export function SettingsHistorySyncPanel({
     collectorAvailable,
-    collectorAllowed
+    collectorAllowed,
+    onSyncComplete
 }: {
     collectorAvailable: boolean;
     collectorAllowed: boolean;
+    onSyncComplete?: () => void;
 }) {
     const { t } = useTranslation();
     const [status, setStatus] = useState<SyncStatus>();
@@ -379,6 +381,7 @@ export function SettingsHistorySyncPanel({
                             setLastRun(
                                 await invoke<SyncRun>('app__remote_sync_now')
                             );
+                            onSyncComplete?.();
                         })
                     }
                 >
