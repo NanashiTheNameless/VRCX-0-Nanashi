@@ -48,6 +48,7 @@ import {
     EntityOverviewCard,
     EntityRawJson
 } from './EntityDialogScaffold';
+import { useEntityRelayUrl } from './useEntityRelayUrl';
 
 function firstArray<T>(...values: (T[] | null | undefined)[]): T[];
 function firstArray(...values: unknown[]) {
@@ -105,6 +106,7 @@ function AvatarOverviewReferences({
     onOpenAvatarUrl(): void;
 }) {
     const { t } = useTranslation();
+    const avatarRelayUrl = useEntityRelayUrl('avatar', avatar.id);
 
     if (!avatar.id && !avatarUrl) {
         return null;
@@ -142,6 +144,33 @@ function AvatarOverviewReferences({
                             icon={CopyIcon}
                             onClick={onCopyAvatarUrl}
                         />
+                    </EntityFactValue>
+                </EntityFactRow>
+            ) : null}
+            {avatarRelayUrl ? (
+                <EntityFactRow
+                    label={
+                        <Tooltip>
+                            <TooltipTrigger
+                                render={
+                                    <span
+                                        className="cursor-help underline decoration-dotted underline-offset-2"
+                                        tabIndex={0}
+                                    >
+                                        {t('dialog.avatar.info.vrcx_url')}
+                                    </span>
+                                }
+                            />
+                            <TooltipContent>
+                                {t('dialog.avatar.info.vrcx_url_description')}
+                            </TooltipContent>
+                        </Tooltip>
+                    }
+                >
+                    <EntityFactValue
+                        display={compactAvatarUrl(avatarRelayUrl)}
+                        title={avatarRelayUrl}
+                    >
                         <EntityFactAction
                             label={t('dialog.avatar.info.copy_vrcx_url')}
                             icon={CopyIcon}

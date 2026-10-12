@@ -102,6 +102,17 @@ export async function buildInstanceRelayUrl(input: {
     return url.toString();
 }
 
+export async function entityRelayUrl(
+    kind: 'world' | 'avatar',
+    id: string
+): Promise<string> {
+    const origin = await getRemoteSyncWebsiteOrigin();
+    return new URL(
+        `/open/${kind}/${encodeURIComponent(id)}`,
+        origin
+    ).toString();
+}
+
 async function buildEntityRelayUrl(
     kind: 'world' | 'avatar',
     id: string,

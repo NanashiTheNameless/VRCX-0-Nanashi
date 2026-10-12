@@ -43,6 +43,7 @@ import {
     EntityFactValue,
     EntityOverviewCard
 } from '../EntityDialogScaffold';
+import { useEntityRelayUrl } from '../useEntityRelayUrl';
 import type {
     WorldDialogHeaderCommands,
     WorldDialogHeaderModel
@@ -128,6 +129,7 @@ function WorldOverviewFacts({
     worldUrl: string;
 }) {
     const { t } = useTranslation();
+    const worldRelayUrl = useEntityRelayUrl('world', world.id);
 
     if (!world.id && !worldUrl) {
         return null;
@@ -169,6 +171,33 @@ function WorldOverviewFacts({
                                 onCopyWorldUrl?.();
                             }}
                         />
+                    </EntityFactValue>
+                </EntityFactRow>
+            ) : null}
+            {worldRelayUrl ? (
+                <EntityFactRow
+                    label={
+                        <Tooltip>
+                            <TooltipTrigger
+                                render={
+                                    <span
+                                        className="cursor-help underline decoration-dotted underline-offset-2"
+                                        tabIndex={0}
+                                    >
+                                        {t('dialog.world.info.vrcx_url')}
+                                    </span>
+                                }
+                            />
+                            <TooltipContent>
+                                {t('dialog.world.info.vrcx_url_description')}
+                            </TooltipContent>
+                        </Tooltip>
+                    }
+                >
+                    <EntityFactValue
+                        display={compactUrl(worldRelayUrl)}
+                        title={worldRelayUrl}
+                    >
                         <EntityFactAction
                             label={t('dialog.world.info.copy_vrcx_url')}
                             icon={CopyIcon}
