@@ -84,7 +84,7 @@ In a container, leave `VRCX0_LOGGER_HOST`, `VRCX0_LOGGER_PORT` and `VRCX0_LOGGER
 
 ## Connect from VRCX-0-Nanashi
 
-**Tools > Self-hosted Recorder**:
+**Settings > Sync Options > Self-hosted Recorder**:
 
 1. Enable automatic backups.
 2. Enter the recorder address, for example `http://192.168.1.10:8787`.

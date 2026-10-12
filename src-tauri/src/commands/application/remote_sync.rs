@@ -13,8 +13,8 @@ use vrcx_0_remote_sync::{
 };
 
 use vrcx_0_runtime_host_desktop::remote_sync::{
-    ACCOUNT_ID_KEY, API_ORIGIN_KEY, BACKEND_KEY, SYNC_INTERVAL_MINUTES_KEY,
-    SYNC_SETTINGS_ENABLED_KEY, TOKEN_KEY, WEBSITE_ORIGIN_KEY,
+    ACCOUNT_ID_KEY, API_ORIGIN_KEY, BACKEND_KEY, PAUSE_WHILE_GAME_RUNNING_KEY,
+    SYNC_INTERVAL_MINUTES_KEY, SYNC_SETTINGS_ENABLED_KEY, TOKEN_KEY, WEBSITE_ORIGIN_KEY,
 };
 
 const TRUST_HISTORY_KEY: &str = "remoteSyncTrustHistory";
@@ -71,6 +71,7 @@ pub struct RemoteSyncSettingsSnapshot {
     pub paired: bool,
     pub sync_interval_minutes: u16,
     pub sync_settings_enabled: bool,
+    pub pause_while_game_running: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
@@ -150,6 +151,10 @@ pub async fn app__remote_sync_settings_get(
             .runtime_host()
             .config_string(SYNC_SETTINGS_ENABLED_KEY, "true")
             != "false",
+        pause_while_game_running: state
+            .runtime_host()
+            .config_string(PAUSE_WHILE_GAME_RUNNING_KEY, "false")
+            == "true",
     })
 }
 
@@ -189,6 +194,7 @@ pub fn app__remote_sync_settings_set(
     website_origin: String,
     sync_interval_minutes: u16,
     sync_settings_enabled: bool,
+    pause_while_game_running: bool,
 ) -> Result<(), AppError> {
     if !matches!(backend.as_str(), "off" | "remotesync") {
         return Err(AppError::WebClient(
@@ -205,7 +211,7 @@ pub fn app__remote_sync_settings_set(
             .is_some()
     {
         return Err(AppError::WebClient(
-            "The Self-hosted Recorder is connected. Disconnect it under Tools > Self-hosted Recorder before turning on history sync; only one of the two can be on at a time.".into(),
+            "The Self-hosted Recorder is connected. Disconnect it under Settings > Sync Options before turning on history sync; only one of the two can be on at a time.".into(),
         ));
     }
     if !SYNC_INTERVAL_OPTIONS_MINUTES.contains(&sync_interval_minutes) {
@@ -254,6 +260,10 @@ pub fn app__remote_sync_settings_set(
         vrcx_0_runtime_host_desktop::local_data::ConfigWriteEntry {
             key: SYNC_SETTINGS_ENABLED_KEY.into(),
             value: sync_settings_enabled.to_string(),
+        },
+        vrcx_0_runtime_host_desktop::local_data::ConfigWriteEntry {
+            key: PAUSE_WHILE_GAME_RUNNING_KEY.into(),
+            value: pause_while_game_running.to_string(),
         },
     ])?;
     Ok(())
@@ -1008,7 +1018,7 @@ pub(crate) fn start_background_sync(app: &tauri::AppHandle) {
                     }
                 }
             }
-            if ready {
+            if ready && !state.runtime_host().remote_sync_paused_for_game() {
                 let interval_minutes = state
                     .runtime_host()
                     .config_string(SYNC_INTERVAL_MINUTES_KEY, "10")

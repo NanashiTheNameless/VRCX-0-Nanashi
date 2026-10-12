@@ -103,7 +103,9 @@ unrelated edit, with where they live:
   (`app__feed_logger_settings_save`, `app__remote_sync_settings_set`), and
   the `feedLogger` config key is never synced. Fork differences to keep
   through upstream merges: install script, compose file, image and guide
-  link point at this fork; one English README; no beta channel and no
+  link point at this fork; the entry point is a card under Settings > Sync
+  Options (`SettingsSelfHostedRecorderCard.tsx`), not a Tools entry; one
+  English README; no beta channel and no
   stable/beta recorder check, because every recorder the fork publishes is
   a nightly build. Nightly builds the binaries and calls
   `logger-image.yml` to publish the image.

@@ -18,6 +18,7 @@ import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
 import { SettingsHistorySyncPanel } from './SettingsHistorySyncPanel';
 import { SettingsHistorySyncTrust } from './SettingsHistorySyncTrust';
+import { SettingsSelfHostedRecorderCard } from './SettingsSelfHostedRecorderCard';
 
 type SettingsSnapshot = {
     backend: string;
@@ -26,6 +27,7 @@ type SettingsSnapshot = {
     paired: boolean;
     syncIntervalMinutes: number;
     syncSettingsEnabled: boolean;
+    pauseWhileGameRunning: boolean;
 };
 
 type Capabilities = {
@@ -82,6 +84,7 @@ export function SettingsHistorySyncTab() {
     const [websiteOrigin, setWebsiteOrigin] = useState(OFFICIAL_WEBSITE);
     const [syncIntervalMinutes, setSyncIntervalMinutes] = useState(10);
     const [syncSettingsEnabled, setSyncSettingsEnabled] = useState(true);
+    const [pauseWhileGameRunning, setPauseWhileGameRunning] = useState(false);
     const [pairing, setPairing] = useState<PairingStart>();
     const [pollInterval, setPollInterval] = useState(5);
     const [pairStartedAt, setPairStartedAt] = useState<number>();
@@ -106,6 +109,7 @@ export function SettingsHistorySyncTab() {
         setWebsiteOrigin(snapshot.websiteOrigin);
         setSyncIntervalMinutes(snapshot.syncIntervalMinutes);
         setSyncSettingsEnabled(snapshot.syncSettingsEnabled);
+        setPauseWhileGameRunning(snapshot.pauseWhileGameRunning);
 
         if (snapshot.backend !== 'remotesync') {
             setCapabilities(undefined);
@@ -188,7 +192,8 @@ export function SettingsHistorySyncTab() {
     async function saveSettings(
         backend: string,
         saveServer = true,
-        nextSyncSettingsEnabled = syncSettingsEnabled
+        nextSyncSettingsEnabled = syncSettingsEnabled,
+        nextPauseWhileGameRunning = pauseWhileGameRunning
     ) {
         setBusy(true);
         setError(undefined);
@@ -209,7 +214,8 @@ export function SettingsHistorySyncTab() {
                     ? websiteOrigin
                     : (settings?.websiteOrigin ?? websiteOrigin),
                 syncIntervalMinutes,
-                syncSettingsEnabled: nextSyncSettingsEnabled
+                syncSettingsEnabled: nextSyncSettingsEnabled,
+                pauseWhileGameRunning: nextPauseWhileGameRunning
             });
             setSettings((previous) =>
                 previous
@@ -223,7 +229,8 @@ export function SettingsHistorySyncTab() {
                               ? websiteOrigin
                               : previous.websiteOrigin,
                           syncIntervalMinutes,
-                          syncSettingsEnabled: nextSyncSettingsEnabled
+                          syncSettingsEnabled: nextSyncSettingsEnabled,
+                          pauseWhileGameRunning: nextPauseWhileGameRunning
                       }
                     : previous
             );
@@ -403,6 +410,27 @@ export function SettingsHistorySyncTab() {
                                 )}
                             </Button>
                         </div>
+                    </Field>
+                    <Field
+                        label={t('view.settings.history_sync.pause_in_game')}
+                        description={t(
+                            'view.settings.history_sync.pause_in_game_description'
+                        )}
+                    >
+                        <Switch
+                            checked={pauseWhileGameRunning}
+                            disabled={busy || !settings}
+                            onCheckedChange={(enabled) => {
+                                setPauseWhileGameRunning(enabled);
+                                void saveSettings(
+                                    backend,
+                                    false,
+                                    settings?.syncSettingsEnabled ??
+                                        syncSettingsEnabled,
+                                    enabled
+                                );
+                            }}
+                        />
                     </Field>
                     <Field
                         label={t('view.settings.history_sync.dedupe_device')}
@@ -756,6 +784,10 @@ export function SettingsHistorySyncTab() {
                     ) : null}
                 </SettingsCard>
             ) : null}
+
+            <SettingsSelfHostedRecorderCard
+                historySyncEnabled={backend === 'remotesync'}
+            />
         </SettingsTabContent>
     );
 }

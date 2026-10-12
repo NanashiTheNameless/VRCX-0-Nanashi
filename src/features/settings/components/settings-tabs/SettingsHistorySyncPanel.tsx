@@ -398,7 +398,7 @@ export function SettingsHistorySyncPanel({
                                             days: collectorForever
                                                 ? null
                                                 : collectorDaysValue,
-                                            intervalSeconds: 300
+                                            intervalSeconds: 60
                                         }
                                     );
                                     setCollectorConsent(false);

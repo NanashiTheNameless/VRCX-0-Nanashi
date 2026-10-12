@@ -1,14 +1,12 @@
 // @vitest-environment jsdom
 
-import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
+import { cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { commands, type FeedLoggerProbe } from '@/platform/tauri/bindings';
-import { handleFeedLoggerHealthEvent } from '@/services/offlineRecordService';
+import { commands } from '@/platform/tauri/bindings';
 import { useModalStore } from '@/state/modalStore';
 import { useOfflineRecordStore } from '@/state/offlineRecordStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
-import { connectedRecorder } from '@/test/offlineRecordFixtures';
 
 const mocks = vi.hoisted(() => ({
     confirm: vi.fn(),
@@ -39,16 +37,6 @@ vi.mock('@/services/profileBackupService', () => ({
 
 import { useToolStatusSummaries } from './useToolStatusSummaries';
 
-function recorderReports(probe: FeedLoggerProbe) {
-    act(() => handleFeedLoggerHealthEvent(probe));
-}
-
-function recorderCard(result: {
-    current: ReturnType<typeof useToolStatusSummaries>;
-}) {
-    return result.current.get('offline-record');
-}
-
 beforeEach(() => {
     useOfflineRecordStore.setState({
         health: null,
@@ -76,78 +64,6 @@ beforeEach(() => {
 afterEach(() => {
     cleanup();
     vi.clearAllMocks();
-});
-
-describe('Tools card for the self-hosted recorder', () => {
-    it('shows nothing until a recorder is set up', () => {
-        const { result } = renderHook(() => useToolStatusSummaries());
-
-        recorderReports({ state: 'notConfigured' });
-
-        expect(recorderCard(result)).toBeUndefined();
-    });
-
-    it('shows "recording · N to fill in" while recording with entries waiting', () => {
-        const { result } = renderHook(() => useToolStatusSummaries());
-
-        recorderReports(connectedRecorder({ unsyncedFrames: 42 }));
-
-        expect(recorderCard(result)).toEqual({
-            label: 'offline_record.status_unsynced',
-            tone: 'active'
-        });
-    });
-
-    it('shows plain "recording" once nothing is waiting to be filled in', () => {
-        const { result } = renderHook(() => useToolStatusSummaries());
-
-        recorderReports(connectedRecorder({ unsyncedFrames: 0 }));
-
-        expect(recorderCard(result)).toEqual({
-            label: 'offline_record.health.recording',
-            tone: 'active'
-        });
-    });
-
-    it.each([
-        {
-            problem: 'unreachable',
-            probe: { state: 'unreachable', message: 'timeout' },
-            message: 'offline_record.health.unreachable'
-        },
-        {
-            problem: 'reconnecting',
-            probe: connectedRecorder({
-                session: { state: 'reconnecting' },
-                unsyncedFrames: 42
-            }),
-            message: 'offline_record.health.reconnecting'
-        },
-        {
-            problem: 'logged into another account',
-            probe: connectedRecorder({ accountId: 'usr_other' }),
-            message: 'offline_record.health.account_mismatch'
-        },
-        {
-            problem: 'waiting for a two-factor code',
-            probe: connectedRecorder({
-                session: { state: 'awaitingTwoFactor', methods: ['totp'] }
-            }),
-            message: 'offline_record.health.two_factor'
-        }
-    ] satisfies { problem: string; probe: FeedLoggerProbe; message: string }[])(
-        'shows the problem in warning colour when the recorder is $problem',
-        ({ probe, message }) => {
-            const { result } = renderHook(() => useToolStatusSummaries());
-
-            recorderReports(probe);
-
-            expect(recorderCard(result)).toEqual({
-                label: message,
-                tone: 'warning'
-            });
-        }
-    );
 });
 
 describe('turning automatic backups off from the Tools card', () => {

@@ -29,7 +29,8 @@ It is a Rust + Tauri rewrite of VRCX.
   PCs is kept once. Memos, notes, favorites, moderation entries, notifications, avatar history
   and tags, profile bios and the mutual friends graph are synced too: the later edit wins and
   a deletion on one PC reaches the others. Nothing on the server can delete local history, and
-  automatic sync pushes and pulls changes on a configurable 1 to 60 minute interval. You can
+  automatic sync pushes and pulls changes on a configurable 1 to 60 minute interval, and can be
+  set to wait while VRChat is open. You can
   choose one paired PC to merge and deduplicate the server copy; other PCs only upload and
   download changes. All PCs must use an app version that supports this selection. The selected PC
   uploads a complete merged snapshot before the server removes older chunks, and a failed upload
@@ -45,7 +46,7 @@ It is a Rust + Tauri rewrite of VRCX.
 - **Self-hosted Recorder (experimental), from this fork's builds.** Upstream's recorder is
   kept: a small server program you run on an always-on Linux machine that logs in to VRChat
   with your account while the app is closed, so friend activity from that time is filled into
-  the Feed when you come back. Set it up under Tools > Self-hosted Recorder. Nothing is sent
+  the Feed when you come back. Set it up under Settings > Sync Options. Nothing is sent
   until you enter a recorder address and password, and login details only go to your own
   recorder. In this fork the install script, Docker image
   (`ghcr.io/nanashithenameless/vrcx-0-logger`) and binaries come from this repository's

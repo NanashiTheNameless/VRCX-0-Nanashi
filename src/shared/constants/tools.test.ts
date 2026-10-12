@@ -45,7 +45,6 @@ describe('tool catalog categories', () => {
             vrchat: ['vrchat-config', 'launch-options'],
             data: [
                 'profile-backup',
-                'offline-record',
                 'registry-backup',
                 'discord-names',
                 'export-notes',

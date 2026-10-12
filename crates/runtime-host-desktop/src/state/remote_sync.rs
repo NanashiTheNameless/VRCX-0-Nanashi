@@ -25,6 +25,7 @@ pub const BACKEND_KEY: &str = "historySyncBackend";
 pub const BACKEND_REMOTESYNC: &str = "remotesync";
 pub const SYNC_INTERVAL_MINUTES_KEY: &str = "remoteSyncIntervalMinutes";
 pub const SYNC_SETTINGS_ENABLED_KEY: &str = "remoteSyncSettingsEnabled";
+pub const PAUSE_WHILE_GAME_RUNNING_KEY: &str = "remoteSyncPauseWhileGameRunning";
 pub const API_ORIGIN_KEY: &str = "remoteSyncApiOrigin";
 pub const ACCOUNT_ID_KEY: &str = "remoteSyncAccountId";
 pub const TOKEN_KEY: &str = "remoteSyncApiToken";
@@ -322,6 +323,18 @@ impl DesktopRuntimeHostState {
 
     pub fn remote_sync_settings_enabled(&self) -> bool {
         self.config_string(SYNC_SETTINGS_ENABLED_KEY, "true") != "false"
+    }
+
+    /// True while the user asked automatic sync to wait for VRChat to close
+    /// and VRChat is open. Manual syncs and the exit flush are not affected.
+    pub fn remote_sync_paused_for_game(&self) -> bool {
+        self.config_string(PAUSE_WHILE_GAME_RUNNING_KEY, "false") == "true"
+            && self
+                .runtime
+                .desktop_assembly()
+                .session()
+                .snapshot()
+                .is_game_running
     }
 
     /// Checks only the local prerequisites needed before the background
