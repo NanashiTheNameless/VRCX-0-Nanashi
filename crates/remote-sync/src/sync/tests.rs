@@ -529,6 +529,7 @@ async fn memos_reach_the_other_pc_and_a_later_edit_replaces_the_older_one() {
                 source_id: "local-edit",
                 source_seq: edited_at.len() as u64 + text.len() as u64,
                 server_seq: 0,
+                snapshot_from: None,
             },
             &[(
                 "memos".to_owned(),

@@ -87,6 +87,19 @@ fn source<'a>(
         source_id,
         source_seq,
         server_seq,
+        snapshot_from: None,
+    }
+}
+
+fn snapshot<'a>(
+    vault: &'a VaultRef,
+    source_id: &'a str,
+    source_seq: u64,
+    snapshot_from: u64,
+) -> ImportSource<'a> {
+    ImportSource {
+        snapshot_from: Some(snapshot_from),
+        ..source(vault, source_id, source_seq, source_seq)
     }
 }
 
@@ -206,6 +219,106 @@ fn one_source_repeating_an_event_keeps_both_rows() {
     )
     .unwrap();
     assert_eq!((report.inserted, report.matched), (2, 0));
+}
+
+#[test]
+fn a_replacement_snapshot_adds_nothing_this_pc_already_has() {
+    let (_dir, db, scope) = setup("snapshot-known");
+    let vault = vault();
+    let table = scope.table_name(stream_spec("feed_status").unwrap());
+    // One source reported the same status twice, three seconds apart.
+    let rows = vec![
+        status_row("2026-10-10T12:00:00.000Z", "busy"),
+        status_row("2026-10-10T12:00:03.000Z", "busy"),
+    ];
+    import_chunk(
+        &db,
+        &scope,
+        source(&vault, "pc-a", 1, 1),
+        &chunk("feed_status", rows.clone()),
+    )
+    .unwrap();
+    assert_eq!(count(&db, &table), 2);
+
+    // The same source then replaces its history with a snapshot holding
+    // those rows, split over two chunks.
+    let first = import_chunk(
+        &db,
+        &scope,
+        snapshot(&vault, "pc-a", 9, 9),
+        &chunk("feed_status", vec![rows[0].clone()]),
+    )
+    .unwrap();
+    let second = import_chunk(
+        &db,
+        &scope,
+        snapshot(&vault, "pc-a", 10, 9),
+        &chunk("feed_status", vec![rows[1].clone()]),
+    )
+    .unwrap();
+    assert_eq!((first.inserted, first.matched), (0, 1));
+    assert_eq!((second.inserted, second.matched), (0, 1));
+    assert_eq!(count(&db, &table), 2);
+    // Rows the snapshot matched are still never uploaded as new.
+    assert!(export(&db, &scope, "feed_status").is_empty());
+}
+
+#[test]
+fn a_replacement_snapshot_keeps_repeated_events_on_a_new_pc() {
+    let (_dir, db, scope) = setup("snapshot-new");
+    let vault = vault();
+    let table = scope.table_name(stream_spec("feed_status").unwrap());
+    let first = import_chunk(
+        &db,
+        &scope,
+        snapshot(&vault, "pc-a", 9, 9),
+        &chunk(
+            "feed_status",
+            vec![
+                status_row("2026-10-10T12:00:00.000Z", "busy"),
+                status_row("2026-10-10T12:00:03.000Z", "busy"),
+            ],
+        ),
+    )
+    .unwrap();
+    // The next chunk of the same snapshot repeats the status once more.
+    let second = import_chunk(
+        &db,
+        &scope,
+        snapshot(&vault, "pc-a", 10, 9),
+        &chunk(
+            "feed_status",
+            vec![status_row("2026-10-10T12:00:06.000Z", "busy")],
+        ),
+    )
+    .unwrap();
+    assert_eq!((first.inserted, first.matched), (2, 0));
+    assert_eq!((second.inserted, second.matched), (1, 0));
+    assert_eq!(count(&db, &table), 3);
+}
+
+#[test]
+fn a_snapshot_row_matches_a_row_this_pc_recorded_itself() {
+    let (_dir, db, scope) = setup("snapshot-local");
+    let vault = vault();
+    let table = scope.table_name(stream_spec("feed_status").unwrap());
+    db.execute_non_query(
+        &format!("INSERT INTO {table} (created_at, user_id, display_name, status, status_description, previous_status, previous_status_description) VALUES ('2026-10-10T12:00:02.000Z', 'usr_friend', 'Friend', 'busy', '', '', '')"),
+        &Default::default(),
+    )
+    .unwrap();
+    let report = import_chunk(
+        &db,
+        &scope,
+        snapshot(&vault, "pc-a", 9, 9),
+        &chunk(
+            "feed_status",
+            vec![status_row("2026-10-10T12:00:00.000Z", "busy")],
+        ),
+    )
+    .unwrap();
+    assert_eq!((report.inserted, report.matched), (0, 1));
+    assert_eq!(count(&db, &table), 1);
 }
 
 #[test]

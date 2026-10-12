@@ -2,7 +2,7 @@
 //! this PC may write to it, upload local history, then import what other
 //! sources uploaded. Everything the server returns is verified before use.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::future::Future;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -838,6 +838,8 @@ async fn pull<T: SyncTransport>(
         cancel,
     } = *pass;
     let mut sequences = store::seen_source_sequences(db, &vault.reference).map_err(storage)?;
+    // Per source, the first and latest sequence of the snapshot being read.
+    let mut snapshots = HashMap::<String, (u64, u64)>::new();
     loop {
         if cancel.load(Ordering::Acquire) {
             report.cancelled = true;
@@ -890,6 +892,17 @@ async fn pull<T: SyncTransport>(
             let source_id = opened.header.source_id.to_string();
             let is_other_source = opened.header.source_id != vault.source_id;
             let source_seq = opened.header.source_seq;
+            let snapshot_from = if matches!(opened.header.kind, ChunkKind::Snapshot) {
+                let first = match snapshots.get(&source_id) {
+                    Some((first, latest)) if latest + 1 == source_seq => *first,
+                    _ => source_seq,
+                };
+                snapshots.insert(source_id.clone(), (first, source_seq));
+                Some(first)
+            } else {
+                snapshots.remove(&source_id);
+                None
+            };
             let streams: BTreeMap<_, _> = opened.body.streams;
             let stream_names: Vec<String> = streams.keys().cloned().collect();
             let imported = blocking(move || {
@@ -901,6 +914,7 @@ async fn pull<T: SyncTransport>(
                         source_id: &source_id,
                         source_seq,
                         server_seq,
+                        snapshot_from,
                     },
                     &streams,
                 )

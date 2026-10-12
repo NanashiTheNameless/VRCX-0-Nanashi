@@ -904,6 +904,11 @@ pub struct ImportSource<'a> {
     pub source_id: &'a str,
     pub source_seq: u64,
     pub server_seq: u64,
+    /// Set for a chunk of a replacement snapshot, to the first sequence of
+    /// that snapshot. A snapshot repeats rows its source sent before, so its
+    /// rows match earlier rows of the same source instead of being added
+    /// again; only rows the snapshot itself already claimed stay separate.
+    pub snapshot_from: Option<u64>,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -1073,20 +1078,29 @@ fn import_row(
         .set("stream", stream.table.clone())
         .set("source_id", source.source_id)
         .set("owner_row_id", scope.owner_row_id)
+        .set("claimed_from", to_i64(source.snapshot_from.unwrap_or(0)))
         .set("time", time.clone());
+    let window = DateTime::parse_from_rfc3339(&time)
+        .ok()
+        .filter(|_| spec.slack);
     let mut conditions = Vec::new();
     for (index, column) in spec.key.iter().enumerate() {
-        conditions.push(format!("{} IS @k{index}", quote(column)));
+        // With a time window, only the first key column may pick the index.
+        // The others are attributes shared by many rows (a location such as
+        // "private"), and an index on one of them would walk all of those.
+        let attribute = if window.is_some() && index > 0 {
+            "+"
+        } else {
+            ""
+        };
+        conditions.push(format!("{attribute}{} IS @k{index}", quote(column)));
         params = params.set(
             &format!("k{index}"),
             value_of(column).unwrap_or(Value::Null),
         );
     }
     let time_column = quote(spec.time);
-    match DateTime::parse_from_rfc3339(&time)
-        .ok()
-        .filter(|_| spec.slack)
-    {
+    match window {
         Some(at) => {
             // The text range narrows the search through the time index;
             // julianday then compares the instants themselves.
@@ -1105,10 +1119,11 @@ fn import_row(
     }
     let table = quote(&stream.table);
     // Rows that came from this same source are separate events of that
-    // source, so they never count as the copy of another of its rows.
+    // source, so they never count as the copy of another of its rows. The
+    // check is one primary key probe per candidate row.
     let existing = tx.execute(
         &format!(
-            "SELECT rowid FROM {table} WHERE {conditions}{owner} AND rowid NOT IN (SELECT local_rowid FROM remote_sync_provenance WHERE stream = @stream AND source_id = @source_id) LIMIT 1",
+            "SELECT rowid FROM {table} AS candidate WHERE {conditions}{owner} AND NOT EXISTS (SELECT 1 FROM remote_sync_provenance WHERE stream = @stream AND local_rowid = candidate.rowid AND source_id = @source_id AND source_seq >= @claimed_from) LIMIT 1",
             conditions = conditions.join(" AND "),
             owner = owner_filter(spec),
         ),
@@ -1152,8 +1167,15 @@ fn import_row(
             )
         }
     };
+    // A snapshot takes over the rows it matches, so that a second row of
+    // the same snapshot cannot match the same local row.
+    let claim = if source.snapshot_from.is_some() {
+        "INSERT INTO remote_sync_provenance (stream, local_rowid, source_id, source_seq) VALUES (@stream, @local_rowid, @source_id, @source_seq) ON CONFLICT (stream, local_rowid) DO UPDATE SET source_id = excluded.source_id, source_seq = excluded.source_seq"
+    } else {
+        "INSERT OR IGNORE INTO remote_sync_provenance (stream, local_rowid, source_id, source_seq) VALUES (@stream, @local_rowid, @source_id, @source_seq)"
+    };
     tx.execute_non_query(
-        "INSERT OR IGNORE INTO remote_sync_provenance (stream, local_rowid, source_id, source_seq) VALUES (@stream, @local_rowid, @source_id, @source_seq)",
+        claim,
         &ParamsBuilder::new()
             .set("stream", stream.table.clone())
             .set("local_rowid", rowid)
