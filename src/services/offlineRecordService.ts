@@ -128,6 +128,7 @@ const ERROR_KEYS: Record<FeedLoggerErrorCode, string> = {
     betaRecorder: 'offline_record.health.beta_recorder',
     backupRequired: 'offline_record.error.backup_required',
     accountMismatch: 'offline_record.error.account_mismatch',
+    historySyncEnabled: 'offline_record.error.history_sync_enabled',
     invalidAddress: 'offline_record.error.invalid_address',
     invalidPassword: 'offline_record.error.invalid_password',
     unreachable: 'offline_record.health.unreachable',

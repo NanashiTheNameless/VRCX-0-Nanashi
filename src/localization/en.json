@@ -505,7 +505,8 @@
             "rejected": "The recorder refused: {message}",
             "storage": "VRCX-0-Nanashi couldn't save the recorder settings or records",
             "backup_required": "Disconnect the Self-hosted Recorder before turning off automatic backups",
-            "account_mismatch": "The recorder logged in to a different VRChat account than VRCX-0-Nanashi, so it was logged out again"
+            "account_mismatch": "The recorder logged in to a different VRChat account than VRCX-0-Nanashi, so it was logged out again",
+            "history_sync_enabled": "History Sync is on. Turn it off in Settings before connecting a recorder; only one of the two can be on at a time."
         },
         "status_unsynced": "Recording - {count} to fill in",
         "two_factor_method": {

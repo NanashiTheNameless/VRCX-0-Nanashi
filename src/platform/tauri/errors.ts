@@ -80,6 +80,7 @@ function feedLoggerErrorCode(value: unknown): FeedLoggerErrorCode | undefined {
         case 'betaRecorder':
         case 'backupRequired':
         case 'accountMismatch':
+        case 'historySyncEnabled':
         case 'invalidAddress':
         case 'invalidPassword':
         case 'unreachable':

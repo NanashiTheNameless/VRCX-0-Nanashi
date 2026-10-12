@@ -5,7 +5,7 @@ use std::sync::Arc;
 use tauri::State;
 use vrcx_0_logger_protocol::wire::{SessionState, WebhookFormat};
 use vrcx_0_runtime_host_desktop::feed_logger::{
-    FeedLoggerProbe, FeedLoggerSettingsView, FeedLoggerSyncReport, SettingsCheck,
+    FeedLoggerError, FeedLoggerProbe, FeedLoggerSettingsView, FeedLoggerSyncReport, SettingsCheck,
 };
 
 use crate::commands::blocking::run_blocking;
@@ -28,6 +28,9 @@ pub async fn app__feed_logger_settings_save(
     address: String,
     password: String,
 ) -> Result<FeedLoggerProbe, AppError> {
+    if state.runtime_host().remote_sync_enabled() {
+        return Err(FeedLoggerError::HistorySyncEnabled.into());
+    }
     let runtime = Arc::clone(state.runtime_host().feed_logger());
     match runtime.verify_settings(address, password).await {
         SettingsCheck::Verified(verified) => {

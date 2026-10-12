@@ -56,6 +56,8 @@ pub enum FeedLoggerError {
     BackupRequired,
     #[error("the feed logger logged in to a different VRChat account")]
     AccountMismatch,
+    #[error("turn off History Sync before connecting the feed logger")]
+    HistorySyncEnabled,
     #[error(transparent)]
     Client(#[from] FeedLoggerClientError),
     #[error("feed logger storage: {0}")]
@@ -74,6 +76,7 @@ pub enum FeedLoggerErrorCode {
     BetaRecorder,
     BackupRequired,
     AccountMismatch,
+    HistorySyncEnabled,
     InvalidAddress,
     InvalidPassword,
     Unreachable,
@@ -96,6 +99,7 @@ impl FeedLoggerError {
             Self::BetaRecorder => FeedLoggerErrorCode::BetaRecorder,
             Self::BackupRequired => FeedLoggerErrorCode::BackupRequired,
             Self::AccountMismatch => FeedLoggerErrorCode::AccountMismatch,
+            Self::HistorySyncEnabled => FeedLoggerErrorCode::HistorySyncEnabled,
             Self::Client(FeedLoggerClientError::InvalidAddress(_)) => {
                 FeedLoggerErrorCode::InvalidAddress
             }

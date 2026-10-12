@@ -195,6 +195,19 @@ pub fn app__remote_sync_settings_set(
             "The selected history sync backend is not available in this app version.".into(),
         ));
     }
+    if backend == "remotesync"
+        && !state.runtime_host().remote_sync_enabled()
+        && state
+            .runtime_host()
+            .feed_logger()
+            .settings_view()?
+            .address
+            .is_some()
+    {
+        return Err(AppError::WebClient(
+            "The self-hosted recorder is connected. Disconnect it in Tools before turning on History Sync; only one of the two can be on at a time.".into(),
+        ));
+    }
     if !SYNC_INTERVAL_OPTIONS_MINUTES.contains(&sync_interval_minutes) {
         return Err(AppError::WebClient(
             "Choose a sync interval from the available options.".into(),

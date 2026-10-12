@@ -4793,6 +4793,7 @@ export type FeedLoggerErrorCode =
     | 'betaRecorder'
     | 'backupRequired'
     | 'accountMismatch'
+    | 'historySyncEnabled'
     | 'invalidAddress'
     | 'invalidPassword'
     | 'unreachable'
