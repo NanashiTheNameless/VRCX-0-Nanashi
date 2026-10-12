@@ -439,18 +439,15 @@ impl DesktopRuntimeHostState {
             discord_rpc,
             vr_overlay_runtime,
             app_update,
-            feed_logger: Arc::new(
-                crate::feed_logger::DesktopFeedLoggerRuntime::new(
-                    Arc::clone(builder.database()),
-                    Arc::clone(builder.desktop_assembly().world_cache()),
-                    builder.desktop_assembly().file_cache().clone(),
-                    Arc::clone(builder.desktop_assembly().web_client()),
-                    builder.desktop_assembly().event_bus().clone(),
-                    builder.desktop_assembly().auth_scope().clone(),
-                    builder.desktop_assembly().auth_credentials_shared(),
-                )
-                .for_app_version(&app_version),
-            ),
+            feed_logger: Arc::new(crate::feed_logger::DesktopFeedLoggerRuntime::new(
+                Arc::clone(builder.database()),
+                Arc::clone(builder.desktop_assembly().world_cache()),
+                builder.desktop_assembly().file_cache().clone(),
+                Arc::clone(builder.desktop_assembly().web_client()),
+                builder.desktop_assembly().event_bus().clone(),
+                builder.desktop_assembly().auth_scope().clone(),
+                builder.desktop_assembly().auth_credentials_shared(),
+            )),
             background_image,
             community_theme,
             integration_api: Arc::clone(&integration_api_runtime),

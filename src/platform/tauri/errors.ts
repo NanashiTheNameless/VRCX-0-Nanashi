@@ -77,7 +77,6 @@ function feedLoggerErrorCode(value: unknown): FeedLoggerErrorCode | undefined {
         case 'notPresent':
         case 'noSavedCredentials':
         case 'loggerTooOld':
-        case 'betaRecorder':
         case 'backupRequired':
         case 'accountMismatch':
         case 'historySyncEnabled':

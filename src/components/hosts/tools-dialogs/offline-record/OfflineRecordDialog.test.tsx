@@ -224,11 +224,6 @@ describe('first-time setup', () => {
             reason: 'offline_record.health.unauthorized'
         },
         {
-            problem: 'is a beta build while this VRCX-0 is stable',
-            probe: { state: 'betaRecorder' },
-            reason: 'offline_record.health.beta_recorder'
-        },
-        {
             problem: 'answers with something unexpected',
             probe: { state: 'badResponse', message: 'not json' },
             reason: 'offline_record.health.bad_response'

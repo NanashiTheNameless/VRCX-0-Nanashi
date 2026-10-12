@@ -50,8 +50,6 @@ pub enum FeedLoggerError {
     NoSavedCredentials,
     #[error("feed logger needs to be updated")]
     LoggerTooOld,
-    #[error("a stable VRCX-0 only works with a stable feed logger")]
-    BetaRecorder,
     #[error("disconnect the feed logger before turning off automatic backups")]
     BackupRequired,
     #[error("the feed logger logged in to a different VRChat account")]
@@ -73,7 +71,6 @@ pub enum FeedLoggerErrorCode {
     NotPresent,
     NoSavedCredentials,
     LoggerTooOld,
-    BetaRecorder,
     BackupRequired,
     AccountMismatch,
     HistorySyncEnabled,
@@ -96,7 +93,6 @@ impl FeedLoggerError {
             Self::NotPresent => FeedLoggerErrorCode::NotPresent,
             Self::NoSavedCredentials => FeedLoggerErrorCode::NoSavedCredentials,
             Self::LoggerTooOld => FeedLoggerErrorCode::LoggerTooOld,
-            Self::BetaRecorder => FeedLoggerErrorCode::BetaRecorder,
             Self::BackupRequired => FeedLoggerErrorCode::BackupRequired,
             Self::AccountMismatch => FeedLoggerErrorCode::AccountMismatch,
             Self::HistorySyncEnabled => FeedLoggerErrorCode::HistorySyncEnabled,
@@ -133,7 +129,6 @@ pub enum FeedLoggerProbe {
     Unauthorized,
     ClientTooOld,
     LoggerTooOld,
-    BetaRecorder,
     BadResponse { message: String },
     Connected { status: Box<StatusResponse> },
 }
@@ -223,7 +218,6 @@ pub struct DesktopFeedLoggerRuntime {
     client: Mutex<Option<Arc<FeedLoggerClient>>>,
     presence_generation: AtomicU64,
     syncing: AtomicBool,
-    stable_app: bool,
     configured: AtomicBool,
     linked_account: Mutex<Option<(String, Instant)>>,
     last_probe: Mutex<Option<FeedLoggerProbe>>,
@@ -246,7 +240,6 @@ impl DesktopFeedLoggerRuntime {
         auth_credentials: Arc<dyn AuthCredentialStore>,
     ) -> Self {
         Self {
-            stable_app: true,
             configured: AtomicBool::new(false),
             config: ConfigRepository::new(Arc::clone(&db)),
             db,
@@ -273,13 +266,6 @@ impl DesktopFeedLoggerRuntime {
         self
     }
 
-    pub fn for_app_version(self, app_version: &str) -> Self {
-        Self {
-            stable_app: !app_version.contains('-'),
-            ..self
-        }
-    }
-
     pub fn settings_view(&self) -> Result<FeedLoggerSettingsView> {
         Ok(FeedLoggerSettingsView {
             address: self.load_settings()?.map(|settings| settings.address),
@@ -289,7 +275,7 @@ impl DesktopFeedLoggerRuntime {
 
     pub async fn verify_settings(&self, address: String, password: String) -> SettingsCheck {
         let settings = PersistedSettings { address, password };
-        let verified = match connect(&settings, self.stable_app).await {
+        let verified = match connect(&settings).await {
             Ok(client) => client
                 .call::<_, StatusResponse>("/status", &OkResponse {})
                 .await
@@ -833,7 +819,7 @@ impl DesktopFeedLoggerRuntime {
         let settings = self
             .load_settings()?
             .ok_or(FeedLoggerError::NotConfigured)?;
-        let client = connect(&settings, self.stable_app).await?;
+        let client = connect(&settings).await?;
         *lock(&self.client) = Some(Arc::clone(&client));
         Ok(client)
     }
@@ -866,17 +852,17 @@ fn store_settings(config: &ConfigRepository, settings: &PersistedSettings) -> Re
     config.set_string(SETTINGS_KEY, &json).map_err(storage)
 }
 
-async fn connect(settings: &PersistedSettings, stable_app: bool) -> Result<Arc<FeedLoggerClient>> {
+async fn connect(settings: &PersistedSettings) -> Result<Arc<FeedLoggerClient>> {
     let address = settings.address.clone();
     let password = settings.password.clone();
     let client = tokio::task::spawn_blocking(move || FeedLoggerClient::new(&address, &password))
         .await
         .map_err(storage)??;
-    check_compatibility(&client.hello().await?, stable_app)?;
+    check_compatibility(&client.hello().await?)?;
     Ok(Arc::new(client))
 }
 
-fn check_compatibility(hello: &HelloResponse, stable_app: bool) -> Result<()> {
+fn check_compatibility(hello: &HelloResponse) -> Result<()> {
     if hello.protocol_version < MIN_LOGGER_PROTOCOL_VERSION
         || hello.capture_format_version < CAPTURE_FORMAT_VERSION
     {
@@ -887,9 +873,6 @@ fn check_compatibility(hello: &HelloResponse, stable_app: bool) -> Result<()> {
     {
         return Err(FeedLoggerClientError::ClientTooOld.into());
     }
-    if stable_app && hello.logger_version.contains('-') {
-        return Err(FeedLoggerError::BetaRecorder);
-    }
     Ok(())
 }
 
@@ -897,7 +880,6 @@ fn probe_from_error(error: FeedLoggerError) -> Result<FeedLoggerProbe> {
     match error {
         FeedLoggerError::NotConfigured => Ok(FeedLoggerProbe::NotConfigured),
         FeedLoggerError::LoggerTooOld => Ok(FeedLoggerProbe::LoggerTooOld),
-        FeedLoggerError::BetaRecorder => Ok(FeedLoggerProbe::BetaRecorder),
         FeedLoggerError::Client(FeedLoggerClientError::Transport(message)) => {
             Ok(FeedLoggerProbe::Unreachable { message })
         }
@@ -1010,33 +992,8 @@ mod tests {
     }
 
     #[test]
-    fn a_stable_desktop_only_accepts_a_stable_recorder() {
-        let beta = recorder_release(PROTOCOL_VERSION, 1, CAPTURE_FORMAT_VERSION, "2.32.0-beta.1");
-
-        assert!(matches!(
-            check_compatibility(&beta, true),
-            Err(FeedLoggerError::BetaRecorder)
-        ));
-        assert!(
-            check_compatibility(&hello(PROTOCOL_VERSION, 1, CAPTURE_FORMAT_VERSION), true).is_ok()
-        );
-    }
-
-    #[test]
-    fn a_beta_desktop_accepts_stable_and_beta_recorders() {
-        let beta = recorder_release(PROTOCOL_VERSION, 1, CAPTURE_FORMAT_VERSION, "2.32.0-beta.1");
-
-        assert!(check_compatibility(&beta, false).is_ok());
-        assert!(
-            check_compatibility(&hello(PROTOCOL_VERSION, 1, CAPTURE_FORMAT_VERSION), false).is_ok()
-        );
-    }
-
-    #[test]
     fn a_recorder_speaking_this_desktops_protocol_and_capture_format_is_accepted() {
-        assert!(
-            check_compatibility(&hello(PROTOCOL_VERSION, 1, CAPTURE_FORMAT_VERSION), true).is_ok()
-        );
+        assert!(check_compatibility(&hello(PROTOCOL_VERSION, 1, CAPTURE_FORMAT_VERSION)).is_ok());
     }
 
     #[test]
@@ -1046,7 +1003,7 @@ mod tests {
             hello(PROTOCOL_VERSION, 1, CAPTURE_FORMAT_VERSION - 1),
         ] {
             assert!(matches!(
-                check_compatibility(&too_old, false),
+                check_compatibility(&too_old),
                 Err(FeedLoggerError::LoggerTooOld)
             ));
         }
@@ -1063,7 +1020,7 @@ mod tests {
             hello(PROTOCOL_VERSION, 1, CAPTURE_FORMAT_VERSION + 1),
         ] {
             assert!(matches!(
-                check_compatibility(&too_new, false),
+                check_compatibility(&too_new),
                 Err(FeedLoggerError::Client(FeedLoggerClientError::ClientTooOld))
             ));
         }

@@ -526,8 +526,7 @@
             "two_factor": "Two-factor code needed",
             "no_credentials": "VRChat login needed",
             "login_failed": "Login failed",
-            "bad_response": "Unexpected response from the recorder",
-            "beta_recorder": "A stable VRCX-0-Nanashi only works with a stable recorder. Switch the recorder to the latest image"
+            "bad_response": "Unexpected response from the recorder"
         },
         "status_bar": {
             "pulling": "Fetching from recorder {count}",

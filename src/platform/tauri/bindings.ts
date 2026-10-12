@@ -4790,7 +4790,6 @@ export type FeedLoggerErrorCode =
     | 'notPresent'
     | 'noSavedCredentials'
     | 'loggerTooOld'
-    | 'betaRecorder'
     | 'backupRequired'
     | 'accountMismatch'
     | 'historySyncEnabled'
@@ -4808,7 +4807,6 @@ export type FeedLoggerProbe =
     | { state: 'unauthorized' }
     | { state: 'clientTooOld' }
     | { state: 'loggerTooOld' }
-    | { state: 'betaRecorder' }
     | { state: 'badResponse'; message: string }
     | { state: 'connected'; status: FeedLoggerStatus };
 export type FeedLoggerSession =

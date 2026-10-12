@@ -49,10 +49,6 @@ const PROBE_FAILURE_HEALTH: Record<
     badResponse: {
         level: 'warning',
         messageKey: 'offline_record.health.bad_response'
-    },
-    betaRecorder: {
-        level: 'error',
-        messageKey: 'offline_record.health.beta_recorder'
     }
 };
 
@@ -119,7 +115,6 @@ const ERROR_KEYS: Record<FeedLoggerErrorCode, string> = {
     notPresent: 'offline_record.error.not_present',
     noSavedCredentials: 'offline_record.error.no_saved_credentials',
     loggerTooOld: 'offline_record.health.logger_too_old',
-    betaRecorder: 'offline_record.health.beta_recorder',
     backupRequired: 'offline_record.error.backup_required',
     accountMismatch: 'offline_record.error.account_mismatch',
     historySyncEnabled: 'offline_record.error.history_sync_enabled',
