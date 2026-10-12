@@ -23,8 +23,8 @@ use vrcx_0_nanashi_website_protocol::{
 use vrcx_0_persistence::remote_sync::{
     self as store,
     streams::{
-        export_rows, export_rows_for_compaction, export_state, import_chunk_deduping, stream_spec,
-        Dedupe, ImportSource, StreamScope, DELETED_SUFFIX, ROW_STREAMS, STATE_STREAMS,
+        export_rows, export_rows_for_compaction, export_state, import_chunk_deduping, newest_rowid,
+        stream_spec, Dedupe, ImportSource, StreamScope, DELETED_SUFFIX, ROW_STREAMS, STATE_STREAMS,
     },
     PendingChunk, ReplacedChunk, SyncLogEntry, VaultRef, VaultState,
 };
@@ -33,8 +33,11 @@ use zeroize::Zeroizing;
 
 use crate::{engine, Error, RemoteSyncClient};
 
-const CHUNK_ROW_LIMIT: usize = 2000;
-const CHUNK_BYTE_LIMIT: usize = 1024 * 1024;
+// One request per chunk, so larger chunks mean fewer round trips. A chunk is
+// imported in one write transaction on every other PC, which keeps the row
+// limit from going higher, and the server accepts 4 MiB at most.
+const CHUNK_ROW_LIMIT: usize = 4000;
+const CHUNK_BYTE_LIMIT: usize = 2 * 1024 * 1024;
 // The server caps pages at 500 chunks and 16 MiB. Use the full chunk limit to
 // reduce round trips when catching up after a long offline period.
 const PULL_BATCH: u16 = 500;
@@ -542,9 +545,14 @@ fn build_chunk(
             break;
         }
         let after = store::push_cursor_get(db, vault, spec.name)?;
+        // Read before the rows are: every row up to here exists by then.
+        let newest = newest_rowid(db, scope, spec)?;
+        let exported = export_rows(db, scope, spec, after, rows_left as u32)?;
+        let reached_the_end = exported.len() < rows_left;
+        let offered = exported.len();
         let mut taken = Vec::new();
         let mut cursor = after;
-        for (rowid, row) in export_rows(db, scope, spec, after, rows_left as u32)? {
+        for (rowid, row) in exported {
             let size = serde_json::to_vec(&row).map(|json| json.len()).unwrap_or(0);
             if !taken.is_empty() && bytes + size > CHUNK_BYTE_LIMIT {
                 break;
@@ -557,10 +565,18 @@ fn build_chunk(
             }
             taken.push(row);
         }
+        // Every row up to the newest one is now either in this chunk, sent
+        // earlier, or imported and never to be sent. Moving the cursor there
+        // keeps the next pass from walking the imported rows again.
+        if reached_the_end && taken.len() == offered {
+            cursor = cursor.max(newest);
+        }
         if !taken.is_empty() {
             rows_left -= taken.len();
             built.cursors.push((spec.name.to_owned(), cursor));
             built.body.streams.insert(spec.name.to_owned(), taken);
+        } else if cursor > after {
+            store::push_cursor_advance(db, vault, spec.name, cursor)?;
         }
     }
     if built.body.row_count() == 0 {

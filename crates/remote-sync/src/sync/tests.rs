@@ -414,6 +414,40 @@ async fn both_pcs_recording_the_same_event_keep_one_copy() {
     assert_eq!((a.rows(), b.rows()), (1, 1));
 }
 
+#[tokio::test]
+async fn imported_rows_are_passed_over_once_and_later_rows_are_still_sent() {
+    let server = FakeServer::default();
+    let secret = SyncSecret::generate().unwrap();
+    let (a, b) = (pc("a"), pc("b"));
+    for hour in 0..3 {
+        a.record(
+            &format!("2026-10-10T1{hour}:00:00.000Z"),
+            &format!("bio {hour}"),
+        );
+    }
+    a.sync(&server, &secret).await.unwrap();
+    b.sync(&server, &secret).await.unwrap();
+
+    // B has nothing of its own to send, yet its upload cursor sits behind
+    // the three imported rows instead of in front of them.
+    let state = store::vault_state_for_user(&b.db, "https://sync.example", "acc_test", USER)
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        store::push_cursor_get(&b.db, &state.vault, "feed_bio").unwrap(),
+        3
+    );
+
+    b.record("2026-10-10T20:00:00.000Z", "from b");
+    assert_eq!(b.unsent(), 1);
+    let report = b.sync(&server, &secret).await.unwrap();
+    assert_eq!(report.pushed_rows, 1);
+    assert_eq!(b.unsent(), 0);
+    let report = a.sync(&server, &secret).await.unwrap();
+    assert_eq!(report.imported_rows, 1);
+    assert_eq!((a.rows(), b.rows()), (4, 4));
+}
+
 /// A, the first PC of a vault, is its deduplicating device. B uploads four
 /// events; C recorded the same four and uploads them without having read B.
 async fn vault_with_a_duplicated_chunk(

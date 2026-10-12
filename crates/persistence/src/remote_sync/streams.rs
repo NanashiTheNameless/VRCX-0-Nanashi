@@ -810,6 +810,22 @@ pub fn export_rows(
         .collect())
 }
 
+/// The highest row id in a stream's table, zero when it is empty.
+pub fn newest_rowid(
+    db: &DatabaseService,
+    scope: &StreamScope,
+    spec: &StreamSpec,
+) -> Result<i64, Error> {
+    let rows = db.execute(
+        &format!(
+            "SELECT COALESCE(MAX(rowid), 0) FROM {}",
+            quote(&scope.table_name(spec))
+        ),
+        &Default::default(),
+    )?;
+    Ok(rows.first().map(|row| row_i64(row, 0)).unwrap_or(0))
+}
+
 /// Counts at most `limit` rows waiting for upload without decoding their
 /// columns into JSON values.
 pub fn pending_row_count(
@@ -950,6 +966,39 @@ struct PreparedStream<'a> {
     rows: &'a [Value],
     /// Highest row id of this stream that this PC already uploaded.
     exported_through: i64,
+    /// The duplicate lookup, with and without a time window. The text is
+    /// the same for every row of the stream, so it is built once.
+    lookup_window: String,
+    lookup_exact: String,
+}
+
+/// Finds a local row that is the same event as the row being imported.
+/// With a time window only the first key column may pick the index: the
+/// others are attributes shared by many rows (a location such as
+/// "private"), and an index on one of them would walk all of those. Rows
+/// that came from this same source are separate events of that source, so
+/// they never count as the copy of another of its rows; that check is one
+/// primary key probe per candidate row.
+fn lookup_sql(table: &str, spec: &StreamSpec, window: bool) -> String {
+    let mut conditions = Vec::new();
+    for (index, column) in spec.key.iter().enumerate() {
+        let attribute = if window && index > 0 { "+" } else { "" };
+        conditions.push(format!("{attribute}{} IS @k{index}", quote(column)));
+    }
+    let time_column = quote(spec.time);
+    conditions.push(if window {
+        // The text range narrows the search through the time index;
+        // julianday then compares the instants themselves.
+        format!("{time_column} >= @lo AND {time_column} <= @hi AND ABS((julianday({time_column}) - julianday(@time)) * 86400.0) <= @slack")
+    } else {
+        format!("{time_column} IS @time")
+    });
+    format!(
+        "SELECT rowid FROM {table} AS candidate WHERE {conditions}{owner} AND NOT EXISTS (SELECT 1 FROM remote_sync_provenance WHERE stream = @stream AND local_rowid = candidate.rowid AND source_id = @source_id AND source_seq >= @claimed_from) LIMIT 1",
+        table = quote(table),
+        conditions = conditions.join(" AND "),
+        owner = owner_filter(spec),
+    )
 }
 
 struct PreparedState<'a> {
@@ -1012,6 +1061,8 @@ pub fn import_chunk_deduping(
             None => 0,
         };
         prepared.push(PreparedStream {
+            lookup_window: lookup_sql(&table, spec, true),
+            lookup_exact: lookup_sql(&table, spec, false),
             spec,
             table,
             columns,
@@ -1175,52 +1226,27 @@ fn import_row(
     let window = DateTime::parse_from_rfc3339(&time)
         .ok()
         .filter(|_| spec.slack);
-    let mut conditions = Vec::new();
     for (index, column) in spec.key.iter().enumerate() {
-        // With a time window, only the first key column may pick the index.
-        // The others are attributes shared by many rows (a location such as
-        // "private"), and an index on one of them would walk all of those.
-        let attribute = if window.is_some() && index > 0 {
-            "+"
-        } else {
-            ""
-        };
-        conditions.push(format!("{attribute}{} IS @k{index}", quote(column)));
         params = params.set(
             &format!("k{index}"),
             value_of(column).unwrap_or(Value::Null),
         );
     }
-    let time_column = quote(spec.time);
-    match window {
+    let lookup = match window {
         Some(at) => {
-            // The text range narrows the search through the time index;
-            // julianday then compares the instants themselves.
             let slack = Duration::seconds(DEDUPE_SLACK_SECONDS);
             let format = "%Y-%m-%dT%H:%M:%S";
             let at = at.to_utc();
-            conditions.push(format!(
-                "{time_column} >= @lo AND {time_column} <= @hi AND ABS((julianday({time_column}) - julianday(@time)) * 86400.0) <= @slack"
-            ));
             params = params
                 .set("lo", (at - slack).format(format).to_string())
                 .set("hi", format!("{}~", (at + slack).format(format)))
                 .set("slack", DEDUPE_SLACK_SECONDS as f64 + 0.001);
+            &stream.lookup_window
         }
-        None => conditions.push(format!("{time_column} IS @time")),
-    }
+        None => &stream.lookup_exact,
+    };
     let table = quote(&stream.table);
-    // Rows that came from this same source are separate events of that
-    // source, so they never count as the copy of another of its rows. The
-    // check is one primary key probe per candidate row.
-    let existing = tx.execute(
-        &format!(
-            "SELECT rowid FROM {table} AS candidate WHERE {conditions}{owner} AND NOT EXISTS (SELECT 1 FROM remote_sync_provenance WHERE stream = @stream AND local_rowid = candidate.rowid AND source_id = @source_id AND source_seq >= @claimed_from) LIMIT 1",
-            conditions = conditions.join(" AND "),
-            owner = owner_filter(spec),
-        ),
-        &params.build(),
-    )?;
+    let existing = tx.execute(lookup, &params.build())?;
     let (rowid, outcome) = match existing.first() {
         Some(found) => {
             let rowid = row_i64(found, 0);
@@ -1249,23 +1275,19 @@ fn import_row(
                 holders.push("@owner_row_id".to_owned());
                 insert = insert.set("owner_row_id", scope.owner_row_id);
             }
-            let added = tx.execute_non_query(
+            let inserted = tx.execute(
                 &format!(
-                    "INSERT OR IGNORE INTO {table} ({}) VALUES ({})",
+                    "INSERT OR IGNORE INTO {table} ({}) VALUES ({}) RETURNING rowid",
                     names.join(", "),
                     holders.join(", ")
                 ),
                 &insert.build(),
             )?;
-            if added == 0 {
+            let Some(inserted) = inserted.first() else {
                 // A unique index already holds this event.
                 return Ok(RowOutcome::Matched);
-            }
-            let inserted = tx.execute("SELECT last_insert_rowid()", &Default::default())?;
-            (
-                inserted.first().map(|row| row_i64(row, 0)).unwrap_or(0),
-                RowOutcome::Inserted,
-            )
+            };
+            (row_i64(inserted, 0), RowOutcome::Inserted)
         }
     };
     // A snapshot takes over the rows it matches, so that a second row of

@@ -490,6 +490,24 @@ pub fn dedupe_checked_seq_set(
     Ok(())
 }
 
+/// Moves a stream's upload cursor forward without an upload, for rows that
+/// never need one because they were imported.
+pub fn push_cursor_advance(
+    db: &DatabaseService,
+    vault: &VaultRef,
+    stream: &str,
+    row_cursor: i64,
+) -> Result<(), Error> {
+    db.execute_non_query(
+        "INSERT INTO remote_sync_push_state (api_origin, account_id, vault_id, stream, row_cursor) VALUES (@api_origin, @account_id, @vault_id, @stream, @row_cursor) ON CONFLICT (api_origin, account_id, vault_id, stream) DO UPDATE SET row_cursor = MAX(row_cursor, excluded.row_cursor)",
+        &vault_params(vault)
+            .set("stream", stream)
+            .set("row_cursor", row_cursor)
+            .build(),
+    )?;
+    Ok(())
+}
+
 pub fn push_cursor_get(db: &DatabaseService, vault: &VaultRef, stream: &str) -> Result<i64, Error> {
     ensure_remote_sync_tables(db)?;
     Ok(db

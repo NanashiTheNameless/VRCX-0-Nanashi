@@ -72,6 +72,41 @@ pub fn seal_chunk(
     Ok((sealed.chunk_id, sealed.blob))
 }
 
+/// Opens the chunks in order. Decrypting, verifying and decoding a chunk is
+/// most of the work of reading a batch and does not depend on the others,
+/// so it is spread over the available cores.
+fn open_chunks(
+    frames: &[&batch::Frame<'_>],
+    keys: &VaultKeys,
+    manifest: &Manifest,
+) -> Result<Vec<OpenedChunk>, Error> {
+    let open = |frame: &&batch::Frame<'_>| {
+        chunk::open_chunk(frame.blob, keys.vault_id(), frame.chunk_id, keys, manifest)
+            .map_err(|error| Error::Integrity(error.to_string()))
+    };
+    let workers = std::thread::available_parallelism()
+        .map_or(1, |cores| cores.get())
+        .min(frames.len());
+    if workers <= 1 {
+        return frames.iter().map(open).collect();
+    }
+    let open = &open;
+    std::thread::scope(|scope| {
+        let parts: Vec<_> = frames
+            .chunks(frames.len().div_ceil(workers))
+            .map(|part| scope.spawn(move || part.iter().map(open).collect::<Result<Vec<_>, _>>()))
+            .collect();
+        let mut opened = Vec::with_capacity(frames.len());
+        for part in parts {
+            opened.extend(
+                part.join()
+                    .map_err(|_| Error::Integrity("a chunk could not be opened".into()))??,
+            );
+        }
+        Ok(opened)
+    })
+}
+
 /// Decode and authenticate an API batch before callers see any rows. Cursor
 /// and provenance changes must be committed only after this function succeeds.
 pub fn verify_batch(
@@ -84,6 +119,11 @@ pub fn verify_batch(
     source_sequences: &mut HashMap<String, u64>,
 ) -> Result<VerifiedBatch, Error> {
     let frames = batch::decode(bytes).map_err(|error| Error::Integrity(error.to_string()))?;
+    let wanted: Vec<&batch::Frame<'_>> = frames
+        .iter()
+        .filter(|frame| frame.seq > compacted_through_seq && !manifest.seq_is_replaced(frame.seq))
+        .collect();
+    let mut opened_chunks = open_chunks(&wanted, keys, manifest)?.into_iter();
     let mut chunks = Vec::new();
     let mut server_gaps = Vec::new();
     let mut source_gaps = Vec::new();
@@ -92,7 +132,7 @@ pub fn verify_batch(
         .max(compacted_through_seq.saturating_add(1));
     let mut next_cursor = after_cursor.max(compacted_through_seq);
 
-    for frame in frames {
+    for frame in &frames {
         if frame.seq <= compacted_through_seq {
             next_cursor = next_cursor.max(frame.seq);
             continue;
@@ -109,8 +149,9 @@ pub fn verify_batch(
             expected_server = frame.seq.saturating_add(1);
             continue;
         }
-        let opened = chunk::open_chunk(frame.blob, keys.vault_id(), frame.chunk_id, keys, manifest)
-            .map_err(|error| Error::Integrity(error.to_string()))?;
+        let opened = opened_chunks
+            .next()
+            .ok_or_else(|| Error::Integrity("a chunk of the batch was not opened".into()))?;
         if opened.header.source_id != own_source_id {
             let source = opened.header.source_id.to_string();
             if let Some(previous) = source_sequences.get(&source).copied() {
