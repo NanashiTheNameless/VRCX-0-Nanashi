@@ -822,7 +822,7 @@ async fn streamed_answers_outlasting_the_timeout_arrive_complete_while_chunks_ke
             .await
             .unwrap();
         for piece in ["a", "b", "c", "d", "e", "f"] {
-            tokio::time::sleep(Duration::from_millis(150)).await;
+            tokio::time::sleep(Duration::from_millis(400)).await;
             let line =
                 format!("data: {{\"choices\":[{{\"delta\":{{\"content\":\"{piece}\"}}}}]}}\n\n");
             if stream.write_all(line.as_bytes()).await.is_err() {
@@ -832,7 +832,7 @@ async fn streamed_answers_outlasting_the_timeout_arrive_complete_while_chunks_ke
         let _ = stream.write_all(b"data: [DONE]\n\n").await;
     });
     let client =
-        LlmClient::with_timeout(base_url, "", "model", None, Duration::from_millis(500)).unwrap();
+        LlmClient::with_timeout(base_url, "", "model", None, Duration::from_secs(2)).unwrap();
 
     let turn = client
         .stream_chat(
