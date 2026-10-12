@@ -390,10 +390,15 @@ jobs:
     # operators of a RemoteSync instance, published next to the app but never
     # bundled into it. The website's collector image takes this exact file
     # together with the version and commit written beside it.
+    #
+    # It is built inside Debian 13 because that is the base of the website's
+    # collector image: a binary linked on the runner needs whatever glibc the
+    # runner has, and the image's loader refuses a newer one before main runs.
     collector:
         name: Collector CLI (Linux x86_64)
         needs: prepare
         runs-on: ubuntu-24.04
+        container: rust:1-trixie
         steps:
             - uses: actions/checkout@v7
 
@@ -406,6 +411,14 @@ jobs:
 
             - name: Build collector
               run: cargo build --locked --release -p vrcx-0-nanashi-collector
+
+            # The website's supervisor starts a downloaded collector without
+            # arguments and only accepts it when it answers with exit code 78.
+            - name: Smoke test collector
+              run: |
+                  status=0
+                  target/release/vrcx-0-nanashi-collector || status=$?
+                  test "$status" -eq 78
 
             - name: Prepare collector release assets
               run: |
