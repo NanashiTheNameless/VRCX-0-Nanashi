@@ -164,7 +164,7 @@ fn run_window(parts: WindowThreadParts) {
     let handler_state = Rc::clone(&state);
     let window = LayeredWindow::create(
         LayeredWindowOptions {
-            title: "VRCX-0".to_string(),
+            title: "VRCX-0-Nanashi".to_string(),
             bounds: rect_from(provisional),
             topmost: settings.pinned,
             click_through: settings.click_through,
