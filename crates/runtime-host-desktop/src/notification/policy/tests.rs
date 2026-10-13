@@ -61,6 +61,7 @@ fn desktop_delivery() -> ActivityDelivery {
         hmd: false,
         webhook: false,
         tts: false,
+        widget: false,
     }
 }
 

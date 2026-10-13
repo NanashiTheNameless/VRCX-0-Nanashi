@@ -55,6 +55,8 @@ type DialogsSectionInput = SettingsSectionInput<
     | 'setHmdNotificationsDialogOpen'
     | 'desktopNotificationsDialogOpen'
     | 'setDesktopNotificationsDialogOpen'
+    | 'desktopWidgetDialogOpen'
+    | 'setDesktopWidgetDialogOpen'
     | 'webhookNotificationsDialogOpen'
     | 'setWebhookNotificationsDialogOpen'
     | 'ttsNotificationsDialogOpen'
@@ -64,6 +66,7 @@ type DialogsSectionInput = SettingsSectionInput<
     | 'saveVrNotificationActivityFilters'
     | 'saveHmdNotificationActivityFilters'
     | 'saveDesktopNotificationActivityFilters'
+    | 'saveDesktopWidgetActivityFilters'
     | 'saveWebhookActivityFilters'
     | 'saveTtsNotificationActivityFilters'
 >;
@@ -122,6 +125,8 @@ export function buildDialogsSection({
     setHmdNotificationsDialogOpen,
     desktopNotificationsDialogOpen,
     setDesktopNotificationsDialogOpen,
+    desktopWidgetDialogOpen,
+    setDesktopWidgetDialogOpen,
     webhookNotificationsDialogOpen,
     setWebhookNotificationsDialogOpen,
     ttsNotificationsDialogOpen,
@@ -131,6 +136,7 @@ export function buildDialogsSection({
     saveVrNotificationActivityFilters,
     saveHmdNotificationActivityFilters,
     saveDesktopNotificationActivityFilters,
+    saveDesktopWidgetActivityFilters,
     saveWebhookActivityFilters,
     saveTtsNotificationActivityFilters
 }: DialogsSectionInput) {
@@ -189,6 +195,8 @@ export function buildDialogsSection({
         setHmdNotificationsDialogOpen,
         desktopNotificationsDialogOpen,
         setDesktopNotificationsDialogOpen,
+        desktopWidgetDialogOpen,
+        setDesktopWidgetDialogOpen,
         webhookNotificationsDialogOpen,
         setWebhookNotificationsDialogOpen,
         ttsNotificationsDialogOpen,
@@ -198,12 +206,14 @@ export function buildDialogsSection({
         hmdNotificationActivityFilters: prefs.hmdNotificationActivityFilters,
         desktopNotificationActivityFilters:
             prefs.desktopNotificationActivityFilters,
+        desktopWidgetActivityFilters: prefs.desktopWidgetActivityFilters,
         webhookActivityFilters: prefs.webhookActivityFilters,
         ttsNotificationActivityFilters: prefs.ttsNotificationActivityFilters,
         saveOverlayActivityFilters,
         saveVrNotificationActivityFilters,
         saveHmdNotificationActivityFilters,
         saveDesktopNotificationActivityFilters,
+        saveDesktopWidgetActivityFilters,
         saveWebhookActivityFilters,
         saveTtsNotificationActivityFilters
     };

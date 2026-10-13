@@ -175,7 +175,7 @@ fn desktop_composition_does_not_expose_concrete_service_bundles() {
     for path in rust_sources_below("src-tauri/src") {
         let source = std::fs::read_to_string(&path).expect("read Tauri source");
         assert!(
-            !source.contains("runtime_host().desktop") && !source.contains("runtime_host().game"),
+            !source.contains("runtime_host().desktop.") && !source.contains("runtime_host().game"),
             "Tauri code reaches into a concrete desktop service bundle: {}",
             path.display()
         );

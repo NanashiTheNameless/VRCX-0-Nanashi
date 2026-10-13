@@ -27,11 +27,16 @@ export function useSettingsNotificationsTabState() {
             notificationTTSVoiceNative: state.notificationTTSVoiceNative,
             notificationTTSVolume: state.notificationTTSVolume,
             notificationTTSNameMode: state.notificationTTSNameMode,
-            notificationTTSNickName: state.notificationTTSNickName
+            notificationTTSNickName: state.notificationTTSNickName,
+            desktopWidgetOpacity: state.desktopWidgetOpacity,
+            desktopWidgetNewestOnTop: state.desktopWidgetNewestOnTop
         }))
     );
     const showTaskbarIconDot = useRuntimeStore(
         (state) => state.hostCapabilities.platform === 'windows'
+    );
+    const showDesktopWidget = useRuntimeStore(
+        (state) => state.desktopWidget.supported
     );
     const {
         notificationLayoutOptions,
@@ -46,6 +51,7 @@ export function useSettingsNotificationsTabState() {
         notificationTtsTestVisible,
         notificationTtsTest,
         setDesktopNotificationsDialogOpen,
+        setDesktopWidgetDialogOpen,
         setTtsNotificationsDialogOpen,
         saveStringPreference,
         saveBoolPreference,
@@ -62,6 +68,7 @@ export function useSettingsNotificationsTabState() {
         prefs,
         notificationLayoutOptions,
         showTaskbarIconDot,
+        showDesktopWidget,
         onNotificationLayoutChange,
         onNotificationIconDotChange,
         onTaskbarIconDotChange,
@@ -74,8 +81,27 @@ export function useSettingsNotificationsTabState() {
         notificationTtsTest,
         onOpenDesktopNotificationFiltersDialog: () =>
             setDesktopNotificationsDialogOpen(true),
+        onOpenDesktopWidgetFiltersDialog: () =>
+            setDesktopWidgetDialogOpen(true),
         onOpenTtsNotificationFiltersDialog: () =>
             setTtsNotificationsDialogOpen(true),
+        onDesktopWidgetOpacityChange: (value: number) => {
+            const opacity = Math.min(100, Math.max(0, Math.round(value)));
+            savePreferenceValue('desktopWidgetOpacity', opacity, () =>
+                setIntConfigPreference('desktopWidgetOpacity', opacity, {
+                    min: 0,
+                    max: 100,
+                    fallback: 55
+                })
+            );
+        },
+        onDesktopWidgetOrderChange: (value: string) => {
+            saveBoolPreference(
+                'desktopWidgetNewestOnTop',
+                'desktopWidgetNewestOnTop',
+                value !== 'bottom'
+            );
+        },
         onDesktopToastChange: (value: string) => {
             saveStringPreference('desktopToast', 'desktopToast', value);
         },

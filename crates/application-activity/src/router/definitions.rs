@@ -16,6 +16,7 @@ pub(super) struct KindDefinition {
     wrist_default_scope: ActivityScope,
     alert_default_scope: ActivityScope,
     tts_default_scope: ActivityScope,
+    widget_default_scope: ActivityScope,
     aliases: &'static [&'static str],
 }
 
@@ -50,105 +51,134 @@ pub(super) fn definition(kind: ActivityKind) -> KindDefinition {
     use ActivityCategory as C;
     use ActivityKind as K;
     use ActivityScope as S;
-    let (category, allowed_scopes, wrist_default_scope, alert_default_scope, tts_default_scope) =
-        match kind {
-            K::Invite
-            | K::RequestInvite
-            | K::InviteResponse
-            | K::RequestInviteResponse
-            | K::Boop => (
-                C::ActionRequired,
-                DIRECT_ACTOR_SCOPES,
-                S::Friends,
-                S::Friends,
-                S::Friends,
-            ),
-            K::FriendRequest | K::GroupQueueReady | K::InstanceClosed => {
-                (C::ActionRequired, BOOLEAN_SCOPES, S::On, S::On, S::On)
-            }
-            K::OnPlayerJoining => (
-                C::CurrentInstance,
-                INSTANCE_ACTOR_SCOPES,
-                S::Friends,
-                S::Friends,
-                S::AllFavorites,
-            ),
-            K::OnPlayerJoined | K::OnPlayerLeft => (
-                C::CurrentInstance,
-                INSTANCE_ACTOR_SCOPES,
-                S::EveryoneInInstance,
-                S::AllFavorites,
-                S::Off,
-            ),
-            K::LobbyAvatarChange => (
-                C::CurrentInstance,
-                INSTANCE_ACTOR_SCOPES,
-                S::Off,
-                S::Off,
-                S::Off,
-            ),
-            K::Online | K::Offline => (
-                C::FavoriteMovement,
-                FRIEND_ACTOR_SCOPES,
-                S::Friends,
-                S::AllFavorites,
-                S::Off,
-            ),
-            K::Gps | K::Status => (
-                C::FavoriteMovement,
-                FRIEND_ACTOR_SCOPES,
-                S::Friends,
-                S::Off,
-                S::Off,
-            ),
-            K::Friend | K::Unfriend => (C::ProfileChange, BOOLEAN_SCOPES, S::On, S::On, S::Off),
-            K::DisplayName | K::TrustLevel => (
-                C::ProfileChange,
-                FRIEND_ACTOR_SCOPES,
-                S::Friends,
-                S::AllFavorites,
-                S::Off,
-            ),
-            K::AvatarChange | K::Bio => (
-                C::ProfileChange,
-                FRIEND_ACTOR_SCOPES,
-                S::Off,
-                S::Off,
-                S::Off,
-            ),
-            K::GroupChange
-            | K::GroupAnnouncement
-            | K::GroupEventCreated
-            | K::GroupEventStarting
-            | K::GroupInformative
-            | K::GroupInvite
-            | K::GroupTransfer => (C::GroupSocial, BOOLEAN_SCOPES, S::On, S::On, S::Off),
-            K::GroupJoinRequest => (C::GroupSocial, BOOLEAN_SCOPES, S::On, S::Off, S::Off),
-            K::GroupInstanceOpened => (
-                C::GroupSocial,
-                GROUP_FAVORITE_SCOPES,
-                S::Off,
-                S::Off,
-                S::Off,
-            ),
-            K::Event | K::External => (C::SystemSafety, BOOLEAN_SCOPES, S::On, S::On, S::Off),
-            K::BlockedOnPlayerJoined
-            | K::BlockedOnPlayerLeft
-            | K::MutedOnPlayerJoined
-            | K::MutedOnPlayerLeft => (
-                C::SystemSafety,
-                INSTANCE_ACTOR_SCOPES,
-                S::Off,
-                S::Off,
-                S::Off,
-            ),
-            K::VideoPlay => (C::Media, BOOLEAN_SCOPES, S::On, S::Off, S::Off),
-            // Fork: safety watchlist hits and assistant reminders stay on for
-            // every local surface, matching the pre-rewrite per-surface defaults.
-            K::SafetyGroup | K::SafetyAvatar | K::SafetyCommunity | K::SafetyUrl | K::Reminder => {
-                (C::SystemSafety, BOOLEAN_SCOPES, S::On, S::On, S::On)
-            }
-        };
+    let (
+        category,
+        allowed_scopes,
+        wrist_default_scope,
+        alert_default_scope,
+        tts_default_scope,
+        widget_default_scope,
+    ) = match kind {
+        K::Invite | K::RequestInvite | K::InviteResponse | K::RequestInviteResponse | K::Boop => (
+            C::ActionRequired,
+            DIRECT_ACTOR_SCOPES,
+            S::Friends,
+            S::Friends,
+            S::Friends,
+            S::Friends,
+        ),
+        K::FriendRequest | K::GroupQueueReady | K::InstanceClosed => (
+            C::ActionRequired,
+            BOOLEAN_SCOPES,
+            S::On,
+            S::On,
+            S::On,
+            S::On,
+        ),
+        K::OnPlayerJoining => (
+            C::CurrentInstance,
+            INSTANCE_ACTOR_SCOPES,
+            S::Friends,
+            S::Friends,
+            S::AllFavorites,
+            S::Friends,
+        ),
+        K::OnPlayerJoined | K::OnPlayerLeft => (
+            C::CurrentInstance,
+            INSTANCE_ACTOR_SCOPES,
+            S::EveryoneInInstance,
+            S::AllFavorites,
+            S::Off,
+            S::Friends,
+        ),
+        K::LobbyAvatarChange => (
+            C::CurrentInstance,
+            INSTANCE_ACTOR_SCOPES,
+            S::Off,
+            S::Off,
+            S::Off,
+            S::Off,
+        ),
+        K::Online | K::Offline => (
+            C::FavoriteMovement,
+            FRIEND_ACTOR_SCOPES,
+            S::Friends,
+            S::AllFavorites,
+            S::Off,
+            S::AllFavorites,
+        ),
+        K::Gps | K::Status => (
+            C::FavoriteMovement,
+            FRIEND_ACTOR_SCOPES,
+            S::Friends,
+            S::Off,
+            S::Off,
+            S::AllFavorites,
+        ),
+        K::Friend | K::Unfriend => (
+            C::ProfileChange,
+            BOOLEAN_SCOPES,
+            S::On,
+            S::On,
+            S::Off,
+            S::On,
+        ),
+        K::DisplayName | K::TrustLevel => (
+            C::ProfileChange,
+            FRIEND_ACTOR_SCOPES,
+            S::Friends,
+            S::AllFavorites,
+            S::Off,
+            S::AllFavorites,
+        ),
+        K::AvatarChange | K::Bio => (
+            C::ProfileChange,
+            FRIEND_ACTOR_SCOPES,
+            S::Off,
+            S::Off,
+            S::Off,
+            S::Off,
+        ),
+        K::GroupChange
+        | K::GroupAnnouncement
+        | K::GroupEventCreated
+        | K::GroupEventStarting
+        | K::GroupInformative
+        | K::GroupInvite
+        | K::GroupTransfer => (C::GroupSocial, BOOLEAN_SCOPES, S::On, S::On, S::Off, S::On),
+        K::GroupJoinRequest => (C::GroupSocial, BOOLEAN_SCOPES, S::On, S::Off, S::Off, S::On),
+        K::GroupInstanceOpened => (
+            C::GroupSocial,
+            GROUP_FAVORITE_SCOPES,
+            S::Off,
+            S::Off,
+            S::Off,
+            S::Off,
+        ),
+        K::Event | K::External => (C::SystemSafety, BOOLEAN_SCOPES, S::On, S::On, S::Off, S::On),
+        K::BlockedOnPlayerJoined | K::MutedOnPlayerJoined => (
+            C::SystemSafety,
+            INSTANCE_ACTOR_SCOPES,
+            S::Off,
+            S::Off,
+            S::Off,
+            S::EveryoneInInstance,
+        ),
+        K::BlockedOnPlayerLeft | K::MutedOnPlayerLeft => (
+            C::SystemSafety,
+            INSTANCE_ACTOR_SCOPES,
+            S::Off,
+            S::Off,
+            S::Off,
+            S::Off,
+        ),
+        K::VideoPlay => (C::Media, BOOLEAN_SCOPES, S::On, S::Off, S::Off, S::Off),
+        // Fork: safety watchlist hits and assistant reminders stay on for
+        // every local surface, matching the pre-rewrite per-surface defaults.
+        K::SafetyGroup | K::SafetyAvatar | K::SafetyCommunity | K::SafetyUrl | K::Reminder => {
+            (C::SystemSafety, BOOLEAN_SCOPES, S::On, S::On, S::On, S::On)
+        }
+    };
     KindDefinition {
         kind,
         category,
@@ -156,6 +186,7 @@ pub(super) fn definition(kind: ActivityKind) -> KindDefinition {
         wrist_default_scope,
         alert_default_scope,
         tts_default_scope,
+        widget_default_scope,
         aliases: match kind {
             K::AvatarChange => &["Avatar"],
             _ => &[],
@@ -176,6 +207,7 @@ pub(super) fn activity_type_definitions() -> Vec<ActivityTypeDefinition> {
             wrist_default_scope: definition.wrist_default_scope,
             alert_default_scope: definition.alert_default_scope,
             tts_default_scope: definition.tts_default_scope,
+            widget_default_scope: definition.widget_default_scope,
             aliases: definition
                 .aliases
                 .iter()
@@ -193,6 +225,7 @@ fn default_scope(definition: &KindDefinition, surface: NotificationSurface) -> A
         | NotificationSurface::Hmd => definition.alert_default_scope,
         NotificationSurface::Tts => definition.tts_default_scope,
         NotificationSurface::Webhook => ActivityScope::Off,
+        NotificationSurface::DesktopWidget => definition.widget_default_scope,
     }
 }
 
@@ -224,7 +257,7 @@ fn rule_with_scope(scope: ActivityScope) -> ActivityRule {
 }
 
 pub(super) fn has_persisted_filter_rules(value: &Value) -> bool {
-    ["wrist", "desktop", "vr", "hmd", "webhook", "tts"]
+    ["wrist", "desktop", "vr", "hmd", "webhook", "tts", "widget"]
         .iter()
         .any(|surface| {
             value
@@ -246,6 +279,7 @@ pub(super) fn normalize_filters(value: Value) -> ActivityFilters {
         hmd: surface("hmd", NotificationSurface::Hmd),
         webhook: surface("webhook", NotificationSurface::Webhook),
         tts: surface("tts", NotificationSurface::Tts),
+        widget: surface("widget", NotificationSurface::DesktopWidget),
     }
 }
 

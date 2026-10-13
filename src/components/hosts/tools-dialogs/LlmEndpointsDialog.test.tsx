@@ -31,7 +31,8 @@ const mocks = vi.hoisted(() => ({
     upsert: vi.fn(),
     deleteEndpoint: vi.fn(),
     detectModels: vi.fn(),
-    toastAdd: vi.fn()
+    toastAdd: vi.fn(),
+    setModelQuery: null as ((value: string) => void) | null
 }));
 
 vi.mock('react-i18next', () => ({
@@ -45,7 +46,14 @@ vi.mock('@/services/toastService', () => ({
 }));
 
 vi.mock('@/state/llmEndpointsStore', () => ({
-    mergeModels: (...lists: string[][]) => [...new Set(lists.flat())],
+    mergeModels: (...lists: string[][]) => [
+        ...new Set(
+            lists
+                .flat()
+                .map((model) => model.trim())
+                .filter(Boolean)
+        )
+    ],
     useLlmEndpointsStore: (
         selector: (state: {
             endpoints: typeof mocks.endpoints;
@@ -82,7 +90,13 @@ vi.mock('@/ui/shadcn/button', () => ({
 }));
 
 vi.mock('@/ui/shadcn/combobox', () => ({
-    Combobox: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    Combobox: ({
+        children,
+        onInputValueChange
+    }: PropsWithChildren<{ onInputValueChange: (value: string) => void }>) => {
+        mocks.setModelQuery = onInputValueChange;
+        return <div>{children}</div>;
+    },
     ComboboxChip: ({ children }: PropsWithChildren) => <span>{children}</span>,
     ComboboxChips: ({ children }: PropsWithChildren) => <div>{children}</div>,
     ComboboxChipsInput: (props: ComponentProps<'input'>) => (
@@ -311,6 +325,32 @@ describe('LlmEndpointsDialog', () => {
                     apiKey: 'sk-existing',
                     modelReasoning: null
                 })
+            )
+        );
+        expect(mocks.detectModels).not.toHaveBeenCalled();
+    });
+
+    it('saves a typed model name that was not committed as a chip', async () => {
+        render(<LlmEndpointsDialog open onOpenChange={vi.fn()} />);
+
+        await waitFor(() => expect(mocks.load).toHaveBeenCalledOnce());
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'view.tools.llm_endpoints.add'
+            })
+        );
+        fireEvent.change(
+            await screen.findByLabelText('view.tools.llm_endpoints.base_url'),
+            { target: { value: 'https://llm.example/v1' } }
+        );
+        act(() => mocks.setModelQuery?.('manual-model'));
+        fireEvent.click(
+            screen.getByRole('button', { name: 'common.actions.save' })
+        );
+
+        await waitFor(() =>
+            expect(mocks.upsert).toHaveBeenCalledWith(
+                expect.objectContaining({ models: ['manual-model'] })
             )
         );
         expect(mocks.detectModels).not.toHaveBeenCalled();

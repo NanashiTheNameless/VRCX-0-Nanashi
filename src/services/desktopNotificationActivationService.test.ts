@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
     eventHandlers: new Map<string, () => void>(),
     openGroupDialog: vi.fn(),
     openUserDialog: vi.fn(),
+    openWorldDialog: vi.fn(),
     subscribe: vi.fn(),
     unsubscribe: vi.fn()
 }));
@@ -32,7 +33,8 @@ vi.mock('@/platform/tauri/client', () => ({
 
 vi.mock('./dialogService', () => ({
     openGroupDialog: mocks.openGroupDialog,
-    openUserDialog: mocks.openUserDialog
+    openUserDialog: mocks.openUserDialog,
+    openWorldDialog: mocks.openWorldDialog
 }));
 
 import {
@@ -73,6 +75,21 @@ describe('desktopNotificationActivationService', () => {
         });
         unbind();
         expect(mocks.unsubscribe).toHaveBeenCalledOnce();
+    });
+
+    it('opens the instance a clicked place points at', async () => {
+        const location =
+            'wrld_12345678-1234-1234-1234-1234567890ab:12345~region(jp)';
+        mocks.appTakePendingDesktopNotificationActivation.mockResolvedValueOnce(
+            { target: { kind: 'openLocation', location } }
+        );
+
+        await takePendingDesktopNotificationActivation();
+
+        expect(mocks.openWorldDialog).toHaveBeenCalledWith({
+            worldId: location
+        });
+        expect(mocks.openUserDialog).not.toHaveBeenCalled();
     });
 
     it('opens a canonical pending user profile only once', async () => {

@@ -141,6 +141,10 @@ beforeEach(() => {
     vi.mocked(commands.appFeedLoggerStatus).mockResolvedValue({
         state: 'notConfigured'
     });
+    vi.mocked(commands.appFeedLoggerBackfillHistory).mockResolvedValue({
+        total: 0,
+        recent: []
+    });
     mocks.getProfileBackupSettings.mockResolvedValue(backupSettings(true));
 });
 
@@ -605,6 +609,27 @@ describe('recorder problems', () => {
         ).toBeNull();
         expect(screen.queryByText('offline_record.storage_error')).toBeNull();
         expect(screen.queryByText('offline_record.last_error')).toBeNull();
+        expect(screen.queryByText('offline_record.backfill_total')).toBeNull();
+    });
+
+    it('lists the latest fill-ins with the running total after they are gone from the recorder', async () => {
+        vi.mocked(commands.appFeedLoggerBackfillHistory).mockResolvedValue({
+            total: 42,
+            recent: [
+                { at: 1791860000, inserted: 6 },
+                { at: 1791850000, inserted: 4 }
+            ]
+        });
+        recorderReports(connectedRecorder());
+        openDialog();
+
+        expect(
+            await screen.findByText('offline_record.backfill_total')
+        ).toBeTruthy();
+        expect(screen.getByText('42')).toBeTruthy();
+        expect(
+            screen.getAllByText('offline_record.backfill_record')
+        ).toHaveLength(2);
     });
 });
 

@@ -31,3 +31,10 @@ vrcx-0-vr-overlay = { path = "../vr-overlay", features = ["slint-ui"] }
 
 [dev-dependencies]
 vrcx-0-application-core = { path = "../application-core", features = ["test-utils"] }
+
+[target.'cfg(windows)'.dev-dependencies]
+windows-sys = { version = "0.61", features = [
+    "Win32_Foundation",
+    "Win32_UI_HiDpi",
+    "Win32_UI_WindowsAndMessaging"
+] }

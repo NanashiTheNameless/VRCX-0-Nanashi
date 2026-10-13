@@ -886,6 +886,51 @@ describe('runtimeEventBridgeService', () => {
         });
     });
 
+    it('shows whether the desktop overlay is on as soon as the app starts', async () => {
+        mocks.getAncillaryRuntimeSnapshot.mockResolvedValue(
+            createAncillaryRuntimeSnapshot({
+                desktopWidgetState: {
+                    supported: true,
+                    enabled: true,
+                    pinned: true,
+                    clickThrough: false
+                }
+            })
+        );
+
+        await bindRuntimeEvents();
+
+        expect(useRuntimeStore.getState().desktopWidget).toEqual({
+            supported: true,
+            enabled: true,
+            pinned: true,
+            clickThrough: false
+        });
+    });
+
+    it('follows desktop overlay changes made from the tray or the window itself', async () => {
+        let widgetState: (payload: unknown) => void = () => {
+            throw new Error('Activity window state was not subscribed.');
+        };
+        mocks.subscribe.mockImplementation(async (name, handler) => {
+            if (name === 'desktopWidgetState') {
+                widgetState = handler;
+            }
+            return () => {};
+        });
+        await bindRuntimeEvents();
+
+        widgetState({
+            supported: true,
+            enabled: false,
+            pinned: true,
+            clickThrough: false
+        });
+
+        expect(useRuntimeStore.getState().desktopWidget.enabled).toBe(false);
+        expect(useRuntimeStore.getState().desktopWidget.supported).toBe(true);
+    });
+
     it('does not overwrite a now-playing event received during hydration', async () => {
         mocks.isHostCapabilityAvailable.mockImplementation(
             (name) => name === 'runtimeGameLogSideEffects'

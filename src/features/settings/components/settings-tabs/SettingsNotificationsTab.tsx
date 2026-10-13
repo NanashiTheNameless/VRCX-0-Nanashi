@@ -20,6 +20,7 @@ import {
 import { Slider } from '@/ui/shadcn/slider';
 import { Switch } from '@/ui/shadcn/switch';
 
+import { desktopWidgetOrderOptions } from '../../settingsOptions';
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
@@ -47,11 +48,14 @@ type SettingsNotificationsPrefs = Pick<
     | 'notificationTTSNickName'
     | 'notificationTTSVoiceNative'
     | 'notificationTTSVolume'
+    | 'desktopWidgetOpacity'
+    | 'desktopWidgetNewestOnTop'
 >;
 
 type SettingsNotificationsTabContentProps = {
     notificationLayoutOptions: SettingsOptionList;
     showTaskbarIconDot: boolean;
+    showDesktopWidget: boolean;
     onNotificationLayoutChange: (value: NotificationLayout) => void;
     onNotificationIconDotChange: (checked: boolean) => void;
     onTaskbarIconDotChange: (checked: boolean) => void;
@@ -75,6 +79,9 @@ type SettingsNotificationsTabContentProps = {
     onNotificationTtsVoiceChange: (value: string) => void;
     onNotificationTtsVolumeChange: (value: number) => void;
     onOpenDesktopNotificationFiltersDialog: () => void;
+    onOpenDesktopWidgetFiltersDialog: () => void;
+    onDesktopWidgetOpacityChange: (value: number) => void;
+    onDesktopWidgetOrderChange: (value: string) => void;
     onOpenTtsNotificationFiltersDialog: () => void;
     onSendTestNotification: () => void;
     onSpeakNotificationTts: (message: string) => void;
@@ -96,6 +103,7 @@ export function SettingsNotificationsTabContent({
     prefs,
     notificationLayoutOptions,
     showTaskbarIconDot,
+    showDesktopWidget,
     onNotificationLayoutChange,
     onNotificationIconDotChange,
     onTaskbarIconDotChange,
@@ -108,7 +116,10 @@ export function SettingsNotificationsTabContent({
     notificationTtsTestVisible,
     notificationTtsTest,
     onOpenDesktopNotificationFiltersDialog,
+    onOpenDesktopWidgetFiltersDialog,
     onOpenTtsNotificationFiltersDialog,
+    onDesktopWidgetOpacityChange,
+    onDesktopWidgetOrderChange,
     onDesktopToastChange,
     onAfkDesktopToastChange,
     onDesktopNotificationSoundChange,
@@ -135,6 +146,12 @@ export function SettingsNotificationsTabContent({
     );
     const [draftTtsVolume, setDraftTtsVolume] = useState<number | null>(null);
     const ttsVolume = draftTtsVolume ?? savedTtsVolume;
+    const [draftDesktopWidgetOpacity, setDraftDesktopWidgetOpacity] = useState<
+        number | null
+    >(null);
+    const desktopWidgetOpacity =
+        draftDesktopWidgetOpacity ??
+        Math.min(100, Math.max(0, Math.round(prefs.desktopWidgetOpacity)));
 
     return (
         <SettingsTabContent value="notifications">
@@ -277,6 +294,110 @@ export function SettingsNotificationsTabContent({
                     />
                 </Field>
             </SettingsCard>
+            {showDesktopWidget ? (
+                <SettingsCard
+                    cardId="notifications.desktop_widget"
+                    title={t(
+                        'view.settings.notifications.notifications.desktop_widget.header'
+                    )}
+                    description={t(
+                        'view.settings.notifications.notifications.desktop_widget.description'
+                    )}
+                >
+                    <p className="text-muted-foreground py-2 text-sm">
+                        {t(
+                            'view.settings.notifications.notifications.desktop_widget.usage_hint'
+                        )}
+                    </p>
+                    <Field
+                        label={t(
+                            'view.settings.notifications.notifications.desktop_widget.background_opacity'
+                        )}
+                        controlId="settings-desktop-widget-opacity"
+                    >
+                        <div className="flex w-56 max-w-full items-center justify-end gap-3">
+                            <Slider
+                                id="settings-desktop-widget-opacity"
+                                value={[desktopWidgetOpacity]}
+                                min={0}
+                                max={100}
+                                step={1}
+                                onValueChange={(value) =>
+                                    setDraftDesktopWidgetOpacity(
+                                        Array.isArray(value) ? value[0] : value
+                                    )
+                                }
+                                onValueCommitted={(value) => {
+                                    setDraftDesktopWidgetOpacity(null);
+                                    onDesktopWidgetOpacityChange(
+                                        Array.isArray(value) ? value[0] : value
+                                    );
+                                }}
+                            />
+                            <span className="text-muted-foreground w-10 text-right text-sm">
+                                {desktopWidgetOpacity}%
+                            </span>
+                        </div>
+                    </Field>
+                    <Field
+                        label={t(
+                            'view.settings.notifications.notifications.desktop_widget.order'
+                        )}
+                        controlId="settings-desktop-widget-order"
+                    >
+                        <Select
+                            value={
+                                prefs.desktopWidgetNewestOnTop
+                                    ? 'top'
+                                    : 'bottom'
+                            }
+                            items={desktopWidgetOrderOptions.map(
+                                ([value, labelKey]) => ({
+                                    value,
+                                    label: t(labelKey)
+                                })
+                            )}
+                            onValueChange={(value) =>
+                                onDesktopWidgetOrderChange(value ?? 'top')
+                            }
+                        >
+                            <SelectTrigger
+                                id="settings-desktop-widget-order"
+                                className="w-56"
+                            >
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    {desktopWidgetOrderOptions.map(
+                                        ([value, labelKey]) => (
+                                            <SelectItem
+                                                key={value}
+                                                value={value}
+                                            >
+                                                {t(labelKey)}
+                                            </SelectItem>
+                                        )
+                                    )}
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </Field>
+                    <Field
+                        label={t(
+                            'view.settings.notifications.notifications.desktop_widget.activity_filters'
+                        )}
+                    >
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={onOpenDesktopWidgetFiltersDialog}
+                        >
+                            {t('common.actions.configure')}
+                        </Button>
+                    </Field>
+                </SettingsCard>
+            ) : null}
             <SettingsCard
                 cardId="notifications.tts"
                 title={t(

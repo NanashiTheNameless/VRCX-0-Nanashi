@@ -59,6 +59,7 @@ type DialogSectionInput = Pick<
         | 'purgeAvatarFeedData'
         | 'saveCustomFontFamily'
         | 'saveDesktopNotificationActivityFilters'
+        | 'saveDesktopWidgetActivityFilters'
         | 'saveHmdNotificationActivityFilters'
         | 'saveOverlayActivityFilters'
         | 'saveTableLimitsDialog'
@@ -121,6 +122,7 @@ export type BuildSettingsPageStateSectionsInput = DialogSectionInput &
         cleanupAppDataDir: SettingsVoidAction;
         deleteAllScreenshotMetadata: SettingsCallback;
         desktopNotificationsDialogOpen: boolean;
+        desktopWidgetDialogOpen: boolean;
         dismissAppDataDirCleanup: SettingsVoidAction;
         discordPrefs: SettingsDiscordPrefs;
         handleCropInstancePrintsChange: SettingsCallback<[boolean]>;
@@ -175,6 +177,7 @@ export type BuildSettingsPageStateSectionsInput = DialogSectionInput &
         setConfigTreeData: SettingsCallback<[Record<string, unknown>]>;
         setDataTableStripedPreference: SettingsCallback<[boolean]>;
         setDesktopNotificationsDialogOpen: SettingsCallback<[boolean]>;
+        setDesktopWidgetDialogOpen: SettingsCallback<[boolean]>;
         setIntConfigPreference: SettingsCallback<
             [string, number, { min?: number; max?: number; fallback?: number }]
         >;

@@ -1,5 +1,6 @@
 mod avatar_cache;
 mod config;
+pub mod desktop_widget;
 mod eligibility;
 mod localization;
 mod manager;

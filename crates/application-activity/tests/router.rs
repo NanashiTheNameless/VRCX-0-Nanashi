@@ -97,6 +97,47 @@ fn default_filters_give_alert_surfaces_one_profile_and_keep_webhook_off() {
 }
 
 #[test]
+fn desktop_widget_defaults_keep_friend_movement_to_favorites_and_show_instance_safety() {
+    let definitions = activity_type_definitions();
+    let scope = |kind: ActivityKind| {
+        definitions
+            .iter()
+            .find(|definition| definition.key == kind)
+            .map(|definition| definition.widget_default_scope)
+            .unwrap_or_else(|| panic!("{} definition", kind.key()))
+    };
+    use ActivityScope::{AllFavorites, EveryoneInInstance, Friends, Off, On};
+
+    for kind in [
+        ActivityKind::Online,
+        ActivityKind::Offline,
+        ActivityKind::Gps,
+        ActivityKind::Status,
+        ActivityKind::DisplayName,
+        ActivityKind::TrustLevel,
+    ] {
+        assert_eq!(scope(kind), AllFavorites, "{kind:?}");
+    }
+    assert_eq!(scope(ActivityKind::OnPlayerJoined), Friends);
+    assert_eq!(scope(ActivityKind::OnPlayerLeft), Friends);
+    assert_eq!(
+        scope(ActivityKind::BlockedOnPlayerJoined),
+        EveryoneInInstance
+    );
+    assert_eq!(scope(ActivityKind::MutedOnPlayerJoined), EveryoneInInstance);
+    assert_eq!(scope(ActivityKind::BlockedOnPlayerLeft), Off);
+    assert_eq!(scope(ActivityKind::MutedOnPlayerLeft), Off);
+    assert_eq!(scope(ActivityKind::VideoPlay), Off);
+    assert_eq!(scope(ActivityKind::GroupJoinRequest), On);
+    assert_eq!(
+        ActivityFilters::default()
+            .rule_for(NotificationSurface::DesktopWidget, ActivityKind::Gps)
+            .scope,
+        AllFavorites
+    );
+}
+
+#[test]
 fn hmd_delivery_is_live_only_and_independent_from_wrist_snapshot() {
     let runtime = ActivityRouter::with_filters(ActivityFilters::from_json(json!({
         "version": 1,
@@ -523,7 +564,7 @@ fn all_activity_types_build_desktop_safe_content() {
 
 #[test]
 fn each_surface_setting_alone_decides_delivery_for_every_activity_type() {
-    const SURFACES: [&str; 6] = ["wrist", "desktop", "vr", "hmd", "webhook", "tts"];
+    const SURFACES: [&str; 7] = ["wrist", "desktop", "vr", "hmd", "webhook", "tts", "widget"];
     let definitions = activity_type_definitions();
 
     for definition in &definitions {
@@ -573,6 +614,7 @@ fn each_surface_setting_alone_decides_delivery_for_every_activity_type() {
                     ("hmd", delivery.hmd),
                     ("webhook", delivery.webhook),
                     ("tts", delivery.tts),
+                    ("widget", delivery.widget),
                 ]
                 .into_iter()
                 .filter_map(|(surface, on)| on.then_some(surface))

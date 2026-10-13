@@ -20,6 +20,7 @@ type NotificationsSectionInput = SettingsSectionInput<
     | 'notificationTtsTestVisible'
     | 'notificationTtsTest'
     | 'setDesktopNotificationsDialogOpen'
+    | 'setDesktopWidgetDialogOpen'
     | 'setTtsNotificationsDialogOpen'
     | 'saveStringPreference'
     | 'saveBoolPreference'
@@ -73,6 +74,7 @@ export function buildNotificationsSection({
     notificationTtsTestVisible,
     notificationTtsTest,
     setDesktopNotificationsDialogOpen,
+    setDesktopWidgetDialogOpen,
     setTtsNotificationsDialogOpen,
     saveStringPreference,
     saveBoolPreference,
@@ -92,6 +94,7 @@ export function buildNotificationsSection({
         notificationTtsTestVisible,
         notificationTtsTest,
         setDesktopNotificationsDialogOpen,
+        setDesktopWidgetDialogOpen,
         setTtsNotificationsDialogOpen,
         saveStringPreference,
         saveBoolPreference,

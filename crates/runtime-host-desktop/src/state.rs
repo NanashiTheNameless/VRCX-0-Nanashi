@@ -11,6 +11,7 @@ use crate::app_launcher::start_app_launcher_snapshot_events;
 use crate::avatar::DesktopAvatarRuntime;
 use crate::context::DesktopRuntimeServicesDeps;
 use crate::data_dir::DesktopDataDirRuntime;
+use crate::desktop_widget::is_desktop_widget_config_key;
 use crate::external_api::ExternalApiRuntime;
 use crate::group::DesktopGroupRuntime;
 use crate::group_order::HostGroupOrderSource;
@@ -165,6 +166,7 @@ pub struct DesktopRuntimeBundle {
     pub host_file_access: HostFileAccess,
     pub discord_rpc: Arc<DiscordRpc>,
     pub vr_overlay_runtime: Arc<DesktopVrOverlayRuntime>,
+    pub desktop_widget: Arc<crate::desktop_widget::DesktopWidget>,
     pub app_update: AppUpdateRuntime,
     pub feed_logger: Arc<crate::feed_logger::DesktopFeedLoggerRuntime>,
     pub background_image: BackgroundImageService,
@@ -364,6 +366,7 @@ impl DesktopRuntimeHostState {
             builder.desktop_assembly().auth_scope().clone(),
             activity_router.clone(),
         );
+        let desktop_widget = Arc::new(crate::desktop_widget::DesktopWidget::new(&desktop_services));
         let game_log_sink: Arc<dyn GameLogEventSink> = Arc::new(crate::safety::SafetyLogSink {
             inner: game_log_runtime.clone(),
             safety: Arc::clone(&safety),
@@ -439,6 +442,7 @@ impl DesktopRuntimeHostState {
             host_file_access: host_file_access.clone(),
             discord_rpc,
             vr_overlay_runtime,
+            desktop_widget,
             app_update,
             feed_logger: Arc::new(crate::feed_logger::DesktopFeedLoggerRuntime::new(
                 Arc::clone(builder.database()),
@@ -2105,6 +2109,7 @@ impl DesktopRuntimeHostState {
     pub fn stop_for_application_exit(&self, reason: &str, before_task_shutdown: impl FnOnce()) {
         self.ytdlp.stop();
         let _ = vrcx_0_host_desktop::power::set_keep_awake(false);
+        self.desktop.desktop_widget.shutdown();
         self.runtime.stop_backend_runtime(reason);
         before_task_shutdown();
         self.runtime.desktop_assembly().tasks().stop_all();
@@ -2260,17 +2265,31 @@ impl DesktopRuntimeHostState {
         &self,
         entries: Vec<crate::local_data::ConfigWriteEntry>,
     ) -> Result<()> {
+        let touches_desktop_widget = entries
+            .iter()
+            .any(|entry| is_desktop_widget_config_key(&entry.key));
         self.local_data.config_set_values(entries)?;
         self.desktop.services.reload_overlay_activity_filters();
         self.desktop.vr_overlay_runtime.mark_config_dirty();
+        if touches_desktop_widget {
+            self.desktop.desktop_widget.reload_settings();
+        }
         Ok(())
     }
 
     pub fn config_remove_value(&self, key: String) -> Result<i64> {
+        let touches_desktop_widget = is_desktop_widget_config_key(&key);
         let removed = self.local_data.config_remove_value(key)?;
         self.desktop.services.reload_overlay_activity_filters();
         self.desktop.vr_overlay_runtime.mark_config_dirty();
+        if touches_desktop_widget {
+            self.desktop.desktop_widget.reload_settings();
+        }
         Ok(removed)
+    }
+
+    pub fn desktop_widget(&self) -> Arc<crate::desktop_widget::DesktopWidget> {
+        Arc::clone(&self.desktop.desktop_widget)
     }
 
     pub async fn ancillary_runtime_snapshot(&self) -> AncillaryRuntimeSnapshot {

@@ -85,6 +85,57 @@ describe('preferencesStore normalizers', () => {
         ).toBe(60);
     });
 
+    it('shows the desktop overlay background at 55% opacity and keeps it within 0-100%', () => {
+        expect(DEFAULT_PREFERENCES.desktopWidgetNewestOnTop).toBe(true);
+        expect(
+            normalizePreferenceSnapshot({ desktopWidgetNewestOnTop: false })
+                .desktopWidgetNewestOnTop
+        ).toBe(false);
+        expect(DEFAULT_PREFERENCES.desktopWidgetOpacity).toBe(55);
+        expect(normalizePreferenceSnapshot({}).desktopWidgetOpacity).toBe(55);
+        expect(
+            normalizePreferenceSnapshot({ desktopWidgetOpacity: 'bad' })
+                .desktopWidgetOpacity
+        ).toBe(55);
+        expect(
+            normalizePreferenceSnapshot({ desktopWidgetOpacity: 140 })
+                .desktopWidgetOpacity
+        ).toBe(100);
+        expect(
+            normalizePreferenceSnapshot({ desktopWidgetOpacity: -5 })
+                .desktopWidgetOpacity
+        ).toBe(0);
+        expect(
+            normalizePreferenceSnapshot({ desktopWidgetOpacity: 30 })
+                .desktopWidgetOpacity
+        ).toBe(30);
+    });
+
+    it('keeps the desktop overlay activity filters separate from desktop notification filters', () => {
+        const widgetFilters = {
+            version: 1,
+            types: {
+                Online: {
+                    scope: 'allFavorites' as const,
+                    favoriteGroupKeys: 'all'
+                }
+            }
+        };
+
+        expect(DEFAULT_PREFERENCES.desktopWidgetActivityFilters).toEqual({
+            version: 1,
+            types: {}
+        });
+        const snapshot = normalizePreferenceSnapshot({
+            desktopWidgetActivityFilters: widgetFilters
+        });
+        expect(snapshot.desktopWidgetActivityFilters).toEqual(widgetFilters);
+        expect(snapshot.desktopNotificationActivityFilters).toEqual({
+            version: 1,
+            types: {}
+        });
+    });
+
     it('keeps auth recovery webhook events enabled by default', () => {
         expect(DEFAULT_PREFERENCES.webhookAuthEventsEnabled).toBe(true);
         expect(normalizePreferenceSnapshot({}).webhookAuthEventsEnabled).toBe(

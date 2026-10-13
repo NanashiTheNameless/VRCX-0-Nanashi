@@ -11,6 +11,7 @@ type ActivityFilterPreferenceKey =
     | 'vrNotificationActivityFilters'
     | 'hmdNotificationActivityFilters'
     | 'desktopNotificationActivityFilters'
+    | 'desktopWidgetActivityFilters'
     | 'webhookActivityFilters'
     | 'ttsNotificationActivityFilters';
 
@@ -54,6 +55,16 @@ export function setDesktopNotificationActivityFiltersPreference(
     return setActivityFilterPreference(
         'desktopNotificationActivityFilters',
         'desktop',
+        value
+    );
+}
+
+export function setDesktopWidgetActivityFiltersPreference(
+    value: ActivityFilterProfile
+) {
+    return setActivityFilterPreference(
+        'desktopWidgetActivityFilters',
+        'widget',
         value
     );
 }

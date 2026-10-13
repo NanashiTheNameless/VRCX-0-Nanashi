@@ -22,7 +22,7 @@ use vrcx_0_persistence::data_dir_migration::{
     PendingDataDirMigration,
 };
 use vrcx_0_persistence::profile_backup::has_pending_profile_restore;
-use vrcx_0_persistence::DatabaseService;
+use vrcx_0_persistence::{DatabaseService, SqliteErrorCategory};
 
 #[cfg(test)]
 mod tests;
@@ -195,8 +195,12 @@ impl LocalDataDirMigrationPort {
         let frozen = match self.inner.db.freeze_for_migration() {
             Ok(frozen) => frozen,
             Err(error) => {
-                tracing::error!(error = %error, "failed to freeze database for data directory migration");
                 let _ = remove_pending_data_dir_migration(&self.inner.control_dir);
+                if error.sqlite_category() == Some(SqliteErrorCategory::Locked) {
+                    tracing::warn!(error = %error, "database is in use; data directory migration was not started");
+                    return self.failed(DataDirMigrationErrorCode::DatabaseInUse, None);
+                }
+                tracing::error!(error = %error, "failed to freeze database for data directory migration");
                 return self.failed(DataDirMigrationErrorCode::DatabaseUnavailable, None);
             }
         };

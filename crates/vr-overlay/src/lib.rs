@@ -9,6 +9,9 @@ pub use model::{
     MAIN_SURFACE_ID,
 };
 #[cfg(feature = "slint-ui")]
-pub use slint_ui::{SlintHmdRenderer, SlintWristRenderer};
+pub use slint_ui::{SlintDesktopWidgetHost, SlintHmdRenderer, SlintWristRenderer};
+pub use surfaces::desktop_widget::{
+    DesktopWidgetAction, DesktopWidgetRow, DesktopWidgetSurfaceModel,
+};
 pub use surfaces::main::{AvatarBitmap, MainSurfaceModel, ToastCard};
 pub use surfaces::wrist::{PlayerCell, WristSurfaceModel, WristTextScale};

@@ -71,7 +71,7 @@ impl Error {
         }
     }
 
-    pub(crate) fn sqlite_category(&self) -> Option<SqliteErrorCategory> {
+    pub fn sqlite_category(&self) -> Option<SqliteErrorCategory> {
         match self {
             Self::Sqlite { category, .. } => *category,
             _ => None,

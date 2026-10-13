@@ -57,8 +57,11 @@ impl PrivacyLockState {
     }
 }
 
+pub type PrivacyLockObserver = Arc<dyn Fn(&PrivacyLockSnapshot) + Send + Sync>;
+
 pub struct PrivacyLockRuntime {
     state: Mutex<PrivacyLockState>,
+    observers: Mutex<Vec<PrivacyLockObserver>>,
     setup_requested: AtomicBool,
     credentials: Arc<dyn AuthCredentialStore>,
     event_bus: RuntimeEventBus,
@@ -76,6 +79,7 @@ impl PrivacyLockRuntime {
                 user_id: String::new(),
                 revision: 0,
             }),
+            observers: Mutex::new(Vec::new()),
             setup_requested: AtomicBool::new(false),
             credentials,
             event_bus,
@@ -84,6 +88,13 @@ impl PrivacyLockRuntime {
 
     pub fn snapshot(&self) -> PrivacyLockSnapshot {
         self.lock_state().snapshot()
+    }
+
+    pub fn add_observer(&self, observer: PrivacyLockObserver) {
+        self.observers
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .push(observer);
     }
 
     pub fn is_locked(&self) -> bool {
@@ -182,7 +193,19 @@ impl PrivacyLockRuntime {
             state.bump()
         };
         self.event_bus.emit(snapshot.clone());
+        self.notify(&snapshot);
         Ok(PrivacyLockOutcome::Ok { snapshot })
+    }
+
+    fn notify(&self, snapshot: &PrivacyLockSnapshot) {
+        let observers = self
+            .observers
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .clone();
+        for observer in observers {
+            observer(snapshot);
+        }
     }
 
     fn lock_state(&self) -> MutexGuard<'_, PrivacyLockState> {
@@ -205,12 +228,13 @@ impl RuntimeAuthScopeObserver for PrivacyLockRuntime {
             state.user_id = user_id;
             state.bump()
         };
-        self.event_bus.emit(snapshot);
+        self.event_bus.emit(snapshot.clone());
+        self.notify(&snapshot);
     }
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use std::sync::{Arc, Mutex};
 
     use vrcx_0_application::auth::{AuthCredentialStore, SealedAuthSecret};
@@ -219,7 +243,7 @@ mod tests {
     use super::*;
 
     #[derive(Clone, Default)]
-    struct MemoryCredentials {
+    pub(crate) struct MemoryCredentials {
         values: Arc<Mutex<std::collections::HashMap<String, String>>>,
     }
 
@@ -269,7 +293,7 @@ mod tests {
         }
     }
 
-    fn runtime_with_scope() -> (Arc<PrivacyLockRuntime>, RuntimeAuthScope) {
+    pub(crate) fn runtime_with_scope() -> (Arc<PrivacyLockRuntime>, RuntimeAuthScope) {
         let credentials: Arc<dyn AuthCredentialStore> = Arc::new(MemoryCredentials::default());
         let runtime = Arc::new(
             PrivacyLockRuntime::new(credentials, RuntimeEventBus::new()).expect("runtime"),
@@ -277,6 +301,27 @@ mod tests {
         let scope = RuntimeAuthScope::new();
         scope.add_observer(runtime.clone());
         (runtime, scope)
+    }
+
+    #[test]
+    fn watchers_hear_when_the_lock_engages_releases_or_follows_an_account_switch() -> Result<()> {
+        let (runtime, scope) = runtime_with_scope();
+        let heard = Arc::new(Mutex::new(Vec::new()));
+        let recorded = Arc::clone(&heard);
+        runtime.add_observer(Arc::new(move |snapshot: &PrivacyLockSnapshot| {
+            recorded.lock().unwrap().push(snapshot.locked);
+        }));
+        scope.set("usr_1", "https://api.example.test/api/1");
+        runtime.set_password("1234")?;
+        heard.lock().unwrap().clear();
+
+        runtime.engage()?;
+        runtime.unlock("1234")?;
+        runtime.engage()?;
+        scope.set("usr_2", "https://api.example.test/api/1");
+
+        assert_eq!(*heard.lock().unwrap(), [true, false, true, false]);
+        Ok(())
     }
 
     #[test]

@@ -9,6 +9,7 @@ use vrcx_0_application_core::HostSessionProjection;
 use vrcx_0_application_game::{DebugLoggingOutcome, NowPlayingSnapshot};
 use vrcx_0_host_desktop::host_capabilities::{is_host_capability_available, HostCapability};
 
+use crate::desktop_widget::DesktopWidgetSnapshot;
 use crate::notification::NotificationDoNotDisturbSnapshot;
 use crate::privacy_lock::PrivacyLockSnapshot;
 use crate::state::DesktopRuntimeHostState;
@@ -28,6 +29,7 @@ pub struct AncillaryRuntimeSnapshot {
     pub background_image_state: BackgroundImageProjection,
     pub notification_do_not_disturb_state: NotificationDoNotDisturbSnapshot,
     pub privacy_lock_state: PrivacyLockSnapshot,
+    pub desktop_widget_state: DesktopWidgetSnapshot,
 }
 
 pub async fn ancillary_runtime_snapshot(
@@ -63,5 +65,6 @@ pub async fn ancillary_runtime_snapshot(
         background_image_state: state.background_image_projection(),
         notification_do_not_disturb_state: state.notification_do_not_disturb_snapshot(),
         privacy_lock_state: state.privacy_lock().snapshot(),
+        desktop_widget_state: state.desktop_widget().snapshot(),
     }
 }

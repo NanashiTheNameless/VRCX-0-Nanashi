@@ -8,6 +8,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 const rootDir = path.join(import.meta.dirname, '..');
 const installScript = path.join(rootDir, 'crates', 'logger', 'install.sh');
 const composeFile = path.join(rootDir, 'crates', 'logger', 'compose.yaml');
+const posixBin = resolvePosixBin();
+const shell = posixBin ? path.join(posixBin, 'sh.exe') : 'sh';
+
+function resolvePosixBin() {
+    if (process.platform !== 'win32') return null;
+    const execPath = spawnSync('git', ['--exec-path'], {
+        encoding: 'utf8'
+    }).stdout.trim();
+    return path.join(execPath, '..', '..', '..', 'usr', 'bin');
+}
 
 const STUBS: Record<string, string> = {
     docker: `#!/bin/sh
@@ -76,13 +86,15 @@ function install(
     if (options.answers) {
         fs.writeFileSync(answersFile, `${options.answers.join('\n')}\n`);
     }
-    const result = spawnSync('sh', [installScript, ...(options.args ?? [])], {
+    const result = spawnSync(shell, [installScript, ...(options.args ?? [])], {
         cwd: box.root,
         encoding: 'utf8',
         input: '',
         env: {
             ...process.env,
-            PATH: `${box.bin}${path.delimiter}${process.env.PATH ?? ''}`,
+            PATH: [box.bin, posixBin, process.env.PATH ?? '']
+                .filter((entry) => entry !== null)
+                .join(path.delimiter),
             STUB_LOG: log,
             STUB_COMPOSE: composeFile,
             VRCX0_LOGGER_ANSWERS: options.answers

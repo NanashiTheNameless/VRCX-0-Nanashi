@@ -6,6 +6,7 @@ import { TableLimitsDialog } from './settings-dialogs/TableLimitsDialog';
 import { TranslationApiDialog } from './settings-dialogs/TranslationApiDialog';
 import {
     DesktopNotificationsDialog,
+    DesktopWidgetActivityDialog,
     HmdNotificationsDialog,
     TtsNotificationsDialog,
     VrNotificationsDialog,
@@ -102,6 +103,12 @@ export function SettingsDialogs() {
         setOpen: dialogs.setDesktopNotificationsDialogOpen,
         value: dialogs.desktopNotificationActivityFilters,
         onSave: dialogs.saveDesktopNotificationActivityFilters
+    };
+    const desktopWidgetActivity = {
+        open: dialogs.desktopWidgetDialogOpen,
+        setOpen: dialogs.setDesktopWidgetDialogOpen,
+        value: dialogs.desktopWidgetActivityFilters,
+        onSave: dialogs.saveDesktopWidgetActivityFilters
     };
     const webhookNotifications = {
         open: dialogs.webhookNotificationsDialogOpen,
@@ -201,6 +208,12 @@ export function SettingsDialogs() {
                 onOpenChange={desktopNotifications.setOpen}
                 value={desktopNotifications.value}
                 onSave={desktopNotifications.onSave}
+            />
+            <DesktopWidgetActivityDialog
+                open={desktopWidgetActivity.open}
+                onOpenChange={desktopWidgetActivity.setOpen}
+                value={desktopWidgetActivity.value}
+                onSave={desktopWidgetActivity.onSave}
             />
             <WebhookNotificationsDialog
                 open={webhookNotifications.open}

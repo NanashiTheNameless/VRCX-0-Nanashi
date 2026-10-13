@@ -45,6 +45,7 @@ pub enum DataDirMigrationPhase {
 pub enum DataDirMigrationErrorCode {
     OperationBusy,
     DatabaseUnavailable,
+    DatabaseInUse,
     PendingRestore,
     PendingLegacyMigration,
     PendingMigration,

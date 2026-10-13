@@ -2,6 +2,8 @@ pub mod asset_bundle_cache;
 pub mod auto_launch;
 pub mod calendar;
 pub mod clipboard;
+#[cfg(windows)]
+pub mod desktop_widget_window;
 pub mod discord_rpc;
 pub mod game_launch;
 pub mod game_window;

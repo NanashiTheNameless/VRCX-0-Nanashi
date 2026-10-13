@@ -5,7 +5,8 @@ use std::sync::Arc;
 use tauri::State;
 use vrcx_0_logger_protocol::wire::{SessionState, WebhookFormat};
 use vrcx_0_runtime_host_desktop::feed_logger::{
-    FeedLoggerError, FeedLoggerProbe, FeedLoggerSettingsView, FeedLoggerSyncReport, SettingsCheck,
+    FeedLoggerBackfillHistory, FeedLoggerError, FeedLoggerProbe, FeedLoggerSettingsView,
+    FeedLoggerSyncReport, SettingsCheck,
 };
 
 use crate::commands::blocking::run_blocking;
@@ -49,6 +50,18 @@ pub async fn app__feed_logger_settings_save(
 pub async fn app__feed_logger_settings_clear(state: State<'_, AppState>) -> Result<(), AppError> {
     let runtime = Arc::clone(state.runtime_host().feed_logger());
     run_blocking("feed logger settings", move || runtime.clear_settings()).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn app__feed_logger_backfill_history(
+    state: State<'_, AppState>,
+) -> Result<FeedLoggerBackfillHistory, AppError> {
+    let runtime = Arc::clone(state.runtime_host().feed_logger());
+    run_blocking("feed logger backfill history", move || {
+        runtime.backfill_history()
+    })
+    .await
 }
 
 #[tauri::command]

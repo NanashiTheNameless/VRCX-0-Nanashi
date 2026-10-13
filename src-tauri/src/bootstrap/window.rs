@@ -501,6 +501,49 @@ pub fn refresh_tray_menu(app: &tauri::AppHandle, state: &AppState) -> Result<(),
             true,
             None::<&str>,
         )?;
+        let desktop_widget = state.runtime_host().desktop_widget().snapshot();
+        let desktop_widget_menu =
+            Submenu::with_id(app, "tray-desktop-widget", &labels.desktop_widget, true)?;
+        if desktop_widget.enabled {
+            desktop_widget_menu.append(&MenuItem::with_id(
+                app,
+                "tray-desktop-widget-show",
+                &labels.desktop_widget_show,
+                true,
+                None::<&str>,
+            )?)?;
+            desktop_widget_menu.append(&CheckMenuItem::with_id(
+                app,
+                "tray-desktop-widget-pin",
+                &labels.desktop_widget_pin,
+                true,
+                desktop_widget.pinned,
+                None::<&str>,
+            )?)?;
+            desktop_widget_menu.append(&CheckMenuItem::with_id(
+                app,
+                "tray-desktop-widget-click-through",
+                &labels.desktop_widget_click_through,
+                true,
+                desktop_widget.click_through,
+                None::<&str>,
+            )?)?;
+            desktop_widget_menu.append(&MenuItem::with_id(
+                app,
+                "tray-desktop-widget-close",
+                &labels.desktop_widget_close,
+                true,
+                None::<&str>,
+            )?)?;
+        } else {
+            desktop_widget_menu.append(&MenuItem::with_id(
+                app,
+                "tray-desktop-widget-on",
+                &labels.desktop_widget_turn_on,
+                true,
+                None::<&str>,
+            )?)?;
+        }
         let lock_item =
             MenuItem::with_id(app, "tray-privacy-lock", labels.lock, true, None::<&str>)?;
         let exit_item = MenuItem::with_id(app, "tray-exit", labels.exit, true, None::<&str>)?;
@@ -516,6 +559,9 @@ pub fn refresh_tray_menu(app: &tauri::AppHandle, state: &AppState) -> Result<(),
             }
             menu.append(&sidebar_mode_item)?;
             menu.append(&do_not_disturb_menu)?;
+            if desktop_widget.supported {
+                menu.append(&desktop_widget_menu)?;
+            }
             #[cfg(target_os = "linux")]
             menu.append(&rebuild_ui_item)?;
             if community_theme_enabled {

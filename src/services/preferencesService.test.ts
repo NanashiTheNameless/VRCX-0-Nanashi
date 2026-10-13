@@ -127,6 +127,7 @@ import {
     setAppLanguagePreference,
     setBoolConfigPreference,
     setDataTableStripedPreference,
+    setDesktopWidgetActivityFiltersPreference,
     setDiscordBoolPreference,
     setIntConfigPreference,
     setHmdNotificationActivityFiltersPreference,
@@ -269,7 +270,8 @@ describe('preferencesService characterization', () => {
             hmd: { version: 1, types: {} },
             desktop: { version: 1, types: {} },
             webhook: { version: 1, types: {} },
-            tts: { version: 1, types: {} }
+            tts: { version: 1, types: {} },
+            widget: { version: 1, types: {} }
         });
         mocks.appLanguageChanged.mockResolvedValue(undefined);
         mocks.appRestartApplication.mockResolvedValue(undefined);
@@ -419,6 +421,34 @@ describe('preferencesService characterization', () => {
         expect(
             usePreferencesStore.getState().hmdNotificationActivityFilters
         ).toEqual(normalized);
+    });
+
+    it('saves the activity shown in the desktop overlay as the widget surface', async () => {
+        const filters = {
+            version: 1,
+            types: {
+                Online: {
+                    scope: 'allFavorites' as const,
+                    favoriteGroupKeys: 'all'
+                }
+            }
+        };
+        mocks.appNotificationActivityFiltersSet.mockResolvedValue(filters);
+
+        await expect(
+            setDesktopWidgetActivityFiltersPreference(filters)
+        ).resolves.toEqual(filters);
+
+        expect(mocks.appNotificationActivityFiltersSet).toHaveBeenCalledWith({
+            surface: 'widget',
+            filters
+        });
+        expect(
+            usePreferencesStore.getState().desktopWidgetActivityFilters
+        ).toEqual(filters);
+        expect(
+            usePreferencesStore.getState().desktopNotificationActivityFilters
+        ).not.toEqual(filters);
     });
 
     it('syncs language, document lang, app fonts, and overlay runtime config', async () => {

@@ -622,7 +622,7 @@ fn device_role(label: &str) -> DeviceRole {
     }
 }
 
-fn feed_line_from_activity(
+pub(crate) fn feed_line_from_activity(
     entry: &ActivityEntry,
     localizer: &OverlayLocalizer,
     hour12: bool,
@@ -635,6 +635,29 @@ fn feed_line_from_activity(
         relation: feed_relation(entry.actor_relation),
         severity: feed_severity(entry),
         accent: feed_accent(entry),
+    }
+}
+
+pub(crate) struct FeedText {
+    pub(crate) time_text: String,
+    pub(crate) subject: String,
+    pub(crate) action: String,
+    pub(crate) relation: FeedRelation,
+    pub(crate) severity: FeedSeverity,
+}
+
+pub(crate) fn feed_text_from_activity(
+    entry: &ActivityEntry,
+    localizer: &OverlayLocalizer,
+    hour12: bool,
+) -> FeedText {
+    let (subject, action) = feed_detail_parts(entry, localizer);
+    FeedText {
+        time_text: time_text(&entry.created_at, hour12),
+        subject,
+        action,
+        relation: feed_relation(entry.actor_relation),
+        severity: feed_severity(entry),
     }
 }
 
@@ -657,7 +680,11 @@ fn feed_relation(relation: ActivityActorRelation) -> FeedRelation {
 }
 
 fn feed_detail(entry: &ActivityEntry, localizer: &OverlayLocalizer) -> String {
-    let localized_summary = localized_activity_summary(entry, localizer);
+    let (subject, action) = feed_detail_parts(entry, localizer);
+    join_non_empty([subject.as_str(), action.as_str()])
+}
+
+fn feed_detail_parts(entry: &ActivityEntry, localizer: &OverlayLocalizer) -> (String, String) {
     let localized_body = localized_entry_text(entry, localizer, &entry.content.body);
     let localized_title = localized_entry_text(entry, localizer, &entry.content.title);
     let summary = entry.content.summary.trim();
@@ -667,50 +694,38 @@ fn feed_detail(entry: &ActivityEntry, localizer: &OverlayLocalizer) -> String {
     let body = source_body.trim();
     let title = source_title.trim();
     let actor = entry.actor_display_name.trim();
-    let world_name = meaningful_world_name(entry);
 
-    if let Some(world_name) = world_name {
-        for value in [
-            localized_summary.as_str(),
-            detail,
-            localized_body.as_str(),
-            summary,
-            body,
-        ] {
-            let replaced = replace_location_ids(value, entry, world_name);
-            if !replaced.trim().is_empty() {
-                return replaced;
-            }
-        }
+    let (subject, action) = if !localized_body.trim().is_empty() {
+        (
+            localized_title.trim().to_string(),
+            localized_body.trim().to_string(),
+        )
+    } else if entry.content.title.as_message().is_some() {
+        (String::new(), localized_title.trim().to_string())
+    } else if !detail.is_empty() {
+        (String::new(), detail.to_string())
+    } else if !summary.is_empty() {
+        (String::new(), summary.to_string())
+    } else if !body.is_empty() {
+        (String::new(), body.to_string())
+    } else {
+        (
+            first_non_empty_owned([localized_title.as_str(), title, actor]),
+            String::new(),
+        )
+    };
+
+    if let Some(world_name) = meaningful_world_name(entry) {
+        return (
+            replace_location_ids(&subject, entry, world_name),
+            replace_location_ids(&action, entry, world_name),
+        );
     }
-
-    let candidate = first_non_empty_owned([
-        localized_summary.as_str(),
-        detail,
-        localized_body.as_str(),
-        summary,
-        body,
-        localized_title.as_str(),
-        title,
-        actor,
-    ]);
-    if contains_location_id(&candidate) {
+    if contains_location_id(&subject) || contains_location_id(&action) {
         location_id_free_detail(entry, localized_title.as_str(), title, actor, localizer)
     } else {
-        candidate
+        (subject, action)
     }
-}
-
-fn localized_activity_summary(entry: &ActivityEntry, localizer: &OverlayLocalizer) -> String {
-    let title = localized_entry_text(entry, localizer, &entry.content.title);
-    let body = localized_entry_text(entry, localizer, &entry.content.body);
-    if !body.trim().is_empty() {
-        return join_non_empty([title.as_str(), body.as_str()]);
-    }
-    if entry.content.title.as_message().is_some() {
-        return title;
-    }
-    String::new()
 }
 
 fn localized_entry_text(
@@ -756,29 +771,21 @@ fn location_id_free_detail(
     fallback_title: &str,
     actor: &str,
     localizer: &OverlayLocalizer,
-) -> String {
+) -> (String, String) {
     let subject = first_non_empty_owned([localized_title, fallback_title, actor]);
-    match entry.kind {
-        ActivityKind::Gps if !subject.is_empty() => {
-            let action = localizer.text(&ActivityText::message(OverlayMessage::notifications_gps(
-                localizer.generic_instance_location(),
-            )));
-            join_non_empty([subject.as_str(), action.as_str()])
-        }
-        ActivityKind::Online if !subject.is_empty() => {
-            let action = localizer.text(&ActivityText::message(
-                OverlayMessage::notifications_online(),
-            ));
-            join_non_empty([subject.as_str(), action.as_str()])
-        }
-        ActivityKind::Invite if !subject.is_empty() => {
-            let action = localizer.text(&ActivityText::message(
-                OverlayMessage::notifications_invite(localizer.generic_instance_location(), ""),
-            ));
-            join_non_empty([subject.as_str(), action.as_str()])
-        }
-        _ => subject,
-    }
+    let action = match entry.kind {
+        ActivityKind::Gps if !subject.is_empty() => localizer.text(&ActivityText::message(
+            OverlayMessage::notifications_gps(localizer.generic_instance_location()),
+        )),
+        ActivityKind::Online if !subject.is_empty() => localizer.text(&ActivityText::message(
+            OverlayMessage::notifications_online(),
+        )),
+        ActivityKind::Invite if !subject.is_empty() => localizer.text(&ActivityText::message(
+            OverlayMessage::notifications_invite(localizer.generic_instance_location(), ""),
+        )),
+        _ => String::new(),
+    };
+    (subject, action)
 }
 
 pub fn should_hide_private_world(entry: &ActivityEntry, enabled: bool) -> bool {

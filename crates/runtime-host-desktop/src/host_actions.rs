@@ -2,11 +2,15 @@ use std::sync::{Arc, Mutex};
 
 use vrcx_0_application_core::{RuntimeVrchatAuthFailureObserver, RuntimeVrchatAuthFailurePayload};
 
+use crate::notification::DesktopNotificationAction;
+
 pub trait RuntimeHostActions: Send + Sync {
     fn focus_main_window(&self);
     fn set_tray_icon_notification(&self, notify: bool);
     fn vrchat_auth_failed(&self, failure: &RuntimeVrchatAuthFailurePayload);
     fn refresh_tray_menu(&self);
+
+    fn open_activity_target(&self, _action: DesktopNotificationAction) {}
 }
 
 #[derive(Clone, Default)]
@@ -58,6 +62,13 @@ impl RuntimeHost {
         };
         if let Some(actions) = actions {
             actions.set_tray_icon_notification(notify);
+        }
+    }
+
+    #[cfg_attr(not(windows), allow(dead_code))]
+    pub(crate) fn open_activity_target(&self, action: DesktopNotificationAction) {
+        if let Some(actions) = self.actions() {
+            actions.open_activity_target(action);
         }
     }
 

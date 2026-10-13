@@ -336,6 +336,36 @@
                 }
             ]
         },
+        "desktopWidget": {
+            "locales": "all",
+            "coverage": "fallback",
+            "messages": [
+                {
+                    "key": "desktopWidget.title",
+                    "source": "desktop_widget.title"
+                },
+                {
+                    "key": "desktopWidget.menu.pin",
+                    "source": "desktop_widget.menu.pin"
+                },
+                {
+                    "key": "desktopWidget.menu.clickThrough",
+                    "source": "desktop_widget.menu.click_through"
+                },
+                {
+                    "key": "desktopWidget.menu.close",
+                    "source": "desktop_widget.menu.close"
+                },
+                {
+                    "key": "desktopWidget.tray.turnOn",
+                    "source": "desktop_widget.tray.turn_on"
+                },
+                {
+                    "key": "desktopWidget.tray.show",
+                    "source": "desktop_widget.tray.show"
+                }
+            ]
+        },
         "shell": {
             "locales": "all",
             "coverage": "required",

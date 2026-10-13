@@ -314,7 +314,10 @@ export function LlmEndpointsDialog({
     }
 
     async function saveDraft() {
-        const target = draft;
+        const target = {
+            ...draft,
+            models: mergeModels(draft.models, [modelQuery])
+        };
         setSaving(true);
         try {
             const resolved = await resolveModelsForSave(target);

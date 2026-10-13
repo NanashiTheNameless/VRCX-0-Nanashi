@@ -157,6 +157,22 @@ fn start_background_mode_from_shell(app: tauri::AppHandle) {
     });
 }
 
+fn update_desktop_widget_from_tray(
+    app: &tauri::AppHandle,
+    update: impl FnOnce(
+        &vrcx_0_runtime_host_desktop::desktop_widget::DesktopWidget,
+    ) -> vrcx_0_application_core::Result<
+        vrcx_0_runtime_host_desktop::desktop_widget::DesktopWidgetSnapshot,
+    >,
+) {
+    let Some(state) = app.try_state::<AppState>() else {
+        return;
+    };
+    if let Err(error) = update(&state.runtime_host().desktop_widget()) {
+        tracing::warn!(error = %error, "failed to update the activity window from tray");
+    }
+}
+
 fn set_do_not_disturb_from_tray(app: &tauri::AppHandle, mode: NotificationDoNotDisturbMode) {
     let Some(state) = app.try_state::<AppState>() else {
         return;
@@ -394,6 +410,24 @@ pub fn run() {
             }
             "tray-dnd-turn-off" => {
                 set_do_not_disturb_from_tray(app, NotificationDoNotDisturbMode::Off);
+            }
+            "tray-desktop-widget-on" => {
+                update_desktop_widget_from_tray(app, |widget| widget.set_enabled(true));
+            }
+            "tray-desktop-widget-show" => {
+                update_desktop_widget_from_tray(app, |widget| {
+                    widget.bring_to_front();
+                    Ok(widget.snapshot())
+                });
+            }
+            "tray-desktop-widget-pin" => {
+                update_desktop_widget_from_tray(app, |widget| widget.toggle_pinned());
+            }
+            "tray-desktop-widget-click-through" => {
+                update_desktop_widget_from_tray(app, |widget| widget.toggle_click_through());
+            }
+            "tray-desktop-widget-close" => {
+                update_desktop_widget_from_tray(app, |widget| widget.set_enabled(false));
             }
             "tray-rebuild-ui" => {
                 let app_handle = app.clone();

@@ -94,3 +94,19 @@ fn localized_catalog_reuses_one_resolved_locale_for_multiple_keys() {
         assert_eq!(catalog.text(key), text("zh_Hant", key));
     }
 }
+
+#[test]
+fn activity_window_labels_fall_back_to_english() {
+    assert_eq!(
+        text("zh-CN", DesktopWidgetKey::DesktopWidgetMenuPin),
+        "Always on Top"
+    );
+    assert_eq!(
+        text("ja", DesktopWidgetKey::DesktopWidgetMenuClickThrough),
+        "Click-Through"
+    );
+    assert_eq!(
+        text("fr", DesktopWidgetKey::DesktopWidgetTitle),
+        text("en", DesktopWidgetKey::DesktopWidgetTitle)
+    );
+}

@@ -318,13 +318,6 @@ mod tests {
     }
 
     #[test]
-    fn realtime_transport_failures_survive_the_network_noise_filter() {
-        assert!(!should_skip_error_log(
-            "[Realtime] websocket auth rejected while the session was still usable generation=4 code=401"
-        ));
-    }
-
-    #[test]
     fn backend_errors_bypass_the_network_noise_filter() {
         let dir = test_dir("backend");
         let line = "2026-09-28T16:05:33.596419Z ERROR vrcx_0_assistant::agent::turn: assistant LLM request failed status=400";

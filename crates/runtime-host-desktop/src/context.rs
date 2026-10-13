@@ -65,6 +65,7 @@ pub struct DesktopRuntimeServices {
     session: HostSessionRuntime,
     world_cache: Arc<WorldCache>,
     tasks: TaskSupervisor,
+    event_bus: RuntimeEventBus,
     activity_router: ActivityRouter,
     activity_sinks: ActivitySinkRegistry,
     notification_do_not_disturb: NotificationDoNotDisturbRuntime,
@@ -102,7 +103,7 @@ impl DesktopRuntimeServices {
         )?;
         let privacy_lock = Arc::new(PrivacyLockRuntime::new(
             deps.auth_credentials,
-            deps.event_bus,
+            deps.event_bus.clone(),
         )?);
         deps.auth_scope.add_observer(privacy_lock.clone());
         let notification_policy = Arc::new(LocalNotificationPolicy::new(
@@ -143,6 +144,7 @@ impl DesktopRuntimeServices {
             session: deps.session,
             world_cache: deps.world_cache,
             tasks: deps.tasks,
+            event_bus: deps.event_bus,
             activity_router: deps.activity_router,
             activity_sinks: deps.activity_sinks,
             notification_do_not_disturb,
@@ -245,6 +247,14 @@ impl DesktopRuntimeServices {
 
     pub fn notification_do_not_disturb(&self) -> NotificationDoNotDisturbRuntime {
         self.notification_do_not_disturb.clone()
+    }
+
+    pub fn event_bus(&self) -> RuntimeEventBus {
+        self.event_bus.clone()
+    }
+
+    pub fn activity_sinks(&self) -> ActivitySinkRegistry {
+        self.activity_sinks.clone()
     }
 
     pub fn privacy_lock(&self) -> Arc<PrivacyLockRuntime> {

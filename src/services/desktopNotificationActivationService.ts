@@ -2,7 +2,11 @@ import { commands } from '@/platform/tauri/bindings';
 import { tauriClient } from '@/platform/tauri/client';
 import { isGroupId, isUserId } from '@/shared/constants/vrchatIds';
 
-import { openGroupDialog, openUserDialog } from './dialogService';
+import {
+    openGroupDialog,
+    openUserDialog,
+    openWorldDialog
+} from './dialogService';
 
 const DESKTOP_NOTIFICATION_ACTIVATED_EVENT = 'desktopNotificationActivated';
 
@@ -34,6 +38,10 @@ export async function takePendingDesktopNotificationActivation(): Promise<void> 
             return;
         }
         openUserDialog({ userId: activation.target.userId });
+        return;
+    }
+    if (activation.target.kind === 'openLocation') {
+        openWorldDialog({ worldId: activation.target.location });
         return;
     }
     if (!isGroupId(activation.target.groupId)) {

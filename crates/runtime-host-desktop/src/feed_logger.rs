@@ -28,6 +28,10 @@ use vrcx_0_persistence::profile_bio::profile_bio_checked_at_list;
 use vrcx_0_persistence::realtime::BackfillWrites;
 use vrcx_0_persistence::{config::ConfigRepository, secrets, DatabaseService};
 
+mod backfill_history;
+
+pub use backfill_history::{FeedLoggerBackfillHistory, FeedLoggerBackfillRecord};
+
 const SETTINGS_KEY: &str = "feedLogger";
 const MIN_LOGGER_PROTOCOL_VERSION: u32 = 1;
 const PRESENCE_INTERVAL: Duration = Duration::from_secs(PRESENCE_INTERVAL_SECS);
@@ -468,6 +472,20 @@ impl DesktopFeedLoggerRuntime {
         self.call_ok("/unpair", &OkResponse {}).await
     }
 
+    pub fn backfill_history(&self) -> Result<FeedLoggerBackfillHistory> {
+        let Ok(account_id) = self.signed_in_user() else {
+            return Ok(FeedLoggerBackfillHistory::default());
+        };
+        backfill_history::load(&self.config, &account_id)
+    }
+
+    fn record_backfill(&self, account_id: &str, inserted: u32) {
+        let at = chrono::Utc::now().timestamp();
+        if let Err(error) = backfill_history::record(&self.config, account_id, at, inserted) {
+            tracing::debug!(error = %error, "failed to record feed logger backfill");
+        }
+    }
+
     pub async fn sync_now(&self) -> Result<FeedLoggerSyncReport> {
         let current_user = self.signed_in_user()?;
         if !self.linked_to(&current_user) {
@@ -479,6 +497,13 @@ impl DesktopFeedLoggerRuntime {
         let mut started = false;
         let result = self.sync(&current_user, &mut started).await;
         self.syncing.store(false, Ordering::Release);
+        if let Ok(FeedLoggerSyncReport::Synced {
+            inserted: inserted @ 1..,
+            ..
+        }) = result
+        {
+            self.record_backfill(&current_user, inserted);
+        }
         if started {
             self.event_bus.emit(match &result {
                 Ok(FeedLoggerSyncReport::Synced {

@@ -421,6 +421,12 @@ export function useSettingsIntegrations({ commit }: SettingsIntegrationsDeps) {
         if (!endpointId || fetchingModelsRef.current.has(endpointId)) {
             return;
         }
+        const endpoint = useLlmEndpointsStore
+            .getState()
+            .endpoints.find((item) => item.id === endpointId);
+        if (!endpoint || endpoint.models.length) {
+            return;
+        }
 
         fetchingModelsRef.current.add(endpointId);
         setIntegrationStatus((current) => ({

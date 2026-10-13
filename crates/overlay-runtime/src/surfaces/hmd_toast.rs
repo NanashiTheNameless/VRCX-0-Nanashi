@@ -361,7 +361,7 @@ fn hmd_instance_key(entry: &ActivityEntry) -> Option<String> {
     Some(format!("{}:{}", location.world_id, location.instance_name))
 }
 
-fn unresolved_entry_world_id(entry: &ActivityEntry) -> Option<String> {
+pub(crate) fn unresolved_entry_world_id(entry: &ActivityEntry) -> Option<String> {
     if is_meaningful_world_name(&entry.content.world_name) {
         return None;
     }

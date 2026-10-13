@@ -9,6 +9,17 @@ export const notificationLayoutOptions = [
     ['table', 'view.settings.notifications.notifications.layout_table']
 ] as const;
 
+export const desktopWidgetOrderOptions = [
+    [
+        'top',
+        'view.settings.notifications.notifications.desktop_widget.order_newest_top'
+    ],
+    [
+        'bottom',
+        'view.settings.notifications.notifications.desktop_widget.order_newest_bottom'
+    ]
+] as const;
+
 export const desktopToastOptions = [
     ['Never', 'view.settings.notifications.notifications.conditions.never'],
     [

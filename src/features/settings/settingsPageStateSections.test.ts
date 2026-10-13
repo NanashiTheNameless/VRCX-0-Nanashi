@@ -36,6 +36,7 @@ function createInput(
         customFontOptionsLoading: false,
         deleteAllScreenshotMetadata: callback,
         desktopNotificationsDialogOpen: false,
+        desktopWidgetDialogOpen: false,
         discordPrefs: {
             discordActive: false,
             discordInstance: true,
@@ -107,6 +108,9 @@ function createInput(
         saveDesktopNotificationActivityFilters: vi.fn(
             async () => prefs.desktopNotificationActivityFilters
         ),
+        saveDesktopWidgetActivityFilters: vi.fn(
+            async () => prefs.desktopWidgetActivityFilters
+        ),
         saveDiscordBoolPreference: callback,
         saveFontFamilyPreference: callback,
         saveHmdNotificationActivityFilters: vi.fn(
@@ -147,6 +151,7 @@ function createInput(
         setCustomFontDraft: callback,
         setDataTableStripedPreference: callback,
         setDesktopNotificationsDialogOpen: callback,
+        setDesktopWidgetDialogOpen: callback,
         setHmdNotificationsDialogOpen: callback,
         setIntConfigPreference: callback,
         setIntegrationValue: callback,
@@ -276,6 +281,44 @@ describe('settingsPageStateSections', () => {
         });
         expect(sections.dialogs.overlayActivityFilters).toBe(
             prefs.overlayActivityFilters
+        );
+    });
+
+    it('opens the desktop overlay activity filter dialog with its own filters and save action', () => {
+        const prefs = createDefaultSettingsPrefs();
+        const desktopWidgetActivityFilters = {
+            version: 1,
+            types: {
+                Online: {
+                    scope: 'allFavorites' as const,
+                    favoriteGroupKeys: 'all'
+                }
+            }
+        };
+        const setDesktopWidgetDialogOpen = vi.fn();
+        const saveDesktopWidgetActivityFilters = vi.fn(
+            async () => desktopWidgetActivityFilters
+        );
+        const sections = buildSettingsPageStateSections(
+            createInput({
+                prefs: { ...prefs, desktopWidgetActivityFilters },
+                desktopWidgetDialogOpen: true,
+                setDesktopWidgetDialogOpen,
+                saveDesktopWidgetActivityFilters
+            })
+        );
+
+        sections.notifications.setDesktopWidgetDialogOpen(true);
+
+        expect(setDesktopWidgetDialogOpen).toHaveBeenCalledWith(true);
+        expect(sections.dialogs).toMatchObject({
+            desktopWidgetDialogOpen: true,
+            desktopWidgetActivityFilters,
+            setDesktopWidgetDialogOpen,
+            saveDesktopWidgetActivityFilters
+        });
+        expect(sections.dialogs.desktopNotificationActivityFilters).toBe(
+            prefs.desktopNotificationActivityFilters
         );
     });
 

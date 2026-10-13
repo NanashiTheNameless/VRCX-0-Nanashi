@@ -112,6 +112,9 @@ type SettingsPreferenceActionsDeps = {
     setDesktopNotificationActivityFiltersPreference: (
         value: PreferencesSnapshot['desktopNotificationActivityFilters']
     ) => Promise<PreferencesSnapshot['desktopNotificationActivityFilters']>;
+    setDesktopWidgetActivityFiltersPreference: (
+        value: PreferencesSnapshot['desktopWidgetActivityFilters']
+    ) => Promise<PreferencesSnapshot['desktopWidgetActivityFilters']>;
     setWebhookActivityFiltersPreference: (
         value: PreferencesSnapshot['webhookActivityFilters']
     ) => Promise<PreferencesSnapshot['webhookActivityFilters']>;
@@ -147,6 +150,7 @@ type ActivityFilterSurfaceField =
     | 'vrNotificationActivityFilters'
     | 'hmdNotificationActivityFilters'
     | 'desktopNotificationActivityFilters'
+    | 'desktopWidgetActivityFilters'
     | 'webhookActivityFilters'
     | 'ttsNotificationActivityFilters';
 
@@ -193,6 +197,7 @@ export function useSettingsPreferenceActions({
     setVrNotificationActivityFiltersPreference,
     setHmdNotificationActivityFiltersPreference,
     setDesktopNotificationActivityFiltersPreference,
+    setDesktopWidgetActivityFiltersPreference,
     setWebhookActivityFiltersPreference,
     setTtsNotificationActivityFiltersPreference,
     setWristOverlayEnabledPreference,
@@ -590,6 +595,10 @@ export function useSettingsPreferenceActions({
             'desktopNotificationActivityFilters',
             setDesktopNotificationActivityFiltersPreference
         );
+    const saveDesktopWidgetActivityFilters = makeSaveActivityFilterSurface(
+        'desktopWidgetActivityFilters',
+        setDesktopWidgetActivityFiltersPreference
+    );
     const saveWebhookActivityFilters = makeSaveActivityFilterSurface(
         'webhookActivityFilters',
         setWebhookActivityFiltersPreference
@@ -665,6 +674,7 @@ export function useSettingsPreferenceActions({
         saveVrNotificationActivityFilters,
         saveHmdNotificationActivityFilters,
         saveDesktopNotificationActivityFilters,
+        saveDesktopWidgetActivityFilters,
         saveWebhookActivityFilters,
         saveTtsNotificationActivityFilters,
         saveWristOverlayEnabled,

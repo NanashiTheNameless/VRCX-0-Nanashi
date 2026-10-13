@@ -1,4 +1,4 @@
-use vrcx_0_i18n::{text as native_text, ShellKey};
+use vrcx_0_i18n::{text as native_text, DesktopWidgetKey, ShellKey};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct TrayLabels {
@@ -14,6 +14,12 @@ pub(crate) struct TrayLabels {
     pub(crate) sidebar_mode: String,
     pub(crate) disable_theme: String,
     pub(crate) check_updates: String,
+    pub(crate) desktop_widget: String,
+    pub(crate) desktop_widget_turn_on: String,
+    pub(crate) desktop_widget_show: String,
+    pub(crate) desktop_widget_pin: String,
+    pub(crate) desktop_widget_click_through: String,
+    pub(crate) desktop_widget_close: String,
     pub(crate) exit: String,
 }
 
@@ -190,6 +196,15 @@ pub(crate) fn tray_labels_for_language(language: &str) -> TrayLabels {
         sidebar_mode: text(language, ShellKey::NativeShellTraySidebarMode),
         disable_theme: text(language, ShellKey::NativeShellTrayDisableTheme),
         check_updates: text(language, ShellKey::NativeShellMenuAppCheckUpdates),
+        desktop_widget: native_text(language, DesktopWidgetKey::DesktopWidgetTitle),
+        desktop_widget_turn_on: native_text(language, DesktopWidgetKey::DesktopWidgetTrayTurnOn),
+        desktop_widget_show: native_text(language, DesktopWidgetKey::DesktopWidgetTrayShow),
+        desktop_widget_pin: native_text(language, DesktopWidgetKey::DesktopWidgetMenuPin),
+        desktop_widget_click_through: native_text(
+            language,
+            DesktopWidgetKey::DesktopWidgetMenuClickThrough,
+        ),
+        desktop_widget_close: native_text(language, DesktopWidgetKey::DesktopWidgetMenuClose),
         exit: text(language, ShellKey::NativeShellTrayExit),
     }
 }
@@ -220,4 +235,21 @@ pub(crate) fn auth_failure_notification_labels_for_language(
 
 fn text(language: &str, key: ShellKey) -> String {
     native_text(language, key)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tray_labels_for_language;
+
+    #[test]
+    fn the_tray_offers_the_activity_window_in_english() {
+        let labels = tray_labels_for_language("zh-CN");
+
+        assert_eq!(labels.desktop_widget, "Desktop Overlay");
+        assert_eq!(labels.desktop_widget_turn_on, "Turn On");
+        assert_eq!(labels.desktop_widget_show, "Bring to Front");
+        assert_eq!(labels.desktop_widget_pin, "Always on Top");
+        assert_eq!(labels.desktop_widget_click_through, "Click-Through");
+        assert_eq!(labels.desktop_widget_close, "Close");
+    }
 }

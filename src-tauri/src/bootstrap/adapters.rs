@@ -297,6 +297,14 @@ impl RuntimeHostActions for TauriRuntimeHostActions {
             }
         }
     }
+
+    #[cfg(windows)]
+    fn open_activity_target(&self, action: DesktopNotificationAction) {
+        crate::desktop_notification_activation::queue_desktop_notification_activation(
+            &self.app_handle,
+            action,
+        );
+    }
 }
 
 #[derive(Clone)]

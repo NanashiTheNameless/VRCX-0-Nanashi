@@ -2,7 +2,7 @@ use crate::VrOverlayRuntimeServices;
 use vrcx_0_host_desktop::vr_overlay::OverlayActivationButton;
 
 use super::eligibility::WristOverlayStartMode;
-use super::localization::OverlayLocale;
+use super::localization::{OverlayLocale, OverlayLocalizer};
 use super::runtime::{
     HmdNotificationConfig, HmdNotificationPosition, HmdNotificationStyle, VrOverlayRuntimeConfig,
     WristOverlayHand,
@@ -13,6 +13,7 @@ use super::{
     WristOverlayRenderOptions, WristOverlaySizePreset, WristPageOrder, WristPlacement,
     WristPlayersSort,
 };
+use vrcx_0_persistence::config::ConfigRepository;
 
 pub const VR_OVERLAY_ENABLED_CONFIG_KEY: &str = "wristOverlayEnabled";
 pub const VR_OVERLAY_BACKEND_CONFIG_KEY: &str = "wristOverlayBackend";
@@ -51,6 +52,46 @@ pub const HMD_NOTIFICATION_AVATARS_CONFIG_KEY: &str = "hmdNotificationAvatars";
 const APP_LANGUAGE_CONFIG_KEY: &str = "appLanguage";
 const DATE_TIME_HOUR12_CONFIG_KEY: &str = "dtHour12";
 const SHOW_INSTANCE_ID_IN_LOCATION_CONFIG_KEY: &str = "VRCX_showInstanceIdInLocation";
+
+#[cfg_attr(not(windows), allow(dead_code))]
+pub(crate) fn load_app_language(config: &ConfigRepository) -> String {
+    config
+        .get_string(APP_LANGUAGE_CONFIG_KEY, "en")
+        .unwrap_or_else(|_| "en".to_string())
+}
+
+pub(crate) fn load_hour12(config: &ConfigRepository) -> bool {
+    config
+        .get_bool(DATE_TIME_HOUR12_CONFIG_KEY, true)
+        .unwrap_or(true)
+}
+
+fn load_locale_settings(config: &ConfigRepository) -> (OverlayLocale, bool) {
+    let locale = config
+        .get_string(APP_LANGUAGE_CONFIG_KEY, "en")
+        .map(|value| OverlayLocale::from_config(&value))
+        .unwrap_or_default();
+    let show_instance_id_in_location = config
+        .get_bool(SHOW_INSTANCE_ID_IN_LOCATION_CONFIG_KEY, false)
+        .unwrap_or(false);
+    (locale, show_instance_id_in_location)
+}
+
+pub(crate) fn is_localizer_config_key(key: &str) -> bool {
+    let key = vrcx_0_contracts::resolve_config_key(key);
+    [
+        APP_LANGUAGE_CONFIG_KEY,
+        DATE_TIME_HOUR12_CONFIG_KEY,
+        SHOW_INSTANCE_ID_IN_LOCATION_CONFIG_KEY,
+    ]
+    .into_iter()
+    .any(|localizer_key| vrcx_0_contracts::resolve_config_key(localizer_key) == key)
+}
+
+pub(crate) fn load_localizer(config: &ConfigRepository) -> OverlayLocalizer {
+    let (locale, show_instance_id) = load_locale_settings(config);
+    OverlayLocalizer::with_instance_id(locale, show_instance_id)
+}
 
 pub(super) fn load_runtime_config(
     services: &dyn VrOverlayRuntimeServices,
@@ -123,16 +164,8 @@ pub(super) fn load_runtime_config(
         .get_string(HMD_NOTIFICATION_STYLE_CONFIG_KEY, "standard")
         .map(|value| HmdNotificationStyle::from_config(&value))
         .unwrap_or_default();
-    let locale = config
-        .get_string(APP_LANGUAGE_CONFIG_KEY, "en")
-        .map(|value| OverlayLocale::from_config(&value))
-        .unwrap_or_default();
-    let dt_hour12 = config
-        .get_bool(DATE_TIME_HOUR12_CONFIG_KEY, true)
-        .unwrap_or(true);
-    let show_instance_id_in_location = config
-        .get_bool(SHOW_INSTANCE_ID_IN_LOCATION_CONFIG_KEY, false)
-        .unwrap_or(false);
+    let (locale, show_instance_id_in_location) = load_locale_settings(config);
+    let dt_hour12 = load_hour12(config);
     let wrist_pages = config
         .get_string(VR_OVERLAY_PAGES_CONFIG_KEY, WristPageOrder::DEFAULT_CONFIG)
         .map(|value| WristPageOrder::from_config(&value))

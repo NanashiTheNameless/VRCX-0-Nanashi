@@ -44,6 +44,7 @@ pub struct ActivityTypeDefinition {
     pub wrist_default_scope: ActivityScope,
     pub alert_default_scope: ActivityScope,
     pub tts_default_scope: ActivityScope,
+    pub widget_default_scope: ActivityScope,
     pub aliases: Vec<String>,
 }
 
@@ -124,6 +125,7 @@ pub enum NotificationSurface {
     Hmd,
     Webhook,
     Tts,
+    DesktopWidget,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
@@ -141,6 +143,8 @@ pub struct ActivityFilters {
     pub webhook: ActivitySurfaceFilters,
     #[serde(default = "ActivitySurfaceFilters::tts_defaults")]
     pub tts: ActivitySurfaceFilters,
+    #[serde(default = "ActivitySurfaceFilters::widget_defaults")]
+    pub widget: ActivitySurfaceFilters,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
@@ -168,6 +172,10 @@ impl ActivitySurfaceFilters {
         Self::defaults(NotificationSurface::Tts)
     }
 
+    fn widget_defaults() -> Self {
+        Self::defaults(NotificationSurface::DesktopWidget)
+    }
+
     pub fn from_saved_types_json(value: &Value, surface: NotificationSurface) -> Self {
         normalize_surface_with_default(Some(value), &default_activity_rules(surface))
     }
@@ -183,6 +191,7 @@ impl Default for ActivityFilters {
             hmd: ActivitySurfaceFilters::defaults(NotificationSurface::Hmd),
             webhook: ActivitySurfaceFilters::defaults(NotificationSurface::Webhook),
             tts: ActivitySurfaceFilters::defaults(NotificationSurface::Tts),
+            widget: ActivitySurfaceFilters::defaults(NotificationSurface::DesktopWidget),
         }
     }
 }
@@ -204,6 +213,7 @@ impl ActivityFilters {
             NotificationSurface::Hmd => &self.hmd,
             NotificationSurface::Webhook => &self.webhook,
             NotificationSurface::Tts => &self.tts,
+            NotificationSurface::DesktopWidget => &self.widget,
         }
     }
 
@@ -312,4 +322,5 @@ pub struct ActivityDelivery {
     pub hmd: bool,
     pub webhook: bool,
     pub tts: bool,
+    pub widget: bool,
 }

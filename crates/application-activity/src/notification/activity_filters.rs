@@ -36,6 +36,7 @@ pub struct NotificationActivityFilterProfiles {
     pub desktop: ActivityFilterProfile,
     pub webhook: ActivityFilterProfile,
     pub tts: ActivityFilterProfile,
+    pub widget: ActivityFilterProfile,
 }
 
 impl From<&ActivityFilters> for NotificationActivityFilterProfiles {
@@ -47,6 +48,7 @@ impl From<&ActivityFilters> for NotificationActivityFilterProfiles {
             desktop: ActivityFilterProfile::from_surface(&filters.desktop),
             webhook: ActivityFilterProfile::from_surface(&filters.webhook),
             tts: ActivityFilterProfile::from_surface(&filters.tts),
+            widget: ActivityFilterProfile::from_surface(&filters.widget),
         }
     }
 }
@@ -60,6 +62,7 @@ pub enum NotificationActivityFilterSurface {
     Desktop,
     Webhook,
     Tts,
+    Widget,
 }
 
 impl NotificationActivityFilterSurface {
@@ -71,6 +74,7 @@ impl NotificationActivityFilterSurface {
             Self::Desktop => NotificationSurface::Desktop,
             Self::Webhook => NotificationSurface::Webhook,
             Self::Tts => NotificationSurface::Tts,
+            Self::Widget => NotificationSurface::DesktopWidget,
         }
     }
 
@@ -82,6 +86,7 @@ impl NotificationActivityFilterSurface {
             Self::Desktop => "desktopNotificationActivityFilters",
             Self::Webhook => "webhookActivityFilters",
             Self::Tts => TTS_FILTERS_CONFIG_KEY,
+            Self::Widget => WIDGET_FILTERS_CONFIG_KEY,
         }
     }
 }
@@ -96,6 +101,7 @@ pub struct NotificationActivityFiltersSetInput {
 const WRIST_FILTERS_CONFIG_KEY: &str = "overlayActivityFilters";
 const HMD_FILTERS_CONFIG_KEY: &str = "hmdNotificationActivityFilters";
 const TTS_FILTERS_CONFIG_KEY: &str = "ttsNotificationActivityFilters";
+const WIDGET_FILTERS_CONFIG_KEY: &str = "desktopWidgetActivityFilters";
 
 pub fn save_notification_activity_filters(
     config: &dyn NotificationConfig,
@@ -130,6 +136,7 @@ pub fn rename_local_favorite_group_in_activity_filters(
         NotificationActivityFilterSurface::Desktop,
         NotificationActivityFilterSurface::Webhook,
         NotificationActivityFilterSurface::Tts,
+        NotificationActivityFilterSurface::Widget,
     ] {
         let Some(raw) = config.get_raw(surface.config_key())? else {
             continue;
@@ -218,6 +225,13 @@ pub fn load_overlay_activity_filters(config: &dyn NotificationConfig) -> Activit
         NotificationSurface::Webhook,
     ) {
         filters.webhook = webhook;
+    }
+    if let Some(widget) = load_types_key_surface(
+        config,
+        WIDGET_FILTERS_CONFIG_KEY,
+        NotificationSurface::DesktopWidget,
+    ) {
+        filters.widget = widget;
     }
     if let Some(tts) =
         load_types_key_surface(config, TTS_FILTERS_CONFIG_KEY, NotificationSurface::Tts)

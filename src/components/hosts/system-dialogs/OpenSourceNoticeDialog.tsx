@@ -53,11 +53,29 @@ function normalizeOpenSourceManifest(value: unknown): OpenSourceManifest {
     if (!isRecord(value)) {
         return {};
     }
+    const noticeTexts: unknown[] = Array.isArray(value.noticeTexts)
+        ? value.noticeTexts
+        : [];
     return {
         entries: Array.isArray(value.entries)
-            ? value.entries.filter((entry): entry is OpenSourceEntry =>
-                  isRecord(entry)
-              )
+            ? value.entries
+                  .filter((entry): entry is OpenSourceEntry => isRecord(entry))
+                  .map((entry) => ({
+                      ...entry,
+                      noticeText: Array.isArray(entry.noticeTextIndexes)
+                          ? entry.noticeTextIndexes
+                                .map((index: unknown) =>
+                                    typeof index === 'number'
+                                        ? noticeTexts[index]
+                                        : undefined
+                                )
+                                .filter(
+                                    (text): text is string =>
+                                        typeof text === 'string'
+                                )
+                                .join('\n\n')
+                          : entry.noticeText
+                  }))
             : [],
         noticePath:
             typeof value.noticePath === 'string' ? value.noticePath : undefined

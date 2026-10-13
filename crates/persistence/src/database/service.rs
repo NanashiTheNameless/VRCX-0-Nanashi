@@ -14,7 +14,7 @@ use rusqlite::{
 };
 pub use vrcx_0_contracts::DatabaseUpgradeStatus;
 
-use crate::Error;
+use crate::{Error, SqliteErrorCategory};
 
 use super::value::{json_to_sql, sqlite_value_to_json};
 
@@ -155,7 +155,12 @@ impl DatabaseService {
                 .lock()
                 .map_err(|error| Error::Database(error.to_string()))?;
             let status = checkpoint_status(&writer, WalCheckpointMode::Full)?;
-            ensure_checkpoint_completed(status)?;
+            if status.busy {
+                return Err(Error::Sqlite {
+                    message: "WAL checkpoint remained busy.".into(),
+                    category: Some(SqliteErrorCategory::Locked),
+                });
+            }
         }
         let db_bytes = fs::metadata(&self.db_path)?.len();
 

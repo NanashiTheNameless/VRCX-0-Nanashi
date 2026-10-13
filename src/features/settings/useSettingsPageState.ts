@@ -177,6 +177,8 @@ export function useSettingsPageState() {
         useState(false);
     const [desktopNotificationsDialogOpen, setDesktopNotificationsDialogOpen] =
         useState(false);
+    const [desktopWidgetDialogOpen, setDesktopWidgetDialogOpen] =
+        useState(false);
     const [webhookNotificationsDialogOpen, setWebhookNotificationsDialogOpen] =
         useState(false);
     const [ttsNotificationsDialogOpen, setTtsNotificationsDialogOpen] =
@@ -271,6 +273,7 @@ export function useSettingsPageState() {
         saveVrNotificationActivityFilters,
         saveHmdNotificationActivityFilters,
         saveDesktopNotificationActivityFilters,
+        saveDesktopWidgetActivityFilters,
         saveWebhookActivityFilters,
         saveTtsNotificationActivityFilters,
         saveWristOverlayEnabled,
@@ -397,6 +400,7 @@ export function useSettingsPageState() {
         customFontOptionsLoading,
         deleteAllScreenshotMetadata,
         desktopNotificationsDialogOpen,
+        desktopWidgetDialogOpen,
         discordPrefs,
         favoriteFriendGroupOptions,
         fetchTranslationModels,
@@ -459,6 +463,7 @@ export function useSettingsPageState() {
         saveVrNotificationActivityFilters,
         saveHmdNotificationActivityFilters,
         saveDesktopNotificationActivityFilters,
+        saveDesktopWidgetActivityFilters,
         saveWebhookActivityFilters,
         saveTtsNotificationActivityFilters,
         saveWristOverlayEnabled,
@@ -476,6 +481,7 @@ export function useSettingsPageState() {
         setCustomFontDraft,
         setDataTableStripedPreference,
         setDesktopNotificationsDialogOpen,
+        setDesktopWidgetDialogOpen,
         setHmdNotificationsDialogOpen,
         setIntConfigPreference,
         setIntegrationValue,

@@ -378,6 +378,7 @@ fn delivery(desktop: bool, vr: bool, webhook: bool, tts: bool) -> ActivityDelive
         hmd: false,
         webhook,
         tts,
+        widget: false,
     }
 }
 

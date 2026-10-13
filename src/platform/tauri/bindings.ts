@@ -395,6 +395,9 @@ const generatedCommands = {
     async appFeedLoggerStatus(): Promise<FeedLoggerProbe> {
         return await TAURI_INVOKE('app__feed_logger_status');
     },
+    async appFeedLoggerBackfillHistory(): Promise<FeedLoggerBackfillHistory> {
+        return await TAURI_INVOKE('app__feed_logger_backfill_history');
+    },
     async appFeedLoggerPushCredentials(
         username: string,
         password: string,
@@ -822,6 +825,13 @@ const generatedCommands = {
         input: FavoriteBulkRemoveInput
     ): Promise<FavoriteBulkRemoveResult> {
         return await TAURI_INVOKE('app__favorites_remove_selection', { input });
+    },
+    async appDesktopWidgetEnabledSet(
+        enabled: boolean
+    ): Promise<DesktopWidgetSnapshot> {
+        return await TAURI_INVOKE('app__desktop_widget_enabled_set', {
+            enabled
+        });
     },
     async appVrOverlayEnabledSet(
         enabled: boolean
@@ -3428,6 +3438,7 @@ export type ActivityTypeDefinition = {
     wristDefaultScope: ActivityScope;
     alertDefaultScope: ActivityScope;
     ttsDefaultScope: ActivityScope;
+    widgetDefaultScope: ActivityScope;
     aliases: string[];
 };
 export type ActivityViewBuildInput = {
@@ -3468,6 +3479,7 @@ export type AncillaryRuntimeSnapshot = {
     backgroundImageState: BackgroundImageProjection;
     notificationDoNotDisturbState: NotificationDoNotDisturbSnapshot;
     privacyLockState: PrivacyLockSnapshot;
+    desktopWidgetState: DesktopWidgetSnapshot;
 };
 export type AppDataDirSource = 'cli' | 'persisted' | 'default';
 export type AppDataDirState = {
@@ -3885,6 +3897,7 @@ export type BackendRuntimeEventPayloadMap = {
     feedLoggerHealth: FeedLoggerProbe;
     notificationDoNotDisturbState: NotificationDoNotDisturbSnapshot;
     privacyLockState: PrivacyLockSnapshot;
+    desktopWidgetState: DesktopWidgetSnapshot;
 };
 export type BackendRuntimeGameLogStatus =
     | 'idle'
@@ -4210,6 +4223,7 @@ export type DataDirMigrationError = {
 export type DataDirMigrationErrorCode =
     | 'operationBusy'
     | 'databaseUnavailable'
+    | 'databaseInUse'
     | 'pendingRestore'
     | 'pendingLegacyMigration'
     | 'pendingMigration'
@@ -4379,7 +4393,14 @@ export type DesktopNotificationActivation = {
 };
 export type DesktopNotificationTarget =
     | { kind: 'openUserProfile'; userId: string }
-    | { kind: 'openGroupProfile'; groupId: string };
+    | { kind: 'openGroupProfile'; groupId: string }
+    | { kind: 'openLocation'; location: string };
+export type DesktopWidgetSnapshot = {
+    supported: boolean;
+    enabled: boolean;
+    pinned: boolean;
+    clickThrough: boolean;
+};
 export type EmojiLoopStyle = 'pingpong';
 export type EmojiUploadParams =
     | {
@@ -4794,6 +4815,11 @@ export type FeedLiveEntry =
           displayLocation?: string | null;
           ownerUserId: string;
       };
+export type FeedLoggerBackfillHistory = {
+    total: number;
+    recent: FeedLoggerBackfillRecord[];
+};
+export type FeedLoggerBackfillRecord = { at: number; inserted: number };
 export type FeedLoggerErrorCode =
     | 'notConfigured'
     | 'notSignedIn'
@@ -6213,6 +6239,7 @@ export type NotificationActivityFilterProfiles = {
     desktop: ActivityFilterProfile;
     webhook: ActivityFilterProfile;
     tts: ActivityFilterProfile;
+    widget: ActivityFilterProfile;
 };
 export type NotificationActivityFilterSurface =
     | 'wrist'
@@ -6220,7 +6247,8 @@ export type NotificationActivityFilterSurface =
     | 'hmd'
     | 'desktop'
     | 'webhook'
-    | 'tts';
+    | 'tts'
+    | 'widget';
 export type NotificationActivityFiltersSetInput = {
     surface: NotificationActivityFilterSurface;
     filters: ActivityFilterProfile;

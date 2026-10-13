@@ -1,0 +1,253 @@
+import { AvatarPlaceholder } from "avatar_placeholder.slint";
+
+export struct DesktopWidgetRowItem {
+    time: string,
+    actor: string,
+    detail: string,
+    favorite: bool,
+    warning: bool,
+    show-avatar-slot: bool,
+    has-avatar: bool,
+    avatar: image,
+}
+
+component ShadowText inherits Rectangle {
+    in property <string> text;
+    in property <color> text-color;
+    in property <length> font-size: 12px;
+    in property <int> font-weight: 400;
+    in property <TextWrap> wrap: TextWrap.no-wrap;
+
+    preferred-width: main.preferred-width;
+    preferred-height: main.preferred-height;
+    min-height: main.preferred-height;
+
+    Text {
+        x: 1px;
+        y: 1px;
+        width: parent.width;
+        height: parent.height;
+        text: root.text;
+        wrap: root.wrap;
+        font-size: root.font-size;
+        font-weight: root.font-weight;
+        color: #000000c8;
+    }
+
+    main := Text {
+        x: 0px;
+        y: 0px;
+        width: parent.width;
+        height: parent.height;
+        text: root.text;
+        wrap: root.wrap;
+        font-size: root.font-size;
+        font-weight: root.font-weight;
+        color: root.text-color;
+    }
+}
+
+component WidgetRow inherits Rectangle {
+    in property <DesktopWidgetRowItem> item;
+    in property <bool> newest-on-top;
+    callback actor-clicked();
+    callback detail-clicked();
+
+    property <bool> entered: false;
+    property <color> actor-color: root.item.warning ? #e7a3a3 : #f2f4f7f2;
+    property <color> detail-color: root.item.warning ? #d98e8ee6 : #e6eaf0c0;
+    property <color> time-color: #e6eaf080;
+
+    Timer {
+        interval: 1ms;
+        running: !root.entered;
+        triggered => {
+            root.entered = true;
+        }
+    }
+
+    property <length> text-drop: 1px;
+    property <length> line-height: line-probe.preferred-height;
+    property <length> time-line-height: time-probe.preferred-height;
+
+    opacity: root.entered ? 1 : 0;
+    animate opacity {
+        duration: 300ms;
+        easing: ease-out;
+    }
+
+    line-probe := Text {
+        visible: false;
+        text: "Ay";
+        font-size: 12px;
+    }
+
+    time-probe := Text {
+        visible: false;
+        text: "0";
+        font-size: 11px;
+    }
+
+    min-height: content.preferred-height;
+    preferred-height: content.preferred-height;
+
+    content := HorizontalLayout {
+        y: root.entered ? 0px : (root.newest-on-top ? -4px : 4px);
+        animate y {
+            duration: 250ms;
+            easing: ease-out;
+        }
+        height: self.preferred-height;
+        padding-left: 10px;
+        padding-right: 10px;
+        padding-top: 3px;
+        padding-bottom: 2px;
+        spacing: 7px;
+
+        if root.item.show-avatar-slot: VerticalLayout {
+            alignment: start;
+            horizontal-stretch: 0;
+
+            Rectangle {
+                width: 16px;
+                height: 16px;
+
+                if root.item.has-avatar: Image {
+                    width: 16px;
+                    height: 16px;
+                    source: root.item.avatar;
+                    image-rendering: smooth;
+                }
+                if !root.item.has-avatar: AvatarPlaceholder {
+                    diameter: 16px;
+                }
+            }
+        }
+
+        if root.item.actor != "": Rectangle {
+            horizontal-stretch: 0;
+            preferred-width: actor-text.preferred-width + (root.item.favorite ? star.preferred-width + 3px : 0px);
+            min-width: self.preferred-width;
+            preferred-height: actor-text.preferred-height + root.text-drop;
+
+            actor-text := ShadowText {
+                x: 0px;
+                y: root.text-drop;
+                width: self.preferred-width;
+                height: parent.height - root.text-drop;
+                text: root.item.actor;
+                text-color: root.actor-color;
+                font-weight: 600;
+            }
+
+            star := ShadowText {
+                visible: root.item.favorite;
+                x: actor-text.width + 3px;
+                y: root.text-drop + 1px;
+                width: self.preferred-width;
+                text: "★";
+                font-size: 10px;
+                text-color: #e1be7de6;
+            }
+
+            TouchArea {
+                clicked => {
+                    root.actor-clicked();
+                }
+            }
+        }
+
+        Rectangle {
+            horizontal-stretch: 1;
+            min-width: 24px;
+            preferred-height: detail-text.preferred-height + root.text-drop;
+
+            detail-text := ShadowText {
+                x: 0px;
+                y: root.text-drop;
+                width: parent.width;
+                height: parent.height - root.text-drop;
+                text: root.item.detail;
+                text-color: root.detail-color;
+                wrap: TextWrap.word-wrap;
+            }
+
+            TouchArea {
+                clicked => {
+                    root.detail-clicked();
+                }
+            }
+        }
+
+        VerticalLayout {
+            alignment: start;
+            horizontal-stretch: 0;
+            padding-top: root.text-drop + max(0px, (root.line-height - root.time-line-height) / 2);
+
+            ShadowText {
+                text: root.item.time;
+                font-size: 11px;
+                text-color: root.time-color;
+            }
+        }
+    }
+}
+
+export component DesktopWidgetPanel inherits Window {
+    background: transparent;
+
+    in property <[DesktopWidgetRowItem]> rows: [];
+    in property <float> background-alpha: 0;
+    in property <bool> grab-floor: false;
+    in property <bool> show-frame: false;
+    in property <bool> newest-on-top: true;
+
+    callback actor-clicked(int);
+    callback detail-clicked(int);
+    callback drag-requested();
+
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        border-radius: 10px;
+        background: root.background-alpha > 0 ? #12141a.with-alpha(root.background-alpha) : (root.grab-floor ? #12141a01 : transparent);
+        border-width: root.show-frame ? 1px : 0px;
+        border-color: #ffffff2e;
+    }
+
+    TouchArea {
+        width: parent.width;
+        height: parent.height;
+        pointer-event(event) => {
+            if (event.kind == PointerEventKind.down && event.button == PointerEventButton.left) {
+                root.drag-requested();
+            }
+        }
+    }
+
+    Rectangle {
+        x: 0px;
+        y: 0px;
+        width: parent.width;
+        height: parent.height;
+        clip: true;
+
+        list := VerticalLayout {
+            x: 0px;
+            width: parent.width;
+            height: self.preferred-height;
+            y: root.newest-on-top ? 6px : parent.height - self.preferred-height - 6px;
+
+            for row[index] in root.rows: WidgetRow {
+                item: row;
+                newest-on-top: root.newest-on-top;
+                actor-clicked => {
+                    root.actor-clicked(index);
+                }
+                detail-clicked => {
+                    root.detail-clicked(index);
+                }
+            }
+        }
+    }
+}

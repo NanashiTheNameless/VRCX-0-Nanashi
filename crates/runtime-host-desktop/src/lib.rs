@@ -12,6 +12,7 @@ mod current_user_mutation;
 pub mod data_dir;
 mod database_upgrade;
 pub mod deep_link;
+pub mod desktop_widget;
 mod external_api;
 pub mod feed_logger;
 mod game_client;

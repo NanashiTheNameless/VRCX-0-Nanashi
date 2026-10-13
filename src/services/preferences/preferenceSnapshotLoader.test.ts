@@ -24,7 +24,16 @@ vi.mock('@/platform/tauri/bindings', () => ({
                 hmd: { version: 1, types: {} },
                 desktop: { version: 1, types: {} },
                 webhook: { version: 1, types: {} },
-                tts: { version: 1, types: {} }
+                tts: { version: 1, types: {} },
+                widget: {
+                    version: 1,
+                    types: {
+                        Online: {
+                            scope: 'allFavorites',
+                            favoriteGroupKeys: 'all'
+                        }
+                    }
+                }
             })
     }
 }));
@@ -266,6 +275,38 @@ describe('preferenceSnapshotLoader', () => {
         expect(snapshot.hmdNotificationOpacity).toBe(90);
         expect(snapshot.hmdNotificationAvatars).toBe(true);
         expect(snapshot.desktopNotificationAvatars).toBe(true);
+    });
+
+    it('loads the desktop overlay opacity at 55% by default and keeps saved values within 0-100%', async () => {
+        const defaults = await loadPreferenceSnapshot();
+
+        expect(mocks.getInt).toHaveBeenCalledWith('desktopWidgetOpacity', 55);
+        expect(defaults.desktopWidgetOpacity).toBe(55);
+
+        mocks.getInt.mockImplementation((key: string, fallback = 0) =>
+            Promise.resolve(
+                key === 'desktopWidgetOpacity' ? 250 : Number(fallback)
+            )
+        );
+        const clamped = await loadPreferenceSnapshot();
+
+        expect(clamped.desktopWidgetOpacity).toBe(100);
+        expect(usePreferencesStore.getState().desktopWidgetOpacity).toBe(100);
+    });
+
+    it('loads the activity shown in the desktop overlay from its own filter profile', async () => {
+        const snapshot = await loadPreferenceSnapshot();
+
+        expect(snapshot.desktopWidgetActivityFilters).toEqual({
+            version: 1,
+            types: {
+                Online: { scope: 'allFavorites', favoriteGroupKeys: 'all' }
+            }
+        });
+        expect(snapshot.desktopNotificationActivityFilters).toEqual({
+            version: 1,
+            types: {}
+        });
     });
 
     it('loads an explicit Friend Log notification dot opt-out', async () => {

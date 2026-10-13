@@ -2,6 +2,7 @@ use std::borrow::Cow;
 use std::sync::{Arc, Mutex};
 
 use vrcx_0_application_activity::notification::RenderedNotification;
+use vrcx_0_core::location::world_id_from_location;
 use vrcx_0_core::vrchat_ids::{is_group_id, is_user_id};
 
 use super::NotificationDeliveryPreferences;
@@ -29,6 +30,9 @@ pub enum DesktopNotificationTarget {
         #[serde(rename = "groupId")]
         group_id: String,
     },
+    OpenLocation {
+        location: String,
+    },
 }
 
 impl DesktopNotificationAction {
@@ -40,6 +44,19 @@ impl DesktopNotificationAction {
             owner_user_id: owner_user_id.clone(),
             target: DesktopNotificationTarget::OpenUserProfile {
                 user_id: user_id.to_string(),
+            },
+        })
+    }
+
+    pub fn open_location(owner_user_id: &OwnerId, location: &str) -> Option<Self> {
+        let location = location.trim();
+        if !is_user_id(owner_user_id.as_str()) || world_id_from_location(location).is_empty() {
+            return None;
+        }
+        Some(Self {
+            owner_user_id: owner_user_id.clone(),
+            target: DesktopNotificationTarget::OpenLocation {
+                location: location.to_string(),
             },
         })
     }
@@ -196,5 +213,23 @@ mod tests {
             "usr_abcdefab-cdef-abcd-efab-cdefabcdefab"
         )
         .is_none());
+    }
+
+    #[test]
+    fn a_place_opens_only_when_it_is_a_real_world_location() {
+        let owner = OwnerId::new("usr_12345678-1234-1234-1234-1234567890ab");
+        let location = "wrld_12345678-1234-1234-1234-1234567890ab:12345~region(jp)";
+
+        assert_eq!(
+            DesktopNotificationAction::open_location(&owner, location),
+            Some(DesktopNotificationAction {
+                owner_user_id: owner.clone(),
+                target: super::DesktopNotificationTarget::OpenLocation {
+                    location: location.into(),
+                },
+            })
+        );
+        assert!(DesktopNotificationAction::open_location(&owner, "private").is_none());
+        assert!(DesktopNotificationAction::open_location(&owner, "").is_none());
     }
 }

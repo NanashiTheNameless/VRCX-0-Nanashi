@@ -285,11 +285,6 @@ async fn run_realtime_transport_inner(
                 reason,
                 "[Realtime] websocket connect rejected by auth"
             );
-            tracing::error!(
-                generation,
-                code = status_code.unwrap_or_default(),
-                "[Realtime] websocket auth rejected while the session was still usable"
-            );
             trail(
                 &trail_db_path,
                 "authRejected",

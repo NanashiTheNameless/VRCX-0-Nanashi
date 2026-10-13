@@ -191,6 +191,8 @@ export const ConfigKeys = defineConfigKeys({
     hmdNotificationPosition: { type: 'string', default: 'bottom' },
     hmdNotificationStyle: { type: 'string', default: 'standard' },
     hmdNotificationAvatars: { type: 'bool', default: true },
+    desktopWidgetOpacity: { type: 'int', default: 55 },
+    desktopWidgetNewestOnTop: { type: 'bool', default: true },
     webhookEnabled: { type: 'bool', default: false },
     webhookAuthEventsEnabled: { type: 'bool', default: true },
     webhookUrl: { type: 'string', default: '' },

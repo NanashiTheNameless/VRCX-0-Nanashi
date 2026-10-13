@@ -131,6 +131,19 @@ export function DesktopNotificationsDialog(
     );
 }
 
+export function DesktopWidgetActivityDialog(
+    props: NotificationProfileDialogProps
+) {
+    return (
+        <ActivityFilterDialog
+            {...props}
+            titleKey="dialog.desktop_widget.title"
+            descriptionKey="dialog.desktop_widget.description"
+            defaultScope={(definition) => definition.widgetDefaultScope}
+        />
+    );
+}
+
 export function HmdNotificationsDialog(props: NotificationProfileDialogProps) {
     return (
         <ActivityFilterDialog

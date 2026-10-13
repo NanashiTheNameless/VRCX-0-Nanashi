@@ -265,7 +265,7 @@ fn freeze_failure_preserves_source_database_and_does_not_commit_pointer() {
     assert_eq!(outcome.status.phase, Some(DataDirMigrationPhase::Freezing));
     assert_eq!(
         outcome.error.expect("freeze error").code,
-        DataDirMigrationErrorCode::DatabaseUnavailable
+        DataDirMigrationErrorCode::DatabaseInUse
     );
     assert!(committed.lock().unwrap().is_none());
     assert!(!target.join("VRCX-0.sqlite3").exists());

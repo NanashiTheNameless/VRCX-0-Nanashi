@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { timeToText } from '@/lib/dateTime';
 import { cn } from '@/lib/utils';
 import { commands, type FeedLoggerStatus } from '@/platform/tauri/bindings';
 import { formatDataDirMigrationBytes } from '@/services/dataDirMigrationI18n';
@@ -22,6 +23,7 @@ import {
     type RunAction
 } from './offlineRecordModel';
 import { SectionTitle } from './SectionTitle';
+import { useBackfillHistory } from './useBackfillHistory';
 import { VrchatLoginForm } from './VrchatLoginForm';
 import { WebhookSection } from './WebhookSection';
 
@@ -223,6 +225,7 @@ function RecordSection({
     const syncing = useOfflineRecordStore(
         (state) => state.syncProgress !== null
     );
+    const backfillHistory = useBackfillHistory();
     const range =
         status.oldestUnsyncedAt !== null && status.newestUnsyncedAt !== null
             ? `${formatUnixTime(status.oldestUnsyncedAt)} - ${formatUnixTime(status.newestUnsyncedAt)}`
@@ -244,6 +247,12 @@ function RecordSection({
         <section className="flex flex-col gap-3">
             <SectionTitle>{t('offline_record.records')}</SectionTitle>
             <div className="flex flex-col gap-1.5">
+                <StatRow
+                    label={t('offline_record.uptime')}
+                    value={timeToText(
+                        (status.serverTime - status.startedAt) * 1000
+                    )}
+                />
                 <StatRow
                     label={t('offline_record.unsynced_frames')}
                     value={String(status.unsyncedFrames)}
@@ -272,6 +281,23 @@ function RecordSection({
                     label={t('offline_record.last_pull')}
                     value={formatUnixTime(status.lastPullAt)}
                 />
+                {backfillHistory && backfillHistory.total > 0 ? (
+                    <>
+                        <StatRow
+                            label={t('offline_record.backfill_total')}
+                            value={String(backfillHistory.total)}
+                        />
+                        {backfillHistory.recent.map((record) => (
+                            <StatRow
+                                key={record.at}
+                                label={formatUnixTime(record.at)}
+                                value={t('offline_record.backfill_record', {
+                                    count: record.inserted
+                                })}
+                            />
+                        ))}
+                    </>
+                ) : null}
                 {status.droppedUnsyncedFrames > 0 ? (
                     <StatRow
                         label={t('offline_record.dropped_unsynced')}

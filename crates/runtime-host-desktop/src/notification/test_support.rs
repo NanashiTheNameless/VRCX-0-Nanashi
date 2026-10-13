@@ -2,7 +2,7 @@ use std::{path::PathBuf, sync::Arc};
 
 use vrcx_0_persistence::{config::ConfigRepository, DatabaseService};
 
-pub(super) struct TestDir(PathBuf);
+pub(crate) struct TestDir(PathBuf);
 
 impl TestDir {
     fn new(name: &str) -> Self {
@@ -25,7 +25,7 @@ impl Drop for TestDir {
     }
 }
 
-pub(super) fn test_config(name: &str) -> (TestDir, ConfigRepository) {
+pub(crate) fn test_config(name: &str) -> (TestDir, ConfigRepository) {
     let dir = TestDir::new(name);
     let db = Arc::new(DatabaseService::new(&dir.0.join("VRCX-0.sqlite3")).unwrap());
     (dir, ConfigRepository::new(db))

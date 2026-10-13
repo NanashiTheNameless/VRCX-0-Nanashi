@@ -12,10 +12,12 @@ import {
     validateTarget
 } from './create-tauri-updater-manifest';
 import {
-    cargoDependencyClosure,
+    createLicenseManifest,
     createThirdPartyNoticeText,
     normalizeFrontendEntry,
     parseCargoMetadata,
+    parseCargoTreePackages,
+    readCrateLicenseTexts,
     sanitizeId
 } from './generate-third-party-licenses';
 import {
@@ -46,43 +48,37 @@ afterEach(() => {
 });
 
 describe('recorder third-party notices', () => {
-    it('lists only crates the recorder needs at runtime, including transitive ones', () => {
-        const metadata = parseCargoMetadata({
-            workspace_members: ['vrcx-0-logger', 'vrcx-0'],
-            packages: [
-                'vrcx-0-logger',
-                'vrcx-0',
-                'rustls',
-                'ring',
-                'tauri',
-                'mockito',
-                'cc'
-            ].map((id) => ({ id, name: id, version: '1.0.0' })),
-            resolve: {
-                nodes: [
-                    {
-                        id: 'vrcx-0-logger',
-                        deps: [
-                            { pkg: 'rustls', dep_kinds: [{ kind: null }] },
-                            { pkg: 'mockito', dep_kinds: [{ kind: 'dev' }] },
-                            { pkg: 'cc', dep_kinds: [{ kind: 'build' }] }
-                        ]
-                    },
-                    {
-                        id: 'rustls',
-                        deps: [{ pkg: 'ring', dep_kinds: [{ kind: null }] }]
-                    },
-                    {
-                        id: 'vrcx-0',
-                        deps: [{ pkg: 'tauri', dep_kinds: [{ kind: null }] }]
-                    }
-                ]
-            }
-        });
+    it('lists each crate the recorder builds once, whatever cargo tree marks it with', () => {
+        const packages = parseCargoTreePackages(
+            [
+                'vrcx-0-logger v2.32.0 (D:\\Code\\VRCX-0\\crates\\logger)',
+                'rustls v0.23.1',
+                'ring v0.17.8',
+                'rustls v0.23.1 (*)',
+                'specta-macros v2.0.0-rc.18 (proc-macro)',
+                ''
+            ].join('\n')
+        );
+
+        expect([...packages].sort()).toEqual([
+            'ring 0.17.8',
+            'rustls 0.23.1',
+            'specta-macros 2.0.0-rc.18',
+            'vrcx-0-logger 2.32.0'
+        ]);
+    });
+
+    it('reads every license and notice file shipped in a crate', () => {
+        const crateDir = createTemporaryDirectory();
+        fs.writeFileSync(path.join(crateDir, 'Cargo.toml'), '[package]\n');
+        fs.writeFileSync(path.join(crateDir, 'LICENSE-MIT'), 'MIT text\r\n');
+        fs.writeFileSync(path.join(crateDir, 'LICENSE-APACHE'), 'Apache text');
+        fs.writeFileSync(path.join(crateDir, 'NOTICE'), 'Notice text');
+        fs.writeFileSync(path.join(crateDir, 'README.md'), 'Readme');
 
         expect(
-            [...cargoDependencyClosure(metadata, 'vrcx-0-logger')].sort()
-        ).toEqual(['ring', 'rustls', 'vrcx-0-logger']);
+            readCrateLicenseTexts(path.join(crateDir, 'Cargo.toml'))
+        ).toEqual(['Apache text', 'MIT text', 'Notice text']);
     });
 });
 
@@ -431,13 +427,13 @@ describe('generate-third-party-licenses', () => {
             license: 'MIT',
             sourceType: 'frontend',
             sourceLabel: 'Frontend bundle',
-            noticeText: 'Copyright\nExample',
+            noticeTexts: ['Copyright\nExample'],
             needsReview: false
         });
         expect(sanitizeId(' @Scope/Package 1.0 ')).toBe('scope-package-1-0');
     });
 
-    it('groups notice entries without dropping missing license text', () => {
+    it('writes a shared license text once and lists every package that uses it', () => {
         const notice = createThirdPartyNoticeText([
             normalizeFrontendEntry({ name: 'Alpha', version: '1.0.0' }, 0),
             normalizeFrontendEntry(
@@ -445,20 +441,49 @@ describe('generate-third-party-licenses', () => {
                     name: 'Beta',
                     version: '2.0.0',
                     license: 'MIT',
-                    noticeText: 'Beta notice'
+                    noticeText: 'Shared notice'
                 },
                 1
+            ),
+            normalizeFrontendEntry(
+                {
+                    name: 'Gamma',
+                    version: '3.0.0',
+                    license: 'MIT',
+                    noticeText: 'Shared notice'
+                },
+                2
             )
         ]);
 
         expect(notice).toContain('Frontend bundle');
-        expect(notice).toContain('## Alpha - 1.0.0');
         expect(notice).toContain(
-            'No local license text was generated for this entry.'
+            '## Used by\n- Beta 2.0.0 (MIT)\n- Gamma 3.0.0 (MIT)\n\nShared notice'
         );
-        expect(notice).toContain('## Beta - 2.0.0 (MIT)');
-        expect(notice).toContain('Beta notice');
+        expect(notice.match(/Shared notice/g)).toHaveLength(1);
+        expect(notice).toContain(
+            '## Alpha 1.0.0\n\nNo local license text was generated for this entry.'
+        );
         expect(notice.endsWith('\n')).toBe(true);
+    });
+
+    it('stores each license text once in the manifest and points entries at it', () => {
+        const manifest = createLicenseManifest([
+            normalizeFrontendEntry(
+                { name: 'Beta', noticeText: 'Shared notice' },
+                0
+            ),
+            normalizeFrontendEntry(
+                { name: 'Gamma', noticeText: 'Shared notice' },
+                1
+            ),
+            normalizeFrontendEntry({ name: 'Alpha' }, 2)
+        ]);
+
+        expect(manifest.noticeTexts).toEqual(['Shared notice']);
+        expect(
+            manifest.entries.map((entry) => entry.noticeTextIndexes)
+        ).toEqual([[0], [0], []]);
     });
 
     it('parses cargo metadata through an explicit boundary', () => {
@@ -487,10 +512,10 @@ describe('generate-third-party-licenses', () => {
                     license: 'MIT',
                     licenseFile: '',
                     repository: 'https://example.test/dependency',
-                    homepage: ''
+                    homepage: '',
+                    manifestPath: ''
                 }
-            ],
-            resolveNodes: []
+            ]
         });
     });
 });
