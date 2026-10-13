@@ -231,6 +231,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::application::remote_sync::app__remote_sync_settings_get,
             commands::application::remote_sync::app__remote_sync_server_validate,
             commands::application::remote_sync::app__remote_sync_settings_set,
+            commands::application::remote_sync::app__remote_sync_setting_groups_get,
+            commands::application::remote_sync::app__remote_sync_setting_choices_set,
             commands::application::remote_sync::app__remote_sync_pair_start,
             commands::application::remote_sync::app__remote_sync_pair_poll,
             commands::application::remote_sync::app__remote_sync_account_get,

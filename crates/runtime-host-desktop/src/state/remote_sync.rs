@@ -2,7 +2,7 @@
 //! store, and nothing here contacts a server unless the backend is set to
 //! RemoteSync and this PC is paired.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
@@ -27,6 +27,7 @@ pub const BACKEND_KEY: &str = "historySyncBackend";
 pub const BACKEND_REMOTESYNC: &str = "remotesync";
 pub const SYNC_INTERVAL_MINUTES_KEY: &str = "remoteSyncIntervalMinutes";
 pub const SYNC_SETTINGS_ENABLED_KEY: &str = "remoteSyncSettingsEnabled";
+const SYNC_SETTING_CHOICES_KEY: &str = "remoteSyncSettingChoices";
 pub const PAUSE_WHILE_GAME_RUNNING_KEY: &str = "remoteSyncPauseWhileGameRunning";
 pub const API_ORIGIN_KEY: &str = "remoteSyncApiOrigin";
 pub const ACCOUNT_ID_KEY: &str = "remoteSyncAccountId";
@@ -320,6 +321,138 @@ fn syncable_app_setting(key: &str) -> bool {
     .any(|fragment| name.contains(fragment))
 }
 
+const OTHER_SETTING_GROUP: &str = "other";
+
+/// Checked in order, so the overlay's notification keys land under overlay.
+const SETTING_GROUPS: [(&str, &[&str]); 8] = [
+    (
+        "overlay",
+        &[
+            "wristoverlay",
+            "hmdnotification",
+            "desktopwidget",
+            "xsnotifications",
+            "ovrt",
+            "overlaytoast",
+        ],
+    ),
+    ("safety", &["safety", "watchlist"]),
+    ("assistant", &["socialai", "assistant", "reminder"]),
+    (
+        "feed",
+        &[
+            "feed",
+            "tablefilter",
+            "gamelog",
+            "friendlog",
+            "hideunfriends",
+            "recentaction",
+            "maxtablesize",
+            "searchlimit",
+        ],
+    ),
+    (
+        "notifications",
+        &["notification", "toast", "tts", "icondot", "sound"],
+    ),
+    (
+        "automation",
+        &[
+            "autoaccept",
+            "autodecline",
+            "presenceautomation",
+            "autologin",
+            "backgroundmode",
+            "closetotray",
+            "relaunch",
+            "vrcquitfix",
+            "autosweep",
+            "autodelete",
+        ],
+    ),
+    (
+        "layout",
+        &[
+            "sidebar",
+            "nav",
+            "isfriendsgroup",
+            "sameinstance",
+            "statusbar",
+            "favorites",
+            "viewmode",
+            "card",
+            "mutualgraph",
+            "activity",
+            "dashboard",
+        ],
+    ),
+    (
+        "appearance",
+        &[
+            "theme",
+            "font",
+            "zoomlevel",
+            "dthour12",
+            "dtisoformat",
+            "dtdateformat",
+            "weekstartson",
+            "applanguage",
+            "background",
+            "show",
+            "hide",
+            "table",
+            "colour",
+            "density",
+            "reducedmotion",
+        ],
+    ),
+];
+
+fn setting_group(key: &str) -> &'static str {
+    let key = key.trim().to_ascii_lowercase();
+    let name = key.strip_prefix("config:vrcx_").unwrap_or(&key);
+    SETTING_GROUPS
+        .iter()
+        .find(|(_, fragments)| fragments.iter().any(|fragment| name.contains(fragment)))
+        .map_or(OTHER_SETTING_GROUP, |(group, _)| group)
+}
+
+/// Which app settings this PC exchanges. Kept per PC and never synced.
+#[derive(
+    Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize, specta::Type,
+)]
+#[serde(rename_all = "camelCase", default)]
+pub struct RemoteSyncSettingChoices {
+    pub excluded_groups: BTreeSet<String>,
+    /// Per-setting choices that win over the setting's group.
+    pub key_overrides: BTreeMap<String, bool>,
+}
+
+impl RemoteSyncSettingChoices {
+    fn selects(&self, key: &str) -> bool {
+        let key = key.trim().to_ascii_lowercase();
+        self.key_overrides
+            .get(&key)
+            .copied()
+            .unwrap_or_else(|| !self.excluded_groups.contains(setting_group(&key)))
+    }
+}
+
+#[derive(Clone, Debug, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteSyncSettingGroup {
+    pub id: String,
+    pub enabled: bool,
+    pub settings: Vec<RemoteSyncSettingChoice>,
+}
+
+#[derive(Clone, Debug, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct RemoteSyncSettingChoice {
+    pub key: String,
+    pub synced: bool,
+}
+
 impl DesktopRuntimeHostState {
     pub fn remote_sync_enabled(&self) -> bool {
         self.config_string(BACKEND_KEY, "off") == BACKEND_REMOTESYNC
@@ -420,12 +553,74 @@ impl DesktopRuntimeHostState {
         self.remote_sync.cancel.store(true, Ordering::Release);
     }
 
+    pub fn remote_sync_setting_choices(&self) -> RemoteSyncSettingChoices {
+        serde_json::from_str(&self.config_string(SYNC_SETTING_CHOICES_KEY, "")).unwrap_or_default()
+    }
+
+    pub fn remote_sync_setting_choices_set(&self, choices: RemoteSyncSettingChoices) -> Result<()> {
+        let choices = RemoteSyncSettingChoices {
+            excluded_groups: choices
+                .excluded_groups
+                .into_iter()
+                .filter(|group| {
+                    group == OTHER_SETTING_GROUP
+                        || SETTING_GROUPS.iter().any(|(known, _)| known == group)
+                })
+                .collect(),
+            key_overrides: choices
+                .key_overrides
+                .into_iter()
+                .map(|(key, synced)| (key.trim().to_ascii_lowercase(), synced))
+                .filter(|(key, _)| syncable_app_setting(key))
+                .collect(),
+        };
+        self.config_set_values(vec![crate::local_data::ConfigWriteEntry {
+            key: SYNC_SETTING_CHOICES_KEY.into(),
+            value: serde_json::to_string(&choices).map_err(sync_error)?,
+        }])?;
+        Ok(())
+    }
+
+    /// Every setting on this PC that sync may exchange, by group.
+    pub fn remote_sync_setting_groups(&self) -> Result<Vec<RemoteSyncSettingGroup>> {
+        let choices = self.remote_sync_setting_choices();
+        let mut groups = SETTING_GROUPS
+            .iter()
+            .map(|(group, _)| *group)
+            .chain([OTHER_SETTING_GROUP])
+            .map(|group| RemoteSyncSettingGroup {
+                id: group.to_string(),
+                enabled: !choices.excluded_groups.contains(group),
+                settings: Vec::new(),
+            })
+            .collect::<Vec<_>>();
+        let mut keys = self
+            .local_data
+            .config_list_values()?
+            .into_iter()
+            .map(|entry| entry.key)
+            .filter(|key| syncable_app_setting(key))
+            .collect::<Vec<_>>();
+        keys.sort();
+        for key in keys {
+            let group = setting_group(&key);
+            if let Some(group) = groups.iter_mut().find(|entry| entry.id == group) {
+                group.settings.push(RemoteSyncSettingChoice {
+                    synced: choices.selects(&key),
+                    key,
+                });
+            }
+        }
+        Ok(groups)
+    }
+
     fn remote_sync_app_settings(&self) -> Result<BTreeMap<String, String>> {
+        let choices = self.remote_sync_setting_choices();
         Ok(self
             .local_data
             .config_list_values()?
             .into_iter()
-            .filter(|entry| syncable_app_setting(&entry.key))
+            .filter(|entry| syncable_app_setting(&entry.key) && choices.selects(&entry.key))
             .map(|entry| (entry.key, entry.value))
             .collect())
     }
@@ -448,7 +643,11 @@ impl DesktopRuntimeHostState {
             .map(|(key, deleted_at)| (key.as_str(), *deleted_at))
             .collect::<std::collections::HashMap<_, _>>();
 
+        let choices = self.remote_sync_setting_choices();
         for (key, value, updated_at) in &synced {
+            if !choices.selects(key) {
+                continue;
+            }
             let remote_ms = sync_timestamp_ms(updated_at).unwrap_or_default();
             let local_ms = local_setting_change_time(db, key)?;
             match local.get(key) {
@@ -502,9 +701,10 @@ impl DesktopRuntimeHostState {
         let synced = store::streams::app_settings_list(db, scope)?;
         let deleted = store::streams::app_settings_deleted_keys(db, scope)?;
         let mut current = self.remote_sync_app_settings()?;
+        let choices = self.remote_sync_setting_choices();
         let mut changed = false;
         for (key, value, updated_at) in &synced {
-            if !syncable_app_setting(key) {
+            if !syncable_app_setting(key) || !choices.selects(key) {
                 continue;
             }
             let remote_ms = sync_timestamp_ms(updated_at).unwrap_or_default();
@@ -541,7 +741,7 @@ impl DesktopRuntimeHostState {
         }
 
         for (key, deleted_at_ms) in &deleted {
-            if !syncable_app_setting(key) {
+            if !syncable_app_setting(key) || !choices.selects(key) {
                 continue;
             }
             let local_ms = local_setting_change_time(db, key)?;
@@ -1432,6 +1632,44 @@ mod tests {
     fn recorder_settings_are_never_synced() {
         assert!(!syncable_app_setting("config:vrcx_feedLogger"));
         assert!(syncable_app_setting("config:vrcx_theme"));
+    }
+
+    #[test]
+    fn the_setting_choices_themselves_are_never_synced() {
+        assert!(!syncable_app_setting(
+            &vrcx_0_contracts::resolve_config_key(SYNC_SETTING_CHOICES_KEY)
+        ));
+    }
+
+    #[test]
+    fn settings_sort_into_groups_with_overlay_keys_ahead_of_notifications() {
+        assert_eq!(
+            setting_group("config:vrcx_hmdnotificationtimeout"),
+            "overlay"
+        );
+        assert_eq!(
+            setting_group("config:vrcx_notificationtimeout"),
+            "notifications"
+        );
+        assert_eq!(setting_group("config:vrcx_thememode"), "appearance");
+        assert_eq!(setting_group("config:vrcx_somethingnew"), "other");
+    }
+
+    #[test]
+    fn a_setting_follows_its_group_unless_it_has_its_own_choice() {
+        let choices = RemoteSyncSettingChoices {
+            excluded_groups: BTreeSet::from(["overlay".to_string()]),
+            key_overrides: BTreeMap::from([
+                ("config:vrcx_wristoverlayhand".to_string(), true),
+                ("config:vrcx_thememode".to_string(), false),
+            ]),
+        };
+
+        assert!(!choices.selects("config:vrcx_wristoverlaysize"));
+        assert!(choices.selects("config:vrcx_wristOverlayHand"));
+        assert!(!choices.selects("config:vrcx_thememode"));
+        assert!(choices.selects("config:vrcx_zoomlevel"));
+        assert!(RemoteSyncSettingChoices::default().selects("config:vrcx_wristoverlaysize"));
     }
 
     fn world(id: &str, name: &str, image_url: &str) -> CachedWorld {

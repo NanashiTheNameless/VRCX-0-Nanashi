@@ -18,6 +18,7 @@ import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
 import { SettingsHistorySyncPanel } from './SettingsHistorySyncPanel';
+import { SettingsHistorySyncSettingChoices } from './SettingsHistorySyncSettingChoices';
 import { SettingsHistorySyncTrust } from './SettingsHistorySyncTrust';
 import { SettingsSelfHostedRecorderCard } from './SettingsSelfHostedRecorderCard';
 
@@ -506,6 +507,16 @@ export function SettingsHistorySyncTab() {
                                 )}
                             </Button>
                         </div>
+                    </Field>
+                    <Field
+                        label={t('view.settings.history_sync.setting_choices')}
+                        description={t(
+                            'view.settings.history_sync.setting_choices_description'
+                        )}
+                    >
+                        <SettingsHistorySyncSettingChoices
+                            disabled={busy || !settings?.syncSettingsEnabled}
+                        />
                     </Field>
                     <Field label={t('view.settings.history_sync.api_url')}>
                         <input

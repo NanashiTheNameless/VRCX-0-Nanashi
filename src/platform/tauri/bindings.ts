@@ -478,6 +478,16 @@ const generatedCommands = {
             pauseWhileGameRunning
         });
     },
+    async appRemoteSyncSettingGroupsGet(): Promise<RemoteSyncSettingGroup[]> {
+        return await TAURI_INVOKE('app__remote_sync_setting_groups_get');
+    },
+    async appRemoteSyncSettingChoicesSet(
+        choices: RemoteSyncSettingChoices
+    ): Promise<null> {
+        return await TAURI_INVOKE('app__remote_sync_setting_choices_set', {
+            choices
+        });
+    },
     async appRemoteSyncPairStart(
         deviceLabel: string
     ): Promise<RemoteSyncPairingStart> {
@@ -7008,6 +7018,22 @@ export type RemoteSyncRunSnapshot = {
     gaps: number;
     unknownStreams: string[];
     cancelled: boolean;
+};
+export type RemoteSyncSettingChoice = { key: string; synced: boolean };
+/**
+ * Which app settings this PC exchanges. Kept per PC and never synced.
+ */
+export type RemoteSyncSettingChoices = {
+    excludedGroups: string[];
+    /**
+     * Per-setting choices that win over the setting's group.
+     */
+    keyOverrides: Partial<{ [key in string]: boolean }>;
+};
+export type RemoteSyncSettingGroup = {
+    id: string;
+    enabled: boolean;
+    settings: RemoteSyncSettingChoice[];
 };
 export type RemoteSyncSettingsImportedPayload = Record<string, never>;
 export type RemoteSyncSettingsSnapshot = {

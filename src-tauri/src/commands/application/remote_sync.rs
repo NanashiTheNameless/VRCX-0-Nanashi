@@ -13,8 +13,9 @@ use vrcx_0_remote_sync::{
 };
 
 use vrcx_0_runtime_host_desktop::remote_sync::{
-    ACCOUNT_ID_KEY, API_ORIGIN_KEY, BACKEND_KEY, PAUSE_WHILE_GAME_RUNNING_KEY,
-    SYNC_INTERVAL_MINUTES_KEY, SYNC_SETTINGS_ENABLED_KEY, TOKEN_KEY, WEBSITE_ORIGIN_KEY,
+    RemoteSyncSettingChoices, RemoteSyncSettingGroup, ACCOUNT_ID_KEY, API_ORIGIN_KEY, BACKEND_KEY,
+    PAUSE_WHILE_GAME_RUNNING_KEY, SYNC_INTERVAL_MINUTES_KEY, SYNC_SETTINGS_ENABLED_KEY, TOKEN_KEY,
+    WEBSITE_ORIGIN_KEY,
 };
 
 const TRUST_HISTORY_KEY: &str = "remoteSyncTrustHistory";
@@ -183,6 +184,25 @@ pub async fn app__remote_sync_server_validate(
         .await
         .map_err(|error| AppError::WebClient(error.to_string()))?
         .into())
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub fn app__remote_sync_setting_groups_get(
+    state: State<'_, AppState>,
+) -> Result<Vec<RemoteSyncSettingGroup>, AppError> {
+    Ok(state.runtime_host().remote_sync_setting_groups()?)
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub fn app__remote_sync_setting_choices_set(
+    state: State<'_, AppState>,
+    choices: RemoteSyncSettingChoices,
+) -> Result<(), AppError> {
+    Ok(state
+        .runtime_host()
+        .remote_sync_setting_choices_set(choices)?)
 }
 
 #[tauri::command(async)]
