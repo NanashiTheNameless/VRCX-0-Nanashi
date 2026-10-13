@@ -1,3 +1,4 @@
+mod adoption_census;
 mod ancillary_snapshot;
 mod app_launcher;
 mod assistant_adapters;

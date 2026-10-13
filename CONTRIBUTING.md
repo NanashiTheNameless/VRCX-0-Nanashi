@@ -21,7 +21,7 @@ actually solves the problem.
 
 ## Before submitting
 
-- Make sure it builds and the checks pass. See [README](README.md) for setup.
+- Make sure it builds and the checks pass. See [Building from source](BUILDING.md) for setup.
 - Keep the change minimal and on-topic.
 
 Contributions are accepted under the project license (GPLv3). No CLA is required.

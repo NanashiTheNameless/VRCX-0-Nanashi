@@ -493,6 +493,33 @@ fn runtime_event_contract_stays_narrow_for_integration_api() {
 }
 
 #[test]
+fn adoption_census_is_sent_only_by_the_desktop_runtime() {
+    assert!(
+        !normal_dependency_names("vrcx-0-nanashi-collector")
+            .contains("vrcx-0-runtime-host-desktop"),
+        "the collector must not link the desktop runtime, which sends the adoption count"
+    );
+
+    for source in rust_sources_below("crates") {
+        let relative = source
+            .strip_prefix(workspace_file(""))
+            .expect("workspace source path")
+            .to_string_lossy()
+            .replace('\\', "/");
+        if relative.starts_with("crates/runtime-host-desktop/")
+            || relative.starts_with("crates/contracts/src/external_api")
+        {
+            continue;
+        }
+        let text = std::fs::read_to_string(&source).expect("read Rust source");
+        assert!(
+            !text.contains("AdoptionCensus") && !text.contains("adoption_census"),
+            "{relative} refers to the adoption count; only the desktop runtime may send it"
+        );
+    }
+}
+
+#[test]
 fn feed_logger_stays_free_of_the_desktop_stack() {
     let logger = normal_dependency_names("vrcx-0-logger");
     for forbidden in [

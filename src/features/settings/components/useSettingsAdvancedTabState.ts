@@ -10,6 +10,7 @@ export function useSettingsAdvancedTabState() {
     const advanced = useSettingsPageSection('advanced');
     const prefs = usePreferencesStore(
         useShallow((state) => ({
+            adoptionCensusEnabled: state.adoptionCensusEnabled,
             autoSweepVRChatCache: state.autoSweepVRChatCache,
             avatarAutoCleanup: state.avatarAutoCleanup,
             gameLogDisabled: state.gameLogDisabled,
@@ -52,6 +53,13 @@ export function useSettingsAdvancedTabState() {
         onlineVisitCount,
         configTreeData,
         appDataDirState,
+        onAdoptionCensusEnabledChange: (checked: boolean) => {
+            saveBoolPreference(
+                'adoptionCensusEnabled',
+                'adoptionCensusEnabled',
+                checked
+            );
+        },
         onAutoSweepVRChatCacheChange: (checked: boolean) => {
             saveBoolPreference(
                 'autoSweepVRChatCache',

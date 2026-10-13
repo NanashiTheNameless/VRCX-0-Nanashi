@@ -208,6 +208,7 @@ struct DesktopRuntimeProfileExtension {
     registry_backup_maintenance_running: Arc<AtomicBool>,
     desktop_maintenance_running: Arc<AtomicBool>,
     background_image_started: AtomicBool,
+    adoption_census_started: AtomicBool,
     app_launcher_events_started: AtomicBool,
     discord_reconcile_generation: Arc<AtomicU64>,
     registry_backup_state: Arc<Mutex<RegistryBackupMaintenanceState>>,
@@ -459,6 +460,7 @@ impl DesktopRuntimeHostState {
             registry_backup_maintenance_running: Arc::new(AtomicBool::new(false)),
             desktop_maintenance_running: Arc::new(AtomicBool::new(false)),
             background_image_started: AtomicBool::new(false),
+            adoption_census_started: AtomicBool::new(false),
             app_launcher_events_started: AtomicBool::new(false),
             discord_reconcile_generation: Arc::new(AtomicU64::new(0)),
             registry_backup_state: Arc::new(Mutex::new(RegistryBackupMaintenanceState::default())),
@@ -2492,6 +2494,9 @@ impl DesktopRuntimeProfileExtension {
                 state.desktop_assembly().event_bus().clone(),
                 state.desktop_assembly().tasks().clone(),
             );
+        }
+        if !self.adoption_census_started.swap(true, Ordering::AcqRel) {
+            crate::adoption_census::start_adoption_census_loop(state);
         }
         if self.background_image_started.swap(true, Ordering::AcqRel) {
             return;

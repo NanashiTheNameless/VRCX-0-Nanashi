@@ -50,6 +50,8 @@ vrcx-0-persistence = { path = "../persistence" }
 vrcx-0-remote-sync = { path = "../remote-sync" }
 base64 = { workspace = true }
 zeroize = { workspace = true }
+sha2 = { workspace = true }
+uuid = { workspace = true }
 vrcx-0-composition = { path = "../composition" }
 vrcx-0-vrchat-client = { path = "../vrchat-client" }
 vrcx-0-outbound-adapters = { path = "../outbound-adapters" }

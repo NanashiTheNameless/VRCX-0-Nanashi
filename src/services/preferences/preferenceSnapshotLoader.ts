@@ -213,6 +213,7 @@ export async function loadPreferenceSnapshot() {
         udonExceptionLogging,
         socialAiEnabled,
         logResourceLoad,
+        adoptionCensusEnabled,
         autoLoginDelayEnabled,
         autoLoginDelaySeconds,
         backgroundModeEnabled,
@@ -382,6 +383,7 @@ export async function loadPreferenceSnapshot() {
         configRepository.getBool('udonExceptionLogging', false),
         configRepository.getBool('socialAiEnabled', false),
         configRepository.getBool('logResourceLoad', false),
+        configRepository.getBool('adoptionCensusEnabled', true),
         configRepository.getBool('autoLoginDelayEnabled', false),
         configRepository.getInt('autoLoginDelaySeconds', 0),
         configRepository.getBool('backgroundModeEnabled', false),
@@ -644,6 +646,7 @@ export async function loadPreferenceSnapshot() {
         udonExceptionLogging: Boolean(udonExceptionLogging),
         socialAiEnabled: Boolean(socialAiEnabled),
         logResourceLoad: Boolean(logResourceLoad),
+        adoptionCensusEnabled: Boolean(adoptionCensusEnabled),
         autoLoginDelayEnabled: Boolean(autoLoginDelayEnabled),
         autoLoginDelaySeconds: Number.isFinite(autoLoginDelaySeconds)
             ? autoLoginDelaySeconds

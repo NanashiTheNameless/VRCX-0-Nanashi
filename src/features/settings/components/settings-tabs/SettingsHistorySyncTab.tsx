@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { commands } from '@/platform/tauri/bindings';
 import { invoke } from '@/platform/tauri/generatedInvoke';
+import { Badge } from '@/ui/shadcn/badge';
 import { Button } from '@/ui/shadcn/button';
 import {
     Select,
@@ -320,7 +321,14 @@ export function SettingsHistorySyncTab() {
                 description={t('view.settings.history_sync.description')}
             >
                 <Field
-                    label={t('view.settings.history_sync.backend')}
+                    label={
+                        <span className="flex flex-wrap items-center gap-2">
+                            {t('view.settings.history_sync.backend')}
+                            <Badge variant="secondary">
+                                {t('view.settings.history_sync.preferred')}
+                            </Badge>
+                        </span>
+                    }
                     description={t(
                         'view.settings.history_sync.backend_description'
                     )}

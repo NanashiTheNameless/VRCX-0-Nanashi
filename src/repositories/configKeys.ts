@@ -142,6 +142,7 @@ export const ConfigKeys = defineConfigKeys({
     avatarAutoCleanup: { type: 'string', default: 'Off' },
     userGeneratedContentPath: { type: 'string', default: '' },
     logResourceLoad: { type: 'bool', default: false },
+    adoptionCensusEnabled: { type: 'bool', default: true },
     udonExceptionLogging: { type: 'bool', default: false },
     socialAiEnabled: { type: 'bool', default: false },
     showNewDashboardButton: { type: 'bool', default: true },

@@ -73,6 +73,7 @@ export function SettingsAdvancedTabContent({
         configTreeData,
         appDataDirState,
         hostPlatform,
+        onAdoptionCensusEnabledChange,
         onAutoSweepVRChatCacheChange,
         onUdonExceptionLoggingChange,
         onLogResourceLoadChange,
@@ -374,6 +375,22 @@ export function SettingsAdvancedTabContent({
             >
                 <ProfileMergeFields />
                 {gameLogPersistenceSupported ? <GameLogImportField /> : null}
+            </SettingsCard>
+            <SettingsCard
+                cardId="advanced.adoption-census"
+                title={t('view.settings.advanced.adoption_census.header')}
+            >
+                <Field
+                    label={t('view.settings.advanced.adoption_census.label')}
+                    description={t(
+                        'view.settings.advanced.adoption_census.description'
+                    )}
+                >
+                    <Switch
+                        checked={prefs.adoptionCensusEnabled}
+                        onCheckedChange={onAdoptionCensusEnabledChange}
+                    />
+                </Field>
             </SettingsCard>
             {/* Danger zone: destructive, irreversible actions kept visually separate at the bottom. */}
             <section className="border-destructive/30 flex shrink-0 flex-col rounded-lg border">

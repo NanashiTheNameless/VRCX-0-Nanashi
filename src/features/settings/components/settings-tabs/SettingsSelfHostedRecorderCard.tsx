@@ -40,6 +40,9 @@ export function SettingsSelfHostedRecorderCard({
             title={t('offline_record.header')}
             description={t('offline_record.dialog_description')}
         >
+            <p className="text-muted-foreground px-1 pb-2 text-sm">
+                {t('view.settings.history_sync.recorder_not_preferred')}
+            </p>
             <Field
                 label={t('view.settings.history_sync.recorder_status')}
                 description={

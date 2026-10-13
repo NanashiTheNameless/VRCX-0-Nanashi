@@ -51,6 +51,16 @@ afterEach(() => {
 });
 
 describe('Sync Options card for the self-hosted recorder', () => {
+    it('says History sync is the preferred option', () => {
+        render(<SettingsSelfHostedRecorderCard historySyncEnabled={false} />);
+
+        expect(
+            screen.getByText(
+                'view.settings.history_sync.recorder_not_preferred'
+            )
+        ).toBeTruthy();
+    });
+
     it('offers setup and opens the recorder dialog when nothing is connected', () => {
         render(<SettingsSelfHostedRecorderCard historySyncEnabled={false} />);
         recorderReports({ state: 'notConfigured' });

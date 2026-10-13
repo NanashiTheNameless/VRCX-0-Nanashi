@@ -74,3 +74,5 @@ The last check downloads real components into a temporary fake VRChat installati
 provider startup/plugin loading, and restores it. It does not read browser cookies or request
 video content. Real Windows/Proton playback and Windows installer behavior still require
 platform testing.
+
+[Back to the README](README.md)

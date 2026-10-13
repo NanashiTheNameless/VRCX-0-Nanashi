@@ -46,8 +46,8 @@ Two rules follow from "coexists with upstream VRCX-0":
 
 ## Feature areas you are most likely to touch
 
-`README.md` is the user-facing list. The parts most likely to be damaged by an
-unrelated edit, with where they live:
+`FEATURES.md` is the user-facing list (`README.md` is the index to it).
+The parts most likely to be damaged by an unrelated edit, with where they live:
 
 - **Reminders** - `src/features/reminders/`,
   `crates/runtime-host-desktop/src/reminders.rs`. Has a dedicated
@@ -109,6 +109,34 @@ unrelated edit, with where they live:
   stable/beta recorder check, because every recorder the fork publishes is
   a nightly build. Nightly builds the binaries and calls
   `logger-image.yml` to publish the image.
+- **Adoption count** - `crates/runtime-host-desktop/src/adoption_census.rs`,
+  `ExternalApiScope::AdoptionCensus` in `crates/contracts/src/external_api.rs`,
+  the card at the bottom of Settings > Advanced. The only thing the app
+  reports to the developer: on startup and every 2 hours it posts the SHA-256
+  of a random install id, the project name, the UTC date and a count of one to the maintainer's
+  NamelessTelemetry service (`telemetry.namelessnanashi.dev/census`), which
+  keeps a per-day count. On by default with an opt-out (the
+  `adoptionCensusEnabled` config key, the `VRCX_0_NANASHI_TELEMETRY_OPTOUT`,
+  `DO_NOT_TRACK`, `TELEMETRY_OPTOUT` or `CI` environment variables set truthy,
+  `TELEMETRY` set falsy, the Windows policy value `DisableTelemetry` under
+  `SOFTWARE\Policies\NamelessNanashi\VRCX-0-Nanashi` in HKLM or HKCU
+  (`crates/host-desktop/src/telemetry_policy.rs`, compiled on Windows only;
+  keep it behind `cfg(windows)`), or a flag file next to the
+  executable: `telemetry-optout`, `no-telemetry`, `DO_NOT_TRACK`,
+  `VRCX_0_NANASHI_TELEMETRY_OPTOUT`, matched ignoring case, with `-` and `_`
+  interchangeable and an optional leading dot);
+  while opted out no request is made and the id file is deleted. Never drop
+  an accepted opt-out flag. The collector must never send it: the loop lives
+  in `runtime-host-desktop`, which `collector-cli` does not depend on, so do
+  not move it into a crate the collector links. The website repo's supervisor
+  also starts the collector with both opt-out variables set to `1`. Debug
+  builds never send. The payload must stay exactly these four fields
+  (`id`, `date`, `project`, `count`): no VRChat ids, usage, settings,
+  hardware, version fields or error data. The install id lives in the
+  `.adoption-census-id` file in the data folder, not in config, so sync and
+  profile merge never see it, and data export skips dot files; keep it there.
+  Keep the names "census", not
+  "telemetry": profile merge skips config keys containing `telemetry`.
 - **yt-dlp / media** - `crates/ytdlp/`, `YTDLP_SETUP.md`. Cookie use is opt-in
   and backs up originals.
 - **Notification sounds** - `crates/host-desktop/src/sound.rs`,
@@ -128,7 +156,8 @@ unrelated edit, with where they live:
 
 - Missing `keys.contains("telemetry")`-style guards in profile merge, and stale
   `vrcx_telemetry*` config keys being ignored, are deliberate: the fork has no
-  telemetry to carry across migrations.
+  upstream telemetry to carry across migrations. The fork's own adoption count
+  uses `adoptionCensus*` names and is unrelated to those keys.
 - The hand-maintained `navIconEntries` list in `src/shared/constants/navIcons.ts`
   and the component map in `src/components/layout/navIconRegistry.ts` must stay
   in sync. An icon present in only one of them silently renders as a generic
@@ -158,9 +187,12 @@ unrelated edit, with where they live:
 
 ## Ground rules
 
-- **No developer telemetry.** This fork has no analytics, no crash reporting, no
-  usage reporting, and no feedback upload. Do not add any, and do not "restore"
-  something that looks like it. VRChat heartbeats, realtime/session events, auth
+- **No developer telemetry beyond the adoption count.** This fork has no
+  analytics, no crash reporting, no usage reporting, and no feedback upload. Do
+  not add any, and do not "restore" something that looks like it. The one
+  exception, added by the maintainer on purpose, is the anonymous adoption
+  count described under "Feature areas"; do not remove it as telemetry, and do
+  not add anything to what it sends. VRChat heartbeats, realtime/session events, auth
   refresh, and API polling are core functionality, not telemetry, and must never
   be removed on that basis. When a name is ambiguous, check the destination: if
   it talks to VRChat, GitHub, or a user-configured AI endpoint, keep it.
@@ -299,4 +331,8 @@ Many crates use nested module folders where each file is a sibling
 
 - Linux: avoid native GTK/WebKit theme changes; they have caused crashes. Do not
   reintroduce live OS-theme switching.
-- `README.md` documents fork features. Keep it accurate when behavior changes.
+- `README.md` is a short index; the user docs it links sit beside it
+  (`FEATURES.md`, `TELEMETRY.md`, `INSTALL.md`, `BUILDING.md`; `docs/` is
+  gitignored, so not there). Keep them
+  accurate when behavior changes, and keep the README table in step when a
+  doc is added or renamed.

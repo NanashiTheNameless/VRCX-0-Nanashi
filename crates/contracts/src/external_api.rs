@@ -14,6 +14,8 @@ const BACKGROUND_IMAGE_EPIC_ORIGIN: &str = "https://epic.gsfc.nasa.gov";
 const BACKGROUND_IMAGE_AIC_ORIGIN: &str = "https://api.artic.edu";
 const BACKGROUND_IMAGE_APOD_ORIGIN: &str = "https://api.nasa.gov";
 const COMMUNITY_THEME_CATALOG_ORIGIN: &str = "https://raw.githubusercontent.com";
+const ADOPTION_CENSUS_ORIGIN: &str = "https://telemetry.namelessnanashi.dev";
+const ADOPTION_CENSUS_PATH: &str = "/census";
 const COMMUNITY_THEME_CATALOG_PATH_PREFIX: &str = "/Map1en/VRCX-0-Community-Themes/master/themes/";
 
 #[derive(Debug, thiserror::Error)]
@@ -42,6 +44,8 @@ pub enum ExternalApiScope {
     BackgroundImage,
     #[serde(rename = "externalCommunityTheme")]
     CommunityTheme,
+    #[serde(rename = "externalAdoptionCensus")]
+    AdoptionCensus,
 }
 
 impl ExternalApiScope {
@@ -56,6 +60,7 @@ impl ExternalApiScope {
             Self::Image => "externalImage",
             Self::BackgroundImage => "externalBackgroundImage",
             Self::CommunityTheme => "externalCommunityTheme",
+            Self::AdoptionCensus => "externalAdoptionCensus",
         }
     }
 
@@ -246,6 +251,31 @@ pub fn vrc_status_json_get_input(path: &str) -> ExternalHttpRequestInput {
     )
 }
 
+/// The anonymous adoption count. The body is the whole report: a SHA-256 of a
+/// random install id, the project name, the UTC day and a count of one.
+/// Nothing about the user or VRChat.
+pub fn adoption_census_post_input(
+    id_hash: &str,
+    project: &str,
+    utc_date: &str,
+) -> ExternalHttpRequestInput {
+    ExternalHttpRequestInput {
+        url: Some(format!("{ADOPTION_CENSUS_ORIGIN}{ADOPTION_CENSUS_PATH}")),
+        method: Some(ExternalHttpMethod::Post),
+        headers: Some(HashMap::from([(
+            "Content-Type".to_string(),
+            "application/json".to_string(),
+        )])),
+        body: Some(json!({
+            "id": id_hash,
+            "date": utc_date,
+            "project": project,
+            "count": 1,
+        })),
+        ..Default::default()
+    }
+}
+
 /// GitHub asks API clients to identify themselves with a way to reach the
 /// developer, so these requests carry the contact user agent.
 fn github_get_input(url: &str, mut headers: HashMap<String, String>) -> ExternalHttpRequestInput {
@@ -290,7 +320,10 @@ pub fn build_web_execute_request_with_policy(
     let method = input.method.unwrap_or_default();
     let mut request =
         ExternalWebExecuteRequest::new(build_request_url(&input, scope, policy)?, method.as_str());
-    request.follow_redirects = scope != ExternalApiScope::CommunityTheme;
+    request.follow_redirects = !matches!(
+        scope,
+        ExternalApiScope::CommunityTheme | ExternalApiScope::AdoptionCensus
+    );
     request.allow_http1 = scope.allows_http1();
 
     let headers = sanitize_headers(input.headers.as_ref(), scope)?;
@@ -417,6 +450,9 @@ fn external_url_allowed(url: &Url, scope: ExternalApiScope, policy: &ExternalApi
         ExternalApiScope::CommunityTheme => {
             origin == COMMUNITY_THEME_CATALOG_ORIGIN
                 && url.path().starts_with(COMMUNITY_THEME_CATALOG_PATH_PREFIX)
+        }
+        ExternalApiScope::AdoptionCensus => {
+            origin == ADOPTION_CENSUS_ORIGIN && url.path() == ADOPTION_CENSUS_PATH
         }
     }
 }

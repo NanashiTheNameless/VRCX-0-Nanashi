@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppDataDirState } from '@/platform/tauri/bindings';
@@ -11,6 +11,7 @@ import { SettingsAdvancedTabContent as SettingsAdvancedTab } from './SettingsAdv
 import type { SettingsAdvancedModel } from './settingsAdvancedTypes';
 
 const labels: Record<string, string> = {
+    'view.settings.advanced.adoption_census.label': 'Count this install',
     'view.settings.advanced.advanced_ui.storage.change_folder':
         'Change folder...',
     'view.settings.advanced.advanced_ui.storage.more':
@@ -77,6 +78,7 @@ function createModel(
         avatarAutoCleanupOptions: ['Off'],
         configTreeData: {},
         onAutoSweepVRChatCacheChange: vi.fn(),
+        onAdoptionCensusEnabledChange: vi.fn(),
         onAvatarAutoCleanupChange: vi.fn(),
         onClearConfigTreeData: vi.fn(),
         onGameLogDisabledChange: vi.fn(),
@@ -93,6 +95,7 @@ function createModel(
         onUdonExceptionLoggingChange: vi.fn(),
         onlineVisitCount: null,
         prefs: {
+            adoptionCensusEnabled: true,
             autoSweepVRChatCache: false,
             avatarAutoCleanup: 'Off',
             gameLogDisabled: false,
@@ -206,5 +209,20 @@ describe('SettingsAdvancedTab data directory states', () => {
                 name: 'More data location actions'
             })
         ).toBeNull();
+    });
+
+    it('shows the adoption count as on by default and reports an opt-out', () => {
+        const onAdoptionCensusEnabledChange = vi.fn();
+        renderTab(createModel({ onAdoptionCensusEnabledChange }));
+
+        const toggle = screen.getByRole('switch', {
+            name: 'Count this install'
+        });
+        expect(toggle.getAttribute('aria-checked')).toBe('true');
+
+        fireEvent.click(toggle);
+
+        expect(onAdoptionCensusEnabledChange).toHaveBeenCalledTimes(1);
+        expect(onAdoptionCensusEnabledChange.mock.calls[0][0]).toBe(false);
     });
 });

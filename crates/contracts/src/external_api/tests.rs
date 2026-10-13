@@ -351,6 +351,7 @@ fn only_credential_free_scopes_allow_http1() {
         ExternalApiScope::Translation,
         ExternalApiScope::Youtube,
         ExternalApiScope::Image,
+        ExternalApiScope::AdoptionCensus,
     ];
     assert!(allowed.iter().all(|scope| scope.allows_http1()));
     assert!(denied.iter().all(|scope| !scope.allows_http1()));
@@ -367,4 +368,53 @@ fn only_credential_free_scopes_allow_http1() {
     )
     .expect("image request");
     assert!(!image.allow_http1);
+}
+
+#[test]
+fn adoption_census_contract_sends_only_the_id_date_project_and_count() {
+    let id_hash = "a".repeat(64);
+    let request = build_web_execute_request(
+        adoption_census_post_input(&id_hash, "VRCX-0-Nanashi", "2026-10-12"),
+        ExternalApiScope::AdoptionCensus,
+    )
+    .expect("census request");
+
+    assert_eq!(request.url, "https://telemetry.namelessnanashi.dev/census");
+    assert_eq!(request.method, "POST");
+    assert_eq!(
+        request.headers,
+        vec![("Content-Type".to_string(), "application/json".to_string())]
+    );
+    assert_eq!(
+        serde_json::from_str::<Value>(request.body.as_deref().expect("census body"))
+            .expect("census json"),
+        json!({
+            "id": id_hash,
+            "date": "2026-10-12",
+            "project": "VRCX-0-Nanashi",
+            "count": 1,
+        })
+    );
+    assert!(!request.follow_redirects);
+    assert!(!request.allow_http1);
+}
+
+#[test]
+fn adoption_census_scope_rejects_other_urls() {
+    for url in [
+        "https://telemetry.namelessnanashi.dev/api/stats",
+        "https://telemetry.namelessnanashi.dev/census/extra",
+        "http://telemetry.namelessnanashi.dev/census",
+        "https://example.com/census",
+    ] {
+        let input = ExternalHttpRequestInput {
+            url: Some(url.to_string()),
+            method: Some(ExternalHttpMethod::Post),
+            ..Default::default()
+        };
+        assert!(
+            build_web_execute_request(input, ExternalApiScope::AdoptionCensus).is_err(),
+            "{url} must be rejected"
+        );
+    }
 }

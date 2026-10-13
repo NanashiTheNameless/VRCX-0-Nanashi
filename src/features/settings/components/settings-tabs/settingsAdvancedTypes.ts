@@ -2,6 +2,7 @@ import type { AppDataDirState, HostPlatform } from '@/platform/tauri/bindings';
 import type { AvatarAutoCleanupPreference } from '@/shared/constants/settings';
 
 export type SettingsAdvancedPrefs = {
+    adoptionCensusEnabled?: boolean;
     autoSweepVRChatCache?: boolean;
     avatarAutoCleanup?: AvatarAutoCleanupPreference;
     gameLogDisabled?: boolean;
@@ -17,6 +18,7 @@ export type SettingsAdvancedModel = {
     hostPlatform?: HostPlatform;
     avatarAutoCleanupOptions: readonly AvatarAutoCleanupPreference[];
     configTreeData: Record<string, unknown>;
+    onAdoptionCensusEnabledChange: (checked: boolean) => void;
     onAutoSweepVRChatCacheChange: (checked: boolean) => void;
     onAvatarAutoCleanupChange: (value: AvatarAutoCleanupPreference) => void;
     onClearConfigTreeData: () => void;

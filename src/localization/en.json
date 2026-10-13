@@ -2488,7 +2488,9 @@
             },
             "history_sync": {
                 "header": "Sync Options",
-                "description": "RemoteSync keeps an end-to-end encrypted copy of your history and non-secret app preferences on a server so your PCs can share them. It is optional and off by default.",
+                "description": "RemoteSync keeps an end-to-end encrypted copy of your history and non-secret app preferences on a server so your PCs can share them. It is optional and off by default. It is this fork's own system and the preferred way to keep history beyond this PC.",
+                "preferred": "Preferred",
+                "recorder_not_preferred": "History sync (RemoteSync) is the preferred option. The recorder is upstream's system and is kept for people who already rely on it. Only one of the two can be on.",
                 "backend": "History sync",
                 "backend_description": "While this is off, nothing is sent to any sync server.",
                 "off": "Off",
@@ -3318,6 +3320,11 @@
                 }
             },
             "advanced": {
+                "adoption_census": {
+                    "header": "Anonymous adoption count",
+                    "label": "Count this install",
+                    "description": "On startup and every 2 hours while it runs, VRCX-0-Nanashi sends a scrambled random install ID, the app name and the date to telemetry.namelessnanashi.dev, so the developer can see how many installs are in use per day. Nothing about you, your VRChat account, your friends or how you use the app is sent, and there are no crash or usage reports. Turning this off stops the pings and deletes the install ID."
+                },
                 "advanced_ui": {
                     "behavior": {
                         "header": "VRChat behavior",
