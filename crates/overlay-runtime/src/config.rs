@@ -35,6 +35,8 @@ pub const VR_OVERLAY_HEADER_TEXT_PERCENT_CONFIG_KEY: &str = "wristOverlayHeaderT
 pub const VR_OVERLAY_FOOTER_TEXT_PERCENT_CONFIG_KEY: &str = "wristOverlayFooterTextPercent";
 pub const VR_OVERLAY_CONTENT_TEXT_PERCENT_CONFIG_KEY: &str = "wristOverlayContentTextPercent";
 pub const HMD_NOTIFICATION_TEXT_PERCENT_CONFIG_KEY: &str = "hmdNotificationTextPercent";
+pub const HMD_NOTIFICATION_OFFSET_SIDE_CM_CONFIG_KEY: &str = "hmdNotificationOffsetSideCm";
+pub const HMD_NOTIFICATION_OFFSET_UP_CM_CONFIG_KEY: &str = "hmdNotificationOffsetUpCm";
 pub const VR_OVERLAY_OFFSET_SIDE_CM_CONFIG_KEY: &str = "wristOverlayOffsetSideCm";
 pub const VR_OVERLAY_OFFSET_UP_CM_CONFIG_KEY: &str = "wristOverlayOffsetUpCm";
 pub const VR_OVERLAY_OFFSET_OUT_CM_CONFIG_KEY: &str = "wristOverlayOffsetOutCm";
@@ -157,6 +159,10 @@ pub(super) fn load_runtime_config(
         let max = i32::from(WristPlacement::MAX_OFFSET_CM);
         raw_int(key).unwrap_or(0).clamp(-max, max) as i8
     };
+    let hmd_offset_cm = |key: &str| {
+        let max = i32::from(HmdNotificationConfig::MAX_OFFSET_CM);
+        raw_int(key).unwrap_or(0).clamp(-max, max) as i8
+    };
     let text_percent = |key: &str| {
         raw_int(key)
             .unwrap_or(100)
@@ -209,6 +215,8 @@ pub(super) fn load_runtime_config(
                 .get_bool(HMD_NOTIFICATION_AVATARS_CONFIG_KEY, true)
                 .unwrap_or(true),
             text_percent: text_percent(HMD_NOTIFICATION_TEXT_PERCENT_CONFIG_KEY),
+            side_cm: hmd_offset_cm(HMD_NOTIFICATION_OFFSET_SIDE_CM_CONFIG_KEY),
+            up_cm: hmd_offset_cm(HMD_NOTIFICATION_OFFSET_UP_CM_CONFIG_KEY),
         },
         render: WristOverlayRenderOptions {
             size,

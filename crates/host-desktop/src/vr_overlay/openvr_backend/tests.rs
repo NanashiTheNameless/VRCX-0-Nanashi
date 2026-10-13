@@ -162,6 +162,7 @@ fn test_main_surface(frame: RgbaFrame, last_uploaded_at: Instant) -> OpenVrSurfa
             size: frame.size,
             physical_width_meters: 1.0,
             placement: OverlayPlacement::HeadLocked {
+                offset_x_meters: 0.0,
                 offset_y_meters: -0.3,
                 distance_meters: 1.3,
                 anchor: None,

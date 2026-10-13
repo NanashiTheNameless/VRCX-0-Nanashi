@@ -72,6 +72,9 @@ pub enum OverlayPlacement {
         adjust: WristPlacementAdjust,
     },
     HeadLocked {
+        /// Fork: sideways shift of the panel's center, positive to the right.
+        #[serde(default)]
+        offset_x_meters: f32,
         offset_y_meters: f32,
         distance_meters: f32,
         /// Which edge of the panel sits at `offset_y_meters`; `None` is the
@@ -189,6 +192,7 @@ impl OverlayPlacement {
                 compose(base, adjust.local_transform(height_meters))
             }
             Self::HeadLocked {
+                offset_x_meters,
                 offset_y_meters,
                 distance_meters,
                 anchor,
@@ -199,7 +203,7 @@ impl OverlayPlacement {
                     Some(WristAnchor::Bottom) => height_meters / 2.0,
                 };
                 [
-                    [1.0, 0.0, 0.0, 0.0],
+                    [1.0, 0.0, 0.0, *offset_x_meters],
                     [0.0, 1.0, 0.0, offset_y_meters + center_shift],
                     [0.0, 0.0, 1.0, -distance_meters],
                 ]
@@ -335,6 +339,7 @@ mod tests {
     #[test]
     fn head_locked_placement_keeps_its_anchored_edge() {
         let placement = |anchor| OverlayPlacement::HeadLocked {
+            offset_x_meters: 0.1,
             offset_y_meters: -0.3,
             distance_meters: 1.3,
             anchor,
@@ -345,6 +350,7 @@ mod tests {
             for height in [0.2_f32, 0.9] {
                 let m = placement(Some(anchor)).transform(height);
                 assert!((m[1][3] + edge * height - -0.3).abs() < 1e-6);
+                assert!((m[0][3] - 0.1).abs() < 1e-6);
             }
         }
     }

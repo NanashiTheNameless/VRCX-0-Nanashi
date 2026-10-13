@@ -86,6 +86,11 @@ const HMD_TEXT_SETTING: NumberSetting = {
     ...TEXT_PERCENT
 };
 
+export const HMD_OFFSET_SETTINGS: NumberSetting[] = [
+    { id: 'side', key: 'hmdNotificationOffsetSideCm', ...OFFSET_CM },
+    { id: 'up', key: 'hmdNotificationOffsetUpCm', ...OFFSET_CM }
+];
+
 type NumberValues = Record<SettingId, number>;
 
 /** Width the old size presets had, used until a width is saved. */
@@ -363,5 +368,70 @@ export function SettingsHmdTextSizeField({ disabled }: { disabled: boolean }) {
                 void configRepository.setInt(HMD_TEXT_SETTING.key, next);
             }}
         />
+    );
+}
+
+// Fork: moves HMD notifications left/right and up/down from the chosen position.
+export function SettingsHmdOffsetFields({ disabled }: { disabled: boolean }) {
+    const { t } = useTranslation();
+    const [values, setValues] = useState<Partial<NumberValues>>({});
+    const [drafts, setDrafts] = useState<Partial<NumberValues>>({});
+
+    useEffect(() => {
+        let active = true;
+        void Promise.all(
+            HMD_OFFSET_SETTINGS.map((setting) =>
+                configRepository.getInt(setting.key, 0)
+            )
+        )
+            .then((saved) => {
+                if (!active) return;
+                const next: Partial<NumberValues> = {};
+                HMD_OFFSET_SETTINGS.forEach((setting, index) => {
+                    next[setting.id] = clampSetting(setting, saved[index], 0);
+                });
+                setValues(next);
+            })
+            .catch(() => {});
+        return () => {
+            active = false;
+        };
+    }, []);
+
+    return (
+        <>
+            {HMD_OFFSET_SETTINGS.map((setting) => (
+                <NumberSliderField
+                    key={setting.id}
+                    setting={setting}
+                    label={t(
+                        `view.settings.vr.hmd_notifications.offset_${setting.id}`
+                    )}
+                    description={t(
+                        `view.settings.vr.hmd_notifications.offset_${setting.id}_description`
+                    )}
+                    value={drafts[setting.id] ?? values[setting.id] ?? 0}
+                    disabled={disabled}
+                    onDraft={(value) =>
+                        setDrafts((current) => ({
+                            ...current,
+                            [setting.id]: value
+                        }))
+                    }
+                    onCommit={(raw) => {
+                        const next = clampSetting(setting, raw, 0);
+                        setDrafts((current) => ({
+                            ...current,
+                            [setting.id]: undefined
+                        }));
+                        setValues((current) => ({
+                            ...current,
+                            [setting.id]: next
+                        }));
+                        void configRepository.setInt(setting.key, next);
+                    }}
+                />
+            ))}
+        </>
     );
 }

@@ -228,6 +228,12 @@ Under Settings > VR you can:
 Short notifications get small cards, long ones wrap onto more lines instead of being cut off,
 and the text size is adjustable under Settings > VR.
 
+### Movable HMD notifications
+
+On top of the Top, Center and Bottom positions, two sliders under Settings > VR move HMD
+notifications left or right and up or down by up to 50 cm. Turn on Overlay Test there to see
+the result while wearing the headset.
+
 ## Notifications and media
 
 ### Custom notification sounds

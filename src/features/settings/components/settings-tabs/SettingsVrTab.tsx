@@ -29,6 +29,7 @@ import { SettingsTabContent } from '../SettingsViewParts';
 import { useSettingsVrTabState } from '../useSettingsVrTabState';
 import { SettingsWristPagesFields } from './SettingsWristPagesFields';
 import {
+    SettingsHmdOffsetFields,
     SettingsHmdTextSizeField,
     SettingsWristPlacementFields
 } from './SettingsWristPlacementFields';
@@ -472,6 +473,8 @@ function SettingsVrTabContent({
                         </SelectContent>
                     </Select>
                 </Field>
+
+                <SettingsHmdOffsetFields disabled={!hmdNotificationsEnabled} />
 
                 <Field
                     label={t('view.settings.vr.hmd_notifications.style')}

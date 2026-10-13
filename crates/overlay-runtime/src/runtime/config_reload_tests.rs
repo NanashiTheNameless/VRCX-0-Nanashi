@@ -16,12 +16,13 @@ use vrcx_0_persistence::config::ConfigRepository;
 use vrcx_0_persistence::DatabaseService;
 
 use super::{
-    hmd_surface_config, load_runtime_config, HmdNotificationPosition, HmdNotificationStyle,
-    StaticWristFrameProducer, VrOverlayRuntime, HMD_STACK_INSET_PX, HMD_SURFACE_SIZE,
-    HMD_SURFACE_WIDTH_METERS,
+    hmd_surface_config, load_runtime_config, HmdNotificationConfig, HmdNotificationPosition,
+    HmdNotificationStyle, StaticWristFrameProducer, VrOverlayRuntime, HMD_STACK_INSET_PX,
+    HMD_SURFACE_SIZE, HMD_SURFACE_WIDTH_METERS,
 };
 use crate::config::{
     HMD_NOTIFICATIONS_ENABLED_CONFIG_KEY, HMD_NOTIFICATION_AVATARS_CONFIG_KEY,
+    HMD_NOTIFICATION_OFFSET_SIDE_CM_CONFIG_KEY, HMD_NOTIFICATION_OFFSET_UP_CM_CONFIG_KEY,
     HMD_NOTIFICATION_OPACITY_CONFIG_KEY, HMD_NOTIFICATION_POSITION_CONFIG_KEY,
     HMD_NOTIFICATION_START_MODE_CONFIG_KEY, HMD_NOTIFICATION_STYLE_CONFIG_KEY,
     HMD_NOTIFICATION_TEXT_PERCENT_CONFIG_KEY, VR_OVERLAY_ANCHOR_CONFIG_KEY,
@@ -323,10 +324,17 @@ fn the_newest_hmd_card_lands_on_the_same_angle_for_each_position() {
         ] {
             for text_percent in [100_u8, 150] {
                 let OverlayPlacement::HeadLocked {
+                    offset_x_meters,
                     offset_y_meters,
                     distance_meters,
                     anchor,
-                } = hmd_surface_config(position, style, text_percent).placement
+                } = hmd_surface_config(HmdNotificationConfig {
+                    position,
+                    style,
+                    text_percent,
+                    ..Default::default()
+                })
+                .placement
                 else {
                     panic!("HMD notifications are head locked");
                 };
@@ -339,6 +347,7 @@ fn the_newest_hmd_card_lands_on_the_same_angle_for_each_position() {
                     assert_eq!(anchor, Some(WristAnchor::Top));
                     offset_y_meters - inset
                 };
+                assert_eq!(offset_x_meters, 0.0);
                 let newest_card_angle = (newest_card_y / distance_meters).atan().to_degrees();
                 assert!(
                     (newest_card_angle - angle).abs() < 0.01,
@@ -346,6 +355,61 @@ fn the_newest_hmd_card_lands_on_the_same_angle_for_each_position() {
                 );
             }
         }
+    }
+}
+
+#[test]
+fn hmd_offsets_shift_every_position_and_are_clamped() {
+    let placement = |hmd: HmdNotificationConfig| {
+        let OverlayPlacement::HeadLocked {
+            offset_x_meters,
+            offset_y_meters,
+            anchor,
+            ..
+        } = hmd_surface_config(hmd).placement
+        else {
+            panic!("HMD notifications are head locked");
+        };
+        (offset_x_meters, offset_y_meters, anchor)
+    };
+    for position in [
+        HmdNotificationPosition::Top,
+        HmdNotificationPosition::Center,
+        HmdNotificationPosition::Bottom,
+    ] {
+        let base = HmdNotificationConfig {
+            position,
+            ..Default::default()
+        };
+        let (base_x, base_y, base_anchor) = placement(base);
+        let (x, y, anchor) = placement(HmdNotificationConfig {
+            side_cm: -20,
+            up_cm: 15,
+            ..base
+        });
+        assert!((x - base_x - -0.20).abs() < 1e-6, "{position:?}: {x}");
+        assert!((y - base_y - 0.15).abs() < 1e-6, "{position:?}: {y}");
+        assert_eq!(anchor, base_anchor);
+    }
+
+    let (_dir, config, runtime) = test_runtime();
+    runtime.reconcile_current();
+    let hmd = runtime.current_runtime_config().hmd;
+    assert_eq!((hmd.side_cm, hmd.up_cm), (0, 0));
+    for (side, up, expected) in [
+        ("-20", "15", (-20, 15)),
+        ("999", "-999", (50, -50)),
+        ("abc", "", (0, 0)),
+    ] {
+        config
+            .set_string(HMD_NOTIFICATION_OFFSET_SIDE_CM_CONFIG_KEY, side)
+            .unwrap();
+        config
+            .set_string(HMD_NOTIFICATION_OFFSET_UP_CM_CONFIG_KEY, up)
+            .unwrap();
+        runtime.reconcile_current();
+        let hmd = runtime.current_runtime_config().hmd;
+        assert_eq!((hmd.side_cm, hmd.up_cm), expected);
     }
 }
 
@@ -366,12 +430,7 @@ fn hmd_notifications_default_to_ninety_percent_opacity() {
 fn hmd_panel_keeps_the_original_angular_width() {
     let OverlayPlacement::HeadLocked {
         distance_meters, ..
-    } = hmd_surface_config(
-        HmdNotificationPosition::Bottom,
-        HmdNotificationStyle::Standard,
-        100,
-    )
-    .placement
+    } = hmd_surface_config(HmdNotificationConfig::default()).placement
     else {
         panic!("HMD notifications are head locked");
     };

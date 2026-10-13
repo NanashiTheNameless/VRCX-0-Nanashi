@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
     clampSetting,
     defaultSettingValue,
+    HMD_OFFSET_SETTINGS,
     presetWidthCm,
     type NumberSetting
 } from './SettingsWristPlacementFields';
@@ -43,5 +44,17 @@ describe('wrist placement settings', () => {
         expect(clampSetting(text, 149.6)).toBe(150);
         expect(clampSetting(width, Number.NaN, 32)).toBe(32);
         expect(clampSetting(text, Number.NaN)).toBe(100);
+    });
+
+    it('offers HMD notification offsets with the Rust keys and range', () => {
+        expect(HMD_OFFSET_SETTINGS.map((setting) => setting.key)).toEqual([
+            'hmdNotificationOffsetSideCm',
+            'hmdNotificationOffsetUpCm'
+        ]);
+        for (const setting of HMD_OFFSET_SETTINGS) {
+            expect(clampSetting(setting, 999)).toBe(50);
+            expect(clampSetting(setting, -999)).toBe(-50);
+            expect(clampSetting(setting, Number.NaN)).toBe(0);
+        }
     });
 });

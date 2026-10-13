@@ -141,6 +141,13 @@ pub(crate) struct HmdNotificationConfig {
     pub(crate) avatars: bool,
     /// Fork: HMD card text size, in percent.
     pub(crate) text_percent: u8,
+    /// Fork: shift from the chosen position, in cm at the panel's distance.
+    pub(crate) side_cm: i8,
+    pub(crate) up_cm: i8,
+}
+
+impl HmdNotificationConfig {
+    pub const MAX_OFFSET_CM: i8 = 50;
 }
 
 impl Default for HmdNotificationConfig {
@@ -154,6 +161,8 @@ impl Default for HmdNotificationConfig {
             style: HmdNotificationStyle::Standard,
             avatars: true,
             text_percent: 100,
+            side_cm: 0,
+            up_cm: 0,
         }
     }
 }
@@ -1160,11 +1169,7 @@ fn overlay_surface_configs(
         configs.extend(wrist_surface_configs(config, force_visible));
     }
     if active_surfaces.hmd {
-        configs.push(hmd_surface_config(
-            config.hmd.position,
-            config.hmd.style,
-            config.hmd.text_percent,
-        ));
+        configs.push(hmd_surface_config(config.hmd));
     }
     configs
 }
@@ -1238,14 +1243,17 @@ const HMD_STACK_INSET_PX: f32 = 20.0;
 /// width only shows for long notifications.
 const HMD_PANEL_WIDTH_PX: u32 = 1280;
 
-fn hmd_surface_config(
-    position: HmdNotificationPosition,
-    style: HmdNotificationStyle,
-    text_percent: u8,
-) -> OverlaySurfaceConfig {
+fn hmd_surface_config(hmd: HmdNotificationConfig) -> OverlaySurfaceConfig {
+    let HmdNotificationConfig {
+        position,
+        style,
+        text_percent,
+        ..
+    } = hmd;
     let meters_per_px = HMD_SURFACE_WIDTH_METERS / HMD_SURFACE_SIZE.width as f32;
-    let newest_card_y =
-        HMD_SURFACE_DISTANCE_METERS * position.newest_card_angle_degrees().to_radians().tan();
+    let newest_card_y = HMD_SURFACE_DISTANCE_METERS
+        * position.newest_card_angle_degrees().to_radians().tan()
+        + f32::from(hmd.up_cm) / 100.0;
     // The panel is only as tall as its cards, so the edge holding the newest
     // card is anchored and the stack grows away from it.
     let card_half_height = style.single_card_height_px() * f32::from(text_percent) / 100.0 / 2.0;
@@ -1260,6 +1268,7 @@ fn hmd_surface_config(
         size: OverlaySize::new(HMD_PANEL_WIDTH_PX, HMD_SURFACE_SIZE.height),
         physical_width_meters: HMD_PANEL_WIDTH_PX as f32 * meters_per_px,
         placement: OverlayPlacement::HeadLocked {
+            offset_x_meters: f32::from(hmd.side_cm) / 100.0,
             offset_y_meters,
             distance_meters: HMD_SURFACE_DISTANCE_METERS,
             anchor: Some(anchor),
