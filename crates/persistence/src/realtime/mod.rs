@@ -10,4 +10,5 @@ pub use types::{
     NotificationExpiration, NotificationV2Update, RealtimePersistenceBatch, RealtimeWriteCounts,
     SelfProfileField, SelfProfileObservation,
 };
+pub(crate) use write::drop_synced_copies_near;
 pub use write::{insert_backfilled_feed, write_realtime_batch, BackfillWrites};

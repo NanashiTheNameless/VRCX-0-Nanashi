@@ -56,7 +56,11 @@ own) to keep an end-to-end encrypted copy of your history there and share it bet
 - **Your key stays yours.** The key is created on your PC, never sent to the server, and shown
   to you as a recovery string. You can move the key to another device.
 - **History that is synced.** Friend feed, friend log, your own profile changes, avatar wear
-  log and game log. The same event recorded by two PCs is kept once.
+  log and game log. The same event recorded by two PCs is kept once. A change that this PC
+  and the collector noticed at different times is also kept once, with the time this PC
+  recorded: up to 10 minutes apart for location, status, avatar and online/offline, and up to
+  30 days apart for bio, your own profile, and friend log entries (new friend, unfriend,
+  display name, trust level). A change that really happened again is kept.
 - **Other data that is synced.** Memos, notes, favorites, moderation entries, notifications,
   avatar history and tags, profile bios and the mutual friends graph. The later edit wins and a
   deletion on one PC reaches the others.

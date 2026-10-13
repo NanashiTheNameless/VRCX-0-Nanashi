@@ -4,6 +4,7 @@ use crate::common::{row_i64, row_string, DbWriteTarget, ParamsBuilder};
 use crate::database::DatabaseService;
 use crate::Error;
 
+pub(crate) mod late_copies;
 pub mod streams;
 #[cfg(test)]
 mod tests;

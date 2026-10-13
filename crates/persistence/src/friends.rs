@@ -375,6 +375,15 @@ pub fn friend_log_history_add(
                     .set("friend_number", value_as_i64(&entry.friend_number))
                     .build(),
             )?;
+            if affected > 0 {
+                crate::realtime::drop_synced_copies_near(
+                    tx,
+                    &user_prefix,
+                    "friend_log_history",
+                    &normalize_text(&entry.user_id),
+                    &entry.created_at,
+                )?;
+            }
             written_count += affected;
         }
         Ok::<i64, crate::Error>(written_count)
@@ -426,6 +435,13 @@ pub(crate) fn add_friend_log_history_entry(
             .set("previous_trust_level", entry.previous_trust_level.clone())
             .set("friend_number", value_as_i64(&entry.friend_number))
             .build(),
+    )?;
+    crate::realtime::drop_synced_copies_near(
+        tx,
+        user_prefix,
+        "friend_log_history",
+        &normalize_text(&entry.user_id),
+        &entry.created_at,
     )?;
     Ok(())
 }

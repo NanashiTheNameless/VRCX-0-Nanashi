@@ -2,6 +2,8 @@ use std::collections::BTreeMap;
 
 use serde_json::{json, Value};
 
+use crate::realtime::normalize_user_table_prefix;
+
 use super::streams::{
     export_rows, export_state, import_chunk, state_spec, stream_spec, synced_columns, ImportSource,
     StreamScope, ROW_STREAMS, STATE_STREAMS,
@@ -199,6 +201,382 @@ fn the_same_event_from_two_recorders_is_kept_once() {
         vault_state_get(&db, &vault).unwrap().unwrap().pull_cursor,
         3
     );
+}
+
+fn friend_log_row(created_at: &str, kind: &str, from: &str, to: &str) -> Value {
+    let (display, previous_display, trust, previous_trust) = match kind {
+        "DisplayName" => (to, from, "Known User", ""),
+        "TrustLevel" => ("Friend", "", to, from),
+        _ => ("Friend", "", "Known User", ""),
+    };
+    json!({
+        "created_at": created_at,
+        "type": kind,
+        "user_id": "usr_friend",
+        "display_name": display,
+        "previous_display_name": previous_display,
+        "trust_level": trust,
+        "previous_trust_level": previous_trust,
+        "friend_number": 0,
+    })
+}
+
+fn record_friend_log(db: &DatabaseService, row: &Value) {
+    // The row uses the column names, the input their camelCase form.
+    let entry = json!({
+        "createdAt": row["created_at"],
+        "type": row["type"],
+        "userId": row["user_id"],
+        "displayName": row["display_name"],
+        "previousDisplayName": row["previous_display_name"],
+        "trustLevel": row["trust_level"],
+        "previousTrustLevel": row["previous_trust_level"],
+    });
+    let written = crate::friends::friend_log_history_add(
+        db,
+        USER.into(),
+        vec![serde_json::from_value(entry).unwrap()],
+    )
+    .unwrap();
+    assert_eq!(written, 1);
+}
+
+fn friend_log_times(db: &DatabaseService, scope: &StreamScope) -> Vec<(String, String)> {
+    let table = scope.table_name(stream_spec("friend_log_history").unwrap());
+    db.execute(
+        &format!("SELECT created_at, type FROM {table} ORDER BY created_at"),
+        &Default::default(),
+    )
+    .unwrap()
+    .iter()
+    .map(|row| (row_string(row, 0), row_string(row, 1)))
+    .collect()
+}
+
+#[test]
+fn a_friend_log_change_noticed_later_by_the_collector_keeps_only_this_pcs_row() {
+    let (_dir, db, scope) = setup("friend-log-local-first");
+    let vault = vault();
+    record_friend_log(
+        &db,
+        &friend_log_row(
+            "2026-10-10T08:21:03.000Z",
+            "TrustLevel",
+            "Known User",
+            "Trusted User",
+        ),
+    );
+    record_friend_log(
+        &db,
+        &friend_log_row("2026-10-10T01:45:00.000Z", "DisplayName", "Cosmo", "Ash"),
+    );
+    record_friend_log(
+        &db,
+        &friend_log_row("2026-10-10T11:42:54.000Z", "Friend", "", ""),
+    );
+
+    // The collector noticed each of them at another time, up to hours away.
+    let report = import_chunk(
+        &db,
+        &scope,
+        source(&vault, "collector", 1, 1),
+        &chunk(
+            "friend_log_history",
+            vec![
+                friend_log_row(
+                    "2026-10-10T08:16:59.000Z",
+                    "TrustLevel",
+                    "Known User",
+                    "Trusted User",
+                ),
+                friend_log_row("2026-10-10T00:34:03.000Z", "DisplayName", "Cosmo", "Ash"),
+                friend_log_row("2026-10-10T11:42:42.000Z", "Friend", "", ""),
+            ],
+        ),
+    )
+    .unwrap();
+    assert_eq!((report.inserted, report.matched), (0, 3));
+    assert_eq!(
+        friend_log_times(&db, &scope),
+        vec![
+            (
+                "2026-10-10T01:45:00.000Z".to_owned(),
+                "DisplayName".to_owned()
+            ),
+            (
+                "2026-10-10T08:21:03.000Z".to_owned(),
+                "TrustLevel".to_owned()
+            ),
+            ("2026-10-10T11:42:54.000Z".to_owned(), "Friend".to_owned()),
+        ]
+    );
+    // This PC's rows are still its own and are uploaded.
+    assert_eq!(export(&db, &scope, "friend_log_history").len(), 3);
+}
+
+#[test]
+fn this_pcs_friend_log_row_replaces_the_collectors_earlier_copy() {
+    let (_dir, db, scope) = setup("friend-log-sync-first");
+    let vault = vault();
+    import_chunk(
+        &db,
+        &scope,
+        source(&vault, "collector", 1, 1),
+        &chunk(
+            "friend_log_history",
+            vec![
+                friend_log_row(
+                    "2026-10-10T08:16:59.000Z",
+                    "TrustLevel",
+                    "Known User",
+                    "Trusted User",
+                ),
+                friend_log_row("2026-10-09T08:00:00.000Z", "DisplayName", "Old", "Cosmo"),
+            ],
+        ),
+    )
+    .unwrap();
+    record_friend_log(
+        &db,
+        &friend_log_row(
+            "2026-10-10T08:21:03.000Z",
+            "TrustLevel",
+            "Known User",
+            "Trusted User",
+        ),
+    );
+
+    // The rename this PC never recorded stays as the collector logged it.
+    assert_eq!(
+        friend_log_times(&db, &scope),
+        vec![
+            (
+                "2026-10-09T08:00:00.000Z".to_owned(),
+                "DisplayName".to_owned()
+            ),
+            (
+                "2026-10-10T08:21:03.000Z".to_owned(),
+                "TrustLevel".to_owned()
+            ),
+        ]
+    );
+    let exported = export(&db, &scope, "friend_log_history");
+    assert_eq!(exported.len(), 1);
+    assert_eq!(exported[0].1["created_at"], "2026-10-10T08:21:03.000Z");
+}
+
+#[test]
+fn a_friend_log_change_that_really_happened_again_is_kept() {
+    let (_dir, db, scope) = setup("friend-log-repeat");
+    let vault = vault();
+    record_friend_log(
+        &db,
+        &friend_log_row("2026-10-10T01:00:00.000Z", "DisplayName", "Cosmo", "Ash"),
+    );
+    record_friend_log(
+        &db,
+        &friend_log_row("2026-10-01T00:00:00.000Z", "Friend", "", ""),
+    );
+    record_friend_log(
+        &db,
+        &friend_log_row(
+            "2026-08-01T00:00:00.000Z",
+            "TrustLevel",
+            "Known User",
+            "Trusted User",
+        ),
+    );
+
+    let report = import_chunk(
+        &db,
+        &scope,
+        source(&vault, "collector", 1, 1),
+        &chunk(
+            "friend_log_history",
+            vec![
+                // Renamed back and then to the same name again.
+                friend_log_row("2026-10-10T05:00:00.000Z", "DisplayName", "Ash", "Cosmo"),
+                friend_log_row("2026-10-10T09:00:00.000Z", "DisplayName", "Cosmo", "Ash"),
+                // Unfriended and added again.
+                friend_log_row("2026-10-03T00:00:00.000Z", "Unfriend", "", ""),
+                friend_log_row("2026-10-05T00:00:00.000Z", "Friend", "", ""),
+                // The same step, but far too long ago to be the same event.
+                friend_log_row(
+                    "2026-10-10T00:00:00.000Z",
+                    "TrustLevel",
+                    "Known User",
+                    "Trusted User",
+                ),
+                // Another change of the same kind is its own event.
+                friend_log_row(
+                    "2026-10-10T00:05:00.000Z",
+                    "TrustLevel",
+                    "Trusted User",
+                    "Veteran User",
+                ),
+            ],
+        ),
+    )
+    .unwrap();
+    assert_eq!((report.inserted, report.matched), (6, 0));
+    assert_eq!(friend_log_times(&db, &scope).len(), 9);
+}
+
+#[test]
+fn friend_log_copies_stored_before_are_removed_when_the_account_is_opened() {
+    let (_dir, db, scope) = setup("friend-log-cleanup");
+    let table = scope.table_name(stream_spec("friend_log_history").unwrap());
+    record_friend_log(
+        &db,
+        &friend_log_row("2026-10-10T11:42:54.000Z", "Friend", "", ""),
+    );
+    record_friend_log(
+        &db,
+        &friend_log_row(
+            "2026-10-10T12:00:00.000Z",
+            "TrustLevel",
+            "Known User",
+            "Trusted User",
+        ),
+    );
+    // Two rows as an older build left them: one imported copy, and one
+    // identical pair this PC recorded itself.
+    for (created_at, kind, synced) in [
+        ("2026-10-10T11:42:42.000Z", "Friend", true),
+        ("2026-10-10T12:04:00.000Z", "TrustLevel", false),
+    ] {
+        let (previous, trust) = match kind {
+            "TrustLevel" => ("Known User", "Trusted User"),
+            _ => ("", "Known User"),
+        };
+        db.execute_non_query(
+            &format!("INSERT INTO {table} (created_at, type, user_id, display_name, previous_display_name, trust_level, previous_trust_level, friend_number) VALUES (@created_at, @type, 'usr_friend', 'Friend', '', @trust, @previous, 0)"),
+            &ParamsBuilder::new()
+                .set("created_at", created_at)
+                .set("type", kind)
+                .set("trust", trust)
+                .set("previous", previous)
+                .build(),
+        )
+        .unwrap();
+        if synced {
+            db.execute_non_query(
+                &format!("INSERT INTO remote_sync_provenance (stream, local_rowid, source_id, source_seq) SELECT @stream, MAX(rowid), 'collector', 1 FROM {table}"),
+                &ParamsBuilder::new().set("stream", table.clone()).build(),
+            )
+            .unwrap();
+        }
+    }
+    assert_eq!(count(&db, &table), 4);
+
+    StreamScope::open(&db, USER).unwrap();
+
+    // Only the imported copy goes; rows this PC recorded are never removed.
+    assert_eq!(
+        friend_log_times(&db, &scope),
+        vec![
+            ("2026-10-10T11:42:54.000Z".to_owned(), "Friend".to_owned()),
+            (
+                "2026-10-10T12:00:00.000Z".to_owned(),
+                "TrustLevel".to_owned()
+            ),
+            (
+                "2026-10-10T12:04:00.000Z".to_owned(),
+                "TrustLevel".to_owned()
+            ),
+        ]
+    );
+    assert_eq!(count(&db, "remote_sync_provenance"), 0);
+}
+
+fn status_times(db: &DatabaseService, scope: &StreamScope) -> Vec<(String, String)> {
+    let table = scope.table_name(stream_spec("feed_status").unwrap());
+    db.execute(
+        &format!("SELECT created_at, status FROM {table} ORDER BY created_at"),
+        &Default::default(),
+    )
+    .unwrap()
+    .iter()
+    .map(|row| (row_string(row, 0), row_string(row, 1)))
+    .collect()
+}
+
+fn record_status(db: &DatabaseService, scope: &StreamScope, created_at: &str, status: &str) {
+    let table = scope.table_name(stream_spec("feed_status").unwrap());
+    db.write_transaction(|tx| {
+        tx.execute_non_query(
+            &format!("INSERT INTO {table} (created_at, user_id, display_name, status, status_description, previous_status, previous_status_description) VALUES (@created_at, 'usr_friend', 'Friend', @status, '', '', '')"),
+            &ParamsBuilder::new()
+                .set("created_at", created_at)
+                .set("status", status)
+                .build(),
+        )?;
+        crate::realtime::drop_synced_copies_near(
+            tx,
+            &normalize_user_table_prefix(USER)?,
+            "feed_status",
+            "usr_friend",
+            created_at,
+        )
+    })
+    .unwrap();
+}
+
+#[test]
+fn a_feed_change_one_recorder_noticed_minutes_late_keeps_this_pcs_row() {
+    let (_dir, db, scope) = setup("feed-late");
+    let vault = vault();
+    let times = |rows: &[(&str, &str)]| -> Vec<(String, String)> {
+        rows.iter()
+            .map(|(at, status)| ((*at).to_owned(), (*status).to_owned()))
+            .collect()
+    };
+
+    // This PC first, the collector's copy four minutes later.
+    record_status(&db, &scope, "2026-10-10T12:00:00.000Z", "busy");
+    let report = import_chunk(
+        &db,
+        &scope,
+        source(&vault, "collector", 1, 1),
+        &chunk(
+            "feed_status",
+            vec![
+                status_row("2026-10-10T12:04:00.000Z", "busy"),
+                status_row("2026-10-10T13:00:00.000Z", "ask me"),
+            ],
+        ),
+    )
+    .unwrap();
+    assert_eq!((report.inserted, report.matched), (1, 1));
+
+    // The collector first, this PC four minutes later.
+    record_status(&db, &scope, "2026-10-10T13:04:00.000Z", "ask me");
+    assert_eq!(
+        status_times(&db, &scope),
+        times(&[
+            ("2026-10-10T12:00:00.000Z", "busy"),
+            ("2026-10-10T13:04:00.000Z", "ask me"),
+        ])
+    );
+
+    // Back to the same status after another one, or the same status much
+    // later, is a new event.
+    let report = import_chunk(
+        &db,
+        &scope,
+        source(&vault, "collector", 2, 2),
+        &chunk(
+            "feed_status",
+            vec![
+                status_row("2026-10-10T13:05:00.000Z", "busy"),
+                status_row("2026-10-10T13:06:00.000Z", "ask me"),
+                status_row("2026-10-10T14:00:00.000Z", "ask me"),
+            ],
+        ),
+    )
+    .unwrap();
+    assert_eq!((report.inserted, report.matched), (3, 0));
+    assert_eq!(status_times(&db, &scope).len(), 5);
 }
 
 #[test]

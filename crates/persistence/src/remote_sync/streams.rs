@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use chrono::{DateTime, Duration};
 use serde_json::{Map, Value};
 
-use super::{push_cursor_get, to_i64, vault_params, VaultRef, VAULT_WHERE};
+use super::{late_copies, push_cursor_get, to_i64, vault_params, VaultRef, VAULT_WHERE};
 use crate::common::{row_i64, row_string, ParamsBuilder};
 use crate::database::{DatabaseService, DatabaseWriteTransaction};
 use crate::game_log::ensure_game_log_tables;
@@ -545,6 +545,14 @@ impl StreamScope {
             owner_row_id,
         };
         ensure_tombstone_triggers(db, &scope)?;
+        // Copies stored before sync told them apart from repeats.
+        db.write_transaction(|tx| {
+            for stream in late_copies::CHECKED_WHOLE {
+                let table = format!("{}_{stream}", scope.user_prefix);
+                late_copies::drop_synced_copies(tx, &table, stream, late_copies::Rows::All)?;
+            }
+            Ok(())
+        })?;
         Ok(scope)
     }
 
@@ -1084,6 +1092,17 @@ pub fn import_chunk_deduping(
             .is_empty();
         if !report.replayed {
             for stream in &prepared {
+                let inserted_before = report.inserted;
+                let first_new_rowid = tx
+                    .execute(
+                        &format!(
+                            "SELECT COALESCE(MAX(rowid), 0) + 1 FROM {}",
+                            quote(&stream.table)
+                        ),
+                        &Default::default(),
+                    )?
+                    .first()
+                    .map_or(1, |row| row_i64(row, 0));
                 for (index, row) in stream.rows.iter().enumerate() {
                     match import_row(tx, scope, &source, stream, row, dedupe)? {
                         RowOutcome::Inserted => report.inserted += 1,
@@ -1098,6 +1117,18 @@ pub fn import_chunk_deduping(
                         }
                         RowOutcome::Invalid => report.invalid_rows += 1,
                     }
+                }
+                if report.inserted > inserted_before {
+                    let copies = late_copies::drop_synced_copies(
+                        tx,
+                        &stream.table,
+                        stream.spec.name,
+                        late_copies::Rows::From(first_new_rowid),
+                    )?
+                    .max(0) as u64;
+                    let copies = copies.min(report.inserted - inserted_before);
+                    report.inserted -= copies;
+                    report.matched += copies;
                 }
             }
             for state in &prepared_state {

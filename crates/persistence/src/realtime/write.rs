@@ -301,7 +301,7 @@ fn add_friend_log_history(
     user_prefix: &str,
     entry: &FriendLogHistoryEntry<'_>,
 ) -> Result<u64, Error> {
-    tx.execute_non_query(
+    let inserted = tx.execute_non_query(
         &format!(
             "INSERT INTO {user_prefix}_friend_log_history (created_at, type, user_id, display_name, previous_display_name, trust_level, previous_trust_level, friend_number) VALUES (@created_at, @type, @user_id, @display_name, @previous_display_name, @trust_level, @previous_trust_level, @friend_number)"
         ),
@@ -315,8 +315,15 @@ fn add_friend_log_history(
             .set("previous_trust_level", entry.previous_trust_level)
             .set("friend_number", entry.friend_number)
             .build(),
-    )
-    .map(affected_count)
+    )?;
+    drop_synced_copies_near(
+        tx,
+        user_prefix,
+        "friend_log_history",
+        entry.user_id,
+        entry.created_at,
+    )?;
+    Ok(affected_count(inserted))
 }
 
 const BACKFILL_DUPLICATE_WINDOW_SECS: i64 = 120;
@@ -597,7 +604,35 @@ fn insert_feed_entry(
             )));
         }
     };
+    let stream = match entry {
+        FeedLiveEntry::Gps { .. } => "feed_gps",
+        FeedLiveEntry::Online { .. } | FeedLiveEntry::Offline { .. } => "feed_online_offline",
+        FeedLiveEntry::Status { .. } => "feed_status",
+        FeedLiveEntry::Bio { .. } => "feed_bio",
+        FeedLiveEntry::Avatar { .. } => "feed_avatar",
+        _ => return Ok(affected_count(affected)),
+    };
+    if affected > 0 {
+        drop_synced_copies_near(tx, user_prefix, stream, entry.user_id(), entry.created_at())?;
+    }
     Ok(affected_count(affected))
+}
+
+/// This PC's own row replaces a copy of the same change that sync brought.
+pub(crate) fn drop_synced_copies_near(
+    tx: &DatabaseWriteTransaction<'_>,
+    user_prefix: &str,
+    stream: &str,
+    subject: &str,
+    time: &str,
+) -> Result<(), Error> {
+    crate::remote_sync::late_copies::drop_synced_copies(
+        tx,
+        &format!("{user_prefix}_{stream}"),
+        stream,
+        crate::remote_sync::late_copies::Rows::Near { subject, time },
+    )?;
+    Ok(())
 }
 
 fn upsert_notification_v1(
@@ -815,7 +850,7 @@ fn observe_self_profile_field(
     if previous_value.as_deref() == Some(observation.value.as_str()) {
         return Ok(0);
     }
-    tx.execute_non_query(
+    let inserted = tx.execute_non_query(
         &format!(
             "INSERT INTO {user_prefix}_self_profile_log (created_at, field, value, previous_value)
              VALUES (@created_at, @field, @value, @previous_value)"
@@ -826,8 +861,15 @@ fn observe_self_profile_field(
             .set("value", observation.value.clone())
             .set("previous_value", previous_value.unwrap_or_default())
             .build(),
-    )
-    .map(affected_count)
+    )?;
+    drop_synced_copies_near(
+        tx,
+        user_prefix,
+        "self_profile_log",
+        field,
+        &observation.observed_at,
+    )?;
+    Ok(affected_count(inserted))
 }
 
 fn upsert_avatar_history(
