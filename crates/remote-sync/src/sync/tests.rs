@@ -273,12 +273,17 @@ impl Drop for TestDir {
 }
 
 fn pc(name: &str) -> Pc {
+    // The clock alone repeats between parallel tests on macOS, where it ticks in microseconds.
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let nonce = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_nanos();
-    let path =
-        std::env::temp_dir().join(format!("vrcx-0-sync-{name}-{}-{nonce}", std::process::id()));
+    let serial = NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    let path = std::env::temp_dir().join(format!(
+        "vrcx-0-sync-{name}-{}-{nonce}-{serial}",
+        std::process::id()
+    ));
     std::fs::create_dir_all(&path).unwrap();
     Pc {
         db: Arc::new(DatabaseService::new(&path.join("VRCX-0.sqlite3")).unwrap()),
