@@ -312,6 +312,9 @@ const generatedCommands = {
     async appQuickSearchWorkingSetInvalidate(): Promise<null> {
         return await TAURI_INVOKE('app__quick_search_working_set_invalidate');
     },
+    async appAdoptionCensusLock(): Promise<AdoptionCensusLock | null> {
+        return await TAURI_INVOKE('app__adoption_census_lock');
+    },
     async appVrcStatusGet(): Promise<VrcStatusSnapshot> {
         return await TAURI_INVOKE('app__vrc_status_get');
     },
@@ -3447,6 +3450,11 @@ export type ActivityViewOutput = {
     builtFromCursor: string;
     builtAt: string;
 };
+/**
+ * An opt-out made outside the app. While one is present the setting cannot
+ * turn the count back on, so Settings shows its switch locked off.
+ */
+export type AdoptionCensusLock = 'policy' | 'environment' | 'file';
 export type AncillaryRuntimeSnapshot = {
     communityThemeState: CommunityThemeProjection | null;
     profileBackupCurrentStatus: ProfileBackupStatus;

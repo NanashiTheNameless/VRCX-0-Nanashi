@@ -87,19 +87,32 @@ pub(crate) fn start_adoption_census_loop(state: &RuntimeHostState) {
         });
 }
 
-fn adoption_census_enabled(config: &ConfigRepository) -> bool {
+/// An opt-out made outside the app. While one is present the setting cannot
+/// turn the count back on, so Settings shows its switch locked off.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum AdoptionCensusLock {
+    Policy,
+    Environment,
+    File,
+}
+
+pub fn adoption_census_lock() -> Option<AdoptionCensusLock> {
     #[cfg(windows)]
     if vrcx_0_host_desktop::telemetry_policy::telemetry_disabled_by_policy() {
-        return false;
+        return Some(AdoptionCensusLock::Policy);
     }
-    if environment_opts_out(|name| std::env::var(name).ok())
-        || opt_out_file_dirs()
-            .iter()
-            .any(|dir| opt_out_file_present(dir))
-    {
-        return false;
+    if environment_opts_out(|name| std::env::var(name).ok()) {
+        return Some(AdoptionCensusLock::Environment);
     }
-    setting_enabled(config)
+    opt_out_file_dirs()
+        .iter()
+        .any(|dir| opt_out_file_present(dir))
+        .then_some(AdoptionCensusLock::File)
+}
+
+fn adoption_census_enabled(config: &ConfigRepository) -> bool {
+    adoption_census_lock().is_none() && setting_enabled(config)
 }
 
 /// An unreadable setting counts as opted out.

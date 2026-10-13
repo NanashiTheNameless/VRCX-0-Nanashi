@@ -1,3 +1,4 @@
+pub mod adoption_census;
 pub mod assistant;
 pub mod background_image;
 pub mod background_mode;

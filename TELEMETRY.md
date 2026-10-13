@@ -48,6 +48,9 @@ Any one of these opts out:
   `-` and `_` are interchangeable, and the name may start with a dot, so `.no_telemetry` and
   `do-not-track` work too. The name must not have an extension such as `.txt`.
 
+While an environment variable, a file or the registry value opts you out, the switch in
+Settings is locked off and says why.
+
 Opting out stops the pings and deletes the install ID. Every flag is checked before every
 ping, so it takes effect without a restart. Because the count is on by default, a new install
 sends its first ping on first launch, before you can reach the setting; set an environment

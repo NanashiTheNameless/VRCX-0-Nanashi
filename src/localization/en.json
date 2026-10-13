@@ -3323,6 +3323,9 @@
                 "adoption_census": {
                     "header": "Anonymous adoption count",
                     "label": "Count this install",
+                    "locked_environment": "Turned off by an environment variable (VRCX_0_NANASHI_TELEMETRY_OPTOUT, DO_NOT_TRACK, TELEMETRY_OPTOUT, TELEMETRY or CI). Nothing is sent, and this switch stays off until the variable is removed.",
+                    "locked_file": "Turned off by an opt-out file next to the app. Nothing is sent, and this switch stays off until the file is removed.",
+                    "locked_policy": "Turned off by a Windows policy (DisableTelemetry). Nothing is sent, and this switch stays off until the policy is removed.",
                     "description": "On startup and every 2 hours while it runs, VRCX-0-Nanashi sends a scrambled random install ID, the app name and the date to telemetry.namelessnanashi.dev, so the developer can see how many installs are in use per day. Nothing about you, your VRChat account, your friends or how you use the app is sent, and there are no crash or usage reports. Turning this off stops the pings and deletes the install ID."
                 },
                 "advanced_ui": {

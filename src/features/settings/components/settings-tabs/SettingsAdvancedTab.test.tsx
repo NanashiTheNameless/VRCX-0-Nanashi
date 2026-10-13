@@ -25,6 +25,7 @@ const labels: Record<string, string> = {
 };
 
 const commandMocks = vi.hoisted(() => ({
+    appAdoptionCensusLock: vi.fn(),
     appBrowseHistoryRetentionDaysGet: vi.fn()
 }));
 
@@ -126,6 +127,7 @@ describe('SettingsAdvancedTab data directory states', () => {
         commandMocks.appBrowseHistoryRetentionDaysGet
             .mockReset()
             .mockResolvedValue(30);
+        commandMocks.appAdoptionCensusLock.mockReset().mockResolvedValue(null);
         vi.stubGlobal(
             'ResizeObserver',
             class {
@@ -225,4 +227,27 @@ describe('SettingsAdvancedTab data directory states', () => {
         expect(onAdoptionCensusEnabledChange).toHaveBeenCalledTimes(1);
         expect(onAdoptionCensusEnabledChange.mock.calls[0][0]).toBe(false);
     });
+
+    it.each(['environment', 'file', 'policy'] as const)(
+        'locks the adoption count off when a %s opt-out is active',
+        async (lock) => {
+            commandMocks.appAdoptionCensusLock.mockResolvedValue(lock);
+            const onAdoptionCensusEnabledChange = vi.fn();
+            renderTab(createModel({ onAdoptionCensusEnabledChange }));
+
+            expect(
+                await screen.findByText(
+                    `view.settings.advanced.adoption_census.locked_${lock}`
+                )
+            ).toBeTruthy();
+            const toggle = screen.getByRole('switch', {
+                name: 'Count this install'
+            });
+            expect(toggle.getAttribute('aria-checked')).toBe('false');
+
+            fireEvent.click(toggle);
+
+            expect(onAdoptionCensusEnabledChange).not.toHaveBeenCalled();
+        }
+    );
 });

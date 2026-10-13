@@ -200,6 +200,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::application::group_calendar::app__group_calendar_snapshot_get,
             commands::application::quick_search::app__quick_search_query,
             commands::application::quick_search::app__quick_search_working_set_invalidate,
+            commands::application::adoption_census::app__adoption_census_lock,
             commands::application::vrc_status::app__vrc_status_get,
             commands::application::vrc_status::app__vrc_status_refresh,
             commands::application::notification_chains::app__notification_hide_and_expire,
