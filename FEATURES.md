@@ -73,8 +73,9 @@ own) to keep an end-to-end encrypted copy of your history there and share it bet
   older chunks, and a failed upload leaves those chunks in place.
 - **Settings sync.** You can sync non-secret app preferences too; this is on by default and can
   be changed under Settings > Sync Options. Credentials and device-specific paths stay local.
-  "Settings to sync" picks what each PC exchanges: turn off a whole group, or open a group and
-  turn off single settings. A setting that is off keeps its value on that PC and is left alone
+  "Settings to sync" opens a dialog that picks what each PC exchanges: choose a group on the
+  left, then turn off the whole group or single settings, listed by the name they have in the
+  app. Changes apply on Save. A setting that is off keeps its value on that PC and is left alone
   on the server, so other PCs can still share it. The choice is per PC and is not synced.
 - **Manage it.** See and sign out connected clients, and delete the server copy, from the same
   settings page.

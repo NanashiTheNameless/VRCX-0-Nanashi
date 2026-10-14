@@ -1,3 +1,4 @@
+import { ChevronRightIcon, RotateCcwIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -7,7 +8,27 @@ import {
 } from '@/platform/tauri/bindings';
 import { ConfigKeys } from '@/repositories/configKeys';
 import { Button } from '@/ui/shadcn/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from '@/ui/shadcn/dialog';
+import {
+    Field,
+    FieldContent,
+    FieldDescription,
+    FieldGroup,
+    FieldLabel
+} from '@/ui/shadcn/field';
+import { ScrollArea } from '@/ui/shadcn/scroll-area';
 import { Switch } from '@/ui/shadcn/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/shadcn/tabs';
+
+import { syncSettingLabels } from './syncSettingLabels';
 
 const KEY_PREFIX = 'config:vrcx_';
 
@@ -18,11 +39,22 @@ const settingNames = new Map(
     ])
 );
 
-function settingName(key: string) {
-    const name = key.startsWith(KEY_PREFIX)
-        ? key.slice(KEY_PREFIX.length)
-        : key;
-    return settingNames.get(name) ?? name;
+function configName(key: string) {
+    return key.startsWith(KEY_PREFIX) ? key.slice(KEY_PREFIX.length) : key;
+}
+
+// Saved view state such as filters and sort orders has no label in the app.
+function fallbackName(name: string) {
+    const words = (settingNames.get(name) ?? name)
+        .replace(/_/g, ' ')
+        .replace(/([a-z\d])([A-Z])/g, '$1 $2')
+        .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+        .toLowerCase();
+    return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+function syncedCount(group: RemoteSyncSettingGroup) {
+    return group.settings.filter((setting) => setting.synced).length;
 }
 
 function choicesFrom(groups: RemoteSyncSettingGroup[]) {
@@ -47,7 +79,10 @@ export function SettingsHistorySyncSettingChoices({
 }) {
     const { t } = useTranslation();
     const [groups, setGroups] = useState<RemoteSyncSettingGroup[]>([]);
-    const [open, setOpen] = useState<string[]>([]);
+    const [draft, setDraft] = useState<RemoteSyncSettingGroup[]>([]);
+    const [open, setOpen] = useState(false);
+    const [selectedId, setSelectedId] = useState<string>();
+    const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string>();
 
     const report = useCallback((cause: unknown) => {
@@ -58,127 +93,245 @@ export function SettingsHistorySyncSettingChoices({
         commands.appRemoteSyncSettingGroupsGet().then(setGroups).catch(report);
     }, [report]);
 
-    const save = (next: RemoteSyncSettingGroup[]) => {
-        const previous = groups;
-        setGroups(next);
+    const openDialog = () => {
+        setDraft(groups);
         setError(undefined);
-        commands
-            .appRemoteSyncSettingChoicesSet(choicesFrom(next))
-            .catch((cause: unknown) => {
-                setGroups(previous);
-                report(cause);
-            });
+        setOpen(true);
     };
 
-    const setGroup = (id: string, enabled: boolean) =>
-        save(
-            groups.map((group) =>
-                group.id === id
-                    ? {
-                          ...group,
-                          enabled,
-                          settings: group.settings.map((setting) => ({
-                              ...setting,
-                              synced: enabled
-                          }))
-                      }
-                    : group
-            )
+    const updateGroup = (
+        id: string,
+        update: (group: RemoteSyncSettingGroup) => RemoteSyncSettingGroup
+    ) =>
+        setDraft((current) =>
+            current.map((group) => (group.id === id ? update(group) : group))
         );
 
-    const setSetting = (key: string, synced: boolean) =>
-        save(
-            groups.map((group) => ({
+    const setGroup = (id: string, enabled: boolean) =>
+        updateGroup(id, (group) => ({
+            ...group,
+            enabled,
+            settings: group.settings.map((setting) => ({
+                ...setting,
+                synced: enabled
+            }))
+        }));
+
+    const setSetting = (id: string, key: string, synced: boolean) =>
+        updateGroup(id, (group) => ({
+            ...group,
+            settings: group.settings.map((setting) =>
+                setting.key === key ? { ...setting, synced } : setting
+            )
+        }));
+
+    const resetAll = () =>
+        setDraft((current) =>
+            current.map((group) => ({
                 ...group,
-                settings: group.settings.map((setting) =>
-                    setting.key === key ? { ...setting, synced } : setting
-                )
+                enabled: true,
+                settings: group.settings.map((setting) => ({
+                    ...setting,
+                    synced: true
+                }))
             }))
         );
 
+    const saveDraft = async () => {
+        setSaving(true);
+        setError(undefined);
+        try {
+            await commands.appRemoteSyncSettingChoicesSet(choicesFrom(draft));
+            setGroups(draft);
+            setOpen(false);
+        } catch (cause) {
+            report(cause);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const groupLabel = (id: string) =>
+        t(`view.settings.history_sync.setting_groups.${id}`);
+    const countLabel = (list: RemoteSyncSettingGroup[]) =>
+        t('view.settings.history_sync.setting_choices_count', {
+            synced: list.reduce((sum, group) => sum + syncedCount(group), 0),
+            total: list.reduce((sum, group) => sum + group.settings.length, 0)
+        });
+    const selected = draft.find((group) => group.id === selectedId) ?? draft[0];
+    const rows = (selected?.settings ?? [])
+        .map((setting) => {
+            const name = configName(setting.key);
+            const [label, section] = syncSettingLabels[name] ?? [];
+            return {
+                ...setting,
+                label: label ? t(label) : fallbackName(name),
+                section: section ? t(section) : undefined
+            };
+        })
+        .sort((a, b) => a.label.localeCompare(b.label));
+
     return (
         <div className="flex flex-col gap-2">
-            {groups.map((group) => {
-                const expanded = open.includes(group.id);
-                const synced = group.settings.filter(
-                    (setting) => setting.synced
-                ).length;
-                return (
-                    <div
-                        key={group.id}
-                        className="flex flex-col gap-2 rounded-md border px-3 py-2"
-                    >
-                        <div className="flex items-center gap-3">
-                            <Switch
-                                aria-label={t(
-                                    `view.settings.history_sync.setting_groups.${group.id}`
-                                )}
-                                checked={group.enabled}
-                                disabled={disabled}
-                                onCheckedChange={(enabled) =>
-                                    setGroup(group.id, enabled)
+            <div className="flex items-center gap-3">
+                <Button
+                    type="button"
+                    variant="outline"
+                    disabled={disabled || !groups.length}
+                    onClick={openDialog}
+                >
+                    {t('common.actions.configure')}
+                </Button>
+                {groups.length ? (
+                    <span className="text-muted-foreground text-xs tabular-nums">
+                        {countLabel(groups)}
+                    </span>
+                ) : null}
+            </div>
+            {error && !open ? (
+                <p className="text-destructive text-sm">{error}</p>
+            ) : null}
+
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogContent className="grid max-h-[85vh] w-[min(94vw,56rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-4xl">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {t('view.settings.history_sync.setting_choices')}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {t(
+                                'view.settings.history_sync.setting_choices_description'
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {selected ? (
+                        <Tabs
+                            orientation="vertical"
+                            value={selected.id}
+                            onValueChange={(value) =>
+                                setSelectedId(String(value))
+                            }
+                            className="grid h-[min(62vh,36rem)] min-h-0 grid-cols-[16rem_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-5 overflow-hidden"
+                        >
+                            <ScrollArea className="h-full border-r pr-3">
+                                <TabsList className="h-fit w-full gap-1">
+                                    {draft.map((group) => (
+                                        <TabsTrigger
+                                            key={group.id}
+                                            value={group.id}
+                                            className="h-auto w-full justify-between gap-3 px-3 py-2.5 text-left whitespace-normal sm:h-auto"
+                                        >
+                                            <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
+                                                <span className="font-medium">
+                                                    {groupLabel(group.id)}
+                                                </span>
+                                                <span className="text-muted-foreground text-xs font-normal tabular-nums">
+                                                    {countLabel([group])}
+                                                </span>
+                                            </span>
+                                            <ChevronRightIcon data-icon="inline-end" />
+                                        </TabsTrigger>
+                                    ))}
+                                </TabsList>
+                            </ScrollArea>
+
+                            <TabsContent
+                                value={selected.id}
+                                className="grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] gap-3"
+                            >
+                                <div className="flex items-center justify-between gap-4 border-b pb-3">
+                                    <span className="flex min-w-0 flex-col gap-1">
+                                        <span className="font-semibold">
+                                            {groupLabel(selected.id)}
+                                        </span>
+                                        <span className="text-muted-foreground text-sm">
+                                            {t(
+                                                'view.settings.history_sync.setting_choices_group'
+                                            )}
+                                        </span>
+                                    </span>
+                                    <Switch
+                                        aria-label={t(
+                                            'view.settings.history_sync.setting_choices_group'
+                                        )}
+                                        checked={selected.enabled}
+                                        onCheckedChange={(enabled) =>
+                                            setGroup(selected.id, enabled)
+                                        }
+                                    />
+                                </div>
+
+                                <ScrollArea className="min-h-0 pr-2">
+                                    <FieldGroup className="gap-0 rounded-lg border">
+                                        {rows.map((setting) => (
+                                            <Field
+                                                key={setting.key}
+                                                orientation="horizontal"
+                                                className="items-center gap-3 border-b px-3 py-2.5 last:border-b-0"
+                                            >
+                                                <FieldContent className="min-w-0">
+                                                    <FieldLabel className="truncate">
+                                                        {setting.label}
+                                                    </FieldLabel>
+                                                    {setting.section ? (
+                                                        <FieldDescription className="truncate">
+                                                            {setting.section}
+                                                        </FieldDescription>
+                                                    ) : null}
+                                                </FieldContent>
+                                                <Switch
+                                                    aria-label={setting.label}
+                                                    checked={setting.synced}
+                                                    onCheckedChange={(synced) =>
+                                                        setSetting(
+                                                            selected.id,
+                                                            setting.key,
+                                                            synced
+                                                        )
+                                                    }
+                                                />
+                                            </Field>
+                                        ))}
+                                    </FieldGroup>
+                                </ScrollArea>
+                            </TabsContent>
+                        </Tabs>
+                    ) : null}
+
+                    <DialogFooter className="sm:justify-between">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={resetAll}
+                        >
+                            <RotateCcwIcon data-icon="inline-start" />
+                            {t('common.actions.reset')}
+                        </Button>
+                        <div className="flex items-center gap-2">
+                            {error ? (
+                                <span className="text-destructive text-sm">
+                                    {error}
+                                </span>
+                            ) : null}
+                            <DialogClose
+                                render={
+                                    <Button type="button" variant="outline">
+                                        {t('common.actions.cancel')}
+                                    </Button>
                                 }
                             />
-                            <span className="min-w-0 flex-1 text-sm">
-                                {t(
-                                    `view.settings.history_sync.setting_groups.${group.id}`
-                                )}
-                            </span>
-                            <span className="text-muted-foreground text-xs tabular-nums">
-                                {t(
-                                    'view.settings.history_sync.setting_choices_count',
-                                    {
-                                        synced,
-                                        total: group.settings.length
-                                    }
-                                )}
-                            </span>
                             <Button
                                 type="button"
-                                variant="ghost"
-                                size="sm"
-                                disabled={!group.settings.length}
-                                aria-expanded={expanded}
-                                onClick={() =>
-                                    setOpen(
-                                        expanded
-                                            ? open.filter(
-                                                  (id) => id !== group.id
-                                              )
-                                            : [...open, group.id]
-                                    )
-                                }
+                                onClick={saveDraft}
+                                disabled={saving}
                             >
-                                {t(
-                                    expanded
-                                        ? 'view.settings.history_sync.setting_choices_hide'
-                                        : 'view.settings.history_sync.setting_choices_show'
-                                )}
+                                {t('common.actions.save')}
                             </Button>
                         </div>
-                        {expanded
-                            ? group.settings.map((setting) => (
-                                  <label
-                                      key={setting.key}
-                                      className="flex items-center gap-3 pl-6 text-sm"
-                                  >
-                                      <Switch
-                                          checked={setting.synced}
-                                          disabled={disabled}
-                                          onCheckedChange={(next) =>
-                                              setSetting(setting.key, next)
-                                          }
-                                      />
-                                      <span className="min-w-0 truncate font-mono text-xs">
-                                          {settingName(setting.key)}
-                                      </span>
-                                  </label>
-                              ))
-                            : null}
-                    </div>
-                );
-            })}
-            {error ? <p className="text-destructive text-sm">{error}</p> : null}
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

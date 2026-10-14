@@ -510,9 +510,6 @@ export function SettingsHistorySyncTab() {
                     </Field>
                     <Field
                         label={t('view.settings.history_sync.setting_choices')}
-                        description={t(
-                            'view.settings.history_sync.setting_choices_description'
-                        )}
                     >
                         <SettingsHistorySyncSettingChoices
                             disabled={busy || !settings?.syncSettingsEnabled}

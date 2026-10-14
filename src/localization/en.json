@@ -2532,10 +2532,9 @@
                 "sync_settings_description": "When enabled, RemoteSync also shares non-secret app preferences between your paired PCs. This is on by default. Credentials, encryption keys, and device-specific paths are never synced.",
                 "save_sync_settings": "Save setting",
                 "setting_choices": "Settings to sync",
-                "setting_choices_description": "Choose which app settings this PC sends and receives. Turn off a whole group, or open it to choose single settings. A setting you turn off keeps its value on this PC and is left untouched on the server, so your other PCs can still share it. This choice is kept on this PC only.",
-                "setting_choices_count": "{synced} of {total}",
-                "setting_choices_show": "Show settings",
-                "setting_choices_hide": "Hide settings",
+                "setting_choices_description": "Choose which app settings this PC sends and receives. Pick a group on the left, then turn off the whole group or single settings. A setting you turn off keeps its value on this PC and is left untouched on the server, so your other PCs can still share it. This choice is kept on this PC only.",
+                "setting_choices_count": "{synced} of {total} syncing",
+                "setting_choices_group": "Sync every setting in this group",
                 "setting_groups": {
                     "overlay": "VR and desktop overlays",
                     "safety": "Safety",
