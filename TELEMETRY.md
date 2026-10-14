@@ -51,6 +51,9 @@ Any one of these opts out:
 While an environment variable, a file or the registry value opts you out, the switch in
 Settings is locked off and says why.
 
+The switch applies to this PC only. History Sync never sends it to other PCs or takes it from
+them.
+
 Opting out stops the pings and deletes the install ID. Every flag is checked before every
 ping, so it takes effect without a restart. Because the count is on by default, a new install
 sends its first ping on first launch, before you can reach the setting; set an environment

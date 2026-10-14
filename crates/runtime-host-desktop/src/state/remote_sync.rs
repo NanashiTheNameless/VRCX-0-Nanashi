@@ -288,6 +288,7 @@ fn syncable_app_setting(key: &str) -> bool {
         "autostart",
         "auth",
         "branch",
+        "census",
         "cookie",
         "credential",
         "directory",
@@ -308,6 +309,7 @@ fn syncable_app_setting(key: &str) -> bool {
         "shareownerkeys",
         "startasminimized",
         "startatwindowsstartup",
+        "telemetry",
         "token",
         "translationapi",
         "webhook",
@@ -1632,6 +1634,12 @@ mod tests {
     fn recorder_settings_are_never_synced() {
         assert!(!syncable_app_setting("config:vrcx_feedLogger"));
         assert!(syncable_app_setting("config:vrcx_theme"));
+    }
+
+    #[test]
+    fn telemetry_settings_are_never_synced() {
+        assert!(!syncable_app_setting("config:vrcx_adoptionCensusEnabled"));
+        assert!(!syncable_app_setting("config:vrcx_telemetryEnabled"));
     }
 
     #[test]

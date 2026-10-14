@@ -184,10 +184,6 @@ export const syncSettingLabels: Record<string, SyncSettingLabel> = {
         `${ADVANCED}.advanced.cache_debug.udon_exception_logging`
     ],
     vrcregistryautobackup: [`${ADVANCED}.advanced.vrc_registry_backup`],
-    adoptioncensusenabled: [
-        `${ADVANCED}.adoption_census.label`,
-        `${ADVANCED}.adoption_census.header`
-    ],
     socialaienabled: ['view.settings.ai.enable', 'view.settings.ai.header'],
     autodeclinefriendrequests: [
         'view.settings.social.interaction.auto_decline_friend_requests',
