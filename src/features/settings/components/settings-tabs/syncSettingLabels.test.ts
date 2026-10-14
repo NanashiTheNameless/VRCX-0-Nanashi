@@ -37,4 +37,19 @@ describe('labels for settings that can sync', () => {
             Object.keys(syncSettingLabels).filter((name) => !known.has(name))
         ).toEqual([]);
     });
+
+    it('a setting without a label in the app has its own name instead', () => {
+        const names = en.view.settings.history_sync.setting_names as Record<
+            string,
+            unknown
+        >;
+
+        expect(
+            Object.entries(names).filter(
+                ([name, value]) =>
+                    typeof value !== 'string' || name in syncSettingLabels
+            )
+        ).toEqual([]);
+        expect(names.feedtablefilters).toBe('Feed table filters');
+    });
 });

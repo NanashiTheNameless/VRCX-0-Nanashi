@@ -31,6 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/shadcn/tabs';
 import { syncSettingLabels } from './syncSettingLabels';
 
 const KEY_PREFIX = 'config:vrcx_';
+const SETTING_NAMES = 'view.settings.history_sync.setting_names';
 
 const settingNames = new Map(
     Object.keys(ConfigKeys).map((name) => [
@@ -43,7 +44,7 @@ function configName(key: string) {
     return key.startsWith(KEY_PREFIX) ? key.slice(KEY_PREFIX.length) : key;
 }
 
-// Saved view state such as filters and sort orders has no label in the app.
+// Only for a key that has no label anywhere, such as one added since.
 function fallbackName(name: string) {
     const words = (settingNames.get(name) ?? name)
         .replace(/_/g, ' ')
@@ -163,9 +164,15 @@ export function SettingsHistorySyncSettingChoices({
         .map((setting) => {
             const name = configName(setting.key);
             const [label, section] = syncSettingLabels[name] ?? [];
+            const namePath = `${SETTING_NAMES}.${name}`;
+            const ownName = t(namePath);
             return {
                 ...setting,
-                label: label ? t(label) : fallbackName(name),
+                label: label
+                    ? t(label)
+                    : ownName !== namePath
+                      ? ownName
+                      : fallbackName(name),
                 section: section ? t(section) : undefined
             };
         })

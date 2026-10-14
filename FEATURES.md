@@ -72,10 +72,11 @@ own) to keep an end-to-end encrypted copy of your history there and share it bet
   this selection. The selected PC uploads a complete merged snapshot before the server removes
   older chunks, and a failed upload leaves those chunks in place.
 - **Settings sync.** You can sync non-secret app preferences too; this is on by default and can
-  be changed under Settings > Sync Options. Credentials and device-specific paths stay local.
-  "Settings to sync" opens a dialog that picks what each PC exchanges: choose a group on the
-  left, then turn off the whole group or single settings, listed by the name they have in the
-  app. Changes apply on Save. A setting that is off keeps its value on that PC and is left alone
+  be changed under Settings > Sync Options. Credentials, device-specific paths and the adoption
+  count switch stay local. "Settings to sync" opens a dialog that picks what each PC exchanges:
+  choose a group on the left, then turn off the whole group or single settings, listed by the
+  name they have in the app, or by a plain name for saved view state such as table filters.
+  Changes apply on Save. A setting that is off keeps its value on that PC and is left alone
   on the server, so other PCs can still share it. The choice is per PC and is not synced.
 - **Manage it.** See and sign out connected clients, and delete the server copy, from the same
   settings page.
