@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -86,6 +86,12 @@ describe('GroupProfileEditDialog', () => {
                 group={createGroup()}
                 onSave={onSave}
             />
+        );
+
+        // The dialog moves focus to its first field just after opening and
+        // would pull it away from the field being typed in.
+        await waitFor(() =>
+            expect(document.activeElement).not.toBe(document.body)
         );
 
         const shortCode = screen.getByLabelText('dialog.group.edit.short_code');
