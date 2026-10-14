@@ -281,30 +281,49 @@ fn syncable_app_setting(key: &str) -> bool {
     let Some(name) = key.strip_prefix("config:vrcx_") else {
         return false;
     };
+    // Keys are stored in lower case, so an identifier is told apart by how the
+    // name ends; a plain "id" fragment also caught "hide" and "sidebar".
+    if ["id", "ids", "idsbyuser"]
+        .iter()
+        .any(|suffix| name.ends_with(suffix))
+    {
+        return false;
+    }
     ![
         "apikey",
         "apitoken",
         "apiendpoint",
+        "audit",
         "autostart",
         "auth",
+        "bounds",
         "branch",
         "census",
         "cookie",
         "credential",
+        "databaseversion",
         "directory",
         "endpoint",
         "feedlogger",
         "file",
         "folder",
+        "gamelogreplaycheckpoint",
         "historysync",
-        "id",
+        "integrationapi",
+        "isgamenovr",
+        "lastgame",
+        "launcharguments",
+        "legacyownership",
         "llm.endpoints",
         "mcpserver",
         "password",
         "path",
+        "privacylock",
         "prompt",
         "proxy",
         "remotesync",
+        "repair",
+        "safetysourcecache",
         "secret",
         "shareownerkeys",
         "startasminimized",
@@ -1640,6 +1659,48 @@ mod tests {
     fn telemetry_settings_are_never_synced() {
         assert!(!syncable_app_setting("config:vrcx_adoptionCensusEnabled"));
         assert!(!syncable_app_setting("config:vrcx_telemetryEnabled"));
+    }
+
+    #[test]
+    fn hide_and_sidebar_settings_sync_but_identifiers_do_not() {
+        for key in [
+            "config:vrcx_feedHiddenUsers",
+            "config:vrcx_hideUserNotes",
+            "config:vrcx_sidebarSortMethod1",
+            "config:vrcx_showInstanceIdInLocation",
+        ] {
+            assert!(syncable_app_setting(key), "{key}");
+        }
+        for key in [
+            "config:vrcx_communityThemeId",
+            "config:vrcx_instanceDialogUserId",
+            "config:vrcx_autoDeletePrintsFavoriteIds",
+            "config:vrcx_autoDeletePrintsFavoriteIdsByUser",
+        ] {
+            assert!(!syncable_app_setting(key), "{key}");
+        }
+    }
+
+    #[test]
+    fn settings_tied_to_one_pc_are_never_synced() {
+        for key in [
+            "config:vrcx_privacyLock",
+            "config:vrcx_launchArguments",
+            "config:vrcx_isGameNoVR",
+            "config:vrcx_safetyAudit",
+            "config:vrcx_safetyGlobalHideAudit",
+            "config:vrcx_safetySourceCache",
+            "config:vrcx_integrationApiEnabled",
+            "config:vrcx_integrationApiPort",
+            "config:vrcx_copresenceDurationRepairV1Done",
+            "config:vrcx_databaseVersion",
+            "config:vrcx_gameLogReplayCheckpoint",
+            "config:vrcx_lastGameOfflineAt",
+            "config:vrcx_desktopWidgetBounds",
+            "config:vrcx_0_legacyOwnershipDecided",
+        ] {
+            assert!(!syncable_app_setting(key), "{key}");
+        }
     }
 
     #[test]
