@@ -250,7 +250,12 @@ pub fn apply_location_notification_rules(
     activity_router: &ActivityRouter,
     config: &dyn NotificationConfig,
 ) {
-    activity_router.set_location_hidden_user_ids(load_location_hidden_user_ids(config));
+    activity_router.set_feed_hidden_users(
+        load_feed_hidden_notification_user_ids(config),
+        config
+            .get_bool("feedHiddenUsersHideAll", false)
+            .unwrap_or(false),
+    );
     activity_router.set_hide_private_location_changes(
         config
             .get_bool("hidePrivateFromFeed", false)
@@ -258,7 +263,7 @@ pub fn apply_location_notification_rules(
     );
 }
 
-fn load_location_hidden_user_ids(config: &dyn NotificationConfig) -> HashSet<String> {
+fn load_feed_hidden_notification_user_ids(config: &dyn NotificationConfig) -> HashSet<String> {
     if !config
         .get_bool("feedHiddenUsersHideNotifications", true)
         .unwrap_or(true)

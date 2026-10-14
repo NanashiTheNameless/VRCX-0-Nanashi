@@ -197,6 +197,57 @@ fn pressing_on_empty_space_starts_moving_the_widget() {
 }
 
 #[test]
+fn dragging_a_name_moves_the_widget() {
+    let mut widget = Widget::new();
+    widget.settled(&model(vec![row(7, "Ada", false)], 0, true));
+
+    assert_eq!(
+        widget.press_and_move(14.0, top_row_y(), 12.0),
+        [DesktopWidgetAction::Drag]
+    );
+}
+
+#[test]
+fn dragging_what_happened_moves_the_widget() {
+    let mut widget = Widget::new();
+    widget.settled(&model(vec![row(7, "Ada", false)], 0, true));
+
+    assert_eq!(
+        widget.press_and_move(80.0, top_row_y(), 12.0),
+        [DesktopWidgetAction::Drag]
+    );
+}
+
+#[test]
+fn a_slightly_shaky_click_on_a_name_still_opens_that_person() {
+    let mut widget = Widget::new();
+    widget.settled(&model(vec![row(7, "Ada", false)], 0, true));
+
+    let mut actions = widget.press_and_move(14.0, top_row_y(), 2.0);
+    widget.host.pointer_released(16.0, top_row_y());
+    actions.extend(widget.host.take_actions());
+
+    assert_eq!(actions, [DesktopWidgetAction::Actor(7)]);
+}
+
+#[test]
+fn pressing_beside_a_short_line_of_what_happened_starts_moving_the_widget() {
+    let mut short = row(7, "Ada", false);
+    short.detail = "left".to_string();
+    let mut widget = Widget::new();
+    widget.settled(&model(vec![short], 0, true));
+
+    assert_eq!(
+        widget.click(200.0, top_row_y()),
+        [DesktopWidgetAction::Drag]
+    );
+    assert_eq!(
+        widget.click(48.0, top_row_y()),
+        [DesktopWidgetAction::Detail(7)]
+    );
+}
+
+#[test]
 fn hovering_a_clickable_widget_shows_a_faint_frame() {
     let mut hovered = model(Vec::new(), 0, true);
     hovered.hovered = true;
@@ -289,6 +340,14 @@ impl Widget {
             self.host.render_bgra(&mut self.out);
         }
         Frame(self.out.clone())
+    }
+
+    fn press_and_move(&mut self, x: f32, y: f32, distance: f32) -> Vec<DesktopWidgetAction> {
+        self.host.take_actions();
+        self.host.pointer_moved(x, y);
+        self.host.pointer_pressed(x, y);
+        self.host.pointer_moved(x + distance, y);
+        self.host.take_actions()
     }
 
     fn click(&mut self, x: f32, y: f32) -> Vec<DesktopWidgetAction> {

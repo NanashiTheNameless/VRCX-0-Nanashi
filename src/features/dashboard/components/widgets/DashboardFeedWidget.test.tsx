@@ -123,6 +123,7 @@ describe('DashboardFeedWidget', () => {
         expect(mocks.queryFeedLatest).toHaveBeenCalledWith({
             userId: 'usr_self',
             filters: [],
+            excludedFavoriteUserIds: [],
             locationHiddenUserIds: [],
             maxRows: 300
         });

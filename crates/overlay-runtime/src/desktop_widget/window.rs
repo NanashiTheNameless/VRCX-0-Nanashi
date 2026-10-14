@@ -255,6 +255,7 @@ impl WidgetLoop {
             LayeredWindowEvent::PointerMoved { x, y } => {
                 self.hovered = true;
                 self.host.pointer_moved(x, y);
+                self.run_actions(window);
             }
             LayeredWindowEvent::PointerPressed { x, y } => {
                 self.host.pointer_pressed(x, y);

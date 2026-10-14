@@ -54,6 +54,13 @@ export function buildSocialSection({
                 checked
             );
         },
+        onFeedHiddenUsersHideAllChange: (checked: boolean) => {
+            saveBoolPreference(
+                'feedHiddenUsersHideAll',
+                'feedHiddenUsersHideAll',
+                checked
+            );
+        },
         onAutoDeclineFriendRequestsChange: (checked: boolean) => {
             saveBoolPreference(
                 'autoDeclineFriendRequests',

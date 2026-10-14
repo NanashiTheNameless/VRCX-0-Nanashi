@@ -165,7 +165,8 @@ pub(super) struct ActivityState {
     pub(super) friend_favorite_groups: ActivityFavoriteGroups,
     pub(super) group_favorite_groups: ActivityFavoriteGroups,
     pub(super) friend_user_ids: HashSet<String>,
-    location_hidden_user_ids: HashSet<String>,
+    feed_hidden_user_ids: HashSet<String>,
+    hide_all_feed_activity: bool,
     hide_private_location_changes: bool,
     current_instance_location: String,
     current_instance_user_ids: HashSet<String>,
@@ -186,7 +187,8 @@ impl Default for ActivityState {
             friend_favorite_groups: ActivityFavoriteGroups::default(),
             group_favorite_groups: ActivityFavoriteGroups::default(),
             friend_user_ids: HashSet::new(),
-            location_hidden_user_ids: HashSet::new(),
+            feed_hidden_user_ids: HashSet::new(),
+            hide_all_feed_activity: false,
             hide_private_location_changes: false,
             current_instance_location: String::new(),
             current_instance_user_ids: HashSet::new(),
@@ -355,9 +357,10 @@ impl ActivityRouter {
         }
     }
 
-    pub fn set_location_hidden_user_ids(&self, user_ids: HashSet<String>) {
+    pub fn set_feed_hidden_users(&self, user_ids: HashSet<String>, hide_all_activity: bool) {
         if let Ok(mut state) = self.inner.state.lock() {
-            state.location_hidden_user_ids = user_ids;
+            state.feed_hidden_user_ids = user_ids;
+            state.hide_all_feed_activity = hide_all_activity;
         }
     }
 
@@ -489,9 +492,19 @@ impl ActivityRouter {
                 return None;
             }
             clear_joined_delivery_coverage_for_departing_gps(&mut state, &event);
-            if event.kind == ActivityKind::Gps
+            let hidden_kind = event.kind == ActivityKind::Gps
+                || (state.hide_all_feed_activity
+                    && matches!(
+                        event.kind,
+                        ActivityKind::Online
+                            | ActivityKind::Offline
+                            | ActivityKind::Status
+                            | ActivityKind::AvatarChange
+                            | ActivityKind::Bio
+                    ));
+            if hidden_kind
                 && state
-                    .location_hidden_user_ids
+                    .feed_hidden_user_ids
                     .contains(&normalize_id(&event.actor.user_id))
             {
                 return None;

@@ -47,11 +47,29 @@ component ShadowText inherits Rectangle {
     }
 }
 
+component ClickOrDragArea inherits TouchArea {
+    callback drag-requested();
+    property <bool> drag-started: false;
+
+    pointer-event(event) => {
+        if (event.kind == PointerEventKind.down) {
+            root.drag-started = false;
+        }
+    }
+    moved => {
+        if (root.pressed && !root.drag-started && (abs(root.mouse-x - root.pressed-x) > 4px || abs(root.mouse-y - root.pressed-y) > 4px)) {
+            root.drag-started = true;
+            root.drag-requested();
+        }
+    }
+}
+
 component WidgetRow inherits Rectangle {
     in property <DesktopWidgetRowItem> item;
     in property <bool> newest-on-top;
     callback actor-clicked();
     callback detail-clicked();
+    callback drag-requested();
 
     property <bool> entered: false;
     property <color> actor-color: root.item.warning ? #e7a3a3 : #f2f4f7f2;
@@ -150,9 +168,12 @@ component WidgetRow inherits Rectangle {
                 text-color: #e1be7de6;
             }
 
-            TouchArea {
+            ClickOrDragArea {
                 clicked => {
                     root.actor-clicked();
+                }
+                drag-requested => {
+                    root.drag-requested();
                 }
             }
         }
@@ -172,9 +193,14 @@ component WidgetRow inherits Rectangle {
                 wrap: TextWrap.word-wrap;
             }
 
-            TouchArea {
+            ClickOrDragArea {
+                x: 0px;
+                width: min(parent.width, detail-text.preferred-width);
                 clicked => {
                     root.detail-clicked();
+                }
+                drag-requested => {
+                    root.drag-requested();
                 }
             }
         }
@@ -246,6 +272,9 @@ export component DesktopWidgetPanel inherits Window {
                 }
                 detail-clicked => {
                     root.detail-clicked(index);
+                }
+                drag-requested => {
+                    root.drag-requested();
                 }
             }
         }

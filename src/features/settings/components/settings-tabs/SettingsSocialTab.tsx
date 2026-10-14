@@ -65,6 +65,7 @@ export function SettingsSocialTab() {
             profileBioScanEnabled: state.profileBioScanEnabled,
             feedHiddenUsersHideNotifications:
                 state.feedHiddenUsersHideNotifications,
+            feedHiddenUsersHideAll: state.feedHiddenUsersHideAll,
             hidePrivateFromFeed: state.hidePrivateFromFeed
         }))
     );
@@ -77,6 +78,7 @@ export function SettingsSocialTab() {
         feedHiddenUsers = [],
         onAddFeedHiddenUser,
         onAutoDeclineFriendRequestsChange,
+        onFeedHiddenUsersHideAllChange,
         onFeedHiddenUsersHideNotificationsChange,
         onHidePrivateFromFeedChange,
         onHideUnfriendsChange,
@@ -376,6 +378,17 @@ export function SettingsSocialTab() {
                             </div>
                         )}
                     </div>
+                </Field>
+                <Field
+                    label={t('view.settings.social.hidden_feed.hide_all')}
+                    description={t(
+                        'view.settings.social.hidden_feed.hide_all_description'
+                    )}
+                >
+                    <Switch
+                        checked={prefs.feedHiddenUsersHideAll}
+                        onCheckedChange={onFeedHiddenUsersHideAllChange}
+                    />
                 </Field>
                 <Field
                     label={t(

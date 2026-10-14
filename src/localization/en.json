@@ -1319,7 +1319,9 @@
             },
             "context": {
                 "hide_user": "Hide Location Changes from Feed",
-                "unhide_user": "Show Location Changes in Feed"
+                "unhide_user": "Show Location Changes in Feed",
+                "hide_user_all": "Hide from Feed",
+                "unhide_user_all": "Show in Feed"
             }
         },
         "friends_locations": {
@@ -2742,15 +2744,17 @@
                     "description": "Periodically fetches friends' public bios and shows changes in the feed. Updates may be delayed, and some changes may go unrecorded."
                 },
                 "hidden_feed": {
-                    "header": "Friends with hidden location changes",
-                    "description": "Hide the selected friends' location changes from the feed. Their other updates still show, and saved data isn't deleted.",
+                    "header": "Friends hidden from the feed",
+                    "description": "Hide the selected friends' location changes, or all of their updates, from the feed. Saved data isn't deleted.",
                     "add": "Add friend",
                     "search_placeholder": "Search friends",
                     "empty": "You haven't hidden anyone yet.",
                     "remove": "Unhide friend",
                     "unknown_friend": "Unknown friend",
+                    "hide_all": "Hide all updates",
+                    "hide_all_description": "Hide every update from these friends. When off, only their location changes are hidden.",
                     "hide_notifications": "Hide from notifications too",
-                    "hide_notifications_description": "Their location changes also won't appear in desktop notifications, TTS, VR overlays, webhooks, or in-app notifications.",
+                    "hide_notifications_description": "Their hidden updates also won't appear in desktop notifications, TTS, VR overlays, webhooks, or in-app notifications.",
                     "hide_private_location_changes": "Don't notify moves to private worlds",
                     "hide_private_location_changes_description": "When a friend goes to a private world, no desktop notification, TTS, VR notification, or webhook is sent. The wrist overlay feed uses its own Hide Private Worlds setting."
                 }

@@ -718,7 +718,7 @@ fn location_hidden_users_skip_gps_on_every_surface_but_keep_other_activity() {
     runtime.set_sink(sink.clone());
     runtime.arm_delivery();
     runtime.set_friend_user_ids(["usr_hidden", "usr_other"]);
-    runtime.set_location_hidden_user_ids(HashSet::from(["usr_hidden".to_string()]));
+    runtime.set_feed_hidden_users(HashSet::from(["usr_hidden".to_string()]), false);
 
     assert!(runtime
         .ingest(recent_event(ActivityKind::Gps, "usr_hidden"))
@@ -747,6 +747,66 @@ fn location_hidden_users_skip_gps_on_every_surface_but_keep_other_activity() {
         vec![
             ("Status".to_string(), "usr_hidden".to_string()),
             ("GPS".to_string(), "usr_other".to_string()),
+        ]
+    );
+}
+
+#[test]
+fn hide_all_feed_activity_skips_every_feed_kind_but_keeps_other_activity() {
+    let rule = json!({ "scope": "friends", "favoriteGroupKeys": "all" });
+    let surface = json!({ "types": {
+        "GPS": rule,
+        "Online": rule,
+        "Offline": rule,
+        "Status": rule,
+        "AvatarChange": rule,
+        "Bio": rule,
+        "boop": rule
+    } });
+    let runtime = ActivityRouter::with_filters(ActivityFilters::from_json(json!({
+        "version": 1,
+        "wrist": surface,
+        "desktop": surface
+    })));
+    let sink = TestOverlayActivitySink::default();
+    runtime.set_sink(sink.clone());
+    runtime.arm_delivery();
+    runtime.set_friend_user_ids(["usr_hidden", "usr_other"]);
+    runtime.set_feed_hidden_users(HashSet::from(["usr_hidden".to_string()]), true);
+
+    for kind in [
+        ActivityKind::Gps,
+        ActivityKind::Online,
+        ActivityKind::Offline,
+        ActivityKind::Status,
+        ActivityKind::AvatarChange,
+        ActivityKind::Bio,
+    ] {
+        assert!(runtime.ingest(recent_event(kind, "usr_hidden")).is_none());
+    }
+    assert!(sink.take_deliveries().is_empty());
+
+    assert!(runtime
+        .ingest(recent_event(ActivityKind::Boop, "usr_hidden"))
+        .is_some());
+    assert!(runtime
+        .ingest(recent_event(ActivityKind::Online, "usr_other"))
+        .is_some());
+    let delivered = sink
+        .take_deliveries()
+        .into_iter()
+        .map(|delivery| {
+            (
+                delivery.entry.kind.key().to_string(),
+                delivery.entry.actor_user_id,
+            )
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(
+        delivered,
+        vec![
+            ("boop".to_string(), "usr_hidden".to_string()),
+            ("Online".to_string(), "usr_other".to_string()),
         ]
     );
 }

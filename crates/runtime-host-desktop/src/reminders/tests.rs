@@ -152,7 +152,7 @@ fn live_friend_feed_fires_reminders_through_the_overlay_observer() {
         f.runtime.overlay.set_friend_user_ids([FRIEND]);
         f.runtime
             .overlay
-            .set_location_hidden_user_ids([FRIEND.to_string()].into_iter().collect());
+            .set_feed_hidden_users([FRIEND.to_string()].into_iter().collect(), false);
         let facts = if kind == ActivityKind::Gps {
             gps("wrld_target:1", "Target")
         } else {

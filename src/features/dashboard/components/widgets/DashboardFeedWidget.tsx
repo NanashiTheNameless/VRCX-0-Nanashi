@@ -15,6 +15,7 @@ import type { FeedRow } from '@/components/feed/feedTypes';
 import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
 import type { FeedReadModelResult } from '@/domain/feed/readModel';
 import { FeedPersistenceDisabledIndicator } from '@/features/feed/components/FeedPersistenceDisabledIndicator';
+import { useFeedHiddenUserFilters } from '@/features/feed/useFeedHiddenUserFilters';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import {
     FEED_FILTER_TYPES,
@@ -88,9 +89,8 @@ export function DashboardFeedWidget({
     const feedPersistenceDisabled = usePreferencesStore(
         (state) => state.feedPersistenceDisabled
     );
-    const feedHiddenUsers = usePreferencesStore(
-        (state) => state.feedHiddenUsers
-    );
+    const { excludedUserIds, locationHiddenUserIds } =
+        useFeedHiddenUserFilters();
     const lastLiveFeedSequenceRef = useRef(0);
     const liveFeedSnapshotRef = useRef({
         entries: liveFeedEntries,
@@ -159,7 +159,8 @@ export function DashboardFeedWidget({
                         rows,
                         userId: currentUserId || '',
                         filters: activeFilters,
-                        locationHiddenUserIds: feedHiddenUsers,
+                        excludedFavoriteUserIds: excludedUserIds,
+                        locationHiddenUserIds,
                         maxRows: FEED_WIDGET_MAX_ROWS
                     }),
                     liveEntries: liveFeedSnapshot.entries,
@@ -181,7 +182,7 @@ export function DashboardFeedWidget({
             }
             return null;
         },
-        [activeFilters, currentUserId, feedHiddenUsers]
+        [activeFilters, currentUserId, excludedUserIds, locationHiddenUserIds]
     );
 
     const prepareWidgetRowsForCommit = useCallback(
@@ -239,7 +240,8 @@ export function DashboardFeedWidget({
             .queryFeedLatest({
                 userId: currentUserId,
                 filters: activeFilters,
-                locationHiddenUserIds: feedHiddenUsers,
+                excludedFavoriteUserIds: excludedUserIds,
+                locationHiddenUserIds,
                 maxRows: FEED_WIDGET_MAX_ROWS
             })
             .then(async (result) => {
@@ -292,8 +294,9 @@ export function DashboardFeedWidget({
         activeFilters,
         addGameLogEventCount,
         currentUserId,
-        feedHiddenUsers,
+        excludedUserIds,
         feedPersistenceDisabled,
+        locationHiddenUserIds,
         mergeWidgetRowsWithLatestLive,
         prepareWidgetRowsForCommit
     ]);

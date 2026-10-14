@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
     preferences: {
         localFavoriteFriendsGroups: [] as string[],
         feedHiddenUsers: [] as string[],
+        feedHiddenUsersHideAll: false,
         feedPersistenceDisabled: false,
         tableLimits: { maxTableSize: 100 }
     },
@@ -112,6 +113,8 @@ describe('useFeedRows', () => {
         vi.useFakeTimers();
         vi.clearAllMocks();
         mocks.preferences.feedPersistenceDisabled = false;
+        mocks.preferences.feedHiddenUsers = [];
+        mocks.preferences.feedHiddenUsersHideAll = false;
         mocks.preferences.tableLimits.maxTableSize = 100;
         mocks.friendLog.revision = 0;
         useFeedLiveStore.getState().resetFeedLive();
@@ -144,6 +147,37 @@ describe('useFeedRows', () => {
         ]);
         expect(mocks.queryFeedLatest).toHaveBeenCalledTimes(1);
         expect(mocks.queryFeed).not.toHaveBeenCalled();
+    });
+
+    it('hides every row of hidden friends when the hide-all mode is on', async () => {
+        mocks.preferences.feedHiddenUsers = ['usr_hidden'];
+        mocks.preferences.feedHiddenUsersHideAll = true;
+        mocks.queryFeedLatest.mockResolvedValue({
+            rows: [{ userId: 'usr_base' }],
+            maxSequence: 0
+        });
+        const { result } = renderFeedRows();
+        await flush();
+
+        expect(mocks.queryFeedLatest).toHaveBeenCalledWith(
+            expect.objectContaining({
+                excludedFavoriteUserIds: ['usr_hidden'],
+                locationHiddenUserIds: []
+            })
+        );
+
+        pushLiveEntry('hidden');
+        pushLiveEntry('live');
+        await flush();
+        act(() => {
+            vi.advanceTimersByTime(250);
+        });
+        await flush();
+
+        expect(result.current.rows.map((row) => row.userId)).toEqual([
+            'usr_live',
+            'usr_base'
+        ]);
     });
 
     it('loads older cursor pages without trimming them when realtime rows arrive', async () => {

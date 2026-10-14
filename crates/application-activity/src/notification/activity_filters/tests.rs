@@ -406,19 +406,19 @@ fn hmd_rules_live_only_under_their_own_key() -> std::result::Result<(), Box<dyn 
 }
 
 #[test]
-fn location_hidden_users_load_from_the_feed_list_unless_the_switch_is_off(
+fn feed_hidden_notification_users_load_from_the_feed_list_unless_the_switch_is_off(
 ) -> std::result::Result<(), Box<dyn std::error::Error>> {
-    let (_dir, config) = test_config("location-hidden-users")?;
+    let (_dir, config) = test_config("feed-hidden-users")?;
     config.set_string(
         "feedHiddenUsers",
         &serde_json::to_string(&json!([" usr_a ", { "userId": "usr_b" }, ""]))?,
     )?;
     assert_eq!(
-        load_location_hidden_user_ids(&config),
+        load_feed_hidden_notification_user_ids(&config),
         HashSet::from(["usr_a".to_string(), "usr_b".to_string()])
     );
 
     config.set_string("feedHiddenUsersHideNotifications", "false")?;
-    assert!(load_location_hidden_user_ids(&config).is_empty());
+    assert!(load_feed_hidden_notification_user_ids(&config).is_empty());
     Ok(())
 }
