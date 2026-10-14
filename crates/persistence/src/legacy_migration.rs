@@ -1,3 +1,4 @@
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -40,14 +41,31 @@ pub fn consume_pending_legacy_migration(paths: &LegacyMigrationPaths) -> Result<
 pub fn request_legacy_migration(paths: &LegacyMigrationPaths) -> Result<(), Error> {
     let flag_path = paths.app_data.join(PENDING_MIGRATION_FILE);
     let temporary = paths.app_data.join(format!("{PENDING_MIGRATION_FILE}.tmp"));
-    std::fs::write(&temporary, STAGED_FLAG_CONTENTS)?;
-    std::fs::OpenOptions::new()
-        .write(true)
-        .open(&temporary)?
-        .sync_all()?;
-    crate::profile_backup::replace_file_atomically(&temporary, &flag_path)?;
-    crate::profile_backup::sync_directory_durable(&paths.app_data)?;
+    step(
+        "write migration flag",
+        std::fs::write(&temporary, STAGED_FLAG_CONTENTS)
+            .and_then(|()| std::fs::OpenOptions::new().write(true).open(&temporary))
+            .and_then(|file| file.sync_all()),
+    )?;
+    step(
+        "replace migration flag",
+        crate::profile_backup::replace_file_atomically(&temporary, &flag_path),
+    )?;
+    step(
+        "sync app data directory",
+        crate::profile_backup::sync_directory_durable(&paths.app_data),
+    )?;
     Ok(())
+}
+
+fn step<T, E: Into<Error>>(name: &str, result: Result<T, E>) -> Result<T, Error> {
+    result.map_err(|error| match error.into() {
+        Error::Io(error) => Error::Io(std::io::Error::new(
+            error.kind(),
+            format!("{name}: {error}"),
+        )),
+        error => error,
+    })
 }
 
 pub fn prepare_legacy_migration(
@@ -59,9 +77,15 @@ pub fn prepare_legacy_migration(
     let pending_flag = paths.app_data.join(PENDING_MIGRATION_FILE);
     let _ = std::fs::remove_file(&pending_flag);
     if staging_dir.exists() {
-        std::fs::remove_dir_all(&staging_dir)?;
+        step(
+            "remove staging directory",
+            std::fs::remove_dir_all(&staging_dir),
+        )?;
     }
-    std::fs::create_dir_all(&staging_dir)?;
+    step(
+        "create staging directory",
+        std::fs::create_dir_all(&staging_dir),
+    )?;
 
     let result = (|| {
         copy_database_snapshot(
@@ -201,17 +225,29 @@ pub fn copy_database_snapshot(
         file_name.to_string_lossy()
     ));
     if temporary.exists() {
-        std::fs::remove_file(&temporary)?;
+        step(
+            "remove database temporary file",
+            std::fs::remove_file(&temporary),
+        )?;
     }
-    backup_connection_to_path(&source, &temporary, on_progress)?;
-    remove_sidecars(to)?;
-    let replace_result = crate::profile_backup::replace_file_atomically(&temporary, to);
+    step(
+        "copy database",
+        backup_connection_to_path(&source, &temporary, on_progress),
+    )?;
+    step("remove database sidecars", remove_sidecars(to))?;
+    let replace_result = step(
+        "replace database",
+        crate::profile_backup::replace_file_atomically(&temporary, to),
+    );
     if replace_result.is_err() {
         let _ = std::fs::remove_file(&temporary);
     }
     replace_result?;
     if let Some(parent) = to.parent() {
-        crate::profile_backup::sync_directory_durable(parent)?;
+        step(
+            "sync database directory",
+            crate::profile_backup::sync_directory_durable(parent),
+        )?;
     }
     Ok(())
 }
@@ -232,17 +268,29 @@ fn copy_replace(from: PathBuf, to: PathBuf) -> Result<(), Error> {
         file_name.to_string_lossy()
     ));
     if temporary.exists() {
-        std::fs::remove_file(&temporary)?;
+        step(
+            "remove config temporary file",
+            std::fs::remove_file(&temporary),
+        )?;
     }
     let result = (|| {
-        std::fs::copy(&from, &temporary)?;
-        std::fs::OpenOptions::new()
-            .write(true)
-            .open(&temporary)?
-            .sync_all()?;
-        crate::profile_backup::replace_file_atomically(&temporary, &to)?;
+        let contents = step("read config", std::fs::read(&from))?;
+        step(
+            "write config",
+            std::fs::File::create(&temporary).and_then(|mut file| {
+                file.write_all(&contents)?;
+                file.sync_all()
+            }),
+        )?;
+        step(
+            "replace config",
+            crate::profile_backup::replace_file_atomically(&temporary, &to),
+        )?;
         if let Some(parent) = to.parent() {
-            crate::profile_backup::sync_directory_durable(parent)?;
+            step(
+                "sync config directory",
+                crate::profile_backup::sync_directory_durable(parent),
+            )?;
         }
         Ok(())
     })();

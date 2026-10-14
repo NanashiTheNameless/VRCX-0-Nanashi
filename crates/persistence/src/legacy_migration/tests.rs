@@ -130,6 +130,37 @@ fn prepares_consistent_snapshot_with_page_progress_without_mutating_source() {
     assert!(paths.app_data.join(PENDING_MIGRATION_FILE).is_file());
 }
 
+fn set_readonly(path: &Path) {
+    let mut permissions = std::fs::metadata(path).unwrap().permissions();
+    permissions.set_readonly(true);
+    std::fs::set_permissions(path, permissions).unwrap();
+}
+
+#[test]
+fn prepares_snapshot_from_read_only_legacy_config() {
+    let dir = TestDir::new("legacy-read-only-config");
+    let paths = dir.app_paths();
+    let legacy_db = dir.path.join("VRCX").join("VRCX.sqlite3");
+    let legacy_config = dir.path.join("VRCX").join("VRCX.json");
+    let connection = open_test_database(&legacy_db);
+    insert_value(&connection, "legacy");
+    write_file(&legacy_config, br#"{"source":"legacy"}"#);
+    set_readonly(&legacy_config);
+
+    prepare_legacy_migration(&paths, &source(legacy_db, Some(legacy_config)), |_| {}).unwrap();
+
+    assert_eq!(
+        std::fs::read(
+            paths
+                .app_data
+                .join(STAGING_DIRECTORY)
+                .join(STAGED_CONFIG_FILE)
+        )
+        .unwrap(),
+        br#"{"source":"legacy"}"#
+    );
+}
+
 #[test]
 fn startup_installs_staged_snapshot_without_reopening_legacy_source() {
     let dir = TestDir::new("legacy-staged-install");
