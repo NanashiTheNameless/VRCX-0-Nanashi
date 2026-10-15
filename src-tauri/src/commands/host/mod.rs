@@ -10,6 +10,7 @@ pub mod game;
 pub mod host_capabilities;
 pub mod legacy_migration;
 pub mod linux_rendering;
+pub mod local_test_avatars;
 pub mod media;
 pub mod overlay_notifications;
 pub mod paths;

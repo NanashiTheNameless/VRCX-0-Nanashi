@@ -23,6 +23,7 @@ import type {
     MyAvatarsReleaseStatusFilter,
     MyAvatarsViewMode
 } from '../myAvatarsTypes';
+import { LocalTestAvatarsButton } from './LocalTestAvatarsDialog';
 import { GridSettingsMenu, MyAvatarFilterPopover } from './MyAvatarsViewParts';
 
 type MyAvatarsToolbarProps = {
@@ -118,6 +119,7 @@ export function MyAvatarsToolbar({
                             'view.my_avatars.action.refresh_avatar_inventory'
                         )}
                     />
+                    <LocalTestAvatarsButton />
                     {viewMode === 'grid' ? (
                         <GridSettingsMenu
                             gridDensity={gridDensity}

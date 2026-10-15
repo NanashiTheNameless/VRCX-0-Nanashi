@@ -207,6 +207,9 @@ describe('WorldTagsDialog', () => {
         );
         expect(horror.getAttribute('aria-checked')).toBe('true');
 
+        await waitFor(() =>
+            expect(document.activeElement).not.toBe(document.body)
+        );
         await user.clear(contentTags);
         await user.type(contentTags, 'violence,content_custom');
 

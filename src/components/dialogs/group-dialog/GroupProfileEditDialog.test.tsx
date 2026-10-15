@@ -15,6 +15,11 @@ import { GroupProfileEditDialog } from './GroupProfileEditDialog';
 
 afterEach(cleanup);
 
+async function waitForInitialFocus() {
+    const name = screen.getByLabelText('dialog.group.info.name');
+    await waitFor(() => expect(document.activeElement).toBe(name));
+}
+
 function createGroup(patch: Partial<GroupProfileRecord> = {}) {
     return {
         id: 'grp_test',
@@ -45,6 +50,7 @@ describe('GroupProfileEditDialog', () => {
                 onSave={onSave}
             />
         );
+        await waitForInitialFocus();
 
         const name = screen.getByLabelText('dialog.group.info.name');
         await user.clear(name);
@@ -87,6 +93,7 @@ describe('GroupProfileEditDialog', () => {
                 onSave={onSave}
             />
         );
+        await waitForInitialFocus();
 
         // The dialog moves focus to its first field just after opening and
         // would pull it away from the field being typed in.

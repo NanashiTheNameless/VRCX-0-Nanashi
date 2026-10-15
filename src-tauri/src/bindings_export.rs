@@ -594,6 +594,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::host::vrchat_log::app__vrchat_log_files_list,
             commands::host::vrchat_log::app__vrchat_log_entries_read,
             commands::host::vrchat_log::app__vrchat_log_tail_read,
+            commands::host::local_test_avatars::app__local_test_avatars_list,
+            commands::host::local_test_avatars::app__local_test_avatar_delete,
             commands::host::shell::app__open_vrcx_app_data_folder,
             commands::host::shell::app__open_vrc_app_data_folder,
             commands::host::shell::app__open_vrc_photos_folder,

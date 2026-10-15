@@ -2478,6 +2478,14 @@ const generatedCommands = {
     ): Promise<VrchatLogEntriesReadOutput> {
         return await TAURI_INVOKE('app__vrchat_log_tail_read', { input });
     },
+    async appLocalTestAvatarsList(): Promise<LocalTestAvatarOutput[]> {
+        return await TAURI_INVOKE('app__local_test_avatars_list');
+    },
+    async appLocalTestAvatarDelete(fileName: string): Promise<null> {
+        return await TAURI_INVOKE('app__local_test_avatar_delete', {
+            fileName
+        });
+    },
     async appOpenVrcxAppDataFolder(): Promise<boolean> {
         return await TAURI_INVOKE('app__open_vrcx_app_data_folder');
     },
@@ -5984,6 +5992,12 @@ export type LocalModerationOutput = {
     displayName: string;
     block: boolean;
     mute: boolean;
+};
+export type LocalTestAvatarOutput = {
+    fileName: string;
+    name: string;
+    size: number;
+    modifiedAt: string | null;
 };
 export type LocalWorldDetailsRefreshOutput = {
     requested: number;
