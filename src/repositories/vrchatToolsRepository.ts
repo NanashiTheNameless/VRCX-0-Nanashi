@@ -78,6 +78,17 @@ export type InviteMessageRecord = Record<string, unknown> & {
     updatedAt?: string;
 };
 type InviteMessagesRecord = InviteMessageRecord[];
+export type ModerationReportRecord = Record<string, unknown> & {
+    id?: string;
+    type?: string;
+    category?: string;
+    reason?: string;
+    description?: string | null;
+    contentId?: string;
+    contentName?: string;
+    contentThumbnailImageUrl?: string | null;
+    created?: string;
+};
 type VrchatApiResult = HttpApiExecuteResponse;
 
 function unwrapVrchatToolsResponse<TJson = Record<string, unknown>>(
@@ -214,6 +225,36 @@ async function reportUser({
     ).json;
 }
 
+async function getModerationReports({
+    currentUserId,
+    offset,
+    closedOnly
+}: {
+    currentUserId: string;
+    offset: number;
+    closedOnly: boolean;
+}) {
+    const response = await commands.appVrchatToolsModerationReportsGet({
+        currentUserId,
+        offset,
+        closedOnly
+    });
+    return unwrapVrchatToolsResponse<PageResponse<ModerationReportRecord>>(
+        response,
+        'moderationReports'
+    ).json;
+}
+
+async function deleteModerationReport({ reportId }: { reportId: string }) {
+    const response = await commands.appVrchatToolsModerationReportDelete({
+        reportId
+    });
+    return unwrapVrchatToolsResponse(
+        response,
+        `moderationReports/${encodeURIComponent(reportId)}`
+    ).json;
+}
+
 async function getInviteMessages({
     currentUserId,
     messageType
@@ -261,6 +302,8 @@ const vrchatToolsRepository = Object.freeze({
     getGroupCalendarIcs,
     saveUserNote,
     reportUser,
+    getModerationReports,
+    deleteModerationReport,
     getInviteMessages,
     editInviteMessage
 });

@@ -52,7 +52,12 @@ describe('tool catalog categories', () => {
                 'export-own-avatars'
             ],
             debug: ['vrchat-log'],
-            other: ['llm-endpoints', 'social-ai', 'edit-invite-message']
+            other: [
+                'llm-endpoints',
+                'social-ai',
+                'edit-invite-message',
+                'moderation-reports'
+            ]
         });
     });
 });

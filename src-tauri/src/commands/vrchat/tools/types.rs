@@ -55,6 +55,24 @@ pub struct VrchatToolsUserReportInput {
 
 #[derive(Debug, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct VrchatToolsModerationReportsInput {
+    #[serde(default)]
+    pub(crate) current_user_id: String,
+    #[serde(default)]
+    pub(crate) offset: i32,
+    #[serde(default)]
+    pub(crate) closed_only: bool,
+}
+
+#[derive(Debug, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct VrchatToolsModerationReportDeleteInput {
+    #[serde(default)]
+    pub(crate) report_id: String,
+}
+
+#[derive(Debug, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct VrchatToolsInviteMessagesInput {
     #[serde(default)]
     pub(crate) current_user_id: String,

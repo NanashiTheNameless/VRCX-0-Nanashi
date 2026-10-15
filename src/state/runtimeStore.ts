@@ -598,6 +598,7 @@ const initialState: RuntimeStoreState = {
         exportFriendsListOpen: false,
         exportAvatarsListOpen: false,
         editInviteMessagesOpen: false,
+        moderationReportsOpen: false,
         llmEndpointsOpen: false,
         profileBackupOpen: false,
         offlineRecordOpen: false

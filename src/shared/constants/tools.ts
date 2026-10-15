@@ -26,6 +26,7 @@ export type ToolDialogKey =
     | 'export-friends-list'
     | 'export-avatars-list'
     | 'edit-invite-messages'
+    | 'moderation-reports'
     | 'llm-endpoints'
     | 'profile-backup';
 
@@ -450,6 +451,16 @@ const toolDefinitions: ToolDefinition[] = [
         descriptionKey: 'view.tools.other.edit_invite_message_description',
         navEligible: true,
         action: { type: 'dialog', dialogKey: 'edit-invite-messages' }
+    },
+    {
+        key: 'moderation-reports',
+        category: 'other',
+        iconKey: 'flag',
+        navIcon: 'lucide:Flag',
+        titleKey: 'view.tools.other.moderation_reports',
+        descriptionKey: 'view.tools.other.moderation_reports_description',
+        navEligible: true,
+        action: { type: 'dialog', dialogKey: 'moderation-reports' }
     }
 ];
 

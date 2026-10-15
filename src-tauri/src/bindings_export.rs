@@ -564,6 +564,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::vrchat::tools::service::app__vrchat_tools_group_event_follow,
             commands::vrchat::tools::service::app__vrchat_tools_invite_message_edit,
             commands::vrchat::tools::service::app__vrchat_tools_invite_messages_get,
+            commands::vrchat::tools::service::app__vrchat_tools_moderation_report_delete,
+            commands::vrchat::tools::service::app__vrchat_tools_moderation_reports_get,
             commands::vrchat::tools::service::app__vrchat_tools_user_note_save,
             commands::vrchat::tools::service::app__vrchat_tools_user_report,
             commands::vrchat::users::service::app__vrchat_current_user_badge_update,

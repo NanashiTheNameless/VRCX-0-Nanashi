@@ -63,6 +63,7 @@ const navIconEntries: Array<readonly [NavIconKey, string]> = [
     ['lucide:FileText', 'File Text'],
     ['lucide:Download', 'Download'],
     ['lucide:MessageSquareText', 'Message'],
+    ['lucide:Flag', 'Flag'],
     ['lucide:Settings', 'Settings'],
     ['lucide:House', 'Home'],
     ['lucide:Compass', 'Compass'],

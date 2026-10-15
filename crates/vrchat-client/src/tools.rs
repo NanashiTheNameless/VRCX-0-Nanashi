@@ -129,6 +129,50 @@ pub fn user_report_input(
     ))
 }
 
+pub fn moderation_reports_get_input(
+    endpoint: String,
+    reporting_user_id: String,
+    n: i32,
+    offset: i32,
+    closed_only: bool,
+) -> Result<(String, HttpApiRequestInput), HttpApiError> {
+    let reporting_user_id = require_text(
+        reporting_user_id,
+        "VrchatToolsModerationReportsGet requires currentUserId.",
+    )?;
+    let mut query_params = HashMap::from([
+        ("reportingUserId".into(), json!(reporting_user_id)),
+        ("n".into(), json!(n)),
+        ("offset".into(), json!(offset)),
+    ]);
+    if closed_only {
+        query_params.insert("status".into(), json!("closed"));
+    }
+    Ok((
+        reporting_user_id.clone(),
+        get_input(endpoint, "moderationReports", query_params),
+    ))
+}
+
+pub fn moderation_report_delete_input(
+    endpoint: String,
+    report_id: String,
+) -> Result<(String, HttpApiRequestInput), HttpApiError> {
+    let report_id = require_text(
+        report_id,
+        "VrchatToolsModerationReportDelete requires reportId.",
+    )?;
+    Ok((
+        report_id.clone(),
+        api_input(
+            endpoint,
+            "DELETE",
+            format!("moderationReports/{}", encode_path_segment(&report_id)),
+            None,
+        ),
+    ))
+}
+
 pub fn invite_messages_get_input(
     endpoint: String,
     current_user_id: String,
@@ -290,6 +334,42 @@ mod tests {
     }
 
     #[test]
+    fn moderation_report_requests_scope_to_the_reporting_user() {
+        let (user_id, list) =
+            moderation_reports_get_input("endpoint".into(), " usr_1 ".into(), 100, 200, false)
+                .unwrap();
+        assert_eq!(user_id, "usr_1");
+        assert_eq!(list.method.as_deref(), Some("GET"));
+        assert_eq!(list.path.as_deref(), Some("moderationReports"));
+        assert_eq!(
+            list.query_params,
+            Some(HashMap::from([
+                ("reportingUserId".into(), json!("usr_1")),
+                ("n".into(), json!(100)),
+                ("offset".into(), json!(200)),
+            ]))
+        );
+
+        let (_, closed) =
+            moderation_reports_get_input("endpoint".into(), "usr_1".into(), 100, 0, true).unwrap();
+        assert_eq!(
+            closed.query_params,
+            Some(HashMap::from([
+                ("reportingUserId".into(), json!("usr_1")),
+                ("n".into(), json!(100)),
+                ("offset".into(), json!(0)),
+                ("status".into(), json!("closed")),
+            ]))
+        );
+
+        let (report_id, delete) =
+            moderation_report_delete_input("endpoint".into(), " mrpt/1 ".into()).unwrap();
+        assert_eq!(report_id, "mrpt/1");
+        assert_eq!(delete.method.as_deref(), Some("DELETE"));
+        assert_eq!(delete.path.as_deref(), Some("moderationReports/mrpt%2F1"));
+    }
+
+    #[test]
     fn invite_message_read_trims_and_encodes_both_segments() {
         let (user_id, request) = invite_messages_get_input(
             "endpoint".into(),
@@ -313,6 +393,8 @@ mod tests {
         assert!(group_calendar_ics_get_input("".into(), " ".into(), "event".into()).is_err());
         assert!(user_note_save_input("".into(), " ".into(), "note".into()).is_err());
         assert!(user_report_input("".into(), " ".into(), "reason".into(),).is_err());
+        assert!(moderation_reports_get_input("".into(), " ".into(), 100, 0, false).is_err());
+        assert!(moderation_report_delete_input("".into(), " ".into()).is_err());
         assert!(serde_json::from_str::<InviteMessageType>(r#""invite""#).is_err());
     }
 }

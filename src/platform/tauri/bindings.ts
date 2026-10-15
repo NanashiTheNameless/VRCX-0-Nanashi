@@ -2326,6 +2326,21 @@ const generatedCommands = {
             input
         });
     },
+    async appVrchatToolsModerationReportDelete(
+        input: VrchatToolsModerationReportDeleteInput
+    ): Promise<HttpApiExecuteResponse> {
+        return await TAURI_INVOKE(
+            'app__vrchat_tools_moderation_report_delete',
+            { input }
+        );
+    },
+    async appVrchatToolsModerationReportsGet(
+        input: VrchatToolsModerationReportsInput
+    ): Promise<HttpApiExecuteResponse> {
+        return await TAURI_INVOKE('app__vrchat_tools_moderation_reports_get', {
+            input
+        });
+    },
     async appVrchatToolsUserNoteSave(
         input: VrchatToolsUserNoteSaveInput
     ): Promise<HttpApiExecuteResponse> {
@@ -7951,6 +7966,12 @@ export type VrchatToolsInviteMessageEditInput = {
 export type VrchatToolsInviteMessagesInput = {
     currentUserId?: string;
     messageType: InviteMessageType;
+};
+export type VrchatToolsModerationReportDeleteInput = { reportId?: string };
+export type VrchatToolsModerationReportsInput = {
+    currentUserId?: string;
+    offset?: number;
+    closedOnly?: boolean;
 };
 export type VrchatToolsUserNoteSaveInput = {
     targetUserId?: string;

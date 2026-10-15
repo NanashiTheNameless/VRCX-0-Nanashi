@@ -2342,7 +2342,9 @@
             "other": {
                 "header": "Other",
                 "edit_invite_message": "Message Templates",
-                "edit_invite_message_description": "Edit invite and request message templates"
+                "edit_invite_message_description": "Edit invite and request message templates",
+                "moderation_reports": "My Reports",
+                "moderation_reports_description": "View or withdraw reports you've submitted"
             },
             "success": {
                 "media_item_deleted": "Media item deleted",
@@ -6762,6 +6764,19 @@
             "modal": {
                 "delete_instance_record": "Remove this visit?"
             }
+        },
+        "moderation_reports": {
+            "header": "My Reports",
+            "description": "Reports you've submitted to VRChat.",
+            "empty_open": "No open reports",
+            "empty_closed": "No closed reports",
+            "failed_to_load": "Couldn't load reports",
+            "withdraw": "Withdraw",
+            "withdraw_title": "Withdraw your report on {value}?",
+            "withdraw_description": "This can't be undone.",
+            "failed_to_withdraw": "Couldn't withdraw the report",
+            "status_open": "Open",
+            "status_closed": "Closed"
         }
     },
     "confirm": {
