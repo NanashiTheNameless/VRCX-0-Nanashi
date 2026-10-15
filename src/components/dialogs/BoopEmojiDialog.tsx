@@ -1,5 +1,11 @@
-import { CheckIcon, ImageIcon, RefreshCcwIcon } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { BanIcon, CheckIcon, ImageIcon, RefreshCcwIcon } from 'lucide-react';
+import {
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+    type ReactNode
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
@@ -49,7 +55,7 @@ type BoopEmojiDialogProps = {
     targetLabel?: string;
     sendDisabled?: boolean;
     onOpenChange: (open: boolean) => void;
-    onSend: (choice: BoopEmojiChoice) => void | Promise<void>;
+    onSend: (choice: BoopEmojiChoice | null) => void | Promise<void>;
 };
 
 const defaultEmojiChoices: readonly BoopEmojiChoice[] = vrchatDefaultEmojis.map(
@@ -179,13 +185,15 @@ function useEmojiRows(
 
 function EmojiChoice({
     imageUrl,
+    icon,
     label,
     imageOnly = false,
     selected,
     disabled,
     onClick
 }: {
-    imageUrl: string;
+    imageUrl?: string;
+    icon?: ReactNode;
     label: string;
     imageOnly?: boolean;
     selected: boolean;
@@ -221,24 +229,26 @@ function EmojiChoice({
                     imageOnly ? 'size-full' : 'size-16'
                 )}
             >
-                <FadeInImage
-                    src={imageUrl}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    className={cn(
-                        'object-contain',
-                        imageOnly
-                            ? 'max-h-full max-w-full'
-                            : 'max-h-16 max-w-16'
-                    )}
-                    fallback={
-                        <ImageIcon
-                            className="text-muted-foreground size-8"
-                            aria-hidden="true"
-                        />
-                    }
-                />
+                {icon ?? (
+                    <FadeInImage
+                        src={imageUrl}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className={cn(
+                            'object-contain',
+                            imageOnly
+                                ? 'max-h-full max-w-full'
+                                : 'max-h-16 max-w-16'
+                        )}
+                        fallback={
+                            <ImageIcon
+                                className="text-muted-foreground size-8"
+                                aria-hidden="true"
+                            />
+                        }
+                    />
+                )}
             </span>
             {imageOnly ? null : (
                 <span className="w-full truncate text-xs font-medium">
@@ -256,7 +266,8 @@ function EmojiChoiceGrid({
     disabled,
     loading = false,
     emptyLabel,
-    onSelect
+    onSelect,
+    onSelectNone
 }: {
     source: EmojiSource;
     rows: readonly BoopEmojiChoice[];
@@ -265,6 +276,7 @@ function EmojiChoiceGrid({
     loading?: boolean;
     emptyLabel: string;
     onSelect: (choice: BoopEmojiChoice) => void;
+    onSelectNone?: () => void;
 }) {
     const { t } = useTranslation();
     return (
@@ -279,6 +291,23 @@ function EmojiChoiceGrid({
                 </div>
             ) : rows.length ? (
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-2">
+                    {onSelectNone ? (
+                        <EmojiChoice
+                            label={t('dialog.gallery_select.none')}
+                            imageOnly
+                            selected={selected === null}
+                            disabled={disabled}
+                            onClick={onSelectNone}
+                            icon={
+                                <span className="border-muted-foreground/50 text-muted-foreground flex size-12 items-center justify-center rounded-full border-2 border-dashed">
+                                    <BanIcon
+                                        className="size-5"
+                                        aria-hidden="true"
+                                    />
+                                </span>
+                            }
+                        />
+                    ) : null}
                     {rows.map((choice) => (
                         <EmojiChoice
                             key={`${choice.kind}:${choice.id}`}
@@ -355,7 +384,7 @@ export function BoopEmojiDialog({
     }
 
     async function handleSend() {
-        if (sendDisabled || sending || !choice) {
+        if (sendDisabled || sending) {
             return;
         }
         setSending(true);
@@ -446,6 +475,7 @@ export function BoopEmojiDialog({
                                 disabled={sending}
                                 emptyLabel={t('empty_state.search_no_results')}
                                 onSelect={toggleChoice}
+                                onSelectNone={() => setChoice(null)}
                             />
                         ) : null}
                         <EmojiChoiceGrid
@@ -455,6 +485,7 @@ export function BoopEmojiDialog({
                             disabled={sending}
                             emptyLabel={t('empty_state.search_no_results')}
                             onSelect={toggleChoice}
+                            onSelectNone={() => setChoice(null)}
                         />
                         {isLocalUserVrcPlusSupporter ? (
                             <EmojiChoiceGrid
@@ -506,7 +537,7 @@ export function BoopEmojiDialog({
                     </Button>
                     <Button
                         type="button"
-                        disabled={sending || sendDisabled || !choice}
+                        disabled={sending || sendDisabled}
                         onClick={handleSend}
                     >
                         {sending ? <Spinner data-icon="inline-start" /> : null}
