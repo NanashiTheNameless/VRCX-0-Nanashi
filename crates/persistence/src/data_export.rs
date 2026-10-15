@@ -288,7 +288,10 @@ pub fn stage_data_import(archive: &Path, app_data: &Path) -> Result<DataImportSu
                 continue;
             }
             let relative = entry.enclosed_name().ok_or_else(|| {
-                Error::InvalidData(format!("Unsafe path in data export: {}", entry.name()))
+                Error::InvalidData(format!(
+                    "Unsafe path in data export: {}",
+                    String::from_utf8_lossy(entry.name_raw())
+                ))
             })?;
             if relative == Path::new(MANIFEST_NAME) {
                 continue;
@@ -300,7 +303,7 @@ pub fn stage_data_import(archive: &Path, app_data: &Path) -> Result<DataImportSu
             if entry.size() > MAX_ENTRY_BYTES {
                 return Err(Error::InvalidData(format!(
                     "Data export entry is too large: {}",
-                    entry.name()
+                    String::from_utf8_lossy(entry.name_raw())
                 )));
             }
             let target = staging.join(&relative);

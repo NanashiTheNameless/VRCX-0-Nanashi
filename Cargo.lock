@@ -6763,9 +6763,9 @@ dependencies = [
 
 [[package]]
 name = "rmcp"
-version = "3.5.0"
+version = "3.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fae7019994ae0fe4ada40b732f798f3ff26f0f04facb1477f1bf37eb4f18a2d3"
+checksum = "ab5023804cbe0304cbe06197ac16e645a0a0d0ffa2953bf735c15c2fa0213350"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -9914,7 +9914,7 @@ dependencies = [
  "vrcx-0-core",
  "vrcx-0-http-client",
  "vrcx-0-logger-protocol",
- "zip 8.6.0",
+ "zip 9.0.3",
 ]
 
 [[package]]
@@ -10085,7 +10085,7 @@ dependencies = [
  "vrcx-0-platform",
  "vrcx-0-vrchat-client",
  "walkdir",
- "zip 8.6.0",
+ "zip 9.0.3",
 ]
 
 [[package]]
@@ -10133,7 +10133,7 @@ dependencies = [
  "vrcx-0-contracts",
  "vrcx-0-core",
  "vrcx-0-platform",
- "zip 8.6.0",
+ "zip 9.0.3",
  "zstd",
 ]
 
@@ -10280,7 +10280,7 @@ dependencies = [
  "vrcx-0-core",
  "vrcx-0-http-client",
  "windows-sys 0.61.2",
- "zip 8.6.0",
+ "zip 9.0.3",
 ]
 
 [[package]]
@@ -11713,14 +11713,15 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "8.6.0"
+version = "9.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d04a6b5381502aa6087c94c669499eb1602eb9c5e8198e534de571f7154809b"
+checksum = "c2d98561b612a84ae525331a7a094429ef8a5772514ed507ff6db5f54badc971"
 dependencies = [
  "crc32fast",
  "flate2",
  "indexmap 2.14.2",
  "memchr",
+ "nix",
  "typed-path",
  "zopfli",
 ]
