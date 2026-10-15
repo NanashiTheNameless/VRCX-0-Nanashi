@@ -31,7 +31,7 @@ pub(crate) struct OnlineState {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Stay {
-    pub(crate) tag: String,
+    pub(crate) place: Place,
     pub(crate) since_ms: i64,
 }
 

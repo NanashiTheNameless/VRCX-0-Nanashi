@@ -117,11 +117,9 @@ impl<'a> FeedNames<'a> {
 
     fn gps(&self, before: &OnlineState, after: &OnlineState, now_ms: i64) -> Option<FeedLiveEntry> {
         let (previous, since_ms, left_ms) = match (&before.place, &before.travel_from) {
-            (Place::Traveling { .. }, Some(stay)) => (
-                Place::Instance(stay.tag.clone()),
-                stay.since_ms,
-                before.since_ms,
-            ),
+            (Place::Traveling { .. }, Some(stay)) => {
+                (stay.place.clone(), stay.since_ms, before.since_ms)
+            }
             (place, _) => (place.clone(), before.since_ms, now_ms),
         };
         if !previous.is_gps_endpoint()

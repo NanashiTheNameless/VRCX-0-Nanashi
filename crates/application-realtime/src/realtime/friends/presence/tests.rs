@@ -449,7 +449,7 @@ fn traveling_announces_joining_and_arrival_writes_gps_from_the_origin() {
     assert_eq!(
         state.travel_from,
         Some(Stay {
-            tag: "wrld_a:1".into(),
+            place: inst("wrld_a:1"),
             since_ms: T - 60_000
         })
     );
@@ -477,6 +477,32 @@ fn traveling_announces_joining_and_arrival_writes_gps_from_the_origin() {
     let entries = feed(&traveling.next, &arrived, T + 5_000);
     assert_eq!(entries[0]["type"], "GPS");
     assert_eq!(entries[0]["previousLocation"], "wrld_a:1");
+    assert_eq!(entries[0]["time"], 60_000);
+}
+
+#[test]
+fn traveling_out_of_private_writes_gps_from_private_on_arrival() {
+    let prev = online(Place::Private, T - 60_000);
+    let traveling = reduce(
+        &prev,
+        &ev(
+            Source::Ws,
+            seen_online(Place::Traveling {
+                to: Some("wrld_a:1".into()),
+            }),
+        ),
+        T,
+    );
+    let arrived = reduce(
+        &traveling.next,
+        &ev(Source::Ws, seen_online(inst("wrld_a:1"))),
+        T + 5_000,
+    );
+    let entries = feed(&traveling.next, &arrived, T + 5_000);
+    assert_eq!(entries.len(), 1);
+    assert_eq!(entries[0]["type"], "GPS");
+    assert_eq!(entries[0]["previousLocation"], "private");
+    assert_eq!(entries[0]["location"], "wrld_a:1");
     assert_eq!(entries[0]["time"], 60_000);
 }
 

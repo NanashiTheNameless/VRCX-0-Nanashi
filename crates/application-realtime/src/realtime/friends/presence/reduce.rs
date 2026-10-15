@@ -200,8 +200,8 @@ fn advance(state: &OnlineState, place: &Place, now_ms: i64) -> OnlineState {
             return next;
         }
         (_, Place::Traveling { .. }) => {
-            next.travel_from = state.place.instance_tag().map(|tag| Stay {
-                tag: tag.to_string(),
+            next.travel_from = state.place.is_gps_endpoint().then(|| Stay {
+                place: state.place.clone(),
                 since_ms: state.since_ms,
             });
             next.place = place.clone();
@@ -213,7 +213,7 @@ fn advance(state: &OnlineState, place: &Place, now_ms: i64) -> OnlineState {
     let restored = next
         .travel_from
         .take()
-        .filter(|stay| place.instance_tag() == Some(stay.tag.as_str()))
+        .filter(|stay| *place == stay.place)
         .map(|stay| stay.since_ms);
     next.place = place.clone();
     next.since_ms = restored.unwrap_or(now_ms);
