@@ -434,6 +434,7 @@ const GroupRailSection = memo(function GroupRailSection({
         [groups, pendingOrder]
     );
     const dragClickSuppressedRef = useRef(false);
+    const skipBlurCommitRef = useRef(false);
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
@@ -668,17 +669,33 @@ const GroupRailSection = memo(function GroupRailSection({
                         className="h-8 text-sm"
                         disabled={loading}
                         placeholder={resolvedNewGroupLabel}
-                        onChange={(event) =>
-                            onNewGroupNameChange?.(event.target.value)
-                        }
+                        onFocus={() => {
+                            skipBlurCommitRef.current = false;
+                        }}
+                        onChange={(event) => {
+                            skipBlurCommitRef.current = false;
+                            onNewGroupNameChange?.(event.target.value);
+                        }}
                         onKeyDown={(event) => {
                             if (event.key === 'Enter') {
+                                skipBlurCommitRef.current = true;
                                 onConfirmCreate?.();
                             } else if (event.key === 'Escape') {
+                                skipBlurCommitRef.current = true;
                                 onCancelCreate?.();
                             }
                         }}
-                        onBlur={onCancelCreate}
+                        onBlur={() => {
+                            if (skipBlurCommitRef.current) {
+                                skipBlurCommitRef.current = false;
+                                return;
+                            }
+                            if (newGroupName?.trim()) {
+                                onConfirmCreate?.();
+                            } else {
+                                onCancelCreate?.();
+                            }
+                        }}
                     />
                 ) : null}
             </div>

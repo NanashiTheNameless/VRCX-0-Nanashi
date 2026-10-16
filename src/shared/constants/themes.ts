@@ -130,8 +130,8 @@ for (const theme of Object.values(THEME_COLOR_CONFIG)) {
 
 export const DEFAULT_ZOOM_LEVEL = 100;
 
-export const MIN_ZOOM_LEVEL = 30;
+export const MIN_ZOOM_LEVEL = 50;
 
-export const MAX_ZOOM_LEVEL = 300;
+export const MAX_ZOOM_LEVEL = 160;
 
 export const ZOOM_STEP = 5;

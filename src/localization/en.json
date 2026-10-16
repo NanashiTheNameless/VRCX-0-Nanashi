@@ -567,7 +567,10 @@
             "search": "Search",
             "select": "Select",
             "cancel": "Cancel",
-            "view_options": "View options"
+            "view_options": "View options",
+            "cut": "Cut",
+            "paste": "Paste",
+            "select_all": "Select all"
         },
         "sort_by": "Sort by:",
         "time_units": {
@@ -2369,8 +2372,9 @@
                 "refresh_this_tab_to_load_inventory_items": "Refresh this tab to load inventory items",
                 "load_a_screenshot_to_inspect_embedded_world_player_and_file_metadata": "Load a screenshot to inspect embedded world, player and file metadata"
             },
-            "error": {
-                "dropped_screenshot_path_is_not_available": "Couldn't read the dropped file. Try selecting the screenshot again."
+            "file_drop": {
+                "upload_to": "Drop to upload to {target}",
+                "open_screenshot": "Drop to open the screenshot"
             },
             "loading": {
                 "deleting_metadata": "Deleting metadata",
@@ -4071,6 +4075,10 @@
                 "cookie_expiry": "Earliest known cookie expiry: {time} (session cookies can expire sooner)",
                 "never": "Never",
                 "limits": "Cookie expiry does not prove YouTube will accept the session. Playback tests resolve one test video without downloading it. If playback fails, check your network, refresh cookies if opted in, and synchronize system time. SABR-only videos require a streaming relay and are not supported by this direct-URL helper. Disable and restore before uninstalling the app."
+            },
+            "restart_pending": {
+                "description": "Some changes take effect after VRCX-0 restarts.",
+                "restart_now": "Restart now"
             }
         },
         "dashboard": {
@@ -4452,6 +4460,12 @@
                 "override_disabled": "Custom CSS disabled.",
                 "override_cleared": "Custom CSS cleared.",
                 "disable_failed": "Failed to update community theme settings."
+            },
+            "confirm": {
+                "delete_theme_title": "Delete this theme?",
+                "delete_theme_description": "The theme will be removed from this device.",
+                "clear_override_title": "Clear custom CSS?",
+                "clear_override_description": "Your saved custom CSS will be deleted. This can't be undone."
             }
         },
         "themes": {

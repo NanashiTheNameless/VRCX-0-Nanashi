@@ -2,6 +2,7 @@ import type { ChangeEvent } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useFileDropTarget } from '@/components/file-drop/useFileDropTarget';
 import { resolveProfileDecorationMutation } from '@/domain/entities/inventory';
 import vrchatMediaRepository, {
     type InventoryItemRecord,
@@ -24,6 +25,7 @@ import {
     INITIAL_INVENTORY_SUB_TABS,
     getInventoryGridDensityConfig,
     parseEmojiUploadSettings,
+    readDroppedUploadImage,
     readGridDensityPreference,
     scopeKey,
     validateImageFile,
@@ -187,6 +189,26 @@ export function useInventoryPageState() {
 
     const activeSubTab = activeSubTabs[activeCategory];
     const activeScopeKey = scopeKey(activeCategory, activeSubTab);
+    const activeUploadTarget =
+        CATEGORY_DEFINITIONS[activeCategory].tabs.find(
+            (entry) => entry.key === activeSubTab
+        )?.uploadTarget ?? null;
+    const fileDropActive = useFileDropTarget({
+        enabled:
+            Boolean(currentUserId) &&
+            Boolean(activeUploadTarget) &&
+            !cropRequest &&
+            !uploadingTarget,
+        onDrop: async (paths) => {
+            if (!activeUploadTarget) {
+                return;
+            }
+            const file = await readDroppedUploadImage(paths, t);
+            if (file) {
+                requestUpload(file, activeUploadTarget);
+            }
+        }
+    });
 
     function changeGridDensity(nextValue: GalleryGridDensity) {
         setGridDensity(nextValue);
@@ -297,21 +319,22 @@ export function useInventoryPageState() {
         throw new Error(`Unsupported inventory upload target: ${target}`);
     }
 
-    async function uploadSelectedFile(event: ChangeEvent<HTMLInputElement>) {
+    function uploadSelectedFile(event: ChangeEvent<HTMLInputElement>) {
         const file = event.target.files?.[0] || null;
         event.target.value = '';
-        if (!file) {
+        const target = uploadTargetRef.current;
+        if (!file || !target) {
             return;
         }
+        requestUpload(file, target);
+    }
+
+    function requestUpload(file: File, target: InventoryUploadTarget) {
         if (!isVrcPlusSupporter) {
             toast.add({ type: 'error', title: t('message.vrcplus.required') });
             return;
         }
         if (!validateImageFile(file, t)) {
-            return;
-        }
-        const target = uploadTargetRef.current;
-        if (!target) {
             return;
         }
         const authTarget = getInventoryAuthTarget();
@@ -680,6 +703,7 @@ export function useInventoryPageState() {
         emojiAnimLoopPingPong,
         emojiAnimType,
         emojiAnimationStyle,
+        fileDropActive,
         gridDensity,
         gridDensityConfig,
         isVrcPlusSupporter,

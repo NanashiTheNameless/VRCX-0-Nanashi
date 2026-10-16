@@ -148,6 +148,46 @@ describe('createGalleryAssetActions', () => {
         expect(toast.error).not.toHaveBeenCalled();
     });
 
+    it('opens the crop dialog for an image dropped on the active tab', () => {
+        const setCropRequest = vi.fn();
+        const { actions } = createActions({
+            setCropRequest,
+            validateImageFile: () => true
+        });
+        const file = new File(['image'], 'drop.png', { type: 'image/png' });
+
+        actions.uploadDroppedFile(file);
+
+        expect(setCropRequest).toHaveBeenCalledWith(
+            expect.objectContaining({
+                tab: 'prints',
+                file,
+                authTarget: {
+                    userId: 'usr_self',
+                    endpoint: 'https://api.vrchat.cloud'
+                }
+            })
+        );
+    });
+
+    it('keeps dropped prints restricted to VRC+ users', () => {
+        const setCropRequest = vi.fn();
+        const { actions, toast } = createActions({
+            isVrcPlusSupporter: false,
+            setCropRequest,
+            validateImageFile: () => true
+        });
+
+        actions.uploadDroppedFile(
+            new File(['image'], 'drop.png', { type: 'image/png' })
+        );
+
+        expect(setCropRequest).not.toHaveBeenCalled();
+        expect(toast.error).toHaveBeenCalledWith(
+            expect.objectContaining({ title: 'message.vrcplus.required' })
+        );
+    });
+
     it.each<GalleryUploadTarget>(['prints', 'emojis', 'stickers'])(
         'keeps %s uploads restricted to VRC+ users',
         (tab) => {

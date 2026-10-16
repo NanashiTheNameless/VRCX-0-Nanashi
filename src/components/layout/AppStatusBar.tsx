@@ -37,6 +37,7 @@ import { isRecord } from '@/shared/utils/record';
 import { useDataDirMigrationStore } from '@/state/dataDirMigrationStore';
 import { usePreferencesStore } from '@/state/preferencesStore';
 import { useProfileBackupStore } from '@/state/profileBackupStore';
+import { markRestartPending } from '@/state/restartPendingStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useShellStore } from '@/state/shellStore';
 import { useWorldCollectionImportStore } from '@/state/worldCollectionImportStore';
@@ -710,6 +711,7 @@ export function AppStatusBar({
                 { restart }
             );
             if (!restart) {
+                markRestartPending();
                 toast.add({
                     type: 'success',
                     title: t('prompt.proxy_settings.saved_restart_required')

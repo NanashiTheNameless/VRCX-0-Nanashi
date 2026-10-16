@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
+import { FileDropOverlay } from '@/components/file-drop/FileDropOverlay';
+import { useFileDropTarget } from '@/components/file-drop/useFileDropTarget';
 import { PageScaffold } from '@/components/layout/PageScaffold';
 import { ToolPageHeader } from '@/components/layout/ToolPageHeader';
 import { convertFileSrc } from '@/platform/tauri/assets';
@@ -26,7 +27,6 @@ import {
 import { ScreenshotSearchResultsView } from './components/ScreenshotSearchResultsView';
 import {
     buildScreenshotSearchRow,
-    getDroppedScreenshotPath,
     normalizeScreenshotMetadata,
     normalizeScreenshotSearchResult,
     resolvePathAfterScreenshotDelete,
@@ -585,28 +585,13 @@ export function ScreenshotMetadataPage() {
         runSearch(nextType);
     }
 
-    async function handleScreenshotDrop(event: DragEvent<HTMLDivElement>) {
-        event.preventDefault();
-        const filePath = getDroppedScreenshotPath(event);
-        if (!filePath) {
-            toast.add({
-                type: 'error',
-                title: t(
-                    'view.tools.error.dropped_screenshot_path_is_not_available'
-                )
-            });
-            return;
+    const fileDropActive = useFileDropTarget({
+        enabled: Boolean(screenshotCacheStatus?.available),
+        onDrop: (paths) => {
+            resetSearchContext({ clearQuery: true });
+            openDetailPath(paths[0]);
         }
-        resetSearchContext({ clearQuery: true });
-        openDetailPath(filePath);
-    }
-
-    function handleScreenshotDragOver(event: DragEvent<HTMLDivElement>) {
-        event.preventDefault();
-        if (event.dataTransfer) {
-            event.dataTransfer.dropEffect = 'copy';
-        }
-    }
+    });
 
     if (!screenshotCacheStatus?.available) {
         return (
@@ -774,10 +759,6 @@ export function ScreenshotMetadataPage() {
                                     sourcePath: metadata?.filePath || ''
                                 })
                             }
-                            onDragOver={handleScreenshotDragOver}
-                            onDrop={(event) => {
-                                handleScreenshotDrop(event);
-                            }}
                         />
 
                         {isDetailsVisible ? (
@@ -793,6 +774,11 @@ export function ScreenshotMetadataPage() {
                     </div>
                 </>
             )}
+
+            <FileDropOverlay
+                active={fileDropActive}
+                label={t('view.tools.file_drop.open_screenshot')}
+            />
         </PageScaffold>
     );
 }

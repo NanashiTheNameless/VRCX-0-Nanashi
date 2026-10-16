@@ -11,7 +11,10 @@ import {
     type EmojiAnimationStyleName
 } from '@/shared/constants/emoji';
 import { MAX_IMAGE_UPLOAD_BYTES } from '@/shared/constants/imageUpload';
-import { validateImageUploadFile } from '@/shared/utils/imageUpload';
+import {
+    readDroppedImageFile,
+    validateImageUploadFile
+} from '@/shared/utils/imageUpload';
 
 import { emojiAnimationStyleValues } from './emojiAnimationStyles';
 import {
@@ -326,6 +329,38 @@ export function parseEmojiUploadSettings(
         }
     }
     return next;
+}
+
+export async function readDroppedUploadImage(
+    paths: string[],
+    t: (key: string) => string
+) {
+    const path = paths[0];
+    if (!path) {
+        return null;
+    }
+    try {
+        const result = await readDroppedImageFile(path);
+        if (result.ok) {
+            return result.file;
+        }
+        toast.add({
+            type: 'error',
+            title:
+                result.reason === 'too_large'
+                    ? t('message.file.too_large')
+                    : t('message.file.not_image')
+        });
+    } catch (error) {
+        toast.add({
+            type: 'error',
+            title:
+                error instanceof Error
+                    ? error.message
+                    : t('message.upload.error')
+        });
+    }
+    return null;
 }
 
 export function validateImageFile(file: Blob, t: (key: string) => string) {

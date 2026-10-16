@@ -25,6 +25,8 @@
             "identifier": "fs:allow-mkdir",
             "allow": [{ "path": "$APPCACHE" }]
         },
+        "fs:allow-read-file",
+        "fs:allow-stat",
         {
             "identifier": "fs:allow-read-text-file",
             "allow": [

@@ -82,7 +82,20 @@ export function DialogHost() {
     return (
         <Dialog
             open={Boolean(activeDialog)}
-            onOpenChange={(open) => !open && closeDialog()}
+            onOpenChange={(open, eventDetails) => {
+                if (open) {
+                    return;
+                }
+                if (
+                    eventDetails.reason === 'escape-key' &&
+                    currentBreadcrumbIndex > 0
+                ) {
+                    eventDetails.cancel();
+                    popToBreadcrumb(currentBreadcrumbIndex - 1);
+                    return;
+                }
+                closeDialog();
+            }}
         >
             <DialogContent
                 showCloseButton={false}

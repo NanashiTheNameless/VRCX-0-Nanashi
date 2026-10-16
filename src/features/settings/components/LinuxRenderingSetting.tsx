@@ -8,6 +8,7 @@ import {
 import { restartApplication } from '@/services/shellIntegrationService';
 import { toast } from '@/services/toastService';
 import { useCriticalTaskStore } from '@/state/criticalTaskStore';
+import { markRestartPending } from '@/state/restartPendingStore';
 import { Switch } from '@/ui/shadcn/switch';
 
 import { Field } from './SettingsField';
@@ -43,6 +44,7 @@ export function LinuxRenderingSetting() {
         setFailed(false);
         try {
             setSnapshot(await commands.appSetLinuxRendering(enabled));
+            markRestartPending();
             toast.add({
                 title: t('linux_rendering.saved'),
                 actionProps: {

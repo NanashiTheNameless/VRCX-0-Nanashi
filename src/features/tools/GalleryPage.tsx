@@ -1,5 +1,7 @@
 import type { ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import { FileDropOverlay } from '@/components/file-drop/FileDropOverlay';
 import { PageBody, PageScaffold } from '@/components/layout/PageScaffold';
 
 import { GalleryDialogs } from './components/GalleryDialogs';
@@ -10,6 +12,7 @@ import type { GalleryProfileField, GalleryUploadOptions } from './galleryTypes';
 import { useGalleryPageController } from './useGalleryPageController';
 
 export function GalleryPage() {
+    const { t } = useTranslation();
     const pageState = useGalleryPageController();
 
     return (
@@ -92,6 +95,13 @@ export function GalleryPage() {
                 onResetUploadAuthTarget={() => {
                     pageState.uploadAuthTargetRef.current = null;
                 }}
+            />
+
+            <FileDropOverlay
+                active={pageState.fileDropActive}
+                label={t('view.tools.file_drop.upload_to', {
+                    target: t(`dialog.gallery_icons.${pageState.activeTab}`)
+                })}
             />
         </PageScaffold>
     );

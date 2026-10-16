@@ -33,6 +33,7 @@ import {
 import { toast } from '@/services/toastService';
 import { useModalStore } from '@/state/modalStore';
 import { usePreferencesStore } from '@/state/preferencesStore';
+import { markRestartPending } from '@/state/restartPendingStore';
 import { useSessionStore } from '@/state/sessionStore';
 import { useShellStore } from '@/state/shellStore';
 
@@ -217,6 +218,7 @@ export function useLoginPageState() {
                 { restart }
             );
             if (!restart) {
+                markRestartPending();
                 toast.add({
                     type: 'success',
                     title: t('prompt.proxy_settings.saved_restart_required')

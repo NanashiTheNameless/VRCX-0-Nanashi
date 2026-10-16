@@ -13,7 +13,6 @@ import {
     UsersIcon,
     XIcon
 } from 'lucide-react';
-import type { DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -428,9 +427,7 @@ export function ScreenshotMetadataPreviewCard({
     onNavigatePrev,
     onNavigateNext,
     onToggleDetails,
-    onImagePreview,
-    onDragOver,
-    onDrop
+    onImagePreview
 }: {
     metadata: NormalizedScreenshotMetadata | null;
     imageUrl: string;
@@ -442,8 +439,6 @@ export function ScreenshotMetadataPreviewCard({
     onNavigateNext: () => void;
     onToggleDetails: () => void;
     onImagePreview: () => void;
-    onDragOver: (event: DragEvent<HTMLDivElement>) => void;
-    onDrop: (event: DragEvent<HTMLDivElement>) => void;
 }) {
     const { t } = useTranslation();
 
@@ -499,12 +494,7 @@ export function ScreenshotMetadataPreviewCard({
                     </div>
                 </div>
             </CardHeader>
-            <CardContent
-                className="flex min-h-0 flex-1 items-center justify-center"
-                onDragOver={onDragOver}
-                onDragEnter={onDragOver}
-                onDrop={onDrop}
-            >
+            <CardContent className="flex min-h-0 flex-1 items-center justify-center">
                 {isMetadataLoading && !imageUrl ? (
                     <EmptyState
                         loading

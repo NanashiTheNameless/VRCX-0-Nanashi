@@ -8,6 +8,7 @@ import {
 } from '@/services/proxySettingsService';
 import { toast } from '@/services/toastService';
 import { usePreferencesStore } from '@/state/preferencesStore';
+import { markRestartPending } from '@/state/restartPendingStore';
 import {
     Dialog,
     DialogContent,
@@ -53,6 +54,7 @@ export function ProxySettingsDialog({
                 { restart }
             );
             if (!restart) {
+                markRestartPending();
                 toast.add({
                     type: 'success',
                     title: t('prompt.proxy_settings.saved_restart_required')

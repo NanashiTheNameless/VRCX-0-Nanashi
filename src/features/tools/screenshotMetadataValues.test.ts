@@ -7,12 +7,10 @@ import {
     buildScreenshotSearchRow,
     DEFAULT_SCREENSHOT_SEARCH_SORT,
     formatScreenshotBytes,
-    getDroppedScreenshotPath,
     getGalleryFolderPathSet,
     getFileNameFromPath,
     normalizeGalleryScrollPositions,
     normalizeGalleryScrollTop,
-    normalizeDroppedFilePath,
     normalizeScreenshotMetadata,
     normalizeScreenshotSearchResult,
     pickRandomScreenshotPath,
@@ -26,33 +24,6 @@ import {
 } from './screenshotMetadataValues';
 
 describe('screenshotMetadataValues', () => {
-    it('reads a dropped screenshot path from files, file URLs, or plain text', () => {
-        expect(
-            getDroppedScreenshotPath({
-                dataTransfer: {
-                    files: [{ path: 'D:\\VRChat\\Photos\\shot.png' }],
-                    getData: () => ''
-                }
-            })
-        ).toBe('D:\\VRChat\\Photos\\shot.png');
-
-        expect(
-            normalizeDroppedFilePath(
-                '\n file:///C:/Users/Alice/Pictures/VRChat%20Shot.png\n'
-            )
-        ).toBe('C:/Users/Alice/Pictures/VRChat Shot.png');
-
-        expect(
-            getDroppedScreenshotPath({
-                dataTransfer: {
-                    files: [],
-                    getData: (type: string) =>
-                        type === 'text/plain' ? 'D:\\VRChat\\fallback.png' : ''
-                }
-            })
-        ).toBe('D:\\VRChat\\fallback.png');
-    });
-
     it('normalizes screenshot metadata so the page can render stable details', () => {
         const metadata = normalizeScreenshotMetadata(
             {

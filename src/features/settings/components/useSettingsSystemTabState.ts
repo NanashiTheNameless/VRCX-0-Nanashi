@@ -7,6 +7,7 @@ import { toast } from '@/services/toastService';
 import type { AppUpdateMode } from '@/shared/appUpdateMode';
 import { isUpdateCheckDisabledBuild } from '@/shared/buildLabel';
 import { usePreferencesStore } from '@/state/preferencesStore';
+import { markRestartPending } from '@/state/restartPendingStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
 import { useSettingsPageSection } from '../SettingsPageStateContext';
@@ -89,6 +90,7 @@ export function useSettingsSystemTabState() {
                 () => setSystemWindowFramePreference(enabled)
             );
             if (saved) {
+                markRestartPending();
                 toast.add({
                     title: t(
                         'view.settings.general.application.system_window_frame_saved'
@@ -170,9 +172,18 @@ export function useSettingsSystemTabState() {
                 () => setProxyEnabledPreference(enabled)
             );
             if (saved) {
+                markRestartPending();
                 toast.add({
                     type: 'success',
-                    title: t('prompt.proxy_settings.saved_restart_required')
+                    title: t('prompt.proxy_settings.saved_restart_required'),
+                    actionProps: {
+                        children: t(
+                            'view.settings.restart_pending.restart_now'
+                        ),
+                        onClick: () => {
+                            void restartApplication();
+                        }
+                    }
                 });
             }
         },

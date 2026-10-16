@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router';
+
+import { useFileDropTarget } from '@/components/file-drop/useFileDropTarget';
 
 import {
     EMPTY_ASSETS,
@@ -17,6 +20,7 @@ import type {
     GalleryControllerDeps,
     GalleryCropRequest
 } from './galleryTypes';
+import { readDroppedUploadImage } from './inventoryHelpers';
 import { useGalleryActions } from './useGalleryActions';
 import { useGalleryBulkActions } from './useGalleryBulkActions';
 import { useGalleryRuntimeState } from './useGalleryRuntimeState';
@@ -34,6 +38,7 @@ function writeGalleryGridDensityPreference(value: GalleryGridDensity) {
 }
 
 export function useGalleryPageController() {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const uploadInputRef = useRef<HTMLInputElement | null>(null);
@@ -88,6 +93,7 @@ export function useGalleryPageController() {
         refreshAll: refreshAllAssets,
         beginUpload,
         uploadSelectedFile,
+        uploadDroppedFile,
         confirmCroppedUpload,
         deleteFileAsset,
         deletePrint,
@@ -123,6 +129,15 @@ export function useGalleryPageController() {
     } satisfies GalleryControllerDeps);
     const { bulkRunning, deleteSelection, setFavoriteSelection } =
         useGalleryBulkActions({ setAssets });
+    const fileDropActive = useFileDropTarget({
+        enabled: Boolean(currentUserId) && !cropRequest && !uploadingTab,
+        onDrop: async (paths) => {
+            const file = await readDroppedUploadImage(paths, t);
+            if (file) {
+                uploadDroppedFile(file);
+            }
+        }
+    });
     const refreshAllRef = useRef(refreshAllAssets);
     useEffect(() => {
         refreshAllRef.current = refreshAllAssets;
@@ -171,6 +186,7 @@ export function useGalleryPageController() {
         uploadInputRef,
         uploadingTab,
         uploadSelectedFile,
+        fileDropActive,
         gridDensity,
         changeGridDensity,
         navigate,

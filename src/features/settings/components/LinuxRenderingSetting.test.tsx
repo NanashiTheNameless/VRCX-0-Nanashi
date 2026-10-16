@@ -33,6 +33,7 @@ vi.mock('@/services/shellIntegrationService', () => ({
 }));
 vi.mock('@/services/toastService', () => ({ toast: { add: mocks.toast } }));
 import { useCriticalTaskStore } from '@/state/criticalTaskStore';
+import { useRestartPendingStore } from '@/state/restartPendingStore';
 
 import { LinuxRenderingSetting } from './LinuxRenderingSetting';
 
@@ -46,6 +47,7 @@ beforeEach(() => {
     }));
     mocks.restart.mockResolvedValue(undefined);
     useCriticalTaskStore.setState({ activeTasks: [] });
+    useRestartPendingStore.setState({ pending: false });
 });
 
 describe('Linux rendering setting', () => {
@@ -63,6 +65,7 @@ describe('Linux rendering setting', () => {
             await waitFor(() => expect(mocks.toast).toHaveBeenCalledOnce());
             expect(mocks.set).toHaveBeenCalledWith(!enabled);
             expect(mocks.restart).not.toHaveBeenCalled();
+            expect(useRestartPendingStore.getState().pending).toBe(true);
             mocks.toast.mock.calls[0][0].actionProps.onClick();
             expect(mocks.restart).toHaveBeenCalledOnce();
         }
@@ -78,6 +81,7 @@ describe('Linux rendering setting', () => {
         fireEvent.click(toggle);
         await screen.findByText('linux_rendering.failed');
         expect(mocks.toast).not.toHaveBeenCalled();
+        expect(useRestartPendingStore.getState().pending).toBe(false);
         expect(toggle.getAttribute('aria-checked')).toBe('false');
     });
 

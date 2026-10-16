@@ -11,6 +11,7 @@ import {
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { FileDropOverlay } from '@/components/file-drop/FileDropOverlay';
 import {
     EmptyState,
     LoadingState,
@@ -367,6 +368,14 @@ export function InventoryPage() {
 
     return (
         <PageScaffold className="gallery-page">
+            <FileDropOverlay
+                active={inventory.fileDropActive}
+                label={t('view.tools.file_drop.upload_to', {
+                    target: t(
+                        CATEGORY_DEFINITIONS[inventory.activeCategory].labelKey
+                    )
+                })}
+            />
             <Input
                 ref={inventory.uploadInputRef}
                 type="file"
