@@ -233,12 +233,12 @@ async fn same_port_is_a_no_op() {
 #[tokio::test]
 async fn stopped_port_change_probes_before_writing_config() {
     let config = Arc::new(MemoryConfig::default());
+    let occupied = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let occupied_port = occupied.local_addr().unwrap().port();
     let original_port = unused_port();
     config
         .set_string(INTEGRATION_API_PORT_CONFIG_KEY, &original_port.to_string())
         .unwrap();
-    let occupied = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
-    let occupied_port = occupied.local_addr().unwrap().port();
     let controller = controller(config.clone());
 
     assert!(matches!(
