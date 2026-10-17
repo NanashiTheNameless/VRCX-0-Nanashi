@@ -382,7 +382,7 @@ export function buildFavoriteAvatarHistoryGroups({
             key: 'local-history',
             label: translate('view.favorite.avatars.local_history'),
             count: avatarHistoryLength,
-            capacity: 100,
+            capacity: 0,
             visibility: ''
         }
     ];

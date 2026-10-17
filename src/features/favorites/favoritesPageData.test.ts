@@ -1,10 +1,32 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    buildFavoriteAvatarHistoryGroups,
     buildFavoriteAvatarHistoryItems,
     buildFavoriteLocalItemsByGroup,
     buildFavoriteRemoteItemsByGroup
 } from './favoritesPageData';
+
+describe('buildFavoriteAvatarHistoryGroups', () => {
+    it('reports the history count without a fixed capacity', () => {
+        expect(
+            buildFavoriteAvatarHistoryGroups({
+                kind: 'avatar',
+                avatarHistoryLength: 150,
+                t: (key: string) => key
+            })
+        ).toEqual([
+            {
+                source: 'history',
+                key: 'local-history',
+                label: 'view.favorite.avatars.local_history',
+                count: 150,
+                capacity: 0,
+                visibility: ''
+            }
+        ]);
+    });
+});
 
 function buildWorldItems({
     remoteWorldDetail,
