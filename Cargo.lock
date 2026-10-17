@@ -156,9 +156,6 @@ name = "arbitrary"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3bc62ac97cc33321f50863d514c3bc38a453947a8f9e781137e47c7401020aed"
-dependencies = [
- "derive_arbitrary",
-]
 
 [[package]]
 name = "arboard"
@@ -1833,17 +1830,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e9de72ce2ad1f90dc62fa25f0f430ef85eb4b0d8fa0be4f30373bc40a21d28e"
 dependencies = [
  "serde_core",
-]
-
-[[package]]
-name = "derive_arbitrary"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b034bd7d5f032402a2479444dcc6f74e36a03f31854d41680fb240ef682a1ac"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 3.0.9",
 ]
 
 [[package]]
@@ -8574,9 +8560,8 @@ dependencies = [
 
 [[package]]
 name = "tauri-plugin-updater"
-version = "2.13.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "855a336eb389d2c1502244fd48fa2d8cb487a430f691bbaed025195f99a04489"
+version = "2.14.0"
+source = "git+https://github.com/tauri-apps/plugins-workspace?rev=f36ba7ba48695776bc11cce0bfdc45678ec24f72#f36ba7ba48695776bc11cce0bfdc45678ec24f72"
 dependencies = [
  "base64 0.22.1",
  "dirs 7.0.0",
@@ -8603,7 +8588,7 @@ dependencies = [
  "tokio",
  "url",
  "windows-sys 0.61.2",
- "zip 4.6.1",
+ "zip",
 ]
 
 [[package]]
@@ -8767,7 +8752,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix 1.1.5",
  "windows-sys 0.61.2",
@@ -9914,7 +9899,7 @@ dependencies = [
  "vrcx-0-core",
  "vrcx-0-http-client",
  "vrcx-0-logger-protocol",
- "zip 9.0.3",
+ "zip",
 ]
 
 [[package]]
@@ -10085,7 +10070,7 @@ dependencies = [
  "vrcx-0-platform",
  "vrcx-0-vrchat-client",
  "walkdir",
- "zip 9.0.3",
+ "zip",
 ]
 
 [[package]]
@@ -10133,7 +10118,7 @@ dependencies = [
  "vrcx-0-contracts",
  "vrcx-0-core",
  "vrcx-0-platform",
- "zip 9.0.3",
+ "zip",
  "zstd",
 ]
 
@@ -10280,7 +10265,7 @@ dependencies = [
  "vrcx-0-core",
  "vrcx-0-http-client",
  "windows-sys 0.61.2",
- "zip 9.0.3",
+ "zip",
 ]
 
 [[package]]
@@ -11697,18 +11682,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 3.0.9",
-]
-
-[[package]]
-name = "zip"
-version = "4.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "caa8cd6af31c3b31c6631b8f483848b91589021b28fffe50adada48d4f4d2ed1"
-dependencies = [
- "arbitrary",
- "crc32fast",
- "indexmap 2.14.2",
- "memchr",
 ]
 
 [[package]]

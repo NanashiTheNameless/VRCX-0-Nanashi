@@ -77,7 +77,7 @@ fn switching_to_newest_at_the_bottom_redraws_the_open_window_right_away() {
         .set_bool(DESKTOP_WIDGET_NEWEST_ON_TOP_CONFIG_KEY, false)
         .unwrap();
     widget.runtime.reload_settings();
-    std::thread::sleep(Duration::from_millis(200));
+    std::thread::sleep(Duration::from_millis(350));
     click(
         handle,
         (widget.bounds.height as f32) - 18.0 * scale_of(handle),
@@ -98,7 +98,7 @@ fn scale_of(handle: isize) -> f32 {
 }
 
 fn click(handle: isize, y: f32) {
-    let x = (40.0 * scale_of(handle)) as isize;
+    let x = (14.0 * scale_of(handle)) as isize;
     let point = ((y as isize) << 16) | x;
     unsafe {
         SendMessageW(handle as _, WM_MOUSEMOVE, 0, point);

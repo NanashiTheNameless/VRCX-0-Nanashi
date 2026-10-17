@@ -40,7 +40,11 @@ tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 tauri-plugin-autostart = "2"
 tauri-plugin-window-state = "2"
 percent-encoding = { workspace = true }
-tauri-plugin-updater = "2"
+tauri-plugin-updater = {
+    git = "https://github.com/tauri-apps/plugins-workspace",
+    rev = "f36ba7ba48695776bc11cce0bfdc45678ec24f72",
+    package = "tauri-plugin-updater",
+}
 sha2.workspace = true
 dirs = "6"
 vrcx-0-core = { path = "../crates/core" }
