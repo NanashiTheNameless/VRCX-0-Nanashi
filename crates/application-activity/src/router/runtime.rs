@@ -168,6 +168,7 @@ pub(super) struct ActivityState {
     feed_hidden_user_ids: HashSet<String>,
     hide_all_feed_activity: bool,
     hide_private_location_changes: bool,
+    hide_video_errors: bool,
     current_instance_location: String,
     current_instance_user_ids: HashSet<String>,
     joined_delivery_coverage: HashMap<(String, String), JoinedDeliveryCoverage>,
@@ -190,6 +191,7 @@ impl Default for ActivityState {
             feed_hidden_user_ids: HashSet::new(),
             hide_all_feed_activity: false,
             hide_private_location_changes: false,
+            hide_video_errors: false,
             current_instance_location: String::new(),
             current_instance_user_ids: HashSet::new(),
             joined_delivery_coverage: HashMap::new(),
@@ -370,6 +372,12 @@ impl ActivityRouter {
         }
     }
 
+    pub fn set_hide_video_errors(&self, hide: bool) {
+        if let Ok(mut state) = self.inner.state.lock() {
+            state.hide_video_errors = hide;
+        }
+    }
+
     pub fn set_favorite_groups(&self, favorite_groups: ActivityFavoriteGroups) {
         if let Ok(mut state) = self.inner.state.lock() {
             state.friend_favorite_groups = favorite_groups;
@@ -512,7 +520,10 @@ impl ActivityRouter {
 
             let notifies = !(state.hide_private_location_changes
                 && event.kind == ActivityKind::Gps
-                && parse_location(&event.facts.location).is_private);
+                && parse_location(&event.facts.location).is_private)
+                && !(state.hide_video_errors
+                    && event.kind == ActivityKind::Event
+                    && event.facts.message.starts_with("VideoError:"));
             let wrist = surface_matches(&state, &event, NotificationSurface::Wrist, &definition);
             let desktop = notifies
                 && surface_matches(&state, &event, NotificationSurface::Desktop, &definition);

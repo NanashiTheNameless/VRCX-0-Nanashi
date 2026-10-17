@@ -43,6 +43,7 @@ type SettingsNotificationsPrefs = Pick<
     | 'desktopToast'
     | 'notificationDoNotDisturbEndOnGameStart'
     | 'busyStatusDoNotDisturb'
+    | 'hideVideoErrorNotifications'
     | 'notificationTTS'
     | 'notificationTTSNameMode'
     | 'notificationTTSNickName'
@@ -73,6 +74,7 @@ type SettingsNotificationsTabContentProps = {
     onNotificationTtsModeChange: (value: string) => void;
     onNotificationDoNotDisturbEndOnGameStartChange: (checked: boolean) => void;
     onBusyStatusDoNotDisturbChange: (checked: boolean) => void;
+    onHideVideoErrorNotificationsChange: (checked: boolean) => void;
     onNotificationTtsNameModeChange: (value: string) => void;
     onNotificationTtsTestChange: (value: string) => void;
     onNotificationTtsTestVisibleChange: (visible: boolean) => void;
@@ -127,6 +129,7 @@ export function SettingsNotificationsTabContent({
     onNotificationTtsModeChange,
     onNotificationDoNotDisturbEndOnGameStartChange,
     onBusyStatusDoNotDisturbChange,
+    onHideVideoErrorNotificationsChange,
     onNotificationTtsVoiceChange,
     onNotificationTtsVolumeChange,
     onNotificationTtsNameModeChange,
@@ -202,6 +205,19 @@ export function SettingsNotificationsTabContent({
                     <Switch
                         checked={prefs.busyStatusDoNotDisturb}
                         onCheckedChange={onBusyStatusDoNotDisturbChange}
+                    />
+                </Field>
+                <Field
+                    label={t(
+                        'view.settings.notifications.notifications.do_not_disturb.hide_video_errors'
+                    )}
+                    description={t(
+                        'view.settings.notifications.notifications.do_not_disturb.hide_video_errors_description'
+                    )}
+                >
+                    <Switch
+                        checked={prefs.hideVideoErrorNotifications}
+                        onCheckedChange={onHideVideoErrorNotificationsChange}
                     />
                 </Field>
             </SettingsCard>

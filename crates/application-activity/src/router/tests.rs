@@ -571,6 +571,38 @@ fn moves_to_private_worlds_stay_off_notification_channels_when_hidden() {
 }
 
 #[test]
+fn video_errors_stay_off_notification_channels_when_hidden() {
+    let runtime = ActivityRouter::with_filters(ActivityFilters::from_json(json!({
+        "version": 1,
+        "wrist": { "types": { "Event": { "scope": "on" } } },
+        "desktop": { "types": { "Event": { "scope": "on" } } }
+    })));
+    let sink = TestOverlayActivitySink::default();
+    runtime.set_sink(sink.clone());
+    runtime.arm_delivery();
+    runtime.set_hide_video_errors(true);
+    let game_event = |source_id: &str, message: &str| {
+        let mut event = recent_event(ActivityKind::Event, "");
+        event.source_id = source_id.to_string();
+        event.facts.message = message.to_string();
+        event
+    };
+
+    runtime.ingest(game_event("video-error", "VideoError: Video not found"));
+
+    assert_eq!(runtime.snapshot().entries.len(), 1);
+    assert!(sink.take_deliveries().is_empty());
+
+    runtime.ingest(game_event(
+        "shader",
+        "Shader Keyword Limit has been reached",
+    ));
+    let deliveries = sink.take_deliveries();
+    assert_eq!(deliveries.len(), 1);
+    assert!(deliveries[0].desktop);
+}
+
+#[test]
 fn current_instance_gps_is_hidden_only_on_surfaces_that_delivered_joined() {
     let runtime =
         ActivityRouter::with_filters(current_instance_gps_filters("friends", "off", "off"));

@@ -169,6 +169,7 @@ export const ConfigKeys = defineConfigKeys({
     desktopNotificationAvatars: { type: 'bool', default: true },
     notificationDoNotDisturbEndOnGameStart: { type: 'bool', default: true },
     busyStatusDoNotDisturb: { type: 'bool', default: true },
+    hideVideoErrorNotifications: { type: 'bool', default: false },
     notificationLayout: { type: 'string', default: null },
     notificationTTS: { type: 'string', default: 'Never' },
     notificationTTSVoiceNative: { type: 'string', default: '' },

@@ -261,6 +261,11 @@ pub fn apply_location_notification_rules(
             .get_bool("hidePrivateFromFeed", false)
             .unwrap_or(false),
     );
+    activity_router.set_hide_video_errors(
+        config
+            .get_bool("hideVideoErrorNotifications", false)
+            .unwrap_or(false),
+    );
 }
 
 fn load_feed_hidden_notification_user_ids(config: &dyn NotificationConfig) -> HashSet<String> {

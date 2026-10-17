@@ -365,6 +365,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     desktopNotificationAvatars: true,
     notificationDoNotDisturbEndOnGameStart: true,
     busyStatusDoNotDisturb: true,
+    hideVideoErrorNotifications: false,
     notificationTTS: 'Never',
     notificationTTSNameMode: 'username',
     notificationTTSNickName: false,
@@ -586,6 +587,9 @@ export function normalizePreferenceSnapshot(snapshot: unknown = {}) {
             next.notificationDoNotDisturbEndOnGameStart
         ),
         busyStatusDoNotDisturb: normalizeBool(next.busyStatusDoNotDisturb),
+        hideVideoErrorNotifications: normalizeBool(
+            next.hideVideoErrorNotifications
+        ),
         notificationTTS: String(next.notificationTTS || 'Never'),
         notificationTTSNameMode: normalizeNotificationTtsNameMode(
             next.notificationTTSNameMode,

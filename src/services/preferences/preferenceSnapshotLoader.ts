@@ -170,6 +170,7 @@ export async function loadPreferenceSnapshot() {
         desktopNotificationAvatars,
         notificationDoNotDisturbEndOnGameStart,
         busyStatusDoNotDisturb,
+        hideVideoErrorNotifications,
         notificationTTS,
         notificationTTSNickName,
         notificationTTSNameMode,
@@ -340,6 +341,7 @@ export async function loadPreferenceSnapshot() {
             true
         ),
         configRepository.getBool('busyStatusDoNotDisturb', true),
+        configRepository.getBool('hideVideoErrorNotifications', false),
         configRepository.getString('notificationTTS', 'Never'),
         configRepository.getBool('notificationTTSNickName', false),
         configRepository.getString('notificationTTSNameMode', ''),
@@ -585,6 +587,7 @@ export async function loadPreferenceSnapshot() {
             notificationDoNotDisturbEndOnGameStart
         ),
         busyStatusDoNotDisturb: Boolean(busyStatusDoNotDisturb),
+        hideVideoErrorNotifications: Boolean(hideVideoErrorNotifications),
         notificationTTS: notificationTTS || 'Never',
         notificationTTSNickName: Boolean(notificationTTSNickName),
         notificationTTSNameMode: normalizeNotificationTtsNameMode(

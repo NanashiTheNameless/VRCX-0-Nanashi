@@ -23,6 +23,7 @@ export function useSettingsNotificationsTabState() {
             notificationDoNotDisturbEndOnGameStart:
                 state.notificationDoNotDisturbEndOnGameStart,
             busyStatusDoNotDisturb: state.busyStatusDoNotDisturb,
+            hideVideoErrorNotifications: state.hideVideoErrorNotifications,
             notificationTTS: state.notificationTTS,
             notificationTTSVoiceNative: state.notificationTTSVoiceNative,
             notificationTTSVolume: state.notificationTTSVolume,
@@ -133,6 +134,13 @@ export function useSettingsNotificationsTabState() {
             saveBoolPreference(
                 'busyStatusDoNotDisturb',
                 'busyStatusDoNotDisturb',
+                enabled
+            );
+        },
+        onHideVideoErrorNotificationsChange: (enabled: boolean) => {
+            saveBoolPreference(
+                'hideVideoErrorNotifications',
+                'hideVideoErrorNotifications',
                 enabled
             );
         },

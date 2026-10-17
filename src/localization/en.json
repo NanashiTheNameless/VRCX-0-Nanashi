@@ -3418,7 +3418,9 @@
                         "end_on_game_start": "Turn off when VRChat starts",
                         "end_on_game_start_description": "Only applies when VRChat changes from stopped to running. You can turn Do Not Disturb on again while playing.",
                         "busy_status": "Turn on while your status is Do Not Disturb",
-                        "busy_status_description": "While your VRChat status is Do Not Disturb, notifications pause the same way as Do Not Disturb mode."
+                        "busy_status_description": "While your VRChat status is Do Not Disturb, notifications pause the same way as Do Not Disturb mode.",
+                        "hide_video_errors": "Don't notify video playback errors",
+                        "hide_video_errors_description": "When a video player fails (for example, YouTube won't load), no desktop notification, TTS, VR notification, or webhook is sent."
                     },
                     "vr_notifications": {
                         "header": "VR Overlay Notifications",
