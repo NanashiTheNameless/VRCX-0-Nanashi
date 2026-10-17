@@ -78,10 +78,8 @@ fn switching_to_newest_at_the_bottom_redraws_the_open_window_right_away() {
         .unwrap();
     widget.runtime.reload_settings();
     std::thread::sleep(Duration::from_millis(350));
-    click(
-        handle,
-        (widget.bounds.height as f32) - 18.0 * scale_of(handle),
-    );
+    let height = window_rect(handle).height as f32;
+    click(handle, height - 12.0 * scale_of(handle));
 
     assert_eq!(
         widget.host.targets.lock().unwrap().clone(),
