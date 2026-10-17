@@ -605,6 +605,15 @@ jobs:
               env:
                   GH_TOKEN: ${{ github.token }}
               run: |
+                  rolling_assets=()
+                  for asset in release-assets/*; do
+                      case "$(basename "$asset")" in
+                          vrcx-0-nanashi-headless-linux-amd64.json) ;;
+                          vrcx-0-nanashi-headless*|vrcx-0-logger*) continue ;;
+                      esac
+                      rolling_assets+=("$asset")
+                  done
+
                   # Rolling tag that always points at the newest nightly build and is
                   # the repository's "latest" release, so releases/latest/download/*
                   # always serves the newest build. Its tag name is not semver, so the
@@ -628,10 +637,10 @@ jobs:
                           | while read -r asset_id; do
                               gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$asset_id" || true
                           done
-                      gh release upload Nightly-Rolling release-assets/* \
+                      gh release upload Nightly-Rolling "${rolling_assets[@]}" \
                           --repo "$GITHUB_REPOSITORY" --clobber
                   else
-                      gh release create Nightly-Rolling release-assets/* \
+                      gh release create Nightly-Rolling "${rolling_assets[@]}" \
                           --repo "$GITHUB_REPOSITORY" \
                           --verify-tag \
                           --latest \
