@@ -6,7 +6,7 @@ ping, so the developer can see how many people run the fork. The two are differe
 |                        | Upstream-style telemetry (removed)                                                                      | Adoption count (this fork)                                                                                                                               |
 | ---------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Purpose                | Usage stats, heartbeats, crash reports, feedback uploads, theme install counts                          | Count installs in use per day                                                                                                                            |
-| What is sent           | Usage, crash and feedback data                                                                          | A SHA-256 hash of a random install ID, the app name, the UTC date and the number 1                                                                       |
+| What is sent           | Usage, crash and feedback data                                                                          | A SHA-256 hash of a random install ID and the app name                                                                                                   |
 | Tied to you            | Not applicable, removed                                                                                 | No. The ID is a random UUID made on your PC. It is not derived from your VRChat account, your hardware or your settings, and only its hash leaves the PC |
 | Crash or error data    | Yes                                                                                                     | Never                                                                                                                                                    |
 | Which features you use | Yes                                                                                                     | Never                                                                                                                                                    |
@@ -20,7 +20,7 @@ How the adoption count works:
   each install once per UTC day and keeps only a per-day total. The marker it uses to avoid
   counting an install twice expires after about 10 days, and daily totals after about a year.
 - The request body is
-  `{"id": "<sha256 hex>", "date": "<UTC date>", "project": "VRCX-0-Nanashi", "count": 1}`
+  `{"id": "<sha256 hex>", "project": "VRCX-0-Nanashi"}`
   and nothing else.
   Like every request the app makes, it carries the app's user agent (app name and version) and
   comes from your IP address, or your proxy's if you set one. The service's code stores neither.

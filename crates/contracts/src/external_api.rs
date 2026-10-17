@@ -252,13 +252,9 @@ pub fn vrc_status_json_get_input(path: &str) -> ExternalHttpRequestInput {
 }
 
 /// The anonymous adoption count. The body is the whole report: a SHA-256 of a
-/// random install id, the project name, the UTC day and a count of one.
+/// random install id and the project name.
 /// Nothing about the user or VRChat.
-pub fn adoption_census_post_input(
-    id_hash: &str,
-    project: &str,
-    utc_date: &str,
-) -> ExternalHttpRequestInput {
+pub fn adoption_census_post_input(id_hash: &str, project: &str) -> ExternalHttpRequestInput {
     ExternalHttpRequestInput {
         url: Some(format!("{ADOPTION_CENSUS_ORIGIN}{ADOPTION_CENSUS_PATH}")),
         method: Some(ExternalHttpMethod::Post),
@@ -268,9 +264,7 @@ pub fn adoption_census_post_input(
         )])),
         body: Some(json!({
             "id": id_hash,
-            "date": utc_date,
             "project": project,
-            "count": 1,
         })),
         ..Default::default()
     }

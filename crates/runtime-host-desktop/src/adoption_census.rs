@@ -1,8 +1,8 @@
 //! Anonymous adoption count: how many installs of the fork are in use.
 //!
 //! This is the only thing the app reports to the developer. A report is the
-//! SHA-256 of a random install id, the project name, the UTC day and a count
-//! of one; the service counts each id once per UTC day. It carries no VRChat account, usage, settings,
+//! SHA-256 of a random install id and the project name; the service counts
+//! each id once per UTC day. It carries no VRChat account, usage, settings,
 //! hardware or crash data, and nothing here may grow to include any.
 
 use std::path::{Path, PathBuf};
@@ -61,11 +61,8 @@ pub(crate) fn start_adoption_census_loop(state: &RuntimeHostState) {
                 if adoption_census_enabled(&config) {
                     match install_id_hash(&id_path) {
                         Ok(id_hash) => {
-                            let input = external_api::adoption_census_post_input(
-                                &id_hash,
-                                APP_NAME,
-                                &chrono::Utc::now().format("%Y-%m-%d").to_string(),
-                            );
+                            let input =
+                                external_api::adoption_census_post_input(&id_hash, APP_NAME);
                             if let Err(error) = web
                                 .execute_external_api(input, ExternalApiScope::AdoptionCensus)
                                 .await

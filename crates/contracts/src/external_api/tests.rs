@@ -371,10 +371,10 @@ fn only_credential_free_scopes_allow_http1() {
 }
 
 #[test]
-fn adoption_census_contract_sends_only_the_id_date_project_and_count() {
+fn adoption_census_contract_sends_only_the_id_and_project() {
     let id_hash = "a".repeat(64);
     let request = build_web_execute_request(
-        adoption_census_post_input(&id_hash, "VRCX-0-Nanashi", "2026-10-12"),
+        adoption_census_post_input(&id_hash, "VRCX-0-Nanashi"),
         ExternalApiScope::AdoptionCensus,
     )
     .expect("census request");
@@ -390,9 +390,7 @@ fn adoption_census_contract_sends_only_the_id_date_project_and_count() {
             .expect("census json"),
         json!({
             "id": id_hash,
-            "date": "2026-10-12",
             "project": "VRCX-0-Nanashi",
-            "count": 1,
         })
     );
     assert!(!request.follow_redirects);
