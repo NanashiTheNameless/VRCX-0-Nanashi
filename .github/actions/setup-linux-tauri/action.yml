@@ -1,5 +1,5 @@
 name: Setup Linux Tauri
-description: Install Linux dependencies for CI checks or pinned package builds.
+description: Install maintained Linux dependencies for CI checks or package builds.
 
 inputs:
     mode:
@@ -36,7 +36,6 @@ runs:
                   exit 1
               fi
 
-              webkitgtk_version="2.44.0-2"
               sudo apt-get install -y --no-install-recommends \
                   build-essential \
                   clang \
@@ -56,10 +55,10 @@ runs:
                   wget
               sudo apt-get install -y --no-install-recommends \
                   libgtk-3-dev \
-                  libwebkit2gtk-4.1-0="$webkitgtk_version" \
-                  libwebkit2gtk-4.1-dev="$webkitgtk_version" \
-                  libjavascriptcoregtk-4.1-0="$webkitgtk_version" \
-                  libjavascriptcoregtk-4.1-dev="$webkitgtk_version" \
-                  gir1.2-javascriptcoregtk-4.1="$webkitgtk_version" \
-                  gir1.2-webkit2-4.1="$webkitgtk_version"
+                  libwebkit2gtk-4.1-0 \
+                  libwebkit2gtk-4.1-dev \
+                  libjavascriptcoregtk-4.1-0 \
+                  libjavascriptcoregtk-4.1-dev \
+                  gir1.2-javascriptcoregtk-4.1 \
+                  gir1.2-webkit2-4.1
           shell: bash

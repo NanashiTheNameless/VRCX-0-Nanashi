@@ -35,8 +35,8 @@ tokio = { workspace = true, features = [
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-notification = "2"
-tauri-plugin-deep-link = "2"
-tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
+tauri-plugin-deep-link = "=2.6.1"
+tauri-plugin-single-instance = { version = "=2.5.3", features = ["deep-link"] }
 tauri-plugin-autostart = "2"
 tauri-plugin-window-state = "2"
 percent-encoding = { workspace = true }

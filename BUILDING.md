@@ -1,6 +1,6 @@
 # Building from source
 
-Requirements: Node.js >= 24.10, npm >= 11.5, and a stable Rust toolchain via rustup
+Requirements: Node.js >= 24.15, npm >= 11.5, and a stable Rust toolchain via rustup
 (rustc >= 1.95). On Windows, also install **Visual Studio Build Tools** with the
 **Desktop development with C++** workload. On Linux, install the WebKitGTK 4.1
 development packages, for example on Debian/Ubuntu:
@@ -9,6 +9,11 @@ development packages, for example on Debian/Ubuntu:
 sudo apt install libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-dev \
   librsvg2-dev libayatana-appindicator3-dev libasound2-dev
 ```
+
+Linux CI and AppImage builds use the maintained WebKitGTK and JavaScriptCore
+packages from Ubuntu 24.04, including its security updates. The `4.1` in the
+package names is the API version, not the WebKit engine version. macOS uses the
+system WebKit, updated with macOS and Safari; Windows uses WebView2.
 
 ```bash
 git clone https://github.com/NanashiTheNameless/VRCX-0-Nanashi
