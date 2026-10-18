@@ -1,18 +1,18 @@
 use std::net::{IpAddr, SocketAddr};
 use std::path::PathBuf;
 
-const PASSWORD_ENV: &str = "VRCX0_LOGGER_PASSWORD";
+pub const PASSWORD_ENV: &str = "VRCX0_LOGGER_PASSWORD";
 const PASSWORD_FILE_ENV: &str = "VRCX0_LOGGER_PASSWORD_FILE";
-const HOST_ENV: &str = "VRCX0_LOGGER_HOST";
-const PORT_ENV: &str = "VRCX0_LOGGER_PORT";
-const DATA_DIR_ENV: &str = "VRCX0_LOGGER_DATA_DIR";
-const RETENTION_DAYS_ENV: &str = "VRCX0_LOGGER_RETENTION_DAYS";
-const MAX_STORAGE_MB_ENV: &str = "VRCX0_LOGGER_MAX_STORAGE_MB";
+pub const HOST_ENV: &str = "VRCX0_LOGGER_HOST";
+pub const PORT_ENV: &str = "VRCX0_LOGGER_PORT";
+pub const DATA_DIR_ENV: &str = "VRCX0_LOGGER_DATA_DIR";
+pub const RETENTION_DAYS_ENV: &str = "VRCX0_LOGGER_RETENTION_DAYS";
+pub const MAX_STORAGE_MB_ENV: &str = "VRCX0_LOGGER_MAX_STORAGE_MB";
 
-const DEFAULT_HOST: &str = "0.0.0.0";
-const DEFAULT_PORT: u16 = 8787;
+pub const DEFAULT_HOST: &str = "0.0.0.0";
+pub const DEFAULT_PORT: u16 = 8787;
 const DEFAULT_DATA_DIR: &str = "data";
-const DEFAULT_MAX_STORAGE_MB: u64 = 1024;
+pub const DEFAULT_MAX_STORAGE_MB: u64 = 1024;
 
 pub struct Config {
     pub password: String,
@@ -30,7 +30,7 @@ impl Config {
         )
     }
 
-    fn from_sources(
+    pub fn from_sources(
         env: impl Fn(&str) -> Option<String>,
         read_file: impl Fn(&str) -> Result<String, String>,
     ) -> Result<Self, String> {
