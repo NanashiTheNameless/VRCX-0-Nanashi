@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import {
     checkCanInvite,
     resolveCurrentInviteLocation,
+    resolveInviteLocation,
     type CheckCanInviteDeps
 } from '@/shared/utils/invite';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -19,7 +20,10 @@ export function useCurrentInviteContext(
     const currentUserLocation = useRuntimeStore(
         (state) => state.auth.currentUserSnapshot?.location
     );
-    const currentLocation = useRuntimeStore(
+    const currentUserPresence = useRuntimeStore(
+        (state) => state.auth.currentUserSnapshot?.$presence
+    );
+    const gameCurrentLocation = useRuntimeStore(
         (state) => state.gameState.currentLocation
     );
     const currentDestination = useRuntimeStore(
@@ -28,9 +32,23 @@ export function useCurrentInviteContext(
     const isGameRunning = useRuntimeStore(
         (state) => state.gameState.isGameRunning
     );
-    const currentInviteLocation = resolveCurrentInviteLocation(
-        { currentLocation, currentDestination, isGameRunning },
-        { $locationTag: currentUserLocationTag, location: currentUserLocation }
+    const gameState = {
+        currentLocation: gameCurrentLocation,
+        currentDestination,
+        isGameRunning
+    };
+    const currentUserSnapshot = {
+        $locationTag: currentUserLocationTag,
+        location: currentUserLocation,
+        $presence: currentUserPresence
+    };
+    const currentLocation = resolveCurrentInviteLocation(
+        gameState,
+        currentUserSnapshot
+    );
+    const currentInviteLocation = resolveInviteLocation(
+        gameState,
+        currentUserSnapshot
     );
     const canInviteFromCurrentLocation = useMemo(
         () =>
@@ -42,12 +60,11 @@ export function useCurrentInviteContext(
         [cachedInstances, currentInviteLocation, currentUserId]
     );
     return {
+        currentLocation,
         currentInviteLocation,
         canInviteFromCurrentLocation,
         canSendInvite: Boolean(
-            isGameRunning &&
-            currentInviteLocation &&
-            canInviteFromCurrentLocation
+            currentInviteLocation && canInviteFromCurrentLocation
         )
     };
 }

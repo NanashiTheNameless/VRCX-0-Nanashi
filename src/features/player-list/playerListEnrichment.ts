@@ -316,12 +316,9 @@ export function enrichPlayerListRows({
                     userRef?.moderations?.timeoutTime ??
                     0
             ) || 0;
-        const ageVerified = Boolean(
-            row.ageVerified ||
-            userRef?.ageVerified ||
+        const ageVerified =
             row.ageVerificationStatus === '18+' ||
-            userRef?.ageVerificationStatus === '18+'
-        );
+            userRef?.ageVerificationStatus === '18+';
         let moderationSeverity: PlayerListRow['moderationSeverity'] = '';
         if (normalizedUserId) {
             if (isBlocked) {

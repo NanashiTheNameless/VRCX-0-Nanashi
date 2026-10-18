@@ -182,7 +182,7 @@ export function UserDialogHeaderAttributes({
         }
     ];
 
-    if (profile.ageVerified) {
+    if (profile.ageVerified && profile.ageVerificationStatus) {
         items.push({
             key: 'age-verified',
             hint: t('dialog.user.label.age_verified'),
@@ -192,7 +192,7 @@ export function UserDialogHeaderAttributes({
                         aria-hidden="true"
                         className="size-3.5 shrink-0"
                     />
-                    18+
+                    {profile.ageVerificationStatus === '18+' ? '18+' : null}
                 </span>
             )
         });

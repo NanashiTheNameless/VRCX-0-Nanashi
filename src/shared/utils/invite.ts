@@ -1,4 +1,4 @@
-import type { PresenceView } from '@/domain/friends/presence';
+import { presenceOf, type PresenceView } from '@/domain/friends/presence';
 
 import { parseLocation } from './location';
 
@@ -32,6 +32,7 @@ export interface InviteLocationGameState {
 export interface InviteLocationCurrentUserSnapshot {
     $locationTag?: string | null;
     location?: string | null;
+    $presence?: unknown;
 }
 
 export type LocalInstanceActionGateTarget = {
@@ -97,6 +98,19 @@ function resolveCurrentInviteLocation(
             currentUserSnapshot?.$locationTag || currentUserSnapshot?.location
         )
     );
+}
+
+function resolveInviteLocation(
+    gameState: InviteLocationGameState | null | undefined,
+    currentUserSnapshot: InviteLocationCurrentUserSnapshot | null | undefined
+): string {
+    if (gameState?.isGameRunning === true) {
+        return resolveCurrentInviteLocation(gameState, currentUserSnapshot);
+    }
+    const presence = presenceOf(currentUserSnapshot);
+    return presence?.kind === 'online' && presence.place.location.isRealInstance
+        ? presence.place.location.tag
+        : '';
 }
 
 function getCachedInstance(
@@ -257,11 +271,7 @@ function evaluateLocalInstanceActionGates({
                 canSelfInvite,
                 canRequestInvite:
                     target.presenceKind === 'online' && !isCurrentUser,
-                canInvite: Boolean(
-                    isGameRunning &&
-                    !isCurrentUser &&
-                    canInviteFromCurrentLocation
-                )
+                canInvite: !isCurrentUser && canInviteFromCurrentLocation
             };
         })
     };
@@ -301,5 +311,6 @@ export {
     checkCanInvite,
     checkCanInviteSelf,
     evaluateLocalInstanceActionGates,
-    resolveCurrentInviteLocation
+    resolveCurrentInviteLocation,
+    resolveInviteLocation
 };

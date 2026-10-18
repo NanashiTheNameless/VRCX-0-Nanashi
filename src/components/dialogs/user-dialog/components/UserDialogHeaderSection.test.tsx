@@ -219,6 +219,29 @@ describe('UserDialogHeaderSection nameplate', () => {
     });
 });
 
+describe('UserDialogHeaderSection age verification', () => {
+    it.each([
+        ['18+', true],
+        ['verified', false]
+    ])(
+        'shows the 18+ label only for adult verification (%s)',
+        (ageVerificationStatus, showsAdultLabel) => {
+            const headerModel = createHeaderModel();
+            headerModel.profile.ageVerified = true;
+            headerModel.profile.ageVerificationStatus = ageVerificationStatus;
+
+            render(
+                <UserDialogHeaderSection
+                    headerModel={headerModel}
+                    headerCommands={createHeaderCommands()}
+                />
+            );
+
+            expect(Boolean(screen.queryByText('18+'))).toBe(showsAdultLabel);
+        }
+    );
+});
+
 describe('UserDialogHeaderSection appearance visibility', () => {
     it('hides the profile background without changing the card structure', () => {
         const headerModel = createHeaderModel();

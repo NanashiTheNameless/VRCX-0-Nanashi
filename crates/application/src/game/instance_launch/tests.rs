@@ -512,7 +512,7 @@ fn check_can_invite_requires_non_standard_private_location_to_match_current_loca
 }
 
 #[test]
-fn gate_batch_blocks_invite_when_game_is_not_running() {
+fn gate_batch_blocks_open_but_not_invite_when_game_is_not_running() {
     let output = evaluate_instance_action_gates(InstanceActionGatesBatchInput {
         current_user_id: "usr_me".to_string(),
         current_invite_location: "wrld_public:12345".to_string(),
@@ -530,7 +530,7 @@ fn gate_batch_blocks_invite_when_game_is_not_running() {
 
     assert!(output.targets[0].can_join);
     assert!(!output.targets[0].can_open_in_game);
-    assert!(!output.targets[0].can_invite);
+    assert!(output.targets[0].can_invite);
 }
 
 #[test]

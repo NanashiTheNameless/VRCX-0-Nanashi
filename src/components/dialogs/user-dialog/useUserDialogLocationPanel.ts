@@ -26,10 +26,7 @@ import {
     recordLocationHintsFromInstances
 } from '@/services/domainIngestionService';
 import { hasUserIdPrefix } from '@/shared/constants/vrchatIds';
-import {
-    checkCanInvite,
-    resolveCurrentInviteLocation
-} from '@/shared/utils/invite';
+import { checkCanInvite, resolveInviteLocation } from '@/shared/utils/invite';
 import { parseLocation } from '@/shared/utils/location';
 import { normalizeString } from '@/shared/utils/string';
 
@@ -251,7 +248,7 @@ export function useUserDialogLocationPanel({
         currentUserSnapshot?.$locationTag || currentUserSnapshot?.location
     );
     const currentInviteLocation = normalizeUserId(
-        resolveCurrentInviteLocation(gameState, currentUserSnapshot)
+        resolveInviteLocation(gameState, currentUserSnapshot)
     );
     const groupInstancesScopeMatches =
         groupInstancesState.userId === currentUserId &&

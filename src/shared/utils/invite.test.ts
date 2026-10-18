@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import type { PresenceView } from '@/domain/friends/presence';
+
 import gateParityCases from './instanceActionGateParityCases.json';
 import {
     buildLocalInstanceActionGateMap,
@@ -7,37 +9,73 @@ import {
     checkCanInviteSelf,
     evaluateLocalInstanceActionGates,
     resolveCurrentInviteLocation,
+    resolveInviteLocation,
     type CheckCanInviteDeps,
     type CheckCanInviteSelfDeps,
     type LocalInstanceActionGates
 } from './invite';
+import { parseLocation } from './location';
+
+function onlineAt(location: string): PresenceView {
+    return {
+        kind: 'online',
+        place: { location: parseLocation(location), travelingTo: null },
+        platform: 'standalonewindows',
+        onlineSinceMs: null
+    };
+}
 
 describe('invite permissions', () => {
-    it('resolves an invite location only while the local game is running', () => {
+    it('resolves the current location only while the local game is running', () => {
         expect(
             resolveCurrentInviteLocation(
-                {
-                    isGameRunning: true,
-                    currentLocation: 'wrld_local:123'
-                },
-                { location: 'wrld_remote:456' }
+                { isGameRunning: true, currentLocation: 'wrld_local:123' },
+                { $presence: onlineAt('wrld_remote:456') }
             )
         ).toBe('wrld_local:123');
         expect(
             resolveCurrentInviteLocation(
+                { isGameRunning: false, currentLocation: 'wrld_remote:456' },
                 {
-                    isGameRunning: false,
-                    currentLocation: 'wrld_remote:456'
-                },
-                { location: 'wrld_remote:456' }
+                    location: 'wrld_remote:456',
+                    $presence: onlineAt('wrld_remote:456')
+                }
             )
         ).toBe('');
+    });
+
+    it('resolves the invite location from the local game before online presence', () => {
         expect(
-            resolveCurrentInviteLocation(
-                { isGameRunning: false },
-                { location: 'wrld_remote:456' }
+            resolveInviteLocation(
+                { isGameRunning: true, currentLocation: 'wrld_local:123' },
+                { $presence: onlineAt('wrld_remote:456') }
             )
-        ).toBe('');
+        ).toBe('wrld_local:123');
+        expect(
+            resolveInviteLocation(
+                { isGameRunning: false, currentLocation: 'wrld_stale:1' },
+                { $presence: onlineAt('wrld_remote:456') }
+            )
+        ).toBe('wrld_remote:456');
+    });
+
+    it('resolves no invite location when the game is not running anywhere', () => {
+        for (const $presence of [
+            undefined,
+            onlineAt('private'),
+            { kind: 'active', platform: 'web' },
+            { kind: 'offline' }
+        ] satisfies (PresenceView | undefined)[]) {
+            expect(
+                resolveInviteLocation(
+                    {
+                        isGameRunning: false,
+                        currentLocation: 'wrld_remote:456'
+                    },
+                    { location: 'wrld_remote:456', $presence }
+                )
+            ).toBe('');
+        }
     });
 
     it('allows invite actions for public, group, and owned private instances', () => {

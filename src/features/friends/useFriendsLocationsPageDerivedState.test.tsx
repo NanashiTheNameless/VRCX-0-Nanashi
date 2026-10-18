@@ -126,6 +126,23 @@ describe('useFriendsLocationsPageDerivedState', () => {
         }
     );
 
+    it('invites from the online presence but keeps the current instance local when the game runs elsewhere', () => {
+        const input = pageInput([friendAt('wrld_remote:1')]);
+        input.gameState = { currentLocation: '', isGameRunning: false };
+        input.currentUserSnapshot = {
+            id: 'usr_self',
+            displayName: 'Me',
+            $presence: onlinePresence('wrld_remote:1')
+        };
+        const { result } = renderHook(() =>
+            useFriendsLocationsPageDerivedState(input)
+        );
+
+        expect(result.current.currentLocation).toBe('');
+        expect(result.current.currentInviteLocation).toBe('wrld_remote:1');
+        expect(result.current.canSendInvite).toBe(true);
+    });
+
     it.each([
         [true, ['usr_fav', 'usr_plain']],
         [false, ['usr_plain']]

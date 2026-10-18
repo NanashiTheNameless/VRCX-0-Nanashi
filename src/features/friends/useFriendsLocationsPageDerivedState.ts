@@ -27,7 +27,8 @@ import {
     checkCanInvite,
     type InviteLocationCurrentUserSnapshot,
     type InviteLocationGameState,
-    resolveCurrentInviteLocation
+    resolveCurrentInviteLocation,
+    resolveInviteLocation
 } from '@/shared/utils/invite';
 import { normalizeString } from '@/shared/utils/string';
 import { computeTrustLevel } from '@/shared/utils/userTransforms';
@@ -213,6 +214,10 @@ export function useFriendsLocationsPageDerivedState({
         () => resolveCurrentInviteLocation(gameState, currentUserSnapshot),
         [gameState, currentUserSnapshot]
     );
+    const inviteLocation = useMemo(
+        () => resolveInviteLocation(gameState, currentUserSnapshot),
+        [gameState, currentUserSnapshot]
+    );
     const currentLocationPlayerIds = gameState?.currentLocationPlayerIds;
     const currentLocationPlayers = gameState?.currentLocationPlayers;
     const currentLocationSnapshot = useMemo(
@@ -235,12 +240,12 @@ export function useFriendsLocationsPageDerivedState({
     );
     const canInviteFromCurrentLocation = useMemo(
         () =>
-            checkCanInvite(currentInviteLocation, {
+            checkCanInvite(inviteLocation, {
                 currentUserId: currentUserId ?? '',
-                lastLocationStr: currentInviteLocation,
+                lastLocationStr: inviteLocation,
                 cachedInstances: new Map()
             }),
-        [currentInviteLocation, currentUserId]
+        [inviteLocation, currentUserId]
     );
     const favoriteGroupLabelsByFriendId = useMemo<Map<string, string[]>>(
         () =>
@@ -1059,9 +1064,7 @@ export function useFriendsLocationsPageDerivedState({
         });
     }, [positionedRows, scrollMetrics.scrollTop, scrollMetrics.viewportHeight]);
     const canSendInvite = Boolean(
-        gameState?.isGameRunning &&
-        currentInviteLocation &&
-        canInviteFromCurrentLocation
+        inviteLocation && canInviteFromCurrentLocation
     );
 
     return {
@@ -1070,7 +1073,8 @@ export function useFriendsLocationsPageDerivedState({
         cardGridMinWidth,
         canInviteFromCurrentLocation,
         canSendInvite,
-        currentInviteLocation,
+        currentLocation: currentInviteLocation,
+        currentInviteLocation: inviteLocation,
         densityConfig,
         favoriteIds,
         friendsMap,

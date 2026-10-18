@@ -99,9 +99,7 @@ pub fn evaluate_instance_action_gates(
                     can_open_in_game,
                     can_self_invite,
                     can_request_invite: is_online && !is_current_user,
-                    can_invite: input.is_game_running
-                        && !is_current_user
-                        && can_invite_from_current_location,
+                    can_invite: !is_current_user && can_invite_from_current_location,
                 }
             })
             .collect(),

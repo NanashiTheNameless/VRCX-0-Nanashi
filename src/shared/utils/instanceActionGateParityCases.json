@@ -150,7 +150,7 @@
         ]
     },
     {
-        "name": "game stopped disables invite and open but not joinability",
+        "name": "game stopped disables open but not invite or joinability",
         "currentUserId": "usr_me",
         "currentInviteLocation": "wrld_public:12345",
         "isGameRunning": false,
@@ -168,7 +168,7 @@
                     "canOpenInGame": false,
                     "canSelfInvite": true,
                     "canRequestInvite": true,
-                    "canInvite": false
+                    "canInvite": true
                 }
             }
         ]

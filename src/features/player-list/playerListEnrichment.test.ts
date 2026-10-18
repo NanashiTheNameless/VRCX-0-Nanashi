@@ -27,6 +27,35 @@ describe('enrichPlayerListRows', () => {
         expect(row.trustSortNum).toBe(5);
     });
 
+    it('marks only adult age verification as 18+', () => {
+        const rows = enrichPlayerListRows({
+            clockNow: Date.parse('2026-05-01T00:00:00.000Z'),
+            context: {},
+            currentUserId: 'usr_self',
+            currentUserSnapshot: null,
+            favoriteFriendIds: new Set(),
+            friendsById: {},
+            playerSourceRows: [
+                { userId: 'usr_adult', displayName: 'Adult' },
+                { userId: 'usr_minor', displayName: 'Minor' }
+            ],
+            profilesByUserId: {
+                usr_adult: {
+                    id: 'usr_adult',
+                    ageVerified: true,
+                    ageVerificationStatus: '18+'
+                },
+                usr_minor: {
+                    id: 'usr_minor',
+                    ageVerified: true,
+                    ageVerificationStatus: 'verified'
+                }
+            }
+        });
+
+        expect(rows.map((row) => row.ageVerified)).toEqual([true, false]);
+    });
+
     it('uses full profile fields while keeping fresher friend presence fields', () => {
         const [row] = enrichPlayerListRows({
             clockNow: Date.parse('2026-05-01T00:00:00.000Z'),

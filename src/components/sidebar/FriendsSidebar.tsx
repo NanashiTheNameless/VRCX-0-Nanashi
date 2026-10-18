@@ -188,11 +188,14 @@ export function FriendsSidebar({
     const { openGroups, statusPresets, toggleSection } =
         useFriendsSidebarPreferences();
     const [recentActionVersion, setRecentActionVersion] = useState(0);
-    const { currentInviteLocation, canInviteFromCurrentLocation } =
-        useCurrentInviteContext();
+    const {
+        currentLocation,
+        currentInviteLocation,
+        canInviteFromCurrentLocation
+    } = useCurrentInviteContext();
     const currentLocationSnapshot = useMemo<SameInstanceLastLocation>(
         () => ({
-            location: currentInviteLocation,
+            location: currentLocation,
             friendList: new Set(
                 resolveObservedPlayerUserIds(
                     effectiveCurrentLocationPlayerIds,
@@ -202,7 +205,7 @@ export function FriendsSidebar({
             )
         }),
         [
-            currentInviteLocation,
+            currentLocation,
             currentLocationPlayers,
             effectiveCurrentLocationPlayerIds,
             friendsById
