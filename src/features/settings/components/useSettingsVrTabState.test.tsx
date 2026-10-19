@@ -125,6 +125,10 @@ describe('useSettingsVrTabState', () => {
         ['onImageNotificationsChange', 'imageNotifications'],
         ['onHmdNotificationsEnabledChange', 'hmdNotificationsEnabled'],
         ['onHmdNotificationAvatarsChange', 'hmdNotificationAvatars'],
+        [
+            'onHmdNotificationTrackerDisconnectChange',
+            'hmdNotificationTrackerDisconnect'
+        ],
         ['onWristOverlayDarkBackgroundChange', 'wristOverlayDarkBackground'],
         [
             'onWristOverlayHidePrivateWorldsChange',

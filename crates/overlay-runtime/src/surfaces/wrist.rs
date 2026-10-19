@@ -341,6 +341,7 @@ pub struct WristOverlayFrameInput {
 pub struct WristRuntimeFooter {
     pub player_count: u32,
     pub instance_duration: String,
+    pub online_duration: String,
     pub local_time: String,
 }
 
@@ -508,7 +509,22 @@ pub fn build_wrist_surface_model(input: WristOverlayFrameInput) -> WristSurfaceM
         }),
         footer: OverlayFooter {
             left: footer_left,
-            center: localized_instance_duration(&localizer, &input.footer.instance_duration),
+            center: [
+                localized_duration(
+                    &localizer,
+                    &input.footer.instance_duration,
+                    OverlayMessage::overlay_footer_instance_duration,
+                ),
+                localized_duration(
+                    &localizer,
+                    &input.footer.online_duration,
+                    OverlayMessage::overlay_footer_online_duration,
+                ),
+            ]
+            .into_iter()
+            .filter(|part| !part.is_empty())
+            .collect::<Vec<_>>()
+            .join(" · "),
             right: input.footer.local_time,
         },
     }
@@ -567,14 +583,16 @@ fn empty_players_line(notes_only: bool) -> FeedLine {
     }
 }
 
-fn localized_instance_duration(localizer: &OverlayLocalizer, duration: &str) -> String {
+fn localized_duration(
+    localizer: &OverlayLocalizer,
+    duration: &str,
+    message: fn(String) -> OverlayMessage,
+) -> String {
     let duration = duration.trim();
     if duration.is_empty() {
         return String::new();
     }
-    localizer.text(&ActivityText::message(
-        OverlayMessage::overlay_footer_instance_duration(duration),
-    ))
+    localizer.text(&ActivityText::message(message(duration.to_string())))
 }
 
 fn device_chip_from_snapshot(snapshot: VrDeviceSnapshot) -> DeviceChip {
@@ -614,7 +632,7 @@ fn device_chip_from_snapshot(snapshot: VrDeviceSnapshot) -> DeviceChip {
     }
 }
 
-fn device_role(label: &str) -> DeviceRole {
+pub(crate) fn device_role(label: &str) -> DeviceRole {
     match label.trim() {
         "HMD" => DeviceRole::Hmd,
         "L" => DeviceRole::LeftController,

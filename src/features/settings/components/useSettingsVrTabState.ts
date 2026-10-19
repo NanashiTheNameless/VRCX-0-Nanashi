@@ -50,6 +50,8 @@ export function useSettingsVrTabState() {
             hmdNotificationPosition: state.hmdNotificationPosition,
             hmdNotificationStyle: state.hmdNotificationStyle,
             hmdNotificationAvatars: state.hmdNotificationAvatars,
+            hmdNotificationTrackerDisconnect:
+                state.hmdNotificationTrackerDisconnect,
             wristOverlayEnabled: state.wristOverlayEnabled,
             wristOverlayStartMode: state.wristOverlayStartMode,
             wristOverlayButton: state.wristOverlayButton,
@@ -184,6 +186,13 @@ export function useSettingsVrTabState() {
             saveBoolPreference(
                 'hmdNotificationAvatars',
                 'hmdNotificationAvatars',
+                enabled
+            );
+        },
+        onHmdNotificationTrackerDisconnectChange: (enabled: boolean) => {
+            saveBoolPreference(
+                'hmdNotificationTrackerDisconnect',
+                'hmdNotificationTrackerDisconnect',
                 enabled
             );
         },

@@ -2,10 +2,15 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use vrcx_0_application_activity::{ActivityActorRelation, ActivityDelivery, ActivityEntry};
+use chrono::Utc;
+use vrcx_0_application_activity::{
+    ActivityActorRelation, ActivityCategory, ActivityContent, ActivityDelivery, ActivityEntry,
+    ActivityText,
+};
 use vrcx_0_application_core::WorldCache;
 use vrcx_0_contracts::activity::ActivityKind;
 use vrcx_0_core::location::{is_meaningful_world_name, parse_location, world_id_from_location};
+use vrcx_0_i18n::OverlayMessage;
 use vrcx_0_vr_overlay::{AvatarBitmap, OverlaySurfaceId, RgbaFrame, MAIN_SURFACE_ID};
 
 use super::super::manager::VrOverlayManager;
@@ -14,6 +19,7 @@ use super::super::runtime::{
 };
 use super::super::service::HostVrOverlayService;
 use super::super::test_preview::test_hmd_toast_views;
+use super::super::tracker_watch::TrackerDisconnect;
 use super::main::{build_main_surface_model, HmdToastView, MainOverlayFrameInput};
 
 const HMD_TOAST_CAPACITY: usize = 3;
@@ -83,6 +89,24 @@ impl VrOverlayRuntime {
         }
         self.reconcile_current();
         self.spawn_avatar_fetch(&entry);
+    }
+
+    pub(crate) fn deliver_tracker_disconnect_toast(&self, disconnect: TrackerDisconnect) {
+        let config = self.current_runtime_config();
+        if !config.hmd.tracker_disconnect
+            || !self.hmd_notifications_allowed()
+            || !self.is_hmd_surface_active(config)
+        {
+            return;
+        }
+        let timeout = Duration::from_millis(config.hmd.timeout_ms);
+        if self.enqueue_hmd_toast(
+            tracker_disconnect_entry(disconnect),
+            Instant::now(),
+            timeout,
+        ) {
+            self.reconcile_current();
+        }
     }
 
     fn enqueue_hmd_toast(&self, entry: ActivityEntry, now: Instant, timeout: Duration) -> bool {
@@ -325,6 +349,30 @@ impl VrOverlayRuntime {
         {
             self.reconcile_current();
         }
+    }
+}
+
+fn tracker_disconnect_entry(disconnect: TrackerDisconnect) -> ActivityEntry {
+    let created_at = Utc::now().to_rfc3339();
+    let body = match (disconnect.count, disconnect.battery_percent) {
+        (1, Some(percent)) => OverlayMessage::notifications_tracker_disconnected_battery(percent),
+        (1, None) => OverlayMessage::notifications_tracker_disconnected(),
+        (count, _) => OverlayMessage::notifications_trackers_disconnected(count),
+    };
+    ActivityEntry {
+        sequence: 0,
+        source_id: format!("vrcx-0-tracker-disconnected:{created_at}"),
+        kind: ActivityKind::Event,
+        category: ActivityCategory::SystemSafety,
+        created_at,
+        actor_user_id: String::new(),
+        actor_display_name: String::new(),
+        content: ActivityContent {
+            title: ActivityText::message(OverlayMessage::notifications_tracker_title()),
+            body: ActivityText::message(body),
+            ..ActivityContent::default()
+        },
+        actor_relation: ActivityActorRelation::None,
     }
 }
 

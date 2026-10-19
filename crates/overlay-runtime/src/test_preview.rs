@@ -47,6 +47,7 @@ pub(crate) fn test_wrist_frame_input(
         footer: WristRuntimeFooter {
             player_count: 0,
             instance_duration: String::new(),
+            online_duration: String::new(),
             local_time,
         },
         options: config.render,

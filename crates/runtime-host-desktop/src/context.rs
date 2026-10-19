@@ -426,6 +426,13 @@ impl VrOverlayRuntimeServices for DesktopRuntimeServices {
             })
             .collect()
     }
+
+    fn game_started_at(&self) -> Option<String> {
+        let session = self.session.snapshot();
+        session
+            .last_game_started_at
+            .filter(|_| session.is_game_running)
+    }
 }
 
 #[cfg(test)]

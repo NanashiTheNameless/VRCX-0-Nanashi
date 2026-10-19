@@ -40,6 +40,7 @@ type SettingsVrPrefs = Pick<
     | 'hmdNotificationPosition'
     | 'hmdNotificationStyle'
     | 'hmdNotificationAvatars'
+    | 'hmdNotificationTrackerDisconnect'
     | 'hmdNotificationStartMode'
     | 'hmdNotificationTimeout'
     | 'hmdNotificationsEnabled'
@@ -78,6 +79,7 @@ type SettingsVrTabContentProps = {
     onHmdNotificationPositionChange: (value: HmdNotificationPosition) => void;
     onHmdNotificationStyleChange: (value: HmdNotificationStyle) => void;
     onHmdNotificationAvatarsChange: (checked: boolean) => void;
+    onHmdNotificationTrackerDisconnectChange: (checked: boolean) => void;
     onHmdNotificationStartModeChange: (value: HmdNotificationStartMode) => void;
     onHmdNotificationTimeoutSecondsChange: (value: string) => void;
     onHmdNotificationsEnabledChange: (checked: boolean) => void;
@@ -160,6 +162,7 @@ function SettingsVrTabContent({
     onHmdNotificationPositionChange,
     onHmdNotificationStyleChange,
     onHmdNotificationAvatarsChange,
+    onHmdNotificationTrackerDisconnectChange,
     onHmdNotificationStartModeChange,
     onOpenHmdNotificationFiltersDialog,
     onWristOverlayEnabledChange,
@@ -524,6 +527,21 @@ function SettingsVrTabContent({
                 </Field>
 
                 <SettingsHmdTextSizeField disabled={!hmdNotificationsEnabled} />
+
+                <Field
+                    label={t(
+                        'view.settings.vr.hmd_notifications.tracker_disconnect'
+                    )}
+                    disabled={!hmdNotificationsEnabled}
+                >
+                    <Switch
+                        checked={prefs.hmdNotificationTrackerDisconnect}
+                        disabled={!hmdNotificationsEnabled}
+                        onCheckedChange={
+                            onHmdNotificationTrackerDisconnectChange
+                        }
+                    />
+                </Field>
 
                 <Field
                     label={t('view.settings.vr.hmd_notifications.timeout')}

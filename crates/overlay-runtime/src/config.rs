@@ -49,6 +49,7 @@ pub const HMD_NOTIFICATION_OPACITY_CONFIG_KEY: &str = "hmdNotificationOpacity";
 pub const HMD_NOTIFICATION_POSITION_CONFIG_KEY: &str = "hmdNotificationPosition";
 pub const HMD_NOTIFICATION_STYLE_CONFIG_KEY: &str = "hmdNotificationStyle";
 pub const HMD_NOTIFICATION_AVATARS_CONFIG_KEY: &str = "hmdNotificationAvatars";
+pub const HMD_NOTIFICATION_TRACKER_DISCONNECT_CONFIG_KEY: &str = "hmdNotificationTrackerDisconnect";
 const APP_LANGUAGE_CONFIG_KEY: &str = "appLanguage";
 const DATE_TIME_HOUR12_CONFIG_KEY: &str = "dtHour12";
 const SHOW_INSTANCE_ID_IN_LOCATION_CONFIG_KEY: &str = "VRCX_showInstanceIdInLocation";
@@ -250,6 +251,9 @@ pub(super) fn load_runtime_config(
             text_percent: text_percent(HMD_NOTIFICATION_TEXT_PERCENT_CONFIG_KEY),
             side_cm: hmd_offset_cm(HMD_NOTIFICATION_OFFSET_SIDE_CM_CONFIG_KEY),
             up_cm: hmd_offset_cm(HMD_NOTIFICATION_OFFSET_UP_CM_CONFIG_KEY),
+            tracker_disconnect: config
+                .get_bool(HMD_NOTIFICATION_TRACKER_DISCONNECT_CONFIG_KEY, true)
+                .unwrap_or(true),
         },
         render: WristOverlayRenderOptions {
             size,

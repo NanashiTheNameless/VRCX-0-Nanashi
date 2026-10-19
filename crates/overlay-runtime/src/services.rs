@@ -42,4 +42,6 @@ pub trait VrOverlayRuntimeServices: Send + Sync {
     ) -> std::collections::HashMap<String, (FriendRecord, PresenceView)> {
         std::collections::HashMap::new()
     }
+
+    fn game_started_at(&self) -> Option<String>;
 }

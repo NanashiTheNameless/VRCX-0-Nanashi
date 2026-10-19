@@ -39,6 +39,7 @@ fn wrist_builder_keeps_renderer_model_free_of_application_entry_shape() {
         footer: WristRuntimeFooter {
             player_count: 8,
             instance_duration: "12m".to_string(),
+            online_duration: "2h 5m".to_string(),
             local_time: "12:34".to_string(),
         },
         options: WristOverlayRenderOptions::default(),
@@ -60,7 +61,7 @@ fn wrist_builder_keeps_renderer_model_free_of_application_entry_shape() {
     assert_eq!(model.feed_rows[1].severity, FeedSeverity::Important);
     assert_eq!(model.feed_rows[2].accent, FeedAccent::Online);
     assert_eq!(model.footer.left, "8 players");
-    assert_eq!(model.footer.center, "Instance 12m");
+    assert_eq!(model.footer.center, "Instance 12m · Online 2h 5m");
     assert_eq!(model.footer.right, "12:34");
 }
 

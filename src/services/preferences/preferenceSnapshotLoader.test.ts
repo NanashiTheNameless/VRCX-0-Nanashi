@@ -274,6 +274,7 @@ describe('preferenceSnapshotLoader', () => {
 
         expect(snapshot.hmdNotificationOpacity).toBe(90);
         expect(snapshot.hmdNotificationAvatars).toBe(true);
+        expect(snapshot.hmdNotificationTrackerDisconnect).toBe(true);
         expect(snapshot.desktopNotificationAvatars).toBe(true);
     });
 
