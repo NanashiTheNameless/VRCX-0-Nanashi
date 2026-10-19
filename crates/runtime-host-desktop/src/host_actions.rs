@@ -65,7 +65,7 @@ impl RuntimeHost {
         }
     }
 
-    #[cfg_attr(not(windows), allow(dead_code))]
+    #[cfg(windows)]
     pub(crate) fn open_activity_target(&self, action: DesktopNotificationAction) {
         if let Some(actions) = self.actions() {
             actions.open_activity_target(action);
