@@ -25,6 +25,7 @@ import {
     NotificationIconDisc,
     NotificationPersonAvatar
 } from '../components/NotificationRowParts';
+import { NotificationText } from '../components/NotificationText';
 import {
     formatNotificationTime,
     getNotificationMessage,
@@ -333,34 +334,59 @@ export function NotificationDrawerRow({
                                     ) : null}
                                 </div>
                             </div>
-                            {headline ? (
-                                <p
-                                    className={cn(
-                                        'mt-1 line-clamp-2 text-sm text-pretty break-words',
-                                        showUnreadDot && 'font-medium'
-                                    )}
-                                >
-                                    {headline}
-                                </p>
-                            ) : null}
-                            {previewMessage || view.emoji ? (
-                                <div className="mt-0.5 flex min-w-0 items-center gap-2">
-                                    {previewMessage ? (
-                                        <p className="text-muted-foreground line-clamp-2 min-w-0 text-xs text-pretty break-words">
-                                            <NotificationMessage
-                                                notification={notification}
-                                                message={previewMessage}
-                                            />
-                                        </p>
-                                    ) : null}
-                                    {view.emoji ? (
+                            <NotificationText
+                                notificationId={notification.id}
+                                translatable={isBroadcast}
+                                revealActionOnHover
+                                headline={headline}
+                                message={previewMessage}
+                                accessory={
+                                    view.emoji ? (
                                         <NotificationEmojiPreview
                                             emoji={view.emoji}
                                             className="size-7"
                                         />
-                                    ) : null}
-                                </div>
-                            ) : null}
+                                    ) : null
+                                }
+                            >
+                                {({
+                                    headline: visibleHeadline,
+                                    message,
+                                    isTranslated
+                                }) => (
+                                    <>
+                                        {visibleHeadline ? (
+                                            <p
+                                                className={cn(
+                                                    'mt-1 text-sm text-pretty break-words',
+                                                    isTranslated
+                                                        ? 'whitespace-pre-wrap'
+                                                        : 'line-clamp-2',
+                                                    showUnreadDot &&
+                                                        'font-medium'
+                                                )}
+                                            >
+                                                {visibleHeadline}
+                                            </p>
+                                        ) : null}
+                                        {message ? (
+                                            <p
+                                                className={cn(
+                                                    'text-muted-foreground mt-0.5 min-w-0 text-xs text-pretty break-words',
+                                                    isTranslated
+                                                        ? 'whitespace-pre-wrap'
+                                                        : 'line-clamp-2'
+                                                )}
+                                            >
+                                                <NotificationMessage
+                                                    notification={notification}
+                                                    message={message}
+                                                />
+                                            </p>
+                                        ) : null}
+                                    </>
+                                )}
+                            </NotificationText>
                             {relativeTime ||
                             hasLocation ||
                             isQueueReady ||
@@ -440,6 +466,7 @@ export function NotificationDrawerRow({
             />
             <NotificationHoverContent
                 notification={notification}
+                translatable={isBroadcast}
                 senderName={senderName || typeLabel}
                 typeLabel={typeLabel}
                 message={message}

@@ -64,6 +64,10 @@ const myAvatarsPage = lazyDashboardPage(
     () => import('@/features/my-avatars/MyAvatarsPage'),
     'MyAvatarsPage'
 );
+const vrchatLogPage = lazyDashboardPage(
+    () => import('@/features/tools/VrchatLogPage'),
+    'VrchatLogPage'
+);
 const toolsPage = lazyDashboardPage(
     () => import('@/features/tools/ToolsPage'),
     'ToolsPage'
@@ -89,6 +93,7 @@ const dashboardPagePanelComponentMap: Record<
     'friend-log': friendLogPage,
     'friend-list': friendListPage,
     moderation: moderationPage,
+    'vrchat-log': vrchatLogPage,
     tools: toolsPage
 };
 

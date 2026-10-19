@@ -177,6 +177,13 @@ const DASHBOARD_PAGE_DEFINITIONS: DashboardPanelDefinition[] = [
         descriptionKey: 'dashboard.registry.avatar_collection_page'
     },
     {
+        key: 'vrchat-log',
+        category: 'page',
+        labelKey: 'dashboard.registry.vrchat_log',
+        path: '/tools/vrchat-log',
+        descriptionKey: 'dashboard.registry.vrchat_log_page'
+    },
+    {
         key: 'tools',
         category: 'page',
         labelKey: 'dashboard.registry.tools',

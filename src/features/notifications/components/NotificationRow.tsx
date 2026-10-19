@@ -35,6 +35,7 @@ import {
     NotificationIconDisc,
     NotificationPersonAvatar
 } from './NotificationRowParts';
+import { NotificationText } from './NotificationText';
 
 export type NotificationFeedHandlers = NotificationRowActionHandlers & {
     onDeleteNotification(
@@ -180,29 +181,14 @@ export function NotificationRow({
                         {typeLabel}
                     </span>
                 </div>
-                {hasHeadline ? (
-                    <p className="text-foreground line-clamp-2 text-sm font-medium">
-                        {view.headline}
-                    </p>
-                ) : null}
-                {body || view.emoji ? (
-                    <div className="flex min-w-0 items-center gap-2">
-                        {body ? (
-                            <p
-                                className={cn(
-                                    'line-clamp-2 min-w-0 text-xs leading-snug break-words',
-                                    hasHeadline
-                                        ? 'text-muted-foreground'
-                                        : 'text-foreground/85'
-                                )}
-                            >
-                                <NotificationMessage
-                                    notification={notification}
-                                    message={body}
-                                />
-                            </p>
-                        ) : null}
-                        {view.emoji ? (
+                <NotificationText
+                    notificationId={notification.id}
+                    translatable={view.template === 'broadcast'}
+                    revealActionOnHover
+                    headline={view.headline}
+                    message={body}
+                    accessory={
+                        view.emoji ? (
                             <NotificationEmojiPreview
                                 emoji={view.emoji}
                                 className="size-7"
@@ -215,9 +201,44 @@ export function NotificationRow({
                                         : undefined
                                 }
                             />
-                        ) : null}
-                    </div>
-                ) : null}
+                        ) : null
+                    }
+                >
+                    {({ headline, message, isTranslated }) => (
+                        <>
+                            {headline ? (
+                                <p
+                                    className={cn(
+                                        'text-foreground text-sm font-medium',
+                                        isTranslated
+                                            ? 'break-words whitespace-pre-wrap'
+                                            : 'line-clamp-2'
+                                    )}
+                                >
+                                    {headline}
+                                </p>
+                            ) : null}
+                            {message ? (
+                                <p
+                                    className={cn(
+                                        'min-w-0 text-xs leading-snug break-words',
+                                        isTranslated
+                                            ? 'whitespace-pre-wrap'
+                                            : 'line-clamp-2',
+                                        hasHeadline
+                                            ? 'text-muted-foreground'
+                                            : 'text-foreground/85'
+                                    )}
+                                >
+                                    <NotificationMessage
+                                        notification={notification}
+                                        message={message}
+                                    />
+                                </p>
+                            ) : null}
+                        </>
+                    )}
+                </NotificationText>
                 <div className="mt-0.5 flex items-center gap-2">
                     <div className="flex min-w-0 flex-1 items-center gap-x-3">
                         <Tooltip>

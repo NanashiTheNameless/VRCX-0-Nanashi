@@ -14,6 +14,7 @@ import {
     getNextDashboardInstanceColumnConfig,
     isDashboardFilterActive
 } from './dashboardConfig';
+import { canEmbedDashboardPagePanel } from './dashboardPagePanelRegistry';
 
 const dashboardT = (key: string, params: { value?: string } = {}) => {
     const messages: Record<string, string> = {
@@ -104,6 +105,16 @@ describe('dashboardConfig', () => {
                 (option) => option.value === '__none__'
             )
         ).toBe(false);
+    });
+
+    it('offers the VRChat log viewer as an embeddable dashboard page', () => {
+        const options = createDashboardPanelSelectOptions('', dashboardT);
+
+        expect(options).toContainEqual({
+            value: 'vrchat-log',
+            label: 'Page · dashboard.registry.vrchat_log'
+        });
+        expect(canEmbedDashboardPagePanel('vrchat-log')).toBe(true);
     });
 
     it('keeps widget panel configs isolated when changing panel settings', () => {

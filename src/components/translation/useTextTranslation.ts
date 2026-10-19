@@ -8,7 +8,7 @@ import {
 import type { TranslationErrorKind, TranslationViewMode } from './types';
 import type { TranslationStatus } from './types';
 
-interface TranslatedEntry {
+export interface TranslatedEntry {
     text: string;
     detectedSourceLang: string | null;
 }
@@ -16,6 +16,7 @@ interface TranslatedEntry {
 interface UseTextTranslationArgs {
     source: string;
     entityId: string;
+    cache?: Map<string, TranslatedEntry>;
 }
 
 export interface UseTextTranslationResult {
@@ -69,9 +70,12 @@ function classifyError(error: unknown): TranslationErrorKind {
 
 export function useTextTranslation({
     source,
-    entityId
+    entityId,
+    cache: sharedCache
 }: UseTextTranslationArgs): UseTextTranslationResult {
-    const cacheRef = useRef<Map<string, TranslatedEntry>>(new Map());
+    const ownCacheRef = useRef<Map<string, TranslatedEntry>>(new Map());
+    const cache = sharedCache ?? ownCacheRef.current;
+    const cacheKey = JSON.stringify([entityId, source]);
     const entityIdRef = useRef(entityId);
     const [mode, setMode] = useState<TranslationViewMode>('original');
     const [status, setStatus] = useState<TranslationStatus>('idle');
@@ -82,13 +86,15 @@ export function useTextTranslation({
 
     useEffect(() => {
         if (entityIdRef.current !== entityId) {
-            cacheRef.current.clear();
+            if (!sharedCache) {
+                ownCacheRef.current.clear();
+            }
             entityIdRef.current = entityId;
         }
         setMode('original');
         setStatus('idle');
         setErrorKind(null);
-    }, [source, entityId]);
+    }, [source, entityId, sharedCache]);
 
     useEffect(() => {
         let cancelled = false;
@@ -107,11 +113,11 @@ export function useTextTranslation({
     }, [entityId]);
 
     const canTranslate = useMemo(() => computeCanTranslate(source), [source]);
-    const cachedEntry = cacheRef.current.get(source);
+    const cachedEntry = cache.get(cacheKey);
     const isTranslated = mode === 'translation' && Boolean(cachedEntry);
     const visibleText = isTranslated ? cachedEntry!.text : source;
     const detectedLang = isTranslated ? cachedEntry!.detectedSourceLang : null;
-    const isStale = !cachedEntry && cacheRef.current.size > 0;
+    const isStale = !cachedEntry && cache.size > 0;
 
     const runTranslation = useCallback(async () => {
         if (!canTranslate) {
@@ -129,49 +135,49 @@ export function useTextTranslation({
             if (!result.text) {
                 throw new Error('No translation returned.');
             }
-            cacheRef.current.set(source, result);
+            cache.set(cacheKey, result);
             setMode('translation');
             setStatus('translated');
         } catch (error) {
             setErrorKind(classifyError(error));
             setStatus('error');
         }
-    }, [canTranslate, source]);
+    }, [cache, cacheKey, canTranslate, source]);
 
     const translate = useCallback(async () => {
         if (!canTranslate || status === 'loading') {
             return;
         }
-        if (cacheRef.current.has(source)) {
+        if (cache.has(cacheKey)) {
             setMode('translation');
             setStatus('translated');
             setErrorKind(null);
             return;
         }
         await runTranslation();
-    }, [canTranslate, runTranslation, source, status]);
+    }, [cache, cacheKey, canTranslate, runTranslation, status]);
 
     const retranslate = useCallback(async () => {
         if (!canTranslate || status === 'loading') {
             return;
         }
-        cacheRef.current.delete(source);
+        cache.delete(cacheKey);
         await runTranslation();
-    }, [canTranslate, runTranslation, source, status]);
+    }, [cache, cacheKey, canTranslate, runTranslation, status]);
 
     const showOriginal = useCallback(() => {
         setMode('original');
     }, []);
 
     const showTranslation = useCallback(() => {
-        if (cacheRef.current.has(source)) {
+        if (cache.has(cacheKey)) {
             setMode('translation');
             setStatus('translated');
             setErrorKind(null);
             return;
         }
         void runTranslation();
-    }, [runTranslation, source]);
+    }, [cache, cacheKey, runTranslation]);
 
     return {
         status,

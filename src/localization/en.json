@@ -878,6 +878,8 @@
             "notification_center_page": "All your notifications.",
             "my_avatars": "My Avatars",
             "avatar_collection_page": "Avatars you've uploaded.",
+            "vrchat_log": "VRChat Log Viewer",
+            "vrchat_log_page": "Live VRChat output log you can filter.",
             "tools": "Tools",
             "tools_launcher_page": "All tools in one place."
         }

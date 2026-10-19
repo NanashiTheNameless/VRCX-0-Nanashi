@@ -11,6 +11,7 @@ import {
     NotificationIconDisc,
     NotificationPersonAvatar
 } from '../components/NotificationRowParts';
+import { NotificationText } from '../components/NotificationText';
 import {
     getFriendMessage,
     getHoverTitle,
@@ -79,6 +80,7 @@ function NotificationHoverHeader({
 
 export function NotificationHoverContent({
     notification,
+    translatable,
     senderName,
     typeLabel,
     message,
@@ -89,6 +91,7 @@ export function NotificationHoverContent({
     actorImageUrl: string;
     message: string;
     notification: NotificationRow;
+    translatable: boolean;
     senderName: string;
     typeLabel: string;
 }) {
@@ -116,17 +119,30 @@ export function NotificationHoverContent({
                         title={fallbackTitle}
                         typeLabel={typeLabel}
                     />
-                    {hoverTitle ? (
-                        <p className="mb-1 text-sm font-medium">{hoverTitle}</p>
-                    ) : null}
-                    {notification?.message ? (
-                        <p className="text-muted-foreground text-xs leading-relaxed break-words whitespace-pre-line">
-                            <NotificationMessage
-                                notification={notification}
-                                message={notification.message}
-                            />
-                        </p>
-                    ) : null}
+                    <NotificationText
+                        notificationId={notification.id}
+                        translatable={translatable}
+                        headline={hoverTitle}
+                        message={notification.message || ''}
+                    >
+                        {({ headline, message }) => (
+                            <>
+                                {headline ? (
+                                    <p className="mb-1 text-sm font-medium break-words whitespace-pre-wrap">
+                                        {headline}
+                                    </p>
+                                ) : null}
+                                {message ? (
+                                    <p className="text-muted-foreground text-xs leading-relaxed break-words whitespace-pre-wrap">
+                                        <NotificationMessage
+                                            notification={notification}
+                                            message={message}
+                                        />
+                                    </p>
+                                ) : null}
+                            </>
+                        )}
+                    </NotificationText>
                 </>
             ) : friendNotification ? (
                 <>

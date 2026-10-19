@@ -15,7 +15,9 @@ import { VrchatLogTable } from './vrchat-log/components/VrchatLogTable';
 import { VrchatLogToolbar } from './vrchat-log/components/VrchatLogToolbar';
 import { useVrchatLogController } from './vrchat-log/useVrchatLogController';
 
-export function VrchatLogPage() {
+export function VrchatLogPage({
+    embedded = false
+}: { embedded?: boolean } = {}) {
     const { t } = useTranslation();
     const {
         vrchatPathStatus,
@@ -63,11 +65,14 @@ export function VrchatLogPage() {
         loadEntries
     } = useVrchatLogController();
 
-    const header = <ToolPageHeader toolKey="vrchat-log" />;
+    const header = embedded ? null : <ToolPageHeader toolKey="vrchat-log" />;
 
     if (vrchatPathUnavailable) {
         return (
-            <PageScaffold className="vrchat-log-page flex-1">
+            <PageScaffold
+                embedded={embedded}
+                className="vrchat-log-page flex-1"
+            >
                 {header}
                 <EmptyState
                     icon={FileSearchIcon}
@@ -79,7 +84,11 @@ export function VrchatLogPage() {
     }
 
     return (
-        <PageScaffold className="vrchat-log-page flex-1" flushBottom>
+        <PageScaffold
+            embedded={embedded}
+            className="vrchat-log-page flex-1"
+            flushBottom={!embedded}
+        >
             {header}
             <VrchatLogToolbar
                 selectedFileName={selectedFileName}
