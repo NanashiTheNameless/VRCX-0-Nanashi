@@ -48,7 +48,7 @@ impl schemars::JsonSchema for TimeWindowParams {
             "oneOf": [
                 {
                     "type": "string",
-                    "description": "Relative window such as 90d or this week, a four-digit calendar year such as 2026, or all history."
+                    "description": "Relative window such as 90d or this week, a four-digit calendar year such as 2026, a calendar day such as 2026-10-18 in the user's local calendar, or all history."
                 },
                 {
                     "type": "integer",
@@ -194,6 +194,9 @@ fn parse_relative_window<Tz: TimeZone>(
             .map_err(|_| format!("unrecognized timeWindow string '{text}'"))
             .and_then(|year| calendar_year_window(year, &now.timezone()));
     }
+    if let Ok(date) = chrono::NaiveDate::parse_from_str(&normalized, "%Y-%m-%d") {
+        return calendar_day_window(date, &now.timezone());
+    }
     let rfc = |dt: DateTime<Utc>| Some(dt.to_rfc3339());
     let window = |from, to| TimeWindowParams { from, to };
 
@@ -248,6 +251,24 @@ fn calendar_year_window<Tz: TimeZone>(year: i64, tz: &Tz) -> Result<TimeWindowPa
     Ok(TimeWindowParams {
         from: Some(from.to_rfc3339()),
         to: Some(to.to_rfc3339()),
+    })
+}
+
+fn calendar_day_window<Tz: TimeZone>(
+    date: chrono::NaiveDate,
+    tz: &Tz,
+) -> Result<TimeWindowParams, String> {
+    let next = date
+        .succ_opt()
+        .ok_or_else(|| "timeWindow calendar day is out of range".to_string())?;
+    let start_of = |day: chrono::NaiveDate| {
+        let local_midnight = day.and_time(chrono::NaiveTime::MIN);
+        local_to_utc(tz, &local_midnight)
+            .ok_or_else(|| "timeWindow calendar day is out of range".to_string())
+    };
+    Ok(TimeWindowParams {
+        from: Some(start_of(date)?.to_rfc3339()),
+        to: Some(start_of(next)?.to_rfc3339()),
     })
 }
 
@@ -695,6 +716,14 @@ mod time_window_tests {
                 .0
                 .as_deref(),
             Some("2026-09-01T00:00:00Z")
+        );
+    }
+
+    #[test]
+    fn calendar_day_string_follows_the_local_calendar() {
+        assert_eq!(
+            resolve(serde_json::json!("2026-09-28")),
+            (utc("2026-09-28T05:00:00Z"), utc("2026-09-29T05:00:00Z"))
         );
     }
 

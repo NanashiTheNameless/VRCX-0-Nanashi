@@ -265,7 +265,7 @@ function ModerationReportList({ closedOnly }: { closedOnly: boolean }) {
 
     return (
         <div className="flex min-h-0 flex-col gap-2 overflow-y-auto">
-            <ul className="divide-stroke-subtle divide-y overflow-hidden rounded-lg border">
+            <ul className="divide-stroke-subtle shrink-0 divide-y overflow-hidden rounded-lg border">
                 {loadState.reports.map((report) => (
                     <ModerationReportRow
                         key={report.id}

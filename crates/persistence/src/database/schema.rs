@@ -330,14 +330,36 @@ pub(crate) fn table_column_names(
     table_name: &str,
 ) -> Result<HashSet<String>, Error> {
     let table_name = safe_identifier(table_name, "Table name")?;
-    let rows = db.execute(
+    Ok(column_names_from_rows(db.execute(
         &format!("PRAGMA table_info({table_name})"),
         &Default::default(),
-    )?;
-    Ok(rows
-        .into_iter()
+    )?))
+}
+
+fn column_names_from_rows(rows: Vec<Vec<Value>>) -> HashSet<String> {
+    rows.into_iter()
         .filter_map(|row| row.get(1).and_then(Value::as_str).map(str::to_string))
-        .collect())
+        .collect()
+}
+
+fn alter_column_if(
+    db: &DatabaseService,
+    table_name: &str,
+    column_name: &str,
+    should_alter: impl FnOnce(bool) -> bool,
+    alter_sql: String,
+) -> Result<bool, Error> {
+    db.write_transaction(|tx| {
+        let columns = column_names_from_rows(tx.execute(
+            &format!("PRAGMA table_info({table_name})"),
+            &Default::default(),
+        )?);
+        if !should_alter(columns.contains(column_name)) {
+            return Ok(false);
+        }
+        tx.execute_non_query(&alter_sql, &Default::default())?;
+        Ok(true)
+    })
 }
 
 pub(crate) fn add_column_if_missing(
@@ -348,14 +370,13 @@ pub(crate) fn add_column_if_missing(
 ) -> Result<bool, Error> {
     let table_name = safe_identifier(table_name, "Table name")?;
     let column_name = safe_identifier(column_name, "Column name")?;
-    if table_column_names(db, &table_name)?.contains(&column_name) {
-        return Ok(false);
-    }
-    db.execute_non_query(
-        &format!("ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"),
-        &Default::default(),
-    )?;
-    Ok(true)
+    alter_column_if(
+        db,
+        &table_name,
+        &column_name,
+        |exists| !exists,
+        format!("ALTER TABLE {table_name} ADD COLUMN {column_name} {column_definition}"),
+    )
 }
 
 pub(crate) fn drop_column_if_exists(
@@ -365,14 +386,13 @@ pub(crate) fn drop_column_if_exists(
 ) -> Result<bool, Error> {
     let table_name = safe_identifier(table_name, "Table name")?;
     let column_name = safe_identifier(column_name, "Column name")?;
-    if !table_column_names(db, &table_name)?.contains(&column_name) {
-        return Ok(false);
-    }
-    db.execute_non_query(
-        &format!("ALTER TABLE {table_name} DROP COLUMN {column_name}"),
-        &Default::default(),
-    )?;
-    Ok(true)
+    alter_column_if(
+        db,
+        &table_name,
+        &column_name,
+        |exists| exists,
+        format!("ALTER TABLE {table_name} DROP COLUMN {column_name}"),
+    )
 }
 
 pub(crate) fn add_v17_global_indexes(db: &DatabaseService) -> Result<(), Error> {
@@ -580,6 +600,38 @@ mod schema_version_tests {
         assert!(!table_column_names(&db, "sample_table")
             .unwrap()
             .contains("display_name"));
+    }
+
+    #[test]
+    fn concurrent_column_adds_on_the_same_table_all_succeed() {
+        let db = test_db("schema-concurrent-column-add");
+        db.execute_non_query(
+            "CREATE TABLE sample_table (id TEXT PRIMARY KEY)",
+            &Default::default(),
+        )
+        .unwrap();
+
+        let barrier = std::sync::Barrier::new(8);
+        let added = std::thread::scope(|scope| {
+            let handles: Vec<_> = (0..8)
+                .map(|_| {
+                    scope.spawn(|| {
+                        barrier.wait();
+                        add_column_if_missing(&db, "sample_table", "sort_order", "INTEGER")
+                    })
+                })
+                .collect();
+            handles
+                .into_iter()
+                .map(|handle| handle.join().unwrap().unwrap())
+                .filter(|added| *added)
+                .count()
+        });
+
+        assert_eq!(added, 1);
+        assert!(table_column_names(&db, "sample_table")
+            .unwrap()
+            .contains("sort_order"));
     }
 
     #[test]

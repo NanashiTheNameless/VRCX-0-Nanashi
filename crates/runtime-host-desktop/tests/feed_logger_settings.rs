@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
 use vrcx_0_application::auth::{AuthCredentialStore, SealedAuthSecret};
@@ -78,14 +79,17 @@ fn desktop() -> (TestDir, DesktopFeedLoggerRuntime) {
     desktop_with_saved_settings(None)
 }
 
+static NEXT_TEST_DIR: AtomicUsize = AtomicUsize::new(0);
+
 fn desktop_with_saved_settings(settings: Option<&str>) -> (TestDir, DesktopFeedLoggerRuntime) {
     let nonce = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_nanos();
     let dir = std::env::temp_dir().join(format!(
-        "vrcx-0-feed-logger-settings-{}-{nonce}",
-        std::process::id()
+        "vrcx-0-feed-logger-settings-{}-{}-{nonce}",
+        std::process::id(),
+        NEXT_TEST_DIR.fetch_add(1, Ordering::Relaxed)
     ));
     std::fs::create_dir_all(&dir).unwrap();
     let db = Arc::new(DatabaseService::new(&dir.join("VRCX-0.sqlite3")).unwrap());
