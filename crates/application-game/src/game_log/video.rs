@@ -26,6 +26,7 @@ pub struct VideoInput {
     pub video_url: String,
     pub video_id: String,
     pub video_name: String,
+    pub artist: String,
     pub video_length: i64,
     pub video_pos: i64,
     pub display_name: String,
@@ -44,6 +45,7 @@ pub enum ProviderVideoEvent {
 #[derive(Clone, Debug, Default)]
 struct YouTubeMetadata {
     video_name: String,
+    artist: String,
     video_length: i64,
     thumbnail_url: String,
 }
@@ -166,6 +168,9 @@ pub(crate) async fn handle_video_play(
             if !metadata.video_name.is_empty() {
                 input.video_name = metadata.video_name;
             }
+            if !metadata.artist.is_empty() {
+                input.artist = metadata.artist;
+            }
             if metadata.video_length > 0 {
                 input.video_length = metadata.video_length;
             }
@@ -212,6 +217,7 @@ pub(crate) async fn handle_video_play(
     let now_playing = NowPlayingPayload {
         url: Some(input.video_url.clone()),
         name: Some(input.video_name.clone()),
+        artist: Some(input.artist),
         source: Some(input.video_id.clone()),
         display_name: Some(input.display_name),
         user_id: Some(input.user_id),
@@ -268,6 +274,7 @@ async fn lookup_youtube_video(
 
     Ok(Some(YouTubeMetadata {
         video_name: text(item.pointer("/snippet/title")),
+        artist: text(item.pointer("/snippet/channelTitle")),
         video_length: convert_youtube_duration_to_seconds(text(
             item.pointer("/contentDetails/duration"),
         )),

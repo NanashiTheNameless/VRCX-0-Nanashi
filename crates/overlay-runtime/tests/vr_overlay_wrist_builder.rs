@@ -246,6 +246,7 @@ fn song_now_playing(captured_at_ms: i64, position_seconds: i64, live: bool) -> O
     build_wrist_surface_model(now_playing_input(
         WristRuntimeNowPlaying {
             title: "  Never Gonna Give You Up  ".to_string(),
+            artist: "  Rick Astley  ".to_string(),
             length_seconds: 212,
             position_seconds,
             started_at: STARTED_AT.to_string(),
@@ -263,6 +264,7 @@ fn wrist_builder_ticks_now_playing_elapsed_every_second_while_visible() {
         song_now_playing(STARTED_AT_MS, 0, true),
         OverlayNowPlaying {
             title: "Never Gonna Give You Up".to_string(),
+            artist: "Rick Astley".to_string(),
             time_text: "0:00 / 3:32".to_string(),
             progress_permille: Some(0),
         }
@@ -271,6 +273,7 @@ fn wrist_builder_ticks_now_playing_elapsed_every_second_while_visible() {
         song_now_playing(STARTED_AT_MS + 83_000, 0, true),
         OverlayNowPlaying {
             title: "Never Gonna Give You Up".to_string(),
+            artist: "Rick Astley".to_string(),
             time_text: "1:23 / 3:32".to_string(),
             progress_permille: Some(391),
         }
@@ -287,6 +290,7 @@ fn wrist_builder_ticks_now_playing_elapsed_every_second_while_visible() {
         song_now_playing(STARTED_AT_MS + 900_000, 0, true),
         OverlayNowPlaying {
             title: "Never Gonna Give You Up".to_string(),
+            artist: "Rick Astley".to_string(),
             time_text: "3:32 / 3:32".to_string(),
             progress_permille: Some(1000),
         }
@@ -299,6 +303,7 @@ fn wrist_builder_ticks_now_playing_elapsed_every_second_while_visible() {
         build_wrist_surface_model(now_playing_input(
             WristRuntimeNowPlaying {
                 title: "Long mix".to_string(),
+                artist: String::new(),
                 length_seconds: 3_725,
                 position_seconds: 0,
                 started_at: STARTED_AT.to_string(),
@@ -320,6 +325,7 @@ fn wrist_builder_holds_now_playing_to_the_minute_while_hidden() {
         first,
         OverlayNowPlaying {
             title: "Never Gonna Give You Up".to_string(),
+            artist: "Rick Astley".to_string(),
             time_text: "1:00 / 3:32".to_string(),
             progress_permille: Some(283),
         }
@@ -337,6 +343,7 @@ fn wrist_builder_shows_elapsed_time_without_a_bar_when_the_length_is_unknown() {
         build_wrist_surface_model(now_playing_input(
             WristRuntimeNowPlaying {
                 title: "https://stream.example.test/live".to_string(),
+                artist: String::new(),
                 length_seconds: 0,
                 position_seconds: 0,
                 started_at: STARTED_AT.to_string(),
@@ -351,6 +358,7 @@ fn wrist_builder_shows_elapsed_time_without_a_bar_when_the_length_is_unknown() {
         stream(true),
         Some(OverlayNowPlaying {
             title: "https://stream.example.test/live".to_string(),
+            artist: String::new(),
             time_text: "12:30".to_string(),
             progress_permille: None,
         })
@@ -366,6 +374,7 @@ fn wrist_builder_drops_now_playing_without_a_title() {
     let model = build_wrist_surface_model(now_playing_input(
         WristRuntimeNowPlaying {
             title: "   ".to_string(),
+            artist: "Artist".to_string(),
             length_seconds: 212,
             position_seconds: 0,
             started_at: STARTED_AT.to_string(),

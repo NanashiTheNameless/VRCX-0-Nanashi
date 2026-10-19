@@ -459,6 +459,7 @@ fn wrist_panel_redraws_only_when_the_now_playing_model_changes() {
 fn now_playing(title: &str, progress_permille: Option<u16>) -> OverlayNowPlaying {
     OverlayNowPlaying {
         title: title.to_string(),
+        artist: "Rick Astley".to_string(),
         time_text: "1:25 / 3:32".to_string(),
         progress_permille,
     }

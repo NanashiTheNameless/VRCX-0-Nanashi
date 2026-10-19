@@ -299,6 +299,7 @@ function createAncillaryRuntimeSnapshot(
         nowPlaying: {
             url: '',
             name: '',
+            artist: '',
             source: '',
             displayName: '',
             userId: null,

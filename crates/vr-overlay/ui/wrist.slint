@@ -108,6 +108,7 @@ export component WristPanel inherits Window {
     in property <string> footer-center;
     in property <string> footer-right;
     in property <string> now-playing-title;
+    in property <string> now-playing-artist;
     in property <string> now-playing-time;
     in property <bool> now-playing-has-progress: false;
     in property <float> now-playing-progress: 0;
@@ -136,7 +137,9 @@ export component WristPanel inherits Window {
     property <length> now-playing-meter-height: 14px * root.content-scale;
     property <bool> now-playing-title-truncated: now-playing-title-measure.preferred-height > now-playing-title.preferred-height;
     property <length> now-playing-height: root.now-playing-title != ""
-        ? root.now-playing-padding * 2 + now-playing-title.preferred-height + 6px * root.content-scale + root.now-playing-meter-height
+        ? root.now-playing-padding * 2 + now-playing-title.preferred-height
+            + (root.now-playing-artist != "" ? now-playing-artist.preferred-height + 3px * root.content-scale : 0px)
+            + 6px * root.content-scale + root.now-playing-meter-height
         : 0px;
     property <bool> has-player-grid: root.player-column-count > 0;
     property <length> player-grid-spacing: 12px * root.grid-scale;
@@ -433,6 +436,18 @@ export component WristPanel inherits Window {
                 color: root.now-playing-title-color;
             }
 
+            now-playing-artist := Text {
+                x: 18px;
+                y: root.now-playing-padding + now-playing-title.preferred-height + 3px * root.content-scale;
+                width: parent.width - 36px;
+                height: self.preferred-height;
+                visible: root.now-playing-artist != "";
+                text: root.now-playing-artist;
+                font-size: 12px * root.content-scale;
+                overflow: elide;
+                color: root.quiet-color;
+            }
+
             now-playing-ellipsis := Text {
                 x: parent.width - 18px - self.width;
                 y: root.now-playing-padding + now-playing-title.preferred-height / 2;
@@ -448,7 +463,9 @@ export component WristPanel inherits Window {
 
             HorizontalLayout {
                 x: 18px;
-                y: root.now-playing-padding + now-playing-title.preferred-height + 6px * root.content-scale;
+                y: root.now-playing-padding + now-playing-title.preferred-height
+                    + (root.now-playing-artist != "" ? now-playing-artist.preferred-height + 3px * root.content-scale : 0px)
+                    + 6px * root.content-scale;
                 width: parent.width - 36px;
                 height: root.now-playing-meter-height;
                 spacing: 10px * root.content-scale;

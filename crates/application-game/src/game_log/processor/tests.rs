@@ -2205,7 +2205,7 @@ impl crate::VideoMetadataPort for VideoMetadataFixture {
         assert_eq!(video_id, "dQw4w9WgXcQ");
         assert_eq!(api_key, "test-key");
         Ok(Some(serde_json::json!({ "items": [{
-            "snippet": { "title": "Resolved video title", "thumbnails": {
+            "snippet": { "title": "Resolved video title", "channelTitle": "Resolved artist", "thumbnails": {
                 "high": { "url": "https://example.test/thumbnail.jpg" }
             } },
             "contentDetails": { "duration": "PT3M20S" }
@@ -2288,6 +2288,16 @@ fn video_notifications_use_enriched_activity_and_respect_replay_and_surface_filt
                 delivery.desktop && delivery.vr && delivery.hmd && delivery.webhook && delivery.tts
             );
             assert_eq!(overlay.snapshot().entries, vec![delivery.entry.clone()]);
+            let events = processor.deps.event_bus.take_events_for_test();
+            let now_playing = events
+                .iter()
+                .find(|event| {
+                    event.name == "gameLogSideEffect"
+                        && event.payload.get("kind").and_then(|kind| kind.as_str())
+                            == Some("nowPlaying")
+                })
+                .expect("now-playing side effect");
+            assert_eq!(now_playing.payload["payload"]["artist"], "Resolved artist");
         }
     }
     Ok(())

@@ -6422,6 +6422,7 @@ export type NotificationWebhookFormat = 'generic' | 'discord';
 export type NowPlayingPayload = {
     url?: string | null;
     name?: string | null;
+    artist?: string | null;
     source?: string | null;
     displayName?: string | null;
     userId?: string | null;
@@ -6440,6 +6441,7 @@ export type NowPlayingPayload = {
 export type NowPlayingSnapshot = {
     url: string;
     name: string;
+    artist: string;
     source: string;
     displayName: string;
     userId?: string | null;

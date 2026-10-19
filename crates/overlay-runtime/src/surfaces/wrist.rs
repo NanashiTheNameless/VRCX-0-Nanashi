@@ -350,6 +350,7 @@ pub struct WristRuntimeFooter {
 #[serde(rename_all = "camelCase")]
 pub struct WristRuntimeNowPlaying {
     pub title: String,
+    pub artist: String,
     pub length_seconds: i64,
     pub position_seconds: i64,
     pub started_at: String,
@@ -393,6 +394,7 @@ fn now_playing_model(
     };
     Some(OverlayNowPlaying {
         title: title.to_string(),
+        artist: input.artist.trim().to_string(),
         time_text,
         progress_permille,
     })

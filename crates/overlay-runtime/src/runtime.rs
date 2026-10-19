@@ -1341,6 +1341,7 @@ pub(super) fn build_wrist_frame_input(
         devices,
         now_playing: (!now_playing.url.trim().is_empty()).then(|| WristRuntimeNowPlaying {
             title: first_non_empty_owned([now_playing.name.as_str(), now_playing.url.as_str()]),
+            artist: now_playing.artist.clone(),
             length_seconds: now_playing.length,
             position_seconds: now_playing.position,
             started_at: now_playing.started_at.clone().unwrap_or_default(),

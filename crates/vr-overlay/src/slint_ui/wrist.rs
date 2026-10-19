@@ -114,6 +114,9 @@ impl SlintSurfaceHost for SlintWristHost {
         self.component.set_now_playing_title(SharedString::from(
             now_playing.map_or("", |value| value.title.as_str()),
         ));
+        self.component.set_now_playing_artist(SharedString::from(
+            now_playing.map_or("", |value| value.artist.as_str()),
+        ));
         self.component.set_now_playing_time(SharedString::from(
             now_playing.map_or("", |value| value.time_text.as_str()),
         ));

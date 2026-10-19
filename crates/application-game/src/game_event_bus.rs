@@ -43,6 +43,8 @@ pub struct NowPlayingPayload {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub artist: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,
@@ -75,6 +77,7 @@ pub struct NowPlayingPayload {
 pub struct NowPlayingSnapshot {
     pub url: String,
     pub name: String,
+    pub artist: String,
     pub source: String,
     pub display_name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -105,6 +108,9 @@ impl NowPlayingSnapshot {
         }
         if let Some(value) = &patch.name {
             self.name.clone_from(value);
+        }
+        if let Some(value) = &patch.artist {
+            self.artist.clone_from(value);
         }
         if let Some(value) = &patch.source {
             self.source.clone_from(value);
@@ -338,6 +344,7 @@ mod tests {
                 NowPlayingPayload {
                     url: Some("url".into()),
                     name: Some("name".into()),
+                    artist: Some("artist".into()),
                     source: Some("source".into()),
                     display_name: Some("display".into()),
                     user_id: Some("usr_test".into()),
@@ -360,6 +367,7 @@ mod tests {
                 "payload": {
                     "url": "url",
                     "name": "name",
+                    "artist": "artist",
                     "source": "source",
                     "displayName": "display",
                     "userId": "usr_test",
@@ -386,6 +394,7 @@ mod tests {
             json!({
                 "url": "",
                 "name": "",
+                "artist": "",
                 "source": "",
                 "displayName": "",
                 "thumbnailUrl": "",
@@ -402,6 +411,7 @@ mod tests {
         let mut snapshot = NowPlayingSnapshot::default();
         snapshot.apply(&NowPlayingPayload {
             name: Some("Test Track".into()),
+            artist: Some("Test Artist".into()),
             position: 42,
             started_at: "start".into(),
             updated_at: "update".into(),
@@ -413,6 +423,7 @@ mod tests {
             json!({
                 "url": "",
                 "name": "Test Track",
+                "artist": "Test Artist",
                 "source": "",
                 "displayName": "",
                 "thumbnailUrl": "",
