@@ -402,7 +402,7 @@ impl Frame {
 
     fn text_centroid(&self, rows: std::ops::Range<u32>) -> f32 {
         let (weighted, total) = rows
-            .flat_map(|y| (33..240).map(move |x| (x, y)))
+            .flat_map(|y| (33..70).map(move |x| (x, y)))
             .map(|(x, y)| (y, f32::from(self.0[((y * WIDTH + x) * 4 + 2) as usize])))
             .filter(|(_, red)| *red > 120.0)
             .fold((0.0, 0.0), |(weighted, total), (y, red)| {

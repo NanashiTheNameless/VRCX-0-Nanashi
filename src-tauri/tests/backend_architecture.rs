@@ -79,6 +79,13 @@ fn named_struct_body<'a>(source: &'a str, declaration: &str) -> &'a str {
     panic!("find closing brace for struct declaration: {declaration}");
 }
 
+fn contains_identifier(source: &str, identifier: &str) -> bool {
+    source.match_indices(identifier).any(|(index, _)| {
+        !source[index + identifier.len()..]
+            .starts_with(|character: char| character == '_' || character.is_alphanumeric())
+    })
+}
+
 #[test]
 fn vrchat_commands_do_not_access_transport_implementation_directly() {
     for path in rust_sources_below("src-tauri/src/commands/vrchat") {
@@ -175,7 +182,8 @@ fn desktop_composition_does_not_expose_concrete_service_bundles() {
     for path in rust_sources_below("src-tauri/src") {
         let source = std::fs::read_to_string(&path).expect("read Tauri source");
         assert!(
-            !source.contains("runtime_host().desktop.") && !source.contains("runtime_host().game"),
+            !contains_identifier(&source, "runtime_host().desktop")
+                && !contains_identifier(&source, "runtime_host().game"),
             "Tauri code reaches into a concrete desktop service bundle: {}",
             path.display()
         );

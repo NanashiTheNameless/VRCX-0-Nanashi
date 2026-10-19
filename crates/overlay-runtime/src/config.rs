@@ -53,7 +53,7 @@ const APP_LANGUAGE_CONFIG_KEY: &str = "appLanguage";
 const DATE_TIME_HOUR12_CONFIG_KEY: &str = "dtHour12";
 const SHOW_INSTANCE_ID_IN_LOCATION_CONFIG_KEY: &str = "VRCX_showInstanceIdInLocation";
 
-#[cfg_attr(not(windows), allow(dead_code))]
+#[cfg(windows)]
 pub(crate) fn load_app_language(config: &ConfigRepository) -> String {
     config
         .get_string(APP_LANGUAGE_CONFIG_KEY, "en")
