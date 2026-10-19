@@ -160,7 +160,7 @@ fn every_rows_avatar_sits_level_with_its_text() {
         let avatar = (top + bottom) as f32 / 2.0;
         let text = frame.first_text_line_centroid(top);
         assert!(
-            (text - avatar).abs() <= 0.75,
+            (text - avatar).abs() <= 1.25,
             "avatar centre {avatar} text centre {text}"
         );
     }

@@ -44,6 +44,8 @@ tauri-plugin-updater = {
     git = "https://github.com/tauri-apps/plugins-workspace",
     rev = "f36ba7ba48695776bc11cce0bfdc45678ec24f72",
     package = "tauri-plugin-updater",
+    default-features = false,
+    features = ["rustls-tls", "system-proxy"],
 }
 sha2.workspace = true
 dirs = "6"
