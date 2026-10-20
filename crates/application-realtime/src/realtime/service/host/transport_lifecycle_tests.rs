@@ -593,6 +593,7 @@ fn fresh_offline_baseline_keeps_a_pending_offline_through_reconnect() -> Result<
     runtime.set_task_executor_for_test(DiscardTaskExecutor);
     let old_transport = active_transport(&runtime);
     seed_online_friend(&runtime, &active_session, old_transport.generation)?;
+    runtime.set_task_executor_for_test(DiscardTaskExecutor);
     runtime.handle_active_friend_ws_message_for_test(&RealtimeWsMessagePayload {
         json: json!({"type": "friend-offline", "content": {"userId": "usr_friend"}}),
         raw: "{}".into(),
