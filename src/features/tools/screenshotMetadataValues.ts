@@ -381,20 +381,6 @@ export function normalizeScreenshotSearchResult(
     });
 }
 
-export function pickRandomScreenshotPath(
-    images: readonly { path: string }[],
-    random: number
-) {
-    if (images.length === 0) {
-        return '';
-    }
-    const index = Math.min(
-        images.length - 1,
-        Math.max(0, Math.floor(random * images.length))
-    );
-    return images[index].path;
-}
-
 function getFolderPathFromPath(path: unknown) {
     const value = String(path || '');
     const separatorIndex = Math.max(

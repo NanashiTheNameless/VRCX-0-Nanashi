@@ -15,12 +15,14 @@ import { AssistantDialogHost } from '@/features/assistant/AssistantDialogHost';
 import { VrcNotificationCenterHost } from '@/features/notifications/VrcNotificationCenterHost';
 import { PrivacyLockDialogHost } from '@/features/privacy-lock/PrivacyLockDialogHost';
 import { PrivacyLockOverlay } from '@/features/privacy-lock/PrivacyLockOverlay';
+import { CommunityThemeUpdateToastHost } from '@/features/themes/CommunityThemeUpdateToastHost';
 
 export function GlobalHosts() {
     return (
         <>
             <AppToaster />
             <CommunityThemeSafetyHost />
+            <CommunityThemeUpdateToastHost />
             <BackgroundRouteResumeHost />
             <ModalHost />
             <DialogHost />

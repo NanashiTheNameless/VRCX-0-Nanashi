@@ -518,6 +518,7 @@ impl WebClientPort for BusyThenWorldApi {
         self.noop.realtime_connection_options()
     }
     fn clear_cookies(&self) {}
+    fn clear_cookies_everywhere(&self) {}
     fn clear_auth_cookies(&self) {}
     fn cookie_diagnostics(&self) -> Value {
         Value::Null

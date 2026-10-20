@@ -55,6 +55,17 @@ export function presencePlace(view: PresenceView): PresencePlace | null {
         : null;
 }
 
+export function presenceOnlineForMs(
+    view: PresenceView | null,
+    nowMs: number
+): number {
+    if (view?.kind !== 'online' && view?.kind !== 'pendingOffline') {
+        return 0;
+    }
+    const sinceMs = view.onlineSinceMs;
+    return sinceMs !== null && sinceMs <= nowMs ? nowMs - sinceMs : 0;
+}
+
 const PRESENCE_KINDS = new Set([
     'online',
     'pendingOffline',

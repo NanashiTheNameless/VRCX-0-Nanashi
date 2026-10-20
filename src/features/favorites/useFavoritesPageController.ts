@@ -154,13 +154,14 @@ export function useFavoritesPageController({ kind }: { kind: FavoriteKind }) {
     });
 
     useFavoritesSelectedGroupSync({
+        autoSelectGroup: filters.autoSelectGroup,
         avatarHistoryGroups: viewData.avatarHistoryGroups,
         localGroups: viewData.localGroups,
         remoteGroups: viewData.remoteGroups,
+        restoreGroup: filters.restoreGroup,
+        restoreTarget: filters.restoreTarget,
         selectedGroupKey: filters.selectedGroupKey,
-        selectedSource: filters.selectedSource,
-        setSelectedGroupKey: filters.setSelectedGroupKey,
-        setSelectedSource: filters.setSelectedSource
+        selectedSource: filters.selectedSource
     });
 
     const favoriteRevision = useFavoriteRevisionStore(

@@ -3,13 +3,14 @@ import { parseLocation } from '@/shared/utils/location';
 
 export function onlinePresence(
     tag = 'wrld_friend:123',
-    platform = 'standalonewindows'
+    platform = 'standalonewindows',
+    onlineSinceMs: number | null = null
 ): PresenceView {
     return {
         kind: 'online',
         place: { location: parseLocation(tag), travelingTo: null },
         platform,
-        onlineSinceMs: null
+        onlineSinceMs
     };
 }
 

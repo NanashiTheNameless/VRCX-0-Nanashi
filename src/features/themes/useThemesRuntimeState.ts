@@ -28,6 +28,7 @@ export function useThemesRuntimeState() {
     const installedThemes = useCommunityThemeStore(
         (state) => state.installedThemes
     );
+    const updates = useCommunityThemeStore((state) => state.updates);
     const localPreview = useCommunityThemeStore((state) => state.localPreview);
     const localPreviewWatch = useCommunityThemeStore(
         (state) => state.localPreviewWatch
@@ -48,6 +49,7 @@ export function useThemesRuntimeState() {
         enabled,
         installedTheme,
         installedThemes,
+        updates,
         localPreview,
         localPreviewWatch,
         overrideCssLength,

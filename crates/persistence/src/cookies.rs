@@ -25,6 +25,11 @@ pub fn get_default_cookies(db: &DatabaseService) -> Result<Option<String>, Error
         );
         return Ok(None);
     };
+    if let Some(promoted) = secrets::promote_own_slot(&stored) {
+        if let Err(error) = upsert_default_cookies_raw(db, &promoted) {
+            tracing::warn!("failed to move this machine's cookie slot first: {error}");
+        }
+    }
     Ok(Some(cookies))
 }
 
@@ -40,7 +45,23 @@ fn load_default_cookies_raw(db: &DatabaseService) -> Result<Option<String>, Erro
 }
 
 pub fn save_default_cookies(db: &DatabaseService, value: &str) -> Result<(), Error> {
-    let sealed = secrets::seal_secret_with_status(value);
+    let previous = load_default_cookies_raw(db)?;
+    seal_and_save_default_cookies(db, previous.as_deref(), value)
+}
+
+pub fn save_default_cookies_dropping_other_machines(
+    db: &DatabaseService,
+    value: &str,
+) -> Result<(), Error> {
+    seal_and_save_default_cookies(db, None, value)
+}
+
+fn seal_and_save_default_cookies(
+    db: &DatabaseService,
+    previous: Option<&str>,
+    value: &str,
+) -> Result<(), Error> {
+    let sealed = secrets::seal_secret_with_status(previous, value);
     if secrets::is_initialized() && !sealed.encrypted && !value.is_empty() {
         config::remove(db, secrets::CLEANUP_COMPLETED_CONFIG_KEY)?;
     }
@@ -70,7 +91,7 @@ pub fn migrate_default_cookies(db: &DatabaseService) -> Result<bool, Error> {
     if stored.is_empty() || secrets::is_sealed_secret(&stored) {
         return Ok(false);
     }
-    let sealed = secrets::seal_secret_with_status(&stored);
+    let sealed = secrets::seal_secret_with_status(None, &stored);
     if !sealed.encrypted {
         return Err(Error::Custom(
             "failed to encrypt stored cookies during migration".into(),

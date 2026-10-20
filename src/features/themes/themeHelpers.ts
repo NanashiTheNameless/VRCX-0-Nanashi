@@ -43,17 +43,6 @@ export function resolveActiveThemeSource(
     return 'built-in';
 }
 
-function normalizeVersionForThemeCompatibility(version: string): string {
-    return version.trim().replace(/^v/i, '');
-}
-
-export function isSameThemeVersion(left: string, right: string): boolean {
-    return (
-        normalizeVersionForThemeCompatibility(left) ===
-        normalizeVersionForThemeCompatibility(right)
-    );
-}
-
 export function resolveThemeAuthorUrl(theme: CommunityThemeManifest): string {
     const authorUrl = theme.author.url?.trim();
     if (authorUrl) {

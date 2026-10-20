@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -20,7 +21,7 @@ use super::persistence::{
 use super::remote::{protocol_error, CommunityThemeRemote};
 use super::types::{
     CommunityThemeCatalog, CommunityThemeConfigureInput, CommunityThemeInstallMetadata,
-    CommunityThemeProjection,
+    CommunityThemeProjection, CommunityThemeUpdate,
 };
 use vrcx_0_application_core::{Error, Result};
 
@@ -32,6 +33,7 @@ struct CommunityThemeServiceInner {
     operation_lock: AsyncMutex<()>,
     operation_generation: AtomicU64,
     projection: Mutex<CommunityThemeProjection>,
+    latest_versions: Mutex<HashMap<String, String>>,
     revision: AtomicU64,
 }
 
@@ -56,6 +58,7 @@ impl CommunityThemeService {
                 operation_lock: AsyncMutex::new(()),
                 operation_generation: AtomicU64::new(0),
                 projection: Mutex::new(empty_projection()),
+                latest_versions: Mutex::new(HashMap::new()),
                 revision: AtomicU64::new(0),
             }),
         }
@@ -91,7 +94,27 @@ impl CommunityThemeService {
     }
 
     pub async fn load_catalog(&self) -> Result<CommunityThemeCatalog> {
-        self.inner.remote.load_catalog().await
+        let catalog = self.inner.remote.load_catalog().await?;
+        let _operation = self.inner.operation_lock.lock().await;
+        *self.inner.latest_versions.lock().unwrap() = catalog
+            .themes
+            .iter()
+            .map(|theme| (theme.id.clone(), theme.version.clone()))
+            .collect();
+        let projection = self.projection();
+        if self.available_updates(&projection.installed_themes) != projection.updates {
+            self.apply_projection(projection);
+        }
+        Ok(catalog)
+    }
+
+    pub async fn check_for_updates(&self) {
+        if self.projection().installed_themes.is_empty() {
+            return;
+        }
+        if let Err(error) = self.load_catalog().await {
+            tracing::debug!(error = %error, "failed to check community theme updates");
+        }
     }
 
     pub async fn configure(
@@ -101,7 +124,10 @@ impl CommunityThemeService {
         let operation = self.begin_configure_operation();
         match input {
             CommunityThemeConfigureInput::Install { theme_id } => {
-                self.install(operation, &theme_id).await
+                self.install(operation, &theme_id, true).await
+            }
+            CommunityThemeConfigureInput::Update { theme_id } => {
+                self.install(operation, &theme_id, false).await
             }
             CommunityThemeConfigureInput::Enable { theme_id } => {
                 self.enable(operation, theme_id.as_deref()).await
@@ -142,7 +168,12 @@ impl CommunityThemeService {
         Ok(projection)
     }
 
-    async fn install(&self, operation: u64, theme_id: &str) -> Result<CommunityThemeProjection> {
+    async fn install(
+        &self,
+        operation: u64,
+        theme_id: &str,
+        activate: bool,
+    ) -> Result<CommunityThemeProjection> {
         if !protocol::is_community_theme_id(theme_id) {
             return Err(Error::Custom(format!(
                 "Invalid community theme id: {theme_id}."
@@ -159,6 +190,11 @@ impl CommunityThemeService {
             .records
             .iter()
             .find(|record| record.metadata.theme_id == theme_id);
+        if !activate && previous.is_none() {
+            return Err(Error::Custom(format!(
+                "Community theme is not installed: {theme_id}."
+            )));
+        }
         let now = now_iso();
         let metadata = CommunityThemeInstallMetadata {
             theme_id: manifest.id.clone(),
@@ -178,16 +214,26 @@ impl CommunityThemeService {
             dark_mode: manifest.dark_mode,
             accent_mode: manifest.accent_mode,
         };
-        let active_record = CommunityThemeInstalledRecord {
+        let record = CommunityThemeInstalledRecord {
             metadata,
             css_snapshot,
         };
-        merge_install_record(&mut state.records, active_record.clone());
-        let mutations = install_state_mutations(&state.records, Some(&active_record))?;
-        self.inner
-            .background_image
-            .disable_for_community_theme(mutations)?;
-        state.active_record = Some(active_record);
+        merge_install_record(&mut state.records, record.clone());
+        let was_active = state
+            .active_record
+            .as_ref()
+            .is_some_and(|active| active.metadata.theme_id == theme_id);
+        if activate || was_active {
+            state.active_record = Some(record);
+        }
+        let mutations = install_state_mutations(&state.records, state.active_record.as_ref())?;
+        if activate {
+            self.inner
+                .background_image
+                .disable_for_community_theme(mutations)?;
+        } else {
+            self.inner.config.apply_mutations(mutations)?;
+        }
         Ok(self.apply_projection(projection_from_state(&state)))
     }
 
@@ -335,10 +381,31 @@ impl CommunityThemeService {
         }
     }
 
+    fn available_updates(
+        &self,
+        installed_themes: &[CommunityThemeInstallMetadata],
+    ) -> Vec<CommunityThemeUpdate> {
+        let latest_versions = self.inner.latest_versions.lock().unwrap();
+        installed_themes
+            .iter()
+            .filter_map(|theme| {
+                let latest_version = latest_versions.get(&theme.theme_id)?;
+                is_newer_theme_version(&theme.version, latest_version).then(|| {
+                    CommunityThemeUpdate {
+                        theme_id: theme.theme_id.clone(),
+                        installed_version: theme.version.clone(),
+                        latest_version: latest_version.clone(),
+                    }
+                })
+            })
+            .collect()
+    }
+
     fn apply_projection(
         &self,
         mut projection: CommunityThemeProjection,
     ) -> CommunityThemeProjection {
+        projection.updates = self.available_updates(&projection.installed_themes);
         projection.revision = self
             .inner
             .revision
@@ -347,5 +414,17 @@ impl CommunityThemeService {
         *self.inner.projection.lock().unwrap() = projection.clone();
         self.inner.event_bus.emit(projection.clone());
         projection
+    }
+}
+
+fn is_newer_theme_version(installed: &str, latest: &str) -> bool {
+    let installed = installed.trim().trim_start_matches(['v', 'V']);
+    let latest = latest.trim().trim_start_matches(['v', 'V']);
+    match (
+        semver::Version::parse(installed),
+        semver::Version::parse(latest),
+    ) {
+        (Ok(installed), Ok(latest)) => latest > installed,
+        _ => installed != latest,
     }
 }

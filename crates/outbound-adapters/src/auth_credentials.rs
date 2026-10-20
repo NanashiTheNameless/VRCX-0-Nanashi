@@ -56,8 +56,8 @@ impl AuthCredentialStore for LocalAuthCredentialStore {
         secrets::open_secret(stored)
     }
 
-    fn seal_secret(&self, plaintext: &str) -> SealedAuthSecret {
-        let sealed = secrets::seal_secret_with_status(plaintext);
+    fn seal_secret(&self, previous: Option<&str>, plaintext: &str) -> SealedAuthSecret {
+        let sealed = secrets::seal_secret_with_status(previous, plaintext);
         SealedAuthSecret {
             stored: sealed.stored,
             encrypted: sealed.encrypted,
@@ -66,5 +66,13 @@ impl AuthCredentialStore for LocalAuthCredentialStore {
 
     fn is_sealed_secret(&self, value: &str) -> bool {
         secrets::is_sealed_secret(value)
+    }
+
+    fn is_other_machine_secret(&self, value: &str) -> bool {
+        secrets::is_other_machine_secret(value)
+    }
+
+    fn is_own_secret_behind_other_machines(&self, value: &str) -> bool {
+        secrets::promote_own_slot(value).is_some()
     }
 }

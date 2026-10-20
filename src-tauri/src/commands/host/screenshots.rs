@@ -124,6 +124,20 @@ pub async fn app__get_screenshot_folder_images(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn app__pick_random_screenshot_in_folder_tree(
+    state: State<'_, AppState>,
+    folder_path: String,
+) -> Result<Option<String>, AppError> {
+    require_host_capability(HostCapability::ScreenshotCache)?;
+    let screenshots = state.runtime_host().screenshots().clone();
+    run_blocking("random screenshot in folder tree", move || {
+        screenshots.random_path_in_folder_tree(&folder_path)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn app__get_world_screenshots(
     state: State<'_, AppState>,
     world_id: String,

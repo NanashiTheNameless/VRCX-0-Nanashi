@@ -25,12 +25,14 @@ import {
     type ScreenshotGridSort
 } from '@/components/media/screenshotGridPreferences';
 import { cn } from '@/lib/utils';
-import type {
-    ScreenshotFolderInfo,
-    ScreenshotFolderTree,
-    ScreenshotLibraryImage,
-    ScreenshotLibraryScanStatus
+import {
+    commands,
+    type ScreenshotFolderInfo,
+    type ScreenshotFolderTree,
+    type ScreenshotLibraryImage,
+    type ScreenshotLibraryScanStatus
 } from '@/platform/tauri/bindings';
+import { toast } from '@/services/toastService';
 import { Button } from '@/ui/shadcn/button';
 import {
     Collapsible,
@@ -47,7 +49,6 @@ import {
 } from '@/ui/shadcn/toggle-group';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
-import { pickRandomScreenshotPath } from '../screenshotMetadataValues';
 import { useClearSelectionOnEscape } from '../useClearSelectionOnEscape';
 import type { useScreenshotBrowseSelection } from '../useScreenshotBrowseSelection';
 import { GallerySelectionBar } from './GallerySelectionBar';
@@ -627,15 +628,29 @@ export function ScreenshotGalleryView({
                             type="button"
                             variant="outline"
                             size="sm"
-                            disabled={images.length === 0}
-                            onClick={() =>
-                                onOpenImage(
-                                    pickRandomScreenshotPath(
-                                        images,
-                                        Math.random()
+                            disabled={!activeFolder?.totalImageCount}
+                            onClick={() => {
+                                commands
+                                    .appPickRandomScreenshotInFolderTree(
+                                        activeFolderPath
                                     )
-                                )
-                            }
+                                    .then((path) => {
+                                        if (path) {
+                                            onOpenImage(path);
+                                        }
+                                    })
+                                    .catch((error: unknown) => {
+                                        toast.add({
+                                            type: 'error',
+                                            title:
+                                                error instanceof Error
+                                                    ? error.message
+                                                    : t(
+                                                          'common.errors.action_failed'
+                                                      )
+                                        });
+                                    });
+                            }}
                         >
                             <DicesIcon data-icon="inline-start" />
                             {t('dialog.screenshot_metadata.feeling_lucky')}

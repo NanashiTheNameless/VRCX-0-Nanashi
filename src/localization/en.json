@@ -4422,7 +4422,7 @@
             },
             "action": {
                 "install": "Install and enable",
-                "update_enable": "Update",
+                "update": "Update",
                 "enable_theme": "Enable theme",
                 "disable_theme": "Disable theme",
                 "delete_theme": "Delete theme",
@@ -4465,7 +4465,10 @@
                 "override_saved": "Custom CSS applied.",
                 "override_disabled": "Custom CSS disabled.",
                 "override_cleared": "Custom CSS cleared.",
-                "disable_failed": "Failed to update community theme settings."
+                "disable_failed": "Failed to update community theme settings.",
+                "update_available": "{{name}} has an update",
+                "theme_updated": "Community theme updated to {{version}}.",
+                "update_failed": "Failed to update community theme."
             },
             "confirm": {
                 "delete_theme_title": "Delete this theme?",

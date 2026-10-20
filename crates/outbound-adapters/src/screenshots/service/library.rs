@@ -367,6 +367,14 @@ pub fn list_screenshot_folder_images(
     Ok(cache.list_screenshot_folder_images_for_root(root_path, folder_path)?)
 }
 
+pub fn random_screenshot_path_in_folder_tree(
+    cache: &MetadataCacheDb,
+    folder_path: &str,
+    root_path: &str,
+) -> Result<Option<String>> {
+    Ok(cache.random_screenshot_path_in_folder_tree_for_root(root_path, folder_path)?)
+}
+
 pub fn list_world_screenshots(
     cache: &MetadataCacheDb,
     world_id: &str,

@@ -8,7 +8,8 @@ export {
     enableInstalledCommunityTheme,
     initializeCommunityThemes,
     installCommunityTheme,
-    loadCatalog
+    loadCatalog,
+    updateInstalledCommunityTheme
 } from './community-theme/installedThemes';
 export {
     loadLocalCommunityThemePreview,

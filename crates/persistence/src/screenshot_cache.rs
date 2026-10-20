@@ -519,6 +519,30 @@ impl MetadataCacheDb {
             .map_err(|error| Error::sqlite_with_context("read screenshot folder image row", error))
     }
 
+    pub fn random_screenshot_path_in_folder_tree_for_root(
+        &self,
+        root_path: &str,
+        folder_path: &str,
+    ) -> Result<Option<String>> {
+        let mut descendant_prefix = folder_path.to_string();
+        if !descendant_prefix.ends_with(std::path::MAIN_SEPARATOR) {
+            descendant_prefix.push(std::path::MAIN_SEPARATOR);
+        }
+        let conn = self.inner.conn.lock().unwrap();
+        conn.query_row(
+            "SELECT path
+             FROM screenshot_files
+             WHERE scan_root = ?1
+               AND (folder_path = ?2 OR substr(folder_path, 1, length(?3)) = ?3)
+             ORDER BY random()
+             LIMIT 1",
+            [root_path, folder_path, descendant_prefix.as_str()],
+            |row| row.get(0),
+        )
+        .optional()
+        .map_err(|error| Error::sqlite_with_context("pick random screenshot in folder tree", error))
+    }
+
     pub fn screenshot_library_navigation_for_root(
         &self,
         root_path: &str,

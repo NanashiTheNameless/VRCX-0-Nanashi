@@ -369,6 +369,11 @@ export const FAVORITES_LAYOUT_CONFIG_KEYS = Object.freeze({
         friend: 'VRCX_FavoritesFriendSort',
         world: 'VRCX_FavoritesWorldSort',
         avatar: 'VRCX_FavoritesAvatarSort'
+    }),
+    selectedGroup: Object.freeze({
+        friend: 'VRCX_FavoritesFriendSelectedGroup',
+        world: 'VRCX_FavoritesWorldSelectedGroup',
+        avatar: 'VRCX_FavoritesAvatarSelectedGroup'
     })
 });
 

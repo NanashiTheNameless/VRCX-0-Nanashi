@@ -2208,7 +2208,15 @@ impl DesktopRuntimeHostState {
                 "RemoteSync secrets cannot be saved because protected credential storage is unavailable.".into(),
             ));
         }
-        let sealed = credentials.seal_secret(plaintext);
+        let previous = self
+            .runtime
+            .desktop_assembly()
+            .config()
+            .get_string(key, "")?;
+        let sealed = credentials.seal_secret(
+            (!previous.is_empty()).then_some(previous.as_str()),
+            plaintext,
+        );
         if !sealed.encrypted {
             return Err(crate::Error::Custom(
                 "RemoteSync secrets cannot be saved without encryption.".into(),
@@ -2529,10 +2537,13 @@ impl DesktopRuntimeProfileExtension {
                 if let Err(error) = community_theme.initialize().await {
                     tracing::warn!(error = %error, "failed to initialize community theme runtime");
                 }
-                if let Err(error) = background_image.initialize().await {
-                    tracing::warn!(error = %error, "failed to initialize background image runtime");
-                }
-                background_image.run_rotation_loop(stop_token).await;
+                let background_image_runtime = async {
+                    if let Err(error) = background_image.initialize().await {
+                        tracing::warn!(error = %error, "failed to initialize background image runtime");
+                    }
+                    background_image.run_rotation_loop(stop_token).await;
+                };
+                tokio::join!(community_theme.check_for_updates(), background_image_runtime);
             });
     }
 

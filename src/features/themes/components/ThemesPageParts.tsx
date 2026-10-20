@@ -128,7 +128,7 @@ export function ThemeCatalogCard({
                         <DownloadIcon data-icon="inline-start" />
                     )}
                     {updateAvailable
-                        ? t('view.community_themes.action.update_enable')
+                        ? t('view.community_themes.action.update')
                         : installed
                           ? active
                               ? t('view.community_themes.status.active')

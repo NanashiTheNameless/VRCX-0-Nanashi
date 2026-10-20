@@ -44,6 +44,7 @@ pub trait AuthSessionCookies: Send + Sync {
     fn get(&self) -> String;
     fn set(&self, cookies: &str) -> Result<()>;
     fn clear(&self);
+    fn clear_everywhere(&self);
     fn clear_auth(&self);
     fn save(&self);
 }

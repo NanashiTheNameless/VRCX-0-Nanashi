@@ -16,6 +16,14 @@ pub struct CommunityThemeInstallMetadata {
     pub accent_mode: bool,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct CommunityThemeUpdate {
+    pub theme_id: String,
+    pub installed_version: String,
+    pub latest_version: String,
+}
+
 #[derive(Clone, Debug, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CommunityThemeProjection {
@@ -27,6 +35,7 @@ pub struct CommunityThemeProjection {
     pub installed_css_snapshot: String,
     pub override_css: String,
     pub override_css_enabled: bool,
+    pub updates: Vec<CommunityThemeUpdate>,
 }
 
 #[derive(Clone, Debug, Deserialize, specta::Type)]
@@ -34,6 +43,10 @@ pub struct CommunityThemeProjection {
 pub enum CommunityThemeConfigureInput {
     #[serde(rename_all = "camelCase")]
     Install {
+        theme_id: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    Update {
         theme_id: String,
     },
     #[serde(rename_all = "camelCase")]

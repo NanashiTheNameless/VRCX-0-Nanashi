@@ -20,6 +20,7 @@ pub trait WebClientPort: Send + Sync {
     async fn fetch_image(&self, url: &str) -> Result<Vec<u8>>;
     fn realtime_connection_options(&self) -> RealtimeConnectionOptions;
     fn clear_cookies(&self);
+    fn clear_cookies_everywhere(&self);
     fn clear_auth_cookies(&self);
     fn cookie_diagnostics(&self) -> Value;
     fn auth_cookie_value(&self) -> Option<String>;
@@ -77,6 +78,10 @@ impl WebClient {
 
     pub fn clear_cookies(&self) {
         self.inner.clear_cookies();
+    }
+
+    pub fn clear_cookies_everywhere(&self) {
+        self.inner.clear_cookies_everywhere();
     }
 
     pub fn clear_auth_cookies(&self) {

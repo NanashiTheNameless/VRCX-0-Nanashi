@@ -28,7 +28,7 @@ pub use background_image::{
 pub use community_theme::{
     CommunityThemeAuthor, CommunityThemeCatalog, CommunityThemeConfigureInput,
     CommunityThemeInstallMetadata, CommunityThemeManifest, CommunityThemeProjection,
-    CommunityThemeRemote, CommunityThemeRemoteFuture, CommunityThemeService,
+    CommunityThemeRemote, CommunityThemeRemoteFuture, CommunityThemeService, CommunityThemeUpdate,
 };
 pub use config_mutation::{list_config_values, remove_config_value, set_config_values};
 pub use data_dir_migration::{

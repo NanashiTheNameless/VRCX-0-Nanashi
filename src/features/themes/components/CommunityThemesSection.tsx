@@ -3,6 +3,7 @@ import {
     BrushIcon,
     CloudOffIcon,
     ExternalLinkIcon,
+    DownloadIcon,
     PaletteIcon,
     Trash2Icon
 } from 'lucide-react';
@@ -17,10 +18,7 @@ import { Button } from '@/ui/shadcn/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/shadcn/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
-import {
-    COMMUNITY_THEMES_REPOSITORY_URL,
-    isSameThemeVersion
-} from '../themeHelpers';
+import { COMMUNITY_THEMES_REPOSITORY_URL } from '../themeHelpers';
 import type { useThemesController } from '../useThemesController';
 import { ThemeCatalogCard } from './ThemesPageParts';
 
@@ -34,6 +32,8 @@ type CommunityThemesSectionProps = Pick<
     | 'loading'
     | 'enableTheme'
     | 'installTheme'
+    | 'updateTheme'
+    | 'updateByThemeId'
     | 'installedThemes'
     | 'disableTheme'
     | 'deleteTheme'
@@ -49,6 +49,8 @@ export function CommunityThemesSection({
     loading,
     enableTheme,
     installTheme,
+    updateTheme,
+    updateByThemeId,
     installedThemes,
     disableTheme,
     deleteTheme,
@@ -77,6 +79,11 @@ export function CommunityThemesSection({
                         </TabsTrigger>
                         <TabsTrigger value="installed">
                             {t('view.community_themes.tabs.installed')}
+                            {updateByThemeId.size ? (
+                                <span className="text-content-tertiary text-[11px] leading-none font-medium tabular-nums">
+                                    {updateByThemeId.size}
+                                </span>
+                            ) : null}
                         </TabsTrigger>
                     </TabsList>
                 </div>
@@ -116,12 +123,8 @@ export function CommunityThemesSection({
                             );
                             const active =
                                 enabled && installedTheme?.themeId === theme.id;
-                            const updateAvailable = Boolean(
-                                installedEntry &&
-                                !isSameThemeVersion(
-                                    installedEntry.version,
-                                    theme.version
-                                )
+                            const updateAvailable = updateByThemeId.has(
+                                theme.id
                             );
                             return (
                                 <ThemeCatalogCard
@@ -132,10 +135,11 @@ export function CommunityThemesSection({
                                     updateAvailable={updateAvailable}
                                     loading={loading}
                                     onInstall={() => {
-                                        if (
-                                            installedEntry &&
-                                            !updateAvailable
-                                        ) {
+                                        if (updateAvailable) {
+                                            updateTheme(theme.id);
+                                            return;
+                                        }
+                                        if (installedEntry) {
                                             enableTheme(theme.id);
                                             return;
                                         }
@@ -168,6 +172,9 @@ export function CommunityThemesSection({
                                         enabled &&
                                         installedTheme?.themeId ===
                                             theme.themeId;
+                                    const update = updateByThemeId.get(
+                                        theme.themeId
+                                    );
                                     return (
                                         <div
                                             key={theme.themeId}
@@ -184,6 +191,9 @@ export function CommunityThemesSection({
                                                                 'view.community_themes.field.version'
                                                             )}
                                                             : {theme.version}
+                                                            {update
+                                                                ? ` → ${update.latestVersion}`
+                                                                : null}
                                                         </div>
                                                         <div className="text-muted-foreground">
                                                             {t(
@@ -209,6 +219,23 @@ export function CommunityThemesSection({
                                                     ) : null}
                                                 </div>
                                                 <div className="flex flex-wrap gap-2">
+                                                    {update ? (
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            disabled={loading}
+                                                            onClick={() =>
+                                                                updateTheme(
+                                                                    theme.themeId
+                                                                )
+                                                            }
+                                                        >
+                                                            <DownloadIcon data-icon="inline-start" />
+                                                            {t(
+                                                                'view.community_themes.action.update'
+                                                            )}
+                                                        </Button>
+                                                    ) : null}
                                                     {active ? (
                                                         <Button
                                                             type="button"

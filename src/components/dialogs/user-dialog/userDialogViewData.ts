@@ -1,4 +1,4 @@
-import { presenceOf, presenceSection } from '@/domain/friends/presence';
+import { presenceOf, presenceOnlineForMs } from '@/domain/friends/presence';
 import { normalizeUserRelationshipHistory } from '@/services/userDialogSessionCacheService';
 
 import {
@@ -89,25 +89,11 @@ function validTimestampMs(value: unknown) {
     return Number.isNaN(timestamp) ? 0 : timestamp;
 }
 
-function isCurrentlyOnline(profile: DialogRecord) {
-    const presence = presenceOf(profile);
-    return presence ? presenceSection(presence) === 'online' : false;
-}
-
 function estimatedOnlineDuration(profile: DialogRecord, nowMs?: number) {
-    if (!isCurrentlyOnline(profile)) {
+    if (typeof nowMs !== 'number' || !Number.isFinite(nowMs)) {
         return 0;
     }
-    const lastLoginMs = validTimestampMs(profile?.last_login);
-    if (
-        !lastLoginMs ||
-        typeof nowMs !== 'number' ||
-        !Number.isFinite(nowMs) ||
-        lastLoginMs > nowMs
-    ) {
-        return 0;
-    }
-    return nowMs - lastLoginMs;
+    return presenceOnlineForMs(presenceOf(profile), nowMs);
 }
 
 function resolveFriendedAt(profile: DialogRecord) {

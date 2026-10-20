@@ -78,6 +78,10 @@ impl AuthSessionCookies for WebAuthSessionCookies {
         self.web.clear_cookies();
     }
 
+    fn clear_everywhere(&self) {
+        self.web.clear_cookies_everywhere();
+    }
+
     fn clear_auth(&self) {
         self.web.clear_auth_cookies();
     }

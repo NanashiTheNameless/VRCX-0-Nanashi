@@ -90,7 +90,7 @@ impl NonInteractiveAuthActions for LocalNonInteractiveAuthActions {
     }
 
     fn clear_browser_session(&self) {
-        self.cookies.clear();
+        self.cookies.clear_everywhere();
         self.cookies.save();
     }
 

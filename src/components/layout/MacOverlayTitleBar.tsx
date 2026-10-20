@@ -22,7 +22,7 @@ export function MacOverlayTitleBar() {
         alwaysOnTopButton,
         sidebarWindowModeButton,
         notificationAction,
-        themeToggleAction
+        appearanceAction
     } = useTitleBarActions('px-2');
     const privacyLockCovering = usePrivacyLockCovering();
 
@@ -56,7 +56,7 @@ export function MacOverlayTitleBar() {
                             </TitleBarButton>
                         ) : null}
                         {notificationAction}
-                        {themeToggleAction}
+                        {appearanceAction}
                         {alwaysOnTopButton}
                         {sidebarWindowModeButton}
                     </div>

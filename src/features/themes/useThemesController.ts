@@ -36,6 +36,7 @@ import { communityThemeControlsAccent } from '@/state/communityThemeStore';
 import { useModalStore } from '@/state/modalStore';
 import type { ThemeMode } from '@/state/shellStore';
 
+import { updateCommunityTheme } from './communityThemeUpdate';
 import { resolveActiveThemeSource, type ThemeSource } from './themeHelpers';
 import { useThemesRuntimeState } from './useThemesRuntimeState';
 
@@ -51,6 +52,7 @@ export function useThemesController() {
         enabled,
         installedTheme,
         installedThemes,
+        updates,
         localPreview,
         localPreviewWatch,
         overrideCssLength,
@@ -171,6 +173,10 @@ export function useThemesController() {
                         : t('view.community_themes.toast.disable_failed')
             });
         }
+    }
+
+    function updateTheme(themeId: string) {
+        void updateCommunityTheme(themeId, t);
     }
 
     async function enableTheme(themeId?: string) {
@@ -423,6 +429,9 @@ export function useThemesController() {
             theme
         ])
     );
+    const updateByThemeId = new Map(
+        updates.map((update) => [update.themeId, update])
+    );
     const appearanceControlled = activeSource !== 'built-in';
     const customCssBadge = overrideCssLength
         ? t('view.themes.summary.custom_css_on')
@@ -470,6 +479,7 @@ export function useThemesController() {
         installedTheme,
         installedThemes,
         installedThemeById,
+        updateByThemeId,
         localPreview,
         overrideCssLength,
         loading,
@@ -492,6 +502,7 @@ export function useThemesController() {
         disableTheme,
         deleteTheme,
         enableTheme,
+        updateTheme,
         saveOverride,
         clearOverride,
         disableOverride,

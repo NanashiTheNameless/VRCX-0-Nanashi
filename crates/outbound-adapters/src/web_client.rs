@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use vrcx_0_contracts::external_api::{
@@ -39,6 +40,7 @@ pub struct WebClient {
     realtime_origin: String,
     image_fetcher: Arc<ImageFetcher>,
     vrchat_config: VrchatConfigCache,
+    drop_other_machine_cookies: AtomicBool,
 }
 
 struct VrchatConfigSnapshot {
@@ -102,6 +104,7 @@ impl WebClient {
             realtime_origin,
             image_fetcher,
             vrchat_config: VrchatConfigCache::default(),
+            drop_other_machine_cookies: AtomicBool::new(false),
         })
     }
 
@@ -114,9 +117,18 @@ impl WebClient {
             jar.mark_dirty();
             return;
         };
-        if let Err(error) = cookies::save_default_cookies(self.db.as_ref(), &b64) {
+        let drop_other_machines = self.drop_other_machine_cookies.load(Ordering::Acquire);
+        let saved = if drop_other_machines {
+            cookies::save_default_cookies_dropping_other_machines(self.db.as_ref(), &b64)
+        } else {
+            cookies::save_default_cookies(self.db.as_ref(), &b64)
+        };
+        if let Err(error) = saved {
             jar.mark_dirty();
             tracing::warn!("failed to persist cookies: {error}");
+        } else if drop_other_machines {
+            self.drop_other_machine_cookies
+                .store(false, Ordering::Release);
         }
     }
 
@@ -137,6 +149,12 @@ impl WebClient {
 
     pub fn clear_cookies(&self) {
         self.inner.clear_cookies();
+    }
+
+    pub fn clear_cookies_everywhere(&self) {
+        self.inner.clear_cookies();
+        self.drop_other_machine_cookies
+            .store(true, Ordering::Release);
     }
 
     pub fn clear_auth_cookies(&self) {
@@ -346,6 +364,10 @@ impl vrcx_0_application_core::WebClientPort for WebClient {
 
     fn clear_cookies(&self) {
         WebClient::clear_cookies(self);
+    }
+
+    fn clear_cookies_everywhere(&self) {
+        WebClient::clear_cookies_everywhere(self);
     }
 
     fn clear_auth_cookies(&self) {

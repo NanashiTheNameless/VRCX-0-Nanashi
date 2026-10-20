@@ -5,6 +5,7 @@ import type {
     CommunityThemeLocalPreview,
     CommunityThemeManifest
 } from '@/domain/themes/types';
+import type { CommunityThemeUpdate } from '@/platform/tauri/bindings';
 
 interface CommunityThemeLocalPreviewWatch {
     enabled: boolean;
@@ -18,6 +19,7 @@ interface CommunityThemeStore {
     enabled: boolean;
     installedTheme: CommunityThemeInstallMetadata | null;
     installedThemes: CommunityThemeInstallMetadata[];
+    updates: CommunityThemeUpdate[];
     localPreview: CommunityThemeLocalPreview | null;
     localPreviewWatch: CommunityThemeLocalPreviewWatch;
     overrideCssLength: number;
@@ -36,6 +38,7 @@ interface CommunityThemeStore {
         enabled: boolean;
         installedTheme: CommunityThemeInstallMetadata | null;
         installedThemes?: CommunityThemeInstallMetadata[];
+        updates?: CommunityThemeUpdate[];
     }): void;
     setLocalPreview(localPreview: CommunityThemeLocalPreview | null): void;
     setLocalPreviewWatch(
@@ -85,6 +88,7 @@ export const useCommunityThemeStore = create<CommunityThemeStore>((set) => ({
     enabled: false,
     installedTheme: null,
     installedThemes: [],
+    updates: [],
     localPreview: null,
     localPreviewWatch: {
         enabled: false,
@@ -121,11 +125,12 @@ export const useCommunityThemeStore = create<CommunityThemeStore>((set) => ({
             overrideCssLength: Math.max(0, overrideCssLength || 0)
         });
     },
-    setInstalledState({ enabled, installedTheme, installedThemes }) {
+    setInstalledState({ enabled, installedTheme, installedThemes, updates }) {
         set({
             enabled: enabled && installedTheme !== null,
             installedTheme,
-            ...(installedThemes !== undefined ? { installedThemes } : {})
+            ...(installedThemes !== undefined ? { installedThemes } : {}),
+            ...(updates !== undefined ? { updates } : {})
         });
     },
     setLocalPreview(localPreview) {

@@ -721,6 +721,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::host::screenshots::app__get_screenshot_library_status,
             commands::host::screenshots::app__get_screenshot_folder_tree,
             commands::host::screenshots::app__get_screenshot_folder_images,
+            commands::host::screenshots::app__pick_random_screenshot_in_folder_tree,
             commands::host::screenshots::app__get_world_screenshots,
             commands::host::screenshots::app__get_screenshots_in_windows,
             commands::host::screenshots::app__ensure_screenshot_thumbnail,

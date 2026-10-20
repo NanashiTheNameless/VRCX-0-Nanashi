@@ -215,3 +215,178 @@ async fn override_css_persists_while_its_enabled_state_can_be_disabled() {
     assert_eq!(initialized.override_css, ":root { --accent: red; }");
     assert!(!initialized.override_css_enabled);
 }
+
+struct VersionedCommunityThemeRemote {
+    version: std::sync::Mutex<String>,
+}
+
+impl VersionedCommunityThemeRemote {
+    fn new(version: &str) -> Self {
+        Self {
+            version: std::sync::Mutex::new(version.into()),
+        }
+    }
+
+    fn publish(&self, version: &str) {
+        *self.version.lock().unwrap() = version.into();
+    }
+
+    fn manifest(&self, theme_id: &str) -> CommunityThemeManifest {
+        CommunityThemeManifest {
+            id: theme_id.into(),
+            name: theme_id.into(),
+            version: self.version.lock().unwrap().clone(),
+            author: CommunityThemeAuthor {
+                name: "Test".into(),
+                github: "test".into(),
+                url: None,
+            },
+            description: String::new(),
+            tags: Vec::new(),
+            tested_with: String::new(),
+            remote_assets: false,
+            dark_mode: true,
+            accent_mode: false,
+            preview_url: String::new(),
+            readme_url: String::new(),
+        }
+    }
+}
+
+impl CommunityThemeRemote for VersionedCommunityThemeRemote {
+    fn load_catalog(&self) -> CommunityThemeRemoteFuture<'_, CommunityThemeCatalog> {
+        Box::pin(async {
+            Ok(CommunityThemeCatalog {
+                source_url: protocol::COMMUNITY_THEME_CATALOG_URL.into(),
+                schema_version: 1,
+                themes: vec![self.manifest("theme-a"), self.manifest("theme-b")],
+            })
+        })
+    }
+
+    fn load_manifest<'a>(
+        &'a self,
+        theme_id: &'a str,
+    ) -> CommunityThemeRemoteFuture<'a, CommunityThemeManifest> {
+        Box::pin(async move { Ok(self.manifest(theme_id)) })
+    }
+
+    fn load_css<'a>(&'a self, theme_id: &'a str) -> CommunityThemeRemoteFuture<'a, String> {
+        Box::pin(async move {
+            Ok(format!(
+                ".{theme_id} {{ --version: '{}'; }}",
+                self.version.lock().unwrap()
+            ))
+        })
+    }
+}
+
+async fn install_theme(service: &CommunityThemeService, theme_id: &str) {
+    service
+        .configure(CommunityThemeConfigureInput::Install {
+            theme_id: theme_id.into(),
+        })
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn update_check_reports_only_newer_catalog_versions() {
+    let remote = Arc::new(VersionedCommunityThemeRemote::new("v1.2.0"));
+    let service = test_service(remote.clone());
+    install_theme(&service, "theme-a").await;
+
+    remote.publish("1.1.9");
+    service.check_for_updates().await;
+    assert!(service.projection().updates.is_empty());
+
+    remote.publish("1.10.0");
+    service.check_for_updates().await;
+    assert_eq!(
+        service.projection().updates,
+        vec![CommunityThemeUpdate {
+            theme_id: "theme-a".into(),
+            installed_version: "v1.2.0".into(),
+            latest_version: "1.10.0".into(),
+        }]
+    );
+}
+
+#[tokio::test]
+async fn update_refreshes_the_snapshot_without_changing_which_theme_is_active() {
+    let remote = Arc::new(VersionedCommunityThemeRemote::new("1.0.0"));
+    let service = test_service(remote.clone());
+    install_theme(&service, "theme-b").await;
+    install_theme(&service, "theme-a").await;
+    remote.publish("1.1.0");
+    service.check_for_updates().await;
+    assert_eq!(service.projection().updates.len(), 2);
+
+    let updated_inactive = service
+        .configure(CommunityThemeConfigureInput::Update {
+            theme_id: "theme-b".into(),
+        })
+        .await
+        .unwrap();
+    assert_eq!(
+        updated_inactive
+            .installed_theme
+            .as_ref()
+            .map(|theme| theme.theme_id.as_str()),
+        Some("theme-a")
+    );
+    assert_eq!(
+        updated_inactive.installed_css_snapshot,
+        ".theme-a { --version: '1.0.0'; }"
+    );
+    assert_eq!(
+        updated_inactive
+            .updates
+            .iter()
+            .map(|update| update.theme_id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["theme-a"]
+    );
+
+    let updated_active = service
+        .configure(CommunityThemeConfigureInput::Update {
+            theme_id: "theme-a".into(),
+        })
+        .await
+        .unwrap();
+    assert!(updated_active.enabled);
+    assert_eq!(
+        updated_active
+            .installed_theme
+            .as_ref()
+            .map(|theme| theme.version.as_str()),
+        Some("1.1.0")
+    );
+    assert_eq!(
+        updated_active.installed_css_snapshot,
+        ".theme-a { --version: '1.1.0'; }"
+    );
+    assert!(updated_active.updates.is_empty());
+
+    let initialized = service.initialize().await.unwrap();
+    assert_eq!(
+        initialized.installed_css_snapshot,
+        ".theme-a { --version: '1.1.0'; }"
+    );
+    assert!(initialized.updates.is_empty());
+}
+
+#[tokio::test]
+async fn update_rejects_themes_that_are_not_installed() {
+    let remote = Arc::new(VersionedCommunityThemeRemote::new("1.0.0"));
+    let service = test_service(remote);
+
+    let error = service
+        .configure(CommunityThemeConfigureInput::Update {
+            theme_id: "theme-a".into(),
+        })
+        .await
+        .unwrap_err();
+    assert!(error.to_string().contains("not installed"));
+    assert!(service.projection().installed_themes.is_empty());
+}

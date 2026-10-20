@@ -8,6 +8,7 @@ import {
     PanelRightOpenIcon,
     PinIcon,
     SearchIcon,
+    ShuffleIcon,
     SparklesIcon
 } from 'lucide-react';
 import {
@@ -23,6 +24,10 @@ import { useLocation, useNavigate } from 'react-router';
 import { KeyboardShortcut } from '@/components/keyboard/KeyboardShortcut';
 import { ShortcutHintPanel } from '@/components/keyboard/ShortcutHintPanel';
 import { cn } from '@/lib/utils';
+import {
+    isBackgroundImageCustomSourceRotating,
+    refreshBackgroundImage
+} from '@/services/background-image/backgroundImageService';
 import { setThemeModePreference } from '@/services/preferencesService';
 import { useResolvedThemeMode } from '@/services/themeService';
 import { toast } from '@/services/toastService';
@@ -146,7 +151,7 @@ interface TitleBarActionsResult {
     alwaysOnTopButton: ReactNode;
     sidebarWindowModeButton: ReactNode;
     notificationAction: ReactNode;
-    themeToggleAction: ReactNode;
+    appearanceAction: ReactNode;
     openQuickSearch: () => void;
     openDirectAccessFromClipboard: () => void;
     openNotificationCenter: () => void;
@@ -228,6 +233,18 @@ export function useTitleBarActions(
     );
     const backgroundImageEnabled = useBackgroundImageStore(
         (state) => state.enabled
+    );
+    const backgroundImageRotating = useBackgroundImageStore(
+        (state) =>
+            state.enabled &&
+            state.mode === 'custom' &&
+            isBackgroundImageCustomSourceRotating(
+                state.customSource,
+                state.snapshot?.imageCount
+            )
+    );
+    const backgroundImageLoading = useBackgroundImageStore(
+        (state) => state.loading
     );
     const {
         sidePanelOpen: rightSidebarOpen,
@@ -426,7 +443,19 @@ export function useTitleBarActions(
         )
     ) : null;
 
-    const themeToggleAction = themeToggleVisible ? (
+    function changeBackgroundImage() {
+        refreshBackgroundImage().catch((error: unknown) => {
+            toast.add({
+                type: 'error',
+                title:
+                    error instanceof Error
+                        ? error.message
+                        : t('view.background_image.toast.failed')
+            });
+        });
+    }
+
+    const appearanceAction = themeToggleVisible ? (
         <Tooltip>
             <TooltipTrigger
                 render={
@@ -459,6 +488,15 @@ export function useTitleBarActions(
                 {themeToggleLabel}
             </TooltipContent>
         </Tooltip>
+    ) : backgroundImageRotating ? (
+        <TitleBarButton
+            label={t('view.background_image.action.change_image')}
+            className="size-7 min-w-7 rounded-md px-0"
+            disabled={backgroundImageLoading}
+            onClick={changeBackgroundImage}
+        >
+            <ShuffleIcon data-icon="icon" />
+        </TitleBarButton>
     ) : null;
 
     const actions = isSessionReady ? (
@@ -533,7 +571,7 @@ export function useTitleBarActions(
                     <SparklesIcon data-icon="icon" />
                 </TitleBarButton>
             ) : null}
-            {themeToggleAction}
+            {appearanceAction}
             {alwaysOnTopButton}
             <TitleBarButton
                 label={rightSidebarLabel}
@@ -599,6 +637,6 @@ export function useTitleBarActions(
         alwaysOnTopButton,
         sidebarWindowModeButton,
         notificationAction,
-        themeToggleAction
+        appearanceAction
     };
 }

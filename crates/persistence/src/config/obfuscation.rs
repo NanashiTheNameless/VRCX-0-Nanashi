@@ -13,6 +13,7 @@ const CONFIG_OBFUSCATION_CHECKSUM_BYTES: usize = 8;
 
 const OBFUSCATED_CONFIG_KEYS: &[&str] = &[
     "config:vrcx_assistant.apikey",
+    "config:vrcx_feedlogger",
     "config:vrcx_integrationapitoken",
     "config:vrcx_llm.endpoints",
     "config:vrcx_mcpservertoken",
@@ -123,6 +124,7 @@ mod tests {
     fn sensitive_key_registry_accepts_aliases_and_rejects_regular_config() {
         for key in [
             "assistant.apiKey",
+            "feedLogger",
             "integrationApiToken",
             "llm.endpoints",
             "mcpServerToken",

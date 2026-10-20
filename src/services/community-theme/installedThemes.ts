@@ -49,7 +49,8 @@ async function applyCommunityThemeProjection(
     store.setInstalledState({
         enabled: projection.enabled,
         installedTheme: projection.installedTheme,
-        installedThemes: projection.installedThemes
+        installedThemes: projection.installedThemes,
+        updates: projection.updates
     });
     store.setOverrideCssLength(
         projection.overrideCssEnabled ? projection.overrideCss.length : 0
@@ -154,6 +155,22 @@ export async function installCommunityTheme(
         throw new Error(`Community theme was not installed: ${theme.id}.`);
     }
     return projection.installedTheme;
+}
+
+export async function updateInstalledCommunityTheme(
+    themeId: string
+): Promise<CommunityThemeInstallMetadata> {
+    const projection = await runCommunityThemeCommand({
+        kind: 'update',
+        themeId
+    });
+    const updatedTheme = projection.installedThemes.find(
+        (theme) => theme.themeId === themeId
+    );
+    if (!updatedTheme) {
+        throw new Error(`Community theme was not updated: ${themeId}.`);
+    }
+    return updatedTheme;
 }
 
 export async function enableInstalledCommunityTheme(

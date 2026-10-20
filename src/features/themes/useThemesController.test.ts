@@ -18,13 +18,12 @@ vi.mock('@/services/communityThemeService', () => ({
     getCommunityThemeOverrideCssSnapshot: () => 'body { color: red; }',
     installCommunityTheme: vi.fn(),
     loadCatalog: () => Promise.resolve(),
-    loadCommunityThemeStats: () => Promise.resolve({}),
     loadLocalCommunityThemePreview: vi.fn(),
-    reportCommunityThemeInstall: vi.fn(),
     saveCommunityThemeOverrideCss: vi.fn(),
     startLocalCommunityThemePreviewWatch: vi.fn(),
     stopLocalCommunityThemePreview: vi.fn(),
-    stopLocalCommunityThemePreviewWatch: vi.fn()
+    stopLocalCommunityThemePreviewWatch: vi.fn(),
+    updateInstalledCommunityTheme: vi.fn()
 }));
 
 vi.mock('@/services/toastService', () => ({
@@ -42,6 +41,7 @@ vi.mock('./useThemesRuntimeState', () => ({
         enabled: false,
         installedTheme: null,
         installedThemes: [],
+        updates: [],
         localPreview: null,
         localPreviewWatch: { enabled: false, folderPath: '', error: '' },
         overrideCssLength: 20,

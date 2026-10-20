@@ -314,6 +314,53 @@ fn list_screenshot_folder_images_for_root_filters_by_folder_and_orders_by_file_n
 }
 
 #[test]
+fn random_screenshot_in_folder_tree_includes_subfolders_only() -> Result<()> {
+    let dir = TestDir::new("random-folder-tree");
+    let cache = open_cache(&dir);
+    let root = dir.path.join("Screenshots");
+    let month = root.join("2026-10");
+    let nested = month.join("Day");
+    let sibling = root.join("2026-10b");
+    let root_str = path_string(&root);
+    let month_str = path_string(&month);
+    let nested_str = path_string(&nested);
+    let sibling_str = path_string(&sibling);
+    let nested_path = path_string(&nested.join("a.png"));
+
+    store_entries(
+        &cache,
+        &root_str,
+        &[
+            library_entry(&root_str, &nested_path, &nested_str, "a.png"),
+            library_entry(
+                &root_str,
+                &path_string(&sibling.join("b.png")),
+                &sibling_str,
+                "b.png",
+            ),
+        ],
+    )?;
+
+    for _ in 0..20 {
+        assert_eq!(
+            cache.random_screenshot_path_in_folder_tree_for_root(&root_str, &month_str)?,
+            Some(nested_path.clone())
+        );
+    }
+    assert!(cache
+        .random_screenshot_path_in_folder_tree_for_root(&root_str, &root_str)?
+        .is_some());
+    assert_eq!(
+        cache.random_screenshot_path_in_folder_tree_for_root(
+            &root_str,
+            &path_string(&root.join("Empty"))
+        )?,
+        None
+    );
+    Ok(())
+}
+
+#[test]
 fn screenshot_library_navigation_crosses_folders_without_wrapping() -> Result<()> {
     let dir = TestDir::new("library-navigation");
     let cache = open_cache(&dir);

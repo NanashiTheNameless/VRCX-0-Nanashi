@@ -30,8 +30,10 @@ pub trait AuthCredentialStore: Send + Sync {
     fn is_encrypting_writes(&self) -> bool;
     fn is_secret_store_initialized(&self) -> bool;
     fn open_secret(&self, stored: &str) -> Option<String>;
-    fn seal_secret(&self, plaintext: &str) -> SealedAuthSecret;
+    fn seal_secret(&self, previous: Option<&str>, plaintext: &str) -> SealedAuthSecret;
     fn is_sealed_secret(&self, value: &str) -> bool;
+    fn is_other_machine_secret(&self, value: &str) -> bool;
+    fn is_own_secret_behind_other_machines(&self, value: &str) -> bool;
 }
 
 #[derive(Serialize)]
@@ -142,7 +144,7 @@ pub fn migrate_saved_credential_secrets(config: &dyn AuthCredentialStore) -> Res
 
 struct DecodedSecret {
     plaintext: Option<String>,
-    cleared_as_undecryptable: bool,
+    needs_rewrite: bool,
 }
 
 struct DecodedSavedCredential {
@@ -168,14 +170,24 @@ fn decode_secret(config: &dyn AuthCredentialStore, stored: String, field: &str) 
     if stored.is_empty() {
         return DecodedSecret {
             plaintext: None,
-            cleared_as_undecryptable: false,
+            needs_rewrite: false,
         };
     }
     match config.open_secret(&stored) {
         Some(plaintext) => DecodedSecret {
             plaintext: Some(plaintext),
-            cleared_as_undecryptable: false,
+            needs_rewrite: config.is_own_secret_behind_other_machines(&stored),
         },
+        None if config.is_other_machine_secret(&stored) => {
+            tracing::info!(
+                field,
+                "stored credential secret belongs to another machine; keeping it"
+            );
+            DecodedSecret {
+                plaintext: None,
+                needs_rewrite: false,
+            }
+        }
         None => {
             tracing::info!(
                 field,
@@ -183,7 +195,7 @@ fn decode_secret(config: &dyn AuthCredentialStore, stored: String, field: &str) 
             );
             DecodedSecret {
                 plaintext: None,
-                cleared_as_undecryptable: true,
+                needs_rewrite: true,
             }
         }
     }
@@ -231,14 +243,14 @@ fn decode_saved_credential(
         if let Some(stored_password) = login_params.password.take() {
             let decoded = decode_secret(config, stored_password, "loginParams.password");
             login_params.password = decoded.plaintext;
-            edited |= decoded.cleared_as_undecryptable;
+            edited |= decoded.needs_rewrite;
         }
     }
 
     let cookies = match record.get("cookies") {
         Some(Value::String(value)) => {
             let decoded = decode_secret(config, value.clone(), "cookies");
-            edited |= decoded.cleared_as_undecryptable;
+            edited |= decoded.needs_rewrite;
             decoded.plaintext
         }
         Some(Value::Null) | None => None,
@@ -267,39 +279,79 @@ struct SealedCredentialSecret {
     is_plaintext: bool,
 }
 
-fn seal_secret(config: &dyn AuthCredentialStore, plaintext: &str) -> SealedCredentialSecret {
+fn seal_secret(
+    config: &dyn AuthCredentialStore,
+    previous: Option<&str>,
+    plaintext: &str,
+) -> SealedCredentialSecret {
     if plaintext.is_empty() {
         return SealedCredentialSecret {
             stored: String::new(),
             is_plaintext: false,
         };
     }
-    let sealed = config.seal_secret(plaintext);
+    let sealed = config.seal_secret(previous, plaintext);
     SealedCredentialSecret {
         stored: sealed.stored,
         is_plaintext: config.is_secret_store_initialized() && !sealed.encrypted,
     }
 }
 
+fn other_machine_secret(
+    config: &dyn AuthCredentialStore,
+    previous: Option<&str>,
+) -> Option<String> {
+    previous
+        .filter(|value| config.is_other_machine_secret(value))
+        .map(ToString::to_string)
+}
+
+struct PreviousSecrets<'a> {
+    password: Option<&'a str>,
+    cookies: Option<&'a str>,
+}
+
+fn previous_secrets<'a>(previous: Option<&'a Value>, user_id: &str) -> PreviousSecrets<'a> {
+    let record = previous.and_then(|value| value.get(user_id));
+    let password = record
+        .and_then(|record| {
+            record
+                .get("loginParams")
+                .or_else(|| record.get("loginParmas"))
+        })
+        .filter(|params| {
+            params.get(PASSWORD_STORAGE_KEY).and_then(Value::as_str)
+                != Some(PLAINTEXT_PASSWORD_STORAGE)
+        })
+        .and_then(|params| params.get("password"))
+        .and_then(Value::as_str);
+    let cookies = record
+        .and_then(|record| record.get("cookies"))
+        .and_then(Value::as_str);
+    PreviousSecrets { password, cookies }
+}
+
 fn persisted_saved_credentials<'a>(
     config: &dyn AuthCredentialStore,
+    previous: Option<&Value>,
     saved_credentials: &'a SavedCredentials,
 ) -> (BTreeMap<String, PersistedSavedCredential<'a>>, bool) {
     let mut persisted = BTreeMap::new();
     let mut contains_plaintext_secret = false;
     for (user_id, credential) in saved_credentials {
+        let previous = previous_secrets(previous, user_id);
         let (password, password_is_plaintext) =
             credential.login_params.password.as_deref().map_or_else(
-                || (None, false),
+                || (other_machine_secret(config, previous.password), false),
                 |password| {
-                    let sealed = seal_secret(config, password);
+                    let sealed = seal_secret(config, previous.password, password);
                     (Some(sealed.stored), sealed.is_plaintext)
                 },
             );
         let (cookies, cookies_are_plaintext) = credential.cookies.as_deref().map_or_else(
-            || (None, false),
+            || (other_machine_secret(config, previous.cookies), false),
             |cookies| {
-                let sealed = seal_secret(config, cookies);
+                let sealed = seal_secret(config, previous.cookies, cookies);
                 (
                     if sealed.stored.is_empty() {
                         None
@@ -397,8 +449,11 @@ pub(super) fn write_saved_credentials(
     config: &dyn AuthCredentialStore,
     saved_credentials: &SavedCredentials,
 ) -> Result<()> {
+    let previous = config
+        .get_raw(SAVED_CREDENTIALS_KEY)?
+        .and_then(|raw| serde_json::from_str::<Value>(&raw).ok());
     let (persisted, contains_plaintext_secret) =
-        persisted_saved_credentials(config, saved_credentials);
+        persisted_saved_credentials(config, previous.as_ref(), saved_credentials);
     if contains_plaintext_secret {
         config.remove(SECRETS_CLEANUP_COMPLETED_CONFIG_KEY)?;
     }
@@ -433,3 +488,6 @@ pub(super) fn set_config_string(
 ) -> Result<()> {
     config.set_string(key, value)
 }
+
+#[cfg(test)]
+mod tests;

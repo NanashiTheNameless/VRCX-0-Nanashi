@@ -142,19 +142,38 @@ describe('buildUserHoverCardModel', () => {
         expect(model.onlineForMs).toBe(0);
     });
 
-    it('estimates online duration from last_login while fully online', () => {
+    it('measures online duration from when the friend was seen coming online', () => {
         const model = buildUserHoverCardModel({
             seed: {
                 id: 'usr_6',
                 status: 'active',
-                $presence: onlinePresence(REAL_INSTANCE),
-                last_login: 1_700_000_000_000
+                $presence: onlinePresence(
+                    REAL_INSTANCE,
+                    'standalonewindows',
+                    NOW - 30 * 60_000
+                ),
+                last_login: NOW - 9 * 60 * 60_000
             },
             profile: null,
             nowMs: NOW
         });
 
-        expect(model.onlineForMs).toBe(NOW - 1_700_000_000_000);
+        expect(model.onlineForMs).toBe(30 * 60_000);
+    });
+
+    it('hides online duration when the friend was already online before tracking began', () => {
+        const model = buildUserHoverCardModel({
+            seed: {
+                id: 'usr_6',
+                status: 'active',
+                $presence: onlinePresence(REAL_INSTANCE),
+                last_login: NOW - 9 * 60 * 60_000
+            },
+            profile: null,
+            nowMs: NOW
+        });
+
+        expect(model.onlineForMs).toBe(0);
     });
 });
 

@@ -77,7 +77,7 @@ export function AppTitleBar() {
         alwaysOnTopButton,
         sidebarWindowModeButton,
         notificationAction,
-        themeToggleAction
+        appearanceAction
     } = useTitleBarActions('px-1');
 
     const MaximizeIcon = isMaximized ? CopyIcon : SquareIcon;
@@ -131,7 +131,7 @@ export function AppTitleBar() {
                             </TitleBarButton>
                         ) : null}
                         {notificationAction}
-                        {themeToggleAction}
+                        {appearanceAction}
                         {alwaysOnTopButton}
                         {sidebarWindowModeButton}
                     </div>

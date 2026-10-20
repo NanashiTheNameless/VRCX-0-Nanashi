@@ -8,6 +8,7 @@ pub use service::CommunityThemeService;
 pub use types::{
     CommunityThemeAuthor, CommunityThemeCatalog, CommunityThemeConfigureInput,
     CommunityThemeInstallMetadata, CommunityThemeManifest, CommunityThemeProjection,
+    CommunityThemeUpdate,
 };
 
 #[cfg(test)]

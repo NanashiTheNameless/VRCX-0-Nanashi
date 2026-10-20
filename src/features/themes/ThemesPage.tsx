@@ -47,6 +47,8 @@ export function ThemesPage() {
         disableTheme,
         deleteTheme,
         enableTheme,
+        updateTheme,
+        updateByThemeId,
         saveOverride,
         clearOverride,
         disableOverride,
@@ -93,6 +95,8 @@ export function ThemesPage() {
                                 loading={loading}
                                 enableTheme={enableTheme}
                                 installTheme={installTheme}
+                                updateTheme={updateTheme}
+                                updateByThemeId={updateByThemeId}
                                 installedThemes={installedThemes}
                                 disableTheme={disableTheme}
                                 deleteTheme={deleteTheme}

@@ -850,30 +850,34 @@ impl DesktopFeedLoggerRuntime {
     }
 
     fn load_settings(&self) -> Result<Option<PersistedSettings>> {
-        let raw = self.config.get_raw(SETTINGS_KEY).map_err(storage)?;
-        Ok(raw
-            .and_then(|raw| serde_json::from_str::<PersistedSettings>(&raw).ok())
-            .and_then(|persisted| {
-                secrets::open_secret(&persisted.password).map(|password| PersistedSettings {
-                    password,
-                    ..persisted
-                })
-            }))
+        read_settings(&self.config)
     }
 }
 
-fn store_settings(config: &ConfigRepository, settings: &PersistedSettings) -> Result<()> {
-    let sealed = secrets::seal_secret_with_status(&settings.password);
-    if secrets::is_initialized() && !sealed.encrypted && !settings.password.is_empty() {
-        config
-            .remove(secrets::CLEANUP_COMPLETED_CONFIG_KEY)
-            .map_err(storage)?;
+fn read_settings(config: &ConfigRepository) -> Result<Option<PersistedSettings>> {
+    let Some(persisted) = config
+        .get_raw(SETTINGS_KEY)
+        .map_err(storage)?
+        .and_then(|raw| serde_json::from_str::<PersistedSettings>(&raw).ok())
+    else {
+        return Ok(None);
+    };
+    if !secrets::is_sealed_secret(&persisted.password) {
+        return Ok(Some(persisted));
     }
-    let json = serde_json::to_string(&PersistedSettings {
-        address: settings.address.clone(),
-        password: sealed.stored,
-    })
-    .map_err(storage)?;
+    let Some(password) = secrets::open_secret(&persisted.password) else {
+        return Ok(None);
+    };
+    let settings = PersistedSettings {
+        password,
+        ..persisted
+    };
+    store_settings(config, &settings)?;
+    Ok(Some(settings))
+}
+
+fn store_settings(config: &ConfigRepository, settings: &PersistedSettings) -> Result<()> {
+    let json = serde_json::to_string(settings).map_err(storage)?;
     config.set_string(SETTINGS_KEY, &json).map_err(storage)
 }
 
@@ -1049,5 +1053,46 @@ mod tests {
                 Err(FeedLoggerError::Client(FeedLoggerClientError::ClientTooOld))
             ));
         }
+    }
+
+    #[test]
+    fn a_recorder_password_sealed_to_this_machine_is_resaved_so_any_machine_can_read_it() {
+        secrets::init_secrets(Some([7; 32]), true);
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!(
+            "vrcx-0-feed-logger-shared-password-{}-{nonce}",
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let config = ConfigRepository::new(Arc::new(
+            DatabaseService::new(&dir.join("VRCX-0.sqlite3")).unwrap(),
+        ));
+        let sealed = secrets::seal_secret("password123");
+        assert!(secrets::is_sealed_secret(&sealed));
+        config
+            .set_string(
+                SETTINGS_KEY,
+                &serde_json::json!({
+                    "address": "http://192.168.1.10:8787",
+                    "password": sealed,
+                })
+                .to_string(),
+            )
+            .unwrap();
+
+        let settings = read_settings(&config).unwrap().unwrap();
+
+        assert_eq!(settings.password, "password123");
+        let resaved = config.get_raw(SETTINGS_KEY).unwrap().unwrap();
+        assert_eq!(
+            serde_json::from_str::<PersistedSettings>(&resaved)
+                .unwrap()
+                .password,
+            "password123"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

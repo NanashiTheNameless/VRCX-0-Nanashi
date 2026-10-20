@@ -176,6 +176,14 @@ impl DesktopScreenshotRuntime {
         )?)
     }
 
+    pub fn random_path_in_folder_tree(&self, folder_path: &str) -> Result<Option<String>> {
+        Ok(screenshot::random_screenshot_path_in_folder_tree(
+            &self.cache,
+            folder_path,
+            &self.photos_root,
+        )?)
+    }
+
     pub fn world_screenshots(&self, world_id: &str) -> Result<Vec<ScreenshotLibraryImage>> {
         Ok(screenshot::list_world_screenshots(
             &self.cache,

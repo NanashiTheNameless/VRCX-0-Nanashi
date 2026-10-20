@@ -103,6 +103,7 @@ function projection(
         installedCssSnapshot: '',
         overrideCss: '',
         overrideCssEnabled: false,
+        updates: [],
         ...patch
     };
 }

@@ -45,6 +45,7 @@ pub(super) fn empty_projection() -> CommunityThemeProjection {
         installed_css_snapshot: String::new(),
         override_css: String::new(),
         override_css_enabled: false,
+        updates: Vec::new(),
     }
 }
 
@@ -246,6 +247,7 @@ pub(super) fn projection_from_state(
             .unwrap_or_default(),
         override_css: state.override_css.clone(),
         override_css_enabled: state.override_css_enabled,
+        updates: Vec::new(),
     }
 }
 

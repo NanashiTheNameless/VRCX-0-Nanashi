@@ -3144,6 +3144,14 @@ const generatedCommands = {
             folderPath
         });
     },
+    async appPickRandomScreenshotInFolderTree(
+        folderPath: string
+    ): Promise<string | null> {
+        return await TAURI_INVOKE(
+            'app__pick_random_screenshot_in_folder_tree',
+            { folderPath }
+        );
+    },
     async appGetWorldScreenshots(
         worldId: string
     ): Promise<ScreenshotLibraryImage[]> {
@@ -4145,6 +4153,7 @@ export type CommunityThemeCatalog = {
 };
 export type CommunityThemeConfigureInput =
     | { kind: 'install'; themeId: string }
+    | { kind: 'update'; themeId: string }
     | { kind: 'enable'; themeId: string | null }
     | { kind: 'disable' }
     | { kind: 'delete'; themeId: string | null }
@@ -4194,6 +4203,12 @@ export type CommunityThemeProjection = {
     installedCssSnapshot: string;
     overrideCss: string;
     overrideCssEnabled: boolean;
+    updates: CommunityThemeUpdate[];
+};
+export type CommunityThemeUpdate = {
+    themeId: string;
+    installedVersion: string;
+    latestVersion: string;
 };
 export type ConfigReadEntry = { key: string; value: string };
 export type ConfigWriteEntry = { key: string; value: string };
