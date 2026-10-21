@@ -6,10 +6,14 @@ struct Fixture {
 }
 impl Fixture {
     fn new() -> Self {
+        // Windows clocks are too coarse to keep parallel tests apart by time
+        // alone, and each fixture deletes its directory when dropped.
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let dir = std::env::temp_dir().join(format!(
-            "vrcx-ytdlp-{}-{}",
+            "vrcx-ytdlp-{}-{}-{}",
             std::process::id(),
-            chrono::Utc::now().timestamp_nanos_opt().unwrap()
+            chrono::Utc::now().timestamp_nanos_opt().unwrap(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         ));
         let tools = dir.join("VRChat/Tools");
         fs::create_dir_all(&tools).unwrap();
