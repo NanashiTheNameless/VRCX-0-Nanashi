@@ -2,6 +2,7 @@ use std::rc::Rc;
 
 use slint::{
     platform::software_renderer::{MinimalSoftwareWindow, PremultipliedRgbaColor},
+    platform::WindowEvent,
     ComponentHandle, ModelRc, PhysicalSize, SharedString, VecModel,
 };
 
@@ -39,10 +40,22 @@ const MIN_PLAYER_COLUMN_PX: f32 = 170.0;
 /// Smallest grid text, as a fraction of the content text size, tried before
 /// the panel is allowed past its maximum height.
 const MIN_GRID_FIT_SCALE: f32 = 0.3;
+/// Physical pixels per layout pixel. The canvas is laid out at 12.8 px/cm,
+/// about half the pixel density of a current headset at arm's length, so it
+/// is drawn twice as dense to keep text sharp.
+pub(super) const RENDER_SCALE: u32 = 2;
+
+fn physical_size(size: OverlaySize) -> OverlaySize {
+    OverlaySize::new(
+        size.width.saturating_mul(RENDER_SCALE),
+        size.height.saturating_mul(RENDER_SCALE),
+    )
+}
 
 pub struct SlintWristHost {
-    /// Canvas width and maximum height from the model. `size` is the rendered
-    /// frame, as tall as the content needs.
+    /// Canvas width and maximum height from the model, in layout pixels.
+    /// `size` is the rendered frame in physical pixels, as tall as the
+    /// content needs.
     base_size: OverlaySize,
     size: OverlaySize,
     window: Rc<MinimalSoftwareWindow>,
@@ -58,14 +71,18 @@ impl SlintSurfaceHost for SlintWristHost {
 
     fn new(size: OverlaySize) -> Result<Self, String> {
         let (component, window) = create_component_window(WristPanel::new)?;
-        window.set_size(PhysicalSize::new(size.width, size.height));
+        window.dispatch_event(WindowEvent::ScaleFactorChanged {
+            scale_factor: RENDER_SCALE as f32,
+        });
+        let physical = physical_size(size);
+        window.set_size(PhysicalSize::new(physical.width, physical.height));
         component.show().map_err(|error| error.to_string())?;
         Ok(Self {
             base_size: size,
-            size,
+            size: physical,
             window,
             component,
-            buffer: vec![PremultipliedRgbaColor::default(); pixel_count(size)?],
+            buffer: vec![PremultipliedRgbaColor::default(); pixel_count(physical)?],
             players: Vec::new(),
             content_scale: 1.0,
         })
@@ -156,7 +173,7 @@ impl SlintSurfaceHost for SlintWristHost {
         for (columns, scale) in wider.chain(smaller) {
             self.layout_players(columns, scale);
             frame = self.settle();
-            if self.size.height <= self.base_size.height {
+            if self.size.height <= physical_size(self.base_size).height {
                 break;
             }
         }
@@ -200,9 +217,9 @@ impl SlintWristHost {
 
     fn settle(&mut self) -> Option<RgbaFrame> {
         let component = &self.component;
-        let base_height = self.base_size.height;
+        let base_height = physical_size(self.base_size).height;
         render_fitting_height(&self.window, &mut self.buffer, &mut self.size, || {
-            let required = component.get_required_height().ceil() as u32;
+            let required = (component.get_required_height() * RENDER_SCALE as f32).ceil() as u32;
             if required > 0 {
                 required
             } else {

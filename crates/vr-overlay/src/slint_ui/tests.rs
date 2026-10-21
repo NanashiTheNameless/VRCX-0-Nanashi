@@ -10,16 +10,48 @@ use crate::{
 };
 use std::{sync::Arc, thread};
 
+/// Wrist frames are drawn at `RENDER_SCALE` physical pixels per layout pixel;
+/// these tests measure in layout pixels, so sample every scaled pixel.
+trait RenderLogical {
+    fn render_logical(&mut self, model: &WristSurfaceModel) -> Result<RgbaFrame, String>;
+}
+
+impl RenderLogical for SlintWristRenderer {
+    fn render_logical(&mut self, model: &WristSurfaceModel) -> Result<RgbaFrame, String> {
+        let frame = self.render(model)?;
+        let scale = super::wrist::RENDER_SCALE;
+        let size = OverlaySize::new(frame.size.width / scale, frame.size.height / scale);
+        let mut data = Vec::with_capacity((size.width * size.height * 4) as usize);
+        for y in 0..size.height {
+            for x in 0..size.width {
+                let px = (((y * scale) * frame.size.width + x * scale) * 4) as usize;
+                data.extend_from_slice(&frame.data[px..px + 4]);
+            }
+        }
+        Ok(RgbaFrame::new(size, data))
+    }
+}
+
 #[test]
 fn slint_platform_init_is_available_on_each_render_thread() {
     ensure_platform().unwrap();
     thread::spawn(|| {
         let mut renderer = SlintWristRenderer::new();
-        let frame = renderer.render(&sample_wrist_model()).unwrap();
+        let frame = renderer.render_logical(&sample_wrist_model()).unwrap();
         assert_eq!(frame.size.width, 512);
     })
     .join()
     .unwrap();
+}
+
+#[test]
+fn wrist_frames_are_drawn_at_twice_the_layout_density() {
+    let model = sample_wrist_model();
+    let raw = SlintWristRenderer::new().render(&model).unwrap();
+    let logical = SlintWristRenderer::new().render_logical(&model).unwrap();
+
+    assert_eq!(raw.size.width, model.size.width * 2);
+    assert_eq!(raw.size.height, logical.size.height * 2);
 }
 
 fn player_grid_model(players: usize, max_height: u32, note: &str) -> WristSurfaceModel {
@@ -44,10 +76,14 @@ const LONG_NOTE: &str = "a long note that has to wrap across several lines in a 
 #[test]
 fn wrist_player_grid_grows_with_its_players_up_to_the_max_height() {
     let mut renderer = SlintWristRenderer::new();
-    let few = renderer.render(&player_grid_model(4, 4000, "")).unwrap();
-    let full = renderer.render(&player_grid_model(80, 4000, "")).unwrap();
+    let few = renderer
+        .render_logical(&player_grid_model(4, 4000, ""))
+        .unwrap();
+    let full = renderer
+        .render_logical(&player_grid_model(80, 4000, ""))
+        .unwrap();
     let noted = renderer
-        .render(&player_grid_model(80, 4000, LONG_NOTE))
+        .render_logical(&player_grid_model(80, 4000, LONG_NOTE))
         .unwrap();
 
     assert_eq!(full.size.width, 1024);
@@ -59,13 +95,13 @@ fn wrist_player_grid_grows_with_its_players_up_to_the_max_height() {
 fn wrist_player_grid_adds_columns_then_shrinks_text_to_fit_the_max_height() {
     let mut renderer = SlintWristRenderer::new();
     let roomy = renderer
-        .render(&player_grid_model(80, 4000, LONG_NOTE))
+        .render_logical(&player_grid_model(80, 4000, LONG_NOTE))
         .unwrap();
     let fitted = renderer
-        .render(&player_grid_model(80, 900, LONG_NOTE))
+        .render_logical(&player_grid_model(80, 900, LONG_NOTE))
         .unwrap();
     let tight = renderer
-        .render(&player_grid_model(80, 500, LONG_NOTE))
+        .render_logical(&player_grid_model(80, 500, LONG_NOTE))
         .unwrap();
 
     assert!(roomy.size.height > 900, "{:?}", roomy.size);
@@ -76,11 +112,13 @@ fn wrist_player_grid_adds_columns_then_shrinks_text_to_fit_the_max_height() {
 #[test]
 fn wrist_player_grid_wraps_long_names_instead_of_clipping_them() {
     let mut renderer = SlintWristRenderer::new();
-    let short = renderer.render(&player_grid_model(40, 4000, "")).unwrap();
+    let short = renderer
+        .render_logical(&player_grid_model(40, 4000, ""))
+        .unwrap();
     let mut model = player_grid_model(40, 4000, "");
     model.players[0].name =
         "An extremely long display name that cannot fit on one line".to_string();
-    let long = renderer.render(&model).unwrap();
+    let long = renderer.render_logical(&model).unwrap();
 
     assert!(long.size.height > short.size.height);
 }
@@ -89,10 +127,10 @@ fn wrist_player_grid_wraps_long_names_instead_of_clipping_them() {
 fn wrist_player_grid_reuses_its_resized_host() {
     let mut renderer = SlintWristRenderer::new();
     let model = player_grid_model(80, 4000, "note");
-    let first = renderer.render(&model).unwrap();
+    let first = renderer.render_logical(&model).unwrap();
     let mut changed = model.clone();
     changed.players[0].joined = "13m".to_string();
-    let second = renderer.render(&changed).unwrap();
+    let second = renderer.render_logical(&changed).unwrap();
 
     assert_eq!(first.size, second.size);
     assert_eq!(renderer.render_count(), 2);
@@ -104,7 +142,7 @@ fn wrist_text_scales_resize_their_areas() {
     let mut model = sample_wrist_model();
     model.size = OverlaySize::new(512, 4000);
     model.feed_rows = (0..4).map(feed_row).collect();
-    let base = renderer.render(&model).unwrap().size.height;
+    let base = renderer.render_logical(&model).unwrap().size.height;
     for text in [
         WristTextScale {
             header_percent: 150,
@@ -120,7 +158,7 @@ fn wrist_text_scales_resize_their_areas() {
         },
     ] {
         model.text = text;
-        let height = renderer.render(&model).unwrap().size.height;
+        let height = renderer.render_logical(&model).unwrap().size.height;
         assert!(height > base, "{text:?}: {height} <= {base}");
     }
 }
@@ -130,15 +168,15 @@ fn slint_wrist_renderer_reuses_cached_frame_for_equal_model() {
     let mut renderer = SlintWristRenderer::new();
     let model = sample_wrist_model();
 
-    let first = renderer.render(&model).unwrap();
-    let second = renderer.render(&model).unwrap();
+    let first = renderer.render_logical(&model).unwrap();
+    let second = renderer.render_logical(&model).unwrap();
 
     assert_eq!(first, second);
     assert_eq!(renderer.render_count(), 1);
 
     let mut changed = model.clone();
     changed.footer.right = "12:35".to_string();
-    let third = renderer.render(&changed).unwrap();
+    let third = renderer.render_logical(&changed).unwrap();
 
     assert_ne!(first, third);
     assert_eq!(renderer.render_count(), 2);
@@ -313,11 +351,11 @@ fn wrist_panel_height_fits_the_feed_rows() {
         |frame: &RgbaFrame, y: u32| frame.data[((y * frame.size.width + 250) * 4 + 3) as usize];
 
     model.feed_rows = Vec::new();
-    let empty = renderer.render(&model).unwrap();
+    let empty = renderer.render_logical(&model).unwrap();
     model.feed_rows = (0..2).map(feed_row).collect();
-    let short = renderer.render(&model).unwrap();
+    let short = renderer.render_logical(&model).unwrap();
     model.feed_rows = (0..8).map(feed_row).collect();
-    let tall = renderer.render(&model).unwrap();
+    let tall = renderer.render_logical(&model).unwrap();
 
     assert_eq!(empty.size.height, 44 + 34);
     assert_eq!(short.size.height, 49 + 2 * 38 + 34);
@@ -335,7 +373,7 @@ fn wrist_panel_fills_the_width_of_every_overlay_size_preset() {
         model.size = size;
         model.feed_rows = (0..4).map(feed_row).collect();
 
-        let frame = renderer.render(&model).unwrap();
+        let frame = renderer.render_logical(&model).unwrap();
 
         let right_edge = ((60 * size.width + size.width - 4) * 4 + 3) as usize;
         assert!(
@@ -361,7 +399,7 @@ fn wrist_feed_drops_the_oldest_rows_in_either_order() {
         if !newest_at_bottom {
             model.feed_rows.reverse();
         }
-        let frame = SlintWristRenderer::new().render(&model).unwrap();
+        let frame = SlintWristRenderer::new().render_logical(&model).unwrap();
         (0..frame.size.height).any(|y| {
             let px = ((y * frame.size.width + 15) * 4) as usize;
             frame.data[px] > 200 && frame.data[px + 1] < 120
@@ -386,7 +424,7 @@ fn wrist_panel_feed_grows_up_to_the_max_height() {
         model.size = size;
         model.feed_rows = (0..capacity + 3).map(feed_row).collect();
 
-        let frame = renderer.render(&model).unwrap();
+        let frame = renderer.render_logical(&model).unwrap();
         let alpha_at = |y: u32| frame.data[((y * size.width + 250) * 4 + 3) as usize];
 
         let panel_height = 49 + capacity * 38 + 34;
@@ -417,21 +455,21 @@ fn wrist_panel_reserves_up_to_two_title_lines_for_now_playing_above_the_footer()
             .unwrap()
     };
 
-    let without = panel_bottom(&renderer.render(&model).unwrap());
+    let without = panel_bottom(&renderer.render_logical(&model).unwrap());
     model.now_playing = Some(now_playing("Never Gonna Give You Up", Some(400)));
-    let one_line = panel_bottom(&renderer.render(&model).unwrap());
+    let one_line = panel_bottom(&renderer.render_logical(&model).unwrap());
     model.now_playing = Some(now_playing(
         "【MV】YOASOBI「アイドル」/ Idol (Official Music Video) - TVアニメ『【推しの子】』OPテーマ 4K Remaster",
         Some(400),
     ));
-    let two_lines = panel_bottom(&renderer.render(&model).unwrap());
+    let two_lines = panel_bottom(&renderer.render_logical(&model).unwrap());
     model.now_playing = Some(now_playing(
         &"【MV】YOASOBI「アイドル」/ Idol (Official Music Video) - TVアニメ ".repeat(6),
         Some(400),
     ));
-    let truncated = panel_bottom(&renderer.render(&model).unwrap());
+    let truncated = panel_bottom(&renderer.render_logical(&model).unwrap());
     model.now_playing = Some(now_playing("https://stream.example.test/live", None));
-    let unknown_length = panel_bottom(&renderer.render(&model).unwrap());
+    let unknown_length = panel_bottom(&renderer.render_logical(&model).unwrap());
 
     assert!(one_line > without + 40);
     assert!(two_lines > one_line + 10);
@@ -445,13 +483,13 @@ fn wrist_panel_redraws_only_when_the_now_playing_model_changes() {
     let mut model = sample_wrist_model();
     model.now_playing = Some(now_playing("Never Gonna Give You Up", Some(400)));
 
-    let first = renderer.render(&model).unwrap();
-    let second = renderer.render(&model).unwrap();
+    let first = renderer.render_logical(&model).unwrap();
+    let second = renderer.render_logical(&model).unwrap();
     assert_eq!(first, second);
     assert_eq!(renderer.render_count(), 1);
 
     model.now_playing = Some(now_playing("Never Gonna Give You Up", Some(405)));
-    let advanced = renderer.render(&model).unwrap();
+    let advanced = renderer.render_logical(&model).unwrap();
     assert_ne!(first, advanced);
     assert_eq!(renderer.render_count(), 2);
 }
