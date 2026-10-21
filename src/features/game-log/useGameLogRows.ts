@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+    useCallback,
+    useEffect,
+    useEffectEvent,
+    useMemo,
+    useRef,
+    useState
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
@@ -12,14 +19,21 @@ import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useSessionStore } from '@/state/sessionStore';
 
-import { getGameLogRowKey } from './gameLogRows';
-import { GAME_LOG_LIVE_REFRESH_THROTTLE_MS } from './gameLogTypes';
+import { getGameLogRowKey, mergeGameLogSessionHead } from './gameLogRows';
+import {
+    GAME_LOG_LIVE_REFRESH_THROTTLE_MS,
+    GAME_LOG_SESSION_HEAD_QUERY_LIMIT
+} from './gameLogTypes';
 import type {
     GameLogLoadStatus,
     GameLogRow,
     GameLogSession,
     GameLogViewMode
 } from './gameLogTypes';
+
+type GameLogSessionQuery = NonNullable<
+    Parameters<typeof gameLogRepository.queryLatestSessions>[0]
+>;
 
 function isGameLogRow(value: unknown): value is GameLogRow {
     return Boolean(value && typeof value === 'object' && !Array.isArray(value));
@@ -78,10 +92,78 @@ export function useGameLogRows({
     const [sessions, setSessions] = useState<GameLogSession[]>([]);
     const [loadStatus, setLoadStatus] = useState<GameLogLoadStatus>('idle');
     const [detail, setDetail] = useState('');
+    const [liveReloadToken, setLiveReloadToken] = useState(0);
+    const fullLoadRunningRef = useRef(false);
+    const liveSessionQueryRef = useRef<GameLogSessionQuery | null>(null);
+    const headRefreshQueuedRef = useRef(false);
+    const headRefreshRunningRef = useRef(false);
+    const seenLiveEventCountRef = useRef(throttledGameLogEventCount);
+
+    const drainSessionHeadRefresh = useEffectEvent(() => {
+        if (
+            !headRefreshQueuedRef.current ||
+            fullLoadRunningRef.current ||
+            headRefreshRunningRef.current
+        ) {
+            return;
+        }
+        headRefreshQueuedRef.current = false;
+        const liveQuery = liveSessionQueryRef.current;
+        if (!liveQuery) {
+            return;
+        }
+        const requestId = requestIdRef.current;
+        headRefreshRunningRef.current = true;
+        void gameLogRepository
+            .queryLatestSessions({
+                ...liveQuery,
+                limit: GAME_LOG_SESSION_HEAD_QUERY_LIMIT
+            })
+            .then((head) => {
+                if (requestIdRef.current !== requestId) {
+                    return;
+                }
+                setSessions((current) =>
+                    mergeGameLogSessionHead(
+                        current,
+                        head,
+                        liveQuery.limit ?? current.length
+                    )
+                );
+            })
+            .catch(() => {
+                if (requestIdRef.current === requestId) {
+                    setLiveReloadToken((current) => current + 1);
+                }
+            })
+            .finally(() => {
+                headRefreshRunningRef.current = false;
+                drainSessionHeadRefresh();
+            });
+    });
+
+    const handleLiveGameLogEvent = useEffectEvent(() => {
+        if (viewMode === 'sessions' && loadStatus !== 'error') {
+            headRefreshQueuedRef.current = true;
+            drainSessionHeadRefresh();
+            return;
+        }
+        setLiveReloadToken((current) => current + 1);
+    });
+
+    useEffect(() => {
+        if (seenLiveEventCountRef.current === throttledGameLogEventCount) {
+            return;
+        }
+        seenLiveEventCountRef.current = throttledGameLogEventCount;
+        handleLiveGameLogEvent();
+    }, [throttledGameLogEventCount]);
 
     useEffect(() => {
         const requestId = requestIdRef.current + 1;
         requestIdRef.current = requestId;
+        fullLoadRunningRef.current = false;
+        liveSessionQueryRef.current = null;
         if (!preferencesReady || !currentUserId) {
             if (!currentUserId) {
                 setRows([]);
@@ -107,6 +189,7 @@ export function useGameLogRows({
         const favoriteUserIds = favoritesOnly ? Array.from(favoriteIdSet) : [];
         setLoadStatus('running');
         setDetail('');
+        fullLoadRunningRef.current = true;
         const query = {
             currentUserId,
             search: deferredSearchQuery,
@@ -123,6 +206,7 @@ export function useGameLogRows({
                 if (requestIdRef.current !== requestId) {
                     return;
                 }
+                liveSessionQueryRef.current = query;
                 setSessions(nextSessions);
                 setRows([]);
             } else {
@@ -138,22 +222,30 @@ export function useGameLogRows({
             setLoadStatus('ready');
             setDetail('');
         };
-        void loadRows().catch((error: unknown) => {
-            if (requestIdRef.current !== requestId) {
-                return;
-            }
-            setRows([]);
-            setSessions([]);
-            setLoadStatus('error');
-            setDetail(
-                userFacingErrorMessage(
-                    error,
-                    t('view.game_log.error.game_log_failed_to_load')
-                )
-            );
-        });
+        void loadRows()
+            .catch((error: unknown) => {
+                if (requestIdRef.current !== requestId) {
+                    return;
+                }
+                setRows([]);
+                setSessions([]);
+                setLoadStatus('error');
+                setDetail(
+                    userFacingErrorMessage(
+                        error,
+                        t('view.game_log.error.game_log_failed_to_load')
+                    )
+                );
+            })
+            .finally(() => {
+                if (requestIdRef.current !== requestId) {
+                    return;
+                }
+                fullLoadRunningRef.current = false;
+                drainSessionHeadRefresh();
+            });
     }, [
-        throttledGameLogEventCount,
+        liveReloadToken,
         currentUserId,
         deferredSearchQuery,
         favoriteIdSet,

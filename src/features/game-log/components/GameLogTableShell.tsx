@@ -24,7 +24,6 @@ type GameLogTableShellProps = {
     pageSizes: number[];
     rows: readonly GameLogRow[];
     setPagination: GameLogPaginationSetter;
-    setSessionLimit(value: number): void;
     table: AppTable<GameLogRow>;
 };
 
@@ -33,7 +32,6 @@ export function GameLogTableShell({
     pageSizes,
     rows,
     setPagination,
-    setSessionLimit,
     table
 }: GameLogTableShellProps) {
     const { t } = useTranslation();
@@ -107,7 +105,6 @@ export function GameLogTableShell({
                             pageIndex: 0,
                             pageSize: nextPageSize
                         });
-                        setSessionLimit(nextPageSize);
                     }}
                 />
             </PageFooter>

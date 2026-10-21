@@ -22,6 +22,12 @@ export const GAME_LOG_SESSION_FILTER_TYPES = [
 
 export const GAME_LOG_LIVE_REFRESH_THROTTLE_MS = 1000;
 
+export const GAME_LOG_SESSION_PAGE_SIZE = 20;
+
+export const GAME_LOG_SESSION_LIMIT_MAX = 1000;
+
+export const GAME_LOG_SESSION_HEAD_QUERY_LIMIT = 3;
+
 export type GameLogViewMode = 'sessions' | 'table';
 
 export type GameLogLoadStatus = LoadStatus;

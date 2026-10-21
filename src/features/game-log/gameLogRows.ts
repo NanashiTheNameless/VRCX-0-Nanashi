@@ -1,5 +1,6 @@
 import { parseLocation } from '@/shared/utils/location';
 
+import { GAME_LOG_SESSION_HEAD_QUERY_LIMIT } from './gameLogTypes';
 import type {
     GameLogRowView,
     GameLogSession,
@@ -271,4 +272,50 @@ export function getGameLogSessionKey(
         .map((value) => normalizeGameLogId(value))
         .filter(Boolean)
         .join(':');
+}
+
+function compareGameLogSessionStream(
+    left: Pick<GameLogSession, 'created_at' | 'id'>,
+    right: Pick<GameLogSession, 'created_at' | 'id'>
+) {
+    const epochDelta =
+        (Date.parse(left.created_at) || 0) -
+        (Date.parse(right.created_at) || 0);
+    return epochDelta || (left.id ?? 0) - (right.id ?? 0);
+}
+
+export function mergeGameLogSessionHead(
+    current: GameLogSession[],
+    head: readonly GameLogSession[],
+    limit: number
+) {
+    const trustedHead =
+        head.length >= GAME_LOG_SESSION_HEAD_QUERY_LIMIT
+            ? head.slice(0, GAME_LOG_SESSION_HEAD_QUERY_LIMIT - 1)
+            : head;
+    const oldestTrusted = trustedHead.at(-1);
+    if (!oldestTrusted) {
+        return current;
+    }
+
+    const currentByKey = new Map(
+        current.map((session) => [getGameLogSessionKey(session), session])
+    );
+    const merged = trustedHead.map((session) => {
+        const existing = currentByKey.get(getGameLogSessionKey(session));
+        return existing && JSON.stringify(existing) === JSON.stringify(session)
+            ? existing
+            : session;
+    });
+    const next = [
+        ...merged,
+        ...current.filter(
+            (session) => compareGameLogSessionStream(session, oldestTrusted) < 0
+        )
+    ].slice(0, limit);
+
+    return next.length === current.length &&
+        next.every((session, index) => session === current[index])
+        ? current
+        : next;
 }

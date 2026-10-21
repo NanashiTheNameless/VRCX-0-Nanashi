@@ -125,8 +125,7 @@ vi.mock('./useGameLogPageController', () => ({
         tableState: {
             loadMoreSessions: vi.fn(),
             pageSizes: [10],
-            setPagination: vi.fn(),
-            setSessionLimit: vi.fn()
+            setPagination: vi.fn()
         }
     })
 }));

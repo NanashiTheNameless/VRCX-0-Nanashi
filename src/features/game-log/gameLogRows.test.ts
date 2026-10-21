@@ -12,12 +12,35 @@ import {
     getGameLogRowKey,
     getGameLogSessionKey,
     getGameLogSessionPlayerAffinity,
+    mergeGameLogSessionHead,
     resolveGameLogSessionDuration,
     resolveGameLogWorldId,
     resolveGameLogWorldTarget,
     shouldLinkGameLogPrimaryDetailToWorld
 } from './gameLogRows';
-import type { GameLogSessionEvent, GameLogSessionMember } from './gameLogTypes';
+import type {
+    GameLogSession,
+    GameLogSessionEvent,
+    GameLogSessionMember
+} from './gameLogTypes';
+
+function liveSession(
+    id: number,
+    overrides: Partial<GameLogSession> = {}
+): GameLogSession {
+    return {
+        id,
+        created_at: `2026-09-03T00:${String(id).padStart(2, '0')}:00.000Z`,
+        duration: 0,
+        location: `wrld_test:${id}`,
+        worldId: 'wrld_test',
+        worldName: `World ${id}`,
+        groupName: '',
+        playerDurationRows: [],
+        events: [],
+        ...overrides
+    };
+}
 
 describe('gameLogRows', () => {
     it('builds the detail text users see for common game-log row types', () => {
@@ -305,5 +328,42 @@ describe('gameLogRows', () => {
             120000
         );
         expect(resolveGameLogSessionDuration({ duration: -1 })).toBe(0);
+    });
+
+    it('merges a live session head without replacing unchanged older sessions', () => {
+        const current = [5, 4, 3, 2, 1].map((id) => liveSession(id));
+        const head = [
+            liveSession(6),
+            liveSession(5, { duration: 60_000 }),
+            liveSession(4, { worldName: 'Boundary copy' })
+        ];
+
+        const merged = mergeGameLogSessionHead(current, head, 5);
+
+        expect(merged.map((session) => session.id)).toEqual([6, 5, 4, 3, 2]);
+        expect(merged[1].duration).toBe(60_000);
+        expect(merged[2]).toBe(current[1]);
+        expect(merged[3]).toBe(current[2]);
+    });
+
+    it('keeps the current list when the live head is unchanged', () => {
+        const current = [3, 2, 1].map((id) => liveSession(id));
+        const head = [3, 2, 1].map((id) => liveSession(id));
+
+        expect(mergeGameLogSessionHead(current, head, 20)).toBe(current);
+    });
+
+    it('treats a short live head as the newest sessions and keeps older loaded pages', () => {
+        const current = [4, 2, 1].map((id) => liveSession(id));
+        const head = [liveSession(5), liveSession(3)];
+
+        expect(
+            mergeGameLogSessionHead(current, head, 20).map(
+                (session) => session.id
+            )
+        ).toEqual([5, 3, 2, 1]);
+        expect(mergeGameLogSessionHead([], [liveSession(1)], 20)).toEqual([
+            liveSession(1)
+        ]);
     });
 });

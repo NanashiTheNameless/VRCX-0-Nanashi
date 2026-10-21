@@ -19,6 +19,10 @@ import {
     sanitizeGameLogSorting,
     writePersistedGameLogState
 } from './gameLogState';
+import {
+    GAME_LOG_SESSION_LIMIT_MAX,
+    GAME_LOG_SESSION_PAGE_SIZE
+} from './gameLogTypes';
 import type { GameLogViewMode } from './gameLogTypes';
 
 type UseGameLogTableStateOptions = {
@@ -55,7 +59,7 @@ export function useGameLogTableState({
     const [preferencesReady, setPreferencesReady] = useState(false);
     const [pageSizes, setPageSizes] = useState(GAME_LOG_DEFAULT_PAGE_SIZES);
     const [sessionLimit, setSessionLimit] = useState(
-        GAME_LOG_DEFAULT_PAGE_SIZES[1]
+        GAME_LOG_SESSION_PAGE_SIZE
     );
     const [sorting, setSorting] = useState(() =>
         sanitizeGameLogSorting(persistedState.sorting)
@@ -119,7 +123,6 @@ export function useGameLogTableState({
                     ...current,
                     pageSize: resolvedActivePageSize
                 }));
-                setSessionLimit(resolvedActivePageSize);
                 setPreferencesReady(true);
             })
             .catch(() => {
@@ -152,9 +155,6 @@ export function useGameLogTableState({
                       pageSize
                   };
         });
-        setSessionLimit((current) =>
-            resolveGameLogPageSize(current, resolvedPageSizes)
-        );
     }, [preferencesHydrated, tablePageSizesPreference]);
 
     useEffect(() => {
@@ -194,7 +194,7 @@ export function useGameLogTableState({
             ...current,
             pageIndex: 0
         }));
-        setSessionLimit(pagination.pageSize);
+        setSessionLimit(GAME_LOG_SESSION_PAGE_SIZE);
     }, [
         deferredSearchQuery,
         pagination.pageSize,
@@ -218,16 +218,18 @@ export function useGameLogTableState({
                 pageIndex: 0,
                 pageSize: nextPageSize
             });
-            setSessionLimit(nextPageSize);
         },
         [pageSizes, pagination.pageSize]
     );
 
     const loadMoreSessions = useCallback(() => {
         setSessionLimit((current) =>
-            Math.min(current + pagination.pageSize, 1000)
+            Math.min(
+                current + GAME_LOG_SESSION_PAGE_SIZE,
+                GAME_LOG_SESSION_LIMIT_MAX
+            )
         );
-    }, [pagination.pageSize]);
+    }, []);
 
     return {
         columnOrder,
@@ -245,7 +247,6 @@ export function useGameLogTableState({
         setColumnVisibility,
         setPageSize,
         setPagination,
-        setSessionLimit,
         setSorting,
         sorting
     };

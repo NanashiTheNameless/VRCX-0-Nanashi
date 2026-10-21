@@ -5,6 +5,7 @@ import { sortTableRowsByDateAndType } from '@/components/data-table/sortRowsByDa
 import { useRuntimeStore } from '@/state/runtimeStore';
 
 import { useGameLogColumns } from './components/GameLogColumns';
+import { GAME_LOG_SESSION_LIMIT_MAX } from './gameLogTypes';
 import { useGameLogAnnotations } from './useGameLogAnnotations';
 import { useGameLogFilters } from './useGameLogFilters';
 import { useGameLogPreviousInstancesDialog } from './useGameLogPreviousInstancesDialog';
@@ -131,7 +132,7 @@ export function useGameLogPageController() {
     const hasMoreSessions =
         filters.viewMode === 'sessions' &&
         rowsState.sessions.length >= tableState.sessionLimit &&
-        tableState.sessionLimit < 1000;
+        tableState.sessionLimit < GAME_LOG_SESSION_LIMIT_MAX;
     const isError =
         rowsState.loadStatus === 'error' &&
         (filters.viewMode === 'sessions'
