@@ -78,6 +78,7 @@ pub struct DesktopRuntimeServices {
     notification_resolver: Arc<NotificationResolver>,
     realtime_user_image_resolver_owner: Mutex<Option<Arc<dyn CachedNotificationUserImageResolver>>>,
     wrist_realtime_runtime: Mutex<Weak<RealtimeHostRuntime>>,
+    #[cfg(any(windows, target_os = "linux"))]
     wrist_player_profiles: wrist_player_profiles::WristPlayerProfiles,
     game_log_snapshot: RuntimeSnapshotStore,
     now_playing: Arc<Mutex<Arc<NowPlayingSnapshot>>>,
@@ -158,6 +159,7 @@ impl DesktopRuntimeServices {
             notification_resolver: deps.notification_resolver,
             realtime_user_image_resolver_owner: Mutex::new(None),
             wrist_realtime_runtime: Mutex::new(Weak::new()),
+            #[cfg(any(windows, target_os = "linux"))]
             wrist_player_profiles: Default::default(),
             game_log_snapshot: RuntimeSnapshotStore::default(),
             now_playing: Arc::new(Mutex::new(Arc::new(NowPlayingSnapshot::default()))),
@@ -459,6 +461,7 @@ impl VrOverlayRuntimeServices for DesktopRuntimeServices {
     }
 }
 
+#[cfg(any(windows, target_os = "linux"))]
 mod wrist_player_profiles;
 
 #[cfg(test)]
