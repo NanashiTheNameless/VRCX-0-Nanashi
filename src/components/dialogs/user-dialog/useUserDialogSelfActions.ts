@@ -23,13 +23,13 @@ import { toast } from '@/services/toastService';
 import { PROFILE_LIST_LIMIT } from '@/shared/constants/profileLimits';
 import {
     mergeCurrentUserMediaFields,
+    profileBannerColorUpdate,
     profileMediaFileUrl,
     profileMediaUpdate,
-    PROFILE_MEDIA_URL_FIELD,
-    type ProfileMediaField
+    type ProfileMediaField,
+    type ProfileMediaUpdate
 } from '@/shared/utils/currentUserMedia';
 import { mergeCurrentUserPresenceFields } from '@/shared/utils/currentUserPresence';
-import { extractFileId } from '@/shared/utils/fileUtils';
 import { normalizeProfileLanguageKeys } from '@/shared/utils/userLanguage';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
@@ -151,8 +151,6 @@ export function useUserDialogSelfActions({
         },
         [currentUserId, currentEndpoint, isCurrentUser, profile?.id]
     );
-    const [profileDetailsDialogOpen, setProfileDetailsDialogOpen] =
-        useState(false);
     const [profileDetailsDraft, setProfileDetailsDraft] = useState(
         createProfileDetailsDraft
     );
@@ -355,8 +353,8 @@ export function useUserDialogSelfActions({
         }
     }
 
-    function editSelfProfileDetails() {
-        if (!isCurrentUser || actionStatusRef.current !== 'idle' || !profile) {
+    function resetSelfProfileDetailsDraft() {
+        if (!isCurrentUser || !profile) {
             return;
         }
 
@@ -369,7 +367,6 @@ export function useUserDialogSelfActions({
             bioLinks: bioLinks.length ? bioLinks : [''],
             pronouns: normalizeProfilePronouns(profile)
         });
-        setProfileDetailsDialogOpen(true);
     }
 
     async function saveSelfProfileDetails() {
@@ -418,7 +415,6 @@ export function useUserDialogSelfActions({
             !addLanguageKeys.length &&
             !removeLanguageKeys.length
         ) {
-            setProfileDetailsDialogOpen(false);
             return;
         }
 
@@ -457,7 +453,6 @@ export function useUserDialogSelfActions({
                 type: 'success',
                 title: t('dialog.user.success.profile_details_updated')
             });
-            setProfileDetailsDialogOpen(false);
         } catch (error) {
             toast.add({
                 type: 'error',
@@ -471,23 +466,11 @@ export function useUserDialogSelfActions({
         }
     }
 
-    async function setSelfProfileMediaField(
-        fieldName: ProfileMediaField,
-        fileId: string
+    async function updateSelfProfileMedia(
+        params: ProfileMediaUpdate,
+        successMessage: string
     ) {
-        if (!isCurrentUser || actionStatusRef.current !== 'idle' || !profile) {
-            return;
-        }
-        const normalizedFileId = fileId.trim();
-        const nextValue = profileMediaFileUrl(
-            currentEndpoint,
-            normalizedFileId
-        );
-        const currentValue = profile[PROFILE_MEDIA_URL_FIELD[fieldName]];
-        if (
-            normalizedFileId ===
-            extractFileId(typeof currentValue === 'string' ? currentValue : '')
-        ) {
+        if (!profile) {
             return;
         }
         const currentProfile = profile;
@@ -495,20 +478,39 @@ export function useUserDialogSelfActions({
             async () => {
                 await userProfileRepository.updateCurrentUserProfile({
                     expectedUserId: currentUserId || '',
-                    params: profileMediaUpdate(fieldName, nextValue)
+                    params
                 });
                 return currentProfile;
             },
             {
                 refreshMedia: true,
-                successMessage:
-                    fieldName === 'userIcon'
-                        ? t('message.gallery.profile_icon_changed')
-                        : t('message.gallery.profile_pic_changed'),
+                successMessage,
                 errorMessage: t(
                     'view.tools.toast.failed_to_update_profile_media'
                 )
             }
+        );
+    }
+
+    async function setSelfProfileMediaField(
+        fieldName: ProfileMediaField,
+        fileId: string
+    ) {
+        await updateSelfProfileMedia(
+            profileMediaUpdate(
+                fieldName,
+                profileMediaFileUrl(currentEndpoint, fileId.trim())
+            ),
+            fieldName === 'userIcon'
+                ? t('message.gallery.profile_icon_changed')
+                : t('message.gallery.profile_pic_changed')
+        );
+    }
+
+    async function setSelfBannerColor(hexColor: string) {
+        await updateSelfProfileMedia(
+            profileBannerColorUpdate(hexColor),
+            t('message.gallery.profile_pic_changed')
         );
     }
 
@@ -618,33 +620,22 @@ export function useUserDialogSelfActions({
         });
     }
 
-    function handleProfileDetailsDialogOpenChange(nextOpen: boolean) {
-        if (nextOpen || actionStatusRef.current === 'idle') {
-            setProfileDetailsDialogOpen(nextOpen);
-        }
-    }
-
-    function closeProfileDetailsDialog() {
-        setProfileDetailsDialogOpen(false);
-    }
-
     return {
         socialStatusDialog,
-        profileDetailsDialog: {
-            open: profileDetailsDialogOpen,
-            onOpenChange: handleProfileDetailsDialogOpenChange,
+        profileDetails: {
             draft: profileDetailsDraft,
             setDraft: setProfileDetailsDraft,
             languageRows: profileDetailsLanguageRows,
             availableLanguageOptions,
             languageOptionsStatus,
-            onCancel: closeProfileDetailsDialog,
+            onReset: resetSelfProfileDetailsDraft,
             onSave: saveSelfProfileDetails
         },
         actions: {
             editSelfStatus,
-            editSelfProfileDetails,
+            resetSelfProfileDetailsDraft,
             setSelfProfileMediaField,
+            setSelfBannerColor,
             toggleSelfAvatarCopying,
             toggleSelfBooping,
             toggleSelfSharedConnections,

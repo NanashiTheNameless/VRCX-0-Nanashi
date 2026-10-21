@@ -34,7 +34,6 @@ import {
     InputGroupButton,
     InputGroupInput
 } from '@/ui/shadcn/input-group';
-import { ScrollArea } from '@/ui/shadcn/scroll-area';
 import { Separator } from '@/ui/shadcn/separator';
 import { Textarea } from '@/ui/shadcn/textarea';
 import {
@@ -391,152 +390,105 @@ export function CurrentUserSocialStatusDialog({
     );
 }
 
-export function UserProfileDetailsDialog({
-    open,
-    onOpenChange,
-    actionStatus,
+export function UserProfileDetailsFields({
+    busy,
     draft,
     setDraft,
     languageRows,
     availableLanguageOptions,
-    languageOptionsStatus,
-    onCancel,
-    onSave
+    languageOptionsStatus
 }: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    actionStatus: string;
+    busy: boolean;
     draft: ProfileDetailsDraft;
     setDraft: Dispatch<SetStateAction<ProfileDetailsDraft>>;
     languageRows: LanguageOption[];
     availableLanguageOptions: LanguageOption[];
     languageOptionsStatus: string;
-    onCancel: () => void;
-    onSave: () => void;
 }) {
     const { t } = useTranslation();
 
-    const busy = actionStatus !== 'idle';
     const bioLength = String(draft.bio || '').length;
     const pronounsLength = String(draft.pronouns || '').length;
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange} disablePointerDismissal>
-            <DialogContent className="grid max-h-[calc(100vh-4rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-xl">
-                <DialogHeader>
-                    <DialogTitle>
-                        {t('dialog.user.description.edit_profile_details')}
-                    </DialogTitle>
-                    <DialogDescription>
-                        {t(
-                            'dialog.user.description.update_your_profile_details'
-                        )}
-                    </DialogDescription>
-                </DialogHeader>
-                <ScrollArea className="-mx-1 min-h-0">
-                    <FieldGroup className="gap-4 px-1 pb-3">
-                        <div className="grid gap-4 sm:grid-cols-2">
-                            <ProfileLanguagesField
-                                languageRows={languageRows}
-                                availableLanguageOptions={
-                                    availableLanguageOptions
-                                }
-                                languageOptionsStatus={languageOptionsStatus}
-                                busy={busy}
-                                onChange={(languageKeys) => {
-                                    setDraft((current) => ({
-                                        ...current,
-                                        languageKeys
-                                    }));
-                                }}
-                            />
-                            <Field>
-                                <div className="flex items-center justify-between gap-2">
-                                    <FieldLabel htmlFor="user-profile-pronouns">
-                                        {t('dialog.user.label.pronouns')}
-                                    </FieldLabel>
-                                    <span className="text-muted-foreground text-xs tabular-nums">
-                                        {pronounsLength}/32
-                                    </span>
-                                </div>
-                                <Input
-                                    id="user-profile-pronouns"
-                                    value={draft.pronouns}
-                                    placeholder={t(
-                                        'dialog.pronouns.pronouns_placeholder'
-                                    )}
-                                    maxLength={32}
-                                    disabled={busy}
-                                    onChange={(event) => {
-                                        setDraft((current) => ({
-                                            ...current,
-                                            pronouns: event.target.value.slice(
-                                                0,
-                                                32
-                                            )
-                                        }));
-                                    }}
-                                />
-                            </Field>
-                        </div>
-                        <Separator className="-my-1" />
-                        <ProfileLinksField
-                            label={t('dialog.user.label.bio_links')}
-                            addLabel={t('dialog.user.action.add_bio_link')}
-                            removeLabel={t(
-                                'dialog.user.action.remove_bio_link'
-                            )}
-                            links={draft.bioLinks}
-                            busy={busy}
-                            onChange={(bioLinks) => {
-                                setDraft((current) => ({
-                                    ...current,
-                                    bioLinks
-                                }));
-                            }}
-                        />
-                        <Separator className="-my-1" />
-                        <Field>
-                            <div className="flex items-center justify-between gap-2">
-                                <FieldLabel htmlFor="user-profile-bio">
-                                    {t('dialog.user.label.bio')}
-                                </FieldLabel>
-                                <FieldDescription className="text-xs">
-                                    {bioLength}/512
-                                </FieldDescription>
-                            </div>
-                            <Textarea
-                                id="user-profile-bio"
-                                rows={6}
-                                value={draft.bio}
-                                placeholder={t('dialog.bio.bio_placeholder')}
-                                maxLength={512}
-                                disabled={busy}
-                                className="field-sizing-fixed max-h-56 min-h-36 resize-y overflow-y-auto"
-                                onChange={(event) => {
-                                    setDraft((current) => ({
-                                        ...current,
-                                        bio: event.target.value.slice(0, 512)
-                                    }));
-                                }}
-                            />
-                        </Field>
-                    </FieldGroup>
-                </ScrollArea>
-                <DialogFooter>
-                    <Button
-                        type="button"
-                        variant="outline"
+        <FieldGroup className="gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+                <ProfileLanguagesField
+                    languageRows={languageRows}
+                    availableLanguageOptions={availableLanguageOptions}
+                    languageOptionsStatus={languageOptionsStatus}
+                    busy={busy}
+                    onChange={(languageKeys) => {
+                        setDraft((current) => ({
+                            ...current,
+                            languageKeys
+                        }));
+                    }}
+                />
+                <Field>
+                    <div className="flex items-center justify-between gap-2">
+                        <FieldLabel htmlFor="user-profile-pronouns">
+                            {t('dialog.user.label.pronouns')}
+                        </FieldLabel>
+                        <span className="text-muted-foreground text-xs tabular-nums">
+                            {pronounsLength}/32
+                        </span>
+                    </div>
+                    <Input
+                        id="user-profile-pronouns"
+                        value={draft.pronouns}
+                        placeholder={t('dialog.pronouns.pronouns_placeholder')}
+                        maxLength={32}
                         disabled={busy}
-                        onClick={onCancel}
-                    >
-                        {t('common.actions.cancel')}
-                    </Button>
-                    <Button type="button" disabled={busy} onClick={onSave}>
-                        {t('common.actions.save')}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                        onChange={(event) => {
+                            setDraft((current) => ({
+                                ...current,
+                                pronouns: event.target.value.slice(0, 32)
+                            }));
+                        }}
+                    />
+                </Field>
+            </div>
+            <Separator className="-my-1" />
+            <ProfileLinksField
+                label={t('dialog.user.label.bio_links')}
+                addLabel={t('dialog.user.action.add_bio_link')}
+                removeLabel={t('dialog.user.action.remove_bio_link')}
+                links={draft.bioLinks}
+                busy={busy}
+                onChange={(bioLinks) => {
+                    setDraft((current) => ({
+                        ...current,
+                        bioLinks
+                    }));
+                }}
+            />
+            <Separator className="-my-1" />
+            <Field>
+                <div className="flex items-center justify-between gap-2">
+                    <FieldLabel htmlFor="user-profile-bio">
+                        {t('dialog.user.label.bio')}
+                    </FieldLabel>
+                    <FieldDescription className="text-xs">
+                        {bioLength}/512
+                    </FieldDescription>
+                </div>
+                <Textarea
+                    id="user-profile-bio"
+                    rows={6}
+                    value={draft.bio}
+                    placeholder={t('dialog.bio.bio_placeholder')}
+                    maxLength={512}
+                    disabled={busy}
+                    className="field-sizing-fixed max-h-56 min-h-36 resize-y overflow-y-auto"
+                    onChange={(event) => {
+                        setDraft((current) => ({
+                            ...current,
+                            bio: event.target.value.slice(0, 512)
+                        }));
+                    }}
+                />
+            </Field>
+        </FieldGroup>
     );
 }

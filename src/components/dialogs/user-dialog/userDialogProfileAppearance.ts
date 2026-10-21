@@ -229,13 +229,30 @@ export function resolveUserDialogBackgroundTextureUrl(
 export function resolveUserDialogBannerUrl(
     profile: UserDialogProfileRecord
 ): string {
-    if (normalizeText(profile.bannerType) === 'color') {
+    const bannerType = normalizeText(profile.bannerType);
+    if (bannerType === 'color') {
         return '';
+    }
+    if (bannerType === 'avatarBanner') {
+        return (
+            normalizeText(profile.bannerUrl) ||
+            normalizeText(profile.currentAvatarImageUrl)
+        );
     }
     return (
         normalizeText(profile.bannerUrl) ||
         normalizeText(profile.bannerCustomUrl)
     );
+}
+
+export function resolveUserDialogBannerColor(
+    profile: UserDialogProfileRecord
+): string {
+    const color = normalizeText(profile.bannerColor);
+    return normalizeText(profile.bannerType) === 'color' &&
+        /^[0-9a-f]{6}$/i.test(color)
+        ? `#${color}`
+        : '';
 }
 
 export function resolveProfileDecorationAssetUrls(

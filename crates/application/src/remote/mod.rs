@@ -12,9 +12,9 @@ pub use vrcx_0_contracts::vrchat_requests::{
     InstanceCreateGroupAccessType, InstanceCreateMinimumAvatarPerformance, InstanceCreateRegion,
     InstanceCreateRequest, InstanceCreateType, InventoryItemUpdateRequest, InventoryListParams,
     InventoryOrder, InviteMessageType, MediaAssetUploadRequest, MediaFileListParams, MediaFileTag,
-    PrintUploadParams, ProfileDecorationEquipSlot, QueryOrder, ReleaseStatusFilter,
-    RequestInviteRequest, UserSearchCustomField, UserSearchParams, UserSearchSort,
-    WorldSearchParams, WorldSearchSort, WorldUpdateRequest,
+    ModerationReportType, PrintUploadParams, ProfileDecorationEquipSlot, QueryOrder,
+    ReleaseStatusFilter, RequestInviteRequest, UserSearchCustomField, UserSearchParams,
+    UserSearchSort, WorldSearchParams, WorldSearchSort, WorldUpdateRequest,
 };
 pub use worlds::{
     deserialize_nonnegative_i32, WorldRemoteFuture, WorldRemoteOperation, WorldRemotePort,

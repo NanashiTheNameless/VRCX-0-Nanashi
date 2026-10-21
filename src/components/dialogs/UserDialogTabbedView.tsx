@@ -1,5 +1,11 @@
 import { ClockIcon } from 'lucide-react';
-import { useEffect, useMemo, useState, type ComponentType } from 'react';
+import {
+    useEffect,
+    useEffectEvent,
+    useMemo,
+    useState,
+    type ComponentType
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -13,7 +19,6 @@ import {
 import { isActionRecent } from '@/services/recentActionService';
 import { MINUTE_MS } from '@/shared/constants/time';
 import { vrchatUserUrl } from '@/shared/constants/vrchatWebUrls';
-import { extractFileId } from '@/shared/utils/fileUtils';
 import { parseLocation } from '@/shared/utils/location';
 import { usePreferencesStore } from '@/state/preferencesStore';
 
@@ -21,9 +26,8 @@ import {
     EntityDialogScaffold,
     EntityDialogTwoColumnLayout
 } from './EntityDialogScaffold';
-import { ProfileMediaPanel } from './ProfileMediaPanel';
 import { UserDialogHeaderSection } from './user-dialog/components/UserDialogHeaderSection';
-import { UserDialogProfileDecorationsPanel } from './user-dialog/components/UserDialogProfileDecorationsPanel';
+import { UserDialogProfileEditPanel } from './user-dialog/components/UserDialogProfileEditPanel';
 import { UserDialogTabsSection } from './user-dialog/components/UserDialogTabsSection';
 import type {
     resolveFriendRequestState,
@@ -32,6 +36,7 @@ import type {
 import { buildUserDialogLocationUsers } from './user-dialog/userDialogLocationUsers';
 import {
     applyUserDialogProfileAppearanceOverrides,
+    resolveUserDialogBannerColor,
     resolveUserDialogBannerUrl
 } from './user-dialog/userDialogProfileAppearance';
 import {
@@ -40,7 +45,6 @@ import {
 } from './user-dialog/userDialogRows';
 import type { UserDialogLoadStatus } from './user-dialog/userDialogTabService';
 import { buildUserDialogProfileSummary } from './user-dialog/userDialogViewData';
-import { USER_PROFILE_MEDIA_SECTIONS } from './user-dialog/userProfileFields';
 import { useUserDialogAvatarAuthorAction } from './user-dialog/useUserDialogAvatarAuthorAction';
 import { useUserDialogClipboardActions } from './user-dialog/useUserDialogClipboardActions';
 import type { useUserDialogLocationPanel } from './user-dialog/useUserDialogLocationPanel';
@@ -64,6 +68,9 @@ import type {
 
 type SupplementalData = ReturnType<typeof useUserDialogSupplementalData>;
 type SelfControls = ReturnType<typeof useUserDialogSelfActions>['actions'];
+type SelfProfileDetails = ReturnType<
+    typeof useUserDialogSelfActions
+>['profileDetails'];
 type LocationPanelController = ReturnType<typeof useUserDialogLocationPanel>;
 
 interface UserDialogTabbedViewProps {
@@ -141,6 +148,7 @@ interface UserDialogTabbedViewProps {
         onGroupModeration: () => void;
     };
     selfControls: SelfControls;
+    selfProfileDetails: SelfProfileDetails;
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -149,7 +157,7 @@ function record(value: unknown): Record<string, unknown> {
         : {};
 }
 
-const SELF_PANELS = ['profile-media', 'profile-decorations'] as const;
+const SELF_PANELS = ['profile-edit'] as const;
 type SelfPanel = '' | (typeof SELF_PANELS)[number];
 
 function isSelfPanel(value: string): value is Exclude<SelfPanel, ''> {
@@ -187,7 +195,8 @@ export function UserDialogTabbedView({
     profileControls,
     relationship,
     resource,
-    selfControls
+    selfControls,
+    selfProfileDetails
 }: UserDialogTabbedViewProps) {
     const {
         memo,
@@ -216,7 +225,7 @@ export function UserDialogTabbedView({
         visibility: appearanceVisibility
     });
     const profileDecorations = useUserDialogProfileDecorations({
-        enabled: activeSelfPanel === 'profile-decorations',
+        enabled: activeSelfPanel === 'profile-edit',
         onProfileUpdated: profileControls.onRefresh
     });
     const profileAppearance = relationship.isCurrentUser
@@ -279,8 +288,9 @@ export function UserDialogTabbedView({
     } = friendControls;
     const {
         editSelfStatus: onEditSelfStatus,
-        editSelfProfileDetails: onEditSelfProfileDetails,
+        resetSelfProfileDetailsDraft,
         setSelfProfileMediaField: onSetSelfProfileMediaField,
+        setSelfBannerColor: onSetSelfBannerColor,
         toggleSelfAvatarCopying: onToggleSelfAvatarCopying,
         toggleSelfBooping: onToggleSelfBooping,
         toggleSelfSharedConnections: onToggleSelfSharedConnections,
@@ -325,10 +335,15 @@ export function UserDialogTabbedView({
         inGameGroupOrder
     });
 
-    useEffect(() => {
-        if (isCurrentUser && isSelfPanel(initialAction)) {
-            setSelfPanel(initialAction);
+    const openInitialSelfPanel = useEffectEvent((panel: string) => {
+        if (isCurrentUser && isSelfPanel(panel)) {
+            resetSelfProfileDetailsDraft();
+            setSelfPanel(panel);
         }
+    });
+
+    useEffect(() => {
+        openInitialSelfPanel(initialAction);
     }, [initialAction, isCurrentUser]);
 
     const {
@@ -530,6 +545,11 @@ export function UserDialogTabbedView({
     const bannerFallbackUrl = convertFileUrlToImageUrl(imageUrl, 1024);
     const displayedBannerUrl = bannerUrl || bannerFallbackUrl;
 
+    function openSelfProfileEditor() {
+        resetSelfProfileDetailsDraft();
+        setSelfPanel('profile-edit');
+    }
+
     function openInstanceHistory() {
         changeTab('instance-history', { allowHidden: true });
     }
@@ -550,6 +570,7 @@ export function UserDialogTabbedView({
         fallbackAvatarTarget,
         friendNumber,
         friendRequestState,
+        bannerColor: resolveUserDialogBannerColor(profile),
         bannerFallbackUrl,
         imageUrl: bannerUrl,
         isCurrentUser,
@@ -593,9 +614,7 @@ export function UserDialogTabbedView({
               }
             : undefined,
         onEditMemo,
-        onEditSelfProfileDetails,
-        onEditSelfProfileMedia: () => setSelfPanel('profile-media'),
-        onEditSelfProfileDecorations: () => setSelfPanel('profile-decorations'),
+        onEditSelfProfile: openSelfProfileEditor,
         onEditSelfStatus,
         onExtendedModeration,
         onFriendRequest,
@@ -721,7 +740,7 @@ export function UserDialogTabbedView({
         changeWorldOrder,
         changeWorldSort,
         onEditMemo,
-        onEditSelfProfileDetails,
+        onEditSelfProfileDetails: openSelfProfileEditor,
         onOpenFeed: openFeed,
         onOpenInstanceHistory: openInstanceHistory,
         onPreviousInstancesChange,
@@ -742,32 +761,22 @@ export function UserDialogTabbedView({
                     />
                 }
             >
-                {activeSelfPanel === 'profile-media' ? (
-                    <ProfileMediaPanel
-                        title={t('dialog.user.actions.edit_profile_media')}
-                        sections={USER_PROFILE_MEDIA_SECTIONS}
-                        currentFileIds={{
-                            banner: extractFileId(
-                                typeof profile.bannerCustomUrl === 'string'
-                                    ? profile.bannerCustomUrl
-                                    : ''
-                            ),
-                            userIcon: extractFileId(
-                                typeof profile.userIcon === 'string'
-                                    ? profile.userIcon
-                                    : ''
-                            )
-                        }}
-                        actionStatus={actionStatus}
-                        onBack={() => setSelfPanel('')}
-                        onSetField={onSetSelfProfileMediaField}
-                    />
-                ) : activeSelfPanel === 'profile-decorations' ? (
-                    <UserDialogProfileDecorationsPanel
+                {activeSelfPanel === 'profile-edit' ? (
+                    <UserDialogProfileEditPanel
                         profile={profile}
                         isVrcPlus={isLocalUserVrcPlusSupporter}
+                        busy={actionStatus !== 'idle'}
+                        details={selfProfileDetails}
+                        decorations={profileDecorations}
+                        statusDotClassName={statusDotClassName}
+                        statusText={
+                            normalizedText(profile.statusDescription) ||
+                            statusStateText
+                        }
                         onBack={() => setSelfPanel('')}
-                        controller={profileDecorations}
+                        onEditStatus={onEditSelfStatus}
+                        onSetMediaFile={onSetSelfProfileMediaField}
+                        onSetBannerColor={onSetSelfBannerColor}
                     />
                 ) : (
                     <UserDialogTabsSection

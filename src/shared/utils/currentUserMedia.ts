@@ -17,7 +17,8 @@ export function profileMediaFileUrl(endpoint: string, fileId: string): string {
 export type ProfileMediaUpdate =
     | { userIcon: string }
     | { bannerType: 'customImage'; bannerCustomUrl: string }
-    | { bannerType: 'avatarBanner' };
+    | { bannerType: 'avatarBanner' }
+    | { bannerType: 'color'; bannerColor: string };
 
 export function profileMediaUpdate(
     field: ProfileMediaField,
@@ -31,10 +32,24 @@ export function profileMediaUpdate(
         : { bannerType: 'avatarBanner' };
 }
 
+export function profileBannerColorUpdate(hexColor: string): ProfileMediaUpdate {
+    return {
+        bannerType: 'color',
+        bannerColor: hexColor.replace(/^#/, '').toLowerCase()
+    };
+}
+
+export function isProfileMediaFileUsableWithoutVrcPlus(
+    field: ProfileMediaField,
+    file: { tags?: string[] }
+): boolean {
+    return field === 'userIcon' && file.tags?.includes('cameraIcon') === true;
+}
+
 export function mergeCurrentUserMediaFields<
     TUser extends Pick<
         UserProfileEntity,
-        'iconUrl' | 'bannerUrl' | 'bannerType' | 'iconType'
+        'iconUrl' | 'bannerUrl' | 'bannerType' | 'bannerColor' | 'iconType'
     >
 >(user: TUser, profile: UserProfileEntity) {
     return {
@@ -44,6 +59,7 @@ export function mergeCurrentUserMediaFields<
         iconUrl: profile.iconUrl ?? user.iconUrl,
         bannerUrl: profile.bannerUrl ?? user.bannerUrl,
         bannerType: profile.bannerType ?? user.bannerType,
+        bannerColor: profile.bannerColor ?? user.bannerColor,
         iconType: profile.iconType ?? user.iconType
     };
 }

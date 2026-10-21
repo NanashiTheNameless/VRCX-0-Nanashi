@@ -15,7 +15,9 @@ import {
 } from '@/shared/constants/selectableTile';
 import { Button } from '@/ui/shadcn/button';
 import { Spinner } from '@/ui/shadcn/spinner';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
+import { TileLockOverlay } from './TileLockOverlay';
 import { TileShell } from './TileShell';
 
 export function SelectableTile({
@@ -30,6 +32,7 @@ export function SelectableTile({
     fallbackIcon = true,
     isCurrent,
     locked,
+    showLockIcon = false,
     busy,
     inert,
     aspectClassName = 'aspect-square',
@@ -47,13 +50,25 @@ export function SelectableTile({
     fallbackIcon?: boolean;
     isCurrent: boolean;
     locked?: boolean;
+    showLockIcon?: boolean;
     busy?: boolean;
     inert: boolean;
     aspectClassName?: string;
     surfaceClassName?: string;
     onClick: () => void;
 }) {
-    return (
+    const tooltip = hint ? `${label} - ${hint}` : showLabel ? '' : label;
+    const button = (
+        <Button
+            type="button"
+            variant="ghost"
+            aria-disabled={inert || undefined}
+            aria-label={hint ? `${label}. ${hint}` : label}
+            aria-pressed={isCurrent}
+            onClick={inert ? undefined : onClick}
+        />
+    );
+    const tile = (
         <TileShell
             selected={isCurrent}
             className={cn(
@@ -62,17 +77,7 @@ export function SelectableTile({
                 aspectClassName,
                 locked && TILE_LOCKED
             )}
-            render={
-                <Button
-                    type="button"
-                    variant="ghost"
-                    aria-disabled={inert || undefined}
-                    aria-label={hint ? `${label}. ${hint}` : label}
-                    aria-pressed={isCurrent}
-                    title={hint ? `${label} - ${hint}` : label}
-                    onClick={inert ? undefined : onClick}
-                />
-            }
+            render={tooltip ? <TooltipTrigger render={button} /> : button}
         >
             <div
                 className={cn(TILE_SURFACE, surfaceClassName)}
@@ -92,6 +97,7 @@ export function SelectableTile({
                     <ImageIcon className="size-6" />
                 ) : null}
             </div>
+            {locked && showLockIcon ? <TileLockOverlay /> : null}
             {showLabel ? <span className={TILE_LABEL}>{label}</span> : null}
             {badge ? <span className={TILE_BADGE}>{badge}</span> : null}
             {isCurrent ? (
@@ -105,5 +111,14 @@ export function SelectableTile({
                 </span>
             ) : null}
         </TileShell>
+    );
+
+    return tooltip ? (
+        <Tooltip>
+            {tile}
+            <TooltipContent>{tooltip}</TooltipContent>
+        </Tooltip>
+    ) : (
+        tile
     );
 }

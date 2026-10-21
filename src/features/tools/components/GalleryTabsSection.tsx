@@ -53,6 +53,7 @@ export function GalleryTabsSection({
                 uploadingTab,
                 mutatingKey,
                 currentUserId,
+                isVrcPlusSupporter,
                 bannerCustomUrl,
                 mediaProfileLoading,
                 mediaProfileError,

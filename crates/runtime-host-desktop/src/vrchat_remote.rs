@@ -38,7 +38,7 @@ use vrcx_0_vrchat_client::tools::{
     following_calendars_get_input, group_calendar_get_input, group_calendar_ics_get_input,
     group_event_follow_input, invite_message_edit_input, invite_messages_get_input,
     moderation_report_delete_input, moderation_reports_get_input, user_note_save_input,
-    user_report_input, CalendarListParams, InviteMessageType,
+    user_report_input, CalendarListParams, InviteMessageType, ModerationReportType,
 };
 use vrcx_0_vrchat_client::users::{profile_get_input, user_represented_group_get_input};
 
@@ -481,6 +481,7 @@ impl DesktopVrchatRemoteFacade {
         current_user_id: String,
         offset: i32,
         closed_only: bool,
+        report_type: Option<ModerationReportType>,
     ) -> Result<VrchatApiResponse> {
         let (current_user_id, request) = moderation_reports_get_input(
             VRCHAT_API_DEFAULT_ENDPOINT.into(),
@@ -488,6 +489,7 @@ impl DesktopVrchatRemoteFacade {
             100,
             offset,
             closed_only,
+            report_type,
         )?;
         self.execute(
             "app__vrchat_tools_moderation_reports_get",

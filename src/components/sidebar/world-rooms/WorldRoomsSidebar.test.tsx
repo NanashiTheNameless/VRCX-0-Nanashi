@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
     getWorldProfile: vi.fn(),
     getInstance: vi.fn(),
     openGroupDialog: vi.fn(),
+    openWorldDialog: vi.fn(),
     fetchGroupProfile: vi.fn()
 }));
 
@@ -36,7 +37,7 @@ vi.mock('@/components/launch/LaunchModeContextMenuGroup', () => ({
 }));
 vi.mock('@/services/dialogService', () => ({
     openGroupDialog: mocks.openGroupDialog,
-    openWorldDialog: vi.fn()
+    openWorldDialog: mocks.openWorldDialog
 }));
 vi.mock('@/repositories/groupProfileRepository', () => ({
     default: { fetchGroupProfile: mocks.fetchGroupProfile }
@@ -254,6 +255,62 @@ describe('world rooms sidebar tab', () => {
             groupId: 'grp_karaoke',
             title: 'Karaoke Club'
         });
+        expect(mocks.openWorldDialog).not.toHaveBeenCalled();
+    });
+
+    it('opens the world dialog for a room when the room is clicked', async () => {
+        openTab();
+        fireEvent.click(await screen.findByText('#11111'));
+
+        expect(mocks.openWorldDialog).toHaveBeenCalledWith({
+            worldId: `${WORLD_ID}:11111~region(jp)`,
+            title: 'Karaoke'
+        });
+    });
+
+    it('opens the world dialog for a room from its context menu', async () => {
+        openTab();
+        fireEvent.contextMenu(await screen.findByText('#11111'));
+        fireEvent.click(
+            await screen.findByRole('menuitem', {
+                name: 'common.actions.view_details'
+            })
+        );
+
+        expect(mocks.openWorldDialog).toHaveBeenCalledWith({
+            worldId: `${WORLD_ID}:11111~region(jp)`,
+            title: 'Karaoke'
+        });
+    });
+
+    it('falls back to placeholders when the group icon or world thumbnail fails to load', async () => {
+        mocks.fetchGroupProfile.mockResolvedValue({
+            id: 'grp_karaoke',
+            name: 'Karaoke Club',
+            iconUrl: GROUP_ICON
+        });
+        mocks.getWorldProfile.mockResolvedValue(
+            world([
+                [
+                    '55555~group(grp_karaoke)~groupAccessType(public)~region(jp)',
+                    9
+                ],
+                ['11111~region(jp)', 3]
+            ])
+        );
+
+        const view = openTab();
+        await screen.findByText('Karaoke Club');
+        for (const image of Array.from(
+            view.container.querySelectorAll('img')
+        )) {
+            fireEvent.error(image);
+        }
+
+        expect(view.container.querySelectorAll('img')).toHaveLength(0);
+        expect(
+            view.container.querySelector('svg.lucide-users-round')
+        ).toBeTruthy();
     });
 
     it('shows the group icon beside a group room and the world thumbnail beside other rooms', async () => {

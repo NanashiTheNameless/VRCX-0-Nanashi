@@ -248,7 +248,7 @@ describe('UserDialogBioPanel', () => {
         );
         expect(
             screen.queryByRole('button', {
-                name: 'dialog.user.actions.edit_profile_details'
+                name: 'dialog.user.actions.edit_profile'
             })
         ).toBeNull();
 
@@ -261,7 +261,7 @@ describe('UserDialogBioPanel', () => {
         );
         fireEvent.click(
             screen.getByRole('button', {
-                name: 'dialog.user.actions.edit_profile_details'
+                name: 'dialog.user.actions.edit_profile'
             })
         );
         expect(onEditBio).toHaveBeenCalledOnce();

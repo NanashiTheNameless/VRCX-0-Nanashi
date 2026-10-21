@@ -9,7 +9,9 @@ use crate::http_api::{
 };
 use crate::query::serialize_query;
 
-pub use vrcx_0_contracts::vrchat_requests::{CalendarListParams, InviteMessageType};
+pub use vrcx_0_contracts::vrchat_requests::{
+    CalendarListParams, InviteMessageType, ModerationReportType,
+};
 
 pub fn calendars_get_input(endpoint: String, params: CalendarListParams) -> HttpApiRequestInput {
     get_input(endpoint, "calendar", serialize_query(&params))
@@ -135,6 +137,7 @@ pub fn moderation_reports_get_input(
     n: i32,
     offset: i32,
     closed_only: bool,
+    report_type: Option<ModerationReportType>,
 ) -> Result<(String, HttpApiRequestInput), HttpApiError> {
     let reporting_user_id = require_text(
         reporting_user_id,
@@ -147,6 +150,9 @@ pub fn moderation_reports_get_input(
     ]);
     if closed_only {
         query_params.insert("status".into(), json!("closed"));
+    }
+    if let Some(report_type) = report_type {
+        query_params.insert("type".into(), json!(report_type.as_str()));
     }
     Ok((
         reporting_user_id.clone(),
@@ -335,9 +341,15 @@ mod tests {
 
     #[test]
     fn moderation_report_requests_scope_to_the_reporting_user() {
-        let (user_id, list) =
-            moderation_reports_get_input("endpoint".into(), " usr_1 ".into(), 100, 200, false)
-                .unwrap();
+        let (user_id, list) = moderation_reports_get_input(
+            "endpoint".into(),
+            " usr_1 ".into(),
+            100,
+            200,
+            false,
+            None,
+        )
+        .unwrap();
         assert_eq!(user_id, "usr_1");
         assert_eq!(list.method.as_deref(), Some("GET"));
         assert_eq!(list.path.as_deref(), Some("moderationReports"));
@@ -350,8 +362,15 @@ mod tests {
             ]))
         );
 
-        let (_, closed) =
-            moderation_reports_get_input("endpoint".into(), "usr_1".into(), 100, 0, true).unwrap();
+        let (_, closed) = moderation_reports_get_input(
+            "endpoint".into(),
+            "usr_1".into(),
+            100,
+            0,
+            true,
+            Some(ModerationReportType::World),
+        )
+        .unwrap();
         assert_eq!(
             closed.query_params,
             Some(HashMap::from([
@@ -359,6 +378,7 @@ mod tests {
                 ("n".into(), json!(100)),
                 ("offset".into(), json!(0)),
                 ("status".into(), json!("closed")),
+                ("type".into(), json!("world")),
             ]))
         );
 
@@ -393,7 +413,7 @@ mod tests {
         assert!(group_calendar_ics_get_input("".into(), " ".into(), "event".into()).is_err());
         assert!(user_note_save_input("".into(), " ".into(), "note".into()).is_err());
         assert!(user_report_input("".into(), " ".into(), "reason".into(),).is_err());
-        assert!(moderation_reports_get_input("".into(), " ".into(), 100, 0, false).is_err());
+        assert!(moderation_reports_get_input("".into(), " ".into(), 100, 0, false, None).is_err());
         assert!(moderation_report_delete_input("".into(), " ".into()).is_err());
         assert!(serde_json::from_str::<InviteMessageType>(r#""invite""#).is_err());
     }

@@ -297,7 +297,7 @@ export function UserDialogContent({
 
     const {
         socialStatusDialog,
-        profileDetailsDialog,
+        profileDetails,
         actions: selfActions
     } = useUserDialogSelfActions({
         profile,
@@ -485,12 +485,12 @@ export function UserDialogContent({
                     }
                 }}
                 selfControls={selfActions}
+                selfProfileDetails={profileDetails}
             />
             <UserDialogContentDialogs
                 actionStatus={actionStatus}
                 noteMemoDialog={memoDialog}
                 socialStatusDialog={socialStatusDialog}
-                profileDetailsDialog={profileDetailsDialog}
                 boopDialog={{
                     request: boopDialogRequest,
                     isLocalUserVrcPlusSupporter,

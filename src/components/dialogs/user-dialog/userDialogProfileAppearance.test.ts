@@ -9,6 +9,7 @@ import {
     preserveUserDialogProfileAppearance,
     resolveProfileDecorationAssetUrls,
     resolveProfileGradientScrimAlpha,
+    resolveUserDialogBannerColor,
     resolveUserDialogBannerUrl
 } from './userDialogProfileAppearance';
 
@@ -323,6 +324,31 @@ describe('profile appearance assets', () => {
                 bannerType: 'color',
                 bannerUrl: 'https://example.test/old-banner.png',
                 bannerCustomUrl: 'https://example.test/old-custom.png'
+            })
+        ).toBe('');
+    });
+
+    it('shows the avatar image for avatar banners instead of a retained custom image', () => {
+        expect(
+            resolveUserDialogBannerUrl({
+                bannerType: 'avatarBanner',
+                bannerCustomUrl: 'https://example.test/old-custom.png',
+                currentAvatarImageUrl: 'https://example.test/avatar.png'
+            })
+        ).toBe('https://example.test/avatar.png');
+    });
+
+    it('paints color banners from the stored hex color', () => {
+        expect(
+            resolveUserDialogBannerColor({
+                bannerType: 'color',
+                bannerColor: 'a9d96a'
+            })
+        ).toBe('#a9d96a');
+        expect(
+            resolveUserDialogBannerColor({
+                bannerType: 'avatarBanner',
+                bannerColor: 'a9d96a'
             })
         ).toBe('');
     });

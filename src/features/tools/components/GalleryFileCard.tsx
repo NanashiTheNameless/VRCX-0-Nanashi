@@ -17,6 +17,7 @@ export function GalleryFileCard({
     file,
     bannerCustomUrl,
     userIcon,
+    locked,
     mutatingKey,
     currentUserId,
     selected,
@@ -31,6 +32,7 @@ export function GalleryFileCard({
     file: MediaFileRecord;
     bannerCustomUrl: string;
     userIcon: string;
+    locked: boolean;
     mutatingKey: string;
     currentUserId: string | null;
     selected: boolean;
@@ -58,7 +60,7 @@ export function GalleryFileCard({
         : false;
     const isMutating = isFileMutating || isProfileMutating;
     const primaryAction =
-        profileField && !isCurrent
+        profileField && !isCurrent && !locked
             ? {
                   label:
                       tab === 'icons'
@@ -85,6 +87,7 @@ export function GalleryFileCard({
             imageFit={tab === 'gallery' ? 'cover' : 'contain'}
             isCurrent={isCurrent}
             currentLabel={t('dialog.gallery_icons.current')}
+            locked={locked}
             menuLabel={t('accessibility.more')}
             placeholderIcon={ImageIcon}
             hideContent
@@ -109,7 +112,13 @@ export function GalleryFileCard({
             onMediaClick={
                 canUseProfileMedia ? primaryAction.onClick : previewAction
             }
-            mediaHoverLabel={canUseProfileMedia ? primaryAction.label : ''}
+            mediaHoverLabel={
+                locked
+                    ? t('dialog.inventory.requires_vrc_plus')
+                    : canUseProfileMedia
+                      ? primaryAction.label
+                      : ''
+            }
             menuActions={[
                 imageUrl
                     ? {

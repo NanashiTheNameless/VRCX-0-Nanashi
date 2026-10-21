@@ -133,6 +133,35 @@ vi.mock('@/ui/shadcn/tabs', () => {
     };
 });
 
+vi.mock('@/ui/shadcn/select', () => {
+    const SelectChange = createContext<(value: string) => void>(() => {});
+    return {
+        Select: ({
+            children,
+            onValueChange
+        }: PropsWithChildren<{ onValueChange: (value: string) => void }>) => (
+            <SelectChange.Provider value={onValueChange}>
+                {children}
+            </SelectChange.Provider>
+        ),
+        SelectTrigger: () => null,
+        SelectValue: () => null,
+        SelectContent: ({ children }: PropsWithChildren) => <>{children}</>,
+        SelectGroup: ({ children }: PropsWithChildren) => <>{children}</>,
+        SelectItem: ({
+            children,
+            value
+        }: PropsWithChildren<{ value: string }>) => {
+            const onValueChange = useContext(SelectChange);
+            return (
+                <button type="button" onClick={() => onValueChange(value)}>
+                    {children}
+                </button>
+            );
+        }
+    };
+});
+
 vi.mock('@/ui/shadcn/tooltip', () => ({
     Tooltip: ({ children }: PropsWithChildren) => <>{children}</>,
     TooltipTrigger: ({ render }: { render: ReactNode }) => render,
@@ -184,7 +213,8 @@ describe('ModerationReportsDialog', () => {
         expect(mocks.getModerationReports).toHaveBeenCalledWith({
             currentUserId: 'usr_me',
             offset: 0,
-            closedOnly: false
+            closedOnly: false,
+            reportType: null
         });
         expect(
             screen.getAllByText('view.search.user.header · behavior-hacking')
@@ -214,9 +244,42 @@ describe('ModerationReportsDialog', () => {
         expect(mocks.getModerationReports).toHaveBeenLastCalledWith({
             currentUserId: 'usr_me',
             offset: 0,
-            closedOnly: true
+            closedOnly: true,
+            reportType: null
         });
         expect(screen.queryByText('Milfy')).toBeNull();
+    });
+
+    it('keeps the type filter when switching between open and closed', async () => {
+        await openDialog();
+
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'dialog.moderation_reports.type_filter.world'
+            })
+        );
+        await waitFor(() => {
+            expect(mocks.getModerationReports).toHaveBeenLastCalledWith({
+                currentUserId: 'usr_me',
+                offset: 0,
+                closedOnly: false,
+                reportType: 'world'
+            });
+        });
+
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'dialog.moderation_reports.status_closed'
+            })
+        );
+
+        await screen.findByText('Closed Group');
+        expect(mocks.getModerationReports).toHaveBeenLastCalledWith({
+            currentUserId: 'usr_me',
+            offset: 0,
+            closedOnly: true,
+            reportType: 'world'
+        });
     });
 
     it('withdraws a confirmed report and drops it from the list', async () => {
@@ -280,7 +343,8 @@ describe('ModerationReportsDialog', () => {
         expect(mocks.getModerationReports).toHaveBeenLastCalledWith({
             currentUserId: 'usr_me',
             offset: 2,
-            closedOnly: false
+            closedOnly: false,
+            reportType: null
         });
         expect(
             screen.queryByRole('button', { name: 'common.load_more' })

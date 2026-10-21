@@ -15,6 +15,7 @@ import { InstanceInviteDialog } from '@/components/dialogs/InstanceInviteDialog'
 import { useLocationMetadata } from '@/components/location/useLocationMetadata';
 import type { GroupInstanceRecord } from '@/domain/entities/group';
 import { cn } from '@/lib/utils';
+import { selectAvatar } from '@/services/avatarSelectionService';
 import { copyTextToClipboard } from '@/services/clipboardService';
 import {
     attachRunningVrchat,
@@ -52,6 +53,8 @@ import {
 } from '@/ui/shadcn/dropdown-menu';
 import { Spinner } from '@/ui/shadcn/spinner';
 
+import { LaunchAvatarSwitch } from './LaunchAvatarSwitch';
+
 const emptyDetails: LaunchDialogDetails = {
     tag: '',
     location: '',
@@ -65,6 +68,7 @@ const emptyDetails: LaunchDialogDetails = {
     parsed: parseLocation('')
 };
 const EMPTY_GROUP_INSTANCES: GroupInstanceRecord[] = [];
+const AVATAR_SWITCH_TIMEOUT_MS = 3000;
 type LaunchActionKey =
     | 'attach'
     | 'launch-vr'
@@ -199,6 +203,9 @@ export function LaunchDialogHost() {
     const isGameRunning = useRuntimeStore(
         (state) => state.gameState.isGameRunning === true
     );
+    const currentAvatarId = useRuntimeStore(
+        (state) => state.auth.currentUserSnapshot?.currentAvatar?.trim() || ''
+    );
     const groupInstancesState = useRuntimeStore(
         (state) => state.groupInstances
     );
@@ -212,6 +219,9 @@ export function LaunchDialogHost() {
     const [loading, setLoading] = useState(false);
     const [busy, setBusy] = useState('');
     const [inviteOpen, setInviteOpen] = useState(false);
+    const [avatarSwitchOpen, setAvatarSwitchOpen] = useState(false);
+    const [avatarSwitchTarget, setAvatarSwitchTarget] = useState('');
+    const avatarSwitchValue = avatarSwitchTarget || currentAvatarId;
     const cachedInstances = useMemo(
         () => buildCachedInstanceMap(groupInstances),
         [groupInstances]
@@ -223,6 +233,8 @@ export function LaunchDialogHost() {
             setDetails(emptyDetails);
             setLoading(false);
             setInviteOpen(false);
+            setAvatarSwitchOpen(false);
+            setAvatarSwitchTarget('');
             return () => {
                 active = false;
             };
@@ -333,6 +345,31 @@ export function LaunchDialogHost() {
         await copyField(url, t('dialog.launch.copy.vrcx_link'));
     }
 
+    async function switchAvatarBeforeJoin() {
+        if (
+            !avatarSwitchOpen ||
+            !avatarSwitchValue ||
+            avatarSwitchValue === currentAvatarId
+        ) {
+            return;
+        }
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const timeout = new Promise<never>((_, reject) => {
+            timer = setTimeout(() => {
+                reject(new Error(t('dialog.launch.avatar_switch.timeout')));
+            }, AVATAR_SWITCH_TIMEOUT_MS);
+        });
+        try {
+            await Promise.race([selectAvatar(avatarSwitchValue), timeout]);
+        } finally {
+            clearTimeout(timer);
+        }
+        toast.add({
+            type: 'success',
+            title: t('dialog.avatar.success.avatar_selected')
+        });
+    }
+
     async function launchWithMode(nextDesktopMode: boolean) {
         if (isGameRunning) {
             const result = await confirm({
@@ -346,11 +383,15 @@ export function LaunchDialogHost() {
             if (!result.ok) {
                 return false;
             }
-            await launchVrchat(actionTag, actionLaunchToken, nextDesktopMode);
-            return true;
         }
+        await switchAvatarBeforeJoin();
         await launchVrchat(actionTag, actionLaunchToken, nextDesktopMode);
         return true;
+    }
+
+    async function joinRunningGame(join: () => Promise<void>) {
+        await switchAvatarBeforeJoin();
+        await join();
     }
 
     const actionTag =
@@ -451,14 +492,24 @@ export function LaunchDialogHost() {
                             disabled={actionDisabled}
                             onClick={() => {
                                 runAction('attach', () =>
-                                    attachRunningVrchat(
-                                        actionTag,
-                                        actionLaunchToken
+                                    joinRunningGame(() =>
+                                        attachRunningVrchat(
+                                            actionTag,
+                                            actionLaunchToken
+                                        )
                                     )
                                 );
                             }}
                         />
                     </div>
+
+                    <LaunchAvatarSwitch
+                        open={avatarSwitchOpen}
+                        value={avatarSwitchValue}
+                        disabled={Boolean(busy)}
+                        onOpenChange={setAvatarSwitchOpen}
+                        onValueChange={setAvatarSwitchTarget}
+                    />
 
                     <DialogFooter className="flex-row items-center justify-between gap-2 sm:justify-between">
                         <div className="flex gap-1">
@@ -479,9 +530,11 @@ export function LaunchDialogHost() {
                                 disabled={actionDisabled}
                                 onClick={() => {
                                     runAction('self-invite', () =>
-                                        selfInviteToInstance(
-                                            actionTag,
-                                            actionLaunchToken
+                                        joinRunningGame(() =>
+                                            selfInviteToInstance(
+                                                actionTag,
+                                                actionLaunchToken
+                                            )
                                         )
                                     );
                                 }}

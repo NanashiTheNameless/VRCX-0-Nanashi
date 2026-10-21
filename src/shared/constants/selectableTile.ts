@@ -8,6 +8,12 @@ export const TILE_SURFACE =
 
 export const TILE_LOCKED = 'opacity-70 grayscale-[0.6]';
 
+export const TILE_LOCK_OVERLAY =
+    'pointer-events-none absolute inset-0 flex items-center justify-center';
+
+export const TILE_LOCK_ICON =
+    'bg-black/65 flex size-9 items-center justify-center rounded-full text-white shadow-sm backdrop-blur-sm';
+
 export const TILE_LABEL =
     'pointer-events-none absolute inset-x-0 bottom-0 truncate bg-gradient-to-t from-black/85 via-black/45 to-transparent px-2 pt-6 pb-1.5 text-left text-xs font-semibold text-white';
 

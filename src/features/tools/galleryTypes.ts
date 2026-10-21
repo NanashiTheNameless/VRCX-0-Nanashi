@@ -205,6 +205,7 @@ export type GalleryFileTabState = Pick<
     | 'assets'
     | 'currentUserId'
     | 'gridDensityConfig'
+    | 'isVrcPlusSupporter'
     | 'loadingByTab'
     | 'mutatingKey'
     | 'bannerCustomUrl'

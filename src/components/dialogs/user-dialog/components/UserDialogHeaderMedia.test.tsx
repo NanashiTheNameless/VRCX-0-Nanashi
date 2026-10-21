@@ -23,6 +23,7 @@ function renderMedia(frame?: typeof iconFrame) {
     return render(
         <UserDialogHeaderMedia
             bannerAlt="Profile banner"
+            bannerColor=""
             bannerFallbackUrl="https://example.test/legacy.webp"
             bannerUrl="https://example.test/banner.webp"
             iconFrame={frame}
@@ -68,6 +69,7 @@ describe('UserDialogHeaderMedia', () => {
         rerender(
             <UserDialogHeaderMedia
                 bannerAlt="Profile banner"
+                bannerColor=""
                 bannerFallbackUrl="https://example.test/legacy.webp"
                 bannerUrl="https://example.test/next.webp"
                 onBannerClick={vi.fn()}
@@ -94,6 +96,7 @@ describe('UserDialogHeaderMedia', () => {
         rerender(
             <UserDialogHeaderMedia
                 bannerAlt="Profile banner"
+                bannerColor=""
                 bannerFallbackUrl="https://example.test/legacy.webp"
                 bannerUrl=""
                 onBannerClick={vi.fn()}

@@ -129,6 +129,24 @@ fn current_user_mutations_build_paths_and_json_bodies() {
         })
     );
 
+    let (_, banner_color) = profile_update_input(
+        "endpoint".into(),
+        "usr_1".into(),
+        CurrentUserProfileUpdateRequest {
+            banner_type: Some(ProfileBannerType::Color),
+            banner_color: Some("891454".into()),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        json_body(&banner_color),
+        &json!({
+            "bannerType": "color",
+            "bannerColor": "891454",
+        })
+    );
+
     let (_, update_default) = current_user_update_input(
         "endpoint".into(),
         " usr/1 ".into(),

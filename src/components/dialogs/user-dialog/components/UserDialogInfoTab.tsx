@@ -621,7 +621,7 @@ export function UserDialogBioPanel({
     onEditBio
 }: UserDialogBioSectionProps) {
     const { t } = useTranslation();
-    const editLabel = t('dialog.user.actions.edit_profile_details');
+    const editLabel = t('dialog.user.actions.edit_profile');
 
     return (
         <TranslatableText

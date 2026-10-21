@@ -4840,11 +4840,10 @@
                 "moderation_enable_chatbox": "Unmute Chatbox",
                 "moderation_disable_chatbox": "Mute Chatbox",
                 "edit_status": "Edit Social Status",
-                "edit_profile_details": "Edit Profile Details",
-                "edit_profile_media": "Edit Banner and Icon",
                 "report_hacking": "Report for Hacking",
                 "unfriend": "Unfriend",
-                "edit_note_memo": "Edit Note and Local Note"
+                "edit_note_memo": "Edit Note and Local Note",
+                "edit_profile": "Edit Profile"
             },
             "group_invite": {
                 "select_group": "Select a group",
@@ -5116,9 +5115,7 @@
             "description": {
                 "update_your_social_status_and_status_description": "Update your social status and status message",
                 "status_description": "Status message",
-                "clear_status_description": "Clear status message",
-                "edit_profile_details": "Edit Profile Details",
-                "update_your_profile_details": "Edit the profile details shown on your card."
+                "clear_status_description": "Clear status message"
             },
             "toast": {
                 "memo_saved": "Local note saved",
@@ -5189,6 +5186,12 @@
                 "left_value_groups": "Left {value} groups",
                 "enable_value": "Enable {value}",
                 "disable_value": "Disable {value}"
+            },
+            "profile_edit": {
+                "details": "Basic Info",
+                "avatar_image": "Avatar Image",
+                "solid_color": "Solid Color",
+                "apply_color": "Apply Color"
             }
         },
         "world": {
@@ -5905,6 +5908,18 @@
                 "self_invite": "Self Invite"
             },
             "subtitle_fallback": "VRChat instance",
+            "avatar_switch": {
+                "toggle": "Switch avatar before joining",
+                "placeholder": "Choose an avatar",
+                "search_placeholder": "Search avatars",
+                "hint": "Avatars are switched through the VRChat API. How long it takes to apply depends on VRChat, so it may not take effect right away.",
+                "timeout": "The VRChat server didn't respond to the avatar switch. Joining was paused.",
+                "group": {
+                    "current": "Current Avatar",
+                    "own": "My Avatars",
+                    "favorite": "Favorite Avatars"
+                }
+            },
             "tile": {
                 "vr": "VR",
                 "desktop": "Desktop",
@@ -6085,7 +6100,9 @@
                 "compact": "Compact",
                 "dense": "Dense"
             },
-            "crop_image": "Confirm Upload"
+            "crop_image": "Confirm Upload",
+            "locked_title": "Your uploaded images are temporarily locked",
+            "locked_description": "They're still saved. Join VRC+ to use them again."
         },
         "inventory": {
             "header": "Inventory",
@@ -6808,7 +6825,14 @@
             "withdraw_description": "This can't be undone.",
             "failed_to_withdraw": "Couldn't withdraw the report",
             "status_open": "Open",
-            "status_closed": "Closed"
+            "status_closed": "Closed",
+            "type_filter": {
+                "all": "All",
+                "user": "Users",
+                "world": "Worlds",
+                "avatar": "Avatars",
+                "group": "Groups"
+            }
         }
     },
     "confirm": {

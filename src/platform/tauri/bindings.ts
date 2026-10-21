@@ -4250,6 +4250,7 @@ export type CurrentUserProfileUpdateRequest = {
     userIcon?: string | null;
     bannerType?: ProfileBannerType | null;
     bannerCustomUrl?: string | null;
+    bannerColor?: string | null;
     backgroundType?: ProfileBackgroundType | null;
     backgroundGradientBottom?: string | null;
     backgroundGradientTop?: string | null;
@@ -6176,6 +6177,7 @@ export type Message = {
     toolCall: ToolCallRecord | null;
     toolResult: ToolResultRecord | null;
 };
+export type ModerationReportType = 'avatar' | 'group' | 'user' | 'world';
 export type ModerationSyncLocalOutput = {
     userId: string;
     updatedAt: string;
@@ -6657,7 +6659,7 @@ export type ProfileBackupStatus = {
     error: ProfileBackupError | null;
     lastOutcome: ProfileBackupOutcome | null;
 };
-export type ProfileBannerType = 'avatarBanner' | 'customImage';
+export type ProfileBannerType = 'avatarBanner' | 'customImage' | 'color';
 export type ProfileDecorationEquipSlot =
     | 'iconFrame'
     | 'profileEffect'
@@ -8012,6 +8014,7 @@ export type VrchatToolsModerationReportsInput = {
     currentUserId?: string;
     offset?: number;
     closedOnly?: boolean;
+    reportType?: ModerationReportType | null;
 };
 export type VrchatToolsUserNoteSaveInput = {
     targetUserId?: string;

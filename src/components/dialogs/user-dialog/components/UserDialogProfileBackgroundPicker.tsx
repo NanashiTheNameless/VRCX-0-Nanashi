@@ -32,10 +32,7 @@ function GradientColorField({
     onChange: (value: string) => void;
 }) {
     return (
-        <label
-            className="flex shrink-0 items-center gap-1.5 text-xs font-medium"
-            title={label}
-        >
+        <label className="flex shrink-0 items-center gap-1.5 text-xs font-medium">
             <span className="text-muted-foreground">{label}</span>
             <Input
                 type="color"

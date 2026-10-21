@@ -18,7 +18,6 @@ vi.mock('@/repositories/vrchatMediaRepository', () => ({
 
 import { GROUP_PROFILE_MEDIA_SECTIONS } from './group-dialog/groupDialogUtils';
 import { ProfileMediaPanel } from './ProfileMediaPanel';
-import { USER_PROFILE_MEDIA_SECTIONS } from './user-dialog/userProfileFields';
 
 function mediaFile(id: string) {
     return { id, name: id, versions: [] };
@@ -26,41 +25,6 @@ function mediaFile(id: string) {
 
 describe('ProfileMediaPanel', () => {
     afterEach(cleanup);
-
-    it('lets the current user clear their banner and profile icon', async () => {
-        mocks.getFileList.mockResolvedValue({ json: [] });
-        const onSetField = vi.fn();
-        render(
-            <ProfileMediaPanel
-                title="dialog.user.actions.edit_profile_media"
-                sections={USER_PROFILE_MEDIA_SECTIONS}
-                currentFileIds={{
-                    banner: 'file_banner',
-                    userIcon: 'file_icon'
-                }}
-                actionStatus="idle"
-                onBack={vi.fn()}
-                onSetField={onSetField}
-            />
-        );
-
-        fireEvent.click(
-            screen.getByRole('button', {
-                name: 'dialog.gallery_icons.clear_banner'
-            })
-        );
-        await waitFor(() =>
-            expect(onSetField).toHaveBeenCalledWith('banner', '')
-        );
-        fireEvent.click(
-            screen.getByRole('button', {
-                name: 'dialog.gallery_icons.clear_profile_icon'
-            })
-        );
-        await waitFor(() =>
-            expect(onSetField).toHaveBeenCalledWith('userIcon', '')
-        );
-    });
 
     it('applies a picked group icon from the VRC+ icons and offers no clearing', async () => {
         mocks.getFileList.mockImplementation(({ tag }: { tag: string }) =>
@@ -71,7 +35,7 @@ describe('ProfileMediaPanel', () => {
         const onSetField = vi.fn();
         render(
             <ProfileMediaPanel
-                title="dialog.user.actions.edit_profile_media"
+                title="dialog.group.actions.edit_profile_media"
                 sections={GROUP_PROFILE_MEDIA_SECTIONS}
                 currentFileIds={{ bannerId: '', iconId: 'file_old_icon' }}
                 actionStatus="idle"

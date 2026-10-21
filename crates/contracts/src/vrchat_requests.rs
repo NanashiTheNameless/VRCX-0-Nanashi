@@ -486,6 +486,15 @@ pub enum InviteMessageType {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum ModerationReportType {
+    Avatar,
+    Group,
+    User,
+    World,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
 pub enum QueryOrder {
     #[serde(rename = "ascending")]
     Ascending,
@@ -623,6 +632,17 @@ impl InviteMessageType {
     }
 }
 
+impl ModerationReportType {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Avatar => "avatar",
+            Self::Group => "group",
+            Self::User => "user",
+            Self::World => "world",
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct WorldUpdateRequest {
@@ -680,6 +700,7 @@ pub enum ProfileBackgroundType {
 pub enum ProfileBannerType {
     AvatarBanner,
     CustomImage,
+    Color,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
@@ -695,6 +716,8 @@ pub struct CurrentUserProfileUpdateRequest {
     pub banner_type: Option<ProfileBannerType>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub banner_custom_url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub banner_color: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub background_type: Option<ProfileBackgroundType>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

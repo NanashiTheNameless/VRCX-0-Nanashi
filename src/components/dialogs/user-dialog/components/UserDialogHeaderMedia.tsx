@@ -10,6 +10,7 @@ import { UserDialogProfileDecorationImage } from './UserDialogProfileDecorationI
 
 interface UserDialogHeaderMediaProps {
     bannerAlt: string;
+    bannerColor: string;
     bannerFallbackUrl: string;
     bannerUrl: string;
     iconFrame?: InventoryItemRecord;
@@ -21,6 +22,7 @@ interface UserDialogHeaderMediaProps {
 
 export function UserDialogHeaderMedia({
     bannerAlt,
+    bannerColor,
     bannerFallbackUrl,
     bannerUrl,
     iconFrame,
@@ -56,14 +58,25 @@ export function UserDialogHeaderMedia({
                 type="button"
                 variant="ghost"
                 aria-label={bannerAlt}
-                disabled={!displayedBannerUrl || !onBannerClick}
+                disabled={
+                    Boolean(bannerColor) ||
+                    !displayedBannerUrl ||
+                    !onBannerClick
+                }
                 onClick={onBannerClick}
                 className={cn(
                     'bg-muted aspect-[4/3] h-auto w-full overflow-hidden rounded-lg border p-0 disabled:pointer-events-none disabled:opacity-100',
-                    displayedBannerUrl ? 'cursor-pointer' : 'cursor-default'
+                    displayedBannerUrl && !bannerColor
+                        ? 'cursor-pointer'
+                        : 'cursor-default'
                 )}
             >
-                {bannerUrl ? (
+                {bannerColor ? (
+                    <span
+                        className="size-full"
+                        style={{ backgroundColor: bannerColor }}
+                    />
+                ) : bannerUrl ? (
                     <span className="relative size-full">
                         {[previousBannerUrl, bannerUrl]
                             .filter(Boolean)

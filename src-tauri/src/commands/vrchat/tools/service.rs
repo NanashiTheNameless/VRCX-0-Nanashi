@@ -106,7 +106,12 @@ pub async fn app__vrchat_tools_moderation_reports_get(
     state
         .runtime_host()
         .vrchat_remote()
-        .moderation_reports(input.current_user_id, input.offset, input.closed_only)
+        .moderation_reports(
+            input.current_user_id,
+            input.offset,
+            input.closed_only,
+            input.report_type,
+        )
         .await
         .map_err(AppError::from)
 }

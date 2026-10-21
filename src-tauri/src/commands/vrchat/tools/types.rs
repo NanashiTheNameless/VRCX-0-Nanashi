@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use vrcx_0_application::remote::{CalendarListParams, InviteMessageType};
+use vrcx_0_application::remote::{CalendarListParams, InviteMessageType, ModerationReportType};
 
 #[derive(Debug, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -62,6 +62,8 @@ pub struct VrchatToolsModerationReportsInput {
     pub(crate) offset: i32,
     #[serde(default)]
     pub(crate) closed_only: bool,
+    #[serde(default)]
+    pub(crate) report_type: Option<ModerationReportType>,
 }
 
 #[derive(Debug, Deserialize, specta::Type)]

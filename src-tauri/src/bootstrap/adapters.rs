@@ -513,8 +513,13 @@ async fn find_update(
         ));
     }
     let expected_manifest_version = expected_version.clone();
+    let exit_app_handle = app_handle.clone();
     let mut builder = app_handle
         .updater_builder()
+        .on_before_exit(move || {
+            crate::commands::host::window::stop_runtime_services(&exit_app_handle);
+            exit_app_handle.cleanup_before_exit();
+        })
         .endpoints(vec![endpoint])
         .map_err(|error| {
             ApplicationError::Custom(format!("Failed to configure update endpoint: {error}"))

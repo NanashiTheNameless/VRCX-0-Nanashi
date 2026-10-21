@@ -26,6 +26,7 @@ export function WorldRoomsCover({
                     alt=""
                     loading="lazy"
                     className="size-full object-cover"
+                    fallback={null}
                 />
             ) : null}
         </span>

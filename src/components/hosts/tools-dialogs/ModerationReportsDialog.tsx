@@ -7,6 +7,7 @@ import { FadeInImage } from '@/components/media/FadeInImage';
 import { formatDateFilter } from '@/lib/dateTime';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { cn } from '@/lib/utils';
+import type { ModerationReportType } from '@/platform/tauri/bindings';
 import vrchatToolsRepository, {
     type ModerationReportRecord
 } from '@/repositories/vrchatToolsRepository';
@@ -26,6 +27,14 @@ import {
     DialogHeader,
     DialogTitle
 } from '@/ui/shadcn/dialog';
+import {
+    Select,
+    SelectContent,
+    SelectGroup,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@/ui/shadcn/select';
 import { Spinner } from '@/ui/shadcn/spinner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/shadcn/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
@@ -33,6 +42,15 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 import { getCurrentUserId } from './toolsDialogUtils';
 
 type ReportTab = 'open' | 'closed';
+type ReportTypeFilter = 'all' | ModerationReportType;
+
+const reportTypeFilters: readonly ReportTypeFilter[] = [
+    'all',
+    'user',
+    'world',
+    'avatar',
+    'group'
+];
 
 type LoadState =
     | { status: 'loading' }
@@ -84,6 +102,11 @@ export function ModerationReportsDialog({
 function ModerationReportsDialogBody() {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<ReportTab>('open');
+    const [typeFilter, setTypeFilter] = useState<ReportTypeFilter>('all');
+    const typeFilterItems = reportTypeFilters.map((value) => ({
+        value,
+        label: t(`dialog.moderation_reports.type_filter.${value}`)
+    }));
 
     return (
         <>
@@ -104,21 +127,49 @@ function ModerationReportsDialogBody() {
                 }}
                 className="min-h-0"
             >
-                <TabsList>
-                    <TabsTrigger value="open">
-                        {t('dialog.moderation_reports.status_open')}
-                    </TabsTrigger>
-                    <TabsTrigger value="closed">
-                        {t('dialog.moderation_reports.status_closed')}
-                    </TabsTrigger>
-                </TabsList>
+                <div className="flex items-center justify-between gap-2">
+                    <TabsList>
+                        <TabsTrigger value="open">
+                            {t('dialog.moderation_reports.status_open')}
+                        </TabsTrigger>
+                        <TabsTrigger value="closed">
+                            {t('dialog.moderation_reports.status_closed')}
+                        </TabsTrigger>
+                    </TabsList>
+                    <Select<ReportTypeFilter>
+                        value={typeFilter}
+                        items={typeFilterItems}
+                        onValueChange={(value) => {
+                            if (value) {
+                                setTypeFilter(value);
+                            }
+                        }}
+                    >
+                        <SelectTrigger className="min-w-32 shrink-0">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectGroup>
+                                {typeFilterItems.map((item) => (
+                                    <SelectItem
+                                        key={item.value}
+                                        value={item.value}
+                                    >
+                                        {item.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectGroup>
+                        </SelectContent>
+                    </Select>
+                </div>
                 <TabsContent
                     value={activeTab}
                     className="flex min-h-0 flex-col"
                 >
                     <ModerationReportList
-                        key={activeTab}
+                        key={`${activeTab}:${typeFilter}`}
                         closedOnly={activeTab === 'closed'}
+                        reportType={typeFilter === 'all' ? null : typeFilter}
                     />
                 </TabsContent>
             </Tabs>
@@ -126,7 +177,13 @@ function ModerationReportsDialogBody() {
     );
 }
 
-function ModerationReportList({ closedOnly }: { closedOnly: boolean }) {
+function ModerationReportList({
+    closedOnly,
+    reportType
+}: {
+    closedOnly: boolean;
+    reportType: ModerationReportType | null;
+}) {
     const { t } = useTranslation();
     const [loadState, setLoadState] = useState<LoadState>({
         status: 'loading'
@@ -140,7 +197,8 @@ function ModerationReportList({ closedOnly }: { closedOnly: boolean }) {
             .getModerationReports({
                 currentUserId: getCurrentUserId(),
                 offset: 0,
-                closedOnly
+                closedOnly,
+                reportType
             })
             .then((page) => {
                 if (active) {
@@ -159,7 +217,7 @@ function ModerationReportList({ closedOnly }: { closedOnly: boolean }) {
         return () => {
             active = false;
         };
-    }, [closedOnly]);
+    }, [closedOnly, reportType]);
 
     async function handleLoadMore() {
         if (loadState.status !== 'ready') {
@@ -170,7 +228,8 @@ function ModerationReportList({ closedOnly }: { closedOnly: boolean }) {
             const page = await vrchatToolsRepository.getModerationReports({
                 currentUserId: getCurrentUserId(),
                 offset: loadState.reports.length,
-                closedOnly
+                closedOnly,
+                reportType
             });
             setLoadState((current) =>
                 current.status === 'ready'

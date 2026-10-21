@@ -241,19 +241,12 @@ describe('useUserDialogSelfActions', () => {
         }
     );
 
-    it('uses bannerCustomUrl for no-op detection and clears omitted media after rereading', async () => {
+    it('switches the banner back to the avatar image and clears omitted media after rereading', async () => {
         const rendered = renderActions({
             ...profile,
             userIcon: 'https://image/file_icon/1',
             bannerCustomUrl: 'https://image/file_banner/3'
         });
-        await act(async () =>
-            rendered.result.current.actions.setSelfProfileMediaField(
-                'banner',
-                'file_banner'
-            )
-        );
-        expect(mocks.updateCurrentUserProfile).not.toHaveBeenCalled();
         mocks.updateCurrentUserProfile.mockResolvedValue({ id: 'usr_self' });
         mocks.getUserAppearanceProfile.mockResolvedValue({ id: 'usr_self' });
         await act(async () =>
@@ -268,6 +261,29 @@ describe('useUserDialogSelfActions', () => {
         });
         expect(rendered.setBaseProfile).toHaveBeenCalledWith(
             expect.objectContaining({ userIcon: '', bannerCustomUrl: '' })
+        );
+    });
+
+    it('saves a solid banner color without the hash prefix', async () => {
+        mocks.updateCurrentUserProfile.mockResolvedValue({ id: 'usr_self' });
+        mocks.getUserAppearanceProfile.mockResolvedValue({
+            id: 'usr_self',
+            bannerType: 'color',
+            bannerColor: '891454'
+        });
+        const rendered = renderActions();
+        await act(async () =>
+            rendered.result.current.actions.setSelfBannerColor('#891454')
+        );
+        expect(mocks.updateCurrentUserProfile).toHaveBeenCalledWith({
+            expectedUserId: 'usr_self',
+            params: { bannerType: 'color', bannerColor: '891454' }
+        });
+        expect(rendered.setBaseProfile).toHaveBeenCalledWith(
+            expect.objectContaining({
+                bannerType: 'color',
+                bannerColor: '891454'
+            })
         );
     });
 
@@ -331,18 +347,18 @@ describe('useUserDialogSelfActions', () => {
         });
         const rendered = renderActions();
 
-        act(() => rendered.result.current.actions.editSelfProfileDetails());
         act(() =>
-            rendered.result.current.profileDetailsDialog.setDraft({
+            rendered.result.current.actions.resetSelfProfileDetailsDraft()
+        );
+        act(() =>
+            rendered.result.current.profileDetails.setDraft({
                 languageKeys: ['ja'],
                 bio: 'New bio',
                 bioLinks: ['https://new.example'],
                 pronouns: 'she/her'
             })
         );
-        await act(async () =>
-            rendered.result.current.profileDetailsDialog.onSave()
-        );
+        await act(async () => rendered.result.current.profileDetails.onSave());
 
         expect(mocks.updateCurrentUserProfile).toHaveBeenCalledWith({
             expectedUserId: 'usr_self',
@@ -375,7 +391,6 @@ describe('useUserDialogSelfActions', () => {
         expect(mocks.removeTags.mock.invocationCallOrder[0]).toBeLessThan(
             mocks.addTags.mock.invocationCallOrder[0]
         );
-        expect(rendered.result.current.profileDetailsDialog.open).toBe(false);
         expect(rendered.actionStatusRef.current).toBe('idle');
     });
 });

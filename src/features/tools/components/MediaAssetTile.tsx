@@ -8,10 +8,12 @@ import type { ComponentProps, MouseEvent, ReactNode } from 'react';
 import { useRef } from 'react';
 
 import { FadeInImage } from '@/components/media/FadeInImage';
+import { TileLockOverlay } from '@/components/tile/TileLockOverlay';
 import { TileShell } from '@/components/tile/TileShell';
 import { cn } from '@/lib/utils';
 import {
     TILE_CHECK,
+    TILE_LOCKED,
     TILE_MOTION,
     TILE_SELECT_BOX,
     TILE_SELECT_OVERLAY_SHIFT,
@@ -140,6 +142,7 @@ export function MediaAssetTile({
     imageFit = 'cover',
     imagePosition = 'center',
     isCurrent = false,
+    locked = false,
     currentLabel,
     menuLabel,
     placeholderIcon: PlaceholderIcon = ImageIcon,
@@ -168,6 +171,7 @@ export function MediaAssetTile({
     imageFit?: 'cover' | 'contain';
     imagePosition?: 'center' | 'top';
     isCurrent?: boolean;
+    locked?: boolean;
     currentLabel?: string;
     menuLabel?: string;
     placeholderIcon?: LucideIcon;
@@ -236,7 +240,8 @@ export function MediaAssetTile({
                     <div
                         className={cn(
                             'bg-muted/30 text-muted-foreground flex w-full items-center justify-center overflow-hidden',
-                            aspectClass
+                            aspectClass,
+                            locked && TILE_LOCKED
                         )}
                     >
                         {renderMedia ? (
@@ -258,6 +263,7 @@ export function MediaAssetTile({
                         )}
                     </div>
                 </Button>
+                {locked ? <TileLockOverlay /> : null}
                 {selectable ? (
                     <span
                         role="presentation"

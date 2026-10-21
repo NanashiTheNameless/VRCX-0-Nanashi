@@ -1,4 +1,4 @@
-import { CheckIcon, ImageIcon, XIcon } from 'lucide-react';
+import { CheckIcon, ImageIcon } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -23,7 +23,7 @@ import {
 } from '@/shared/constants/selectableTile';
 import { Button } from '@/ui/shadcn/button';
 
-type MediaFile = Awaited<
+export type MediaFile = Awaited<
     ReturnType<typeof vrchatMediaRepository.getFileList>
 >['json'][number];
 
@@ -31,11 +31,10 @@ export interface ProfileMediaSection<TField extends string> {
     fieldName: TField;
     fileTag: MediaFileTag;
     titleKey: string;
-    clearKey?: string;
     useKey: string;
 }
 
-function getLatestFileUrl(file: MediaFile) {
+export function getLatestFileUrl(file: MediaFile) {
     const versions = Array.isArray(file?.versions) ? file.versions : [];
     const latestVersion = versions.at(-1);
     const versionFile =
@@ -83,9 +82,7 @@ function ProfileMediaThumbnail<TField extends string>({
     const imageUrl = getLatestFileUrl(file);
     const displayName = getUsefulDisplayName(file);
     const isCurrent = file.id === currentFileId;
-    const isMutating =
-        mutatingKey === `${section.fieldName}:${file.id}` ||
-        mutatingKey === `${section.fieldName}:clear`;
+    const isMutating = mutatingKey === `${section.fieldName}:${file.id}`;
 
     return (
         <TileShell
@@ -138,8 +135,7 @@ function ProfileMediaSectionCard<TField extends string>({
     currentFileId,
     busy,
     mutatingKey,
-    onUse,
-    onClear
+    onUse
 }: {
     section: ProfileMediaSection<TField>;
     files: MediaFile[];
@@ -148,30 +144,13 @@ function ProfileMediaSectionCard<TField extends string>({
     busy: boolean;
     mutatingKey: string;
     onUse: (fieldName: TField, fileId: string) => void;
-    onClear: (fieldName: TField) => void;
 }) {
     const { t } = useTranslation();
 
     return (
         <div className="bg-card/40 flex min-w-0 flex-col gap-3 rounded-lg border p-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                    <div className="font-heading text-base font-medium">
-                        {t(section.titleKey)}
-                    </div>
-                </div>
-                {section.clearKey ? (
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        className="shrink-0 self-start"
-                        disabled={!currentFileId || busy}
-                        onClick={() => onClear(section.fieldName)}
-                    >
-                        <XIcon data-icon="inline-start" />
-                        {t(section.clearKey)}
-                    </Button>
-                ) : null}
+            <div className="font-heading min-w-0 text-base font-medium">
+                {t(section.titleKey)}
             </div>
             {loading ? (
                 <LoadingState className="min-h-32" />
@@ -281,16 +260,6 @@ export function ProfileMediaPanel<TField extends string>({
         }
     }
 
-    async function clearProfileMedia(fieldName: TField) {
-        const key = `${fieldName}:clear`;
-        setMutatingKey(key);
-        try {
-            await onSetField(fieldName, '');
-        } finally {
-            setMutatingKey((current) => (current === key ? '' : current));
-        }
-    }
-
     return (
         <div className="flex min-h-0 flex-1 flex-col gap-3">
             <PageToolbar>
@@ -317,9 +286,6 @@ export function ProfileMediaPanel<TField extends string>({
                             mutatingKey={mutatingKey}
                             onUse={(fieldName, fileId) => {
                                 applyProfileMedia(fieldName, fileId);
-                            }}
-                            onClear={(fieldName) => {
-                                clearProfileMedia(fieldName);
                             }}
                         />
                     ))}

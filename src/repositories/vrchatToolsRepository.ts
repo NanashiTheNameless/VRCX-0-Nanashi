@@ -8,7 +8,8 @@ import {
     commands,
     type CalendarListParams,
     type HttpApiExecuteResponse,
-    type InviteMessageType
+    type InviteMessageType,
+    type ModerationReportType
 } from '@/platform/tauri/bindings';
 import { DEFAULT_VRCHAT_API_ENDPOINT } from '@/shared/vrchatEndpoint';
 
@@ -228,16 +229,19 @@ async function reportUser({
 async function getModerationReports({
     currentUserId,
     offset,
-    closedOnly
+    closedOnly,
+    reportType
 }: {
     currentUserId: string;
     offset: number;
     closedOnly: boolean;
+    reportType: ModerationReportType | null;
 }) {
     const response = await commands.appVrchatToolsModerationReportsGet({
         currentUserId,
         offset,
-        closedOnly
+        closedOnly,
+        reportType
     });
     return unwrapVrchatToolsResponse<PageResponse<ModerationReportRecord>>(
         response,

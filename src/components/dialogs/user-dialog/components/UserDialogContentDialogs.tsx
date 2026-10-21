@@ -1,9 +1,6 @@
 import { BoopEmojiDialog } from '../../BoopEmojiDialog';
 import { InviteMessageDialog } from '../../InviteMessageDialog';
-import {
-    CurrentUserSocialStatusDialog,
-    UserProfileDetailsDialog
-} from '../UserSelfEditDialogs';
+import { CurrentUserSocialStatusDialog } from '../UserSelfEditDialogs';
 import type { useUserDialogActions } from '../useUserDialogActions';
 import type { useUserDialogMemoState } from '../useUserDialogMemoState';
 import type { useUserDialogSelfActions } from '../useUserDialogSelfActions';
@@ -42,7 +39,6 @@ type UserDialogContentDialogsProps = {
     };
     noteMemoDialog: ReturnType<typeof useUserDialogMemoState>['memoDialog'];
     socialStatusDialog: SelfActionsState['socialStatusDialog'];
-    profileDetailsDialog: SelfActionsState['profileDetailsDialog'];
     inviteMessageDialog: {
         request: UserActionsState['inviteMessageRequest'];
         onOpenChange: UserActionsState['handleInviteMessageDialogOpenChange'];
@@ -61,7 +57,6 @@ export function UserDialogContentDialogs({
     groupQuickModerationDialog,
     noteMemoDialog,
     socialStatusDialog,
-    profileDetailsDialog,
     inviteMessageDialog
 }: UserDialogContentDialogsProps) {
     return (
@@ -81,22 +76,6 @@ export function UserDialogContentDialogs({
             <CurrentUserSocialStatusDialog
                 controller={socialStatusDialog}
                 actionStatus={actionStatus}
-            />
-            <UserProfileDetailsDialog
-                open={profileDetailsDialog.open}
-                onOpenChange={profileDetailsDialog.onOpenChange}
-                actionStatus={actionStatus}
-                draft={profileDetailsDialog.draft}
-                setDraft={profileDetailsDialog.setDraft}
-                languageRows={profileDetailsDialog.languageRows}
-                availableLanguageOptions={
-                    profileDetailsDialog.availableLanguageOptions
-                }
-                languageOptionsStatus={
-                    profileDetailsDialog.languageOptionsStatus
-                }
-                onCancel={profileDetailsDialog.onCancel}
-                onSave={profileDetailsDialog.onSave}
             />
             <InviteMessageDialog
                 open={Boolean(inviteMessageDialog.request)}

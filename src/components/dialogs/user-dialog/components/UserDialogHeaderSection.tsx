@@ -188,6 +188,7 @@ export interface UserHeaderModel {
     actionStatus: string;
     appearanceVisibility: UserDialogProfileAppearanceVisibility;
     avatarOverrideState: AvatarOverrideState;
+    bannerColor: string;
     bannerFallbackUrl: string;
     canInviteFromCurrentLocation: boolean;
     currentAvatarTarget: string;
@@ -227,9 +228,7 @@ export interface UserHeaderCommands {
     onCopyUsername?: () => void;
     onCopyUserUrl: () => void;
     onEditMemo: () => void;
-    onEditSelfProfileDetails: () => void;
-    onEditSelfProfileMedia: () => void;
-    onEditSelfProfileDecorations: () => void;
+    onEditSelfProfile: () => void;
     onEditSelfStatus: () => void;
     onExtendedModeration: (
         type: ExtendedModerationType,
@@ -513,6 +512,7 @@ export function UserDialogHeaderSection({
         actionStatus = 'idle',
         appearanceVisibility,
         avatarOverrideState,
+        bannerColor,
         bannerFallbackUrl,
         canInviteFromCurrentLocation,
         currentAvatarTarget,
@@ -551,9 +551,7 @@ export function UserDialogHeaderSection({
         onCopyUsername,
         onCopyUserUrl,
         onEditMemo,
-        onEditSelfProfileDetails,
-        onEditSelfProfileMedia,
-        onEditSelfProfileDecorations,
+        onEditSelfProfile,
         onEditSelfStatus,
         onExtendedModeration,
         onFriendRequest,
@@ -602,9 +600,7 @@ export function UserDialogHeaderSection({
         onAvatarOverride,
         onBoop,
         onEditMemo,
-        onEditSelfProfileDetails,
-        onEditSelfProfileMedia,
-        onEditSelfProfileDecorations,
+        onEditSelfProfile,
         onEditSelfStatus,
         onExtendedModeration,
         onFriendRequest,
@@ -687,6 +683,7 @@ export function UserDialogHeaderSection({
                 <UserDialogHeaderMedia
                     key={profile.id}
                     bannerAlt={profile.displayName || profile.id || 'User'}
+                    bannerColor={bannerColor}
                     bannerFallbackUrl={bannerFallbackUrl}
                     bannerUrl={imageUrl}
                     iconFrame={

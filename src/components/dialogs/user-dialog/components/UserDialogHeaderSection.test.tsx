@@ -82,6 +82,7 @@ function createHeaderModel(effect?: InventoryItemRecord): UserHeaderModel {
             hideAvatar: false,
             showAvatar: false
         },
+        bannerColor: '',
         bannerFallbackUrl: '',
         canInviteFromCurrentLocation: false,
         currentAvatarTarget: '',
@@ -136,9 +137,7 @@ function createHeaderCommands(): UserHeaderCommands {
         onCopyUserId: noop,
         onCopyUserUrl: noop,
         onEditMemo: noop,
-        onEditSelfProfileDetails: noop,
-        onEditSelfProfileMedia: noop,
-        onEditSelfProfileDecorations: noop,
+        onEditSelfProfile: noop,
         onEditSelfStatus: noop,
         onExtendedModeration: noop,
         onFriendRequest: noop,
