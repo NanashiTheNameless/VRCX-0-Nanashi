@@ -126,7 +126,7 @@ export function SettingsSearchInput() {
                 <SearchIcon />
             </InputGroupAddon>
             <InputGroupInput
-                type="search"
+                type="text"
                 value={query}
                 placeholder={t('view.settings.search.placeholder')}
                 aria-label={t('view.settings.search.placeholder')}
