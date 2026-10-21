@@ -4775,10 +4775,19 @@
             "remove_app": "Remove app",
             "remove_confirm": "Remove {name} from App Launcher?",
             "name_required": "Name is required",
+            "folders_header": "Startup folders",
+            "folders_description": "Shortcuts and programs in these folders start with VRChat, like in VRCX. Files in the desktop subfolder start only without SteamVR, files in the vr subfolder only with it. A file is skipped while it is already running and closed when VRChat closes.",
+            "folder_app": "VRCX-0-Nanashi startup folder",
+            "folder_vrcx": "VRCX startup folder",
+            "folder_vrcx_description": "Read only. Leave this off while VRCX itself still launches these apps, or they may start twice.",
+            "folder_empty": "No shortcuts in this folder.",
+            "folder_missing": "Folder not found.",
+            "open_folder": "Open folder",
             "toast": {
                 "load_failed": "Failed to load App Launcher",
                 "save_failed": "Failed to save App Launcher",
-                "pick_failed": "Failed to pick app or shortcut"
+                "pick_failed": "Failed to pick app or shortcut",
+                "open_folder_failed": "Failed to open folder"
             }
         },
         "user": {

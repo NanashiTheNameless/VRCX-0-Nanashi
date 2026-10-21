@@ -108,6 +108,7 @@ pub struct AppLauncherSession {
 pub struct AppLauncherSnapshot {
     pub enabled: bool,
     pub entries: Vec<AppLauncherEntry>,
+    pub folders: Vec<super::AppLauncherFolder>,
     pub active_session: Option<AppLauncherSession>,
     pub test_runs: Vec<AppLauncherRun>,
 }

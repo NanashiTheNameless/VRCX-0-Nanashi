@@ -3062,6 +3062,20 @@ const generatedCommands = {
             enabled
         });
     },
+    async appAppLauncherFolderEnabledSet(
+        source: AppLauncherFolderSource,
+        enabled: boolean
+    ): Promise<AppLauncherSnapshot> {
+        return await TAURI_INVOKE('app__app_launcher_folder_enabled_set', {
+            source,
+            enabled
+        });
+    },
+    async appAppLauncherFolderOpen(
+        source: AppLauncherFolderSource
+    ): Promise<boolean> {
+        return await TAURI_INVOKE('app__app_launcher_folder_open', { source });
+    },
     async appAppLauncherEntryTest(
         entryId: string
     ): Promise<AppLauncherSnapshot> {
@@ -3573,6 +3587,14 @@ export type AppLauncherEntry = {
     workingDirectory?: string | null;
 };
 export type AppLauncherEntryKind = 'localApp' | 'steamApp';
+export type AppLauncherFolder = {
+    source: AppLauncherFolderSource;
+    path: string;
+    enabled: boolean;
+    exists: boolean;
+    entries: AppLauncherEntry[];
+};
+export type AppLauncherFolderSource = 'vrcx' | 'app';
 export type AppLauncherPickedTarget = {
     kind: AppLauncherEntryKind;
     name: string;
@@ -3615,6 +3637,7 @@ export type AppLauncherSession = {
 export type AppLauncherSnapshot = {
     enabled: boolean;
     entries: AppLauncherEntry[];
+    folders: AppLauncherFolder[];
     activeSession: AppLauncherSession | null;
     testRuns: AppLauncherRun[];
 };

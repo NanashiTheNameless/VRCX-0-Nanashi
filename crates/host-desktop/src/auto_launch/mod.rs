@@ -7,6 +7,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 use sysinfo::{Pid, ProcessesToUpdate, System};
 
+mod folders;
 mod manager;
 mod model;
 mod picker;
@@ -34,6 +35,11 @@ use process::{
     launch_entry, now_timestamp, refresh_runs, stop_close_by_vrcx_session, stop_tracked_run,
 };
 
+pub use folders::{
+    app_startup_folder, scan_startup_folder, vrcx_startup_folder, AppLauncherFolder,
+    AppLauncherFolderConfig, AppLauncherFolderSource, APP_LAUNCHER_APP_FOLDER_ENABLED_CONFIG_KEY,
+    APP_LAUNCHER_VRCX_FOLDER_ENABLED_CONFIG_KEY, APP_STARTUP_FOLDER_NAME,
+};
 pub use manager::AutoAppLaunchManager;
 pub use model::{
     deserialize_app_launcher_entries, normalize_app_launcher_entries, scope_matches,

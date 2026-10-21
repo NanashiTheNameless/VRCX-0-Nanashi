@@ -76,9 +76,11 @@ use vrcx_0_composition::{
 };
 use vrcx_0_core::json::RawJson;
 use vrcx_0_host_desktop::auto_launch::{
-    deserialize_app_launcher_entries, normalize_app_launcher_entries, AppLauncherEntry,
-    AppLauncherSnapshot, AutoAppLaunchManager, APP_LAUNCHER_ENABLED_CONFIG_KEY,
-    APP_LAUNCHER_ENTRIES_CONFIG_KEY,
+    app_startup_folder, deserialize_app_launcher_entries, normalize_app_launcher_entries,
+    vrcx_startup_folder, AppLauncherEntry, AppLauncherFolderConfig, AppLauncherFolderSource,
+    AppLauncherSnapshot, AutoAppLaunchManager, APP_LAUNCHER_APP_FOLDER_ENABLED_CONFIG_KEY,
+    APP_LAUNCHER_ENABLED_CONFIG_KEY, APP_LAUNCHER_ENTRIES_CONFIG_KEY,
+    APP_LAUNCHER_VRCX_FOLDER_ENABLED_CONFIG_KEY,
 };
 use vrcx_0_host_desktop::discord_rpc::DiscordRpc;
 use vrcx_0_host_desktop::host_capabilities::{
@@ -405,7 +407,26 @@ impl DesktopRuntimeHostState {
                 .config()
                 .get_json(APP_LAUNCHER_ENTRIES_CONFIG_KEY, json!([]))?,
         );
-        let auto_launch = AutoAppLaunchManager::new(app_launcher_enabled, app_launcher_entries);
+        let mut app_launcher_folders = vec![AppLauncherFolderConfig {
+            source: AppLauncherFolderSource::App,
+            path: app_startup_folder(&builder.paths().app_data),
+            enabled: builder
+                .desktop_assembly()
+                .config()
+                .get_bool(APP_LAUNCHER_APP_FOLDER_ENABLED_CONFIG_KEY, true)?,
+        }];
+        if let Some(path) = vrcx_startup_folder() {
+            app_launcher_folders.push(AppLauncherFolderConfig {
+                source: AppLauncherFolderSource::Vrcx,
+                path,
+                enabled: builder
+                    .desktop_assembly()
+                    .config()
+                    .get_bool(APP_LAUNCHER_VRCX_FOLDER_ENABLED_CONFIG_KEY, false)?,
+            });
+        }
+        let auto_launch = AutoAppLaunchManager::new(app_launcher_enabled, app_launcher_entries)
+            .with_folders(app_launcher_folders);
         let background_image = BackgroundImageService::new(
             Arc::clone(&profile_config),
             Arc::new(
@@ -2365,6 +2386,41 @@ impl DesktopRuntimeHostState {
                     &serde_json::to_value(entries)?,
                 )
             })?)
+    }
+
+    pub fn set_app_launcher_folder_enabled(
+        &self,
+        source: AppLauncherFolderSource,
+        enabled: bool,
+    ) -> Result<AppLauncherSnapshot> {
+        let key = match source {
+            AppLauncherFolderSource::App => APP_LAUNCHER_APP_FOLDER_ENABLED_CONFIG_KEY,
+            AppLauncherFolderSource::Vrcx => APP_LAUNCHER_VRCX_FOLDER_ENABLED_CONFIG_KEY,
+        };
+        self.runtime
+            .desktop_assembly()
+            .config()
+            .set_bool(key, enabled)?;
+        Ok(self.game.auto_launch.set_folder_enabled(source, enabled))
+    }
+
+    /// Creates this app's own startup folder on demand. VRCX's folder is only
+    /// returned when VRCX already created it.
+    pub fn app_launcher_folder_for_open(
+        &self,
+        source: AppLauncherFolderSource,
+    ) -> Result<Option<std::path::PathBuf>> {
+        let Some(path) = self.game.auto_launch.folder_path(source) else {
+            return Ok(None);
+        };
+        if source == AppLauncherFolderSource::App {
+            for dir in [path.clone(), path.join("desktop"), path.join("vr")] {
+                std::fs::create_dir_all(&dir).map_err(|error| {
+                    vrcx_0_composition::Error::Custom(format!("create {}: {error}", dir.display()))
+                })?;
+            }
+        }
+        Ok(path.is_dir().then_some(path))
     }
 
     pub fn test_app_launcher_entry(&self, entry_id: &str) -> Result<AppLauncherSnapshot> {

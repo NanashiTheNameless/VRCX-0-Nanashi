@@ -21,6 +21,8 @@ const mocks = vi.hoisted(() => ({
     snapshot: vi.fn(),
     setEnabled: vi.fn(),
     setEntries: vi.fn(),
+    setFolderEnabled: vi.fn(),
+    openFolder: vi.fn(),
     pickTarget: vi.fn()
 }));
 
@@ -36,6 +38,8 @@ vi.mock('@/platform/tauri/bindings', () => ({
         appAppLauncherSnapshotGet: mocks.snapshot,
         appAppLauncherEnabledSet: mocks.setEnabled,
         appAppLauncherEntriesSet: mocks.setEntries,
+        appAppLauncherFolderEnabledSet: mocks.setFolderEnabled,
+        appAppLauncherFolderOpen: mocks.openFolder,
         appAppLauncherTargetPick: mocks.pickTarget
     }
 }));
@@ -141,6 +145,7 @@ function appSnapshot(run?: AppLauncherRun): AppLauncherSnapshot {
     return {
         enabled: true,
         entries: [appEntry()],
+        folders: [],
         activeSession: {
             id: 'session',
             steamvrRunning: false,
@@ -157,6 +162,8 @@ describe('AppLauncherDialog Windows launch diagnostics', () => {
         mocks.snapshot.mockReset();
         mocks.setEnabled.mockReset();
         mocks.setEntries.mockReset();
+        mocks.setFolderEnabled.mockReset();
+        mocks.openFolder.mockReset();
         mocks.pickTarget.mockReset();
     });
 
@@ -206,6 +213,56 @@ describe('AppLauncherDialog Windows launch diagnostics', () => {
         expect(
             screen.queryByText('dialog.app_launcher.run_status_running')
         ).toBeNull();
+    });
+
+    it('lists startup folder files and toggles a folder without saving entries', async () => {
+        const initial = appSnapshot();
+        initial.folders = [
+            {
+                source: 'vrcx',
+                path: 'C:\\Users\\me\\AppData\\Roaming\\VRCX\\startup',
+                enabled: false,
+                exists: true,
+                entries: [
+                    appEntry({
+                        id: 'folder-vrcx-vr-Overlay.lnk',
+                        name: 'Overlay',
+                        scope: 'vr'
+                    })
+                ]
+            },
+            {
+                source: 'app',
+                path: 'C:\\Users\\me\\AppData\\Roaming\\VRCX-0-Nanashi\\StartupApps',
+                enabled: true,
+                exists: false,
+                entries: []
+            }
+        ];
+        mocks.snapshot.mockResolvedValue(initial);
+        mocks.setFolderEnabled.mockResolvedValue({
+            ...initial,
+            folders: initial.folders.map((folder) =>
+                folder.source === 'vrcx' ? { ...folder, enabled: true } : folder
+            )
+        });
+
+        render(<AppLauncherDialog open onOpenChange={vi.fn()} />);
+
+        expect(await screen.findByText('Overlay')).toBeTruthy();
+        expect(
+            screen.getByText('dialog.app_launcher.folder_missing')
+        ).toBeTruthy();
+
+        fireEvent.click(
+            screen.getByRole('switch', {
+                name: 'dialog.app_launcher.folder_vrcx'
+            })
+        );
+        await waitFor(() =>
+            expect(mocks.setFolderEnabled).toHaveBeenCalledWith('vrcx', true)
+        );
+        expect(mocks.setEntries).not.toHaveBeenCalled();
     });
 
     it('keeps a row toggle in the draft so the next field commit does not revert it', async () => {

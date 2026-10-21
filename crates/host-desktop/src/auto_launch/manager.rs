@@ -1,7 +1,8 @@
 use super::{
-    launch_entry, normalize_app_launcher_entries, now_timestamp, refresh_runs, scope_matches,
-    stop_close_by_vrcx_session, stop_tracked_run, AppLauncherEntry, AppLauncherRun,
-    AppLauncherRunStatus, AppLauncherSession, AppLauncherSnapshot, Arc, Duration, HashSet, Mutex,
+    launch_entry, normalize_app_launcher_entries, now_timestamp, refresh_runs, scan_startup_folder,
+    scope_matches, stop_close_by_vrcx_session, stop_tracked_run, AppLauncherEntry,
+    AppLauncherFolderConfig, AppLauncherFolderSource, AppLauncherRun, AppLauncherRunStatus,
+    AppLauncherSession, AppLauncherSnapshot, Arc, Duration, HashSet, Mutex,
 };
 
 pub struct AutoAppLaunchManager {
@@ -21,6 +22,7 @@ impl Clone for AutoAppLaunchManager {
 pub(super) struct Inner {
     enabled: bool,
     entries: Vec<AppLauncherEntry>,
+    folders: Vec<AppLauncherFolderConfig>,
     pub(super) active_session: Option<AppLauncherSession>,
     pub(super) test_runs: Vec<AppLauncherRun>,
     generation: u64,
@@ -33,6 +35,7 @@ impl AutoAppLaunchManager {
             inner: Arc::new(Mutex::new(Inner {
                 enabled,
                 entries: normalize_app_launcher_entries(entries),
+                folders: Vec::new(),
                 active_session: None,
                 test_runs: Vec::new(),
                 generation: 0,
@@ -40,6 +43,11 @@ impl AutoAppLaunchManager {
             })),
             changes: tokio::sync::watch::channel(0).0,
         }
+    }
+
+    pub fn with_folders(self, folders: Vec<AppLauncherFolderConfig>) -> Self {
+        self.inner.lock().unwrap().folders = folders;
+        self
     }
 
     pub fn subscribe_changes(&self) -> tokio::sync::watch::Receiver<u64> {
@@ -105,6 +113,41 @@ impl AutoAppLaunchManager {
         snapshot
     }
 
+    pub fn set_folder_enabled(
+        &self,
+        source: AppLauncherFolderSource,
+        enabled: bool,
+    ) -> AppLauncherSnapshot {
+        let mut delayed = Vec::new();
+        let snapshot = {
+            let mut inner = self.inner.lock().unwrap();
+            inner.generation = inner.generation.saturating_add(1);
+            for folder in inner
+                .folders
+                .iter_mut()
+                .filter(|folder| folder.source == source)
+            {
+                folder.enabled = enabled;
+            }
+            reconcile_active_session_entries(&mut inner, self, &mut delayed);
+            refresh_runs(&mut inner);
+            inner.snapshot()
+        };
+        self.notify_changed();
+        spawn_delayed_launches(delayed);
+        snapshot
+    }
+
+    pub fn folder_path(&self, source: AppLauncherFolderSource) -> Option<std::path::PathBuf> {
+        self.inner
+            .lock()
+            .unwrap()
+            .folders
+            .iter()
+            .find(|folder| folder.source == source)
+            .map(|folder| folder.path.clone())
+    }
+
     pub fn set_entry_enabled<E>(
         &self,
         entry_id: &str,
@@ -152,10 +195,9 @@ impl AutoAppLaunchManager {
             stop_close_by_vrcx_session(&mut inner);
 
             let entries: Vec<AppLauncherEntry> = inner
-                .entries
-                .iter()
+                .launchable_entries()
+                .into_iter()
                 .filter(|entry| entry.enabled && scope_matches(entry.scope, is_steamvr_running))
-                .cloned()
                 .collect();
 
             inner.active_session = Some(AppLauncherSession {
@@ -215,10 +257,9 @@ impl AutoAppLaunchManager {
     pub fn test_entry(&self, entry_id: &str) -> Result<AppLauncherSnapshot, String> {
         let mut inner = self.inner.lock().unwrap();
         let Some(entry) = inner
-            .entries
-            .iter()
+            .launchable_entries()
+            .into_iter()
             .find(|entry| entry.id == entry_id)
-            .cloned()
         else {
             return Err(format!("VRChat Startup Apps entry not found: {entry_id}"));
         };
@@ -356,10 +397,9 @@ fn reconcile_active_session_entries(
     let session_id = session.id.clone();
     let generation = inner.generation;
     let desired_entries: Vec<AppLauncherEntry> = inner
-        .entries
-        .iter()
+        .launchable_entries()
+        .into_iter()
         .filter(|entry| entry.enabled && scope_matches(entry.scope, steamvr_running))
-        .cloned()
         .collect();
 
     if let Some(session) = inner.active_session.as_mut() {
@@ -413,10 +453,23 @@ impl Inner {
         format!("{prefix}-{}-{}", now_timestamp(), self.next_id)
     }
 
+    fn launchable_entries(&self) -> Vec<AppLauncherEntry> {
+        let mut entries = self.entries.clone();
+        for folder in self.folders.iter().filter(|folder| folder.enabled) {
+            entries.extend(scan_startup_folder(folder.source, &folder.path));
+        }
+        entries
+    }
+
     fn snapshot(&self) -> AppLauncherSnapshot {
         AppLauncherSnapshot {
             enabled: self.enabled,
             entries: self.entries.clone(),
+            folders: self
+                .folders
+                .iter()
+                .map(AppLauncherFolderConfig::snapshot)
+                .collect(),
             active_session: self.active_session.clone(),
             test_runs: self.test_runs.clone(),
         }

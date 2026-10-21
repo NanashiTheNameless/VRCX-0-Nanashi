@@ -1,5 +1,6 @@
 import {
     AppWindowIcon,
+    FolderIcon,
     FolderOpenIcon,
     MousePointerClickIcon,
     PlusIcon,
@@ -20,6 +21,8 @@ import {
     commands,
     type AppLauncherEntry,
     type AppLauncherEntryKind,
+    type AppLauncherFolder,
+    type AppLauncherFolderSource,
     type AppLauncherPickedTarget,
     type AppLauncherRun,
     type AppLauncherSnapshot
@@ -74,6 +77,7 @@ import {
 
 const MAX_LAUNCH_DELAY_SECONDS = 4_294_967_295;
 const EMPTY_APP_LAUNCHER_ENTRIES: AppLauncherEntry[] = [];
+const EMPTY_APP_LAUNCHER_FOLDERS: AppLauncherFolder[] = [];
 const APP_LAUNCHER_SCOPES: AppLauncherEntry['scope'][] = [
     'all',
     'desktop',
@@ -232,6 +236,7 @@ export function AppLauncherDialog({
     const [editing, setEditing] = useState<AppLauncherEntry | null>(null);
 
     const entries = snapshot?.entries ?? EMPTY_APP_LAUNCHER_ENTRIES;
+    const folders = snapshot?.folders ?? EMPTY_APP_LAUNCHER_FOLDERS;
     useEffect(() => {
         if (!open) {
             return undefined;
@@ -317,6 +322,49 @@ export function AppLauncherDialog({
             });
         } finally {
             setSaving(false);
+        }
+    };
+
+    const updateFolderEnabled = async (
+        source: AppLauncherFolderSource,
+        enabled: boolean
+    ) => {
+        setSaving(true);
+        try {
+            setSnapshot(
+                await commands.appAppLauncherFolderEnabledSet(source, enabled)
+            );
+            publishToolsStatusUpdated();
+        } catch (error) {
+            toast.add({
+                type: 'error',
+                title: userFacingErrorMessage(
+                    error,
+                    t('dialog.app_launcher.toast.save_failed')
+                )
+            });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const openFolder = async (source: AppLauncherFolderSource) => {
+        try {
+            const opened = await commands.appAppLauncherFolderOpen(source);
+            if (!opened) {
+                toast.add({
+                    type: 'error',
+                    title: t('dialog.app_launcher.folder_missing')
+                });
+            }
+        } catch (error) {
+            toast.add({
+                type: 'error',
+                title: userFacingErrorMessage(
+                    error,
+                    t('dialog.app_launcher.toast.open_folder_failed')
+                )
+            });
         }
     };
 
@@ -629,6 +677,16 @@ export function AppLauncherDialog({
                                 </Table>
                             )}
                         </ScrollArea>
+
+                        {folders.length > 0 ? (
+                            <StartupFoldersPanel
+                                folders={folders}
+                                snapshot={snapshot}
+                                disabled={loading || saving}
+                                onEnabledChange={updateFolderEnabled}
+                                onOpen={openFolder}
+                            />
+                        ) : null}
                     </div>
 
                     <EntryDetailsPanel
@@ -648,6 +706,149 @@ export function AppLauncherDialog({
                 </div>
             </DialogContent>
         </Dialog>
+    );
+}
+
+const FOLDER_SOURCE_ORDER: AppLauncherFolderSource[] = ['app', 'vrcx'];
+
+function StartupFoldersPanel({
+    folders,
+    snapshot,
+    disabled,
+    onEnabledChange,
+    onOpen
+}: {
+    folders: AppLauncherFolder[];
+    snapshot: AppLauncherSnapshot | null;
+    disabled: boolean;
+    onEnabledChange: (
+        source: AppLauncherFolderSource,
+        enabled: boolean
+    ) => void;
+    onOpen: (source: AppLauncherFolderSource) => void;
+}) {
+    const { t } = useTranslation();
+    const ordered = [...folders].sort(
+        (left, right) =>
+            FOLDER_SOURCE_ORDER.indexOf(left.source) -
+            FOLDER_SOURCE_ORDER.indexOf(right.source)
+    );
+
+    return (
+        <div className="flex max-h-[40%] shrink-0 flex-col gap-2 rounded-lg border p-3">
+            <div className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium">
+                    {t('dialog.app_launcher.folders_header')}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                    {t('dialog.app_launcher.folders_description')}
+                </span>
+            </div>
+            <ScrollArea className="min-h-0">
+                <div className="flex flex-col gap-3">
+                    {ordered.map((folder) => (
+                        <div
+                            key={folder.source}
+                            className="flex flex-col gap-1.5"
+                        >
+                            <div className="flex items-center gap-2">
+                                <Switch
+                                    size="sm"
+                                    aria-label={t(
+                                        `dialog.app_launcher.folder_${folder.source}`
+                                    )}
+                                    checked={folder.enabled}
+                                    disabled={disabled}
+                                    onCheckedChange={(enabled) =>
+                                        onEnabledChange(folder.source, enabled)
+                                    }
+                                />
+                                <span className="text-sm font-medium">
+                                    {t(
+                                        `dialog.app_launcher.folder_${folder.source}`
+                                    )}
+                                </span>
+                                <Button
+                                    type="button"
+                                    className="ml-auto"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={
+                                        folder.source === 'vrcx' &&
+                                        !folder.exists
+                                    }
+                                    onClick={() => onOpen(folder.source)}
+                                >
+                                    <FolderIcon data-icon="inline-start" />
+                                    {t('dialog.app_launcher.open_folder')}
+                                </Button>
+                            </div>
+                            <span className="text-muted-foreground truncate font-mono text-xs">
+                                {folder.path}
+                            </span>
+                            {folder.source === 'vrcx' ? (
+                                <span className="text-muted-foreground text-xs">
+                                    {t(
+                                        'dialog.app_launcher.folder_vrcx_description'
+                                    )}
+                                </span>
+                            ) : null}
+                            {folder.entries.length === 0 ? (
+                                <span className="text-muted-foreground text-xs">
+                                    {folder.exists
+                                        ? t('dialog.app_launcher.folder_empty')
+                                        : t(
+                                              'dialog.app_launcher.folder_missing'
+                                          )}
+                                </span>
+                            ) : (
+                                <ul className="flex flex-col gap-0.5">
+                                    {folder.entries.map((entry) => {
+                                        const run = activeRunForEntry(
+                                            snapshot,
+                                            entry.id
+                                        );
+                                        return (
+                                            <li
+                                                key={entry.id}
+                                                className={cn(
+                                                    'flex items-center gap-2 text-xs',
+                                                    !folder.enabled &&
+                                                        'text-muted-foreground'
+                                                )}
+                                            >
+                                                <span className="min-w-0 truncate">
+                                                    {entry.name}
+                                                </span>
+                                                <span className="text-muted-foreground shrink-0">
+                                                    {t(
+                                                        `dialog.app_launcher.scope_${entry.scope}`
+                                                    )}
+                                                </span>
+                                                {run ? (
+                                                    <span
+                                                        className={cn(
+                                                            'text-muted-foreground ml-auto shrink-0',
+                                                            run.status ===
+                                                                'failed' &&
+                                                                'text-destructive'
+                                                        )}
+                                                    >
+                                                        {t(
+                                                            `dialog.app_launcher.run_status_${run.status}`
+                                                        )}
+                                                    </span>
+                                                ) : null}
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </ScrollArea>
+        </div>
     );
 }
 

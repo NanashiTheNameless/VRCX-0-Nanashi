@@ -5,12 +5,13 @@ use std::path::PathBuf;
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 use vrcx_0_host_desktop::auto_launch::{
-    picked_app_launcher_target, AppLauncherEntry, AppLauncherEntryKind, AppLauncherPickedTarget,
-    AppLauncherSnapshot, AppLauncherTargetPickKind,
+    picked_app_launcher_target, AppLauncherEntry, AppLauncherEntryKind, AppLauncherFolderSource,
+    AppLauncherPickedTarget, AppLauncherSnapshot, AppLauncherTargetPickKind,
 };
 use vrcx_0_host_desktop::host_capabilities::{
     require_host_capability, require_host_capability_supported, HostCapability,
 };
+use vrcx_0_host_desktop::shell_actions;
 
 use crate::error::AppError;
 use crate::state::AppState;
@@ -61,6 +62,32 @@ pub fn app__app_launcher_entry_enabled_set(
     Ok(state
         .runtime_host()
         .set_app_launcher_entry_enabled(&entry_id, enabled)?)
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub fn app__app_launcher_folder_enabled_set(
+    state: State<'_, AppState>,
+    source: AppLauncherFolderSource,
+    enabled: bool,
+) -> Result<AppLauncherSnapshot, AppError> {
+    require_app_launcher_supported()?;
+    Ok(state
+        .runtime_host()
+        .set_app_launcher_folder_enabled(source, enabled)?)
+}
+
+#[tauri::command(async)]
+#[specta::specta]
+pub fn app__app_launcher_folder_open(
+    state: State<'_, AppState>,
+    source: AppLauncherFolderSource,
+) -> Result<bool, AppError> {
+    require_app_launcher_supported()?;
+    let Some(path) = state.runtime_host().app_launcher_folder_for_open(source)? else {
+        return Ok(false);
+    };
+    Ok(shell_actions::open_existing_folder(&path)?)
 }
 
 #[tauri::command(async)]

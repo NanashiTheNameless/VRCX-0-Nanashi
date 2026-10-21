@@ -52,7 +52,13 @@ function launcherEntry(id: string, enabled: boolean): AppLauncherEntry {
 }
 
 function launcherSnapshot(entries: AppLauncherEntry[]): AppLauncherSnapshot {
-    return { enabled: true, entries, activeSession: null, testRuns: [] };
+    return {
+        enabled: true,
+        entries,
+        folders: [],
+        activeSession: null,
+        testRuns: []
+    };
 }
 
 beforeEach(() => {

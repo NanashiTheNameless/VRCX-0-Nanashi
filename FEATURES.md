@@ -302,6 +302,19 @@ installed, whichever app registered a scheme last handles it.
 
 Set the VRChat install folder in Launch Options to start VRChat directly.
 
+### VRCX startup folders
+
+Besides its own list, App Launcher starts the shortcuts and programs (`.exe`, `.lnk`, `.url`,
+`.bat`, `.cmd`) in two folders when VRChat starts, using the VRCX layout: files in the folder
+start every time, files in its `desktop` subfolder only without SteamVR, files in its `vr`
+subfolder only with it. A file is skipped while it is already running and closed when VRChat
+closes.
+
+- **This app's folder.** `StartupApps` in the data folder, on by default. "Open folder" creates
+  it.
+- **VRCX's folder.** `%AppData%\VRCX\startup`, off by default so apps do not start twice while
+  VRCX is still running. It is only read, never created or changed.
+
 ### Updates come from this fork's releases
 
 Not upstream.

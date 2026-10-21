@@ -707,6 +707,8 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::host::app_launcher::app__app_launcher_enabled_set,
             commands::host::app_launcher::app__app_launcher_entries_set,
             commands::host::app_launcher::app__app_launcher_entry_enabled_set,
+            commands::host::app_launcher::app__app_launcher_folder_enabled_set,
+            commands::host::app_launcher::app__app_launcher_folder_open,
             commands::host::app_launcher::app__app_launcher_entry_test,
             commands::host::app_launcher::app__app_launcher_test_run_stop,
             commands::host::app_launcher::app__app_launcher_target_pick,

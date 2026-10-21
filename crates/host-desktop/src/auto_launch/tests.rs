@@ -578,3 +578,95 @@ fn app_launcher_entry_toggle_keeps_entries_when_saving_fails() {
     assert_eq!(result.unwrap_err(), "disk full");
     assert!(manager.snapshot().entries[0].enabled);
 }
+
+fn startup_folder_fixture(name: &str) -> PathBuf {
+    let root = std::env::temp_dir().join(format!(
+        "vrcx-startup-folder-{name}-{}-{}",
+        std::process::id(),
+        now_timestamp()
+    ));
+    std::fs::create_dir_all(root.join("desktop")).unwrap();
+    std::fs::create_dir_all(root.join("vr")).unwrap();
+    std::fs::write(root.join("Overlay.exe"), "").unwrap();
+    std::fs::write(root.join("notes.txt"), "").unwrap();
+    std::fs::write(root.join("desktop").join("Desktop Tool.lnk"), "").unwrap();
+    std::fs::write(
+        root.join("vr").join("Steam Game.url"),
+        "[InternetShortcut]\nURL=steam://rungameid/438100\n",
+    )
+    .unwrap();
+    root
+}
+
+#[test]
+fn app_launcher_startup_folder_maps_subfolders_to_scopes() {
+    let root = startup_folder_fixture("scopes");
+
+    let entries = scan_startup_folder(AppLauncherFolderSource::Vrcx, &root);
+    let _ = std::fs::remove_dir_all(&root);
+
+    let summary: Vec<_> = entries
+        .iter()
+        .map(|entry| (entry.id.as_str(), entry.scope, entry.kind.clone()))
+        .collect();
+    assert_eq!(
+        summary,
+        vec![
+            (
+                "folder-vrcx-Overlay.exe",
+                AppLauncherScope::All,
+                AppLauncherEntryKind::LocalApp
+            ),
+            (
+                "folder-vrcx-desktop-Desktop Tool.lnk",
+                AppLauncherScope::Desktop,
+                AppLauncherEntryKind::LocalApp
+            ),
+            (
+                "folder-vrcx-vr-Steam Game.url",
+                AppLauncherScope::Vr,
+                AppLauncherEntryKind::SteamApp
+            ),
+        ]
+    );
+    assert_eq!(entries[0].run_policy, AppLauncherRunPolicy::SkipIfRunning);
+    assert_eq!(entries[0].stop_policy, AppLauncherStopPolicy::CloseByVrcx);
+    assert_eq!(entries[2].stop_policy, AppLauncherStopPolicy::KeepRunning);
+}
+
+#[test]
+fn app_launcher_missing_startup_folder_is_empty() {
+    let root = std::env::temp_dir().join(format!(
+        "vrcx-startup-folder-missing-{}-{}",
+        std::process::id(),
+        now_timestamp()
+    ));
+
+    assert!(scan_startup_folder(AppLauncherFolderSource::App, &root).is_empty());
+    assert!(!root.exists());
+}
+
+#[test]
+fn app_launcher_disabled_startup_folder_is_listed_but_not_launchable() {
+    let root = startup_folder_fixture("toggle");
+    let manager = AutoAppLaunchManager::new(true, vec![local_entry("local")]).with_folders(vec![
+        AppLauncherFolderConfig {
+            source: AppLauncherFolderSource::Vrcx,
+            path: root.clone(),
+            enabled: false,
+        },
+    ]);
+
+    let snapshot = manager.snapshot();
+    let folder = &snapshot.folders[0];
+    assert!(!folder.enabled);
+    assert!(folder.exists);
+    assert_eq!(folder.entries.len(), 3);
+    assert_eq!(snapshot.entries.len(), 1);
+    assert!(manager.test_entry("folder-vrcx-Overlay.exe").is_err());
+
+    let snapshot = manager.set_folder_enabled(AppLauncherFolderSource::Vrcx, true);
+    let _ = std::fs::remove_dir_all(&root);
+    assert!(snapshot.folders[0].enabled);
+    assert_eq!(snapshot.entries.len(), 1);
+}

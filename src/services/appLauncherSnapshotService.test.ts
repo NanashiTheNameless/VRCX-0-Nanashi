@@ -22,6 +22,7 @@ function snapshot(enabled: boolean): AppLauncherSnapshot {
     return {
         enabled,
         entries: [],
+        folders: [],
         activeSession: null,
         testRuns: []
     };
