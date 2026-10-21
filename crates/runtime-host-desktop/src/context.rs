@@ -444,13 +444,23 @@ impl VrOverlayRuntimeServices for DesktopRuntimeServices {
             return std::collections::HashMap::new();
         };
         let current_user_id = self.auth_scope.snapshot().current_user_id;
-        let user_ids: Vec<String> = user_ids
+        let others: Vec<String> = user_ids
             .iter()
             .filter(|id| **id != current_user_id)
             .cloned()
             .collect();
-        self.wrist_player_profiles
-            .statuses(&user_ids, &runtime, &self.tasks)
+        let mut statuses = self
+            .wrist_player_profiles
+            .statuses(&others, &runtime, &self.tasks);
+        if user_ids.contains(&current_user_id) {
+            if let Some(profile) = runtime.current_user_snapshot() {
+                statuses.insert(
+                    current_user_id,
+                    wrist_player_profiles::status_from_profile(&profile),
+                );
+            }
+        }
+        statuses
     }
 
     fn game_started_at(&self) -> Option<String> {

@@ -1339,6 +1339,7 @@ pub(super) fn build_wrist_frame_input(
         let notes = services.user_notes(&ids);
         let friends = services.friend_records(&ids);
         let cached = services.cached_user_statuses(&ids);
+        let current_user_id = services.auth_scope().snapshot().current_user_id;
         let mut rows: Vec<(Option<i64>, WristPlayerRow)> = game_log
             .players
             .iter()
@@ -1376,6 +1377,7 @@ pub(super) fn build_wrist_frame_input(
                             .map(|status| status == "18+")
                             .or_else(|| cached.map(|status| status.age_verified))
                             .unwrap_or_default(),
+                        is_local: !current_user_id.is_empty() && player.user_id == current_user_id,
                     },
                 )
             })
@@ -1466,10 +1468,10 @@ fn sort_wrist_players(rows: &mut [(Option<i64>, WristPlayerRow)], sort: WristPla
                 .to_lowercase()
                 .cmp(&b.display_name.to_lowercase())
         };
-        match sort {
+        a.is_local.cmp(&b.is_local).then_with(|| match sort {
             WristPlayersSort::Name => by_name(),
             WristPlayersSort::Joined => b_joined.cmp(a_joined).then_with(by_name),
-        }
+        })
     });
 }
 
@@ -1563,6 +1565,23 @@ mod wrist_page_tests {
         sort_wrist_players(&mut rows, WristPlayersSort::Joined);
         let names: Vec<_> = rows.iter().map(|(_, r)| r.display_name.as_str()).collect();
         assert_eq!(names, ["ann", "Cid", "bea", "Abe"]);
+    }
+
+    #[test]
+    fn the_local_user_is_listed_last_in_either_order() {
+        let mut me = row("Aaron");
+        me.is_local = true;
+        let mut rows = vec![
+            (Some(50), me),
+            (Some(10), row("bea")),
+            (Some(30), row("Cid")),
+        ];
+        sort_wrist_players(&mut rows, WristPlayersSort::Name);
+        let names: Vec<_> = rows.iter().map(|(_, r)| r.display_name.as_str()).collect();
+        assert_eq!(names, ["bea", "Cid", "Aaron"]);
+        sort_wrist_players(&mut rows, WristPlayersSort::Joined);
+        let names: Vec<_> = rows.iter().map(|(_, r)| r.display_name.as_str()).collect();
+        assert_eq!(names, ["Cid", "bea", "Aaron"]);
     }
 }
 

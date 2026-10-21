@@ -317,6 +317,9 @@ pub struct WristPlayerRow {
     /// VRChat 18+ age verification badge.
     #[serde(default)]
     pub age_verified: bool,
+    /// The signed-in user, listed after everyone else.
+    #[serde(default)]
+    pub is_local: bool,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -955,6 +958,7 @@ mod page_tests {
             platform: String::new(),
             status_description: String::new(),
             age_verified: false,
+            is_local: false,
         }
     }
 
@@ -1005,6 +1009,7 @@ mod page_tests {
                 platform: "android".to_string(),
                 status_description: "chilling".to_string(),
                 age_verified: false,
+                is_local: false,
             })
             .collect::<Vec<_>>();
         let cells = player_cells(&players, false);

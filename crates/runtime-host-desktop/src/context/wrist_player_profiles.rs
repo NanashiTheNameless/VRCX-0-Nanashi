@@ -170,14 +170,13 @@ pub(crate) fn status_from_profile(profile: &Value) -> CachedUserStatus {
             .map(str::trim)
             .unwrap_or_default()
     };
-    // "web" only means the website is open; the last game platform is more
-    // useful for someone standing in the instance.
-    let platform = [text("platform"), text("last_platform")]
-        .into_iter()
-        .find(|platform| !platform.is_empty() && *platform != "web")
-        .unwrap_or_default();
+    // VRChat reports "offline" or "web" as the platform of players who are
+    // not friends; their last game platform is the useful one.
     CachedUserStatus {
-        platform: platform.to_string(),
+        platform: vrcx_0_core::trust::compute_user_platform(
+            text("platform"),
+            text("last_platform"),
+        ),
         status_description: text("statusDescription").to_string(),
         age_verified: text("ageVerificationStatus") == "18+",
     }
@@ -204,6 +203,14 @@ mod tests {
                 age_verified: true,
             }
         );
+
+        let status = status_from_profile(&json!({
+            "platform": "offline",
+            "last_platform": "standalonewindows",
+            "ageVerificationStatus": "18+"
+        }));
+        assert_eq!(status.platform, "standalonewindows");
+        assert!(status.age_verified);
 
         let status = status_from_profile(&json!({
             "platform": "standalonewindows",
