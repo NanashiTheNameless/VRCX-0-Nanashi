@@ -1,4 +1,4 @@
-import { SearchIcon, XIcon } from 'lucide-react';
+import { SearchIcon } from 'lucide-react';
 import { useEffect, useState, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -6,7 +6,6 @@ import { useNavigationCacheStore } from '@/state/navigationCacheStore';
 import {
     InputGroup,
     InputGroupAddon,
-    InputGroupButton,
     InputGroupInput
 } from '@/ui/shadcn/input-group';
 
@@ -126,7 +125,7 @@ export function SettingsSearchInput() {
                 <SearchIcon />
             </InputGroupAddon>
             <InputGroupInput
-                type="text"
+                type="search"
                 value={query}
                 placeholder={t('view.settings.search.placeholder')}
                 aria-label={t('view.settings.search.placeholder')}
@@ -137,17 +136,6 @@ export function SettingsSearchInput() {
                     }
                 }}
             />
-            {query ? (
-                <InputGroupAddon align="inline-end">
-                    <InputGroupButton
-                        size="icon-xs"
-                        aria-label={t('view.settings.search.clear')}
-                        onClick={() => setQuery('')}
-                    >
-                        <XIcon />
-                    </InputGroupButton>
-                </InputGroupAddon>
-            ) : null}
         </InputGroup>
     );
 }

@@ -3862,7 +3862,6 @@
             },
             "search": {
                 "placeholder": "Search settings",
-                "clear": "Clear search",
                 "results": "{count} results",
                 "no_results": "No settings match \"{query}\"."
             },
