@@ -11,6 +11,7 @@ use vrcx_0_persistence::config::ConfigRepository;
 pub struct CachedUserStatus {
     pub platform: String,
     pub status_description: String,
+    pub age_verified: bool,
 }
 
 pub trait VrOverlayRuntimeServices: Send + Sync {
@@ -49,7 +50,7 @@ pub trait VrOverlayRuntimeServices: Send + Sync {
         std::collections::HashMap::new()
     }
 
-    /// Fork: platform and status text from cached VRChat profiles, for the
+    /// Fork: platform, status text and 18+ badge from VRChat profiles, for the
     /// wrist Players/Notes pages to show them for players who are not friends.
     fn cached_user_statuses(
         &self,

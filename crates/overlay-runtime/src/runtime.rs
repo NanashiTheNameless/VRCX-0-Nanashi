@@ -1370,6 +1370,12 @@ pub(super) fn build_wrist_frame_input(
                             .filter(|description| !description.is_empty())
                             .or_else(|| cached.map(|status| status.status_description.clone()))
                             .unwrap_or_default(),
+                        age_verified: friend
+                            .and_then(|(record, _)| record.extra.get("ageVerificationStatus"))
+                            .and_then(serde_json::Value::as_str)
+                            .map(|status| status == "18+")
+                            .or_else(|| cached.map(|status| status.age_verified))
+                            .unwrap_or_default(),
                     },
                 )
             })

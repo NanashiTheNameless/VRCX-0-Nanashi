@@ -238,13 +238,14 @@ fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
         crate::CachedUserStatus {
             platform: "standalonewindows".into(),
             status_description: "Just visiting".into(),
+            age_verified: true,
         },
     );
     let frame =
         super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
     let cells = build_wrist_surface_model(frame).players;
     assert!(!cells[0].is_friend);
-    assert_eq!(cells[0].status, "online / PC VR / Just visiting");
+    assert_eq!(cells[0].status, "online / PC VR / 18+ / Just visiting");
     assert_eq!(cells[1].status, "online / Quest / World hopping");
     services.cached.clear();
 

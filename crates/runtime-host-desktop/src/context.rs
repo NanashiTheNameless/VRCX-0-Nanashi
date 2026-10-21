@@ -78,6 +78,7 @@ pub struct DesktopRuntimeServices {
     notification_resolver: Arc<NotificationResolver>,
     realtime_user_image_resolver_owner: Mutex<Option<Arc<dyn CachedNotificationUserImageResolver>>>,
     wrist_realtime_runtime: Mutex<Weak<RealtimeHostRuntime>>,
+    wrist_player_profiles: wrist_player_profiles::WristPlayerProfiles,
     game_log_snapshot: RuntimeSnapshotStore,
     now_playing: Arc<Mutex<Arc<NowPlayingSnapshot>>>,
 }
@@ -157,6 +158,7 @@ impl DesktopRuntimeServices {
             notification_resolver: deps.notification_resolver,
             realtime_user_image_resolver_owner: Mutex::new(None),
             wrist_realtime_runtime: Mutex::new(Weak::new()),
+            wrist_player_profiles: Default::default(),
             game_log_snapshot: RuntimeSnapshotStore::default(),
             now_playing: Arc::new(Mutex::new(Arc::new(NowPlayingSnapshot::default()))),
         })
@@ -439,19 +441,14 @@ impl VrOverlayRuntimeServices for DesktopRuntimeServices {
         let Some(runtime) = runtime else {
             return std::collections::HashMap::new();
         };
-        runtime
-            .cached_user_profiles(&self.auth_scope.snapshot(), user_ids)
-            .into_iter()
-            .map(|profile| {
-                (
-                    profile.user_id,
-                    vrcx_0_overlay_runtime::CachedUserStatus {
-                        platform: profile.platform,
-                        status_description: profile.status_description,
-                    },
-                )
-            })
-            .collect()
+        let current_user_id = self.auth_scope.snapshot().current_user_id;
+        let user_ids: Vec<String> = user_ids
+            .iter()
+            .filter(|id| **id != current_user_id)
+            .cloned()
+            .collect();
+        self.wrist_player_profiles
+            .statuses(&user_ids, &runtime, &self.tasks)
     }
 
     fn game_started_at(&self) -> Option<String> {
@@ -461,6 +458,8 @@ impl VrOverlayRuntimeServices for DesktopRuntimeServices {
             .filter(|_| session.is_game_running)
     }
 }
+
+mod wrist_player_profiles;
 
 #[cfg(test)]
 mod tests;

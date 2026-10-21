@@ -16,8 +16,6 @@ pub struct RealtimeCachedUserProfile {
     pub user_id: String,
     pub is_friend: bool,
     pub languages: Vec<String>,
-    pub platform: String,
-    pub status_description: String,
 }
 
 #[derive(Clone, Debug, Default, PartialEq)]

@@ -314,6 +314,9 @@ pub struct WristPlayerRow {
     pub platform: String,
     /// Status description (e.g., "In VRChat", "In a private world")
     pub status_description: String,
+    /// VRChat 18+ age verification badge.
+    #[serde(default)]
+    pub age_verified: bool,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -549,6 +552,9 @@ fn player_cells(players: &[WristPlayerRow], notes_only: bool) -> Vec<PlayerCell>
                     _ => &player.platform,
                 };
                 status_parts.push(platform_label.to_string());
+            }
+            if player.age_verified {
+                status_parts.push("18+".to_string());
             }
             if !player.status_description.is_empty() {
                 status_parts.push(player.status_description.clone());
@@ -948,6 +954,7 @@ mod page_tests {
             state: String::new(),
             platform: String::new(),
             status_description: String::new(),
+            age_verified: false,
         }
     }
 
@@ -997,6 +1004,7 @@ mod page_tests {
                 state: "active".to_string(),
                 platform: "android".to_string(),
                 status_description: "chilling".to_string(),
+                age_verified: false,
             })
             .collect::<Vec<_>>();
         let cells = player_cells(&players, false);
@@ -1013,9 +1021,10 @@ mod page_tests {
         stranger.state = "online".into();
         stranger.platform = "windows".into();
         stranger.status_description = "hello".into();
+        stranger.age_verified = true;
         let cells = player_cells(&[stranger], false);
         assert!(!cells[0].is_friend);
-        assert_eq!(cells[0].status, "online / Desktop / hello");
+        assert_eq!(cells[0].status, "online / Desktop / 18+ / hello");
     }
 }
 

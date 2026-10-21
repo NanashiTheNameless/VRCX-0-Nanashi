@@ -222,9 +222,10 @@ The wrist menu shows the feed, the players in your instance, and the players you
 - **Full instances.** The Players and Notes pages list everyone in the instance with all of
   their details; when a full instance does not fit, they add columns and then use smaller text
   instead of leaving anyone out.
-- **Player details.** Every player shows their state, platform and status text; for players
-  who are not friends these come from profiles the app has already loaded. Friends' names are
-  yellow.
+- **Player details.** Every player shows their state, platform, an 18+ badge when VRChat
+  reports one, and status text. While these pages are open the app loads each player's VRChat
+  profile once every 10 minutes, one request at a time, reusing profiles the Player List page
+  already loaded. Friends' names are yellow.
 
 ### Wrist menu size and placement
 
