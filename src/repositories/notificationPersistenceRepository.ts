@@ -104,6 +104,7 @@ export const NOTIFICATION_TYPES = Object.freeze([
     'moderation.report.closed',
     'moderation.contentrestriction',
     'moderation.notice',
+    'moderation.sanction',
     'votetokick',
     'instance.closed',
     'economy.alert',

@@ -130,7 +130,9 @@ vi.mock('./authSessionRecoveryService', () => ({
     handleRuntimeAuthFailure: mocks.handleRuntimeAuthFailure
 }));
 
+import { getCachedQueryData, queryKeys } from '@/lib/entityQueryCache';
 import { toast } from '@/services/toastService';
+import { DEFAULT_VRCHAT_API_ENDPOINT } from '@/shared/vrchatEndpoint';
 import { useDataDirMigrationStore } from '@/state/dataDirMigrationStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useOfflineRecordStore } from '@/state/offlineRecordStore';
@@ -506,6 +508,24 @@ describe('runtimeEventBridgeService', () => {
             finishAppearanceHydration();
             await binding;
         }
+    });
+
+    it('caches the live VRChat Credits balance from the economy event', async () => {
+        const { handlers } = await bindCapturedRuntimeEvents();
+
+        handlers.get('realtimeEconomyBalance')?.({
+            userId: 'usr_owner',
+            walletBalance: 2450
+        });
+
+        expect(
+            getCachedQueryData(
+                queryKeys.economyBalance(
+                    'usr_owner',
+                    DEFAULT_VRCHAT_API_ENDPOINT
+                )
+            )
+        ).toBe(2450);
     });
 
     it('records the browser focus time and refreshes VRChat status on focus', async () => {

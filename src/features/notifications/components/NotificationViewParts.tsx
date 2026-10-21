@@ -58,6 +58,7 @@ const NOTIFICATION_TYPE_SECTIONS: {
             'moderation.report.closed',
             'moderation.contentrestriction',
             'moderation.notice',
+            'moderation.sanction',
             'votetokick'
         ]
     },

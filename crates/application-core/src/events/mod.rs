@@ -3,6 +3,7 @@ mod projection;
 
 pub use payloads::{
     FriendProfileBulkLoadStatus, FriendProfileLoadStatusPayload, PrintAutoCleanupEvent,
+    RealtimeEconomyBalancePayload,
 };
 pub use projection::{
     FeedLiveEntry, FriendProjection, FriendProjectionPatch, RealtimeCurrentUserProjection,

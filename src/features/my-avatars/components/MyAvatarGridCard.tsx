@@ -125,44 +125,60 @@ export function AvatarActionMenuItems({
                     {t('dialog.avatar.actions.select')}
                 </Item>
             </Group>
-            <Separator />
-            <Group>
-                <Item disabled={disabled} {...actionItemProps('manageTags')}>
-                    <TagsIcon />
-                    {t('dialog.avatar.actions.manage_tags')}
-                </Item>
-                <Item disabled={disabled} {...actionItemProps('editDetails')}>
-                    <PencilIcon />
-                    {t('dialog.avatar.actions.edit_details')}
-                </Item>
-                <Item
-                    disabled={disabled}
-                    {...actionItemProps('changeContentTags')}
-                >
-                    <ShieldCheckIcon />
-                    {t('dialog.avatar.actions.change_content_tags')}
-                </Item>
-                <Item disabled={disabled} {...actionItemProps('changeImage')}>
-                    <ImageIcon />
-                    {t('dialog.avatar.actions.change_image')}
-                </Item>
-            </Group>
-            <Separator />
-            <Group>
-                <Item disabled={disabled} {...actionItemProps(releaseAction)}>
-                    <ReleaseIcon />
-                    {isPublic
-                        ? t('dialog.avatar.actions.make_private')
-                        : t('dialog.avatar.actions.make_public')}
-                </Item>
-                <Item
-                    disabled={disabled}
-                    {...actionItemProps('createImpostor')}
-                >
-                    <ScanFaceIcon />
-                    {t('dialog.avatar.actions.create_impostor')}
-                </Item>
-            </Group>
+            {avatar.$licensed ? null : (
+                <>
+                    <Separator />
+                    <Group>
+                        <Item
+                            disabled={disabled}
+                            {...actionItemProps('manageTags')}
+                        >
+                            <TagsIcon />
+                            {t('dialog.avatar.actions.manage_tags')}
+                        </Item>
+                        <Item
+                            disabled={disabled}
+                            {...actionItemProps('editDetails')}
+                        >
+                            <PencilIcon />
+                            {t('dialog.avatar.actions.edit_details')}
+                        </Item>
+                        <Item
+                            disabled={disabled}
+                            {...actionItemProps('changeContentTags')}
+                        >
+                            <ShieldCheckIcon />
+                            {t('dialog.avatar.actions.change_content_tags')}
+                        </Item>
+                        <Item
+                            disabled={disabled}
+                            {...actionItemProps('changeImage')}
+                        >
+                            <ImageIcon />
+                            {t('dialog.avatar.actions.change_image')}
+                        </Item>
+                    </Group>
+                    <Separator />
+                    <Group>
+                        <Item
+                            disabled={disabled}
+                            {...actionItemProps(releaseAction)}
+                        >
+                            <ReleaseIcon />
+                            {isPublic
+                                ? t('dialog.avatar.actions.make_private')
+                                : t('dialog.avatar.actions.make_public')}
+                        </Item>
+                        <Item
+                            disabled={disabled}
+                            {...actionItemProps('createImpostor')}
+                        >
+                            <ScanFaceIcon />
+                            {t('dialog.avatar.actions.create_impostor')}
+                        </Item>
+                    </Group>
+                </>
+            )}
         </>
     );
 }

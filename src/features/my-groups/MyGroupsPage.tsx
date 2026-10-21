@@ -52,7 +52,12 @@ import {
 } from '@/ui/shadcn/select';
 
 import { MyGroupCard } from './components/MyGroupCard';
+import { MyGroupMembershipCard } from './components/MyGroupMembershipCard';
 import { MyGroupsSelectionBar } from './components/MyGroupsSelectionBar';
+import {
+    useMyGroupMembershipLists,
+    type MyGroupMembershipRow
+} from './useMyGroupMembershipLists';
 import { useMyGroupsBatchController } from './useMyGroupsBatchController';
 import {
     isOwnGroup as isOwnGroupForUser,
@@ -94,9 +99,23 @@ export function MyGroupsPage() {
     const orderIndexById = new Map(
         state.visibleGroups.map((group, index) => [groupIdForRow(group), index])
     );
+    const membership = useMyGroupMembershipLists(state.currentUserId);
+    const pendingRows = [
+        ...membership.lists.invited,
+        ...membership.lists.requested
+    ];
+    const blockedRows = membership.lists.blocked;
+    const pendingSection = pendingRows.length
+        ? { key: 'pending' as const, rows: pendingRows }
+        : null;
+    const blockedSection = blockedRows.length
+        ? { key: 'blocked' as const, rows: blockedRows }
+        : null;
     const sectionTitles: Record<MyGroupsSectionKey, string> = {
         own: t('view.my_groups.section_own'),
-        joined: t('view.my_groups.section_joined')
+        joined: t('view.my_groups.section_joined'),
+        pending: t('view.my_groups.section_pending'),
+        blocked: t('view.my_groups.section_blocked')
     };
     const toBatchTargets = (groups: MyGroupRowModel[]) =>
         groups.map((group) => ({
@@ -151,7 +170,76 @@ export function MyGroupsPage() {
         );
     }
 
-    function renderSection(section: MyGroupsSection, sectionIndex: number) {
+    function membershipActions(row: MyGroupMembershipRow) {
+        if (row.membershipKind === 'invited') {
+            return [
+                {
+                    label: t('view.my_groups.accept_invite'),
+                    variant: 'default' as const,
+                    onClick: () => void membership.acceptInvite(row)
+                },
+                {
+                    label: t('view.my_groups.decline_invite'),
+                    onClick: () => void membership.declineInvite(row)
+                },
+                {
+                    label: t('view.my_groups.block'),
+                    variant: 'ghost' as const,
+                    onClick: () => void membership.blockGroup(row)
+                }
+            ];
+        }
+        if (row.membershipKind === 'requested') {
+            return [
+                {
+                    label: t('view.my_groups.cancel_request'),
+                    onClick: () => void membership.cancelRequest(row)
+                }
+            ];
+        }
+        return [
+            {
+                label: t('view.my_groups.unblock'),
+                onClick: () => void membership.unblockGroup(row)
+            }
+        ];
+    }
+
+    function renderMembershipSection(
+        section: {
+            key: 'pending' | 'blocked';
+            rows: MyGroupMembershipRow[];
+        },
+        isFirst: boolean
+    ) {
+        const open = state.openSections[section.key];
+        return (
+            <section key={section.key}>
+                <ListSectionHeader
+                    id={section.key}
+                    title={sectionTitles[section.key]}
+                    count={section.rows.length}
+                    open={open}
+                    isFirst={isFirst}
+                    onToggle={() => state.toggleSection(section.key)}
+                />
+                {open ? (
+                    <div className={cn(GROUP_GRID_CLASS_NAME, 'pt-1')}>
+                        {section.rows.map((row) => (
+                            <MyGroupMembershipCard
+                                key={`${row.membershipKind}:${groupIdForRow(row)}`}
+                                group={row}
+                                disabled={Boolean(membership.busyGroupId)}
+                                actions={membershipActions(row)}
+                            />
+                        ))}
+                    </div>
+                ) : null}
+            </section>
+        );
+    }
+
+    function renderSection(section: MyGroupsSection, isFirst: boolean) {
         return (
             <section key={section.key}>
                 <ListSectionHeader
@@ -159,7 +247,7 @@ export function MyGroupsPage() {
                     title={sectionTitles[section.key]}
                     count={section.groups.length}
                     open={section.open}
-                    isFirst={sectionIndex === 0}
+                    isFirst={isFirst}
                     onToggle={() => state.toggleSection(section.key)}
                 />
                 {section.open ? (
@@ -233,7 +321,10 @@ export function MyGroupsPage() {
                     />
                     <ToolbarActions>
                         <ToolbarRefreshButton
-                            onRefresh={() => void state.load(true)}
+                            onRefresh={() => {
+                                void state.load(true);
+                                void membership.load();
+                            }}
                             loading={state.status === 'running'}
                             disabled={batch.busy}
                         />
@@ -284,7 +375,8 @@ export function MyGroupsPage() {
                             {t('common.action.retry')}
                         </Button>
                     </EmptyState>
-                ) : state.visibleGroups.length ? (
+                ) : state.visibleGroups.length ||
+                  (!state.editMode && (pendingSection || blockedSection)) ? (
                     <ScrollArea className="min-h-0 flex-1">
                         <DndContext
                             sensors={sensors}
@@ -315,7 +407,25 @@ export function MyGroupsPage() {
                                 </SortableContext>
                             ) : (
                                 <div className="flex flex-col gap-1 p-0.5">
-                                    {state.sections.map(renderSection)}
+                                    {pendingSection
+                                        ? renderMembershipSection(
+                                              pendingSection,
+                                              true
+                                          )
+                                        : null}
+                                    {state.sections.map((section, index) =>
+                                        renderSection(
+                                            section,
+                                            index === 0 && !pendingSection
+                                        )
+                                    )}
+                                    {blockedSection
+                                        ? renderMembershipSection(
+                                              blockedSection,
+                                              !pendingSection &&
+                                                  !state.sections.length
+                                          )
+                                        : null}
                                 </div>
                             )}
                         </DndContext>

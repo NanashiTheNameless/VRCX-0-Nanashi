@@ -105,6 +105,7 @@ interface UserDialogTabbedViewProps {
         canInviteFromCurrentLocation: boolean;
         currentUserHasSharedConnectionsOptOut: boolean;
         currentUserBoopingEnabled: boolean;
+        currentUserAccountStanding: string;
         userStats?: SupplementalData['userStats'];
         loadPreviousInstances?: SupplementalData['loadPreviousInstances'];
         previousInstances?: SupplementalData['previousInstances'];
@@ -128,6 +129,7 @@ interface UserDialogTabbedViewProps {
     profileControls: {
         onRefresh: () => void;
         onEditMemo: () => void | Promise<void>;
+        onShowAccountStanding: () => void;
     };
     friendControls: {
         onFriendRequest: (action: string) => void;
@@ -143,7 +145,7 @@ interface UserDialogTabbedViewProps {
             enabled: boolean
         ) => void;
         onAvatarOverride: (type: AvatarOverrideType) => void;
-        onReportHacking: () => void;
+        onReportUser: () => void;
         onInviteToGroup: () => void;
         onGroupModeration: () => void;
     };
@@ -250,6 +252,7 @@ export function UserDialogTabbedView({
         canInviteFromCurrentLocation,
         currentUserHasSharedConnectionsOptOut,
         currentUserBoopingEnabled,
+        currentUserAccountStanding,
         userStats = {},
         loadPreviousInstances,
         previousInstances = [],
@@ -270,7 +273,7 @@ export function UserDialogTabbedView({
         onRefreshLocation,
         onPreviousInstancesChange
     } = locationPanel;
-    const { onRefresh, onEditMemo } = profileControls;
+    const { onRefresh, onEditMemo, onShowAccountStanding } = profileControls;
     const {
         onFriendRequest,
         onInvite,
@@ -282,7 +285,7 @@ export function UserDialogTabbedView({
         onModeration,
         onExtendedModeration,
         onAvatarOverride,
-        onReportHacking,
+        onReportUser,
         onInviteToGroup,
         onGroupModeration
     } = friendControls;
@@ -564,6 +567,7 @@ export function UserDialogTabbedView({
         avatarOverrideState,
         canInviteFromCurrentLocation,
         currentAvatarTarget,
+        currentUserAccountStanding,
         currentUserBoopingEnabled,
         detail,
         extendedModerationState,
@@ -640,7 +644,8 @@ export function UserDialogTabbedView({
             }),
         onOpenUserUrl: () => openExternalLink(userUrl),
         onRefresh,
-        onReportHacking,
+        onReportUser,
+        onShowAccountStanding,
         onShowAvatarAuthor: showAvatarAuthor,
         onShowInstanceHistory: openInstanceHistory,
         onToggleBadgeShowcased,

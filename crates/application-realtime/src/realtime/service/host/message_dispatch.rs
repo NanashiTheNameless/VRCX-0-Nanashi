@@ -108,6 +108,23 @@ impl RealtimeMessageSink for RealtimeHostRuntimeMessageSink {
             return;
         }
 
+        if event_kind == RealtimeWsEventKind::EconomyUpdate {
+            if let Some(wallet_balance) = payload
+                .json
+                .get("content")
+                .and_then(|content| content.get("walletBalance"))
+                .and_then(serde_json::Value::as_i64)
+            {
+                self.runtime.deps.event_bus.emit_realtime_economy_balance(
+                    vrcx_0_application_core::RealtimeEconomyBalancePayload {
+                        user_id: session.user_id.clone(),
+                        wallet_balance,
+                    },
+                );
+            }
+            return;
+        }
+
         if let Some(mut projection) =
             apply_instance_queue_ws_event(generation, &event_kind, payload)
         {

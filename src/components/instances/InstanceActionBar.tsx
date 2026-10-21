@@ -1,11 +1,14 @@
 import {
+    CalendarPlusIcon,
     Gamepad2Icon,
     HistoryIcon,
     LogInIcon,
     MailIcon,
+    PencilIcon,
     RefreshCwIcon
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { LocationObjectRecord } from '@/components/location/locationModel';
@@ -15,6 +18,7 @@ import { Spinner } from '@/ui/shadcn/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import { InstanceActionSummary } from './InstanceActionSummary';
+import { InstanceCalendarLinkDialog } from './InstanceCalendarLinkDialog';
 import {
     useInstanceActionBarController,
     type InstanceActionBarControllerInput
@@ -112,12 +116,17 @@ export function InstanceActionBar({
     onHistory?: () => void;
 }) {
     const { t } = useTranslation();
+    const [calendarLinkOpen, setCalendarLinkOpen] = useState(false);
 
     const {
         actionTarget,
         busy,
+        calendarEntryId,
+        calendarGroupId,
         canCloseCurrentInstance,
+        canLinkCalendarEvent,
         canOpenInstanceInGame,
+        canRename,
         canShowLaunchAction,
         capacity,
         closeInstance,
@@ -130,8 +139,10 @@ export function InstanceActionBar({
         openInstanceInGame,
         queueSize,
         refreshInstance,
+        renameInstance,
         resolvedUserCount,
-        selfInvite
+        selfInvite,
+        setCalendarLink
     } = useInstanceActionBarController({
         target,
         instance,
@@ -223,6 +234,32 @@ export function InstanceActionBar({
                     }}
                 />
             ) : null}
+            {canRename && actionTarget.isRealInstanceLocation ? (
+                <ActionButton
+                    label={t('component.instance_action_bar.rename.header')}
+                    icon={PencilIcon}
+                    disableTooltip={disableTooltip}
+                    variant={actionVariant}
+                    loading={busy === 'rename'}
+                    disabled={Boolean(busy)}
+                    onClick={() => {
+                        void renameInstance();
+                    }}
+                />
+            ) : null}
+            {canLinkCalendarEvent && actionTarget.isRealInstanceLocation ? (
+                <ActionButton
+                    label={t(
+                        'component.instance_action_bar.calendar_link.header'
+                    )}
+                    icon={CalendarPlusIcon}
+                    disableTooltip={disableTooltip}
+                    variant={actionVariant}
+                    loading={busy === 'calendar-link'}
+                    disabled={Boolean(busy)}
+                    onClick={() => setCalendarLinkOpen(true)}
+                />
+            ) : null}
             {showRefresh && actionTarget.isRealInstanceLocation ? (
                 <ActionButton
                     label={refreshTooltip}
@@ -247,6 +284,16 @@ export function InstanceActionBar({
                 />
             ) : null}
             {instanceInfoPlacement === 'start' ? null : instanceSummary}
+            {canLinkCalendarEvent ? (
+                <InstanceCalendarLinkDialog
+                    open={calendarLinkOpen}
+                    groupId={calendarGroupId}
+                    currentEventId={calendarEntryId}
+                    busy={busy === 'calendar-link'}
+                    onOpenChange={setCalendarLinkOpen}
+                    onSubmit={setCalendarLink}
+                />
+            ) : null}
         </div>
     );
 }

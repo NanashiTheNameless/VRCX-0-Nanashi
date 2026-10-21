@@ -1,12 +1,8 @@
-import { ImageIcon } from 'lucide-react';
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { FadeInImage } from '@/components/media/FadeInImage';
 import type { GroupProfileRecord } from '@/domain/entities/group';
-import { cn } from '@/lib/utils';
-import vrchatMediaRepository from '@/repositories/vrchatMediaRepository';
 import { Button } from '@/ui/shadcn/button';
 import { Checkbox } from '@/ui/shadcn/checkbox';
 import {
@@ -19,12 +15,6 @@ import {
 } from '@/ui/shadcn/dialog';
 import { Field, FieldGroup, FieldLabel } from '@/ui/shadcn/field';
 import { Input } from '@/ui/shadcn/input';
-import {
-    InputGroup,
-    InputGroupAddon,
-    InputGroupButton,
-    InputGroupInput
-} from '@/ui/shadcn/input-group';
 import { Textarea } from '@/ui/shadcn/textarea';
 import {
     ToggleGroup,
@@ -32,13 +22,9 @@ import {
     ToggleGroupSeparator
 } from '@/ui/shadcn/toggle-group';
 
-import { getGroupRowImage, getGroupRowLabel } from './groupDialogUtils';
+import { GroupGalleryImageField } from './GroupGalleryImageField';
 import { GroupListState } from './GroupListState';
 import type { GroupPostForm } from './useGroupDialogPosts';
-
-function text(value: unknown): string {
-    return typeof value === 'string' ? value : '';
-}
 
 export function GroupPostEditorDialog({
     open,
@@ -59,72 +45,12 @@ export function GroupPostEditorDialog({
 }) {
     const { t } = useTranslation();
 
-    const [galleryRows, setGalleryRows] = useState<
-        Awaited<ReturnType<typeof vrchatMediaRepository.getFileList>>['json']
-    >([]);
-    const [galleryStatus, setGalleryStatus] = useState('idle');
-    const [galleryError, setGalleryError] = useState('');
-    const galleryRequestIdRef = useRef(0);
-
-    const loadGalleryRows = useCallback(async () => {
-        if (!open) {
-            return;
-        }
-        const requestId = galleryRequestIdRef.current + 1;
-        galleryRequestIdRef.current = requestId;
-        setGalleryStatus('running');
-        setGalleryError('');
-        try {
-            const response = await vrchatMediaRepository.getFileList({
-                n: 100,
-                tag: 'gallery'
-            });
-            if (galleryRequestIdRef.current !== requestId) {
-                return;
-            }
-            setGalleryRows(
-                Array.isArray(response.json) ? [...response.json].reverse() : []
-            );
-            setGalleryStatus('ready');
-        } catch (error) {
-            if (galleryRequestIdRef.current !== requestId) {
-                return;
-            }
-            setGalleryRows([]);
-            setGalleryStatus('error');
-            setGalleryError(
-                error instanceof Error
-                    ? error.message
-                    : 'Failed to load gallery images.'
-            );
-        }
-    }, [open]);
-
-    useEffect(() => {
-        if (open) {
-            loadGalleryRows();
-        } else {
-            galleryRequestIdRef.current += 1;
-            setGalleryRows([]);
-            setGalleryStatus('idle');
-            setGalleryError('');
-        }
-    }, [loadGalleryRows, open]);
-
     if (!form) {
         return null;
     }
     const roles = Array.isArray(group?.roles) ? group.roles : [];
     const roleIds = Array.isArray(form.roleIds) ? form.roleIds : [];
     const isEdit = form.mode === 'edit';
-    const galleryOptions = galleryRows
-        .map((row) => ({
-            id: text(row?.id || row?.fileId || row?.file_id),
-            label: getGroupRowLabel(row),
-            image: getGroupRowImage(row, 'gallery')
-        }))
-        .filter((option) => option.id);
-
     function updateForm(patch: Partial<GroupPostForm>) {
         onFormChange((current) =>
             current ? { ...current, ...patch } : current
@@ -288,97 +214,13 @@ export function GroupPostEditorDialog({
                             )}
                         </Field>
                     ) : null}
-                    <Field>
-                        <FieldLabel htmlFor="group-post-image-id">
-                            {t('table.import.image')}
-                        </FieldLabel>
-                        <InputGroup>
-                            <InputGroupInput
-                                id="group-post-image-id"
-                                value={form.imageId || ''}
-                                onChange={(event) =>
-                                    updateForm({ imageId: event.target.value })
-                                }
-                                disabled={submitting}
-                                placeholder={t(
-                                    'dialog.group.label.gallery_image_id'
-                                )}
-                            />
-                            <InputGroupAddon align="inline-end">
-                                <InputGroupButton
-                                    type="button"
-                                    disabled={submitting || !form.imageId}
-                                    onClick={() => updateForm({ imageId: '' })}
-                                >
-                                    {t('common.actions.clear')}
-                                </InputGroupButton>
-                                <InputGroupButton
-                                    type="button"
-                                    disabled={
-                                        submitting ||
-                                        galleryStatus === 'running'
-                                    }
-                                    onClick={() => {
-                                        loadGalleryRows();
-                                    }}
-                                >
-                                    {t('common.actions.refresh')}
-                                </InputGroupButton>
-                            </InputGroupAddon>
-                        </InputGroup>
-                        {galleryOptions.length ? (
-                            <div className="grid max-h-56 gap-2 overflow-auto rounded-md border p-2 sm:grid-cols-2">
-                                {galleryOptions.map((option) => (
-                                    <Button
-                                        key={option.id}
-                                        type="button"
-                                        variant="outline"
-                                        disabled={submitting}
-                                        className={cn(
-                                            'h-auto w-full min-w-0 justify-start gap-2 p-2 text-left text-sm',
-                                            form.imageId === option.id &&
-                                                'border-primary'
-                                        )}
-                                        onClick={() =>
-                                            updateForm({ imageId: option.id })
-                                        }
-                                    >
-                                        {option.image ? (
-                                            <FadeInImage
-                                                src={option.image}
-                                                alt=""
-                                                className="size-12 shrink-0 rounded object-cover"
-                                            />
-                                        ) : (
-                                            <span className="text-muted-foreground flex size-12 shrink-0 items-center justify-center rounded border">
-                                                <ImageIcon />
-                                            </span>
-                                        )}
-                                        <span className="min-w-0">
-                                            <span className="block truncate font-medium">
-                                                {option.label}
-                                            </span>
-                                            <span className="text-muted-foreground block truncate font-mono text-xs">
-                                                {option.id}
-                                            </span>
-                                        </span>
-                                    </Button>
-                                ))}
-                            </div>
-                        ) : (
-                            <GroupListState
-                                title={t(
-                                    'dialog.group.empty.no_gallery_images'
-                                )}
-                                description={t(
-                                    'dialog.group.action.refresh_to_load_gallery_images'
-                                )}
-                                loading={galleryStatus === 'running'}
-                                error={galleryError}
-                                className="min-h-24 p-3"
-                            />
-                        )}
-                    </Field>
+                    <GroupGalleryImageField
+                        id="group-post-image-id"
+                        open={open}
+                        imageId={form.imageId || ''}
+                        disabled={submitting}
+                        onChange={(imageId) => updateForm({ imageId })}
+                    />
                 </FieldGroup>
                 <DialogFooter>
                     <Button

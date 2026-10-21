@@ -56,7 +56,8 @@ describe('tool catalog categories', () => {
                 'llm-endpoints',
                 'social-ai',
                 'edit-invite-message',
-                'moderation-reports'
+                'moderation-reports',
+                'purchase-history'
             ]
         });
     });

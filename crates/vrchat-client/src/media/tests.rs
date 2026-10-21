@@ -324,3 +324,21 @@ fn media_id_requests_reject_empty_text() {
     assert!(avatar_image_set_input(ENDPOINT.into(), " ".into(), "url".into()).is_err());
     assert!(world_image_set_input(ENDPOINT.into(), " ".into(), "url".into()).is_err());
 }
+
+#[test]
+fn gallery_file_order_puts_trimmed_ids_for_the_gallery() {
+    let request = gallery_file_order_input(
+        ENDPOINT.into(),
+        " avtr_1 ".into(),
+        vec![" file_b ".into(), "".into(), "file_a".into()],
+    )
+    .unwrap();
+
+    assert_eq!(request.method.as_deref(), Some("PUT"));
+    assert_eq!(request.path.as_deref(), Some("files/order"));
+    assert_eq!(
+        request.body.as_json(),
+        Some(&json!({ "ids": ["file_b", "file_a"], "galleryId": "avtr_1" }))
+    );
+    assert!(gallery_file_order_input(ENDPOINT.into(), "avtr_1".into(), Vec::new()).is_err());
+}

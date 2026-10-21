@@ -15,6 +15,8 @@ export type MyAvatarsReleaseStatusFilter = Exclude<
 
 export type MyAvatarsPlatformFilter = 'all' | 'pc' | 'android' | 'ios';
 
+export type MyAvatarsSource = 'own' | 'licensed';
+
 export type MyAvatarsAuthTarget = {
     currentUserId: string;
     currentEndpoint: string;
@@ -39,6 +41,7 @@ export type MyAvatarRow = Partial<AvatarProfileRecord> & {
     created_at?: string;
     $tags?: MyAvatarTag[];
     $timeSpent?: number;
+    $licensed?: boolean;
     [key: string]: unknown;
 };
 

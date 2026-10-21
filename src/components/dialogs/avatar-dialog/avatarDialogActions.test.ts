@@ -45,8 +45,10 @@ vi.mock('./avatarMediaActions', () => ({
         deleteAvatarCache: vi.fn(),
         openAvatarCacheFolder: vi.fn()
     }),
-    createAvatarGalleryUploadActions: () => ({
+    createAvatarGalleryActions: () => ({
         beginAvatarGalleryUpload: vi.fn(),
+        deleteAvatarGalleryImage: vi.fn(),
+        moveAvatarGalleryImage: vi.fn(),
         onFileChangeAvatarGallery: vi.fn()
     }),
     createAvatarImageUploadActions: () => ({

@@ -26,6 +26,13 @@ pub struct FriendProfileLoadStatusPayload {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
+pub struct RealtimeEconomyBalancePayload {
+    pub user_id: String,
+    pub wallet_balance: i64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct PrintAutoCleanupEvent {
     pub deleted: u32,
     pub remaining: u32,

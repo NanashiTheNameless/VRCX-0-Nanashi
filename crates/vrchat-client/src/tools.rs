@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
-use serde_json::json;
-#[cfg(test)]
-use serde_json::Value;
+use serde_json::{json, Value};
 
 use crate::http_api::{
     api_input, encode_path_segment, get_input, require_text, HttpApiError, HttpApiRequestInput,
@@ -10,7 +8,9 @@ use crate::http_api::{
 use crate::query::serialize_query;
 
 pub use vrcx_0_contracts::vrchat_requests::{
-    CalendarListParams, InviteMessageType, ModerationReportType,
+    CalendarListParams, GroupCalendarEventAccessType, GroupCalendarEventMutation,
+    GroupCalendarRecurrence, GroupCalendarRecurrenceEnd, GroupCalendarRecurrenceFrequency,
+    InviteMessageType, ModerationReportType,
 };
 
 pub fn calendars_get_input(endpoint: String, params: CalendarListParams) -> HttpApiRequestInput {
@@ -69,6 +69,110 @@ pub fn group_event_follow_input(
     ))
 }
 
+fn group_event_body(event: GroupCalendarEventMutation) -> Result<Value, HttpApiError> {
+    require_text(&event.title, "VrchatToolsGroupEvent requires title.")?;
+    require_text(&event.starts_at, "VrchatToolsGroupEvent requires startsAt.")?;
+    require_text(&event.ends_at, "VrchatToolsGroupEvent requires endsAt.")?;
+    let is_series = event.recurrence.is_some();
+    let mut body =
+        serde_json::to_value(event).map_err(|error| HttpApiError::Custom(error.to_string()))?;
+    if is_series {
+        body["occurrenceKind"] = json!("series");
+    }
+    Ok(body)
+}
+
+pub fn group_event_create_input(
+    endpoint: String,
+    group_id: String,
+    event: GroupCalendarEventMutation,
+) -> Result<(String, HttpApiRequestInput), HttpApiError> {
+    let group_id = require_text(group_id, "VrchatToolsGroupEventCreate requires groupId.")?;
+    let body = group_event_body(event)?;
+    Ok((
+        group_id.clone(),
+        api_input(
+            endpoint,
+            "POST",
+            format!("calendar/{}/event", encode_path_segment(&group_id)),
+            Some(body),
+        ),
+    ))
+}
+
+pub fn group_event_update_input(
+    endpoint: String,
+    group_id: String,
+    event_id: String,
+    event: GroupCalendarEventMutation,
+) -> Result<(String, HttpApiRequestInput), HttpApiError> {
+    let group_id = require_text(group_id, "VrchatToolsGroupEventUpdate requires groupId.")?;
+    let event_id = require_text(event_id, "VrchatToolsGroupEventUpdate requires eventId.")?;
+    let body = group_event_body(event)?;
+    Ok((
+        event_id.clone(),
+        api_input(
+            endpoint,
+            "PUT",
+            format!(
+                "calendar/{}/{}/event",
+                encode_path_segment(&group_id),
+                encode_path_segment(&event_id)
+            ),
+            Some(body),
+        ),
+    ))
+}
+
+pub fn group_event_delete_input(
+    endpoint: String,
+    group_id: String,
+    event_id: String,
+) -> Result<(String, HttpApiRequestInput), HttpApiError> {
+    let group_id = require_text(group_id, "VrchatToolsGroupEventDelete requires groupId.")?;
+    let event_id = require_text(event_id, "VrchatToolsGroupEventDelete requires eventId.")?;
+    Ok((
+        event_id.clone(),
+        api_input(
+            endpoint,
+            "DELETE",
+            format!(
+                "calendar/{}/{}",
+                encode_path_segment(&group_id),
+                encode_path_segment(&event_id)
+            ),
+            None,
+        ),
+    ))
+}
+
+pub fn group_calendar_event_get_input(
+    endpoint: String,
+    group_id: String,
+    event_id: String,
+) -> Result<(String, HttpApiRequestInput), HttpApiError> {
+    let group_id = require_text(
+        group_id,
+        "VrchatToolsGroupCalendarEventGet requires groupId.",
+    )?;
+    let event_id = require_text(
+        event_id,
+        "VrchatToolsGroupCalendarEventGet requires eventId.",
+    )?;
+    Ok((
+        event_id.clone(),
+        get_input(
+            endpoint,
+            format!(
+                "calendar/{}/{}",
+                encode_path_segment(&group_id),
+                encode_path_segment(&event_id)
+            ),
+            HashMap::new(),
+        ),
+    ))
+}
+
 pub fn group_calendar_ics_get_input(
     endpoint: String,
     group_id: String,
@@ -113,21 +217,26 @@ pub fn user_note_save_input(
 pub fn user_report_input(
     endpoint: String,
     user_id: String,
+    category: String,
     reason: String,
+    description: String,
 ) -> Result<(String, HttpApiRequestInput), HttpApiError> {
     let user_id = require_text(user_id, "VrchatToolsUserReport requires userId.")?;
+    let category = require_text(category, "VrchatToolsUserReport requires category.")?;
+    let reason = require_text(reason, "VrchatToolsUserReport requires reason.")?;
+    let mut body = json!({
+        "type": "user",
+        "category": category,
+        "reason": reason,
+        "contentId": user_id,
+    });
+    let description = description.trim();
+    if !description.is_empty() {
+        body["description"] = json!(description);
+    }
     Ok((
-        user_id.clone(),
-        api_input(
-            endpoint,
-            "POST",
-            format!("feedback/{}/user", encode_path_segment(&user_id)),
-            Some(json!({
-                "contentType": "user",
-                "reason": reason,
-                "type": "report",
-            })),
-        ),
+        user_id,
+        api_input(endpoint, "POST", "moderationReports", Some(body)),
     ))
 }
 
@@ -316,14 +425,35 @@ mod tests {
             &json!({ "targetUserId": "usr/1", "note": "  keep note whitespace  " })
         );
 
-        let (_, report) =
-            user_report_input("endpoint".into(), " usr/1 ".into(), "reason".into()).unwrap();
+        let (_, report) = user_report_input(
+            "endpoint".into(),
+            " usr/1 ".into(),
+            "behavior".into(),
+            "hacking".into(),
+            "  ".into(),
+        )
+        .unwrap();
         assert_eq!(report.method.as_deref(), Some("POST"));
-        assert_eq!(report.path.as_deref(), Some("feedback/usr%2F1/user"));
+        assert_eq!(report.path.as_deref(), Some("moderationReports"));
         assert_eq!(
             json_body(&report),
-            &json!({ "contentType": "user", "reason": "reason", "type": "report" })
+            &json!({
+                "type": "user",
+                "category": "behavior",
+                "reason": "hacking",
+                "contentId": "usr/1",
+            })
         );
+
+        let (_, described) = user_report_input(
+            "endpoint".into(),
+            "usr_1".into(),
+            "chat".into(),
+            "harassing".into(),
+            "  spam in chat  ".into(),
+        )
+        .unwrap();
+        assert_eq!(json_body(&described)["description"], json!("spam in chat"));
 
         let (slot, edit) = invite_message_edit_input(
             "endpoint".into(),
@@ -406,13 +536,107 @@ mod tests {
         );
     }
 
+    fn sample_event() -> GroupCalendarEventMutation {
+        GroupCalendarEventMutation {
+            title: "Meetup".into(),
+            description: "Hang out".into(),
+            starts_at: "2026-10-22T10:00:00.000Z".into(),
+            ends_at: "2026-10-22T12:00:00.000Z".into(),
+            category: "hangout".into(),
+            access_type: GroupCalendarEventAccessType::Group,
+            tags: vec!["chill".into()],
+            languages: vec!["eng".into()],
+            platforms: Vec::new(),
+            role_ids: Vec::new(),
+            image_id: None,
+            send_creation_notification: true,
+            host_early_join_minutes: 60,
+            guest_early_join_minutes: 5,
+            close_instance_after_end_minutes: 5,
+            recurrence: None,
+        }
+    }
+
+    #[test]
+    fn group_event_mutations_use_calendar_event_paths_and_bodies() {
+        let (_, create) =
+            group_event_create_input("endpoint".into(), "grp/1".into(), sample_event()).unwrap();
+        assert_eq!(create.method.as_deref(), Some("POST"));
+        assert_eq!(create.path.as_deref(), Some("calendar/grp%2F1/event"));
+        let body = json_body(&create);
+        assert_eq!(body["accessType"], json!("group"));
+        assert_eq!(body["sendCreationNotification"], json!(true));
+        assert_eq!(body["imageId"], Value::Null);
+        assert!(body.get("occurrenceKind").is_none());
+
+        let mut series = sample_event();
+        series.recurrence = Some(GroupCalendarRecurrence {
+            frequency: GroupCalendarRecurrenceFrequency::Weekly,
+            interval: 1,
+            timezone: "Asia/Tokyo".into(),
+            days_of_week: vec!["SA".into()],
+            end: Some(GroupCalendarRecurrenceEnd::AfterOccurrences { count: 4 }),
+        });
+        let (event_id, update) =
+            group_event_update_input("endpoint".into(), "grp_1".into(), "gcal_1".into(), series)
+                .unwrap();
+        assert_eq!(event_id, "gcal_1");
+        assert_eq!(update.method.as_deref(), Some("PUT"));
+        assert_eq!(
+            update.path.as_deref(),
+            Some("calendar/grp%5F1/gcal%5F1/event")
+        );
+        let body = json_body(&update);
+        assert_eq!(body["occurrenceKind"], json!("series"));
+        assert_eq!(
+            body["recurrence"],
+            json!({
+                "frequency": "weekly",
+                "interval": 1,
+                "timezone": "Asia/Tokyo",
+                "daysOfWeek": ["SA"],
+                "end": { "type": "afterOccurrences", "count": 4 },
+            })
+        );
+
+        let (_, event) =
+            group_calendar_event_get_input("endpoint".into(), "grp_1".into(), "gcal_1".into())
+                .unwrap();
+        assert_eq!(event.method.as_deref(), Some("GET"));
+        assert_eq!(event.path.as_deref(), Some("calendar/grp%5F1/gcal%5F1"));
+
+        let (_, delete) =
+            group_event_delete_input("endpoint".into(), "grp_1".into(), "gcal_1".into()).unwrap();
+        assert_eq!(delete.method.as_deref(), Some("DELETE"));
+        assert_eq!(delete.path.as_deref(), Some("calendar/grp%5F1/gcal%5F1"));
+
+        let mut untitled = sample_event();
+        untitled.title = " ".into();
+        assert!(group_event_create_input("endpoint".into(), "grp_1".into(), untitled).is_err());
+    }
+
     #[test]
     fn tool_requests_reject_blank_required_ids() {
         assert!(group_calendar_get_input("".into(), " ".into()).is_err());
         assert!(group_event_follow_input("".into(), "group".into(), " ".into(), false,).is_err());
         assert!(group_calendar_ics_get_input("".into(), " ".into(), "event".into()).is_err());
         assert!(user_note_save_input("".into(), " ".into(), "note".into()).is_err());
-        assert!(user_report_input("".into(), " ".into(), "reason".into(),).is_err());
+        assert!(user_report_input(
+            "".into(),
+            " ".into(),
+            "behavior".into(),
+            "hacking".into(),
+            String::new(),
+        )
+        .is_err());
+        assert!(user_report_input(
+            "".into(),
+            "usr_1".into(),
+            "behavior".into(),
+            " ".into(),
+            String::new(),
+        )
+        .is_err());
         assert!(moderation_reports_get_input("".into(), " ".into(), 100, 0, false, None).is_err());
         assert!(moderation_report_delete_input("".into(), " ".into()).is_err());
         assert!(serde_json::from_str::<InviteMessageType>(r#""invite""#).is_err());

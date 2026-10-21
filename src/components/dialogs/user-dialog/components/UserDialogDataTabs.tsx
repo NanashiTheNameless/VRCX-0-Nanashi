@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router';
 import { InstanceHistoryListPanel } from '@/components/dialogs/previous-instances-table/InstanceHistoryListPanel';
 import { DialogErrorState } from '@/components/dialogs/previous-instances-table/PreviousInstancesViewParts';
 import { UserActivityPanel } from '@/components/dialogs/UserActivityPanel';
+import { useHasLicensedAvatars } from '@/components/economy/useHasLicensedAvatars';
 import type { UserProfileEntity } from '@/domain/entities/user';
 import { useDialogStore } from '@/state/dialogStore';
 import {
@@ -389,6 +390,14 @@ export function UserDialogAvatarsTab({
         currentUserId: string | null;
     }) {
     const { t } = useTranslation();
+    const isCurrentUser = profile.id === currentUserId;
+    const hasLicensedAvatars = useHasLicensedAvatars(isCurrentUser);
+    const releaseStatusOptions = userDialogAvatarReleaseStatusOptions.filter(
+        (option) =>
+            option.value !== 'licensed' ||
+            hasLicensedAvatars ||
+            avatarReleaseStatus === 'licensed'
+    );
 
     return (
         <EntityDialogTabContent value="avatars" className="flex flex-col gap-2">
@@ -403,7 +412,7 @@ export function UserDialogAvatarsTab({
                 search={search}
                 setSearch={setSearch}
             >
-                {profile.id === currentUserId ? (
+                {isCurrentUser ? (
                     <>
                         <span className="text-muted-foreground text-sm">
                             {t('dialog.user.avatars.sort_by')}
@@ -452,28 +461,24 @@ export function UserDialogAvatarsTab({
                                 }
                             }}
                             disabled={remoteStatus.avatars === 'running'}
-                            items={userDialogAvatarReleaseStatusOptions.map(
-                                (option) => ({
-                                    value: option.value,
-                                    label: t(option.name)
-                                })
-                            )}
+                            items={releaseStatusOptions.map((option) => ({
+                                value: option.value,
+                                label: t(option.name)
+                            }))}
                         >
                             <SelectTrigger size="sm" className="w-32">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>
-                                    {userDialogAvatarReleaseStatusOptions.map(
-                                        (option) => (
-                                            <SelectItem
-                                                key={option.value}
-                                                value={option.value}
-                                            >
-                                                {t(option.name)}
-                                            </SelectItem>
-                                        )
-                                    )}
+                                    {releaseStatusOptions.map((option) => (
+                                        <SelectItem
+                                            key={option.value}
+                                            value={option.value}
+                                        >
+                                            {t(option.name)}
+                                        </SelectItem>
+                                    ))}
                                 </SelectGroup>
                             </SelectContent>
                         </Select>

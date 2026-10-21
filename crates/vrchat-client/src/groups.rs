@@ -14,7 +14,7 @@ mod request;
 pub use params::GroupMemberSort;
 pub use request::{
     GroupMemberPatch, GroupMemberVisibility, GroupPostMutation, GroupPostVisibility,
-    GroupProfileJoinState, GroupProfileUpdate,
+    GroupProfileJoinState, GroupProfileUpdate, GroupRoleMutation,
 };
 
 fn group_path(group_id: &str, suffix: &str) -> String {
@@ -54,6 +54,26 @@ pub fn user_groups_get_input(
         get_input(
             endpoint,
             format!("users/{}/groups", encode_path_segment(&user_id)),
+            HashMap::new(),
+        ),
+    ))
+}
+
+pub fn user_groups_by_membership_get_input(
+    endpoint: String,
+    user_id: String,
+    membership_status: &str,
+) -> Result<(String, HttpApiRequestInput), HttpApiError> {
+    let user_id = require_text(user_id, "VrchatGroupMembershipListGet requires userId.")?;
+    Ok((
+        user_id.clone(),
+        get_input(
+            endpoint,
+            format!(
+                "users/{}/groups/{}",
+                encode_path_segment(&user_id),
+                membership_status
+            ),
             HashMap::new(),
         ),
     ))
@@ -580,6 +600,76 @@ pub fn unblock_input(
     })
 }
 
+pub fn role_create_input(
+    group_id: String,
+    role: GroupRoleMutation,
+) -> Result<(String, HttpApiRequestInput), HttpApiError> {
+    let role = role.validated(true)?;
+    simple_group_action_input(
+        VRCHAT_API_DEFAULT_ENDPOINT.into(),
+        group_id,
+        "VrchatGroupRoleCreate requires groupId.",
+        "POST",
+        "roles",
+        Some(serde_json::to_value(role).map_err(|error| HttpApiError::Custom(error.to_string()))?),
+    )
+}
+
+pub fn role_update_input(
+    group_id: String,
+    role_id: String,
+    role: GroupRoleMutation,
+) -> Result<(String, String, HttpApiRequestInput), HttpApiError> {
+    let role = role.validated(false)?;
+    let suffix_role_id = role_id.clone();
+    group_user_action_input(GroupUserActionInput {
+        endpoint: VRCHAT_API_DEFAULT_ENDPOINT.into(),
+        group_id,
+        user_id: role_id,
+        group_message: "VrchatGroupRoleUpdate requires groupId.",
+        user_message: "VrchatGroupRoleUpdate requires roleId.",
+        method: "PUT",
+        suffix: format!("roles/{}", encode_path_segment(&suffix_role_id)),
+        body: Some(
+            serde_json::to_value(role).map_err(|error| HttpApiError::Custom(error.to_string()))?,
+        ),
+    })
+}
+
+pub fn role_delete_input(
+    group_id: String,
+    role_id: String,
+) -> Result<(String, String, HttpApiRequestInput), HttpApiError> {
+    let suffix_role_id = role_id.clone();
+    group_user_action_input(GroupUserActionInput {
+        endpoint: VRCHAT_API_DEFAULT_ENDPOINT.into(),
+        group_id,
+        user_id: role_id,
+        group_message: "VrchatGroupRoleDelete requires groupId.",
+        user_message: "VrchatGroupRoleDelete requires roleId.",
+        method: "DELETE",
+        suffix: format!("roles/{}", encode_path_segment(&suffix_role_id)),
+        body: None,
+    })
+}
+
+pub fn invite_decline_input(
+    group_id: String,
+    user_id: String,
+) -> Result<(String, String, HttpApiRequestInput), HttpApiError> {
+    let suffix_user_id = user_id.clone();
+    group_user_action_input(GroupUserActionInput {
+        endpoint: VRCHAT_API_DEFAULT_ENDPOINT.into(),
+        group_id,
+        user_id,
+        group_message: "VrchatGroupInviteDecline requires groupId.",
+        user_message: "VrchatGroupInviteDecline requires userId.",
+        method: "DELETE",
+        suffix: format!("members/{}", encode_path_segment(&suffix_user_id)),
+        body: None,
+    })
+}
+
 pub fn join_request_respond_input(
     group_id: String,
     user_id: String,
@@ -880,6 +970,75 @@ mod tests {
             request.body.as_json(),
             Some(&serde_json::json!({ "visibility": "friends" }))
         );
+    }
+
+    #[test]
+    fn role_mutations_send_only_the_changed_fields() {
+        let (_, create) = role_create_input(
+            "grp_1".into(),
+            GroupRoleMutation {
+                name: Some(" Staff ".into()),
+                permissions: Some(vec!["group-members-manage".into()]),
+                ..GroupRoleMutation::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(create.method.as_deref(), Some("POST"));
+        assert_eq!(create.path.as_deref(), Some("groups/grp%5F1/roles"));
+        assert_eq!(
+            create.body.as_json(),
+            Some(&serde_json::json!({
+                "name": "Staff",
+                "permissions": ["group-members-manage"],
+            }))
+        );
+        assert!(role_create_input("grp_1".into(), GroupRoleMutation::default()).is_err());
+
+        let (_, role_id, reorder) = role_update_input(
+            "grp_1".into(),
+            "grol_1".into(),
+            GroupRoleMutation {
+                order: Some(3),
+                ..GroupRoleMutation::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(role_id, "grol_1");
+        assert_eq!(reorder.method.as_deref(), Some("PUT"));
+        assert_eq!(
+            reorder.path.as_deref(),
+            Some("groups/grp%5F1/roles/grol%5F1")
+        );
+        assert_eq!(
+            reorder.body.as_json(),
+            Some(&serde_json::json!({ "order": 3 }))
+        );
+
+        let (_, _, delete) = role_delete_input("grp_1".into(), "grol_1".into()).unwrap();
+        assert_eq!(delete.method.as_deref(), Some("DELETE"));
+        assert_eq!(
+            delete.path.as_deref(),
+            Some("groups/grp%5F1/roles/grol%5F1")
+        );
+    }
+
+    #[test]
+    fn membership_list_and_invite_decline_target_the_current_user() {
+        let (_, invited) =
+            user_groups_by_membership_get_input(endpoint(), "usr me".into(), "invited").unwrap();
+        assert_eq!(invited.method.as_deref(), Some("GET"));
+        assert_eq!(
+            invited.path.as_deref(),
+            Some("users/usr%20me/groups/invited")
+        );
+
+        let (_, _, decline) = invite_decline_input("grp 1".into(), "usr me".into()).unwrap();
+        assert_eq!(decline.method.as_deref(), Some("DELETE"));
+        assert_eq!(
+            decline.path.as_deref(),
+            Some("groups/grp%201/members/usr%20me")
+        );
+        assert!(invite_decline_input("grp_1".into(), " ".into()).is_err());
     }
 
     #[test]

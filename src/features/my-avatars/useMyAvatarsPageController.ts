@@ -13,7 +13,7 @@ import { useMyAvatarsViewData } from './useMyAvatarsViewData';
 
 export function useMyAvatarsPageController() {
     const filters = useMyAvatarsFilters();
-    const rowsState = useMyAvatarsRows();
+    const rowsState = useMyAvatarsRows(filters.source);
     const dialogs = useMyAvatarsDialogState();
     const viewData = useMyAvatarsViewData({
         avatars: rowsState.avatars,

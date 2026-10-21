@@ -13,8 +13,9 @@ use vrcx_0_application::social::{PrintFavoriteBulkResult, PrintFavoriteState};
 use vrcx_0_application_core::vrchat_api::VrchatApiResponse;
 
 use super::types::{
-    VrchatMediaAvatarGalleryImageUploadInput, VrchatMediaEmojiUploadInput, VrchatMediaFileIdInput,
-    VrchatMediaFilesInput, VrchatMediaImageUploadInput, VrchatMediaInventoryItemInput,
+    VrchatMediaAvatarGalleryImageUploadInput, VrchatMediaAvatarGalleryOrderInput,
+    VrchatMediaEmojiUploadInput, VrchatMediaFileIdInput, VrchatMediaFilesInput,
+    VrchatMediaImageUploadInput, VrchatMediaInventoryItemInput,
     VrchatMediaInventoryItemUpdateInput, VrchatMediaInventoryItemsInput,
     VrchatMediaInventoryTemplateInput, VrchatMediaLegacyImageUploadInput, VrchatMediaPrintIdInput,
     VrchatMediaPrintUploadInput, VrchatMediaPrintsInput, VrchatMediaProfileDecorationEquipInput,
@@ -96,6 +97,20 @@ pub async fn app__vrchat_media_avatar_gallery_image_upload(
         .runtime_host()
         .vrchat_remote()
         .upload_avatar_gallery_image(input.image_data, input.avatar_id)
+        .await
+        .map_err(AppError::from)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn app__vrchat_media_avatar_gallery_order_set(
+    state: State<'_, AppState>,
+    input: VrchatMediaAvatarGalleryOrderInput,
+) -> Result<VrchatApiResponse, AppError> {
+    state
+        .runtime_host()
+        .vrchat_remote()
+        .set_avatar_gallery_order(input.avatar_id, input.file_ids)
         .await
         .map_err(AppError::from)
 }

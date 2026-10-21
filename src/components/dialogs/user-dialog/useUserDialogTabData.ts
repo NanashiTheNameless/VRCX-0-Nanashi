@@ -16,6 +16,7 @@ import configRepository from '@/repositories/configRepository';
 import groupProfileRepository from '@/repositories/groupProfileRepository';
 import myAvatarRepository from '@/repositories/myAvatarRepository';
 import userProfileRepository from '@/repositories/userProfileRepository';
+import vrchatEconomyRepository from '@/repositories/vrchatEconomyRepository';
 import vrchatFavoriteRepository from '@/repositories/vrchatFavoriteRepository';
 import worldProfileRepository from '@/repositories/worldProfileRepository';
 import { onPreferenceChanged } from '@/shared/events/preferenceEvents';
@@ -49,6 +50,7 @@ const userDialogTabServiceRepositories = Object.freeze({
     groupProfileRepository,
     myAvatarRepository,
     userProfileRepository,
+    vrchatEconomyRepository,
     vrchatFavoriteRepository,
     worldProfileRepository
 });
@@ -183,6 +185,10 @@ export function useUserDialogTabData({
     const profileUserId = typeof profile.id === 'string' ? profile.id : '';
     const effectiveAvatarReleaseStatus =
         profileUserId === currentUserId ? avatarReleaseStatus : 'all';
+    const countAvatarReleaseStatus =
+        effectiveAvatarReleaseStatus === 'licensed'
+            ? 'all'
+            : effectiveAvatarReleaseStatus;
     const loadContextRef = useRef<UserDialogLoadContext>({
         endpoint: currentEndpoint,
         userId: profileUserId,
@@ -375,7 +381,7 @@ export function useUserDialogTabData({
                 userId: profileUserId,
                 endpoint: currentEndpoint,
                 currentUserId: currentUserId || '',
-                effectiveAvatarReleaseStatus,
+                effectiveAvatarReleaseStatus: countAvatarReleaseStatus,
                 includeMutualFriends: countContext.includeMutualFriends,
                 force
             });
@@ -392,7 +398,10 @@ export function useUserDialogTabData({
 
     async function loadTab(
         tab: string,
-        { force = false }: { force?: boolean } = {}
+        {
+            force = false,
+            refetch = false
+        }: { force?: boolean; refetch?: boolean } = {}
     ) {
         if (!isUserDialogDataTab(tab)) {
             return;
@@ -432,6 +441,9 @@ export function useUserDialogTabData({
                     previousAvatarSwapTime,
                     worldSort,
                     worldOrder,
+                    licensedAvatars:
+                        effectiveAvatarReleaseStatus === 'licensed',
+                    refetch,
                     repositories: userDialogTabServiceRepositories
                 });
 
@@ -538,7 +550,7 @@ export function useUserDialogTabData({
             ...current,
             ...emptyDataPatchForTab(tab)
         }));
-        await loadTab(tab, { force: true });
+        await loadTab(tab, { force: true, refetch: true });
     }
 
     const loadActiveTab = useEffectEvent(() => {
@@ -547,7 +559,10 @@ export function useUserDialogTabData({
         if (shouldForceReload) {
             handledReloadTokenRef.current = reloadToken;
         }
-        loadTab(activeTab, { force: shouldForceReload });
+        loadTab(activeTab, {
+            force: shouldForceReload,
+            refetch: shouldForceReload
+        });
     });
 
     useEffect(() => {

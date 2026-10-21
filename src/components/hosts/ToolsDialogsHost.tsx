@@ -65,6 +65,11 @@ const ModerationReportsDialog = lazy(() =>
         default: module.ModerationReportsDialog
     }))
 );
+const PurchaseHistoryDialog = lazy(() =>
+    import('./tools-dialogs/PurchaseHistoryDialog').then((module) => ({
+        default: module.PurchaseHistoryDialog
+    }))
+);
 const LlmEndpointsDialog = lazy(() =>
     import('./tools-dialogs/LlmEndpointsDialog').then((module) => ({
         default: module.LlmEndpointsDialog
@@ -117,6 +122,9 @@ export function ToolsDialogsHost() {
     );
     const moderationReportsOpen = useRuntimeStore(
         (state) => state.systemHosts.moderationReportsOpen
+    );
+    const purchaseHistoryOpen = useRuntimeStore(
+        (state) => state.systemHosts.purchaseHistoryOpen
     );
     const llmEndpointsOpen = useRuntimeStore(
         (state) => state.systemHosts.llmEndpointsOpen
@@ -220,6 +228,14 @@ export function ToolsDialogsHost() {
                     open={moderationReportsOpen}
                     onOpenChange={(open) =>
                         setSystemHostOpen('moderationReportsOpen', open)
+                    }
+                />
+            </MountOnFirstOpen>
+            <MountOnFirstOpen open={purchaseHistoryOpen}>
+                <PurchaseHistoryDialog
+                    open={purchaseHistoryOpen}
+                    onOpenChange={(open) =>
+                        setSystemHostOpen('purchaseHistoryOpen', open)
                     }
                 />
             </MountOnFirstOpen>

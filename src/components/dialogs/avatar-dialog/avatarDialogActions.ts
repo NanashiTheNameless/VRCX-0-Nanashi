@@ -14,7 +14,7 @@ import type {
 } from './avatarDialogTypes';
 import {
     createAvatarCacheActions,
-    createAvatarGalleryUploadActions,
+    createAvatarGalleryActions,
     createAvatarImageUploadActions
 } from './avatarMediaActions';
 import { createAvatarModerationActions } from './avatarModerationActions';
@@ -391,18 +391,24 @@ export function createAvatarDialogActions({
             setAvatarSideData,
             t
         });
-    const { beginAvatarGalleryUpload, onFileChangeAvatarGallery } =
-        createAvatarGalleryUploadActions({
-            actionStatusRef,
-            activeAvatarTargetRef,
-            avatar,
-            canManageAvatar,
-            currentEndpoint,
-            galleryUploadInputRef,
-            setActionStatus,
-            setAvatarSideData,
-            t
-        });
+    const {
+        beginAvatarGalleryUpload,
+        deleteAvatarGalleryImage,
+        moveAvatarGalleryImage,
+        onFileChangeAvatarGallery
+    } = createAvatarGalleryActions({
+        actionStatusRef,
+        activeAvatarTargetRef,
+        avatar,
+        avatarSideData,
+        canManageAvatar,
+        confirm,
+        currentEndpoint,
+        galleryUploadInputRef,
+        setActionStatus,
+        setAvatarSideData,
+        t
+    });
     const { setAvatarBlock, updateAvatarImposter } =
         createAvatarModerationActions({
             actionStatusRef,
@@ -441,8 +447,10 @@ export function createAvatarDialogActions({
         confirmAvatarImageUpload,
         deleteAvatar,
         deleteAvatarCache,
+        deleteAvatarGalleryImage,
         editAvatarDetails,
         editMemo,
+        moveAvatarGalleryImage,
         onFileChangeAvatarGallery,
         onFileChangeAvatarImage,
         openAvatarCacheFolder,

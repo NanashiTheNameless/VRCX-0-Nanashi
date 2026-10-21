@@ -49,14 +49,46 @@ describe('worldDialogInstanceRows', () => {
         });
 
         expect(result.displayInstanceRows).toHaveLength(2);
-        expect(result.displayInstanceRows[1]).toMatchObject({
+        expect(result.displayInstanceRows[0]).toMatchObject({
             id: 'friends-room~friends(usr_owner)~region(jp)',
             location: 'wrld_test:friends-room~friends(usr_owner)~region(jp)',
             creatorUserId: 'usr_owner'
         });
         expect(
-            result.displayInstanceRows[1].users.map((user) => user.id)
+            result.displayInstanceRows[0].users.map((user) => user.id)
         ).toEqual(['usr_friend', 'usr_roommate']);
+    });
+
+    it('lists the current instance first, then instances with more friends', () => {
+        const friendIn = (id: string, location: string) => ({
+            id,
+            displayName: id,
+            $presence: onlinePresence(location)
+        });
+        const result = buildWorldDialogDisplayInstanceRows({
+            creatorGroupsById: {},
+            currentInstanceDetails: {},
+            currentLocation: 'wrld_test:current',
+            friendsById: {
+                usr_a: friendIn('usr_a', 'wrld_test:two'),
+                usr_b: friendIn('usr_b', 'wrld_test:two'),
+                usr_c: friendIn('usr_c', 'wrld_test:one')
+            },
+            instanceRows: [
+                { id: 'empty', location: 'wrld_test:empty', users: [] },
+                { id: 'one', location: 'wrld_test:one', users: [] },
+                { id: 'current', location: 'wrld_test:current', users: [] },
+                { id: 'quiet', location: 'wrld_test:quiet', users: [] },
+                { id: 'two', location: 'wrld_test:two', users: [] }
+            ],
+            isInstanceLocation: false,
+            normalizedWorldId: 'wrld_test',
+            world: { id: 'wrld_test', capacity: 40 }
+        });
+
+        expect(
+            result.displayInstanceRows.map((instance) => instance.id)
+        ).toEqual(['current', 'two', 'one', 'empty', 'quiet']);
     });
 
     it('does not mark the opened instance as current without a local location', () => {

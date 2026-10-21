@@ -26,6 +26,7 @@ open_string_enum! {
         ModerationContentRestriction => "moderation.contentrestriction",
         ModerationNotice => "moderation.notice",
         ModerationReportClosed => "moderation.report.closed",
+        ModerationSanction => "moderation.sanction",
         ModerationWarningGroup => "moderation.warning.group",
         PromoRedeem => "promo.redeem",
         RequestInvite => "requestInvite",

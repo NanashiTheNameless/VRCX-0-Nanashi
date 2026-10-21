@@ -35,6 +35,11 @@ fn user_reads_trim_and_encode_ids() {
                 .1,
             "users/usr%2F%E9%9B%AA/groups/represented",
         ),
+        (
+            "account standing",
+            account_standing_get_input("endpoint".into()),
+            "auth/user/accountStanding",
+        ),
     ];
 
     for (name, request, expected_path) in cases {

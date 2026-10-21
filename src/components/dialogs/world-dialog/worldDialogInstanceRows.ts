@@ -325,7 +325,7 @@ export function buildWorldDialogDisplayInstanceRows({
     )
         .sort()
         .join('|');
-    const displayInstanceRows = candidateInstanceRows.map((instance) => {
+    const unsortedInstanceRows = candidateInstanceRows.map((instance) => {
         const location = resolveLaunchLocation(world, instance);
         const friendsInInstance = location
             ? friendLocations
@@ -379,6 +379,25 @@ export function buildWorldDialogDisplayInstanceRows({
               }
             : instanceWithFriends;
     });
+
+    const friendCount = (instance: WorldDialogInstanceRow) =>
+        instance.users.filter((user) =>
+            Boolean(friendsById[firstText(user.id, user.userId)])
+        ).length;
+    const displayInstanceRows = unsortedInstanceRows
+        .map((instance, index) => ({
+            instance,
+            index,
+            friends: friendCount(instance)
+        }))
+        .sort(
+            (left, right) =>
+                Number(Boolean(right.instance.isCurrentInstance)) -
+                    Number(Boolean(left.instance.isCurrentInstance)) ||
+                right.friends - left.friends ||
+                left.index - right.index
+        )
+        .map(({ instance }) => instance);
 
     return { creatorGroupKey, displayInstanceRows };
 }

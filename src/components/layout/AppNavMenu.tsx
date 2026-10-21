@@ -8,11 +8,16 @@ import {
     type ShortcutHintItem
 } from '@/components/keyboard/ShortcutHintPanel';
 import type { Dashboard } from '@/repositories/dashboardRepository';
+import { startInventoryBundleWatch } from '@/services/inventoryBundleService';
 import { setNavbarCollapsedPreference } from '@/services/preferencesService';
 import { toast } from '@/services/toastService';
 import { triggerToolByKey } from '@/services/toolActionService';
 import { DASHBOARD_NAV_KEY_PREFIX } from '@/shared/constants/dashboard';
 import { useDashboardStore } from '@/state/dashboardStore';
+import {
+    hasUnseenInventoryBundles,
+    useInventoryBundleStore
+} from '@/state/inventoryBundleStore';
 import { useModalStore } from '@/state/modalStore';
 import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
@@ -189,9 +194,13 @@ function useAppNavNotifications({
     const loadVrcNotifications = useVrcNotificationStore(
         (state) => state.refreshForCurrentUser
     );
+    const hasUnseenBundles = useInventoryBundleStore(hasUnseenInventoryBundles);
     const notifiedKeys = new Set(notifiedMenus);
     if (vrcUnseenNotificationCount > 0) {
         notifiedKeys.add('notification');
+    }
+    if (hasUnseenBundles) {
+        notifiedKeys.add('inventory');
     }
 
     useEffect(() => {
@@ -200,6 +209,13 @@ function useAppNavNotifications({
         }
         loadVrcNotifications().catch(() => {});
     }, [currentUserId, loadVrcNotifications, sessionPhase]);
+
+    useEffect(() => {
+        if (sessionPhase !== 'ready' || !currentUserId) {
+            return undefined;
+        }
+        return startInventoryBundleWatch(currentUserId);
+    }, [currentUserId, sessionPhase]);
 
     useEffect(() => {
         if (!activeIndex) {

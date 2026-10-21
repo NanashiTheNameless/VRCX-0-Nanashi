@@ -23,11 +23,12 @@ import type {
 const mocks = vi.hoisted(() => ({
     getFollowingGroupCalendars: vi.fn(),
     getGroupCalendar: vi.fn(),
-    getAllGroupPosts: vi.fn()
+    getAllGroupPosts: vi.fn(),
+    navigate: vi.fn()
 }));
 
 vi.mock('react-router', () => ({
-    useNavigate: () => vi.fn()
+    useNavigate: () => mocks.navigate
 }));
 
 vi.mock('@/repositories/vrchatToolsRepository', () => ({
@@ -80,6 +81,7 @@ vi.mock('./GroupDialogHeaderSection', () => ({
         headerCommands: {
             onEditProfile: () => void;
             onEditProfileMedia: () => void;
+            onOpenModeration: () => void;
         };
         headerModel: { canEditProfile: boolean };
     }) =>
@@ -93,6 +95,9 @@ vi.mock('./GroupDialogHeaderSection', () => ({
                     onClick={headerCommands.onEditProfileMedia}
                 >
                     Edit banner and icon
+                </button>
+                <button type="button" onClick={headerCommands.onOpenModeration}>
+                    Open moderation
                 </button>
             </div>
         ) : null
@@ -302,6 +307,24 @@ describe('GroupDialogTabbedView profile editing', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Edit details' }));
 
         expect(screen.getByText('Group details editor')).not.toBeNull();
+    });
+
+    it('opens group moderation from the dialog', () => {
+        render(
+            <GroupDialogTabbedView
+                groupControls={groupControls}
+                groupResource={{ ...groupResource, group: editableGroup }}
+                groupView={groupView}
+            />
+        );
+
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Open moderation' })
+        );
+
+        expect(mocks.navigate).toHaveBeenCalledWith(
+            '/tools/group-moderation/grp_test'
+        );
     });
 
     it('does not offer profile editing to moderators without group data permission', () => {

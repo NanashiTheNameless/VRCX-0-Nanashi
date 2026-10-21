@@ -13,6 +13,7 @@ import {
     DATA_TABLE_NUMERIC_HEADER_CLASS_NAME,
     DATA_TABLE_PRIMARY_CELL_CLASS_NAME
 } from '@/components/data-table/DataTableView';
+import { LanguageCodeBadge } from '@/components/language/LanguageCodeBadge';
 import { BioLinkFavicon } from '@/components/media/BioLinkFavicon';
 import { FadeInImage } from '@/components/media/FadeInImage';
 import { UserStatusDot } from '@/components/UserStatusDot';
@@ -317,23 +318,11 @@ export function useFriendListColumns({
                                     return null;
                                 }
                                 return (
-                                    <Tooltip
+                                    <LanguageCodeBadge
                                         key={`${key}:${entry?.value || ''}`}
-                                    >
-                                        <TooltipTrigger
-                                            render={
-                                                <span
-                                                    className="border-border/70 bg-muted/70 text-muted-foreground inline-flex h-5 min-w-8 items-center justify-center rounded border px-1 font-mono text-[10px] leading-none font-semibold"
-                                                    aria-label={tooltipLabel}
-                                                >
-                                                    {code}
-                                                </span>
-                                            }
-                                        />
-                                        <TooltipContent side="top">
-                                            {tooltipLabel}
-                                        </TooltipContent>
-                                    </Tooltip>
+                                        code={code}
+                                        tooltip={tooltipLabel}
+                                    />
                                 );
                             })}
                         </div>

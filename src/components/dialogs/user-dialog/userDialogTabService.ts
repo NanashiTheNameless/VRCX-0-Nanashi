@@ -50,6 +50,12 @@ export type UserDialogRepositories = {
             previousAvatarSwapTime?: number;
         }): Promise<unknown[]>;
     };
+    vrchatEconomyRepository: {
+        getLicensedAvatars(input: {
+            userId: string;
+            force?: boolean;
+        }): Promise<unknown[]>;
+    };
     groupProfileRepository: {
         getUserGroups(input: {
             userId?: string;
@@ -174,6 +180,8 @@ export async function loadUserDialogTabData({
     previousAvatarSwapTime = 0,
     worldSort,
     worldOrder,
+    licensedAvatars = false,
+    refetch = false,
     repositories
 }: {
     tab: string;
@@ -184,6 +192,8 @@ export async function loadUserDialogTabData({
     previousAvatarSwapTime?: number;
     worldSort?: UserDialogWorldSort;
     worldOrder?: UserDialogWorldOrder;
+    licensedAvatars?: boolean;
+    refetch?: boolean;
     repositories: UserDialogRepositories;
 }): Promise<{
     rows: EntityRecord[];
@@ -228,6 +238,14 @@ export async function loadUserDialogTabData({
     }
 
     if (tab === 'avatars') {
+        if (userId === currentUserId && licensedAvatars) {
+            const rows =
+                await repositories.vrchatEconomyRepository.getLicensedAvatars({
+                    userId,
+                    force: refetch
+                });
+            return { rows: recordRows(rows), favoriteWorldGroups: [] };
+        }
         if (userId === currentUserId) {
             const rows = await repositories.myAvatarRepository.getMyAvatars({
                 endpoint,

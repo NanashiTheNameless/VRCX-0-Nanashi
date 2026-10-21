@@ -98,6 +98,11 @@ export function AvatarDialogContent({
                     },
                     onUploadGallery: () =>
                         avatarActions.beginAvatarGalleryUpload(),
+                    onMoveGalleryImage: (index: number, direction: -1 | 1) =>
+                        avatarActions.moveAvatarGalleryImage(index, direction),
+                    onDeleteGalleryImage: (index: number) => {
+                        avatarActions.deleteAvatarGalleryImage(index);
+                    },
                     onEditDetails: () => {
                         avatarActions.editAvatarDetails();
                     },

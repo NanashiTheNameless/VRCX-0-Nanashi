@@ -1,10 +1,11 @@
-import { ImageIcon, UploadIcon } from 'lucide-react';
+import { ImageIcon, Trash2Icon, UploadIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { FadeInImage } from '@/components/media/FadeInImage';
 import type { LoadStatus } from '@/domain/shared/types';
 import { Button } from '@/ui/shadcn/button';
 import { Spinner } from '@/ui/shadcn/spinner';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import {
     EntityDialogTabContent,
@@ -13,8 +14,7 @@ import {
 } from '../../EntityDialogScaffold';
 import type {
     AvatarActionStatus,
-    AvatarGalleryEntry,
-    AvatarListing
+    AvatarGalleryEntry
 } from '../avatarDialogTypes';
 
 export function AvatarDialogGalleryTab({
@@ -24,7 +24,9 @@ export function AvatarDialogGalleryTab({
     media,
     onOpenGalleryPreview,
     onGalleryIndexChange,
-    onUploadGallery
+    onUploadGallery,
+    onMoveGalleryImage,
+    onDeleteGalleryImage
 }: {
     canManageAvatar: boolean;
     actionStatus: AvatarActionStatus;
@@ -33,15 +35,16 @@ export function AvatarDialogGalleryTab({
         galleryImages: AvatarGalleryEntry[];
         currentGalleryImage: string;
         galleryIndex: number;
-        listings: AvatarListing[];
     };
     onOpenGalleryPreview(): void;
     onGalleryIndexChange(updater: (currentIndex: number) => number): void;
     onUploadGallery(): void;
+    onMoveGalleryImage(direction: -1 | 1): void;
+    onDeleteGalleryImage(): void;
 }) {
     const { t } = useTranslation();
-    const { galleryImages, currentGalleryImage, galleryIndex, listings } =
-        media;
+    const { galleryImages, currentGalleryImage, galleryIndex } = media;
+    const galleryEditDisabled = actionStatus !== 'idle';
 
     return (
         <EntityDialogTabContent value="gallery" forceMount>
@@ -71,25 +74,91 @@ export function AvatarDialogGalleryTab({
                             </div>
                         ) : galleryImages.length ? (
                             <div className="flex flex-col gap-2">
-                                <Button
-                                    type="button"
-                                    disabled={!currentGalleryImage}
-                                    variant="outline"
-                                    className="bg-muted/20 h-52 w-full overflow-hidden p-0"
-                                    onClick={onOpenGalleryPreview}
-                                >
-                                    {currentGalleryImage ? (
-                                        <FadeInImage
-                                            src={currentGalleryImage}
-                                            alt=""
-                                            className="size-full object-contain"
-                                        />
-                                    ) : (
-                                        <span className="text-muted-foreground flex size-full items-center justify-center [&>svg]:size-8">
-                                            <ImageIcon />
-                                        </span>
-                                    )}
-                                </Button>
+                                <div className="relative">
+                                    <Button
+                                        type="button"
+                                        disabled={!currentGalleryImage}
+                                        variant="outline"
+                                        className="bg-muted/20 h-52 w-full overflow-hidden p-0"
+                                        onClick={onOpenGalleryPreview}
+                                    >
+                                        {currentGalleryImage ? (
+                                            <FadeInImage
+                                                src={currentGalleryImage}
+                                                alt=""
+                                                className="size-full object-contain"
+                                            />
+                                        ) : (
+                                            <span className="text-muted-foreground flex size-full items-center justify-center [&>svg]:size-8">
+                                                <ImageIcon />
+                                            </span>
+                                        )}
+                                    </Button>
+                                    {canManageAvatar ? (
+                                        <div className="bg-background/85 absolute top-2 right-2 flex items-center gap-1 rounded-md border p-1 shadow-sm">
+                                            <Button
+                                                type="button"
+                                                size="xs"
+                                                variant="ghost"
+                                                disabled={
+                                                    galleryEditDisabled ||
+                                                    galleryIndex === 0
+                                                }
+                                                onClick={() =>
+                                                    onMoveGalleryImage(-1)
+                                                }
+                                            >
+                                                {t(
+                                                    'dialog.avatar.info.gallery_move_earlier'
+                                                )}
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                size="xs"
+                                                variant="ghost"
+                                                disabled={
+                                                    galleryEditDisabled ||
+                                                    galleryIndex >=
+                                                        galleryImages.length - 1
+                                                }
+                                                onClick={() =>
+                                                    onMoveGalleryImage(1)
+                                                }
+                                            >
+                                                {t(
+                                                    'dialog.avatar.info.gallery_move_later'
+                                                )}
+                                            </Button>
+                                            <Tooltip>
+                                                <TooltipTrigger
+                                                    render={
+                                                        <Button
+                                                            type="button"
+                                                            aria-label={t(
+                                                                'dialog.avatar.info.gallery_delete_image'
+                                                            )}
+                                                            size="icon-xs"
+                                                            variant="ghost"
+                                                            disabled={
+                                                                galleryEditDisabled
+                                                            }
+                                                            onClick={
+                                                                onDeleteGalleryImage
+                                                            }
+                                                        >
+                                                            <Trash2Icon />
+                                                        </Button>
+                                                    }
+                                                />
+                                                <TooltipContent>
+                                                    {t(
+                                                        'dialog.avatar.info.gallery_delete_image'
+                                                    )}
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </div>
+                                    ) : null}
+                                </div>
                                 <div className="text-muted-foreground flex items-center justify-between gap-2 text-xs">
                                     <Button
                                         type="button"
@@ -136,35 +205,6 @@ export function AvatarDialogGalleryTab({
                         )}
                     </div>
                 </EntityInfoBlock>
-                {listings.length ? (
-                    <EntityInfoBlock
-                        label={t('dialog.avatar.info.listings')}
-                        full
-                    >
-                        <div className="flex flex-col gap-2">
-                            {listings.map((listing, index) => (
-                                <div
-                                    key={`${listing?.id || listing?.platform || index}`}
-                                    className="box-border flex flex-col p-1.5 text-sm"
-                                >
-                                    <div className="font-medium">
-                                        {listing?.displayName ||
-                                            listing?.name ||
-                                            listing?.platform ||
-                                            listing?.id ||
-                                            t('dialog.avatar.info.listings')}
-                                    </div>
-                                    <div className="text-muted-foreground text-xs">
-                                        {listing?.description ||
-                                            listing?.createdAt ||
-                                            listing?.id ||
-                                            ''}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </EntityInfoBlock>
-                ) : null}
             </EntityInfoGrid>
         </EntityDialogTabContent>
     );

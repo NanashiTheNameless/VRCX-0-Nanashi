@@ -89,8 +89,11 @@ export function isUserDialogAvatarSort(
 export const userDialogAvatarReleaseStatusOptions = [
     { name: 'dialog.user.avatars.all', value: 'all' },
     { name: 'dialog.user.avatars.public', value: 'public' },
-    { name: 'dialog.user.avatars.private', value: 'private' }
-] as const satisfies readonly UserDialogSelectOption<ReleaseStatusFilter>[];
+    { name: 'dialog.user.avatars.private', value: 'private' },
+    { name: 'dialog.user.avatars.licensed', value: 'licensed' }
+] as const satisfies readonly UserDialogSelectOption<
+    ReleaseStatusFilter | 'licensed'
+>[];
 
 export type UserDialogAvatarReleaseStatus =
     (typeof userDialogAvatarReleaseStatusOptions)[number]['value'];

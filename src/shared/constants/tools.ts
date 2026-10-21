@@ -27,6 +27,7 @@ export type ToolDialogKey =
     | 'export-avatars-list'
     | 'edit-invite-messages'
     | 'moderation-reports'
+    | 'purchase-history'
     | 'llm-endpoints'
     | 'profile-backup';
 
@@ -461,6 +462,16 @@ const toolDefinitions: ToolDefinition[] = [
         descriptionKey: 'view.tools.other.moderation_reports_description',
         navEligible: true,
         action: { type: 'dialog', dialogKey: 'moderation-reports' }
+    },
+    {
+        key: 'purchase-history',
+        category: 'other',
+        iconKey: 'receipt',
+        navIcon: 'lucide:Receipt',
+        titleKey: 'view.tools.other.purchase_history',
+        descriptionKey: 'view.tools.other.purchase_history_description',
+        navEligible: true,
+        action: { type: 'dialog', dialogKey: 'purchase-history' }
     }
 ];
 

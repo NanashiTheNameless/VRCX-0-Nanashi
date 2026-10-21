@@ -4,7 +4,10 @@ import type { EntityRecord } from '@/domain/entities/shared';
 
 import type { EntityDialogTab } from '../EntityDialogScaffold';
 
-export function getGroupDialogTabs(t: TFunction): EntityDialogTab[] {
+export function getGroupDialogTabs(
+    t: TFunction,
+    hasStore: boolean
+): EntityDialogTab[] {
     return [
         { value: 'overview', label: t('dialog.group.overview.header') },
         { value: 'events', label: t('dialog.group.events.header') },
@@ -15,6 +18,9 @@ export function getGroupDialogTabs(t: TFunction): EntityDialogTab[] {
             value: 'instance-history',
             label: t('dialog.previous_instances.header')
         },
+        ...(hasStore
+            ? [{ value: 'store', label: t('economy.store_header') }]
+            : []),
         { value: 'json', label: t('dialog.group.json.header') }
     ];
 }

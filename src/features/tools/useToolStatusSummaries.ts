@@ -1,5 +1,5 @@
 import type { TFunction } from 'i18next';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -30,6 +30,7 @@ import {
     TOOLS_STATUS_UPDATED_EVENT
 } from '@/shared/constants/tools';
 import { isRecord } from '@/shared/utils/record';
+import { useInventoryBundleStore } from '@/state/inventoryBundleStore';
 import { useProfileBackupStore } from '@/state/profileBackupStore';
 
 type ToolStatusItem = {
@@ -276,6 +277,9 @@ export function useToolStatusSummaries(): Map<string, ToolStatusSummary> {
     const backupOutcomeRevision = useProfileBackupStore(
         (state) => state.status.lastOutcome?.revision ?? -1
     );
+    const unopenedBundleCount = useInventoryBundleStore(
+        (state) => state.bundleIds.length
+    );
     const [statusByToolKey, setStatusByToolKey] = useState(
         () => new Map<string, ToolStatusSummary>()
     );
@@ -299,5 +303,15 @@ export function useToolStatusSummaries(): Map<string, ToolStatusSummary> {
         };
     }, [backupOutcomeRevision, t]);
 
-    return statusByToolKey;
+    return useMemo(() => {
+        if (unopenedBundleCount === 0) {
+            return statusByToolKey;
+        }
+        return new Map(statusByToolKey).set('inventory', {
+            label: t('view.tools.status.unopened_bundles', {
+                count: unopenedBundleCount
+            }),
+            tone: 'active'
+        });
+    }, [statusByToolKey, t, unopenedBundleCount]);
 }

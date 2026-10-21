@@ -217,14 +217,23 @@ function parsedGroupForInstanceLocation(location: string) {
     return parsedLocation.groupId || '';
 }
 
+const NO_INSTANCE_ENTRIES: readonly unknown[] = [];
+
+export function worldInstanceEntries(
+    world: WorldProfileRecord
+): readonly unknown[] {
+    if (Array.isArray(world.slimInstances) && world.slimInstances.length) {
+        return world.slimInstances;
+    }
+    return Array.isArray(world.instances)
+        ? world.instances
+        : NO_INSTANCE_ENTRIES;
+}
+
 export function resolveInstanceRows(
     world: WorldProfileRecord
 ): WorldDialogInstanceRow[] {
-    if (!Array.isArray(world.instances)) {
-        return [];
-    }
-
-    return world.instances
+    return worldInstanceEntries(world)
         .map((entry): WorldDialogInstanceRow => {
             if (Array.isArray(entry)) {
                 const id = String(entry[0] || '').trim();
@@ -322,7 +331,7 @@ export function resolveInstanceRows(
                 return {
                     ...entry,
                     id: String(entry.id || entry.instanceId || '').trim(),
-                    occupants: finiteNumber(entry.occupants),
+                    occupants: finiteNumber(entry.occupants ?? entry.n_users),
                     location: entryLocation,
                     users: normalizeInstanceUsers(
                         entry.users,

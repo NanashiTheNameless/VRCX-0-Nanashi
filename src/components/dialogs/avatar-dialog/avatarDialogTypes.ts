@@ -23,6 +23,7 @@ export type AvatarActionStatus =
     | 'delete'
     | 'image-upload'
     | 'gallery-upload'
+    | 'gallery-edit'
     | 'cache'
     | 'tags'
     | 'imposter'
@@ -117,6 +118,8 @@ export type AvatarControls = {
     onOpenCache(): void;
     onDeleteCache(): void;
     onUploadGallery(): void;
+    onMoveGalleryImage(index: number, direction: -1 | 1): Promise<boolean>;
+    onDeleteGalleryImage(index: number): void;
     onEditDetails(): void;
     onChangeContentTags(): void;
     onChangeImage(): void;
@@ -194,12 +197,14 @@ export type AvatarCacheActionDependencies = Pick<
     | 't'
 >;
 
-export type AvatarGalleryUploadActionDependencies = Pick<
+export type AvatarGalleryActionDependencies = Pick<
     AvatarDialogActionDependencies,
     | 'actionStatusRef'
     | 'activeAvatarTargetRef'
     | 'avatar'
+    | 'avatarSideData'
     | 'canManageAvatar'
+    | 'confirm'
     | 'currentEndpoint'
     | 'galleryUploadInputRef'
     | 'setActionStatus'

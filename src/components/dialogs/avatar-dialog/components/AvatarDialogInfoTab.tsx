@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { PlatformFileAnalysis } from '@/domain/entities/world';
 import { formatDateFilter, timeToText } from '@/lib/dateTime';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
+import type { EconomyListingRecord } from '@/repositories/vrchatEconomyRepository';
 import { Alert, AlertDescription } from '@/ui/shadcn/alert';
 
 import {
@@ -18,6 +19,7 @@ import type {
     AvatarTagGroups,
     AvatarViewRecord
 } from '../avatarDialogTypes';
+import { AvatarDialogListings } from './AvatarDialogListings';
 import { AvatarDialogTagList } from './AvatarDialogTagList';
 
 const EMPTY_VALUE = '\u2014';
@@ -60,6 +62,8 @@ export function AvatarDialogInfoTab({
     fileAnalysis,
     hasImposter,
     imposterVersion,
+    listings,
+    avatarUrl,
     onOpenAuthor,
     onSaveMemo
 }: {
@@ -71,6 +75,8 @@ export function AvatarDialogInfoTab({
     fileAnalysis: PlatformFileAnalysis;
     hasImposter: boolean;
     imposterVersion: string;
+    listings: EconomyListingRecord[];
+    avatarUrl: string;
     onOpenAuthor(): void;
     onSaveMemo(value: string): void | Promise<void>;
 }) {
@@ -94,6 +100,15 @@ export function AvatarDialogInfoTab({
                         </AlertDescription>
                     </Alert>
                 ) : null}
+                <AvatarDialogListings
+                    listings={listings}
+                    productId={
+                        typeof avatar.productId === 'string'
+                            ? avatar.productId
+                            : ''
+                    }
+                    avatarUrl={avatarUrl}
+                />
                 <EntityMemoTextarea
                     label={t('dialog.avatar.info.memo')}
                     value={memo}

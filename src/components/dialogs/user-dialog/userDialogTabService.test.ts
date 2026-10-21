@@ -31,6 +31,9 @@ function repositories(
         myAvatarRepository: {
             getMyAvatars: async () => []
         },
+        vrchatEconomyRepository: {
+            getLicensedAvatars: async () => []
+        },
         groupProfileRepository: {
             getUserGroups: async () => []
         },
@@ -214,6 +217,36 @@ describe('userDialogTabService', () => {
             currentAvatarId: 'avtr_current',
             previousAvatarSwapTime: 1234
         });
+    });
+
+    it('loads current-user licensed avatars when the licensed filter is selected', async () => {
+        let request = null;
+        const fakeRepositories = repositories({
+            myAvatarRepository: {
+                getMyAvatars: async () => [{ id: 'avtr_own' }]
+            },
+            vrchatEconomyRepository: {
+                getLicensedAvatars: async (params) => {
+                    request = params;
+                    return [{ id: 'avtr_bought' }];
+                }
+            }
+        });
+
+        await expect(
+            loadUserDialogTabData({
+                tab: 'avatars',
+                userId: 'usr_self',
+                currentUserId: 'usr_self',
+                licensedAvatars: true,
+                refetch: true,
+                repositories: fakeRepositories
+            })
+        ).resolves.toEqual({
+            rows: [{ id: 'avtr_bought' }],
+            favoriteWorldGroups: []
+        });
+        expect(request).toEqual({ userId: 'usr_self', force: true });
     });
 
     it('loads another user avatars through every enabled search provider', async () => {

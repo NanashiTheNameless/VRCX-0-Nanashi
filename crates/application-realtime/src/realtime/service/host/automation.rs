@@ -349,10 +349,15 @@ impl RealtimeHostRuntime {
             LocalGameContextSnapshot::Unavailable => String::new(),
             LocalGameContextSnapshot::Available { location, .. } => location.trim().to_string(),
         };
+        let current_user_status = self
+            .current_user_snapshot()
+            .map(|user| json_string_field(user.get("status")))
+            .unwrap_or_default();
         InviteLocationFacts {
             local_game_context,
             last_location: current_location.clone(),
             current_user_id: session.user_id.clone(),
+            current_user_status,
             closed_locations,
         }
     }
@@ -496,18 +501,22 @@ fn load_invite_automation_config(
 ) -> Result<InviteAutomationConfig> {
     let mode =
         normalize_invite_automation_mode(&store.get_string("autoAcceptInviteRequests", "Off")?);
-    let groups = store.get_json("autoAcceptInviteGroups", json!([]))?;
-    let selected_groups = groups
+    Ok(InviteAutomationConfig {
+        mode,
+        selected_groups: config_string_list(store, "autoAcceptInviteGroups")?,
+        allowed_statuses: config_string_list(store, "autoAcceptInviteStatuses")?,
+    })
+}
+
+fn config_string_list(store: &dyn crate::RealtimeStore, key: &str) -> Result<Vec<String>> {
+    Ok(store
+        .get_json(key, json!([]))?
         .as_array()
         .into_iter()
         .flatten()
         .map(|value| json_string_field(Some(value)))
         .filter(|value| !value.is_empty())
-        .collect();
-    Ok(InviteAutomationConfig {
-        mode,
-        selected_groups,
-    })
+        .collect())
 }
 
 fn sender_allowlist_from_snapshot(snapshot: &Value, sender_user_id: &str) -> SenderAllowlist {

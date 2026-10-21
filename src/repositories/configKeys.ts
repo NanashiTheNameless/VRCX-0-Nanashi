@@ -224,6 +224,7 @@ export const ConfigKeys = defineConfigKeys({
     autoAcceptInviteRequests: { type: 'string', default: 'Off' },
     autoDeclineFriendRequests: { type: 'bool', default: false },
     autoAcceptInviteGroups: { type: 'string', default: '[]' },
+    autoAcceptInviteStatuses: { type: 'string', default: '[]' },
     presenceAutomationTimeRules: { type: 'string', default: '[]' },
     presenceAutomationContextRules: { type: 'string', default: '[]' },
     presenceAutomationMinStatusWriteIntervalMs: {

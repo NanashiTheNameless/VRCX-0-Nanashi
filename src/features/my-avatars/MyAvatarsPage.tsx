@@ -48,6 +48,8 @@ export function MyAvatarsPage({
             />
             <div className="flex min-h-0 flex-1 flex-col gap-3">
                 <MyAvatarsToolbar
+                    source={filters.source}
+                    onSourceChange={filters.setSource}
                     viewMode={filters.viewMode}
                     activeFilterCount={viewData.activeFilterCount}
                     allTags={viewData.allTags}

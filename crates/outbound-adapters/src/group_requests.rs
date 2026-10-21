@@ -1,18 +1,20 @@
 use vrcx_0_application::social::{
     GroupBuiltRequest, GroupMemberPatch, GroupMemberSort, GroupMemberVisibility, GroupPostMutation,
     GroupPostVisibility, GroupProfileJoinState, GroupProfileUpdate, GroupRemoteRequest,
-    GroupRemoteRequests,
+    GroupRemoteRequests, GroupRoleMutation,
 };
 use vrcx_0_application_core::{vrchat_api::VrchatApiRequest, Result};
 use vrcx_0_core::vrchat_endpoints::VRCHAT_API_DEFAULT_ENDPOINT;
 use vrcx_0_vrchat_client::groups::{
     current_user_group_instances_get_input, delete_input, gallery_get_input, group_block_input,
-    group_get_no_params_input, group_paged_get_input, invite_delete_input, invite_send_input,
-    join_input, join_request_respond_input, join_requests_get_input, leave_input, logs_get_input,
-    member_ban_input, member_kick_input, member_props_set_input, member_role_add_input,
-    member_role_remove_input, member_unban_input, members_get_input, members_search_input,
-    post_create_input, post_delete_input, post_edit_input, profile_get_input, profile_update_input,
-    representation_set_input, request_cancel_input, unblock_input, user_groups_get_input,
+    group_get_no_params_input, group_paged_get_input, invite_decline_input, invite_delete_input,
+    invite_send_input, join_input, join_request_respond_input, join_requests_get_input,
+    leave_input, logs_get_input, member_ban_input, member_kick_input, member_props_set_input,
+    member_role_add_input, member_role_remove_input, member_unban_input, members_get_input,
+    members_search_input, post_create_input, post_delete_input, post_edit_input, profile_get_input,
+    profile_update_input, representation_set_input, request_cancel_input, role_create_input,
+    role_delete_input, role_update_input, unblock_input, user_groups_by_membership_get_input,
+    user_groups_get_input,
 };
 
 pub struct VrchatGroupRemoteRequests;
@@ -31,6 +33,14 @@ impl GroupRemoteRequests for VrchatGroupRemoteRequests {
             GroupRemoteRequest::GetUserGroups(input) => {
                 let (user_id, request) =
                     user_groups_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), input.user_id)?;
+                Ok(built1(user_id, request))
+            }
+            GroupRemoteRequest::GetMembershipList(input) => {
+                let (user_id, request) = user_groups_by_membership_get_input(
+                    VRCHAT_API_DEFAULT_ENDPOINT.into(),
+                    input.user_id,
+                    input.status.as_str(),
+                )?;
                 Ok(built1(user_id, request))
             }
             GroupRemoteRequest::GetPosts(input) => {
@@ -227,6 +237,41 @@ impl GroupRemoteRequests for VrchatGroupRemoteRequests {
                 let (group_id, user_id, request) = unblock_input(input.group_id, input.user_id)?;
                 Ok(built2(group_id, user_id, request))
             }
+            GroupRemoteRequest::GetRoles(input) => {
+                let (group_id, request) = group_get_no_params_input(
+                    input.group_id,
+                    "roles",
+                    "VrchatGroupRolesGet requires groupId.",
+                )?;
+                Ok(built1(group_id, request))
+            }
+            GroupRemoteRequest::GetPermissions(input) => {
+                let (group_id, request) = group_get_no_params_input(
+                    input.group_id,
+                    "permissions",
+                    "VrchatGroupPermissionsGet requires groupId.",
+                )?;
+                Ok(built1(group_id, request))
+            }
+            GroupRemoteRequest::CreateRole(input) => {
+                let (group_id, request) = role_create_input(input.group_id, role(input.params))?;
+                Ok(built1(group_id, request))
+            }
+            GroupRemoteRequest::UpdateRole(input) => {
+                let (group_id, role_id, request) =
+                    role_update_input(input.group_id, input.role_id, role(input.params))?;
+                Ok(built2(group_id, role_id, request))
+            }
+            GroupRemoteRequest::DeleteRole(input) => {
+                let (group_id, role_id, request) =
+                    role_delete_input(input.group_id, input.role_id)?;
+                Ok(built2(group_id, role_id, request))
+            }
+            GroupRemoteRequest::DeclineInvite(input) => {
+                let (group_id, user_id, request) =
+                    invite_decline_input(input.group_id, input.user_id)?;
+                Ok(built2(group_id, user_id, request))
+            }
         }
     }
 }
@@ -272,6 +317,19 @@ fn profile_update(input: GroupProfileUpdate) -> vrcx_0_vrchat_client::groups::Gr
         icon_id: input.icon_id,
         banner_id: input.banner_id,
         allow_group_join_prompt: input.allow_group_join_prompt,
+    }
+}
+
+fn role(input: GroupRoleMutation) -> vrcx_0_vrchat_client::groups::GroupRoleMutation {
+    vrcx_0_vrchat_client::groups::GroupRoleMutation {
+        name: input.name,
+        description: input.description,
+        is_self_assignable: input.is_self_assignable,
+        is_added_on_join: input.is_added_on_join,
+        requires_two_factor: input.requires_two_factor,
+        requires_purchase: input.requires_purchase,
+        permissions: input.permissions,
+        order: input.order,
     }
 }
 

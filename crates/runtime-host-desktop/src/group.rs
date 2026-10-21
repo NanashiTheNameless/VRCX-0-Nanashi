@@ -8,9 +8,11 @@ use vrcx_0_application::social::{
     VrchatGroupGalleryInput, VrchatGroupIdInput, VrchatGroupJoinRequestRespondInput,
     VrchatGroupJoinRequestsInput, VrchatGroupLogsInput, VrchatGroupMemberPropsInput,
     VrchatGroupMemberRoleInput, VrchatGroupMembersInput, VrchatGroupMembersSearchInput,
-    VrchatGroupPagedInput, VrchatGroupPostCreateInput, VrchatGroupPostDeleteInput,
-    VrchatGroupPostEditInput, VrchatGroupProfileInput, VrchatGroupRepresentationInput,
-    VrchatGroupUpdateInput, VrchatGroupUserGroupsInput, VrchatGroupUserInput,
+    VrchatGroupMembershipListInput, VrchatGroupPagedInput, VrchatGroupPostCreateInput,
+    VrchatGroupPostDeleteInput, VrchatGroupPostEditInput, VrchatGroupProfileInput,
+    VrchatGroupRepresentationInput, VrchatGroupRoleCreateInput, VrchatGroupRoleInput,
+    VrchatGroupRoleUpdateInput, VrchatGroupUpdateInput, VrchatGroupUserGroupsInput,
+    VrchatGroupUserInput,
 };
 use vrcx_0_application_core::vrchat_api::VrchatApiResponse;
 use vrcx_0_application_core::{
@@ -280,5 +282,42 @@ impl DesktopGroupRuntime {
 
     pub async fn unblock(&self, input: VrchatGroupUserInput) -> Result<VrchatApiResponse> {
         Ok(application::unblock_group(self.api_deps(), input).await?)
+    }
+
+    pub async fn membership_list(
+        &self,
+        input: VrchatGroupMembershipListInput,
+    ) -> Result<VrchatApiResponse> {
+        Ok(application::get_membership_list(self.api_deps(), input).await?)
+    }
+
+    pub async fn decline_invite(&self, input: VrchatGroupUserInput) -> Result<VrchatApiResponse> {
+        Ok(application::decline_invite(self.api_deps(), input).await?)
+    }
+
+    pub async fn roles(&self, input: VrchatGroupIdInput) -> Result<VrchatApiResponse> {
+        Ok(application::get_roles(self.api_deps(), input).await?)
+    }
+
+    pub async fn permissions(&self, input: VrchatGroupIdInput) -> Result<VrchatApiResponse> {
+        Ok(application::get_permissions(self.api_deps(), input).await?)
+    }
+
+    pub async fn create_role(
+        &self,
+        input: VrchatGroupRoleCreateInput,
+    ) -> Result<VrchatApiResponse> {
+        Ok(application::create_role(self.api_deps(), input).await?)
+    }
+
+    pub async fn update_role(
+        &self,
+        input: VrchatGroupRoleUpdateInput,
+    ) -> Result<VrchatApiResponse> {
+        Ok(application::update_role(self.api_deps(), input).await?)
+    }
+
+    pub async fn delete_role(&self, input: VrchatGroupRoleInput) -> Result<VrchatApiResponse> {
+        Ok(application::delete_role(self.api_deps(), input).await?)
     }
 }

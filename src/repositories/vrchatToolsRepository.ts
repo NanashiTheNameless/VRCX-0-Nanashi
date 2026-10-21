@@ -211,19 +211,22 @@ async function saveUserNote({
 
 async function reportUser({
     userId,
-    reason
+    category,
+    reason,
+    description = ''
 }: {
     userId: string;
+    category: string;
     reason: string;
+    description?: string;
 }) {
     const response = await commands.appVrchatToolsUserReport({
         userId,
-        reason
+        category,
+        reason,
+        description
     });
-    return unwrapVrchatToolsResponse(
-        response,
-        `feedback/${encodeURIComponent(userId)}/user`
-    ).json;
+    return unwrapVrchatToolsResponse(response, 'moderationReports').json;
 }
 
 async function getModerationReports({

@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod avatars;
+pub mod economy;
 pub mod favorites;
 pub mod friends;
 pub mod groups;

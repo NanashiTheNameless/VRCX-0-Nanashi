@@ -327,6 +327,78 @@ describe('InstanceActionBar', () => {
         });
     });
 
+    it('offers event linking only to group managers who may link calendar events', () => {
+        const groupInstance = (permissions: string[]) =>
+            renderActionBar({
+                target: { location: 'wrld_test:12345~group(grp_team)' },
+                instance: {
+                    ownerId: 'grp_team',
+                    group: { myMember: { permissions } }
+                },
+                showLaunch: false,
+                showInvite: false
+            });
+        const linkLabel =
+            'aria-label="component.instance_action_bar.calendar_link.header"';
+
+        expect(
+            groupInstance([
+                'group-instance-manage',
+                'group-instance-calendar-link'
+            ])
+        ).toContain(linkLabel);
+        expect(groupInstance(['group-instance-manage'])).not.toContain(
+            linkLabel
+        );
+        expect(
+            renderActionBar({
+                target: { location: 'wrld_test:12345' },
+                instance: {
+                    ownerId: 'usr_self',
+                    group: { myMember: { permissions: ['*'] } }
+                }
+            })
+        ).not.toContain(linkLabel);
+    });
+
+    it('offers renaming for group managers and VRC+ owners only', () => {
+        const renameLabel =
+            'aria-label="component.instance_action_bar.rename.header"';
+        const render = (instance: Record<string, unknown>) =>
+            renderActionBar({
+                target: { location: 'wrld_test:12345' },
+                instance,
+                showLaunch: false,
+                showInvite: false
+            });
+
+        expect(
+            render({
+                ownerId: 'grp_team',
+                group: { myMember: { permissions: ['group-instance-manage'] } }
+            })
+        ).toContain(renameLabel);
+        expect(render({ ownerId: 'usr_self' })).not.toContain(renameLabel);
+        expect(render({ ownerId: 'usr_other' })).not.toContain(renameLabel);
+    });
+
+    it('shows the linked event marker', () => {
+        const html = renderActionBar({
+            target: { location: 'wrld_test:12345~group(grp_team)' },
+            instance: {
+                ownerId: 'grp_team',
+                displayName: 'Movie night',
+                calendarEntryId: 'gcal_1'
+            },
+            showLaunch: false,
+            showInvite: false
+        });
+
+        expect(html).toContain(
+            'aria-label="component.instance_action_bar.calendar_event"'
+        );
+    });
+
     it('can show instance info while keeping action tooltips disabled', () => {
         render(
             <InstanceActionBar

@@ -113,6 +113,33 @@ pub fn file_delete_input(
     ))
 }
 
+pub fn gallery_file_order_input(
+    endpoint: String,
+    gallery_id: String,
+    file_ids: Vec<String>,
+) -> Result<HttpApiRequestInput, HttpApiError> {
+    let gallery_id = require_text(
+        gallery_id,
+        "VrchatMediaGalleryFileOrder requires galleryId.",
+    )?;
+    let file_ids: Vec<String> = file_ids
+        .into_iter()
+        .map(|file_id| file_id.trim().to_string())
+        .filter(|file_id| !file_id.is_empty())
+        .collect();
+    if file_ids.is_empty() {
+        return Err(HttpApiError::Custom(
+            "VrchatMediaGalleryFileOrder requires fileIds.".into(),
+        ));
+    }
+    Ok(api_input(
+        endpoint,
+        "PUT",
+        "files/order",
+        Some(serde_json::json!({ "ids": file_ids, "galleryId": gallery_id })),
+    ))
+}
+
 pub fn files_get_input(endpoint: String, params: MediaFileListParams) -> HttpApiRequestInput {
     get_input(endpoint, "files", serialize_query(&params))
 }

@@ -1,3 +1,4 @@
+import { refreshInventoryBundles } from '@/services/inventoryBundleService';
 import {
     mergeCurrentUserMediaFields,
     profileMediaFileUrl,
@@ -197,6 +198,7 @@ export function useGalleryInventoryActions({
                         (item) => item.id !== normalizedInventoryId
                     )
                 }));
+                refreshInventoryBundles(currentUserId).catch(() => {});
                 await refreshInventory();
                 toast.add({
                     type: 'success',

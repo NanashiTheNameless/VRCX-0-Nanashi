@@ -13,11 +13,13 @@ import type {
     MyAvatarsGridDensity,
     MyAvatarsPlatformFilter,
     MyAvatarsReleaseStatusFilter,
+    MyAvatarsSource,
     MyAvatarsViewMode
 } from './myAvatarsTypes';
 
 export function useMyAvatarsFilters() {
     const [viewMode, setViewMode] = useState<MyAvatarsViewMode>('grid');
+    const [source, setSource] = useState<MyAvatarsSource>('own');
     const [searchQuery, setSearchQuery] = useState('');
     const deferredSearchQuery = useDeferredValue(searchQuery);
     const [releaseStatusFilter, setReleaseStatusFilter] =
@@ -94,6 +96,8 @@ export function useMyAvatarsFilters() {
     }
 
     return {
+        source,
+        setSource,
         clearFilters,
         deferredSearchQuery,
         gridDensity,

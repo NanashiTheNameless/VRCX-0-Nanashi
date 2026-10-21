@@ -103,6 +103,34 @@ pub struct VrchatGroupUserGroupsInput {
     pub user_id: String,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+pub enum GroupMembershipListStatus {
+    #[serde(rename = "invited")]
+    Invited,
+    #[serde(rename = "requested")]
+    Requested,
+    #[serde(rename = "userblocked")]
+    UserBlocked,
+}
+
+impl GroupMembershipListStatus {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Invited => "invited",
+            Self::Requested => "requested",
+            Self::UserBlocked => "userblocked",
+        }
+    }
+}
+
+#[derive(Debug, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct VrchatGroupMembershipListInput {
+    #[serde(default)]
+    pub user_id: String,
+    pub status: GroupMembershipListStatus,
+}
+
 #[derive(Debug, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct VrchatGroupPagedInput {
@@ -246,6 +274,54 @@ pub struct VrchatGroupJoinRequestRespondInput {
     pub action: GroupJoinRequestAction,
     #[serde(default)]
     pub block: bool,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GroupRoleMutation {
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub description: Option<String>,
+    #[serde(default)]
+    pub is_self_assignable: Option<bool>,
+    #[serde(default)]
+    pub is_added_on_join: Option<bool>,
+    #[serde(default)]
+    pub requires_two_factor: Option<bool>,
+    #[serde(default)]
+    pub requires_purchase: Option<bool>,
+    #[serde(default)]
+    pub permissions: Option<Vec<String>>,
+    #[serde(default)]
+    pub order: Option<i32>,
+}
+
+#[derive(Debug, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct VrchatGroupRoleCreateInput {
+    #[serde(default)]
+    pub group_id: String,
+    pub params: GroupRoleMutation,
+}
+
+#[derive(Debug, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct VrchatGroupRoleUpdateInput {
+    #[serde(default)]
+    pub group_id: String,
+    #[serde(default)]
+    pub role_id: String,
+    pub params: GroupRoleMutation,
+}
+
+#[derive(Debug, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct VrchatGroupRoleInput {
+    #[serde(default)]
+    pub group_id: String,
+    #[serde(default)]
+    pub role_id: String,
 }
 
 #[derive(Debug, Deserialize, specta::Type)]

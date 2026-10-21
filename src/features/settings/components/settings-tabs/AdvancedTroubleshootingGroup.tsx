@@ -7,7 +7,9 @@ import {
     type DeepLinkSchemeSettings,
     type HostPlatform
 } from '@/platform/tauri/bindings';
+import { unwrapVrchatResponse } from '@/repositories/vrchatRequest';
 import { toast } from '@/services/toastService';
+import { isRecord } from '@/shared/utils/record';
 import { Button } from '@/ui/shadcn/button';
 import { Spinner } from '@/ui/shadcn/spinner';
 import { Switch } from '@/ui/shadcn/switch';
@@ -125,7 +127,29 @@ export function AdvancedTroubleshootingGroup({
     const [pendingAction, setPendingAction] = useState<DiagnosticAction | null>(
         null
     );
+    const [activeInstanceCount, setActiveInstanceCount] = useState<
+        number | null
+    >(null);
     const hasConfig = Object.keys(configTreeData).length > 0;
+
+    async function refreshOnlineStats() {
+        await Promise.all([
+            onRefreshOnlineVisits(),
+            commands
+                .appVrchatInstanceCountGet()
+                .then((response) => {
+                    const json = unwrapVrchatResponse<unknown>(
+                        response,
+                        'instances/count'
+                    ).json;
+                    const count = isRecord(json) ? Number(json.instances) : NaN;
+                    setActiveInstanceCount(
+                        Number.isFinite(count) ? count : null
+                    );
+                })
+                .catch(() => setActiveInstanceCount(null))
+        ]);
+    }
     const hasTableSizes = Object.keys(sqliteTableSizes).length > 0;
 
     async function runAction(
@@ -278,9 +302,16 @@ export function AdvancedTroubleshootingGroup({
                             })}
                         </span>
                     ) : null}
+                    {activeInstanceCount !== null ? (
+                        <span className="text-muted-foreground text-sm">
+                            {t('view.profile.game_info.instances_active', {
+                                count: activeInstanceCount
+                            })}
+                        </span>
+                    ) : null}
                     {renderRefreshButton(
                         'online',
-                        onRefreshOnlineVisits,
+                        refreshOnlineStats,
                         t(
                             'view.settings.advanced.advanced_ui.troubleshooting.refresh_online_users'
                         )

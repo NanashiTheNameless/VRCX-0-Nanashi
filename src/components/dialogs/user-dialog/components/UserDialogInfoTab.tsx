@@ -2,6 +2,8 @@ import { ChevronRightIcon, ExternalLinkIcon, PencilIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { formatCredits } from '@/components/economy/economyDisplay';
+import { useEconomyBalance } from '@/components/economy/useEconomyBalance';
 import { AvatarInfoLine } from '@/components/feed/FeedAvatarInfoLine';
 import { useAvatarImageInfo } from '@/components/feed/useAvatarImageInfo';
 import { InstanceActionBar } from '@/components/instances/InstanceActionBar';
@@ -30,6 +32,7 @@ import {
 import type { UserDialogPreviousInstance } from '@/services/userDialogSessionCacheService';
 import type { UserDialogRelationshipEvent } from '@/services/userDialogSessionCacheService';
 import { parseLocation } from '@/shared/utils/location';
+import { useRuntimeStore } from '@/state/runtimeStore';
 import { Button } from '@/ui/shadcn/button';
 import {
     Card,
@@ -782,6 +785,29 @@ function UserRelationshipStat({
     );
 }
 
+function UserCreditsStat({ userId }: { userId: string }) {
+    const { t } = useTranslation();
+    const balance = useEconomyBalance(userId, true);
+
+    return (
+        <InfoStat
+            label={t('dialog.user.info.vrc_credits')}
+            value={
+                typeof balance.data === 'number'
+                    ? formatCredits(balance.data)
+                    : ''
+            }
+            onClick={() => {
+                void balance.refetch();
+                useRuntimeStore
+                    .getState()
+                    .setSystemHostOpen('purchaseHistoryOpen', true);
+            }}
+            subtle
+        />
+    );
+}
+
 export function UserDialogActivitySummaryPanel({
     friendedAt,
     relationshipHistory = [],
@@ -851,6 +877,9 @@ export function UserDialogActivitySummaryPanel({
                         />
                     </>
                 )}
+                {isCurrentUser && profile.id ? (
+                    <UserCreditsStat userId={profile.id} />
+                ) : null}
                 <InfoStat
                     label={t('dialog.user.info.date_joined')}
                     value={formatLocalizedActivityDate(

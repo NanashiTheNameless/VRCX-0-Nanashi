@@ -1,4 +1,4 @@
-import { CalendarIcon, RefreshCwIcon } from 'lucide-react';
+import { CalendarIcon, CalendarPlusIcon, RefreshCwIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -91,7 +91,9 @@ function GroupEventsSection({
     emptyTitle,
     group,
     followingIds,
-    onToggleFollow
+    onToggleFollow,
+    onEdit,
+    onDelete
 }: {
     title: ReactNode;
     series: GroupCalendarEventRecord[][];
@@ -99,6 +101,8 @@ function GroupEventsSection({
     group: GroupProfileRecord;
     followingIds: ReadonlySet<string>;
     onToggleFollow: (event: GroupCalendarEventRecord) => void;
+    onEdit?: (event: GroupCalendarEventRecord) => void;
+    onDelete?: (event: GroupCalendarEventRecord) => void;
 }) {
     return (
         <section className="flex min-w-0 flex-col gap-2">
@@ -114,6 +118,8 @@ function GroupEventsSection({
                             followingIds={followingIds}
                             variant="series"
                             onToggleFollow={onToggleFollow}
+                            onEdit={onEdit}
+                            onDelete={onDelete}
                         />
                     ))}
                 </div>
@@ -192,15 +198,23 @@ export function GroupEventsTab({
     status,
     error,
     group,
+    canManage,
     onRefresh,
-    onToggleFollow
+    onToggleFollow,
+    onCreate,
+    onEdit,
+    onDelete
 }: {
     events: GroupCalendarEventRecord[];
     status: LoadStatus;
     error: string;
     group: GroupProfileRecord;
+    canManage: boolean;
     onRefresh: () => void;
     onToggleFollow: (event: GroupCalendarEventRecord) => void;
+    onCreate: () => void;
+    onEdit: (event: GroupCalendarEventRecord) => void;
+    onDelete: (event: GroupCalendarEventRecord) => void;
 }) {
     const { t } = useTranslation();
     const rows = Array.isArray(events) ? events : [];
@@ -216,20 +230,33 @@ export function GroupEventsTab({
                         count: rows.length
                     })}
                 </div>
-                <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={loading}
-                    onClick={onRefresh}
-                >
-                    {loading ? (
-                        <Spinner data-icon="inline-start" />
-                    ) : (
-                        <RefreshCwIcon data-icon="inline-start" />
-                    )}
-                    {t('common.actions.refresh')}
-                </Button>
+                <div className="flex items-center gap-2">
+                    {canManage ? (
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={onCreate}
+                        >
+                            <CalendarPlusIcon data-icon="inline-start" />
+                            {t('dialog.group.actions.create_event')}
+                        </Button>
+                    ) : null}
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={loading}
+                        onClick={onRefresh}
+                    >
+                        {loading ? (
+                            <Spinner data-icon="inline-start" />
+                        ) : (
+                            <RefreshCwIcon data-icon="inline-start" />
+                        )}
+                        {t('common.actions.refresh')}
+                    </Button>
+                </div>
             </div>
 
             {error ? (
@@ -260,6 +287,8 @@ export function GroupEventsTab({
                         group={group}
                         followingIds={followingIds}
                         onToggleFollow={onToggleFollow}
+                        onEdit={canManage ? onEdit : undefined}
+                        onDelete={canManage ? onDelete : undefined}
                     />
                     <GroupEventsSection
                         title={t('dialog.group.info.past_events')}
@@ -268,6 +297,8 @@ export function GroupEventsTab({
                         group={group}
                         followingIds={followingIds}
                         onToggleFollow={onToggleFollow}
+                        onEdit={canManage ? onEdit : undefined}
+                        onDelete={canManage ? onDelete : undefined}
                     />
                 </div>
             ) : null}

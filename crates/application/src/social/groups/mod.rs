@@ -32,22 +32,25 @@ pub use quick_moderation::{
     GroupQuickModerationGroup, GroupQuickModerationInput, GroupQuickModerationOutput,
 };
 pub use service::{
-    add_member_role, ban_member, block_group, cancel_request, create_post, delete_group,
-    delete_invite, delete_post, edit_post, get_audit_log_types, get_bans, get_gallery, get_group,
-    get_invites, get_join_requests, get_logs, get_members, get_posts, get_user_groups,
-    get_user_instances, join_group, kick_member, leave_group, remove_member_role,
+    add_member_role, ban_member, block_group, cancel_request, create_post, create_role,
+    decline_invite, delete_group, delete_invite, delete_post, delete_role, edit_post,
+    get_audit_log_types, get_bans, get_gallery, get_group, get_invites, get_join_requests,
+    get_logs, get_members, get_membership_list, get_permissions, get_posts, get_roles,
+    get_user_groups, get_user_instances, join_group, kick_member, leave_group, remove_member_role,
     respond_join_request, search_members, send_invite, set_member_props, set_representation,
-    unban_member, unblock_group, update_group, GroupApiDeps, GroupBuiltRequest,
+    unban_member, unblock_group, update_group, update_role, GroupApiDeps, GroupBuiltRequest,
     GroupMembershipRemoteRequests, GroupRemoteRequest, GroupRemoteRequests,
 };
 pub use types::{
-    GroupMemberPatch, GroupMemberSort, GroupMemberVisibility, GroupPostMutation,
-    GroupPostVisibility, GroupProfileJoinState, GroupProfileUpdate, VrchatGroupGalleryInput,
-    VrchatGroupIdInput, VrchatGroupJoinRequestRespondInput, VrchatGroupJoinRequestsInput,
-    VrchatGroupLogsInput, VrchatGroupMemberPropsInput, VrchatGroupMemberRoleInput,
-    VrchatGroupMembersInput, VrchatGroupMembersSearchInput, VrchatGroupPagedInput,
+    GroupMemberPatch, GroupMemberSort, GroupMemberVisibility, GroupMembershipListStatus,
+    GroupPostMutation, GroupPostVisibility, GroupProfileJoinState, GroupProfileUpdate,
+    GroupRoleMutation, VrchatGroupGalleryInput, VrchatGroupIdInput,
+    VrchatGroupJoinRequestRespondInput, VrchatGroupJoinRequestsInput, VrchatGroupLogsInput,
+    VrchatGroupMemberPropsInput, VrchatGroupMemberRoleInput, VrchatGroupMembersInput,
+    VrchatGroupMembersSearchInput, VrchatGroupMembershipListInput, VrchatGroupPagedInput,
     VrchatGroupPostCreateInput, VrchatGroupPostDeleteInput, VrchatGroupPostEditInput,
-    VrchatGroupProfileInput, VrchatGroupRepresentationInput, VrchatGroupUpdateInput,
+    VrchatGroupProfileInput, VrchatGroupRepresentationInput, VrchatGroupRoleCreateInput,
+    VrchatGroupRoleInput, VrchatGroupRoleUpdateInput, VrchatGroupUpdateInput,
     VrchatGroupUserGroupsInput, VrchatGroupUserInput,
 };
 pub use user_groups_overview::{

@@ -51,6 +51,13 @@ pub struct VrchatMediaAvatarGalleryImageUploadInput {
 
 #[derive(Debug, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct VrchatMediaAvatarGalleryOrderInput {
+    pub(crate) avatar_id: String,
+    pub(crate) file_ids: Vec<String>,
+}
+
+#[derive(Debug, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct VrchatMediaPrintUploadInput {
     #[serde(default)]
     pub(crate) image_data: String,

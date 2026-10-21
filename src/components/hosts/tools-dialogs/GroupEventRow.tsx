@@ -3,8 +3,10 @@ import {
     DownloadIcon,
     EllipsisIcon,
     ImageIcon,
+    PencilIcon,
     Share2Icon,
-    StarIcon
+    StarIcon,
+    Trash2Icon
 } from 'lucide-react';
 import { useState, type HTMLAttributes } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -34,6 +36,7 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/ui/shadcn/dropdown-menu';
 
@@ -50,7 +53,9 @@ export function GroupEventRow({
     variant,
     onOpen,
     surface = 'card',
-    onToggleFollow
+    onToggleFollow,
+    onEdit,
+    onDelete
 }: {
     events: GroupCalendarEventRecord[];
     groupName: string;
@@ -60,6 +65,8 @@ export function GroupEventRow({
     onOpen?: () => void;
     surface?: 'card' | 'plain';
     onToggleFollow(event: GroupCalendarEventRecord): void;
+    onEdit?(event: GroupCalendarEventRecord): void;
+    onDelete?(event: GroupCalendarEventRecord): void;
 }) {
     const { t } = useTranslation();
     const [nowMs] = useState(() => Date.now());
@@ -307,6 +314,24 @@ export function GroupEventRow({
                                     'dialog.group_calendar.event_card.download_ics'
                                 )}
                             </DropdownMenuItem>
+                            {onEdit || onDelete ? (
+                                <DropdownMenuSeparator />
+                            ) : null}
+                            {onEdit ? (
+                                <DropdownMenuItem onClick={() => onEdit(event)}>
+                                    <PencilIcon />
+                                    {t('dialog.group_event_edit.edit_header')}
+                                </DropdownMenuItem>
+                            ) : null}
+                            {onDelete ? (
+                                <DropdownMenuItem
+                                    variant="destructive"
+                                    onClick={() => onDelete(event)}
+                                >
+                                    <Trash2Icon />
+                                    {t('dialog.group_event_edit.delete')}
+                                </DropdownMenuItem>
+                            ) : null}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>

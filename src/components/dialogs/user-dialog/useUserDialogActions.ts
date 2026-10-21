@@ -14,7 +14,6 @@ import {
     commands,
     type SocialFriendMutationOutcome
 } from '@/platform/tauri/bindings';
-import vrchatToolsRepository from '@/repositories/vrchatToolsRepository';
 import { signalFriendLogChanged } from '@/services/friendLogMutationService';
 import friendRelationshipService from '@/services/friendRelationshipService';
 import { sendBoopToUser } from '@/services/inviteDeliveryService';
@@ -500,52 +499,6 @@ export function useUserDialogActions({
         }
     }
 
-    async function reportHacking() {
-        const rosterUserId = normalizeUserId(profile?.id);
-        if (
-            !rosterUserId ||
-            isCurrentUser ||
-            actionStatusRef.current !== 'idle'
-        ) {
-            return;
-        }
-
-        const result = await confirm({
-            title: t('dialog.user.modal.report_hacking'),
-            description: profile?.displayName || rosterUserId,
-            confirmText: t('dialog.user.modal.report'),
-            cancelText: t('common.actions.cancel'),
-            destructive: true
-        });
-        if (!result.ok) {
-            return;
-        }
-
-        actionStatusRef.current = 'report-hacking';
-        setActionStatus('report-hacking');
-        try {
-            await vrchatToolsRepository.reportUser({
-                userId: rosterUserId,
-                reason: 'behavior-hacking'
-            });
-            toast.add({
-                type: 'success',
-                title: t('dialog.user.success.report_sent')
-            });
-        } catch (error) {
-            toast.add({
-                type: 'error',
-                title:
-                    error instanceof Error
-                        ? error.message
-                        : t('dialog.user.toast.failed_to_report_user')
-            });
-        } finally {
-            actionStatusRef.current = 'idle';
-            setActionStatus('idle');
-        }
-    }
-
     function buildBoopContext() {
         const rosterUserId = normalizeUserId(profile?.id);
         if (
@@ -635,7 +588,6 @@ export function useUserDialogActions({
         sendUserBoopEmoji,
         actions: {
             openGroupModerationForUser,
-            reportHacking,
             sendUserBoop,
             sendUserInvite,
             sendUserInviteRequest,

@@ -50,6 +50,18 @@ export const entityQueryPolicies = Object.freeze({
         retry: 1,
         refetchOnWindowFocus: false
     }),
+    economy: Object.freeze({
+        staleTime: 10 * MINUTE_MS,
+        gcTime: 30 * MINUTE_MS,
+        retry: 1,
+        refetchOnWindowFocus: false
+    }),
+    economyBalance: Object.freeze({
+        staleTime: 120 * SECOND_MS,
+        gcTime: 600 * SECOND_MS,
+        retry: 1,
+        refetchOnWindowFocus: false
+    }),
     groupCalendarEvent: Object.freeze({
         staleTime: 120 * SECOND_MS,
         gcTime: 600 * SECOND_MS,
@@ -215,6 +227,16 @@ export const queryKeys = Object.freeze({
         }: { eventId?: string; groupId?: string } = {},
         endpoint: string = ''
     ) => withEndpoint(['calendar', groupId, eventId], endpoint),
+    economyPurchases: (userId: string, endpoint: string = '') =>
+        withEndpoint(['economy', 'purchases', userId], endpoint),
+    economyTransactions: (userId: string, endpoint: string = '') =>
+        withEndpoint(['economy', 'transactions', userId], endpoint),
+    economyBalance: (userId: string, endpoint: string = '') =>
+        withEndpoint(['economy', 'balance', userId], endpoint),
+    economyStore: (storeId: string, endpoint: string = '') =>
+        withEndpoint(['economy', 'store', storeId], endpoint),
+    licensedAvatars: (userId: string, endpoint: string = '') =>
+        withEndpoint(['avatars', 'licensed', userId], endpoint),
     worldRooms: (worldId: string, endpoint: string = '') =>
         withEndpoint(['world', worldId, 'rooms'], endpoint),
     avatarGallery: (avatarId: string, endpoint: string = '') =>

@@ -93,6 +93,10 @@ pub fn user_groups_get_input(
     ))
 }
 
+pub fn account_standing_get_input(endpoint: String) -> HttpApiRequestInput {
+    get_input(endpoint, "auth/user/accountStanding", HashMap::new())
+}
+
 pub fn user_represented_group_get_input(
     endpoint: String,
     user_id: String,

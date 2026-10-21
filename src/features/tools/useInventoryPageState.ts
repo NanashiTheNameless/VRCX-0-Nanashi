@@ -9,12 +9,14 @@ import vrchatMediaRepository, {
     type MediaFileRecord
 } from '@/repositories/vrchatMediaRepository';
 import { refreshCurrentUser } from '@/services/backgroundMaintenanceSessionService';
+import { refreshInventoryBundles } from '@/services/inventoryBundleService';
 import { toast } from '@/services/toastService';
 import { VRCHAT_API_DEFAULT_PAGE_SIZE } from '@/shared/constants/pagination';
 import {
     readFileAsBase64,
     withUploadTimeout
 } from '@/shared/utils/imageUpload';
+import { useInventoryBundleStore } from '@/state/inventoryBundleStore';
 import { useModalStore } from '@/state/modalStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
@@ -134,6 +136,12 @@ export function useInventoryPageState() {
     const currentEndpoint = useRuntimeStore(
         (state) => state.auth.currentUserEndpoint
     );
+    const bundleIds = useInventoryBundleStore((state) => state.bundleIds);
+    useEffect(() => {
+        if (bundleIds.length > 0) {
+            useInventoryBundleStore.getState().markSeen();
+        }
+    }, [bundleIds]);
     const currentUserWebsocket = useRuntimeStore(
         (state) => state.auth.currentUserWebsocket
     );
@@ -537,6 +545,7 @@ export function useInventoryPageState() {
                     type: 'success',
                     title: t('view.tools.label.inventory_bundle_consumed')
                 });
+                refreshInventoryBundles(currentUserId).catch(() => {});
                 await refreshScope(activeCategory, activeSubTab);
             }
         } catch (error) {

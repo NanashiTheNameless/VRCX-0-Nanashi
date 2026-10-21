@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import type { AppTable } from '@/components/data-table/appTable';
 import { TableColumnVisibilityMenu } from '@/components/data-table/TableColumnVisibilityMenu';
+import { useHasLicensedAvatars } from '@/components/economy/useHasLicensedAvatars';
 import { PageToolbar, PageToolbarRow } from '@/components/layout/PageScaffold';
 import {
     ToolbarActions,
@@ -21,12 +22,15 @@ import type {
     MyAvatarRow,
     MyAvatarsPlatformFilter,
     MyAvatarsReleaseStatusFilter,
+    MyAvatarsSource,
     MyAvatarsViewMode
 } from '../myAvatarsTypes';
 import { LocalTestAvatarsButton } from './LocalTestAvatarsDialog';
 import { GridSettingsMenu, MyAvatarFilterPopover } from './MyAvatarsViewParts';
 
 type MyAvatarsToolbarProps = {
+    source: MyAvatarsSource;
+    onSourceChange: (value: MyAvatarsSource) => void;
     viewMode: MyAvatarsViewMode;
     activeFilterCount: number;
     allTags: string[];
@@ -48,6 +52,8 @@ type MyAvatarsToolbarProps = {
 };
 
 export function MyAvatarsToolbar({
+    source,
+    onSourceChange,
     viewMode,
     activeFilterCount,
     allTags,
@@ -82,10 +88,23 @@ export function MyAvatarsToolbar({
         }
     ];
 
+    const hasLicensedAvatars = useHasLicensedAvatars(true);
+    const sourceOptions: ToolbarSegmentOption<MyAvatarsSource>[] = [
+        { value: 'own', label: t('view.my_avatars.source.own') },
+        { value: 'licensed', label: t('view.my_avatars.source.licensed') }
+    ];
+
     return (
         <PageToolbar>
             <PageToolbarRow>
                 <ToolbarViews>
+                    {hasLicensedAvatars || source === 'licensed' ? (
+                        <ToolbarSegmented
+                            value={source}
+                            onValueChange={onSourceChange}
+                            options={sourceOptions}
+                        />
+                    ) : null}
                     <ToolbarSegmented
                         iconOnly
                         value={viewMode}

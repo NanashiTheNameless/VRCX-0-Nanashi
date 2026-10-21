@@ -9,21 +9,26 @@ use vrcx_0_vrchat_client::avatars::{
     avatar_gallery_get_input, avatar_list_by_user_get_input, avatar_styles_get_input,
     AvatarListByUserGetInput,
 };
+use vrcx_0_vrchat_client::economy::{
+    balance_get_input, licensed_avatars_get_input, purchases_get_input, store_get_input,
+    transactions_get_input,
+};
 use vrcx_0_vrchat_client::favorites::{favorite_groups_get_input, favorite_worlds_get_input};
 use vrcx_0_vrchat_client::friends::friend_status_get_input;
 use vrcx_0_vrchat_client::instances::{
-    instance_close_input, instance_create_input, instance_get_input, instance_self_invite_input,
-    instance_short_name_get_input, InstanceCreateRequest,
+    instance_calendar_link_input, instance_close_input, instance_count_get_input,
+    instance_create_input, instance_display_name_input, instance_get_input,
+    instance_self_invite_input, instance_short_name_get_input, InstanceCreateRequest,
 };
 use vrcx_0_vrchat_client::media::{
     asset_upload_input, avatar_gallery_image_upload_input, file_delete_input, files_get_input,
-    image_upload_input, inventory_bundle_consume_input, inventory_item_equip_input,
-    inventory_item_update_input, inventory_items_get_input, inventory_slot_unequip_input,
-    inventory_template_get_input, print_delete_input, print_get_input, print_upload_input,
-    prints_get_input, reward_redeem_input, sticker_upload_input, tagged_image_upload_input,
-    user_inventory_item_get_input, EmojiUploadParams, InventoryItemUpdateRequest,
-    InventoryListParams, MediaAssetUploadRequest, MediaFileListParams, PrintUploadParams,
-    ProfileDecorationEquipSlot,
+    gallery_file_order_input, image_upload_input, inventory_bundle_consume_input,
+    inventory_item_equip_input, inventory_item_update_input, inventory_items_get_input,
+    inventory_slot_unequip_input, inventory_template_get_input, print_delete_input,
+    print_get_input, print_upload_input, prints_get_input, reward_redeem_input,
+    sticker_upload_input, tagged_image_upload_input, user_inventory_item_get_input,
+    EmojiUploadParams, InventoryItemUpdateRequest, InventoryListParams, MediaAssetUploadRequest,
+    MediaFileListParams, PrintUploadParams, ProfileDecorationEquipSlot,
 };
 use vrcx_0_vrchat_client::notifications::{
     boop_send_input, request_invite_photo_input, request_invite_send_input, RequestInviteRequest,
@@ -35,12 +40,16 @@ use vrcx_0_vrchat_client::search::{
     WorldSearchParams,
 };
 use vrcx_0_vrchat_client::tools::{
-    following_calendars_get_input, group_calendar_get_input, group_calendar_ics_get_input,
-    group_event_follow_input, invite_message_edit_input, invite_messages_get_input,
-    moderation_report_delete_input, moderation_reports_get_input, user_note_save_input,
-    user_report_input, CalendarListParams, InviteMessageType, ModerationReportType,
+    following_calendars_get_input, group_calendar_event_get_input, group_calendar_get_input,
+    group_calendar_ics_get_input, group_event_create_input, group_event_delete_input,
+    group_event_follow_input, group_event_update_input, invite_message_edit_input,
+    invite_messages_get_input, moderation_report_delete_input, moderation_reports_get_input,
+    user_note_save_input, user_report_input, CalendarListParams, GroupCalendarEventMutation,
+    InviteMessageType, ModerationReportType,
 };
-use vrcx_0_vrchat_client::users::{profile_get_input, user_represented_group_get_input};
+use vrcx_0_vrchat_client::users::{
+    account_standing_get_input, profile_get_input, user_represented_group_get_input,
+};
 
 use crate::profile_bio::ProfileBioObserver;
 use crate::DesktopMediaRuntime;
@@ -119,6 +128,77 @@ impl DesktopVrchatRemoteFacade {
             .await?;
         self.profile_bio.observe(&response);
         Ok(response)
+    }
+
+    pub async fn licensed_avatars(&self, n: i32, offset: i32) -> Result<VrchatApiResponse> {
+        self.execute(
+            "app__vrchat_economy_licensed_avatars_get",
+            "Getting licensed avatars.",
+            licensed_avatars_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), n, offset),
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
+    pub async fn economy_purchases(
+        &self,
+        buyer_id: String,
+        n: i32,
+        offset: i32,
+    ) -> Result<VrchatApiResponse> {
+        let (buyer_id, request) =
+            purchases_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), buyer_id, n, offset)?;
+        self.execute(
+            "app__vrchat_economy_purchases_get",
+            format!("Getting purchases for {buyer_id}."),
+            request,
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
+    pub async fn economy_transactions(&self, user_id: String, n: i32) -> Result<VrchatApiResponse> {
+        let (user_id, request) =
+            transactions_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), user_id, n)?;
+        self.execute(
+            "app__vrchat_economy_transactions_get",
+            format!("Getting credit transactions for {user_id}."),
+            request,
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
+    pub async fn economy_balance(&self, user_id: String) -> Result<VrchatApiResponse> {
+        let (user_id, request) = balance_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), user_id)?;
+        self.execute(
+            "app__vrchat_economy_balance_get",
+            format!("Getting credit balance for {user_id}."),
+            request,
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
+    pub async fn economy_store(&self, store_id: String) -> Result<VrchatApiResponse> {
+        let (store_id, request) = store_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), store_id)?;
+        self.execute(
+            "app__vrchat_economy_store_get",
+            format!("Getting store {store_id}."),
+            request,
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
+    pub async fn account_standing(&self) -> Result<VrchatApiResponse> {
+        self.execute(
+            "app__vrchat_current_user_account_standing_get",
+            "Getting current user account standing.",
+            account_standing_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into()),
+            VrchatScope::Vrchat,
+        )
+        .await
     }
 
     pub async fn user_represented_group(&self, user_id: String) -> Result<VrchatApiResponse> {
@@ -324,6 +404,54 @@ impl DesktopVrchatRemoteFacade {
         .await
     }
 
+    pub async fn instance_calendar_link(
+        &self,
+        location: String,
+        calendar_entry_id: Option<String>,
+    ) -> Result<VrchatApiResponse> {
+        let (location, request) = instance_calendar_link_input(
+            VRCHAT_API_DEFAULT_ENDPOINT.into(),
+            location,
+            calendar_entry_id,
+        )?;
+        self.execute(
+            "app__vrchat_instance_calendar_link_set",
+            format!("Updating the calendar event of instance {location}."),
+            request,
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
+    pub async fn instance_display_name(
+        &self,
+        location: String,
+        display_name: Option<String>,
+    ) -> Result<VrchatApiResponse> {
+        let (location, request) = instance_display_name_input(
+            VRCHAT_API_DEFAULT_ENDPOINT.into(),
+            location,
+            display_name,
+        )?;
+        self.execute(
+            "app__vrchat_instance_display_name_set",
+            format!("Renaming instance {location}."),
+            request,
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
+    pub async fn instance_count(&self) -> Result<VrchatApiResponse> {
+        self.execute(
+            "app__vrchat_instance_count_get",
+            "Getting the active instance count.",
+            instance_count_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into()),
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
     pub async fn search_worlds(
         &self,
         params: WorldSearchParams,
@@ -432,6 +560,75 @@ impl DesktopVrchatRemoteFacade {
         .await
     }
 
+    pub async fn create_group_event(
+        &self,
+        group_id: String,
+        event: GroupCalendarEventMutation,
+    ) -> Result<VrchatApiResponse> {
+        let (group_id, request) =
+            group_event_create_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), group_id, event)?;
+        self.execute(
+            "app__vrchat_tools_group_event_create",
+            format!("Creating an event for group {group_id}."),
+            request,
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
+    pub async fn update_group_event(
+        &self,
+        group_id: String,
+        event_id: String,
+        event: GroupCalendarEventMutation,
+    ) -> Result<VrchatApiResponse> {
+        let (event_id, request) = group_event_update_input(
+            VRCHAT_API_DEFAULT_ENDPOINT.into(),
+            group_id,
+            event_id,
+            event,
+        )?;
+        self.execute(
+            "app__vrchat_tools_group_event_update",
+            format!("Updating group event {event_id}."),
+            request,
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
+    pub async fn delete_group_event(
+        &self,
+        group_id: String,
+        event_id: String,
+    ) -> Result<VrchatApiResponse> {
+        let (event_id, request) =
+            group_event_delete_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), group_id, event_id)?;
+        self.execute(
+            "app__vrchat_tools_group_event_delete",
+            format!("Deleting group event {event_id}."),
+            request,
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
+    pub async fn group_calendar_event(
+        &self,
+        group_id: String,
+        event_id: String,
+    ) -> Result<VrchatApiResponse> {
+        let (event_id, request) =
+            group_calendar_event_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), group_id, event_id)?;
+        self.execute(
+            "app__vrchat_tools_group_calendar_event_get",
+            format!("Getting group event {event_id}."),
+            request,
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
     pub async fn group_calendar_ics(
         &self,
         group_id: String,
@@ -464,9 +661,20 @@ impl DesktopVrchatRemoteFacade {
         .await
     }
 
-    pub async fn report_user(&self, user_id: String, reason: String) -> Result<VrchatApiResponse> {
-        let (user_id, request) =
-            user_report_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), user_id, reason)?;
+    pub async fn report_user(
+        &self,
+        user_id: String,
+        category: String,
+        reason: String,
+        description: String,
+    ) -> Result<VrchatApiResponse> {
+        let (user_id, request) = user_report_input(
+            VRCHAT_API_DEFAULT_ENDPOINT.into(),
+            user_id,
+            category,
+            reason,
+            description,
+        )?;
         self.execute(
             "app__vrchat_tools_user_report",
             format!("Reporting user {user_id}."),
@@ -631,6 +839,23 @@ impl DesktopVrchatRemoteFacade {
         let request = file_delete_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), file_id)?;
         self.execute(
             "app__vrchat_media_file_delete",
+            detail,
+            request,
+            VrchatScope::VrchatMedia,
+        )
+        .await
+    }
+
+    pub async fn set_avatar_gallery_order(
+        &self,
+        avatar_id: String,
+        file_ids: Vec<String>,
+    ) -> Result<VrchatApiResponse> {
+        let detail = format!("Reordering avatar gallery {avatar_id}.");
+        let request =
+            gallery_file_order_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), avatar_id, file_ids)?;
+        self.execute(
+            "app__vrchat_media_avatar_gallery_order_set",
             detail,
             request,
             VrchatScope::VrchatMedia,

@@ -192,6 +192,7 @@ export interface UserHeaderModel {
     bannerFallbackUrl: string;
     canInviteFromCurrentLocation: boolean;
     currentAvatarTarget: string;
+    currentUserAccountStanding: string;
     currentUserBoopingEnabled: boolean;
     detail: string;
     extendedModerationState: ExtendedModerationState;
@@ -249,7 +250,8 @@ export interface UserHeaderCommands {
     onOpenUserIcon: () => void;
     onOpenUserUrl: () => void;
     onRefresh: () => void;
-    onReportHacking: () => void;
+    onReportUser: () => void;
+    onShowAccountStanding: () => void;
     onShowAvatarAuthor: () => void;
     onShowInstanceHistory: () => void;
     onToggleBadgeShowcased: (
@@ -516,6 +518,7 @@ export function UserDialogHeaderSection({
         bannerFallbackUrl,
         canInviteFromCurrentLocation,
         currentAvatarTarget,
+        currentUserAccountStanding,
         currentUserBoopingEnabled,
         detail,
         extendedModerationState,
@@ -569,7 +572,8 @@ export function UserDialogHeaderSection({
         onOpenUserIcon,
         onOpenUserUrl,
         onRefresh,
-        onReportHacking,
+        onReportUser,
+        onShowAccountStanding,
         onShowAvatarAuthor,
         onShowInstanceHistory,
         onToggleBadgeShowcased,
@@ -585,6 +589,7 @@ export function UserDialogHeaderSection({
         avatarOverrideState,
         canInviteFromCurrentLocation,
         currentAvatarTarget,
+        currentUserAccountStanding,
         currentUserBoopingEnabled,
         extendedModerationState,
         fallbackAvatarTarget,
@@ -613,7 +618,8 @@ export function UserDialogHeaderSection({
         onModeration,
         onOpenFallbackAvatar,
         onRefresh,
-        onReportHacking,
+        onReportUser,
+        onShowAccountStanding,
         onShowAvatarAuthor,
         onShowInstanceHistory,
         onUnfriend

@@ -3,6 +3,7 @@ import type { ChangeEvent } from 'react';
 import { commands } from '@/platform/tauri/bindings';
 import avatarProfileRepository from '@/repositories/avatarProfileRepository';
 import vrchatMediaRepository from '@/repositories/vrchatMediaRepository';
+import { unwrapVrchatResponse } from '@/repositories/vrchatRequest';
 import { openFolderAndSelectItem } from '@/services/shellIntegrationService';
 import { toast } from '@/services/toastService';
 import {
@@ -16,7 +17,7 @@ import { avatarGalleryImageUrl, resolveAssetBundleArgs } from './avatarAssets';
 import { readAvatarCacheInfo } from './avatarCacheAdapter';
 import type {
     AvatarCacheActionDependencies,
-    AvatarGalleryUploadActionDependencies,
+    AvatarGalleryActionDependencies,
     AvatarImageUploadActionDependencies
 } from './avatarDialogTypes';
 
@@ -239,17 +240,49 @@ export function createAvatarCacheActions({
     };
 }
 
-export function createAvatarGalleryUploadActions({
+export function createAvatarGalleryActions({
     actionStatusRef,
     activeAvatarTargetRef,
     avatar,
+    avatarSideData,
     canManageAvatar,
+    confirm,
     currentEndpoint,
     galleryUploadInputRef,
     setActionStatus,
     setAvatarSideData,
     t
-}: AvatarGalleryUploadActionDependencies) {
+}: AvatarGalleryActionDependencies) {
+    function displayedGalleryRows() {
+        return avatarSideData.galleryRows.filter((row) =>
+            Boolean(avatarGalleryImageUrl(row))
+        );
+    }
+
+    async function refreshAvatarGallery(
+        targetAvatarId: string,
+        requestEndpoint: string
+    ): Promise<boolean> {
+        const galleryRows = await avatarProfileRepository.getAvatarGallery({
+            avatarId: targetAvatarId,
+            force: true
+        });
+        if (
+            activeAvatarTargetRef.current.avatarId !== targetAvatarId ||
+            activeAvatarTargetRef.current.endpoint !== requestEndpoint
+        ) {
+            return false;
+        }
+        setAvatarSideData((current) => ({
+            ...current,
+            galleryRows,
+            galleryImages: galleryRows
+                .map(avatarGalleryImageUrl)
+                .filter((url): url is string => Boolean(url))
+        }));
+        return true;
+    }
+
     function beginAvatarGalleryUpload() {
         if (!canManageAvatar || actionStatusRef.current !== 'idle') {
             return;
@@ -286,20 +319,7 @@ export function createAvatarGalleryUploadActions({
                 base64Body,
                 targetAvatarId
             );
-            const galleryRows = await avatarProfileRepository.getAvatarGallery({
-                avatarId: targetAvatarId
-            });
-            if (
-                activeAvatarTargetRef.current.avatarId === targetAvatarId &&
-                activeAvatarTargetRef.current.endpoint === requestEndpoint
-            ) {
-                setAvatarSideData((current) => ({
-                    ...current,
-                    galleryRows,
-                    galleryImages: galleryRows
-                        .map(avatarGalleryImageUrl)
-                        .filter((url): url is string => Boolean(url))
-                }));
+            if (await refreshAvatarGallery(targetAvatarId, requestEndpoint)) {
                 toast.add({
                     type: 'success',
                     title: t(
@@ -325,8 +345,117 @@ export function createAvatarGalleryUploadActions({
         }
     }
 
+    async function moveAvatarGalleryImage(
+        index: number,
+        direction: -1 | 1
+    ): Promise<boolean> {
+        const targetAvatarId = normalizeEntityId(avatar?.id);
+        const requestEndpoint = currentEndpoint;
+        const rows = displayedGalleryRows();
+        const targetIndex = index + direction;
+        if (
+            !canManageAvatar ||
+            !targetAvatarId ||
+            actionStatusRef.current !== 'idle' ||
+            !rows[index] ||
+            !rows[targetIndex]
+        ) {
+            return false;
+        }
+        const orderedRows = rows.slice();
+        [orderedRows[index], orderedRows[targetIndex]] = [
+            orderedRows[targetIndex],
+            orderedRows[index]
+        ];
+        const hiddenRows = avatarSideData.galleryRows.filter(
+            (row) => !rows.includes(row)
+        );
+        actionStatusRef.current = 'gallery-edit';
+        setActionStatus('gallery-edit');
+        try {
+            unwrapVrchatResponse(
+                await commands.appVrchatMediaAvatarGalleryOrderSet({
+                    avatarId: targetAvatarId,
+                    fileIds: [...orderedRows, ...hiddenRows].map((row) =>
+                        normalizeEntityId(row.id)
+                    )
+                }),
+                'files/order'
+            );
+            return await refreshAvatarGallery(targetAvatarId, requestEndpoint);
+        } catch (error) {
+            toast.add({
+                type: 'error',
+                title:
+                    error instanceof Error
+                        ? error.message
+                        : t(
+                              'dialog.avatar.toast.failed_to_reorder_avatar_gallery'
+                          )
+            });
+            return false;
+        } finally {
+            if (actionStatusRef.current === 'gallery-edit') {
+                actionStatusRef.current = 'idle';
+                setActionStatus('idle');
+            }
+        }
+    }
+
+    async function deleteAvatarGalleryImage(index: number) {
+        const targetAvatarId = normalizeEntityId(avatar?.id);
+        const requestEndpoint = currentEndpoint;
+        const fileId = normalizeEntityId(displayedGalleryRows()[index]?.id);
+        if (
+            !canManageAvatar ||
+            !targetAvatarId ||
+            !fileId ||
+            actionStatusRef.current !== 'idle'
+        ) {
+            return;
+        }
+        const result = await confirm({
+            title: t('dialog.avatar.modal.delete_gallery_image'),
+            description: avatar.name || avatar.id,
+            confirmText: t('common.actions.delete'),
+            cancelText: t('common.actions.cancel'),
+            destructive: true
+        });
+        if (!result.ok || actionStatusRef.current !== 'idle') {
+            return;
+        }
+        actionStatusRef.current = 'gallery-edit';
+        setActionStatus('gallery-edit');
+        try {
+            await vrchatMediaRepository.deleteFile(fileId);
+            if (await refreshAvatarGallery(targetAvatarId, requestEndpoint)) {
+                toast.add({
+                    type: 'success',
+                    title: t('dialog.avatar.label.avatar_gallery_image_deleted')
+                });
+            }
+        } catch (error) {
+            toast.add({
+                type: 'error',
+                title:
+                    error instanceof Error
+                        ? error.message
+                        : t(
+                              'dialog.avatar.toast.failed_to_delete_avatar_gallery_image'
+                          )
+            });
+        } finally {
+            if (actionStatusRef.current === 'gallery-edit') {
+                actionStatusRef.current = 'idle';
+                setActionStatus('idle');
+            }
+        }
+    }
+
     return {
         beginAvatarGalleryUpload,
+        deleteAvatarGalleryImage,
+        moveAvatarGalleryImage,
         onFileChangeAvatarGallery
     };
 }

@@ -1,6 +1,7 @@
 import { InfoIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { userStatusLabel } from '@/shared/utils/userStatus';
 import { Alert, AlertDescription } from '@/ui/shadcn/alert';
 import {
     Field,
@@ -22,6 +23,7 @@ import { Switch } from '@/ui/shadcn/switch';
 
 import {
     normalizeAutoAcceptMode,
+    statusOptions,
     type AutoAcceptInviteRequestValue
 } from '../toolsDialogUtils';
 import { CompactCheckList } from './AutomationRuleLayout';
@@ -32,6 +34,7 @@ const I18N_ROOT = 'view.tools.social_automation';
 export type InviteRulesTabValues = {
     autoAcceptInviteGroups: string[];
     autoAcceptInviteRequests: AutoAcceptInviteRequestValue;
+    autoAcceptInviteStatuses: string[];
 };
 
 type InviteRulesTabProps = {
@@ -50,6 +53,10 @@ export function InviteRulesTab({
 }: InviteRulesTabProps) {
     const { t } = useTranslation();
     const groupOptions = useFavoriteFriendGroupOptions();
+    const allowedStatusOptions = statusOptions.map((status) => ({
+        value: status,
+        label: userStatusLabel(status, t)
+    }));
     const autoAcceptEnabled = values.autoAcceptInviteRequests !== 'Off';
     const selectedFavoritesOnly =
         values.autoAcceptInviteRequests === 'Selected Favorites';
@@ -168,6 +175,22 @@ export function InviteRulesTab({
                                 onSaveValue('autoAcceptInviteGroups', next);
                             }}
                         />
+                    </Field>
+                    <Field data-disabled={loading || !autoAcceptEnabled}>
+                        <FieldLabel>
+                            {t(`${I18N_ROOT}.allowed_statuses_label`)}
+                        </FieldLabel>
+                        <CompactCheckList
+                            values={values.autoAcceptInviteStatuses}
+                            options={allowedStatusOptions}
+                            disabled={loading || !autoAcceptEnabled}
+                            onChange={(next) => {
+                                onSaveValue('autoAcceptInviteStatuses', next);
+                            }}
+                        />
+                        <FieldDescription>
+                            {t(`${I18N_ROOT}.allowed_statuses_description`)}
+                        </FieldDescription>
                     </Field>
                 </FieldGroup>
             </FieldSet>

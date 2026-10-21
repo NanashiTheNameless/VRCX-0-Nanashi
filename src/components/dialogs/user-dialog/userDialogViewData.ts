@@ -271,7 +271,8 @@ export function buildUserDialogListViewData({
     );
     const filteredProfileAvatars = filterRows(profileAvatars, search.avatars);
     const visibleProfileAvatars = sortAvatarRows(
-        effectiveAvatarReleaseStatus === 'all'
+        effectiveAvatarReleaseStatus === 'all' ||
+            effectiveAvatarReleaseStatus === 'licensed'
             ? filteredProfileAvatars
             : filteredProfileAvatars.filter(
                   (avatar) =>

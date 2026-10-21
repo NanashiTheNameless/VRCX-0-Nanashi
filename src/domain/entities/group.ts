@@ -7,6 +7,10 @@ export type GroupRoleRecord = EntityRecord & {
     order?: number;
     isManagementRole?: boolean;
     isSelfAssignable?: boolean;
+    isAddedOnJoin?: boolean;
+    requiresTwoFactor?: boolean;
+    requiresPurchase?: boolean;
+    defaultRole?: boolean;
     permissions?: string[];
 };
 

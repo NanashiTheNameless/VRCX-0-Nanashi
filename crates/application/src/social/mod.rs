@@ -68,6 +68,11 @@ pub use groups::{
     VrchatGroupUserInput,
 };
 pub use groups::{
+    create_role, decline_invite, delete_role, get_membership_list, get_permissions, get_roles,
+    update_role, GroupMembershipListStatus, GroupRoleMutation, VrchatGroupMembershipListInput,
+    VrchatGroupRoleCreateInput, VrchatGroupRoleInput, VrchatGroupRoleUpdateInput,
+};
+pub use groups::{
     get_user_groups_overview, UserGroupsOverviewDeps, UserGroupsOverviewGroup,
     UserGroupsOverviewInput, UserGroupsOverviewOutput,
 };

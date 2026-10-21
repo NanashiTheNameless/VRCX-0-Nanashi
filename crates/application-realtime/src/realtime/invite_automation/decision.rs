@@ -16,6 +16,7 @@ pub enum InviteAutomationMode {
 pub struct InviteAutomationConfig {
     pub mode: InviteAutomationMode,
     pub selected_groups: Vec<String>,
+    pub allowed_statuses: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -37,6 +38,7 @@ pub struct InviteLocationFacts {
     pub local_game_context: LocalGameContextSnapshot,
     pub last_location: String,
     pub current_user_id: String,
+    pub current_user_status: String,
     pub closed_locations: HashSet<String>,
 }
 
@@ -92,6 +94,7 @@ pub enum InviteDecision {
 pub enum InviteAutomationSkipReason {
     Disabled,
     InvalidNotification,
+    StatusNotAllowed,
     SenderNotAllowlisted,
     LocalGameContextUnavailable,
     GameNotRunning,
@@ -107,6 +110,7 @@ impl InviteAutomationSkipReason {
         match self {
             Self::Disabled => "disabled",
             Self::InvalidNotification => "invalid-notification",
+            Self::StatusNotAllowed => "status-not-allowed",
             Self::SenderNotAllowlisted => "sender-not-allowlisted",
             Self::LocalGameContextUnavailable => "local-game-context-unavailable",
             Self::GameNotRunning => "game-not-running",
@@ -133,6 +137,14 @@ pub fn context_gates(
 ) -> Result<(), InviteAutomationSkipReason> {
     if config.mode == InviteAutomationMode::Off {
         return Err(InviteAutomationSkipReason::Disabled);
+    }
+    if !config.allowed_statuses.is_empty()
+        && !config
+            .allowed_statuses
+            .iter()
+            .any(|status| status.trim() == location.current_user_status.trim())
+    {
+        return Err(InviteAutomationSkipReason::StatusNotAllowed);
     }
     let LocalGameContextSnapshot::Available {
         is_game_running, ..
@@ -284,6 +296,7 @@ mod tests {
             config: InviteAutomationConfig {
                 mode: InviteAutomationMode::SelectedFavorites,
                 selected_groups: vec!["friend:group_0".into()],
+                allowed_statuses: Vec::new(),
             },
             allowlist: SenderAllowlist {
                 is_favorite: true,
@@ -296,6 +309,7 @@ mod tests {
                 ),
                 last_location: "wrld_private:12345~private(usr_self)".into(),
                 current_user_id: "usr_self".into(),
+                current_user_status: "join me".into(),
                 closed_locations: HashSet::new(),
             },
             cooldown: CooldownView {
@@ -332,6 +346,30 @@ mod tests {
                 reason: InviteAutomationSkipReason::SenderNotAllowlisted,
             }
         );
+    }
+
+    #[test]
+    fn only_sends_while_current_status_is_allowed() {
+        let mut input = base_input();
+        input.config.allowed_statuses = vec!["active".into(), "join me".into()];
+        assert!(matches!(
+            evaluate_invite_automation(&input),
+            InviteDecision::Send { .. }
+        ));
+
+        input.location.current_user_status = "busy".into();
+        assert_eq!(
+            evaluate_invite_automation(&input),
+            InviteDecision::Skip {
+                reason: InviteAutomationSkipReason::StatusNotAllowed,
+            }
+        );
+
+        input.config.allowed_statuses.clear();
+        assert!(matches!(
+            evaluate_invite_automation(&input),
+            InviteDecision::Send { .. }
+        ));
     }
 
     #[test]

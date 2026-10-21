@@ -53,6 +53,19 @@ pub async fn app__vrchat_user_get(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn app__vrchat_current_user_account_standing_get(
+    state: State<'_, AppState>,
+) -> Result<VrchatApiResponse, AppError> {
+    state
+        .runtime_host()
+        .vrchat_remote()
+        .account_standing()
+        .await
+        .map_err(AppError::from)
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn app__vrchat_user_represented_group_get(
     state: State<'_, AppState>,
     input: VrchatUserInput,

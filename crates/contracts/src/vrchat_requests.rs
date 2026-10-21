@@ -457,6 +457,67 @@ pub struct InventoryItemUpdateRequest {
     pub is_archived: bool,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum GroupCalendarEventAccessType {
+    Group,
+    Public,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum GroupCalendarRecurrenceFrequency {
+    Weekly,
+    Monthly,
+    Yearly,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum GroupCalendarRecurrenceEnd {
+    AfterOccurrences { count: u32 },
+    AfterDate { date: String },
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GroupCalendarRecurrence {
+    pub frequency: GroupCalendarRecurrenceFrequency,
+    pub interval: u32,
+    pub timezone: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub days_of_week: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub end: Option<GroupCalendarRecurrenceEnd>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct GroupCalendarEventMutation {
+    pub title: String,
+    pub description: String,
+    pub starts_at: String,
+    pub ends_at: String,
+    pub category: String,
+    pub access_type: GroupCalendarEventAccessType,
+    #[serde(default)]
+    pub tags: Vec<String>,
+    #[serde(default)]
+    pub languages: Vec<String>,
+    #[serde(default)]
+    pub platforms: Vec<String>,
+    #[serde(default)]
+    pub role_ids: Vec<String>,
+    pub image_id: Option<String>,
+    #[serde(default)]
+    pub send_creation_notification: bool,
+    pub host_early_join_minutes: u32,
+    pub guest_early_join_minutes: u32,
+    pub close_instance_after_end_minutes: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recurrence: Option<GroupCalendarRecurrence>,
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CalendarListParams {

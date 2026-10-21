@@ -27,6 +27,7 @@ pub(crate) enum RealtimeWsEventKind {
     UserLocation,
     InstanceClosed,
     ContentRefresh,
+    EconomyUpdate,
     Unknown(CompactString),
 }
 
@@ -59,6 +60,7 @@ impl RealtimeWsEventKind {
             "user-location" => Some(Self::UserLocation),
             "instance-closed" => Some(Self::InstanceClosed),
             "content-refresh" => Some(Self::ContentRefresh),
+            "economy-update" => Some(Self::EconomyUpdate),
             _ => None,
         }
     }
@@ -153,6 +155,7 @@ mod tests {
             ("user-location", RealtimeWsEventKind::UserLocation),
             ("instance-closed", RealtimeWsEventKind::InstanceClosed),
             ("content-refresh", RealtimeWsEventKind::ContentRefresh),
+            ("economy-update", RealtimeWsEventKind::EconomyUpdate),
         ] {
             let kind: RealtimeWsEventKind = serde_json::from_value(json!(name)).unwrap();
             assert_eq!(kind, expected, "{name}");
