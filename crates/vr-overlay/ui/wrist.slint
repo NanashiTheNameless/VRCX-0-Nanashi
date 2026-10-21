@@ -48,6 +48,14 @@ component WristPlayerColumn inherits VerticalLayout {
         HorizontalLayout {
             spacing: 6px * root.scale;
 
+            joined := Text {
+                horizontal-stretch: 0;
+                text: cell.joined;
+                font-size: 12px * root.scale;
+                vertical-alignment: center;
+                color: root.quiet-color;
+            }
+
             Text {
                 horizontal-stretch: 1;
                 width: root.width - joined.preferred-width - 6px * root.scale;
@@ -56,14 +64,6 @@ component WristPlayerColumn inherits VerticalLayout {
                 font-weight: 600;
                 wrap: word-wrap;
                 color: cell.name-color;
-            }
-
-            joined := Text {
-                horizontal-stretch: 0;
-                text: cell.joined;
-                font-size: 12px * root.scale;
-                vertical-alignment: center;
-                color: root.quiet-color;
             }
         }
 
