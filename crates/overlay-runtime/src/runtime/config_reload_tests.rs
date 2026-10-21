@@ -47,6 +47,7 @@ struct TestServices {
     game_log: RuntimeSnapshot,
     notes: HashMap<String, String>,
     friends: HashMap<String, (FriendRecord, PresenceView)>,
+    cached: HashMap<String, crate::CachedUserStatus>,
 }
 
 impl VrOverlayRuntimeServices for TestServices {
@@ -99,6 +100,13 @@ impl VrOverlayRuntimeServices for TestServices {
         self.friends.clone()
     }
 
+    fn cached_user_statuses(
+        &self,
+        _user_ids: &[String],
+    ) -> HashMap<String, crate::CachedUserStatus> {
+        self.cached.clone()
+    }
+
     fn now_playing(&self) -> NowPlayingSnapshot {
         NowPlayingSnapshot::default()
     }
@@ -138,6 +146,7 @@ fn test_services() -> (TestDir, TestServices) {
         game_log: RuntimeSnapshot::default(),
         notes: HashMap::new(),
         friends: HashMap::new(),
+        cached: HashMap::new(),
     };
     (dir, services)
 }
@@ -213,16 +222,31 @@ fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
         super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
     assert_eq!(frame.players[0].display_name, "Ada");
     assert!(!frame.players[0].is_friend);
-    assert!(frame.players[0].state.is_empty());
+    assert_eq!(frame.players[0].state, "online");
     assert!(frame.players[0].platform.is_empty());
     assert_eq!(frame.players[1].note, "Local note");
     let model = build_wrist_surface_model(frame);
     let cells = model.players;
     assert!(!cells[0].is_friend);
-    assert!(cells[0].status.is_empty());
+    assert_eq!(cells[0].status, "online");
     assert!(cells[1].is_friend);
     assert_eq!(cells[1].note, "Local note");
     assert_eq!(cells[1].status, "online / Quest / World hopping");
+
+    services.cached.insert(
+        "usr_stranger".into(),
+        crate::CachedUserStatus {
+            platform: "standalonewindows".into(),
+            status_description: "Just visiting".into(),
+        },
+    );
+    let frame =
+        super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
+    let cells = build_wrist_surface_model(frame).players;
+    assert!(!cells[0].is_friend);
+    assert_eq!(cells[0].status, "online / PC VR / Just visiting");
+    assert_eq!(cells[1].status, "online / Quest / World hopping");
+    services.cached.clear();
 
     config.wrist_players_sort = WristPlayersSort::Joined;
     let frame =
@@ -480,6 +504,7 @@ fn hmd_toasts_follow_the_router_hmd_flag_and_the_hmd_switch() {
         game_log: RuntimeSnapshot::default(),
         notes: HashMap::new(),
         friends: HashMap::new(),
+        cached: HashMap::new(),
     });
     let runtime = Arc::new(VrOverlayRuntime::new_with_frame_producer_factory(
         true,
@@ -602,6 +627,7 @@ fn tracker_disconnect_toasts_follow_their_own_switch_and_the_hmd_switch() {
         game_log: RuntimeSnapshot::default(),
         notes: HashMap::new(),
         friends: HashMap::new(),
+        cached: HashMap::new(),
     });
     let runtime = Arc::new(VrOverlayRuntime::new_with_frame_producer_factory(
         true,

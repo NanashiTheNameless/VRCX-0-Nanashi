@@ -538,22 +538,20 @@ fn player_cells(players: &[WristPlayerRow], notes_only: bool) -> Vec<PlayerCell>
         .filter(|player| !notes_only || !player.note.trim().is_empty())
         .map(|player| {
             let mut status_parts = Vec::new();
-            if player.is_friend {
-                if !player.state.is_empty() {
-                    status_parts.push(player.state.clone());
-                }
-                if !player.platform.is_empty() {
-                    let platform_label = match player.platform.as_str() {
-                        "standalonewindows" => "PC VR",
-                        "android" => "Quest",
-                        "windows" => "Desktop",
-                        _ => &player.platform,
-                    };
-                    status_parts.push(platform_label.to_string());
-                }
-                if !player.status_description.is_empty() {
-                    status_parts.push(player.status_description.clone());
-                }
+            if !player.state.is_empty() {
+                status_parts.push(player.state.clone());
+            }
+            if !player.platform.is_empty() {
+                let platform_label = match player.platform.as_str() {
+                    "standalonewindows" => "PC VR",
+                    "android" => "Quest",
+                    "windows" => "Desktop",
+                    _ => &player.platform,
+                };
+                status_parts.push(platform_label.to_string());
+            }
+            if !player.status_description.is_empty() {
+                status_parts.push(player.status_description.clone());
             }
             PlayerCell {
                 name: player.display_name.clone(),
@@ -1007,6 +1005,17 @@ mod page_tests {
         assert_eq!(cells[79].note, "note 79");
         assert_eq!(cells[79].status, "active / Quest / chilling");
         assert_eq!(cells[79].joined, "5m");
+    }
+
+    #[test]
+    fn player_status_shows_for_players_who_are_not_friends() {
+        let mut stranger = player("Bob", "");
+        stranger.state = "online".into();
+        stranger.platform = "windows".into();
+        stranger.status_description = "hello".into();
+        let cells = player_cells(&[stranger], false);
+        assert!(!cells[0].is_friend);
+        assert_eq!(cells[0].status, "online / Desktop / hello");
     }
 }
 

@@ -19,6 +19,7 @@ use super::{WristDeviceItem, WristFeedItem, WristPanel, WristPlayerItem};
 const WRIST_TEXT: Color = Color::rgba(238, 238, 238, 255);
 const WRIST_FRIEND_TEXT: Color = Color::rgba(246, 246, 246, 255);
 const WRIST_FAVORITE_TEXT: Color = Color::rgba(245, 205, 84, 255);
+const WRIST_PLAYER_FRIEND_TEXT: Color = WRIST_FAVORITE_TEXT;
 const WRIST_MUTED_TEXT: Color = Color::rgba(168, 168, 168, 255);
 const WRIST_MUTED_TEXT_ON_TRANSPARENT: Color = Color::rgba(205, 205, 205, 255);
 const WRIST_LOW: Color = Color::rgba(245, 158, 11, 255);
@@ -223,11 +224,11 @@ fn wrist_player_item(cell: &PlayerCell) -> WristPlayerItem {
         joined: SharedString::from(cell.joined.as_str()),
         status: SharedString::from(cell.status.as_str()),
         note: SharedString::from(cell.note.as_str()),
-        name_color: to_slint_color(wrist_relation_color(if cell.is_friend {
-            FeedRelation::Friend
+        name_color: to_slint_color(if cell.is_friend {
+            WRIST_PLAYER_FRIEND_TEXT
         } else {
-            FeedRelation::None
-        })),
+            WRIST_TEXT
+        }),
         has_status: !cell.status.is_empty(),
         has_note: !cell.note.is_empty(),
     }

@@ -526,6 +526,13 @@ impl RealtimeHostRuntime {
                     .filter(|language| !language.is_empty())
                     .map(str::to_string)
                     .collect(),
+                platform: cached_user_platform(&user),
+                status_description: user
+                    .get("statusDescription")
+                    .and_then(serde_json::Value::as_str)
+                    .unwrap_or_default()
+                    .trim()
+                    .to_string(),
             })
             .collect()
     }
@@ -698,6 +705,18 @@ impl RealtimeHostRuntime {
     }
 }
 
+/// The live platform when VRChat reports one, otherwise the last one; "web"
+/// only means the website is open.
+fn cached_user_platform(user: &serde_json::Map<String, serde_json::Value>) -> String {
+    ["platform", "last_platform"]
+        .into_iter()
+        .filter_map(|key| user.get(key).and_then(serde_json::Value::as_str))
+        .map(str::trim)
+        .find(|platform| !platform.is_empty() && *platform != "web")
+        .unwrap_or_default()
+        .to_string()
+}
+
 #[cfg(test)]
 mod cached_user_profile_tests {
     use super::*;
@@ -712,7 +731,10 @@ mod cached_user_profile_tests {
         runtime.ingest_user_facts(vec![json!({
             "user": {
                 "id": "usr_target",
-                "tags": ["language_eng"]
+                "tags": ["language_eng"],
+                "platform": "web",
+                "last_platform": "android",
+                "statusDescription": " chilling "
             },
             "isFriend": true
         })]);
@@ -725,6 +747,8 @@ mod cached_user_profile_tests {
                 user_id: "usr_target".into(),
                 is_friend: true,
                 languages: vec!["eng".into()],
+                platform: "android".into(),
+                status_description: "chilling".into(),
             }]
         );
 

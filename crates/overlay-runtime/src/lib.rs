@@ -22,7 +22,7 @@ pub use service::{
     HostVrOverlayService, OverlayBackendPreference, OverlayServiceStartError,
     OverlayServiceStartErrorReason, VrOverlayServiceControl,
 };
-pub use services::VrOverlayRuntimeServices;
+pub use services::{CachedUserStatus, VrOverlayRuntimeServices};
 pub use surfaces::wrist::{
     build_wrist_surface_model, WristOverlayFrameInput, WristOverlayRenderOptions,
     WristOverlaySizePreset, WristPage, WristPageOrder, WristPlacement, WristPlayerRow,

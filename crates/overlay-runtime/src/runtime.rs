@@ -1338,11 +1338,13 @@ pub(super) fn build_wrist_frame_input(
             .collect();
         let notes = services.user_notes(&ids);
         let friends = services.friend_records(&ids);
+        let cached = services.cached_user_statuses(&ids);
         let mut rows: Vec<(Option<i64>, WristPlayerRow)> = game_log
             .players
             .iter()
             .map(|player| {
                 let friend = friends.get(&player.user_id);
+                let cached = cached.get(&player.user_id);
                 (
                     player.join_time_ms,
                     WristPlayerRow {
@@ -1353,14 +1355,20 @@ pub(super) fn build_wrist_frame_input(
                             .map(|joined| compact_duration((captured_at_ms - joined).max(0)))
                             .unwrap_or_default(),
                         is_friend: friend.is_some(),
+                        // Everyone listed here is in the current instance, so
+                        // a player without friend presence is online.
                         state: friend
                             .map(|(_, presence)| presence.section().as_str().to_string())
-                            .unwrap_or_default(),
+                            .unwrap_or_else(|| "online".to_string()),
                         platform: friend
                             .map(|(_, presence)| presence.platform().to_string())
+                            .filter(|platform| !platform.is_empty())
+                            .or_else(|| cached.map(|status| status.platform.clone()))
                             .unwrap_or_default(),
                         status_description: friend
                             .map(|(record, _)| record.status_description.to_string())
+                            .filter(|description| !description.is_empty())
+                            .or_else(|| cached.map(|status| status.status_description.clone()))
                             .unwrap_or_default(),
                     },
                 )

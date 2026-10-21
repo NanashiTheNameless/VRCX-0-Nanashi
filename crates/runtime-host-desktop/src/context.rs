@@ -427,6 +427,33 @@ impl VrOverlayRuntimeServices for DesktopRuntimeServices {
             .collect()
     }
 
+    fn cached_user_statuses(
+        &self,
+        user_ids: &[String],
+    ) -> std::collections::HashMap<String, vrcx_0_overlay_runtime::CachedUserStatus> {
+        let runtime = self
+            .wrist_realtime_runtime
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .upgrade();
+        let Some(runtime) = runtime else {
+            return std::collections::HashMap::new();
+        };
+        runtime
+            .cached_user_profiles(&self.auth_scope.snapshot(), user_ids)
+            .into_iter()
+            .map(|profile| {
+                (
+                    profile.user_id,
+                    vrcx_0_overlay_runtime::CachedUserStatus {
+                        platform: profile.platform,
+                        status_description: profile.status_description,
+                    },
+                )
+            })
+            .collect()
+    }
+
     fn game_started_at(&self) -> Option<String> {
         let session = self.session.snapshot();
         session

@@ -7,6 +7,12 @@ use vrcx_0_core::friends::FriendRecord;
 use vrcx_0_core::presence::PresenceView;
 use vrcx_0_persistence::config::ConfigRepository;
 
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct CachedUserStatus {
+    pub platform: String,
+    pub status_description: String,
+}
+
 pub trait VrOverlayRuntimeServices: Send + Sync {
     fn config(&self) -> &ConfigRepository;
 
@@ -40,6 +46,15 @@ pub trait VrOverlayRuntimeServices: Send + Sync {
         &self,
         _user_ids: &[String],
     ) -> std::collections::HashMap<String, (FriendRecord, PresenceView)> {
+        std::collections::HashMap::new()
+    }
+
+    /// Fork: platform and status text from cached VRChat profiles, for the
+    /// wrist Players/Notes pages to show them for players who are not friends.
+    fn cached_user_statuses(
+        &self,
+        _user_ids: &[String],
+    ) -> std::collections::HashMap<String, CachedUserStatus> {
         std::collections::HashMap::new()
     }
 
