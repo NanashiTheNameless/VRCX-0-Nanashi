@@ -224,7 +224,7 @@ function OtherPeople({ people }: { people: JourneyPerson[] }) {
                                 }
                                 className="flex w-full min-w-0 items-center justify-between gap-3 rounded-md px-2 py-1 text-left text-sm enabled:hover:bg-(--state-hover-surface)"
                             >
-                                <span className="min-w-0 truncate">
+                                <span className="min-w-0 wrap-anywhere">
                                     {person.displayName}
                                 </span>
                                 {person.sharedMs > 0 ? (

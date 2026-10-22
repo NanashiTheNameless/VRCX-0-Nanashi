@@ -189,7 +189,7 @@ export function UserHoverCardContent({
                     <span className="min-w-0 flex-1">
                         <button
                             type="button"
-                            className="block w-full cursor-pointer truncate text-left text-sm font-medium"
+                            className="block w-full cursor-pointer text-left text-sm font-medium wrap-anywhere"
                             style={{ color: nameColour }}
                             onClick={() => openUserDialog({ userId })}
                         >
@@ -229,7 +229,7 @@ export function UserHoverCardContent({
                             </span>
                         ) : null}
                         {hasStatusDescription ? (
-                            <span className="text-muted-foreground min-w-0 truncate">
+                            <span className="text-muted-foreground min-w-0 wrap-anywhere">
                                 {model.statusDescription}
                             </span>
                         ) : null}

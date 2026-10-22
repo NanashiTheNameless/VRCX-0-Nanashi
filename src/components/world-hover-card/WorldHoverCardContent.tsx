@@ -34,11 +34,11 @@ export function WorldHoverCardContent({ seed }: { seed: WorldHoverCardSeed }) {
                 )}
             </div>
             <div className="flex flex-col gap-1 p-3">
-                <p className="text-foreground truncate text-sm font-medium">
+                <p className="text-foreground text-sm font-medium wrap-anywhere">
                     {name || t('dashboard.widget.unknown_world')}
                 </p>
                 {authorName ? (
-                    <p className="text-muted-foreground truncate text-xs">
+                    <p className="text-muted-foreground text-xs wrap-anywhere">
                         {authorName}
                     </p>
                 ) : null}

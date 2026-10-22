@@ -367,7 +367,7 @@ export function SidePanelSettingsPopover({
                                                 />
                                                 <FieldLabel
                                                     htmlFor={`sidebar-favorite-${group.key}`}
-                                                    className="min-w-0 flex-1 truncate text-xs"
+                                                    className="min-w-0 flex-1 text-xs wrap-anywhere"
                                                 >
                                                     {group.label}
                                                 </FieldLabel>

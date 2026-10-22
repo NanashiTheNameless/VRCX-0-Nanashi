@@ -653,14 +653,14 @@ export function WorldNewInstanceDialog({
                                                             key={name}
                                                             type="button"
                                                             variant="ghost"
-                                                            className="h-auto w-full justify-start p-1.5 text-left font-normal"
+                                                            className="h-auto w-full justify-start p-1.5 text-left font-normal whitespace-normal"
                                                             onClick={() =>
                                                                 selectDisplayNamePreset(
                                                                     name
                                                                 )
                                                             }
                                                         >
-                                                            <span className="truncate">
+                                                            <span className="min-w-0 wrap-anywhere">
                                                                 {name}
                                                             </span>
                                                         </Button>

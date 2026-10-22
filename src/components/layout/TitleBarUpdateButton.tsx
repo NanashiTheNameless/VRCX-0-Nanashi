@@ -160,19 +160,19 @@ export function TitleBarUpdateButton({ onClick }: { onClick: () => void }) {
                         <dt className="text-muted-foreground">
                             {t('message.vrcx_updater.current_version')}
                         </dt>
-                        <dd className="text-foreground truncate tabular-nums">
+                        <dd className="text-foreground wrap-anywhere tabular-nums">
                             {latestUpdaterRelease?.currentVersion || '-'}
                         </dd>
                         <dt className="text-muted-foreground">
                             {t('message.vrcx_updater.latest_version')}
                         </dt>
-                        <dd className="text-foreground truncate tabular-nums">
+                        <dd className="text-foreground wrap-anywhere tabular-nums">
                             {latestUpdaterRelease?.latestVersion || '-'}
                         </dd>
                         <dt className="text-muted-foreground">
                             {t('message.vrcx_updater.released')}
                         </dt>
-                        <dd className="text-foreground truncate">
+                        <dd className="text-foreground wrap-anywhere">
                             {formatUpdateReleaseDate(
                                 latestUpdaterRelease?.publishedAt
                             )}

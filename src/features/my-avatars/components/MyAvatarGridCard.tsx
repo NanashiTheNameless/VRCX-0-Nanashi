@@ -341,7 +341,7 @@ export function MyAvatarGridCard({
                                                         variant="secondary"
                                                         className={cn(
                                                             MY_AVATAR_TAG_BADGE_CLASS_NAME,
-                                                            'max-w-full truncate'
+                                                            'h-auto max-w-full wrap-anywhere whitespace-normal'
                                                         )}
                                                         style={resolveMyAvatarGridTagBadgeStyle(
                                                             entry

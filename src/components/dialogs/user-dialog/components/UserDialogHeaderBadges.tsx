@@ -383,9 +383,9 @@ export function UserDialogHeaderMediaBadges({
                                 <div className="bg-muted/20 flex min-h-24 items-center justify-center p-3">
                                     <Badge
                                         variant="outline"
-                                        className="mx-auto max-w-full"
+                                        className="mx-auto h-auto max-w-full whitespace-normal"
                                     >
-                                        <span className="truncate">
+                                        <span className="min-w-0 wrap-anywhere">
                                             {badgeName || badge.badgeId}
                                         </span>
                                     </Badge>
@@ -394,7 +394,7 @@ export function UserDialogHeaderMediaBadges({
                             <div className="flex flex-col gap-3 p-3 text-sm">
                                 <div className="flex min-w-0 items-start justify-between gap-3">
                                     <div className="flex min-w-0 flex-col gap-1">
-                                        <div className="min-w-0 truncate font-medium">
+                                        <div className="min-w-0 font-medium wrap-anywhere">
                                             {badgeName}
                                         </div>
                                         {badge.badgeDescription ? (

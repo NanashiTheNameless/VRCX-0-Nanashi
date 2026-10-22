@@ -136,7 +136,7 @@ export function AccountSwitcherPopover() {
                                 variant="ghost"
                                 disabled={!isCurrent && !canSwitch}
                                 aria-current={isCurrent}
-                                className="aria-[current=true]:bg-accent/60 h-auto w-full min-w-0 justify-start gap-2.5 p-1.5 text-left font-normal"
+                                className="aria-[current=true]:bg-accent/60 h-auto w-full min-w-0 justify-start gap-2.5 p-1.5 text-left font-normal whitespace-normal"
                                 onClick={
                                     canSwitch
                                         ? () => handleSwitch(entry)
@@ -152,10 +152,10 @@ export function AccountSwitcherPopover() {
                                     </AvatarFallback>
                                 </Avatar>
                                 <div className="min-w-0 flex-1">
-                                    <div className="truncate text-sm">
+                                    <div className="text-sm wrap-anywhere">
                                         {accountDisplayName(entry.user)}
                                     </div>
-                                    <div className="text-muted-foreground truncate text-xs">
+                                    <div className="text-muted-foreground text-xs wrap-anywhere">
                                         {entry.user.username || userId}
                                     </div>
                                 </div>

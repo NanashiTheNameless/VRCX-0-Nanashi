@@ -39,7 +39,7 @@ export function PreviousDisplayNamesBadge({
                 render={
                     <Badge
                         variant="ghost"
-                        className="text-muted-foreground max-w-52 cursor-pointer px-1 text-xs font-normal"
+                        className="text-muted-foreground h-auto max-w-full cursor-pointer px-1 text-left text-xs font-normal whitespace-normal"
                         render={
                             <button
                                 type="button"
@@ -48,7 +48,7 @@ export function PreviousDisplayNamesBadge({
                                 onClick={() => onCopyName(primaryName)}
                             >
                                 <HistoryIcon data-icon="inline-start" />
-                                <span className="min-w-0 truncate">
+                                <span className="min-w-0 wrap-anywhere">
                                     {primaryName}
                                 </span>
                                 {names.length > 1 ? (
@@ -61,7 +61,10 @@ export function PreviousDisplayNamesBadge({
                     />
                 }
             />
-            <HoverCardContent align="start" className="w-72 p-0">
+            <HoverCardContent
+                align="start"
+                className="w-auto max-w-[min(36rem,calc(100vw-2rem))] min-w-72 p-0"
+            >
                 <div className="flex flex-col">
                     <div className="border-border flex items-center justify-between gap-3 border-b px-3 py-2">
                         <div className="text-sm font-medium">
@@ -75,12 +78,12 @@ export function PreviousDisplayNamesBadge({
                                 key={`${entry.displayName}:${entry.updated_at || index}`}
                                 type="button"
                                 variant="ghost"
-                                className="h-auto w-full min-w-0 justify-start gap-3 rounded-md px-2 py-1.5 text-left"
+                                className="h-auto w-full min-w-0 justify-start gap-3 rounded-md px-2 py-1.5 text-left whitespace-normal"
                                 aria-label={`${t('common.actions.copy')}: ${entry.displayName}`}
                                 title={t('common.actions.copy')}
                                 onClick={() => onCopyName(entry.displayName)}
                             >
-                                <span className="min-w-0 flex-1 truncate font-medium">
+                                <span className="min-w-0 flex-1 font-medium wrap-anywhere">
                                     {entry.displayName}
                                 </span>
                                 {entry.updated_at ? (
