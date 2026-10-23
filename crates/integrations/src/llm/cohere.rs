@@ -244,10 +244,8 @@ impl CohereStreamState {
                     ));
                 }
             }
-            Some("message-end") => {
-                if text_at(&event, "/delta/finish_reason") == "MAX_TOKENS" {
-                    self.truncated = true;
-                }
+            Some("message-end") if text_at(&event, "/delta/finish_reason") == "MAX_TOKENS" => {
+                self.truncated = true;
             }
             _ => {}
         }

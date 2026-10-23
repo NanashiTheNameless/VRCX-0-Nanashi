@@ -309,11 +309,11 @@ impl AnthropicStreamState {
                     _ => {}
                 }
             }
-            Some("message_delta") => {
-                if event.pointer("/delta/stop_reason").and_then(Value::as_str) == Some("max_tokens")
-                {
-                    self.truncated = true;
-                }
+            Some("message_delta")
+                if event.pointer("/delta/stop_reason").and_then(Value::as_str)
+                    == Some("max_tokens") =>
+            {
+                self.truncated = true;
             }
             Some("error") => {
                 self.error = Some(
