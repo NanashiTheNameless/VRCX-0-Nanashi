@@ -1,3 +1,6 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
+
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 
@@ -304,28 +307,22 @@ fn streaming_chat_request_body_includes_reasoning_effort_verbatim() {
 
 #[test]
 fn streaming_reasoning_details_are_accumulated_in_response_order() {
-    let mut content = String::new();
-    let mut tool_acc = Vec::new();
-    let mut reasoning_details = Vec::new();
+    let mut state = ChatStreamState::default();
     let mut on_text = |_: &str| {};
 
     apply_chat_stream_line(
         r#"data: {"choices":[{"delta":{"reasoning_details":[{"type":"reasoning.summary","summary":"Checking context","id":"summary-1","format":"anthropic-claude-v1","index":0}]}}]}"#,
         &mut on_text,
-        &mut content,
-        &mut tool_acc,
-        &mut reasoning_details,
+        &mut state,
     );
     apply_chat_stream_line(
         r#"data: {"choices":[{"delta":{"reasoning_details":[{"type":"reasoning.encrypted","data":"opaque-data","id":"encrypted-1","format":"anthropic-claude-v1","index":1}]}}]}"#,
         &mut on_text,
-        &mut content,
-        &mut tool_acc,
-        &mut reasoning_details,
+        &mut state,
     );
 
     assert_eq!(
-        reasoning_details,
+        state.reasoning_details,
         vec![
             serde_json::json!({
                 "type": "reasoning.summary",
@@ -366,6 +363,7 @@ fn assistant_tool_call_message_resends_reasoning_details_unchanged() {
             },
         }],
         reasoning_details: reasoning_details.clone(),
+        truncated: false,
     }
     .into_message();
 
@@ -882,4 +880,183 @@ async fn non_streaming_completions_still_stop_at_the_overall_timeout() {
 
     assert!(result.is_err());
     assert!(started.elapsed() < Duration::from_secs(2));
+}
+
+#[test]
+fn stream_lines_record_finish_reason_done_and_in_band_errors() {
+    let mut state = ChatStreamState::default();
+    let mut on_text = |_: &str| {};
+
+    apply_chat_stream_line(
+        r#"data: {"choices":[{"delta":{"content":"partial"},"finish_reason":"length"}]}"#,
+        &mut on_text,
+        &mut state,
+    );
+    apply_chat_stream_line("data: [DONE]", &mut on_text, &mut state);
+    assert_eq!(state.finish_reason.as_deref(), Some("length"));
+    assert!(state.done);
+    assert!(state.error.is_none());
+
+    apply_chat_stream_line(
+        r#"data: {"error":{"message":"upstream overloaded","code":502}}"#,
+        &mut on_text,
+        &mut state,
+    );
+    assert!(matches!(
+        state.error,
+        Some(LlmError::Api { status: 502, ref message }) if message == "upstream overloaded"
+    ));
+}
+
+const SSE_STOP: &str = "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\ndata: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n";
+
+fn json_error_response(status_line: &str, extra_headers: &str, body: &str) -> String {
+    format!(
+        "HTTP/1.1 {status_line}\r\nContent-Type: application/json\r\nContent-Length: {}\r\n{extra_headers}Connection: close\r\n\r\n{body}",
+        body.len()
+    )
+}
+
+async fn serve_scripted(responses: Vec<String>) -> (String, Arc<AtomicUsize>) {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+    let base_url = format!("http://{}/v1", listener.local_addr().unwrap());
+    let hits = Arc::new(AtomicUsize::new(0));
+    let served = hits.clone();
+    tokio::spawn(async move {
+        loop {
+            let Ok((mut stream, _)) = listener.accept().await else {
+                return;
+            };
+            let index = served.fetch_add(1, Ordering::SeqCst);
+            let response = responses[index.min(responses.len() - 1)].clone();
+            let mut request = Vec::new();
+            let mut chunk = [0_u8; 4096];
+            while !request.windows(4).any(|window| window == b"\r\n\r\n") {
+                let read = stream.read(&mut chunk).await.unwrap();
+                if read == 0 {
+                    break;
+                }
+                request.extend_from_slice(&chunk[..read]);
+            }
+            let _ = stream.write_all(response.as_bytes()).await;
+            let _ = stream.shutdown().await;
+        }
+    });
+    (base_url, hits)
+}
+
+async fn stream_once(base_url: String) -> Result<AssistantTurn, LlmError> {
+    let client = LlmClient::new(base_url, "", "model", None).unwrap();
+    client
+        .stream_chat(
+            &[ChatMessage::user("hi")],
+            &[],
+            &LlmRequestOptions::default(),
+            |_| {},
+        )
+        .await
+}
+
+#[tokio::test]
+async fn server_errors_retry_after_the_server_delay() {
+    let (base_url, hits) = serve_scripted(vec![
+        json_error_response(
+            "500 Internal Server Error",
+            "Retry-After: 0\r\n",
+            r#"{"error":{"message":"server error"}}"#,
+        ),
+        json_error_response("503 Service Unavailable", "retry-after-ms: 10\r\n", "{}"),
+        SSE_STOP.into(),
+    ])
+    .await;
+
+    let turn = stream_once(base_url).await.unwrap();
+
+    assert_eq!(turn.content, "ok");
+    assert!(!turn.truncated);
+    assert_eq!(hits.load(Ordering::SeqCst), 3);
+}
+
+#[tokio::test]
+async fn rate_limits_exhausted_quota_and_client_errors_are_not_retried() {
+    for response in [
+        json_error_response(
+            "429 Too Many Requests",
+            "Retry-After: 0\r\n",
+            r#"{"error":{"message":"rate limited"}}"#,
+        ),
+        json_error_response(
+            "503 Service Unavailable",
+            "Retry-After: 0\r\n",
+            r#"{"error":{"code":"insufficient_quota"}}"#,
+        ),
+        json_error_response("400 Bad Request", "", r#"{"error":"bad"}"#),
+        json_error_response("503 Service Unavailable", "Retry-After: 3600\r\n", "{}"),
+    ] {
+        let (base_url, hits) = serve_scripted(vec![response]).await;
+
+        let result = stream_once(base_url).await;
+
+        assert!(matches!(result, Err(LlmError::Api { .. })));
+        assert_eq!(hits.load(Ordering::SeqCst), 1);
+    }
+}
+
+#[tokio::test]
+async fn retries_stop_after_the_attempt_limit() {
+    let (base_url, hits) = serve_scripted(vec![json_error_response(
+        "502 Bad Gateway",
+        "Retry-After: 0\r\n",
+        "{}",
+    )])
+    .await;
+
+    let result = stream_once(base_url).await;
+
+    assert!(matches!(result, Err(LlmError::Api { status: 502, .. })));
+    assert_eq!(hits.load(Ordering::SeqCst), MAX_RETRIES as usize + 1);
+}
+
+#[tokio::test]
+async fn streams_that_end_without_finishing_are_errors() {
+    let (base_url, _) = serve_scripted(vec![
+        "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\ndata: {\"choices\":[{\"delta\":{\"content\":\"half\"}}]}\n\n".into(),
+    ])
+    .await;
+
+    let result = stream_once(base_url).await;
+
+    assert!(matches!(
+        result,
+        Err(LlmError::Api { status: 200, ref message }) if message.contains("ended before")
+    ));
+}
+
+#[tokio::test]
+async fn in_band_stream_errors_surface_instead_of_an_empty_answer() {
+    let (base_url, hits) = serve_scripted(vec![
+        "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\ndata: {\"error\":{\"message\":\"provider failed\",\"code\":502}}\n\ndata: [DONE]\n\n".into(),
+    ])
+    .await;
+
+    let result = stream_once(base_url).await;
+
+    assert!(matches!(
+        result,
+        Err(LlmError::Api { status: 502, ref message }) if message == "provider failed"
+    ));
+    assert_eq!(hits.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn length_finish_reason_marks_the_turn_truncated() {
+    let (base_url, _) = serve_scripted(vec![
+        "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\ndata: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"index\":0,\"id\":\"c1\",\"function\":{\"name\":\"get_summary\",\"arguments\":\"{\\\"limit\\\": 1\"}}]},\"finish_reason\":\"length\"}]}\n\ndata: [DONE]\n\n".into(),
+    ])
+    .await;
+
+    let turn = stream_once(base_url).await.unwrap();
+
+    assert!(turn.truncated);
+    assert_eq!(turn.tool_calls.len(), 1);
 }

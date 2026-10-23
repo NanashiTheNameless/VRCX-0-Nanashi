@@ -325,6 +325,7 @@ fn sanitize_schema(schema: &Value) -> Value {
 struct GeminiStreamState {
     content: String,
     tool_calls: Vec<ToolCall>,
+    truncated: bool,
 }
 
 impl GeminiStreamState {
@@ -338,10 +339,18 @@ impl GeminiStreamState {
     }
 
     fn apply_payload<F: FnMut(&str)>(&mut self, payload: &Value, on_text: &mut F) {
-        let parts = payload
+        let candidate = payload
             .get("candidates")
             .and_then(Value::as_array)
-            .and_then(|candidates| candidates.first())
+            .and_then(|candidates| candidates.first());
+        if candidate
+            .and_then(|candidate| candidate.get("finishReason"))
+            .and_then(Value::as_str)
+            == Some("MAX_TOKENS")
+        {
+            self.truncated = true;
+        }
+        let parts = candidate
             .and_then(|candidate| candidate.pointer("/content/parts"))
             .and_then(Value::as_array);
         for part in parts.into_iter().flatten() {
@@ -389,6 +398,7 @@ impl GeminiStreamState {
             content: self.content,
             tool_calls: self.tool_calls,
             reasoning_details: Vec::new(),
+            truncated: self.truncated,
         }
     }
 }
@@ -460,5 +470,18 @@ mod tests {
         assert_eq!(streamed, "Hello");
         assert_eq!(turn.tool_calls[0].function.name, "search");
         assert_eq!(turn.tool_calls[0].function.arguments, r#"{"q":"ada"}"#);
+        assert!(!turn.truncated);
+    }
+
+    #[test]
+    fn max_tokens_finish_marks_the_turn_truncated() {
+        let mut state = GeminiStreamState::default();
+        state.apply_line(
+            r#"data: {"candidates":[{"content":{"parts":[{"text":"Hel"}]},"finishReason":"MAX_TOKENS"}]}"#,
+            &mut |_: &str| {},
+        );
+        let turn = state.finish();
+        assert_eq!(turn.content, "Hel");
+        assert!(turn.truncated);
     }
 }

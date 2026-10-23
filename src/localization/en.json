@@ -134,6 +134,10 @@
         "untitled": "New conversation",
         "close": "Close",
         "thinking": "Generating response",
+        "trace": {
+            "working": "Looking through your data",
+            "done": "Looked through your data"
+        },
         "scroll_to_latest": "Scroll to bottom",
         "connection": {
             "checking": "Checking connection",
@@ -607,6 +611,7 @@
             "database_initialization_is_still_pending": "The database is still starting up. Try again in a moment."
         },
         "label": {
+            "terminal": "Terminal",
             "authenticated_and_prepared_the_session": "Signed in",
             "auto_login": "Auto sign-in",
             "vrchat_launched": "VRChat launched"
@@ -3143,13 +3148,13 @@
                     "port_active_connections": "Port {port} · {count} active connections",
                     "client_config": "Client config",
                     "client_config_description": "Claude Code: a one-time terminal command. Generic (HTTP): JSON config for a direct connection. Generic (mcp-remote): JSON config via a Node.js proxy for clients without native HTTP; needs Node.js in PATH. With LAN enabled, configs use `YOUR-LAN-IP` — replace it with this computer's local IP.",
+                    "view_client_config": "View config",
                     "copy_mcp_remote": "Generic (mcp-remote)",
                     "copy_generic": "Generic (HTTP)",
                     "security_note": "Client configs contain a plain-text token. Only share them with tools or devices you trust.",
                     "rotate_token": "Rotate token",
                     "rotate_token_description": "Old client configs stop working after rotation.",
                     "token_rotated": "MCP token rotated",
-                    "copied": "{target} config copied",
                     "status": {
                         "loading": "Loading",
                         "disabled": "Stopped",

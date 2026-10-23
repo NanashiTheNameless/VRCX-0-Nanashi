@@ -234,6 +234,7 @@ pub(crate) async fn run_turn(ctx: TurnContext) {
                     tool_defs,
                     ctx.tool_defs.as_slice(),
                     utc_offset_minutes,
+                    turn.truncated,
                     &mut dispatched_tools,
                 )
             })
@@ -378,11 +379,40 @@ fn prepare_call<'a>(
     tool_defs: &[ToolDefinition],
     all_tool_defs: &[ToolDefinition],
     utc_offset_minutes: i64,
+    output_truncated: bool,
     dispatched_tools: &mut HashSet<String>,
 ) -> PreparedCall<'a> {
+    let rejected = |message: String| PreparedCall {
+        call,
+        arguments: None,
+        resolved: Some(resolve_tool_outcome(Err(McpError::Custom(message)))),
+    };
+    if output_truncated {
+        tracing::warn!(tool = %call.function.name, "assistant: skipped tool call from a truncated response");
+        return rejected(format!(
+            "tool `{}` was not run: the response hit the output token limit, so its arguments may be cut off. Re-issue the call with complete arguments.",
+            call.function.name
+        ));
+    }
+    let parsed = match parse_arguments(&call.function.arguments) {
+        Ok(parsed) => parsed,
+        Err(error) => {
+            tracing::warn!(
+                tool = %call.function.name,
+                args = %call.function.arguments,
+                %error,
+                "assistant: tool arguments were not valid JSON"
+            );
+            return rejected(format!(
+                "tool `{}` was not run: its arguments are not a valid JSON object ({error}). Received arguments: {}. Re-issue the call with a valid JSON object.",
+                call.function.name,
+                truncate(&call.function.arguments)
+            ));
+        }
+    };
     let arguments = normalize_tool_arguments(
         &call.function.name,
-        parse_arguments(&call.function.arguments),
+        parsed,
         tool_accepts_utc_offset(all_tool_defs, &call.function.name).then_some(utc_offset_minutes),
     );
     let signature = tool_call_signature(&call.function.name, arguments.as_ref());

@@ -146,6 +146,7 @@ impl LlmClient {
             content: state.content,
             tool_calls: state.tool_calls,
             reasoning_details: Vec::new(),
+            truncated: state.truncated,
         })
     }
 }
@@ -224,6 +225,7 @@ struct OllamaStreamState {
     content: String,
     tool_calls: Vec<ToolCall>,
     error: Option<String>,
+    truncated: bool,
 }
 
 impl OllamaStreamState {
@@ -238,6 +240,9 @@ impl OllamaStreamState {
         if let Some(error) = chunk.get("error").and_then(Value::as_str) {
             self.error = Some(error.to_string());
             return;
+        }
+        if chunk.get("done_reason").and_then(Value::as_str) == Some("length") {
+            self.truncated = true;
         }
         let Some(message) = chunk.get("message") else {
             return;
@@ -297,6 +302,17 @@ mod tests {
         assert_eq!(streamed, "Hi");
         assert_eq!(state.tool_calls[0].function.name, "search");
         assert_eq!(state.tool_calls[0].function.arguments, r#"{"q":"ada"}"#);
+        assert!(!state.truncated);
+    }
+
+    #[test]
+    fn length_done_reason_marks_the_turn_truncated() {
+        let mut state = OllamaStreamState::default();
+        state.apply_line(
+            r#"{"message":{"role":"assistant","content":""},"done":true,"done_reason":"length"}"#,
+            &mut |_: &str| {},
+        );
+        assert!(state.truncated);
     }
 
     #[test]

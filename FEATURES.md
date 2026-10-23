@@ -35,7 +35,10 @@ App-managed HTTP clients try HTTP/3 when a direct HTTPS connection supports it, 
 - **Local addresses.** Localhost and private IP addresses can always use HTTP/1.1, including
   local AI services. A local proxy does not exempt a remote destination.
 - **Proxies.** Proxy connections use TCP negotiation; HTTP/3 never bypasses a proxy.
-- **No replays.** AI prompts and uploads are not replayed after transport failures.
+- **Retries.** The HTTP layer never replays AI prompts or uploads after a transport failure.
+  OpenAI-compatible and Azure OpenAI chat requests are resent up to 3 times when the connection
+  cannot be opened or the provider answers 408, 409 or a 5xx error; rate limits (429), quota
+  errors and other client errors are not retried.
 - **Not covered.** WebSocket handshakes, WebView resources and external yt-dlp processes retain
   their own protocol handling.
 

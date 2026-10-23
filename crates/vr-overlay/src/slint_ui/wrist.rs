@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{cmp::Ordering, rc::Rc};
 
 use slint::{
     platform::software_renderer::{MinimalSoftwareWindow, PremultipliedRgbaColor},
@@ -31,6 +31,9 @@ const WRIST_WARNING: Color = Color::rgba(251, 191, 36, 255);
 const WRIST_FEED_ONLINE: Color = Color::rgba(46, 211, 25, 255);
 const WRIST_FEED_LOCATION: Color = Color::rgba(14, 165, 233, 255);
 const WRIST_FEED_OFFLINE: Color = Color::rgba(148, 163, 184, 255);
+const WRIST_HEADER_INSET: f32 = 36.0;
+const WRIST_TOKEN_SPACING: f32 = 10.0;
+const WRIST_HEADER_SAFETY_MARGIN: f32 = 16.0;
 
 /// Players / Notes grid: a new column starts every this many players, and a
 /// column is never narrower than `MIN_PLAYER_COLUMN_PX` at full text size.
@@ -256,8 +259,7 @@ pub(super) struct WristDeviceToken {
     pub(super) label: String,
     status: DeviceStatus,
     battery_percent: Option<u8>,
-    aggregate_count: Option<usize>,
-    abnormal: bool,
+    collapsed: bool,
     draw_battery: bool,
 }
 
@@ -267,29 +269,31 @@ impl WristDeviceToken {
             label,
             status: device.status,
             battery_percent: device.battery_percent,
-            aggregate_count: None,
-            abnormal: is_abnormal_device_status(device.status),
+            collapsed: false,
             draw_battery: device.battery_percent.is_some(),
         }
     }
 
-    fn aggregate(label: String, count: usize, abnormal: bool) -> Self {
+    fn collapsed_trackers(trackers: &[&DeviceChip]) -> Self {
+        let status = match trackers.first() {
+            Some(device) if is_abnormal_device_status(device.status) => device.status,
+            _ => DeviceStatus::Normal,
+        };
+        let battery_percent = trackers
+            .iter()
+            .filter_map(|device| device.battery_percent)
+            .min();
         Self {
-            label,
-            status: if abnormal {
-                DeviceStatus::TrackingWarning
-            } else {
-                DeviceStatus::Normal
-            },
-            battery_percent: None,
-            aggregate_count: Some(count),
-            abnormal,
-            draw_battery: false,
+            label: format!("T×{}", trackers.len()),
+            status,
+            battery_percent,
+            collapsed: true,
+            draw_battery: battery_percent.is_some(),
         }
     }
 
     fn percent_text(&self, show_percent: bool) -> Option<String> {
-        if self.aggregate_count.is_some() || !show_percent {
+        if !show_percent {
             return None;
         }
         self.battery_percent.map(|percent| {
@@ -300,16 +304,41 @@ impl WristDeviceToken {
             }
         })
     }
+
+    fn shows_battery(&self, percent_shown: bool) -> bool {
+        self.draw_battery && (!percent_shown || is_abnormal_device_status(self.status))
+    }
+
+    fn estimated_width(&self, show_percent: bool) -> f32 {
+        let percent = self.percent_text(show_percent);
+        let mut width = self.label.chars().count() as f32 * 10.0 + WRIST_TOKEN_SPACING;
+        if let Some(percent) = &percent {
+            width += 4.0 + percent.chars().count() as f32 * 7.5;
+        }
+        if self.shows_battery(percent.is_some()) {
+            width += 27.0;
+        }
+        width
+    }
+}
+
+fn total_token_width(tokens: &[WristDeviceToken], show_percent: bool) -> f32 {
+    tokens
+        .iter()
+        .map(|token| token.estimated_width(show_percent))
+        .sum()
 }
 
 fn wrist_device_model(model: &WristSurfaceModel) -> ModelRc<WristDeviceItem> {
     ModelRc::new(VecModel::from(
-        wrist_device_tokens(&model.devices, model.size.width as f32)
-            .into_iter()
-            .map(|token| {
-                wrist_device_item(&token, model.show_battery_percent, model.dark_background)
-            })
-            .collect::<Vec<_>>(),
+        wrist_device_tokens(
+            &model.devices,
+            header_layout_width(model.size.width as f32, model.text.header_percent),
+            model.show_battery_percent,
+        )
+        .into_iter()
+        .map(|token| wrist_device_item(&token, model.show_battery_percent, model.dark_background))
+        .collect::<Vec<_>>(),
     ))
 }
 
@@ -321,59 +350,77 @@ pub(super) fn wrist_muted_text(dark_background: bool) -> Color {
     }
 }
 
-pub(super) fn wrist_device_tokens(devices: &[DeviceChip], width: f32) -> Vec<WristDeviceToken> {
+/// The header row's fixed side insets do not scale with the header text, so
+/// only the space between them shrinks as the text grows.
+pub(super) fn header_layout_width(width: f32, header_percent: u8) -> f32 {
+    let scale = (f32::from(header_percent) / 100.0).max(0.01);
+    WRIST_HEADER_INSET + (width - WRIST_HEADER_INSET) / scale
+}
+
+pub(super) fn wrist_device_tokens(
+    devices: &[DeviceChip],
+    width: f32,
+    show_percent: bool,
+) -> Vec<WristDeviceToken> {
     let mut tokens = Vec::new();
     push_wrist_role_token(&mut tokens, devices, DeviceRole::Hmd, "HMD");
     push_wrist_role_token(&mut tokens, devices, DeviceRole::LeftController, "L");
     push_wrist_role_token(&mut tokens, devices, DeviceRole::RightController, "R");
-
-    let abnormal_tracker_limit = abnormal_tracker_display_limit(width);
-    let mut abnormal_trackers = devices
-        .iter()
-        .filter(|device| {
-            device.role == DeviceRole::Tracker && is_abnormal_device_status(device.status)
-        })
-        .collect::<Vec<_>>();
-    abnormal_trackers.sort_by(|left, right| {
-        right
-            .priority
-            .cmp(&left.priority)
-            .then_with(|| tracker_index(&left.label).cmp(&tracker_index(&right.label)))
-    });
-    for device in abnormal_trackers.iter().take(abnormal_tracker_limit) {
-        tokens.push(WristDeviceToken::specific(device, device.label.clone()));
-    }
-    if abnormal_trackers.len() > abnormal_tracker_limit {
-        tokens.push(WristDeviceToken::aggregate(
-            format!("+{}", abnormal_trackers.len() - abnormal_tracker_limit),
-            abnormal_trackers.len() - abnormal_tracker_limit,
-            true,
-        ));
-    }
-
-    let normal_tracker_count = devices
-        .iter()
-        .filter(|device| {
-            device.role == DeviceRole::Tracker && !is_abnormal_device_status(device.status)
-        })
-        .count();
-    if normal_tracker_count > 0 {
-        tokens.push(WristDeviceToken::aggregate(
-            format!("T×{normal_tracker_count}"),
-            normal_tracker_count,
-            false,
-        ));
-    }
-
-    for device in devices
+    let other_tokens = devices
         .iter()
         .filter(|device| {
             device.role == DeviceRole::Other && is_abnormal_device_status(device.status)
         })
         .take(2)
-    {
-        tokens.push(WristDeviceToken::specific(device, device.label.clone()));
+        .map(|device| WristDeviceToken::specific(device, device.label.clone()))
+        .collect::<Vec<_>>();
+
+    let mut trackers = devices
+        .iter()
+        .filter(|device| device.role == DeviceRole::Tracker)
+        .collect::<Vec<_>>();
+    trackers.sort_by(|left, right| {
+        let left_abnormal = is_abnormal_device_status(left.status);
+        let right_abnormal = is_abnormal_device_status(right.status);
+        right_abnormal
+            .cmp(&left_abnormal)
+            .then_with(|| {
+                if left_abnormal {
+                    right.priority.cmp(&left.priority)
+                } else {
+                    Ordering::Equal
+                }
+            })
+            .then_with(|| tracker_index(&left.label).cmp(&tracker_index(&right.label)))
+    });
+    let tracker_tokens = trackers
+        .iter()
+        .map(|device| WristDeviceToken::specific(device, device.label.clone()))
+        .collect::<Vec<_>>();
+    let tracker_budget = width
+        - WRIST_HEADER_INSET
+        - WRIST_HEADER_SAFETY_MARGIN
+        - total_token_width(&tokens, show_percent)
+        - total_token_width(&other_tokens, show_percent);
+    if trackers.is_empty() || total_token_width(&tracker_tokens, show_percent) <= tracker_budget {
+        tokens.extend(tracker_tokens);
+    } else {
+        let shown_trackers = (0..trackers.len())
+            .rev()
+            .find(|&shown| {
+                total_token_width(&tracker_tokens[..shown], show_percent)
+                    + WristDeviceToken::collapsed_trackers(&trackers[shown..])
+                        .estimated_width(show_percent)
+                    <= tracker_budget
+            })
+            .unwrap_or(0);
+        tokens.extend(tracker_tokens.into_iter().take(shown_trackers));
+        tokens.push(WristDeviceToken::collapsed_trackers(
+            &trackers[shown_trackers..],
+        ));
     }
+
+    tokens.extend(other_tokens);
     tokens
 }
 
@@ -395,7 +442,7 @@ pub(super) fn wrist_device_item(
 ) -> WristDeviceItem {
     let percent = token.percent_text(show_percent).unwrap_or_default();
     let muted = wrist_muted_text(dark_background);
-    let label_color = if token.aggregate_count.is_some() && token.abnormal {
+    let label_color = if token.collapsed && is_abnormal_device_status(token.status) {
         wrist_status_color(token.status)
     } else {
         muted
@@ -413,18 +460,7 @@ pub(super) fn wrist_device_item(
         battery_color: to_slint_color(wrist_status_color(token.status)),
         battery_fill: battery_fill_ratio(token.battery_percent),
         show_percent: !percent.is_empty(),
-        show_battery: token.draw_battery
-            && (percent.is_empty() || is_abnormal_device_status(token.status)),
-    }
-}
-
-fn abnormal_tracker_display_limit(width: f32) -> usize {
-    if width >= 600.0 {
-        4
-    } else if width >= 540.0 {
-        3
-    } else {
-        2
+        show_battery: token.shows_battery(!percent.is_empty()),
     }
 }
 

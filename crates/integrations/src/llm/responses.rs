@@ -302,6 +302,7 @@ impl ResponsesStreamState {
             content,
             tool_calls,
             reasoning_details,
+            truncated: false,
         }
     }
 }

@@ -291,6 +291,7 @@ fn parse_converse_output(payload: &Value) -> AssistantTurn {
         content,
         tool_calls,
         reasoning_details: Vec::new(),
+        truncated: payload.get("stopReason").and_then(Value::as_str) == Some("max_tokens"),
     }
 }
 
@@ -341,6 +342,16 @@ mod tests {
         assert_eq!(turn.content, "Checking");
         assert_eq!(turn.tool_calls[0].id, "tu_2");
         assert_eq!(turn.tool_calls[0].function.arguments, r#"{"q":"x"}"#);
+        assert!(!turn.truncated);
+    }
+
+    #[test]
+    fn max_tokens_stop_reason_marks_the_turn_truncated() {
+        let turn = parse_converse_output(&json!({
+            "output": { "message": { "content": [{ "text": "Check" }] } },
+            "stopReason": "max_tokens"
+        }));
+        assert!(turn.truncated);
     }
 
     #[test]

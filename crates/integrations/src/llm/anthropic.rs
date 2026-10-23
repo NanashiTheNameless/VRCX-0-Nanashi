@@ -257,6 +257,7 @@ struct AnthropicStreamState {
     content: String,
     tools: Vec<(usize, PendingToolUse)>,
     error: Option<String>,
+    truncated: bool,
 }
 
 impl AnthropicStreamState {
@@ -308,6 +309,12 @@ impl AnthropicStreamState {
                     _ => {}
                 }
             }
+            Some("message_delta") => {
+                if event.pointer("/delta/stop_reason").and_then(Value::as_str) == Some("max_tokens")
+                {
+                    self.truncated = true;
+                }
+            }
             Some("error") => {
                 self.error = Some(
                     event
@@ -348,6 +355,7 @@ impl AnthropicStreamState {
             content: self.content,
             tool_calls,
             reasoning_details: Vec::new(),
+            truncated: self.truncated,
         }
     }
 }
@@ -415,5 +423,20 @@ mod tests {
         assert_eq!(turn.content, "Hi");
         assert_eq!(turn.tool_calls[0].id, "toolu_9");
         assert_eq!(turn.tool_calls[0].function.arguments, r#"{"q":"ada"}"#);
+        assert!(!turn.truncated);
+    }
+
+    #[test]
+    fn max_tokens_stop_marks_the_turn_truncated() {
+        let mut state = AnthropicStreamState::default();
+        for line in [
+            r#"data: {"type":"content_block_start","index":0,"content_block":{"type":"tool_use","id":"toolu_1","name":"search"}}"#,
+            r#"data: {"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\"q\":"}}"#,
+            r#"data: {"type":"message_delta","delta":{"stop_reason":"max_tokens"}}"#,
+        ] {
+            state.apply_line(line, &mut |_: &str| {});
+        }
+
+        assert!(state.finish().truncated);
     }
 }
