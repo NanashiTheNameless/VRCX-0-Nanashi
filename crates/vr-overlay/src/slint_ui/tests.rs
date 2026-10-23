@@ -614,7 +614,7 @@ fn wrist_shows_each_tracker_battery_while_the_header_has_room() {
 #[test]
 fn larger_header_text_collapses_trackers_sooner() {
     let mut devices = headset_and_controllers();
-    devices.extend((1..=6).map(|index| tracker(index, DeviceStatus::Normal, 60 + index as u8)));
+    devices.extend((1..=3).map(|index| tracker(index, DeviceStatus::Normal, 60 + index as u8)));
     let labels = |header_percent: u8| {
         wrist_device_tokens(&devices, header_layout_width(512.0, header_percent), true)
             .iter()
@@ -687,7 +687,7 @@ fn wrist_header_keeps_trackers_clear_of_the_edge_at_every_overlay_size_preset() 
                     .devices
                     .extend((1..=count).map(|index| tracker(index, status, battery)));
 
-                let frame = renderer.render(&model).unwrap();
+                let frame = renderer.render_logical(&model).unwrap();
 
                 assert!(
                     header_right_edge(&frame) + 16 < size.width - 18,
