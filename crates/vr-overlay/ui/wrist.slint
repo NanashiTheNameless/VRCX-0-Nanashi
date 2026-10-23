@@ -119,6 +119,12 @@ export component WristPanel inherits Window {
     in property <float> content-scale: 1;
     in property <float> grid-fit-scale: 1;
     in property <length> max-panel-height: 1024px;
+    in property <WristDeviceItem> device-probe;
+    out property <length> device-probe-width: device-label-probe.preferred-width
+        + (root.device-probe.show-percent ? root.device-gap + device-percent-probe.preferred-width : 0px)
+        + (root.device-probe.show-battery ? root.device-gap + root.battery-width : 0px);
+    out property <length> device-spacing: 10px * root.header-scale;
+    out property <length> device-room: device-strip.width - 16px;
 
     property <float> grid-scale: root.content-scale * root.grid-fit-scale;
     property <color> background-color: root.dark-background ? #0d1117f2 : #0d1117b8;
@@ -129,6 +135,10 @@ export component WristPanel inherits Window {
     property <color> now-playing-title-color: root.dark-background ? #d5dbe4 : #e6ebf1;
     property <color> now-playing-accent-color: #38bdf8;
     property <length> header-height: 44px * root.header-scale;
+    property <length> device-gap: 4px * root.header-scale;
+    property <length> battery-width: 23px * root.header-scale;
+    property <length> device-label-size: 14px * root.header-scale;
+    property <length> device-percent-size: 12px * root.header-scale;
     property <length> footer-height: 34px * root.footer-scale;
     property <length> row-height: 38px * root.content-scale;
     property <length> feed-time-width: (root.feed-wide-time ? 60px : 42px) * root.content-scale;
@@ -197,7 +207,20 @@ export component WristPanel inherits Window {
             background: root.divider-color;
         }
 
-        Rectangle {
+        device-label-probe := Text {
+            visible: false;
+            text: root.device-probe.label;
+            font-size: root.device-label-size;
+            font-weight: 600;
+        }
+
+        device-percent-probe := Text {
+            visible: false;
+            text: root.device-probe.percent;
+            font-size: root.device-percent-size;
+        }
+
+        device-strip := Rectangle {
             x: 18px;
             y: 10px * root.header-scale;
             width: parent.width - 36px;
@@ -208,15 +231,15 @@ export component WristPanel inherits Window {
                 x: 0px;
                 y: 0px;
                 height: 24px * root.header-scale;
-                spacing: 10px * root.header-scale;
+                spacing: root.device-spacing;
                 alignment: start;
 
                 for device in root.devices : HorizontalLayout {
-                    spacing: 4px * root.header-scale;
+                    spacing: root.device-gap;
 
                     Text {
                         text: device.label;
-                        font-size: 14px * root.header-scale;
+                        font-size: root.device-label-size;
                         font-weight: 600;
                         vertical-alignment: center;
                         color: device.label-color;
@@ -224,13 +247,13 @@ export component WristPanel inherits Window {
 
                     if device.show-percent: Text {
                         text: device.percent;
-                        font-size: 12px * root.header-scale;
+                        font-size: root.device-percent-size;
                         vertical-alignment: center;
                         color: device.percent-color;
                     }
 
                     if device.show-battery: Rectangle {
-                        width: 23px * root.header-scale;
+                        width: root.battery-width;
 
                         Rectangle {
                             x: 0px;
