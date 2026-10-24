@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { setDisplayTimeZone } from '@/shared/utils/displayTimeZone';
 import { useShellStore } from '@/state/shellStore';
 
 import {
@@ -9,11 +10,13 @@ import {
     resolveFeedColumnTimeDisplay
 } from './feedTimeDisplay';
 
-const BASE_TIME = new Date('2026-06-04T09:20:02').getTime();
+const BASE_TIME = new Date('2026-06-04T09:20:02Z').getTime();
 const translate = ((key: string) => key) as TFunction;
 
 describe('feedTimeDisplay', () => {
+    afterEach(() => setDisplayTimeZone(''));
     beforeEach(() => {
+        setDisplayTimeZone('UTC');
         useShellStore.setState({
             locale: 'zh-CN',
             dateCulture: 'en-gb',

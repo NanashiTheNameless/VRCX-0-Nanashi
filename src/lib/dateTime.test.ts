@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { setI18nLanguage } from '@/services/i18nService';
+import { setDisplayTimeZone } from '@/shared/utils/displayTimeZone';
 import { useShellStore } from '@/state/shellStore';
 
 import {
@@ -17,7 +18,9 @@ const DAY_MS = 24 * HOUR_MS;
 const YEAR_MS = 365 * DAY_MS;
 
 describe('app dateTime wrappers', () => {
+    afterEach(() => setDisplayTimeZone(''));
     beforeEach(async () => {
+        setDisplayTimeZone('UTC');
         await setI18nLanguage('en');
         useShellStore.setState({
             locale: 'en',

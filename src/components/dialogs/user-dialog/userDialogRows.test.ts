@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { setDisplayTimeZone } from '@/shared/utils/displayTimeZone';
 import { useShellStore } from '@/state/shellStore';
 import { activePresence } from '@/test/presenceFixtures';
 
@@ -31,7 +32,9 @@ import {
 } from './userDialogRows';
 
 describe('userDialogRows', () => {
+    afterEach(() => setDisplayTimeZone(''));
     beforeEach(() => {
+        setDisplayTimeZone('UTC');
         useShellStore.setState({
             dateCulture: 'en-gb',
             dateIsoFormat: true,

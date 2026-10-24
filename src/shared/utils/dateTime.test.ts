@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { setDisplayTimeZone } from '@/shared/utils/displayTimeZone';
 
 import {
     formatClockWithPreferences,
@@ -9,9 +11,20 @@ import {
     timeToTextWithLabels
 } from './dateTime';
 
-const LOCAL_DATE = '2026-06-04T09:20:02';
+const UTC_DATE = '2026-06-04T09:20:02Z';
 
 describe('dateTime utils', () => {
+    beforeEach(() => setDisplayTimeZone('UTC'));
+    afterEach(() => setDisplayTimeZone(''));
+    it('formats legacy UTC timestamps in the configured fractional timezone across midnight', () => {
+        setDisplayTimeZone('UTC+05:45');
+        expect(
+            formatDateFilterWithPreferences('2026-06-04T21:20:02', 'long', {
+                dateIsoFormat: true
+            })
+        ).toBe('2026-06-05 03:05:02');
+    });
+
     it('supports compact unit spacing without changing duration precision or default spacing', () => {
         const duration = ((24 + 1) * 60 + 37) * 60_000;
         const units = { d: '天', h: '时', m: '分', s: '秒' };
@@ -26,7 +39,7 @@ describe('dateTime utils', () => {
 
     it('formats visible dates with the app locale before date culture', () => {
         expect(
-            formatDateFilterWithPreferences(LOCAL_DATE, 'long', {
+            formatDateFilterWithPreferences(UTC_DATE, 'long', {
                 appLocale: 'zh-CN',
                 dateCulture: 'en-gb',
                 dateHour12: false
@@ -36,28 +49,29 @@ describe('dateTime utils', () => {
 
     it('formats Chinese short dates as year, month and day text', () => {
         expect(
-            formatDateFilterWithPreferences(LOCAL_DATE, 'short', {
+            formatDateFilterWithPreferences(UTC_DATE, 'short', {
                 appLocale: 'zh-CN',
                 dateHour12: false
             })
         ).toBe('2026年6月4日 9:20');
         expect(
-            formatDateFilterWithPreferences(LOCAL_DATE, 'date', {
+            formatDateFilterWithPreferences(UTC_DATE, 'date', {
                 appLocale: 'zh-TW'
             })
         ).toBe('2026年6月4日');
     });
 
     it('formats Japanese date labels with Japanese locale ordering', () => {
-        const date = new Date(LOCAL_DATE);
+        const date = new Date(UTC_DATE);
         const expected = date.toLocaleDateString('ja', {
+            timeZone: 'UTC',
             month: 'long',
             day: 'numeric',
             year: 'numeric'
         });
 
         expect(
-            formatDateFilterWithPreferences(LOCAL_DATE, 'date', {
+            formatDateFilterWithPreferences(UTC_DATE, 'date', {
                 appLocale: 'ja'
             })
         ).toBe(expected);
@@ -65,7 +79,7 @@ describe('dateTime utils', () => {
 
     it('formats English short dates with the English app locale', () => {
         expect(
-            formatDateFilterWithPreferences(LOCAL_DATE, 'short', {
+            formatDateFilterWithPreferences(UTC_DATE, 'short', {
                 appLocale: 'en',
                 dateHour12: false
             })
@@ -74,7 +88,7 @@ describe('dateTime utils', () => {
 
     it('keeps long ISO output when ISO format is enabled', () => {
         expect(
-            formatDateFilterWithPreferences(LOCAL_DATE, 'long', {
+            formatDateFilterWithPreferences(UTC_DATE, 'long', {
                 appLocale: 'ja',
                 dateIsoFormat: true
             })
@@ -82,27 +96,29 @@ describe('dateTime utils', () => {
     });
 
     it('switches the clock between 12-hour and 24-hour preferences', () => {
-        const date = new Date(LOCAL_DATE);
+        const date = new Date(UTC_DATE);
 
         expect(
-            formatDateFilterWithPreferences(LOCAL_DATE, 'time', {
+            formatDateFilterWithPreferences(UTC_DATE, 'time', {
                 appLocale: 'en',
                 dateHour12: true
             })
         ).toBe(
             date.toLocaleTimeString('en', {
+                timeZone: 'UTC',
                 hour: 'numeric',
                 minute: 'numeric',
                 hourCycle: 'h12'
             })
         );
         expect(
-            formatDateFilterWithPreferences(LOCAL_DATE, 'time', {
+            formatDateFilterWithPreferences(UTC_DATE, 'time', {
                 appLocale: 'en',
                 dateHour12: false
             })
         ).toBe(
             date.toLocaleTimeString('en', {
+                timeZone: 'UTC',
                 hour: 'numeric',
                 minute: 'numeric',
                 hourCycle: 'h23'
@@ -111,11 +127,11 @@ describe('dateTime utils', () => {
     });
 
     it('formats arbitrary date time options and clocks with app locale', () => {
-        const date = new Date(LOCAL_DATE);
+        const date = new Date(UTC_DATE);
 
         expect(
             formatDateTimeWithPreferences(
-                LOCAL_DATE,
+                UTC_DATE,
                 {
                     weekday: 'short',
                     hour: '2-digit',
@@ -128,6 +144,7 @@ describe('dateTime utils', () => {
             )
         ).toBe(
             new Intl.DateTimeFormat('ja', {
+                timeZone: 'UTC',
                 weekday: 'short',
                 hour: '2-digit',
                 minute: '2-digit',
@@ -135,13 +152,14 @@ describe('dateTime utils', () => {
             }).format(date)
         );
         expect(
-            formatClockWithPreferences(LOCAL_DATE, {
+            formatClockWithPreferences(UTC_DATE, {
                 appLocale: 'en',
                 hour12: true,
                 includeSeconds: true
             })
         ).toBe(
             new Intl.DateTimeFormat('en', {
+                timeZone: 'UTC',
                 hour: '2-digit',
                 minute: '2-digit',
                 second: '2-digit',
@@ -151,11 +169,11 @@ describe('dateTime utils', () => {
     });
 
     it('applies hour preferences when using timeStyle', () => {
-        const date = new Date(LOCAL_DATE);
+        const date = new Date(UTC_DATE);
 
         expect(
             formatDateTimeWithPreferences(
-                LOCAL_DATE,
+                UTC_DATE,
                 {
                     dateStyle: 'medium',
                     timeStyle: 'medium'
@@ -167,6 +185,7 @@ describe('dateTime utils', () => {
             )
         ).toBe(
             new Intl.DateTimeFormat('en', {
+                timeZone: 'UTC',
                 dateStyle: 'medium',
                 timeStyle: 'medium',
                 hour12: false
@@ -177,21 +196,21 @@ describe('dateTime utils', () => {
     it('adds the year whenever a month and day are shown', () => {
         expect(
             formatDateTimeWithPreferences(
-                LOCAL_DATE,
+                UTC_DATE,
                 { month: '2-digit', day: '2-digit' },
                 { appLocale: 'en' }
             )
         ).toBe('06/04/2026');
         expect(
             formatDateTimeWithPreferences(
-                LOCAL_DATE,
+                UTC_DATE,
                 { year: '2-digit', month: '2-digit', day: '2-digit' },
                 { appLocale: 'en' }
             )
         ).toBe('06/04/26');
         expect(
             formatDateTimeWithPreferences(
-                LOCAL_DATE,
+                UTC_DATE,
                 { year: 'numeric', month: 'long' },
                 { appLocale: 'en' }
             )
@@ -205,16 +224,16 @@ describe('dateTime utils', () => {
             dateHour12: true
         } as const;
         expect(
-            formatDateFilterWithPreferences(LOCAL_DATE, 'long', preferences)
+            formatDateFilterWithPreferences(UTC_DATE, 'long', preferences)
         ).toBe('09:20:02 AM 06/04/26');
         expect(
-            formatDateFilterWithPreferences(LOCAL_DATE, 'short', preferences)
+            formatDateFilterWithPreferences(UTC_DATE, 'short', preferences)
         ).toBe('09:20:02 AM 06/04/26');
         expect(
-            formatDateFilterWithPreferences(LOCAL_DATE, 'time', preferences)
+            formatDateFilterWithPreferences(UTC_DATE, 'time', preferences)
         ).toBe('09:20:02 AM');
         expect(
-            formatDateFilterWithPreferences(LOCAL_DATE, 'date', preferences)
+            formatDateFilterWithPreferences(UTC_DATE, 'date', preferences)
         ).toBe('06/04/26');
         expect(
             formatDateFilterWithPreferences('2026-06-04T21:05:09', 'long', {
@@ -239,28 +258,28 @@ describe('dateTime utils', () => {
         } as const;
         expect(
             formatDateTimeWithPreferences(
-                LOCAL_DATE,
+                UTC_DATE,
                 { month: 'short', day: 'numeric', hour: 'numeric' },
                 preferences
             )
         ).toBe('09:20:02 04/06/26');
         expect(
             formatDateTimeWithPreferences(
-                LOCAL_DATE,
+                UTC_DATE,
                 { hour: '2-digit', minute: '2-digit' },
                 preferences
             )
         ).toBe('09:20');
         expect(
             formatDateTimeWithPreferences(
-                LOCAL_DATE,
+                UTC_DATE,
                 { year: 'numeric', month: 'long' },
                 preferences
             )
         ).toBe('June 2026');
         expect(
             formatDateTimeWithPreferences(
-                LOCAL_DATE,
+                UTC_DATE,
                 { weekday: 'long', month: 'short', day: 'numeric' },
                 preferences
             )
@@ -289,7 +308,7 @@ describe('dateTime utils', () => {
         expect(
             formatRelativeTimeWithPreferences('2026-06-04T07:20:02', {
                 appLocale: 'zh-CN',
-                nowMs: new Date(LOCAL_DATE).getTime()
+                nowMs: new Date(UTC_DATE).getTime()
             })
         ).toBe(expected);
     });
