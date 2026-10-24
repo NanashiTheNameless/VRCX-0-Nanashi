@@ -689,7 +689,7 @@ fn bulk_profile_refresh_is_discarded_when_friend_rev_advanced() -> Result<()> {
             }
         }),
         raw: "{}".into(),
-        received_at: "2026-05-15T00:00:01Z".into(),
+        received_at: 1778803201,
     });
 
     assert!(!runtime.runtime().apply_friend_profile_refresh(
@@ -752,7 +752,7 @@ async fn cached_user_response_is_not_replayed_into_friend_state() -> Result<()> 
             }
         }),
         raw: "{}".into(),
-        received_at: "2026-05-15T00:00:01Z".into(),
+        received_at: 1778803201,
     });
 
     let stale_profile = json!({

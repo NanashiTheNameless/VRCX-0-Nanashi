@@ -10,6 +10,7 @@ import {
     DATA_TABLE_PRIMARY_CELL_CLASS_NAME
 } from '@/components/data-table/DataTableView';
 import { formatDateFilter } from '@/lib/dateTime';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { Button } from '@/ui/shadcn/button';
 import { Spinner } from '@/ui/shadcn/spinner';
@@ -72,8 +73,8 @@ export function useModerationColumns({
                     />
                 ),
                 sortFn: (rowA, rowB) => {
-                    const leftTs = Date.parse(rowA.original.created);
-                    const rightTs = Date.parse(rowB.original.created);
+                    const leftTs = parseAbsoluteDateMs(rowA.original.created);
+                    const rightTs = parseAbsoluteDateMs(rowB.original.created);
                     if (
                         Number.isFinite(leftTs) &&
                         Number.isFinite(rightTs) &&

@@ -33,6 +33,6 @@ pub struct AvatarWearSegment {
     pub name: String,
     pub thumbnail_image_url: String,
     pub image_url: String,
-    pub started_at_ms: i64,
-    pub ended_at_ms: i64,
+    pub started_at: i64,
+    pub ended_at: i64,
 }

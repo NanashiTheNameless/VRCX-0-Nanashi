@@ -1,7 +1,7 @@
 use vrcx_0_contracts::{SavedGroupCollection, SavedGroupFavoritesSnapshot};
 use vrcx_0_core::OwnerId;
 
-use crate::common::{normalize_text, row_string, ParamsBuilder};
+use crate::common::{normalize_text, row_i64, row_string, ParamsBuilder};
 use crate::database::schema::ensure_global_store_tables;
 use crate::ownership::{owner_id_for_filter, owner_id_get_or_insert};
 use crate::{DatabaseService, Error};
@@ -25,7 +25,7 @@ pub fn snapshot(
             id: row_string(&row, 0),
             name: row_string(&row, 1),
             group_ids: parse_group_ids(&row_string(&row, 2)),
-            created_at: row_string(&row, 3),
+            created_at: row_i64(&row, 3),
         })
         .collect();
     Ok(SavedGroupFavoritesSnapshot { collections })
@@ -40,7 +40,7 @@ pub fn create_collection(
     ensure_global_store_tables(db)?;
     let owner_id = owner_id_get_or_insert(db, owner)?.value();
     db.execute_non_query(
-        "INSERT INTO favorite_group_collection (id, owner_id, name, group_ids, created_at) VALUES (@id, @owner_id, @name, '[]', strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
+        "INSERT INTO favorite_group_collection (id, owner_id, name, group_ids, created_at) VALUES (@id, @owner_id, @name, '[]', CAST(strftime('%s', 'now') AS INTEGER))",
         &ParamsBuilder::new()
             .set("id", normalize_text(collection_id))
             .set("owner_id", owner_id)

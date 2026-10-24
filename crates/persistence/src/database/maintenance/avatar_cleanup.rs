@@ -1,5 +1,6 @@
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use serde_json::Value;
+use vrcx_0_core::time::epoch_from_json;
 
 use crate::common::ParamsBuilder;
 use crate::feed::feed_avatar_delete_before_sql;
@@ -42,23 +43,14 @@ pub fn avatar_auto_cleanup_run(
             )?
             .first()
             .and_then(|row| row.first())
-            .and_then(Value::as_str)
-            .and_then(|value| DateTime::parse_from_rfc3339(value).ok())
-            .map(|value| value.with_timezone(&Utc));
-        if last_completed.is_some_and(|last| {
-            last <= now && now.signed_duration_since(last) < Duration::days(7)
-        }) {
+            .and_then(epoch_from_json);
+        let now = now.timestamp();
+        if last_completed.is_some_and(|last| last <= now && now - last < 7 * 86_400) {
             return Ok(());
         }
 
-        let retention = Duration::try_days(retention_days)
-            .ok_or_else(|| Error::Custom("Avatar cleanup retention is out of range.".into()))?;
-        let cutoff = now
-            .checked_sub_signed(retention)
-            .ok_or_else(|| Error::Custom("Avatar cleanup cutoff is out of range.".into()))?
-            .format("%Y-%m-%dT%H:%M:%S%.3fZ")
-            .to_string();
-        let completed_at = now.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
+        let cutoff = now - retention_days * 86_400;
+        let completed_at = now.to_string();
         tx.execute_non_query(
             &feed_avatar_delete_before_sql(&user_prefix),
             &ParamsBuilder::new().set("cutoff", cutoff).build(),

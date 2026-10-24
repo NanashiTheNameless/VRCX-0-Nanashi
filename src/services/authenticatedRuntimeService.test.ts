@@ -97,7 +97,7 @@ function phaseSnapshot(
             clientRunId: 7,
             sessionGeneration: 4
         },
-        updatedAt: '2026-07-17T00:00:00.000Z',
+        updatedAt: 1784246400,
         ...patch
     };
 }
@@ -392,7 +392,7 @@ describe('authenticatedRuntimeService', () => {
                     clientRunId: 7,
                     sessionGeneration: 5
                 },
-                updatedAt: '2026-07-17T00:00:03.000Z'
+                updatedAt: 1784246403
             })
         );
 
@@ -428,7 +428,7 @@ describe('authenticatedRuntimeService', () => {
                     lastError: null
                 },
                 realtimeTransport: null,
-                updatedAt: '2026-07-17T00:00:02.000Z'
+                updatedAt: 1784246402
             })
         );
 

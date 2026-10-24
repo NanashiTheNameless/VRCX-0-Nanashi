@@ -87,17 +87,17 @@ pub async fn sync_notifications(
         fetch_notification_pages(deps, NotificationSyncSource::HiddenFriendRequests).await?;
     ensure_scope_matches(&deps.auth_scope.snapshot(), &deps.expected_scope)?;
 
-    let now = Utc::now().to_rfc3339();
+    let now = Utc::now().timestamp();
     let v1 = v1_pages
         .rows
         .iter()
-        .map(|notification| normalize_v1_notification(notification, &now))
+        .map(|notification| normalize_v1_notification(notification, now))
         .filter(valid_notification)
         .collect::<Vec<_>>();
     let mut hidden_rows = hidden_pages
         .rows
         .iter()
-        .map(|notification| normalize_v1_notification(notification, &now))
+        .map(|notification| normalize_v1_notification(notification, now))
         .filter(valid_notification)
         .collect::<Vec<_>>();
     for notification in &mut hidden_rows {
@@ -118,7 +118,7 @@ pub async fn sync_notifications(
         .rows
         .iter()
         .map(|notification| {
-            normalize_v2_notification(notification, &deps.expected_scope.endpoint, &now)
+            normalize_v2_notification(notification, &deps.expected_scope.endpoint, now)
         })
         .filter(valid_notification)
         .collect::<Vec<_>>();

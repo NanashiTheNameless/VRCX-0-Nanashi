@@ -246,9 +246,9 @@ describe('previousInstancesChart', () => {
     it('lays worn avatars across the axis range, stretching the ends and coloring per avatar', () => {
         const lane = buildAvatarLaneSegments(
             [
-                { avatarId: 'a', startedAtMs: 900, endedAtMs: 2000 },
-                { avatarId: 'b', startedAtMs: 2000, endedAtMs: 4000 },
-                { avatarId: 'a', startedAtMs: 4000, endedAtMs: 4900 }
+                { avatarId: 'a', startedAt: 0, endedAt: 2 },
+                { avatarId: 'b', startedAt: 2, endedAt: 4 },
+                { avatarId: 'a', startedAt: 4, endedAt: 5 }
             ],
             1000,
             5000

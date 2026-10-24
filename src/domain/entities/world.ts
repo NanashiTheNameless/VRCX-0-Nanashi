@@ -3,7 +3,7 @@ import type { EntityRecord } from './shared';
 export type UnityPackageRecord = EntityRecord & {
     assetUrl?: string;
     assetVersion?: number;
-    created_at?: string;
+    created_at?: string | number;
     id?: string;
     platform?: string;
     performanceRating?: string;
@@ -69,8 +69,8 @@ export type WorldProfileRecord = EntityRecord & {
     authorId: string;
     authorName: string;
     capacity: number;
-    created_at?: string;
-    createdAt: string;
+    created_at?: string | number;
+    createdAt: string | number;
     defaultContentSettings?: EntityRecord;
     disabledPropAbilities?: string[];
     favorites: number;
@@ -89,7 +89,7 @@ export type WorldProfileRecord = EntityRecord & {
     previewYoutubeId?: string | null;
     privateOccupants?: number;
     publicOccupants?: number;
-    publicationDate: string | null;
+    publicationDate: string | number | null;
     recommendedCapacity: number;
     releaseStatus: string;
     slimInstances?: unknown[];
@@ -97,8 +97,8 @@ export type WorldProfileRecord = EntityRecord & {
     thumbnailImageUrl: string;
     udonProducts?: unknown[];
     unityPackages?: UnityPackageRecord[];
-    updated_at?: string;
-    updatedAt: string;
+    updated_at?: string | number;
+    updatedAt: string | number;
     urlList?: string[];
     version?: number;
     visits: number;

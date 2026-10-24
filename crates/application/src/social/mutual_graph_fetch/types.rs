@@ -36,9 +36,9 @@ pub struct MutualGraphFetchStatus {
     pub opted_out_friends: u32,
     pub failed_friends: u32,
     pub cancel_requested: bool,
-    pub started_at: String,
-    pub updated_at: String,
-    pub finished_at: Option<String>,
+    pub started_at: i64,
+    pub updated_at: i64,
+    pub finished_at: Option<i64>,
     pub last_error: Option<String>,
 }
 
@@ -92,7 +92,7 @@ pub struct MutualGraphSnapshotEntryInput {
 #[derive(Clone, Debug)]
 pub struct MutualGraphMetaInput {
     pub friend_id: String,
-    pub last_fetched_at: String,
+    pub last_fetched_at: i64,
     pub opted_out: bool,
     pub total_count: Option<usize>,
 }
@@ -106,7 +106,7 @@ pub struct MutualGraphLinkOutput {
 #[derive(Clone, Debug)]
 pub struct MutualGraphMetaOutput {
     pub friend_id: String,
-    pub last_fetched_at: String,
+    pub last_fetched_at: i64,
     pub opted_out: bool,
     pub total_count: Option<usize>,
 }

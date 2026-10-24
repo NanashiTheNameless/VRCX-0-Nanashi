@@ -47,14 +47,14 @@ pub(super) fn apply_wake(
         &previous.presence,
         &step.next,
         now.timestamp_ms,
-        &now.iso,
+        now.at,
     ));
     output.joining.extend(joining_feed(
         user_id,
         &previous.record,
         &previous.presence,
         &step.next,
-        &now.iso,
+        now.at,
     ));
     if let Some(wake_at_ms) = step.wake_at_ms {
         output.wake = Some(FriendWake::at(user_id, wake_at_ms));
@@ -135,9 +135,9 @@ fn apply_change(
         &previous.presence,
         &step.next,
         now.timestamp_ms,
-        &now.iso,
+        now.at,
     );
-    let joining = joining_feed(&user_id, &record, &previous.presence, &step.next, &now.iso);
+    let joining = joining_feed(&user_id, &record, &previous.presence, &step.next, now.at);
     if event_kind != FriendEventKind::Add
         && record == previous.record
         && presence_view(&step.next) == presence_view(&previous.presence)
@@ -165,9 +165,9 @@ fn apply_change(
             &patch,
             &previous.record,
             previous.presence.is_online_section(),
-            &now.iso,
+            now.at,
         );
-        if let Some(change) = friend_icon_change(&user_id, &patch, &previous.record, &now.iso) {
+        if let Some(change) = friend_icon_change(&user_id, &patch, &previous.record, now.at) {
             output.icon_changes.push(change);
         }
     }
@@ -206,7 +206,7 @@ fn create_entry(
         output
             .persistence
             .friend_log_upserts
-            .push(friend_log_upsert(user_id, patch, None, &now.iso));
+            .push(friend_log_upsert(user_id, patch, None, now.at));
         output
             .persistence
             .feed_entries
@@ -215,7 +215,7 @@ fn create_entry(
                 user_id,
                 patch,
                 None,
-                &now.iso,
+                now.at,
             ));
         output.projection.friend_log_changed = true;
     }
@@ -225,7 +225,7 @@ fn create_entry(
         &record,
         &Phase::offline(),
         &presence,
-        &now.iso,
+        now.at,
     ));
     commit(state, output, user_id, FriendEntry { record, presence });
     Some(())
@@ -248,7 +248,7 @@ fn apply_delete(
     output.projection.removals.push(user_id.clone());
     output.persistence.friend_log_deletes.push(FriendLogDelete {
         target_user_id: user_id.clone(),
-        created_at: now.iso.clone(),
+        created_at: now.at,
     });
     if let Some(previous) = removed.as_ref() {
         output
@@ -259,7 +259,7 @@ fn apply_delete(
                 &user_id,
                 &json!({ "id": user_id.clone() }),
                 Some(&previous.record),
-                &now.iso,
+                now.at,
             ));
     }
     output.projection.friend_log_changed = true;
@@ -300,7 +300,7 @@ fn friend_icon_change(
     user_id: &str,
     patch: &Value,
     previous: &FriendRecord,
-    created_at: &str,
+    created_at: i64,
 ) -> Option<FriendIconChange> {
     let next_icon_url = patch.trimmed_field("iconUrl")?;
     if next_icon_url == previous.icon_url
@@ -313,7 +313,7 @@ fn friend_icon_change(
         display_name: display_name(user_id, patch, Some(previous)),
         previous_icon_url: previous.icon_url.clone(),
         next_icon_url: next_icon_url.to_string(),
-        created_at: created_at.to_string(),
+        created_at,
     })
 }
 
@@ -348,13 +348,13 @@ fn record_profile_identity_change(
     if !name_changed && !trust_differs {
         return;
     }
-    let upsert = friend_log_upsert(user_id, patch, Some(previous), &now.iso);
+    let upsert = friend_log_upsert(user_id, patch, Some(previous), now.at);
     if name_changed && !previous_name.is_empty() {
         output
             .persistence
             .feed_entries
             .push(display_name_feed_entry(
-                &now.iso,
+                now.at,
                 user_id,
                 &upsert.display_name,
                 &previous_name,
@@ -363,7 +363,7 @@ fn record_profile_identity_change(
     }
     if trust_changed {
         output.persistence.feed_entries.push(trust_level_feed_entry(
-            &now.iso,
+            now.at,
             user_id,
             &upsert.display_name,
             &trust_level,

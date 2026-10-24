@@ -15,6 +15,7 @@ import {
 import type { GroupProfileRecord } from '@/domain/entities/group';
 import type { EntityRecord } from '@/domain/entities/shared';
 import { formatDateFilter } from '@/lib/dateTime';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { Button } from '@/ui/shadcn/button';
 import { Checkbox } from '@/ui/shadcn/checkbox';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
@@ -250,8 +251,12 @@ export function useGroupModerationColumns({
                 tableCellClassName: DATA_TABLE_METADATA_CELL_CLASS_NAME
             },
             sortFn: (rowA, rowB) => {
-                const leftTs = Date.parse(moderationRowDate(rowA.original));
-                const rightTs = Date.parse(moderationRowDate(rowB.original));
+                const leftTs = parseAbsoluteDateMs(
+                    moderationRowDate(rowA.original)
+                );
+                const rightTs = parseAbsoluteDateMs(
+                    moderationRowDate(rowB.original)
+                );
                 if (
                     Number.isFinite(leftTs) &&
                     Number.isFinite(rightTs) &&

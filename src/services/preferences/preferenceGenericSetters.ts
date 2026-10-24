@@ -10,6 +10,10 @@ import { MINUTES_PER_DAY } from '@/shared/constants/time';
 import { TRUST_COLOR_DEFAULTS } from '@/shared/constants/trustColors';
 import { normalizeDateFormatPreset } from '@/shared/utils/dateTime';
 import {
+    isValidDisplayTimeZone,
+    setDisplayTimeZone
+} from '@/shared/utils/displayTimeZone';
+import {
     isValidTrustColor,
     normalizeTrustColors
 } from '@/shared/utils/trustColors';
@@ -368,7 +372,11 @@ export async function setStringConfigPreference(
     key: StringConfigPreferenceKey,
     value: string
 ) {
+    if (key === 'dtTimeZone' && !isValidDisplayTimeZone(value)) {
+        throw new Error('Enter an IANA timezone or a UTC offset.');
+    }
     await configRepository.setString(key, value);
+    if (key === 'dtTimeZone') setDisplayTimeZone(value);
     patchPreferenceValue(key, value);
     publishPreferenceChanged(key, value);
 }

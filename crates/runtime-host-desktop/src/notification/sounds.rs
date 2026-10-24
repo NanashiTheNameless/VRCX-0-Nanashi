@@ -86,7 +86,7 @@ mod tests {
             source_id: "s".into(),
             kind,
             category: Default::default(),
-            created_at: String::new(),
+            created_at: 0,
             actor_user_id: "usr_a".into(),
             actor_display_name: "Ada".into(),
             content: Default::default(),

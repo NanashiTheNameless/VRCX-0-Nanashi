@@ -9,6 +9,12 @@
 
 use crate::migration::Migration;
 
+mod epoch_seconds;
+
+pub(crate) use epoch_seconds::{
+    convert_setting_text, epoch_seconds_sql, legacy_event_discriminator, staged_create_sql,
+};
+
 pub fn migrations() -> Vec<Migration> {
-    Vec::new()
+    vec![epoch_seconds::migration()]
 }

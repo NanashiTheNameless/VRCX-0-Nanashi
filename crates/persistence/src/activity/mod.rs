@@ -19,4 +19,4 @@ pub use types::{
 };
 pub use view::{activity_overlap_view_build, activity_self_sessions_warmup, activity_view_build};
 
-pub(crate) use repository::{activity_iso_from_ms, parse_activity_time_ms};
+pub(crate) use repository::{activity_ms_from_epoch, activity_ms_from_value};

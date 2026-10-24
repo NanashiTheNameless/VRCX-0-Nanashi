@@ -8,6 +8,7 @@ import type {
 } from '@/components/feed/feedTypes';
 import gameLogRepository from '@/repositories/gameLogRepository';
 import { toast } from '@/services/toastService';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { parseLocation } from '@/shared/utils/location';
 
 export function useFeedPreviousInstancesDialog() {
@@ -51,8 +52,8 @@ export function useFeedPreviousInstancesDialog() {
                         }
                     }
                     return (
-                        Date.parse(right.created_at) -
-                        Date.parse(left.created_at)
+                        parseAbsoluteDateMs(right.created_at) -
+                        parseAbsoluteDateMs(left.created_at)
                     );
                 });
                 setRows(sortedInstances);

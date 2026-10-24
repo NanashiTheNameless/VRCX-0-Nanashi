@@ -138,7 +138,7 @@ async fn non_friend_and_pending_request_lists_only_backfill_after_friend_add() -
             }
         }),
         raw: "{}".into(),
-        received_at: "2026-08-30T00:00:00Z".into(),
+        received_at: 1788048000,
     });
     let result = get_user_mutual_friends_list(
         deps,
@@ -203,7 +203,7 @@ async fn unavailable_lists_only_update_opt_out_metadata_for_current_friends() ->
                         &session.endpoint,
                         "usr_target",
                         json!({ "id": "usr_target", "displayName": "Target" }),
-                        "2026-08-30T00:00:00Z".into(),
+                        1788048000,
                     ),
                     SyntheticFriendEventOutcome::Applied
                 );
@@ -255,7 +255,7 @@ async fn friend_removed_during_list_request_is_not_backfilled() -> Result<()> {
             &session.endpoint,
             "usr_target",
             json!({ "id": "usr_target", "displayName": "Target" }),
-            "2026-08-30T00:00:00Z".into(),
+            1788048000,
         ),
         SyntheticFriendEventOutcome::Applied
     );
@@ -269,7 +269,7 @@ async fn friend_removed_during_list_request_is_not_backfilled() -> Result<()> {
                     &OwnerId::new(&session.user_id),
                     &session.endpoint,
                     "usr_target",
-                    "2026-08-30T00:00:01Z".into(),
+                    1788048001,
                 ),
                 SyntheticFriendEventOutcome::Applied
             );

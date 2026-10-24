@@ -83,7 +83,7 @@ mod tests {
             "usr_friend",
             first_rev,
             profile.clone(),
-            "2026-05-15T00:00:01Z",
+            1778803201,
         ) else {
             panic!("trust-changing profile should produce an output");
         };
@@ -113,13 +113,7 @@ mod tests {
 
         let second_rev = runtime.friend_rev_of(1, "usr_friend").unwrap_or_default();
         if let RealtimeFriendApplyResult::Output(second) = runtime
-            .apply_refetched_user_profile_if_rev(
-                1,
-                "usr_friend",
-                second_rev,
-                profile,
-                "2026-05-15T00:00:02Z",
-            )
+            .apply_refetched_user_profile_if_rev(1, "usr_friend", second_rev, profile, 1778803202)
         {
             assert!(second.persistence.friend_log_upserts.is_empty());
             assert!(second
@@ -171,7 +165,7 @@ mod tests {
                     "state": "online",
                     "location": "wrld_2:456"
                 }),
-                "2026-05-15T00:00:01Z",
+                1778803201,
             )
         else {
             panic!("refetched friend profile should produce an output");
@@ -240,7 +234,7 @@ mod tests {
                     "status": "active",
                     "statusDescription": "Fresh REST status"
                 }),
-                "2026-05-15T00:00:01Z",
+                1778803201,
             )
         else {
             panic!("refetched friend profile should produce an output");
@@ -252,7 +246,7 @@ mod tests {
         assert!(output.persistence.feed_entries.is_empty());
         assert!(output.wake.is_some());
         let fired = runtime
-            .wake("usr_friend", "2026-05-15T00:03:00Z")
+            .wake("usr_friend", 1778803380)
             .expect("pending finalizes");
         let entry = fired.persistence.feed_entries[0].to_json();
         assert_eq!(entry["type"], "Offline");
@@ -303,7 +297,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-location should produce an output");
@@ -325,7 +319,7 @@ mod tests {
                     "state": "online",
                     "location": "wrld_fresh:456"
                 }),
-                "2026-05-15T00:00:01Z",
+                1778803201,
             )
         else {
             panic!("refetched friend profile should produce an output");
@@ -341,7 +335,7 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(feed_types, vec![json!("GPS")]);
         assert!(!is_pending_offline(view));
-        assert!(runtime.wake("usr_friend", "2026-05-15T00:03:00Z").is_none());
+        assert!(runtime.wake("usr_friend", 1778803380).is_none());
     }
 
     #[test]
@@ -367,7 +361,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:01Z".into(),
+                received_at: 1778803201,
             })
         else {
             panic!("websocket status update should produce an output");
@@ -384,7 +378,7 @@ mod tests {
                 "status": "ask me",
                 "statusDescription": ""
             }),
-            "2026-05-15T00:00:02Z",
+            1778803202,
         );
 
         assert!(matches!(result, RealtimeFriendApplyResult::Ignored));
@@ -416,7 +410,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:01Z".into(),
+                received_at: 1778803201,
             })
         else {
             panic!("websocket rename should produce an output");
@@ -448,7 +442,7 @@ mod tests {
                 "state": "online",
                 "status": "active"
             }),
-            "2026-05-15T00:00:02Z",
+            1778803202,
         );
 
         assert!(matches!(result, RealtimeFriendApplyResult::Ignored));
@@ -481,7 +475,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:01Z".into(),
+                received_at: 1778803201,
             })
         else {
             panic!("friend-location should produce an output");
@@ -497,7 +491,7 @@ mod tests {
                 "state": "offline",
                 "location": "offline"
             }),
-            "2026-05-15T00:00:02Z",
+            1778803202,
         );
 
         assert!(matches!(result, RealtimeFriendApplyResult::Ignored));
@@ -524,7 +518,7 @@ mod tests {
                 "status": "active",
                 "statusDescription": "freeggs"
             }),
-            "2026-05-15T00:00:01Z",
+            1778803201,
         ) else {
             panic!("current refetched profile should produce an output");
         };
@@ -556,7 +550,7 @@ mod tests {
                 "displayName": "Stranger",
                 "state": "online"
             }),
-            "2026-05-15T00:00:00Z",
+            1778803200,
         );
 
         assert!(matches!(result, RealtimeFriendApplyResult::Ignored));

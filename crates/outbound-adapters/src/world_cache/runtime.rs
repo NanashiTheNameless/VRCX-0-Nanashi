@@ -570,13 +570,23 @@ fn world_summary(value: &Value, id: String, name: String) -> WorldSummaryOutput 
         id,
         author_id: text_field(value, "authorId"),
         author_name: text_field(value, "authorName"),
-        created_at: text_field_with_fallback(value, "created_at", "createdAt").into(),
+        created_at: vrcx_0_core::time::epoch_from_json(&value_or_null_with_fallback(
+            value,
+            "created_at",
+            "createdAt",
+        ))
+        .unwrap_or_default(),
         description: text_field(value, "description"),
         image_url: text_field(value, "imageUrl"),
         name,
         release_status: text_field(value, "releaseStatus").into(),
         thumbnail_image_url: text_field(value, "thumbnailImageUrl"),
-        updated_at: text_field_with_fallback(value, "updated_at", "updatedAt").into(),
+        updated_at: vrcx_0_core::time::epoch_from_json(&value_or_null_with_fallback(
+            value,
+            "updated_at",
+            "updatedAt",
+        ))
+        .unwrap_or_default(),
         version: value
             .get("version")
             .and_then(Value::as_i64)
@@ -621,16 +631,6 @@ fn summary_image_url(summary: &WorldSummaryOutput) -> Option<String> {
 fn text_field(value: &Value, key: &str) -> String {
     value
         .get(key)
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .unwrap_or_default()
-        .to_string()
-}
-
-fn text_field_with_fallback(value: &Value, key: &str, fallback: &str) -> String {
-    value
-        .get(key)
-        .or_else(|| value.get(fallback))
         .and_then(Value::as_str)
         .map(str::trim)
         .unwrap_or_default()

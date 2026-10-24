@@ -66,8 +66,8 @@ fn game_log_side_effect_observer_merges_and_resets_now_playing() {
     let event = GameLogSideEffectEvent::NowPlaying(Box::new(NowPlayingPayload {
         name: Some("Test Track".into()),
         position: 42,
-        started_at: "start".into(),
-        updated_at: "update".into(),
+        started_at: 1,
+        updated_at: 2,
         ..Default::default()
     }));
 

@@ -46,6 +46,9 @@ describe('recentActionService', () => {
         service.configureRecentActionCooldown({ enabled: true, minutes: 30 });
         service.recordRecentAction(' usr_abc ', 'Invite');
 
+        expect(
+            JSON.parse(String(localStorage.dump().VRCX_recentActions))
+        ).toEqual({ v: 2, actions: { 'usr_abc:Invite': 1767225600 } });
         expect(service.isActionRecent('usr_abc', 'Invite')).toBe(true);
 
         vi.setSystemTime(new Date('2026-01-01T00:29:59Z'));
@@ -57,7 +60,72 @@ describe('recentActionService', () => {
         const stored = JSON.parse(
             String(localStorage.dump().VRCX_recentActions)
         );
-        expect(stored).toEqual({});
+        expect(stored).toEqual({ v: 2, actions: {} });
+    });
+
+    it('migrates persisted milliseconds and ISO dates without resetting cooldowns', async () => {
+        const { service, localStorage } = await loadRecentActionService({
+            VRCX_recentActions: JSON.stringify({
+                'usr_old:Invite': 1767225540123,
+                'usr_iso:Invite': '2025-12-31T23:59:00Z'
+            })
+        });
+        service.configureRecentActionCooldown({ enabled: true, minutes: 30 });
+        for (const id of ['usr_old', 'usr_iso'])
+            expect(service.isActionRecent(id, 'Invite')).toBe(true);
+        expect(
+            JSON.parse(String(localStorage.dump().VRCX_recentActions))
+        ).toEqual({
+            v: 2,
+            actions: {
+                'usr_old:Invite': 1767225540,
+                'usr_iso:Invite': 1767225540
+            }
+        });
+        vi.setSystemTime(new Date('2026-01-01T00:29:00Z'));
+        expect(service.isActionRecent('usr_old', 'Invite')).toBe(false);
+    });
+
+    it('converts known legacy millisecond units near 1970 and reads versioned seconds again', async () => {
+        vi.setSystemTime(new Date(0));
+        const { service, localStorage } = await loadRecentActionService({
+            VRCX_recentActions: JSON.stringify({
+                'usr_negative:Invite': -1001,
+                'usr_positive:Invite': 30001
+            })
+        });
+        service.configureRecentActionCooldown({ enabled: true, minutes: 5 });
+        expect(service.isActionRecent('usr_negative', 'Invite')).toBe(true);
+        const migrated = localStorage.dump();
+        expect(JSON.parse(String(migrated.VRCX_recentActions))).toEqual({
+            v: 2,
+            actions: { 'usr_negative:Invite': -2, 'usr_positive:Invite': 30 }
+        });
+        const restored = await loadRecentActionService(migrated);
+        restored.service.configureRecentActionCooldown({
+            enabled: true,
+            minutes: 5
+        });
+        vi.setSystemTime(new Date(298000));
+        expect(restored.service.isActionRecent('usr_negative', 'Invite')).toBe(
+            false
+        );
+        expect(restored.service.isActionRecent('usr_positive', 'Invite')).toBe(
+            true
+        );
+    });
+
+    it('keeps cooldown checks working when migration cannot write to localStorage', async () => {
+        const { service, localStorage } = await loadRecentActionService({
+            VRCX_recentActions: JSON.stringify({
+                'usr_old:Invite': 1767225600000
+            })
+        });
+        localStorage.setItem.mockImplementation(() => {
+            throw new Error('storage full');
+        });
+        service.configureRecentActionCooldown({ enabled: true, minutes: 5 });
+        expect(service.isActionRecent('usr_old', 'Invite')).toBe(true);
     });
 
     it('ignores recent actions when cooldown is disabled', async () => {

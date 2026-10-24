@@ -35,8 +35,8 @@ function spanVisitWindow(
 ): AvatarWearSegment[] {
     return segments.map((segment, index) => ({
         ...segment,
-        startedAtMs: index === 0 ? startMs : segment.startedAtMs,
-        endedAtMs: segments[index + 1]?.startedAtMs ?? endMs
+        startedAt: index === 0 ? Math.floor(startMs / 1000) : segment.startedAt,
+        endedAt: segments[index + 1]?.startedAt ?? Math.floor(endMs / 1000)
     }));
 }
 
@@ -67,7 +67,11 @@ export function useInstanceAvatarWearSegments(
         const toMs = isOngoing ? nowMs : endMs;
         let active = true;
         commands
-            .appAvatarWearSegments(currentUserId, startMs, toMs)
+            .appAvatarWearSegments(
+                currentUserId,
+                Math.floor(startMs / 1000),
+                Math.floor(toMs / 1000)
+            )
             .then((rows) => {
                 if (!active) {
                     return;
@@ -90,8 +94,10 @@ export function useInstanceAvatarWearSegments(
                                   snapshot?.currentAvatarThumbnailImageUrl ||
                                   '',
                               imageUrl: snapshot?.currentAvatarImageUrl || '',
-                              startedAtMs: Math.max(swapMs, startMs),
-                              endedAtMs: nowMs
+                              startedAt: Math.floor(
+                                  Math.max(swapMs, startMs) / 1000
+                              ),
+                              endedAt: Math.floor(nowMs / 1000)
                           }
                       ]
                     : rows;
@@ -164,7 +170,7 @@ function WearSegmentList({
             {segments.map((segment) => {
                 const name = segmentName(segment);
                 return (
-                    <li key={segment.startedAtMs}>
+                    <li key={segment.startedAt}>
                         <button
                             type="button"
                             className="hover:bg-muted focus-visible:ring-ring/50 flex w-full min-w-0 cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left outline-none focus-visible:ring-2"
@@ -182,7 +188,7 @@ function WearSegmentList({
                                 {name}
                             </span>
                             <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                                {formatClock(segment.startedAtMs)}
+                                {formatClock(segment.startedAt)}
                             </span>
                         </button>
                     </li>
@@ -211,10 +217,7 @@ export function InstanceAvatarWearSummary({
             <dd className="mt-1 flex items-center">
                 <AvatarGroup>
                     {stacked.map((segment) => (
-                        <WearAvatar
-                            key={segment.startedAtMs}
-                            segment={segment}
-                        />
+                        <WearAvatar key={segment.startedAt} segment={segment} />
                     ))}
                     {extra > 0 ? (
                         <HoverCard>
@@ -291,7 +294,7 @@ export function AvatarWearLane({
                         },
                         index
                     ) => (
-                        <Tooltip key={segment.startedAtMs}>
+                        <Tooltip key={segment.startedAt}>
                             <TooltipTrigger
                                 render={
                                     <button

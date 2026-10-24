@@ -12,11 +12,12 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { commands, type SafetyLogRow } from '@/platform/tauri/bindings';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 type Row = {
     type?: string | null;
-    created_at?: string;
+    created_at?: string | number;
     userId?: string | null;
     location?: string | null;
     videoUrl?: string | null;
@@ -137,7 +138,7 @@ export function SafetyLogBadge({ row }: { row: Row }) {
     const input: SafetyLogRow = {
         accountUserId: context?.accountUserId || '',
         kind: row.type || '',
-        createdAt: row.created_at || '',
+        createdAt: epochSecondsFromValue(row.created_at) ?? 0,
         userId: row.userId || '',
         location: row.location || sessionLocation,
         url: (row.videoUrl || row.resourceUrl || '').slice(0, 8192),

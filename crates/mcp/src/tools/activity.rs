@@ -55,7 +55,7 @@ impl VrcxMcpServer {
     }
 
     #[tool(
-        description = "[L2·analyze] One friend's (or all friends') online activity bucketed by hour-of-day or weekday, from the online/offline log. Use for \"when is X usually online\". Buckets are UTC unless you pass utcOffsetMinutes (the user's offset, e.g. 540 for UTC+9) for the user's local time. For \"best time to catch the MOST people\" prefer get_best_time_to_play."
+        description = "[L2·analyze] One friend's (or all friends') online activity bucketed by hour-of-day or weekday, from the online/offline log. Use for \"when is X usually online\". Buckets use the configured display timezone unless utcOffsetMinutes specifies a fixed offset (e.g. 540 for UTC+9). For \"best time to catch the MOST people\" prefer get_best_time_to_play."
     )]
     async fn get_friend_activity_pattern(
         &self,
@@ -133,7 +133,7 @@ impl VrcxMcpServer {
     }
 
     #[tool(
-        description = "[L2·analyze] The signed-in user's own playtime bucketed over time: year, month, week, dayOfWeek, or hourOfDay, with a ready-to-read summary. Use this for \"which months/days did I play most\", activity trends, and personal schedule / when I log on. Pass utcOffsetMinutes (e.g. 540 for UTC+9) so month/day/hour buckets are local. Omit timeWindow for all history. Rows carry minutes and sessionCount."
+        description = "[L2·analyze] The signed-in user's own playtime bucketed over time: year, month, week, dayOfWeek, or hourOfDay, with a ready-to-read summary. Use this for \"which months/days did I play most\", activity trends, and personal schedule / when I log on. Uses the configured display timezone; pass utcOffsetMinutes (e.g. 540 for UTC+9) to override it with a fixed offset. Omit timeWindow for all history. Rows carry minutes and sessionCount."
     )]
     async fn get_activity_timeline(
         &self,
@@ -144,20 +144,25 @@ impl VrcxMcpServer {
         let bounds = time_window_bounds_ms(&time_window)?;
         let to_ms = bounds.to.unwrap_or_else(|| Utc::now().timestamp_millis());
         let sessions = self.play_sessions(&owner_user_id, bounds.from, to_ms)?;
-        let offset_minutes = input.utc_offset_minutes.unwrap_or(0);
+        let offset_minutes = input.utc_offset_minutes.unwrap_or_else(|| {
+            i64::from(vrcx_0_core::time::display_now().offset().local_minus_utc()) / 60
+        });
         let bucket = input.bucket.into();
-        let rows = activity_buckets::activity_timeline(
-            &sessions,
-            bucket,
-            offset_minutes,
-            bounds.from,
-            bounds.to,
-        );
+        let rows = if let Some(offset) = input.utc_offset_minutes {
+            activity_buckets::activity_timeline(&sessions, bucket, offset, bounds.from, bounds.to)
+        } else {
+            activity_buckets::activity_timeline_in_display_zone(
+                &sessions,
+                bucket,
+                bounds.from,
+                bounds.to,
+            )
+        };
         structured_result(activity_timeline_output(input.bucket, offset_minutes, rows))
     }
 
     #[tool(
-        description = "[L2·analyze] The signed-in user's play-streak facts: longest break without playing, current break, longest daily play streak, total active days, first/last session, total minutes, and session count, with a ready-to-read summary. Use this for \"longest I went without playing\" or \"how many days have I played\". Pass utcOffsetMinutes so day boundaries are local."
+        description = "[L2·analyze] The signed-in user's play-streak facts: longest break without playing, current break, longest daily play streak, total active days, first/last session, total minutes, and session count, with a ready-to-read summary. Use this for \"longest I went without playing\" or \"how many days have I played\". Uses the configured display timezone; utcOffsetMinutes overrides it with a fixed offset."
     )]
     async fn get_activity_streaks(
         &self,
@@ -166,8 +171,14 @@ impl VrcxMcpServer {
         let owner_user_id = require_current_user_id(&self.runtime)?;
         let now_ms = Utc::now().timestamp_millis();
         let sessions = self.play_sessions(&owner_user_id, None, now_ms)?;
-        let offset_minutes = input.utc_offset_minutes.unwrap_or(0);
-        let streaks = activity_buckets::activity_streaks(&sessions, now_ms, offset_minutes);
+        let offset_minutes = input.utc_offset_minutes.unwrap_or_else(|| {
+            i64::from(vrcx_0_core::time::display_now().offset().local_minus_utc()) / 60
+        });
+        let streaks = if let Some(offset) = input.utc_offset_minutes {
+            activity_buckets::activity_streaks(&sessions, now_ms, offset)
+        } else {
+            activity_buckets::activity_streaks_in_display_zone(&sessions, now_ms)
+        };
         structured_result(activity_streaks_output(offset_minutes, streaks))
     }
     #[tool(
@@ -186,7 +197,7 @@ impl VrcxMcpServer {
     }
 
     #[tool(
-        description = "[L2·analyze] The hour-of-day or weekday buckets where the most distinct friends are observed coming online (best time to catch people), across all friends. Use for \"when should I log on to find people\". Buckets are UTC unless you pass utcOffsetMinutes (e.g. 540 for UTC+9) for the user's local time. For a single named friend prefer get_friend_activity_pattern."
+        description = "[L2·analyze] The hour-of-day or weekday buckets where the most distinct friends are observed coming online (best time to catch people), across all friends. Use for \"when should I log on to find people\". Buckets use the configured display timezone unless utcOffsetMinutes specifies a fixed offset (e.g. 540 for UTC+9). For a single named friend prefer get_friend_activity_pattern."
     )]
     async fn get_best_time_to_play(
         &self,
@@ -258,7 +269,9 @@ impl VrcxMcpServer {
     ) -> Result<MyActivityOutput, String> {
         let time_window = input.time_window.unwrap_or_default().into();
         let bounds = time_window_bounds_ms(&time_window)?;
-        let offset_minutes = input.utc_offset_minutes.unwrap_or(0);
+        let offset_minutes = input.utc_offset_minutes.unwrap_or_else(|| {
+            i64::from(vrcx_0_core::time::display_now().offset().local_minus_utc()) / 60
+        });
         let offset_ms = offset_minutes.saturating_mul(60_000);
         let to_ms = bounds.to.unwrap_or_else(|| Utc::now().timestamp_millis());
         let spans = self.play_spans(&owner_user_id, bounds.from, to_ms)?;
@@ -417,7 +430,7 @@ impl VrcxMcpServer {
                 "fadingFriends compares the recent half of the period against the earlier half (or the last 30 days versus the prior 30 when no period is given).".into(),
                 format!(
                     "Best-time buckets are in {}.",
-                    activity_buckets::utc_offset_label(input.utc_offset_minutes.unwrap_or(0))
+                    activity_buckets::utc_offset_label(input.utc_offset_minutes.unwrap_or_else(|| i64::from(vrcx_0_core::time::display_now().offset().local_minus_utc()) / 60))
                 ),
             ],
         })

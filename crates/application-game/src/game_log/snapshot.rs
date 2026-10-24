@@ -12,7 +12,7 @@ pub enum PlayerListSnapshotSource {
 #[derive(Clone, Debug, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct PlayerListSnapshotContext {
-    pub created_at: String,
+    pub created_at: i64,
     pub location: String,
     pub world_id: String,
     pub world_name: String,
@@ -33,7 +33,7 @@ pub struct PlayerListSnapshotPlayer {
     pub id: String,
     pub user_id: String,
     pub display_name: String,
-    pub joined_at: String,
+    pub joined_at: i64,
     pub joined_at_ms: i64,
 }
 
@@ -46,7 +46,7 @@ pub struct PlayerListSnapshotOutput {
 
 fn empty_context(location: String, source: PlayerListSnapshotSource) -> PlayerListSnapshotContext {
     PlayerListSnapshotContext {
-        created_at: String::new(),
+        created_at: 0,
         location,
         world_id: String::new(),
         world_name: String::new(),
@@ -87,7 +87,7 @@ pub fn player_list_runtime_snapshot(
         };
     }
     let mut context = empty_context(snapshot.location.clone(), PlayerListSnapshotSource::Runtime);
-    context.created_at = snapshot.started_at.clone();
+    context.created_at = snapshot.started_at;
     context.world_id = world_id_from_location(&snapshot.location);
     context.world_name = snapshot.world_name.clone();
     context.player_facts_known = Some(snapshot.has_player_events);
@@ -100,9 +100,8 @@ pub fn player_list_runtime_snapshot(
             display_name: player.display_name.clone(),
             joined_at: player
                 .join_time_ms
-                .and_then(chrono::DateTime::from_timestamp_millis)
-                .map(|time| time.to_rfc3339_opts(chrono::SecondsFormat::Millis, true))
-                .unwrap_or_default(),
+                .map(vrcx_0_core::time::epoch_from_millis)
+                .unwrap_or(0),
             joined_at_ms: player.join_time_ms.unwrap_or(0),
         })
         .collect();

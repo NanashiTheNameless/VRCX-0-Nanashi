@@ -14,18 +14,18 @@ pub(crate) fn ensure_global_store_tables(db: &DatabaseService) -> Result<(), Err
     db.ensure_schema_until_stable(GLOBAL_STORE_SCHEMA_KEY, || {
         ensure_owner_table(db)?;
         for sql in [
-            "CREATE TABLE IF NOT EXISTS cache_avatar (id TEXT PRIMARY KEY, added_at TEXT, author_id TEXT, author_name TEXT, created_at TEXT, description TEXT, image_url TEXT, name TEXT, release_status TEXT, thumbnail_image_url TEXT, updated_at TEXT, version INTEGER)",
-            "CREATE TABLE IF NOT EXISTS cache_world (id TEXT PRIMARY KEY, added_at TEXT, author_id TEXT, author_name TEXT, created_at TEXT, description TEXT, image_url TEXT, name TEXT, release_status TEXT, thumbnail_image_url TEXT, updated_at TEXT, version INTEGER)",
-            "CREATE TABLE IF NOT EXISTS cache_file (id TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT '', owner_id TEXT NOT NULL DEFAULT '', fetched_at TEXT NOT NULL DEFAULT '')",
-            "CREATE TABLE IF NOT EXISTS favorite_world (id INTEGER PRIMARY KEY, created_at TEXT, world_id TEXT, group_name TEXT)",
-            "CREATE TABLE IF NOT EXISTS favorite_avatar (id INTEGER PRIMARY KEY, created_at TEXT, avatar_id TEXT, group_name TEXT)",
-            "CREATE TABLE IF NOT EXISTS favorite_friend (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, group_name TEXT, owner_id INTEGER NOT NULL DEFAULT 0)",
-            "CREATE TABLE IF NOT EXISTS favorite_group_collection (id TEXT PRIMARY KEY, owner_id INTEGER NOT NULL, name TEXT NOT NULL, group_ids TEXT NOT NULL DEFAULT '[]', created_at TEXT NOT NULL)",
+            "CREATE TABLE IF NOT EXISTS cache_avatar (id TEXT PRIMARY KEY, added_at INTEGER, author_id TEXT, author_name TEXT, created_at INTEGER, description TEXT, image_url TEXT, name TEXT, release_status TEXT, thumbnail_image_url TEXT, updated_at INTEGER, version INTEGER)",
+            "CREATE TABLE IF NOT EXISTS cache_world (id TEXT PRIMARY KEY, added_at INTEGER, author_id TEXT, author_name TEXT, created_at INTEGER, description TEXT, image_url TEXT, name TEXT, release_status TEXT, thumbnail_image_url TEXT, updated_at INTEGER, version INTEGER)",
+            "CREATE TABLE IF NOT EXISTS cache_file (id TEXT PRIMARY KEY, name TEXT NOT NULL DEFAULT '', owner_id TEXT NOT NULL DEFAULT '', fetched_at INTEGER NOT NULL DEFAULT 0)",
+            "CREATE TABLE IF NOT EXISTS favorite_world (id INTEGER PRIMARY KEY, created_at INTEGER, world_id TEXT, group_name TEXT)",
+            "CREATE TABLE IF NOT EXISTS favorite_avatar (id INTEGER PRIMARY KEY, created_at INTEGER, avatar_id TEXT, group_name TEXT)",
+            "CREATE TABLE IF NOT EXISTS favorite_friend (id INTEGER PRIMARY KEY, created_at INTEGER, user_id TEXT, group_name TEXT, owner_id INTEGER NOT NULL DEFAULT 0)",
+            "CREATE TABLE IF NOT EXISTS favorite_group_collection (id TEXT PRIMARY KEY, owner_id INTEGER NOT NULL, name TEXT NOT NULL, group_ids TEXT NOT NULL DEFAULT '[]', created_at INTEGER NOT NULL)",
             "CREATE UNIQUE INDEX IF NOT EXISTS favorite_group_collection_owner_name_idx ON favorite_group_collection (owner_id, name)",
             "CREATE INDEX IF NOT EXISTS favorite_group_collection_owner_created_idx ON favorite_group_collection (owner_id, created_at, id)",
-            "CREATE TABLE IF NOT EXISTS memos (user_id TEXT PRIMARY KEY, edited_at TEXT, memo TEXT)",
-            "CREATE TABLE IF NOT EXISTS world_memos (world_id TEXT PRIMARY KEY, edited_at TEXT, memo TEXT)",
-            "CREATE TABLE IF NOT EXISTS avatar_memos (avatar_id TEXT PRIMARY KEY, edited_at TEXT, memo TEXT)",
+            "CREATE TABLE IF NOT EXISTS memos (user_id TEXT PRIMARY KEY, edited_at INTEGER, memo TEXT)",
+            "CREATE TABLE IF NOT EXISTS world_memos (world_id TEXT PRIMARY KEY, edited_at INTEGER, memo TEXT)",
+            "CREATE TABLE IF NOT EXISTS avatar_memos (avatar_id TEXT PRIMARY KEY, edited_at INTEGER, memo TEXT)",
             "CREATE TABLE IF NOT EXISTS avatar_tags (avatar_id TEXT NOT NULL, tag TEXT NOT NULL, color TEXT, PRIMARY KEY (avatar_id, tag))",
         ] {
             db.execute_non_query(sql, &Default::default())?;
@@ -156,8 +156,8 @@ pub(crate) fn ensure_assistant_tables(db: &DatabaseService) -> Result<(), Error>
     db.ensure_schema_once("assistant", || {
         ensure_owner_table(db)?;
         for sql in [
-            "CREATE TABLE IF NOT EXISTS assistant_session (id TEXT PRIMARY KEY, title TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT '', entity_panel_open INTEGER NOT NULL DEFAULT 0, surfaced_entities TEXT NOT NULL DEFAULT '[]', owner_id INTEGER NOT NULL DEFAULT 0)",
-            "CREATE TABLE IF NOT EXISTS assistant_message (id TEXT PRIMARY KEY, session_id TEXT NOT NULL, seq INTEGER NOT NULL DEFAULT 0, role TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '', created_at TEXT NOT NULL DEFAULT '')",
+            "CREATE TABLE IF NOT EXISTS assistant_session (id TEXT PRIMARY KEY, title TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL DEFAULT 0, updated_at INTEGER NOT NULL DEFAULT 0, entity_panel_open INTEGER NOT NULL DEFAULT 0, surfaced_entities TEXT NOT NULL DEFAULT '[]', owner_id INTEGER NOT NULL DEFAULT 0)",
+            "CREATE TABLE IF NOT EXISTS assistant_message (id TEXT PRIMARY KEY, session_id TEXT NOT NULL, seq INTEGER NOT NULL DEFAULT 0, role TEXT NOT NULL DEFAULT '', content TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL DEFAULT 0)",
             "CREATE INDEX IF NOT EXISTS assistant_message_session_seq_idx ON assistant_message (session_id, seq)",
         ] {
             db.execute_non_query(sql, &Default::default())?;
@@ -213,9 +213,9 @@ fn ensure_user_store_statements(db: &DatabaseService, user_prefix: &str) -> Resu
         format!(
             "CREATE TABLE IF NOT EXISTS {user_prefix}_activity_sync_state_v2 (
                 user_id TEXT PRIMARY KEY,
-                updated_at TEXT NOT NULL DEFAULT '',
+                updated_at INTEGER NOT NULL DEFAULT 0,
                 is_self INTEGER NOT NULL DEFAULT 0,
-                source_last_created_at TEXT NOT NULL DEFAULT '',
+                source_last_created_at INTEGER NOT NULL DEFAULT 0,
                 pending_session_start_at INTEGER,
                 cached_range_days INTEGER NOT NULL DEFAULT 0
             )"
@@ -248,7 +248,7 @@ fn ensure_user_store_statements(db: &DatabaseService, user_prefix: &str) -> Resu
                 normalized_buckets_json TEXT NOT NULL DEFAULT '[]',
                 built_from_cursor TEXT NOT NULL DEFAULT '',
                 summary_json TEXT NOT NULL DEFAULT '{{}}',
-                built_at TEXT NOT NULL DEFAULT '',
+                built_at INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (user_id, target_user_id, range_days, view_kind, exclude_key)
             )"
         ),
@@ -259,15 +259,15 @@ fn ensure_user_store_statements(db: &DatabaseService, user_prefix: &str) -> Resu
                 payload_version INTEGER NOT NULL DEFAULT 1,
                 built_from_cursor TEXT NOT NULL DEFAULT '',
                 payload_json TEXT NOT NULL DEFAULT '{{}}',
-                built_at TEXT NOT NULL DEFAULT '',
+                built_at INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (user_id, range_days)
             )"
         ),
         format!(
-            "CREATE TABLE IF NOT EXISTS {user_prefix}_moderation (user_id TEXT PRIMARY KEY, updated_at TEXT, display_name TEXT, block INTEGER, mute INTEGER)"
+            "CREATE TABLE IF NOT EXISTS {user_prefix}_moderation (user_id TEXT PRIMARY KEY, updated_at INTEGER, display_name TEXT, block INTEGER, mute INTEGER)"
         ),
         format!(
-            "CREATE TABLE IF NOT EXISTS {user_prefix}_notes (user_id TEXT PRIMARY KEY, display_name TEXT, note TEXT, created_at TEXT)"
+            "CREATE TABLE IF NOT EXISTS {user_prefix}_notes (user_id TEXT PRIMARY KEY, display_name TEXT, note TEXT, created_at INTEGER)"
         ),
         format!(
             "CREATE TABLE IF NOT EXISTS {user_prefix}_mutual_graph_friends (friend_id TEXT PRIMARY KEY)"
@@ -276,10 +276,10 @@ fn ensure_user_store_statements(db: &DatabaseService, user_prefix: &str) -> Resu
             "CREATE TABLE IF NOT EXISTS {user_prefix}_mutual_graph_links (friend_id TEXT NOT NULL, mutual_id TEXT NOT NULL, PRIMARY KEY(friend_id, mutual_id))"
         ),
         format!(
-            "CREATE TABLE IF NOT EXISTS {user_prefix}_mutual_graph_meta (friend_id TEXT PRIMARY KEY, last_fetched_at TEXT, opted_out INTEGER DEFAULT 0, total_count INTEGER)"
+            "CREATE TABLE IF NOT EXISTS {user_prefix}_mutual_graph_meta (friend_id TEXT PRIMARY KEY, last_fetched_at INTEGER, opted_out INTEGER DEFAULT 0, total_count INTEGER)"
         ),
         format!(
-            "CREATE TABLE IF NOT EXISTS {user_prefix}_remote_sync_app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL)"
+            "CREATE TABLE IF NOT EXISTS {user_prefix}_remote_sync_app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at INTEGER NOT NULL)"
         ),
     ] {
         db.execute_non_query(&sql, &Default::default())?;

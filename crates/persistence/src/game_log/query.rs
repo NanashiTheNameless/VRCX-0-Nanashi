@@ -1,6 +1,5 @@
 use std::collections::{BTreeSet, HashMap};
 
-use chrono::Utc;
 use sea_query::{Expr, ExprTrait, Order, Query, SqliteQueryBuilder};
 
 use crate::common::{ident, row_i64, row_string, ParamsBuilder};
@@ -294,7 +293,7 @@ pub fn get_user_id_from_display_name(
 pub fn get_location_before_or_at(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
-    created_at: &str,
+    created_at: i64,
 ) -> Result<Option<GameLogLocationSnapshot>, Error> {
     let args = owner_params(db, owner_user_id)?
         .set("createdAt", created_at)
@@ -303,7 +302,7 @@ pub fn get_location_before_or_at(
         .execute(&location_before_or_at_sql(), &args)?
         .first()
         .map(|row| GameLogLocationSnapshot {
-            created_at: row_string(row, 0),
+            created_at: row_i64(row, 0),
             location: row_string(row, 1),
             world_id: row_string(row, 2),
             world_name: row_string(row, 3),
@@ -336,7 +335,7 @@ pub fn get_previous_instances_by_group_id(
         by_location.insert(
             location.clone(),
             GameLogPreviousInstanceGroupOutput {
-                created_at: row_string(&row, 0),
+                created_at: row_i64(&row, 0),
                 group_name: row_string(&row, 4),
                 location,
                 time,
@@ -364,7 +363,7 @@ pub fn get_previous_instances_by_world_id(
         .execute(previous_instances_by_world_id_sql(), &args)?
         .into_iter()
         .map(|row| GameLogPreviousInstanceWorldOutput {
-            created_at: row_string(&row, 1),
+            created_at: row_i64(&row, 1),
             group_name: row_string(&row, 5),
             id: row_i64(&row, 0),
             location: row_string(&row, 2),
@@ -378,8 +377,8 @@ pub fn get_join_leave_entries_for_location_range(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
     location: &str,
-    after_date: &str,
-    before_date: &str,
+    after_date: i64,
+    before_date: i64,
 ) -> Result<Vec<GameLogJoinLeaveSnapshot>, Error> {
     get_join_leave_entries_for_location_range_inner(
         db,
@@ -393,8 +392,8 @@ pub fn get_join_leave_entries_for_location_range(
 pub fn get_join_leave_entries_for_location_range_unscoped(
     db: &DatabaseService,
     location: &str,
-    after_date: &str,
-    before_date: &str,
+    after_date: i64,
+    before_date: i64,
 ) -> Result<Vec<GameLogJoinLeaveSnapshot>, Error> {
     get_join_leave_entries_for_location_range_inner(db, None, location, after_date, before_date)
 }
@@ -403,8 +402,8 @@ fn get_join_leave_entries_for_location_range_inner(
     db: &DatabaseService,
     owner_user_id: Option<&OwnerId>,
     location: &str,
-    after_date: &str,
-    before_date: &str,
+    after_date: i64,
+    before_date: i64,
 ) -> Result<Vec<GameLogJoinLeaveSnapshot>, Error> {
     let mut args = ParamsBuilder::new();
     if let Some(owner_user_id) = owner_user_id {
@@ -423,7 +422,7 @@ fn get_join_leave_entries_for_location_range_inner(
         .into_iter()
         .map(|row| GameLogJoinLeaveSnapshot {
             id: row_i64(&row, 0),
-            created_at: row_string(&row, 1),
+            created_at: row_i64(&row, 1),
             event_type: row_string(&row, 2),
             display_name: row_string(&row, 3),
             user_id: row_string(&row, 4),
@@ -435,7 +434,7 @@ fn get_join_leave_entries_for_location_range_inner(
 fn session_location_segment_from_row(row: &[serde_json::Value]) -> SessionLocationSegmentRow {
     SessionLocationSegmentRow {
         id: row_i64(row, 0),
-        created_at: row_string(row, 1),
+        created_at: row_i64(row, 1),
         location: row_string(row, 2),
         world_id: row_string(row, 3),
         world_name: row_string(row, 4),
@@ -468,8 +467,8 @@ pub fn get_session_location_segments(
 pub fn get_session_location_segments_by_date_range(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
-    after_date: &str,
-    before_date: &str,
+    after_date: i64,
+    before_date: i64,
     limit: i64,
 ) -> Result<Vec<SessionLocationSegmentRow>, Error> {
     ensure_game_log_tables(db)?;
@@ -487,8 +486,8 @@ pub fn get_session_location_segments_by_date_range(
 pub fn get_session_events_for_range(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
-    after_date: &str,
-    before_date: &str,
+    after_date: i64,
+    before_date: i64,
 ) -> Result<Vec<SessionEventRow>, Error> {
     ensure_game_log_tables(db)?;
     let args = owner_params(db, owner_user_id)?
@@ -501,7 +500,7 @@ pub fn get_session_events_for_range(
         rows.push(SessionEventRow {
             row_id: row_i64(&row, 0),
             event_type: row_string(&row, 1),
-            created_at: row_string(&row, 2),
+            created_at: row_i64(&row, 2),
             display_name: row_string(&row, 3),
             user_id: row_string(&row, 4),
             location: row_string(&row, 5),
@@ -514,7 +513,7 @@ pub fn get_session_events_for_range(
         rows.push(SessionEventRow {
             row_id: row_i64(&row, 0),
             event_type: "VideoPlay".to_string(),
-            created_at: row_string(&row, 1),
+            created_at: row_i64(&row, 1),
             video_url: Some(row_string(&row, 2)),
             video_name: Some(row_string(&row, 3)),
             video_id: Some(row_string(&row, 4)),
@@ -564,7 +563,7 @@ pub fn get_session_player_duration_rows(
     Ok(rows
         .iter()
         .map(|row| SessionPlayerDurationRow {
-            created_at: row_string(row, 4),
+            created_at: row_i64(row, 4),
             location: row_string(row, 0),
             display_name: row_string(row, 1),
             user_id: row_string(row, 2),
@@ -583,7 +582,7 @@ pub fn get_game_log_events(
         .execute(&game_log_events_sql(), &args)?
         .into_iter()
         .map(|row| GameLogEventEntry {
-            created_at: row_string(&row, 0),
+            created_at: row_i64(&row, 0),
             data: row_string(&row, 1),
         })
         .collect())
@@ -599,7 +598,7 @@ pub fn get_game_log_locations(
         .execute(&game_log_locations_sql(), &args)?
         .into_iter()
         .map(|row| GameLogLocationEntry {
-            created_at: row_string(&row, 0),
+            created_at: row_i64(&row, 0),
             location: row_string(&row, 1),
             world_id: row_string(&row, 2),
             world_name: row_string(&row, 3),
@@ -621,7 +620,7 @@ pub fn get_last_game_log_location(
         .into_iter()
         .next()
         .map(|row| GameLogLocationEntry {
-            created_at: row_string(&row, 0),
+            created_at: row_i64(&row, 0),
             location: row_string(&row, 1),
             world_id: row_string(&row, 2),
             world_name: row_string(&row, 3),
@@ -643,7 +642,7 @@ pub fn get_game_log_join_leave(
         .execute(&game_log_join_leave_sql(), &args)?
         .into_iter()
         .map(|row| GameLogJoinLeaveEntry {
-            created_at: row_string(&row, 0),
+            created_at: row_i64(&row, 0),
             event_type: row_string(&row, 1),
             display_name: row_string(&row, 2),
             location: row_string(&row, 3),
@@ -667,7 +666,7 @@ pub fn get_game_log_externals(
         .execute(&game_log_externals_sql(), &args)?
         .into_iter()
         .map(|row| GameLogExternalEntry {
-            created_at: row_string(&row, 0),
+            created_at: row_i64(&row, 0),
             message: row_string(&row, 1),
             display_name: row_string(&row, 2),
             user_id: row_string(&row, 3),
@@ -682,14 +681,11 @@ pub fn game_log_location_table_exists(db: &DatabaseService) -> Result<bool, Erro
         .is_empty())
 }
 
-pub fn get_last_game_log_date(db: &DatabaseService) -> Result<String, Error> {
+pub fn get_last_game_log_date(db: &DatabaseService) -> Result<i64, Error> {
     ensure_game_log_tables(db)?;
 
-    let now = Utc::now();
-    let now_string = now.format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string();
-    let date_offset = (now - chrono::Duration::days(1))
-        .format("%Y-%m-%dT%H:%M:%S%.3fZ")
-        .to_string();
+    let now = vrcx_0_core::time::now_epoch();
+    let date_offset = now - 86_400;
 
     let mut dates = Vec::new();
     for table in [
@@ -704,22 +700,20 @@ pub fn get_last_game_log_date(db: &DatabaseService) -> Result<String, Error> {
             .execute(&latest_created_at_sql(table), &Default::default())?
             .first()
             .and_then(|row| row.first())
-            .and_then(|value| value.as_str())
-            .filter(|value| !value.is_empty())
+            .and_then(|value| value.as_i64())
         {
-            dates.push(value.to_string());
+            dates.push(value);
         }
     }
 
-    dates.sort();
-    let Some(latest) = dates.last() else {
-        return Ok(now_string);
+    let Some(latest) = dates.into_iter().max() else {
+        return Ok(now);
     };
-    if latest > &date_offset && latest < &now_string {
-        Ok(latest.clone())
+    Ok(if latest > date_offset && latest < now {
+        latest
     } else {
-        Ok(now_string)
-    }
+        now
+    })
 }
 
 #[cfg(test)]
@@ -755,11 +749,11 @@ mod tests {
         let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
         ensure_game_log_tables(&db)?;
         for (id, created_at, display_name) in [
-            (7, "2026-05-14T01:00:02.000Z", "d"),
-            (3, "2026-05-14T01:00:01.000Z", "b"),
-            (9, "2026-05-14T01:00:01.000Z", "c"),
-            (1, "2026-05-14T01:00:02.000Z", "a"),
-            (5, "2026-05-14T01:00:01.000Z", "e"),
+            (7, 1778720402, "d"),
+            (3, 1778720401, "b"),
+            (9, 1778720401, "c"),
+            (1, 1778720402, "a"),
+            (5, 1778720401, "e"),
         ] {
             db.execute_non_query(
                 "INSERT INTO gamelog_join_leave (id, created_at, type, display_name, location, user_id, time) VALUES (@id, @createdAt, 'OnPlayerJoined', @displayName, 'wrld_test:1', '', 0)",
@@ -775,8 +769,8 @@ mod tests {
             &db,
             &OwnerId::new("usr_test"),
             "wrld_test:1",
-            "2026-05-14T00:00:00.000Z",
-            "2026-05-14T02:00:00.000Z",
+            1778716800,
+            1778724000,
         )?;
 
         assert_eq!(

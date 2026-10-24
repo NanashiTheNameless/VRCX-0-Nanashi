@@ -84,7 +84,7 @@ pub(crate) enum Rows<'a> {
     /// PC just recorded.
     Near {
         subject: &'a str,
-        time: &'a str,
+        time: i64,
     },
 }
 
@@ -164,10 +164,8 @@ pub(crate) fn drop_synced_copies(
     let synced = |alias: &str| {
         format!("EXISTS (SELECT 1 FROM remote_sync_provenance WHERE stream = @stream AND local_rowid = {alias}.rowid)")
     };
-    // The text range lets the time index narrow the search; julianday then
-    // compares the instants themselves.
     let around = |alias: &str, center: &str| {
-        format!("{alias}.created_at >= strftime('%Y-%m-%dT%H:%M:%S', {center}, '-{seconds} seconds') AND {alias}.created_at <= strftime('%Y-%m-%dT%H:%M:%S', {center}, '+{seconds} seconds') || '~'")
+        format!("{alias}.created_at >= {center} - @seconds AND {alias}.created_at <= {center} + @seconds")
     };
     let mut params = ParamsBuilder::new()
         .set("stream", table)
@@ -185,7 +183,7 @@ pub(crate) fn drop_synced_copies(
     };
     let removed = tx.execute_non_query(
         &format!(
-            "DELETE FROM {quoted} WHERE rowid IN (SELECT r.rowid FROM {quoted} AS r WHERE {checked} AND {applies} AND julianday(r.created_at) IS NOT NULL AND {r_synced} AND EXISTS (SELECT 1 FROM {quoted} AS k WHERE k.\"{subject}\" IS r.\"{subject}\" AND {k_around} AND k.rowid != r.rowid AND {same} AND ABS(julianday(k.created_at) - julianday(r.created_at)) * 86400.0 <= @seconds AND (k.rowid < r.rowid OR NOT {k_synced}) AND NOT {same_source} AND NOT EXISTS (SELECT 1 FROM {quoted} AS x WHERE x.\"{subject}\" IS r.\"{subject}\" AND {x_around} AND julianday(x.created_at) > MIN(julianday(k.created_at), julianday(r.created_at)) AND julianday(x.created_at) < MAX(julianday(k.created_at), julianday(r.created_at)) AND {undoes})))",
+            "DELETE FROM {quoted} WHERE rowid IN (SELECT r.rowid FROM {quoted} AS r WHERE {checked} AND {applies} AND r.created_at IS NOT NULL AND {r_synced} AND EXISTS (SELECT 1 FROM {quoted} AS k WHERE k.\"{subject}\" IS r.\"{subject}\" AND {k_around} AND k.rowid != r.rowid AND {same} AND (k.rowid < r.rowid OR NOT {k_synced}) AND NOT {same_source} AND NOT EXISTS (SELECT 1 FROM {quoted} AS x WHERE x.\"{subject}\" IS r.\"{subject}\" AND {x_around} AND x.created_at > MIN(k.created_at, r.created_at) AND x.created_at < MAX(k.created_at, r.created_at) AND {undoes})))",
             applies = rule.change.applies(),
             r_synced = synced("r"),
             k_synced = synced("k"),

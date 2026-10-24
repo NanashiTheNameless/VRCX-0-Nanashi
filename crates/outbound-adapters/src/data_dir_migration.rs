@@ -173,7 +173,7 @@ impl LocalDataDirMigrationPort {
         let mut journal = PendingDataDirMigration::copying(
             self.inner.source_dir.to_string_lossy().into_owned(),
             target_dir.to_string_lossy().into_owned(),
-            Utc::now().to_rfc3339(),
+            Utc::now().timestamp(),
             replace_existing,
         );
         if let Err(error) = write_pending_data_dir_migration(&self.inner.control_dir, &journal) {
@@ -436,7 +436,7 @@ impl LocalDataDirMigrationPort {
         Ok(dismiss_data_dir_cleanup(&self.inner.control_dir)?)
     }
 
-    pub fn mark_cleanup_prompted(&self, prompted_at: String) -> Result<()> {
+    pub fn mark_cleanup_prompted(&self, prompted_at: i64) -> Result<()> {
         let Some(_guard) = OperationGuard::try_acquire(&self.inner.operation_gate) else {
             return Err(Error::Custom(
                 "A profile or data directory operation is already running.".into(),
@@ -647,7 +647,7 @@ impl DataDirMigrationPort for LocalDataDirMigrationPort {
         LocalDataDirMigrationPort::dismiss_cleanup(self)
     }
 
-    fn mark_cleanup_prompted(&self, prompted_at: String) -> Result<()> {
+    fn mark_cleanup_prompted(&self, prompted_at: i64) -> Result<()> {
         LocalDataDirMigrationPort::mark_cleanup_prompted(self, prompted_at)
     }
 }

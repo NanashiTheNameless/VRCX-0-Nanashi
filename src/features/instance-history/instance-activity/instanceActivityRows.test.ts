@@ -9,13 +9,13 @@ import {
 import type { InstanceActivityDetailRow } from './instanceActivityTypes';
 
 function iso(value: number | string | Date) {
-    return new Date(value).toISOString();
+    return Math.floor(new Date(value).getTime() / 1000);
 }
 
 function detailRow(id: string, isFriend: boolean): InstanceActivityDetailRow {
     return {
         id,
-        created_at: '2024-01-02T00:00:00.001Z',
+        created_at: 1704153600,
         user_id: id,
         display_name: id,
         location: 'wrld_filter:1',

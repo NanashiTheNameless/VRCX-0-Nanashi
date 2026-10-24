@@ -86,8 +86,8 @@ impl TestRealtimeStore {
             &query.user_id,
             &filters,
             &query.search,
-            &query.date_from,
-            &query.date_to,
+            query.date_from,
+            query.date_to,
             false,
             &query.vip_list,
             &query.scoped_user_ids,
@@ -142,7 +142,7 @@ impl TestRealtimeStore {
                         .any(|value| value.to_uppercase().contains(&search))
             })
             .collect::<Vec<_>>();
-        rows.sort_by(|left, right| right.created_at.cmp(&left.created_at));
+        rows.sort_by_key(|row| std::cmp::Reverse(row.created_at));
         let limit = if query.limit > 0 {
             query.limit
         } else if query.per_table_limit > 0 {
@@ -478,9 +478,9 @@ impl RealtimeStore for TestRealtimeStore {
                 let mut row = updates.clone();
                 row.insert("id".into(), Value::String(update.id.clone()));
                 row.entry("createdAt")
-                    .or_insert_with(|| Value::String(update.received_at.clone()));
+                    .or_insert_with(|| Value::from(update.received_at));
                 row.entry("created_at")
-                    .or_insert_with(|| Value::String(update.received_at.clone()));
+                    .or_insert_with(|| Value::from(update.received_at));
                 rows.push(Value::Object(row));
             }
         }
@@ -595,7 +595,7 @@ impl TestRealtimeStore {
             seen.insert(format!(
                 "{}:{}:{}:{}",
                 row.r#type.as_deref().unwrap_or_default(),
-                row.created_at.as_deref().unwrap_or_default(),
+                row.created_at.unwrap_or_default(),
                 row.user_id.as_deref().unwrap_or_default(),
                 row.location.as_deref().unwrap_or_default(),
             ))
@@ -653,7 +653,7 @@ fn apply_friend_upsert(
         push_history(
             state,
             owner,
-            &entry.created_at,
+            entry.created_at,
             history.entry_type,
             &plan.user_id,
             &plan.display_name,
@@ -682,7 +682,7 @@ fn apply_friend_delete(
     push_history(
         state,
         owner,
-        &entry.created_at,
+        entry.created_at,
         "Unfriend",
         &existing.user_id,
         &existing.display_name,
@@ -704,7 +704,7 @@ fn append_input_history(
         push_history(
             state,
             owner,
-            &entry.created_at,
+            entry.created_at,
             &entry.r#type,
             &entry.user_id,
             &entry.display_name,
@@ -722,7 +722,7 @@ fn append_input_history(
 fn push_history(
     state: &mut TestRealtimeStoreState,
     owner: &str,
-    created_at: &str,
+    created_at: i64,
     entry_type: &str,
     user_id: &str,
     display_name: &str,
@@ -739,7 +739,7 @@ fn push_history(
         .or_default()
         .push(FriendLogHistoryOutput {
             row_id,
-            created_at: created_at.to_string(),
+            created_at,
             r#type: entry_type.to_string(),
             user_id: user_id.to_string(),
             display_name: display_name.to_string(),
@@ -801,20 +801,27 @@ fn value_string(value: &Value, keys: &[&str]) -> String {
         .unwrap_or_default()
 }
 
+fn value_epoch(value: &Value, keys: &[&str]) -> Option<i64> {
+    let object = value.as_object()?;
+    keys.iter()
+        .find_map(|key| object.get(*key).filter(|value| !value.is_null()))
+        .and_then(vrcx_0_core::time::epoch_from_json)
+}
+
 fn value_bool(value: &Value, keys: &[&str]) -> bool {
     let text = value_string(value, keys);
     matches!(text.as_str(), "true" | "1")
 }
 
 fn notification_from_value(value: &Value, version: i64) -> NotificationListItemOutput {
-    let created_at = value_string(value, &["createdAt", "created_at"]);
+    let created_at = value_epoch(value, &["createdAt", "created_at"]).unwrap_or_default();
     NotificationListItemOutput {
         id: value_string(value, &["id"]),
         version,
-        created_at: created_at.clone(),
+        created_at,
         created_at_legacy: created_at,
-        updated_at: value_string(value, &["updatedAt", "updated_at"]),
-        expires_at: value_string(value, &["expiresAt", "expires_at"]),
+        updated_at: value_epoch(value, &["updatedAt", "updated_at"]),
+        expires_at: value_epoch(value, &["expiresAt", "expires_at"]),
         r#type: value_string(value, &["type"]),
         link: value_string(value, &["link"]),
         link_text: value_string(value, &["linkText", "link_text"]),

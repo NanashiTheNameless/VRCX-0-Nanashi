@@ -63,7 +63,10 @@ describe('buildVersionList', () => {
         const published = (version: string, day: number) =>
             ({
                 canonicalVersion: version,
-                publishedAt: `2026-10-${String(day).padStart(2, '0')}T12:00:00Z`
+                publishedAt:
+                    Date.parse(
+                        `2026-10-${String(day).padStart(2, '0')}T12:00:00Z`
+                    ) / 1000
             }) as NormalizedRelease;
         const list = buildVersionList(
             [
@@ -85,7 +88,7 @@ describe('buildVersionList', () => {
         const at = (version: string, iso: string) =>
             ({
                 canonicalVersion: version,
-                publishedAt: iso
+                publishedAt: Date.parse(iso) / 1000
             }) as NormalizedRelease;
         const list = buildVersionList(
             [

@@ -109,7 +109,7 @@ async fn semantic_remote_hydrates_each_group_once_and_preserves_instance_order()
         refresh.instances[1].as_value()["group"]["name"],
         json!("Shared Group")
     );
-    assert!(!refresh.fetched_at.is_empty());
+    assert!(refresh.fetched_at > 0);
     assert_eq!(
         *remote.calls.lock().unwrap(),
         vec![

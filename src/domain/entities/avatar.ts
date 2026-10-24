@@ -28,8 +28,8 @@ export type AvatarProfileRecord = EntityRecord & {
     attribution?: string | null;
     authorId: string;
     authorName: string;
-    created_at: string;
-    createdAt?: string;
+    created_at: string | number;
+    createdAt?: string | number;
     featured?: boolean;
     fileAnalysis?: PlatformFileAnalysis;
     gallery?: EntityRecord[];
@@ -46,8 +46,8 @@ export type AvatarProfileRecord = EntityRecord & {
     unityPackageUrl?: string;
     unityPackageUrlObject?: EntityRecord & { unityPackageUrl?: string };
     unityPackages: UnityPackageRecord[];
-    updated_at: string;
-    updatedAt?: string;
+    updated_at: string | number;
+    updatedAt?: string | number;
     version: number;
     $cacheLocked?: boolean;
     $cachePath?: string;

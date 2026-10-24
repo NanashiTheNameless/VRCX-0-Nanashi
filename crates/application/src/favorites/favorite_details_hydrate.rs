@@ -53,7 +53,7 @@ pub struct FavoriteDetailsHydrateOutput {
     pub details_by_id: HashMap<String, RawJson>,
     pub availability_by_id: HashMap<String, String>,
     pub cached_count: u32,
-    pub fetched_at: String,
+    pub fetched_at: i64,
 }
 
 struct FavoriteDetailsHydrateDeps<'a> {
@@ -131,7 +131,7 @@ impl FavoriteDetailsRuntime {
             HashMap::new(),
             &input.requested_ids,
             cached_count,
-            Utc::now().to_rfc3339(),
+            Utc::now().timestamp(),
         ))
     }
 
@@ -415,7 +415,7 @@ fn project_world_cards(
         details_by_id,
         availability_by_id,
         cached_count,
-        fetched_at: Utc::now().to_rfc3339(),
+        fetched_at: Utc::now().timestamp(),
     }
 }
 
@@ -433,7 +433,7 @@ fn project_details(
     availability_by_id: HashMap<String, String>,
     requested_ids: &[String],
     cached_count: u32,
-    fetched_at: String,
+    fetched_at: i64,
 ) -> FavoriteDetailsHydrateOutput {
     let requested = normalize_ids(requested_ids)
         .into_iter()

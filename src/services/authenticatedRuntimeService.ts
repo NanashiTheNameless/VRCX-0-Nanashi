@@ -3,6 +3,7 @@ import type {
     RealtimeWsStatusPayload,
     RuntimeVrchatAuthFailurePayload
 } from '@/platform/tauri/bindings';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 import { normalizeVrchatEndpointKey } from '@/shared/vrchatEndpoint';
 import { useFavoriteStore } from '@/state/favoriteStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
@@ -152,7 +153,8 @@ function applyRealtimeStep(snapshot: AuthenticatedRuntimePhaseSnapshot): void {
         useRuntimeStore.getState().setTransportState({
             websocketConnected: false,
             websocketDomain: snapshot.websocket,
-            lastDisconnectedAt: snapshot.updatedAt || new Date().toISOString()
+            lastDisconnectedAt:
+                snapshot.updatedAt || Math.floor(Date.now() / 1000)
         });
         useSessionStore.getState().setTransportStatus('pipeline-error');
         return;
@@ -163,7 +165,8 @@ function applyRealtimeStep(snapshot: AuthenticatedRuntimePhaseSnapshot): void {
         useRuntimeStore.getState().setTransportState({
             websocketConnected: false,
             websocketDomain: snapshot.websocket,
-            lastDisconnectedAt: snapshot.updatedAt || new Date().toISOString()
+            lastDisconnectedAt:
+                snapshot.updatedAt || Math.floor(Date.now() / 1000)
         });
         useSessionStore.getState().setTransportStatus('disconnected');
         return;
@@ -187,7 +190,7 @@ function applyRealtimeStep(snapshot: AuthenticatedRuntimePhaseSnapshot): void {
         websocketConnected: connected,
         websocketDomain: snapshot.websocket,
         lastConnectedAt: connected
-            ? snapshot.updatedAt || new Date().toISOString()
+            ? snapshot.updatedAt || Math.floor(Date.now() / 1000)
             : null,
         lastDisconnectedAt: null
     });
@@ -270,7 +273,8 @@ function applyRealtimeStatus(
     const websocketDomain = (
         payload.websocketDomain || snapshot.websocket
     ).replace(/\/+$/, '');
-    const at = payload.at || new Date().toISOString();
+    const at =
+        epochSecondsFromValue(payload.at) ?? Math.floor(Date.now() / 1000);
 
     switch (payload.status) {
         case 'connecting':

@@ -94,7 +94,7 @@ fn create_restore_archive(dir: &TestDir, name: &str) -> PathBuf {
         ProfileBackupManifestMetadata {
             app_version: "2.13.0".into(),
             db_version: 18,
-            created_at: "2026-07-15T00:00:00Z".into(),
+            created_at: 1784073600,
             platform: "windows".into(),
             kind: ProfileBackupKind::Manual,
         },
@@ -113,7 +113,7 @@ fn pending_data_dir_migration_blocks_backup_and_restore() {
         &PendingDataDirMigration::copying(
             app_data.to_string_lossy().into_owned(),
             dir.0.join("target").to_string_lossy().into_owned(),
-            Utc::now().to_rfc3339(),
+            Utc::now().timestamp(),
             false,
         ),
     )
@@ -287,9 +287,9 @@ fn due_when_missing_expired_or_clock_moved_backwards() {
         .unwrap()
         .with_timezone(&Utc);
     assert!(is_auto_backup_due(None, now, 7));
-    assert!(is_auto_backup_due(Some("2026-07-07T09:59:59Z"), now, 7));
-    assert!(is_auto_backup_due(Some("2026-07-15T10:00:00Z"), now, 7));
-    assert!(!is_auto_backup_due(Some("2026-07-08T10:00:00Z"), now, 7));
+    assert!(is_auto_backup_due(Some(1783418399), now, 7));
+    assert!(is_auto_backup_due(Some(1784109600), now, 7));
+    assert!(!is_auto_backup_due(Some(1783504800), now, 7));
 }
 
 #[test]

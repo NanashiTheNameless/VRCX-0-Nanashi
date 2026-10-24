@@ -71,7 +71,7 @@ function snapshot(imageUrl: string): BackgroundImageSnapshot {
         author: 'Author',
         license: 'Public domain',
         source: 'Source',
-        resolvedAt: '2026-08-24T00:00:00.000Z',
+        resolvedAt: 1787529600,
         resolvedForKey: '2026-08-24'
     };
 }

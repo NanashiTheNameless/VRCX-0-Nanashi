@@ -13,6 +13,7 @@ import {
 } from '@/services/dataDirMigrationService';
 import { getAppDataDirState } from '@/services/shellIntegrationService';
 import { toast } from '@/services/toastService';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { useModalStore } from '@/state/modalStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
@@ -129,7 +130,7 @@ export function DataDirCleanupHost() {
                 return;
             }
             const lastPromptedAt = pending?.lastPromptedAt
-                ? Date.parse(pending.lastPromptedAt)
+                ? parseAbsoluteDateMs(pending.lastPromptedAt)
                 : Number.NaN;
             if (
                 !pending ||

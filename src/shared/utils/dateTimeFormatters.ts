@@ -1,3 +1,8 @@
+import {
+    absoluteDateFromValue,
+    displayDateFormatInput,
+    displayDateParts
+} from './displayTimeZone';
 export type DateTimeFormatterOptions = {
     locale?: string | null;
     fallback?: string;
@@ -56,21 +61,7 @@ export function normalizeDateLocale(
 }
 
 function toValidDate(value: unknown): Date | null {
-    if (!value) {
-        return null;
-    }
-
-    let date: Date;
-    if (value instanceof Date) {
-        date = value;
-    } else if (typeof value === 'string') {
-        date = new Date(value);
-    } else if (typeof value === 'number') {
-        date = new Date(value);
-    } else {
-        return null;
-    }
-    return Number.isNaN(date.getTime()) ? null : date;
+    return absoluteDateFromValue(value);
 }
 
 function padDatePart(value: number): string {
@@ -83,11 +74,8 @@ export function formatIsoDateTime(value: unknown, fallback = '-'): string {
         return fallback;
     }
 
-    return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(
-        date.getDate()
-    )} ${padDatePart(date.getHours())}:${padDatePart(
-        date.getMinutes()
-    )}:${padDatePart(date.getSeconds())}`;
+    const parts = displayDateParts(date);
+    return `${parts.year}-${padDatePart(parts.month)}-${padDatePart(parts.day)} ${padDatePart(parts.hour)}:${padDatePart(parts.minute)}:${padDatePart(parts.second)}`;
 }
 
 export function formatDateTimeValue(
@@ -106,10 +94,11 @@ export function formatDateTimeValue(
     }
 
     try {
+        const input = displayDateFormatInput(date, formatOptions);
         return getDateTimeFormatter(
             normalizeDateLocale(locale),
-            formatOptions
-        ).format(date);
+            input.options
+        ).format(input.date);
     } catch {
         return fallback;
     }

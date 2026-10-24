@@ -50,7 +50,7 @@ pub(crate) struct SafetyJob {
     policy_revision: u64,
     is_join: bool,
     location: String,
-    created_at: String,
+    created_at: i64,
     user_id: String,
     display_name: String,
     avatar_name: String,
@@ -306,7 +306,7 @@ impl SafetyRuntime {
                     SourceStatus {
                         id: source.id.clone(),
                         count: cache.map_or(0, |c| c.entries.len() as u32),
-                        updated_at: cache.map_or_else(String::new, |c| c.updated_at.clone()),
+                        updated_at: cache.map_or(0, |c| c.updated_at),
                         error: cache.map_or_else(String::new, |c| c.error.clone()),
                     }
                 })
@@ -341,7 +341,7 @@ impl SafetyRuntime {
                         } else {
                             &c.last_attempt
                         };
-                        chrono::DateTime::parse_from_rfc3339(timestamp).map_or(true, |time| {
+                        chrono::DateTime::<Utc>::from_timestamp(*timestamp, 0).is_none_or(|time| {
                             (Utc::now() - time.with_timezone(&Utc)).num_seconds()
                                 >= if c.error.is_empty() { 86400 } else { 3600 }
                         })
@@ -730,7 +730,7 @@ impl SafetyRuntime {
                 policy_revision: state.policy_revision,
                 is_join: false,
                 location: state.location.clone(),
-                created_at: event.created_at.clone(),
+                created_at: event.created_at,
                 user_id: String::new(),
                 display_name: String::new(),
                 avatar_name: String::new(),
@@ -872,11 +872,7 @@ impl SafetyRuntime {
         let Some(kind) = ActivityKind::from_key(kind) else {
             return;
         };
-        let mut event = ActivityEvent::new(
-            kind,
-            format!("safety:{}:{key}", now()),
-            job.created_at.clone(),
-        );
+        let mut event = ActivityEvent::new(kind, format!("safety:{}:{key}", now()), job.created_at);
         event.in_current_instance = true;
         event.actor.user_id = job.user_id.clone();
         event.actor.display_name = job.display_name.clone();
@@ -937,7 +933,7 @@ impl SafetyRuntime {
         };
         audit.push_back(SafetyAuditEntry {
             account_user_id: job.scope.current_user_id.clone(),
-            event_created_at: job.created_at.clone(),
+            event_created_at: job.created_at,
             location: job.location.clone(),
             log_kind: job.log_kind.clone(),
             avatar_id: job.avatar_id.clone(),
@@ -1330,7 +1326,7 @@ fn is_global_hide_action(action: &str) -> bool {
 
 fn cache_is_fresh(cache: &SourceCache) -> bool {
     cache.error.is_empty()
-        && chrono::DateTime::parse_from_rfc3339(&cache.updated_at).is_ok_and(|time| {
+        && chrono::DateTime::<Utc>::from_timestamp(cache.updated_at, 0).is_some_and(|time| {
             (0..172800).contains(&(Utc::now() - time.with_timezone(&Utc)).num_seconds())
         })
 }
@@ -1419,8 +1415,8 @@ fn parse_mirror(
 fn cache_matches(cache: &SourceCache, source: &SafetySource) -> bool {
     cache.source_id == source.id && cache.url == source.url && cache.format == source.format
 }
-fn now() -> String {
-    Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+fn now() -> i64 {
+    Utc::now().timestamp()
 }
 
 async fn request(

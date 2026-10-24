@@ -1,5 +1,4 @@
 import { BellIcon, SearchXIcon } from 'lucide-react';
-import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { AppTable } from '@/components/data-table/appTable';
@@ -11,7 +10,12 @@ import { EmptyState, LoadingState } from '@/components/layout/PageScaffold';
 import { formatDateFilter } from '@/lib/dateTime';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { useNowMs } from '@/lib/useNowMs';
+import {
+    displayDayKey,
+    displayDateParts
+} from '@/shared/utils/displayTimeZone';
 import { getNotificationTs } from '@/shared/utils/notificationCategory';
+import { usePreferencesStore } from '@/state/preferencesStore';
 import { Button } from '@/ui/shadcn/button';
 
 import type {
@@ -30,12 +34,7 @@ type NotificationFeedDay = {
 };
 
 function dayKey(timestamp: number): string {
-    const date = new Date(timestamp);
-    return [
-        date.getFullYear(),
-        String(date.getMonth() + 1).padStart(2, '0'),
-        String(date.getDate()).padStart(2, '0')
-    ].join('-');
+    return displayDayKey(new Date(timestamp));
 }
 
 function groupByDay(rows: NotificationRecord[]): NotificationFeedDay[] {
@@ -85,10 +84,16 @@ export function NotificationFeed({
     table: AppTable<NotificationRecord>;
 }) {
     const { t } = useTranslation();
-    const days = useMemo(() => groupByDay(rows), [rows]);
+    usePreferencesStore((state) => state.dtTimeZone);
+    const days = groupByDay(rows);
     const nowMs = useNowMs({ intervalMs: 60_000 });
     const todayKey = dayKey(nowMs);
-    const yesterdayKey = dayKey(nowMs - 86_400_000);
+    const today = displayDateParts(new Date(nowMs));
+    const yesterdayKey = new Date(
+        Date.UTC(today.year, today.month - 1, today.day - 1)
+    )
+        .toISOString()
+        .slice(0, 10);
 
     function dayLabel(day: NotificationFeedDay) {
         if (day.key === todayKey) {

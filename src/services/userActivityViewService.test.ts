@@ -29,7 +29,7 @@ describe('userActivityViewService Rust activity views', () => {
             filteredEventCount: 1,
             hasAnyData: true,
             builtFromCursor: 'cursor',
-            builtAt: '2025-01-06T00:00:00.000Z'
+            builtAt: 1736121600
         });
 
         const result = await userActivityViewService.loadActivityView({
@@ -47,7 +47,7 @@ describe('userActivityViewService Rust activity views', () => {
             isSelf: false,
             rangeDays: 7,
             utcOffsetMinutes: -new Date().getTimezoneOffset(),
-            nowMs: expect.any(Number),
+            now: expect.any(Number),
             forceRefresh: true
         });
         expect(result).toMatchObject({
@@ -70,7 +70,7 @@ describe('userActivityViewService Rust activity views', () => {
             filteredEventCount: 1,
             hasAnyData: true,
             builtFromCursor: 'cursor',
-            builtAt: '2025-01-06T00:00:00.000Z'
+            builtAt: 1736121600
         });
 
         const result = await userActivityViewService.loadActivityView({
@@ -95,7 +95,7 @@ describe('userActivityViewService Rust activity views', () => {
             bestHourEnd: 4,
             hasOverlapData: true,
             builtFromCursor: 'self|target',
-            builtAt: '2025-01-06T00:00:00.000Z'
+            builtAt: 1736121600
         });
 
         const result = await userActivityViewService.loadOverlapView({
@@ -118,7 +118,7 @@ describe('userActivityViewService Rust activity views', () => {
             targetUserId: 'usr_target',
             rangeDays: 7,
             utcOffsetMinutes: -new Date().getTimezoneOffset(),
-            nowMs: expect.any(Number),
+            now: expect.any(Number),
             forceRefresh: false,
             excludeStartHour: 22,
             excludeEndHour: 2

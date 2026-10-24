@@ -115,7 +115,7 @@ async fn friend_feed_search_resolves_target_pages_results_and_guards_global_hist
                 display_name: "Alice".into(),
                 trust_level: "trusted".into(),
                 friend_number: 1,
-                created_at: "2026-08-01T00:00:00.000Z".into(),
+                created_at: 1785542400,
                 force_history: false,
             }],
             ..RealtimePersistenceBatch::default()
@@ -145,7 +145,18 @@ async fn friend_feed_search_resolves_target_pages_results_and_guards_global_hist
             "",
         ),
     ] {
-        seed_feed_bio_row(db.as_ref(), "usr_owner", row).unwrap();
+        seed_feed_bio_row(
+            db.as_ref(),
+            "usr_owner",
+            (
+                vrcx_0_core::time::parse_epoch_seconds(row.0).unwrap(),
+                row.1,
+                row.2,
+                row.3,
+                row.4,
+            ),
+        )
+        .unwrap();
     }
     let tools = spawn_in_process_tools(runtime).await.unwrap();
 

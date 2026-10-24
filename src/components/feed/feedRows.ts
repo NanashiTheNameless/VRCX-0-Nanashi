@@ -8,6 +8,7 @@ import {
 } from '@/domain/friends/presence';
 import type { FriendRecordInput } from '@/domain/friends/types';
 import { isUserId } from '@/shared/constants/vrchatIds';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import {
     SOLID_USER_STATUS_DOT_CLASS_NAMES,
     userStatusFromValue
@@ -107,9 +108,11 @@ export function resolveFeedLocationForDisplay(row: FeedRow | null | undefined) {
     return location;
 }
 
-const feedRowCreatedAtMsCache = new WeakMap<FeedRow, number>();
+const feedRowCreatedAtMsCache = new WeakMap<object, number>();
 
-export function getFeedRowCreatedAtMs(row: FeedRow | null | undefined): number {
+export function getFeedRowCreatedAtMs(
+    row: { created_at?: unknown } | null | undefined
+): number {
     if (!row) {
         return 0;
     }
@@ -117,7 +120,7 @@ export function getFeedRowCreatedAtMs(row: FeedRow | null | undefined): number {
     if (cached !== undefined) {
         return cached;
     }
-    const parsed = new Date(row.created_at || 0).valueOf() || 0;
+    const parsed = parseAbsoluteDateMs(row.created_at) || 0;
     feedRowCreatedAtMsCache.set(row, parsed);
     return parsed;
 }

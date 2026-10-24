@@ -13,7 +13,7 @@ function buildNode(
     id: string,
     label: string,
     degree: number,
-    meta: { lastFetchedAt?: string | null; optedOut?: boolean } = {}
+    meta: { lastFetchedAt?: number | null; optedOut?: boolean } = {}
 ) {
     return {
         id,
@@ -21,9 +21,7 @@ function buildNode(
         degree,
         mutualCount: degree,
         lastFetchedAt:
-            meta.lastFetchedAt === undefined
-                ? '2026-09-01T00:00:00.000Z'
-                : meta.lastFetchedAt,
+            meta.lastFetchedAt === undefined ? 1788220800 : meta.lastFetchedAt,
         optedOut: meta.optedOut ?? false
     };
 }

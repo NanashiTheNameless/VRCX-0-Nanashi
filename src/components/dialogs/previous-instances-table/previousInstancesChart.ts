@@ -387,7 +387,7 @@ export function buildInfoChartOption({
 }
 
 export function buildAvatarLaneSegments<
-    T extends { avatarId: string; startedAtMs: number; endedAtMs: number }
+    T extends { avatarId: string; startedAt: number; endedAt: number }
 >(segments: readonly T[], startMs: number, endMs: number) {
     const spanMs = endMs - startMs;
     if (spanMs <= 0) {
@@ -395,15 +395,16 @@ export function buildAvatarLaneSegments<
     }
     const colors = new Map<string, string>();
     const inRange = segments.filter(
-        (segment) => segment.endedAtMs > startMs && segment.startedAtMs < endMs
+        (segment) =>
+            segment.endedAt * 1000 > startMs && segment.startedAt * 1000 < endMs
     );
     return inRange.map((segment, index) => {
         const fromMs =
-            index === 0 ? startMs : Math.max(segment.startedAtMs, startMs);
+            index === 0 ? startMs : Math.max(segment.startedAt * 1000, startMs);
         const toMs =
             index === inRange.length - 1
                 ? endMs
-                : Math.min(segment.endedAtMs, endMs);
+                : Math.min(segment.endedAt * 1000, endMs);
         let color = colors.get(segment.avatarId);
         if (!color) {
             color = AVATAR_LANE_COLORS[colors.size % AVATAR_LANE_COLORS.length];

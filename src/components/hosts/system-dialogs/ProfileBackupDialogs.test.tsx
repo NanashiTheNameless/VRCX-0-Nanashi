@@ -91,7 +91,7 @@ const restoreValidation = {
     databaseVersion: 'compatible',
     database: 'valid',
     manifest: {
-        createdAt: '2026-07-15T00:00:00Z',
+        createdAt: 1784073600,
         appVersion: '2.13.0',
         dbVersion: 18,
         platform: 'windows',

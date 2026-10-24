@@ -169,7 +169,7 @@ pub(crate) async fn run_turn(ctx: TurnContext) {
     // than the whole surface. Open mode keeps everything.
     let fallback_tools = (ctx.apply_playbook && playbook_tools.is_none())
         .then(|| playbook::weak_fallback_tools(ctx.tool_defs.as_slice()));
-    let now_local = chrono::Local::now().fixed_offset();
+    let now_local = vrcx_0_core::time::display_now();
     let mut working = build_context(&ctx, route, now_local);
     let tool_defs = playbook_tools
         .as_deref()

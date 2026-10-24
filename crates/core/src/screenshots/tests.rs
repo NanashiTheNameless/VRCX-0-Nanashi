@@ -237,32 +237,32 @@ fn export_file_name_is_short_ascii_and_marks_screenshots() {
 #[test]
 fn captured_at_prefers_offset_timestamp_from_vrchat_metadata() {
     let tz = chrono::FixedOffset::east_opt(0).unwrap();
-    let captured = captured_at_ms_in(
+    let captured = captured_at_in(
         &tz,
         Some("2026-09-17T17:49:28.1279419+09:00"),
         "VRChat_2026-09-17_17-49-27.719_3840x2160.png",
         1,
     );
 
-    let expected = chrono::DateTime::parse_from_rfc3339("2026-09-17T08:49:28.127Z")
+    let expected = chrono::DateTime::parse_from_rfc3339("2026-09-17T08:49:28Z")
         .unwrap()
-        .timestamp_millis();
+        .timestamp();
     assert_eq!(captured, expected);
 }
 
 #[test]
 fn captured_at_reads_file_name_as_local_time() {
     let tz = chrono::FixedOffset::east_opt(9 * 3600).unwrap();
-    let expected = chrono::DateTime::parse_from_rfc3339("2026-09-17T08:49:27.719Z")
+    let expected = chrono::DateTime::parse_from_rfc3339("2026-09-17T08:49:27Z")
         .unwrap()
-        .timestamp_millis();
+        .timestamp();
 
     assert_eq!(
-        captured_at_ms_in(&tz, None, "VRChat_2026-09-17_17-49-27.719_3840x2160.png", 1),
+        captured_at_in(&tz, None, "VRChat_2026-09-17_17-49-27.719_3840x2160.png", 1),
         expected
     );
     assert_eq!(
-        captured_at_ms_in(
+        captured_at_in(
             &tz,
             Some("not a time"),
             "VRChat_3840x2160_2026-09-17_17-49-27.7190.png",
@@ -276,5 +276,5 @@ fn captured_at_reads_file_name_as_local_time() {
 fn captured_at_falls_back_to_modified_time() {
     let tz = chrono::FixedOffset::east_opt(0).unwrap();
 
-    assert_eq!(captured_at_ms_in(&tz, None, "holiday.png", 42), 42);
+    assert_eq!(captured_at_in(&tz, None, "holiday.png", 42), 42);
 }

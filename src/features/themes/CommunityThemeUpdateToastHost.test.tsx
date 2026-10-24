@@ -42,8 +42,8 @@ function installedTheme(themeId: string): CommunityThemeInstallMetadata {
         version: '1.0.0',
         sourceUrl: '',
         sha256: '',
-        installedAt: '',
-        updatedAt: '',
+        installedAt: 0,
+        updatedAt: 0,
         darkMode: true,
         accentMode: false
     };

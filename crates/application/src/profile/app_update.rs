@@ -15,7 +15,7 @@ use vrcx_0_application_core::{
     UpdaterCheckRequest, UpdaterDownloadProgress, UpdaterMetadata, UpdaterPort,
     UpdaterProgressCallback,
 };
-use vrcx_0_core::time::now_iso;
+use vrcx_0_core::time::now_epoch;
 
 use super::ProfileConfigStore;
 
@@ -114,7 +114,7 @@ pub struct AppUpdateCatalogRelease {
     pub html_url: Option<String>,
     pub name: Option<String>,
     pub prerelease: bool,
-    pub published_at: Option<String>,
+    pub published_at: Option<i64>,
     pub body: Option<String>,
 }
 
@@ -130,7 +130,7 @@ pub struct AppUpdateReleaseSnapshot {
     pub display_name: String,
     pub tag_name: String,
     pub html_url: String,
-    pub published_at: String,
+    pub published_at: i64,
     pub body: String,
     pub canonical_version: String,
     pub display_version: String,
@@ -144,7 +144,7 @@ pub struct AppUpdateReleaseSnapshot {
 #[serde(rename_all = "camelCase")]
 pub struct AppUpdateStatusSnapshot {
     pub has_available_update: bool,
-    pub checked_at: String,
+    pub checked_at: i64,
     pub detail: String,
     pub error: Option<String>,
     pub release: Option<AppUpdateReleaseSnapshot>,
@@ -155,7 +155,7 @@ impl AppUpdateStatusSnapshot {
     fn idle() -> Self {
         Self {
             has_available_update: false,
-            checked_at: String::new(),
+            checked_at: 0,
             detail: "App update check has not run yet.".into(),
             error: None,
             release: None,
@@ -335,7 +335,7 @@ async fn run_check_inner(context: &AppUpdateCheckContext<'_>) -> Result<CheckOut
 }
 
 async fn run_check(context: &AppUpdateCheckContext<'_>) -> AppUpdateStatusSnapshot {
-    let checked_at = now_iso();
+    let checked_at = now_epoch();
     match run_check_inner(context).await {
         Ok(outcome) => AppUpdateStatusSnapshot {
             has_available_update: outcome.has_available_update,
@@ -378,7 +378,7 @@ struct PendingDownload {
 struct DownloadState {
     phase: AppUpdateDownloadPhase,
     version: Option<String>,
-    started_at: Option<String>,
+    started_at: Option<i64>,
     downloaded_bytes: u64,
     total_bytes: u64,
     percent: u32,
@@ -408,7 +408,7 @@ impl DownloadState {
         AppUpdateDownloadStatusSnapshot {
             phase: self.phase,
             version: self.version.clone(),
-            started_at: self.started_at.clone(),
+            started_at: self.started_at,
             downloaded_bytes: self.downloaded_bytes,
             total_bytes: self.total_bytes,
             percent: self.percent,
@@ -422,7 +422,7 @@ impl DownloadState {
 pub struct AppUpdateDownloadStatusSnapshot {
     pub phase: AppUpdateDownloadPhase,
     pub version: Option<String>,
-    pub started_at: Option<String>,
+    pub started_at: Option<i64>,
     pub downloaded_bytes: u64,
     pub total_bytes: u64,
     pub percent: u32,
@@ -434,7 +434,7 @@ pub struct AppUpdateDownloadStatusSnapshot {
 pub struct AppUpdateDownloadProgressPayload {
     pub version: String,
     pub phase: AppUpdateDownloadPhase,
-    pub started_at: Option<String>,
+    pub started_at: Option<i64>,
     pub downloaded_bytes: u64,
     pub total_bytes: u64,
     pub percent: u32,
@@ -755,7 +755,7 @@ impl AppUpdateRuntime {
                         *state = DownloadState {
                             phase: AppUpdateDownloadPhase::Downloading,
                             version: Some(version.clone()),
-                            started_at: Some(now_iso()),
+                            started_at: Some(now_epoch()),
                             downloaded_bytes: 0,
                             total_bytes: 0,
                             percent: 0,
@@ -926,7 +926,7 @@ impl AppUpdateRuntime {
         self.inner.event_bus.emit(AppUpdateDownloadProgressPayload {
             version,
             phase: snapshot.phase,
-            started_at: snapshot.started_at.clone(),
+            started_at: snapshot.started_at,
             downloaded_bytes: snapshot.downloaded_bytes,
             total_bytes: snapshot.total_bytes,
             percent: snapshot.percent,

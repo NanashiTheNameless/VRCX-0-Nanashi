@@ -15,6 +15,7 @@ import {
     formatIsoDateTime,
     normalizeDateLocale
 } from '@/shared/utils/dateTimeFormatters';
+import { absoluteDateFromValue } from '@/shared/utils/displayTimeZone';
 import { useShellStore } from '@/state/shellStore';
 
 export function formatDateFilter(dateStr: unknown, format: DateFilterFormat) {
@@ -39,7 +40,7 @@ export function formatDateFilterOrFallback(
     format: DateFilterFormat,
     { empty = '-', invalid = '-' }: DateFallbackOptions = {}
 ) {
-    if (!value) {
+    if (value === null || value === undefined || value === '') {
         return empty;
     }
 
@@ -90,12 +91,12 @@ export function formatScreenshotDateTime(
     value: Date | string | number | null | undefined,
     locale?: string
 ) {
-    if (!value) {
+    if (value === null || value === undefined || value === '') {
         return '-';
     }
 
-    const date = value instanceof Date ? value : new Date(value);
-    if (Number.isNaN(date.getTime())) {
+    const date = absoluteDateFromValue(value);
+    if (!date) {
         return '-';
     }
 

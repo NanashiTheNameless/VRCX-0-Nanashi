@@ -42,6 +42,7 @@ import {
     type BrowseHistoryItemOutput
 } from '@/platform/tauri/bindings';
 import { toast } from '@/services/toastService';
+import { displayDateBoundary } from '@/shared/utils/displayTimeZone';
 import { useModalStore } from '@/state/modalStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { Button } from '@/ui/shadcn/button';
@@ -112,8 +113,8 @@ export function BrowseHistoryPage() {
                 ownerUserId,
                 entityKind,
                 search: deferredSearch,
-                dateFrom,
-                dateTo,
+                dateFrom: displayDateBoundary(dateFrom, 'start'),
+                dateTo: displayDateBoundary(dateTo, 'end'),
                 cursor: null,
                 limit: PAGE_LIMIT
             })
@@ -191,8 +192,8 @@ export function BrowseHistoryPage() {
                 ownerUserId,
                 entityKind,
                 search: deferredSearch,
-                dateFrom,
-                dateTo,
+                dateFrom: displayDateBoundary(dateFrom, 'start'),
+                dateTo: displayDateBoundary(dateTo, 'end'),
                 cursor,
                 limit: PAGE_LIMIT
             })

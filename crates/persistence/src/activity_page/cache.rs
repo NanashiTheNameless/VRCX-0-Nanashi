@@ -69,7 +69,7 @@ pub fn write_cached_page(
             .set("payload_version", payload_version)
             .set("built_from_cursor", view.built_from_cursor.as_str())
             .set("payload_json", payload_json)
-            .set("built_at", view.built_at.as_str())
+            .set("built_at", view.built_at)
             .build(),
     )?;
     Ok(())

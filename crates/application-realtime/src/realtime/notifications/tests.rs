@@ -7,7 +7,7 @@ fn ws(message_type: &str, content: Value) -> RealtimeWsMessagePayload {
             "content": content
         }),
         raw: "{}".into(),
-        received_at: "2026-06-08T10:00:00Z".into(),
+        received_at: 1780912800,
     }
 }
 
@@ -39,10 +39,7 @@ fn notification_v1_routes_projection_and_persistence_filters() {
     assert!(upsert.deliver_runtime);
     assert!(upsert.run_automation);
     assert_eq!(upsert.notification["version"], json!(1));
-    assert_eq!(
-        upsert.notification["createdAt"],
-        json!("2026-06-08T10:00:00Z")
-    );
+    assert_eq!(upsert.notification["createdAt"], json!(1780912800));
     assert_eq!(upsert.notification["seen"], json!(false));
 
     let self_sent = apply_notification_ws_message(
@@ -104,7 +101,7 @@ fn notification_v2_routes_seen_and_boop_legacy_fields() {
     assert_eq!(notification["title"], json!(""));
     assert_eq!(notification["message"], json!("Boop smile"));
     assert_eq!(notification["imageUrl"], json!("default_smile"));
-    assert_eq!(notification["createdAt"], json!("2026-06-08T10:00:00Z"));
+    assert_eq!(notification["createdAt"], json!(1780912800));
     assert!(!output.projection.upserts[0].notify_menu);
     assert!(output.projection.upserts[0].deliver_runtime);
     assert!(output.projection.upserts[0].run_automation);
@@ -135,7 +132,7 @@ fn notification_v2_update_routes_update_and_seen_projection() {
     assert_eq!(output.persistence.notification_v2_updates.len(), 1);
     let update = &output.persistence.notification_v2_updates[0];
     assert_eq!(update.id, "notif_v2");
-    assert_eq!(update.received_at, "2026-06-08T10:00:00Z");
+    assert_eq!(update.received_at, 1780912800);
     assert_eq!(update.updates["data"]["slot"], json!(1));
     assert_eq!(update.updates["responses"][0]["text"], json!("OK"));
     assert_eq!(update.updates["details"]["emojiId"], json!("emoji_custom"));
@@ -187,7 +184,7 @@ fn notification_terminal_routes_seen_and_expire_ids() {
     assert_eq!(hidden.projection.expired_ids, vec!["hidden_id"]);
     assert_eq!(
         hidden.persistence.notification_expirations[0].expired_at,
-        "2026-06-08T10:00:00Z"
+        1780912800
     );
 
     let response = apply_notification_ws_message(

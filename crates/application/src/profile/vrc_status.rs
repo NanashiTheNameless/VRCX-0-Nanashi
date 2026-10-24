@@ -9,7 +9,7 @@ use vrcx_0_application_core::{
     sleep_until_due_or_stopped, RuntimeEventBus, TaskSupervisor, VrcStatusSnapshot,
 };
 use vrcx_0_core::json::RawJson;
-use vrcx_0_core::time::now_iso;
+use vrcx_0_core::time::now_epoch;
 
 use vrcx_0_application_core::{Error, Result};
 
@@ -105,7 +105,7 @@ impl VrcStatusService {
             Err(error) => {
                 let message = error.to_string();
                 let snapshot = self.update_snapshot(|snapshot| {
-                    snapshot.last_fetched_at = Some(now_iso());
+                    snapshot.last_fetched_at = Some(now_epoch());
                     snapshot.polling_interval_ms = ISSUE_POLL_MS;
                     snapshot.refreshing = false;
                     snapshot.error = message;
@@ -150,7 +150,8 @@ impl VrcStatusService {
         let status = self.inner.remote.status().await?;
         let description = text_at(status.as_value(), &["status", "description"]);
         let indicator = text_at(status.as_value(), &["status", "indicator"]);
-        let updated_at = optional_text_at(status.as_value(), &["page", "updated_at"]);
+        let updated_at = optional_text_at(status.as_value(), &["page", "updated_at"])
+            .and_then(|value| vrcx_0_core::time::parse_epoch_seconds(&value));
         let summary = match self.inner.remote.summary().await {
             Ok(summary) => summarize_components(summary.as_value()),
             Err(error) => {
@@ -182,7 +183,7 @@ impl VrcStatusService {
                 String::new()
             },
             updated_at,
-            last_fetched_at: Some(now_iso()),
+            last_fetched_at: Some(now_epoch()),
             polling_interval_ms: if has_issue { ISSUE_POLL_MS } else { OK_POLL_MS },
             refreshing: false,
             error: String::new(),
@@ -343,7 +344,7 @@ mod tests {
         assert_eq!(snapshot.status, ISSUE_FALLBACK_STATUS);
         assert_eq!(snapshot.indicator, "minor");
         assert_eq!(snapshot.summary, "API");
-        assert_eq!(snapshot.updated_at.as_deref(), Some("2026-08-28T00:00:00Z"));
+        assert_eq!(snapshot.updated_at, Some(1787875200));
         assert_eq!(snapshot.polling_interval_ms, ISSUE_POLL_MS);
         assert_eq!(remote.status_calls.load(TestOrdering::SeqCst), 1);
         assert_eq!(remote.summary_calls.load(TestOrdering::SeqCst), 1);

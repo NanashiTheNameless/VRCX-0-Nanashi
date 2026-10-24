@@ -35,13 +35,13 @@ fn avatar_entry(id: &str) -> CacheEntityInput {
         id: json!(id),
         author_id: json!("usr_author"),
         author_name: json!("Author"),
-        created_at: json!("2026-01-01T00:00:00Z"),
+        created_at: json!(1767225600),
         description: json!("Description"),
         image_url: json!("https://example.com/avatar.png"),
         name: json!("Shared Avatar"),
         release_status: json!("public"),
         thumbnail_image_url: json!("https://example.com/avatar-thumb.png"),
-        updated_at: json!("2026-01-02T00:00:00Z"),
+        updated_at: json!(1767312000),
         version: json!(1),
     }
 }
@@ -55,7 +55,7 @@ fn insert_avatar_history(
     let user_prefix = normalize_user_table_prefix(user_id)?;
     ensure_user_store_tables(db, &user_prefix)?;
     db.execute_non_query(
-        &format!("INSERT INTO {user_prefix}_avatar_history (avatar_id, created_at, time) VALUES (@avatar_id, '2026-01-01T00:00:00Z', @time_spent)"),
+        &format!("INSERT INTO {user_prefix}_avatar_history (avatar_id, created_at, time) VALUES (@avatar_id, 1767225600, @time_spent)"),
         &ParamsBuilder::new()
             .set("avatar_id", avatar_id)
             .set("time_spent", time_spent)
@@ -200,8 +200,8 @@ fn insert_wear_log(
     db: &DatabaseService,
     user_id: &str,
     avatar_id: &str,
-    started_at: &str,
-    ended_at: &str,
+    started_at: i64,
+    ended_at: i64,
 ) -> Result<(), Error> {
     let user_prefix = normalize_user_table_prefix(user_id)?;
     ensure_user_store_tables(db, &user_prefix)?;
@@ -216,10 +216,6 @@ fn insert_wear_log(
     Ok(())
 }
 
-fn ms(iso: &str) -> i64 {
-    parse_activity_time_ms(iso).unwrap()
-}
-
 #[test]
 fn wear_segments_are_clipped_to_the_visit_and_merge_consecutive_repeats_in_order(
 ) -> Result<(), Error> {
@@ -227,84 +223,31 @@ fn wear_segments_are_clipped_to_the_visit_and_merge_consecutive_repeats_in_order
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
     avatar_cache_upsert(&db, avatar_entry("avtr_a"))?;
 
-    insert_wear_log(
-        &db,
-        "usr_a",
-        "avtr_before",
-        "2026-01-01T09:00:00.000Z",
-        "2026-01-01T09:50:00.000Z",
-    )?;
-    insert_wear_log(
-        &db,
-        "usr_a",
-        "avtr_a",
-        "2026-01-01T09:55:00.000Z",
-        "2026-01-01T10:10:00.000Z",
-    )?;
-    insert_wear_log(
-        &db,
-        "usr_a",
-        "avtr_b",
-        "2026-01-01T10:10:00.000Z",
-        "2026-01-01T10:20:00.000Z",
-    )?;
-    insert_wear_log(
-        &db,
-        "usr_a",
-        "avtr_b",
-        "2026-01-01T10:21:00.000Z",
-        "2026-01-01T10:30:00.000Z",
-    )?;
-    insert_wear_log(
-        &db,
-        "usr_a",
-        "avtr_a",
-        "2026-01-01T10:30:00.000Z",
-        "2026-01-01T11:30:00.000Z",
-    )?;
-    insert_wear_log(
-        &db,
-        "usr_b",
-        "avtr_other",
-        "2026-01-01T10:00:00.000Z",
-        "2026-01-01T11:00:00.000Z",
-    )?;
+    insert_wear_log(&db, "usr_a", "avtr_before", 1767258000, 1767261000)?;
+    insert_wear_log(&db, "usr_a", "avtr_a", 1767261300, 1767262200)?;
+    insert_wear_log(&db, "usr_a", "avtr_b", 1767262200, 1767262800)?;
+    insert_wear_log(&db, "usr_a", "avtr_b", 1767262860, 1767263400)?;
+    insert_wear_log(&db, "usr_a", "avtr_a", 1767263400, 1767267000)?;
+    insert_wear_log(&db, "usr_b", "avtr_other", 1767261600, 1767265200)?;
 
-    let segments = avatar_wear_segments(
-        &db,
-        "usr_a".into(),
-        ms("2026-01-01T10:00:00.000Z"),
-        ms("2026-01-01T11:00:00.000Z"),
-    )?;
+    let segments = avatar_wear_segments(&db, "usr_a".into(), 1767261600, 1767265200)?;
 
     let summary: Vec<(&str, i64, i64)> = segments
         .iter()
         .map(|segment| {
             (
                 segment.avatar_id.as_str(),
-                segment.started_at_ms,
-                segment.ended_at_ms,
+                segment.started_at,
+                segment.ended_at,
             )
         })
         .collect();
     assert_eq!(
         summary,
         vec![
-            (
-                "avtr_a",
-                ms("2026-01-01T10:00:00.000Z"),
-                ms("2026-01-01T10:10:00.000Z")
-            ),
-            (
-                "avtr_b",
-                ms("2026-01-01T10:10:00.000Z"),
-                ms("2026-01-01T10:30:00.000Z")
-            ),
-            (
-                "avtr_a",
-                ms("2026-01-01T10:30:00.000Z"),
-                ms("2026-01-01T11:00:00.000Z")
-            ),
+            ("avtr_a", 1767261600, 1767262200),
+            ("avtr_b", 1767262200, 1767263400),
+            ("avtr_a", 1767263400, 1767265200),
         ]
     );
     assert_eq!(segments[0].name, "Shared Avatar");

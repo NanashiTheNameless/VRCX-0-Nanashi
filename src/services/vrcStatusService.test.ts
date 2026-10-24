@@ -23,8 +23,8 @@ function snapshot(status: string, lastFetchedAt: string): VrcStatusSnapshot {
         status,
         indicator: status,
         summary: status,
-        updatedAt: lastFetchedAt,
-        lastFetchedAt,
+        updatedAt: Math.floor(Date.parse(lastFetchedAt) / 1000),
+        lastFetchedAt: Math.floor(Date.parse(lastFetchedAt) / 1000),
         pollingIntervalMs: 900_000,
         refreshing: false,
         error: ''

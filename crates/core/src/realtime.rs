@@ -23,7 +23,8 @@ impl RealtimeSessionContext {
 pub struct RealtimeWsMessagePayload {
     pub json: Value,
     pub raw: String,
-    pub received_at: String,
+    /// Epoch seconds.
+    pub received_at: i64,
 }
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, Eq, specta::Type)]
@@ -82,11 +83,7 @@ pub enum RealtimeMessageParseOutcome {
 }
 
 impl RealtimeMessageParser {
-    pub fn parse_text(
-        &mut self,
-        raw: &str,
-        received_at: impl Into<String>,
-    ) -> RealtimeMessageParseOutcome {
+    pub fn parse_text(&mut self, raw: &str, received_at: i64) -> RealtimeMessageParseOutcome {
         if self.last_raw.as_deref() == Some(raw) {
             return RealtimeMessageParseOutcome::Duplicate;
         }
@@ -111,7 +108,7 @@ impl RealtimeMessageParser {
         RealtimeMessageParseOutcome::Valid(RealtimeWsMessagePayload {
             json,
             raw: raw.to_string(),
-            received_at: received_at.into(),
+            received_at,
         })
     }
 }
@@ -125,7 +122,7 @@ mod tests {
         let mut parser = RealtimeMessageParser::default();
         let RealtimeMessageParseOutcome::Valid(payload) = parser.parse_text(
             r#"{"type":"friend-online","content":"{\"userId\":\"usr_1\"}"}"#,
-            "2026-05-14T00:00:00Z",
+            1778716800,
         ) else {
             panic!("message should parse");
         };
@@ -136,16 +133,15 @@ mod tests {
             payload.raw,
             r#"{"type":"friend-online","content":"{\"userId\":\"usr_1\"}"}"#
         );
-        assert_eq!(payload.received_at, "2026-05-14T00:00:00Z");
+        assert_eq!(payload.received_at, 1778716800);
     }
 
     #[test]
     fn keeps_non_json_content_string() {
         let mut parser = RealtimeMessageParser::default();
-        let RealtimeMessageParseOutcome::Valid(payload) = parser.parse_text(
-            r#"{"type":"notification","content":"hello"}"#,
-            "2026-05-14T00:00:00Z",
-        ) else {
+        let RealtimeMessageParseOutcome::Valid(payload) =
+            parser.parse_text(r#"{"type":"notification","content":"hello"}"#, 1778716800)
+        else {
             panic!("message should parse");
         };
 
@@ -157,14 +153,14 @@ mod tests {
         let mut parser = RealtimeMessageParser::default();
 
         let RealtimeMessageParseOutcome::Invalid { error } =
-            parser.parse_text("not-json", "2026-05-14T00:00:00Z")
+            parser.parse_text("not-json", 1778716800)
         else {
             panic!("invalid JSON should return its parse error");
         };
 
         assert_eq!(error.classify(), serde_json::error::Category::Syntax);
         assert!(matches!(
-            parser.parse_text("not-json", "2026-05-14T00:00:01Z"),
+            parser.parse_text("not-json", 1778716801),
             RealtimeMessageParseOutcome::Invalid { .. }
         ));
     }
@@ -175,11 +171,11 @@ mod tests {
         let raw = r#"{"type":"friend-offline","content":{"userId":"usr_1"}}"#;
 
         assert!(matches!(
-            parser.parse_text(raw, "2026-05-14T00:00:00Z"),
+            parser.parse_text(raw, 1778716800),
             RealtimeMessageParseOutcome::Valid(_)
         ));
         assert!(matches!(
-            parser.parse_text(raw, "2026-05-14T00:00:01Z"),
+            parser.parse_text(raw, 1778716801),
             RealtimeMessageParseOutcome::Duplicate
         ));
     }

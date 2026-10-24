@@ -652,7 +652,7 @@ mod tests {
     fn avatar_row(avatar_id: &str, group_name: &str) -> FavoriteRow {
         FavoriteRow::new(
             FavoriteEntityKind::Avatar,
-            String::new(),
+            0,
             avatar_id.into(),
             group_name.into(),
         )

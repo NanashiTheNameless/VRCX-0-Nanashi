@@ -13,7 +13,8 @@ pub struct ProfileBackupSettings {
     pub auto_interval_days: u8,
     pub auto_retain_extra: u8,
     pub auto_target_dir: String,
-    pub last_auto_at: Option<String>,
+    #[serde(default, deserialize_with = "vrcx_0_contracts::epoch::de_opt")]
+    pub last_auto_at: Option<i64>,
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize, specta::Type)]

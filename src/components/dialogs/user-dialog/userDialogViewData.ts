@@ -1,5 +1,6 @@
 import { presenceOf, presenceOnlineForMs } from '@/domain/friends/presence';
 import { normalizeUserRelationshipHistory } from '@/services/userDialogSessionCacheService';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 
 import {
     normalizeUserGroupMembershipRows,
@@ -85,7 +86,7 @@ function validTimestampMs(value: unknown) {
     ) {
         return numericValue;
     }
-    const timestamp = Date.parse(String(value));
+    const timestamp = parseAbsoluteDateMs(String(value));
     return Number.isNaN(timestamp) ? 0 : timestamp;
 }
 

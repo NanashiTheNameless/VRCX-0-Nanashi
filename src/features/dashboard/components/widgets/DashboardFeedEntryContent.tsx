@@ -18,8 +18,8 @@ type DashboardFeedRow = Record<string, unknown> & {
     id?: string | number | null;
     rowId?: string | number | null;
     type?: string | null;
-    created_at?: string | null;
-    createdAt?: string | null;
+    created_at?: string | number | null;
+    createdAt?: string | number | null;
     userId?: string | null;
     senderUserId?: string | null;
     displayName?: string | null;

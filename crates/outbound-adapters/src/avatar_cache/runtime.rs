@@ -358,13 +358,23 @@ fn avatar_summary(value: &Value) -> Option<AvatarCacheOutput> {
         id,
         author_id: text_field(value, "authorId"),
         author_name: text_field(value, "authorName"),
-        created_at: text_field_with_fallback(value, "created_at", "createdAt"),
+        created_at: vrcx_0_core::time::epoch_from_json(&value_or_null_with_fallback(
+            value,
+            "created_at",
+            "createdAt",
+        ))
+        .unwrap_or_default(),
         description: text_field(value, "description"),
         image_url: text_field(value, "imageUrl"),
         name,
         release_status: AvatarJson::new(value).release_status().unwrap_or_default(),
         thumbnail_image_url: text_field(value, "thumbnailImageUrl"),
-        updated_at: text_field_with_fallback(value, "updated_at", "updatedAt"),
+        updated_at: vrcx_0_core::time::epoch_from_json(&value_or_null_with_fallback(
+            value,
+            "updated_at",
+            "updatedAt",
+        ))
+        .unwrap_or_default(),
         version: value
             .get("version")
             .and_then(Value::as_i64)
@@ -403,15 +413,6 @@ fn text_field(value: &Value, key: &str) -> String {
         .map(str::trim)
         .unwrap_or_default()
         .to_string()
-}
-
-fn text_field_with_fallback(value: &Value, key: &str, fallback: &str) -> String {
-    let text = text_field(value, key);
-    if text.is_empty() {
-        text_field(value, fallback)
-    } else {
-        text
-    }
 }
 
 fn value_or_null(value: &Value, key: &str) -> Value {

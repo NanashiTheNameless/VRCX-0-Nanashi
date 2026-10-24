@@ -11,13 +11,13 @@ fn test_store(_name: &str) -> TestGameStateStore {
 }
 
 fn location(
-    created_at: &str,
+    created_at: i64,
     location: &str,
     world_id: &str,
     world_name: &str,
 ) -> GameLogLocationEntry {
     GameLogLocationEntry {
-        created_at: created_at.to_string(),
+        created_at,
         location: location.to_string(),
         world_id: world_id.to_string(),
         world_name: world_name.to_string(),
@@ -27,13 +27,13 @@ fn location(
 }
 
 fn join(
-    created_at: &str,
+    created_at: i64,
     display_name: &str,
     location: &str,
     user_id: &str,
 ) -> GameLogJoinLeaveEntry {
     GameLogJoinLeaveEntry {
-        created_at: created_at.to_string(),
+        created_at,
         event_type: "OnPlayerJoined".to_string(),
         display_name: display_name.to_string(),
         location: location.to_string(),
@@ -44,14 +44,14 @@ fn join(
 }
 
 fn leave(
-    created_at: &str,
+    created_at: i64,
     display_name: &str,
     location: &str,
     user_id: &str,
     time: i64,
 ) -> GameLogJoinLeaveEntry {
     GameLogJoinLeaveEntry {
-        created_at: created_at.to_string(),
+        created_at,
         event_type: "OnPlayerLeft".to_string(),
         display_name: display_name.to_string(),
         location: location.to_string(),
@@ -61,9 +61,9 @@ fn leave(
     }
 }
 
-fn video(created_at: &str, url: &str, location: &str) -> GameLogVideoPlayEntry {
+fn video(created_at: i64, url: &str, location: &str) -> GameLogVideoPlayEntry {
     GameLogVideoPlayEntry {
-        created_at: created_at.to_string(),
+        created_at,
         video_url: url.to_string(),
         video_name: "Clip".to_string(),
         video_id: String::new(),
@@ -98,13 +98,13 @@ fn returns_sessions_newest_first_with_video_merge() {
     write_rows(
         &store,
         vec![
-            location("2026-01-01T10:00:00.000Z", "wrld_old:1", "wrld_old", "Old"),
-            location("2026-01-01T11:00:00.000Z", "wrld_new:1", "wrld_new", "New"),
+            location(1767261600, "wrld_old:1", "wrld_old", "Old"),
+            location(1767265200, "wrld_new:1", "wrld_new", "New"),
         ],
-        vec![join("2026-01-01T10:00:01.000Z", "A", "wrld_old:1", "usr_a")],
+        vec![join(1767261601, "A", "wrld_old:1", "usr_a")],
         vec![
-            video("2026-01-01T11:00:01.000Z", "https://v.test/a", "wrld_new:1"),
-            video("2026-01-01T11:00:02.000Z", "https://v.test/a", "wrld_new:1"),
+            video(1767265201, "https://v.test/a", "wrld_new:1"),
+            video(1767265202, "https://v.test/a", "wrld_new:1"),
         ],
     );
 
@@ -129,29 +129,18 @@ fn returns_duration_rows_within_the_session_visit() {
     let session_location = "wrld_test:1";
     write_rows(
         &store,
-        vec![location(
-            "2026-01-01T10:00:00.000Z",
-            session_location,
-            "wrld_test",
-            "Test",
-        )],
+        vec![location(1767261600, session_location, "wrld_test", "Test")],
         vec![
+            leave(1735725660, "Alice", session_location, "usr_alice", 60_000),
             leave(
-                "2025-01-01T10:01:00.000Z",
-                "Alice",
-                session_location,
-                "usr_alice",
-                60_000,
-            ),
-            leave(
-                "2026-01-01T10:01:00.000Z",
+                1767261660,
                 "Renamed Alice",
                 session_location,
                 "usr_alice",
                 90_000,
             ),
             leave(
-                "2026-01-01T10:02:00.000Z",
+                1767261720,
                 "Ignored by duration calculation",
                 session_location,
                 "",
@@ -178,42 +167,19 @@ fn returns_duration_rows_within_the_session_visit() {
 fn splits_duration_rows_between_visits_to_the_same_instance() {
     let store = test_store("session-player-duration-revisit");
     let revisited = "wrld_home:1";
-    let mut first_visit = location("2026-01-01T00:41:00.000Z", revisited, "wrld_home", "Home");
+    let mut first_visit = location(1767228060, revisited, "wrld_home", "Home");
     first_visit.time = 9_720_000;
-    let mut detour = location(
-        "2026-01-01T03:23:00.000Z",
-        "wrld_away:1",
-        "wrld_away",
-        "Away",
-    );
+    let mut detour = location(1767237780, "wrld_away:1", "wrld_away", "Away");
     detour.time = 360_000;
-    let mut second_visit = location("2026-01-01T03:44:00.000Z", revisited, "wrld_home", "Home");
+    let mut second_visit = location(1767239040, revisited, "wrld_home", "Home");
     second_visit.time = 360_000;
     write_rows(
         &store,
         vec![first_visit, detour, second_visit],
         vec![
-            leave(
-                "2026-01-01T03:23:00.000Z",
-                "Alice",
-                revisited,
-                "usr_alice",
-                10_080_000,
-            ),
-            leave(
-                "2026-01-01T03:50:00.000Z",
-                "Alice",
-                revisited,
-                "usr_alice",
-                360_000,
-            ),
-            leave(
-                "2026-01-01T09:00:00.000Z",
-                "Bob",
-                revisited,
-                "usr_bob",
-                18_000_000,
-            ),
+            leave(1767237780, "Alice", revisited, "usr_alice", 10_080_000),
+            leave(1767239400, "Alice", revisited, "usr_alice", 360_000),
+            leave(1767258000, "Bob", revisited, "usr_bob", 18_000_000),
         ],
         Vec::new(),
     );
@@ -237,12 +203,12 @@ fn filters_sessions_by_favorite_user() {
     write_rows(
         &store,
         vec![
-            location("2026-01-01T10:00:00.000Z", "wrld_a:1", "wrld_a", "A"),
-            location("2026-01-01T11:00:00.000Z", "wrld_b:1", "wrld_b", "B"),
+            location(1767261600, "wrld_a:1", "wrld_a", "A"),
+            location(1767265200, "wrld_b:1", "wrld_b", "B"),
         ],
         vec![
-            join("2026-01-01T10:00:01.000Z", "A", "wrld_a:1", "usr_a"),
-            join("2026-01-01T11:00:01.000Z", "B", "wrld_b:1", "usr_b"),
+            join(1767261601, "A", "wrld_a:1", "usr_a"),
+            join(1767265201, "B", "wrld_b:1", "usr_b"),
         ],
         Vec::new(),
     );
@@ -266,22 +232,12 @@ fn global_search_matches_world_name_header() {
     write_rows(
         &store,
         vec![
-            location(
-                "2026-01-01T10:00:00.000Z",
-                "wrld_a:1",
-                "wrld_a",
-                "Alpha World",
-            ),
-            location(
-                "2026-01-01T11:00:00.000Z",
-                "wrld_b:1",
-                "wrld_b",
-                "Beta World",
-            ),
+            location(1767261600, "wrld_a:1", "wrld_a", "Alpha World"),
+            location(1767265200, "wrld_b:1", "wrld_b", "Beta World"),
         ],
         vec![
-            join("2026-01-01T10:00:01.000Z", "A", "wrld_a:1", "usr_a"),
-            join("2026-01-01T11:00:01.000Z", "B", "wrld_b:1", "usr_b"),
+            join(1767261601, "A", "wrld_a:1", "usr_a"),
+            join(1767265201, "B", "wrld_b:1", "usr_b"),
         ],
         Vec::new(),
     );

@@ -7,17 +7,17 @@ fn friend_activity_pattern_counts_online_events_by_hour() {
     let (_dir, db) = test_db("activity-pattern");
     ensure_realtime_tables(&db, "usrself").unwrap();
     for (user_id, display_name, created_at) in [
-        ("usr_alice", "Alice", "2026-06-01T18:05:00Z"),
-        ("usr_alice", "Alice", "2026-06-02T18:45:00Z"),
-        ("usr_alice", "Alice", "2026-06-02T21:00:00Z"),
-        ("usr_bob", "Bob", "2026-06-03T09:00:00Z"),
+        ("usr_alice", "Alice", "2026-06-01T18:05:00.000Z"),
+        ("usr_alice", "Alice", "2026-06-02T18:45:00.000Z"),
+        ("usr_alice", "Alice", "2026-06-02T21:00:00.000Z"),
+        ("usr_bob", "Bob", "2026-06-03T09:00:00.000Z"),
     ] {
         db.execute_non_query(
                 "INSERT INTO usrself_feed_online_offline
                     (created_at, user_id, display_name, type, location, world_name, time, group_name)
                  VALUES (@created_at, @user_id, @display_name, 'Online', '', '', 0, '')",
                 &crate::common::ParamsBuilder::new()
-                    .set("created_at", created_at)
+                    .set("created_at", vrcx_0_core::time::parse_epoch_seconds(created_at))
                     .set("user_id", user_id)
                     .set("display_name", display_name)
                     .build(),
@@ -32,7 +32,7 @@ fn friend_activity_pattern_counts_online_events_by_hour() {
             user_id: Some("usr_alice".into()),
             time_window: TimeWindow::all(),
             bucket: ActivityBucket::HourOfDay,
-            utc_offset_minutes: None,
+            utc_offset_minutes: Some(0),
         },
     )
     .unwrap();
@@ -51,7 +51,7 @@ fn friend_activity_pattern_buckets_in_local_time_with_offset() {
     db.execute_non_query(
         "INSERT INTO usrself_feed_online_offline
             (created_at, user_id, display_name, type, location, world_name, time, group_name)
-         VALUES ('2026-06-01T18:05:00Z', 'usr_alice', 'Alice', 'Online', '', '', 0, '')",
+         VALUES (1780337100, 'usr_alice', 'Alice', 'Online', '', '', 0, '')",
         &Default::default(),
     )
     .unwrap();
@@ -82,15 +82,18 @@ fn friend_activity_pattern_merges_renamed_user_buckets() {
     let (_dir, db) = test_db("activity-pattern-renamed");
     ensure_realtime_tables(&db, "usrself").unwrap();
     for (display_name, created_at) in [
-        ("AliceOld", "2026-06-01T18:05:00Z"),
-        ("AliceNew", "2026-06-02T18:45:00Z"),
+        ("AliceOld", "2026-06-01T18:05:00.000Z"),
+        ("AliceNew", "2026-06-02T18:45:00.000Z"),
     ] {
         db.execute_non_query(
             "INSERT INTO usrself_feed_online_offline
                 (created_at, user_id, display_name, type, location, world_name, time, group_name)
              VALUES (@created_at, 'usr_alice', @display_name, 'Online', '', '', 0, '')",
             &crate::common::ParamsBuilder::new()
-                .set("created_at", created_at)
+                .set(
+                    "created_at",
+                    vrcx_0_core::time::parse_epoch_seconds(created_at),
+                )
                 .set("display_name", display_name)
                 .build(),
         )
@@ -104,7 +107,7 @@ fn friend_activity_pattern_merges_renamed_user_buckets() {
             user_id: Some("usr_alice".into()),
             time_window: TimeWindow::all(),
             bucket: ActivityBucket::HourOfDay,
-            utc_offset_minutes: None,
+            utc_offset_minutes: Some(0),
         },
     )
     .unwrap();
@@ -122,15 +125,18 @@ fn best_time_renamed_user_shows_latest_name() {
     let (_dir, db) = test_db("best-time-renamed");
     ensure_realtime_tables(&db, "usrself").unwrap();
     for (display_name, created_at) in [
-        ("AliceA", "2026-06-01T20:05:00Z"),
-        ("AliceZ", "2026-06-02T20:30:00Z"),
+        ("AliceA", "2026-06-01T20:05:00.000Z"),
+        ("AliceZ", "2026-06-02T20:30:00.000Z"),
     ] {
         db.execute_non_query(
             "INSERT INTO usrself_feed_online_offline
                 (created_at, user_id, display_name, type, location, world_name, time, group_name)
              VALUES (@created_at, 'usr_alice', @display_name, 'Online', '', '', 0, '')",
             &crate::common::ParamsBuilder::new()
-                .set("created_at", created_at)
+                .set(
+                    "created_at",
+                    vrcx_0_core::time::parse_epoch_seconds(created_at),
+                )
                 .set("display_name", display_name)
                 .build(),
         )
@@ -144,7 +150,7 @@ fn best_time_renamed_user_shows_latest_name() {
             time_window: TimeWindow::all(),
             bucket: ActivityBucket::HourOfDay,
             limit: None,
-            utc_offset_minutes: None,
+            utc_offset_minutes: Some(0),
         },
     )
     .unwrap();
@@ -165,15 +171,18 @@ fn best_time_renamed_user_shows_latest_name_across_buckets() {
     let (_dir, db) = test_db("best-time-renamed-across-buckets");
     ensure_realtime_tables(&db, "usrself").unwrap();
     for (display_name, created_at) in [
-        ("AliceA", "2026-06-01T20:05:00Z"),
-        ("AliceZ", "2026-06-02T21:30:00Z"),
+        ("AliceA", "2026-06-01T20:05:00.000Z"),
+        ("AliceZ", "2026-06-02T21:30:00.000Z"),
     ] {
         db.execute_non_query(
             "INSERT INTO usrself_feed_online_offline
                 (created_at, user_id, display_name, type, location, world_name, time, group_name)
              VALUES (@created_at, 'usr_alice', @display_name, 'Online', '', '', 0, '')",
             &crate::common::ParamsBuilder::new()
-                .set("created_at", created_at)
+                .set(
+                    "created_at",
+                    vrcx_0_core::time::parse_epoch_seconds(created_at),
+                )
                 .set("display_name", display_name)
                 .build(),
         )
@@ -187,7 +196,7 @@ fn best_time_renamed_user_shows_latest_name_across_buckets() {
             time_window: TimeWindow::all(),
             bucket: ActivityBucket::HourOfDay,
             limit: None,
-            utc_offset_minutes: None,
+            utc_offset_minutes: Some(0),
         },
     )
     .unwrap();

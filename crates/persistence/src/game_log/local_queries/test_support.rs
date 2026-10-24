@@ -57,6 +57,12 @@ pub(super) fn rows(value: Value) -> Vec<Value> {
     value.as_array().cloned().unwrap_or_default()
 }
 
+pub(super) fn row_epochs(rows: &[Value], key: &str) -> Vec<i64> {
+    rows.iter()
+        .filter_map(|row| row.get(key).and_then(Value::as_i64))
+        .collect()
+}
+
 pub(super) fn row_texts(rows: &[Value], key: &str) -> Vec<String> {
     rows.iter()
         .filter_map(|row| {
@@ -74,7 +80,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
         &GameLogWriteBatch {
             locations: vec![
                 GameLogLocationEntry {
-                    created_at: "2026-05-14T08:00:00Z".into(),
+                    created_at: 1778745600,
                     location: "wrld_alpha:inst-a~group(grp_alpha)".into(),
                     world_id: "wrld_alpha".into(),
                     world_name: "Alpha World".into(),
@@ -82,7 +88,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
                     group_name: "Group Alpha".into(),
                 },
                 GameLogLocationEntry {
-                    created_at: "2026-05-14T09:00:00Z".into(),
+                    created_at: 1778749200,
                     location: "wrld_beta:inst-b".into(),
                     world_id: "wrld_beta".into(),
                     world_name: "Beta World".into(),
@@ -90,7 +96,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
                     group_name: String::new(),
                 },
                 GameLogLocationEntry {
-                    created_at: "2026-05-14T10:00:00Z".into(),
+                    created_at: 1778752800,
                     location: "wrld_alpha:inst-c~group(grp_alpha)".into(),
                     world_id: "wrld_alpha".into(),
                     world_name: "Alpha World".into(),
@@ -100,7 +106,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
             ],
             join_leave: vec![
                 GameLogJoinLeaveEntry {
-                    created_at: "2026-05-14T08:01:00Z".into(),
+                    created_at: 1778745660,
                     event_type: "OnPlayerJoined".into(),
                     display_name: "Vip Friend".into(),
                     location: "wrld_alpha:inst-a~group(grp_alpha)".into(),
@@ -109,7 +115,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
                     time: 0,
                 },
                 GameLogJoinLeaveEntry {
-                    created_at: "2026-05-14T08:02:00Z".into(),
+                    created_at: 1778745720,
                     event_type: "OnPlayerJoined".into(),
                     display_name: "Self User".into(),
                     location: "wrld_alpha:inst-a~group(grp_alpha)".into(),
@@ -118,7 +124,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
                     time: 0,
                 },
                 GameLogJoinLeaveEntry {
-                    created_at: "2026-05-14T08:03:00Z".into(),
+                    created_at: 1778745780,
                     event_type: "OnPlayerJoined".into(),
                     display_name: "Other Friend".into(),
                     location: "wrld_alpha:inst-a~group(grp_alpha)".into(),
@@ -127,7 +133,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
                     time: 0,
                 },
                 GameLogJoinLeaveEntry {
-                    created_at: "2026-05-14T08:30:00Z".into(),
+                    created_at: 1778747400,
                     event_type: "OnPlayerLeft".into(),
                     display_name: "Vip Friend".into(),
                     location: "wrld_alpha:inst-a~group(grp_alpha)".into(),
@@ -136,7 +142,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
                     time: 1_800_000,
                 },
                 GameLogJoinLeaveEntry {
-                    created_at: "2026-05-14T09:10:00Z".into(),
+                    created_at: 1778749800,
                     event_type: "OnPlayerJoined".into(),
                     display_name: "Old Target".into(),
                     location: "wrld_beta:inst-b".into(),
@@ -145,7 +151,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
                     time: 0,
                 },
                 GameLogJoinLeaveEntry {
-                    created_at: "2026-05-14T09:20:00Z".into(),
+                    created_at: 1778750400,
                     event_type: "OnPlayerLeft".into(),
                     display_name: "New Target".into(),
                     location: "wrld_beta:inst-b".into(),
@@ -154,7 +160,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
                     time: 900_000,
                 },
                 GameLogJoinLeaveEntry {
-                    created_at: "2026-05-14T10:05:00Z".into(),
+                    created_at: 1778753100,
                     event_type: "OnPlayerJoined".into(),
                     display_name: "Late Friend".into(),
                     location: "wrld_alpha:inst-c~group(grp_alpha)".into(),
@@ -165,7 +171,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
             ],
             portal_spawns: vec![
                 GameLogPortalSpawnEntry {
-                    created_at: "2026-05-14T08:04:00Z".into(),
+                    created_at: 1778745840,
                     display_name: "Vip Friend".into(),
                     location: "wrld_alpha:inst-a~group(grp_alpha)".into(),
                     user_id: "usr_vip".into(),
@@ -173,7 +179,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
                     world_name: "Portal World".into(),
                 },
                 GameLogPortalSpawnEntry {
-                    created_at: "2026-05-14T08:05:00Z".into(),
+                    created_at: 1778745900,
                     display_name: "Other Friend".into(),
                     location: "wrld_alpha:inst-a~group(grp_alpha)".into(),
                     user_id: "usr_other".into(),
@@ -183,7 +189,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
             ],
             video_plays: vec![
                 GameLogVideoPlayEntry {
-                    created_at: "2026-05-14T08:06:00Z".into(),
+                    created_at: 1778745960,
                     video_url: "https://video.example/needle".into(),
                     video_name: "Needle Video".into(),
                     video_id: "vid_needle".into(),
@@ -192,7 +198,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
                     user_id: "usr_vip".into(),
                 },
                 GameLogVideoPlayEntry {
-                    created_at: "2026-05-14T09:06:00Z".into(),
+                    created_at: 1778749560,
                     video_url: "https://video.example/other".into(),
                     video_name: "Other Video".into(),
                     video_id: "vid_other".into(),
@@ -203,38 +209,38 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
             ],
             resource_loads: vec![
                 GameLogResourceLoadEntry {
-                    created_at: "2026-05-14T08:07:00Z".into(),
+                    created_at: 1778746020,
                     resource_url: "https://assets.example/needle.png".into(),
                     resource_type: "ImageLoad".into(),
                     location: "wrld_alpha:inst-a~group(grp_alpha)".into(),
                 },
                 GameLogResourceLoadEntry {
-                    created_at: "2026-05-14T08:08:00Z".into(),
+                    created_at: 1778746080,
                     resource_url: "https://assets.example/string.json".into(),
                     resource_type: "StringLoad".into(),
                     location: "wrld_alpha:inst-a~group(grp_alpha)".into(),
                 },
                 GameLogResourceLoadEntry {
-                    created_at: "2026-05-14T09:08:00Z".into(),
+                    created_at: 1778749680,
                     resource_url: "https://assets.example/beta.png".into(),
                     resource_type: "ImageLoad".into(),
                     location: "wrld_beta:inst-b".into(),
                 },
             ],
             events: vec![GameLogEventEntry {
-                created_at: "2026-05-14T08:09:00Z".into(),
+                created_at: 1778746140,
                 data: "Needle Event".into(),
             }],
             externals: vec![
                 GameLogExternalEntry {
-                    created_at: "2026-05-14T08:10:00Z".into(),
+                    created_at: 1778746200,
                     message: "Needle External".into(),
                     display_name: "Vip Friend".into(),
                     user_id: "usr_vip".into(),
                     location: "wrld_alpha:inst-a~group(grp_alpha)".into(),
                 },
                 GameLogExternalEntry {
-                    created_at: "2026-05-14T08:11:00Z".into(),
+                    created_at: 1778746260,
                     message: "Other External".into(),
                     display_name: "Other Friend".into(),
                     user_id: "usr_other".into(),

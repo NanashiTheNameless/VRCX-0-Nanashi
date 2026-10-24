@@ -12,7 +12,7 @@ import {
 
 function previousInstance(location: string): UserDialogPreviousInstance {
     return {
-        createdAt: '',
+        createdAt: 0,
         events: [],
         groupName: '',
         lastTs: 0,
@@ -39,8 +39,8 @@ describe('userDialogSessionCacheService', () => {
 
         expect(readCachedUserStats(key)).toEqual({
             timeSpent: 0,
-            lastSeen: '',
-            friendedAt: '',
+            lastSeen: null,
+            friendedAt: null,
             relationshipHistory: [],
             joinCount: 0,
             previousDisplayNames: []
@@ -63,8 +63,8 @@ describe('userDialogSessionCacheService', () => {
 
         expect(readCachedUserStats(key)).toEqual({
             timeSpent: 12345,
-            lastSeen: '2026-01-02T03:04:05.000Z',
-            friendedAt: '',
+            lastSeen: 1767323045,
+            friendedAt: null,
             relationshipHistory: [],
             joinCount: 7,
             previousDisplayNames: [{ displayName: 'Old Name' }]
@@ -96,8 +96,8 @@ describe('userDialogSessionCacheService', () => {
 
         expect(readCachedUserStats(key)).toEqual({
             timeSpent: 2000,
-            lastSeen: '2026-01-02T03:04:05.000Z',
-            friendedAt: '',
+            lastSeen: 1767323045,
+            friendedAt: null,
             relationshipHistory: [],
             joinCount: 3,
             previousDisplayNames: [{ displayName: 'Original' }],
@@ -111,19 +111,19 @@ describe('userDialogSessionCacheService', () => {
     it('keeps relationship history isolated from caller and dialog edits', () => {
         const key = dialogTargetKey('https://api.example.test', 'usr_target');
         const history = [
-            { rowId: 12, type: 'Unfriend', created_at: '2026-09-01T00:00:00Z' }
+            { rowId: 12, type: 'Unfriend', created_at: 1788220800 }
         ];
         cacheUserStats(key, { relationshipHistory: history });
         history[0].type = 'Friend';
         const firstRead = readCachedUserStats(key);
-        firstRead.relationshipHistory[0].created_at = 'changed';
+        firstRead.relationshipHistory[0].created_at = 1;
         firstRead.relationshipHistory.push({
             rowId: 1,
             type: 'Friend',
-            created_at: ''
+            created_at: 0
         });
         expect(readCachedUserStats(key).relationshipHistory).toEqual([
-            { rowId: 12, type: 'Unfriend', created_at: '2026-09-01T00:00:00Z' }
+            { rowId: 12, type: 'Unfriend', created_at: 1788220800 }
         ]);
     });
 

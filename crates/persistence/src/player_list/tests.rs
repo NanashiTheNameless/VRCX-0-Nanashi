@@ -46,13 +46,13 @@ fn test_db(name: &str) -> Result<TestDatabase, Error> {
 }
 
 fn location(
-    created_at: &str,
+    created_at: i64,
     location: &str,
     world_id: &str,
     world_name: &str,
 ) -> GameLogLocationEntry {
     GameLogLocationEntry {
-        created_at: created_at.into(),
+        created_at,
         location: location.into(),
         world_id: world_id.into(),
         world_name: world_name.into(),
@@ -62,7 +62,7 @@ fn location(
 }
 
 fn join_leave(
-    created_at: &str,
+    created_at: i64,
     event_type: &str,
     display_name: &str,
     location: &str,
@@ -70,7 +70,7 @@ fn join_leave(
     time: i64,
 ) -> GameLogJoinLeaveEntry {
     GameLogJoinLeaveEntry {
-        created_at: created_at.into(),
+        created_at,
         event_type: event_type.into(),
         display_name: display_name.into(),
         location: location.into(),
@@ -85,13 +85,13 @@ fn cache_world(id: &str, name: &str) -> CacheEntityInput {
         id: json!(id),
         author_id: json!("usr_author"),
         author_name: json!("Author"),
-        created_at: json!("2026-01-01T00:00:00Z"),
+        created_at: json!(1767225600),
         description: json!("Description"),
         image_url: json!("image.png"),
         name: json!(name),
         release_status: json!("public"),
         thumbnail_image_url: json!("thumb.png"),
-        updated_at: json!("2026-01-02T00:00:00Z"),
+        updated_at: json!(1767312000),
         version: json!(1),
     }
 }
@@ -105,7 +105,7 @@ fn activity_includes_duration_start_across_range_and_filters_traveling() -> Resu
         &GameLogWriteBatch {
             join_leave: vec![
                 join_leave(
-                    "2026-07-01T10:10:00Z",
+                    1782900600,
                     "OnPlayerLeft",
                     "Spanning",
                     "wrld_a:instance",
@@ -113,7 +113,7 @@ fn activity_includes_duration_start_across_range_and_filters_traveling() -> Resu
                     1_200_000,
                 ),
                 join_leave(
-                    "2026-07-01T10:20:00Z",
+                    1782901200,
                     "OnPlayerLeft",
                     "Covering",
                     "wrld_a:instance",
@@ -121,7 +121,7 @@ fn activity_includes_duration_start_across_range_and_filters_traveling() -> Resu
                     3_600_000,
                 ),
                 join_leave(
-                    "2026-07-01T09:52:00Z",
+                    1782899520,
                     "OnPlayerLeft",
                     "Traveling",
                     " traveling:traveling ",
@@ -129,7 +129,7 @@ fn activity_includes_duration_start_across_range_and_filters_traveling() -> Resu
                     0,
                 ),
                 join_leave(
-                    "2026-07-01T09:53:00Z",
+                    1782899580,
                     "OnPlayerJoined",
                     "Joined",
                     "wrld_a:instance",
@@ -144,12 +144,12 @@ fn activity_includes_duration_start_across_range_and_filters_traveling() -> Resu
     let rows = instance_activity_rows_get(
         &test_db.db,
         &OwnerId::new("usr_test"),
-        "2026-07-01T09:49:00Z".into(),
-        "2026-07-01T09:55:00Z".into(),
+        1782899340,
+        1782899700,
     )?;
     assert_eq!(rows.len(), 2);
     assert_eq!(rows[0].display_name, "Spanning");
-    assert_eq!(rows[0].created_at, "2026-07-01T10:10:00Z");
+    assert_eq!(rows[0].created_at, 1782900600);
     assert_eq!(rows[1].display_name, "Covering");
     Ok(())
 }
@@ -164,30 +164,10 @@ fn world_summaries_prefer_cache_and_fall_back_to_latest_game_log_name() -> Resul
         &OwnerId::new("usr_test"),
         &GameLogWriteBatch {
             locations: vec![
-                location(
-                    "2026-07-01T00:00:00Z",
-                    "cached:1",
-                    "wrld_cached",
-                    "Game Log Name",
-                ),
-                location(
-                    "2026-07-01T00:01:00Z",
-                    "fallback:1",
-                    "wrld_fallback",
-                    "Old Fallback",
-                ),
-                location(
-                    "2026-07-01T00:02:00Z",
-                    "fallback:2",
-                    "wrld_fallback",
-                    "Latest Fallback",
-                ),
-                location(
-                    "2026-07-01T00:03:00Z",
-                    "empty:1",
-                    "wrld_empty_cache",
-                    "Recovered Name",
-                ),
+                location(1782864000, "cached:1", "wrld_cached", "Game Log Name"),
+                location(1782864060, "fallback:1", "wrld_fallback", "Old Fallback"),
+                location(1782864120, "fallback:2", "wrld_fallback", "Latest Fallback"),
+                location(1782864180, "empty:1", "wrld_empty_cache", "Recovered Name"),
             ],
             ..GameLogWriteBatch::default()
         },

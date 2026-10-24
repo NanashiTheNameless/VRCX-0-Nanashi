@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
-use chrono::{DateTime, Utc};
 use serde_json::{json, Value};
 use vrcx_0_core::text::contains_lowercase_query_case_insensitive;
 
 use crate::common::{
-    add_list_params, normalize_text, now_iso, parse_json_value, strict_row_i64, strict_row_string,
-    value_as_string, DbParams, ParamsBuilder,
+    add_list_params, normalize_text, now_epoch, parse_json_value, strict_row_i64,
+    strict_row_string, value_as_string, DbParams, ParamsBuilder,
 };
 use crate::database::DatabaseService;
 use crate::realtime::{ensure_realtime_tables, normalize_user_table_prefix};
@@ -27,7 +26,7 @@ fn notification_unseen_v2_select_sql(table: &str) -> String {
     notification_select_sql(
         table,
         NOTIFICATION_V2_COLUMNS,
-        " WHERE seen = 0 AND (expires_at IS NULL OR expires_at = '' OR expires_at > @now)",
+        " WHERE seen = 0 AND (expires_at IS NULL OR expires_at = 0 OR expires_at > @now)",
         false,
     )
 }
@@ -69,19 +68,8 @@ fn notification_filter_params(
     }
 }
 
-fn notification_date_millis(value: &str) -> i64 {
-    DateTime::parse_from_rfc3339(value)
-        .map(|date| date.timestamp_millis())
-        .unwrap_or(0)
-}
-
-fn notification_expires_at_expired(value: &str, now: DateTime<Utc>) -> bool {
-    if value.trim().is_empty() {
-        return false;
-    }
-    DateTime::parse_from_rfc3339(value)
-        .map(|date| date <= now)
-        .unwrap_or(false)
+fn notification_expires_at_expired(value: i64, now: i64) -> bool {
+    value != 0 && value <= now
 }
 
 fn notification_value_text(value: &Value, key: &str) -> String {
@@ -141,10 +129,10 @@ fn notification_v1_list_item(row: NotificationV1RowOutput) -> NotificationListIt
     NotificationListItemOutput {
         id: row.id,
         version: 1,
-        created_at: row.created_at.clone(),
+        created_at: row.created_at,
         created_at_legacy: row.created_at,
-        updated_at: String::new(),
-        expires_at: String::new(),
+        updated_at: None,
+        expires_at: None,
         r#type: row.r#type,
         link: String::new(),
         link_text: String::new(),
@@ -163,22 +151,19 @@ fn notification_v1_list_item(row: NotificationV1RowOutput) -> NotificationListIt
     }
 }
 
-fn notification_v2_list_item(
-    row: NotificationV2RowOutput,
-    now: DateTime<Utc>,
-) -> NotificationListItemOutput {
+fn notification_v2_list_item(row: NotificationV2RowOutput, now: i64) -> NotificationListItemOutput {
     let expires_at = row.expires_at;
-    let expired = notification_expires_at_expired(&expires_at, now);
+    let expired = notification_expires_at_expired(expires_at, now);
     let data = parse_json_value(&Value::String(row.data), json!({}));
     let responses = parse_json_value(&Value::String(row.responses), json!([]));
     let details = parse_json_value(&Value::String(row.details), json!({}));
     NotificationListItemOutput {
         id: row.id,
         version: 2,
-        created_at: row.created_at.clone(),
+        created_at: row.created_at,
         created_at_legacy: row.created_at,
-        updated_at: row.updated_at,
-        expires_at,
+        updated_at: Some(row.updated_at).filter(|value| *value != 0),
+        expires_at: Some(expires_at).filter(|value| *value != 0),
         r#type: row.r#type,
         link: row.link,
         link_text: row.link_text,
@@ -276,7 +261,7 @@ pub fn notification_rows_query(
     let unseen_v2_rows = if query.include_unseen {
         db.execute(
             &notification_unseen_v2_select_sql(&format!("{user_prefix}_notifications_v2")),
-            &ParamsBuilder::new().set("now", now_iso()).build(),
+            &ParamsBuilder::new().set("now", now_epoch()).build(),
         )?
         .into_iter()
         .map(|row| notification_v2_from_row(&row))
@@ -310,10 +295,10 @@ pub fn notification_has_unseen_action_required(
                 WHERE type = 'friendRequest' AND COALESCE(seen, 0) = 0 AND COALESCE(expired, 0) = 0 \
                 UNION ALL \
                 SELECT 1 FROM {user_prefix}_notifications_v2 \
-                WHERE COALESCE(seen, 0) = 0 AND (expires_at IS NULL OR expires_at = '' OR expires_at > @now)\
+                WHERE COALESCE(seen, 0) = 0 AND (expires_at IS NULL OR expires_at = 0 OR expires_at > @now)\
             )"
         ),
-        &ParamsBuilder::new().set("now", now_iso()).build(),
+        &ParamsBuilder::new().set("now", now_epoch()).build(),
     )?;
     rows.first()
         .map(|row| strict_row_i64(row, 0).map(|value| value != 0))
@@ -339,7 +324,7 @@ fn query_notification_list(
     };
     let final_limit = if query.limit > 0 { query.limit } else { 500 };
     let search = normalize_text(query.search);
-    let now = Utc::now();
+    let now = now_epoch();
 
     let v1_search_columns = [
         "type",
@@ -399,7 +384,7 @@ fn query_notification_list(
     let unseen_v2_rows = if query.include_unseen {
         db.execute(
             &notification_unseen_v2_select_sql(&format!("{user_prefix}_notifications_v2")),
-            &ParamsBuilder::new().set("now", now_iso()).build(),
+            &ParamsBuilder::new().set("now", now_epoch()).build(),
         )?
         .into_iter()
         .map(|row| notification_v2_from_row(&row))
@@ -425,8 +410,9 @@ fn query_notification_list(
         .filter(|notification| notification_matches_search(notification, &search))
         .collect::<Vec<_>>();
     notifications.sort_by(|left, right| {
-        notification_date_millis(&right.created_at)
-            .cmp(&notification_date_millis(&left.created_at))
+        right
+            .created_at
+            .cmp(&left.created_at)
             .then_with(|| right.id.cmp(&left.id))
     });
     notifications.truncate(final_limit as usize);
@@ -443,7 +429,7 @@ pub fn notification_list_query(
 fn notification_v1_from_row(row: &[Value]) -> Result<NotificationV1RowOutput, Error> {
     Ok(NotificationV1RowOutput {
         id: strict_row_string(row, 0)?,
-        created_at: strict_row_string(row, 1)?,
+        created_at: strict_row_i64(row, 1)?,
         r#type: strict_row_string(row, 2)?,
         sender_user_id: strict_row_string(row, 3)?,
         sender_username: strict_row_string(row, 4)?,
@@ -463,9 +449,9 @@ fn notification_v1_from_row(row: &[Value]) -> Result<NotificationV1RowOutput, Er
 fn notification_v2_from_row(row: &[Value]) -> Result<NotificationV2RowOutput, Error> {
     Ok(NotificationV2RowOutput {
         id: strict_row_string(row, 0)?,
-        created_at: strict_row_string(row, 1)?,
-        updated_at: strict_row_string(row, 2)?,
-        expires_at: strict_row_string(row, 3)?,
+        created_at: strict_row_i64(row, 1)?,
+        updated_at: strict_row_i64(row, 2)?,
+        expires_at: strict_row_i64(row, 3)?,
         r#type: strict_row_string(row, 4)?,
         link: strict_row_string(row, 5)?,
         link_text: strict_row_string(row, 6)?,
@@ -512,7 +498,6 @@ fn build_type_filter(filters: &[String]) -> NotificationTypeFilter {
 
 #[cfg(test)]
 mod tests {
-    use chrono::{TimeZone, Utc};
     use serde_json::json;
 
     use super::*;
@@ -520,7 +505,7 @@ mod tests {
     fn v1_row() -> NotificationV1RowOutput {
         NotificationV1RowOutput {
             id: "notif_v1".into(),
-            created_at: "2026-06-22T10:30:00Z".into(),
+            created_at: 1782124200,
             r#type: "friendRequest".into(),
             sender_user_id: "usr_sender".into(),
             sender_username: "Sender Name".into(),
@@ -541,9 +526,9 @@ mod tests {
     fn v2_row() -> NotificationV2RowOutput {
         NotificationV2RowOutput {
             id: "notif_v2".into(),
-            created_at: "2026-06-22T11:00:00Z".into(),
-            updated_at: "2026-06-22T11:01:00Z".into(),
-            expires_at: "2026-06-23T11:00:00Z".into(),
+            created_at: 1782126000,
+            updated_at: 1782126060,
+            expires_at: 1782212400,
             r#type: "invite".into(),
             link: "https://vrchat.com/home/world/wrld_2".into(),
             link_text: "Open World".into(),
@@ -560,21 +545,13 @@ mod tests {
     }
 
     #[test]
-    fn parses_notification_dates_and_expiration_boundaries() {
-        let now = Utc.with_ymd_and_hms(2026, 6, 22, 10, 30, 0).unwrap();
+    fn expiration_boundaries_and_missing_expiry() {
+        let now = 1782124200;
 
-        assert_eq!(
-            notification_date_millis("2026-06-22T10:30:00Z"),
-            1_782_124_200_000
-        );
-        assert_eq!(notification_date_millis("not-a-date"), 0);
-        assert!(notification_expires_at_expired("2026-06-22T10:30:00Z", now));
-        assert!(!notification_expires_at_expired(
-            "2026-06-22T10:30:01Z",
-            now
-        ));
-        assert!(!notification_expires_at_expired("", now));
-        assert!(!notification_expires_at_expired("not-a-date", now));
+        assert!(notification_expires_at_expired(now, now));
+        assert!(notification_expires_at_expired(now - 1, now));
+        assert!(!notification_expires_at_expired(now + 1, now));
+        assert!(!notification_expires_at_expired(0, now));
     }
 
     #[test]
@@ -583,8 +560,8 @@ mod tests {
 
         assert_eq!(item.id, "notif_v1");
         assert_eq!(item.version, 1);
-        assert_eq!(item.created_at, "2026-06-22T10:30:00Z");
-        assert_eq!(item.created_at_legacy, "2026-06-22T10:30:00Z");
+        assert_eq!(item.created_at, 1782124200);
+        assert_eq!(item.created_at_legacy, 1782124200);
         assert_eq!(item.r#type, "friendRequest");
         assert_eq!(item.message, "Let's be friends");
         assert!(item.seen);
@@ -601,13 +578,13 @@ mod tests {
 
     #[test]
     fn maps_v2_rows_to_notification_list_items_and_sanitizes_json_shapes() {
-        let now = Utc.with_ymd_and_hms(2026, 6, 22, 12, 0, 0).unwrap();
+        let now = 1782129600;
         let item = notification_v2_list_item(v2_row(), now);
 
         assert_eq!(item.id, "notif_v2");
         assert_eq!(item.version, 2);
-        assert_eq!(item.updated_at, "2026-06-22T11:01:00Z");
-        assert_eq!(item.expires_at, "2026-06-23T11:00:00Z");
+        assert_eq!(item.updated_at, Some(1782126060));
+        assert_eq!(item.expires_at, Some(1782212400));
         assert_eq!(item.r#type, "invite");
         assert_eq!(item.link_text, "Open World");
         assert!(item.seen);
@@ -622,7 +599,7 @@ mod tests {
                 data: "[]".into(),
                 responses: "{}".into(),
                 details: "not-json".into(),
-                expires_at: "2026-06-22T10:00:00Z".into(),
+                expires_at: 1782122400,
                 ..v2_row()
             },
             now,
@@ -636,7 +613,7 @@ mod tests {
 
     #[test]
     fn matches_notification_search_and_filters_across_projected_fields() {
-        let item = notification_v2_list_item(v2_row(), Utc::now());
+        let item = notification_v2_list_item(v2_row(), vrcx_0_core::time::now_epoch());
 
         assert!(notification_matches_search(&item, ""));
         assert!(notification_matches_search(&item, "sender two"));

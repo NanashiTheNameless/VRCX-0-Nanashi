@@ -21,7 +21,7 @@ use vrcx_0_core::vrchat_endpoints::VRCHAT_API_DEFAULT_ENDPOINT;
 fn item(id: &str, created_at: &str) -> PrintListItem {
     PrintListItem {
         id: id.to_string(),
-        created_at: created_at.to_string(),
+        created_at: vrcx_0_core::time::parse_epoch_seconds(created_at).unwrap_or_default(),
     }
 }
 
@@ -33,7 +33,7 @@ fn payload(json: serde_json::Value) -> RealtimeWsMessagePayload {
     RealtimeWsMessagePayload {
         json,
         raw: String::new(),
-        received_at: "2026-06-29T00:00:00Z".to_string(),
+        received_at: 1782691200,
     }
 }
 

@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use chrono::{DateTime, Datelike, Duration, Local, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, Datelike, Duration, NaiveDateTime, TimeZone, Utc};
 use rmcp::model::CallToolResult;
 use rmcp::schemars;
 use serde::{Deserialize, Serialize};
@@ -92,7 +92,10 @@ impl From<TimeWindowParams> for social_aggregates::TimeWindow {
 /// "last month", a year, a bare date) follow the user's local calendar - the
 /// tools run on the user's machine - and are returned as UTC bounds.
 fn time_window_from_value(value: &Value) -> Result<TimeWindowParams, String> {
-    time_window_from_value_at(value, Local::now())
+    time_window_from_value_at(
+        value,
+        Utc::now().with_timezone(&vrcx_0_core::time::DisplayTimeZone),
+    )
 }
 
 fn time_window_from_value_at<Tz: TimeZone>(

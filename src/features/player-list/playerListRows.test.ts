@@ -11,8 +11,8 @@ import {
 
 describe('playerListRows', () => {
     it('parses numeric and ISO timestamps used by the current instance list', () => {
-        expect(parseTimeMs(1234)).toBe(1234);
-        expect(parseTimeMs('1234')).toBe(1234);
+        expect(parseTimeMs(1234)).toBe(1234000);
+        expect(parseTimeMs('1234')).toBe(1234000);
         expect(parseTimeMs('2026-01-02T03:04:05.000Z')).toBe(
             Date.parse('2026-01-02T03:04:05.000Z')
         );
@@ -48,17 +48,17 @@ describe('playerListRows', () => {
                 context: {
                     playerFactsKnown: true,
                     location: 'wrld_live:123',
-                    createdAt: '2026-01-02T03:04:05.000Z'
+                    createdAt: 1767323045
                 },
                 currentUserLocation: '',
-                currentLocationStartedAt: ''
+                currentLocationStartedAt: 0
             })
         ).toEqual([
             {
                 id: 'usr_self',
                 userId: 'usr_self',
                 displayName: 'Current User',
-                joinedAt: '2026-01-02T03:04:05.000Z',
+                joinedAt: 1767323045,
                 joinedAtMs: Date.parse('2026-01-02T03:04:05.000Z'),
                 lastDurationMs: 0,
                 ref: {
@@ -88,15 +88,15 @@ describe('playerListRows', () => {
                 context: {
                     playerFactsKnown: true,
                     location: 'wrld_live:123',
-                    createdAt: '2026-01-02T03:04:05.000Z'
+                    createdAt: 1767323045
                 },
                 currentUserLocation: '',
-                currentLocationStartedAt: '2026-02-03T04:05:06.000Z'
+                currentLocationStartedAt: 1770091506
             })[0]
         ).toMatchObject({
             id: 'usr_self',
             displayName: 'Self Username',
-            joinedAt: '2026-02-03T04:05:06.000Z',
+            joinedAt: 1770091506,
             joinedAtMs: Date.parse('2026-02-03T04:05:06.000Z')
         });
     });
@@ -115,10 +115,10 @@ describe('playerListRows', () => {
                 context: {
                     playerFactsKnown: true,
                     location: 'wrld_live:123',
-                    createdAt: '2026-01-02T03:04:05.000Z'
+                    createdAt: 1767323045
                 },
                 currentUserLocation: '',
-                currentLocationStartedAt: ''
+                currentLocationStartedAt: 0
             })
         ).toEqual([{ id: 'usr_self', displayName: 'Self from source' }]);
     });
@@ -137,10 +137,10 @@ describe('playerListRows', () => {
                 context: {
                     playerFactsKnown: true,
                     location: 'private',
-                    createdAt: '2026-01-02T03:04:05.000Z'
+                    createdAt: 1767323045
                 },
                 currentUserLocation: '',
-                currentLocationStartedAt: ''
+                currentLocationStartedAt: 0
             })
         ).toEqual([]);
 
@@ -153,10 +153,10 @@ describe('playerListRows', () => {
                 context: {
                     playerFactsKnown: true,
                     location: 'wrld_live:123',
-                    createdAt: '2026-01-02T03:04:05.000Z'
+                    createdAt: 1767323045
                 },
                 currentUserLocation: '',
-                currentLocationStartedAt: ''
+                currentLocationStartedAt: 0
             })
         ).toEqual([]);
     });

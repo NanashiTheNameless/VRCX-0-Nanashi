@@ -1,3 +1,4 @@
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { parseLocation } from '@/shared/utils/location';
 
 import { GAME_LOG_SESSION_HEAD_QUERY_LIMIT } from './gameLogTypes';
@@ -279,8 +280,8 @@ function compareGameLogSessionStream(
     right: Pick<GameLogSession, 'created_at' | 'id'>
 ) {
     const epochDelta =
-        (Date.parse(left.created_at) || 0) -
-        (Date.parse(right.created_at) || 0);
+        (parseAbsoluteDateMs(left.created_at) || 0) -
+        (parseAbsoluteDateMs(right.created_at) || 0);
     return epochDelta || (left.id ?? 0) - (right.id ?? 0);
 }
 

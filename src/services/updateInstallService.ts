@@ -13,6 +13,7 @@ import {
 } from '@/services/updateService';
 import { links } from '@/shared/constants/link';
 import { MINUTE_MS } from '@/shared/constants/time';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
 import { UPDATE_READY_TOAST_DURATION_MS } from './backgroundMaintenanceTiming';
@@ -95,6 +96,11 @@ const IDLE_DOWNLOAD_STATE: Pick<
 };
 const AUTO_DOWNLOAD_UI_DELAY_MS = 30 * MINUTE_MS;
 
+let observedDownload: {
+    version: string;
+    startedAt: number;
+    preciseStartMs: number;
+} | null = null;
 let autoDownloadUiTimer: ReturnType<typeof setTimeout> | null = null;
 
 function clearAutoDownloadUiTimer(): void {
@@ -105,9 +111,22 @@ function clearAutoDownloadUiTimer(): void {
     autoDownloadUiTimer = null;
 }
 
-function scheduleAutoDownloadUi(version: string, startedAt: string): void {
+function scheduleAutoDownloadUi(version: string, startedAt: number): void {
     clearAutoDownloadUiTimer();
-    const startedAtMs = Date.parse(startedAt);
+    if (
+        observedDownload?.version !== version ||
+        observedDownload.startedAt !== startedAt
+    ) {
+        observedDownload = {
+            version,
+            startedAt,
+            preciseStartMs:
+                startedAt === Math.floor(Date.now() / 1000)
+                    ? Date.now()
+                    : parseAbsoluteDateMs(startedAt)
+        };
+    }
+    const startedAtMs = observedDownload.preciseStartMs;
     const remainingDelay = Math.max(
         0,
         (Number.isFinite(startedAtMs) ? startedAtMs : Date.now()) +
@@ -131,6 +150,7 @@ function scheduleAutoDownloadUi(version: string, startedAt: string): void {
 }
 
 export function resetAutoDownloadUiDelay(): void {
+    observedDownload = null;
     clearAutoDownloadUiTimer();
     useRuntimeStore.getState().setUpdateLoopState({
         autoDownloadStartedAt: null,
@@ -139,6 +159,7 @@ export function resetAutoDownloadUiDelay(): void {
 }
 
 function resetUpdateLoopState() {
+    observedDownload = null;
     clearAutoDownloadUiTimer();
     useRuntimeStore.getState().setUpdateLoopState({
         ...IDLE_DOWNLOAD_STATE,
@@ -252,10 +273,10 @@ function applyAppUpdateDownloadState(
         (updateLoop.autoDownloadState !== 'downloading' ||
             updateLoop.downloadedVersion !== payload.version ||
             updateLoop.autoDownloadStartedAt !== payload.startedAt);
-    let autoDownloadStartedAt: string | null = null;
+    let autoDownloadStartedAt: number | null = null;
     if (payload.phase === 'downloading') {
         autoDownloadStartedAt = startsNewDownload
-            ? payload.startedAt || new Date().toISOString()
+            ? payload.startedAt || Math.floor(Date.now() / 1000)
             : updateLoop.autoDownloadStartedAt;
     }
     const autoDownloadUiVisible =

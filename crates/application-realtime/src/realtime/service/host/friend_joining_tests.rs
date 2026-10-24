@@ -14,7 +14,7 @@ fn joining_output(
         FriendProjection::new(7, baseline_revision),
     );
     output.joining.push(FeedLiveEntry::OnPlayerJoining {
-        created_at: "2026-07-13T10:00:00Z".into(),
+        created_at: 1783936800,
         user_id: "usr_friend".into(),
         display_name: "Friend".into(),
         location: "traveling".into(),
@@ -74,7 +74,7 @@ fn player_joining_only_reaches_overlay_for_current_instance_absent_player() -> R
         .apply_game_process_status(GameProcessStatus {
             is_game_running: true,
             is_steamvr_running: true,
-            changed_at: "2026-07-13T09:59:00Z".into(),
+            changed_at: 1783936740,
         });
     apply_joining("wrld_other:789");
     assert!(activity_sink.take_events().is_empty());

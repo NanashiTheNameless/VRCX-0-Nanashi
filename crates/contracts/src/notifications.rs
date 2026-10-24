@@ -16,7 +16,7 @@ pub struct NotificationRowsQueryInput {
 #[serde(rename_all = "snake_case")]
 pub struct NotificationV1RowOutput {
     pub id: String,
-    pub created_at: String,
+    pub created_at: i64,
     pub r#type: String,
     pub sender_user_id: String,
     pub sender_username: String,
@@ -37,9 +37,9 @@ pub struct NotificationV1RowOutput {
 #[serde(rename_all = "snake_case")]
 pub struct NotificationV2RowOutput {
     pub id: String,
-    pub created_at: String,
-    pub updated_at: String,
-    pub expires_at: String,
+    pub created_at: i64,
+    pub updated_at: i64,
+    pub expires_at: i64,
     pub r#type: String,
     pub link: String,
     pub link_text: String,
@@ -83,13 +83,13 @@ pub struct NotificationListQueryInput {
 pub struct NotificationListItemOutput {
     pub id: String,
     pub version: i64,
-    pub created_at: String,
+    pub created_at: i64,
     #[serde(rename = "created_at")]
-    pub created_at_legacy: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
-    pub updated_at: String,
-    #[serde(skip_serializing_if = "String::is_empty")]
-    pub expires_at: String,
+    pub created_at_legacy: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub expires_at: Option<i64>,
     pub r#type: String,
     pub link: String,
     pub link_text: String,

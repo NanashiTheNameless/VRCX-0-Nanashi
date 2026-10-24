@@ -15,7 +15,7 @@ pub(crate) async fn resolve_avatar_feed_entry(
     let previous =
         resolve_avatar_image_file(file_cache, web, endpoint, &change.previous_icon_url).await;
     Some(FeedLiveEntry::Avatar {
-        created_at: change.created_at.clone(),
+        created_at: change.created_at,
         user_id: change.user_id.clone(),
         display_name: change.display_name.clone(),
         owner_id: next.owner_id,

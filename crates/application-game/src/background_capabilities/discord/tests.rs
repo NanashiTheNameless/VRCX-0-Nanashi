@@ -5,9 +5,7 @@ use serde_json::{json, Value};
 use vrcx_0_core::location::parse_location;
 
 use super::super::presence_facts::BackgroundPresenceFacts;
-use super::activity_builders::{
-    build_access_name, build_discord_activity, timestamp_seconds, DEFAULT_APP_ID,
-};
+use super::activity_builders::{build_access_name, build_discord_activity, DEFAULT_APP_ID};
 use super::{
     discord_enrichment_status_retryable, set_assets_or_noop, BackgroundDiscordActivityPayload,
     BackgroundDiscordPresenceCommand, BackgroundDiscordPresenceState, DiscordConfig,
@@ -75,13 +73,13 @@ fn discord_rpc_world_uses_now_playing_details_and_thumbnail() {
     let facts = BackgroundPresenceFacts {
         is_game_running: true,
         is_steamvr_running: true,
-        current_location_started_at: "2026-05-19T00:00:00Z".into(),
+        current_location_started_at: 1779148800,
         current_user: json!({ "status": "active" }).into(),
         now_playing: std::sync::Arc::new(NowPlayingSnapshot {
             url: "https://video.example/watch".into(),
             name: "Example Movie".into(),
             thumbnail_url: "https://image.example/thumb.jpg".into(),
-            started_at: Some("2026-05-19T01:00:00Z".into()),
+            started_at: Some(1779152400),
             length: 120,
             ..Default::default()
         }),
@@ -118,14 +116,14 @@ fn discord_rpc_world_uses_now_playing_details_and_thumbnail() {
             .get("timestamps")
             .and_then(|value| value.get("start"))
             .and_then(Value::as_i64),
-        timestamp_seconds("2026-05-19T01:00:00Z")
+        Some(1779152400)
     );
     assert_eq!(
         activity
             .get("timestamps")
             .and_then(|value| value.get("end"))
             .and_then(Value::as_i64),
-        timestamp_seconds("2026-05-19T01:02:00Z")
+        Some(1779152520)
     );
 }
 
@@ -139,8 +137,8 @@ fn discord_payload_keeps_platform_spacing_labels_and_session_floor() {
     let facts = BackgroundPresenceFacts {
         is_game_running: true,
         is_steamvr_running: true,
-        last_game_started_at: Some("2026-05-19T02:00:00Z".into()),
-        current_location_started_at: "2026-05-19T01:00:00Z".into(),
+        last_game_started_at: Some(1779156000),
+        current_location_started_at: 1779152400,
         current_user: json!({ "status": "active" }).into(),
         player_count: 2,
         ..Default::default()
@@ -174,7 +172,7 @@ fn discord_payload_keeps_platform_spacing_labels_and_session_floor() {
             .get("timestamps")
             .and_then(|value| value.get("start"))
             .and_then(Value::as_i64),
-        timestamp_seconds("2026-05-19T02:00:00Z")
+        Some(1779156000)
     );
 }
 

@@ -24,7 +24,7 @@ vi.mock('@/platform/tauri/bindings', () => ({
 function row(userId: string): FriendLogRow {
     return {
         rowId: 1,
-        created_at: '2026-09-01T00:00:00Z',
+        created_at: 1788220800,
         type: 'Friend',
         userId,
         displayName: '',

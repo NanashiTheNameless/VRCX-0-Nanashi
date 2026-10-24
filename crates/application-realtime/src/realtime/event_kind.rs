@@ -166,9 +166,7 @@ mod tests {
     fn serde_preserves_unknown_event_name_without_mutating_payload() {
         let raw = r#"{"type":"future-event","content":"{\"value\":1}"}"#;
         let mut parser = RealtimeMessageParser::default();
-        let RealtimeMessageParseOutcome::Valid(payload) =
-            parser.parse_text(raw, "2026-08-14T00:00:00Z")
-        else {
+        let RealtimeMessageParseOutcome::Valid(payload) = parser.parse_text(raw, 1786665600) else {
             panic!("message should parse");
         };
 
@@ -186,7 +184,7 @@ mod tests {
             let payload = vrcx_0_core::realtime::RealtimeWsMessagePayload {
                 raw: json.to_string(),
                 json,
-                received_at: "2026-08-14T00:00:00Z".to_string(),
+                received_at: 1786665600,
             };
             assert_eq!(RealtimeWsEventKind::from_payload(&payload), None);
         }
@@ -213,7 +211,7 @@ mod tests {
             };
             let received_at = record
                 .get("receivedAt")
-                .and_then(Value::as_str)
+                .and_then(vrcx_0_core::time::epoch_from_json)
                 .unwrap_or_default();
             match parser.parse_text(raw, received_at) {
                 RealtimeMessageParseOutcome::Duplicate => {}

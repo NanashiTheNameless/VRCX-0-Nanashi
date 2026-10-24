@@ -29,7 +29,7 @@ pub trait DataDirMigrationPort: Send + Sync {
     fn cleanup_pending(&self) -> Result<Option<DataDirCleanupPending>>;
     fn cleanup_migrated_data(&self) -> Result<Option<DataDirCleanupReport>>;
     fn dismiss_cleanup(&self) -> Result<()>;
-    fn mark_cleanup_prompted(&self, prompted_at: String) -> Result<()>;
+    fn mark_cleanup_prompted(&self, prompted_at: i64) -> Result<()>;
 }
 
 #[derive(Clone)]
@@ -86,7 +86,7 @@ impl DataDirMigrationRuntime {
         self.inner.dismiss_cleanup()
     }
 
-    pub fn mark_cleanup_prompted(&self, prompted_at: String) -> Result<()> {
+    pub fn mark_cleanup_prompted(&self, prompted_at: i64) -> Result<()> {
         self.inner.mark_cleanup_prompted(prompted_at)
     }
 }

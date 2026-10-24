@@ -1,7 +1,8 @@
-// @vitest-environment jsdom
-
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
+// @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 
 const mocks = vi.hoisted(() => ({
     favorites: { favoriteFriendIds: [], localFriendFavorites: [] },
@@ -63,7 +64,10 @@ import { useGameLogRows } from './useGameLogRows';
 function session(id: number): GameLogSession {
     return {
         id,
-        created_at: `2026-09-03T00:${String(id).padStart(2, '0')}:00.000Z`,
+        created_at:
+            epochSecondsFromValue(
+                `2026-09-03T00:${String(id).padStart(2, '0')}:00.000Z`
+            ) ?? 0,
         duration: 0,
         location: `wrld_test:${id}`,
         worldId: 'wrld_test',

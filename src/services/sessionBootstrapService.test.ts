@@ -152,7 +152,7 @@ describe('sessionBootstrapService', () => {
             await import('./sessionBootstrapService');
         useRuntimeStore.getState().setGameState({
             currentLocation: 'wrld_test:456~region(jp)',
-            currentLocationStartedAt: '2026-09-25T13:48:10.000Z'
+            currentLocationStartedAt: 1790344090
         });
 
         await bootstrapAuthenticatedSession(

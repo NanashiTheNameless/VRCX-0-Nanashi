@@ -131,5 +131,5 @@ pub struct RealtimeInstanceQueueProjection {
     pub world_name: String,
     pub position: i64,
     pub queue_size: i64,
-    pub received_at: String,
+    pub received_at: i64,
 }

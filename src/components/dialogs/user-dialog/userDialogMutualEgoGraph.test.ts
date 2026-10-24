@@ -23,7 +23,7 @@ describe('buildUserMutualEgoGraph', () => {
                     {
                         id: 'usr_a',
                         label: 'A',
-                        lastFetchedAt: '2026-09-01T00:00:00.000Z',
+                        lastFetchedAt: 1788220800,
                         optedOut: false,
                         degree: 40,
                         mutualCount: 42
@@ -41,7 +41,7 @@ describe('buildUserMutualEgoGraph', () => {
             {
                 id: 'usr_target',
                 label: 'Target',
-                lastFetchedAt: '',
+                lastFetchedAt: null,
                 optedOut: false,
                 degree: 2,
                 mutualCount: 2
@@ -49,7 +49,7 @@ describe('buildUserMutualEgoGraph', () => {
             {
                 id: 'usr_a',
                 label: 'A',
-                lastFetchedAt: '2026-09-01T00:00:00.000Z',
+                lastFetchedAt: 1788220800,
                 optedOut: false,
                 degree: 2,
                 mutualCount: 42

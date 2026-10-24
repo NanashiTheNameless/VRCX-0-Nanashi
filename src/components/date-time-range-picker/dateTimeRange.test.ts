@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { setDisplayTimeZone } from '@/shared/utils/displayTimeZone';
+
 import {
     buildDateTimeRange,
     buildMinuteOptions,
@@ -153,5 +155,30 @@ describe('buildDateTimeRange', () => {
         expect(result.to?.getDate()).toBe(22);
         expect(result.to?.getHours()).toBe(20);
         expect(result.to?.getMinutes()).toBe(15);
+    });
+});
+
+describe('configured timezone calendar input', () => {
+    it('keeps the selected day and clock time across a DST transition', () => {
+        setDisplayTimeZone('America/New_York');
+        try {
+            const instant = new Date('2026-03-08T07:30:00Z');
+            expect(toTimeValue(instant, '')).toBe('03:30');
+            const calendarDay = stripTime(instant);
+            expect(calendarDay.getDate()).toBe(8);
+            expect(
+                combineDateTime(calendarDay, '02:30', false).toISOString()
+            ).toBe('2026-03-08T07:30:00.000Z');
+            const range = buildDateTimeRange(
+                { from: calendarDay },
+                '00:00',
+                '23:59'
+            );
+            expect(range.to!.getTime() - range.from!.getTime() + 1).toBe(
+                23 * 3600 * 1000
+            );
+        } finally {
+            setDisplayTimeZone('');
+        }
     });
 });

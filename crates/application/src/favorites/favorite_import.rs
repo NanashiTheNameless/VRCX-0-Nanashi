@@ -111,8 +111,8 @@ pub struct FavoriteImportStatus {
     pub failed: u32,
     pub cancel_requested: bool,
     pub items: Vec<FavoriteImportItemResult>,
-    pub started_at: Option<String>,
-    pub finished_at: Option<String>,
+    pub started_at: Option<i64>,
+    pub finished_at: Option<i64>,
     pub last_error: Option<String>,
 }
 
@@ -252,7 +252,7 @@ impl FavoriteImportRuntime {
                 kind: prepared.kind,
                 auth_scope_generation: scope.generation,
                 total: crate::wire_count(prepared.ids.len()),
-                started_at: Some(Utc::now().to_rfc3339()),
+                started_at: Some(Utc::now().timestamp()),
                 ..Default::default()
             };
             inner.status = status.clone();
@@ -670,7 +670,7 @@ impl FavoriteImportRuntime {
             }
             inner.status.status = state;
             inner.status.cancel_requested = false;
-            inner.status.finished_at = Some(Utc::now().to_rfc3339());
+            inner.status.finished_at = Some(Utc::now().timestamp());
             if error.is_some() {
                 inner.status.last_error = error;
             }

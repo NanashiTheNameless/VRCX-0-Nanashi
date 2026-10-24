@@ -1,26 +1,29 @@
-use chrono::{DateTime, Utc};
+use chrono::Utc;
+use vrcx_0_core::time::epoch_from_millis;
 
 pub(crate) struct EventTime {
-    pub(crate) iso: String,
+    /// Epoch seconds, the form every stored date takes.
+    pub(crate) at: i64,
     pub(crate) timestamp_ms: i64,
 }
 
 impl EventTime {
     pub(crate) fn now() -> Self {
-        let now = Utc::now();
+        let timestamp_ms = Utc::now().timestamp_millis();
         Self {
-            iso: now.to_rfc3339(),
-            timestamp_ms: now.timestamp_millis(),
+            at: epoch_from_millis(timestamp_ms),
+            timestamp_ms,
         }
     }
 
-    pub(crate) fn from_received_at(received_at: &str) -> Self {
-        let timestamp_ms = DateTime::parse_from_rfc3339(received_at)
-            .map(|value| value.timestamp_millis())
-            .unwrap_or_else(|_| Utc::now().timestamp_millis());
+    /// An event stamped on arrival in epoch seconds; 0 means now.
+    pub(crate) fn from_received_at(received_at: i64) -> Self {
+        if received_at == 0 {
+            return Self::now();
+        }
         Self {
-            iso: received_at.to_string(),
-            timestamp_ms,
+            at: received_at,
+            timestamp_ms: received_at * 1000,
         }
     }
 }

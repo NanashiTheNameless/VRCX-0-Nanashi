@@ -6,11 +6,11 @@ use crate::Error;
 pub fn feed_avatar_purge(
     db: &DatabaseService,
     user_id: String,
-    cutoff_date: Option<String>,
+    cutoff_date: Option<i64>,
 ) -> Result<i64, Error> {
     let user_prefix = normalize_user_table_prefix(&user_id)?;
     ensure_realtime_tables(db, &user_prefix)?;
-    if let Some(cutoff_date) = cutoff_date.filter(|value| !value.trim().is_empty()) {
+    if let Some(cutoff_date) = cutoff_date {
         return db.execute_non_query(
             &feed_avatar_delete_before_sql(&user_prefix),
             &ParamsBuilder::new().set("cutoff", cutoff_date).build(),
@@ -25,7 +25,6 @@ pub fn feed_avatar_purge(
 pub(crate) fn feed_avatar_delete_before_sql(user_prefix: &str) -> String {
     format!(
         "DELETE FROM {user_prefix}_feed_avatar
-         WHERE created_at < strftime('%Y-%m-%dT%H:%M:%fZ', @cutoff, '+1 day')
-           AND julianday(created_at) < julianday(@cutoff)"
+         WHERE created_at < @cutoff"
     )
 }

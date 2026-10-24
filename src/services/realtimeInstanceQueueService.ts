@@ -104,6 +104,6 @@ export function handleQueuedInstancePatch(instanceLocation: string) {
             currentQueue.label
                 ? currentQueue.label
                 : resolveQueueLocationLabel(normalizedLocation),
-        updatedAt: new Date().toISOString()
+        updatedAt: Math.floor(Date.now() / 1000)
     });
 }

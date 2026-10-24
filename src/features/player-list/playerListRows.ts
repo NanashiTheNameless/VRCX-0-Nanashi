@@ -1,4 +1,5 @@
 import { hasUserIdPrefix } from '@/shared/constants/vrchatIds';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { parseLocation } from '@/shared/utils/location';
 import { isRecord } from '@/shared/utils/record';
 import { normalizeString } from '@/shared/utils/string';
@@ -55,19 +56,7 @@ export function buildPlayerDialogSeedData(row: unknown) {
 }
 
 export function parseTimeMs(value: unknown) {
-    if (!value) {
-        return 0;
-    }
-
-    if (typeof value === 'number') {
-        return Number.isFinite(value) ? value : 0;
-    }
-    const text = normalizeString(value);
-    const numeric = Number(text);
-    if (Number.isFinite(numeric) && numeric > 0) {
-        return numeric;
-    }
-    const timestamp = Date.parse(text);
+    const timestamp = parseAbsoluteDateMs(value);
     return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
@@ -100,7 +89,7 @@ export function buildPlayerSourceRows({
     isGameRunning?: boolean;
     context: PlayerListContext;
     currentUserLocation?: string | null;
-    currentLocationStartedAt?: string | null;
+    currentLocationStartedAt?: number | null;
 }): PlayerListSourceRow[] {
     const rows: PlayerListSourceRow[] = [];
     const knownKeys = new Set<string>();
@@ -168,7 +157,7 @@ export function buildPlayerSourceRows({
                 currentUserSnapshot.displayName ||
                 currentUserSnapshot.username ||
                 currentUserKey,
-            joinedAt: joinedAtMs ? new Date(joinedAtMs).toISOString() : '',
+            joinedAt: Math.floor(joinedAtMs / 1000),
             joinedAtMs,
             lastDurationMs: 0,
             ref: currentUserSnapshot,

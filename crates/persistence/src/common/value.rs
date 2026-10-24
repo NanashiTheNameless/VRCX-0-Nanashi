@@ -3,7 +3,7 @@ use vrcx_0_core::json::text_of;
 
 use super::DbParams;
 
-pub(crate) use vrcx_0_core::time::now_iso;
+pub(crate) use vrcx_0_core::time::now_epoch;
 
 pub(crate) use vrcx_0_core::text::normalize_text;
 
@@ -55,6 +55,22 @@ pub(crate) fn object_field_string(value: &Value, keys: &[&str]) -> String {
         }
     }
     String::new()
+}
+
+/// A date field in seconds, milliseconds or ISO text; 0 when absent or unreadable.
+pub(crate) fn object_field_epoch(value: &Value, keys: &[&str]) -> i64 {
+    keys.iter()
+        .find_map(|key| object_field(value, key))
+        .and_then(vrcx_0_core::time::epoch_from_json)
+        .unwrap_or(0)
+}
+
+/// A date field as epoch seconds, or `Value::Null` when absent or unreadable.
+pub(crate) fn object_field_optional_epoch(value: &Value, keys: &[&str]) -> Value {
+    keys.iter()
+        .find_map(|key| object_field(value, key))
+        .and_then(vrcx_0_core::time::epoch_from_json)
+        .map_or(Value::Null, Value::from)
 }
 
 pub(crate) fn object_field_optional_string(value: &Value, keys: &[&str]) -> Value {

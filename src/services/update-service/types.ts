@@ -24,7 +24,7 @@ export type NormalizedRelease = {
     htmlUrl: string;
     tagName: string;
     displayName: string;
-    publishedAt: string;
+    publishedAt: number;
     body: string;
     updaterType: 'tauri' | 'manual';
 };

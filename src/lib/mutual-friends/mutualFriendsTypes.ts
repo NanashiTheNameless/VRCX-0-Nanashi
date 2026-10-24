@@ -3,7 +3,7 @@ import type { FriendRecord } from '@/domain/friends/types';
 export interface MutualFriendNode {
     id: string;
     label: string;
-    lastFetchedAt: string | null;
+    lastFetchedAt: number | null;
     optedOut: boolean;
     degree: number;
     mutualCount: number;
@@ -20,7 +20,7 @@ export interface MutualFriendGraph {
 }
 
 interface MutualFriendNodeMeta {
-    lastFetchedAt: string | null;
+    lastFetchedAt: number | null;
     optedOut: boolean;
     totalCount: number | null;
 }
@@ -65,7 +65,7 @@ export interface MutualFriendsCoverage {
     friendCount: number;
     fetchedCount: number;
     unavailableCount: number;
-    lastFetchedAt: string | null;
+    lastFetchedAt: number | null;
 }
 
 export interface MutualFriendPickerOption {

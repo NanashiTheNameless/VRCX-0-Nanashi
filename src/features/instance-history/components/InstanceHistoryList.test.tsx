@@ -39,7 +39,7 @@ import {
 describe('resolveGrouping', () => {
     function rowsOnDays(days: string[]) {
         return days.map((day, index) => ({
-            createdAt: `${day}T10:0${index}:00Z`,
+            createdAt: Math.floor(Date.parse(`${day}T10:0${index}:00Z`) / 1000),
             location: `wrld_test:${index}`,
             time: 60_000,
             events: [1]
@@ -78,7 +78,7 @@ describe('InstanceHistoryRow', () => {
     it('keeps row selection and deletion as separate native buttons', async () => {
         const user = userEvent.setup();
         const row = {
-            createdAt: '2026-07-01T10:00:00Z',
+            createdAt: 1782900000,
             location: 'wrld_test:1',
             time: 60_000,
             events: [1]
@@ -116,7 +116,7 @@ describe('InstanceHistoryRow', () => {
 describe('InstanceHistoryList', () => {
     it('does not relocate the selected row when virtual measurements update', () => {
         const row = {
-            createdAt: '2026-07-01T10:00:00Z',
+            createdAt: 1782900000,
             location: 'wrld_test:1',
             time: 60_000,
             events: [1]

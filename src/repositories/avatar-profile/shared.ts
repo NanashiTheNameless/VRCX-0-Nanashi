@@ -2,6 +2,7 @@ import type {
     HttpApiExecuteResponse,
     VrchatAvatarIdInput as IpcVrchatAvatarIdInput
 } from '@/platform/tauri/bindings';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 import { isRecord } from '@/shared/utils/record';
 
 import { unwrapVrchatResponse } from '../vrchatRequest';
@@ -16,8 +17,8 @@ export function normalizeString(value: unknown): string {
     return typeof value === 'string' ? value.trim() : '';
 }
 
-export function normalizeTimestamp(value: unknown): string {
-    return typeof value === 'string' ? value : '';
+export function normalizeTimestamp(value: unknown): number {
+    return epochSecondsFromValue(value) ?? 0;
 }
 
 export function normalizeMemoString(value: unknown): string {

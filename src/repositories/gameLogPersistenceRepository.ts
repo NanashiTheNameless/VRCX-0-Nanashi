@@ -17,6 +17,11 @@ import {
     hasGroupIdPrefix,
     hasWorldIdPrefix
 } from '@/shared/constants/vrchatIds';
+import {
+    displayDateBoundary,
+    epochSecondsFromValue,
+    parseAbsoluteDateMs
+} from '@/shared/utils/displayTimeZone';
 
 type GameLogKind = Extract<GameLogWriteKind, 'Event' | 'External'>;
 
@@ -40,8 +45,8 @@ type GameLogWorldCacheEntry = {
 
 type InstancePlayerAggregate = {
     rowId: number;
-    created_at: string;
-    left_at: string;
+    created_at: number;
+    left_at: number;
     displayName: string;
     userId: string;
     time: number;
@@ -56,7 +61,7 @@ type GameLogUserStatsResult = Omit<
     GameLogUserStatsOutput,
     'previousDisplayNames'
 > & {
-    previousDisplayNames: Map<string, string>;
+    previousDisplayNames: Map<string, number>;
 };
 
 type GameLogInstanceDeleteInput = {
@@ -115,7 +120,7 @@ function normalizeGameLogUserStats(
         if (row.displayName && row.created_at) {
             ref.previousDisplayNames.set(
                 normalizeGameLogIdentifier(row.displayName),
-                normalizeGameLogIdentifier(row.created_at)
+                row.created_at
             );
         }
     }
@@ -173,7 +178,7 @@ const gameLog = {
     async getGamelogDatabase(maxTableSize: number = DEFAULT_MAX_TABLE_SIZE) {
         var date = new Date();
         date.setDate(date.getDate() - 1);
-        var dateOffset = date.toJSON();
+        var dateOffset = Math.floor(date.getTime() / 1000);
         return queryGameLog('recentDatabase', {
             dateOffset,
             maxTableSize
@@ -357,8 +362,8 @@ const gameLog = {
         options: GameLogPreviousInstancesOptions = {}
     ): Promise<InstanceHistoryEntryOutput[]> {
         const normalizedUserId = normalizeGameLogIdentifier(input?.id);
-        const dateFrom = normalizeGameLogIdentifier(options.dateFrom);
-        const dateTo = normalizeGameLogIdentifier(options.dateTo);
+        const dateFrom = displayDateBoundary(options.dateFrom ?? '', 'start');
+        const dateTo = displayDateBoundary(options.dateTo ?? '', 'end');
         const requestedLimit = options.limit ?? 0;
         const limit =
             Number.isFinite(requestedLimit) && requestedLimit > 0
@@ -394,7 +399,7 @@ const gameLog = {
             var rowId = rowData.rowId;
             var created_at = rowData.created_at;
             var left_at =
-                rowData.type === 'OnPlayerLeft' ? rowData.created_at : '';
+                rowData.type === 'OnPlayerLeft' ? rowData.created_at : 0;
             var displayName = normalizeGameLogIdentifier(rowData.displayName);
             var userId = normalizeGameLogIdentifier(rowData.userId);
             var playerKey = userId || `${displayName || 'anonymous'}:${rowId}`;
@@ -431,19 +436,21 @@ const gameLog = {
         return players;
     },
 
-    async getLocationBeforeOrAt(createdAt: string) {
-        return queryGameLog('locationBeforeOrAt', { createdAt });
+    async getLocationBeforeOrAt(createdAt: string | number) {
+        return queryGameLog('locationBeforeOrAt', {
+            createdAt: epochSecondsFromValue(createdAt) ?? 0
+        });
     },
 
     async getJoinLeaveEntriesForLocationRange(
         location: string,
-        afterDate: string,
-        beforeDate: string
+        afterDate: string | number,
+        beforeDate: string | number
     ) {
         const rows = await queryGameLog('joinLeaveRange', {
             location,
-            afterDate,
-            beforeDate
+            afterDate: epochSecondsFromValue(afterDate) ?? 0,
+            beforeDate: epochSecondsFromValue(beforeDate) ?? 0
         });
         return rows;
     },
@@ -456,13 +463,13 @@ const gameLog = {
     },
 
     async getPreviousDisplayNamesByUserId(ref: GameLogUserIdentity) {
-        var data = new Map<string, string>();
+        var data = new Map<string, number>();
         const rows = await queryGameLog('previousDisplayNamesByUserId', {
             userId: ref.id
         });
         for (const row of rows) {
             const displayName = normalizeGameLogIdentifier(row.displayName);
-            const createdAt = normalizeGameLogIdentifier(row.created_at);
+            const createdAt = row.created_at;
             if (ref.displayName !== displayName) {
                 data.set(displayName, createdAt);
             }
@@ -493,17 +500,17 @@ const gameLog = {
         toDays: number = 0
     ) {
         const now = new Date();
-        const params: { fromDate?: string; toDate?: string } = {};
+        const params: { fromDate?: number; toDate?: number } = {};
 
         if (fromDays > 0) {
-            params.fromDate = new Date(
-                now.getTime() - fromDays * DAY_MS
-            ).toISOString();
+            params.fromDate = Math.floor(
+                (now.getTime() - fromDays * DAY_MS) / 1000
+            );
         }
         if (toDays > 0) {
-            params.toDate = new Date(
-                now.getTime() - toDays * DAY_MS
-            ).toISOString();
+            params.toDate = Math.floor(
+                (now.getTime() - toDays * DAY_MS) / 1000
+            );
         }
 
         const rows = await queryGameLog('onlineSessions', params);
@@ -511,11 +518,11 @@ const gameLog = {
     },
 
     async getCurrentUserOnlineSessionsAfter(
-        afterCreatedAt: string,
+        afterCreatedAt: string | number,
         inclusive: boolean = false
     ) {
         return queryGameLog('onlineSessionsAfter', {
-            afterCreatedAt,
+            afterCreatedAt: epochSecondsFromValue(afterCreatedAt) ?? 0,
             inclusive
         });
     },
@@ -525,7 +532,7 @@ const gameLog = {
     },
 
     async getInstanceJoinHistory(currentUserId: string = '') {
-        var oneWeekAgo = new Date(Date.now() - 604800000).toJSON();
+        var oneWeekAgo = Math.floor((Date.now() - 604800000) / 1000);
         var instances = new Map<string, number>();
         const rows = await queryGameLog('instanceJoinHistory', {
             userId: normalizeCurrentUserId(currentUserId),
@@ -533,7 +540,7 @@ const gameLog = {
         });
         for (const row of rows) {
             if (!instances.has(row.location)) {
-                var epoch = new Date(row.created_at).getTime();
+                var epoch = parseAbsoluteDateMs(row.created_at);
                 instances.set(row.location, epoch);
             }
         }

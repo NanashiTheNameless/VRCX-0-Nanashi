@@ -24,28 +24,28 @@ import { MINUTE_MS } from '@/shared/constants/time';
 type TaskState = {
     status: RuntimeOperationStatus;
     detail: string;
-    updatedAt: string | null;
+    updatedAt: number | null;
 };
 
 type RuntimeEventState = {
     count: number;
     lastPayload: unknown;
-    lastReceivedAt: string | null;
+    lastReceivedAt: number | null;
 };
 
 type TransportState = {
     websocketConnected: boolean;
     websocketDomain: string;
-    lastConnectedAt: string | null;
-    lastDisconnectedAt: string | null;
+    lastConnectedAt: number | null;
+    lastDisconnectedAt: number | null;
 };
 
 export type MutualGraphState = Omit<
     MutualGraphFetchStatus,
     'startedAt' | 'updatedAt'
 > & {
-    startedAt: string | null;
-    updatedAt: string | null;
+    startedAt: number | null;
+    updatedAt: number | null;
 };
 
 export type FriendProfileLoadStatus = FriendProfileBulkLoadStatus;
@@ -61,9 +61,9 @@ export type FriendProfileLoadState = {
     failedFriends: number;
     cancelRequested: boolean;
     dialogOpen: boolean;
-    startedAt: string | null;
-    updatedAt: string | null;
-    finishedAt: string | null;
+    startedAt: number | null;
+    updatedAt: number | null;
+    finishedAt: number | null;
 };
 
 export type InstanceQueueState = {
@@ -72,7 +72,7 @@ export type InstanceQueueState = {
     position: number;
     queueSize: number;
     label: string;
-    updatedAt: string | null;
+    updatedAt: number | null;
 };
 
 export type NowPlayingState = {
@@ -83,8 +83,8 @@ export type NowPlayingState = {
     thumbnailUrl: string | null;
     length: number | null;
     position: number;
-    startedAt: string | null;
-    updatedAt: string | null;
+    startedAt: number | null;
+    updatedAt: number | null;
 };
 
 export type VrcStatusState = VrcStatusSnapshot;
@@ -132,7 +132,7 @@ type GroupInstancesState = {
     endpoint: string;
     instances: GroupInstanceRecord[];
     groupOrder: string[];
-    fetchedAt: string | null;
+    fetchedAt: number | null;
     lastLoadedAt: string | null;
     error: string;
 };
@@ -172,7 +172,7 @@ type RuntimeStore = {
         downloadedVersion: string | null;
         downloadProgress: number;
         downloadedBytes: number;
-        autoDownloadStartedAt: string | null;
+        autoDownloadStartedAt: number | null;
         autoDownloadUiVisible: boolean;
     };
     mutualGraph: MutualGraphState;
@@ -186,15 +186,15 @@ type RuntimeStore = {
         currentWorldId: string;
         currentWorldName: string;
         currentDestination: string;
-        currentLocationStartedAt: string | null;
+        currentLocationStartedAt: number | null;
         currentLocationPlayerIds: string[];
         currentLocationPlayers: CurrentInstanceRosterPlayer[];
-        lastGameStateChangedAt: string | null;
-        lastGameStartedAt: string | null;
-        lastGameLogAt: string | null;
+        lastGameStateChangedAt: number | null;
+        lastGameStartedAt: number | null;
+        lastGameLogAt: number | null;
         lastGameLogType: string;
         lastScreenshotPath: string;
-        lastBrowserFocusAt: string | null;
+        lastBrowserFocusAt: number | null;
     };
     nowPlaying: NowPlayingState;
     instanceQueue: InstanceQueueState;
@@ -680,7 +680,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
                 [task]: {
                     status,
                     detail,
-                    updatedAt: new Date().toISOString()
+                    updatedAt: Math.floor(Date.now() / 1000)
                 }
             }
         }));
@@ -725,7 +725,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
             mutualGraph: {
                 ...state.mutualGraph,
                 ...patch,
-                updatedAt: patch?.updatedAt || new Date().toISOString()
+                updatedAt: patch?.updatedAt || Math.floor(Date.now() / 1000)
             }
         }));
     },
@@ -739,7 +739,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
             friendProfileLoad: {
                 ...state.friendProfileLoad,
                 ...patch,
-                updatedAt: patch.updatedAt || new Date().toISOString()
+                updatedAt: patch.updatedAt || Math.floor(Date.now() / 1000)
             }
         }));
     },
@@ -766,7 +766,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
                     [name]: {
                         count: current.count + 1,
                         lastPayload: payload,
-                        lastReceivedAt: new Date().toISOString()
+                        lastReceivedAt: Math.floor(Date.now() / 1000)
                     }
                 }
             };
@@ -826,7 +826,7 @@ export const useRuntimeStore = create<RuntimeStore>((set, get) => ({
         set({
             nowPlaying: {
                 ...createNowPlayingState(),
-                updatedAt: new Date().toISOString()
+                updatedAt: Math.floor(Date.now() / 1000)
             }
         });
     },

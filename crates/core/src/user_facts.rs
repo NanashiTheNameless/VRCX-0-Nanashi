@@ -8,7 +8,8 @@ use serde_json::{Map, Number, Value};
 pub struct UserFact {
     pub fields: Map<String, Value>,
     observed: HashSet<&'static str>,
-    pub updated_at: String,
+    /// Epoch seconds.
+    pub updated_at: i64,
 }
 
 impl UserFact {
@@ -26,7 +27,7 @@ impl UserFact {
     pub fn to_object(&self) -> Map<String, Value> {
         let mut object = self.fields.clone();
         insert_derived_trust_fields(&mut object);
-        object.insert("updatedAt".into(), Value::String(self.updated_at.clone()));
+        object.insert("updatedAt".into(), Value::from(self.updated_at));
         object
     }
 }
@@ -124,7 +125,8 @@ fn has_presence_evidence(profile: &Map<String, Value>) -> bool {
 pub struct UserFactMergeOptions {
     pub endpoint: String,
     pub source: String,
-    pub received_at: String,
+    /// Epoch seconds; 0 means now.
+    pub received_at: i64,
     pub is_current_user: bool,
     pub is_friend: bool,
 }
@@ -134,7 +136,7 @@ impl Default for UserFactMergeOptions {
         Self {
             endpoint: String::new(),
             source: "seed".into(),
-            received_at: String::new(),
+            received_at: 0,
             is_current_user: false,
             is_friend: false,
         }
@@ -310,13 +312,10 @@ pub fn merge_user_fact_owned(
         };
         normalize_endpoint(&Value::String(candidate))
     };
-    let updated_at = {
-        let received = normalize_fact_text(&Value::String(options.received_at.clone()));
-        if received.is_empty() {
-            chrono::Utc::now().to_rfc3339()
-        } else {
-            received
-        }
+    let updated_at = if options.received_at == 0 {
+        crate::time::now_epoch()
+    } else {
+        options.received_at
     };
 
     let mut fact = match existing {
@@ -329,7 +328,7 @@ pub fn merge_user_fact_owned(
                 fields
             },
             observed: HashSet::new(),
-            updated_at: updated_at.clone(),
+            updated_at,
         },
     };
     let mut changed = !had_existing;

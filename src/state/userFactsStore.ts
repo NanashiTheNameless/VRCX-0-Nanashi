@@ -1,13 +1,14 @@
 import { create } from 'zustand';
 
 import { userFactKey, type UserFact } from '@/domain/users/userFacts';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 import { evictOverflow } from '@/state/storeEviction';
 
 type UserFactInput = Omit<Partial<UserFact>, 'endpoint' | 'id' | 'updatedAt'> &
     Record<string, unknown> & {
         endpoint?: string;
         id?: string;
-        updatedAt?: string;
+        updatedAt?: string | number;
         userId?: string;
     };
 
@@ -51,7 +52,8 @@ function isUserFactInput(value: unknown): value is UserFactInput {
             typeof value.id === 'string') &&
         (!('updatedAt' in value) ||
             value.updatedAt === undefined ||
-            typeof value.updatedAt === 'string') &&
+            typeof value.updatedAt === 'string' ||
+            typeof value.updatedAt === 'number') &&
         (!('userId' in value) ||
             value.userId === undefined ||
             typeof value.userId === 'string')
@@ -68,7 +70,7 @@ function isStoredUserFact(
         user.id.trim() === userId &&
         typeof user.endpoint === 'string' &&
         user.endpoint.trim() === endpointFromKey(key) &&
-        typeof user.updatedAt === 'string'
+        typeof user.updatedAt === 'number'
     );
 }
 
@@ -91,7 +93,8 @@ function toUserFact(user: UserFactInput, key: string): UserFact | null {
         ...rest,
         id: userId,
         endpoint: endpointFromKey(key),
-        updatedAt: text(updatedAt) || new Date().toISOString()
+        updatedAt:
+            epochSecondsFromValue(updatedAt) ?? Math.floor(Date.now() / 1000)
     };
 }
 

@@ -23,6 +23,7 @@ import {
     DEFAULT_DATE_FORMAT,
     normalizeDateFormatPreset
 } from '@/shared/utils/dateTime';
+import { setDisplayTimeZone } from '@/shared/utils/displayTimeZone';
 import { normalizeTrustColors } from '@/shared/utils/trustColors';
 import {
     normalizeAutoDeletePrintsLimit,
@@ -229,6 +230,7 @@ export async function loadPreferenceSnapshot() {
         systemWindowFrame,
         dtIsoFormat,
         dtHour12,
+        dtTimeZone,
         dtDateFormat,
         trustColor,
         currentCulture,
@@ -404,6 +406,7 @@ export async function loadPreferenceSnapshot() {
         storageRepository.getString('VRCX_SystemWindowFrame', 'false'),
         configRepository.getBool('dtIsoFormat', false),
         configRepository.getBool('dtHour12', true),
+        configRepository.getString('dtTimeZone', ''),
         configRepository.getString('dtDateFormat', DEFAULT_DATE_FORMAT),
         configRepository.getObject('VRCX_trustColor', null),
         getPrefetchedSystemCulture() ??
@@ -511,6 +514,7 @@ export async function loadPreferenceSnapshot() {
         );
     }
 
+    setDisplayTimeZone(dtTimeZone || '');
     const snapshot: PreferencesSnapshot = {
         notificationLayout: notificationLayout || DEFAULT_NOTIFICATION_LAYOUT,
         dataTableStriped: Boolean(dataTableStriped),
@@ -680,6 +684,7 @@ export async function loadPreferenceSnapshot() {
         systemWindowFrame: systemWindowFrame === 'true',
         dtIsoFormat: Boolean(dtIsoFormat),
         dtHour12: Boolean(dtHour12),
+        dtTimeZone: dtTimeZone || '',
         dtDateFormat: normalizeDateFormatPreset(dtDateFormat),
         trustColor: normalizeTrustColors(trustColor),
         navPanelWidth: normalizeNavWidth(navPanelWidth),

@@ -3,7 +3,8 @@ use std::collections::HashSet;
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub(crate) struct LogContext {
     pub(crate) position: u64,
-    pub(crate) file_created_at: Option<u64>,
+    #[serde(flatten)]
+    pub(crate) file_creation: crate::game_log_watcher::FileCreationStamp,
     #[serde(skip)]
     pub(crate) at_end: bool,
     #[serde(skip)]
@@ -20,7 +21,7 @@ impl LogContext {
     pub(crate) fn new() -> Self {
         Self {
             position: 0,
-            file_created_at: None,
+            file_creation: Default::default(),
             at_end: true,
             read_failed: false,
             recent_world_name: String::new(),

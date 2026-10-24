@@ -509,19 +509,28 @@ async fn ensure_manifest<T: SyncTransport>(
     ))
 }
 
-fn row_time_ms(row: &serde_json::Value, column: &str) -> Option<i64> {
-    row.get(column)
-        .and_then(serde_json::Value::as_str)
-        .and_then(|text| chrono::DateTime::parse_from_rfc3339(text).ok())
-        .map(|time| time.timestamp_millis())
+fn row_time(row: &serde_json::Value, column: &str) -> Option<i64> {
+    match row.get(column)? {
+        serde_json::Value::Number(number) => number.as_i64().map(|value| {
+            if value.abs() >= 100_000_000_000 {
+                value.div_euclid(1000)
+            } else {
+                value
+            }
+        }),
+        serde_json::Value::String(text) => chrono::DateTime::parse_from_rfc3339(text)
+            .ok()
+            .map(|time| time.timestamp()),
+        _ => None,
+    }
 }
 
 struct BuiltChunk {
     kind: ChunkKind,
     body: ChunkBody,
     cursors: Vec<(String, i64)>,
-    first_ms: Option<i64>,
-    last_ms: Option<i64>,
+    first: Option<i64>,
+    last: Option<i64>,
 }
 
 /// Collects the next rows to upload, oldest first within each stream, up to
@@ -535,8 +544,8 @@ fn build_chunk(
         kind: ChunkKind::Rows,
         body: ChunkBody::default(),
         cursors: Vec::new(),
-        first_ms: None,
-        last_ms: None,
+        first: None,
+        last: None,
     };
     let mut rows_left = CHUNK_ROW_LIMIT;
     let mut bytes = 0;
@@ -559,9 +568,9 @@ fn build_chunk(
             }
             bytes += size;
             cursor = rowid;
-            if let Some(at) = row_time_ms(&row, spec.time) {
-                built.first_ms = Some(built.first_ms.map_or(at, |first| first.min(at)));
-                built.last_ms = Some(built.last_ms.map_or(at, |last| last.max(at)));
+            if let Some(at) = row_time(&row, spec.time) {
+                built.first = Some(built.first.map_or(at, |first| first.min(at)));
+                built.last = Some(built.last.map_or(at, |last| last.max(at)));
             }
             taken.push(row);
         }
@@ -631,8 +640,8 @@ fn build_state_chunk(
             kind: ChunkKind::Snapshot,
             body,
             cursors,
-            first_ms: None,
-            last_ms: None,
+            first: None,
+            last: None,
         }));
     }
     Ok(None)
@@ -923,12 +932,15 @@ async fn push<T: SyncTransport>(
                 let state = store::vault_state_get(db, &vault.reference)
                     .map_err(storage)?
                     .ok_or_else(|| Error::Storage("sync state is missing".into()))?;
-                let coverage = match (built.first_ms, built.last_ms) {
+                let coverage = match (built.first, built.last) {
                     (Some(first), Some(last)) => {
                         store::coverage_between(db, &identity.vrchat_user_id, first, last)
                             .map_err(storage)?
                             .into_iter()
-                            .map(|(start_ms, end_ms)| CoveragePeriod { start_ms, end_ms })
+                            .map(|(start, end)| CoveragePeriod {
+                                start_ms: start.saturating_mul(1000),
+                                end_ms: end.saturating_mul(1000),
+                            })
                             .collect()
                     }
                     _ => Vec::new(),
@@ -1189,7 +1201,7 @@ fn log(
             message,
             first_seq: range.map(|(first, _)| first),
             last_seq: range.map(|(_, last)| last),
-            created_at_ms: now_ms(),
+            created_at: chrono::Utc::now().timestamp(),
         },
     )
     .map_err(storage)
@@ -1506,7 +1518,8 @@ pub async fn sync_account<T: SyncTransport>(
             .store(report.replaced_chunks, Ordering::Relaxed);
     }
     if !report.cancelled {
-        store::last_sync_set(&db, &vault.reference, now_ms()).map_err(storage)?;
+        store::last_sync_set(&db, &vault.reference, chrono::Utc::now().timestamp())
+            .map_err(storage)?;
     }
     Ok(report)
 }

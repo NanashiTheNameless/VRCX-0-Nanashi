@@ -148,7 +148,7 @@ pub fn game_log_query(
             let limit = non_negative_limit(max_table_size, 500);
             let mut rows = Vec::new();
             let recent_params = scoped_params(owner_id)
-                .set("date_offset", date_offset.trim())
+                .set("date_offset", date_offset.unwrap_or(0))
                 .set("limit", limit)
                 .build();
             for descriptor in GAME_LOG_RECENT_DESCRIPTORS {
@@ -156,7 +156,7 @@ pub fn game_log_query(
                     rows.push(game_log_row_from_unified_row(&row)?);
                 }
             }
-            rows.sort_by(|left, right| left.created_at.cmp(&right.created_at));
+            rows.sort_by_key(|left| left.created_at);
             let limit = limit_usize(limit);
             if rows.len() > limit {
                 rows.drain(0..rows.len() - limit);
@@ -403,7 +403,7 @@ pub fn game_log_query(
                 .cloned();
             Ok(GameLogQueryOutput::LastVisit(
                 row.map(|row| GameLogLastVisitOutput {
-                    created_at: row_string(&row, 0),
+                    created_at: row_i64(&row, 0),
                     world_id: row_string(&row, 1),
                 })
                 .unwrap_or_default(),
@@ -451,7 +451,7 @@ pub fn game_log_query(
                         .build(),
                 )?
                 .first()
-                .map(|row| row_string(row, 0))
+                .map(|row| row_i64(row, 0))
                 .unwrap_or_default();
             Ok(GameLogQueryOutput::LastGroupVisit(
                 GameLogLastGroupVisitOutput { created_at },
@@ -480,7 +480,7 @@ pub fn game_log_query(
                 row.map(|row| {
                     let row_user_id = row_string(&row, 1);
                     GameLogLastSeenOutput {
-                        created_at: row_string(&row, 0),
+                        created_at: row_i64(&row, 0),
                         user_id: if row_user_id.is_empty() {
                             user_id
                         } else {
@@ -591,7 +591,7 @@ pub fn game_log_query(
             )? {
                 previous_names.push(GameLogPreviousDisplayNameOutput {
                     display_name: row_string(&row, 0),
-                    created_at: row_string(&row, 1),
+                    created_at: row_i64(&row, 1),
                 });
             }
             Ok(GameLogQueryOutput::UserStats(GameLogUserStatsOutput {
@@ -676,15 +676,14 @@ pub fn game_log_query(
                         &scoped_params(owner_id).build(),
                     )?
                     .first()
-                    .map(|row| row_string(row, 0))
-                    .filter(|value| !value.is_empty())
+                    .and_then(|row| row.first())
+                    .and_then(Value::as_i64)
                 {
                     dates.push(date);
                 }
             }
-            dates.sort();
             Ok(GameLogQueryOutput::LastDate(
-                dates.pop().unwrap_or_default(),
+                dates.into_iter().max().unwrap_or_default(),
             ))
         }
         GameLogQuery::PlayersFromInstanceRows { location } => {
@@ -697,7 +696,7 @@ pub fn game_log_query(
                     .into_iter()
                     .map(|row| GameLogInstancePlayerEventOutput {
                         row_id: row_i64(&row, 0),
-                        created_at: row_string(&row, 1),
+                        created_at: row_i64(&row, 1),
                         display_name: row_string(&row, 2),
                         user_id: row_string(&row, 3),
                         time: row_i64(&row, 4),
@@ -707,7 +706,6 @@ pub fn game_log_query(
             ))
         }
         GameLogQuery::LocationBeforeOrAt { created_at } => {
-            let created_at = created_at.trim().to_string();
             let row = db
                 .execute(
                     "SELECT created_at, location, world_id, world_name, group_name
@@ -724,7 +722,7 @@ pub fn game_log_query(
                 .cloned();
             Ok(GameLogQueryOutput::LocationBeforeOrAt(row.map(|row| {
                 GameLogLocationBeforeOutput {
-                    created_at: row_string(&row, 0),
+                    created_at: row_i64(&row, 0),
                     location: row_string(&row, 1),
                     world_id: row_string(&row, 2),
                     world_name: row_string(&row, 3),
@@ -738,8 +736,6 @@ pub fn game_log_query(
             before_date,
         } => {
             let location = location.trim().to_string();
-            let after_date = after_date.trim().to_string();
-            let before_date = before_date.trim().to_string();
             Ok(GameLogQueryOutput::JoinLeaveRange(
                 db.execute(
                     "SELECT created_at, type, display_name, user_id
@@ -757,7 +753,7 @@ pub fn game_log_query(
                 )?
                 .into_iter()
                 .map(|row| GameLogJoinLeaveRangeOutput {
-                    created_at: row_string(&row, 0),
+                    created_at: row_i64(&row, 0),
                     r#type: row_string(&row, 1),
                     display_name: row_string(&row, 2),
                     user_id: row_string(&row, 3),
@@ -778,7 +774,7 @@ pub fn game_log_query(
                 )?
                 .into_iter()
                 .map(|row| GameLogPlayerDetailOutput {
-                    created_at: row_string(&row, 0),
+                    created_at: row_i64(&row, 0),
                     display_name: row_string(&row, 1),
                     user_id: row_string(&row, 2),
                     time: row_i64(&row, 3),
@@ -799,7 +795,7 @@ pub fn game_log_query(
                 )?
                 .into_iter()
                 .map(|row| GameLogPreviousDisplayNameOutput {
-                    created_at: row_string(&row, 0),
+                    created_at: row_i64(&row, 0),
                     display_name: row_string(&row, 1),
                 })
                 .collect(),
@@ -818,33 +814,31 @@ pub fn game_log_query(
             .collect(),
         )),
         GameLogQuery::OnlineSessions { from_date, to_date } => {
-            let from_date = from_date.trim().to_string();
-            let to_date = to_date.trim().to_string();
             let mut rows = Vec::new();
-            if !from_date.is_empty() {
+            if let Some(from_date) = from_date {
                 if let Some(row) = db
                     .execute(
                         "SELECT created_at, time FROM gamelog_location WHERE owner_id IN (0, @owner_id) AND created_at < @from_date ORDER BY created_at DESC LIMIT 1",
-                        &scoped_params(owner_id).set("from_date", from_date.clone()).build(),
+                        &scoped_params(owner_id).set("from_date", from_date).build(),
                     )?
                     .first()
                     .cloned()
                 {
                     rows.push(GameLogOnlineSessionOutput {
-                        created_at: row_string(&row, 0),
+                        created_at: row_i64(&row, 0),
                         time: row_i64(&row, 1),
                     });
                 }
             }
             let mut clauses = vec!["owner_id IN (0, @owner_id)"];
             let mut db_params = scoped_param_map(owner_id);
-            if !from_date.is_empty() {
+            if let Some(from_date) = from_date {
                 clauses.push("created_at >= @from_date");
-                db_params.insert("@from_date".into(), Value::String(from_date));
+                db_params.insert("@from_date".into(), Value::from(from_date));
             }
-            if !to_date.is_empty() {
+            if let Some(to_date) = to_date {
                 clauses.push("created_at < @to_date");
-                db_params.insert("@to_date".into(), Value::String(to_date));
+                db_params.insert("@to_date".into(), Value::from(to_date));
             }
             let date_clause = format!("WHERE {}", clauses.join(" AND "));
             for row in db.execute(
@@ -852,7 +846,7 @@ pub fn game_log_query(
                 &db_params,
             )? {
                 rows.push(GameLogOnlineSessionOutput {
-                    created_at: row_string(&row, 0),
+                    created_at: row_i64(&row, 0),
                     time: row_i64(&row, 1),
                 });
             }
@@ -862,7 +856,7 @@ pub fn game_log_query(
             after_created_at,
             inclusive,
         } => {
-            let after = after_created_at.trim().to_string();
+            let after = after_created_at;
             let op = if inclusive { ">=" } else { ">" };
             Ok(GameLogQueryOutput::OnlineSessionsAfter(
                 db
@@ -872,7 +866,7 @@ pub fn game_log_query(
                     )?
                     .into_iter()
                     .map(|row| GameLogOnlineSessionOutput {
-                        created_at: row_string(&row, 0),
+                        created_at: row_i64(&row, 0),
                         time: row_i64(&row, 1),
                     })
                     .collect(),
@@ -888,12 +882,12 @@ pub fn game_log_query(
                         "SELECT created_at, location FROM gamelog_join_leave WHERE owner_id IN (0, @owner_id) AND user_id = @user_id AND created_at > @created_at ORDER BY created_at DESC",
                         &scoped_params(owner_id)
                             .set("user_id", user_id.trim())
-                            .set("created_at", created_at.trim())
+                            .set("created_at", created_at)
                             .build(),
                     )?
                     .into_iter()
                     .map(|row| GameLogInstanceJoinOutput {
-                        created_at: row_string(&row, 0),
+                        created_at: row_i64(&row, 0),
                         location: row_string(&row, 1),
                     })
                     .collect(),

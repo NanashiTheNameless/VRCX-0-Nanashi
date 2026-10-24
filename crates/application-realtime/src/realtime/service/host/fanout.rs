@@ -188,7 +188,7 @@ impl RealtimeHostRuntime {
                     &UserFactMergeOptions {
                         endpoint,
                         source: "realtime".into(),
-                        received_at: chrono::Utc::now().to_rfc3339(),
+                        received_at: vrcx_0_core::time::now_epoch(),
                         is_friend: true,
                         ..Default::default()
                     },

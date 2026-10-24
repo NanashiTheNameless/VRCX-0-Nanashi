@@ -1,5 +1,5 @@
-use crate::activity::parse_activity_time_ms;
-use crate::common::{row_i64, row_string, ParamsBuilder};
+use crate::activity::{activity_ms_from_epoch, activity_ms_from_value};
+use crate::common::{row_i64, row_string, row_value, ParamsBuilder};
 use crate::database::DatabaseService;
 use crate::game_log::ensure_game_log_tables;
 use crate::ownership::{owner_id_for_filter, OwnerId};
@@ -10,7 +10,7 @@ use vrcx_0_contracts::activity_page::ActivityLocationSpan as LocationSpan;
 use vrcx_0_core::activity_sessions::{span_duration_ms, SpanEnd};
 
 pub(super) struct SourceRow {
-    pub(super) left_at: String,
+    pub(super) left_ms: i64,
     pub(super) time: i64,
     pub(super) location: String,
     pub(super) world_id: String,
@@ -80,7 +80,7 @@ fn read_open_instance_span(
     if row_i64(row, 1) != 0 {
         return Ok(None);
     }
-    let Some(start_ms) = parse_activity_time_ms(&row_string(row, 0)) else {
+    let Some(start_ms) = activity_ms_from_value(row_value(row, 0)) else {
         return Ok(None);
     };
     let duration_ms = span_duration_ms(start_ms, 0, SpanEnd::OpenTail, now_ms);
@@ -116,12 +116,12 @@ pub(super) fn read_source_rows(
                 })
             }),
     );
-    rows.sort_by_key(|row| parse_activity_time_ms(&row.left_at));
+    rows.sort_by_key(|row| row.left_ms);
     Ok(rows)
 }
 
 fn row_bounds(row: &SourceRow) -> Option<(i64, i64)> {
-    let end_ms = parse_activity_time_ms(&row.left_at)?;
+    let end_ms = row.left_ms;
     Some((end_ms.checked_sub(row.time)?, end_ms))
 }
 
@@ -132,7 +132,7 @@ pub(super) fn unclosed_stays_sql(started_filter: &str) -> String {
                        WHERE e.location = s.location
                          AND e.created_at >= s.started_at
                          AND (s.next_at IS NULL OR e.created_at < s.next_at)
-                         AND e.owner_id IN (0, @owner_id)), '')"
+                         AND e.owner_id IN (0, @owner_id)), 0)"
         )
     };
     let last_event_exprs = [
@@ -182,22 +182,22 @@ fn read_unclosed_rows(
         &format!(
             "SELECT started_at, last_at, location, {world_id_expr}, world_name, {access_expr}
              FROM ({})",
-            unclosed_stays_sql("AND l.created_at <= @to_iso")
+            unclosed_stays_sql("AND l.created_at <= @to")
         ),
         &ParamsBuilder::new()
             .set("owner_id", owner_id_for_filter(db, owner_user_id)?)
             .set("user_id", owner_user_id.as_str())
-            .set("to_iso", crate::activity::activity_iso_from_ms(to_ms))
+            .set("to", vrcx_0_core::time::epoch_from_millis(to_ms))
             .build(),
     )?;
     Ok(rows
         .into_iter()
         .filter_map(|row| {
-            let start_ms = parse_activity_time_ms(&row_string(&row, 0))?;
-            let left_at = row_string(&row, 1);
-            let time = parse_activity_time_ms(&left_at)? - start_ms;
+            let start_ms = activity_ms_from_value(row_value(&row, 0))?;
+            let left_ms = activity_ms_from_value(row_value(&row, 1)).filter(|ms| *ms > 0)?;
+            let time = left_ms - start_ms;
             (time > 0).then(|| SourceRow {
-                left_at,
+                left_ms,
                 time,
                 location: row_string(&row, 2),
                 world_id: row_string(&row, 3),
@@ -219,20 +219,15 @@ fn read_closed_rows(
     let world_id_expr = world_id_from_location_sql("jl.location");
     let access_expr = access_bucket_sql("jl.location");
     let from_filter = if from_ms.is_some() {
-        "AND julianday(jl.created_at) >= julianday(@from_iso)"
+        "AND jl.created_at >= @from"
     } else {
         ""
     };
     let params = ParamsBuilder::new()
         .set("owner_id", owner_id)
         .set("user_id", owner_user_id.as_str())
-        .set(
-            "from_iso",
-            from_ms
-                .map(crate::activity::activity_iso_from_ms)
-                .unwrap_or_default(),
-        )
-        .set("to_iso", crate::activity::activity_iso_from_ms(to_ms))
+        .set("from", from_ms.map(vrcx_0_core::time::epoch_from_millis))
+        .set("to_ms", to_ms)
         .build();
     let sql = format!(
         "SELECT jl.created_at,
@@ -254,7 +249,7 @@ fn read_closed_rows(
            AND jl.type = 'OnPlayerLeft'
            AND jl.time > 0
            {from_filter}
-           AND julianday(jl.created_at, '-' || (jl.time * 1.0 / 1000) || ' seconds') <= julianday(@to_iso)
+           AND jl.created_at * 1000 - jl.time <= @to_ms
          ORDER BY jl.created_at ASC, jl.id ASC"
     );
 
@@ -262,7 +257,7 @@ fn read_closed_rows(
         .execute(&sql, &params)?
         .into_iter()
         .map(|row| SourceRow {
-            left_at: row_string(&row, 0),
+            left_ms: activity_ms_from_epoch(row_i64(&row, 0)),
             time: row_i64(&row, 1),
             location: row_string(&row, 2),
             world_id: row_string(&row, 3),
@@ -278,9 +273,7 @@ fn spans_from_rows(rows: &[SourceRow]) -> Vec<LocationSpan> {
         if row.time <= 0 {
             continue;
         }
-        let Some(end_ms) = parse_activity_time_ms(&row.left_at) else {
-            continue;
-        };
+        let end_ms = row.left_ms;
         let Some(start_ms) = end_ms.checked_sub(row.time) else {
             continue;
         };
@@ -326,7 +319,7 @@ mod tests {
 
     fn source_row(left_offset_ms: i64, time: i64) -> SourceRow {
         SourceRow {
-            left_at: crate::activity::activity_iso_from_ms(BASE + left_offset_ms),
+            left_ms: BASE + left_offset_ms,
             time,
             location: "wrld_a:1".into(),
             world_id: "wrld_a".into(),
@@ -397,8 +390,8 @@ mod tests {
         db
     }
 
-    fn iso(offset_ms: i64) -> String {
-        crate::activity::activity_iso_from_ms(BASE + offset_ms)
+    fn iso(offset_ms: i64) -> i64 {
+        (BASE + offset_ms) / 1000
     }
 
     fn insert_location(db: &DatabaseService, offset_ms: i64, location: &str) {

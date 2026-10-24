@@ -30,13 +30,10 @@ fn query_feed_rows(
     let cursor = query
         .cursor
         .as_ref()
-        .filter(|cursor| !cursor.created_at.trim().is_empty() && cursor.row_id > 0);
+        .filter(|cursor| cursor.created_at != 0 && cursor.row_id > 0);
     let cursor_source_rank = cursor.map(|cursor| cursor.source_rank);
     if let Some(cursor) = cursor {
-        params.insert(
-            "@cursor_created_at".into(),
-            Value::String(cursor.created_at.clone()),
-        );
+        params.insert("@cursor_created_at".into(), Value::from(cursor.created_at));
         params.insert("@cursor_row_id".into(), Value::from(cursor.row_id));
     }
 
@@ -73,40 +70,17 @@ fn query_feed_rows(
         )
     };
 
-    let normalize_created_at = should_interrupt.is_some();
-    let created_at_expression = if normalize_created_at {
-        "julianday(created_at)"
-    } else {
-        "created_at"
-    };
-    let cursor_created_at_expression = if normalize_created_at {
-        "julianday(@cursor_created_at)"
-    } else {
-        "@cursor_created_at"
-    };
+    let created_at_expression = "created_at";
+    let cursor_created_at_expression = "@cursor_created_at";
     let search = normalize_text(&query.search);
     let mut date_query = String::new();
-    if !query.date_from.trim().is_empty() {
-        date_query.push_str(&format!(
-            "AND {created_at_expression} >= {date_from_expression} ",
-            date_from_expression = if normalize_created_at {
-                "julianday(@date_from)"
-            } else {
-                "@date_from"
-            }
-        ));
-        params.insert("@date_from".into(), Value::String(query.date_from.clone()));
+    if let Some(date_from) = query.date_from {
+        date_query.push_str("AND created_at >= @date_from ");
+        params.insert("@date_from".into(), Value::from(date_from));
     }
-    if !query.date_to.trim().is_empty() {
-        date_query.push_str(&format!(
-            "AND {created_at_expression} <= {date_to_expression} ",
-            date_to_expression = if normalize_created_at {
-                "julianday(@date_to)"
-            } else {
-                "@date_to"
-            }
-        ));
-        params.insert("@date_to".into(), Value::String(query.date_to.clone()));
+    if let Some(date_to) = query.date_to {
+        date_query.push_str("AND created_at <= @date_to ");
+        params.insert("@date_to".into(), Value::from(date_to));
     }
     let instance_mode = query.mode == FeedQueryMode::Instance
         || (query.mode == FeedQueryMode::Search
@@ -425,8 +399,8 @@ pub fn feed_latest_query(
                 excluded_user_ids: query.excluded_user_ids.clone(),
                 location_hidden_user_ids: query.location_hidden_user_ids.clone(),
                 max_entries: query.max_rows,
-                date_from: String::new(),
-                date_to: String::new(),
+                date_from: None,
+                date_to: None,
                 cursor: None,
             },
             None,
@@ -441,8 +415,8 @@ pub fn feed_latest_query(
         current_user_id: &query.user_id,
         filters: &query.filters,
         search: "",
-        date_from: "",
-        date_to: "",
+        date_from: None,
+        date_to: None,
         favorites_only: query.favorites_only,
         favorite_user_ids: &query.favorite_user_ids,
         scoped_user_ids: &query.scoped_user_ids,
@@ -489,8 +463,8 @@ pub fn feed_search_query(
                 excluded_user_ids: query.excluded_user_ids.clone(),
                 location_hidden_user_ids: query.location_hidden_user_ids.clone(),
                 max_entries: query.max_rows,
-                date_from: query.date_from.clone(),
-                date_to: query.date_to.clone(),
+                date_from: query.date_from,
+                date_to: query.date_to,
                 cursor: None,
             },
             None,
@@ -502,8 +476,8 @@ pub fn feed_search_query(
         current_user_id: &query.user_id,
         filters: &query.filters,
         search: &query.search,
-        date_from: &query.date_from,
-        date_to: &query.date_to,
+        date_from: query.date_from,
+        date_to: query.date_to,
         favorites_only: query.favorites_only,
         favorite_user_ids: &query.favorite_user_ids,
         scoped_user_ids: &query.scoped_user_ids,
@@ -610,7 +584,7 @@ fn feed_row_from_unified_row(row: &[Value]) -> FeedRowOutput {
     FeedRowOutput {
         row_id: row_opt_i64(row, 0),
         source_rank: row_opt_i64(row, 1),
-        created_at: row_opt_string(row, 2),
+        created_at: row_opt_i64(row, 2),
         user_id: row_opt_string(row, 3),
         display_name: row_opt_string(row, 4),
         r#type: row_opt_string(row, 5),
@@ -703,7 +677,7 @@ fn feed_row_key(row: &FeedRowOutput) -> String {
 
 fn feed_cursor_from_row(row: &FeedRowOutput) -> Option<FeedCursorInput> {
     Some(FeedCursorInput {
-        created_at: row.created_at.clone()?,
+        created_at: row.created_at?,
         source_rank: row.source_rank?,
         row_id: row.row_id?,
     })
@@ -713,7 +687,7 @@ fn feed_row_content_key(row: &FeedRowOutput) -> String {
     let entry_type = row.r#type.as_deref().unwrap_or_default();
     format!(
         "{entry_type}:{}:{}:{}",
-        row.created_at.as_deref().unwrap_or_default(),
+        row.created_at.unwrap_or_default(),
         row.user_id.as_deref().unwrap_or_default(),
         row.location.as_deref().unwrap_or_default()
     )
@@ -723,8 +697,8 @@ pub(crate) struct FeedLiveRowsMergeContext<'a> {
     pub(crate) current_user_id: &'a str,
     pub(crate) filters: &'a [FeedFilter],
     pub(crate) search: &'a str,
-    pub(crate) date_from: &'a str,
-    pub(crate) date_to: &'a str,
+    pub(crate) date_from: Option<i64>,
+    pub(crate) date_to: Option<i64>,
     pub(crate) favorites_only: bool,
     pub(crate) favorite_user_ids: &'a [String],
     pub(crate) scoped_user_ids: &'a [String],

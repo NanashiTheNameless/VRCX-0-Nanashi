@@ -12,6 +12,11 @@ import {
 } from '@/components/layout/PageScaffold';
 import { commands, type ReminderDraft } from '@/platform/tauri/bindings';
 import { toast } from '@/services/toastService';
+import {
+    displayDateParts,
+    displayDateFormatInput,
+    displayOffsetMinutesAt
+} from '@/shared/utils/displayTimeZone';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { Button } from '@/ui/shadcn/button';
 import { Textarea } from '@/ui/shadcn/textarea';
@@ -28,17 +33,20 @@ const P = 'view.reminders';
 
 /** e.g. `2026-09-29T21:05 (Tuesday, UTC-05:00)`, for resolving "in 20 minutes". */
 export function describeLocalNow(now: Date): string {
-    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
-        .toISOString()
-        .slice(0, 16);
-    const offsetMinutes = -now.getTimezoneOffset();
+    const p = displayDateParts(now);
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const local = `${p.year}-${pad(p.month)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}`;
+    const offsetMinutes = displayOffsetMinutesAt(now.getTime());
     const sign = offsetMinutes < 0 ? '-' : '+';
     const hours = String(Math.floor(Math.abs(offsetMinutes) / 60)).padStart(
         2,
         '0'
     );
     const minutes = String(Math.abs(offsetMinutes) % 60).padStart(2, '0');
-    const weekday = now.toLocaleDateString('en-US', { weekday: 'long' });
+    const input = displayDateFormatInput(now, { weekday: 'long' });
+    const weekday = new Intl.DateTimeFormat('en-US', input.options).format(
+        input.date
+    );
     return `${local} (${weekday}, UTC${sign}${hours}:${minutes})`;
 }
 

@@ -149,6 +149,7 @@ export const useFeedLiveStore = create<FeedLiveStoreState>((set) => ({
                 .filter((entry) => entry.sequence > state.version)
                 .map((entry) => ({
                     sequence: entry.sequence,
+                    receivedAtMs: Date.now(),
                     ownerUserId,
                     entry: entry.entry
                 }));

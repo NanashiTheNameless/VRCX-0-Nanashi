@@ -77,8 +77,8 @@ describe('WorldProfileRepository', () => {
             heat: 5,
             tags: ['system_labs'],
             isLabs: true,
-            createdAt: '2026-01-01',
-            updatedAt: '2026-01-02',
+            createdAt: 1767225600,
+            updatedAt: 1767312000,
             platforms: ['PC', 'Quest', 'iOS']
         });
     });

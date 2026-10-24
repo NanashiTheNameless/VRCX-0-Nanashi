@@ -12,10 +12,10 @@ describe('local favorite custom order', () => {
         expect(
             buildCustomOrderByGroup(
                 [
-                    { createdAt: '', groupName: 'B', worldId: 'wrld_2' },
-                    { createdAt: '', groupName: 'A', worldId: 'wrld_1' },
-                    { createdAt: '', groupName: 'B', worldId: 'wrld_1' },
-                    { createdAt: '', groupName: ' ', worldId: 'wrld_3' }
+                    { createdAt: 0, groupName: 'B', worldId: 'wrld_2' },
+                    { createdAt: 0, groupName: 'A', worldId: 'wrld_1' },
+                    { createdAt: 0, groupName: 'B', worldId: 'wrld_1' },
+                    { createdAt: 0, groupName: ' ', worldId: 'wrld_3' }
                 ],
                 'world'
             )

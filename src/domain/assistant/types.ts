@@ -56,7 +56,7 @@ export type SessionSummary = {
     id: string;
     title: string;
     busy: boolean;
-    updatedAt: string;
+    updatedAt: number;
 };
 
 export type ToolCallStatus = 'pending' | 'done' | 'error';

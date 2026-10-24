@@ -127,9 +127,12 @@ fn screenshot_library_entry_from_path(
         .unwrap_or_default();
     let modified_at = metadata
         .modified()
-        .map(unix_time_millis)
+        .map(|value| unix_time_millis(value).div_euclid(1000))
         .unwrap_or_default();
-    let created_at = metadata.created().ok().map(unix_time_millis);
+    let created_at = metadata
+        .created()
+        .ok()
+        .map(|value| unix_time_millis(value).div_euclid(1000));
     let PngDimensions { width, height } = read_png_dimensions(&path_value);
     let screenshot_metadata = get_screenshot_metadata(&path_value);
     let error = screenshot_metadata
@@ -154,7 +157,7 @@ fn screenshot_library_entry_from_path(
             )
         })
         .unwrap_or_default();
-    let captured_at_ms = vrcx_0_core::screenshots::screenshot_captured_at_ms(
+    let captured_at = vrcx_0_core::screenshots::screenshot_captured_at(
         captured_at.as_deref(),
         &file_name,
         modified_at,
@@ -173,7 +176,6 @@ fn screenshot_library_entry_from_path(
         world_id,
         world_name,
         captured_at,
-        captured_at_ms,
         metadata_json,
         error,
     })
@@ -237,7 +239,7 @@ pub(super) fn scan_screenshot_library_in(
         let size_bytes = metadata.len() as i64;
         let modified_at = metadata
             .modified()
-            .map(unix_time_millis)
+            .map(|value| unix_time_millis(value).div_euclid(1000))
             .unwrap_or_default();
 
         if !force

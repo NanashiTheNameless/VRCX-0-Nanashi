@@ -97,9 +97,9 @@ function directoryFromPath(path: string): string {
     return separatorAt > 0 ? path.slice(0, separatorAt) : path;
 }
 
-function formatResolvedAt(value: string): string {
+function formatResolvedAt(value: number | undefined): string {
     const formatted = formatDateFilter(value, 'long');
-    return formatted === '-' ? value : formatted;
+    return formatted === '-' ? String(value ?? '-') : formatted;
 }
 
 function resolveProviderName(providerId?: BackgroundImageProviderId): string {

@@ -105,7 +105,7 @@ impl TestRealtimeHostRuntime {
         self.file_cache_port.resolve_calls()
     }
 
-    pub fn cache_world_for_test(&self, id: &str, name: &str, updated_at: &str) {
+    pub fn cache_world_for_test(&self, id: &str, name: &str, updated_at: i64) {
         self.world_cache_port.insert(json!({
             "id": id,
             "name": name,
@@ -289,8 +289,8 @@ pub fn feed_lookup_input(user_id: String) -> FeedRowsQueryInput {
         excluded_user_ids: Vec::new(),
         location_hidden_user_ids: Vec::new(),
         max_entries: 20,
-        date_from: String::new(),
-        date_to: String::new(),
+        date_from: None,
+        date_to: None,
         cursor: None,
     }
 }
@@ -788,8 +788,7 @@ fn runtime_with_active_session_game_context(
 }
 
 #[cfg(test)]
-pub(super) fn feed_entry_of(entry_type: &str, created_at: &str) -> FeedLiveEntry {
-    let created_at = created_at.to_string();
+pub(super) fn feed_entry_of(entry_type: &str, created_at: i64) -> FeedLiveEntry {
     let user_id = "usr_friend".to_string();
     let display_name = "Friend".to_string();
     match entry_type {
@@ -845,9 +844,9 @@ pub(super) fn feed_entry_of(entry_type: &str, created_at: &str) -> FeedLiveEntry
 }
 
 #[cfg(test)]
-pub(super) fn unwritable_feed_entry(created_at: &str) -> FeedLiveEntry {
+pub(super) fn unwritable_feed_entry(created_at: i64) -> FeedLiveEntry {
     FeedLiveEntry::InstanceClosed {
-        created_at: created_at.to_string(),
+        created_at,
         id: format!("instance.closed:wrld_1:123:{created_at}"),
         location: "wrld_1:123".into(),
         message: "Instance Closed".into(),

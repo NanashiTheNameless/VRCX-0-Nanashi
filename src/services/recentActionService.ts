@@ -1,4 +1,5 @@
 import { MINUTE_MS, MINUTES_PER_DAY } from '@/shared/constants/time';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 import { safeJsonParse } from '@/shared/utils/json';
 import { isRecord } from '@/shared/utils/record';
 
@@ -35,13 +36,38 @@ function readActions(): Record<string, number> {
         return cachedActions;
     }
     const parsed = safeJsonParse(localStorage.getItem(STORAGE_KEY));
-    cachedActions = isRecord(parsed) ? (parsed as Record<string, number>) : {};
+    const versioned =
+        isRecord(parsed) && parsed.v === 2 && isRecord(parsed.actions);
+    const stored = versioned ? parsed.actions : parsed;
+    cachedActions = {};
+    if (isRecord(stored)) {
+        for (const [key, value] of Object.entries(stored)) {
+            const seconds =
+                typeof value === 'number' && Number.isFinite(value)
+                    ? Math.floor(value / (versioned ? 1 : 1000))
+                    : epochSecondsFromValue(value);
+            if (seconds !== null) cachedActions[key] = seconds;
+        }
+        if (!versioned) {
+            try {
+                localStorage.setItem(
+                    STORAGE_KEY,
+                    JSON.stringify({ v: 2, actions: cachedActions })
+                );
+            } catch {
+                return cachedActions;
+            }
+        }
+    }
     return cachedActions;
 }
 
 function writeActions(actions: Record<string, number>): void {
     cachedActions = actions;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(cachedActions));
+    localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ v: 2, actions: cachedActions })
+    );
 }
 
 function actionKey(
@@ -90,7 +116,7 @@ export function recordRecentAction(
     }
     const actions: Record<string, number> = {
         ...readActions(),
-        [key]: Date.now()
+        [key]: Math.floor(Date.now() / 1000)
     };
     writeActions(actions);
     notifyRecentActionListeners();
@@ -113,7 +139,7 @@ export function isActionRecent(
         return false;
     }
     const cooldownMs = cooldownMinutes * MINUTE_MS;
-    if (Date.now() - timestamp < cooldownMs) {
+    if (Date.now() - timestamp * 1000 < cooldownMs) {
         return true;
     }
     const nextActions: Record<string, number> = { ...actions };

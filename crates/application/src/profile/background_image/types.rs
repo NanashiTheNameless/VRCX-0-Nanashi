@@ -78,7 +78,8 @@ pub struct BackgroundImageSnapshot {
     pub author: String,
     pub license: String,
     pub source: String,
-    pub resolved_at: String,
+    #[serde(default, deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub resolved_at: i64,
     pub resolved_for_key: String,
 }
 

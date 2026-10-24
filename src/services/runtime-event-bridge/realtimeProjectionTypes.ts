@@ -59,10 +59,10 @@ type RealtimeGameStatePatch = Partial<{
     currentWorldId: string;
     currentWorldName: string;
     currentDestination: string;
-    currentLocationStartedAt: string | null;
+    currentLocationStartedAt: number | null;
     currentLocationPlayerIds: [];
     currentLocationPlayers: [];
-    lastGameLogAt: string;
+    lastGameLogAt: number;
     lastGameLogType: 'location';
 }>;
 

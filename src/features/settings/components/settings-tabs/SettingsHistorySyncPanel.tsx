@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { formatDateFilter } from '@/lib/dateTime';
 import { invoke } from '@/platform/tauri/generatedInvoke';
 import { Button } from '@/ui/shadcn/button';
 import { Progress } from '@/ui/shadcn/progress';
@@ -23,9 +24,9 @@ type SyncStatus = {
     hasKey: boolean;
     signedInToVrchat: boolean;
     vaultId: string | null;
-    lastSyncAtMs: number | null;
+    lastSyncAt: number | null;
     progress: SyncProgress | null;
-    log: { kind: string; message: string; createdAtMs: number }[];
+    log: { kind: string; message: string; createdAt: number }[];
 };
 
 type SyncProgress = {
@@ -478,9 +479,9 @@ export function SettingsHistorySyncPanel({
                 </section>
             ) : null}
             <p>
-                {status.lastSyncAtMs
+                {status.lastSyncAt
                     ? t('view.settings.history_sync.last_sync', {
-                          time: new Date(status.lastSyncAtMs).toLocaleString()
+                          time: formatDateFilter(status.lastSyncAt, 'long')
                       })
                     : t('view.settings.history_sync.never_synced')}
             </p>
@@ -565,8 +566,8 @@ export function SettingsHistorySyncPanel({
                     </p>
                     <ul className="text-muted-foreground max-h-40 overflow-auto text-xs">
                         {status.log.map((entry) => (
-                            <li key={`${entry.createdAtMs}-${entry.message}`}>
-                                {new Date(entry.createdAtMs).toLocaleString()}{' '}
+                            <li key={`${entry.createdAt}-${entry.message}`}>
+                                {formatDateFilter(entry.createdAt, 'long')}{' '}
                                 {entry.message}
                             </li>
                         ))}

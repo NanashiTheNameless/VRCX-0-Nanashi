@@ -109,7 +109,7 @@ mod tests {
                 }
             }),
             raw: "{}".into(),
-            received_at: "2026-05-15T00:00:00Z".into(),
+            received_at: 1778803200,
         };
 
         let RealtimeFriendApplyResult::Output(first) = runtime.apply_ws_message(&event) else {
@@ -160,7 +160,7 @@ mod tests {
                     "content": { "userId": "usr_added" }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-add should produce an output");
@@ -212,7 +212,7 @@ mod tests {
                 }
             }),
             raw: "{}".into(),
-            received_at: "2026-05-15T00:00:00Z".into(),
+            received_at: 1778803200,
         };
 
         let RealtimeFriendApplyResult::Output(first) = runtime.apply_ws_message(&event) else {
@@ -287,7 +287,7 @@ mod tests {
             let payload = RealtimeWsMessagePayload {
                 json: event,
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             };
 
             let RealtimeFriendApplyResult::Output(first) = runtime.apply_ws_message(&payload)
@@ -354,7 +354,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("legacy-equivalent trust change should update current state");
@@ -419,7 +419,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-online should produce an output");
@@ -477,7 +477,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-active should produce an output");
@@ -538,7 +538,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-active should produce an output");
@@ -590,7 +590,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-location should produce an output");
@@ -641,7 +641,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-delete should produce an output");
@@ -669,7 +669,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:01Z".into(),
+                received_at: 1778803201,
             })
         else {
             panic!("repeated friend-delete should retry persistence");
@@ -727,7 +727,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-active should produce an output");
@@ -745,7 +745,7 @@ mod tests {
             output.wake.is_some(),
             "online->active should schedule pending timer"
         );
-        let fired = runtime.wake("usr_friend", "2026-05-15T00:03:00Z").unwrap();
+        let fired = runtime.wake("usr_friend", 1778803380).unwrap();
         assert_eq!(
             fired.projection.patches[0].presence.view.section().as_str(),
             "active"
@@ -787,7 +787,7 @@ mod tests {
                     "content": { "userId": "usr_friend" }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-offline should produce an output");
@@ -806,7 +806,7 @@ mod tests {
         assert_eq!(location_tag(view), Some("wrld_1:123"));
         assert!(is_pending_offline(view));
 
-        let fired = runtime.wake("usr_friend", "2026-05-15T00:03:00Z").unwrap();
+        let fired = runtime.wake("usr_friend", 1778803380).unwrap();
 
         assert_eq!(
             fired.projection.patches[0].presence.view.section().as_str(),
@@ -836,7 +836,7 @@ mod tests {
                 }
             }),
             raw: "{}".into(),
-            received_at: "2026-05-15T00:00:01Z".into(),
+            received_at: 1778803201,
         });
 
         assert!(matches!(result, RealtimeFriendApplyResult::Ignored));
@@ -855,7 +855,7 @@ mod tests {
                     "content": { "userId": "usr_friend" }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-offline should schedule pending timer");
@@ -879,7 +879,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:01Z".into(),
+                received_at: 1778803201,
             })
         else {
             panic!("friend-online should cancel pending offline");
@@ -890,7 +890,7 @@ mod tests {
         let view = &online.projection.patches[0].presence.view;
         assert_eq!(view.section().as_str(), "online");
         assert!(!is_pending_offline(view));
-        assert!(runtime.wake("usr_friend", "2026-05-15T00:03:00Z").is_none());
+        assert!(runtime.wake("usr_friend", 1778803380).is_none());
     }
 
     #[test]
@@ -907,7 +907,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("first location should produce an output");
@@ -924,7 +924,7 @@ mod tests {
                     "content": { "userId": "usr_friend" }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:01Z".into(),
+                received_at: 1778803201,
             })
         else {
             panic!("friend-offline should schedule pending timer");
@@ -941,7 +941,7 @@ mod tests {
                     "content": { "userId": "usr_friend" }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:02Z".into(),
+                received_at: 1778803202,
             })
         else {
             panic!("friend-delete should produce an output");
@@ -964,7 +964,7 @@ mod tests {
             .expect("baseline snapshot")
             .friends_by_id
             .contains_key("usr_friend"));
-        assert!(runtime.wake("usr_friend", "2026-05-15T00:03:00Z").is_none());
+        assert!(runtime.wake("usr_friend", 1778803380).is_none());
 
         assert!(matches!(
             runtime.apply_ws_message(&RealtimeWsMessagePayload {
@@ -980,7 +980,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:03Z".into(),
+                received_at: 1778803203,
             }),
             RealtimeFriendApplyResult::Output(_)
         ));

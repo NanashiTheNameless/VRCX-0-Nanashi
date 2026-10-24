@@ -71,7 +71,7 @@ impl RealtimeHostRuntime {
         expected_owner_user_id: &OwnerId,
         expected_endpoint: &str,
         target_user_id: &str,
-        received_at: String,
+        received_at: i64,
     ) -> SyntheticFriendEventOutcome {
         let owner = self.lock_friend_owner();
         self.apply_synthetic_friend_event_with_owner(
@@ -91,7 +91,7 @@ impl RealtimeHostRuntime {
         expected_endpoint: &str,
         target_user_id: &str,
         profile: Value,
-        received_at: String,
+        received_at: i64,
     ) -> SyntheticFriendEventOutcome {
         let owner = self.lock_friend_owner();
         self.apply_synthetic_friend_event_with_owner(
@@ -112,14 +112,14 @@ impl RealtimeHostRuntime {
         expected_owner_user_id: &OwnerId,
         expected_endpoint: &str,
         event: SyntheticFriendEvent,
-        received_at: String,
+        received_at: i64,
     ) -> SyntheticFriendEventOutcome {
         if !self.is_transport_current() {
             self.friends.apply_scoped_synthetic_event(
                 expected_owner_user_id,
                 expected_endpoint,
                 event,
-                &received_at,
+                received_at,
             );
             return SyntheticFriendEventOutcome::TransportInactive;
         }
@@ -127,7 +127,7 @@ impl RealtimeHostRuntime {
             expected_owner_user_id,
             expected_endpoint,
             event,
-            &received_at,
+            received_at,
         ) {
             RealtimeFriendApplyResult::Output(output) => {
                 match self.apply_friend_output_owned(owner, *output) {

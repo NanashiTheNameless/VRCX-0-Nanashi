@@ -11,6 +11,7 @@ import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import vrchatToolsRepository, {
     type GroupCalendarEventRecord
 } from '@/repositories/vrchatToolsRepository';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { Button } from '@/ui/shadcn/button';
 import {
     Dialog,
@@ -37,8 +38,8 @@ export function linkableCalendarEvents(
 ) {
     return events
         .filter((event) => {
-            const startsAt = Date.parse(event.startsAt || '');
-            const endsAt = Date.parse(event.endsAt || '');
+            const startsAt = parseAbsoluteDateMs(event.startsAt || '');
+            const endsAt = parseAbsoluteDateMs(event.endsAt || '');
             return (
                 Number.isFinite(startsAt) &&
                 Number.isFinite(endsAt) &&
@@ -48,8 +49,8 @@ export function linkableCalendarEvents(
         })
         .sort(
             (left, right) =>
-                Date.parse(left.startsAt || '') -
-                Date.parse(right.startsAt || '')
+                parseAbsoluteDateMs(left.startsAt || '') -
+                parseAbsoluteDateMs(right.startsAt || '')
         );
 }
 

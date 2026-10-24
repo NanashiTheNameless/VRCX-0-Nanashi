@@ -86,7 +86,7 @@ fn entering_then_joining_produces_location_snapshot() {
 
     assert_eq!(snapshot.location, "wrld_test:instancehidden");
     assert_eq!(snapshot.world_name, "Test World");
-    assert_eq!(snapshot.created_at, convert_log_time_to_iso8601(&joining));
+    assert_eq!(snapshot.created_at, convert_log_time_to_epoch(&joining));
     assert_eq!(snapshot.file_name, "output_log_2026-01-02_03-04-05.txt");
 }
 

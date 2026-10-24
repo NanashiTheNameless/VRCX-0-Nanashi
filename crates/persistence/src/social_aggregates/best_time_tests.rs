@@ -15,7 +15,10 @@ fn insert_event(
             (created_at, user_id, display_name, type, location, world_name, time, group_name)
          VALUES (@created_at, @user_id, @display_name, @type, '', '', 0, '')",
         &crate::common::ParamsBuilder::new()
-            .set("created_at", created_at)
+            .set(
+                "created_at",
+                vrcx_0_core::time::parse_epoch_seconds(created_at),
+            )
             .set("user_id", user_id)
             .set("display_name", display_name)
             .set("type", kind)
@@ -39,7 +42,7 @@ fn input(owner_user_id: &OwnerId, bucket: ActivityBucket) -> BestTimeToPlayInput
         time_window: TimeWindow::all(),
         bucket,
         limit: None,
-        utc_offset_minutes: None,
+        utc_offset_minutes: Some(0),
     }
 }
 
@@ -61,10 +64,16 @@ fn returns_empty_rows_when_owner_has_no_feed_table_yet() {
 fn counts_only_online_events_and_ranks_friends_within_a_bucket() {
     let (_dir, db) = test_db("best-time-basic");
     ensure_realtime_tables(&db, "usrself").unwrap();
-    insert_online_event(&db, "2026-06-01T18:05:00Z", "usr_alice", "Alice");
-    insert_online_event(&db, "2026-06-02T18:10:00Z", "usr_alice", "Alice");
-    insert_online_event(&db, "2026-06-02T18:20:00Z", "usr_bob", "Bob");
-    insert_event(&db, "Offline", "2026-06-02T18:30:00Z", "usr_carol", "Carol");
+    insert_online_event(&db, "2026-06-01T18:05:00.000Z", "usr_alice", "Alice");
+    insert_online_event(&db, "2026-06-02T18:10:00.000Z", "usr_alice", "Alice");
+    insert_online_event(&db, "2026-06-02T18:20:00.000Z", "usr_bob", "Bob");
+    insert_event(
+        &db,
+        "Offline",
+        "2026-06-02T18:30:00.000Z",
+        "usr_carol",
+        "Carol",
+    );
 
     let output = get_best_time_to_play(
         &db,
@@ -88,12 +97,12 @@ fn counts_only_online_events_and_ranks_friends_within_a_bucket() {
 fn ranks_buckets_by_distinct_friends_before_online_event_count() {
     let (_dir, db) = test_db("best-time-rank-buckets");
     ensure_realtime_tables(&db, "usrself").unwrap();
-    insert_online_event(&db, "2026-06-01T20:05:00Z", "usr_alice", "Alice");
-    insert_online_event(&db, "2026-06-02T20:30:00Z", "usr_bob", "Bob");
+    insert_online_event(&db, "2026-06-01T20:05:00.000Z", "usr_alice", "Alice");
+    insert_online_event(&db, "2026-06-02T20:30:00.000Z", "usr_bob", "Bob");
     for created_at in [
-        "2026-06-01T09:00:00Z",
-        "2026-06-02T09:00:00Z",
-        "2026-06-03T09:00:00Z",
+        "2026-06-01T09:00:00.000Z",
+        "2026-06-02T09:00:00.000Z",
+        "2026-06-03T09:00:00.000Z",
     ] {
         insert_online_event(&db, created_at, "usr_carol", "Carol");
     }
@@ -121,7 +130,7 @@ fn truncates_top_friends_to_five_but_keeps_true_distinct_count() {
     for index in 0..6 {
         insert_online_event(
             &db,
-            "2026-06-01T09:00:00Z",
+            "2026-06-01T09:00:00.000Z",
             &format!("usr_{index}"),
             &format!("Friend{index}"),
         );
@@ -142,8 +151,8 @@ fn truncates_top_friends_to_five_but_keeps_true_distinct_count() {
 fn day_of_week_bucket_groups_by_weekday_with_readable_label() {
     let (_dir, db) = test_db("best-time-weekday");
     ensure_realtime_tables(&db, "usrself").unwrap();
-    insert_online_event(&db, "2026-06-01T09:00:00Z", "usr_alice", "Alice");
-    insert_online_event(&db, "2026-06-08T09:00:00Z", "usr_alice", "Alice");
+    insert_online_event(&db, "2026-06-01T09:00:00.000Z", "usr_alice", "Alice");
+    insert_online_event(&db, "2026-06-08T09:00:00.000Z", "usr_alice", "Alice");
 
     let output = get_best_time_to_play(
         &db,
@@ -161,7 +170,7 @@ fn day_of_week_bucket_groups_by_weekday_with_readable_label() {
 fn utc_offset_shifts_hour_bucket_into_local_time_and_notes_it_in_caveats() {
     let (_dir, db) = test_db("best-time-offset");
     ensure_realtime_tables(&db, "usrself").unwrap();
-    insert_online_event(&db, "2026-06-01T23:30:00Z", "usr_alice", "Alice");
+    insert_online_event(&db, "2026-06-01T23:30:00.000Z", "usr_alice", "Alice");
 
     let mut request = input(&OwnerId::new("usr_self"), ActivityBucket::HourOfDay);
     request.utc_offset_minutes = Some(9 * 60);
@@ -179,8 +188,8 @@ fn utc_offset_shifts_hour_bucket_into_local_time_and_notes_it_in_caveats() {
 fn limit_is_clamped_to_at_least_one_bucket() {
     let (_dir, db) = test_db("best-time-limit");
     ensure_realtime_tables(&db, "usrself").unwrap();
-    insert_online_event(&db, "2026-06-01T09:00:00Z", "usr_alice", "Alice");
-    insert_online_event(&db, "2026-06-01T21:00:00Z", "usr_bob", "Bob");
+    insert_online_event(&db, "2026-06-01T09:00:00.000Z", "usr_alice", "Alice");
+    insert_online_event(&db, "2026-06-01T21:00:00.000Z", "usr_bob", "Bob");
 
     let mut request = input(&OwnerId::new("usr_self"), ActivityBucket::HourOfDay);
     request.limit = Some(0);
@@ -193,7 +202,7 @@ fn limit_is_clamped_to_at_least_one_bucket() {
 fn tolerates_an_out_of_range_utc_offset() {
     let (_dir, db) = test_db("best-time-min-offset");
     ensure_realtime_tables(&db, "usrself").unwrap();
-    insert_online_event(&db, "2026-06-01T18:05:00Z", "usr_alice", "Alice");
+    insert_online_event(&db, "2026-06-01T18:05:00.000Z", "usr_alice", "Alice");
 
     let output = get_best_time_to_play(
         &db,

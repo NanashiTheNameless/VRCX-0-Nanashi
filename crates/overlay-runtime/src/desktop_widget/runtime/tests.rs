@@ -380,7 +380,7 @@ fn delivery(name: &str, widget: bool) -> ActivityDelivery {
             source_id: format!("online:{name}"),
             kind: ActivityKind::Online,
             category: ActivityCategory::FavoriteMovement,
-            created_at: "2026-06-01T12:34:56.000Z".to_string(),
+            created_at: 1780317296,
             actor_user_id: format!("usr_{name}"),
             actor_display_name: name.to_string(),
             content: ActivityContent {

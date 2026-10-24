@@ -22,6 +22,7 @@ import { SettingsCard } from '../SettingsCard';
 import { Field, SegmentedPreference } from '../SettingsField';
 import { SettingsInterfaceProfileAppearanceCard } from './SettingsInterfaceProfileAppearanceCard';
 import { SettingsInterfaceUserDialogCard } from './SettingsInterfaceUserDialogCard';
+import { SettingsTimeZoneField } from './SettingsTimeZoneField';
 
 type InterfaceState = SettingsPageStateSections['interface'];
 type SettingsInterfaceDisplayPrefs = Pick<
@@ -230,6 +231,7 @@ export function SettingsInterfaceDisplayCards({
                     </Select>
                 </Field>
 
+                <SettingsTimeZoneField />
                 <Field
                     label={t('view.settings.appearance.timedate.date_format')}
                     description={t(

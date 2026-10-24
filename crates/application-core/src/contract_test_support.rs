@@ -405,13 +405,19 @@ impl MemoryWorldCachePort {
             id: string("id"),
             author_id: string("authorId"),
             author_name: string("authorName"),
-            created_at: string("createdAt").into(),
+            created_at: world
+                .get("createdAt")
+                .and_then(vrcx_0_core::time::epoch_from_json)
+                .unwrap_or_default(),
             description: string("description"),
             image_url: string("imageUrl"),
             name: string("name"),
             release_status: string("releaseStatus").into(),
             thumbnail_image_url: string("thumbnailImageUrl"),
-            updated_at: string("updatedAt").into(),
+            updated_at: world
+                .get("updatedAt")
+                .and_then(vrcx_0_core::time::epoch_from_json)
+                .unwrap_or_default(),
             version: world
                 .get("version")
                 .and_then(serde_json::Value::as_i64)

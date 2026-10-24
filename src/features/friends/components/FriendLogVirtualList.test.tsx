@@ -19,7 +19,7 @@ vi.mock('./FriendLogViewParts', () => ({
 
 const rows: FriendLogRow[] = Array.from({ length: 160 }, (_, index) => ({
     rowId: index + 1,
-    created_at: '2026-09-01T00:00:00Z',
+    created_at: 1788220800,
     type: 'Friend',
     userId: `usr_${index}`,
     displayName: `Name ${index}`,

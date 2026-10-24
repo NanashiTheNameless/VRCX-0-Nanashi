@@ -51,7 +51,7 @@ describe('profileBackupStore', () => {
             databaseVersion: 'compatible',
             database: 'valid',
             manifest: {
-                createdAt: '2026-07-14T07:30:00Z',
+                createdAt: 1784014200,
                 appVersion: '2.13.0',
                 dbVersion: 18,
                 platform: 'windows',

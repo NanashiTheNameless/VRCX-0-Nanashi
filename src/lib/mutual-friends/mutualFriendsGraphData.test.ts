@@ -21,7 +21,7 @@ describe('mutualFriendsGraphData', () => {
                 [
                     'usr_c',
                     {
-                        lastFetchedAt: '2026-04-01T00:00:00.000Z',
+                        lastFetchedAt: 1775001600,
                         optedOut: true,
                         totalCount: 4
                     }
@@ -48,7 +48,7 @@ describe('mutualFriendsGraphData', () => {
             ['usr_c', 'Cora', 1]
         ]);
         expect(graph.nodes.find((node) => node.id === 'usr_c')).toMatchObject({
-            lastFetchedAt: '2026-04-01T00:00:00.000Z',
+            lastFetchedAt: 1775001600,
             optedOut: true,
             mutualCount: 4
         });
@@ -94,7 +94,7 @@ describe('buildMutualFriendsCoverage', () => {
         [
             'usr_a',
             {
-                lastFetchedAt: '2026-09-01T10:00:00.000Z',
+                lastFetchedAt: 1788256800,
                 optedOut: false,
                 totalCount: 4
             }
@@ -102,7 +102,7 @@ describe('buildMutualFriendsCoverage', () => {
         [
             'usr_b',
             {
-                lastFetchedAt: '2026-09-03T10:00:00.000Z',
+                lastFetchedAt: 1788429600,
                 optedOut: true,
                 totalCount: null
             }
@@ -122,7 +122,7 @@ describe('buildMutualFriendsCoverage', () => {
             friendCount: 4,
             fetchedCount: 2,
             unavailableCount: 1,
-            lastFetchedAt: '2026-09-03T10:00:00.000Z'
+            lastFetchedAt: 1788429600
         });
     });
 

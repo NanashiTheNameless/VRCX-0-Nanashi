@@ -9,9 +9,10 @@ use crate::Error;
 
 use super::caveats::visit_timeline_caveats;
 use super::helpers::{
-    clamped_optional_limit, current_friend_id_set, format_minutes, millis_to_minutes,
+    clamped_optional_limit, current_friend_id_set, format_minutes, millis_to_minutes, row_iso,
 };
 use super::types::{VisitRosterRow, VisitRow, VisitStint, VisitTimelineInput, VisitTimelineOutput};
+use vrcx_0_core::time::parse_epoch_seconds;
 
 const EVENT_SCAN_LIMIT: i64 = 20_000;
 const TIMESTAMP_FORMAT: &str = "%Y-%m-%dT%H:%M:%S%.3fZ";
@@ -116,7 +117,7 @@ fn select_visit(
     );
     let mut params = ParamsBuilder::new()
         .set("owner_id", owner_id)
-        .set("at", at.to_string());
+        .set("at", parse_epoch_seconds(at));
     if let Some(location) = location.map(str::trim).filter(|value| !value.is_empty()) {
         sql.push_str(" AND location = @location");
         params = params.set("location", location.to_string());
@@ -131,7 +132,7 @@ fn select_visit(
             world_id: row_string(&row, 1),
             world_name: row_string(&row, 2),
             location: row_string(&row, 3),
-            joined_at: row_string(&row, 4),
+            joined_at: row_iso(&row, 4),
             stay_millis: row_i64(&row, 5),
         }))
 }
@@ -150,13 +151,13 @@ fn next_visit_start(
              ORDER BY created_at ASC, id ASC LIMIT 1",
             &ParamsBuilder::new()
                 .set("owner_id", owner_id)
-                .set("joined_at", joined_at.to_string())
+                .set("joined_at", parse_epoch_seconds(joined_at))
                 .set("visit_id", visit_id)
                 .build(),
         )?
         .into_iter()
         .next()
-        .map(|row| row_string(&row, 0)))
+        .map(|row| row_iso(&row, 0)))
 }
 
 struct JoinLeaveEvent {
@@ -183,11 +184,11 @@ fn load_events(
     );
     let mut params = ParamsBuilder::new()
         .set("owner_id", owner_id)
-        .set("start", start.to_string())
+        .set("start", parse_epoch_seconds(start))
         .set("scan_limit", EVENT_SCAN_LIMIT);
     if let Some(end) = end {
         sql.push_str(" AND created_at < @end");
-        params = params.set("end", end.to_string());
+        params = params.set("end", parse_epoch_seconds(end));
     }
     if !owner_user_id.is_empty() {
         sql.push_str(" AND COALESCE(user_id, '') <> @owner_user_id");
@@ -198,7 +199,7 @@ fn load_events(
         .execute(&sql, &params.build())?
         .into_iter()
         .map(|row| JoinLeaveEvent {
-            created_at: row_string(&row, 0),
+            created_at: row_iso(&row, 0),
             joined: row_string(&row, 1) == "OnPlayerJoined",
             display_name: row_string(&row, 2),
             user_id: row_string(&row, 3),

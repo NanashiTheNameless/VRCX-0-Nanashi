@@ -10,7 +10,7 @@ pub struct InstanceRosterSnapshot {
     pub location: String,
     pub world_name: String,
     pub destination: String,
-    pub entered_at: String,
+    pub entered_at: i64,
     pub members: Vec<InstanceRosterMember>,
     pub departed_user_ids: Vec<String>,
     pub replayed_departed_user_ids: Vec<String>,

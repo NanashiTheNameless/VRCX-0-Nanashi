@@ -44,7 +44,7 @@ fn add_v1(
     db: &DatabaseService,
     user_id: &str,
     id: &str,
-    created_at: &str,
+    created_at: i64,
     message: &str,
 ) -> Result<(), Error> {
     notification_add_v1(
@@ -115,13 +115,7 @@ fn query(
 fn merged_notification_list_keeps_original_v2_precedence_and_global_order() -> Result<(), Error> {
     let (_dir, db) = test_db("merge")?;
     let user_id = "usr_owner";
-    add_v1(
-        &db,
-        user_id,
-        "notif_shared",
-        "2026-01-03T12:00:00Z",
-        "legacy duplicate",
-    )?;
+    add_v1(&db, user_id, "notif_shared", 1767441600, "legacy duplicate")?;
     add_v2(
         &db,
         user_id,
@@ -130,13 +124,7 @@ fn merged_notification_list_keeps_original_v2_precedence_and_global_order() -> R
         true,
         "2099-01-01T00:00:00Z",
     )?;
-    add_v1(
-        &db,
-        user_id,
-        "notif_other",
-        "2026-01-02T11:00:00Z",
-        "legacy other",
-    )?;
+    add_v1(&db, user_id, "notif_other", 1767351600, "legacy other")?;
 
     let rows = query(&db, user_id, 10, 10, false)?;
 
@@ -202,7 +190,7 @@ fn notification_list_applies_final_limit_with_stable_id_ties() -> Result<(), Err
     let (_dir, db) = test_db("limit")?;
     let user_id = "usr_owner";
     for id in ["notif_a", "notif_c", "notif_b"] {
-        add_v1(&db, user_id, id, "2026-04-01T00:00:00Z", "same timestamp")?;
+        add_v1(&db, user_id, id, 1775001600, "same timestamp")?;
     }
 
     let rows = query(&db, user_id, 10, 2, false)?;
@@ -217,20 +205,8 @@ fn notification_list_applies_final_limit_with_stable_id_ties() -> Result<(), Err
 #[test]
 fn notification_tables_remain_scoped_to_the_requested_account() -> Result<(), Error> {
     let (_dir, db) = test_db("account-scope")?;
-    add_v1(
-        &db,
-        "usr_owner_a",
-        "notif_a",
-        "2026-05-01T00:00:00Z",
-        "owner a",
-    )?;
-    add_v1(
-        &db,
-        "usr_owner_b",
-        "notif_b",
-        "2026-05-02T00:00:00Z",
-        "owner b",
-    )?;
+    add_v1(&db, "usr_owner_a", "notif_a", 1777593600, "owner a")?;
+    add_v1(&db, "usr_owner_b", "notif_b", 1777680000, "owner b")?;
 
     let rows = query(&db, "usr_owner_a", 10, 10, true)?;
 
@@ -294,13 +270,7 @@ fn instance_closed_keeps_its_location_after_a_reload() -> Result<(), Error> {
 fn unseen_indicator_matches_frontend_action_required_rules() -> Result<(), Error> {
     let (_dir, db) = test_db("unseen-indicator")?;
     let user_id = "usr_owner";
-    add_v1(
-        &db,
-        user_id,
-        "legacy_invite",
-        "2026-09-01T00:00:00Z",
-        "invite",
-    )?;
+    add_v1(&db, user_id, "legacy_invite", 1788220800, "invite")?;
     assert!(!notification_has_unseen_action_required(&db, user_id)?);
 
     notification_add_v1(

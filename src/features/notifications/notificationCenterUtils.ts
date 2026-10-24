@@ -18,6 +18,7 @@ import {
 } from '@/services/entityMediaService';
 import { toast } from '@/services/toastService';
 import { hasGroupIdPrefix } from '@/shared/constants/vrchatIds';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { parseLocation } from '@/shared/utils/location';
 import { getNotificationTs } from '@/shared/utils/notificationCategory';
 import { isRecord } from '@/shared/utils/record';
@@ -113,7 +114,7 @@ export function isNotificationExpired(
     if (!notification?.expiresAt) {
         return false;
     }
-    const expiresAt = Date.parse(notification.expiresAt);
+    const expiresAt = parseAbsoluteDateMs(notification.expiresAt);
     return Number.isFinite(expiresAt) && expiresAt <= Date.now();
 }
 

@@ -12,6 +12,7 @@ import {
     DEFAULT_MAX_TABLE_SIZE,
     DEFAULT_SEARCH_LIMIT
 } from '@/shared/constants/settings';
+import { displayDateBoundary } from '@/shared/utils/displayTimeZone';
 import { normalizeString } from '@/shared/utils/string';
 
 import { normalizeUserTablePrefix } from './userSessionRepository';
@@ -106,8 +107,8 @@ async function queryFeedRows({
         excludedUserIds: normalizeStringList(excludedUserIds),
         locationHiddenUserIds: normalizeStringList(locationHiddenUserIds),
         maxEntries,
-        dateFrom,
-        dateTo,
+        dateFrom: displayDateBoundary(dateFrom, 'start'),
+        dateTo: displayDateBoundary(dateTo, 'end'),
         cursor
     } satisfies FeedRowsQueryInput;
     return commands.appFeedRowsQuery(query);
@@ -139,8 +140,8 @@ const feed = {
             excludedUserIds: normalizeStringList(excludedUserIds),
             locationHiddenUserIds: normalizeStringList(locationHiddenUserIds),
             favoritesOnly,
-            dateFrom,
-            dateTo,
+            dateFrom: displayDateBoundary(dateFrom, 'start'),
+            dateTo: displayDateBoundary(dateTo, 'end'),
             maxRows: maxEntries
         } satisfies FeedSearchQueryInput;
         return commands.appFeedSearchQuery(query);

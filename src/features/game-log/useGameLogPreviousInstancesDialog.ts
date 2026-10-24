@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import gameLogRepository from '@/repositories/gameLogRepository';
 import { toast } from '@/services/toastService';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 
 import {
     getGameLogRowKey,
@@ -42,8 +43,8 @@ export function useGameLogPreviousInstancesDialog() {
                         }
                     }
                     return (
-                        Date.parse(String(right?.created_at || 0)) -
-                        Date.parse(String(left?.created_at || 0))
+                        parseAbsoluteDateMs(String(right?.created_at || 0)) -
+                        parseAbsoluteDateMs(String(left?.created_at || 0))
                     );
                 });
                 setRows(sortedInstances);

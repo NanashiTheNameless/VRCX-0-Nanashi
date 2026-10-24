@@ -216,8 +216,8 @@ fn search_friend_feed_page(
                 excluded_user_ids: Vec::new(),
                 location_hidden_user_ids: Vec::new(),
                 max_entries: page_limit,
-                date_from: input.date_from,
-                date_to: input.date_to,
+                date_from: vrcx_0_core::time::parse_epoch_seconds(&input.date_from),
+                date_to: vrcx_0_core::time::parse_epoch_seconds(&input.date_to),
                 cursor: input.cursor,
             },
             should_interrupt,
@@ -264,7 +264,7 @@ fn canonical_time_bound(value: Option<String>) -> Result<String, String> {
 }
 
 fn feed_cursor(row: &FeedRowOutput) -> Result<String, String> {
-    let created_at = row.created_at.as_deref().filter(|value| !value.is_empty());
+    let created_at = row.created_at;
     let source_rank = row.source_rank.filter(|value| *value > 0);
     let row_id = row.row_id.filter(|value| *value > 0);
     match (created_at, source_rank, row_id) {
@@ -292,7 +292,8 @@ fn parse_feed_cursor(value: &str) -> Result<FeedCursorInput, String> {
         return Err("invalid friend Feed cursor".into());
     }
     Ok(FeedCursorInput {
-        created_at: created_at.to_string(),
+        created_at: vrcx_0_core::time::parse_epoch_seconds(created_at)
+            .ok_or("invalid friend Feed cursor")?,
         source_rank,
         row_id,
     })
@@ -439,7 +440,10 @@ impl SearchFriendFeedRow {
         let (bio, bio_truncated) = bounded_feed_text(value.bio, query);
         let (previous_bio, previous_bio_truncated) = bounded_feed_text(value.previous_bio, query);
         Self {
-            created_at: value.created_at.unwrap_or_default(),
+            created_at: value
+                .created_at
+                .map(vrcx_0_core::time::epoch_to_iso)
+                .unwrap_or_default(),
             kind: value.r#type.unwrap_or_default(),
             user_id: value.user_id.unwrap_or_default(),
             display_name: value.display_name.unwrap_or_default(),
@@ -501,14 +505,14 @@ mod tests {
         let row = FeedRowOutput {
             row_id: Some(42),
             source_rank: Some(30),
-            created_at: Some("2026-08-12T10:00:00Z".into()),
+            created_at: Some(1786528800),
             ..FeedRowOutput::default()
         };
 
         let encoded = feed_cursor(&row).unwrap();
         let decoded = parse_feed_cursor(&encoded).unwrap();
 
-        assert_eq!(decoded.created_at, "2026-08-12T10:00:00Z");
+        assert_eq!(decoded.created_at, 1786528800);
         assert_eq!(decoded.source_rank, 30);
         assert_eq!(decoded.row_id, 42);
         assert!(parse_feed_cursor("2026-08-12T10:00:00Z|0|42").is_err());

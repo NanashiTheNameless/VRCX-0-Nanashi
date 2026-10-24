@@ -137,18 +137,18 @@ describe('previousInstancesRows', () => {
                 {
                     userId: 'usr_friend',
                     displayName: 'Friend',
-                    createdAt: '2024-01-02T03:00:00.000Z',
+                    createdAt: 1704164400,
                     time: 30 * 60 * 1000
                 },
                 {
                     userId: 'usr_favorite',
                     displayName: 'Favorite',
-                    createdAt: '2024-01-02T04:00:00.000Z',
+                    createdAt: 1704168000,
                     time: 15 * 60 * 1000
                 },
                 {
                     displayName: 'Missing id',
-                    createdAt: '2024-01-02T05:00:00.000Z',
+                    createdAt: 1704171600,
                     time: 15 * 60 * 1000
                 }
             ],

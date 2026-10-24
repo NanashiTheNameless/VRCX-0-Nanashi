@@ -17,7 +17,7 @@ use crate::{Error, Result};
 use crate::{HostSessionRuntime, RuntimeAuthScope, TaskSupervisor};
 use vrcx_0_application_core::ActivityIngress;
 use vrcx_0_application_core::BackendRuntimeStatusPublisher;
-use vrcx_0_core::time::now_iso;
+use vrcx_0_core::time::now_epoch;
 use vrcx_0_core::OwnerId;
 
 const CRASH_RELAUNCH_MESSAGE: &str = "VRChat crashed, attempting to rejoin last instance.";
@@ -224,23 +224,21 @@ impl GameClientProcessor {
 
     fn persist_game_stop_session(&self) -> Result<()> {
         let snapshot = self.deps.session.snapshot();
-        let Some(started_at) = snapshot.last_game_started_at.as_deref() else {
+        let Some(started_at) = snapshot.last_game_started_at.filter(|value| *value > 0) else {
             return Ok(());
         };
-        let Ok(started_at) = chrono::DateTime::parse_from_rfc3339(started_at) else {
-            return Ok(());
-        };
-        let offline_at = Utc::now().timestamp_millis();
-        let session_duration = offline_at.saturating_sub(started_at.timestamp_millis());
+        let offline_at_ms = Utc::now().timestamp_millis();
+        let session_duration = offline_at_ms.saturating_sub(started_at.saturating_mul(1000));
         if session_duration <= 0 {
             return Ok(());
         }
         self.deps
             .store
             .set_string("lastGameSessionMs", &session_duration.to_string())?;
-        self.deps
-            .store
-            .set_string("lastGameOfflineAt", &offline_at.to_string())?;
+        self.deps.store.set_string(
+            "lastGameOfflineAt",
+            &vrcx_0_core::time::epoch_from_millis(offline_at_ms).to_string(),
+        )?;
         Ok(())
     }
 
@@ -317,12 +315,12 @@ impl GameClientProcessor {
     }
 
     fn persist_crash_relaunch_event(&self) -> Result<()> {
-        let created_at = now_iso();
+        let created_at = now_epoch();
         let affected_count = self.deps.store.write_game_log(
             &OwnerId::new(self.deps.auth_scope.snapshot().current_user_id),
             &GameLogWriteBatch {
                 events: vec![GameLogEventEntry {
-                    created_at: created_at.clone(),
+                    created_at,
                     data: CRASH_RELAUNCH_MESSAGE.into(),
                 }],
                 ..Default::default()
@@ -333,13 +331,13 @@ impl GameClientProcessor {
             .publish_game_log_persisted(affected_count);
         self.deps
             .activity
-            .ingest_activity(vec![game_log_event(&created_at, CRASH_RELAUNCH_MESSAGE)]);
+            .ingest_activity(vec![game_log_event(created_at, CRASH_RELAUNCH_MESSAGE)]);
         self.deps
             .event_bus
             .emit_runtime_game_log_event(RuntimeGameLogEventPayload {
                 raw: vec![
                     "runtime-game-client".into(),
-                    created_at,
+                    created_at.to_string(),
                     "event".into(),
                     CRASH_RELAUNCH_MESSAGE.into(),
                 ],
@@ -482,7 +480,7 @@ mod tests {
                     snapshot: Some(LogLocationSnapshot {
                         location: location.into(),
                         world_name: "Current World".into(),
-                        created_at: "2026-09-01T00:00:00Z".into(),
+                        created_at: 1788220800,
                         file_name: "output_log_current.txt".into(),
                     }),
                 }),

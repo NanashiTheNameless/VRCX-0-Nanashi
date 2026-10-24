@@ -803,13 +803,9 @@ impl DesktopFeedLoggerRuntime {
             )
             .unwrap_or_default()
             .into_iter()
-            .filter_map(|(user_id, checked_at)| {
-                Some(ProfileCheck {
-                    checked_at: chrono::DateTime::parse_from_rfc3339(&checked_at)
-                        .ok()?
-                        .timestamp(),
-                    user_id,
-                })
+            .map(|(user_id, checked_at)| ProfileCheck {
+                checked_at,
+                user_id,
             })
             .collect()
     }

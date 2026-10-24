@@ -5,7 +5,7 @@ fn opts(source: &str) -> UserFactMergeOptions {
     UserFactMergeOptions {
         endpoint: "https://api.example.test".into(),
         source: source.into(),
-        received_at: "2026-06-16T00:00:00Z".into(),
+        received_at: 1781568000,
         ..Default::default()
     }
 }

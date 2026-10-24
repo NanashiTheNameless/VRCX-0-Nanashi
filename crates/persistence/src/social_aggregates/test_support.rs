@@ -41,7 +41,7 @@ pub(super) fn create_game_log_tables(db: &DatabaseService) {
     db.execute_non_query(
         "CREATE TABLE gamelog_join_leave (
                 id INTEGER PRIMARY KEY,
-                created_at TEXT,
+                created_at INTEGER,
                 type TEXT,
                 display_name TEXT,
                 location TEXT,
@@ -55,7 +55,7 @@ pub(super) fn create_game_log_tables(db: &DatabaseService) {
     db.execute_non_query(
         "CREATE TABLE gamelog_location (
                 id INTEGER PRIMARY KEY,
-                created_at TEXT,
+                created_at INTEGER,
                 location TEXT,
                 world_id TEXT,
                 world_name TEXT,
@@ -91,7 +91,10 @@ pub(super) fn insert_join_leave(
         "INSERT INTO gamelog_join_leave (created_at, type, display_name, location, user_id, time)
          VALUES (@created_at, @type, @display_name, @location, @user_id, @time)",
         &crate::common::ParamsBuilder::new()
-            .set("created_at", created_at)
+            .set(
+                "created_at",
+                vrcx_0_core::time::parse_epoch_seconds(created_at),
+            )
             .set("type", kind)
             .set("display_name", display_name)
             .set("location", location)

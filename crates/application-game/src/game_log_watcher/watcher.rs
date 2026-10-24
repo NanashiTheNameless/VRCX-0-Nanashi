@@ -150,11 +150,9 @@ impl LogWatcher {
         }
     }
 
-    pub fn set_date_till(&self, date: &str) {
-        if let Ok(dt) = date.parse::<chrono::DateTime<Utc>>() {
+    pub fn set_date_till(&self, date: i64) {
+        if let Some(dt) = chrono::DateTime::<Utc>::from_timestamp(date, 0) {
             *self.inner.till_date.lock().unwrap() = Some(dt.naive_utc());
-        } else if let Ok(dt) = NaiveDateTime::parse_from_str(date, "%Y-%m-%dT%H:%M:%S%.fZ") {
-            *self.inner.till_date.lock().unwrap() = Some(dt);
         }
         *self.inner.active.lock().unwrap() = true;
         *self.inner.keep_polling_until.lock().unwrap() =
@@ -168,7 +166,7 @@ impl LogWatcher {
     }
 
     pub fn resume_from(&self, cursor: super::GameLogScanCursor) {
-        self.set_date_till(&cursor.cutoff);
+        self.set_date_till(cursor.cutoff);
         *self.inner.resume_cursor.lock().unwrap() = Some(cursor);
     }
 
@@ -340,7 +338,7 @@ pub(super) fn update(
             fs::metadata(log_dir.join(&cursor.file_name)).is_ok_and(|metadata| {
                 metadata.is_file()
                     && metadata.len() >= cursor.context.position
-                    && file_created_at(&metadata) == cursor.file_created_at
+                    && file_creation(&metadata) == cursor.file_creation
             })
         });
     let mut sink = queue::WatcherParseSink { inner };
@@ -389,13 +387,13 @@ pub(super) fn update(
             .get_mut(&name)
             .expect("GameLog context was inserted");
 
-        let created_at = file_created_at(&meta);
+        let created_at = file_creation(&meta);
         if ctx.position > meta.len()
-            || (ctx.file_created_at.is_some() && ctx.file_created_at != created_at)
+            || (ctx.file_creation.seconds.is_some() && ctx.file_creation != created_at)
         {
             *ctx = LogContext::new();
         }
-        ctx.file_created_at = created_at;
+        ctx.file_creation = created_at;
         loop {
             if inner.stop_requested.load(Ordering::Acquire) {
                 return saw_new_data;
@@ -421,14 +419,10 @@ pub(super) fn update(
                     let cursor = super::GameLogScanCursor {
                         file_name: name.clone(),
                         start_position: previous_context.position,
-                        file_created_at: file_created_at(&meta),
+                        file_creation: file_creation(&meta),
                         rebuild,
                         context: ctx.clone(),
-                        cutoff: chrono::DateTime::<Utc>::from_naive_utc_and_offset(
-                            till_date_utc,
-                            Utc,
-                        )
-                        .to_rfc3339(),
+                        cutoff: till_date_utc.and_utc().timestamp(),
                     };
                     let origin = if *first_run {
                         super::GameLogEventOrigin::InitialScan
@@ -466,11 +460,21 @@ pub(super) fn update(
     saw_new_data
 }
 
-fn file_created_at(metadata: &fs::Metadata) -> Option<u64> {
-    metadata
-        .created()
-        .ok()?
-        .duration_since(std::time::UNIX_EPOCH)
-        .ok()
-        .and_then(|duration| u64::try_from(duration.as_nanos()).ok())
+fn file_creation(metadata: &fs::Metadata) -> super::FileCreationStamp {
+    let Some(created) = metadata.created().ok() else {
+        return Default::default();
+    };
+    let nanos = match created.duration_since(std::time::UNIX_EPOCH) {
+        Ok(duration) => i128::try_from(duration.as_nanos()).ok(),
+        Err(error) => i128::try_from(error.duration().as_nanos())
+            .ok()
+            .map(|nanos| -nanos),
+    };
+    let Some(nanos) = nanos else {
+        return Default::default();
+    };
+    super::FileCreationStamp {
+        seconds: i64::try_from(nanos.div_euclid(1_000_000_000)).ok(),
+        fraction: u32::try_from(nanos.rem_euclid(1_000_000_000)).ok(),
+    }
 }

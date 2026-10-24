@@ -76,7 +76,7 @@ function customSnapshot(imagePath: string): BackgroundImageSnapshot {
         author: '',
         license: '',
         source: '',
-        resolvedAt: '2026-08-26T00:00:00.000Z',
+        resolvedAt: 1787702400,
         resolvedForKey: imagePath
     };
 }

@@ -8,7 +8,7 @@ export type UserBadgeRecord = EntityRecord & {
     badgeName?: string;
     hidden?: boolean;
     showcased?: boolean;
-    updatedAt?: string;
+    updatedAt?: string | number;
 };
 
 type UserTravelingLocation = EntityRecord & {
@@ -44,7 +44,7 @@ type UserPlatformHistoryRecord = EntityRecord & {
 
 type UserPastDisplayNameRecord = EntityRecord & {
     displayName: string;
-    updated_at: string;
+    updated_at: string | number;
 };
 
 export type UserProfileEntity = EntityRecord & {
@@ -151,7 +151,7 @@ export type UserProfileEntity = EntityRecord & {
     twoFactorAuthEnabledDate?: string | null;
     unsubscribe?: boolean;
     userIcon?: string;
-    updated_at?: string;
+    updated_at?: string | number;
     userLanguage?: string | null;
     userLanguageCode?: string;
     usesGeneratedPassword?: boolean;

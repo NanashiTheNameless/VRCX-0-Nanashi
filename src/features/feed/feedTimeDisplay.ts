@@ -2,12 +2,13 @@ import type { TFunction } from 'i18next';
 
 import { formatDateFilter, formatRelativeTime } from '@/lib/dateTime';
 import { dateFromUnknown } from '@/shared/utils/dateTime';
+import { displayDayKey as toLocalDayKey } from '@/shared/utils/displayTimeZone';
 import type { FeedTimeDisplayModePreference } from '@/state/preferencesStore';
 
-type FeedTimestamp = string | null | undefined;
+type FeedTimestamp = number | string | null | undefined;
 
 function parseTimestampMs(value: FeedTimestamp) {
-    if (!value) {
+    if (value === null || value === undefined || value === '') {
         return null;
     }
 
@@ -32,7 +33,7 @@ export function formatFeedRelativeTime(
 
 export function isSameLocalDay(timestampMs: number, nowMs: number) {
     return (
-        new Date(timestampMs).toDateString() === new Date(nowMs).toDateString()
+        toLocalDayKey(new Date(timestampMs)) === toLocalDayKey(new Date(nowMs))
     );
 }
 
@@ -40,7 +41,7 @@ export function formatFeedExactTime(
     value: FeedTimestamp,
     format: 'short' | 'long' = 'short'
 ) {
-    if (!value) {
+    if (value === null || value === undefined || value === '') {
         return '-';
     }
 

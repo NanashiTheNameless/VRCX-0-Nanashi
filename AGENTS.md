@@ -249,6 +249,40 @@ headless with `cargo test -p vrcx-0 --tests`. Run them after adding or changing
 a Tauri command: new commands must be `#[tauri::command(async)]` or async, or
 the main-thread allowlist test fails.
 
+## Dates and timezones
+
+See `TIMESTAMPS.md` before changing stored dates, date inputs, history grouping,
+calendar queries, imports, or sync boundaries.
+
+- App-owned stored absolute dates use signed `i64` Unix epoch seconds in UTC.
+  Keep durations in their existing units. Persisted localStorage cooldowns use
+  a versioned seconds payload so known legacy milliseconds are unambiguous.
+  Internal animation and elapsed-time
+  clocks may use milliseconds; convert explicitly at persistence boundaries.
+- The versioned persistence migration converts existing ISO and millisecond
+  dates, including dynamic per-user tables and known date-valued settings.
+  Preserve row IDs and `event_discriminator` in game-log uniqueness, imports,
+  exports and RemoteSync. Never discard same-second legacy collisions.
+- Use the tolerant core/contracts timestamp helpers for old JSON and imports.
+  Keep external API formats and signed protocol bytes at their boundaries.
+  The shared RemoteSync protocol stays pinned to an exact Git revision; a wire
+  version upgrade requires a coordinated published protocol and desktop change.
+- `dtTimeZone` is device-specific and must never enter Settings Sync. Blank or
+  `system` follows the OS; IANA names and fixed UTC offsets are supported.
+  Rust uses `core::time` display helpers; frontend code uses
+  `shared/utils/displayTimeZone`. Pass a `Date` when a value is explicitly
+  milliseconds, or multiply canonical seconds by 1000 before `new Date`.
+- Calendar grouping, filters and date inputs use the display timezone and
+  calendar arithmetic across DST. Subscribe to `dtTimeZone` in memoized views
+  so changing the setting updates existing groups.
+- For VRChat recurring group events, preserve an existing series timezone.
+  New series use the configured IANA zone, or the system IANA zone when the
+  display setting is a fixed offset. Recurrence end dates are wall-clock
+  values in that series timezone, not stored absolute app dates.
+- Cover legacy conversion, repeat imports, same-second collisions and
+  non-system timezone/DST boundaries when changing these paths. Generated
+  Tauri bindings still come from `npm run generate:tauri-bindings`.
+
 ## Bindings
 
 `src/platform/tauri/bindings.ts` is generated. Never hand-edit it.

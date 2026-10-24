@@ -1,6 +1,6 @@
 pub use vrcx_0_contracts::profile_bio::ProfileBioRecord;
 
-use crate::common::{normalize_text, row_string, ParamsBuilder};
+use crate::common::{normalize_text, row_i64, row_string, ParamsBuilder};
 use crate::database::DatabaseService;
 use crate::ownership::OwnerId;
 use crate::realtime::{ensure_realtime_tables, normalize_user_table_prefix};
@@ -14,7 +14,7 @@ pub(crate) fn ensure_profile_bio_table(
     db.ensure_schema_once(&format!("profile_bio:{user_prefix}"), || {
         db.execute_non_query(
             &format!(
-                "CREATE TABLE IF NOT EXISTS {user_prefix}_profile_bio (user_id TEXT PRIMARY KEY, bio TEXT NOT NULL DEFAULT '', checked_at TEXT NOT NULL DEFAULT '')"
+                "CREATE TABLE IF NOT EXISTS {user_prefix}_profile_bio (user_id TEXT PRIMARY KEY, bio TEXT NOT NULL DEFAULT '', checked_at INTEGER NOT NULL DEFAULT 0)"
             ),
             &Default::default(),
         )?;
@@ -43,7 +43,7 @@ pub fn profile_bio_get(
         .first()
         .map(|row| ProfileBioRecord {
             bio: row_string(row, 0),
-            checked_at: row_string(row, 1),
+            checked_at: row_i64(row, 1),
         }))
 }
 
@@ -63,7 +63,7 @@ pub fn profile_bio_upsert(
         &ParamsBuilder::new()
             .set("user_id", user_id)
             .set("bio", record.bio.clone())
-            .set("checked_at", record.checked_at.clone())
+            .set("checked_at", record.checked_at)
             .build(),
     )?;
     Ok(())
@@ -73,7 +73,7 @@ pub fn profile_bio_mark_checked(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
     user_id: &str,
-    checked_at: &str,
+    checked_at: i64,
 ) -> Result<(), Error> {
     let user_prefix = ensure_profile_bio_table(db, owner_user_id)?;
     let user_id = require_user_id(user_id)?;
@@ -84,7 +84,7 @@ pub fn profile_bio_mark_checked(
         ),
         &ParamsBuilder::new()
             .set("user_id", user_id)
-            .set("checked_at", checked_at.to_string())
+            .set("checked_at", checked_at)
             .build(),
     )?;
     Ok(())
@@ -93,7 +93,7 @@ pub fn profile_bio_mark_checked(
 pub fn profile_bio_next_stale_friend(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
-    checked_before: &str,
+    checked_before: i64,
 ) -> Result<Option<String>, Error> {
     let user_prefix = ensure_profile_bio_table(db, owner_user_id)?;
     ensure_realtime_tables(db, &user_prefix)?;
@@ -107,7 +107,7 @@ pub fn profile_bio_next_stale_friend(
                  LIMIT 1"
             ),
             &ParamsBuilder::new()
-                .set("checked_before", checked_before.to_string())
+                .set("checked_before", checked_before)
                 .build(),
         )?
         .first()
@@ -118,17 +118,17 @@ pub fn profile_bio_next_stale_friend(
 pub fn profile_bio_checked_at_list(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
-) -> Result<Vec<(String, String)>, Error> {
+) -> Result<Vec<(String, i64)>, Error> {
     let user_prefix = ensure_profile_bio_table(db, owner_user_id)?;
     Ok(db
         .execute(
             &format!(
-                "SELECT user_id, checked_at FROM {user_prefix}_profile_bio WHERE checked_at <> ''"
+                "SELECT user_id, checked_at FROM {user_prefix}_profile_bio WHERE checked_at <> 0"
             ),
             &Default::default(),
         )?
         .iter()
-        .map(|row| (row_string(row, 0), row_string(row, 1)))
+        .map(|row| (row_string(row, 0), row_i64(row, 1)))
         .collect())
 }
 
@@ -193,10 +193,10 @@ mod tests {
         .unwrap();
     }
 
-    fn record(bio: &str, checked_at: &str) -> ProfileBioRecord {
+    fn record(bio: &str, checked_at: i64) -> ProfileBioRecord {
         ProfileBioRecord {
             bio: bio.into(),
-            checked_at: checked_at.into(),
+            checked_at,
         }
     }
 
@@ -206,27 +206,21 @@ mod tests {
         let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3")).unwrap();
 
         assert_eq!(profile_bio_get(&db, &owner(), "usr_friend").unwrap(), None);
-        profile_bio_upsert(
-            &db,
-            &owner(),
-            "usr_friend",
-            &record("hello", "2026-09-18T00:00:00Z"),
-        )
-        .unwrap();
+        profile_bio_upsert(&db, &owner(), "usr_friend", &record("hello", 1789689600)).unwrap();
         assert_eq!(
             profile_bio_get(&db, &owner(), "usr_friend").unwrap(),
-            Some(record("hello", "2026-09-18T00:00:00Z"))
+            Some(record("hello", 1789689600))
         );
 
-        profile_bio_mark_checked(&db, &owner(), "usr_friend", "2026-09-19T00:00:00Z").unwrap();
+        profile_bio_mark_checked(&db, &owner(), "usr_friend", 1789776000).unwrap();
         assert_eq!(
             profile_bio_get(&db, &owner(), "usr_friend").unwrap(),
-            Some(record("hello", "2026-09-19T00:00:00Z"))
+            Some(record("hello", 1789776000))
         );
-        profile_bio_mark_checked(&db, &owner(), "usr_new", "2026-09-19T00:00:00Z").unwrap();
+        profile_bio_mark_checked(&db, &owner(), "usr_new", 1789776000).unwrap();
         assert_eq!(
             profile_bio_get(&db, &owner(), "usr_new").unwrap(),
-            Some(record("", "2026-09-19T00:00:00Z"))
+            Some(record("", 1789776000))
         );
         assert_eq!(
             profile_bio_get(&db, &OwnerId::new("usr_other"), "usr_friend").unwrap(),
@@ -241,41 +235,23 @@ mod tests {
         add_friend(&db, "usr_fresh", 1);
         add_friend(&db, "usr_old", 2);
         add_friend(&db, "usr_new", 3);
-        profile_bio_upsert(
-            &db,
-            &owner(),
-            "usr_fresh",
-            &record("", "2026-09-18T11:00:00Z"),
-        )
-        .unwrap();
-        profile_bio_upsert(
-            &db,
-            &owner(),
-            "usr_old",
-            &record("", "2026-09-17T00:00:00Z"),
-        )
-        .unwrap();
-        profile_bio_upsert(
-            &db,
-            &owner(),
-            "usr_gone",
-            &record("", "2026-01-01T00:00:00Z"),
-        )
-        .unwrap();
+        profile_bio_upsert(&db, &owner(), "usr_fresh", &record("", 1789729200)).unwrap();
+        profile_bio_upsert(&db, &owner(), "usr_old", &record("", 1789603200)).unwrap();
+        profile_bio_upsert(&db, &owner(), "usr_gone", &record("", 1767225600)).unwrap();
 
-        let before = "2026-09-18T00:00:00Z";
+        let before = 1789689600;
         assert_eq!(
             profile_bio_next_stale_friend(&db, &owner(), before).unwrap(),
             Some("usr_new".into())
         );
 
-        profile_bio_mark_checked(&db, &owner(), "usr_new", "2026-09-18T12:00:00Z").unwrap();
+        profile_bio_mark_checked(&db, &owner(), "usr_new", 1789732800).unwrap();
         assert_eq!(
             profile_bio_next_stale_friend(&db, &owner(), before).unwrap(),
             Some("usr_old".into())
         );
 
-        profile_bio_mark_checked(&db, &owner(), "usr_old", "2026-09-18T12:00:01Z").unwrap();
+        profile_bio_mark_checked(&db, &owner(), "usr_old", 1789732801).unwrap();
         assert_eq!(
             profile_bio_next_stale_friend(&db, &owner(), before).unwrap(),
             None

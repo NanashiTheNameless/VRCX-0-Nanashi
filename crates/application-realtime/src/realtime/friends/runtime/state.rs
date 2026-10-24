@@ -3,7 +3,6 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use vrcx_0_application_core::{FriendLocationTime, InstanceDwellRegistry};
 use vrcx_0_core::derived_keys;
 
-use chrono::{TimeZone, Utc};
 use serde_json::{json, Value};
 use vrcx_0_contracts::feed_live::FeedLiveEntry;
 use vrcx_0_core::friends::{FriendBaselineEntry, FriendRecord, FriendRosterBaseline};
@@ -142,7 +141,7 @@ impl RealtimeFriendsRuntime {
             realtime_generation,
             baseline_revision,
             None,
-            Utc::now().timestamp_millis(),
+            chrono::Utc::now().timestamp_millis(),
         )
         .result
     }
@@ -157,11 +156,7 @@ impl RealtimeFriendsRuntime {
     ) -> FriendBaselineEffects {
         let baseline = baseline.normalized();
         let mut state = self.lock_state();
-        let now_iso = Utc
-            .timestamp_millis_opt(now_ms)
-            .single()
-            .map(|time| time.to_rfc3339())
-            .unwrap_or_default();
+        let now = vrcx_0_core::time::epoch_from_millis(now_ms);
         let watermark = friend_rev_watermark.unwrap_or(0);
         let replaced = state.roster.take();
         let previous_ids = replaced
@@ -226,7 +221,7 @@ impl RealtimeFriendsRuntime {
                         &entry.presence,
                         &step.next,
                         now_ms,
-                        &now_iso,
+                        now,
                     ));
                     let wake_at_ms = if new_generation {
                         step.next.wake_at()
@@ -246,7 +241,7 @@ impl RealtimeFriendsRuntime {
             let shown = existing_entry
                 .filter(|_| !new_generation)
                 .map_or(&unseen, |entry| &entry.presence);
-            if let Some(entry) = joining_feed(&user_id, &record, shown, &presence, &now_iso) {
+            if let Some(entry) = joining_feed(&user_id, &record, shown, &presence, now) {
                 joining_feed_entries.push((user_id.clone(), entry));
             }
             entries.insert(user_id, FriendEntry { record, presence });
@@ -505,7 +500,7 @@ impl RealtimeFriendsRuntime {
             return RealtimeFriendApplyResult::Ignored;
         };
         let content = payload.json.get("content").unwrap_or(&Value::Null);
-        self.apply_friend_content(event_kind, content, &payload.received_at, None, Source::Ws)
+        self.apply_friend_content(event_kind, content, payload.received_at, None, Source::Ws)
     }
 
     pub(crate) fn apply_scoped_synthetic_event(
@@ -513,7 +508,7 @@ impl RealtimeFriendsRuntime {
         expected_owner_user_id: &OwnerId,
         expected_endpoint: &str,
         event: SyntheticFriendEvent,
-        received_at: &str,
+        received_at: i64,
     ) -> RealtimeFriendApplyResult {
         let (event_kind, content, source) = match event {
             SyntheticFriendEvent::Delete { user_id } => (
@@ -543,7 +538,7 @@ impl RealtimeFriendsRuntime {
         &self,
         event_kind: FriendEventKind,
         content: &Value,
-        received_at: &str,
+        received_at: i64,
         expected_scope: Option<ExpectedFriendScope<'_>>,
         source: Source,
     ) -> RealtimeFriendApplyResult {
@@ -569,7 +564,7 @@ impl RealtimeFriendsRuntime {
         user_id: &str,
         expected_rev: u64,
         profile: Value,
-        received_at: &str,
+        received_at: i64,
     ) -> RealtimeFriendApplyResult {
         let mut state = self.lock_state();
         let Some(roster) = state.roster.as_ref() else {
@@ -595,9 +590,9 @@ impl RealtimeFriendsRuntime {
         finish_output(&mut state, output)
     }
 
-    pub fn wake(&self, user_id: &str, now_iso: &str) -> Option<RealtimeFriendOutput> {
+    pub fn wake(&self, user_id: &str, now: i64) -> Option<RealtimeFriendOutput> {
         let mut state = self.lock_state();
-        let now = EventTime::from_received_at(now_iso);
+        let now = EventTime::from_received_at(now);
         let mut output = apply_wake(&mut state, user_id, &now)?;
         stamp_output_revs(&mut state, &mut output);
         Some(output)

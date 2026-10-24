@@ -18,7 +18,7 @@ describe('currentInstanceRosterRepository', () => {
     it('normalizes inputs before invoking the snapshot command', async () => {
         vi.mocked(commands.appPlayerListCurrentSnapshot).mockResolvedValueOnce({
             context: {
-                createdAt: '',
+                createdAt: 0,
                 location: '',
                 worldId: '',
                 worldName: '',
@@ -41,7 +41,7 @@ describe('currentInstanceRosterRepository', () => {
     it('sorts players by join time with locale-aware name tie-break', async () => {
         vi.mocked(commands.appPlayerListCurrentSnapshot).mockResolvedValueOnce({
             context: {
-                createdAt: '2026-04-30T10:00:00.000Z',
+                createdAt: 1777543200,
                 location: 'wrld_live:123',
                 worldId: 'wrld_live',
                 worldName: 'Live World',
@@ -57,21 +57,21 @@ describe('currentInstanceRosterRepository', () => {
                     id: 'usr_b',
                     userId: 'usr_b',
                     displayName: 'beta',
-                    joinedAt: '2026-04-30T10:02:00.000Z',
+                    joinedAt: 1777543320,
                     joinedAtMs: 2
                 },
                 {
                     id: 'usr_c',
                     userId: 'usr_c',
                     displayName: 'Alpha',
-                    joinedAt: '2026-04-30T10:02:00.000Z',
+                    joinedAt: 1777543320,
                     joinedAtMs: 2
                 },
                 {
                     id: 'usr_a',
                     userId: 'usr_a',
                     displayName: 'Zed',
-                    joinedAt: '2026-04-30T10:01:00.000Z',
+                    joinedAt: 1777543260,
                     joinedAtMs: 1
                 }
             ]

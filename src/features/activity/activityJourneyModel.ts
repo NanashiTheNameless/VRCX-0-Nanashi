@@ -4,6 +4,7 @@ import type {
     ActivityJourneyVisit
 } from '@/platform/tauri/bindings';
 import { ACTIVITY_PAGE_CONFIG_KEYS } from '@/repositories/configKeys';
+import { displayDateBoundary } from '@/shared/utils/displayTimeZone';
 
 export const ACTIVITY_PAGE_MODE_KEY = ACTIVITY_PAGE_CONFIG_KEYS.mode;
 
@@ -64,17 +65,14 @@ export function journeyDayBounds(dayKey: string): {
     fromMs: number;
     toMs: number;
 } {
-    const [year, month, day] = dayKey
-        .split('-')
-        .map((value) => Number.parseInt(value, 10) || 0);
     return {
-        fromMs: new Date(year, Math.max(0, month - 1), day || 1).getTime(),
-        toMs: new Date(year, Math.max(0, month - 1), (day || 1) + 1).getTime()
+        fromMs: (displayDateBoundary(dayKey, 'start') ?? 0) * 1000,
+        toMs: ((displayDateBoundary(dayKey, 'end') ?? 0) + 1) * 1000
     };
 }
 
 export function journeyVisitKey(visit: ActivityJourneyVisit): string {
-    return `${visit.location}@${visit.startMs}`;
+    return `${visit.location}@${visit.startAt}`;
 }
 
 export const JOURNEY_PAGE_DAYS = 7;
@@ -124,7 +122,7 @@ export function mergeJourneyVisits(
         byKey.set(journeyVisitKey(visit), visit);
     }
     return [...byKey.values()].sort(
-        (left, right) => right.startMs - left.startMs
+        (left, right) => right.startAt - left.startAt
     );
 }
 
@@ -133,7 +131,7 @@ export function groupJourneyVisitsByDay(
 ): { dayKey: string; visits: ActivityJourneyVisit[] }[] {
     const groups: { dayKey: string; visits: ActivityJourneyVisit[] }[] = [];
     for (const visit of visits) {
-        const dayKey = toLocalDayKey(visit.startMs);
+        const dayKey = toLocalDayKey(visit.startAt);
         const last = groups[groups.length - 1];
         if (last?.dayKey === dayKey) {
             last.visits.push(visit);
@@ -166,7 +164,7 @@ export function buildJourneyVisitView(
                   .filter((person) => !close.includes(person))
                   .slice(0, limits.strangers)
             : [];
-    const durationMs = Math.max(0, visit.endMs - visit.startMs);
+    const durationMs = Math.max(0, visit.endAt - visit.startAt) * 1000;
     const shownPeople = [...close, ...strangers];
 
     return {

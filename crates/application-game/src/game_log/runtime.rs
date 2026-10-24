@@ -176,7 +176,7 @@ impl GameLogRuntime {
             .map_err(crate::Error::Custom)
     }
 
-    pub fn set_persistence_resume_after(&self, resume_after: &str) {
+    pub fn set_persistence_resume_after(&self, resume_after: i64) {
         self.processor.set_persistence_resume_after(resume_after);
     }
 
@@ -206,11 +206,9 @@ impl GameLogRuntime {
 
     pub fn on_game_process_event(&self, event: GameProcessEvent) -> Result<()> {
         let snapshot = self.session.snapshot();
-        let changed_at = snapshot.last_game_state_changed_at.unwrap_or_else(|| {
-            chrono::Utc::now()
-                .format("%Y-%m-%dT%H:%M:%S%.3fZ")
-                .to_string()
-        });
+        let changed_at = snapshot
+            .last_game_state_changed_at
+            .unwrap_or_else(vrcx_0_core::time::now_epoch);
         self.worker
             .push_batch([GameLogWorkerJob::Process(GameLogProcessEvent {
                 process: GameProcessEvent {

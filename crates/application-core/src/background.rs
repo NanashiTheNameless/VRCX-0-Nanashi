@@ -7,7 +7,7 @@ use crate::task_supervisor::{TaskStopToken, TaskSupervisor};
 use crate::RuntimeOperationStatus;
 use chrono::{DateTime, Duration as ChronoDuration, Utc};
 use serde::Serialize;
-use vrcx_0_core::time::{iso_millis, now_iso};
+use vrcx_0_core::time::now_iso;
 
 const DATABASE_OPTIMIZE_JOB: &str = "databaseOptimize";
 const DATABASE_OPTIMIZE_INITIAL_DELAY_SECONDS: u64 = 3_600;
@@ -84,8 +84,8 @@ pub async fn sleep_until_due_or_stopped(total: Duration, stop_token: &TaskStopTo
     !stop_token.is_stop_requested()
 }
 
-fn future_iso(seconds: u64) -> String {
-    iso_millis(Utc::now() + ChronoDuration::seconds(seconds as i64))
+fn future_epoch(seconds: u64) -> i64 {
+    (Utc::now() + ChronoDuration::seconds(seconds as i64)).timestamp()
 }
 
 #[derive(Clone, Debug, Serialize, specta::Type)]
@@ -95,9 +95,9 @@ pub struct RuntimeBackgroundJobSnapshot {
     pub owner: String,
     pub status: RuntimeOperationStatus,
     pub cadence_seconds: Option<u64>,
-    pub last_started_at: Option<String>,
-    pub last_finished_at: Option<String>,
-    pub next_run_at: Option<String>,
+    pub last_started_at: Option<i64>,
+    pub last_finished_at: Option<i64>,
+    pub next_run_at: Option<i64>,
     pub last_detail: String,
     pub last_error: Option<String>,
     pub failure_count: u64,
@@ -118,9 +118,9 @@ pub struct RuntimeBackgroundJobs {
 
 #[derive(Default)]
 struct JobStatusTiming {
-    started_at: Option<String>,
-    finished_at: Option<String>,
-    next_run_at: Option<String>,
+    started_at: Option<i64>,
+    finished_at: Option<i64>,
+    next_run_at: Option<i64>,
 }
 
 impl RuntimeBackgroundJobs {
@@ -148,7 +148,7 @@ impl RuntimeBackgroundJobs {
                         job.status = status;
                         job.last_detail = detail.clone();
                         if job.next_run_at.is_none() {
-                            job.next_run_at = cadence_seconds.map(future_iso);
+                            job.next_run_at = cadence_seconds.map(future_epoch);
                         }
                     })
                     .or_insert_with(|| RuntimeBackgroundJobSnapshot {
@@ -158,7 +158,7 @@ impl RuntimeBackgroundJobs {
                         cadence_seconds,
                         last_started_at: None,
                         last_finished_at: None,
-                        next_run_at: cadence_seconds.map(future_iso),
+                        next_run_at: cadence_seconds.map(future_epoch),
                         last_detail: detail,
                         last_error: None,
                         failure_count: 0,
@@ -173,7 +173,7 @@ impl RuntimeBackgroundJobs {
             name,
             RuntimeOperationStatus::Running,
             JobStatusTiming {
-                started_at: Some(now_iso()),
+                started_at: Some(vrcx_0_core::time::now_epoch()),
                 ..Default::default()
             },
             detail,
@@ -186,7 +186,7 @@ impl RuntimeBackgroundJobs {
             name,
             RuntimeOperationStatus::Idle,
             JobStatusTiming {
-                finished_at: Some(now_iso()),
+                finished_at: Some(vrcx_0_core::time::now_epoch()),
                 ..Default::default()
             },
             detail,
@@ -199,7 +199,7 @@ impl RuntimeBackgroundJobs {
             name,
             RuntimeOperationStatus::Error,
             JobStatusTiming {
-                finished_at: Some(now_iso()),
+                finished_at: Some(vrcx_0_core::time::now_epoch()),
                 ..Default::default()
             },
             detail,
@@ -212,7 +212,7 @@ impl RuntimeBackgroundJobs {
             name,
             RuntimeOperationStatus::Scheduled,
             JobStatusTiming {
-                next_run_at: Some(future_iso(delay_seconds)),
+                next_run_at: Some(future_epoch(delay_seconds)),
                 ..Default::default()
             },
             detail,
@@ -642,7 +642,7 @@ impl RuntimeBackgroundJobs {
                     RuntimeOperationStatus::Idle | RuntimeOperationStatus::Error
                 ) {
                     if job.next_run_at.is_none() {
-                        job.next_run_at = job.cadence_seconds.map(future_iso);
+                        job.next_run_at = job.cadence_seconds.map(future_epoch);
                     }
                 } else if status == RuntimeOperationStatus::Running {
                     job.next_run_at = None;

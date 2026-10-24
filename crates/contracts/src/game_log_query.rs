@@ -8,7 +8,7 @@ pub enum GameLogQuery {
     #[serde(rename_all = "camelCase")]
     RecentDatabase {
         #[serde(default)]
-        date_offset: String,
+        date_offset: Option<i64>,
         #[serde(default)]
         max_table_size: Option<i64>,
     },
@@ -123,16 +123,16 @@ pub enum GameLogQuery {
     #[serde(rename_all = "camelCase")]
     LocationBeforeOrAt {
         #[serde(default)]
-        created_at: String,
+        created_at: i64,
     },
     #[serde(rename_all = "camelCase")]
     JoinLeaveRange {
         #[serde(default)]
         location: String,
         #[serde(default)]
-        after_date: String,
+        after_date: i64,
         #[serde(default)]
-        before_date: String,
+        before_date: i64,
     },
     #[serde(rename_all = "camelCase")]
     PlayerDetailFromInstance {
@@ -148,14 +148,14 @@ pub enum GameLogQuery {
     #[serde(rename_all = "camelCase")]
     OnlineSessions {
         #[serde(default)]
-        from_date: String,
+        from_date: Option<i64>,
         #[serde(default)]
-        to_date: String,
+        to_date: Option<i64>,
     },
     #[serde(rename_all = "camelCase")]
     OnlineSessionsAfter {
         #[serde(default)]
-        after_created_at: String,
+        after_created_at: i64,
         #[serde(default)]
         inclusive: bool,
     },
@@ -164,7 +164,7 @@ pub enum GameLogQuery {
         #[serde(default)]
         user_id: String,
         #[serde(default)]
-        created_at: String,
+        created_at: i64,
     },
     #[serde(rename_all = "camelCase")]
     WorldNameByWorldId {
@@ -204,7 +204,7 @@ pub enum GameLogQueryOutput {
     TimeSpent(GameLogUserTimeSpentOutput),
     UserStats(GameLogUserStatsOutput),
     AllUserStats(Vec<GameLogAllUserStatsOutput>),
-    LastDate(String),
+    LastDate(i64),
     PlayersFromInstanceRows(Vec<GameLogInstancePlayerEventOutput>),
     LocationBeforeOrAt(Option<GameLogLocationBeforeOutput>),
     JoinLeaveRange(Vec<GameLogJoinLeaveRangeOutput>),
@@ -225,7 +225,7 @@ pub enum GameLogQueryOutput {
 pub struct GameLogRowOutput {
     pub row_id: i64,
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     pub r#type: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub display_name: Option<String>,
@@ -261,7 +261,7 @@ pub struct GameLogRowOutput {
 #[serde(rename_all = "camelCase")]
 pub struct GameLogLastVisitOutput {
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     pub world_id: String,
 }
 
@@ -283,14 +283,14 @@ pub struct GameLogWorldTimeSpentOutput {
 #[serde(rename_all = "camelCase")]
 pub struct GameLogLastGroupVisitOutput {
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct GameLogLastSeenOutput {
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     pub user_id: String,
 }
 
@@ -312,7 +312,7 @@ pub struct GameLogUserTimeSpentOutput {
 #[serde(rename_all = "camelCase")]
 pub struct GameLogPreviousDisplayNameOutput {
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     pub display_name: String,
 }
 
@@ -341,7 +341,7 @@ pub struct GameLogAllUserStatsOutput {
 pub struct GameLogInstancePlayerEventOutput {
     pub row_id: i64,
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     pub display_name: String,
     pub user_id: String,
     pub time: i64,
@@ -352,7 +352,7 @@ pub struct GameLogInstancePlayerEventOutput {
 #[serde(rename_all = "camelCase")]
 pub struct GameLogLocationBeforeOutput {
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     pub location: String,
     pub world_id: String,
     pub world_name: String,
@@ -363,7 +363,7 @@ pub struct GameLogLocationBeforeOutput {
 #[serde(rename_all = "camelCase")]
 pub struct GameLogJoinLeaveRangeOutput {
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     pub r#type: String,
     pub display_name: String,
     pub user_id: String,
@@ -371,7 +371,7 @@ pub struct GameLogJoinLeaveRangeOutput {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, specta::Type)]
 pub struct GameLogPlayerDetailOutput {
-    pub created_at: String,
+    pub created_at: i64,
     pub display_name: String,
     pub user_id: String,
     pub time: i64,
@@ -388,7 +388,7 @@ pub struct GameLogInstanceTimeOutput {
 #[serde(rename_all = "camelCase")]
 pub struct GameLogOnlineSessionOutput {
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     pub time: i64,
 }
 
@@ -396,7 +396,7 @@ pub struct GameLogOnlineSessionOutput {
 #[serde(rename_all = "camelCase")]
 pub struct GameLogInstanceJoinOutput {
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     pub location: String,
 }
 
@@ -444,7 +444,7 @@ mod tests {
     fn output_wire_shape_is_kind_plus_value_and_keeps_snake_case_created_at() {
         let output = GameLogQueryOutput::RowsByLocation(vec![GameLogRowOutput {
             row_id: 7,
-            created_at: "2026-05-14T08:00:00Z".into(),
+            created_at: 1778745600,
             r#type: "Location".into(),
             world_id: Some("wrld_a".into()),
             ..Default::default()
@@ -456,7 +456,7 @@ mod tests {
                 "kind": "rowsByLocation",
                 "value": [{
                     "rowId": 7,
-                    "created_at": "2026-05-14T08:00:00Z",
+                    "created_at": 1778745600,
                     "type": "Location",
                     "worldId": "wrld_a"
                 }]

@@ -84,7 +84,7 @@ describe('enrichPlayerListRows', () => {
                 {
                     userId: 'usr_friend',
                     displayName: 'Friend',
-                    joinedAt: '2026-05-01T00:00:00.000Z'
+                    joinedAt: 1777593600
                 }
             ],
             profilesByUserId: {

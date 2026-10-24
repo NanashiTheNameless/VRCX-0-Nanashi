@@ -34,6 +34,7 @@ import { useTodayDate } from '@/lib/useTodayDate';
 import type { ActivityCompanionOrder } from '@/platform/tauri/bindings';
 import configRepository from '@/repositories/configRepository';
 import { getResolvedThemeMode } from '@/services/themeService';
+import { displayDayKey as toLocalDayKey } from '@/shared/utils/displayTimeZone';
 import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useShellStore } from '@/state/shellStore';
@@ -445,9 +446,8 @@ export function ActivityPageImpl() {
                                 ) : null}
                                 <p className="text-muted-foreground break-inside-avoid px-1 pt-1 text-xs">
                                     {t('view.activity.caveat.recorded_since', {
-                                        date: view.coverage.firstSourceAt.slice(
-                                            0,
-                                            10
+                                        date: toLocalDayKey(
+                                            view.coverage.firstSourceAt
                                         )
                                     })}
                                 </p>

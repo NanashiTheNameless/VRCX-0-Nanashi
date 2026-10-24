@@ -306,9 +306,7 @@ fn migration_uses_the_profile_backup_operation_gate() {
     );
     assert!(runtime.cleanup_migrated_data().is_err());
     assert!(runtime.dismiss_cleanup().is_err());
-    assert!(runtime
-        .mark_cleanup_prompted("2026-07-18T00:00:00Z".into())
-        .is_err());
+    assert!(runtime.mark_cleanup_prompted(1784332800).is_err());
 
     let outcome = runtime.run_migration(target, false);
 
@@ -425,7 +423,7 @@ fn migration_rejects_restore_legacy_and_cleanup_conflicts() {
         &DataDirCleanupPending {
             old_dir: target.to_string_lossy().into_owned(),
             bytes: 0,
-            migrated_at: "now".into(),
+            migrated_at: 1000,
             last_prompted_at: None,
             dismissed: false,
             replaced_dir: None,
@@ -463,7 +461,7 @@ fn existing_migration_journal_is_rejected_without_overwrite() {
     let journal = PendingDataDirMigration::copying(
         "preserved-source".into(),
         "preserved-target".into(),
-        "now".into(),
+        1000,
         false,
     );
     write_pending_data_dir_migration(&control, &journal).unwrap();

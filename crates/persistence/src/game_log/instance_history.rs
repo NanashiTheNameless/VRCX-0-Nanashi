@@ -9,8 +9,8 @@ pub fn previous_instance_event_rows_query(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
     user_id: &str,
-    date_from: &str,
-    date_to: &str,
+    date_from: Option<i64>,
+    date_to: Option<i64>,
     limit: usize,
 ) -> Result<Vec<PreviousInstanceEventRow>, Error> {
     ensure_game_log_tables(db)?;
@@ -25,13 +25,11 @@ pub fn previous_instance_event_rows_query(
         .set("owner_id", owner_id)
         .set("user_id", user_id)
         .set("limit", i64::try_from(limit).unwrap_or(i64::MAX));
-    let date_from = normalize_text(date_from);
-    let date_to = normalize_text(date_to);
-    if !date_from.is_empty() {
+    if let Some(date_from) = date_from {
         clauses.push("jl.created_at >= @date_from");
         params = params.set("date_from", date_from);
     }
-    if !date_to.is_empty() {
+    if let Some(date_to) = date_to {
         clauses.push("jl.created_at <= @date_to");
         params = params.set("date_to", date_to);
     }
@@ -40,7 +38,7 @@ pub fn previous_instance_event_rows_query(
         &format!(
             "WITH scoped_events AS (
                  SELECT jl.created_at,
-                        COALESCE(CAST(strftime('%s', jl.created_at) AS INTEGER) * 1000, 0) AS created_at_ts,
+                        COALESCE(jl.created_at * 1000, 0) AS created_at_ts,
                         jl.location,
                         jl.time,
                         gl.world_name,
@@ -116,7 +114,7 @@ pub fn previous_instance_event_rows_query(
     Ok(rows
         .into_iter()
         .map(|row| PreviousInstanceEventRow {
-            created_at: row_string(&row, 0),
+            created_at: row_i64(&row, 0),
             created_at_ts: row_i64(&row, 1),
             location: row_string(&row, 2),
             time: row_i64(&row, 3),

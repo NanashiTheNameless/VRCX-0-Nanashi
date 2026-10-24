@@ -1,5 +1,5 @@
 export type FeedCursor = {
-    createdAt: string;
+    createdAt: number;
     sourceRank: number;
     rowId: number;
 };

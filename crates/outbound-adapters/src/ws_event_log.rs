@@ -63,10 +63,10 @@ pub(crate) fn append_connect_marker(
 /// `raw` is stored as a JSON string (not embedded as parsed JSON) so the capture is
 /// lossless even for frames that fail to parse, letting a replay tool feed each line
 /// straight back through the realtime parser with its original timestamp.
-pub(crate) fn append(path: &Path, received_at: &str, raw: &str) {
+pub(crate) fn append(path: &Path, received_at: i64, raw: &str) {
     let line = serde_json::json!({
         "kind": "message",
-        "receivedAt": received_at,
+        "receivedAt": vrcx_0_core::time::epoch_to_iso(received_at),
         "raw": raw,
     });
     write_or_warn(path, &line);

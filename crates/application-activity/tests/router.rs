@@ -338,11 +338,8 @@ fn group_instance_favorites_use_group_membership_not_friend_membership() {
         ["grp_saved"].as_slice(),
     )]));
     let group_instance = |source_id: &str, group_id: &str| {
-        let mut event = ActivityEvent::new(
-            ActivityKind::GroupInstanceOpened,
-            source_id,
-            "2026-05-31T00:00:00.000Z",
-        );
+        let mut event =
+            ActivityEvent::new(ActivityKind::GroupInstanceOpened, source_id, 1780185600);
         event.subject = ActivitySubject::Group(group_id.into());
         event
     };
@@ -381,7 +378,7 @@ fn saved_group_instance_scan_seeds_then_delivers_the_new_parsed_location() {
     runtime.set_sink(sink.clone());
     runtime.arm_delivery();
     let scope_key = "usr_owner\u{1f}https://api.example.test\u{1f}7";
-    let fetched_at = chrono::Utc::now().to_rfc3339();
+    let fetched_at = chrono::Utc::now().timestamp();
     let existing: vrcx_0_core::json::RawJson = json!({
         "location": "wrld_test:existing~group(grp_saved)~groupAccessType(plus)",
         "group": { "id": "grp_saved", "name": "Test Group" },
@@ -393,7 +390,7 @@ fn saved_group_instance_scan_seeds_then_delivers_the_new_parsed_location() {
         .scan(
             scope_key,
             "grp_saved",
-            &fetched_at,
+            fetched_at,
             std::slice::from_ref(&existing)
         )
         .is_none());
@@ -402,7 +399,7 @@ fn saved_group_instance_scan_seeds_then_delivers_the_new_parsed_location() {
         .scan(
             scope_key,
             "grp_saved",
-            &fetched_at,
+            fetched_at,
             &[
                 existing,
                 json!({
@@ -782,11 +779,7 @@ impl ActivitySink for RecordingSink {
 }
 
 fn event(kind: ActivityKind, user_id: &str) -> ActivityEvent {
-    let mut event = ActivityEvent::new(
-        kind,
-        format!("{}:{user_id}", kind.key()),
-        "2026-05-31T00:00:00.000Z",
-    );
+    let mut event = ActivityEvent::new(kind, format!("{}:{user_id}", kind.key()), 1780185600);
     event.actor = ActivityActor::new(user_id, user_id);
     event.subject = ActivitySubject::User(user_id.to_string());
     event
@@ -794,7 +787,7 @@ fn event(kind: ActivityKind, user_id: &str) -> ActivityEvent {
 
 fn recent_event(kind: ActivityKind, user_id: &str) -> ActivityEvent {
     ActivityEvent {
-        created_at: chrono::Utc::now().to_rfc3339(),
+        created_at: chrono::Utc::now().timestamp(),
         ..event(kind, user_id)
     }
 }

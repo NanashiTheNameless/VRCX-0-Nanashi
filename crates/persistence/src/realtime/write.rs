@@ -2,7 +2,6 @@ use std::collections::HashSet;
 
 use serde_json::Value;
 
-use crate::activity::activity_iso_from_ms;
 use crate::common::{row_i64, row_string, ParamsBuilder};
 use crate::database::{DatabaseService, DatabaseWriteTransaction};
 use crate::game_log::{ensure_game_log_tables, GameLogLocationEntry, GameLogLocationTimeUpdate};
@@ -16,9 +15,10 @@ use vrcx_0_core::friend_log::{plan_friend_log_upsert, FriendLogCurrent, FriendLo
 use super::schema::{ensure_realtime_tables, normalize_user_table_prefix};
 use super::types::*;
 use vrcx_0_core::text::first_non_empty;
+use vrcx_0_core::time::epoch_from_json;
 
 struct FriendLogHistoryEntry<'a> {
-    created_at: &'a str,
+    created_at: i64,
     entry_type: &'a str,
     user_id: &'a str,
     display_name: &'a str,
@@ -118,7 +118,7 @@ fn validate_friend_log_backed_feed_entries(batch: &RealtimePersistenceBatch) -> 
                     && has_matching_friend_log_upsert(
                         batch,
                         user_id,
-                        created_at,
+                        *created_at,
                         display_name,
                         *friend_number,
                         Some(trust_level),
@@ -136,7 +136,7 @@ fn validate_friend_log_backed_feed_entries(batch: &RealtimePersistenceBatch) -> 
                     && has_matching_friend_log_upsert(
                         batch,
                         user_id,
-                        created_at,
+                        *created_at,
                         display_name,
                         *friend_number,
                         None,
@@ -157,17 +157,17 @@ fn validate_friend_log_backed_feed_entries(batch: &RealtimePersistenceBatch) -> 
 fn has_matching_friend_log_upsert(
     batch: &RealtimePersistenceBatch,
     user_id: &str,
-    created_at: &str,
+    created_at: i64,
     display_name: &str,
     friend_number: i64,
     trust_level: Option<&str>,
 ) -> bool {
     let user_id = normalize_user_id(user_id);
-    !created_at.is_empty()
+    created_at != 0
         && !user_id.is_empty()
         && batch.friend_log_upserts.iter().any(|upsert| {
             normalize_user_id(&upsert.target_user_id) == user_id
-                && upsert.created_at.trim() == created_at
+                && upsert.created_at == created_at
                 && upsert.display_name.trim() == display_name.trim()
                 && trust_level
                     .is_none_or(|trust_level| upsert.trust_level.trim() == trust_level.trim())
@@ -237,7 +237,7 @@ fn upsert_friend_log_current(
             tx,
             user_prefix,
             &FriendLogHistoryEntry {
-                created_at: &entry.created_at,
+                created_at: entry.created_at,
                 entry_type: history.entry_type,
                 user_id: &plan.user_id,
                 display_name: &plan.display_name,
@@ -282,7 +282,7 @@ fn delete_friend_log_current(
             tx,
             user_prefix,
             &FriendLogHistoryEntry {
-                created_at: &entry.created_at,
+                created_at: entry.created_at,
                 entry_type: "Unfriend",
                 user_id: &existing.user_id,
                 display_name: &existing.display_name,
@@ -388,7 +388,7 @@ fn apply_backfilled_profile_bio(
                 .build(),
         )?
         .first()
-        .map(|row| (row_string(row, 0), row_string(row, 1)));
+        .map(|row| (row_string(row, 0), row_i64(row, 1)));
     if last_seen
         .as_ref()
         .is_some_and(|(_, checked_at)| *checked_at >= profile_bio.observed_at)
@@ -403,13 +403,13 @@ fn apply_backfilled_profile_bio(
         &ParamsBuilder::new()
             .set("user_id", observation.user_id.clone())
             .set("bio", observation.bio.clone())
-            .set("checked_at", profile_bio.observed_at.clone())
+            .set("checked_at", profile_bio.observed_at)
             .build(),
     )?;
     Ok(last_seen
         .filter(|(previous_bio, _)| *previous_bio != observation.bio)
         .map(|(previous_bio, _)| FeedLiveEntry::Bio {
-            created_at: profile_bio.observed_at.clone(),
+            created_at: profile_bio.observed_at,
             user_id: observation.user_id.clone(),
             display_name: observation.display_name.clone(),
             bio: observation.bio.clone(),
@@ -463,7 +463,7 @@ fn backfilled_entry_table_if_new(
         .build();
     let nearby = tx.execute(
         &format!(
-            "SELECT id FROM {user_prefix}_{table} WHERE user_id = @user_id AND {same_change}              AND ABS(julianday(created_at) - julianday(@created_at)) * 86400 <= @window"
+            "SELECT id FROM {user_prefix}_{table} WHERE user_id = @user_id AND {same_change} AND created_at BETWEEN @created_at - @window AND @created_at + @window"
         ),
         &params,
     )?;
@@ -492,7 +492,7 @@ fn insert_feed_entry(
         } => tx.execute_non_query(
             &format!("INSERT OR IGNORE INTO {user_prefix}_feed_gps (created_at, user_id, display_name, location, world_name, previous_location, time, group_name) VALUES (@created_at, @user_id, @display_name, @location, @world_name, @previous_location, @time, @group_name)"),
             &ParamsBuilder::new()
-                .set("created_at", created_at.clone())
+                .set("created_at", *created_at)
                 .set("user_id", user_id.clone())
                 .set("display_name", display_name.clone())
                 .set("location", location.clone())
@@ -524,7 +524,7 @@ fn insert_feed_entry(
         } => tx.execute_non_query(
             &format!("INSERT OR IGNORE INTO {user_prefix}_feed_online_offline (created_at, user_id, display_name, type, location, world_name, time, group_name) VALUES (@created_at, @user_id, @display_name, @type, @location, @world_name, @time, @group_name)"),
             &ParamsBuilder::new()
-                .set("created_at", created_at.clone())
+                .set("created_at", *created_at)
                 .set("user_id", user_id.clone())
                 .set("display_name", display_name.clone())
                 .set("type", entry.entry_type())
@@ -546,7 +546,7 @@ fn insert_feed_entry(
         } => tx.execute_non_query(
             &format!("INSERT OR IGNORE INTO {user_prefix}_feed_status (created_at, user_id, display_name, status, status_description, previous_status, previous_status_description) VALUES (@created_at, @user_id, @display_name, @status, @status_description, @previous_status, @previous_status_description)"),
             &ParamsBuilder::new()
-                .set("created_at", created_at.clone())
+                .set("created_at", *created_at)
                 .set("user_id", user_id.clone())
                 .set("display_name", display_name.clone())
                 .set("status", status.clone())
@@ -565,7 +565,7 @@ fn insert_feed_entry(
         } => tx.execute_non_query(
             &format!("INSERT OR IGNORE INTO {user_prefix}_feed_bio (created_at, user_id, display_name, bio, previous_bio) VALUES (@created_at, @user_id, @display_name, @bio, @previous_bio)"),
             &ParamsBuilder::new()
-                .set("created_at", created_at.clone())
+                .set("created_at", *created_at)
                 .set("user_id", user_id.clone())
                 .set("display_name", display_name.clone())
                 .set("bio", bio.clone())
@@ -584,7 +584,7 @@ fn insert_feed_entry(
         } => tx.execute_non_query(
             &format!("INSERT OR IGNORE INTO {user_prefix}_feed_avatar (created_at, user_id, display_name, owner_id, avatar_name, current_avatar_image_url, previous_current_avatar_image_url) VALUES (@created_at, @user_id, @display_name, @owner_id, @avatar_name, @current_avatar_image_url, @previous_current_avatar_image_url)"),
             &ParamsBuilder::new()
-                .set("created_at", created_at.clone())
+                .set("created_at", *created_at)
                 .set("user_id", user_id.clone())
                 .set("display_name", display_name.clone())
                 .set("owner_id", owner_id.clone())
@@ -624,7 +624,7 @@ pub(crate) fn drop_synced_copies_near(
     user_prefix: &str,
     stream: &str,
     subject: &str,
-    time: &str,
+    time: i64,
 ) -> Result<(), Error> {
     crate::remote_sync::late_copies::drop_synced_copies(
         tx,
@@ -641,12 +641,10 @@ fn upsert_notification_v1(
     notification: &Value,
 ) -> Result<u64, Error> {
     let id = entry_string(notification, "id");
-    let created_at_snake = entry_string(notification, "created_at");
-    let created_at_camel = entry_string(notification, "createdAt");
     let created_at =
-        first_non_empty([created_at_snake.as_str(), created_at_camel.as_str()]).to_string();
+        entry_epoch(notification, "created_at").or_else(|| entry_epoch(notification, "createdAt"));
     let notification_type = entry_string(notification, "type");
-    if id.is_empty() || created_at.is_empty() || notification_type.is_empty() {
+    if id.is_empty() || created_at.is_none() || notification_type.is_empty() {
         return Err(Error::InvalidData(
             "Notification v1 upsert requires id, createdAt/created_at, and type.".into(),
         ));
@@ -690,9 +688,9 @@ fn upsert_notification_v2(
     notification: &Value,
 ) -> Result<u64, Error> {
     let id = entry_string(notification, "id");
-    let created_at = entry_string(notification, "createdAt");
+    let created_at = entry_epoch(notification, "createdAt");
     let notification_type = entry_string(notification, "type");
-    if id.is_empty() || created_at.is_empty() || notification_type.is_empty() {
+    if id.is_empty() || created_at.is_none() || notification_type.is_empty() {
         return Err(Error::InvalidData(
             "Notification v2 upsert requires id, createdAt, and type.".into(),
         ));
@@ -702,8 +700,8 @@ fn upsert_notification_v2(
         &ParamsBuilder::new()
             .set("id", id)
             .set("created_at", created_at)
-            .set("updated_at", entry_string(notification, "updatedAt"))
-            .set("expires_at", entry_string(notification, "expiresAt"))
+            .set("updated_at", entry_epoch(notification, "updatedAt"))
+            .set("expires_at", entry_epoch(notification, "expiresAt"))
             .set("type", notification_type)
             .set("link", entry_string(notification, "link"))
             .set("link_text", entry_string(notification, "linkText"))
@@ -734,7 +732,7 @@ fn expire_notification(
         &format!("UPDATE {user_prefix}_notifications_v2 SET expires_at = @expires_at, seen = 1 WHERE id = @id"),
         &ParamsBuilder::new()
             .set("id", id.clone())
-            .set("expires_at", entry.expired_at.clone())
+            .set("expires_at", entry.expired_at)
             .build(),
     )?);
     affected = affected.saturating_add(affected_count(tx.execute_non_query(
@@ -763,6 +761,13 @@ fn update_notification_v2(
         ("createdAt", "created_at"),
         ("updatedAt", "updated_at"),
         ("expiresAt", "expires_at"),
+    ] {
+        if updates.contains_key(json_key) {
+            assignments.push(format!("{column} = @{column}"));
+            params = params.set(column, entry_epoch(&entry.updates, json_key));
+        }
+    }
+    for (json_key, column) in [
         ("type", "type"),
         ("link", "link"),
         ("linkText", "link_text"),
@@ -807,10 +812,10 @@ fn update_notification_v2(
         notification.insert("id".into(), Value::String(id));
         notification
             .entry("createdAt")
-            .or_insert_with(|| Value::String(entry.received_at.clone()));
+            .or_insert_with(|| Value::from(entry.received_at));
         notification
             .entry("created_at")
-            .or_insert_with(|| Value::String(entry.received_at.clone()));
+            .or_insert_with(|| Value::from(entry.received_at));
         return upsert_notification_v2(tx, user_prefix, &Value::Object(notification));
     }
     Ok(affected_count(updated))
@@ -856,7 +861,7 @@ fn observe_self_profile_field(
              VALUES (@created_at, @field, @value, @previous_value)"
         ),
         &ParamsBuilder::new()
-            .set("created_at", observation.observed_at.clone())
+            .set("created_at", observation.observed_at)
             .set("field", field)
             .set("value", observation.value.clone())
             .set("previous_value", previous_value.unwrap_or_default())
@@ -867,7 +872,7 @@ fn observe_self_profile_field(
         user_prefix,
         "self_profile_log",
         field,
-        &observation.observed_at,
+        observation.observed_at,
     )?;
     Ok(affected_count(inserted))
 }
@@ -889,7 +894,7 @@ fn upsert_avatar_history(
         ),
         &ParamsBuilder::new()
             .set("avatar_id", avatar_id)
-            .set("created_at", entry.created_at.clone())
+            .set("created_at", entry.created_at)
             .build(),
     )
     .map(affected_count)
@@ -901,7 +906,7 @@ fn upsert_avatar_time_spent(
     entry: &AvatarTimeSpentUpsert,
 ) -> Result<u64, Error> {
     let avatar_id = normalize_user_id(&entry.avatar_id);
-    if avatar_id.is_empty() || entry.ended_at_ms <= entry.started_at_ms {
+    if avatar_id.is_empty() || entry.ended_at <= entry.started_at {
         return Ok(0);
     }
     if entry.time_spent > 0 {
@@ -913,16 +918,16 @@ fn upsert_avatar_time_spent(
             ),
             &ParamsBuilder::new()
                 .set("avatar_id", avatar_id.clone())
-                .set("created_at", entry.created_at.clone())
+                .set("created_at", entry.created_at)
                 .set("time_spent", entry.time_spent)
                 .build(),
         )?;
     }
     let params = ParamsBuilder::new()
         .set("avatar_id", avatar_id)
-        .set("started_at", activity_iso_from_ms(entry.started_at_ms))
-        .set("ended_at", activity_iso_from_ms(entry.ended_at_ms))
-        .set("time", entry.ended_at_ms - entry.started_at_ms)
+        .set("started_at", entry.started_at)
+        .set("ended_at", entry.ended_at)
+        .set("time", (entry.ended_at - entry.started_at) * 1000)
         .build();
     let updated = tx.execute_non_query(
         &format!(
@@ -955,7 +960,7 @@ fn insert_game_log_location(
     tx.execute_non_query(
         "INSERT OR IGNORE INTO gamelog_location (created_at, location, world_id, world_name, time, group_name, owner_id) VALUES (@created_at, @location, @world_id, @world_name, @time, @group_name, @owner_id)",
         &ParamsBuilder::new()
-            .set("created_at", entry.created_at.clone())
+            .set("created_at", entry.created_at)
             .set("location", entry.location.clone())
             .set("world_id", entry.world_id.clone())
             .set("world_name", entry.world_name.clone())
@@ -972,13 +977,13 @@ fn update_game_log_location_time(
     owner_id: OwnerRowId,
     update: &GameLogLocationTimeUpdate,
 ) -> Result<u64, Error> {
-    if update.created_at.trim().is_empty() || update.time < 0 {
+    if update.created_at == 0 || update.time < 0 {
         return Ok(0);
     }
     tx.execute_non_query(
         "UPDATE gamelog_location SET time = @time WHERE created_at = @created_at AND owner_id IN (0, @owner_id)",
         &ParamsBuilder::new()
-            .set("created_at", update.created_at.clone())
+            .set("created_at", update.created_at)
             .set("time", update.time)
             .set("owner_id", owner_id)
             .build(),
@@ -1048,6 +1053,11 @@ fn entry_string(entry: &Value, key: &str) -> String {
                 .map(ToString::to_string)
                 .unwrap_or_default()
         })
+}
+
+/// A date from VRChat's JSON (ISO text) or from this app (epoch seconds).
+fn entry_epoch(entry: &Value, key: &str) -> Option<i64> {
+    entry.get(key).and_then(epoch_from_json)
 }
 
 fn value_to_i64(value: &Value) -> Option<i64> {

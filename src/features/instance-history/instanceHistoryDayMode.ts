@@ -41,7 +41,10 @@ export function buildAvailableInstanceHistoryDays(
     return Array.from(
         new Set(
             rows
-                .map((row) => toLocalDayKey(previousInstanceLeaveMs(row)))
+                .map((row) => {
+                    const at = previousInstanceLeaveMs(row);
+                    return at ? toLocalDayKey(new Date(at)) : '';
+                })
                 .filter(Boolean)
         )
     ).sort((left, right) => right.localeCompare(left));

@@ -85,8 +85,8 @@ pub struct FriendProfileBulkLoadState {
     processed: u32,
     loaded: u32,
     failed: u32,
-    started_at: String,
-    finished_at: Option<String>,
+    started_at: i64,
+    finished_at: Option<i64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -137,8 +137,8 @@ impl FriendProfileBulkLoadState {
             processed: self.processed,
             loaded: self.loaded,
             failed: self.failed,
-            started_at: self.started_at.clone(),
-            finished_at: self.finished_at.clone(),
+            started_at: self.started_at,
+            finished_at: self.finished_at,
         }
     }
 }
@@ -218,14 +218,14 @@ impl RealtimeHostRuntime {
                 targets.len(),
             );
             let run_id = bulk.run_id.saturating_add(1);
-            let now = chrono::Utc::now().to_rfc3339();
+            let now = chrono::Utc::now().timestamp();
             bulk.run_id = run_id;
             bulk.owner = Some(owner.clone());
             bulk.total = initial_progress.total;
             bulk.processed = initial_progress.processed;
             bulk.loaded = 0;
             bulk.failed = 0;
-            bulk.started_at = now.clone();
+            bulk.started_at = now;
             bulk.finished_at = None;
             let spawn_worker = !targets.is_empty();
             bulk.status = if spawn_worker {
@@ -309,7 +309,7 @@ impl RealtimeHostRuntime {
                 return;
             }
             bulk.status = FriendProfileBulkLoadStatus::Cancelled;
-            bulk.finished_at = Some(chrono::Utc::now().to_rfc3339());
+            bulk.finished_at = Some(chrono::Utc::now().timestamp());
             bulk.run_id
         };
         self.friend_profile_bulk_cancel_tx
@@ -607,7 +607,7 @@ impl RealtimeHostRuntime {
                 }
                 _ => return,
             };
-            bulk.finished_at = Some(chrono::Utc::now().to_rfc3339());
+            bulk.finished_at = Some(chrono::Utc::now().timestamp());
         }
         self.emit_friend_profile_bulk_load_status();
     }
@@ -632,7 +632,7 @@ impl RealtimeHostRuntime {
         bulk.status = FriendProfileBulkLoadStatus::Running;
         bulk.owner = Some(owner);
         bulk.total = total;
-        bulk.started_at = chrono::Utc::now().to_rfc3339();
+        bulk.started_at = chrono::Utc::now().timestamp();
     }
 
     pub(super) fn test_friend_profile_bulk_load_record_progress(

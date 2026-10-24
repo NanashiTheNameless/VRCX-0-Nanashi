@@ -6,7 +6,6 @@ use serde::Serialize;
 const MAX_COMMAND_OBSERVATIONS: usize = 100;
 
 use crate::RuntimeOperationStatus;
-use vrcx_0_core::time::now_iso;
 
 #[derive(Clone, Debug, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -14,7 +13,7 @@ pub struct RuntimeCommandObservation {
     pub command: String,
     pub status: RuntimeOperationStatus,
     pub detail: String,
-    pub observed_at: String,
+    pub observed_at: i64,
 }
 
 #[derive(Clone, Default)]
@@ -39,7 +38,7 @@ impl RuntimeDiagnostics {
                     command: command.into(),
                     status,
                     detail: detail.into(),
-                    observed_at: now_iso(),
+                    observed_at: vrcx_0_core::time::now_epoch(),
                 });
                 while commands.len() > MAX_COMMAND_OBSERVATIONS {
                     commands.pop_front();

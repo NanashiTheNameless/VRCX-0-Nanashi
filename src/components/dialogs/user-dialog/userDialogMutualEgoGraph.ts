@@ -44,7 +44,7 @@ export function buildUserMutualEgoGraph({
             {
                 id: center.id,
                 label: center.label,
-                lastFetchedAt: '',
+                lastFetchedAt: null,
                 optedOut: false,
                 degree: friends.length,
                 mutualCount: friends.length

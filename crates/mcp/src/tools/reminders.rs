@@ -44,7 +44,12 @@ impl VrcxMcpServer {
         }
         let trigger = match input.trigger {
             ReminderTriggerKind::Time => McpReminderTrigger::Time {
-                at: reminder_time(input.at.as_deref(), input.in_minutes, Utc::now())?,
+                at: vrcx_0_core::time::parse_epoch_seconds(&reminder_time(
+                    input.at.as_deref(),
+                    input.in_minutes,
+                    Utc::now(),
+                )?)
+                .ok_or("invalid reminder time")?,
                 repeat_minutes: repeat_minutes(input.repeat_minutes)?,
             },
             kind => {

@@ -10,9 +10,9 @@ const EMPTY_NAMES: Readonly<Record<string, string>> = Object.freeze({});
  * them instead of falling back to raw user ids.
  */
 export function buildFriendNameHistory(
-    rows: readonly { userId: string; displayName: string; created_at: string }[]
+    rows: readonly { userId: string; displayName: string; created_at: number }[]
 ): Record<string, string> {
-    const latest = new Map<string, { name: string; at: string }>();
+    const latest = new Map<string, { name: string; at: number }>();
     for (const row of rows) {
         const userId = row.userId.trim();
         const name = row.displayName.trim();

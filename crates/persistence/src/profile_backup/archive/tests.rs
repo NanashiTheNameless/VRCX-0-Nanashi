@@ -36,7 +36,7 @@ fn profile_backup_manifest_roundtrips_and_archive_orders_database_first() {
         ProfileBackupManifestMetadata {
             app_version: "1.2.3".into(),
             db_version: 18,
-            created_at: "2026-07-14T07:30:00Z".into(),
+            created_at: 1784014200,
             platform: "windows".into(),
             kind: ProfileBackupKind::Manual,
         },
@@ -161,7 +161,7 @@ fn profile_backup_rejects_oversized_snapshot_before_creating_archive() {
             ProfileBackupManifestMetadata {
                 app_version: "1.2.3".into(),
                 db_version: 18,
-                created_at: "2026-07-14T07:30:00Z".into(),
+                created_at: 1784014200,
                 platform: "windows".into(),
                 kind: ProfileBackupKind::Manual,
             },
@@ -187,7 +187,7 @@ fn profile_backup_archive_is_private_on_unix() {
         ProfileBackupManifestMetadata {
             app_version: "1.2.3".into(),
             db_version: 18,
-            created_at: "2026-07-14T07:30:00Z".into(),
+            created_at: 1784014200,
             platform: "linux".into(),
             kind: ProfileBackupKind::Manual,
         },
@@ -197,5 +197,20 @@ fn profile_backup_archive_is_private_on_unix() {
     assert_eq!(
         fs::metadata(archive).unwrap().permissions().mode() & 0o777,
         0o600
+    );
+}
+
+#[test]
+fn backup_manifests_from_before_the_epoch_migration_still_load() {
+    let old = serde_json::json!({
+        "manifestVersion": 1, "appVersion": "1.2.3", "dbVersion": 18,
+        "createdAt": "2026-07-14T07:30:00.250Z", "platform": "windows",
+        "kind": "manual", "contents": []
+    });
+    let manifest: ProfileBackupManifest = serde_json::from_value(old).unwrap();
+    assert_eq!(manifest.created_at, 1784014200);
+    assert_eq!(
+        serde_json::to_value(manifest).unwrap()["createdAt"],
+        1784014200
     );
 }

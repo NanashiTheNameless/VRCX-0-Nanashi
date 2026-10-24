@@ -35,8 +35,8 @@ pub fn generic_webhook_payload(
         "locationId": &entry.content.location,
         "worldId": &entry.content.world_id,
         "worldName": &entry.content.world_name,
-        "timestamp": &entry.created_at,
-        "localTime": webhook_local_time_string(&entry.created_at),
+        "timestamp": vrcx_0_core::time::epoch_to_iso(entry.created_at),
+        "localTime": webhook_local_time_string(entry.created_at),
     });
     filter_generic_webhook_payload(payload, fields)
 }

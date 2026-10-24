@@ -34,8 +34,8 @@ export type CommunityThemeInstallMetadata = {
     version: string;
     sourceUrl: string;
     sha256: string;
-    installedAt: string;
-    updatedAt: string;
+    installedAt?: number;
+    updatedAt: number;
     darkMode: boolean;
     accentMode: boolean;
 };

@@ -18,7 +18,7 @@ describe('friendLogHistoryRepository', () => {
         commandMocks.appFriendLogHistoryQuery.mockResolvedValueOnce([
             {
                 rowId: 1,
-                createdAt: '2026-08-10T10:00:00.000Z',
+                createdAt: 1786356000,
                 type: 'DisplayName',
                 userId: 'usr_rename',
                 displayName: 'New Name',
@@ -29,7 +29,7 @@ describe('friendLogHistoryRepository', () => {
             },
             {
                 rowId: 2,
-                createdAt: '2026-08-11T10:00:00.000Z',
+                createdAt: 1786442400,
                 type: 'TrustLevel',
                 userId: 'usr_trust',
                 displayName: 'Trusted Friend',
@@ -40,7 +40,7 @@ describe('friendLogHistoryRepository', () => {
             },
             {
                 rowId: 3,
-                createdAt: '2026-08-12T10:00:00.000Z',
+                createdAt: 1786528800,
                 type: 'Friend',
                 userId: '   ',
                 displayName: 'Invalid Row',
@@ -61,15 +61,15 @@ describe('friendLogHistoryRepository', () => {
             targetUserId: 'target_user',
             types: ['Friend', 'DisplayName', 'TrustLevel'],
             excludedTypes: [],
-            dateFrom: '',
-            dateTo: '',
+            dateFrom: null,
+            dateTo: null,
             cursor: null,
             limit: null
         });
         expect(rows).toEqual([
             {
                 rowId: 1,
-                created_at: '2026-08-10T10:00:00.000Z',
+                created_at: 1786356000,
                 type: 'DisplayName',
                 userId: 'usr_rename',
                 displayName: 'New Name',
@@ -78,7 +78,7 @@ describe('friendLogHistoryRepository', () => {
             },
             {
                 rowId: 2,
-                created_at: '2026-08-11T10:00:00.000Z',
+                created_at: 1786442400,
                 type: 'TrustLevel',
                 userId: 'usr_trust',
                 displayName: 'Trusted Friend',
@@ -96,13 +96,13 @@ describe('friendLogHistoryRepository', () => {
         });
         expect(commandMocks.appFriendLogHistoryQuery).toHaveBeenLastCalledWith(
             expect.objectContaining({
-                dateFrom: '2026-09-01T00:00:00Z',
-                dateTo: '2026-09-02T23:59:59.999Z',
+                dateFrom: 1788220800,
+                dateTo: 1788393599,
                 limit: null,
                 cursor: null
             })
         );
-        const cursor = { createdAt: '2026-09-01T00:00:00Z', rowId: 42 };
+        const cursor = { createdAt: 1788220800, rowId: 42 };
         await getFriendLogHistory('usr_owner', {
             cursor,
             limit: 80,

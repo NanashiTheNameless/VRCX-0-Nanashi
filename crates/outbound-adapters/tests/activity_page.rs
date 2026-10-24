@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use chrono::{DateTime, Duration, SecondsFormat};
+use chrono::DateTime;
 use vrcx_0_application_activity::activity_page::{
     ActivityCompanionOrder, ActivityPageBuildInput, ActivitySeriesBucket,
 };
@@ -74,7 +74,7 @@ fn named_location(
     world_name: &str,
 ) -> GameLogLocationEntry {
     GameLogLocationEntry {
-        created_at: created_at.to_string(),
+        created_at: ms(created_at).div_euclid(1000),
         location: location.to_string(),
         world_id: world_id.to_string(),
         world_name: world_name.to_string(),
@@ -88,9 +88,7 @@ fn write_locations(db: &DatabaseService, locations: Vec<GameLogLocationEntry>) {
         .iter()
         .filter(|location| location.time > 0)
         .map(|location| GameLogJoinLeaveEntry {
-            created_at: (DateTime::parse_from_rfc3339(&location.created_at).unwrap()
-                + Duration::milliseconds(location.time))
-            .to_rfc3339_opts(SecondsFormat::Millis, true),
+            created_at: location.created_at + location.time.div_euclid(1000),
             event_type: "OnPlayerLeft".to_string(),
             display_name: USER_ID.to_string(),
             location: location.location.clone(),
@@ -113,7 +111,7 @@ fn write_locations(db: &DatabaseService, locations: Vec<GameLogLocationEntry>) {
 
 fn left(created_at: &str, user_id: &str, location: &str, time: i64) -> GameLogJoinLeaveEntry {
     GameLogJoinLeaveEntry {
-        created_at: created_at.to_string(),
+        created_at: ms(created_at).div_euclid(1000),
         event_type: "OnPlayerLeft".to_string(),
         display_name: user_id.to_string(),
         location: location.to_string(),
@@ -157,7 +155,7 @@ fn build(range_days: i64, now: &str) -> ActivityPageBuildInput {
         owner_user_id: OwnerId::new(USER_ID),
         range_days,
         utc_offset_minutes: 0,
-        now_ms: ms(now),
+        now: ms(now).div_euclid(1000),
         companion_order: ActivityCompanionOrder::Days,
         force_refresh: false,
     }

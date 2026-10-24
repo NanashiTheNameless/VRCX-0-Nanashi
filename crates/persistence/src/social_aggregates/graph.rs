@@ -41,25 +41,23 @@ pub fn get_social_graph(
         .collect::<BTreeMap<_, _>>();
     let mut fetched_friends = 0usize;
     let mut opted_out_friends = 0usize;
-    let mut newest_fetched_at: Option<String> = None;
-    let mut oldest_fetched_at: Option<String> = None;
+    let mut newest_fetched_at: Option<i64> = None;
+    let mut oldest_fetched_at: Option<i64> = None;
     for meta in &snapshot.meta {
         if meta.opted_out {
             opted_out_friends += 1;
             continue;
         }
-        if meta.last_fetched_at.trim().is_empty() {
+        if meta.last_fetched_at == 0 {
             continue;
         }
         fetched_friends += 1;
-        newest_fetched_at = Some(match newest_fetched_at {
-            Some(current) => current.max(meta.last_fetched_at.clone()),
-            None => meta.last_fetched_at.clone(),
-        });
-        oldest_fetched_at = Some(match oldest_fetched_at {
-            Some(current) => current.min(meta.last_fetched_at.clone()),
-            None => meta.last_fetched_at.clone(),
-        });
+        newest_fetched_at = Some(newest_fetched_at.map_or(meta.last_fetched_at, |current| {
+            current.max(meta.last_fetched_at)
+        }));
+        oldest_fetched_at = Some(oldest_fetched_at.map_or(meta.last_fetched_at, |current| {
+            current.min(meta.last_fetched_at)
+        }));
     }
     let focus = input
         .user_id
@@ -152,8 +150,8 @@ pub fn get_social_graph(
         total_edges,
         fetched_friends,
         opted_out_friends,
-        newest_fetched_at,
-        oldest_fetched_at,
+        newest_fetched_at: newest_fetched_at.and_then(iso_millis_from_epoch),
+        oldest_fetched_at: oldest_fetched_at.and_then(iso_millis_from_epoch),
         caveats: social_graph_caveats(),
     })
 }
@@ -294,4 +292,8 @@ fn friend_circles_summary(
     format!(
         "Your {friends_analyzed} friends form {circle_count} mutual circle(s); {top}. {isolated_friend_count} share no fetched mutual link."
     )
+}
+
+fn iso_millis_from_epoch(seconds: i64) -> Option<String> {
+    chrono::DateTime::from_timestamp(seconds, 0).map(vrcx_0_core::time::iso_millis)
 }

@@ -430,7 +430,7 @@ fn screenshot_library_scan_repairs_stale_rows_without_metadata() -> Result<()> {
     let file_metadata = std::fs::metadata(&image_path)?;
     let modified_at = file_metadata
         .modified()
-        .map(unix_time_millis)
+        .map(|time| unix_time_millis(time).div_euclid(1000))
         .unwrap_or_default();
     let image_path_string = image_path.to_string_lossy().into_owned();
     cache.replace_library_entries(
@@ -448,8 +448,7 @@ fn screenshot_library_scan_repairs_stale_rows_without_metadata() -> Result<()> {
             height: None,
             world_id: None,
             world_name: None,
-            captured_at: None,
-            captured_at_ms: modified_at,
+            captured_at: modified_at,
             metadata_json: None,
             error: None,
         }],

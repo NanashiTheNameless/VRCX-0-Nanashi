@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { formatDateFilter } from '@/lib/dateTime';
 import { cn } from '@/lib/utils';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { Button } from '@/ui/shadcn/button';
 import {
@@ -11,11 +12,11 @@ import {
     HoverCardTrigger
 } from '@/ui/shadcn/hover-card';
 
-function formatUpdateReleaseDate(value: string | null | undefined) {
+function formatUpdateReleaseDate(value: string | number | null | undefined) {
     if (!value) {
         return '-';
     }
-    const timestamp = Date.parse(value);
+    const timestamp = parseAbsoluteDateMs(value);
     if (!Number.isFinite(timestamp)) {
         return value;
     }

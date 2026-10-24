@@ -20,6 +20,7 @@ import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
 import type { FriendRecordInput } from '@/domain/friends/types';
 import type { CurrentInstanceRosterPlayer } from '@/domain/instances/currentInstanceRoster';
 import type { DashboardConfig } from '@/features/dashboard/dashboardConfig';
+import { formatDateFilter } from '@/lib/dateTime';
 import { timeToText } from '@/lib/dateTime';
 import { useCurrentInstanceRoster } from '@/lib/useCurrentInstanceRoster';
 import { cn } from '@/lib/utils';
@@ -287,7 +288,7 @@ function DashboardInstanceSummary({
 }: {
     currentUserId: string | null;
     enrichedRows: DashboardInstancePlayerRow[];
-    instanceCreatedAt: string;
+    instanceCreatedAt: number;
     instanceGroupName: string;
     instanceLocation: string;
     instancePlayerCount: number;
@@ -298,7 +299,7 @@ function DashboardInstanceSummary({
     const { t } = useTranslation();
     const sourceText = joinCompactParts([
         instanceSource === 'database' ? 'Local game log' : 'Runtime fallback',
-        instanceCreatedAt || ''
+        instanceCreatedAt ? formatDateFilter(instanceCreatedAt, 'long') : ''
     ]);
 
     return (

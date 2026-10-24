@@ -10,7 +10,7 @@ pub const PROFILE_BIO_SCAN_MIN_AGE: Duration = Duration::from_secs(12 * 60 * 60)
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct ProfileBioRecord {
     pub bio: String,
-    pub checked_at: String,
+    pub checked_at: i64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -37,5 +37,5 @@ impl ProfileBioObservation {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RecordedProfileBio {
     pub observation: ProfileBioObservation,
-    pub observed_at: String,
+    pub observed_at: i64,
 }

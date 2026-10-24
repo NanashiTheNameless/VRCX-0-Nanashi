@@ -38,7 +38,7 @@ pub(crate) fn apply_instance_queue_ws_event(
         world_name: String::new(),
         position: number_field(content.get("position")),
         queue_size: number_field(content.get("queueSize")),
-        received_at: payload.received_at.clone(),
+        received_at: payload.received_at,
     })
 }
 

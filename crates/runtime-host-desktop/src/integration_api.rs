@@ -365,7 +365,7 @@ fn enrich_room_snapshot(
         world_id,
         world_name: snapshot.world_name.clone(),
         destination: snapshot.destination.clone(),
-        entered_at: snapshot.entered_at.clone(),
+        entered_at: vrcx_0_core::time::epoch_to_iso(snapshot.entered_at),
         members,
     })
 }

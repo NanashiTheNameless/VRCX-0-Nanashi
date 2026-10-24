@@ -8,6 +8,10 @@ import {
     type ComparableRecord,
     type Comparator
 } from '@/shared/utils/compare';
+import {
+    parseAbsoluteDateMs,
+    epochSecondsFromValue
+} from '@/shared/utils/displayTimeZone';
 import { isRecord } from '@/shared/utils/record';
 import { userStatusLabel } from '@/shared/utils/userStatus';
 
@@ -43,7 +47,7 @@ type UserDialogRow = ComparableRecord & {
 
 export type PreviousDisplayNameRow = {
     displayName: string;
-    updated_at?: string;
+    updated_at?: number;
 };
 
 export type PreviousDisplayNameSources = {
@@ -242,14 +246,15 @@ export function normalizePreviousDisplayNames(value: unknown) {
     return rows
         .map((entry): PreviousDisplayNameRow => {
             if (typeof entry === 'string') {
-                return { displayName: entry, updated_at: '' };
+                return { displayName: entry, updated_at: 0 };
             }
             const record = isRecord(entry) ? entry : {};
             return {
                 displayName: normalizedText(record.displayName || record.name),
-                updated_at: normalizedText(
-                    record.updated_at || record.updatedAt || record.date || ''
-                )
+                updated_at:
+                    epochSecondsFromValue(
+                        record.updated_at ?? record.updatedAt ?? record.date
+                    ) ?? 0
             };
         })
         .filter((entry) => entry.displayName);
@@ -271,24 +276,24 @@ export function mergePreviousDisplayNames(
             const existing = namesByDisplayName.get(entry.displayName);
             if (
                 !existing ||
-                normalizedText(entry.updated_at) >
-                    normalizedText(existing.updated_at)
+                (entry.updated_at ?? 0) > (existing.updated_at ?? 0)
             ) {
                 namesByDisplayName.set(entry.displayName, entry);
             }
         }
     }
 
-    return Array.from(namesByDisplayName.values()).sort((left, right) =>
-        normalizedText(right.updated_at).localeCompare(
-            normalizedText(left.updated_at)
-        )
+    return Array.from(namesByDisplayName.values()).sort(
+        (left, right) => (right.updated_at ?? 0) - (left.updated_at ?? 0)
     );
 }
 
 export function replacePreviousDisplayNameSource(
     currentDisplayName: unknown,
-    currentSources: Partial<PreviousDisplayNameSources> | null | undefined,
+    currentSources:
+        | { friendLog?: unknown; gameLog?: unknown }
+        | null
+        | undefined,
     source: PreviousDisplayNameSource,
     rows: unknown
 ) {
@@ -351,7 +356,7 @@ export function userRowSubtitle(
             row?.created_at ||
             row?.createdAt
     );
-    const timestamp = joinedAt ? Date.parse(joinedAt) : Number.NaN;
+    const timestamp = joinedAt ? parseAbsoluteDateMs(joinedAt) : Number.NaN;
     if (!Number.isNaN(timestamp) && Number.isFinite(nowMs)) {
         return timeToText(nowMs - timestamp);
     }

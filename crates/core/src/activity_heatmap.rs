@@ -91,11 +91,63 @@ pub fn overlap_normalize_config(range_days: i64) -> NormalizeConfig {
     }
 }
 
+#[derive(Clone, Copy)]
+enum BucketTimeZone {
+    Fixed(i64),
+    Display,
+}
+
+impl BucketTimeZone {
+    fn for_display(offset_minutes: i64) -> Self {
+        if offset_minutes == i64::from(crate::time::display_now().offset().local_minus_utc()) / 60 {
+            Self::Display
+        } else {
+            Self::Fixed(offset_minutes)
+        }
+    }
+}
+
 pub fn compute_activity_view(
     sessions: &[ActivitySession],
     range_days: i64,
     now_ms: i64,
     offset_minutes: i64,
+    config: &NormalizeConfig,
+    max_session_ms: i64,
+) -> ActivityView {
+    compute_activity_view_with_zone(
+        sessions,
+        range_days,
+        now_ms,
+        BucketTimeZone::Fixed(offset_minutes),
+        config,
+        max_session_ms,
+    )
+}
+
+pub fn compute_activity_view_in_display_zone(
+    sessions: &[ActivitySession],
+    range_days: i64,
+    now_ms: i64,
+    offset_minutes: i64,
+    config: &NormalizeConfig,
+    max_session_ms: i64,
+) -> ActivityView {
+    compute_activity_view_with_zone(
+        sessions,
+        range_days,
+        now_ms,
+        BucketTimeZone::for_display(offset_minutes),
+        config,
+        max_session_ms,
+    )
+}
+
+fn compute_activity_view_with_zone(
+    sessions: &[ActivitySession],
+    range_days: i64,
+    now_ms: i64,
+    zone: BucketTimeZone,
     config: &NormalizeConfig,
     max_session_ms: i64,
 ) -> ActivityView {
@@ -105,7 +157,7 @@ pub fn compute_activity_view(
         &clipped_sessions,
         window_start_ms,
         now_ms,
-        offset_minutes,
+        zone,
         max_session_ms,
     );
     let normalized_buckets = normalize_buckets(&raw_buckets, with_range_days(config, range_days));
@@ -126,10 +178,37 @@ pub fn compute_overlap_view(
     target_sessions: &[ActivitySession],
     options: OverlapViewOptions,
 ) -> OverlapView {
+    compute_overlap_view_with_zone(
+        self_sessions,
+        target_sessions,
+        options,
+        BucketTimeZone::Fixed(options.offset_minutes),
+    )
+}
+
+pub fn compute_overlap_view_in_display_zone(
+    self_sessions: &[ActivitySession],
+    target_sessions: &[ActivitySession],
+    options: OverlapViewOptions,
+) -> OverlapView {
+    compute_overlap_view_with_zone(
+        self_sessions,
+        target_sessions,
+        options,
+        BucketTimeZone::for_display(options.offset_minutes),
+    )
+}
+
+fn compute_overlap_view_with_zone(
+    self_sessions: &[ActivitySession],
+    target_sessions: &[ActivitySession],
+    options: OverlapViewOptions,
+    zone: BucketTimeZone,
+) -> OverlapView {
     let OverlapViewOptions {
         range_days,
         now_ms,
-        offset_minutes,
+        offset_minutes: _,
         exclude_hours,
         config,
         max_session_ms,
@@ -140,18 +219,13 @@ pub fn compute_overlap_view(
     clipped_self.sort_by_key(|session| session.start);
     clipped_target.sort_by_key(|session| session.start);
 
-    let mut self_buckets = build_heatmap_buckets(
-        &clipped_self,
-        window_start_ms,
-        now_ms,
-        offset_minutes,
-        max_session_ms,
-    );
+    let mut self_buckets =
+        build_heatmap_buckets(&clipped_self, window_start_ms, now_ms, zone, max_session_ms);
     let mut target_buckets = build_heatmap_buckets(
         &clipped_target,
         window_start_ms,
         now_ms,
-        offset_minutes,
+        zone,
         max_session_ms,
     );
     let mut raw_buckets = build_overlap_buckets(
@@ -159,7 +233,7 @@ pub fn compute_overlap_view(
         &clipped_target,
         window_start_ms,
         now_ms,
-        offset_minutes,
+        zone,
         max_session_ms,
     );
 
@@ -308,7 +382,7 @@ fn build_heatmap_buckets(
     sessions: &[ActivitySession],
     window_start_ms: i64,
     now_ms: i64,
-    offset_minutes: i64,
+    zone: BucketTimeZone,
     max_session_ms: i64,
 ) -> Vec<f64> {
     let mut buckets = vec![0.0; BUCKET_COUNT];
@@ -325,10 +399,22 @@ fn build_heatmap_buckets(
 
         let mut cursor = start;
         while cursor < end {
+            let offset_minutes = match zone {
+                BucketTimeZone::Fixed(offset) => offset,
+                BucketTimeZone::Display => {
+                    i64::from(
+                        crate::time::display_offset_at(cursor.div_euclid(1000)).local_minus_utc(),
+                    ) / 60
+                }
+            };
             let Some(slot) = local_hour_slot(cursor, offset_minutes) else {
                 break;
             };
-            let segment_end = next_local_hour_boundary_ms(cursor, offset_minutes).min(end);
+            let mut segment_end = next_local_hour_boundary_ms(cursor, offset_minutes).min(end);
+            if matches!(zone, BucketTimeZone::Display) {
+                segment_end =
+                    segment_end.min((cursor.div_euclid(MS_PER_MINUTE) + 1) * MS_PER_MINUTE);
+            }
             buckets[slot] += (segment_end - cursor) as f64 / MS_PER_MINUTE as f64;
             cursor = segment_end;
         }
@@ -342,7 +428,7 @@ fn build_overlap_buckets(
     target_sessions: &[ActivitySession],
     window_start_ms: i64,
     now_ms: i64,
-    offset_minutes: i64,
+    zone: BucketTimeZone,
     max_session_ms: i64,
 ) -> Vec<f64> {
     let mut intersections = Vec::new();
@@ -377,7 +463,7 @@ fn build_overlap_buckets(
         &intersections,
         window_start_ms,
         now_ms,
-        offset_minutes,
+        zone,
         max_session_ms,
     )
 }

@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::Duration;
 
-use chrono::{DateTime, SecondsFormat, Utc};
+use chrono::{DateTime, Utc};
 use serde_json::json;
 use vrcx_0_application_activity::ActivityRouter;
 use vrcx_0_application_core::{RuntimeAuthScope, TaskSupervisor};
@@ -106,8 +106,8 @@ impl ReminderRuntime {
             // Time reminders repeat through repeat_minutes, not the event flag.
             recurring: recurring && !matches!(trigger, ReminderTrigger::Time { .. }),
             trigger,
-            created_at: now.to_rfc3339_opts(SecondsFormat::Secs, true),
-            last_fired_at: String::new(),
+            created_at: now.timestamp(),
+            last_fired_at: None,
             fire_count: 0,
         };
         let mut reminders = self.reminders.lock().unwrap();
@@ -156,7 +156,7 @@ impl ReminderRuntime {
             .ok_or_else(|| "Sign in to create reminders.".to_string())?;
         match &trigger {
             ReminderTrigger::Time { at, .. } => {
-                if chrono::DateTime::parse_from_rfc3339(at).is_err() {
+                if chrono::DateTime::<Utc>::from_timestamp(*at, 0).is_none() {
                     return Err("Pick a valid date and time.".into());
                 }
             }
@@ -195,7 +195,7 @@ impl ReminderRuntime {
     }
 
     fn observe(&self, candidate: &ActivityEvent, now: DateTime<Utc>) {
-        if candidate.kind == ActivityKind::Reminder || is_stale(&candidate.created_at, now) {
+        if candidate.kind == ActivityKind::Reminder || is_stale(candidate.created_at, now) {
             return;
         }
         let Some(owner) = self.current_owner() else {
@@ -240,7 +240,7 @@ impl ReminderRuntime {
                 let ReminderTrigger::Time { at, repeat_minutes } = &mut reminder.trigger else {
                     continue;
                 };
-                let Some(due) = parse_time(at) else {
+                let Some(due) = parse_time(*at) else {
                     remove.push(reminder.id.clone());
                     continue;
                 };
@@ -250,7 +250,7 @@ impl ReminderRuntime {
                 // Fires once even after a long sleep, then moves past `now`.
                 let next = next_due(due, *repeat_minutes, now);
                 match next {
-                    Some(next) => *at = next.to_rfc3339_opts(SecondsFormat::Secs, true),
+                    Some(next) => *at = next.timestamp(),
                     None => remove.push(reminder.id.clone()),
                 }
                 mark_fired(reminder, now);
@@ -279,7 +279,7 @@ impl ReminderRuntime {
         } else {
             format!("{detail}: {}", reminder.message)
         };
-        let created_at = now.to_rfc3339_opts(SecondsFormat::Millis, true);
+        let created_at = now.timestamp();
         let mut event = ActivityEvent::new(
             ActivityKind::Reminder,
             format!("reminder:{}:{}", reminder.id, reminder.fire_count),
@@ -298,24 +298,25 @@ impl ReminderRuntime {
     }
 }
 
-fn parse_time(value: &str) -> Option<DateTime<Utc>> {
-    DateTime::parse_from_rfc3339(value.trim())
-        .ok()
-        .map(|time| time.with_timezone(&Utc))
+fn parse_time(value: i64) -> Option<DateTime<Utc>> {
+    DateTime::<Utc>::from_timestamp(value, 0)
 }
 
-fn is_stale(created_at: &str, now: DateTime<Utc>) -> bool {
+fn is_stale(created_at: i64, now: DateTime<Utc>) -> bool {
     // Unknown timestamps count as live; the source already decided to emit.
-    parse_time(created_at).is_some_and(|time| (now - time).num_seconds() > STALE_EVENT_SECS)
+    created_at != 0
+        && parse_time(created_at).is_some_and(|time| (now - time).num_seconds() > STALE_EVENT_SECS)
 }
 
 fn in_cooldown(reminder: &Reminder, now: DateTime<Utc>) -> bool {
-    parse_time(&reminder.last_fired_at)
+    reminder
+        .last_fired_at
+        .and_then(parse_time)
         .is_some_and(|time| (now - time).num_seconds() < RECURRING_COOLDOWN_SECS)
 }
 
 fn mark_fired(reminder: &mut Reminder, now: DateTime<Utc>) {
-    reminder.last_fired_at = now.to_rfc3339_opts(SecondsFormat::Secs, true);
+    reminder.last_fired_at = Some(now.timestamp());
     reminder.fire_count = reminder.fire_count.saturating_add(1);
 }
 

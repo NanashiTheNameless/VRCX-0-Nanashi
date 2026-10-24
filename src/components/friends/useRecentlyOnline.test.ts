@@ -24,7 +24,7 @@ describe('useRecentlyOnline', () => {
         vi.useRealTimers();
     });
 
-    it('plays for three seconds after the friend Online feed event', () => {
+    it('plays for three seconds after receiving the friend Online feed event', () => {
         const { result } = renderHook(() => useRecentlyOnline('usr_friend'));
         expect(result.current).toBe(false);
 
@@ -33,7 +33,7 @@ describe('useRecentlyOnline', () => {
                 {
                     sequence: 1,
                     entry: onlineFeedEntry({
-                        created_at: '2026-08-11T00:00:09.500Z'
+                        created_at: 1786406409
                     })
                 }
             ]);
@@ -41,7 +41,7 @@ describe('useRecentlyOnline', () => {
         expect(result.current).toBe(true);
 
         act(() => {
-            vi.advanceTimersByTime(2_499);
+            vi.advanceTimersByTime(2_999);
         });
         expect(result.current).toBe(true);
 
@@ -58,7 +58,7 @@ describe('useRecentlyOnline', () => {
                     sequence: 1,
                     entry: onlineFeedEntry({
                         location: 'traveling',
-                        created_at: '2026-08-11T00:00:10Z'
+                        created_at: 1786406410
                     })
                 }
             ]);
@@ -75,20 +75,20 @@ describe('useRecentlyOnline', () => {
                 {
                     sequence: 1,
                     entry: onlineFeedEntry({
-                        created_at: '2026-08-11T00:00:06Z'
+                        created_at: 1786406406
                     })
                 },
                 {
                     sequence: 2,
                     entry: onlineFeedEntry({
                         userId: 'usr_other',
-                        created_at: '2026-08-11T00:00:10Z'
+                        created_at: 1786406410
                     })
                 },
                 {
                     sequence: 3,
                     entry: gpsFeedEntry({
-                        created_at: '2026-08-11T00:00:10Z'
+                        created_at: 1786406410
                     })
                 }
             ]);

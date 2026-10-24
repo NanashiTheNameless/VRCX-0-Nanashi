@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { formatDateFilter } from '@/lib/dateTime';
 import { invoke } from '@/platform/tauri/generatedInvoke';
 import { Button } from '@/ui/shadcn/button';
 import { Input } from '@/ui/shadcn/input';
@@ -281,9 +282,12 @@ export function SettingsHistorySyncAccount({
                                                         'view.settings.history_sync.clients.active'
                                                     )
                                                   : client.lastSeenMs
-                                                    ? new Date(
-                                                          client.lastSeenMs
-                                                      ).toLocaleString()
+                                                    ? formatDateFilter(
+                                                          new Date(
+                                                              client.lastSeenMs
+                                                          ),
+                                                          'long'
+                                                      )
                                                     : null,
                                             client.address
                                                 ? `${client.address.ip} ${client.address.location}`
@@ -299,9 +303,12 @@ export function SettingsHistorySyncAccount({
                                                   className="text-muted-foreground text-xs"
                                               >
                                                   {entry.ip} {entry.location}{' '}
-                                                  {new Date(
-                                                      entry.lastSeenMs
-                                                  ).toLocaleString()}
+                                                  {formatDateFilter(
+                                                      new Date(
+                                                          entry.lastSeenMs
+                                                      ),
+                                                      'long'
+                                                  )}
                                               </p>
                                           ))
                                         : null}

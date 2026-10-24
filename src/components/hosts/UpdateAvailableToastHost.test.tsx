@@ -47,7 +47,7 @@ function updateRelease(
         tagName: 'v2.7.0',
         htmlUrl:
             'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/tag/v2.7.0',
-        publishedAt: '2026-08-20T00:00:00.000Z',
+        publishedAt: 1787184000,
         body: '',
         canonicalVersion: '2.7.0',
         displayVersion: '2.7.0',

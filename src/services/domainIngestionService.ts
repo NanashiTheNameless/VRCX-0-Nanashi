@@ -21,7 +21,7 @@ interface GameRuntimePresenceInput {
     endpoint?: string;
     currentLocation?: string;
     currentDestination?: string;
-    currentLocationStartedAt?: string | null;
+    currentLocationStartedAt?: number | null;
     currentLocationPlayers?: unknown[];
     currentWorldName?: string;
 }
@@ -91,7 +91,7 @@ function recordGameRuntimePresence({
     endpoint = '',
     currentLocation = '',
     currentDestination = '',
-    currentLocationStartedAt = '',
+    currentLocationStartedAt = 0,
     currentLocationPlayers = [],
     currentWorldName = ''
 }: GameRuntimePresenceInput = {}) {

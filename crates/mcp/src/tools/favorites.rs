@@ -333,7 +333,7 @@ fn favorite_row_from_value(
         kind: kind.as_str().to_string(),
         entity_id,
         group: row.group_name.clone(),
-        created_at: row.created_at.clone(),
+        created_at: vrcx_0_core::time::epoch_to_iso(row.created_at),
     })
 }
 

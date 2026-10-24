@@ -121,7 +121,9 @@ import { useGameLogPageController } from './useGameLogPageController';
 function createRows(count: number): GameLogRow[] {
     return Array.from({ length: count }, (_, index) => ({
         rowId: index + 1,
-        created_at: new Date(Date.UTC(2026, 7, 31, 0, index)).toISOString(),
+        created_at: Math.floor(
+            new Date(Date.UTC(2026, 7, 31, 0, index)).getTime() / 1000
+        ),
         type: 'OnPlayerLeft',
         userId: `usr_${index + 1}`
     }));
@@ -180,7 +182,7 @@ describe('useGameLogPageController', () => {
 
     it('keeps row and cell IDs independent of large log payloads', () => {
         const data = 'large log message '.repeat(10_000);
-        mocks.rows = [{ rowId: 1, type: 'Event', created_at: '', data }];
+        mocks.rows = [{ rowId: 1, type: 'Event', created_at: 0, data }];
         const { result, rerender } = renderHook(useGameLogPageController);
         const row = result.current.table.getRowModel().rows[0];
 
@@ -310,7 +312,7 @@ describe('useGameLogPageController', () => {
         mocks.friends.friendsById = { usr_1: {} };
         mocks.sessions = [
             {
-                created_at: '2026-08-31T00:00:00Z',
+                created_at: 1788134400,
                 location: 'wrld_test:1',
                 worldId: 'wrld_test',
                 worldName: 'World',
@@ -322,7 +324,7 @@ describe('useGameLogPageController', () => {
                 events: [
                     {
                         type: 'OnPlayerJoined',
-                        created_at: '2026-08-31T00:00:00Z',
+                        created_at: 1788134400,
                         userId: 'usr_1'
                     }
                 ]

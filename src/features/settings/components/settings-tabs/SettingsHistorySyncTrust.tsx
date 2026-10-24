@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { formatDateFilter } from '@/lib/dateTime';
 import { invoke } from '@/platform/tauri/generatedInvoke';
 
 type Trust = {
@@ -92,9 +93,10 @@ export function SettingsHistorySyncTrust({ serverKey }: { serverKey: string }) {
                             {t(
                                 'view.settings.history_sync.trust.was_official',
                                 {
-                                    time: new Date(
-                                        trust.instanceOfficialAtMs
-                                    ).toLocaleString()
+                                    time: formatDateFilter(
+                                        new Date(trust.instanceOfficialAtMs),
+                                        'long'
+                                    )
                                 }
                             )}
                         </p>
@@ -124,9 +126,10 @@ export function SettingsHistorySyncTrust({ serverKey }: { serverKey: string }) {
                             {t(
                                 'view.settings.history_sync.trust.was_official',
                                 {
-                                    time: new Date(
-                                        trust.codeOfficialAtMs
-                                    ).toLocaleString()
+                                    time: formatDateFilter(
+                                        new Date(trust.codeOfficialAtMs),
+                                        'long'
+                                    )
                                 }
                             )}
                         </p>

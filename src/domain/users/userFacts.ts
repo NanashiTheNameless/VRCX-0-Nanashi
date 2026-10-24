@@ -48,7 +48,7 @@ interface UserFact {
     $presence?: PresenceView;
     memo?: string;
     note?: string;
-    updatedAt: string;
+    updatedAt: number;
 }
 
 function normalizeText(value: unknown): string {

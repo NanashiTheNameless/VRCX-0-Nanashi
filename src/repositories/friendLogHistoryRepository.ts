@@ -5,10 +5,14 @@ import {
     type FriendLogHistoryEntryInput,
     type FriendLogHistoryOutput
 } from '@/platform/tauri/bindings';
+import {
+    displayDateBoundary,
+    epochSecondsFromValue
+} from '@/shared/utils/displayTimeZone';
 
 export interface FriendLogHistoryRow {
     rowId: number;
-    created_at: string;
+    created_at: number;
     type: FriendLogType | string;
     userId: string;
     displayName: string;
@@ -20,7 +24,7 @@ export interface FriendLogHistoryRow {
 
 interface FriendLogHistoryEntry {
     rowId?: number | string | null;
-    created_at?: string | null;
+    created_at?: number | string | null;
     type?: FriendLogType | string | null;
     userId?: string | null;
     displayName?: string | null;
@@ -73,7 +77,7 @@ function normalizeFriendLogHistoryEntryForRuntime(
 ): FriendLogHistoryEntryInput {
     return {
         rowId: valueAsInt(entry?.rowId),
-        createdAt: entry?.created_at ?? '',
+        createdAt: epochSecondsFromValue(entry?.created_at) ?? 0,
         type: entry?.type ?? '',
         userId: entry?.userId ?? '',
         displayName: entry?.displayName ?? '',
@@ -97,8 +101,8 @@ async function getFriendLogHistory(
         targetUserId: normalizedTargetUserId,
         types: normalizedTypes,
         excludedTypes: options.excludedTypes ?? [],
-        dateFrom: options.dateFrom ?? '',
-        dateTo: options.dateTo ?? '',
+        dateFrom: displayDateBoundary(options.dateFrom ?? '', 'start'),
+        dateTo: displayDateBoundary(options.dateTo ?? '', 'end'),
         cursor: options.cursor ?? null,
         limit: options.limit ?? null
     });

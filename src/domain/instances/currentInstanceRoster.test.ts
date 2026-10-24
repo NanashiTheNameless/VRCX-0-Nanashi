@@ -9,8 +9,8 @@ import {
 describe('collectRuntimeRosterPlayers', () => {
     it('deduplicates repeated GameLog join events for the same player into a single roster entry', () => {
         const { players } = collectRuntimeRosterPlayers([
-            { userId: 'usr_1', displayName: 'Alice', joinTimeMs: 1000 },
-            { userId: 'usr_1', displayName: 'Alice', joinTimeMs: 2000 }
+            { userId: 'usr_1', displayName: 'Alice', joinTime: 1 },
+            { userId: 'usr_1', displayName: 'Alice', joinTime: 2 }
         ]);
 
         expect(players).toHaveLength(1);
@@ -19,8 +19,8 @@ describe('collectRuntimeRosterPlayers', () => {
 
     it('falls back to matching by display name when the GameLog event has no user id yet, so an early join event still dedupes once the id arrives', () => {
         const { players } = collectRuntimeRosterPlayers([
-            { userId: '', displayName: 'Bob', joinTimeMs: 1000 },
-            { userId: '', displayName: 'Bob', joinTimeMs: 1500 }
+            { userId: '', displayName: 'Bob', joinTime: 1 },
+            { userId: '', displayName: 'Bob', joinTime: 2 }
         ]);
 
         expect(players).toHaveLength(1);
@@ -29,7 +29,7 @@ describe('collectRuntimeRosterPlayers', () => {
 
     it('skips a GameLog event that identifies neither a user id nor a display name, since it cannot be shown in the roster', () => {
         const { players } = collectRuntimeRosterPlayers([
-            { userId: '', displayName: '', joinTimeMs: 1000 }
+            { userId: '', displayName: '', joinTime: 1 }
         ]);
 
         expect(players).toHaveLength(0);
@@ -37,8 +37,8 @@ describe('collectRuntimeRosterPlayers', () => {
 
     it('excludes players with no known user id from playerIds, so downstream user-detail lookups are not made for display-name-only rows', () => {
         const { playerIds } = collectRuntimeRosterPlayers([
-            { userId: 'usr_1', displayName: 'Alice', joinTimeMs: 1000 },
-            { userId: '', displayName: 'Bob', joinTimeMs: 1000 }
+            { userId: 'usr_1', displayName: 'Alice', joinTime: 1 },
+            { userId: '', displayName: 'Bob', joinTime: 1 }
         ]);
 
         expect(playerIds).toEqual(['usr_1']);
@@ -50,7 +50,7 @@ describe('decorateCurrentUserInRoster', () => {
         id: 'usr_2',
         userId: 'usr_2',
         displayName: 'Someone Else',
-        joinedAt: '2026-01-01T00:00:00.000Z',
+        joinedAt: 1767225600,
         joinedAtMs: 1_735_689_600_000
     };
 
@@ -58,7 +58,7 @@ describe('decorateCurrentUserInRoster', () => {
         const result = decorateCurrentUserInRoster({
             currentUserId: 'usr_self',
             currentUserDisplayName: 'Me',
-            joinedAt: '2026-02-01T00:00:00.000Z',
+            joinedAt: 1769904000,
             players: [otherPlayer]
         });
 
@@ -70,7 +70,7 @@ describe('decorateCurrentUserInRoster', () => {
             id: 'usr_self',
             userId: 'usr_self',
             displayName: 'Me',
-            joinedAt: '2026-01-05T00:00:00.000Z',
+            joinedAt: 1767571200,
             joinedAtMs: 1_736_035_200_000,
             lastDurationMs: 500
         };
@@ -78,7 +78,7 @@ describe('decorateCurrentUserInRoster', () => {
         const result = decorateCurrentUserInRoster({
             currentUserId: 'usr_self',
             currentUserDisplayName: 'Me',
-            joinedAt: '2026-02-01T00:00:00.000Z',
+            joinedAt: 1769904000,
             players: [otherPlayer, selfFromGameLog]
         });
 
@@ -86,7 +86,7 @@ describe('decorateCurrentUserInRoster', () => {
         expect(
             result.filter((player) => player.userId === 'usr_self')
         ).toHaveLength(1);
-        expect(result[0].joinedAt).toBe('2026-01-05T00:00:00.000Z');
+        expect(result[0].joinedAt).toBe(1767571200);
         expect(result[0].lastDurationMs).toBe(500);
     });
 
@@ -95,27 +95,27 @@ describe('decorateCurrentUserInRoster', () => {
             id: 'display:me',
             userId: '',
             displayName: 'me',
-            joinedAt: '2026-01-05T00:00:00.000Z',
+            joinedAt: 1767571200,
             joinedAtMs: 1_736_035_200_000
         };
 
         const result = decorateCurrentUserInRoster({
             currentUserId: 'usr_self',
             currentUserDisplayName: 'Me',
-            joinedAt: '2026-02-01T00:00:00.000Z',
+            joinedAt: 1769904000,
             players: [selfFromGameLog]
         });
 
         expect(result).toHaveLength(1);
         expect(result[0].userId).toBe('usr_self');
-        expect(result[0].joinedAt).toBe('2026-01-05T00:00:00.000Z');
+        expect(result[0].joinedAt).toBe(1767571200);
     });
 
     it('leaves the roster untouched when the current user identity is not yet known, avoiding a bogus self-entry', () => {
         const result = decorateCurrentUserInRoster({
             currentUserId: '',
             currentUserDisplayName: '',
-            joinedAt: '2026-02-01T00:00:00.000Z',
+            joinedAt: 1769904000,
             players: [otherPlayer]
         });
 
@@ -128,14 +128,14 @@ it('does not relabel a different known user as self when names match', () => {
         id: 'usr_other',
         userId: 'usr_other',
         displayName: 'Me',
-        joinedAt: '',
+        joinedAt: 0,
         joinedAtMs: 0
     };
     expect(
         decorateCurrentUserInRoster({
             currentUserId: 'usr_self',
             currentUserDisplayName: 'Me',
-            joinedAt: '',
+            joinedAt: 0,
             players: [row]
         })
     ).toEqual([row]);

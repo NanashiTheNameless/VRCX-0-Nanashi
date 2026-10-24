@@ -1,5 +1,6 @@
 import { timeToText } from '@/lib/dateTime';
 import type { InstanceHistoryEntryOutput } from '@/platform/tauri/bindings';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { parseLocation } from '@/shared/utils/location';
 import { localeIncludes } from '@/shared/utils/string';
 
@@ -74,18 +75,8 @@ function textValue(value: unknown) {
           : String(value);
 }
 
-function dateInputValue(value: unknown): string | number {
-    if (value instanceof Date) {
-        return value.getTime();
-    }
-    if (typeof value === 'string' || typeof value === 'number') {
-        return value;
-    }
-    return value === null || value === undefined ? 0 : String(value);
-}
-
 function timestampMs(value: unknown) {
-    const timestamp = new Date(dateInputValue(value)).getTime();
+    const timestamp = parseAbsoluteDateMs(value);
     return Number.isFinite(timestamp) && timestamp > 0 ? timestamp : 0;
 }
 
@@ -99,11 +90,8 @@ export function formatPreviousInstanceCount(count: number) {
 }
 
 export function createdTime(row: PreviousInstanceRow | null | undefined) {
-    return (
-        new Date(
-            dateInputValue(row?.created_at || row?.createdAt || 0)
-        ).getTime() || 0
-    );
+    const parsed = parseAbsoluteDateMs(row?.created_at ?? row?.createdAt);
+    return Number.isFinite(parsed) ? parsed : 0;
 }
 
 export function rowLocation(row: PreviousInstanceRow | null | undefined) {
@@ -369,9 +357,9 @@ export function normalizeInfoChartRows(
     return (Array.isArray(rows) ? rows : [])
         .map((row) => {
             const durationMs = Math.max(0, Number(row?.time || 0));
-            const leaveMs = new Date(
-                dateInputValue(row?.created_at || row?.createdAt || 0)
-            ).getTime();
+            const leaveMs = parseAbsoluteDateMs(
+                row?.created_at ?? row?.createdAt
+            );
             const userId = playerUserId(row);
             if (!Number.isFinite(leaveMs) || !userId || durationMs <= 0) {
                 return null;

@@ -4,7 +4,7 @@ pub(crate) fn game_log_row_from_unified_row(row: &[Value]) -> Result<GameLogRowO
     let event_type = strict_row_string(row, 2)?;
     let mut output = GameLogRowOutput {
         row_id: strict_row_i64(row, 0)?,
-        created_at: strict_row_string(row, 1)?,
+        created_at: strict_row_i64(row, 1)?,
         r#type: event_type.clone(),
         ..GameLogRowOutput::default()
     };
@@ -124,7 +124,7 @@ pub(crate) fn game_log_batch_for_kind(
             batch.locations = entries
                 .into_iter()
                 .map(|entry| GameLogLocationEntry {
-                    created_at: object_field_string(&entry, &["created_at", "createdAt"]),
+                    created_at: object_field_epoch(&entry, &["created_at", "createdAt"]),
                     location: object_field_string(&entry, &["location"]),
                     world_id: object_field_string(&entry, &["worldId", "world_id"]),
                     world_name: object_field_string(&entry, &["worldName", "world_name"]),
@@ -137,7 +137,7 @@ pub(crate) fn game_log_batch_for_kind(
             batch.location_time_updates = entries
                 .into_iter()
                 .map(|entry| GameLogLocationTimeUpdate {
-                    created_at: object_field_string(&entry, &["created_at", "createdAt"]),
+                    created_at: object_field_epoch(&entry, &["created_at", "createdAt"]),
                     time: value_as_i64(object_field(&entry, "time").unwrap_or(&Value::Null)),
                 })
                 .collect();
@@ -146,7 +146,7 @@ pub(crate) fn game_log_batch_for_kind(
             batch.join_leave = entries
                 .into_iter()
                 .map(|entry| GameLogJoinLeaveEntry {
-                    created_at: object_field_string(&entry, &["created_at", "createdAt"]),
+                    created_at: object_field_epoch(&entry, &["created_at", "createdAt"]),
                     event_type: object_field_string(&entry, &["type", "eventType"]),
                     display_name: object_field_string(&entry, &["displayName", "display_name"]),
                     location: object_field_string(&entry, &["location"]),
@@ -160,7 +160,7 @@ pub(crate) fn game_log_batch_for_kind(
             batch.portal_spawns = entries
                 .into_iter()
                 .map(|entry| GameLogPortalSpawnEntry {
-                    created_at: object_field_string(&entry, &["created_at", "createdAt"]),
+                    created_at: object_field_epoch(&entry, &["created_at", "createdAt"]),
                     display_name: object_field_string(&entry, &["displayName", "display_name"]),
                     location: object_field_string(&entry, &["location"]),
                     user_id: object_field_string(&entry, &["userId", "user_id"]),
@@ -173,7 +173,7 @@ pub(crate) fn game_log_batch_for_kind(
             batch.video_plays = entries
                 .into_iter()
                 .map(|entry| GameLogVideoPlayEntry {
-                    created_at: object_field_string(&entry, &["created_at", "createdAt"]),
+                    created_at: object_field_epoch(&entry, &["created_at", "createdAt"]),
                     video_url: object_field_string(&entry, &["videoUrl", "video_url"]),
                     video_name: object_field_string(&entry, &["videoName", "video_name"]),
                     video_id: object_field_string(&entry, &["videoId", "video_id"]),
@@ -189,7 +189,7 @@ pub(crate) fn game_log_batch_for_kind(
             batch.resource_loads = entries
                 .into_iter()
                 .map(|entry| GameLogResourceLoadEntry {
-                    created_at: object_field_string(&entry, &["created_at", "createdAt"]),
+                    created_at: object_field_epoch(&entry, &["created_at", "createdAt"]),
                     resource_url: object_field_string(&entry, &["resourceUrl", "resource_url"]),
                     resource_type: object_field_string(
                         &entry,
@@ -203,7 +203,7 @@ pub(crate) fn game_log_batch_for_kind(
             batch.events = entries
                 .into_iter()
                 .map(|entry| GameLogEventEntry {
-                    created_at: object_field_string(&entry, &["created_at", "createdAt"]),
+                    created_at: object_field_epoch(&entry, &["created_at", "createdAt"]),
                     data: object_field_string(&entry, &["data"]),
                 })
                 .collect();
@@ -212,7 +212,7 @@ pub(crate) fn game_log_batch_for_kind(
             batch.externals = entries
                 .into_iter()
                 .map(|entry| GameLogExternalEntry {
-                    created_at: object_field_string(&entry, &["created_at", "createdAt"]),
+                    created_at: object_field_epoch(&entry, &["created_at", "createdAt"]),
                     message: object_field_string(&entry, &["message"]),
                     display_name: object_field_string(&entry, &["displayName", "display_name"]),
                     user_id: object_field_string(&entry, &["userId", "user_id"]),

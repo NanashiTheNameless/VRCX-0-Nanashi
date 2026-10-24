@@ -1,5 +1,7 @@
 import type { SortingState } from '@tanstack/react-table';
 
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
+
 export const DATE_AND_TYPE_SORT_COLUMN_IDS: readonly string[] = [
     'created_at',
     'type'
@@ -7,13 +9,13 @@ export const DATE_AND_TYPE_SORT_COLUMN_IDS: readonly string[] = [
 
 type DateAndTypeRow = {
     rowId: number;
-    created_at: string;
+    created_at: string | number;
     type: string;
 };
 
 function compareRowDates(left: DateAndTypeRow, right: DateAndTypeRow): number {
-    const leftTs = Date.parse(left.created_at);
-    const rightTs = Date.parse(right.created_at);
+    const leftTs = parseAbsoluteDateMs(left.created_at);
+    const rightTs = parseAbsoluteDateMs(right.created_at);
     if (
         Number.isFinite(leftTs) &&
         Number.isFinite(rightTs) &&

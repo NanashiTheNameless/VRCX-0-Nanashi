@@ -65,9 +65,9 @@ describe('useUserDialogSupplementalData', () => {
 
     it('preserves add/remove/re-add history when game stats finish later', async () => {
         const history = [
-            { rowId: 4, type: 'Friend', created_at: '2026-09-01T00:00:00Z' },
-            { rowId: 3, type: 'Unfriend', created_at: '2026-09-01T00:00:00Z' },
-            { rowId: 1, type: 'Friend', created_at: '2025-01-01T00:00:00Z' }
+            { rowId: 4, type: 'Friend', created_at: 1788220800 },
+            { rowId: 3, type: 'Unfriend', created_at: 1788220800 },
+            { rowId: 1, type: 'Friend', created_at: 1735689600 }
         ];
         mocks.getFriendLogHistory.mockResolvedValue([
             ...history.slice(0, 2),
@@ -75,7 +75,7 @@ describe('useUserDialogSupplementalData', () => {
                 rowId: 2,
                 type: 'DisplayName',
                 previousDisplayName: 'Old Name',
-                created_at: '2026-01-01T00:00:00Z'
+                created_at: 1767225600
             },
             history[2]
         ]);
@@ -111,7 +111,7 @@ describe('useUserDialogSupplementalData', () => {
         const removal = {
             rowId: 2,
             type: 'Unfriend',
-            created_at: '2026-09-01T00:00:00Z'
+            created_at: 1788220800
         };
         mocks.getFriendLogHistory.mockResolvedValueOnce([removal]);
         const first = input({ id: 'usr_target' });
@@ -131,12 +131,10 @@ describe('useUserDialogSupplementalData', () => {
             ])
         );
         await act(async () => {
-            finishOld([
-                { rowId: 1, type: 'Friend', created_at: '2025-01-01T00:00:00Z' }
-            ]);
+            finishOld([{ rowId: 1, type: 'Friend', created_at: 1735689600 }]);
         });
         expect(result.current.userStats.relationshipHistory).toEqual([removal]);
-        expect(result.current.userStats.friendedAt).toBe('');
+        expect(result.current.userStats.friendedAt).toBe(null);
     });
 
     it('does not refetch id-based supplemental rows for a display-only profile merge', async () => {
@@ -174,11 +172,11 @@ describe('useUserDialogSupplementalData', () => {
             expect(result.current.userStats.previousDisplayNames).toEqual([
                 {
                     displayName: 'Merged Name',
-                    updated_at: '2026-08-10T00:00:00.000Z'
+                    updated_at: 1786320000
                 },
                 {
                     displayName: 'Older Name',
-                    updated_at: '2026-08-09T00:00:00.000Z'
+                    updated_at: 1786233600
                 }
             ]);
         });
@@ -196,7 +194,7 @@ describe('useUserDialogSupplementalData', () => {
             expect(result.current.userStats.previousDisplayNames).toEqual([
                 {
                     displayName: 'Older Name',
-                    updated_at: '2026-08-09T00:00:00.000Z'
+                    updated_at: 1786233600
                 }
             ]);
         });

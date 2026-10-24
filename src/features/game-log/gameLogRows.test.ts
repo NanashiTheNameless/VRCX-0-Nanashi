@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 
 import {
     canDeleteGameLogRow,
@@ -30,7 +31,10 @@ function liveSession(
 ): GameLogSession {
     return {
         id,
-        created_at: `2026-09-03T00:${String(id).padStart(2, '0')}:00.000Z`,
+        created_at:
+            epochSecondsFromValue(
+                `2026-09-03T00:${String(id).padStart(2, '0')}:00.000Z`
+            ) ?? 0,
         duration: 0,
         location: `wrld_test:${id}`,
         worldId: 'wrld_test',
@@ -154,20 +158,18 @@ describe('gameLogRows', () => {
         expect(
             getGameLogRowKey({
                 type: 'VideoPlay',
-                created_at: '2026-04-16T00:00:00.000Z',
+                created_at: 1776297600,
                 videoUrl: 'https://video.example.test/watch',
                 rowId: 1
             })
-        ).toBe(
-            'VideoPlay:2026-04-16T00:00:00.000Z:https://video.example.test/watch:1'
-        );
+        ).toBe('VideoPlay:1776297600:https://video.example.test/watch:1');
         expect(
             getGameLogSessionKey({
                 id: 1,
-                created_at: '2026-04-16T00:00:00.000Z',
+                created_at: 1776297600,
                 location: 'wrld_session:1'
             })
-        ).toBe('1:2026-04-16T00:00:00.000Z:wrld_session:1');
+        ).toBe('1:1776297600:wrld_session:1');
     });
 
     it('resolves session affinity from local and remote favorites', () => {
@@ -181,30 +183,30 @@ describe('gameLogRows', () => {
 
         const event: GameLogSessionEvent = {
             type: 'OnPlayerJoined',
-            created_at: '2026-04-16T00:00:00.000Z',
+            created_at: 1776297600,
             userId: 'usr_friend'
         };
         const members: GameLogSessionMember[] = [
             {
-                created_at: '2026-04-16T00:00:00.000Z',
+                created_at: 1776297600,
                 displayName: 'Remote',
                 userId: 'usr_remote',
                 isFavorite: false
             },
             {
-                created_at: '2026-04-16T00:00:00.000Z',
+                created_at: 1776297600,
                 displayName: 'Favorite',
                 userId: 'usr_favorite',
                 isFavorite: false
             },
             {
-                created_at: '2026-04-16T00:00:00.000Z',
+                created_at: 1776297600,
                 displayName: 'Member',
                 userId: 'usr_member',
                 isFavorite: false
             },
             {
-                created_at: '2026-04-16T00:00:00.000Z',
+                created_at: 1776297600,
                 displayName: '',
                 userId: '',
                 isFavorite: false
@@ -265,33 +267,33 @@ describe('gameLogRows', () => {
         const alice = {
             userId: ' usr_alice ',
             displayName: 'Alice',
-            created_at: '',
+            created_at: 0,
             isFavorite: false
         };
         const bob = {
             userId: 'usr_bob',
             displayName: 'Bob',
-            created_at: '',
+            created_at: 0,
             isFavorite: false
         };
         const events: GameLogSessionEvent[] = [
             { ...alice, type: 'OnPlayerJoined' },
-            { type: 'JoinGroup', created_at: '', members: [alice, bob] },
+            { type: 'JoinGroup', created_at: 0, members: [alice, bob] },
             {
                 type: 'OnPlayerJoined',
-                created_at: '',
+                created_at: 0,
                 displayName: 'No ID',
                 userId: '',
                 isFavorite: false
             },
             {
                 type: 'JoinGroup',
-                created_at: '',
+                created_at: 0,
                 members: [
                     {
                         userId: '',
                         displayName: 'Ignored member',
-                        created_at: '',
+                        created_at: 0,
                         isFavorite: false
                     }
                 ]

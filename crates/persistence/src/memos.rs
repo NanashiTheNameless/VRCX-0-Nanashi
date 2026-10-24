@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::common::{normalize_text, now_iso, row_i64, row_string, ParamsBuilder};
+use crate::common::{normalize_text, now_epoch, row_i64, row_string, ParamsBuilder};
 use crate::database::schema::{ensure_global_store_tables, ensure_user_store_tables};
 use crate::database::DatabaseService;
 use crate::ownership::OwnerId;
@@ -11,7 +11,7 @@ use crate::Error;
 #[serde(rename_all = "camelCase")]
 pub struct MemoSaveResult {
     pub entity_id: String,
-    pub edited_at: String,
+    pub edited_at: i64,
     pub memo: String,
 }
 
@@ -19,7 +19,7 @@ pub struct MemoSaveResult {
 #[serde(rename_all = "camelCase")]
 pub struct UserMemoOutput {
     pub user_id: String,
-    pub edited_at: String,
+    pub edited_at: i64,
     pub memo: String,
 }
 
@@ -27,7 +27,7 @@ pub struct UserMemoOutput {
 #[serde(rename_all = "camelCase")]
 pub struct WorldMemoOutput {
     pub world_id: String,
-    pub edited_at: String,
+    pub edited_at: i64,
     pub memo: String,
 }
 
@@ -35,7 +35,7 @@ pub struct WorldMemoOutput {
 #[serde(rename_all = "camelCase")]
 pub struct AvatarMemoOutput {
     pub avatar_id: String,
-    pub edited_at: String,
+    pub edited_at: i64,
     pub memo: String,
 }
 
@@ -45,7 +45,7 @@ pub struct UserNoteOutput {
     pub user_id: String,
     pub display_name: String,
     pub note: String,
-    pub created_at: String,
+    pub created_at: i64,
 }
 
 pub fn memo_get_user(
@@ -65,7 +65,7 @@ pub fn memo_get_user(
         .first()
         .map(|row| UserMemoOutput {
             user_id: row_string(row, 0),
-            edited_at: row_string(row, 1),
+            edited_at: row_i64(row, 1),
             memo: row_string(row, 2),
         }))
 }
@@ -80,7 +80,7 @@ pub fn memo_list_users(db: &DatabaseService) -> Result<Vec<UserMemoOutput>, Erro
         .into_iter()
         .map(|row| UserMemoOutput {
             user_id: row_string(&row, 0),
-            edited_at: row_string(&row, 1),
+            edited_at: row_i64(&row, 1),
             memo: row_string(&row, 2),
         })
         .collect())
@@ -98,7 +98,7 @@ pub fn memo_count_users(db: &DatabaseService) -> Result<usize, Error> {
 pub fn memo_list_users_page(
     db: &DatabaseService,
     limit: i64,
-    cursor: Option<(&str, &str)>,
+    cursor: Option<(i64, &str)>,
 ) -> Result<Vec<UserMemoOutput>, Error> {
     ensure_global_store_tables(db)?;
     let mut sql = String::from("SELECT user_id, edited_at, memo FROM memos WHERE 1 = 1");
@@ -118,7 +118,7 @@ pub fn memo_list_users_page(
         .into_iter()
         .map(|row| UserMemoOutput {
             user_id: row_string(&row, 0),
-            edited_at: row_string(&row, 1),
+            edited_at: row_i64(&row, 1),
             memo: row_string(&row, 2),
         })
         .collect())
@@ -144,7 +144,7 @@ pub fn memo_list_user_notes(
             user_id: row_string(&row, 0),
             display_name: row_string(&row, 1),
             note: row_string(&row, 2),
-            created_at: row_string(&row, 3),
+            created_at: row_i64(&row, 3),
         })
         .collect())
 }
@@ -166,7 +166,7 @@ pub fn memo_get_world(
         .first()
         .map(|row| WorldMemoOutput {
             world_id: row_string(row, 0),
-            edited_at: row_string(row, 1),
+            edited_at: row_i64(row, 1),
             memo: row_string(row, 2),
         }))
 }
@@ -206,7 +206,7 @@ pub fn memo_get_worlds_many(
         .into_iter()
         .map(|row| WorldMemoOutput {
             world_id: row_string(&row, 0),
-            edited_at: row_string(&row, 1),
+            edited_at: row_i64(&row, 1),
             memo: row_string(&row, 2),
         })
         .collect())
@@ -229,7 +229,7 @@ pub fn memo_get_avatar(
         .first()
         .map(|row| AvatarMemoOutput {
             avatar_id: row_string(row, 0),
-            edited_at: row_string(row, 1),
+            edited_at: row_i64(row, 1),
             memo: row_string(row, 2),
         }))
 }
@@ -280,16 +280,16 @@ pub(crate) fn save_memo(
         )?;
         return Ok(MemoSaveResult {
             entity_id: normalized_id,
-            edited_at: String::new(),
+            edited_at: 0,
             memo: String::new(),
         });
     }
-    let edited_at = now_iso();
+    let edited_at = now_epoch();
     db.execute_non_query(
         &format!("INSERT OR REPLACE INTO {table_name} ({id_column}, edited_at, memo) VALUES (@entity_id, @edited_at, @memo)"),
         &ParamsBuilder::new()
             .set("entity_id", normalized_id.clone())
-            .set("edited_at", edited_at.clone())
+            .set("edited_at", edited_at)
             .set("memo", next_memo.clone())
             .build(),
     )?;

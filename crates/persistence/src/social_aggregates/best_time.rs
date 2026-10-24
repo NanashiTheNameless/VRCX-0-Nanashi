@@ -6,9 +6,7 @@ use crate::realtime::normalize_user_table_prefix;
 use crate::Error;
 
 use super::caveats::best_time_caveats;
-use super::helpers::{
-    append_time_window_filter, bucket_label, table_exists, tz_offset_modifier, with_tz_caveat,
-};
+use super::helpers::{append_time_window_filter, bucket_label, table_exists, with_tz_caveat};
 use super::types::{
     ActivityBucket, BestTimeBucketRow, BestTimeFriend, BestTimeToPlayInput, BestTimeToPlayOutput,
 };
@@ -26,11 +24,13 @@ pub fn get_best_time_to_play(
         });
     }
 
-    let offset_minutes = input.utc_offset_minutes.unwrap_or(0);
-    let tz_modifier = tz_offset_modifier(offset_minutes);
     let bucket_expr = match input.bucket {
-        ActivityBucket::HourOfDay => "strftime('%H', created_at, @tz)",
-        ActivityBucket::DayOfWeek => "strftime('%w', created_at, @tz)",
+        ActivityBucket::HourOfDay => {
+            "strftime('%H', vrcx_display_epoch(created_at, @tz), 'unixepoch')"
+        }
+        ActivityBucket::DayOfWeek => {
+            "strftime('%w', vrcx_display_epoch(created_at, @tz), 'unixepoch')"
+        }
     };
     let mut sql = format!(
         "WITH filtered AS (
@@ -38,7 +38,7 @@ pub fn get_best_time_to_play(
             FROM {table_name}
             WHERE type = 'Online'"
     );
-    let mut params = ParamsBuilder::new().set("tz", tz_modifier);
+    let mut params = ParamsBuilder::new().set("tz", input.utc_offset_minutes);
     append_time_window_filter(&mut sql, &mut params, &input.time_window, "created_at");
     sql.push_str(
         ")
@@ -130,7 +130,7 @@ pub fn get_best_time_to_play(
 
     Ok(BestTimeToPlayOutput {
         rows,
-        caveats: with_tz_caveat(best_time_caveats(), offset_minutes),
+        caveats: with_tz_caveat(best_time_caveats(), input.utc_offset_minutes),
     })
 }
 

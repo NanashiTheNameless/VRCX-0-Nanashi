@@ -137,11 +137,11 @@ pub async fn send_json_webhook_with_retry(
     Err(last_failure)
 }
 
-pub fn webhook_local_time_string(created_at: &str) -> String {
-    chrono::DateTime::parse_from_rfc3339(created_at)
+pub fn webhook_local_time_string(created_at: i64) -> String {
+    chrono::DateTime::from_timestamp(created_at, 0)
         .map(|value| {
             value
-                .with_timezone(&chrono::Local)
+                .with_timezone(&vrcx_0_core::time::DisplayTimeZone)
                 .format("%Y-%m-%d %H:%M:%S")
                 .to_string()
         })

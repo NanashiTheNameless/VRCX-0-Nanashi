@@ -342,12 +342,12 @@ describe('searchResultToLibraryImage', () => {
             folderPath: 'C:\\VRChat\\2026-07',
             fileName: 'shot.png',
             sizeBytes: 2048,
-            modifiedAt: Date.parse('2026-04-16T01:02:03.000Z'),
+            modifiedAt: Date.parse('2026-04-16T01:02:03.000Z') / 1000,
             width: 1920,
             height: 1080,
             worldId: 'wrld_1',
             worldName: 'Great World',
-            capturedAt: '2026-04-16T01:02:03.000Z',
+            capturedAt: 1776301323,
             error: null
         });
     });
@@ -366,7 +366,7 @@ describe('searchResultToLibraryImage', () => {
                     metadata: null
                 })
             )
-        ).toBe(new Date(2025, 0, 5, 2, 24, 53, 276).getTime());
+        ).toBe(new Date(2025, 0, 5, 2, 24, 53, 0).getTime());
     });
 
     it('prefers the file name capture time over a rewritten file date', () => {
@@ -396,7 +396,7 @@ describe('searchResultToLibraryImage', () => {
             createdAt: null,
             worldId: null,
             worldName: null,
-            capturedAt: null,
+            capturedAt: 0,
             metadata: null
         });
     });

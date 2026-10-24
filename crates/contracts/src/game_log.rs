@@ -26,7 +26,7 @@ pub enum GameLogEntryDeleteKind {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GameLogLocationEntry {
-    pub created_at: String,
+    pub created_at: i64,
     pub location: String,
     pub world_id: String,
     pub world_name: String,
@@ -36,7 +36,7 @@ pub struct GameLogLocationEntry {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct GameLogJoinLeaveEntry {
-    pub created_at: String,
+    pub created_at: i64,
     pub event_type: String,
     pub display_name: String,
     pub location: String,
@@ -47,7 +47,7 @@ pub struct GameLogJoinLeaveEntry {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct GameLogPortalSpawnEntry {
-    pub created_at: String,
+    pub created_at: i64,
     pub display_name: String,
     pub location: String,
     pub user_id: String,
@@ -57,7 +57,7 @@ pub struct GameLogPortalSpawnEntry {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct GameLogVideoPlayEntry {
-    pub created_at: String,
+    pub created_at: i64,
     pub video_url: String,
     pub video_name: String,
     pub video_id: String,
@@ -68,7 +68,7 @@ pub struct GameLogVideoPlayEntry {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct GameLogResourceLoadEntry {
-    pub created_at: String,
+    pub created_at: i64,
     pub resource_url: String,
     pub resource_type: String,
     pub location: String,
@@ -76,13 +76,13 @@ pub struct GameLogResourceLoadEntry {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct GameLogEventEntry {
-    pub created_at: String,
+    pub created_at: i64,
     pub data: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct GameLogExternalEntry {
-    pub created_at: String,
+    pub created_at: i64,
     pub message: String,
     pub display_name: String,
     pub user_id: String,
@@ -91,7 +91,7 @@ pub struct GameLogExternalEntry {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GameLogLocationTimeUpdate {
-    pub created_at: String,
+    pub created_at: i64,
     pub time: i64,
 }
 
@@ -99,7 +99,7 @@ pub struct GameLogLocationTimeUpdate {
 #[serde(rename_all = "camelCase")]
 pub struct GameLogPreviousInstanceGroupOutput {
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     pub group_name: String,
     pub location: String,
     pub time: i64,
@@ -110,7 +110,7 @@ pub struct GameLogPreviousInstanceGroupOutput {
 #[serde(rename_all = "camelCase")]
 pub struct GameLogPreviousInstanceWorldOutput {
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     pub group_name: String,
     pub id: i64,
     pub location: String,
@@ -147,7 +147,7 @@ impl GameLogWriteBatch {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GameLogLocationSnapshot {
-    pub created_at: String,
+    pub created_at: i64,
     pub location: String,
     pub world_id: String,
     pub world_name: String,
@@ -157,7 +157,7 @@ pub struct GameLogLocationSnapshot {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GameLogJoinLeaveSnapshot {
     pub id: i64,
-    pub created_at: String,
+    pub created_at: i64,
     pub event_type: String,
     pub display_name: String,
     pub user_id: String,
@@ -167,7 +167,7 @@ pub struct GameLogJoinLeaveSnapshot {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SessionLocationSegmentRow {
     pub id: i64,
-    pub created_at: String,
+    pub created_at: i64,
     pub location: String,
     pub world_id: String,
     pub world_name: String,
@@ -179,7 +179,7 @@ pub struct SessionLocationSegmentRow {
 pub struct SessionEventRow {
     pub row_id: i64,
     pub event_type: String,
-    pub created_at: String,
+    pub created_at: i64,
     pub display_name: String,
     pub user_id: String,
     pub location: String,
@@ -190,7 +190,7 @@ pub struct SessionEventRow {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SessionPlayerDurationRow {
-    pub created_at: String,
+    pub created_at: i64,
     pub location: String,
     pub display_name: String,
     pub user_id: String,
@@ -199,7 +199,7 @@ pub struct SessionPlayerDurationRow {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PreviousInstanceEventRow {
-    pub created_at: String,
+    pub created_at: i64,
     pub created_at_ts: i64,
     pub location: String,
     pub time: i64,

@@ -10,7 +10,7 @@ import { useGameLogSessionExpansion } from './useGameLogSessionExpansion';
 function session(id: number): GameLogSession {
     return {
         id,
-        created_at: '2026-09-03T00:00:00.000Z',
+        created_at: 1788393600,
         duration: 0,
         location: `wrld_test:${id}`,
         worldId: 'wrld_test',

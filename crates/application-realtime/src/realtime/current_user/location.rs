@@ -66,7 +66,7 @@ pub(super) fn location_game_log_entry(
     let parsed = parse_location(&location);
     let world_name = snapshot.world_name.trim().to_string();
     Some(GameLogLocationEntry {
-        created_at: now.iso.clone(),
+        created_at: now.at,
         location,
         world_id: parsed.world_id,
         world_name,
@@ -98,10 +98,10 @@ pub(super) fn location_game_state_patch(
         "currentWorldId": parsed.world_id,
         "currentWorldName": world_name,
         "currentDestination": "",
-        "currentLocationStartedAt": now.iso,
+        "currentLocationStartedAt": now.at,
         "currentLocationPlayerIds": [],
         "currentLocationPlayers": [],
-        "lastGameLogAt": now.iso,
+        "lastGameLogAt": now.at,
         "lastGameLogType": "location",
     }))
 }

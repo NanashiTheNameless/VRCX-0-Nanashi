@@ -2,7 +2,7 @@ use chrono::{DateTime, FixedOffset};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::common::{normalize_text, now_iso, strict_row_i64, strict_row_string, ParamsBuilder};
+use crate::common::{normalize_text, now_epoch, strict_row_i64, strict_row_string, ParamsBuilder};
 use crate::database::schema::ensure_user_store_tables;
 use crate::database::DatabaseService;
 use crate::ownership::OwnerId;
@@ -15,7 +15,7 @@ pub struct LocalModerationInput {
     #[serde(default)]
     pub user_id: String,
     #[serde(default)]
-    pub updated_at: String,
+    pub updated_at: i64,
     #[serde(default)]
     pub display_name: String,
     #[serde(default)]
@@ -41,7 +41,7 @@ pub struct RemoteModerationInput {
 #[serde(rename_all = "camelCase")]
 pub struct LocalModerationOutput {
     pub user_id: String,
-    pub updated_at: String,
+    pub updated_at: i64,
     pub display_name: String,
     pub block: bool,
     pub mute: bool,
@@ -80,7 +80,7 @@ impl LocalModerationOutput {
     fn from_row(row: &[Value]) -> Result<Self, Error> {
         Ok(Self {
             user_id: strict_row_string(row, 0)?,
-            updated_at: strict_row_string(row, 1)?,
+            updated_at: strict_row_i64(row, 1)?,
             display_name: strict_row_string(row, 2)?,
             block: strict_row_i64(row, 3)? == 1,
             mute: strict_row_i64(row, 4)? == 1,
@@ -154,7 +154,7 @@ pub fn local_moderation_sync_snapshot(
             .entry(target_user_id.clone())
             .or_insert_with(|| LocalModerationOutput {
                 user_id: target_user_id.clone(),
-                updated_at: String::new(),
+                updated_at: 0,
                 display_name: String::new(),
                 block: false,
                 mute: false,
@@ -170,7 +170,7 @@ pub fn local_moderation_sync_snapshot(
                 .get(&target_user_id)
                 .is_none_or(|current| candidate > *current)
             {
-                entry.updated_at = candidate.created.clone();
+                entry.updated_at = candidate.created_at.timestamp();
                 entry.display_name = candidate.display_name.clone();
                 metadata_by_user_id.insert(target_user_id.clone(), candidate);
             }
@@ -188,8 +188,8 @@ pub fn local_moderation_sync_snapshot(
         }
     }
     for entry in moderation_by_user_id.values_mut() {
-        if entry.updated_at.is_empty() {
-            entry.updated_at = now_iso();
+        if entry.updated_at == 0 {
+            entry.updated_at = now_epoch();
         }
     }
 
@@ -218,7 +218,7 @@ pub fn local_moderation_sync_snapshot(
                 &format!("INSERT OR REPLACE INTO {user_prefix}_moderation (user_id, updated_at, display_name, block, mute) VALUES (@user_id, @updated_at, @display_name, @block, @mute)"),
                 &ParamsBuilder::new()
                     .set("user_id", entry.user_id.clone())
-                    .set("updated_at", entry.updated_at.clone())
+                    .set("updated_at", entry.updated_at)
                     .set("display_name", entry.display_name.clone())
                     .set("block", if entry.block { 1 } else { 0 })
                     .set("mute", if entry.mute { 1 } else { 0 })
@@ -247,7 +247,7 @@ pub(crate) fn set_local_moderation_row(
         &format!("INSERT OR REPLACE INTO {user_prefix}_moderation (user_id, updated_at, display_name, block, mute) VALUES (@user_id, @updated_at, @display_name, @block, @mute)"),
         &ParamsBuilder::new()
             .set("user_id", user_id)
-            .set("updated_at", entry.updated_at.clone())
+            .set("updated_at", entry.updated_at)
             .set("display_name", entry.display_name.clone())
             .set("block", if entry.block { 1 } else { 0 })
             .set("mute", if entry.mute { 1 } else { 0 })

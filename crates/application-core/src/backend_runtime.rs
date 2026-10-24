@@ -2,7 +2,6 @@ use std::sync::{Arc, Mutex};
 
 use serde::{Deserialize, Serialize};
 use vrcx_0_core::realtime::{RealtimeWsStatus, RealtimeWsStatusPayload};
-use vrcx_0_core::time::now_iso;
 
 use crate::events::FriendProfileLoadStatusPayload;
 use crate::ports::HostSessionProjection;
@@ -134,7 +133,8 @@ pub struct BackendRuntimeSnapshot {
     pub process_status: BackendRuntimeProcessStatus,
     pub game_log_persisted_count: u64,
     pub last_error: Option<String>,
-    pub updated_at: String,
+    #[serde(default, deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub updated_at: i64,
     pub friend_profile_load: FriendProfileLoadStatusPayload,
 }
 
@@ -164,7 +164,7 @@ struct BackendRuntimeState {
     process_status: BackendRuntimeProcessStatus,
     game_log_persisted_count: u64,
     last_error: Option<String>,
-    updated_at: String,
+    updated_at: i64,
     friend_profile_load: FriendProfileLoadStatusPayload,
 }
 
@@ -181,7 +181,7 @@ impl Default for BackendRuntimeState {
             process_status: BackendRuntimeProcessStatus::Unknown,
             game_log_persisted_count: 0,
             last_error: None,
-            updated_at: now_iso(),
+            updated_at: vrcx_0_core::time::now_epoch(),
             friend_profile_load: FriendProfileLoadStatusPayload::default(),
         }
     }
@@ -327,7 +327,7 @@ impl BackendRuntime {
     fn update(&self, update: impl FnOnce(&mut BackendRuntimeState)) -> BackendRuntimeSnapshot {
         let mut state = self.lock_state();
         update(&mut state);
-        state.updated_at = now_iso();
+        state.updated_at = vrcx_0_core::time::now_epoch();
         self.state_to_snapshot(&state)
     }
 
@@ -349,7 +349,7 @@ impl BackendRuntime {
             process_status: state.process_status,
             game_log_persisted_count: state.game_log_persisted_count,
             last_error: state.last_error.clone(),
-            updated_at: state.updated_at.clone(),
+            updated_at: state.updated_at,
             friend_profile_load: state.friend_profile_load.clone(),
         }
     }

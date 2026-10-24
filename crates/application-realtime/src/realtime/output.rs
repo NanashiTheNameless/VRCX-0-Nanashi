@@ -14,7 +14,7 @@ pub struct FriendIconChange {
     pub display_name: String,
     pub previous_icon_url: String,
     pub next_icon_url: String,
-    pub created_at: String,
+    pub created_at: i64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

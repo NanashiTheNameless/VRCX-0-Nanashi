@@ -1,7 +1,6 @@
 use std::path::PathBuf;
 use std::sync::{Arc, Barrier};
 
-use chrono::DateTime;
 use serde_json::json;
 use vrcx_0_contracts::feed_live::FeedLiveEntry;
 use vrcx_0_core::OwnerId;
@@ -16,6 +15,9 @@ use vrcx_0_persistence::activity::{
 use vrcx_0_persistence::game_log::{write_batch, GameLogLocationEntry, GameLogWriteBatch};
 use vrcx_0_persistence::realtime::{write_realtime_batch, RealtimePersistenceBatch};
 use vrcx_0_persistence::DatabaseService;
+
+/// The newest self game log row a cached self view was built from.
+const SELF_CURSOR: i64 = 1736038800;
 
 struct TestDir {
     path: PathBuf,
@@ -46,10 +48,8 @@ fn test_db(name: &str) -> (TestDir, Arc<DatabaseService>) {
     (dir, db)
 }
 
-fn ms(value: &str) -> i64 {
-    DateTime::parse_from_rfc3339(value)
-        .unwrap()
-        .timestamp_millis()
+fn ms(seconds: i64) -> i64 {
+    seconds * 1000
 }
 
 fn buckets_with(slot: usize, value: f64) -> Vec<f64> {
@@ -58,14 +58,14 @@ fn buckets_with(slot: usize, value: f64) -> Vec<f64> {
     buckets
 }
 
-fn upsert_self_sync(db: &DatabaseService, user_id: &str, cursor: &str) {
+fn upsert_self_sync(db: &DatabaseService, user_id: &str, cursor: i64) {
     activity_sync_state_upsert(
         db,
         ActivitySyncStateInput {
             user_id: user_id.to_string(),
-            updated_at: "2025-01-06T00:00:00Z".to_string(),
+            updated_at: 1736121600,
             is_self: true,
-            source_last_created_at: cursor.to_string(),
+            source_last_created_at: cursor,
             pending_session_start_at: None,
             cached_range_days: json!(7),
         },
@@ -73,7 +73,7 @@ fn upsert_self_sync(db: &DatabaseService, user_id: &str, cursor: &str) {
     .unwrap();
 }
 
-fn replace_self_session(db: &DatabaseService, user_id: &str, start: &str, end: &str) {
+fn replace_self_session(db: &DatabaseService, user_id: &str, start: i64, end: i64) {
     activity_sessions_replace(
         db,
         user_id.to_string(),
@@ -81,14 +81,13 @@ fn replace_self_session(db: &DatabaseService, user_id: &str, start: &str, end: &
             start: json!(ms(start)),
             end: json!(ms(end)),
             is_open_tail: false,
-            source_revision: "self-cursor".to_string(),
+            source_revision: SELF_CURSOR.to_string(),
         }],
     )
     .unwrap();
 }
 
-fn presence_entry(user_id: &str, created_at: &str, kind: &str) -> FeedLiveEntry {
-    let created_at = created_at.to_string();
+fn presence_entry(user_id: &str, created_at: i64, kind: &str) -> FeedLiveEntry {
     let user_id = user_id.to_string();
     let display_name = "Friend".to_string();
     match kind {
@@ -124,7 +123,7 @@ fn add_presence(
     db: &DatabaseService,
     owner_user_id: &str,
     target_user_id: &str,
-    created_at: &str,
+    created_at: i64,
     kind: &str,
 ) {
     write_realtime_batch(
@@ -147,7 +146,7 @@ fn self_activity_warmup_prepares_a_year_without_bucket_cache() {
         &OwnerId::new(owner),
         &GameLogWriteBatch {
             locations: vec![GameLogLocationEntry {
-                created_at: "2025-01-05T01:00:00Z".to_string(),
+                created_at: 1736038800,
                 location: "wrld_1:1".to_string(),
                 world_id: "wrld_1".to_string(),
                 world_name: "World".to_string(),
@@ -159,16 +158,11 @@ fn self_activity_warmup_prepares_a_year_without_bucket_cache() {
     )
     .unwrap();
 
-    let warmed = activity_self_sessions_warmup(
-        &db,
-        OwnerId::new(owner),
-        365,
-        Some(ms("2025-01-06T00:00:00Z")),
-    )
-    .unwrap();
+    let warmed =
+        activity_self_sessions_warmup(&db, OwnerId::new(owner), 365, Some(ms(1736121600))).unwrap();
 
     assert_eq!(warmed.sync.cached_range_days, 365);
-    assert_eq!(warmed.sync.source_last_created_at, "2025-01-05T01:00:00Z");
+    assert_eq!(warmed.sync.source_last_created_at, 1736038800);
     assert!(!warmed.sessions.is_empty());
     assert!(activity_bucket_cache_get(
         &db,
@@ -177,7 +171,7 @@ fn self_activity_warmup_prepares_a_year_without_bucket_cache() {
             target_user_id: String::new(),
             range_days: json!(365),
             view_kind: ActivityViewKind::Activity,
-            exclude_key: String::new(),
+            exclude_key: format!("|tz={}", vrcx_0_core::time::display_zone_cache_key()),
         },
     )
     .unwrap()
@@ -193,7 +187,7 @@ fn concurrent_page_refresh_cannot_downgrade_year_warmup() {
         &OwnerId::new(owner),
         &GameLogWriteBatch {
             locations: vec![GameLogLocationEntry {
-                created_at: "2025-01-05T01:00:00Z".to_string(),
+                created_at: 1736038800,
                 location: "wrld_1:1".to_string(),
                 world_id: "wrld_1".to_string(),
                 world_name: "World".to_string(),
@@ -214,7 +208,7 @@ fn concurrent_page_refresh_cannot_downgrade_year_warmup() {
             warmup_db.as_ref(),
             OwnerId::new(owner),
             365,
-            Some(ms("2025-01-06T00:00:00Z")),
+            Some(ms(1736121600)),
         )
         .unwrap();
     });
@@ -230,7 +224,7 @@ fn concurrent_page_refresh_cannot_downgrade_year_warmup() {
                 is_self: true,
                 range_days: 30,
                 utc_offset_minutes: 0,
-                now_ms: ms("2025-01-06T00:00:00Z"),
+                now: 1736121600,
                 force_refresh: true,
             },
         )
@@ -251,8 +245,8 @@ fn concurrent_page_refresh_cannot_downgrade_year_warmup() {
 fn activity_view_build_returns_matching_cached_self_view() {
     let (_dir, db) = test_db("activity-view-cache-hit");
     let owner = "usr_self";
-    upsert_self_sync(&db, owner, "self-cursor");
-    replace_self_session(&db, owner, "2025-01-05T01:00:00Z", "2025-01-05T02:00:00Z");
+    upsert_self_sync(&db, owner, SELF_CURSOR);
+    replace_self_session(&db, owner, 1736038800, 1736042400);
     activity_bucket_cache_upsert(
         &db,
         ActivityBucketCacheInput {
@@ -260,9 +254,9 @@ fn activity_view_build_returns_matching_cached_self_view() {
             target_user_id: String::new(),
             range_days: json!(7),
             view_kind: ActivityViewKind::Activity,
-            exclude_key: String::new(),
+            exclude_key: format!("|tz={}", vrcx_0_core::time::display_zone_cache_key()),
             bucket_version: json!(1),
-            built_from_cursor: "self-cursor".to_string(),
+            built_from_cursor: SELF_CURSOR.to_string(),
             raw_buckets: json!(buckets_with(5, 42.0)),
             normalized_buckets: json!(buckets_with(5, 0.5)),
             summary: json!({
@@ -272,7 +266,7 @@ fn activity_view_build_returns_matching_cached_self_view() {
                 "peakHourEnd": 6,
                 "hasAnyData": true
             }),
-            built_at: "2025-01-06T00:00:00Z".to_string(),
+            built_at: 1736121600,
         },
     )
     .unwrap();
@@ -285,13 +279,13 @@ fn activity_view_build_returns_matching_cached_self_view() {
             is_self: true,
             range_days: 7,
             utc_offset_minutes: 0,
-            now_ms: ms("2025-01-06T00:00:00Z"),
+            now: 1736121600,
             force_refresh: false,
         },
     )
     .unwrap();
 
-    assert_eq!(view.built_from_cursor, "self-cursor");
+    assert_eq!(view.built_from_cursor, SELF_CURSOR.to_string());
     assert_eq!(view.raw_buckets[5], 42.0);
     assert_eq!(view.peak_hour_start, 5);
     assert!(view.has_any_data);
@@ -302,7 +296,7 @@ fn build_friend_view(
     owner: &str,
     friend: &str,
     range_days: i64,
-    now: &str,
+    now: i64,
 ) -> ActivityViewOutput {
     activity_view_build(
         db,
@@ -312,7 +306,7 @@ fn build_friend_view(
             is_self: false,
             range_days,
             utc_offset_minutes: 0,
-            now_ms: ms(now),
+            now,
             force_refresh: false,
         },
     )
@@ -336,16 +330,16 @@ fn activity_friend_presence_last_created_at_returns_global_max() {
     let (_dir, db) = test_db("activity-friend-last-created");
     let owner = "usr_owner";
     let friend = "usr_friend";
-    add_presence(&db, owner, friend, "2025-01-05T01:00:00Z", "Online");
-    add_presence(&db, owner, friend, "2025-01-05T02:00:00Z", "Offline");
-    add_presence(&db, owner, friend, "2025-01-04T23:00:00Z", "Online");
+    add_presence(&db, owner, friend, 1736038800, "Online");
+    add_presence(&db, owner, friend, 1736042400, "Offline");
+    add_presence(&db, owner, friend, 1736031600, "Online");
 
     let last = activity_friend_presence_last_created_at(&db, &OwnerId::new(owner), friend).unwrap();
-    assert_eq!(last, "2025-01-05T02:00:00Z");
+    assert_eq!(last, Some(1736042400));
 
     let missing =
         activity_friend_presence_last_created_at(&db, &OwnerId::new(owner), "usr_nobody").unwrap();
-    assert_eq!(missing, "");
+    assert_eq!(missing, None);
 }
 
 #[test]
@@ -353,11 +347,11 @@ fn activity_view_build_friend_probe_hit_is_stable() {
     let (_dir, db) = test_db("activity-view-friend-probe-hit");
     let owner = "usr_owner";
     let friend = "usr_friend";
-    add_presence(&db, owner, friend, "2025-01-05T01:00:00Z", "Online");
-    add_presence(&db, owner, friend, "2025-01-05T02:00:00Z", "Offline");
+    add_presence(&db, owner, friend, 1736038800, "Online");
+    add_presence(&db, owner, friend, 1736042400, "Offline");
 
-    let first = build_friend_view(&db, owner, friend, 7, "2025-01-06T00:00:00Z");
-    let second = build_friend_view(&db, owner, friend, 7, "2025-01-06T06:00:00Z");
+    let first = build_friend_view(&db, owner, friend, 7, 1736121600);
+    let second = build_friend_view(&db, owner, friend, 7, 1736143200);
 
     assert!(first.has_any_data);
     assert!(second.has_any_data);
@@ -371,8 +365,8 @@ fn activity_view_build_friend_without_data_is_stable() {
     let owner = "usr_owner";
     let friend = "usr_friend";
 
-    let first = build_friend_view(&db, owner, friend, 7, "2025-01-06T00:00:00Z");
-    let second = build_friend_view(&db, owner, friend, 7, "2025-01-06T00:00:00Z");
+    let first = build_friend_view(&db, owner, friend, 7, 1736121600);
+    let second = build_friend_view(&db, owner, friend, 7, 1736121600);
 
     assert!(!first.has_any_data);
     assert!(!second.has_any_data);
@@ -385,8 +379,8 @@ fn activity_view_build_friend_rebuilds_legacy_cache_without_has_any_data() {
     let (_dir, db) = test_db("activity-view-friend-legacy-cache");
     let owner = "usr_owner";
     let friend = "usr_friend";
-    add_presence(&db, owner, friend, "2025-01-05T01:00:00Z", "Online");
-    add_presence(&db, owner, friend, "2025-01-05T02:00:00Z", "Offline");
+    add_presence(&db, owner, friend, 1736038800, "Online");
+    add_presence(&db, owner, friend, 1736042400, "Offline");
 
     activity_bucket_cache_upsert(
         &db,
@@ -395,9 +389,9 @@ fn activity_view_build_friend_rebuilds_legacy_cache_without_has_any_data() {
             target_user_id: friend.to_string(),
             range_days: json!(7),
             view_kind: ActivityViewKind::Activity,
-            exclude_key: String::new(),
+            exclude_key: format!("|tz={}", vrcx_0_core::time::display_zone_cache_key()),
             bucket_version: json!(1),
-            built_from_cursor: "2025-01-05T02:00:00Z".to_string(),
+            built_from_cursor: "1736042400".into(),
             raw_buckets: json!(buckets_with(5, 999.0)),
             normalized_buckets: json!(buckets_with(5, 1.0)),
             summary: json!({
@@ -406,17 +400,17 @@ fn activity_view_build_friend_rebuilds_legacy_cache_without_has_any_data() {
                 "peakHourStart": 5,
                 "peakHourEnd": 6
             }),
-            built_at: "2025-01-06T00:00:00Z".to_string(),
+            built_at: 1736121600,
         },
     )
     .unwrap();
 
-    let view = build_friend_view(&db, owner, friend, 7, "2025-01-06T00:00:00Z");
+    let view = build_friend_view(&db, owner, friend, 7, 1736121600);
 
     assert!(view.has_any_data);
     assert_eq!(view.raw_buckets[1], 60.0);
     assert_eq!(view.raw_buckets[5], 0.0);
-    assert_eq!(view.built_from_cursor, "2025-01-05T02:00:00Z");
+    assert_eq!(view.built_from_cursor, "1736042400");
 
     let cached = activity_bucket_cache_get(
         &db,
@@ -425,7 +419,7 @@ fn activity_view_build_friend_rebuilds_legacy_cache_without_has_any_data() {
             target_user_id: friend.to_string(),
             range_days: json!(7),
             view_kind: ActivityViewKind::Activity,
-            exclude_key: String::new(),
+            exclude_key: format!("|tz={}", vrcx_0_core::time::display_zone_cache_key()),
         },
     )
     .unwrap()
@@ -438,17 +432,17 @@ fn activity_view_build_friend_new_event_changes_cursor_and_rebuilds() {
     let (_dir, db) = test_db("activity-view-friend-new-event");
     let owner = "usr_owner";
     let friend = "usr_friend";
-    add_presence(&db, owner, friend, "2025-01-05T01:00:00Z", "Online");
-    add_presence(&db, owner, friend, "2025-01-05T02:00:00Z", "Offline");
+    add_presence(&db, owner, friend, 1736038800, "Online");
+    add_presence(&db, owner, friend, 1736042400, "Offline");
 
-    let first = build_friend_view(&db, owner, friend, 7, "2025-01-06T00:00:00Z");
-    assert_eq!(first.built_from_cursor, "2025-01-05T02:00:00Z");
+    let first = build_friend_view(&db, owner, friend, 7, 1736121600);
+    assert_eq!(first.built_from_cursor, "1736042400");
 
-    add_presence(&db, owner, friend, "2025-01-05T03:00:00Z", "Online");
-    add_presence(&db, owner, friend, "2025-01-05T04:00:00Z", "Offline");
+    add_presence(&db, owner, friend, 1736046000, "Online");
+    add_presence(&db, owner, friend, 1736049600, "Offline");
 
-    let second = build_friend_view(&db, owner, friend, 7, "2025-01-06T00:00:00Z");
-    assert_eq!(second.built_from_cursor, "2025-01-05T04:00:00Z");
+    let second = build_friend_view(&db, owner, friend, 7, 1736121600);
+    assert_eq!(second.built_from_cursor, "1736049600");
     assert!(second.has_any_data);
     assert_ne!(first.raw_buckets, second.raw_buckets);
 }
@@ -458,8 +452,8 @@ fn activity_view_build_computes_friend_presence_and_writes_cache() {
     let (_dir, db) = test_db("activity-view-friend");
     let owner = "usr_owner";
     let friend = "usr_friend";
-    add_presence(&db, owner, friend, "2025-01-05T01:00:00Z", "Online");
-    add_presence(&db, owner, friend, "2025-01-05T02:00:00Z", "Offline");
+    add_presence(&db, owner, friend, 1736038800, "Online");
+    add_presence(&db, owner, friend, 1736042400, "Offline");
 
     let view = activity_view_build(
         &db,
@@ -469,13 +463,13 @@ fn activity_view_build_computes_friend_presence_and_writes_cache() {
             is_self: false,
             range_days: 7,
             utc_offset_minutes: 0,
-            now_ms: ms("2025-01-06T00:00:00Z"),
+            now: 1736121600,
             force_refresh: false,
         },
     )
     .unwrap();
 
-    assert_eq!(view.built_from_cursor, "2025-01-05T02:00:00Z");
+    assert_eq!(view.built_from_cursor, "1736042400");
     assert_eq!(view.raw_buckets[1], 60.0);
     assert_eq!(view.peak_day_index, 0);
     assert_eq!(view.filtered_event_count, 1);
@@ -488,12 +482,12 @@ fn activity_view_build_computes_friend_presence_and_writes_cache() {
             target_user_id: friend.to_string(),
             range_days: json!(7),
             view_kind: ActivityViewKind::Activity,
-            exclude_key: String::new(),
+            exclude_key: format!("|tz={}", vrcx_0_core::time::display_zone_cache_key()),
         },
     )
     .unwrap()
     .unwrap();
-    assert_eq!(cached.built_from_cursor, "2025-01-05T02:00:00Z");
+    assert_eq!(cached.built_from_cursor, "1736042400");
     assert_eq!(cached.summary["peakDayIndex"], json!(0));
 }
 
@@ -502,10 +496,10 @@ fn activity_overlap_view_build_uses_pair_cursor_and_exclude_key() {
     let (_dir, db) = test_db("activity-overlap-view");
     let owner = "usr_owner";
     let friend = "usr_friend";
-    upsert_self_sync(&db, owner, "self-cursor");
-    replace_self_session(&db, owner, "2025-01-05T00:00:00Z", "2025-01-05T04:00:00Z");
-    add_presence(&db, owner, friend, "2025-01-05T00:00:00Z", "Online");
-    add_presence(&db, owner, friend, "2025-01-05T04:00:00Z", "Offline");
+    upsert_self_sync(&db, owner, SELF_CURSOR);
+    replace_self_session(&db, owner, 1736035200, 1736049600);
+    add_presence(&db, owner, friend, 1736035200, "Online");
+    add_presence(&db, owner, friend, 1736049600, "Offline");
 
     let view = activity_overlap_view_build(
         &db,
@@ -515,7 +509,7 @@ fn activity_overlap_view_build_uses_pair_cursor_and_exclude_key() {
             target_user_id: friend.to_string(),
             range_days: 7,
             utc_offset_minutes: 0,
-            now_ms: ms("2025-01-06T00:00:00Z"),
+            now: 1736121600,
             force_refresh: false,
             exclude_start_hour: Some(22),
             exclude_end_hour: Some(2),
@@ -523,7 +517,7 @@ fn activity_overlap_view_build_uses_pair_cursor_and_exclude_key() {
     )
     .unwrap();
 
-    assert_eq!(view.built_from_cursor, "self-cursor|2025-01-05T04:00:00Z");
+    assert_eq!(view.built_from_cursor, format!("{SELF_CURSOR}|1736049600"));
     assert_eq!(view.raw_buckets[0], 0.0);
     assert_eq!(view.raw_buckets[1], 0.0);
     assert_eq!(view.raw_buckets[2], 60.0);
@@ -539,12 +533,15 @@ fn activity_overlap_view_build_uses_pair_cursor_and_exclude_key() {
             target_user_id: friend.to_string(),
             range_days: json!(7),
             view_kind: ActivityViewKind::Overlap,
-            exclude_key: "22-2".to_string(),
+            exclude_key: format!("22-2|tz={}", vrcx_0_core::time::display_zone_cache_key()),
         },
     )
     .unwrap()
     .unwrap();
-    assert_eq!(cached.built_from_cursor, "self-cursor|2025-01-05T04:00:00Z");
+    assert_eq!(
+        cached.built_from_cursor,
+        format!("{SELF_CURSOR}|1736049600")
+    );
     assert_eq!(cached.summary["overlapPercent"], json!(100));
 }
 
@@ -553,8 +550,8 @@ fn activity_view_build_all_range_resolves_friend_span_and_uses_sentinel_cache() 
     let (_dir, db) = test_db("activity-view-all-friend");
     let owner = "usr_owner";
     let friend = "usr_friend";
-    add_presence(&db, owner, friend, "2024-06-01T01:00:00Z", "Online");
-    add_presence(&db, owner, friend, "2024-06-01T02:00:00Z", "Offline");
+    add_presence(&db, owner, friend, 1717203600, "Online");
+    add_presence(&db, owner, friend, 1717207200, "Offline");
 
     let view = activity_view_build(
         &db,
@@ -564,7 +561,7 @@ fn activity_view_build_all_range_resolves_friend_span_and_uses_sentinel_cache() 
             is_self: false,
             range_days: 0,
             utc_offset_minutes: 0,
-            now_ms: ms("2025-01-06T00:00:00Z"),
+            now: 1736121600,
             force_refresh: false,
         },
     )
@@ -580,7 +577,7 @@ fn activity_view_build_all_range_resolves_friend_span_and_uses_sentinel_cache() 
             target_user_id: friend.to_string(),
             range_days: json!(0),
             view_kind: ActivityViewKind::Activity,
-            exclude_key: String::new(),
+            exclude_key: format!("|tz={}", vrcx_0_core::time::display_zone_cache_key()),
         },
     )
     .unwrap()
@@ -596,7 +593,7 @@ fn activity_view_build_all_range_backfills_old_self_gamelog() {
         &OwnerId::new(owner),
         &GameLogWriteBatch {
             locations: vec![GameLogLocationEntry {
-                created_at: "2024-06-01T01:00:00Z".to_string(),
+                created_at: 1717203600,
                 location: "wrld_1:1".to_string(),
                 world_id: "wrld_1".to_string(),
                 world_name: "World".to_string(),
@@ -616,7 +613,7 @@ fn activity_view_build_all_range_backfills_old_self_gamelog() {
             is_self: true,
             range_days: 0,
             utc_offset_minutes: 0,
-            now_ms: ms("2025-01-06T00:00:00Z"),
+            now: 1736121600,
             force_refresh: false,
         },
     )
@@ -632,7 +629,7 @@ fn activity_view_build_all_range_backfills_old_self_gamelog() {
             target_user_id: String::new(),
             range_days: json!(0),
             view_kind: ActivityViewKind::Activity,
-            exclude_key: String::new(),
+            exclude_key: format!("|tz={}", vrcx_0_core::time::display_zone_cache_key()),
         },
     )
     .unwrap()

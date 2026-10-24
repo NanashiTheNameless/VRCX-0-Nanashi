@@ -1,9 +1,10 @@
 import type { InstanceHistoryEntryOutput } from '@/platform/tauri/bindings';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 import { normalizeString } from '@/shared/utils/string';
 
 type UserDialogPreviousDisplayName = {
     displayName: string;
-    updated_at?: string;
+    updated_at?: number;
 };
 
 type UserDialogPreviousDisplayNameSources = {
@@ -14,7 +15,7 @@ type UserDialogPreviousDisplayNameSources = {
 export type UserDialogRelationshipEvent = {
     rowId: number;
     type: 'Friend' | 'Unfriend';
-    created_at: string;
+    created_at: number;
 };
 
 export function normalizeUserRelationshipHistory(
@@ -27,21 +28,25 @@ export function normalizeUserRelationshipHistory(
         const row = record(entry);
         if (
             (row.type !== 'Friend' && row.type !== 'Unfriend') ||
-            typeof row.created_at !== 'string' ||
+            epochSecondsFromValue(row.created_at) === null ||
             typeof row.rowId !== 'number'
         ) {
             return [];
         }
         return [
-            { rowId: row.rowId, type: row.type, created_at: row.created_at }
+            {
+                rowId: row.rowId,
+                type: row.type,
+                created_at: epochSecondsFromValue(row.created_at) ?? 0
+            }
         ];
     });
 }
 
 export type UserDialogStats = {
     timeSpent: number;
-    lastSeen: string;
-    friendedAt: string;
+    lastSeen: number | null;
+    friendedAt: number | null;
     relationshipHistory: UserDialogRelationshipEvent[];
     joinCount: number;
     previousDisplayNames: UserDialogPreviousDisplayName[];
@@ -58,8 +63,8 @@ function record(value: unknown): Record<string, unknown> {
 
 export const DEFAULT_USER_STATS = Object.freeze({
     timeSpent: 0,
-    lastSeen: '',
-    friendedAt: '',
+    lastSeen: null,
+    friendedAt: null,
     relationshipHistory: [],
     joinCount: 0,
     previousDisplayNames: []
@@ -88,8 +93,11 @@ function clonePreviousDisplayNames(
               const row = record(entry);
               return {
                   displayName: normalizeString(row.displayName),
-                  ...(typeof row.updated_at === 'string'
-                      ? { updated_at: row.updated_at }
+                  ...(epochSecondsFromValue(row.updated_at) !== null
+                      ? {
+                            updated_at:
+                                epochSecondsFromValue(row.updated_at) ?? 0
+                        }
                       : {})
               };
           })
@@ -118,8 +126,8 @@ function cloneUserStats(source: unknown = DEFAULT_USER_STATS): UserDialogStats {
 
     return {
         timeSpent: Number(stats.timeSpent) || 0,
-        lastSeen: normalizeString(stats.lastSeen),
-        friendedAt: normalizeString(stats.friendedAt),
+        lastSeen: epochSecondsFromValue(stats.lastSeen),
+        friendedAt: epochSecondsFromValue(stats.friendedAt),
         relationshipHistory: normalizeUserRelationshipHistory(
             stats.relationshipHistory
         ),

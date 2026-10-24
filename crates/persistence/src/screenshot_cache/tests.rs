@@ -68,8 +68,7 @@ fn library_entry(
         height: Some(1080),
         world_id: None,
         world_name: None,
-        captured_at: None,
-        captured_at_ms: 1000,
+        captured_at: 1000,
         metadata_json: None,
         error: None,
     }
@@ -437,10 +436,10 @@ fn list_screenshots_in_windows_counts_and_limits_each_window() -> Result<()> {
     let root_str = path_string(&dir.path.join("Screenshots"));
     let entries = [100, 200, 300, 900]
         .into_iter()
-        .map(|captured_at_ms| {
-            let name = format!("{captured_at_ms}.png");
+        .map(|captured_at| {
+            let name = format!("{captured_at}.png");
             let mut entry = library_entry(&root_str, &name, &root_str, &name);
-            entry.captured_at_ms = captured_at_ms;
+            entry.captured_at = captured_at;
             entry
         })
         .collect::<Vec<_>>();
@@ -449,14 +448,8 @@ fn list_screenshots_in_windows_counts_and_limits_each_window() -> Result<()> {
     let windows = cache.list_screenshots_in_windows_for_root(
         &root_str,
         &[
-            ScreenshotTimeWindow {
-                from_ms: 100,
-                to_ms: 300,
-            },
-            ScreenshotTimeWindow {
-                from_ms: 400,
-                to_ms: 800,
-            },
+            ScreenshotTimeWindow { from: 100, to: 300 },
+            ScreenshotTimeWindow { from: 400, to: 800 },
         ],
         2,
     )?;
@@ -466,7 +459,7 @@ fn list_screenshots_in_windows_counts_and_limits_each_window() -> Result<()> {
         windows[0]
             .images
             .iter()
-            .map(|image| image.captured_at_ms)
+            .map(|image| image.captured_at)
             .collect::<Vec<_>>(),
         vec![100, 200]
     );
@@ -564,5 +557,59 @@ fn delete_screenshot_entry_removes_index_and_metadata_cache_rows() -> Result<()>
     let states = cache.library_file_states(&root_str);
     assert_eq!(states.len(), 1);
     assert!(states.contains_key("b.png"));
+    Ok(())
+}
+
+#[test]
+fn an_older_cache_is_converted_to_seconds_once() -> Result<()> {
+    let dir = TestDir::new("cache-seconds-conversion");
+    let db_path = dir.path.join("metadataCache.db");
+    {
+        let conn = Connection::open(&db_path).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE cache (id INTEGER PRIMARY KEY AUTOINCREMENT, file_path TEXT NOT NULL UNIQUE, metadata TEXT, cached_at INTEGER NOT NULL);
+             CREATE TABLE screenshot_files (path TEXT PRIMARY KEY, scan_root TEXT NOT NULL DEFAULT '', folder_path TEXT NOT NULL, file_name TEXT NOT NULL, size_bytes INTEGER NOT NULL, modified_at INTEGER NOT NULL, created_at INTEGER, width INTEGER, height INTEGER, world_id TEXT, world_name TEXT, captured_at TEXT, metadata_json TEXT, index_version INTEGER NOT NULL DEFAULT 0, indexed_at INTEGER NOT NULL, error TEXT, captured_at_ms INTEGER NOT NULL DEFAULT 0);
+             CREATE TABLE screenshot_thumbnail_cache (thumb_path TEXT PRIMARY KEY, source_path TEXT NOT NULL, cache_key TEXT NOT NULL DEFAULT '', size_bytes INTEGER NOT NULL, modified_at INTEGER NOT NULL, created_at INTEGER NOT NULL, last_used_at INTEGER NOT NULL);
+             INSERT INTO screenshot_files VALUES ('a.png', 'root', 'root', 'a.png', 1, 1784629815250, 1784629800999, 1, 1, NULL, NULL, '2026-07-21T19:30:15+09:00', NULL, 2, 1784629900, NULL, 1784629815250);
+             INSERT INTO screenshot_files VALUES ('b.png', 'root', 'root', 'b.png', 1, 1784629815250, NULL, 1, 1, NULL, NULL, NULL, NULL, 2, 1784629900, NULL, 0);
+             INSERT INTO screenshot_thumbnail_cache VALUES ('a.webp', 'a.png', 'k', 1, 1784629815250, 1784629900, 1784629900);",
+        )
+        .unwrap();
+    }
+
+    drop(MetadataCacheDb::new(&db_path)?);
+    MetadataCacheDb::new(&db_path)?;
+
+    let conn = Connection::open(&db_path).unwrap();
+    let files: Vec<(String, i64, Option<i64>, i64)> = conn
+        .prepare(
+            "SELECT path, modified_at, created_at, captured_at FROM screenshot_files ORDER BY path",
+        )
+        .unwrap()
+        .query_map([], |row| {
+            Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?))
+        })
+        .unwrap()
+        .collect::<rusqlite::Result<_>>()
+        .unwrap();
+    assert_eq!(
+        files,
+        vec![
+            ("a.png".into(), 1784629815, Some(1784629800), 1784629815),
+            ("b.png".into(), 1784629815, None, 1784629815),
+        ]
+    );
+    let thumb_modified: i64 = conn
+        .query_row(
+            "SELECT modified_at FROM screenshot_thumbnail_cache",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    assert_eq!(thumb_modified, 1784629815);
+    let version: i64 = conn
+        .query_row("PRAGMA user_version", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(version, 1);
     Ok(())
 }

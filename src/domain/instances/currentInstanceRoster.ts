@@ -1,7 +1,8 @@
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 type CurrentInstanceRosterSource = 'none' | 'runtime';
 
 export interface CurrentInstanceRosterContext {
-    createdAt: string;
+    createdAt: number;
     groupName: string;
     location: string;
     observedPlayerEventCount?: number | null;
@@ -17,7 +18,7 @@ export interface CurrentInstanceRosterPlayer {
     id: string;
     userId: string;
     displayName: string;
-    joinedAt: string;
+    joinedAt: number;
     joinedAtMs: number;
     lastDurationMs?: number;
     source?: 'runtime';
@@ -31,7 +32,7 @@ export interface CurrentInstanceRosterSnapshot {
 export interface GameLogRosterProjectionPlayer {
     userId: string;
     displayName: string;
-    joinTimeMs: number | null;
+    joinTime: number | null;
 }
 
 export function decorateCurrentUserInRoster({
@@ -42,7 +43,7 @@ export function decorateCurrentUserInRoster({
 }: {
     currentUserDisplayName: string;
     currentUserId: string;
-    joinedAt: string;
+    joinedAt: number;
     players: readonly CurrentInstanceRosterPlayer[];
 }): CurrentInstanceRosterPlayer[] {
     if (!currentUserId || !currentUserDisplayName) {
@@ -58,7 +59,7 @@ export function decorateCurrentUserInRoster({
     if (!existingCurrentUser) {
         return [...players];
     }
-    const joinedAtMs = Date.parse(joinedAt);
+    const joinedAtMs = parseAbsoluteDateMs(joinedAt);
     return [
         {
             ...existingCurrentUser,
@@ -87,12 +88,12 @@ export function collectRuntimeRosterPlayers(
         if (!player.userId && !player.displayName) {
             continue;
         }
-        const joinTime = player.joinTimeMs || 0;
+        const joinTime = (player.joinTime ?? 0) * 1000;
         playersByKey.set(player.userId || `display:${player.displayName}`, {
             id: player.userId || `display:${player.displayName}`,
             userId: player.userId,
             displayName: player.displayName,
-            joinedAt: joinTime ? new Date(joinTime).toISOString() : '',
+            joinedAt: Math.floor(joinTime / 1000),
             joinedAtMs: joinTime,
             lastDurationMs: 0,
             source: 'runtime'

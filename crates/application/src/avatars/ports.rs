@@ -5,7 +5,7 @@ use vrcx_0_application_core::Result;
 use vrcx_0_contracts::{AvatarTagOutput, AvatarTimeSpentOutput};
 
 pub trait AvatarFeedCleanupStore: Send + Sync {
-    fn purge_avatar_feed(&self, user_id: String, cutoff_date: Option<String>) -> Result<i64>;
+    fn purge_avatar_feed(&self, user_id: String, cutoff_date: Option<i64>) -> Result<i64>;
     fn vacuum_if_fragmented(&self) -> Result<bool>;
 }
 

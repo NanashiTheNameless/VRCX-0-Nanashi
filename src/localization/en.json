@@ -6640,6 +6640,7 @@
             "start_in_past": "The event must start in the future.",
             "invalid_date_range": "The event must end after it starts.",
             "repeat": "Repeat",
+            "recurrence_timezone": "Repeats in {{timezone}}. The repeat end date uses this timezone.",
             "repeat_values": {
                 "none": "Does not repeat",
                 "weekly": "Weekly",

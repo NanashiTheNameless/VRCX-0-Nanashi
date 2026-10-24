@@ -1,3 +1,7 @@
+import {
+    displayDateParts,
+    displayLocalToEpoch
+} from '@/shared/utils/displayTimeZone';
 export interface DateTimeRangeValue {
     from: Date | null;
     to: Date | null;
@@ -44,15 +48,15 @@ export function toTimeValue(date: Date | null | undefined, fallback: string) {
     if (!date) {
         return fallback;
     }
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const parts = displayDateParts(date);
+    const hours = String(parts.hour).padStart(2, '0');
+    const minutes = String(parts.minute).padStart(2, '0');
     return `${hours}:${minutes}`;
 }
 
 export function stripTime(date: Date) {
-    const next = new Date(date);
-    next.setHours(0, 0, 0, 0);
-    return next;
+    const parts = displayDateParts(date);
+    return new Date(parts.year, parts.month - 1, parts.day);
 }
 
 export function combineDateTime(
@@ -63,14 +67,13 @@ export function combineDateTime(
     const [rawHours, rawMinutes] = time.split(':');
     const hours = Number.parseInt(rawHours, 10);
     const minutes = Number.parseInt(rawMinutes, 10);
-    const next = new Date(date);
-    next.setHours(
-        Number.isFinite(hours) ? hours : 0,
-        Number.isFinite(minutes) ? minutes : 0,
-        endOfMinute ? 59 : 0,
-        endOfMinute ? 999 : 0
+    const pad = (value: number) => String(value).padStart(2, '0');
+    const day = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    const local = `${day}T${pad(Number.isFinite(hours) ? hours : 0)}:${pad(Number.isFinite(minutes) ? minutes : 0)}:${endOfMinute ? '59' : '00'}`;
+    const seconds = displayLocalToEpoch(local);
+    return new Date(
+        seconds === null ? NaN : seconds * 1000 + (endOfMinute ? 999 : 0)
     );
-    return next;
 }
 
 export function buildDateTimeRange(

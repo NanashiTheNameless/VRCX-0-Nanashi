@@ -1,4 +1,4 @@
-use chrono::{DateTime, Local, Timelike};
+use chrono::{DateTime, Timelike};
 use vrcx_0_application_activity::{
     ActivityActorRelation, ActivityCategory, ActivityEntry, ActivitySnapshot, ActivityText,
 };
@@ -360,7 +360,7 @@ pub struct WristRuntimeNowPlaying {
     pub artist: String,
     pub length_seconds: i64,
     pub position_seconds: i64,
-    pub started_at: String,
+    pub started_at: i64,
 }
 
 const HIDDEN_NOW_PLAYING_STEP_SECONDS: i64 = 60;
@@ -374,9 +374,7 @@ fn now_playing_model(
     if title.is_empty() {
         return None;
     }
-    let started_at_ms = DateTime::parse_from_rfc3339(input.started_at.trim())
-        .ok()
-        .map(|value| value.timestamp_millis());
+    let started_at_ms = (input.started_at > 0).then(|| input.started_at.saturating_mul(1000));
     let elapsed_seconds = input.position_seconds.max(0)
         + started_at_ms.map_or(0, |started_at_ms| {
             (captured_at_ms - started_at_ms).max(0) / 1000
@@ -655,7 +653,7 @@ pub(crate) fn feed_line_from_activity(
     hour12: bool,
 ) -> FeedLine {
     FeedLine {
-        time_text: time_text(&entry.created_at, hour12),
+        time_text: time_text(entry.created_at, hour12),
         kind: feed_kind(entry),
         actor_text: feed_actor(entry, localizer),
         detail: feed_detail(entry, localizer),
@@ -680,7 +678,7 @@ pub(crate) fn feed_text_from_activity(
 ) -> FeedText {
     let (subject, action) = feed_detail_parts(entry, localizer);
     FeedText {
-        time_text: time_text(&entry.created_at, hour12),
+        time_text: time_text(entry.created_at, hour12),
         subject,
         action,
         relation: feed_relation(entry.actor_relation),
@@ -889,35 +887,20 @@ fn feed_accent(entry: &ActivityEntry) -> FeedAccent {
     }
 }
 
-fn time_text(value: &str, hour12: bool) -> String {
-    time_text_in_timezone(value, &Local, hour12).unwrap_or_else(|| raw_time_text(value, hour12))
+fn time_text(value: i64, hour12: bool) -> String {
+    time_text_in_timezone(value, &vrcx_0_core::time::display_offset_at(value), hour12)
+        .unwrap_or_default()
 }
 
-fn time_text_in_timezone<Tz>(value: &str, timezone: &Tz, hour12: bool) -> Option<String>
+fn time_text_in_timezone<Tz>(value: i64, timezone: &Tz, hour12: bool) -> Option<String>
 where
     Tz: chrono::TimeZone,
 {
-    let local_time = DateTime::parse_from_rfc3339(value)
-        .ok()?
-        .with_timezone(timezone);
-    Some(clock_text(local_time.hour(), local_time.minute(), hour12))
-}
-
-fn raw_time_text(value: &str, hour12: bool) -> String {
-    let Some(time_start) = value.find('T').map(|index| index + 1) else {
-        return String::new();
-    };
-    let Some(raw) = value.get(time_start..time_start + 5) else {
-        return String::new();
-    };
-    let parsed = raw
-        .split_once(':')
-        .and_then(|(hour, minute)| Some((hour.parse::<u32>().ok()?, minute.parse::<u32>().ok()?)))
-        .filter(|(hour, minute)| *hour < 24 && *minute < 60);
-    match parsed {
-        Some((hour, minute)) => clock_text(hour, minute, hour12),
-        None => raw.to_string(),
+    if value == 0 {
+        return None;
     }
+    let local_time = DateTime::from_timestamp(value, 0)?.with_timezone(timezone);
+    Some(clock_text(local_time.hour(), local_time.minute(), hour12))
 }
 
 pub(crate) fn clock_text(hour: u32, minute: u32, hour12: bool) -> String {
@@ -1091,19 +1074,18 @@ mod tests {
         let daylight_offset = chrono::FixedOffset::west_opt(4 * 60 * 60).unwrap();
 
         assert_eq!(
-            time_text_in_timezone("2026-06-01T12:34:56.000Z", &daylight_offset, false),
+            time_text_in_timezone(1780317296, &daylight_offset, false),
             Some("08:34".to_string())
         );
         assert_eq!(
-            time_text_in_timezone("2026-06-01T20:34:56.000Z", &daylight_offset, true),
+            time_text_in_timezone(1780346096, &daylight_offset, true),
             Some("4:34 PM".to_string())
         );
     }
 
     #[test]
-    fn feed_time_falls_back_to_raw_iso_time_for_invalid_timestamps() {
-        assert_eq!(time_text("not-a-dateT12:34:56", false), "12:34");
-        assert_eq!(time_text("not-a-dateT00:05:56", true), "12:05 AM");
+    fn feed_time_is_blank_for_a_missing_timestamp() {
+        assert_eq!(time_text(0, false), "");
     }
 
     #[test]
@@ -1189,7 +1171,7 @@ mod tests {
             source_id: format!("source:{activity_type}"),
             kind: ActivityKind::from_key(activity_type).expect("known activity kind"),
             category: ActivityCategory::FavoriteMovement,
-            created_at: "2026-06-01T12:34:56.000Z".to_string(),
+            created_at: 1780317296,
             actor_user_id: "usr_1".to_string(),
             actor_display_name: "User".to_string(),
             content: ActivityContent {

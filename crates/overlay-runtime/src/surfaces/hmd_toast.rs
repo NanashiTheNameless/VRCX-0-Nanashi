@@ -353,7 +353,8 @@ impl VrOverlayRuntime {
 }
 
 fn tracker_disconnect_entry(disconnect: TrackerDisconnect) -> ActivityEntry {
-    let created_at = Utc::now().to_rfc3339();
+    let now = Utc::now();
+    let created_at = now.timestamp();
     let body = match (disconnect.count, disconnect.battery_percent) {
         (1, Some(percent)) => OverlayMessage::notifications_tracker_disconnected_battery(percent),
         (1, None) => OverlayMessage::notifications_tracker_disconnected(),
@@ -361,7 +362,10 @@ fn tracker_disconnect_entry(disconnect: TrackerDisconnect) -> ActivityEntry {
     };
     ActivityEntry {
         sequence: 0,
-        source_id: format!("vrcx-0-tracker-disconnected:{created_at}"),
+        source_id: format!(
+            "vrcx-0-tracker-disconnected:{}",
+            now.timestamp_nanos_opt().unwrap_or_default()
+        ),
         kind: ActivityKind::Event,
         category: ActivityCategory::SystemSafety,
         created_at,

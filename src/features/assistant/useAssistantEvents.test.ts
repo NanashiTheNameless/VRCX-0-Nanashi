@@ -139,7 +139,7 @@ describe('useAssistantEvents auth scope', () => {
                     id: 'session-1',
                     title: 'Running',
                     busy: true,
-                    updatedAt: '2026-08-11T00:00:00Z'
+                    updatedAt: 1786406400
                 }
             ],
             messagesBySession: { 'session-1': [] },

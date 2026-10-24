@@ -7,6 +7,10 @@ import {
     type ReminderTrigger
 } from '@/platform/tauri/bindings';
 import { toast } from '@/services/toastService';
+import {
+    displayDateParts,
+    displayLocalToEpoch
+} from '@/shared/utils/displayTimeZone';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { Button } from '@/ui/shadcn/button';
 import {
@@ -65,8 +69,9 @@ function errorMessage(error: unknown): string {
 
 /** `datetime-local` value for a date, in local time. */
 function toLocalInputValue(date: Date): string {
-    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-    return local.toISOString().slice(0, 16);
+    const p = displayDateParts(date);
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${p.year}-${pad(p.month)}-${pad(p.day)}T${pad(p.hour)}:${pad(p.minute)}`;
 }
 
 export function buildReminderTrigger(
@@ -86,13 +91,13 @@ export function buildReminderTrigger(
     }
 ): ReminderTrigger | null {
     if (kind === 'time') {
-        const at = new Date(localTime);
-        if (!localTime || Number.isNaN(at.getTime())) {
+        const at = displayLocalToEpoch(localTime);
+        if (at === null) {
             return null;
         }
         return {
             kind,
-            at: at.toISOString(),
+            at,
             repeatMinutes: Math.max(0, Math.floor(repeatMinutes) || 0)
         };
     }

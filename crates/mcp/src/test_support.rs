@@ -81,7 +81,7 @@ impl McpMutualGraphPort for TestMcpMutualGraphAdapter {
                 .into_iter()
                 .map(|meta| McpMutualGraphMeta {
                     friend_id: meta.friend_id,
-                    last_fetched_at: meta.last_fetched_at,
+                    last_fetched_at: vrcx_0_core::time::epoch_to_iso(meta.last_fetched_at),
                     opted_out: meta.opted_out,
                     total_count: meta.total_count.map(|value| value as usize),
                 })
@@ -332,9 +332,14 @@ impl McpFriendLocalDataPort for TestMcpFriendLocalDataAdapter {
         limit: i64,
         cursor: Option<(&str, &str)>,
     ) -> vrcx_0_application_core::Result<Vec<McpFriendMemo>> {
-        memos::memo_list_users_page(self.db.as_ref(), limit, cursor)
-            .map(|rows| rows.into_iter().map(test_friend_memo).collect())
-            .map_err(Into::into)
+        memos::memo_list_users_page(
+            self.db.as_ref(),
+            limit,
+            cursor
+                .and_then(|(at, id)| vrcx_0_core::time::parse_epoch_seconds(at).map(|at| (at, id))),
+        )
+        .map(|rows| rows.into_iter().map(test_friend_memo).collect())
+        .map_err(Into::into)
     }
 
     fn memo_count_users(&self) -> vrcx_0_application_core::Result<usize> {
@@ -357,7 +362,7 @@ impl McpFriendLocalDataPort for TestMcpFriendLocalDataAdapter {
         memos::memo_save_user(self.db.as_ref(), user_id, memo)
             .map(|saved| McpMemoSave {
                 entity_id: saved.entity_id,
-                edited_at: saved.edited_at,
+                edited_at: vrcx_0_core::time::epoch_to_iso(saved.edited_at),
                 memo: saved.memo,
             })
             .map_err(Into::into)
@@ -372,7 +377,7 @@ impl McpFriendLocalDataPort for TestMcpFriendLocalDataAdapter {
             .map(|row| {
                 row.map(|row| McpLocalModeration {
                     user_id: row.user_id,
-                    updated_at: row.updated_at,
+                    updated_at: vrcx_0_core::time::epoch_to_iso(row.updated_at),
                     display_name: row.display_name,
                     block: row.block,
                     mute: row.mute,
@@ -403,7 +408,7 @@ impl McpFriendLocalDataPort for TestMcpFriendLocalDataAdapter {
 fn test_friend_memo(row: memos::UserMemoOutput) -> McpFriendMemo {
     McpFriendMemo {
         user_id: row.user_id,
-        edited_at: row.edited_at,
+        edited_at: vrcx_0_core::time::epoch_to_iso(row.edited_at),
         memo: row.memo,
     }
 }

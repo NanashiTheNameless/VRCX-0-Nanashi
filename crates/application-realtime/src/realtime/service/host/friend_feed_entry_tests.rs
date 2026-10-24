@@ -10,7 +10,7 @@ use super::test_support::{
 
 fn bio_entry() -> FeedLiveEntry {
     FeedLiveEntry::Bio {
-        created_at: "2026-09-18T00:00:00.000Z".into(),
+        created_at: 1789689600,
         user_id: "usr_friend".into(),
         display_name: "Friend".into(),
         bio: "new bio".into(),

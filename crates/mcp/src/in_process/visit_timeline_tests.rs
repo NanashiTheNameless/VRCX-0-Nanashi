@@ -14,7 +14,7 @@ fn join_leave(
     user_id: &str,
 ) -> GameLogJoinLeaveEntry {
     GameLogJoinLeaveEntry {
-        created_at: created_at.into(),
+        created_at: vrcx_0_core::time::parse_epoch_seconds(created_at).unwrap(),
         event_type: event_type.into(),
         display_name: name.into(),
         location: "wrld_a:1".into(),
@@ -33,7 +33,7 @@ async fn visit_timeline_tool_reconstructs_a_visit_over_the_bridge() {
         &OwnerId::new("usr_owner"),
         &GameLogWriteBatch {
             locations: vec![GameLogLocationEntry {
-                created_at: "2026-06-01T20:00:00.000Z".into(),
+                created_at: 1780344000,
                 location: "wrld_a:1".into(),
                 world_id: "wrld_a".into(),
                 world_name: "World A".into(),

@@ -39,7 +39,7 @@ fn switched_journal(source: &Path, target: &Path) -> PendingDataDirMigration {
     let mut journal = PendingDataDirMigration::copying(
         source.to_string_lossy().into_owned(),
         target.to_string_lossy().into_owned(),
-        "2026-07-18T00:00:00Z".into(),
+        1784332800,
         false,
     );
     journal.mark_switched(
@@ -56,12 +56,8 @@ fn switched_journal(source: &Path, target: &Path) -> PendingDataDirMigration {
 #[test]
 fn journal_round_trips_and_rejects_incomplete_switched_state() -> Result<()> {
     let dir = TestDir::new("journal");
-    let mut journal = PendingDataDirMigration::copying(
-        "source".into(),
-        "target".into(),
-        "2026-07-18T00:00:00Z".into(),
-        true,
-    );
+    let mut journal =
+        PendingDataDirMigration::copying("source".into(), "target".into(), 1784332800, true);
     write_pending_data_dir_migration(&dir.path, &journal)?;
     assert_eq!(
         read_pending_data_dir_migration(&dir.path)?,
@@ -396,7 +392,7 @@ fn interrupted_copy_removes_only_staging_and_records_result() -> Result<()> {
     let journal = PendingDataDirMigration::copying(
         source.to_string_lossy().into_owned(),
         target.to_string_lossy().into_owned(),
-        "2026-07-18T00:00:00Z".into(),
+        1784332800,
         false,
     );
     write_pending_data_dir_migration(&control, &journal)?;
@@ -444,7 +440,7 @@ fn cleanup_removes_only_manifest_entries_and_preserves_control_and_unknown_files
     let pending = DataDirCleanupPending {
         old_dir: old.to_string_lossy().into_owned(),
         bytes: 0,
-        migrated_at: "2026-07-18T00:00:00Z".into(),
+        migrated_at: 1784332800,
         last_prompted_at: None,
         dismissed: false,
         replaced_dir: Some(replaced.to_string_lossy().into_owned()),
@@ -474,7 +470,7 @@ fn cleanup_rejects_the_active_data_directory() -> Result<()> {
     let pending = DataDirCleanupPending {
         old_dir: dir.path.to_string_lossy().into_owned(),
         bytes: 2,
-        migrated_at: "2026-07-18T00:00:00Z".into(),
+        migrated_at: 1784332800,
         last_prompted_at: None,
         dismissed: false,
         replaced_dir: None,
@@ -494,7 +490,7 @@ fn cleanup_completes_when_the_old_directory_was_already_removed() -> Result<()> 
     let pending = DataDirCleanupPending {
         old_dir: old.to_string_lossy().into_owned(),
         bytes: 0,
-        migrated_at: "2026-07-18T00:00:00Z".into(),
+        migrated_at: 1784332800,
         last_prompted_at: None,
         dismissed: false,
         replaced_dir: None,
@@ -515,7 +511,7 @@ fn cleanup_pending_queue_preserves_and_promotes_older_migrations() -> Result<()>
     let first = DataDirCleanupPending {
         old_dir: dir.path.join("first").to_string_lossy().into_owned(),
         bytes: 1,
-        migrated_at: "2026-07-18T00:00:00Z".into(),
+        migrated_at: 1784332800,
         last_prompted_at: None,
         dismissed: false,
         replaced_dir: None,
@@ -523,7 +519,7 @@ fn cleanup_pending_queue_preserves_and_promotes_older_migrations() -> Result<()>
     let second = DataDirCleanupPending {
         old_dir: dir.path.join("second").to_string_lossy().into_owned(),
         bytes: 2,
-        migrated_at: "2026-07-19T00:00:00Z".into(),
+        migrated_at: 1784419200,
         last_prompted_at: None,
         dismissed: false,
         replaced_dir: None,
@@ -567,7 +563,7 @@ fn database_open_failure_preserves_an_older_cleanup_pending() -> Result<()> {
         &DataDirCleanupPending {
             old_dir: dir.path.join("older-source").to_string_lossy().into_owned(),
             bytes: 1,
-            migrated_at: journal.requested_at.clone(),
+            migrated_at: journal.requested_at,
             last_prompted_at: None,
             dismissed: false,
             replaced_dir: None,

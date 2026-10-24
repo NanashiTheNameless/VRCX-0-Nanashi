@@ -92,7 +92,10 @@ pub(super) fn normalize_provider_snapshot(
         author: text_of(value.get("author")),
         license: text_of(value.get("license")),
         source: text_of(value.get("source")),
-        resolved_at: text_of(value.get("resolvedAt")),
+        resolved_at: value
+            .get("resolvedAt")
+            .and_then(vrcx_0_core::time::epoch_from_json)
+            .unwrap_or_default(),
         resolved_for_key,
     })
 }
@@ -101,10 +104,10 @@ pub(super) fn is_snapshot_fresh(snapshot: Option<&BackgroundImageSnapshot>) -> b
     let Some(snapshot) = snapshot else {
         return false;
     };
-    if snapshot.provider_id.is_none() || snapshot.resolved_at.is_empty() {
+    if snapshot.provider_id.is_none() || snapshot.resolved_at == 0 {
         return false;
     }
-    let Ok(resolved_at) = DateTime::parse_from_rfc3339(&snapshot.resolved_at) else {
+    let Some(resolved_at) = DateTime::<Utc>::from_timestamp(snapshot.resolved_at, 0) else {
         return false;
     };
     let age = Utc::now().signed_duration_since(resolved_at.with_timezone(&Utc));

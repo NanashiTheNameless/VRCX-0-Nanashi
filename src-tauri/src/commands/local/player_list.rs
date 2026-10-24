@@ -26,7 +26,7 @@ pub fn app__player_list_current_snapshot(
 pub fn app__instance_activity_dates_get(
     state: State<'_, AppState>,
     user_id: String,
-) -> Result<Vec<String>, AppError> {
+) -> Result<Vec<i64>, AppError> {
     state
         .runtime_host()
         .local_data()
@@ -38,8 +38,8 @@ pub fn app__instance_activity_dates_get(
 #[specta::specta]
 pub async fn app__instance_activity_rows_get(
     state: State<'_, AppState>,
-    start_date: String,
-    end_date: String,
+    start_date: i64,
+    end_date: i64,
 ) -> Result<Vec<InstanceActivityRowOutput>, AppError> {
     let local_data = state.runtime_host().local_data().clone();
     run_blocking("instance activity rows query", move || {

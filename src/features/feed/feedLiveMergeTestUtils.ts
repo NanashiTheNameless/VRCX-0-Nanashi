@@ -34,7 +34,7 @@ export function pushLiveEntry(id: string, sequence?: number): void {
                     entry: onlineFeedEntry({
                         userId: `usr_${id}`,
                         displayName: id,
-                        created_at: `2026-08-11T00:00:${String(state.version).padStart(2, '0')}Z`
+                        created_at: 1786406400 + state.version
                     })
                 }
             ],

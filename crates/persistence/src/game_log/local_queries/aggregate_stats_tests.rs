@@ -23,7 +23,7 @@ fn world_and_user_stat_queries_return_defaults_and_skip_current_matches() -> Res
                 "currentWorldMatch": true
             }),
         )?["created_at"],
-        "2026-05-14T08:00:00Z"
+        1778745600
     );
     assert_eq!(
         query(
@@ -47,7 +47,7 @@ fn world_and_user_stat_queries_return_defaults_and_skip_current_matches() -> Res
             "lastGroupVisit",
             json!({ "groupId": "grp_alpha" })
         )?["created_at"],
-        "2026-05-14T10:00:00Z"
+        1778752800
     );
     assert_eq!(
         query(
@@ -59,7 +59,7 @@ fn world_and_user_stat_queries_return_defaults_and_skip_current_matches() -> Res
                 "inCurrentWorld": true
             }),
         )?["created_at"],
-        "2026-05-14T08:01:00Z"
+        1778745660
     );
     assert_eq!(
         query(
@@ -105,7 +105,7 @@ fn world_and_user_stat_queries_return_defaults_and_skip_current_matches() -> Res
             "lastVisit",
             json!({ "worldId": "wrld_missing" })
         )?,
-        json!({ "created_at": "", "worldId": "" })
+        json!({ "created_at": 0, "worldId": "" })
     );
     Ok(())
 }
@@ -119,7 +119,7 @@ fn aggregate_and_lookup_queries_cover_group_world_player_and_dates() -> Result<(
         get_previous_instances_by_group_id(&test_db.db, &OwnerId::new("usr_test"), "grp_alpha")?;
     assert_eq!(group_rows.len(), 2);
     assert_eq!(group_rows[0].location, "wrld_alpha:inst-c~group(grp_alpha)");
-    assert_eq!(group_rows[0].created_at, "2026-05-14T10:00:00Z");
+    assert_eq!(group_rows[0].created_at, 1778752800);
     assert_eq!(group_rows[0].time, 90_000);
     assert_eq!(
         serde_json::to_value(&group_rows)?,
@@ -142,15 +142,15 @@ fn aggregate_and_lookup_queries_cover_group_world_player_and_dates() -> Result<(
 
     assert_eq!(
         query(&test_db.db, "lastDate", json!({}))?,
-        json!("2026-05-14T10:05:00Z")
+        json!(1778753100)
     );
 
     let previous_by_user = previous_instance_event_rows_query(
         &test_db.db,
         &OwnerId::new("usr_test"),
         "usr_vip",
-        "2026-05-14T08:00:00Z",
-        "2026-05-14T08:10:00Z",
+        Some(1778745600),
+        Some(1778746200),
         0,
     )?;
     assert_eq!(previous_by_user.len(), 1);
@@ -159,7 +159,7 @@ fn aggregate_and_lookup_queries_cover_group_world_player_and_dates() -> Result<(
     let world_rows =
         get_previous_instances_by_world_id(&test_db.db, &OwnerId::new("usr_test"), "wrld_alpha")?;
     assert_eq!(world_rows.len(), 2);
-    assert_eq!(world_rows[0].created_at, "2026-05-14T10:00:00Z");
+    assert_eq!(world_rows[0].created_at, 1778752800);
     assert_eq!(world_rows[0].time, 90_000);
     assert_eq!(
         serde_json::to_value(&world_rows)?,
@@ -181,7 +181,7 @@ fn aggregate_and_lookup_queries_cover_group_world_player_and_dates() -> Result<(
         query(
             &test_db.db,
             "locationBeforeOrAt",
-            json!({ "createdAt": "2026-05-14T09:30:00Z" }),
+            json!({ "createdAt": 1778751000 }),
         )?["worldId"],
         "wrld_beta"
     );
@@ -191,8 +191,8 @@ fn aggregate_and_lookup_queries_cover_group_world_player_and_dates() -> Result<(
         "joinLeaveRange",
         json!({
             "location": "wrld_alpha:inst-a~group(grp_alpha)",
-            "afterDate": "2026-05-14T08:00:00Z",
-            "beforeDate": "2026-05-14T08:02:00Z"
+            "afterDate": 1778745600,
+            "beforeDate": 1778745720
         }),
     )?);
     assert_eq!(range.len(), 2);
@@ -221,30 +221,24 @@ fn aggregate_and_lookup_queries_cover_group_world_player_and_dates() -> Result<(
         &test_db.db,
         "onlineSessions",
         json!({
-            "fromDate": "2026-05-14T09:30:00Z",
-            "toDate": "2026-05-14T10:30:00Z"
+            "fromDate": 1778751000,
+            "toDate": 1778754600
         }),
     )?);
     assert_eq!(
-        row_texts(&online, "created_at"),
-        vec![
-            "2026-05-14T09:00:00Z".to_string(),
-            "2026-05-14T10:00:00Z".to_string(),
-        ]
+        row_epochs(&online, "created_at"),
+        vec![1778749200, 1778752800,]
     );
 
     let after = rows(query(
         &test_db.db,
         "onlineSessionsAfter",
         json!({
-            "afterCreatedAt": "2026-05-14T09:00:00Z",
+            "afterCreatedAt": 1778749200,
             "inclusive": false
         }),
     )?);
-    assert_eq!(
-        row_texts(&after, "created_at"),
-        vec!["2026-05-14T10:00:00Z".to_string(),]
-    );
+    assert_eq!(row_epochs(&after, "created_at"), vec![1778752800,]);
 
     Ok(())
 }
@@ -260,7 +254,7 @@ fn typed_group_previous_instances_preserve_legacy_location_aggregation() -> Resu
         &GameLogWriteBatch {
             locations: vec![
                 GameLogLocationEntry {
-                    created_at: "2026-05-14T08:00:00Z".into(),
+                    created_at: 1778745600,
                     location: location.into(),
                     world_id: "wrld_alpha".into(),
                     world_name: "Alpha World".into(),
@@ -268,7 +262,7 @@ fn typed_group_previous_instances_preserve_legacy_location_aggregation() -> Resu
                     group_name: "Group Alpha".into(),
                 },
                 GameLogLocationEntry {
-                    created_at: "2026-05-14T09:00:00Z".into(),
+                    created_at: 1778749200,
                     location: location.into(),
                     world_id: "wrld_alpha".into(),
                     world_name: "Alpha World Updated".into(),
@@ -283,7 +277,7 @@ fn typed_group_previous_instances_preserve_legacy_location_aggregation() -> Resu
     let rows =
         get_previous_instances_by_group_id(&test_db.db, &OwnerId::new("usr_test"), "grp_alpha")?;
     assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].created_at, "2026-05-14T08:00:00Z");
+    assert_eq!(rows[0].created_at, 1778745600);
     assert_eq!(rows[0].world_name, "Alpha World");
     assert_eq!(rows[0].group_name, "Group Alpha");
     assert_eq!(rows[0].time, 90_000);
@@ -307,17 +301,14 @@ fn activity_and_session_queries_cover_empty_and_cursor_edges() -> Result<(), cra
     let activity = instance_activity_rows_get(
         &test_db.db,
         &OwnerId::new("usr_test"),
-        "2026-05-14T08:00:00Z".into(),
-        "2026-05-14T08:10:00Z".into(),
+        1778745600,
+        1778746200,
     )?;
     assert_eq!(activity[0].display_name, "Vip Friend");
 
     assert_eq!(
         instance_activity_dates_get(&test_db.db, &OwnerId::new("usr_test"), "usr_vip".into(),)?,
-        vec![
-            "2026-05-14T08:30:00Z".to_string(),
-            "2026-05-14T08:01:00Z".to_string()
-        ]
+        vec![1778747400, 1778745660]
     );
 
     let join_history = rows(query(
@@ -325,7 +316,7 @@ fn activity_and_session_queries_cover_empty_and_cursor_edges() -> Result<(), cra
         "instanceJoinHistory",
         json!({
             "userId": "usr_vip",
-            "createdAt": "2026-05-14T08:00:00Z"
+            "createdAt": 1778745600
         }),
     )?);
     assert_eq!(

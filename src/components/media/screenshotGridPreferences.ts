@@ -79,7 +79,7 @@ export function sanitizeScreenshotGridSort(value: unknown): ScreenshotGridSort {
 
 export function sortScreenshotGridImages<
     TImage extends {
-        capturedAt?: string | null;
+        capturedAt?: string | number | null;
         fileName?: string | null;
         modifiedAt?: number | null;
     }

@@ -6,7 +6,7 @@ use crate::Error;
 pub fn seed_feed_avatar_row(
     db: &DatabaseService,
     owner_user_id: &str,
-    (created_at, user_id, display_name, owner_id, avatar_name): (&str, &str, &str, &str, &str),
+    (created_at, user_id, display_name, owner_id, avatar_name): (i64, &str, &str, &str, &str),
 ) -> Result<(), Error> {
     let user_prefix = normalize_user_table_prefix(owner_user_id)?;
     ensure_realtime_tables(db, &user_prefix)?;
@@ -29,7 +29,7 @@ pub fn seed_feed_avatar_row(
 pub fn seed_feed_bio_row(
     db: &DatabaseService,
     owner_user_id: &str,
-    (created_at, user_id, display_name, bio, previous_bio): (&str, &str, &str, &str, &str),
+    (created_at, user_id, display_name, bio, previous_bio): (i64, &str, &str, &str, &str),
 ) -> Result<(), Error> {
     let user_prefix = normalize_user_table_prefix(owner_user_id)?;
     ensure_realtime_tables(db, &user_prefix)?;
@@ -57,7 +57,7 @@ pub fn seed_feed_gps_rows(db: &DatabaseService, user_id: &str, rows: i64) -> Res
             "WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq WHERE n < {rows}) \
              INSERT INTO {user_prefix}_feed_gps (created_at, user_id, display_name, location, world_name, previous_location, time, group_name) \
              SELECT \
-               strftime('%Y-%m-%dT%H:%M:%fZ', 1700000000 + n * 60, 'unixepoch'), \
+               1700000000 + n * 60, \
                'usr_' || printf('%08x', (n * 7919) % 500) || '-0000-0000-0000-000000000000', \
                'Friend ' || ((n * 7919) % 500), \
                'wrld_' || printf('%08x', (n * 104729) % 20000) || '-1111-2222-3333-444444444444:' || (n % 99999) || '~region(jp)', \

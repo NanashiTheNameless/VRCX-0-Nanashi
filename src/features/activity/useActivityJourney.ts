@@ -10,6 +10,7 @@ import {
     startScreenshotLibraryScan,
     subscribeScreenshotLibraryScanStatus
 } from '@/services/screenshotLibraryScanService';
+import { usePreferencesStore } from '@/state/preferencesStore';
 
 import {
     journeyDaysInRange,
@@ -40,7 +41,7 @@ async function loadPhotos(
         return new Map();
     }
     const windows = await commands.appGetScreenshotsInWindows(
-        visits.map((visit) => ({ fromMs: visit.startMs, toMs: visit.endMs })),
+        visits.map((visit) => ({ from: visit.startAt, to: visit.endAt })),
         JOURNEY_PHOTO_PREVIEW_LIMIT
     );
     return new Map(
@@ -53,6 +54,7 @@ export function useActivityJourneyFeed(
     range: DateTimeRangeValue,
     screenshotsAvailable: boolean
 ): ActivityJourneyFeed {
+    const timeZone = usePreferencesStore((state) => state.dtTimeZone);
     const [days, setDays] = useState<string[]>([]);
     const [daysLoaded, setDaysLoaded] = useState(false);
     const [visits, setVisits] = useState<ActivityJourneyVisit[]>([]);
@@ -98,7 +100,7 @@ export function useActivityJourneyFeed(
         return () => {
             active = false;
         };
-    }, [nonce, ownerUserId]);
+    }, [nonce, ownerUserId, timeZone]);
 
     const dayList = useMemo(
         () => journeyDaysInRange(days, rangeFromMs, rangeToMs),
@@ -121,8 +123,8 @@ export function useActivityJourneyFeed(
             try {
                 const page = await commands.appActivityJourneyVisits({
                     ownerUserId,
-                    fromMs: window.fromMs,
-                    toMs: window.toMs
+                    from: Math.floor(window.fromMs / 1000),
+                    to: Math.floor(window.toMs / 1000)
                 });
                 if (generationRef.current !== generation) {
                     return;

@@ -305,7 +305,15 @@ impl Pc {
         seed_feed_bio_row(
             &self.db,
             USER,
-            (created_at, "usr_friend", "Friend", bio, ""),
+            (
+                chrono::DateTime::parse_from_rfc3339(created_at)
+                    .unwrap()
+                    .timestamp(),
+                "usr_friend",
+                "Friend",
+                bio,
+                "",
+            ),
         )
         .unwrap();
     }
@@ -474,7 +482,7 @@ async fn vault_with_a_duplicated_chunk(
     }
     for extra in 0..extra_rows_on_c {
         c.record(
-            &format!("2026-10-11T1{extra}:00:00.000Z"),
+            &format!("2026-10-11T{extra:02}:00:00.000Z"),
             &format!("only c {extra}"),
         );
     }

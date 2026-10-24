@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { BrowseHistoryItemOutput } from '@/platform/tauri/bindings';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 
 import {
     BROWSE_HISTORY_CARD_HEIGHT,
@@ -15,8 +16,8 @@ function item(entityId: string, lastViewedAt: string): BrowseHistoryItemOutput {
         entityId,
         title: entityId,
         imageUrl: '',
-        firstViewedAt: lastViewedAt,
-        lastViewedAt,
+        firstViewedAt: epochSecondsFromValue(lastViewedAt) ?? 0,
+        lastViewedAt: epochSecondsFromValue(lastViewedAt) ?? 0,
         viewCount: 1
     };
 }

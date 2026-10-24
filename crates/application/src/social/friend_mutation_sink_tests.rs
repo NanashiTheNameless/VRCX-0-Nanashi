@@ -67,7 +67,7 @@ fn seed_friend_log_current(runtime: &TestRealtimeHostRuntime, owner: &str, targe
                     display_name: "Friend".into(),
                     trust_level: "Visitor".into(),
                     friend_number: 1,
-                    created_at: "2026-05-15T00:00:00Z".into(),
+                    created_at: 1778803200,
                     force_history: false,
                 }],
                 ..RealtimePersistenceBatch::default()
@@ -101,7 +101,7 @@ fn friend_delete_payload(user_id: &str) -> RealtimeWsMessagePayload {
             "content": { "userId": user_id }
         }),
         raw: "{}".into(),
-        received_at: "2026-05-15T00:00:01Z".into(),
+        received_at: 1778803201,
     }
 }
 
@@ -115,7 +115,7 @@ fn friend_add_payload(user_id: &str, display_name: &str) -> RealtimeWsMessagePay
             }
         }),
         raw: "{}".into(),
-        received_at: "2026-05-15T00:00:01Z".into(),
+        received_at: 1778803201,
     }
 }
 
@@ -379,7 +379,7 @@ fn synthetic_event_with_stale_endpoint_reports_missing_baseline() -> Result<()> 
         &OwnerId::new(active_session.user_id),
         "https://api.example.test/api/1",
         "usr_friend",
-        "2026-05-15T00:00:01Z".into(),
+        1778803201,
     );
 
     assert_eq!(outcome, SyntheticFriendEventOutcome::MissingBaseline);

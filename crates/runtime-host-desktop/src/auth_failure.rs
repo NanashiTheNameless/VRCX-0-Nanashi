@@ -89,7 +89,7 @@ mod tests {
             process_status: BackendRuntimeProcessStatus::Unknown,
             game_log_persisted_count: 0,
             last_error: None,
-            updated_at: String::new(),
+            updated_at: 0,
             friend_profile_load: FriendProfileLoadStatusPayload::default(),
         }
     }

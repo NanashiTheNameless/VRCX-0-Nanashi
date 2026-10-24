@@ -1,4 +1,3 @@
-use chrono::DateTime;
 use serde_json::Value;
 
 use crate::common::{row_string, ParamsBuilder};
@@ -20,7 +19,7 @@ pub(super) fn repair_zero_copresence_durations(db: &DatabaseService) -> Result<(
         db.write_transaction(|tx| {
             for row in chunk {
                 let id = row.first().cloned().unwrap_or(Value::Null);
-                let leave_at = row_string(row, 1);
+                let leave_at = row.get(1).cloned().unwrap_or(Value::Null);
                 let location = row_string(row, 2);
                 let user_id = row_string(row, 3);
                 let display_name = row_string(row, 4);
@@ -37,15 +36,10 @@ pub(super) fn repair_zero_copresence_durations(db: &DatabaseService) -> Result<(
                         .set("display_name", display_name)
                         .build(),
                 )?;
-                let Some(join_at) = join_rows
-                    .first()
-                    .map(|join| row_string(join, 0))
-                    .filter(|value| !value.is_empty())
-                else {
-                    continue;
-                };
-                let (Some(join_ms), Some(leave_ms)) = (rfc3339_ms(&join_at), rfc3339_ms(&leave_at))
-                else {
+                let (Some(join_ms), Some(leave_ms)) = (
+                    join_rows.first().and_then(|join| epoch_ms(join.first())),
+                    epoch_ms(Some(&leave_at)),
+                ) else {
                     continue;
                 };
                 let duration = leave_ms - join_ms;
@@ -66,8 +60,6 @@ pub(super) fn repair_zero_copresence_durations(db: &DatabaseService) -> Result<(
     Ok(())
 }
 
-fn rfc3339_ms(value: &str) -> Option<i64> {
-    DateTime::parse_from_rfc3339(value)
-        .ok()
-        .map(|dt| dt.timestamp_millis())
+fn epoch_ms(value: Option<&Value>) -> Option<i64> {
+    value.and_then(Value::as_i64).map(|seconds| seconds * 1000)
 }

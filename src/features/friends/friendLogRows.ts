@@ -1,5 +1,6 @@
 import type { FriendLogHistoryRow } from '@/repositories/friendLogHistoryRepository';
 import { isUserId } from '@/shared/constants/vrchatIds';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 
 export type FriendLogRow = FriendLogHistoryRow & {
     resolvedDisplayName?: string;
@@ -7,8 +8,8 @@ export type FriendLogRow = FriendLogHistoryRow & {
 
 export function sortRows<TRow extends FriendLogRow>(rows: TRow[]): TRow[] {
     return rows.slice().sort((left, right) => {
-        const leftTs = Date.parse(left.created_at);
-        const rightTs = Date.parse(right.created_at);
+        const leftTs = parseAbsoluteDateMs(left.created_at);
+        const rightTs = parseAbsoluteDateMs(right.created_at);
         if (
             Number.isFinite(leftTs) &&
             Number.isFinite(rightTs) &&

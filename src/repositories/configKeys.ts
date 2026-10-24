@@ -71,6 +71,7 @@ export const ConfigKeys = defineConfigKeys({
     customFontOverride: { type: 'string', default: '' },
     cjkFontPack: { type: 'string', default: 'system' },
     dtHour12: { type: 'bool', default: true },
+    dtTimeZone: { type: 'string', default: '' },
     dtIsoFormat: { type: 'bool', default: false },
     dtDateFormat: { type: 'string', default: 'time-mdy' },
     hideNicknames: { type: 'bool', default: false },

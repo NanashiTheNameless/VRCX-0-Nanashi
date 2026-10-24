@@ -114,18 +114,18 @@ pub fn friend_log_history_query(
             excluded_placeholders.join(", ")
         ));
     }
-    if !query.date_from.is_empty() {
-        clauses.push("julianday(created_at) >= julianday(@date_from)".into());
-        db_params.insert("@date_from".into(), Value::String(query.date_from));
+    if let Some(date_from) = query.date_from {
+        clauses.push("created_at >= @date_from".into());
+        db_params.insert("@date_from".into(), Value::from(date_from));
     }
-    if !query.date_to.is_empty() {
-        clauses.push("julianday(created_at) <= julianday(@date_to)".into());
-        db_params.insert("@date_to".into(), Value::String(query.date_to));
+    if let Some(date_to) = query.date_to {
+        clauses.push("created_at <= @date_to".into());
+        db_params.insert("@date_to".into(), Value::from(date_to));
     }
     let paged = query.limit.is_some() || query.cursor.is_some();
     if let Some(cursor) = query.cursor {
-        clauses.push("(COALESCE(julianday(created_at), 0), id) < (COALESCE(julianday(@cursor_date), 0), @cursor_id)".into());
-        db_params.insert("@cursor_date".into(), Value::String(cursor.created_at));
+        clauses.push("(COALESCE(created_at, 0), id) < (@cursor_date, @cursor_id)".into());
+        db_params.insert("@cursor_date".into(), Value::from(cursor.created_at));
         db_params.insert("@cursor_id".into(), Value::from(cursor.row_id));
     }
     let limit_sql = if let Some(limit) = query.limit {
@@ -135,7 +135,7 @@ pub fn friend_log_history_query(
         ""
     };
     let order_sql = if paged {
-        "COALESCE(julianday(created_at), 0) DESC, id DESC"
+        "COALESCE(created_at, 0) DESC, id DESC"
     } else {
         "created_at DESC, id DESC"
     };
@@ -148,7 +148,7 @@ pub fn friend_log_history_query(
         .into_iter()
         .map(|row| FriendLogHistoryOutput {
             row_id: row_i64(&row, 0),
-            created_at: row_string(&row, 1),
+            created_at: row_i64(&row, 1),
             r#type: row_string(&row, 2),
             user_id: row_string(&row, 3),
             display_name: row_string(&row, 4),
@@ -365,7 +365,7 @@ pub fn friend_log_history_add(
             let affected = tx.execute_non_query(
                 &format!("INSERT OR IGNORE INTO {user_prefix}_friend_log_history (created_at, type, user_id, display_name, previous_display_name, trust_level, previous_trust_level, friend_number) VALUES (@created_at, @type, @user_id, @display_name, @previous_display_name, @trust_level, @previous_trust_level, @friend_number)"),
                 &ParamsBuilder::new()
-                    .set("created_at", entry.created_at.clone())
+                    .set("created_at", entry.created_at)
                     .set("type", entry.r#type.clone())
                     .set("user_id", normalize_text(&entry.user_id))
                     .set("display_name", entry.display_name.clone())
@@ -381,7 +381,7 @@ pub fn friend_log_history_add(
                     &user_prefix,
                     "friend_log_history",
                     &normalize_text(&entry.user_id),
-                    &entry.created_at,
+                    entry.created_at,
                 )?;
             }
             written_count += affected;
@@ -426,7 +426,7 @@ pub(crate) fn add_friend_log_history_entry(
     tx.execute_non_query(
         &format!("INSERT INTO {user_prefix}_friend_log_history (created_at, type, user_id, display_name, previous_display_name, trust_level, previous_trust_level, friend_number) VALUES (@created_at, @type, @user_id, @display_name, @previous_display_name, @trust_level, @previous_trust_level, @friend_number)"),
         &ParamsBuilder::new()
-            .set("created_at", entry.created_at.clone())
+            .set("created_at", entry.created_at)
             .set("type", entry.r#type.clone())
             .set("user_id", normalize_text(&entry.user_id))
             .set("display_name", entry.display_name.clone())
@@ -441,7 +441,7 @@ pub(crate) fn add_friend_log_history_entry(
         user_prefix,
         "friend_log_history",
         &normalize_text(&entry.user_id),
-        &entry.created_at,
+        entry.created_at,
     )?;
     Ok(())
 }

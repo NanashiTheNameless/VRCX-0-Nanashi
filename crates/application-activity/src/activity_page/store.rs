@@ -31,7 +31,7 @@ pub trait ActivityPageStore {
         from_ms: Option<i64>,
         to_ms: i64,
     ) -> Result<Vec<ActivityLocationSpan>>;
-    fn first_source_created_at(&self, owner: &OwnerId) -> Result<String>;
+    fn first_source_created_at(&self, owner: &OwnerId) -> Result<Option<i64>>;
     fn world_ids_before(&self, owner: &OwnerId, before_ms: i64) -> Result<BTreeSet<String>>;
     fn encountered_user_ids(
         &self,

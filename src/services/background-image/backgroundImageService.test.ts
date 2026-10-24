@@ -84,7 +84,7 @@ function dailyProjection(
             author: 'NASA EPIC / DSCOVR',
             license: 'NASA media usage guidelines',
             source: 'NASA EPIC',
-            resolvedAt: '2026-07-30T00:00:00.000Z',
+            resolvedAt: 1785369600,
             resolvedForKey: '2026-07-30'
         },
         error: null,
@@ -188,7 +188,7 @@ describe('backgroundImageService', () => {
                     author: 'Custom image source',
                     license: 'Local file',
                     source: '1 selected image',
-                    resolvedAt: '2026-07-30T00:00:00.000Z',
+                    resolvedAt: 1785369600,
                     resolvedForKey: 'static'
                 }
             })

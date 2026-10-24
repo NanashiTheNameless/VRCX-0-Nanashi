@@ -61,7 +61,7 @@ type UserDialogLocationGameState = {
     currentLocation: string;
     currentLocationPlayerIds: string[];
     currentLocationPlayers: CurrentInstanceRosterPlayer[];
-    currentLocationStartedAt: string | null;
+    currentLocationStartedAt: number | null;
     currentWorldId: string;
     currentWorldName: string;
     isGameRunning: boolean | null;
@@ -515,7 +515,7 @@ export function useUserDialogLocationPanel({
                             currentLocationStartedAt:
                                 gameState?.currentLocationStartedAt ||
                                 playerSnapshot?.context?.createdAt ||
-                                '',
+                                0,
                             currentLocationPlayers: snapshotPlayers,
                             currentWorldName:
                                 playerSnapshot?.context?.worldName ||

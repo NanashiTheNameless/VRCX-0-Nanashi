@@ -37,7 +37,7 @@ mod tests {
         RealtimeWsMessagePayload {
             json,
             raw: "{}".into(),
-            received_at: "2026-05-15T00:00:00Z".into(),
+            received_at: 1778803200,
         }
     }
 
@@ -358,7 +358,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-location should produce an output");
@@ -418,7 +418,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-location should produce an output");
@@ -475,7 +475,7 @@ mod tests {
                     "content": { "userId": "usr_friend" }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-offline should produce an output");
@@ -495,7 +495,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:01Z".into(),
+                received_at: 1778803201,
             })
         else {
             panic!("friend-location should produce an output");
@@ -506,7 +506,7 @@ mod tests {
         assert!(output.persistence.feed_entries.is_empty());
         assert!(is_pending_offline(view));
         assert_eq!(output.profile_refetch_user_ids, vec!["usr_friend"]);
-        assert!(runtime.wake("usr_friend", "2026-05-15T00:03:00Z").is_some());
+        assert!(runtime.wake("usr_friend", 1778803380).is_some());
     }
 
     #[test]
@@ -554,7 +554,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:03:01Z".into(),
+                received_at: 1778803381,
             })
         else {
             panic!("friend-location should produce an output");
@@ -620,7 +620,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-location should produce an output");
@@ -635,7 +635,7 @@ mod tests {
         assert!(output.persistence.feed_entries.is_empty());
         assert_eq!(location_tag(view), Some("wrld_1:123"));
         assert!(is_pending_offline(view));
-        let fired = runtime.wake("usr_friend", "2026-05-15T00:03:00Z").unwrap();
+        let fired = runtime.wake("usr_friend", 1778803380).unwrap();
         assert_eq!(
             fired.projection.patches[0].presence.view.section().as_str(),
             "offline"
@@ -663,7 +663,7 @@ mod tests {
                 }
             }),
             raw: "{}".into(),
-            received_at: "2026-05-15T00:00:00Z".into(),
+            received_at: 1778803200,
         });
 
         assert!(matches!(result, RealtimeFriendApplyResult::Ignored));
@@ -760,7 +760,7 @@ mod tests {
         assert_eq!(snapshot_friend(&runtime).status, "join me");
         assert_eq!(location_tag(&debounced), Some("wrld_1:123~region(jp)"));
 
-        let fired = runtime.wake("usr_friend", "2026-05-15T00:03:00Z").unwrap();
+        let fired = runtime.wake("usr_friend", 1778803380).unwrap();
         assert_eq!(
             fired.projection.patches[0].presence.view.section().as_str(),
             "offline"
@@ -967,10 +967,10 @@ mod tests {
                 display_name: "Friend".into(),
                 previous_icon_url: "https://api.vrchat.cloud/api/1/image/file_old/1/256".into(),
                 next_icon_url: "https://api.vrchat.cloud/api/1/image/file_new/2/256".into(),
-                created_at: output.icon_changes[0].created_at.clone(),
+                created_at: output.icon_changes[0].created_at,
             }]
         );
-        assert!(!output.icon_changes[0].created_at.is_empty());
+        assert!(output.icon_changes[0].created_at > 0);
     }
 
     #[test]

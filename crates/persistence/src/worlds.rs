@@ -102,13 +102,13 @@ pub(crate) fn world_summary_from_row(row: &[Value]) -> WorldSummaryOutput {
         id: row_string(row, 0),
         author_id: row_string(row, 1),
         author_name: row_string(row, 2),
-        created_at: row_string(row, 3).into(),
+        created_at: row_i64(row, 3),
         description: row_string(row, 4),
         image_url: row_string(row, 5),
         name: row_string(row, 6),
         release_status: row_string(row, 7).into(),
         thumbnail_image_url: row_string(row, 8),
-        updated_at: row_string(row, 9).into(),
+        updated_at: row_i64(row, 9),
         version: row_i64(row, 10),
     }
 }

@@ -21,7 +21,7 @@ pub struct AvatarFeedCleanupOutcome {
 pub fn cleanup_avatar_feed_history(
     store: &dyn AvatarFeedCleanupStore,
     user_id: String,
-    cutoff_date: Option<String>,
+    cutoff_date: Option<i64>,
 ) -> Result<AvatarFeedCleanupOutcome> {
     let deleted_rows = store.purge_avatar_feed(user_id, cutoff_date)?;
     let optimization_error = match store.vacuum_if_fragmented() {
@@ -56,7 +56,7 @@ mod tests {
     struct FakeStore;
 
     impl AvatarFeedCleanupStore for FakeStore {
-        fn purge_avatar_feed(&self, user_id: String, cutoff_date: Option<String>) -> Result<i64> {
+        fn purge_avatar_feed(&self, user_id: String, cutoff_date: Option<i64>) -> Result<i64> {
             assert_eq!(user_id, "usr_test");
             assert_eq!(cutoff_date, None);
             Ok(0)

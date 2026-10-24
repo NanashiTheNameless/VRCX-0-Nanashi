@@ -20,24 +20,21 @@ fn recent_database_sorts_across_tables_and_clamps_page_size() -> Result<(), crat
         &test_db.db,
         "recentDatabase",
         json!({
-            "dateOffset": "2026-05-14",
+            "dateOffset": 1778716800,
             "maxTableSize": 2
         }),
     )?);
 
     assert_eq!(
-        row_texts(&recent, "created_at"),
-        vec![
-            "2026-05-14T10:00:00Z".to_string(),
-            "2026-05-14T10:05:00Z".to_string(),
-        ]
+        row_epochs(&recent, "created_at"),
+        vec![1778752800, 1778753100,]
     );
 
     let empty_page = rows(query(
         &test_db.db,
         "recentDatabase",
         json!({
-            "dateOffset": "2026-05-14",
+            "dateOffset": 1778716800,
             "maxTableSize": -1
         }),
     )?);
@@ -82,7 +79,7 @@ fn lookup_rows_respects_filters_vip_and_limit() -> Result<(), crate::Error> {
         }),
     )?);
     assert_eq!(limited.len(), 1);
-    assert_eq!(limited[0]["created_at"], "2026-05-14T10:05:00Z");
+    assert_eq!(limited[0]["created_at"], 1778753100);
     Ok(())
 }
 
@@ -95,15 +92,15 @@ fn lookup_rows_limits_results_after_preserving_per_table_candidates() -> Result<
         &GameLogWriteBatch {
             events: vec![
                 GameLogEventEntry {
-                    created_at: "2030-01-01T00:00:00Z".into(),
+                    created_at: 1893456000,
                     data: "newest-created-at".into(),
                 },
                 GameLogEventEntry {
-                    created_at: "2020-01-01T00:00:00Z".into(),
+                    created_at: 1577836800,
                     data: "older-created-at".into(),
                 },
                 GameLogEventEntry {
-                    created_at: "2021-01-01T00:00:00Z".into(),
+                    created_at: 1609459200,
                     data: "latest-id".into(),
                 },
             ],

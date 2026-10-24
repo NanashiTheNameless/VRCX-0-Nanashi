@@ -204,8 +204,8 @@ fn hydrate_from_vrchat_payload_preserves_snake_case_timestamps() {
     let row = world_cache_get(db.as_ref(), "wrld_timestamps".into())
         .unwrap()
         .unwrap();
-    assert_eq!(row.created_at, "2026-01-01T00:00:00.000Z");
-    assert_eq!(row.updated_at, "2026-01-02T00:00:00.000Z");
+    assert_eq!(row.created_at, 1767225600);
+    assert_eq!(row.updated_at, 1767312000);
 }
 
 #[test]

@@ -30,17 +30,17 @@ describe('UserDialogActivitySummaryPanel', () => {
             {
                 rowId: 3,
                 type: 'Unfriend' as const,
-                created_at: '2026-09-01T00:00:00Z'
+                created_at: 1788220800
             },
             {
                 rowId: 2,
                 type: 'Friend' as const,
-                created_at: '2026-01-01T00:00:00Z'
+                created_at: 1767225600
             },
             {
                 rowId: 1,
                 type: 'Unfriend' as const,
-                created_at: '2025-01-01T00:00:00Z'
+                created_at: 1735689600
             }
         ];
         render(
@@ -71,7 +71,9 @@ describe('UserDialogActivitySummaryPanel', () => {
             within(popup)
                 .getAllByRole('listitem')
                 .map((row) => row.querySelector('time')?.dateTime)
-        ).toEqual(history.map((row) => row.created_at));
+        ).toEqual(
+            history.map((row) => new Date(row.created_at * 1000).toISOString())
+        );
         expect(
             within(popup).getAllByText('view.friend_log.filters.Unfriend')
         ).toHaveLength(2);
@@ -91,7 +93,7 @@ describe('UserDialogActivitySummaryPanel', () => {
                     {
                         rowId: 1,
                         type: 'Friend',
-                        created_at: '2026-09-01T00:00:00Z'
+                        created_at: 1788220800
                     }
                 ]}
                 isCurrentUser={false}

@@ -100,17 +100,16 @@ fn screenshot_context(
     }
 
     store.ensure_game_log_tables()?;
-    let Some(location_entry) = store.location_before_or_at(owner_user_id, &input.created_at)?
-    else {
+    let Some(location_entry) = store.location_before_or_at(owner_user_id, input.created_at)? else {
         return Ok(None);
     };
 
-    let screenshot_time = DateTime::parse_from_rfc3339(&input.created_at)
-        .map(|date| date.with_timezone(&Utc))
-        .unwrap_or_else(|_| Utc::now());
-    let location_time = DateTime::parse_from_rfc3339(&location_entry.created_at)
-        .map(|date| date.with_timezone(&Utc))
-        .unwrap_or_else(|_| {
+    let screenshot_time = DateTime::<Utc>::from_timestamp(input.created_at, 0)
+        .filter(|_| input.created_at != 0)
+        .unwrap_or_else(Utc::now);
+    let location_time = DateTime::<Utc>::from_timestamp(location_entry.created_at, 0)
+        .filter(|_| location_entry.created_at != 0)
+        .unwrap_or_else(|| {
             screenshot_time - Duration::milliseconds(FALLBACK_LOCATION_MAX_AGE_MS + 1)
         });
     if screenshot_time.timestamp_millis() - location_time.timestamp_millis()
@@ -123,8 +122,8 @@ fn screenshot_context(
     for entry in store.join_leave_for_location(
         owner_user_id,
         &location_entry.location,
-        &location_entry.created_at,
-        &input.created_at,
+        location_entry.created_at,
+        input.created_at,
     )? {
         let key = if entry.user_id.is_empty() {
             format!("display:{}", entry.display_name)

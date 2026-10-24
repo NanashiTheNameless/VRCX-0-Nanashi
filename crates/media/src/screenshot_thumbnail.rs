@@ -28,10 +28,15 @@ pub struct ScreenshotThumbnailFile {
     pub modified_at: i64,
 }
 
-pub fn unix_time_millis(time: std::time::SystemTime) -> i64 {
-    time.duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_millis() as i64
+pub fn unix_time_seconds(time: std::time::SystemTime) -> i64 {
+    match time.duration_since(std::time::UNIX_EPOCH) {
+        Ok(duration) => i64::try_from(duration.as_secs()).unwrap_or(i64::MAX),
+        Err(error) => {
+            let duration = error.duration();
+            -i64::try_from(duration.as_secs()).unwrap_or(i64::MAX)
+                - i64::from(duration.subsec_nanos() != 0)
+        }
+    }
 }
 
 pub fn screenshot_thumbnail_cache_key(path: &str, size_bytes: i64, modified_at: i64) -> String {
@@ -54,7 +59,7 @@ pub fn screenshot_thumbnail_source_state(path: &Path) -> Result<(i64, i64), Erro
     let metadata = std::fs::metadata(path)?;
     let modified_at = metadata
         .modified()
-        .map(unix_time_millis)
+        .map(unix_time_seconds)
         .unwrap_or_default();
     Ok((metadata.len() as i64, modified_at))
 }
@@ -77,7 +82,7 @@ pub fn screenshot_thumbnail_files(cache_dir: &Path) -> Vec<ScreenshotThumbnailFi
             let metadata = std::fs::metadata(&path).ok()?;
             let modified_at = metadata
                 .modified()
-                .map(unix_time_millis)
+                .map(unix_time_seconds)
                 .unwrap_or_default();
             Some(ScreenshotThumbnailFile {
                 path,
@@ -181,7 +186,7 @@ pub fn write_thumbnail_atomically(path: &Path, bytes: &[u8]) -> Result<(), Error
     let temp_path = path.with_file_name(format!(
         "{file_name}.{}.{}.{}.tmp",
         std::process::id(),
-        unix_time_millis(std::time::SystemTime::now()),
+        unix_time_seconds(std::time::SystemTime::now()),
         THUMBNAIL_TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed)
     ));
     std::fs::write(&temp_path, bytes)?;

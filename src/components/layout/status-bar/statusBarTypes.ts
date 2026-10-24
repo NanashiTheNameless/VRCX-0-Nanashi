@@ -72,12 +72,12 @@ export type StatusBarNowPlaying = Pick<
 >;
 
 type StatusBarRuntimeGameState = {
-    currentLocationStartedAt?: string | null;
+    currentLocationStartedAt?: number | null;
     currentWorldId?: string | null;
     currentWorldName?: string | null;
-    lastGameLogAt?: string | null;
+    lastGameLogAt?: number | null;
     lastGameLogType?: string | null;
-    lastGameStartedAt?: string | null;
+    lastGameStartedAt?: number | null;
 };
 
 type StatusBarRuntimeTransport = {
@@ -101,7 +101,7 @@ type StatusBarFooterModel = {
     formatAppUptime: (ms: number) => string;
     formatClock: (nowMs: number, offset: number) => string;
     formatDuration: (ms: number) => string;
-    formatStatusDate: (value: string | null | undefined) => string;
+    formatStatusDate: (value: string | number | null | undefined) => string;
     gameStartedAt: number;
     instanceQueue: StatusBarInstanceQueue;
     isGameRunning: boolean | null;

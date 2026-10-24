@@ -372,7 +372,7 @@ describe('useFeedRows', () => {
                     {
                         sequence: 1,
                         entry: gpsFeedEntry({
-                            created_at: '2026-05-15T00:00:00Z',
+                            created_at: 1778803200,
                             userId: 'usr_gps',
                             displayName: 'GPS Friend',
                             location: 'wrld_1:instance',

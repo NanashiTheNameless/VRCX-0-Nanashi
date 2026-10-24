@@ -16,7 +16,7 @@ describe('worldCollectionImportStore', () => {
             imported: 10,
             failed: 2,
             groupName: 'Shared worlds',
-            startedAt: '2026-07-16T00:00:00Z',
+            startedAt: 1784160000,
             finishedAt: null,
             lastError: null
         });
@@ -40,8 +40,8 @@ describe('worldCollectionImportStore', () => {
             imported: 78,
             failed: 2,
             groupName: 'Shared worlds',
-            startedAt: '2026-07-16T00:00:00Z',
-            finishedAt: '2026-07-16T00:10:00Z',
+            startedAt: 1784160000,
+            finishedAt: 1784160600,
             lastError: null
         });
         expect(useWorldCollectionImportStore.getState()).toMatchObject({

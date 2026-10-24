@@ -889,8 +889,8 @@ const generatedCommands = {
         });
     },
     async appRegistryBackupRestorePromptAcknowledge(
-        backupDate: string
-    ): Promise<string> {
+        backupDate: number
+    ): Promise<number> {
         return await TAURI_INVOKE(
             'app__registry_backup_restore_prompt_acknowledge',
             { backupDate }
@@ -1036,13 +1036,13 @@ const generatedCommands = {
     },
     async appAvatarWearSegments(
         userId: string,
-        fromMs: number,
-        toMs: number
+        from: number,
+        to: number
     ): Promise<AvatarWearSegment[]> {
         return await TAURI_INVOKE('app__avatar_wear_segments', {
             userId,
-            fromMs,
-            toMs
+            from,
+            to
         });
     },
     async appAvatarTimeSpentGet(
@@ -1126,7 +1126,7 @@ const generatedCommands = {
         });
     },
     async appAvatarFeedHistoryCleanup(
-        cutoffDate: string | null
+        cutoffDate: number | null
     ): Promise<AvatarFeedCleanupOutcome> {
         return await TAURI_INVOKE('app__avatar_feed_history_cleanup', {
             cutoffDate
@@ -1231,14 +1231,14 @@ const generatedCommands = {
             currentLocation
         });
     },
-    async appInstanceActivityDatesGet(userId: string): Promise<string[]> {
+    async appInstanceActivityDatesGet(userId: string): Promise<number[]> {
         return await TAURI_INVOKE('app__instance_activity_dates_get', {
             userId
         });
     },
     async appInstanceActivityRowsGet(
-        startDate: string,
-        endDate: string
+        startDate: number,
+        endDate: number
     ): Promise<InstanceActivityRowOutput[]> {
         return await TAURI_INVOKE('app__instance_activity_rows_get', {
             startDate,
@@ -1520,7 +1520,7 @@ const generatedCommands = {
     async appDismissDataDirCleanup(): Promise<null> {
         return await TAURI_INVOKE('app__dismiss_data_dir_cleanup');
     },
-    async appMarkDataDirCleanupPrompted(promptedAt: string): Promise<null> {
+    async appMarkDataDirCleanupPrompted(promptedAt: number): Promise<null> {
         return await TAURI_INVOKE('app__mark_data_dir_cleanup_prompted', {
             promptedAt
         });
@@ -3437,8 +3437,8 @@ export type ActivityJourneyCompanion = {
 };
 export type ActivityJourneyDayInput = {
     ownerUserId: OwnerId;
-    fromMs: number;
-    toMs: number;
+    from: number;
+    to: number;
 };
 export type ActivityJourneyDaysInput = {
     ownerUserId: OwnerId;
@@ -3449,8 +3449,8 @@ export type ActivityJourneyVisit = {
     worldId: string;
     worldName: string;
     worldImageUrl: string;
-    startMs: number;
-    endMs: number;
+    startAt: number;
+    endAt: number;
     companions: ActivityJourneyCompanion[];
 };
 export type ActivityKind =
@@ -3503,7 +3503,7 @@ export type ActivityOverlapViewBuildInput = {
     targetUserId: string;
     rangeDays: number;
     utcOffsetMinutes: number;
-    nowMs: number;
+    now: number;
     forceRefresh: boolean;
     excludeStartHour?: number | null;
     excludeEndHour?: number | null;
@@ -3517,14 +3517,14 @@ export type ActivityOverlapViewOutput = {
     bestHourEnd: number;
     hasOverlapData: boolean;
     builtFromCursor: string;
-    builtAt: string;
+    builtAt: number;
 };
 export type ActivityPageAccessSlice = { access: string; minutes: number };
 export type ActivityPageBuildInput = {
     ownerUserId: OwnerId;
     rangeDays: number;
     utcOffsetMinutes: number;
-    nowMs: number;
+    now: number;
     companionOrder: ActivityCompanionOrder;
     forceRefresh: boolean;
 };
@@ -3538,9 +3538,9 @@ export type ActivityPageCompanionRow = {
     lastSeenTogether: string;
 };
 export type ActivityPageCoverage = {
-    from: string;
-    to: string;
-    firstSourceAt: string;
+    from: number;
+    to: number;
+    firstSourceAt: number;
 };
 export type ActivityPageFadingRow = {
     userId: string;
@@ -3577,8 +3577,8 @@ export type ActivityPageSummary = {
 export type ActivityPageView = {
     rangeDays: number;
     utcOffsetMinutes: number;
-    windowFromMs: number;
-    windowToMs: number;
+    windowFrom: number;
+    windowTo: number;
     summary: ActivityPageSummary;
     previous: ActivityPagePreviousSummary;
     series: ActivityPageSeries;
@@ -3587,7 +3587,7 @@ export type ActivityPageView = {
     people: ActivityPagePeople;
     coverage: ActivityPageCoverage;
     builtFromCursor: string;
-    builtAt: string;
+    builtAt: number;
     stale: boolean;
 };
 export type ActivityPageWorldRow = {
@@ -3595,8 +3595,8 @@ export type ActivityPageWorldRow = {
     worldName: string;
     minutes: number;
     visitCount: number;
-    firstSeenAt: string;
-    lastSeenAt: string;
+    firstSeenAt: number;
+    lastSeenAt: number;
 };
 export type ActivityPageWorlds = {
     top: ActivityPageWorldRow[];
@@ -3633,7 +3633,7 @@ export type ActivityViewBuildInput = {
     isSelf: boolean;
     rangeDays: number;
     utcOffsetMinutes: number;
-    nowMs: number;
+    now: number;
     forceRefresh: boolean;
 };
 export type ActivityViewOutput = {
@@ -3645,7 +3645,7 @@ export type ActivityViewOutput = {
     filteredEventCount: number;
     hasAnyData: boolean;
     builtFromCursor: string;
-    builtAt: string;
+    builtAt: number;
 };
 /**
  * An opt-out made outside the app. While one is present the setting cannot
@@ -3786,7 +3786,7 @@ export type AppUpdateDownloadPhase =
 export type AppUpdateDownloadProgressPayload = {
     version: string;
     phase: AppUpdateDownloadPhase;
-    startedAt: string | null;
+    startedAt: number | null;
     downloadedBytes: number;
     totalBytes: number;
     percent: number;
@@ -3794,7 +3794,7 @@ export type AppUpdateDownloadProgressPayload = {
 export type AppUpdateDownloadStatusSnapshot = {
     phase: AppUpdateDownloadPhase;
     version: string | null;
-    startedAt: string | null;
+    startedAt: number | null;
     downloadedBytes: number;
     totalBytes: number;
     percent: number;
@@ -3808,7 +3808,7 @@ export type AppUpdateReleaseSnapshot = {
     displayName: string;
     tagName: string;
     htmlUrl: string;
-    publishedAt: string;
+    publishedAt: number;
     body: string;
     canonicalVersion: string;
     displayVersion: string;
@@ -3819,7 +3819,7 @@ export type AppUpdateReleaseSnapshot = {
 };
 export type AppUpdateStatusSnapshot = {
     hasAvailableUpdate: boolean;
-    checkedAt: string;
+    checkedAt: number;
     detail: string;
     error: string | null;
     release: AppUpdateReleaseSnapshot | null;
@@ -3897,7 +3897,7 @@ export type AuthenticatedRuntimePhaseSnapshot = {
     friendBaseline: SocialFriendRosterBaselineOutput | null;
     favoritesBaseline: SocialFavoritesBaselineOutput | null;
     realtimeTransport: RealtimeTransportStartResult | null;
-    updatedAt: string;
+    updatedAt: number;
 };
 export type AuthenticatedRuntimeSession = {
     userId: string;
@@ -3942,7 +3942,7 @@ export type AvatarBlockPreview = {
     token: string;
     accountUserId: string;
     sourceName: string;
-    updatedAt: string;
+    updatedAt: number;
     offset: number;
     total: number;
     entries: AvatarBlockEntry[];
@@ -3952,13 +3952,13 @@ export type AvatarCacheOutput = {
     id: string;
     authorId: string;
     authorName: string;
-    created_at: string;
+    created_at: number;
     description: string;
     imageUrl: string;
     name: string;
     releaseStatus: string;
     thumbnailImageUrl: string;
-    updated_at: string;
+    updated_at: number;
     version: number;
 };
 export type AvatarContentTagsBatchInput = {
@@ -3984,7 +3984,7 @@ export type AvatarListSort =
     | '_updated_at';
 export type AvatarMemoOutput = {
     avatarId: string;
-    editedAt: string;
+    editedAt: number;
     memo: string;
 };
 export type AvatarReleaseStatus = 'public' | 'private';
@@ -4024,8 +4024,8 @@ export type AvatarWearSegment = {
     name: string;
     thumbnailImageUrl: string;
     imageUrl: string;
-    startedAtMs: number;
-    endedAtMs: number;
+    startedAt: number;
+    endedAt: number;
 };
 export type BackendRuntimeAuthStatus =
     | 'unknown'
@@ -4123,7 +4123,7 @@ export type BackendRuntimeSnapshot = {
     processStatus: BackendRuntimeProcessStatus;
     gameLogPersistedCount: number;
     lastError: string | null;
-    updatedAt: string;
+    updatedAt?: number;
     friendProfileLoad: FriendProfileLoadStatusPayload;
 };
 export type BackendRuntimeTelemetry = {
@@ -4187,7 +4187,7 @@ export type BackgroundImageSnapshot = {
     author: string;
     license: string;
     source: string;
-    resolvedAt: string;
+    resolvedAt?: number;
     resolvedForKey: string;
 };
 export type BatchMutationItemResult = {
@@ -4214,7 +4214,7 @@ export type BatchMutationResult = {
     lastError: string | null;
 };
 export type BrowseHistoryCursor = {
-    lastViewedAt: string;
+    lastViewedAt: number;
     entityKind: BrowseHistoryEntityKind;
     entityId: string;
 };
@@ -4224,8 +4224,8 @@ export type BrowseHistoryItemOutput = {
     entityId: string;
     title: string;
     imageUrl: string;
-    firstViewedAt: string;
-    lastViewedAt: string;
+    firstViewedAt: number;
+    lastViewedAt: number;
     viewCount: number;
 };
 export type BrowseHistoryPageOutput = {
@@ -4238,8 +4238,8 @@ export type BrowseHistoryQueryInput = {
     search?: string;
     cursor: BrowseHistoryCursor | null;
     limit?: number;
-    dateFrom?: string;
-    dateTo?: string;
+    dateFrom?: number | null;
+    dateTo?: number | null;
 };
 export type BrowseHistoryRecordInput = {
     ownerUserId: OwnerId;
@@ -4330,8 +4330,8 @@ export type CommunityThemeInstallMetadata = {
     version: string;
     sourceUrl: string;
     sha256: string;
-    installedAt: string;
-    updatedAt: string;
+    installedAt?: number;
+    updatedAt: number;
     darkMode: boolean;
     accentMode: boolean;
 };
@@ -4409,8 +4409,8 @@ export type CustomLocaleEntry = {
 export type DataDirCleanupPending = {
     oldDir: string;
     bytes: number;
-    migratedAt: string;
-    lastPromptedAt?: string | null;
+    migratedAt: number;
+    lastPromptedAt?: number | null;
     dismissed: boolean;
     replacedDir?: string | null;
 };
@@ -4490,7 +4490,7 @@ export type DataExportReport = { files: number; bytes: number };
 export type DataImportSummary = {
     files: number;
     appVersion: string;
-    createdAt: string;
+    createdAt: number;
 };
 export type DatabaseUpgradePreflight = {
     status: DatabaseUpgradePreflightStatus;
@@ -4548,11 +4548,11 @@ export type DatabaseUpgradeStatus = {
     fromVersion: number;
     toVersion: number;
     workDbPath: string;
-    startedAt: string;
+    startedAt: number;
     appVersion?: string | null;
     stage?: string | null;
     operation?: string | null;
-    failedAt?: string | null;
+    failedAt?: number | null;
     reason?: string | null;
 };
 export type DebugLoggingOutcome = {
@@ -4733,7 +4733,7 @@ export type FavoriteDetailsHydrateOutput = {
     detailsById: Partial<{ [key in string]: RawJson }>;
     availabilityById: Partial<{ [key in string]: string }>;
     cachedCount: number;
-    fetchedAt: string;
+    fetchedAt: number;
 };
 export type FavoriteEntityKind = 'avatar' | 'world' | 'friend';
 export type FavoriteGroupOutput = {
@@ -4781,8 +4781,8 @@ export type FavoriteImportStatus = {
     failed: number;
     cancelRequested: boolean;
     items: FavoriteImportItemResult[];
-    startedAt: string | null;
-    finishedAt: string | null;
+    startedAt: number | null;
+    finishedAt: number | null;
     lastError: string | null;
 };
 export type FavoriteImportTarget = {
@@ -4791,7 +4791,7 @@ export type FavoriteImportTarget = {
     favoriteType: VrchatFavoriteType | null;
 };
 export type FavoriteRow = {
-    createdAt: string;
+    createdAt: number;
     groupName: string;
     userId?: string | null;
     avatarId?: string | null;
@@ -4868,7 +4868,7 @@ export type FavoritesChangedPayload = {
     requiresRefresh: boolean;
 };
 export type FeedCursorInput = {
-    createdAt: string;
+    createdAt: number;
     sourceRank: number;
     rowId: number;
 };
@@ -4892,7 +4892,7 @@ export type FeedLatestQueryInput = {
 export type FeedLiveEntry =
     | {
           type: 'Online';
-          created_at: string;
+          created_at: number;
           userId: string;
           displayName: string;
           location: string;
@@ -4905,7 +4905,7 @@ export type FeedLiveEntry =
       }
     | {
           type: 'Offline';
-          created_at: string;
+          created_at: number;
           userId: string;
           displayName: string;
           location: string;
@@ -4918,7 +4918,7 @@ export type FeedLiveEntry =
       }
     | {
           type: 'GPS';
-          created_at: string;
+          created_at: number;
           userId: string;
           displayName: string;
           location: string;
@@ -4932,7 +4932,7 @@ export type FeedLiveEntry =
       }
     | {
           type: 'Status';
-          created_at: string;
+          created_at: number;
           userId: string;
           displayName: string;
           status: string;
@@ -4943,7 +4943,7 @@ export type FeedLiveEntry =
       }
     | {
           type: 'Bio';
-          created_at: string;
+          created_at: number;
           userId: string;
           displayName: string;
           bio: string;
@@ -4952,7 +4952,7 @@ export type FeedLiveEntry =
       }
     | {
           type: 'Avatar';
-          created_at: string;
+          created_at: number;
           userId: string;
           displayName: string;
           ownerId: string;
@@ -4965,7 +4965,7 @@ export type FeedLiveEntry =
       }
     | {
           type: 'TrustLevel';
-          created_at: string;
+          created_at: number;
           userId: string;
           displayName: string;
           trustLevel: string;
@@ -4975,7 +4975,7 @@ export type FeedLiveEntry =
       }
     | {
           type: 'DisplayName';
-          created_at: string;
+          created_at: number;
           userId: string;
           displayName: string;
           previousDisplayName: string;
@@ -4984,21 +4984,21 @@ export type FeedLiveEntry =
       }
     | {
           type: 'Friend';
-          created_at: string;
+          created_at: number;
           userId: string;
           displayName: string;
           ownerUserId: string;
       }
     | {
           type: 'Unfriend';
-          created_at: string;
+          created_at: number;
           userId: string;
           displayName: string;
           ownerUserId: string;
       }
     | {
           type: 'OnPlayerJoining';
-          created_at: string;
+          created_at: number;
           userId: string;
           displayName: string;
           location: string;
@@ -5010,7 +5010,7 @@ export type FeedLiveEntry =
       }
     | {
           type: 'instance.closed';
-          created_at: string;
+          created_at: number;
           id: string;
           location: string;
           message: string;
@@ -5117,7 +5117,7 @@ export type FeedReadModelOutput = {
 export type FeedRowOutput = {
     rowId?: number | null;
     sourceRank?: number | null;
-    created_at?: string | null;
+    created_at?: number | null;
     userId?: string | null;
     displayName?: string | null;
     type?: string | null;
@@ -5154,8 +5154,8 @@ export type FeedRowsQueryInput = {
     excludedUserIds?: string[];
     locationHiddenUserIds?: string[];
     maxEntries: number;
-    dateFrom?: string;
-    dateTo?: string;
+    dateFrom?: number | null;
+    dateTo?: number | null;
     cursor?: FeedCursorInput | null;
 };
 export type FeedSearchQueryInput = {
@@ -5167,8 +5167,8 @@ export type FeedSearchQueryInput = {
     excludedUserIds?: string[];
     locationHiddenUserIds?: string[];
     favoritesOnly?: boolean;
-    dateFrom?: string;
-    dateTo?: string;
+    dateFrom?: number | null;
+    dateTo?: number | null;
     maxRows: number;
 };
 export type FileMetadataOutput = {
@@ -5190,10 +5190,10 @@ export type FriendLogCurrentOutput = {
     trustLevel: string;
     friendNumber: number;
 };
-export type FriendLogHistoryCursor = { createdAt: string; rowId: number };
+export type FriendLogHistoryCursor = { createdAt: number; rowId: number };
 export type FriendLogHistoryEntryInput = {
     rowId?: JsonValue;
-    createdAt?: string;
+    createdAt?: number;
     type?: string;
     userId?: string;
     displayName?: string;
@@ -5204,7 +5204,7 @@ export type FriendLogHistoryEntryInput = {
 };
 export type FriendLogHistoryOutput = {
     rowId: number;
-    createdAt: string;
+    createdAt: number;
     type: string;
     userId: string;
     displayName: string;
@@ -5218,8 +5218,8 @@ export type FriendLogHistoryQueryInput = {
     targetUserId?: string;
     types?: string[];
     excludedTypes?: string[];
-    dateFrom?: string;
-    dateTo?: string;
+    dateFrom?: number | null;
+    dateTo?: number | null;
     cursor: FriendLogHistoryCursor | null;
     limit: number | null;
 };
@@ -5240,8 +5240,8 @@ export type FriendProfileLoadStatusPayload = {
     processed: number;
     loaded: number;
     failed: number;
-    startedAt: string;
-    finishedAt: string | null;
+    startedAt?: number;
+    finishedAt: number | null;
 };
 export type FriendProjection = {
     generation: number;
@@ -5319,12 +5319,12 @@ export type GameLogImportFileStatus =
     | 'liveFile'
     | 'unreadable';
 export type GameLogInstanceJoinOutput = {
-    created_at: string;
+    created_at: number;
     location: string;
 };
 export type GameLogInstancePlayerEventOutput = {
     rowId: number;
-    created_at: string;
+    created_at: number;
     displayName: string;
     userId: string;
     time: number;
@@ -5333,45 +5333,45 @@ export type GameLogInstancePlayerEventOutput = {
 export type GameLogInstanceTimeOutput = { location: string; time: number };
 export type GameLogJoinCountOutput = { joinCount: number; userId: string };
 export type GameLogJoinLeaveRangeOutput = {
-    created_at: string;
+    created_at: number;
     type: string;
     displayName: string;
     userId: string;
 };
-export type GameLogLastGroupVisitOutput = { created_at: string };
-export type GameLogLastSeenOutput = { created_at: string; userId: string };
-export type GameLogLastVisitOutput = { created_at: string; worldId: string };
+export type GameLogLastGroupVisitOutput = { created_at: number };
+export type GameLogLastSeenOutput = { created_at: number; userId: string };
+export type GameLogLastVisitOutput = { created_at: number; worldId: string };
 export type GameLogLocationBeforeOutput = {
-    created_at: string;
+    created_at: number;
     location: string;
     worldId: string;
     worldName: string;
     groupName: string;
 };
-export type GameLogOnlineSessionOutput = { created_at: string; time: number };
+export type GameLogOnlineSessionOutput = { created_at: number; time: number };
 export type GameLogPersistenceFallbackPayload = {
     attemptedRowCount: number;
     error: string;
 };
 export type GameLogPlayerDetailOutput = {
-    created_at: string;
+    created_at: number;
     display_name: string;
     user_id: string;
     time: number;
 };
 export type GameLogPreviousDisplayNameOutput = {
-    created_at: string;
+    created_at: number;
     displayName: string;
 };
 export type GameLogPreviousInstanceGroupOutput = {
-    created_at: string;
+    created_at: number;
     groupName: string;
     location: string;
     time: number;
     worldName: string;
 };
 export type GameLogPreviousInstanceWorldOutput = {
-    created_at: string;
+    created_at: number;
     groupName: string;
     id: number;
     location: string;
@@ -5383,16 +5383,16 @@ export type GameLogProjection = {
     currentWorldId: string;
     currentWorldName: string;
     currentDestination: string;
-    currentLocationStartedAt: string | null;
+    currentLocationStartedAt: number | null;
     currentLocationPlayerIds: string[];
     currentLocationPlayers: PlayerState[];
-    lastGameLogAt: string;
+    lastGameLogAt: number;
     lastGameLogType: string;
 };
 export type GameLogQuery =
     | {
           kind: 'recentDatabase';
-          params: { dateOffset?: string; maxTableSize?: number | null };
+          params: { dateOffset?: number | null; maxTableSize?: number | null };
       }
     | {
           kind: 'rowsByLocation';
@@ -5456,26 +5456,29 @@ export type GameLogQuery =
       }
     | { kind: 'lastDate'; params: Record<string, never> }
     | { kind: 'playersFromInstanceRows'; params: { location?: string } }
-    | { kind: 'locationBeforeOrAt'; params: { createdAt?: string } }
+    | { kind: 'locationBeforeOrAt'; params: { createdAt?: number } }
     | {
           kind: 'joinLeaveRange';
           params: {
               location?: string;
-              afterDate?: string;
-              beforeDate?: string;
+              afterDate?: number;
+              beforeDate?: number;
           };
       }
     | { kind: 'playerDetailFromInstance'; params: { location?: string } }
     | { kind: 'previousDisplayNamesByUserId'; params: { userId?: string } }
     | { kind: 'instanceTimes'; params: Record<string, never> }
-    | { kind: 'onlineSessions'; params: { fromDate?: string; toDate?: string } }
+    | {
+          kind: 'onlineSessions';
+          params: { fromDate?: number | null; toDate?: number | null };
+      }
     | {
           kind: 'onlineSessionsAfter';
-          params: { afterCreatedAt?: string; inclusive?: boolean };
+          params: { afterCreatedAt?: number; inclusive?: boolean };
       }
     | {
           kind: 'instanceJoinHistory';
-          params: { userId?: string; createdAt?: string };
+          params: { userId?: string; createdAt?: number };
       }
     | { kind: 'worldNameByWorldId'; params: { worldId?: string } }
     | { kind: 'userIdFromDisplayName'; params: { displayName?: string } }
@@ -5495,7 +5498,7 @@ export type GameLogQueryOutput =
     | { kind: 'timeSpent'; value: GameLogUserTimeSpentOutput }
     | { kind: 'userStats'; value: GameLogUserStatsOutput }
     | { kind: 'allUserStats'; value: GameLogAllUserStatsOutput[] }
-    | { kind: 'lastDate'; value: string }
+    | { kind: 'lastDate'; value: number }
     | {
           kind: 'playersFromInstanceRows';
           value: GameLogInstancePlayerEventOutput[];
@@ -5523,7 +5526,7 @@ export type GameLogQueryOutput =
       };
 export type GameLogRowOutput = {
     rowId: number;
-    created_at: string;
+    created_at: number;
     type: string;
     displayName?: string | null;
     userId?: string | null;
@@ -5542,7 +5545,7 @@ export type GameLogRowOutput = {
 };
 export type GameLogSessionDto = {
     id?: number | null;
-    created_at: string;
+    created_at: number;
     location: string;
     worldId: string;
     worldName: string;
@@ -5553,7 +5556,7 @@ export type GameLogSessionDto = {
 };
 export type GameLogSessionEventDto = {
     type: string;
-    created_at: string;
+    created_at: number;
     rowId?: number | null;
     userId?: string | null;
     displayName?: string | null;
@@ -5569,7 +5572,7 @@ export type GameLogSessionEventDto = {
 export type GameLogSessionMemberDto = {
     displayName: string;
     userId: string;
-    created_at: string;
+    created_at: number;
     isFavorite: boolean;
 };
 export type GameLogSessionPlayerDurationRowDto = {
@@ -5581,8 +5584,8 @@ export type GameLogSessionsQueryInput = {
     search?: string;
     filters?: string[];
     favoriteUserIds?: string[];
-    dateFrom?: string;
-    dateTo?: string;
+    dateFrom?: number | null;
+    dateTo?: number | null;
     limit?: number;
     maxTableSize?: number;
     searchLimit?: number;
@@ -5631,7 +5634,7 @@ export type GlobalHideStatus = {
     today: number;
     dailyCap: number;
     paused: boolean;
-    backoffUntil: string;
+    backoffUntil: number;
     lastError: string;
     unblockRemaining: number;
 };
@@ -5666,8 +5669,8 @@ export type GroupBanImportStatus = {
     failed: number;
     cancelRequested: boolean;
     items: GroupBanImportItemResult[];
-    startedAt: string | null;
-    finishedAt: string | null;
+    startedAt: number | null;
+    finishedAt: number | null;
     lastError: string | null;
 };
 export type GroupCalendarEventAccessType = 'group' | 'public';
@@ -5895,12 +5898,12 @@ export type HostPlatform = 'windows' | 'linux' | 'macos' | 'unknown';
 export type HostSessionProjection = {
     isGameRunning: boolean;
     isSteamVRRunning: boolean;
-    lastGameStartedAt?: string | null;
-    lastGameStateChangedAt?: string | null;
+    lastGameStartedAt?: number | null;
+    lastGameStateChangedAt?: number | null;
     generation: number;
     gameChanged: boolean;
     steamvrChanged: boolean;
-    changedAt: string;
+    changedAt: number;
 };
 export type HttpApiExecuteResponse = { status: number; data: string };
 export type ImageAnimationStyle =
@@ -5935,7 +5938,7 @@ export type ImageMaskTag = 'square';
 export type ImportPreview = { title: string; worldIds: string[] };
 export type InstanceActivityRowOutput = {
     id: number;
-    createdAt: string;
+    createdAt: number;
     type: string;
     displayName: string;
     location: string;
@@ -5969,7 +5972,7 @@ export type InstanceCreateType =
     | 'private'
     | 'public';
 export type InstanceHistoryEntryOutput = {
-    createdAt: string;
+    createdAt: number;
     location: string;
     time: number;
     worldName: string;
@@ -5979,8 +5982,8 @@ export type InstanceHistoryEntryOutput = {
 };
 export type InstanceHistoryQueryInput = {
     userId: string;
-    dateFrom?: string;
-    dateTo?: string;
+    dateFrom?: number | null;
+    dateTo?: number | null;
     limit?: number;
 };
 export type InstanceInviteBatchInput = {
@@ -6215,7 +6218,7 @@ export type LocalFavoriteSnapshot = {
 };
 export type LocalModerationOutput = {
     userId: string;
-    updatedAt: string;
+    updatedAt: number;
     displayName: string;
     block: boolean;
     mute: boolean;
@@ -6233,7 +6236,7 @@ export type LocalWorldDetailsRefreshOutput = {
 export type LogLocationSnapshot = {
     location: string;
     worldName: string;
-    createdAt: string;
+    createdAt: number;
     fileName: string;
 };
 export type LoginFailureKind =
@@ -6338,7 +6341,7 @@ export type MediaFileTag =
     | 'sticker';
 export type MemoSaveResult = {
     entityId: string;
-    editedAt: string;
+    editedAt: number;
     memo: string;
 };
 export type Message = {
@@ -6346,14 +6349,14 @@ export type Message = {
     seq: number;
     role: Role;
     content: string;
-    createdAt: string;
+    createdAt: number;
     toolCall: ToolCallRecord | null;
     toolResult: ToolResultRecord | null;
 };
 export type ModerationReportType = 'avatar' | 'group' | 'user' | 'world';
 export type ModerationSyncLocalOutput = {
     userId: string;
-    updatedAt: string;
+    updatedAt: number;
     displayName: string;
     block: boolean;
     mute: boolean;
@@ -6404,9 +6407,9 @@ export type MutualGraphFetchStatus = {
     optedOutFriends: number;
     failedFriends: number;
     cancelRequested: boolean;
-    startedAt: string;
-    updatedAt: string;
-    finishedAt: string | null;
+    startedAt: number;
+    updatedAt: number;
+    finishedAt: number | null;
     lastError: string | null;
 };
 export type MutualGraphFriendRefreshInput = {
@@ -6420,7 +6423,7 @@ export type MutualGraphFriendRefreshStatus = 'refreshed' | 'optedOut';
 export type MutualGraphLinkOutput = { friendId: string; mutualId: string };
 export type MutualGraphMetaOutput = {
     friendId: string;
-    lastFetchedAt: string;
+    lastFetchedAt: number;
     optedOut: boolean;
     totalCount: number | null;
 };
@@ -6468,8 +6471,8 @@ export type NoteExportStatus = {
     succeeded: number;
     failed: number;
     items: NoteExportItemStatus[];
-    startedAt: string | null;
-    finishedAt: string | null;
+    startedAt: number | null;
+    finishedAt: number | null;
     lastError: string | null;
 };
 export type NotificationActionOutcome = {
@@ -6552,10 +6555,10 @@ export type NotificationInviteResponseInput = {
 export type NotificationListItemOutput = {
     id: string;
     version: number;
-    createdAt: string;
-    created_at: string;
-    updatedAt: string;
-    expiresAt: string;
+    createdAt: number;
+    created_at: number;
+    updatedAt?: number | null;
+    expiresAt?: number | null;
     type: string;
     link: string;
     linkText: string;
@@ -6643,13 +6646,13 @@ export type NowPlayingPayload = {
     thumbnailUrl?: string | null;
     length?: number | null;
     position: number;
-    startedAt: string;
-    created_at?: string | null;
+    startedAt: number;
+    created_at?: number | null;
     type?: string | null;
     videoUrl?: string | null;
     videoName?: string | null;
     videoId?: string | null;
-    updatedAt: string;
+    updatedAt: number;
 };
 export type NowPlayingSnapshot = {
     url: string;
@@ -6662,13 +6665,13 @@ export type NowPlayingSnapshot = {
     thumbnailUrl: string;
     length: number;
     position: number;
-    startedAt: string | null;
-    created_at?: string | null;
+    startedAt: number | null;
+    created_at?: number | null;
     type?: string | null;
     videoUrl?: string | null;
     videoName?: string | null;
     videoId?: string | null;
-    updatedAt: string | null;
+    updatedAt: number | null;
 };
 export type OwnerId = string;
 export type ParsedLocation = {
@@ -6701,7 +6704,7 @@ export type PlayerDetail = {
     pos?: [number, number, number] | null;
 };
 export type PlayerListSnapshotContext = {
-    createdAt: string;
+    createdAt: number;
     location: string;
     worldId: string;
     worldName: string;
@@ -6720,14 +6723,14 @@ export type PlayerListSnapshotPlayer = {
     id: string;
     userId: string;
     displayName: string;
-    joinedAt: string;
+    joinedAt: number;
     joinedAtMs: number;
 };
 export type PlayerListSnapshotSource = 'none' | 'runtime';
 export type PlayerState = {
     userId: string;
     displayName: string;
-    joinTimeMs: number | null;
+    joinTime: number | null;
 };
 export type PresenceAutomationRuleKind = 'time' | 'context';
 export type PresenceEntry = { rev: number; view: PresenceView };
@@ -6820,7 +6823,7 @@ export type ProfileBackupSettings = {
     autoIntervalDays: number;
     autoRetainExtra: number;
     autoTargetDir: string;
-    lastAutoAt: string | null;
+    lastAutoAt?: number | null;
 };
 export type ProfileBackupState = 'idle' | 'running' | 'retryable' | 'error';
 export type ProfileBackupStatus = {
@@ -6887,7 +6890,7 @@ export type ProfileRestoreFailureCode =
 export type ProfileRestoreManifestSummary = {
     appVersion: string;
     dbVersion: number;
-    createdAt: string;
+    createdAt: number;
     platform: string;
     kind: ProfileBackupKind;
 };
@@ -7029,7 +7032,7 @@ export type RealtimeInstanceQueueProjection = {
     worldName: string;
     position: number;
     queueSize: number;
-    receivedAt: string;
+    receivedAt: number;
 };
 export type RealtimeNotificationProjection = {
     generation: number;
@@ -7072,13 +7075,13 @@ export type RealtimeWsStatusPayload = {
 export type RegistryBackupMaintenanceResult = {
     autoBackupCreated: boolean;
     restorePromptNeeded: boolean;
-    restorePromptBackupDate: string | null;
+    restorePromptBackupDate: number | null;
     detail: string;
 };
 export type RegistryBackupSnapshot = {
     key: string;
     name: string;
-    date: string;
+    date: number;
 };
 export type ReleaseStatusFilter = 'all' | 'hidden' | 'private' | 'public';
 export type Reminder = {
@@ -7090,8 +7093,8 @@ export type Reminder = {
      * Event reminders: keep firing (with a cooldown) instead of once.
      */
     recurring?: boolean;
-    createdAt: string;
-    lastFiredAt?: string;
+    createdAt: number;
+    lastFiredAt?: number | null;
     fireCount?: number;
 };
 export type ReminderDraft = {
@@ -7135,9 +7138,9 @@ export type ReminderTrigger =
      */
     | { kind: 'playerJoined'; userId: string; displayName: string }
     /**
-     * A point in time (RFC 3339, UTC); optionally repeats.
+     * A point in time (epoch seconds); optionally repeats.
      */
-    | { kind: 'time'; at: string; repeatMinutes?: number };
+    | { kind: 'time'; at: number; repeatMinutes?: number };
 export type RemoteModerationRow = {
     id: string;
     type: string;
@@ -7227,7 +7230,7 @@ export type RemoteSyncInstanceTrust =
 export type RemoteSyncLogSnapshot = {
     kind: string;
     message: string;
-    createdAtMs: number;
+    createdAt: number;
 };
 export type RemoteSyncPairingPoll =
     | { status: 'pending'; value: { interval_seconds: number } }
@@ -7299,7 +7302,7 @@ export type RemoteSyncStatusSnapshot = {
     hasKey: boolean;
     signedInToVrchat: boolean;
     vaultId: string | null;
-    lastSyncAtMs: number | null;
+    lastSyncAt: number | null;
     progress: RemoteSyncProgressSnapshot | null;
     log: RemoteSyncLogSnapshot[];
 };
@@ -7334,7 +7337,7 @@ export type RuntimeGroupInstancesProjection = {
     status: RuntimeGroupInstancesStatus;
     userId: string;
     endpoint: string;
-    fetchedAt?: string | null;
+    fetchedAt?: number | null;
     error?: string | null;
     instances?: RawJson[] | null;
     groupOrder?: string[] | null;
@@ -7385,11 +7388,11 @@ export type RuntimeVrchatAuthFailurePayload = {
 export type RuntimeWorkerErrorPayload = { worker: string; message: string };
 export type SafetyAuditEntry = {
     accountUserId?: string;
-    eventCreatedAt?: string;
+    eventCreatedAt?: number;
     location?: string;
     logKind?: string;
     avatarId?: string;
-    createdAt: string;
+    createdAt: number;
     eventType: string;
     userId: string;
     source: string;
@@ -7400,7 +7403,7 @@ export type SafetyAuditEntry = {
 export type SafetyLogRow = {
     accountUserId: string;
     kind: string;
-    createdAt: string;
+    createdAt: number;
     userId: string;
     location: string;
     url: string;
@@ -7469,7 +7472,7 @@ export type SavedGroupCollection = {
     id: string;
     name: string;
     groupIds: string[];
-    createdAt: string;
+    createdAt: number;
 };
 export type SavedGroupCollectionCreateInput = { name: string };
 export type SavedGroupCollectionDeleteInput = { collectionId: string };
@@ -7517,8 +7520,11 @@ export type ScreenshotLibraryImage = {
     height: number | null;
     worldId: string | null;
     worldName: string | null;
-    capturedAt: string | null;
-    capturedAtMs: number;
+    /**
+     * When the picture was taken: the metadata timestamp, else the time in
+     * VRChat's file name, else the file's modified time.
+     */
+    capturedAt: number;
     metadata: ScreenshotMetadata | null;
     error: string | null;
 };
@@ -7554,7 +7560,7 @@ export type ScreenshotSearchResult = {
     height: number | null;
     metadata: ScreenshotMetadata;
 };
-export type ScreenshotTimeWindow = { fromMs: number; toMs: number };
+export type ScreenshotTimeWindow = { from: number; to: number };
 export type ScreenshotWindowImages = {
     total: number;
     images: ScreenshotLibraryImage[];
@@ -7571,14 +7577,14 @@ export type Session = {
     playbookMode: PlaybookMode;
     entityPanelOpen: boolean;
     surfacedEntities: Entity[];
-    createdAt: string;
-    updatedAt: string;
+    createdAt: number;
+    updatedAt: number;
 };
 export type SessionSummary = {
     id: string;
     title: string;
     busy: boolean;
-    updatedAt: string;
+    updatedAt: number;
 };
 export type ShareCollectionCreateInput = {
     title: string;
@@ -7612,8 +7618,8 @@ export type SharedCollectionImportStatus = {
     imported: number;
     failed: number;
     groupName: string;
-    startedAt: string | null;
-    finishedAt: string | null;
+    startedAt: number | null;
+    finishedAt: number | null;
     lastError: string | null;
 };
 export type SidebarAutoHideContext = {
@@ -7718,7 +7724,7 @@ export type SourceFormat =
 export type SourceStatus = {
     id: string;
     count: number;
-    updatedAt: string;
+    updatedAt: number;
     error: string;
 };
 export type SqliteErrorCategory =
@@ -7831,7 +7837,7 @@ export type UserGroupsOverviewOutput = {
     groups: UserGroupsOverviewGroup[];
     permissionsDegraded: boolean;
 };
-export type UserMemoOutput = { userId: string; editedAt: string; memo: string };
+export type UserMemoOutput = { userId: string; editedAt: number; memo: string };
 export type UserMutualFriendsListInput = { userId: string };
 export type UserMutualFriendsListOutput = {
     rows: RawJson[];
@@ -7841,7 +7847,7 @@ export type UserNoteOutput = {
     userId: string;
     displayName: string;
     note: string;
-    createdAt: string;
+    createdAt: number;
 };
 export type UserSearchCustomField = 'bio' | 'displayName';
 export type UserSearchParams = {
@@ -7874,8 +7880,8 @@ export type VrcStatusSnapshot = {
     status: string;
     indicator: string;
     summary: string;
-    updatedAt: string | null;
-    lastFetchedAt: string | null;
+    updatedAt?: number | null;
+    lastFetchedAt: number | null;
     pollingIntervalMs: number;
     refreshing: boolean;
     error: string;
@@ -8289,7 +8295,7 @@ export type WebhookDeliveryRecord = {
     event: string;
     status: number | null;
     attempts: number;
-    observedAt: string;
+    observedAt: number;
 };
 export type WebhookDeliverySnapshot = {
     notification: WebhookDeliveryChannelSnapshot;
@@ -8304,11 +8310,11 @@ export type WorldFriendVisitRow = {
     userId: string;
     displayName: string;
     visitCount: number;
-    lastVisitedAt: string;
+    lastVisitedAt: number;
 };
 export type WorldFriendVisitsOutput = {
     friendCount: number;
-    lastVisitedAt: string;
+    lastVisitedAt: number;
     friends: WorldFriendVisitRow[];
 };
 export type WorldGetInput = {
@@ -8318,7 +8324,7 @@ export type WorldGetInput = {
 };
 export type WorldMemoOutput = {
     worldId: string;
-    editedAt: string;
+    editedAt: number;
     memo: string;
 };
 export type WorldSearchParams = {
@@ -8363,13 +8369,13 @@ export type WorldSummaryOutput = {
     id: string;
     authorId: string;
     authorName: string;
-    created_at: string;
+    created_at: number;
     description: string;
     imageUrl: string;
     name: string;
     releaseStatus: string;
     thumbnailImageUrl: string;
-    updated_at: string;
+    updated_at: number;
     version: number;
 };
 export type WorldUpdateRequest = {

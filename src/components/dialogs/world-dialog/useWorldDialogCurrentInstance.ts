@@ -235,7 +235,7 @@ export function useWorldDialogCurrentInstance({
                         currentLocationStartedAt:
                             currentLocationStartedAt ||
                             playerContext?.createdAt ||
-                            '',
+                            0,
                         currentLocationPlayers: snapshotPlayers,
                         currentWorldName:
                             playerContext?.worldName || worldName || ''

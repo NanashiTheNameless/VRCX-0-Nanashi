@@ -4,9 +4,10 @@ use std::{
     sync::{Arc, Mutex, OnceLock, Weak},
 };
 
-use chrono::{DateTime, NaiveDateTime, SecondsFormat, Utc};
+use chrono::Utc;
 use serde_json::{json, Value};
 use vrcx_0_core::activity_sessions::{span_duration_ms, SpanEnd};
+use vrcx_0_core::time::epoch_from_millis;
 
 use crate::common::{
     normalize_text, parse_json_value, row_i64, row_json, row_string, row_value, value_as_i64,
@@ -22,7 +23,7 @@ use crate::Error;
 use super::types::*;
 
 struct ActivitySourceLocationRow {
-    created_at: String,
+    created_at: i64,
     time: i64,
 }
 
@@ -63,21 +64,14 @@ fn activity_now_ms(input: Option<i64>) -> i64 {
     input.unwrap_or_else(|| Utc::now().timestamp_millis())
 }
 
-pub(crate) fn activity_iso_from_ms(ms: i64) -> String {
-    DateTime::<Utc>::from_timestamp_millis(ms)
-        .unwrap_or_else(Utc::now)
-        .to_rfc3339_opts(SecondsFormat::Millis, true)
+/// Sessions are computed in milliseconds and stored in epoch seconds.
+pub(crate) fn activity_ms_from_epoch(seconds: i64) -> i64 {
+    seconds.saturating_mul(1000)
 }
 
-pub(crate) fn parse_activity_time_ms(value: &str) -> Option<i64> {
-    DateTime::parse_from_rfc3339(value)
-        .map(|value| value.timestamp_millis())
-        .ok()
-        .or_else(|| {
-            NaiveDateTime::parse_from_str(value, "%Y-%m-%d %H:%M:%S")
-                .ok()
-                .map(|value| value.and_utc().timestamp_millis())
-        })
+/// A stored date (epoch seconds) as milliseconds, `None` when it is NULL.
+pub(crate) fn activity_ms_from_value(value: &Value) -> Option<i64> {
+    value.as_i64().map(activity_ms_from_epoch)
 }
 
 fn clamp_activity_range_days(value: &Value, default_value: i64) -> i64 {
@@ -116,8 +110,8 @@ fn read_activity_sessions_data(
         )?
         .into_iter()
         .map(|row| ActivitySessionRow {
-            start: row_i64(&row, 0),
-            end: row_i64(&row, 1),
+            start: activity_ms_from_epoch(row_i64(&row, 0)),
+            end: activity_ms_from_epoch(row_i64(&row, 1)),
             is_open_tail: row_i64(&row, 2) != 0,
             source_revision: row_string(&row, 3),
         })
@@ -137,9 +131,9 @@ fn read_activity_sync_state(
         .first()
         .map(|row| ActivitySyncStateOutput {
             user_id: row_string(row, 0),
-            updated_at: row_string(row, 1),
+            updated_at: row_i64(row, 1),
             is_self: row_i64(row, 2) != 0,
-            source_last_created_at: row_string(row, 3),
+            source_last_created_at: row_i64(row, 3),
             pending_session_start_at: row_json(row, 4),
             cached_range_days: row_i64(row, 5),
         }))
@@ -148,9 +142,9 @@ fn read_activity_sync_state(
 fn default_activity_sync_state(user_id: &str) -> ActivitySyncStateOutput {
     ActivitySyncStateOutput {
         user_id: user_id.to_string(),
-        updated_at: String::new(),
+        updated_at: 0,
         is_self: true,
-        source_last_created_at: String::new(),
+        source_last_created_at: 0,
         pending_session_start_at: Value::Null,
         cached_range_days: 0,
     }
@@ -159,16 +153,16 @@ fn default_activity_sync_state(user_id: &str) -> ActivitySyncStateOutput {
 fn read_self_activity_source_slice(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
-    from_date: &str,
-    to_date: &str,
+    from_date: i64,
+    to_date: Option<i64>,
 ) -> Result<Vec<ActivitySourceLocationRow>, Error> {
     ensure_game_log_tables(db)?;
-    let to_filter = if to_date.is_empty() {
+    let to_filter = if to_date.is_none() {
         ""
     } else {
-        "AND created_at < @to_date_iso"
+        "AND created_at < @to_date"
     };
-    let to_tail = if to_date.is_empty() {
+    let to_tail = if to_date.is_none() {
         String::new()
     } else {
         "UNION ALL
@@ -177,7 +171,7 @@ fn read_self_activity_source_slice(
              SELECT created_at, time
              FROM gamelog_location
              WHERE owner_id IN (0, @owner_id)
-               AND created_at >= @to_date_iso
+               AND created_at >= @to_date
              ORDER BY created_at
              LIMIT 1
          )"
@@ -188,11 +182,8 @@ fn read_self_activity_source_slice(
         "@owner_id".into(),
         Value::from(owner_id_for_filter(db, owner_user_id)?),
     );
-    db_params.insert(
-        "@from_date_iso".into(),
-        Value::String(from_date.to_string()),
-    );
-    db_params.insert("@to_date_iso".into(), Value::String(to_date.to_string()));
+    db_params.insert("@from_date".into(), Value::from(from_date));
+    db_params.insert("@to_date".into(), Value::from(to_date));
     Ok(db
         .execute(
             &format!(
@@ -203,7 +194,7 @@ fn read_self_activity_source_slice(
                          SELECT created_at, time
                          FROM gamelog_location
                          WHERE owner_id IN (0, @owner_id)
-                           AND created_at < @from_date_iso
+                           AND created_at < @from_date
                          ORDER BY created_at DESC
                          LIMIT 1
                      )
@@ -211,7 +202,7 @@ fn read_self_activity_source_slice(
                      SELECT created_at, time, 1 AS sort_group
                      FROM gamelog_location
                      WHERE owner_id IN (0, @owner_id)
-                       AND created_at >= @from_date_iso
+                       AND created_at >= @from_date
                        {to_filter}
                      {to_tail}
                  )
@@ -221,7 +212,7 @@ fn read_self_activity_source_slice(
         )?
         .into_iter()
         .map(|row| ActivitySourceLocationRow {
-            created_at: row_string(&row, 0),
+            created_at: row_i64(&row, 0),
             time: row_i64(&row, 1),
         })
         .collect())
@@ -230,7 +221,7 @@ fn read_self_activity_source_slice(
 fn read_self_activity_source_after(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
-    after_created_at: &str,
+    after_created_at: i64,
     inclusive: bool,
 ) -> Result<Vec<ActivitySourceLocationRow>, Error> {
     ensure_game_log_tables(db)?;
@@ -246,12 +237,12 @@ fn read_self_activity_source_after(
             ),
             &ParamsBuilder::new()
                 .set("owner_id", owner_id_for_filter(db, owner_user_id)?)
-                .set("after_created_at", normalize_text(after_created_at))
+                .set("after_created_at", after_created_at)
                 .build(),
         )?
         .into_iter()
         .map(|row| ActivitySourceLocationRow {
-            created_at: row_string(&row, 0),
+            created_at: row_i64(&row, 0),
             time: row_i64(&row, 1),
         })
         .collect())
@@ -290,18 +281,20 @@ fn build_sessions_from_gamelog(
     rows: &[ActivitySourceLocationRow],
     now_ms: i64,
     may_have_open_tail: bool,
-    source_revision: &str,
+    source_revision: i64,
 ) -> Vec<ActivitySessionRow> {
+    let source_revision = source_revision.to_string();
     let mut raw_sessions = Vec::new();
     for (index, row) in rows.iter().enumerate() {
-        let Some(start) = parse_activity_time_ms(&row.created_at) else {
+        if row.created_at == 0 {
             continue;
-        };
+        }
+        let start = activity_ms_from_epoch(row.created_at);
         let end = match rows.get(index + 1) {
-            Some(next) => match parse_activity_time_ms(&next.created_at) {
-                Some(next_start) => SpanEnd::NextStart(next_start),
-                None => SpanEnd::UnknownNextStart,
-            },
+            Some(next) if next.created_at != 0 => {
+                SpanEnd::NextStart(activity_ms_from_epoch(next.created_at))
+            }
+            Some(_) => SpanEnd::UnknownNextStart,
             None => SpanEnd::OpenTail,
         };
         let duration = span_duration_ms(start, row.time, end, now_ms);
@@ -310,7 +303,7 @@ fn build_sessions_from_gamelog(
                 start,
                 end: start + duration,
                 is_open_tail: false,
-                source_revision: source_revision.to_string(),
+                source_revision: source_revision.clone(),
             });
         }
     }
@@ -334,9 +327,9 @@ fn write_activity_sync_state_data(
         &format!("INSERT OR REPLACE INTO {user_prefix}_activity_sync_state_v2 (user_id, updated_at, is_self, source_last_created_at, pending_session_start_at, cached_range_days) VALUES (@user_id, @updated_at, @is_self, @source_last_created_at, @pending_session_start_at, @cached_range_days)"),
         &ParamsBuilder::new()
             .set("user_id", user_id.to_string())
-            .set("updated_at", sync.updated_at.clone())
+            .set("updated_at", sync.updated_at)
             .set("is_self", if sync.is_self { 1 } else { 0 })
-            .set("source_last_created_at", sync.source_last_created_at.clone())
+            .set("source_last_created_at", sync.source_last_created_at)
             .set("pending_session_start_at", sync.pending_session_start_at.clone())
             .set("cached_range_days", sync.cached_range_days)
             .build(),
@@ -361,9 +354,9 @@ fn write_activity_snapshot(
             &format!("INSERT OR REPLACE INTO {user_prefix}_activity_sync_state_v2 (user_id, updated_at, is_self, source_last_created_at, pending_session_start_at, cached_range_days) VALUES (@user_id, @updated_at, @is_self, @source_last_created_at, @pending_session_start_at, @cached_range_days)"),
             &ParamsBuilder::new()
                 .set("user_id", user_id.to_string())
-                .set("updated_at", sync.updated_at.clone())
+                .set("updated_at", sync.updated_at)
                 .set("is_self", if sync.is_self { 1 } else { 0 })
-                .set("source_last_created_at", sync.source_last_created_at.clone())
+                .set("source_last_created_at", sync.source_last_created_at)
                 .set("pending_session_start_at", sync.pending_session_start_at.clone())
                 .set("cached_range_days", sync.cached_range_days)
                 .build(),
@@ -373,7 +366,7 @@ fn write_activity_snapshot(
                 &format!("DELETE FROM {user_prefix}_activity_sessions_v2 WHERE user_id = @user_id AND start_at >= @replace_from_start_at"),
                 &ParamsBuilder::new()
                     .set("user_id", user_id.to_string())
-                    .set("replace_from_start_at", replace_from_start_at)
+                    .set("replace_from_start_at", epoch_from_millis(replace_from_start_at))
                     .build(),
             )?,
             None => tx.execute_non_query(
@@ -414,19 +407,15 @@ pub fn activity_friend_presence_slice(
     let user_prefix = normalize_user_table_prefix(&owner_user_id)?;
     ensure_user_store_tables(db, &user_prefix)?;
     let table_name = format!("{user_prefix}_feed_online_offline");
-    let to_date = normalize_text(query.to_date_iso);
-    let to_filter = if to_date.is_empty() {
+    let to_filter = if query.to.is_none() {
         ""
     } else {
-        "AND created_at < @to_date_iso"
+        "AND created_at < @to_date"
     };
     let mut db_params = HashMap::new();
     db_params.insert("@user_id".into(), Value::String(user_id.clone()));
-    db_params.insert(
-        "@from_date_iso".into(),
-        Value::String(normalize_text(query.from_date_iso)),
-    );
-    db_params.insert("@to_date_iso".into(), Value::String(to_date.clone()));
+    db_params.insert("@from_date".into(), Value::from(query.from));
+    db_params.insert("@to_date".into(), Value::from(query.to));
     let mut rows: Vec<ActivityPresenceOutput> = db
         .execute(
             &format!(
@@ -438,7 +427,7 @@ pub fn activity_friend_presence_slice(
                          FROM {table_name}
                          WHERE user_id = @user_id
                            AND (type = 'Online' OR type = 'Offline')
-                           AND created_at < @from_date_iso
+                           AND created_at < @from_date
                          ORDER BY created_at DESC
                          LIMIT 1
                      )
@@ -447,7 +436,7 @@ pub fn activity_friend_presence_slice(
                      FROM {table_name}
                      WHERE user_id = @user_id
                        AND (type = 'Online' OR type = 'Offline')
-                       AND created_at >= @from_date_iso
+                       AND created_at >= @from_date
                        {to_filter}
                  )
                  ORDER BY created_at ASC, sort_group ASC"
@@ -457,7 +446,7 @@ pub fn activity_friend_presence_slice(
         .into_iter()
         .map(|row| activity_presence_from_row(&row))
         .collect();
-    if !to_date.is_empty() {
+    if query.to.is_some() {
         rows.extend(
             db.execute(
                 &format!(
@@ -465,7 +454,7 @@ pub fn activity_friend_presence_slice(
                          FROM {table_name}
                          WHERE user_id = @user_id
                            AND (type = 'Online' OR type = 'Offline')
-                           AND created_at >= @to_date_iso
+                           AND created_at >= @to_date
                          ORDER BY created_at ASC
                          LIMIT 1"
                 ),
@@ -474,7 +463,7 @@ pub fn activity_friend_presence_slice(
             .into_iter()
             .map(|row| activity_presence_from_row(&row)),
         );
-        rows.sort_by(|left, right| left.created_at.cmp(&right.created_at));
+        rows.sort_by_key(|left| left.created_at);
     }
     Ok(rows)
 }
@@ -484,11 +473,11 @@ fn activity_friend_presence_bound(
     owner_user_id: &OwnerId,
     user_id: &str,
     aggregate: &str,
-) -> Result<String, Error> {
+) -> Result<Option<i64>, Error> {
     let owner_user_id = normalize_text(owner_user_id.as_str());
     let user_id = normalize_text(user_id);
     if owner_user_id.is_empty() || user_id.is_empty() {
-        return Ok(String::new());
+        return Ok(None);
     }
     let user_prefix = normalize_user_table_prefix(&owner_user_id)?;
     ensure_user_store_tables(db, &user_prefix)?;
@@ -499,15 +488,15 @@ fn activity_friend_presence_bound(
             &ParamsBuilder::new().set("user_id", user_id).build(),
         )?
         .first()
-        .map(|row| row_string(row, 0))
-        .unwrap_or_default())
+        .and_then(|row| row.first())
+        .and_then(Value::as_i64))
 }
 
 pub fn activity_friend_presence_first_created_at(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
     user_id: &str,
-) -> Result<String, Error> {
+) -> Result<Option<i64>, Error> {
     activity_friend_presence_bound(db, owner_user_id, user_id, "MIN")
 }
 
@@ -515,24 +504,24 @@ pub fn activity_friend_presence_last_created_at(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
     user_id: &str,
-) -> Result<String, Error> {
+) -> Result<Option<i64>, Error> {
     activity_friend_presence_bound(db, owner_user_id, user_id, "MAX")
 }
 
 pub(super) fn activity_self_source_first_created_at(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
-) -> Result<String, Error> {
+) -> Result<Option<i64>, Error> {
     ensure_game_log_tables(db)?;
     let owner_id = owner_id_for_filter(db, owner_user_id)?;
     Ok(db
         .execute(
-            "SELECT created_at FROM gamelog_location WHERE owner_id IN (0, @owner_id) ORDER BY created_at LIMIT 1",
+            "SELECT created_at FROM gamelog_location WHERE owner_id IN (0, @owner_id) AND created_at IS NOT NULL ORDER BY created_at LIMIT 1",
             &ParamsBuilder::new().set("owner_id", owner_id).build(),
         )?
         .first()
-        .map(|row| row_string(row, 0))
-        .unwrap_or_default())
+        .and_then(|row| row.first())
+        .and_then(Value::as_i64))
 }
 
 pub fn activity_self_source_bounds(
@@ -550,13 +539,13 @@ pub fn activity_self_source_bounds(
         .next();
     Ok(match row {
         Some(row) => ActivitySelfSourceBoundsOutput {
-            first_created_at: row_string(&row, 0),
-            last_created_at: row_string(&row, 1),
+            first_created_at: row_i64(&row, 0),
+            last_created_at: row_i64(&row, 1),
             count: row_i64(&row, 2),
         },
         None => ActivitySelfSourceBoundsOutput {
-            first_created_at: String::new(),
-            last_created_at: String::new(),
+            first_created_at: 0,
+            last_created_at: 0,
             count: 0,
         },
     })
@@ -626,7 +615,7 @@ pub(super) fn activity_self_sessions_refresh_auto(
         let mode = if force_refresh
             || sync_state
                 .as_ref()
-                .is_none_or(|sync| sync.source_last_created_at.is_empty())
+                .is_none_or(|sync| sync.source_last_created_at == 0)
         {
             ActivityRefreshMode::Full
         } else if sync_state
@@ -661,7 +650,7 @@ fn activity_self_sessions_refresh_inner(
     ensure_user_store_tables(db, &user_prefix)?;
 
     let now_ms = activity_now_ms(input.now_ms);
-    let now_iso = activity_iso_from_ms(now_ms);
+    let now = epoch_from_millis(now_ms);
     let mut sync = read_activity_sync_state(db, &user_prefix, user_id)?
         .unwrap_or_else(|| default_activity_sync_state(user_id));
     let mut sessions = read_activity_sessions_data(db, &user_prefix, user_id)?;
@@ -670,16 +659,13 @@ fn activity_self_sessions_refresh_inner(
         ActivityRefreshMode::Full => {
             let range_days =
                 clamp_activity_range_days(&input.range_days, ACTIVITY_INITIAL_RANGE_DAYS);
-            let from_date = activity_iso_from_ms(now_ms - range_days * ACTIVITY_DAY_MS);
-            let rows = read_self_activity_source_slice(db, &owner_user_id, &from_date, "")?;
-            let source_last_created_at = rows
-                .last()
-                .map(|row| row.created_at.clone())
-                .unwrap_or_default();
-            sessions = build_sessions_from_gamelog(&rows, now_ms, true, &source_last_created_at);
+            let from_date = epoch_from_millis(now_ms - range_days * ACTIVITY_DAY_MS);
+            let rows = read_self_activity_source_slice(db, &owner_user_id, from_date, None)?;
+            let source_last_created_at = rows.last().map_or(0, |row| row.created_at);
+            sessions = build_sessions_from_gamelog(&rows, now_ms, true, source_last_created_at);
             sync = ActivitySyncStateOutput {
                 user_id: user_id.to_string(),
-                updated_at: now_iso,
+                updated_at: now,
                 is_self: true,
                 source_last_created_at,
                 pending_session_start_at: Value::Null,
@@ -689,29 +675,25 @@ fn activity_self_sessions_refresh_inner(
             Ok(activity_refresh_output(sync, sessions, rows.len()))
         }
         ActivityRefreshMode::Incremental => {
-            if sync.source_last_created_at.is_empty() {
+            if sync.source_last_created_at == 0 {
                 return Ok(activity_refresh_output(sync, sessions, 0));
             }
             let rows = read_self_activity_source_after(
                 db,
                 &owner_user_id,
-                &sync.source_last_created_at,
+                sync.source_last_created_at,
                 true,
             )?;
             if rows.is_empty() {
-                sync.updated_at = now_iso;
+                sync.updated_at = now;
                 write_activity_sync_state_data(db, &user_prefix, user_id, &sync)?;
                 return Ok(activity_refresh_output(sync, sessions, 0));
             }
-            let source_last_created_at = rows
-                .last()
-                .map(|row| row.created_at.clone())
-                .unwrap_or_default();
-            let computed =
-                build_sessions_from_gamelog(&rows, now_ms, true, &source_last_created_at);
+            let source_last_created_at = rows.last().map_or(0, |row| row.created_at);
+            let computed = build_sessions_from_gamelog(&rows, now_ms, true, source_last_created_at);
             let replace_from_start_at = sessions.last().map(|session| session.start);
             sessions = merge_activity_sessions(&sessions, &computed);
-            sync.updated_at = now_iso;
+            sync.updated_at = now;
             sync.source_last_created_at = source_last_created_at;
             sync.pending_session_start_at = Value::Null;
             let tail_sessions = match replace_from_start_at {
@@ -742,20 +724,17 @@ fn activity_self_sessions_refresh_inner(
             if range_days <= current_days {
                 return Ok(activity_refresh_output(sync, sessions, 0));
             }
-            let from_date = activity_iso_from_ms(now_ms - range_days * ACTIVITY_DAY_MS);
-            let to_date = if current_days > 0 {
-                activity_iso_from_ms(now_ms - current_days * ACTIVITY_DAY_MS)
-            } else {
-                String::new()
-            };
-            let rows = read_self_activity_source_slice(db, &owner_user_id, &from_date, &to_date)?;
+            let from_date = epoch_from_millis(now_ms - range_days * ACTIVITY_DAY_MS);
+            let to_date = (current_days > 0)
+                .then(|| epoch_from_millis(now_ms - current_days * ACTIVITY_DAY_MS));
+            let rows = read_self_activity_source_slice(db, &owner_user_id, from_date, to_date)?;
             let computed =
-                build_sessions_from_gamelog(&rows, now_ms, false, &sync.source_last_created_at);
+                build_sessions_from_gamelog(&rows, now_ms, false, sync.source_last_created_at);
             if !computed.is_empty() {
                 sessions = merge_activity_sessions(&computed, &sessions);
             }
             sync.cached_range_days = range_days;
-            sync.updated_at = now_iso;
+            sync.updated_at = now;
             write_activity_snapshot(db, &user_prefix, user_id, &sync, &sessions, None)?;
             Ok(activity_refresh_output(sync, sessions, rows.len()))
         }
@@ -780,9 +759,9 @@ pub fn activity_sync_state_get(
         .first()
         .map(|row| ActivitySyncStateOutput {
             user_id: row_string(row, 0),
-            updated_at: row_string(row, 1),
+            updated_at: row_i64(row, 1),
             is_self: row_i64(row, 2) != 0,
-            source_last_created_at: row_string(row, 3),
+            source_last_created_at: row_i64(row, 3),
             pending_session_start_at: row_json(row, 4),
             cached_range_days: row_i64(row, 5),
         }))
@@ -845,7 +824,7 @@ pub fn activity_bucket_cache_get(
             raw_buckets: parse_json_value(row_value(row, 7), Value::Array(Vec::new())),
             normalized_buckets: parse_json_value(row_value(row, 8), Value::Array(Vec::new())),
             summary: parse_json_value(row_value(row, 9), json!({})),
-            built_at: row_string(row, 10),
+            built_at: row_i64(row, 10),
         }))
 }
 
@@ -881,8 +860,8 @@ fn insert_activity_sessions(
             &format!("INSERT OR REPLACE INTO {user_prefix}_activity_sessions_v2 (user_id, start_at, end_at, is_open_tail, source_revision) VALUES (@user_id, @start_at, @end_at, @is_open_tail, @source_revision)"),
             &ParamsBuilder::new()
                 .set("user_id", user_id.to_string())
-                .set("start_at", value_as_i64(&session.start))
-                .set("end_at", value_as_i64(&session.end))
+                .set("start_at", epoch_from_millis(value_as_i64(&session.start)))
+                .set("end_at", epoch_from_millis(value_as_i64(&session.end)))
                 .set("is_open_tail", if session.is_open_tail { 1 } else { 0 })
                 .set("source_revision", session.source_revision.clone())
                 .build(),
@@ -925,7 +904,7 @@ pub fn activity_sessions_append(
                 &format!("DELETE FROM {user_prefix}_activity_sessions_v2 WHERE user_id = @user_id AND start_at >= @replace_from_start_at"),
                 &ParamsBuilder::new()
                     .set("user_id", user_id.clone())
-                    .set("replace_from_start_at", replace_from_start_at)
+                    .set("replace_from_start_at", epoch_from_millis(replace_from_start_at))
                     .build(),
             )?;
         }
@@ -969,14 +948,14 @@ pub(crate) const ACTIVITY_DAY_MS: i64 = 86_400_000;
 
 fn activity_presence_from_row(row: &[Value]) -> ActivityPresenceOutput {
     ActivityPresenceOutput {
-        created_at: row_string(row, 0),
+        created_at: row_i64(row, 0),
         r#type: row_string(row, 1),
     }
 }
 fn activity_session_from_row(row: &[Value]) -> ActivitySessionOutput {
     ActivitySessionOutput {
-        start: row_i64(row, 0),
-        end: row_i64(row, 1),
+        start: activity_ms_from_epoch(row_i64(row, 0)),
+        end: activity_ms_from_epoch(row_i64(row, 1)),
         is_open_tail: row_i64(row, 2) != 0,
         source_revision: row_string(row, 3),
     }

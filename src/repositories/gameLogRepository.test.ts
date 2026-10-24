@@ -52,8 +52,8 @@ describe('gameLogRepository', () => {
 
         expect(commandMocks.sessionsQuery).toHaveBeenCalledWith(
             expect.objectContaining({
-                dateFrom: '2026-07-04T07:00:00.000Z',
-                dateTo: '2026-07-05T06:59:59.999Z'
+                dateFrom: 1783148400,
+                dateTo: 1783234799
             })
         );
     });

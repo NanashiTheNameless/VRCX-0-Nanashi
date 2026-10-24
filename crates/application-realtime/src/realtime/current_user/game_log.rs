@@ -37,7 +37,7 @@ pub(super) fn reconcile_remote_game_log_interval(
         return;
     };
     state.remote_game_log_interval = Some(RemoteGameLogInterval {
-        created_at: entry.created_at.clone(),
+        created_at: entry.created_at,
         started_at_ms: now.timestamp_ms,
         location: entry.location.clone(),
     });

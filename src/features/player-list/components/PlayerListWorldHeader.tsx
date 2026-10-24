@@ -35,7 +35,7 @@ type PlayerListWorldHeaderProps = {
     instanceSnapshot: PlayerListContext;
     isGameRunning: boolean;
     playerCount: number;
-    startedAt?: string | null;
+    startedAt?: number | null;
 };
 
 export function PlayerListWorldHeader({

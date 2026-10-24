@@ -1,3 +1,4 @@
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 export type FriendStats = {
     joinCount?: number;
     lastSeen?: string;
@@ -76,7 +77,10 @@ export function aggregateFriendUserStats(
             });
             continue;
         }
-        if (Date.parse(row.lastSeen) > Date.parse(current.lastSeen)) {
+        if (
+            parseAbsoluteDateMs(row.lastSeen) >
+            parseAbsoluteDateMs(current.lastSeen)
+        ) {
             current.lastSeen = row.lastSeen;
         }
         current.timeSpent += row.timeSpent;

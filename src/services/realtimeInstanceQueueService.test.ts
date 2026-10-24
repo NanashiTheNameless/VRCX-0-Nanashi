@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppToastOptions } from '@/services/toastService';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 
 const mocks = vi.hoisted(() => ({
     success: vi.fn(),
@@ -46,7 +47,7 @@ function queueProjection(
         worldName: 'Queue World',
         position: values.position ?? 0,
         queueSize: values.queueSize ?? 0,
-        receivedAt: values.receivedAt ?? '2026-08-02T00:00:00.000Z'
+        receivedAt: epochSecondsFromValue(values.receivedAt) ?? 1785628800
     };
 }
 
@@ -91,7 +92,7 @@ describe('realtimeInstanceQueueService', () => {
             position: 0,
             queueSize: 5,
             label: 'Known Queue',
-            updatedAt: '2026-08-02T00:00:00.000Z'
+            updatedAt: 1785628800
         });
     });
 
@@ -165,7 +166,7 @@ describe('realtimeInstanceQueueService', () => {
 
         expect(useRuntimeStore.getState().instanceQueue).toMatchObject({
             label: 'Hinted World group(Hinted Group)',
-            updatedAt: '2026-08-01T23:59:00.000Z'
+            updatedAt: 1785628740
         });
     });
 });

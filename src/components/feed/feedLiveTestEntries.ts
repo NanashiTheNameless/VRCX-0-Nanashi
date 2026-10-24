@@ -10,7 +10,7 @@ export function onlineFeedEntry(
 ): FeedLiveEntryPayload {
     return {
         type: 'Online',
-        created_at: '2026-08-11T00:00:00Z',
+        created_at: 1786406400,
         userId: 'usr_friend',
         displayName: 'Friend',
         location: '',
@@ -26,7 +26,7 @@ export function gpsFeedEntry(
 ): FeedLiveEntryPayload {
     return {
         type: 'GPS',
-        created_at: '2026-08-11T00:00:00Z',
+        created_at: 1786406400,
         userId: 'usr_friend',
         displayName: 'Friend',
         location: '',
@@ -44,7 +44,7 @@ export function statusFeedEntry(
 ): FeedLiveEntryPayload {
     return {
         type: 'Status',
-        created_at: '2026-08-11T00:00:00Z',
+        created_at: 1786406400,
         userId: 'usr_friend',
         displayName: 'Friend',
         status: '',
@@ -61,7 +61,7 @@ export function bioFeedEntry(
 ): FeedLiveEntryPayload {
     return {
         type: 'Bio',
-        created_at: '2026-08-11T00:00:00Z',
+        created_at: 1786406400,
         userId: 'usr_friend',
         displayName: 'Friend',
         bio: '',
@@ -76,7 +76,7 @@ export function avatarFeedEntry(
 ): FeedLiveEntryPayload {
     return {
         type: 'Avatar',
-        created_at: '2026-08-11T00:00:00Z',
+        created_at: 1786406400,
         userId: 'usr_friend',
         displayName: 'Friend',
         ownerId: '',
@@ -95,7 +95,7 @@ export function instanceClosedFeedEntry(
 ): FeedLiveEntryPayload {
     return {
         type: 'instance.closed',
-        created_at: '2026-08-11T00:00:00Z',
+        created_at: 1786406400,
         id: 'instance.closed:wrld_world:123:2026-08-11T00:00:00Z',
         location: 'wrld_world:123',
         message: 'Instance Closed',

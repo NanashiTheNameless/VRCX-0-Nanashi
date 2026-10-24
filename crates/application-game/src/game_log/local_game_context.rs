@@ -47,7 +47,7 @@ mod tests {
         session.apply_game_process_status(HostSessionGameProcessStatus {
             is_game_running: true,
             is_steamvr_running: false,
-            changed_at: "2026-07-17T00:00:00.000Z".into(),
+            changed_at: 1784246400,
         });
         let snapshot = RuntimeSnapshotStore::default();
         snapshot.replace(RuntimeSnapshot {

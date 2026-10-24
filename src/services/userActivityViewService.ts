@@ -1,4 +1,5 @@
 import { commands } from '@/platform/tauri/bindings';
+import { displayOffsetMinutesAt } from '@/shared/utils/displayTimeZone';
 
 type ActivityBuckets = {
     rawBuckets: number[];
@@ -57,7 +58,7 @@ function normalizeNumberArray(value: readonly number[]): number[] {
 }
 
 function utcOffsetMinutes() {
-    return -new Date().getTimezoneOffset();
+    return displayOffsetMinutesAt();
 }
 
 function dayLabel(dayLabels: string[], index: number): string {
@@ -110,7 +111,7 @@ async function loadActivityView({
         isSelf,
         rangeDays,
         utcOffsetMinutes: utcOffsetMinutes(),
-        nowMs,
+        now: Math.floor(nowMs / 1000),
         forceRefresh
     });
 
@@ -144,7 +145,7 @@ async function loadOverlapView({
         targetUserId,
         rangeDays,
         utcOffsetMinutes: utcOffsetMinutes(),
-        nowMs,
+        now: Math.floor(nowMs / 1000),
         forceRefresh,
         excludeStartHour: excludeEnabled
             ? optionalHour(excludeHours?.startHour)

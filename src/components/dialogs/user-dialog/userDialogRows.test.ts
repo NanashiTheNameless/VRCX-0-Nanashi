@@ -253,8 +253,8 @@ describe('userDialogRows', () => {
                 ])
             )
         ).toEqual([
-            { displayName: 'Old Name', updated_at: '2026-01-02T03:04:05.000Z' },
-            { displayName: 'Older Name', updated_at: '' }
+            { displayName: 'Old Name', updated_at: 1767323045 },
+            { displayName: 'Older Name', updated_at: 0 }
         ]);
 
         expect(
@@ -263,8 +263,8 @@ describe('userDialogRows', () => {
                 { name: 'Past Name', date: '2025-01-01' }
             ])
         ).toEqual([
-            { displayName: 'Legacy Name', updated_at: '' },
-            { displayName: 'Past Name', updated_at: '2025-01-01' }
+            { displayName: 'Legacy Name', updated_at: 0 },
+            { displayName: 'Past Name', updated_at: 1735689600 }
         ]);
     });
 
@@ -279,26 +279,26 @@ describe('userDialogRows', () => {
                 [
                     {
                         displayName: 'Temporary Name',
-                        updated_at: '2026-01-04T00:00:00.000Z'
+                        updated_at: 1767484800
                     },
                     {
                         displayName: 'Original Name',
-                        updated_at: '2026-01-03T00:00:00.000Z'
+                        updated_at: 1767398400
                     },
                     {
                         displayName: 'Observed Name',
-                        updated_at: '2026-01-05T00:00:00.000Z'
+                        updated_at: 1767571200
                     }
                 ]
             )
         ).toEqual([
             {
                 displayName: 'Observed Name',
-                updated_at: '2026-01-05T00:00:00.000Z'
+                updated_at: 1767571200
             },
             {
                 displayName: 'Temporary Name',
-                updated_at: '2026-01-04T00:00:00.000Z'
+                updated_at: 1767484800
             }
         ]);
     });
@@ -328,7 +328,7 @@ describe('userDialogRows', () => {
             previousDisplayNames: [
                 {
                     displayName: 'Observed Name',
-                    updated_at: '2026-01-02T00:00:00.000Z'
+                    updated_at: 1767312000
                 }
             ],
             previousDisplayNameSources: {
@@ -336,7 +336,7 @@ describe('userDialogRows', () => {
                 gameLog: [
                     {
                         displayName: 'Observed Name',
-                        updated_at: '2026-01-02T00:00:00.000Z'
+                        updated_at: 1767312000
                     }
                 ]
             }

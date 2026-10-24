@@ -1,4 +1,4 @@
-import { getFeedRowId, normalizeFeedId } from '@/components/feed/feedRows';
+import { getFeedRowId } from '@/components/feed/feedRows';
 import type { FeedRow } from '@/components/feed/feedTypes';
 import type { FeedCursor } from '@/repositories/feedPersistenceRepository';
 
@@ -20,7 +20,7 @@ export function retainFeedRowWindow(
 }
 
 function resolveFeedCursor(row: FeedRow): FeedCursor | null {
-    const createdAt = normalizeFeedId(row.created_at);
+    const createdAt = row.created_at;
     if (
         !createdAt ||
         typeof row.sourceRank !== 'number' ||

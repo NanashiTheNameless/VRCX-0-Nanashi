@@ -85,8 +85,9 @@ pub struct ScreenshotLibraryImage {
     pub height: Option<i32>,
     pub world_id: Option<String>,
     pub world_name: Option<String>,
-    pub captured_at: Option<String>,
-    pub captured_at_ms: i64,
+    /// When the picture was taken: the metadata timestamp, else the time in
+    /// VRChat's file name, else the file's modified time.
+    pub captured_at: i64,
     pub metadata: Option<ScreenshotMetadata>,
     pub error: Option<String>,
 }
@@ -94,8 +95,8 @@ pub struct ScreenshotLibraryImage {
 #[derive(Clone, Copy, Debug, serde::Serialize, serde::Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ScreenshotTimeWindow {
-    pub from_ms: i64,
-    pub to_ms: i64,
+    pub from: i64,
+    pub to: i64,
 }
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -494,15 +495,12 @@ static VRCHAT_FILE_NAME_TIME: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
-pub fn screenshot_captured_at_ms(
-    timestamp: Option<&str>,
-    file_name: &str,
-    modified_at: i64,
-) -> i64 {
-    captured_at_ms_in(&chrono::Local, timestamp, file_name, modified_at)
+/// In epoch seconds. VRChat writes the file name in the PC's own timezone.
+pub fn screenshot_captured_at(timestamp: Option<&str>, file_name: &str, modified_at: i64) -> i64 {
+    captured_at_in(&chrono::Local, timestamp, file_name, modified_at)
 }
 
-fn captured_at_ms_in<Tz: chrono::TimeZone>(
+fn captured_at_in<Tz: chrono::TimeZone>(
     tz: &Tz,
     timestamp: Option<&str>,
     file_name: &str,
@@ -510,10 +508,10 @@ fn captured_at_ms_in<Tz: chrono::TimeZone>(
 ) -> i64 {
     timestamp
         .and_then(|value| chrono::DateTime::parse_from_rfc3339(value.trim()).ok())
-        .map(|value| value.timestamp_millis())
+        .map(|value| value.timestamp())
         .or_else(|| {
             file_name_local_time(file_name)
-                .map(|local| crate::game_log_parser::log_time_to_utc(tz, local).timestamp_millis())
+                .map(|local| crate::game_log_parser::log_time_to_utc(tz, local).timestamp())
         })
         .unwrap_or(modified_at)
 }

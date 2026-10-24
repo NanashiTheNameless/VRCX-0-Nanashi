@@ -131,7 +131,7 @@ impl SharedCollectionImportRuntime {
                 imported: 0,
                 failed: 0,
                 group_name: prepared.group_name.clone(),
-                started_at: Some(Utc::now().to_rfc3339()),
+                started_at: Some(Utc::now().timestamp()),
                 finished_at: None,
                 last_error: None,
             };
@@ -306,7 +306,7 @@ fn prepare_terminal_result(
             status.last_error = Some(error.to_string());
         }
     }
-    status.finished_at = Some(Utc::now().to_rfc3339());
+    status.finished_at = Some(Utc::now().timestamp());
     Some(AppliedSharedCollectionImportTerminal { status })
 }
 

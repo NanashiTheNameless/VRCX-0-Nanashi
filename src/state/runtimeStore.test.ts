@@ -32,7 +32,7 @@ describe('runtimeStore render mirrors', () => {
                 id: 'usr_a',
                 userId: 'usr_a',
                 displayName: 'A',
-                joinedAt: '2026-01-01T00:00:00.000Z',
+                joinedAt: 1767225600,
                 joinedAtMs: 1
             }
         ];
@@ -66,7 +66,7 @@ describe('runtimeStore render mirrors', () => {
                     id: 'usr_a',
                     userId: 'usr_a',
                     displayName: 'A',
-                    joinedAt: '2026-01-01T00:00:00.000Z',
+                    joinedAt: 1767225600,
                     joinedAtMs: 1
                 }
             ]
@@ -80,14 +80,14 @@ describe('runtimeStore render mirrors', () => {
                     id: 'usr_a',
                     userId: 'usr_a',
                     displayName: 'A',
-                    joinedAt: '2026-01-01T00:00:00.000Z',
+                    joinedAt: 1767225600,
                     joinedAtMs: 1
                 },
                 {
                     id: 'usr_b',
                     userId: 'usr_b',
                     displayName: 'B',
-                    joinedAt: '2026-01-01T00:01:00.000Z',
+                    joinedAt: 1767225660,
                     joinedAtMs: 2
                 }
             ]
@@ -111,7 +111,7 @@ describe('runtimeStore render mirrors', () => {
                     id: 'usr_a',
                     userId: 'usr_a',
                     displayName: 'A',
-                    joinedAt: '2026-01-01T00:00:00.000Z',
+                    joinedAt: 1767225600,
                     joinedAtMs: 1
                 }
             ]
@@ -144,7 +144,7 @@ describe('runtimeStore render mirrors', () => {
                     id: 'usr_a',
                     userId: 'usr_a',
                     displayName: 'A',
-                    joinedAt: '2026-01-01T00:00:00.000Z',
+                    joinedAt: 1767225600,
                     joinedAtMs: 1
                 }
             ]
@@ -158,7 +158,7 @@ describe('runtimeStore render mirrors', () => {
                     id: 'usr_a',
                     userId: 'usr_a',
                     displayName: 'A renamed',
-                    joinedAt: '2026-01-01T00:00:00.000Z',
+                    joinedAt: 1767225600,
                     joinedAtMs: 1
                 }
             ]
@@ -190,7 +190,7 @@ describe('runtimeStore render mirrors', () => {
             expect.objectContaining({
                 count: 2,
                 lastPayload: { id: 2 },
-                lastReceivedAt: expect.any(String)
+                lastReceivedAt: expect.any(Number)
             })
         );
         expect(
@@ -199,7 +199,7 @@ describe('runtimeStore render mirrors', () => {
             expect.objectContaining({
                 count: 1,
                 lastPayload: { ok: true },
-                lastReceivedAt: expect.any(String)
+                lastReceivedAt: expect.any(Number)
             })
         );
     });

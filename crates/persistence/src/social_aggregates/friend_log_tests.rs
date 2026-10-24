@@ -10,10 +10,10 @@ fn friend_log_applies_filters_limit_and_rejects_unknown_types() {
         "INSERT INTO usrself_friend_log_history
             (created_at, type, user_id, display_name, previous_display_name, trust_level, previous_trust_level, friend_number)
          VALUES
-            ('2026-06-01T10:00:00Z', 'Friend', 'usr_alice', 'Alice', '', 'Known', '', 1),
-            ('2026-06-02T10:00:00Z', 'Friend', 'usr_bob', 'Bob', '', 'Known', '', 2),
-            ('2026-06-03T10:00:00Z', 'TrustLevel', 'usr_alice', 'Alice', '', 'Trusted', 'Known', 1),
-            ('2026-06-04T10:00:00Z', 'DisplayName', 'usr_alice', 'Alice New', 'Alice', 'Trusted', 'Trusted', 1)",
+            (1780308000, 'Friend', 'usr_alice', 'Alice', '', 'Known', '', 1),
+            (1780394400, 'Friend', 'usr_bob', 'Bob', '', 'Known', '', 2),
+            (1780480800, 'TrustLevel', 'usr_alice', 'Alice', '', 'Trusted', 'Known', 1),
+            (1780567200, 'DisplayName', 'usr_alice', 'Alice New', 'Alice', 'Trusted', 'Trusted', 1)",
         &Default::default(),
     )
     .unwrap();
@@ -25,8 +25,8 @@ fn friend_log_applies_filters_limit_and_rejects_unknown_types() {
             target_user_id: Some("usr_alice".into()),
             types: vec!["Friend".into(), "TrustLevel".into()],
             time_window: TimeWindow {
-                from: Some("2026-06-01T00:00:00Z".into()),
-                to: Some("2026-06-03T23:59:59Z".into()),
+                from: Some("2026-06-01T00:00:00.000Z".into()),
+                to: Some("2026-06-03T23:59:59.000Z".into()),
             },
             limit: Some(1),
             cursor: None,
@@ -44,7 +44,7 @@ fn friend_log_applies_filters_limit_and_rejects_unknown_types() {
     assert_eq!(
         get_friend_log_first_created_at(&db, &OwnerId::new("usr_self"), "usr_alice", "Friend")
             .unwrap(),
-        Some("2026-06-01T10:00:00Z".into())
+        Some("2026-06-01T10:00:00.000Z".into())
     );
     assert!(output
         .caveats
@@ -74,9 +74,9 @@ fn friend_log_cursor_returns_the_next_page() {
         "INSERT INTO usrself_friend_log_history
             (created_at, type, user_id, display_name, previous_display_name, trust_level, previous_trust_level, friend_number)
          VALUES
-            ('2026-06-03T10:00:00Z', 'Friend', 'usr_carol', 'Carol', '', 'Known', '', 3),
-            ('2026-06-02T10:00:00Z', 'Friend', 'usr_bob', 'Bob', '', 'Known', '', 2),
-            ('2026-06-01T10:00:00Z', 'Friend', 'usr_alice', 'Alice', '', 'Known', '', 1)",
+            (1780480800, 'Friend', 'usr_carol', 'Carol', '', 'Known', '', 3),
+            (1780394400, 'Friend', 'usr_bob', 'Bob', '', 'Known', '', 2),
+            (1780308000, 'Friend', 'usr_alice', 'Alice', '', 'Known', '', 1)",
         &Default::default(),
     )
     .unwrap();

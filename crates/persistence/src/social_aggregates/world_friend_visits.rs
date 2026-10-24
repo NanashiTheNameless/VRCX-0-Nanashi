@@ -69,12 +69,12 @@ pub fn get_world_friend_visits(
             user_id: row_string(&row, 0),
             display_name: row_string(&row, 1),
             visit_count: row_i64(&row, 2),
-            last_visited_at: row_string(&row, 3),
+            last_visited_at: row_i64(&row, 3),
         })
         .collect::<Vec<_>>();
     let last_visited_at = friends
         .first()
-        .map(|row| row.last_visited_at.clone())
+        .map(|row| row.last_visited_at)
         .unwrap_or_default();
 
     Ok(WorldFriendVisitsOutput {

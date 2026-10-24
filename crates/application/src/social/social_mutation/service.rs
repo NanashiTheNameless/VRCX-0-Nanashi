@@ -3,7 +3,7 @@ use std::time::Duration;
 use vrcx_0_core::text::normalize_text;
 
 use serde_json::{json, Value};
-use vrcx_0_core::time::now_iso;
+use vrcx_0_core::time::now_epoch;
 
 use vrcx_0_application_core::vrchat_api::{VrchatApiRequest, VrchatScope};
 use vrcx_0_application_core::RuntimeVrchatAuthFailurePayload;
@@ -229,7 +229,7 @@ pub(in crate::social) fn apply_unfriend_locally(
         owner_user_id,
         endpoint,
         target_user_id,
-        now_iso(),
+        now_epoch(),
     ) {
         SyntheticFriendEventOutcome::Applied => {
             SocialFriendMutationOutcome::applied(target_user_id)
@@ -293,7 +293,7 @@ pub(in crate::social) fn apply_friend_request_accept_locally(
         endpoint,
         target_user_id,
         profile.clone(),
-        now_iso(),
+        now_epoch(),
     ) {
         SyntheticFriendEventOutcome::Applied => {
             SocialFriendMutationOutcome::applied(target_user_id)
@@ -390,7 +390,7 @@ fn history_entry(
 ) -> FriendLogHistoryEntryInput {
     FriendLogHistoryEntryInput {
         row_id: Value::Null,
-        created_at: now_iso(),
+        created_at: now_epoch(),
         r#type: history_type.to_string(),
         user_id: target_user_id.to_string(),
         display_name: display_name_or_fallback(target_display_name, target_user_id),

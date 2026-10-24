@@ -1,5 +1,6 @@
 import { commands, type VrcStatusSnapshot } from '@/platform/tauri/bindings';
 import { MINUTE_MS } from '@/shared/constants/time';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
 const FOCUS_REFRESH_MS = MINUTE_MS;
@@ -38,7 +39,7 @@ function refreshVrcStatus(): Promise<void> {
 }
 
 export function handleBrowserFocus(): Promise<void> {
-    const lastFetchedAt = Date.parse(
+    const lastFetchedAt = parseAbsoluteDateMs(
         useRuntimeStore.getState().vrcStatus.lastFetchedAt || ''
     );
     if (

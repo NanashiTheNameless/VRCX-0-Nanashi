@@ -147,8 +147,14 @@ fn normalize_install_metadata(value: &Value) -> Option<CommunityThemeInstallMeta
         version,
         source_url: config_text(entry.get("sourceUrl")),
         sha256: config_text(entry.get("sha256")),
-        installed_at: config_text(entry.get("installedAt")),
-        updated_at: config_text(entry.get("updatedAt")),
+        installed_at: entry
+            .get("installedAt")
+            .and_then(vrcx_0_core::time::epoch_from_json)
+            .unwrap_or_default(),
+        updated_at: entry
+            .get("updatedAt")
+            .and_then(vrcx_0_core::time::epoch_from_json)
+            .unwrap_or_default(),
         dark_mode: entry.get("darkMode").and_then(Value::as_bool) != Some(false),
         accent_mode: entry.get("accentMode").and_then(Value::as_bool) == Some(true)
             || entry.get("accentMode").and_then(Value::as_str) == Some("app"),

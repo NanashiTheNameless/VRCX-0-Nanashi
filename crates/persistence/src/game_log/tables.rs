@@ -83,6 +83,7 @@ fn unique_index(columns: &[&'static str]) -> sea_query::IndexCreateStatement {
     for column in columns {
         index.col(ident(*column));
     }
+    index.col(ident("event_discriminator"));
     index.take()
 }
 
@@ -91,7 +92,14 @@ fn create_location_table_sql() -> String {
         .table(ident(TABLE_LOCATION))
         .if_not_exists()
         .col(id_column())
-        .col(text_column(COL_CREATED_AT))
+        .col(integer_column(COL_CREATED_AT))
+        .col(
+            ColumnDef::new(ident("event_discriminator"))
+                .text()
+                .not_null()
+                .default("")
+                .take(),
+        )
         .col(text_column(COL_LOCATION))
         .col(text_column(COL_WORLD_ID))
         .col(text_column(COL_WORLD_NAME))
@@ -107,7 +115,14 @@ fn create_join_leave_table_sql() -> String {
         .table(ident(TABLE_JOIN_LEAVE))
         .if_not_exists()
         .col(id_column())
-        .col(text_column(COL_CREATED_AT))
+        .col(integer_column(COL_CREATED_AT))
+        .col(
+            ColumnDef::new(ident("event_discriminator"))
+                .text()
+                .not_null()
+                .default("")
+                .take(),
+        )
         .col(text_column(COL_TYPE))
         .col(text_column(COL_DISPLAY_NAME))
         .col(text_column(COL_LOCATION))
@@ -127,7 +142,14 @@ fn create_portal_spawn_table_sql() -> String {
         .table(ident(TABLE_PORTAL_SPAWN))
         .if_not_exists()
         .col(id_column())
-        .col(text_column(COL_CREATED_AT))
+        .col(integer_column(COL_CREATED_AT))
+        .col(
+            ColumnDef::new(ident("event_discriminator"))
+                .text()
+                .not_null()
+                .default("")
+                .take(),
+        )
         .col(text_column(COL_DISPLAY_NAME))
         .col(text_column(COL_LOCATION))
         .col(text_column(COL_USER_ID))
@@ -143,7 +165,14 @@ fn create_video_play_table_sql() -> String {
         .table(ident(TABLE_VIDEO_PLAY))
         .if_not_exists()
         .col(id_column())
-        .col(text_column(COL_CREATED_AT))
+        .col(integer_column(COL_CREATED_AT))
+        .col(
+            ColumnDef::new(ident("event_discriminator"))
+                .text()
+                .not_null()
+                .default("")
+                .take(),
+        )
         .col(text_column(COL_VIDEO_URL))
         .col(text_column(COL_VIDEO_NAME))
         .col(text_column(COL_VIDEO_ID))
@@ -160,7 +189,14 @@ fn create_resource_load_table_sql() -> String {
         .table(ident(TABLE_RESOURCE_LOAD))
         .if_not_exists()
         .col(id_column())
-        .col(text_column(COL_CREATED_AT))
+        .col(integer_column(COL_CREATED_AT))
+        .col(
+            ColumnDef::new(ident("event_discriminator"))
+                .text()
+                .not_null()
+                .default("")
+                .take(),
+        )
         .col(text_column(COL_RESOURCE_URL))
         .col(text_column(COL_RESOURCE_TYPE))
         .col(text_column(COL_LOCATION))
@@ -174,7 +210,14 @@ fn create_event_table_sql() -> String {
         .table(ident(TABLE_EVENT))
         .if_not_exists()
         .col(id_column())
-        .col(text_column(COL_CREATED_AT))
+        .col(integer_column(COL_CREATED_AT))
+        .col(
+            ColumnDef::new(ident("event_discriminator"))
+                .text()
+                .not_null()
+                .default("")
+                .take(),
+        )
         .col(text_column(COL_DATA))
         .col(owner_column())
         .index(&mut unique_index(&[COL_CREATED_AT, COL_DATA]))
@@ -186,7 +229,14 @@ fn create_external_table_sql() -> String {
         .table(ident(TABLE_EXTERNAL))
         .if_not_exists()
         .col(id_column())
-        .col(text_column(COL_CREATED_AT))
+        .col(integer_column(COL_CREATED_AT))
+        .col(
+            ColumnDef::new(ident("event_discriminator"))
+                .text()
+                .not_null()
+                .default("")
+                .take(),
+        )
         .col(text_column(COL_MESSAGE))
         .col(text_column(COL_DISPLAY_NAME))
         .col(text_column(COL_USER_ID))

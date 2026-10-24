@@ -86,13 +86,49 @@ vi.mock('./GameLogSessionEventRow', () => ({
     SessionEventGroups: () => null
 }));
 
+import { setDisplayTimeZone } from '@/shared/utils/displayTimeZone';
+
 import { GameLogSessionAffinityContext } from '../gameLogSessionAffinity';
 import { GameLogSessionsView } from './GameLogSessionsView';
 
 describe('GameLogSessionsView', () => {
     afterEach(() => {
         cleanup();
+        setDisplayTimeZone('');
         vi.clearAllMocks();
+    });
+
+    it('groups epoch-second sessions by the configured calendar day', () => {
+        setDisplayTimeZone('America/New_York');
+        const sessions = ['2026-08-10T04:30:00Z', '2026-08-10T03:30:00Z'].map(
+            (at, id) => ({
+                id,
+                created_at: Date.parse(at) / 1000,
+                duration: 60000,
+                location: 'wrld_test:1',
+                worldId: 'wrld_test',
+                worldName: 'Test World',
+                groupName: '',
+                playerDurationRows: [],
+                events: []
+            })
+        );
+        const view = render(
+            <GameLogSessionAffinityContext
+                value={{ favoriteIdSet: new Set(), friendIdSet: new Set() }}
+            >
+                <GameLogSessionsView
+                    isGameRunning={false}
+                    defaultOpen={false}
+                    sessionOpenOverrides={new Map()}
+                    onSessionOpenChange={vi.fn()}
+                    sessions={sessions}
+                />
+            </GameLogSessionAffinityContext>
+        );
+        expect(view.container.querySelectorAll('.tracking-wide')).toHaveLength(
+            2
+        );
     });
 
     it('shows every session friend with an avatar below the +n trigger', () => {
@@ -114,7 +150,7 @@ describe('GameLogSessionsView', () => {
                 sessions={[
                     {
                         id: 1,
-                        created_at: '2026-08-10T00:00:00.000Z',
+                        created_at: 1786320000,
                         duration: 60_000,
                         location: 'wrld_test:1',
                         worldId: 'wrld_test',
@@ -123,7 +159,10 @@ describe('GameLogSessionsView', () => {
                         playerDurationRows: [],
                         events: friends.map(([userId, displayName], index) => ({
                             type: 'OnPlayerJoined',
-                            created_at: `2026-08-10T00:0${index}:00.000Z`,
+                            created_at: Math.floor(
+                                Date.parse(`2026-08-10T00:0${index}:00.000Z`) /
+                                    1000
+                            ),
                             userId,
                             displayName
                         }))
@@ -196,7 +235,7 @@ describe('GameLogSessionsView', () => {
                 sessions={[
                     {
                         id: 1,
-                        created_at: '2026-08-10T00:00:00.000Z',
+                        created_at: 1786320000,
                         duration: 0,
                         location: 'wrld_test:1',
                         worldId: 'wrld_test',

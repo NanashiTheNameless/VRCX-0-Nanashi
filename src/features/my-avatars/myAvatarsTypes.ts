@@ -37,8 +37,8 @@ export type MyAvatarRow = Partial<AvatarProfileRecord> & {
     imageUrl?: string;
     unityPackages?: MyAvatarUnityPackage[];
     version?: number;
-    updated_at?: string;
-    created_at?: string;
+    updated_at?: string | number;
+    created_at?: string | number;
     $tags?: MyAvatarTag[];
     $timeSpent?: number;
     $licensed?: boolean;

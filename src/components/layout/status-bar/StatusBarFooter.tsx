@@ -156,7 +156,7 @@ function formatVrcStatusTooltip(
         'summary' | 'status' | 'refreshing' | 'error' | 'lastFetchedAt'
     >,
     t: ReturnType<typeof useTranslation>['t'],
-    formatStatusDate: (value: string | null) => string
+    formatStatusDate: (value: string | number | null) => string
 ) {
     const status =
         vrcStatus.summary || vrcStatus.status || t('status_bar.servers_ok');

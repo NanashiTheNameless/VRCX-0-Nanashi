@@ -7,6 +7,7 @@ export type { FeedLiveEntryPayload };
 
 export type FeedLiveEntry = {
     sequence: number;
+    receivedAtMs?: number;
     ownerUserId?: string;
     entry: FeedLiveEntryPayload;
 };

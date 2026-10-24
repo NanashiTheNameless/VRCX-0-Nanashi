@@ -87,7 +87,7 @@ describe('resolveUserDialogTargetPresenceLocation', () => {
                         id: 'Hidden Friend',
                         userId: '',
                         displayName: 'Hidden Friend',
-                        joinedAt: '',
+                        joinedAt: 0,
                         joinedAtMs: 0
                     }
                 ],

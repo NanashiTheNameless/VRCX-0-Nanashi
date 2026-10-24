@@ -10,7 +10,7 @@ pub struct PersistedMessage {
     pub seq: i64,
     pub role: String,
     pub content: String,
-    pub created_at: String,
+    pub created_at: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -18,8 +18,8 @@ pub struct PersistedSession {
     pub owner_user_id: OwnerId,
     pub id: String,
     pub title: String,
-    pub created_at: String,
-    pub updated_at: String,
+    pub created_at: i64,
+    pub updated_at: i64,
     pub entity_panel_open: bool,
     pub surfaced_entities: String,
     pub endpoint_id: String,
@@ -45,8 +45,8 @@ pub fn assistant_sessions_load(
             owner_user_id: OwnerId::new(row_string(&row, 10)),
             id: row_string(&row, 0),
             title: row_string(&row, 1),
-            created_at: row_string(&row, 2),
-            updated_at: row_string(&row, 3),
+            created_at: row_i64(&row, 2),
+            updated_at: row_i64(&row, 3),
             entity_panel_open: row_i64(&row, 4) != 0,
             surfaced_entities: row_string(&row, 5),
             endpoint_id: row_string(&row, 6),
@@ -80,7 +80,7 @@ pub fn assistant_session_messages_load(
             seq: row_i64(&row, 1),
             role: row_string(&row, 2),
             content: row_string(&row, 3),
-            created_at: row_string(&row, 4),
+            created_at: row_i64(&row, 4),
         })
         .collect();
     Ok(messages)
@@ -91,8 +91,8 @@ pub fn assistant_session_upsert(
     owner_user_id: &OwnerId,
     id: &str,
     title: &str,
-    created_at: &str,
-    updated_at: &str,
+    created_at: i64,
+    updated_at: i64,
 ) -> Result<(), Error> {
     ensure_assistant_tables(db)?;
     let owner_id = owner_id_get_or_insert(db, owner_user_id)?;
@@ -103,8 +103,8 @@ pub fn assistant_session_upsert(
         &ParamsBuilder::new()
             .set("id", id.to_string())
             .set("title", title.to_string())
-            .set("created_at", created_at.to_string())
-            .set("updated_at", updated_at.to_string())
+            .set("created_at", created_at)
+            .set("updated_at", updated_at)
             .set("owner_id", owner_id)
             .build(),
     )?;
@@ -191,7 +191,7 @@ pub fn assistant_message_insert(
     seq: i64,
     role: &str,
     content: &str,
-    created_at: &str,
+    created_at: i64,
 ) -> Result<(), Error> {
     ensure_assistant_tables(db)?;
     db.execute_non_query(
@@ -203,7 +203,7 @@ pub fn assistant_message_insert(
             .set("seq", seq)
             .set("role", role.to_string())
             .set("content", content.to_string())
-            .set("created_at", created_at.to_string())
+            .set("created_at", created_at)
             .build(),
     )?;
     Ok(())
@@ -227,12 +227,12 @@ mod tests {
     #[test]
     fn round_trips_sessions_and_messages() {
         let db = test_db("assistant-roundtrip");
-        assistant_session_upsert(&db, &OwnerId::new("usr_a"), "ses_1", "", "t0", "t0").unwrap();
+        assistant_session_upsert(&db, &OwnerId::new("usr_a"), "ses_1", "", 1000, 1000).unwrap();
         assistant_session_set_runtime(&db, "ses_1", Some("ep_1"), Some("model-a"), true, "guided")
             .unwrap();
-        assistant_message_insert(&db, "msg_1", "ses_1", 1, "user", "hi", "t1").unwrap();
-        assistant_session_upsert(&db, &OwnerId::new("usr_a"), "ses_1", "hi", "t0", "t1").unwrap();
-        assistant_message_insert(&db, "msg_2", "ses_1", 2, "assistant", "hello", "t2").unwrap();
+        assistant_message_insert(&db, "msg_1", "ses_1", 1, "user", "hi", 1001).unwrap();
+        assistant_session_upsert(&db, &OwnerId::new("usr_a"), "ses_1", "hi", 1000, 1001).unwrap();
+        assistant_message_insert(&db, "msg_2", "ses_1", 2, "assistant", "hello", 1002).unwrap();
 
         let loaded = assistant_sessions_load(&db, &OwnerId::new("usr_a")).unwrap();
         assert_eq!(loaded.len(), 1);
@@ -252,8 +252,8 @@ mod tests {
     #[test]
     fn delete_removes_session_and_messages() {
         let db = test_db("assistant-delete");
-        assistant_session_upsert(&db, &OwnerId::new("usr_a"), "ses_1", "x", "t0", "t0").unwrap();
-        assistant_message_insert(&db, "msg_1", "ses_1", 1, "user", "hi", "t1").unwrap();
+        assistant_session_upsert(&db, &OwnerId::new("usr_a"), "ses_1", "x", 1000, 1000).unwrap();
+        assistant_message_insert(&db, "msg_1", "ses_1", 1, "user", "hi", 1001).unwrap();
 
         assistant_session_delete(&db, &OwnerId::new("usr_a"), "ses_1").unwrap();
 
@@ -272,9 +272,9 @@ mod tests {
     #[test]
     fn sessions_are_scoped_and_cross_owner_delete_is_ignored() {
         let db = test_db("assistant-owner-scope");
-        assistant_session_upsert(&db, &OwnerId::new("usr_a"), "ses_a", "a", "t0", "t0").unwrap();
-        assistant_session_upsert(&db, &OwnerId::new("usr_b"), "ses_b", "b", "t0", "t0").unwrap();
-        assistant_session_upsert(&db, &OwnerId::new(""), "ses_shared", "shared", "t0", "t0")
+        assistant_session_upsert(&db, &OwnerId::new("usr_a"), "ses_a", "a", 1000, 1000).unwrap();
+        assistant_session_upsert(&db, &OwnerId::new("usr_b"), "ses_b", "b", 1000, 1000).unwrap();
+        assistant_session_upsert(&db, &OwnerId::new(""), "ses_shared", "shared", 1000, 1000)
             .unwrap();
 
         let mut a_ids = assistant_sessions_load(&db, &OwnerId::new("usr_a"))

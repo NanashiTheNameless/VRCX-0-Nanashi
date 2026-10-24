@@ -369,7 +369,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:01Z".into(),
+                received_at: 1778803201,
             })
         else {
             panic!("friend-online should produce an output");
@@ -507,7 +507,7 @@ mod tests {
                     "content": { "userId": "usr_friend" }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-offline should produce an output");
@@ -553,7 +553,7 @@ mod tests {
         assert!(effects.presence_feed_entries.is_empty());
         assert_eq!(effects.profile_refetch_user_ids, vec!["usr_friend"]);
         let fired = runtime
-            .wake("usr_friend", "2026-05-15T00:03:00Z")
+            .wake("usr_friend", 1778803380)
             .expect("the live pending still finalizes");
         assert_eq!(
             fired.persistence.feed_entries[0].to_json()["type"],
@@ -572,7 +572,7 @@ mod tests {
                     "content": { "userId": "usr_friend" }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-offline should produce an output");
@@ -709,7 +709,7 @@ mod tests {
                     "content": { "userId": "usr_friend", "location": "wrld_a:1", "platform": "android" }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-online should produce an output");

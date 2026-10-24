@@ -201,7 +201,7 @@ describe('useProfileBackupSettings', () => {
     it('reloads the last automatic backup time after an automatic success', async () => {
         const updatedSettings = {
             ...initialSettings,
-            lastAutoAt: '2026-07-14T09:00:00Z'
+            lastAutoAt: 1784019600
         };
         mocks.getSettings
             .mockResolvedValueOnce(initialSettings)
@@ -240,7 +240,7 @@ describe('useProfileBackupSettings', () => {
         const automaticRefresh = deferred<ProfileBackupSettings>();
         const updatedSettings = {
             ...initialSettings,
-            lastAutoAt: '2026-07-14T09:00:00Z'
+            lastAutoAt: 1784019600
         };
         mocks.getSettings
             .mockReturnValueOnce(initialLoad.promise)

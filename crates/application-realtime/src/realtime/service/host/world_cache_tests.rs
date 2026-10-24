@@ -16,17 +16,14 @@ fn enrich_projection_world_names_returns_unresolved_world_ids() -> Result<()> {
     assert_eq!(unresolved_world_ids[0].world_id, "wrld_missing");
     let entry = unresolved_world_ids[0].entry.as_ref().unwrap();
     assert_eq!(entry.stream, RealtimeEntryCorrectionStream::Feed);
-    assert_eq!(
-        entry.id,
-        "GPS:2026-06-21T00:00:00.000Z:usr_location:wrld_missing:123:"
-    );
+    assert_eq!(entry.id, "GPS:1782000000:usr_location:wrld_missing:123:");
     assert_eq!(entries[0].world_name(), "wrld_missing");
     Ok(())
 }
 
 fn gps_world_entry(world_id: &str) -> FeedLiveEntry {
     FeedLiveEntry::Gps {
-        created_at: "2026-06-21T00:00:00.000Z".into(),
+        created_at: 1782000000,
         user_id: "usr_location".into(),
         display_name: String::new(),
         location: format!("{world_id}:123"),
@@ -45,7 +42,7 @@ fn feed_entry_correction_id_matches_frontend_golden_vectors() {
     let vectors = [
         (
             FeedLiveEntry::InstanceClosed {
-                created_at: "2026-06-21T00:00:00.000Z".into(),
+                created_at: 1782000000,
                 id: "instance.closed:wrld_world:123:2026-06-21T00:00:00.000Z".into(),
                 location: "wrld_world:123".into(),
                 message: "Instance Closed".into(),
@@ -58,11 +55,11 @@ fn feed_entry_correction_id_matches_frontend_golden_vectors() {
         ),
         (
             gps_world_entry("wrld_world"),
-            "GPS:2026-06-21T00:00:00.000Z:usr_location:wrld_world:123:",
+            "GPS:1782000000:usr_location:wrld_world:123:",
         ),
         (
             FeedLiveEntry::Status {
-                created_at: "2026-06-21T00:00:00.000Z".into(),
+                created_at: 1782000000,
                 user_id: "usr_friend".into(),
                 display_name: "Friend".into(),
                 status: "active".into(),
@@ -71,7 +68,7 @@ fn feed_entry_correction_id_matches_frontend_golden_vectors() {
                 previous_status_description: String::new(),
                 owner_user_id: String::new(),
             },
-            "Status:2026-06-21T00:00:00.000Z:usr_friend::",
+            "Status:1782000000:usr_friend::",
         ),
     ];
 
@@ -90,7 +87,7 @@ fn failed_world_name_warm_drains_pending_corrections_without_emit() -> Result<()
             "wrld_fail".into(),
             vec![PendingEntryCorrection {
                 stream: RealtimeEntryCorrectionStream::Feed,
-                id: "GPS:2026-06-21T00:00:00.000Z:usr_location:wrld_fail:123:".into(),
+                id: "GPS:1782000000:usr_location:wrld_fail:123:".into(),
                 location: "wrld_fail:123".into(),
                 group_name: String::new(),
             }],
@@ -137,7 +134,7 @@ fn resolved_feed_world_name_patches_the_rust_cache_and_emits_feed_projection() -
             "wrld_pending".into(),
             vec![PendingEntryCorrection {
                 stream: RealtimeEntryCorrectionStream::Feed,
-                id: "GPS:2026-06-21T00:00:00.000Z:usr_location:wrld_pending:123:".into(),
+                id: "GPS:1782000000:usr_location:wrld_pending:123:".into(),
                 location: "wrld_pending:123".into(),
                 group_name: String::new(),
             }],

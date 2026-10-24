@@ -16,10 +16,10 @@ fn resolve_user_ranks_exact_then_friend_then_seen() {
     // Alice (friend, seen twice), Alicia (stranger, seen once), and an exact
     // "Alic" stranger that must rank first on exact match.
     for (created_at, display_name, user_id) in [
-        ("2026-06-01T20:00:00Z", "Alice", "usr_alice"),
-        ("2026-06-02T20:00:00Z", "Alice", "usr_alice"),
-        ("2026-06-03T20:00:00Z", "Alicia", "usr_alicia"),
-        ("2026-06-04T20:00:00Z", "Alic", "usr_exact"),
+        ("2026-06-01T20:00:00.000Z", "Alice", "usr_alice"),
+        ("2026-06-02T20:00:00.000Z", "Alice", "usr_alice"),
+        ("2026-06-03T20:00:00.000Z", "Alicia", "usr_alicia"),
+        ("2026-06-04T20:00:00.000Z", "Alic", "usr_exact"),
     ] {
         insert_join_leave(
             &db,
@@ -71,7 +71,7 @@ fn recall_encounter_excludes_owner_self_rows() {
     // never surface even when the name query would otherwise catch them.
     insert_join_leave(
         &db,
-        "2026-06-10T21:00:00Z",
+        "2026-06-10T21:00:00.000Z",
         "OnPlayerJoined",
         "Luna",
         "usr_self",
@@ -80,7 +80,7 @@ fn recall_encounter_excludes_owner_self_rows() {
     );
     insert_join_leave(
         &db,
-        "2026-06-10T21:05:00Z",
+        "2026-06-10T21:05:00.000Z",
         "OnPlayerJoined",
         "LunaBunny",
         "usr_luna",
@@ -119,7 +119,7 @@ fn recall_encounter_filters_by_name_and_copresence_including_non_friends() {
     // Anchor and Luna share wrld_party; Luna is a non-friend stranger.
     insert_join_leave(
         &db,
-        "2026-06-10T21:00:00Z",
+        "2026-06-10T21:00:00.000Z",
         "OnPlayerJoined",
         "Anchor",
         "usr_anchor",
@@ -128,7 +128,7 @@ fn recall_encounter_filters_by_name_and_copresence_including_non_friends() {
     );
     insert_join_leave(
         &db,
-        "2026-06-10T21:05:00Z",
+        "2026-06-10T21:05:00.000Z",
         "OnPlayerJoined",
         "LunaBunny",
         "usr_luna",
@@ -137,7 +137,7 @@ fn recall_encounter_filters_by_name_and_copresence_including_non_friends() {
     );
     insert_join_leave(
         &db,
-        "2026-06-12T21:00:00Z",
+        "2026-06-12T21:00:00.000Z",
         "OnPlayerJoined",
         "LunaBunny",
         "usr_luna",
@@ -147,7 +147,7 @@ fn recall_encounter_filters_by_name_and_copresence_including_non_friends() {
     // Luna also appears in a world Anchor never visited -> excluded by coPresentWith.
     insert_join_leave(
         &db,
-        "2026-06-11T10:00:00Z",
+        "2026-06-11T10:00:00.000Z",
         "OnPlayerJoined",
         "LunaBunny",
         "usr_luna",
@@ -157,7 +157,7 @@ fn recall_encounter_filters_by_name_and_copresence_including_non_friends() {
     // Different person should be filtered out by the name query.
     insert_join_leave(
         &db,
-        "2026-06-10T21:10:00Z",
+        "2026-06-10T21:10:00.000Z",
         "OnPlayerJoined",
         "Zephyr",
         "usr_zephyr",
@@ -184,7 +184,7 @@ fn recall_encounter_filters_by_name_and_copresence_including_non_friends() {
     assert_eq!(row.display_name, "LunaBunny");
     assert_eq!(row.encounter_count, 2);
     assert_eq!(row.encounter_days, 2);
-    assert_eq!(row.last_seen, "2026-06-12T21:00:00Z");
+    assert_eq!(row.last_seen, "2026-06-12T21:00:00.000Z");
     assert!(!row.is_friend);
     assert_eq!(row.sample_locations, vec!["wrld_party:1".to_string()]);
 

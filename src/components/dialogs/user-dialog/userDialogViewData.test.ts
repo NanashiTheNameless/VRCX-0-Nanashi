@@ -234,8 +234,8 @@ describe('userDialogViewData', () => {
         });
 
         expect(summary.previousDisplayNames).toEqual([
-            { displayName: 'Old Name', updated_at: '2026-01-02T03:04:05' },
-            { displayName: 'Profile Name', updated_at: '' }
+            { displayName: 'Old Name', updated_at: 1767344645 },
+            { displayName: 'Profile Name', updated_at: 0 }
         ]);
         expect(summary.previousDisplayNamesTitle).toBe(
             'Old Name - 2026-01-02 03:04:05\nProfile Name'
@@ -300,11 +300,11 @@ describe('userDialogViewData', () => {
         expect(summary.previousDisplayNames).toEqual([
             {
                 displayName: 'API Recent Name',
-                updated_at: '2026-07-20T15:02:17.251Z'
+                updated_at: 1784559737
             },
             {
                 displayName: 'API Older Name',
-                updated_at: '2025-10-20T16:34:53.541Z'
+                updated_at: 1760978093
             }
         ]);
     });

@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::common::{normalize_text, now_iso, row_i64, row_string, row_value, ParamsBuilder};
+use crate::common::{normalize_text, now_epoch, row_i64, row_string, row_value, ParamsBuilder};
 use crate::database::schema::ensure_user_store_tables;
 use crate::database::{DatabaseService, DatabaseWriteTransaction};
 use crate::realtime::normalize_user_table_prefix;
@@ -22,7 +22,7 @@ pub struct MutualGraphSnapshotEntryInput {
 pub struct MutualGraphMetaInput {
     pub friend_id: String,
     #[serde(default)]
-    pub last_fetched_at: String,
+    pub last_fetched_at: i64,
     #[serde(default)]
     pub opted_out: bool,
     #[serde(default)]
@@ -40,7 +40,7 @@ pub struct MutualGraphLinkOutput {
 #[serde(rename_all = "camelCase")]
 pub struct MutualGraphMetaOutput {
     pub friend_id: String,
-    pub last_fetched_at: String,
+    pub last_fetched_at: i64,
     pub opted_out: bool,
     pub total_count: Option<u32>,
 }
@@ -104,7 +104,7 @@ pub fn mutual_graph_snapshot_get(
             } else {
                 Some(MutualGraphMetaOutput {
                     friend_id,
-                    last_fetched_at: row_string(&row, 1),
+                    last_fetched_at: row_i64(&row, 1),
                     opted_out: row_i64(&row, 2) == 1,
                     total_count: row_value(&row, 3)
                         .as_i64()
@@ -154,7 +154,7 @@ fn upsert_mutual_graph_meta_entries(
     user_prefix: &str,
     entries: &[MutualGraphMetaInput],
 ) -> Result<(), Error> {
-    let now = now_iso();
+    let now = now_epoch();
     for entry in entries {
         let friend_id = normalize_text(&entry.friend_id);
         if friend_id.is_empty() {
@@ -166,10 +166,10 @@ fn upsert_mutual_graph_meta_entries(
                 .set("friend_id", friend_id)
                 .set(
                     "last_fetched_at",
-                    if entry.last_fetched_at.trim().is_empty() {
-                        now.clone()
+                    if entry.last_fetched_at == 0 {
+                        now
                     } else {
-                        entry.last_fetched_at.clone()
+                        entry.last_fetched_at
                     },
                 )
                 .set("opted_out", if entry.opted_out { 1 } else { 0 })
@@ -280,7 +280,7 @@ pub fn mutual_graph_friend_refresh_commit(
             &user_prefix,
             &[MutualGraphMetaInput {
                 friend_id,
-                last_fetched_at: String::new(),
+                last_fetched_at: 0,
                 opted_out,
                 total_count,
             }],

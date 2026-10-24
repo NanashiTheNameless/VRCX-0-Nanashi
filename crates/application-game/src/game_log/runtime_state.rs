@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use chrono::DateTime;
 use serde::Serialize;
 
 pub use vrcx_0_core::location::world_id_from_location;
@@ -11,7 +10,9 @@ pub struct GameLogRuntimeState {
     pub current_location: String,
     pub current_world_name: String,
     pub current_destination: String,
-    pub current_location_started_at: String,
+    #[serde(default, deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub current_location_started_at: i64,
+    #[serde(default, skip_serializing)]
     pub current_location_started_at_ms: Option<i64>,
     pub has_player_events: bool,
     pub players_by_key: HashMap<String, PlayerState>,
@@ -25,11 +26,42 @@ pub struct GameLogRuntimeState {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, serde::Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", from = "StoredPlayerState")]
 pub struct PlayerState {
     pub user_id: String,
     pub display_name: String,
+    #[serde(rename = "joinTime", serialize_with = "serialize_join_time")]
     pub join_time_ms: Option<i64>,
+}
+
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct StoredPlayerState {
+    user_id: String,
+    display_name: String,
+    #[serde(default, deserialize_with = "vrcx_0_contracts::epoch::de_opt")]
+    join_time: Option<i64>,
+    join_time_ms: Option<i64>,
+}
+
+impl From<StoredPlayerState> for PlayerState {
+    fn from(stored: StoredPlayerState) -> Self {
+        Self {
+            user_id: stored.user_id,
+            display_name: stored.display_name,
+            join_time_ms: stored
+                .join_time
+                .map(|seconds| seconds.saturating_mul(1000))
+                .or(stored.join_time_ms),
+        }
+    }
+}
+
+fn serialize_join_time<S: serde::Serializer>(
+    value: &Option<i64>,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    serde::Serialize::serialize(&value.map(|millis| millis.div_euclid(1000)), serializer)
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -39,7 +71,7 @@ pub struct RuntimeSnapshot {
     pub location: String,
     pub world_name: String,
     pub destination: String,
-    pub started_at: String,
+    pub started_at: i64,
     pub players: Vec<PlayerState>,
 }
 
@@ -74,10 +106,10 @@ pub struct GameLogProjection {
     pub current_world_id: String,
     pub current_world_name: String,
     pub current_destination: String,
-    pub current_location_started_at: Option<String>,
+    pub current_location_started_at: Option<i64>,
     pub current_location_player_ids: Vec<String>,
     pub current_location_players: Vec<PlayerState>,
-    pub last_game_log_at: String,
+    pub last_game_log_at: i64,
     pub last_game_log_type: String,
 }
 
@@ -95,23 +127,19 @@ impl GameLogRuntimeState {
             location: self.current_location.clone(),
             world_name: self.current_world_name.clone(),
             destination: self.current_destination.clone(),
-            started_at: self.current_location_started_at.clone(),
+            started_at: self.current_location_started_at,
             players,
         }
     }
 
-    pub fn projection(
-        &self,
-        last_game_log_at: &str,
-        last_game_log_type: &str,
-    ) -> GameLogProjection {
+    pub fn projection(&self, last_game_log_at: i64, last_game_log_type: &str) -> GameLogProjection {
         let snapshot = self.snapshot();
         GameLogProjection {
             current_world_id: world_id_from_location(&snapshot.location),
             current_location: snapshot.location,
             current_world_name: snapshot.world_name,
             current_destination: snapshot.destination,
-            current_location_started_at: if snapshot.started_at.is_empty() {
+            current_location_started_at: if snapshot.started_at == 0 {
                 None
             } else {
                 Some(snapshot.started_at)
@@ -128,16 +156,14 @@ impl GameLogRuntimeState {
                 })
                 .collect(),
             current_location_players: snapshot.players,
-            last_game_log_at: last_game_log_at.to_string(),
+            last_game_log_at,
             last_game_log_type: last_game_log_type.to_string(),
         }
     }
 }
 
-pub fn parse_event_time_ms(value: &str) -> Option<i64> {
-    DateTime::parse_from_rfc3339(value)
-        .ok()
-        .map(|dt| dt.timestamp_millis())
+pub fn parse_event_time_ms(value: i64) -> Option<i64> {
+    (value != 0).then(|| value.saturating_mul(1000))
 }
 
 pub fn duration_ms(started_at: Option<i64>, stopped_at: Option<i64>) -> i64 {

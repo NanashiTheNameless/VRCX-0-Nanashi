@@ -10,7 +10,7 @@ type RuntimeState = ReturnType<typeof useRuntimeStore.getState>;
 type GameStatePatch = Parameters<RuntimeState['setGameState']>[0];
 
 async function handleGameStopped() {
-    const stoppedAt = new Date().toISOString();
+    const stoppedAt = Math.floor(Date.now() / 1000);
     useRuntimeStore.getState().clearInstanceQueueState();
 
     resetGameLogSessionState(stoppedAt);
@@ -23,7 +23,7 @@ async function handleGameStopped() {
     });
 }
 
-function buildNewGameSessionPatch(startedAt: string): GameStatePatch {
+function buildNewGameSessionPatch(startedAt: number): GameStatePatch {
     return {
         currentLocation: '',
         currentWorldId: '',
@@ -36,7 +36,7 @@ function buildNewGameSessionPatch(startedAt: string): GameStatePatch {
     };
 }
 
-function buildStoppedGameSessionPatch(stoppedAt: string): GameStatePatch {
+function buildStoppedGameSessionPatch(stoppedAt: number): GameStatePatch {
     return {
         currentLocation: '',
         currentWorldId: '',
@@ -63,12 +63,12 @@ export async function handleGameRunningUpdate(
     const changed = gameRunningChanged || steamVrRunningChanged;
     const payloadChangedAt =
         projection.lastGameStateChangedAt || projection.changedAt;
-    const payloadStartedAt = projection.lastGameStartedAt || '';
+    const payloadStartedAt = projection.lastGameStartedAt || null;
     const shouldRefreshDiscordPresence =
         gameRunningChanged ||
         (nextGameRunning === true &&
             useSessionStore.getState().sessionPhase === 'ready');
-    const now = payloadChangedAt || new Date().toISOString();
+    const now = payloadChangedAt || Math.floor(Date.now() / 1000);
     const gameStartedAt =
         gameRunningChanged && nextGameRunning
             ? payloadStartedAt || now

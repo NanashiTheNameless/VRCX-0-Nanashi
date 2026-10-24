@@ -17,7 +17,7 @@ fn social_graph_uses_mutual_graph_edges_without_implying_coplay() {
         )
         .unwrap();
     db.execute_non_query(
-            "CREATE TABLE usrself_mutual_graph_meta (friend_id TEXT PRIMARY KEY, last_fetched_at TEXT, opted_out INTEGER DEFAULT 0)",
+            "CREATE TABLE usrself_mutual_graph_meta (friend_id TEXT PRIMARY KEY, last_fetched_at INTEGER, opted_out INTEGER DEFAULT 0)",
             &Default::default(),
         )
         .unwrap();
@@ -36,9 +36,9 @@ fn social_graph_uses_mutual_graph_edges_without_implying_coplay() {
     db.execute_non_query(
         "INSERT INTO usrself_mutual_graph_meta (friend_id, last_fetched_at, opted_out)
              VALUES
-                ('usr_a', '2026-06-01T10:00:00Z', 0),
-                ('usr_b', '2026-06-02T11:00:00Z', 0),
-                ('usr_opted', '2026-06-03T12:00:00Z', 1)",
+                ('usr_a', 1780308000, 0),
+                ('usr_b', 1780398000, 0),
+                ('usr_opted', 1780488000, 1)",
         &Default::default(),
     )
     .unwrap();
@@ -79,11 +79,11 @@ fn social_graph_uses_mutual_graph_edges_without_implying_coplay() {
     assert_eq!(output.opted_out_friends, 1);
     assert_eq!(
         output.oldest_fetched_at,
-        Some("2026-06-01T10:00:00Z".into())
+        Some("2026-06-01T10:00:00.000Z".into())
     );
     assert_eq!(
         output.newest_fetched_at,
-        Some("2026-06-02T11:00:00Z".into())
+        Some("2026-06-02T11:00:00.000Z".into())
     );
     assert!(output
         .caveats
@@ -110,7 +110,7 @@ fn social_graph_marks_first_degree_friends_apart_from_mutuals() {
     )
     .unwrap();
     db.execute_non_query(
-        "CREATE TABLE usrself_mutual_graph_meta (friend_id TEXT PRIMARY KEY, last_fetched_at TEXT, opted_out INTEGER DEFAULT 0)",
+        "CREATE TABLE usrself_mutual_graph_meta (friend_id TEXT PRIMARY KEY, last_fetched_at INTEGER, opted_out INTEGER DEFAULT 0)",
         &Default::default(),
     )
     .unwrap();
@@ -126,7 +126,7 @@ fn social_graph_marks_first_degree_friends_apart_from_mutuals() {
     )
     .unwrap();
     db.execute_non_query(
-        "INSERT INTO usrself_mutual_graph_meta (friend_id, last_fetched_at, opted_out) VALUES ('usr_a', '2026-06-01T10:00:00Z', 0)",
+        "INSERT INTO usrself_mutual_graph_meta (friend_id, last_fetched_at, opted_out) VALUES ('usr_a', 1780308000, 0)",
         &Default::default(),
     )
     .unwrap();
@@ -183,7 +183,7 @@ fn social_graph_applies_node_and_edge_caps_with_total_counts() {
     )
     .unwrap();
     db.execute_non_query(
-        "CREATE TABLE usrself_mutual_graph_meta (friend_id TEXT PRIMARY KEY, last_fetched_at TEXT, opted_out INTEGER DEFAULT 0)",
+        "CREATE TABLE usrself_mutual_graph_meta (friend_id TEXT PRIMARY KEY, last_fetched_at INTEGER, opted_out INTEGER DEFAULT 0)",
         &Default::default(),
     )
     .unwrap();
@@ -259,7 +259,7 @@ fn friend_circles_groups_mutually_linked_friends_and_excludes_second_degree_node
     )
     .unwrap();
     db.execute_non_query(
-        "CREATE TABLE usrself_mutual_graph_meta (friend_id TEXT PRIMARY KEY, last_fetched_at TEXT, opted_out INTEGER DEFAULT 0)",
+        "CREATE TABLE usrself_mutual_graph_meta (friend_id TEXT PRIMARY KEY, last_fetched_at INTEGER, opted_out INTEGER DEFAULT 0)",
         &Default::default(),
     )
     .unwrap();

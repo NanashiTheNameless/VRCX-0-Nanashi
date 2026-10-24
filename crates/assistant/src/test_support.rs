@@ -129,8 +129,8 @@ impl TestAssistantSessionPersistence {
         owner_user_id: &OwnerId,
         id: &str,
         title: &str,
-        created_at: &str,
-        updated_at: &str,
+        created_at: i64,
+        updated_at: i64,
     ) {
         self.upsert_session(AssistantSessionUpsert {
             owner_user_id,
@@ -158,7 +158,7 @@ impl AssistantSessionPersistencePort for TestAssistantSessionPersistence {
             .filter(|session| session_visible_to(session, owner_user_id))
             .cloned()
             .collect::<Vec<_>>();
-        sessions.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        sessions.sort_by_key(|row| std::cmp::Reverse(row.updated_at));
         Ok(sessions)
     }
 
@@ -190,7 +190,7 @@ impl AssistantSessionPersistencePort for TestAssistantSessionPersistence {
         }
         if let Some(session) = state.sessions.get_mut(input.id) {
             session.title = input.title.to_string();
-            session.updated_at = input.updated_at.to_string();
+            session.updated_at = input.updated_at;
         } else {
             state.sessions.insert(
                 input.id.to_string(),
@@ -198,8 +198,8 @@ impl AssistantSessionPersistencePort for TestAssistantSessionPersistence {
                     owner_user_id: input.owner_user_id.clone(),
                     id: input.id.to_string(),
                     title: input.title.to_string(),
-                    created_at: input.created_at.to_string(),
-                    updated_at: input.updated_at.to_string(),
+                    created_at: input.created_at,
+                    updated_at: input.updated_at,
                     entity_panel_open: false,
                     surfaced_entities: "[]".into(),
                     endpoint_id: String::new(),
@@ -274,7 +274,7 @@ impl AssistantSessionPersistencePort for TestAssistantSessionPersistence {
             seq: input.seq,
             role: input.role.to_string(),
             content: input.content.to_string(),
-            created_at: input.created_at.to_string(),
+            created_at: input.created_at,
         });
         Ok(())
     }

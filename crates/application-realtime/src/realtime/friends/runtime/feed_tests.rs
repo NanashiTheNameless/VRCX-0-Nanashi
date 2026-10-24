@@ -49,7 +49,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:01Z".into(),
+                received_at: 1778803201,
             })
         else {
             panic!("friend-update should produce an output");
@@ -113,7 +113,7 @@ mod tests {
             runtime.apply_ws_message(&RealtimeWsMessagePayload {
                 json: payload.clone(),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:01Z".into(),
+                received_at: 1778803201,
             })
         else {
             panic!("first friend-update should produce an output");
@@ -127,7 +127,7 @@ mod tests {
             runtime.apply_ws_message(&RealtimeWsMessagePayload {
                 json: payload,
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:01:01Z".into(),
+                received_at: 1778803261,
             }),
             RealtimeFriendApplyResult::Ignored
         ));
@@ -180,7 +180,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:01Z".into(),
+                received_at: 1778803201,
             })
         else {
             panic!("first friend-update should produce an output");
@@ -202,7 +202,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:02:01Z".into(),
+                received_at: 1778803321,
             })
         else {
             panic!("second friend-update should produce an output");

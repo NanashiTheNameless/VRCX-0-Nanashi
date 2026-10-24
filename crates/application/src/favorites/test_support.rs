@@ -262,7 +262,7 @@ impl TestFavoriteStore {
 
     fn rows_to_favorites(rows: Vec<StoredFavorite>) -> Vec<FavoriteRow> {
         rows.into_iter()
-            .map(|row| FavoriteRow::new(row.kind, String::new(), row.entity_id, row.group_name))
+            .map(|row| FavoriteRow::new(row.kind, 0, row.entity_id, row.group_name))
             .collect()
     }
 }

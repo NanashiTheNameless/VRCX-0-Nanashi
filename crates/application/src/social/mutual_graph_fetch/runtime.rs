@@ -7,7 +7,7 @@ use vrcx_0_core::OwnerId;
 
 #[cfg(test)]
 use std::time::Duration;
-use vrcx_0_core::time::now_iso;
+use vrcx_0_core::time::now_epoch;
 
 use crate::remote::VrchatRequestPort;
 use vrcx_0_application_core::{
@@ -117,7 +117,7 @@ impl MutualGraphFetchRuntime {
                     "A mutual graph fetch is already running.".into(),
                 ));
             }
-            let now = now_iso();
+            let now = now_epoch();
             let status = MutualGraphFetchStatus {
                 run_id,
                 revision: 1,
@@ -130,7 +130,7 @@ impl MutualGraphFetchRuntime {
                 opted_out_friends: 0,
                 failed_friends: 0,
                 cancel_requested: false,
-                started_at: now.clone(),
+                started_at: now,
                 updated_at: now,
                 finished_at: None,
                 last_error: None,
@@ -181,7 +181,7 @@ impl MutualGraphFetchRuntime {
             }
             inner.status.status = MutualGraphFetchState::Cancelling;
             inner.status.cancel_requested = true;
-            inner.status.updated_at = now_iso();
+            inner.status.updated_at = now_epoch();
             inner.status.revision += 1;
             inner.status.clone()
         };
@@ -244,7 +244,7 @@ impl MutualGraphFetchRuntime {
                     });
                     meta_entries.push(MutualGraphMetaInput {
                         friend_id: friend_id.clone(),
-                        last_fetched_at: String::new(),
+                        last_fetched_at: 0,
                         opted_out: false,
                         total_count: Some(total_count),
                     });
@@ -253,7 +253,7 @@ impl MutualGraphFetchRuntime {
                 FriendFetchResult::OptedOut => {
                     meta_entries.push(MutualGraphMetaInput {
                         friend_id: friend_id.clone(),
-                        last_fetched_at: String::new(),
+                        last_fetched_at: 0,
                         opted_out: true,
                         total_count: None,
                     });
@@ -365,7 +365,7 @@ impl MutualGraphFetchRuntime {
         state: MutualGraphFetchState,
         last_error: Option<String>,
     ) -> MutualGraphFetchStatus {
-        let now = now_iso();
+        let now = now_epoch();
         let mut output = idle_status();
         let mut emitted = None;
         if let Ok(mut inner) = self.shared.state.lock() {
@@ -373,7 +373,7 @@ impl MutualGraphFetchRuntime {
                 inner.status.status = state;
                 inner.status.cancel_requested = false;
                 inner.status.current_friend_id.clear();
-                inner.status.updated_at = now.clone();
+                inner.status.updated_at = now;
                 inner.status.finished_at = Some(now);
                 inner.status.last_error = last_error;
                 inner.status.revision += 1;
@@ -397,7 +397,7 @@ impl MutualGraphFetchRuntime {
                 return;
             }
             mutate(&mut inner.status);
-            inner.status.updated_at = now_iso();
+            inner.status.updated_at = now_epoch();
             inner.status.revision += 1;
             Some(inner.status.clone())
         } else {
@@ -426,8 +426,8 @@ fn idle_status() -> MutualGraphFetchStatus {
         opted_out_friends: 0,
         failed_friends: 0,
         cancel_requested: false,
-        started_at: String::new(),
-        updated_at: String::new(),
+        started_at: 0,
+        updated_at: 0,
         finished_at: None,
         last_error: None,
     }

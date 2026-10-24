@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 use crate::{Error, GameStateStore, Result};
-use vrcx_0_core::time::{iso_millis, now_iso};
+use vrcx_0_core::time::{now_epoch, parse_epoch_seconds};
 
 const CONFIG_AUTO_BACKUP: &str = "vrcRegistryAutoBackup";
 const CONFIG_ASK_RESTORE: &str = "vrcRegistryAskRestore";
@@ -40,7 +40,7 @@ pub enum RegistryBackupMaintenanceMode {
 pub struct RegistryBackupSnapshot {
     pub key: String,
     pub name: String,
-    pub date: String,
+    pub date: i64,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -54,7 +54,7 @@ pub struct RegistryBackupExport {
 pub struct RegistryBackupMaintenanceResult {
     pub auto_backup_created: bool,
     pub restore_prompt_needed: bool,
-    pub restore_prompt_backup_date: Option<String>,
+    pub restore_prompt_backup_date: Option<i64>,
     #[serde(skip)]
     #[specta(skip)]
     pub restore_prompt_check_deferred: bool,
@@ -65,8 +65,8 @@ pub struct RegistryBackupMaintenanceResult {
 struct StoredRegistryBackup {
     #[serde(default)]
     name: String,
-    #[serde(default)]
-    date: String,
+    #[serde(default, deserialize_with = "vrcx_0_contracts::epoch::de")]
+    date: i64,
     #[serde(default)]
     data: Value,
 }
@@ -107,7 +107,10 @@ pub fn registry_backup_restore(
     let json = registry_backup_data_to_json(&backup.data)?;
     validate_registry_json(&json)?;
     host.set_registry_json(&json)?;
-    store.set_string(CONFIG_LAST_RESTORE_CHECK, &non_empty_or_now(&backup.date))?;
+    store.set_string(
+        CONFIG_LAST_RESTORE_CHECK,
+        &non_zero_or_now(backup.date).to_string(),
+    )?;
     Ok(normalize_backup(backup, index))
 }
 
@@ -170,16 +173,16 @@ pub fn registry_backup_import_json(
 ) -> Result<()> {
     validate_registry_json(json)?;
     host.set_registry_json(json)?;
-    store.set_string(CONFIG_LAST_RESTORE_CHECK, &now_iso())?;
+    store.set_string(CONFIG_LAST_RESTORE_CHECK, &now_epoch().to_string())?;
     Ok(())
 }
 
 pub fn registry_backup_restore_prompt_acknowledge(
     store: &dyn GameStateStore,
-    backup_date: &str,
-) -> Result<String> {
-    store.set_string(CONFIG_LAST_RESTORE_CHECK, backup_date)?;
-    Ok(backup_date.to_string())
+    backup_date: i64,
+) -> Result<i64> {
+    store.set_string(CONFIG_LAST_RESTORE_CHECK, &backup_date.to_string())?;
+    Ok(backup_date)
 }
 
 pub fn registry_backup_maintenance_run(
@@ -219,7 +222,7 @@ pub fn registry_backup_maintenance_run(
 
     match create_backup_with_backups(store, host, AUTO_BACKUP_NAME.into(), now, &mut backups) {
         Ok(CreateBackupOutcome::Created) => {
-            store.set_string(CONFIG_LAST_BACKUP_DATE, &iso_millis(now))?;
+            store.set_string(CONFIG_LAST_BACKUP_DATE, &now.timestamp().to_string())?;
             let detail = format!("Registry auto backup created ({reason}).");
             maintenance_result(true, false, None, false, detail)
         }
@@ -293,7 +296,7 @@ fn create_backup_with_backups(
 
     backups.push(StoredRegistryBackup {
         name,
-        date: iso_millis(now),
+        date: now.timestamp(),
         data,
     });
     write_backups(store, backups)?;
@@ -310,7 +313,7 @@ fn prune_old_auto_backups(
         if backup.name != AUTO_BACKUP_NAME {
             return true;
         }
-        parse_backup_date(&backup.date).is_some_and(|date| date >= cutoff)
+        parse_backup_date(backup.date).is_some_and(|date| date >= cutoff)
     });
     backups.len() != before
 }
@@ -319,8 +322,8 @@ fn recent_auto_backup_exists(
     store: &dyn GameStateStore,
     now: chrono::DateTime<Utc>,
 ) -> Result<bool> {
-    let last_backup_date = store.get_string(CONFIG_LAST_BACKUP_DATE, "")?;
-    let Some(last_backup_date) = parse_backup_date(&last_backup_date) else {
+    let Some(last_backup_date) = parse_backup_date(stored_date(store, CONFIG_LAST_BACKUP_DATE)?)
+    else {
         return Ok(false);
     };
     Ok(now - last_backup_date < AUTO_BACKUP_INTERVAL)
@@ -348,9 +351,9 @@ fn maybe_restore_prompt(
             "Registry folder is missing; restore prompt is disabled.",
         );
     }
-    let last_backup_date = store.get_string(CONFIG_LAST_BACKUP_DATE, "")?;
-    let last_restore_check = store.get_string(CONFIG_LAST_RESTORE_CHECK, "")?;
-    if last_backup_date.trim().is_empty() || last_restore_check == last_backup_date {
+    let last_backup_date = stored_date(store, CONFIG_LAST_BACKUP_DATE)?;
+    let last_restore_check = stored_date(store, CONFIG_LAST_RESTORE_CHECK)?;
+    if last_backup_date == 0 || last_restore_check == last_backup_date {
         return maintenance_result(
             false,
             false,
@@ -371,7 +374,7 @@ fn maybe_restore_prompt(
 fn maintenance_result(
     auto_backup_created: bool,
     restore_prompt_needed: bool,
-    restore_prompt_backup_date: Option<String>,
+    restore_prompt_backup_date: Option<i64>,
     restore_prompt_check_deferred: bool,
     detail: impl Into<String>,
 ) -> Result<RegistryBackupMaintenanceResult> {
@@ -390,7 +393,7 @@ fn backup_key(backup: &StoredRegistryBackup, index: usize) -> String {
     } else {
         &backup.name
     };
-    if backup.date.trim().is_empty() {
+    if backup.date == 0 {
         format!("{index}-{name}")
     } else {
         format!("{}-{name}", backup.date)
@@ -437,18 +440,23 @@ fn normalized_backup_name(name: &str) -> String {
     }
 }
 
-fn non_empty_or_now(value: &str) -> String {
-    if value.trim().is_empty() {
-        now_iso()
+fn non_zero_or_now(value: i64) -> i64 {
+    if value == 0 {
+        now_epoch()
     } else {
-        value.to_string()
+        value
     }
 }
 
-fn parse_backup_date(value: &str) -> Option<chrono::DateTime<Utc>> {
-    chrono::DateTime::parse_from_rfc3339(value)
-        .ok()
-        .map(|date| date.with_timezone(&Utc))
+fn stored_date(store: &dyn GameStateStore, key: &str) -> Result<i64> {
+    Ok(parse_epoch_seconds(&store.get_string(key, "")?).unwrap_or(0))
+}
+
+fn parse_backup_date(value: i64) -> Option<chrono::DateTime<Utc>> {
+    if value == 0 {
+        return None;
+    }
+    chrono::DateTime::from_timestamp(value, 0)
 }
 
 #[cfg(test)]

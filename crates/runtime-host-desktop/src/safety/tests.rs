@@ -340,7 +340,7 @@ async fn failed_or_stale_refresh_retains_warning_but_disables_actions() {
         let mut f = Fixture::new();
         f.source(SourceFormat::UserIds, &[USER], true, error);
         if error.is_empty() {
-            f.runtime.state.lock().unwrap().caches[0].updated_at = "2020-01-01T00:00:00Z".into();
+            f.runtime.state.lock().unwrap().caches[0].updated_at = 1577836800;
         }
         let (api, port) = f.api(json!({}));
         let job = f.join();
@@ -584,7 +584,7 @@ fn row_badges_match_exact_account_location_event_and_respect_limits() {
     let mut historic = log_row(&f, "OnPlayerLeft");
     historic.kind = job.log_kind.clone();
     historic.location = "another:1".into();
-    historic.created_at = job.created_at.clone();
+    historic.created_at = job.created_at;
     assert!(!f.runtime.inspect_rows(vec![historic.clone()]).unwrap()[0]
         .iter()
         .any(|m| m.contains("Historical")));
@@ -900,7 +900,7 @@ fn unchanged_github_mirror_counts_as_a_fresh_refresh() {
         url: source.url.clone(),
         format: source.format,
         entries: ["avtr_11111111-1111-1111-1111-111111111111".to_string()].into(),
-        updated_at: "2020-01-01T00:00:00Z".into(),
+        updated_at: 1577836800,
         commit_sha: "abc".into(),
         ..Default::default()
     }];
@@ -942,7 +942,7 @@ fn legacy_global_hide_entries_move_out_of_the_alert_history() {
     let scope = f.runtime.auth.snapshot();
     let entry = |action: &str| SafetyAuditEntry {
         account_user_id: scope.current_user_id.clone(),
-        event_created_at: String::new(),
+        event_created_at: 0,
         location: String::new(),
         log_kind: String::new(),
         avatar_id: String::new(),

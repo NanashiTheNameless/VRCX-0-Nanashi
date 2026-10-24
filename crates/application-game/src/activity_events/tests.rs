@@ -13,7 +13,7 @@ fn game_log_join_leave_batch_becomes_current_instance_activity() {
     let output = GameLogIngestOutput {
         batch: GameLogWriteBatch {
             join_leave: vec![GameLogJoinLeaveEntry {
-                created_at: "2026-05-31T00:04:00.000Z".to_string(),
+                created_at: 1780185840,
                 event_type: "OnPlayerJoined".to_string(),
                 display_name: "Joining User".to_string(),
                 location: "wrld_1:123".to_string(),
@@ -40,11 +40,11 @@ fn game_log_event_and_external_batches_become_system_activity() {
     let output = GameLogIngestOutput {
         batch: GameLogWriteBatch {
             events: vec![GameLogEventEntry {
-                created_at: "2026-05-31T00:05:00.000Z".to_string(),
+                created_at: 1780185900,
                 data: "Something happened".to_string(),
             }],
             externals: vec![GameLogExternalEntry {
-                created_at: "2026-05-31T00:05:01.000Z".to_string(),
+                created_at: 1780185901,
                 message: "External message".to_string(),
                 display_name: "External User".to_string(),
                 user_id: "usr_external".to_string(),
@@ -71,24 +71,24 @@ fn game_log_system_and_video_events_with_same_timestamp_do_not_collide() {
         batch: GameLogWriteBatch {
             events: vec![
                 GameLogEventEntry {
-                    created_at: "2026-05-31T00:05:00.000Z".to_string(),
+                    created_at: 1780185900,
                     data: "First event".to_string(),
                 },
                 GameLogEventEntry {
-                    created_at: "2026-05-31T00:05:00.000Z".to_string(),
+                    created_at: 1780185900,
                     data: "Second event".to_string(),
                 },
             ],
             externals: vec![
                 GameLogExternalEntry {
-                    created_at: "2026-05-31T00:05:01.000Z".to_string(),
+                    created_at: 1780185901,
                     message: "First external".to_string(),
                     display_name: "External User".to_string(),
                     user_id: "usr_external".to_string(),
                     location: "wrld_1:123".to_string(),
                 },
                 GameLogExternalEntry {
-                    created_at: "2026-05-31T00:05:01.000Z".to_string(),
+                    created_at: 1780185901,
                     message: "Second external".to_string(),
                     display_name: "External User".to_string(),
                     user_id: "usr_external".to_string(),
@@ -99,7 +99,7 @@ fn game_log_system_and_video_events_with_same_timestamp_do_not_collide() {
         },
         side_effects: vec![
             GameLogSideEffect::Video(VideoInput {
-                created_at: "2026-05-31T00:05:02.000Z".to_string(),
+                created_at: 1780185902,
                 location: "wrld_1:123".to_string(),
                 video_url: "https://example.test/first".to_string(),
                 video_id: "first".to_string(),
@@ -108,7 +108,7 @@ fn game_log_system_and_video_events_with_same_timestamp_do_not_collide() {
                 ..VideoInput::default()
             }),
             GameLogSideEffect::Video(VideoInput {
-                created_at: "2026-05-31T00:05:02.000Z".to_string(),
+                created_at: 1780185902,
                 location: "wrld_1:123".to_string(),
                 video_url: "https://example.test/second".to_string(),
                 video_id: "second".to_string(),

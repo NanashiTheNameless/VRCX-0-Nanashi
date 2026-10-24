@@ -26,7 +26,7 @@ pub(super) struct PendingCurrentUserOffline {
 
 #[derive(Clone, Debug)]
 pub(super) struct RemoteGameLogInterval {
-    pub(super) created_at: String,
+    pub(super) created_at: i64,
     pub(super) started_at_ms: i64,
     pub(super) location: String,
 }

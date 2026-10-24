@@ -240,7 +240,7 @@ fn wrist_builder_keeps_enough_feed_rows_for_expanded_compact_layout() {
     assert_eq!(model.feed_rows.len(), 18);
 }
 
-const STARTED_AT: &str = "2026-06-01T12:00:00.000Z";
+const STARTED_AT: i64 = 1_780_315_200;
 const STARTED_AT_MS: i64 = 1_780_315_200_000;
 
 fn song_now_playing(captured_at_ms: i64, position_seconds: i64, live: bool) -> OverlayNowPlaying {
@@ -250,7 +250,7 @@ fn song_now_playing(captured_at_ms: i64, position_seconds: i64, live: bool) -> O
             artist: "  Rick Astley  ".to_string(),
             length_seconds: 212,
             position_seconds,
-            started_at: STARTED_AT.to_string(),
+            started_at: STARTED_AT,
         },
         captured_at_ms,
         live,
@@ -307,7 +307,7 @@ fn wrist_builder_ticks_now_playing_elapsed_every_second_while_visible() {
                 artist: String::new(),
                 length_seconds: 3_725,
                 position_seconds: 0,
-                started_at: STARTED_AT.to_string(),
+                started_at: STARTED_AT,
             },
             STARTED_AT_MS + 65_000,
             true,
@@ -347,7 +347,7 @@ fn wrist_builder_shows_elapsed_time_without_a_bar_when_the_length_is_unknown() {
                 artist: String::new(),
                 length_seconds: 0,
                 position_seconds: 0,
-                started_at: STARTED_AT.to_string(),
+                started_at: STARTED_AT,
             },
             STARTED_AT_MS + 12 * 60_000 + 30_000,
             live,
@@ -378,7 +378,7 @@ fn wrist_builder_drops_now_playing_without_a_title() {
             artist: "Artist".to_string(),
             length_seconds: 212,
             position_seconds: 0,
-            started_at: STARTED_AT.to_string(),
+            started_at: STARTED_AT,
         },
         STARTED_AT_MS,
         true,
@@ -433,7 +433,7 @@ fn activity_entry_with_relation(
         source_id: format!("source-{sequence}"),
         kind: ActivityKind::from_key(activity_type).expect("known activity kind"),
         category,
-        created_at: "2026-06-01T12:34:56.000Z".to_string(),
+        created_at: 1780317296,
         actor_user_id: format!("usr_{sequence}"),
         actor_display_name: format!("User {sequence}"),
         content: ActivityContent {

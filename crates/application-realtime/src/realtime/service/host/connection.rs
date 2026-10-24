@@ -540,7 +540,7 @@ impl RealtimeHostRuntime {
         let batch = RealtimePersistenceBatch {
             notification_expirations: vec![NotificationExpiration {
                 id: notification_id,
-                expired_at: chrono::Utc::now().to_rfc3339(),
+                expired_at: vrcx_0_core::time::now_epoch(),
             }],
             ..RealtimePersistenceBatch::default()
         };

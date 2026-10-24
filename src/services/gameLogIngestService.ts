@@ -100,7 +100,7 @@ export async function hydrateRuntimeGameLogProjection(): Promise<boolean> {
         currentLocationPlayers: snapshot.players.map((player) => ({
             userId: player.userId,
             displayName: player.displayName,
-            joinTimeMs: player.joinedAtMs
+            joinTime: Math.floor(player.joinedAtMs / 1000)
         })),
         lastGameLogAt: snapshot.context.createdAt,
         lastGameLogType: 'startup-roster'
@@ -109,7 +109,7 @@ export async function hydrateRuntimeGameLogProjection(): Promise<boolean> {
 }
 
 export function resetGameLogSessionState(
-    stoppedAt: string = new Date().toISOString()
+    stoppedAt: number = Math.floor(Date.now() / 1000)
 ) {
     const runtimeStore = useRuntimeStore.getState();
     runtimeStore.resetNowPlayingState();

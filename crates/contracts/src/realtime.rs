@@ -11,7 +11,7 @@ pub struct FriendLogUpsert {
     pub display_name: String,
     pub trust_level: String,
     pub friend_number: i64,
-    pub created_at: String,
+    pub created_at: i64,
     #[serde(default)]
     pub force_history: bool,
 }
@@ -20,7 +20,7 @@ pub struct FriendLogUpsert {
 #[serde(rename_all = "camelCase")]
 pub struct FriendLogDelete {
     pub target_user_id: String,
-    pub created_at: String,
+    pub created_at: i64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -44,7 +44,7 @@ impl SelfProfileField {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SelfProfileObservation {
-    pub observed_at: String,
+    pub observed_at: i64,
     pub field: SelfProfileField,
     pub value: String,
 }
@@ -119,7 +119,7 @@ impl RealtimeWriteCounts {
 #[serde(rename_all = "camelCase")]
 pub struct NotificationExpiration {
     pub id: String,
-    pub expired_at: String,
+    pub expired_at: i64,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
@@ -128,22 +128,22 @@ pub struct NotificationV2Update {
     pub id: String,
     pub updates: Value,
     #[serde(default)]
-    pub received_at: String,
+    pub received_at: i64,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AvatarHistoryUpsert {
     pub avatar_id: String,
-    pub created_at: String,
+    pub created_at: i64,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AvatarTimeSpentUpsert {
     pub avatar_id: String,
-    pub created_at: String,
+    pub created_at: i64,
     pub time_spent: i64,
-    pub started_at_ms: i64,
-    pub ended_at_ms: i64,
+    pub started_at: i64,
+    pub ended_at: i64,
 }

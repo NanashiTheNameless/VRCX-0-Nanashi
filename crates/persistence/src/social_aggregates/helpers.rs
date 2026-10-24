@@ -126,19 +126,17 @@ pub(crate) fn current_friend_id_set(
 
 /// Append the timezone that hour/weekday buckets were computed in to a caveat
 /// list, so callers that pass a `utcOffsetMinutes` get one consistent note.
-pub(crate) fn with_tz_caveat(mut caveats: Vec<String>, utc_offset_minutes: i64) -> Vec<String> {
+pub(crate) fn with_tz_caveat(
+    mut caveats: Vec<String>,
+    utc_offset_minutes: Option<i64>,
+) -> Vec<String> {
     caveats.push(format!(
         "Hour/weekday buckets are in {}.",
-        tz_offset_label(utc_offset_minutes)
+        utc_offset_minutes
+            .map(tz_offset_label)
+            .unwrap_or_else(vrcx_0_core::time::display_zone_label)
     ));
     caveats
-}
-
-/// SQLite `strftime` modifier that shifts a UTC timestamp into a local zone, so
-/// hour/weekday buckets are computed in the caller's timezone instead of UTC.
-pub(crate) fn tz_offset_modifier(utc_offset_minutes: i64) -> String {
-    let sign = if utc_offset_minutes < 0 { '-' } else { '+' };
-    format!("{sign}{} minutes", utc_offset_minutes.unsigned_abs())
 }
 
 /// Human-readable timezone label for caveats, e.g. "UTC+09:00" or "UTC".
@@ -157,21 +155,11 @@ pub(crate) fn append_time_window_filter(
     time_window: &TimeWindow,
     column: &str,
 ) {
-    if let Some(from) = time_window
-        .from
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    {
+    if let Some(from) = window_bound(time_window, WindowBound::From) {
         sql.push_str(&format!(" AND {column} >= @from"));
         *params = std::mem::take(params).set("from", from);
     }
-    if let Some(to) = time_window
-        .to
-        .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-    {
+    if let Some(to) = window_bound(time_window, WindowBound::To) {
         sql.push_str(&format!(" AND {column} <= @to"));
         *params = std::mem::take(params).set("to", to);
     }
@@ -187,13 +175,13 @@ pub(crate) fn table_exists(db: &DatabaseService, table_name: &str) -> Result<boo
 }
 
 fn window_bound_ms_sql(param: &str) -> String {
-    format!("(CAST(strftime('%s', @{param}) AS INTEGER) * 1000)")
+    format!("(@{param} * 1000)")
 }
 
 /// Co-presence rows carry the whole shared interval, so a window has to clip the
 /// stored duration instead of counting rows that merely end inside it.
 pub(crate) fn clipped_millis_sql(time_window: &TimeWindow) -> String {
-    let leave_ms = "(CAST(strftime('%s', g.created_at) AS INTEGER) * 1000)";
+    let leave_ms = "(g.created_at * 1000)";
     let enter_ms = format!("({leave_ms} - COALESCE(g.time, 0))");
     let mut start = enter_ms.clone();
     let mut end = leave_ms.to_string();
@@ -214,7 +202,7 @@ pub(crate) fn append_copresence_window_filter(
     params: &mut ParamsBuilder,
     time_window: &TimeWindow,
 ) {
-    let leave_ms = "(CAST(strftime('%s', g.created_at) AS INTEGER) * 1000)";
+    let leave_ms = "(g.created_at * 1000)";
     let enter_ms = format!("({leave_ms} - COALESCE(g.time, 0))");
     if let Some(from) = window_bound(time_window, WindowBound::From) {
         sql.push_str(&format!(
@@ -234,15 +222,25 @@ enum WindowBound {
     To,
 }
 
-fn window_bound(time_window: &TimeWindow, bound: WindowBound) -> Option<&str> {
+/// A window bound (RFC 3339 text from a tool call) in epoch seconds.
+fn window_bound(time_window: &TimeWindow, bound: WindowBound) -> Option<i64> {
     let value = match bound {
         WindowBound::From => &time_window.from,
         WindowBound::To => &time_window.to,
     };
     value
         .as_deref()
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
+        .and_then(vrcx_0_core::time::parse_epoch_seconds)
+}
+
+/// A stored date column as RFC 3339 text for tool output, in the same
+/// millisecond form the tools have always returned; empty when NULL.
+pub(crate) fn row_iso(row: &[serde_json::Value], index: usize) -> String {
+    row.get(index)
+        .and_then(serde_json::Value::as_i64)
+        .and_then(|seconds| chrono::DateTime::from_timestamp(seconds, 0))
+        .map(vrcx_0_core::time::iso_millis)
+        .unwrap_or_default()
 }
 
 pub(crate) fn access_bucket_sql(location_column: &str) -> String {
@@ -331,14 +329,14 @@ pub(crate) fn bucket_label(bucket: &ActivityBucket, key: &str) -> String {
 #[derive(Clone, Debug, Default)]
 pub(crate) struct LatestName {
     name: String,
-    at: String,
+    at: i64,
 }
 
 impl LatestName {
-    pub(crate) fn observe(&mut self, name: &str, created_at: &str) {
-        if self.name.is_empty() || created_at > self.at.as_str() {
+    pub(crate) fn observe(&mut self, name: &str, created_at: i64) {
+        if self.name.is_empty() || created_at > self.at {
             self.name = name.to_string();
-            self.at = created_at.to_string();
+            self.at = created_at;
         }
     }
 

@@ -279,7 +279,7 @@ fn profile_backup_restore_rejects_non_archives_and_non_profile_databases() {
         ProfileBackupManifestMetadata {
             app_version: "1.2.3".into(),
             db_version: VRCX0_SCHEMA_VERSION,
-            created_at: "2026-07-14T07:30:00Z".into(),
+            created_at: 1784014200,
             platform: "windows".into(),
             kind: ProfileBackupKind::Manual,
         },

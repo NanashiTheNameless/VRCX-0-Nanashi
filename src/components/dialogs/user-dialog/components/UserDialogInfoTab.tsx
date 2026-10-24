@@ -31,6 +31,7 @@ import {
 } from '@/services/entityMediaService';
 import type { UserDialogPreviousInstance } from '@/services/userDialogSessionCacheService';
 import type { UserDialogRelationshipEvent } from '@/services/userDialogSessionCacheService';
+import { absoluteDateFromValue } from '@/shared/utils/displayTimeZone';
 import { parseLocation } from '@/shared/utils/location';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { Button } from '@/ui/shadcn/button';
@@ -766,7 +767,9 @@ function UserRelationshipStat({
                                     {t(`view.friend_log.filters.${entry.type}`)}
                                 </TimelineTitle>
                                 <TimelineDate
-                                    dateTime={entry.created_at}
+                                    dateTime={absoluteDateFromValue(
+                                        entry.created_at
+                                    )?.toISOString()}
                                     className="mt-0.5 mb-0 font-normal group-data-[orientation=vertical]/timeline:max-sm:h-auto"
                                 >
                                     {formatLocalizedActivityDate(

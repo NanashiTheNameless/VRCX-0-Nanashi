@@ -283,6 +283,14 @@ export function GroupEventEditorDialog({
                                             </SelectGroup>
                                         </SelectContent>
                                     </Select>
+                                    {form.repeat !== 'none' ? (
+                                        <FieldDescription>
+                                            {t(`${I18N}.recurrence_timezone`, {
+                                                timezone:
+                                                    form.recurrenceTimezone
+                                            })}
+                                        </FieldDescription>
+                                    ) : null}
                                 </Field>
                                 {form.repeat !== 'none' ? (
                                     <Field>

@@ -9,7 +9,7 @@ pub enum FeedLiveEntry {
     #[serde(rename_all = "camelCase")]
     Online {
         #[serde(rename = "created_at")]
-        created_at: String,
+        created_at: i64,
         user_id: String,
         display_name: String,
         location: String,
@@ -27,7 +27,7 @@ pub enum FeedLiveEntry {
     #[serde(rename_all = "camelCase")]
     Offline {
         #[serde(rename = "created_at")]
-        created_at: String,
+        created_at: i64,
         user_id: String,
         display_name: String,
         location: String,
@@ -45,7 +45,7 @@ pub enum FeedLiveEntry {
     #[serde(rename = "GPS", rename_all = "camelCase")]
     Gps {
         #[serde(rename = "created_at")]
-        created_at: String,
+        created_at: i64,
         user_id: String,
         display_name: String,
         location: String,
@@ -63,7 +63,7 @@ pub enum FeedLiveEntry {
     #[serde(rename_all = "camelCase")]
     Status {
         #[serde(rename = "created_at")]
-        created_at: String,
+        created_at: i64,
         user_id: String,
         display_name: String,
         status: String,
@@ -76,7 +76,7 @@ pub enum FeedLiveEntry {
     #[serde(rename_all = "camelCase")]
     Bio {
         #[serde(rename = "created_at")]
-        created_at: String,
+        created_at: i64,
         user_id: String,
         display_name: String,
         bio: String,
@@ -87,7 +87,7 @@ pub enum FeedLiveEntry {
     #[serde(rename_all = "camelCase")]
     Avatar {
         #[serde(rename = "created_at")]
-        created_at: String,
+        created_at: i64,
         user_id: String,
         display_name: String,
         owner_id: String,
@@ -102,7 +102,7 @@ pub enum FeedLiveEntry {
     #[serde(rename_all = "camelCase")]
     TrustLevel {
         #[serde(rename = "created_at")]
-        created_at: String,
+        created_at: i64,
         user_id: String,
         display_name: String,
         trust_level: String,
@@ -114,7 +114,7 @@ pub enum FeedLiveEntry {
     #[serde(rename_all = "camelCase")]
     DisplayName {
         #[serde(rename = "created_at")]
-        created_at: String,
+        created_at: i64,
         user_id: String,
         display_name: String,
         previous_display_name: String,
@@ -125,7 +125,7 @@ pub enum FeedLiveEntry {
     #[serde(rename_all = "camelCase")]
     Friend {
         #[serde(rename = "created_at")]
-        created_at: String,
+        created_at: i64,
         user_id: String,
         display_name: String,
         #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -134,7 +134,7 @@ pub enum FeedLiveEntry {
     #[serde(rename_all = "camelCase")]
     Unfriend {
         #[serde(rename = "created_at")]
-        created_at: String,
+        created_at: i64,
         user_id: String,
         display_name: String,
         #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -143,7 +143,7 @@ pub enum FeedLiveEntry {
     #[serde(rename_all = "camelCase")]
     OnPlayerJoining {
         #[serde(rename = "created_at")]
-        created_at: String,
+        created_at: i64,
         user_id: String,
         display_name: String,
         location: String,
@@ -160,7 +160,7 @@ pub enum FeedLiveEntry {
     #[serde(rename = "instance.closed", rename_all = "camelCase")]
     InstanceClosed {
         #[serde(rename = "created_at")]
-        created_at: String,
+        created_at: i64,
         id: String,
         location: String,
         message: String,
@@ -229,8 +229,8 @@ impl FeedLiveEntry {
         }
     }
 
-    pub fn created_at(&self) -> &str {
-        common_field!(self, created_at)
+    pub fn created_at(&self) -> i64 {
+        *common_field!(self, created_at)
     }
 
     pub fn owner_user_id(&self) -> &str {
@@ -544,7 +544,7 @@ impl FeedLiveEntry {
 impl From<&FeedLiveEntry> for FeedRowOutput {
     fn from(entry: &FeedLiveEntry) -> Self {
         let row = FeedRowOutput {
-            created_at: optional_text(entry.created_at()),
+            created_at: Some(entry.created_at()).filter(|value| *value != 0),
             user_id: optional_text(entry.user_id()),
             display_name: optional_text(entry.display_name()),
             r#type: optional_text(entry.entry_type()),

@@ -70,7 +70,7 @@ fn switched_journal(source: &Path, target: &Path) -> PendingDataDirMigration {
     let mut journal = PendingDataDirMigration::copying(
         source.to_string_lossy().into_owned(),
         target.to_string_lossy().into_owned(),
-        "2026-07-18T00:00:00Z".into(),
+        1784332800,
         false,
     );
     journal.mark_switched(
@@ -169,7 +169,7 @@ fn interrupted_copy_is_cleaned_before_profile_startup() -> Result<()> {
         &PendingDataDirMigration::copying(
             source.to_string_lossy().into_owned(),
             target.to_string_lossy().into_owned(),
-            "2026-07-18T00:00:00Z".into(),
+            1784332800,
             false,
         ),
     )?;

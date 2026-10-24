@@ -1,6 +1,7 @@
 use super::*;
 use crate::ports::TestGameStateStore;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use vrcx_0_core::time::parse_epoch_seconds;
 
 struct TestDir;
 
@@ -57,7 +58,7 @@ impl RegistryBackupHostActions for StubHost {
 fn backup(name: &str, date: &str) -> StoredRegistryBackup {
     StoredRegistryBackup {
         name: name.into(),
-        date: date.into(),
+        date: parse_epoch_seconds(date).unwrap_or(0),
         data: json!({"key": "value"}),
     }
 }
@@ -76,7 +77,7 @@ fn export_preparation_preserves_name_normalization_and_json_shape() {
             &db,
             &[StoredRegistryBackup {
                 name: name.into(),
-                date: "2026-08-22T00:00:00.000Z".into(),
+                date: 1787356800,
                 data: json!({"b": 2, "a": 1}),
             }],
         )
@@ -115,7 +116,7 @@ fn restore_accepts_lossless_binary_backup_and_records_completion() {
         &db,
         &[StoredRegistryBackup {
             name: "Binary Backup".into(),
-            date: backup_date.into(),
+            date: parse_epoch_seconds(backup_date).unwrap_or(0),
             data: json!({
                 "VRC_BINARY": {
                     "type": 3,
@@ -132,7 +133,7 @@ fn restore_accepts_lossless_binary_backup_and_records_completion() {
     assert_eq!(restored.name, "Binary Backup");
     assert_eq!(
         db.get_string(CONFIG_LAST_RESTORE_CHECK, "").unwrap(),
-        backup_date
+        parse_epoch_seconds(backup_date).unwrap().to_string()
     );
 }
 
@@ -140,7 +141,7 @@ fn restore_accepts_lossless_binary_backup_and_records_completion() {
 fn restore_prompt_acknowledgement_persists_the_shown_backup_date() {
     let dir = TestDir::new("ack");
     let db = dir.open_db();
-    let backup_date = "2026-08-01T12:34:56.000Z";
+    let backup_date = 1785587696;
 
     assert_eq!(
         registry_backup_restore_prompt_acknowledge(&db, backup_date).unwrap(),
@@ -148,7 +149,7 @@ fn restore_prompt_acknowledgement_persists_the_shown_backup_date() {
     );
     assert_eq!(
         db.get_string(CONFIG_LAST_RESTORE_CHECK, "").unwrap(),
-        backup_date
+        backup_date.to_string()
     );
 }
 
@@ -203,8 +204,11 @@ fn maintenance_run_creates_auto_backup_when_registry_present_and_no_recent_backu
 fn maintenance_run_skips_creation_when_recent_auto_backup_exists() {
     let dir = TestDir::new("recent");
     let db = dir.open_db();
-    db.set_string(CONFIG_LAST_BACKUP_DATE, &iso_millis(Utc::now()))
-        .unwrap();
+    db.set_string(
+        CONFIG_LAST_BACKUP_DATE,
+        &(Utc::now()).timestamp().to_string(),
+    )
+    .unwrap();
     let host = StubHost::with_registry(json!({"a": 1}));
 
     let result = registry_backup_maintenance_run(
@@ -229,7 +233,9 @@ fn maintenance_run_prunes_expired_auto_backups_before_checking_recent_backup() {
     let dir = TestDir::new("prune");
     let db = dir.open_db();
     let now = Utc::now();
-    let expired_date = iso_millis(now - AUTO_BACKUP_RETENTION - Duration::days(1));
+    let expired_date = (now - AUTO_BACKUP_RETENTION - Duration::days(1))
+        .timestamp()
+        .to_string();
     write_backups(&db, &[backup(AUTO_BACKUP_NAME, &expired_date)]).unwrap();
     let host = StubHost::with_registry(json!({"a": 1}));
 
@@ -244,7 +250,7 @@ fn maintenance_run_prunes_expired_auto_backups_before_checking_recent_backup() {
     assert!(result.auto_backup_created);
     let backups = registry_backup_list(&db).unwrap();
     assert_eq!(backups.len(), 1);
-    assert_ne!(backups[0].date, expired_date);
+    assert_ne!(backups[0].date.to_string(), expired_date);
 }
 
 #[test]
@@ -268,7 +274,7 @@ fn maintenance_run_falls_back_to_restore_prompt_when_registry_folder_missing() {
     assert!(result.restore_prompt_needed);
     assert_eq!(
         result.restore_prompt_backup_date,
-        Some(last_backup_date.to_string())
+        parse_epoch_seconds(last_backup_date)
     );
     assert_eq!(host.get_registry_calls.load(Ordering::SeqCst), 0);
 }
@@ -314,8 +320,10 @@ fn manual_backup_preserves_the_no_registry_data_error_contract() {
 #[test]
 fn prune_old_auto_backups_removes_only_expired_auto_backups() {
     let now = Utc::now();
-    let fresh_date = iso_millis(now - Duration::days(1));
-    let expired_date = iso_millis(now - AUTO_BACKUP_RETENTION - Duration::days(1));
+    let fresh_date = (now - Duration::days(1)).timestamp().to_string();
+    let expired_date = (now - AUTO_BACKUP_RETENTION - Duration::days(1))
+        .timestamp()
+        .to_string();
     let mut backups = vec![
         backup(AUTO_BACKUP_NAME, &fresh_date),
         backup(AUTO_BACKUP_NAME, &expired_date),
@@ -325,13 +333,15 @@ fn prune_old_auto_backups_removes_only_expired_auto_backups() {
 
     assert!(pruned);
     assert_eq!(backups.len(), 1);
-    assert_eq!(backups[0].date, fresh_date);
+    assert_eq!(backups[0].date.to_string(), fresh_date);
 }
 
 #[test]
 fn prune_old_auto_backups_keeps_manual_backups_regardless_of_age() {
     let now = Utc::now();
-    let expired_date = iso_millis(now - AUTO_BACKUP_RETENTION - Duration::days(1));
+    let expired_date = (now - AUTO_BACKUP_RETENTION - Duration::days(1))
+        .timestamp()
+        .to_string();
     let mut backups = vec![backup(MANUAL_BACKUP_NAME, &expired_date)];
 
     let pruned = prune_old_auto_backups(&mut backups, now);
@@ -366,7 +376,7 @@ fn recent_auto_backup_exists_is_true_within_interval() {
     let now = Utc::now();
     db.set_string(
         CONFIG_LAST_BACKUP_DATE,
-        &iso_millis(now - Duration::days(1)),
+        &(now - Duration::days(1)).timestamp().to_string(),
     )
     .unwrap();
 
@@ -380,7 +390,9 @@ fn recent_auto_backup_exists_is_false_outside_interval() {
     let now = Utc::now();
     db.set_string(
         CONFIG_LAST_BACKUP_DATE,
-        &iso_millis(now - AUTO_BACKUP_INTERVAL - Duration::days(1)),
+        &(now - AUTO_BACKUP_INTERVAL - Duration::days(1))
+            .timestamp()
+            .to_string(),
     )
     .unwrap();
 
@@ -467,7 +479,7 @@ fn maybe_restore_prompt_fires_when_new_backup_is_unacknowledged() {
     assert!(result.restore_prompt_needed);
     assert_eq!(
         result.restore_prompt_backup_date,
-        Some(backup_date.to_string())
+        parse_epoch_seconds(backup_date)
     );
     assert_eq!(result.detail, "Registry restore prompt is needed.");
 }
@@ -479,14 +491,14 @@ fn normalize_backup_falls_back_to_index_and_default_name_for_empty_fields() {
             "Auto Backup",
             "2026-01-01T00:00:00.000Z",
             5,
-            "2026-01-01T00:00:00.000Z-Auto Backup",
+            "1767225600-Auto Backup",
             "Auto Backup",
         ),
         (
             "",
             "2026-01-01T00:00:00.000Z",
             2,
-            "2026-01-01T00:00:00.000Z-backup",
+            "1767225600-backup",
             "Backup",
         ),
         ("Manual Backup", "", 3, "3-Manual Backup", "Manual Backup"),
@@ -498,6 +510,6 @@ fn normalize_backup_falls_back_to_index_and_default_name_for_empty_fields() {
 
         assert_eq!(snapshot.key, expected_key);
         assert_eq!(snapshot.name, expected_name);
-        assert_eq!(snapshot.date, date);
+        assert_eq!(snapshot.date, parse_epoch_seconds(date).unwrap_or(0));
     }
 }

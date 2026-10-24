@@ -57,7 +57,7 @@ import { isSameLocalDay } from '../feedTimeDisplay';
 import { FeedExpandedRow } from './FeedExpandedRow';
 
 function formatTimestampShort(
-    value: string | null | undefined,
+    value: string | number | null | undefined,
     nowMs = Date.now()
 ) {
     const parsed = value ? dateFromUnknown(value) : null;
@@ -71,7 +71,7 @@ function formatTimestampShort(
     );
 }
 
-function formatTimestampLong(value: string | null | undefined) {
+function formatTimestampLong(value: string | number | null | undefined) {
     if (!value) {
         return '-';
     }

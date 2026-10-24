@@ -148,17 +148,17 @@ impl GameLogHostRuntime {
 
     pub fn prime_log_watcher(&self, log_watcher: &LogWatcher) -> Result<()> {
         if vrcx_0_persistence::config::get_bool(&self.db, "gameLogDisabled", false)? {
-            log_watcher.set_date_till("1970-01-01T00:00:00Z");
+            log_watcher.set_date_till(0);
             log_watcher.set_initial_scan_latest_file_only(true);
             return Ok(());
         }
         let last_persisted = vrcx_0_persistence::game_log::get_last_game_log_date(&self.db)?;
-        let resume_after =
-            vrcx_0_persistence::config::get_string(&self.db, "gameLogPersistenceResumeAfter", "")?;
-        let date_till =
-            later_timestamp(&last_persisted, &resume_after).unwrap_or(last_persisted.as_str());
-        self.inner.set_persistence_resume_after(&resume_after);
-        log_watcher.set_date_till(date_till);
+        let resume_after = vrcx_0_core::time::parse_epoch_seconds(
+            &vrcx_0_persistence::config::get_string(&self.db, "gameLogPersistenceResumeAfter", "")?,
+        )
+        .unwrap_or(0);
+        self.inner.set_persistence_resume_after(resume_after);
+        log_watcher.set_date_till(last_persisted.max(resume_after));
         if let Some(cursor) = self.inner.replay_cursor() {
             log_watcher.resume_from(cursor);
         }
@@ -176,9 +176,9 @@ impl GameLogHostRuntime {
         log_watcher
             .with_paused_scan(|| {
                 let resume_after = if disabled {
-                    String::new()
+                    0
                 } else {
-                    vrcx_0_core::time::now_iso()
+                    vrcx_0_core::time::now_epoch()
                 };
                 let mut values = vec![
                     vrcx_0_persistence::config::ConfigWriteEntry {
@@ -193,19 +193,15 @@ impl GameLogHostRuntime {
                 if !disabled {
                     values.push(vrcx_0_persistence::config::ConfigWriteEntry {
                         key: "gameLogPersistenceResumeAfter".into(),
-                        value: resume_after.clone(),
+                        value: resume_after.to_string(),
                     });
                 }
                 vrcx_0_persistence::config::config_set_values(&self.db, values)?;
                 self.inner.reset_replay()?;
-                self.inner.set_persistence_resume_after(&resume_after);
+                self.inner.set_persistence_resume_after(resume_after);
                 log_watcher.clear_resume_cursor();
                 log_watcher.set_initial_scan_latest_file_only(disabled);
-                log_watcher.set_date_till(if disabled {
-                    "1970-01-01T00:00:00Z"
-                } else {
-                    &resume_after
-                });
+                log_watcher.set_date_till(resume_after);
                 log_watcher.reset();
                 Ok(())
             })
@@ -251,40 +247,8 @@ impl GameLogEventSink for GameLogHostRuntime {
     }
 }
 
-fn later_timestamp<'a>(left: &'a str, right: &'a str) -> Option<&'a str> {
-    let left_at = vrcx_0_application_game::parse_event_time_ms(left);
-    let right_at = vrcx_0_application_game::parse_event_time_ms(right);
-    match (left_at, right_at) {
-        (Some(left_at), Some(right_at)) => Some(if left_at >= right_at { left } else { right }),
-        (Some(_), None) => Some(left),
-        (None, Some(_)) => Some(right),
-        (None, None) => None,
-    }
-}
-
 impl GameProcessEventSink for GameLogHostRuntime {
     fn on_game_process_event(&self, event: GameProcessEvent) -> RuntimeResult<()> {
         self.inner.on_game_process_event(event)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::later_timestamp;
-
-    #[test]
-    fn resume_cutoff_only_advances_the_watcher_boundary() {
-        assert_eq!(
-            later_timestamp("2026-08-06T10:00:00.000Z", "2026-08-06T11:00:00.000Z"),
-            Some("2026-08-06T11:00:00.000Z")
-        );
-        assert_eq!(
-            later_timestamp("2026-08-06T12:00:00.000Z", "2026-08-06T11:00:00.000Z"),
-            Some("2026-08-06T12:00:00.000Z")
-        );
-        assert_eq!(
-            later_timestamp("2026-08-06T12:00:00.000Z", ""),
-            Some("2026-08-06T12:00:00.000Z")
-        );
     }
 }

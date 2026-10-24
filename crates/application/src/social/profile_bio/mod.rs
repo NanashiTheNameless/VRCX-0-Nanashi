@@ -12,7 +12,6 @@ pub use vrcx_0_contracts::profile_bio::{
     PROFILE_BIO_SCAN_PAUSE,
 };
 use vrcx_0_contracts::vrchat_api::VrchatJsonResponse;
-use vrcx_0_core::time::iso_millis;
 use vrcx_0_core::OwnerId;
 
 use crate::remote::VrchatRequestPort;
@@ -25,9 +24,9 @@ pub const PROFILE_BIO_SCAN_CONFIG_KEY: &str = "profileBioScanEnabled";
 pub trait ProfileBioStore: Send + Sync {
     fn last_seen(&self, owner: &OwnerId, user_id: &str) -> Result<Option<ProfileBioRecord>>;
     fn record(&self, owner: &OwnerId, user_id: &str, record: &ProfileBioRecord) -> Result<()>;
-    fn mark_checked(&self, owner: &OwnerId, user_id: &str, checked_at: &str) -> Result<()>;
-    fn next_stale_friend(&self, owner: &OwnerId, checked_before: &str) -> Result<Option<String>>;
-    fn observe_self_bio(&self, owner: &OwnerId, bio: &str, observed_at: &str) -> Result<()>;
+    fn mark_checked(&self, owner: &OwnerId, user_id: &str, checked_at: i64) -> Result<()>;
+    fn next_stale_friend(&self, owner: &OwnerId, checked_before: i64) -> Result<Option<String>>;
+    fn observe_self_bio(&self, owner: &OwnerId, bio: &str, observed_at: i64) -> Result<()>;
 }
 
 pub trait ProfileBioRemoteRequests: Send + Sync {
@@ -54,11 +53,11 @@ pub fn observe_profile_bio(
     realtime: &Arc<RealtimeHostRuntime>,
     owner: &OwnerId,
     observation: &ProfileBioObservation,
-    now: &str,
+    now: i64,
 ) -> Result<ProfileBioOutcome> {
     let record = ProfileBioRecord {
         bio: observation.bio.clone(),
-        checked_at: now.to_string(),
+        checked_at: now,
     };
     let Some(last) = store.last_seen(owner, &observation.user_id)? else {
         store.record(owner, &observation.user_id, &record)?;
@@ -79,7 +78,7 @@ pub fn observe_profile_bio(
     let published = realtime.publish_friend_feed_entry(
         owner,
         FeedLiveEntry::Bio {
-            created_at: now.to_string(),
+            created_at: now,
             user_id: observation.user_id.clone(),
             display_name,
             bio: observation.bio.clone(),
@@ -99,7 +98,7 @@ pub fn observe_profile_response(
     realtime: &Arc<RealtimeHostRuntime>,
     owner: &OwnerId,
     response: &VrchatApiResponse,
-    now: &str,
+    now: i64,
 ) -> Result<Option<ProfileBioOutcome>> {
     let Some(observation) = observation_from_response(response) else {
         return Ok(None);
@@ -169,8 +168,8 @@ pub async fn scan_next_profile_bio(
     if deps.pacer.is_paused(now) {
         return Ok(ProfileBioScanOutcome::Paused);
     }
-    let checked_before = iso_millis(now - PROFILE_BIO_SCAN_MIN_AGE);
-    let Some(user_id) = deps.store.next_stale_friend(&deps.owner, &checked_before)? else {
+    let checked_before = (now - PROFILE_BIO_SCAN_MIN_AGE).timestamp();
+    let Some(user_id) = deps.store.next_stale_friend(&deps.owner, checked_before)? else {
         deps.pacer.pause(now);
         return Ok(ProfileBioScanOutcome::Idle);
     };
@@ -178,7 +177,7 @@ pub async fn scan_next_profile_bio(
         .remote_requests
         .profile(deps.endpoint.clone(), user_id.clone())?;
     let response = deps.remote.send(request, VrchatScope::Vrchat).await?;
-    let now_iso = iso_millis(now);
+    let now_epoch = now.timestamp();
     let observation = match classify_api_response(response.status).class {
         ApiResponseClass::Ok => observation_from_response(&response),
         ApiResponseClass::ClientError => None,
@@ -193,7 +192,7 @@ pub async fn scan_next_profile_bio(
         }
     };
     let Some(observation) = observation else {
-        deps.store.mark_checked(&deps.owner, &user_id, &now_iso)?;
+        deps.store.mark_checked(&deps.owner, &user_id, now_epoch)?;
         return Ok(ProfileBioScanOutcome::Unavailable {
             user_id,
             status: response.status,
@@ -204,7 +203,7 @@ pub async fn scan_next_profile_bio(
         deps.realtime,
         &deps.owner,
         &observation,
-        &now_iso,
+        now_epoch,
     )?;
     Ok(ProfileBioScanOutcome::Checked { user_id, outcome })
 }

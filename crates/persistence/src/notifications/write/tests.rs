@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use serde_json::{json, Value};
 
 use crate::common::ParamsBuilder;
@@ -126,7 +126,7 @@ fn notification_add_v1_maps_legacy_fields_and_preserves_the_first_insert() -> Re
     assert_eq!(
         rows,
         vec![vec![
-            json!("2026-05-15T00:00:00Z"),
+            json!(1778803200),
             json!("invite"),
             json!("usr_sender"),
             json!("Sender"),
@@ -338,9 +338,9 @@ fn notification_add_v2_accepts_aliases_defaults_json_and_replaces_existing_rows(
         "notif_v2",
     )?;
     assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0][0], json!("2026-05-17T00:01:00Z"));
-    assert_eq!(rows[0][1], json!("2026-05-17T00:02:00Z"));
-    assert_eq!(rows[0][2], json!("2026-05-18T00:01:00Z"));
+    assert_eq!(rows[0][0], json!(1778976060));
+    assert_eq!(rows[0][1], json!(1778976120));
+    assert_eq!(rows[0][2], json!(1779062460));
     assert_eq!(rows[0][3], json!("invite"));
     assert_eq!(rows[0][4], Value::Null);
     assert_eq!(rows[0][5], json!("Open world"));
@@ -422,11 +422,9 @@ fn notification_mutations_update_only_the_requested_rows() -> Result<(), Error> 
     assert_eq!(v2[1], vec![json!("second"), Value::Null, json!(1)]);
     assert_eq!(v2[2][0], json!("third"));
     assert_eq!(v2[2][2], json!(1));
-    let expires_at = DateTime::parse_from_rfc3339(v2[2][1].as_str().unwrap())
-        .unwrap()
-        .with_timezone(&Utc);
-    assert!(expires_at.timestamp_millis() >= before.timestamp_millis());
-    assert!(expires_at.timestamp_millis() <= after.timestamp_millis());
+    let expires_at = v2[2][1].as_i64().unwrap();
+    assert!(expires_at >= before.timestamp());
+    assert!(expires_at <= after.timestamp());
 
     let legacy = rows_by_id(
         &db,
@@ -528,11 +526,9 @@ fn combined_expire_and_delete_cover_both_versions_without_crossing_accounts() ->
     )?;
     assert_eq!(own_v1[0][0], json!(1));
     assert_eq!(own_v2[0][1], json!(1));
-    let expires_at = DateTime::parse_from_rfc3339(own_v2[0][0].as_str().unwrap())
-        .unwrap()
-        .with_timezone(&Utc);
-    assert!(expires_at.timestamp_millis() >= before.timestamp_millis());
-    assert!(expires_at.timestamp_millis() <= after.timestamp_millis());
+    let expires_at = own_v2[0][0].as_i64().unwrap();
+    assert!(expires_at >= before.timestamp());
+    assert!(expires_at <= after.timestamp());
 
     let other_v1 = rows_by_id(
         &db,

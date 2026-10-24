@@ -62,7 +62,7 @@ async function performRegistryBackupMaintenance(reason: string) {
             );
         configRepository.applyServerEntry(
             'VRChatRegistryLastRestoreCheck',
-            acknowledgedDate
+            String(acknowledgedDate)
         );
     }
 }

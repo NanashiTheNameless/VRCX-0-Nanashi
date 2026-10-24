@@ -5,7 +5,7 @@ use vrcx_0_core::text::normalize_text;
 use serde_json::Value;
 use vrcx_0_application_core::vrchat_api::{VrchatApiRequest, VrchatScope};
 use vrcx_0_contracts::VrchatJsonResponse;
-use vrcx_0_core::time::now_iso;
+use vrcx_0_core::time::now_epoch;
 use vrcx_0_core::vrchat_endpoints::normalize_vrchat_api_endpoint;
 
 use super::types::{
@@ -150,13 +150,13 @@ pub async fn update_player_moderation(
             .store
             .get(OwnerId::new(owner_user_id.clone()), target_user_id.clone())?;
         let (block, mute) = resolve_local_moderation_state(existing.as_ref(), kind, input.enabled);
-        let updated_at = now_iso();
+        let updated_at = now_epoch();
         if block || mute {
             deps.store.set(
                 OwnerId::new(owner_user_id.clone()),
                 LocalModerationInput {
                     user_id: target_user_id.clone(),
-                    updated_at: updated_at.clone(),
+                    updated_at,
                     display_name: target_display_name.clone(),
                     block,
                     mute,
@@ -347,7 +347,7 @@ mod tests {
     fn local_moderation_update_preserves_other_bit_when_not_supplied() {
         let existing = LocalModerationOutput {
             user_id: "usr_target".into(),
-            updated_at: String::new(),
+            updated_at: 0,
             display_name: String::new(),
             block: true,
             mute: true,

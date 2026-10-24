@@ -10028,6 +10028,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "compact_str",
+ "jiff",
  "proptest",
  "quick-xml 0.41.0",
  "regex",

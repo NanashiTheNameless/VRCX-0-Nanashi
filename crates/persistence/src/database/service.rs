@@ -606,7 +606,29 @@ fn open_read_connection(db_path: &Path) -> Result<Connection, Error> {
     Ok(conn)
 }
 
+fn register_display_time(conn: &Connection) -> Result<(), Error> {
+    conn.create_scalar_function(
+        "vrcx_display_epoch",
+        2,
+        rusqlite::functions::FunctionFlags::SQLITE_UTF8,
+        |context| {
+            let Some(seconds) = context.get::<Option<i64>>(0)? else {
+                return Ok(None);
+            };
+            let offset = context
+                .get::<Option<i64>>(1)?
+                .map(|minutes| minutes.saturating_mul(60))
+                .unwrap_or_else(|| {
+                    i64::from(vrcx_0_core::time::display_offset_at(seconds).local_minus_utc())
+                });
+            Ok(seconds.checked_add(offset))
+        },
+    )
+    .map_err(Error::sqlite)
+}
+
 fn configure_connection(conn: &Connection) -> Result<(), Error> {
+    register_display_time(conn)?;
     conn.busy_timeout(CONNECTION_BUSY_TIMEOUT)
         .map_err(Error::sqlite)?;
     conn.execute_batch(
@@ -622,6 +644,7 @@ fn configure_connection(conn: &Connection) -> Result<(), Error> {
 }
 
 fn configure_read_connection(conn: &Connection) -> Result<(), Error> {
+    register_display_time(conn)?;
     conn.busy_timeout(CONNECTION_BUSY_TIMEOUT)
         .map_err(Error::sqlite)?;
     conn.execute_batch(

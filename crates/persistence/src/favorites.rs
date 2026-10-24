@@ -2,7 +2,7 @@ use serde_json::json;
 pub use vrcx_0_contracts::FavoriteRow;
 use vrcx_0_core::FavoriteEntityKind;
 
-use crate::common::{normalize_text, now_iso, row_string, ParamsBuilder};
+use crate::common::{normalize_text, now_epoch, row_i64, row_string, ParamsBuilder};
 use crate::config::{ensure_config_table, resolve_config_key};
 use crate::database::schema::ensure_global_store_tables;
 use crate::database::{DatabaseService, DatabaseWriteTransaction};
@@ -55,7 +55,7 @@ fn favorite_list_ordered(
         .map(|row| {
             FavoriteRow::new(
                 kind,
-                row_string(&row, 0),
+                row_i64(&row, 0),
                 row_string(&row, 1),
                 row_string(&row, 2),
             )
@@ -85,7 +85,7 @@ pub fn favorite_add(
         &ParamsBuilder::new()
             .set(entity_param, normalize_text(entity_id))
             .set("group_name", normalize_text(group_name))
-            .set("created_at", now_iso())
+            .set("created_at", now_epoch())
             .set("owner_id", owner_id)
             .build(),
     )
@@ -163,7 +163,7 @@ pub fn favorite_move(
             &ParamsBuilder::new()
                 .set(entity_param, normalized_entity_id)
                 .set("group_name", normalized_target_group_name)
-                .set("created_at", now_iso())
+                .set("created_at", now_epoch())
                 .set("owner_id", owner_id)
                 .build(),
         )?;

@@ -595,7 +595,7 @@ impl ActivityRouter {
             };
 
             let delivery_is_live = (desktop || vr || hmd || webhook || tts || widget)
-                && is_live_event(&state, &entry.created_at);
+                && is_live_event(&state, entry.created_at);
             let delivery = if delivery_is_live {
                 remember_joined_delivery(&mut state, &entry, vr, hmd);
                 Some(ActivityDelivery {
@@ -624,7 +624,7 @@ impl ActivityRouter {
     }
 
     pub fn deliver_test_notification(&self, message: &str) {
-        let created_at = Utc::now().to_rfc3339();
+        let created_at = vrcx_0_core::time::now_epoch();
         let mut event = ActivityEvent::new(
             ActivityKind::Event,
             format!("test-notification:{created_at}"),
@@ -813,17 +813,16 @@ fn remember_source_id(state: &mut ActivityState, source_id: String) {
     }
 }
 
-fn is_live_event(state: &ActivityState, created_at: &str) -> bool {
+fn is_live_event(state: &ActivityState, created_at: i64) -> bool {
     let Some(live_since) = state.live_since else {
         return false;
     };
-    let trimmed = created_at.trim();
-    if trimmed.is_empty() {
+    if created_at == 0 {
         return true;
     }
-    match DateTime::parse_from_rfc3339(trimmed) {
-        Ok(timestamp) => timestamp.with_timezone(&Utc) >= live_since - DELIVERY_LIVE_GRACE,
-        Err(_) => true,
+    match DateTime::<Utc>::from_timestamp(created_at, 0) {
+        Some(timestamp) => timestamp >= live_since - DELIVERY_LIVE_GRACE,
+        None => true,
     }
 }
 
@@ -894,7 +893,7 @@ fn normalize_source_id(event: &ActivityEvent) -> String {
             "{}:{}:{}",
             event.kind.key(),
             event.actor.user_id.trim(),
-            event.created_at.trim()
+            event.created_at
         )
     } else {
         source_id.to_string()

@@ -6,10 +6,10 @@ use super::{
     GameLogProcessEvent, GameLogSideEffect,
 };
 
-fn event(created_at: &str, kind: GameLogEventKind) -> GameLogEvent {
+fn event(created_at: i64, kind: GameLogEventKind) -> GameLogEvent {
     GameLogEvent {
         file_name: "output_log.txt".into(),
-        created_at: created_at.into(),
+        created_at,
         kind,
     }
 }
@@ -17,7 +17,7 @@ fn event(created_at: &str, kind: GameLogEventKind) -> GameLogEvent {
 #[test]
 fn reports_an_instance_avatar_change_only_after_the_first_avatar_seen() {
     let mut engine = GameLogIngestEngine::default();
-    let avatar = |created_at: &str, avatar_name: &str| {
+    let avatar = |created_at: i64, avatar_name: &str| {
         event(
             created_at,
             GameLogEventKind::AvatarChange {
@@ -29,30 +29,30 @@ fn reports_an_instance_avatar_change_only_after_the_first_avatar_seen() {
     let output = engine.ingest_events(
         &[
             event(
-                "2026-09-06T15:52:04Z",
+                1788709924,
                 GameLogEventKind::Location {
                     location: "wrld_room:1".into(),
                     world_name: "Room".into(),
                 },
             ),
             event(
-                "2026-09-06T15:52:05Z",
+                1788709925,
                 GameLogEventKind::PlayerJoined {
                     display_name: "Alice".into(),
                     user_id: "usr_alice".into(),
                 },
             ),
-            avatar("2026-09-06T15:52:06Z", "First"),
-            avatar("2026-09-06T15:52:07Z", "First"),
-            avatar("2026-09-06T15:52:08Z", "Second"),
+            avatar(1788709926, "First"),
+            avatar(1788709927, "First"),
+            avatar(1788709928, "Second"),
             event(
-                "2026-09-06T15:53:00Z",
+                1788709980,
                 GameLogEventKind::Location {
                     location: "wrld_next:2".into(),
                     world_name: "Next".into(),
                 },
             ),
-            avatar("2026-09-06T15:53:01Z", "Third"),
+            avatar(1788709981, "Third"),
         ],
         GameLogIngestOptions::default(),
     );
@@ -60,7 +60,7 @@ fn reports_an_instance_avatar_change_only_after_the_first_avatar_seen() {
     assert_eq!(
         output.avatar_changes,
         [GameLogAvatarChange {
-            created_at: "2026-09-06T15:52:08Z".into(),
+            created_at: 1788709928,
             user_id: "usr_alice".into(),
             display_name: "Alice".into(),
             avatar_name: "Second".into(),
@@ -75,7 +75,7 @@ fn room_exit_cleanup_does_not_report_friends_as_departed() {
     for batched in [false, true] {
         let mut engine = GameLogIngestEngine::default();
         let mut initial = vec![event(
-            "2026-09-06T15:52:04Z",
+            1788709924,
             GameLogEventKind::Location {
                 location: "wrld_old:1".into(),
                 world_name: "Old".into(),
@@ -83,7 +83,7 @@ fn room_exit_cleanup_does_not_report_friends_as_departed() {
         )];
         for user_id in ["usr_staying", "usr_leaving"] {
             initial.push(event(
-                "2026-09-06T15:52:29Z",
+                1788709949,
                 GameLogEventKind::PlayerJoined {
                     display_name: user_id.into(),
                     user_id: user_id.into(),
@@ -93,41 +93,41 @@ fn room_exit_cleanup_does_not_report_friends_as_departed() {
         engine.ingest_events(&initial, GameLogIngestOptions::default());
         let events = [
             event(
-                "2026-09-06T15:53:01Z",
+                1788709981,
                 GameLogEventKind::PlayerLeft {
                     display_name: "usr_leaving".into(),
                     user_id: "usr_leaving".into(),
                 },
             ),
             event(
-                "2026-09-06T15:53:01Z",
+                1788709981,
                 GameLogEventKind::LocationDestination {
                     location: "wrld_next:2".into(),
                 },
             ),
             event(
-                "2026-09-06T15:53:01Z",
+                1788709981,
                 GameLogEventKind::PlayerLeft {
                     display_name: "usr_staying".into(),
                     user_id: "usr_staying".into(),
                 },
             ),
             event(
-                "2026-09-06T15:53:02Z",
+                1788709982,
                 GameLogEventKind::Location {
                     location: "wrld_next:2".into(),
                     world_name: "Next".into(),
                 },
             ),
             event(
-                "2026-09-06T15:53:12Z",
+                1788709992,
                 GameLogEventKind::PlayerJoined {
                     display_name: "usr_next".into(),
                     user_id: "usr_next".into(),
                 },
             ),
             event(
-                "2026-09-06T15:53:13Z",
+                1788709993,
                 GameLogEventKind::PlayerLeft {
                     display_name: "usr_next".into(),
                     user_id: "usr_next".into(),
@@ -161,7 +161,7 @@ fn resource_load_without_write_does_not_emit_runtime_persisted_mirror() {
     let mut engine = GameLogIngestEngine::default();
     let output = engine.ingest_events(
         &[event(
-            "2026-05-14T00:00:00.000Z",
+            1778716800,
             GameLogEventKind::ResourceLoad {
                 resource_type: "ImageLoad".into(),
                 resource_url: "https://example.test/image.png".into(),
@@ -181,7 +181,7 @@ fn provider_video_vrcx_event_does_not_emit_core_persisted_mirror() {
     let mut engine = GameLogIngestEngine::default();
     let output = engine.ingest_events(
         &[event(
-            "2026-05-14T00:00:00.000Z",
+            1778716800,
             GameLogEventKind::Vrcx {
                 data: "VideoPlay(PyPyDance) \"https://example.test\",0,10,\"Song (Alpha)\"".into(),
             },
@@ -201,21 +201,21 @@ fn pypy_dance_provider_event_enriches_video_after_generic_playback_log() {
     let output = engine.ingest_events(
         &[
             event(
-                "2026-05-14T00:00:00.000Z",
+                1778716800,
                 GameLogEventKind::Location {
                     location: "wrld_f20326da-f1ac-45fc-a062-609723b097b1:1".into(),
                     world_name: "PyPyDance".into(),
                 },
             ),
             event(
-                "2026-05-14T00:00:01.000Z",
+                1778716801,
                 GameLogEventKind::VideoPlay {
                     video_url: video_url.into(),
                     display_name: String::new(),
                 },
             ),
             event(
-                "2026-05-14T00:00:02.000Z",
+                1778716802,
                 GameLogEventKind::Vrcx {
                     data: format!(
                         "VideoPlay(PyPyDance) \"{video_url}\",0,180,\"1234 : Song Title (Alpha)\""
@@ -242,14 +242,14 @@ fn leaving_room_resets_now_playing_for_world_switch_and_rejoin() {
         engine.ingest_events(
             &[
                 event(
-                    "2026-05-14T00:00:00.000Z",
+                    1778716800,
                     GameLogEventKind::Location {
                         location: "wrld_current:1".into(),
                         world_name: "Current World".into(),
                     },
                 ),
                 event(
-                    "2026-05-14T00:01:00.000Z",
+                    1778716860,
                     GameLogEventKind::VideoPlay {
                         video_url: "https://example.test/video.mp4".into(),
                         display_name: "Player".into(),
@@ -261,7 +261,7 @@ fn leaving_room_resets_now_playing_for_world_switch_and_rejoin() {
 
         let leave_output = engine.ingest_events(
             &[event(
-                "2026-05-14T00:02:00.000Z",
+                1778716920,
                 GameLogEventKind::LocationDestination {
                     location: destination.into(),
                 },
@@ -276,7 +276,7 @@ fn leaving_room_resets_now_playing_for_world_switch_and_rejoin() {
 
         let next_video_output = engine.ingest_events(
             &[event(
-                "2026-05-14T00:03:00.000Z",
+                1778716980,
                 GameLogEventKind::VideoPlay {
                     video_url: "https://example.test/video.mp4".into(),
                     display_name: "Player".into(),
@@ -294,7 +294,7 @@ fn leaving_room_resets_now_playing_for_world_switch_and_rejoin() {
 
 #[test]
 fn videos_from_a_closed_game_never_stay_now_playing() {
-    let video = |at: &str| {
+    let video = |at: i64| {
         event(
             at,
             GameLogEventKind::VideoPlay {
@@ -309,14 +309,11 @@ fn videos_from_a_closed_game_never_stay_now_playing() {
             is_steamvr_running: false,
             game_changed: false,
         },
-        changed_at: "2026-05-14T00:10:00.000Z".into(),
+        changed_at: 1778717400,
     };
 
     let mut scanned_first = GameLogIngestEngine::default();
-    scanned_first.ingest_events(
-        &[video("2026-05-14T00:01:00.000Z")],
-        GameLogIngestOptions::default(),
-    );
+    scanned_first.ingest_events(&[video(1778716860)], GameLogIngestOptions::default());
     assert_eq!(
         scanned_first
             .handle_process_event(game_closed.clone())
@@ -326,10 +323,7 @@ fn videos_from_a_closed_game_never_stay_now_playing() {
 
     let mut closed_first = GameLogIngestEngine::default();
     closed_first.handle_process_event(game_closed);
-    let output = closed_first.ingest_events(
-        &[video("2026-05-14T00:01:00.000Z")],
-        GameLogIngestOptions::default(),
-    );
+    let output = closed_first.ingest_events(&[video(1778716860)], GameLogIngestOptions::default());
     assert!(matches!(
         output.side_effects.as_slice(),
         [
@@ -345,21 +339,21 @@ fn player_left_tolerates_missing_join_user_id_when_display_name_is_unique() {
     let output = engine.ingest_events(
         &[
             event(
-                "2026-05-14T04:00:00.000Z",
+                1778731200,
                 GameLogEventKind::Location {
                     location: "wrld_ingest:1".into(),
                     world_name: "Ingest World".into(),
                 },
             ),
             event(
-                "2026-05-14T04:00:10.000Z",
+                1778731210,
                 GameLogEventKind::PlayerJoined {
                     display_name: "Left Player".into(),
                     user_id: String::new(),
                 },
             ),
             event(
-                "2026-05-14T04:00:40.000Z",
+                1778731240,
                 GameLogEventKind::PlayerLeft {
                     display_name: "Left Player".into(),
                     user_id: "usr_left".into(),
@@ -384,7 +378,7 @@ fn external_vrcx_event_emits_mirror_when_external_row_is_written() {
     let mut engine = GameLogIngestEngine::default();
     let output = engine.ingest_events(
         &[event(
-            "2026-05-14T00:00:00.000Z",
+            1778716800,
             GameLogEventKind::Vrcx {
                 data: "UnknownProvider payload".into(),
             },

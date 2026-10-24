@@ -89,7 +89,7 @@ impl DatabaseService {
             from_version,
             to_version,
             work_db_path: work_db_path.to_string_lossy().into_owned(),
-            started_at: Utc::now().to_rfc3339(),
+            started_at: vrcx_0_core::time::now_epoch(),
             app_version: app_version.map(str::to_owned),
             stage: stage.map(str::to_owned),
             operation: operation.map(str::to_owned),
@@ -214,7 +214,7 @@ impl DatabaseService {
                 } else {
                     self.db_path.to_string_lossy().into_owned()
                 };
-                failed_status.failed_at = Some(Utc::now().to_rfc3339());
+                failed_status.failed_at = Some(vrcx_0_core::time::now_epoch());
                 failed_status.reason = Some(reason.clone());
                 match self.write_status(&self.failed_status_path(), &failed_status) {
                     Ok(()) => {
@@ -293,7 +293,7 @@ impl DatabaseService {
             }
         };
 
-        status.failed_at = Some(Utc::now().to_rfc3339());
+        status.failed_at = Some(vrcx_0_core::time::now_epoch());
         status.reason = Some(reason);
         self.write_status(&self.failed_status_path(), &status)?;
         self.remove_file_if_exists(&self.active_status_path())?;

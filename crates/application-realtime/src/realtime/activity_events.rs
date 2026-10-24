@@ -5,6 +5,7 @@ use vrcx_0_contracts::activity::{
 use vrcx_0_contracts::feed_live::FeedLiveEntry;
 use vrcx_0_core::json::JsonExt;
 use vrcx_0_core::text::first_non_empty_owned;
+use vrcx_0_core::time::epoch_from_json;
 
 use super::RealtimeInstanceQueueProjection;
 
@@ -105,7 +106,7 @@ pub(crate) fn feed_activity_event(entry: &FeedLiveEntry) -> Option<ActivityEvent
         ),
         FeedLiveEntry::InstanceClosed { .. } => return None,
     };
-    let created_at = entry.created_at().trim();
+    let created_at = entry.created_at();
     let user_id = entry.user_id().trim();
     let mut event = ActivityEvent::new(
         kind,
@@ -190,7 +191,7 @@ pub(crate) fn queue_ready_activity_event(
             "queue-ready:{}:{}",
             projection.instance_location, projection.received_at
         ),
-        projection.received_at.clone(),
+        projection.received_at,
     );
     event.facts = ActivityFacts {
         location: projection.instance_location.clone(),
@@ -201,11 +202,12 @@ pub(crate) fn queue_ready_activity_event(
     event
 }
 
-fn notification_created_at(notification: &Value) -> String {
-    first_non_empty_owned([
-        notification.trimmed_field("createdAt").unwrap_or_default(),
-        notification.trimmed_field("created_at").unwrap_or_default(),
-    ])
+/// VRChat's own notification time (ISO text), or epoch seconds from this app.
+fn notification_created_at(notification: &Value) -> i64 {
+    ["createdAt", "created_at"]
+        .iter()
+        .find_map(|key| notification.get(*key).and_then(epoch_from_json))
+        .unwrap_or(0)
 }
 
 fn notification_facts(notification: &Value) -> ActivityFacts {

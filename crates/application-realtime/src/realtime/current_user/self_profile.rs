@@ -21,7 +21,7 @@ pub(super) fn append_self_profile_observations(
         persistence
             .self_profile_observations
             .push(SelfProfileObservation {
-                observed_at: now.iso.clone(),
+                observed_at: now.at,
                 field,
                 value: value.to_string(),
             });

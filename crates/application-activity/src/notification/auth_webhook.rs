@@ -209,7 +209,9 @@ pub fn auth_webhook_generic_payload(event: &AuthWebhookEvent) -> Value {
         "reason": sanitize_auth_webhook_reason(&event.reason),
         "mode": &event.mode,
         "timestamp": &event.timestamp,
-        "localTime": webhook_local_time_string(&event.timestamp),
+        "localTime": webhook_local_time_string(
+            vrcx_0_core::time::parse_epoch_seconds(&event.timestamp).unwrap_or_default(),
+        ),
     })
 }
 
@@ -228,7 +230,9 @@ fn auth_webhook_discord_payload(event: &AuthWebhookEvent) -> Value {
         "reason": &reason,
         "mode": &event.mode,
         "timestamp": &event.timestamp,
-        "localTime": webhook_local_time_string(&event.timestamp),
+        "localTime": webhook_local_time_string(
+            vrcx_0_core::time::parse_epoch_seconds(&event.timestamp).unwrap_or_default(),
+        ),
         "content": null,
         "embeds": [{
             "title": event.kind.title(),

@@ -62,7 +62,7 @@ fn setup(name: &str) -> (TestDir, DatabaseService, StreamScope) {
     (dir, db, scope)
 }
 
-fn status_row(created_at: &str, status: &str) -> Value {
+fn status_row(created_at: i64, status: &str) -> Value {
     json!({
         "created_at": created_at,
         "user_id": "usr_friend",
@@ -160,10 +160,7 @@ fn the_same_event_from_two_recorders_is_kept_once() {
         &db,
         &scope,
         source(&vault, "pc-a", 1, 1),
-        &chunk(
-            "feed_status",
-            vec![status_row("2026-10-10T12:00:00.000Z", "busy")],
-        ),
+        &chunk("feed_status", vec![status_row(1791633600, "busy")]),
     )
     .unwrap();
     assert_eq!((first.inserted, first.matched), (1, 0));
@@ -173,10 +170,7 @@ fn the_same_event_from_two_recorders_is_kept_once() {
         &db,
         &scope,
         source(&vault, "collector", 1, 2),
-        &chunk(
-            "feed_status",
-            vec![status_row("2026-10-10T12:00:04.250Z", "busy")],
-        ),
+        &chunk("feed_status", vec![status_row(1791633604, "busy")]),
     )
     .unwrap();
     assert_eq!((second.inserted, second.matched), (0, 1));
@@ -189,8 +183,8 @@ fn the_same_event_from_two_recorders_is_kept_once() {
         &chunk(
             "feed_status",
             vec![
-                status_row("2026-10-10T12:00:30.000Z", "busy"),
-                status_row("2026-10-10T12:00:01.000Z", "active"),
+                status_row(1791633630, "busy"),
+                status_row(1791633601, "active"),
             ],
         ),
     )
@@ -203,7 +197,7 @@ fn the_same_event_from_two_recorders_is_kept_once() {
     );
 }
 
-fn friend_log_row(created_at: &str, kind: &str, from: &str, to: &str) -> Value {
+fn friend_log_row(created_at: i64, kind: &str, from: &str, to: &str) -> Value {
     let (display, previous_display, trust, previous_trust) = match kind {
         "DisplayName" => (to, from, "Known User", ""),
         "TrustLevel" => ("Friend", "", to, from),
@@ -241,7 +235,7 @@ fn record_friend_log(db: &DatabaseService, row: &Value) {
     assert_eq!(written, 1);
 }
 
-fn friend_log_times(db: &DatabaseService, scope: &StreamScope) -> Vec<(String, String)> {
+fn friend_log_times(db: &DatabaseService, scope: &StreamScope) -> Vec<(i64, String)> {
     let table = scope.table_name(stream_spec("friend_log_history").unwrap());
     db.execute(
         &format!("SELECT created_at, type FROM {table} ORDER BY created_at"),
@@ -249,7 +243,7 @@ fn friend_log_times(db: &DatabaseService, scope: &StreamScope) -> Vec<(String, S
     )
     .unwrap()
     .iter()
-    .map(|row| (row_string(row, 0), row_string(row, 1)))
+    .map(|row| (row_i64(row, 0), row_string(row, 1)))
     .collect()
 }
 
@@ -259,21 +253,13 @@ fn a_friend_log_change_noticed_later_by_the_collector_keeps_only_this_pcs_row() 
     let vault = vault();
     record_friend_log(
         &db,
-        &friend_log_row(
-            "2026-10-10T08:21:03.000Z",
-            "TrustLevel",
-            "Known User",
-            "Trusted User",
-        ),
+        &friend_log_row(1791620463, "TrustLevel", "Known User", "Trusted User"),
     );
     record_friend_log(
         &db,
-        &friend_log_row("2026-10-10T01:45:00.000Z", "DisplayName", "Cosmo", "Ash"),
+        &friend_log_row(1791596700, "DisplayName", "Cosmo", "Ash"),
     );
-    record_friend_log(
-        &db,
-        &friend_log_row("2026-10-10T11:42:54.000Z", "Friend", "", ""),
-    );
+    record_friend_log(&db, &friend_log_row(1791632574, "Friend", "", ""));
 
     // The collector noticed each of them at another time, up to hours away.
     let report = import_chunk(
@@ -283,14 +269,9 @@ fn a_friend_log_change_noticed_later_by_the_collector_keeps_only_this_pcs_row() 
         &chunk(
             "friend_log_history",
             vec![
-                friend_log_row(
-                    "2026-10-10T08:16:59.000Z",
-                    "TrustLevel",
-                    "Known User",
-                    "Trusted User",
-                ),
-                friend_log_row("2026-10-10T00:34:03.000Z", "DisplayName", "Cosmo", "Ash"),
-                friend_log_row("2026-10-10T11:42:42.000Z", "Friend", "", ""),
+                friend_log_row(1791620219, "TrustLevel", "Known User", "Trusted User"),
+                friend_log_row(1791592443, "DisplayName", "Cosmo", "Ash"),
+                friend_log_row(1791632562, "Friend", "", ""),
             ],
         ),
     )
@@ -299,15 +280,9 @@ fn a_friend_log_change_noticed_later_by_the_collector_keeps_only_this_pcs_row() 
     assert_eq!(
         friend_log_times(&db, &scope),
         vec![
-            (
-                "2026-10-10T01:45:00.000Z".to_owned(),
-                "DisplayName".to_owned()
-            ),
-            (
-                "2026-10-10T08:21:03.000Z".to_owned(),
-                "TrustLevel".to_owned()
-            ),
-            ("2026-10-10T11:42:54.000Z".to_owned(), "Friend".to_owned()),
+            (1791596700, "DisplayName".to_owned()),
+            (1791620463, "TrustLevel".to_owned()),
+            (1791632574, "Friend".to_owned()),
         ]
     );
     // This PC's rows are still its own and are uploaded.
@@ -325,44 +300,28 @@ fn this_pcs_friend_log_row_replaces_the_collectors_earlier_copy() {
         &chunk(
             "friend_log_history",
             vec![
-                friend_log_row(
-                    "2026-10-10T08:16:59.000Z",
-                    "TrustLevel",
-                    "Known User",
-                    "Trusted User",
-                ),
-                friend_log_row("2026-10-09T08:00:00.000Z", "DisplayName", "Old", "Cosmo"),
+                friend_log_row(1791620219, "TrustLevel", "Known User", "Trusted User"),
+                friend_log_row(1791532800, "DisplayName", "Old", "Cosmo"),
             ],
         ),
     )
     .unwrap();
     record_friend_log(
         &db,
-        &friend_log_row(
-            "2026-10-10T08:21:03.000Z",
-            "TrustLevel",
-            "Known User",
-            "Trusted User",
-        ),
+        &friend_log_row(1791620463, "TrustLevel", "Known User", "Trusted User"),
     );
 
     // The rename this PC never recorded stays as the collector logged it.
     assert_eq!(
         friend_log_times(&db, &scope),
         vec![
-            (
-                "2026-10-09T08:00:00.000Z".to_owned(),
-                "DisplayName".to_owned()
-            ),
-            (
-                "2026-10-10T08:21:03.000Z".to_owned(),
-                "TrustLevel".to_owned()
-            ),
+            (1791532800, "DisplayName".to_owned()),
+            (1791620463, "TrustLevel".to_owned()),
         ]
     );
     let exported = export(&db, &scope, "friend_log_history");
     assert_eq!(exported.len(), 1);
-    assert_eq!(exported[0].1["created_at"], "2026-10-10T08:21:03.000Z");
+    assert_eq!(exported[0].1["created_at"], 1791620463);
 }
 
 #[test]
@@ -371,20 +330,12 @@ fn a_friend_log_change_that_really_happened_again_is_kept() {
     let vault = vault();
     record_friend_log(
         &db,
-        &friend_log_row("2026-10-10T01:00:00.000Z", "DisplayName", "Cosmo", "Ash"),
+        &friend_log_row(1791594000, "DisplayName", "Cosmo", "Ash"),
     );
+    record_friend_log(&db, &friend_log_row(1790812800, "Friend", "", ""));
     record_friend_log(
         &db,
-        &friend_log_row("2026-10-01T00:00:00.000Z", "Friend", "", ""),
-    );
-    record_friend_log(
-        &db,
-        &friend_log_row(
-            "2026-08-01T00:00:00.000Z",
-            "TrustLevel",
-            "Known User",
-            "Trusted User",
-        ),
+        &friend_log_row(1785542400, "TrustLevel", "Known User", "Trusted User"),
     );
 
     let report = import_chunk(
@@ -395,25 +346,15 @@ fn a_friend_log_change_that_really_happened_again_is_kept() {
             "friend_log_history",
             vec![
                 // Renamed back and then to the same name again.
-                friend_log_row("2026-10-10T05:00:00.000Z", "DisplayName", "Ash", "Cosmo"),
-                friend_log_row("2026-10-10T09:00:00.000Z", "DisplayName", "Cosmo", "Ash"),
+                friend_log_row(1791608400, "DisplayName", "Ash", "Cosmo"),
+                friend_log_row(1791622800, "DisplayName", "Cosmo", "Ash"),
                 // Unfriended and added again.
-                friend_log_row("2026-10-03T00:00:00.000Z", "Unfriend", "", ""),
-                friend_log_row("2026-10-05T00:00:00.000Z", "Friend", "", ""),
+                friend_log_row(1790985600, "Unfriend", "", ""),
+                friend_log_row(1791158400, "Friend", "", ""),
                 // The same step, but far too long ago to be the same event.
-                friend_log_row(
-                    "2026-10-10T00:00:00.000Z",
-                    "TrustLevel",
-                    "Known User",
-                    "Trusted User",
-                ),
+                friend_log_row(1791590400, "TrustLevel", "Known User", "Trusted User"),
                 // Another change of the same kind is its own event.
-                friend_log_row(
-                    "2026-10-10T00:05:00.000Z",
-                    "TrustLevel",
-                    "Trusted User",
-                    "Veteran User",
-                ),
+                friend_log_row(1791590700, "TrustLevel", "Trusted User", "Veteran User"),
             ],
         ),
     )
@@ -426,24 +367,16 @@ fn a_friend_log_change_that_really_happened_again_is_kept() {
 fn friend_log_copies_stored_before_are_removed_when_the_account_is_opened() {
     let (_dir, db, scope) = setup("friend-log-cleanup");
     let table = scope.table_name(stream_spec("friend_log_history").unwrap());
+    record_friend_log(&db, &friend_log_row(1791632574, "Friend", "", ""));
     record_friend_log(
         &db,
-        &friend_log_row("2026-10-10T11:42:54.000Z", "Friend", "", ""),
-    );
-    record_friend_log(
-        &db,
-        &friend_log_row(
-            "2026-10-10T12:00:00.000Z",
-            "TrustLevel",
-            "Known User",
-            "Trusted User",
-        ),
+        &friend_log_row(1791633600, "TrustLevel", "Known User", "Trusted User"),
     );
     // Two rows as an older build left them: one imported copy, and one
     // identical pair this PC recorded itself.
     for (created_at, kind, synced) in [
-        ("2026-10-10T11:42:42.000Z", "Friend", true),
-        ("2026-10-10T12:04:00.000Z", "TrustLevel", false),
+        (1791632562, "Friend", true),
+        (1791633840, "TrustLevel", false),
     ] {
         let (previous, trust) = match kind {
             "TrustLevel" => ("Known User", "Trusted User"),
@@ -475,21 +408,15 @@ fn friend_log_copies_stored_before_are_removed_when_the_account_is_opened() {
     assert_eq!(
         friend_log_times(&db, &scope),
         vec![
-            ("2026-10-10T11:42:54.000Z".to_owned(), "Friend".to_owned()),
-            (
-                "2026-10-10T12:00:00.000Z".to_owned(),
-                "TrustLevel".to_owned()
-            ),
-            (
-                "2026-10-10T12:04:00.000Z".to_owned(),
-                "TrustLevel".to_owned()
-            ),
+            (1791632574, "Friend".to_owned()),
+            (1791633600, "TrustLevel".to_owned()),
+            (1791633840, "TrustLevel".to_owned()),
         ]
     );
     assert_eq!(count(&db, "remote_sync_provenance"), 0);
 }
 
-fn status_times(db: &DatabaseService, scope: &StreamScope) -> Vec<(String, String)> {
+fn status_times(db: &DatabaseService, scope: &StreamScope) -> Vec<(i64, String)> {
     let table = scope.table_name(stream_spec("feed_status").unwrap());
     db.execute(
         &format!("SELECT created_at, status FROM {table} ORDER BY created_at"),
@@ -497,11 +424,11 @@ fn status_times(db: &DatabaseService, scope: &StreamScope) -> Vec<(String, Strin
     )
     .unwrap()
     .iter()
-    .map(|row| (row_string(row, 0), row_string(row, 1)))
+    .map(|row| (row_i64(row, 0), row_string(row, 1)))
     .collect()
 }
 
-fn record_status(db: &DatabaseService, scope: &StreamScope, created_at: &str, status: &str) {
+fn record_status(db: &DatabaseService, scope: &StreamScope, created_at: i64, status: &str) {
     let table = scope.table_name(stream_spec("feed_status").unwrap());
     db.write_transaction(|tx| {
         tx.execute_non_query(
@@ -526,14 +453,14 @@ fn record_status(db: &DatabaseService, scope: &StreamScope, created_at: &str, st
 fn a_feed_change_one_recorder_noticed_minutes_late_keeps_this_pcs_row() {
     let (_dir, db, scope) = setup("feed-late");
     let vault = vault();
-    let times = |rows: &[(&str, &str)]| -> Vec<(String, String)> {
+    let times = |rows: &[(i64, &str)]| -> Vec<(i64, String)> {
         rows.iter()
-            .map(|(at, status)| ((*at).to_owned(), (*status).to_owned()))
+            .map(|(time, status)| (*time, status.to_string()))
             .collect()
     };
 
     // This PC first, the collector's copy four minutes later.
-    record_status(&db, &scope, "2026-10-10T12:00:00.000Z", "busy");
+    record_status(&db, &scope, 1791633600, "busy");
     let report = import_chunk(
         &db,
         &scope,
@@ -541,8 +468,8 @@ fn a_feed_change_one_recorder_noticed_minutes_late_keeps_this_pcs_row() {
         &chunk(
             "feed_status",
             vec![
-                status_row("2026-10-10T12:04:00.000Z", "busy"),
-                status_row("2026-10-10T13:00:00.000Z", "ask me"),
+                status_row(1791633840, "busy"),
+                status_row(1791637200, "ask me"),
             ],
         ),
     )
@@ -550,13 +477,10 @@ fn a_feed_change_one_recorder_noticed_minutes_late_keeps_this_pcs_row() {
     assert_eq!((report.inserted, report.matched), (1, 1));
 
     // The collector first, this PC four minutes later.
-    record_status(&db, &scope, "2026-10-10T13:04:00.000Z", "ask me");
+    record_status(&db, &scope, 1791637440, "ask me");
     assert_eq!(
         status_times(&db, &scope),
-        times(&[
-            ("2026-10-10T12:00:00.000Z", "busy"),
-            ("2026-10-10T13:04:00.000Z", "ask me"),
-        ])
+        times(&[(1791633600, "busy"), (1791637440, "ask me"),])
     );
 
     // Back to the same status after another one, or the same status much
@@ -568,9 +492,9 @@ fn a_feed_change_one_recorder_noticed_minutes_late_keeps_this_pcs_row() {
         &chunk(
             "feed_status",
             vec![
-                status_row("2026-10-10T13:05:00.000Z", "busy"),
-                status_row("2026-10-10T13:06:00.000Z", "ask me"),
-                status_row("2026-10-10T14:00:00.000Z", "ask me"),
+                status_row(1791637500, "busy"),
+                status_row(1791637560, "ask me"),
+                status_row(1791640800, "ask me"),
             ],
         ),
     )
@@ -590,8 +514,8 @@ fn one_source_repeating_an_event_keeps_both_rows() {
         &chunk(
             "feed_status",
             vec![
-                status_row("2026-10-10T12:00:00.000Z", "busy"),
-                status_row("2026-10-10T12:00:03.000Z", "busy"),
+                status_row(1791633600, "busy"),
+                status_row(1791633603, "busy"),
             ],
         ),
     )
@@ -606,8 +530,8 @@ fn a_replacement_snapshot_adds_nothing_this_pc_already_has() {
     let table = scope.table_name(stream_spec("feed_status").unwrap());
     // One source reported the same status twice, three seconds apart.
     let rows = vec![
-        status_row("2026-10-10T12:00:00.000Z", "busy"),
-        status_row("2026-10-10T12:00:03.000Z", "busy"),
+        status_row(1791633600, "busy"),
+        status_row(1791633603, "busy"),
     ];
     import_chunk(
         &db,
@@ -653,8 +577,8 @@ fn a_replacement_snapshot_keeps_repeated_events_on_a_new_pc() {
         &chunk(
             "feed_status",
             vec![
-                status_row("2026-10-10T12:00:00.000Z", "busy"),
-                status_row("2026-10-10T12:00:03.000Z", "busy"),
+                status_row(1791633600, "busy"),
+                status_row(1791633603, "busy"),
             ],
         ),
     )
@@ -664,10 +588,7 @@ fn a_replacement_snapshot_keeps_repeated_events_on_a_new_pc() {
         &db,
         &scope,
         snapshot(&vault, "pc-a", 10, 9),
-        &chunk(
-            "feed_status",
-            vec![status_row("2026-10-10T12:00:06.000Z", "busy")],
-        ),
+        &chunk("feed_status", vec![status_row(1791633606, "busy")]),
     )
     .unwrap();
     assert_eq!((first.inserted, first.matched), (2, 0));
@@ -681,7 +602,7 @@ fn a_snapshot_row_matches_a_row_this_pc_recorded_itself() {
     let vault = vault();
     let table = scope.table_name(stream_spec("feed_status").unwrap());
     db.execute_non_query(
-        &format!("INSERT INTO {table} (created_at, user_id, display_name, status, status_description, previous_status, previous_status_description) VALUES ('2026-10-10T12:00:02.000Z', 'usr_friend', 'Friend', 'busy', '', '', '')"),
+        &format!("INSERT INTO {table} (created_at, user_id, display_name, status, status_description, previous_status, previous_status_description) VALUES (1791633602, 'usr_friend', 'Friend', 'busy', '', '', '')"),
         &Default::default(),
     )
     .unwrap();
@@ -689,10 +610,7 @@ fn a_snapshot_row_matches_a_row_this_pc_recorded_itself() {
         &db,
         &scope,
         snapshot(&vault, "pc-a", 9, 9),
-        &chunk(
-            "feed_status",
-            vec![status_row("2026-10-10T12:00:00.000Z", "busy")],
-        ),
+        &chunk("feed_status", vec![status_row(1791633600, "busy")]),
     )
     .unwrap();
     assert_eq!((report.inserted, report.matched), (0, 1));
@@ -703,10 +621,7 @@ fn a_snapshot_row_matches_a_row_this_pc_recorded_itself() {
 fn replaying_a_chunk_changes_nothing() {
     let (_dir, db, scope) = setup("replay");
     let vault = vault();
-    let rows = chunk(
-        "feed_status",
-        vec![status_row("2026-10-10T12:00:00.000Z", "busy")],
-    );
+    let rows = chunk("feed_status", vec![status_row(1791633600, "busy")]);
     import_chunk(&db, &scope, source(&vault, "pc-a", 7, 1), &rows).unwrap();
     // The server presents the same source chunk again under a new sequence.
     let replay = import_chunk(&db, &scope, source(&vault, "pc-a", 7, 2), &rows).unwrap();
@@ -726,7 +641,7 @@ fn imported_rows_are_never_exported_and_local_rows_are() {
     let vault = vault();
     let table = scope.table_name(stream_spec("feed_status").unwrap());
     db.execute_non_query(
-        &format!("INSERT INTO {table} (created_at, user_id, display_name, status, status_description) VALUES ('2026-10-09T08:00:00.000Z', 'usr_local', 'Local', 'active', '')"),
+        &format!("INSERT INTO {table} (created_at, user_id, display_name, status, status_description) VALUES (1791532800, 'usr_local', 'Local', 'active', '')"),
         &Default::default(),
     )
     .unwrap();
@@ -734,10 +649,7 @@ fn imported_rows_are_never_exported_and_local_rows_are() {
         &db,
         &scope,
         source(&vault, "pc-a", 1, 1),
-        &chunk(
-            "feed_status",
-            vec![status_row("2026-10-10T12:00:00.000Z", "busy")],
-        ),
+        &chunk("feed_status", vec![status_row(1791633600, "busy")]),
     )
     .unwrap();
 
@@ -868,10 +780,7 @@ fn clearing_account_state_keeps_history_and_provenance() {
         &db,
         &scope,
         source(&vault, "pc-a", 1, 1),
-        &chunk(
-            "feed_status",
-            vec![status_row("2026-10-10T12:00:00.000Z", "busy")],
-        ),
+        &chunk("feed_status", vec![status_row(1791633600, "busy")]),
     )
     .unwrap();
     clear_account_state(&db, &vault.api_origin, &vault.account_id).unwrap();
@@ -898,17 +807,17 @@ fn coverage_periods_are_reported_for_the_requested_window() {
     assert_eq!(coverage_between(&db, USER, 6_000, 9_000).unwrap(), vec![]);
 }
 
-fn memo(db: &DatabaseService, user_id: &str) -> Option<(String, String)> {
+fn memo(db: &DatabaseService, user_id: &str) -> Option<(String, i64)> {
     db.execute(
         "SELECT memo, edited_at FROM memos WHERE user_id = @user_id",
         &ParamsBuilder::new().set("user_id", user_id).build(),
     )
     .unwrap()
     .first()
-    .map(|row| (row_string(row, 0), row_string(row, 1)))
+    .map(|row| (row_string(row, 0), row_i64(row, 1)))
 }
 
-fn memo_row(user_id: &str, edited_at: &str, memo: &str) -> Value {
+fn memo_row(user_id: &str, edited_at: i64, memo: &str) -> Value {
     json!({ "user_id": user_id, "edited_at": edited_at, "memo": memo })
 }
 
@@ -917,7 +826,7 @@ fn state_rows_merge_by_key_and_the_later_edit_wins() {
     let (_dir, db, scope) = setup("state-merge");
     let vault = vault();
     db.execute_non_query(
-        "INSERT INTO memos (user_id, edited_at, memo) VALUES ('usr_a', '2026-10-05T00:00:00.000Z', 'mine')",
+        "INSERT INTO memos (user_id, edited_at, memo) VALUES ('usr_a', 1791158400, 'mine')",
         &Default::default(),
     )
     .unwrap();
@@ -929,8 +838,8 @@ fn state_rows_merge_by_key_and_the_later_edit_wins() {
         &chunk(
             "memos",
             vec![
-                memo_row("usr_a", "2026-10-01T00:00:00.000Z", "older"),
-                memo_row("usr_b", "2026-10-02T00:00:00.000Z", "new friend"),
+                memo_row("usr_a", 1790812800, "older"),
+                memo_row("usr_b", 1790899200, "new friend"),
                 json!({ "edited_at": "2026-10-02T00:00:00.000Z", "memo": "no key" }),
             ],
         ),
@@ -949,20 +858,13 @@ fn state_rows_merge_by_key_and_the_later_edit_wins() {
         source(&vault, "pc-a", 2, 2),
         &chunk(
             "memos",
-            vec![memo_row(
-                "usr_a",
-                "2026-10-09T00:00:00.000Z",
-                "edited elsewhere",
-            )],
+            vec![memo_row("usr_a", 1791504000, "edited elsewhere")],
         ),
     )
     .unwrap();
     assert_eq!(
         memo(&db, "usr_a").unwrap(),
-        (
-            "edited elsewhere".to_owned(),
-            "2026-10-09T00:00:00.000Z".to_owned()
-        )
+        ("edited elsewhere".to_owned(), 1791504000)
     );
 }
 
@@ -973,16 +875,13 @@ fn state_export_fingerprint_follows_the_table_content() {
     assert_eq!(export_state(&db, &scope, spec).unwrap().fingerprint, 0);
 
     db.execute_non_query(
-        "INSERT INTO memos (user_id, edited_at, memo) VALUES ('usr_a', '2026-10-05T00:00:00.000Z', 'one')",
+        "INSERT INTO memos (user_id, edited_at, memo) VALUES ('usr_a', 1791158400, 'one')",
         &Default::default(),
     )
     .unwrap();
     let exported = export_state(&db, &scope, spec).unwrap();
     let (rows, first) = (exported.rows, exported.fingerprint);
-    assert_eq!(
-        rows,
-        vec![memo_row("usr_a", "2026-10-05T00:00:00.000Z", "one")]
-    );
+    assert_eq!(rows, vec![memo_row("usr_a", 1791158400, "one")]);
     assert_ne!(first, 0);
     assert_eq!(export_state(&db, &scope, spec).unwrap().fingerprint, first);
 
@@ -1032,10 +931,7 @@ fn a_deletion_travels_and_does_not_undo_a_later_edit() {
     let (_dir, db, scope) = setup("state-delete");
     let vault = vault();
     let spec = state_spec("memos").unwrap();
-    for (user, edited_at) in [
-        ("usr_old", "2026-10-01T00:00:00.000Z"),
-        ("usr_new", "2026-10-09T00:00:00.000Z"),
-    ] {
+    for (user, edited_at) in [("usr_old", 1790812800), ("usr_new", 1791504000)] {
         db.execute_non_query(
             "INSERT INTO memos (user_id, edited_at, memo) VALUES (@user, @edited_at, 'text')",
             &ParamsBuilder::new()
@@ -1045,9 +941,8 @@ fn a_deletion_travels_and_does_not_undo_a_later_edit() {
         )
         .unwrap();
     }
-    let deleted_at = chrono::DateTime::parse_from_rfc3339("2026-10-05T00:00:00.000Z")
-        .unwrap()
-        .timestamp_millis();
+    // Older versions sent the deletion time in milliseconds.
+    let deleted_at = 1791158400_i64 * 1000;
     let deletions = vec![
         json!({ "key": ["usr_old"], "deletedAtMs": deleted_at }),
         json!({ "key": ["usr_new"], "deletedAtMs": deleted_at }),
@@ -1069,16 +964,10 @@ fn a_deletion_travels_and_does_not_undo_a_later_edit() {
 
     // The deleted row does not come back from an older copy, but a copy
     // written after the deletion does.
-    let old_copy = chunk(
-        "memos",
-        vec![memo_row("usr_old", "2026-10-02T00:00:00.000Z", "stale")],
-    );
+    let old_copy = chunk("memos", vec![memo_row("usr_old", 1790899200, "stale")]);
     import_chunk(&db, &scope, source(&vault, "pc-b", 1, 2), &old_copy).unwrap();
     assert!(memo(&db, "usr_old").is_none());
-    let new_copy = chunk(
-        "memos",
-        vec![memo_row("usr_old", "2026-10-08T00:00:00.000Z", "rewritten")],
-    );
+    let new_copy = chunk("memos", vec![memo_row("usr_old", 1791417600, "rewritten")]);
     import_chunk(&db, &scope, source(&vault, "pc-b", 2, 3), &new_copy).unwrap();
     assert_eq!(memo(&db, "usr_old").unwrap().0, "rewritten");
     assert!(export_state(&db, &scope, spec)
@@ -1141,4 +1030,89 @@ fn owned_state_rows_get_the_local_owner_and_stay_per_account() {
         .get("owner_id")
         .is_none());
     assert!(export_state(&db, &other, spec).unwrap().rows.is_empty());
+}
+
+#[test]
+fn rows_from_older_versions_with_text_dates_match_and_are_stored_as_seconds() {
+    let (_dir, db, scope) = setup("legacy-text-dates");
+    let vault = vault();
+    record_status(&db, &scope, 1791633600, "busy");
+    let legacy_status = |created_at: &str, status: &str| {
+        let mut row = status_row(0, status);
+        row["created_at"] = json!(created_at);
+        row
+    };
+
+    let report = import_chunk(
+        &db,
+        &scope,
+        source(&vault, "older-pc", 1, 1),
+        &chunk(
+            "feed_status",
+            vec![
+                legacy_status("2026-10-10T12:00:03.250Z", "busy"),
+                legacy_status("2026-10-10T14:20:00.000+02:00", "ask me"),
+            ],
+        ),
+    )
+    .unwrap();
+
+    assert_eq!((report.inserted, report.matched), (1, 1));
+    assert_eq!(
+        status_times(&db, &scope),
+        vec![
+            (1791633600, "busy".to_owned()),
+            (1791634800, "ask me".to_owned()),
+        ]
+    );
+    let stored_types = db
+        .execute(
+            &format!(
+                "SELECT DISTINCT typeof(created_at) FROM {}",
+                scope.table_name(stream_spec("feed_status").unwrap())
+            ),
+            &Default::default(),
+        )
+        .unwrap();
+    assert_eq!(stored_types, vec![vec![json!("integer")]]);
+
+    import_chunk(
+        &db,
+        &scope,
+        source(&vault, "older-pc", 2, 2),
+        &chunk(
+            "memos",
+            vec![json!({ "user_id": "usr_a", "edited_at": "2026-10-09T00:00:00.000Z", "memo": "old format" })],
+        ),
+    )
+    .unwrap();
+    assert_eq!(
+        memo(&db, "usr_a").unwrap(),
+        ("old format".to_owned(), 1791504000)
+    );
+}
+
+#[test]
+fn legacy_game_events_in_the_same_second_survive_sync_and_reimport() {
+    let (_dir, db, scope) = setup("legacy-game-events");
+    let vault = vault();
+    let rows = ["2026-10-10T12:00:00.100Z", "2026-10-10T12:00:00.900Z"]
+        .into_iter()
+        .map(|at| json!({"created_at": at, "data": "same event text"}))
+        .collect::<Vec<_>>();
+    let body = chunk("gamelog_event", rows);
+    let first = import_chunk(&db, &scope, source(&vault, "old-pc", 1, 1), &body).unwrap();
+    assert_eq!(first.inserted, 2);
+    let second = import_chunk(&db, &scope, source(&vault, "other-pc", 1, 2), &body).unwrap();
+    assert_eq!(second.inserted, 0);
+    assert_eq!(second.matched, 2);
+    assert_eq!(count(&db, "gamelog_event"), 2);
+    assert!(export(&db, &scope, "gamelog_event").is_empty());
+    let stored = db
+        .execute(
+            "SELECT event_discriminator FROM gamelog_event ORDER BY id",
+            &Default::default(),
+        )
+        .unwrap();
+    assert_ne!(stored[0][0], stored[1][0]);
 }

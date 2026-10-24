@@ -144,7 +144,7 @@ mod tests {
             manifest: ProfileRestoreManifestSummary {
                 app_version: "2.24.3".into(),
                 db_version: 18,
-                created_at: "2026-08-22T00:00:00.000Z".into(),
+                created_at: 1787356800,
                 platform: "windows".into(),
                 kind: ProfileBackupKind::Manual,
             },

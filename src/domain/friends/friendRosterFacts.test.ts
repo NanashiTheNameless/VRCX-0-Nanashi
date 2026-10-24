@@ -32,7 +32,7 @@ function fact(patch: Partial<UserFact>): UserFact {
     return {
         id: 'usr_1',
         endpoint: 'api',
-        updatedAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: 1767225600,
         ...patch
     };
 }

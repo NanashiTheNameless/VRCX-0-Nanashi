@@ -6,7 +6,7 @@ use crate::realtime::normalize_user_table_prefix;
 use crate::Error;
 
 use super::caveats::invite_history_caveats;
-use super::helpers::{append_time_window_filter, clamped_optional_limit, table_exists};
+use super::helpers::{append_time_window_filter, clamped_optional_limit, row_iso, table_exists};
 use super::types::{InviteDirection, InviteHistoryInput, InviteHistoryOutput, InviteHistoryRow};
 
 pub fn get_invite_history(
@@ -83,7 +83,7 @@ fn append_v1_invites(
         let sender_username = row_string(&row, 1);
         let receiver_user_id = row_string(&row, 2);
         let kind = row_string(&row, 3);
-        let created_at = row_string(&row, 4);
+        let created_at = row_iso(&row, 4);
         let inferred_direction = if sender_user_id == input.owner_user_id.as_str() {
             InviteDirection::Sent
         } else {
@@ -136,7 +136,7 @@ fn append_v2_invites(
             row_string(&row, 1),
             InviteDirection::Received,
             row_string(&row, 2),
-            row_string(&row, 3),
+            row_iso(&row, 3),
         );
     }
     Ok(())

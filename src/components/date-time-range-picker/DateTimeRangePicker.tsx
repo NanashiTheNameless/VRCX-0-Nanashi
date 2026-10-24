@@ -133,6 +133,7 @@ export function DateTimeRangePicker({
     align = 'start',
     renderTrigger
 }: DateTimeRangePickerProps) {
+    const timeZone = usePreferencesStore((state) => state.dtTimeZone);
     const weekStartsOn = usePreferencesStore((state) => state.weekStartsOn);
     const [open, setOpen] = useState(false);
     const [draftRange, setDraftRange] = useState<DateRange | undefined>(
@@ -166,7 +167,7 @@ export function DateTimeRangePicker({
         setEndTime(
             snapMinuteDown(toTimeValue(value.to, defaultEndTime), minuteStep)
         );
-    }, [open, value.from, value.to, minuteStep, defaultEndTime]);
+    }, [open, value.from, value.to, minuteStep, defaultEndTime, timeZone]);
 
     function apply() {
         onChange(

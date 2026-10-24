@@ -1,7 +1,6 @@
-use std::borrow::Cow;
 use std::collections::BTreeSet;
 
-use chrono::{DateTime, SecondsFormat, TimeDelta};
+use chrono::DateTime;
 use futures_util::future::join_all;
 use futures_util::stream::{self, StreamExt};
 use serde_json::Value;
@@ -9,7 +8,7 @@ use vrcx_0_contracts::feed_live::FeedLiveEntry;
 use vrcx_0_contracts::profile_bio::{ProfileBioObservation, RecordedProfileBio};
 use vrcx_0_core::friends::FriendRosterBaseline;
 use vrcx_0_core::realtime::{RealtimeMessageParseOutcome, RealtimeMessageParser};
-use vrcx_0_core::time::iso_millis;
+use vrcx_0_core::time::epoch_from_millis;
 use vrcx_0_logger_protocol::wire::{FrameKind, WireFrame};
 
 use crate::realtime::avatar_change::resolve_avatar_feed_entry;
@@ -60,7 +59,6 @@ impl<'a> ReplayResolvers<'a> {
 struct ReplayStep<'a> {
     order: (i64, u8, i64),
     at_ms: i64,
-    received_at: Cow<'a, str>,
     frame: &'a WireFrame,
 }
 
@@ -108,9 +106,7 @@ pub async fn replay_logger_frames(
             outcome.entries.extend(resolved.into_iter().flatten());
         }
     }
-    outcome
-        .entries
-        .sort_by(|left, right| left.created_at().cmp(right.created_at()));
+    outcome.entries.sort_by_key(|entry| entry.created_at());
     outcome
 }
 
@@ -127,17 +123,11 @@ fn replay_frames(frames: &[WireFrame], account_id: &str, clock_offset_ms: i64) -
         .iter()
         .filter(|frame| frame.account_id == account_id)
         .filter_map(|frame| {
+            // The recorder's wire format keeps ISO text.
             let recorded_at = DateTime::parse_from_rfc3339(&frame.received_at).ok()?;
-            let (at_ms, received_at) = if clock_offset_ms == 0 {
-                (
-                    recorded_at.timestamp_millis(),
-                    Cow::Borrowed(frame.received_at.as_str()),
-                )
-            } else {
-                let shifted = recorded_at
-                    .checked_sub_signed(TimeDelta::try_milliseconds(clock_offset_ms)?)?;
-                (shifted.timestamp_millis(), Cow::Owned(shifted.to_rfc3339()))
-            };
+            let at_ms = recorded_at
+                .timestamp_millis()
+                .checked_sub(clock_offset_ms)?;
             let order = match frame.kind {
                 FrameKind::Message | FrameKind::Connect | FrameKind::Profile => {
                     (frame.seq, 1, frame.seq)
@@ -147,7 +137,6 @@ fn replay_frames(frames: &[WireFrame], account_id: &str, clock_offset_ms: i64) -
             Some(ReplayStep {
                 order,
                 at_ms,
-                received_at,
                 frame,
             })
         })
@@ -166,7 +155,9 @@ fn replay_frames(frames: &[WireFrame], account_id: &str, clock_offset_ms: i64) -
         replay.fire_timers(step.at_ms);
         match step.frame.kind {
             FrameKind::Snapshot => replay.apply_snapshot(step.frame, step.at_ms),
-            FrameKind::Message => replay.apply_message(&step.frame.payload, &step.received_at),
+            FrameKind::Message => {
+                replay.apply_message(&step.frame.payload, epoch_from_millis(step.at_ms))
+            }
             FrameKind::Profile => replay.record_profile(step.frame, step.at_ms),
             FrameKind::Connect => {}
         }
@@ -238,9 +229,8 @@ impl Replay<'_> {
         self.timers.extend(effects.schedules);
     }
 
-    fn apply_message(&mut self, text: &str, received_at: &str) {
-        let RealtimeMessageParseOutcome::Valid(payload) =
-            self.parser.parse_text(text, received_at.to_string())
+    fn apply_message(&mut self, text: &str, received_at: i64) {
+        let RealtimeMessageParseOutcome::Valid(payload) = self.parser.parse_text(text, received_at)
         else {
             return;
         };
@@ -269,12 +259,9 @@ impl Replay<'_> {
         else {
             return;
         };
-        let Some(observed_at) = DateTime::from_timestamp_millis(at_ms) else {
-            return;
-        };
         self.outcome.profile_bios.push(RecordedProfileBio {
             observation,
-            observed_at: iso_millis(observed_at),
+            observed_at: epoch_from_millis(at_ms),
         });
     }
 
@@ -285,13 +272,10 @@ impl Replay<'_> {
                 return;
             }
             let wake = self.timers.remove(0);
-            let Some(at) = DateTime::from_timestamp_millis(wake.at_ms) else {
-                continue;
-            };
-            if let Some(output) = self.runtime.wake(
-                &wake.user_id,
-                &at.to_rfc3339_opts(SecondsFormat::Nanos, false),
-            ) {
+            if let Some(output) = self
+                .runtime
+                .wake(&wake.user_id, epoch_from_millis(wake.at_ms))
+            {
                 self.timers.extend(output.wake);
                 self.keep(output.persistence.feed_entries);
             }

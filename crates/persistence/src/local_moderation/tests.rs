@@ -41,7 +41,7 @@ fn test_db(name: &str) -> Result<TestDatabase, Error> {
 fn local_entry(user_id: &str, block: bool, mute: bool) -> LocalModerationInput {
     LocalModerationInput {
         user_id: user_id.into(),
-        updated_at: "2026-07-01T00:00:00Z".into(),
+        updated_at: 1782864000,
         display_name: format!("Name {user_id}"),
         block,
         mute,
@@ -86,7 +86,7 @@ fn snapshot_merges_block_and_mute_and_ignores_invalid_rows() -> Result<(), Error
     let row = &rows[0];
     assert_eq!(row.user_id, "usr_target");
     assert_eq!(row.display_name, "Final Name");
-    assert_eq!(row.updated_at, "2026-07-01T00:02:00Z");
+    assert_eq!(row.updated_at, 1782864120);
     assert!(row.block);
     assert!(row.mute);
     assert!(
@@ -122,7 +122,7 @@ fn snapshot_metadata_uses_latest_valid_created_row_regardless_of_input_order() -
     .expect("merged moderation");
 
     for row in [&first, &second] {
-        assert_eq!(row.updated_at, "2026-07-02T00:00:00Z");
+        assert_eq!(row.updated_at, 1782950400);
         assert_eq!(row.display_name, "New Name");
         assert!(row.block);
         assert!(row.mute);

@@ -59,7 +59,7 @@ impl Drop for Fixture {
 }
 
 fn at(value: &str) -> DateTime<Utc> {
-    parse_time(value).unwrap()
+    parse_time(vrcx_0_core::time::parse_epoch_seconds(value).unwrap()).unwrap()
 }
 
 fn candidate(
@@ -71,7 +71,7 @@ fn candidate(
     let mut event = ActivityEvent::new(
         kind,
         format!("test:{}:{created_at}", kind.key()),
-        created_at,
+        vrcx_0_core::time::parse_epoch_seconds(created_at).unwrap_or(0),
     );
     event.actor.user_id = user_id.into();
     event.actor.display_name = "Friend Now".into();
@@ -271,7 +271,7 @@ fn time_reminders_fire_once_or_advance_past_now() {
             SELF,
             "once".into(),
             ReminderTrigger::Time {
-                at: "2026-09-27T12:00:00Z".into(),
+                at: 1790510400,
                 repeat_minutes: 0,
             },
             true,
@@ -282,7 +282,7 @@ fn time_reminders_fire_once_or_advance_past_now() {
             SELF,
             "hourly".into(),
             ReminderTrigger::Time {
-                at: "2026-09-27T12:00:00Z".into(),
+                at: 1790510400,
                 repeat_minutes: 60,
             },
             false,
@@ -304,7 +304,7 @@ fn time_reminders_fire_once_or_advance_past_now() {
     assert_eq!(
         left[0].trigger,
         ReminderTrigger::Time {
-            at: "2026-09-27T16:00:00Z".into(),
+            at: 1790524800,
             repeat_minutes: 60,
         }
     );
@@ -342,7 +342,7 @@ fn reminders_persist_are_capped_and_delete_is_owner_scoped() {
             SELF,
             "one too many".into(),
             ReminderTrigger::Time {
-                at: "2026-09-27T12:00:00Z".into(),
+                at: 1790510400,
                 repeat_minutes: 0
             },
             false

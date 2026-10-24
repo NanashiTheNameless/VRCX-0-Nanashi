@@ -36,7 +36,7 @@ fn hmd_entry(source_id: &str) -> ActivityEntry {
         source_id: source_id.to_string(),
         kind: ActivityKind::Status,
         category: vrcx_0_application_activity::ActivityCategory::CurrentInstance,
-        created_at: "2026-01-01T00:00:00Z".to_string(),
+        created_at: 1767225600,
         actor_user_id: "usr_actor".to_string(),
         actor_display_name: source_id.to_string(),
         content: vrcx_0_application_activity::ActivityContent {

@@ -56,7 +56,7 @@ fn activity_text_serializes_as_the_typed_tagged_contract() {
 
 fn recent_event(kind: ActivityKind, user_id: &str) -> ActivityEvent {
     ActivityEvent {
-        created_at: chrono::Utc::now().to_rfc3339(),
+        created_at: chrono::Utc::now().timestamp(),
         ..event(kind, user_id)
     }
 }
@@ -202,7 +202,7 @@ fn invites_from_favorites_match_the_all_favorites_scope() {
 fn group_event_notifications_use_the_vrchat_title_when_it_is_given() {
     let runtime = ActivityRouter::with_filters(ActivityFilters::default());
     let group_event = |kind: ActivityKind, title: &str| {
-        let mut event = ActivityEvent::new(kind, kind.key(), "2026-05-31T00:02:00.000Z");
+        let mut event = ActivityEvent::new(kind, kind.key(), 1780185720);
         event.facts.title = title.into();
         event.facts.message = "Starts at 21:00".into();
         event
@@ -318,7 +318,7 @@ fn queue_ready_names_the_ready_instance() {
     let mut ready = ActivityEvent::new(
         ActivityKind::GroupQueueReady,
         "queue-ready:wrld_1:123",
-        "2026-05-31T00:03:10.000Z",
+        1780185790,
     );
     ready.facts.location = "wrld_1:123".into();
     ready.facts.world_id = "wrld_1".into();
@@ -466,7 +466,7 @@ fn delivery_fires_for_missed_event_after_live_session_started() {
     runtime.inner.state.lock().unwrap().live_since = Some(now - chrono::Duration::seconds(120));
 
     let mut missed = event(ActivityKind::FriendRequest, "usr_missed");
-    missed.created_at = (now - chrono::Duration::seconds(90)).to_rfc3339();
+    missed.created_at = (now - chrono::Duration::seconds(90)).timestamp();
     runtime.ingest(missed);
     let deliveries = sink.take_deliveries();
     assert_eq!(deliveries.len(), 1);
@@ -844,11 +844,7 @@ fn hide_all_feed_activity_skips_every_feed_kind_but_keeps_other_activity() {
 }
 
 fn event(kind: ActivityKind, user_id: &str) -> ActivityEvent {
-    let mut event = ActivityEvent::new(
-        kind,
-        format!("{}:{user_id}", kind.key()),
-        "2026-05-31T00:00:00.000Z",
-    );
+    let mut event = ActivityEvent::new(kind, format!("{}:{user_id}", kind.key()), 1780185600);
     event.actor = ActivityActor::new(user_id, user_id);
     event.subject = ActivitySubject::User(user_id.to_string());
     event

@@ -41,7 +41,7 @@ function runningPayload() {
         processed: 0,
         loaded: 0,
         failed: 0,
-        startedAt: '2026-01-01T00:00:00.000Z',
+        startedAt: 1767225600,
         finishedAt: null
     };
 }
@@ -54,7 +54,7 @@ function completedPayload(
         status: 'completed' as const,
         processed: 3,
         loaded: 3,
-        finishedAt: '2026-01-01T00:00:05.000Z',
+        finishedAt: 1767225605,
         ...overrides
     };
 }
@@ -194,7 +194,7 @@ describe('friendProfileLoadService', () => {
             status: 'cancelled',
             processed: 74,
             loaded: 74,
-            finishedAt: '2026-01-01T00:00:05.000Z'
+            finishedAt: 1767225605
         });
         applyFriendProfileLoadStatusPayload({
             ...runningPayload(),

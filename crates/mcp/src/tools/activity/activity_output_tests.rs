@@ -295,7 +295,12 @@ fn timeline_bucket_accepts_camel_and_snake_case() {
 
 fn world_visit(minute: usize, world_id: &str, created_on: &str, time: i64) -> GameLogLocationEntry {
     GameLogLocationEntry {
-        created_at: format!("{created_on}T{:02}:{:02}:00.000Z", minute / 60, minute % 60),
+        created_at: vrcx_0_core::time::parse_epoch_seconds(&format!(
+            "{created_on}T{:02}:{:02}:00.000Z",
+            minute / 60,
+            minute % 60
+        ))
+        .unwrap(),
         location: format!("{world_id}:1"),
         world_id: world_id.into(),
         world_name: world_id.into(),
@@ -419,7 +424,7 @@ fn social_period_states_the_best_time_bucket_timezone() {
 
 fn closed_stay(left_at: &str, minutes: i64) -> GameLogJoinLeaveEntry {
     GameLogJoinLeaveEntry {
-        created_at: left_at.into(),
+        created_at: vrcx_0_core::time::parse_epoch_seconds(left_at).unwrap(),
         event_type: "OnPlayerLeft".into(),
         display_name: "Owner".into(),
         user_id: "usr_owner".into(),
@@ -492,7 +497,7 @@ fn my_activity_counts_the_current_stay_while_the_game_is_running() {
         &OwnerId::new("usr_owner"),
         &GameLogWriteBatch {
             locations: vec![GameLogLocationEntry {
-                created_at: vrcx_0_core::time::iso_millis(started_at),
+                created_at: started_at.timestamp(),
                 location: "wrld_open:1".into(),
                 world_id: "wrld_open".into(),
                 world_name: "Open".into(),

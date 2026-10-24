@@ -60,7 +60,7 @@ const STATUS_ASKME_TINT =
     'color-mix(in srgb, var(--status-askme) 14%, transparent)';
 
 function useExpiryCountdown(
-    expiresAt: string | null | undefined,
+    expiresAt: string | number | null | undefined,
     enabled: boolean
 ) {
     const [remainingMs, setRemainingMs] = useState<number | null>(() =>

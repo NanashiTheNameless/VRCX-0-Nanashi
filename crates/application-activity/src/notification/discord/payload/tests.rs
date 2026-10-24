@@ -11,7 +11,7 @@ fn builds_rich_invite_embed_with_explicit_enrichment() {
     delivery.entry.kind = ActivityKind::Invite;
     delivery.entry.actor_display_name = "Example".into();
     delivery.entry.actor_user_id = "usr_abcdefg".into();
-    delivery.entry.created_at = "2026-06-29T08:11:00.000Z".into();
+    delivery.entry.created_at = 1782720660;
     delivery.entry.content.location = "wrld_114514:810~private(usr_abcdefg)~region(jp)".into();
     delivery.entry.content.world_id = "wrld_114514".into();
     delivery.entry.content.world_name = "for Two".into();
@@ -54,10 +54,7 @@ fn builds_rich_invite_embed_with_explicit_enrichment() {
     let footer = embed["footer"]["text"].as_str().unwrap();
     assert!(footer.contains("#810"));
     assert!(footer.contains("JP"));
-    assert_eq!(
-        embed["timestamp"].as_str(),
-        Some("2026-06-29T08:11:00.000Z")
-    );
+    assert_eq!(embed["timestamp"].as_str(), Some("2026-06-29T08:11:00Z"));
     assert_eq!(
         embed["thumbnail"]["url"].as_str(),
         Some("https://api.vrchat.cloud/api/1/file/file_world/8/file")
@@ -290,7 +287,7 @@ fn delivery() -> ActivityDelivery {
             source_id: "game-log:join".into(),
             kind: ActivityKind::OnPlayerJoined,
             category: ActivityCategory::CurrentInstance,
-            created_at: "2026-06-18T08:30:00.000Z".into(),
+            created_at: 1781771400,
             actor_user_id: "usr_traveler".into(),
             actor_display_name: "Traveler".into(),
             content: ActivityContent {
@@ -348,11 +345,7 @@ fn every_activity_type_renders_text_and_both_webhook_payloads_in_every_locale() 
 
     for definition in definitions {
         let kind = definition.key;
-        let mut event = ActivityEvent::new(
-            kind,
-            format!("{}:all", kind.key()),
-            "2026-10-02T00:00:00.000Z",
-        );
+        let mut event = ActivityEvent::new(kind, format!("{}:all", kind.key()), 1790899200);
         event.actor = ActivityActor::new("usr_actor", "Actor");
         event.subject = if kind == ActivityKind::GroupInstanceOpened {
             ActivitySubject::Group("grp_all".into())

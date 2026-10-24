@@ -47,7 +47,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:01Z".into(),
+                received_at: 1778803201,
             })
         else {
             panic!("friend-location should produce an output");
@@ -107,7 +107,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("arrival should produce an output");
@@ -133,7 +133,8 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: received_at.into(),
+                received_at: vrcx_0_core::time::parse_epoch_seconds(received_at)
+                    .unwrap_or_default(),
             })
         };
 
@@ -266,7 +267,8 @@ mod tests {
             runtime.apply_ws_message(&RealtimeWsMessagePayload {
                 json: payload.clone(),
                 raw: "{}".into(),
-                received_at: received_at.into(),
+                received_at: vrcx_0_core::time::parse_epoch_seconds(received_at)
+                    .unwrap_or_default(),
             })
         };
 
@@ -331,7 +333,7 @@ mod tests {
                     }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-07-13T10:00:00Z".into(),
+                received_at: 1783936800,
             })
         else {
             panic!("friend-online should produce persisted and ephemeral feed entries");

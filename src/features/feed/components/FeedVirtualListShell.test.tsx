@@ -48,7 +48,7 @@ const actions: FeedFriendActions = {
 };
 
 const row: FeedRow = {
-    created_at: '2026-09-04T00:00:00.000Z',
+    created_at: 1788480000,
     rowId: 1,
     sourceRank: 40,
     statusDescription: 'new',

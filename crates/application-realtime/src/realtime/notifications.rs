@@ -5,6 +5,7 @@ use vrcx_0_core::json::{text_of, JsonExt};
 use vrcx_0_core::realtime::RealtimeWsMessagePayload;
 use vrcx_0_core::text::first_non_empty;
 use vrcx_0_core::text::first_owned;
+use vrcx_0_core::time::epoch_from_json;
 
 use super::event_kind::RealtimeWsEventKind;
 use super::{
@@ -35,7 +36,7 @@ pub(crate) fn apply_notification_ws_event(
         return None;
     }
     let content = payload.json.get("content").unwrap_or(&Value::Null);
-    let now = payload.received_at.clone();
+    let now = payload.received_at;
     let mut output = RealtimeNotificationOutput {
         owner_user_id: OwnerId::new(owner_user_id.as_str().trim()),
         projection: RealtimeNotificationProjection {
@@ -47,7 +48,7 @@ pub(crate) fn apply_notification_ws_event(
 
     match event_kind {
         RealtimeWsEventKind::Notification => {
-            let notification = normalize_v1_notification(content, &now);
+            let notification = normalize_v1_notification(content, now);
             if should_persist_v1(&notification, owner_user_id.as_str()) {
                 output
                     .persistence
@@ -63,7 +64,7 @@ pub(crate) fn apply_notification_ws_event(
             });
         }
         RealtimeWsEventKind::NotificationV2 => {
-            let notification = normalize_v2_notification(content, endpoint, &now);
+            let notification = normalize_v2_notification(content, endpoint, now);
             output
                 .persistence
                 .notification_v2_upserts
@@ -89,7 +90,7 @@ pub(crate) fn apply_notification_ws_event(
                 .push(NotificationV2Update {
                     id: notification.text_field("id"),
                     updates: notification.clone(),
-                    received_at: now.clone(),
+                    received_at: now,
                 });
             if bool_field(notification.get("seen")) {
                 output
@@ -129,7 +130,7 @@ pub(crate) fn apply_notification_ws_event(
                     .notification_expirations
                     .push(NotificationExpiration {
                         id: id.clone(),
-                        expired_at: now.clone(),
+                        expired_at: now,
                     });
             }
             output.projection.expired_ids = ids.clone();
@@ -196,7 +197,7 @@ pub(crate) fn apply_instance_closed_ws_event(
         content.text_field("instanceLocation"),
         content.text_field("location"),
     ]);
-    let created_at = payload.received_at.clone();
+    let created_at = payload.received_at;
     let id = format!(
         "instance.closed:{}:{}",
         if location.is_empty() {
@@ -220,7 +221,7 @@ pub(crate) fn apply_instance_closed_ws_event(
             notification: notification.clone().into(),
         },
         feed_entry: FeedLiveEntry::InstanceClosed {
-            created_at: created_at.clone(),
+            created_at,
             id,
             location: location.clone(),
             message: "Instance Closed".to_string(),
@@ -236,7 +237,13 @@ pub(crate) fn apply_instance_closed_ws_event(
     })
 }
 
-pub fn normalize_v1_notification(content: &Value, now: &str) -> Value {
+/// Dates in a notification as epoch seconds, `now` when VRChat sent none.
+fn epoch_field(object: &serde_json::Map<String, Value>, keys: &[&str]) -> Option<i64> {
+    keys.iter()
+        .find_map(|key| object.get(*key).and_then(epoch_from_json))
+}
+
+pub fn normalize_v1_notification(content: &Value, now: i64) -> Value {
     let mut object = sanitize_object(content);
     object.entry("id").or_insert(Value::String(String::new()));
     object
@@ -252,13 +259,9 @@ pub fn normalize_v1_notification(content: &Value, now: &str) -> Value {
         .or_insert(Value::String(String::new()));
     object.entry("seen").or_insert(Value::Bool(false));
     object.entry("$isExpired").or_insert(Value::Bool(false));
-    let created_at = first_owned([
-        object.text_field("createdAt"),
-        object.text_field("created_at"),
-        now.to_string(),
-    ]);
-    object.insert("createdAt".into(), Value::String(created_at.clone()));
-    object.insert("created_at".into(), Value::String(created_at));
+    let created_at = epoch_field(&object, &["createdAt", "created_at"]).unwrap_or(now);
+    object.insert("createdAt".into(), Value::from(created_at));
+    object.insert("created_at".into(), Value::from(created_at));
     object.insert(
         "details".into(),
         parse_object_value(object.get("details").cloned()).unwrap_or_else(|| json!({})),
@@ -266,7 +269,7 @@ pub fn normalize_v1_notification(content: &Value, now: &str) -> Value {
     Value::Object(object)
 }
 
-pub fn normalize_v2_notification(content: &Value, endpoint: &str, now: &str) -> Value {
+pub fn normalize_v2_notification(content: &Value, endpoint: &str, now: i64) -> Value {
     let mut object = sanitize_object(content);
     for key in [
         "id",
@@ -286,13 +289,13 @@ pub fn normalize_v2_notification(content: &Value, endpoint: &str, now: &str) -> 
     }
     object.entry("seen").or_insert(Value::Bool(false));
     object.insert("version".into(), Value::from(2));
-    let created_at = first_owned([
-        object.text_field("createdAt"),
-        object.text_field("created_at"),
-        now.to_string(),
-    ]);
-    object.insert("createdAt".into(), Value::String(created_at.clone()));
-    object.insert("created_at".into(), Value::String(created_at));
+    for key in ["updatedAt", "expiresAt"] {
+        let value = epoch_field(&object, &[key]).map_or(Value::Null, Value::from);
+        object.insert(key.into(), value);
+    }
+    let created_at = epoch_field(&object, &["createdAt", "created_at"]).unwrap_or(now);
+    object.insert("createdAt".into(), Value::from(created_at));
+    object.insert("created_at".into(), Value::from(created_at));
     object.insert(
         "data".into(),
         parse_object_value(object.get("data").cloned()).unwrap_or_else(|| json!({})),

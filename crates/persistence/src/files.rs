@@ -1,6 +1,6 @@
 use vrcx_0_contracts::FileMetadataOutput;
 
-use crate::common::{normalize_text, now_iso, row_string, ParamsBuilder};
+use crate::common::{normalize_text, now_epoch, row_string, ParamsBuilder};
 use crate::database::schema::ensure_global_store_tables;
 use crate::database::DatabaseService;
 use crate::Error;
@@ -40,7 +40,7 @@ pub fn file_cache_upsert(db: &DatabaseService, file: &FileMetadataOutput) -> Res
             .set("id", file_id)
             .set("name", file.name.clone())
             .set("owner_id", file.owner_id.clone())
-            .set("fetched_at", now_iso())
+            .set("fetched_at", now_epoch())
             .build(),
     )?;
     Ok(())

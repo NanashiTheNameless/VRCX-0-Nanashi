@@ -13,9 +13,9 @@ use crate::feed::test_support::{seed_feed_avatar_row, seed_feed_bio_row, seed_fe
 use crate::ownership::OwnerId;
 use crate::realtime::{write_realtime_batch, RealtimePersistenceBatch};
 
-fn gps_entry(created_at: &str, user_id: &str, display_name: &str, location: &str) -> FeedLiveEntry {
+fn gps_entry(created_at: i64, user_id: &str, display_name: &str, location: &str) -> FeedLiveEntry {
     FeedLiveEntry::Gps {
-        created_at: created_at.into(),
+        created_at,
         user_id: user_id.into(),
         display_name: display_name.into(),
         location: location.into(),
@@ -30,7 +30,7 @@ fn gps_entry(created_at: &str, user_id: &str, display_name: &str, location: &str
 }
 
 fn gps_world_entry(
-    created_at: &str,
+    created_at: i64,
     user_id: &str,
     display_name: &str,
     location: &str,
@@ -41,14 +41,9 @@ fn gps_world_entry(
     entry
 }
 
-fn status_entry(
-    created_at: &str,
-    user_id: &str,
-    display_name: &str,
-    status: &str,
-) -> FeedLiveEntry {
+fn status_entry(created_at: i64, user_id: &str, display_name: &str, status: &str) -> FeedLiveEntry {
     FeedLiveEntry::Status {
-        created_at: created_at.into(),
+        created_at,
         user_id: user_id.into(),
         display_name: display_name.into(),
         status: status.into(),
@@ -59,9 +54,9 @@ fn status_entry(
     }
 }
 
-fn friend_entry(created_at: &str, user_id: &str, display_name: &str) -> FeedLiveEntry {
+fn friend_entry(created_at: i64, user_id: &str, display_name: &str) -> FeedLiveEntry {
     FeedLiveEntry::Friend {
-        created_at: created_at.into(),
+        created_at,
         user_id: user_id.into(),
         display_name: display_name.into(),
         owner_user_id: String::new(),
@@ -109,8 +104,8 @@ struct MergeCase {
     current_user_id: String,
     filters: Vec<FeedFilter>,
     search: String,
-    date_from: String,
-    date_to: String,
+    date_from: Option<i64>,
+    date_to: Option<i64>,
     favorites_only: bool,
     favorite_user_ids: Vec<String>,
     scoped_user_ids: Vec<String>,
@@ -126,8 +121,8 @@ fn merge_case(input: MergeCase) -> FeedReadModelOutput {
         current_user_id: &input.current_user_id,
         filters: &input.filters,
         search: &input.search,
-        date_from: &input.date_from,
-        date_to: &input.date_to,
+        date_from: input.date_from,
+        date_to: input.date_to,
         favorites_only: input.favorites_only,
         favorite_user_ids: &input.favorite_user_ids,
         scoped_user_ids: &input.scoped_user_ids,
@@ -150,26 +145,18 @@ fn live_feed_ignores_friend_relationship_events_without_active_filters() {
         current_user_id: "usr_self".into(),
         filters: Vec::new(),
         search: String::new(),
-        date_from: String::new(),
-        date_to: String::new(),
+        date_from: None,
+        date_to: None,
         favorites_only: false,
         favorite_user_ids: Vec::new(),
         scoped_user_ids: Vec::new(),
         excluded_user_ids: Vec::new(),
         location_hidden_user_ids: Vec::new(),
         live_entries: vec![
-            live(
-                1,
-                friend_entry("2026-05-15T00:00:00Z", "usr_friend", "Friend"),
-            ),
+            live(1, friend_entry(1778803200, "usr_friend", "Friend")),
             live(
                 2,
-                gps_entry(
-                    "2026-05-15T00:00:01Z",
-                    "usr_friend",
-                    "Friend",
-                    "wrld_1:instance",
-                ),
+                gps_entry(1778803201, "usr_friend", "Friend", "wrld_1:instance"),
             ),
         ],
         min_live_sequence: 0,
@@ -186,13 +173,13 @@ fn user_scope_drops_live_entries_and_existing_rows_outside_the_scope() {
     let output = merge_case(MergeCase {
         rows: vec![
             FeedRowOutput::from(&gps_entry(
-                "2026-05-15T00:00:00Z",
+                1778803200,
                 "usr_scoped",
                 "Scoped",
                 "wrld_1:instance",
             )),
             FeedRowOutput::from(&gps_entry(
-                "2026-05-15T00:00:01Z",
+                1778803201,
                 "usr_other",
                 "Other",
                 "wrld_2:instance",
@@ -201,8 +188,8 @@ fn user_scope_drops_live_entries_and_existing_rows_outside_the_scope() {
         current_user_id: "usr_self".into(),
         filters: Vec::new(),
         search: String::new(),
-        date_from: String::new(),
-        date_to: String::new(),
+        date_from: None,
+        date_to: None,
         favorites_only: false,
         favorite_user_ids: Vec::new(),
         scoped_user_ids: vec!["usr_scoped".into()],
@@ -211,21 +198,11 @@ fn user_scope_drops_live_entries_and_existing_rows_outside_the_scope() {
         live_entries: vec![
             live(
                 1,
-                gps_entry(
-                    "2026-05-15T00:00:02Z",
-                    "usr_other",
-                    "Other",
-                    "wrld_3:instance",
-                ),
+                gps_entry(1778803202, "usr_other", "Other", "wrld_3:instance"),
             ),
             live(
                 2,
-                gps_entry(
-                    "2026-05-15T00:00:03Z",
-                    "usr_scoped",
-                    "Scoped",
-                    "wrld_4:instance",
-                ),
+                gps_entry(1778803203, "usr_scoped", "Scoped", "wrld_4:instance"),
             ),
         ],
         min_live_sequence: 0,
@@ -248,8 +225,8 @@ fn merged_rows_carry_every_live_entry_field() {
         current_user_id: "usr_self".into(),
         filters: Vec::new(),
         search: String::new(),
-        date_from: String::new(),
-        date_to: String::new(),
+        date_from: None,
+        date_to: None,
         favorites_only: false,
         favorite_user_ids: Vec::new(),
         scoped_user_ids: Vec::new(),
@@ -258,7 +235,7 @@ fn merged_rows_carry_every_live_entry_field() {
         live_entries: vec![live(
             1,
             FeedLiveEntry::Gps {
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 user_id: "usr_friend".into(),
                 display_name: "Friend".into(),
                 location: "wrld_1:instance".into(),
@@ -279,7 +256,7 @@ fn merged_rows_carry_every_live_entry_field() {
     let row = &output.rows[0];
     assert_eq!(row.user_id.as_deref(), Some("usr_friend"));
     assert_eq!(row.display_name.as_deref(), Some("Friend"));
-    assert_eq!(row.created_at.as_deref(), Some("2026-05-15T00:00:00Z"));
+    assert_eq!(row.created_at, Some(1778803200));
     assert_eq!(row.world_name.as_deref(), Some("World"));
     assert_eq!(row.time, Some(1500));
 }
@@ -288,16 +265,8 @@ fn merged_rows_carry_every_live_entry_field() {
 fn persisted_rows_with_matching_content_identity_remain_distinct() {
     let output = merge_case(MergeCase {
         rows: vec![
-            persisted_row(
-                1,
-                40,
-                status_entry("2026-05-15T00:00:00Z", "usr_friend", "", "active"),
-            ),
-            persisted_row(
-                2,
-                40,
-                status_entry("2026-05-15T00:00:00Z", "usr_friend", "", "join me"),
-            ),
+            persisted_row(1, 40, status_entry(1778803200, "usr_friend", "", "active")),
+            persisted_row(2, 40, status_entry(1778803200, "usr_friend", "", "join me")),
         ],
         current_user_id: "usr_self".into(),
         max_rows: 10,
@@ -315,12 +284,12 @@ fn live_row_replaces_the_same_persisted_feed_entry() {
         rows: vec![persisted_row(
             1,
             60,
-            gps_entry("2026-05-15T00:00:00Z", "usr_friend", "", "wrld_1:instance"),
+            gps_entry(1778803200, "usr_friend", "", "wrld_1:instance"),
         )],
         current_user_id: "usr_self".into(),
         live_entries: vec![live(
             1,
-            gps_entry("2026-05-15T00:00:00Z", "usr_friend", "", "wrld_1:instance"),
+            gps_entry(1778803200, "usr_friend", "", "wrld_1:instance"),
         )],
         max_rows: 10,
         ..MergeCase::default()
@@ -341,7 +310,7 @@ fn latest_query_keeps_the_persisted_cursor_when_live_rows_fill_the_result(
         &OwnerId::new("usr_self"),
         &RealtimePersistenceBatch {
             feed_entries: vec![gps_world_entry(
-                "2026-05-15T00:00:00Z",
+                1778803200,
                 "usr_persisted",
                 "Persisted",
                 "wrld_1:persisted",
@@ -365,7 +334,7 @@ fn latest_query_keeps_the_persisted_cursor_when_live_rows_fill_the_result(
         },
         vec![live(
             1,
-            gps_entry("2026-05-15T00:01:00Z", "usr_live", "", "wrld_1:live"),
+            gps_entry(1778803260, "usr_live", "", "wrld_1:live"),
         )],
         1,
         true,
@@ -388,9 +357,9 @@ fn location_hidden_users_drop_only_their_gps_rows() -> Result<(), crate::Error> 
         &OwnerId::new("usr_self"),
         &RealtimePersistenceBatch {
             feed_entries: vec![
-                gps_entry("2026-05-15T00:00:00Z", "usr_hidden", "Hidden", "wrld_1:a"),
-                status_entry("2026-05-15T00:00:01Z", "usr_hidden", "Hidden", "busy"),
-                gps_entry("2026-05-15T00:00:02Z", "usr_other", "Other", "wrld_1:b"),
+                gps_entry(1778803200, "usr_hidden", "Hidden", "wrld_1:a"),
+                status_entry(1778803201, "usr_hidden", "Hidden", "busy"),
+                gps_entry(1778803202, "usr_other", "Other", "wrld_1:b"),
             ],
             ..RealtimePersistenceBatch::default()
         },
@@ -409,13 +378,10 @@ fn location_hidden_users_drop_only_their_gps_rows() -> Result<(), crate::Error> 
             max_rows: 10,
         },
         vec![
-            live(
-                1,
-                gps_entry("2026-05-15T00:01:00Z", "usr_hidden", "Hidden", "wrld_1:c"),
-            ),
+            live(1, gps_entry(1778803260, "usr_hidden", "Hidden", "wrld_1:c")),
             live(
                 2,
-                status_entry("2026-05-15T00:01:01Z", "usr_hidden", "Hidden", "active"),
+                status_entry(1778803261, "usr_hidden", "Hidden", "active"),
             ),
         ],
         2,
@@ -454,14 +420,14 @@ fn lookup_feed_pagination_uses_the_same_date_order_as_its_cursor() -> Result<(),
         &RealtimePersistenceBatch {
             feed_entries: vec![
                 gps_world_entry(
-                    "2026-05-15T00:10:00Z",
+                    1778803800,
                     "usr_newer_created",
                     "newer-created",
                     "wrld_1:newer",
                     "Newer Created",
                 ),
                 gps_world_entry(
-                    "2026-05-15T00:00:00Z",
+                    1778803200,
                     "usr_later_inserted",
                     "later-inserted",
                     "wrld_1:later",
@@ -484,8 +450,8 @@ fn lookup_feed_pagination_uses_the_same_date_order_as_its_cursor() -> Result<(),
             excluded_user_ids: Vec::new(),
             location_hidden_user_ids: Vec::new(),
             max_entries: 1,
-            date_from: String::new(),
-            date_to: String::new(),
+            date_from: None,
+            date_to: None,
             cursor: None,
         },
     )?;
@@ -505,10 +471,10 @@ fn lookup_feed_pagination_uses_the_same_date_order_as_its_cursor() -> Result<(),
             excluded_user_ids: Vec::new(),
             location_hidden_user_ids: Vec::new(),
             max_entries: 1,
-            date_from: String::new(),
-            date_to: String::new(),
+            date_from: None,
+            date_to: None,
             cursor: Some(FeedCursorInput {
-                created_at: first_page[0].created_at.clone().unwrap(),
+                created_at: first_page[0].created_at.unwrap(),
                 source_rank: first_page[0].source_rank.unwrap(),
                 row_id: first_page[0].row_id.unwrap(),
             }),
@@ -532,20 +498,8 @@ fn world_id_search_honors_the_date_window() -> Result<(), crate::Error> {
         &OwnerId::new("usr_self"),
         &RealtimePersistenceBatch {
             feed_entries: vec![
-                gps_world_entry(
-                    "2026-05-01T00:00:00Z",
-                    "usr_old",
-                    "Old",
-                    "wrld_target:old",
-                    "Target",
-                ),
-                gps_world_entry(
-                    "2026-05-20T00:00:00Z",
-                    "usr_new",
-                    "New",
-                    "wrld_target:new",
-                    "Target",
-                ),
+                gps_world_entry(1777593600, "usr_old", "Old", "wrld_target:old", "Target"),
+                gps_world_entry(1779235200, "usr_new", "New", "wrld_target:new", "Target"),
             ],
             ..RealtimePersistenceBatch::default()
         },
@@ -563,8 +517,8 @@ fn world_id_search_honors_the_date_window() -> Result<(), crate::Error> {
             excluded_user_ids: Vec::new(),
             location_hidden_user_ids: Vec::new(),
             max_entries: 10,
-            date_from: "2026-05-10T00:00:00Z".into(),
-            date_to: String::new(),
+            date_from: Some(1778371200),
+            date_to: None,
             cursor: None,
         },
         || false,
@@ -583,7 +537,7 @@ fn private_avatar_search_applies_dates_to_every_match_branch() -> Result<(), cra
         &db,
         "usr_self",
         (
-            "2026-05-01T00:00:00Z",
+            1777593600,
             "usr_old",
             "Private Collector",
             "usr_old",
@@ -593,13 +547,7 @@ fn private_avatar_search_applies_dates_to_every_match_branch() -> Result<(), cra
     seed_feed_avatar_row(
         &db,
         "usr_self",
-        (
-            "2026-05-20T00:00:00Z",
-            "usr_new",
-            "New",
-            "usr_new",
-            "New Avatar",
-        ),
+        (1779235200, "usr_new", "New", "usr_new", "New Avatar"),
     )?;
 
     let rows = feed_rows_query_interruptible(
@@ -614,8 +562,8 @@ fn private_avatar_search_applies_dates_to_every_match_branch() -> Result<(), cra
             excluded_user_ids: Vec::new(),
             location_hidden_user_ids: Vec::new(),
             max_entries: 10,
-            date_from: "2026-05-10T00:00:00Z".into(),
-            date_to: String::new(),
+            date_from: Some(1778371200),
+            date_to: None,
             cursor: None,
         },
         || false,
@@ -627,7 +575,7 @@ fn private_avatar_search_applies_dates_to_every_match_branch() -> Result<(), cra
 }
 
 #[test]
-fn date_window_preserves_millisecond_boundaries() -> Result<(), crate::Error> {
+fn date_window_includes_both_ends_and_excludes_the_next_second() -> Result<(), crate::Error> {
     let dir = TestDir::new("feed-millisecond-date-window");
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
     write_realtime_batch(
@@ -635,20 +583,10 @@ fn date_window_preserves_millisecond_boundaries() -> Result<(), crate::Error> {
         &OwnerId::new("usr_self"),
         &RealtimePersistenceBatch {
             feed_entries: vec![
-                status_entry(
-                    "2026-05-20T00:00:00.000Z",
-                    "usr_milliseconds",
-                    "Milliseconds",
-                    "active",
-                ),
-                status_entry("2026-05-20T00:00:00Z", "usr_seconds", "Seconds", "active"),
-                status_entry(
-                    "2026-05-20T00:00:00+00:00",
-                    "usr_offset",
-                    "Offset",
-                    "active",
-                ),
-                status_entry("2026-05-20T00:00:00.500Z", "usr_later", "Later", "active"),
+                status_entry(1779235200, "usr_milliseconds", "Milliseconds", "active"),
+                status_entry(1779235200, "usr_seconds", "Seconds", "active"),
+                status_entry(1779235200, "usr_offset", "Offset", "active"),
+                status_entry(1779235201, "usr_later", "Later", "active"),
             ],
             ..RealtimePersistenceBatch::default()
         },
@@ -666,8 +604,8 @@ fn date_window_preserves_millisecond_boundaries() -> Result<(), crate::Error> {
             excluded_user_ids: Vec::new(),
             location_hidden_user_ids: Vec::new(),
             max_entries: 10,
-            date_from: "2026-05-20T00:00:00.000Z".into(),
-            date_to: "2026-05-20T00:00:00.000Z".into(),
+            date_from: Some(1779235200),
+            date_to: Some(1779235200),
             cursor: None,
         },
         || false,
@@ -690,8 +628,8 @@ fn date_window_preserves_millisecond_boundaries() -> Result<(), crate::Error> {
             excluded_user_ids: Vec::new(),
             location_hidden_user_ids: Vec::new(),
             max_entries: 1,
-            date_from: String::new(),
-            date_to: String::new(),
+            date_from: None,
+            date_to: None,
             cursor: None,
         },
         || false,
@@ -706,26 +644,14 @@ fn search_matches_previous_values_and_escapes_like_wildcards() -> Result<(), cra
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
     for row in [
         (
-            "2026-05-20T00:00:00.000Z",
+            1779235200,
             "usr_previous",
             "Previous",
             "new value",
             "removed needle",
         ),
-        (
-            "2026-05-19T00:00:00.000Z",
-            "usr_percent",
-            "Percent",
-            "100% literal",
-            "old",
-        ),
-        (
-            "2026-05-18T00:00:00.000Z",
-            "usr_other",
-            "Other",
-            "ordinary text",
-            "old",
-        ),
+        (1779148800, "usr_percent", "Percent", "100% literal", "old"),
+        (1779062400, "usr_other", "Other", "ordinary text", "old"),
     ] {
         seed_feed_bio_row(&db, "usr_self", row)?;
     }
@@ -743,8 +669,8 @@ fn search_matches_previous_values_and_escapes_like_wildcards() -> Result<(), cra
                 excluded_user_ids: Vec::new(),
                 location_hidden_user_ids: Vec::new(),
                 max_entries: 10,
-                date_from: String::new(),
-                date_to: String::new(),
+                date_from: None,
+                date_to: None,
                 cursor: None,
             },
         )
@@ -777,8 +703,8 @@ fn lookup_page(
             excluded_user_ids: Vec::new(),
             location_hidden_user_ids: Vec::new(),
             max_entries,
-            date_from: String::new(),
-            date_to: String::new(),
+            date_from: None,
+            date_to: None,
             cursor,
         },
     )
@@ -786,7 +712,7 @@ fn lookup_page(
 
 fn cursor_after(row: &FeedRowOutput) -> FeedCursorInput {
     FeedCursorInput {
-        created_at: row.created_at.clone().unwrap(),
+        created_at: row.created_at.unwrap(),
         source_rank: row.source_rank.unwrap(),
         row_id: row.row_id.unwrap(),
     }
@@ -797,7 +723,7 @@ fn cursor_pagination_walks_same_timestamp_rows_across_tables_in_full_page_order(
 ) -> Result<(), crate::Error> {
     let dir = TestDir::new("feed-cursor-ties");
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
-    let tie = "2026-05-15T00:10:00Z";
+    let tie = 1778803800;
     seed_feed_bio_row(
         &db,
         "usr_self",
@@ -816,7 +742,7 @@ fn cursor_pagination_walks_same_timestamp_rows_across_tables_in_full_page_order(
                 status_entry(tie, "usr_status", "status-40", "join me"),
                 gps_entry(tie, "usr_gps_a", "gps-60-a", "wrld_1:a"),
                 gps_entry(tie, "usr_gps_b", "gps-60-b", "wrld_1:b"),
-                gps_entry("2026-05-15T00:00:00Z", "usr_older", "older", "wrld_1:c"),
+                gps_entry(1778803200, "usr_older", "older", "wrld_1:c"),
             ],
             ..RealtimePersistenceBatch::default()
         },
@@ -864,7 +790,7 @@ fn deep_cursor_page_costs_the_same_as_the_first_page_on_the_baseline_fixture(
         &Default::default(),
     )?;
     let deep_cursor = FeedCursorInput {
-        created_at: deep_row[0][0].as_str().unwrap().to_string(),
+        created_at: deep_row[0][0].as_i64().unwrap(),
         source_rank: 60,
         row_id: 1000,
     };

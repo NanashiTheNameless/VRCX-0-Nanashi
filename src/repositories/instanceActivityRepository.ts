@@ -3,10 +3,12 @@ import {
     type InstanceActivityRowOutput,
     type WorldSummaryOutput
 } from '@/platform/tauri/bindings';
+import { displayDayKey as toLocalDayKey } from '@/shared/utils/displayTimeZone';
+import { displayDateBoundary } from '@/shared/utils/displayTimeZone';
 
 export interface InstanceActivityRow {
     id: number;
-    created_at: string;
+    created_at: number;
     type: string;
     display_name: string;
     location: string;
@@ -37,14 +39,17 @@ async function getAvailableDates(userId: string): Promise<string[]> {
     }
 
     const rows = await commands.appInstanceActivityDatesGet(normalizedUserId);
-    return rows.filter(Boolean);
+    return [...new Set(rows.map(toLocalDayKey).filter(Boolean))];
 }
 
 async function getInstanceActivityRows(
     startDate: string,
     endDate: string
 ): Promise<InstanceActivityRow[]> {
-    const rows = await commands.appInstanceActivityRowsGet(startDate, endDate);
+    const rows = await commands.appInstanceActivityRowsGet(
+        displayDateBoundary(startDate, 'start') ?? 0,
+        displayDateBoundary(endDate, 'end') ?? 0
+    );
 
     return rows.map((row) => normalizeInstanceActivityRow(row));
 }

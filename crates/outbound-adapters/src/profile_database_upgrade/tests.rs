@@ -86,8 +86,8 @@ fn install_failing_repair_fixture(db: &DatabaseService) {
         "INSERT INTO gamelog_join_leave
                  (created_at, type, display_name, location, user_id, time)
              VALUES
-                 ('2026-01-01T00:00:00Z', 'OnPlayerJoined', 'Test', 'wrld_test:1', 'usr_test', 0),
-                 ('2026-01-01T00:01:00Z', 'OnPlayerLeft', 'Test', 'wrld_test:1', 'usr_test', 0);
+                 (1767225600, 'OnPlayerJoined', 'Test', 'wrld_test:1', 'usr_test', 0),
+                 (1767225660, 'OnPlayerLeft', 'Test', 'wrld_test:1', 'usr_test', 0);
              CREATE TRIGGER reject_copresence_repair
              BEFORE UPDATE OF time ON gamelog_join_leave
              BEGIN

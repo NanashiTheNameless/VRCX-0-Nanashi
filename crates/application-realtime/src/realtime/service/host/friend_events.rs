@@ -139,8 +139,8 @@ impl RealtimeHostRuntime {
         if !current {
             return;
         }
-        let now = chrono::Utc::now().to_rfc3339();
-        if let Some(output) = self.friends.wake(user_id, &now) {
+        let now = vrcx_0_core::time::now_epoch();
+        if let Some(output) = self.friends.wake(user_id, now) {
             self.apply_friend_output_owned(&owner, output);
         }
     }

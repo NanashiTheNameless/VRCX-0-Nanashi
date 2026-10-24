@@ -9,7 +9,7 @@ use vrcx_0_application_core::sleep_until_due_or_stopped;
 use vrcx_0_application_core::RuntimeEventBus;
 use vrcx_0_application_core::TaskStopToken;
 use vrcx_0_contracts::{background_image as protocol, ConfigMutation};
-use vrcx_0_core::time::now_iso;
+use vrcx_0_core::time::now_epoch;
 
 use vrcx_0_application_core::{Error, Result};
 
@@ -264,7 +264,7 @@ impl BackgroundImageService {
                     author: image.author,
                     license: image.license,
                     source: image.source,
-                    resolved_at: now_iso(),
+                    resolved_at: now_epoch(),
                     resolved_for_key: current_utc_date_key(),
                 };
                 if !snapshots.is_object() {
@@ -309,7 +309,7 @@ impl BackgroundImageService {
         let index = random_custom_image_index(source, &files, previous);
         let image_path = files[index].clone();
         let title = file_name_from_path(&image_path);
-        let resolved_at = now_iso();
+        let resolved_at = now_epoch();
 
         Ok(BackgroundImageSnapshot {
             mode: BackgroundImageMode::Custom,
@@ -331,8 +331,8 @@ impl BackgroundImageService {
                     )
                 }
             },
-            resolved_at: resolved_at.clone(),
-            resolved_for_key: resolved_at,
+            resolved_at,
+            resolved_for_key: resolved_at.to_string(),
         })
     }
 

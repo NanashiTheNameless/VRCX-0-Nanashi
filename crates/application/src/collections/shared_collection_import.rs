@@ -40,8 +40,8 @@ pub struct SharedCollectionImportStatus {
     pub imported: u32,
     pub failed: u32,
     pub group_name: String,
-    pub started_at: Option<String>,
-    pub finished_at: Option<String>,
+    pub started_at: Option<i64>,
+    pub finished_at: Option<i64>,
     pub last_error: Option<String>,
 }
 

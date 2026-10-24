@@ -44,7 +44,7 @@ pub trait PrintRemote: Send + Sync {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrintListItem {
     pub id: String,
-    pub created_at: String,
+    pub created_at: i64,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, specta::Type)]
@@ -224,10 +224,10 @@ pub fn print_list_items_from_json(value: &Value) -> Vec<PrintListItem> {
             if id.is_empty() {
                 return None;
             }
-            let mut created_at = trimmed_text_field(entry, "createdAt");
-            if created_at.is_empty() {
-                created_at = trimmed_text_field(entry, "timestamp");
-            }
+            let created_at = ["createdAt", "timestamp"]
+                .iter()
+                .find_map(|key| entry.get(*key).and_then(vrcx_0_core::time::epoch_from_json))
+                .unwrap_or_default();
             Some(PrintListItem { id, created_at })
         })
         .collect()

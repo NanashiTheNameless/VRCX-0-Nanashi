@@ -47,7 +47,7 @@ pub(super) fn build_running_fallback_activity(
         "details": details,
         "state": platform.trim(),
         "status_display_type": 0,
-        "timestamps": create_activity_timestamps(facts.last_game_started_at.as_deref(), None),
+        "timestamps": create_activity_timestamps(facts.last_game_started_at.unwrap_or(0), 0),
         "assets": create_activity_assets("vrchat", status_info.status_image, status_info.status_name),
     }));
     BackgroundDiscordActivityPayload {
@@ -107,7 +107,7 @@ pub(super) fn build_discord_activity(
     );
     let mut state_text = access_name;
     let mut start_time = clamp_game_session_start_time(facts);
-    let mut end_time = String::new();
+    let mut end_time = 0;
     let mut activity_type = 0;
     let mut status_display_type = if config.discord_world_name_as_discord_status {
         2
@@ -160,7 +160,7 @@ pub(super) fn build_discord_activity(
             }
             if facts.now_playing.has_content() {
                 let now_playing_times = now_playing_activity_times(&facts.now_playing);
-                if !now_playing_times.start_time.is_empty() {
+                if now_playing_times.start_time > 0 {
                     start_time = now_playing_times.start_time;
                     end_time = now_playing_times.end_time;
                 }
@@ -177,8 +177,8 @@ pub(super) fn build_discord_activity(
         details_url.clear();
         details_text = labels.private_world.clone();
         state_text.clear();
-        start_time.clear();
-        end_time.clear();
+        start_time = 0;
+        end_time = 0;
         app_id = DEFAULT_APP_ID.into();
         big_icon = "vrchat".into();
         activity_type = 0;
@@ -196,7 +196,7 @@ pub(super) fn build_discord_activity(
         "details_url": details_url,
         "state": state_text,
         "status_display_type": status_display_type,
-        "timestamps": create_activity_timestamps(Some(start_time.as_str()), Some(end_time.as_str())),
+        "timestamps": create_activity_timestamps(start_time, end_time),
         "assets": create_activity_assets(big_icon, status_info.status_image, status_info.status_name),
         "party": create_activity_party(party_id, party_size, party_max_size),
         "buttons": create_activity_buttons(button_text, button_url),
@@ -327,52 +327,32 @@ pub(super) fn build_access_name(
     }
 }
 
-fn clamp_game_session_start_time(facts: &BackgroundPresenceFacts) -> String {
-    let location_start = facts.current_location_started_at.trim();
-    let game_start = facts.last_game_started_at.as_deref().unwrap_or("").trim();
-    let Some(game_start_seconds) = timestamp_seconds(game_start).filter(|value| *value > 0) else {
-        return location_start.to_string();
-    };
-    let location_start_seconds = timestamp_seconds(location_start).unwrap_or(0);
-    if location_start_seconds == 0 || location_start_seconds < game_start_seconds {
-        game_start.to_string()
+fn clamp_game_session_start_time(facts: &BackgroundPresenceFacts) -> i64 {
+    let location_start = facts.current_location_started_at;
+    let game_start = facts.last_game_started_at.unwrap_or(0);
+    if game_start <= 0 {
+        return location_start;
+    }
+    if location_start <= 0 || location_start < game_start {
+        game_start
     } else {
-        location_start.to_string()
+        location_start
     }
 }
 
-fn create_activity_timestamps(start_time: Option<&str>, end_time: Option<&str>) -> Option<Value> {
+fn create_activity_timestamps(start_time: i64, end_time: i64) -> Option<Value> {
     let mut timestamps = Map::new();
-    if let Some(start) = start_time
-        .and_then(timestamp_seconds)
-        .filter(|value| *value > 0)
-    {
-        timestamps.insert("start".into(), json!(start));
+    if start_time > 0 {
+        timestamps.insert("start".into(), json!(start_time));
     }
-    if let Some(end) = end_time
-        .and_then(timestamp_seconds)
-        .filter(|value| *value > 0)
-    {
-        timestamps.insert("end".into(), json!(end));
+    if end_time > 0 {
+        timestamps.insert("end".into(), json!(end_time));
     }
     if timestamps.is_empty() {
         None
     } else {
         Some(Value::Object(timestamps))
     }
-}
-
-pub(super) fn timestamp_seconds(value: &str) -> Option<i64> {
-    if let Ok(number) = value.parse::<i64>() {
-        return Some(if number > 10_000_000_000 {
-            number / 1000
-        } else {
-            number
-        });
-    }
-    chrono::DateTime::parse_from_rfc3339(value)
-        .ok()
-        .map(|date| date.timestamp())
 }
 
 fn create_activity_assets(
@@ -444,35 +424,28 @@ fn compact_object(value: Value) -> Value {
 }
 
 struct NowPlayingActivityTimes {
-    start_time: String,
-    end_time: String,
+    start_time: i64,
+    end_time: i64,
 }
 
 fn now_playing_activity_times(now_playing: &crate::NowPlayingSnapshot) -> NowPlayingActivityTimes {
-    let start_time = trimmed_non_empty(now_playing.started_at.as_deref())
-        .or_else(|| trimmed_non_empty(now_playing.created_at.as_deref()))
-        .map(str::to_string)
-        .unwrap_or_default();
-    let Some(start_seconds) = timestamp_seconds(&start_time).filter(|value| *value > 0) else {
+    let start_time = now_playing
+        .started_at
+        .filter(|value| *value > 0)
+        .or(now_playing.created_at)
+        .unwrap_or(0);
+    if start_time <= 0 {
         return NowPlayingActivityTimes {
-            start_time,
-            end_time: String::new(),
+            start_time: 0,
+            end_time: 0,
         };
-    };
+    }
     let length = now_playing.length;
-    let end_time = if length > 0 {
-        (start_seconds + length).to_string()
-    } else {
-        String::new()
-    };
+    let end_time = if length > 0 { start_time + length } else { 0 };
     NowPlayingActivityTimes {
         start_time,
         end_time,
     }
-}
-
-fn trimmed_non_empty(value: Option<&str>) -> Option<&str> {
-    value.map(str::trim).filter(|value| !value.is_empty())
 }
 
 fn is_popcorn_palace_world(world_id: &str) -> bool {

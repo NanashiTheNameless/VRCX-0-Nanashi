@@ -20,7 +20,7 @@ use super::*;
 struct MemoryProfileBioStore {
     records: Mutex<HashMap<(String, String), ProfileBioRecord>>,
     candidates: Mutex<Vec<String>>,
-    self_bios: Mutex<Vec<(String, String, String)>>,
+    self_bios: Mutex<Vec<(String, String, i64)>>,
 }
 
 impl ProfileBioStore for MemoryProfileBioStore {
@@ -41,25 +41,25 @@ impl ProfileBioStore for MemoryProfileBioStore {
         Ok(())
     }
 
-    fn mark_checked(&self, owner: &OwnerId, user_id: &str, checked_at: &str) -> Result<()> {
+    fn mark_checked(&self, owner: &OwnerId, user_id: &str, checked_at: i64) -> Result<()> {
         self.records
             .lock()
             .unwrap()
             .entry((owner.as_str().to_string(), user_id.to_string()))
             .or_default()
-            .checked_at = checked_at.to_string();
+            .checked_at = checked_at;
         Ok(())
     }
 
-    fn next_stale_friend(&self, _owner: &OwnerId, _checked_before: &str) -> Result<Option<String>> {
+    fn next_stale_friend(&self, _owner: &OwnerId, _checked_before: i64) -> Result<Option<String>> {
         Ok(self.candidates.lock().unwrap().first().cloned())
     }
 
-    fn observe_self_bio(&self, owner: &OwnerId, bio: &str, observed_at: &str) -> Result<()> {
+    fn observe_self_bio(&self, owner: &OwnerId, bio: &str, observed_at: i64) -> Result<()> {
         self.self_bios.lock().unwrap().push((
             owner.as_str().to_string(),
             bio.to_string(),
-            observed_at.to_string(),
+            observed_at,
         ));
         Ok(())
     }
@@ -157,7 +157,7 @@ fn first_observation_only_records_a_baseline() -> Result<()> {
         runtime.runtime(),
         &owner,
         &observation("hello"),
-        "2026-09-18T00:00:00.000Z",
+        1789689600,
     )?;
 
     assert_eq!(outcome, ProfileBioOutcome::Baseline);
@@ -165,7 +165,7 @@ fn first_observation_only_records_a_baseline() -> Result<()> {
         store.last_seen(&owner, "usr_friend")?,
         Some(ProfileBioRecord {
             bio: "hello".into(),
-            checked_at: "2026-09-18T00:00:00.000Z".into(),
+            checked_at: 1789689600,
         })
     );
     assert!(bio_rows(&runtime, &owner).is_empty());
@@ -181,7 +181,7 @@ fn changed_bio_writes_a_feed_row_and_moves_the_baseline() -> Result<()> {
         "usr_friend",
         &ProfileBioRecord {
             bio: "old".into(),
-            checked_at: "2026-09-17T00:00:00.000Z".into(),
+            checked_at: 1789603200,
         },
     )?;
 
@@ -190,12 +190,12 @@ fn changed_bio_writes_a_feed_row_and_moves_the_baseline() -> Result<()> {
         runtime.runtime(),
         &owner,
         &observation("old"),
-        "2026-09-18T00:00:00.000Z",
+        1789689600,
     )?;
     assert_eq!(unchanged, ProfileBioOutcome::Unchanged);
     assert_eq!(
         store.last_seen(&owner, "usr_friend")?.unwrap().checked_at,
-        "2026-09-18T00:00:00.000Z"
+        1789689600
     );
     assert!(bio_rows(&runtime, &owner).is_empty());
 
@@ -207,7 +207,7 @@ fn changed_bio_writes_a_feed_row_and_moves_the_baseline() -> Result<()> {
             display_name: String::new(),
             ..observation("new")
         },
-        "2026-09-18T01:00:00.000Z",
+        1789693200,
     )?;
     assert_eq!(changed, ProfileBioOutcome::Changed);
     let rows = bio_rows(&runtime, &owner);
@@ -215,15 +215,12 @@ fn changed_bio_writes_a_feed_row_and_moves_the_baseline() -> Result<()> {
     assert_eq!(rows[0].display_name.as_deref(), Some("Friend"));
     assert_eq!(rows[0].bio.as_deref(), Some("new"));
     assert_eq!(rows[0].previous_bio.as_deref(), Some("old"));
-    assert_eq!(
-        rows[0].created_at.as_deref(),
-        Some("2026-09-18T01:00:00.000Z")
-    );
+    assert_eq!(rows[0].created_at, Some(1789693200));
     assert_eq!(
         store.last_seen(&owner, "usr_friend")?,
         Some(ProfileBioRecord {
             bio: "new".into(),
-            checked_at: "2026-09-18T01:00:00.000Z".into(),
+            checked_at: 1789693200,
         })
     );
     Ok(())
@@ -236,7 +233,7 @@ fn changed_bio_keeps_the_old_baseline_when_the_feed_cannot_be_published() -> Res
     let store = MemoryProfileBioStore::default();
     let old = ProfileBioRecord {
         bio: "old".into(),
-        checked_at: "2026-09-17T00:00:00.000Z".into(),
+        checked_at: 1789603200,
     };
     store.record(&owner, "usr_friend", &old)?;
 
@@ -245,7 +242,7 @@ fn changed_bio_keeps_the_old_baseline_when_the_feed_cannot_be_published() -> Res
         runtime.runtime(),
         &owner,
         &observation("new"),
-        "2026-09-18T00:00:00.000Z",
+        1789689600,
     )?;
 
     assert_eq!(outcome, ProfileBioOutcome::Deferred);
@@ -257,7 +254,7 @@ fn changed_bio_keeps_the_old_baseline_when_the_feed_cannot_be_published() -> Res
 fn profile_responses_are_observed_only_for_current_friends() -> Result<()> {
     let (_dir, runtime, owner) = runtime_with_friend("profile-bio-response")?;
     let store = MemoryProfileBioStore::default();
-    let now = "2026-09-18T00:00:00.000Z";
+    let now = 1789689600;
     let observe = |response: &VrchatApiResponse| {
         observe_profile_response(&store, runtime.runtime(), &owner, response, now)
     };
@@ -280,7 +277,7 @@ fn profile_responses_are_observed_only_for_current_friends() -> Result<()> {
 fn own_profile_response_is_observed_against_the_self_bio_baseline() -> Result<()> {
     let (_dir, runtime, owner) = runtime_with_friend("profile-bio-self")?;
     let store = MemoryProfileBioStore::default();
-    let now = "2026-09-18T00:00:00.000Z";
+    let now = 1789689600;
 
     let outcome = observe_profile_response(
         &store,
@@ -293,11 +290,7 @@ fn own_profile_response_is_observed_against_the_self_bio_baseline() -> Result<()
     assert_eq!(outcome, None);
     assert_eq!(
         store.self_bios.lock().unwrap().clone(),
-        vec![(
-            owner.as_str().to_string(),
-            "my bio".to_string(),
-            now.to_string()
-        )]
+        vec![(owner.as_str().to_string(), "my bio".to_string(), now)]
     );
     assert_eq!(store.last_seen(&owner, owner.as_str())?, None);
     assert!(bio_rows(&runtime, &owner).is_empty());
@@ -359,7 +352,7 @@ async fn scan_checks_the_next_stale_friend_and_pauses_when_vrchat_pushes_back() 
         store.last_seen(&owner, "usr_friend")?,
         Some(ProfileBioRecord {
             bio: "hello".into(),
-            checked_at: iso_millis(resumed),
+            checked_at: resumed.timestamp(),
         })
     );
 
@@ -369,7 +362,7 @@ async fn scan_checks_the_next_stale_friend_and_pauses_when_vrchat_pushes_back() 
     );
     assert_eq!(
         store.last_seen(&owner, "usr_friend")?.unwrap().checked_at,
-        iso_millis(resumed)
+        resumed.timestamp()
     );
     assert!(pacer.is_paused(resumed + PROFILE_BIO_SCAN_INTERVAL));
 
@@ -385,7 +378,7 @@ async fn scan_checks_the_next_stale_friend_and_pauses_when_vrchat_pushes_back() 
         store.last_seen(&owner, "usr_friend")?,
         Some(ProfileBioRecord {
             bio: "hello".into(),
-            checked_at: iso_millis(later),
+            checked_at: later.timestamp(),
         })
     );
     assert!(!pacer.is_paused(later + PROFILE_BIO_SCAN_INTERVAL));

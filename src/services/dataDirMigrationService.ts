@@ -6,6 +6,7 @@ import {
     type DataDirMigrationPlan,
     type DataDirMigrationResult
 } from '@/platform/tauri/bindings';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 
 export type {
     DataDirCleanupPending,
@@ -50,7 +51,9 @@ export async function dismissDataDirCleanup(): Promise<void> {
 }
 
 export async function markDataDirCleanupPrompted(
-    promptedAt: string
+    promptedAt: number | string
 ): Promise<void> {
-    await commands.appMarkDataDirCleanupPrompted(promptedAt);
+    await commands.appMarkDataDirCleanupPrompted(
+        epochSecondsFromValue(promptedAt) ?? 0
+    );
 }

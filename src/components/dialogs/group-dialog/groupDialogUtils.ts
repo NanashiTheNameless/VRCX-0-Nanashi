@@ -96,7 +96,9 @@ export function announcementRoleNames(
         : [];
 }
 
-export function announcementTimestamp(value: string | null | undefined) {
+export function announcementTimestamp(
+    value: string | number | null | undefined
+) {
     return value ? formatDateFilter(value, 'long') : '-';
 }
 

@@ -154,7 +154,7 @@ describe('PlayerListWorldHeader', () => {
                 clockNow={1_700_000_000_000}
                 friendCount={0}
                 instanceSnapshot={{
-                    createdAt: '2023-11-14T22:00:00.000Z',
+                    createdAt: 1699999200,
                     groupName: 'Test Group',
                     location:
                         'wrld_test:12345~group(grp_test)~groupAccessType(plus)',

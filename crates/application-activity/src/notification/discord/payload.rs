@@ -155,7 +155,10 @@ fn build_discord_payload_with_enrichment(
     if !footer.is_empty() {
         embed.insert("footer".into(), json!({ "text": footer }));
     }
-    embed.insert("timestamp".into(), Value::String(entry.created_at.clone()));
+    embed.insert(
+        "timestamp".into(),
+        Value::String(vrcx_0_core::time::epoch_to_iso(entry.created_at)),
+    );
     embed.insert("thumbnail".into(), thumbnail);
 
     json!({
@@ -225,7 +228,10 @@ fn discord_legacy_embed(
         embed.insert("description".into(), Value::String(description));
     }
     embed.insert("thumbnail".into(), thumbnail);
-    embed.insert("timestamp".into(), Value::String(entry.created_at.clone()));
+    embed.insert(
+        "timestamp".into(),
+        Value::String(vrcx_0_core::time::epoch_to_iso(entry.created_at)),
+    );
     json!({
         "content": null,
         "embeds": [embed],

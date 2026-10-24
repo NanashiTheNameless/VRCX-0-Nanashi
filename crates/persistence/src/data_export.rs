@@ -24,7 +24,9 @@ use crate::legacy_migration::copy_database_snapshot;
 use crate::Error;
 
 pub const DATA_EXPORT_FORMAT: &str = "vrcx-0-nanashi-data-export";
-const DATA_EXPORT_FORMAT_VERSION: u32 = 1;
+/// 2: dates in the database and the manifest are epoch seconds. Version 1
+/// exports still import; their database is migrated on the next start.
+const DATA_EXPORT_FORMAT_VERSION: u32 = 2;
 const MANIFEST_NAME: &str = "vrcx-0-nanashi-export.json";
 const DATABASE_FILE: &str = "VRCX-0.sqlite3";
 const SETTINGS_FILE: &str = "VRCX-0.json";
@@ -133,7 +135,8 @@ struct DataExportManifest {
     format: String,
     format_version: u32,
     app_version: String,
-    created_at: String,
+    #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
+    created_at: i64,
     files: u32,
 }
 
@@ -149,7 +152,7 @@ pub struct DataExportReport {
 pub struct DataImportSummary {
     pub files: u32,
     pub app_version: String,
-    pub created_at: String,
+    pub created_at: i64,
 }
 
 fn is_excluded(relative: &Path) -> bool {
@@ -223,7 +226,7 @@ pub fn export_data_archive(
             format: DATA_EXPORT_FORMAT.into(),
             format_version: DATA_EXPORT_FORMAT_VERSION,
             app_version: app_version.into(),
-            created_at: chrono::Utc::now().to_rfc3339(),
+            created_at: vrcx_0_core::time::now_epoch(),
             files: files.len() as u32 + 1,
         };
         writer
@@ -336,7 +339,7 @@ pub fn stage_data_import(archive: &Path, app_data: &Path) -> Result<DataImportSu
         Ok(DataImportSummary {
             files,
             app_version: manifest.app_version.clone(),
-            created_at: manifest.created_at.clone(),
+            created_at: manifest.created_at,
         })
     })();
     if result.is_err() {

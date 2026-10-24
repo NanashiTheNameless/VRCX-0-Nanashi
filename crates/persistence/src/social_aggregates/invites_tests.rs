@@ -10,8 +10,8 @@ fn invite_history_groups_received_and_sent_notifications() {
             "INSERT INTO usrself_notifications
                 (id, created_at, type, sender_user_id, sender_username, receiver_user_id, message, world_id, world_name, image_url, invite_message, request_message, response_message, expired)
              VALUES
-                ('n1', '2026-06-01T20:00:00Z', 'invite', 'usr_alice', 'Alice', 'usr_self', '', '', '', '', '', '', '', 0),
-                ('n2', '2026-06-02T20:00:00Z', 'requestInvite', 'usr_self', 'Self', 'usr_bob', '', '', '', '', '', '', '', 0)",
+                ('n1', 1780344000, 'invite', 'usr_alice', 'Alice', 'usr_self', '', '', '', '', '', '', '', 0),
+                ('n2', 1780430400, 'requestInvite', 'usr_self', 'Self', 'usr_bob', '', '', '', '', '', '', '', 0)",
             &Default::default(),
         )
         .unwrap();
@@ -19,7 +19,7 @@ fn invite_history_groups_received_and_sent_notifications() {
             "INSERT INTO usrself_notifications_v2
                 (id, created_at, updated_at, expires_at, type, link, link_text, message, title, image_url, seen, sender_user_id, sender_username, data, responses, details)
              VALUES
-                ('n3', '2026-06-03T20:00:00Z', '', '', 'invite', '', '', '', '', '', 0, 'usr_alice', 'Alice', '', '', '')",
+                ('n3', 1780516800, '', '', 'invite', '', '', '', '', '', 0, 'usr_alice', 'Alice', '', '', '')",
             &Default::default(),
         )
         .unwrap();
@@ -43,7 +43,7 @@ fn invite_history_groups_received_and_sent_notifications() {
         .unwrap();
     assert_eq!(alice.direction, InviteDirection::Received);
     assert_eq!(alice.total_count, 2);
-    assert_eq!(alice.last_invite_at, "2026-06-03T20:00:00Z");
+    assert_eq!(alice.last_invite_at, "2026-06-03T20:00:00.000Z");
     let bob = output
         .rows
         .iter()

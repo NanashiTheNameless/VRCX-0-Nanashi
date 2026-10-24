@@ -115,8 +115,9 @@ pub struct VrcStatusSnapshot {
     pub status: String,
     pub indicator: String,
     pub summary: String,
-    pub updated_at: Option<String>,
-    pub last_fetched_at: Option<String>,
+    #[serde(default, deserialize_with = "vrcx_0_contracts::epoch::de_opt")]
+    pub updated_at: Option<i64>,
+    pub last_fetched_at: Option<i64>,
     pub polling_interval_ms: u32,
     pub refreshing: bool,
     pub error: String,

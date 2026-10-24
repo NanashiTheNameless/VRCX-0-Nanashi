@@ -144,7 +144,7 @@ pub async fn app__dismiss_data_dir_cleanup(state: State<'_, AppState>) -> Result
 #[specta::specta]
 pub async fn app__mark_data_dir_cleanup_prompted(
     state: State<'_, AppState>,
-    prompted_at: String,
+    prompted_at: i64,
 ) -> Result<(), AppError> {
     let runtime = state.runtime_host().data_dir().clone();
     tauri::async_runtime::spawn_blocking(move || runtime.mark_cleanup_prompted(prompted_at))

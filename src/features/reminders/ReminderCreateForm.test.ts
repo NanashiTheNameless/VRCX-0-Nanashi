@@ -51,7 +51,7 @@ describe('buildReminderTrigger', () => {
 
         expect(trigger).toEqual({
             kind: 'time',
-            at: new Date('2026-10-01T09:30').toISOString(),
+            at: Math.floor(new Date('2026-10-01T09:30').getTime() / 1000),
             repeatMinutes: 0
         });
         expect(buildReminderTrigger('time', base)).toBeNull();

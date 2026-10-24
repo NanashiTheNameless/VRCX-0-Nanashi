@@ -715,7 +715,7 @@ fn stable_location_skip_reason(
     if facts.parsed_location.is_traveling {
         return Some("traveling");
     }
-    let started_at_ms = parse_date_ms(&facts.current_location_started_at);
+    let started_at_ms = parse_date_ms(facts.current_location_started_at);
     if started_at_ms > 0 && Utc::now().timestamp_millis() - started_at_ms < stable_location_ms {
         return Some("location-stabilizing");
     }
@@ -849,10 +849,8 @@ fn valid_status(value: &str) -> bool {
     matches!(value, "active" | "join me" | "ask me" | "busy" | "offline")
 }
 
-fn parse_date_ms(value: &str) -> i64 {
-    chrono::DateTime::parse_from_rfc3339(value)
-        .map(|date| date.timestamp_millis())
-        .unwrap_or(0)
+fn parse_date_ms(value: i64) -> i64 {
+    value.saturating_mul(1000)
 }
 
 fn value_to_string(value: &Value) -> String {

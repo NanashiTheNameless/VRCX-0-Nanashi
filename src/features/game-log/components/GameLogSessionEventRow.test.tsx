@@ -88,22 +88,22 @@ describe('SessionEventGroups player durations', () => {
                 events={[
                     {
                         type: 'OnPlayerJoined',
-                        created_at: '2026-08-12T10:00:00.000Z',
+                        created_at: 1786528800,
                         displayName: 'Alice',
                         userId: 'usr_alice'
                     },
                     {
                         type: 'OnPlayerLeft',
-                        created_at: '2026-08-12T10:01:00.000Z',
+                        created_at: 1786528860,
                         displayName: 'Alice',
                         userId: 'usr_alice'
                     },
                     {
                         type: 'JoinGroup',
-                        created_at: '2026-08-12T10:02:00.000Z',
+                        created_at: 1786528920,
                         members: [
                             {
-                                created_at: '2026-08-12T10:02:00.000Z',
+                                created_at: 1786528920,
                                 displayName: 'Alice',
                                 userId: 'usr_alice',
                                 isFavorite: false
@@ -112,10 +112,10 @@ describe('SessionEventGroups player durations', () => {
                     },
                     {
                         type: 'LeftGroup',
-                        created_at: '2026-08-12T10:03:00.000Z',
+                        created_at: 1786528980,
                         members: [
                             {
-                                created_at: '2026-08-12T10:03:00.000Z',
+                                created_at: 1786528980,
                                 displayName: 'Alice',
                                 userId: 'usr_alice',
                                 isFavorite: false
@@ -135,17 +135,13 @@ describe('SessionEventGroups player durations', () => {
         }
         expect(screen.getAllByText('duration:60000')).toHaveLength(2);
 
-        const joinedRow = screen
-            .getByText('2026-08-12T10:00:00.000Z')
-            .closest('div');
-        const leftRow = screen
-            .getByText('2026-08-12T10:01:00.000Z')
-            .closest('div');
+        const joinedRow = screen.getByText('1786528800').closest('div');
+        const leftRow = screen.getByText('1786528860').closest('div');
         const joinedGroupMember = screen
-            .getAllByText('2026-08-12T10:02:00.000Z')[1]
+            .getAllByText('1786528920')[1]
             .closest('div');
         const leftGroupMember = screen
-            .getAllByText('2026-08-12T10:03:00.000Z')[1]
+            .getAllByText('1786528980')[1]
             .closest('div');
 
         expect(joinedRow?.textContent).not.toContain('duration:60000');
@@ -167,7 +163,7 @@ describe('SessionEventGroups player durations', () => {
                     events={[
                         {
                             type: 'OnPlayerJoined',
-                            created_at: '2026-08-12T10:00:00.000Z',
+                            created_at: 1786528800,
                             displayName: 'Alice',
                             userId: 'usr_alice'
                         }
@@ -181,11 +177,11 @@ describe('SessionEventGroups player durations', () => {
     });
 
     it('defers member normalization until expanded and releases rows when collapsed', async () => {
-        const readCreatedAt = vi.fn(() => 'member-time');
+        const readCreatedAt = vi.fn(() => 1786406401);
         const events: GameLogSessionEvent[] = [
             {
                 type: 'LeftGroup',
-                created_at: 'group-time',
+                created_at: 1786406400,
                 count: 99,
                 members: [
                     {
@@ -223,7 +219,7 @@ describe('SessionEventGroups player durations', () => {
 
         fireEvent.click(trigger);
         expect(screen.getByText('Alice')).not.toBeNull();
-        expect(screen.getByText('member-time')).not.toBeNull();
+        expect(screen.getByText('1786406401')).not.toBeNull();
         expect(screen.getByText('duration:60000')).not.toBeNull();
         expect(
             view.container.querySelector('[data-affinity="friend"]')
@@ -271,23 +267,23 @@ describe('SessionEventGroups player durations', () => {
                 events={[
                     {
                         type: 'JoinGroup',
-                        created_at: 'fallback-time',
+                        created_at: 1786406402,
                         displayName: 'Fallback',
                         isFavorite: false
                     },
                     {
                         type: 'LeftGroup',
-                        created_at: 'parent-time',
+                        created_at: 1786406403,
                         members: [
                             {
                                 userId: '',
                                 displayName: 'Member',
-                                created_at: '',
+                                created_at: 0,
                                 isFavorite: false
                             }
                         ]
                     },
-                    { type: 'JoinGroup', created_at: 'count-only', count: 3 }
+                    { type: 'JoinGroup', created_at: 1786406404, count: 3 }
                 ]}
             />,
             { wrapper: EmptyAffinityProvider }
@@ -313,11 +309,11 @@ describe('SessionEventGroups player durations', () => {
                     'data-affinity'
                 )
         ).toBe('');
-        expect(screen.getAllByText('parent-time')).toHaveLength(2);
+        expect(screen.getAllByText('1786406403')).toHaveLength(2);
         expect(
-            screen.getByText('count-only').closest('button')?.textContent
+            screen.getByText('1786406404').closest('button')?.textContent
         ).toContain('3');
-        expect(screen.getAllByText('count-only')).toHaveLength(1);
+        expect(screen.getAllByText('1786406404')).toHaveLength(1);
     });
 
     it('fails explicitly when player rows are mounted without an affinity provider', () => {
@@ -327,7 +323,7 @@ describe('SessionEventGroups player durations', () => {
                     events={[
                         {
                             type: 'OnPlayerJoined',
-                            created_at: '',
+                            created_at: 0,
                             userId: 'usr_alice',
                             displayName: 'Alice'
                         }

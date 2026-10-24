@@ -127,7 +127,7 @@ export function handleUpdateIsGameRunning(
 
 export function handleBrowserFocusEvent(): void {
     useRuntimeStore.getState().setGameState({
-        lastBrowserFocusAt: new Date().toISOString()
+        lastBrowserFocusAt: Math.floor(Date.now() / 1000)
     });
     handleBrowserFocus().catch((error: unknown) => {
         console.warn('Browser focus status refresh failed:', error);

@@ -105,7 +105,7 @@ function node(id: string) {
     return {
         id,
         label: id,
-        lastFetchedAt: '2026-09-01T00:00:00.000Z',
+        lastFetchedAt: 1788220800,
         optedOut: false,
         degree: 1,
         mutualCount: 1
@@ -475,7 +475,7 @@ describe('buildSigmaGraph', () => {
             expect.objectContaining({
                 fullLabel: 'usr_a',
                 mutualCount: 1,
-                lastFetchedAt: '2026-09-01T00:00:00.000Z',
+                lastFetchedAt: 1788220800,
                 x: 100,
                 y: 120
             }),

@@ -8,6 +8,7 @@ import {
     userFactKey,
     type UserFact
 } from '@/domain/users/userFacts';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import {
     useRuntimeStore,
@@ -76,7 +77,8 @@ function currentSnapshotToUserFact(
         id: normalizedUserId,
         endpoint: normalizeEndpoint(snapshot.endpoint || endpoint),
         updatedAt:
-            typeof snapshot.updatedAt === 'string' ? snapshot.updatedAt : ''
+            epochSecondsFromValue(snapshot.updatedAt) ??
+            Math.floor(Date.now() / 1000)
     };
 }
 

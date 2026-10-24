@@ -30,7 +30,7 @@ function normalizeEntityId(value?: string | null) {
 function createEmptyUserMemo(userId = ''): UserMemoOutput {
     return {
         userId,
-        editedAt: '',
+        editedAt: 0,
         memo: ''
     };
 }
@@ -38,7 +38,7 @@ function createEmptyUserMemo(userId = ''): UserMemoOutput {
 function createEmptyWorldMemo(worldId = ''): WorldMemoOutput {
     return {
         worldId,
-        editedAt: '',
+        editedAt: 0,
         memo: ''
     };
 }
@@ -46,7 +46,7 @@ function createEmptyWorldMemo(worldId = ''): WorldMemoOutput {
 function createEmptyAvatarMemo(avatarId = ''): AvatarMemoOutput {
     return {
         avatarId,
-        editedAt: '',
+        editedAt: 0,
         memo: ''
     };
 }

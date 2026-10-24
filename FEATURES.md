@@ -279,13 +279,21 @@ screen can still turn off.
 
 ## Interface
 
-| Change                                    | Details                                                                                                                                                                                                                                              |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Profile decorations are hidden by default | VRChat profile backgrounds, avatar frames, profile and nameplate effects stay off in the user dialog, friends sidebar, user hover cards, Friends Locations and the Activity journey until turned on under Settings > Interface > Profile Appearance. |
-| One date format everywhere                | Dates show as `hh:mm:ss AM MM/DD/YY` by default. Under Settings > Interface > Time/Date, pick time-first or date-first with MM/DD/YY, DD/MM/YY or YYYY-MM-DD, or the language default. Today's feed entries show only the time.                      |
-| Resizable feed columns                    | In the feed's column view, drag a column's right edge (or focus it and use the arrow keys) to set its width.                                                                                                                                         |
-| Local fonts by default                    | Bundled 0xProto and system CJK fonts work offline. Additional online font choices are labelled in Settings > Interface.                                                                                                                              |
-| English only                              | Other UI translations were removed. Support (issues, questions) is offered in English only; other languages, including any custom translations you load, are not officially supported on this fork.                                                  |
+| Change                                    | Details                                                                                                                                                                                                                                                                                 |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Profile decorations are hidden by default | VRChat profile backgrounds, avatar frames, profile and nameplate effects stay off in the user dialog, friends sidebar, user hover cards, Friends Locations and the Activity journey until turned on under Settings > Interface > Profile Appearance.                                    |
+| One date format everywhere                | Dates show as `hh:mm:ss AM MM/DD/YY` by default. Under Settings > Interface > Time/Date, pick time-first or date-first with MM/DD/YY, DD/MM/YY or YYYY-MM-DD, or the language default. Today's feed entries show only the time.                                                         |
+| Per-PC timezone                           | Settings > Interface > Time/Date accepts an IANA timezone such as `America/Chicago` or a fixed offset such as `UTC+05:30`. Blank follows the system timezone. The setting applies to displayed dates, reminders, calendar filters and Rust overlays, and is never synced to another PC. |
+| Resizable feed columns                    | In the feed's column view, drag a column's right edge (or focus it and use the arrow keys) to set its width.                                                                                                                                                                            |
+| Local fonts by default                    | Bundled 0xProto and system CJK fonts work offline. Additional online font choices are labelled in Settings > Interface.                                                                                                                                                                 |
+| English only                              | Other UI translations were removed. Support (issues, questions) is offered in English only; other languages, including any custom translations you load, are not officially supported on this fork.                                                                                     |
+
+Absolute dates are stored as signed Unix epoch seconds in UTC. Updates convert existing
+ISO dates and millisecond timestamps automatically. Distinct old game-log events within
+one second keep separate identities, and repeated imports still deduplicate them. Old
+history and backup formats are accepted at import boundaries. Durations keep their existing
+units; signed protocol envelopes retain the units required by their protocol version.
+See [Dates and timezones](TIMESTAMPS.md) for migration, timezone and sync compatibility details.
 
 ## App identity, links and updates
 

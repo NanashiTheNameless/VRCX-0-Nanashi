@@ -8,9 +8,10 @@ use crate::Error;
 
 use super::caveats::fading_friends_caveats;
 use super::helpers::{
-    clamped_optional_limit, date_part, millis_to_minutes, table_exists, LatestName,
+    clamped_optional_limit, date_part, millis_to_minutes, row_iso, table_exists, LatestName,
 };
 use super::types::{FadingFriendRow, FadingFriendsInput, FadingFriendsOutput};
+use vrcx_0_core::time::parse_epoch_seconds;
 
 pub fn get_fading_friends(
     db: &DatabaseService,
@@ -37,9 +38,10 @@ pub fn get_fading_friends(
     );
     let params = ParamsBuilder::new()
         .set("owner_id", owner_id)
-        .set("prior_from", input.prior_from.as_str())
-        .set("now", input.now.as_str());
+        .set("prior_from", parse_epoch_seconds(&input.prior_from))
+        .set("now", parse_epoch_seconds(&input.now));
 
+    let pivot = parse_epoch_seconds(&input.pivot).unwrap_or(i64::MAX);
     let mut grouped: BTreeMap<String, FadingAccumulator> = BTreeMap::new();
     for row in db.execute(&sql, &params.build())? {
         let user_id = row_string(&row, 0);
@@ -48,15 +50,16 @@ pub fn get_fading_friends(
         }
         let display_name = row_string(&row, 1);
         let millis = row_i64(&row, 2).max(0);
-        let created_at = row_string(&row, 3);
+        let created_at_seconds = row_i64(&row, 3);
+        let created_at = row_iso(&row, 3);
         let entry = grouped
             .entry(user_id.clone())
             .or_insert_with(|| FadingAccumulator {
                 user_id,
                 ..FadingAccumulator::default()
             });
-        entry.latest_name.observe(&display_name, &created_at);
-        let is_recent = created_at >= input.pivot;
+        entry.latest_name.observe(&display_name, created_at_seconds);
+        let is_recent = created_at_seconds >= pivot;
         if is_recent {
             entry.recent_millis += millis;
             if !created_at.is_empty() {
@@ -68,7 +71,8 @@ pub fn get_fading_friends(
                 entry.prior_days.insert(date_part(&created_at));
             }
         }
-        if created_at > entry.last_seen_together {
+        if created_at_seconds > entry.last_seen_together_at {
+            entry.last_seen_together_at = created_at_seconds;
             entry.last_seen_together = created_at;
         }
     }
@@ -120,5 +124,6 @@ struct FadingAccumulator {
     recent_millis: i64,
     prior_days: HashSet<String>,
     recent_days: HashSet<String>,
+    last_seen_together_at: i64,
     last_seen_together: String,
 }

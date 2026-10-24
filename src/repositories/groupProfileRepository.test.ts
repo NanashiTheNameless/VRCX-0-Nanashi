@@ -103,8 +103,8 @@ describe('GroupProfileRepository', () => {
             })
         ).toMatchObject({
             id: 'grp_redacted',
-            createdAt: '',
-            updatedAt: '',
+            createdAt: 0,
+            updatedAt: 42,
             myMember: null,
             memberCountSyncedAt: '',
             galleries: [{ id: 'gal_redacted', roleIdsToView: null }]

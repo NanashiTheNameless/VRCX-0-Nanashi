@@ -4,7 +4,7 @@ import type { GameLogPreviousInstanceWorldRow } from '@/repositories/gameLogRepo
 
 export type PreviousInstancesDialogRow =
     Partial<GameLogPreviousInstanceWorldRow> & {
-        createdAt?: string;
+        createdAt?: number;
         worldId?: string;
     };
 

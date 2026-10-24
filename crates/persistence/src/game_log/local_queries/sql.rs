@@ -46,7 +46,7 @@ const GAME_LOG_RESOURCE_LOAD_BASE_PROJECTION: &str = "id, created_at, resource_t
 
 pub(super) fn game_log_recent_select_sql(descriptor: &GameLogRecentDescriptor) -> String {
     format!(
-        "SELECT {} FROM {} WHERE owner_id IN (0, @owner_id) AND created_at >= date(@date_offset) ORDER BY id DESC LIMIT @limit",
+        "SELECT {} FROM {} WHERE owner_id IN (0, @owner_id) AND created_at >= @date_offset ORDER BY id DESC LIMIT @limit",
         descriptor.projection, descriptor.table
     )
 }

@@ -98,7 +98,7 @@ fn update_skips_files_older_than_the_requested_cutoff() {
     let dir = TestDir::new("cutoff");
     std::fs::write(dir.path().join("output_log_2026-08-02_00-00-00.txt"), []).unwrap();
     let watcher = LogWatcher::new(None);
-    watcher.set_date_till("2999-01-01T00:00:00.000Z");
+    watcher.set_date_till(32472144000);
     let mut reader = LogReader::new();
     let mut contexts = HashMap::new();
     let mut first_run = true;
@@ -164,7 +164,7 @@ fn flush_labels_initial_and_live_batches() {
     let watcher = LogWatcher::new(Some(sink.clone()));
     let event = GameLogEvent {
         file_name: "output_log_test.txt".into(),
-        created_at: "2026-08-06T00:00:00.000Z".into(),
+        created_at: 1785974400,
         kind: GameLogEventKind::DesktopMode,
     };
 
@@ -186,7 +186,7 @@ fn flush_labels_initial_and_live_batches() {
 
 #[test]
 fn latest_only_replay_does_not_ingest_older_files_on_later_polls() {
-    use chrono::{Duration, Local, Utc};
+    use chrono::{Duration, Local};
     struct Seen(Mutex<Vec<(String, GameLogEventOrigin)>>);
     impl GameLogEventSink for Seen {
         fn ingest_game_log_event(&self, _: &GameLogEvent) -> crate::Result<()> {
@@ -229,11 +229,7 @@ fn latest_only_replay_does_not_ingest_older_files_on_later_polls() {
     let seen = Arc::new(Seen(Mutex::new(Vec::new())));
     let watcher = LogWatcher::new(Some(seen.clone()));
     watcher.set_initial_scan_latest_file_only(true);
-    watcher.set_date_till(
-        &(older - Duration::minutes(1))
-            .with_timezone(&Utc)
-            .to_rfc3339(),
-    );
+    watcher.set_date_till((older - Duration::minutes(1)).timestamp());
     let mut reader = LogReader::new();
     let mut contexts = HashMap::new();
     let mut first = true;
@@ -429,4 +425,24 @@ fn retry_in_later_file_does_not_revisit_completed_earlier_files() {
             .count(),
         1
     );
+}
+
+#[test]
+fn replay_file_creation_dates_migrate_without_losing_replacement_identity() {
+    let old = serde_json::json!({ "file_created_at": 1784629815250000000_u64 });
+    let stamp: super::FileCreationStamp = serde_json::from_value(old).unwrap();
+    assert_eq!(stamp.seconds, Some(1784629815));
+    assert_eq!(stamp.fraction, Some(250000000));
+    let stored = serde_json::to_value(&stamp).unwrap();
+    assert_eq!(stored["file_created_at_seconds"], 1784629815);
+    assert!(stored.get("file_created_at").is_none());
+    assert_eq!(
+        serde_json::from_value::<super::FileCreationStamp>(stored).unwrap(),
+        stamp
+    );
+    let replaced: super::FileCreationStamp =
+        serde_json::from_value(serde_json::json!({ "file_created_at": 1784629815900000000_u64 }))
+            .unwrap();
+    assert_eq!(replaced.seconds, stamp.seconds);
+    assert_ne!(replaced, stamp);
 }

@@ -31,7 +31,7 @@ it('batches mounted rows and renders URL warnings without opening any URLs', asy
             <SafetyLogBadge
                 row={{
                     type: 'VideoPlay',
-                    created_at: 'time',
+                    created_at: 1786406400,
                     videoUrl: 'https://grabify.link/secret'
                 }}
             />
@@ -57,7 +57,7 @@ it('includes the account and inherited session location for accurate history mat
                 <SafetyLogBadge
                     row={{
                         type: 'OnPlayerJoined',
-                        created_at: 'time',
+                        created_at: 1786406400,
                         userId: 'usr_player'
                     }}
                 />
@@ -70,7 +70,7 @@ it('includes the account and inherited session location for accurate history mat
                 accountUserId: 'usr_self',
                 location: 'wrld_world:instance',
                 userId: 'usr_player',
-                createdAt: 'time',
+                createdAt: 1786406400,
                 kind: 'OnPlayerJoined'
             })
         ])

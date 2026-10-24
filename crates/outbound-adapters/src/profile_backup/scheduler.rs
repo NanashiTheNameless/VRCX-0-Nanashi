@@ -37,7 +37,7 @@ impl LocalProfileBackupPort {
             auto_interval_days: settings.auto_interval_days.clamp(1, 30),
             auto_retain_extra: settings.auto_retain_extra.clamp(1, 5),
             auto_target_dir: target_dir,
-            last_auto_at: previous.last_auto_at.clone(),
+            last_auto_at: previous.last_auto_at,
         };
         write_settings(&self.inner.storage, &normalized);
         if !previous.auto_enabled && normalized.auto_enabled && normalized.last_auto_at.is_none() {
@@ -108,7 +108,7 @@ impl LocalProfileBackupPort {
         if !settings.auto_enabled
             || settings.auto_target_dir.is_empty()
             || !is_auto_backup_due(
-                settings.last_auto_at.as_deref(),
+                settings.last_auto_at,
                 Utc::now(),
                 settings.auto_interval_days,
             )
@@ -145,7 +145,7 @@ fn read_settings(storage: &StorageService) -> ProfileBackupSettings {
         auto_target_dir: storage.get(AUTO_TARGET_DIR_KEY).unwrap_or_default(),
         last_auto_at: storage
             .get(LAST_AUTO_AT_KEY)
-            .filter(|value| !value.is_empty()),
+            .and_then(|value| vrcx_0_core::time::parse_epoch_seconds(&value)),
     }
 }
 
@@ -169,12 +169,8 @@ fn parse_clamped_u8(value: Option<String>, default: u8, min: u8, max: u8) -> u8 
         .clamp(min, max)
 }
 
-pub(super) fn is_auto_backup_due(
-    last: Option<&str>,
-    now: DateTime<Utc>,
-    interval_days: u8,
-) -> bool {
-    let Some(last) = last.and_then(|value| DateTime::parse_from_rfc3339(value).ok()) else {
+pub(super) fn is_auto_backup_due(last: Option<i64>, now: DateTime<Utc>, interval_days: u8) -> bool {
+    let Some(last) = last.and_then(|value| DateTime::<Utc>::from_timestamp(value, 0)) else {
         return true;
     };
     let last = last.with_timezone(&Utc);

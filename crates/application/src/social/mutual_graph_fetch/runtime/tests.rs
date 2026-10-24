@@ -273,7 +273,7 @@ fn progress_and_terminal_transitions_emit_typed_status_events() {
     assert_eq!(events[1].payload["revision"], json!(3));
     assert_eq!(events[2].payload["status"], json!("completed"));
     assert_eq!(events[2].payload["revision"], json!(4));
-    assert!(events[2].payload["finishedAt"].is_string());
+    assert!(events[2].payload["finishedAt"].is_i64());
 }
 
 #[test]
@@ -321,7 +321,7 @@ fn failed_friends_keep_their_cached_snapshot_entries() {
     }];
     let mut meta_entries = vec![MutualGraphMetaInput {
         friend_id: "usr_ok".into(),
-        last_fetched_at: "new".into(),
+        last_fetched_at: 2000,
         opted_out: false,
         total_count: Some(1),
     }];
@@ -341,13 +341,13 @@ fn failed_friends_keep_their_cached_snapshot_entries() {
         meta: vec![
             MutualGraphMetaOutput {
                 friend_id: "usr_failed".into(),
-                last_fetched_at: "old".into(),
+                last_fetched_at: 1000,
                 opted_out: false,
                 total_count: Some(3),
             },
             MutualGraphMetaOutput {
                 friend_id: "usr_removed".into(),
-                last_fetched_at: "removed".into(),
+                last_fetched_at: 1500,
                 opted_out: false,
                 total_count: Some(4),
             },
@@ -361,6 +361,6 @@ fn failed_friends_keep_their_cached_snapshot_entries() {
     assert_eq!(entries[1].mutual_ids, vec!["usr_mutual_old"]);
     assert_eq!(meta_entries.len(), 2);
     assert_eq!(meta_entries[1].friend_id, "usr_failed");
-    assert_eq!(meta_entries[1].last_fetched_at, "old");
+    assert_eq!(meta_entries[1].last_fetched_at, 1000);
     assert_eq!(meta_entries[1].total_count, Some(3));
 }

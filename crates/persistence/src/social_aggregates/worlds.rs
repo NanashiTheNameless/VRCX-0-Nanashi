@@ -8,7 +8,7 @@ use crate::Error;
 use vrcx_0_core::FavoriteEntityKind;
 
 use super::caveats::{favorite_local_caveats, worlds_visited_caveats};
-use super::helpers::{append_time_window_filter, millis_to_minutes, world_names_for_ids};
+use super::helpers::{append_time_window_filter, millis_to_minutes, row_iso, world_names_for_ids};
 use super::types::{
     FavoriteAction, FavoriteLocalInput, FavoriteOutput, SearchWorldsVisitedInput,
     SearchWorldsVisitedOutput, TopVisitedWorldRow, TopVisitedWorldsInput, VisitedWorldRow,
@@ -36,7 +36,7 @@ pub fn search_worlds_visited(
         .execute(&sql, &params.build())?
         .into_iter()
         .map(|row| {
-            let visited_at = row_string(&row, 3);
+            let visited_at = row_iso(&row, 3);
             let stay_millis = row_i64(&row, 4).max(0);
             VisitedWorldRow {
                 world_id: row_string(&row, 0),
@@ -96,7 +96,7 @@ pub fn top_visited_worlds(
             world_name: row_string(&row, 1),
             visits: row_i64(&row, 2),
             total_minutes: row_i64(&row, 3),
-            last_visited_at: row_string(&row, 4),
+            last_visited_at: row_iso(&row, 4),
         })
         .collect::<Vec<_>>();
     let world_ids = rows

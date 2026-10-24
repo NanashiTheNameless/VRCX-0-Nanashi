@@ -42,7 +42,7 @@ pub struct RemoteModerationInput {
 #[derive(Clone, Debug)]
 pub struct LocalModerationInput {
     pub user_id: String,
-    pub updated_at: String,
+    pub updated_at: i64,
     pub display_name: String,
     pub block: bool,
     pub mute: bool,
@@ -53,7 +53,7 @@ pub struct LocalModerationInput {
 #[specta(rename = "ModerationSyncLocalOutput")]
 pub struct LocalModerationOutput {
     pub user_id: String,
-    pub updated_at: String,
+    pub updated_at: i64,
     pub display_name: String,
     pub block: bool,
     pub mute: bool,

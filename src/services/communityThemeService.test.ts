@@ -82,8 +82,8 @@ function installedTheme(
         version: '1.0.0',
         sourceUrl: `${CATALOG_URL}/${themeId}/theme.css`,
         sha256: `${themeId}-sha`,
-        installedAt: '2026-05-01T00:00:00.000Z',
-        updatedAt: '2026-05-01T00:00:00.000Z',
+        installedAt: 1777593600,
+        updatedAt: 1777593600,
         darkMode: true,
         accentMode: false,
         ...patch

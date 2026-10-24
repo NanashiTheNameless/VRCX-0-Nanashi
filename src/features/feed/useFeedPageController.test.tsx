@@ -129,9 +129,9 @@ describe('useFeedPageController', () => {
                 {
                     rowId: 1,
                     type: 'Status',
-                    created_at: '2026-08-31T00:00:00Z'
+                    created_at: 1788134400
                 },
-                { rowId: 2, type: 'GPS', created_at: '2026-08-30T00:00:00Z' }
+                { rowId: 2, type: 'GPS', created_at: 1788048000 }
             ];
             const { result, rerender } = renderHook(() =>
                 useFeedPageController({ routeScopedUserIds: [] })
@@ -143,7 +143,7 @@ describe('useFeedPageController', () => {
                 usr_1: {
                     id: 'usr_1',
                     endpoint: 'default',
-                    updatedAt: '',
+                    updatedAt: 0,
                     displayName: 'Alice'
                 }
             };
@@ -223,9 +223,7 @@ describe('useFeedPageController', () => {
         mocks.rows = Array.from({ length: 45 }, (_, index) => ({
             rowId: index + 1,
             type: 'GPS',
-            created_at: new Date(
-                Date.UTC(2026, 7, 31, 0, 45 - index)
-            ).toISOString()
+            created_at: Date.UTC(2026, 7, 31, 0, 45 - index) / 1000
         }));
         const { result } = renderHook(() =>
             useFeedPageController({ routeScopedUserIds: [] })
@@ -268,9 +266,9 @@ describe('useFeedPageController', () => {
             {
                 rowId: 1,
                 type: 'Status',
-                created_at: '2026-08-31T00:00:00Z'
+                created_at: 1788134400
             },
-            { rowId: 2, type: 'GPS', created_at: '2026-08-30T00:00:00Z' }
+            { rowId: 2, type: 'GPS', created_at: 1788048000 }
         ];
         const { result } = renderHook(() =>
             useFeedPageController({ routeScopedUserIds: [] })

@@ -14,6 +14,7 @@ import {
     getRelativeTimeFormatter,
     normalizeDateLocale
 } from './dateTimeFormatters';
+import { absoluteDateFromValue, displayDateParts } from './displayTimeZone';
 
 export const DEFAULT_TIME_UNIT_LABELS = Object.freeze({
     y: 'y',
@@ -63,36 +64,12 @@ type DateTimeFormatPreferences = Pick<
     fallback?: string;
 };
 
-type DateInputValue = string | number | Date;
-
-function toDateInput(value: unknown): DateInputValue | null {
-    return typeof value === 'string' ||
-        typeof value === 'number' ||
-        value instanceof Date
-        ? value
-        : null;
-}
-
 export function dateFromUnknown(value: unknown): Date | null {
-    const input = toDateInput(value);
-    if (input === null) {
-        return null;
-    }
-
-    const date = new Date(input);
-    return Number.isNaN(date.getTime()) ? null : date;
+    return absoluteDateFromValue(value);
 }
 
 export function timestampMsFromValue(value: unknown) {
-    if (value === null || value === undefined || value === '') {
-        return 0;
-    }
-    const numberValue = Number(value);
-    if (Number.isFinite(numberValue) && numberValue > 0) {
-        return numberValue;
-    }
-    const parsed = Date.parse(String(value));
-    return Number.isFinite(parsed) ? parsed : 0;
+    return absoluteDateFromValue(value)?.getTime() ?? 0;
 }
 
 type DatePatternParts = {
@@ -106,23 +83,23 @@ function padTwo(value: number) {
 }
 
 function formatPatternDate(date: Date, preset: DateFormatPreset) {
-    const month = padTwo(date.getMonth() + 1);
-    const day = padTwo(date.getDate());
+    const month = padTwo(displayDateParts(date).month);
+    const day = padTwo(displayDateParts(date).day);
     if (preset.includes('ymd')) {
-        return `${date.getFullYear()}-${month}-${day}`;
+        return `${displayDateParts(date).year}-${month}-${day}`;
     }
-    const year = padTwo(date.getFullYear() % 100);
+    const year = padTwo(displayDateParts(date).year % 100);
     return preset.includes('dmy')
         ? `${day}/${month}/${year}`
         : `${month}/${day}/${year}`;
 }
 
 function formatPatternTime(date: Date, hour12: boolean, seconds: boolean) {
-    const hours = date.getHours();
+    const hours = displayDateParts(date).hour;
     const clock = [
         padTwo(hour12 ? hours % 12 || 12 : hours),
-        padTwo(date.getMinutes()),
-        ...(seconds ? [padTwo(date.getSeconds())] : [])
+        padTwo(displayDateParts(date).minute),
+        ...(seconds ? [padTwo(displayDateParts(date).second)] : [])
     ].join(':');
     if (!hour12) {
         return clock;
@@ -191,38 +168,49 @@ function toLocalClock(
     hour12: boolean,
     includeSeconds = false
 ) {
-    return date.toLocaleTimeString(dateFormat, {
-        hour: 'numeric',
-        minute: '2-digit',
-        second: includeSeconds ? '2-digit' : undefined,
-        hourCycle: hour12 ? 'h12' : 'h23'
-    });
+    return formatDateTimeValue(
+        date,
+        {
+            hour: 'numeric',
+            minute: '2-digit',
+            second: includeSeconds ? '2-digit' : undefined,
+            hourCycle: hour12 ? 'h12' : 'h23'
+        },
+        { locale: dateFormat }
+    );
 }
 
 function toLocalShort(date: Date, dateFormat: string, hour12: boolean) {
-    return date
-        .toLocaleDateString(dateFormat, {
+    return formatDateTimeValue(
+        date,
+        {
             month: 'short',
             day: 'numeric',
             year: 'numeric',
             hour: 'numeric',
             minute: '2-digit',
             hourCycle: hour12 ? 'h12' : 'h23'
-        })
+        },
+        { locale: dateFormat }
+    )
         .replace(' AM', 'am')
         .replace(' PM', 'pm')
         .replaceAll(',', '');
 }
 
 function toLocalLong(date: Date, dateFormat: string, hour12: boolean) {
-    return date.toLocaleDateString(dateFormat, {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit',
-        hourCycle: hour12 ? 'h12' : 'h23'
-    });
+    return formatDateTimeValue(
+        date,
+        {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hourCycle: hour12 ? 'h12' : 'h23'
+        },
+        { locale: dateFormat }
+    );
 }
 
 function toLocalTime(date: Date, dateFormat: string, hour12: boolean) {
@@ -230,11 +218,15 @@ function toLocalTime(date: Date, dateFormat: string, hour12: boolean) {
 }
 
 function toLocalDate(date: Date, dateFormat: string) {
-    return date.toLocaleDateString(dateFormat, {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
-    });
+    return formatDateTimeValue(
+        date,
+        {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+        },
+        { locale: dateFormat }
+    );
 }
 
 export function formatDateFilterWithPreferences(

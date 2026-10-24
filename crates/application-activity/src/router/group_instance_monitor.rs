@@ -40,7 +40,7 @@ impl GroupInstanceMonitor {
         &self,
         scope_key: &str,
         group_id: &str,
-        fetched_at: &str,
+        fetched_at: i64,
         instances: &[RawJson],
     ) -> Option<ActivityEvent> {
         let mut current_locations = instances
@@ -138,7 +138,7 @@ mod tests {
 
     fn scan(monitor: &GroupInstanceMonitor, group_id: &str, instances: &[RawJson]) -> Option<u64> {
         monitor
-            .scan("scope", group_id, &Utc::now().to_rfc3339(), instances)
+            .scan("scope", group_id, vrcx_0_core::time::now_epoch(), instances)
             .map(|event| event.facts.count)
     }
 
@@ -172,7 +172,7 @@ mod tests {
             .scan(
                 "scope",
                 "grp_test",
-                &Utc::now().to_rfc3339(),
+                vrcx_0_core::time::now_epoch(),
                 &[
                     instance("one"),
                     instance("two"),

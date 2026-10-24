@@ -55,7 +55,7 @@ impl GameStateStore for PersistenceGameStateStore {
     fn fill_location_group_name(
         &self,
         owner: &OwnerId,
-        created_at: &str,
+        created_at: i64,
         location: &str,
         group_name: &str,
     ) -> vrcx_0_application_core::Result<u64> {
@@ -72,8 +72,8 @@ impl GameStateStore for PersistenceGameStateStore {
         &self,
         owner: &OwnerId,
         location: &str,
-        after_date: &str,
-        before_date: &str,
+        after_date: i64,
+        before_date: i64,
     ) -> vrcx_0_application_core::Result<Vec<GameLogJoinLeaveSnapshot>> {
         Ok(game_log::get_join_leave_entries_for_location_range(
             self.db.as_ref(),
@@ -88,8 +88,8 @@ impl GameStateStore for PersistenceGameStateStore {
         &self,
         owner: &OwnerId,
         user_id: &str,
-        date_from: &str,
-        date_to: &str,
+        date_from: Option<i64>,
+        date_to: Option<i64>,
         limit: usize,
     ) -> vrcx_0_application_core::Result<Vec<PreviousInstanceEventRow>> {
         Ok(game_log::previous_instance_event_rows_query(
@@ -121,7 +121,7 @@ impl GameStateStore for PersistenceGameStateStore {
     fn location_before_or_at(
         &self,
         owner: &OwnerId,
-        created_at: &str,
+        created_at: i64,
     ) -> vrcx_0_application_core::Result<Option<GameLogLocationSnapshot>> {
         Ok(game_log::get_location_before_or_at(
             self.db.as_ref(),
@@ -147,8 +147,8 @@ impl GameStateStore for PersistenceGameStateStore {
     fn session_location_segments_by_date_range(
         &self,
         owner: &OwnerId,
-        after_date: &str,
-        before_date: &str,
+        after_date: i64,
+        before_date: i64,
         limit: i64,
     ) -> vrcx_0_application_core::Result<Vec<SessionLocationSegmentRow>> {
         Ok(game_log::get_session_location_segments_by_date_range(
@@ -163,8 +163,8 @@ impl GameStateStore for PersistenceGameStateStore {
     fn session_events_for_range(
         &self,
         owner: &OwnerId,
-        after_date: &str,
-        before_date: &str,
+        after_date: i64,
+        before_date: i64,
     ) -> vrcx_0_application_core::Result<Vec<SessionEventRow>> {
         Ok(game_log::get_session_events_for_range(
             self.db.as_ref(),

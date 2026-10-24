@@ -54,7 +54,7 @@ where
             .batch
             .events
             .iter()
-            .map(|entry| game_log_event(&entry.created_at, &entry.data)),
+            .map(|entry| game_log_event(entry.created_at, &entry.data)),
     );
     for entry in &output.batch.externals {
         let mut event = ActivityEvent::new(
@@ -66,7 +66,7 @@ where
                 entry.created_at,
                 stable_source_hash(&entry.message)
             ),
-            entry.created_at.clone(),
+            entry.created_at,
         );
         event.actor = ActivityActor::new(entry.user_id.clone(), entry.display_name.clone());
         event.subject = ActivitySubject::User(entry.user_id.clone());
@@ -90,7 +90,7 @@ fn join_leave_event(entry: &GameLogJoinLeaveEntry, kind: ActivityKind) -> Activi
             entry.location,
             entry.created_at
         ),
-        entry.created_at.clone(),
+        entry.created_at,
     );
     event.actor = ActivityActor::new(entry.user_id.clone(), entry.display_name.clone());
     event.subject = ActivitySubject::User(entry.user_id.clone());
@@ -111,7 +111,7 @@ pub(crate) fn lobby_avatar_change_event(change: &GameLogAvatarChange) -> Activit
             "game-log-avatar:{}:{}:{}:{}",
             change.user_id, change.display_name, change.created_at, change.avatar_name
         ),
-        change.created_at.clone(),
+        change.created_at,
     );
     event.actor = ActivityActor::new(change.user_id.clone(), change.display_name.clone());
     event.subject = ActivitySubject::User(change.user_id.clone());
@@ -126,7 +126,7 @@ pub(crate) fn lobby_avatar_change_event(change: &GameLogAvatarChange) -> Activit
     event
 }
 
-pub(crate) fn game_log_event(created_at: &str, data: &str) -> ActivityEvent {
+pub(crate) fn game_log_event(created_at: i64, data: &str) -> ActivityEvent {
     let mut event = ActivityEvent::new(
         ActivityKind::Event,
         format!("game-log-event:{created_at}:{}", stable_source_hash(data)),
@@ -146,7 +146,7 @@ pub(crate) fn video_activity_event(input: &VideoInput) -> ActivityEvent {
             input.created_at,
             stable_source_hash(&input.video_url)
         ),
-        input.created_at.clone(),
+        input.created_at,
     );
     event.actor = ActivityActor::new(input.user_id.clone(), input.display_name.clone());
     event.subject = ActivitySubject::User(input.user_id.clone());

@@ -43,7 +43,7 @@ type ReleaseSnapshotFixture = {
     displayName: string;
     tagName: string;
     htmlUrl: string;
-    publishedAt: string;
+    publishedAt: number;
     body: string;
     canonicalVersion: string;
     displayVersion: string;
@@ -57,7 +57,7 @@ const TAURI_RELEASE_SNAPSHOT: ReleaseSnapshotFixture = {
     displayName: 'VRCX-0 2.7.0',
     tagName: 'v2.7.0',
     htmlUrl: 'https://example.test/release',
-    publishedAt: '2026-06-18T00:00:00Z',
+    publishedAt: 1781740800,
     body: '',
     canonicalVersion: '2.7.0',
     displayVersion: '2.7.0',
@@ -93,7 +93,7 @@ function statusSnapshot(
 ) {
     return {
         hasAvailableUpdate: Boolean(release),
-        checkedAt: '2026-06-18T00:00:00.000Z',
+        checkedAt: 1781740800,
         detail: '',
         error: null,
         release,
@@ -217,7 +217,7 @@ describe('backgroundMaintenanceService update checks', () => {
     it('records the check detail without notifying when the check errored', async () => {
         await handleAppUpdateStatusEvent({
             hasAvailableUpdate: false,
-            checkedAt: '2026-06-18T00:00:00.000Z',
+            checkedAt: 1781740800,
             detail: '',
             error: 'network failed',
             release: null,

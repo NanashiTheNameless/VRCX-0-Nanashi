@@ -22,7 +22,7 @@ function toUpdaterReleaseSnapshot(release: UpdaterReleaseSnapshotSource) {
             release.displayVersion ||
             formatReleaseDisplayVersion(release.canonicalVersion) ||
             String(release.tagName || ''),
-        publishedAt: release.publishedAt || '',
+        publishedAt: release.publishedAt || 0,
         manifestUrl: release.manifestUrl || '',
         target: release.target || '',
         canonicalVersion: release.canonicalVersion || '',

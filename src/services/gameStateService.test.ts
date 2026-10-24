@@ -47,24 +47,24 @@ describe('gameStateService lifecycle transitions', () => {
             currentWorldId: 'wrld_old',
             currentWorldName: 'Old World',
             currentDestination: 'wrld_next:456',
-            currentLocationStartedAt: '2026-06-08T09:00:00.000Z',
+            currentLocationStartedAt: 1780909200,
             currentLocationPlayerIds: ['usr_friend']
         });
         useRuntimeStore.getState().setNowPlayingState({
             url: 'https://video.example/test',
             name: 'Video',
-            updatedAt: '2026-06-08T09:59:00.000Z'
+            updatedAt: 1780912740
         });
 
         await handleGameRunningUpdate({
             isGameRunning: true,
             isSteamVRRunning: true,
-            lastGameStartedAt: '2026-06-08T10:00:00.000Z',
-            lastGameStateChangedAt: '2026-06-08T10:00:00.000Z',
+            lastGameStartedAt: 1780912800,
+            lastGameStateChangedAt: 1780912800,
             generation: 1,
             gameChanged: true,
             steamvrChanged: true,
-            changedAt: '2026-06-08T10:00:00.000Z'
+            changedAt: 1780912800
         });
 
         expect(useRuntimeStore.getState().gameState).toMatchObject({
@@ -77,8 +77,8 @@ describe('gameStateService lifecycle transitions', () => {
             currentLocationStartedAt: null,
             currentLocationPlayerIds: [],
             currentLocationPlayers: [],
-            lastGameStartedAt: '2026-06-08T10:00:00.000Z',
-            lastGameStateChangedAt: '2026-06-08T10:00:00.000Z'
+            lastGameStartedAt: 1780912800,
+            lastGameStateChangedAt: 1780912800
         });
         expect(useRuntimeStore.getState().nowPlaying).toMatchObject({
             url: '',
@@ -97,7 +97,7 @@ describe('gameStateService lifecycle transitions', () => {
             currentWorldId: 'wrld_old',
             currentWorldName: 'Old World',
             currentDestination: 'wrld_next:456',
-            lastGameStartedAt: '2026-06-08T09:00:00.000Z'
+            lastGameStartedAt: 1780909200
         });
         useRuntimeStore.getState().setInstanceQueueState({
             active: true,
@@ -112,7 +112,7 @@ describe('gameStateService lifecycle transitions', () => {
             generation: 2,
             gameChanged: true,
             steamvrChanged: true,
-            changedAt: '2026-06-08T10:00:00.000Z'
+            changedAt: 1780912800
         });
 
         expect(useRuntimeStore.getState().gameState).toMatchObject({
@@ -122,13 +122,11 @@ describe('gameStateService lifecycle transitions', () => {
             currentWorldId: '',
             currentWorldName: '',
             currentDestination: '',
-            lastGameLogAt: '2026-06-08T10:00:00.000Z',
+            lastGameLogAt: 1780912800,
             lastGameLogType: 'game-stopped'
         });
         expect(useRuntimeStore.getState().instanceQueue.active).toBe(false);
-        expect(mocks.resetGameLogSessionState).toHaveBeenCalledWith(
-            '2026-06-08T10:00:00.000Z'
-        );
+        expect(mocks.resetGameLogSessionState).toHaveBeenCalledWith(1780912800);
         expect(mocks.appRuntimeDiscordReconcileRequest).toHaveBeenCalledTimes(
             1
         );

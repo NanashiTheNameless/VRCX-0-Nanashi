@@ -245,7 +245,7 @@ describe('deepLinkService', () => {
                 processed: 2,
                 imported: 1,
                 failed: 1,
-                finishedAt: '2026-07-16T00:01:00Z'
+                finishedAt: 1784160060
             })
         );
 

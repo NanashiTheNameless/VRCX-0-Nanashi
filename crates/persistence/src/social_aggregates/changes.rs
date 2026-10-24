@@ -6,7 +6,7 @@ use crate::realtime::normalize_user_table_prefix;
 use crate::Error;
 
 use super::caveats::friend_changes_caveats;
-use super::helpers::{append_time_window_filter, clamped_optional_limit, table_exists};
+use super::helpers::{append_time_window_filter, clamped_optional_limit, row_iso, table_exists};
 use super::types::{
     FriendChangeEvent, FriendChangeKind, FriendChangeRow, FriendChangesInput, FriendChangesOutput,
 };
@@ -59,7 +59,7 @@ pub fn get_friend_changes(
             continue;
         }
         let display_name = row_string(&row, 1);
-        let changed_at = row_string(&row, 2);
+        let changed_at = row_iso(&row, 2);
         let previous_value = row_string(&row, 3).trim().to_string();
         let new_value = row_string(&row, 4).trim().to_string();
         let entry = grouped

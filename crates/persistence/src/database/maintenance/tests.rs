@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{TimeZone, Utc};
 
 use crate::realtime::ensure_realtime_tables;
 
@@ -29,7 +29,7 @@ impl Drop for TestDir {
 
 fn insert_join_leave(
     db: &DatabaseService,
-    created_at: &str,
+    created_at: i64,
     event_type: &str,
     display_name: &str,
     location: &str,
@@ -62,7 +62,7 @@ fn leave_time(db: &DatabaseService, user_id: &str) -> i64 {
     .unwrap()
 }
 
-fn leave_time_at(db: &DatabaseService, created_at: &str) -> i64 {
+fn leave_time_at(db: &DatabaseService, created_at: i64) -> i64 {
     db.execute(
         "SELECT time FROM gamelog_join_leave WHERE created_at = @created_at AND type = 'OnPlayerLeft'",
         &ParamsBuilder::new().set("created_at", created_at).build(),
@@ -82,9 +82,7 @@ fn cleanup_test_db(name: &str) -> Result<(TestDir, DatabaseService), Error> {
 #[test]
 fn avatar_auto_cleanup_disables_off_and_invalid_retention() -> Result<(), Error> {
     let (_dir, db) = cleanup_test_db("avatar-cleanup-disabled")?;
-    let now = DateTime::parse_from_rfc3339("2026-07-17T12:00:00Z")
-        .unwrap()
-        .with_timezone(&Utc);
+    let now = Utc.timestamp_opt(1784289600, 0).unwrap();
 
     avatar_auto_cleanup_run(&db, "usr_self", now)?;
     assert_eq!(
@@ -110,18 +108,14 @@ fn avatar_auto_cleanup_skips_when_last_run_is_less_than_seven_days_old() -> Resu
     crate::config::set_string(
         &db,
         "lastAvatarCleanupDate_usr_self",
-        "2026-07-12T12:00:00Z",
+        "2026-07-12T12:00:00.000Z",
     )?;
-    let now = DateTime::parse_from_rfc3339("2026-07-17T12:00:00Z")
-        .unwrap()
-        .with_timezone(&Utc);
+    let now = Utc.timestamp_opt(1784289600, 0).unwrap();
     let prefix = normalize_user_table_prefix("usr_self")?;
     ensure_realtime_tables(&db, &prefix)?;
     db.execute_non_query(
         &format!("INSERT INTO {prefix}_feed_avatar (created_at) VALUES (@created_at)"),
-        &ParamsBuilder::new()
-            .set("created_at", "2026-05-01T00:00:00Z")
-            .build(),
+        &ParamsBuilder::new().set("created_at", 1777593600).build(),
     )?;
 
     avatar_auto_cleanup_run(&db, "usr_self", now)?;
@@ -133,7 +127,7 @@ fn avatar_auto_cleanup_skips_when_last_run_is_less_than_seven_days_old() -> Resu
     assert_eq!(remaining.first().map(|row| row_i64(row, 0)), Some(1));
     assert_eq!(
         crate::config::get_string(&db, "lastAvatarCleanupDate_usr_self", "")?,
-        "2026-07-12T12:00:00Z"
+        "1783857600"
     );
     Ok(())
 }
@@ -148,13 +142,9 @@ fn avatar_auto_cleanup_treats_invalid_last_date_as_due_and_commits_delete_with_f
     ensure_realtime_tables(&db, &prefix)?;
     db.execute_non_query(
         &format!("INSERT INTO {prefix}_feed_avatar (created_at) VALUES (@created_at)"),
-        &ParamsBuilder::new()
-            .set("created_at", "2026-05-01T00:00:00Z")
-            .build(),
+        &ParamsBuilder::new().set("created_at", 1777593600).build(),
     )?;
-    let now = DateTime::parse_from_rfc3339("2026-07-17T12:00:00Z")
-        .unwrap()
-        .with_timezone(&Utc);
+    let now = Utc.timestamp_opt(1784289600, 0).unwrap();
 
     avatar_auto_cleanup_run(&db, "usr_self", now)?;
 
@@ -165,7 +155,7 @@ fn avatar_auto_cleanup_treats_invalid_last_date_as_due_and_commits_delete_with_f
     assert_eq!(remaining.first().map(|row| row_i64(row, 0)), Some(0));
     assert_eq!(
         crate::config::get_string(&db, "lastAvatarCleanupDate_usr_self", "")?,
-        "2026-07-17T12:00:00.000Z"
+        "1784289600"
     );
     Ok(())
 }
@@ -174,44 +164,34 @@ fn avatar_auto_cleanup_treats_invalid_last_date_as_due_and_commits_delete_with_f
 fn avatar_auto_cleanup_runs_when_last_completion_is_in_the_future() -> Result<(), Error> {
     let (_dir, db) = cleanup_test_db("avatar-cleanup-future-completion")?;
     crate::config::set_string(&db, "VRCX_avatarAutoCleanup", "30")?;
-    crate::config::set_string(
-        &db,
-        "lastAvatarCleanupDate_usr_self",
-        "2027-07-17T12:00:00Z",
-    )?;
+    crate::config::set_string(&db, "lastAvatarCleanupDate_usr_self", "1815825600")?;
     let prefix = normalize_user_table_prefix("usr_self")?;
     ensure_realtime_tables(&db, &prefix)?;
     db.execute_non_query(
         &format!("INSERT INTO {prefix}_feed_avatar (created_at) VALUES (@created_at)"),
-        &ParamsBuilder::new()
-            .set("created_at", "2026-05-01T00:00:00Z")
-            .build(),
+        &ParamsBuilder::new().set("created_at", 1777593600).build(),
     )?;
-    let now = DateTime::parse_from_rfc3339("2026-07-17T12:00:00Z")
-        .unwrap()
-        .with_timezone(&Utc);
+    let now = Utc.timestamp_opt(1784289600, 0).unwrap();
 
     avatar_auto_cleanup_run(&db, "usr_self", now)?;
     assert_eq!(
         crate::config::get_string(&db, "lastAvatarCleanupDate_usr_self", "")?,
-        "2026-07-17T12:00:00.000Z"
+        "1784289600"
     );
     Ok(())
 }
 
 #[test]
-fn avatar_cleanup_compares_mixed_timestamp_formats_by_instant() -> Result<(), Error> {
+fn avatar_cleanup_deletes_only_rows_before_the_cutoff() -> Result<(), Error> {
     let (_dir, db) = cleanup_test_db("avatar-cleanup-timestamps")?;
     crate::config::set_string(&db, "VRCX_avatarAutoCleanup", "30")?;
     let prefix = normalize_user_table_prefix("usr_self")?;
     ensure_realtime_tables(&db, &prefix)?;
     for (user_id, created_at) in [
-        ("old", "2026-06-17T11:59:59+00:00"),
-        ("old-positive-offset", "2026-06-18T01:59:59+14:00"),
-        ("equal", "2026-06-17T12:00:00+00:00"),
-        ("equal-positive-offset", "2026-06-18T02:00:00+14:00"),
-        ("new-space", "2026-06-17 12:00:01"),
-        ("invalid", "not-a-date"),
+        ("old", Some(1781697599)),
+        ("equal", Some(1781697600)),
+        ("new", Some(1781697601)),
+        ("undated", None),
     ] {
         db.execute_non_query(
             &format!(
@@ -223,9 +203,7 @@ fn avatar_cleanup_compares_mixed_timestamp_formats_by_instant() -> Result<(), Er
                 .build(),
         )?;
     }
-    let now = DateTime::parse_from_rfc3339("2026-07-17T12:00:00Z")
-        .unwrap()
-        .with_timezone(&Utc);
+    let now = Utc.timestamp_opt(1784289600, 0).unwrap();
 
     avatar_auto_cleanup_run(&db, "usr_self", now)?;
     let rows = db.execute(
@@ -236,10 +214,7 @@ fn avatar_cleanup_compares_mixed_timestamp_formats_by_instant() -> Result<(), Er
         .iter()
         .map(|row| row_string(row, 0))
         .collect::<Vec<_>>();
-    assert_eq!(
-        remaining_ids,
-        vec!["equal", "equal-positive-offset", "invalid", "new-space"]
-    );
+    assert_eq!(remaining_ids, vec!["equal", "new", "undated"]);
     Ok(())
 }
 
@@ -254,9 +229,7 @@ fn avatar_cleanup_uses_the_created_at_index() -> Result<(), Error> {
             "EXPLAIN QUERY PLAN {}",
             crate::feed::feed_avatar_delete_before_sql(&prefix)
         ),
-        &ParamsBuilder::new()
-            .set("cutoff", "2026-06-17T12:00:00.000Z")
-            .build(),
+        &ParamsBuilder::new().set("cutoff", 1781697600).build(),
     )?;
     let expected_index = format!("USING INDEX {prefix}_feed_avatar_created_id_idx");
 
@@ -275,18 +248,14 @@ fn avatar_auto_cleanup_rolls_back_delete_when_completion_flag_fails() -> Result<
     ensure_realtime_tables(&db, &prefix)?;
     db.execute_non_query(
         &format!("INSERT INTO {prefix}_feed_avatar (created_at) VALUES (@created_at)"),
-        &ParamsBuilder::new()
-            .set("created_at", "2026-05-01T00:00:00Z")
-            .build(),
+        &ParamsBuilder::new().set("created_at", 1777593600).build(),
     )?;
     db.execute_non_query(
         "CREATE TRIGGER fail_avatar_cleanup_flag BEFORE UPDATE ON configs
          BEGIN SELECT RAISE(ABORT, 'forced completion flag failure'); END",
         &Default::default(),
     )?;
-    let now = DateTime::parse_from_rfc3339("2026-07-17T12:00:00Z")
-        .unwrap()
-        .with_timezone(&Utc);
+    let now = Utc.timestamp_opt(1784289600, 0).unwrap();
 
     assert!(avatar_auto_cleanup_run(&db, "usr_self", now).is_err());
     let remaining = db.execute(
@@ -306,7 +275,7 @@ fn repair_zero_copresence_durations_pairs_leave_with_join() -> Result<(), Error>
     // Alice: real 40-minute session whose leave was written as time=0.
     insert_join_leave(
         &db,
-        "2026-06-30T16:00:10.000Z",
+        1782835210,
         "OnPlayerJoined",
         "Alice",
         "wrld_x:1",
@@ -315,7 +284,7 @@ fn repair_zero_copresence_durations_pairs_leave_with_join() -> Result<(), Error>
     );
     insert_join_leave(
         &db,
-        "2026-06-30T16:40:10.000Z",
+        1782837610,
         "OnPlayerLeft",
         "Alice",
         "wrld_x:1",
@@ -325,7 +294,7 @@ fn repair_zero_copresence_durations_pairs_leave_with_join() -> Result<(), Error>
     // Bob: leave with no matching join stays 0.
     insert_join_leave(
         &db,
-        "2026-06-30T16:40:10.000Z",
+        1782837610,
         "OnPlayerLeft",
         "Bob",
         "wrld_x:1",
@@ -335,7 +304,7 @@ fn repair_zero_copresence_durations_pairs_leave_with_join() -> Result<(), Error>
     // Carol: a 'traveling' leave carries no world, so it is not repaired.
     insert_join_leave(
         &db,
-        "2026-06-30T16:05:00.000Z",
+        1782835500,
         "OnPlayerJoined",
         "Carol",
         "wrld_x:1",
@@ -344,7 +313,7 @@ fn repair_zero_copresence_durations_pairs_leave_with_join() -> Result<(), Error>
     );
     insert_join_leave(
         &db,
-        "2026-06-30T16:20:00.000Z",
+        1782836400,
         "OnPlayerLeft",
         "Carol",
         "traveling",
@@ -366,8 +335,8 @@ fn empty_leave_location_repair_restores_the_instance_the_session_started_in() ->
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
     ensure_game_log_tables(&db)?;
     for (created_at, location) in [
-        ("2026-08-13T10:00:00.000Z", "wrld_a:1~friends(usr_x)"),
-        ("2026-08-13T12:00:00.000Z", "wrld_b:2~hidden(usr_x)"),
+        (1786615200, "wrld_a:1~friends(usr_x)"),
+        (1786622400, "wrld_b:2~hidden(usr_x)"),
     ] {
         db.execute_non_query(
             "INSERT INTO gamelog_location (created_at, location, world_id, world_name, time, group_name)
@@ -380,18 +349,12 @@ fn empty_leave_location_repair_restores_the_instance_the_session_started_in() ->
     }
     let minutes = |value: i64| value * 60 * 1000;
     for (created_at, location, user_id, time) in [
-        ("2026-08-13T11:30:00.000Z", "", "usr_inside", minutes(85)),
-        ("2026-08-13T13:00:00.000Z", "", "usr_boundary", minutes(60)),
-        ("2026-08-13T12:30:00.000Z", "", "usr_crossed", minutes(150)),
-        ("2026-08-13T09:30:00.000Z", "", "usr_before", minutes(10)),
-        ("2026-08-13T11:00:00.000Z", "", "usr_zero", 0),
-        (
-            "2026-08-13T11:00:00.000Z",
-            "wrld_c:3",
-            "usr_known",
-            minutes(30),
-        ),
-        ("2026-08-13 11:30:00", "", "usr_unnormalized", minutes(85)),
+        (1786620600, "", "usr_inside", minutes(85)),
+        (1786626000, "", "usr_boundary", minutes(60)),
+        (1786624200, "", "usr_crossed", minutes(150)),
+        (1786613400, "", "usr_before", minutes(10)),
+        (1786618800, "", "usr_zero", 0),
+        (1786618800, "wrld_c:3", "usr_known", minutes(30)),
     ] {
         insert_join_leave(
             &db,
@@ -422,7 +385,6 @@ fn empty_leave_location_repair_restores_the_instance_the_session_started_in() ->
     assert_eq!(leave_location("usr_before"), "");
     assert_eq!(leave_location("usr_zero"), "");
     assert_eq!(leave_location("usr_known"), "wrld_c:3");
-    assert_eq!(leave_location("usr_unnormalized"), "");
     Ok(())
 }
 
@@ -433,8 +395,8 @@ fn empty_leave_location_repair_skips_a_previous_location_stay_that_ended_before_
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
     ensure_game_log_tables(&db)?;
     for (created_at, location, time) in [
-        ("2026-08-10T20:00:00.000Z", "wrld_old:1", 60 * 60 * 1000),
-        ("2026-08-13T10:00:00.000Z", "wrld_open:2", 0),
+        (1786392000, "wrld_old:1", 60 * 60 * 1000),
+        (1786615200, "wrld_open:2", 0),
     ] {
         db.execute_non_query(
             "INSERT INTO gamelog_location (created_at, location, world_id, world_name, time, group_name)
@@ -447,8 +409,8 @@ fn empty_leave_location_repair_skips_a_previous_location_stay_that_ended_before_
         )?;
     }
     for (created_at, user_id) in [
-        ("2026-08-12T12:00:00.000Z", "usr_missing_session"),
-        ("2026-08-13T11:00:00.000Z", "usr_open_session"),
+        (1786536000, "usr_missing_session"),
+        (1786618800, "usr_open_session"),
     ] {
         insert_join_leave(
             &db,
@@ -489,11 +451,11 @@ fn empty_leave_location_repair_skips_when_the_matching_join_recorded_another_ins
     ensure_game_log_tables(&db)?;
     db.execute_non_query(
         "INSERT INTO gamelog_location (created_at, location, world_id, world_name, time, group_name)
-         VALUES ('2026-08-13T10:00:00.000Z', 'wrld_prev:1', '', '', 0, '')",
+         VALUES (1786615200, 'wrld_prev:1', '', '', 0, '')",
         &Default::default(),
     )?;
-    let joined_at = "2026-08-13T11:00:00.000Z";
-    let left_at = "2026-08-13T11:30:00.000Z";
+    let joined_at = 1786618800;
+    let left_at = 1786620600;
     for (display_name, user_id, join_location) in [
         ("Moved", "usr_moved", "wrld_missing:9"),
         ("Stayed", "usr_stayed", "wrld_prev:1"),
@@ -549,10 +511,10 @@ fn copresence_repair_uses_the_latest_matching_join_in_the_same_instance() -> Res
     ensure_game_log_tables(&db)?;
 
     for (created_at, location, user_id) in [
-        ("2026-08-13T10:00:00.000Z", "wrld_a:1", "usr_alice"),
-        ("2026-08-13T10:10:00.000Z", "wrld_a:1", "usr_alice"),
-        ("2026-08-13T10:20:00.000Z", "wrld_a:1", "usr_other"),
-        ("2026-08-13T10:25:00.000Z", "wrld_b:1", "usr_alice"),
+        (1786615200, "wrld_a:1", "usr_alice"),
+        (1786615800, "wrld_a:1", "usr_alice"),
+        (1786616400, "wrld_a:1", "usr_other"),
+        (1786616700, "wrld_b:1", "usr_alice"),
     ] {
         insert_join_leave(
             &db,
@@ -566,7 +528,7 @@ fn copresence_repair_uses_the_latest_matching_join_in_the_same_instance() -> Res
     }
     insert_join_leave(
         &db,
-        "2026-08-13T10:30:00.000Z",
+        1786617000,
         "OnPlayerLeft",
         "Alice",
         "wrld_a:1",
@@ -589,7 +551,7 @@ fn copresence_repair_uses_latest_display_name_match_for_legacy_rows_without_user
 
     insert_join_leave(
         &db,
-        "2026-08-13T11:00:00.000Z",
+        1786618800,
         "OnPlayerJoined",
         "Legacy Player",
         "wrld_a:1",
@@ -598,7 +560,7 @@ fn copresence_repair_uses_latest_display_name_match_for_legacy_rows_without_user
     );
     insert_join_leave(
         &db,
-        "2026-08-13T11:10:00.000Z",
+        1786619400,
         "OnPlayerJoined",
         "Legacy Player",
         "wrld_a:1",
@@ -607,7 +569,7 @@ fn copresence_repair_uses_latest_display_name_match_for_legacy_rows_without_user
     );
     insert_join_leave(
         &db,
-        "2026-08-13T11:15:00.000Z",
+        1786619700,
         "OnPlayerLeft",
         "Legacy Player",
         "wrld_a:1",
@@ -616,7 +578,7 @@ fn copresence_repair_uses_latest_display_name_match_for_legacy_rows_without_user
     );
     insert_join_leave(
         &db,
-        "2026-08-13T11:20:00.000Z",
+        1786620000,
         "OnPlayerLeft",
         "Legacy Player",
         "wrld_a:1",
@@ -626,10 +588,7 @@ fn copresence_repair_uses_latest_display_name_match_for_legacy_rows_without_user
 
     database_maintenance_run(&db, DatabaseMaintenanceTask::RepairZeroCopresenceDurations)?;
 
-    assert_eq!(
-        leave_time_at(&db, "2026-08-13T11:15:00.000Z"),
-        5 * 60 * 1000
-    );
+    assert_eq!(leave_time_at(&db, 1786619700), 5 * 60 * 1000);
     assert_eq!(leave_time(&db, "usr_missing"), 0);
     Ok(())
 }
@@ -641,34 +600,23 @@ fn copresence_repair_preserves_recorded_and_rejects_implausible_history() -> Res
     ensure_game_log_tables(&db)?;
 
     for (created_at, event_type, user_id, time) in [
-        ("2026-08-12T12:00:00.000Z", "OnPlayerJoined", "usr_day", 0),
-        ("2026-08-13T12:00:00.000Z", "OnPlayerLeft", "usr_day", 0),
-        ("2026-08-12T11:59:59.999Z", "OnPlayerJoined", "usr_over", 0),
-        ("2026-08-13T12:00:00.000Z", "OnPlayerLeft", "usr_over", 0),
-        (
-            "2026-08-13T11:00:00.000Z",
-            "OnPlayerJoined",
-            "usr_recorded",
-            0,
-        ),
-        (
-            "2026-08-13T12:00:00.000Z",
-            "OnPlayerLeft",
-            "usr_recorded",
-            1234,
-        ),
-        (
-            "2026-08-13T11:00:00.000Z",
-            "OnPlayerJoined",
-            "usr_invalid",
-            0,
-        ),
-        ("not-a-timestamp", "OnPlayerLeft", "usr_invalid", 0),
+        (1786536000, "OnPlayerJoined", "usr_day", 0),
+        (1786622400, "OnPlayerLeft", "usr_day", 0),
+        (1786535999, "OnPlayerJoined", "usr_over", 0),
+        (1786622400, "OnPlayerLeft", "usr_over", 0),
+        (1786618800, "OnPlayerJoined", "usr_recorded", 0),
+        (1786622400, "OnPlayerLeft", "usr_recorded", 1234),
+        (1786618800, "OnPlayerJoined", "usr_invalid", 0),
     ] {
         insert_join_leave(
             &db, created_at, event_type, user_id, "wrld_a:1", user_id, time,
         );
     }
+    db.execute_non_query(
+        "INSERT INTO gamelog_join_leave (created_at, type, display_name, location, user_id, time)
+         VALUES (NULL, 'OnPlayerLeft', 'usr_invalid', 'wrld_a:1', 'usr_invalid', 0)",
+        &Default::default(),
+    )?;
 
     database_maintenance_run(&db, DatabaseMaintenanceTask::RepairZeroCopresenceDurations)?;
 
@@ -687,7 +635,7 @@ fn fix_broken_game_log_display_names_skips_unique_key_collisions() -> Result<(),
 
     insert_join_leave(
         &db,
-        "2026-07-03T12:00:00.000Z",
+        1783080000,
         "OnPlayerJoined",
         "Alice (usr_a)",
         "wrld_x:1",
@@ -696,7 +644,7 @@ fn fix_broken_game_log_display_names_skips_unique_key_collisions() -> Result<(),
     );
     insert_join_leave(
         &db,
-        "2026-07-03T12:00:00.000Z",
+        1783080000,
         "OnPlayerJoined",
         "Alice (usr_b)",
         "wrld_x:1",
@@ -824,10 +772,10 @@ fn import_upstream_print_favorites_merges_rows_into_config_and_drops_table() -> 
     )?;
     db.execute_non_query(
         "INSERT INTO favorite_print (print_id, created_at) VALUES
-            ('prnt_newer', '2026-08-02T00:00:00.000Z'),
-            ('prnt_both', '2026-08-01T00:00:00.000Z'),
-            ('prnt_older', '2026-08-01T00:00:00.000Z'),
-            ('', '2026-08-03T00:00:00.000Z')",
+            ('prnt_newer', 1785628800),
+            ('prnt_both', 1785542400),
+            ('prnt_older', 1785542400),
+            ('', 1785715200)",
         &Default::default(),
     )?;
 
@@ -855,7 +803,7 @@ fn repair_expired_notifications_seen_marks_every_user_table() -> Result<(), Erro
         ensure_realtime_tables(&db, prefix)?;
         db.execute_non_query(
             &format!(
-                "INSERT INTO {prefix}_notifications (id, created_at, type, expired, seen) VALUES ('active', '2026-08-20T11:00:00Z', 'friendRequest', 0, 0), ('expired', '2026-08-20T10:00:00Z', 'friendRequest', 1, 0)"
+                "INSERT INTO {prefix}_notifications (id, created_at, type, expired, seen) VALUES ('active', 1787223600, 'friendRequest', 0, 0), ('expired', 1787220000, 'friendRequest', 1, 0)"
             ),
             &Default::default(),
         )?;

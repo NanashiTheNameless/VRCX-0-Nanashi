@@ -280,7 +280,7 @@ fn favorite_list_upgrades_legacy_friend_table_before_owner_scoped_read() {
     )
     .unwrap();
     db.execute_non_query(
-        "INSERT INTO favorite_friend (created_at, user_id, group_name) VALUES ('2026-07-01T00:00:00.000Z', 'usr_legacy', 'legacy')",
+        "INSERT INTO favorite_friend (created_at, user_id, group_name) VALUES (1782864000, 'usr_legacy', 'legacy')",
         &Default::default(),
     )
     .unwrap();
@@ -308,12 +308,12 @@ fn ensure_global_store_tables_preserves_dirty_duplicates_and_promotes_unique_ind
     )
     .unwrap();
     db.execute_non_query(
-        "INSERT INTO favorite_world (created_at, world_id, group_name) VALUES ('2026-01-01T00:00:00.000Z', 'wrld_1', 'group')",
+        "INSERT INTO favorite_world (created_at, world_id, group_name) VALUES (1767225600, 'wrld_1', 'group')",
         &Default::default(),
     )
     .unwrap();
     db.execute_non_query(
-        "INSERT INTO favorite_world (created_at, world_id, group_name) VALUES ('2026-01-02T00:00:00.000Z', 'wrld_1', 'group')",
+        "INSERT INTO favorite_world (created_at, world_id, group_name) VALUES (1767312000, 'wrld_1', 'group')",
         &Default::default(),
     )
     .unwrap();
@@ -353,7 +353,7 @@ fn ensure_global_store_tables_preserves_dirty_duplicates_and_promotes_unique_ind
         .is_empty());
 
     db.execute_non_query(
-        "DELETE FROM favorite_world WHERE created_at = '2026-01-02T00:00:00.000Z'",
+        "DELETE FROM favorite_world WHERE created_at = 1767312000",
         &Default::default(),
     )
     .unwrap();

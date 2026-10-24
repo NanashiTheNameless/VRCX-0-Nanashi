@@ -44,7 +44,7 @@ function snapshot(
 ): Snapshot {
     return {
         context: {
-            createdAt: '2026-08-01T01:00:00.000Z',
+            createdAt: 1785546000,
             groupName: '',
             location,
             playerCount: 1,
@@ -59,14 +59,14 @@ function snapshot(
                 id: 'usr_self',
                 userId: 'usr_self',
                 displayName: 'Current User',
-                joinedAt: '2026-08-01T01:00:00.000Z',
+                joinedAt: 1785546000,
                 joinedAtMs: Date.parse('2026-08-01T01:00:00.000Z')
             },
             {
                 id: 'usr_player',
                 userId: 'usr_player',
                 displayName,
-                joinedAt: '2026-08-01T01:00:00.000Z',
+                joinedAt: 1785546000,
                 joinedAtMs: Date.parse('2026-08-01T01:00:00.000Z')
             }
         ]
@@ -81,7 +81,7 @@ function props(location: string) {
         isGameRunning: true,
         logLocationSnapshot: null,
         playerListLocation: location,
-        playerListStartedAt: '2026-08-01T00:00:00.000Z',
+        playerListStartedAt: 1785542400,
         playerListWorldId: 'wrld_test'
     };
 }
@@ -97,7 +97,7 @@ describe('useCurrentInstanceRoster', () => {
             id: 'display:Current User',
             userId: '',
             displayName: 'Current User',
-            joinedAt: '2026-08-01T01:00:00.000Z',
+            joinedAt: 1785546000,
             joinedAtMs: Date.parse('2026-08-01T01:00:00.000Z')
         };
         mocks.loadCurrentInstanceRoster.mockResolvedValueOnce(loadedSnapshot);

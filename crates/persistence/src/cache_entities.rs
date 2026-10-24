@@ -1,6 +1,6 @@
 pub use vrcx_0_contracts::CacheEntityInput;
 
-use crate::common::{insert_or_replace_sql, now_iso, DbWriteTarget, ParamsBuilder};
+use crate::common::{insert_or_replace_sql, now_epoch, DbWriteTarget, ParamsBuilder};
 use crate::database::schema::ensure_global_store_tables;
 use crate::database::DatabaseService;
 use crate::Error;
@@ -87,7 +87,7 @@ fn upsert_cache_entity_on(
     id: String,
     entry: CacheEntityInput,
 ) -> Result<i64, Error> {
-    let now = now_iso();
+    let now = now_epoch();
     target.execute_non_query(
         sql,
         &ParamsBuilder::new()
@@ -95,13 +95,19 @@ fn upsert_cache_entity_on(
             .set("added_at", now)
             .set("author_id", entry.author_id)
             .set("author_name", entry.author_name)
-            .set("created_at", entry.created_at)
+            .set(
+                "created_at",
+                vrcx_0_core::time::epoch_from_json(&entry.created_at),
+            )
             .set("description", entry.description)
             .set("image_url", entry.image_url)
             .set("name", entry.name)
             .set("release_status", entry.release_status)
             .set("thumbnail_image_url", entry.thumbnail_image_url)
-            .set("updated_at", entry.updated_at)
+            .set(
+                "updated_at",
+                vrcx_0_core::time::epoch_from_json(&entry.updated_at),
+            )
             .set("version", entry.version)
             .build(),
     )

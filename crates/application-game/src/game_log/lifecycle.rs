@@ -20,7 +20,7 @@ pub fn set_game_no_vr(
 pub fn handle_vrc_quit(
     store: &dyn crate::GameStateStore,
     host_actions: &dyn GameLogHostActions,
-    created_at: &str,
+    created_at: i64,
     is_game_running: bool,
 ) {
     if !is_game_running {
@@ -43,7 +43,7 @@ pub fn handle_vrc_quit(
     }
 }
 
-pub(crate) fn video_sync_payload(timestamp: &str, created_at: &str) -> NowPlayingPayload {
+pub(crate) fn video_sync_payload(timestamp: &str, created_at: i64) -> NowPlayingPayload {
     let position = timestamp
         .replace(',', "")
         .parse::<i64>()
@@ -53,8 +53,8 @@ pub(crate) fn video_sync_payload(timestamp: &str, created_at: &str) -> NowPlayin
 
     NowPlayingPayload {
         position,
-        started_at: created_at.into(),
-        updated_at: Utc::now().to_rfc3339(),
+        started_at: created_at,
+        updated_at: Utc::now().timestamp(),
         ..Default::default()
     }
 }

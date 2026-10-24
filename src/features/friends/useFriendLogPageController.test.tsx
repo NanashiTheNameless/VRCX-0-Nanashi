@@ -54,7 +54,9 @@ vi.mock('./components/FriendLogColumns', () => ({
 function makeRows(count: number): FriendLogRow[] {
     return Array.from({ length: count }, (_, index) => ({
         rowId: index + 1,
-        created_at: new Date(Date.UTC(2026, 8, 1, 0, index)).toISOString(),
+        created_at: Math.floor(
+            new Date(Date.UTC(2026, 8, 1, 0, index)).getTime() / 1000
+        ),
         type: 'Friend',
         userId: `usr_${index + 1}`,
         displayName: `Name ${index + 1}`,

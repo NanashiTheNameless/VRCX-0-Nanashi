@@ -1,7 +1,7 @@
 import { commands } from '@/platform/tauri/bindings';
 
 type MutualGraphMeta = {
-    lastFetchedAt: string | null;
+    lastFetchedAt: number | null;
     optedOut: boolean;
     totalCount: number | null;
 };

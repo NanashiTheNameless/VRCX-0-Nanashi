@@ -7,7 +7,7 @@ use crate::Error;
 
 use super::caveats::recall_encounter_caveats;
 use super::helpers::{
-    append_time_window_filter, clamped_optional_limit, current_friend_id_set, date_part,
+    append_time_window_filter, clamped_optional_limit, current_friend_id_set, date_part, row_iso,
 };
 use super::types::{RecallEncounterInput, RecallEncounterOutput, RecallEncounterRow};
 
@@ -68,7 +68,7 @@ pub fn recall_encounter(
             continue;
         }
         let location = row_string(&row, 2);
-        let created_at = row_string(&row, 3);
+        let created_at = row_iso(&row, 3);
         let entry = grouped.entry(key).or_insert_with(|| RecallAccumulator {
             user_id: user_id.clone(),
             display_name: display_name.clone(),

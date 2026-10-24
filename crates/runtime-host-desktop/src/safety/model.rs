@@ -23,11 +23,13 @@ pub struct GlobalHideAccountState {
     pub day: String,
     pub day_count: u32,
     pub paused: bool,
-    /// RFC 3339; no requests before this time.
-    pub backoff_until: String,
+    /// No requests before this epoch second.
+    #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub backoff_until: i64,
     pub consecutive_errors: u32,
     pub last_error: String,
-    pub last_block_at: String,
+    #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub last_block_at: i64,
 }
 
 /// Fork: a player's current avatar name in this instance (from the game log).
@@ -61,7 +63,8 @@ pub struct GlobalHideStatus {
     pub today: u32,
     pub daily_cap: u32,
     pub paused: bool,
-    pub backoff_until: String,
+    #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub backoff_until: i64,
     pub last_error: String,
     pub unblock_remaining: u32,
 }
@@ -153,8 +156,10 @@ pub struct SourceCache {
     pub url: String,
     pub format: SourceFormat,
     pub entries: BTreeSet<String>,
-    pub updated_at: String,
-    pub last_attempt: String,
+    #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub updated_at: i64,
+    #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub last_attempt: i64,
     pub error: String,
     /// Fork: commit of the local GitHub mirror the entries were read from.
     pub commit_sha: String,
@@ -168,14 +173,16 @@ pub struct SafetyAuditEntry {
     #[serde(default)]
     pub account_user_id: String,
     #[serde(default)]
-    pub event_created_at: String,
+    #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub event_created_at: i64,
     #[serde(default)]
     pub location: String,
     #[serde(default)]
     pub log_kind: String,
     #[serde(default)]
     pub avatar_id: String,
-    pub created_at: String,
+    #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub created_at: i64,
     pub event_type: String,
     pub user_id: String,
     pub source: String,
@@ -197,7 +204,8 @@ pub struct SafetyStatus {
 pub struct SourceStatus {
     pub id: String,
     pub count: u32,
-    pub updated_at: String,
+    #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub updated_at: i64,
     pub error: String,
 }
 
@@ -435,7 +443,8 @@ pub fn logged_urls(data: &str) -> Vec<String> {
 pub struct SafetyLogRow {
     pub account_user_id: String,
     pub kind: String,
-    pub created_at: String,
+    #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub created_at: i64,
     pub user_id: String,
     pub location: String,
     pub url: String,
@@ -454,7 +463,8 @@ pub struct AvatarBlockPreview {
     pub token: String,
     pub account_user_id: String,
     pub source_name: String,
-    pub updated_at: String,
+    #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub updated_at: i64,
     pub offset: u32,
     pub total: u32,
     pub entries: Vec<AvatarBlockEntry>,

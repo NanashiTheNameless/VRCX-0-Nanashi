@@ -81,7 +81,7 @@ function tauriRelease() {
         title: 'VRCX-0 2.7.0',
         currentVersion: '2.6.0',
         latestVersion: '2.7.0',
-        publishedAt: '2026-06-22T00:00:00Z',
+        publishedAt: 1782086400,
         body: ''
     };
 }
@@ -116,7 +116,7 @@ describe('openOrInstallLatestAvailableUpdate', () => {
                 channel: 'stable',
                 tagName: 'v2.7.0',
                 displayName: 'VRCX-0 2.7.0',
-                publishedAt: '',
+                publishedAt: 0,
                 body: '',
                 title: 'VRCX-0 2.7.0',
                 currentVersion: '2.6.0',
@@ -147,7 +147,7 @@ describe('openOrInstallLatestAvailableUpdate', () => {
                 channel: 'stable',
                 tagName: 'v2.7.0',
                 displayName: 'VRCX-0 2.7.0',
-                publishedAt: '',
+                publishedAt: 0,
                 body: '',
                 title: 'VRCX-0 2.7.0',
                 currentVersion: '2.6.0',
@@ -206,7 +206,7 @@ describe('openOrInstallLatestAvailableUpdate', () => {
             displayVersion: '2.7.0',
             tagName: 'v2.7.0',
             displayName: 'VRCX-0 2.7.0',
-            publishedAt: '2026-06-22T00:00:00Z',
+            publishedAt: 1782086400,
             body: ''
         });
 
@@ -233,7 +233,7 @@ describe('handleAppUpdateDownloadProgressEvent', () => {
         handleAppUpdateDownloadProgressEvent({
             version: '2.7.0',
             phase: 'downloading',
-            startedAt: new Date().toISOString(),
+            startedAt: Math.floor(Date.now() / 1000),
             downloadedBytes: 50,
             totalBytes: 100,
             percent: 50
@@ -248,7 +248,7 @@ describe('handleAppUpdateDownloadProgressEvent', () => {
 
     it('keeps a fast background download hidden until restart is ready', () => {
         vi.useFakeTimers();
-        const startedAt = new Date().toISOString();
+        const startedAt = Math.floor(Date.now() / 1000);
         useRuntimeStore.getState().setUpdateLoopState({
             hasAvailableUpdate: true,
             latestUpdaterRelease: tauriRelease()
@@ -288,7 +288,7 @@ describe('handleAppUpdateDownloadProgressEvent', () => {
 
     it('reveals update UI immediately when a silent background download fails', () => {
         vi.useFakeTimers();
-        const startedAt = new Date().toISOString();
+        const startedAt = Math.floor(Date.now() / 1000);
         useRuntimeStore.getState().setUpdateLoopState({
             hasAvailableUpdate: true,
             latestUpdaterRelease: tauriRelease()
@@ -324,7 +324,7 @@ describe('handleAppUpdateDownloadProgressEvent', () => {
 
     it('reveals update UI when a background download is still running after 30 minutes', () => {
         vi.useFakeTimers();
-        const downloadStartedAt = new Date().toISOString();
+        const downloadStartedAt = Math.floor(Date.now() / 1000);
         useRuntimeStore.getState().setUpdateLoopState({
             hasAvailableUpdate: true,
             latestUpdaterRelease: tauriRelease()
@@ -370,7 +370,7 @@ describe('handleAppUpdateDownloadProgressEvent', () => {
         handleAppUpdateDownloadStatusSnapshot({
             version: '2.7.0',
             phase: 'downloading',
-            startedAt: '2026-07-18T00:00:00.000Z',
+            startedAt: 1784332800,
             downloadedBytes: 75,
             totalBytes: 100,
             percent: 75,
@@ -384,7 +384,7 @@ describe('handleAppUpdateDownloadProgressEvent', () => {
     });
 
     it('never shows a toast for the downloading phase, in or out of a direct install', async () => {
-        const startedAt = new Date().toISOString();
+        const startedAt = Math.floor(Date.now() / 1000);
         handleAppUpdateDownloadProgressEvent({
             version: '2.7.0',
             phase: 'downloading',

@@ -54,13 +54,13 @@ pub struct SyncLogEntry {
     pub message: String,
     pub first_seq: Option<u64>,
     pub last_seq: Option<u64>,
-    pub created_at_ms: i64,
+    pub created_at: i64,
 }
 
 pub fn ensure_remote_sync_tables(db: &DatabaseService) -> Result<(), Error> {
     db.ensure_schema_until_stable(SCHEMA_KEY, || {
         for sql in [
-            "CREATE TABLE IF NOT EXISTS remote_sync_state (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, vrchat_user_id TEXT NOT NULL DEFAULT '', source_id TEXT NOT NULL, pull_cursor INTEGER NOT NULL DEFAULT 0, highest_manifest_seq INTEGER NOT NULL DEFAULT 0, push_source_seq INTEGER NOT NULL DEFAULT 0, last_sync_at_ms INTEGER, PRIMARY KEY (api_origin, account_id, vault_id))",
+            "CREATE TABLE IF NOT EXISTS remote_sync_state (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, vrchat_user_id TEXT NOT NULL DEFAULT '', source_id TEXT NOT NULL, pull_cursor INTEGER NOT NULL DEFAULT 0, highest_manifest_seq INTEGER NOT NULL DEFAULT 0, push_source_seq INTEGER NOT NULL DEFAULT 0, last_sync_at INTEGER, PRIMARY KEY (api_origin, account_id, vault_id))",
             "CREATE TABLE IF NOT EXISTS remote_sync_push_state (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, stream TEXT NOT NULL, row_cursor INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (api_origin, account_id, vault_id, stream))",
             "CREATE TABLE IF NOT EXISTS remote_sync_pending_chunk (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, chunk_id TEXT NOT NULL, source_seq INTEGER NOT NULL, blob TEXT NOT NULL, cursors TEXT NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id))",
             "CREATE TABLE IF NOT EXISTS remote_sync_compaction (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, journal TEXT NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id))",
@@ -69,13 +69,13 @@ pub fn ensure_remote_sync_tables(db: &DatabaseService) -> Result<(), Error> {
             "CREATE TABLE IF NOT EXISTS remote_sync_replaced_chunk (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, server_seq INTEGER NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, replacement_chunk_id TEXT, replacement_source_seq INTEGER, announced INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (api_origin, account_id, vault_id, server_seq))",
             "CREATE INDEX IF NOT EXISTS remote_sync_replaced_chunk_source_idx ON remote_sync_replaced_chunk (api_origin, account_id, vault_id, source_id, source_seq)",
             "CREATE TABLE IF NOT EXISTS remote_sync_seen_chunk (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id, source_id, source_seq))",
-            "CREATE TABLE IF NOT EXISTS remote_sync_coverage (id INTEGER PRIMARY KEY, vrchat_user_id TEXT NOT NULL, started_at_ms INTEGER NOT NULL, extended_at_ms INTEGER NOT NULL, ended_at_ms INTEGER)",
-            "CREATE INDEX IF NOT EXISTS remote_sync_coverage_user_idx ON remote_sync_coverage (vrchat_user_id, started_at_ms)",
+            "CREATE TABLE IF NOT EXISTS remote_sync_coverage (id INTEGER PRIMARY KEY, vrchat_user_id TEXT NOT NULL, started_at INTEGER NOT NULL, extended_at INTEGER NOT NULL, ended_at INTEGER)",
+            "CREATE INDEX IF NOT EXISTS remote_sync_coverage_user_idx ON remote_sync_coverage (vrchat_user_id, started_at)",
             "CREATE TABLE IF NOT EXISTS remote_sync_provenance (stream TEXT NOT NULL, local_rowid INTEGER NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, PRIMARY KEY (stream, local_rowid))",
             "CREATE INDEX IF NOT EXISTS remote_sync_provenance_source_idx ON remote_sync_provenance (stream, source_id, local_rowid)",
-            "CREATE TABLE IF NOT EXISTS remote_sync_tombstone (stream TEXT NOT NULL, owner_id INTEGER NOT NULL DEFAULT 0, row_key TEXT NOT NULL, deleted_at_ms INTEGER NOT NULL, PRIMARY KEY (stream, owner_id, row_key))",
-            "CREATE TABLE IF NOT EXISTS remote_sync_log (id INTEGER PRIMARY KEY, api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, kind TEXT NOT NULL, message TEXT NOT NULL, first_seq INTEGER, last_seq INTEGER, created_at_ms INTEGER NOT NULL)",
-            "CREATE INDEX IF NOT EXISTS remote_sync_log_recent_idx ON remote_sync_log (api_origin, account_id, vault_id, created_at_ms DESC)",
+            "CREATE TABLE IF NOT EXISTS remote_sync_tombstone (stream TEXT NOT NULL, owner_id INTEGER NOT NULL DEFAULT 0, row_key TEXT NOT NULL, deleted_at INTEGER NOT NULL, PRIMARY KEY (stream, owner_id, row_key))",
+            "CREATE TABLE IF NOT EXISTS remote_sync_log (id INTEGER PRIMARY KEY, api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, kind TEXT NOT NULL, message TEXT NOT NULL, first_seq INTEGER, last_seq INTEGER, created_at INTEGER NOT NULL)",
+            "CREATE INDEX IF NOT EXISTS remote_sync_log_recent_idx ON remote_sync_log (api_origin, account_id, vault_id, created_at DESC)",
         ] {
             db.execute_non_query(sql, &Default::default())?;
         }
@@ -174,10 +174,10 @@ pub fn manifest_seq_advance(db: &DatabaseService, vault: &VaultRef, seq: u64) ->
     Ok(())
 }
 
-pub fn last_sync_set(db: &DatabaseService, vault: &VaultRef, at_ms: i64) -> Result<(), Error> {
+pub fn last_sync_set(db: &DatabaseService, vault: &VaultRef, at: i64) -> Result<(), Error> {
     db.execute_non_query(
-        &format!("UPDATE remote_sync_state SET last_sync_at_ms = @at_ms WHERE {VAULT_WHERE}"),
-        &vault_params(vault).set("at_ms", at_ms).build(),
+        &format!("UPDATE remote_sync_state SET last_sync_at = @at WHERE {VAULT_WHERE}"),
+        &vault_params(vault).set("at", at).build(),
     )?;
     Ok(())
 }
@@ -186,7 +186,7 @@ pub fn last_sync_get(db: &DatabaseService, vault: &VaultRef) -> Result<Option<i6
     ensure_remote_sync_tables(db)?;
     Ok(db
         .execute(
-            &format!("SELECT last_sync_at_ms FROM remote_sync_state WHERE {VAULT_WHERE}"),
+            &format!("SELECT last_sync_at FROM remote_sync_state WHERE {VAULT_WHERE}"),
             &vault_params(vault).build(),
         )?
         .first()
@@ -524,15 +524,15 @@ pub fn push_cursor_get(db: &DatabaseService, vault: &VaultRef, stream: &str) -> 
 pub fn coverage_start(
     db: &DatabaseService,
     vrchat_user_id: &str,
-    started_at_ms: i64,
+    started_at: i64,
 ) -> Result<i64, Error> {
     ensure_remote_sync_tables(db)?;
     db.write_transaction(|tx| {
         tx.execute_non_query(
-            "INSERT INTO remote_sync_coverage (vrchat_user_id, started_at_ms, extended_at_ms) VALUES (@vrchat_user_id, @started_at_ms, @started_at_ms)",
+            "INSERT INTO remote_sync_coverage (vrchat_user_id, started_at, extended_at) VALUES (@vrchat_user_id, @started_at, @started_at)",
             &ParamsBuilder::new()
                 .set("vrchat_user_id", vrchat_user_id)
-                .set("started_at_ms", started_at_ms)
+                .set("started_at", started_at)
                 .build(),
         )?;
         Ok(tx
@@ -546,44 +546,44 @@ pub fn coverage_start(
 pub fn coverage_extend(
     db: &DatabaseService,
     coverage_id: i64,
-    extended_at_ms: i64,
+    extended_at: i64,
 ) -> Result<(), Error> {
     db.execute_non_query(
-        "UPDATE remote_sync_coverage SET extended_at_ms = MAX(extended_at_ms, @extended_at_ms) WHERE id = @coverage_id AND ended_at_ms IS NULL",
+        "UPDATE remote_sync_coverage SET extended_at = MAX(extended_at, @extended_at) WHERE id = @coverage_id AND ended_at IS NULL",
         &ParamsBuilder::new()
-            .set("extended_at_ms", extended_at_ms)
+            .set("extended_at", extended_at)
             .set("coverage_id", coverage_id)
             .build(),
     )?;
     Ok(())
 }
 
-pub fn coverage_end(db: &DatabaseService, coverage_id: i64, ended_at_ms: i64) -> Result<(), Error> {
+pub fn coverage_end(db: &DatabaseService, coverage_id: i64, ended_at: i64) -> Result<(), Error> {
     db.execute_non_query(
-        "UPDATE remote_sync_coverage SET ended_at_ms = @ended_at_ms WHERE id = @coverage_id AND ended_at_ms IS NULL",
+        "UPDATE remote_sync_coverage SET ended_at = @ended_at WHERE id = @coverage_id AND ended_at IS NULL",
         &ParamsBuilder::new()
-            .set("ended_at_ms", ended_at_ms)
+            .set("ended_at", ended_at)
             .set("coverage_id", coverage_id)
             .build(),
     )?;
     Ok(())
 }
 
-/// Recording periods of this PC that overlap `[from_ms, to_ms]`.
+/// Recording periods of this PC that overlap `[from, to]`.
 pub fn coverage_between(
     db: &DatabaseService,
     vrchat_user_id: &str,
-    from_ms: i64,
-    to_ms: i64,
+    from: i64,
+    to: i64,
 ) -> Result<Vec<(i64, i64)>, Error> {
     ensure_remote_sync_tables(db)?;
     Ok(db
         .execute(
-            "SELECT started_at_ms, COALESCE(ended_at_ms, extended_at_ms) FROM remote_sync_coverage WHERE vrchat_user_id = @vrchat_user_id AND started_at_ms <= @to_ms AND COALESCE(ended_at_ms, extended_at_ms) >= @from_ms ORDER BY started_at_ms",
+            "SELECT started_at, COALESCE(ended_at, extended_at) FROM remote_sync_coverage WHERE vrchat_user_id = @vrchat_user_id AND started_at <= @to AND COALESCE(ended_at, extended_at) >= @from ORDER BY started_at",
             &ParamsBuilder::new()
                 .set("vrchat_user_id", vrchat_user_id)
-                .set("from_ms", from_ms)
-                .set("to_ms", to_ms)
+                .set("from", from)
+                .set("to", to)
                 .build(),
         )?
         .iter()
@@ -597,13 +597,13 @@ pub fn sync_log_record(
     entry: &SyncLogEntry,
 ) -> Result<(), Error> {
     target.execute_non_query(
-        "INSERT INTO remote_sync_log (api_origin, account_id, vault_id, kind, message, first_seq, last_seq, created_at_ms) VALUES (@api_origin, @account_id, @vault_id, @kind, @message, @first_seq, @last_seq, @created_at_ms)",
+        "INSERT INTO remote_sync_log (api_origin, account_id, vault_id, kind, message, first_seq, last_seq, created_at) VALUES (@api_origin, @account_id, @vault_id, @kind, @message, @first_seq, @last_seq, @created_at)",
         &vault_params(vault)
             .set("kind", entry.kind.clone())
             .set("message", entry.message.clone())
             .set("first_seq", entry.first_seq.map(to_i64))
             .set("last_seq", entry.last_seq.map(to_i64))
-            .set("created_at_ms", entry.created_at_ms)
+            .set("created_at", entry.created_at)
             .build(),
     )?;
     Ok(())
@@ -617,7 +617,7 @@ pub fn sync_log_recent(
     ensure_remote_sync_tables(db)?;
     Ok(db
         .execute(
-            &format!("SELECT kind, message, first_seq, last_seq, created_at_ms FROM remote_sync_log WHERE {VAULT_WHERE} ORDER BY created_at_ms DESC, id DESC LIMIT @limit"),
+            &format!("SELECT kind, message, first_seq, last_seq, created_at FROM remote_sync_log WHERE {VAULT_WHERE} ORDER BY created_at DESC, id DESC LIMIT @limit"),
             &vault_params(vault).set("limit", limit).build(),
         )?
         .iter()
@@ -626,7 +626,7 @@ pub fn sync_log_recent(
             message: row_string(row, 1),
             first_seq: row.get(2).and_then(serde_json::Value::as_u64),
             last_seq: row.get(3).and_then(serde_json::Value::as_u64),
-            created_at_ms: row_i64(row, 4),
+            created_at: row_i64(row, 4),
         })
         .collect())
 }

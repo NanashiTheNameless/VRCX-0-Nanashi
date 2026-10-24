@@ -1,3 +1,4 @@
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 const PREVIEW_LABELS = new Set(['preview', 'test']);
 const DEVKIT_LABEL = 'devkit';
 
@@ -21,7 +22,7 @@ function isLocalDevBuild(): boolean {
 export function getBuildTimeMs(): number | null {
     const value =
         typeof VRCX_0_BUILD_TIME === 'string'
-            ? Date.parse(VRCX_0_BUILD_TIME)
+            ? parseAbsoluteDateMs(VRCX_0_BUILD_TIME)
             : NaN;
     return Number.isFinite(value) ? value : null;
 }

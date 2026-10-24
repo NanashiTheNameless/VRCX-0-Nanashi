@@ -59,7 +59,6 @@ impl SafetyRuntime {
                     || r.kind.len() > 40
                     || r.location.len() > 2048
                     || r.user_id.len() > 80
-                    || r.created_at.len() > 80
                     || r.account_user_id.len() > 80
             })
         {
@@ -127,7 +126,7 @@ impl SafetyRuntime {
                 for entry in &state.audit {
                     if entry.action == "warn"
                         && entry.event_type != "SafetyUrl"
-                        && !entry.event_created_at.is_empty()
+                        && entry.event_created_at != 0
                         && entry.account_user_id == row.account_user_id
                         && entry.event_created_at == row.created_at
                         && entry.user_id == row.user_id

@@ -1,3 +1,4 @@
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 type NotificationCategory = 'friend' | 'group' | 'other';
 type NotificationLike = {
     created_at?: string | number | null;
@@ -44,7 +45,7 @@ function getNotificationTs(n: NotificationLike): number {
     const raw = n.created_at ?? n.createdAt;
     if (typeof raw === 'number') return raw > 1e12 ? raw : raw * 1000;
     if (raw === null || raw === undefined || raw === '') return 0;
-    const ts = Date.parse(String(raw));
+    const ts = parseAbsoluteDateMs(String(raw));
     return Number.isFinite(ts) ? ts : 0;
 }
 

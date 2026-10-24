@@ -62,7 +62,7 @@ fn writes_core_game_log_rows_with_parameterized_sql() -> Result<(), Error> {
     insert_location(
         db,
         &GameLogLocationEntry {
-            created_at: "2026-05-14T01:00:00.000Z".into(),
+            created_at: 1778720400,
             location: "wrld_test:123".into(),
             world_id: "wrld_test".into(),
             world_name: "测试世界".into(),
@@ -73,7 +73,7 @@ fn writes_core_game_log_rows_with_parameterized_sql() -> Result<(), Error> {
     insert_join_leave(
         db,
         &GameLogJoinLeaveEntry {
-            created_at: "2026-05-14T01:00:10.000Z".into(),
+            created_at: 1778720410,
             event_type: "OnPlayerJoined".into(),
             display_name: "做鳄梦small-fry".into(),
             location: "wrld_test:123".into(),
@@ -85,7 +85,7 @@ fn writes_core_game_log_rows_with_parameterized_sql() -> Result<(), Error> {
     insert_portal_spawn(
         db,
         &GameLogPortalSpawnEntry {
-            created_at: "2026-05-14T01:00:20.000Z".into(),
+            created_at: 1778720420,
             display_name: "".into(),
             location: "wrld_test:123".into(),
             user_id: "".into(),
@@ -96,7 +96,7 @@ fn writes_core_game_log_rows_with_parameterized_sql() -> Result<(), Error> {
     insert_resource_load(
         db,
         &GameLogResourceLoadEntry {
-            created_at: "2026-05-14T01:00:30.000Z".into(),
+            created_at: 1778720430,
             resource_url: "https://example.test/image.png".into(),
             resource_type: "ImageLoad".into(),
             location: "wrld_test:123".into(),
@@ -105,7 +105,7 @@ fn writes_core_game_log_rows_with_parameterized_sql() -> Result<(), Error> {
     insert_event(
         db,
         &GameLogEventEntry {
-            created_at: "2026-05-14T01:00:40.000Z".into(),
+            created_at: 1778720440,
             data: "Shader Keyword Limit has been reached".into(),
         },
     )?;
@@ -141,7 +141,7 @@ fn duplicate_location_and_join_leave_rows_are_ignored() -> Result<(), Error> {
     let test_db = test_db("store-gamelog-dedupe")?;
     let db = &test_db.db;
     let location = GameLogLocationEntry {
-        created_at: "2026-05-14T02:00:00.000Z".into(),
+        created_at: 1778724000,
         location: "wrld_dup:1".into(),
         world_id: "wrld_dup".into(),
         world_name: "Dup".into(),
@@ -152,7 +152,7 @@ fn duplicate_location_and_join_leave_rows_are_ignored() -> Result<(), Error> {
     insert_location(db, &location)?;
 
     let join = GameLogJoinLeaveEntry {
-        created_at: "2026-05-14T02:00:10.000Z".into(),
+        created_at: 1778724010,
         event_type: "OnPlayerJoined".into(),
         display_name: "DupUser".into(),
         location: "wrld_dup:1".into(),
@@ -180,7 +180,7 @@ fn updates_location_duration_by_created_at() -> Result<(), Error> {
     insert_location(
         db,
         &GameLogLocationEntry {
-            created_at: "2026-05-14T03:00:00.000Z".into(),
+            created_at: 1778727600,
             location: "wrld_time:1".into(),
             world_id: "wrld_time".into(),
             world_name: "Timed".into(),
@@ -188,7 +188,7 @@ fn updates_location_duration_by_created_at() -> Result<(), Error> {
             group_name: "".into(),
         },
     )?;
-    update_location_time(db, "2026-05-14T03:00:00.000Z", 2500)?;
+    update_location_time(db, 1778727600, 2500)?;
     let rows = db.execute("SELECT time FROM gamelog_location", &Default::default())?;
     assert_eq!(rows[0][0], serde_json::json!(2500));
     Ok(())
@@ -200,7 +200,7 @@ fn fills_only_the_matching_location_group_name_once() -> Result<(), Error> {
     let db = &test_db.db;
     let location = "wrld_group:1~group(grp_owner)~groupAccessType(public)";
     let mut batch = GameLogWriteBatch::default();
-    for created_at in ["2026-05-14T03:00:00.000Z", "2026-05-14T04:00:00.000Z"] {
+    for created_at in [1778727600, 1778731200] {
         batch.locations.push(GameLogLocationEntry {
             created_at: created_at.into(),
             location: location.into(),
@@ -214,17 +214,11 @@ fn fills_only_the_matching_location_group_name_once() -> Result<(), Error> {
     write_batch(db, &owner, &batch)?;
 
     assert_eq!(
-        fill_location_group_name(
-            db,
-            &owner,
-            "2026-05-14T03:00:00.000Z",
-            location,
-            "Owner Group"
-        )?,
+        fill_location_group_name(db, &owner, 1778727600, location, "Owner Group")?,
         1
     );
     assert_eq!(
-        fill_location_group_name(db, &owner, "2026-05-14T03:00:00.000Z", location, "Renamed")?,
+        fill_location_group_name(db, &owner, 1778727600, location, "Renamed")?,
         0
     );
 
@@ -243,7 +237,7 @@ fn writes_core_rows_in_one_batch_and_keeps_deduplication() -> Result<(), Error> 
     let db = &test_db.db;
     let mut batch = GameLogWriteBatch::default();
     batch.locations.push(GameLogLocationEntry {
-        created_at: "2026-05-14T06:00:00.000Z".into(),
+        created_at: 1778738400,
         location: "wrld_batch:1".into(),
         world_id: "wrld_batch".into(),
         world_name: "Batch 世界".into(),
@@ -252,7 +246,7 @@ fn writes_core_rows_in_one_batch_and_keeps_deduplication() -> Result<(), Error> 
     });
     batch.locations.push(batch.locations[0].clone());
     batch.join_leave.push(GameLogJoinLeaveEntry {
-        created_at: "2026-05-14T06:00:10.000Z".into(),
+        created_at: 1778738410,
         event_type: "OnPlayerJoined".into(),
         display_name: "BatchUser".into(),
         location: "wrld_batch:1".into(),
@@ -261,7 +255,7 @@ fn writes_core_rows_in_one_batch_and_keeps_deduplication() -> Result<(), Error> 
         time: 0,
     });
     batch.events.push(GameLogEventEntry {
-        created_at: "2026-05-14T06:00:20.000Z".into(),
+        created_at: 1778738420,
         data: "event data".into(),
     });
 
@@ -288,14 +282,14 @@ fn account_scoped_reads_include_shared_rows_and_machine_cursor_stays_global() ->
     insert_event(
         db,
         &GameLogEventEntry {
-            created_at: "2026-05-14T05:00:00.000Z".into(),
+            created_at: 1778734800,
             data: "shared".into(),
         },
     )?;
     insert_location(
         db,
         &GameLogLocationEntry {
-            created_at: "2026-05-14T05:00:00.000Z".into(),
+            created_at: 1778734800,
             location: "wrld_shared:1".into(),
             world_id: "wrld_shared".into(),
             world_name: "Shared".into(),
@@ -304,10 +298,9 @@ fn account_scoped_reads_include_shared_rows_and_machine_cursor_stays_global() ->
         },
     )?;
 
-    for (owner_user_id, created_at, value) in [
-        ("usr_a", "2026-05-14T06:00:00.000Z", "a"),
-        ("usr_b", "2026-05-14T07:00:00.000Z", "b"),
-    ] {
+    for (owner_user_id, created_at, value) in
+        [("usr_a", 1778738400, "a"), ("usr_b", 1778742000, "b")]
+    {
         let mut batch = GameLogWriteBatch::default();
         batch.events.push(GameLogEventEntry {
             created_at: created_at.into(),
@@ -357,8 +350,8 @@ fn account_scoped_reads_include_shared_rows_and_machine_cursor_stays_global() ->
         db,
         &OwnerId::new("usr_a"),
         GameLogQuery::OnlineSessions {
-            from_date: String::new(),
-            to_date: String::new(),
+            from_date: None,
+            to_date: None,
         },
     )?;
     let GameLogQueryOutput::OnlineSessions(sessions) = online_sessions else {
@@ -367,9 +360,9 @@ fn account_scoped_reads_include_shared_rows_and_machine_cursor_stays_global() ->
     assert_eq!(
         sessions
             .iter()
-            .map(|row| row.created_at.as_str())
+            .map(|row| row.created_at)
             .collect::<Vec<_>>(),
-        vec!["2026-05-14T05:00:00.000Z", "2026-05-14T06:00:00.000Z"]
+        vec![1778734800, 1778738400]
     );
 
     let last = crate::game_log::get_last_game_log_location(db)?.unwrap();
@@ -383,7 +376,7 @@ fn game_log_uniqueness_remains_machine_global() -> Result<(), Error> {
     let db = &test_db.db;
     let mut batch = GameLogWriteBatch::default();
     batch.events.push(GameLogEventEntry {
-        created_at: "2026-05-14T06:00:00.000Z".into(),
+        created_at: 1778738400,
         data: "duplicate".into(),
     });
 
@@ -397,12 +390,10 @@ fn game_log_uniqueness_remains_machine_global() -> Result<(), Error> {
 fn machine_cursor_uses_latest_row_from_any_owner() -> Result<(), Error> {
     let test_db = test_db("store-gamelog-global-cursor")?;
     let db = &test_db.db;
-    let created_at = (chrono::Utc::now() - chrono::Duration::minutes(1))
-        .format("%Y-%m-%dT%H:%M:%S%.3fZ")
-        .to_string();
+    let created_at = vrcx_0_core::time::now_epoch() - 60;
     let mut batch = GameLogWriteBatch::default();
     batch.events.push(GameLogEventEntry {
-        created_at: created_at.clone(),
+        created_at,
         data: "owner-a-latest".into(),
     });
     write_batch(db, &OwnerId::new("usr_a"), &batch)?;
@@ -422,7 +413,7 @@ fn batch_write_rolls_back_when_one_core_insert_fails() -> Result<(), Error> {
 
     let mut batch = GameLogWriteBatch::default();
     batch.locations.push(GameLogLocationEntry {
-        created_at: "2026-05-14T07:00:00.000Z".into(),
+        created_at: 1778742000,
         location: "wrld_rollback:1".into(),
         world_id: "wrld_rollback".into(),
         world_name: "Rollback".into(),
@@ -430,7 +421,7 @@ fn batch_write_rolls_back_when_one_core_insert_fails() -> Result<(), Error> {
         group_name: "".into(),
     });
     batch.join_leave.push(GameLogJoinLeaveEntry {
-        created_at: "2026-05-14T07:00:10.000Z".into(),
+        created_at: 1778742010,
         event_type: "OnPlayerJoined".into(),
         display_name: "RollbackUser".into(),
         location: "wrld_rollback:1".into(),
@@ -452,7 +443,7 @@ fn local_query_negative_limits_are_clamped_to_zero() -> Result<(), Error> {
     insert_location(
         db,
         &GameLogLocationEntry {
-            created_at: "2026-05-14T08:00:00.000Z".into(),
+            created_at: 1778745600,
             location: "wrld_limit:1".into(),
             world_id: "wrld_limit".into(),
             world_name: "Limit".into(),
@@ -465,7 +456,7 @@ fn local_query_negative_limits_are_clamped_to_zero() -> Result<(), Error> {
         db,
         &OwnerId::new("usr_test"),
         GameLogQuery::RecentDatabase {
-            date_offset: "-365 day".into(),
+            date_offset: Some(0),
             max_table_size: Some(-1),
         },
     )?;
@@ -488,7 +479,7 @@ fn previous_instances_by_user_id_uses_latest_location_metadata() -> Result<(), E
     insert_location(
         db,
         &GameLogLocationEntry {
-            created_at: "2026-05-14T09:00:00.000Z".into(),
+            created_at: 1778749200,
             location: matched_location.into(),
             world_id: "wrld_match".into(),
             world_name: "Old World".into(),
@@ -499,7 +490,7 @@ fn previous_instances_by_user_id_uses_latest_location_metadata() -> Result<(), E
     insert_location(
         db,
         &GameLogLocationEntry {
-            created_at: "2026-05-14T10:00:00.000Z".into(),
+            created_at: 1778752800,
             location: matched_location.into(),
             world_id: "wrld_match".into(),
             world_name: "New World".into(),
@@ -510,7 +501,7 @@ fn previous_instances_by_user_id_uses_latest_location_metadata() -> Result<(), E
     insert_location(
         db,
         &GameLogLocationEntry {
-            created_at: "2026-05-14T10:30:00.000Z".into(),
+            created_at: 1778754600,
             location: "wrld_other:1".into(),
             world_id: "wrld_other".into(),
             world_name: "Other World".into(),
@@ -522,7 +513,7 @@ fn previous_instances_by_user_id_uses_latest_location_metadata() -> Result<(), E
     insert_join_leave(
         db,
         &GameLogJoinLeaveEntry {
-            created_at: "2026-05-14T10:01:00.000Z".into(),
+            created_at: 1778752860,
             event_type: "OnPlayerJoined".into(),
             display_name: "Target".into(),
             location: matched_location.into(),
@@ -534,7 +525,7 @@ fn previous_instances_by_user_id_uses_latest_location_metadata() -> Result<(), E
     insert_join_leave(
         db,
         &GameLogJoinLeaveEntry {
-            created_at: "2026-05-14T10:02:00.000Z".into(),
+            created_at: 1778752920,
             event_type: "OnPlayerLeft".into(),
             display_name: "Target".into(),
             location: missing_location.into(),
@@ -546,7 +537,7 @@ fn previous_instances_by_user_id_uses_latest_location_metadata() -> Result<(), E
     insert_join_leave(
         db,
         &GameLogJoinLeaveEntry {
-            created_at: "2026-05-14T10:03:00.000Z".into(),
+            created_at: 1778752980,
             event_type: "OnPlayerJoined".into(),
             display_name: "Other".into(),
             location: "wrld_match:1".into(),
@@ -560,8 +551,8 @@ fn previous_instances_by_user_id_uses_latest_location_metadata() -> Result<(), E
         db,
         &OwnerId::new("usr_test"),
         target_user_id,
-        "",
-        "",
+        None,
+        None,
         0,
     )?;
     assert_eq!(rows.len(), 1);
@@ -583,7 +574,7 @@ fn previous_instances_by_user_id_filters_by_date_range() -> Result<(), Error> {
     insert_location(
         db,
         &GameLogLocationEntry {
-            created_at: "2026-05-14T10:00:00.000Z".into(),
+            created_at: 1778752800,
             location: matched_location.into(),
             world_id: "wrld_match".into(),
             world_name: "Matched World".into(),
@@ -592,11 +583,7 @@ fn previous_instances_by_user_id_filters_by_date_range() -> Result<(), Error> {
         },
     )?;
 
-    for created_at in [
-        "2026-05-13T23:59:59.999Z",
-        "2026-05-14T10:01:00.000Z",
-        "2026-05-15T00:00:00.001Z",
-    ] {
+    for created_at in [1778716799, 1778752860, 1778803201] {
         insert_join_leave(
             db,
             &GameLogJoinLeaveEntry {
@@ -613,7 +600,7 @@ fn previous_instances_by_user_id_filters_by_date_range() -> Result<(), Error> {
     insert_join_leave(
         db,
         &GameLogJoinLeaveEntry {
-            created_at: "2026-05-14T12:00:00.000Z".into(),
+            created_at: 1778760000,
             event_type: "OnPlayerLeft".into(),
             display_name: "Target".into(),
             location: "wrld_missing:123".into(),
@@ -627,12 +614,12 @@ fn previous_instances_by_user_id_filters_by_date_range() -> Result<(), Error> {
         db,
         &OwnerId::new("usr_test"),
         target_user_id,
-        "2026-05-14T00:00:00.000Z",
-        "2026-05-15T00:00:00.000Z",
+        Some(1778716800),
+        Some(1778803200),
         0,
     )?;
     assert_eq!(rows.len(), 1);
-    assert_eq!(rows[0].created_at, "2026-05-14T10:01:00.000Z");
+    assert_eq!(rows[0].created_at, 1778752860);
     assert_eq!(rows[0].location, matched_location);
     Ok(())
 }
@@ -647,7 +634,7 @@ fn previous_instances_limit_keeps_complete_recent_groups() -> Result<(), Error> 
         insert_location(
             db,
             &GameLogLocationEntry {
-                created_at: format!("2026-05-14T1{index}:00:00.000Z"),
+                created_at: 1778752800 + index as i64 * 3600,
                 location: location.into(),
                 world_id: location.split(':').next().unwrap_or_default().into(),
                 world_name: format!("World {index}"),
@@ -659,7 +646,7 @@ fn previous_instances_limit_keeps_complete_recent_groups() -> Result<(), Error> 
             insert_join_leave(
                 db,
                 &GameLogJoinLeaveEntry {
-                    created_at: format!("2026-05-14T1{index}:0{minute}:00.000Z"),
+                    created_at: 1778752800 + index as i64 * 3600 + minute * 60,
                     event_type: if minute == 1 {
                         "OnPlayerJoined".into()
                     } else {
@@ -679,8 +666,8 @@ fn previous_instances_limit_keeps_complete_recent_groups() -> Result<(), Error> 
         db,
         &OwnerId::new("usr_test"),
         target_user_id,
-        "",
-        "",
+        None,
+        None,
         2,
     )?;
 
@@ -708,7 +695,7 @@ fn deleting_an_instance_row_is_scoped_by_owner_location_and_event_ids() -> Resul
             &OwnerId::new(owner),
             &GameLogWriteBatch {
                 join_leave: vec![GameLogJoinLeaveEntry {
-                    created_at: "2026-05-14T10:00:00.000Z".into(),
+                    created_at: 1778752800,
                     event_type: "OnPlayerJoined".into(),
                     display_name: user.into(),
                     location: location.into(),
@@ -757,7 +744,7 @@ fn get_last_location_returns_latest_by_id() -> Result<(), Error> {
     insert_location(
         db,
         &GameLogLocationEntry {
-            created_at: "2026-05-14T09:00:00.000Z".into(),
+            created_at: 1778749200,
             location: "wrld_a:1".into(),
             world_id: "wrld_a".into(),
             world_name: "A".into(),
@@ -768,7 +755,7 @@ fn get_last_location_returns_latest_by_id() -> Result<(), Error> {
     insert_location(
         db,
         &GameLogLocationEntry {
-            created_at: "2026-05-14T10:00:00.000Z".into(),
+            created_at: 1778752800,
             location: "wrld_b:1".into(),
             world_id: "wrld_b".into(),
             world_name: "B".into(),
@@ -779,7 +766,7 @@ fn get_last_location_returns_latest_by_id() -> Result<(), Error> {
     insert_location(
         db,
         &GameLogLocationEntry {
-            created_at: "2026-05-14T08:00:00.000Z".into(),
+            created_at: 1778745600,
             location: "wrld_c:1".into(),
             world_id: "wrld_c".into(),
             world_name: "C".into(),
@@ -808,7 +795,7 @@ fn replay_checkpoint_commits_atomically_with_its_rows() -> Result<(), Error> {
     let second = GameLogWriteBatch {
         replay_checkpoint: Some("second".into()),
         join_leave: vec![GameLogJoinLeaveEntry {
-            created_at: "2026-05-14T04:00:10.000Z".into(),
+            created_at: 1778731210,
             event_type: "OnPlayerJoined".into(),
             display_name: "Player".into(),
             location: "wrld_test:1".into(),

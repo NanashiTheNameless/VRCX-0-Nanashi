@@ -56,7 +56,7 @@ export type NotificationRow = Omit<
         createdAt?: string | number | null;
         created_at?: string | number | null;
         updatedAt?: string | number | null;
-        expiresAt?: string | null;
+        expiresAt?: string | number | null;
         displayLocation?: string;
         groupName?: string;
         senderDisplayName?: string;

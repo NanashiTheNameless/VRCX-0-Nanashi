@@ -122,7 +122,7 @@ async fn headless_recent_notification_sends_one_webhook_and_deduplicates() {
             }
         }),
         raw: "{}".into(),
-        received_at: chrono::Utc::now().to_rfc3339(),
+        received_at: chrono::Utc::now().timestamp(),
     };
 
     for _ in 0..2 {

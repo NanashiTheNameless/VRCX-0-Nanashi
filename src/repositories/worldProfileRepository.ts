@@ -17,6 +17,7 @@ import {
     type WorldUpdateRequest,
     type WorldSearchSort
 } from '@/platform/tauri/bindings';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 import { isRecord } from '@/shared/utils/record';
 import { DEFAULT_VRCHAT_API_ENDPOINT } from '@/shared/vrchatEndpoint';
 
@@ -197,19 +198,10 @@ function normalizeWorldProfile(world: unknown): WorldProfileRecord {
         tags,
         isLabs: tags.includes('system_labs'),
         createdAt:
-            typeof (source.created_at ?? source.createdAt) === 'string'
-                ? String(source.created_at ?? source.createdAt)
-                : '',
+            epochSecondsFromValue(source.created_at ?? source.createdAt) ?? 0,
         updatedAt:
-            typeof (source.updated_at ?? source.updatedAt) === 'string'
-                ? String(source.updated_at ?? source.updatedAt)
-                : '',
-        publicationDate:
-            source.publicationDate === null
-                ? null
-                : typeof source.publicationDate === 'string'
-                  ? source.publicationDate
-                  : '',
+            epochSecondsFromValue(source.updated_at ?? source.updatedAt) ?? 0,
+        publicationDate: epochSecondsFromValue(source.publicationDate),
         platforms: resolveWorldPlatforms(source)
     };
 }

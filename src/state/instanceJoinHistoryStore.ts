@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 
 import { instanceLocationKey } from '@/domain/presence/instancePresence';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 
 interface InstanceJoinHistoryStoreState {
     joinedAtByLocation: Record<string, number>;
@@ -21,8 +22,7 @@ const initialState: Pick<
 };
 
 function epochMs(value: string | number): number {
-    const parsed =
-        typeof value === 'number' ? value : Date.parse(String(value ?? ''));
+    const parsed = parseAbsoluteDateMs(value);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
 }
 
@@ -33,7 +33,8 @@ export const useInstanceJoinHistoryStore =
             const joinedAtByLocation: Record<string, number> = {};
             for (const [location, joinedAt] of entries) {
                 const key = instanceLocationKey(location);
-                const epoch = epochMs(joinedAt);
+                const epoch =
+                    typeof joinedAt === 'number' ? joinedAt : epochMs(joinedAt);
                 if (!key || !epoch) {
                     continue;
                 }

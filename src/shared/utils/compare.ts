@@ -10,7 +10,7 @@ type ComparableFieldValue = string | number | undefined;
 
 type ComparableRecord = Record<string, unknown> & {
     $friendNumber?: number;
-    created_at?: string;
+    created_at?: string | number;
     displayName?: string;
     id?: string;
     last_activity?: ComparableFieldValue;

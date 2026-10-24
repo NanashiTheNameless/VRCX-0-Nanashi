@@ -214,7 +214,7 @@ describe('worldDialogInstanceRows', () => {
                             id: 'id:usr_dup',
                             userId: 'usr_dup',
                             displayName: 'Dup',
-                            joinedAt: '2024-01-01T00:00:00Z'
+                            joinedAt: 1704067200
                         }
                     ]
                 }
@@ -243,7 +243,7 @@ describe('worldDialogInstanceRows', () => {
         expect(users[0]).toMatchObject({
             id: 'usr_dup',
             userId: 'usr_dup',
-            joinedAt: '2024-01-01T00:00:00Z'
+            joinedAt: 1704067200
         });
         expect(users[0].$location_at).toBeUndefined();
     });

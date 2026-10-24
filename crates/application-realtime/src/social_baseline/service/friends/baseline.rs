@@ -400,7 +400,7 @@ pub(crate) fn reconcile_friend_roster_records(
         .collect::<HashMap<_, _>>();
     let expected_set: HashSet<&str> = friends_by_id.keys().map(String::as_str).collect();
 
-    let created_at = chrono::Utc::now().to_rfc3339();
+    let created_at = vrcx_0_core::time::now_epoch();
     let mut batch = RealtimePersistenceBatch::default();
 
     for (friend_id, entry) in friends_by_id {
@@ -444,7 +444,7 @@ pub(crate) fn reconcile_friend_roster_records(
             display_name: display_name.clone(),
             trust_level: trust_level.clone(),
             friend_number,
-            created_at: created_at.clone(),
+            created_at,
             force_history: false,
         });
         if let Some(previous_display_name) = existing_row
@@ -452,7 +452,7 @@ pub(crate) fn reconcile_friend_roster_records(
             .filter(|name| name_changed && !name.is_empty() && *name != "Unknown")
         {
             batch.feed_entries.push(display_name_feed_entry(
-                &created_at,
+                created_at,
                 friend_id,
                 &display_name,
                 previous_display_name,
@@ -464,7 +464,7 @@ pub(crate) fn reconcile_friend_roster_records(
                 .map(|row| row.trust_level.clone())
                 .unwrap_or_default();
             batch.feed_entries.push(trust_level_feed_entry(
-                &created_at,
+                created_at,
                 friend_id,
                 &display_name,
                 &trust_level,
@@ -483,7 +483,7 @@ pub(crate) fn reconcile_friend_roster_records(
         }
         batch.friend_log_deletes.push(FriendLogDelete {
             target_user_id: row.user_id.clone(),
-            created_at: created_at.clone(),
+            created_at,
         });
     }
 

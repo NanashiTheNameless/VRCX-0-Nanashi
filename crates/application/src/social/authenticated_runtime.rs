@@ -23,7 +23,7 @@ use vrcx_0_application_realtime::{
     SocialFriendRosterBaselineOutput,
 };
 use vrcx_0_core::friends::FriendRecord;
-use vrcx_0_core::time::now_iso;
+use vrcx_0_core::time::now_epoch;
 use vrcx_0_core::OwnerId;
 
 const RETRY_DELAYS_SECONDS: [u64; 4] = [5, 15, 30, 60];
@@ -236,7 +236,7 @@ impl AuthenticatedRuntimeOrchestrator {
             endpoint: session.endpoint.clone(),
             websocket: session.websocket.clone(),
             phase: AuthenticatedRuntimePhase::Starting,
-            updated_at: now_iso(),
+            updated_at: now_epoch(),
             ..Default::default()
         };
         *self.lock_state() = AuthenticatedRuntimeState {
@@ -269,7 +269,7 @@ impl AuthenticatedRuntimeOrchestrator {
             endpoint: previous.endpoint,
             websocket: previous.websocket,
             phase: AuthenticatedRuntimePhase::Stopped,
-            updated_at: now_iso(),
+            updated_at: now_epoch(),
             ..Default::default()
         };
         *self.lock_state() = AuthenticatedRuntimeState {
@@ -833,7 +833,7 @@ impl AuthenticatedRuntimeOrchestrator {
             update(&mut state.phase);
             state.phase.friend_baseline = None;
             state.phase.favorites_baseline = None;
-            state.phase.updated_at = now_iso();
+            state.phase.updated_at = now_epoch();
             state.phase.clone()
         };
         self.emit(snapshot);
@@ -881,7 +881,7 @@ impl AuthenticatedRuntimeOrchestrator {
                 return;
             }
             state.phase.phase = AuthenticatedRuntimePhase::Ready;
-            state.phase.updated_at = now_iso();
+            state.phase.updated_at = now_epoch();
             state.phase.clone()
         };
         self.emit(snapshot);
@@ -937,7 +937,7 @@ fn commit_friend_baseline(
     state.friend_baseline = Some(friend_baseline_metadata(&output));
     state.phase.friend_baseline = None;
     state.phase.favorites_baseline = None;
-    state.phase.updated_at = now_iso();
+    state.phase.updated_at = now_epoch();
     let mut emitted = state.phase.clone();
     emitted.friend_baseline = Some(output);
     emitted
@@ -957,7 +957,7 @@ fn commit_favorites_baseline(
     state.favorites_baseline = Some(output.clone());
     state.phase.friend_baseline = None;
     state.phase.favorites_baseline = None;
-    state.phase.updated_at = now_iso();
+    state.phase.updated_at = now_epoch();
     let mut emitted = state.phase.clone();
     emitted.favorites_baseline = Some(output);
     emitted
@@ -1048,7 +1048,7 @@ fn accept_favorites_baseline(
         &snapshot,
     )));
     state.favorites_baseline = Some(output);
-    state.phase.updated_at = now_iso();
+    state.phase.updated_at = now_epoch();
     Some(snapshot)
 }
 

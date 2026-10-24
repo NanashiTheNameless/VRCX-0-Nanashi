@@ -49,7 +49,7 @@ import {
 const GAME_LOG_WIDGET_MAX_ROWS = 500;
 
 type DashboardGameLogRow = {
-    created_at?: string;
+    created_at?: number;
     displayName?: string;
     location?: string;
     rowId?: number;

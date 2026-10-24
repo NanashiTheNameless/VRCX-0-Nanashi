@@ -18,7 +18,7 @@ export function usePlayerListSourceRows({
     playerRows
 }: {
     context: PlayerListContext;
-    currentLocationStartedAt?: string | null;
+    currentLocationStartedAt?: number | null;
     currentUserId?: string | null;
     currentUserLocation?: string | null;
     currentUserSnapshot?: PlayerListCurrentUserSnapshot | null;

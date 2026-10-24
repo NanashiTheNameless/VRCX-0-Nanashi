@@ -1,4 +1,3 @@
-use compact_str::CompactString;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use vrcx_0_core::json::JsonExt;
@@ -38,7 +37,7 @@ pub struct AvatarCacheOutput {
     pub author_id: String,
     pub author_name: String,
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     pub description: String,
     pub image_url: String,
     pub name: String,
@@ -46,7 +45,7 @@ pub struct AvatarCacheOutput {
     pub release_status: ReleaseStatus,
     pub thumbnail_image_url: String,
     #[serde(rename = "updated_at")]
-    pub updated_at: String,
+    pub updated_at: i64,
     pub version: i64,
 }
 
@@ -57,8 +56,7 @@ pub struct WorldSummaryOutput {
     pub author_id: String,
     pub author_name: String,
     #[serde(rename = "created_at")]
-    #[specta(type = String)]
-    pub created_at: CompactString,
+    pub created_at: i64,
     pub description: String,
     pub image_url: String,
     pub name: String,
@@ -66,8 +64,7 @@ pub struct WorldSummaryOutput {
     pub release_status: ReleaseStatus,
     pub thumbnail_image_url: String,
     #[serde(rename = "updated_at")]
-    #[specta(type = String)]
-    pub updated_at: CompactString,
+    pub updated_at: i64,
     pub version: i64,
 }
 

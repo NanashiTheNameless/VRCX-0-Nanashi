@@ -82,7 +82,7 @@ impl ActivityKind {
 pub struct ActivityEvent {
     pub kind: ActivityKind,
     pub source_id: String,
-    pub created_at: String,
+    pub created_at: i64,
     pub actor: ActivityActor,
     pub subject: ActivitySubject,
     pub in_current_instance: bool,
@@ -90,15 +90,11 @@ pub struct ActivityEvent {
 }
 
 impl ActivityEvent {
-    pub fn new(
-        kind: ActivityKind,
-        source_id: impl Into<String>,
-        created_at: impl Into<String>,
-    ) -> Self {
+    pub fn new(kind: ActivityKind, source_id: impl Into<String>, created_at: i64) -> Self {
         Self {
             kind,
             source_id: source_id.into(),
-            created_at: created_at.into(),
+            created_at,
             actor: ActivityActor::default(),
             subject: ActivitySubject::None,
             in_current_instance: false,

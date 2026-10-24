@@ -11,9 +11,9 @@ const INSTANCE_HISTORY_LIMIT_MAX: u32 = 1_000;
 pub struct InstanceHistoryQueryInput {
     pub user_id: String,
     #[serde(default)]
-    pub date_from: String,
+    pub date_from: Option<i64>,
     #[serde(default)]
-    pub date_to: String,
+    pub date_to: Option<i64>,
     #[serde(default)]
     pub limit: u32,
 }
@@ -21,7 +21,7 @@ pub struct InstanceHistoryQueryInput {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct InstanceHistoryEntryOutput {
-    pub created_at: String,
+    pub created_at: i64,
     pub location: String,
     pub time: i64,
     pub world_name: String,
@@ -39,8 +39,8 @@ pub fn instance_history_query(
     let rows = store.previous_instance_events(
         owner_user_id,
         &input.user_id,
-        &input.date_from,
-        &input.date_to,
+        input.date_from,
+        input.date_to,
         limit,
     )?;
     Ok(group_previous_instance_events(rows))
@@ -94,7 +94,7 @@ mod tests {
         time: i64,
     ) -> PreviousInstanceEventRow {
         PreviousInstanceEventRow {
-            created_at: format!("2026-07-01T00:00:{event_id:02}Z"),
+            created_at: 1782864000 + event_id,
             created_at_ts,
             location: location.into(),
             time,

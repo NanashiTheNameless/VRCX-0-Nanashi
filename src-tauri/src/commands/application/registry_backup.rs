@@ -150,9 +150,9 @@ pub async fn app__registry_backup_maintenance_run(
 #[specta::specta]
 pub fn app__registry_backup_restore_prompt_acknowledge(
     state: State<'_, AppState>,
-    backup_date: String,
-) -> Result<String, AppError> {
+    backup_date: i64,
+) -> Result<i64, AppError> {
     Ok(state
         .runtime_host()
-        .acknowledge_registry_backup_restore_prompt(&backup_date)?)
+        .acknowledge_registry_backup_restore_prompt(backup_date)?)
 }

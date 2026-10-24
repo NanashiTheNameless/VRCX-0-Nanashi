@@ -5,6 +5,7 @@ import type {
     ActivityPageView
 } from '@/platform/tauri/bindings';
 import { ACTIVITY_PAGE_CONFIG_KEYS } from '@/repositories/configKeys';
+import { displayOffsetMinutesAt } from '@/shared/utils/displayTimeZone';
 
 export const ACTIVITY_PAGE_RANGE_KEY = ACTIVITY_PAGE_CONFIG_KEYS.range;
 export const ACTIVITY_PAGE_SHOW_HOME_KEY =
@@ -46,7 +47,7 @@ export function rangeDaysFor(range: ActivityRange): number {
 }
 
 export function utcOffsetMinutes(): number {
-    return -new Date().getTimezoneOffset();
+    return displayOffsetMinutesAt();
 }
 
 export function averageMinutesPerDay(summary: ActivityPageSummary): number {

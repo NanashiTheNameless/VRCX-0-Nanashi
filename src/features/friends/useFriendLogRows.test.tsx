@@ -20,7 +20,7 @@ vi.mock('./useFriendLogResolvedNames', () => ({
 
 const data: FriendLogRow[] = Array.from({ length: 180 }, (_, index) => ({
     rowId: 180 - index,
-    created_at: '2026-09-01T00:00:00.000Z',
+    created_at: 1788220800,
     type: index % 2 ? 'Friend' : 'Unfriend',
     userId: `usr_${180 - index}`,
     displayName: `Name ${180 - index}`,
@@ -208,7 +208,7 @@ describe('Friend History browsing and search', () => {
         act(() => result.current.removeRow(data[0]));
         const replacement = {
             ...data[0],
-            created_at: '2026-09-02T00:00:00.000Z',
+            created_at: 1788307200,
             displayName: 'New event'
         };
         vi.mocked(

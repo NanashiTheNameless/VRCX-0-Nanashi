@@ -22,7 +22,7 @@ fn policy(name: &str) -> (TestDir, ConfigRepository, LocalNotificationPolicy) {
     session.apply_game_process_status(HostSessionGameProcessStatus {
         is_game_running: true,
         is_steamvr_running: true,
-        changed_at: "2026-10-02T00:00:00Z".into(),
+        changed_at: 1790899200,
     });
     let do_not_disturb = NotificationDoNotDisturbRuntime::new(
         config.clone(),
@@ -50,7 +50,7 @@ fn desktop_delivery() -> ActivityDelivery {
             source_id: "game-log:join".into(),
             kind: ActivityKind::OnPlayerJoined,
             category: ActivityCategory::CurrentInstance,
-            created_at: "2026-10-02T00:00:00.000Z".into(),
+            created_at: 1790899200,
             actor_user_id: "usr_traveler".into(),
             actor_display_name: "Traveler".into(),
             content: ActivityContent::default(),

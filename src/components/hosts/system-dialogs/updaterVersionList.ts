@@ -1,4 +1,5 @@
 import type { NormalizedRelease } from '@/services/updateService';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 
 /** Older releases offered for downgrading, below the installed one. */
 export const MAX_OLDER_VERSIONS = 4;
@@ -42,7 +43,7 @@ export function buildVersionList(
         // An unparsable publish date counts as older, which errs toward
         // showing the downgrade warning.
         const isNewer = (release: NormalizedRelease) =>
-            Date.parse(release.publishedAt) > buildTimeMs;
+            parseAbsoluteDateMs(release.publishedAt) > buildTimeMs;
         const newer = releases.filter(isNewer);
         const older = releases
             .filter((release) => !isNewer(release))

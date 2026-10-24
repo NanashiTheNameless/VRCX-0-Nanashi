@@ -30,10 +30,11 @@ pub enum ReminderTrigger {
         user_id: String,
         display_name: String,
     },
-    /// A point in time (RFC 3339, UTC); optionally repeats.
+    /// A point in time (epoch seconds); optionally repeats.
     #[serde(rename_all = "camelCase")]
     Time {
-        at: String,
+        #[serde(deserialize_with = "crate::epoch::de")]
+        at: i64,
         #[serde(default)]
         repeat_minutes: u32,
     },
@@ -49,9 +50,10 @@ pub struct Reminder {
     /// Event reminders: keep firing (with a cooldown) instead of once.
     #[serde(default)]
     pub recurring: bool,
-    pub created_at: String,
-    #[serde(default)]
-    pub last_fired_at: String,
+    #[serde(deserialize_with = "crate::epoch::de")]
+    pub created_at: i64,
+    #[serde(default, deserialize_with = "crate::epoch::de_opt")]
+    pub last_fired_at: Option<i64>,
     #[serde(default)]
     pub fire_count: u32,
 }

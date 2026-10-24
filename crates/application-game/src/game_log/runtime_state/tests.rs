@@ -14,7 +14,7 @@ fn snapshot_and_projection_preserve_the_current_instance_roster_contract() {
         current_location: "wrld_current:instance".into(),
         current_world_name: "Current World".into(),
         current_destination: "wrld_destination:instance".into(),
-        current_location_started_at: "2026-08-13T10:00:00.000Z".into(),
+        current_location_started_at: 1786615200,
         ..Default::default()
     };
     for player in [
@@ -38,15 +38,12 @@ fn snapshot_and_projection_preserve_the_current_instance_roster_contract() {
         ]
     );
 
-    let projection = state.projection("2026-08-13T10:05:00.000Z", "OnPlayerJoined");
+    let projection = state.projection(1786615500, "OnPlayerJoined");
 
     assert_eq!(projection.current_location, "wrld_current:instance");
     assert_eq!(projection.current_world_id, "wrld_current");
     assert_eq!(projection.current_world_name, "Current World");
-    assert_eq!(
-        projection.current_location_started_at.as_deref(),
-        Some("2026-08-13T10:00:00.000Z")
-    );
+    assert_eq!(projection.current_location_started_at, Some(1786615200));
     assert_eq!(projection.current_location_player_ids, ["usr_a", "usr_z"]);
     assert_eq!(projection.current_location_players, snapshot.players);
     assert_eq!(projection.last_game_log_type, "OnPlayerJoined");
@@ -92,9 +89,23 @@ fn leave_duration_requires_known_monotonic_event_times() {
 
 #[test]
 fn projection_uses_absence_for_an_unknown_location_start() {
-    let projection = GameLogRuntimeState::default().projection("", "game-started");
+    let projection = GameLogRuntimeState::default().projection(0, "game-started");
 
     assert_eq!(projection.current_location_started_at, None);
     assert!(projection.current_location_player_ids.is_empty());
     assert!(projection.current_location_players.is_empty());
+}
+
+#[test]
+fn stored_player_join_dates_are_seconds_and_old_milliseconds_still_load() {
+    let player: PlayerState = serde_json::from_value(serde_json::json!({
+        "userId": "usr_a", "displayName": "A", "joinTimeMs": 1784629815250_i64
+    }))
+    .unwrap();
+    assert_eq!(player.join_time_ms, Some(1784629815250));
+    let stored = serde_json::to_value(player).unwrap();
+    assert_eq!(stored["joinTime"], 1784629815);
+    assert!(stored.get("joinTimeMs").is_none());
+    let restored: PlayerState = serde_json::from_value(stored).unwrap();
+    assert_eq!(restored.join_time_ms, Some(1784629815000));
 }

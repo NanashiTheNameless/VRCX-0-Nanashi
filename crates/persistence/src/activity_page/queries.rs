@@ -1,15 +1,15 @@
-use crate::activity::activity_iso_from_ms;
 use crate::common::{row_string, ParamsBuilder};
 use crate::database::DatabaseService;
 use crate::game_log::ensure_game_log_tables;
 use crate::ownership::{owner_id_for_filter, OwnerId};
 use crate::Error;
 use std::collections::BTreeSet;
+use vrcx_0_core::time::epoch_from_millis;
 
 pub fn first_source_created_at(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
-) -> Result<String, Error> {
+) -> Result<Option<i64>, Error> {
     ensure_game_log_tables(db)?;
     Ok(db
         .execute(
@@ -19,8 +19,8 @@ pub fn first_source_created_at(
                 .build(),
         )?
         .first()
-        .map(|row| row_string(row, 0))
-        .unwrap_or_default())
+        .and_then(|row| row.first())
+        .and_then(serde_json::Value::as_i64))
 }
 
 pub fn world_ids_before(
@@ -34,11 +34,11 @@ pub fn world_ids_before(
             "SELECT DISTINCT world_id
              FROM gamelog_location
              WHERE owner_id IN (0, @owner_id)
-               AND created_at < @before_iso
+               AND created_at < @before
                AND world_id LIKE 'wrld_%'",
             &ParamsBuilder::new()
                 .set("owner_id", owner_id_for_filter(db, owner_user_id)?)
-                .set("before_iso", activity_iso_from_ms(before_ms))
+                .set("before", epoch_from_millis(before_ms))
                 .build(),
         )?
         .into_iter()
@@ -65,12 +65,12 @@ pub fn encountered_user_ids(
         .set("owner_id", owner_id_for_filter(db, owner_user_id)?)
         .set("owner_user_id", owner_user_id.as_str());
     if let Some(from_ms) = from_ms {
-        sql.push_str(" AND created_at >= @from_iso");
-        params = params.set("from_iso", activity_iso_from_ms(from_ms));
+        sql.push_str(" AND created_at >= @from");
+        params = params.set("from", epoch_from_millis(from_ms));
     }
     if let Some(to_ms) = to_ms {
-        sql.push_str(" AND created_at < @to_iso");
-        params = params.set("to_iso", activity_iso_from_ms(to_ms));
+        sql.push_str(" AND created_at < @to");
+        params = params.set("to", epoch_from_millis(to_ms));
     }
     Ok(db
         .execute(&sql, &params.build())?

@@ -9,19 +9,19 @@ describe('buildFriendNameHistory', () => {
                 {
                     userId: 'usr_a',
                     displayName: 'Old Name',
-                    created_at: '2026-01-01T00:00:00Z'
+                    created_at: 1767225600
                 },
                 {
                     userId: 'usr_a',
                     displayName: 'New Name',
-                    created_at: '2026-02-01T00:00:00Z'
+                    created_at: 1769904000
                 },
                 {
                     userId: 'usr_b',
                     displayName: 'Unfriended',
-                    created_at: '2026-01-15T00:00:00Z'
+                    created_at: 1768435200
                 },
-                { userId: 'usr_c', displayName: ' ', created_at: '2026-01-01' }
+                { userId: 'usr_c', displayName: ' ', created_at: 1767225600 }
             ])
         ).toEqual({ usr_a: 'New Name', usr_b: 'Unfriended' });
     });

@@ -25,7 +25,7 @@ function createRuntimeContext({
     source?: CurrentInstanceRosterContext['source'];
 }): CurrentInstanceRosterContext {
     return {
-        createdAt: '',
+        createdAt: 0,
         groupName: '',
         location: playerListLocation ?? '',
         playerCount: 0,
@@ -54,7 +54,7 @@ export function useCurrentInstanceRoster({
     isGameRunning: boolean;
     logLocationSnapshot?: LogLocationSnapshot | null;
     playerListLocation?: string;
-    playerListStartedAt?: string | null;
+    playerListStartedAt?: number | null;
     playerListWorldId?: string;
     refreshRevision?: number;
     tailSyncRevision?: string | null;
@@ -141,7 +141,7 @@ export function useCurrentInstanceRoster({
                               currentUserId: currentUserId ?? '',
                               joinedAt:
                                   result.context.createdAt ||
-                                  (playerListStartedAt ?? ''),
+                                  (playerListStartedAt ?? 0),
                               players: result.players
                           })
                         : result.players;
@@ -162,7 +162,7 @@ export function useCurrentInstanceRoster({
                     currentLocation: nextContext.location || playerListLocation,
                     currentLocationPlayers: result.players,
                     currentLocationStartedAt:
-                        nextContext.createdAt || playerListStartedAt || '',
+                        nextContext.createdAt || playerListStartedAt || 0,
                     currentWorldName: nextContext.worldName,
                     endpoint: currentUserEndpoint
                 });

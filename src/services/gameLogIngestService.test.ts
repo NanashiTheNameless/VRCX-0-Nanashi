@@ -31,7 +31,7 @@ function projection(overrides: Partial<GameLogProjection>): GameLogProjection {
         currentLocationStartedAt: null,
         currentWorldId: '',
         currentWorldName: '',
-        lastGameLogAt: '',
+        lastGameLogAt: 0,
         lastGameLogType: '',
         ...overrides
     };
@@ -68,19 +68,19 @@ describe('gameLogIngestService characterization', () => {
                 currentLocation: 'wrld_test:123',
                 currentWorldId: 'wrld_test',
                 currentWorldName: 'Test World',
-                currentLocationStartedAt: '2026-05-14T00:00:00.000Z',
-                lastGameLogAt: '2026-05-14T00:00:01.000Z',
+                currentLocationStartedAt: 1778716800,
+                lastGameLogAt: 1778716801,
                 lastGameLogType: 'location',
                 currentLocationPlayers: [
                     {
                         userId: '',
                         displayName: 'Name Only',
-                        joinTimeMs: 1_768_348_800_000
+                        joinTime: 1_768_348_800
                     },
                     {
                         userId: 'usr_1',
                         displayName: 'Known User',
-                        joinTimeMs: 1_768_348_801_000
+                        joinTime: 1_768_348_801
                     }
                 ]
             })
@@ -91,9 +91,9 @@ describe('gameLogIngestService characterization', () => {
             currentLocation: 'wrld_test:123',
             currentWorldId: 'wrld_test',
             currentWorldName: 'Test World',
-            currentLocationStartedAt: '2026-05-14T00:00:00.000Z',
+            currentLocationStartedAt: 1778716800,
             currentLocationPlayerIds: ['usr_1'],
-            lastGameLogAt: '2026-05-14T00:00:01.000Z',
+            lastGameLogAt: 1778716801,
             lastGameLogType: 'location'
         });
         expect(gameState.currentLocationPlayers).toEqual([
@@ -124,7 +124,7 @@ describe('gameLogIngestService characterization', () => {
             projection({
                 currentLocation: 'wrld_test:123',
                 currentLocationPlayers: [
-                    { userId: 'usr_1', displayName: 'First', joinTimeMs: null }
+                    { userId: 'usr_1', displayName: 'First', joinTime: null }
                 ]
             })
         );
@@ -132,7 +132,7 @@ describe('gameLogIngestService characterization', () => {
             projection({
                 currentLocation: 'wrld_test:123',
                 currentLocationPlayers: [
-                    { userId: 'usr_2', displayName: 'Second', joinTimeMs: null }
+                    { userId: 'usr_2', displayName: 'Second', joinTime: null }
                 ]
             })
         );
@@ -158,7 +158,7 @@ describe('gameLogIngestService characterization', () => {
                 source: 'runtime',
                 playerFactsKnown: true,
                 worldName: 'Recovered World',
-                createdAt: '2026-05-14T00:00:00.000Z'
+                createdAt: 1778716800
             },
             players: [
                 {
@@ -189,7 +189,7 @@ describe('gameLogIngestService characterization', () => {
             expect.objectContaining({
                 id: 'display:Name Only',
                 displayName: 'Name Only',
-                joinedAt: new Date(1_768_348_800_000).toISOString(),
+                joinedAt: 1_768_348_800,
                 joinedAtMs: 1_768_348_800_000
             })
         ]);
@@ -225,7 +225,7 @@ describe('gameLogIngestService characterization', () => {
                 location: 'wrld_old:123',
                 worldId: 'wrld_old',
                 worldName: 'Old World',
-                createdAt: '2026-05-14T00:00:00.000Z',
+                createdAt: 1778716800,
                 time: 0,
                 groupName: '',
                 playerCount: 0,
@@ -247,12 +247,12 @@ describe('gameLogIngestService characterization', () => {
                 currentLocation: 'wrld_test:123',
                 currentWorldId: 'wrld_test',
                 currentWorldName: 'Test World',
-                currentLocationStartedAt: '2026-05-14T00:00:00.000Z',
+                currentLocationStartedAt: 1778716800,
                 currentLocationPlayers: [
                     {
                         userId: 'usr_1',
                         displayName: 'Known User',
-                        joinTimeMs: Date.parse('2026-05-14T00:01:00.000Z')
+                        joinTime: Date.parse('2026-05-14T00:01:00.000Z') / 1000
                     }
                 ]
             })
@@ -262,7 +262,7 @@ describe('gameLogIngestService characterization', () => {
             name: 'Some Video'
         });
 
-        service.resetGameLogSessionState('2026-05-14T00:03:00.000Z');
+        service.resetGameLogSessionState(1778716980);
 
         expect(useRuntimeStore.getState().nowPlaying).toMatchObject({
             url: '',
@@ -275,7 +275,7 @@ describe('gameLogIngestService characterization', () => {
             currentLocationStartedAt: null,
             currentLocationPlayerIds: [],
             currentLocationPlayers: [],
-            lastGameLogAt: '2026-05-14T00:03:00.000Z',
+            lastGameLogAt: 1778716980,
             lastGameLogType: 'game-stopped'
         });
     });
@@ -295,7 +295,7 @@ it('hydrates the backend current room over an unchanged stale frontend room', as
             location: 'wrld_current:2',
             worldId: 'wrld_current',
             worldName: 'Current',
-            createdAt: '2026-05-14T04:00:00Z'
+            createdAt: 1778731200
         },
         players: []
     });

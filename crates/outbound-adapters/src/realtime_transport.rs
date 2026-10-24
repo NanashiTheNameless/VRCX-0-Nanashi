@@ -492,9 +492,9 @@ async fn connect_once(
                 }
                 match classify_websocket_frame(frame) {
                     RealtimeFrame::Text(text) => {
-                        let received_at = chrono::Utc::now().to_rfc3339();
+                        let received_at = vrcx_0_core::time::now_epoch();
                         if let Some(path) = &ws_event_log_path {
-                            crate::ws_event_log::append(path, &received_at, &text);
+                            crate::ws_event_log::append(path, received_at, &text);
                         }
                         match parser.parse_text(&text, received_at) {
                             RealtimeMessageParseOutcome::Duplicate => {}

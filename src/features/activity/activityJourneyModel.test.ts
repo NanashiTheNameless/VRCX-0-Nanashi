@@ -42,8 +42,8 @@ function visit(
         worldId: 'wrld_a',
         worldName: 'Alpha',
         worldImageUrl: '',
-        startMs,
-        endMs: startMs + minutes * MINUTE,
+        startAt: Math.floor(startMs / 1000),
+        endAt: Math.floor((startMs + minutes * MINUTE) / 1000),
         companions
     };
 }

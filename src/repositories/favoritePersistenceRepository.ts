@@ -12,7 +12,7 @@ import configRepository from './configRepository';
 type LocalFavoriteKind = FavoriteEntityKind;
 
 interface WorldFavoriteRow {
-    created_at: string;
+    created_at: number;
     worldId: string;
     groupName: string;
 }
@@ -44,7 +44,7 @@ function applyLocalFavoriteGroupWrite(write: {
 
 function normalizeWorldFavoriteRow(row: FavoriteRow): WorldFavoriteRow {
     return {
-        created_at: normalizeEntityId(row.createdAt),
+        created_at: row.createdAt,
         worldId: normalizeEntityId(row.worldId),
         groupName: normalizeGroupName(row.groupName)
     };

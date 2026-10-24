@@ -59,5 +59,5 @@ pub trait VrOverlayRuntimeServices: Send + Sync {
         std::collections::HashMap::new()
     }
 
-    fn game_started_at(&self) -> Option<String>;
+    fn game_started_at(&self) -> Option<i64>;
 }

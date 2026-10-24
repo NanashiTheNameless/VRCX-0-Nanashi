@@ -21,6 +21,7 @@ import {
     type UserDialogPreviousInstance,
     type UserDialogStats
 } from '@/services/userDialogSessionCacheService';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 
 import {
     mergePreviousDisplayNames,
@@ -353,7 +354,7 @@ export function useUserDialogSupplementalData({
                 }
                 const nextStats = {
                     timeSpent: Number(stats?.timeSpent) || 0,
-                    lastSeen: normalizeUserId(stats?.lastSeen),
+                    lastSeen: epochSecondsFromValue(stats?.lastSeen),
                     joinCount: Number(stats?.joinCount) || 0
                 };
                 setUserStatsForTarget((current) => {
@@ -401,13 +402,13 @@ export function useUserDialogSupplementalData({
                 if (!isTargetCurrentUser) {
                     return {
                         ...current,
-                        friendedAt: '',
+                        friendedAt: null,
                         relationshipHistory: []
                     };
                 }
                 return {
                     ...current,
-                    friendedAt: '',
+                    friendedAt: null,
                     relationshipHistory: [],
                     ...replacePreviousDisplayNameSource(
                         profileDisplayNameRef.current,
@@ -437,7 +438,7 @@ export function useUserDialogSupplementalData({
                 const friendedAt =
                     latestRelationship?.type === 'Friend'
                         ? latestRelationship.created_at
-                        : '';
+                        : null;
                 const friendLogPreviousDisplayNames = rows
                     .filter((row) => row.type === 'DisplayName')
                     .map((row) => ({

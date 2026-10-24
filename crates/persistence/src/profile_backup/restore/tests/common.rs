@@ -80,7 +80,7 @@ pub(super) fn create_profile_backup(
         ProfileBackupManifestMetadata {
             app_version: app_version.into(),
             db_version: manifest_db_version,
-            created_at: "2026-07-14T07:30:00Z".into(),
+            created_at: 1784014200,
             platform: "windows".into(),
             kind: ProfileBackupKind::Manual,
         },
@@ -117,7 +117,7 @@ pub(super) fn manifest_for_database(bytes: &[u8]) -> ProfileBackupManifest {
         manifest_version: 1,
         app_version: "1.2.3".into(),
         db_version: VRCX0_SCHEMA_VERSION,
-        created_at: "2026-07-14T07:30:00Z".into(),
+        created_at: 1784014200,
         platform: "windows".into(),
         kind: ProfileBackupKind::Manual,
         contents: vec![ProfileBackupContent {

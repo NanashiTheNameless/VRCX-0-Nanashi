@@ -438,14 +438,14 @@ function VisitClock({
     visit: ActivityJourneyVisit;
     dayStartMs: number;
 }) {
-    return visit.startMs < dayStartMs
-        ? formatDateTime(visit.startMs, {
+    return visit.startAt * 1000 < dayStartMs
+        ? formatDateTime(visit.startAt, {
               month: 'numeric',
               day: 'numeric',
               hour: '2-digit',
               minute: '2-digit'
           })
-        : formatClock(visit.startMs);
+        : formatClock(visit.startAt);
 }
 
 function VisitItem({
@@ -489,9 +489,9 @@ function VisitItem({
     function openInInstanceHistory() {
         const params = new URLSearchParams();
         params.set('mode', 'day');
-        params.set('day', toLocalDayKey(visit.endMs));
+        params.set('day', toLocalDayKey(visit.endAt));
         params.set('location', visit.location);
-        params.set('at', String(visit.endMs));
+        params.set('at', String(visit.endAt * 1000));
         navigate(`/instance-history?${params.toString()}`);
     }
 

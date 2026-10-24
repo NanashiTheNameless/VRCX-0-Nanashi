@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use chrono::{DateTime, FixedOffset, NaiveDate, TimeZone};
+use chrono::{FixedOffset, NaiveDate, TimeZone};
 use semver::Version;
 
 use super::{
@@ -112,11 +112,8 @@ pub(super) fn compare_releases_newest_first(
     right: &AppUpdateReleaseSnapshot,
 ) -> Ordering {
     compare_release_versions(&right.canonical_version, &left.canonical_version).then_with(|| {
-        let published = |release: &AppUpdateReleaseSnapshot| {
-            DateTime::parse_from_rfc3339(&release.published_at)
-                .map(|published_at| published_at.timestamp_millis())
-                .unwrap_or(i64::MIN)
-        };
+        let published =
+            |release: &AppUpdateReleaseSnapshot| release.published_at.saturating_mul(1000);
         published(right).cmp(&published(left))
     })
 }
@@ -180,9 +177,7 @@ pub(super) fn is_stable_release_newer_than_preview_build(
     release: &AppUpdateReleaseSnapshot,
     preview_build_timestamp_ms: i64,
 ) -> bool {
-    DateTime::parse_from_rfc3339(&release.published_at)
-        .map(|published_at| published_at.timestamp_millis() > preview_build_timestamp_ms)
-        .unwrap_or(false)
+    release.published_at.saturating_mul(1000) > preview_build_timestamp_ms
 }
 
 const UPDATER_MANIFEST_ASSET: &str = "version_manifest.json";
@@ -240,7 +235,7 @@ pub(super) fn normalize_release(
         display_name,
         tag_name,
         html_url: release.html_url.clone().unwrap_or_default(),
-        published_at: release.published_at.clone().unwrap_or_default(),
+        published_at: release.published_at.unwrap_or_default(),
         body: release.body.clone().unwrap_or_default(),
         canonical_version: parsed.canonical_version.clone(),
         display_version: parsed.canonical_version,

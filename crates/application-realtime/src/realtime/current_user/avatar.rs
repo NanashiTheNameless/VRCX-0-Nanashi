@@ -32,12 +32,12 @@ fn avatar_wear_time_spent(
 ) -> AvatarTimeSpentUpsert {
     AvatarTimeSpentUpsert {
         avatar_id,
-        created_at: now.iso.clone(),
+        created_at: now.at,
         time_spent: now
             .timestamp_ms
             .saturating_sub(swap_time.max(checkpoint_ms)),
-        started_at_ms: swap_time,
-        ended_at_ms: now.timestamp_ms,
+        started_at: vrcx_0_core::time::epoch_from_millis(swap_time),
+        ended_at: now.at,
     }
 }
 
@@ -120,7 +120,7 @@ pub(super) fn apply_avatar_wear_transition(
             .avatar_history_upserts
             .push(AvatarHistoryUpsert {
                 avatar_id: next_avatar_id,
-                created_at: now.iso.clone(),
+                created_at: now.at,
             });
         return (next, persistence);
     }
@@ -130,7 +130,7 @@ pub(super) fn apply_avatar_wear_transition(
             .avatar_history_upserts
             .push(AvatarHistoryUpsert {
                 avatar_id: next_avatar_id,
-                created_at: now.iso.clone(),
+                created_at: now.at,
             });
         if previous_swap_time > 0 {
             persistence
@@ -150,7 +150,7 @@ pub(super) fn apply_avatar_wear_transition(
             .avatar_history_upserts
             .push(AvatarHistoryUpsert {
                 avatar_id: next_avatar_id,
-                created_at: now.iso.clone(),
+                created_at: now.at,
             });
     }
     next.set_previous_avatar_swap_time(Some(first_positive([

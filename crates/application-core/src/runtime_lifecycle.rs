@@ -4,7 +4,6 @@ use std::sync::{Arc, Mutex};
 use serde::Serialize;
 
 use crate::RuntimeOperationStatus;
-use vrcx_0_core::time::now_iso;
 
 #[derive(Clone, Debug, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -12,13 +11,13 @@ pub struct RuntimePhaseSnapshot {
     pub name: String,
     pub status: RuntimeOperationStatus,
     pub detail: String,
-    pub updated_at: String,
+    pub updated_at: i64,
 }
 
 #[derive(Clone, Debug, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct RuntimeLifecycleSnapshot {
-    pub started_at: String,
+    pub started_at: i64,
     pub host_services_started: bool,
     pub phases: Vec<RuntimePhaseSnapshot>,
 }
@@ -31,14 +30,14 @@ struct RuntimeLifecycleState {
 
 #[derive(Clone)]
 pub struct RuntimeLifecycle {
-    started_at: String,
+    started_at: i64,
     inner: Arc<Mutex<RuntimeLifecycleState>>,
 }
 
 impl RuntimeLifecycle {
     pub fn new() -> Self {
         Self {
-            started_at: now_iso(),
+            started_at: vrcx_0_core::time::now_epoch(),
             inner: Arc::new(Mutex::new(RuntimeLifecycleState::default())),
         }
     }
@@ -59,7 +58,7 @@ impl RuntimeLifecycle {
                         name,
                         status,
                         detail,
-                        updated_at: now_iso(),
+                        updated_at: vrcx_0_core::time::now_epoch(),
                     },
                 );
             }
@@ -88,14 +87,14 @@ impl RuntimeLifecycle {
     pub fn snapshot(&self) -> RuntimeLifecycleSnapshot {
         match self.inner.lock() {
             Ok(state) => RuntimeLifecycleSnapshot {
-                started_at: self.started_at.clone(),
+                started_at: self.started_at,
                 host_services_started: state.host_services_started,
                 phases: state.phases.values().cloned().collect(),
             },
             Err(error) => {
                 tracing::warn!("failed to lock runtime lifecycle: {error}");
                 RuntimeLifecycleSnapshot {
-                    started_at: self.started_at.clone(),
+                    started_at: self.started_at,
                     host_services_started: false,
                     phases: Vec::new(),
                 }

@@ -35,7 +35,7 @@ pub trait BackgroundGroupRemote: Send + Sync {
 #[derive(Clone, Debug, Default)]
 pub struct BackgroundGroupInstancesRefresh {
     pub instances: Vec<RawJson>,
-    pub fetched_at: String,
+    pub fetched_at: i64,
 }
 
 #[derive(Clone, Debug, serde::Serialize, specta::Type)]
@@ -45,7 +45,7 @@ pub struct RuntimeGroupInstancesProjection {
     pub user_id: String,
     pub endpoint: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub fetched_at: Option<String>,
+    pub fetched_at: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -71,7 +71,7 @@ impl RuntimeGroupInstancesProjection {
     pub fn ready(
         user_id: String,
         endpoint: String,
-        fetched_at: String,
+        fetched_at: i64,
         instances: Vec<RawJson>,
         group_order: Vec<String>,
     ) -> Self {
@@ -136,7 +136,7 @@ pub async fn refresh_background_group_instances(
     let instances = remote
         .group_instances(&session.endpoint, &session.current_user_id)
         .await?;
-    let fetched_at = Utc::now().to_rfc3339();
+    let fetched_at = Utc::now().timestamp();
     let instances = hydrate_background_group_instances(remote, &session.endpoint, instances).await;
     Ok(BackgroundGroupInstancesRefresh {
         instances: instances.into_iter().map(RawJson::from).collect(),
@@ -154,7 +154,7 @@ pub async fn refresh_background_group_instances_for_group(
         .await?;
     Ok(BackgroundGroupInstancesRefresh {
         instances: instances.into_iter().map(RawJson::from).collect(),
-        fetched_at: Utc::now().to_rfc3339(),
+        fetched_at: Utc::now().timestamp(),
     })
 }
 

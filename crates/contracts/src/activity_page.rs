@@ -8,7 +8,7 @@ pub struct ActivityPageBuildInput {
     pub owner_user_id: OwnerId,
     pub range_days: i64,
     pub utc_offset_minutes: i64,
-    pub now_ms: i64,
+    pub now: i64,
     pub companion_order: ActivityCompanionOrder,
     pub force_refresh: bool,
 }
@@ -75,8 +75,8 @@ pub struct ActivityPageWorldRow {
     pub world_name: String,
     pub minutes: i64,
     pub visit_count: i64,
-    pub first_seen_at: String,
-    pub last_seen_at: String,
+    pub first_seen_at: i64,
+    pub last_seen_at: i64,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
@@ -125,9 +125,9 @@ pub struct ActivityPagePeople {
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ActivityPageCoverage {
-    pub from: String,
-    pub to: String,
-    pub first_source_at: String,
+    pub from: i64,
+    pub to: i64,
+    pub first_source_at: i64,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
@@ -135,8 +135,8 @@ pub struct ActivityPageCoverage {
 pub struct ActivityPageView {
     pub range_days: i64,
     pub utc_offset_minutes: i64,
-    pub window_from_ms: i64,
-    pub window_to_ms: i64,
+    pub window_from: i64,
+    pub window_to: i64,
     pub summary: ActivityPageSummary,
     pub previous: ActivityPagePreviousSummary,
     pub series: ActivityPageSeries,
@@ -145,7 +145,7 @@ pub struct ActivityPageView {
     pub people: ActivityPagePeople,
     pub coverage: ActivityPageCoverage,
     pub built_from_cursor: String,
-    pub built_at: String,
+    pub built_at: i64,
     pub stale: bool,
 }
 
@@ -169,8 +169,8 @@ pub struct CachedActivityPage {
 #[serde(rename_all = "camelCase")]
 pub struct ActivityJourneyDayInput {
     pub owner_user_id: OwnerId,
-    pub from_ms: i64,
-    pub to_ms: i64,
+    pub from: i64,
+    pub to: i64,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
@@ -196,7 +196,7 @@ pub struct ActivityJourneyVisit {
     pub world_id: String,
     pub world_name: String,
     pub world_image_url: String,
-    pub start_ms: i64,
-    pub end_ms: i64,
+    pub start_at: i64,
+    pub end_at: i64,
     pub companions: Vec<ActivityJourneyCompanion>,
 }

@@ -502,7 +502,13 @@ mod tests {
         seed_feed_bio_row(
             recorder.state.database(),
             USER,
-            (created_at, "usr_friend", "Friend", bio, ""),
+            (
+                vrcx_0_core::time::parse_epoch_seconds(created_at).unwrap(),
+                "usr_friend",
+                "Friend",
+                bio,
+                "",
+            ),
         )
         .unwrap();
     }

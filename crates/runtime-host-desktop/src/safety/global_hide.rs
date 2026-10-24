@@ -32,13 +32,12 @@ fn today() -> String {
 }
 
 fn in_backoff(state: &GlobalHideAccountState) -> bool {
-    chrono::DateTime::parse_from_rfc3339(&state.backoff_until)
-        .is_ok_and(|until| until.with_timezone(&Utc) > Utc::now())
+    state.backoff_until > Utc::now().timestamp()
 }
 
 /// Backoff after `errors` consecutive failures: 5 min doubling, capped at 6 h;
 /// from `MAX_CONSECUTIVE_ERRORS` on, wait until the next UTC day.
-fn backoff_until(errors: u32) -> String {
+fn backoff_until(errors: u32) -> i64 {
     let now = Utc::now();
     let until = if errors >= MAX_CONSECUTIVE_ERRORS {
         (now.date_naive() + chrono::Days::new(1))
@@ -50,7 +49,7 @@ fn backoff_until(errors: u32) -> String {
         let secs = (BACKOFF_BASE_SECS << exponent).min(BACKOFF_MAX_SECS);
         now + chrono::Duration::seconds(secs)
     };
-    until.to_rfc3339_opts(chrono::SecondsFormat::Secs, true)
+    until.timestamp()
 }
 
 fn roll_day(state: &mut GlobalHideAccountState) {
@@ -431,9 +430,9 @@ impl SafetyRuntime {
         status.today = state.day_count;
         status.paused = state.paused;
         status.backoff_until = if in_backoff(state) {
-            state.backoff_until.clone()
+            state.backoff_until
         } else {
-            String::new()
+            0
         };
         status.last_error = state.last_error.clone();
         status.unblock_remaining = unblock_remaining;
@@ -448,7 +447,7 @@ impl SafetyRuntime {
             state.paused = paused;
             if !paused {
                 // Resuming is an explicit user choice: clear any error backoff.
-                state.backoff_until.clear();
+                state.backoff_until = 0;
                 state.consecutive_errors = 0;
             }
             drop(all);
@@ -516,11 +515,7 @@ mod tests {
 
     #[test]
     fn backoff_grows_and_caps_then_waits_for_the_next_day() {
-        let parse = |value: String| {
-            chrono::DateTime::parse_from_rfc3339(&value)
-                .unwrap()
-                .with_timezone(&Utc)
-        };
+        let parse = |value: i64| chrono::DateTime::<Utc>::from_timestamp(value, 0).unwrap();
         let now = Utc::now();
         let first = parse(backoff_until(1)) - now;
         assert!((290..=310).contains(&first.num_seconds()));

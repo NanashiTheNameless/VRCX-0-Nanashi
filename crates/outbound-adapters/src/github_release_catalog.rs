@@ -87,7 +87,10 @@ impl From<GitHubRelease> for AppUpdateCatalogRelease {
             html_url: release.html_url,
             name: release.name,
             prerelease: release.prerelease,
-            published_at: release.published_at,
+            published_at: release
+                .published_at
+                .as_deref()
+                .and_then(vrcx_0_core::time::parse_epoch_seconds),
             body: release.body,
         }
     }

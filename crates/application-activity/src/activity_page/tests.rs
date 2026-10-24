@@ -79,9 +79,9 @@ impl ActivityPageStore for Store {
             access_bucket: "public".into(),
         }])
     }
-    fn first_source_created_at(&self, _: &OwnerId) -> Result<String> {
+    fn first_source_created_at(&self, _: &OwnerId) -> Result<Option<i64>> {
         self.called("coverage");
-        Ok("2025-01-01T00:00:00.000Z".into())
+        Ok(Some(1735689600))
     }
     fn world_ids_before(&self, _: &OwnerId, _: i64) -> Result<BTreeSet<String>> {
         self.called("worlds");
@@ -131,7 +131,7 @@ fn input() -> ActivityPageBuildInput {
         owner_user_id: OwnerId::new("usr_page"),
         range_days: 7,
         utc_offset_minutes: 0,
-        now_ms: 1_736_035_200_000,
+        now: 1_736_035_200,
         companion_order: Default::default(),
         force_refresh: false,
     }

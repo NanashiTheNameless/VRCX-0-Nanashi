@@ -1,4 +1,5 @@
 import type { FriendRecord } from '@/domain/friends/types';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 
 import {
     isValidMutualFriendId,
@@ -48,7 +49,7 @@ export function buildMutualFriendsCoverage(
             continue;
         }
         coverage.fetchedCount += 1;
-        const fetchedTime = Date.parse(metadata.lastFetchedAt);
+        const fetchedTime = parseAbsoluteDateMs(metadata.lastFetchedAt);
         if (Number.isFinite(fetchedTime) && fetchedTime > latestFetchedTime) {
             latestFetchedTime = fetchedTime;
             coverage.lastFetchedAt = metadata.lastFetchedAt;

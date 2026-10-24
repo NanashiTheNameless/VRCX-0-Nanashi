@@ -251,7 +251,7 @@ fn backend_snapshot(
         process_status: BackendRuntimeProcessStatus::Unknown,
         game_log_persisted_count: 0,
         last_error: None,
-        updated_at: "2026-07-03T08:30:00.000Z".into(),
+        updated_at: 1783067400,
         friend_profile_load: vrcx_0_application_core::FriendProfileLoadStatusPayload::default(),
     }
 }
@@ -367,7 +367,7 @@ fn delivery(desktop: bool, vr: bool, webhook: bool, tts: bool) -> ActivityDelive
             source_id: "notification:1".into(),
             kind: vrcx_0_contracts::activity::ActivityKind::Online,
             category: ActivityCategory::FavoriteMovement,
-            created_at: "2026-06-18T08:30:00.000Z".into(),
+            created_at: 1781771400,
             actor_user_id: "usr_123".into(),
             actor_display_name: "Pizza".into(),
             content: ActivityContent::default(),

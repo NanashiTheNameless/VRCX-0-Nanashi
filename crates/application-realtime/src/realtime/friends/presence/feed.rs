@@ -12,7 +12,7 @@ pub(crate) fn presence_feed(
     prev: &Phase,
     next: &Phase,
     now_ms: i64,
-    created_at: &str,
+    created_at: i64,
 ) -> Vec<FeedLiveEntry> {
     let names = FeedNames::new(user_id, record, created_at);
     let mut entries = Vec::new();
@@ -36,7 +36,7 @@ pub(crate) fn joining_feed(
     record: &FriendRecord,
     prev: &Phase,
     next: &Phase,
-    created_at: &str,
+    created_at: i64,
 ) -> Option<FeedLiveEntry> {
     let Phase::Online(after) = next else {
         return None;
@@ -48,11 +48,11 @@ struct FeedNames<'a> {
     user_id: &'a str,
     record: &'a FriendRecord,
     display_name: String,
-    created_at: &'a str,
+    created_at: i64,
 }
 
 impl<'a> FeedNames<'a> {
-    fn new(user_id: &'a str, record: &'a FriendRecord, created_at: &'a str) -> Self {
+    fn new(user_id: &'a str, record: &'a FriendRecord, created_at: i64) -> Self {
         let display_name = meaningful_display_name(&record.display_name, &record.username, user_id)
             .unwrap_or_else(|| "Unknown".to_string());
         Self {
@@ -85,7 +85,7 @@ impl<'a> FeedNames<'a> {
     fn online(&self, location: &str) -> FeedLiveEntry {
         let (world_name, group_name) = self.location_names(location);
         FeedLiveEntry::Online {
-            created_at: self.created_at.to_string(),
+            created_at: self.created_at,
             user_id: self.user_id.to_string(),
             display_name: self.display_name.clone(),
             location: location.to_string(),
@@ -102,7 +102,7 @@ impl<'a> FeedNames<'a> {
         let location = held.place.tag().to_string();
         let (world_name, group_name) = self.location_names(&location);
         FeedLiveEntry::Offline {
-            created_at: self.created_at.to_string(),
+            created_at: self.created_at,
             user_id: self.user_id.to_string(),
             display_name: self.display_name.clone(),
             location,
@@ -131,7 +131,7 @@ impl<'a> FeedNames<'a> {
         let location = after.place.tag().to_string();
         let (world_name, group_name) = self.location_names(&location);
         Some(FeedLiveEntry::Gps {
-            created_at: self.created_at.to_string(),
+            created_at: self.created_at,
             user_id: self.user_id.to_string(),
             display_name: self.display_name.clone(),
             location,
@@ -150,7 +150,7 @@ impl<'a> FeedNames<'a> {
             before.is_some_and(|state| matches!(state.place, Place::Traveling { .. }));
         let to = after.place.traveling_to().filter(|_| !was_traveling)?;
         Some(FeedLiveEntry::OnPlayerJoining {
-            created_at: self.created_at.to_string(),
+            created_at: self.created_at,
             user_id: self.user_id.to_string(),
             display_name: self.display_name.clone(),
             location: after.place.tag().to_string(),

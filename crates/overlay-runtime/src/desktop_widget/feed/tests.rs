@@ -234,7 +234,7 @@ fn entry(
         source_id: format!("{}:{user_id}:{name}", kind.key()),
         kind,
         category,
-        created_at: "2026-06-01T12:34:56.000Z".to_string(),
+        created_at: 1780317296,
         actor_user_id: user_id.to_string(),
         actor_display_name: name.to_string(),
         content: ActivityContent {

@@ -85,7 +85,7 @@ interface RemoteDetailsState {
     detail: string;
     data: FavoriteRemoteDetailsById;
     availabilityById: Record<string, string>;
-    lastLoadedAt: string | null;
+    lastLoadedAt: number | null;
 }
 
 interface RetainedEntry {
@@ -385,7 +385,7 @@ export function useFavoriteRemoteDetails({
                             : `Failed to load remote ${type} favorites.`,
                         retainedRef.current
                     ),
-                    lastLoadedAt: new Date().toISOString()
+                    lastLoadedAt: Math.floor(Date.now() / 1000)
                 });
             });
 

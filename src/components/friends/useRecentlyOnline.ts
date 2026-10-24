@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { useFeedLiveStore } from '@/state/feedLiveStore';
 import type { FeedLiveEntry } from '@/state/feedLiveTypes';
 
@@ -12,12 +13,12 @@ export function latestOnlineAtMs(
 ): number | null {
     for (let index = entries.length - 1; index >= 0; index -= 1) {
         const { entry } = entries[index];
-        const createdAtMs = Date.parse(entry.created_at);
+        const createdAtMs = parseAbsoluteDateMs(entry.created_at);
         if (createdAtMs < nowMs - RECENTLY_ONLINE_MS) {
             return null;
         }
         if (entry.type === 'Online' && entry.userId === userId) {
-            return createdAtMs;
+            return entries[index].receivedAtMs ?? createdAtMs;
         }
     }
     return null;

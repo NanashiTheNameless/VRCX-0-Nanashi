@@ -229,7 +229,7 @@ pub fn finalize_data_dir_migration(
     let cleanup_pending = DataDirCleanupPending {
         old_dir: journal.source_dir.clone(),
         bytes: cleanup_manifest_size(source_dir)?,
-        migrated_at: journal.requested_at.clone(),
+        migrated_at: journal.requested_at,
         last_prompted_at: None,
         dismissed: false,
         replaced_dir: journal.replaced_dir.clone(),

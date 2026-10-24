@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import {
+    displayDateParts,
+    setDisplayTimeZone
+} from '@/shared/utils/displayTimeZone';
+
 const mocks = vi.hoisted(() => ({
     appLanguageChanged: vi.fn(),
     appRestartApplication: vi.fn(),
@@ -120,11 +125,47 @@ import {
     setFeedPersistenceDisabledPreference,
     setIntConfigPreference,
     setStartAtWindowsStartupPreference,
+    setStringConfigPreference,
     setTableLimitsPreference,
     setTablePageSizesPreference
 } from './preferenceGenericSetters';
 
 describe('preferenceGenericSetters', () => {
+    it('persists and applies the timezone to displayed dates', async () => {
+        try {
+            await setStringConfigPreference('dtTimeZone', 'UTC+05:30');
+            expect(usePreferencesStore.getState().dtTimeZone).toBe('UTC+05:30');
+            expect(
+                displayDateParts(new Date('2026-07-21T20:00:00Z'))
+            ).toMatchObject({ day: 22, hour: 1, minute: 30 });
+            expect(mocks.setString).toHaveBeenCalledWith(
+                'dtTimeZone',
+                'UTC+05:30'
+            );
+        } finally {
+            setDisplayTimeZone('');
+        }
+    });
+
+    it('keeps the saved timezone when an invalid timezone is submitted', async () => {
+        try {
+            await setStringConfigPreference('dtTimeZone', 'America/New_York');
+            mocks.setString.mockClear();
+            await expect(
+                setStringConfigPreference('dtTimeZone', 'Nowhere/Invalid')
+            ).rejects.toThrow();
+            expect(mocks.setString).not.toHaveBeenCalled();
+            expect(usePreferencesStore.getState().dtTimeZone).toBe(
+                'America/New_York'
+            );
+            expect(
+                displayDateParts(new Date('2026-07-21T12:00:00Z')).hour
+            ).toBe(8);
+        } finally {
+            setDisplayTimeZone('');
+        }
+    });
+
     beforeEach(() => {
         vi.clearAllMocks();
         usePreferencesStore.getState().hydratePreferences(DEFAULT_PREFERENCES);

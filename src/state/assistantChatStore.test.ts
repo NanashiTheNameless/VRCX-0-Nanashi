@@ -43,13 +43,13 @@ describe('assistantChatStore', () => {
                     id: 'session-completed',
                     title: 'Completed',
                     busy: false,
-                    updatedAt: '2026-08-11T00:00:00Z'
+                    updatedAt: 1786406400
                 },
                 {
                     id: 'session-running',
                     title: 'Running',
                     busy: true,
-                    updatedAt: '2026-08-11T00:00:00Z'
+                    updatedAt: 1786406400
                 }
             ],
             messagesBySession: {
@@ -95,13 +95,13 @@ describe('assistantChatStore', () => {
                     id: 'session-1',
                     title: 'First',
                     busy: false,
-                    updatedAt: '2026-08-11T00:00:00Z'
+                    updatedAt: 1786406400
                 },
                 {
                     id: 'session-2',
                     title: 'Second',
                     busy: false,
-                    updatedAt: '2026-08-11T00:00:00Z'
+                    updatedAt: 1786406400
                 }
             ],
             messagesBySession: {
@@ -150,7 +150,7 @@ describe('assistantChatStore', () => {
                     seq: 1,
                     role: 'user',
                     content: 'who do I play with?',
-                    createdAt: '2026-09-23T00:00:00Z',
+                    createdAt: 1790121600,
                     toolCall: null,
                     toolResult: null
                 },
@@ -159,7 +159,7 @@ describe('assistantChatStore', () => {
                     seq: 2,
                     role: 'tool_call',
                     content: '',
-                    createdAt: '2026-09-23T00:00:01Z',
+                    createdAt: 1790121601,
                     toolCall: {
                         id: 'call_1',
                         name: 'get_copresence_summary',
@@ -172,7 +172,7 @@ describe('assistantChatStore', () => {
                     seq: 3,
                     role: 'tool_result',
                     content: '',
-                    createdAt: '2026-09-23T00:00:02Z',
+                    createdAt: 1790121602,
                     toolCall: null,
                     toolResult: {
                         toolCallId: 'call_1',
@@ -193,7 +193,7 @@ describe('assistantChatStore', () => {
                     seq: 4,
                     role: 'assistant',
                     content: 'Alice, mostly.',
-                    createdAt: '2026-09-23T00:00:03Z',
+                    createdAt: 1790121603,
                     toolCall: null,
                     toolResult: null
                 },
@@ -202,7 +202,7 @@ describe('assistantChatStore', () => {
                     seq: 5,
                     role: 'user',
                     content: 'and last week?',
-                    createdAt: '2026-09-23T00:00:04Z',
+                    createdAt: 1790121604,
                     toolCall: null,
                     toolResult: null
                 },
@@ -211,7 +211,7 @@ describe('assistantChatStore', () => {
                     seq: 6,
                     role: 'tool_call',
                     content: '',
-                    createdAt: '2026-09-23T00:00:05Z',
+                    createdAt: 1790121605,
                     toolCall: {
                         id: 'call_2',
                         name: 'get_copresence_summary',
@@ -227,8 +227,8 @@ describe('assistantChatStore', () => {
             playbookMode: 'auto',
             entityPanelOpen: false,
             surfacedEntities: [],
-            createdAt: '2026-09-23T00:00:00Z',
-            updatedAt: '2026-09-23T00:00:05Z'
+            createdAt: 1790121600,
+            updatedAt: 1790121605
         });
 
         expect(
@@ -300,7 +300,7 @@ describe('assistantChatStore', () => {
                     id: 'session-1',
                     title: 'First',
                     busy: true,
-                    updatedAt: '2026-08-11T00:00:00Z'
+                    updatedAt: 1786406400
                 }
             ],
             messagesBySession: { 'session-1': [] },

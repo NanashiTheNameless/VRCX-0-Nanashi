@@ -51,7 +51,7 @@ impl RealtimeHostRuntime {
         let runtime = Arc::clone(self);
         self.deps.tasks.spawn(async move {
             sleep_until(at_ms).await;
-            let now = chrono::Utc::now().to_rfc3339();
+            let now = vrcx_0_core::time::now_epoch();
             let Some(output) = runtime.current_user.wake_pending_offline(
                 generation,
                 now,

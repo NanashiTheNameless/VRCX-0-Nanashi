@@ -30,7 +30,8 @@ pub struct ProfileBackupManifest {
     pub manifest_version: u32,
     pub app_version: String,
     pub db_version: i64,
-    pub created_at: String,
+    #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub created_at: i64,
     pub platform: String,
     pub kind: ProfileBackupKind,
     pub contents: Vec<ProfileBackupContent>,
@@ -40,7 +41,7 @@ pub struct ProfileBackupManifest {
 pub struct ProfileBackupManifestMetadata {
     pub app_version: String,
     pub db_version: i64,
-    pub created_at: String,
+    pub created_at: i64,
     pub platform: String,
     pub kind: ProfileBackupKind,
 }

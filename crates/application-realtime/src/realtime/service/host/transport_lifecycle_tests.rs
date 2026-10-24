@@ -217,7 +217,7 @@ fn transport_start_announces_friends_already_traveling_to_the_current_instance()
         .apply_game_process_status(GameProcessStatus {
             is_game_running: true,
             is_steamvr_running: true,
-            changed_at: "2026-07-13T09:59:00Z".into(),
+            changed_at: 1783936740,
         });
     runtime
         .local_game_context_for_test()
@@ -280,7 +280,7 @@ fn synthetic_delete_while_reconnecting_updates_the_kept_roster_and_defers_persis
         &OwnerId::new(session.user_id.clone()),
         &session.endpoint,
         "usr_friend",
-        "2026-07-20T00:00:00Z".into(),
+        1784505600,
     );
 
     assert_eq!(outcome, SyntheticFriendEventOutcome::TransportInactive);
@@ -510,7 +510,7 @@ fn fresh_baseline_reconnect_preserves_location_time_without_new_game_logs() -> R
             .apply_ws_message(&RealtimeWsMessagePayload {
                 json: json!({"type": "friend-offline", "content": {"userId": "usr_friend"}}),
                 raw: "{}".into(),
-                received_at: "2026-07-20T00:00:00Z".into(),
+                received_at: 1784505600,
             })
     else {
         panic!("friend-offline should produce an output");
@@ -574,7 +574,7 @@ fn fresh_baseline_reconnect_preserves_location_time_without_new_game_logs() -> R
                 }
             }),
             raw: "{}".into(),
-            received_at: "2026-07-20T00:04:00Z".into(),
+            received_at: 1784505840,
         });
         assert_eq!(
             runtime.runtime().deps.instance_dwell.snapshot()[0].since_ms,
@@ -597,7 +597,7 @@ fn fresh_offline_baseline_keeps_a_pending_offline_through_reconnect() -> Result<
     runtime.handle_active_friend_ws_message_for_test(&RealtimeWsMessagePayload {
         json: json!({"type": "friend-offline", "content": {"userId": "usr_friend"}}),
         raw: "{}".into(),
-        received_at: "2026-07-20T00:00:00Z".into(),
+        received_at: 1784505600,
     });
     assert!(matches!(
         friend_view(&runtime),
@@ -1157,7 +1157,7 @@ fn unexpected_exit_keeps_old_roster_until_pending_baseline_replacement_starts() 
             }
         }),
         raw: "{}".into(),
-        received_at: "2026-07-20T00:00:00Z".into(),
+        received_at: 1784505600,
     };
     sink.handle_realtime_ws_message(
         old_transport.generation,
@@ -1248,7 +1248,7 @@ fn reconnect_without_a_fresh_baseline_keeps_pending_offline() -> Result<()> {
                     "content": { "userId": "usr_friend" }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-07-20T00:00:00Z".into(),
+                received_at: 1784505600,
             })
     else {
         panic!("friend-offline should produce an output");
@@ -1290,7 +1290,7 @@ fn reconnect_without_a_fresh_baseline_keeps_pending_offline() -> Result<()> {
     let fired = runtime
         .runtime()
         .friends
-        .wake("usr_friend", "2026-07-20T00:03:00Z")
+        .wake("usr_friend", 1784505780)
         .expect("the preserved pending still finalizes");
     assert_eq!(
         fired.persistence.feed_entries[0].to_json()["type"],
@@ -1316,7 +1316,7 @@ fn pending_offline_timer_firing_while_disconnected_keeps_preserved_baseline() ->
                     "content": { "userId": "usr_friend" }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-07-20T00:00:00Z".into(),
+                received_at: 1784505600,
             })
     else {
         panic!("friend-offline should produce an output");
@@ -1397,7 +1397,7 @@ fn friend_ws_dispatch_fans_out_one_canonical_output() -> Result<()> {
                 }
             }),
             raw: "{}".into(),
-            received_at: "2026-07-18T00:00:00Z".into(),
+            received_at: 1784332800,
         },
     );
 
@@ -1501,7 +1501,7 @@ fn friend_ws_without_baseline_has_no_fanout() -> Result<()> {
                 }
             }),
             raw: "{}".into(),
-            received_at: "2026-07-18T00:00:00Z".into(),
+            received_at: 1784332800,
         },
     );
 
@@ -1543,7 +1543,7 @@ fn pending_baseline_trust_feed_projects_once_after_start_without_rewriting() -> 
                 display_name: "Friend".into(),
                 trust_level: "Known User".into(),
                 friend_number: 7,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
             ..RealtimePersistenceBatch::default()
@@ -1729,7 +1729,7 @@ fn economy_update_emits_the_wallet_balance_for_the_session_user() -> Result<()> 
         &RealtimeWsMessagePayload {
             json: json!({"type": "economy-update", "content": {"walletBalance": 2450}}),
             raw: "{}".into(),
-            received_at: "2026-10-21T00:00:00Z".into(),
+            received_at: 1792540800,
         },
     );
 

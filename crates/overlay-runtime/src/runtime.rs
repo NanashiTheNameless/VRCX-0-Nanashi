@@ -7,7 +7,7 @@ use std::sync::{
 use std::thread::{self, ThreadId};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use chrono::{DateTime, Local, Timelike};
+use chrono::Timelike;
 use serde::Serialize;
 use vrcx_0_application_activity::{ActivityDelivery, ActivitySink, ActivitySnapshot};
 use vrcx_0_application_core::{GameProcessEvent, GameProcessEventSink, TaskSupervisor};
@@ -1397,19 +1397,19 @@ pub(super) fn build_wrist_frame_input(
             artist: now_playing.artist.clone(),
             length_seconds: now_playing.length,
             position_seconds: now_playing.position,
-            started_at: now_playing.started_at.clone().unwrap_or_default(),
+            started_at: now_playing.started_at.unwrap_or_default(),
         }),
         live_now_playing,
         footer: WristRuntimeFooter {
             player_count: game_log.players.len() as u32,
             instance_duration: instance_duration_text(
                 &game_log.location,
-                &game_log.started_at,
+                game_log.started_at,
                 captured_at_ms,
             ),
             online_duration: services
                 .game_started_at()
-                .map(|started_at| elapsed_minutes_text(&started_at, captured_at_ms))
+                .map(|started_at| elapsed_minutes_text(started_at, captured_at_ms))
                 .unwrap_or_default(),
             local_time: local_time_text(config.dt_hour12),
         },
@@ -1430,24 +1430,22 @@ fn now_ms() -> i64 {
 }
 
 fn local_time_text(hour12: bool) -> String {
-    let now = Local::now();
+    let now = vrcx_0_core::time::display_now();
     clock_text(now.hour(), now.minute(), hour12)
 }
 
-fn instance_duration_text(location: &str, started_at: &str, now_ms: i64) -> String {
+fn instance_duration_text(location: &str, started_at: i64, now_ms: i64) -> String {
     if !is_real_instance_location(location) {
         return String::new();
     }
     elapsed_minutes_text(started_at, now_ms)
 }
 
-fn elapsed_minutes_text(started_at: &str, now_ms: i64) -> String {
-    let Some(started_at_ms) = DateTime::parse_from_rfc3339(started_at.trim())
-        .ok()
-        .map(|value| value.timestamp_millis())
-    else {
+fn elapsed_minutes_text(started_at: i64, now_ms: i64) -> String {
+    if started_at <= 0 {
         return String::new();
-    };
+    }
+    let started_at_ms = started_at.saturating_mul(1000);
     if now_ms < started_at_ms {
         return String::new();
     }

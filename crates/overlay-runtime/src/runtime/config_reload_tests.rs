@@ -111,7 +111,7 @@ impl VrOverlayRuntimeServices for TestServices {
         NowPlayingSnapshot::default()
     }
 
-    fn game_started_at(&self) -> Option<String> {
+    fn game_started_at(&self) -> Option<i64> {
         None
     }
 }
@@ -520,7 +520,7 @@ fn hmd_toasts_follow_the_router_hmd_flag_and_the_hmd_switch() {
             source_id: source_id.into(),
             kind: ActivityKind::Status,
             category: ActivityCategory::FavoriteMovement,
-            created_at: "2026-10-02T00:00:00Z".into(),
+            created_at: 1790899200,
             actor_user_id: "usr_actor".into(),
             actor_display_name: "Actor".into(),
             content: ActivityContent::default(),

@@ -1,3 +1,7 @@
+import {
+    displayDateBoundary,
+    parseAbsoluteDateMs
+} from '@/shared/utils/displayTimeZone';
 import { parseLocation } from '@/shared/utils/location';
 
 import { parseLocalDayKey } from './instanceActivityDate';
@@ -10,14 +14,15 @@ import type {
     WorldDetailsById
 } from './instanceActivityTypes';
 
-function timestampMs(value: string): number {
-    return new Date(value).getTime();
+function timestampMs(value: string | number): number {
+    return parseAbsoluteDateMs(value);
 }
 
 export function getLocalDayBounds(dayKey: string) {
     const start = parseLocalDayKey(dayKey);
-    const end = new Date(start);
-    end.setHours(23, 59, 59, 999);
+    const end = new Date(
+        (displayDateBoundary(dayKey, 'end') ?? 0) * 1000 + 999
+    );
     return {
         start,
         end,

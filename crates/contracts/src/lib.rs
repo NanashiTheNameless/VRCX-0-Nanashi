@@ -7,6 +7,7 @@ pub mod community_theme_protocol;
 mod data_dir_migration;
 mod database_upgrade;
 mod entity_cache;
+pub mod epoch;
 pub mod external_api;
 mod favorites;
 pub mod feed;

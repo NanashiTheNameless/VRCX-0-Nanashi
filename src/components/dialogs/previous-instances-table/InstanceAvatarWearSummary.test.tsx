@@ -50,8 +50,8 @@ function segment(
         name: `Avatar ${avatarId}`,
         thumbnailImageUrl: '',
         imageUrl: '',
-        startedAtMs,
-        endedAtMs
+        startedAt: Math.floor(startedAtMs / 1000),
+        endedAt: Math.floor(endedAtMs / 1000)
     };
 }
 
@@ -106,8 +106,8 @@ describe('InstanceAvatarWearSummary', () => {
         ).toEqual(['Avatar a', 'Avatar b', 'Avatar c']);
         expect(mocks.appAvatarWearSegments).toHaveBeenCalledWith(
             'usr_me',
-            1000,
-            6000
+            1,
+            6
         );
     });
 
@@ -128,12 +128,12 @@ describe('InstanceAvatarWearSummary', () => {
         expect(
             result.current.map((worn) => [
                 worn.avatarId,
-                worn.startedAtMs,
-                worn.endedAtMs
+                worn.startedAt,
+                worn.endedAt
             ])
         ).toEqual([
-            ['a', 1000, 4000],
-            ['b', 4000, 6000]
+            ['a', 1, 4],
+            ['b', 4, 6]
         ]);
     });
 
@@ -180,8 +180,8 @@ describe('InstanceAvatarWearSummary', () => {
         ).toBeTruthy();
         expect(mocks.appAvatarWearSegments).toHaveBeenCalledWith(
             'usr_me',
-            1000,
-            9000
+            1,
+            9
         );
         vi.restoreAllMocks();
     });
@@ -211,7 +211,7 @@ describe('InstanceAvatarWearSummary', () => {
     it('marks every avatar change with its thumbnail', () => {
         const { container } = render(
             <AvatarWearLane
-                segments={[segment('a', 1000, 1100), segment('b', 1100, 5000)]}
+                segments={[segment('a', 1000, 2000), segment('b', 2000, 5000)]}
                 startMs={1000}
                 endMs={5000}
                 label="Avatars"

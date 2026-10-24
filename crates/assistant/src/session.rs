@@ -57,7 +57,7 @@ pub struct Message {
     pub seq: u64,
     pub role: Role,
     pub content: String,
-    pub created_at: String,
+    pub created_at: i64,
     pub tool_call: Option<ToolCallRecord>,
     pub tool_result: Option<ToolResultRecord>,
     /// Full tool output as sent to the model. Kept out of the UI payload;
@@ -88,7 +88,7 @@ impl Message {
         }
     }
 
-    fn from_stored(id: String, seq: u64, role: Role, content: String, created_at: String) -> Self {
+    fn from_stored(id: String, seq: u64, role: Role, content: String, created_at: i64) -> Self {
         let mut message = Self {
             id,
             seq,
@@ -148,8 +148,8 @@ pub struct Session {
     pub playbook_mode: PlaybookMode,
     pub entity_panel_open: bool,
     pub surfaced_entities: Vec<Entity>,
-    pub created_at: String,
-    pub updated_at: String,
+    pub created_at: i64,
+    pub updated_at: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Type)]
@@ -158,7 +158,7 @@ pub struct SessionSummary {
     pub id: String,
     pub title: String,
     pub busy: bool,
-    pub updated_at: String,
+    pub updated_at: i64,
 }
 
 #[derive(Clone)]
@@ -172,8 +172,8 @@ struct StoredSession {
     playbook_mode: PlaybookMode,
     entity_panel_open: bool,
     surfaced_entities: Vec<Entity>,
-    created_at: String,
-    updated_at: String,
+    created_at: i64,
+    updated_at: i64,
 }
 
 impl StoredSession {
@@ -189,8 +189,8 @@ impl StoredSession {
             playbook_mode: self.playbook_mode,
             entity_panel_open: self.entity_panel_open,
             surfaced_entities: self.surfaced_entities.clone(),
-            created_at: self.created_at.clone(),
-            updated_at: self.updated_at.clone(),
+            created_at: self.created_at,
+            updated_at: self.updated_at,
         }
     }
 }
@@ -404,8 +404,8 @@ impl SessionStore {
         owner_user_id: &OwnerId,
         id: &str,
         title: &str,
-        created_at: &str,
-        updated_at: &str,
+        created_at: i64,
+        updated_at: i64,
     ) -> bool {
         let Some(persistence) = self.persistence.as_ref() else {
             return false;
@@ -430,8 +430,8 @@ impl SessionStore {
             &session.owner_user_id,
             id,
             &session.title,
-            &session.created_at,
-            &session.updated_at,
+            session.created_at,
+            session.updated_at,
         );
         persist_runtime(self.persistence.as_deref(), id, session);
     }
@@ -440,8 +440,8 @@ impl SessionStore {
         &self,
         id: &str,
         title: &str,
-        created_at: &str,
-        updated_at: &str,
+        created_at: i64,
+        updated_at: i64,
         message: &Message,
         owner_user_id: &OwnerId,
     ) -> bool {
@@ -456,7 +456,7 @@ impl SessionStore {
             seq: message.seq as i64,
             role: role_str(message.role),
             content: &content,
-            created_at: &message.created_at,
+            created_at: message.created_at,
         }) {
             Ok(()) => true,
             Err(error) => {
@@ -481,7 +481,7 @@ impl SessionStore {
     ) -> Session {
         let load = self.content_load(&id);
         let _load = load.lock().unwrap();
-        let now = now_rfc3339();
+        let now = now_epoch();
         let stored = StoredSession {
             owner_user_id: OwnerId::new(owner_user_id.as_str().trim()),
             title: String::new(),
@@ -492,7 +492,7 @@ impl SessionStore {
             playbook_mode: runtime.playbook_mode,
             entity_panel_open: false,
             surfaced_entities: Vec::new(),
-            created_at: now.clone(),
+            created_at: now,
             updated_at: now,
         };
         {
@@ -552,7 +552,7 @@ impl SessionStore {
             let session = state.sessions.get_mut(&id)?;
             if session.endpoint_id.is_none() && session.model.is_none() {
                 apply_runtime(session, runtime);
-                session.updated_at = now_rfc3339();
+                session.updated_at = now_epoch();
                 seeded = true;
             }
             state.materialize_loaded(&id)
@@ -597,10 +597,10 @@ impl SessionStore {
                     .active_turn
                     .as_ref()
                     .is_some_and(|turn| matches!(turn.status, TurnStatus::Running)),
-                updated_at: session.updated_at.clone(),
+                updated_at: session.updated_at,
             })
             .collect();
-        summaries.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+        summaries.sort_by_key(|row| std::cmp::Reverse(row.updated_at));
         summaries
     }
 
@@ -626,7 +626,7 @@ impl SessionStore {
         let mut state = self.state.lock().unwrap();
         if let Some(session) = state.sessions.get_mut(session_id) {
             session.active_turn = turn;
-            session.updated_at = now_rfc3339();
+            session.updated_at = now_epoch();
             if state.contents.contains_key(session_id) {
                 state.touch_content(session_id);
             }
@@ -681,13 +681,13 @@ impl SessionStore {
         let _load = load.lock().unwrap();
         let row = self.with_loaded_session(session_id, |state| {
             let session = state.sessions.get_mut(session_id)?;
-            let now = now_rfc3339();
+            let now = now_epoch();
             let mut message = Message {
                 id: format!("msg_{}", random_hex()),
                 seq: self.next_seq(),
                 role,
                 content: String::new(),
-                created_at: now.clone(),
+                created_at: now,
                 tool_call: None,
                 tool_result: None,
                 tool_content: None,
@@ -708,8 +708,8 @@ impl SessionStore {
             session.updated_at = now;
             let owner_user_id = session.owner_user_id.clone();
             let title = session.title.clone();
-            let created_at = session.created_at.clone();
-            let updated_at = session.updated_at.clone();
+            let created_at = session.created_at;
+            let updated_at = session.updated_at;
             let cached = state.contents.get_mut(session_id)?;
             cached.messages.push(message.clone());
             cached.pending_writes = cached.pending_writes.saturating_add(1);
@@ -722,8 +722,8 @@ impl SessionStore {
         let persisted = self.persist_message(
             session_id,
             &title,
-            &created_at,
-            &updated_at,
+            created_at,
+            updated_at,
             &message,
             &owner_user_id,
         );
@@ -801,7 +801,7 @@ impl SessionStore {
         let updated = self.with_loaded_session(session_id, |state| {
             let session = state.sessions.get_mut(session_id)?;
             apply_runtime(session, runtime);
-            session.updated_at = now_rfc3339();
+            session.updated_at = now_epoch();
             let stored = session.clone();
             let materialized = state.materialize_loaded(session_id)?;
             Some((stored, materialized))
@@ -919,8 +919,8 @@ pub fn random_hex() -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
-fn now_rfc3339() -> String {
-    chrono::Utc::now().to_rfc3339()
+fn now_epoch() -> i64 {
+    chrono::Utc::now().timestamp()
 }
 
 #[cfg(test)]

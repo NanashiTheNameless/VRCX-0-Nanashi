@@ -3,10 +3,11 @@
 
 use serde_json::Value;
 
-use crate::activity::{activity_iso_from_ms, parse_activity_time_ms};
-use crate::common::{row_i64, row_string, ParamsBuilder};
+use crate::activity::{activity_ms_from_epoch, activity_ms_from_value};
+use crate::common::{row_i64, row_string, row_value, ParamsBuilder};
 use crate::game_log::ensure_game_log_tables;
 use crate::Error;
+use vrcx_0_core::time::epoch_from_millis;
 
 use super::super::DatabaseService;
 
@@ -22,13 +23,10 @@ pub(super) fn repair_empty_leave_locations(db: &DatabaseService) -> Result<(), E
         db.write_transaction(|tx| {
             for row in chunk {
                 let id = row.first().cloned().unwrap_or(Value::Null);
-                let left_at = row_string(row, 1);
-                let Some(left_ms) = parse_activity_time_ms(&left_at)
-                    .filter(|&left_ms| activity_iso_from_ms(left_ms) == left_at)
-                else {
+                let Some(left_at) = row_value(row, 1).as_i64() else {
                     continue;
                 };
-                let joined_ms = left_ms - row_i64(row, 2);
+                let joined_ms = activity_ms_from_epoch(left_at) - row_i64(row, 2);
                 let location_rows = tx.execute(
                     "SELECT started.location, started.created_at, started.time FROM (
                          SELECT created_at, location, time FROM gamelog_location
@@ -53,7 +51,7 @@ pub(super) fn repair_empty_leave_locations(db: &DatabaseService) -> Result<(), E
                        )",
                     &ParamsBuilder::new()
                         .set("owner_id", row.get(3).cloned().unwrap_or(Value::Null))
-                        .set("joined_at", activity_iso_from_ms(joined_ms))
+                        .set("joined_at", epoch_from_millis(joined_ms))
                         .set("left_at", left_at)
                         .set("user_id", row_string(row, 4))
                         .set("display_name", row_string(row, 5))
@@ -64,7 +62,7 @@ pub(super) fn repair_empty_leave_locations(db: &DatabaseService) -> Result<(), E
                 };
                 let location_time = row_i64(started, 2);
                 if location_time > 0
-                    && parse_activity_time_ms(&row_string(started, 1))
+                    && activity_ms_from_value(row_value(started, 1))
                         .is_none_or(|started_ms| started_ms + location_time < joined_ms)
                 {
                     continue;

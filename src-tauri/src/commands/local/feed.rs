@@ -26,7 +26,7 @@ pub fn app__feed_persistence_set_disabled(
 #[specta::specta]
 pub async fn app__avatar_feed_history_cleanup(
     state: State<'_, AppState>,
-    cutoff_date: Option<String>,
+    cutoff_date: Option<i64>,
 ) -> Result<vrcx_0_application::avatars::AvatarFeedCleanupOutcome, AppError> {
     let local_data = state.runtime_host().local_data().clone();
     tauri::async_runtime::spawn_blocking(move || {

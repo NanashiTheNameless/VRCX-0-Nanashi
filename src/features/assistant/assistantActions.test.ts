@@ -34,7 +34,7 @@ function session(id: string): Session {
                 seq: 1,
                 role: 'user',
                 content: id,
-                createdAt: '2026-08-11T00:00:00Z',
+                createdAt: 1786406400,
                 toolCall: null,
                 toolResult: null
             }
@@ -46,8 +46,8 @@ function session(id: string): Session {
         playbookMode: 'auto',
         entityPanelOpen: false,
         surfacedEntities: [],
-        createdAt: '2026-08-11T00:00:00Z',
-        updatedAt: '2026-08-11T00:00:00Z'
+        createdAt: 1786406400,
+        updatedAt: 1786406400
     };
 }
 
@@ -81,13 +81,13 @@ describe('assistantActions session lifecycle', () => {
                     id: 'session-1',
                     title: 'First',
                     busy: false,
-                    updatedAt: '2026-08-11T00:00:00Z'
+                    updatedAt: 1786406400
                 },
                 {
                     id: 'session-2',
                     title: 'Second',
                     busy: false,
-                    updatedAt: '2026-08-11T00:00:00Z'
+                    updatedAt: 1786406400
                 }
             ],
             messagesBySession: { 'session-1': [] }
@@ -160,7 +160,7 @@ describe('assistantActions session lifecycle', () => {
                     id: 'session-1',
                     title: 'First',
                     busy: false,
-                    updatedAt: '2026-08-11T00:00:00Z'
+                    updatedAt: 1786406400
                 }
             ],
             messagesBySession: { 'session-1': [] },

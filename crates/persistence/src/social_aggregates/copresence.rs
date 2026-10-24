@@ -9,8 +9,8 @@ use crate::Error;
 use super::caveats::copresence_caveats;
 use super::helpers::{
     access_bucket_sql, append_copresence_window_filter, clamped_optional_limit, clipped_millis_sql,
-    current_friend_id_set, format_minutes, millis_to_minutes, normalize_access_bucket,
-    table_exists, tz_offset_modifier, world_id_from_location_sql, world_names_for_ids,
+    current_friend_id_set, format_minutes, millis_to_minutes, normalize_access_bucket, row_iso,
+    table_exists, world_id_from_location_sql, world_names_for_ids,
 };
 use super::types::{
     CopresenceAudience, CopresenceGroupBy, CopresenceOrderBy, CopresenceSummaryInput,
@@ -29,7 +29,6 @@ pub fn get_copresence_summary(
             .unwrap_or_default(),
     );
     let owner_id = owner_id_for_filter(db, &owner_user_id)?;
-    let offset_minutes = input.utc_offset_minutes.unwrap_or(0);
     let limit = clamped_optional_limit(input.limit, 25, 100);
     let min_millis = input.min_minutes.unwrap_or(0).max(0).saturating_mul(60_000);
     let world_id_expr = match input.group_by {
@@ -52,8 +51,8 @@ pub fn get_copresence_summary(
         " AS world_id,
                 COALESCE(g.location, '') AS location,
                 {} AS time,
-                COALESCE(g.created_at, '') AS created_at,
-                substr(datetime(g.created_at, @tz), 1, 10) AS local_day,
+                g.created_at AS created_at,
+                substr(datetime(vrcx_display_epoch(g.created_at, @tz), 'unixepoch'), 1, 10) AS local_day,
                 ",
         clipped_millis_sql(&input.time_window)
     ));
@@ -66,7 +65,7 @@ pub fn get_copresence_summary(
     );
     let mut params = ParamsBuilder::new()
         .set("owner_id", owner_id)
-        .set("tz", tz_offset_modifier(offset_minutes));
+        .set("tz", input.utc_offset_minutes);
     append_copresence_window_filter(&mut sql, &mut params, &input.time_window);
 
     sql.push_str(" AND (@owner_user_id = '' OR COALESCE(g.user_id, '') <> @owner_user_id)");
@@ -238,7 +237,7 @@ pub fn get_copresence_summary(
                 total_minutes: millis_to_minutes(row_i64(&row, 3)),
                 co_days: usize::try_from(row_i64(&row, 4).max(0)).unwrap_or(0),
                 instances: usize::try_from(row_i64(&row, 5).max(0)).unwrap_or(0),
-                last_seen_together: row_string(&row, 6),
+                last_seen_together: row_iso(&row, 6),
                 minutes_by_access: BTreeMap::new(),
             });
         }

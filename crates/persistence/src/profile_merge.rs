@@ -141,6 +141,9 @@ fn select_expression(column: &str, owner_map: bool) -> String {
         format!(
             "COALESCE((SELECT main_id FROM temp.merge_owner_map WHERE src_id = s.{quoted}), s.{quoted})"
         )
+    } else if crate::remote_sync::streams::is_date_column(column) {
+        // The other profile may still store dates as text or milliseconds.
+        crate::migrations::epoch_seconds_sql(&format!("s.{quoted}"))
     } else {
         format!("s.{quoted}")
     }
@@ -175,9 +178,63 @@ fn merge_configs(conn: &Connection) -> Result<u64, Error> {
     Ok(added)
 }
 
+fn create_import_table(conn: &Connection, table: &str, sql: &str) -> Result<(), Error> {
+    let columns = table_columns(conn, SOURCE_SCHEMA, table)?;
+    let dates = columns
+        .iter()
+        .filter(|column| crate::remote_sync::streams::is_date_column(&column.name))
+        .map(|column| (column.name.as_str(), column.name.as_str(), false))
+        .collect::<Vec<_>>();
+    let mut definition = sql.to_string();
+    if table.starts_with("gamelog_")
+        && !columns
+            .iter()
+            .any(|column| column.name == "event_discriminator")
+    {
+        let open = definition
+            .find('(')
+            .ok_or_else(|| Error::Database("Missing table definition".into()))?;
+        definition.insert_str(open + 1, "event_discriminator TEXT NOT NULL DEFAULT '', ");
+    }
+    let definition = crate::migrations::staged_create_sql(&definition, table, &dates)?;
+    conn.execute_batch(&definition).map_err(Error::sqlite)
+}
+
 fn merge_table(conn: &Connection, table: &str, owner_map: bool) -> Result<u64, Error> {
     let main_columns = table_columns(conn, "main", table)?;
     let source_columns = table_columns(conn, SOURCE_SCHEMA, table)?;
+    let legacy_game_log = table.starts_with("gamelog_")
+        && main_columns
+            .iter()
+            .any(|column| column.name == "event_discriminator")
+        && !source_columns
+            .iter()
+            .any(|column| column.name == "event_discriminator");
+    if legacy_game_log {
+        conn.execute_batch("DROP TABLE IF EXISTS temp.merge_event_discriminators; CREATE TEMP TABLE merge_event_discriminators (source_rowid INTEGER PRIMARY KEY, discriminator TEXT NOT NULL)").map_err(Error::sqlite)?;
+        let mut statement = conn
+            .prepare(&format!(
+                "SELECT rowid, created_at FROM {SOURCE_SCHEMA}.{}",
+                quote(table)
+            ))
+            .map_err(Error::sqlite)?;
+        let mut rows = statement.query([]).map_err(Error::sqlite)?;
+        while let Some(row) = rows.next().map_err(Error::sqlite)? {
+            let id: i64 = row.get(0).map_err(Error::sqlite)?;
+            let value = match row.get_ref(1).map_err(Error::sqlite)? {
+                rusqlite::types::ValueRef::Text(text) => {
+                    serde_json::Value::String(String::from_utf8_lossy(text).into_owned())
+                }
+                rusqlite::types::ValueRef::Integer(value) => value.into(),
+                _ => serde_json::Value::Null,
+            };
+            conn.execute(
+                "INSERT INTO temp.merge_event_discriminators VALUES (?1, ?2)",
+                rusqlite::params![id, crate::migrations::legacy_event_discriminator(&value)],
+            )
+            .map_err(Error::sqlite)?;
+        }
+    }
     let pk_columns = main_columns
         .iter()
         .filter(|column| column.pk_position > 0)
@@ -191,9 +248,10 @@ fn merge_table(conn: &Connection, table: &str, owner_map: bool) -> Result<u64, E
         .iter()
         .filter(|column| Some(&column.name) != rowid_alias.as_ref())
         .filter(|column| {
-            source_columns
-                .iter()
-                .any(|source| source.name == column.name)
+            (legacy_game_log && column.name == "event_discriminator")
+                || source_columns
+                    .iter()
+                    .any(|source| source.name == column.name)
         })
         .map(|column| column.name.clone())
         .collect::<Vec<_>>();
@@ -207,7 +265,9 @@ fn merge_table(conn: &Connection, table: &str, owner_map: bool) -> Result<u64, E
         .join(", ");
     let select_list = columns
         .iter()
-        .map(|name| select_expression(name, owner_map))
+        .map(|name| if legacy_game_log && name == "event_discriminator" {
+            "(SELECT discriminator FROM temp.merge_event_discriminators WHERE source_rowid = s.rowid)".to_string()
+        } else { select_expression(name, owner_map) })
         .collect::<Vec<_>>()
         .join(", ");
     let from = format!("{SOURCE_SCHEMA}.{} AS s", quote(table));
@@ -422,7 +482,7 @@ pub fn merge_profile_database(
                     merge_configs(conn)?
                 } else {
                     if !main_table_exists(conn, &table)? {
-                        conn.execute_batch(&sql).map_err(Error::sqlite)?;
+                        create_import_table(conn, &table, &sql)?;
                         report.tables_created += 1;
                     }
                     merge_table(conn, &table, owner_map)?
@@ -467,8 +527,8 @@ mod tests {
     const SCHEMA: &str = "
         CREATE TABLE configs (key TEXT PRIMARY KEY, value TEXT);
         CREATE TABLE owners (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL UNIQUE);
-        CREATE TABLE memos (user_id TEXT PRIMARY KEY, edited_at TEXT, memo TEXT);
-        CREATE TABLE favorite_friend (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, group_name TEXT, owner_id INTEGER NOT NULL DEFAULT 0);
+        CREATE TABLE memos (user_id TEXT PRIMARY KEY, edited_at INTEGER, memo TEXT);
+        CREATE TABLE favorite_friend (id INTEGER PRIMARY KEY, created_at INTEGER, user_id TEXT, group_name TEXT, owner_id INTEGER NOT NULL DEFAULT 0);
         CREATE TABLE cache_world (id TEXT PRIMARY KEY, name TEXT);
         CREATE TABLE cookies (key TEXT PRIMARY KEY, value TEXT);
     ";
@@ -484,7 +544,7 @@ mod tests {
              INSERT INTO configs VALUES ('theme', 'dark');
              INSERT INTO configs VALUES ('VRCX_0_databaseVersion', '40');
              INSERT INTO memos VALUES ('usr_a', '1', 'mine');
-             INSERT INTO favorite_friend (created_at, user_id, group_name, owner_id) VALUES ('t1', 'usr_a', 'G', 1);",
+             INSERT INTO favorite_friend (created_at, user_id, group_name, owner_id) VALUES (1000, 'usr_a', 'G', 1);",
         )
         .unwrap();
 
@@ -498,12 +558,12 @@ mod tests {
                  INSERT INTO configs VALUES ('zoom', '110');
                  INSERT INTO configs VALUES ('VRCX_0_databaseVersion', '12');
                  INSERT INTO memos VALUES ('usr_a', '2', 'theirs');
-                 INSERT INTO memos VALUES ('usr_b', '2', 'new memo');
-                 INSERT INTO favorite_friend (created_at, user_id, group_name, owner_id) VALUES ('t1', 'usr_a', 'G', 2);
-                 INSERT INTO favorite_friend (created_at, user_id, group_name, owner_id) VALUES ('t2', 'usr_b', 'G', 2);
+                 INSERT INTO memos VALUES ('usr_b', '2026-10-09T00:00:00.000Z', 'new memo');
+                 INSERT INTO favorite_friend (created_at, user_id, group_name, owner_id) VALUES (1000, 'usr_a', 'G', 2);
+                 INSERT INTO favorite_friend (created_at, user_id, group_name, owner_id) VALUES (2000, 'usr_b', 'G', 2);
                  INSERT INTO cache_world VALUES ('wrld_1', 'cached');
                  INSERT INTO cookies VALUES ('auth', 'secret');
-                 CREATE TABLE usrother_feed_gps (id INTEGER PRIMARY KEY, created_at TEXT, location TEXT);
+                 CREATE TABLE usrother_feed_gps (id INTEGER PRIMARY KEY, created_at INTEGER, location TEXT);
                  INSERT INTO usrother_feed_gps (created_at, location) VALUES ('t', 'wrld_1:1');",
             )
             .unwrap();
@@ -529,6 +589,11 @@ mod tests {
         assert_eq!(
             value("SELECT memo FROM memos WHERE user_id = 'usr_b'"),
             "new memo"
+        );
+        // The other profile may still store dates as text.
+        assert_eq!(
+            count("SELECT edited_at FROM memos WHERE user_id = 'usr_b'"),
+            1791504000
         );
         // usr_me is owner 1 here and 2 in the source: duplicate skipped, new row remapped.
         assert_eq!(count("SELECT COUNT(*) FROM favorite_friend"), 2);
@@ -643,5 +708,49 @@ mod tests {
         drop(main);
         let _ = std::fs::remove_file(main_path);
         let _ = std::fs::remove_file(source_path);
+    }
+}
+
+#[cfg(test)]
+mod epoch_collision_tests {
+    use super::*;
+
+    #[test]
+    fn legacy_profile_events_keep_distinct_ids_and_reimport_without_duplicates() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "ATTACH DATABASE ':memory:' AS merge_src;
+             CREATE TABLE main.gamelog_event (id INTEGER PRIMARY KEY, created_at INTEGER, data TEXT, event_discriminator TEXT NOT NULL DEFAULT '', UNIQUE(created_at, data, event_discriminator));
+             CREATE TABLE merge_src.gamelog_event (id INTEGER PRIMARY KEY, created_at TEXT, data TEXT, UNIQUE(created_at, data));
+             INSERT INTO merge_src.gamelog_event VALUES (1, '2026-07-21T10:30:15.100Z', 'same'), (2, '2026-07-21T10:30:15.900Z', 'same');"
+        ).unwrap();
+        assert_eq!(merge_table(&conn, "gamelog_event", false).unwrap(), 2);
+        assert_eq!(merge_table(&conn, "gamelog_event", false).unwrap(), 0);
+        let count: i64 = conn.query_row("SELECT COUNT(DISTINCT id) FROM gamelog_event WHERE created_at = 1784629815 AND typeof(created_at) = 'integer'", [], |row| row.get(0)).unwrap();
+        assert_eq!(count, 2);
+    }
+    #[test]
+    fn source_only_table_uses_integer_dates_and_keeps_fractional_events() {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("ATTACH DATABASE ':memory:' AS merge_src; CREATE TABLE merge_src.gamelog_event (id INTEGER PRIMARY KEY, created_at TEXT, data TEXT, UNIQUE(created_at, data)); INSERT INTO merge_src.gamelog_event VALUES (1, '2026-07-21T10:30:15.100Z', 'same'), (2, '2026-07-21T10:30:15.900Z', 'same');").unwrap();
+        let sql: String = conn
+            .query_row(
+                "SELECT sql FROM merge_src.sqlite_master WHERE name='gamelog_event'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        create_import_table(&conn, "gamelog_event", &sql).unwrap();
+        assert_eq!(merge_table(&conn, "gamelog_event", false).unwrap(), 2);
+        assert_eq!(merge_table(&conn, "gamelog_event", false).unwrap(), 0);
+        assert_eq!(
+            conn.query_row(
+                "SELECT COUNT(*) FROM gamelog_event WHERE typeof(created_at)='integer'",
+                [],
+                |row| row.get::<_, i64>(0)
+            )
+            .unwrap(),
+            2
+        );
     }
 }

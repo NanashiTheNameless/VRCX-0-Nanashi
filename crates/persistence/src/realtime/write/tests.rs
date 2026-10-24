@@ -16,9 +16,9 @@ use super::{
 use crate::ownership::OwnerId;
 use vrcx_0_contracts::feed_live::FeedLiveEntry;
 
-fn online_entry(created_at: &str, location: &str, world_name: &str) -> FeedLiveEntry {
+fn online_entry(created_at: i64, location: &str, world_name: &str) -> FeedLiveEntry {
     FeedLiveEntry::Online {
-        created_at: created_at.into(),
+        created_at,
         user_id: "usr_friend".into(),
         display_name: "Friend".into(),
         location: location.into(),
@@ -31,8 +31,7 @@ fn online_entry(created_at: &str, location: &str, world_name: &str) -> FeedLiveE
     }
 }
 
-fn relationship_entry(created_at: &str, unfriend: bool) -> FeedLiveEntry {
-    let created_at = created_at.to_string();
+fn relationship_entry(created_at: i64, unfriend: bool) -> FeedLiveEntry {
     let user_id = "usr_friend".to_string();
     let display_name = "Friend".to_string();
     if unfriend {
@@ -52,9 +51,9 @@ fn relationship_entry(created_at: &str, unfriend: bool) -> FeedLiveEntry {
     }
 }
 
-fn trust_level_entry(created_at: &str, friend_number: i64) -> FeedLiveEntry {
+fn trust_level_entry(created_at: i64, friend_number: i64) -> FeedLiveEntry {
     FeedLiveEntry::TrustLevel {
-        created_at: created_at.into(),
+        created_at,
         user_id: "usr_friend".into(),
         display_name: "Friend".into(),
         trust_level: "Trusted User".into(),
@@ -64,9 +63,9 @@ fn trust_level_entry(created_at: &str, friend_number: i64) -> FeedLiveEntry {
     }
 }
 
-fn untabled_entry(created_at: &str) -> FeedLiveEntry {
+fn untabled_entry(created_at: i64) -> FeedLiveEntry {
     FeedLiveEntry::OnPlayerJoining {
-        created_at: created_at.into(),
+        created_at,
         user_id: "usr_friend".into(),
         display_name: "Friend".into(),
         location: "traveling".into(),
@@ -140,10 +139,10 @@ fn writes_friend_log_and_feed_rows() -> Result<(), crate::Error> {
                 display_name: "Friend".into(),
                 trust_level: "Known".into(),
                 friend_number: 12,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
-            feed_entries: vec![online_entry("2026-05-15T00:00:00Z", "wrld_1:123", "wrld_1")],
+            feed_entries: vec![online_entry(1778803200, "wrld_1:123", "wrld_1")],
             ..RealtimePersistenceBatch::default()
         },
     )?;
@@ -168,7 +167,7 @@ fn writes_friend_log_and_feed_rows() -> Result<(), crate::Error> {
         &OwnerId::new("usr_self"),
         &RealtimePersistenceBatch {
             game_log_locations: vec![GameLogLocationEntry {
-                created_at: "2026-05-15T00:00:05Z".into(),
+                created_at: 1778803205,
                 location: "wrld_1:123".into(),
                 world_id: "wrld_1".into(),
                 world_name: "World".into(),
@@ -192,7 +191,7 @@ fn writes_bio_feed_rows() -> Result<(), crate::Error> {
         &OwnerId::new("usr_self"),
         &RealtimePersistenceBatch {
             feed_entries: vec![FeedLiveEntry::Bio {
-                created_at: "2026-09-18T00:00:00Z".into(),
+                created_at: 1789689600,
                 user_id: "usr_friend".into(),
                 display_name: "Friend".into(),
                 bio: "new bio".into(),
@@ -211,7 +210,7 @@ fn writes_bio_feed_rows() -> Result<(), crate::Error> {
     assert_eq!(
         feed[0],
         vec![
-            json!("2026-09-18T00:00:00Z"),
+            json!(1789689600),
             json!("Friend"),
             json!("new bio"),
             json!("old bio")
@@ -233,7 +232,7 @@ fn writes_bio_feed_rows_into_upstream_v18_layout() -> Result<(), crate::Error> {
         &OwnerId::new("usr_self"),
         &RealtimePersistenceBatch {
             feed_entries: vec![FeedLiveEntry::Bio {
-                created_at: "2026-10-05T00:00:00Z".into(),
+                created_at: 1791158400,
                 user_id: "usr_friend".into(),
                 display_name: "Friend".into(),
                 bio: "new bio".into(),
@@ -262,7 +261,7 @@ fn writes_remote_location_intervals_and_allows_same_location_after_closed_interv
     let dir = TestDir::new("realtime-remote-location-interval");
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
     let first_location = GameLogLocationEntry {
-        created_at: "2026-05-15T00:00:00Z".into(),
+        created_at: 1778803200,
         location: "wrld_remote:456".into(),
         world_id: "wrld_remote".into(),
         world_name: "Remote World".into(),
@@ -294,7 +293,7 @@ fn writes_remote_location_intervals_and_allows_same_location_after_closed_interv
         &OwnerId::new("usr_self"),
         &RealtimePersistenceBatch {
             game_log_locations: vec![GameLogLocationEntry {
-                created_at: "2026-05-15T00:03:20Z".into(),
+                created_at: 1778803400,
                 ..first_location
             }],
             ..RealtimePersistenceBatch::default()
@@ -308,10 +307,10 @@ fn writes_remote_location_intervals_and_allows_same_location_after_closed_interv
         &Default::default(),
     )?;
     assert_eq!(rows.len(), 2);
-    assert_eq!(rows[0][0], json!("2026-05-15T00:00:00Z"));
+    assert_eq!(rows[0][0], json!(1778803200));
     assert_eq!(rows[0][1], json!("wrld_remote:456"));
     assert_eq!(rows[0][2], json!(180_000));
-    assert_eq!(rows[1][0], json!("2026-05-15T00:03:20Z"));
+    assert_eq!(rows[1][0], json!(1778803400));
     assert_eq!(rows[1][1], json!("wrld_remote:456"));
     assert_eq!(rows[1][2], json!(0));
     Ok(())
@@ -332,10 +331,10 @@ fn friend_and_unfriend_feed_markers_are_skipped_not_persisted_as_feed_rows(
                 display_name: "Friend".into(),
                 trust_level: "Known".into(),
                 friend_number: 1,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
-            feed_entries: vec![relationship_entry("2026-05-15T00:00:00Z", false)],
+            feed_entries: vec![relationship_entry(1778803200, false)],
             ..RealtimePersistenceBatch::default()
         },
     )?;
@@ -351,9 +350,9 @@ fn friend_and_unfriend_feed_markers_are_skipped_not_persisted_as_feed_rows(
         &RealtimePersistenceBatch {
             friend_log_deletes: vec![FriendLogDelete {
                 target_user_id: "usr_friend".into(),
-                created_at: "2026-05-15T00:00:01Z".into(),
+                created_at: 1778803201,
             }],
-            feed_entries: vec![relationship_entry("2026-05-15T00:00:01Z", true)],
+            feed_entries: vec![relationship_entry(1778803201, true)],
             ..RealtimePersistenceBatch::default()
         },
     )?;
@@ -381,7 +380,7 @@ fn force_history_false_skips_friend_history_on_update() -> Result<(), crate::Err
             display_name: name.into(),
             trust_level: "Known".into(),
             friend_number: 12,
-            created_at: "2026-05-15T00:00:00Z".into(),
+            created_at: 1778803200,
             force_history: false,
         }],
         ..RealtimePersistenceBatch::default()
@@ -409,7 +408,7 @@ fn display_name_change_on_update_writes_display_name_history() -> Result<(), cra
             display_name: name.into(),
             trust_level: trust.into(),
             friend_number: 12,
-            created_at: "2026-05-15T00:00:00Z".into(),
+            created_at: 1778803200,
             force_history: false,
         }],
         ..RealtimePersistenceBatch::default()
@@ -443,13 +442,13 @@ fn display_name_change_on_update_writes_display_name_history() -> Result<(), cra
 fn trust_change_on_update_writes_trust_history() -> Result<(), crate::Error> {
     let dir = TestDir::new("realtime-trust-change");
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
-    let upsert = |name: &str, trust: &str, created_at: &str| RealtimePersistenceBatch {
+    let upsert = |name: &str, trust: &str, created_at: i64| RealtimePersistenceBatch {
         friend_log_upserts: vec![FriendLogUpsert {
             target_user_id: "usr_friend".into(),
             display_name: name.into(),
             trust_level: trust.into(),
             friend_number: 12,
-            created_at: created_at.into(),
+            created_at,
             force_history: false,
         }],
         ..RealtimePersistenceBatch::default()
@@ -458,12 +457,12 @@ fn trust_change_on_update_writes_trust_history() -> Result<(), crate::Error> {
     write_realtime_batch(
         &db,
         &OwnerId::new("usr_self"),
-        &upsert("Friend", "Known User", "2026-05-15T00:00:00Z"),
+        &upsert("Friend", "Known User", 1778803200),
     )?;
     write_realtime_batch(
         &db,
         &OwnerId::new("usr_self"),
-        &upsert("Friend", "Trusted User", "2026-05-15T00:00:01Z"),
+        &upsert("Friend", "Trusted User", 1778803201),
     )?;
 
     let history = db.execute(
@@ -482,13 +481,13 @@ fn trust_change_on_update_writes_trust_history() -> Result<(), crate::Error> {
 fn simultaneous_name_and_trust_change_writes_both_histories() -> Result<(), crate::Error> {
     let dir = TestDir::new("realtime-name-trust-change");
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
-    let batch = |name: &str, trust: &str, created_at: &str| RealtimePersistenceBatch {
+    let batch = |name: &str, trust: &str, created_at: i64| RealtimePersistenceBatch {
         friend_log_upserts: vec![FriendLogUpsert {
             target_user_id: "usr_friend".into(),
             display_name: name.into(),
             trust_level: trust.into(),
             friend_number: 12,
-            created_at: created_at.into(),
+            created_at,
             force_history: false,
         }],
         ..RealtimePersistenceBatch::default()
@@ -497,12 +496,12 @@ fn simultaneous_name_and_trust_change_writes_both_histories() -> Result<(), crat
     write_realtime_batch(
         &db,
         &OwnerId::new("usr_self"),
-        &batch("Old Name", "Known User", "2026-05-15T00:00:00Z"),
+        &batch("Old Name", "Known User", 1778803200),
     )?;
     write_realtime_batch(
         &db,
         &OwnerId::new("usr_self"),
-        &batch("New Name", "Trusted User", "2026-05-15T00:00:01Z"),
+        &batch("New Name", "Trusted User", 1778803201),
     )?;
 
     let history = db.execute(
@@ -526,7 +525,7 @@ fn empty_same_and_legacy_equivalent_trust_values_skip_history() -> Result<(), cr
             display_name: "Friend".into(),
             trust_level: trust.into(),
             friend_number: 12,
-            created_at: "2026-05-15T00:00:00Z".into(),
+            created_at: 1778803200,
             force_history: false,
         }],
         ..RealtimePersistenceBatch::default()
@@ -563,7 +562,7 @@ fn failed_trust_batch_rolls_back_current_and_history() -> Result<(), crate::Erro
                 display_name: "Friend".into(),
                 trust_level: "Known User".into(),
                 friend_number: 12,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
             ..RealtimePersistenceBatch::default()
@@ -579,10 +578,10 @@ fn failed_trust_batch_rolls_back_current_and_history() -> Result<(), crate::Erro
                 display_name: "Friend".into(),
                 trust_level: "Trusted User".into(),
                 friend_number: 12,
-                created_at: "2026-05-15T00:00:01Z".into(),
+                created_at: 1778803201,
                 force_history: false,
             }],
-            feed_entries: vec![untabled_entry("2026-05-15T00:00:01Z")],
+            feed_entries: vec![untabled_entry(1778803201)],
             ..RealtimePersistenceBatch::default()
         },
     );
@@ -612,7 +611,7 @@ fn unchanged_or_unknown_display_name_skips_display_name_history() -> Result<(), 
             display_name: name.into(),
             trust_level: "Known".into(),
             friend_number: 12,
-            created_at: "2026-05-15T00:00:00Z".into(),
+            created_at: 1778803200,
             force_history: false,
         }],
         ..RealtimePersistenceBatch::default()
@@ -652,7 +651,7 @@ fn blank_display_name_persists_unknown_not_user_id() -> Result<(), crate::Error>
                 display_name: String::new(),
                 trust_level: "Known".into(),
                 friend_number: 12,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
             ..RealtimePersistenceBatch::default()
@@ -676,7 +675,7 @@ fn rejects_trust_feed_without_matching_friend_log_upsert() {
         &db,
         &OwnerId::new("usr_self"),
         &RealtimePersistenceBatch {
-            feed_entries: vec![trust_level_entry("2026-05-15T00:00:00Z", 7)],
+            feed_entries: vec![trust_level_entry(1778803200, 7)],
             ..RealtimePersistenceBatch::default()
         },
     )
@@ -695,7 +694,7 @@ fn rejects_display_name_feed_without_matching_friend_log_upsert() {
         &OwnerId::new("usr_self"),
         &RealtimePersistenceBatch {
             feed_entries: vec![FeedLiveEntry::DisplayName {
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 user_id: "usr_friend".into(),
                 display_name: "New Name".into(),
                 previous_display_name: "Old Name".into(),
@@ -724,10 +723,10 @@ fn rolls_back_friend_log_rows_when_later_feed_entry_fails() -> Result<(), crate:
                 display_name: "Friend".into(),
                 trust_level: "Known".into(),
                 friend_number: 1,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
-            feed_entries: vec![untabled_entry("2026-05-15T00:00:01Z")],
+            feed_entries: vec![untabled_entry(1778803201)],
             ..RealtimePersistenceBatch::default()
         },
     )
@@ -756,7 +755,7 @@ fn realtime_schema_adds_v1_seen_column_and_backfills_expired_rows() -> Result<()
         &Default::default(),
     )?;
     db.execute_non_query(
-        "INSERT INTO usrself_notifications (id, created_at, type, expired) VALUES ('active', '2026-08-20T11:00:00Z', 'friendRequest', 0), ('expired', '2026-08-20T10:00:00Z', 'friendRequest', 1)",
+        "INSERT INTO usrself_notifications (id, created_at, type, expired) VALUES ('active', 1787223600, 'friendRequest', 0), ('expired', 1787220000, 'friendRequest', 1)",
         &Default::default(),
     )?;
 
@@ -811,7 +810,7 @@ fn expiring_a_v1_notification_marks_it_seen() -> Result<(), crate::Error> {
         &RealtimePersistenceBatch {
             notification_expirations: vec![NotificationExpiration {
                 id: "notif_v1".into(),
-                expired_at: "2026-05-15T01:00:00Z".into(),
+                expired_at: 1778806800,
             }],
             ..RealtimePersistenceBatch::default()
         },
@@ -883,7 +882,7 @@ fn writes_notification_v1_and_v2_schema_columns() -> Result<(), crate::Error> {
         ),
         &ParamsBuilder::new().set("id", "notif_v1").build(),
     )?;
-    assert_eq!(v1[0][0], json!("2026-05-15T00:00:00Z"));
+    assert_eq!(v1[0][0], json!(1778803200));
     assert_eq!(v1[0][1], json!("invite"));
     assert_eq!(v1[0][2], json!("usr_sender"));
     assert_eq!(v1[0][3], json!("Sender"));
@@ -906,9 +905,9 @@ fn writes_notification_v1_and_v2_schema_columns() -> Result<(), crate::Error> {
         ),
         &ParamsBuilder::new().set("id", "notif_v2").build(),
     )?;
-    assert_eq!(v2[0][0], json!("2026-05-15T00:01:00Z"));
-    assert_eq!(v2[0][1], json!("2026-05-15T00:01:01Z"));
-    assert_eq!(v2[0][2], json!("2026-05-16T00:01:00Z"));
+    assert_eq!(v2[0][0], json!(1778803260));
+    assert_eq!(v2[0][1], json!(1778803261));
+    assert_eq!(v2[0][2], json!(1778889660));
     assert_eq!(v2[0][3], json!("friendRequest"));
     assert_eq!(v2[0][4], json!("https://vrchat.com/home/user/usr_sender"));
     assert_eq!(v2[0][5], json!("Open user"));
@@ -945,7 +944,7 @@ fn notification_v2_update_falls_back_to_upsert_with_received_timestamp() -> Resu
         &RealtimePersistenceBatch {
             notification_v2_updates: vec![NotificationV2Update {
                 id: "notif_update".into(),
-                received_at: "2026-05-15T00:02:00Z".into(),
+                received_at: 1778803320,
                 updates: json!({
                     "type": "invite",
                     "message": "Fallback insert",
@@ -966,7 +965,7 @@ fn notification_v2_update_falls_back_to_upsert_with_received_timestamp() -> Resu
         ),
         &ParamsBuilder::new().set("id", "notif_update").build(),
     )?;
-    assert_eq!(inserted[0][0], json!("2026-05-15T00:02:00Z"));
+    assert_eq!(inserted[0][0], json!(1778803320));
     assert_eq!(inserted[0][1], json!("invite"));
     assert_eq!(inserted[0][2], json!("Fallback insert"));
     assert_eq!(inserted[0][3], json!(1));
@@ -1056,12 +1055,12 @@ fn self_profile_log_rows(db: &DatabaseService) -> Vec<Vec<serde_json::Value>> {
 }
 
 fn self_profile_observation(
-    observed_at: &str,
+    observed_at: i64,
     field: SelfProfileField,
     value: &str,
 ) -> SelfProfileObservation {
     SelfProfileObservation {
-        observed_at: observed_at.to_string(),
+        observed_at,
         field,
         value: value.to_string(),
     }
@@ -1088,10 +1087,10 @@ fn self_profile_observations_log_only_values_that_differ_from_the_latest_row() {
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3")).unwrap();
 
     for (observed_at, bio) in [
-        ("2026-05-15T00:00:00Z", "old bio"),
-        ("2026-05-16T00:00:00Z", "old bio"),
-        ("2026-05-17T00:00:00Z", "new bio"),
-        ("2026-05-18T00:00:00Z", "new bio"),
+        (1778803200, "old bio"),
+        (1778889600, "old bio"),
+        (1778976000, "new bio"),
+        (1779062400, "new bio"),
     ] {
         write_self_profile_observations(
             &db,
@@ -1106,19 +1105,14 @@ fn self_profile_observations_log_only_values_that_differ_from_the_latest_row() {
         self_profile_log_rows(&db),
         vec![
             vec![
-                json!("2026-05-15T00:00:00Z"),
+                json!(1778803200),
                 json!("status"),
                 json!("join me"),
                 json!(""),
             ],
+            vec![json!(1778803200), json!("bio"), json!("old bio"), json!(""),],
             vec![
-                json!("2026-05-15T00:00:00Z"),
-                json!("bio"),
-                json!("old bio"),
-                json!(""),
-            ],
-            vec![
-                json!("2026-05-17T00:00:00Z"),
+                json!(1778976000),
                 json!("bio"),
                 json!("new bio"),
                 json!("old bio"),
@@ -1132,18 +1126,18 @@ fn checkpointed_avatar_wear_extends_one_log_row_and_adds_only_the_new_time(
 ) -> Result<(), crate::Error> {
     let dir = TestDir::new("avatar-wear-checkpoint");
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
-    let started_at_ms = 1_790_863_200_000;
-    for (time_spent, ended_after_ms) in [(60_000, 60_000), (30_000, 90_000)] {
+    let started_at = 1_790_863_200;
+    for (time_spent, ended_after) in [(60_000, 60), (30_000, 90)] {
         write_realtime_batch(
             &db,
             &OwnerId::new("usr_self"),
             &RealtimePersistenceBatch {
                 avatar_time_spent_upserts: vec![AvatarTimeSpentUpsert {
                     avatar_id: "avtr_worn".into(),
-                    created_at: "2026-10-01T14:00:00.000Z".into(),
+                    created_at: 1790863200,
                     time_spent,
-                    started_at_ms,
-                    ended_at_ms: started_at_ms + ended_after_ms,
+                    started_at,
+                    ended_at: started_at + ended_after,
                 }],
                 ..RealtimePersistenceBatch::default()
             },
@@ -1155,8 +1149,8 @@ fn checkpointed_avatar_wear_extends_one_log_row_and_adds_only_the_new_time(
         &Default::default(),
     )?;
     assert_eq!(wear_rows.len(), 1);
-    assert_eq!(wear_rows[0][0], json!("2026-10-01T14:00:00.000Z"));
-    assert_eq!(wear_rows[0][1], json!("2026-10-01T14:01:30.000Z"));
+    assert_eq!(wear_rows[0][0], json!(1790863200));
+    assert_eq!(wear_rows[0][1], json!(1790863290));
     assert_eq!(wear_rows[0][2], json!(90_000));
     let history = db.execute(
         "SELECT time FROM usrself_avatar_history WHERE avatar_id = 'avtr_worn'",
@@ -1176,10 +1170,10 @@ fn backfill_skips_entries_that_have_no_feed_row_instead_of_failing_the_sync(
         &db,
         &OwnerId::new("usr_self"),
         &[
-            online_entry("2026-05-15T00:00:00Z", "wrld_1:1", "World"),
-            untabled_entry("2026-05-15T00:01:00Z"),
-            relationship_entry("2026-05-15T00:02:00Z", true),
-            trust_level_entry("2026-05-15T00:03:00Z", 7),
+            online_entry(1778803200, "wrld_1:1", "World"),
+            untabled_entry(1778803260),
+            relationship_entry(1778803320, true),
+            trust_level_entry(1778803380, 7),
         ],
         &[],
         &mut BackfillWrites::default(),
@@ -1200,21 +1194,21 @@ fn backfill_only_treats_rows_from_before_the_current_sync_as_duplicates() -> Res
     let first_segment = insert_backfilled_feed(
         &db,
         &owner,
-        &[online_entry("2026-05-15T00:00:00Z", "wrld_1:1", "World")],
+        &[online_entry(1778803200, "wrld_1:1", "World")],
         &[],
         &mut this_sync,
     )?;
     let next_segment = insert_backfilled_feed(
         &db,
         &owner,
-        &[online_entry("2026-05-15T00:01:00Z", "wrld_1:1", "World")],
+        &[online_entry(1778803260, "wrld_1:1", "World")],
         &[],
         &mut this_sync,
     )?;
     let next_sync = insert_backfilled_feed(
         &db,
         &owner,
-        &[online_entry("2026-05-15T00:01:00Z", "wrld_1:1", "World")],
+        &[online_entry(1778803260, "wrld_1:1", "World")],
         &[],
         &mut BackfillWrites::default(),
     )?;

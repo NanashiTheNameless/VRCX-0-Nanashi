@@ -26,7 +26,7 @@ fn custom_snapshot(image_path: &str) -> BackgroundImageSnapshot {
         author: String::new(),
         license: String::new(),
         source: String::new(),
-        resolved_at: String::new(),
+        resolved_at: 0,
         resolved_for_key: String::new(),
     }
 }
@@ -104,13 +104,13 @@ fn snapshot_freshness_uses_24h_ttl() {
         author: String::new(),
         license: String::new(),
         source: String::new(),
-        resolved_at: (Utc::now() - chrono::Duration::hours(23)).to_rfc3339(),
+        resolved_at: (Utc::now() - chrono::Duration::hours(23)).timestamp(),
         resolved_for_key: "2026-07-30".into(),
     };
     assert!(is_snapshot_fresh(Some(&snapshot)));
-    snapshot.resolved_at = (Utc::now() - chrono::Duration::hours(25)).to_rfc3339();
+    snapshot.resolved_at = (Utc::now() - chrono::Duration::hours(25)).timestamp();
     assert!(!is_snapshot_fresh(Some(&snapshot)));
-    snapshot.resolved_at = String::new();
+    snapshot.resolved_at = 0;
     assert!(!is_snapshot_fresh(Some(&snapshot)));
     assert!(!is_snapshot_fresh(None));
 }

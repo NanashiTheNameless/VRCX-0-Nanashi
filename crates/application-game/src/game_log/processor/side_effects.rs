@@ -131,7 +131,7 @@ pub(super) fn dispatch_side_effect(
             created_at,
         } => {
             if let Some((generation, length_seconds)) = deps.now_playing.resync() {
-                let mut payload = runtime_lifecycle::video_sync_payload(&timestamp, &created_at);
+                let mut payload = runtime_lifecycle::video_sync_payload(&timestamp, created_at);
                 payload.length = Some(length_seconds);
                 if let Some(ends_at_ms) = announce_now_playing(&deps, payload) {
                     deps.tasks
@@ -198,7 +198,7 @@ pub(super) fn dispatch_side_effect(
             runtime_lifecycle::handle_vrc_quit(
                 deps.store.as_ref(),
                 deps.host_actions.as_ref(),
-                &created_at,
+                created_at,
                 is_game_running,
             );
         }
@@ -218,7 +218,7 @@ pub(super) fn dispatch_side_effect(
         } => {
             deps.tasks.clone().spawn(async move {
                 if let Err(error) =
-                    fill_location_group_name(&deps, &created_at, &location, &group_id).await
+                    fill_location_group_name(&deps, created_at, &location, &group_id).await
                 {
                     tracing::warn!("GameLog group name side effect failed: {error}");
                 }
@@ -238,7 +238,7 @@ pub(super) fn dispatch_side_effect(
 
 async fn fill_location_group_name(
     deps: &GameLogSideEffectDeps,
-    created_at: &str,
+    created_at: i64,
     location: &str,
     group_id: &str,
 ) -> crate::Result<()> {

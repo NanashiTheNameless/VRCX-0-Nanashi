@@ -9,7 +9,7 @@ const meta: Pick<FeedTableMeta, 'knownUsersById' | 'friendLogNamesById'> = {
         usr_known: {
             id: 'usr_known',
             endpoint: 'default',
-            updatedAt: '',
+            updatedAt: 0,
             displayName: 'Known'
         }
     },
@@ -48,11 +48,11 @@ describe('sortFeedTableRows', () => {
 
     it('applies multiple sort keys and keeps equal rows in query order', () => {
         const rows: FeedRow[] = [
-            { rowId: 1, type: 'Status', created_at: '2026-08-31T00:00:00Z' },
-            { rowId: 2, type: 'GPS', created_at: '2026-08-30T00:00:00Z' },
-            { rowId: 3, type: 'GPS', created_at: '2026-08-31T00:00:00Z' },
-            { rowId: 4, type: 'GPS', created_at: '2026-08-31T00:00:00Z' },
-            { rowId: 5, type: 'GPS', created_at: 'invalid' }
+            { rowId: 1, type: 'Status', created_at: 1788134400 },
+            { rowId: 2, type: 'GPS', created_at: 1788048000 },
+            { rowId: 3, type: 'GPS', created_at: 1788134400 },
+            { rowId: 4, type: 'GPS', created_at: 1788134400 },
+            { rowId: 5, type: 'GPS', created_at: Number.NaN }
         ];
 
         expect(

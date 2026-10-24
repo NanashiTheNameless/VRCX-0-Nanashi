@@ -59,6 +59,25 @@ pub fn activity_timeline(
     from_ms: Option<i64>,
     to_ms: Option<i64>,
 ) -> Vec<ActivityBucket> {
+    activity_timeline_with_zone(sessions, bucket, Some(offset_minutes), from_ms, to_ms)
+}
+
+pub fn activity_timeline_in_display_zone(
+    sessions: &[(i64, i64)],
+    bucket: ActivityTimeBucket,
+    from_ms: Option<i64>,
+    to_ms: Option<i64>,
+) -> Vec<ActivityBucket> {
+    activity_timeline_with_zone(sessions, bucket, None, from_ms, to_ms)
+}
+
+fn activity_timeline_with_zone(
+    sessions: &[(i64, i64)],
+    bucket: ActivityTimeBucket,
+    offset_minutes: Option<i64>,
+    from_ms: Option<i64>,
+    to_ms: Option<i64>,
+) -> Vec<ActivityBucket> {
     let mut buckets: BTreeMap<String, BucketAccumulator> = BTreeMap::new();
     for (index, (start, end)) in sessions.iter().copied().enumerate() {
         let start = from_ms.map_or(start, |from| start.max(from));
@@ -71,7 +90,9 @@ pub fn activity_timeline(
         while cursor < end {
             let step_end = end.min(next_minute_boundary_ms(cursor));
             let step_ms = step_end - cursor;
-            if let Some(key) = bucket_key(cursor, bucket, offset_minutes) {
+            if let Some(key) =
+                bucket_key(cursor, bucket, offset_for_instant(cursor, offset_minutes))
+            {
                 let accumulator = buckets.entry(key).or_default();
                 accumulator.ms += step_ms;
                 accumulator.session_indexes.insert(index);
@@ -98,6 +119,18 @@ pub fn activity_streaks(
     now_ms: i64,
     offset_minutes: i64,
 ) -> ActivityStreaks {
+    activity_streaks_with_zone(sessions, now_ms, Some(offset_minutes))
+}
+
+pub fn activity_streaks_in_display_zone(sessions: &[(i64, i64)], now_ms: i64) -> ActivityStreaks {
+    activity_streaks_with_zone(sessions, now_ms, None)
+}
+
+fn activity_streaks_with_zone(
+    sessions: &[(i64, i64)],
+    now_ms: i64,
+    offset_minutes: Option<i64>,
+) -> ActivityStreaks {
     let mut active_days = BTreeSet::new();
     let mut session_count = 0usize;
     let mut total_ms = 0i64;
@@ -108,7 +141,9 @@ pub fn activity_streaks(
         total_ms += end - start;
         first_session_ms = Some(first_session_ms.map_or(start, |value| value.min(start)));
         last_session_ms = Some(last_session_ms.map_or(end, |value| value.max(end)));
-        for day in local_day(start, offset_minutes)..=local_day(end - 1, offset_minutes) {
+        for day in local_day(start, offset_for_instant(start, offset_minutes))
+            ..=local_day(end - 1, offset_for_instant(end - 1, offset_minutes))
+        {
             active_days.insert(day);
         }
     }
@@ -137,7 +172,7 @@ pub fn activity_streaks(
         previous_day = Some(day);
     }
 
-    let today = local_day(now_ms, offset_minutes);
+    let today = local_day(now_ms, offset_for_instant(now_ms, offset_minutes));
     let last_active_day = active_days.last().copied().unwrap_or(today);
     ActivityStreaks {
         longest_break_days,
@@ -249,6 +284,12 @@ fn hour_label(key: &str) -> Option<String> {
         return None;
     }
     Some(format!("{hour:02}:00\u{2013}{:02}:00", (hour + 1) % 24))
+}
+
+fn offset_for_instant(ms: i64, fixed: Option<i64>) -> i64 {
+    fixed.unwrap_or_else(|| {
+        i64::from(crate::time::display_offset_at(ms.div_euclid(1000)).local_minus_utc()) / 60
+    })
 }
 
 fn local_day(ms: i64, offset_minutes: i64) -> i64 {

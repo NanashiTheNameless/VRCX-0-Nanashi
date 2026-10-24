@@ -54,7 +54,7 @@ export type GroupPreviousInstanceRow =
     Awaited<
         ReturnType<typeof gameLogRepository.getPreviousInstancesByGroupId>
     > extends Map<unknown, infer V>
-        ? V & { createdAt?: string }
+        ? V & { createdAt?: number }
         : EntityRecord;
 
 function isEntityRecord(value: unknown): value is EntityRecord {

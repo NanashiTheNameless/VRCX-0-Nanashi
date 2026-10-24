@@ -229,7 +229,7 @@ pub struct RemoteSyncStatus {
     pub has_key: bool,
     pub signed_in_to_vrchat: bool,
     pub vault_id: Option<String>,
-    pub last_sync_at_ms: Option<i64>,
+    pub last_sync_at: Option<i64>,
     /// Set while a sync pass is running.
     pub progress: Option<SyncProgressSnapshot>,
     pub log: Vec<SyncLogEntry>,
@@ -246,18 +246,6 @@ fn reauth_method(method: &str) -> Result<vrcx_0_remote_sync::ReauthMethod> {
 
 fn sync_error(error: impl std::fmt::Display) -> Error {
     Error::Custom(error.to_string())
-}
-
-fn sync_timestamp_ms(timestamp: &str) -> Option<i64> {
-    chrono::DateTime::parse_from_rfc3339(timestamp)
-        .ok()
-        .map(|time| time.timestamp_millis())
-}
-
-fn sync_timestamp(ms: i64) -> String {
-    chrono::DateTime::from_timestamp_millis(ms)
-        .unwrap_or_else(chrono::Utc::now)
-        .to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
 }
 
 fn local_setting_change_time(
@@ -305,6 +293,7 @@ fn syncable_app_setting(key: &str) -> bool {
         "directory",
         "endpoint",
         "feedlogger",
+        "dttimezone",
         "file",
         "folder",
         "gamelogreplaycheckpoint",
@@ -657,7 +646,7 @@ impl DesktopRuntimeHostState {
         let deleted = store::streams::app_settings_deleted_keys(db, scope)?;
         let synced_by_key = synced
             .iter()
-            .map(|(key, value, updated_at)| (key.as_str(), (value.as_str(), updated_at.as_str())))
+            .map(|(key, value, updated_at)| (key.as_str(), (value.as_str(), *updated_at)))
             .collect::<std::collections::HashMap<_, _>>();
         let deleted_by_key = deleted
             .iter()
@@ -669,7 +658,7 @@ impl DesktopRuntimeHostState {
             if !choices.selects(key) {
                 continue;
             }
-            let remote_ms = sync_timestamp_ms(updated_at).unwrap_or_default();
+            let remote_ms = *updated_at;
             let local_ms = local_setting_change_time(db, key)?;
             match local.get(key) {
                 Some(local_value) if local_value != value => {
@@ -679,7 +668,7 @@ impl DesktopRuntimeHostState {
                             scope,
                             key,
                             local_value,
-                            &sync_timestamp(local_ms.unwrap_or(remote_ms)),
+                            local_ms.unwrap_or(remote_ms),
                         )?;
                     }
                 }
@@ -707,9 +696,8 @@ impl DesktopRuntimeHostState {
             } else if !allow_new_settings && local_ms.is_none() {
                 continue;
             }
-            let updated_at =
-                sync_timestamp(local_ms.unwrap_or_else(|| chrono::Utc::now().timestamp_millis()));
-            store::streams::app_settings_upsert(db, scope, key, value, &updated_at)?;
+            let updated_at = local_ms.unwrap_or_else(|| chrono::Utc::now().timestamp());
+            store::streams::app_settings_upsert(db, scope, key, value, updated_at)?;
         }
         Ok(())
     }
@@ -728,7 +716,7 @@ impl DesktopRuntimeHostState {
             if !syncable_app_setting(key) || !choices.selects(key) {
                 continue;
             }
-            let remote_ms = sync_timestamp_ms(updated_at).unwrap_or_default();
+            let remote_ms = *updated_at;
             let local_ms = local_setting_change_time(db, key)?;
             if let Some(local_value) = current.get(key) {
                 if local_value != value && local_ms.is_some_and(|changed_at| changed_at > remote_ms)
@@ -738,7 +726,7 @@ impl DesktopRuntimeHostState {
                         scope,
                         key,
                         local_value,
-                        &sync_timestamp(local_ms.unwrap_or(remote_ms)),
+                        local_ms.unwrap_or(remote_ms),
                     )?;
                     continue;
                 }
@@ -773,7 +761,7 @@ impl DesktopRuntimeHostState {
                         scope,
                         key,
                         value,
-                        &sync_timestamp(local_ms.unwrap_or(*deleted_at_ms)),
+                        local_ms.unwrap_or(*deleted_at_ms),
                     )?;
                 }
                 continue;
@@ -797,14 +785,8 @@ impl DesktopRuntimeHostState {
                 && !deleted_keys.contains(key.as_str())
             {
                 let changed_at = local_setting_change_time(db, &key)?
-                    .unwrap_or_else(|| chrono::Utc::now().timestamp_millis());
-                store::streams::app_settings_upsert(
-                    db,
-                    scope,
-                    &key,
-                    &value,
-                    &sync_timestamp(changed_at),
-                )?;
+                    .unwrap_or_else(|| chrono::Utc::now().timestamp());
+                store::streams::app_settings_upsert(db, scope, &key, &value, changed_at)?;
             }
         }
         Ok(changed)
@@ -912,7 +894,7 @@ impl DesktopRuntimeHostState {
         if let Some(state) =
             store::vault_state_for_user(db, &api_origin, &account_id, scope.current_user_id.trim())?
         {
-            status.last_sync_at_ms = store::last_sync_get(db, &state.vault)?;
+            status.last_sync_at = store::last_sync_get(db, &state.vault)?;
             status.log = store::sync_log_recent(db, &state.vault, 50)?;
             status.vault_id = Some(state.vault.vault_id);
         }
@@ -1652,6 +1634,7 @@ mod tests {
     #[test]
     fn recorder_settings_are_never_synced() {
         assert!(!syncable_app_setting("config:vrcx_feedLogger"));
+        assert!(!syncable_app_setting("config:vrcx_dtTimeZone"));
         assert!(syncable_app_setting("config:vrcx_theme"));
     }
 

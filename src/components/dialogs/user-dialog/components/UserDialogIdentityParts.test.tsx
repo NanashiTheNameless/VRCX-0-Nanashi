@@ -23,7 +23,7 @@ describe('PreviousDisplayNamesBadge', () => {
                 names={[
                     {
                         displayName: 'Recent Name',
-                        updated_at: '2026-08-24T00:00:00Z'
+                        updated_at: 1787529600
                     },
                     { displayName: 'Older Name' }
                 ]}

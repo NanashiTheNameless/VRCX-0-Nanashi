@@ -7,7 +7,7 @@ function rustUser(overrides: Record<string, unknown> = {}) {
         id: 'usr_test',
         endpoint: 'api',
         displayName: 'Mirror User',
-        updatedAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: 1767225600,
         ...overrides
     };
 }
@@ -38,6 +38,17 @@ describe('userFactsStore', () => {
 
         const nextState = useUserFactsStore.getState();
         expect(nextState.usersByKey['api::usr_test']).toBe(replacement);
+    });
+
+    it('converts a legacy timestamp while preserving the user facts', () => {
+        useUserFactsStore
+            .getState()
+            .replaceUserFacts([
+                rustUser({ updatedAt: '2026-01-01T00:00:00.250Z', bio: 'kept' })
+            ]);
+        expect(
+            useUserFactsStore.getState().usersByKey['api::usr_test']
+        ).toMatchObject({ updatedAt: 1767225600, bio: 'kept' });
     });
 
     it('ignores empty arrays and skips entries without an id', () => {

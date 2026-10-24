@@ -8,6 +8,7 @@ import { getEventId } from '@/components/hosts/tools-dialogs/toolsDialogUtils';
 import type { GroupProfileRecord } from '@/domain/entities/group';
 import type { LoadStatus } from '@/domain/shared/types';
 import type { GroupCalendarEventRecord } from '@/repositories/vrchatToolsRepository';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { Button } from '@/ui/shadcn/button';
 import {
     Empty,
@@ -19,7 +20,7 @@ import {
 import { Spinner } from '@/ui/shadcn/spinner';
 
 function eventTimeMs(value: string | null | undefined) {
-    const time = Date.parse(value || '');
+    const time = parseAbsoluteDateMs(value || '');
     return Number.isFinite(time) ? time : 0;
 }
 

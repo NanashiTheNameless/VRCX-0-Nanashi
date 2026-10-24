@@ -376,8 +376,8 @@ impl LocalDataRuntime {
         Ok(vrcx_0_persistence::activity_page::read_journey_visits(
             self.db.as_ref(),
             &input.owner_user_id,
-            input.from_ms,
-            input.to_ms,
+            input.from.saturating_mul(1000),
+            input.to.saturating_mul(1000),
         )?)
     }
 
@@ -419,14 +419,14 @@ impl LocalDataRuntime {
     pub fn avatar_wear_segments(
         &self,
         user_id: String,
-        from_ms: i64,
-        to_ms: i64,
+        from: i64,
+        to: i64,
     ) -> Result<Vec<AvatarWearSegment>> {
         Ok(vrcx_0_persistence::avatars::avatar_wear_segments(
             self.db.as_ref(),
             user_id,
-            from_ms,
-            to_ms,
+            from,
+            to,
         )?)
     }
 
@@ -662,7 +662,7 @@ impl LocalDataRuntime {
 
     pub fn cleanup_avatar_feed_history(
         &self,
-        cutoff_date: Option<String>,
+        cutoff_date: Option<i64>,
     ) -> Result<AvatarFeedCleanupOutcome> {
         let adapter =
             vrcx_0_outbound_adapters::LocalAvatarApplicationAdapter::new(Arc::clone(&self.db));
@@ -990,7 +990,7 @@ impl LocalDataRuntime {
         )
     }
 
-    pub fn instance_activity_dates_get(&self, user_id: String) -> Result<Vec<String>> {
+    pub fn instance_activity_dates_get(&self, user_id: String) -> Result<Vec<i64>> {
         Ok(
             vrcx_0_persistence::player_list::instance_activity_dates_get(
                 self.db.as_ref(),
@@ -1002,8 +1002,8 @@ impl LocalDataRuntime {
 
     pub fn instance_activity_rows_get(
         &self,
-        start_date: String,
-        end_date: String,
+        start_date: i64,
+        end_date: i64,
     ) -> Result<Vec<InstanceActivityRowOutput>> {
         Ok(vrcx_0_persistence::player_list::instance_activity_rows_get(
             self.db.as_ref(),

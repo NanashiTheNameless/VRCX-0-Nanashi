@@ -11,17 +11,17 @@ fn test_store(_name: &str) -> TestGameStateStore {
 }
 
 const LOCATION: &str = "wrld_live:123";
-const LOCATION_AT: &str = "2026-04-30T10:00:00.000Z";
-const SHOT_AT: &str = "2026-04-30T10:15:00.000Z";
+const LOCATION_AT: i64 = 1777543200;
+const SHOT_AT: i64 = 1777544100;
 
 fn join_leave_entry(
-    created_at: &str,
+    created_at: i64,
     event_type: &str,
     display_name: &str,
     user_id: &str,
 ) -> GameLogJoinLeaveEntry {
     GameLogJoinLeaveEntry {
-        created_at: created_at.to_string(),
+        created_at,
         event_type: event_type.to_string(),
         display_name: display_name.to_string(),
         location: LOCATION.to_string(),
@@ -34,7 +34,7 @@ fn join_leave_entry(
 fn write_visited_location(store: &TestGameStateStore, join_leave: Vec<GameLogJoinLeaveEntry>) {
     let batch = GameLogWriteBatch {
         locations: vec![GameLogLocationEntry {
-            created_at: LOCATION_AT.to_string(),
+            created_at: LOCATION_AT,
             location: LOCATION.to_string(),
             world_id: "wrld_live".to_string(),
             world_name: "Live World".to_string(),
@@ -47,9 +47,9 @@ fn write_visited_location(store: &TestGameStateStore, join_leave: Vec<GameLogJoi
     store.write_game_log(&OwnerId::new(""), &batch).unwrap();
 }
 
-fn context_at(store: &TestGameStateStore, created_at: &str) -> Option<ScreenshotContext> {
+fn context_at(store: &TestGameStateStore, created_at: i64) -> Option<ScreenshotContext> {
     let input = ScreenshotInput {
-        created_at: created_at.to_string(),
+        created_at,
         path: "screenshot.png".to_string(),
         snapshot: RuntimeSnapshot::default(),
     };
@@ -60,7 +60,7 @@ fn context_at(store: &TestGameStateStore, created_at: &str) -> Option<Screenshot
 fn snapshot_location_short_circuits_the_database_lookup() {
     let store = test_store("screenshot-snapshot-shortcircuit");
     let input = ScreenshotInput {
-        created_at: SHOT_AT.to_string(),
+        created_at: SHOT_AT,
         path: "screenshot.png".to_string(),
         snapshot: RuntimeSnapshot {
             ready: true,
@@ -68,7 +68,7 @@ fn snapshot_location_short_circuits_the_database_lookup() {
             location: LOCATION.to_string(),
             world_name: "Live World".to_string(),
             destination: String::new(),
-            started_at: String::new(),
+            started_at: 0,
             players: vec![PlayerState {
                 user_id: "usr_a".to_string(),
                 display_name: "Alice".to_string(),
@@ -105,11 +105,11 @@ fn location_exactly_at_max_age_boundary_is_still_used() {
 }
 
 #[test]
-fn location_one_ms_past_max_age_boundary_is_rejected() {
+fn location_one_second_past_max_age_boundary_is_rejected() {
     let store = test_store("screenshot-boundary-excluded");
     write_visited_location(&store, vec![]);
 
-    assert!(context_at(&store, "2026-04-30T10:15:00.001Z").is_none());
+    assert!(context_at(&store, SHOT_AT + 1).is_none());
 }
 
 #[test]
@@ -118,18 +118,8 @@ fn join_events_dedupe_by_user_id_key() {
     write_visited_location(
         &store,
         vec![
-            join_leave_entry(
-                "2026-04-30T10:01:00.000Z",
-                "OnPlayerJoined",
-                "Alice",
-                "usr_a",
-            ),
-            join_leave_entry(
-                "2026-04-30T10:02:00.000Z",
-                "OnPlayerJoined",
-                "Alice",
-                "usr_a",
-            ),
+            join_leave_entry(1777543260, "OnPlayerJoined", "Alice", "usr_a"),
+            join_leave_entry(1777543320, "OnPlayerJoined", "Alice", "usr_a"),
         ],
     );
 
@@ -145,8 +135,8 @@ fn join_events_dedupe_by_display_name_when_user_id_missing() {
     write_visited_location(
         &store,
         vec![
-            join_leave_entry("2026-04-30T10:01:00.000Z", "OnPlayerJoined", "NoId", ""),
-            join_leave_entry("2026-04-30T10:02:00.000Z", "OnPlayerJoined", "NoId", ""),
+            join_leave_entry(1777543260, "OnPlayerJoined", "NoId", ""),
+            join_leave_entry(1777543320, "OnPlayerJoined", "NoId", ""),
         ],
     );
 
@@ -162,18 +152,8 @@ fn distinct_user_ids_with_the_same_display_name_are_not_merged() {
     write_visited_location(
         &store,
         vec![
-            join_leave_entry(
-                "2026-04-30T10:01:00.000Z",
-                "OnPlayerJoined",
-                "Twin",
-                "usr_a",
-            ),
-            join_leave_entry(
-                "2026-04-30T10:02:00.000Z",
-                "OnPlayerJoined",
-                "Twin",
-                "usr_b",
-            ),
+            join_leave_entry(1777543260, "OnPlayerJoined", "Twin", "usr_a"),
+            join_leave_entry(1777543320, "OnPlayerJoined", "Twin", "usr_b"),
         ],
     );
 
@@ -188,13 +168,8 @@ fn leave_removes_player_by_user_id_key() {
     write_visited_location(
         &store,
         vec![
-            join_leave_entry(
-                "2026-04-30T10:01:00.000Z",
-                "OnPlayerJoined",
-                "Alice",
-                "usr_a",
-            ),
-            join_leave_entry("2026-04-30T10:02:00.000Z", "OnPlayerLeft", "Alice", "usr_a"),
+            join_leave_entry(1777543260, "OnPlayerJoined", "Alice", "usr_a"),
+            join_leave_entry(1777543320, "OnPlayerLeft", "Alice", "usr_a"),
         ],
     );
 
@@ -209,8 +184,8 @@ fn leave_removes_anonymous_player_by_display_name_key() {
     write_visited_location(
         &store,
         vec![
-            join_leave_entry("2026-04-30T10:01:00.000Z", "OnPlayerJoined", "Bob", ""),
-            join_leave_entry("2026-04-30T10:02:00.000Z", "OnPlayerLeft", "Bob", ""),
+            join_leave_entry(1777543260, "OnPlayerJoined", "Bob", ""),
+            join_leave_entry(1777543320, "OnPlayerLeft", "Bob", ""),
         ],
     );
 

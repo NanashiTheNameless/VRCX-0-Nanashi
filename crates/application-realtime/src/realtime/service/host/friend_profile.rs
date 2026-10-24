@@ -101,7 +101,7 @@ impl RealtimeHostRuntime {
             user_id,
             rev,
             profile,
-            &chrono::Utc::now().to_rfc3339(),
+            vrcx_0_core::time::now_epoch(),
         ) {
             RealtimeFriendApplyResult::Output(output) => {
                 self.apply_friend_output_owned(&owner, *output);
@@ -148,7 +148,7 @@ impl RealtimeHostRuntime {
         let options = UserFactMergeOptions {
             endpoint: endpoint.to_string(),
             source: "profile".to_string(),
-            received_at: chrono::Utc::now().to_rfc3339(),
+            received_at: vrcx_0_core::time::now_epoch(),
             is_friend,
             ..Default::default()
         };
@@ -195,7 +195,7 @@ impl RealtimeHostRuntime {
                 &UserFactMergeOptions {
                     endpoint: endpoint.to_string(),
                     source: "friend".into(),
-                    received_at: chrono::Utc::now().to_rfc3339(),
+                    received_at: vrcx_0_core::time::now_epoch(),
                     is_friend: true,
                     ..Default::default()
                 },
@@ -230,7 +230,7 @@ impl RealtimeHostRuntime {
                     .and_then(Value::as_str)
                     .unwrap_or("seed")
                     .to_string(),
-                received_at: chrono::Utc::now().to_rfc3339(),
+                received_at: vrcx_0_core::time::now_epoch(),
                 is_friend: entry
                     .get("isFriend")
                     .and_then(Value::as_bool)

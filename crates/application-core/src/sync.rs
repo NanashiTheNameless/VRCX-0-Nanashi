@@ -4,7 +4,6 @@ use std::sync::{Arc, Mutex};
 use serde::Serialize;
 
 use crate::RuntimeOperationStatus;
-use vrcx_0_core::time::now_iso;
 
 #[derive(Clone, Debug, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -12,7 +11,7 @@ pub struct RuntimeSyncDomainSnapshot {
     pub domain: String,
     pub status: RuntimeOperationStatus,
     pub detail: String,
-    pub updated_at: String,
+    pub updated_at: i64,
     pub revision: u64,
     pub pending_count: u64,
     pub failure_count: u64,
@@ -78,14 +77,14 @@ impl RuntimeSyncEngine {
                             domain,
                             status: RuntimeOperationStatus::Pending,
                             detail: String::new(),
-                            updated_at: String::new(),
+                            updated_at: 0,
                             revision: 0,
                             pending_count: 0,
                             failure_count: 0,
                         });
                 entry.status = status;
                 entry.detail = detail;
-                entry.updated_at = now_iso();
+                entry.updated_at = vrcx_0_core::time::now_epoch();
                 entry.revision = entry.revision.saturating_add(1);
                 entry.pending_count = pending_count;
                 if failed {

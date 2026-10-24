@@ -28,11 +28,7 @@ impl LocalAvatarApplicationAdapter {
 }
 
 impl AvatarFeedCleanupStore for LocalAvatarApplicationAdapter {
-    fn purge_avatar_feed(
-        &self,
-        user_id: String,
-        cutoff_date: Option<String>,
-    ) -> crate::Result<i64> {
+    fn purge_avatar_feed(&self, user_id: String, cutoff_date: Option<i64>) -> crate::Result<i64> {
         Ok(vrcx_0_persistence::feed::feed_avatar_purge(
             &self.db,
             user_id,

@@ -57,9 +57,9 @@ pub struct NowPlayingPayload {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub length: Option<i64>,
     pub position: i64,
-    pub started_at: String,
+    pub started_at: i64,
     #[serde(rename = "created_at", skip_serializing_if = "Option::is_none")]
-    pub created_at: Option<String>,
+    pub created_at: Option<i64>,
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub activity_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -68,7 +68,7 @@ pub struct NowPlayingPayload {
     pub video_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub video_id: Option<String>,
-    pub updated_at: String,
+    pub updated_at: i64,
 }
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, specta::Type)]
@@ -87,9 +87,9 @@ pub struct NowPlayingSnapshot {
     pub thumbnail_url: String,
     pub length: i64,
     pub position: i64,
-    pub started_at: Option<String>,
+    pub started_at: Option<i64>,
     #[serde(rename = "created_at", skip_serializing_if = "Option::is_none")]
-    pub created_at: Option<String>,
+    pub created_at: Option<i64>,
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
     pub activity_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -98,7 +98,7 @@ pub struct NowPlayingSnapshot {
     pub video_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub video_id: Option<String>,
-    pub updated_at: Option<String>,
+    pub updated_at: Option<i64>,
 }
 
 impl NowPlayingSnapshot {
@@ -131,9 +131,9 @@ impl NowPlayingSnapshot {
             self.length = value;
         }
         self.position = patch.position;
-        self.started_at = Some(patch.started_at.clone());
+        self.started_at = Some(patch.started_at);
         if let Some(value) = &patch.created_at {
-            self.created_at = Some(value.clone());
+            self.created_at = Some(*value);
         }
         if let Some(value) = &patch.activity_type {
             self.activity_type = Some(value.clone());
@@ -147,7 +147,7 @@ impl NowPlayingSnapshot {
         if let Some(value) = &patch.video_id {
             self.video_id = Some(value.clone());
         }
-        self.updated_at = Some(patch.updated_at.clone());
+        self.updated_at = Some(patch.updated_at);
     }
 
     pub fn has_content(&self) -> bool {
@@ -320,8 +320,8 @@ mod tests {
             serde_json::to_value(GameLogSideEffectEvent::NowPlaying(Box::new(
                 NowPlayingPayload {
                     position: 42,
-                    started_at: "start".into(),
-                    updated_at: "update".into(),
+                    started_at: 1,
+                    updated_at: 2,
                     ..Default::default()
                 },
             )))
@@ -330,8 +330,8 @@ mod tests {
                 "kind": "nowPlaying",
                 "payload": {
                     "position": 42,
-                    "startedAt": "start",
-                    "updatedAt": "update",
+                    "startedAt": 1,
+                    "updatedAt": 2,
                 },
             })
         );
@@ -352,13 +352,13 @@ mod tests {
                     thumbnail_url: Some("thumbnail".into()),
                     length: Some(120),
                     position: 42,
-                    started_at: "start".into(),
-                    created_at: Some("start".into()),
+                    started_at: 1,
+                    created_at: Some(1),
                     activity_type: Some("VideoPlay".into()),
                     video_url: Some("url".into()),
                     video_name: Some("name".into()),
                     video_id: Some("source".into()),
-                    updated_at: "update".into(),
+                    updated_at: 2,
                 },
             )))
             .unwrap(),
@@ -375,13 +375,13 @@ mod tests {
                     "thumbnailUrl": "thumbnail",
                     "length": 120,
                     "position": 42,
-                    "startedAt": "start",
-                    "created_at": "start",
+                    "startedAt": 1,
+                    "created_at": 1,
                     "type": "VideoPlay",
                     "videoUrl": "url",
                     "videoName": "name",
                     "videoId": "source",
-                    "updatedAt": "update",
+                    "updatedAt": 2,
                 },
             })
         );
@@ -413,8 +413,8 @@ mod tests {
             name: Some("Test Track".into()),
             artist: Some("Test Artist".into()),
             position: 42,
-            started_at: "start".into(),
-            updated_at: "update".into(),
+            started_at: 1,
+            updated_at: 2,
             ..Default::default()
         });
 
@@ -429,8 +429,8 @@ mod tests {
                 "thumbnailUrl": "",
                 "length": 0,
                 "position": 42,
-                "startedAt": "start",
-                "updatedAt": "update",
+                "startedAt": 1,
+                "updatedAt": 2,
             })
         );
     }

@@ -4,8 +4,6 @@ pub use vrcx_0_contracts::{
     AvatarCacheOutput, AvatarTagOutput, AvatarTimeSpentOutput, AvatarUsageRow, AvatarWearSegment,
 };
 
-use crate::activity::{activity_iso_from_ms, parse_activity_time_ms};
-
 use crate::cache_entities::{upsert_cache_entities, upsert_cache_entity, CacheEntityInput};
 use crate::common::{normalize_text, row_i64, row_string, ParamsBuilder};
 use crate::database::schema::{ensure_global_store_tables, ensure_user_store_tables};
@@ -220,10 +218,10 @@ pub fn avatar_usage_ranking(
 pub fn avatar_wear_segments(
     db: &DatabaseService,
     user_id: String,
-    from_ms: i64,
-    to_ms: i64,
+    from: i64,
+    to: i64,
 ) -> Result<Vec<AvatarWearSegment>, Error> {
-    if to_ms <= from_ms {
+    if to <= from {
         return Ok(Vec::new());
     }
     let user_prefix = normalize_user_table_prefix(&normalize_text(user_id))?;
@@ -234,32 +232,29 @@ pub fn avatar_wear_segments(
             "SELECT log.avatar_id, log.started_at, log.ended_at, COALESCE(cache_avatar.name, ''), COALESCE(cache_avatar.thumbnail_image_url, ''), COALESCE(cache_avatar.image_url, '')
              FROM {user_prefix}_avatar_wear_log AS log
              LEFT JOIN cache_avatar ON cache_avatar.id = log.avatar_id
-             WHERE log.started_at < @to_iso AND log.ended_at > @from_iso
+             WHERE log.started_at < @to AND log.ended_at > @from
              ORDER BY log.started_at, log.id"
         ),
         &ParamsBuilder::new()
-            .set("from_iso", activity_iso_from_ms(from_ms))
-            .set("to_iso", activity_iso_from_ms(to_ms))
+            .set("from", from)
+            .set("to", to)
             .build(),
     )?;
 
     let mut segments: Vec<AvatarWearSegment> = Vec::new();
     for row in rows {
-        let (Some(started_ms), Some(ended_ms)) = (
-            parse_activity_time_ms(&row_string(&row, 1)),
-            parse_activity_time_ms(&row_string(&row, 2)),
-        ) else {
+        let (Some(started), Some(ended)) = (row[1].as_i64(), row[2].as_i64()) else {
             continue;
         };
-        let started_at_ms = started_ms.max(from_ms);
-        let ended_at_ms = ended_ms.min(to_ms);
-        if ended_at_ms <= started_at_ms {
+        let started_at = started.max(from);
+        let ended_at = ended.min(to);
+        if ended_at <= started_at {
             continue;
         }
         let avatar_id = row_string(&row, 0);
         if let Some(last) = segments.last_mut() {
             if last.avatar_id == avatar_id {
-                last.ended_at_ms = last.ended_at_ms.max(ended_at_ms);
+                last.ended_at = last.ended_at.max(ended_at);
                 continue;
             }
         }
@@ -268,8 +263,8 @@ pub fn avatar_wear_segments(
             name: row_string(&row, 3),
             thumbnail_image_url: row_string(&row, 4),
             image_url: row_string(&row, 5),
-            started_at_ms,
-            ended_at_ms,
+            started_at,
+            ended_at,
         });
     }
     Ok(segments)
@@ -538,13 +533,13 @@ pub(crate) fn cache_entity_from_row(row: &[Value]) -> AvatarCacheOutput {
         id: row_string(row, 0),
         author_id: row_string(row, 1),
         author_name: row_string(row, 2),
-        created_at: row_string(row, 3),
+        created_at: row_i64(row, 3),
         description: row_string(row, 4),
         image_url: row_string(row, 5),
         name: row_string(row, 6),
         release_status: row_string(row, 7).into(),
         thumbnail_image_url: row_string(row, 8),
-        updated_at: row_string(row, 9),
+        updated_at: row_i64(row, 9),
         version: row_i64(row, 10),
     }
 }

@@ -51,11 +51,11 @@ describe('feed row helpers', () => {
         expect(
             getFeedRowId({
                 type: 'GPS',
-                created_at: '2026-05-15T00:00:00Z',
+                created_at: 1778803200,
                 userId: USER_ID,
                 location: 'wrld_1:instance'
             })
-        ).toBe(`GPS:2026-05-15T00:00:00Z:${USER_ID}:wrld_1:instance`);
+        ).toBe(`GPS:1778803200:${USER_ID}:wrld_1:instance`);
     });
 
     it('resolves invite requests from presence and the current invite location', () => {
@@ -189,16 +189,16 @@ describe('feed row helpers', () => {
 
 describe('getFeedRowCreatedAtMs', () => {
     it('parses timestamps and caches them per row reference', () => {
-        const row = { created_at: '2024-01-02T03:04:05.000Z' };
+        const row = { created_at: 1704164645 };
         const expected = new Date('2024-01-02T03:04:05.000Z').valueOf();
 
         expect(getFeedRowCreatedAtMs(row)).toBe(expected);
 
-        row.created_at = '2025-06-07T08:09:10.000Z';
+        row.created_at = 1749283750;
         expect(getFeedRowCreatedAtMs(row)).toBe(expected);
-        expect(
-            getFeedRowCreatedAtMs({ created_at: '2025-06-07T08:09:10.000Z' })
-        ).toBe(new Date('2025-06-07T08:09:10.000Z').valueOf());
+        expect(getFeedRowCreatedAtMs({ created_at: 1749283750 })).toBe(
+            new Date('2025-06-07T08:09:10.000Z').valueOf()
+        );
     });
 
     it('returns 0 for missing rows and unparsable timestamps', () => {

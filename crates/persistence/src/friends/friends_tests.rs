@@ -49,7 +49,7 @@ fn current_entry(
 fn history_entry(user_id: &str, kind: &str) -> FriendLogHistoryEntryInput {
     FriendLogHistoryEntryInput {
         row_id: Value::Null,
-        created_at: "2026-06-01T00:00:00Z".into(),
+        created_at: 1780272000,
         r#type: kind.into(),
         user_id: user_id.into(),
         display_name: String::new(),
@@ -522,7 +522,7 @@ fn friend_log_history_pages_keep_equal_timestamps_and_owner_filters() {
         vec!["usr_d", "usr_c"]
     );
     let cursor = FriendLogHistoryCursor {
-        created_at: first[1].created_at.clone(),
+        created_at: first[1].created_at,
         row_id: first[1].row_id,
     };
     friend_log_history_add(
@@ -547,23 +547,23 @@ fn friend_log_history_pages_keep_equal_timestamps_and_owner_filters() {
 fn friend_log_history_date_range_includes_endpoints_and_handles_timestamp_offsets() {
     let (_dir, db) = test_db("history-date-range");
     let entries = [
-        ("usr_before", "2026-08-31T14:59:59.999Z"),
-        ("usr_start", "2026-09-01T00:00:00+09:00"),
-        ("usr_end", "2026-09-01T14:59:59.999Z"),
-        ("usr_after", "2026-09-01T15:00:00Z"),
+        ("usr_before", 1788188399),
+        ("usr_start", 1788188400),
+        ("usr_end", 1788274799),
+        ("usr_after", 1788274800),
     ]
     .into_iter()
     .map(|(id, date)| {
         let mut entry = history_entry(id, "Friend");
-        entry.created_at = date.into();
+        entry.created_at = date;
         entry
     })
     .collect();
     friend_log_history_add(&db, "usr_self".into(), entries).unwrap();
     let query = FriendLogHistoryQueryInput {
         user_id: "usr_self".into(),
-        date_from: "2026-08-31T15:00:00.000Z".into(),
-        date_to: "2026-09-01T14:59:59.999Z".into(),
+        date_from: Some(1788188400),
+        date_to: Some(1788274799),
         ..Default::default()
     };
     let rows = friend_log_history_query(&db, query.clone()).unwrap();
@@ -574,7 +574,7 @@ fn friend_log_history_date_range_includes_endpoints_and_handles_timestamp_offset
     let from_only = friend_log_history_query(
         &db,
         FriendLogHistoryQueryInput {
-            date_to: String::new(),
+            date_to: None,
             ..query
         },
     )
@@ -583,19 +583,19 @@ fn friend_log_history_date_range_includes_endpoints_and_handles_timestamp_offset
 }
 
 #[test]
-fn friend_log_history_cursor_orders_actual_times_across_legacy_formats() {
+fn friend_log_history_cursor_orders_by_time_then_row() {
     use vrcx_0_contracts::friend_log::FriendLogHistoryCursor;
     let (_dir, db) = test_db("history-time-order");
     let entries = [
-        ("usr_older", "2026-09-01T00:00:00Z"),
-        ("usr_newer", "2026-09-01T00:00:00.500Z"),
-        ("usr_same_time", "2026-09-01T09:00:00+09:00"),
-        ("usr_unknown_time", ""),
+        ("usr_older", 1788220800),
+        ("usr_newer", 1788220801),
+        ("usr_same_time", 1788220800),
+        ("usr_unknown_time", 0),
     ]
     .into_iter()
     .map(|(id, date)| {
         let mut entry = history_entry(id, "Friend");
-        entry.created_at = date.into();
+        entry.created_at = date;
         entry
     })
     .collect();
@@ -622,7 +622,7 @@ fn friend_log_history_cursor_orders_actual_times_across_legacy_formats() {
             user_id: "usr_self".into(),
             limit: Some(2),
             cursor: Some(FriendLogHistoryCursor {
-                created_at: first[1].created_at.clone(),
+                created_at: first[1].created_at,
                 row_id: first[1].row_id,
             }),
             ..Default::default()

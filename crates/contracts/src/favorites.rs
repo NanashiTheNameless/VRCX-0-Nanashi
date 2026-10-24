@@ -60,7 +60,7 @@ impl From<VrchatFavoriteType> for vrcx_0_core::FavoriteChangeScope {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct FavoriteRow {
-    pub created_at: String,
+    pub created_at: i64,
     pub group_name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_id: Option<String>,
@@ -73,7 +73,7 @@ pub struct FavoriteRow {
 impl FavoriteRow {
     pub fn new(
         kind: FavoriteEntityKind,
-        created_at: String,
+        created_at: i64,
         entity_id: String,
         group_name: String,
     ) -> Self {
@@ -107,7 +107,7 @@ pub struct SavedGroupCollection {
     pub id: String,
     pub name: String,
     pub group_ids: Vec<String>,
-    pub created_at: String,
+    pub created_at: i64,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, specta::Type)]

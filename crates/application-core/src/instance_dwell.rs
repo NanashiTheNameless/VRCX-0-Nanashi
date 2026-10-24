@@ -137,9 +137,8 @@ fn update_local_roster(state: &mut InstanceDwellState, snapshot: &InstanceRoster
     let mut next = LocalInstanceRoster::default();
     if parse_location(&snapshot.location).is_real_instance {
         next.location = normalized(&snapshot.location).to_string();
-        next.entered_at_ms = chrono::DateTime::parse_from_rfc3339(&snapshot.entered_at)
-            .ok()
-            .map(|time| time.timestamp_millis());
+        next.entered_at_ms =
+            (snapshot.entered_at != 0).then(|| snapshot.entered_at.saturating_mul(1000));
     }
     let same_visit =
         previous.location == next.location && previous.entered_at_ms == next.entered_at_ms;
@@ -369,7 +368,7 @@ mod tests {
             location: location.to_string(),
             world_name: String::new(),
             destination: String::new(),
-            entered_at: String::new(),
+            entered_at: 0,
             departed_user_ids: Vec::new(),
             replayed_departed_user_ids: Vec::new(),
             members: members
@@ -435,9 +434,7 @@ mod tests {
         members: &[(&str, i64)],
     ) -> InstanceRosterSnapshot {
         InstanceRosterSnapshot {
-            entered_at: chrono::DateTime::from_timestamp_millis(entered_at_ms)
-                .unwrap()
-                .to_rfc3339(),
+            entered_at: entered_at_ms / 1000,
             ..roster(location, members)
         }
     }
@@ -521,18 +518,13 @@ mod tests {
             assert_eq!(registry.snapshot()[0].since_ms, Some(6_000));
         }
 
-        for entered_at in ["", "invalid"] {
-            let registry = InstanceDwellRegistry::new();
-            registry.observe_friend(
-                "usr_a",
-                &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 1_000),
-            );
-            registry.observe_roster(&InstanceRosterSnapshot {
-                entered_at: entered_at.into(),
-                ..roster("wrld_a:1", &[("usr_a", 6_000)])
-            });
-            assert_eq!(registry.snapshot()[0].since_ms, Some(6_000));
-        }
+        let registry = InstanceDwellRegistry::new();
+        registry.observe_friend(
+            "usr_a",
+            &place_from_record(&friend("usr_a", "online", "wrld_a:1"), 1_000),
+        );
+        registry.observe_roster(&roster("wrld_a:1", &[("usr_a", 6_000)]));
+        assert_eq!(registry.snapshot()[0].since_ms, Some(6_000));
     }
 
     #[test]
@@ -772,7 +764,7 @@ mod tests {
             roster("wrld_b:2", &[]),
             InstanceRosterSnapshot::default(),
             InstanceRosterSnapshot {
-                entered_at: "1970-01-01T00:00:20Z".into(),
+                entered_at: 20,
                 ..roster("wrld_a:1", &[])
             },
         ] {

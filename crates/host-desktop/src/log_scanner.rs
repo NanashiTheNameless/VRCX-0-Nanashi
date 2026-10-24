@@ -5,7 +5,7 @@ use std::time::SystemTime;
 
 use chrono::{Local, NaiveDateTime};
 use vrcx_0_core::game_log_parser::{
-    clean_location, convert_log_time_to_iso8601, parse_log_line_header, parse_room_log_event,
+    clean_location, convert_log_time_to_epoch, parse_log_line_header, parse_room_log_event,
     LogLocationSnapshot, RoomLogEvent,
 };
 use vrcx_0_core::vrchat_log_reader::parse_output_log_file_timestamp;
@@ -91,7 +91,7 @@ fn scan_log_file_location_snapshot(path: &Path, file_name: &str) -> Option<LogLo
                     current_location = Some(LogLocationSnapshot {
                         location,
                         world_name: recent_world_name.clone(),
-                        created_at: convert_log_time_to_iso8601(trimmed),
+                        created_at: convert_log_time_to_epoch(trimmed),
                         file_name: file_name.to_string(),
                     });
                 }

@@ -49,8 +49,8 @@ describe('favoriteLocalRefreshService', () => {
     it('keeps the backend group order and lists the newest favorites first', async () => {
         mocks.appFavoriteLocalSnapshot.mockResolvedValueOnce({
             favorites: [
-                { createdAt: '2026-01-01', avatarId: 'avtr_1', groupName: 'B' },
-                { createdAt: '2026-01-02', avatarId: 'avtr_2', groupName: 'B' }
+                { createdAt: 1767225600, avatarId: 'avtr_1', groupName: 'B' },
+                { createdAt: 1767312000, avatarId: 'avtr_2', groupName: 'B' }
             ],
             groupNames: ['B', 'A']
         } satisfies LocalFavoriteSnapshot);
@@ -80,7 +80,7 @@ describe('favoriteLocalRefreshService', () => {
             .mockResolvedValueOnce({
                 favorites: [
                     {
-                        createdAt: '2026-01-02',
+                        createdAt: 1767312000,
                         avatarId: 'avtr_new',
                         groupName: 'New'
                     }
@@ -96,7 +96,7 @@ describe('favoriteLocalRefreshService', () => {
         resolveFirst({
             favorites: [
                 {
-                    createdAt: '2026-01-01',
+                    createdAt: 1767225600,
                     avatarId: 'avtr_old',
                     groupName: 'Old'
                 }
@@ -129,7 +129,7 @@ describe('favoriteLocalRefreshService', () => {
         resolveSnapshot({
             favorites: [
                 {
-                    createdAt: '2026-01-01',
+                    createdAt: 1767225600,
                     userId: 'usr_friend',
                     groupName: 'Friends'
                 }

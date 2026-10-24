@@ -1,5 +1,6 @@
 import { positionKnownSizeRows } from '@/lib/knownSizeVirtualRows';
 import type { BrowseHistoryItemOutput } from '@/platform/tauri/bindings';
+import { displayDayKey as toLocalDayKey } from '@/shared/utils/displayTimeZone';
 
 export const BROWSE_HISTORY_CARD_HEIGHT = 64;
 export const BROWSE_HISTORY_GRID_GAP = 8;
@@ -19,15 +20,8 @@ export type BrowseHistoryVirtualRow =
           height: number;
       };
 
-export function browseHistoryDayKey(value: string) {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-        return value;
-    }
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+export function browseHistoryDayKey(value: string | number) {
+    return toLocalDayKey(value) || String(value);
 }
 
 export function buildBrowseHistoryRows(

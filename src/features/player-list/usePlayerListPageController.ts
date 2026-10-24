@@ -21,9 +21,7 @@ export function usePlayerListPageController() {
         parseLocation(playerListLocation).worldId ||
         '';
     const playerListStartedAt =
-        runtime.currentLocationStartedAt ||
-        logLocationSnapshot?.createdAt ||
-        '';
+        runtime.currentLocationStartedAt || logLocationSnapshot?.createdAt || 0;
     const rowsState = useCurrentInstanceRoster({
         currentUserEndpoint: runtime.currentUserEndpoint,
         currentUserId: runtime.currentUserId,

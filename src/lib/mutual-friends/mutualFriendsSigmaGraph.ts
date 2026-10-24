@@ -56,7 +56,7 @@ type MutualFriendsNodeAttributes = Record<string, unknown> & {
     holeColor?: string;
     ringColor?: string;
     label: string;
-    lastFetchedAt: string | null;
+    lastFetchedAt: number | null;
     mutualCount: number;
     optedOut: boolean;
     size: number;

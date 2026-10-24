@@ -8,7 +8,7 @@ fn insert_location(db: &DatabaseService, created_at: &str, location: &str, milli
         "INSERT INTO gamelog_location (created_at, location, world_id, world_name, time, group_name)
          VALUES (@created_at, @location, @world_id, @world_name, @time, '')",
         &crate::common::ParamsBuilder::new()
-            .set("created_at", created_at)
+            .set("created_at", vrcx_0_core::time::parse_epoch_seconds(created_at))
             .set("location", location)
             .set("world_id", location.split(':').next().unwrap_or_default().to_string())
             .set("world_name", format!("World {location}"))
@@ -98,7 +98,7 @@ fn visit_timeline_reconstructs_exact_bounds_and_per_person_stints() {
     create_game_log_tables(&db);
     seed_two_visits(&db);
 
-    let output = timeline(&db, "2026-06-01T20:35:00Z");
+    let output = timeline(&db, "2026-06-01T20:35:00.000Z");
 
     let visit = output.visit.unwrap();
     assert_eq!(visit.location, "wrld_a:1");
@@ -165,7 +165,7 @@ fn visit_timeline_marks_the_current_visit_in_progress_without_left_at() {
     create_game_log_tables(&db);
     seed_two_visits(&db);
 
-    let output = timeline(&db, "2026-06-01T22:00:00Z");
+    let output = timeline(&db, "2026-06-01T22:00:00.000Z");
 
     let visit = output.visit.unwrap();
     assert_eq!(visit.location, "wrld_b:2");
@@ -183,14 +183,14 @@ fn visit_timeline_reports_gaps_between_visits_instead_of_guessing() {
     create_game_log_tables(&db);
     seed_two_visits(&db);
 
-    let output = timeline(&db, "2026-06-01T21:15:00Z");
+    let output = timeline(&db, "2026-06-01T21:15:00.000Z");
 
     assert!(output.visit.is_none());
     assert!(output
         .summary
         .contains("nearest earlier visit ended at 2026-06-01T21:00:00.000Z"));
 
-    let before_any = timeline(&db, "2026-05-01T00:00:00Z");
+    let before_any = timeline(&db, "2026-05-01T00:00:00.000Z");
     assert!(before_any.visit.is_none());
     assert!(before_any.summary.contains("No visit"));
 }
@@ -216,7 +216,7 @@ fn visit_timeline_caps_the_roster_and_keeps_the_total_count() {
         &db,
         VisitTimelineInput {
             owner_user_id: OwnerId::new("usr_me"),
-            at: "2026-06-01T20:30:00Z".into(),
+            at: "2026-06-01T20:30:00.000Z".into(),
             location: Some("wrld_a:1".into()),
             limit: Some(2),
         },

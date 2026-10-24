@@ -266,6 +266,12 @@ impl DesktopRuntimeHostState {
             database_maintenance_cache_dir,
             task_executor: Some(task_executor),
         })?;
+        vrcx_0_core::time::set_display_zone(
+            &builder
+                .desktop_assembly()
+                .config()
+                .get_string("dtTimeZone", "")?,
+        );
         cleanup_legacy_updater_files(&builder.paths().app_data);
         let host_file_access = HostFileAccess::new();
         register_desktop_file_access_grants(
@@ -2172,7 +2178,7 @@ impl DesktopRuntimeHostState {
             .await?)
     }
 
-    pub fn acknowledge_registry_backup_restore_prompt(&self, backup_date: &str) -> Result<String> {
+    pub fn acknowledge_registry_backup_restore_prompt(&self, backup_date: i64) -> Result<i64> {
         let store = crate::game_state_store::PersistenceGameStateStore::new(Arc::clone(
             self.runtime.database(),
         ));
@@ -2297,7 +2303,23 @@ impl DesktopRuntimeHostState {
         let touches_desktop_widget = entries
             .iter()
             .any(|entry| is_desktop_widget_config_key(&entry.key));
+        for entry in &entries {
+            if entry.key.to_ascii_lowercase().ends_with("dttimezone")
+                && vrcx_0_core::time::parse_display_zone_setting(&entry.value).is_none()
+            {
+                return Err(vrcx_0_composition::Error::Custom(
+                    "Enter an IANA timezone or a UTC offset.".into(),
+                ));
+            }
+        }
         self.local_data.config_set_values(entries)?;
+        vrcx_0_core::time::set_display_zone(
+            &self
+                .runtime
+                .desktop_assembly()
+                .config()
+                .get_string("dtTimeZone", "")?,
+        );
         self.desktop.services.reload_overlay_activity_filters();
         self.desktop.vr_overlay_runtime.mark_config_dirty();
         if touches_desktop_widget {
@@ -2309,6 +2331,13 @@ impl DesktopRuntimeHostState {
     pub fn config_remove_value(&self, key: String) -> Result<i64> {
         let touches_desktop_widget = is_desktop_widget_config_key(&key);
         let removed = self.local_data.config_remove_value(key)?;
+        vrcx_0_core::time::set_display_zone(
+            &self
+                .runtime
+                .desktop_assembly()
+                .config()
+                .get_string("dtTimeZone", "")?,
+        );
         self.desktop.services.reload_overlay_activity_filters();
         self.desktop.vr_overlay_runtime.mark_config_dirty();
         if touches_desktop_widget {

@@ -61,7 +61,7 @@ impl ActivityPageStore for LocalActivityPageStore<'_> {
             self.db, owner, from_ms, to_ms,
         )?)
     }
-    fn first_source_created_at(&self, owner: &OwnerId) -> Result<String> {
+    fn first_source_created_at(&self, owner: &OwnerId) -> Result<Option<i64>> {
         Ok(activity_page::first_source_created_at(self.db, owner)?)
     }
     fn world_ids_before(&self, owner: &OwnerId, before_ms: i64) -> Result<BTreeSet<String>> {

@@ -1,22 +1,27 @@
 import { formatDateTime } from '@/lib/dateTime';
+import {
+    absoluteDateFromValue,
+    displayDateParts,
+    displayLocalToEpoch
+} from '@/shared/utils/displayTimeZone';
 
 export function toLocalDayKey(value: Date | string | number) {
-    const date = value instanceof Date ? value : new Date(value);
+    const date = absoluteDateFromValue(value);
+    if (!date) return '';
     const time = date.getTime();
-    if (!Number.isFinite(time) || time <= 0) {
+    if (!Number.isFinite(time)) {
         return '';
     }
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    const parts = displayDateParts(date);
+    const year = parts.year;
+    const month = String(parts.month).padStart(2, '0');
+    const day = String(parts.day).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
 
 export function parseLocalDayKey(dayKey: string) {
-    const [year, month, day] = dayKey
-        .split('-')
-        .map((value: string) => Number.parseInt(value, 10) || 0);
-    return new Date(year, Math.max(0, month - 1), day || 1, 0, 0, 0, 0);
+    const seconds = displayLocalToEpoch(dayKey);
+    return new Date(seconds === null ? NaN : seconds * 1000);
 }
 
 export function formatDateLabel(dayKey: string) {

@@ -15,13 +15,21 @@ pub struct StorageService {
 
 impl StorageService {
     pub fn new(file_path: &Path) -> Result<Self, Error> {
-        let data = if file_path.exists() {
+        let mut data: HashMap<String, String> = if file_path.exists() {
             let content = std::fs::read_to_string(file_path)?;
             serde_json::from_str(&content).unwrap_or_default()
         } else {
             HashMap::new()
         };
 
+        let mut migrated = false;
+        for (key, value) in &mut data {
+            let converted = crate::migrations::convert_setting_text(key, value);
+            if converted != *value {
+                *value = converted;
+                migrated = true;
+            }
+        }
         let data = Arc::new(RwLock::new(data));
         let (dirty_tx, dirty_rx) = mpsc::channel::<()>();
 
@@ -30,6 +38,9 @@ impl StorageService {
         let saver_handle =
             std::thread::spawn(move || debounce_saver(dirty_rx, saver_data, saver_path));
 
+        if migrated {
+            let _ = dirty_tx.send(());
+        }
         Ok(Self {
             data,
             file_path: file_path.to_path_buf(),
@@ -43,6 +54,7 @@ impl StorageService {
     }
 
     pub fn set(&self, key: String, value: String) {
+        let value = crate::migrations::convert_setting_text(&key, &value);
         self.data.write().unwrap().insert(key, value);
         if let Some(dirty_tx) = &self.dirty_tx {
             let _ = dirty_tx.send(());

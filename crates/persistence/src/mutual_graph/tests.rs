@@ -37,7 +37,7 @@ fn entry(friend_id: &str, mutual_ids: &[&str]) -> MutualGraphSnapshotEntryInput 
 fn meta(friend_id: &str, opted_out: bool) -> MutualGraphMetaInput {
     MutualGraphMetaInput {
         friend_id: friend_id.into(),
-        last_fetched_at: "2026-07-21T12:00:00Z".into(),
+        last_fetched_at: 1784635200,
         opted_out,
         total_count: None,
     }
@@ -130,6 +130,6 @@ fn friend_refresh_replaces_links_and_opt_out_preserves_the_last_snapshot() {
     );
     assert_eq!(snapshot.meta.len(), 1);
     assert!(snapshot.meta[0].opted_out);
-    assert!(!snapshot.meta[0].last_fetched_at.is_empty());
+    assert!(snapshot.meta[0].last_fetched_at > 0);
     assert_eq!(snapshot.meta[0].total_count, Some(2));
 }

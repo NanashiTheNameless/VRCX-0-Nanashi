@@ -41,9 +41,9 @@ function status(
         optedOutFriends: 0,
         failedFriends: 0,
         cancelRequested: state === 'cancelling',
-        startedAt: '2026-07-31T00:00:00Z',
-        updatedAt: '2026-07-31T00:00:01Z',
-        finishedAt: state === 'completed' ? '2026-07-31T00:00:02Z' : null,
+        startedAt: 1785456000,
+        updatedAt: 1785456001,
+        finishedAt: state === 'completed' ? 1785456002 : null,
         lastError: null
     };
 }

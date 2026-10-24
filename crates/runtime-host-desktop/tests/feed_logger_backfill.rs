@@ -206,7 +206,7 @@ fn avatar_image(file_id: &str, avatar_name: &str) -> FileMetadataOutput {
 
 fn live_location(seconds: i64, location: &str) -> FeedLiveEntry {
     FeedLiveEntry::Gps {
-        created_at: at(seconds),
+        created_at: time(seconds).timestamp(),
         user_id: "usr_a".into(),
         display_name: "A".into(),
         location: location.into(),
@@ -222,7 +222,7 @@ fn live_location(seconds: i64, location: &str) -> FeedLiveEntry {
 
 fn live_online(seconds: i64, location: &str) -> FeedLiveEntry {
     FeedLiveEntry::Online {
-        created_at: at(seconds),
+        created_at: time(seconds).timestamp(),
         user_id: "usr_b".into(),
         display_name: "B".into(),
         location: location.into(),
@@ -237,7 +237,7 @@ fn live_online(seconds: i64, location: &str) -> FeedLiveEntry {
 
 fn live_avatar(seconds: i64, file_id: &str) -> FeedLiveEntry {
     FeedLiveEntry::Avatar {
-        created_at: at(seconds),
+        created_at: time(seconds).timestamp(),
         user_id: "usr_a".into(),
         display_name: "A".into(),
         owner_id: "usr_author".into(),
@@ -375,19 +375,17 @@ impl Desktop {
                 excluded_user_ids: Vec::new(),
                 location_hidden_user_ids: Vec::new(),
                 max_entries: 100,
-                date_from: String::new(),
-                date_to: String::new(),
+                date_from: None,
+                date_to: None,
                 cursor: None,
             },
         )
         .unwrap();
-        rows.sort_by_key(|row| {
-            DateTime::parse_from_rfc3339(row.created_at.as_deref().unwrap_or_default()).unwrap()
-        });
+        rows.sort_by_key(|row| row.created_at);
         rows
     }
 
-    fn timeline(&self) -> Vec<(String, String, String)> {
+    fn timeline(&self) -> Vec<(String, String, i64)> {
         self.feed()
             .into_iter()
             .map(|row| {
@@ -407,7 +405,7 @@ impl Desktop {
             user_id,
             &ProfileBioRecord {
                 bio: bio.into(),
-                checked_at: at_millis(checked_at_seconds),
+                checked_at: time(checked_at_seconds).timestamp(),
             },
         )
         .unwrap();
@@ -420,8 +418,14 @@ impl Desktop {
     }
 }
 
-fn entry(kind: &str, user_id: &str, created_at: String) -> (String, String, String) {
-    (kind.into(), user_id.into(), created_at)
+fn entry(kind: &str, user_id: &str, created_at: String) -> (String, String, i64) {
+    (
+        kind.into(),
+        user_id.into(),
+        DateTime::parse_from_rfc3339(&created_at)
+            .unwrap()
+            .timestamp(),
+    )
 }
 
 #[derive(Default)]
@@ -619,8 +623,8 @@ async fn times_from_a_recorder_whose_clock_runs_ahead_are_moved_onto_the_desktop
     let feed = desktop.feed();
     assert_eq!(feed.len(), 1);
     assert_eq!(
-        feed[0].created_at.as_deref(),
-        Some((time(25) + sub_millisecond).to_rfc3339().as_str())
+        feed[0].created_at,
+        Some((time(25) + sub_millisecond).timestamp())
     );
 }
 
@@ -640,8 +644,7 @@ async fn a_friend_who_went_offline_appears_offline_when_the_offline_confirmation
     let feed = desktop.feed();
     assert_eq!(feed.len(), 1);
     assert_eq!(feed[0].r#type.as_deref(), Some("Offline"));
-    let shown_at =
-        DateTime::parse_from_rfc3339(feed[0].created_at.as_deref().unwrap_or_default()).unwrap();
+    let shown_at = DateTime::from_timestamp(feed[0].created_at.unwrap_or_default(), 0).unwrap();
     assert_eq!(shown_at, time(60 + OFFLINE_CONFIRMATION_DELAY_SECS));
 }
 

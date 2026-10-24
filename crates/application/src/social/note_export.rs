@@ -74,8 +74,8 @@ pub struct NoteExportStatus {
     pub succeeded: u32,
     pub failed: u32,
     pub items: Vec<NoteExportItemStatus>,
-    pub started_at: Option<String>,
-    pub finished_at: Option<String>,
+    pub started_at: Option<i64>,
+    pub finished_at: Option<i64>,
     pub last_error: Option<String>,
 }
 
@@ -465,7 +465,7 @@ impl NoteExportRuntime {
                         ..Default::default()
                     })
                     .collect(),
-                started_at: Some(Utc::now().to_rfc3339()),
+                started_at: Some(Utc::now().timestamp()),
                 ..Default::default()
             };
             inner.status = status.clone();
@@ -574,7 +574,7 @@ impl NoteExportRuntime {
             } else {
                 NoteExportState::Completed
             };
-            inner.status.finished_at = Some(Utc::now().to_rfc3339());
+            inner.status.finished_at = Some(Utc::now().timestamp());
             inner.cancel = None;
             inner.status.clone()
         };

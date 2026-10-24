@@ -274,9 +274,9 @@ mod tests {
     use super::FeedLiveCache;
     use crate::realtime::RealtimeEntryCorrectionFields;
 
-    fn gps_entry(created_at: &str) -> FeedLiveEntry {
+    fn gps_entry(created_at: i64) -> FeedLiveEntry {
         FeedLiveEntry::Gps {
-            created_at: created_at.to_string(),
+            created_at,
             user_id: "usr_friend".into(),
             display_name: "Friend".into(),
             location: "wrld_1:1".into(),
@@ -290,9 +290,9 @@ mod tests {
         }
     }
 
-    fn online_entry(created_at: &str) -> FeedLiveEntry {
+    fn online_entry(created_at: i64) -> FeedLiveEntry {
         FeedLiveEntry::Online {
-            created_at: created_at.to_string(),
+            created_at,
             user_id: "usr_friend".into(),
             display_name: "Friend".into(),
             location: "wrld_2:1".into(),
@@ -305,9 +305,9 @@ mod tests {
         }
     }
 
-    fn status_entry(created_at: &str) -> FeedLiveEntry {
+    fn status_entry(created_at: i64) -> FeedLiveEntry {
         FeedLiveEntry::Status {
-            created_at: created_at.to_string(),
+            created_at,
             user_id: "usr_friend".into(),
             display_name: "Friend".into(),
             status: "active".into(),
@@ -338,10 +338,10 @@ mod tests {
     #[test]
     fn cache_owns_sequences_entries_and_corrections() {
         let mut cache = FeedLiveCache::default();
-        let first = gps_entry("2026-05-14T00:00:01Z");
+        let first = gps_entry(1778716801);
         let upserts = cache.push_entries(
             &OwnerId::new("usr_self"),
-            vec![first.clone(), online_entry("2026-05-14T00:00:02Z")],
+            vec![first.clone(), online_entry(1778716802)],
         );
 
         assert_eq!(upserts[0].sequence, 1);
@@ -371,22 +371,16 @@ mod tests {
     #[test]
     fn changing_owner_resets_the_cache_and_sequence() {
         let mut cache = FeedLiveCache::default();
-        cache.push_entries(
-            &OwnerId::new("usr_first"),
-            vec![gps_entry("2026-05-14T00:00:01Z")],
-        );
+        cache.push_entries(&OwnerId::new("usr_first"), vec![gps_entry(1778716801)]);
 
-        let upserts = cache.push_entries(
-            &OwnerId::new("usr_second"),
-            vec![gps_entry("2026-05-14T00:00:02Z")],
-        );
+        let upserts = cache.push_entries(&OwnerId::new("usr_second"), vec![gps_entry(1778716802)]);
         let matcher = latest_matcher("usr_second", Vec::new(), 10);
         let (entries, watermark) = cache.snapshot_matching(&OwnerId::new("usr_second"), &matcher);
 
         assert_eq!(upserts[0].sequence, 1);
         assert_eq!(watermark, 1);
         assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0].entry.created_at(), "2026-05-14T00:00:02Z");
+        assert_eq!(entries[0].entry.created_at(), 1778716802);
         assert!(cache
             .snapshot_matching(&OwnerId::new("usr_first"), &matcher)
             .0
@@ -399,10 +393,10 @@ mod tests {
         cache.push_entries(
             &OwnerId::new("usr_self"),
             vec![
-                gps_entry("2026-05-14T00:00:01Z"),
-                status_entry("2026-05-14T00:00:02Z"),
-                gps_entry("2026-05-14T00:00:03Z"),
-                gps_entry("2026-05-14T00:00:04Z"),
+                gps_entry(1778716801),
+                status_entry(1778716802),
+                gps_entry(1778716803),
+                gps_entry(1778716804),
             ],
         );
         let matcher = latest_matcher("usr_self", vec![FeedFilter::Gps], 2);
@@ -411,7 +405,7 @@ mod tests {
 
         assert_eq!(watermark, 4);
         assert_eq!(entries.len(), 2);
-        assert_eq!(entries[0].entry.created_at(), "2026-05-14T00:00:03Z");
-        assert_eq!(entries[1].entry.created_at(), "2026-05-14T00:00:04Z");
+        assert_eq!(entries[0].entry.created_at(), 1778716803);
+        assert_eq!(entries[1].entry.created_at(), 1778716804);
     }
 }

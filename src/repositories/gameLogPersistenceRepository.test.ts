@@ -42,8 +42,8 @@ describe('gameLogPersistenceRepository', () => {
         expect(tauriMock.commands.appInstanceHistoryQuery).toHaveBeenCalledWith(
             {
                 userId: 'usr_target',
-                dateFrom: '',
-                dateTo: '',
+                dateFrom: null,
+                dateTo: null,
                 limit: 0
             }
         );
@@ -61,8 +61,8 @@ describe('gameLogPersistenceRepository', () => {
         expect(tauriMock.commands.appInstanceHistoryQuery).toHaveBeenCalledWith(
             {
                 userId: 'usr_self',
-                dateFrom: '2026-06-03T12:00:00.000Z',
-                dateTo: '2026-07-03T12:00:00.000Z',
+                dateFrom: 1780488000,
+                dateTo: 1783080000,
                 limit: 0
             }
         );
@@ -77,8 +77,8 @@ describe('gameLogPersistenceRepository', () => {
         expect(tauriMock.commands.appInstanceHistoryQuery).toHaveBeenCalledWith(
             {
                 userId: 'usr_target',
-                dateFrom: '',
-                dateTo: '',
+                dateFrom: null,
+                dateTo: null,
                 limit: 50
             }
         );

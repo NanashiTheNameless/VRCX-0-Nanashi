@@ -4,6 +4,7 @@ import {
     isFeedFilterType,
     type FeedFilterType
 } from '@/repositories/feedRepository';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 import { useFeedLiveStore } from '@/state/feedLiveStore';
 import type {
     FeedLiveEntry,
@@ -59,7 +60,7 @@ function optionalNumber(value: unknown): number | undefined {
 
 function liveEntryRow(entry: FeedLiveEntryPayload): FeedRow {
     const row: FeedRow = {
-        created_at: optionalText(entry.created_at),
+        created_at: epochSecondsFromValue(entry.created_at),
         type: optionalText(entry.type),
         ownerUserId: optionalText(entry.ownerUserId)
     };

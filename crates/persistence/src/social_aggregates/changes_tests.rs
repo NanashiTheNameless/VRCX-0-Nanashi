@@ -10,10 +10,10 @@ fn friend_changes_returns_recent_status_events_by_friend() {
             "INSERT INTO usrself_feed_status
                 (created_at, user_id, display_name, status, status_description, previous_status, previous_status_description)
              VALUES
-                ('2026-06-01T20:00:00Z', 'usr_alice', 'Alice', 'join me', 'Open', 'active', 'Busy'),
-                ('2026-06-02T20:00:00Z', 'usr_alice', 'Alice', 'active', 'Back later', 'join me', 'Open'),
-                ('2026-06-03T20:00:00Z', 'usr_bob', 'Bob', 'ask me', '', 'active', ''),
-                ('2026-06-04T20:00:00Z', 'usr_alice', 'Alice', 'join me', 'Again', 'active', 'Back later')",
+                (1780344000, 'usr_alice', 'Alice', 'join me', 'Open', 'active', 'Busy'),
+                (1780430400, 'usr_alice', 'Alice', 'active', 'Back later', 'join me', 'Open'),
+                (1780516800, 'usr_bob', 'Bob', 'ask me', '', 'active', ''),
+                (1780603200, 'usr_alice', 'Alice', 'join me', 'Again', 'active', 'Back later')",
             &Default::default(),
         )
         .unwrap();
@@ -35,7 +35,7 @@ fn friend_changes_returns_recent_status_events_by_friend() {
     assert_eq!(output.rows[0].change_count, 3);
     assert_eq!(
         output.rows[0].recent_events[0].changed_at,
-        "2026-06-04T20:00:00Z"
+        "2026-06-04T20:00:00.000Z"
     );
     assert_eq!(
         output.rows[0].recent_events[0].kind,

@@ -4,7 +4,7 @@ use crate::realtime::normalize_user_table_prefix;
 use crate::Error;
 
 use super::caveats::friend_log_caveats;
-use super::helpers::{append_time_window_filter, clamped_optional_limit, table_exists};
+use super::helpers::{append_time_window_filter, clamped_optional_limit, row_iso, table_exists};
 use super::types::{FriendLogInput, FriendLogOutput, FriendLogRow};
 use crate::ownership::OwnerId;
 
@@ -60,7 +60,7 @@ pub fn get_friend_log(
         .map(|row| FriendLogPageRow {
             id: row_i64(&row, 0),
             row: FriendLogRow {
-                created_at: row_string(&row, 1),
+                created_at: row_iso(&row, 1),
                 kind: row_string(&row, 2),
                 user_id: row_string(&row, 3),
                 display_name: row_string(&row, 4),
@@ -159,7 +159,10 @@ fn friend_log_filters(
             " AND (created_at < @cursor_created_at OR (created_at = @cursor_created_at AND id < @cursor_id))",
         );
         params = params
-            .set("cursor_created_at", created_at.clone())
+            .set(
+                "cursor_created_at",
+                vrcx_0_core::time::parse_epoch_seconds(created_at),
+            )
             .set("cursor_id", *id);
     }
     Ok((sql, params))
@@ -220,7 +223,7 @@ pub fn get_friend_log_first_created_at(
                 .build(),
         )?
         .first()
-        .map(|row| row_string(row, 0))
+        .map(|row| row_iso(row, 0))
         .filter(|value| !value.trim().is_empty()))
 }
 

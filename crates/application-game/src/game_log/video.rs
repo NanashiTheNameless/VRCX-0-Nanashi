@@ -20,7 +20,7 @@ use vrcx_0_core::OwnerId;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct VideoInput {
-    pub created_at: String,
+    pub created_at: i64,
     pub location: String,
     pub world_name: String,
     pub video_url: String,
@@ -113,7 +113,7 @@ impl NowPlayingClock {
 
 pub(crate) fn now_playing_ends_at_ms(payload: &NowPlayingPayload) -> Option<i64> {
     let length_seconds = payload.length.filter(|length| *length > 0)?;
-    parse_event_time_ms(&payload.started_at)
+    parse_event_time_ms(payload.started_at)
         .map(|started_ms| started_ms + (length_seconds - payload.position) * 1000)
 }
 
@@ -141,7 +141,7 @@ pub(crate) fn normalize_video_input(input: &mut VideoInput) -> Option<String> {
 
 pub(crate) fn video_play_entry(input: &VideoInput) -> GameLogVideoPlayEntry {
     GameLogVideoPlayEntry {
-        created_at: input.created_at.clone(),
+        created_at: input.created_at,
         video_url: input.video_url.clone(),
         video_name: input.video_name.clone(),
         video_id: input.video_id.clone(),
@@ -186,7 +186,7 @@ pub(crate) async fn handle_video_play(
 
     let raw_row = vec![
         "runtime-game-log".into(),
-        input.created_at.clone(),
+        input.created_at.to_string(),
         "video-play".into(),
         input.video_url.clone(),
         input.display_name.clone(),
@@ -225,13 +225,13 @@ pub(crate) async fn handle_video_play(
         thumbnail_url: Some(input.thumbnail_url),
         length: Some(input.video_length),
         position: input.video_pos,
-        started_at: input.created_at.clone(),
+        started_at: input.created_at,
         created_at: Some(input.created_at),
         activity_type: Some("VideoPlay".into()),
         video_url: Some(input.video_url),
         video_name: Some(input.video_name),
         video_id: Some(input.video_id),
-        updated_at: Utc::now().to_rfc3339(),
+        updated_at: Utc::now().timestamp(),
     };
 
     Ok(Some(VideoPlayed {
@@ -282,7 +282,7 @@ async fn lookup_youtube_video(
     }))
 }
 
-pub fn parse_provider_video(created_at: &str, location: &str, data: &str) -> ProviderVideoEvent {
+pub fn parse_provider_video(created_at: i64, location: &str, data: &str) -> ProviderVideoEvent {
     let trimmed = data.trim();
     if trimmed.starts_with("VideoPlay(PyPyDance) ") {
         return parse_pypy_dance(created_at, location, trimmed)
@@ -329,7 +329,7 @@ pub(super) fn uses_provider_video_events(location: &str) -> bool {
     )
 }
 
-fn parse_pypy_dance(created_at: &str, location: &str, data: &str) -> Option<VideoInput> {
+fn parse_pypy_dance(created_at: i64, location: &str, data: &str) -> Option<VideoInput> {
     let fields = csv_like_fields(data.strip_prefix("VideoPlay(PyPyDance) ")?.trim());
     if fields.len() < 4 {
         return None;
@@ -356,7 +356,7 @@ fn parse_pypy_dance(created_at: &str, location: &str, data: &str) -> Option<Vide
     }
 
     Some(VideoInput {
-        created_at: created_at.to_string(),
+        created_at,
         location: location.to_string(),
         video_url: fields[0].clone(),
         video_pos: parse_i64_lossy(&fields[1]),
@@ -371,7 +371,7 @@ fn parse_pypy_dance(created_at: &str, location: &str, data: &str) -> Option<Vide
     })
 }
 
-fn parse_vr_dancing(created_at: &str, location: &str, data: &str) -> Option<VideoInput> {
+fn parse_vr_dancing(created_at: i64, location: &str, data: &str) -> Option<VideoInput> {
     let prefix_end = data.find(' ')?;
     let fields = csv_like_fields(data[prefix_end + 1..].trim());
     if fields.len() < 6 {
@@ -391,7 +391,7 @@ fn parse_vr_dancing(created_at: &str, location: &str, data: &str) -> Option<Vide
     }
 
     Some(VideoInput {
-        created_at: created_at.to_string(),
+        created_at,
         location: location.to_string(),
         video_url: fields[0].clone(),
         video_pos: if fields[1] == fields[2] {
@@ -407,14 +407,14 @@ fn parse_vr_dancing(created_at: &str, location: &str, data: &str) -> Option<Vide
     })
 }
 
-fn parse_ls_media(created_at: &str, location: &str, data: &str) -> Option<VideoInput> {
+fn parse_ls_media(created_at: i64, location: &str, data: &str) -> Option<VideoInput> {
     let fields = csv_like_fields(data.strip_prefix("LSMedia ")?.trim());
     if fields.len() < 4 {
         return None;
     }
     let video_name = fields[3].clone();
     Some(VideoInput {
-        created_at: created_at.to_string(),
+        created_at,
         location: location.to_string(),
         video_url: video_name.clone(),
         video_pos: parse_i64_lossy(&fields[0]),
@@ -426,7 +426,7 @@ fn parse_ls_media(created_at: &str, location: &str, data: &str) -> Option<VideoI
     })
 }
 
-fn parse_popcorn_palace(created_at: &str, location: &str, data: &str) -> ProviderVideoEvent {
+fn parse_popcorn_palace(created_at: i64, location: &str, data: &str) -> ProviderVideoEvent {
     let Some(json_start) = data.find('{') else {
         return ProviderVideoEvent::Ignored;
     };
@@ -438,7 +438,7 @@ fn parse_popcorn_palace(created_at: &str, location: &str, data: &str) -> Provide
         return ProviderVideoEvent::ResetNowPlaying;
     }
     ProviderVideoEvent::Video(Box::new(VideoInput {
-        created_at: created_at.to_string(),
+        created_at,
         location: location.to_string(),
         video_url: video_name.clone(),
         video_pos: number(parsed.get("videoPos")),
@@ -620,7 +620,7 @@ mod tests {
     #[test]
     fn parses_provider_video_rows() {
         let ProviderVideoEvent::Video(input) = parse_provider_video(
-            "2026-05-14T00:00:00.000Z",
+            1778716800,
             "wrld_test:1",
             "VideoPlay(VRDancing) \"https://example.test\",3,120,-1,\"做鳄梦small-fry\",\"<b>[x]</b> Song\"",
         ) else {
@@ -635,23 +635,19 @@ mod tests {
     #[test]
     fn provider_rows_do_not_fall_through_to_external() {
         assert!(matches!(
-            parse_provider_video(
-                "2026-05-14T00:00:00.000Z",
-                "wrld_test:1",
-                "VideoPlay(PyPyDance) malformed"
-            ),
+            parse_provider_video(1778716800, "wrld_test:1", "VideoPlay(PyPyDance) malformed"),
             ProviderVideoEvent::Ignored
         ));
         assert!(matches!(
             parse_provider_video(
-                "2026-05-14T00:00:00.000Z",
+                1778716800,
                 "wrld_test:1",
                 r#"VideoPlay(PopcornPalace) {"videoName":""}"#
             ),
             ProviderVideoEvent::ResetNowPlaying
         ));
         assert!(matches!(
-            parse_provider_video("2026-05-14T00:00:00.000Z", "wrld_test:1", "Other message"),
+            parse_provider_video(1778716800, "wrld_test:1", "Other message"),
             ProviderVideoEvent::NotProvider
         ));
     }
@@ -691,12 +687,12 @@ mod tests {
         let payload = |length| NowPlayingPayload {
             length,
             position: 15,
-            started_at: "2026-05-14T00:00:00.000Z".into(),
+            started_at: 1778716800,
             ..Default::default()
         };
         assert_eq!(
             now_playing_ends_at_ms(&payload(Some(60))),
-            crate::game_log::runtime_state::parse_event_time_ms("2026-05-14T00:00:45.000Z")
+            crate::game_log::runtime_state::parse_event_time_ms(1778716845)
         );
         assert_eq!(now_playing_ends_at_ms(&payload(Some(0))), None);
         assert_eq!(now_playing_ends_at_ms(&payload(None)), None);

@@ -20,8 +20,9 @@ pub struct FriendProfileLoadStatusPayload {
     pub processed: u32,
     pub loaded: u32,
     pub failed: u32,
-    pub started_at: String,
-    pub finished_at: Option<String>,
+    #[serde(default, deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub started_at: i64,
+    pub finished_at: Option<i64>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type)]

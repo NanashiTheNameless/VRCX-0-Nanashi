@@ -307,7 +307,7 @@ function deferred<T>(): Deferred<T> {
 function row(
     location: string,
     events: number[] = [1],
-    createdAt = new Date(Date.now() - 60_000).toISOString()
+    createdAt = Math.floor((Date.now() - 60_000) / 1000)
 ): InstanceHistoryEntryRow {
     return {
         id: location,
@@ -384,7 +384,7 @@ describe('InstanceHistoryPage', () => {
                 row(
                     'wrld_stale:1',
                     [1],
-                    new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+                    Math.floor((Date.now() - 3 * 24 * 60 * 60 * 1000) / 1000)
                 )
             ]);
         });

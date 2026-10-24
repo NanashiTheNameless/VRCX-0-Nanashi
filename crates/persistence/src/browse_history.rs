@@ -1,8 +1,7 @@
-use chrono::{Duration, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::common::{normalize_text, now_iso, strict_row_i64, strict_row_string, ParamsBuilder};
+use crate::common::{normalize_text, now_epoch, strict_row_i64, strict_row_string, ParamsBuilder};
 use crate::config;
 use crate::database::DatabaseService;
 use crate::ownership::OwnerId;
@@ -68,7 +67,7 @@ fn default_record_visit() -> bool {
 #[derive(Clone, Debug, Deserialize, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct BrowseHistoryCursor {
-    pub last_viewed_at: String,
+    pub last_viewed_at: i64,
     pub entity_kind: BrowseHistoryEntityKind,
     pub entity_id: String,
 }
@@ -84,9 +83,9 @@ pub struct BrowseHistoryQueryInput {
     #[serde(default)]
     pub limit: i64,
     #[serde(default)]
-    pub date_from: String,
+    pub date_from: Option<i64>,
     #[serde(default)]
-    pub date_to: String,
+    pub date_to: Option<i64>,
 }
 
 #[derive(Clone, Debug, Serialize, specta::Type)]
@@ -96,8 +95,8 @@ pub struct BrowseHistoryItemOutput {
     pub entity_id: String,
     pub title: String,
     pub image_url: String,
-    pub first_viewed_at: String,
-    pub last_viewed_at: String,
+    pub first_viewed_at: i64,
+    pub last_viewed_at: i64,
     pub view_count: i64,
 }
 
@@ -117,8 +116,8 @@ fn ensure_browse_history_table(db: &DatabaseService) -> Result<(), Error> {
                 entity_id TEXT NOT NULL,
                 title TEXT NOT NULL DEFAULT '',
                 image_url TEXT NOT NULL DEFAULT '',
-                first_viewed_at TEXT NOT NULL,
-                last_viewed_at TEXT NOT NULL,
+                first_viewed_at INTEGER NOT NULL,
+                last_viewed_at INTEGER NOT NULL,
                 view_count INTEGER NOT NULL DEFAULT 0,
                 PRIMARY KEY (owner_user_id, entity_kind, entity_id)
             )",
@@ -152,10 +151,8 @@ pub fn browse_history_retention_days_get(db: &DatabaseService) -> Result<i64, Er
     ))
 }
 
-fn retention_cutoff(retention_days: i64) -> Option<String> {
-    (retention_days > 0).then(|| {
-        (Utc::now() - Duration::days(retention_days)).to_rfc3339_opts(SecondsFormat::Millis, true)
-    })
+fn retention_cutoff(retention_days: i64) -> Option<i64> {
+    (retention_days > 0).then(|| now_epoch() - retention_days * 86_400)
 }
 
 pub fn browse_history_retention_days_set(
@@ -195,7 +192,7 @@ pub fn browse_history_record(
     if retention_days == OFF_RETENTION_DAYS {
         return Ok(());
     }
-    let viewed_at = now_iso();
+    let viewed_at = now_epoch();
     let title = normalize_text(input.title);
     let image_url = normalize_text(input.image_url);
     let record_visit = i64::from(input.record_visit);
@@ -230,7 +227,7 @@ pub fn browse_history_record(
                 .set("entity_id", entity_id.clone())
                 .set("title", title.clone())
                 .set("image_url", image_url.clone())
-                .set("viewed_at", viewed_at.clone())
+                .set("viewed_at", viewed_at)
                 .set("record_visit", record_visit)
                 .build(),
         )?;
@@ -244,8 +241,8 @@ fn item_from_row(row: &[Value]) -> Result<BrowseHistoryItemOutput, Error> {
         entity_id: strict_row_string(row, 1)?,
         title: strict_row_string(row, 2)?,
         image_url: strict_row_string(row, 3)?,
-        first_viewed_at: strict_row_string(row, 4)?,
-        last_viewed_at: strict_row_string(row, 5)?,
+        first_viewed_at: strict_row_i64(row, 4)?,
+        last_viewed_at: strict_row_i64(row, 5)?,
         view_count: strict_row_i64(row, 6)?,
     })
 }
@@ -287,13 +284,11 @@ pub fn browse_history_query(
         clauses.push("(LOWER(title) LIKE @search OR LOWER(entity_id) LIKE @search)");
         params = params.set("search", format!("%{search}%"));
     }
-    let date_from = normalize_text(input.date_from);
-    if !date_from.is_empty() {
+    if let Some(date_from) = input.date_from {
         clauses.push("last_viewed_at >= @date_from");
         params = params.set("date_from", date_from);
     }
-    let date_to = normalize_text(input.date_to);
-    if !date_to.is_empty() {
+    if let Some(date_to) = input.date_to {
         clauses.push("last_viewed_at <= @date_to");
         params = params.set("date_to", date_to);
     }
@@ -304,7 +299,7 @@ pub fn browse_history_query(
               OR (last_viewed_at = @cursor_viewed_at AND entity_kind = @cursor_kind AND entity_id > @cursor_id))",
         );
         params = params
-            .set("cursor_viewed_at", normalize_text(cursor.last_viewed_at))
+            .set("cursor_viewed_at", cursor.last_viewed_at)
             .set("cursor_kind", cursor.entity_kind.as_str())
             .set("cursor_id", normalize_text(cursor.entity_id));
     }
@@ -331,7 +326,7 @@ pub fn browse_history_query(
     let next_cursor = next_cursor.then(|| {
         let item = items.last().expect("checked non-empty browse history page");
         BrowseHistoryCursor {
-            last_viewed_at: item.last_viewed_at.clone(),
+            last_viewed_at: item.last_viewed_at,
             entity_kind: item.entity_kind,
             entity_id: item.entity_id.clone(),
         }

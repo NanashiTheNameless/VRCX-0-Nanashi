@@ -27,7 +27,7 @@ fn insert_location_on(
     entry: &GameLogLocationEntry,
 ) -> Result<u64, Error> {
     let args = ParamsBuilder::new()
-        .set(COL_CREATED_AT, entry.created_at.clone())
+        .set(COL_CREATED_AT, entry.created_at)
         .set(COL_LOCATION, entry.location.clone())
         .set(COL_WORLD_ID, entry.world_id.clone())
         .set(COL_WORLD_NAME, entry.world_name.clone())
@@ -55,14 +55,14 @@ fn insert_location_on(
 }
 
 #[cfg(test)]
-fn update_location_time(db: &DatabaseService, created_at: &str, time: i64) -> Result<u64, Error> {
+fn update_location_time(db: &DatabaseService, created_at: i64, time: i64) -> Result<u64, Error> {
     update_location_time_on(db, OwnerRowId::UNASSIGNED, created_at, time)
 }
 
 fn update_location_time_on(
     target: &impl DbWriteTarget,
     owner_id: OwnerRowId,
-    created_at: &str,
+    created_at: i64,
     time: i64,
 ) -> Result<u64, Error> {
     let args = ParamsBuilder::new()
@@ -86,7 +86,7 @@ fn insert_join_leave_on(
     entry: &GameLogJoinLeaveEntry,
 ) -> Result<u64, Error> {
     let args = ParamsBuilder::new()
-        .set(COL_CREATED_AT, entry.created_at.clone())
+        .set(COL_CREATED_AT, entry.created_at)
         .set(COL_TYPE, entry.event_type.clone())
         .set(COL_DISPLAY_NAME, entry.display_name.clone())
         .set(COL_LOCATION, entry.location.clone())
@@ -127,7 +127,7 @@ fn insert_portal_spawn_on(
     entry: &GameLogPortalSpawnEntry,
 ) -> Result<u64, Error> {
     let args = ParamsBuilder::new()
-        .set(COL_CREATED_AT, entry.created_at.clone())
+        .set(COL_CREATED_AT, entry.created_at)
         .set(COL_DISPLAY_NAME, entry.display_name.clone())
         .set(COL_LOCATION, entry.location.clone())
         .set(COL_USER_ID, entry.user_id.clone())
@@ -160,7 +160,7 @@ fn insert_video_play_on(
     entry: &GameLogVideoPlayEntry,
 ) -> Result<u64, Error> {
     let args = ParamsBuilder::new()
-        .set(COL_CREATED_AT, entry.created_at.clone())
+        .set(COL_CREATED_AT, entry.created_at)
         .set(COL_VIDEO_URL, entry.video_url.clone())
         .set(COL_VIDEO_NAME, entry.video_name.clone())
         .set(COL_VIDEO_ID, entry.video_id.clone())
@@ -203,7 +203,7 @@ fn insert_resource_load_on(
     entry: &GameLogResourceLoadEntry,
 ) -> Result<u64, Error> {
     let args = ParamsBuilder::new()
-        .set(COL_CREATED_AT, entry.created_at.clone())
+        .set(COL_CREATED_AT, entry.created_at)
         .set(COL_RESOURCE_URL, entry.resource_url.clone())
         .set(COL_RESOURCE_TYPE, entry.resource_type.clone())
         .set(COL_LOCATION, entry.location.clone())
@@ -237,7 +237,7 @@ fn insert_event_on(
     entry: &GameLogEventEntry,
 ) -> Result<u64, Error> {
     let args = ParamsBuilder::new()
-        .set(COL_CREATED_AT, entry.created_at.clone())
+        .set(COL_CREATED_AT, entry.created_at)
         .set(COL_DATA, entry.data.clone())
         .set(COL_OWNER_ID, owner_id)
         .build();
@@ -255,7 +255,7 @@ fn insert_external_on(
     entry: &GameLogExternalEntry,
 ) -> Result<u64, Error> {
     let args = ParamsBuilder::new()
-        .set(COL_CREATED_AT, entry.created_at.clone())
+        .set(COL_CREATED_AT, entry.created_at)
         .set(COL_MESSAGE, entry.message.clone())
         .set(COL_DISPLAY_NAME, entry.display_name.clone())
         .set(COL_USER_ID, entry.user_id.clone())
@@ -304,7 +304,7 @@ pub fn write_batch(
             affected = affected.saturating_add(update_location_time_on(
                 tx,
                 owner_id,
-                &update.created_at,
+                update.created_at,
                 update.time,
             )?);
         }
@@ -342,11 +342,11 @@ pub fn write_batch(
 pub fn fill_location_group_name(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
-    created_at: &str,
+    created_at: i64,
     location: &str,
     group_name: &str,
 ) -> Result<u64, Error> {
-    if created_at.trim().is_empty() || location.trim().is_empty() || group_name.trim().is_empty() {
+    if created_at == 0 || location.trim().is_empty() || group_name.trim().is_empty() {
         return Ok(0);
     }
     super::tables::ensure_game_log_tables(db)?;

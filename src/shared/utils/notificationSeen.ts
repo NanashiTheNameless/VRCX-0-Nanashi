@@ -1,4 +1,5 @@
 import { DAY_MS } from '@/shared/constants/time';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 
 import { getNotificationLifecycleBucket } from './notificationLifecycle';
 
@@ -10,7 +11,7 @@ export type NotificationSeenLike = {
     createdAt?: string | number | null;
     created_at?: string | number | null;
     expired?: boolean;
-    expiresAt?: string | null;
+    expiresAt?: string | number | null;
     seen?: boolean;
     type?: string;
     version?: number;
@@ -28,7 +29,7 @@ export function isNotificationExpired(
     if (!notification?.expiresAt) {
         return false;
     }
-    const expiresAt = Date.parse(notification.expiresAt);
+    const expiresAt = parseAbsoluteDateMs(notification.expiresAt);
     return Number.isFinite(expiresAt) && expiresAt <= Date.now();
 }
 

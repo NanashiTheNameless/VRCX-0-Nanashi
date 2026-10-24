@@ -7,7 +7,7 @@ pub struct FriendLogHistoryEntryInput {
     #[serde(default)]
     pub row_id: Value,
     #[serde(default)]
-    pub created_at: String,
+    pub created_at: i64,
     #[serde(default)]
     pub r#type: String,
     #[serde(default)]
@@ -86,7 +86,7 @@ pub struct FriendLogCurrentOutput {
 #[derive(Clone, Debug, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct FriendLogHistoryCursor {
-    pub created_at: String,
+    pub created_at: i64,
     pub row_id: i64,
 }
 
@@ -101,9 +101,9 @@ pub struct FriendLogHistoryQueryInput {
     #[serde(default)]
     pub excluded_types: Vec<String>,
     #[serde(default)]
-    pub date_from: String,
+    pub date_from: Option<i64>,
     #[serde(default)]
-    pub date_to: String,
+    pub date_to: Option<i64>,
     pub cursor: Option<FriendLogHistoryCursor>,
     pub limit: Option<u32>,
 }
@@ -112,7 +112,7 @@ pub struct FriendLogHistoryQueryInput {
 #[serde(rename_all = "camelCase")]
 pub struct FriendLogHistoryOutput {
     pub row_id: i64,
-    pub created_at: String,
+    pub created_at: i64,
     pub r#type: String,
     pub user_id: String,
     pub display_name: String,

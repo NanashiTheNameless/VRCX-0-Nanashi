@@ -10,8 +10,8 @@ fn search_worlds_visited_returns_recent_world_candidates() {
     db.execute_non_query(
             "INSERT INTO gamelog_location (created_at, location, world_id, world_name, time, group_name)
              VALUES
-             ('2026-06-01T22:00:00Z', 'wrld_parkour:1', 'wrld_parkour', 'Parkour Night', 1800000, ''),
-             ('2026-06-01T20:00:00Z', 'wrld_chill:2', 'wrld_chill', 'Chill Room', 600000, '')",
+             (1780351200, 'wrld_parkour:1', 'wrld_parkour', 'Parkour Night', 1800000, ''),
+             (1780344000, 'wrld_chill:2', 'wrld_chill', 'Chill Room', 600000, '')",
             &Default::default(),
         )
         .unwrap();
@@ -21,8 +21,8 @@ fn search_worlds_visited_returns_recent_world_candidates() {
         &OwnerId::new("usr_test"),
         SearchWorldsVisitedInput {
             time_window: TimeWindow {
-                from: Some("2026-06-01T21:00:00Z".into()),
-                to: Some("2026-06-02T00:00:00Z".into()),
+                from: Some("2026-06-01T21:00:00.000Z".into()),
+                to: Some("2026-06-02T00:00:00.000Z".into()),
             },
             limit: 10,
         },
@@ -118,9 +118,9 @@ fn top_visited_worlds_counts_every_visit_under_the_latest_world_name() {
     db.execute_non_query(
         "INSERT INTO gamelog_location (created_at, location, world_id, world_name, time, group_name)
          VALUES
-         ('2026-06-01T20:00:00Z', 'wrld_a:1', 'wrld_a', 'Zeta Old Name', 600000, ''),
-         ('2026-06-01T21:00:00Z', 'wrld_a:2', 'wrld_a', 'Alpha New Name', 1200000, ''),
-         ('2026-06-01T22:00:00Z', 'wrld_b:1', 'wrld_b', 'Beta', 600000, '')",
+         (1780344000, 'wrld_a:1', 'wrld_a', 'Zeta Old Name', 600000, ''),
+         (1780347600, 'wrld_a:2', 'wrld_a', 'Alpha New Name', 1200000, ''),
+         (1780351200, 'wrld_b:1', 'wrld_b', 'Beta', 600000, '')",
         &Default::default(),
     )
     .unwrap();
@@ -142,6 +142,6 @@ fn top_visited_worlds_counts_every_visit_under_the_latest_world_name() {
     assert_eq!(rows[0].world_name, "Alpha New Name");
     assert_eq!(rows[0].visits, 2);
     assert_eq!(rows[0].total_minutes, 30);
-    assert_eq!(rows[0].last_visited_at, "2026-06-01T21:00:00Z");
+    assert_eq!(rows[0].last_visited_at, "2026-06-01T21:00:00.000Z");
     assert_eq!(rows[1].world_id, "wrld_b");
 }

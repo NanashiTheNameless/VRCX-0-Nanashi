@@ -299,7 +299,7 @@ pub struct ActivityEntry {
     pub source_id: String,
     pub kind: ActivityKind,
     pub category: ActivityCategory,
-    pub created_at: String,
+    pub created_at: i64,
     pub actor_user_id: String,
     pub actor_display_name: String,
     pub content: ActivityContent,

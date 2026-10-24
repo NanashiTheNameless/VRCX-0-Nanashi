@@ -428,7 +428,7 @@ pub async fn app__remote_sync_sign_out(state: State<'_, AppState>) -> Result<(),
 pub struct RemoteSyncLogSnapshot {
     pub kind: String,
     pub message: String,
-    pub created_at_ms: f64,
+    pub created_at: f64,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, specta::Type)]
@@ -439,7 +439,7 @@ pub struct RemoteSyncStatusSnapshot {
     pub has_key: bool,
     pub signed_in_to_vrchat: bool,
     pub vault_id: Option<String>,
-    pub last_sync_at_ms: Option<f64>,
+    pub last_sync_at: Option<f64>,
     pub progress: Option<RemoteSyncProgressSnapshot>,
     pub log: Vec<RemoteSyncLogSnapshot>,
 }
@@ -640,7 +640,7 @@ pub fn app__remote_sync_status_get(
         has_key: status.has_key,
         signed_in_to_vrchat: status.signed_in_to_vrchat,
         vault_id: status.vault_id,
-        last_sync_at_ms: status.last_sync_at_ms.map(|at| at as f64),
+        last_sync_at: status.last_sync_at.map(|at| at as f64),
         progress: status.progress.map(|progress| RemoteSyncProgressSnapshot {
             phase: match progress.phase {
                 SyncPhase::Connecting => RemoteSyncPhase::Connecting,
@@ -662,7 +662,7 @@ pub fn app__remote_sync_status_get(
             .map(|entry| RemoteSyncLogSnapshot {
                 kind: entry.kind,
                 message: entry.message,
-                created_at_ms: entry.created_at_ms as f64,
+                created_at: entry.created_at as f64,
             })
             .collect(),
     })

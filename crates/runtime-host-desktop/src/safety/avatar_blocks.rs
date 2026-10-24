@@ -8,7 +8,7 @@ pub(super) struct AvatarReview {
     token: String,
     scope: RuntimeAuthScopeSnapshot,
     source: SafetySource,
-    updated_at: String,
+    updated_at: i64,
     entries: BTreeSet<String>,
     policy_revision: u64,
     pub(super) created: Instant,
@@ -62,7 +62,7 @@ impl SafetyRuntime {
                     .unwrap_or_default(),
             })
             .collect();
-        let updated_at = cache.updated_at.clone();
+        let updated_at = cache.updated_at;
         state.revision += 1;
         let token = format!(
             "{}-{}-{}",
@@ -74,7 +74,7 @@ impl SafetyRuntime {
             token: token.clone(),
             scope: scope.clone(),
             source: source.clone(),
-            updated_at: updated_at.clone(),
+            updated_at,
             entries: entries.iter().map(|e| e.id.clone()).collect(),
             policy_revision: state.policy_revision,
             created: Instant::now(),

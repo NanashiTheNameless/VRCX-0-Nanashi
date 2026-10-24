@@ -463,7 +463,7 @@ impl VrOverlayRuntimeServices for DesktopRuntimeServices {
         statuses
     }
 
-    fn game_started_at(&self) -> Option<String> {
+    fn game_started_at(&self) -> Option<i64> {
         let session = self.session.snapshot();
         session
             .last_game_started_at

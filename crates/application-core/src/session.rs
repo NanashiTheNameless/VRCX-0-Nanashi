@@ -13,7 +13,7 @@ mod tests {
         let initial = runtime.apply_game_process_status(GameProcessStatus {
             is_game_running: false,
             is_steamvr_running: false,
-            changed_at: "2026-05-15T00:00:00Z".into(),
+            changed_at: 1778803200,
         });
         assert!(!initial.game_changed);
         assert_eq!(initial.generation, 0);
@@ -22,19 +22,13 @@ mod tests {
         let started = runtime.apply_game_process_status(GameProcessStatus {
             is_game_running: true,
             is_steamvr_running: true,
-            changed_at: "2026-05-15T00:01:00Z".into(),
+            changed_at: 1778803260,
         });
         assert!(started.game_changed);
         assert!(started.steamvr_changed);
         assert_eq!(started.generation, 1);
-        assert_eq!(
-            started.last_game_started_at.as_deref(),
-            Some("2026-05-15T00:01:00Z")
-        );
-        assert_eq!(
-            started.last_game_state_changed_at.as_deref(),
-            Some("2026-05-15T00:01:00Z")
-        );
+        assert_eq!(started.last_game_started_at, Some(1778803260));
+        assert_eq!(started.last_game_state_changed_at, Some(1778803260));
         let snapshot = runtime.projection_snapshot();
         assert_eq!(snapshot.is_game_running, started.is_game_running);
         assert_eq!(snapshot.is_steamvr_running, started.is_steamvr_running);
@@ -46,7 +40,7 @@ mod tests {
         );
         assert!(!snapshot.game_changed);
         assert!(!snapshot.steamvr_changed);
-        assert_eq!(snapshot.changed_at, "2026-05-15T00:01:00Z");
+        assert_eq!(snapshot.changed_at, 1778803260);
         let payload = serde_json::to_value(&started).expect("projection serializes");
         assert_eq!(payload["isSteamVRRunning"], serde_json::json!(true));
         assert!(payload.get("isSteamvrRunning").is_none());
@@ -54,18 +48,12 @@ mod tests {
         let stopped = runtime.apply_game_process_status(GameProcessStatus {
             is_game_running: false,
             is_steamvr_running: true,
-            changed_at: "2026-05-15T00:10:00Z".into(),
+            changed_at: 1778803800,
         });
         assert!(stopped.game_changed);
         assert_eq!(stopped.generation, 2);
-        assert_eq!(
-            stopped.last_game_started_at.as_deref(),
-            Some("2026-05-15T00:01:00Z")
-        );
-        assert_eq!(
-            stopped.last_game_state_changed_at.as_deref(),
-            Some("2026-05-15T00:10:00Z")
-        );
+        assert_eq!(stopped.last_game_started_at, Some(1778803260));
+        assert_eq!(stopped.last_game_state_changed_at, Some(1778803800));
     }
 
     #[test]

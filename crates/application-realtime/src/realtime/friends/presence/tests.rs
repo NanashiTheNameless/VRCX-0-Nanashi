@@ -50,9 +50,9 @@ fn feed(prev: &Phase, step: &Step, now_ms: i64) -> Vec<serde_json::Value> {
         display_name: "Friend".into(),
         ..FriendRecord::default()
     };
-    presence_feed("usr_friend", &record, prev, &step.next, now_ms, "at")
+    presence_feed("usr_friend", &record, prev, &step.next, now_ms, 1)
         .into_iter()
-        .chain(joining_feed("usr_friend", &record, prev, &step.next, "at"))
+        .chain(joining_feed("usr_friend", &record, prev, &step.next, 1))
         .map(|entry| entry.to_json())
         .collect()
 }

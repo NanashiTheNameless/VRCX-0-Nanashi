@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 
 use serde::Serialize;
 use vrcx_0_application_core::{RuntimeDiagnostics, RuntimeOperationStatus};
-use vrcx_0_core::time::now_iso;
+use vrcx_0_core::time::now_epoch;
 
 use super::{WebhookDeliveryFailure, WebhookDeliveryOutcome};
 
@@ -12,7 +12,7 @@ pub struct WebhookDeliveryRecord {
     pub event: String,
     pub status: Option<i32>,
     pub attempts: u32,
-    pub observed_at: String,
+    pub observed_at: i64,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, specta::Type)]
@@ -57,7 +57,7 @@ impl WebhookDeliveryMonitor {
         event: &str,
         result: &Result<WebhookDeliveryOutcome, WebhookDeliveryFailure>,
     ) {
-        let observed_at = now_iso();
+        let observed_at = now_epoch();
         if let Ok(mut snapshot) = self.snapshot.lock() {
             let channel_snapshot = channel_snapshot_mut(&mut snapshot, channel);
             match result {
@@ -110,7 +110,7 @@ impl WebhookDeliveryMonitor {
                 event: event.to_string(),
                 status: None,
                 attempts: 0,
-                observed_at: now_iso(),
+                observed_at: vrcx_0_core::time::now_epoch(),
             });
         }
         diagnostics.record_command(

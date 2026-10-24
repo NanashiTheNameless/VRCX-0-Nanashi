@@ -187,7 +187,7 @@ fn delivery() -> ActivityDelivery {
             source_id: "game-log:join".into(),
             kind: vrcx_0_contracts::activity::ActivityKind::OnPlayerJoined,
             category: ActivityCategory::CurrentInstance,
-            created_at: "2026-06-18T08:30:00.000Z".into(),
+            created_at: 1781771400,
             actor_user_id: "usr_traveler".into(),
             actor_display_name: "Traveler".into(),
             content: ActivityContent {

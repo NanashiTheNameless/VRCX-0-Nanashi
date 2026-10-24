@@ -69,7 +69,7 @@ pub trait GameStateStore: Send + Sync {
     fn fill_location_group_name(
         &self,
         owner: &OwnerId,
-        created_at: &str,
+        created_at: i64,
         location: &str,
         group_name: &str,
     ) -> Result<u64>;
@@ -77,15 +77,15 @@ pub trait GameStateStore: Send + Sync {
         &self,
         owner: &OwnerId,
         location: &str,
-        after_date: &str,
-        before_date: &str,
+        after_date: i64,
+        before_date: i64,
     ) -> Result<Vec<GameLogJoinLeaveSnapshot>>;
     fn previous_instance_events(
         &self,
         owner: &OwnerId,
         user_id: &str,
-        date_from: &str,
-        date_to: &str,
+        date_from: Option<i64>,
+        date_to: Option<i64>,
         limit: usize,
     ) -> Result<Vec<PreviousInstanceEventRow>>;
     fn user_id_from_display_name(&self, owner: &OwnerId, display_name: &str) -> Result<String>;
@@ -93,7 +93,7 @@ pub trait GameStateStore: Send + Sync {
     fn location_before_or_at(
         &self,
         owner: &OwnerId,
-        created_at: &str,
+        created_at: i64,
     ) -> Result<Option<GameLogLocationSnapshot>>;
     fn session_location_segments(
         &self,
@@ -104,15 +104,15 @@ pub trait GameStateStore: Send + Sync {
     fn session_location_segments_by_date_range(
         &self,
         owner: &OwnerId,
-        after_date: &str,
-        before_date: &str,
+        after_date: i64,
+        before_date: i64,
         limit: i64,
     ) -> Result<Vec<SessionLocationSegmentRow>>;
     fn session_events_for_range(
         &self,
         owner: &OwnerId,
-        after_date: &str,
-        before_date: &str,
+        after_date: i64,
+        before_date: i64,
     ) -> Result<Vec<SessionEventRow>>;
     fn session_player_duration_rows(
         &self,
@@ -242,7 +242,7 @@ fn location_snapshot(
     row: &vrcx_0_contracts::game_log::GameLogLocationEntry,
 ) -> GameLogLocationSnapshot {
     GameLogLocationSnapshot {
-        created_at: row.created_at.clone(),
+        created_at: row.created_at,
         location: row.location.clone(),
         world_id: row.world_id.clone(),
         world_name: row.world_name.clone(),
@@ -316,7 +316,7 @@ impl GameStateStore for TestGameStateStore {
     fn fill_location_group_name(
         &self,
         owner: &OwnerId,
-        created_at: &str,
+        created_at: i64,
         location: &str,
         group_name: &str,
     ) -> Result<u64> {
@@ -387,8 +387,8 @@ impl GameStateStore for TestGameStateStore {
         &self,
         owner: &OwnerId,
         location: &str,
-        after_date: &str,
-        before_date: &str,
+        after_date: i64,
+        before_date: i64,
     ) -> Result<Vec<GameLogJoinLeaveSnapshot>> {
         let state = self.state.lock().expect("test game state lock");
         let mut rows = state
@@ -398,12 +398,12 @@ impl GameStateStore for TestGameStateStore {
             .filter(|(_, row)| {
                 owner_can_read(&row.owner, owner)
                     && row.value.location == location
-                    && row.value.created_at.as_str() >= after_date
-                    && row.value.created_at.as_str() <= before_date
+                    && row.value.created_at >= after_date
+                    && row.value.created_at <= before_date
             })
             .map(|(index, row)| GameLogJoinLeaveSnapshot {
                 id: index as i64 + 1,
-                created_at: row.value.created_at.clone(),
+                created_at: row.value.created_at,
                 event_type: row.value.event_type.clone(),
                 display_name: row.value.display_name.clone(),
                 user_id: row.value.user_id.clone(),
@@ -422,8 +422,8 @@ impl GameStateStore for TestGameStateStore {
         &self,
         owner: &OwnerId,
         user_id: &str,
-        date_from: &str,
-        date_to: &str,
+        date_from: Option<i64>,
+        date_to: Option<i64>,
         limit: usize,
     ) -> Result<Vec<PreviousInstanceEventRow>> {
         let state = self.state.lock().expect("test game state lock");
@@ -434,8 +434,8 @@ impl GameStateStore for TestGameStateStore {
             .filter(|(_, row)| {
                 owner_can_read(&row.owner, owner)
                     && row.value.user_id == user_id
-                    && row.value.created_at.as_str() >= date_from
-                    && row.value.created_at.as_str() <= date_to
+                    && date_from.is_none_or(|from| row.value.created_at >= from)
+                    && date_to.is_none_or(|to| row.value.created_at <= to)
             })
             .filter_map(|(index, event)| {
                 let location = state.locations.iter().rev().find(|location| {
@@ -443,11 +443,9 @@ impl GameStateStore for TestGameStateStore {
                         && location.value.location == event.value.location
                         && location.value.created_at <= event.value.created_at
                 })?;
-                let created_at_ts = chrono::DateTime::parse_from_rfc3339(&event.value.created_at)
-                    .map(|value| value.timestamp_millis())
-                    .unwrap_or_default();
+                let created_at_ts = event.value.created_at.saturating_mul(1000);
                 Some(PreviousInstanceEventRow {
-                    created_at: event.value.created_at.clone(),
+                    created_at: event.value.created_at,
                     created_at_ts,
                     location: event.value.location.clone(),
                     time: location.value.time,
@@ -491,7 +489,7 @@ impl GameStateStore for TestGameStateStore {
     fn location_before_or_at(
         &self,
         owner: &OwnerId,
-        created_at: &str,
+        created_at: i64,
     ) -> Result<Option<GameLogLocationSnapshot>> {
         Ok(self
             .state
@@ -499,9 +497,7 @@ impl GameStateStore for TestGameStateStore {
             .expect("test game state lock")
             .locations
             .iter()
-            .filter(|row| {
-                owner_can_read(&row.owner, owner) && row.value.created_at.as_str() <= created_at
-            })
+            .filter(|row| owner_can_read(&row.owner, owner) && row.value.created_at <= created_at)
             .max_by(|left, right| left.value.created_at.cmp(&right.value.created_at))
             .map(|row| location_snapshot(&row.value)))
     }
@@ -525,7 +521,7 @@ impl GameStateStore for TestGameStateStore {
             .take(limit.max(0) as usize)
             .map(|(index, row)| SessionLocationSegmentRow {
                 id: index as i64 + 1,
-                created_at: row.value.created_at.clone(),
+                created_at: row.value.created_at,
                 location: row.value.location.clone(),
                 world_id: row.value.world_id.clone(),
                 world_name: row.value.world_name.clone(),
@@ -538,8 +534,8 @@ impl GameStateStore for TestGameStateStore {
     fn session_location_segments_by_date_range(
         &self,
         owner: &OwnerId,
-        after_date: &str,
-        before_date: &str,
+        after_date: i64,
+        before_date: i64,
         limit: i64,
     ) -> Result<Vec<SessionLocationSegmentRow>> {
         let state = self.state.lock().expect("test game state lock");
@@ -550,13 +546,13 @@ impl GameStateStore for TestGameStateStore {
             .rev()
             .filter(|(_, row)| {
                 owner_can_read(&row.owner, owner)
-                    && row.value.created_at.as_str() >= after_date
-                    && row.value.created_at.as_str() <= before_date
+                    && row.value.created_at >= after_date
+                    && row.value.created_at <= before_date
             })
             .take(limit.max(0) as usize)
             .map(|(index, row)| SessionLocationSegmentRow {
                 id: index as i64 + 1,
-                created_at: row.value.created_at.clone(),
+                created_at: row.value.created_at,
                 location: row.value.location.clone(),
                 world_id: row.value.world_id.clone(),
                 world_name: row.value.world_name.clone(),
@@ -569,20 +565,20 @@ impl GameStateStore for TestGameStateStore {
     fn session_events_for_range(
         &self,
         owner: &OwnerId,
-        after_date: &str,
-        before_date: &str,
+        after_date: i64,
+        before_date: i64,
     ) -> Result<Vec<SessionEventRow>> {
         let state = self.state.lock().expect("test game state lock");
         let mut rows = Vec::new();
         for (index, row) in state.join_leave.iter().enumerate() {
             if owner_can_read(&row.owner, owner)
-                && row.value.created_at.as_str() >= after_date
-                && row.value.created_at.as_str() <= before_date
+                && row.value.created_at >= after_date
+                && row.value.created_at <= before_date
             {
                 rows.push(SessionEventRow {
                     row_id: index as i64 + 1,
                     event_type: row.value.event_type.clone(),
-                    created_at: row.value.created_at.clone(),
+                    created_at: row.value.created_at,
                     display_name: row.value.display_name.clone(),
                     user_id: row.value.user_id.clone(),
                     location: row.value.location.clone(),
@@ -594,13 +590,13 @@ impl GameStateStore for TestGameStateStore {
         }
         for (index, row) in state.video_plays.iter().enumerate() {
             if owner_can_read(&row.owner, owner)
-                && row.value.created_at.as_str() >= after_date
-                && row.value.created_at.as_str() <= before_date
+                && row.value.created_at >= after_date
+                && row.value.created_at <= before_date
             {
                 rows.push(SessionEventRow {
                     row_id: index as i64 + 1,
                     event_type: "VideoPlay".to_string(),
-                    created_at: row.value.created_at.clone(),
+                    created_at: row.value.created_at,
                     display_name: row.value.display_name.clone(),
                     user_id: row.value.user_id.clone(),
                     location: row.value.location.clone(),
@@ -639,10 +635,10 @@ impl GameStateStore for TestGameStateStore {
             })
             .map(|(index, row)| {
                 (
-                    row.value.created_at.clone(),
+                    row.value.created_at,
                     index,
                     SessionPlayerDurationRow {
-                        created_at: row.value.created_at.clone(),
+                        created_at: row.value.created_at,
                         location: row.value.location.clone(),
                         display_name: row.value.display_name.clone(),
                         user_id: row.value.user_id.clone(),

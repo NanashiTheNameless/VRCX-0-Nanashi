@@ -16,7 +16,7 @@ use crate::worlds::{world_summary_from_row, WorldSummaryOutput};
 #[serde(rename_all = "camelCase")]
 pub struct InstanceActivityRowOutput {
     pub id: i64,
-    pub created_at: String,
+    pub created_at: i64,
     pub r#type: String,
     pub display_name: String,
     pub location: String,
@@ -28,7 +28,7 @@ pub fn instance_activity_dates_get(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
     user_id: String,
-) -> Result<Vec<String>, Error> {
+) -> Result<Vec<i64>, Error> {
     ensure_game_log_tables(db)?;
     let user_id = normalize_text(user_id);
     if user_id.is_empty() {
@@ -48,16 +48,15 @@ pub fn instance_activity_dates_get(
                 .build(),
         )?
         .into_iter()
-        .map(|row| row_string(&row, 0))
-        .filter(|created_at| !created_at.is_empty())
+        .filter_map(|row| row.first().and_then(serde_json::Value::as_i64))
         .collect())
 }
 
 pub fn instance_activity_rows_get(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
-    start_date: String,
-    end_date: String,
+    start_date: i64,
+    end_date: i64,
 ) -> Result<Vec<InstanceActivityRowOutput>, Error> {
     ensure_game_log_tables(db)?;
     let owner_id = owner_id_for_filter(db, owner_user_id)?;
@@ -67,8 +66,8 @@ pub fn instance_activity_rows_get(
              FROM gamelog_join_leave
              WHERE owner_id IN (0, @owner_id)
                AND type = 'OnPlayerLeft'
-               AND julianday(created_at, '-' || (time * 1.0 / 1000) || ' seconds') <= julianday(@utc_end_date)
-               AND julianday(created_at) >= julianday(@utc_start_date)
+               AND created_at - time / 1000 <= @utc_end_date
+               AND created_at >= @utc_start_date
              ORDER BY created_at ASC, id ASC",
             &ParamsBuilder::new()
                 .set("owner_id", owner_id)
@@ -181,7 +180,7 @@ pub fn world_summaries_get(
 pub(crate) fn instance_activity_from_row(row: &[Value]) -> InstanceActivityRowOutput {
     InstanceActivityRowOutput {
         id: row_i64(row, 0),
-        created_at: row_string(row, 1),
+        created_at: row_i64(row, 1),
         r#type: row_string(row, 2),
         display_name: row_string(row, 3),
         location: row_string(row, 4),

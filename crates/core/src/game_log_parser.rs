@@ -1,7 +1,7 @@
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GameLogEvent {
     pub file_name: String,
-    pub created_at: String,
+    pub created_at: i64,
     pub kind: GameLogEventKind,
 }
 
@@ -10,7 +10,7 @@ pub struct GameLogEvent {
 pub struct LogLocationSnapshot {
     pub location: String,
     pub world_name: String,
-    pub created_at: String,
+    pub created_at: i64,
     pub file_name: String,
 }
 
@@ -103,15 +103,15 @@ fn has_log_timestamp_prefix(bytes: &[u8]) -> bool {
         && bytes[18].is_ascii_digit()
 }
 
-pub fn convert_log_time_to_iso8601(line: &str) -> String {
+pub fn convert_log_time_to_epoch(line: &str) -> i64 {
     let date_str = match line.get(..LOG_TIMESTAMP_LEN) {
         Some(value) => value,
-        None => return crate::time::now_iso(),
+        None => return crate::time::now_epoch(),
     };
 
     match chrono::NaiveDateTime::parse_from_str(date_str, LOG_TIME_FORMAT) {
-        Ok(local_dt) => crate::time::iso_millis(log_time_to_utc(&chrono::Local, local_dt)),
-        Err(_) => crate::time::now_iso(),
+        Ok(local_dt) => log_time_to_utc(&chrono::Local, local_dt).timestamp(),
+        Err(_) => crate::time::now_epoch(),
     }
 }
 
@@ -206,7 +206,7 @@ impl GameLogEvent {
     pub fn to_compat_row(&self) -> Vec<String> {
         let mut row = vec![
             self.file_name.clone(),
-            self.created_at.clone(),
+            self.created_at.to_string(),
             self.compat_type().to_string(),
         ];
         row.extend(self.kind.compat_args());
@@ -216,9 +216,9 @@ impl GameLogEvent {
     #[cfg(test)]
     pub fn from_compat_row(row: &[String]) -> Option<Self> {
         let file_name = row.first()?.to_string();
-        let created_at = row.get(1)?.to_string();
+        let created_at = crate::time::parse_epoch_seconds(row.get(1)?)?;
         let event_type = row.get(2)?.as_str();
-        if created_at.is_empty() || event_type.is_empty() {
+        if event_type.is_empty() {
             return None;
         }
         let kind = GameLogEventKind::from_compat_parts(event_type, &row[3..])?;
@@ -535,7 +535,7 @@ mod tests {
     fn typed_event_generates_compatible_raw_row() {
         let event = GameLogEvent {
             file_name: "output_log.txt".into(),
-            created_at: "2026-05-14T01:00:00.000Z".into(),
+            created_at: 1778720400,
             kind: GameLogEventKind::Location {
                 location: "wrld_test:123".into(),
                 world_name: "测试世界".into(),
@@ -546,7 +546,7 @@ mod tests {
             event.to_compat_row(),
             row(&[
                 "output_log.txt",
-                "2026-05-14T01:00:00.000Z",
+                "1778720400",
                 "location",
                 "wrld_test:123",
                 "测试世界",

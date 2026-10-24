@@ -1,9 +1,10 @@
 use serde_json::Value;
 
 use crate::common::{
-    delete_by_key_sql, insert_or_ignore_sql, insert_or_replace_sql, normalize_text, now_iso,
-    object_field, object_field_bool, object_field_json, object_field_optional_string,
-    object_field_string, update_by_key_sql, DbParams, DbWriteTarget, ParamsBuilder,
+    delete_by_key_sql, insert_or_ignore_sql, insert_or_replace_sql, normalize_text, now_epoch,
+    object_field, object_field_bool, object_field_epoch, object_field_json,
+    object_field_optional_epoch, object_field_optional_string, object_field_string,
+    update_by_key_sql, DbParams, DbWriteTarget, ParamsBuilder,
 };
 use crate::database::DatabaseService;
 use crate::realtime::{ensure_realtime_tables, normalize_user_table_prefix};
@@ -28,9 +29,9 @@ pub fn notification_add_v1(
 
 fn notification_v1_params(notification: &Value, force_active: bool) -> Result<DbParams, Error> {
     let id = normalize_text(object_field_string(notification, &["id"]));
-    let created_at = object_field_string(notification, &["created_at", "createdAt"]);
+    let created_at = object_field_epoch(notification, &["created_at", "createdAt"]);
     let notification_type = object_field_string(notification, &["type"]);
-    if id.is_empty() || created_at.is_empty() || notification_type.is_empty() {
+    if id.is_empty() || created_at == 0 || notification_type.is_empty() {
         return Err(Error::Custom(
             "Notification is missing required field".into(),
         ));
@@ -192,15 +193,15 @@ pub fn notification_add_v2(
             .set("id", id)
             .set(
                 "created_at",
-                object_field_optional_string(&notification, &["createdAt", "created_at"]),
+                object_field_optional_epoch(&notification, &["createdAt", "created_at"]),
             )
             .set(
                 "updated_at",
-                object_field_optional_string(&notification, &["updatedAt", "updated_at"]),
+                object_field_optional_epoch(&notification, &["updatedAt", "updated_at"]),
             )
             .set(
                 "expires_at",
-                object_field_optional_string(&notification, &["expiresAt", "expires_at"]),
+                object_field_optional_epoch(&notification, &["expiresAt", "expires_at"]),
             )
             .set(
                 "type",
@@ -276,7 +277,7 @@ pub fn notification_v2_expire(
         &sql,
         &ParamsBuilder::new()
             .set("id", id)
-            .set("expires_at", now_iso())
+            .set("expires_at", now_epoch())
             .set("seen", 1)
             .build(),
     )?;
@@ -394,7 +395,7 @@ pub fn notification_expire(db: &DatabaseService, user_id: String, id: String) ->
     if id.is_empty() {
         return Ok(());
     }
-    let now = now_iso();
+    let now = now_epoch();
     let v1_table = format!("{user_prefix}_notifications");
     let v2_table = format!("{user_prefix}_notifications_v2");
     let expire_v1_sql = update_by_key_sql(&v1_table, &["expired", "seen"], "id");

@@ -440,7 +440,7 @@ mod tests {
             seq: 0,
             role,
             content: content.into(),
-            created_at: String::new(),
+            created_at: 0,
             tool_call: None,
             tool_result: None,
             tool_content: None,
@@ -453,7 +453,7 @@ mod tests {
             seq: 0,
             role: Role::ToolCall,
             content: String::new(),
-            created_at: String::new(),
+            created_at: 0,
             tool_call: Some(ToolCallRecord {
                 id: id.into(),
                 name: name.into(),
@@ -470,7 +470,7 @@ mod tests {
             seq: 0,
             role: Role::ToolResult,
             content: String::new(),
-            created_at: String::new(),
+            created_at: 0,
             tool_call: None,
             tool_result: Some(ToolResultRecord {
                 tool_call_id: id.into(),

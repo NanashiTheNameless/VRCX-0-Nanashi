@@ -7,7 +7,7 @@ use tokio::sync::Mutex as AsyncMutex;
 use vrcx_0_application_core::RuntimeEventBus;
 use vrcx_0_contracts::community_theme_protocol as protocol;
 use vrcx_0_contracts::ConfigMutation;
-use vrcx_0_core::time::now_iso;
+use vrcx_0_core::time::now_epoch;
 
 use super::super::background_image::{
     BackgroundImageConfigureInput, BackgroundImageProjection, BackgroundImageService,
@@ -195,7 +195,7 @@ impl CommunityThemeService {
                 "Community theme is not installed: {theme_id}."
             )));
         }
-        let now = now_iso();
+        let now = now_epoch();
         let metadata = CommunityThemeInstallMetadata {
             theme_id: manifest.id.clone(),
             theme_name: manifest.name,
@@ -207,9 +207,9 @@ impl CommunityThemeService {
             .map_err(protocol_error)?,
             sha256: hex::encode(Sha256::digest(css_snapshot.as_bytes())),
             installed_at: previous
-                .map(|record| record.metadata.installed_at.clone())
-                .filter(|value| !value.is_empty())
-                .unwrap_or_else(|| now.clone()),
+                .map(|record| record.metadata.installed_at)
+                .filter(|value| *value != 0)
+                .unwrap_or(now),
             updated_at: now,
             dark_mode: manifest.dark_mode,
             accent_mode: manifest.accent_mode,

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use chrono::{Local, Utc};
+use chrono::Utc;
 use vrcx_0_application_activity::{
     ActivityPageWarmupStore, ActivitySessionWarmupOutput, ActivitySessionWarmupStore,
 };
@@ -21,7 +21,7 @@ impl LocalActivitySessionWarmupStore {
 }
 
 fn local_utc_offset_minutes() -> i64 {
-    i64::from(Local::now().offset().local_minus_utc()) / 60
+    i64::from(vrcx_0_core::time::display_now().offset().local_minus_utc()) / 60
 }
 
 pub struct LocalActivityPageWarmupStore {
@@ -42,7 +42,7 @@ impl ActivityPageWarmupStore for LocalActivityPageWarmupStore {
                 owner_user_id,
                 range_days,
                 utc_offset_minutes: local_utc_offset_minutes(),
-                now_ms: Utc::now().timestamp_millis(),
+                now: Utc::now().timestamp(),
                 companion_order: Default::default(),
                 force_refresh: false,
             },

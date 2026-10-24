@@ -10,7 +10,7 @@ import {
     getWidgetDayKey
 } from './dashboardWidgetUtils';
 
-type DashboardWidgetTimestamp = string | null | undefined;
+type DashboardWidgetTimestamp = number | string | null | undefined;
 
 function DashboardWidgetDayDivider({
     value

@@ -18,12 +18,7 @@ pub(super) enum FriendRelationshipFeedKind {
 }
 
 impl FriendRelationshipFeedKind {
-    fn feed_entry(
-        self,
-        created_at: String,
-        user_id: String,
-        display_name: String,
-    ) -> FeedLiveEntry {
+    fn feed_entry(self, created_at: i64, user_id: String, display_name: String) -> FeedLiveEntry {
         match self {
             Self::Friend => FeedLiveEntry::Friend {
                 created_at,
@@ -55,7 +50,7 @@ pub(super) fn friend_log_upsert(
     user_id: &str,
     patch: &Value,
     previous: Option<&FriendRecord>,
-    created_at: &str,
+    created_at: i64,
 ) -> FriendLogUpsert {
     FriendLogUpsert {
         target_user_id: user_id.to_string(),
@@ -72,20 +67,20 @@ pub(super) fn friend_log_upsert(
                 previous.and_then(|previous| previous.extra.i64_field(derived_keys::FRIEND_NUMBER))
             })
             .unwrap_or(0),
-        created_at: created_at.to_string(),
+        created_at,
         force_history: false,
     }
 }
 
 pub(crate) fn display_name_feed_entry(
-    created_at: &str,
+    created_at: i64,
     user_id: &str,
     display_name: &str,
     previous_display_name: &str,
     friend_number: i64,
 ) -> FeedLiveEntry {
     FeedLiveEntry::DisplayName {
-        created_at: created_at.to_string(),
+        created_at,
         user_id: user_id.to_string(),
         display_name: display_name.to_string(),
         previous_display_name: previous_display_name.to_string(),
@@ -95,7 +90,7 @@ pub(crate) fn display_name_feed_entry(
 }
 
 pub(crate) fn trust_level_feed_entry(
-    created_at: &str,
+    created_at: i64,
     user_id: &str,
     display_name: &str,
     trust_level: &str,
@@ -103,7 +98,7 @@ pub(crate) fn trust_level_feed_entry(
     friend_number: i64,
 ) -> FeedLiveEntry {
     FeedLiveEntry::TrustLevel {
-        created_at: created_at.to_string(),
+        created_at,
         user_id: user_id.to_string(),
         display_name: display_name.to_string(),
         trust_level: trust_level.to_string(),
@@ -119,7 +114,7 @@ pub(super) fn add_profile_diff_feed_entries(
     patch: &Value,
     previous: &FriendRecord,
     previous_online: bool,
-    created_at: &str,
+    created_at: i64,
 ) {
     if !previous_online {
         return;
@@ -132,7 +127,7 @@ pub(super) fn add_profile_diff_feed_entries(
         && previous.status != "offline"
     {
         output.persistence.feed_entries.push(FeedLiveEntry::Status {
-            created_at: created_at.to_string(),
+            created_at,
             user_id: user_id.to_string(),
             display_name: display_name(user_id, patch, Some(previous)),
             status: next_status,
@@ -149,10 +144,10 @@ pub(super) fn friend_relationship_feed_entry(
     user_id: &str,
     patch: &Value,
     previous: Option<&FriendRecord>,
-    created_at: &str,
+    created_at: i64,
 ) -> FeedLiveEntry {
     relationship.feed_entry(
-        created_at.to_string(),
+        created_at,
         user_id.to_string(),
         display_name(user_id, patch, previous),
     )

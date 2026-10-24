@@ -118,7 +118,7 @@ fn sync_friend_snapshot_keeps_a_pending_offline_until_its_deadline() -> Result<(
                 "content": { "userId": "usr_friend" }
             }),
             raw: "{}".into(),
-            received_at: "2026-05-15T00:00:00Z".into(),
+            received_at: 1778803200,
         })
     else {
         panic!("friend-offline should produce an output");
@@ -170,7 +170,7 @@ fn sync_friend_snapshot_keeps_a_pending_offline_until_its_deadline() -> Result<(
     let fired = runtime
         .runtime()
         .friends
-        .wake("usr_friend", "2026-05-15T00:03:00Z")
+        .wake("usr_friend", 1778803380)
         .expect("the pending offline finalizes at its deadline");
     runtime.runtime().apply_friend_output(fired);
     let events = runtime.runtime().deps.event_bus.take_events_for_test();
@@ -225,8 +225,8 @@ fn sync_friend_snapshot_keeps_a_pending_offline_until_its_deadline() -> Result<(
                 excluded_user_ids: Vec::new(),
                 location_hidden_user_ids: Vec::new(),
                 max_entries: 10,
-                date_from: String::new(),
-                date_to: String::new(),
+                date_from: None,
+                date_to: None,
                 cursor: None,
             })?;
     assert_eq!(persisted_rows.len(), 1);
@@ -271,7 +271,7 @@ fn host_watermark_preserves_pending_created_after_capture() -> Result<()> {
                     "content": { "userId": "usr_friend" }
                 }),
                 raw: "{}".into(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             })
         else {
             panic!("friend-offline should produce an output");
@@ -320,7 +320,7 @@ fn host_watermark_preserves_pending_created_after_capture() -> Result<()> {
         let fired = runtime
             .runtime()
             .friends
-            .wake("usr_friend", "2026-05-15T00:03:00Z")
+            .wake("usr_friend", 1778803380)
             .expect("the original pending timer should remain active");
         assert_eq!(
             fired.persistence.feed_entries[0].to_json()["type"],
@@ -365,7 +365,7 @@ fn host_watermark_preserves_online_cancellation_after_capture() -> Result<()> {
                 "content": { "userId": "usr_friend" }
             }),
             raw: "{}".into(),
-            received_at: "2026-05-15T00:00:00Z".into(),
+            received_at: 1778803200,
         })
     else {
         panic!("friend-offline should produce an output");
@@ -403,7 +403,7 @@ fn host_watermark_preserves_online_cancellation_after_capture() -> Result<()> {
                 }
             }),
             raw: "{}".into(),
-            received_at: "2026-05-15T00:00:01Z".into(),
+            received_at: 1778803201,
         },
     );
     runtime.runtime().deps.event_bus.take_events_for_test();
@@ -450,7 +450,7 @@ fn host_watermark_preserves_online_cancellation_after_capture() -> Result<()> {
     assert!(runtime
         .runtime()
         .friends
-        .wake("usr_friend", "2026-05-15T00:03:00Z")
+        .wake("usr_friend", 1778803380)
         .is_none());
     Ok(())
 }
@@ -488,7 +488,7 @@ fn causal_sync_returns_canonical_snapshot_after_newer_friend_delete() -> Result<
                 display_name: "Friend".into(),
                 trust_level: "Visitor".into(),
                 friend_number: 1,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
             ..RealtimePersistenceBatch::default()
@@ -514,7 +514,7 @@ fn causal_sync_returns_canonical_snapshot_after_newer_friend_delete() -> Result<
                 "content": { "userId": "usr_friend" }
             }),
             raw: "{}".into(),
-            received_at: "2026-05-15T00:00:01Z".into(),
+            received_at: 1778803201,
         },
     );
     runtime.runtime().deps.event_bus.take_events_for_test();
@@ -580,7 +580,7 @@ fn causal_watermark_rejects_baseline_after_local_friend_log_mutation() -> Result
                 display_name: "Friend".into(),
                 trust_level: "Visitor".into(),
                 friend_number: 1,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
             ..RealtimePersistenceBatch::default()
@@ -631,7 +631,7 @@ fn seeded_friend_log(dir: &TestDir, target_user_id: &str) -> Result<TestRealtime
                 display_name: "Friend".into(),
                 trust_level: "Known".into(),
                 friend_number: 1,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
             ..RealtimePersistenceBatch::default()
@@ -827,7 +827,7 @@ fn reconcile_records_display_name_change_for_existing_friend() -> Result<()> {
                 display_name: "Old Name".into(),
                 trust_level: "Known".into(),
                 friend_number: 1,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
             ..RealtimePersistenceBatch::default()
@@ -907,7 +907,7 @@ fn reconcile_records_and_projects_trust_only_change_once() -> Result<()> {
                 display_name: "Friend".into(),
                 trust_level: "Known User".into(),
                 friend_number: 7,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
             ..RealtimePersistenceBatch::default()
@@ -990,7 +990,7 @@ fn reconcile_skips_placeholder_records() -> Result<()> {
                 display_name: "Friend".into(),
                 trust_level: "Trusted User".into(),
                 friend_number: 7,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
             ..RealtimePersistenceBatch::default()
@@ -1127,7 +1127,7 @@ fn reconcile_updates_legacy_equivalent_trust_without_history_or_feed() -> Result
                 display_name: "Friend".into(),
                 trust_level: "Veteran User".into(),
                 friend_number: 7,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
             ..RealtimePersistenceBatch::default()
@@ -1362,7 +1362,7 @@ fn active_baseline_trust_change_fans_out_after_atomic_persistence() -> Result<()
                 display_name: "Friend".into(),
                 trust_level: "Known User".into(),
                 friend_number: 7,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
             ..RealtimePersistenceBatch::default()
@@ -1424,7 +1424,7 @@ fn active_baseline_uses_runtime_feed_persistence_state() -> Result<()> {
                 display_name: "Friend".into(),
                 trust_level: "Known User".into(),
                 friend_number: 7,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
             ..RealtimePersistenceBatch::default()
@@ -1742,7 +1742,7 @@ fn apply_friend_profile_refresh_updates_existing_friend_only() -> Result<()> {
 fn friend_projection_clears_feed_entries_when_persistence_fails() -> Result<()> {
     let (_dir, runtime, active_session) =
         runtime_with_active_session("friend-persist-failure-clears-feed")?;
-    let feed_entry = unwritable_feed_entry("2026-06-21T00:00:00.000Z");
+    let feed_entry = unwritable_feed_entry(1782000000);
 
     let mut output = RealtimeFriendOutput::from_projection(
         OwnerId::new(active_session.user_id.clone()),
@@ -1795,7 +1795,7 @@ fn repeated_friend_delete_retries_after_persistence_failure_without_duplicate_fe
                 display_name: "Friend".into(),
                 trust_level: "Visitor".into(),
                 friend_number: 1,
-                created_at: "2026-05-15T00:00:00Z".into(),
+                created_at: 1778803200,
                 force_history: false,
             }],
             ..RealtimePersistenceBatch::default()
@@ -1808,7 +1808,7 @@ fn repeated_friend_delete_retries_after_persistence_failure_without_duplicate_fe
             "content": { "userId": "usr_friend" }
         }),
         raw: "{}".into(),
-        received_at: "2026-05-15T00:00:01Z".into(),
+        received_at: 1778803201,
     };
 
     let RealtimeFriendApplyResult::Output(mut first) =
@@ -1819,7 +1819,7 @@ fn repeated_friend_delete_retries_after_persistence_failure_without_duplicate_fe
     first
         .persistence
         .feed_entries
-        .push(unwritable_feed_entry("2026-05-15T00:00:01Z"));
+        .push(unwritable_feed_entry(1778803201));
     runtime.runtime().apply_friend_output(*first);
 
     assert_eq!(
@@ -1863,9 +1863,7 @@ fn disabled_feed_persistence_keeps_projection_and_other_batch_writes() -> Result
     let feed_entries = ["GPS", "Online", "Status"]
         .into_iter()
         .enumerate()
-        .map(|(index, entry_type)| {
-            feed_entry_of(entry_type, &format!("2026-06-21T00:00:0{index}.000Z"))
-        })
+        .map(|(index, entry_type)| feed_entry_of(entry_type, 1782000000 + index as i64))
         .collect::<Vec<_>>();
     let mut output = RealtimeFriendOutput::from_projection(
         OwnerId::new(active_session.user_id.clone()),
@@ -1877,7 +1875,7 @@ fn disabled_feed_persistence_keeps_projection_and_other_batch_writes() -> Result
         display_name: "Friend".into(),
         trust_level: "Known User".into(),
         friend_number: 1,
-        created_at: "2026-06-21T00:00:00.000Z".into(),
+        created_at: 1782000000,
         force_history: false,
     });
     runtime.runtime().apply_friend_output(output);
@@ -1907,7 +1905,7 @@ fn disabled_feed_persistence_keeps_projection_and_other_batch_writes() -> Result
     .is_empty());
 
     runtime.runtime().set_feed_persistence_disabled(false)?;
-    let enabled_entry = feed_entry_of("Online", "2026-06-21T00:00:10.000Z");
+    let enabled_entry = feed_entry_of("Online", 1782000010);
     let mut enabled_output = RealtimeFriendOutput::from_projection(
         OwnerId::new(active_session.user_id.clone()),
         FriendProjection::new(7, 0),

@@ -226,7 +226,7 @@ impl LocalProfileBackupPort {
             ProfileBackupManifestMetadata {
                 app_version: self.inner.app_version.clone(),
                 db_version,
-                created_at: Utc::now().to_rfc3339(),
+                created_at: Utc::now().timestamp(),
                 platform: std::env::consts::OS.into(),
                 kind: pending.kind,
             },
@@ -292,7 +292,7 @@ impl LocalProfileBackupPort {
         let _ = fs::remove_file(&pending.archive);
         self.set_pending_delivery(None);
         if pending.kind == ProfileBackupKind::Auto {
-            let completed_at = Utc::now().to_rfc3339();
+            let completed_at = Utc::now().timestamp().to_string();
             self.inner
                 .storage
                 .set(LAST_AUTO_AT_KEY.into(), completed_at);

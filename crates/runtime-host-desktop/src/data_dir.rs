@@ -113,7 +113,7 @@ impl DesktopDataDirRuntime {
         Ok(self.migration.dismiss_cleanup()?)
     }
 
-    pub fn mark_cleanup_prompted(&self, prompted_at: String) -> Result<()> {
+    pub fn mark_cleanup_prompted(&self, prompted_at: i64) -> Result<()> {
         Ok(self.migration.mark_cleanup_prompted(prompted_at)?)
     }
 

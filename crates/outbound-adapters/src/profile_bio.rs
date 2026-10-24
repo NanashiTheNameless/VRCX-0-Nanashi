@@ -33,23 +33,23 @@ impl ProfileBioStore for LocalProfileBioStore {
             .map_err(crate::map_persistence_error)
     }
 
-    fn mark_checked(&self, owner: &OwnerId, user_id: &str, checked_at: &str) -> Result<()> {
+    fn mark_checked(&self, owner: &OwnerId, user_id: &str, checked_at: i64) -> Result<()> {
         profile_bio::profile_bio_mark_checked(&self.db, owner, user_id, checked_at)
             .map_err(crate::map_persistence_error)
     }
 
-    fn next_stale_friend(&self, owner: &OwnerId, checked_before: &str) -> Result<Option<String>> {
+    fn next_stale_friend(&self, owner: &OwnerId, checked_before: i64) -> Result<Option<String>> {
         profile_bio::profile_bio_next_stale_friend(&self.db, owner, checked_before)
             .map_err(crate::map_persistence_error)
     }
 
-    fn observe_self_bio(&self, owner: &OwnerId, bio: &str, observed_at: &str) -> Result<()> {
+    fn observe_self_bio(&self, owner: &OwnerId, bio: &str, observed_at: i64) -> Result<()> {
         realtime::write_realtime_batch(
             &self.db,
             owner,
             &RealtimePersistenceBatch {
                 self_profile_observations: vec![SelfProfileObservation {
-                    observed_at: observed_at.to_string(),
+                    observed_at,
                     field: SelfProfileField::Bio,
                     value: bio.to_string(),
                 }],

@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use chrono::{DateTime, NaiveDateTime, SecondsFormat, Utc};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 use vrcx_0_contracts::game_log::{SessionLocationSegmentRow, SessionPlayerDurationRow};
@@ -44,9 +44,9 @@ pub struct GameLogSessionsQueryInput {
     #[serde(default)]
     pub favorite_user_ids: Vec<String>,
     #[serde(default)]
-    pub date_from: String,
+    pub date_from: Option<i64>,
     #[serde(default)]
-    pub date_to: String,
+    pub date_to: Option<i64>,
     #[serde(default)]
     pub limit: i64,
     #[serde(default)]
@@ -61,7 +61,7 @@ pub struct GameLogSessionMemberDto {
     pub display_name: String,
     pub user_id: String,
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     pub is_favorite: bool,
 }
 
@@ -71,7 +71,7 @@ pub struct GameLogSessionEventDto {
     #[serde(rename = "type")]
     pub type_: String,
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub row_id: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -110,7 +110,7 @@ pub struct GameLogSessionDto {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<i64>,
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     pub location: String,
     pub world_id: String,
     pub world_name: String,
@@ -182,31 +182,8 @@ impl GameLogSessionDto {
     }
 }
 
-fn parse_session_epoch(value: &str) -> i64 {
-    let trimmed = value.trim();
-    if trimmed.is_empty() {
-        return 0;
-    }
-    if let Some(ms) = parse_event_time_ms(trimmed) {
-        return ms;
-    }
-    for format in [
-        "%Y-%m-%dT%H:%M:%S%.f",
-        "%Y-%m-%d %H:%M:%S%.f",
-        "%Y-%m-%dT%H:%M:%S",
-        "%Y-%m-%d %H:%M:%S",
-    ] {
-        if let Ok(parsed) = NaiveDateTime::parse_from_str(trimmed, format) {
-            return parsed.and_utc().timestamp_millis();
-        }
-    }
-    0
-}
-
-fn epoch_to_iso(ms: i64) -> String {
-    DateTime::from_timestamp_millis(ms)
-        .map(|value| value.to_rfc3339_opts(SecondsFormat::Millis, true))
-        .unwrap_or_default()
+fn parse_session_epoch(value: i64) -> i64 {
+    parse_event_time_ms(value).unwrap_or(0)
 }
 
 fn normalize_filters(filters: &[String]) -> Vec<String> {
@@ -257,10 +234,10 @@ fn resolve_session_fetch_limit(
 fn build_location_inputs(rows: &[SessionLocationSegmentRow]) -> Vec<SessionLocationInput> {
     rows.iter()
         .map(|row| SessionLocationInput {
-            epoch: parse_session_epoch(&row.created_at),
+            epoch: parse_session_epoch(row.created_at),
             sort_id: row.id,
             id: Some(row.id),
-            created_at: row.created_at.clone(),
+            created_at: row.created_at,
             location: row.location.clone(),
             world_id: row.world_id.clone(),
             world_name: row.world_name.clone(),
@@ -295,16 +272,16 @@ fn load_session_events(
         )
     };
 
-    let after_date = epoch_to_iso(min_epoch - DAY_MS);
-    let before_date = epoch_to_iso(max_epoch + DAY_MS);
-    let rows = store.session_events_for_range(owner_user_id, &after_date, &before_date)?;
+    let after_date = (min_epoch - DAY_MS).div_euclid(1000);
+    let before_date = (max_epoch + DAY_MS).div_euclid(1000);
+    let rows = store.session_events_for_range(owner_user_id, after_date, before_date)?;
 
     Ok(rows
         .into_iter()
         .map(|row| {
             let favorite = is_favorite(favorite_user_ids, &row.user_id);
             SessionEventInput {
-                epoch: parse_session_epoch(&row.created_at),
+                epoch: parse_session_epoch(row.created_at),
                 sort_id: row.row_id,
                 row_id: Some(row.row_id),
                 type_: row.event_type,
@@ -421,8 +398,13 @@ fn header_matches_search(segment: &SessionSegmentOut, query: &str) -> bool {
     if query.is_empty() {
         return true;
     }
+    let iso_date = vrcx_0_core::time::epoch_to_iso(segment.created_at);
+    let display_date = vrcx_0_core::time::to_display(segment.created_at)
+        .map(|date| date.format("%Y-%m-%d %H:%M:%S").to_string())
+        .unwrap_or_default();
     [
-        &segment.created_at,
+        &iso_date,
+        &display_date,
         &segment.location,
         &segment.world_id,
         &segment.world_name,
@@ -496,14 +478,14 @@ pub fn game_log_sessions_query(
     } else {
         DEFAULT_SEARCH_LIMIT
     };
-    let date_from = input.date_from.trim().to_string();
-    let date_to = input.date_to.trim().to_string();
+    let date_from = input.date_from;
+    let date_to = input.date_to;
 
     let has_filtering = !search.is_empty() || !filters.is_empty() || !favorite_user_ids.is_empty();
     let fetch_limit =
         resolve_session_fetch_limit(limit, has_filtering, max_table_size, search_limit);
 
-    let segments = if !search.is_empty() && date_from.is_empty() && date_to.is_empty() {
+    let segments = if !search.is_empty() && date_from.is_none() && date_to.is_none() {
         let fetch_count = SESSION_GLOBAL_SEARCH_INITIAL_LOCATIONS + 1;
         let mut all_locations: Vec<SessionLocationInput> = Vec::new();
         let mut all_events: Vec<SessionEventInput> = Vec::new();
@@ -546,18 +528,10 @@ pub fn game_log_sessions_query(
         }
         latest
     } else {
-        let locations = if !date_from.is_empty() || !date_to.is_empty() {
-            let from = if date_from.is_empty() {
-                "1970-01-01T00:00:00.000Z".to_string()
-            } else {
-                date_from
-            };
-            let to = if date_to.is_empty() {
-                epoch_to_iso(Utc::now().timestamp_millis())
-            } else {
-                date_to
-            };
-            store.session_location_segments_by_date_range(owner_user_id, &from, &to, fetch_limit)?
+        let locations = if date_from.is_some() || date_to.is_some() {
+            let from = date_from.unwrap_or(0);
+            let to = date_to.unwrap_or_else(|| Utc::now().timestamp());
+            store.session_location_segments_by_date_range(owner_user_id, from, to, fetch_limit)?
         } else {
             store.session_location_segments(owner_user_id, None, fetch_limit)?
         };
@@ -602,7 +576,7 @@ fn assign_player_duration_rows(
 ) -> Vec<Vec<GameLogSessionPlayerDurationRowDto>> {
     let mut windows_by_location: HashMap<&str, Vec<SegmentWindow>> = HashMap::new();
     for (index, segment) in segments.iter().enumerate() {
-        let start = parse_session_epoch(&segment.created_at);
+        let start = parse_session_epoch(segment.created_at);
         if start <= 0 {
             continue;
         }
@@ -624,7 +598,7 @@ fn assign_player_duration_rows(
         let Some(windows) = windows_by_location.get(row.location.as_str()) else {
             continue;
         };
-        let epoch = parse_session_epoch(&row.created_at);
+        let epoch = parse_session_epoch(row.created_at);
         let position = windows.partition_point(|window| window.start <= epoch);
         let Some(window) = windows[..position].last() else {
             continue;

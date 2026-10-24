@@ -159,7 +159,7 @@ function createBackendRuntimeSnapshot(): BackendRuntimeSnapshot {
         processStatus: 'unknown',
         gameLogPersistedCount: 0,
         lastError: null,
-        updatedAt: '2026-07-09T00:00:00.000Z',
+        updatedAt: 1783555200,
         friendProfileLoad: {
             runId: 0,
             status: 'idle',
@@ -167,7 +167,7 @@ function createBackendRuntimeSnapshot(): BackendRuntimeSnapshot {
             processed: 0,
             loaded: 0,
             failed: 0,
-            startedAt: '',
+            startedAt: 0,
             finishedAt: null
         }
     };
@@ -184,7 +184,7 @@ function createGameProcessProjection(
         generation: 0,
         gameChanged: false,
         steamvrChanged: false,
-        changedAt: '',
+        changedAt: 0,
         ...patch
     };
 }
@@ -228,7 +228,7 @@ function createAuthenticatedRuntimePhaseSnapshot(
             generation: 12,
             sessionGeneration: 14
         },
-        updatedAt: '2026-07-20T00:00:00.000Z',
+        updatedAt: 1784505600,
         ...patch
     };
 }
@@ -371,7 +371,7 @@ function createBackendRuntimeCombinedSnapshot(
             },
             friendBaselineRevision: 0,
             realtimeTransport: null,
-            updatedAt: ''
+            updatedAt: 0
         }),
         ...patch
     };
@@ -535,7 +535,7 @@ describe('runtimeEventBridgeService', () => {
         handlers.get('browserFocus')?.(null);
 
         expect(useRuntimeStore.getState().gameState.lastBrowserFocusAt).toEqual(
-            expect.any(String)
+            expect.any(Number)
         );
         expect(mocks.handleBrowserFocus).toHaveBeenCalledTimes(1);
     });
@@ -718,7 +718,7 @@ describe('runtimeEventBridgeService', () => {
                     generation: 11,
                     sessionGeneration: 13
                 },
-                updatedAt: '2026-07-19T23:59:59.000Z'
+                updatedAt: 1784505599
             })
         );
 
@@ -810,10 +810,10 @@ describe('runtimeEventBridgeService', () => {
                 gameProcessSnapshot: createGameProcessProjection({
                     isGameRunning: true,
                     isSteamVRRunning: true,
-                    lastGameStartedAt: '2026-08-05T00:00:00.000Z',
-                    lastGameStateChangedAt: '2026-08-05T00:00:00.000Z',
+                    lastGameStartedAt: 1785888000,
+                    lastGameStateChangedAt: 1785888000,
                     generation: 1,
-                    changedAt: '2026-08-05T00:00:00.000Z'
+                    changedAt: 1785888000
                 })
             })
         );
@@ -864,12 +864,12 @@ describe('runtimeEventBridgeService', () => {
         const liveProjection = createGameProcessProjection({
             isGameRunning: true,
             isSteamVRRunning: true,
-            lastGameStartedAt: '2026-08-05T00:01:00.000Z',
-            lastGameStateChangedAt: '2026-08-05T00:01:00.000Z',
+            lastGameStartedAt: 1785888060,
+            lastGameStateChangedAt: 1785888060,
             generation: 1,
             gameChanged: true,
             steamvrChanged: true,
-            changedAt: '2026-08-05T00:01:00.000Z'
+            changedAt: 1785888060
         });
         updateGameProcess(liveProjection);
 
@@ -1196,8 +1196,8 @@ describe('runtimeEventBridgeService', () => {
             optedOutFriends: 0,
             failedFriends: 0,
             cancelRequested: false,
-            startedAt: '',
-            updatedAt: '',
+            startedAt: 0,
+            updatedAt: 0,
             finishedAt: null,
             lastError: null
         };

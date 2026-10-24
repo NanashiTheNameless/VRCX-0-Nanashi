@@ -9,6 +9,7 @@ import {
 } from '@/lib/entityQueryCache';
 import { commands } from '@/platform/tauri/bindings';
 import type { UserGroupsOverviewOutput } from '@/platform/tauri/bindings';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 import { createDefaultGroupRef } from '@/shared/utils/groupTransforms';
 import { DEFAULT_VRCHAT_API_ENDPOINT } from '@/shared/vrchatEndpoint';
 
@@ -84,8 +85,8 @@ function normalizeGroupProfile(
         discriminator,
         bannerUrl: normalizeString(base.bannerUrl),
         iconUrl: normalizeString(base.iconUrl),
-        createdAt: typeof base.createdAt === 'string' ? base.createdAt : '',
-        updatedAt: typeof base.updatedAt === 'string' ? base.updatedAt : '',
+        createdAt: epochSecondsFromValue(base.createdAt) ?? 0,
+        updatedAt: epochSecondsFromValue(base.updatedAt) ?? 0,
         memberCount: parseInteger(base.memberCount),
         onlineMemberCount: parseInteger(base.onlineMemberCount),
         ownerId,

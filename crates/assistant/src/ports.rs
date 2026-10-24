@@ -100,7 +100,7 @@ pub struct PersistedAssistantMessage {
     pub seq: i64,
     pub role: String,
     pub content: String,
-    pub created_at: String,
+    pub created_at: i64,
 }
 
 #[derive(Debug, Clone)]
@@ -108,8 +108,8 @@ pub struct PersistedAssistantSession {
     pub owner_user_id: OwnerId,
     pub id: String,
     pub title: String,
-    pub created_at: String,
-    pub updated_at: String,
+    pub created_at: i64,
+    pub updated_at: i64,
     pub entity_panel_open: bool,
     pub surfaced_entities: String,
     pub endpoint_id: String,
@@ -122,8 +122,8 @@ pub struct AssistantSessionUpsert<'a> {
     pub owner_user_id: &'a OwnerId,
     pub id: &'a str,
     pub title: &'a str,
-    pub created_at: &'a str,
-    pub updated_at: &'a str,
+    pub created_at: i64,
+    pub updated_at: i64,
 }
 
 pub struct AssistantSessionRuntimeUpdate<'a> {
@@ -140,7 +140,7 @@ pub struct AssistantMessageInsert<'a> {
     pub seq: i64,
     pub role: &'a str,
     pub content: &'a str,
-    pub created_at: &'a str,
+    pub created_at: i64,
 }
 
 pub trait AssistantSessionPersistencePort: Send + Sync {

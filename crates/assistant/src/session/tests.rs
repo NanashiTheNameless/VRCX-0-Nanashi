@@ -403,9 +403,9 @@ fn owner_switch_hides_other_sessions_and_keeps_shared_legacy_sessions() {
 #[test]
 fn persisted_sessions_load_only_for_the_requested_owner() {
     let persistence = test_persistence();
-    persistence.seed_session(&OwnerId::new("usr_a"), "ses_a", "a", "t0", "t0");
-    persistence.seed_session(&OwnerId::new("usr_b"), "ses_b", "b", "t0", "t0");
-    persistence.seed_session(&OwnerId::new(""), "ses_shared", "shared", "t0", "t0");
+    persistence.seed_session(&OwnerId::new("usr_a"), "ses_a", "a", 1, 1);
+    persistence.seed_session(&OwnerId::new("usr_b"), "ses_b", "b", 1, 1);
+    persistence.seed_session(&OwnerId::new(""), "ses_shared", "shared", 1, 1);
     let store = SessionStore::with_test_persistence(&persistence);
 
     assert!(store.state.lock().unwrap().sessions.is_empty());

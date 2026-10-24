@@ -11,35 +11,35 @@ fn companions_of_uses_gamelog_overlap_and_excludes_owner_and_non_overlap() {
     // no overlap; Bob shared no instance with the target.
     for (created_at, user_id, display_name, location, millis) in [
         (
-            "2026-06-01T20:15:00Z",
+            "2026-06-01T20:15:00.000Z",
             "usr_target",
             "Target",
             "wrld_public:1",
             900_000,
         ),
         (
-            "2026-06-01T20:10:00Z",
+            "2026-06-01T20:10:00.000Z",
             "usr_alice",
             "Alice",
             "wrld_public:1",
             600_000,
         ),
         (
-            "2026-06-01T20:12:00Z",
+            "2026-06-01T20:12:00.000Z",
             "usr_self",
             "Self",
             "wrld_public:1",
             600_000,
         ),
         (
-            "2026-06-01T20:40:00Z",
+            "2026-06-01T20:40:00.000Z",
             "usr_charlie",
             "Charlie",
             "wrld_public:1",
             300_000,
         ),
         (
-            "2026-06-01T20:10:00Z",
+            "2026-06-01T20:10:00.000Z",
             "usr_bob",
             "Bob",
             "wrld_other:1",
@@ -58,7 +58,7 @@ fn companions_of_uses_gamelog_overlap_and_excludes_owner_and_non_overlap() {
     }
     db.execute_non_query(
         "INSERT INTO gamelog_location (created_at, location, world_id, world_name, time, group_name)
-             VALUES ('2026-06-01T20:00:00Z', 'wrld_public:1', 'wrld_public', 'Public World', 900000, '')",
+             VALUES (1780344000, 'wrld_public:1', 'wrld_public', 'Public World', 900000, '')",
         &Default::default(),
     )
     .unwrap();
@@ -91,10 +91,10 @@ fn companions_of_renamed_user_shows_latest_name() {
     // Target and Alice overlapped on two days; Alice was renamed in between, so
     // the companion row must surface her latest observed name.
     for (created_at, user_id, display_name) in [
-        ("2026-06-01T20:10:00Z", "usr_target", "Target"),
-        ("2026-06-03T20:10:00Z", "usr_target", "Target"),
-        ("2026-06-01T20:10:00Z", "usr_alice", "AliceOld"),
-        ("2026-06-03T20:10:00Z", "usr_alice", "AliceNew"),
+        ("2026-06-01T20:10:00.000Z", "usr_target", "Target"),
+        ("2026-06-03T20:10:00.000Z", "usr_target", "Target"),
+        ("2026-06-01T20:10:00.000Z", "usr_alice", "AliceOld"),
+        ("2026-06-03T20:10:00.000Z", "usr_alice", "AliceNew"),
     ] {
         insert_join_leave(
             &db,
@@ -197,7 +197,7 @@ fn fading_friends_ranks_dropped_copresence_for_current_friends() {
     // Alice: heavy in prior window, almost gone in recent window -> fading.
     insert_join_leave(
         &db,
-        "2026-05-05T20:00:00Z",
+        "2026-05-05T20:00:00.000Z",
         "OnPlayerLeft",
         "Alice",
         "usr_alice",
@@ -206,7 +206,7 @@ fn fading_friends_ranks_dropped_copresence_for_current_friends() {
     );
     insert_join_leave(
         &db,
-        "2026-05-10T20:00:00Z",
+        "2026-05-10T20:00:00.000Z",
         "OnPlayerLeft",
         "Alice",
         "usr_alice",
@@ -215,7 +215,7 @@ fn fading_friends_ranks_dropped_copresence_for_current_friends() {
     );
     insert_join_leave(
         &db,
-        "2026-06-10T20:00:00Z",
+        "2026-06-10T20:00:00.000Z",
         "OnPlayerLeft",
         "Alice",
         "usr_alice",
@@ -225,7 +225,7 @@ fn fading_friends_ranks_dropped_copresence_for_current_friends() {
     // Bob: steady in both windows -> not fading.
     insert_join_leave(
         &db,
-        "2026-05-08T20:00:00Z",
+        "2026-05-08T20:00:00.000Z",
         "OnPlayerLeft",
         "Bob",
         "usr_bob",
@@ -234,7 +234,7 @@ fn fading_friends_ranks_dropped_copresence_for_current_friends() {
     );
     insert_join_leave(
         &db,
-        "2026-06-08T20:00:00Z",
+        "2026-06-08T20:00:00.000Z",
         "OnPlayerLeft",
         "Bob",
         "usr_bob",
@@ -244,7 +244,7 @@ fn fading_friends_ranks_dropped_copresence_for_current_friends() {
     // Stranger is ignored even with a big drop.
     insert_join_leave(
         &db,
-        "2026-05-09T20:00:00Z",
+        "2026-05-09T20:00:00.000Z",
         "OnPlayerLeft",
         "Carol",
         "usr_carol",
@@ -256,9 +256,9 @@ fn fading_friends_ranks_dropped_copresence_for_current_friends() {
         &db,
         FadingFriendsInput {
             owner_user_id: OwnerId::new("usr_self"),
-            prior_from: "2026-05-01T00:00:00Z".into(),
-            pivot: "2026-06-01T00:00:00Z".into(),
-            now: "2026-07-01T00:00:00Z".into(),
+            prior_from: "2026-05-01T00:00:00.000Z".into(),
+            pivot: "2026-06-01T00:00:00.000Z".into(),
+            now: "2026-07-01T00:00:00.000Z".into(),
             min_prior_minutes: Some(30),
             limit: None,
         },
@@ -273,7 +273,7 @@ fn fading_friends_ranks_dropped_copresence_for_current_friends() {
     assert_eq!(row.prior_co_days, 2);
     assert_eq!(row.recent_co_days, 1);
     assert_eq!(row.drop_percent, 91);
-    assert_eq!(row.last_seen_together, "2026-06-10T20:00:00Z");
+    assert_eq!(row.last_seen_together, "2026-06-10T20:00:00.000Z");
 }
 
 #[test]
@@ -289,7 +289,7 @@ fn fading_friends_renamed_user_shows_latest_name() {
     .unwrap();
     insert_join_leave(
         &db,
-        "2026-05-05T20:00:00Z",
+        "2026-05-05T20:00:00.000Z",
         "OnPlayerLeft",
         "AliceOld",
         "usr_alice",
@@ -298,7 +298,7 @@ fn fading_friends_renamed_user_shows_latest_name() {
     );
     insert_join_leave(
         &db,
-        "2026-06-10T20:00:00Z",
+        "2026-06-10T20:00:00.000Z",
         "OnPlayerLeft",
         "AliceNew",
         "usr_alice",
@@ -310,9 +310,9 @@ fn fading_friends_renamed_user_shows_latest_name() {
         &db,
         FadingFriendsInput {
             owner_user_id: OwnerId::new("usr_self"),
-            prior_from: "2026-05-01T00:00:00Z".into(),
-            pivot: "2026-06-01T00:00:00Z".into(),
-            now: "2026-07-01T00:00:00Z".into(),
+            prior_from: "2026-05-01T00:00:00.000Z".into(),
+            pivot: "2026-06-01T00:00:00.000Z".into(),
+            now: "2026-07-01T00:00:00.000Z".into(),
             min_prior_minutes: Some(30),
             limit: None,
         },

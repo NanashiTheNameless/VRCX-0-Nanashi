@@ -32,7 +32,8 @@ pub struct PendingDataDirMigration {
     pub db_bytes: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub wal_bytes: Option<u64>,
-    pub requested_at: String,
+    #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
+    pub requested_at: i64,
     #[serde(default)]
     pub replace_existing: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -43,7 +44,7 @@ impl PendingDataDirMigration {
     pub fn copying(
         source_dir: String,
         target_dir: String,
-        requested_at: String,
+        requested_at: i64,
         replace_existing: bool,
     ) -> Self {
         Self {

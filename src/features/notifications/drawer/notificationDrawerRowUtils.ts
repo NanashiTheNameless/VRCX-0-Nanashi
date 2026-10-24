@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 import { formatDateFilter, formatRelativeTime } from '@/lib/dateTime';
 import type { NotificationRow } from '@/repositories/notificationPersistenceRepository';
 import { hasGroupIdPrefix } from '@/shared/constants/vrchatIds';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 
 import { notificationTypeLabelKey } from '../notificationViewModel';
 
@@ -81,11 +82,13 @@ export function isFriendNotification(
     ].includes(String(notification?.type || ''));
 }
 
-export function computeRemaining(expiresAt: string | null | undefined) {
+export function computeRemaining(
+    expiresAt: string | number | null | undefined
+) {
     if (!expiresAt) {
         return null;
     }
-    const ts = Date.parse(expiresAt);
+    const ts = parseAbsoluteDateMs(expiresAt);
     if (!Number.isFinite(ts)) {
         return null;
     }

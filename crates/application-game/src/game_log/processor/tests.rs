@@ -83,10 +83,10 @@ impl Drop for TestDir {
     }
 }
 
-fn event(created_at: &str, kind: GameLogEventKind) -> GameLogEvent {
+fn event(created_at: i64, kind: GameLogEventKind) -> GameLogEvent {
     GameLogEvent {
         file_name: "output_log_2026-05-14_00-00-00.txt".into(),
-        created_at: created_at.into(),
+        created_at,
         kind,
     }
 }
@@ -166,21 +166,21 @@ fn tracks_location_players_and_session_duration() -> Result<()> {
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::Event(event(
-            "2026-05-14T04:00:00.000Z",
+            1778731200,
             GameLogEventKind::Location {
                 location: "wrld_ingest:1".into(),
                 world_name: "Ingest World".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T04:00:10.000Z",
+            1778731210,
             GameLogEventKind::PlayerJoined {
                 display_name: "Alpha".into(),
                 user_id: "usr_alpha".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T04:00:40.000Z",
+            1778731240,
             GameLogEventKind::LocationDestination {
                 location: "wrld_next:1".into(),
             },
@@ -204,16 +204,13 @@ fn enabled_initial_scan_keeps_persistence_and_side_effects() -> Result<()> {
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::InitialEvent(event(
-            "2026-05-14T04:30:00.000Z",
+            1778733000,
             GameLogEventKind::Location {
                 location: "wrld_initial:1".into(),
                 world_name: "Initial".into(),
             },
         )),
-        GameLogWorkerJob::InitialEvent(event(
-            "2026-05-14T04:30:01.000Z",
-            GameLogEventKind::DesktopMode,
-        )),
+        GameLogWorkerJob::InitialEvent(event(1778733001, GameLogEventKind::DesktopMode)),
     ])?;
 
     assert_eq!(store.locations(&OwnerId::new("")).len(), 1);
@@ -233,7 +230,7 @@ fn enabled_process_stop_keeps_session_closure_and_side_effect_order() -> Result<
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::Event(event(
-            "2026-05-14T04:40:00.000Z",
+            1778733600,
             GameLogEventKind::Location {
                 location: "wrld_enabled_stop:1".into(),
                 world_name: "Enabled Stop".into(),
@@ -245,7 +242,7 @@ fn enabled_process_stop_keeps_session_closure_and_side_effect_order() -> Result<
                 is_steamvr_running: false,
                 game_changed: true,
             },
-            changed_at: "2026-05-14T04:45:00.000Z".into(),
+            changed_at: 1778733900,
         }),
     ])?;
 
@@ -280,23 +277,20 @@ fn disabled_persistence_keeps_live_state_projection_overlay_and_side_effects() -
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::Event(event(
-            "2026-05-14T05:00:00.000Z",
+            1778734800,
             GameLogEventKind::Location {
                 location: "wrld_disabled:1".into(),
                 world_name: "Disabled".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T05:00:31.000Z",
+            1778734831,
             GameLogEventKind::PlayerJoined {
                 display_name: "Live Player".into(),
                 user_id: "usr_live".into(),
             },
         )),
-        GameLogWorkerJob::Event(event(
-            "2026-05-14T05:00:32.000Z",
-            GameLogEventKind::DesktopMode,
-        )),
+        GameLogWorkerJob::Event(event(1778734832, GameLogEventKind::DesktopMode)),
     ])?;
 
     assert!(store.locations(&OwnerId::new("")).is_empty());
@@ -347,23 +341,20 @@ fn disabled_initial_scan_rebuilds_memory_without_replaying_side_effects() -> Res
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::InitialEvent(event(
-            "2026-05-14T05:10:00.000Z",
+            1778735400,
             GameLogEventKind::Location {
                 location: "wrld_replay:1".into(),
                 world_name: "Replay".into(),
             },
         )),
         GameLogWorkerJob::InitialEvent(event(
-            "2026-05-14T05:10:31.000Z",
+            1778735431,
             GameLogEventKind::PlayerJoined {
                 display_name: "Replay Player".into(),
                 user_id: "usr_replay".into(),
             },
         )),
-        GameLogWorkerJob::InitialEvent(event(
-            "2026-05-14T05:10:32.000Z",
-            GameLogEventKind::DesktopMode,
-        )),
+        GameLogWorkerJob::InitialEvent(event(1778735432, GameLogEventKind::DesktopMode)),
     ])?;
 
     assert!(!store.tables_exist());
@@ -410,14 +401,14 @@ fn entering_a_friends_instance_keeps_dwell_without_rewriting_log_join_time() -> 
         );
         processor.deps.instance_roster_observer = Some(timers.clone());
         let location = GameLogWorkerJob::Event(event(
-            "2026-09-06T10:30:00Z",
+            1788690600,
             GameLogEventKind::Location {
                 location: "wrld_local:1".into(),
                 world_name: "Local".into(),
             },
         ));
         let joined = GameLogWorkerJob::Event(event(
-            "2026-09-06T10:30:12Z",
+            1788690612,
             GameLogEventKind::PlayerJoined {
                 display_name: "Friend".into(),
                 user_id: "usr_friend".into(),
@@ -453,7 +444,7 @@ fn room_exit_cleanup_preserves_the_dwell_of_friends_staying_in_the_old_instance(
             let (_dir, _store, mut processor) = test_processor("gamelog-exit-cleanup-timers")?;
             let timers = Arc::new(vrcx_0_application_core::InstanceDwellRegistry::new());
             let mut initial = vec![event(
-                "1970-01-01T00:30:00Z",
+                1800,
                 GameLogEventKind::Location {
                     location: "wrld_old:1".into(),
                     world_name: "Old".into(),
@@ -478,7 +469,7 @@ fn room_exit_cleanup_preserves_the_dwell_of_friends_staying_in_the_old_instance(
                     ),
                 );
                 initial.push(event(
-                    "1970-01-01T00:30:25Z",
+                    1825,
                     GameLogEventKind::PlayerJoined {
                         display_name: user_id.into(),
                         user_id: user_id.into(),
@@ -495,27 +486,27 @@ fn room_exit_cleanup_preserves_the_dwell_of_friends_staying_in_the_old_instance(
 
             let events = [
                 event(
-                    "1970-01-01T00:31:01Z",
+                    1861,
                     GameLogEventKind::LocationDestination {
                         location: "wrld_next:2".into(),
                     },
                 ),
                 event(
-                    "1970-01-01T00:31:01Z",
+                    1861,
                     GameLogEventKind::PlayerLeft {
                         display_name: "usr_a".into(),
                         user_id: "usr_a".into(),
                     },
                 ),
                 event(
-                    "1970-01-01T00:31:02Z",
+                    1862,
                     GameLogEventKind::PlayerLeft {
                         display_name: "usr_b".into(),
                         user_id: "usr_b".into(),
                     },
                 ),
                 event(
-                    "1970-01-01T00:31:03Z",
+                    1863,
                     GameLogEventKind::Location {
                         location: "wrld_next:2".into(),
                         world_name: "Next".into(),
@@ -542,14 +533,14 @@ fn room_exit_cleanup_preserves_the_dwell_of_friends_staying_in_the_old_instance(
             processor.handle_jobs(vec![GameLogWorkerJob::Events {
                 events: vec![
                     event(
-                        "1970-01-01T00:32:00Z",
+                        1920,
                         GameLogEventKind::Location {
                             location: "wrld_old:1".into(),
                             world_name: "Old".into(),
                         },
                     ),
                     event(
-                        "1970-01-01T00:32:10Z",
+                        1930,
                         GameLogEventKind::PlayerJoined {
                             display_name: "usr_a".into(),
                             user_id: "usr_a".into(),
@@ -593,35 +584,35 @@ fn local_mode_initial_replay_does_not_restart_remote_timers() -> Result<()> {
 
         processor.handle_jobs(vec![
             GameLogWorkerJob::InitialEvent(event(
-                "1970-01-01T00:00:01Z",
+                1,
                 GameLogEventKind::Location {
                     location: "wrld_history:1".into(),
                     world_name: "History".into(),
                 },
             )),
             GameLogWorkerJob::InitialEvent(event(
-                "1970-01-01T00:00:02Z",
+                2,
                 GameLogEventKind::PlayerJoined {
                     display_name: "Remote".into(),
                     user_id: "usr_remote".into(),
                 },
             )),
             GameLogWorkerJob::InitialEvent(event(
-                "1970-01-01T00:00:03Z",
+                3,
                 GameLogEventKind::PlayerLeft {
                     display_name: "Remote".into(),
                     user_id: "usr_remote".into(),
                 },
             )),
             GameLogWorkerJob::InitialEvent(event(
-                "1970-01-01T00:00:04Z",
+                4,
                 GameLogEventKind::Location {
                     location: "wrld_current:2".into(),
                     world_name: "Current".into(),
                 },
             )),
             GameLogWorkerJob::InitialEvent(event(
-                "1970-01-01T00:00:05Z",
+                5,
                 GameLogEventKind::PlayerJoined {
                     display_name: "Local".into(),
                     user_id: "usr_local".into(),
@@ -674,7 +665,7 @@ fn local_mode_resume_prefix_does_not_restart_timers_but_live_departures_do() -> 
         ),
     );
     processor.deps.instance_roster_observer = Some(timers.clone());
-    processor.set_persistence_resume_after("1970-01-01T00:00:03Z");
+    processor.set_persistence_resume_after(3);
     let joined = GameLogEventKind::PlayerJoined {
         display_name: "Friend".into(),
         user_id: "usr_friend".into(),
@@ -686,28 +677,22 @@ fn local_mode_resume_prefix_does_not_restart_timers_but_live_departures_do() -> 
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::Event(event(
-            "1970-01-01T00:00:01Z",
+            1,
             GameLogEventKind::Location {
                 location: "wrld_local:1".into(),
                 world_name: "Local".into(),
             },
         )),
-        GameLogWorkerJob::Event(event("1970-01-01T00:00:02Z", joined.clone())),
-        GameLogWorkerJob::Event(event("1970-01-01T00:00:03Z", left.clone())),
-        GameLogWorkerJob::Event(event("1970-01-01T00:00:04Z", GameLogEventKind::DesktopMode)),
+        GameLogWorkerJob::Event(event(2, joined.clone())),
+        GameLogWorkerJob::Event(event(3, left.clone())),
+        GameLogWorkerJob::Event(event(4, GameLogEventKind::DesktopMode)),
     ])?;
     assert_eq!(timers.snapshot()[0].since_ms, Some(500));
 
-    processor.handle_jobs(vec![GameLogWorkerJob::Event(event(
-        "1970-01-01T00:00:05Z",
-        joined,
-    ))])?;
+    processor.handle_jobs(vec![GameLogWorkerJob::Event(event(5, joined))])?;
     assert_eq!(timers.snapshot()[0].since_ms, Some(5_000));
     let before_leave = chrono::Utc::now().timestamp_millis();
-    processor.handle_jobs(vec![GameLogWorkerJob::Event(event(
-        "1970-01-01T00:00:06Z",
-        left,
-    ))])?;
+    processor.handle_jobs(vec![GameLogWorkerJob::Event(event(6, left))])?;
     assert!(timers.snapshot()[0].since_ms.unwrap() >= before_leave);
     assert_eq!(
         timers.snapshot()[0].source,
@@ -749,26 +734,23 @@ fn local_mode_distinguishes_player_leave_rejoin_and_own_room_exit() -> Result<()
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::InitialEvent(event(
-            "1970-01-01T00:00:01Z",
+            1,
             GameLogEventKind::Location {
                 location: "wrld_local:1".into(),
                 world_name: "Local".into(),
             },
         )),
-        GameLogWorkerJob::InitialEvent(event("1970-01-01T00:00:02Z", joined.clone())),
+        GameLogWorkerJob::InitialEvent(event(2, joined.clone())),
     ])?;
     assert_eq!(timers.snapshot()[0].since_ms, Some(500));
 
     processor.handle_jobs(vec![
-        GameLogWorkerJob::Event(event("1970-01-01T00:00:03Z", left.clone())),
-        GameLogWorkerJob::Event(event("1970-01-01T00:00:04Z", joined.clone())),
+        GameLogWorkerJob::Event(event(3, left.clone())),
+        GameLogWorkerJob::Event(event(4, joined.clone())),
     ])?;
     assert_eq!(timers.snapshot()[0].since_ms, Some(4_000));
 
-    processor.handle_jobs(vec![GameLogWorkerJob::Event(event(
-        "1970-01-01T00:00:05Z",
-        left,
-    ))])?;
+    processor.handle_jobs(vec![GameLogWorkerJob::Event(event(5, left))])?;
     let remote_start = timers.snapshot()[0].since_ms.unwrap();
     assert!(remote_start > 4_000);
     assert_eq!(
@@ -776,12 +758,9 @@ fn local_mode_distinguishes_player_leave_rejoin_and_own_room_exit() -> Result<()
         vrcx_0_application_core::FriendLocationTimeSource::Realtime
     );
 
+    processor.handle_jobs(vec![GameLogWorkerJob::Event(event(6, joined))])?;
     processor.handle_jobs(vec![GameLogWorkerJob::Event(event(
-        "1970-01-01T00:00:06Z",
-        joined,
-    ))])?;
-    processor.handle_jobs(vec![GameLogWorkerJob::Event(event(
-        "1970-01-01T00:00:07Z",
+        7,
         GameLogEventKind::LocationDestination {
             location: "wrld_next:2".into(),
         },
@@ -818,14 +797,14 @@ fn local_mode_player_leave_is_not_lost_when_own_exit_is_in_the_same_batch() -> R
     processor.deps.instance_roster_observer = Some(timers.clone());
     processor.handle_jobs(vec![
         GameLogWorkerJob::InitialEvent(event(
-            "1970-01-01T00:00:01Z",
+            1,
             GameLogEventKind::Location {
                 location: "wrld_local:1".into(),
                 world_name: "Local".into(),
             },
         )),
         GameLogWorkerJob::InitialEvent(event(
-            "1970-01-01T00:00:02Z",
+            2,
             GameLogEventKind::PlayerJoined {
                 display_name: "Friend".into(),
                 user_id: "usr_friend".into(),
@@ -836,14 +815,14 @@ fn local_mode_player_leave_is_not_lost_when_own_exit_is_in_the_same_batch() -> R
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::Event(event(
-            "1970-01-01T00:00:03Z",
+            3,
             GameLogEventKind::PlayerLeft {
                 display_name: "Friend".into(),
                 user_id: String::new(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "1970-01-01T00:00:04Z",
+            4,
             GameLogEventKind::LocationDestination {
                 location: "wrld_next:2".into(),
             },
@@ -857,18 +836,18 @@ fn local_mode_player_leave_is_not_lost_when_own_exit_is_in_the_same_batch() -> R
 #[test]
 fn resume_cutoff_splits_queued_live_events_without_backfilling() -> Result<()> {
     let (_dir, store, processor) = test_processor("runtime-gamelog-resume-cutoff")?;
-    processor.set_persistence_resume_after("2026-05-14T05:20:30.000Z");
+    processor.set_persistence_resume_after(1778736030);
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::Event(event(
-            "2026-05-14T05:20:00.000Z",
+            1778736000,
             GameLogEventKind::Location {
                 location: "wrld_cutoff:1".into(),
                 world_name: "Cutoff".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T05:20:40.000Z",
+            1778736040,
             GameLogEventKind::PlayerJoined {
                 display_name: "After Resume".into(),
                 user_id: "usr_after_resume".into(),
@@ -887,7 +866,7 @@ fn disabled_process_stop_clears_memory_without_persisting_session_closure() -> R
     let (_dir, store, processor) = test_processor("runtime-gamelog-disabled-stop")?;
     store.set_bool("gameLogDisabled", true)?;
     processor.handle_jobs(vec![GameLogWorkerJob::Event(event(
-        "2026-05-14T05:30:00.000Z",
+        1778736600,
         GameLogEventKind::Location {
             location: "wrld_stop:1".into(),
             world_name: "Stop".into(),
@@ -901,7 +880,7 @@ fn disabled_process_stop_clears_memory_without_persisting_session_closure() -> R
             is_steamvr_running: false,
             game_changed: true,
         },
-        changed_at: "2026-05-14T05:35:00.000Z".into(),
+        changed_at: 1778736900,
     })])?;
 
     assert!(processor.deps.snapshot.snapshot().location.is_empty());
@@ -917,9 +896,9 @@ fn disabled_process_stop_clears_memory_without_persisting_session_closure() -> R
 #[test]
 fn resume_cutoff_skips_a_queued_process_stop_closure() -> Result<()> {
     let (_dir, store, processor) = test_processor("runtime-gamelog-resume-stop")?;
-    processor.set_persistence_resume_after("2026-05-14T05:45:00.000Z");
+    processor.set_persistence_resume_after(1778737500);
     processor.handle_jobs(vec![GameLogWorkerJob::Event(event(
-        "2026-05-14T05:40:00.000Z",
+        1778737200,
         GameLogEventKind::Location {
             location: "wrld_resume_stop:1".into(),
             world_name: "Resume Stop".into(),
@@ -933,7 +912,7 @@ fn resume_cutoff_skips_a_queued_process_stop_closure() -> Result<()> {
             is_steamvr_running: false,
             game_changed: true,
         },
-        changed_at: "2026-05-14T05:44:00.000Z".into(),
+        changed_at: 1778737440,
     })])?;
 
     assert!(!store.tables_exist());
@@ -951,7 +930,7 @@ fn emits_runtime_persisted_mirror_after_worker_write() -> Result<()> {
     let (_dir, _db, processor) = test_processor("runtime-gamelog-worker-mirror")?;
 
     processor.handle_jobs(vec![GameLogWorkerJob::Event(event(
-        "2026-05-14T06:00:00.000Z",
+        1778738400,
         GameLogEventKind::Location {
             location: "wrld_mirror:1".into(),
             world_name: "Mirror World".into(),
@@ -979,16 +958,13 @@ fn enabled_write_failure_emits_fallback_and_skips_persisted_outputs() -> Result<
     let worker = std::thread::spawn(move || {
         writing.handle_jobs(vec![
             GameLogWorkerJob::Event(event(
-                "2026-05-14T06:10:00.000Z",
+                1778739000,
                 GameLogEventKind::Location {
                     location: "wrld_failure:1".into(),
                     world_name: "Failure".into(),
                 },
             )),
-            GameLogWorkerJob::Event(event(
-                "2026-05-14T06:10:01.000Z",
-                GameLogEventKind::DesktopMode,
-            )),
+            GameLogWorkerJob::Event(event(1778739001, GameLogEventKind::DesktopMode)),
         ])
     });
     std::thread::sleep(std::time::Duration::from_millis(600));
@@ -1016,14 +992,14 @@ fn join_leave_events_reuse_current_world_name_for_overlay_content() -> Result<()
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::Event(event(
-            "2026-05-14T07:00:00.000Z",
+            1778742000,
             GameLogEventKind::Location {
                 location: "wrld_named:123".into(),
                 world_name: "Named World".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T07:00:40.000Z",
+            1778742040,
             GameLogEventKind::PlayerJoined {
                 display_name: "Traveler".into(),
                 user_id: "usr_traveler".into(),
@@ -1048,14 +1024,14 @@ fn suppresses_initial_current_instance_join_overlay_notifications() -> Result<()
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:00:00.000Z",
+            1778745600,
             GameLogEventKind::Location {
                 location: "wrld_public:123".into(),
                 world_name: "Public World".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:00:10.000Z",
+            1778745610,
             GameLogEventKind::PlayerJoined {
                 display_name: "Existing Player".into(),
                 user_id: "usr_existing".into(),
@@ -1075,14 +1051,14 @@ fn allows_later_current_instance_join_overlay_notifications() -> Result<()> {
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:10:00.000Z",
+            1778746200,
             GameLogEventKind::Location {
                 location: "wrld_public:456".into(),
                 world_name: "Public World".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:10:31.000Z",
+            1778746231,
             GameLogEventKind::PlayerJoined {
                 display_name: "Late Player".into(),
                 user_id: "usr_late".into(),
@@ -1108,7 +1084,7 @@ fn instance_avatar_changes_reach_overlay_activity_except_for_the_current_user() 
         } }
     })));
     let mut jobs = vec![GameLogWorkerJob::Event(event(
-        "2026-05-14T08:30:00.000Z",
+        1778747400,
         GameLogEventKind::Location {
             location: "wrld_public:321".into(),
             world_name: "Public World".into(),
@@ -1116,16 +1092,13 @@ fn instance_avatar_changes_reach_overlay_activity_except_for_the_current_user() 
     ))];
     for (display_name, user_id) in [("Self", "usr_self"), ("Alice", "usr_alice")] {
         jobs.push(GameLogWorkerJob::Event(event(
-            "2026-05-14T08:30:01.000Z",
+            1778747401,
             GameLogEventKind::PlayerJoined {
                 display_name: display_name.into(),
                 user_id: user_id.into(),
             },
         )));
-        for (created_at, avatar_name) in [
-            ("2026-05-14T08:30:02.000Z", "First"),
-            ("2026-05-14T08:31:00.000Z", "Second"),
-        ] {
+        for (created_at, avatar_name) in [(1778747402, "First"), (1778747460, "Second")] {
             jobs.push(GameLogWorkerJob::Event(event(
                 created_at,
                 GameLogEventKind::AvatarChange {
@@ -1172,28 +1145,28 @@ fn moderated_players_add_blocked_and_muted_join_leave_overlay_activity() -> Resu
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:20:00.000Z",
+            1778746800,
             GameLogEventKind::Location {
                 location: "wrld_public:789".into(),
                 world_name: "Public World".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:20:31.000Z",
+            1778746831,
             GameLogEventKind::PlayerJoined {
                 display_name: "Blocked Player".into(),
                 user_id: "usr_blocked".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:20:41.000Z",
+            1778746841,
             GameLogEventKind::PlayerJoined {
                 display_name: "Other Player".into(),
                 user_id: "usr_other".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:21:00.000Z",
+            1778746860,
             GameLogEventKind::PlayerLeft {
                 display_name: "Blocked Player".into(),
                 user_id: "usr_blocked".into(),
@@ -1242,21 +1215,21 @@ fn moderated_players_already_in_instance_alert_despite_join_suppression() -> Res
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:20:00.000Z",
+            1778746800,
             GameLogEventKind::Location {
                 location: "wrld_public:789".into(),
                 world_name: "Public World".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:20:01.000Z",
+            1778746801,
             GameLogEventKind::PlayerJoined {
                 display_name: "Blocked Player".into(),
                 user_id: "usr_blocked".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:20:01.000Z",
+            1778746801,
             GameLogEventKind::PlayerJoined {
                 display_name: "Other Player".into(),
                 user_id: "usr_other".into(),
@@ -1322,19 +1295,19 @@ fn game_log_presence_enables_current_instance_gps_surface_filtering() -> Result<
     let sink = RecordingOverlaySink::default();
     overlay.set_sink(sink.clone());
     overlay.arm_delivery();
-    let location_at = (chrono::Utc::now() - chrono::Duration::seconds(40)).to_rfc3339();
-    let joined_at = chrono::Utc::now().to_rfc3339();
+    let location_at = (chrono::Utc::now() - chrono::Duration::seconds(40)).timestamp();
+    let joined_at = chrono::Utc::now().timestamp();
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::Event(event(
-            &location_at,
+            location_at,
             GameLogEventKind::Location {
                 location: "wrld_current:123".into(),
                 world_name: "Current World".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            &joined_at,
+            joined_at,
             GameLogEventKind::PlayerJoined {
                 display_name: "Selected Friend".into(),
                 user_id: "usr_selected".into(),
@@ -1349,7 +1322,7 @@ fn game_log_presence_enables_current_instance_gps_surface_filtering() -> Result<
     let mut gps = ActivityEvent::new(
         ActivityKind::Gps,
         "friend-feed:GPS:usr_selected",
-        chrono::Utc::now().to_rfc3339(),
+        chrono::Utc::now().timestamp(),
     );
     gps.actor = ActivityActor::new("usr_selected", "Selected Friend");
     gps.subject = ActivitySubject::User("usr_selected".into());
@@ -1373,21 +1346,21 @@ fn suppresses_leave_overlay_notifications_right_after_destination() -> Result<()
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:20:00.000Z",
+            1778746800,
             GameLogEventKind::Location {
                 location: "wrld_old:123".into(),
                 world_name: "Old World".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:20:40.000Z",
+            1778746840,
             GameLogEventKind::PlayerJoined {
                 display_name: "Departing Player".into(),
                 user_id: "usr_departing".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:21:00.000Z",
+            1778746860,
             GameLogEventKind::LocationDestination {
                 location: "wrld_next:123".into(),
             },
@@ -1412,21 +1385,21 @@ fn suppresses_current_user_join_leave_overlay_notifications() -> Result<()> {
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:30:00.000Z",
+            1778747400,
             GameLogEventKind::Location {
                 location: "wrld_self:123".into(),
                 world_name: "Self World".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:30:40.000Z",
+            1778747440,
             GameLogEventKind::PlayerJoined {
                 display_name: "Self".into(),
                 user_id: "usr_self".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T08:31:00.000Z",
+            1778747460,
             GameLogEventKind::LocationDestination {
                 location: "wrld_next:123".into(),
             },
@@ -1443,7 +1416,7 @@ fn suppresses_current_user_join_leave_overlay_notifications() -> Result<()> {
 fn failed_write_recovers_before_later_records_advance_history() -> Result<()> {
     let (_dir, store, processor) = test_processor("recover-write-gap")?;
     processor.handle_jobs(vec![GameLogWorkerJob::Event(event(
-        "2026-05-14T04:00:00.000Z",
+        1778731200,
         GameLogEventKind::Location {
             location: "wrld_recovery:1".into(),
             world_name: "Recovery".into(),
@@ -1451,7 +1424,7 @@ fn failed_write_recovers_before_later_records_advance_history() -> Result<()> {
     ))])?;
     store.set_fail_writes(true);
     let failed = processor.handle_jobs(vec![GameLogWorkerJob::Event(event(
-        "2026-05-14T04:00:10.000Z",
+        1778731210,
         GameLogEventKind::PlayerJoined {
             user_id: "usr_other".into(),
             display_name: "Other".into(),
@@ -1461,7 +1434,7 @@ fn failed_write_recovers_before_later_records_advance_history() -> Result<()> {
     store.set_fail_writes(false);
     assert!(failed.is_err());
     processor.handle_jobs(vec![GameLogWorkerJob::Event(event(
-        "2026-05-14T04:00:10.000Z",
+        1778731210,
         GameLogEventKind::PlayerJoined {
             user_id: "usr_self".into(),
             display_name: "Self".into(),
@@ -1493,12 +1466,12 @@ fn scan_job(
         events,
         origin: crate::GameLogEventOrigin::InitialScan,
         cursor: Box::new(crate::GameLogScanCursor {
-            file_created_at: None,
+            file_creation: Default::default(),
             start_position: position.saturating_sub(100),
             rebuild: false,
             file_name: file_name.into(),
             context,
-            cutoff: "2026-05-14T00:00:00Z".into(),
+            cutoff: 1778716800,
         }),
         publish,
         completed: None,
@@ -1513,14 +1486,14 @@ fn checkpoint_recovers_same_second_tail_without_replaying_committed_joins() -> R
         100,
         vec![
             event(
-                "2026-05-14T04:00:00.000Z",
+                1778731200,
                 GameLogEventKind::Location {
                     location: "wrld_checkpoint:1".into(),
                     world_name: "Checkpoint".into(),
                 },
             ),
             event(
-                "2026-05-14T04:00:10.000Z",
+                1778731210,
                 GameLogEventKind::PlayerJoined {
                     user_id: "usr_first".into(),
                     display_name: "First".into(),
@@ -1533,7 +1506,7 @@ fn checkpoint_recovers_same_second_tail_without_replaying_committed_joins() -> R
     store.set_fail_writes(true);
     let writing = processor.clone();
     let tail = event(
-        "2026-05-14T04:00:10.000Z",
+        1778731210,
         GameLogEventKind::PlayerJoined {
             user_id: "usr_second".into(),
             display_name: "Second".into(),
@@ -1560,9 +1533,10 @@ fn checkpoint_recovers_same_second_tail_without_replaying_committed_joins() -> R
     assert!(snapshot.ready);
     assert_eq!(snapshot.players.len(), 2);
     assert_eq!(store.join_leave(&OwnerId::new("")).len(), 2);
-    assert!(snapshot.players.iter().all(
-        |player| player.join_time_ms == crate::parse_event_time_ms("2026-05-14T04:00:10.000Z")
-    ));
+    assert!(snapshot
+        .players
+        .iter()
+        .all(|player| player.join_time_ms == crate::parse_event_time_ms(1778731210)));
     Ok(())
 }
 
@@ -1574,14 +1548,14 @@ fn a_new_log_file_cannot_publish_the_previous_games_roster() -> Result<()> {
         100,
         vec![
             event(
-                "2026-05-14T04:00:00.000Z",
+                1778731200,
                 GameLogEventKind::Location {
                     location: "wrld_old:1".into(),
                     world_name: "Old".into(),
                 },
             ),
             event(
-                "2026-05-14T04:00:10.000Z",
+                1778731210,
                 GameLogEventKind::PlayerJoined {
                     user_id: "usr_old".into(),
                     display_name: "Old".into(),
@@ -1605,21 +1579,21 @@ fn current_file_replay_restores_members_without_backfilling_history() -> Result<
         100,
         vec![
             event(
-                "2026-05-14T04:00:00.000Z",
+                1778731200,
                 GameLogEventKind::Location {
                     location: "wrld_current:1".into(),
                     world_name: "Current".into(),
                 },
             ),
             event(
-                "2026-05-14T04:00:10.000Z",
+                1778731210,
                 GameLogEventKind::PlayerJoined {
                     user_id: "usr_self".into(),
                     display_name: "Self".into(),
                 },
             ),
             event(
-                "2026-05-14T04:00:10.000Z",
+                1778731210,
                 GameLogEventKind::PlayerJoined {
                     user_id: "usr_other".into(),
                     display_name: "Other".into(),
@@ -1629,7 +1603,7 @@ fn current_file_replay_restores_members_without_backfilling_history() -> Result<
         true,
     );
     if let GameLogWorkerJob::Scan { cursor, .. } = &mut scan {
-        cursor.cutoff = "2026-05-14T05:00:00Z".into();
+        cursor.cutoff = 1778734800;
         cursor.rebuild = true;
     }
     processor.handle_jobs(vec![scan])?;
@@ -1656,21 +1630,21 @@ fn replay_cutoff_applies_to_old_records_after_a_newer_timestamp() -> Result<()> 
         100,
         vec![
             event(
-                "2026-05-14T04:00:00.000Z",
+                1778731200,
                 GameLogEventKind::Location {
                     location: "wrld_current:1".into(),
                     world_name: "Current".into(),
                 },
             ),
             event(
-                "2026-05-14T04:02:00.000Z",
+                1778731320,
                 GameLogEventKind::PlayerJoined {
                     user_id: "usr_new".into(),
                     display_name: "New".into(),
                 },
             ),
             event(
-                "2026-05-14T04:00:10.000Z",
+                1778731210,
                 GameLogEventKind::PlayerJoined {
                     user_id: "usr_old".into(),
                     display_name: "Old".into(),
@@ -1680,7 +1654,7 @@ fn replay_cutoff_applies_to_old_records_after_a_newer_timestamp() -> Result<()> 
         true,
     );
     if let GameLogWorkerJob::Scan { cursor, .. } = &mut scan {
-        cursor.cutoff = "2026-05-14T04:01:00Z".into();
+        cursor.cutoff = 1778731260;
         cursor.rebuild = true;
     }
     processor.handle_jobs(vec![scan])?;
@@ -1699,7 +1673,7 @@ fn live_chunks_use_current_engine_for_join_suppression() -> Result<()> {
             "output_log_current.txt",
             100,
             vec![event(
-                "2026-05-14T04:00:00.000Z",
+                1778731200,
                 GameLogEventKind::Location {
                     location: "wrld_new:1".into(),
                     world_name: "New World".into(),
@@ -1715,7 +1689,7 @@ fn live_chunks_use_current_engine_for_join_suppression() -> Result<()> {
             "output_log_current.txt",
             200,
             vec![event(
-                "2026-05-14T04:00:10.000Z",
+                1778731210,
                 GameLogEventKind::PlayerJoined {
                     user_id: "usr_existing".into(),
                     display_name: "Already Here".into(),
@@ -1749,7 +1723,7 @@ fn new_file_does_not_forward_previous_replayed_departures() -> Result<()> {
         "output_log_old.txt",
         100,
         vec![event(
-            "2026-05-14T04:00:00.000Z",
+            1778731200,
             GameLogEventKind::PlayerLeft {
                 user_id: "usr_from_previous_game".into(),
                 display_name: "Old".into(),
@@ -1761,7 +1735,7 @@ fn new_file_does_not_forward_previous_replayed_departures() -> Result<()> {
         "output_log_new.txt",
         100,
         vec![event(
-            "2026-05-14T05:00:00.000Z",
+            1778734800,
             GameLogEventKind::Location {
                 location: "wrld_new:2".into(),
                 world_name: "New".into(),
@@ -1782,7 +1756,7 @@ fn process_events_do_not_close_unverified_database_roster() -> Result<()> {
         &OwnerId::new(""),
         &GameLogWriteBatch {
             locations: vec![GameLogLocationEntry {
-                created_at: "2026-05-14T04:00:00.000Z".into(),
+                created_at: 1778731200,
                 location: "wrld_old:1".into(),
                 world_id: "wrld_old".into(),
                 world_name: "Old".into(),
@@ -1790,7 +1764,7 @@ fn process_events_do_not_close_unverified_database_roster() -> Result<()> {
                 group_name: String::new(),
             }],
             join_leave: vec![vrcx_0_contracts::game_log::GameLogJoinLeaveEntry {
-                created_at: "2026-05-14T04:00:10.000Z".into(),
+                created_at: 1778731210,
                 event_type: "OnPlayerJoined".into(),
                 user_id: "usr_old".into(),
                 display_name: "Old".into(),
@@ -1802,17 +1776,14 @@ fn process_events_do_not_close_unverified_database_roster() -> Result<()> {
         },
     )?;
     let processor = build_test_processor(store.clone())?;
-    for (running, time) in [
-        (true, "2026-05-14T05:00:00.000Z"),
-        (false, "2026-05-14T05:01:00.000Z"),
-    ] {
+    for (running, time) in [(true, 1778734800), (false, 1778734860)] {
         processor.handle_jobs(vec![GameLogWorkerJob::Process(GameLogProcessEvent {
             process: GameProcessEvent {
                 is_game_running: running,
                 is_steamvr_running: false,
                 game_changed: true,
             },
-            changed_at: time.into(),
+            changed_at: time,
         })])?;
     }
     let rows = store.join_leave(&OwnerId::new(""));
@@ -1829,7 +1800,7 @@ fn regression_failed_scan_returns_and_retries_once_with_process_closure() -> Res
         "output_log_current.txt",
         100,
         vec![event(
-            "2026-05-14T04:00:00Z",
+            1778731200,
             GameLogEventKind::Location {
                 location: "wrld_retry:1".into(),
                 world_name: "Retry".into(),
@@ -1842,7 +1813,7 @@ fn regression_failed_scan_returns_and_retries_once_with_process_closure() -> Res
         "output_log_current.txt",
         200,
         vec![event(
-            "2026-05-14T04:00:10Z",
+            1778731210,
             GameLogEventKind::PlayerJoined {
                 user_id: "usr_other".into(),
                 display_name: "Other".into(),
@@ -1873,7 +1844,7 @@ fn regression_failed_scan_returns_and_retries_once_with_process_closure() -> Res
                 is_steamvr_running: false,
                 game_changed: true
             },
-            changed_at: "2026-05-14T04:01:00Z".into()
+            changed_at: 1778731260
         })])
         .is_err());
     store.set_fail_writes(false);
@@ -1917,7 +1888,7 @@ fn regression_runtime_acknowledges_failure_and_continues_after_config_recovers()
         "output_log_current.txt",
         100,
         vec![event(
-            "2026-05-14T04:00:00Z",
+            1778731200,
             GameLogEventKind::Location {
                 location: "wrld_recovered:1".into(),
                 world_name: "Recovered".into(),
@@ -1948,14 +1919,14 @@ fn unchanged_log_publishes_snapshot_after_each_restart() -> Result<()> {
         100,
         vec![
             event(
-                "2026-05-14T04:00:00Z",
+                1778731200,
                 GameLogEventKind::Location {
                     location: "wrld_restored:1".into(),
                     world_name: "Restored".into(),
                 },
             ),
             event(
-                "2026-05-14T04:00:10Z",
+                1778731210,
                 GameLogEventKind::PlayerJoined {
                     user_id: "usr_other".into(),
                     display_name: "Other".into(),
@@ -1987,7 +1958,7 @@ fn unchanged_log_publishes_snapshot_after_each_restart() -> Result<()> {
         assert_eq!(snapshot.players.len(), 1);
         assert_eq!(
             snapshot.players[0].join_time_ms,
-            crate::parse_event_time_ms("2026-05-14T04:00:10Z")
+            crate::parse_event_time_ms(1778731210)
         );
         let checkpoint: super::ReplayCheckpoint =
             serde_json::from_str(&store.get_string("gameLogReplayCheckpoint", "")?)?;
@@ -2022,13 +1993,13 @@ fn duplicate_scan_can_publish_without_replaying_rows_or_side_effects() -> Result
         100,
         vec![
             event(
-                "2026-05-14T04:00:00Z",
+                1778731200,
                 GameLogEventKind::Location {
                     location: "wrld_once:1".into(),
                     world_name: "Once".into(),
                 },
             ),
-            event("2026-05-14T04:00:10Z", GameLogEventKind::DesktopMode),
+            event(1778731210, GameLogEventKind::DesktopMode),
         ],
         false,
     );
@@ -2064,7 +2035,7 @@ fn a_scan_without_events_keeps_the_persisted_checkpoint_and_the_database_idle() 
         "output_log_current.txt",
         200,
         vec![event(
-            "2026-05-14T04:00:00Z",
+            1778731200,
             GameLogEventKind::Location {
                 location: "wrld_eventless:1".into(),
                 world_name: "Eventless".into(),
@@ -2103,13 +2074,13 @@ fn a_scan_without_events_keeps_the_persisted_checkpoint_and_the_database_idle() 
 fn side_effect_events_without_history_rows_still_advance_the_restart_position() -> Result<()> {
     let (_dir, store, processor) = test_processor("side-effect-restart-position")?;
     let location = event(
-        "2026-05-14T04:00:00Z",
+        1778731200,
         GameLogEventKind::Location {
             location: "wrld_sync:1".into(),
             world_name: "Sync".into(),
         },
     );
-    let desktop_mode = event("2026-05-14T04:00:20Z", GameLogEventKind::DesktopMode);
+    let desktop_mode = event(1778731220, GameLogEventKind::DesktopMode);
     let side_effects = |processor: &GameLogProcessor| {
         processor
             .deps
@@ -2149,12 +2120,12 @@ fn side_effect_events_without_history_rows_still_advance_the_restart_position() 
         events: replayed,
         origin: crate::GameLogEventOrigin::InitialScan,
         cursor: Box::new(crate::GameLogScanCursor {
-            file_created_at: None,
+            file_creation: Default::default(),
             start_position: resume_position,
             rebuild: false,
             file_name: "output_log_current.txt".into(),
             context,
-            cutoff: "2026-05-14T04:00:00Z".into(),
+            cutoff: 1778731200,
         }),
         publish: true,
         completed: None,
@@ -2240,16 +2211,16 @@ fn video_notifications_use_enriched_activity_and_respect_replay_and_surface_filt
         overlay.arm_delivery();
         let sink = RecordingOverlaySink::default();
         overlay.set_sink(sink.clone());
-        let timestamp = chrono::Utc::now().to_rfc3339();
+        let timestamp = chrono::Utc::now().timestamp();
         let video = event(
-            &timestamp,
+            timestamp,
             GameLogEventKind::VideoPlay {
                 video_url: "https://youtu.be/dQw4w9WgXcQ".into(),
                 display_name: "Video User".into(),
             },
         );
         let location = event(
-            &timestamp,
+            timestamp,
             GameLogEventKind::Location {
                 location: "wrld_video:123".into(),
                 world_name: "Video World".into(),
@@ -2346,7 +2317,7 @@ fn video_notifications_discard_metadata_completed_after_auth_scope_changes() -> 
         overlay.set_sink(sink.clone());
         overlay.arm_delivery();
         processor.handle_jobs(vec![GameLogWorkerJob::Event(event(
-            &chrono::Utc::now().to_rfc3339(),
+            vrcx_0_core::time::now_epoch(),
             GameLogEventKind::VideoPlay {
                 video_url: "https://youtu.be/dQw4w9WgXcQ".into(),
                 display_name: "Video User".into(),
@@ -2375,14 +2346,14 @@ fn group_instance_locations_record_the_owning_group_name() -> Result<()> {
 
     processor.handle_jobs(vec![
         GameLogWorkerJob::Event(event(
-            "2026-05-14T04:00:00.000Z",
+            1778731200,
             GameLogEventKind::Location {
                 location: "wrld_group:1~group(grp_owner)~groupAccessType(public)".into(),
                 world_name: "Group World".into(),
             },
         )),
         GameLogWorkerJob::Event(event(
-            "2026-05-14T05:00:00.000Z",
+            1778734800,
             GameLogEventKind::Location {
                 location: "wrld_group:2~hidden(usr_owner)".into(),
                 world_name: "Group World".into(),

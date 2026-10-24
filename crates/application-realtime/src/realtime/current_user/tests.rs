@@ -46,7 +46,7 @@ fn current_user_location_message(
             }
         }),
         raw: String::new(),
-        received_at: received_at.into(),
+        received_at: vrcx_0_core::time::parse_epoch_seconds(received_at).unwrap_or_default(),
     }
 }
 
@@ -77,7 +77,7 @@ fn current_user_projection_serializes_object_shape() {
                     }
                 }),
                 raw: String::new(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             },
             game_not_running(true),
         )
@@ -215,7 +215,7 @@ fn user_update_message(user: serde_json::Value) -> RealtimeWsMessagePayload {
             "content": { "userId": "usr_self", "user": user }
         }),
         raw: String::new(),
-        received_at: "2026-05-15T00:00:00Z".into(),
+        received_at: 1778803200,
     }
 }
 
@@ -406,7 +406,7 @@ fn unavailable_local_game_context_skips_game_dependent_side_effects() {
                     }
                 }),
                 raw: String::new(),
-                received_at: "2026-05-15T00:00:02Z".into(),
+                received_at: 1778803202,
             },
             game.clone(),
         )
@@ -449,7 +449,7 @@ fn running_local_game_keeps_authoritative_location_above_remote_ws_location() {
                     }
                 }),
                 raw: String::new(),
-                received_at: "2026-05-15T00:00:00Z".into(),
+                received_at: 1778803200,
             },
             game_running_at("wrld_local:123", "Local World"),
         )
@@ -498,7 +498,7 @@ fn stopped_local_game_projects_remote_location_as_online_and_starts_gamelog_inte
     assert_eq!(
         output.persistence.game_log_locations[0],
         GameLogLocationEntry {
-            created_at: "2026-05-15T00:00:00Z".into(),
+            created_at: 1778803200,
             location: "wrld_remote:456~group(grp_remote)".into(),
             world_id: "wrld_remote".into(),
             world_name: "".into(),
@@ -551,7 +551,7 @@ fn false_remote_offline_keeps_location_until_same_location_cancels_pending() {
     assert_eq!(resumed.wake_at_ms, None);
     assert!(resumed.persistence.is_empty());
     assert!(runtime
-        .wake_pending_offline(7, "2026-05-15T00:03:00Z".into(), game_not_running(true),)
+        .wake_pending_offline(7, 1778803380, game_not_running(true),)
         .is_none());
 }
 
@@ -573,10 +573,10 @@ fn an_earlier_wake_does_not_confirm_a_newer_pending_offline() {
     }
 
     assert!(runtime
-        .wake_pending_offline(7, "2026-05-15T00:03:00Z".into(), game_not_running(true))
+        .wake_pending_offline(7, 1778803380, game_not_running(true))
         .is_none());
     let confirmed = runtime
-        .wake_pending_offline(7, "2026-05-15T00:03:10Z".into(), game_not_running(true))
+        .wake_pending_offline(7, 1778803390, game_not_running(true))
         .expect("the newer pending offline confirms at its own deadline");
     assert_eq!(confirmed.snapshot["$presence"]["kind"], json!("active"));
 }
@@ -602,7 +602,7 @@ fn confirmed_remote_offline_ends_interval_and_same_location_can_start_again() {
     assert!(pending.wake_at_ms.is_some());
 
     let confirmed = runtime
-        .wake_pending_offline(7, "2026-05-15T00:03:00Z".into(), game_not_running(true))
+        .wake_pending_offline(7, 1778803380, game_not_running(true))
         .expect("pending remote offline should fire");
 
     assert_eq!(confirmed.snapshot["$presence"]["kind"], json!("active"));
@@ -610,7 +610,7 @@ fn confirmed_remote_offline_ends_interval_and_same_location_can_start_again() {
     assert_eq!(
         confirmed.persistence.game_log_location_time_updates,
         vec![GameLogLocationTimeUpdate {
-            created_at: "2026-05-15T00:00:00Z".into(),
+            created_at: 1778803200,
             time: 180_000,
         }]
     );
@@ -625,7 +625,7 @@ fn confirmed_remote_offline_ends_interval_and_same_location_can_start_again() {
     assert_eq!(restarted.persistence.game_log_locations.len(), 1);
     assert_eq!(
         restarted.persistence.game_log_locations[0].created_at,
-        "2026-05-15T00:03:20Z"
+        1778803400
     );
 }
 
@@ -674,7 +674,7 @@ fn local_game_start_invalidates_remote_offline_timer_and_keeps_local_authority()
     assert_eq!(local.snapshot["location"], json!("wrld_local:123"));
     assert_eq!(local.snapshot["$presence"]["kind"], json!("online"));
     assert!(runtime
-        .wake_pending_offline(7, "2026-05-15T00:03:00Z".into(), local_game,)
+        .wake_pending_offline(7, 1778803380, local_game,)
         .is_none());
 }
 
@@ -747,7 +747,7 @@ fn reconnect_preserves_remote_interval_and_invalidates_old_pending_timer() {
     );
 
     assert!(runtime
-        .wake_pending_offline(7, "2026-05-15T00:03:00Z".into(), game_not_running(true),)
+        .wake_pending_offline(7, 1778803380, game_not_running(true),)
         .is_none());
     let duplicate = runtime
         .apply_ws_message(
@@ -767,13 +767,13 @@ fn reconnect_preserves_remote_interval_and_invalidates_old_pending_timer() {
         .expect("remote offline after reconnect");
     assert!(pending.wake_at_ms.is_some());
     let confirmed = runtime
-        .wake_pending_offline(8, "2026-05-15T00:03:20Z".into(), game_not_running(true))
+        .wake_pending_offline(8, 1778803400, game_not_running(true))
         .expect("remote offline should close original interval");
 
     assert_eq!(
         confirmed.persistence.game_log_location_time_updates,
         vec![GameLogLocationTimeUpdate {
-            created_at: "2026-05-15T00:00:00Z".into(),
+            created_at: 1778803200,
             time: 200_000,
         }]
     );
@@ -825,7 +825,7 @@ fn explicit_transport_finalization_ends_remote_interval() {
     );
     assert_eq!(
         finalized.persistence.game_log_location_time_updates[0].created_at,
-        "2026-05-15T00:00:00Z"
+        1778803200
     );
     assert!(finalized.persistence.game_log_location_time_updates[0].time > 0);
 }
@@ -921,15 +921,16 @@ fn avatar_wear_checkpoint_saves_the_open_segment_and_closing_adds_only_the_rest(
     assert_eq!(owner.as_str(), "usr_self");
     assert_eq!(saved.avatar_id, "avtr_worn");
     assert!(saved.time_spent > 0);
-    assert_eq!(saved.time_spent, saved.ended_at_ms - saved.started_at_ms);
+    assert!(saved.ended_at >= saved.started_at);
     std::thread::sleep(std::time::Duration::from_millis(5));
 
     let stopped = runtime
         .apply_game_running_state(7, game_not_running(true))
         .expect("game stop output");
     let closing = &stopped.persistence.avatar_time_spent_upserts[0];
-    assert_eq!(closing.started_at_ms, saved.started_at_ms);
-    assert_eq!(closing.time_spent, closing.ended_at_ms - saved.ended_at_ms);
+    assert_eq!(closing.started_at, saved.started_at);
+    assert!(closing.ended_at >= saved.ended_at);
+    assert!(closing.time_spent > 0);
     assert!(runtime
         .checkpoint_avatar_wear(7, game_not_running(true))
         .is_none());

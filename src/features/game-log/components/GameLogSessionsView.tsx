@@ -10,6 +10,11 @@ import { cn } from '@/lib/utils';
 import { userImage } from '@/services/entityMediaService';
 import { openGameLogUser } from '@/services/gameLogUserDialogService';
 import {
+    displayDayKey,
+    parseAbsoluteDateMs
+} from '@/shared/utils/displayTimeZone';
+import { usePreferencesStore } from '@/state/preferencesStore';
+import {
     Avatar,
     AvatarFallback,
     AvatarGroup,
@@ -236,15 +241,7 @@ function sessionStartValue(session: GameLogSession) {
 }
 
 function localDayKey(value: string | number) {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-        return String(value || '').slice(0, 10);
-    }
-    return [
-        date.getFullYear(),
-        String(date.getMonth() + 1).padStart(2, '0'),
-        String(date.getDate()).padStart(2, '0')
-    ].join('-');
+    return displayDayKey(value);
 }
 
 function sessionDayKey(session: GameLogSession) {
@@ -296,9 +293,9 @@ function buildSessionSummary(
         if (!eventTime) {
             continue;
         }
-        const eventEpoch = Date.parse(eventTime);
-        const firstEpoch = Date.parse(firstEventAt);
-        const lastEpoch = Date.parse(lastEventAt);
+        const eventEpoch = parseAbsoluteDateMs(eventTime);
+        const firstEpoch = parseAbsoluteDateMs(firstEventAt);
+        const lastEpoch = parseAbsoluteDateMs(lastEventAt);
         if (
             !firstEventAt ||
             (Number.isFinite(eventEpoch) &&
@@ -340,11 +337,12 @@ const GameLogSessionSegment = memo(function GameLogSessionSegment({
     isOpen = false,
     onOpenChange
 }: GameLogSessionSegmentProps) {
+    usePreferencesStore((state) => state.dtTimeZone);
     const { t } = useTranslation();
     const { favoriteIdSet, friendIdSet } = useGameLogSessionAffinity();
     const worldTarget = resolveWorldTarget(session);
     const durationMs = resolveSessionDuration(session);
-    const sessionStartedAt = Date.parse(session?.created_at || '');
+    const sessionStartedAt = parseAbsoluteDateMs(session?.created_at || '');
     const sessionLocation = session.location || '';
     const playerDurationDetails = useMemo(
         () =>
@@ -510,6 +508,7 @@ export function GameLogSessionsView({
     autoFillKey = '',
     onLoadMore
 }: GameLogSessionsViewProps) {
+    usePreferencesStore((state) => state.dtTimeZone);
     const { t } = useTranslation();
     const scrollRef = useRef<HTMLDivElement | null>(null);
     const sentinelRef = useRef<HTMLDivElement | null>(null);

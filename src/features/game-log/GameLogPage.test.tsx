@@ -158,7 +158,7 @@ describe('GameLogPage', () => {
         mocks.viewMode = 'sessions';
         mocks.sessions = [1, 2].map((id) => ({
             id,
-            created_at: '2026-09-03T00:00:00.000Z',
+            created_at: 1788393600,
             duration: 0,
             location: `wrld_test:${id}`,
             worldId: 'wrld_test',

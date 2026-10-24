@@ -5,7 +5,9 @@ use crate::database::DatabaseService;
 use crate::ownership::owner_id_for_filter;
 use crate::Error;
 
-use super::helpers::{clamped_optional_limit, current_friend_id_set, friend_current_table_name};
+use super::helpers::{
+    clamped_optional_limit, current_friend_id_set, friend_current_table_name, row_iso,
+};
 use super::types::{ResolveUserInput, ResolveUserOutput, ResolvedUserRow};
 
 pub fn resolve_user_by_name(
@@ -45,7 +47,7 @@ pub fn resolve_user_by_name(
         }
         let name = row_string(&row, 1);
         let hits = row_i64(&row, 2).max(0);
-        let last_seen = row_string(&row, 3);
+        let last_seen = row_iso(&row, 3);
         let entry = acc.entry(user_id.clone()).or_insert_with(|| Candidate {
             user_id,
             display_name: name.clone(),

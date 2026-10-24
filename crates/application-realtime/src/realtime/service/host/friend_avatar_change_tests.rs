@@ -21,7 +21,7 @@ fn icon_change(previous_file_id: &str, next_file_id: &str) -> FriendIconChange {
         display_name: "Friend".into(),
         previous_icon_url: icon_url(previous_file_id),
         next_icon_url: icon_url(next_file_id),
-        created_at: "2026-09-17T00:00:00.000Z".into(),
+        created_at: 1789603200,
     }
 }
 

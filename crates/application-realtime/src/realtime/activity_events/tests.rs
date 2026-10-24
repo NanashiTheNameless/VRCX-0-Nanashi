@@ -76,7 +76,7 @@ fn notifications_without_ids_get_stable_distinct_source_ids() {
     };
 
     let first = invite("first");
-    assert!(first.starts_with("notification:invite:usr_sender:2026-05-31T00:02:00.000Z:"));
+    assert!(first.starts_with("notification:invite:usr_sender:1780185720:"));
     assert_eq!(first, invite("first"));
     assert_ne!(first, invite("second"));
 }
@@ -93,7 +93,7 @@ fn unsupported_notification_types_produce_no_activity() {
 #[test]
 fn friend_feed_entries_keep_their_kind_specific_facts() {
     let avatar = feed_activity_event(&FeedLiveEntry::Avatar {
-        created_at: "2026-05-31T00:01:00.000Z".into(),
+        created_at: 1780185660,
         user_id: "usr_friend".into(),
         display_name: "Friend".into(),
         owner_id: String::new(),
@@ -110,7 +110,7 @@ fn friend_feed_entries_keep_their_kind_specific_facts() {
     assert_eq!(avatar.facts.image_url, "https://images.example/avatar.png");
 
     let renamed = feed_activity_event(&FeedLiveEntry::DisplayName {
-        created_at: "2026-05-31T00:01:00.000Z".into(),
+        created_at: 1780185660,
         user_id: "usr_friend".into(),
         display_name: "New Name".into(),
         previous_display_name: "Old Name".into(),
@@ -123,7 +123,7 @@ fn friend_feed_entries_keep_their_kind_specific_facts() {
     assert_eq!(renamed.facts.previous_display_name, "Old Name");
 
     let joining = feed_activity_event(&FeedLiveEntry::OnPlayerJoining {
-        created_at: "2026-07-13T10:00:00Z".into(),
+        created_at: 1783936800,
         user_id: "usr_joining".into(),
         display_name: "Joining User".into(),
         location: "traveling".into(),

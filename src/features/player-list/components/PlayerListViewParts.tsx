@@ -64,7 +64,7 @@ export function CurrentWorldHeader({
     fileAnalysis = {},
     friendCount,
     instanceCapacity,
-    instanceCreatedAt = '',
+    instanceCreatedAt = 0,
     instanceGroupName = '',
     instanceLocation = '',
     instanceWorldId = '',
@@ -82,7 +82,7 @@ export function CurrentWorldHeader({
     fileAnalysis?: PlatformFileAnalysis;
     friendCount: number;
     instanceCapacity?: number | null;
-    instanceCreatedAt?: string;
+    instanceCreatedAt?: number;
     instanceGroupName?: string;
     instanceLocation?: string;
     instanceWorldId?: string;
@@ -91,7 +91,7 @@ export function CurrentWorldHeader({
     onPreviewImage?: (image: { url: string; title: string }) => void;
     playerCount: number;
     parsedLocation: ReturnType<typeof parseLocation>;
-    startedAt?: string | null;
+    startedAt?: number | null;
     world?: WorldProfileRecord | null;
 }) {
     const { t } = useTranslation();

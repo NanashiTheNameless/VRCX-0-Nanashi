@@ -1,10 +1,11 @@
 use std::collections::BTreeSet;
 
-use super::{activity_iso_from_ms, ActivityPageStore, PAYLOAD_VERSION};
+use super::{ActivityPageStore, PAYLOAD_VERSION};
 use vrcx_0_application_core::Result;
 use vrcx_0_contracts::activity_page::{
     ActivityLocationSpan as LocationSpan, CachedActivityPage as CachedPage,
 };
+use vrcx_0_core::time::epoch_from_millis;
 use vrcx_0_core::OwnerId;
 
 use super::aggregate::{
@@ -28,7 +29,11 @@ pub fn activity_page_view_build(
     }
     let range_days = input.range_days;
     store.with_build_lock(&input.owner_user_id, || {
-        let cursor = store.source_cursor(&input.owner_user_id)?;
+        let cursor = format!(
+            "{}|tz={}",
+            store.source_cursor(&input.owner_user_id)?,
+            vrcx_0_core::time::display_zone_cache_key()
+        );
         let cached = store.read_cached_page(&input.owner_user_id, range_days)?;
         let window = window_bounds(&input, range_days);
 
@@ -79,15 +84,15 @@ fn is_reusable(
         && cached.built_from_cursor == cursor
         && cached.view.utc_offset_minutes == input.utc_offset_minutes
         && cached.view.people.order == input.companion_order
-        && cached.view.window_from_ms == window.from_ms.unwrap_or(0)
-        && cached.view.window_to_ms == window.to_ms
+        && cached.view.window_from == window.from_ms.map_or(0, epoch_from_millis)
+        && cached.view.window_to == epoch_from_millis(window.to_ms)
 }
 
 fn empty_activity_page_view(input: &ActivityPageBuildInput) -> ActivityPageView {
     ActivityPageView {
         range_days: input.range_days.max(0),
         utc_offset_minutes: input.utc_offset_minutes,
-        built_at: activity_iso_from_ms(input.now_ms),
+        built_at: input.now,
         ..Default::default()
     }
 }
@@ -98,8 +103,33 @@ pub(super) struct WindowBounds {
 }
 
 fn window_bounds(input: &ActivityPageBuildInput, range_days: i64) -> WindowBounds {
+    if input.utc_offset_minutes
+        == i64::from(vrcx_0_core::time::display_now().offset().local_minus_utc()) / 60
+    {
+        if let Some(tomorrow) =
+            vrcx_0_core::time::to_display(input.now).and_then(|local| local.date_naive().succ_opt())
+        {
+            let midnight = |date: chrono::NaiveDate| {
+                date.and_hms_opt(0, 0, 0)
+                    .and_then(vrcx_0_core::time::display_local_to_epoch)
+                    .map(|seconds| seconds * 1000)
+            };
+            if let Some(to_ms) = midnight(tomorrow) {
+                return WindowBounds {
+                    from_ms: (range_days > 0)
+                        .then(|| {
+                            tomorrow
+                                .checked_sub_signed(chrono::Duration::days(range_days))
+                                .and_then(midnight)
+                        })
+                        .flatten(),
+                    to_ms,
+                };
+            }
+        }
+    }
     let offset_ms = input.utc_offset_minutes * MINUTE_MS;
-    let local_now_ms = input.now_ms + offset_ms;
+    let local_now_ms = input.now * 1000 + offset_ms;
     let local_day_end_ms = local_now_ms.div_euclid(DAY_MS) * DAY_MS + DAY_MS;
     let to_ms = local_day_end_ms - offset_ms;
     WindowBounds {
@@ -142,8 +172,8 @@ fn build_fresh(
     Ok(ActivityPageView {
         range_days,
         utc_offset_minutes: input.utc_offset_minutes,
-        window_from_ms: from_ms.unwrap_or(0),
-        window_to_ms: to_ms,
+        window_from: from_ms.map_or(0, epoch_from_millis),
+        window_to: epoch_from_millis(to_ms),
         summary: summarize(&spans, window_days, input.utc_offset_minutes),
         previous,
         series: series(
@@ -163,7 +193,7 @@ fn build_fresh(
         )?,
         coverage: coverage(store, &input.owner_user_id, from_ms, to_ms)?,
         built_from_cursor: cursor.to_string(),
-        built_at: activity_iso_from_ms(input.now_ms),
+        built_at: input.now,
         stale: false,
     })
 }
@@ -181,14 +211,14 @@ fn coverage(
     from_ms: Option<i64>,
     to_ms: i64,
 ) -> Result<ActivityPageCoverage> {
-    let first_source_at = store.first_source_created_at(owner_user_id)?;
+    let first_source_at = store.first_source_created_at(owner_user_id)?.unwrap_or(0);
     let from = match from_ms {
-        Some(from_ms) => activity_iso_from_ms(from_ms),
-        None => first_source_at.clone(),
+        Some(from_ms) => epoch_from_millis(from_ms),
+        None => first_source_at,
     };
     Ok(ActivityPageCoverage {
         from,
-        to: activity_iso_from_ms(to_ms),
+        to: epoch_from_millis(to_ms),
         first_source_at,
     })
 }

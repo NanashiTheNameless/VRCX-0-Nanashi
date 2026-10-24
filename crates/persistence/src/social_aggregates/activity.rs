@@ -7,8 +7,7 @@ use crate::Error;
 
 use super::caveats::friend_activity_caveats;
 use super::helpers::{
-    append_time_window_filter, table_exists, typical_online_window, tz_offset_modifier,
-    with_tz_caveat, LatestName,
+    append_time_window_filter, table_exists, typical_online_window, with_tz_caveat, LatestName,
 };
 use super::types::{
     ActivityBucket, FriendActivityPatternInput, FriendActivityPatternOutput,
@@ -28,11 +27,13 @@ pub fn get_friend_activity_pattern(
         });
     }
 
-    let offset_minutes = input.utc_offset_minutes.unwrap_or(0);
-    let tz_modifier = tz_offset_modifier(offset_minutes);
     let bucket_expr = match input.bucket {
-        ActivityBucket::HourOfDay => "strftime('%H', created_at, @tz)",
-        ActivityBucket::DayOfWeek => "strftime('%w', created_at, @tz)",
+        ActivityBucket::HourOfDay => {
+            "strftime('%H', vrcx_display_epoch(created_at, @tz), 'unixepoch')"
+        }
+        ActivityBucket::DayOfWeek => {
+            "strftime('%w', vrcx_display_epoch(created_at, @tz), 'unixepoch')"
+        }
     };
     let mut sql = format!(
         "WITH filtered AS (
@@ -40,7 +41,7 @@ pub fn get_friend_activity_pattern(
             FROM {table_name}
             WHERE type = 'Online'"
     );
-    let mut params = ParamsBuilder::new().set("tz", tz_modifier);
+    let mut params = ParamsBuilder::new().set("tz", input.utc_offset_minutes);
     append_time_window_filter(&mut sql, &mut params, &input.time_window, "created_at");
     if let Some(user_id) = input
         .user_id
@@ -97,7 +98,7 @@ pub fn get_friend_activity_pattern(
         let display_name = row_string(&row, 1);
         let bucket = row_string(&row, 2);
         let count = row_i64(&row, 3);
-        let latest_at = row_string(&row, 4);
+        let latest_at = row_i64(&row, 4);
         let entry = grouped
             .entry(user_id.clone())
             .or_insert_with(|| FriendActivityAccumulator {
@@ -105,7 +106,7 @@ pub fn get_friend_activity_pattern(
                 latest_name: LatestName::default(),
                 buckets: BTreeMap::new(),
             });
-        entry.latest_name.observe(&display_name, &latest_at);
+        entry.latest_name.observe(&display_name, latest_at);
         *entry.buckets.entry(bucket).or_insert(0) += count;
     }
 
@@ -119,7 +120,7 @@ pub fn get_friend_activity_pattern(
                 buckets: entry.buckets,
             })
             .collect(),
-        caveats: with_tz_caveat(friend_activity_caveats(), offset_minutes),
+        caveats: with_tz_caveat(friend_activity_caveats(), input.utc_offset_minutes),
     })
 }
 

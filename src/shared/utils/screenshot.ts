@@ -1,3 +1,4 @@
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 const SCREENSHOT_FILE_NAME_REGEX =
     /VRChat_((\d{3,})x(\d{3,})_(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})\.(\d{1,})|(\d{4})-(\d{2})-(\d{2})_(\d{2})-(\d{2})-(\d{2})\.(\d{3})_(\d{3,})x(\d{3,}))/;
 
@@ -50,11 +51,13 @@ function parseVrchatScreenshotDateFromFileName(
 }
 
 function resolveScreenshotCapturedTime(image: {
-    capturedAt?: string | null;
+    capturedAt?: string | number | null;
     fileName?: string | null;
     modifiedAt?: number | null;
 }): number {
-    const parsed = image.capturedAt ? Date.parse(image.capturedAt) : Number.NaN;
+    const parsed = image.capturedAt
+        ? parseAbsoluteDateMs(image.capturedAt)
+        : Number.NaN;
     if (Number.isFinite(parsed)) {
         return parsed;
     }
@@ -66,7 +69,7 @@ function resolveScreenshotCapturedTime(image: {
         return fromFileName;
     }
 
-    return image.modifiedAt ?? 0;
+    return image.modifiedAt == null ? 0 : parseAbsoluteDateMs(image.modifiedAt);
 }
 
 export { parseVrchatScreenshotDateFromFileName, resolveScreenshotCapturedTime };

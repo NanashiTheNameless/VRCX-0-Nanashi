@@ -134,7 +134,7 @@ mod tests {
             } else {
                 "profile".into()
             },
-            received_at: "2026-06-16T00:00:00Z".into(),
+            received_at: 1781568000,
             is_friend,
             ..Default::default()
         }

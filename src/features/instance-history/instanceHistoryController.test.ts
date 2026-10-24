@@ -32,21 +32,21 @@ describe('filterAndSortInstanceHistoryRows', () => {
         const rows = [
             {
                 id: 'older',
-                createdAt: '2026-08-09T12:00:00.000Z',
+                createdAt: 1786276800,
                 location: 'wrld_match:2',
                 worldName: 'Match World',
                 events: [2]
             },
             {
                 id: 'newer',
-                createdAt: '2026-08-10T12:00:00.000Z',
+                createdAt: 1786363200,
                 location: 'wrld_match:1',
                 worldName: 'Match World',
                 events: [1]
             },
             {
                 id: 'outside',
-                createdAt: '2026-08-01T12:00:00.000Z',
+                createdAt: 1785585600,
                 location: 'wrld_match:3',
                 worldName: 'Match World',
                 events: [3]

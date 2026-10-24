@@ -3,7 +3,6 @@ mod tests {
     use super::super::*;
     use crate::realtime::event_time::EventTime;
     use crate::realtime::FriendWake;
-    use chrono::{TimeZone, Utc};
     use std::collections::{BTreeMap, HashMap};
     use std::env;
     use std::fs;
@@ -40,13 +39,9 @@ mod tests {
     }
 
     fn fire_timer(runtime: &RealtimeFriendsRuntime, timer: &PendingTimer) -> Vec<FeedLiveEntry> {
-        let at = Utc
-            .timestamp_millis_opt(timer.deadline_ms)
-            .single()
-            .map(|time| time.to_rfc3339())
-            .unwrap_or_default();
+        let at = vrcx_0_core::time::epoch_from_millis(timer.deadline_ms);
         runtime
-            .wake(&timer.uid, &at)
+            .wake(&timer.uid, at)
             .map(|output| output.persistence.feed_entries)
             .unwrap_or_default()
     }
@@ -140,7 +135,7 @@ mod tests {
         let mut emit = |observed: &mut BTreeMap<String, Value>,
                         runtime: &RealtimeFriendsRuntime,
                         kind: &str,
-                        at: &str,
+                        at: i64,
                         uid: &str,
                         feeds: &[FeedLiveEntry]| {
             let next = observe_all(runtime);
@@ -167,7 +162,10 @@ mod tests {
             if kind != "baseline" && kind != "ws" {
                 continue;
             }
-            let at = entry.get("at").and_then(Value::as_str).unwrap_or("");
+            let at = entry
+                .get("at")
+                .and_then(vrcx_0_core::time::epoch_from_json)
+                .unwrap_or_default();
             let at_ms = EventTime::from_received_at(at).timestamp_ms;
 
             timers.sort_by_key(|timer| timer.deadline_ms);
@@ -177,16 +175,12 @@ mod tests {
             {
                 let timer = timers.remove(0);
                 let feeds = fire_timer(&runtime, &timer);
-                let timer_at = Utc
-                    .timestamp_millis_opt(timer.deadline_ms)
-                    .single()
-                    .map(|time| time.to_rfc3339())
-                    .unwrap_or_default();
+                let timer_at = vrcx_0_core::time::epoch_from_millis(timer.deadline_ms);
                 emit(
                     &mut observed,
                     &runtime,
                     "timer",
-                    &timer_at,
+                    timer_at,
                     &timer.uid,
                     &feeds,
                 );
@@ -227,7 +221,7 @@ mod tests {
             let payload = RealtimeWsMessagePayload {
                 json: entry.get("ws").cloned().unwrap_or(Value::Null),
                 raw: "{}".into(),
-                received_at: at.to_string(),
+                received_at: at,
             };
             let feeds = match runtime.apply_ws_message(&payload) {
                 RealtimeFriendApplyResult::Output(output) => {

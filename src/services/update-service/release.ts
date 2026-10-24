@@ -1,3 +1,5 @@
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { isRecord } from '@/shared/utils/record';
 import {
     compareReleaseVersions,
@@ -30,7 +32,7 @@ function normalizeGitHubRelease(
         tagName: release.tag_name || '',
         displayName:
             release.name || `VRCX-0-Nanashi ${parsedVersion.displayVersion}`,
-        publishedAt: release.published_at || '',
+        publishedAt: epochSecondsFromValue(release.published_at) ?? 0,
         body: release.body || '',
         updaterType: 'manual'
     };
@@ -52,7 +54,7 @@ export function normalizeReleaseList(
                     right.canonicalVersion,
                     left.canonicalVersion
                 ) ||
-                (Date.parse(right.publishedAt) || 0) -
-                    (Date.parse(left.publishedAt) || 0)
+                (parseAbsoluteDateMs(right.publishedAt) || 0) -
+                    (parseAbsoluteDateMs(left.publishedAt) || 0)
         );
 }

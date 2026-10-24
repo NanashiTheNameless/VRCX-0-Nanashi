@@ -65,8 +65,8 @@ function completedStatus(
                     ? { id, name: 'Avatar' }
                     : null
         })),
-        startedAt: '2026-01-01T00:00:00Z',
-        finishedAt: '2026-01-01T00:00:01Z',
+        startedAt: 1767225600,
+        finishedAt: 1767225601,
         lastError: failed ? options.message || 'failed' : null
     };
 }

@@ -1,7 +1,8 @@
 import type { DashboardConfig } from '@/features/dashboard/dashboardConfig';
 import { formatDateFilter } from '@/lib/dateTime';
+import { displayDayKey as toLocalDayKey } from '@/shared/utils/displayTimeZone';
 
-type WidgetTimestamp = string | null | undefined;
+type WidgetTimestamp = number | string | null | undefined;
 
 export function formatWidgetTime(value: WidgetTimestamp) {
     if (!value) {
@@ -11,7 +12,7 @@ export function formatWidgetTime(value: WidgetTimestamp) {
     try {
         return formatDateFilter(value, 'time');
     } catch {
-        return value;
+        return String(value);
     }
 }
 
@@ -23,21 +24,12 @@ export function formatWidgetDate(value: WidgetTimestamp) {
     try {
         return formatDateFilter(value, 'date');
     } catch {
-        return value;
+        return String(value);
     }
 }
 
 export function getWidgetDayKey(value: WidgetTimestamp) {
-    const date = new Date(value || '');
-    if (Number.isNaN(date.getTime())) {
-        return (value || '').slice(0, 10);
-    }
-
-    return [
-        date.getFullYear(),
-        String(date.getMonth() + 1).padStart(2, '0'),
-        String(date.getDate()).padStart(2, '0')
-    ].join('-');
+    return value == null ? '' : toLocalDayKey(value);
 }
 
 export function formatWidgetExactTime(value: WidgetTimestamp) {
@@ -48,7 +40,7 @@ export function formatWidgetExactTime(value: WidgetTimestamp) {
     try {
         return formatDateFilter(value, 'long');
     } catch {
-        return value;
+        return String(value);
     }
 }
 

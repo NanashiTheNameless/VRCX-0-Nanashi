@@ -205,8 +205,7 @@ function galleryImage(
         height: 1080,
         worldId: null,
         worldName: null,
-        capturedAt: null,
-        capturedAtMs: 1,
+        capturedAt: 1,
         metadata: null,
         error: null
     };

@@ -509,7 +509,7 @@ describe('useFriendsLocationsPageDerivedState', () => {
                             id: friend.id,
                             userId: friend.id,
                             displayName: friend.displayName,
-                            joinedAt: new Date(joinedAtMs).toISOString(),
+                            joinedAt: Math.floor(joinedAtMs / 1000),
                             joinedAtMs
                         }
                     ],

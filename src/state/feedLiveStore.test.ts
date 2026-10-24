@@ -24,20 +24,20 @@ const goldenFeedEntryCorrectionIds = [
     },
     {
         input: gpsFeedEntry({
-            created_at: '2026-06-21T00:00:00.000Z',
+            created_at: 1782000000,
             userId: 'usr_location',
             location: 'wrld_world:123'
         }),
-        expected: 'GPS:2026-06-21T00:00:00.000Z:usr_location:wrld_world:123:'
+        expected: 'GPS:1782000000:usr_location:wrld_world:123:'
     },
     {
         input: statusFeedEntry({
-            created_at: '2026-06-21T00:00:00.000Z',
+            created_at: 1782000000,
             userId: 'usr_friend',
             status: 'active',
             previousStatus: 'join me'
         }),
-        expected: 'Status:2026-06-21T00:00:00.000Z:usr_friend::'
+        expected: 'Status:1782000000:usr_friend::'
     }
 ];
 

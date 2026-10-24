@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+
+import { setDisplayTimeZone } from '@/shared/utils/displayTimeZone';
 
 import {
     createGroupEventForm,
@@ -8,9 +10,72 @@ import {
     toLocalDateTimeInput
 } from './groupEventForm';
 
+afterEach(() => setDisplayTimeZone(''));
+
 const NOW = new Date(2026, 9, 21, 12, 30).getTime();
 
 describe('groupEventForm', () => {
+    it('edits and submits epoch seconds in the configured timezone across DST', () => {
+        setDisplayTimeZone('America/New_York');
+        const form = groupEventFormFromEvent({
+            id: 'gcal_1',
+            startsAt: '2026-03-08T07:30:00Z',
+            endsAt: '2026-03-08T08:30:00Z'
+        });
+        expect(form.startsAt).toBe('2026-03-08T03:30');
+        expect(toLocalDateTimeInput(1772955000)).toBe('2026-03-08T03:30');
+        expect(groupEventMutation(form).startsAt).toBe(
+            '2026-03-08T07:30:00.000Z'
+        );
+        form.repeat = 'weekly';
+        expect(groupEventMutation(form).recurrence?.timezone).toBe(
+            'America/New_York'
+        );
+        form.startsAt = '2026-03-08T02:30';
+        expect(groupEventMutation(form).startsAt).toBe(
+            '2026-03-08T07:30:00.000Z'
+        );
+    });
+
+    it('rounds the default event up in a fixed fractional timezone', () => {
+        setDisplayTimeZone('UTC+05:45');
+        const form = createGroupEventForm(Date.parse('2026-10-21T12:30:00Z'));
+        expect(form.startsAt).toBe('2026-10-21T19:00');
+        form.repeat = 'weekly';
+        expect(groupEventMutation(form).recurrence?.timezone).toBe(
+            Intl.DateTimeFormat().resolvedOptions().timeZone
+        );
+        expect(groupEventMutation(form).startsAt).toBe(
+            '2026-10-21T13:15:00.000Z'
+        );
+    });
+
+    it('keeps UTC as the named timezone for a new series', () => {
+        setDisplayTimeZone('UTC');
+        const form = createGroupEventForm(NOW);
+        form.repeat = 'weekly';
+        expect(groupEventMutation(form).recurrence?.timezone).toBe('UTC');
+    });
+
+    it('preserves an existing series timezone and its wall-clock end date', () => {
+        setDisplayTimeZone('America/New_York');
+        const form = groupEventFormFromEvent({
+            id: 'gcal_1',
+            startsAt: '2026-10-22T10:00:00Z',
+            endsAt: '2026-10-22T12:00:00Z',
+            recurrence: {
+                frequency: 'weekly',
+                timezone: 'Asia/Tokyo',
+                end: { type: 'afterDate', date: '2026-12-31T23:59:00' }
+            }
+        });
+        expect(form.repeatEndDate).toBe('2026-12-31T23:59');
+        expect(groupEventMutation(form).recurrence).toMatchObject({
+            timezone: 'Asia/Tokyo',
+            end: { type: 'afterDate', date: '2026-12-31T23:59' }
+        });
+    });
+
     it('starts a new event at the next full hour for two hours', () => {
         const form = createGroupEventForm(NOW);
 

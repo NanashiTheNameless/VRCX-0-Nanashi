@@ -33,6 +33,7 @@ import {
     SECONDS_PER_MINUTE
 } from '@/shared/constants/time';
 import { getDateTimeFormatter } from '@/shared/utils/dateTimeFormatters';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { isRecord } from '@/shared/utils/record';
 import { useDataDirMigrationStore } from '@/state/dataDirMigrationStore';
 import { usePreferencesStore } from '@/state/preferencesStore';
@@ -171,7 +172,7 @@ function formatAppUptime(ms: number) {
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
-function formatStatusDate(value: string | null | undefined) {
+function formatStatusDate(value: string | number | null | undefined) {
     return formatDateTime(value, {
         month: '2-digit',
         day: '2-digit',
@@ -426,8 +427,8 @@ export function AppStatusBar({
             vrcStatusSummary
         ]
     );
-    const gameStartedAt = Date.parse(lastGameStartedAt || '');
-    const currentLocationStartedTimestamp = Date.parse(
+    const gameStartedAt = parseAbsoluteDateMs(lastGameStartedAt || '');
+    const currentLocationStartedTimestamp = parseAbsoluteDateMs(
         currentLocationStartedAt || ''
     );
     const currentWorld = currentWorldName || currentWorldId || '';

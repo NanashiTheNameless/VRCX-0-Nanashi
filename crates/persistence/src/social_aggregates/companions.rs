@@ -10,7 +10,7 @@ use crate::Error;
 use super::caveats::companions_caveats;
 use super::helpers::{
     append_time_window_filter, clamped_optional_limit, format_minutes,
-    latest_display_names_for_users, millis_to_minutes, world_names_for_ids,
+    latest_display_names_for_users, millis_to_minutes, row_iso, world_names_for_ids,
 };
 use super::types::{CompanionOfRow, CompanionWorldRow, CompanionsOfInput, CompanionsOfOutput};
 
@@ -42,11 +42,11 @@ pub fn get_companions_of(
             SUM(
                 MAX(0,
                     MIN(
-                        CAST(strftime('%s', other.created_at) AS INTEGER),
-                        CAST(strftime('%s', target.created_at) AS INTEGER)
+                        other.created_at,
+                        target.created_at
                     ) - MAX(
-                        CAST(strftime('%s', other.created_at) AS INTEGER) - (MAX(other.time, 0) / 1000),
-                        CAST(strftime('%s', target.created_at) AS INTEGER) - (MAX(target.time, 0) / 1000)
+                        other.created_at - (MAX(other.time, 0) / 1000),
+                        target.created_at - (MAX(target.time, 0) / 1000)
                     )
                 )
             ) AS overlap_seconds,
@@ -67,10 +67,10 @@ pub fn get_companions_of(
            AND other.user_id <> @target_user_id
            AND other.user_id <> @owner_user_id
            AND trim(other.user_id) <> ''
-           AND CAST(strftime('%s', other.created_at) AS INTEGER)
-               > CAST(strftime('%s', target.created_at) AS INTEGER) - (MAX(target.time, 0) / 1000)
-           AND CAST(strftime('%s', target.created_at) AS INTEGER)
-               > CAST(strftime('%s', other.created_at) AS INTEGER) - (MAX(other.time, 0) / 1000)",
+           AND other.created_at
+               > target.created_at - (MAX(target.time, 0) / 1000)
+           AND target.created_at
+               > other.created_at - (MAX(other.time, 0) / 1000)",
     );
     let mut params = ParamsBuilder::new()
         .set("target_user_id", target_user_id.clone())
@@ -119,7 +119,7 @@ pub fn get_companions_of(
             overlap_minutes: millis_to_minutes(row_i64(&row, 1).max(0) * 1000),
             overlap_events: row_i64(&row, 2).max(0),
             shared_instances: usize::try_from(row_i64(&row, 3).max(0)).unwrap_or(0),
-            last_seen_together: row_string(&row, 4),
+            last_seen_together: row_iso(&row, 4),
             world_count,
             worlds,
         });

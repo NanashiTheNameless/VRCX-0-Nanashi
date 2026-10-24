@@ -132,7 +132,7 @@ impl RealtimeCurrentUserRuntime {
         game: LocalGameContextSnapshot,
     ) -> Option<RealtimeCurrentUserOutput> {
         let content = payload.json.get("content").unwrap_or(&Value::Null);
-        let now = EventTime::from_received_at(&payload.received_at);
+        let now = EventTime::from_received_at(payload.received_at);
         let mut state = self.lock_state();
         if state.generation != generation || state.current_user_id.is_empty() {
             return None;
@@ -247,11 +247,11 @@ impl RealtimeCurrentUserRuntime {
     pub fn wake_pending_offline(
         &self,
         generation: u64,
-        now: String,
+        now: i64,
         game: LocalGameContextSnapshot,
     ) -> Option<RealtimeCurrentUserOutput> {
         let mut state = self.lock_state();
-        let now = EventTime::from_received_at(&now);
+        let now = EventTime::from_received_at(now);
         if state.generation != generation
             || state.current_user_id.is_empty()
             || game.is_game_running()

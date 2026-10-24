@@ -57,8 +57,8 @@ fn query(
             search: String::new(),
             cursor,
             limit,
-            date_from: String::new(),
-            date_to: String::new(),
+            date_from: None,
+            date_to: None,
         },
     )
     .unwrap()
@@ -113,7 +113,7 @@ fn cursor_pagination_is_stable_for_equal_timestamps() {
                     first_viewed_at, last_viewed_at, view_count
                  ) VALUES (
                     'usr_owner', 'world', @entity_id, @entity_id, '',
-                    '2099-01-01T00:00:00.000Z', '2099-01-01T00:00:00.000Z', 1
+                    4070908800, 4070908800, 1
                  )",
                 &ParamsBuilder::new().set("entity_id", entity_id).build(),
             )
@@ -153,8 +153,8 @@ fn queries_and_clear_are_scoped_to_owner() {
             search: String::new(),
             cursor: None,
             limit: 10,
-            date_from: String::new(),
-            date_to: String::new(),
+            date_from: None,
+            date_to: None,
         },
     )
     .unwrap();
@@ -190,10 +190,7 @@ fn own_profile_is_never_recorded() {
 fn date_range_filters_by_last_viewed_at() {
     let test = test_db("date-range");
     ensure_browse_history_table(&test.db).unwrap();
-    for (entity_id, last_viewed_at) in [
-        ("wrld_old", "2099-01-01T10:00:00.000Z"),
-        ("wrld_new", "2099-01-03T10:00:00.000Z"),
-    ] {
+    for (entity_id, last_viewed_at) in [("wrld_old", 4_070_944_800_i64), ("wrld_new", 4071117600)] {
         test.db
             .execute_non_query(
                 "INSERT INTO browse_history (
@@ -219,8 +216,8 @@ fn date_range_filters_by_last_viewed_at() {
             search: String::new(),
             cursor: None,
             limit: 10,
-            date_from: "2099-01-02T00:00:00.000Z".into(),
-            date_to: "2099-01-04T00:00:00.000Z".into(),
+            date_from: Some(4070995200),
+            date_to: Some(4071168000),
         },
     )
     .unwrap();
@@ -257,7 +254,7 @@ fn switching_to_off_retention_keeps_existing_rows() {
                 first_viewed_at, last_viewed_at, view_count
              ) VALUES (
                 'usr_owner', 'world', 'wrld_kept', '', '',
-                '2000-01-01T00:00:00.000Z', '2000-01-01T00:00:00.000Z', 1
+                946684800, 946684800, 1
              )",
             &Default::default(),
         )
@@ -280,7 +277,7 @@ fn shorter_retention_prunes_expired_rows_for_every_account() {
                     first_viewed_at, last_viewed_at, view_count
                  ) VALUES (
                     @owner_user_id, 'world', @owner_user_id, '', '',
-                    '2000-01-01T00:00:00.000Z', '2000-01-01T00:00:00.000Z', 1
+                    946684800, 946684800, 1
                  )",
                 &ParamsBuilder::new()
                     .set("owner_user_id", owner_user_id)

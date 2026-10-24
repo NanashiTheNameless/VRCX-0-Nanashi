@@ -31,7 +31,7 @@ fn persisted_notification_output_reaches_its_dedicated_observer_without_overlay_
 #[test]
 fn notification_cache_hits_enrich_projection_and_persistence() -> Result<()> {
     let (_dir, runtime, active_session) = runtime_with_active_session("notification-cache-hit")?;
-    runtime.cache_world_for_test("wrld_cached", "Cached World", "2026-01-01T00:00:00.000Z");
+    runtime.cache_world_for_test("wrld_cached", "Cached World", 1767225600);
     runtime
         .runtime()
         .world_cache
@@ -761,7 +761,7 @@ fn notification_v2_update_sanitizes_id_like_names_before_persistence() -> Result
                 notification_v2_updates: vec![NotificationV2Update {
                     id: "notif-update-sanitize".into(),
                     updates: update,
-                    received_at: "2026-06-21T00:01:00.000Z".into(),
+                    received_at: 1782000060,
                 }],
                 ..RealtimePersistenceBatch::default()
             },

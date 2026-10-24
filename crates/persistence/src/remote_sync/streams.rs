@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
-use chrono::{DateTime, Duration};
 use serde_json::{Map, Value};
+use vrcx_0_core::time::{epoch_from_json, epoch_from_millis, now_epoch};
 
 use super::{late_copies, push_cursor_get, to_i64, vault_params, VaultRef, VAULT_WHERE};
 use crate::common::{row_i64, row_string, ParamsBuilder};
@@ -238,7 +238,7 @@ impl StateSpec {
 #[derive(Clone, Debug, PartialEq)]
 pub struct StateExport {
     pub rows: Vec<Value>,
-    /// Rows deleted here in the last 90 days: `{ key: [...], deletedAtMs }`.
+    /// Rows deleted here in the last 90 days: `{ key: [...], deletedAt }`.
     pub deleted: Vec<Value>,
     pub fingerprint: i64,
 }
@@ -275,20 +275,19 @@ pub fn export_state(
             .set("owner_row_id", scope.owner_row_id)
             .build(),
     )?;
-    let now_ms = chrono::Utc::now().timestamp_millis();
     let deleted = db
         .execute(
-            "SELECT row_key, deleted_at_ms FROM remote_sync_tombstone WHERE stream = @stream AND owner_id = @owner AND deleted_at_ms >= @oldest ORDER BY row_key",
+            "SELECT row_key, deleted_at FROM remote_sync_tombstone WHERE stream = @stream AND owner_id = @owner AND deleted_at >= @oldest ORDER BY row_key",
             &ParamsBuilder::new()
                 .set("stream", table.clone())
                 .set("owner", tombstone_owner(scope, spec))
-                .set("oldest", now_ms - TOMBSTONE_MAX_AGE_MS)
+                .set("oldest", now_epoch() - TOMBSTONE_MAX_AGE_SECONDS)
                 .build(),
         )?
         .iter()
         .filter_map(|row| {
             let key = serde_json::from_str::<Value>(&row_string(row, 0)).ok()?;
-            Some(serde_json::json!({ "key": key, "deletedAtMs": row_i64(row, 1) }))
+            Some(serde_json::json!({ "key": key, "deletedAt": row_i64(row, 1) }))
         })
         .collect::<Vec<_>>();
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
@@ -327,14 +326,9 @@ fn import_state_row(
     let Some(object) = row.as_object() else {
         return Ok(RowOutcome::Invalid);
     };
-    let mut values = Vec::new();
-    for column in columns {
-        match object.get(column).map(scalar) {
-            Some(Some(value)) => values.push((column.as_str(), value)),
-            Some(None) => return Ok(RowOutcome::Invalid),
-            None => {}
-        }
-    }
+    let Some(values) = import_values(columns, object) else {
+        return Ok(RowOutcome::Invalid);
+    };
     let value_of = |column: &str| {
         values
             .iter()
@@ -362,7 +356,7 @@ fn import_state_row(
     let remote_version = spec
         .version
         .and_then(value_of)
-        .map(|value| row_string(&[value], 0));
+        .and_then(|value| value.as_i64());
     let key = key.set("owner_row_id", scope.owner_row_id).build();
     let quoted = quote(table);
     let version = spec.version.map(quote).unwrap_or_else(|| "NULL".into());
@@ -375,7 +369,7 @@ fn import_state_row(
         // written after the deletion.
         let deleted_at = tx
             .execute(
-                "SELECT deleted_at_ms FROM remote_sync_tombstone WHERE stream = @stream AND owner_id = @owner AND row_key = @row_key",
+                "SELECT deleted_at FROM remote_sync_tombstone WHERE stream = @stream AND owner_id = @owner AND row_key = @row_key",
                 &ParamsBuilder::new()
                     .set("stream", table)
                     .set("owner", tombstone_owner(scope, spec))
@@ -385,7 +379,7 @@ fn import_state_row(
             .first()
             .map(|row| row_i64(row, 0));
         if let Some(deleted_at) = deleted_at {
-            if remote_version.is_none_or(|version| version <= iso_from_ms(deleted_at)) {
+            if remote_version.is_none_or(|version| version <= deleted_at) {
                 return Ok(RowOutcome::Matched);
             }
         }
@@ -415,7 +409,9 @@ fn import_state_row(
             RowOutcome::Matched
         });
     };
-    let newer = remote_version.is_some_and(|remote| remote > row_string(found, 0));
+    let local_version = found.first().and_then(epoch_from_json);
+    let newer =
+        remote_version.is_some_and(|remote| local_version.is_none_or(|local| remote > local));
     if !newer {
         return Ok(RowOutcome::Matched);
     }
@@ -450,10 +446,17 @@ fn import_state_deletion(
     spec: &StateSpec,
     entry: &Value,
 ) -> Result<RowOutcome, Error> {
-    let (Some(key), Some(deleted_at)) = (
-        entry.get("key").and_then(Value::as_array),
-        entry.get("deletedAtMs").and_then(Value::as_i64),
-    ) else {
+    let deleted_at = entry
+        .get("deletedAt")
+        .and_then(epoch_from_json)
+        .or_else(|| {
+            entry
+                .get("deletedAtMs")
+                .and_then(Value::as_i64)
+                .map(epoch_from_millis)
+        });
+    let (Some(key), Some(deleted_at)) = (entry.get("key").and_then(Value::as_array), deleted_at)
+    else {
         return Ok(RowOutcome::Invalid);
     };
     if key.len() != spec.key.len()
@@ -466,14 +469,14 @@ fn import_state_deletion(
     let stream = spec.as_stream();
     let mut params = ParamsBuilder::new()
         .set("owner_row_id", scope.owner_row_id)
-        .set("deleted_iso", iso_from_ms(deleted_at));
+        .set("deleted_at", deleted_at);
     let mut conditions = Vec::new();
     for (index, (column, value)) in spec.key.iter().zip(key).enumerate() {
         conditions.push(format!("{} = @k{index}", quote(column)));
         params = params.set(&format!("k{index}"), value.clone());
     }
     let not_newer = match spec.version {
-        Some(column) => format!(" AND ({0} IS NULL OR {0} <= @deleted_iso)", quote(column)),
+        Some(column) => format!(" AND ({0} IS NULL OR {0} <= @deleted_at)", quote(column)),
         None => String::new(),
     };
     let removed = tx.execute_non_query(
@@ -504,7 +507,7 @@ fn import_state_deletion(
         .is_empty();
     if !still_there {
         tx.execute_non_query(
-            "INSERT INTO remote_sync_tombstone (stream, owner_id, row_key, deleted_at_ms) VALUES (@stream, @owner, @row_key, @deleted_at) ON CONFLICT (stream, owner_id, row_key) DO UPDATE SET deleted_at_ms = excluded.deleted_at_ms",
+            "INSERT INTO remote_sync_tombstone (stream, owner_id, row_key, deleted_at) VALUES (@stream, @owner, @row_key, @deleted_at) ON CONFLICT (stream, owner_id, row_key) DO UPDATE SET deleted_at = excluded.deleted_at",
             &ParamsBuilder::new()
                 .set("stream", table)
                 .set("owner", tombstone_owner(scope, spec))
@@ -567,7 +570,7 @@ impl StreamScope {
 pub fn app_settings_list(
     db: &DatabaseService,
     scope: &StreamScope,
-) -> Result<Vec<(String, String, String)>, Error> {
+) -> Result<Vec<(String, String, i64)>, Error> {
     let table = scope.table_name(&StreamSpec {
         name: "app_settings",
         table: StreamTable::User("remote_sync_app_settings"),
@@ -584,7 +587,7 @@ pub fn app_settings_list(
             &Default::default(),
         )?
         .iter()
-        .map(|row| (row_string(row, 0), row_string(row, 1), row_string(row, 2)))
+        .map(|row| (row_string(row, 0), row_string(row, 1), row_i64(row, 2)))
         .collect())
 }
 
@@ -593,7 +596,7 @@ pub fn app_settings_upsert(
     scope: &StreamScope,
     key: &str,
     value: &str,
-    updated_at: &str,
+    updated_at: i64,
 ) -> Result<(), Error> {
     let table = scope.table_name(&StreamSpec {
         name: "app_settings",
@@ -620,7 +623,7 @@ pub fn app_settings_remove(
     db: &DatabaseService,
     scope: &StreamScope,
     key: &str,
-    deleted_at_ms: i64,
+    deleted_at: i64,
 ) -> Result<(), Error> {
     let spec = state_spec("app_settings").expect("app settings is a state stream");
     let table = scope.table_name(&spec.as_stream());
@@ -631,7 +634,7 @@ pub fn app_settings_remove(
             "row_key",
             Value::Array(vec![Value::String(key.to_owned())]).to_string(),
         )
-        .set("deleted_at", deleted_at_ms)
+        .set("deleted_at", deleted_at)
         .build();
     db.write_transaction(|tx| {
         tx.execute_non_query(
@@ -639,7 +642,7 @@ pub fn app_settings_remove(
             &ParamsBuilder::new().set("key", key).build(),
         )?;
         tx.execute_non_query(
-            "INSERT INTO remote_sync_tombstone (stream, owner_id, row_key, deleted_at_ms) VALUES (@stream, @owner, @row_key, @deleted_at) ON CONFLICT (stream, owner_id, row_key) DO UPDATE SET deleted_at_ms = excluded.deleted_at_ms",
+            "INSERT INTO remote_sync_tombstone (stream, owner_id, row_key, deleted_at) VALUES (@stream, @owner, @row_key, @deleted_at) ON CONFLICT (stream, owner_id, row_key) DO UPDATE SET deleted_at = excluded.deleted_at",
             &params,
         )?;
         Ok(())
@@ -659,7 +662,7 @@ pub fn app_settings_deleted_keys(
         slack: false,
     });
     let rows = db.execute(
-        "SELECT row_key, deleted_at_ms FROM remote_sync_tombstone WHERE stream = @stream AND owner_id = 0",
+        "SELECT row_key, deleted_at FROM remote_sync_tombstone WHERE stream = @stream AND owner_id = 0",
         &ParamsBuilder::new().set("stream", table).build(),
     )?;
     Ok(rows
@@ -677,7 +680,7 @@ pub fn app_settings_deleted_keys(
 /// Stream name carrying the deletions of a state stream.
 pub const DELETED_SUFFIX: &str = "#deleted";
 /// Deletions older than this are no longer sent.
-const TOMBSTONE_MAX_AGE_MS: i64 = 90 * 24 * 60 * 60 * 1000;
+const TOMBSTONE_MAX_AGE_SECONDS: i64 = 90 * 24 * 60 * 60;
 
 fn owner_value(table: StreamTable, alias: &str) -> String {
     match table {
@@ -704,7 +707,7 @@ fn ensure_tombstone_triggers(db: &DatabaseService, scope: &StreamScope) -> Resul
             };
             for sql in [
                 format!(
-                    "CREATE TRIGGER IF NOT EXISTS {} AFTER DELETE ON {} BEGIN INSERT INTO remote_sync_tombstone (stream, owner_id, row_key, deleted_at_ms) VALUES ('{literal}', {}, json_array({}), CAST(strftime('%s', 'now') AS INTEGER) * 1000) ON CONFLICT (stream, owner_id, row_key) DO UPDATE SET deleted_at_ms = MAX(remote_sync_tombstone.deleted_at_ms, excluded.deleted_at_ms); END",
+                    "CREATE TRIGGER IF NOT EXISTS {} AFTER DELETE ON {} BEGIN INSERT INTO remote_sync_tombstone (stream, owner_id, row_key, deleted_at) VALUES ('{literal}', {}, json_array({}), CAST(strftime('%s', 'now') AS INTEGER)) ON CONFLICT (stream, owner_id, row_key) DO UPDATE SET deleted_at = MAX(remote_sync_tombstone.deleted_at, excluded.deleted_at); END",
                     quote(&format!("remote_sync_deleted_{table}")),
                     quote(&table),
                     owner_value(spec.table, "OLD"),
@@ -730,12 +733,6 @@ fn tombstone_owner(scope: &StreamScope, spec: &StateSpec) -> i64 {
         StreamTable::Owned(_) => scope.owner_row_id,
         StreamTable::User(_) | StreamTable::Global(_) => 0,
     }
-}
-
-fn iso_from_ms(ms: i64) -> String {
-    chrono::DateTime::from_timestamp_millis(ms)
-        .map(|time| time.to_rfc3339_opts(chrono::SecondsFormat::Millis, true))
-        .unwrap_or_default()
 }
 
 fn quote(identifier: &str) -> String {
@@ -967,6 +964,45 @@ fn scalar(value: &Value) -> Option<Value> {
     }
 }
 
+/// Every stored date column is named `*_at` and holds epoch seconds.
+pub(crate) fn is_date_column(column: &str) -> bool {
+    column.ends_with("_at")
+}
+
+/// The values of a synced row for the local columns, or `None` when one of
+/// them is not a scalar. Rows from older versions carry dates as ISO text or
+/// milliseconds; they are converted to epoch seconds here, and a date that
+/// cannot be read is stored as NULL rather than as text.
+fn import_values<'c>(
+    columns: &'c [String],
+    object: &Map<String, Value>,
+) -> Option<Vec<(&'c str, Value)>> {
+    let mut values = Vec::new();
+    for column in columns {
+        if column == "event_discriminator" && !object.contains_key(column) {
+            values.push((
+                column.as_str(),
+                crate::migrations::legacy_event_discriminator(
+                    object.get("created_at").unwrap_or(&Value::Null),
+                )
+                .into(),
+            ));
+            continue;
+        }
+        let Some(value) = object.get(column) else {
+            continue;
+        };
+        let value = scalar(value)?;
+        let value = if is_date_column(column) && !value.is_null() {
+            epoch_from_json(&value).map_or(Value::Null, Value::from)
+        } else {
+            value
+        };
+        values.push((column.as_str(), value));
+    }
+    Some(values)
+}
+
 struct PreparedStream<'a> {
     spec: &'static StreamSpec,
     table: String,
@@ -993,11 +1029,12 @@ fn lookup_sql(table: &str, spec: &StreamSpec, window: bool) -> String {
         let attribute = if window && index > 0 { "+" } else { "" };
         conditions.push(format!("{attribute}{} IS @k{index}", quote(column)));
     }
+    if matches!(spec.table, StreamTable::Owned(name) if name.starts_with("gamelog_")) {
+        conditions.push("event_discriminator = @event_discriminator".into());
+    }
     let time_column = quote(spec.time);
     conditions.push(if window {
-        // The text range narrows the search through the time index;
-        // julianday then compares the instants themselves.
-        format!("{time_column} >= @lo AND {time_column} <= @hi AND ABS((julianday({time_column}) - julianday(@time)) * 86400.0) <= @slack")
+        format!("{time_column} >= @lo AND {time_column} <= @hi")
     } else {
         format!("{time_column} IS @time")
     });
@@ -1230,21 +1267,16 @@ fn import_row(
     let Some(object) = row.as_object() else {
         return Ok(RowOutcome::Invalid);
     };
-    let mut values = Vec::new();
-    for column in &stream.columns {
-        match object.get(column).map(scalar) {
-            Some(Some(value)) => values.push((column.as_str(), value)),
-            Some(None) => return Ok(RowOutcome::Invalid),
-            None => {}
-        }
-    }
+    let Some(values) = import_values(&stream.columns, object) else {
+        return Ok(RowOutcome::Invalid);
+    };
     let value_of = |column: &str| {
         values
             .iter()
             .find(|(name, _)| *name == column)
             .map(|(_, value)| value.clone())
     };
-    let Some(Value::String(time)) = value_of(spec.time) else {
+    let Some(time) = value_of(spec.time).and_then(|value| value.as_i64()) else {
         return Ok(RowOutcome::Invalid);
     };
 
@@ -1253,28 +1285,24 @@ fn import_row(
         .set("source_id", source.source_id)
         .set("owner_row_id", scope.owner_row_id)
         .set("claimed_from", to_i64(source.snapshot_from.unwrap_or(0)))
-        .set("time", time.clone());
-    let window = DateTime::parse_from_rfc3339(&time)
-        .ok()
-        .filter(|_| spec.slack);
+        .set("time", time)
+        .set(
+            "event_discriminator",
+            value_of("event_discriminator").unwrap_or(Value::String(String::new())),
+        );
     for (index, column) in spec.key.iter().enumerate() {
         params = params.set(
             &format!("k{index}"),
             value_of(column).unwrap_or(Value::Null),
         );
     }
-    let lookup = match window {
-        Some(at) => {
-            let slack = Duration::seconds(DEDUPE_SLACK_SECONDS);
-            let format = "%Y-%m-%dT%H:%M:%S";
-            let at = at.to_utc();
-            params = params
-                .set("lo", (at - slack).format(format).to_string())
-                .set("hi", format!("{}~", (at + slack).format(format)))
-                .set("slack", DEDUPE_SLACK_SECONDS as f64 + 0.001);
-            &stream.lookup_window
-        }
-        None => &stream.lookup_exact,
+    let lookup = if spec.slack {
+        params = params
+            .set("lo", time - DEDUPE_SLACK_SECONDS)
+            .set("hi", time + DEDUPE_SLACK_SECONDS);
+        &stream.lookup_window
+    } else {
+        &stream.lookup_exact
     };
     let table = quote(&stream.table);
     let existing = tx.execute(lookup, &params.build())?;

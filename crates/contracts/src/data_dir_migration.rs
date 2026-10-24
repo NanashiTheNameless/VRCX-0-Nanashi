@@ -40,9 +40,14 @@ pub struct DataDirMigrationResult {
 pub struct DataDirCleanupPending {
     pub old_dir: String,
     pub bytes: u64,
-    pub migrated_at: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_prompted_at: Option<String>,
+    #[serde(deserialize_with = "crate::epoch::de")]
+    pub migrated_at: i64,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::epoch::de_opt"
+    )]
+    pub last_prompted_at: Option<i64>,
     pub dismissed: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub replaced_dir: Option<String>,

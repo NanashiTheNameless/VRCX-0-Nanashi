@@ -366,7 +366,7 @@ export function createSettingsMaintenanceActions({
                       cutoff.setDate(
                           cutoff.getDate() - Number.parseInt(purgePeriod, 10)
                       );
-                      return cutoff.toJSON();
+                      return Math.floor(cutoff.getTime() / 1000);
                   })();
         setPurgeInProgress(true);
         useRuntimeStore.getState().setDatabaseMaintenanceActive(true);

@@ -26,8 +26,7 @@ pub struct ScreenshotLibraryEntry {
     pub height: Option<i32>,
     pub world_id: Option<String>,
     pub world_name: Option<String>,
-    pub captured_at: Option<String>,
-    pub captured_at_ms: i64,
+    pub captured_at: i64,
     pub metadata_json: Option<String>,
     pub error: Option<String>,
 }
@@ -97,7 +96,7 @@ impl MetadataCacheDb {
                  height INTEGER,
                  world_id TEXT,
                  world_name TEXT,
-                 captured_at TEXT,
+                 captured_at INTEGER NOT NULL DEFAULT 0,
                  metadata_json TEXT,
                  index_version INTEGER NOT NULL DEFAULT 0,
                  indexed_at INTEGER NOT NULL,
@@ -126,10 +125,7 @@ impl MetadataCacheDb {
             "ALTER TABLE screenshot_files ADD COLUMN index_version INTEGER NOT NULL DEFAULT 0",
             [],
         );
-        let _ = conn.execute(
-            "ALTER TABLE screenshot_files ADD COLUMN captured_at_ms INTEGER NOT NULL DEFAULT 0",
-            [],
-        );
+        convert_cache_dates_to_seconds(&mut conn)?;
         conn.execute_batch(
             "CREATE INDEX IF NOT EXISTS idx_screenshot_files_folder_path
                  ON screenshot_files(scan_root, folder_path);
@@ -137,8 +133,8 @@ impl MetadataCacheDb {
                  ON screenshot_files(scan_root, world_id);
              CREATE INDEX IF NOT EXISTS idx_screenshot_files_modified_at
                  ON screenshot_files(scan_root, modified_at);
-             CREATE INDEX IF NOT EXISTS idx_screenshot_files_captured_at_ms
-                 ON screenshot_files(scan_root, captured_at_ms);
+             CREATE INDEX IF NOT EXISTS idx_screenshot_files_captured_at
+                 ON screenshot_files(scan_root, captured_at);
              CREATE INDEX IF NOT EXISTS idx_screenshot_thumbnail_cache_source
                  ON screenshot_thumbnail_cache(source_path);",
         )
@@ -272,10 +268,10 @@ impl MetadataCacheDb {
                 .prepare(
                     "INSERT INTO screenshot_files (
                     path, scan_root, folder_path, file_name, size_bytes, modified_at, created_at,
-                    width, height, world_id, world_name, captured_at, captured_at_ms,
+                    width, height, world_id, world_name, captured_at,
                     metadata_json, index_version, indexed_at, error
                  )
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
                  ON CONFLICT(path) DO UPDATE SET
                     scan_root = excluded.scan_root,
                     folder_path = excluded.folder_path,
@@ -288,7 +284,6 @@ impl MetadataCacheDb {
                     world_id = excluded.world_id,
                     world_name = excluded.world_name,
                     captured_at = excluded.captured_at,
-                    captured_at_ms = excluded.captured_at_ms,
                     metadata_json = excluded.metadata_json,
                     index_version = excluded.index_version,
                     indexed_at = excluded.indexed_at,
@@ -311,8 +306,7 @@ impl MetadataCacheDb {
                     entry.height,
                     entry.world_id.as_deref(),
                     entry.world_name.as_deref(),
-                    entry.captured_at.as_deref(),
-                    entry.captured_at_ms,
+                    entry.captured_at,
                     entry.metadata_json.as_deref(),
                     SCREENSHOT_LIBRARY_INDEX_VERSION,
                     now,
@@ -503,8 +497,7 @@ impl MetadataCacheDb {
         let mut stmt = conn
             .prepare(
                 "SELECT path, folder_path, file_name, size_bytes, modified_at, created_at,
-                    width, height, world_id, world_name, captured_at, error, metadata_json,
-                    captured_at_ms
+                    width, height, world_id, world_name, captured_at, error, metadata_json
              FROM screenshot_files
              WHERE scan_root = ?1 AND folder_path = ?2
               ORDER BY file_name ASC, modified_at ASC",
@@ -607,8 +600,7 @@ impl MetadataCacheDb {
         let mut stmt = conn
             .prepare(
                 "SELECT path, folder_path, file_name, size_bytes, modified_at, created_at,
-                    width, height, world_id, world_name, captured_at, error, metadata_json,
-                    captured_at_ms
+                    width, height, world_id, world_name, captured_at, error, metadata_json
              FROM screenshot_files
              WHERE scan_root = ?1 AND world_id = ?2
               ORDER BY file_name ASC, modified_at ASC",
@@ -631,7 +623,7 @@ impl MetadataCacheDb {
         let mut count_stmt = conn
             .prepare(
                 "SELECT COUNT(*) FROM screenshot_files
-             WHERE scan_root = ?1 AND captured_at_ms >= ?2 AND captured_at_ms <= ?3",
+             WHERE scan_root = ?1 AND captured_at >= ?2 AND captured_at <= ?3",
             )
             .map_err(|error| {
                 Error::sqlite_with_context("prepare window screenshot count", error)
@@ -639,11 +631,10 @@ impl MetadataCacheDb {
         let mut image_stmt = conn
             .prepare(
                 "SELECT path, folder_path, file_name, size_bytes, modified_at, created_at,
-                    width, height, world_id, world_name, captured_at, error, metadata_json,
-                    captured_at_ms
+                    width, height, world_id, world_name, captured_at, error, metadata_json
              FROM screenshot_files
-             WHERE scan_root = ?1 AND captured_at_ms >= ?2 AND captured_at_ms <= ?3
-             ORDER BY captured_at_ms ASC, path ASC
+             WHERE scan_root = ?1 AND captured_at >= ?2 AND captured_at <= ?3
+             ORDER BY captured_at ASC, path ASC
              LIMIT ?4",
             )
             .map_err(|error| Error::sqlite_with_context("prepare window screenshots", error))?;
@@ -652,7 +643,7 @@ impl MetadataCacheDb {
             .map(|window| {
                 let total = count_stmt
                     .query_row(
-                        rusqlite::params![root_path, window.from_ms, window.to_ms],
+                        rusqlite::params![root_path, window.from, window.to],
                         |row| row.get::<_, i64>(0),
                     )
                     .map_err(|error| {
@@ -660,12 +651,7 @@ impl MetadataCacheDb {
                     })?;
                 let images = image_stmt
                     .query_map(
-                        rusqlite::params![
-                            root_path,
-                            window.from_ms,
-                            window.to_ms,
-                            limit_per_window
-                        ],
+                        rusqlite::params![root_path, window.from, window.to, limit_per_window],
                         Self::map_library_image_row,
                     )
                     .map_err(|error| Error::sqlite_with_context("read window screenshots", error))?
@@ -811,7 +797,6 @@ impl MetadataCacheDb {
             world_id: row.get(8)?,
             world_name: row.get(9)?,
             captured_at: row.get(10)?,
-            captured_at_ms: row.get(13)?,
             error: row.get(11)?,
             metadata,
         })
@@ -910,6 +895,99 @@ fn normalize_thumbnail_cache_paths(conn: &mut Connection, thumbnail_dir: &Path) 
     transaction
         .commit()
         .map_err(|error| Error::sqlite_with_context("commit thumbnail path normalization", error))
+}
+
+/// Earlier versions stored file times in milliseconds and the capture time
+/// twice (metadata text and milliseconds). Converts such a cache in place to
+/// epoch seconds with a single integer `captured_at`.
+fn convert_cache_dates_to_seconds(conn: &mut Connection) -> Result<()> {
+    const DATES_IN_SECONDS: i64 = 1;
+    let version: i64 = conn
+        .query_row("PRAGMA user_version", [], |row| row.get(0))
+        .map_err(|error| Error::sqlite_with_context("read cache db version", error))?;
+    if version >= DATES_IN_SECONDS {
+        return Ok(());
+    }
+    let columns = {
+        let mut stmt = conn
+            .prepare("SELECT name FROM pragma_table_info('screenshot_files')")
+            .map_err(|error| Error::sqlite_with_context("read screenshot columns", error))?;
+        let names = stmt
+            .query_map([], |row| row.get::<_, String>(0))
+            .map_err(|error| Error::sqlite_with_context("read screenshot columns", error))?
+            .collect::<rusqlite::Result<HashSet<_>>>()
+            .map_err(|error| Error::sqlite_with_context("read screenshot columns", error))?;
+        names
+    };
+    let tx = conn
+        .transaction()
+        .map_err(|error| Error::sqlite_with_context("start cache date conversion", error))?;
+    let seconds = |column: &str| {
+        format!("(({column}) / 1000 - CASE WHEN ({column}) < 0 AND ({column}) % 1000 != 0 THEN 1 ELSE 0 END)")
+    };
+    let legacy_capture_text = tx
+        .query_row(
+            "SELECT type FROM pragma_table_info('screenshot_files') WHERE name = 'captured_at'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(Error::sqlite)?
+        .is_some_and(|kind| !kind.eq_ignore_ascii_case("INTEGER"));
+    if columns.contains("captured_at_ms") || legacy_capture_text {
+        let capture_seconds = crate::migrations::epoch_seconds_sql("captured_at");
+        let captured = if columns.contains("captured_at_ms") {
+            format!(
+                "COALESCE(NULLIF({}, 0), {capture_seconds}, {})",
+                seconds("captured_at_ms"),
+                seconds("modified_at")
+            )
+        } else {
+            format!("COALESCE({capture_seconds}, {})", seconds("modified_at"))
+        };
+        tx.execute_batch(&format!(
+            "CREATE TABLE screenshot_files__seconds (
+                 path TEXT PRIMARY KEY,
+                 scan_root TEXT NOT NULL DEFAULT '',
+                 folder_path TEXT NOT NULL,
+                 file_name TEXT NOT NULL,
+                 size_bytes INTEGER NOT NULL,
+                 modified_at INTEGER NOT NULL,
+                 created_at INTEGER,
+                 width INTEGER,
+                 height INTEGER,
+                 world_id TEXT,
+                 world_name TEXT,
+                 captured_at INTEGER NOT NULL DEFAULT 0,
+                 metadata_json TEXT,
+                 index_version INTEGER NOT NULL DEFAULT 0,
+                 indexed_at INTEGER NOT NULL,
+                 error TEXT
+             );
+             INSERT INTO screenshot_files__seconds (
+                 path, scan_root, folder_path, file_name, size_bytes, modified_at, created_at,
+                 width, height, world_id, world_name, captured_at, metadata_json,
+                 index_version, indexed_at, error
+             )
+             SELECT path, scan_root, folder_path, file_name, size_bytes, {modified}, {created},
+                 width, height, world_id, world_name, {captured}, metadata_json,
+                 index_version, indexed_at, error
+             FROM screenshot_files;
+             DROP TABLE screenshot_files;
+             ALTER TABLE screenshot_files__seconds RENAME TO screenshot_files;",
+            modified = seconds("modified_at"),
+            created = seconds("created_at"),
+        ))
+        .map_err(|error| Error::sqlite_with_context("convert screenshot dates", error))?;
+    }
+    tx.execute_batch(&format!(
+        "UPDATE screenshot_thumbnail_cache SET modified_at = {};
+         PRAGMA user_version = {DATES_IN_SECONDS};",
+        seconds("modified_at")
+    ))
+    .map_err(|error| Error::sqlite_with_context("convert thumbnail dates", error))?;
+    tx.commit()
+        .map_err(|error| Error::sqlite_with_context("finish cache date conversion", error))
 }
 
 fn path_string(path: &Path) -> String {

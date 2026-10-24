@@ -39,9 +39,9 @@ fn memo_list_users_page_returns_ordered_cursor_page() {
     db.execute_non_query(
         "INSERT INTO memos (user_id, edited_at, memo)
              VALUES
-                ('usr_a', '2026-06-01T10:00:00Z', 'A'),
-                ('usr_b', '2026-06-03T10:00:00Z', 'B'),
-                ('usr_c', '2026-06-02T10:00:00Z', 'C')",
+                ('usr_a', 1780308000, 'A'),
+                ('usr_b', 1780480800, 'B'),
+                ('usr_c', 1780394400, 'C')",
         &Default::default(),
     )
     .unwrap();
@@ -57,7 +57,7 @@ fn memo_list_users_page_returns_ordered_cursor_page() {
     let second = memo_list_users_page(
         &db,
         2,
-        Some((first[1].edited_at.as_str(), first[1].user_id.as_str())),
+        Some((first[1].edited_at, first[1].user_id.as_str())),
     )
     .unwrap();
     assert_eq!(second.len(), 1);
@@ -79,7 +79,7 @@ fn save_memo_upserts_a_non_empty_memo_and_stamps_edited_at() {
 
     let saved = memo_save_user(&db, "usr_alice".into(), "remember this".into()).unwrap();
     assert_eq!(saved.memo, "remember this");
-    assert!(!saved.edited_at.is_empty());
+    assert!(saved.edited_at > 0);
 
     let fetched = memo_get_user(&db, "usr_alice".into()).unwrap().unwrap();
     assert_eq!(fetched.memo, "remember this");
@@ -98,7 +98,7 @@ fn save_memo_with_empty_memo_deletes_the_row_instead_of_storing_a_blank() {
 
     let result = memo_save_user(&db, "usr_alice".into(), "".into()).unwrap();
 
-    assert_eq!(result.edited_at, "");
+    assert_eq!(result.edited_at, 0);
     assert_eq!(result.memo, "");
     assert!(memo_get_user(&db, "usr_alice".into()).unwrap().is_none());
 }
@@ -181,7 +181,7 @@ fn memo_list_user_notes_reads_the_owners_notes_table() {
     db.execute_non_query(
         &format!(
             "INSERT INTO {prefix}_notes (user_id, display_name, note, created_at)
-                 VALUES ('usr_alice', 'Alice', 'met at a concert', '2026-06-01T00:00:00Z')"
+                 VALUES ('usr_alice', 'Alice', 'met at a concert', 1780272000)"
         ),
         &Default::default(),
     )

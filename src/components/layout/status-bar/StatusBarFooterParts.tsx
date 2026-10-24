@@ -1,3 +1,5 @@
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
+
 import { useStatusNowMs } from './statusBarTicker';
 import type { DurationValueProps, StatusBarNowPlaying } from './statusBarTypes';
 
@@ -54,7 +56,7 @@ export function NowPlayingProgress({
     }
 
     const startedAtMs = nowPlaying.startedAt
-        ? Date.parse(nowPlaying.startedAt)
+        ? parseAbsoluteDateMs(nowPlaying.startedAt)
         : Number.NaN;
     const elapsedSeconds = Math.min(
         lengthSeconds,

@@ -103,7 +103,7 @@ impl GameLogProcessorDeps {
                     location: snapshot.location.clone(),
                     world_name: snapshot.world_name.clone(),
                     destination: snapshot.destination.clone(),
-                    entered_at: snapshot.started_at.clone(),
+                    entered_at: snapshot.started_at,
                     departed_user_ids: match origin {
                         GameLogEventOrigin::Live => std::mem::take(&mut output.departed_user_ids),
                         GameLogEventOrigin::InitialScan => Vec::new(),
@@ -230,7 +230,7 @@ impl GameLogProcessor {
             .and_then(|cursor| cursor.clone())
     }
 
-    pub fn set_persistence_resume_after(&self, resume_after: &str) {
+    pub fn set_persistence_resume_after(&self, resume_after: i64) {
         self.persistence_resume_after_ms.store(
             crate::game_log::parse_event_time_ms(resume_after).unwrap_or(i64::MIN),
             Ordering::Release,
@@ -362,7 +362,7 @@ impl GameLogProcessor {
         if let Some((cursor, publish)) = &scan {
             if self.replay_cursor().is_some_and(|previous| {
                 previous.file_name == cursor.file_name
-                    && previous.file_created_at == cursor.file_created_at
+                    && previous.file_creation == cursor.file_creation
                     && previous.start_position == cursor.start_position
                     && previous.context.position == cursor.context.position
             }) {
@@ -411,7 +411,7 @@ impl GameLogProcessor {
         let log_resource_load = self.deps.store.get_bool("logResourceLoad", false)?;
         let cutoff = scan
             .as_ref()
-            .and_then(|(cursor, _)| super::parse_event_time_ms(&cursor.cutoff))
+            .and_then(|(cursor, _)| super::parse_event_time_ms(cursor.cutoff))
             .unwrap_or(i64::MIN)
             .max(self.persistence_resume_after_ms.load(Ordering::Acquire));
         let (mut output, snapshot, mut replayed_departures) = self.with_engine(|engine| {
@@ -421,13 +421,13 @@ impl GameLogProcessor {
             let mut projection = None;
             while let Some(first) = remaining.first() {
                 let replay = !persistence_disabled
-                    && super::parse_event_time_ms(&first.created_at)
+                    && super::parse_event_time_ms(first.created_at)
                         .is_some_and(|time| time <= cutoff);
                 let count = remaining
                     .iter()
                     .take_while(|event| {
                         (!persistence_disabled
-                            && super::parse_event_time_ms(&event.created_at)
+                            && super::parse_event_time_ms(event.created_at)
                                 .is_some_and(|time| time <= cutoff))
                             == replay
                     })
@@ -504,7 +504,7 @@ impl GameLogProcessor {
         output.instance_roster_changed |= !output.replayed_departed_user_ids.is_empty();
         if output.projection.is_none() && changed {
             output.projection = Some(self.with_engine(|engine| {
-                engine.checkpoint_state().projection("", "replay-complete")
+                engine.checkpoint_state().projection(0, "replay-complete")
             })?);
         }
         self.deps.set_game_log_snapshot(snapshot, output, origin);
@@ -512,7 +512,7 @@ impl GameLogProcessor {
     }
 
     fn handle_game_process_event_now(&self, event: GameLogProcessEvent) -> Result<()> {
-        let before_resume_cutoff = self.is_before_resume_cutoff(&event.changed_at);
+        let before_resume_cutoff = self.is_before_resume_cutoff(event.changed_at);
         let (mut output, snapshot) = self.with_engine(|engine| {
             let output = engine.handle_process_event(event);
             (output, engine.runtime_snapshot())
@@ -636,7 +636,7 @@ impl GameLogProcessor {
             return;
         };
         let current_location = snapshot.location.clone();
-        let current_started_at = snapshot.started_at.clone();
+        let current_started_at = snapshot.started_at;
         let current_user_id = self.deps.auth_scope.snapshot().current_user_id;
         let owner = OwnerId::new(current_user_id.clone());
         let context = OverlayJoinLeaveSuppressionContext::from_output(
@@ -745,7 +745,7 @@ impl GameLogProcessor {
         Ok(f(&mut engine))
     }
 
-    fn is_before_resume_cutoff(&self, created_at: &str) -> bool {
+    fn is_before_resume_cutoff(&self, created_at: i64) -> bool {
         let resume_after_ms = self.persistence_resume_after_ms.load(Ordering::Acquire);
         resume_after_ms != i64::MIN
             && crate::game_log::parse_event_time_ms(created_at)
@@ -755,22 +755,22 @@ impl GameLogProcessor {
 
 struct OverlayJoinLeaveSuppressionContext<'a> {
     current_location: String,
-    current_started_at: String,
-    location_started_at_by_location: HashMap<&'a str, &'a str>,
-    destination_started_at: &'a [String],
+    current_started_at: i64,
+    location_started_at_by_location: HashMap<&'a str, i64>,
+    destination_started_at: &'a [i64],
 }
 
 impl<'a> OverlayJoinLeaveSuppressionContext<'a> {
     fn from_output(
         output: &'a GameLogIngestOutput,
         current_location: String,
-        current_started_at: String,
+        current_started_at: i64,
     ) -> Self {
         let location_started_at_by_location = output
             .batch
             .locations
             .iter()
-            .map(|entry| (entry.location.as_str(), entry.created_at.as_str()))
+            .map(|entry| (entry.location.as_str(), entry.created_at))
             .collect();
 
         Self {
@@ -781,22 +781,18 @@ impl<'a> OverlayJoinLeaveSuppressionContext<'a> {
         }
     }
 
-    fn join_reference_at(&self, location: &str) -> Option<&str> {
+    fn join_reference_at(&self, location: &str) -> Option<i64> {
         self.location_started_at_by_location
             .get(location)
             .copied()
-            .or_else(|| {
-                (self.current_location == location).then_some(self.current_started_at.as_str())
-            })
+            .or_else(|| (self.current_location == location).then_some(self.current_started_at))
     }
 
-    fn is_within_leave_suppression_window(&self, created_at: &str) -> bool {
+    fn is_within_leave_suppression_window(&self, created_at: i64) -> bool {
         self.destination_started_at
             .iter()
-            .map(String::as_str)
-            .chain(
-                (self.current_location == "traveling").then_some(self.current_started_at.as_str()),
-            )
+            .copied()
+            .chain((self.current_location == "traveling").then_some(self.current_started_at))
             .any(|reference_at| {
                 is_within_suppression_window(
                     created_at,
@@ -820,7 +816,7 @@ fn should_deliver_join_leave_overlay_activity(
     if kind == ActivityKind::OnPlayerJoined {
         if let Some(reference_at) = context.join_reference_at(&entry.location) {
             return !is_within_suppression_window(
-                &entry.created_at,
+                entry.created_at,
                 reference_at,
                 JOIN_NOTIFICATION_SUPPRESS_MS,
             );
@@ -833,13 +829,13 @@ fn should_deliver_join_leave_overlay_activity(
             | ActivityKind::BlockedOnPlayerLeft
             | ActivityKind::MutedOnPlayerLeft
     ) {
-        return !context.is_within_leave_suppression_window(&entry.created_at);
+        return !context.is_within_leave_suppression_window(entry.created_at);
     }
 
     true
 }
 
-fn is_within_suppression_window(created_at: &str, reference_at: &str, window_ms: i64) -> bool {
+fn is_within_suppression_window(created_at: i64, reference_at: i64, window_ms: i64) -> bool {
     let Some(created_at_ms) = crate::game_log::parse_event_time_ms(created_at) else {
         return false;
     };

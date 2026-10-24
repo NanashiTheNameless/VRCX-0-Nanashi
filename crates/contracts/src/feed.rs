@@ -27,7 +27,7 @@ pub enum FeedFilter {
 #[derive(Clone, Debug, Deserialize, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct FeedCursorInput {
-    pub created_at: String,
+    pub created_at: i64,
     pub source_rank: i64,
     pub row_id: i64,
 }
@@ -51,9 +51,9 @@ pub struct FeedRowsQueryInput {
     pub location_hidden_user_ids: Vec<String>,
     pub max_entries: i64,
     #[serde(default)]
-    pub date_from: String,
+    pub date_from: Option<i64>,
     #[serde(default)]
-    pub date_to: String,
+    pub date_to: Option<i64>,
     #[serde(default)]
     pub cursor: Option<FeedCursorInput>,
 }
@@ -96,9 +96,9 @@ pub struct FeedSearchQueryInput {
     #[serde(default)]
     pub favorites_only: bool,
     #[serde(default)]
-    pub date_from: String,
+    pub date_from: Option<i64>,
     #[serde(default)]
-    pub date_to: String,
+    pub date_to: Option<i64>,
     pub max_rows: i64,
 }
 
@@ -127,7 +127,7 @@ pub struct FeedRowOutput {
     pub source_rank: Option<i64>,
     #[serde(rename = "created_at")]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_at: Option<String>,
+    pub created_at: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -184,8 +184,8 @@ pub struct FeedLiveQueryMatcher {
     current_user_id: String,
     filters: Vec<FeedFilter>,
     search: String,
-    date_from: String,
-    date_to: String,
+    date_from: Option<i64>,
+    date_to: Option<i64>,
     favorites_only: bool,
     favorite_user_ids: HashSet<String>,
     scoped_user_ids: HashSet<String>,
@@ -200,8 +200,8 @@ impl FeedLiveQueryMatcher {
             &query.user_id,
             &query.filters,
             "",
-            "",
-            "",
+            None,
+            None,
             query.favorites_only,
             &query.favorite_user_ids,
             &query.scoped_user_ids,
@@ -216,8 +216,8 @@ impl FeedLiveQueryMatcher {
             &query.user_id,
             &query.filters,
             &query.search,
-            &query.date_from,
-            &query.date_to,
+            query.date_from,
+            query.date_to,
             query.favorites_only,
             &query.favorite_user_ids,
             &query.scoped_user_ids,
@@ -232,8 +232,8 @@ impl FeedLiveQueryMatcher {
         current_user_id: &str,
         filters: &[FeedFilter],
         search: &str,
-        date_from: &str,
-        date_to: &str,
+        date_from: Option<i64>,
+        date_to: Option<i64>,
         favorites_only: bool,
         favorite_user_ids: &[String],
         scoped_user_ids: &[String],
@@ -245,8 +245,8 @@ impl FeedLiveQueryMatcher {
             current_user_id: current_user_id.to_string(),
             filters: filters.to_vec(),
             search: search.to_string(),
-            date_from: date_from.to_string(),
-            date_to: date_to.to_string(),
+            date_from,
+            date_to,
             favorites_only,
             favorite_user_ids: normalize_user_ids(favorite_user_ids),
             scoped_user_ids: normalize_user_ids(scoped_user_ids),
@@ -288,16 +288,10 @@ impl FeedLiveQueryMatcher {
         }
 
         let created_at = entry.created_at();
-        if !self.date_from.trim().is_empty()
-            && !created_at.is_empty()
-            && created_at < self.date_from.as_str()
-        {
+        if self.date_from.is_some_and(|from| created_at < from) {
             return false;
         }
-        if !self.date_to.trim().is_empty()
-            && !created_at.is_empty()
-            && created_at > self.date_to.as_str()
-        {
+        if self.date_to.is_some_and(|to| created_at > to) {
             return false;
         }
 
@@ -355,7 +349,7 @@ fn feed_search_matches(entry: &FeedLiveEntry, search: &str) -> bool {
 #[serde(rename_all = "camelCase")]
 pub struct WorldFriendVisitsOutput {
     pub friend_count: i64,
-    pub last_visited_at: String,
+    pub last_visited_at: i64,
     pub friends: Vec<WorldFriendVisitRow>,
 }
 
@@ -365,5 +359,5 @@ pub struct WorldFriendVisitRow {
     pub user_id: String,
     pub display_name: String,
     pub visit_count: i64,
-    pub last_visited_at: String,
+    pub last_visited_at: i64,
 }

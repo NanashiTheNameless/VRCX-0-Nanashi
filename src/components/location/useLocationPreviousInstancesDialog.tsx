@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import gameLogRepository from '@/repositories/gameLogRepository';
 import { toast } from '@/services/toastService';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import type { ParsedLocation } from '@/shared/utils/location';
 import { normalizeString } from '@/shared/utils/string';
 import {
@@ -112,8 +113,8 @@ export function useLocationPreviousInstancesDialog({
                     }
                 }
                 return (
-                    Date.parse(right?.created_at || '') -
-                    Date.parse(left?.created_at || '')
+                    parseAbsoluteDateMs(right?.created_at || '') -
+                    parseAbsoluteDateMs(left?.created_at || '')
                 );
             });
 

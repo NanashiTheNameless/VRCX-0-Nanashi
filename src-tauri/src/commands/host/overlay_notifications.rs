@@ -65,7 +65,7 @@ fn webhook_test_payload(format: NotificationWebhookFormat, fields: &str) -> Valu
             "worldId": "wrld_00000000-0000-0000-0000-000000000000",
             "worldName": "VRCX-0-Nanashi test world",
             "timestamp": &timestamp,
-            "localTime": webhook_local_time_string(&timestamp),
+            "localTime": webhook_local_time_string(chrono::Utc::now().timestamp()),
         });
         filter_generic_webhook_payload(payload, &parse_webhook_fields(fields))
     }

@@ -70,11 +70,11 @@ function getEventLabel(event: GameLogSessionEvent, t: TFunction) {
 function normalizeSessionMember(
     member: SessionPlayerInput,
     { favoriteIdSet, friendIdSet }: GameLogSessionAffinity,
-    fallbackCreatedAt = ''
+    fallbackCreatedAt = 0
 ): GameLogSessionMember {
     const userId = normalizeId(member?.userId);
     return {
-        created_at: member?.created_at || fallbackCreatedAt || '',
+        created_at: member?.created_at || fallbackCreatedAt,
         displayName: member?.displayName || '',
         userId,
         ...getGameLogSessionPlayerAffinity(member, favoriteIdSet, friendIdSet)
@@ -106,7 +106,7 @@ function getGroupCount(event: GameLogSessionEvent, memberCount: number) {
         : 0;
 }
 
-function EventTime({ value }: { value: string }) {
+function EventTime({ value }: { value: number }) {
     return (
         <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
             {formatDateFilter(value, 'time')}
@@ -272,7 +272,7 @@ function GroupMemberRows({
     showDuration
 }: {
     members: readonly SessionPlayerInput[];
-    createdAt: string;
+    createdAt: number;
     durationByKey: Map<string, number>;
     showDuration: boolean;
 }) {

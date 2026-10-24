@@ -19,7 +19,7 @@ pub(crate) fn test_overlay_entry() -> ActivityEntry {
         source_id: TEST_ENTRY_SOURCE_ID.to_string(),
         kind: ActivityKind::Event,
         category: ActivityCategory::CurrentInstance,
-        created_at: Local::now().to_rfc3339(),
+        created_at: Local::now().timestamp(),
         actor_user_id: String::new(),
         actor_display_name: TEST_ENTRY_TITLE.to_string(),
         content: ActivityContent {

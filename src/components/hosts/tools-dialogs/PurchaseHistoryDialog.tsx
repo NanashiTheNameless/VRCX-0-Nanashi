@@ -16,6 +16,7 @@ import vrchatEconomyRepository, {
     type EconomyTransactionRecord
 } from '@/repositories/vrchatEconomyRepository';
 import { openUserDialog } from '@/services/dialogService';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { Badge } from '@/ui/shadcn/badge';
 import { Button } from '@/ui/shadcn/button';
 import {
@@ -226,8 +227,8 @@ async function loadPurchases(force: boolean) {
         .filter((purchase) => purchase.buyerId === currentUserId)
         .sort(
             (a, b) =>
-                Date.parse(b.purchaseDate ?? '') -
-                Date.parse(a.purchaseDate ?? '')
+                parseAbsoluteDateMs(b.purchaseDate ?? '') -
+                parseAbsoluteDateMs(a.purchaseDate ?? '')
         );
 }
 

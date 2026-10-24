@@ -24,6 +24,7 @@ import { Location } from '@/components/Location';
 import { formatDateFilter } from '@/lib/dateTime';
 import groupProfileRepository from '@/repositories/groupProfileRepository';
 import { openUserDialog } from '@/services/dialogService';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { Button } from '@/ui/shadcn/button';
 import {
     DropdownMenu,
@@ -45,7 +46,7 @@ const LOGS_COLUMN_IDS = ['created', 'type', 'actor', 'description', 'data'];
 export interface GroupModerationLogRow {
     actorDisplayName?: string;
     actorId?: string;
-    created_at?: string;
+    created_at?: string | number;
     data?: unknown;
     description?: string;
     eventType?: string;
@@ -246,8 +247,12 @@ export function createGroupAuditLogColumns(
             minSize: 140,
             meta: { label: createdLabel },
             sortFn: (rowA, rowB) => {
-                const leftTs = Date.parse(rowA.original.created_at || '');
-                const rightTs = Date.parse(rowB.original.created_at || '');
+                const leftTs = parseAbsoluteDateMs(
+                    rowA.original.created_at || ''
+                );
+                const rightTs = parseAbsoluteDateMs(
+                    rowB.original.created_at || ''
+                );
                 if (
                     Number.isFinite(leftTs) &&
                     Number.isFinite(rightTs) &&

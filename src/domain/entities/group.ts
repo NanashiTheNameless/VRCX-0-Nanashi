@@ -15,7 +15,7 @@ export type GroupRoleRecord = EntityRecord & {
 };
 
 type GroupGallerySummary = EntityRecord & {
-    createdAt?: string;
+    createdAt?: string | number;
     description?: string;
     id: string;
     membersOnly?: boolean;
@@ -24,7 +24,7 @@ type GroupGallerySummary = EntityRecord & {
     roleIdsToManage?: string[];
     roleIdsToSubmit?: string[];
     roleIdsToView?: string[] | null;
-    updatedAt?: string;
+    updatedAt?: string | number;
 };
 
 type GroupMemberSummary = EntityRecord & {
@@ -42,13 +42,13 @@ type GroupMemberSummary = EntityRecord & {
 };
 
 export type GroupAnnouncementRecord = EntityRecord & {
-    createdAt?: string;
+    createdAt?: string | number;
     id?: string;
     imageUrl?: string;
     roleIds?: string[];
     text?: string;
     title?: string;
-    updatedAt?: string;
+    updatedAt?: string | number;
 };
 
 export type GroupPostRecord = GroupAnnouncementRecord & {
@@ -65,7 +65,7 @@ export type GroupGalleryFileRow = EntityRecord & {
     approved?: boolean;
     approvedAt?: string | null;
     approvedByUserId?: string | null;
-    createdAt?: string;
+    createdAt?: string | number;
     fileId: string;
     galleryId: string;
     groupId: string;
@@ -95,7 +95,7 @@ export type GroupMemberRow = EntityRecord & {
     acceptedByDisplayName: string | null;
     acceptedById: string | null;
     bannedAt: string | null;
-    createdAt: string;
+    createdAt: string | number;
     groupId: string;
     hasJoinedFromPurchase: boolean;
     id: string;
@@ -118,7 +118,7 @@ export type GroupAuditLogData = EntityRecord;
 export type GroupAuditLogRow = EntityRecord & {
     actorDisplayName: string;
     actorId: string;
-    created_at: string;
+    created_at: string | number;
     data: GroupAuditLogData;
     description: string;
     eventType: string;
@@ -226,7 +226,7 @@ export type GroupProfileRecord = EntityRecord & {
     discriminator: string;
     bannerId?: string;
     bannerUrl: string;
-    createdAt?: string;
+    createdAt?: string | number;
     galleries?: GroupGallerySummary[];
     groupId?: string;
     iconId?: string;
@@ -255,7 +255,7 @@ export type GroupProfileRecord = EntityRecord & {
     roles: GroupRoleRecord[];
     storeId?: string;
     tags: string[];
-    updatedAt?: string;
+    updatedAt?: string | number;
     url: string;
     userInterest?: unknown;
     $languages?: string[];

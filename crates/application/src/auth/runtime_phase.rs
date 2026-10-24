@@ -52,5 +52,5 @@ pub struct AuthenticatedRuntimePhaseSnapshot {
     pub friend_baseline: Option<SocialFriendRosterBaselineOutput>,
     pub favorites_baseline: Option<SocialFavoritesBaselineOutput>,
     pub realtime_transport: Option<RealtimeTransportStartResult>,
-    pub updated_at: String,
+    pub updated_at: i64,
 }

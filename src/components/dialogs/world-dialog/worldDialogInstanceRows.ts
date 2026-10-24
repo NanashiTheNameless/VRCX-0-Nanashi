@@ -11,6 +11,7 @@ import type {
     CurrentInstanceRosterPlayer
 } from '@/domain/instances/currentInstanceRoster';
 import { hasGroupIdPrefix } from '@/shared/constants/vrchatIds';
+import { epochSecondsFromValue } from '@/shared/utils/displayTimeZone';
 import { parseLocation } from '@/shared/utils/location';
 import { isRecord } from '@/shared/utils/record';
 
@@ -148,7 +149,10 @@ export function buildWorldDialogDisplayInstanceRows({
                 id: userId,
                 userId,
                 displayName: firstText(source.displayName, source.display_name),
-                joinedAt: firstText(source.joinedAt, source.joined_at),
+                joinedAt:
+                    epochSecondsFromValue(
+                        source.joinedAt ?? source.joined_at
+                    ) ?? 0,
                 joinedAtMs: source.joinedAtMs
             };
         })

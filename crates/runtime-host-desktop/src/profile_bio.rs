@@ -4,7 +4,7 @@ use vrcx_0_application::social::observe_profile_response;
 use vrcx_0_application_core::vrchat_api::VrchatApiResponse;
 use vrcx_0_application_core::RuntimeAuthScope;
 use vrcx_0_application_realtime::RealtimeHostRuntime;
-use vrcx_0_core::time::now_iso;
+use vrcx_0_core::time::now_epoch;
 use vrcx_0_core::OwnerId;
 use vrcx_0_outbound_adapters::LocalProfileBioStore;
 use vrcx_0_persistence::DatabaseService;
@@ -32,7 +32,7 @@ impl ProfileBioObserver {
     pub fn observe(&self, response: &VrchatApiResponse) {
         let owner = OwnerId::new(self.auth_scope.snapshot().current_user_id);
         if let Err(error) =
-            observe_profile_response(&self.store, &self.realtime, &owner, response, &now_iso())
+            observe_profile_response(&self.store, &self.realtime, &owner, response, now_epoch())
         {
             tracing::warn!(error = %error, "failed to observe a profile bio");
         }

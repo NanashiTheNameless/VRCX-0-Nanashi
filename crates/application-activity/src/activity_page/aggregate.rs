@@ -5,12 +5,12 @@ use vrcx_0_core::activity_sessions::{
     merge_sessions_with_gap, ActivitySession, PLAY_SESSION_MERGE_GAP_MS,
 };
 
-use super::activity_iso_from_ms;
 use vrcx_0_contracts::activity_page::ActivityLocationSpan as LocationSpan;
 use vrcx_0_contracts::activity_page::{
     ActivityPageAccessSlice, ActivityPagePreviousSummary, ActivityPageSeries, ActivityPageSummary,
     ActivityPageWorldRow, ActivityPageWorlds, ActivitySeriesBucket, ActivitySeriesPoint,
 };
+use vrcx_0_core::time::epoch_from_millis;
 
 pub(super) const WEEK_BUCKET_MIN_RANGE_DAYS: i64 = 180;
 const DAY_MS: i64 = 86_400_000;
@@ -152,8 +152,8 @@ pub(super) fn worlds(
             world_name: entry.world_name,
             minutes: entry.millis / MINUTE_MS,
             visit_count: entry.visit_count,
-            first_seen_at: activity_iso_from_ms(entry.first_seen_ms),
-            last_seen_at: activity_iso_from_ms(entry.last_seen_ms),
+            first_seen_at: epoch_from_millis(entry.first_seen_ms),
+            last_seen_at: epoch_from_millis(entry.last_seen_ms),
         })
         .collect();
     rows.sort_by(|left, right| {
@@ -227,6 +227,34 @@ fn millis_by_local_day<'a>(
     spans: impl IntoIterator<Item = &'a LocationSpan>,
     utc_offset_minutes: i64,
 ) -> BTreeMap<NaiveDate, i64> {
+    if utc_offset_minutes
+        == i64::from(vrcx_0_core::time::display_now().offset().local_minus_utc()) / 60
+    {
+        let mut totals = BTreeMap::new();
+        for span in spans {
+            let mut cursor = span.start_ms;
+            while cursor < span.end_ms {
+                let Some(local) = vrcx_0_core::time::to_display(cursor.div_euclid(1000)) else {
+                    break;
+                };
+                let day = local.date_naive();
+                let Some(next_midnight) = day
+                    .succ_opt()
+                    .and_then(|day| day.and_hms_opt(0, 0, 0))
+                    .and_then(vrcx_0_core::time::display_local_to_epoch)
+                else {
+                    break;
+                };
+                let end = (next_midnight * 1000).min(span.end_ms);
+                if end <= cursor {
+                    break;
+                }
+                *totals.entry(day).or_insert(0) += end - cursor;
+                cursor = end;
+            }
+        }
+        return totals;
+    }
     let offset_ms = utc_offset_minutes * MINUTE_MS;
     let mut totals: BTreeMap<NaiveDate, i64> = BTreeMap::new();
     for span in spans {

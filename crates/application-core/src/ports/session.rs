@@ -10,7 +10,7 @@ use crate::BackendRuntimeStatusPublisher;
 pub struct GameProcessStatus {
     pub is_game_running: bool,
     pub is_steamvr_running: bool,
-    pub changed_at: String,
+    pub changed_at: i64,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -204,8 +204,8 @@ pub struct HostSessionSnapshot {
     pub is_game_running: bool,
     pub is_steamvr_running: bool,
     pub is_hmd_afk: bool,
-    pub last_game_started_at: Option<String>,
-    pub last_game_state_changed_at: Option<String>,
+    pub last_game_started_at: Option<i64>,
+    pub last_game_state_changed_at: Option<i64>,
     pub generation: u64,
     pub realtime_generation: u64,
     pub realtime_context: Option<HostRealtimeSessionContext>,
@@ -218,13 +218,13 @@ pub struct HostSessionProjection {
     #[serde(rename = "isSteamVRRunning")]
     pub is_steamvr_running: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_game_started_at: Option<String>,
+    pub last_game_started_at: Option<i64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_game_state_changed_at: Option<String>,
+    pub last_game_state_changed_at: Option<i64>,
     pub generation: u64,
     pub game_changed: bool,
     pub steamvr_changed: bool,
-    pub changed_at: String,
+    pub changed_at: i64,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -232,8 +232,8 @@ struct HostSessionState {
     is_game_running: bool,
     is_steamvr_running: bool,
     is_hmd_afk: bool,
-    last_game_started_at: Option<String>,
-    last_game_state_changed_at: Option<String>,
+    last_game_started_at: Option<i64>,
+    last_game_state_changed_at: Option<i64>,
     generation: u64,
     realtime_generation: u64,
     realtime_context: Option<HostRealtimeSessionContext>,
@@ -255,10 +255,10 @@ impl HostSessionRuntime {
         let steamvr_changed = state.is_steamvr_running != status.is_steamvr_running;
         if game_changed || steamvr_changed {
             state.generation = state.generation.saturating_add(1);
-            state.last_game_state_changed_at = Some(status.changed_at.clone());
+            state.last_game_state_changed_at = Some(status.changed_at);
         }
         if game_changed && status.is_game_running {
-            state.last_game_started_at = Some(status.changed_at.clone());
+            state.last_game_started_at = Some(status.changed_at);
         }
         state.is_game_running = status.is_game_running;
         state.is_steamvr_running = status.is_steamvr_running;
@@ -267,8 +267,8 @@ impl HostSessionRuntime {
         HostSessionProjection {
             is_game_running: state.is_game_running,
             is_steamvr_running: state.is_steamvr_running,
-            last_game_started_at: state.last_game_started_at.clone(),
-            last_game_state_changed_at: state.last_game_state_changed_at.clone(),
+            last_game_started_at: state.last_game_started_at,
+            last_game_state_changed_at: state.last_game_state_changed_at,
             generation: state.generation,
             game_changed,
             steamvr_changed,
@@ -286,8 +286,8 @@ impl HostSessionRuntime {
             is_game_running: state.is_game_running,
             is_steamvr_running: state.is_steamvr_running,
             is_hmd_afk: state.is_hmd_afk,
-            last_game_started_at: state.last_game_started_at.clone(),
-            last_game_state_changed_at: state.last_game_state_changed_at.clone(),
+            last_game_started_at: state.last_game_started_at,
+            last_game_state_changed_at: state.last_game_state_changed_at,
             generation: state.generation,
             realtime_generation: state.realtime_generation,
             realtime_context: state.realtime_context.clone(),
@@ -299,12 +299,12 @@ impl HostSessionRuntime {
         HostSessionProjection {
             is_game_running: state.is_game_running,
             is_steamvr_running: state.is_steamvr_running,
-            last_game_started_at: state.last_game_started_at.clone(),
-            last_game_state_changed_at: state.last_game_state_changed_at.clone(),
+            last_game_started_at: state.last_game_started_at,
+            last_game_state_changed_at: state.last_game_state_changed_at,
             generation: state.generation,
             game_changed: false,
             steamvr_changed: false,
-            changed_at: state.last_game_state_changed_at.clone().unwrap_or_default(),
+            changed_at: state.last_game_state_changed_at.unwrap_or_default(),
         }
     }
 
@@ -362,9 +362,7 @@ impl GameProcessEventSink for SessionHostRuntime {
         let projection = self.session.apply_game_process_status(GameProcessStatus {
             is_game_running: event.is_game_running,
             is_steamvr_running: event.is_steamvr_running,
-            changed_at: chrono::Utc::now()
-                .format("%Y-%m-%dT%H:%M:%S%.3fZ")
-                .to_string(),
+            changed_at: vrcx_0_core::time::now_epoch(),
         });
 
         if projection.game_changed || projection.steamvr_changed {

@@ -130,7 +130,7 @@ fn update_release_snapshot() -> AppUpdateReleaseSnapshot {
         display_name: "VRCX-0-Nanashi 2.15.0".into(),
         tag_name: "v2.15.0".into(),
         html_url: "https://example.test/releases/v2.15.0".into(),
-        published_at: "2026-07-18T00:00:00Z".into(),
+        published_at: 1784332800,
         body: String::new(),
         canonical_version: TEST_UPDATE_VERSION.into(),
         display_version: TEST_UPDATE_VERSION.into(),
@@ -191,7 +191,7 @@ fn app_update_test_context_with_update_check(
     if !update_check_disabled {
         *runtime.inner.status.lock().expect("lock update status") = AppUpdateStatusSnapshot {
             has_available_update: true,
-            checked_at: "2026-07-18T00:00:00.000Z".into(),
+            checked_at: 1784332800,
             detail: "Update available.".into(),
             error: None,
             release: Some(update_release_snapshot()),
@@ -297,7 +297,7 @@ fn download_progress_coalesces_chunk_bursts_and_keeps_boundaries() {
         *state = DownloadState {
             phase: AppUpdateDownloadPhase::Downloading,
             version: Some(TEST_UPDATE_VERSION.into()),
-            started_at: Some("2026-07-18T00:00:00.000Z".into()),
+            started_at: Some(1784332800),
             downloaded_bytes: 0,
             total_bytes: 0,
             percent: 0,
@@ -366,7 +366,7 @@ fn release(
         ),
         name: None,
         prerelease,
-        published_at: Some("2026-07-16T12:00:00Z".into()),
+        published_at: Some(1784203200),
         body: Some("Release notes.".into()),
     }
 }
@@ -739,7 +739,7 @@ async fn background_download_does_not_replace_an_installing_flight() {
         *state = DownloadState {
             phase: AppUpdateDownloadPhase::Installing,
             version: Some(TEST_UPDATE_VERSION.into()),
-            started_at: Some("2026-07-18T00:00:00.000Z".into()),
+            started_at: Some(1784332800),
             downloaded_bytes: 10,
             total_bytes: 10,
             percent: 100,
@@ -790,9 +790,9 @@ fn nightly_builds_are_newer_only_when_they_are_a_different_build() {
 #[tokio::test]
 async fn nightly_update_check_picks_the_most_recently_published_build() {
     let mut older = release("v3.0.0-Nightly-fffffff", true, Vec::new());
-    older.published_at = Some("2026-09-01T00:00:00Z".into());
+    older.published_at = Some(1788220800);
     let mut newest = release("v3.0.0-Nightly-0000001", true, Vec::new());
-    newest.published_at = Some("2026-09-02T00:00:00Z".into());
+    newest.published_at = Some(1788307200);
     let release_catalog = TestAppUpdateReleaseCatalog {
         releases: vec![older, newest],
     };

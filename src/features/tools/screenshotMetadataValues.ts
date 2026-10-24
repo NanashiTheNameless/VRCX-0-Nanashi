@@ -10,6 +10,7 @@ import type {
     WorldDetail
 } from '@/platform/tauri/bindings';
 import { SCREENSHOT_GALLERY_CONFIG_KEYS } from '@/repositories/configKeys';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 import { isRecord } from '@/shared/utils/record';
 import {
     parseVrchatScreenshotDateFromFileName,
@@ -279,7 +280,7 @@ function resolveScreenshotMetadataDate(
     fileName: string
 ) {
     if (metadata?.timestamp) {
-        const parsed = Date.parse(metadata.timestamp);
+        const parsed = parseAbsoluteDateMs(metadata.timestamp);
         if (Number.isFinite(parsed)) {
             return new Date(parsed);
         }
@@ -291,7 +292,7 @@ function resolveScreenshotMetadataDate(
     }
 
     if (extra?.creationDate) {
-        const parsed = Date.parse(extra.creationDate);
+        const parsed = parseAbsoluteDateMs(extra.creationDate);
         if (Number.isFinite(parsed)) {
             return new Date(parsed);
         }
@@ -396,9 +397,11 @@ export function searchResultToLibraryImage(
     }
 ): ScreenshotLibraryImage {
     const creationTime = result.creationDate
-        ? Date.parse(result.creationDate)
+        ? parseAbsoluteDateMs(result.creationDate)
         : Number.NaN;
-    const createdAt = Number.isNaN(creationTime) ? null : creationTime;
+    const createdAt = Number.isNaN(creationTime)
+        ? null
+        : Math.floor(creationTime / 1000);
     const fileName = result.fileName || getFileNameFromPath(result.filePath);
 
     return {
@@ -412,12 +415,13 @@ export function searchResultToLibraryImage(
         height: result.height,
         worldId: result.metadata?.world?.id || null,
         worldName: result.metadata?.world?.name || null,
-        capturedAt: result.metadata?.timestamp || null,
-        capturedAtMs: resolveScreenshotCapturedTime({
-            capturedAt: result.metadata?.timestamp,
-            fileName,
-            modifiedAt: createdAt
-        }),
+        capturedAt: Math.floor(
+            resolveScreenshotCapturedTime({
+                capturedAt: result.metadata?.timestamp,
+                fileName,
+                modifiedAt: createdAt
+            }) / 1000
+        ),
         metadata: result.metadata,
         error: result.metadata?.error || null
     };

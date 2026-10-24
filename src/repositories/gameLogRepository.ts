@@ -1,4 +1,5 @@
 import { commands } from '@/platform/tauri/bindings';
+import { displayDateBoundary } from '@/shared/utils/displayTimeZone';
 import { normalizeString } from '@/shared/utils/string';
 
 import configRepository from './configRepository';
@@ -62,39 +63,7 @@ function normalizeQueryLimit(value?: number) {
 }
 
 function normalizeDateBoundary(value: string, boundary: 'start' | 'end') {
-    const normalized = value.trim();
-    if (!normalized) {
-        return '';
-    }
-
-    const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(normalized);
-    const date = dateOnlyMatch
-        ? new Date(
-              Number(dateOnlyMatch[1]),
-              Number(dateOnlyMatch[2]) - 1,
-              Number(dateOnlyMatch[3])
-          )
-        : new Date(normalized);
-    if (Number.isNaN(date.getTime())) {
-        return '';
-    }
-
-    if (dateOnlyMatch) {
-        if (
-            date.getFullYear() !== Number(dateOnlyMatch[1]) ||
-            date.getMonth() !== Number(dateOnlyMatch[2]) - 1 ||
-            date.getDate() !== Number(dateOnlyMatch[3])
-        ) {
-            return '';
-        }
-        if (boundary === 'end') {
-            date.setHours(23, 59, 59, 999);
-        } else {
-            date.setHours(0, 0, 0, 0);
-        }
-    }
-
-    return date.toISOString();
+    return displayDateBoundary(value, boundary);
 }
 
 async function queryGameLog({

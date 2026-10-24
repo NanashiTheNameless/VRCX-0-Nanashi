@@ -5,6 +5,13 @@ import type {
     GroupCalendarRecurrenceFrequency
 } from '@/platform/tauri/bindings';
 import type { GroupCalendarEventRecord } from '@/repositories/vrchatToolsRepository';
+import {
+    absoluteDateFromValue,
+    displayDateParts,
+    displayLocalToEpoch,
+    fixedTimeZoneOffset,
+    getDisplayTimeZone
+} from '@/shared/utils/displayTimeZone';
 import { isRecord } from '@/shared/utils/record';
 
 export const GROUP_EVENT_CATEGORIES = [
@@ -77,6 +84,7 @@ export type GroupEventForm = {
     guestEarlyJoinMinutes: number;
     closeInstanceAfterEndMinutes: number;
     repeat: GroupEventRepeat;
+    recurrenceTimezone: string;
     interval: number;
     weeklyPattern: GroupEventWeeklyPattern;
     customDays: string[];
@@ -98,15 +106,17 @@ function pad(value: number) {
 }
 
 export function toLocalDateTimeInput(value: string | number | Date) {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
+    const date = absoluteDateFromValue(value);
+    if (!date) {
         return '';
     }
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    const parts = displayDateParts(date);
+    return `${parts.year}-${pad(parts.month)}-${pad(parts.day)}T${pad(parts.hour)}:${pad(parts.minute)}`;
 }
 
 function localInputMs(value: string) {
-    return value ? new Date(value).getTime() : NaN;
+    const seconds = displayLocalToEpoch(value);
+    return seconds === null ? NaN : seconds * 1000;
 }
 
 function stringList(value: unknown): string[] {
@@ -145,9 +155,12 @@ function isFrequency(
 }
 
 export function createGroupEventForm(nowMs = Date.now()): GroupEventForm {
-    const start = new Date(nowMs);
-    start.setMinutes(0, 0, 0);
-    start.setHours(start.getHours() + 1);
+    const displayTimezone = getDisplayTimeZone();
+    const parts = displayDateParts(new Date(nowMs));
+    const nextHour = new Date(
+        Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour + 1)
+    );
+    const start = new Date(localInputMs(nextHour.toISOString().slice(0, 16)));
     const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
     return {
         mode: 'create',
@@ -170,6 +183,11 @@ export function createGroupEventForm(nowMs = Date.now()): GroupEventForm {
         guestEarlyJoinMinutes: 5,
         closeInstanceAfterEndMinutes: 5,
         repeat: 'none',
+        recurrenceTimezone:
+            fixedTimeZoneOffset(displayTimezone) === null ||
+            /^(UTC|GMT)$/i.test(displayTimezone)
+                ? displayTimezone
+                : Intl.DateTimeFormat().resolvedOptions().timeZone,
         interval: 1,
         weeklyPattern: 'every_week',
         customDays: ['SA'],
@@ -219,6 +237,10 @@ export function groupEventFormFromEvent(
             base.closeInstanceAfterEndMinutes
         ),
         repeat: frequency ?? 'none',
+        recurrenceTimezone:
+            typeof recurrence?.timezone === 'string' && recurrence.timezone
+                ? recurrence.timezone
+                : base.recurrenceTimezone,
         interval:
             typeof recurrence?.interval === 'number' && recurrence.interval > 0
                 ? recurrence.interval
@@ -232,7 +254,7 @@ export function groupEventFormFromEvent(
         occurrenceCount:
             typeof end?.count === 'number' && end.count > 0 ? end.count : 1,
         repeatEndDate:
-            typeof end?.date === 'string' ? toLocalDateTimeInput(end.date) : ''
+            typeof end?.date === 'string' ? end.date.slice(0, 16) : ''
     };
 }
 
@@ -324,13 +346,13 @@ function groupEventRecurrence(
 
 export function groupEventMutation(
     form: GroupEventForm,
-    timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    timezone = form.recurrenceTimezone
 ): GroupCalendarEventMutation {
     return {
         title: form.title.trim(),
         description: form.description.trim(),
-        startsAt: new Date(form.startsAt).toISOString(),
-        endsAt: new Date(form.endsAt).toISOString(),
+        startsAt: new Date(localInputMs(form.startsAt)).toISOString(),
+        endsAt: new Date(localInputMs(form.endsAt)).toISOString(),
         category: form.category,
         accessType: form.accessType,
         tags: groupEventTags(form.tags),

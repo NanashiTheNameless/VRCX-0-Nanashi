@@ -11,7 +11,7 @@ pub struct SessionLocationInput {
     pub epoch: i64,
     pub sort_id: i64,
     pub id: Option<i64>,
-    pub created_at: String,
+    pub created_at: i64,
     pub location: String,
     pub world_id: String,
     pub world_name: String,
@@ -25,7 +25,7 @@ pub struct SessionEventInput {
     pub sort_id: i64,
     pub row_id: Option<i64>,
     pub type_: String,
-    pub created_at: String,
+    pub created_at: i64,
     pub display_name: String,
     pub user_id: String,
     pub location: String,
@@ -39,7 +39,7 @@ pub struct SessionEventInput {
 pub struct SessionMemberOut {
     pub display_name: String,
     pub user_id: String,
-    pub created_at: String,
+    pub created_at: i64,
     pub is_favorite: bool,
 }
 
@@ -47,7 +47,7 @@ pub struct SessionMemberOut {
 pub struct SessionEventOut {
     #[serde(rename = "type")]
     pub type_: String,
-    pub created_at: String,
+    pub created_at: i64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub row_id: Option<i64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -76,7 +76,7 @@ pub struct SessionEventOut {
 pub struct SessionSegmentOut {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub id: Option<i64>,
-    pub created_at: String,
+    pub created_at: i64,
     pub location: String,
     pub world_id: String,
     pub world_name: String,
@@ -100,7 +100,7 @@ enum DedupeKey<'a> {
     },
     Fields {
         type_: &'a str,
-        created_at: &'a str,
+        created_at: i64,
         user_id: &'a str,
         display_name: &'a str,
         location: &'a str,
@@ -116,7 +116,7 @@ fn dedupe_key(event: &SessionEventInput) -> DedupeKey<'_> {
         },
         None => DedupeKey::Fields {
             type_: &event.type_,
-            created_at: &event.created_at,
+            created_at: event.created_at,
             user_id: &event.user_id,
             display_name: &event.display_name,
             location: &event.location,
@@ -129,7 +129,7 @@ struct SingleNode {
     epoch: i64,
     row_id: Option<i64>,
     type_: String,
-    created_at: String,
+    created_at: i64,
     display_name: String,
     user_id: String,
     location: String,
@@ -143,7 +143,7 @@ struct SingleNode {
 struct GroupNode {
     epoch: i64,
     type_: String,
-    created_at: String,
+    created_at: i64,
     members: Vec<SessionMemberOut>,
 }
 
@@ -173,7 +173,7 @@ fn single_node(event: &SessionEventInput) -> SingleNode {
         epoch: event.epoch,
         row_id: event.row_id,
         type_: event.type_.clone(),
-        created_at: event.created_at.clone(),
+        created_at: event.created_at,
         display_name: event.display_name.clone(),
         user_id: event.user_id.clone(),
         location: event.location.clone(),
@@ -189,7 +189,7 @@ fn member_of(single: &SingleNode) -> SessionMemberOut {
     SessionMemberOut {
         display_name: single.display_name.clone(),
         user_id: single.user_id.clone(),
-        created_at: single.created_at.clone(),
+        created_at: single.created_at,
         is_favorite: single.is_favorite,
     }
 }
@@ -198,8 +198,8 @@ fn make_group(events: &[Node], indices: &[usize], group_type: &str) -> GroupNode
     let anchor = &events[indices[0]];
     let epoch = anchor.epoch();
     let created_at = match anchor {
-        Node::Single(single) => single.created_at.clone(),
-        Node::Group(group) => group.created_at.clone(),
+        Node::Single(single) => single.created_at,
+        Node::Group(group) => group.created_at,
     };
     let mut members = Vec::with_capacity(indices.len());
     for &index in indices {
@@ -353,7 +353,7 @@ struct SegmentBuild {
     epoch: i64,
     sort_id: i64,
     id: Option<i64>,
-    created_at: String,
+    created_at: i64,
     location: String,
     world_id: String,
     world_name: String,
@@ -380,7 +380,7 @@ pub fn build_game_log_sessions(
             epoch: location.epoch,
             sort_id: location.sort_id,
             id: location.id,
-            created_at: location.created_at.clone(),
+            created_at: location.created_at,
             location: location.location.clone(),
             world_id: location.world_id.clone(),
             world_name: location.world_name.clone(),

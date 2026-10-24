@@ -216,7 +216,7 @@ fn run_database_maintenance_task(
         DatabaseMaintenanceTask::CleanLegendFromFriendLog => {
             for table_name in select_table_names(db, "name LIKE '%_friend_log_history'")? {
                 db.execute_non_query(
-                    &format!("DELETE FROM {table_name} WHERE type = 'TrustLevel' AND created_at > '2022-05-04T01:00:00.000Z' AND ((trust_level = 'Veteran User' AND previous_trust_level = 'Trusted User') OR (trust_level = 'Trusted User' AND previous_trust_level = 'Veteran User'))"),
+                    &format!("DELETE FROM {table_name} WHERE type = 'TrustLevel' AND {} > 1651626000 AND ((trust_level = 'Veteran User' AND previous_trust_level = 'Trusted User') OR (trust_level = 'Trusted User' AND previous_trust_level = 'Veteran User'))", crate::migrations::epoch_seconds_sql("created_at")),
                     &Default::default(),
                 )?;
             }
@@ -300,7 +300,7 @@ fn run_database_maintenance_task(
             for table_name in select_table_names(db, "name LIKE '%_notifications'")? {
                 db.execute_non_query(
                     &format!(
-                        "DELETE FROM {table_name} WHERE (created_at is null or created_at = '')"
+                        "DELETE FROM {table_name} WHERE (created_at is null or created_at = '' or created_at = 0)"
                     ),
                     &Default::default(),
                 )?;
@@ -308,7 +308,7 @@ fn run_database_maintenance_task(
         }
         DatabaseMaintenanceTask::FixBrokenGroupChange => {
             for table_name in select_table_names(db, "name LIKE '%_notifications'")? {
-                db.execute_non_query(&format!("DELETE FROM {table_name} WHERE type = 'groupChange' AND created_at < '2024-04-23T03:00:00.000Z'"), &Default::default())?;
+                db.execute_non_query(&format!("DELETE FROM {table_name} WHERE type = 'groupChange' AND {} < 1713841200", crate::migrations::epoch_seconds_sql("created_at")), &Default::default())?;
             }
         }
         DatabaseMaintenanceTask::FixCancelFriendRequestTypo => {
@@ -322,7 +322,7 @@ fn run_database_maintenance_task(
                 &Default::default(),
             )? {
                 let id = row.first().cloned().unwrap_or(Value::Null);
-                let created_at = row_string(&row, 1);
+                let created_at = row.get(1).cloned().unwrap_or(Value::Null);
                 let event_type = row_string(&row, 2);
                 let display_name = row.get(3).and_then(Value::as_str).unwrap_or_default();
                 let new_display_name = display_name

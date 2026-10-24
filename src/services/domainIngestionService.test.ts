@@ -87,7 +87,7 @@ describe('domainIngestionService', () => {
         recordGameRuntimePresence({
             endpoint: 'api',
             currentLocation: 'wrld_game:12345',
-            currentLocationStartedAt: '2026-01-01T00:00:00.000Z',
+            currentLocationStartedAt: 1767225600,
             currentLocationPlayers: [
                 {
                     userId: 'usr_friend',
@@ -109,7 +109,7 @@ describe('domainIngestionService', () => {
         recordGameRuntimePresence({
             endpoint: 'api',
             currentLocation: 'wrld_game:12345',
-            currentLocationStartedAt: '2026-01-01T00:00:00.000Z',
+            currentLocationStartedAt: 1767225600,
             currentLocationPlayers: [
                 {
                     id: 'id:usr_dup',
@@ -146,7 +146,7 @@ describe('domainIngestionService', () => {
             endpoint: 'api',
             currentLocation: 'traveling:traveling',
             currentDestination: 'wrld_destination:12345',
-            currentLocationStartedAt: '2026-01-01T00:00:00.000Z',
+            currentLocationStartedAt: 1767225600,
             currentLocationPlayers: [
                 {
                     userId: 'usr_friend',

@@ -31,24 +31,24 @@ impl ActivityViewKind {
 pub struct ActivityFriendPresenceSliceInput {
     pub owner_user_id: OwnerId,
     pub user_id: String,
-    pub from_date_iso: String,
+    pub from: i64,
     #[serde(default)]
-    pub to_date_iso: String,
+    pub to: Option<i64>,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ActivityPresenceOutput {
     #[serde(rename = "created_at")]
-    pub created_at: String,
+    pub created_at: i64,
     pub r#type: String,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ActivitySelfSourceBoundsOutput {
-    pub first_created_at: String,
-    pub last_created_at: String,
+    pub first_created_at: i64,
+    pub last_created_at: i64,
     pub count: i64,
 }
 
@@ -56,9 +56,9 @@ pub struct ActivitySelfSourceBoundsOutput {
 #[serde(rename_all = "camelCase")]
 pub struct ActivitySyncStateOutput {
     pub user_id: String,
-    pub updated_at: String,
+    pub updated_at: i64,
     pub is_self: bool,
-    pub source_last_created_at: String,
+    pub source_last_created_at: i64,
     pub pending_session_start_at: Value,
     pub cached_range_days: i64,
 }
@@ -116,7 +116,7 @@ pub struct ActivityBucketCacheOutput {
     pub raw_buckets: Value,
     pub normalized_buckets: Value,
     pub summary: Value,
-    pub built_at: String,
+    pub built_at: i64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -125,11 +125,11 @@ pub struct ActivitySyncStateInput {
     #[serde(default)]
     pub user_id: String,
     #[serde(default)]
-    pub updated_at: String,
+    pub updated_at: i64,
     #[serde(default)]
     pub is_self: bool,
     #[serde(default)]
-    pub source_last_created_at: String,
+    pub source_last_created_at: i64,
     #[serde(default)]
     pub pending_session_start_at: Option<Value>,
     #[serde(default)]
@@ -170,7 +170,7 @@ pub struct ActivityBucketCacheInput {
     #[serde(default)]
     pub summary: Value,
     #[serde(default)]
-    pub built_at: String,
+    pub built_at: i64,
 }
 
 #[derive(Debug, Deserialize, specta::Type)]
@@ -181,7 +181,7 @@ pub struct ActivityViewBuildInput {
     pub is_self: bool,
     pub range_days: i64,
     pub utc_offset_minutes: i64,
-    pub now_ms: i64,
+    pub now: i64,
     pub force_refresh: bool,
 }
 
@@ -196,7 +196,7 @@ pub struct ActivityViewOutput {
     pub filtered_event_count: i64,
     pub has_any_data: bool,
     pub built_from_cursor: String,
-    pub built_at: String,
+    pub built_at: i64,
 }
 
 #[derive(Debug, Deserialize, specta::Type)]
@@ -207,7 +207,7 @@ pub struct ActivityOverlapViewBuildInput {
     pub target_user_id: String,
     pub range_days: i64,
     pub utc_offset_minutes: i64,
-    pub now_ms: i64,
+    pub now: i64,
     pub force_refresh: bool,
     #[serde(default)]
     pub exclude_start_hour: Option<i32>,
@@ -226,5 +226,5 @@ pub struct ActivityOverlapViewOutput {
     pub best_hour_end: i32,
     pub has_overlap_data: bool,
     pub built_from_cursor: String,
-    pub built_at: String,
+    pub built_at: i64,
 }
