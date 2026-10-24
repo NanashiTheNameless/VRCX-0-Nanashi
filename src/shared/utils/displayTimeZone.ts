@@ -93,13 +93,18 @@ export function absoluteDateFromValue(value: unknown): Date | null {
             Math.abs(value) < 100_000_000_000 ? value * 1000 : value
         );
     else if (typeof value === 'string') {
-        date = /^-?\d+$/.test(value.trim())
+        const text = value.trim();
+        const naiveDateTime =
+            /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(
+                text
+            );
+        date = /^-?\d+$/.test(text)
             ? new Date(
                   Math.abs(Number(value)) < 100_000_000_000
                       ? Number(value) * 1000
                       : Number(value)
               )
-            : new Date(value);
+            : new Date(naiveDateTime ? `${text.replace(' ', 'T')}Z` : text);
     } else return null;
     return Number.isNaN(date.getTime()) ? null : date;
 }

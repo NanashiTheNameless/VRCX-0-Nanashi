@@ -11,6 +11,30 @@ import {
 afterEach(() => setDisplayTimeZone(''));
 
 describe('display timezone', () => {
+    it('reads offset-free stored dates as UTC while keeping wall-clock inputs in the display zone', () => {
+        setDisplayTimeZone('UTC+05:45');
+        for (const value of [
+            '2026-01-02T03:04:05',
+            '2026-01-02 03:04:05',
+            ' 2026-01-02T03:04:05 '
+        ]) {
+            const date = absoluteDateFromValue(value);
+            expect(date?.toISOString()).toBe('2026-01-02T03:04:05.000Z');
+            expect(displayDateParts(date!)).toMatchObject({
+                hour: 8,
+                minute: 49
+            });
+        }
+        expect(
+            absoluteDateFromValue('2026-01-02 03:04:05.250')?.getTime()
+        ).toBe(1767323045250);
+        expect(absoluteDateFromValue('2026-01-02T03:04')?.toISOString()).toBe(
+            '2026-01-02T03:04:00.000Z'
+        );
+        expect(displayLocalToEpoch('2026-01-02T03:04:05')).toBe(
+            Date.parse('2026-01-01T21:19:05Z') / 1000
+        );
+    });
     it('accepts IANA names and fixed offsets and rejects invalid settings', () => {
         for (const zone of [
             '',

@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { commands } from '@/platform/tauri/bindings';
+import { setDisplayTimeZone } from '@/shared/utils/displayTimeZone';
 
 import { userActivityViewService } from './userActivityViewService';
 
@@ -15,8 +16,15 @@ const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 describe('userActivityViewService Rust activity views', () => {
     beforeEach(() => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date('2026-07-21T10:30:15.250Z'));
+        setDisplayTimeZone('UTC');
         vi.mocked(commands.appActivityView).mockReset();
         vi.mocked(commands.appActivityOverlapView).mockReset();
+    });
+    afterEach(() => {
+        setDisplayTimeZone('');
+        vi.useRealTimers();
     });
 
     it('loads activity view from Rust and formats peak labels', async () => {
@@ -46,8 +54,8 @@ describe('userActivityViewService Rust activity views', () => {
             targetUserId: 'usr_target',
             isSelf: false,
             rangeDays: 7,
-            utcOffsetMinutes: -new Date().getTimezoneOffset(),
-            now: expect.any(Number),
+            utcOffsetMinutes: 0,
+            now: 1784629815,
             forceRefresh: true
         });
         expect(result).toMatchObject({
@@ -61,6 +69,7 @@ describe('userActivityViewService Rust activity views', () => {
     });
 
     it('formats single-hour activity peaks without a range suffix', async () => {
+        setDisplayTimeZone('UTC+05:45');
         vi.mocked(commands.appActivityView).mockResolvedValue({
             rawBuckets: [60],
             normalizedBuckets: [1],
@@ -83,6 +92,9 @@ describe('userActivityViewService Rust activity views', () => {
 
         expect(result.peakDay).toBe('Tue');
         expect(result.peakTime).toBe('09:00');
+        expect(commands.appActivityView).toHaveBeenCalledWith(
+            expect.objectContaining({ utcOffsetMinutes: 345, now: 1784629815 })
+        );
     });
 
     it('loads overlap view from Rust and formats best overlap labels', async () => {
@@ -117,8 +129,8 @@ describe('userActivityViewService Rust activity views', () => {
             currentUserId: 'usr_owner',
             targetUserId: 'usr_target',
             rangeDays: 7,
-            utcOffsetMinutes: -new Date().getTimezoneOffset(),
-            now: expect.any(Number),
+            utcOffsetMinutes: 0,
+            now: 1784629815,
             forceRefresh: false,
             excludeStartHour: 22,
             excludeEndHour: 2

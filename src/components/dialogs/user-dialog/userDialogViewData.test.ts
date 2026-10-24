@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { setDisplayTimeZone } from '@/shared/utils/displayTimeZone';
 import { useShellStore } from '@/state/shellStore';
 import { activePresence } from '@/test/presenceFixtures';
 
@@ -12,12 +13,14 @@ import {
 
 describe('userDialogViewData', () => {
     beforeEach(() => {
+        setDisplayTimeZone('UTC');
         useShellStore.setState({
             dateCulture: 'en-gb',
             dateIsoFormat: true,
             dateHour12: false
         });
     });
+    afterEach(() => setDisplayTimeZone(''));
 
     it('builds the tabs available for the viewed user', () => {
         const otherUserTabs = buildUserDialogTabs({
@@ -234,7 +237,7 @@ describe('userDialogViewData', () => {
         });
 
         expect(summary.previousDisplayNames).toEqual([
-            { displayName: 'Old Name', updated_at: 1767344645 },
+            { displayName: 'Old Name', updated_at: 1767323045 },
             { displayName: 'Profile Name', updated_at: 0 }
         ]);
         expect(summary.previousDisplayNamesTitle).toBe(
