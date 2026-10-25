@@ -275,7 +275,7 @@ fn delivery(user_id: &str, name: &str) -> ActivityDelivery {
             source_id: format!("online:{user_id}"),
             kind: ActivityKind::Online,
             category: ActivityCategory::FavoriteMovement,
-            created_at: "2026-06-01T12:34:56.000Z".to_string(),
+            created_at: 1_780_317_296,
             actor_user_id: user_id.to_string(),
             actor_display_name: name.to_string(),
             content: ActivityContent {
