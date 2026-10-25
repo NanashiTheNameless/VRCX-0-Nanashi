@@ -264,9 +264,9 @@ impl Recorder {
                 .unwrap_or("")
                 .to_owned()
         };
-        let now_ms = std::time::SystemTime::now()
+        let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .map(|elapsed| elapsed.as_millis() as i64)
+            .map(|elapsed| elapsed.as_secs() as i64)
             .unwrap_or(0);
         let mut friends = Vec::new();
         let mut occupants: BTreeMap<String, Vec<String>> = BTreeMap::new();
@@ -295,7 +295,7 @@ impl Recorder {
                     "statusDescription": friend.status_description.to_string(),
                     "location": location,
                     "platform": presence.view.platform(),
-                    "lastSeenAtMs": now_ms,
+                    "lastSeenAt": now,
                 }));
             }
         }

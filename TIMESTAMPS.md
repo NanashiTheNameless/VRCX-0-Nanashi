@@ -63,8 +63,10 @@ columns and fields are converted by their declared unit, including dates near 19
 VRChat and other external APIs retain their required formats at the boundary.
 RemoteSync cryptography and wire types come from the protocol crate pinned in
 `Cargo.toml`. Existing signed bytes are never rewritten before verification.
-The current pinned version determines envelope/header units; local history
-rows carry epoch seconds and retain their event discriminators.
+The pinned v2 protocol uses `/v2` API routes and epoch seconds in new chunk,
+live snapshot, envelope and manifest timestamps. Its readers still verify old
+signed data before importing it. Local history rows carry epoch seconds and
+retain their event discriminators.
 
 The website database and protocol migration is a separate coordinated rollout.
 The chosen rollout makes new writers use the new protocol and requires older

@@ -9,8 +9,8 @@ import { Input } from '@/ui/shadcn/input';
 type Address = {
     ip: string;
     location: string;
-    firstSeenMs: number;
-    lastSeenMs: number;
+    firstSeen: number;
+    lastSeen: number;
 };
 
 type Client = {
@@ -21,7 +21,7 @@ type Client = {
     current: boolean;
     activeNow: boolean;
     revoked: boolean;
-    lastSeenMs: number | null;
+    lastSeen: number | null;
     address: Address | null;
     history: Address[];
 };
@@ -281,11 +281,9 @@ export function SettingsHistorySyncAccount({
                                                   ? t(
                                                         'view.settings.history_sync.clients.active'
                                                     )
-                                                  : client.lastSeenMs
+                                                  : client.lastSeen
                                                     ? formatDateFilter(
-                                                          new Date(
-                                                              client.lastSeenMs
-                                                          ),
+                                                          client.lastSeen,
                                                           'long'
                                                       )
                                                     : null,
@@ -299,14 +297,12 @@ export function SettingsHistorySyncAccount({
                                     {historyOf === client.clientId
                                         ? client.history.map((entry) => (
                                               <p
-                                                  key={`${entry.ip}-${entry.firstSeenMs}`}
+                                                  key={`${entry.ip}-${entry.firstSeen}`}
                                                   className="text-muted-foreground text-xs"
                                               >
                                                   {entry.ip} {entry.location}{' '}
                                                   {formatDateFilter(
-                                                      new Date(
-                                                          entry.lastSeenMs
-                                                      ),
+                                                      entry.lastSeen,
                                                       'long'
                                                   )}
                                               </p>

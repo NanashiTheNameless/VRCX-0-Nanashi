@@ -88,7 +88,7 @@ impl SyncTransport for FakeServer {
             vault_id: request.vault_id,
             vault_pk: request.vault_pk,
             manifest_pk: request.manifest_pk,
-            created_at_ms: 0,
+            created_at: 0,
             max_seq: 0,
             manifest_seq: 0,
             usage_bytes: 0,
@@ -371,6 +371,32 @@ impl Pc {
 }
 
 #[tokio::test]
+async fn uploaded_chunks_and_signer_windows_use_epoch_seconds() {
+    let server = FakeServer::default();
+    let secret = SyncSecret::generate().unwrap();
+    let a = pc("seconds");
+    a.record("2026-10-10T10:00:00.000Z", "first");
+    let before = now_epoch();
+    a.sync(&server, &secret).await.unwrap();
+    let vaults = server.vaults.lock().unwrap();
+    let (vault_id, vault) = vaults.iter().next().unwrap();
+    let keys = VaultKeys::derive(&secret, *vault_id);
+    let (seq, bytes) = vault.manifest.as_ref().unwrap();
+    let manifest = engine::open_manifest(bytes, *seq, &keys, None).unwrap();
+    let (.., chunk_id, blob) = &vault.chunks[0];
+    let opened = vrcx_0_nanashi_website_protocol::chunk::open_chunk(
+        blob, *vault_id, *chunk_id, &keys, &manifest,
+    )
+    .unwrap();
+    assert_eq!(opened.header.v, 2);
+    assert!(opened.header.created_at >= before && opened.header.created_at <= now_epoch());
+    assert!(manifest
+        .signers
+        .iter()
+        .all(|signer| signer.added_at >= before && signer.added_at <= now_epoch()));
+}
+
+#[tokio::test]
 async fn two_pcs_exchange_history_without_echoing_it_back() {
     let server = FakeServer::default();
     let secret = SyncSecret::generate().unwrap();
@@ -646,7 +672,7 @@ async fn a_chunk_signed_by_an_unlisted_key_is_rejected() {
         source_id: SourceId::random().unwrap(),
         source_seq: 1,
         kind: ChunkKind::Rows,
-        created_at_ms: now_ms(),
+        created_at: now_epoch(),
         app_version: "forged".into(),
         coverage: Vec::new(),
         dropped_rows: 0,

@@ -843,6 +843,15 @@ const generatedCommands = {
             enabled
         });
     },
+    async appDesktopWidgetPinnedToggle(): Promise<DesktopWidgetSnapshot> {
+        return await TAURI_INVOKE('app__desktop_widget_pinned_toggle');
+    },
+    async appDesktopWidgetClickThroughToggle(): Promise<DesktopWidgetSnapshot> {
+        return await TAURI_INVOKE('app__desktop_widget_click_through_toggle');
+    },
+    async appDesktopWidgetShow(): Promise<void> {
+        await TAURI_INVOKE('app__desktop_widget_show');
+    },
     async appVrOverlayEnabledSet(
         enabled: boolean
     ): Promise<VrOverlayRuntimeSnapshot> {
@@ -2877,6 +2886,9 @@ const generatedCommands = {
     async appGetClipboard(): Promise<string> {
         return await TAURI_INVOKE('app__get_clipboard');
     },
+    async appReadClipboardImage(): Promise<ClipboardImage | null> {
+        return await TAURI_INVOKE('app__read_clipboard_image');
+    },
     async appCopyImageToClipboard(path: string): Promise<null> {
         return await TAURI_INVOKE('app__copy_image_to_clipboard', { path });
     },
@@ -3296,6 +3308,21 @@ const generatedCommands = {
             'app__pick_random_screenshot_in_folder_tree',
             { folderPath }
         );
+    },
+    async appGetFavoriteScreenshots(): Promise<FavoriteScreenshots> {
+        return await TAURI_INVOKE('app__get_favorite_screenshots');
+    },
+    async appSetScreenshotFavorite(
+        path: string,
+        favorite: boolean
+    ): Promise<null> {
+        return await TAURI_INVOKE('app__set_screenshot_favorite', {
+            path,
+            favorite
+        });
+    },
+    async appForgetMissingScreenshotFavorites(): Promise<number> {
+        return await TAURI_INVOKE('app__forget_missing_screenshot_favorites');
     },
     async appGetWorldScreenshots(
         worldId: string
@@ -4273,6 +4300,11 @@ export type ClientConfigSnippets = {
     mcpRemoteJson: string;
     genericJson: string;
 };
+export type ClipboardImage = {
+    fileName: string;
+    mimeType: string;
+    dataBase64: string;
+};
 export type CollectorLiveFriend = {
     userId: string;
     displayName: string;
@@ -4796,6 +4828,11 @@ export type FavoriteRow = {
     userId?: string | null;
     avatarId?: string | null;
     worldId?: string | null;
+};
+export type FavoriteScreenshots = {
+    paths: string[];
+    images: ScreenshotLibraryImage[];
+    missingCount: number;
 };
 export type FavoriteTransferInput = {
     kind: FavoriteEntityKind;

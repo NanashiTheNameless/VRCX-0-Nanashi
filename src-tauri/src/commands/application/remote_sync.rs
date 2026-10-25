@@ -786,8 +786,8 @@ pub async fn app__remote_sync_delete_data(
 pub struct RemoteSyncClientAddress {
     pub ip: String,
     pub location: String,
-    pub first_seen_ms: f64,
-    pub last_seen_ms: f64,
+    pub first_seen: f64,
+    pub last_seen: f64,
 }
 
 #[derive(Clone, Debug, Serialize, specta::Type)]
@@ -800,7 +800,7 @@ pub struct RemoteSyncClientSnapshot {
     pub current: bool,
     pub active_now: bool,
     pub revoked: bool,
-    pub last_seen_ms: Option<f64>,
+    pub last_seen: Option<f64>,
     pub address: Option<RemoteSyncClientAddress>,
     pub history: Vec<RemoteSyncClientAddress>,
 }
@@ -866,8 +866,8 @@ fn client_address(
     RemoteSyncClientAddress {
         ip: entry.ip,
         location,
-        first_seen_ms: entry.first_seen_ms as f64,
-        last_seen_ms: entry.last_seen_ms as f64,
+        first_seen: entry.first_seen as f64,
+        last_seen: entry.last_seen as f64,
     }
 }
 
@@ -893,8 +893,8 @@ pub async fn app__remote_sync_clients_get(
             client_version: client.client_version,
             current: client.current,
             active_now: client.active_now,
-            revoked: client.revoked_at_ms.is_some(),
-            last_seen_ms: client.last_seen_ms.map(|at| at as f64),
+            revoked: client.revoked_at.is_some(),
+            last_seen: client.last_seen.map(|at| at as f64),
             address: client.current_ip.map(client_address),
             history: client.history.into_iter().map(client_address).collect(),
         })

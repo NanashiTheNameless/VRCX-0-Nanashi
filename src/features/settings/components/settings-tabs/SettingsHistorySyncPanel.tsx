@@ -64,7 +64,7 @@ type SyncRun = {
 
 type CollectorSnapshot = {
     state: string;
-    lastChunkAtMs: number | null;
+    lastChunkAt: number | null;
     lastError: string | null;
     liveAgeMs: number | null;
     live: {

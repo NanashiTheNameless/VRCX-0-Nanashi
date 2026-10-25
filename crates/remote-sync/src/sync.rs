@@ -335,10 +335,10 @@ fn integrity(error: impl std::fmt::Display) -> Error {
     Error::Integrity(error.to_string())
 }
 
-fn now_ms() -> i64 {
+fn now_epoch() -> i64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .map(|elapsed| elapsed.as_millis() as i64)
+        .map(|elapsed| elapsed.as_secs() as i64)
         .unwrap_or(0)
 }
 
@@ -466,7 +466,7 @@ async fn ensure_manifest<T: SyncTransport>(
             store::manifest_seq_advance(db, &vault.reference, manifest.manifest_seq)
                 .map_err(storage)?;
             if manifest.v == vrcx_0_nanashi_website_protocol::manifest::VERSION
-                && manifest.signer(&signer.key_id(), now_ms()).is_some()
+                && manifest.signer(&signer.key_id(), now_epoch()).is_some()
             {
                 return Ok(manifest.clone());
             }
@@ -488,7 +488,7 @@ async fn ensure_manifest<T: SyncTransport>(
             &signer.public(),
             SignerKind::Device,
             identity.device_label.clone(),
-            now_ms(),
+            now_epoch(),
         ));
         let sealed = engine::seal_manifest(&next, &vault.keys)?;
         match transport
@@ -721,7 +721,7 @@ fn build_compaction_journal(
                 source_id,
                 source_seq: next_source_seq,
                 kind: ChunkKind::Snapshot,
-                created_at_ms: now_ms(),
+                created_at: now_epoch(),
                 app_version: identity.app_version.clone(),
                 coverage: Vec::new(),
                 dropped_rows: 0,
@@ -937,10 +937,7 @@ async fn push<T: SyncTransport>(
                         store::coverage_between(db, &identity.vrchat_user_id, first, last)
                             .map_err(storage)?
                             .into_iter()
-                            .map(|(start, end)| CoveragePeriod {
-                                start_ms: start.saturating_mul(1000),
-                                end_ms: end.saturating_mul(1000),
-                            })
+                            .map(|(start, end)| CoveragePeriod { start, end })
                             .collect()
                     }
                     _ => Vec::new(),
@@ -951,7 +948,7 @@ async fn push<T: SyncTransport>(
                     source_id: vault.source_id,
                     source_seq,
                     kind: built.kind,
-                    created_at_ms: now_ms(),
+                    created_at: now_epoch(),
                     app_version: identity.app_version.clone(),
                     coverage,
                     dropped_rows: 0,
@@ -1072,7 +1069,7 @@ async fn replace_chunk<T: SyncTransport>(
         source_id: vault.source_id,
         source_seq,
         kind: ChunkKind::Rows,
-        created_at_ms: now_ms(),
+        created_at: now_epoch(),
         app_version: deduper.identity.app_version.clone(),
         coverage: header.coverage.clone(),
         dropped_rows: header.dropped_rows,

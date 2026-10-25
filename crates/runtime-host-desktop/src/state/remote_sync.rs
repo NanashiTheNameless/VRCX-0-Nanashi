@@ -80,8 +80,8 @@ const SHARE_IMAGE_PREFIXES: [&str; 2] = ["https://api.vrchat.cloud/", "https://a
 #[serde(rename_all = "camelCase")]
 pub struct CollectorSnapshot {
     pub state: String,
-    pub since_ms: Option<i64>,
-    pub last_chunk_at_ms: Option<i64>,
+    pub since: Option<i64>,
+    pub last_chunk_at: Option<i64>,
     pub last_error: Option<String>,
     pub live_age_ms: Option<u64>,
     pub live: Option<CollectorLiveSnapshot>,
@@ -90,7 +90,7 @@ pub struct CollectorSnapshot {
 #[derive(Clone, Debug, serde::Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct CollectorLiveSnapshot {
-    pub created_at_ms: i64,
+    pub created_at: i64,
     pub own_status: String,
     pub own_status_description: String,
     pub own_location: String,
@@ -105,7 +105,7 @@ pub struct CollectorLiveFriend {
     pub status: String,
     pub location: String,
     pub platform: String,
-    pub last_seen_at_ms: i64,
+    pub last_seen_at: i64,
 }
 
 #[derive(Clone, Debug)]
@@ -1264,8 +1264,8 @@ impl DesktopRuntimeHostState {
                 "The saved VRChat session has no auth cookie. Sign in again first.".into(),
             )
         })?;
-        let now = chrono::Utc::now().timestamp_millis();
-        let expires_at = days.map(|days| now.saturating_add(i64::from(days) * 24 * 60 * 60 * 1000));
+        let now = chrono::Utc::now().timestamp();
+        let expires_at = days.map(|days| now.saturating_add(i64::from(days) * 24 * 60 * 60));
         let payload = serde_json::json!({
             "version": 1,
             "vaultPk": protocol::b64::encode(keys.public().vault_pk.as_bytes()),
@@ -1302,9 +1302,9 @@ impl DesktopRuntimeHostState {
             &signing_key,
             protocol::manifest::SignerKind::Collector,
             "RemoteSync collector",
-            now.max(collector.keys_valid_since_ms),
+            now.max(collector.keys_valid_since),
         );
-        signer.expires_at_ms = expires_at;
+        signer.expires_at = expires_at;
         manifest.add_signer(signer);
         let next = manifest.next();
         let sealed_manifest = engine::seal_manifest(&next, &keys).map_err(sync_error)?;
@@ -1428,7 +1428,7 @@ impl DesktopRuntimeHostState {
                     (
                         Some(age),
                         Some(CollectorLiveSnapshot {
-                            created_at_ms: snapshot.created_at_ms,
+                            created_at: snapshot.created_at,
                             own_status: snapshot.own.status,
                             own_status_description: snapshot.own.status_description,
                             own_location: snapshot.own.location,
@@ -1441,7 +1441,7 @@ impl DesktopRuntimeHostState {
                                     status: friend.status,
                                     location: friend.location,
                                     platform: friend.platform,
-                                    last_seen_at_ms: friend.last_seen_at_ms,
+                                    last_seen_at: friend.last_seen_at,
                                 })
                                 .collect(),
                         }),
@@ -1454,8 +1454,8 @@ impl DesktopRuntimeHostState {
         };
         Ok(CollectorSnapshot {
             state: format!("{:?}", status.state).to_ascii_lowercase(),
-            since_ms: status.since_ms,
-            last_chunk_at_ms: status.last_chunk_at_ms,
+            since: status.since,
+            last_chunk_at: status.last_chunk_at,
             last_error: status.last_error,
             live_age_ms,
             live,

@@ -207,6 +207,10 @@ impl RemoteSyncClient {
         format!("{}{}", self.origin.as_str().trim_end_matches('/'), path)
     }
 
+    fn api_endpoint(&self, path: &str) -> String {
+        self.endpoint(&format!("/v{}{path}", api::PROTOCOL_VERSION))
+    }
+
     async fn send_json<T: DeserializeOwned>(
         &self,
         request: reqwest::RequestBuilder,
@@ -237,7 +241,7 @@ impl RemoteSyncClient {
     pub async fn capabilities(&self) -> Result<Capabilities, Error> {
         let capabilities: Capabilities = self
             .send_json(
-                self.client.get(self.endpoint("/v1/capabilities")),
+                self.client.get(self.api_endpoint("/capabilities")),
                 Policy::sensitive(false),
             )
             .await?;
@@ -245,9 +249,10 @@ impl RemoteSyncClient {
             return Err(Error::Incompatible("unrecognized server".into()));
         }
         if !capabilities.protocol.contains(&api::PROTOCOL_VERSION) {
-            return Err(Error::Incompatible(
-                "server does not support protocol version 1".into(),
-            ));
+            return Err(Error::Incompatible(format!(
+                "server does not support protocol version {}",
+                api::PROTOCOL_VERSION
+            )));
         }
         Ok(capabilities)
     }
@@ -255,7 +260,7 @@ impl RemoteSyncClient {
     pub async fn account(&self, token: &str) -> Result<AccountInfo, Error> {
         self.send_json(
             self.client
-                .get(self.endpoint("/v1/account"))
+                .get(self.api_endpoint("/account"))
                 .bearer_auth(token),
             Policy::sensitive(false),
         )
@@ -276,8 +281,8 @@ impl RemoteSyncClient {
         let request = match existing {
             Some(code) => self
                 .client
-                .put(self.endpoint(&format!("/v1/collections/{code}"))),
-            None => self.client.post(self.endpoint("/v1/collections")),
+                .put(self.api_endpoint(&format!("/collections/{code}"))),
+            None => self.client.post(self.api_endpoint("/collections")),
         };
         let response = request
             .bearer_auth(token)
@@ -334,7 +339,7 @@ impl RemoteSyncClient {
     pub async fn revoke_current_token(&self, token: &str) -> Result<(), Error> {
         self.send_empty(
             self.client
-                .delete(self.endpoint("/v1/account/tokens/current")),
+                .delete(self.api_endpoint("/account/tokens/current")),
             token,
         )
         .await
@@ -350,7 +355,7 @@ impl RemoteSyncClient {
         };
         self.send_empty(
             self.client
-                .delete(self.endpoint(&format!("/v1/account/data{query}"))),
+                .delete(self.api_endpoint(&format!("/account/data{query}"))),
             token,
         )
         .await
@@ -359,7 +364,7 @@ impl RemoteSyncClient {
     pub async fn clients(&self, token: &str) -> Result<Vec<api::ClientInfo>, Error> {
         self.send_json(
             self.client
-                .get(self.endpoint("/v1/account/clients?history=true"))
+                .get(self.api_endpoint("/account/clients?history=true"))
                 .bearer_auth(token),
             Policy::sensitive(false),
         )
@@ -377,7 +382,7 @@ impl RemoteSyncClient {
     ) -> Result<(), Error> {
         self.send_empty(
             self.client
-                .post(self.endpoint("/v1/account/reauth"))
+                .post(self.api_endpoint("/account/reauth"))
                 .json(&api::ReauthRequest {
                     method,
                     code: code.map(|code| code.trim().to_owned()),
@@ -397,7 +402,7 @@ impl RemoteSyncClient {
         }
         self.send_empty(
             self.client
-                .post(self.endpoint(&format!("/v1/account/clients/{client_id}/revoke"))),
+                .post(self.api_endpoint(&format!("/account/clients/{client_id}/revoke"))),
             token,
         )
         .await
@@ -406,7 +411,7 @@ impl RemoteSyncClient {
     pub async fn revoke_other_clients(&self, token: &str) -> Result<(), Error> {
         self.send_empty(
             self.client
-                .post(self.endpoint("/v1/account/clients/revoke-others")),
+                .post(self.api_endpoint("/account/clients/revoke-others")),
             token,
         )
         .await
@@ -415,7 +420,7 @@ impl RemoteSyncClient {
     pub async fn clear_client_history(&self, token: &str) -> Result<(), Error> {
         self.send_empty(
             self.client
-                .delete(self.endpoint("/v1/account/clients/history")),
+                .delete(self.api_endpoint("/account/clients/history")),
             token,
         )
         .await
@@ -428,7 +433,7 @@ impl RemoteSyncClient {
     ) -> Result<api::TransferCreated, Error> {
         self.send_json(
             self.client
-                .post(self.endpoint("/v1/transfer"))
+                .post(self.api_endpoint("/transfer"))
                 .bearer_auth(token)
                 .json(&api::TransferCreateRequest { epk }),
             Policy::sensitive(false),
@@ -443,7 +448,7 @@ impl RemoteSyncClient {
     ) -> Result<api::TransferKey, Error> {
         self.send_json(
             self.client
-                .get(self.endpoint(&format!("/v1/transfer/{transfer_id}")))
+                .get(self.api_endpoint(&format!("/transfer/{transfer_id}")))
                 .bearer_auth(token),
             Policy::sensitive(false),
         )
@@ -458,7 +463,7 @@ impl RemoteSyncClient {
     ) -> Result<(), Error> {
         self.send_empty(
             self.client
-                .put(self.endpoint(&format!("/v1/transfer/{transfer_id}")))
+                .put(self.api_endpoint(&format!("/transfer/{transfer_id}")))
                 .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
                 .body(sealed),
             token,
@@ -475,7 +480,7 @@ impl RemoteSyncClient {
         match self
             .send_bytes(
                 self.client
-                    .get(self.endpoint(&format!("/v1/transfer/{transfer_id}/result"))),
+                    .get(self.api_endpoint(&format!("/transfer/{transfer_id}/result"))),
                 token,
             )
             .await
@@ -489,7 +494,7 @@ impl RemoteSyncClient {
     pub async fn vaults(&self, token: &str) -> Result<Vec<VaultInfo>, Error> {
         self.send_json(
             self.client
-                .get(self.endpoint("/v1/vaults"))
+                .get(self.api_endpoint("/vaults"))
                 .bearer_auth(token),
             Policy::sensitive(false),
         )
@@ -502,7 +507,7 @@ impl RemoteSyncClient {
         request: &CreateVaultRequest,
     ) -> Result<(), Error> {
         self.send_empty(
-            self.client.post(self.endpoint("/v1/vaults")).json(request),
+            self.client.post(self.api_endpoint("/vaults")).json(request),
             token,
         )
         .await
@@ -515,7 +520,7 @@ impl RemoteSyncClient {
     ) -> Result<(u64, Vec<u8>), Error> {
         let response = self
             .client
-            .get(self.endpoint(&format!("/v1/vaults/{vault_id}/manifest")))
+            .get(self.api_endpoint(&format!("/vaults/{vault_id}/manifest")))
             .bearer_auth(token)
             .header(api::headers::CLIENT, &self.client_header)
             .send_with_policy(Policy::sensitive(false).without_redirects())
@@ -555,7 +560,7 @@ impl RemoteSyncClient {
     ) -> Result<(), Error> {
         let response = self
             .client
-            .put(self.endpoint(&format!("/v1/vaults/{vault_id}/manifest")))
+            .put(self.api_endpoint(&format!("/vaults/{vault_id}/manifest")))
             .bearer_auth(token)
             .header(api::headers::CLIENT, &self.client_header)
             .header(api::headers::MANIFEST_SEQ, manifest_seq)
@@ -586,7 +591,7 @@ impl RemoteSyncClient {
     ) -> Result<ChunkStored, Error> {
         self.send_json(
             self.client
-                .post(self.endpoint(&format!("/v1/vaults/{vault_id}/chunks")))
+                .post(self.api_endpoint(&format!("/vaults/{vault_id}/chunks")))
                 .bearer_auth(token)
                 .header(api::headers::CHUNK_ID, chunk_id.to_string())
                 .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
@@ -605,8 +610,8 @@ impl RemoteSyncClient {
     ) -> Result<(u64, bool, Vec<u8>), Error> {
         let response = self
             .client
-            .get(self.endpoint(&format!(
-                "/v1/vaults/{vault_id}/chunks:batch?after={after}&limit={}",
+            .get(self.api_endpoint(&format!(
+                "/vaults/{vault_id}/chunks:batch?after={after}&limit={}",
                 limit.clamp(1, 500)
             )))
             .bearer_auth(token)
@@ -649,7 +654,7 @@ impl RemoteSyncClient {
     ) -> Result<(), Error> {
         self.send_empty(
             self.client
-                .post(self.endpoint(&format!("/v1/vaults/{vault_id}/compact")))
+                .post(self.api_endpoint(&format!("/vaults/{vault_id}/compact")))
                 .json(request),
             token,
         )
@@ -666,7 +671,7 @@ impl RemoteSyncClient {
     ) -> Result<(), Error> {
         self.send_empty(
             self.client
-                .post(self.endpoint(&format!("/v1/vaults/{vault_id}/chunks:replace")))
+                .post(self.api_endpoint(&format!("/vaults/{vault_id}/chunks:replace")))
                 .json(request),
             token,
         )
@@ -680,7 +685,7 @@ impl RemoteSyncClient {
     ) -> Result<CollectorStatus, Error> {
         self.send_json(
             self.client
-                .get(self.endpoint(&format!("/v1/vaults/{vault_id}/collector")))
+                .get(self.api_endpoint(&format!("/vaults/{vault_id}/collector")))
                 .bearer_auth(token),
             Policy::sensitive(false),
         )
@@ -695,7 +700,7 @@ impl RemoteSyncClient {
     ) -> Result<(), Error> {
         self.send_empty(
             self.client
-                .post(self.endpoint(&format!("/v1/vaults/{vault_id}/collector/unlock")))
+                .post(self.api_endpoint(&format!("/vaults/{vault_id}/collector/unlock")))
                 .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
                 .body(sealed_payload),
             token,
@@ -706,7 +711,7 @@ impl RemoteSyncClient {
     pub async fn collector_lock(&self, token: &str, vault_id: VaultId) -> Result<(), Error> {
         self.send_empty(
             self.client
-                .post(self.endpoint(&format!("/v1/vaults/{vault_id}/collector/lock"))),
+                .post(self.api_endpoint(&format!("/vaults/{vault_id}/collector/lock"))),
             token,
         )
         .await
@@ -719,7 +724,7 @@ impl RemoteSyncClient {
     ) -> Result<(u64, u64, Vec<u8>), Error> {
         let response = self
             .client
-            .get(self.endpoint(&format!("/v1/vaults/{vault_id}/live")))
+            .get(self.api_endpoint(&format!("/vaults/{vault_id}/live")))
             .bearer_auth(token)
             .header(api::headers::CLIENT, &self.client_header)
             .send_with_policy(Policy::sensitive(false).without_redirects())
@@ -766,7 +771,7 @@ impl RemoteSyncClient {
     ) -> Result<DeviceAuthorizeResponse, Error> {
         self.send_json(
             self.client
-                .post(self.endpoint("/v1/device/authorize"))
+                .post(self.api_endpoint("/device/authorize"))
                 .json(&DeviceAuthorizeRequest {
                     device_label,
                     requested_scopes: vec![
@@ -789,7 +794,7 @@ impl RemoteSyncClient {
         let response = self
             .send_json::<DeviceTokenResponse>(
                 self.client
-                    .post(self.endpoint("/v1/device/token"))
+                    .post(self.api_endpoint("/device/token"))
                     .json(&DeviceTokenRequest {
                         device_code: device_code.to_owned(),
                     }),
@@ -858,7 +863,7 @@ impl RemoteSyncClient {
         }
         let api_copy: Result<ApiCopy, Error> = self
             .send_json(
-                self.client.get(self.endpoint("/v1/instance")),
+                self.client.get(self.api_endpoint("/instance")),
                 Policy::public(),
             )
             .await;
@@ -1122,6 +1127,29 @@ pub fn pairing_deadline(expires_in: u32) -> tokio::time::Instant {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn api_requests_use_the_pinned_epoch_second_protocol_version() {
+        assert_eq!(api::PROTOCOL_VERSION, 2);
+        let client = RemoteSyncClient::new("https://sync.example").unwrap();
+        let request = client
+            .client
+            .get(client.api_endpoint("/capabilities"))
+            .build()
+            .unwrap();
+        assert_eq!(
+            request.url().as_str(),
+            "https://sync.example/v2/capabilities"
+        );
+        assert_eq!(
+            client.api_endpoint("/account/clients?history=true"),
+            "https://sync.example/v2/account/clients?history=true"
+        );
+        assert_eq!(
+            client.endpoint("/instance.json"),
+            "https://sync.example/instance.json"
+        );
+    }
 
     #[test]
     fn only_https_origins_are_accepted() {

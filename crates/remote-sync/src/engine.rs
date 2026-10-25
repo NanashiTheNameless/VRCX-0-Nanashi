@@ -309,6 +309,40 @@ mod tests {
     }
 
     #[test]
+    fn legacy_signed_chunks_keep_their_signature_and_convert_milliseconds() {
+        use vrcx_0_nanashi_website_protocol::{chunk, framing::{self, Signing}};
+        let vault_id = VaultId::random().unwrap();
+        let chunk_id = ChunkId::random().unwrap();
+        let source_id = SourceId::random().unwrap();
+        let keys = VaultKeys::derive(&SyncSecret::generate().unwrap(), vault_id);
+        let signer = SignerKey::generate().unwrap();
+        let mut manifest = Manifest::new(vault_id, None);
+        manifest.add_signer(SignerEntry::new(&signer.public(), SignerKind::Device, "legacy", -100));
+        let header = json!({
+            "v": 1, "vaultId": vault_id, "chunkId": chunk_id,
+            "sourceId": source_id, "sourceSeq": 1,
+            "signerKeyId": signer.key_id(), "kind": "rows",
+            "createdAtMs": -1001, "appVersion": "legacy",
+            "coverage": [{"startMs": -1999, "endMs": 1999}], "droppedRows": 0
+        });
+        let body = ChunkBody { streams: [("feed_status".into(), vec![json!({"status": "Online"})])].into_iter().collect() };
+        let binding = [vault_id.as_bytes().as_slice(), chunk_id.as_bytes()].concat();
+        let blob = framing::seal_signed(
+            chunk::DOMAIN, &binding, &framing::to_cbor(&header).unwrap(),
+            &framing::compress(&framing::to_cbor(&body).unwrap()),
+            Signing::Signer(&signer), &keys.public().vault_pk,
+        ).unwrap();
+        let opened = chunk::open_chunk(&blob, vault_id, chunk_id, &keys, &manifest).unwrap();
+        assert_eq!(opened.header.created_at, -2);
+        assert_eq!(opened.header.coverage, vec![CoveragePeriod { start: -2, end: 1 }]);
+        assert_eq!(opened.body, body);
+        let mut tampered = blob;
+        let last = tampered.len() - 1;
+        tampered[last] ^= 1;
+        assert!(chunk::open_chunk(&tampered, vault_id, chunk_id, &keys, &manifest).is_err());
+    }
+
+    #[test]
     fn verified_batch_reports_missing_sequences_and_ignores_own_source() {
         let vault_id = VaultId::random().unwrap();
         let secret = SyncSecret::generate().unwrap();
@@ -328,12 +362,9 @@ mod tests {
             source_id: source,
             source_seq: 3,
             kind: ChunkKind::Rows,
-            created_at_ms: 10,
+            created_at: 10,
             app_version: "test".into(),
-            coverage: vec![CoveragePeriod {
-                start_ms: 1,
-                end_ms: 2,
-            }],
+            coverage: vec![CoveragePeriod { start: 1, end: 2 }],
             dropped_rows: 0,
             body: ChunkBody {
                 streams: [("feed_status".into(), vec![json!({"status":"Online"})])]
