@@ -43,6 +43,18 @@ const PREFIX: &str = "usr0123abcd";
 const SECONDS: i64 = 1_784_629_815;
 
 #[test]
+fn upstream_screenshot_favorites_keep_their_identity_and_convert_dates_once() {
+    let (_dir, db) = test_db("screenshot-favorites");
+    exec(&db, "CREATE TABLE favorite_screenshot (id INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT NOT NULL UNIQUE, size_bytes INTEGER NOT NULL, sha256 TEXT NOT NULL, created_at TEXT NOT NULL)");
+    exec(&db, "INSERT INTO favorite_screenshot VALUES (42, '/photos/a.png', 123, 'fingerprint', '2026-07-21T10:30:15.250Z')");
+    for _ in 0..2 {
+        migrate(&db);
+        assert_eq!(query(&db, "SELECT id, path, size_bytes, sha256, created_at, typeof(created_at) FROM favorite_screenshot"),
+            vec![vec![json!(42), json!("/photos/a.png"), json!(123), json!("fingerprint"), json!(SECONDS), json!("integer")]]);
+    }
+}
+
+#[test]
 fn text_dates_in_every_stored_form_become_integer_seconds() {
     let (_dir, db) = test_db("forms");
     exec(

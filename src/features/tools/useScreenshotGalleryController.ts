@@ -22,6 +22,7 @@ import {
     normalizeGalleryScrollPositions,
     normalizeGalleryScrollTop,
     resolveGalleryFolder,
+    SCREENSHOT_FAVORITES_FOLDER,
     SCREENSHOT_GALLERY_FOLDER_CONFIG_KEY,
     SCREENSHOT_GALLERY_SCROLL_CONFIG_KEY,
     SCREENSHOT_GALLERY_SCROLL_SAVE_DELAY_MS,
@@ -325,7 +326,11 @@ export function useScreenshotGalleryController({
     ]);
 
     useEffect(() => {
-        if (!isGalleryMode || !selectedGalleryFolder) {
+        if (
+            !isGalleryMode ||
+            !selectedGalleryFolder ||
+            selectedGalleryFolder === SCREENSHOT_FAVORITES_FOLDER
+        ) {
             galleryRequestRef.current += 1;
             setGalleryImages([]);
             setGalleryImagesFolder('');

@@ -17,6 +17,9 @@ import { useNotificationTypeLabel } from './useNotificationTypeLabel';
 
 export function useVrcNotificationPageController() {
     const canMarkAllSeen = useVrcNotificationStore(selectCanMarkAllSeen);
+    const isMarkingAllSeen = useVrcNotificationStore(
+        (state) => state.markAllSeenProgress !== null
+    );
     const sourceRowsCount = useVrcNotificationStore(
         (state) => state.rows.length
     );
@@ -86,6 +89,7 @@ export function useVrcNotificationPageController() {
         sourceRowsCount,
         table,
         tableState,
-        canMarkAllSeen
+        canMarkAllSeen,
+        isMarkingAllSeen
     };
 }

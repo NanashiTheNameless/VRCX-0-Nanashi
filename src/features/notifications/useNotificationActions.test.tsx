@@ -13,7 +13,6 @@ const mocks = vi.hoisted(() => ({
     deleteNotification: vi.fn(),
     expireLocally: vi.fn(),
     hideRemote: vi.fn(),
-    markAllSeen: vi.fn(),
     markSeen: vi.fn(),
     openImagePreview: vi.fn(),
     reload: vi.fn(),
@@ -58,12 +57,10 @@ vi.mock('@/state/modalStore', () => ({
 vi.mock('@/state/vrcNotificationStore', () => ({
     useVrcNotificationStore: (
         selector: (state: {
-            markAllSeen: typeof mocks.markAllSeen;
             markNotificationSeen: typeof mocks.markSeen;
         }) => unknown
     ) =>
         selector({
-            markAllSeen: mocks.markAllSeen,
             markNotificationSeen: mocks.markSeen
         })
 }));

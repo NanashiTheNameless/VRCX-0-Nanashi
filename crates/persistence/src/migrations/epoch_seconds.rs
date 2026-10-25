@@ -59,6 +59,7 @@ const GLOBAL_TABLES: &[(&str, Columns)] = &[
     ("favorite_world", &[("created_at", "created_at")]),
     ("favorite_avatar", &[("created_at", "created_at")]),
     ("favorite_friend", &[("created_at", "created_at")]),
+    ("favorite_screenshot", &[("created_at", "created_at")]),
     ("favorite_group_collection", &[("created_at", "created_at")]),
     ("gamelog_location", &[("created_at", "created_at")]),
     ("gamelog_join_leave", &[("created_at", "created_at")]),

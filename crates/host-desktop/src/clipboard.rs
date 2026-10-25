@@ -4,6 +4,9 @@ use std::process::Command;
 #[cfg(windows)]
 use std::time::Duration;
 
+use base64::{engine::general_purpose::STANDARD as B64, Engine};
+use image::{codecs::png::PngEncoder, ExtendedColorType, ImageEncoder};
+use serde::Serialize;
 use vrcx_0_platform::Error;
 
 #[cfg(windows)]
@@ -11,22 +14,94 @@ const WINDOWS_CLIPBOARD_OPEN_RETRY_COUNT: usize = 5;
 #[cfg(windows)]
 const WINDOWS_CLIPBOARD_OPEN_RETRY_DELAY: Duration = Duration::from_millis(5);
 
+const CLIPBOARD_IMAGE_FILE_NAME: &str = "clipboard.png";
+
+#[derive(Clone, Debug, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipboardImage {
+    pub file_name: String,
+    pub mime_type: String,
+    pub data_base64: String,
+}
+
 pub fn get_clipboard_text() -> Result<String, Error> {
     let mut clipboard =
         arboard::Clipboard::new().map_err(|e| Error::Custom(format!("clipboard: {e}")))?;
     Ok(clipboard.get_text().unwrap_or_default())
 }
 
-fn is_supported_image_path(path: &Path) -> bool {
+pub fn read_clipboard_image() -> Result<Option<ClipboardImage>, Error> {
+    let mut clipboard =
+        arboard::Clipboard::new().map_err(|e| Error::Custom(format!("clipboard: {e}")))?;
+
+    let image_path = clipboard
+        .get()
+        .file_list()
+        .unwrap_or_default()
+        .into_iter()
+        .find(|path| path.is_file() && image_mime_type(path).is_some());
+    if let Some(path) = image_path {
+        return read_clipboard_image_file(&path).map(Some);
+    }
+
+    let image = match clipboard.get().image() {
+        Ok(image) => image,
+        Err(arboard::Error::ContentNotAvailable) => return Ok(None),
+        Err(e) => return Err(Error::Custom(format!("clipboard image: {e}"))),
+    };
+    let png = encode_rgba_png(image.width, image.height, &image.bytes)?;
+    Ok(Some(ClipboardImage {
+        file_name: CLIPBOARD_IMAGE_FILE_NAME.into(),
+        mime_type: "image/png".into(),
+        data_base64: B64.encode(png),
+    }))
+}
+
+fn read_clipboard_image_file(path: &Path) -> Result<ClipboardImage, Error> {
+    let mime_type = image_mime_type(path)
+        .ok_or_else(|| Error::Custom(format!("unsupported image format: {}", path.display())))?;
+    let bytes = std::fs::read(path)
+        .map_err(|e| Error::Custom(format!("read clipboard image {}: {e}", path.display())))?;
+    Ok(ClipboardImage {
+        file_name: path
+            .file_name()
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_else(|| CLIPBOARD_IMAGE_FILE_NAME.into()),
+        mime_type: mime_type.into(),
+        data_base64: B64.encode(bytes),
+    })
+}
+
+fn encode_rgba_png(width: usize, height: usize, rgba: &[u8]) -> Result<Vec<u8>, Error> {
+    let width =
+        u32::try_from(width).map_err(|_| Error::Custom("clipboard image too wide".into()))?;
+    let height =
+        u32::try_from(height).map_err(|_| Error::Custom("clipboard image too tall".into()))?;
+    let mut png = Vec::new();
+    PngEncoder::new(&mut png)
+        .write_image(rgba, width, height, ExtendedColorType::Rgba8)
+        .map_err(|e| Error::Custom(format!("encode clipboard image: {e}")))?;
+    Ok(png)
+}
+
+fn image_mime_type(path: &Path) -> Option<&'static str> {
     let ext = path
         .extension()
         .map(|e| e.to_string_lossy().to_lowercase())
         .unwrap_or_default();
 
-    matches!(
-        ext.as_str(),
-        "png" | "jpg" | "jpeg" | "bmp" | "gif" | "webp"
-    )
+    match ext.as_str() {
+        "png" => Some("image/png"),
+        "jpg" | "jpeg" => Some("image/jpeg"),
+        "bmp" => Some("image/bmp"),
+        "gif" => Some("image/gif"),
+        "webp" => Some("image/webp"),
+        _ => None,
+    }
+}
+
+fn is_supported_image_path(path: &Path) -> bool {
+    image_mime_type(path).is_some()
 }
 
 fn validate_image_path(path: &Path) -> Result<(), Error> {
@@ -206,6 +281,35 @@ mod tests {
         assert!(is_supported_image_path(Path::new("VRChat_2026-05-08.png")));
         assert!(is_supported_image_path(Path::new("VRChat_2026-05-08.JPG")));
         assert!(!is_supported_image_path(Path::new("VRChat_2026-05-08.txt")));
+    }
+
+    #[test]
+    fn clipboard_bitmap_is_encoded_as_png_with_original_size() -> Result<(), Error> {
+        let rgba = [255u8, 0, 0, 255].repeat(6);
+        let png = encode_rgba_png(3, 2, &rgba)?;
+        let decoded = image::load_from_memory_with_format(&png, image::ImageFormat::Png)
+            .map_err(|e| Error::Custom(format!("decode png: {e}")))?;
+
+        assert_eq!((decoded.width(), decoded.height()), (3, 2));
+        assert_eq!(decoded.to_rgba8().into_raw(), rgba);
+        Ok(())
+    }
+
+    #[test]
+    fn copied_image_file_keeps_its_name_and_type() -> Result<(), Error> {
+        let dir =
+            std::env::temp_dir().join(format!("vrcx-0-clipboard-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).map_err(|e| Error::Custom(e.to_string()))?;
+        let path = dir.join("sea.JPG");
+        std::fs::write(&path, b"jpeg-bytes").map_err(|e| Error::Custom(e.to_string()))?;
+
+        let image = read_clipboard_image_file(&path)?;
+        let _ = std::fs::remove_dir_all(&dir);
+
+        assert_eq!(image.file_name, "sea.JPG");
+        assert_eq!(image.mime_type, "image/jpeg");
+        assert_eq!(image.data_base64, B64.encode(b"jpeg-bytes"));
+        Ok(())
     }
 
     #[test]

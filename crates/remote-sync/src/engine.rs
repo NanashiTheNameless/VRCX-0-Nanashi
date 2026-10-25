@@ -310,32 +310,31 @@ mod tests {
 
     #[test]
     fn legacy_signed_chunks_keep_their_signature_and_convert_milliseconds() {
-        use vrcx_0_nanashi_website_protocol::{chunk, framing::{self, Signing}};
-        let vault_id = VaultId::random().unwrap();
-        let chunk_id = ChunkId::random().unwrap();
-        let source_id = SourceId::random().unwrap();
-        let keys = VaultKeys::derive(&SyncSecret::generate().unwrap(), vault_id);
-        let signer = SignerKey::generate().unwrap();
+        use vrcx_0_nanashi_website_protocol::{b64, chunk, keys::verifying_key};
+        let fixture: serde_json::Value =
+            serde_json::from_str(include_str!("fixtures/legacy_chunk.json")).unwrap();
+        let text = |name: &str| fixture[name].as_str().unwrap();
+        let vault_id = text("vaultId").parse().unwrap();
+        let chunk_id = text("chunkId").parse().unwrap();
+        let secret = parse_recovery_string(text("recovery")).unwrap();
+        let keys = VaultKeys::derive(&secret, vault_id);
+        let signer = verifying_key(&b64::decode(text("signerPublicKey")).unwrap()).unwrap();
         let mut manifest = Manifest::new(vault_id, None);
-        manifest.add_signer(SignerEntry::new(&signer.public(), SignerKind::Device, "legacy", -100));
-        let header = json!({
-            "v": 1, "vaultId": vault_id, "chunkId": chunk_id,
-            "sourceId": source_id, "sourceSeq": 1,
-            "signerKeyId": signer.key_id(), "kind": "rows",
-            "createdAtMs": -1001, "appVersion": "legacy",
-            "coverage": [{"startMs": -1999, "endMs": 1999}], "droppedRows": 0
-        });
-        let body = ChunkBody { streams: [("feed_status".into(), vec![json!({"status": "Online"})])].into_iter().collect() };
-        let binding = [vault_id.as_bytes().as_slice(), chunk_id.as_bytes()].concat();
-        let blob = framing::seal_signed(
-            chunk::DOMAIN, &binding, &framing::to_cbor(&header).unwrap(),
-            &framing::compress(&framing::to_cbor(&body).unwrap()),
-            Signing::Signer(&signer), &keys.public().vault_pk,
-        ).unwrap();
+        manifest.add_signer(SignerEntry::new(
+            &signer,
+            SignerKind::Device,
+            "legacy",
+            -100,
+        ));
+        let blob = b64::decode(text("blob")).unwrap();
         let opened = chunk::open_chunk(&blob, vault_id, chunk_id, &keys, &manifest).unwrap();
+        assert_eq!(opened.header.v, 1);
         assert_eq!(opened.header.created_at, -2);
-        assert_eq!(opened.header.coverage, vec![CoveragePeriod { start: -2, end: 1 }]);
-        assert_eq!(opened.body, body);
+        assert_eq!(
+            opened.header.coverage,
+            vec![CoveragePeriod { start: -2, end: 1 }]
+        );
+        assert_eq!(opened.body, ChunkBody::default());
         let mut tampered = blob;
         let last = tampered.len() - 1;
         tampered[last] ^= 1;

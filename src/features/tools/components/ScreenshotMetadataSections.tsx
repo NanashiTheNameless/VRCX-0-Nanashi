@@ -8,6 +8,7 @@ import {
     ListIcon,
     PanelRightCloseIcon,
     PanelRightOpenIcon,
+    StarIcon,
     Trash2Icon,
     UploadIcon,
     UsersIcon,
@@ -33,6 +34,7 @@ import {
     ToolbarViews,
     toolbarSearchScopeTrigger
 } from '@/components/layout/ToolbarControls';
+import { cn } from '@/lib/utils';
 import { Button } from '@/ui/shadcn/button';
 import {
     Card,
@@ -87,7 +89,9 @@ export function ScreenshotDetailActions({
     onCopyImage,
     onUpload,
     onDelete,
-    onDeleteFile
+    onDeleteFile,
+    isFavorite,
+    onToggleFavorite
 }: {
     metadata: NormalizedScreenshotMetadata | null;
     isVrcPlusSupporter: boolean;
@@ -100,6 +104,8 @@ export function ScreenshotDetailActions({
     onUpload: () => void;
     onDelete: () => void;
     onDeleteFile: () => void;
+    isFavorite: boolean;
+    onToggleFavorite: () => void;
 }) {
     const { t } = useTranslation();
 
@@ -108,6 +114,23 @@ export function ScreenshotDetailActions({
             <Button variant="ghost" size="sm" onClick={onBackToGallery}>
                 <ArrowLeftIcon data-icon="inline-start" />
                 {t('dialog.screenshot_metadata.gallery')}
+            </Button>
+            <Button
+                variant="outline"
+                size="sm"
+                disabled={!metadata?.filePath}
+                aria-pressed={isFavorite}
+                onClick={onToggleFavorite}
+            >
+                <StarIcon
+                    data-icon="inline-start"
+                    className={cn(isFavorite && 'fill-current text-amber-400')}
+                />
+                {t(
+                    isFavorite
+                        ? 'dialog.screenshot_metadata.unfavorite'
+                        : 'dialog.screenshot_metadata.favorite'
+                )}
             </Button>
             <Button
                 variant="outline"

@@ -17,6 +17,7 @@ chrono = { workspace = true }
 dirs = { workspace = true }
 fontdb = "0.24"
 hex = "0.4"
+image = { workspace = true }
 open = "5"
 rodio = { version = "0.22", default-features = false, features = ["playback", "wav", "mp3", "flac", "vorbis"] }
 serde = { workspace = true, features = ["derive"] }

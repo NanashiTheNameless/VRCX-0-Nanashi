@@ -26,6 +26,7 @@ import {
     sendInviteResponseNotification,
     sendNotificationButtonResponse
 } from '@/services/notificationActionService';
+import { markAllNotificationsSeenWithFeedback } from '@/services/notificationMarkAllSeenService';
 import { toast } from '@/services/toastService';
 import { withUploadTimeout } from '@/shared/utils/imageUpload';
 import { parseLocation } from '@/shared/utils/location';
@@ -67,9 +68,6 @@ export function useNotificationActions({
     setInviteResponseRequest: (request: NotificationDialogRequest) => void;
 }) {
     const { t } = useTranslation();
-    const markAllNotificationsSeen = useVrcNotificationStore(
-        (state) => state.markAllSeen
-    );
     const markNotificationSeen = useVrcNotificationStore(
         (state) => state.markNotificationSeen
     );
@@ -187,21 +185,15 @@ export function useNotificationActions({
         [markNotificationSeen, t]
     );
 
-    const markAllSeen = useCallback(async () => {
-        try {
-            await markAllNotificationsSeen();
-        } catch (error) {
-            toast.add({
-                type: 'error',
-                title:
-                    error instanceof Error
-                        ? error.message
-                        : t(
-                              'host.vrc_notification_center.toast.failed_to_mark_notifications_as_seen'
-                          )
-            });
-        }
-    }, [markAllNotificationsSeen, t]);
+    const markAllSeen = useCallback(
+        () =>
+            markAllNotificationsSeenWithFeedback(
+                t(
+                    'host.vrc_notification_center.toast.failed_to_mark_notifications_as_seen'
+                )
+            ),
+        [t]
+    );
 
     const deleteNotification = useCallback(
         async (

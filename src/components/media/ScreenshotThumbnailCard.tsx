@@ -1,4 +1,4 @@
-import { CameraIcon, ImageIcon } from 'lucide-react';
+import { CameraIcon, ImageIcon, StarIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -14,6 +14,7 @@ import { convertFileSrc } from '@/platform/tauri/assets';
 import type { ScreenshotLibraryImage } from '@/platform/tauri/bindings';
 import { requestScreenshotThumbnail } from '@/services/screenshotThumbnailQueueService';
 import {
+    TILE_FAVORITE_TOGGLE,
     TILE_SELECT_BOX,
     TILE_SELECT_TOGGLE,
     TILE_SELECT_TOGGLE_VISIBLE
@@ -134,7 +135,10 @@ export function ScreenshotThumbnailCard({
     selected = false,
     selectionActive = false,
     selectLabel = '',
-    onToggleSelect
+    onToggleSelect,
+    favorite = false,
+    favoriteLabel = '',
+    onToggleFavorite
 }: {
     compact?: boolean;
     item: ScreenshotThumbnailItem;
@@ -146,6 +150,9 @@ export function ScreenshotThumbnailCard({
     selectionActive?: boolean;
     selectLabel?: string;
     onToggleSelect?: (checked: boolean, shift: boolean) => void;
+    favorite?: boolean;
+    favoriteLabel?: string;
+    onToggleFavorite?: (favorite: boolean) => void;
 }) {
     const { i18n, t } = useTranslation();
     const shiftPressedRef = useRef(false);
@@ -299,6 +306,27 @@ export function ScreenshotThumbnailCard({
                         }
                     />
                 </span>
+            ) : null}
+            {onToggleFavorite && !isSelectionActive ? (
+                <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon-xs"
+                    aria-label={favoriteLabel}
+                    aria-pressed={favorite}
+                    className={cn(
+                        TILE_FAVORITE_TOGGLE,
+                        'bg-background/85 shadow-sm',
+                        favorite && TILE_SELECT_TOGGLE_VISIBLE
+                    )}
+                    onClick={() => onToggleFavorite(!favorite)}
+                >
+                    <StarIcon
+                        className={cn(
+                            favorite && 'fill-current text-amber-400'
+                        )}
+                    />
+                </Button>
             ) : null}
         </div>
     );

@@ -33,6 +33,7 @@ pub mod realtime;
 pub mod remote_sync;
 pub mod saved_group_favorites;
 pub mod screenshot_cache;
+pub mod screenshot_favorites;
 pub mod secrets;
 pub mod social_aggregates;
 pub mod storage;

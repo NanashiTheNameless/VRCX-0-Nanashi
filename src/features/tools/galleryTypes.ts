@@ -90,6 +90,7 @@ export type GalleryActionDeps = GalleryControllerDeps & {
         settings?: Partial<EmojiUploadSettings>
     ): EmojiUploadSettings;
     prompt(request: DialogRequest): Promise<DialogResult<string>>;
+    readClipboardUploadImage(t: Translation): Promise<File | null>;
     readFileAsBase64(file: Blob): Promise<string>;
     t: Translation;
     toast: ToastApi;
@@ -173,6 +174,7 @@ export type GalleryBulkCommands = {
 export type GalleryCommands = {
     onActiveTabChange(value: string): void;
     onBeginUpload(tab: GalleryUploadTarget): void;
+    onPasteUpload(tab: GalleryTab): void;
     onClearProfileField(fieldName: GalleryProfileField, fileId: string): void;
     onDeleteFile(tab: FileAssetTab, fileId: string): void;
     onDeletePrint(printId: string): void;
@@ -217,6 +219,7 @@ export type GalleryFileTabState = Pick<
     Pick<
         GalleryCommands,
         | 'onBeginUpload'
+        | 'onPasteUpload'
         | 'onClearProfileField'
         | 'onDeleteFile'
         | 'onPreview'

@@ -1173,6 +1173,8 @@
             "title": "Notification Center",
             "view_more": "View More",
             "mark_all_read": "Mark all read",
+            "marking_all_read": "Marking as read...",
+            "mark_read_failed": "Couldn't mark as read",
             "mark_as_read": "Mark as read",
             "more_actions": "More actions",
             "join_now": "Join now",
@@ -5783,7 +5785,10 @@
                 "edited_at": "Edited At:",
                 "created_at": "Created At:",
                 "edited_by": "Edited by:",
-                "search_placeholder": "Search"
+                "search_placeholder": "Search",
+                "expand": "Show more",
+                "collapse": "Show less",
+                "edited": "Edited"
             },
             "role_name": {
                 "group_owner": "Group Owner",
@@ -6138,6 +6143,7 @@
             "inventory": "Inventory",
             "refresh": "Refresh",
             "upload": "Upload",
+            "paste_upload": "Paste Image",
             "clear": "Clear",
             "banner": "Banner",
             "profile_photo": "Banner",
@@ -6285,6 +6291,15 @@
             "result_count": "{count} results",
             "gallery": "Gallery",
             "folders": "Folders",
+            "favorites": "Favorites",
+            "favorite": "Favorite",
+            "unfavorite": "Remove from Favorites",
+            "favorites_missing": "{count} favorites can't be found",
+            "forget_missing_favorites": "Remove missing",
+            "forget_missing_favorites_confirm_title": "Remove favorites that can't be found?",
+            "forget_missing_favorites_confirm_description": "{count} favorites point to files that are no longer there. After removal they won't be found again, even if the files are on a drive that isn't connected right now.",
+            "empty_favorites": "No favorites yet",
+            "empty_favorites_description": "Star a screenshot to keep it here.",
             "scanning": "Scanning screenshots",
             "image_count": "{count} images",
             "feeling_lucky": "I'm Feeling Lucky",
@@ -7220,6 +7235,7 @@
         "file": {
             "not_image": "File isn't an image",
             "too_large": "File is too large",
+            "clipboard_no_image": "No image on the clipboard. Copy an image or an image file first.",
             "folder_opened": "Folder opened",
             "folder_missing": "Folder doesn't exist"
         },
@@ -7560,7 +7576,8 @@
         "desktop_widget_off": "Desktop Overlay is off",
         "desktop_widget_on": "Desktop Overlay is on",
         "desktop_widget_click_through": "Desktop Overlay is on (Click-Through)",
-        "desktop_widget_failed": "Failed to update Desktop Overlay"
+        "desktop_widget_failed": "Failed to update Desktop Overlay",
+        "desktop_widget_menu_hint": "Right-click for more options"
     },
     "component": {
         "favorite_action_menu": {
@@ -7737,6 +7754,7 @@
         "vrc_notification_center": {
             "toast": {
                 "failed_to_mark_notifications_as_seen": "Failed to mark notifications as seen",
+                "mark_all_seen_partially_failed": "Some notifications couldn't be marked as read",
                 "failed_to_accept_friend_request": "Failed to accept friend request",
                 "failed_to_decline_notification": "Failed to decline notification",
                 "failed_to_send_invite": "Failed to send invite",

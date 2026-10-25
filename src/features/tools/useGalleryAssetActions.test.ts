@@ -67,6 +67,7 @@ function createActions(overrides: Partial<GalleryAssetActionDeps> = {}) {
             getPrints: vi.fn()
         },
         parseEmojiUploadSettings: vi.fn(),
+        readClipboardUploadImage: vi.fn().mockResolvedValue(null),
         readFileAsBase64: vi.fn().mockResolvedValue('base64-body'),
         setAssets: vi.fn(),
         setCropRequest: vi.fn(),
@@ -168,6 +169,40 @@ describe('createGalleryAssetActions', () => {
                 }
             })
         );
+    });
+
+    it('opens the crop dialog for a clipboard image on the requested tab', async () => {
+        const setCropRequest = vi.fn();
+        const file = new File(['image'], 'clipboard.png', {
+            type: 'image/png'
+        });
+        const { actions } = createActions({
+            readClipboardUploadImage: vi.fn().mockResolvedValue(file),
+            setCropRequest,
+            validateImageFile: () => true
+        });
+
+        await actions.pasteClipboardUpload('gallery');
+
+        expect(setCropRequest).toHaveBeenCalledWith(
+            expect.objectContaining({
+                tab: 'gallery',
+                file,
+                authTarget: {
+                    userId: 'usr_self',
+                    endpoint: 'https://api.vrchat.cloud'
+                }
+            })
+        );
+    });
+
+    it('does nothing when the clipboard has no image', async () => {
+        const setCropRequest = vi.fn();
+        const { actions } = createActions({ setCropRequest });
+
+        await actions.pasteClipboardUpload('prints');
+
+        expect(setCropRequest).not.toHaveBeenCalled();
     });
 
     it('keeps dropped prints restricted to VRC+ users', () => {

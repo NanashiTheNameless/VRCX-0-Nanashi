@@ -59,6 +59,9 @@ export function GalleryPage() {
                     galleryCommands={{
                         onActiveTabChange: pageState.setActiveTab,
                         onBeginUpload: pageState.beginUpload,
+                        onPasteUpload: (tab: GalleryTab) => {
+                            void pageState.pasteClipboardUpload(tab);
+                        },
                         onClearProfileField: (
                             fieldName: GalleryProfileField,
                             fileId: string

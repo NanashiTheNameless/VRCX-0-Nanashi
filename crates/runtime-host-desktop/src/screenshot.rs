@@ -4,16 +4,17 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use vrcx_0_application_core::RuntimeEventBus;
-use vrcx_0_core::screenshots::ScreenshotExportProgress;
 use vrcx_0_core::screenshots::{
     plan_screenshot_zip_entries, screenshot_export_file_name, ScreenshotZipEntry,
 };
+use vrcx_0_core::screenshots::{FavoriteScreenshots, ScreenshotExportProgress};
 use vrcx_0_outbound_adapters::screenshots::{
     self as screenshot, ScreenshotExportOutcome, ScreenshotFolderTree, ScreenshotLibraryImage,
     ScreenshotLibraryScanStatus, ScreenshotSearchResult, ScreenshotTimeWindow,
     ScreenshotWindowImages,
 };
 use vrcx_0_persistence::screenshot_cache::MetadataCacheDb;
+use vrcx_0_persistence::DatabaseService;
 use vrcx_0_platform::app_paths::AppPaths;
 
 use crate::{HostFileAccess, Result};
@@ -48,6 +49,7 @@ fn ensure_export_space(output_path: &Path, required_bytes: u64) -> Result<()> {
 #[derive(Clone)]
 pub struct DesktopScreenshotRuntime {
     cache: MetadataCacheDb,
+    db: Arc<DatabaseService>,
     host_file_access: HostFileAccess,
     paths: AppPaths,
     photos_root: String,
@@ -58,6 +60,7 @@ pub struct DesktopScreenshotRuntime {
 impl DesktopScreenshotRuntime {
     pub(crate) fn new(
         cache: MetadataCacheDb,
+        db: Arc<DatabaseService>,
         host_file_access: HostFileAccess,
         paths: AppPaths,
         photos_root: String,
@@ -65,6 +68,7 @@ impl DesktopScreenshotRuntime {
     ) -> Self {
         Self {
             cache,
+            db,
             host_file_access,
             paths,
             photos_root,
@@ -124,14 +128,42 @@ impl DesktopScreenshotRuntime {
     }
 
     pub fn delete_metadata(&self, path: &str) -> bool {
-        screenshot::delete_text_metadata(path, true)
+        let deleted = screenshot::delete_text_metadata(path, true);
+        if deleted {
+            if let Err(error) = screenshot::refresh_screenshot_favorite(&self.db, path) {
+                tracing::warn!(%error, "failed to refresh screenshot favorite after metadata delete");
+            }
+        }
+        deleted
     }
 
     pub fn delete_file(&self, path: &str) -> Result<()> {
         self.ensure_delete_allowed(path)?;
         vrcx_0_host_desktop::shell_actions::move_to_trash(Path::new(path))?;
         screenshot::forget_screenshot_file(&self.cache, &self.paths.screenshot_thumbs, path)?;
+        screenshot::forget_screenshot_favorite(&self.db, path)?;
         Ok(())
+    }
+
+    pub fn set_favorite(&self, path: &str, favorite: bool) -> Result<()> {
+        if favorite {
+            self.ensure_read_allowed(path)?;
+        }
+        Ok(screenshot::set_screenshot_favorite(
+            &self.db, path, favorite,
+        )?)
+    }
+
+    pub fn forget_missing_favorites(&self) -> Result<u32> {
+        Ok(screenshot::forget_missing_screenshot_favorites(&self.db)?)
+    }
+
+    pub fn favorites(&self) -> Result<FavoriteScreenshots> {
+        Ok(screenshot::list_favorite_screenshots(
+            &self.db,
+            &self.cache,
+            &self.photos_root,
+        )?)
     }
 
     pub fn add_metadata(
@@ -306,5 +338,8 @@ impl DesktopScreenshotRuntime {
             &self.paths.screenshot_thumbs,
             &self.photos_root,
         );
+        if let Err(error) = screenshot::refresh_all_screenshot_favorites(&self.db) {
+            tracing::warn!(%error, "failed to refresh screenshot favorites after metadata clear");
+        }
     }
 }

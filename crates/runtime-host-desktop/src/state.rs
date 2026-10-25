@@ -616,6 +616,7 @@ impl DesktopRuntimeHostState {
         );
         let screenshots = DesktopScreenshotRuntime::new(
             game.screenshot_cache.clone(),
+            Arc::clone(runtime.database()),
             desktop.host_file_access.clone(),
             runtime.paths().clone(),
             vrcx_0_host_desktop::vrchat_paths::vrchat_photos_location(),
@@ -2081,6 +2082,7 @@ impl DesktopRuntimeHostState {
     ) -> vrcx_0_core::screenshots::ScreenshotLibraryScanStatus {
         vrcx_0_outbound_adapters::screenshots::start_screenshot_library_scan(
             &self.game.screenshot_cache,
+            Arc::clone(self.runtime.database()),
             self.runtime.paths().screenshot_thumbs.clone(),
             self.runtime.desktop_assembly().event_bus().clone(),
             self.runtime.desktop_assembly().tasks().clone(),

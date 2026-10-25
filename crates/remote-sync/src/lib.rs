@@ -50,7 +50,8 @@ struct InstanceStatement {
     v: u32,
     api_origin: String,
     website_origin: String,
-    expires_at_ms: i64,
+    expires_at_ms: Option<i64>,
+    expires_at: Option<i64>,
 }
 
 /// Checks a statement against the signing key and the origins the app is
@@ -86,10 +87,12 @@ fn check_instance_statement(
     let Ok(parsed) = serde_json::from_slice::<InstanceStatement>(statement) else {
         return invalid("the instance statement is unreadable");
     };
-    if parsed.v != 1 {
-        return invalid("the instance statement uses an unknown version");
-    }
-    if now_ms > parsed.expires_at_ms {
+    let expired = match (parsed.v, parsed.expires_at_ms, parsed.expires_at) {
+        (1, Some(expires), None) => now_ms > expires,
+        (2, None, Some(expires)) => now_ms.div_euclid(1000) > expires,
+        _ => return invalid("the instance statement uses an unknown version or expiry"),
+    };
+    if expired {
         return invalid("the instance statement has expired");
     }
     if parsed.api_origin != api_origin || parsed.website_origin != website_origin {
@@ -1259,6 +1262,51 @@ mod tests {
         for pinned in OFFICIAL_INSTANCE_KEYS.iter().chain(OFFICIAL_WEBSITE_KEYS) {
             assert!(decode_public_key(pinned).is_ok());
         }
+    }
+
+    #[test]
+    fn epoch_second_instance_statements_verify_before_their_expiry_is_used() {
+        use ed25519_dalek::{Signer, SigningKey};
+        let api = "https://api.example.com";
+        let website = "https://www.example.com";
+        let (legacy, _, key) = signed_statement(api, website);
+        let statement = String::from_utf8(legacy)
+            .unwrap()
+            .replace("\"v\":1", "\"v\":2")
+            .replace("\"issuedAtMs\":1000", "\"issuedAt\":1")
+            .replace("\"expiresAtMs\":5000", "\"expiresAt\":5");
+        let signature = STANDARD.encode(
+            SigningKey::from_bytes(&[7; 32])
+                .sign(statement.as_bytes())
+                .to_bytes(),
+        );
+        assert_eq!(
+            check_instance_statement(
+                statement.as_bytes(),
+                &signature,
+                &[&key],
+                api,
+                website,
+                2000
+            ),
+            InstanceTrust::Official
+        );
+        assert!(matches!(
+            check_instance_statement(
+                statement.as_bytes(),
+                &signature,
+                &[&key],
+                api,
+                website,
+                6000
+            ),
+            InstanceTrust::Invalid(_)
+        ));
+        let edited = statement.replace("\"expiresAt\":5", "\"expiresAt\":50");
+        assert!(matches!(
+            check_instance_statement(edited.as_bytes(), &signature, &[&key], api, website, 2000),
+            InstanceTrust::Invalid(_)
+        ));
     }
 
     #[test]

@@ -4311,10 +4311,10 @@ export type CollectorLiveFriend = {
     status: string;
     location: string;
     platform: string;
-    lastSeenAtMs: number;
+    lastSeenAt: number;
 };
 export type CollectorLiveSnapshot = {
-    createdAtMs: number;
+    createdAt: number;
     ownStatus: string;
     ownStatusDescription: string;
     ownLocation: string;
@@ -4322,8 +4322,8 @@ export type CollectorLiveSnapshot = {
 };
 export type CollectorSnapshot = {
     state: string;
-    sinceMs: number | null;
-    lastChunkAtMs: number | null;
+    since: number | null;
+    lastChunkAt: number | null;
     lastError: string | null;
     liveAgeMs: number | null;
     live: CollectorLiveSnapshot | null;
@@ -7208,8 +7208,8 @@ export type RemoteSyncCapabilitiesSnapshot = {
 export type RemoteSyncClientAddress = {
     ip: string;
     location: string;
-    firstSeenMs: number;
-    lastSeenMs: number;
+    firstSeen: number;
+    lastSeen: number;
 };
 export type RemoteSyncClientSnapshot = {
     clientId: string;
@@ -7219,7 +7219,7 @@ export type RemoteSyncClientSnapshot = {
     current: boolean;
     activeNow: boolean;
     revoked: boolean;
-    lastSeenMs: number | null;
+    lastSeen: number | null;
     address: RemoteSyncClientAddress | null;
     history: RemoteSyncClientAddress[];
 };

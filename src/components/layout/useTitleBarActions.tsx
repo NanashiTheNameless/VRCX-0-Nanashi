@@ -28,6 +28,7 @@ import {
     isBackgroundImageCustomSourceRotating,
     refreshBackgroundImage
 } from '@/services/background-image/backgroundImageService';
+import { markAllNotificationsSeenWithFeedback } from '@/services/notificationMarkAllSeenService';
 import { setThemeModePreference } from '@/services/preferencesService';
 import { useResolvedThemeMode } from '@/services/themeService';
 import { toast } from '@/services/toastService';
@@ -190,8 +191,8 @@ export function useTitleBarActions(
     const setVrcNotificationCenterOpen = useVrcNotificationStore(
         (state) => state.setCenterOpen
     );
-    const markAllVrcNotificationsSeen = useVrcNotificationStore(
-        (state) => state.markAllSeen
+    const isMarkingAllVrcNotificationsSeen = useVrcNotificationStore(
+        (state) => state.markAllSeenProgress !== null
     );
     const removeNavNotification = useShellStore((state) => state.removeNotify);
     const hostPlatform = useRuntimeStore(
@@ -363,20 +364,12 @@ export function useTitleBarActions(
     ]);
 
     async function markAllNotificationsRead() {
-        try {
-            await markAllVrcNotificationsSeen();
-            removeNavNotification('notification');
-        } catch (error) {
-            toast.add({
-                type: 'error',
-                title:
-                    error instanceof Error
-                        ? error.message
-                        : t(
-                              'component.app_title_bar.toast.failed_to_mark_notifications_as_seen'
-                          )
-            });
-        }
+        await markAllNotificationsSeenWithFeedback(
+            t(
+                'component.app_title_bar.toast.failed_to_mark_notifications_as_seen'
+            )
+        );
+        removeNavNotification('notification');
     }
 
     function openNotifications() {
@@ -423,12 +416,13 @@ export function useTitleBarActions(
     );
 
     const notificationAction = notificationActionVisible ? (
-        canMarkAllVrcNotificationsSeen ? (
+        canMarkAllVrcNotificationsSeen || isMarkingAllVrcNotificationsSeen ? (
             <ContextMenu>
                 <ContextMenuTrigger render={notificationButton} />
                 <ContextMenuContent className="w-48">
                     <ContextMenuGroup>
                         <ContextMenuItem
+                            disabled={isMarkingAllVrcNotificationsSeen}
                             onClick={() => {
                                 markAllNotificationsRead();
                             }}

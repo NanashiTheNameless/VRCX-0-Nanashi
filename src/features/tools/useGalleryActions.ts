@@ -15,6 +15,7 @@ import { FILE_TABS, UPLOAD_ASPECT_RATIOS } from './galleryConstants';
 import type { GalleryActionDeps, GalleryControllerDeps } from './galleryTypes';
 import {
     parseEmojiUploadSettings,
+    readClipboardUploadImage,
     validateImageFile
 } from './inventoryHelpers';
 import { createGalleryAssetActions } from './useGalleryAssetActions';
@@ -40,6 +41,7 @@ export function useGalleryActions(deps: GalleryControllerDeps) {
         mediaRepository: vrchatMediaRepository,
         parseEmojiUploadSettings,
         prompt,
+        readClipboardUploadImage,
         readFileAsBase64,
         t,
         toast,

@@ -1,4 +1,4 @@
-import { UploadIcon, XIcon } from 'lucide-react';
+import { ClipboardPasteIcon, UploadIcon, XIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -42,6 +42,7 @@ export function GalleryFileTab({
         userIcon,
         gridDensityConfig,
         onBeginUpload,
+        onPasteUpload,
         onBulkDelete,
         onClearProfileField,
         onPreview,
@@ -93,6 +94,15 @@ export function GalleryFileTab({
                             >
                                 <UploadIcon data-icon="inline-start" />
                                 {t('dialog.gallery_icons.upload')}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={Boolean(uploadingTab)}
+                                onClick={() => onPasteUpload(tab)}
+                            >
+                                <ClipboardPasteIcon data-icon="inline-start" />
+                                {t('dialog.gallery_icons.paste_upload')}
                             </Button>
                             {tab === 'gallery' ? (
                                 <ToolbarOverflowMenu>

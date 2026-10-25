@@ -27,6 +27,7 @@ pub(crate) fn ensure_global_store_tables(db: &DatabaseService) -> Result<(), Err
             "CREATE TABLE IF NOT EXISTS world_memos (world_id TEXT PRIMARY KEY, edited_at INTEGER, memo TEXT)",
             "CREATE TABLE IF NOT EXISTS avatar_memos (avatar_id TEXT PRIMARY KEY, edited_at INTEGER, memo TEXT)",
             "CREATE TABLE IF NOT EXISTS avatar_tags (avatar_id TEXT NOT NULL, tag TEXT NOT NULL, color TEXT, PRIMARY KEY (avatar_id, tag))",
+            "CREATE TABLE IF NOT EXISTS favorite_screenshot (id INTEGER PRIMARY KEY AUTOINCREMENT, path TEXT NOT NULL UNIQUE, size_bytes INTEGER NOT NULL, sha256 TEXT NOT NULL, created_at INTEGER NOT NULL)",
         ] {
             db.execute_non_query(sql, &Default::default())?;
         }

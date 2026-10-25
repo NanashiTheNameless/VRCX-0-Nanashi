@@ -189,6 +189,8 @@ export function resolvePathAfterScreenshotDelete(
     return null;
 }
 
+export const SCREENSHOT_FAVORITES_FOLDER = '::favorites';
+
 export function resolveGalleryFolder(
     folderTree: ScreenshotFolderTree | null | undefined,
     preferredFolders: string | readonly string[]
@@ -199,8 +201,9 @@ export function resolveGalleryFolder(
         : [preferredFolders];
     for (const preferredFolder of preferredList) {
         if (
-            preferredFolder &&
-            folders.some((folder) => folder.path === preferredFolder)
+            preferredFolder === SCREENSHOT_FAVORITES_FOLDER ||
+            (preferredFolder &&
+                folders.some((folder) => folder.path === preferredFolder))
         ) {
             return preferredFolder;
         }

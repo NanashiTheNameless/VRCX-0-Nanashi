@@ -34,6 +34,7 @@ export function createGalleryAssetActions({
     isVrcPlusSupporter,
     mediaRepository,
     parseEmojiUploadSettings,
+    readClipboardUploadImage,
     readFileAsBase64,
     setAssets,
     setCropRequest,
@@ -240,6 +241,13 @@ export function createGalleryAssetActions({
     function uploadDroppedFile(file: File) {
         requestUpload(file, activeTab, getAuthTarget());
     }
+    async function pasteClipboardUpload(tab: GalleryUploadTarget) {
+        const authTarget = getAuthTarget();
+        const file = await readClipboardUploadImage(t);
+        if (file) {
+            requestUpload(file, tab, authTarget);
+        }
+    }
     function requestUpload(
         file: File,
         tab: GalleryUploadTarget,
@@ -424,6 +432,7 @@ export function createGalleryAssetActions({
         beginUpload,
         uploadSelectedFile,
         uploadDroppedFile,
+        pasteClipboardUpload,
         confirmCroppedUpload,
         deleteFileAsset
     };

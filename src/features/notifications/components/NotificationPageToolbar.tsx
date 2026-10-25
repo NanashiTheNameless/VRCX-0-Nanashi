@@ -38,6 +38,7 @@ type NotificationPageToolbarProps = {
     quickFilter: NotificationQuickFilter;
     searchQuery: string;
     canMarkAllSeen: boolean;
+    isMarkingAllSeen: boolean;
 };
 
 export function NotificationPageToolbar({
@@ -47,6 +48,7 @@ export function NotificationPageToolbar({
     loadStatus,
     quickFilter,
     canMarkAllSeen,
+    isMarkingAllSeen,
     onActiveTypesChange,
     onSearchQueryChange,
     onMarkAllSeen,
@@ -102,6 +104,7 @@ export function NotificationPageToolbar({
                             'side_panel.notification_center.mark_all_read'
                         )}
                         disabled={!canMarkAllSeen}
+                        loading={isMarkingAllSeen}
                         onClick={onMarkAllSeen}
                     />
                 </ToolbarActions>

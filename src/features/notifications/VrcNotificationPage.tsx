@@ -26,7 +26,8 @@ export function VrcNotificationPage({
         sourceRowsCount,
         table,
         tableState,
-        canMarkAllSeen
+        canMarkAllSeen,
+        isMarkingAllSeen
     } = useVrcNotificationPageController();
 
     return (
@@ -51,6 +52,7 @@ export function VrcNotificationPage({
                         notificationTypeLabel={notificationTypeLabel}
                         loadStatus={rowsState.loadStatus}
                         canMarkAllSeen={canMarkAllSeen}
+                        isMarkingAllSeen={isMarkingAllSeen}
                         onActiveTypesChange={filters.setActiveTypes}
                         onSearchQueryChange={filters.setSearchQuery}
                         onMarkAllSeen={actions.markAllSeen}

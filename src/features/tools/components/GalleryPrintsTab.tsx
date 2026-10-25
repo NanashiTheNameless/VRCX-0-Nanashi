@@ -1,5 +1,6 @@
 import {
     AlertTriangleIcon,
+    ClipboardPasteIcon,
     ImageIcon,
     StarIcon,
     StarOffIcon,
@@ -59,6 +60,7 @@ export type GalleryPrintsTabState = {
     loading: boolean;
     mutatingKey?: string;
     onBeginUpload: (tab: 'prints') => void;
+    onPasteUpload: (tab: 'prints') => void;
     onDeletePrint: (printId: string) => void;
     onPreview: (preview: { id: string; title: string; url: string }) => void;
     onRefresh: (tab: 'prints') => void;
@@ -82,6 +84,7 @@ export function GalleryPrintsTab({ printsTab }: GalleryPrintsTabProps) {
         gridDensityConfig,
         onRefresh,
         onBeginUpload,
+        onPasteUpload,
         onPreview,
         onBulkDelete,
         onBulkSetFavorite,
@@ -261,17 +264,30 @@ export function GalleryPrintsTab({ printsTab }: GalleryPrintsTabProps) {
                         </ToggleGroup>
                     }
                     actions={
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={
-                                !isVrcPlusSupporter || Boolean(uploadingTab)
-                            }
-                            onClick={() => onBeginUpload('prints')}
-                        >
-                            <UploadIcon data-icon="inline-start" />
-                            {t('dialog.gallery_icons.upload')}
-                        </Button>
+                        <>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={
+                                    !isVrcPlusSupporter || Boolean(uploadingTab)
+                                }
+                                onClick={() => onBeginUpload('prints')}
+                            >
+                                <UploadIcon data-icon="inline-start" />
+                                {t('dialog.gallery_icons.upload')}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={
+                                    !isVrcPlusSupporter || Boolean(uploadingTab)
+                                }
+                                onClick={() => onPasteUpload('prints')}
+                            >
+                                <ClipboardPasteIcon data-icon="inline-start" />
+                                {t('dialog.gallery_icons.paste_upload')}
+                            </Button>
+                        </>
                     }
                 />
                 {noticeMessage ? (
