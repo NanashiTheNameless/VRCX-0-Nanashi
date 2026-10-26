@@ -22,7 +22,7 @@ use vrcx_0_core::proxy::with_remote_dns;
 
 #[derive(Debug, thiserror::Error)]
 pub enum LlmError {
-    #[error("LLM transport error: {0}")]
+    #[error("LLM transport error: {}", transport_error_detail(.0))]
     Http(#[from] reqwest::Error),
     #[error("LLM transport error: {0}")]
     Transport(#[from] vrcx_0_http_client::Error),
@@ -564,7 +564,7 @@ impl LlmClient {
             content: state.content,
             tool_calls,
             reasoning_details: state.reasoning_details,
-            truncated: state.finish_reason.as_deref() == Some("length"),
+            finish_reason: state.finish_reason,
         })
     }
 
@@ -644,6 +644,36 @@ fn server_retry_delay(headers: &reqwest::header::HeaderMap) -> Option<Duration> 
 
 fn backoff_delay(attempt: u32) -> Duration {
     Duration::from_secs(1 << attempt.min(3))
+}
+
+pub fn transport_error_detail(error: &reqwest::Error) -> String {
+    let kind = if error.is_timeout() {
+        Some("timeout")
+    } else if error.is_connect() {
+        Some("connect")
+    } else if error.is_body() {
+        Some("body")
+    } else if error.is_decode() {
+        Some("decode")
+    } else if error.is_request() {
+        Some("request")
+    } else {
+        None
+    };
+    let mut chain = error.to_string();
+    let mut source = std::error::Error::source(error);
+    while let Some(cause) = source {
+        let message = cause.to_string();
+        if !message.is_empty() && !chain.contains(&message) {
+            chain.push_str(": ");
+            chain.push_str(&message);
+        }
+        source = cause.source();
+    }
+    match kind {
+        Some(kind) => format!("{kind}: {chain}"),
+        None => chain,
+    }
 }
 
 fn parse_models_response(

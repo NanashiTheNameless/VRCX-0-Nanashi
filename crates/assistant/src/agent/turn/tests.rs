@@ -275,6 +275,16 @@ fn empty_final_answer_without_tools_still_allows_no_answer_error() {
 }
 
 #[test]
+fn no_answer_message_reports_both_finish_reasons() {
+    let message = no_answer_message(Some("length"), None);
+
+    assert!(
+        message.contains("(finish_reason: length -> none)"),
+        "{message}"
+    );
+}
+
+#[test]
 fn direct_answer_retry_prompt_does_not_mention_tool_results() {
     assert!(!DIRECT_ANSWER_RETRY_PROMPT.contains("tool results"));
 }

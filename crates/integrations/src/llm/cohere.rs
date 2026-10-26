@@ -202,7 +202,7 @@ struct PendingCall {
 struct CohereStreamState {
     content: String,
     calls: Vec<PendingCall>,
-    truncated: bool,
+    finish_reason: Option<String>,
 }
 
 impl CohereStreamState {
@@ -244,8 +244,15 @@ impl CohereStreamState {
                     ));
                 }
             }
-            Some("message-end") if text_at(&event, "/delta/finish_reason") == "MAX_TOKENS" => {
-                self.truncated = true;
+            Some("message-end") => {
+                let reason = text_at(&event, "/delta/finish_reason");
+                if !reason.is_empty() {
+                    self.finish_reason = Some(if reason == "MAX_TOKENS" {
+                        "length".to_string()
+                    } else {
+                        reason
+                    });
+                }
             }
             _ => {}
         }
@@ -278,7 +285,7 @@ impl CohereStreamState {
             content: self.content,
             tool_calls,
             reasoning_details: Vec::new(),
-            truncated: self.truncated,
+            finish_reason: self.finish_reason,
         }
     }
 }
@@ -310,7 +317,7 @@ mod tests {
         assert_eq!(streamed, "Hi");
         assert_eq!(turn.tool_calls[0].id, "tc_1");
         assert_eq!(turn.tool_calls[0].function.arguments, r#"{"q":"ada"}"#);
-        assert!(!turn.truncated);
+        assert!(!turn.truncated());
     }
 
     #[test]
@@ -320,7 +327,7 @@ mod tests {
             r#"data: {"type":"message-end","delta":{"finish_reason":"MAX_TOKENS"}}"#,
             &mut |_: &str| {},
         );
-        assert!(state.finish().truncated);
+        assert!(state.finish().truncated());
     }
 
     #[test]

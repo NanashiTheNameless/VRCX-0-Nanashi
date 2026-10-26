@@ -127,10 +127,14 @@ pub struct AssistantTurn {
     pub content: String,
     pub tool_calls: Vec<ToolCall>,
     pub reasoning_details: Vec<Value>,
-    pub truncated: bool,
+    pub finish_reason: Option<String>,
 }
 
 impl AssistantTurn {
+    pub fn truncated(&self) -> bool {
+        self.finish_reason.as_deref() == Some("length")
+    }
+
     pub fn into_message(self) -> ChatMessage {
         ChatMessage {
             role: "assistant".into(),

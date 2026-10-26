@@ -257,7 +257,7 @@ struct AnthropicStreamState {
     content: String,
     tools: Vec<(usize, PendingToolUse)>,
     error: Option<String>,
-    truncated: bool,
+    finish_reason: Option<String>,
 }
 
 impl AnthropicStreamState {
@@ -309,11 +309,15 @@ impl AnthropicStreamState {
                     _ => {}
                 }
             }
-            Some("message_delta")
-                if event.pointer("/delta/stop_reason").and_then(Value::as_str)
-                    == Some("max_tokens") =>
-            {
-                self.truncated = true;
+            Some("message_delta") => {
+                if let Some(reason) = event.pointer("/delta/stop_reason").and_then(Value::as_str) {
+                    let reason = if reason == "max_tokens" {
+                        "length"
+                    } else {
+                        reason
+                    };
+                    self.finish_reason = Some(reason.to_string());
+                }
             }
             Some("error") => {
                 self.error = Some(
@@ -355,7 +359,7 @@ impl AnthropicStreamState {
             content: self.content,
             tool_calls,
             reasoning_details: Vec::new(),
-            truncated: self.truncated,
+            finish_reason: self.finish_reason,
         }
     }
 }
@@ -423,7 +427,7 @@ mod tests {
         assert_eq!(turn.content, "Hi");
         assert_eq!(turn.tool_calls[0].id, "toolu_9");
         assert_eq!(turn.tool_calls[0].function.arguments, r#"{"q":"ada"}"#);
-        assert!(!turn.truncated);
+        assert!(!turn.truncated());
     }
 
     #[test]
@@ -437,6 +441,18 @@ mod tests {
             state.apply_line(line, &mut |_: &str| {});
         }
 
-        assert!(state.finish().truncated);
+        assert!(state.finish().truncated());
+    }
+
+    #[test]
+    fn other_stop_reasons_are_kept_as_reported() {
+        let mut state = AnthropicStreamState::default();
+        state.apply_line(
+            r#"data: {"type":"message_delta","delta":{"stop_reason":"end_turn"}}"#,
+            &mut |_: &str| {},
+        );
+        let turn = state.finish();
+        assert_eq!(turn.finish_reason.as_deref(), Some("end_turn"));
+        assert!(!turn.truncated());
     }
 }

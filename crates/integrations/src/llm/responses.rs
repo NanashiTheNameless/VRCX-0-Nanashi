@@ -203,6 +203,7 @@ pub(super) struct ResponsesStreamState {
     items: Vec<Value>,
     /// The final `response.output`, used when no item events were seen.
     completed_output: Option<Vec<Value>>,
+    finish_reason: Option<String>,
     pub(super) error: Option<LlmError>,
 }
 
@@ -235,6 +236,10 @@ impl ResponsesStreamState {
                     .pointer("/response/output")
                     .and_then(Value::as_array)
                     .cloned();
+                self.finish_reason = event
+                    .pointer("/response/status")
+                    .and_then(Value::as_str)
+                    .map(str::to_string);
             }
             "response.failed" | "response.incomplete" | "error" => {
                 let message = event
@@ -302,7 +307,7 @@ impl ResponsesStreamState {
             content,
             tool_calls,
             reasoning_details,
-            truncated: false,
+            finish_reason: self.finish_reason,
         }
     }
 }

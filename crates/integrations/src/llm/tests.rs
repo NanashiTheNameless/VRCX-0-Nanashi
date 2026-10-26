@@ -363,7 +363,7 @@ fn assistant_tool_call_message_resends_reasoning_details_unchanged() {
             },
         }],
         reasoning_details: reasoning_details.clone(),
-        truncated: false,
+        finish_reason: Some("tool_calls".into()),
     }
     .into_message();
 
@@ -374,6 +374,30 @@ fn assistant_tool_call_message_resends_reasoning_details_unchanged() {
         .unwrap()
         .get("reasoning_details")
         .is_none());
+}
+
+#[tokio::test]
+async fn transport_error_detail_names_the_kind_and_underlying_cause() {
+    let listener = TcpListener::bind(("127.0.0.1", 0)).await.unwrap();
+    let address = listener.local_addr().unwrap();
+    drop(listener);
+
+    let error = Client::new()
+        .get(format!("http://{address}/v1/models"))
+        .send()
+        .await
+        .unwrap_err();
+    let detail = transport_error_detail(&error);
+
+    assert!(
+        detail.starts_with("connect: error sending request"),
+        "{detail}"
+    );
+    assert!(detail.contains("tcp connect error"), "{detail}");
+    assert_eq!(
+        LlmError::Http(error).to_string(),
+        format!("LLM transport error: {detail}")
+    );
 }
 
 #[tokio::test]
@@ -973,7 +997,7 @@ async fn server_errors_retry_after_the_server_delay() {
     let turn = stream_once(base_url).await.unwrap();
 
     assert_eq!(turn.content, "ok");
-    assert!(!turn.truncated);
+    assert!(!turn.truncated());
     assert_eq!(hits.load(Ordering::SeqCst), 3);
 }
 
@@ -1057,6 +1081,6 @@ async fn length_finish_reason_marks_the_turn_truncated() {
 
     let turn = stream_once(base_url).await.unwrap();
 
-    assert!(turn.truncated);
+    assert!(turn.truncated());
     assert_eq!(turn.tool_calls.len(), 1);
 }

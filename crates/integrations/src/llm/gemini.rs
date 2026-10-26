@@ -325,7 +325,7 @@ fn sanitize_schema(schema: &Value) -> Value {
 struct GeminiStreamState {
     content: String,
     tool_calls: Vec<ToolCall>,
-    truncated: bool,
+    finish_reason: Option<String>,
 }
 
 impl GeminiStreamState {
@@ -343,12 +343,16 @@ impl GeminiStreamState {
             .get("candidates")
             .and_then(Value::as_array)
             .and_then(|candidates| candidates.first());
-        if candidate
+        if let Some(reason) = candidate
             .and_then(|candidate| candidate.get("finishReason"))
             .and_then(Value::as_str)
-            == Some("MAX_TOKENS")
         {
-            self.truncated = true;
+            let reason = if reason == "MAX_TOKENS" {
+                "length"
+            } else {
+                reason
+            };
+            self.finish_reason = Some(reason.to_string());
         }
         let parts = candidate
             .and_then(|candidate| candidate.pointer("/content/parts"))
@@ -398,7 +402,7 @@ impl GeminiStreamState {
             content: self.content,
             tool_calls: self.tool_calls,
             reasoning_details: Vec::new(),
-            truncated: self.truncated,
+            finish_reason: self.finish_reason,
         }
     }
 }
@@ -470,7 +474,7 @@ mod tests {
         assert_eq!(streamed, "Hello");
         assert_eq!(turn.tool_calls[0].function.name, "search");
         assert_eq!(turn.tool_calls[0].function.arguments, r#"{"q":"ada"}"#);
-        assert!(!turn.truncated);
+        assert!(!turn.truncated());
     }
 
     #[test]
@@ -482,6 +486,6 @@ mod tests {
         );
         let turn = state.finish();
         assert_eq!(turn.content, "Hel");
-        assert!(turn.truncated);
+        assert!(turn.truncated());
     }
 }
