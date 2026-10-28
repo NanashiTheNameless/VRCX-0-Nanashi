@@ -55,6 +55,7 @@ const PRINT_FAVORITE_FILTERS: PrintFavoriteFilter[] = [
 
 export type GalleryPrintsTabState = {
     activeTab: string;
+    clipboardPasting?: boolean;
     gridDensityConfig: GridDensityConfig;
     isVrcPlusSupporter: boolean;
     loading: boolean;
@@ -78,6 +79,7 @@ export function GalleryPrintsTab({ printsTab }: GalleryPrintsTabProps) {
         bulkRunning,
         prints,
         loading,
+        clipboardPasting,
         uploadingTab,
         mutatingKey,
         isVrcPlusSupporter,
@@ -91,6 +93,8 @@ export function GalleryPrintsTab({ printsTab }: GalleryPrintsTabProps) {
         onDeletePrint
     } = printsTab;
     const { t } = useTranslation();
+    const uploadDisabled =
+        !isVrcPlusSupporter || Boolean(uploadingTab) || clipboardPasting;
     const [favoriteMutatingId, setFavoriteMutatingId] = useState('');
     const [favoriteFilter, setFavoriteFilter] =
         useState<PrintFavoriteFilter>('all');
@@ -268,9 +272,7 @@ export function GalleryPrintsTab({ printsTab }: GalleryPrintsTabProps) {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                disabled={
-                                    !isVrcPlusSupporter || Boolean(uploadingTab)
-                                }
+                                disabled={uploadDisabled}
                                 onClick={() => onBeginUpload('prints')}
                             >
                                 <UploadIcon data-icon="inline-start" />
@@ -279,9 +281,7 @@ export function GalleryPrintsTab({ printsTab }: GalleryPrintsTabProps) {
                             <Button
                                 variant="outline"
                                 size="sm"
-                                disabled={
-                                    !isVrcPlusSupporter || Boolean(uploadingTab)
-                                }
+                                disabled={uploadDisabled}
                                 onClick={() => onPasteUpload('prints')}
                             >
                                 <ClipboardPasteIcon data-icon="inline-start" />

@@ -764,7 +764,6 @@
                 "keyboardShortcuts": "Keyboard Shortcuts",
                 "sendFeedback": "Send Feedback",
                 "reportIssue": "Report Issue on GitHub",
-                "qqGroup": "QQ Group",
                 "openDevtools": "Open DevTools",
                 "supportVrcx": "Support VRCX-0-Nanashi"
             }
@@ -796,7 +795,6 @@
         "toggle_theme": "Toggle Theme"
     },
     "nav_menu": {
-        "qq_group": "QQ Group",
         "changelog": "Changelog",
         "update": "Update",
         "update_downloading": "Downloading",
@@ -988,7 +986,8 @@
             "pagination": "Search and table pagination",
             "screenshots": "Screenshot details",
             "image_viewer": "Fullscreen image viewer",
-            "selection": "Selection in screenshots and favorites"
+            "selection": "Selection in screenshots and favorites",
+            "gallery_inventory": "Gallery and inventory"
         },
         "navigation_items": "Open navigation item 1–9",
         "hold_for_hints": "Show shortcut hints (hold)",
@@ -2374,6 +2373,8 @@
                 "allowed_statuses_label": "Only when my status is",
                 "allowed_statuses_description": "Leave all unchecked to reply in any status.",
                 "automatic_replies_note": "Only runs while VRChat is running and your location allows invites. Each sender has a cooldown.",
+                "invite_message": "Invite message",
+                "invite_message_description": "Sends the slot's current text, so editing it changes what's sent.",
                 "failed_to_load_schedule_rules": "Failed to load schedule rules.",
                 "failed_to_save_schedule_rules": "Failed to save schedule rules.",
                 "failed_to_load_room_rules": "Failed to load instance rules.",
@@ -6059,7 +6060,10 @@
             },
             "dynamic": {
                 "edit_slot_value": "Edit slot {value}"
-            }
+            },
+            "no_message": "No message",
+            "slot_value": "Slot {value}",
+            "attach_image": "Attach image"
         },
         "invite_request_message": {
             "header": "Request with Message"
@@ -6087,16 +6091,11 @@
             }
         },
         "edit_invite_message": {
-            "header": "Edit Message Template",
             "save": "Save"
         },
         "edit_send_invite_message": {
-            "header": "Edit and Send Message Template",
             "description": "1-hour edit cooldown.",
             "send": "Send"
-        },
-        "edit_send_invite_response_message": {
-            "description": "1-hour edit cooldown."
         },
         "export_friends_list": {
             "header": "Export Friends List",
@@ -7464,10 +7463,7 @@
         },
         "profile": {
             "invite_messages": {
-                "slot": "Slot",
-                "message": "Message",
-                "cool_down": "Cooldown",
-                "action": "Action"
+                "cool_down": "Cooldown"
             }
         },
         "import": {
