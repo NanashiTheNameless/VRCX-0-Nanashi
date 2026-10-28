@@ -51,7 +51,8 @@ pub(crate) enum ContextMode {
 fn current_time_directive(now_local: DateTime<FixedOffset>) -> String {
     format!(
         "Current local date: {date} ({weekday}), timezone UTC{offset}. Calendar periods \
-(\"today\", \"yesterday\", \"this week\") follow this local calendar.\n\
+(\"today\", \"yesterday\", \"this week\") follow this local calendar; tools that take \
+utcOffsetMinutes read timeWindow calendar forms in that offset.\n\
 Tools return timestamps in UTC. Convert them into this timezone when presenting them.",
         date = now_local.format("%Y-%m-%d"),
         weekday = now_local.weekday(),
@@ -521,8 +522,8 @@ mod tests {
         let now_local = DateTime::parse_from_rfc3339("2026-06-28T06:00:00+09:00").unwrap();
         let directive = current_time_directive(now_local);
         assert!(directive.contains("Current local date: 2026-06-28 (Sun)"));
-        assert!(!directive.contains("2026-06-27"));
         assert!(directive.contains("UTC+09:00"));
+        assert!(!directive.contains("2026-06-27"));
     }
 
     #[test]

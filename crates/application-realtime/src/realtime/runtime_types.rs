@@ -109,10 +109,6 @@ impl FriendBaselineSyncOutcome {
             friend_log_changed,
         }
     }
-
-    pub(crate) fn into_result(self) -> FriendBaselineResult {
-        self.result
-    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type)]

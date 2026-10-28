@@ -92,7 +92,7 @@ export function KeyboardShortcutsDialog({
                                                 {t(item.labelKey)}
                                             </span>
                                             <KeyboardShortcut
-                                                keys={item.keys}
+                                                keys={[...item.keys]}
                                             />
                                         </li>
                                     ))}

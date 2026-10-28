@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use chrono::{DateTime, Datelike, Duration, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, Datelike, Duration, FixedOffset, NaiveDateTime, TimeZone, Utc};
 use rmcp::model::CallToolResult;
 use rmcp::schemars;
 use serde::{Deserialize, Serialize};
@@ -32,6 +32,27 @@ where
 pub(super) struct TimeWindowParams {
     pub(super) from: Option<String>,
     pub(super) to: Option<String>,
+    source: Option<Value>,
+}
+
+impl TimeWindowParams {
+    /// Re-resolves calendar forms in the caller's fixed UTC offset when a tool
+    /// passes one. Without it the window keeps the user's display timezone.
+    pub(super) fn in_utc_offset(self, utc_offset_minutes: Option<i64>) -> Result<Self, String> {
+        let Some(offset) = utc_offset_minutes
+            .filter(|minutes| *minutes != 0)
+            .and_then(|minutes| i32::try_from(minutes.checked_mul(60)?).ok())
+            .and_then(FixedOffset::east_opt)
+        else {
+            return Ok(self);
+        };
+        let Some(source) = self.source else {
+            return Ok(self);
+        };
+        let mut window = time_window_from_value_at(&source, Utc::now().with_timezone(&offset))?;
+        window.source = Some(source);
+        Ok(window)
+    }
 }
 
 impl schemars::JsonSchema for TimeWindowParams {
@@ -48,13 +69,13 @@ impl schemars::JsonSchema for TimeWindowParams {
             "oneOf": [
                 {
                     "type": "string",
-                    "description": "Relative window such as 90d or this week, a four-digit calendar year such as 2026, this year or last year, a calendar month such as 2026-10 or a calendar day such as 2026-10-18 in the user's local calendar, or all history."
+                    "description": "Relative window such as 90d or this week, a four-digit calendar year such as 2026, this year or last year, a calendar month such as 2026-10 or a calendar day such as 2026-10-18 in the user's local calendar, or all history. Calendar forms use the tool's utcOffsetMinutes when it takes one."
                 },
                 {
                     "type": "integer",
                     "minimum": 1000,
                     "maximum": 9998,
-                    "description": "Four-digit calendar year such as 2026, in the user's local calendar."
+                    "description": "Four-digit calendar year such as 2026, in the user's local calendar, or the tool's utcOffsetMinutes when it takes one."
                 },
                 {
                     "type": "object",
@@ -75,7 +96,9 @@ impl<'de> Deserialize<'de> for TimeWindowParams {
         D: serde::Deserializer<'de>,
     {
         let value = Value::deserialize(deserializer)?;
-        time_window_from_value(&value).map_err(serde::de::Error::custom)
+        let mut window = time_window_from_value(&value).map_err(serde::de::Error::custom)?;
+        window.source = Some(value);
+        Ok(window)
     }
 }
 
@@ -115,6 +138,7 @@ fn time_window_from_value_at<Tz: TimeZone>(
             Ok(TimeWindowParams {
                 from: time_window_bound(map.get("from"), "from", &now)?,
                 to: time_window_bound(map.get("to"), "to", &now)?,
+                source: None,
             })
         }
         _ => Err(
@@ -207,7 +231,11 @@ fn parse_relative_window<Tz: TimeZone>(
         }
     }
     let rfc = |dt: DateTime<Utc>| Some(dt.to_rfc3339());
-    let window = |from, to| TimeWindowParams { from, to };
+    let window = |from, to| TimeWindowParams {
+        from,
+        to,
+        source: None,
+    };
 
     match normalized.as_str() {
         "" | "all" | "all time" | "alltime" | "all history" | "all-history" | "entire history"
@@ -266,6 +294,7 @@ fn calendar_year_window<Tz: TimeZone>(year: i64, tz: &Tz) -> Result<TimeWindowPa
     Ok(TimeWindowParams {
         from: Some(from.to_rfc3339()),
         to: Some(to.to_rfc3339()),
+        source: None,
     })
 }
 
@@ -302,6 +331,7 @@ fn local_date_range_window<Tz: TimeZone>(
     Ok(TimeWindowParams {
         from: Some(start_of(from)?.to_rfc3339()),
         to: Some(start_of(to)?.to_rfc3339()),
+        source: None,
     })
 }
 
@@ -310,6 +340,7 @@ fn parse_rolling_window(text: &str, now: DateTime<Utc>) -> Option<TimeWindowPara
     Some(TimeWindowParams {
         from: Some((now - duration).to_rfc3339()),
         to: None,
+        source: None,
     })
 }
 

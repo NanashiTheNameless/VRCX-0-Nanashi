@@ -80,19 +80,19 @@ pub fn app__avatar_usage_ranking(
         .map_err(AppError::from)
 }
 
-#[tauri::command(async)]
+#[tauri::command]
 #[specta::specta]
-pub fn app__avatar_wear_segments(
+pub async fn app__avatar_wear_segments(
     state: State<'_, AppState>,
     user_id: String,
     from: i64,
     to: i64,
 ) -> Result<Vec<AvatarWearSegment>, AppError> {
-    state
-        .runtime_host()
-        .local_data()
-        .avatar_wear_segments(user_id, from, to)
-        .map_err(AppError::from)
+    let local_data = state.runtime_host().local_data().clone();
+    run_blocking("avatar wear segments", move || {
+        local_data.avatar_wear_segments(user_id, from, to)
+    })
+    .await
 }
 
 #[tauri::command(async)]

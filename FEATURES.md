@@ -114,7 +114,7 @@ sharing it again; manage shares on the website.
 
 ### Self-hosted Recorder (experimental), from this fork's builds
 
-Upstream's recorder is kept: a small server program you run on an always-on Linux machine that
+Upstream's recorder is kept: a small server program you run on an always-on Linux machine or Windows PC that
 logs in to VRChat with your account while the app is closed, so friend activity from that time
 is filled into the Feed when you come back. Set it up under Settings > Sync Options.
 

@@ -16,7 +16,7 @@ The Self-hosted Recorder runs on an always-on machine and records friend activit
 
 ## Requirements
 
-- A Linux machine that stays on (x86_64 or ARM64), such as a NAS, VPS or Raspberry Pi.
+- A machine that stays on: Linux (x86_64 or ARM64), such as a NAS, VPS or Raspberry Pi, or a Windows PC (x86_64).
 - Docker with Docker Compose v2 (the `docker compose` command). A standalone binary is also available.
 - VRCX-0-Nanashi must be able to reach the machine over the network.
 
@@ -55,6 +55,12 @@ NAS interfaces (Synology Container Manager, Unraid and others): use the image `g
 ### Standalone binary
 
 Download `vrcx-0-logger_<version>_linux_<arch>` from [Releases](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases), set the password variable and run it. Use a service manager such as systemd to keep it running.
+
+### Windows
+
+Download `vrcx-0-logger_<version>_windows_x86_64.exe` from [Releases](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases) and run it. The window shows the address and a generated password to enter in VRCX-0-Nanashi, along with the listen address, port, data folder, retention and storage limit. Settings are saved in `%LOCALAPPDATA%\VRCX-0-Nanashi Logger\logger.env`, and records go to the `data` folder next to it by default. The recorder runs while the window is open, and connection problems such as VRChat being unreachable are listed below the status.
+
+To run it without a window, for example from Task Scheduler, start it with `--headless` and set the environment variables listed under Configuration.
 
 ### Configuration
 
@@ -106,12 +112,12 @@ Run the install script again, or `docker compose pull && docker compose up -d`. 
 
 ## Troubleshooting
 
-| Problem              | Check                                                            |
-| -------------------- | ---------------------------------------------------------------- |
-| Recorder unreachable | Container running, firewall allows the port, address correct.    |
-| Wrong password       | The password in VRCX-0-Nanashi must match the recorder password. |
-| Different account    | Log the recorder in with the account used in VRCX-0-Nanashi.     |
-| Logs                 | `docker compose logs` in the install directory.                  |
+| Problem              | Check                                                                                                                                                 |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Recorder unreachable | Container running, firewall allows the port, address correct.                                                                                         |
+| Wrong password       | The password in VRCX-0-Nanashi must match the recorder password.                                                                                      |
+| Different account    | Log the recorder in with the account used in VRCX-0-Nanashi.                                                                                          |
+| Logs                 | `docker compose logs` in the install directory. On Windows, errors are listed in the recorder window; with `--headless`, the log goes to the console. |
 
 ## Data and security
 

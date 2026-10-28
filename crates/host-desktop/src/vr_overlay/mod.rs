@@ -25,5 +25,6 @@ pub use openxr_backend::{probe_runtime as probe_openxr_runtime, OpenXrOverlayBac
 pub use status::{OverlayServicePhase, OverlayServiceStatus};
 pub use types::{
     BackendStartError, BackendStartErrorReason, OverlayActivationButton, OverlayPlacement,
-    OverlaySurfaceConfig, VrDeviceSnapshot, VrDeviceStatus, WristAnchor, WristPlacementAdjust,
+    OverlaySurfaceConfig, VrDeviceRole, VrDeviceSnapshot, VrDeviceStatus, WristAnchor,
+    WristPlacementAdjust,
 };

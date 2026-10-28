@@ -11,9 +11,10 @@ Grab the file for your platform from the
 macOS is not supported.
 
 Each nightly release also carries the Self-hosted Recorder for Linux servers as
-`vrcx-0-logger_<version>_linux_x86_64` and `vrcx-0-logger_<version>_linux_aarch64`. Most people
-should use the install script or Docker image described in the
-[recorder guide](crates/logger/README.md) instead of the bare binary.
+`vrcx-0-logger_<version>_linux_x86_64` and `vrcx-0-logger_<version>_linux_aarch64`, and for
+Windows as `vrcx-0-logger_<version>_windows_x86_64.exe`. On Linux, most people should use the
+install script or Docker image described in the [recorder guide](crates/logger/README.md)
+instead of the bare binary.
 
 Fork builds are not code-signed. On Windows, SmartScreen may warn on first run.
 

@@ -847,10 +847,16 @@ impl DesktopRuntimeHostState {
     pub fn current_log_location_snapshot(
         &self,
     ) -> Option<vrcx_0_application_game::LogLocationSnapshot> {
+        if self.desktop.services.game_isolation().is_enabled() {
+            return None;
+        }
         self.game.log_watcher.current_location_snapshot()
     }
 
     pub fn now_playing_snapshot(&self) -> vrcx_0_application_game::NowPlayingSnapshot {
+        if self.desktop.services.game_isolation().is_enabled() {
+            return vrcx_0_application_game::NowPlayingSnapshot::default();
+        }
         self.desktop.services.now_playing().as_ref().clone()
     }
 
@@ -2097,7 +2103,7 @@ impl DesktopRuntimeHostState {
     ) -> vrcx_0_core::screenshots::ScreenshotLibraryScanStatus {
         vrcx_0_outbound_adapters::screenshots::start_screenshot_library_scan(
             &self.game.screenshot_cache,
-            Arc::clone(self.runtime.database()),
+            self.screenshots.screenshot_favorites().clone(),
             self.runtime.paths().screenshot_thumbs.clone(),
             self.runtime.desktop_assembly().event_bus().clone(),
             self.runtime.desktop_assembly().tasks().clone(),
@@ -2616,7 +2622,16 @@ impl RuntimeHostProfileExtension for DesktopRuntimeProfileExtension {
     fn start_profile_maintenance(&self, state: &RuntimeHostState) {
         self.start_registry_backup_loop(state);
         self.start_desktop_maintenance_loops(state);
-        self.desktop.feed_logger.start_presence_loop(state);
+        let feed_logger = &self.desktop.feed_logger;
+        let check = Arc::clone(feed_logger);
+        state
+            .realtime_runtime()
+            .set_reconnect_backfill_check(Arc::new(move || check.recorder_may_be_recording()));
+        feed_logger.start_presence_loop(
+            state.backend_runtime().clone(),
+            state.desktop_assembly().auth_scope().clone(),
+            state.desktop_assembly().tasks().clone(),
+        );
     }
 }
 

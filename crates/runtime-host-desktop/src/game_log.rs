@@ -19,6 +19,9 @@ use vrcx_0_host_desktop::{clipboard, game_launch, vrchat_paths};
 use vrcx_0_persistence::DatabaseService;
 use vrcx_0_platform::app_paths::AppPaths;
 
+pub(crate) const GAME_LOG_PERSISTENCE_RESUME_AFTER_CONFIG_KEY: &str =
+    "gameLogPersistenceResumeAfter";
+
 fn host_error(error: vrcx_0_platform::Error) -> RuntimeError {
     match error {
         vrcx_0_platform::Error::Io(error) => RuntimeError::Io(error),
@@ -157,10 +160,13 @@ impl GameLogHostRuntime {
             return Ok(());
         }
         let last_persisted = vrcx_0_persistence::game_log::get_last_game_log_date(&self.db)?;
-        let resume_after = vrcx_0_core::time::parse_epoch_seconds(
-            &vrcx_0_persistence::config::get_string(&self.db, "gameLogPersistenceResumeAfter", "")?,
-        )
-        .unwrap_or(0);
+        let resume_after =
+            vrcx_0_core::time::parse_epoch_seconds(&vrcx_0_persistence::config::get_string(
+                &self.db,
+                GAME_LOG_PERSISTENCE_RESUME_AFTER_CONFIG_KEY,
+                "",
+            )?)
+            .unwrap_or(0);
         self.inner.set_persistence_resume_after(resume_after);
         log_watcher.set_date_till(last_persisted.max(resume_after));
         if let Some(cursor) = self.inner.replay_cursor() {
@@ -196,7 +202,7 @@ impl GameLogHostRuntime {
                 ];
                 if !disabled {
                     values.push(vrcx_0_persistence::config::ConfigWriteEntry {
-                        key: "gameLogPersistenceResumeAfter".into(),
+                        key: GAME_LOG_PERSISTENCE_RESUME_AFTER_CONFIG_KEY.into(),
                         value: resume_after.to_string(),
                     });
                 }

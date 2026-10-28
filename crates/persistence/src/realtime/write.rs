@@ -462,15 +462,19 @@ fn backfilled_entry_table_if_new(
         .set("window", BACKFILL_DUPLICATE_WINDOW_SECS)
         .build();
     let nearby = tx.execute(
-        &format!(
-            "SELECT id FROM {user_prefix}_{table} WHERE user_id = @user_id AND {same_change} AND created_at BETWEEN @created_at - @window AND @created_at + @window"
-        ),
+        &backfill_nearby_ids_sql(user_prefix, table, same_change),
         &params,
     )?;
     let recorded_elsewhere = nearby
         .iter()
         .any(|row| !written.rows.contains(&(table, row_i64(row, 0))));
     Ok((!recorded_elsewhere).then_some(table))
+}
+
+fn backfill_nearby_ids_sql(user_prefix: &str, table: &str, same_change: &str) -> String {
+    format!(
+        "SELECT id FROM {user_prefix}_{table} WHERE user_id = @user_id AND {same_change} AND created_at BETWEEN @created_at - @window AND @created_at + @window"
+    )
 }
 
 fn insert_feed_entry(

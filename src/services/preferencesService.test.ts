@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-    appLanguageChanged: vi.fn(),
     appRestartApplication: vi.fn(),
     appNotificationActivityFiltersGet: vi.fn(),
     appNotificationActivityFiltersSet: vi.fn(),
@@ -38,7 +37,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
-        appLanguageChanged: mocks.appLanguageChanged,
         appRestartApplication: mocks.appRestartApplication,
         appNotificationActivityFiltersGet:
             mocks.appNotificationActivityFiltersGet,
@@ -273,7 +271,6 @@ describe('preferencesService characterization', () => {
             tts: { version: 1, types: {} },
             widget: { version: 1, types: {} }
         });
-        mocks.appLanguageChanged.mockResolvedValue(undefined);
         mocks.appRestartApplication.mockResolvedValue(undefined);
         mocks.appDisableVrchatRichPresence.mockResolvedValue({ changed: true });
         mocks.appRuntimeDiscordReconcileRequest.mockResolvedValue(1);
@@ -475,7 +472,6 @@ describe('preferencesService characterization', () => {
             cjkFontPack: 'noto',
             locale: 'en'
         });
-        expect(mocks.appLanguageChanged).toHaveBeenCalledWith('en');
     });
 
     it('updates DOM classes for table and accessibility preferences', async () => {

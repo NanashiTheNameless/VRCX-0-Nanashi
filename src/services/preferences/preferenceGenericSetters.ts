@@ -49,7 +49,6 @@ import {
     DEFAULT_TABLE_PAGE_SIZES
 } from './preferencesConstants';
 import {
-    appLanguageChanged,
     applyAccessibleStatusClass,
     applyDataTableStripedClass,
     applyReducedMotionAndBlurClass,
@@ -93,7 +92,6 @@ export async function setAppLanguagePreference(language: string | null) {
         cjkFontPack,
         locale: nextLanguage
     });
-    await appLanguageChanged(nextLanguage);
 }
 
 export async function setThemeModePreference(themeMode: ThemeMode) {

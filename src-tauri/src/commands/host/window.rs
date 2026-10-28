@@ -131,16 +131,7 @@ pub(crate) fn stop_runtime_services(app_handle: &AppHandle) {
 
 fn flush_before_task_shutdown(state: &AppState) {
     let runtime_host = state.runtime_host();
-    let flush = runtime_host.leave_feed_logger();
-    match tokio::runtime::Handle::try_current() {
-        Ok(handle) if handle.runtime_flavor() == tokio::runtime::RuntimeFlavor::MultiThread => {
-            tokio::task::block_in_place(|| handle.block_on(flush));
-        }
-        Ok(_) => {}
-        Err(_) => {
-            tauri::async_runtime::block_on(flush);
-        }
-    }
+    crate::bootstrap::block_on_runtime_task(runtime_host.leave_feed_logger());
 }
 
 #[tauri::command]

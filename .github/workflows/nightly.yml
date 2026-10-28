@@ -282,22 +282,38 @@ jobs:
                   path: collector-assets/*
                   if-no-files-found: error
 
-    # Self-hosted recorder. A separate server program, built static so it runs
-    # on any Linux host and in the distroless image.
+    # Self-hosted recorder. A separate server program. The Linux builds are
+    # static so they run on any Linux host and in the distroless image; the
+    # Windows build opens the recorder window.
     logger:
-        name: Logger (${{ matrix.arch }})
+        name: Logger (${{ matrix.platform }} ${{ matrix.arch }})
         needs: prepare
         runs-on: ${{ matrix.os }}
+        defaults:
+            run:
+                shell: bash
         strategy:
             fail-fast: false
             matrix:
                 include:
-                    - arch: x86_64
+                    - platform: linux
+                      arch: x86_64
                       os: ubuntu-24.04
                       rust_target: x86_64-unknown-linux-musl
-                    - arch: aarch64
+                      binary: vrcx-0-logger
+                      suffix: ''
+                    - platform: linux
+                      arch: aarch64
                       os: ubuntu-24.04-arm
                       rust_target: aarch64-unknown-linux-musl
+                      binary: vrcx-0-logger
+                      suffix: ''
+                    - platform: windows
+                      arch: x86_64
+                      os: windows-latest
+                      rust_target: x86_64-pc-windows-msvc
+                      binary: vrcx-0-logger.exe
+                      suffix: .exe
         steps:
             - uses: actions/checkout@v7
 
@@ -308,13 +324,14 @@ jobs:
             - uses: Swatinem/rust-cache@v2
               with:
                   workspaces: . -> target
-                  shared-key: nightly-logger-${{ matrix.arch }}
+                  shared-key: nightly-logger-${{ matrix.platform }}-${{ matrix.arch }}
 
             - uses: actions/setup-node@v7
               with:
                   node-version: 24.x
 
             - name: Install musl toolchain
+              if: matrix.platform == 'linux'
               run: sudo apt-get update && sudo apt-get install -y musl-tools
 
             - name: Stamp nightly version
@@ -326,15 +343,15 @@ jobs:
             - name: Prepare logger asset
               run: |
                   mkdir -p logger-assets
-                  cp "target/${{ matrix.rust_target }}/release/vrcx-0-logger" "logger-assets/vrcx-0-logger_${{ needs.prepare.outputs.build_version }}_linux_${{ matrix.arch }}"
+                  cp "target/${{ matrix.rust_target }}/release/${{ matrix.binary }}" "logger-assets/vrcx-0-logger_${{ needs.prepare.outputs.build_version }}_${{ matrix.platform }}_${{ matrix.arch }}${{ matrix.suffix }}"
 
             - name: Generate logger third-party notices
-              if: matrix.arch == 'x86_64'
+              if: matrix.platform == 'linux' && matrix.arch == 'x86_64'
               run: node scripts/generate-third-party-licenses.ts --logger "logger-assets/vrcx-0-logger_${{ needs.prepare.outputs.build_version }}_THIRD_PARTY_NOTICES.txt"
 
             - uses: actions/upload-artifact@v7
               with:
-                  name: nightly-logger-${{ matrix.arch }}
+                  name: nightly-logger-${{ matrix.platform }}-${{ matrix.arch }}
                   path: logger-assets/*
                   if-no-files-found: error
 

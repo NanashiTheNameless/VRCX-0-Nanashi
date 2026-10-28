@@ -1,4 +1,3 @@
-import { commands } from '@/platform/tauri/bindings';
 import {
     normalizePreferenceKey,
     publishPreferenceChanged
@@ -62,10 +61,6 @@ export function patchPreferenceValue(
     usePreferencesStore
         .getState()
         .setPreferenceValue(normalizeStorePreferenceKey(key), value);
-}
-
-export async function appLanguageChanged(language: string) {
-    await commands.appLanguageChanged(language);
 }
 
 export function normalizeStringList(value: unknown): string[] {

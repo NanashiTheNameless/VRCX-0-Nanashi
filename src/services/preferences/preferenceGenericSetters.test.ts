@@ -6,7 +6,6 @@ import {
 } from '@/shared/utils/displayTimeZone';
 
 const mocks = vi.hoisted(() => ({
-    appLanguageChanged: vi.fn(),
     appRestartApplication: vi.fn(),
     appSetStartup: vi.fn(),
     appFeedPersistenceSetDisabled: vi.fn(),
@@ -36,7 +35,6 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
-        appLanguageChanged: mocks.appLanguageChanged,
         appRestartApplication: mocks.appRestartApplication,
         appSetStartup: mocks.appSetStartup,
         appFeedPersistenceSetDisabled: mocks.appFeedPersistenceSetDisabled
