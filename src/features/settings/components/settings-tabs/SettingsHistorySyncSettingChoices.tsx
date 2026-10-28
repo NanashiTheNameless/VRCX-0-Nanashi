@@ -47,7 +47,8 @@ function configName(key: string) {
 // Only for a key that has no label anywhere, such as one added since.
 function fallbackName(name: string) {
     const words = (settingNames.get(name) ?? name)
-        .replace(/_/g, ' ')
+        .replace(/^0_/, '')
+        .replace(/[_.]/g, ' ')
         .replace(/([a-z\d])([A-Z])/g, '$1 $2')
         .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
         .toLowerCase();
@@ -159,12 +160,21 @@ export function SettingsHistorySyncSettingChoices({
             synced: list.reduce((sum, group) => sum + syncedCount(group), 0),
             total: list.reduce((sum, group) => sum + group.settings.length, 0)
         });
-    const selected = draft.find((group) => group.id === selectedId) ?? draft[0];
+    const visibleGroups = draft.filter((group) => group.settings.length > 0);
+    const selected =
+        visibleGroups.find((group) => group.id === selectedId) ??
+        visibleGroups[0];
     const rows = (selected?.settings ?? [])
         .map((setting) => {
             const name = configName(setting.key);
             const [label, section] = syncSettingLabels[name] ?? [];
-            const namePath = `${SETTING_NAMES}.${name}`;
+            const account = name.startsWith('friendloginit_')
+                ? name.slice('friendloginit_'.length)
+                : undefined;
+            const labelName = account
+                ? 'friendloginit'
+                : name.replace(/\./g, '');
+            const namePath = `${SETTING_NAMES}.${labelName}`;
             const ownName = t(namePath);
             return {
                 ...setting,
@@ -173,7 +183,7 @@ export function SettingsHistorySyncSettingChoices({
                     : ownName !== namePath
                       ? ownName
                       : fallbackName(name),
-                section: section ? t(section) : undefined
+                section: section ? t(section) : account
             };
         })
         .sort((a, b) => a.label.localeCompare(b.label));
@@ -223,7 +233,7 @@ export function SettingsHistorySyncSettingChoices({
                         >
                             <ScrollArea className="h-full min-w-0 border-r pr-3">
                                 <TabsList className="h-fit w-full min-w-0 gap-1">
-                                    {draft.map((group) => (
+                                    {visibleGroups.map((group) => (
                                         <TabsTrigger
                                             key={group.id}
                                             value={group.id}

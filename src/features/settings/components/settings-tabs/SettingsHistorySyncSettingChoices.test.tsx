@@ -168,6 +168,78 @@ describe('choosing which settings sync', () => {
         ).toBeTruthy();
     });
 
+    it.each([
+        ['config:vrcx_instancedialogdisplayname', 'New instance display name'],
+        [
+            'config:vrcx_instancedialogminimumavatarperformance',
+            'New instance minimum avatar performance'
+        ],
+        ['config:vrcx_assistant.lastselection', 'Social AI model selection'],
+        ['config:vrcx_0_rightsidebarwidth', 'Side panel width'],
+        ['config:vrcx_0_screenshotgridsort', 'Screenshot sort order'],
+        ['config:vrcx_gameisolationenabled', 'Game isolation']
+    ])('labels %s and saves its original key', async (key, label) => {
+        groupsGet.mockResolvedValue([
+            { id: 'other', enabled: true, settings: [{ key, synced: true }] }
+        ]);
+        await renderChoices();
+        openDialog();
+
+        fireEvent.click(screen.getByRole('switch', { name: label }));
+        await save();
+
+        expect(choicesSet).toHaveBeenCalledWith({
+            excludedGroups: [],
+            keyOverrides: { [key]: false }
+        });
+    });
+
+    it('labels per-account friend log state separately from the account id', async () => {
+        const key = 'config:vrcx_friendloginit_usr_example';
+        groupsGet.mockResolvedValue([
+            { id: 'feed', enabled: true, settings: [{ key, synced: true }] }
+        ]);
+        await renderChoices();
+        openDialog();
+
+        expect(screen.getByText('usr_example')).toBeTruthy();
+        fireEvent.click(
+            screen.getByRole('switch', {
+                name: 'Friend log initialized for account'
+            })
+        );
+        await save();
+        expect(choicesSet).toHaveBeenCalledWith({
+            excludedGroups: [],
+            keyOverrides: { [key]: false }
+        });
+    });
+
+    it('hides empty groups while preserving their saved exclusions', async () => {
+        groupsGet.mockResolvedValue([
+            { id: 'automation', enabled: false, settings: [] },
+            { id: 'social', enabled: true, settings: [] },
+            {
+                id: 'appearance',
+                enabled: true,
+                settings: [{ key: 'config:vrcx_thememode', synced: true }]
+            },
+            { id: 'other', enabled: false, settings: [] }
+        ]);
+        await renderChoices();
+        openDialog();
+
+        expect(screen.getAllByRole('tab')).toHaveLength(1);
+        expect(screen.getByRole('tab').textContent).toContain(
+            'setting_groups.appearance'
+        );
+        await save();
+        expect(choicesSet).toHaveBeenCalledWith({
+            excludedGroups: ['automation', 'other'],
+            keyOverrides: {}
+        });
+    });
+
     it('cancelling throws the changes away', async () => {
         await renderChoices();
         openDialog();

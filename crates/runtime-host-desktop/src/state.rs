@@ -2651,7 +2651,12 @@ impl DesktopRuntimeProfileExtension {
             );
         }
         if !self.adoption_census_started.swap(true, Ordering::AcqRel) {
-            crate::adoption_census::start_adoption_census_loop(state);
+            crate::adoption_census::start_adoption_census_loop(
+                state.desktop_assembly().config().clone(),
+                state.web_client().clone(),
+                &state.app_data_dir().current_dir,
+                state.desktop_assembly().tasks(),
+            );
         }
         if self.background_image_started.swap(true, Ordering::AcqRel) {
             return;

@@ -6,11 +6,11 @@
 //! hardware or crash data, and nothing here may grow to include any.
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Duration;
 
 use sha2::{Digest, Sha256};
-use vrcx_0_application_core::sleep_until_due_or_stopped;
-use vrcx_0_composition::RuntimeHostState;
+use vrcx_0_application_core::{sleep_until_due_or_stopped, TaskSupervisor, WebClient};
 use vrcx_0_contracts::external_api::{self, ExternalApiScope};
 use vrcx_0_core::user_agent::APP_NAME;
 use vrcx_0_persistence::config::ConfigRepository;
@@ -39,49 +39,45 @@ const ADOPTION_CENSUS_OPT_OUT_FILES: [&str; 4] = [
 /// sync and profile merge never see it and data export skips it.
 const ADOPTION_CENSUS_ID_FILE: &str = ".adoption-census-id";
 
-pub(crate) fn start_adoption_census_loop(state: &RuntimeHostState) {
+pub(crate) fn start_adoption_census_loop(
+    config: ConfigRepository,
+    web: Arc<WebClient>,
+    data_dir: &Path,
+    tasks: &TaskSupervisor,
+) {
     // Development builds are not installs worth counting.
     if cfg!(debug_assertions) {
         return;
     }
-    let config = state.desktop_assembly().config().clone();
-    let web = state.web_client().clone();
-    let id_path = state
-        .app_data_dir()
-        .current_dir
-        .join(ADOPTION_CENSUS_ID_FILE);
-    state
-        .desktop_assembly()
-        .tasks()
-        .spawn_cancellable(move |stop_token| async move {
-            loop {
-                if stop_token.is_stop_requested() {
-                    return;
-                }
-                if adoption_census_enabled(&config) {
-                    match install_id_hash(&id_path) {
-                        Ok(id_hash) => {
-                            let input =
-                                external_api::adoption_census_post_input(&id_hash, APP_NAME);
-                            if let Err(error) = web
-                                .execute_external_api(input, ExternalApiScope::AdoptionCensus)
-                                .await
-                            {
-                                tracing::debug!(error = %error, "adoption census ping failed");
-                            }
-                        }
-                        Err(error) => {
-                            tracing::debug!(error = %error, "adoption census id unavailable");
+    let id_path = data_dir.join(ADOPTION_CENSUS_ID_FILE);
+    tasks.spawn_cancellable(move |stop_token| async move {
+        loop {
+            if stop_token.is_stop_requested() {
+                return;
+            }
+            if adoption_census_enabled(&config) {
+                match install_id_hash(&id_path) {
+                    Ok(id_hash) => {
+                        let input = external_api::adoption_census_post_input(&id_hash, APP_NAME);
+                        if let Err(error) = web
+                            .execute_external_api(input, ExternalApiScope::AdoptionCensus)
+                            .await
+                        {
+                            tracing::debug!(error = %error, "adoption census ping failed");
                         }
                     }
-                } else {
-                    forget_install_id(&id_path);
+                    Err(error) => {
+                        tracing::debug!(error = %error, "adoption census id unavailable");
+                    }
                 }
-                if !sleep_until_due_or_stopped(ADOPTION_CENSUS_INTERVAL, &stop_token).await {
-                    return;
-                }
+            } else {
+                forget_install_id(&id_path);
             }
-        });
+            if !sleep_until_due_or_stopped(ADOPTION_CENSUS_INTERVAL, &stop_token).await {
+                return;
+            }
+        }
+    });
 }
 
 /// An opt-out made outside the app. While one is present the setting cannot
