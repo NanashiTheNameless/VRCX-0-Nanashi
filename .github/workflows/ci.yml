@@ -128,9 +128,12 @@ jobs:
               with:
                   node-version: 24.x
             - uses: ./.github/actions/setup-rust
+              with:
+                  cache-key: desktop
+                  save-cache: 'false'
             - run: npm run rust:fmt:check
             - run: mkdir -p dist && printf '<!doctype html><html><body></body></html>' > dist/index.html
-            - run: npm run rust:clippy:ci
+            - run: mold -run npm run rust:clippy:ci
             - uses: taiki-e/install-action@cargo-deny
             - run: npm run rust:deny
 
@@ -172,12 +175,19 @@ jobs:
               with:
                   mode: ci
             - uses: ./.github/actions/setup-rust
+              with:
+                  cache-key: desktop
             - run: mkdir -p dist && printf '<!doctype html><html><body></body></html>' > dist/index.html
             - name: Build Tauri crate
-              run: cargo build --manifest-path src-tauri/Cargo.toml --locked
+              run: |
+                  if [[ "$RUNNER_OS" == "Linux" ]]; then
+                      mold -run cargo build --manifest-path src-tauri/Cargo.toml --locked
+                  else
+                      cargo build --manifest-path src-tauri/Cargo.toml --locked
+                  fi
             - name: Test backend architecture
               if: runner.os == 'Linux'
-              run: cargo test --manifest-path src-tauri/Cargo.toml --locked --test backend_architecture
+              run: mold -run cargo test --manifest-path src-tauri/Cargo.toml --locked --test backend_architecture
 
     rust-tests:
         name: Rust Tests (${{ matrix.label }})
@@ -209,6 +219,8 @@ jobs:
               with:
                   node-version: 24.x
             - uses: ./.github/actions/setup-rust
+              with:
+                  cache-key: tests
             - env:
                   RUST_TEST_ARGS: ${{ matrix.rust_test_args }}
               run: npm run rust:test:ci -- $RUST_TEST_ARGS
@@ -226,7 +238,10 @@ jobs:
                   mode: ci
             - uses: ./.github/actions/setup-node
             - uses: ./.github/actions/setup-rust
-            - run: npm run generate:tauri-bindings
+              with:
+                  cache-key: desktop
+                  save-cache: 'false'
+            - run: mold -run npm run generate:tauri-bindings
             - name: Verify bindings.ts is regenerated
               run: git diff --exit-code src/platform/tauri/bindings.ts
 

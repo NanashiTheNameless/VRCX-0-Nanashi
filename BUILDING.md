@@ -59,4 +59,14 @@ Release builds run `scripts/smoke-appimage.py` against the packaged AppImage bef
 uploading it. The check covers renaming, repeat launches, autostart arguments, and
 the paths used for updates and relaunching without opening the app interface.
 
+CI caches compiled Rust dependencies separately for desktop builds and workspace
+tests. Desktop builds populate the cache on master; Clippy and binding generation
+reuse it without saving duplicate caches. Pull requests restore the master caches
+without saving their own. Linux desktop checks and package builds use mold to
+reduce linking time; local builds can also use it after installing `mold`:
+
+```bash
+mold -run npm run tauri:build -- --no-sign --no-bundle
+```
+
 [Back to the README](README.md)
