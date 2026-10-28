@@ -322,6 +322,7 @@ export function SettingsHistorySyncTab() {
                 description={t('view.settings.history_sync.description')}
             >
                 <Field
+                    settingId="history-sync.backend.backend"
                     label={
                         <span className="flex flex-wrap items-center gap-2">
                             {t('view.settings.history_sync.backend')}
@@ -354,6 +355,7 @@ export function SettingsHistorySyncTab() {
                         serverKey={`${settings?.apiOrigin} ${settings?.websiteOrigin}`}
                     />
                     <Field
+                        settingId="history-sync.remotesync.sync-interval"
                         label={t('view.settings.history_sync.sync_interval')}
                         description={t(
                             'view.settings.history_sync.sync_interval_description'
@@ -422,6 +424,7 @@ export function SettingsHistorySyncTab() {
                         </div>
                     </Field>
                     <Field
+                        settingId="history-sync.remotesync.pause-in-game"
                         label={t('view.settings.history_sync.pause_in_game')}
                         description={t(
                             'view.settings.history_sync.pause_in_game_description'
@@ -439,6 +442,7 @@ export function SettingsHistorySyncTab() {
                         />
                     </Field>
                     <Field
+                        settingId="history-sync.remotesync.dedupe-device"
                         label={t('view.settings.history_sync.dedupe_device')}
                         description={t(
                             'view.settings.history_sync.dedupe_device_description'
@@ -477,6 +481,7 @@ export function SettingsHistorySyncTab() {
                         </Select>
                     </Field>
                     <Field
+                        settingId="history-sync.remotesync.sync-settings"
                         label={t('view.settings.history_sync.sync_settings')}
                         description={t(
                             'view.settings.history_sync.sync_settings_description'
@@ -509,13 +514,17 @@ export function SettingsHistorySyncTab() {
                         </div>
                     </Field>
                     <Field
+                        settingId="history-sync.remotesync.setting-choices"
                         label={t('view.settings.history_sync.setting_choices')}
                     >
                         <SettingsHistorySyncSettingChoices
                             disabled={busy || !settings?.syncSettingsEnabled}
                         />
                     </Field>
-                    <Field label={t('view.settings.history_sync.api_url')}>
+                    <Field
+                        settingId="history-sync.remotesync.api-url"
+                        label={t('view.settings.history_sync.api_url')}
+                    >
                         <input
                             className="bg-background h-9 w-full rounded-md border px-3 text-sm"
                             value={apiOrigin}
@@ -525,7 +534,10 @@ export function SettingsHistorySyncTab() {
                             spellCheck={false}
                         />
                     </Field>
-                    <Field label={t('view.settings.history_sync.website_url')}>
+                    <Field
+                        settingId="history-sync.remotesync.website-url"
+                        label={t('view.settings.history_sync.website_url')}
+                    >
                         <input
                             className="bg-background h-9 w-full rounded-md border px-3 text-sm"
                             value={websiteOrigin}

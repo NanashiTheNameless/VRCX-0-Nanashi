@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::game_isolation::GameIsolationRuntime;
 use crate::log_watcher::{GameLogEvent, GameLogEventOrigin, GameLogEventSink, LogWatcher};
 use crate::{HostFileAccess, Result};
 use vrcx_0_application_activity::ActivityRouter;
@@ -82,6 +83,7 @@ impl GameLogHostActions for HostGameLogActions {
 pub struct GameLogHostRuntime {
     db: Arc<DatabaseService>,
     session: HostSessionRuntime,
+    isolation: GameIsolationRuntime,
     inner: GameLogRuntime,
 }
 
@@ -102,6 +104,7 @@ pub struct GameLogHostRuntimeDeps {
     pub instance_roster_observer: Option<Arc<dyn InstanceRosterObserver>>,
     pub backend_status: BackendRuntimeStatusPublisher,
     pub side_effect_sink: GameLogSideEffectSink,
+    pub isolation: GameIsolationRuntime,
 }
 
 impl GameLogHostRuntime {
@@ -142,6 +145,7 @@ impl GameLogHostRuntime {
         Self {
             db: deps.db,
             session: deps.session,
+            isolation: deps.isolation,
             inner,
         }
     }
@@ -225,16 +229,24 @@ impl GameLogEventSink for GameLogHostRuntime {
         cursor: vrcx_0_application_game::GameLogScanCursor,
         publish: bool,
     ) -> RuntimeResult<()> {
-        self.inner
-            .ingest_game_log_scan(events, origin, cursor, publish)
+        self.isolation.ingest_game_log(events, |events| {
+            self.inner
+                .ingest_game_log_scan(events, origin, cursor, publish)
+        })
     }
 
     fn ingest_game_log_event(&self, event: &GameLogEvent) -> RuntimeResult<()> {
-        self.inner.ingest_game_log_event(event)
+        self.isolation
+            .ingest_game_log(std::slice::from_ref(event), |events| {
+                events
+                    .iter()
+                    .try_for_each(|event| self.inner.ingest_game_log_event(event))
+            })
     }
 
     fn ingest_game_log_events(&self, events: &[GameLogEvent]) -> RuntimeResult<()> {
-        self.inner.ingest_game_log_events(events)
+        self.isolation
+            .ingest_game_log(events, |events| self.inner.ingest_game_log_events(events))
     }
 
     fn ingest_game_log_events_with_origin(
@@ -242,8 +254,10 @@ impl GameLogEventSink for GameLogHostRuntime {
         events: &[GameLogEvent],
         origin: GameLogEventOrigin,
     ) -> RuntimeResult<()> {
-        self.inner
-            .ingest_game_log_events_with_origin(events, origin)
+        self.isolation.ingest_game_log(events, |events| {
+            self.inner
+                .ingest_game_log_events_with_origin(events, origin)
+        })
     }
 }
 

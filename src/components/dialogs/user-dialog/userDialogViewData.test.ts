@@ -56,6 +56,7 @@ describe('userDialogViewData', () => {
 
     it('prepares visible list rows from remote data, search, and sort choices', () => {
         const viewData = buildUserDialogListViewData({
+            loadedTabs: {},
             profile: {
                 groups: [{ id: 'grp_profile', name: 'Profile Group' }],
                 worlds: [
@@ -145,6 +146,7 @@ describe('userDialogViewData', () => {
             effectiveAvatarReleaseStatus: UserDialogAvatarReleaseStatus
         ) =>
             buildUserDialogListViewData({
+                loadedTabs: {},
                 profile: {},
                 remoteData: {
                     avatars: [

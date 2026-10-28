@@ -36,6 +36,7 @@ export function AdoptionCensusField({
 
     return (
         <Field
+            settingId="advanced.adoption-census.enabled"
             label={t('view.settings.advanced.adoption_census.label')}
             description={
                 lock

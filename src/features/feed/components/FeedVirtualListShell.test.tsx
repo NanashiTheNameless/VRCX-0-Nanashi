@@ -58,12 +58,15 @@ const row: FeedRow = {
 };
 
 const table = {
-    getColumn: () => ({ getSize: () => 120 }),
+    getColumn: (id: string) => ({ id, getSize: () => 120 }),
     getHeaderGroups: () => [{ headers: [] }]
 } as unknown as FeedTableInstance;
 
+const onlyType = vi.fn();
+
 const props = {
     actions,
+    filterCommands: { onlyType },
     favoritesOnly: false,
     friendLogNamesById: {},
     hasMore: false,
@@ -167,5 +170,24 @@ describe('FeedVirtualListShell', () => {
             })
         );
         expect(onReloadLatest).toHaveBeenCalledOnce();
+    });
+
+    it('offers type filters from the row context menu', async () => {
+        const view = render(<FeedVirtualListShell {...props} />);
+        const summary = view.container.querySelector(
+            '[data-feed-list-summary]'
+        );
+        if (!summary) {
+            throw new Error('missing summary row');
+        }
+
+        fireEvent.contextMenu(summary);
+        fireEvent.click(
+            await screen.findByRole('menuitem', {
+                name: 'table.filter_action.only_type'
+            })
+        );
+
+        expect(onlyType).toHaveBeenCalledWith('Status');
     });
 });

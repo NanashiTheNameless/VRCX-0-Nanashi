@@ -57,7 +57,6 @@ type FeedColumnPaneProps = {
         listeners?: NonNullable<ReturnType<typeof useSortable>['listeners']>;
     };
     loadingPreviousInstancesKey: string;
-    nowMs: number;
     onDelete(columnId: string): void;
     onEdit(columnId: string): void;
     onOpenPreviousInstances(payload?: FeedLocationActionPayload): void;
@@ -150,6 +149,7 @@ function useColumnViewport(
     const viewportRef = useRef<HTMLDivElement | null>(null);
     const previousRowsRef = useRef<FeedRow[]>(rows);
     const [viewport, setViewport] = useState({ height: 0, scrollTop: 0 });
+    const [newCount, setNewCount] = useState(0);
     const totalHeight = rows.length * itemStep;
 
     useLayoutEffect(() => {
@@ -172,6 +172,9 @@ function useColumnViewport(
         if (nextIndex < 0 || nextIndex === previousIndex) {
             return;
         }
+        if (nextIndex > previousIndex) {
+            setNewCount((current) => current + nextIndex - previousIndex);
+        }
         const offset = element.scrollTop - previousIndex * itemStep;
         element.scrollTop = nextIndex * itemStep + offset;
     }, [itemStep, rows]);
@@ -188,6 +191,9 @@ function useColumnViewport(
             }
             frameId = requestAnimationFrame(() => {
                 frameId = 0;
+                if (element.scrollTop <= itemStep) {
+                    setNewCount((current) => (current === 0 ? current : 0));
+                }
                 setViewport({
                     height: element.clientHeight,
                     scrollTop: element.scrollTop
@@ -209,7 +215,7 @@ function useColumnViewport(
             observer?.disconnect();
             element.removeEventListener('scroll', updateViewport);
         };
-    }, []);
+    }, [itemStep]);
 
     useEffect(() => {
         if (!viewport.height || !rows.length) {
@@ -258,6 +264,7 @@ function useColumnViewport(
     };
 
     return {
+        newCount,
         scrollToLatest,
         showLatestButton: viewport.scrollTop > itemStep,
         totalHeight,
@@ -272,7 +279,6 @@ export function FeedColumnPane({
     densityConfig,
     dragHandleProps,
     loadingPreviousInstancesKey,
-    nowMs,
     onDelete,
     onEdit,
     onOpenPreviousInstances,
@@ -296,6 +302,7 @@ export function FeedColumnPane({
     );
     const newRowKeys = useFeedNewTopRowKeys(rows, columnRowsResetKey);
     const {
+        newCount,
         scrollToLatest,
         showLatestButton,
         totalHeight,
@@ -432,7 +439,11 @@ export function FeedColumnPane({
                         onClick={scrollToLatest}
                     >
                         <ArrowUpToLineIcon data-icon="inline-start" />
-                        {t('view.feed.columns.latest')}
+                        {newCount > 0
+                            ? t('table.label.new_items_count', {
+                                  count: newCount
+                              })
+                            : t('view.feed.columns.latest')}
                     </Button>
                 ) : null}
                 <div
@@ -468,7 +479,6 @@ export function FeedColumnPane({
                                             loadingPreviousInstancesKey
                                         }
                                         densityConfig={densityConfig}
-                                        nowMs={nowMs}
                                         onOpenPreviousInstances={
                                             onOpenPreviousInstances
                                         }

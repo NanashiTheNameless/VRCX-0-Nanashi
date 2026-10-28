@@ -34,6 +34,7 @@ type SettingId =
 
 export type NumberSetting = {
     id: SettingId;
+    settingId: string;
     key: string;
     min: number;
     max: number;
@@ -45,9 +46,17 @@ const OFFSET_CM = { min: -50, max: 50, unit: 'cm' } as const;
 
 // Mirrors load_runtime_config in crates/overlay-runtime/src/config.rs.
 const NUMBER_SETTINGS: NumberSetting[] = [
-    { id: 'width', key: 'wristOverlayWidthCm', min: 10, max: 80, unit: 'cm' },
+    {
+        id: 'width',
+        settingId: 'vr.wrist.width',
+        key: 'wristOverlayWidthCm',
+        min: 10,
+        max: 80,
+        unit: 'cm'
+    },
     {
         id: 'height',
+        settingId: 'vr.wrist.height',
         key: 'wristOverlayMaxHeightCm',
         min: 10,
         max: 160,
@@ -55,24 +64,43 @@ const NUMBER_SETTINGS: NumberSetting[] = [
     },
     {
         id: 'header_text',
+        settingId: 'vr.wrist.header-text',
         key: 'wristOverlayHeaderTextPercent',
         ...TEXT_PERCENT
     },
     {
         id: 'footer_text',
+        settingId: 'vr.wrist.footer-text',
         key: 'wristOverlayFooterTextPercent',
         ...TEXT_PERCENT
     },
     {
         id: 'content_text',
+        settingId: 'vr.wrist.content-text',
         key: 'wristOverlayContentTextPercent',
         ...TEXT_PERCENT
     },
-    { id: 'side', key: 'wristOverlayOffsetSideCm', ...OFFSET_CM },
-    { id: 'up', key: 'wristOverlayOffsetUpCm', ...OFFSET_CM },
-    { id: 'out', key: 'wristOverlayOffsetOutCm', ...OFFSET_CM },
+    {
+        id: 'side',
+        settingId: 'vr.wrist.offset-side',
+        key: 'wristOverlayOffsetSideCm',
+        ...OFFSET_CM
+    },
+    {
+        id: 'up',
+        settingId: 'vr.wrist.offset-up',
+        key: 'wristOverlayOffsetUpCm',
+        ...OFFSET_CM
+    },
+    {
+        id: 'out',
+        settingId: 'vr.wrist.offset-out',
+        key: 'wristOverlayOffsetOutCm',
+        ...OFFSET_CM
+    },
     {
         id: 'tilt',
+        settingId: 'vr.wrist.tilt',
         key: 'wristOverlayTiltDegrees',
         min: -90,
         max: 90,
@@ -82,13 +110,24 @@ const NUMBER_SETTINGS: NumberSetting[] = [
 
 const HMD_TEXT_SETTING: NumberSetting = {
     id: 'content_text',
+    settingId: 'vr.hmd.text-size',
     key: 'hmdNotificationTextPercent',
     ...TEXT_PERCENT
 };
 
 export const HMD_OFFSET_SETTINGS: NumberSetting[] = [
-    { id: 'side', key: 'hmdNotificationOffsetSideCm', ...OFFSET_CM },
-    { id: 'up', key: 'hmdNotificationOffsetUpCm', ...OFFSET_CM }
+    {
+        id: 'side',
+        settingId: 'vr.hmd.offset-side',
+        key: 'hmdNotificationOffsetSideCm',
+        ...OFFSET_CM
+    },
+    {
+        id: 'up',
+        settingId: 'vr.hmd.offset-up',
+        key: 'hmdNotificationOffsetUpCm',
+        ...OFFSET_CM
+    }
 ];
 
 type NumberValues = Record<SettingId, number>;
@@ -163,7 +202,12 @@ function NumberSliderField({
 }) {
     const { t } = useTranslation();
     return (
-        <Field label={label} description={description} disabled={disabled}>
+        <Field
+            settingId={setting.settingId}
+            label={label}
+            description={description}
+            disabled={disabled}
+        >
             <div className="flex w-56 max-w-full items-center justify-end gap-3">
                 <Slider
                     value={[value]}
@@ -281,6 +325,7 @@ export function SettingsWristPlacementFields({
             ))}
 
             <Field
+                settingId="vr.wrist.anchor"
                 label={t(`${P}.anchor`)}
                 description={t(`${P}.anchor_description`)}
                 controlId="settings-wrist-overlay-anchor"
@@ -317,7 +362,11 @@ export function SettingsWristPlacementFields({
                 </Select>
             </Field>
 
-            <Field label={t(`${P}.reset`)} disabled={disabled}>
+            <Field
+                settingId="vr.wrist.reset-placement"
+                label={t(`${P}.reset`)}
+                disabled={disabled}
+            >
                 <Button
                     type="button"
                     variant="outline"

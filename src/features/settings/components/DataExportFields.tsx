@@ -97,6 +97,7 @@ export function DataExportFields() {
     return (
         <>
             <Field
+                settingId="advanced.data-export.export"
                 label={t(`${P}.export_label`)}
                 description={t(`${P}.export_description`)}
             >
@@ -113,6 +114,7 @@ export function DataExportFields() {
                 </Button>
             </Field>
             <Field
+                settingId="advanced.data-export.import"
                 label={t(`${P}.import_label`)}
                 description={t(`${P}.import_description`)}
             >

@@ -347,6 +347,7 @@ export function formatRelativeTimeWithPreferences(
     preferences: DateTimeFormatPreferences & {
         nowMs?: number;
         style?: Intl.RelativeTimeFormatStyle;
+        minUnit?: 'second' | 'minute';
     } = {}
 ) {
     if (!value) {
@@ -375,7 +376,10 @@ export function formatRelativeTimeWithPreferences(
     const [unit, unitSeconds] =
         units.find(([, seconds]) => absSeconds >= seconds) ||
         units[units.length - 1];
-    const amount = Math.round(diffSeconds / unitSeconds);
+    const amount =
+        preferences.minUnit === 'minute' && unit === 'second'
+            ? 0
+            : Math.round(diffSeconds / unitSeconds);
     const locale = normalizeDateLocale(
         preferences.appLocale || preferences.dateCulture
     );

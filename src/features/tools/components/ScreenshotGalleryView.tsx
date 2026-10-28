@@ -15,14 +15,11 @@ import { ToolbarViewMenu } from '@/components/layout/ToolbarControls';
 import { WorkspaceResizeHandle } from '@/components/layout/WorkspaceResizeHandle';
 import {
     readScreenshotGridDensity,
-    readScreenshotGridSort,
     sanitizeScreenshotGridDensity,
     sanitizeScreenshotGridSort,
     SCREENSHOT_GRID_DENSITY_OPTIONS,
     SCREENSHOT_GRID_SORT_OPTIONS,
-    sortScreenshotGridImages,
     writeScreenshotGridDensity,
-    writeScreenshotGridSort,
     type ScreenshotGridDensity,
     type ScreenshotGridSort
 } from '@/components/media/screenshotGridPreferences';
@@ -320,6 +317,8 @@ function ScreenshotGalleryGrid({
     density,
     error,
     initialScrollTop,
+    revealPath,
+    onRevealPathConsumed,
     images,
     isLoading,
     selectedFolder,
@@ -333,6 +332,8 @@ function ScreenshotGalleryGrid({
     density: ScreenshotGridDensity;
     error: string;
     initialScrollTop: number;
+    revealPath: string;
+    onRevealPathConsumed: () => void;
     images: ScreenshotLibraryImage[];
     isLoading: boolean;
     selectedFolder: string;
@@ -391,6 +392,8 @@ function ScreenshotGalleryGrid({
             images={images}
             initialScrollTop={initialScrollTop}
             resetKey={selectedFolder}
+            revealPath={revealPath}
+            onRevealPathConsumed={onRevealPathConsumed}
             hasSelection={hasSelection}
             selectedKeysSet={selectedKeysSet}
             onOpen={onOpen}
@@ -505,9 +508,13 @@ export function ScreenshotGalleryView({
     onScrollPositionChange,
     isDeleteRunning,
     restoreScrollTop,
+    revealPath = '',
+    onRevealPathConsumed = () => {},
     selection,
     onExportSelection,
-    favorites
+    favorites,
+    sort,
+    onSortChange
 }: {
     folderTree: ScreenshotFolderTree | null;
     images: ScreenshotLibraryImage[];
@@ -523,9 +530,13 @@ export function ScreenshotGalleryView({
     onScrollPositionChange: (folder: string, scrollTop: number) => void;
     isDeleteRunning: boolean;
     restoreScrollTop: number;
+    revealPath?: string;
+    onRevealPathConsumed?: () => void;
     selection: ScreenshotBrowseSelection;
     onExportSelection: (paths: string[], groupByFolder: boolean) => void;
     favorites: ScreenshotGalleryFavorites;
+    sort: ScreenshotGridSort;
+    onSortChange: (value: ScreenshotGridSort) => void;
 }) {
     const { t } = useTranslation();
     const isFavoritesFolder = selectedFolder === SCREENSHOT_FAVORITES_FOLDER;
@@ -534,11 +545,6 @@ export function ScreenshotGalleryView({
         panelIds: SCREENSHOT_GALLERY_PANEL_IDS
     });
     const [density, setDensity] = useState(readScreenshotGridDensity);
-    const [sort, setSort] = useState(readScreenshotGridSort);
-    const sortedImages = useMemo(
-        () => sortScreenshotGridImages(images, sort),
-        [images, sort]
-    );
     const root = useMemo(() => buildFolderTree(folderTree), [folderTree]);
     const activeFolder =
         folderTree?.folders.find((folder) => folder.path === selectedFolder) ||
@@ -561,11 +567,6 @@ export function ScreenshotGalleryView({
     function onDensityChange(next: ScreenshotGridDensity) {
         setDensity(next);
         writeScreenshotGridDensity(next);
-    }
-
-    function onSortChange(next: ScreenshotGridSort) {
-        setSort(next);
-        writeScreenshotGridSort(next);
     }
 
     return (
@@ -765,7 +766,9 @@ export function ScreenshotGalleryView({
                     density={density}
                     error={error}
                     initialScrollTop={restoreScrollTop}
-                    images={sortedImages}
+                    revealPath={revealPath}
+                    onRevealPathConsumed={onRevealPathConsumed}
+                    images={images}
                     isLoading={isImagesLoading}
                     selectedFolder={selectedFolder}
                     hasSelection={selection.hasSelection}

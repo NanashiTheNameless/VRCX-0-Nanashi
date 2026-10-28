@@ -147,6 +147,7 @@ export function formatRelativeTime(
     preferences: DateTimeFormatPreferences & {
         nowMs?: number;
         style?: Intl.RelativeTimeFormatStyle;
+        minUnit?: 'second' | 'minute';
     } = {}
 ) {
     return formatRelativeTimeWithPreferences(

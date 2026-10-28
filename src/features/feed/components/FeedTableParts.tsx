@@ -11,6 +11,10 @@ import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { DataTableSortButton } from '@/components/data-table/DataTableSortButton';
+import {
+    LogFilterMenuItems,
+    type LogFilterCommands
+} from '@/components/data-table/LogFilterContextMenu';
 import { FeedDetailCell } from '@/components/feed/FeedDetailCell';
 import {
     canRequestInviteFromFeedFriend,
@@ -92,6 +96,7 @@ function FeedUserLink({
     avatarSize = 28,
     cachedDisplayName = '',
     className = '',
+    filterCommands,
     row,
     showAvatar = false
 }: {
@@ -99,6 +104,7 @@ function FeedUserLink({
     avatarSize?: number;
     cachedDisplayName?: string;
     className?: string;
+    filterCommands?: LogFilterCommands;
     row: FeedRow;
     showAvatar?: boolean;
 }) {
@@ -372,6 +378,10 @@ function FeedUserLink({
                         {t('dialog.user.info.copy_display_name')}
                     </ContextMenuItem>
                 </ContextMenuGroup>
+                <LogFilterMenuItems
+                    commands={filterCommands}
+                    target={{ userId, userName: userLabel }}
+                />
             </ContextMenuContent>
         </ContextMenu>
     );

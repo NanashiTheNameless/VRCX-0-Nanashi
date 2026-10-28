@@ -81,6 +81,7 @@ function UserCell({ row, table }: AppCellContext<FeedRow>) {
             cachedDisplayName={
                 meta.friendLogNamesById[resolveFeedUserId(row.original)]
             }
+            filterCommands={meta.filterCommands}
             row={row.original}
         />
     );
@@ -94,6 +95,7 @@ function DetailCell({ row, table }: AppCellContext<FeedRow>) {
 
     return (
         <FeedDetailCell
+            filterCommands={meta.filterCommands}
             loadingHistoryKey={meta.loadingPreviousInstancesKey}
             onNewInstance={meta.actions.openFeedNewInstance}
             onOpenPreviousInstances={meta.onOpenPreviousInstances}

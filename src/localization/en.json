@@ -173,7 +173,10 @@
         "in_private_world": "In a private world",
         "mutual_friends": "{count} mutual friends",
         "no_mutual_friends": "No mutual friends",
-        "name_separator": ", "
+        "name_separator": ", ",
+        "open_world": "Open world",
+        "unknown_user": "Unknown user",
+        "load_failed": "Couldn't load this profile"
     },
     "group_event_hover_card": {
         "following": "Following",
@@ -574,7 +577,8 @@
             "view_options": "View options",
             "cut": "Cut",
             "paste": "Paste",
-            "select_all": "Select all"
+            "select_all": "Select all",
+            "more_actions": "More actions"
         },
         "sort_by": "Sort by:",
         "time_units": {
@@ -691,6 +695,29 @@
             "show": "Bring to Front"
         }
     },
+    "game_isolation": {
+        "confirm_title": "Turn on Game Isolation?",
+        "active_title": "Game Isolation is on",
+        "summary": "This account isn't the one playing VRChat on this PC.",
+        "effect_game_log": "Game Log isn't recorded",
+        "effect_presence": "Your location and status come from VRChat's servers only",
+        "effect_vr": "VR overlay, XSOverlay, OVR Toolkit, and Text-to-Speech are turned off",
+        "effect_automation": "Game-based automation, Discord status, screenshot info, and crash relaunch are turned off",
+        "unchanged": "Desktop notifications and the Desktop Overlay keep working.",
+        "hint_before_launch": "Turn it on before launching VRChat. Also recommended when running more than one game client.",
+        "hint_running_enable": "VRChat is running: the current room is still recorded, and recording stops from the next room.",
+        "hint_running_active": "VRChat is running: after you turn it off, recording resumes from the next room.",
+        "cancel": "Cancel",
+        "confirm": "Turn on",
+        "close": "Close",
+        "turn_off": "Turn off Game Isolation",
+        "toast_on": "Game Isolation turned on",
+        "toast_off": "Game Isolation turned off",
+        "toast_off_running": "Game Isolation turned off · Recording resumes from the next room",
+        "failed": "Couldn't change Game Isolation",
+        "badge": "Isolated",
+        "menu_item": "Game Isolation…"
+    },
     "nativeShell": {
         "tray": {
             "open": "Open VRCX-0-Nanashi",
@@ -701,6 +728,7 @@
             "doNotDisturbThreeHours": "3 hours",
             "doNotDisturbUntilStopped": "Until turned off",
             "doNotDisturbTurnOff": "Turn off",
+            "gameIsolation": "Game Isolation",
             "rebuildUi": "Reload UI",
             "sidebarMode": "Sidebar Mode",
             "disableTheme": "Disable Theme",
@@ -992,7 +1020,10 @@
         "navigation_items": "Open navigation item 1–9",
         "hold_for_hints": "Show shortcut hints (hold)",
         "toggle_details": "Show / hide details",
-        "clear_selection": "Clear selection"
+        "clear_selection": "Clear selection",
+        "toggle_theme_safe_mode": "Temporarily disable community themes",
+        "theme_safe_mode_on": "Community themes disabled for this session",
+        "theme_safe_mode_off": "Community themes restored"
     },
     "privacy_lock": {
         "locked_title": "Locked",
@@ -1182,7 +1213,8 @@
             "group_system": "System",
             "tab_friend": "Friend",
             "no_new_notifications": "No new notifications in the past 24 hours",
-            "no_unseen_notifications": "No unread notifications"
+            "no_unseen_notifications": "No unread notifications",
+            "title_with_count": "Notifications, {count} unread"
         },
         "success": {
             "vrchat_launch_request_sent": "Opened in VRChat",
@@ -1410,7 +1442,10 @@
                 "expand_session": "Expand session",
                 "collapse_session": "Collapse session",
                 "expand_all": "Expand all",
-                "collapse_all": "Collapse all"
+                "collapse_all": "Collapse all",
+                "players_count": "{count} players",
+                "videos_count": "{count} videos",
+                "latest": "Latest"
             },
             "label": {
                 "sessions": "Sessions",
@@ -1987,7 +2022,12 @@
                     "group": "Groups",
                     "moderation": "Moderation",
                     "other": "Other"
-                }
+                },
+                "pending_count": "{count} new notifications",
+                "new_this_session": "New this session",
+                "expires_in": "Expires {time}",
+                "action_all_done": "All caught up",
+                "action_all_done_description": "Nothing needs your response right now."
             },
             "responses": {
                 "acknowledge_and_dismiss": "Dismiss",
@@ -3363,6 +3403,8 @@
                     "date_format": "Date Format",
                     "date_format_description": "How dates and times are shown throughout the app. Time Format controls 12 or 24 hour clocks.",
                     "date_format_locale": "Language default",
+                    "time_zone": "Timezone",
+                    "time_zone_description": "Use an IANA timezone or a fixed UTC offset. Leave blank to follow the system timezone. This setting applies to this PC.",
                     "force_iso_date_format": "Force ISO Date Format",
                     "week_starts_on": "Week Starts On",
                     "week_starts_on_description": "Choose the first day of the week. Affects calendars, charts, and activity views.",
@@ -4124,6 +4166,17 @@
             "restart_pending": {
                 "description": "Some changes take effect after VRCX-0 restarts.",
                 "restart_now": "Restart now"
+            },
+            "field": {
+                "modified": "Modified",
+                "reset": "Reset",
+                "restart_required": "Restart required",
+                "requires_parent": "Turn on “{name}” first"
+            },
+            "search": {
+                "placeholder": "Search settings",
+                "results": "Settings search results",
+                "no_results": "No matching settings"
             }
         },
         "dashboard": {
@@ -4431,7 +4484,10 @@
                 "accept_friend_request": "Accept friend request",
                 "decline_notification": "Decline notification",
                 "decline": "Decline",
-                "send_invite": "Send invite"
+                "send_invite": "Send invite",
+                "accept_friend_request_consequence": "They will be added to your friends list.",
+                "decline_notification_consequence": "The notification will be removed on VRChat.",
+                "send_invite_consequence": "The invite goes to the instance you are in now."
             },
             "dynamic": {
                 "accept_the_friend_request_from_value": "Accept the friend request from {value}?",
@@ -4446,7 +4502,8 @@
             },
             "status": {
                 "active": "Active",
-                "installed": "Installed"
+                "installed": "Installed",
+                "tested_with_older": "Tested with {version}; may not look right on this version"
             },
             "field": {
                 "name": "Name",
@@ -5260,6 +5317,28 @@
                 "issue_clear_days": "Days until cleared",
                 "sanctions": "Sanctions",
                 "load_failed": "Couldn't load account standing"
+            },
+            "relationship": {
+                "friend": "Friend",
+                "request_received": "Friend request received",
+                "request_sent": "Friend request sent",
+                "avatar_hidden": "Avatar hidden",
+                "interaction_off": "Avatar interaction off",
+                "chatbox_muted": "Chatbox muted"
+            },
+            "friend_request": {
+                "incoming_banner": "Sent you a friend request"
+            },
+            "consequence": {
+                "block_on": "You and {name} won't be able to see or hear each other in VRChat.",
+                "block_off": "You and {name} will be able to see and hear each other in VRChat again.",
+                "mute_on": "You won't hear {name}'s voice in VRChat.",
+                "mute_off": "You'll hear {name}'s voice in VRChat again.",
+                "interactOff_on": "{name} won't be able to interact with your avatar in VRChat.",
+                "interactOff_off": "{name} will be able to interact with your avatar in VRChat again.",
+                "muteChat_on": "You won't see {name}'s chatbox messages in VRChat.",
+                "muteChat_off": "You'll see {name}'s chatbox messages in VRChat again.",
+                "unfriend": "{name} will be removed from your friends list. To be friends again, one of you will need to send a new friend request."
             }
         },
         "world": {
@@ -7489,13 +7568,28 @@
             "table_layout": "Table layout",
             "columns": "Columns",
             "lock_column_order": "Lock column order",
-            "unlock_column_order": "Unlock column order"
+            "unlock_column_order": "Unlock column order",
+            "new_items_count": "{count} new"
         },
         "action": {
-            "reset_columns": "Reset columns"
+            "reset_columns": "Reset columns",
+            "sort_ascending": "Sort ascending",
+            "sort_descending": "Sort descending",
+            "clear_sort": "Clear sorting",
+            "hide_column": "Hide column",
+            "move_column_left": "Move left",
+            "move_column_right": "Move right"
         },
         "empty": {
             "no_rows_yet": "No entries yet."
+        },
+        "filter_action": {
+            "label": "Filter",
+            "only_user": "Only show {value}",
+            "add_user_to_scope": "Add {value} to the filter",
+            "only_type": "Only show {value}",
+            "exclude_type": "Hide {value}",
+            "only_world": "Only show {value}"
         }
     },
     "accessibility": {
@@ -7520,7 +7614,8 @@
         "open_player": "Open player profile: {player}",
         "player": "player",
         "remove_value": "Remove {value}",
-        "add_table_page_size": "Add table page size"
+        "add_table_page_size": "Add table page size",
+        "column_width_value": "{value} pixels"
     },
     "status_bar": {
         "do_not_disturb": "Do Not Disturb",
@@ -7530,6 +7625,8 @@
         "do_not_disturb_three_hours": "For 3 hours",
         "do_not_disturb_until_stopped": "Until I turn it off",
         "do_not_disturb_turn_off": "Turn off Do Not Disturb",
+        "game_isolation": "Game Isolation",
+        "game_isolation_active": "Game Isolation is on · Click to turn off",
         "do_not_disturb_failed": "Failed to update Do Not Disturb",
         "world_collection_importing": "Importing world collection ({progress}/{total})",
         "game": "Game",

@@ -15,6 +15,7 @@ import { Spinner } from '@/ui/shadcn/spinner';
 import { Switch } from '@/ui/shadcn/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
+import { SETTINGS_DEFAULT_VALUES } from '../../settingsFieldState';
 import { DeepLinkRegistrationField } from '../DeepLinkRegistrationField';
 import { SettingsCard } from '../SettingsCard';
 import { Field, JsonTreeView, SettingsSectionHeading } from '../SettingsField';
@@ -65,6 +66,7 @@ function DeepLinkSchemeToggles() {
     return (
         <>
             <Field
+                settingId="advanced.troubleshooting.deep-link-upstream"
                 label={t('view.settings.deep_link_schemes.upstream')}
                 description={t(
                     'view.settings.deep_link_schemes.upstream_description'
@@ -78,6 +80,7 @@ function DeepLinkSchemeToggles() {
                 />
             </Field>
             <Field
+                settingId="advanced.troubleshooting.deep-link-legacy"
                 label={t('view.settings.deep_link_schemes.legacy')}
                 description={t(
                     'view.settings.deep_link_schemes.legacy_description'
@@ -213,6 +216,7 @@ export function AdvancedTroubleshootingGroup({
                 title={t('view.settings.general.logging.header')}
             />
             <Field
+                settingId="advanced.troubleshooting.error-log"
                 label={t('view.settings.general.logging.error_log')}
                 description={t(
                     'view.settings.general.logging.error_log_description'
@@ -238,6 +242,12 @@ export function AdvancedTroubleshootingGroup({
                 </Button>
             </Field>
             <Field
+                settingId="advanced.troubleshooting.udon-exception-logging"
+                onReset={() =>
+                    onUdonExceptionLoggingChange(
+                        SETTINGS_DEFAULT_VALUES.udonExceptionLogging
+                    )
+                }
                 label={t(
                     'view.settings.advanced.advanced.cache_debug.udon_exception_logging'
                 )}
@@ -247,7 +257,15 @@ export function AdvancedTroubleshootingGroup({
                     onCheckedChange={onUdonExceptionLoggingChange}
                 />
             </Field>
-            <Field label={t('view.settings.general.logging.resource_load')}>
+            <Field
+                settingId="advanced.troubleshooting.resource-load-logging"
+                onReset={() =>
+                    onLogResourceLoadChange(
+                        SETTINGS_DEFAULT_VALUES.logResourceLoad
+                    )
+                }
+                label={t('view.settings.general.logging.resource_load')}
+            >
                 <Switch
                     checked={prefs.logResourceLoad}
                     onCheckedChange={onLogResourceLoadChange}
@@ -262,6 +280,7 @@ export function AdvancedTroubleshootingGroup({
             {/* Fork: the scheme toggles have no effect on Linux, so hide them. */}
             {hostPlatform !== 'linux' ? <DeepLinkSchemeToggles /> : null}
             <Field
+                settingId="advanced.troubleshooting.database-usage"
                 label={t(
                     'view.settings.advanced.advanced_ui.troubleshooting.database_usage'
                 )}
@@ -290,6 +309,7 @@ export function AdvancedTroubleshootingGroup({
                 </div>
             ) : null}
             <Field
+                settingId="advanced.troubleshooting.online-users"
                 label={t(
                     'view.settings.advanced.advanced_ui.troubleshooting.online_users'
                 )}
@@ -319,6 +339,7 @@ export function AdvancedTroubleshootingGroup({
                 </div>
             </Field>
             <Field
+                settingId="advanced.troubleshooting.vrchat-config"
                 label={t(
                     'view.settings.advanced.advanced_ui.troubleshooting.vrchat_config'
                 )}

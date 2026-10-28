@@ -1034,3 +1034,65 @@ async fn players_already_present_are_warned_once_without_actions() {
         .count();
     assert_eq!(warnings, 2);
 }
+
+struct IsolatedGameLog {
+    isolation: crate::game_isolation::GameIsolationRuntime,
+    recorded: Mutex<usize>,
+}
+impl GameLogEventSink for IsolatedGameLog {
+    fn ingest_game_log_event(&self, event: &GameLogEvent) -> vrcx_0_application_core::Result<()> {
+        self.ingest_game_log_events_with_origin(
+            std::slice::from_ref(event),
+            GameLogEventOrigin::Live,
+        )
+    }
+    fn ingest_game_log_events_with_origin(
+        &self,
+        events: &[GameLogEvent],
+        _: GameLogEventOrigin,
+    ) -> vrcx_0_application_core::Result<()> {
+        self.isolation.ingest_game_log(events, |events| {
+            *self.recorded.lock().unwrap() += events.len();
+            Ok(())
+        })
+    }
+}
+
+#[test]
+fn watchlists_keep_checking_players_while_game_isolation_drops_the_game_log() {
+    let mut f = Fixture::new();
+    let (_dir, config) = crate::notification::test_support::test_config("safety-isolation");
+    let isolation = crate::game_isolation::GameIsolationRuntime::new(
+        config,
+        vrcx_0_application_core::RuntimeEventBus::new(),
+        crate::RuntimeHost::new(),
+    )
+    .unwrap();
+    isolation.set_enabled(true).unwrap();
+    let inner = Arc::new(IsolatedGameLog {
+        isolation,
+        recorded: Mutex::new(0),
+    });
+    let sink = SafetyLogSink {
+        inner: inner.clone(),
+        safety: Arc::clone(&f.runtime),
+    };
+
+    for kind in [
+        GameLogEventKind::Location {
+            location: "wrld_alt:1".into(),
+            world_name: String::new(),
+        },
+        join(),
+    ] {
+        sink.ingest_game_log_event(&GameLogEvent {
+            file_name: "output_log.txt".into(),
+            created_at: now(),
+            kind,
+        })
+        .unwrap();
+    }
+
+    assert_eq!(*inner.recorded.lock().unwrap(), 0);
+    assert_eq!(f.receiver.try_recv().unwrap().user_id, USER);
+}

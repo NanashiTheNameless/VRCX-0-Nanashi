@@ -141,6 +141,7 @@ export function SettingsYtdlpCard() {
                 <>
                     {!status.supported && <p>{t(`${P}.unsupported`)}</p>}
                     <Field
+                        settingId="advanced.ytdlp.enabled"
                         label={t(`${P}.enable`)}
                         description={t(`${P}.enable_description`)}
                     >
@@ -154,6 +155,7 @@ export function SettingsYtdlpCard() {
                         />
                     </Field>
                     <Field
+                        settingId="advanced.ytdlp.tools"
                         label={t(`${P}.tools`)}
                         description={t(`${P}.tools_help`)}
                     >
@@ -170,6 +172,7 @@ export function SettingsYtdlpCard() {
                         />
                     </Field>
                     <Field
+                        settingId="advanced.ytdlp.cookies"
                         label={t(`${P}.cookies`)}
                         description={t(`${P}.cookies_opt_in`)}
                     >

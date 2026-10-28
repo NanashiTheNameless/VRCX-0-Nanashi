@@ -1,4 +1,3 @@
-import type { TFunction } from 'i18next';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { setDisplayTimeZone } from '@/shared/utils/displayTimeZone';
@@ -11,7 +10,6 @@ import {
 } from './feedTimeDisplay';
 
 const BASE_TIME = new Date('2026-06-04T09:20:02Z').getTime();
-const translate = ((key: string) => key) as TFunction;
 
 describe('feedTimeDisplay', () => {
     afterEach(() => setDisplayTimeZone(''));
@@ -27,13 +25,20 @@ describe('feedTimeDisplay', () => {
     });
 
     it('formats relative feed time with the app locale', () => {
-        expect(
-            formatFeedRelativeTime('2026-06-04T07:20:02', BASE_TIME, translate)
-        ).toBe(
+        expect(formatFeedRelativeTime('2026-06-04T07:20:02', BASE_TIME)).toBe(
             new Intl.RelativeTimeFormat('zh-CN', {
                 numeric: 'auto',
                 style: 'short'
             }).format(-2, 'hour')
+        );
+    });
+
+    it('collapses relative feed time under one minute to now', () => {
+        expect(formatFeedRelativeTime('2026-06-04T09:19:20', BASE_TIME)).toBe(
+            new Intl.RelativeTimeFormat('zh-CN', {
+                numeric: 'auto',
+                style: 'short'
+            }).format(0, 'second')
         );
     });
 
@@ -48,7 +53,6 @@ describe('feedTimeDisplay', () => {
             resolveFeedColumnTimeDisplay({
                 mode: 'exact',
                 nowMs: BASE_TIME,
-                t: translate,
                 value: '2026-06-04T07:20:02'
             }).label
         ).toBe('7:20');
@@ -59,7 +63,6 @@ describe('feedTimeDisplay', () => {
             resolveFeedColumnTimeDisplay({
                 mode: 'exact',
                 nowMs: BASE_TIME,
-                t: translate,
                 value: '2026-06-03T07:20:02'
             }).label
         ).toBe('2026年6月3日 7:20');
@@ -72,7 +75,6 @@ describe('feedTimeDisplay', () => {
             resolveFeedColumnTimeDisplay({
                 mode: 'exact',
                 nowMs: BASE_TIME,
-                t: translate,
                 value: '2026-06-03T19:20:02'
             }).label
         ).toBe('07:20:02 PM 06/03/26');
@@ -80,7 +82,6 @@ describe('feedTimeDisplay', () => {
             resolveFeedColumnTimeDisplay({
                 mode: 'exact',
                 nowMs: BASE_TIME,
-                t: translate,
                 value: '2026-06-04T07:20:02'
             }).label
         ).toBe('07:20:02 AM');

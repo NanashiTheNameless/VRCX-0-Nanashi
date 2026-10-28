@@ -44,6 +44,7 @@ export function SettingsSelfHostedRecorderCard({
                 {t('view.settings.history_sync.recorder_not_preferred')}
             </p>
             <Field
+                settingId="history-sync.recorder.status"
                 label={t('view.settings.history_sync.recorder_status')}
                 description={
                     blocked

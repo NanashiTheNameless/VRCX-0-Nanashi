@@ -7,6 +7,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useMinuteNowMs } from '@/lib/useMinuteNowMs';
 import { cn } from '@/lib/utils';
 import type { NotificationRow } from '@/repositories/notificationPersistenceRepository';
 import { getDismissResponse } from '@/shared/utils/notificationResponse';
@@ -36,6 +37,7 @@ import {
     NotificationPersonAvatar
 } from '../components/NotificationRowParts';
 import { NotificationText } from '../components/NotificationText';
+import { useNotificationActionPending } from '../notificationActionPending';
 import {
     formatNotificationTime,
     getNotificationMessage,
@@ -104,9 +106,11 @@ export function NotificationDrawerRow({
     notification: NotificationRow;
 }) {
     const { t } = useTranslation();
+    const actionPending = useNotificationActionPending(notification);
     const rawMessage = String(getNotificationMessage(notification) || '');
     const typeLabel = getNotificationTypeLabel(notification, t);
-    const relativeTime = getNotificationRelativeTime(notification);
+    const nowMs = useMinuteNowMs();
+    const relativeTime = getNotificationRelativeTime(notification, nowMs);
     const absoluteTime =
         getNotificationAbsoluteTime(notification) ||
         formatNotificationTime(notification);
@@ -454,11 +458,18 @@ export function NotificationDrawerRow({
                                     {isQueueReady ||
                                     inlineActions.length > 0 ? (
                                         <div
+                                            aria-busy={
+                                                actionPending || undefined
+                                            }
                                             className={cn(
                                                 'flex shrink-0 items-center gap-1.5',
-                                                NOTIFICATION_ROW_HOVER_REVEAL
+                                                !actionPending &&
+                                                    NOTIFICATION_ROW_HOVER_REVEAL
                                             )}
                                         >
+                                            {actionPending ? (
+                                                <Spinner className="text-muted-foreground size-3.5" />
+                                            ) : null}
                                             {isQueueReady ? (
                                                 <Button
                                                     type="button"
@@ -491,6 +502,7 @@ export function NotificationDrawerRow({
                                                     type="button"
                                                     size="xs"
                                                     variant="ghost"
+                                                    disabled={actionPending}
                                                     onClick={action.onClick}
                                                 >
                                                     {action.label}

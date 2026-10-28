@@ -255,7 +255,10 @@ export function SettingsSafetyCard() {
             >
                 {settings && (
                     <>
-                        <Field label={t(`${P}.enabled`)}>
+                        <Field
+                            settingId="advanced.safety.enabled"
+                            label={t(`${P}.enabled`)}
+                        >
                             <Switch
                                 checked={settings.enabled}
                                 onCheckedChange={(enabled) =>
@@ -277,6 +280,7 @@ export function SettingsSafetyCard() {
                             change={(avatars) => update({ avatars })}
                         />
                         <Field
+                            settingId="advanced.safety.url-warnings"
                             label={t(`${P}.url_warnings`)}
                             description={t(`${P}.url_description`)}
                         >
@@ -287,7 +291,10 @@ export function SettingsSafetyCard() {
                                 }
                             />
                         </Field>
-                        <Field label={t(`${P}.shorteners`)}>
+                        <Field
+                            settingId="advanced.safety.shorteners"
+                            label={t(`${P}.shorteners`)}
+                        >
                             <Switch
                                 checked={settings.warnShorteners}
                                 onCheckedChange={(warnShorteners) =>
@@ -451,6 +458,7 @@ export function SettingsSafetyCard() {
                                     {(source.format === 'avatarIds' ||
                                         source.format === 'githubAvatars') && (
                                         <Field
+                                            settingId="advanced.safety.global-hide"
                                             label={t(`${P}.global_hide.toggle`)}
                                             description={t(
                                                 `${P}.global_hide.toggle_description`

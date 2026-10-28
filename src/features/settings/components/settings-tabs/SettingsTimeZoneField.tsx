@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { setStringConfigPreference } from '@/services/preferencesService';
 import { isValidDisplayTimeZone } from '@/shared/utils/displayTimeZone';
@@ -8,6 +9,7 @@ import { Input } from '@/ui/shadcn/input';
 import { Field } from '../SettingsField';
 
 export function SettingsTimeZoneField() {
+    const { t } = useTranslation();
     const saved = usePreferencesStore((state) => state.dtTimeZone);
     const [draft, setDraft] = useState(saved);
     const [error, setError] = useState('');
@@ -29,8 +31,11 @@ export function SettingsTimeZoneField() {
     };
     return (
         <Field
-            label="Timezone"
-            description="Use an IANA timezone or a fixed UTC offset. Leave blank to follow the system timezone. This setting applies to this PC."
+            settingId="interface.time-date.time-zone"
+            label={t('view.settings.appearance.timedate.time_zone')}
+            description={t(
+                'view.settings.appearance.timedate.time_zone_description'
+            )}
             controlId="settings-timezone"
         >
             <Input

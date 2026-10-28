@@ -42,6 +42,7 @@ import {
 } from '@/ui/shadcn/select';
 import { Switch } from '@/ui/shadcn/switch';
 
+import { SETTINGS_DEFAULT_VALUES } from '../../settingsFieldState';
 import { SettingsCard } from '../SettingsCard';
 import { Field, SegmentedPreference } from '../SettingsField';
 
@@ -185,6 +186,7 @@ function FontFamilyPreferenceField({
 
     return (
         <Field
+            settingId="interface.appearance.font-family"
             label={t('view.settings.appearance.appearance.font_family')}
             description={t(
                 'view.settings.appearance.appearance.font_family_description'
@@ -294,6 +296,7 @@ export function SettingsInterfaceAppearanceCard({
         >
             {languageCodes.length > 1 ? (
                 <Field
+                    settingId="interface.appearance.language"
                     label={t('view.settings.appearance.appearance.language')}
                     controlId="settings-language"
                 >
@@ -329,6 +332,7 @@ export function SettingsInterfaceAppearanceCard({
             ) : null}
 
             <Field
+                settingId="interface.appearance.zoom"
                 label={t('view.settings.appearance.appearance.zoom')}
                 controlId="settings-zoom"
             >
@@ -361,6 +365,10 @@ export function SettingsInterfaceAppearanceCard({
             </Field>
 
             <Field
+                settingId="interface.appearance.table-density"
+                onReset={() =>
+                    onTableDensityChange(SETTINGS_DEFAULT_VALUES.tableDensity)
+                }
                 label={t('view.settings.appearance.appearance.table_density')}
             >
                 <SegmentedPreference
@@ -388,6 +396,12 @@ export function SettingsInterfaceAppearanceCard({
             </Field>
 
             <Field
+                settingId="interface.appearance.striped-tables"
+                onReset={() =>
+                    onDataTableStripedChange(
+                        SETTINGS_DEFAULT_VALUES.dataTableStriped
+                    )
+                }
                 label={t(
                     'view.settings.appearance.appearance.striped_data_table_mode'
                 )}
@@ -399,6 +413,12 @@ export function SettingsInterfaceAppearanceCard({
             </Field>
 
             <Field
+                settingId="interface.appearance.reduced-motion"
+                onReset={() =>
+                    onReducedMotionAndBlurChange(
+                        SETTINGS_DEFAULT_VALUES.reducedMotionAndBlur
+                    )
+                }
                 label={t(
                     'view.settings.appearance.appearance.reduced_motion_and_blur'
                 )}
@@ -413,6 +433,12 @@ export function SettingsInterfaceAppearanceCard({
             </Field>
 
             <Field
+                settingId="interface.appearance.accessible-status"
+                onReset={() =>
+                    onAccessibleStatusIndicatorsChange(
+                        SETTINGS_DEFAULT_VALUES.accessibleStatusIndicators
+                    )
+                }
                 label={t(
                     'view.settings.appearance.appearance.accessible_status_indicators'
                 )}

@@ -26,6 +26,7 @@ describe('wrist placement settings', () => {
     it('clamps and rounds like the Rust config loader', () => {
         const width: NumberSetting = {
             id: 'width',
+            settingId: 'vr.wrist.width',
             key: 'k',
             min: 10,
             max: 80,
@@ -33,6 +34,7 @@ describe('wrist placement settings', () => {
         };
         const text: NumberSetting = {
             id: 'header_text',
+            settingId: 'vr.wrist.header-text',
             key: 'k',
             min: 50,
             max: 200,

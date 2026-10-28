@@ -31,6 +31,7 @@ type VirtualSidebarOptions = {
     overscan?: number;
     keepMountedKey?: VirtualRowKey | null;
     preserveScrollAnchor?: boolean;
+    anchorThreshold?: number;
     resetKey?: string;
 };
 
@@ -106,6 +107,7 @@ export function useVirtualSidebarRows<T extends VirtualSidebarRow>(
             ? options.overscan
             : DEFAULT_OVERSCAN;
     const preserveScrollAnchor = options.preserveScrollAnchor === true;
+    const anchorThreshold = options.anchorThreshold ?? 0;
     const resetKey = options.resetKey ?? '';
 
     const rowMetrics = useMemo(() => {
@@ -153,11 +155,14 @@ export function useVirtualSidebarRows<T extends VirtualSidebarRow>(
             );
             return;
         }
-        if (
-            !preserveScrollAnchor ||
-            element.scrollTop <= 0 ||
-            previousLayout.rows.length === 0
-        ) {
+        if (!preserveScrollAnchor || previousLayout.rows.length === 0) {
+            return;
+        }
+        const popupOpen = Boolean(
+            element.closest('[data-popup-open]') ||
+            element.querySelector('[data-popup-open]')
+        );
+        if (element.scrollTop <= anchorThreshold && !popupOpen) {
             return;
         }
 
@@ -199,7 +204,7 @@ export function useVirtualSidebarRows<T extends VirtualSidebarRow>(
                     : { ...current, scrollTop }
             );
         }
-    }, [preserveScrollAnchor, resetKey, rowMetrics, rows]);
+    }, [anchorThreshold, preserveScrollAnchor, resetKey, rowMetrics, rows]);
 
     const measureElement = useCallback(
         (key: VirtualRowKey, element: HTMLElement | null) => {

@@ -45,6 +45,7 @@ export function KeepSystemAwakeSetting() {
 
     return (
         <Field
+            settingId="system.window.keep-system-awake"
             label={t('view.settings.general.application.keep_system_awake')}
             description={t(
                 'view.settings.general.application.keep_system_awake_description'

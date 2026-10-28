@@ -148,6 +148,7 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
     return (
         <>
             <Field
+                settingId="vr.wrist.pages"
                 label={t(`${P}.label`)}
                 description={t(`${P}.description`)}
                 disabled={disabled}
@@ -194,6 +195,7 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
             </Field>
 
             <Field
+                settingId="vr.wrist.feed-order"
                 label={t(`${P}.feed_order`)}
                 description={t(`${P}.feed_order_description`)}
                 controlId="settings-wrist-overlay-feed-order"
@@ -232,6 +234,7 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
             </Field>
 
             <Field
+                settingId="vr.wrist.players-sort"
                 label={t(`${P}.players_sort`)}
                 controlId="settings-wrist-overlay-players-sort"
                 disabled={disabled}
@@ -269,6 +272,7 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
             </Field>
 
             <Field
+                settingId="vr.wrist.timeout"
                 label={t(`${P}.timeout`)}
                 description={t(`${P}.timeout_description`)}
                 controlId="settings-wrist-overlay-timeout"
