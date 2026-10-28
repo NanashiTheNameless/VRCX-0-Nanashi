@@ -88,7 +88,7 @@ fn discover_legacy_source() -> Result<Option<LegacyVrcxSource>, String> {
     Ok(None)
 }
 
-fn legacy_vrcx_dirs() -> Vec<PathBuf> {
+pub(crate) fn legacy_vrcx_dirs() -> Vec<PathBuf> {
     let mut dirs = Vec::new();
 
     #[cfg(target_os = "windows")]
@@ -109,21 +109,15 @@ fn legacy_vrcx_dirs() -> Vec<PathBuf> {
             dirs.push(home.join(".config").join("VRCX"));
         }
 
+        if let Some(prefix) = std::env::var_os("WINEPREFIX")
+            .map(PathBuf::from)
+            .filter(|path| !path.as_os_str().is_empty())
+        {
+            append_wine_profile_dirs(&mut dirs, &prefix);
+        }
         if let Some(home) = home_dir() {
-            let user_name = std::env::var_os("USER").or_else(|| std::env::var_os("USERNAME"));
-            if let Some(user_name) = user_name {
-                dirs.push(
-                    home.join(".local")
-                        .join("share")
-                        .join("vrcx")
-                        .join("drive_c")
-                        .join("users")
-                        .join(PathBuf::from(user_name))
-                        .join("AppData")
-                        .join("Roaming")
-                        .join("VRCX"),
-                );
-            }
+            append_wine_profile_dirs(&mut dirs, &home.join(".local/share/vrcx"));
+            append_wine_profile_dirs(&mut dirs, &home.join(".wine"));
         }
     }
 
@@ -148,6 +142,23 @@ fn legacy_vrcx_dirs() -> Vec<PathBuf> {
     dedupe_paths(dirs)
 }
 
+#[cfg(target_os = "linux")]
+fn append_wine_profile_dirs(directories: &mut Vec<PathBuf>, prefix: &Path) {
+    let users = prefix.join("drive_c/users");
+    if let Some(user) = std::env::var_os("USER").or_else(|| std::env::var_os("USERNAME")) {
+        directories.push(users.join(user).join("AppData/Roaming/VRCX"));
+    }
+    if let Ok(entries) = std::fs::read_dir(&users) {
+        let mut profiles: Vec<_> = entries
+            .filter_map(Result::ok)
+            .map(|entry| entry.path().join("AppData/Roaming/VRCX"))
+            .filter(|path| path.is_dir())
+            .collect();
+        profiles.sort();
+        directories.extend(profiles);
+    }
+}
+
 #[cfg(any(target_os = "linux", target_os = "macos"))]
 fn home_dir() -> Option<PathBuf> {
     std::env::var_os("HOME")
@@ -165,7 +176,7 @@ fn dedupe_paths(paths: Vec<PathBuf>) -> Vec<PathBuf> {
     seen
 }
 
-fn resolve_legacy_config_path(legacy_dir: &Path) -> Option<PathBuf> {
+pub(crate) fn resolve_legacy_config_path(legacy_dir: &Path) -> Option<PathBuf> {
     let json_path = legacy_dir.join("VRCX.json");
     if json_path.exists() {
         return Some(json_path);
@@ -196,7 +207,7 @@ fn legacy_database_location(config_path: &Path) -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
-fn read_legacy_database_version(db_path: &Path) -> Result<i64, String> {
+pub(crate) fn read_legacy_database_version(db_path: &Path) -> Result<i64, String> {
     let conn = Connection::open_with_flags(db_path, OpenFlags::SQLITE_OPEN_READ_ONLY)
         .map_err(|e| format!("Failed to open legacy VRCX database: {e}"))?;
 

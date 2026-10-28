@@ -4,6 +4,16 @@ use crate::host_capabilities::{
 };
 use vrcx_0_platform::Error;
 
+pub fn validate_update_version(version: &str) -> Result<(), Error> {
+    if !vrcx_0_core::update_compatibility::supports_current_profile(version) {
+        return Err(Error::Custom(format!(
+            "This profile requires VRCX-0-Nanashi {} or newer. Earlier versions cannot be installed.",
+            vrcx_0_core::update_compatibility::MINIMUM_PROFILE_VERSION
+        )));
+    }
+    Ok(())
+}
+
 pub fn expected_updater_target() -> Result<String, Error> {
     updater_target(
         current_host_platform(),
@@ -84,6 +94,16 @@ fn validate_update_request_with_expected_target(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rejects_pre_migration_versions_even_for_explicit_downgrades() {
+        for version in ["2.99.0", "3.0.0", "3.0.0-Nightly-abcdef0", "invalid"] {
+            assert!(validate_update_version(version).is_err(), "{version}");
+        }
+        for version in ["3.0.1", "3.0.1-Nightly-abcdef0", "3.1.0", "4.0.0"] {
+            assert!(validate_update_version(version).is_ok(), "{version}");
+        }
+    }
 
     const TEST_TARGET: &str = "windows-x86_64-stable";
 

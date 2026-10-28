@@ -22,8 +22,8 @@ pub struct LegacyMigrationPaths {
 impl LegacyMigrationPaths {
     pub fn from_app_data(app_data: PathBuf) -> Self {
         Self {
-            db_file: app_data.join("VRCX-0.sqlite3"),
-            config_file: app_data.join("VRCX-0.json"),
+            db_file: app_data.join("VRCX-0-Nanashi.sqlite3"),
+            config_file: app_data.join("VRCX-0-Nanashi.json"),
             app_data,
         }
     }

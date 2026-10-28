@@ -302,8 +302,12 @@ See [Dates and timezones](TIMESTAMPS.md) for migration, timezone and sync compat
 Installs and runs side by side with upstream VRCX-0, with its own data folder
 (`VRCX-0-Nanashi`).
 
-- On first launch it copies your existing VRCX-0 data folder (caches excluded); upstream data
-  is never changed.
+- With no fork profile, first launch automatically imports upstream VRCX-0 or original
+  VRCX, including custom data locations. Imports use verified snapshots and resume after
+  interruption; source files are never changed. Existing fork profiles take priority.
+- Older fork databases and settings migrate to `VRCX-0-Nanashi.sqlite3` and
+  `VRCX-0-Nanashi.json`, keeping the originals for recovery. Releases before 3.0.1
+  are blocked by the updater.
 - Its own link scheme is `vrcx-0-nanashi://`, and `vrcx-0://` / `vrcx://` links are accepted
   too.
 

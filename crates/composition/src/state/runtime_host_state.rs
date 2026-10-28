@@ -203,7 +203,15 @@ fn prepare_data_dir_migration_startup(
     }
 }
 
-fn open_profile(paths: &AppPaths) -> Result<OpenedProfile> {
+fn open_profile(
+    paths: &AppPaths,
+    profile: RuntimeHostProfile,
+    auto_import: bool,
+) -> Result<OpenedProfile> {
+    if auto_import && matches!(profile, RuntimeHostProfile::Desktop) {
+        vrcx_0_persistence::profile_import::import_first_run_profile(&paths.app_data)?;
+    }
+    vrcx_0_persistence::profile_names::migrate_profile_names(&paths.app_data)?;
     // Fork: a staged "Import data" replaces files before anything opens them.
     if let Err(error) = vrcx_0_persistence::data_export::apply_pending_data_import(&paths.app_data)
     {
@@ -272,10 +280,11 @@ impl RuntimeHostStateBuilder {
             database_maintenance_cache_dir,
             task_executor,
         } = options;
+        let auto_import = app_data_dir.source != AppDataDirSource::Cli;
         let prepared_migration = prepare_data_dir_migration_startup(&mut app_data_dir)?;
         let mut paths = AppPaths::from_app_data(app_data_dir.current_dir.clone());
         let mut profile_lock = ProfileLock::acquire(&paths.app_data)?;
-        let opened = match open_profile(&paths) {
+        let opened = match open_profile(&paths, profile, auto_import) {
             Ok(opened) => opened,
             Err(error) => {
                 let Some(prepared) = prepared_migration.as_ref() else {
@@ -286,7 +295,7 @@ impl RuntimeHostStateBuilder {
                 rollback_failed_data_dir_migration_startup(&mut app_data_dir, prepared)?;
                 paths = AppPaths::from_app_data(app_data_dir.current_dir.clone());
                 profile_lock = ProfileLock::acquire(&paths.app_data)?;
-                open_profile(&paths)?
+                open_profile(&paths, profile, auto_import)?
             }
         };
         if let Some(prepared) = prepared_migration.as_ref() {

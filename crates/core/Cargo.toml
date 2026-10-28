@@ -6,6 +6,7 @@ license.workspace = true
 description = "Shared domain primitives"
 
 [dependencies]
+semver = { workspace = true }
 chrono = { workspace = true }
 jiff = "0.2.38"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }

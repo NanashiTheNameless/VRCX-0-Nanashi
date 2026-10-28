@@ -100,7 +100,7 @@ fn target_inspection_distinguishes_empty_existing_and_foreign_content() -> Resul
         inspect_data_dir_migration_target(&target)?,
         DataDirMigrationTargetState::ForeignContent
     );
-    fs::write(target.join("VRCX-0.sqlite3"), b"profile")?;
+    fs::write(target.join("VRCX-0-Nanashi.sqlite3"), b"profile")?;
     assert_eq!(
         inspect_data_dir_migration_target(&target)?,
         DataDirMigrationTargetState::ExistingProfile
@@ -111,10 +111,10 @@ fn target_inspection_distinguishes_empty_existing_and_foreign_content() -> Resul
 #[test]
 fn required_bytes_counts_only_migrated_data() -> Result<()> {
     let dir = TestDir::new("required-bytes");
-    fs::write(dir.path.join("VRCX-0.sqlite3"), b"database")?;
-    fs::write(dir.path.join("VRCX-0.sqlite3-wal"), b"wal")?;
-    fs::write(dir.path.join("VRCX-0.sqlite3-shm"), b"ignored-shm")?;
-    fs::write(dir.path.join("VRCX-0.json"), b"config")?;
+    fs::write(dir.path.join("VRCX-0-Nanashi.sqlite3"), b"database")?;
+    fs::write(dir.path.join("VRCX-0-Nanashi.sqlite3-wal"), b"wal")?;
+    fs::write(dir.path.join("VRCX-0-Nanashi.sqlite3-shm"), b"ignored-shm")?;
+    fs::write(dir.path.join("VRCX-0-Nanashi.json"), b"config")?;
     fs::write(dir.path.join("metadataCache.db"), b"metadata")?;
     fs::create_dir(dir.path.join("ScreenshotThumbs"))?;
     fs::write(
@@ -138,7 +138,7 @@ fn frozen_database_copies_verifies_and_installs_without_shm() -> Result<()> {
     let target = dir.path.join("target");
     fs::create_dir(&source)?;
     fs::create_dir(&target)?;
-    let db_path = source.join("VRCX-0.sqlite3");
+    let db_path = source.join("VRCX-0-Nanashi.sqlite3");
     let db = DatabaseService::new(&db_path)?;
     let empty = HashMap::new();
     db.execute_non_query("CREATE TABLE migration_items (value TEXT NOT NULL)", &empty)?;
@@ -147,7 +147,7 @@ fn frozen_database_copies_verifies_and_installs_without_shm() -> Result<()> {
         &empty,
     )?;
     let frozen = db.freeze_for_migration()?;
-    fs::write(source.join("VRCX-0.sqlite3-shm"), b"must not copy")?;
+    fs::write(source.join("VRCX-0-Nanashi.sqlite3-shm"), b"must not copy")?;
     let source_hash = hash_file_with_progress(&frozen.db_path, |_, _| {})?;
     let mut last_progress = (0, 0);
 
@@ -160,9 +160,9 @@ fn frozen_database_copies_verifies_and_installs_without_shm() -> Result<()> {
     assert_eq!(copied.db_sha256, source_hash.0);
     assert_eq!(copied.db_bytes, source_hash.1);
     assert_eq!(last_progress.0, last_progress.1);
-    assert!(!target.join("VRCX-0.sqlite3-shm").exists());
+    assert!(!target.join("VRCX-0-Nanashi.sqlite3-shm").exists());
     let target_db = Connection::open_with_flags(
-        target.join("VRCX-0.sqlite3"),
+        target.join("VRCX-0-Nanashi.sqlite3"),
         OpenFlags::SQLITE_OPEN_READ_ONLY,
     )
     .map_err(|error| crate::Error::Database(error.to_string()))?;
@@ -184,7 +184,7 @@ fn copy_detects_target_tampering_and_abort_reopens_source_database() -> Result<(
     let target = dir.path.join("target");
     fs::create_dir(&source)?;
     fs::create_dir(&target)?;
-    let db = DatabaseService::new(&source.join("VRCX-0.sqlite3"))?;
+    let db = DatabaseService::new(&source.join("VRCX-0-Nanashi.sqlite3"))?;
     let empty = HashMap::new();
     db.execute_non_query("CREATE TABLE migration_items (value TEXT NOT NULL)", &empty)?;
     let frozen = db.freeze_for_migration()?;
@@ -217,7 +217,7 @@ fn cancellable_copy_stops_before_finishing_the_database() -> Result<()> {
     let target = dir.path.join("target");
     fs::create_dir(&source)?;
     fs::create_dir(&target)?;
-    let db_path = source.join("VRCX-0.sqlite3");
+    let db_path = source.join("VRCX-0-Nanashi.sqlite3");
     fs::write(&db_path, vec![1_u8; 512 * 1024])?;
     let frozen = FrozenDatabase {
         db_path,
@@ -233,7 +233,7 @@ fn cancellable_copy_stops_before_finishing_the_database() -> Result<()> {
     assert!(result.is_err());
     let partial = target
         .join(DATA_DIR_MIGRATION_STAGING_DIRECTORY)
-        .join("VRCX-0.sqlite3");
+        .join("VRCX-0-Nanashi.sqlite3");
     assert!(fs::metadata(partial)?.len() < frozen.db_bytes);
     Ok(())
 }
@@ -245,11 +245,11 @@ fn copy_includes_nonempty_wal_and_never_copies_shm() -> Result<()> {
     let target = dir.path.join("target");
     fs::create_dir(&source)?;
     fs::create_dir(&target)?;
-    let db_path = source.join("VRCX-0.sqlite3");
-    let wal_path = source.join("VRCX-0.sqlite3-wal");
+    let db_path = source.join("VRCX-0-Nanashi.sqlite3");
+    let wal_path = source.join("VRCX-0-Nanashi.sqlite3-wal");
     fs::write(&db_path, b"database")?;
     fs::write(&wal_path, b"wal")?;
-    fs::write(source.join("VRCX-0.sqlite3-shm"), b"shm")?;
+    fs::write(source.join("VRCX-0-Nanashi.sqlite3-shm"), b"shm")?;
     let frozen = FrozenDatabase {
         db_path,
         db_bytes: 8,
@@ -261,8 +261,11 @@ fn copy_includes_nonempty_wal_and_never_copies_shm() -> Result<()> {
 
     assert_eq!(copied.wal_bytes, Some(3));
     let staging = target.join(DATA_DIR_MIGRATION_STAGING_DIRECTORY);
-    assert_eq!(fs::read(staging.join("VRCX-0.sqlite3-wal"))?, b"wal");
-    assert!(!staging.join("VRCX-0.sqlite3-shm").exists());
+    assert_eq!(
+        fs::read(staging.join("VRCX-0-Nanashi.sqlite3-wal"))?,
+        b"wal"
+    );
+    assert!(!staging.join("VRCX-0-Nanashi.sqlite3-shm").exists());
     Ok(())
 }
 
@@ -273,10 +276,10 @@ fn replacing_existing_profile_preserves_target_files() -> Result<()> {
     let target = dir.path.join("target");
     fs::create_dir(&source)?;
     fs::create_dir(&target)?;
-    let db_path = source.join("VRCX-0.sqlite3");
+    let db_path = source.join("VRCX-0-Nanashi.sqlite3");
     fs::write(&db_path, b"new-database")?;
-    fs::write(target.join("VRCX-0.sqlite3"), b"old-database")?;
-    fs::write(target.join("VRCX-0.json"), b"old-config")?;
+    fs::write(target.join("VRCX-0-Nanashi.sqlite3"), b"old-database")?;
+    fs::write(target.join("VRCX-0-Nanashi.json"), b"old-config")?;
     fs::create_dir(target.join("ScreenshotThumbs"))?;
     fs::write(
         target.join("ScreenshotThumbs").join("old.webp"),
@@ -292,9 +295,18 @@ fn replacing_existing_profile_preserves_target_files() -> Result<()> {
 
     let replaced = install_staged_data_dir_database(&target, true)?.expect("replaced directory");
 
-    assert_eq!(fs::read(target.join("VRCX-0.sqlite3"))?, b"new-database");
-    assert_eq!(fs::read(replaced.join("VRCX-0.sqlite3"))?, b"old-database");
-    assert_eq!(fs::read(replaced.join("VRCX-0.json"))?, b"old-config");
+    assert_eq!(
+        fs::read(target.join("VRCX-0-Nanashi.sqlite3"))?,
+        b"new-database"
+    );
+    assert_eq!(
+        fs::read(replaced.join("VRCX-0-Nanashi.sqlite3"))?,
+        b"old-database"
+    );
+    assert_eq!(
+        fs::read(replaced.join("VRCX-0-Nanashi.json"))?,
+        b"old-config"
+    );
     assert_eq!(
         fs::read(replaced.join("ScreenshotThumbs").join("old.webp"))?,
         b"old-thumbnail"
@@ -311,8 +323,8 @@ fn finalize_is_idempotent_copies_best_effort_data_and_removes_only_pure_caches()
     for path in [&control, &source, &target] {
         fs::create_dir(path)?;
     }
-    fs::write(source.join("VRCX-0.sqlite3"), b"source-db")?;
-    fs::write(source.join("VRCX-0.json"), b"source-config")?;
+    fs::write(source.join("VRCX-0-Nanashi.sqlite3"), b"source-db")?;
+    fs::write(source.join("VRCX-0-Nanashi.json"), b"source-config")?;
     fs::write(source.join("metadataCache.db"), b"metadata")?;
     fs::create_dir(source.join("ScreenshotThumbs"))?;
     fs::write(
@@ -323,7 +335,7 @@ fn finalize_is_idempotent_copies_best_effort_data_and_removes_only_pure_caches()
     fs::write(source.join("ImageCache").join("cached.bin"), b"cache")?;
     fs::write(source.join("ws-events.jsonl"), b"events")?;
     fs::write(source.join("unknown.txt"), b"unknown")?;
-    fs::write(target.join("VRCX-0.sqlite3"), b"target-db")?;
+    fs::write(target.join("VRCX-0-Nanashi.sqlite3"), b"target-db")?;
     let journal = switched_journal(&source, &target);
 
     let first = finalize_data_dir_migration(&control, &journal)?;
@@ -331,14 +343,23 @@ fn finalize_is_idempotent_copies_best_effort_data_and_removes_only_pure_caches()
 
     assert!(first.warnings.is_empty());
     assert!(second.warnings.is_empty());
-    assert_eq!(fs::read(target.join("VRCX-0.json"))?, b"source-config");
+    assert_eq!(
+        fs::read(target.join("VRCX-0-Nanashi.json"))?,
+        b"source-config"
+    );
     assert_eq!(fs::read(target.join("metadataCache.db"))?, b"metadata");
     assert_eq!(
         fs::read(target.join("ScreenshotThumbs").join("thumb.webp"))?,
         b"thumbnail"
     );
-    assert_eq!(fs::read(source.join("VRCX-0.sqlite3"))?, b"source-db");
-    assert_eq!(fs::read(source.join("VRCX-0.json"))?, b"source-config");
+    assert_eq!(
+        fs::read(source.join("VRCX-0-Nanashi.sqlite3"))?,
+        b"source-db"
+    );
+    assert_eq!(
+        fs::read(source.join("VRCX-0-Nanashi.json"))?,
+        b"source-config"
+    );
     assert!(!source.join("ImageCache").exists());
     assert!(!source.join("ws-events.jsonl").exists());
     assert_eq!(fs::read(source.join("unknown.txt"))?, b"unknown");
@@ -361,7 +382,7 @@ fn finalize_reports_config_and_gallery_copy_failures_without_failing() -> Result
     for path in [&control, &source, &target] {
         fs::create_dir(path)?;
     }
-    fs::create_dir(source.join("VRCX-0.json"))?;
+    fs::create_dir(source.join("VRCX-0-Nanashi.json"))?;
     fs::create_dir(source.join("metadataCache.db"))?;
     let journal = switched_journal(&source, &target);
 
@@ -388,7 +409,7 @@ fn interrupted_copy_removes_only_staging_and_records_result() -> Result<()> {
     let staging = target.join(DATA_DIR_MIGRATION_STAGING_DIRECTORY);
     fs::create_dir(&staging)?;
     fs::write(staging.join("partial"), b"partial")?;
-    fs::write(source.join("VRCX-0.sqlite3"), b"source")?;
+    fs::write(source.join("VRCX-0-Nanashi.sqlite3"), b"source")?;
     let journal = PendingDataDirMigration::copying(
         source.to_string_lossy().into_owned(),
         target.to_string_lossy().into_owned(),
@@ -400,7 +421,7 @@ fn interrupted_copy_removes_only_staging_and_records_result() -> Result<()> {
     cleanup_interrupted_data_dir_migration(&control, &journal)?;
 
     assert!(!staging.exists());
-    assert_eq!(fs::read(source.join("VRCX-0.sqlite3"))?, b"source");
+    assert_eq!(fs::read(source.join("VRCX-0-Nanashi.sqlite3"))?, b"source");
     assert!(!has_pending_data_dir_migration(&control));
     assert_eq!(
         take_data_dir_migration_result(&control)?
@@ -418,8 +439,8 @@ fn cleanup_removes_only_manifest_entries_and_preserves_control_and_unknown_files
     let current = dir.path.join("current");
     fs::create_dir(&old)?;
     fs::create_dir(&current)?;
-    fs::write(old.join("VRCX-0.sqlite3"), b"db")?;
-    fs::write(old.join("VRCX-0.json"), b"config")?;
+    fs::write(old.join("VRCX-0-Nanashi.sqlite3"), b"db")?;
+    fs::write(old.join("VRCX-0-Nanashi.json"), b"config")?;
     fs::create_dir(old.join("ScreenshotThumbs"))?;
     fs::write(old.join("ScreenshotThumbs").join("thumb.webp"), b"thumb")?;
     fs::write(old.join("unknown.txt"), b"unknown")?;
@@ -451,8 +472,8 @@ fn cleanup_removes_only_manifest_entries_and_preserves_control_and_unknown_files
 
     assert!(report.skipped.is_empty());
     assert_eq!(report.freed_bytes, 2 + 6 + 5 + 8);
-    assert!(!old.join("VRCX-0.sqlite3").exists());
-    assert!(!old.join("VRCX-0.json").exists());
+    assert!(!old.join("VRCX-0-Nanashi.sqlite3").exists());
+    assert!(!old.join("VRCX-0-Nanashi.json").exists());
     assert!(!old.join("ScreenshotThumbs").exists());
     assert!(!replaced.exists());
     assert_eq!(fs::read(old.join("unknown.txt"))?, b"unknown");
@@ -466,7 +487,7 @@ fn cleanup_removes_only_manifest_entries_and_preserves_control_and_unknown_files
 #[test]
 fn cleanup_rejects_the_active_data_directory() -> Result<()> {
     let dir = TestDir::new("cleanup-active");
-    fs::write(dir.path.join("VRCX-0.sqlite3"), b"db")?;
+    fs::write(dir.path.join("VRCX-0-Nanashi.sqlite3"), b"db")?;
     let pending = DataDirCleanupPending {
         old_dir: dir.path.to_string_lossy().into_owned(),
         bytes: 2,
@@ -477,7 +498,7 @@ fn cleanup_rejects_the_active_data_directory() -> Result<()> {
     };
 
     assert!(cleanup_migrated_data(&dir.path, &dir.path, &pending).is_err());
-    assert_eq!(fs::read(dir.path.join("VRCX-0.sqlite3"))?, b"db");
+    assert_eq!(fs::read(dir.path.join("VRCX-0-Nanashi.sqlite3"))?, b"db");
     Ok(())
 }
 

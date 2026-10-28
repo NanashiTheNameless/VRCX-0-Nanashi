@@ -13,7 +13,7 @@ use super::types::{
 };
 use crate::{Error, Result};
 
-const PROFILE_DATABASE_FILE: &str = "VRCX-0.sqlite3";
+const PROFILE_DATABASE_FILE: &str = "VRCX-0-Nanashi.sqlite3";
 
 pub fn inspect_data_dir_migration_target(target_dir: &Path) -> Result<DataDirMigrationTargetState> {
     if !target_dir.is_dir() {
@@ -22,7 +22,9 @@ pub fn inspect_data_dir_migration_target(target_dir: &Path) -> Result<DataDirMig
             target_dir.display()
         )));
     }
-    if target_dir.join(PROFILE_DATABASE_FILE).is_file() {
+    if target_dir.join(PROFILE_DATABASE_FILE).is_file()
+        || target_dir.join("VRCX-0.sqlite3").is_file()
+    {
         return Ok(DataDirMigrationTargetState::ExistingProfile);
     }
     if fs::read_dir(target_dir)?.next().transpose()?.is_none() {

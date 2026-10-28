@@ -1,10 +1,14 @@
 [package]
 name = "vrcx-0"
-version = "3.0.0"
+version = "3.0.1"
 edition = "2021"
 license.workspace = true
 description = "VRCX-0-Nanashi desktop shell"
-default-run = "vrcx-0"
+default-run = "VRCX-0-Nanashi"
+
+[[bin]]
+name = "VRCX-0-Nanashi"
+path = "src/main.rs"
 
 [[bin]]
 name = "export-bindings"

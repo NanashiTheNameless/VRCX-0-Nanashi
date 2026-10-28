@@ -95,14 +95,50 @@ fn persisted_resolution(source: &Path) -> AppDataDirResolution {
 }
 
 #[test]
+fn startup_ports_legacy_profile_and_settings_before_opening() -> Result<()> {
+    let dir = TestDir::new("legacy-filenames");
+    let legacy_db = dir.path.join("VRCX-0.sqlite3");
+    let db = DatabaseService::new(&legacy_db)?;
+    vrcx_0_persistence::config::set_string(&db, "rename-sentinel", "preserved")?;
+    drop(db);
+    std::fs::write(
+        dir.path.join("VRCX-0.json"),
+        br#"{"rename-sentinel":"settings"}"#,
+    )?;
+    let builder = RuntimeHostStateBuilder::new(cli_options(
+        dir.path.clone(),
+        RuntimeHostProfile::HeadlessData,
+        None,
+    ))?;
+    assert_eq!(
+        builder.paths.db_file,
+        dir.path.join("VRCX-0-Nanashi.sqlite3")
+    );
+    assert_eq!(
+        vrcx_0_persistence::config::get_raw(&builder.db, "rename-sentinel")?.as_deref(),
+        Some("preserved")
+    );
+    assert_eq!(
+        builder.storage.get("rename-sentinel").as_deref(),
+        Some("settings")
+    );
+    assert!(legacy_db.is_file());
+    Ok(())
+}
+
+#[test]
 fn switched_data_dir_migration_finishes_before_profile_startup() -> Result<()> {
     let dir = TestDir::new("data-dir-migration-success");
     let source = dir.path.join("source");
     let target = dir.path.join("target");
     std::fs::create_dir_all(&source)?;
     std::fs::create_dir_all(&target)?;
-    drop(DatabaseService::new(&source.join("VRCX-0.sqlite3"))?);
-    drop(DatabaseService::new(&target.join("VRCX-0.sqlite3"))?);
+    drop(DatabaseService::new(
+        &source.join("VRCX-0-Nanashi.sqlite3"),
+    )?);
+    drop(DatabaseService::new(
+        &target.join("VRCX-0-Nanashi.sqlite3"),
+    )?);
     write_pending_data_dir_migration(&source, &switched_journal(&source, &target))?;
 
     let builder = RuntimeHostStateBuilder::new(RuntimeHostOptions {
@@ -131,8 +167,10 @@ fn migrated_database_open_failure_rolls_back_to_source() -> Result<()> {
     let source = dir.path.join("source");
     let target = dir.path.join("target");
     std::fs::create_dir_all(&source)?;
-    std::fs::create_dir_all(target.join("VRCX-0.sqlite3"))?;
-    drop(DatabaseService::new(&source.join("VRCX-0.sqlite3"))?);
+    std::fs::create_dir_all(target.join("VRCX-0-Nanashi.sqlite3"))?;
+    drop(DatabaseService::new(
+        &source.join("VRCX-0-Nanashi.sqlite3"),
+    )?);
     write_pending_data_dir_migration(&source, &switched_journal(&source, &target))?;
 
     let builder = RuntimeHostStateBuilder::new(RuntimeHostOptions {
@@ -163,7 +201,7 @@ fn interrupted_copy_is_cleaned_before_profile_startup() -> Result<()> {
     let staging = target.join(".migrate-staging");
     std::fs::create_dir_all(&source)?;
     std::fs::create_dir_all(&staging)?;
-    std::fs::write(staging.join("VRCX-0.sqlite3"), b"partial")?;
+    std::fs::write(staging.join("VRCX-0-Nanashi.sqlite3"), b"partial")?;
     write_pending_data_dir_migration(
         &source,
         &PendingDataDirMigration::copying(

@@ -78,7 +78,7 @@ fn unescape_value(value: &str) -> String {
 
 fn executable_end(command: &str) -> usize {
     if command.starts_with('/') {
-        for suffix in [".AppImage", "/vrcx-0"] {
+        for suffix in [".AppImage", "/VRCX-0-Nanashi", "/vrcx-0"] {
             if let Some(start) = command.find(suffix) {
                 let end = start + suffix.len();
                 if command[end..].is_empty() || command[end..].starts_with(char::is_whitespace) {

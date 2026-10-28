@@ -507,6 +507,8 @@ async fn find_update(
     let expected_version = semver::Version::parse(&request.expected_version).map_err(|error| {
         ApplicationError::Custom(format!("Invalid expected update version: {error}"))
     })?;
+    vrcx_0_host_desktop::updater_policy::validate_update_version(&request.expected_version)
+        .map_err(|error| ApplicationError::Custom(error.to_string()))?;
     if !request.allow_downgrades && expected_version <= current_version {
         return Err(ApplicationError::Custom(
             "Expected update version must be newer than the current version.".into(),
@@ -644,6 +646,8 @@ impl UpdaterPort for TauriUpdaterPort {
             .0
             .downcast::<TauriPendingUpdate>()
             .map_err(|_| ApplicationError::Custom("Invalid pending update handle.".into()))?;
+        vrcx_0_host_desktop::updater_policy::validate_update_version(&pending.update.version)
+            .map_err(|error| ApplicationError::Custom(error.to_string()))?;
         let bytes = read_verified_update_artifact(&pending.artifact_path, &pending.sha256).await?;
         pending.update.install(bytes).map_err(|error| {
             ApplicationError::Custom(format!("Failed to install pending update: {error}"))

@@ -28,8 +28,8 @@ pub const DATA_EXPORT_FORMAT: &str = "vrcx-0-nanashi-data-export";
 /// exports still import; their database is migrated on the next start.
 const DATA_EXPORT_FORMAT_VERSION: u32 = 2;
 const MANIFEST_NAME: &str = "vrcx-0-nanashi-export.json";
-const DATABASE_FILE: &str = "VRCX-0.sqlite3";
-const SETTINGS_FILE: &str = "VRCX-0.json";
+const DATABASE_FILE: &str = "VRCX-0-Nanashi.sqlite3";
+const SETTINGS_FILE: &str = "VRCX-0-Nanashi.json";
 const EXPORT_STAGING_DIR: &str = ".export-staging";
 pub const IMPORT_STAGING_DIR: &str = ".import-pending";
 const IMPORT_MARKER_FILE: &str = "pending-data-import.json";
@@ -118,6 +118,11 @@ const EXCLUDED_TOP_LEVEL: &[&str] = &[
     "runtime.lock",
     "vrcx-0.data-dir.json",
     "vrcx-0.sqlite3",
+    "vrcx-0.json",
+    "vrcx-0-nanashi.sqlite3",
+    "vrcx-0-nanashi.sqlite3-wal",
+    "vrcx-0-nanashi.sqlite3-shm",
+    "vrcx-0-nanashi.sqlite3-journal",
     "vrcx-0.sqlite3-wal",
     "vrcx-0.sqlite3-shm",
     "vrcx-0.sqlite3-journal",
@@ -299,6 +304,11 @@ pub fn stage_data_import(archive: &Path, app_data: &Path) -> Result<DataImportSu
             if relative == Path::new(MANIFEST_NAME) {
                 continue;
             }
+            let relative = match relative.to_str() {
+                Some("VRCX-0.sqlite3") => PathBuf::from(DATABASE_FILE),
+                Some("VRCX-0.json") => PathBuf::from(SETTINGS_FILE),
+                _ => relative,
+            };
             let is_database = relative == Path::new(DATABASE_FILE);
             if !is_database && is_excluded(&relative) {
                 continue;
@@ -313,7 +323,7 @@ pub fn stage_data_import(archive: &Path, app_data: &Path) -> Result<DataImportSu
             if let Some(parent) = target.parent() {
                 fs::create_dir_all(parent)?;
             }
-            let mut out = File::create(&target)?;
+            let mut out = File::options().write(true).create_new(true).open(&target)?;
             io::copy(&mut (&mut entry).take(MAX_ENTRY_BYTES), &mut out)?;
             out.sync_all()?;
             if is_database {
@@ -374,6 +384,7 @@ pub fn apply_pending_data_import(app_data: &Path) -> Result<bool, Error> {
         }
         return Ok(false);
     }
+    normalize_legacy_staged_import(&staging)?;
     // Remove the marker first so a failure can never loop on every start.
     fs::remove_file(&marker)?;
     if !staging.join(DATABASE_FILE).is_file() {
@@ -390,8 +401,8 @@ pub fn apply_pending_data_import(app_data: &Path) -> Result<bool, Error> {
     fs::create_dir_all(&backup)?;
     for name in [
         DATABASE_FILE,
-        "VRCX-0.sqlite3-wal",
-        "VRCX-0.sqlite3-shm",
+        "VRCX-0-Nanashi.sqlite3-wal",
+        "VRCX-0-Nanashi.sqlite3-shm",
         SETTINGS_FILE,
     ] {
         let source = app_data.join(name);
@@ -400,9 +411,9 @@ pub fn apply_pending_data_import(app_data: &Path) -> Result<bool, Error> {
         }
     }
     for name in [
-        "VRCX-0.sqlite3-wal",
-        "VRCX-0.sqlite3-shm",
-        "VRCX-0.sqlite3-journal",
+        "VRCX-0-Nanashi.sqlite3-wal",
+        "VRCX-0-Nanashi.sqlite3-shm",
+        "VRCX-0-Nanashi.sqlite3-journal",
     ] {
         let _ = fs::remove_file(app_data.join(name));
     }
@@ -430,6 +441,25 @@ pub fn apply_pending_data_import(app_data: &Path) -> Result<bool, Error> {
     }
     tracing::info!(backup = %backup.display(), "applied staged data import");
     Ok(true)
+}
+
+fn normalize_legacy_staged_import(staging: &Path) -> Result<(), Error> {
+    for (old, new) in [
+        ("VRCX-0.sqlite3", DATABASE_FILE),
+        ("VRCX-0.json", SETTINGS_FILE),
+    ] {
+        let source = staging.join(old);
+        if source.try_exists()? {
+            let destination = staging.join(new);
+            if destination.try_exists()? {
+                return Err(Error::InvalidData(
+                    "Staged import contains conflicting profile filenames.".into(),
+                ));
+            }
+            fs::rename(source, destination)?;
+        }
+    }
+    Ok(())
 }
 
 fn collect_staged(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), Error> {
@@ -496,7 +526,7 @@ mod tests {
         let target = temp_dir("target");
         make_db(&target.join(DATABASE_FILE), "light");
         fs::write(target.join(SETTINGS_FILE), r#"{"zoom":"90"}"#).unwrap();
-        fs::write(target.join("VRCX-0.sqlite3-wal"), "stale").unwrap();
+        fs::write(target.join("VRCX-0-Nanashi.sqlite3-wal"), "stale").unwrap();
 
         let staged = temp_dir("inspect");
         stage_data_import(&archive, &staged).unwrap();
@@ -518,7 +548,7 @@ mod tests {
 
         assert!(apply_pending_data_import(&target).unwrap());
         assert!(!has_pending_data_import(&target));
-        assert!(!target.join("VRCX-0.sqlite3-wal").exists());
+        assert!(!target.join("VRCX-0-Nanashi.sqlite3-wal").exists());
         assert!(!target.join("ImageCache").exists());
         assert_eq!(
             fs::read_to_string(target.join(SETTINGS_FILE)).unwrap(),
@@ -555,6 +585,86 @@ mod tests {
                 .to_string_lossy()
                 .starts_with("before-data-import-")));
         assert!(!apply_pending_data_import(&target).unwrap());
+    }
+
+    #[test]
+    fn imports_legacy_names_and_rejects_conflicting_archive_entries() {
+        let source = temp_dir("legacy-source");
+        let database = source.join("old.sqlite3");
+        make_db(&database, "legacy");
+        for conflict in [false, true] {
+            let archive = source.join(if conflict {
+                "conflict.zip"
+            } else {
+                "legacy.zip"
+            });
+            let mut writer = ZipWriter::new(File::create(&archive).unwrap());
+            writer.start_file(MANIFEST_NAME, file_options()).unwrap();
+            writer
+                .write_all(
+                    &serde_json::to_vec(&DataExportManifest {
+                        format: DATA_EXPORT_FORMAT.into(),
+                        format_version: 1,
+                        app_version: "3.0.0".into(),
+                        created_at: 1784014200,
+                        files: 2,
+                    })
+                    .unwrap(),
+                )
+                .unwrap();
+            for name in if conflict {
+                vec!["VRCX-0.sqlite3", DATABASE_FILE]
+            } else {
+                vec!["VRCX-0.sqlite3"]
+            } {
+                writer.start_file(name, file_options()).unwrap();
+                io::copy(&mut File::open(&database).unwrap(), &mut writer).unwrap();
+            }
+            writer.start_file("VRCX-0.json", file_options()).unwrap();
+            writer.write_all(br#"{"setting":"legacy"}"#).unwrap();
+            writer.finish().unwrap();
+            let target = temp_dir(if conflict {
+                "conflicting-target"
+            } else {
+                "legacy-target"
+            });
+            let result = stage_data_import(&archive, &target);
+            if conflict {
+                assert!(result.is_err());
+                assert!(!has_pending_data_import(&target));
+            } else {
+                result.unwrap();
+                assert!(apply_pending_data_import(&target).unwrap());
+                let conn = rusqlite::Connection::open(target.join(DATABASE_FILE)).unwrap();
+                let theme: String = conn
+                    .query_row("SELECT value FROM configs WHERE key='theme'", [], |row| {
+                        row.get(0)
+                    })
+                    .unwrap();
+                assert_eq!(theme, "legacy");
+                assert_eq!(
+                    fs::read(target.join(SETTINGS_FILE)).unwrap(),
+                    br#"{"setting":"legacy"}"#
+                );
+                assert!(!target.join("VRCX-0.sqlite3").exists());
+            }
+        }
+    }
+
+    #[test]
+    fn applies_import_staged_by_a_previous_build() {
+        let target = temp_dir("previous-staged-import");
+        let staging = target.join(IMPORT_STAGING_DIR);
+        fs::create_dir(&staging).unwrap();
+        make_db(&staging.join("VRCX-0.sqlite3"), "previous");
+        fs::write(staging.join("VRCX-0.json"), br#"{"kept":"yes"}"#).unwrap();
+        fs::write(target.join(IMPORT_MARKER_FILE), b"{}").unwrap();
+        assert!(apply_pending_data_import(&target).unwrap());
+        assert!(target.join(DATABASE_FILE).is_file());
+        assert_eq!(
+            fs::read(target.join(SETTINGS_FILE)).unwrap(),
+            br#"{"kept":"yes"}"#
+        );
     }
 
     #[test]

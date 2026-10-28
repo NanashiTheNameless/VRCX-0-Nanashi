@@ -28,6 +28,7 @@ pub mod time;
 pub mod tls;
 pub mod trust;
 pub mod two_factor_method;
+pub mod update_compatibility;
 pub mod user_agent;
 pub mod user_facts;
 pub mod vrchat_endpoints;

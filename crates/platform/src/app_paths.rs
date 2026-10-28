@@ -8,12 +8,10 @@ const APP_DIR_NAME: &str = "VRCX-0-Nanashi";
 /// Upstream VRCX-0's data folder. Copied once into [`APP_DIR_NAME`] on first
 /// launch so the fork starts with the user's existing profile.
 const UPSTREAM_APP_DIR_NAME: &str = "VRCX-0";
-/// Regenerable caches and per-process state that are not worth copying.
-const UPSTREAM_COPY_SKIP: &[&str] = &["ImageCache", "ScreenshotThumbs", "runtime.lock"];
 const DATA_DIR_POINTER_FILE: &str = "VRCX-0.data-dir.json";
 const DATA_DIR_ARG: &str = "--data-dir";
-const PROFILE_DB_FILE: &str = "VRCX-0.sqlite3";
-const PROFILE_CONFIG_FILE: &str = "VRCX-0.json";
+const PROFILE_DB_FILE: &str = "VRCX-0-Nanashi.sqlite3";
+const PROFILE_CONFIG_FILE: &str = "VRCX-0-Nanashi.json";
 const WRITE_PROBE_FILE: &str = ".vrcx-0-write-test";
 
 #[derive(Clone)]
@@ -102,44 +100,7 @@ pub fn default_app_data_dir() -> Result<PathBuf, Error> {
 }
 
 pub fn resolve_app_data_dir() -> Result<AppDataDirResolution, Error> {
-    if let Ok(default_dir) = default_app_data_dir() {
-        if let Some(config_dir) = default_dir.parent() {
-            seed_from_upstream_app_dir(&config_dir.join(UPSTREAM_APP_DIR_NAME), &default_dir);
-        }
-    }
     resolve_app_data_dir_from_args(std::env::args_os().skip(1))
-}
-
-/// Fork: when this fork has no data folder yet but upstream VRCX-0 does, copy
-/// upstream's folder (minus caches and the runtime lock) so settings, the
-/// database and a custom data-dir pointer carry over. Upstream data is never
-/// modified. Best effort: on failure the partial copy is removed and the app
-/// starts fresh.
-pub fn seed_from_upstream_app_dir(upstream_dir: &Path, fork_dir: &Path) -> bool {
-    if fork_dir.exists() || !upstream_dir.is_dir() {
-        return false;
-    }
-    if upstream_dir.join("runtime.lock").exists() {
-        tracing::warn!(
-            upstream = %upstream_dir.display(),
-            "upstream VRCX-0 appears to be running; copying its data anyway"
-        );
-    }
-    match copy_dir_filtered(upstream_dir, fork_dir, UPSTREAM_COPY_SKIP) {
-        Ok(()) => {
-            tracing::info!(
-                from = %upstream_dir.display(),
-                to = %fork_dir.display(),
-                "seeded fork data folder from upstream VRCX-0"
-            );
-            true
-        }
-        Err(error) => {
-            tracing::warn!(%error, "failed to copy upstream VRCX-0 data; starting fresh");
-            let _ = std::fs::remove_dir_all(fork_dir);
-            false
-        }
-    }
 }
 
 /// Profile database of an upstream VRCX-0 install (honours its custom data
@@ -149,26 +110,35 @@ pub fn upstream_vrcx0_profile_db() -> Option<PathBuf> {
     let data_dir = read_persisted_app_data_dir_from_default(&upstream_default)
         .ok()
         .flatten()
+        .map(|path| {
+            if path.is_absolute() {
+                path
+            } else {
+                upstream_default.join(path)
+            }
+        })
         .unwrap_or(upstream_default);
-    let db = data_dir.join(PROFILE_DB_FILE);
+    let db = data_dir.join("VRCX-0.sqlite3");
     db.is_file().then_some(db)
 }
 
-fn copy_dir_filtered(from: &Path, to: &Path, skip: &[&str]) -> std::io::Result<()> {
-    std::fs::create_dir_all(to)?;
-    for entry in std::fs::read_dir(from)? {
-        let entry = entry?;
-        let name = entry.file_name();
-        if skip.iter().any(|skipped| OsStr::new(skipped) == name) {
-            continue;
-        }
-        let source = entry.path();
-        let target = to.join(&name);
-        let file_type = entry.file_type()?;
-        if file_type.is_dir() {
-            copy_dir_filtered(&source, &target, &[])?;
-        } else if file_type.is_file() {
-            std::fs::copy(&source, &target)?;
+pub fn ensure_fork_data_directory(path: &Path) -> Result<(), Error> {
+    if let Some(default) = dirs::config_dir().map(|dir| dir.join(UPSTREAM_APP_DIR_NAME)) {
+        let configured = read_persisted_app_data_dir_from_default(&default)
+            .ok()
+            .flatten()
+            .map(|path| {
+                if path.is_absolute() {
+                    path
+                } else {
+                    default.join(path)
+                }
+            });
+        if std::iter::once(&default)
+            .chain(configured.iter())
+            .any(|upstream| app_data_paths_match(path, upstream))
+        {
+            return Err(Error::Custom("The fork cannot open upstream VRCX-0 data in place. Copy the profile into a separate directory first.".into()));
         }
     }
     Ok(())
@@ -193,7 +163,13 @@ pub fn resolve_app_data_dir_from_args(
         });
     }
 
-    let persisted_dir = read_persisted_app_data_dir_from_default(&default_dir)?;
+    let mut persisted_dir = read_persisted_app_data_dir_from_default(&default_dir)?;
+    if persisted_dir
+        .as_ref()
+        .is_some_and(|path| ensure_fork_data_directory(path).is_err())
+    {
+        persisted_dir = Some(detach_upstream_data_dir_pointer(&default_dir)?);
+    }
     let (current_dir, source) = if let Some(persisted_dir) = persisted_dir.clone() {
         (
             validate_startup_app_data_dir(&persisted_dir, false)?.resolved_path(),
@@ -289,6 +265,34 @@ pub fn commit_app_data_dir_pointer(default_dir: &Path, path: &Path) -> Result<()
     write_app_data_dir_pointer(default_dir, &json)
 }
 
+fn detach_upstream_data_dir_pointer(default_dir: &Path) -> Result<PathBuf, Error> {
+    let original = std::fs::read(app_data_dir_pointer_path(default_dir))?;
+    let mut suffix = 0_u32;
+    let target = loop {
+        let name = if suffix == 0 {
+            "imported-upstream-profile".to_string()
+        } else {
+            format!("imported-upstream-profile-{suffix}")
+        };
+        let candidate = default_dir.join(name);
+        match std::fs::create_dir(&candidate) {
+            Ok(()) => break candidate,
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => suffix += 1,
+            Err(error) => return Err(error.into()),
+        }
+    };
+    let backup = target.join(".previous-data-dir-pointer.json");
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(backup)?;
+    file.write_all(&original)?;
+    file.sync_all()?;
+    sync_directory_after_pointer_update(&target)?;
+    commit_app_data_dir_pointer(default_dir, &target)?;
+    Ok(target)
+}
+
 pub fn clear_app_data_dir_pointer(default_dir: &Path) -> Result<(), Error> {
     let pointer_path = app_data_dir_pointer_path(default_dir);
     match std::fs::remove_file(&pointer_path) {
@@ -324,7 +328,9 @@ fn parse_data_dir_arg(args: impl IntoIterator<Item = OsString>) -> Result<Option
     Ok(data_dir)
 }
 
-fn read_persisted_app_data_dir_from_default(default_dir: &Path) -> Result<Option<PathBuf>, Error> {
+pub fn read_persisted_app_data_dir_from_default(
+    default_dir: &Path,
+) -> Result<Option<PathBuf>, Error> {
     let pointer_path = app_data_dir_pointer_path(default_dir);
     if !pointer_path.exists() {
         return Ok(None);
@@ -401,6 +407,7 @@ fn validate_app_data_dir_for_mode(
         return Err(Error::Custom("Data directory path is empty.".into()));
     }
 
+    ensure_fork_data_directory(path)?;
     let existed = path.exists();
     if existed && !path.is_dir() {
         return Err(Error::Custom(format!(
@@ -421,9 +428,12 @@ fn validate_app_data_dir_for_mode(
 
     let resolved_path = path.canonicalize()?;
     let is_empty = directory_is_empty(&resolved_path)?;
+    ensure_fork_data_directory(&resolved_path)?;
     ensure_directory_writable(&resolved_path)?;
-    let has_database = resolved_path.join(PROFILE_DB_FILE).is_file();
-    let has_config = resolved_path.join(PROFILE_CONFIG_FILE).is_file();
+    let has_database = resolved_path.join(PROFILE_DB_FILE).is_file()
+        || resolved_path.join("VRCX-0.sqlite3").is_file();
+    let has_config = resolved_path.join(PROFILE_CONFIG_FILE).is_file()
+        || resolved_path.join("VRCX-0.json").is_file();
     let (warning_kind, warning) = if is_empty {
         (
             Some(AppDataDirWarningKind::Empty),
@@ -532,58 +542,44 @@ fn path_string(path: &Path) -> String {
 }
 
 #[cfg(test)]
-mod seed_tests {
-    use super::*;
-
-    fn temp_dir(name: &str) -> PathBuf {
-        let dir =
-            std::env::temp_dir().join(format!("vrcx-0-nanashi-seed-{name}-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        dir
-    }
-
-    #[test]
-    fn copies_upstream_profile_once_and_skips_caches() {
-        let root = temp_dir("copy");
-        let upstream = root.join("VRCX-0");
-        let fork = root.join("VRCX-0-Nanashi");
-        std::fs::create_dir_all(upstream.join("ImageCache")).unwrap();
-        std::fs::create_dir_all(upstream.join("backups")).unwrap();
-        std::fs::write(upstream.join(PROFILE_DB_FILE), b"db").unwrap();
-        std::fs::write(upstream.join(PROFILE_CONFIG_FILE), b"{}").unwrap();
-        std::fs::write(upstream.join("runtime.lock"), b"").unwrap();
-        std::fs::write(upstream.join("ImageCache/a.png"), b"x").unwrap();
-        std::fs::write(upstream.join("backups/b.zip"), b"z").unwrap();
-
-        assert!(seed_from_upstream_app_dir(&upstream, &fork));
-        assert!(fork.join(PROFILE_DB_FILE).is_file());
-        assert!(fork.join("backups/b.zip").is_file());
-        assert!(!fork.join("ImageCache").exists());
-        assert!(!fork.join("runtime.lock").exists());
-        assert!(upstream.join(PROFILE_DB_FILE).is_file());
-
-        std::fs::write(fork.join(PROFILE_DB_FILE), b"fork").unwrap();
-        assert!(!seed_from_upstream_app_dir(&upstream, &fork));
-        assert_eq!(std::fs::read(fork.join(PROFILE_DB_FILE)).unwrap(), b"fork");
-        let _ = std::fs::remove_dir_all(root);
-    }
-
-    #[test]
-    fn does_nothing_without_upstream_folder() {
-        let root = temp_dir("none");
-        assert!(!seed_from_upstream_app_dir(
-            &root.join("missing"),
-            &root.join("fork")
-        ));
-        assert!(!root.join("fork").exists());
-        let _ = std::fs::remove_dir_all(root);
-    }
-}
-
-#[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn refuses_the_upstream_folder_even_when_no_database_is_present() {
+        if let Some(config) = dirs::config_dir() {
+            assert!(ensure_fork_data_directory(&config.join(UPSTREAM_APP_DIR_NAME)).is_err());
+        }
+    }
+
+    #[test]
+    fn detaches_an_upstream_pointer_without_reusing_or_removing_any_profile() {
+        let dir = TestDir::new("detach-upstream-pointer");
+        let existing = dir.path.join("imported-upstream-profile");
+        std::fs::create_dir(&existing).unwrap();
+        std::fs::write(existing.join(PROFILE_DB_FILE), b"existing").unwrap();
+        std::fs::write(dir.path.join("VRCX-0.sqlite3"), b"older local copy").unwrap();
+        let pointer = r#"{"dataDir":"upstream-source"}"#;
+        write_app_data_dir_pointer(&dir.path, pointer).unwrap();
+        let target = detach_upstream_data_dir_pointer(&dir.path).unwrap();
+        assert_eq!(target, dir.path.join("imported-upstream-profile-1"));
+        assert_eq!(
+            read_persisted_app_data_dir_from_default(&dir.path).unwrap(),
+            Some(target.canonicalize().unwrap())
+        );
+        assert_eq!(
+            std::fs::read(target.join(".previous-data-dir-pointer.json")).unwrap(),
+            pointer.as_bytes()
+        );
+        assert_eq!(
+            std::fs::read(existing.join(PROFILE_DB_FILE)).unwrap(),
+            b"existing"
+        );
+        assert_eq!(
+            std::fs::read(dir.path.join("VRCX-0.sqlite3")).unwrap(),
+            b"older local copy"
+        );
+    }
 
     #[test]
     fn startup_validation_warns_but_accepts_a_database_only_profile_dir() {

@@ -57,6 +57,7 @@ struct ProfileLockGuard {
 
 impl ProfileLock {
     pub(super) fn acquire(app_data: &Path) -> Result<Self> {
+        vrcx_0_platform::app_paths::ensure_fork_data_directory(app_data)?;
         std::fs::create_dir_all(app_data)?;
         let path = app_data.join(PROFILE_LOCK_FILE);
         let mut file = open_profile_lock_file(&path)?;

@@ -14,8 +14,8 @@ use super::types::{
     DATA_DIR_MIGRATION_STAGING_DIRECTORY,
 };
 
-const PROFILE_DATABASE_FILE: &str = "VRCX-0.sqlite3";
-const PROFILE_CONFIG_FILE: &str = "VRCX-0.json";
+const PROFILE_DATABASE_FILE: &str = "VRCX-0-Nanashi.sqlite3";
+const PROFILE_CONFIG_FILE: &str = "VRCX-0-Nanashi.json";
 const METADATA_CACHE_FILE: &str = "metadataCache.db";
 const SCREENSHOT_THUMBS_DIRECTORY: &str = "ScreenshotThumbs";
 const PURE_CACHE_ENTRIES: [&str; 5] = [
@@ -31,8 +31,8 @@ const CLEANUP_FILES: [&str; 7] = [
     "error-log.txt",
     "runtime.lock",
     "last_profile_restore_result.json",
-    "VRCX-0.sqlite3-wal",
-    "VRCX-0.sqlite3-shm",
+    "VRCX-0-Nanashi.sqlite3-wal",
+    "VRCX-0-Nanashi.sqlite3-shm",
 ];
 const CLEANUP_DIRECTORIES: [&str; 8] = [
     "ImageCache",
@@ -210,10 +210,14 @@ pub fn finalize_data_dir_migration(
     let target_dir = Path::new(&journal.target_dir);
     let mut warnings = Vec::new();
 
-    if let Err(error) = copy_optional_file(
-        &source_dir.join(PROFILE_CONFIG_FILE),
-        &target_dir.join(PROFILE_CONFIG_FILE),
-    ) {
+    let config_source = source_dir.join(PROFILE_CONFIG_FILE);
+    let config_source = match fs::symlink_metadata(&config_source) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            source_dir.join("VRCX-0.json")
+        }
+        _ => config_source,
+    };
+    if let Err(error) = copy_optional_file(&config_source, &target_dir.join(PROFILE_CONFIG_FILE)) {
         tracing::warn!(error = %error, "failed to copy migrated profile configuration");
         warnings.push(DataDirMigrationWarning::ConfigCopyFailed);
     }
@@ -357,9 +361,14 @@ fn ensure_copy_continues(continue_copying: bool) -> Result<()> {
 fn move_existing_profile_to_replaced_directory(target_dir: &Path) -> Result<Option<PathBuf>> {
     let mut entries = Vec::new();
     for name in [
-        PROFILE_DATABASE_FILE,
+        "VRCX-0.sqlite3",
         "VRCX-0.sqlite3-wal",
         "VRCX-0.sqlite3-shm",
+        "VRCX-0.sqlite3-journal",
+        "VRCX-0.json",
+        PROFILE_DATABASE_FILE,
+        "VRCX-0-Nanashi.sqlite3-wal",
+        "VRCX-0-Nanashi.sqlite3-shm",
         PROFILE_CONFIG_FILE,
         METADATA_CACHE_FILE,
         "metadataCache.db-wal",
@@ -412,10 +421,11 @@ fn copy_gallery_data(source_dir: &Path, target_dir: &Path) -> Result<()> {
 }
 
 fn copy_optional_file(source: &Path, destination: &Path) -> Result<()> {
-    if !source.exists() {
-        return Ok(());
-    }
-    let metadata = fs::symlink_metadata(source)?;
+    let metadata = match fs::symlink_metadata(source) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+        Err(error) => return Err(error.into()),
+    };
     if !metadata.file_type().is_file() {
         return Err(Error::InvalidData(format!(
             "Migration source is not a regular file: {}",

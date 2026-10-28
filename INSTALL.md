@@ -18,6 +18,27 @@ Fork builds are not code-signed. On Windows, SmartScreen may warn on first run. 
 if the first launch is blocked, open **System Settings > Privacy & Security** and click
 **Open Anyway**.
 
+## Upgrading from older builds
+
+An existing fork profile always takes priority. During normal startup with no fork profile, the app
+automatically imports upstream VRCX-0 first, then original VRCX. It follows
+upstream VRCX-0's custom data-directory pointer and VRCX's custom database
+location, including supported Wine installations on Linux. The source is read
+only. Interrupted imports resume, and conflicting files are never overwritten.
+Corrupt databases, unsupported newer VRCX schemas and missing custom databases
+stop the import with an error instead of silently creating an empty profile.
+An explicit `--data-dir` stays isolated: existing files there migrate, and an
+empty directory starts a separate profile.
+
+From 3.0.1, the desktop executable is `VRCX-0-Nanashi` (`.exe` on Windows).
+The first launch copies `VRCX-0.sqlite3` and `VRCX-0.json` to
+`VRCX-0-Nanashi.sqlite3` and `VRCX-0-Nanashi.json` in the same data directory.
+The SQLite snapshot includes committed WAL data and must pass an integrity
+check before it becomes active. The original files remain for recovery.
+Older exports and profile backups remain importable. The updater blocks all
+releases with a base version below 3.0.1, including older nightly builds.
+Autostart entries are refreshed when the updated app starts.
+
 ## Linux
 
 On first launch, the AppImage removes its build version from the standard download

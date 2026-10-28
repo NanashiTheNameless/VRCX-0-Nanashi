@@ -219,9 +219,9 @@ jobs:
                   case "${{ matrix.platform }}" in
                       windows_x86_64)
                           if [[ "$PACKAGE_VARIANT" == "preview" ]]; then
-                              source="target/debug/vrcx-0.exe"
+                              source="target/debug/VRCX-0-Nanashi.exe"
                           else
-                              source="target/release/vrcx-0.exe"
+                              source="target/release/VRCX-0-Nanashi.exe"
                           fi
                           cp "$source" "package-assets/${stem}_windows_x86_64.exe"
                           ;;
@@ -307,7 +307,7 @@ jobs:
               with:
                   name: macos-binary-${{ inputs.variant }}-${{ matrix.rust_target }}
                   path: |
-                      target/${{ matrix.rust_target }}/release/vrcx-0
+                      target/${{ matrix.rust_target }}/release/VRCX-0-Nanashi
                       src-tauri/resources/licenses/THIRD_PARTY_NOTICES.txt
                   if-no-files-found: error
                   retention-days: 1
@@ -338,11 +338,11 @@ jobs:
                   universal_dir="target/universal-apple-darwin/release"
                   mkdir -p "$universal_dir"
                   lipo -create \
-                      target/aarch64-apple-darwin/release/vrcx-0 \
-                      target/x86_64-apple-darwin/release/vrcx-0 \
-                      -output "$universal_dir/vrcx-0"
-                  chmod +x "$universal_dir/vrcx-0"
-                  lipo -info "$universal_dir/vrcx-0"
+                      target/aarch64-apple-darwin/release/VRCX-0-Nanashi \
+                      target/x86_64-apple-darwin/release/VRCX-0-Nanashi \
+                      -output "$universal_dir/VRCX-0-Nanashi"
+                  chmod +x "$universal_dir/VRCX-0-Nanashi"
+                  lipo -info "$universal_dir/VRCX-0-Nanashi"
 
             - name: Bundle DMG
               run: |

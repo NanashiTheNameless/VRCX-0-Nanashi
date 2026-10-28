@@ -38,7 +38,7 @@ impl Drop for TestDir {
 }
 
 fn test_database(source_dir: &Path) -> Arc<DatabaseService> {
-    let db = Arc::new(DatabaseService::new(&source_dir.join("VRCX-0.sqlite3")).unwrap());
+    let db = Arc::new(DatabaseService::new(&source_dir.join("VRCX-0-Nanashi.sqlite3")).unwrap());
     ConfigRepository::new(Arc::clone(&db))
         .set_string("migration-test", "source")
         .unwrap();
@@ -146,7 +146,7 @@ fn migration_happy_path_freezes_copies_and_commits_pointer() {
     assert_eq!(outcome.status.state, DataDirMigrationState::Completed);
     assert_eq!(*committed.lock().unwrap(), Some(target.clone()));
     assert!(!db.is_main_mode());
-    assert!(target.join("VRCX-0.sqlite3").is_file());
+    assert!(target.join("VRCX-0-Nanashi.sqlite3").is_file());
     assert_eq!(
         read_pending_data_dir_migration(&control)
             .unwrap()
@@ -204,14 +204,14 @@ fn migration_succeeds_when_a_reader_prevents_wal_truncation() {
     assert_eq!(journal.phase, DataDirMigrationJournalPhase::Switched);
     assert_eq!(journal.wal_bytes, None);
     assert!(
-        std::fs::metadata(source.join("VRCX-0.sqlite3-wal"))
+        std::fs::metadata(source.join("VRCX-0-Nanashi.sqlite3-wal"))
             .unwrap()
             .len()
             > 0
     );
-    assert!(!target.join("VRCX-0.sqlite3-wal").exists());
-    assert!(!target.join("VRCX-0.sqlite3-shm").exists());
-    let migrated = Arc::new(DatabaseService::new(&target.join("VRCX-0.sqlite3")).unwrap());
+    assert!(!target.join("VRCX-0-Nanashi.sqlite3-wal").exists());
+    assert!(!target.join("VRCX-0-Nanashi.sqlite3-shm").exists());
+    let migrated = Arc::new(DatabaseService::new(&target.join("VRCX-0-Nanashi.sqlite3")).unwrap());
     assert_eq!(
         ConfigRepository::new(migrated)
             .get_string("migration-test", "")
@@ -268,7 +268,7 @@ fn freeze_failure_preserves_source_database_and_does_not_commit_pointer() {
         DataDirMigrationErrorCode::DatabaseInUse
     );
     assert!(committed.lock().unwrap().is_none());
-    assert!(!target.join("VRCX-0.sqlite3").exists());
+    assert!(!target.join("VRCX-0-Nanashi.sqlite3").exists());
     assert!(read_pending_data_dir_migration(&control).unwrap().is_none());
     assert!(db.is_main_mode());
     read_snapshot.rollback().unwrap();
