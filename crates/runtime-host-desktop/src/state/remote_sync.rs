@@ -23,6 +23,9 @@ use zeroize::Zeroizing;
 use super::DesktopRuntimeHostState;
 use crate::{Error, Result};
 
+mod setting_groups;
+use setting_groups::{setting_group, SETTING_GROUPS};
+
 pub const BACKEND_KEY: &str = "historySyncBackend";
 pub const BACKEND_REMOTESYNC: &str = "remotesync";
 pub const SYNC_INTERVAL_MINUTES_KEY: &str = "remoteSyncIntervalMinutes";
@@ -269,6 +272,12 @@ fn syncable_app_setting(key: &str) -> bool {
     let Some(name) = key.strip_prefix("config:vrcx_") else {
         return false;
     };
+    if name.starts_with("0_nanashi_avatarproviderdefaults")
+        || name.starts_with("currentusergroups_")
+        || name == "elprimarycolor"
+    {
+        return false;
+    }
     // Keys are stored in lower case, so an identifier is told apart by how the
     // name ends; a plain "id" fragment also caught "hide" and "sidebar".
     if ["id", "ids", "idsbyuser"]
@@ -334,7 +343,7 @@ fn syncable_app_setting(key: &str) -> bool {
 const OTHER_SETTING_GROUP: &str = "other";
 
 /// Checked in order, so the overlay's notification keys land under overlay.
-const SETTING_GROUPS: [(&str, &[&str]); 8] = [
+const LEGACY_SETTING_GROUPS: [(&str, &[&str]); 8] = [
     (
         "overlay",
         &[
@@ -418,10 +427,10 @@ const SETTING_GROUPS: [(&str, &[&str]); 8] = [
     ),
 ];
 
-fn setting_group(key: &str) -> &'static str {
+fn legacy_setting_group(key: &str) -> &'static str {
     let key = key.trim().to_ascii_lowercase();
     let name = key.strip_prefix("config:vrcx_").unwrap_or(&key);
-    SETTING_GROUPS
+    LEGACY_SETTING_GROUPS
         .iter()
         .find(|(_, fragments)| fragments.iter().any(|fragment| name.contains(fragment)))
         .map_or(OTHER_SETTING_GROUP, |(group, _)| group)
@@ -445,6 +454,33 @@ impl RemoteSyncSettingChoices {
             .get(&key)
             .copied()
             .unwrap_or_else(|| !self.excluded_groups.contains(setting_group(&key)))
+    }
+}
+
+#[derive(Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase", default)]
+struct StoredRemoteSyncSettingChoices {
+    grouping_version: u32,
+    #[serde(flatten)]
+    choices: RemoteSyncSettingChoices,
+}
+
+impl StoredRemoteSyncSettingChoices {
+    fn selects(&self, key: &str) -> bool {
+        if self.grouping_version > 0 {
+            return self.choices.selects(key);
+        }
+        let key = key.trim().to_ascii_lowercase();
+        self.choices
+            .key_overrides
+            .get(&key)
+            .copied()
+            .unwrap_or_else(|| {
+                !self
+                    .choices
+                    .excluded_groups
+                    .contains(legacy_setting_group(&key))
+            })
     }
 }
 
@@ -563,7 +599,7 @@ impl DesktopRuntimeHostState {
         self.remote_sync.cancel.store(true, Ordering::Release);
     }
 
-    pub fn remote_sync_setting_choices(&self) -> RemoteSyncSettingChoices {
+    fn remote_sync_setting_choices(&self) -> StoredRemoteSyncSettingChoices {
         serde_json::from_str(&self.config_string(SYNC_SETTING_CHOICES_KEY, "")).unwrap_or_default()
     }
 
@@ -574,7 +610,7 @@ impl DesktopRuntimeHostState {
                 .into_iter()
                 .filter(|group| {
                     group == OTHER_SETTING_GROUP
-                        || SETTING_GROUPS.iter().any(|(known, _)| known == group)
+                        || SETTING_GROUPS.iter().any(|(known, ..)| known == group)
                 })
                 .collect(),
             key_overrides: choices
@@ -586,7 +622,11 @@ impl DesktopRuntimeHostState {
         };
         self.config_set_values(vec![crate::local_data::ConfigWriteEntry {
             key: SYNC_SETTING_CHOICES_KEY.into(),
-            value: serde_json::to_string(&choices).map_err(sync_error)?,
+            value: serde_json::to_string(&StoredRemoteSyncSettingChoices {
+                grouping_version: 1,
+                choices,
+            })
+            .map_err(sync_error)?,
         }])?;
         Ok(())
     }
@@ -596,11 +636,11 @@ impl DesktopRuntimeHostState {
         let choices = self.remote_sync_setting_choices();
         let mut groups = SETTING_GROUPS
             .iter()
-            .map(|(group, _)| *group)
+            .map(|(group, ..)| *group)
             .chain([OTHER_SETTING_GROUP])
             .map(|group| RemoteSyncSettingGroup {
                 id: group.to_string(),
-                enabled: !choices.excluded_groups.contains(group),
+                enabled: !choices.choices.excluded_groups.contains(group),
                 settings: Vec::new(),
             })
             .collect::<Vec<_>>();
@@ -1687,6 +1727,21 @@ mod tests {
     }
 
     #[test]
+    fn migration_markers_and_legacy_caches_are_never_synced() {
+        for key in [
+            "config:vrcx_0_nanashi_avatarproviderdefaultsv2",
+            "config:vrcx_0_nanashi_avatarproviderdefaultsv3",
+            "config:vrcx_currentusergroups_usr_51f73598-041f-42f3-bb89-319a6d27b10c",
+            "config:vrcx_elprimarycolor",
+        ] {
+            assert!(!syncable_app_setting(key), "{key}");
+        }
+        assert!(syncable_app_setting(
+            "config:vrcx_0_nanashi_avatarsearchdisabledproviders"
+        ));
+    }
+
+    #[test]
     fn the_setting_choices_themselves_are_never_synced() {
         assert!(!syncable_app_setting(
             &vrcx_0_contracts::resolve_config_key(SYNC_SETTING_CHOICES_KEY)
@@ -1722,6 +1777,45 @@ mod tests {
         assert!(!choices.selects("config:vrcx_thememode"));
         assert!(choices.selects("config:vrcx_zoomlevel"));
         assert!(RemoteSyncSettingChoices::default().selects("config:vrcx_wristoverlaysize"));
+    }
+
+    #[test]
+    fn regrouping_preserves_legacy_exclusions_and_explicit_choices() {
+        let choices: StoredRemoteSyncSettingChoices = serde_json::from_str(
+            r#"{"excludedGroups":["other","appearance","layout","feed"],"keyOverrides":{"config:vrcx_cropinstanceprints":true,"config:vrcx_desktoptoast":false}}"#,
+        )
+        .unwrap();
+        for key in [
+            "config:vrcx_avatarremotedatabaseproviderlist",
+            "config:vrcx_discordhideimage",
+            "config:vrcx_overlayactivityfilters",
+            "config:vrcx_notificationtablefilters",
+            "config:vrcx_saveinstanceprints",
+        ] {
+            assert!(!choices.selects(key), "{key}");
+        }
+        assert!(choices.selects("config:vrcx_cropinstanceprints"));
+        assert!(!choices.selects("config:vrcx_desktoptoast"));
+        assert!(choices.selects("config:vrcx_autodeleteprintslimit"));
+        assert!(choices.selects("config:vrcx_wristoverlayhand"));
+    }
+
+    #[test]
+    fn saved_choices_use_the_new_categories_after_round_trip() {
+        let stored = StoredRemoteSyncSettingChoices {
+            grouping_version: 1,
+            choices: RemoteSyncSettingChoices {
+                excluded_groups: BTreeSet::from(["media".into(), "avatars".into()]),
+                key_overrides: BTreeMap::from([("config:vrcx_cropinstanceprints".into(), true)]),
+            },
+        };
+        let encoded = serde_json::to_string(&stored).unwrap();
+        let restored: StoredRemoteSyncSettingChoices = serde_json::from_str(&encoded).unwrap();
+        assert!(!restored.selects("config:vrcx_autodeleteprintslimit"));
+        assert!(!restored.selects("config:vrcx_avatarremotedatabaseproviderlist"));
+        assert!(restored.selects("config:vrcx_cropinstanceprints"));
+        assert!(restored.selects("config:vrcx_autoupdatevrcx"));
+        assert!(restored.selects("config:vrcx_discordhideimage"));
     }
 
     fn world(id: &str, name: &str, image_url: &str) -> CachedWorld {

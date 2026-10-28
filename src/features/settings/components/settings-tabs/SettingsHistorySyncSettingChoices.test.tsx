@@ -9,7 +9,25 @@ import {
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import en from '@/localization/en.json';
 import { commands } from '@/platform/tauri/bindings';
+
+vi.mock('react-i18next', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('react-i18next')>();
+    return {
+        ...actual,
+        useTranslation: () => ({
+            t: (key: string) => {
+                const prefix = 'view.settings.history_sync.setting_names.';
+                const names = en.view.settings.history_sync
+                    .setting_names as Record<string, string>;
+                return key.startsWith(prefix)
+                    ? (names[key.slice(prefix.length)] ?? key)
+                    : key;
+            }
+        })
+    };
+});
 
 vi.mock('@/platform/tauri/bindings', async () =>
     (await import('@/test/mockCommands')).mockBindingsModule()
@@ -164,6 +182,31 @@ describe('choosing which settings sync', () => {
         expect(groupSwitch().getAttribute('aria-checked')).toBe('true');
     });
 
+    it('gives the fork avatar-provider preference a readable label and preserves its key', async () => {
+        const key = 'config:vrcx_0_nanashi_avatarsearchdisabledproviders';
+        groupsGet.mockResolvedValue([
+            {
+                id: 'other',
+                enabled: true,
+                settings: [{ key, synced: true }]
+            }
+        ]);
+        await renderChoices();
+        openDialog();
+
+        fireEvent.click(
+            screen.getByRole('switch', {
+                name: 'Disabled avatar search providers'
+            })
+        );
+        await save();
+
+        expect(choicesSet).toHaveBeenCalledWith({
+            excludedGroups: [],
+            keyOverrides: { [key]: false }
+        });
+    });
+
     it('reset turns everything back on', async () => {
         groupsGet.mockResolvedValue([
             {
@@ -186,6 +229,43 @@ describe('choosing which settings sync', () => {
         expect(choicesSet).toHaveBeenCalledWith({
             excludedGroups: [],
             keyOverrides: {}
+        });
+    });
+
+    it('saving regrouped settings preserves exclusions inherited from their old categories', async () => {
+        groupsGet.mockResolvedValue([
+            {
+                id: 'media',
+                enabled: true,
+                settings: [
+                    { key: 'config:vrcx_saveinstanceprints', synced: false },
+                    { key: 'config:vrcx_cropinstanceprints', synced: true }
+                ]
+            },
+            { id: 'other', enabled: false, settings: [] }
+        ]);
+        await renderChoices();
+        openDialog();
+
+        expect(
+            screen
+                .getByRole('switch', {
+                    name: 'view.settings.advanced.advanced.save_instance_prints_to_file.header'
+                })
+                .getAttribute('aria-checked')
+        ).toBe('false');
+        expect(
+            screen
+                .getByRole('switch', {
+                    name: 'view.settings.advanced.advanced.save_instance_prints_to_file.crop'
+                })
+                .getAttribute('aria-checked')
+        ).toBe('true');
+        await save();
+
+        expect(choicesSet).toHaveBeenCalledWith({
+            excludedGroups: ['other'],
+            keyOverrides: { 'config:vrcx_saveinstanceprints': false }
         });
     });
 

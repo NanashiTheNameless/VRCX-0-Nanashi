@@ -80,6 +80,9 @@ own) to keep an end-to-end encrypted copy of your history there and share it bet
   one PC stay local. "Settings to sync" opens a dialog that picks what each PC exchanges:
   choose a group on the left, then turn off the whole group or single settings, listed by the
   name they have in the app, or by a plain name for saved view state such as table filters.
+  Categories keep application behavior, appearance, layout, history, favorites, instance
+  defaults, avatar search, media, notifications, overlays, safety, automation, Discord and
+  Social AI preferences together. Existing exclusions are preserved when categories change.
   Changes apply on Save. A setting that is off keeps its value on that PC and is left alone
   on the server, so other PCs can still share it. The choice is per PC and is not synced.
 - **Manage it.** See and sign out connected clients, and delete the server copy, from the same

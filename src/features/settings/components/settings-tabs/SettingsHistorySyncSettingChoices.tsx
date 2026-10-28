@@ -200,7 +200,7 @@ export function SettingsHistorySyncSettingChoices({
             ) : null}
 
             <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="grid max-h-[85vh] w-[min(94vw,56rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-4xl">
+                <DialogContent className="grid h-[min(85vh,48rem)] max-h-[85vh] w-[min(94vw,56rem)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:max-w-4xl">
                     <DialogHeader>
                         <DialogTitle>
                             {t('view.settings.history_sync.setting_choices')}
@@ -219,17 +219,17 @@ export function SettingsHistorySyncSettingChoices({
                             onValueChange={(value) =>
                                 setSelectedId(String(value))
                             }
-                            className="grid h-[min(62vh,36rem)] min-h-0 grid-cols-[16rem_minmax(0,1fr)] grid-rows-[minmax(0,1fr)] gap-5 overflow-hidden"
+                            className="grid h-full min-h-0 min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,2fr)] grid-rows-[minmax(0,1fr)] gap-3 overflow-hidden sm:grid-cols-[14rem_minmax(0,1fr)] sm:gap-5"
                         >
-                            <ScrollArea className="h-full border-r pr-3">
-                                <TabsList className="h-fit w-full gap-1">
+                            <ScrollArea className="h-full min-w-0 border-r pr-3">
+                                <TabsList className="h-fit w-full min-w-0 gap-1">
                                     {draft.map((group) => (
                                         <TabsTrigger
                                             key={group.id}
                                             value={group.id}
-                                            className="h-auto w-full justify-between gap-3 px-3 py-2.5 text-left whitespace-normal sm:h-auto"
+                                            className="h-auto w-full min-w-0 justify-between gap-3 px-3 py-2.5 text-left whitespace-normal sm:h-auto"
                                         >
-                                            <span className="flex min-w-0 flex-1 flex-col items-start gap-1">
+                                            <span className="flex min-w-0 flex-1 flex-col items-start gap-1 [overflow-wrap:anywhere]">
                                                 <span className="font-medium">
                                                     {groupLabel(group.id)}
                                                 </span>
@@ -237,7 +237,10 @@ export function SettingsHistorySyncSettingChoices({
                                                     {countLabel([group])}
                                                 </span>
                                             </span>
-                                            <ChevronRightIcon data-icon="inline-end" />
+                                            <ChevronRightIcon
+                                                data-icon="inline-end"
+                                                className="shrink-0"
+                                            />
                                         </TabsTrigger>
                                     ))}
                                 </TabsList>
@@ -247,7 +250,7 @@ export function SettingsHistorySyncSettingChoices({
                                 value={selected.id}
                                 className="grid min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)] gap-3"
                             >
-                                <div className="flex items-center justify-between gap-4 border-b pb-3">
+                                <div className="flex min-w-0 items-center justify-between gap-4 border-b pb-3">
                                     <span className="flex min-w-0 flex-col gap-1">
                                         <span className="font-semibold">
                                             {groupLabel(selected.id)}
@@ -269,7 +272,7 @@ export function SettingsHistorySyncSettingChoices({
                                     />
                                 </div>
 
-                                <ScrollArea className="min-h-0 pr-2">
+                                <ScrollArea className="min-h-0 min-w-0 pr-2">
                                     <FieldGroup className="gap-0 rounded-lg border">
                                         {rows.map((setting) => (
                                             <Field
@@ -278,11 +281,11 @@ export function SettingsHistorySyncSettingChoices({
                                                 className="items-center gap-3 border-b px-3 py-2.5 last:border-b-0"
                                             >
                                                 <FieldContent className="min-w-0">
-                                                    <FieldLabel className="truncate">
+                                                    <FieldLabel className="max-w-full min-w-0 [overflow-wrap:anywhere] whitespace-normal">
                                                         {setting.label}
                                                     </FieldLabel>
                                                     {setting.section ? (
-                                                        <FieldDescription className="truncate">
+                                                        <FieldDescription className="[overflow-wrap:anywhere]">
                                                             {setting.section}
                                                         </FieldDescription>
                                                     ) : null}
