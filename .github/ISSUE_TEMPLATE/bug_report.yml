@@ -17,7 +17,7 @@ body:
     - type: input
       attributes:
           label: Operating system
-          description: e.g., Windows 11, macOS 26, Ubuntu 26.04
+          description: e.g., Windows 11, Ubuntu 26.04
     - type: textarea
       attributes:
           label: What happened?
@@ -33,5 +33,4 @@ body:
           description: |
               Screenshots help a lot! If you see an error, the log file is at:
               - **Windows:** `%APPDATA%\VRCX-0-Nanashi\error-log.txt`
-              - **macOS:** `~/Library/Application Support/VRCX-0-Nanashi/error-log.txt`
               - **Linux:** `~/.local/share/VRCX-0-Nanashi/error-log.txt`

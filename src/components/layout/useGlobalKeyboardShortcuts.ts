@@ -31,9 +31,6 @@ export function useGlobalKeyboardShortcuts() {
     const setSystemHostOpen = useRuntimeStore(
         (state) => state.setSystemHostOpen
     );
-    const isMacHost = useRuntimeStore(
-        (state) => state.hostCapabilities.platform === 'macos'
-    );
     const sessionReady = useSessionStore(
         (state) => state.sessionPhase === 'ready'
     );
@@ -42,7 +39,7 @@ export function useGlobalKeyboardShortcuts() {
     );
 
     useEffect(() => {
-        const primaryModifierKey = isMacHost ? 'Meta' : 'Control';
+        const primaryModifierKey = 'Control';
         let primaryModifierHeld = false;
         let shortcutHintsSuppressed = false;
         let shortcutHintTimer: number | null = null;
@@ -185,7 +182,7 @@ export function useGlobalKeyboardShortcuts() {
             if (event.key !== primaryModifierKey) {
                 return;
             }
-            primaryModifierHeld = isMacHost ? event.metaKey : event.ctrlKey;
+            primaryModifierHeld = event.ctrlKey;
             if (!primaryModifierHeld) {
                 shortcutHintsSuppressed = false;
                 hideShortcutHints();
@@ -213,7 +210,6 @@ export function useGlobalKeyboardShortcuts() {
             hideShortcutHints();
         };
     }, [
-        isMacHost,
         navigate,
         sessionReady,
         setShortcutHintsVisible,

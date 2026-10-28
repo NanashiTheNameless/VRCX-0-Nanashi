@@ -94,7 +94,7 @@ export async function suspendSidebarAutoHide(
     suspended: boolean
 ): Promise<void> {
     const platform = useRuntimeStore.getState().hostCapabilities.platform;
-    if (platform !== 'windows' && platform !== 'macos') {
+    if (platform !== 'windows') {
         return;
     }
     if (!suspended) {

@@ -163,16 +163,8 @@ jobs:
                 include:
                     - label: Windows
                       os: windows-latest
-                      rust_target: ''
                     - label: Linux
                       os: ubuntu-24.04
-                      rust_target: ''
-                    - label: macOS Apple Silicon
-                      os: macos-latest
-                      rust_target: ''
-                    - label: macOS Intel
-                      os: macos-latest
-                      rust_target: x86_64-apple-darwin
         steps:
             - uses: actions/checkout@v7
             - uses: ./.github/actions/setup-linux-tauri
@@ -180,18 +172,9 @@ jobs:
               with:
                   mode: ci
             - uses: ./.github/actions/setup-rust
-              with:
-                  target: ${{ matrix.rust_target }}
             - run: mkdir -p dist && printf '<!doctype html><html><body></body></html>' > dist/index.html
             - name: Build Tauri crate
-              env:
-                  RUST_TARGET: ${{ matrix.rust_target }}
-              run: |
-                  if [[ -n "$RUST_TARGET" ]]; then
-                      cargo build --manifest-path src-tauri/Cargo.toml --locked --target "$RUST_TARGET"
-                  else
-                      cargo build --manifest-path src-tauri/Cargo.toml --locked
-                  fi
+              run: cargo build --manifest-path src-tauri/Cargo.toml --locked
             - name: Test backend architecture
               if: runner.os == 'Linux'
               run: cargo test --manifest-path src-tauri/Cargo.toml --locked --test backend_architecture
@@ -215,9 +198,6 @@ jobs:
                     - label: Windows
                       os: windows-latest
                       rust_test_args: ''
-                    - label: macOS
-                      os: macos-latest
-                      rust_test_args: --exclude vrcx-0-overlay-runtime
         steps:
             - uses: actions/checkout@v7
             - name: Install Slint Linux dependencies

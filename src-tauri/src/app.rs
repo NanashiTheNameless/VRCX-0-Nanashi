@@ -1,8 +1,6 @@
 use crate::bindings_export;
 use crate::bootstrap;
 use crate::commands;
-#[cfg(target_os = "macos")]
-use crate::macos_menu;
 use crate::state::AppState;
 
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
@@ -334,7 +332,7 @@ pub fn run() {
                 .build(),
         );
 
-    #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
     let builder = builder.plugin(tauri_plugin_autostart::init(
         tauri_plugin_autostart::MacosLauncher::LaunchAgent,
         Some(vec!["--autostart"]),
@@ -460,33 +458,12 @@ pub fn run() {
             "tray-exit" => {
                 commands::host::window::request_application_exit(app);
             }
-            id if id.starts_with("mac-menu-") => {
-                #[cfg(target_os = "macos")]
-                if let Err(error) = macos_menu::emit_menu_action(app, id) {
-                    tracing::warn!(error = %error, id, "failed to emit macOS menu action");
-                }
-            }
             _ => {}
         })
         .invoke_handler(bindings_export::builder().invoke_handler())
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
-            #[cfg(target_os = "macos")]
-            if let tauri::RunEvent::Reopen {
-                has_visible_windows,
-                ..
-            } = event
-            {
-                if !has_visible_windows {
-                    restore_or_ensure_main_window(
-                        app,
-                        "failed to show main window from macOS Dock",
-                    );
-                }
-                return;
-            }
-
             if let tauri::RunEvent::ExitRequested { api, code, .. } = event {
                 if code.is_some() {
                     return;

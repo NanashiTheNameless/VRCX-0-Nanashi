@@ -483,11 +483,7 @@ fn normalize_release_requires_an_uploaded_manifest_asset_when_required() {
     );
 
     // One manifest carries every platform, so any supported target resolves it.
-    for target in [
-        "windows-x86_64-stable",
-        "linux-x86_64-appimage-stable",
-        "macos-aarch64-stable",
-    ] {
+    for target in ["windows-x86_64-stable", "linux-x86_64-appimage-stable"] {
         let normalized = normalize_release(&catalog_release, Some(target), true)
             .unwrap_or_else(|| panic!("release with a manifest normalizes for {target}"));
         assert_eq!(normalized.updater_type, AppUpdateDeliveryKind::Tauri);

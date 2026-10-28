@@ -29,8 +29,6 @@ fn updater_target(
 ) -> Result<String, Error> {
     let target = match (platform, arch) {
         (HostPlatform::Windows, HostArchitecture::X86_64) => "windows-x86_64-stable".to_string(),
-        (HostPlatform::Macos, HostArchitecture::Aarch64) => "macos-aarch64-stable".to_string(),
-        (HostPlatform::Macos, HostArchitecture::X86_64) => "macos-x86_64-stable".to_string(),
         (HostPlatform::Linux, HostArchitecture::X86_64) => {
             let kind = match linux_package_kind {
                 LinuxPackageKind::Deb => "deb",
@@ -127,15 +125,6 @@ mod tests {
             )
             .unwrap(),
             "linux-x86_64-appimage-stable"
-        );
-        assert_eq!(
-            updater_target(
-                HostPlatform::Macos,
-                HostArchitecture::Aarch64,
-                LinuxPackageKind::Unknown,
-            )
-            .unwrap(),
-            "macos-aarch64-stable"
         );
     }
 

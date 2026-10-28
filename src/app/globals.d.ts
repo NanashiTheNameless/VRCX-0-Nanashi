@@ -4,7 +4,6 @@ declare global {
     const VRCX_0_BUILD_BADGE: string;
     const VRCX_0_BUILD_TIME: string;
     const VRCX_0_DISABLE_UPDATE_CHECK: boolean;
-    const VRCX_0_MACOS_SYSTEM_FONTS_ENABLED: boolean;
 
     var $debug: AppDebug | undefined;
 

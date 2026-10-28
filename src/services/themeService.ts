@@ -45,13 +45,6 @@ const GOOGLE_NOTO_SANS_JP_FONTS = Object.freeze(["'Noto Sans JP'"]);
 const GOOGLE_NOTO_SANS_SC_FONTS = Object.freeze(["'Noto Sans SC'"]);
 const GOOGLE_NOTO_SANS_TC_FONTS = Object.freeze(["'Noto Sans TC'"]);
 const GOOGLE_NOTO_SANS_KR_FONTS = Object.freeze(["'Noto Sans KR'"]);
-const MACOS_SYSTEM_CJK_FONT_STACKS = Object.freeze({
-    ja: Object.freeze(["'Hiragino Sans'", "'Hiragino Kaku Gothic ProN'"]),
-    'zh-CN': Object.freeze(["'PingFang SC'", "'Hiragino Sans GB'"]),
-    'zh-TW': Object.freeze(["'PingFang TC'", "'PingFang HK'"]),
-    ko: Object.freeze(["'Apple SD Gothic Neo'"]),
-    default: Object.freeze([])
-});
 const CONFIGURABLE_CJK_FONT_LOCALES = new Set(['ja', 'ko', 'zh-CN', 'zh-TW']);
 
 type AppFontKey = keyof typeof APP_FONT_CONFIG;
@@ -284,21 +277,6 @@ export function resolveAppCjkFontPackForLocale(
     return supportsConfigurableCjkFontPack(locale) ? normalizedCjk : 'system';
 }
 
-function getMacosSystemCjkFonts(locale: string): readonly string[] {
-    switch (locale) {
-        case 'ja':
-            return MACOS_SYSTEM_CJK_FONT_STACKS.ja;
-        case 'zh-CN':
-            return MACOS_SYSTEM_CJK_FONT_STACKS['zh-CN'];
-        case 'zh-TW':
-            return MACOS_SYSTEM_CJK_FONT_STACKS['zh-TW'];
-        case 'ko':
-            return MACOS_SYSTEM_CJK_FONT_STACKS.ko;
-        default:
-            return MACOS_SYSTEM_CJK_FONT_STACKS.default;
-    }
-}
-
 function resolveNotoCjkFontConfig(locale: string): {
     cssNames: readonly string[];
     cssImport: string | null;
@@ -309,14 +287,6 @@ function resolveNotoCjkFontConfig(locale: string): {
             cssNames: [],
             cssImport: null,
             styleKey: `noto:system:${locale}`
-        };
-    }
-
-    if (VRCX_0_MACOS_SYSTEM_FONTS_ENABLED) {
-        return {
-            cssNames: getMacosSystemCjkFonts(locale),
-            cssImport: null,
-            styleKey: `noto:macos:${locale}`
         };
     }
 
@@ -439,11 +409,9 @@ export function applyAppFontPreferences({
     const normalizedFont = normalizeAppFontFamily(fontFamily);
     const normalizedCjk = normalizeAppCjkFontPack(cjkFontPack);
     const normalizedLocale = normalizeFontLocale(locale);
-    const useMacosSystemFonts = VRCX_0_MACOS_SYSTEM_FONTS_ENABLED;
-    const effectiveFont = useMacosSystemFonts ? 'system_ui' : normalizedFont;
-    const fontConfig = APP_FONT_CONFIG[effectiveFont];
+    const fontConfig = APP_FONT_CONFIG[normalizedFont];
 
-    if (effectiveFont === 'custom') {
+    if (normalizedFont === 'custom') {
         const stack =
             String(customFontFamily || '').trim() ||
             `${APP_FONT_CONFIG[APP_FONT_DEFAULT_KEY].cssName}, system-ui`;
@@ -460,9 +428,7 @@ export function applyAppFontPreferences({
         };
     }
 
-    const cjkConfig = useMacosSystemFonts
-        ? resolveNotoCjkFontConfig(normalizedLocale)
-        : resolveCjkFontConfig(normalizedCjk, normalizedLocale);
+    const cjkConfig = resolveCjkFontConfig(normalizedCjk, normalizedLocale);
     const westernFont = fontConfig.cssName;
 
     // Local-first: skip the CDN import when the family is already installed.
@@ -476,7 +442,7 @@ export function applyAppFontPreferences({
             : cjkConfig.cssImport;
     ensureDynamicStyle(
         APP_FONT_STYLE_ATTR,
-        westernImport ? effectiveFont : `${effectiveFont}:local`,
+        westernImport ? normalizedFont : `${normalizedFont}:local`,
         westernImport
     );
     ensureDynamicStyle(

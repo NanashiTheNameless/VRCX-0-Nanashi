@@ -183,10 +183,7 @@ pub(super) fn is_stable_release_newer_than_preview_build(
 const UPDATER_MANIFEST_ASSET: &str = "version_manifest.json";
 
 fn manifest_asset_name_for_target(target: &str) -> Option<&'static str> {
-    if target.starts_with("windows-")
-        || target.starts_with("linux-")
-        || target.starts_with("macos-")
-    {
+    if target.starts_with("windows-") || target.starts_with("linux-") {
         Some(UPDATER_MANIFEST_ASSET)
     } else {
         None

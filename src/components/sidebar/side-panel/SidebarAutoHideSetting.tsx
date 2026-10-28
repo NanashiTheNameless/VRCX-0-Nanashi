@@ -22,7 +22,7 @@ export function SidebarAutoHideSetting() {
     const hydrated = useSidebarAutoHideStore((state) => state.hydrated);
     const failed = useSidebarAutoHideStore((state) => state.failed);
     const [pending, setPending] = useState(false);
-    if (!sidebar || (platform !== 'windows' && platform !== 'macos')) {
+    if (!sidebar || platform !== 'windows') {
         return null;
     }
 

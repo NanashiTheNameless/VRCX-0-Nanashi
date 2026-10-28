@@ -287,39 +287,6 @@ describe('useGlobalKeyboardShortcuts', () => {
         expect(useShellStore.getState().shortcutHintsVisible).toBe(false);
     });
 
-    it('shows shortcut hints while holding Command on macOS', () => {
-        vi.useFakeTimers();
-        useRuntimeStore.setState((state) => ({
-            hostCapabilities: {
-                ...state.hostCapabilities,
-                platform: 'macos'
-            }
-        }));
-        useSessionStore.getState().setSessionPhase('ready');
-        renderHook(() => useGlobalKeyboardShortcuts(), { wrapper });
-
-        act(() => {
-            window.dispatchEvent(
-                new KeyboardEvent('keydown', {
-                    key: 'Meta',
-                    metaKey: true
-                })
-            );
-            vi.advanceTimersByTime(160);
-        });
-
-        expect(useShellStore.getState().shortcutHintsVisible).toBe(true);
-
-        act(() => {
-            window.dispatchEvent(
-                new KeyboardEvent('keyup', {
-                    key: 'Meta'
-                })
-            );
-        });
-        expect(useShellStore.getState().shortcutHintsVisible).toBe(false);
-    });
-
     it('does not show shortcut hints while editing text', () => {
         vi.useFakeTimers();
         useSessionStore.getState().setSessionPhase('ready');

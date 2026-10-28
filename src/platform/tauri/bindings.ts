@@ -2765,9 +2765,6 @@ const generatedCommands = {
     async appDevkitPanic(message: string | null): Promise<null> {
         return await TAURI_INVOKE('app__devkit_panic', { message });
     },
-    async appLanguageChanged(language: string): Promise<null> {
-        return await TAURI_INVOKE('app__language_changed', { language });
-    },
     async appSetTrayIconNotification(notify: boolean | null): Promise<void> {
         await TAURI_INVOKE('app__set_tray_icon_notification', { notify });
     },
@@ -5939,7 +5936,7 @@ export type HostCapabilities = {
     vrchatLaunchPipe: CapabilityStatus;
     screenshotCache: CapabilityStatus;
 };
-export type HostPlatform = 'windows' | 'linux' | 'macos' | 'unknown';
+export type HostPlatform = 'windows' | 'linux' | 'unknown';
 export type HostSessionProjection = {
     isGameRunning: boolean;
     isSteamVRRunning: boolean;

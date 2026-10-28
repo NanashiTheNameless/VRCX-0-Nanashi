@@ -584,7 +584,6 @@ fn blocking_tauri_commands_are_limited_to_the_main_thread_allowlist() {
         "app__get_clipboard",
         "app__get_linux_rendering",
         "app__get_sidebar_auto_hide",
-        "app__language_changed",
         "app__open_devtools",
         "app__refresh_tray_menu",
         "app__restart_application",

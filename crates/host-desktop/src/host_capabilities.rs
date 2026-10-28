@@ -178,41 +178,6 @@ pub fn current_host_capabilities() -> HostCapabilities {
         },
         #[cfg(target_os = "linux")]
         HostPlatform::Linux => linux_host_capabilities(platform, arch, &available),
-        HostPlatform::Macos => HostCapabilities {
-            platform,
-            arch,
-            linux_package_kind: LinuxPackageKind::Unknown,
-            local_database: available.clone(),
-            websocket_runtime: available.clone(),
-            game_log_watcher: CapabilityStatus::unsupported("GameLog watcher", "macOS"),
-            runtime_game_log_ingest: CapabilityStatus::unsupported(
-                "runtime GameLog ingest",
-                "macOS",
-            ),
-            runtime_game_log_side_effects: CapabilityStatus::unsupported(
-                "runtime GameLog side effects",
-                "macOS",
-            ),
-            runtime_game_client_lifecycle: CapabilityStatus::unsupported(
-                "runtime game client lifecycle",
-                "macOS",
-            ),
-            runtime_realtime_transport: available.clone(),
-            game_process_monitor: CapabilityStatus::unsupported("Game process monitor", "macOS"),
-            vrchat_path_discovery: CapabilityStatus::unsupported("VRChat path discovery", "macOS"),
-            steam_library_discovery: CapabilityStatus::unsupported(
-                "Steam library discovery",
-                "macOS",
-            ),
-            steam_runtime_integration: CapabilityStatus::unsupported(
-                "Steam runtime integration",
-                "macOS",
-            ),
-            registry_prefs: CapabilityStatus::unsupported("VRChat registry preferences", "macOS"),
-            game_launch: CapabilityStatus::unsupported("Game launch", "macOS"),
-            vrchat_launch_pipe: CapabilityStatus::unsupported("VRChat launch pipe", "macOS"),
-            screenshot_cache: CapabilityStatus::unsupported("Screenshot cache", "macOS"),
-        },
         _ => HostCapabilities {
             platform,
             arch,

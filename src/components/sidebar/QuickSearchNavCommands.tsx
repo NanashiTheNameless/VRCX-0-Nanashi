@@ -18,7 +18,6 @@ import { isToolNavKey, toolDefinitions } from '@/shared/constants/tools';
 import { navDefinitions } from '@/shared/constants/ui';
 import { useDashboardStore } from '@/state/dashboardStore';
 import { usePreferencesStore } from '@/state/preferencesStore';
-import { useRuntimeStore } from '@/state/runtimeStore';
 import { CommandGroup, CommandItem } from '@/ui/shadcn/command';
 
 const NAV_RESULT_LIMIT = 6;
@@ -139,9 +138,6 @@ export function NavResultGroup({
     shortcutPositions?: ReadonlyMap<string, number>;
     onSelect: (item: QuickSearchNavCommand) => void;
 }) {
-    const isMacHost = useRuntimeStore(
-        (state) => state.hostCapabilities.platform === 'macos'
-    );
     if (!items.length) {
         return null;
     }
@@ -163,10 +159,7 @@ export function NavResultGroup({
                         </span>
                         {shortcutPosition === undefined ? null : (
                             <ShortcutKey
-                                keys={[
-                                    isMacHost ? '⌘' : 'Ctrl',
-                                    String(shortcutPosition)
-                                ]}
+                                keys={['Ctrl', String(shortcutPosition)]}
                             />
                         )}
                     </CommandItem>

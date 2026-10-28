@@ -4,11 +4,10 @@ use std::time::Duration;
 
 #[cfg(windows)]
 use std::collections::HashSet;
-#[cfg(all(not(windows), not(target_os = "macos")))]
+#[cfg(not(windows))]
 use std::io;
-#[cfg(all(not(windows), not(target_os = "macos")))]
+#[cfg(not(windows))]
 use std::process::{Child, Command, Stdio};
-#[cfg(not(target_os = "macos"))]
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use serde::{Deserialize, Serialize};
@@ -87,7 +86,7 @@ impl TtsEngine for SystemTtsEngine {
     }
 }
 
-#[cfg(all(not(windows), not(target_os = "macos")))]
+#[cfg(not(windows))]
 fn run_tts_worker(receiver: mpsc::Receiver<TtsRequest>) {
     let mut child = None;
     loop {
@@ -179,62 +178,7 @@ fn run_tts_worker(receiver: mpsc::Receiver<TtsRequest>) {
     let _ = synthesizer.stop();
 }
 
-#[cfg(target_os = "macos")]
-fn run_tts_worker(receiver: mpsc::Receiver<TtsRequest>) {
-    use objc2::rc::autoreleasepool;
-    use objc2_avf_audio::{
-        AVSpeechBoundary, AVSpeechSynthesisVoice, AVSpeechSynthesizer, AVSpeechUtterance,
-    };
-    use objc2_foundation::NSString;
-
-    let synthesizer = autoreleasepool(|_| unsafe { AVSpeechSynthesizer::new() });
-    loop {
-        let request = if unsafe { synthesizer.isSpeaking() } {
-            match receiver.try_recv() {
-                Ok(request) => Some(request),
-                Err(mpsc::TryRecvError::Empty) => None,
-                Err(mpsc::TryRecvError::Disconnected) => break,
-            }
-        } else {
-            match receiver.recv() {
-                Ok(request) => Some(request),
-                Err(_) => break,
-            }
-        };
-
-        if let Some(request) = request {
-            unsafe {
-                synthesizer.stopSpeakingAtBoundary(AVSpeechBoundary::Immediate);
-            }
-            if !request.text.trim().is_empty() && request.volume > 0 {
-                autoreleasepool(|_| unsafe {
-                    let text = NSString::from_str(&request.text);
-                    let utterance = AVSpeechUtterance::speechUtteranceWithString(&text);
-                    utterance.setVolume(f32::from(request.volume) / 100.0);
-                    if let Some(voice_id) = request.voice_id.as_deref() {
-                        let voices = AVSpeechSynthesisVoice::speechVoices();
-                        if let Some(voice) = voices
-                            .iter()
-                            .find(|voice| voice.name().to_string() == voice_id)
-                        {
-                            utterance.setVoice(Some(&voice));
-                        }
-                    }
-                    synthesizer.speakUtterance(&utterance);
-                });
-            }
-        }
-
-        if unsafe { synthesizer.isSpeaking() } {
-            thread::sleep(Duration::from_millis(50));
-        }
-    }
-    unsafe {
-        synthesizer.stopSpeakingAtBoundary(AVSpeechBoundary::Immediate);
-    }
-}
-
-#[cfg(all(not(windows), not(target_os = "macos")))]
+#[cfg(not(windows))]
 fn stop_child(child: &mut Option<Child>) {
     if let Some(mut current) = child.take() {
         let _ = current.kill();
@@ -242,7 +186,7 @@ fn stop_child(child: &mut Option<Child>) {
     }
 }
 
-#[cfg(all(not(windows), not(target_os = "macos")))]
+#[cfg(not(windows))]
 fn warn_tts_io_once(error: &io::Error) {
     static WARNED: AtomicBool = AtomicBool::new(false);
     if !WARNED.swap(true, Ordering::SeqCst) {
@@ -429,7 +373,7 @@ struct WindowsVoiceToken {
 #[cfg(windows)]
 const SPERR_NOT_FOUND: windows::core::HRESULT = windows::core::HRESULT(0x8004503A_u32 as i32);
 
-#[cfg(all(not(windows), not(target_os = "macos")))]
+#[cfg(not(windows))]
 fn spawn_tts_child(text: &str, _voice_id: Option<&str>, volume: u8) -> io::Result<Child> {
     Command::new("spd-say")
         .args(["--volume", &speech_dispatcher_volume(volume).to_string()])
@@ -441,7 +385,7 @@ fn spawn_tts_child(text: &str, _voice_id: Option<&str>, volume: u8) -> io::Resul
         .spawn()
 }
 
-#[cfg(any(all(not(windows), not(target_os = "macos")), test))]
+#[cfg(any(not(windows), test))]
 fn speech_dispatcher_volume(volume: u8) -> i16 {
     i16::from(volume.min(DEFAULT_TTS_VOLUME)) * 2 - 100
 }
@@ -582,24 +526,7 @@ fn windows_locale_name(lcid: u32) -> Option<String> {
     (length > 1).then(|| String::from_utf16_lossy(&locale_name[..length as usize - 1]))
 }
 
-#[cfg(target_os = "macos")]
-fn platform_voices() -> Vec<TtsVoice> {
-    use objc2::rc::autoreleasepool;
-    use objc2_avf_audio::AVSpeechSynthesisVoice;
-
-    autoreleasepool(|_| unsafe {
-        AVSpeechSynthesisVoice::speechVoices()
-            .iter()
-            .map(|voice| TtsVoice {
-                id: voice.name().to_string(),
-                name: voice.name().to_string(),
-                language: voice.language().to_string(),
-            })
-            .collect()
-    })
-}
-
-#[cfg(all(not(windows), not(target_os = "macos")))]
+#[cfg(not(windows))]
 fn platform_voices() -> Vec<TtsVoice> {
     Vec::new()
 }

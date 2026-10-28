@@ -8,7 +8,6 @@
 //! - Windows: `SetThreadExecutionState(ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED)`
 //!   held by a dedicated thread. Away mode (when enabled by the system) makes a
 //!   manual "Sleep" look asleep (display off, audio muted) while still running.
-//! - macOS: a `caffeinate -i -w <pid>` child process.
 //! - Linux: a `systemd-inhibit --what=sleep:idle` child that exits with us.
 
 use std::sync::{Mutex, OnceLock};
@@ -19,7 +18,7 @@ enum KeepAwakeGuard {
         stop: std::sync::mpsc::Sender<()>,
         handle: std::thread::JoinHandle<()>,
     },
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(target_os = "linux")]
     Child(std::process::Child),
 }
 
@@ -31,7 +30,7 @@ impl KeepAwakeGuard {
                 let _ = stop.send(());
                 let _ = handle.join();
             }
-            #[cfg(any(target_os = "macos", target_os = "linux"))]
+            #[cfg(target_os = "linux")]
             Self::Child(mut child) => {
                 let _ = child.kill();
                 let _ = child.wait();
@@ -108,18 +107,6 @@ fn acquire() -> Result<KeepAwakeGuard, String> {
     }
 }
 
-#[cfg(target_os = "macos")]
-fn acquire() -> Result<KeepAwakeGuard, String> {
-    std::process::Command::new("caffeinate")
-        .args(["-i", "-w", &std::process::id().to_string()])
-        .stdin(std::process::Stdio::null())
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .spawn()
-        .map(KeepAwakeGuard::Child)
-        .map_err(|error| format!("failed to start caffeinate: {error}"))
-}
-
 #[cfg(target_os = "linux")]
 fn acquire() -> Result<KeepAwakeGuard, String> {
     // `tail --pid` exits when this process exits, so the inhibitor lock can
@@ -143,7 +130,7 @@ fn acquire() -> Result<KeepAwakeGuard, String> {
         .map_err(|error| format!("failed to start systemd-inhibit: {error}"))
 }
 
-#[cfg(not(any(windows, target_os = "macos", target_os = "linux")))]
+#[cfg(not(any(windows, target_os = "linux")))]
 fn acquire() -> Result<KeepAwakeGuard, String> {
     Err("keeping the system awake is not supported on this platform".into())
 }

@@ -77,16 +77,3 @@ tokio = { workspace = true, features = ["net"] }
 tokio-tungstenite = { version = "0.30", features = ["rustls-tls-native-roots"] }
 vrcx-0-vr-overlay = { path = "../vr-overlay" }
 
-[target.'cfg(target_os = "macos")'.dependencies]
-objc2-app-kit = { version = "0.3.2", default-features = false, features = ["std", "NSEvent", "NSWindow", "NSResponder", "NSScreen", "NSGraphics"] }
-objc2 = { version = "0.6", default-features = false, features = ["std"] }
-objc2-avf-audio = { version = "0.3.2", default-features = false, features = [
-    "std",
-    "AVSpeechSynthesis"
-] }
-objc2-foundation = { version = "0.3.2", default-features = false, features = [
-    "std",
-    "NSString",
-    "NSDictionary",
-    "NSGeometry"
-] }

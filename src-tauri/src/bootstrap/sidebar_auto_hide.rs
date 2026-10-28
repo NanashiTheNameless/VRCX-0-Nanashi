@@ -4,9 +4,9 @@ use vrcx_0_runtime_host_desktop::sidebar_auto_hide::{
     SidebarAutoHideContext, SidebarAutoHideSnapshot,
 };
 
-#[cfg(any(windows, target_os = "macos"))]
+#[cfg(windows)]
 const PREFERENCE_KEY: &str = "VRCX_SidebarAutoHide";
-#[cfg(any(windows, target_os = "macos"))]
+#[cfg(windows)]
 const STATUS_EVENT: &str = "sidebarAutoHideState";
 
 static SIDEBAR_MODE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -29,7 +29,7 @@ pub(crate) fn is_edge_hidden(_app: &AppHandle) -> bool {
 }
 
 pub(crate) fn snapshot(app: &AppHandle) -> SidebarAutoHideSnapshot {
-    #[cfg(any(windows, target_os = "macos"))]
+    #[cfg(windows)]
     if let Some(shared) = app.try_state::<native::Shared>() {
         return shared
             .control
@@ -42,7 +42,7 @@ pub(crate) fn snapshot(app: &AppHandle) -> SidebarAutoHideSnapshot {
 }
 
 pub(crate) async fn set_enabled(app: AppHandle, enabled: bool) -> Result<bool, AppError> {
-    #[cfg(any(windows, target_os = "macos"))]
+    #[cfg(windows)]
     {
         native::update(app.clone(), move |control, window| {
             control.recover(window)?;
@@ -56,7 +56,7 @@ pub(crate) async fn set_enabled(app: AppHandle, enabled: bool) -> Result<bool, A
             .storage_set(PREFERENCE_KEY.into(), enabled.to_string());
         Ok(enabled)
     }
-    #[cfg(not(any(windows, target_os = "macos")))]
+    #[cfg(not(windows))]
     {
         let _ = (app, enabled);
         Err(AppError::Custom(
@@ -78,7 +78,7 @@ pub(crate) async fn set_context(
             }
         }
     }
-    #[cfg(any(windows, target_os = "macos"))]
+    #[cfg(windows)]
     return native::update(app, move |control, window| {
         if context.sidebar_mode != control.context.sidebar_mode {
             control.recover(window)?;
@@ -88,7 +88,7 @@ pub(crate) async fn set_context(
         Ok(())
     })
     .await;
-    #[cfg(not(any(windows, target_os = "macos")))]
+    #[cfg(not(windows))]
     {
         let _ = (app, context);
         Ok(())
@@ -96,7 +96,7 @@ pub(crate) async fn set_context(
 }
 
 pub(crate) async fn set_suspended(app: AppHandle, suspended: bool) -> Result<(), AppError> {
-    #[cfg(any(windows, target_os = "macos"))]
+    #[cfg(windows)]
     return native::update(app, move |control, window| {
         if suspended || control.failed {
             control.recover(window)?;
@@ -108,7 +108,7 @@ pub(crate) async fn set_suspended(app: AppHandle, suspended: bool) -> Result<(),
         Ok(())
     })
     .await;
-    #[cfg(not(any(windows, target_os = "macos")))]
+    #[cfg(not(windows))]
     {
         let _ = (app, suspended);
         Ok(())
@@ -116,16 +116,16 @@ pub(crate) async fn set_suspended(app: AppHandle, suspended: bool) -> Result<(),
 }
 
 pub(crate) fn park(app: &AppHandle, parked: bool) {
-    #[cfg(any(windows, target_os = "macos"))]
+    #[cfg(windows)]
     native::park(app, parked);
-    #[cfg(not(any(windows, target_os = "macos")))]
+    #[cfg(not(windows))]
     let _ = (app, parked);
 }
 
 pub(crate) fn attach(window: &tauri::WebviewWindow) {
-    #[cfg(any(windows, target_os = "macos"))]
+    #[cfg(windows)]
     native::attach(window);
-    #[cfg(not(any(windows, target_os = "macos")))]
+    #[cfg(not(windows))]
     let _ = window;
 }
 
@@ -135,7 +135,7 @@ pub(crate) fn is_animating(app: &AppHandle) -> bool {
         .is_some_and(|shared| shared.animating.load(std::sync::atomic::Ordering::Acquire))
 }
 
-#[cfg(any(windows, target_os = "macos"))]
+#[cfg(windows)]
 mod native {
     use super::*;
     use std::sync::{
@@ -279,10 +279,7 @@ mod native {
     }
 
     fn handle(window: &WebviewWindow) -> Result<isize, AppError> {
-        #[cfg(windows)]
-        return Ok(window.hwnd().map_err(window_error)?.0 as isize);
-        #[cfg(target_os = "macos")]
-        return Ok(window.ns_window().map_err(window_error)? as isize);
+        Ok(window.hwnd().map_err(window_error)?.0 as isize)
     }
 
     fn place(window: &WebviewWindow, point: Point, raise: bool) -> Result<(), AppError> {
@@ -404,7 +401,6 @@ mod native {
         });
     }
 
-    #[cfg(windows)]
     fn screen_id(name: Option<&str>, position: Point) -> Arc<str> {
         match name.filter(|name| !name.trim().is_empty()) {
             Some(name) => name.into(),
@@ -412,7 +408,6 @@ mod native {
         }
     }
 
-    #[cfg(windows)]
     fn geometry(window: &WebviewWindow) -> Result<(Rect, Vec<Screen>), AppError> {
         let position = window.outer_position().map_err(window_error)?;
         let size = window.outer_size().map_err(window_error)?;
@@ -457,13 +452,6 @@ mod native {
         ))
     }
 
-    #[cfg(target_os = "macos")]
-    fn geometry(window: &WebviewWindow) -> Result<(Rect, Vec<Screen>), AppError> {
-        let geometry =
-            sidebar_window::logical_geometry(handle(window)?).map_err(AppError::Custom)?;
-        Ok((geometry.rect, geometry.screens))
-    }
-
     fn tick(
         window: &WebviewWindow,
         control: &mut Control,
@@ -483,13 +471,10 @@ mod native {
             .geometry
             .as_ref()
             .ok_or_else(|| AppError::Custom("Window geometry is unavailable.".into()))?;
-        #[cfg(windows)]
         let pointer = window.cursor_position().ok().map(|point| Point {
             x: point.x,
             y: point.y,
         });
-        #[cfg(target_os = "macos")]
-        let pointer = Some(sidebar_window::logical_pointer().map_err(AppError::Custom)?);
         let verify_reveal = control.machine.is_hidden_edge_hovered(pointer);
         let interaction = sidebar_window::interaction(
             handle(window)?,
@@ -586,7 +571,6 @@ mod native {
             assert_eq!(reads.get(), 3);
         }
 
-        #[cfg(windows)]
         #[test]
         fn unnamed_monitors_use_distinct_position_ids_without_failing() {
             let left = Point { x: -1920.0, y: 0.0 };

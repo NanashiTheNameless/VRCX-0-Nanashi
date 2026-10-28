@@ -259,14 +259,6 @@ pub(super) fn create_main_window(
     {
         builder = builder.background_color(STARTUP_BACKGROUND);
     }
-    #[cfg(target_os = "macos")]
-    {
-        builder = builder
-            .decorations(true)
-            .title_bar_style(tauri::TitleBarStyle::Overlay)
-            .hidden_title(true)
-            .traffic_light_position(tauri::LogicalPosition::new(16.0, 16.0));
-    }
     if let Some(route) = state.take_background_resume_route() {
         let route = serde_json::to_string(&route)?;
         builder = builder.initialization_script(format!(

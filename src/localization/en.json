@@ -746,54 +746,10 @@
         },
         "menu": {
             "app": {
-                "about": "About VRCX-0-Nanashi",
-                "settings": "Settings",
-                "checkUpdates": "Check for Updates",
-                "restart": "Restart VRCX-0-Nanashi",
-                "startBackgroundMode": "Switch to Background Mode",
-                "logout": "Sign Out",
-                "quit": "Quit VRCX-0-Nanashi"
-            },
-            "view": {
-                "title": "View",
-                "notificationCenter": "Notification Center",
-                "quickSearch": "Quick Search",
-                "directAccess": "Direct Access",
-                "toggleNav": "Toggle Navigation",
-                "toggleFriendsSidebar": "Toggle Friends Sidebar",
-                "customNav": "Customize Navigation",
-                "themes": "Theme",
-                "zoomIn": "Zoom In",
-                "zoomOut": "Zoom Out",
-                "resetZoom": "Reset Zoom"
-            },
-            "tools": {
-                "title": "Tools",
-                "allTools": "All Tools"
-            },
-            "edit": {
-                "title": "Edit",
-                "undo": "Undo",
-                "redo": "Redo",
-                "cut": "Cut",
-                "copy": "Copy",
-                "paste": "Paste",
-                "selectAll": "Select All"
+                "checkUpdates": "Check for Updates"
             },
             "window": {
-                "title": "Window",
-                "minimize": "Minimize",
-                "maximize": "Maximize",
-                "close": "Close Window"
-            },
-            "help": {
-                "title": "Help",
-                "changelog": "Changelog",
-                "keyboardShortcuts": "Keyboard Shortcuts",
-                "sendFeedback": "Send Feedback",
-                "reportIssue": "Report Issue on GitHub",
-                "openDevtools": "Open DevTools",
-                "supportVrcx": "Support VRCX-0-Nanashi"
+                "minimize": "Minimize"
             }
         }
     },
@@ -3941,11 +3897,6 @@
             },
             "dynamic": {
                 "value_value": "{value} {value2}"
-            },
-            "search": {
-                "placeholder": "Search settings",
-                "results": "{count} results",
-                "no_results": "No settings match \"{query}\"."
             },
             "custom_languages": {
                 "header": "Languages",

@@ -648,7 +648,6 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::host::theme_debug::app__community_theme_debug_load_local_theme,
             commands::host::devkit::app__devkit_read_file,
             commands::host::devkit::app__devkit_panic,
-            commands::host::window::app__language_changed,
             commands::host::window::app__set_tray_icon_notification,
             commands::host::window::app__set_taskbar_overlay_notification,
             commands::host::window::app__refresh_tray_menu,

@@ -37,8 +37,6 @@ function getPlatformBuildTarget() {
     }
 
     switch (process.platform) {
-        case 'darwin':
-            return webkitModernBuildTarget;
         case 'linux':
             return webkitLegacyBuildTarget;
         case 'win32':
@@ -77,7 +75,6 @@ export default defineConfig(({ mode }) => {
     const buildTarget = getPlatformBuildTarget();
     const enableReactDevtoolsStandalone =
         mode === 'development' && process.env.VITE_REACT_DEVTOOLS === '1';
-    const macosSystemFontsEnabled = process.platform === 'darwin';
 
     return {
         base: '',
@@ -113,9 +110,6 @@ export default defineConfig(({ mode }) => {
             VRCX_0_BUILD_TIME: JSON.stringify(new Date().toISOString()),
             VRCX_0_DISABLE_UPDATE_CHECK: JSON.stringify(
                 process.env['VRCX_0_DISABLE_UPDATE_CHECK'] === '1'
-            ),
-            VRCX_0_MACOS_SYSTEM_FONTS_ENABLED: JSON.stringify(
-                macosSystemFontsEnabled
             )
         },
         server: {

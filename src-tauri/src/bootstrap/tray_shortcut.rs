@@ -1,6 +1,6 @@
 //! Global "show/hide main window" shortcut. Windows records keys with a
-//! low-level hook (so keys the webview never sees still work); Linux (X11) and
-//! macOS record from the focused settings input and register through
+//! low-level hook (so keys the webview never sees still work); Linux (X11)
+//! records from the focused settings input and registers through
 //! tauri-plugin-global-shortcut.
 
 use tauri::AppHandle;

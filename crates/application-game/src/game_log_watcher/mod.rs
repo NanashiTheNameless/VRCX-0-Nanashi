@@ -1,6 +1,3 @@
-// VRChat has no macOS client, so the log parser/watcher is unused there.
-#![cfg_attr(target_os = "macos", allow(dead_code))]
-
 mod queue;
 mod sink;
 mod watcher;

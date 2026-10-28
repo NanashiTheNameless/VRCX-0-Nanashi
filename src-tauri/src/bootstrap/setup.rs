@@ -19,7 +19,6 @@ use super::adapters::{
     start_host_services, start_mcp_server_if_enabled, TauriDesktopNotifier, TauriUpdaterPort,
 };
 use super::autostart::{apply_autostart_window_state_if_needed, sync_autostart_from_db};
-use super::shared::app_language;
 use super::window::{configure_tray, configure_windows_webview_settings, create_main_window};
 use vrcx_0_application_core::ports::NoopUpdaterPort;
 use vrcx_0_host_desktop::host_capabilities::{current_host_capabilities, LinuxPackageKind};
@@ -264,7 +263,6 @@ pub fn setup_app_with_data_dir(
             Arc::new(TauriUpdaterPort::new(app.handle().clone()))
         };
     let app_state = initialize_app_state(app, app_data_dir, updater_port);
-    let language = app_language(&app_state);
     app.manage(app_state);
 
     let state = app.state::<AppState>();
@@ -305,10 +303,6 @@ pub fn setup_app_with_data_dir(
         RuntimeOperationStatus::Completed,
         "System tray configured.",
     );
-    #[cfg(target_os = "macos")]
-    crate::macos_menu::configure_macos_app_menu(app.handle(), &language)?;
-    #[cfg(not(target_os = "macos"))]
-    let _ = language;
     sync_autostart_from_db(app, &state);
     apply_autostart_window_state_if_needed(app, &state);
     start_host_services(app.handle(), &state);

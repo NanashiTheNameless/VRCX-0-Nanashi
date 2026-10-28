@@ -174,22 +174,6 @@ pub fn place_window(handle: isize, point: Point, raise: bool) -> Result<(), Stri
     Ok(())
 }
 
-#[cfg(target_os = "macos")]
-pub fn interaction(
-    handle: isize,
-    _notification_state: &mut NotificationStateCache,
-    _verify_reveal: bool,
-    _now: std::time::Instant,
-) -> Interaction {
-    use objc2_app_kit::{NSEvent, NSWindow};
-    let window = unsafe { &*(handle as *const NSWindow) };
-    Interaction {
-        pointer_down: NSEvent::pressedMouseButtons() != 0,
-        blocked: window.attachedSheet().is_some(),
-        reveal_allowed: window.isOnActiveSpace(),
-    }
-}
-
 #[cfg(windows)]
 pub fn set_taskbar_button(handle: isize, shown: bool) -> Result<(), String> {
     use windows_sys::Win32::UI::WindowsAndMessaging::{
@@ -216,92 +200,6 @@ pub fn set_taskbar_button(handle: isize, shown: bool) -> Result<(), String> {
         ShowWindow(window, SW_SHOWNOACTIVATE);
     }
     Ok(())
-}
-
-#[cfg(target_os = "macos")]
-pub fn set_taskbar_button(_handle: isize, _shown: bool) -> Result<(), String> {
-    Ok(())
-}
-
-#[cfg(target_os = "macos")]
-pub fn place_window(handle: isize, point: Point, raise: bool) -> Result<(), String> {
-    use objc2::MainThreadMarker;
-    use objc2_app_kit::{NSScreen, NSWindow};
-    use objc2_foundation::NSPoint;
-    let main_thread =
-        MainThreadMarker::new().ok_or("Placing a window requires the main thread.")?;
-    let primary = NSScreen::screens(main_thread)
-        .firstObject()
-        .ok_or("No screen is available.")?;
-    let window = unsafe { &*(handle as *const NSWindow) };
-    window.setFrameOrigin(NSPoint::new(
-        point.x,
-        primary.frame().size.height - point.y - window.frame().size.height,
-    ));
-    if raise {
-        window.orderFrontRegardless();
-    }
-    Ok(())
-}
-
-#[cfg(target_os = "macos")]
-pub struct LogicalGeometry {
-    pub rect: Rect,
-    pub screens: Vec<Screen>,
-}
-
-#[cfg(target_os = "macos")]
-pub fn logical_geometry(handle: isize) -> Result<LogicalGeometry, String> {
-    use objc2::MainThreadMarker;
-    use objc2_app_kit::{NSScreen, NSWindow};
-    use objc2_foundation::{NSRect, NSString};
-    let main_thread = MainThreadMarker::new().ok_or("Window geometry requires the main thread.")?;
-    let screens = NSScreen::screens(main_thread);
-    let primary = screens.firstObject().ok_or("No screen is available.")?;
-    let height = primary.frame().size.height;
-    let convert = |rect: NSRect| Rect {
-        x: rect.origin.x,
-        y: height - rect.origin.y - rect.size.height,
-        width: rect.size.width,
-        height: rect.size.height,
-    };
-    let window = unsafe { &*(handle as *const NSWindow) };
-    Ok(LogicalGeometry {
-        rect: convert(window.frame()),
-        screens: screens
-            .iter()
-            .map(|screen| {
-                let key = NSString::from_str("NSScreenNumber");
-                let number = screen
-                    .deviceDescription()
-                    .objectForKey(&key)
-                    .ok_or("Screen identity is unavailable.")?;
-                let id: u32 = unsafe { objc2::msg_send![&*number, unsignedIntValue] };
-                Ok(Screen {
-                    id: format!("macos:{id}").into(),
-                    bounds: convert(screen.frame()),
-                    work_area: convert(screen.visibleFrame()),
-                    scale: 1.0,
-                })
-            })
-            .collect::<Result<_, String>>()?,
-    })
-}
-
-#[cfg(target_os = "macos")]
-pub fn logical_pointer() -> Result<Point, String> {
-    use objc2::MainThreadMarker;
-    use objc2_app_kit::{NSEvent, NSScreen};
-    let main_thread =
-        MainThreadMarker::new().ok_or("Reading the pointer requires the main thread.")?;
-    let primary = NSScreen::screens(main_thread)
-        .firstObject()
-        .ok_or("No screen is available.")?;
-    let point = NSEvent::mouseLocation();
-    Ok(Point {
-        x: point.x,
-        y: primary.frame().size.height - point.y,
-    })
 }
 
 #[cfg(all(test, windows))]

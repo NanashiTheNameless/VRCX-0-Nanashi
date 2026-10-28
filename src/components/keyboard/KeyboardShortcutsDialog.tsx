@@ -24,8 +24,6 @@ export function KeyboardShortcutsDialog({
     const platform = useRuntimeStore(
         (state) => state.hostCapabilities.platform
     );
-    const isMacHost = platform === 'macos';
-    const modifier = isMacHost ? 'Meta' : 'Mod';
     const trayShortcut = useTrayShortcutStore((state) => state.snapshot);
 
     return (
@@ -94,11 +92,7 @@ export function KeyboardShortcutsDialog({
                                                 {t(item.labelKey)}
                                             </span>
                                             <KeyboardShortcut
-                                                keys={item.keys.map((key) =>
-                                                    key === 'Mod'
-                                                        ? modifier
-                                                        : key
-                                                )}
+                                                keys={item.keys}
                                             />
                                         </li>
                                     ))}

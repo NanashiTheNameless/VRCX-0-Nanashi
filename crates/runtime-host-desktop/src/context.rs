@@ -54,7 +54,6 @@ pub(crate) struct DesktopRuntimeServicesDeps {
 }
 
 // Several fields only back the Windows/Linux VR overlay.
-#[cfg_attr(target_os = "macos", allow(dead_code))]
 pub struct DesktopRuntimeServices {
     /// Fork: used for local notes on the wrist overlay's Players/Notes pages.
     db: Arc<DatabaseService>,

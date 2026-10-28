@@ -38,23 +38,20 @@ afterEach(async () => {
 });
 
 describe('sidebar auto-hide setting', () => {
-    it.each(['windows', 'macos'] as const)(
-        'shows only in sidebar mode on %s',
-        async (platform) => {
-            useRuntimeStore.setState((state) => ({
-                hostCapabilities: { ...state.hostCapabilities, platform }
-            }));
-            await act(async () => root.render(<SidebarAutoHideSetting />));
-            expect(container.textContent).toContain(
-                'side_panel.settings.auto_hide.label'
-            );
-            expect(container.querySelector('[role="switch"]')).not.toBeNull();
-            await act(async () => {
-                useShellStore.setState({ windowDisplayMode: 'normal' });
-            });
-            expect(container.textContent).toBe('');
-        }
-    );
+    it('shows only in sidebar mode on Windows', async () => {
+        useRuntimeStore.setState((state) => ({
+            hostCapabilities: { ...state.hostCapabilities, platform: 'windows' }
+        }));
+        await act(async () => root.render(<SidebarAutoHideSetting />));
+        expect(container.textContent).toContain(
+            'side_panel.settings.auto_hide.label'
+        );
+        expect(container.querySelector('[role="switch"]')).not.toBeNull();
+        await act(async () => {
+            useShellStore.setState({ windowDisplayMode: 'normal' });
+        });
+        expect(container.textContent).toBe('');
+    });
 
     it('omits the setting on Linux even if an enabled preference was restored', async () => {
         useRuntimeStore.setState((state) => ({

@@ -12,8 +12,8 @@ sudo apt install libwebkit2gtk-4.1-dev libjavascriptcoregtk-4.1-dev libsoup-3.0-
 
 Linux CI and AppImage builds use the maintained WebKitGTK and JavaScriptCore
 packages from Ubuntu 24.04, including its security updates. The `4.1` in the
-package names is the API version, not the WebKit engine version. macOS uses the
-system WebKit, updated with macOS and Safari; Windows uses WebView2.
+package names is the API version, not the WebKit engine version. Windows uses
+WebView2.
 
 ```bash
 git clone https://github.com/NanashiTheNameless/VRCX-0-Nanashi

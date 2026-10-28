@@ -111,7 +111,7 @@ describe('SettingsSystemTab updater policy', () => {
     );
 
     it('shows global tray shortcut settings on every desktop platform', () => {
-        for (const hostPlatform of ['windows', 'macos', 'linux'] as const) {
+        for (const hostPlatform of ['windows', 'linux'] as const) {
             const html = renderToStaticMarkup(
                 <SettingsSystemTab hostPlatform={hostPlatform} {...handlers} />
             );
@@ -120,7 +120,7 @@ describe('SettingsSystemTab updater policy', () => {
     });
 
     it('shows the VRChat focus toggle only on Windows', () => {
-        for (const hostPlatform of ['windows', 'macos', 'linux'] as const) {
+        for (const hostPlatform of ['windows', 'linux'] as const) {
             const html = renderToStaticMarkup(
                 <SettingsSystemTab hostPlatform={hostPlatform} {...handlers} />
             );

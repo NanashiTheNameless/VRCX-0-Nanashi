@@ -181,44 +181,26 @@ impl DesktopVrOverlayRuntime {
 
 #[cfg(not(any(windows, target_os = "linux")))]
 fn unsupported_error() -> vrcx_0_composition::Error {
-    vrcx_0_composition::Error::Custom(unsupported_message(
-        vrcx_0_platform::host_capabilities::current_platform(),
+    vrcx_0_composition::Error::Custom(format!(
+        "VR overlay is not supported on {}",
+        vrcx_0_platform::host_capabilities::current_platform()
     ))
 }
 
-#[cfg(any(test, not(any(windows, target_os = "linux"))))]
-fn unsupported_message(platform: &str) -> String {
-    let platform = match platform {
-        "macos" => "macOS",
-        other => other,
-    };
-    format!("VR overlay is not supported on {platform}")
-}
-
-#[cfg(test)]
+#[cfg(all(test, not(any(windows, target_os = "linux"))))]
 mod tests {
-    use super::unsupported_message;
-
-    #[test]
-    fn unsupported_message_uses_macos_product_name() {
-        assert_eq!(
-            unsupported_message("macos"),
-            "VR overlay is not supported on macOS"
-        );
-    }
-
-    #[cfg(not(any(windows, target_os = "linux")))]
     #[test]
     fn unsupported_facade_rejects_all_commands() {
         let runtime = super::DesktopVrOverlayRuntime {};
-
-        assert_eq!(
-            runtime.set_enabled(true).unwrap_err().to_string(),
-            "VR overlay is not supported on macOS"
+        let expected = format!(
+            "VR overlay is not supported on {}",
+            vrcx_0_platform::host_capabilities::current_platform()
         );
+
+        assert_eq!(runtime.set_enabled(true).unwrap_err().to_string(), expected);
         assert_eq!(
             runtime.set_test_mode(true).unwrap_err().to_string(),
-            "VR overlay is not supported on macOS"
+            expected
         );
     }
 }

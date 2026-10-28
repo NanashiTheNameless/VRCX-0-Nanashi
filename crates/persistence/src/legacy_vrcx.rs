@@ -121,18 +121,7 @@ pub(crate) fn legacy_vrcx_dirs() -> Vec<PathBuf> {
         }
     }
 
-    #[cfg(target_os = "macos")]
-    {
-        if let Some(home) = home_dir() {
-            dirs.push(
-                home.join("Library")
-                    .join("Application Support")
-                    .join("VRCX"),
-            );
-        }
-    }
-
-    #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
+    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
     {
         if let Some(path) = dirs::config_dir() {
             dirs.push(path.join("VRCX"));
@@ -159,7 +148,7 @@ fn append_wine_profile_dirs(directories: &mut Vec<PathBuf>, prefix: &Path) {
     }
 }
 
-#[cfg(any(target_os = "linux", target_os = "macos"))]
+#[cfg(target_os = "linux")]
 fn home_dir() -> Option<PathBuf> {
     std::env::var_os("HOME")
         .map(PathBuf::from)
