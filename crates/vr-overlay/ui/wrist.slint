@@ -17,6 +17,7 @@ export struct WristFeedItem {
     detail-color: color,
     accent-color: color,
     has-actor: bool,
+    is-favorite: bool,
     show-accent: bool,
 }
 
@@ -407,6 +408,25 @@ export component WristPanel inherits Window {
                     font-weight: 600;
                     vertical-alignment: center;
                     color: line.actor-color;
+                }
+
+                if line.has-actor && line.is-favorite: Rectangle {
+                    horizontal-stretch: 0;
+                    width: 14px * root.content-scale;
+
+                    Path {
+                        width: parent.width;
+                        height: parent.width;
+                        y: (parent.height - self.height) / 2;
+                        viewbox-width: 24;
+                        viewbox-height: 24;
+                        commands: "M 12 2 L 15.09 8.26 L 22 9.27 L 17 14.14 L 18.18 21 L 12 17.77 L 5.82 21 L 7 14.14 L 2 9.27 L 8.91 8.26 Z";
+                        fill: line.actor-color;
+                        stroke: line.actor-color;
+                        stroke-width: 2.5px;
+                        stroke-line-cap: round;
+                        stroke-line-join: round;
+                    }
                 }
 
                 Text {

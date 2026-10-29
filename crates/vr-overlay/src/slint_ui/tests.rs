@@ -806,6 +806,30 @@ fn wrist_feed_item_preserves_actor_detail_and_muted_media_detail() {
 }
 
 #[test]
+fn wrist_feed_friends_are_yellow_and_only_favorites_get_a_star() {
+    let mut row = FeedLine {
+        time_text: "16:31".to_string(),
+        kind: FeedKind::Friend,
+        actor_text: "Ada".to_string(),
+        detail: "Ada is online".to_string(),
+        relation: FeedRelation::Friend,
+        severity: FeedSeverity::Normal,
+        accent: FeedAccent::Online,
+    };
+    let friend = wrist_feed_item(&row, true);
+    row.relation = FeedRelation::Favorite;
+    let favorite = wrist_feed_item(&row, true);
+    row.relation = FeedRelation::None;
+    let stranger = wrist_feed_item(&row, true);
+
+    assert_eq!(friend.actor_color, favorite.actor_color);
+    assert_ne!(stranger.actor_color, favorite.actor_color);
+    assert!(!friend.is_favorite);
+    assert!(favorite.is_favorite);
+    assert!(!stranger.is_favorite);
+}
+
+#[test]
 fn wrist_feed_item_uses_feed_type_accents_and_keeps_severity_precedence() {
     let mut row = FeedLine {
         time_text: "16:31".to_string(),

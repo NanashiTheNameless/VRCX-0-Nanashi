@@ -18,8 +18,10 @@ use super::surface::SlintSurfaceHost;
 use super::{WristDeviceItem, WristFeedItem, WristPanel, WristPlayerItem};
 
 const WRIST_TEXT: Color = Color::rgba(238, 238, 238, 255);
-const WRIST_FRIEND_TEXT: Color = Color::rgba(246, 246, 246, 255);
 const WRIST_FAVORITE_TEXT: Color = Color::rgba(245, 205, 84, 255);
+// Fork: friends' names are yellow everywhere on the wrist; favorites in the
+// feed also get a star.
+const WRIST_FRIEND_TEXT: Color = WRIST_FAVORITE_TEXT;
 const WRIST_PLAYER_FRIEND_TEXT: Color = WRIST_FAVORITE_TEXT;
 const WRIST_MUTED_TEXT: Color = Color::rgba(168, 168, 168, 255);
 const WRIST_MUTED_TEXT_ON_TRANSPARENT: Color = Color::rgba(205, 205, 205, 255);
@@ -507,6 +509,7 @@ pub(super) fn wrist_feed_item(row: &FeedLine, dark_background: bool) -> WristFee
         detail_color: to_slint_color(wrist_detail_color(row, dark_background)),
         accent_color: to_slint_color(accent_color),
         has_actor,
+        is_favorite: row.relation == FeedRelation::Favorite,
         show_accent,
     }
 }

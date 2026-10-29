@@ -221,6 +221,7 @@ The wrist menu shows the feed, the players in your instance, and the players you
 
 - **Pages.** Under Settings > VR you choose which pages appear, their order, whether the newest
   feed entry is on top or on the bottom, and the player order.
+- **Friends in yellow.** Friends' names are yellow in the feed too; favorites also get a star.
 - **Timeout.** The menu closes after 15 seconds without interaction by default; set the menu
   timeout anywhere from 5 to 255 seconds.
 - **Switching pages.** Pressing the menu button while the menu is already open switches to the
@@ -251,7 +252,8 @@ Under Settings > VR you can:
 ### HMD notifications fit their text
 
 Short notifications get small cards, long ones wrap onto more lines instead of being cut off,
-and the text size is adjustable under Settings > VR.
+and the text size is adjustable under Settings > VR. Friends' names are yellow, and favorites
+also get a star.
 
 ### Movable HMD notifications
 

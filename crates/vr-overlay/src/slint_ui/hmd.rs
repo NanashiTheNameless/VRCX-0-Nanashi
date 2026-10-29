@@ -126,8 +126,9 @@ fn hmd_toast_item(
 
 fn hmd_relation_color(relation: FeedRelation) -> slint::Color {
     match relation {
-        FeedRelation::Favorite => slint::Color::from_rgb_u8(245, 205, 84),
-        FeedRelation::Friend => slint::Color::from_rgb_u8(246, 246, 246),
+        // Fork: friends' names are yellow like on the wrist player pages;
+        // favorites keep their star.
+        FeedRelation::Favorite | FeedRelation::Friend => slint::Color::from_rgb_u8(245, 205, 84),
         FeedRelation::None => slint::Color::from_rgb_u8(238, 238, 238),
     }
 }
@@ -137,5 +138,17 @@ fn hmd_severity_color(severity: FeedSeverity, accent: crate::Color) -> slint::Co
         FeedSeverity::Important => slint::Color::from_rgb_u8(245, 158, 11),
         FeedSeverity::Warning => slint::Color::from_rgb_u8(239, 68, 68),
         FeedSeverity::Normal => to_slint_color(accent),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn friend_names_are_yellow_like_favorites() {
+        let favorite = hmd_relation_color(FeedRelation::Favorite);
+        assert_eq!(hmd_relation_color(FeedRelation::Friend), favorite);
+        assert_ne!(hmd_relation_color(FeedRelation::None), favorite);
     }
 }
