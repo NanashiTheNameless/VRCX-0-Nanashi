@@ -262,8 +262,12 @@ impl TestWidget {
         widget
     }
 
-    fn restart(&self) -> Self {
-        Self::open(Arc::clone(&self.dir))
+    /// Closes this widget's database before reopening it, as an app restart
+    /// does; two open connections can hit "database is locked" on Windows.
+    fn restart(self) -> Self {
+        let dir = Arc::clone(&self.dir);
+        drop(self);
+        Self::open(dir)
     }
 
     fn open(dir: Arc<TestDir>) -> Self {
