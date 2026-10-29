@@ -1329,6 +1329,18 @@ fn hmd_surface_config(hmd: HmdNotificationConfig) -> OverlaySurfaceConfig {
     }
 }
 
+/// Codes in `theirs` that the signed-in user also lists, in their order.
+fn shared_languages(local: &[String], theirs: &[String]) -> Vec<String> {
+    let mut shared: Vec<String> = Vec::new();
+    for code in theirs {
+        let code = code.to_ascii_uppercase();
+        if local.iter().any(|own| own.eq_ignore_ascii_case(&code)) && !shared.contains(&code) {
+            shared.push(code);
+        }
+    }
+    shared
+}
+
 pub(super) fn build_wrist_frame_input(
     services: &dyn VrOverlayRuntimeServices,
     config: VrOverlayRuntimeConfig,
@@ -1352,6 +1364,10 @@ pub(super) fn build_wrist_frame_input(
         let friends = services.friend_records(&ids);
         let cached = services.cached_user_statuses(&ids);
         let current_user_id = services.auth_scope().snapshot().current_user_id;
+        let local_languages = cached
+            .get(&current_user_id)
+            .map(|status| status.languages.as_slice())
+            .unwrap_or_default();
         let mut rows: Vec<(Option<i64>, WristPlayerRow)> = game_log
             .players
             .iter()
@@ -1390,6 +1406,14 @@ pub(super) fn build_wrist_frame_input(
                             .or_else(|| cached.map(|status| status.age_verified))
                             .unwrap_or_default(),
                         is_local: !current_user_id.is_empty() && player.user_id == current_user_id,
+                        shared_languages: if player.user_id == current_user_id {
+                            Vec::new()
+                        } else {
+                            shared_languages(
+                                local_languages,
+                                cached.map_or(&[], |status| status.languages.as_slice()),
+                            )
+                        },
                     },
                 )
             })

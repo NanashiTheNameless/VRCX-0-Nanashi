@@ -12,6 +12,8 @@ pub struct CachedUserStatus {
     pub platform: String,
     pub status_description: String,
     pub age_verified: bool,
+    /// Lowercase VRChat language codes from the profile's `language_*` tags.
+    pub languages: Vec<String>,
 }
 
 pub trait VrOverlayRuntimeServices: Send + Sync {

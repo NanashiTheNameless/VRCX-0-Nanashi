@@ -231,7 +231,7 @@ The wrist menu shows the feed, the players in your instance, and the players you
   their details; when a full instance does not fit, they add columns and then use smaller text
   instead of leaving anyone out.
 - **Player details.** Every player shows their state, platform, an 18+ badge when VRChat
-  reports one, and status text. While these pages are open the app loads each player's VRChat
+  reports one, the profile languages you both list (such as `ENG, JPN`), and status text. While these pages are open the app loads each player's VRChat
   profile once every 10 minutes, one request at a time, reusing profiles the Player List page
   already loaded. You are listed last, with your own details. Friends' names are yellow.
 

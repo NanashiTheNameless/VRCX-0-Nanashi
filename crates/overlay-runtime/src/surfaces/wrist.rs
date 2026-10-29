@@ -320,6 +320,9 @@ pub struct WristPlayerRow {
     /// The signed-in user, listed after everyone else.
     #[serde(default)]
     pub is_local: bool,
+    /// Uppercase language codes this player shares with the signed-in user.
+    #[serde(default)]
+    pub shared_languages: Vec<String>,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -556,6 +559,9 @@ fn player_cells(players: &[WristPlayerRow], notes_only: bool) -> Vec<PlayerCell>
             }
             if player.age_verified {
                 status_parts.push("18+".to_string());
+            }
+            if !player.shared_languages.is_empty() {
+                status_parts.push(player.shared_languages.join(", "));
             }
             if !player.status_description.is_empty() {
                 status_parts.push(player.status_description.clone());
@@ -942,6 +948,7 @@ mod page_tests {
             status_description: String::new(),
             age_verified: false,
             is_local: false,
+            shared_languages: Vec::new(),
         }
     }
 
@@ -993,6 +1000,7 @@ mod page_tests {
                 status_description: "chilling".to_string(),
                 age_verified: false,
                 is_local: false,
+                shared_languages: Vec::new(),
             })
             .collect::<Vec<_>>();
         let cells = player_cells(&players, false);

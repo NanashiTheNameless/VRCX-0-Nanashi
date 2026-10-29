@@ -240,6 +240,14 @@ fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
             platform: "standalonewindows".into(),
             status_description: "Just visiting".into(),
             age_verified: true,
+            languages: vec!["jpn".into(), "eng".into(), "deu".into()],
+        },
+    );
+    services.cached.insert(
+        "usr_me".into(),
+        crate::CachedUserStatus {
+            languages: vec!["eng".into(), "jpn".into(), "fra".into()],
+            ..Default::default()
         },
     );
     let frame =
@@ -248,6 +256,21 @@ fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
     assert!(!cells[0].is_friend);
     assert_eq!(cells[0].status, "online / PC VR / 18+ / Just visiting");
     assert_eq!(cells[1].status, "online / Quest / World hopping");
+
+    // Languages show once the signed-in user is known, and only shared ones.
+    services
+        .auth_scope
+        .set("usr_me", "https://api.vrchat.cloud/api/1");
+    let frame =
+        super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
+    assert_eq!(frame.players[0].shared_languages, vec!["JPN", "ENG"]);
+    let cells = build_wrist_surface_model(frame).players;
+    assert_eq!(
+        cells[0].status,
+        "online / PC VR / 18+ / JPN, ENG / Just visiting"
+    );
+    assert_eq!(cells[1].status, "online / Quest / World hopping");
+    services.auth_scope.set("", "");
     services.cached.clear();
 
     config.wrist_players_sort = WristPlayersSort::Joined;

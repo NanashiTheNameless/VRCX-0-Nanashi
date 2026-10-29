@@ -179,6 +179,16 @@ pub(crate) fn status_from_profile(profile: &Value) -> CachedUserStatus {
         ),
         status_description: text("statusDescription").to_string(),
         age_verified: text("ageVerificationStatus") == "18+",
+        languages: profile
+            .get("tags")
+            .and_then(Value::as_array)
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .filter_map(|tag| tag.trim().strip_prefix("language_"))
+            .filter(|code| !code.is_empty())
+            .map(str::to_ascii_lowercase)
+            .collect(),
     }
 }
 
@@ -201,6 +211,7 @@ mod tests {
                 platform: "android".into(),
                 status_description: "chilling".into(),
                 age_verified: true,
+                languages: Vec::new(),
             }
         );
 
@@ -220,5 +231,13 @@ mod tests {
         assert_eq!(status.platform, "standalonewindows");
         assert!(status.status_description.is_empty());
         assert!(!status.age_verified);
+    }
+
+    #[test]
+    fn profile_status_reads_language_tags() {
+        let status = status_from_profile(&json!({
+            "tags": ["system_trust_basic", "language_eng", " language_JPN ", "language_", 7]
+        }));
+        assert_eq!(status.languages, vec!["eng".to_string(), "jpn".to_string()]);
     }
 }
