@@ -1401,8 +1401,11 @@ pub(super) fn build_wrist_frame_input(
                             .or_else(|| cached.map(|status| status.age_verified))
                             .unwrap_or_default(),
                         is_local: !current_user_id.is_empty() && player.user_id == current_user_id,
-                        shared_languages: if player.user_id == current_user_id {
-                            Vec::new()
+                        languages: if player.user_id == current_user_id {
+                            local_languages
+                                .iter()
+                                .map(|code| code.to_ascii_uppercase())
+                                .collect()
                         } else {
                             shared_languages(
                                 local_languages,

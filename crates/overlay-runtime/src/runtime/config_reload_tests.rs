@@ -263,13 +263,26 @@ fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
         .set("usr_me", "https://api.vrchat.cloud/api/1");
     let frame =
         super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
-    assert_eq!(frame.players[0].shared_languages, vec!["JPN", "ENG"]);
+    assert_eq!(frame.players[0].languages, vec!["JPN", "ENG"]);
     let cells = build_wrist_surface_model(frame).players;
     assert_eq!(
         cells[0].status,
         "online / PC VR / 18+ / JPN, ENG / Just visiting"
     );
     assert_eq!(cells[1].status, "online / Quest / World hopping");
+
+    // Your own row lists all of your languages.
+    services.game_log.players.push(PlayerState {
+        user_id: "usr_me".into(),
+        display_name: "Me".into(),
+        join_time_ms: Some(5),
+    });
+    let frame =
+        super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
+    assert!(frame.players[2].is_local);
+    assert_eq!(frame.players[2].languages, vec!["ENG", "JPN", "FRA"]);
+    assert_eq!(frame.players[0].languages, vec!["JPN", "ENG"]);
+    services.game_log.players.pop();
     services.auth_scope.set("", "");
     services.cached.clear();
 

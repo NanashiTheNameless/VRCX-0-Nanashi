@@ -235,7 +235,8 @@ The wrist menu shows the feed, the players in your instance, and the players you
 - **Player details.** Every player shows their state, platform, an 18+ badge when VRChat
   reports one, the profile languages you both list (such as `ENG, JPN`), and status text.
   While these pages are open the app loads each player's VRChat profile once every 10 minutes,
-  one request at a time, reusing profiles the Player List page already loaded. You are listed last, with your own details. Friends' names are yellow.
+  one request at a time, reusing profiles the Player List page already loaded. You are listed
+  last, with your own details and all of your languages. Friends' names are yellow.
 
 ### Wrist menu size and placement
 
