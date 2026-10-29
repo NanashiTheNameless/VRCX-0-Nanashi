@@ -156,6 +156,7 @@ fn build(range_days: i64, now: &str) -> ActivityPageBuildInput {
         range_days,
         utc_offset_minutes: 0,
         now: ms(now).div_euclid(1000),
+        window_to: None,
         companion_order: ActivityCompanionOrder::Days,
         force_refresh: false,
     }

@@ -132,6 +132,7 @@ fn input() -> ActivityPageBuildInput {
         range_days: 7,
         utc_offset_minutes: 0,
         now: 1_736_035_200,
+        window_to: None,
         companion_order: Default::default(),
         force_refresh: false,
     }
@@ -163,7 +164,7 @@ fn cache_hit_skips_rebuild_and_all_operations_stay_inside_owner_lock() {
     let store = Store::default();
     let first = activity_page_view_build(&store, input()).unwrap();
     assert_eq!(first.summary.total_minutes, 60);
-    assert_eq!(store.cached.borrow().as_ref().unwrap().payload_version, 4);
+    assert_eq!(store.cached.borrow().as_ref().unwrap().payload_version, 5);
     store.calls.borrow_mut().clear();
     assert_eq!(activity_page_view_build(&store, input()).unwrap(), first);
     assert_eq!(*store.calls.borrow(), vec!["cursor", "cache_read"]);
@@ -226,6 +227,61 @@ fn timezone_order_and_payload_version_changes_invalidate_cache() {
     store.calls.borrow_mut().clear();
     activity_page_view_build(&store, query).unwrap();
     assert!(store.calls.borrow().contains(&"cache_write"));
+}
+
+#[test]
+fn paged_window_ends_on_a_local_day_boundary_and_skips_the_cache() {
+    let store = Store::default();
+    let day_seconds = 86_400;
+    let mut query = input();
+    query.window_to = Some(input().now - 10 * day_seconds + 5);
+
+    let view = activity_page_view_build(&store, query).unwrap();
+
+    assert_eq!(view.window_to, input().now - 9 * day_seconds);
+    assert_eq!(view.window_from, view.window_to - 7 * day_seconds);
+    assert_eq!(view.series.points.len(), 7);
+    assert!(!store.calls.borrow().contains(&"cache_read"));
+    assert!(!store.calls.borrow().contains(&"cache_write"));
+    assert!(store.cached.borrow().is_none());
+}
+
+#[test]
+fn paged_window_and_zero_filled_series_use_display_calendar_boundaries() {
+    let midnight = |day| {
+        chrono::NaiveDate::from_ymd_opt(2025, 3, day)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .and_then(vrcx_0_core::time::display_local_to_epoch)
+            .unwrap()
+    };
+    let store = Store::default();
+    let mut query = input();
+    query.utc_offset_minutes =
+        i64::from(vrcx_0_core::time::display_now().offset().local_minus_utc()) / 60;
+    query.now = midnight(12);
+    query.window_to = Some(midnight(10));
+    query.range_days = 2;
+
+    let view = activity_page_view_build(&store, query).unwrap();
+
+    assert_eq!(view.window_from, midnight(8));
+    assert_eq!(view.window_to, midnight(10));
+    assert_eq!(view.series.points.len(), 2);
+    assert_eq!(view.series.points[0].start_date, "2025-03-08");
+    assert_eq!(view.series.points[1].end_date, "2025-03-09");
+}
+
+#[test]
+fn window_end_in_the_future_is_clamped_to_today() {
+    let store = Store::default();
+    let current = activity_page_view_build(&store, input()).unwrap();
+    let mut query = input();
+    query.window_to = Some(input().now + 30 * 86_400);
+
+    let view = activity_page_view_build(&store, query).unwrap();
+
+    assert_eq!(view.window_to, current.window_to);
 }
 
 #[test]

@@ -1886,6 +1886,10 @@ impl DesktopRuntimeHostState {
             .await;
     }
 
+    pub fn retry_realtime_now(&self) {
+        self.runtime.authenticated_runtime().retry_now();
+    }
+
     pub fn active_realtime_transport(&self) -> Option<RealtimeTransportStartResult> {
         self.runtime
             .authenticated_runtime()

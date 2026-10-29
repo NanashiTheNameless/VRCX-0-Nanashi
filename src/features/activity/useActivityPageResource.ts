@@ -7,11 +7,7 @@ import {
 } from '@/platform/tauri/bindings';
 import { usePreferencesStore } from '@/state/preferencesStore';
 
-import {
-    rangeDaysFor,
-    utcOffsetMinutes,
-    type ActivityRange
-} from './activityPageModel';
+import { utcOffsetMinutes } from './activityPageModel';
 
 type ActivityPageResource = {
     view: ActivityPageView | null;
@@ -22,7 +18,8 @@ type ActivityPageResource = {
 
 export function useActivityPageResource(
     ownerUserId: string,
-    range: ActivityRange,
+    rangeDays: number,
+    windowToMs: number | null,
     companionOrder: ActivityCompanionOrder
 ): ActivityPageResource {
     const timeZone = usePreferencesStore((state) => state.dtTimeZone);
@@ -44,9 +41,13 @@ export function useActivityPageResource(
             try {
                 const next = await commands.appActivityPageView({
                     ownerUserId,
-                    rangeDays: rangeDaysFor(range),
+                    rangeDays,
                     utcOffsetMinutes: utcOffsetMinutes(),
                     now: Math.floor(Date.now() / 1000),
+                    windowTo:
+                        windowToMs === null
+                            ? null
+                            : Math.floor(windowToMs / 1000),
                     companionOrder,
                     forceRefresh: forceRefresh || Boolean(timeZone)
                 });
@@ -63,7 +64,7 @@ export function useActivityPageResource(
                 }
             }
         },
-        [companionOrder, ownerUserId, range, timeZone]
+        [companionOrder, ownerUserId, rangeDays, windowToMs, timeZone]
     );
 
     useEffect(() => {

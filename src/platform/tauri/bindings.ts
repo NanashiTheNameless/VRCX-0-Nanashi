@@ -119,6 +119,9 @@ const generatedCommands = {
     async appCurrentUserRefresh(): Promise<CurrentUserRefreshOutcome> {
         return await TAURI_INVOKE('app__current_user_refresh');
     },
+    async appRealtimeRetryNow(): Promise<void> {
+        await TAURI_INVOKE('app__realtime_retry_now');
+    },
     async appIngestUserFacts(entries: JsonValue[]): Promise<null> {
         return await TAURI_INVOKE('app__ingest_user_facts', { entries });
     },
@@ -3554,6 +3557,7 @@ export type ActivityPageBuildInput = {
     rangeDays: number;
     utcOffsetMinutes: number;
     now: number;
+    windowTo: number | null;
     companionOrder: ActivityCompanionOrder;
     forceRefresh: boolean;
 };
@@ -3645,7 +3649,11 @@ export type ActivityScope =
     | 'allFavorites'
     | 'everyoneInInstance';
 export type ActivitySeriesBucket = 'day' | 'week';
-export type ActivitySeriesPoint = { startDate: string; minutes: number };
+export type ActivitySeriesPoint = {
+    startDate: string;
+    endDate: string;
+    minutes: number;
+};
 export type ActivityTypeDefinition = {
     key: ActivityKind;
     category: ActivityCategory;
@@ -3923,11 +3931,17 @@ export type AuthenticatedRuntimePhaseSnapshot = {
     friends: AuthenticatedRuntimeStepSnapshot;
     favorites: AuthenticatedRuntimeStepSnapshot;
     realtime: AuthenticatedRuntimeStepSnapshot;
+    realtimeHealth: AuthenticatedRuntimeRealtimeHealth;
     friendBaselineRevision: number;
     friendBaseline: SocialFriendRosterBaselineOutput | null;
     favoritesBaseline: SocialFavoritesBaselineOutput | null;
     realtimeTransport: RealtimeTransportStartResult | null;
     updatedAt: number;
+};
+export type AuthenticatedRuntimeRealtimeHealth = {
+    interrupted: boolean;
+    disconnectedAt: number | null;
+    retryAt: number | null;
 };
 export type AuthenticatedRuntimeSession = {
     userId: string;
@@ -6616,6 +6630,7 @@ export type NotificationListItemOutput = {
     details: JsonValue;
     location: string;
     expired: boolean;
+    groupKey?: string | null;
 };
 export type NotificationListQueryInput = {
     userId: string;

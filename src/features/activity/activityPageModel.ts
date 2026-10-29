@@ -5,7 +5,14 @@ import type {
     ActivityPageView
 } from '@/platform/tauri/bindings';
 import { ACTIVITY_PAGE_CONFIG_KEYS } from '@/repositories/configKeys';
-import { displayOffsetMinutesAt } from '@/shared/utils/displayTimeZone';
+import {
+    displayOffsetMinutesAt,
+    displayDateBoundary,
+    displayDateParts,
+    displayDayKey,
+    displayLocalToEpoch,
+    parseAbsoluteDateMs
+} from '@/shared/utils/displayTimeZone';
 
 export const ACTIVITY_PAGE_RANGE_KEY = ACTIVITY_PAGE_CONFIG_KEYS.range;
 export const ACTIVITY_PAGE_SHOW_HOME_KEY =
@@ -48,6 +55,168 @@ export function rangeDaysFor(range: ActivityRange): number {
 
 export function utcOffsetMinutes(): number {
     return displayOffsetMinutesAt();
+}
+
+const DAY_MS = 86_400_000;
+const MINUTE_MS = 60_000;
+
+export type ActivityWindowOverride = {
+    rangeDays: number;
+    windowToMs: number;
+    custom: boolean;
+};
+
+export function localDayEndMs(ms: number, offsetMinutes: number): number {
+    if (offsetMinutes === displayOffsetMinutesAt()) {
+        const end = displayDateBoundary(displayDayKey(new Date(ms)), 'end');
+        if (end !== null) return (end + 1) * 1000;
+    }
+    const offsetMs = offsetMinutes * MINUTE_MS;
+    return Math.floor((ms + offsetMs) / DAY_MS) * DAY_MS + DAY_MS - offsetMs;
+}
+
+export function windowEndsNow(view: ActivityPageView, nowMs: number): boolean {
+    return view.windowTo * 1000 >= localDayEndMs(nowMs, view.utcOffsetMinutes);
+}
+
+export function canPageBack(view: ActivityPageView): boolean {
+    const firstSourceMs = parseAbsoluteDateMs(view.coverage.firstSourceAt);
+    return (
+        view.rangeDays > 0 &&
+        Number.isFinite(firstSourceMs) &&
+        firstSourceMs < view.windowFrom * 1000
+    );
+}
+
+export function previousWindow(
+    view: ActivityPageView,
+    override: ActivityWindowOverride | null
+): ActivityWindowOverride {
+    return {
+        rangeDays: view.rangeDays,
+        windowToMs: view.windowFrom * 1000,
+        custom: override?.custom ?? false
+    };
+}
+
+export function nextWindow(
+    view: ActivityPageView,
+    override: ActivityWindowOverride | null,
+    nowMs: number
+): ActivityWindowOverride | null {
+    const currentEndMs = localDayEndMs(nowMs, view.utcOffsetMinutes);
+    const nextToMs = Math.min(
+        shiftWindowDays(
+            view.windowTo * 1000,
+            view.rangeDays,
+            view.utcOffsetMinutes
+        ),
+        currentEndMs
+    );
+    const custom = override?.custom ?? false;
+    if (nextToMs >= currentEndMs && !custom) {
+        return null;
+    }
+    return { rangeDays: view.rangeDays, windowToMs: nextToMs, custom };
+}
+
+export function customWindow(
+    from: Date,
+    to: Date,
+    offsetMinutes: number
+): ActivityWindowOverride {
+    const fromDay = Date.UTC(
+        from.getFullYear(),
+        from.getMonth(),
+        from.getDate()
+    );
+    const toDay = Date.UTC(to.getFullYear(), to.getMonth(), to.getDate());
+    const startDay = Math.min(fromDay, toDay);
+    const endDay = Math.max(fromDay, toDay);
+    return {
+        rangeDays: Math.round((endDay - startDay) / DAY_MS) + 1,
+        windowToMs:
+            offsetMinutes === displayOffsetMinutesAt()
+                ? (displayLocalToEpoch(
+                      new Date(endDay + DAY_MS).toISOString().slice(0, 10)
+                  ) ?? 0) * 1000
+                : endDay + DAY_MS - offsetMinutes * MINUTE_MS,
+        custom: true
+    };
+}
+
+export function parseLocalDate(dateKey: string): Date {
+    const [year, month, day] = dateKey
+        .split('-')
+        .map((value) => Number.parseInt(value, 10) || 0);
+    return new Date(year, Math.max(0, month - 1), day || 1);
+}
+
+function endOfLocalDay(date: Date): Date {
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+    return end;
+}
+
+export function localDateRange(
+    startDate: string,
+    endDate: string
+): { from: Date; to: Date } {
+    return {
+        from: parseLocalDate(startDate),
+        to: endOfLocalDay(parseLocalDate(endDate))
+    };
+}
+
+function shiftWindowDays(
+    ms: number,
+    days: number,
+    offsetMinutes: number
+): number {
+    if (offsetMinutes === displayOffsetMinutesAt()) {
+        const p = displayDateParts(new Date(ms));
+        const dateKey = new Date(Date.UTC(p.year, p.month - 1, p.day + days))
+            .toISOString()
+            .slice(0, 10);
+        const epoch = displayLocalToEpoch(dateKey);
+        if (epoch !== null) return epoch * 1000;
+    }
+    return ms + days * DAY_MS;
+}
+
+function dateKeyAt(ms: number, offsetMinutes: number): string {
+    if (offsetMinutes === displayOffsetMinutesAt())
+        return displayDayKey(new Date(ms));
+    return new Date(ms + offsetMinutes * MINUTE_MS).toISOString().slice(0, 10);
+}
+
+export function windowDateRange(
+    override: ActivityWindowOverride,
+    offsetMinutes: number
+): { from: Date; to: Date } {
+    return localDateRange(
+        dateKeyAt(
+            shiftWindowDays(
+                override.windowToMs,
+                -override.rangeDays,
+                offsetMinutes
+            ),
+            offsetMinutes
+        ),
+        dateKeyAt(override.windowToMs - 1, offsetMinutes)
+    );
+}
+
+export type ActivityPeriodDirection = 'more' | 'less' | 'same';
+
+export function periodDirection(
+    currentMinutes: number,
+    previousMinutes: number
+): ActivityPeriodDirection {
+    if (currentMinutes === previousMinutes) {
+        return 'same';
+    }
+    return currentMinutes > previousMinutes ? 'more' : 'less';
 }
 
 export function averageMinutesPerDay(summary: ActivityPageSummary): number {

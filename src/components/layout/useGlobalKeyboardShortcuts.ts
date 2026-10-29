@@ -3,16 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
 
 import { isTextEntryTarget } from '@/components/keyboard/keyboardShortcutGuards';
+import {
+    dispatchGlobalShortcut,
+    useShortcutHandler
+} from '@/components/keyboard/shortcutDispatcher';
 import { toast } from '@/services/toastService';
 import { toggleCommunityThemeLayersSuppressed } from '@/services/vrcx0CssLayerService';
 import {
     restoreNormalWindowModeForIntent,
     runAfterRestoringNormalWindow
 } from '@/services/windowModeService';
-import {
-    NAV_SHORTCUT_POSITION_LIMIT,
-    publishNavShortcutRequested
-} from '@/shared/events/navLayoutEvents';
+import { publishNavShortcutRequested } from '@/shared/events/navLayoutEvents';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useSessionStore } from '@/state/sessionStore';
 import { useShellStore } from '@/state/shellStore';
@@ -37,6 +38,45 @@ export function useGlobalKeyboardShortcuts() {
     const setShortcutHintsVisible = useShellStore(
         (state) => state.setShortcutHintsVisible
     );
+
+    useShortcutHandler('nav-position', (event) => {
+        if (useSessionStore.getState().sessionPhase !== 'ready') {
+            return;
+        }
+        const navShortcutPosition = Number(event.key);
+        runAfterRestoringNormalWindow(() => {
+            publishNavShortcutRequested(navShortcutPosition);
+        });
+    });
+
+    useShortcutHandler('theme-safe-mode', () => {
+        const suppressed = toggleCommunityThemeLayersSuppressed();
+        toast.add({
+            type: 'info',
+            title: t(
+                suppressed
+                    ? 'shortcuts.theme_safe_mode_on'
+                    : 'shortcuts.theme_safe_mode_off'
+            )
+        });
+    });
+
+    useShortcutHandler('keyboard-shortcuts', () => {
+        restoreNormalWindowModeForIntent();
+        const keyboardShortcutsOpen =
+            useRuntimeStore.getState().systemHosts.keyboardShortcutsOpen;
+        setSystemHostOpen('keyboardShortcutsOpen', !keyboardShortcutsOpen);
+    });
+
+    useShortcutHandler(
+        'settings',
+        () => {
+            void navigate('/settings');
+        },
+        sessionReady
+    );
+
+    useShortcutHandler('friends-sidebar', toggleSidePanelOpen, sessionReady);
 
     useEffect(() => {
         const primaryModifierKey = 'Control';
@@ -96,86 +136,7 @@ export function useGlobalKeyboardShortcuts() {
                 hideShortcutHints();
             }
 
-            if (!(event.ctrlKey || event.metaKey)) {
-                return;
-            }
-
-            const key = event.key.toLowerCase();
-
-            // Suppress the WebView2 print dialog everywhere, including while a
-            // text field is focused, so it must run before the editable guard.
-            if (key === 'p' && !event.shiftKey && !event.altKey) {
-                event.preventDefault();
-                return;
-            }
-
-            const navShortcutPosition = Number(key);
-            if (
-                Number.isInteger(navShortcutPosition) &&
-                navShortcutPosition >= 1 &&
-                navShortcutPosition <= NAV_SHORTCUT_POSITION_LIMIT &&
-                !event.shiftKey &&
-                !event.altKey
-            ) {
-                const handledElsewhere = event.defaultPrevented;
-                event.preventDefault();
-                if (
-                    handledElsewhere ||
-                    event.repeat ||
-                    isTextEntryTarget(event.target) ||
-                    useSessionStore.getState().sessionPhase !== 'ready'
-                ) {
-                    return;
-                }
-                runAfterRestoringNormalWindow(() => {
-                    publishNavShortcutRequested(navShortcutPosition);
-                });
-                return;
-            }
-
-            if (isTextEntryTarget(event.target)) {
-                return;
-            }
-            if (key === 't' && event.altKey && event.shiftKey) {
-                event.preventDefault();
-                const suppressed = toggleCommunityThemeLayersSuppressed();
-                toast.add({
-                    type: 'info',
-                    title: t(
-                        suppressed
-                            ? 'shortcuts.theme_safe_mode_on'
-                            : 'shortcuts.theme_safe_mode_off'
-                    )
-                });
-                return;
-            }
-            if (key === '/') {
-                event.preventDefault();
-                restoreNormalWindowModeForIntent();
-                const keyboardShortcutsOpen =
-                    useRuntimeStore.getState().systemHosts
-                        .keyboardShortcutsOpen;
-                setSystemHostOpen(
-                    'keyboardShortcutsOpen',
-                    !keyboardShortcutsOpen
-                );
-                return;
-            }
-
-            if (!sessionReady) {
-                return;
-            }
-
-            if (key === ',') {
-                event.preventDefault();
-                navigate('/settings');
-                return;
-            }
-
-            if (key === 'b' && event.shiftKey) {
-                event.preventDefault();
-                toggleSidePanelOpen();
-            }
+            dispatchGlobalShortcut(event, false);
         }
 
         function handleKeyUp(event: KeyboardEvent) {
@@ -209,12 +170,5 @@ export function useGlobalKeyboardShortcuts() {
             );
             hideShortcutHints();
         };
-    }, [
-        navigate,
-        sessionReady,
-        setShortcutHintsVisible,
-        setSystemHostOpen,
-        t,
-        toggleSidePanelOpen
-    ]);
+    }, [sessionReady, setShortcutHintsVisible]);
 }

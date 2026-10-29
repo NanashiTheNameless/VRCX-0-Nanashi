@@ -39,6 +39,12 @@ type TransportState = {
     websocketDomain: string;
     lastConnectedAt: number | null;
     lastDisconnectedAt: number | null;
+    interrupted: boolean;
+    retryWaiting: boolean;
+    retryAt: number | null;
+    retryAttempt: number;
+    lastError: string | null;
+    outageStartedAt: number | null;
 };
 
 export type MutualGraphState = Omit<
@@ -365,7 +371,13 @@ function createTransportState(): TransportState {
         websocketConnected: false,
         websocketDomain: '',
         lastConnectedAt: null,
-        lastDisconnectedAt: null
+        lastDisconnectedAt: null,
+        interrupted: false,
+        retryWaiting: false,
+        retryAt: null,
+        retryAttempt: 0,
+        lastError: null,
+        outageStartedAt: null
     };
 }
 

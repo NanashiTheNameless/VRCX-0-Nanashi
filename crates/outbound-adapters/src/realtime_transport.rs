@@ -30,12 +30,15 @@ const ALIVE_TRAIL_INTERVAL: Duration = Duration::from_secs(300);
 /// may on other hosts), so without this a socket that died while the PC slept
 /// looks fresh after wake and takes up to HEARTBEAT_DEADLINE to be replaced.
 const SUSPEND_CLOCK_JUMP: Duration = Duration::from_secs(45);
+const LIVENESS_QUIET_PERIOD: Duration = Duration::from_secs(5);
+const LIVENESS_REPLY_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Clone)]
 pub struct RealtimeTransportDeps {
     store: Arc<dyn vrcx_0_application_realtime::RealtimeStore>,
     web: Arc<WebClient>,
     pub backend_status: BackendRuntimeStatusPublisher,
+    liveness_probe: Arc<watch::Sender<u64>>,
 }
 
 #[derive(Clone)]
@@ -54,6 +57,7 @@ impl VrchatRealtimeTransport {
                 store,
                 web,
                 backend_status,
+                liveness_probe: Arc::new(watch::channel(0).0),
             },
         }
     }
@@ -78,6 +82,12 @@ impl RealtimeTransport for VrchatRealtimeTransport {
             session,
             cancel_rx,
         ))
+    }
+
+    fn verify_liveness(&self) {
+        self.deps
+            .liveness_probe
+            .send_modify(|probe| *probe = probe.wrapping_add(1));
     }
 }
 
@@ -437,6 +447,9 @@ async fn connect_once(
             attempt.session_generation,
         );
     }
+    let mut liveness_rx = deps.liveness_probe.subscribe();
+    let mut liveness_requested = false;
+    let mut liveness_deadline: Option<tokio::time::Instant> = None;
     let reason = loop {
         if let Some(slept) = suspend_probe.detect_resume() {
             break format!(
@@ -444,10 +457,38 @@ async fn connect_once(
                 slept.as_secs()
             );
         }
-        if last_inbound_at.elapsed() >= HEARTBEAT_INTERVAL {
+        if liveness_deadline.is_some_and(|deadline| tokio::time::Instant::now() >= deadline) {
+            break format!(
+                "websocket did not answer a liveness ping within {} seconds",
+                LIVENESS_REPLY_TIMEOUT.as_secs()
+            );
+        }
+        let liveness_due = liveness_requested && last_inbound_at.elapsed() >= LIVENESS_QUIET_PERIOD;
+        if liveness_due || last_inbound_at.elapsed() >= HEARTBEAT_INTERVAL {
             if let Err(reason) = heartbeat(&mut stream, last_inbound_at).await {
                 break reason;
             }
+            if liveness_due {
+                liveness_requested = false;
+                liveness_deadline = Some(tokio::time::Instant::now() + LIVENESS_REPLY_TIMEOUT);
+                trail(
+                    &trail_db_path,
+                    "livenessProbe",
+                    serde_json::json!({
+                        "generation": attempt.generation,
+                        "silentSecs": last_inbound_at.elapsed().as_secs(),
+                    }),
+                );
+            }
+        }
+        let mut read_timeout = liveness_deadline.map_or(HEARTBEAT_INTERVAL, |deadline| {
+            deadline
+                .saturating_duration_since(tokio::time::Instant::now())
+                .min(HEARTBEAT_INTERVAL)
+        });
+        if liveness_requested {
+            read_timeout =
+                read_timeout.min(LIVENESS_QUIET_PERIOD.saturating_sub(last_inbound_at.elapsed()));
         }
         tokio::select! {
             changed = attempt.cancel_rx.changed() => {
@@ -455,7 +496,10 @@ async fn connect_once(
                     return Ok(ConnectionEnd::Stopped);
                 }
             }
-            frame = tokio::time::timeout(HEARTBEAT_INTERVAL, stream.next()) => {
+            Ok(()) = liveness_rx.changed() => {
+                liveness_requested = true;
+            }
+            frame = tokio::time::timeout(read_timeout, stream.next()) => {
                 let Ok(frame) = frame else {
                     trail(
                         &trail_db_path,
@@ -477,6 +521,8 @@ async fn connect_once(
                     Err(error) => break format!("websocket read: {error}"),
                 };
                 last_inbound_at = tokio::time::Instant::now();
+                liveness_requested = false;
+                liveness_deadline = None;
                 messages_received = messages_received.saturating_add(1);
                 if last_alive_trail_at.elapsed() >= ALIVE_TRAIL_INTERVAL {
                     last_alive_trail_at = last_inbound_at;

@@ -11,8 +11,14 @@
         "app_launcher_description": "Add an app or shortcut and choose when you want it to open.",
         "app_launcher_selection_title": "Choose an app or shortcut",
         "app_launcher_selection_description": "Select an app to edit when it starts.",
+        "feed_title": "No friend activity yet",
+        "feed_description": "Friends coming online, changing worlds, or updating their profiles appear here as activity is recorded or synced.",
         "game_log_title": "No VRChat activity yet",
-        "game_log_description": "World visits, players, and other VRChat activity will appear here as you play.",
+        "game_log_description": "World visits, players, and other activity appear here as you play or sync history.",
+        "game_log_disabled_description": "Game Log recording is turned off, so new activity isn't being saved.",
+        "game_log_enable_action": "Turn on in Settings",
+        "game_log_unavailable_description": "VRCX-0-Nanashi couldn't find VRChat's log folder on this computer, so new activity isn't being recorded. You can still import log files manually.",
+        "game_log_unsupported_description": "Reading VRChat logs isn't supported on this system, so game activity can't be recorded here.",
         "my_avatars_title": "No uploaded avatars yet",
         "my_avatars_description": "Avatars you upload to VRChat will appear here.",
         "search_no_results": "No results found",
@@ -732,7 +738,8 @@
             "rebuildUi": "Reload UI",
             "sidebarMode": "Sidebar Mode",
             "disableTheme": "Disable Theme",
-            "exit": "Exit"
+            "exit": "Exit",
+            "realtimeReconnecting": "Realtime connection lost, reconnecting"
         },
         "notification": {
             "backgroundModeStarted": {
@@ -1289,7 +1296,9 @@
                 "restore_preset": "Restore preset",
                 "restore_preset_title": "Restore the preset feed columns?",
                 "restore_preset_description": "This restores the preset columns: Favorites, Location, Profile, Presence.",
-                "restore_preset_confirm": "Restore preset"
+                "restore_preset_confirm": "Restore preset",
+                "empty_title": "Nothing in this column yet",
+                "empty_description": "Activity matching this column's friends and types will appear here."
             },
             "error": {
                 "avatar_author_unavailable": "Avatar author unavailable",
@@ -1318,6 +1327,12 @@
             },
             "empty": {
                 "no_feed_rows_match_the_current_filters": "No feed entries match the current filters"
+            },
+            "first_run_tip": {
+                "title": "Welcome to VRCX-0-Nanashi",
+                "description": "Friend activity and game history appear here as they are recorded or synced. You can also import your VRCX data or VRChat log files.",
+                "description_without_logs": "Friend activity appears here as it is recorded or synced. You can also import your VRCX data.",
+                "dismiss": "Got it"
             },
             "toast": {
                 "failed_to_resolve_avatar_author": "Couldn't find the avatar's author",
@@ -1983,7 +1998,13 @@
                 "new_this_session": "New this session",
                 "expires_in": "Expires {time}",
                 "action_all_done": "All caught up",
-                "action_all_done_description": "Nothing needs your response right now."
+                "action_all_done_description": "Nothing needs your response right now.",
+                "group": {
+                    "from_actor": "{count} from {name}",
+                    "from_people": "{name} and others ({count})",
+                    "expand": "Show all",
+                    "collapse": "Show less"
+                }
             },
             "responses": {
                 "acknowledge_and_dismiss": "Dismiss",
@@ -4690,7 +4711,10 @@
             "description": "Where your time went, summarised over a period",
             "range": {
                 "all": "All time",
-                "days": "Last {days} days"
+                "days": "Last {days} days",
+                "previous": "Previous period",
+                "next": "Next period",
+                "custom": "Custom range"
             },
             "stat": {
                 "total_time": "Total time",
@@ -4726,7 +4750,10 @@
             },
             "empty": {
                 "title": "Nothing recorded yet",
-                "description": "Play some VRChat and your activity will show up here."
+                "description": "Keep VRCX-0-Nanashi running while you play VRChat, and your activity will show up here.",
+                "window_title": "Nothing recorded in this period",
+                "unsupported": "VRCX-0-Nanashi can't read VRChat's game logs on this platform, so activity isn't recorded here.",
+                "unavailable": "VRCX-0-Nanashi couldn't find VRChat's log folder, so new activity isn't being recorded. You can import existing log files instead."
             },
             "error": {
                 "failed_to_load": "Could not load your activity"
@@ -4785,11 +4812,23 @@
                 "photo_count_other": "{count} screenshots",
                 "empty": {
                     "title": "No visits recorded yet",
-                    "description": "A visit shows up here once you leave the world.",
+                    "description": "Keep VRCX-0-Nanashi running while you play VRChat. Each visit shows up here once you leave the world.",
                     "filtered_title": "No visits in this date range"
                 },
                 "all_dates": "All dates",
                 "screenshots": "Screenshots"
+            },
+            "previous": {
+                "summary": "Previous {days} days: {hours} - days played: {activeDays}",
+                "none": "Nothing recorded in the previous {days} days",
+                "more": "More than the previous period",
+                "less": "Less than the previous period",
+                "same": "Same as the previous period"
+            },
+            "stale": "This may not be the latest data",
+            "chart": {
+                "series_summary": "{label}, {from} to {to}: {total} in total. Highest: {peak}, {peakHours}.",
+                "heatmap_summary": "Play time by weekday and hour. Busiest hour: {peak}."
             }
         },
         "my_groups": {
@@ -7651,6 +7690,14 @@
         "realtime_connection": "Realtime",
         "ws_connected": "Connected",
         "ws_disconnected": "Disconnected",
+        "realtime_connecting": "Connecting",
+        "realtime_reconnecting": "Reconnecting",
+        "realtime_retry_in": "Retrying in {seconds}s",
+        "realtime_retry_soon": "Retrying soon",
+        "realtime_last_connected": "Last connected: {time}",
+        "realtime_disconnected_since": "Disconnected since {time}",
+        "realtime_reason": "Reason: {reason}",
+        "realtime_retry_now": "Click to retry now",
         "zoom": "Zoom",
         "zoom_tooltip": "Click to adjust zoom level",
         "app_uptime": "Application uptime",

@@ -28,13 +28,18 @@ pub fn activity_page_view_build(
         return Ok(empty_activity_page_view(&input));
     }
     let range_days = input.range_days;
+    let cacheable = input.window_to.is_none();
     store.with_build_lock(&input.owner_user_id, || {
         let cursor = format!(
             "{}|tz={}",
             store.source_cursor(&input.owner_user_id)?,
             vrcx_0_core::time::display_zone_cache_key()
         );
-        let cached = store.read_cached_page(&input.owner_user_id, range_days)?;
+        let cached = if cacheable {
+            store.read_cached_page(&input.owner_user_id, range_days)?
+        } else {
+            None
+        };
         let window = window_bounds(&input, range_days);
 
         if !input.force_refresh {
@@ -47,12 +52,14 @@ pub fn activity_page_view_build(
 
         match build_fresh(store, &input, range_days, &cursor, &window) {
             Ok(view) => {
-                store.write_cached_page(
-                    &input.owner_user_id,
-                    range_days,
-                    PAYLOAD_VERSION,
-                    &view,
-                )?;
+                if cacheable {
+                    store.write_cached_page(
+                        &input.owner_user_id,
+                        range_days,
+                        PAYLOAD_VERSION,
+                        &view,
+                    )?;
+                }
                 Ok(view)
             }
             Err(error) => match cached {
@@ -106,8 +113,12 @@ fn window_bounds(input: &ActivityPageBuildInput, range_days: i64) -> WindowBound
     if input.utc_offset_minutes
         == i64::from(vrcx_0_core::time::display_now().offset().local_minus_utc()) / 60
     {
-        if let Some(tomorrow) =
-            vrcx_0_core::time::to_display(input.now).and_then(|local| local.date_naive().succ_opt())
+        if let Some(tomorrow) = vrcx_0_core::time::to_display(
+            input
+                .window_to
+                .map_or(input.now, |to| to.saturating_sub(1).min(input.now)),
+        )
+        .and_then(|local| local.date_naive().succ_opt())
         {
             let midnight = |date: chrono::NaiveDate| {
                 date.and_hms_opt(0, 0, 0)
@@ -129,9 +140,13 @@ fn window_bounds(input: &ActivityPageBuildInput, range_days: i64) -> WindowBound
         }
     }
     let offset_ms = input.utc_offset_minutes * MINUTE_MS;
-    let local_now_ms = input.now * 1000 + offset_ms;
-    let local_day_end_ms = local_now_ms.div_euclid(DAY_MS) * DAY_MS + DAY_MS;
-    let to_ms = local_day_end_ms - offset_ms;
+    let local_day_end_ms =
+        |ms: i64| (ms + offset_ms).div_euclid(DAY_MS) * DAY_MS + DAY_MS - offset_ms;
+    let current_to_ms = local_day_end_ms(input.now * 1000);
+    let to_ms = match input.window_to.map(|seconds| seconds * 1000) {
+        Some(window_to_ms) => local_day_end_ms(window_to_ms.saturating_sub(1)).min(current_to_ms),
+        None => current_to_ms,
+    };
     WindowBounds {
         from_ms: (range_days > 0).then(|| to_ms - range_days * DAY_MS),
         to_ms,
@@ -180,6 +195,8 @@ fn build_fresh(
             &spans,
             series_bucket_for_range(range_days),
             input.utc_offset_minutes,
+            from_ms,
+            to_ms,
         ),
         access_split: access_split(&spans),
         worlds: worlds(&spans, &earlier_world_ids, TOP_WORLD_LIMIT),

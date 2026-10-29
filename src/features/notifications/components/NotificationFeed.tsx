@@ -24,11 +24,16 @@ import { getNotificationTs } from '@/shared/utils/notificationCategory';
 import { usePreferencesStore } from '@/state/preferencesStore';
 import { Button } from '@/ui/shadcn/button';
 
+import {
+    foldAdjacentNotifications,
+    useExpandedNotificationGroups
+} from '../notificationGroups';
 import type {
     NotificationLoadStatus,
     NotificationRow as NotificationRecord
 } from '../notificationPageTypes';
 import type { NotificationQuickFilter } from '../useNotificationFilters';
+import { NotificationGroupSummary } from './NotificationGroupSummary';
 import {
     NotificationRow,
     type NotificationFeedHandlers
@@ -107,6 +112,7 @@ export function NotificationFeed({
     // groupByDay reads the display timezone, so regroup when it changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     const days = useMemo(() => groupByDay(rows), [rows, timeZone]);
+    const { expanded, toggle } = useExpandedNotificationGroups();
     const nowMs = useNowMs({ intervalMs: 60_000 });
     const todayKey = dayKey(nowMs);
     const today = displayDateParts(new Date(nowMs));
@@ -115,6 +121,18 @@ export function NotificationFeed({
     )
         .toISOString()
         .slice(0, 10);
+
+    function renderRow(notification: NotificationRecord) {
+        return (
+            <NotificationRow
+                key={String(notification.id)}
+                notification={notification}
+                currentUserId={currentUserId}
+                canInviteFromCurrentLocation={canInviteFromCurrentLocation}
+                handlers={handlers}
+            />
+        );
+    }
 
     function dayLabel(day: NotificationFeedDay) {
         if (day.key === todayKey) {
@@ -189,17 +207,42 @@ export function NotificationFeed({
                                     {dayLabel(day)}
                                 </h3>
                                 <div role="list">
-                                    {day.rows.map((notification) => (
-                                        <NotificationRow
-                                            key={String(notification.id)}
-                                            notification={notification}
-                                            currentUserId={currentUserId}
-                                            canInviteFromCurrentLocation={
-                                                canInviteFromCurrentLocation
-                                            }
-                                            handlers={handlers}
-                                        />
-                                    ))}
+                                    {foldAdjacentNotifications(
+                                        day.rows,
+                                        (row) => row
+                                    ).map((fold) => {
+                                        if (fold.kind === 'single') {
+                                            return renderRow(fold.item);
+                                        }
+                                        const isExpanded = expanded.has(
+                                            fold.runKey
+                                        );
+                                        return (
+                                            <div
+                                                key={`group:${fold.runKey}`}
+                                                role="listitem"
+                                            >
+                                                <NotificationGroupSummary
+                                                    variant="page"
+                                                    rows={fold.items}
+                                                    expanded={isExpanded}
+                                                    onToggle={() =>
+                                                        toggle(fold.runKey)
+                                                    }
+                                                />
+                                                {isExpanded ? (
+                                                    <div
+                                                        role="list"
+                                                        className="border-border/60 ml-6 border-l pl-2"
+                                                    >
+                                                        {fold.items.map(
+                                                            renderRow
+                                                        )}
+                                                    </div>
+                                                ) : null}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </section>
                         ))
