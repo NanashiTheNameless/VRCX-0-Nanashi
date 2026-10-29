@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use vrcx_0_host_desktop::vr_overlay::{OverlaySurfaceConfig, VrDeviceSnapshot};
+use vrcx_0_host_desktop::vr_overlay::{OverlaySurfaceConfig, VrDeviceSnapshot, WristPressCounts};
 use vrcx_0_vr_overlay::{OverlaySurfaceId, RgbaFrame};
 
 use super::{
@@ -156,7 +156,7 @@ where
         self.service.is_surface_visible(surface_id)
     }
 
-    pub fn wrist_activation_count(&self, surface_id: &OverlaySurfaceId) -> u64 {
+    pub fn wrist_activation_count(&self, surface_id: &OverlaySurfaceId) -> WristPressCounts {
         self.service.wrist_activation_count(surface_id)
     }
     pub fn hmd_user_present(&self) -> Option<bool> {

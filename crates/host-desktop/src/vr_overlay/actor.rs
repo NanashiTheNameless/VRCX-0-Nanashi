@@ -16,7 +16,10 @@ use super::{
     command::{OverlayCommandError, OverlayServiceCommand},
     noop::NoopOverlayBackend,
     status::{OverlayServicePhase, OverlayServiceStatus},
-    types::{BackendStartError, BackendStartErrorReason, OverlaySurfaceConfig, VrDeviceSnapshot},
+    types::{
+        BackendStartError, BackendStartErrorReason, OverlaySurfaceConfig, VrDeviceSnapshot,
+        WristPressCounts,
+    },
 };
 
 const IDLE_OVERLAY_TICK_INTERVAL: Duration = Duration::from_millis(100);
@@ -53,9 +56,8 @@ pub trait OverlayBackend: Send + 'static {
     fn visible_surface_ids(&self) -> Vec<OverlaySurfaceId> {
         Vec::new()
     }
-    /// How many times the wrist menu was opened on each surface, including
-    /// presses while it was already open.
-    fn wrist_activation_counts(&self) -> Vec<(OverlaySurfaceId, u64)> {
+    /// Wrist menu presses and opens counted on each surface.
+    fn wrist_activation_counts(&self) -> Vec<(OverlaySurfaceId, WristPressCounts)> {
         Vec::new()
     }
     fn hmd_user_present(&self) -> Option<bool> {
@@ -74,7 +76,7 @@ pub struct OverlayActorHandle {
     status: Arc<Mutex<OverlayServiceStatus>>,
     runtime_quit_at: Arc<Mutex<Option<Instant>>>,
     visible_surfaces: Arc<Mutex<Vec<OverlaySurfaceId>>>,
-    wrist_activations: Arc<Mutex<HashMap<String, u64>>>,
+    wrist_activations: Arc<Mutex<HashMap<String, WristPressCounts>>>,
     hmd_user_present: Arc<Mutex<Option<bool>>>,
 }
 
@@ -227,7 +229,7 @@ impl OverlayActorHandle {
             .is_ok_and(|visible| visible.contains(surface_id))
     }
 
-    pub fn wrist_activation_count(&self, surface_id: &OverlaySurfaceId) -> u64 {
+    pub fn wrist_activation_count(&self, surface_id: &OverlaySurfaceId) -> WristPressCounts {
         self.wrist_activations
             .lock()
             .ok()
@@ -285,7 +287,7 @@ fn run_actor<B>(
     status: Arc<Mutex<OverlayServiceStatus>>,
     runtime_quit_at: Arc<Mutex<Option<Instant>>>,
     visible_surfaces: Arc<Mutex<Vec<OverlaySurfaceId>>>,
-    wrist_activations: Arc<Mutex<HashMap<String, u64>>>,
+    wrist_activations: Arc<Mutex<HashMap<String, WristPressCounts>>>,
     hmd_user_present: Arc<Mutex<Option<bool>>>,
 ) where
     B: OverlayBackend,
@@ -366,8 +368,10 @@ where
     }
 }
 
-fn publish_wrist_activations<B>(backend: &B, wrist_activations: &Mutex<HashMap<String, u64>>)
-where
+fn publish_wrist_activations<B>(
+    backend: &B,
+    wrist_activations: &Mutex<HashMap<String, WristPressCounts>>,
+) where
     B: OverlayBackend,
 {
     let counts = backend

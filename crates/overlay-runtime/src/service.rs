@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 
 use vrcx_0_host_desktop::vr_overlay::{
     OverlayActorHandle, OverlayCommandError, OverlayServiceCommand, OverlayServicePhase,
-    OverlaySurfaceConfig, VrDeviceSnapshot,
+    OverlaySurfaceConfig, VrDeviceSnapshot, WristPressCounts,
 };
 use vrcx_0_vr_overlay::{OverlaySurfaceId, RgbaFrame};
 
@@ -114,10 +114,10 @@ pub trait VrOverlayServiceControl {
     fn is_surface_visible(&self, _surface_id: &OverlaySurfaceId) -> bool {
         false
     }
-    /// Total wrist menu presses, including presses while the menu was already
-    /// open. A change in this value means the user pressed the menu button.
-    fn wrist_activation_count(&self, _surface_id: &OverlaySurfaceId) -> u64 {
-        0
+    /// Total wrist menu presses and opens, including presses while the menu was
+    /// already open. A change means the user pressed the menu button.
+    fn wrist_activation_count(&self, _surface_id: &OverlaySurfaceId) -> WristPressCounts {
+        WristPressCounts::default()
     }
     fn should_stop_when_ineligible(&self) -> bool {
         self.is_running()
@@ -579,7 +579,7 @@ impl VrOverlayServiceControl for HostVrOverlayService {
             .is_some_and(|actor| actor.is_surface_visible(surface_id))
     }
 
-    fn wrist_activation_count(&self, surface_id: &OverlaySurfaceId) -> u64 {
+    fn wrist_activation_count(&self, surface_id: &OverlaySurfaceId) -> WristPressCounts {
         self.actor
             .as_ref()
             .map(|actor| actor.wrist_activation_count(surface_id))

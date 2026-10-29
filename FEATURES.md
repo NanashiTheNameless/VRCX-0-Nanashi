@@ -227,13 +227,15 @@ The wrist menu shows the feed, the players in your instance, and the players you
   next page and restarts that timer - you never have to close and reopen it. A second press
   within 1 second of opening the menu (a double press) only keeps it open; press again to
   switch. Set this double press cooldown from 0 (off) to 5000 ms.
+- **One menu at a time.** With the menu on both hands, opening it on one wrist closes it on the
+  other. Each time the menu opens, on either wrist, it starts on your first page.
 - **Full instances.** The Players and Notes pages list everyone in the instance with all of
   their details; when a full instance does not fit, they add columns and then use smaller text
   instead of leaving anyone out.
 - **Player details.** Every player shows their state, platform, an 18+ badge when VRChat
-  reports one, the profile languages you both list (such as `ENG, JPN`), and status text. While these pages are open the app loads each player's VRChat
-  profile once every 10 minutes, one request at a time, reusing profiles the Player List page
-  already loaded. You are listed last, with your own details. Friends' names are yellow.
+  reports one, the profile languages you both list (such as `ENG, JPN`), and status text.
+  While these pages are open the app loads each player's VRChat profile once every 10 minutes,
+  one request at a time, reusing profiles the Player List page already loaded. You are listed last, with your own details. Friends' names are yellow.
 
 ### Wrist menu size and placement
 

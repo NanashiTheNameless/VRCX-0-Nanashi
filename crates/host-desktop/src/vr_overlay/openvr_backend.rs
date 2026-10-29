@@ -24,7 +24,7 @@ use super::{
     policy::WristVisibilityPolicy,
     types::{
         BackendStartError, OverlayActivationButton, OverlayPlacement, OverlaySurfaceConfig,
-        VrDeviceSnapshot,
+        VrDeviceSnapshot, WristPressCounts,
     },
 };
 use openvr_devices::{snapshot_openvr_devices, string_property, BatteryReadingState};
@@ -394,11 +394,11 @@ impl OverlayBackend for OpenVrOverlayBackend {
             .collect()
     }
 
-    fn wrist_activation_counts(&self) -> Vec<(OverlaySurfaceId, u64)> {
+    fn wrist_activation_counts(&self) -> Vec<(OverlaySurfaceId, WristPressCounts)> {
         self.surfaces
             .iter()
             .filter(|(_, surface)| surface_uses_wrist_policy(&surface.config))
-            .map(|(surface_id, surface)| (surface_id.clone(), surface.policy.activations()))
+            .map(|(surface_id, surface)| (surface_id.clone(), surface.policy.press_counts()))
             .collect()
     }
 
@@ -594,7 +594,7 @@ impl OpenVrOverlayBackend {
             .ok_or_else(|| "OpenVR overlay is not started".to_string())?;
         let now = Instant::now();
         let mut surface_updates = Vec::new();
-        let mut visibility_updates = Vec::new();
+        let mut opened_surface = None;
         for candidate in candidates {
             let mut transform_device = candidate.transform_device;
             let mut policy = candidate.policy;
@@ -621,19 +621,38 @@ impl OpenVrOverlayBackend {
                     );
                 }
                 transform_device = Some(device);
-                if device_button_pressed(system, device, candidate.config.activation_button) {
-                    policy.open(now);
+                if device_button_pressed(system, device, candidate.config.activation_button)
+                    && policy.open(now)
+                {
+                    opened_surface = Some(candidate.surface_id.clone());
                 }
             }
-
-            let device_present = transform_device.is_some();
-            let visible = policy.evaluate(now, device_present)
-                || (candidate.config.force_visible && device_present);
-            surface_updates.push((candidate.surface_id.clone(), transform_device, policy));
-            visibility_updates.push((candidate.surface_id, visible));
+            surface_updates.push((
+                candidate.surface_id,
+                transform_device,
+                policy,
+                candidate.config.force_visible,
+            ));
         }
 
-        for (surface_id, transform_device, policy) in surface_updates {
+        // Only one wrist menu is open at a time: opening one closes the other.
+        if let Some(opened_surface) = &opened_surface {
+            for (surface_id, _, policy, _) in &mut surface_updates {
+                if surface_id != opened_surface {
+                    policy.close();
+                }
+            }
+        }
+
+        let mut visibility_updates = Vec::new();
+        for (surface_id, transform_device, policy, force_visible) in &mut surface_updates {
+            let device_present = transform_device.is_some();
+            let visible =
+                policy.evaluate(now, device_present) || (*force_visible && device_present);
+            visibility_updates.push((surface_id.clone(), visible));
+        }
+
+        for (surface_id, transform_device, policy, _) in surface_updates {
             if let Some(surface) = self.surfaces.get_mut(&surface_id) {
                 surface.transform_device = transform_device;
                 surface.policy = policy;

@@ -12,7 +12,7 @@ use vrcx_0_vr_overlay::{OverlaySurfaceId, RgbaFrame};
 
 use super::super::{
     actor::OverlayBackend,
-    types::{BackendStartError, OverlaySurfaceConfig, VrDeviceSnapshot},
+    types::{BackendStartError, OverlaySurfaceConfig, VrDeviceSnapshot, WristPressCounts},
 };
 use super::session::{self, SessionCommand};
 
@@ -49,7 +49,7 @@ struct Worker {
     commands: Sender<SessionCommand>,
     alive: Arc<AtomicBool>,
     visible_surfaces: Arc<Mutex<Vec<OverlaySurfaceId>>>,
-    wrist_activations: Arc<Mutex<HashMap<String, u64>>>,
+    wrist_activations: Arc<Mutex<HashMap<String, WristPressCounts>>>,
     join: Option<JoinHandle<()>>,
 }
 
@@ -238,7 +238,7 @@ impl OverlayBackend for OpenXrOverlayBackend {
         self.request(|reply| SessionCommand::SnapshotDevices { reply })
     }
 
-    fn wrist_activation_counts(&self) -> Vec<(OverlaySurfaceId, u64)> {
+    fn wrist_activation_counts(&self) -> Vec<(OverlaySurfaceId, WristPressCounts)> {
         self.worker()
             .ok()
             .and_then(|worker| {

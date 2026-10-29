@@ -3168,7 +3168,7 @@
                     "wrist_feed_notifications": "Wrist Overlay Notification Filters",
                     "pages": {
                         "label": "Pages",
-                        "description": "Turn pages on or off and set their order. The first page is shown when the overlay starts.",
+                        "description": "Turn pages on or off and set their order. The first page is shown each time the menu opens.",
                         "names": {
                             "feed": "Feed",
                             "players": "Players",

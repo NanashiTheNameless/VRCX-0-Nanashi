@@ -26,5 +26,5 @@ pub use status::{OverlayServicePhase, OverlayServiceStatus};
 pub use types::{
     BackendStartError, BackendStartErrorReason, OverlayActivationButton, OverlayPlacement,
     OverlaySurfaceConfig, VrDeviceRole, VrDeviceSnapshot, VrDeviceStatus, WristAnchor,
-    WristPlacementAdjust,
+    WristPlacementAdjust, WristPressCounts,
 };

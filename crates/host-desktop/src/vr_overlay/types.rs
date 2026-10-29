@@ -71,6 +71,27 @@ fn default_switch_cooldown_ms() -> u64 {
     1000
 }
 
+/// Menu presses counted on a wrist surface. Each counted press raises
+/// `presses`; a press that opened the closed menu also raises `opens`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct WristPressCounts {
+    pub presses: u64,
+    pub opens: u64,
+}
+
+impl WristPressCounts {
+    /// Totals across surfaces: every press raises exactly one surface's counts,
+    /// so a change in the sum means a press happened on one of them.
+    pub fn sum(counts: impl IntoIterator<Item = Self>) -> Self {
+        counts
+            .into_iter()
+            .fold(Self::default(), |total, counts| Self {
+                presses: total.presses.wrapping_add(counts.presses),
+                opens: total.opens.wrapping_add(counts.opens),
+            })
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum OverlayPlacement {

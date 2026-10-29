@@ -1,5 +1,7 @@
 use std::time::{Duration, Instant};
 
+use super::types::WristPressCounts;
+
 const DEFAULT_VISIBLE_DURATION: Duration = Duration::from_secs(10);
 const DEFAULT_SWITCH_COOLDOWN: Duration = Duration::from_secs(1);
 
@@ -11,7 +13,7 @@ pub(super) struct WristVisibilityPolicy {
     switch_cooldown: Duration,
     opened_until: Option<Instant>,
     opened_at: Option<Instant>,
-    activations: u64,
+    counts: WristPressCounts,
 }
 
 impl Default for WristVisibilityPolicy {
@@ -27,7 +29,7 @@ impl WristVisibilityPolicy {
             switch_cooldown,
             opened_until: None,
             opened_at: None,
-            activations: 0,
+            counts: WristPressCounts::default(),
         }
     }
 
@@ -39,8 +41,9 @@ impl WristVisibilityPolicy {
 
     /// Every press, including one while the menu is already open: the press
     /// restarts the timeout instead of being ignored. A press within the switch
-    /// cooldown of opening restarts the timeout but is not counted.
-    pub fn open(&mut self, now: Instant) {
+    /// cooldown of opening restarts the timeout but is not counted. Returns
+    /// whether this press opened a closed menu.
+    pub fn open(&mut self, now: Instant) -> bool {
         let already_open = self.opened_until.is_some_and(|until| now <= until);
         if !already_open {
             self.opened_at = Some(now);
@@ -51,14 +54,18 @@ impl WristVisibilityPolicy {
             });
         self.opened_until = Some(now + self.visible_duration);
         if !in_cooldown {
-            self.activations = self.activations.wrapping_add(1);
+            self.counts.presses = self.counts.presses.wrapping_add(1);
         }
+        if !already_open {
+            self.counts.opens = self.counts.opens.wrapping_add(1);
+        }
+        !already_open
     }
 
-    /// How many times the menu was opened, so the frame producer can tell a new
-    /// press from the menu simply staying open.
-    pub fn activations(&self) -> u64 {
-        self.activations
+    /// Counted presses and opens, so the frame producer can tell a press that
+    /// opened the menu from one that switches its page.
+    pub fn press_counts(&self) -> WristPressCounts {
+        self.counts
     }
 
     pub fn close(&mut self) {
@@ -122,11 +129,11 @@ mod tests {
         let mut policy = WristVisibilityPolicy::new(VISIBLE, SWITCH_COOLDOWN);
         let now = Instant::now();
         policy.open(now);
-        assert_eq!(policy.activations(), 1);
+        assert_eq!(policy.press_counts().presses, 1);
 
         let later = now + VISIBLE - Duration::from_millis(1);
         policy.open(later);
-        assert_eq!(policy.activations(), 2);
+        assert_eq!(policy.press_counts().presses, 2);
 
         // The window restarts, so it is still open well past the original end.
         assert!(policy.evaluate(later + VISIBLE, true));
@@ -138,17 +145,35 @@ mod tests {
         let mut policy = WristVisibilityPolicy::new(VISIBLE, SWITCH_COOLDOWN);
         let now = Instant::now();
         policy.open(now);
-        assert_eq!(policy.activations(), 1);
+        assert_eq!(policy.press_counts().presses, 1);
 
         let double = now + SWITCH_COOLDOWN - Duration::from_millis(1);
         policy.open(double);
-        assert_eq!(policy.activations(), 1);
+        assert_eq!(policy.press_counts().presses, 1);
         // The ignored press still restarts the timeout.
         assert!(policy.evaluate(double + VISIBLE, true));
 
         // A press after the cooldown counts again.
         policy.open(now + SWITCH_COOLDOWN);
-        assert_eq!(policy.activations(), 2);
+        assert_eq!(policy.press_counts().presses, 2);
+    }
+
+    #[test]
+    fn open_reports_only_the_press_that_opened_the_menu() {
+        let mut policy = WristVisibilityPolicy::new(VISIBLE, SWITCH_COOLDOWN);
+        let now = Instant::now();
+        assert!(policy.open(now));
+        assert!(!policy.open(now + SWITCH_COOLDOWN));
+        assert_eq!(
+            policy.press_counts(),
+            WristPressCounts {
+                presses: 2,
+                opens: 1
+            }
+        );
+        policy.close();
+        assert!(policy.open(now + SWITCH_COOLDOWN));
+        assert_eq!(policy.press_counts().opens, 2);
     }
 
     #[test]
@@ -157,7 +182,7 @@ mod tests {
         let now = Instant::now();
         policy.open(now);
         policy.open(now);
-        assert_eq!(policy.activations(), 2);
+        assert_eq!(policy.press_counts().presses, 2);
     }
 
     #[test]
@@ -168,7 +193,7 @@ mod tests {
         policy.configure(VISIBLE, Duration::from_millis(100));
 
         policy.open(now + Duration::from_millis(200));
-        assert_eq!(policy.activations(), 2);
+        assert_eq!(policy.press_counts().presses, 2);
         assert!(policy.evaluate(now, true));
     }
 
@@ -179,11 +204,11 @@ mod tests {
         policy.open(now);
         let switch = now + SWITCH_COOLDOWN + Duration::from_secs(1);
         policy.open(switch);
-        assert_eq!(policy.activations(), 2);
+        assert_eq!(policy.press_counts().presses, 2);
 
         // Quick presses while already switching pages are not swallowed.
         policy.open(switch + Duration::from_millis(100));
-        assert_eq!(policy.activations(), 3);
+        assert_eq!(policy.press_counts().presses, 3);
     }
 
     #[test]
@@ -195,8 +220,8 @@ mod tests {
 
         let reopen = now + Duration::from_millis(100);
         policy.open(reopen);
-        assert_eq!(policy.activations(), 2);
+        assert_eq!(policy.press_counts().presses, 2);
         policy.open(reopen + Duration::from_millis(100));
-        assert_eq!(policy.activations(), 2);
+        assert_eq!(policy.press_counts().presses, 2);
     }
 }

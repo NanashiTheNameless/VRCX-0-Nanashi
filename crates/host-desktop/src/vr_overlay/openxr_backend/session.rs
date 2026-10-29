@@ -12,7 +12,7 @@ use super::super::{
     policy::WristVisibilityPolicy,
     types::{
         BackendStartError, OverlayPlacement, OverlaySurfaceConfig, VrDeviceRole, VrDeviceSnapshot,
-        VrDeviceStatus,
+        VrDeviceStatus, WristPressCounts,
     },
 };
 use super::backend::load_entry;
@@ -52,7 +52,7 @@ pub(super) fn run(
     commands: Receiver<SessionCommand>,
     init_reply: Sender<Result<(), BackendStartError>>,
     visible_surfaces: &Mutex<Vec<OverlaySurfaceId>>,
-    wrist_activations: &Mutex<HashMap<String, u64>>,
+    wrist_activations: &Mutex<HashMap<String, WristPressCounts>>,
 ) {
     let context = match SessionContext::initialize() {
         Ok(context) => context,
@@ -193,7 +193,7 @@ impl SessionContext {
         mut self,
         commands: Receiver<SessionCommand>,
         visible_surfaces: &Mutex<Vec<OverlaySurfaceId>>,
-        wrist_activations: &Mutex<HashMap<String, u64>>,
+        wrist_activations: &Mutex<HashMap<String, WristPressCounts>>,
     ) -> Result<(), String> {
         let mut event_buffer = xr::EventDataBuffer::new();
         loop {
@@ -272,14 +272,17 @@ impl SessionContext {
         }
     }
 
-    fn publish_wrist_activations(&self, wrist_activations: &Mutex<HashMap<String, u64>>) {
+    fn publish_wrist_activations(
+        &self,
+        wrist_activations: &Mutex<HashMap<String, WristPressCounts>>,
+    ) {
         let counts = self
             .surfaces
             .iter()
             .map(|(surface_id, surface)| {
                 (
                     surface_id.as_str().to_string(),
-                    surface.policy.activations(),
+                    surface.policy.press_counts(),
                 )
             })
             .collect::<HashMap<_, _>>();
@@ -306,19 +309,34 @@ impl SessionContext {
         }
 
         let now = Instant::now();
+        let mut opened_surface = None;
+        for (surface_id, surface) in &mut self.surfaces {
+            if let Attachment::Hand(hand) = surface.attachment {
+                if self.input.activation_pressed(
+                    &self.session,
+                    hand,
+                    surface.config.activation_button,
+                ) && surface.policy.open(now)
+                {
+                    opened_surface = Some(surface_id.clone());
+                }
+            }
+        }
+        // Only one wrist menu is open at a time: opening one closes the other.
+        if let Some(opened_surface) = &opened_surface {
+            for (surface_id, surface) in &mut self.surfaces {
+                if surface_id != opened_surface && matches!(surface.attachment, Attachment::Hand(_))
+                {
+                    surface.policy.close();
+                }
+            }
+        }
         for surface in self.surfaces.values_mut() {
             match surface.attachment {
                 Attachment::Head => {
                     surface.visible = surface.requested_visible;
                 }
                 Attachment::Hand(hand) => {
-                    if self.input.activation_pressed(
-                        &self.session,
-                        hand,
-                        surface.config.activation_button,
-                    ) {
-                        surface.policy.open(now);
-                    }
                     let present = self
                         .input
                         .hand_located(hand, &self.local_space, display_time);

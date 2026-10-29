@@ -14,6 +14,7 @@ use vrcx_0_application_core::{GameProcessEvent, GameProcessEventSink, TaskSuperv
 use vrcx_0_core::text::first_non_empty_owned;
 use vrcx_0_host_desktop::vr_overlay::{
     OverlayActivationButton, OverlayPlacement, OverlaySurfaceConfig, VrDeviceSnapshot, WristAnchor,
+    WristPressCounts,
 };
 use vrcx_0_vr_overlay::{
     MainSurfaceModel, OverlaySize, OverlaySurfaceId, RgbaFrame, SlintHmdRenderer,
@@ -245,9 +246,9 @@ struct VrOverlayFrameInput {
     config: VrOverlayRuntimeConfig,
     devices: Vec<VrDeviceSnapshot>,
     wrist_visible: bool,
-    /// Total wrist menu presses seen so far. Any change means the user pressed
-    /// the menu button, including while the menu was already open.
-    wrist_activations: u64,
+    /// Wrist menu presses and opens summed over the wrist surfaces. Any change
+    /// means the user pressed the menu button.
+    wrist_activations: WristPressCounts,
     test_mode: bool,
 }
 
@@ -769,17 +770,14 @@ impl VrOverlayRuntime {
         }
     }
 
-    /// Whether any wrist surface is shown, and the latest menu press count.
+    /// Whether any wrist surface is shown, and the menu press counts.
     /// `None` when the manager is busy; the next poll will catch up.
-    fn wrist_state(&self) -> Option<(bool, u64)> {
+    fn wrist_state(&self) -> Option<(bool, WristPressCounts)> {
         let manager = self.manager.try_lock().ok()?;
         let ids = wrist_surface_ids(self.current_runtime_config().hand);
         Some((
             ids.iter().any(|id| manager.is_surface_visible(id)),
-            ids.iter()
-                .map(|id| manager.wrist_activation_count(id))
-                .max()
-                .unwrap_or_default(),
+            WristPressCounts::sum(ids.iter().map(|id| manager.wrist_activation_count(id))),
         ))
     }
 
@@ -952,11 +950,11 @@ impl VrOverlayRuntime {
         let wrist_visible = wrist_ids
             .iter()
             .any(|surface_id| manager.is_surface_visible(surface_id));
-        let wrist_activations = wrist_ids
-            .iter()
-            .map(|surface_id| manager.wrist_activation_count(surface_id))
-            .max()
-            .unwrap_or_default();
+        let wrist_activations = WristPressCounts::sum(
+            wrist_ids
+                .iter()
+                .map(|surface_id| manager.wrist_activation_count(surface_id)),
+        );
         let frame = match self
             .frame_producer
             .lock()
@@ -1092,33 +1090,30 @@ impl RuntimeWristFrameProducer {
 /// Tracks menu presses so the page can follow them.
 #[derive(Clone, Copy, Debug, Default)]
 struct WristPressState {
-    /// Menu presses seen on the previous frame. The first frame only records a
-    /// baseline; the overlay is closed then, so it is not treated as a press.
-    last_activations: Option<u64>,
-    /// Whether a press has already opened the menu.
-    opened: bool,
+    /// Menu press counts seen on the previous frame. The first frame only
+    /// records a baseline; the overlay is closed then, so it is not a press.
+    last_activations: Option<WristPressCounts>,
 }
 
-/// Fork: the first press opens the first configured page and every later press
-/// moves to the next one, while the backend restarts the inactivity timeout. The
-/// menu never has to be closed and reopened to switch pages.
+/// Fork: a press that opens the menu, on either wrist, shows the first
+/// configured page and every press while it is open moves to the next one,
+/// while the backend restarts the inactivity timeout. The menu never has to be
+/// closed and reopened to switch pages.
 fn track_wrist_page(
     config: &VrOverlayRuntimeConfig,
     page: &mut WristPage,
     state: &mut WristPressState,
-    activations: u64,
+    activations: WristPressCounts,
 ) {
     if state.last_activations != Some(activations) {
-        let is_press = state.last_activations.is_some();
-        state.last_activations = Some(activations);
-        if is_press {
-            *page = if state.opened {
-                config.wrist_pages.next_after(*page)
+        if let Some(last) = state.last_activations {
+            if activations.opens != last.opens {
+                *page = config.wrist_pages.first();
             } else {
-                config.wrist_pages.first()
-            };
-            state.opened = true;
+                *page = config.wrist_pages.next_after(*page);
+            }
         }
+        state.last_activations = Some(activations);
     }
     *page = config.wrist_pages.normalize(*page);
 }
@@ -1520,6 +1515,10 @@ mod wrist_page_tests {
         }
     }
 
+    fn counts(presses: u64, opens: u64) -> WristPressCounts {
+        WristPressCounts { presses, opens }
+    }
+
     #[test]
     fn each_press_advances_the_page_without_closing_the_menu() {
         let config = config_with("feed,players,notes");
@@ -1527,22 +1526,90 @@ mod wrist_page_tests {
         let mut state = WristPressState::default();
 
         // Nothing pressed yet.
-        track_wrist_page(&config, &mut page, &mut state, 0);
+        track_wrist_page(&config, &mut page, &mut state, counts(0, 0));
         assert_eq!(page, WristPage::Feed);
 
         // The first press opens on the first configured page.
-        track_wrist_page(&config, &mut page, &mut state, 1);
+        track_wrist_page(&config, &mut page, &mut state, counts(1, 1));
         assert_eq!(page, WristPage::Feed);
 
         // Pressing again while the menu is still open advances the page.
-        track_wrist_page(&config, &mut page, &mut state, 2);
+        track_wrist_page(&config, &mut page, &mut state, counts(2, 1));
         assert_eq!(page, WristPage::Players);
-        track_wrist_page(&config, &mut page, &mut state, 3);
+        track_wrist_page(&config, &mut page, &mut state, counts(3, 1));
         assert_eq!(page, WristPage::Notes);
 
         // And wraps around.
-        track_wrist_page(&config, &mut page, &mut state, 4);
+        track_wrist_page(&config, &mut page, &mut state, counts(4, 1));
         assert_eq!(page, WristPage::Feed);
+    }
+
+    #[test]
+    fn reopening_the_menu_starts_on_the_first_page() {
+        let config = config_with("feed,players,notes");
+        let mut page = WristPage::Feed;
+        let mut state = WristPressState::default();
+
+        track_wrist_page(&config, &mut page, &mut state, counts(0, 0));
+        track_wrist_page(&config, &mut page, &mut state, counts(1, 1));
+        track_wrist_page(&config, &mut page, &mut state, counts(2, 1));
+        assert_eq!(page, WristPage::Players);
+
+        // The menu timed out and a press opens it again.
+        track_wrist_page(&config, &mut page, &mut state, counts(3, 2));
+        assert_eq!(page, WristPage::Feed);
+    }
+
+    #[test]
+    fn opening_the_other_wrist_starts_on_the_first_page() {
+        let config = config_with("feed,players,notes");
+        let mut page = WristPage::Feed;
+        let mut state = WristPressState::default();
+        // Left and right wrist counts, summed as the runtime does.
+        let both = |left, right| WristPressCounts::sum([left, right]);
+
+        track_wrist_page(
+            &config,
+            &mut page,
+            &mut state,
+            both(counts(0, 0), counts(0, 0)),
+        );
+        // Open on the left and switch twice.
+        track_wrist_page(
+            &config,
+            &mut page,
+            &mut state,
+            both(counts(1, 1), counts(0, 0)),
+        );
+        track_wrist_page(
+            &config,
+            &mut page,
+            &mut state,
+            both(counts(2, 1), counts(0, 0)),
+        );
+        track_wrist_page(
+            &config,
+            &mut page,
+            &mut state,
+            both(counts(3, 1), counts(0, 0)),
+        );
+        assert_eq!(page, WristPage::Notes);
+
+        // Opening on the right closes the left and starts over.
+        track_wrist_page(
+            &config,
+            &mut page,
+            &mut state,
+            both(counts(3, 1), counts(1, 1)),
+        );
+        assert_eq!(page, WristPage::Feed);
+        track_wrist_page(
+            &config,
+            &mut page,
+            &mut state,
+            both(counts(3, 1), counts(2, 1)),
+        );
+        assert_eq!(page, WristPage::Players);
     }
 
     #[test]
@@ -1551,14 +1618,14 @@ mod wrist_page_tests {
         let mut page = WristPage::Feed;
         let mut state = WristPressState::default();
 
-        track_wrist_page(&config, &mut page, &mut state, 0);
-        track_wrist_page(&config, &mut page, &mut state, 1);
-        track_wrist_page(&config, &mut page, &mut state, 2);
+        track_wrist_page(&config, &mut page, &mut state, counts(0, 0));
+        track_wrist_page(&config, &mut page, &mut state, counts(1, 1));
+        track_wrist_page(&config, &mut page, &mut state, counts(2, 1));
         assert_eq!(page, WristPage::Players);
 
         // The menu stays open on the same page until the user presses again.
         for _ in 0..5 {
-            track_wrist_page(&config, &mut page, &mut state, 2);
+            track_wrist_page(&config, &mut page, &mut state, counts(2, 1));
         }
         assert_eq!(page, WristPage::Players);
     }
@@ -1569,12 +1636,12 @@ mod wrist_page_tests {
         let mut page = WristPage::Feed;
         let mut state = WristPressState::default();
 
-        track_wrist_page(&config, &mut page, &mut state, 0);
-        track_wrist_page(&config, &mut page, &mut state, 1);
+        track_wrist_page(&config, &mut page, &mut state, counts(0, 0));
+        track_wrist_page(&config, &mut page, &mut state, counts(1, 1));
         assert_eq!(page, WristPage::Feed);
-        track_wrist_page(&config, &mut page, &mut state, 2);
+        track_wrist_page(&config, &mut page, &mut state, counts(2, 1));
         assert_eq!(page, WristPage::Notes);
-        track_wrist_page(&config, &mut page, &mut state, 3);
+        track_wrist_page(&config, &mut page, &mut state, counts(3, 1));
         assert_eq!(page, WristPage::Feed);
     }
 
