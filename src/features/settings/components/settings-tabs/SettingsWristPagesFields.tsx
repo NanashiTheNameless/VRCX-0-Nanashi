@@ -27,6 +27,7 @@ const P = 'view.settings.vr.wrist_overlay.pages';
 const PAGES_KEY = 'wristOverlayPages';
 const SORT_KEY = 'wristOverlayPlayersSort';
 const TIMEOUT_KEY = 'wristOverlayTimeoutSeconds';
+const SWITCH_COOLDOWN_KEY = 'wristOverlaySwitchCooldownMs';
 const FEED_ORDER_KEY = 'wristOverlayFeedOrder';
 
 export type WristPageId = 'feed' | 'players' | 'notes';
@@ -35,6 +36,8 @@ type PageRow = { id: WristPageId; shown: boolean };
 const ALL_PAGES: WristPageId[] = ['feed', 'players', 'notes'];
 const MIN_TIMEOUT_SECONDS = 5;
 const MAX_TIMEOUT_SECONDS = 255;
+const DEFAULT_SWITCH_COOLDOWN_MS = 1000;
+const MAX_SWITCH_COOLDOWN_MS = 5000;
 const SORTS = ['name', 'joined'] as const;
 type PlayersSort = (typeof SORTS)[number];
 const FEED_ORDERS = ['newestTop', 'newestBottom'] as const;
@@ -48,6 +51,14 @@ export function clampTimeoutSeconds(value: number): number {
         MAX_TIMEOUT_SECONDS,
         Math.max(MIN_TIMEOUT_SECONDS, Math.round(value))
     );
+}
+
+/** Mirrors the Rust parser: 0 turns the cooldown off. */
+export function clampSwitchCooldownMs(value: number): number {
+    if (!Number.isFinite(value)) {
+        return DEFAULT_SWITCH_COOLDOWN_MS;
+    }
+    return Math.min(MAX_SWITCH_COOLDOWN_MS, Math.max(0, Math.round(value)));
 }
 
 /** Shown pages in order first, then the hidden ones; mirrors the Rust parser. */
@@ -79,7 +90,8 @@ export function serializeWristPages(rows: PageRow[]): string {
 }
 
 // Fork: choose which wrist pages exist, their order, the players order and how
-// long the menu stays open before closing due to inactivity.
+// long the menu stays open before closing due to inactivity, and how long a
+// second press right after opening is ignored instead of switching the page.
 export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
     const { t } = useTranslation();
     const [rows, setRows] = useState<PageRow[]>(() =>
@@ -88,6 +100,9 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
     const [sort, setSort] = useState<PlayersSort>('name');
     const [feedOrder, setFeedOrder] = useState<FeedOrder>('newestTop');
     const [timeout, setTimeout] = useState<number>(15);
+    const [switchCooldown, setSwitchCooldown] = useState<number>(
+        DEFAULT_SWITCH_COOLDOWN_MS
+    );
 
     useEffect(() => {
         let active = true;
@@ -95,9 +110,13 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
             configRepository.getString(PAGES_KEY, 'feed,players,notes'),
             configRepository.getString(SORT_KEY, 'name'),
             configRepository.getInt(TIMEOUT_KEY, 15),
-            configRepository.getString(FEED_ORDER_KEY, 'newestTop')
+            configRepository.getString(FEED_ORDER_KEY, 'newestTop'),
+            configRepository.getInt(
+                SWITCH_COOLDOWN_KEY,
+                DEFAULT_SWITCH_COOLDOWN_MS
+            )
         ])
-            .then(([pages, players, seconds, order]) => {
+            .then(([pages, players, seconds, order, cooldownMs]) => {
                 if (!active) return;
                 setRows(parseWristPages(pages));
                 setSort(players === 'joined' ? 'joined' : 'name');
@@ -105,6 +124,7 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
                     order === 'newestBottom' ? 'newestBottom' : 'newestTop'
                 );
                 setTimeout(clampTimeoutSeconds(seconds));
+                setSwitchCooldown(clampSwitchCooldownMs(cooldownMs));
             })
             .catch(() => {});
         return () => {
@@ -292,6 +312,37 @@ export function SettingsWristPagesFields({ disabled }: { disabled: boolean }) {
                         const seconds = clampTimeoutSeconds(value);
                         setTimeout(seconds);
                         void saveNumber(TIMEOUT_KEY, seconds);
+                    }}
+                >
+                    <NumberFieldGroup>
+                        <NumberFieldDecrement />
+                        <NumberFieldInput />
+                        <NumberFieldIncrement />
+                    </NumberFieldGroup>
+                </NumberField>
+            </Field>
+
+            <Field
+                settingId="vr.wrist.switch-cooldown"
+                label={t(`${P}.switch_cooldown`)}
+                description={t(`${P}.switch_cooldown_description`)}
+                controlId="settings-wrist-overlay-switch-cooldown"
+                disabled={disabled}
+            >
+                <NumberField
+                    value={switchCooldown}
+                    min={0}
+                    max={MAX_SWITCH_COOLDOWN_MS}
+                    step={100}
+                    id="settings-wrist-overlay-switch-cooldown"
+                    className="w-32"
+                    onValueChange={(value) => {
+                        if (value === null) {
+                            return;
+                        }
+                        const ms = clampSwitchCooldownMs(value);
+                        setSwitchCooldown(ms);
+                        void saveNumber(SWITCH_COOLDOWN_KEY, ms);
                     }}
                 >
                     <NumberFieldGroup>

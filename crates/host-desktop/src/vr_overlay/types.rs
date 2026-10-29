@@ -57,10 +57,18 @@ pub struct OverlaySurfaceConfig {
     /// remain visible for this duration after the last interaction.
     #[serde(default = "default_visible_duration_ms")]
     pub visible_duration_ms: u64,
+    /// How long after the press that opened the overlay a further press is
+    /// taken as part of a double press instead of a page switch. 0 disables it.
+    #[serde(default = "default_switch_cooldown_ms")]
+    pub switch_cooldown_ms: u64,
 }
 
 fn default_visible_duration_ms() -> u64 {
     15000 // 15 seconds as default
+}
+
+fn default_switch_cooldown_ms() -> u64 {
+    1000
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, specta::Type)]

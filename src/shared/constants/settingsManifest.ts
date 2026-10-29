@@ -1079,6 +1079,13 @@ defineCard('vr', 'wrist', 'view.settings.vr.wrist_overlay.header', [
         descriptionKey:
             'view.settings.vr.wrist_overlay.pages.timeout_description',
         dependsOn: 'enabled'
+    },
+    {
+        key: 'switch-cooldown',
+        labelKey: 'view.settings.vr.wrist_overlay.pages.switch_cooldown',
+        descriptionKey:
+            'view.settings.vr.wrist_overlay.pages.switch_cooldown_description',
+        dependsOn: 'enabled'
     }
 ]);
 

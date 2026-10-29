@@ -227,6 +227,7 @@ export const ConfigKeys = defineConfigKeys({
     wristOverlayPages: { type: 'string', default: 'feed,players,notes' },
     wristOverlayPlayersSort: { type: 'string', default: 'name' },
     wristOverlayTimeoutSeconds: { type: 'int', default: 15 },
+    wristOverlaySwitchCooldownMs: { type: 'int', default: 1000 },
 
     // ── Settings - VR Background ─────────────────────
     // ── Auto State Change ────────────────────────────

@@ -187,6 +187,9 @@ pub(super) struct VrOverlayRuntimeConfig {
     /// Inactivity timeout in seconds. When the wrist menu is shown, it will
     /// remain visible for this duration after the last interaction.
     pub(crate) wrist_timeout_secs: u8,
+    /// Fork: after the press that opens the wrist menu, presses within this many
+    /// milliseconds do not switch the page. 0 disables it.
+    pub(crate) wrist_switch_cooldown_ms: u16,
     /// Fork: wrist menu size, anchor, offsets and tilt (Settings > VR).
     pub(crate) wrist_placement: WristPlacement,
 }
@@ -206,6 +209,7 @@ impl Default for VrOverlayRuntimeConfig {
             wrist_pages: WristPageOrder::default(),
             wrist_players_sort: WristPlayersSort::Name,
             wrist_timeout_secs: 15, // Default to 15 seconds
+            wrist_switch_cooldown_ms: 1_000,
             wrist_placement: WristPlacement::default(),
         }
     }
@@ -1239,15 +1243,7 @@ fn wrist_surface_configs(
             } else {
                 "left-hand"
             };
-            wrist_surface_config(
-                surface_id.as_str(),
-                device_hint,
-                config.render.size,
-                config.wrist_placement,
-                config.button,
-                force_visible,
-                config.wrist_timeout_secs,
-            )
+            wrist_surface_config(surface_id.as_str(), device_hint, config, force_visible)
         })
         .collect()
 }
@@ -1266,24 +1262,23 @@ fn wrist_surface_ids(hand: WristOverlayHand) -> Vec<OverlaySurfaceId> {
 fn wrist_surface_config(
     surface_id: &str,
     device_hint: &str,
-    size: WristOverlaySizePreset,
-    placement: WristPlacement,
-    button: OverlayActivationButton,
+    config: VrOverlayRuntimeConfig,
     force_visible: bool,
-    timeout_secs: u8,
 ) -> OverlaySurfaceConfig {
-    let timeout_ms = u64::from(timeout_secs) * 1_000;
+    let placement = config.wrist_placement;
+    let timeout_ms = u64::from(config.wrist_timeout_secs) * 1_000;
     OverlaySurfaceConfig {
         surface_id: OverlaySurfaceId::new(surface_id),
-        size: size.overlay_size(),
+        size: config.render.size.overlay_size(),
         physical_width_meters: placement.physical_width_meters(),
         placement: OverlayPlacement::TrackedDeviceRelative {
             device_hint: device_hint.to_string(),
             adjust: placement.adjust(),
         },
-        activation_button: button,
+        activation_button: config.button,
         force_visible,
         visible_duration_ms: timeout_ms,
+        switch_cooldown_ms: u64::from(config.wrist_switch_cooldown_ms),
     }
 }
 
@@ -1330,6 +1325,7 @@ fn hmd_surface_config(hmd: HmdNotificationConfig) -> OverlaySurfaceConfig {
         force_visible: false,
         // HMD toasts expire per toast; the surface itself does not time out.
         visible_duration_ms: u64::MAX,
+        switch_cooldown_ms: 0,
     }
 }
 

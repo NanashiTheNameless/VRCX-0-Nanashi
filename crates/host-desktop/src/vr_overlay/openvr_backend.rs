@@ -242,6 +242,10 @@ impl OverlayBackend for OpenVrOverlayBackend {
         if self.surfaces.contains_key(&surface_id) {
             self.apply_config(&config)?;
             if let Some(surface) = self.surfaces.get_mut(&surface_id) {
+                surface.policy.configure(
+                    Duration::from_millis(config.visible_duration_ms),
+                    Duration::from_millis(config.switch_cooldown_ms),
+                );
                 surface.config = config;
                 surface.active = true;
             }
@@ -270,9 +274,10 @@ impl OverlayBackend for OpenVrOverlayBackend {
                 back_loading: false,
                 config: config.clone(),
                 transform_device: None,
-                policy: WristVisibilityPolicy::new(Duration::from_millis(
-                    config.visible_duration_ms,
-                )),
+                policy: WristVisibilityPolicy::new(
+                    Duration::from_millis(config.visible_duration_ms),
+                    Duration::from_millis(config.switch_cooldown_ms),
+                ),
                 frame_aspect: frame_aspect(config.size),
                 visible: false,
                 active: true,

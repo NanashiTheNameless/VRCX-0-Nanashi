@@ -436,6 +436,10 @@ impl SessionContext {
         if let Some(existing) = self.surfaces.get_mut(&config.surface_id) {
             if existing.config.size == config.size {
                 existing.attachment = attachment;
+                existing.policy.configure(
+                    Duration::from_millis(config.visible_duration_ms),
+                    Duration::from_millis(config.switch_cooldown_ms),
+                );
                 existing.config = config;
                 return Ok(());
             }
@@ -454,7 +458,10 @@ impl SessionContext {
                 images,
                 width,
                 height,
-                policy: WristVisibilityPolicy::default(),
+                policy: WristVisibilityPolicy::new(
+                    Duration::from_millis(config.visible_duration_ms),
+                    Duration::from_millis(config.switch_cooldown_ms),
+                ),
                 pending_frame: None,
                 uploaded: false,
                 visible: false,

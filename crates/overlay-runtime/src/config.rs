@@ -29,6 +29,7 @@ pub const VR_OVERLAY_PAGES_CONFIG_KEY: &str = "wristOverlayPages";
 pub const VR_OVERLAY_PLAYERS_SORT_CONFIG_KEY: &str = "wristOverlayPlayersSort";
 pub const VR_OVERLAY_FEED_ORDER_CONFIG_KEY: &str = "wristOverlayFeedOrder";
 pub const VR_OVERLAY_TIMEOUT_SECONDS_CONFIG_KEY: &str = "wristOverlayTimeoutSeconds";
+pub const VR_OVERLAY_SWITCH_COOLDOWN_MS_CONFIG_KEY: &str = "wristOverlaySwitchCooldownMs";
 pub const VR_OVERLAY_WIDTH_CM_CONFIG_KEY: &str = "wristOverlayWidthCm";
 pub const VR_OVERLAY_ANCHOR_CONFIG_KEY: &str = "wristOverlayAnchor";
 pub const VR_OVERLAY_MAX_HEIGHT_CM_CONFIG_KEY: &str = "wristOverlayMaxHeightCm";
@@ -182,6 +183,13 @@ pub(super) fn load_runtime_config(
         .and_then(|value| value.trim().parse::<u8>().ok())
         .unwrap_or(15)
         .clamp(5, 255);
+    let wrist_switch_cooldown_ms = config
+        .get_raw(VR_OVERLAY_SWITCH_COOLDOWN_MS_CONFIG_KEY)
+        .ok()
+        .flatten()
+        .and_then(|value| value.trim().parse::<u16>().ok())
+        .unwrap_or(1_000)
+        .min(5_000);
     let raw_int = |key: &str| {
         config
             .get_raw(key)
@@ -277,6 +285,7 @@ pub(super) fn load_runtime_config(
         wrist_pages,
         wrist_players_sort,
         wrist_timeout_secs,
+        wrist_switch_cooldown_ms,
         wrist_placement,
     }
 }

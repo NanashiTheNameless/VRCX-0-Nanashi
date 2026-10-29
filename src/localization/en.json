@@ -3189,6 +3189,8 @@
                         },
                         "timeout": "Menu timeout",
                         "timeout_description": "How long the wrist menu stays open after the last interaction before it closes. Pressing the menu button while it is open switches to the next page and restarts this timer, so you never have to close and reopen it.",
+                        "switch_cooldown": "Double press cooldown (ms)",
+                        "switch_cooldown_description": "After a press opens the wrist menu, further presses within this many milliseconds keep it open without switching the page, so a double press does not skip past the first page. Set to 0 to switch on every press.",
                         "seconds_one": "1 second",
                         "seconds_other": "{count} seconds"
                     },

@@ -224,7 +224,9 @@ The wrist menu shows the feed, the players in your instance, and the players you
 - **Timeout.** The menu closes after 15 seconds without interaction by default; set the menu
   timeout anywhere from 5 to 255 seconds.
 - **Switching pages.** Pressing the menu button while the menu is already open switches to the
-  next page and restarts that timer - you never have to close and reopen it.
+  next page and restarts that timer - you never have to close and reopen it. A second press
+  within 1 second of opening the menu (a double press) only keeps it open; press again to
+  switch. Set this double press cooldown from 0 (off) to 5000 ms.
 - **Full instances.** The Players and Notes pages list everyone in the instance with all of
   their details; when a full instance does not fit, they add columns and then use smaller text
   instead of leaving anyone out.

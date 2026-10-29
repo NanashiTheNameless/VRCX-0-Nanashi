@@ -278,6 +278,7 @@ fn make_wrist_config() -> OverlaySurfaceConfig {
         activation_button: OverlayActivationButton::Grip,
         force_visible: false,
         visible_duration_ms: 15_000,
+        switch_cooldown_ms: 1_000,
     }
 }
 
