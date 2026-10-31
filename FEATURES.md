@@ -68,6 +68,8 @@ own) to keep an end-to-end encrypted copy of your history there and share it bet
   avatar history and tags, profile bios and the mutual friends graph. The later edit wins and a
   deletion on one PC reaches the others.
 - **Local history is safe.** Nothing on the server can delete local history.
+  Stopping or restarting the server collector keeps its older synced history
+  available to paired PCs.
 - **Automatic sync.** Pushes and pulls changes on a configurable 1 to 60 minute interval, and
   can be set to wait while VRChat is open.
 - **One PC merges.** You can choose one paired PC to merge and deduplicate the server copy;

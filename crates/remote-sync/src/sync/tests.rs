@@ -459,6 +459,213 @@ async fn upgrading_a_legacy_manifest_preserves_signers_and_imports_old_history()
 }
 
 #[tokio::test]
+async fn collector_history_still_syncs_after_renewal_lock_and_restart() {
+    let server = FakeServer::default();
+    let secret = SyncSecret::generate().unwrap();
+    let owner = pc("owner");
+    let vault_id = owner
+        .sync(&server, &secret)
+        .await
+        .unwrap()
+        .vault_id
+        .parse()
+        .unwrap();
+    let keys = VaultKeys::derive(&secret, vault_id);
+    let collector = SignerKey::generate().unwrap();
+    let now = now_epoch();
+    let start = now - 86400;
+    let (seq, blob) = server.get_manifest(vault_id).await.unwrap();
+    let mut manifest = engine::open_manifest(&blob, seq, &keys, None)
+        .unwrap()
+        .next();
+    engine::authorize_collector(&mut manifest, &collector.public(), start, Some(now + 3600));
+    server
+        .put_manifest(
+            vault_id,
+            manifest.manifest_seq,
+            engine::seal_manifest(&manifest, &keys).unwrap(),
+        )
+        .await
+        .unwrap();
+    let draft = ChunkDraft {
+        vault_id,
+        source_id: SourceId::random().unwrap(),
+        source_seq: 1,
+        kind: ChunkKind::Rows,
+        created_at: start + 600,
+        app_version: "test".into(),
+        coverage: Vec::new(),
+        dropped_rows: 0,
+        body: ChunkBody {
+            streams: [(
+                "feed_bio".into(),
+                vec![serde_json::json!({
+                    "created_at": start + 600, "user_id": "usr_friend", "display_name": "Friend",
+                    "bio": "collector history", "previous_bio": ""
+                })],
+            )]
+            .into_iter()
+            .collect(),
+        },
+    };
+    let (chunk_id, chunk) = engine::seal_chunk(&draft, &collector, &keys).unwrap();
+    server
+        .upload_chunk(vault_id, chunk_id, chunk)
+        .await
+        .unwrap();
+
+    for phase in ["initial", "renewed", "locked", "restarted"] {
+        let (seq, blob) = server.get_manifest(vault_id).await.unwrap();
+        let mut manifest = engine::open_manifest(&blob, seq, &keys, None)
+            .unwrap()
+            .next();
+        if phase == "locked" {
+            assert!(engine::expire_collector(
+                &mut manifest,
+                &collector.key_id(),
+                now
+            ));
+        } else if phase != "initial" {
+            engine::authorize_collector(&mut manifest, &collector.public(), now, None);
+        }
+        server
+            .put_manifest(
+                vault_id,
+                manifest.manifest_seq,
+                engine::seal_manifest(&manifest, &keys).unwrap(),
+            )
+            .await
+            .unwrap();
+        let reader = pc(phase);
+        let report = reader.sync(&server, &secret).await.unwrap();
+        assert_eq!((report.imported_rows, report.pushed_rows), (1, 0));
+        assert_eq!(reader.rows(), 1);
+        let repeated = reader.sync(&server, &secret).await.unwrap();
+        assert_eq!((repeated.imported_rows, repeated.pushed_rows), (0, 0));
+        assert_eq!(server.chunk_count(), 1);
+    }
+}
+
+#[tokio::test]
+async fn reauthorizing_a_device_keeps_its_old_history_verifiable() {
+    let server = FakeServer::default();
+    let secret = SyncSecret::generate().unwrap();
+    let owner = pc("owner");
+    let vault_id = owner
+        .sync(&server, &secret)
+        .await
+        .unwrap()
+        .vault_id
+        .parse()
+        .unwrap();
+    let keys = VaultKeys::derive(&secret, vault_id);
+    let now = now_epoch();
+    let start = now - 86400;
+    let (seq, blob) = server.get_manifest(vault_id).await.unwrap();
+    let mut manifest = engine::open_manifest(&blob, seq, &keys, None)
+        .unwrap()
+        .next();
+    let entry = manifest
+        .signers
+        .iter_mut()
+        .find(|entry| entry.key_id == owner.signer.key_id())
+        .unwrap();
+    entry.added_at = start;
+    entry.expires_at = Some(now - 3600);
+    server
+        .put_manifest(
+            vault_id,
+            manifest.manifest_seq,
+            engine::seal_manifest(&manifest, &keys).unwrap(),
+        )
+        .await
+        .unwrap();
+    let draft = ChunkDraft {
+        vault_id,
+        source_id: SourceId::random().unwrap(),
+        source_seq: 1,
+        kind: ChunkKind::Rows,
+        created_at: now - 7200,
+        app_version: "test".into(),
+        coverage: Vec::new(),
+        dropped_rows: 0,
+        body: ChunkBody {
+            streams: [(
+                "feed_bio".into(),
+                vec![serde_json::json!({
+                    "created_at": now - 7200, "user_id": "usr_friend", "display_name": "Friend",
+                    "bio": "device history", "previous_bio": ""
+                })],
+            )]
+            .into_iter()
+            .collect(),
+        },
+    };
+    let (chunk_id, chunk) = engine::seal_chunk(&draft, &owner.signer, &keys).unwrap();
+    server
+        .upload_chunk(vault_id, chunk_id, chunk)
+        .await
+        .unwrap();
+
+    let report = owner.sync(&server, &secret).await.unwrap();
+    assert_eq!((report.imported_rows, report.pushed_rows), (1, 0));
+    assert_eq!(owner.rows(), 1);
+    let (seq, blob) = server.get_manifest(vault_id).await.unwrap();
+    let manifest = engine::open_manifest(&blob, seq, &keys, None).unwrap();
+    let entry = manifest
+        .signers
+        .iter()
+        .find(|entry| entry.key_id == owner.signer.key_id())
+        .unwrap();
+    assert_eq!(entry.added_at, start);
+    assert_eq!(entry.expires_at, None);
+}
+
+#[tokio::test]
+async fn a_device_clock_before_its_authorization_cannot_publish_invalid_history() {
+    let server = FakeServer::default();
+    let secret = SyncSecret::generate().unwrap();
+    let owner = pc("owner");
+    let vault_id = owner
+        .sync(&server, &secret)
+        .await
+        .unwrap()
+        .vault_id
+        .parse()
+        .unwrap();
+    let keys = VaultKeys::derive(&secret, vault_id);
+    let (seq, blob) = server.get_manifest(vault_id).await.unwrap();
+    let mut manifest = engine::open_manifest(&blob, seq, &keys, None)
+        .unwrap()
+        .next();
+    let entry = manifest
+        .signers
+        .iter_mut()
+        .find(|entry| entry.key_id == owner.signer.key_id())
+        .unwrap();
+    entry.added_at = now_epoch() + 3600;
+    server
+        .put_manifest(
+            vault_id,
+            manifest.manifest_seq,
+            engine::seal_manifest(&manifest, &keys).unwrap(),
+        )
+        .await
+        .unwrap();
+    owner.record("2026-10-10T10:00:00.000Z", "not yet authorized");
+
+    let error = owner.sync(&server, &secret).await.unwrap_err();
+    assert!(matches!(error, Error::Integrity(message) if message.contains("system clock")));
+    assert_eq!(server.chunk_count(), 0);
+    assert_eq!(owner.unsent(), 1);
+    let (seq, blob) = server.get_manifest(vault_id).await.unwrap();
+    assert_eq!(
+        engine::open_manifest(&blob, seq, &keys, None).unwrap(),
+        manifest
+    );
+}
+
+#[tokio::test]
 async fn two_pcs_exchange_history_without_echoing_it_back() {
     let server = FakeServer::default();
     let secret = SyncSecret::generate().unwrap();

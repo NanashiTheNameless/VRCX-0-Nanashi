@@ -5,7 +5,7 @@ use vrcx_0_nanashi_website_protocol::{
     chunk::{self, ChunkDraft, OpenedChunk},
     ids::{ChunkId, SourceId, VaultId},
     keys::VaultKeys,
-    manifest::{self, Manifest},
+    manifest::{self, Manifest, SignerEntry, SignerKind},
 };
 
 use crate::Error;
@@ -60,6 +60,44 @@ pub fn open_manifest(
 
 pub fn seal_manifest(manifest: &Manifest, keys: &VaultKeys) -> Result<Vec<u8>, Error> {
     manifest::seal_manifest(manifest, keys).map_err(|error| Error::Integrity(error.to_string()))
+}
+
+pub fn authorize_collector(
+    manifest: &mut Manifest,
+    public: &ed25519_dalek::VerifyingKey,
+    added_at: i64,
+    expires_at: Option<i64>,
+) {
+    let key_id = vrcx_0_nanashi_website_protocol::keys::key_id(public);
+    let added_at = manifest
+        .signers
+        .iter()
+        .find(|entry| entry.key_id == key_id && entry.kind == SignerKind::Collector)
+        .map_or(added_at, |entry| entry.added_at);
+    let mut entry = SignerEntry::new(
+        public,
+        SignerKind::Collector,
+        "RemoteSync collector",
+        added_at,
+    );
+    entry.expires_at = expires_at;
+    manifest.add_signer(entry);
+}
+
+pub fn expire_collector(manifest: &mut Manifest, key_id: &str, at: i64) -> bool {
+    let Some(entry) = manifest
+        .signers
+        .iter_mut()
+        .find(|entry| entry.key_id == key_id && entry.kind == SignerKind::Collector)
+    else {
+        return false;
+    };
+    let expiry = Some(entry.expires_at.map_or(at, |expires| expires.min(at)));
+    if entry.expires_at == expiry {
+        return false;
+    }
+    entry.expires_at = expiry;
+    true
 }
 
 pub fn seal_chunk(
@@ -277,6 +315,81 @@ mod tests {
         assert_eq!(parse_recovery_string(&recovery).unwrap(), secret);
         assert!(parse_own_key("password phrase").is_err());
         assert!(derive_vault_keys(&secret, "bad-vault").is_err());
+    }
+
+    #[test]
+    fn collector_renewal_and_locking_preserve_verifiable_history() {
+        let vault_id = VaultId::random().unwrap();
+        let keys = VaultKeys::derive(&SyncSecret::generate().unwrap(), vault_id);
+        let signer = SignerKey::generate().unwrap();
+        let mut manifest = Manifest::new(vault_id, None);
+        let start = 1_790_000_000;
+        authorize_collector(&mut manifest, &signer.public(), start, Some(start + 3600));
+        let draft = |created_at| ChunkDraft {
+            vault_id,
+            source_id: SourceId::random().unwrap(),
+            source_seq: 1,
+            kind: ChunkKind::Rows,
+            created_at,
+            app_version: "test".into(),
+            coverage: Vec::new(),
+            dropped_rows: 0,
+            body: ChunkBody::default(),
+        };
+        let (old_id, old_blob) = seal_chunk(&draft(start + 600), &signer, &keys).unwrap();
+        let (new_id, new_blob) = seal_chunk(&draft(start + 7200), &signer, &keys).unwrap();
+        let open = |id, blob: &[u8], manifest: &Manifest| {
+            chunk::open_chunk(blob, vault_id, id, &keys, manifest)
+        };
+        assert!(open(old_id, &old_blob, &manifest).is_ok());
+        assert!(open(new_id, &new_blob, &manifest).is_err());
+
+        authorize_collector(&mut manifest, &signer.public(), start + 86400, None);
+        assert_eq!(manifest.signers[0].added_at, start);
+        assert_eq!(manifest.signers[0].expires_at, None);
+        assert!(open(old_id, &old_blob, &manifest).is_ok());
+        assert!(open(new_id, &new_blob, &manifest).is_ok());
+
+        assert!(expire_collector(
+            &mut manifest,
+            &signer.key_id(),
+            start + 3600
+        ));
+        assert!(!expire_collector(
+            &mut manifest,
+            &signer.key_id(),
+            start + 86400
+        ));
+        let sealed = seal_manifest(&manifest, &keys).unwrap();
+        let manifest = open_manifest(&sealed, manifest.manifest_seq, &keys, None).unwrap();
+        assert_eq!(manifest.signers[0].expires_at, Some(start + 3600));
+        assert!(open(old_id, &old_blob, &manifest).is_ok());
+        assert!(open(new_id, &new_blob, &manifest).is_err());
+        let mut tampered = old_blob;
+        *tampered.last_mut().unwrap() ^= 1;
+        assert!(open(old_id, &tampered, &manifest).is_err());
+    }
+
+    #[test]
+    fn collector_rotation_keeps_separate_authorization_windows() {
+        let mut manifest = Manifest::new(VaultId::random().unwrap(), None);
+        let old = SignerKey::generate().unwrap();
+        let new = SignerKey::generate().unwrap();
+        let device = SignerKey::generate().unwrap();
+        manifest.add_signer(SignerEntry::new(
+            &device.public(),
+            SignerKind::Device,
+            "PC",
+            0,
+        ));
+        authorize_collector(&mut manifest, &old.public(), 1000, Some(2000));
+        authorize_collector(&mut manifest, &new.public(), 5000, None);
+        assert_eq!(manifest.signers.len(), 3);
+        assert_eq!(manifest.signers[1].added_at, 1000);
+        assert_eq!(manifest.signers[1].expires_at, Some(2000));
+        assert_eq!(manifest.signers[2].added_at, 5000);
+        assert!(!expire_collector(&mut manifest, &device.key_id(), 6000));
+        assert!(!expire_collector(&mut manifest, "missing", 6000));
     }
 
     #[test]

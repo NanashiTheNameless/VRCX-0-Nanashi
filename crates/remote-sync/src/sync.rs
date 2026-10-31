@@ -484,12 +484,27 @@ async fn ensure_manifest<T: SyncTransport>(
         if current.is_none() {
             next.dedupe_device_key_id = Some(signer.key_id());
         }
-        if next.signer(&signer.key_id(), now_epoch()).is_none() {
+        let key_id = signer.key_id();
+        let now = now_epoch();
+        if next.signer(&key_id, now).is_none() {
+            let added_at = next
+                .signers
+                .iter()
+                .find(|entry| entry.key_id == key_id && entry.kind == SignerKind::Device)
+                .map_or(now, |entry| entry.added_at);
+            if added_at
+                > now
+                    .saturating_add(vrcx_0_nanashi_website_protocol::manifest::CLOCK_SKEW_MS / 1000)
+            {
+                return Err(Error::Integrity(
+                    "This PC's clock is earlier than its device authorization. Correct its system clock before syncing.".into(),
+                ));
+            }
             next.add_signer(SignerEntry::new(
                 &signer.public(),
                 SignerKind::Device,
                 identity.device_label.clone(),
-                now_epoch(),
+                added_at,
             ));
         }
         let sealed = engine::seal_manifest(&next, &vault.keys)?;

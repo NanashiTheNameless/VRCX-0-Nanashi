@@ -1338,14 +1338,12 @@ impl DesktopRuntimeHostState {
             &protocol::b64::decode(&collector.signing_key).map_err(sync_error)?,
         )
         .map_err(sync_error)?;
-        let mut signer = protocol::manifest::SignerEntry::new(
+        engine::authorize_collector(
+            &mut manifest,
             &signing_key,
-            protocol::manifest::SignerKind::Collector,
-            "RemoteSync collector",
             now.max(collector.keys_valid_since),
+            expires_at,
         );
-        signer.expires_at = expires_at;
-        manifest.add_signer(signer);
         let next = manifest.next();
         let sealed_manifest = engine::seal_manifest(&next, &keys).map_err(sync_error)?;
         client
@@ -1379,7 +1377,13 @@ impl DesktopRuntimeHostState {
         if let Some(collector) = capabilities.collector {
             if let Ok(bytes) = protocol::b64::decode(&collector.signing_key) {
                 if let Ok(key) = protocol::keys::verifying_key(&bytes) {
-                    manifest.remove_signer(&protocol::keys::key_id(&key));
+                    if !engine::expire_collector(
+                        &mut manifest,
+                        &protocol::keys::key_id(&key),
+                        chrono::Utc::now().timestamp(),
+                    ) {
+                        return Ok(());
+                    }
                     let next = manifest.next();
                     let sealed = engine::seal_manifest(
                         &next,

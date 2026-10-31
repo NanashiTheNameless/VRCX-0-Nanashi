@@ -76,6 +76,10 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   response is verified before anything is imported, imported rows are never
   uploaded back, and nothing remote ever deletes local history. Signing out
   keeps the encryption key on the PC because it may be the only copy.
+  Preserve a signer's original `added_at` when upgrading, renewing or
+  reauthorizing the same key. Stopping a collector expires its signer entry;
+  never remove the entry needed to verify its older history. Keep regression
+  coverage for upgrades, renewal, stopping, restarting and key rotation.
   Settings runs two independent checks on the configured server
   (`app__remote_sync_trust_check`): the code test passes only when the
   website's files match the build signed with the maintainer's key, wherever
