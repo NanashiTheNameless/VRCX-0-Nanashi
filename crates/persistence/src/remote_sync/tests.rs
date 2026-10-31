@@ -1116,3 +1116,80 @@ fn legacy_game_events_in_the_same_second_survive_sync_and_reimport() {
         .unwrap();
     assert_ne!(stored[0][0], stored[1][0]);
 }
+
+fn profile_bio(db: &DatabaseService, user_id: &str) -> Option<(String, String, i64)> {
+    let prefix = normalize_user_table_prefix(USER).unwrap();
+    db.execute(
+        &format!(
+            "SELECT bio, bio_links, checked_at FROM {prefix}_profile_bio WHERE user_id = @user_id"
+        ),
+        &ParamsBuilder::new().set("user_id", user_id).build(),
+    )
+    .unwrap()
+    .first()
+    .map(|row| (row_string(row, 0), row_string(row, 1), row_i64(row, 2)))
+}
+
+#[test]
+fn profile_bio_links_sync_and_survive_rows_from_older_versions() {
+    let (_dir, db, scope) = setup("profile-bio-links");
+    let vault = vault();
+    let prefix = normalize_user_table_prefix(USER).unwrap();
+    db.execute_non_query(
+        &format!("INSERT INTO {prefix}_profile_bio (user_id, bio, bio_links, checked_at) VALUES ('usr_mine', 'hello', '[\"https://a.example\"]', 1791158400)"),
+        &Default::default(),
+    )
+    .unwrap();
+
+    let exported = export_state(&db, &scope, state_spec("profile_bio").unwrap()).unwrap();
+    assert_eq!(
+        exported.rows,
+        vec![json!({
+            "user_id": "usr_mine",
+            "bio": "hello",
+            "bio_links": "[\"https://a.example\"]",
+            "checked_at": 1791158400,
+        })]
+    );
+
+    import_chunk(
+        &db,
+        &scope,
+        source(&vault, "pc-a", 1, 1),
+        &chunk(
+            "profile_bio",
+            vec![
+                json!({ "user_id": "usr_mine", "bio": "edited", "checked_at": 1791504000 }),
+                json!({ "user_id": "usr_old", "bio": "older pc", "checked_at": 1791504000 }),
+                json!({
+                    "user_id": "usr_new",
+                    "bio": "newer pc",
+                    "bio_links": "[\"https://b.example\"]",
+                    "checked_at": 1791504000,
+                }),
+            ],
+        ),
+    )
+    .unwrap();
+
+    assert_eq!(
+        profile_bio(&db, "usr_mine").unwrap(),
+        (
+            "edited".to_owned(),
+            "[\"https://a.example\"]".to_owned(),
+            1791504000
+        )
+    );
+    assert_eq!(
+        profile_bio(&db, "usr_old").unwrap(),
+        ("older pc".to_owned(), "[]".to_owned(), 1791504000)
+    );
+    assert_eq!(
+        profile_bio(&db, "usr_new").unwrap(),
+        (
+            "newer pc".to_owned(),
+            "[\"https://b.example\"]".to_owned(),
+            1791504000
+        )
+    );
+}

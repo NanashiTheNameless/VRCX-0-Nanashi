@@ -552,3 +552,53 @@ fn stored_replay_checkpoint_converts_dates_and_keeps_file_identity_and_durations
         converted
     );
 }
+
+#[test]
+fn upstream_app_notification_log_dates_become_seconds() {
+    let (_dir, db) = test_db("app-notification-log");
+    exec(&db, &format!("CREATE TABLE {PREFIX}_app_notification_log (id TEXT PRIMARY KEY, created_at TEXT NOT NULL, type TEXT NOT NULL, subject_id TEXT NOT NULL DEFAULT '', subject_name TEXT NOT NULL DEFAULT '', image_url TEXT NOT NULL DEFAULT '', message_key TEXT NOT NULL, message_params TEXT NOT NULL DEFAULT '{{}}')"));
+    exec(&db, &format!("CREATE INDEX {PREFIX}_app_notification_log_created_id_idx ON {PREFIX}_app_notification_log (created_at DESC, id DESC)"));
+    exec(&db, &format!("INSERT INTO {PREFIX}_app_notification_log VALUES ('groupChange:grp_1:2026-07-21T10:30:15.250Z', '2026-07-21T10:30:15.250Z', 'groupChange', 'grp_1', 'Club', '', 'notifications.group_left', '{{\"roles\":\"Staff\"}}')"));
+
+    migrate(&db);
+
+    assert_eq!(
+        query(&db, &format!("SELECT id, created_at, typeof(created_at), subject_name, message_params FROM {PREFIX}_app_notification_log")),
+        vec![vec![
+            json!("groupChange:grp_1:2026-07-21T10:30:15.250Z"),
+            json!(SECONDS),
+            json!("integer"),
+            json!("Club"),
+            json!("{\"roles\":\"Staff\"}"),
+        ]]
+    );
+    assert_eq!(
+        query(&db, &format!("SELECT type FROM pragma_table_info('{PREFIX}_app_notification_log') WHERE name = 'created_at'"))[0][0],
+        json!("INTEGER")
+    );
+    assert_eq!(
+        query(&db, &format!("SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = '{PREFIX}_app_notification_log_created_id_idx'"))[0][0],
+        json!(1)
+    );
+}
+
+#[test]
+fn profile_bio_links_survive_the_date_rebuild() {
+    let (_dir, db) = test_db("profile-bio-links");
+    exec(&db, &format!("CREATE TABLE {PREFIX}_profile_bio (user_id TEXT PRIMARY KEY, bio TEXT NOT NULL DEFAULT '', checked_at TEXT NOT NULL DEFAULT '', bio_links TEXT NOT NULL DEFAULT '[]')"));
+    exec(&db, &format!("INSERT INTO {PREFIX}_profile_bio VALUES ('usr_a', 'hi', '2026-07-21T10:30:15.250Z', '[\"https://a.example\"]')"));
+
+    migrate(&db);
+
+    assert_eq!(
+        query(
+            &db,
+            &format!("SELECT bio, checked_at, bio_links FROM {PREFIX}_profile_bio")
+        ),
+        vec![vec![
+            json!("hi"),
+            json!(SECONDS),
+            json!("[\"https://a.example\"]")
+        ]]
+    );
+}
