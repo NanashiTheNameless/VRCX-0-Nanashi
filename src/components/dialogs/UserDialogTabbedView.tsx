@@ -439,7 +439,8 @@ export function UserDialogTabbedView({
         currentUserSnapshot: isLocalUserVrcPlusSupporter
             ? VRC_PLUS_SUMMARY_SNAPSHOT
             : null,
-        nowMs
+        nowMs,
+        t
     });
     const statusDotClassName = resolveSidebarStatusDotClassName(profile, {
         hideNonFriend: false

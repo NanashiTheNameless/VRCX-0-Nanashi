@@ -319,7 +319,8 @@ export function buildUserDialogProfileSummary({
     isCurrentUser,
     vrchatConfigConstants,
     currentUserSnapshot,
-    nowMs
+    nowMs,
+    t
 }: {
     profile: DialogRecord;
     userStats: DialogRecord;
@@ -328,6 +329,7 @@ export function buildUserDialogProfileSummary({
     vrchatConfigConstants: unknown;
     currentUserSnapshot: DialogRecord | null;
     nowMs?: number;
+    t?: (key: string) => string;
 } & DialogRecord) {
     const statsPreviousDisplayNames = Array.isArray(
         userStats.previousDisplayNames
@@ -348,7 +350,7 @@ export function buildUserDialogProfileSummary({
                 : entry.displayName
         )
         .join('\n');
-    const statusStateText = resolveStatusStateText(profile);
+    const statusStateText = resolveStatusStateText(profile, t);
     const userGroupSections = splitUserGroups(
         sortedProfileGroups,
         normalizedText(profile.id),

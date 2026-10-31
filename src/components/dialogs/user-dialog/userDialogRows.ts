@@ -12,6 +12,7 @@ import {
     parseAbsoluteDateMs,
     epochSecondsFromValue
 } from '@/shared/utils/displayTimeZone';
+import { userStatusFromValue } from '@/shared/utils/friendStatus';
 import { isRecord } from '@/shared/utils/record';
 import { userStatusLabel } from '@/shared/utils/userStatus';
 
@@ -329,15 +330,30 @@ export function formatCountText(count: number, max: unknown) {
 }
 
 export function resolveStatusStateText(
-    profile: UserDialogRow | null | undefined
+    profile: UserDialogRow | null | undefined,
+    t?: TranslateFn
 ) {
     const presence = presenceOf(profile);
-    const state = presence ? presenceSection(presence) : '';
-    const status = normalizedText(profile?.status);
-    if (state && status && state.toLowerCase() !== status.toLowerCase()) {
-        return `${state} / ${status}`;
+    const statusLabel = userStatusLabel(normalizedText(profile?.status), t);
+    if (!presence) {
+        return statusLabel;
     }
-    return state || status || '';
+    if (presenceSection(presence) === 'offline') {
+        return userStatusLabel('offline', t);
+    }
+    const stateLabel =
+        presence.kind === 'active'
+            ? userStatusLabel(profile, t)
+            : userStatusLabel('active', t);
+    const friendStatus = userStatusFromValue(profile?.status);
+    if (
+        friendStatus === 'join me' ||
+        friendStatus === 'ask me' ||
+        friendStatus === 'busy'
+    ) {
+        return `${stateLabel} / ${statusLabel}`;
+    }
+    return stateLabel;
 }
 
 export function userRowSubtitle(

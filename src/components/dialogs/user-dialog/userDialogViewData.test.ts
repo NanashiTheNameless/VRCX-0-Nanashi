@@ -245,7 +245,7 @@ describe('userDialogViewData', () => {
         expect(summary.previousDisplayNamesTitle).toBe(
             'Old Name - 2026-01-02 03:04:05\nProfile Name'
         );
-        expect(summary.statusStateText).toBe('active / join me');
+        expect(summary.statusStateText).toBe('Online on website / Join Me');
         expect(
             summary.userGroupSections.ownGroups.map((group) => group.id)
         ).toEqual(['grp_owned']);

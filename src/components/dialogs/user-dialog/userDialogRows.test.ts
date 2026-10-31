@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { setDisplayTimeZone } from '@/shared/utils/displayTimeZone';
 import { useShellStore } from '@/state/shellStore';
-import { activePresence } from '@/test/presenceFixtures';
+import {
+    activePresence,
+    offlinePresence,
+    onlinePresence
+} from '@/test/presenceFixtures';
 
 import {
     groupIdForRow,
@@ -369,13 +373,37 @@ describe('userDialogRows', () => {
                 $presence: activePresence(),
                 status: 'join me'
             })
-        ).toBe('active / join me');
+        ).toBe('Online on website / Join Me');
         expect(
             resolveStatusStateText({
                 $presence: activePresence(),
                 status: 'active'
             })
-        ).toBe('active');
+        ).toBe('Online on website');
+        expect(
+            resolveStatusStateText({
+                $presence: activePresence(''),
+                status: 'active'
+            })
+        ).toBe('Online on another platform');
+        expect(
+            resolveStatusStateText({
+                $presence: onlinePresence(),
+                status: 'busy'
+            })
+        ).toBe('Online / Do Not Disturb');
+        expect(
+            resolveStatusStateText({
+                $presence: onlinePresence(),
+                status: 'active'
+            })
+        ).toBe('Online');
+        expect(
+            resolveStatusStateText({
+                $presence: offlinePresence,
+                status: 'join me'
+            })
+        ).toBe('Offline');
         expect(
             resolveTabValue([{ value: 'info' }, { value: 'groups' }], 'groups')
         ).toBe('groups');
