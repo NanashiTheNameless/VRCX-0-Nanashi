@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { commands } from '@/platform/tauri/bindings';
@@ -23,8 +23,10 @@ import {
     type NotificationSoundRule,
     type NotificationSounds
 } from '../../notificationSounds';
+import { useDraftAutosave } from '../../useDraftAutosave';
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
+import { SettingsSaveStatus } from '../SettingsSaveStatus';
 
 const PREFIX = 'view.settings.notifications.custom_sounds';
 const AUDIENCES = ['anyone', 'friend', 'favorite'] as const;
@@ -58,12 +60,25 @@ export function SettingsCustomSoundsCard() {
         value: BUNDLED_SOUND_PREFIX + name,
         label: bundledSoundLabel(name)
     }));
-    const dirty = config !== null && JSON.stringify(config) !== saved;
     const invalid =
         config !== null &&
         Object.values(config.rules).some(
             (rule) => rule.enabled && !rule.path.trim()
         );
+    const persist = useCallback(async (draft: NotificationSounds) => {
+        const raw = JSON.stringify(draft);
+        await configRepository.setString('notificationSounds', raw);
+        setSaved(raw);
+    }, []);
+    const autosave = useDraftAutosave({
+        draft: config,
+        saved,
+        save: persist,
+        needsReview: (draft) =>
+            Object.values(draft.rules).some(
+                (rule) => rule.enabled && !rule.path.trim()
+            )
+    });
 
     useEffect(() => {
         let active = true;
@@ -126,13 +141,6 @@ export function SettingsCustomSoundsCard() {
         } finally {
             setBusy(false);
         }
-    }
-
-    async function save() {
-        if (!config) return;
-        const raw = JSON.stringify(config);
-        await configRepository.setString('notificationSounds', raw);
-        setSaved(raw);
     }
 
     return (
@@ -359,24 +367,13 @@ export function SettingsCustomSoundsCard() {
                         {t(`${PREFIX}.empty`)}
                     </p>
                 )}
-                {invalid && (
-                    <p className="text-muted-foreground text-sm">
-                        {t(`${PREFIX}.missing_file`)}
-                    </p>
-                )}
-                <div className="flex items-center gap-3">
-                    <Button
-                        disabled={!dirty || invalid}
-                        onClick={() => void run(save)}
-                    >
-                        {t(`${PREFIX}.save`)}
-                    </Button>
-                    {dirty && (
-                        <span className="text-muted-foreground text-sm">
-                            {t(`${PREFIX}.unsaved`)}
-                        </span>
-                    )}
-                </div>
+                <SettingsSaveStatus
+                    mode={autosave.mode}
+                    error={autosave.error}
+                    reviewMessage={t(`${PREFIX}.missing_file`)}
+                    canSave={!invalid}
+                    onSave={() => void autosave.saveNow()}
+                />
             </fieldset>
         </SettingsCard>
     );

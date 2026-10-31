@@ -85,7 +85,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('custom notification sounds', () => {
-    it('loads rules, previews draft changes and persists the backend schema', async () => {
+    it('loads rules, previews draft changes and saves them automatically', async () => {
         render(<SettingsCustomSoundsCard />);
         await screen.findByDisplayValue('/sounds/favorite.wav');
         fireEvent.click(screen.getByText('browse'));
@@ -97,12 +97,6 @@ describe('custom notification sounds', () => {
         await waitFor(() =>
             expect(mocks.preview).toHaveBeenCalledWith('/sounds/new.ogg', 0.25)
         );
-        await waitFor(() =>
-            expect(screen.getByText('save').closest('fieldset')?.disabled).toBe(
-                false
-            )
-        );
-        fireEvent.click(screen.getByText('save'));
         await waitFor(() =>
             expect(mocks.set).toHaveBeenCalledWith(
                 prefix,
@@ -118,19 +112,20 @@ describe('custom notification sounds', () => {
                 })
             )
         );
-        await waitFor(() => expect(screen.queryByText('unsaved')).toBeNull());
+        expect(mocks.set).toHaveBeenCalledOnce();
+        expect(await screen.findByText('saved')).toBeTruthy();
     });
 
-    it('adds an anyone rule without overwriting a favorite rule and prevents duplicates', async () => {
+    it('holds a new rule until it has a file, then saves it beside the favorite rule', async () => {
         render(<SettingsCustomSoundsCard />);
         await screen.findByDisplayValue('/sounds/favorite.wav');
         fireEvent.click(screen.getByText('add'));
         expect((screen.getByText('add') as HTMLButtonElement).disabled).toBe(
             true
         );
-        expect((screen.getByText('save') as HTMLButtonElement).disabled).toBe(
-            true
-        );
+        expect(screen.getByText('missing_file')).toBeTruthy();
+        await new Promise((resolve) => setTimeout(resolve, 900));
+        expect(mocks.set).not.toHaveBeenCalled();
         fireEvent.change(
             screen
                 .getAllByRole('textbox')
@@ -139,7 +134,6 @@ describe('custom notification sounds', () => {
                 target: { value: '/sounds/any.wav' }
             }
         );
-        fireEvent.click(screen.getByText('save'));
         await waitFor(() => expect(mocks.set).toHaveBeenCalled());
         expect(JSON.parse(mocks.set.mock.calls[0][1]).rules).toEqual({
             ...persisted.rules,
@@ -149,24 +143,24 @@ describe('custom notification sounds', () => {
                 volume: 0.8
             }
         });
+        expect(screen.queryByText('missing_file')).toBeNull();
     });
 
-    it('keeps changes available for retry after a failed save and persists removal', async () => {
+    it('shows a failed save and saves the removal on retry', async () => {
         mocks.set.mockRejectedValueOnce(new Error('disk full'));
         render(<SettingsCustomSoundsCard />);
         await screen.findByDisplayValue('/sounds/favorite.wav');
         fireEvent.click(screen.getByText('remove'));
-        fireEvent.click(screen.getByText('save'));
         expect((await screen.findByRole('alert')).textContent).toContain(
-            'disk full'
+            'failed'
         );
-        expect(screen.getByText('unsaved')).toBeTruthy();
-        fireEvent.click(screen.getByText('save'));
-        await waitFor(() => expect(screen.queryByText('unsaved')).toBeNull());
+        fireEvent.click(screen.getByText('retry'));
+        await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
         expect(mocks.set).toHaveBeenLastCalledWith(
             prefix,
             '{"version":1,"rules":{}}'
         );
+        expect(await screen.findByText('saved')).toBeTruthy();
     });
 
     it('leaves the file unchanged when the picker is cancelled', async () => {
@@ -175,19 +169,33 @@ describe('custom notification sounds', () => {
         await screen.findByDisplayValue('/sounds/favorite.wav');
         fireEvent.click(screen.getByText('browse'));
         await waitFor(() =>
-            expect(screen.getByText('save').closest('fieldset')?.disabled).toBe(
+            expect(screen.getByText('add').closest('fieldset')?.disabled).toBe(
                 false
             )
         );
         expect(screen.getByDisplayValue('/sounds/favorite.wav')).toBeTruthy();
-        expect(screen.queryByText('unsaved')).toBeNull();
+        await new Promise((resolve) => setTimeout(resolve, 900));
+        expect(mocks.set).not.toHaveBeenCalled();
+    });
+
+    it('saves a pending change when the card closes before the delay', async () => {
+        const view = render(<SettingsCustomSoundsCard />);
+        await screen.findByDisplayValue('/sounds/favorite.wav');
+        fireEvent.click(screen.getByText('remove'));
+        view.unmount();
+        await waitFor(() =>
+            expect(mocks.set).toHaveBeenCalledWith(
+                prefix,
+                '{"version":1,"rules":{}}'
+            )
+        );
     });
 
     it('blocks editing when stored settings cannot be read', async () => {
         mocks.get.mockResolvedValue('{broken');
         render(<SettingsCustomSoundsCard />);
         await screen.findByRole('alert');
-        expect(screen.getByText('save').closest('fieldset')?.disabled).toBe(
+        expect(screen.getByText('add').closest('fieldset')?.disabled).toBe(
             true
         );
         expect(mocks.set).not.toHaveBeenCalled();

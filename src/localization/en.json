@@ -3679,9 +3679,7 @@
                     "test": "Test sound",
                     "remove": "Remove sound",
                     "empty": "No custom sounds configured.",
-                    "missing_file": "Choose a file for each enabled rule before saving.",
-                    "save": "Save sounds",
-                    "unsaved": "Unsaved changes",
+                    "missing_file": "Not saved yet: choose a sound file for each enabled rule, or turn the rule off.",
                     "bundled": "Built-in sound"
                 }
             },
@@ -3750,7 +3748,7 @@
                         "tools": "Diagnostics",
                         "database_usage": "Database usage",
                         "refresh_database_usage": "Refresh database usage",
-                        "database_size": "Size on disk: {{size}}",
+                        "database_size": "Size on disk: {size}",
                         "online_users": "VRChat online users",
                         "refresh_online_users": "Refresh online users",
                         "vrchat_config": "VRChat config",
@@ -4052,6 +4050,13 @@
                 "legacy": "Open vrcx:// links",
                 "legacy_description": "Handle original VRCX links in this app. Turn off to leave them to VRCX."
             },
+            "save_status": {
+                "saving": "Saving...",
+                "saved": "All changes saved",
+                "failed": "Not saved: {error}",
+                "retry": "Try again",
+                "unsaved": "You have unsaved changes."
+            },
             "safety": {
                 "title": "Safety watchlists and warnings",
                 "description": "Flag groups and avatars, choose community lists, and inspect logged URL hosts without opening them.",
@@ -4094,7 +4099,8 @@
                 "never": "Never",
                 "save": "Save safety settings",
                 "refresh_sources": "Refresh saved sources",
-                "unsaved": "Unsaved changes",
+                "review_needed": "Not saved yet: these changes turn on automatic actions on your account. Review and save them to apply.",
+                "review_discarded": "Safety changes that turn on automatic actions were not saved.",
                 "channels": "Warning delivery follows the System & Safety filters for wrist, desktop and VR overlays. Custom sounds can be assigned to each safety warning type.",
                 "confirm_title": "Enable automatic community-list actions?",
                 "confirm_description": "On matching live joins, these sources will perform the following actions on your account. Community lists may contain false positives. Every attempt and result is recorded.\n\n{sources}",

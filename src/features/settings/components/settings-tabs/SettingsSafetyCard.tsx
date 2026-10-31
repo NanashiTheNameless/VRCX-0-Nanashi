@@ -1,5 +1,5 @@
 import { ChevronDownIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
@@ -11,6 +11,7 @@ import {
     type SourceFormat,
     type WatchEntry
 } from '@/platform/tauri/bindings';
+import { toast } from '@/services/toastService';
 import { useModalStore } from '@/state/modalStore';
 import { useNavigationCacheStore } from '@/state/navigationCacheStore';
 import { Button } from '@/ui/shadcn/button';
@@ -30,8 +31,10 @@ import {
 import { Switch } from '@/ui/shadcn/switch';
 import { Textarea } from '@/ui/shadcn/textarea';
 
+import { useDraftAutosave } from '../../useDraftAutosave';
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
+import { SettingsSaveStatus } from '../SettingsSaveStatus';
 import { SettingsAvatarBlocks } from './SettingsAvatarBlocks';
 import { SettingsGlobalHide } from './SettingsGlobalHide';
 import { SettingsInstanceAvatarCheck } from './SettingsInstanceAvatarCheck';
@@ -134,10 +137,39 @@ function Watchlist({
     );
 }
 
+function normalizeSafetySettings(settings: SafetySettings): SafetySettings {
+    return {
+        ...settings,
+        blockedDomains: lines(settings.blockedDomains.join('\n')),
+        allowedDomains: lines(settings.allowedDomains.join('\n')),
+        sources: settings.sources.map((source) => ({
+            ...source,
+            banGroupIds: lines(source.banGroupIds.join('\n'))
+        }))
+    };
+}
+
+// Account actions a source performs on its own. Turning one on is never
+// saved automatically; it waits for the confirmation.
+function automaticActions(settings: SafetySettings): Set<string> {
+    const actions = new Set<string>();
+    if (!settings.enabled) return actions;
+    for (const source of normalizeSafetySettings(settings).sources) {
+        if (!source.enabled) continue;
+        if (source.blockUsers) actions.add(`${source.id}:block`);
+        if (source.globalHide) actions.add(`${source.id}:hide`);
+        for (const group of source.banGroupIds) {
+            actions.add(`${source.id}:ban:${group}`);
+        }
+    }
+    return actions;
+}
+
 export function SettingsSafetyCard() {
     const { t } = useTranslation();
     const [settings, setSettings] = useState<SafetySettings | null>(null);
     const [saved, setSaved] = useState('');
+    const [stored, setStored] = useState<SafetySettings | null>(null);
     const [status, setStatus] = useState<SafetyStatus | null>(null);
     const historyOpen = useNavigationCacheStore(
         (state) => state.settingsCards[SAFETY_HISTORY_CARD_ID] ?? false
@@ -148,7 +180,6 @@ export function SettingsSafetyCard() {
     const [refreshing, setRefreshing] = useState(false);
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
-    const dirty = !!settings && JSON.stringify(settings) !== saved;
     useEffect(() => {
         let active = true;
         Promise.all([
@@ -159,6 +190,7 @@ export function SettingsSafetyCard() {
                 if (active) {
                     setSettings(value);
                     setSaved(JSON.stringify(value));
+                    setStored(value);
                     setStatus(state);
                 }
             })
@@ -203,28 +235,59 @@ export function SettingsSafetyCard() {
             setRefreshing(false);
         }
     }
-    async function save() {
+    const addsAutomaticActions = useCallback(
+        (draft: SafetySettings) => {
+            const before = stored ? automaticActions(stored) : new Set();
+            return [...automaticActions(draft)].some(
+                (action) => !before.has(action)
+            );
+        },
+        [stored]
+    );
+    // The draft is kept as typed; the runtime gets the cleaned-up copy.
+    const persist = useCallback(async (draft: SafetySettings) => {
+        const value = await commands.appSafetySettingsSave(
+            normalizeSafetySettings(draft)
+        );
+        setStored(value);
+        setSaved(JSON.stringify(draft));
+        setStatus(await commands.appSafetyStatus());
+    }, []);
+    const autosave = useDraftAutosave({
+        draft: settings,
+        saved,
+        save: persist,
+        needsReview: addsAutomaticActions,
+        onLeaveUnsaved: () =>
+            toast.add({
+                type: 'warning',
+                title: t(`${P}.review_discarded`)
+            })
+    });
+    const dirty = autosave.dirty;
+    async function reviewAndSave() {
         if (!settings) return;
-        const normalized = {
-            ...settings,
-            blockedDomains: lines(settings.blockedDomains.join('\n')),
-            allowedDomains: lines(settings.allowedDomains.join('\n')),
-            sources: settings.sources.map((source) => ({
-                ...source,
-                banGroupIds: lines(source.banGroupIds.join('\n'))
-            }))
-        };
-        const automatic = normalized.sources.filter(
-            (s) => s.enabled && (s.blockUsers || s.banGroupIds.length)
+        const automatic = normalizeSafetySettings(settings).sources.filter(
+            (s) =>
+                s.enabled &&
+                (s.blockUsers || s.banGroupIds.length || s.globalHide)
         );
         if (settings.enabled && automatic.length) {
             const confirmed = await useModalStore.getState().confirm({
                 title: t(`${P}.confirm_title`),
                 description: t(`${P}.confirm_description`, {
                     sources: automatic
-                        .map(
-                            (s) =>
-                                `${s.name}: ${s.blockUsers ? t(`${P}.block`) : ''} ${s.banGroupIds.join(', ')}`
+                        .map((s) =>
+                            [
+                                `${s.name}:`,
+                                s.blockUsers ? t(`${P}.block`) : '',
+                                s.globalHide
+                                    ? t(`${P}.global_hide.toggle`)
+                                    : '',
+                                s.banGroupIds.join(', ')
+                            ]
+                                .filter(Boolean)
+                                .join(' ')
                         )
                         .join('\n')
                 }),
@@ -233,10 +296,7 @@ export function SettingsSafetyCard() {
             });
             if (!confirmed.ok) return;
         }
-        const value = await commands.appSafetySettingsSave(normalized);
-        setSettings(value);
-        setSaved(JSON.stringify(value));
-        setStatus(await commands.appSafetyStatus());
+        await autosave.saveNow();
     }
     return (
         <SettingsCard
@@ -545,13 +605,14 @@ export function SettingsSafetyCard() {
                         </Button>
                         <SettingsGlobalHide />
                         <SettingsInstanceAvatarCheck />
+                        <SettingsSaveStatus
+                            mode={autosave.mode}
+                            error={autosave.error}
+                            reviewMessage={t(`${P}.review_needed`)}
+                            saveLabel={t(`${P}.save`)}
+                            onSave={() => void run(reviewAndSave)}
+                        />
                         <div className="flex flex-wrap items-center gap-2">
-                            <Button
-                                disabled={!dirty}
-                                onClick={() => void run(save)}
-                            >
-                                {t(`${P}.save`)}
-                            </Button>
                             <Button
                                 variant="outline"
                                 disabled={
@@ -563,11 +624,6 @@ export function SettingsSafetyCard() {
                                     `${P}.${refreshing ? 'refreshing' : 'refresh_sources'}`
                                 )}
                             </Button>
-                            {dirty && (
-                                <span className="text-muted-foreground text-sm">
-                                    {t(`${P}.unsaved`)}
-                                </span>
-                            )}
                         </div>
                         <p className="text-muted-foreground text-sm">
                             {t(`${P}.channels`)}
