@@ -397,6 +397,68 @@ async fn uploaded_chunks_and_signer_windows_use_epoch_seconds() {
 }
 
 #[tokio::test]
+async fn upgrading_a_legacy_manifest_preserves_signers_and_imports_old_history() {
+    let fixture: serde_json::Value =
+        serde_json::from_str(include_str!("../fixtures/legacy_manifest.json")).unwrap();
+    let text = |name: &str| fixture[name].as_str().unwrap();
+    let secret = engine::parse_recovery_string(text("recovery")).unwrap();
+    let vault_id = text("vaultId").parse().unwrap();
+    let keys = VaultKeys::derive(&secret, vault_id);
+    let original_blob = b64::decode(text("manifest")).unwrap();
+    let original = engine::open_manifest(&original_blob, 1, &keys, None).unwrap();
+    assert_eq!(original.v, 3);
+    assert_eq!(original.signers[0].added_at, 1_790_000_000);
+    assert_eq!(original.signers[0].expires_at, Some(4_102_444_800));
+
+    for existing_device in [true, false] {
+        let server = FakeServer::default();
+        server
+            .create_vault(CreateVaultRequest {
+                vault_id,
+                vault_pk: b64::encode(keys.public().vault_pk.as_bytes()),
+                manifest_pk: b64::encode(keys.public().manifest_pk.as_bytes()),
+            })
+            .await
+            .unwrap();
+        server
+            .put_manifest(vault_id, 1, original_blob.clone())
+            .await
+            .unwrap();
+        server
+            .upload_chunk(
+                vault_id,
+                text("chunkId").parse().unwrap(),
+                b64::decode(text("chunk")).unwrap(),
+            )
+            .await
+            .unwrap();
+        let mut a = pc("upgrade");
+        if existing_device {
+            let seed: [u8; 32] = b64::decode(text("deviceSeed")).unwrap().try_into().unwrap();
+            a.signer = SignerKey::from_seed(&seed);
+        }
+
+        let report = a.sync(&server, &secret).await.unwrap();
+        assert_eq!(report.imported_rows, 1);
+        assert_eq!(report.pushed_rows, 0);
+        assert_eq!(a.rows(), 1);
+        let (seq, blob) = server.get_manifest(vault_id).await.unwrap();
+        let upgraded = engine::open_manifest(&blob, seq, &keys, Some(1)).unwrap();
+        assert_eq!(
+            upgraded.v,
+            vrcx_0_nanashi_website_protocol::manifest::VERSION
+        );
+        for signer in &original.signers {
+            assert!(upgraded.signers.contains(signer));
+        }
+        assert!(upgraded.signer(&a.signer.key_id(), now_epoch()).is_some());
+        let repeated = a.sync(&server, &secret).await.unwrap();
+        assert_eq!((repeated.imported_rows, repeated.pushed_rows), (0, 0));
+        assert_eq!(a.rows(), 1);
+    }
+}
+
+#[tokio::test]
 async fn two_pcs_exchange_history_without_echoing_it_back() {
     let server = FakeServer::default();
     let secret = SyncSecret::generate().unwrap();

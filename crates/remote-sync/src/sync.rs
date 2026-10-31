@@ -484,12 +484,14 @@ async fn ensure_manifest<T: SyncTransport>(
         if current.is_none() {
             next.dedupe_device_key_id = Some(signer.key_id());
         }
-        next.add_signer(SignerEntry::new(
-            &signer.public(),
-            SignerKind::Device,
-            identity.device_label.clone(),
-            now_epoch(),
-        ));
+        if next.signer(&signer.key_id(), now_epoch()).is_none() {
+            next.add_signer(SignerEntry::new(
+                &signer.public(),
+                SignerKind::Device,
+                identity.device_label.clone(),
+                now_epoch(),
+            ));
+        }
         let sealed = engine::seal_manifest(&next, &vault.keys)?;
         match transport
             .put_manifest(vault.id, next.manifest_seq, sealed)
