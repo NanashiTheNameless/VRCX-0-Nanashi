@@ -666,6 +666,22 @@ fn fix_broken_game_log_display_names_skips_unique_key_collisions() -> Result<(),
 }
 
 #[test]
+fn table_sizes_report_the_database_size_on_disk() -> Result<(), Error> {
+    let dir = TestDir::new("table-sizes-bytes");
+    let path = dir.path.join("VRCX-0.sqlite3");
+    let db = DatabaseService::new(&path)?;
+
+    let sizes = database_maintenance_table_sizes_get(&db, String::new())?;
+    let mut expected = std::fs::metadata(&path).unwrap().len();
+    if let Ok(wal) = std::fs::metadata(dir.path.join("VRCX-0.sqlite3-wal")) {
+        expected += wal.len();
+    }
+    assert!(sizes.database_bytes > 0);
+    assert_eq!(sizes.database_bytes, expected as i64);
+    Ok(())
+}
+
+#[test]
 fn vacuum_is_skipped_when_there_is_nothing_meaningful_to_reclaim() -> Result<(), Error> {
     let dir = TestDir::new("vacuum-skip");
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;

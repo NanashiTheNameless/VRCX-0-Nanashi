@@ -51,10 +51,13 @@ const labels: Record<string, string> = {
 vi.mock('react-i18next', async (importOriginal) => ({
     ...(await importOriginal<typeof import('react-i18next')>()),
     useTranslation: () => ({
-        t: (key: string, options?: { count?: number }) =>
+        t: (key: string, options?: { count?: number; size?: string }) =>
             key === 'view.profile.game_info.user_online'
                 ? `${options?.count ?? 0} online`
-                : (labels[key] ?? key)
+                : key ===
+                    'view.settings.advanced.advanced_ui.troubleshooting.database_size'
+                  ? `Size on disk: ${options?.size ?? ''}`
+                  : (labels[key] ?? key)
     })
 }));
 
@@ -129,6 +132,26 @@ describe('AdvancedTroubleshootingGroup', () => {
 
         await user.keyboard('{Enter}');
         expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    });
+
+    it('shows the database size once usage is loaded', async () => {
+        const user = userEvent.setup();
+        renderGroup(
+            createProps({
+                sqliteTableSizes: { gps: 3, databaseBytes: 5 * 1024 * 1024 }
+            })
+        );
+        await openTools(user);
+
+        expect(screen.getByText('Size on disk: 5.0 MB')).toBeTruthy();
+    });
+
+    it('hides the database size before usage is loaded', async () => {
+        const user = userEvent.setup();
+        renderGroup(createProps());
+        await openTools(user);
+
+        expect(screen.queryByText(/Size on disk/)).toBeNull();
     });
 
     it.each([

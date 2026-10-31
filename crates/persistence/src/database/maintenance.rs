@@ -77,6 +77,8 @@ pub struct MaintenanceTableSizesOutput {
     pub event: i64,
     pub external: i64,
     pub resource_load: i64,
+    /// Bytes the database occupies on disk, write-ahead log included.
+    pub database_bytes: i64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -460,6 +462,7 @@ pub fn database_maintenance_table_sizes_get(
         event: count_table(db, "gamelog_event")?,
         external: count_table(db, "gamelog_external")?,
         resource_load: count_table(db, "gamelog_resource_load")?,
+        database_bytes: database_file_bytes(db),
     };
     if !user_id.is_empty() {
         let user_prefix = normalize_user_table_prefix(&user_id)?;
@@ -473,6 +476,17 @@ pub fn database_maintenance_table_sizes_get(
         output.notification = count_table(db, &format!("{user_prefix}_notifications"))?;
     }
     Ok(output)
+}
+
+fn database_file_bytes(db: &DatabaseService) -> i64 {
+    let path = db.db_path();
+    let mut wal = path.as_os_str().to_owned();
+    wal.push("-wal");
+    [path.to_path_buf(), std::path::PathBuf::from(wal)]
+        .iter()
+        .filter_map(|file| std::fs::metadata(file).ok())
+        .map(|metadata| i64::try_from(metadata.len()).unwrap_or(i64::MAX))
+        .fold(0i64, i64::saturating_add)
 }
 
 pub(crate) fn count_table(db: &DatabaseService, table_name: &str) -> Result<i64, Error> {

@@ -9,6 +9,7 @@ import {
 } from '@/platform/tauri/bindings';
 import { unwrapVrchatResponse } from '@/repositories/vrchatRequest';
 import { toast } from '@/services/toastService';
+import { formatBytes } from '@/shared/utils/formatBytes';
 import { isRecord } from '@/shared/utils/record';
 import { Button } from '@/ui/shadcn/button';
 import { Spinner } from '@/ui/shadcn/spinner';
@@ -154,6 +155,7 @@ export function AdvancedTroubleshootingGroup({
         ]);
     }
     const hasTableSizes = Object.keys(sqliteTableSizes).length > 0;
+    const databaseBytes = Number(sqliteTableSizes.databaseBytes);
 
     async function runAction(
         actionName: DiagnosticAction,
@@ -285,13 +287,23 @@ export function AdvancedTroubleshootingGroup({
                     'view.settings.advanced.advanced_ui.troubleshooting.database_usage'
                 )}
             >
-                {renderRefreshButton(
-                    'tables',
-                    onRefreshSqliteTableSizes,
-                    t(
-                        'view.settings.advanced.advanced_ui.troubleshooting.refresh_database_usage'
-                    )
-                )}
+                <div className="flex items-center justify-end gap-2">
+                    {Number.isFinite(databaseBytes) && databaseBytes > 0 ? (
+                        <span className="text-muted-foreground text-sm">
+                            {t(
+                                'view.settings.advanced.advanced_ui.troubleshooting.database_size',
+                                { size: formatBytes(databaseBytes) }
+                            )}
+                        </span>
+                    ) : null}
+                    {renderRefreshButton(
+                        'tables',
+                        onRefreshSqliteTableSizes,
+                        t(
+                            'view.settings.advanced.advanced_ui.troubleshooting.refresh_database_usage'
+                        )
+                    )}
+                </div>
             </Field>
             {hasTableSizes ? (
                 <div className="text-muted-foreground grid [grid-template-columns:repeat(auto-fit,minmax(12rem,1fr))] gap-x-6 gap-y-1 rounded-lg border p-3 text-sm">

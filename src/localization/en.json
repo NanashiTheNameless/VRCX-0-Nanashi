@@ -3750,6 +3750,7 @@
                         "tools": "Diagnostics",
                         "database_usage": "Database usage",
                         "refresh_database_usage": "Refresh database usage",
+                        "database_size": "Size on disk: {{size}}",
                         "online_users": "VRChat online users",
                         "refresh_online_users": "Refresh online users",
                         "vrchat_config": "VRChat config",

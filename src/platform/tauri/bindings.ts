@@ -6359,6 +6359,10 @@ export type MaintenanceTableSizesOutput = {
     event: number;
     external: number;
     resourceLoad: number;
+    /**
+     * Bytes the database occupies on disk, write-ahead log included.
+     */
+    databaseBytes: number;
 };
 export type McpServerState = 'disabled' | 'running';
 export type McpServerStatus = {

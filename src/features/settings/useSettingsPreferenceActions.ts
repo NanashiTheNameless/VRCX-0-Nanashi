@@ -436,7 +436,8 @@ export function useSettingsPreferenceActions({
                 portalSpawn: sizes.portalSpawn,
                 videoPlay: sizes.videoPlay,
                 event: sizes.event,
-                external: sizes.external
+                external: sizes.external,
+                databaseBytes: sizes.databaseBytes
             });
         } catch (error) {
             toast.add({
