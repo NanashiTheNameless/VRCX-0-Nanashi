@@ -1,11 +1,14 @@
 import { InfoIcon } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
 import { Alert, AlertDescription } from '@/ui/shadcn/alert';
 import { Spinner } from '@/ui/shadcn/spinner';
+
+const QRCodeSVG = lazy(() =>
+    import('qrcode.react').then((module) => ({ default: module.QRCodeSVG }))
+);
 
 function secondsUntil(expiresAt: number): number {
     return Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
@@ -38,12 +41,14 @@ export function DeviceLoginQrCode({
                 className
             )}
         >
-            <QRCodeSVG
-                value={value}
-                size={size}
-                marginSize={0}
-                title={t('device_login.qr_label')}
-            />
+            <Suspense fallback={<div style={{ width: size, height: size }} />}>
+                <QRCodeSVG
+                    value={value}
+                    size={size}
+                    marginSize={0}
+                    title={t('device_login.qr_label')}
+                />
+            </Suspense>
         </div>
     );
 }
