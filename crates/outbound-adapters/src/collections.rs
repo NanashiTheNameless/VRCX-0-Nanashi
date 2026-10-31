@@ -82,8 +82,7 @@ impl SharedCollectionImportActions for LocalSharedCollectionImportActions {
             self.db.as_ref(),
             LOCAL_WORLD_FAVORITE_GROUPS_KEY,
             json!([]),
-        )
-        .map_err(crate::map_persistence_error)?
+        )?
         .as_array()
         .cloned()
         .unwrap_or_default()
@@ -100,7 +99,7 @@ impl SharedCollectionImportActions for LocalSharedCollectionImportActions {
             LOCAL_WORLD_FAVORITE_GROUPS_KEY,
             &json!(groups),
         )
-        .map_err(crate::map_persistence_error)
+        .map_err(crate::Error::from)
     }
 
     fn fetch_and_cache_world<'a>(&'a self, world_id: &'a str) -> BoxFuture<'a, crate::Result<()>> {
@@ -143,6 +142,6 @@ impl SharedCollectionImportActions for LocalSharedCollectionImportActions {
             group_name.to_string(),
         )
         .map(|_| ())
-        .map_err(crate::map_persistence_error)
+        .map_err(crate::Error::from)
     }
 }

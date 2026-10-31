@@ -45,6 +45,39 @@ fn friend_activity_pattern_counts_online_events_by_hour() {
 }
 
 #[test]
+fn friend_activity_pattern_numbers_weekdays_from_monday_like_the_activity_histogram() {
+    let (_dir, db) = test_db("activity-pattern-weekday");
+    ensure_realtime_tables(&db, "usrself").unwrap();
+    for created_at in [1780337100_i64, 1780855500] {
+        db.execute_non_query(
+            "INSERT INTO usrself_feed_online_offline
+                (created_at, user_id, display_name, type, location, world_name, time, group_name)
+             VALUES (@created_at, 'usr_alice', 'Alice', 'Online', '', '', 0, '')",
+            &crate::common::ParamsBuilder::new()
+                .set("created_at", created_at)
+                .build(),
+        )
+        .unwrap();
+    }
+
+    let output = get_friend_activity_pattern(
+        &db,
+        FriendActivityPatternInput {
+            owner_user_id: OwnerId::new("usr_self"),
+            user_id: Some("usr_alice".into()),
+            time_window: TimeWindow::all(),
+            bucket: ActivityBucket::DayOfWeek,
+            utc_offset_minutes: Some(0),
+        },
+    )
+    .unwrap();
+
+    assert_eq!(output.rows[0].buckets.get("0"), Some(&1));
+    assert_eq!(output.rows[0].buckets.get("6"), Some(&1));
+    assert_eq!(output.rows[0].typical_online_window, "Monday");
+}
+
+#[test]
 fn friend_activity_pattern_buckets_in_local_time_with_offset() {
     let (_dir, db) = test_db("activity-pattern-offset");
     ensure_realtime_tables(&db, "usrself").unwrap();

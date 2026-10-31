@@ -409,6 +409,7 @@ impl EndpointStore {
                 model,
                 input.reasoning_effort.as_deref().unwrap_or(""),
             ),
+            forbid_tool_calls: false,
         };
         Ok(client
             .complete_chat(

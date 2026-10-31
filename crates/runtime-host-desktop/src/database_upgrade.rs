@@ -33,7 +33,9 @@ impl DesktopDatabaseUpgradeRuntime {
         let preflight = tokio::task::spawn_blocking(move || runtime.preflight())
             .await
             .map_err(|error| {
-                Error::Custom(format!("database upgrade preflight task failed: {error}"))
+                vrcx_0_application_core::Error::Custom(format!(
+                    "database upgrade preflight task failed: {error}"
+                ))
             })??;
         if preflight.status == DatabaseUpgradePreflightStatus::Blocked {
             let failure = preflight.failed_upgrade.as_ref();
@@ -57,7 +59,11 @@ impl DesktopDatabaseUpgradeRuntime {
         let runtime = self.runtime.clone();
         let result = tokio::task::spawn_blocking(move || runtime.run())
             .await
-            .map_err(|error| Error::Custom(format!("database upgrade task failed: {error}")))?;
+            .map_err(|error| {
+                vrcx_0_application_core::Error::Custom(format!(
+                    "database upgrade task failed: {error}"
+                ))
+            })?;
         Ok(result)
     }
 
@@ -70,7 +76,9 @@ impl DesktopDatabaseUpgradeRuntime {
         let result = tokio::task::spawn_blocking(move || runtime.retry())
             .await
             .map_err(|error| {
-                Error::Custom(format!("database upgrade retry task failed: {error}"))
+                vrcx_0_application_core::Error::Custom(format!(
+                    "database upgrade retry task failed: {error}"
+                ))
             })??;
         Ok(result)
     }
@@ -84,7 +92,11 @@ impl DesktopDatabaseUpgradeRuntime {
         let result =
             tokio::task::spawn_blocking(move || runtime.prepare_legacy_migration(&paths, &source))
                 .await
-                .map_err(|error| Error::Custom(format!("legacy migration task failed: {error}")))?
+                .map_err(|error| {
+                    vrcx_0_application_core::Error::Custom(format!(
+                        "legacy migration task failed: {error}"
+                    ))
+                })?
                 .map_err(Error::from);
         if let Err(error) = &result {
             tracing::error!(error = %error, "legacy VRCX snapshot preparation failed");
@@ -104,7 +116,11 @@ impl DesktopDatabaseUpgradeRuntime {
         let runtime = self.runtime.clone();
         let recovery_result = tokio::task::spawn_blocking(move || runtime.start_fresh_database())
             .await
-            .map_err(|error| Error::Custom(format!("database fresh-start task failed: {error}")))?;
+            .map_err(|error| {
+                vrcx_0_application_core::Error::Custom(format!(
+                    "database fresh-start task failed: {error}"
+                ))
+            })?;
         let result = finalize_start_fresh(recovery_result.map_err(Error::from), move || {
             lifecycle.request_restart()
         });
@@ -164,7 +180,6 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use super::{database_upgrade_failure_token, finalize_start_fresh};
-    use crate::Error;
 
     #[test]
     fn failure_tokens_preserve_the_existing_diagnostic_sanitization() {
@@ -189,7 +204,7 @@ mod tests {
             let result = if succeeds {
                 Ok("recovery")
             } else {
-                Err(Error::Custom("failed".into()))
+                Err(vrcx_0_application_core::Error::Custom("failed".into()).into())
             };
 
             let result = finalize_start_fresh(result, || {

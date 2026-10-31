@@ -109,9 +109,10 @@ impl RuntimeHostState {
         cli_login_prompt: Option<Arc<dyn CliLoginPrompt>>,
     ) -> Result<BackendRuntimeSnapshot> {
         if self.profile != RuntimeHostProfile::Desktop {
-            return Err(crate::Error::Custom(
+            return Err(vrcx_0_application_core::Error::Custom(
                 "GUI backend runtime requires the Desktop host profile.".into(),
-            ));
+            )
+            .into());
         }
         self.start_backend_runtime_inner(Some(mode), cli_login_prompt)
             .await
@@ -122,9 +123,10 @@ impl RuntimeHostState {
         cli_login_prompt: Option<Arc<dyn CliLoginPrompt>>,
     ) -> Result<BackendRuntimeSnapshot> {
         if self.profile != RuntimeHostProfile::HeadlessData {
-            return Err(crate::Error::Custom(
+            return Err(vrcx_0_application_core::Error::Custom(
                 "Headless backend runtime requires the HeadlessData host profile.".into(),
-            ));
+            )
+            .into());
         }
         self.start_backend_runtime_inner(None, cli_login_prompt)
             .await
@@ -137,13 +139,14 @@ impl RuntimeHostState {
     #[cfg(feature = "collector")]
     pub async fn start_collector_backend_runtime(&self, cookies_b64: &str) -> Result<String> {
         if self.profile != RuntimeHostProfile::HeadlessData {
-            return Err(crate::Error::Custom(
+            return Err(vrcx_0_application_core::Error::Custom(
                 "Collector runtime requires the HeadlessData host profile.".into(),
-            ));
+            )
+            .into());
         }
         self.web_client()
             .set_cookies(cookies_b64)
-            .map_err(|error| crate::Error::Custom(error.to_string()))?;
+            .map_err(|error| vrcx_0_application_core::Error::Custom(error.to_string()))?;
         self.backend_runtime
             .set_phase(BackendRuntimePhase::Starting);
         self.start_data_services();
@@ -171,7 +174,7 @@ impl RuntimeHostState {
                 });
             }
             Err(NonInteractiveAuthError::Failed(reason)) => {
-                return Err(crate::Error::Custom(reason));
+                return Err(vrcx_0_application_core::Error::Custom(reason).into());
             }
         };
         let user_id = session.user_id.clone();
@@ -250,7 +253,7 @@ impl RuntimeHostState {
             }
             Err(NonInteractiveAuthError::Failed(reason)) => {
                 self.backend_runtime.set_auth_error(reason.clone());
-                return Err(crate::Error::Custom(reason));
+                return Err(vrcx_0_application_core::Error::Custom(reason).into());
             }
         };
 
@@ -277,9 +280,10 @@ impl RuntimeHostState {
         session: AuthenticatedRuntimeSession,
     ) -> Result<BackendRuntimeSnapshot> {
         if session.user_id.trim().is_empty() {
-            return Err(crate::Error::Custom(
+            return Err(vrcx_0_application_core::Error::Custom(
                 "Authenticated runtime requires an authenticated user id.".into(),
-            ));
+            )
+            .into());
         }
         let auth_scope = self.runtime_context.auth_scope.set_identity(
             &session.user_id,
@@ -318,7 +322,8 @@ impl RuntimeHostState {
         );
         self.backend_runtime.set_phase(BackendRuntimePhase::Running);
         self.establish_authenticated_session_projection(&session, auth_scope.generation);
-        self.authenticated_runtime.start(session)?;
+        self.authenticated_runtime
+            .start(session, auth_scope.clone())?;
         self.activity_warmup
             .schedule(activity_warmup_user_id, auth_scope.generation);
         self.start_social_maintenance_loops();

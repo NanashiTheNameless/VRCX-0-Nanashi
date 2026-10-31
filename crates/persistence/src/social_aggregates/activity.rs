@@ -32,7 +32,7 @@ pub fn get_friend_activity_pattern(
             "strftime('%H', vrcx_display_epoch(created_at, @tz), 'unixepoch')"
         }
         ActivityBucket::DayOfWeek => {
-            "strftime('%w', vrcx_display_epoch(created_at, @tz), 'unixepoch')"
+            "CAST((CAST(strftime('%w', vrcx_display_epoch(created_at, @tz), 'unixepoch') AS INTEGER) + 6) % 7 AS TEXT)"
         }
     };
     let mut sql = format!(

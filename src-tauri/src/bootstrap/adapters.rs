@@ -1,6 +1,7 @@
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 use std::time::Duration;
 use vrcx_0_application_core::RuntimeOperationStatus;
 
@@ -47,29 +48,8 @@ impl TauriRuntimeEventSink {
 impl RuntimeEventSink for TauriRuntimeEventSink {
     fn emit(&self, event: &str, payload: serde_json::Value) {
         log_gui_background_runtime_info(&self.app_handle, event, &payload);
-        if event == AuthenticatedRuntimePhaseSnapshot::EVENT_NAME {
-            crate::commands::host::window::set_tray_realtime_interrupted(
-                &self.app_handle,
-                realtime_interrupted(&payload),
-            );
-        }
         emit_to_main_window_if_visible(&self.app_handle, event, payload);
     }
-}
-
-fn realtime_interrupted(phase_snapshot: &serde_json::Value) -> bool {
-    matches!(
-        phase_snapshot
-            .get("phase")
-            .and_then(serde_json::Value::as_str),
-        Some("starting" | "ready")
-    ) && phase_snapshot
-        .pointer("/realtimeHealth/interrupted")
-        .and_then(serde_json::Value::as_bool)
-        .unwrap_or(false)
-        && phase_snapshot
-            .pointer("/realtimeHealth/disconnectedAt")
-            .is_some_and(serde_json::Value::is_i64)
 }
 
 #[derive(Clone)]
@@ -383,6 +363,20 @@ impl RuntimeTaskExecutor for TauriRuntimeTaskExecutor {
     fn spawn(&self, task: RuntimeTask) -> Box<dyn RuntimeTaskHandle> {
         Box::new(TauriRuntimeTaskHandle(tauri::async_runtime::spawn(task)))
     }
+}
+
+pub(super) fn observe_tray_realtime_phase(app: &tauri::AppHandle, state: &AppState) {
+    let tray_app = app.clone();
+    state
+        .runtime_host()
+        .add_authenticated_runtime_phase_observer(Arc::new(
+            move |snapshot: &AuthenticatedRuntimePhaseSnapshot| {
+                crate::commands::host::window::set_tray_realtime_interrupted(
+                    &tray_app,
+                    snapshot.realtime_interrupted(),
+                );
+            },
+        ));
 }
 
 pub(super) fn start_host_services(app: &tauri::AppHandle, state: &AppState) {
@@ -704,26 +698,6 @@ pub(super) fn start_mcp_server_if_enabled(app: &tauri::AppHandle) {
             }
         }
     });
-}
-
-#[cfg(test)]
-mod realtime_health_tests {
-    use super::realtime_interrupted;
-    use serde_json::json;
-
-    #[test]
-    fn tray_interruption_uses_epoch_seconds_and_ignores_stopped_sessions() {
-        let mut snapshot = json!({
-            "phase": "ready",
-            "realtimeHealth": { "interrupted": true, "disconnectedAt": 1793278800_i64 }
-        });
-        assert!(realtime_interrupted(&snapshot));
-        snapshot["phase"] = json!("stopped");
-        assert!(!realtime_interrupted(&snapshot));
-        snapshot["phase"] = json!("ready");
-        snapshot["realtimeHealth"]["disconnectedAt"] = json!(null);
-        assert!(!realtime_interrupted(&snapshot));
-    }
 }
 
 #[cfg(test)]

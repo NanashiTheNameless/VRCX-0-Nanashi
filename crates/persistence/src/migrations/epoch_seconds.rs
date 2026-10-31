@@ -98,6 +98,7 @@ const PER_USER_TABLES: &[(&str, Columns)] = &[
             ("expires_at", "expires_at"),
         ],
     ),
+    ("app_notification_log", &[("created_at", "created_at")]),
     ("avatar_history", &[("created_at", "created_at")]),
     (
         "avatar_wear_log",

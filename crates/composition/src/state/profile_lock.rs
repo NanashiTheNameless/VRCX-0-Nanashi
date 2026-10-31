@@ -90,8 +90,7 @@ fn open_profile_lock_file_with_retry(
             .write(true)
             .create(true)
             .truncate(false)
-            .open(path)
-            .map_err(crate::Error::Io)?;
+            .open(path)?;
 
         match file.try_lock() {
             Ok(()) => return Ok(file),
@@ -99,12 +98,13 @@ fn open_profile_lock_file_with_retry(
                 std::thread::sleep(retry_delay);
             }
             Err(std::fs::TryLockError::WouldBlock) => {
-                return Err(crate::Error::Custom(format!(
+                return Err(vrcx_0_application_core::Error::Custom(format!(
                     "VRCX-0-Nanashi profile is already in use: {}",
                     path.display()
-                )));
+                ))
+                .into());
             }
-            Err(std::fs::TryLockError::Error(error)) => return Err(crate::Error::Io(error)),
+            Err(std::fs::TryLockError::Error(error)) => return Err(error.into()),
         }
     }
 

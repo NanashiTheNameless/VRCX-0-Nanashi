@@ -108,6 +108,7 @@ fn observation(bio: &str) -> ProfileBioObservation {
         user_id: "usr_friend".into(),
         display_name: "Friend".into(),
         bio: bio.into(),
+        bio_links: Vec::new(),
     }
 }
 
@@ -141,7 +142,20 @@ fn observation_parses_profiles_and_rejects_payloads_without_a_bio() {
             user_id: "usr_friend".into(),
             display_name: String::new(),
             bio: String::new(),
+            bio_links: Vec::new(),
         })
+    );
+    assert_eq!(
+        ProfileBioObservation::from_profile(&json!({
+            "id": "usr_friend",
+            "bio": "hello",
+            "bioLinks": [" https://a.example ", "", 3, "https://b.example"]
+        }))
+        .map(|observation| observation.bio_links),
+        Some(vec![
+            "https://a.example".to_string(),
+            "https://b.example".to_string()
+        ])
     );
     assert!(ProfileBioObservation::from_profile(&json!({ "id": "usr_friend" })).is_none());
     assert!(ProfileBioObservation::from_profile(&json!({ "id": "grp_x", "bio": "b" })).is_none());
@@ -165,6 +179,7 @@ fn first_observation_only_records_a_baseline() -> Result<()> {
         store.last_seen(&owner, "usr_friend")?,
         Some(ProfileBioRecord {
             bio: "hello".into(),
+            bio_links: Vec::new(),
             checked_at: 1789689600,
         })
     );
@@ -181,6 +196,7 @@ fn changed_bio_writes_a_feed_row_and_moves_the_baseline() -> Result<()> {
         "usr_friend",
         &ProfileBioRecord {
             bio: "old".into(),
+            bio_links: Vec::new(),
             checked_at: 1789603200,
         },
     )?;
@@ -189,13 +205,20 @@ fn changed_bio_writes_a_feed_row_and_moves_the_baseline() -> Result<()> {
         &store,
         runtime.runtime(),
         &owner,
-        &observation("old"),
+        &ProfileBioObservation {
+            bio_links: vec!["https://a.example".into()],
+            ..observation("old")
+        },
         1789689600,
     )?;
     assert_eq!(unchanged, ProfileBioOutcome::Unchanged);
     assert_eq!(
-        store.last_seen(&owner, "usr_friend")?.unwrap().checked_at,
-        1789689600
+        store.last_seen(&owner, "usr_friend")?,
+        Some(ProfileBioRecord {
+            bio: "old".into(),
+            bio_links: vec!["https://a.example".into()],
+            checked_at: 1789689600,
+        })
     );
     assert!(bio_rows(&runtime, &owner).is_empty());
 
@@ -220,6 +243,7 @@ fn changed_bio_writes_a_feed_row_and_moves_the_baseline() -> Result<()> {
         store.last_seen(&owner, "usr_friend")?,
         Some(ProfileBioRecord {
             bio: "new".into(),
+            bio_links: Vec::new(),
             checked_at: 1789693200,
         })
     );
@@ -233,6 +257,7 @@ fn changed_bio_keeps_the_old_baseline_when_the_feed_cannot_be_published() -> Res
     let store = MemoryProfileBioStore::default();
     let old = ProfileBioRecord {
         bio: "old".into(),
+        bio_links: Vec::new(),
         checked_at: 1789603200,
     };
     store.record(&owner, "usr_friend", &old)?;
@@ -352,6 +377,7 @@ async fn scan_checks_the_next_stale_friend_and_pauses_when_vrchat_pushes_back() 
         store.last_seen(&owner, "usr_friend")?,
         Some(ProfileBioRecord {
             bio: "hello".into(),
+            bio_links: Vec::new(),
             checked_at: resumed.timestamp(),
         })
     );
@@ -378,6 +404,7 @@ async fn scan_checks_the_next_stale_friend_and_pauses_when_vrchat_pushes_back() 
         store.last_seen(&owner, "usr_friend")?,
         Some(ProfileBioRecord {
             bio: "hello".into(),
+            bio_links: Vec::new(),
             checked_at: later.timestamp(),
         })
     );

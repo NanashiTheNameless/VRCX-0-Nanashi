@@ -15,11 +15,11 @@ use vrcx_0_application::social::{
     ModerationSyncRuntime, MutualGraphFetchRuntime, PrintCleanupQueue,
 };
 use vrcx_0_application_activity::notification::{
-    apply_location_notification_rules, load_overlay_activity_filters,
-    save_notification_activity_filters, ActivityFilterProfile, AuthWebhookEvent, AuthWebhookQueue,
-    AuthWebhookQueueDeps, NotificationActivityFilterProfiles, NotificationActivityFiltersSetInput,
-    NotificationConfig, NotificationRemote, NotificationResolver, NotificationWebhookSink,
-    NotificationWebhookSinkDeps, WebhookDeliveryMonitor, WebhookDeliverySnapshot,
+    load_overlay_activity_filters, reload_activity_router, save_notification_activity_filters,
+    ActivityFilterProfile, AuthWebhookEvent, AuthWebhookQueue, AuthWebhookQueueDeps,
+    NotificationActivityFilterProfiles, NotificationActivityFiltersSetInput, NotificationConfig,
+    NotificationRemote, NotificationResolver, NotificationWebhookSink, NotificationWebhookSinkDeps,
+    WebhookDeliveryMonitor, WebhookDeliverySnapshot,
 };
 use vrcx_0_application_activity::{ActivityRouter, ActivitySinkRegistry, GroupInstanceMonitor};
 use vrcx_0_application_core::RemoteMutationGate;
@@ -310,7 +310,7 @@ impl RuntimeHostContext {
             load_overlay_activity_filters(notification_config.as_ref()),
             Some(app_data_dir.join("overlay_activity_wrist.json")),
         );
-        apply_location_notification_rules(&activity_router, notification_config.as_ref());
+        reload_activity_router(&activity_router, notification_config.as_ref());
         let activity_sinks = ActivitySinkRegistry::default();
         let notification_projection_observers =
             RealtimeNotificationProjectionObserverRegistry::default();
@@ -560,11 +560,7 @@ impl RuntimeHostContext {
     }
 
     pub fn reload_overlay_activity_filters(&self) {
-        self.activity_router
-            .set_filters(load_overlay_activity_filters(
-                self.notification_config.as_ref(),
-            ));
-        apply_location_notification_rules(&self.activity_router, self.notification_config.as_ref());
+        reload_activity_router(&self.activity_router, self.notification_config.as_ref());
     }
 
     pub fn notification_activity_filter_profiles(&self) -> NotificationActivityFilterProfiles {

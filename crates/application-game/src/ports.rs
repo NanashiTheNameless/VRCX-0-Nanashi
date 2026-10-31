@@ -14,6 +14,7 @@ pub trait BackgroundRemoteApi: Send + Sync {
         endpoint: &str,
         world_id: &str,
     ) -> Result<vrcx_0_contracts::VrchatResponse>;
+    async fn world_image_url(&self, endpoint: &str, world_id: &str) -> Option<String>;
     async fn get_group(
         &self,
         endpoint: &str,
@@ -408,6 +409,7 @@ impl GameStateStore for TestGameStateStore {
         Ok(GameLogWriteCount {
             inserted,
             location_times_updated,
+            video_names_updated: 0,
         })
     }
 

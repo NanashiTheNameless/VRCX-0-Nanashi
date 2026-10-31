@@ -637,6 +637,14 @@ impl crate::RealtimeRemoteRequests for TestRealtimeRemoteRequests {
         ))
     }
 
+    fn group(
+        &self,
+        endpoint: String,
+        group_id: String,
+    ) -> Result<vrcx_0_application_core::vrchat_api::VrchatApiRequest> {
+        Ok(test_request(endpoint, &format!("/groups/{group_id}")))
+    }
+
     fn invite_send(
         &self,
         endpoint: String,
@@ -701,12 +709,11 @@ fn runtime_with_active_session_game_context(
     let store = Arc::new(TestRealtimeStore::new(dir.path.join("VRCX-0.sqlite3")));
     let web = Arc::new(WebClient::new(NoopWebClientPort));
     let session = HostSessionRuntime::new();
-    let host_session_generation =
-        session.set_realtime_context(vrcx_0_application_core::HostRealtimeSessionContext::new(
-            "usr_self".into(),
-            "https://api.vrchat.cloud/api/1".into(),
-            "wss://pipeline.vrchat.cloud".into(),
-        ));
+    let host_session_generation = session.set_realtime_context(RealtimeSessionContext::new(
+        "usr_self".into(),
+        "https://api.vrchat.cloud/api/1".into(),
+        "wss://pipeline.vrchat.cloud".into(),
+    ));
     let world_cache_port = MemoryWorldCachePort::default();
     let world_cache = Arc::new(vrcx_0_application_core::WorldCache::new(
         world_cache_port.clone(),

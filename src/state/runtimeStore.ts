@@ -89,8 +89,9 @@ export type NowPlayingState = {
     displayName: string | null;
     thumbnailUrl: string | null;
     length: number | null;
-    position: number;
+    position: number | null;
     startedAt: number | null;
+    paused: boolean | null;
     updatedAt: number | null;
 };
 
@@ -429,6 +430,7 @@ function createNowPlayingState(): RuntimeStore['nowPlaying'] {
         length: 0,
         position: 0,
         startedAt: null,
+        paused: false,
         updatedAt: null
     };
 }

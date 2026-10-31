@@ -1504,7 +1504,7 @@ fn local_time_text(hour12: bool) -> String {
 }
 
 fn instance_duration_text(location: &str, started_at: i64, now_ms: i64) -> String {
-    if !is_real_instance_location(location) {
+    if !is_world_instance_location(location) {
         return String::new();
     }
     elapsed_minutes_text(started_at, now_ms)
@@ -1522,7 +1522,7 @@ fn elapsed_minutes_text(started_at: i64, now_ms: i64) -> String {
     compact_duration((minute_start_ms - started_at_ms).max(0))
 }
 
-fn is_real_instance_location(location: &str) -> bool {
+fn is_world_instance_location(location: &str) -> bool {
     let location = location.trim().to_ascii_lowercase();
     location.starts_with("wrld_") && location.contains(':')
 }

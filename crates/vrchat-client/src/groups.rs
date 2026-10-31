@@ -13,8 +13,8 @@ mod request;
 
 pub use params::GroupMemberSort;
 pub use request::{
-    GroupMemberPatch, GroupMemberVisibility, GroupPostMutation, GroupPostVisibility,
-    GroupProfileJoinState, GroupProfileUpdate, GroupRoleMutation,
+    GroupGalleryMutation, GroupMemberPatch, GroupMemberVisibility, GroupPostMutation,
+    GroupPostVisibility, GroupProfileJoinState, GroupProfileUpdate, GroupRoleMutation,
 };
 
 fn group_path(group_id: &str, suffix: &str) -> String {
@@ -164,7 +164,10 @@ pub fn members_get_input(
     let mut params = HashMap::from([
         ("n".to_string(), serde_json::json!(n)),
         ("offset".to_string(), serde_json::json!(offset)),
-        ("sort".to_string(), Value::String(sort.as_str().to_string())),
+        (
+            "sort".to_string(),
+            Value::String(params::member_sort_param(sort).to_string()),
+        ),
     ]);
     if !role_id.is_empty() {
         params.insert("roleId".to_string(), Value::String(role_id));
@@ -213,14 +216,124 @@ pub fn gallery_get_input(
         gallery_id.clone(),
         get_input(
             VRCHAT_API_DEFAULT_ENDPOINT.into(),
-            group_path(
-                &group_id,
-                &format!("galleries/{}", encode_path_segment(&gallery_id)),
-            ),
+            group_path(&group_id, &gallery_path(&gallery_id, "")),
             HashMap::from([
                 ("n".to_string(), serde_json::json!(n)),
                 ("offset".to_string(), serde_json::json!(offset)),
             ]),
+        ),
+    ))
+}
+
+fn gallery_path(gallery_id: &str, suffix: &str) -> String {
+    let gallery = format!("galleries/{}", encode_path_segment(gallery_id));
+    if suffix.is_empty() {
+        gallery
+    } else {
+        format!("{gallery}/{suffix}")
+    }
+}
+
+fn gallery_body(mut gallery: GroupGalleryMutation) -> Result<Value, HttpApiError> {
+    gallery.name = require_text(gallery.name, "VrchatGroupGallery requires name.")?;
+    gallery.description = gallery.description.trim().to_string();
+    serde_json::to_value(gallery).map_err(|error| HttpApiError::Custom(error.to_string()))
+}
+
+pub fn gallery_create_input(
+    group_id: String,
+    gallery: GroupGalleryMutation,
+) -> Result<(String, HttpApiRequestInput), HttpApiError> {
+    let group_id = require_text(group_id, "VrchatGroupGalleryCreate requires groupId.")?;
+    Ok((
+        group_id.clone(),
+        api_input(
+            VRCHAT_API_DEFAULT_ENDPOINT.into(),
+            "POST",
+            group_path(&group_id, "galleries"),
+            Some(gallery_body(gallery)?),
+        ),
+    ))
+}
+
+pub fn gallery_edit_input(
+    group_id: String,
+    gallery_id: String,
+    gallery: GroupGalleryMutation,
+) -> Result<(String, String, HttpApiRequestInput), HttpApiError> {
+    let group_id = require_text(group_id, "VrchatGroupGalleryEdit requires groupId.")?;
+    let gallery_id = require_text(gallery_id, "VrchatGroupGalleryEdit requires galleryId.")?;
+    Ok((
+        group_id.clone(),
+        gallery_id.clone(),
+        api_input(
+            VRCHAT_API_DEFAULT_ENDPOINT.into(),
+            "PUT",
+            group_path(&group_id, &gallery_path(&gallery_id, "")),
+            Some(gallery_body(gallery)?),
+        ),
+    ))
+}
+
+pub fn gallery_delete_input(
+    group_id: String,
+    gallery_id: String,
+) -> Result<(String, String, HttpApiRequestInput), HttpApiError> {
+    let group_id = require_text(group_id, "VrchatGroupGalleryDelete requires groupId.")?;
+    let gallery_id = require_text(gallery_id, "VrchatGroupGalleryDelete requires galleryId.")?;
+    Ok((
+        group_id.clone(),
+        gallery_id.clone(),
+        api_input(
+            VRCHAT_API_DEFAULT_ENDPOINT.into(),
+            "DELETE",
+            group_path(&group_id, &gallery_path(&gallery_id, "")),
+            None,
+        ),
+    ))
+}
+
+pub fn gallery_image_add_input(
+    group_id: String,
+    gallery_id: String,
+    file_id: String,
+) -> Result<(String, String, HttpApiRequestInput), HttpApiError> {
+    let group_id = require_text(group_id, "VrchatGroupGalleryImageAdd requires groupId.")?;
+    let gallery_id = require_text(gallery_id, "VrchatGroupGalleryImageAdd requires galleryId.")?;
+    let file_id = require_text(file_id, "VrchatGroupGalleryImageAdd requires fileId.")?;
+    Ok((
+        group_id.clone(),
+        gallery_id.clone(),
+        api_input(
+            VRCHAT_API_DEFAULT_ENDPOINT.into(),
+            "POST",
+            group_path(&group_id, &gallery_path(&gallery_id, "images")),
+            Some(serde_json::json!({ "fileId": file_id })),
+        ),
+    ))
+}
+
+pub fn gallery_image_delete_input(
+    group_id: String,
+    gallery_id: String,
+    image_id: String,
+) -> Result<(String, String, String, HttpApiRequestInput), HttpApiError> {
+    let group_id = require_text(group_id, "VrchatGroupGalleryImageDelete requires groupId.")?;
+    let gallery_id = require_text(
+        gallery_id,
+        "VrchatGroupGalleryImageDelete requires galleryId.",
+    )?;
+    let image_id = require_text(image_id, "VrchatGroupGalleryImageDelete requires imageId.")?;
+    let images = format!("images/{}", encode_path_segment(&image_id));
+    Ok((
+        group_id.clone(),
+        gallery_id.clone(),
+        image_id,
+        api_input(
+            VRCHAT_API_DEFAULT_ENDPOINT.into(),
+            "DELETE",
+            group_path(&group_id, &gallery_path(&gallery_id, &images)),
+            None,
         ),
     ))
 }
@@ -313,7 +426,7 @@ pub fn profile_update_input(
     params: GroupProfileUpdate,
 ) -> Result<(String, HttpApiRequestInput), HttpApiError> {
     let group_id = require_text(group_id, "VrchatGroupUpdate requires groupId.")?;
-    let params = params.validated()?;
+    let params = request::validated_profile_update(params)?;
     Ok((
         group_id.clone(),
         api_input(
@@ -343,7 +456,7 @@ pub fn post_create_input(
     params: GroupPostMutation,
 ) -> Result<(String, HttpApiRequestInput), HttpApiError> {
     let group_id = require_text(group_id, "VrchatGroupPostCreate requires groupId.")?;
-    let params = params.validated()?;
+    let params = request::validated_post(params)?;
     Ok((
         group_id.clone(),
         api_input(
@@ -362,7 +475,7 @@ pub fn post_edit_input(
 ) -> Result<(String, String, HttpApiRequestInput), HttpApiError> {
     let group_id = require_text(group_id, "VrchatGroupPostEdit requires groupId.")?;
     let post_id = require_text(post_id, "VrchatGroupPostEdit requires postId.")?;
-    let params = params.validated()?;
+    let params = request::validated_post(params)?;
     Ok((
         group_id.clone(),
         post_id.clone(),

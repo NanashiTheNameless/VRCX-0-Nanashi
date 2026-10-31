@@ -83,6 +83,8 @@ struct ChatRequestBody<'a> {
     messages: &'a [ChatMessage],
     #[serde(skip_serializing_if = "Vec::is_empty")]
     tools: Vec<RequestTool<'a>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_choice: Option<&'static str>,
     stream: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     reasoning: Option<ReasoningRequest>,
@@ -387,6 +389,7 @@ impl LlmClient {
             model: &self.model,
             messages,
             tools: Vec::new(),
+            tool_choice: None,
             stream: false,
             reasoning: reasoning_request(options),
             reasoning_effort: None,
@@ -472,6 +475,7 @@ impl LlmClient {
             model: &self.model,
             messages,
             tools: request_tools,
+            tool_choice: (options.forbid_tool_calls && !tools.is_empty()).then_some("none"),
             stream: true,
             reasoning: reasoning_request(options),
             reasoning_effort: None,
@@ -591,10 +595,14 @@ impl LlmClient {
                         },
                     )
                 }
-                Err(vrcx_0_http_client::Error::Http(error)) if error.is_connect() => (
-                    Some(backoff_delay(attempt)),
-                    vrcx_0_http_client::Error::Http(error).into(),
-                ),
+                Err(vrcx_0_http_client::Error::Http(error))
+                    if error.is_connect() || (error.is_request() && !error.is_timeout()) =>
+                {
+                    (
+                        Some(backoff_delay(attempt)),
+                        vrcx_0_http_client::Error::Http(error).into(),
+                    )
+                }
                 Err(error) => return Err(error.into()),
             };
             let Some(delay) = delay.filter(|_| attempt < MAX_RETRIES) else {

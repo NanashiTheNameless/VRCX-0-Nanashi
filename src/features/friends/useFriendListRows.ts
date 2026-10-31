@@ -9,6 +9,7 @@ import {
     useFriendStatsHydration
 } from '@/lib/useFriendStats';
 import { useKnownUserFacts } from '@/lib/useKnownUser';
+import { commands, type ProfileBioOutput } from '@/platform/tauri/bindings';
 import memoPersistenceRepository from '@/repositories/memoPersistenceRepository';
 import { useFavoriteStore } from '@/state/favoriteStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
@@ -26,6 +27,7 @@ type FriendListRowCacheEntry = {
     fact: UserFact | null | undefined;
     friend: FriendRecord;
     index: number;
+    profileBio: ProfileBioOutput | undefined;
     row: FriendListRow;
     stats: FriendStats | undefined;
 };
@@ -64,6 +66,9 @@ export function useFriendListRows({
     const [userNoteById, setUserNoteById] = useState(
         () => new Map<string, string>()
     );
+    const [profileBioById, setProfileBioById] = useState(
+        () => new Map<string, ProfileBioOutput>()
+    );
     const favoriteFriendIds = useMemo(
         () => buildFavoriteIdSet(remoteFavoriteFriendIds, localFriendFavorites),
         [localFriendFavorites, remoteFavoriteFriendIds]
@@ -87,19 +92,28 @@ export function useFriendListRows({
             }
             const fact = factsById[friendId];
             const stats = statsById[friendId];
+            const profileBio = profileBioById.get(friendId);
             const cached = previousCache.get(friendId);
             const row =
                 cached &&
                 cached.friend === rosterFriend &&
                 cached.fact === fact &&
                 cached.stats === stats &&
+                cached.profileBio === profileBio &&
                 cached.index === index
                     ? cached.row
-                    : buildFriendListRow(rosterFriend, fact, stats, index);
+                    : buildFriendListRow(
+                          rosterFriend,
+                          fact,
+                          stats,
+                          index,
+                          profileBio
+                      );
             nextCache.set(friendId, {
                 fact,
                 friend: rosterFriend,
                 index,
+                profileBio,
                 row,
                 stats
             });
@@ -107,7 +121,7 @@ export function useFriendListRows({
         }
         rowCacheRef.current = nextCache;
         return rows;
-    }, [factsById, friendsById, orderedFriendIds, statsById]);
+    }, [factsById, friendsById, orderedFriendIds, profileBioById, statsById]);
     const filteredRows = useMemo(() => {
         return filterFriendListRows({
             rosterRows,
@@ -154,6 +168,27 @@ export function useFriendListRows({
                 }
                 setUserMemoById(nextMemos);
                 setUserNoteById(nextNotes);
+            })
+            .catch(() => {});
+        return () => {
+            active = false;
+        };
+    }, [currentUserId]);
+
+    useEffect(() => {
+        let active = true;
+        if (!currentUserId) {
+            setProfileBioById(new Map());
+            return undefined;
+        }
+        commands
+            .appFriendProfileBioList(currentUserId)
+            .then((rows) => {
+                if (active) {
+                    setProfileBioById(
+                        new Map(rows.map((row) => [row.userId, row]))
+                    );
+                }
             })
             .catch(() => {});
         return () => {

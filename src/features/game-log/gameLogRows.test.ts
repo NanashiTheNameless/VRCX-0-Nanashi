@@ -40,6 +40,7 @@ function liveSession(
         worldId: 'wrld_test',
         worldName: `World ${id}`,
         groupName: '',
+        remote: false,
         playerDurationRows: [],
         events: [],
         ...overrides

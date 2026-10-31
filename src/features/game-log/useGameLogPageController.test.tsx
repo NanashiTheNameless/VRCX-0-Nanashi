@@ -349,6 +349,7 @@ describe('useGameLogPageController', () => {
                 worldName: 'World',
                 groupName: '',
                 duration: 1000,
+                remote: false,
                 playerDurationRows: [
                     { userId: 'usr_1', displayName: 'User', time: 1000 }
                 ],

@@ -236,6 +236,7 @@ const groupControls: GroupDialogControls = {
     onLeave: vi.fn(),
     onPreviousInstancesChange: vi.fn(),
     onRefresh: vi.fn(),
+    onReloadProfile: vi.fn(),
     onRepresent: vi.fn(),
     onSubscribe: vi.fn(),
     onVisibility: vi.fn()

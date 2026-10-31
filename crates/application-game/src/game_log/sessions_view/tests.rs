@@ -253,3 +253,33 @@ fn global_search_matches_world_name_header() {
     assert_eq!(sessions.len(), 1);
     assert_eq!(sessions[0].world_name, "Alpha World");
 }
+
+#[test]
+fn marks_sessions_without_local_log_events_as_remote() {
+    let store = test_store("sessions-remote");
+    write_rows(
+        &store,
+        vec![
+            location(1767261600, "wrld_pc:1", "wrld_pc", "PC"),
+            location(1767265200, "wrld_quest:1", "wrld_quest", "Quest"),
+        ],
+        vec![join(1767261601, "Me", "wrld_pc:1", "usr_me")],
+        Vec::new(),
+    );
+
+    let sessions = query(
+        &store,
+        GameLogSessionsQueryInput {
+            filters: vec!["Location".to_string(), "VideoPlay".to_string()],
+            ..Default::default()
+        },
+    );
+
+    assert_eq!(
+        sessions
+            .iter()
+            .map(|s| (s.world_id.as_str(), s.events.len(), s.remote))
+            .collect::<Vec<_>>(),
+        vec![("wrld_quest", 0, true), ("wrld_pc", 0, false)]
+    );
+}

@@ -5,6 +5,7 @@ import type {
     FriendMutualStats,
     FriendStatsById
 } from '@/domain/friends/friendStats';
+import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 
 type FriendStatsState = {
     ownerUserId: string | null;
@@ -13,6 +14,11 @@ type FriendStatsState = {
     applyMutualStats(
         ownerUserId: string,
         mutualById: Record<string, FriendMutualStats>
+    ): void;
+    markSeen(
+        ownerUserId: string,
+        userIds: readonly string[],
+        seenAt: number | string
     ): void;
     reset(): void;
 };
@@ -41,6 +47,34 @@ export const useFriendStatsStore = create<FriendStatsState>((set) => ({
                 ownerUserId,
                 byUserId: replaceEqualDeep(previous, next)
             };
+        });
+    },
+    markSeen(ownerUserId, userIds, seenAt) {
+        set((state) => {
+            if (state.ownerUserId !== ownerUserId) {
+                return state;
+            }
+            const seenAtMs = parseAbsoluteDateMs(seenAt);
+            if (Number.isNaN(seenAtMs)) {
+                return state;
+            }
+            let next: FriendStatsById | null = null;
+            for (const userId of userIds) {
+                const stats = state.byUserId[userId];
+                if (
+                    !stats ||
+                    (stats.lastSeen &&
+                        parseAbsoluteDateMs(stats.lastSeen) >= seenAtMs)
+                ) {
+                    continue;
+                }
+                next ??= { ...state.byUserId };
+                next[userId] = {
+                    ...stats,
+                    lastSeen: new Date(seenAtMs).toISOString()
+                };
+            }
+            return next ? { byUserId: next } : state;
         });
     },
     reset() {

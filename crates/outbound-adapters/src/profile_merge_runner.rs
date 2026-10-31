@@ -17,7 +17,6 @@ use vrcx_0_persistence::profile_merge::{
 };
 use vrcx_0_persistence::DatabaseService;
 
-use crate::map_persistence_error;
 use crate::profile_database_upgrade::run_database_upgrade_with_progress;
 
 const MERGE_STAGING_DIR: &str = "merge-staging";
@@ -90,9 +89,9 @@ fn with_staged_source<T>(
     std::fs::create_dir_all(&staging).map_err(|error| Error::Custom(error.to_string()))?;
     let result = (|| {
         let snapshot = staging.join(STAGED_DB_FILE);
-        copy_database_snapshot(&source, &snapshot, |_, _| {}).map_err(map_persistence_error)?;
+        copy_database_snapshot(&source, &snapshot, |_, _| {}).map_err(crate::Error::from)?;
         {
-            let staged = DatabaseService::new(&snapshot).map_err(map_persistence_error)?;
+            let staged = DatabaseService::new(&snapshot).map_err(crate::Error::from)?;
             let upgrade = run_database_upgrade_with_progress(&staged, |_| {});
             if !matches!(
                 upgrade.status,
@@ -107,7 +106,7 @@ fn with_staged_source<T>(
                         .unwrap_or_default()
                 )));
             }
-            staged.checkpoint_wal().map_err(map_persistence_error)?;
+            staged.checkpoint_wal().map_err(crate::Error::from)?;
         }
         let backups = app_data.join("backups");
         std::fs::create_dir_all(&backups).map_err(|error| Error::Custom(error.to_string()))?;
@@ -117,7 +116,7 @@ fn with_staged_source<T>(
             &backups.join(format!("before-{backup_label}-{stamp}.sqlite3")),
             |_, _| {},
         )
-        .map_err(map_persistence_error)?;
+        .map_err(crate::Error::from)?;
         apply(&snapshot, &source)
     })();
     let _ = std::fs::remove_dir_all(&staging);
@@ -132,10 +131,10 @@ pub fn run_profile_merge(
 ) -> Result<ProfileMergeReport, Error> {
     with_staged_source(db, app_data, kind, "merge", |snapshot, source| {
         let mut report =
-            merge_profile_database_file(db.db_path(), snapshot).map_err(map_persistence_error)?;
+            merge_profile_database_file(db.db_path(), snapshot).map_err(crate::Error::from)?;
         if let Some(settings) = profile_merge_settings_path(kind, source) {
             report.settings_file_keys_added =
-                merge_settings_file(storage, &settings).map_err(map_persistence_error)?;
+                merge_settings_file(storage, &settings).map_err(crate::Error::from)?;
         }
         tracing::info!(
             source = %source.display(),
@@ -158,12 +157,12 @@ pub fn run_profile_settings_import(
     with_staged_source(db, app_data, kind, "settings-import", |snapshot, source| {
         let mut report = ProfileSettingsImportReport {
             configs_imported: import_profile_configs_file(db.db_path(), snapshot)
-                .map_err(map_persistence_error)?,
+                .map_err(crate::Error::from)?,
             ..ProfileSettingsImportReport::default()
         };
         if let Some(settings) = profile_merge_settings_path(kind, source) {
             report.settings_file_keys_imported =
-                import_settings_file(storage, &settings).map_err(map_persistence_error)?;
+                import_settings_file(storage, &settings).map_err(crate::Error::from)?;
         }
         tracing::info!(
             source = %source.display(),
@@ -183,7 +182,7 @@ pub fn run_data_export(
     archive: &Path,
     app_version: &str,
 ) -> Result<vrcx_0_persistence::data_export::DataExportReport, Error> {
-    storage.save().map_err(map_persistence_error)?;
+    storage.save().map_err(crate::Error::from)?;
     // The snapshot uses SQLite's online backup API, which reads through the WAL,
     // so open readers keeping the checkpoint busy must not fail the export.
     match db.checkpoint_wal_passive() {
@@ -201,7 +200,7 @@ pub fn run_data_export(
         archive,
         app_version,
     )
-    .map_err(map_persistence_error)
+    .map_err(crate::Error::from)
 }
 
 /// Fork: stage a data export for import on the next start.
@@ -210,11 +209,11 @@ pub fn stage_data_import(
     archive: &Path,
 ) -> Result<vrcx_0_persistence::data_export::DataImportSummary, Error> {
     vrcx_0_persistence::data_export::stage_data_import(archive, app_data)
-        .map_err(map_persistence_error)
+        .map_err(crate::Error::from)
 }
 
 /// Fork: drop a staged import that has not been applied yet.
 pub fn discard_data_import(app_data: &Path) -> Result<(), Error> {
     vrcx_0_persistence::data_export::discard_pending_data_import(app_data)
-        .map_err(map_persistence_error)
+        .map_err(crate::Error::from)
 }

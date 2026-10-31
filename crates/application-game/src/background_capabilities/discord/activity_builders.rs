@@ -144,26 +144,31 @@ pub(super) fn build_discord_activity(
     }
 
     if config.discord_world_integration {
-        if let Some(rpc_config) = rpc_world_config(&parsed.world_id) {
+        let now_playing = &facts.now_playing;
+        let rpc_config = rpc_world_config(&parsed.world_id);
+        if let Some(rpc_config) = rpc_config {
             activity_type = rpc_config.activity_type;
             status_display_type = rpc_config.status_display_type;
             app_id = rpc_config.app_id.into();
             big_icon = rpc_config.big_icon.into();
-            if is_popcorn_palace_world(&parsed.world_id)
-                && !config.discord_hide_image
-                && !facts.now_playing.thumbnail_url.trim().is_empty()
-            {
-                big_icon = facts.now_playing.thumbnail_url.trim().to_string();
+            if !now_playing.name.trim().is_empty() {
+                details_text = now_playing.name.trim().to_string();
             }
-            if !facts.now_playing.name.trim().is_empty() {
-                details_text = facts.now_playing.name.trim().to_string();
+        }
+        if now_playing.has_content()
+            && !now_playing.paused
+            && (rpc_config.is_some() || now_playing.titled)
+        {
+            if rpc_config.is_none() {
+                activity_type = 3;
             }
-            if facts.now_playing.has_content() {
-                let now_playing_times = now_playing_activity_times(&facts.now_playing);
-                if now_playing_times.start_time > 0 {
-                    start_time = now_playing_times.start_time;
-                    end_time = now_playing_times.end_time;
-                }
+            if let Some(times) = now_playing_activity_times(now_playing) {
+                start_time = times.start_time;
+                end_time = times.end_time;
+            }
+            let cover = now_playing.thumbnail_url.trim();
+            if !config.discord_hide_image && cover.starts_with("https://") && cover.len() <= 256 {
+                big_icon = cover.to_string();
             }
         }
     }
@@ -428,31 +433,23 @@ struct NowPlayingActivityTimes {
     end_time: i64,
 }
 
-fn now_playing_activity_times(now_playing: &crate::NowPlayingSnapshot) -> NowPlayingActivityTimes {
-    let start_time = now_playing
+fn now_playing_activity_times(
+    now_playing: &crate::NowPlayingSnapshot,
+) -> Option<NowPlayingActivityTimes> {
+    let start_seconds = now_playing
         .started_at
         .filter(|value| *value > 0)
         .or(now_playing.created_at)
-        .unwrap_or(0);
-    if start_time <= 0 {
-        return NowPlayingActivityTimes {
-            start_time: 0,
-            end_time: 0,
-        };
-    }
-    let length = now_playing.length;
-    let end_time = if length > 0 { start_time + length } else { 0 };
-    NowPlayingActivityTimes {
-        start_time,
-        end_time,
-    }
-}
-
-fn is_popcorn_palace_world(world_id: &str) -> bool {
-    matches!(
-        world_id,
-        "wrld_266523e8-9161-40da-acd0-6bd82e075833" | "wrld_27c7e6b2-d938-447e-a270-3d1a873e2cf3"
-    )
+        .filter(|value| *value > 0)?
+        - now_playing.position;
+    Some(NowPlayingActivityTimes {
+        start_time: start_seconds,
+        end_time: if now_playing.length > 0 {
+            start_seconds + now_playing.length
+        } else {
+            0
+        },
+    })
 }
 
 fn rpc_world_config(world_id: &str) -> Option<RpcWorldConfig> {
@@ -471,13 +468,6 @@ fn rpc_world_config(world_id: &str) -> Option<RpcWorldConfig> {
             activity_type: 2,
             status_display_type: 2,
             big_icon: "vr_dancing",
-        }),
-        "wrld_52bdcdab-11cd-4325-9655-0fb120846945"
-        | "wrld_2d40da63-8f1f-4011-8a9e-414eb8530acd" => Some(RpcWorldConfig {
-            app_id: "939473404808007731",
-            activity_type: 2,
-            status_display_type: 2,
-            big_icon: "zuwa_zuwa_dance",
         }),
         "wrld_74970324-58e8-4239-a17b-2c59dfdf00db"
         | "wrld_db9d878f-6e76-4776-8bf2-15bcdd7fc445"

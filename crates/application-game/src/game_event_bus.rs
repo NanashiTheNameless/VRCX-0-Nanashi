@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use vrcx_0_application_core::RuntimeEventPayload;
 
@@ -56,8 +56,14 @@ pub struct NowPlayingPayload {
     pub thumbnail_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub length: Option<i64>,
-    pub position: i64,
-    pub started_at: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub position: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub started_at: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub paused: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub titled: Option<bool>,
     #[serde(rename = "created_at", skip_serializing_if = "Option::is_none")]
     pub created_at: Option<i64>,
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
@@ -88,6 +94,8 @@ pub struct NowPlayingSnapshot {
     pub length: i64,
     pub position: i64,
     pub started_at: Option<i64>,
+    pub paused: bool,
+    pub titled: bool,
     #[serde(rename = "created_at", skip_serializing_if = "Option::is_none")]
     pub created_at: Option<i64>,
     #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
@@ -130,8 +138,18 @@ impl NowPlayingSnapshot {
         if let Some(value) = patch.length {
             self.length = value;
         }
-        self.position = patch.position;
-        self.started_at = Some(patch.started_at);
+        if let Some(value) = patch.position {
+            self.position = value;
+        }
+        if let Some(value) = patch.started_at {
+            self.started_at = Some(value);
+        }
+        if let Some(value) = patch.paused {
+            self.paused = value;
+        }
+        if let Some(value) = patch.titled {
+            self.titled = value;
+        }
         if let Some(value) = &patch.created_at {
             self.created_at = Some(*value);
         }
@@ -166,6 +184,44 @@ pub enum GameLogSideEffectEvent {
     ScreenshotProcessed(ScreenshotProcessedPayload),
     #[serde(rename = "gameNoVR")]
     GameNoVr(GameNoVrPayload),
+}
+
+#[derive(Clone, Default)]
+pub struct NowPlayingStore {
+    snapshot: Arc<Mutex<Arc<NowPlayingSnapshot>>>,
+}
+
+impl NowPlayingStore {
+    pub fn snapshot(&self) -> Arc<NowPlayingSnapshot> {
+        self.snapshot
+            .lock()
+            .map(|snapshot| Arc::clone(&snapshot))
+            .unwrap_or_else(|_| Arc::new(NowPlayingSnapshot::default()))
+    }
+
+    pub fn observe(&self, event: &GameLogSideEffectEvent) {
+        match event {
+            GameLogSideEffectEvent::NowPlaying(payload) => {
+                if let Some(mut current) = self.lock() {
+                    Arc::make_mut(&mut current).apply(payload);
+                }
+            }
+            GameLogSideEffectEvent::NowPlayingReset(_) => {
+                if let Some(mut current) = self.lock() {
+                    *current = Arc::new(NowPlayingSnapshot::default());
+                }
+            }
+            GameLogSideEffectEvent::ScreenshotProcessed(_)
+            | GameLogSideEffectEvent::GameNoVr(_) => {}
+        }
+    }
+
+    fn lock(&self) -> Option<MutexGuard<'_, Arc<NowPlayingSnapshot>>> {
+        self.snapshot
+            .lock()
+            .map_err(|error| tracing::warn!("failed to lock now playing snapshot: {error}"))
+            .ok()
+    }
 }
 
 pub trait GameLogSideEffectObserver: Send + Sync {
@@ -319,8 +375,8 @@ mod tests {
         assert_eq!(
             serde_json::to_value(GameLogSideEffectEvent::NowPlaying(Box::new(
                 NowPlayingPayload {
-                    position: 42,
-                    started_at: 1,
+                    position: Some(42),
+                    started_at: Some(1),
                     updated_at: 2,
                     ..Default::default()
                 },
@@ -351,8 +407,10 @@ mod tests {
                     location: Some("wrld_test:1".into()),
                     thumbnail_url: Some("thumbnail".into()),
                     length: Some(120),
-                    position: 42,
-                    started_at: 1,
+                    position: Some(42),
+                    started_at: Some(1),
+                    paused: Some(false),
+                    titled: Some(true),
                     created_at: Some(1),
                     activity_type: Some("VideoPlay".into()),
                     video_url: Some("url".into()),
@@ -376,6 +434,8 @@ mod tests {
                     "length": 120,
                     "position": 42,
                     "startedAt": 1,
+                    "paused": false,
+                    "titled": true,
                     "created_at": 1,
                     "type": "VideoPlay",
                     "videoUrl": "url",
@@ -401,6 +461,8 @@ mod tests {
                 "length": 0,
                 "position": 0,
                 "startedAt": null,
+                "paused": false,
+                "titled": false,
                 "updatedAt": null,
             })
         );
@@ -412,8 +474,8 @@ mod tests {
         snapshot.apply(&NowPlayingPayload {
             name: Some("Test Track".into()),
             artist: Some("Test Artist".into()),
-            position: 42,
-            started_at: 1,
+            position: Some(42),
+            started_at: Some(1),
             updated_at: 2,
             ..Default::default()
         });
@@ -430,6 +492,8 @@ mod tests {
                 "length": 0,
                 "position": 42,
                 "startedAt": 1,
+                "paused": false,
+                "titled": false,
                 "updatedAt": 2,
             })
         );

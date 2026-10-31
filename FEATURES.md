@@ -37,8 +37,9 @@ App-managed HTTP clients try HTTP/3 when a direct HTTPS connection supports it, 
 - **Proxies.** Proxy connections use TCP negotiation; HTTP/3 never bypasses a proxy.
 - **Retries.** The HTTP layer never replays AI prompts or uploads after a transport failure.
   OpenAI-compatible and Azure OpenAI chat requests are resent up to 3 times when the connection
-  cannot be opened or the provider answers 408, 409 or a 5xx error; rate limits (429), quota
-  errors and other client errors are not retried.
+  cannot be opened, drops before the response arrives (which sends the prompt again), or the
+  provider answers 408, 409 or a 5xx error; rate limits (429), quota errors, timeouts and other
+  client errors are not retried.
 - **Not covered.** WebSocket handshakes and WebView resources retain
   their own protocol handling.
 

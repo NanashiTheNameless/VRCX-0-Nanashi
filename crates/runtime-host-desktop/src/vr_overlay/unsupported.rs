@@ -44,8 +44,9 @@ impl Overlay {
 }
 
 fn unsupported_error() -> vrcx_0_composition::Error {
-    vrcx_0_composition::Error::Custom(format!(
+    vrcx_0_application_core::Error::Custom(format!(
         "VR overlay is not supported on {}",
         vrcx_0_platform::host_capabilities::current_platform()
     ))
+    .into()
 }

@@ -153,7 +153,9 @@ fn build_share_snapshot(
 )> {
     let title = limited(&request.title, 120);
     if title.is_empty() {
-        return Err(Error::Custom("Give the collection a title.".into()));
+        return Err(Error::from(vrcx_0_application_core::Error::Custom(
+            "Give the collection a title.".into(),
+        )));
     }
     let mut by_id = worlds
         .into_iter()
@@ -194,9 +196,9 @@ fn build_share_snapshot(
         });
     }
     if included.is_empty() {
-        return Err(Error::Custom(
+        return Err(Error::from(vrcx_0_application_core::Error::Custom(
             "None of these worlds have complete cached details to share. Open them once and try again.".into(),
-        ));
+        )));
     }
     Ok((
         vrcx_0_remote_sync::CollectionSnapshot {
@@ -243,12 +245,14 @@ fn reauth_method(method: &str) -> Result<vrcx_0_remote_sync::ReauthMethod> {
         "totp" => Ok(vrcx_0_remote_sync::ReauthMethod::Totp),
         "email" => Ok(vrcx_0_remote_sync::ReauthMethod::Email),
         "recovery" => Ok(vrcx_0_remote_sync::ReauthMethod::Recovery),
-        _ => Err(Error::Custom("Unknown verification method.".into())),
+        _ => Err(Error::from(vrcx_0_application_core::Error::Custom(
+            "Unknown verification method.".into(),
+        ))),
     }
 }
 
 fn sync_error(error: impl std::fmt::Display) -> Error {
-    Error::Custom(error.to_string())
+    Error::from(vrcx_0_application_core::Error::Custom(error.to_string()))
 }
 
 fn local_setting_change_time(
@@ -552,9 +556,9 @@ impl DesktopRuntimeHostState {
 
     fn remote_sync_store_secret(&self, secret: &SyncSecret) -> Result<String> {
         if self.remote_sync_secret_exists(SYNC_SECRET_KEY)? {
-            return Err(Error::Custom(
+            return Err(Error::from(vrcx_0_application_core::Error::Custom(
                 "This PC already has a RemoteSync encryption key.".into(),
-            ));
+            )));
         }
         let recovery = engine::recovery_string(secret);
         self.remote_sync_secret_set(SYNC_SECRET_KEY, &recovery)?;
@@ -580,9 +584,11 @@ impl DesktopRuntimeHostState {
     }
 
     pub fn remote_sync_recovery_string(&self) -> Result<String> {
-        let secret = self
-            .remote_sync_secret()?
-            .ok_or_else(|| Error::Custom("This PC has no RemoteSync encryption key yet.".into()))?;
+        let secret = self.remote_sync_secret()?.ok_or_else(|| {
+            Error::from(vrcx_0_application_core::Error::Custom(
+                "This PC has no RemoteSync encryption key yet.".into(),
+            ))
+        })?;
         Ok(engine::recovery_string(&secret).to_string())
     }
 
@@ -591,7 +597,9 @@ impl DesktopRuntimeHostState {
             let stored = Zeroizing::new(stored);
             let seed = Zeroizing::new(STANDARD.decode(stored.as_bytes()).map_err(sync_error)?);
             let seed: &[u8; 32] = seed.as_slice().try_into().map_err(|_| {
-                Error::Custom("The stored RemoteSync device key is damaged.".into())
+                Error::from(vrcx_0_application_core::Error::Custom(
+                    "The stored RemoteSync device key is damaged.".into(),
+                ))
             })?;
             return Ok(SignerKey::from_seed(seed));
         }
@@ -844,28 +852,38 @@ impl DesktopRuntimeHostState {
         let _running = self.remote_sync.running.lock().await;
         self.remote_sync.cancel.store(false, Ordering::Release);
         if !self.remote_sync_enabled() {
-            return Err(Error::Custom("History sync is turned off.".into()));
+            return Err(Error::from(vrcx_0_application_core::Error::Custom(
+                "History sync is turned off.".into(),
+            )));
         }
         let token = self
             .remote_sync_secret_get(TOKEN_KEY)?
             .map(Zeroizing::new)
-            .ok_or_else(|| Error::Custom("This PC is not paired with RemoteSync.".into()))?;
+            .ok_or_else(|| {
+                Error::from(vrcx_0_application_core::Error::Custom(
+                    "This PC is not paired with RemoteSync.".into(),
+                ))
+            })?;
         let secret = self.remote_sync_secret()?.ok_or_else(|| {
-            Error::Custom("Set up the RemoteSync encryption key on this PC first.".into())
+            Error::from(vrcx_0_application_core::Error::Custom(
+                "Set up the RemoteSync encryption key on this PC first.".into(),
+            ))
         })?;
         let auth = self.runtime.desktop_assembly().auth_scope();
         let scope = auth.snapshot();
         if !scope.active || scope.current_user_id.trim().is_empty() {
-            return Err(Error::Custom("Sign in to VRChat before syncing.".into()));
+            return Err(Error::from(vrcx_0_application_core::Error::Custom(
+                "Sign in to VRChat before syncing.".into(),
+            )));
         }
         let api_origin = self.config_string(API_ORIGIN_KEY, OFFICIAL_API);
         let client = RemoteSyncClient::new_with_version(&api_origin, remote_sync_app_version())
             .map_err(sync_error)?;
         let account = client.account(&token).await.map_err(sync_error)?;
         if !account.sync_allowed {
-            return Err(Error::Custom(
+            return Err(Error::from(vrcx_0_application_core::Error::Custom(
                 "RemoteSync was disabled for your account by an administrator. Local history is unchanged.".into(),
-            ));
+            )));
         }
         let identity = SyncIdentity {
             api_origin,
@@ -1075,12 +1093,18 @@ impl DesktopRuntimeHostState {
 
     fn remote_sync_session(&self) -> Result<(RemoteSyncClient, Zeroizing<String>)> {
         if !self.remote_sync_enabled() {
-            return Err(Error::Custom("History sync is turned off.".into()));
+            return Err(Error::from(vrcx_0_application_core::Error::Custom(
+                "History sync is turned off.".into(),
+            )));
         }
         let token = self
             .remote_sync_secret_get(TOKEN_KEY)?
             .map(Zeroizing::new)
-            .ok_or_else(|| Error::Custom("This PC is not paired with RemoteSync.".into()))?;
+            .ok_or_else(|| {
+                Error::from(vrcx_0_application_core::Error::Custom(
+                    "This PC is not paired with RemoteSync.".into(),
+                ))
+            })?;
         let api_origin = self.config_string(API_ORIGIN_KEY, OFFICIAL_API);
         let client = RemoteSyncClient::new_with_version(&api_origin, remote_sync_app_version())
             .map_err(sync_error)?;
@@ -1137,9 +1161,9 @@ impl DesktopRuntimeHostState {
         let (vault_id, state) = self.remote_sync_current_vault()?;
         let account = client.account(&token).await.map_err(sync_error)?;
         if !account.sync_allowed {
-            return Err(Error::Custom(
+            return Err(Error::from(vrcx_0_application_core::Error::Custom(
                 "RemoteSync was disabled for this account by an administrator.".into(),
-            ));
+            )));
         }
         for _ in 0..3 {
             let mut manifest = self
@@ -1148,9 +1172,9 @@ impl DesktopRuntimeHostState {
             if !manifest.signers.iter().any(|signer| {
                 signer.key_id == key_id && signer.kind == protocol::manifest::SignerKind::Device
             }) {
-                return Err(Error::Custom(
+                return Err(Error::from(vrcx_0_application_core::Error::Custom(
                     "Choose a device that is currently paired with this vault.".into(),
-                ));
+                )));
             }
             if manifest.dedupe_device_key_id.as_deref() == Some(key_id.as_str()) {
                 return Ok(());
@@ -1158,9 +1182,11 @@ impl DesktopRuntimeHostState {
             let previous_seq = manifest.manifest_seq;
             manifest.manifest_seq += 1;
             manifest.dedupe_device_key_id = Some(key_id.clone());
-            let secret = self
-                .remote_sync_secret()?
-                .ok_or_else(|| Error::Custom("The RemoteSync encryption key is missing.".into()))?;
+            let secret = self.remote_sync_secret()?.ok_or_else(|| {
+                Error::from(vrcx_0_application_core::Error::Custom(
+                    "The RemoteSync encryption key is missing.".into(),
+                ))
+            })?;
             let keys = protocol::keys::VaultKeys::derive(&secret, vault_id);
             let blob = engine::seal_manifest(&manifest, &keys).map_err(sync_error)?;
             match client
@@ -1180,9 +1206,9 @@ impl DesktopRuntimeHostState {
                 Err(error) => return Err(sync_error(error)),
             }
         }
-        Err(Error::Custom(
+        Err(Error::from(vrcx_0_application_core::Error::Custom(
             "The vault manifest kept changing; try selecting the device again.".into(),
-        ))
+        )))
     }
 
     /// Signs other clients out. The server only allows this right after a
@@ -1222,9 +1248,9 @@ impl DesktopRuntimeHostState {
         let account_id = self.config_string(ACCOUNT_ID_KEY, "");
         let api_origin = self.config_string(API_ORIGIN_KEY, OFFICIAL_API);
         if !scope.active || scope.current_user_id.trim().is_empty() || account_id.is_empty() {
-            return Err(Error::Custom(
+            return Err(Error::from(vrcx_0_application_core::Error::Custom(
                 "Sign in to VRChat and pair this PC first.".into(),
-            ));
+            )));
         }
         let state = store::vault_state_for_user(
             self.runtime.desktop_assembly().database(),
@@ -1233,13 +1259,15 @@ impl DesktopRuntimeHostState {
             scope.current_user_id.trim(),
         )?
         .ok_or_else(|| {
-            Error::Custom("Run History Sync once before using collector controls.".into())
+            Error::from(vrcx_0_application_core::Error::Custom(
+                "Run History Sync once before using collector controls.".into(),
+            ))
         })?;
-        let vault_id = state
-            .vault
-            .vault_id
-            .parse()
-            .map_err(|_| Error::Custom("The saved RemoteSync vault id is invalid.".into()))?;
+        let vault_id = state.vault.vault_id.parse().map_err(|_| {
+            Error::from(vrcx_0_application_core::Error::Custom(
+                "The saved RemoteSync vault id is invalid.".into(),
+            ))
+        })?;
         Ok((vault_id, state))
     }
 
@@ -1252,7 +1280,11 @@ impl DesktopRuntimeHostState {
     ) -> Result<protocol::manifest::Manifest> {
         let secret = self
             .remote_sync_secret_get(SYNC_SECRET_KEY)?
-            .ok_or_else(|| Error::Custom("The RemoteSync encryption key is missing.".into()))?;
+            .ok_or_else(|| {
+                Error::from(vrcx_0_application_core::Error::Custom(
+                    "The RemoteSync encryption key is missing.".into(),
+                ))
+            })?;
         let secret = engine::parse_recovery_string(&secret).map_err(sync_error)?;
         let keys = protocol::keys::VaultKeys::derive(&secret, vault_id);
         let (seq, blob) = client
@@ -1279,37 +1311,51 @@ impl DesktopRuntimeHostState {
         if days.is_some_and(|days| !(1..=30).contains(&days))
             || !(60..=900).contains(&interval_seconds)
         {
-            return Err(Error::Custom(
+            return Err(Error::from(vrcx_0_application_core::Error::Custom(
                 "Collector duration must be 1 to 30 days or forever, and interval 60 to 900 seconds.".into(),
-            ));
+            )));
         }
         let (client, token) = self.remote_sync_session()?;
         let account = client.account(&token).await.map_err(sync_error)?;
         if !account.collector_allowed {
-            return Err(Error::Custom(
+            return Err(Error::from(vrcx_0_application_core::Error::Custom(
                 "This RemoteSync account is not allowed to use the collector.".into(),
-            ));
+            )));
         }
         let capabilities = client.capabilities().await.map_err(sync_error)?;
         let collector = capabilities
             .collector
             .filter(|value| value.available)
-            .ok_or_else(|| Error::Custom("The RemoteSync collector is unavailable.".into()))?;
+            .ok_or_else(|| {
+                Error::from(vrcx_0_application_core::Error::Custom(
+                    "The RemoteSync collector is unavailable.".into(),
+                ))
+            })?;
         let (vault_id, state) = self.remote_sync_current_vault()?;
         let secret_text = self
             .remote_sync_secret_get(SYNC_SECRET_KEY)?
-            .ok_or_else(|| Error::Custom("The RemoteSync encryption key is missing.".into()))?;
+            .ok_or_else(|| {
+                Error::from(vrcx_0_application_core::Error::Custom(
+                    "The RemoteSync encryption key is missing.".into(),
+                ))
+            })?;
         let secret = engine::parse_recovery_string(&secret_text).map_err(sync_error)?;
         let keys = protocol::keys::VaultKeys::derive(&secret, vault_id);
         let db = self.runtime.desktop_assembly().database();
-        let cookies = vrcx_0_persistence::cookies::get_default_cookies(db)?
-            .ok_or_else(|| Error::Custom("No saved VRChat session is available.".into()))?;
-        let (auth, two_factor_auth) = saved_vrchat_session_cookies(&cookies)
-            .ok_or_else(|| Error::Custom("The saved VRChat session could not be read.".into()))?;
+        let cookies = vrcx_0_persistence::cookies::get_default_cookies(db)?.ok_or_else(|| {
+            Error::from(vrcx_0_application_core::Error::Custom(
+                "No saved VRChat session is available.".into(),
+            ))
+        })?;
+        let (auth, two_factor_auth) = saved_vrchat_session_cookies(&cookies).ok_or_else(|| {
+            Error::from(vrcx_0_application_core::Error::Custom(
+                "The saved VRChat session could not be read.".into(),
+            ))
+        })?;
         let auth = auth.filter(|value| !value.is_empty()).ok_or_else(|| {
-            Error::Custom(
+            Error::from(vrcx_0_application_core::Error::Custom(
                 "The saved VRChat session has no auth cookie. Sign in again first.".into(),
-            )
+            ))
         })?;
         let now = chrono::Utc::now().timestamp();
         let expires_at = days.map(|days| now.saturating_add(i64::from(days) * 24 * 60 * 60));
@@ -1334,7 +1380,8 @@ impl DesktopRuntimeHostState {
             &unlock_key,
             b"remotesync/v1/unlock",
             &aad,
-            &serde_json::to_vec(&payload).map_err(|e| Error::Custom(e.to_string()))?,
+            &serde_json::to_vec(&payload)
+                .map_err(|e| Error::from(vrcx_0_application_core::Error::Custom(e.to_string())))?,
         )
         .map_err(sync_error)?;
 
@@ -1466,7 +1513,11 @@ impl DesktopRuntimeHostState {
         let (live_age_ms, live) = if status.state == protocol::api::CollectorState::Running {
             let secret = self
                 .remote_sync_secret_get(SYNC_SECRET_KEY)?
-                .ok_or_else(|| Error::Custom("The RemoteSync encryption key is missing.".into()))?;
+                .ok_or_else(|| {
+                    Error::from(vrcx_0_application_core::Error::Custom(
+                        "The RemoteSync encryption key is missing.".into(),
+                    ))
+                })?;
             let secret = engine::parse_recovery_string(&secret).map_err(sync_error)?;
             let keys = protocol::keys::VaultKeys::derive(&secret, vault_id);
             let manifest = self
@@ -1526,9 +1577,9 @@ impl DesktopRuntimeHostState {
     /// the code to type there.
     pub async fn remote_sync_transfer_begin(&self) -> Result<String> {
         if self.remote_sync_secret_exists(SYNC_SECRET_KEY)? {
-            return Err(Error::Custom(
+            return Err(Error::from(vrcx_0_application_core::Error::Custom(
                 "This PC already has a RemoteSync encryption key.".into(),
-            ));
+            )));
         }
         let (client, token) = self.remote_sync_session()?;
         let receiver = engine::TransferReceiver::new();
@@ -1554,7 +1605,9 @@ impl DesktopRuntimeHostState {
             .as_ref()
             .map(|(_, transfer_id)| transfer_id.clone())
         else {
-            return Err(Error::Custom("No key transfer is in progress.".into()));
+            return Err(Error::from(vrcx_0_application_core::Error::Custom(
+                "No key transfer is in progress.".into(),
+            )));
         };
         let Some(sealed) = client
             .transfer_result(&token, &transfer_id)
@@ -1565,7 +1618,9 @@ impl DesktopRuntimeHostState {
         };
         let account_id = self.config_string(ACCOUNT_ID_KEY, "");
         let Some((receiver, _)) = self.remote_sync.transfer.lock().unwrap().take() else {
-            return Err(Error::Custom("No key transfer is in progress.".into()));
+            return Err(Error::from(vrcx_0_application_core::Error::Custom(
+                "No key transfer is in progress.".into(),
+            )));
         };
         let secret = receiver
             .open(&account_id, &transfer_id, &sealed)
@@ -1577,7 +1632,9 @@ impl DesktopRuntimeHostState {
     /// Sends this PC's encryption key to the device showing `code`.
     pub async fn remote_sync_transfer_send(&self, code: String) -> Result<()> {
         let secret = self.remote_sync_secret()?.ok_or_else(|| {
-            Error::Custom("This PC has no RemoteSync encryption key to send.".into())
+            Error::from(vrcx_0_application_core::Error::Custom(
+                "This PC has no RemoteSync encryption key to send.".into(),
+            ))
         })?;
         let (client, token) = self.remote_sync_session()?;
         let transfer_id = engine::transfer_id_from_code(&code).map_err(sync_error)?;
@@ -1602,17 +1659,17 @@ impl DesktopRuntimeHostState {
         request: ShareCollectionRequest,
     ) -> Result<ShareCollectionOutcome> {
         if !self.remote_sync_enabled() {
-            return Err(Error::Custom(
+            return Err(Error::from(vrcx_0_application_core::Error::Custom(
                 "Turn on RemoteSync under Settings > History Sync to share collections.".into(),
-            ));
+            )));
         }
         let token = self
             .remote_sync_secret_get(TOKEN_KEY)?
             .map(Zeroizing::new)
             .ok_or_else(|| {
-                Error::Custom(
+                Error::from(vrcx_0_application_core::Error::Custom(
                     "Pair this PC under Settings > History Sync to share collections.".into(),
-                )
+                ))
             })?;
         let db = self.runtime.desktop_assembly().database();
         let worlds = vrcx_0_persistence::worlds::world_cache_get_many(db, &request.world_ids)?
@@ -1658,9 +1715,9 @@ impl DesktopRuntimeHostState {
             other => other,
         }
         .map_err(|error| match error {
-            vrcx_0_remote_sync::Error::Api { code, .. } if code == "forbidden_scope" => Error::Custom(
+            vrcx_0_remote_sync::Error::Api { code, .. } if code == "forbidden_scope" => Error::from(vrcx_0_application_core::Error::Custom(
                 "This PC was paired without permission to share collections. Sign out and pair it again under Settings > History Sync.".into(),
-            ),
+            )),
             error => sync_error(error),
         })?;
         shared.insert(share_key, id.clone());

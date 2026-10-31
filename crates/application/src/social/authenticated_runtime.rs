@@ -6,9 +6,9 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 
 use crate::auth::{
-    AuthenticatedRuntimePhase, AuthenticatedRuntimePhaseSnapshot,
-    AuthenticatedRuntimeRealtimeHealth, AuthenticatedRuntimeSession,
-    AuthenticatedRuntimeStepSnapshot, AuthenticatedRuntimeStepStatus,
+    AuthenticatedRuntimePhase, AuthenticatedRuntimePhaseObserver,
+    AuthenticatedRuntimePhaseSnapshot, AuthenticatedRuntimeRealtimeHealth,
+    AuthenticatedRuntimeSession, AuthenticatedRuntimeStepSnapshot, AuthenticatedRuntimeStepStatus,
 };
 use serde_json::{json, Value};
 use vrcx_0_application_core::{
@@ -115,6 +115,7 @@ struct AuthenticatedRuntimeShared {
     generation: AtomicU64,
     retry_wake: RetryWake,
     resume_watch: SystemResumeWatch,
+    phase_observers: Mutex<Vec<AuthenticatedRuntimePhaseObserver>>,
 }
 
 #[derive(Default)]
@@ -141,6 +142,7 @@ impl AuthenticatedRuntimeOrchestrator {
                 generation: AtomicU64::new(0),
                 retry_wake: RetryWake::default(),
                 resume_watch: SystemResumeWatch::default(),
+                phase_observers: Mutex::new(Vec::new()),
             }),
             social_baseline: deps.social_baseline,
             auth_probe: deps.auth_probe,
@@ -178,6 +180,14 @@ impl AuthenticatedRuntimeOrchestrator {
         self.lock_state().phase.clone()
     }
 
+    pub fn add_phase_observer(&self, observer: AuthenticatedRuntimePhaseObserver) {
+        self.shared
+            .phase_observers
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .push(observer);
+    }
+
     pub fn update_favorites_baseline(&self, output: SocialFavoritesBaselineOutput) {
         let accepted = accept_favorites_baseline(&mut self.lock_state(), output);
         if let Some(snapshot) = accepted {
@@ -205,6 +215,7 @@ impl AuthenticatedRuntimeOrchestrator {
     pub fn start(
         &self,
         session: AuthenticatedRuntimeSession,
+        scope: RuntimeAuthScopeSnapshot,
     ) -> Result<AuthenticatedRuntimePhaseSnapshot> {
         if session.user_id.trim().is_empty() {
             return Err(Error::Custom(
@@ -212,11 +223,6 @@ impl AuthenticatedRuntimeOrchestrator {
             ));
         }
 
-        let scope = self.auth_scope.set_identity(
-            &session.user_id,
-            &session.display_name,
-            &session.endpoint,
-        );
         let current = self.phase_snapshot();
         let same_session = snapshot_matches_session(&current, &session, scope.generation);
         let already_active = match current.phase {
@@ -972,6 +978,15 @@ impl AuthenticatedRuntimeOrchestrator {
     }
 
     fn emit(&self, snapshot: AuthenticatedRuntimePhaseSnapshot) {
+        let observers = self
+            .shared
+            .phase_observers
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone();
+        for observer in &observers {
+            observer(&snapshot);
+        }
         self.event_bus.emit(snapshot);
     }
 

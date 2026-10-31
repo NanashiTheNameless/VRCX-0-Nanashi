@@ -615,7 +615,7 @@ fn parses_video_play_sources_and_sync_events() {
 }
 
 #[test]
-fn deduplicates_video_errors_and_adds_youtube_bot_hint() {
+fn deduplicates_video_errors_and_keeps_the_original_message() {
     let mut sink = RecordingParseSink::default();
     let mut ctx = LogContext::new();
     let playback_line =
@@ -647,10 +647,7 @@ fn deduplicates_video_errors_and_adds_youtube_bot_hint() {
     assert_eq!(
         sink.payloads(),
         vec![
-            payload(&[
-                "event",
-                "VideoError: [VRCX] Fix error with this: https://github.com/EllyVR/VRCVideoCacher\nSign in to confirm you are not a bot",
-            ]),
+            payload(&["event", "VideoError: Sign in to confirm you are not a bot",]),
             payload(&["event", "VideoError: HTTP 403 Forbidden"]),
         ]
     );
@@ -731,6 +728,33 @@ fn avpro_url_lines_are_preserved_for_local_safety_inspection() {
         vec![payload(&[
             "event",
             "VideoURL: [AVProVideo] Opening 'https://grabify.link/token'"
+        ])]
+    );
+}
+
+#[test]
+fn parses_now_playing_lines_with_a_producer_suffix() {
+    let mut sink = RecordingParseSink::default();
+    let line = "2026.10.30 21:00:00 Debug      -  nowplaying {\"id\":\"ProTV-1\",\"type\":\"mediaStop\"} (ProTV)";
+    let plain = "2026.10.30 21:00:01 Debug      -  nowplaying is not json";
+
+    assert!(media::parse_now_playing_log(
+        &mut sink,
+        FILE,
+        line,
+        content(line),
+    ));
+    assert!(!media::parse_now_playing_log(
+        &mut sink,
+        FILE,
+        plain,
+        content(plain),
+    ));
+    assert_eq!(
+        sink.payloads(),
+        vec![payload(&[
+            "nowplaying",
+            "{\"id\":\"ProTV-1\",\"type\":\"mediaStop\"}"
         ])]
     );
 }

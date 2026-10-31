@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use chrono::{DateTime, Datelike, Duration, Utc};
+use chrono::{Duration, Utc};
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::CallToolResult;
 use rmcp::{schemars, tool, tool_router};
@@ -55,7 +55,7 @@ impl VrcxMcpServer {
     }
 
     #[tool(
-        description = "[L2·analyze] One friend's (or all friends') online activity bucketed by hour-of-day or weekday, from the online/offline log. Use for \"when is X usually online\". Buckets use the configured display timezone unless utcOffsetMinutes specifies a fixed offset (e.g. 540 for UTC+9). For \"best time to catch the MOST people\" prefer get_best_time_to_play."
+        description = "[L2·analyze] One friend's (or all friends') online activity bucketed by hour-of-day or weekday, from the online/offline log. Use for \"when is X usually online\". Weekday bucket keys run 0=Monday through 6=Sunday. Buckets use the configured display timezone unless utcOffsetMinutes specifies a fixed offset (e.g. 540 for UTC+9). For \"best time to catch the MOST people\" prefer get_best_time_to_play."
     )]
     async fn get_friend_activity_pattern(
         &self,
@@ -287,7 +287,6 @@ impl VrcxMcpServer {
         let offset_minutes = input.utc_offset_minutes.unwrap_or_else(|| {
             i64::from(vrcx_0_core::time::display_now().offset().local_minus_utc()) / 60
         });
-        let offset_ms = offset_minutes.saturating_mul(60_000);
         let to_ms = bounds.to.unwrap_or_else(|| Utc::now().timestamp_millis());
         let spans = self.play_spans(&owner_user_id, bounds.from, to_ms)?;
         let sessions = activity_buckets::merge_spans(&spans, PLAY_SESSION_MERGE_GAP_MS);
@@ -297,20 +296,19 @@ impl VrcxMcpServer {
             .map(|(start, end)| end - start)
             .max()
             .unwrap_or(0);
-        let mut total_ms = 0i64;
-        let mut by_weekday = BTreeMap::new();
-        for (start, end) in activity_buckets::merge_spans(&spans, 0) {
-            let duration_ms = end - start;
-            total_ms += duration_ms;
-            if let Some(start_at) =
-                DateTime::<Utc>::from_timestamp_millis(start.saturating_add(offset_ms))
-            {
-                *by_weekday
-                    .entry(start_at.weekday().to_string())
-                    .or_insert(0) += duration_ms / 60_000;
-            }
-        }
-        let total_minutes = total_ms / 60_000;
+        let played = activity_buckets::merge_spans(&spans, 0);
+        let total_minutes = played.iter().map(|(start, end)| end - start).sum::<i64>() / 60_000;
+        let by_weekday = activity_buckets::activity_timeline(
+            &played,
+            activity_buckets::ActivityTimeBucket::DayOfWeek,
+            offset_minutes,
+            None,
+            None,
+        )
+        .into_iter()
+        .filter(|bucket| bucket.minutes > 0)
+        .map(|bucket| (bucket.label, bucket.minutes))
+        .collect::<BTreeMap<_, _>>();
         Ok(MyActivityOutput {
             total_minutes,
             session_count,
