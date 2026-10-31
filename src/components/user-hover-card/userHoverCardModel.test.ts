@@ -103,7 +103,7 @@ describe('buildUserHoverCardModel', () => {
         });
 
         expect(model.variant).toBe('active');
-        expect(model.statusKey).toBe('dialog.user.status.active');
+        expect(model.statusKey).toBe('dialog.user.status.active_web');
         expect(model.statusDotClassName).toBe(
             'user-status-indicator online border-[var(--status-online)] bg-background'
         );

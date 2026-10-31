@@ -1107,7 +1107,7 @@
         "visited_hours_ago_other": "Visited {count} hr ago",
         "visited_at": "Last joined {time}",
         "online": "Online",
-        "active": "Active",
+        "active": "Online on website or another platform",
         "offline": "Offline",
         "pending_offline": "Possibly Offline",
         "status_menu": {
@@ -1404,7 +1404,7 @@
             "favorite_friends": "Favorite Friends",
             "favorite": "Favorites",
             "same_instance": "Same instance",
-            "active": "Active",
+            "active": "Other platform",
             "offline": "Offline",
             "search_placeholder": "Search friends",
             "density": "Density",
@@ -4954,7 +4954,8 @@
         },
         "user": {
             "status": {
-                "active": "Active",
+                "active": "Online on another platform",
+                "active_web": "Online on website",
                 "offline": "Offline",
                 "online": "Online",
                 "join_me": "Join Me",

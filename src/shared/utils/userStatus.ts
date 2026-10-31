@@ -116,7 +116,7 @@ const statusLabelKeys: Readonly<Record<string, string>> = Object.freeze({
 
 const statusLabelFallbacks: Readonly<Record<string, string>> = Object.freeze({
     active: 'Online',
-    'state-active': 'Active',
+    'state-active': 'Online on another platform',
     'join me': 'Join Me',
     'ask me': 'Ask Me',
     busy: 'Do Not Disturb',
@@ -132,8 +132,28 @@ function labelStatus(value: unknown) {
         : status;
 }
 
+const activePlatformLabels: Readonly<
+    Record<string, { key: string; fallback: string }>
+> = Object.freeze({
+    web: {
+        key: 'dialog.user.status.active_web',
+        fallback: 'Online on website'
+    }
+});
+
+function activePlatformLabel(value: unknown) {
+    const presence = presenceOf(value);
+    const platform =
+        presence?.kind === 'active' ? presence.platform.toLowerCase() : '';
+    return activePlatformLabels[platform] ?? null;
+}
+
 function userStatusLabelKey(value: unknown): string {
-    return statusLabelKeys[labelStatus(value)] ?? '';
+    const status = labelStatus(value);
+    if (status === 'state-active') {
+        return activePlatformLabel(value)?.key ?? statusLabelKeys[status];
+    }
+    return statusLabelKeys[status] ?? '';
 }
 
 function userStatusLabel(value: unknown, t?: TranslateFn) {
@@ -141,8 +161,11 @@ function userStatusLabel(value: unknown, t?: TranslateFn) {
     if (!status) {
         return '';
     }
-    const labelKey = statusLabelKeys[status];
-    const fallback = statusLabelFallbacks[status] || status;
+    const platformLabel =
+        status === 'state-active' ? activePlatformLabel(value) : null;
+    const labelKey = platformLabel?.key ?? statusLabelKeys[status];
+    const fallback =
+        platformLabel?.fallback ?? (statusLabelFallbacks[status] || status);
     if (!labelKey || typeof t !== 'function') {
         return fallback;
     }

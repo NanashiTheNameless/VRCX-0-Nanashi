@@ -9,6 +9,7 @@ import {
 
 import {
     resolveUserPresenceStatus,
+    userStatusLabel,
     userStatusLabelKey,
     userStatusSortRank
 } from './userStatus';
@@ -111,13 +112,31 @@ describe('userStatus', () => {
         ).toBe('busy');
     });
 
-    it('labels an active user as active and a leaving user as offline', () => {
+    it('labels an active user by platform and a leaving user as offline', () => {
         expect(
             userStatusLabelKey({
                 status: 'join me',
                 $presence: activePresence()
             })
+        ).toBe('dialog.user.status.active_web');
+        expect(
+            userStatusLabelKey({ $presence: activePresence('android') })
         ).toBe('dialog.user.status.active');
+        expect(userStatusLabelKey({ $presence: activePresence('ios') })).toBe(
+            'dialog.user.status.active'
+        );
+        expect(userStatusLabelKey({ $presence: activePresence('') })).toBe(
+            'dialog.user.status.active'
+        );
+        expect(userStatusLabelKey({ $presence: onlinePresence() })).toBe(
+            'dialog.user.status.online'
+        );
+        expect(userStatusLabel({ $presence: activePresence() })).toBe(
+            'Online on website'
+        );
+        expect(userStatusLabel({ $presence: activePresence('') })).toBe(
+            'Online on another platform'
+        );
         expect(
             userStatusLabelKey({
                 status: 'join me',
