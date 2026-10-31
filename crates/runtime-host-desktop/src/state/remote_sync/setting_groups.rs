@@ -148,7 +148,6 @@ pub(super) const SETTING_GROUPS: &[(&str, &[&str], &[&str])] = &[
             "cropinstance",
             "autodeleteprints",
             "autodeleteoldprints",
-            "ytdlp",
         ],
         &[],
     ),

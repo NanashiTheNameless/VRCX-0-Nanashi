@@ -29,7 +29,6 @@ members = [
     "crates/mcp",
     "crates/integration-api",
     "crates/assistant",
-    "crates/ytdlp",
     "crates/remote-sync",
     "crates/collector-cli"
 ]
@@ -63,7 +62,6 @@ default-members = [
     "crates/mcp",
     "crates/integration-api",
     "crates/assistant",
-    "crates/ytdlp",
     "crates/remote-sync"
 ]
 resolver = "2"

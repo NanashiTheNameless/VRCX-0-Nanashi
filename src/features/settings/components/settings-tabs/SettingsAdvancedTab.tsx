@@ -37,7 +37,6 @@ import { AdvancedTroubleshootingGroup } from './AdvancedTroubleshootingGroup';
 import { GameLogImportField } from './GameLogImportField';
 import type { SettingsAdvancedModel } from './settingsAdvancedTypes';
 import { SettingsSafetyCard } from './SettingsSafetyCard';
-import { SettingsYtdlpCard } from './SettingsYtdlpCard';
 
 type SettingsAdvancedTabContentProps = {
     advanced: SettingsAdvancedModel;
@@ -105,7 +104,6 @@ export function SettingsAdvancedTabContent({
     return (
         <SettingsTabContent value="advanced">
             <SettingsSafetyCard />
-            <SettingsYtdlpCard />
             <SettingsCard
                 cardId="advanced.storage"
                 title={t('view.settings.advanced.advanced_ui.storage.header')}

@@ -50,9 +50,6 @@ vi.mock('./AdvancedTroubleshootingGroup', () => ({
 vi.mock('./SettingsSafetyCard', () => ({
     SettingsSafetyCard: () => <div>safety-card</div>
 }));
-vi.mock('./SettingsYtdlpCard', () => ({
-    SettingsYtdlpCard: () => <div>ytdlp-card</div>
-}));
 
 function appDataDirState(
     overrides: Partial<AppDataDirState> = {}

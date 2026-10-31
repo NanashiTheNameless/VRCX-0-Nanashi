@@ -2,8 +2,8 @@
 //! restore from it.
 //!
 //! Export snapshots the live database (safe while the app runs) and adds every
-//! other file in the data directory except caches, logs, backups, the yt-dlp
-//! toolchain and internal staging/journal files.
+//! other file in the data directory except caches, logs, backups and internal
+//! staging/journal files.
 //!
 //! Login sessions (the `cookies` table) and saved logins are removed from the
 //! exported database; an import keeps the sessions already on this PC.
@@ -110,7 +110,6 @@ const EXCLUDED_TOP_LEVEL: &[&str] = &[
     "database-upgrade-recovery",
     "merge-staging",
     "legacy-migration-staging",
-    "ytdlp",
     "metadatacache.db",
     "metadatacache.db-wal",
     "metadatacache.db-shm",

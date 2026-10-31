@@ -30,5 +30,3 @@ pub mod window;
 
 pub mod reminders;
 pub mod safety;
-
-pub mod ytdlp;

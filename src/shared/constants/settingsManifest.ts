@@ -1574,24 +1574,6 @@ defineCard('advanced', 'safety', 'view.settings.safety.title', [
     }
 ]);
 
-defineCard('advanced', 'ytdlp', 'view.settings.ytdlp.title', [
-    {
-        key: 'enabled',
-        labelKey: 'view.settings.ytdlp.enable',
-        descriptionKey: 'view.settings.ytdlp.enable_description'
-    },
-    {
-        key: 'tools',
-        labelKey: 'view.settings.ytdlp.tools',
-        descriptionKey: 'view.settings.ytdlp.tools_help'
-    },
-    {
-        key: 'cookies',
-        labelKey: 'view.settings.ytdlp.cookies',
-        descriptionKey: 'view.settings.ytdlp.cookies_opt_in'
-    }
-]);
-
 defineCard('advanced', 'data-export', 'view.settings.data_export.header', [
     {
         key: 'export',

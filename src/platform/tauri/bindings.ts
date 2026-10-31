@@ -2993,33 +2993,6 @@ const generatedCommands = {
     async appNotificationSoundsBundled(): Promise<string[]> {
         return await TAURI_INVOKE('app__notification_sounds_bundled');
     },
-    async appYtdlpStatus(): Promise<YtdlpStatus> {
-        return await TAURI_INVOKE('app__ytdlp_status');
-    },
-    async appYtdlpConfigure(settings: YtdlpSettings): Promise<YtdlpStatus> {
-        return await TAURI_INVOKE('app__ytdlp_configure', { settings });
-    },
-    async appYtdlpUpdate(): Promise<YtdlpStatus> {
-        return await TAURI_INVOKE('app__ytdlp_update');
-    },
-    async appYtdlpRefreshCookies(
-        browser: string,
-        profile: string
-    ): Promise<YtdlpStatus> {
-        return await TAURI_INVOKE('app__ytdlp_refresh_cookies', {
-            browser,
-            profile
-        });
-    },
-    async appYtdlpImportCookies(path: string): Promise<YtdlpStatus> {
-        return await TAURI_INVOKE('app__ytdlp_import_cookies', { path });
-    },
-    async appYtdlpClearCookies(): Promise<YtdlpStatus> {
-        return await TAURI_INVOKE('app__ytdlp_clear_cookies');
-    },
-    async appYtdlpTest(): Promise<YtdlpStatus> {
-        return await TAURI_INVOKE('app__ytdlp_test');
-    },
     async appRemindersList(): Promise<Reminder[]> {
         return await TAURI_INVOKE('app__reminders_list');
     },
@@ -8449,29 +8422,6 @@ export type WorldUpdateRequest = {
     tags?: string[] | null;
     urlList?: string[] | null;
     disabledPropAbilities?: string[] | null;
-};
-export type YtdlpSettings = {
-    enabled: boolean;
-    toolsPath: string;
-    browser: string;
-    profile: string;
-    useCookies: boolean;
-};
-export type YtdlpStatus = {
-    settings: YtdlpSettings;
-    supported: boolean;
-    installed: boolean;
-    version: string;
-    checkedAt: string;
-    cookiesRefreshedAt: string;
-    cookieCount: number;
-    cookieExpiry: number;
-    cookieValidatedAt: string;
-    cookieValidation: string;
-    providerRunning: boolean;
-    busy: boolean;
-    message: string;
-    toolsPath: string;
 };
 
 /** tauri-specta globals **/

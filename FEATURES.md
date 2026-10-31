@@ -28,7 +28,7 @@ App-managed HTTP clients try HTTP/3 when a direct HTTPS connection supports it, 
 - **No HTTP/1.1 for sensitive requests.** Requests that carry credentials or personal data
   cannot use HTTP/1.1 with a remote host: VRChat API and images, AI, translation, YouTube
   metadata, avatar search, webhooks and uploads.
-- **HTTP/1.1 fallback for credential-free requests.** GitHub downloads (yt-dlp, safety-list
+- **HTTP/1.1 fallback for credential-free requests.** GitHub downloads (safety-list
   mirrors), safety lists, update checks and the updater (still signature-verified), VRChat
   status, community theme catalog and stats, background image metadata and shared world
   collection reads.
@@ -39,7 +39,7 @@ App-managed HTTP clients try HTTP/3 when a direct HTTPS connection supports it, 
   OpenAI-compatible and Azure OpenAI chat requests are resent up to 3 times when the connection
   cannot be opened or the provider answers 408, 409 or a 5xx error; rate limits (429), quota
   errors and other client errors are not retried.
-- **Not covered.** WebSocket handshakes, WebView resources and external yt-dlp processes retain
+- **Not covered.** WebSocket handshakes and WebView resources retain
   their own protocol handling.
 
 ## Sync and sharing
@@ -273,16 +273,6 @@ for anyone, friends, or favorite friends.
 - Sounds work in background mode and respect Do Not Disturb and privacy lock.
 - Built-in sounds are CC0 clips listed in
   [crates/host-desktop/sounds](crates/host-desktop/sounds/README.md).
-
-### Experimental, opt-in VRChat video playback helper
-
-Settings > Media installs managed yt-dlp master updates and a local PO-token provider.
-
-- Cookie use is a separate opt-in: explicitly select a browser to refresh or import your own
-  cookies.txt. Originals are backed up for restore.
-- No video caching or browser extension.
-
-See [setup and playback limits](YTDLP_SETUP.md).
 
 ### Keeps the PC awake
 

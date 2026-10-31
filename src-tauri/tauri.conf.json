@@ -73,8 +73,7 @@
             "nsis": {
                 "installerIcon": "icons/icon.ico",
                 "displayLanguageSelector": false,
-                "installMode": "currentUser",
-                "installerHooks": "installer/ytdlp-hooks.nsh"
+                "installMode": "currentUser"
             }
         },
         "createUpdaterArtifacts": true

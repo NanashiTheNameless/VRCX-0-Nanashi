@@ -22,7 +22,6 @@ It is a Rust + Tauri rewrite of VRCX.
 | [Telemetry](TELEMETRY.md)                             | What upstream telemetry was removed, the one anonymous adoption count this fork sends, and every way to opt out                                                                         |
 | [Install](INSTALL.md)                                 | Downloads for Windows and Linux, and platform notes                                                                                                                                     |
 | [Building from source](BUILDING.md)                   | Requirements, dev and release builds, the RemoteSync collector and the recorder                                                                                                         |
-| [yt-dlp setup](YTDLP_SETUP.md)                        | The opt-in VRChat video playback helper                                                                                                                                                 |
 | [Self-hosted Recorder guide](crates/logger/README.md) | Running your own recorder server                                                                                                                                                        |
 | [Contributing](CONTRIBUTING.md)                       | How to propose changes to this fork                                                                                                                                                     |
 

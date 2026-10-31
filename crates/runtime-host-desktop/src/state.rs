@@ -180,7 +180,6 @@ pub struct DesktopRuntimeBundle {
 pub struct DesktopRuntimeHostState {
     safety: Arc<crate::safety::SafetyRuntime>,
     reminders: Arc<crate::reminders::ReminderRuntime>,
-    ytdlp: Arc<vrcx_0_ytdlp::Runtime>,
     runtime: RuntimeHostState,
     game: Arc<GameRuntimeBundle>,
     desktop: Arc<DesktopRuntimeBundle>,
@@ -654,29 +653,6 @@ impl DesktopRuntimeHostState {
                 world_cache: Arc::clone(runtime.desktop_assembly().world_cache()),
             },
         );
-        let vrchat_data = vrcx_0_host_desktop::vrchat_paths::vrchat_app_data();
-        let ytdlp = vrcx_0_ytdlp::Runtime::new(
-            runtime.paths().app_data.clone(),
-            if vrchat_data.as_os_str().is_empty() {
-                String::new()
-            } else {
-                vrchat_data.join("Tools").to_string_lossy().into_owned()
-            },
-        );
-        let yt_worker = Arc::clone(&ytdlp);
-        runtime
-            .desktop_assembly()
-            .tasks()
-            .spawn_cancellable(move |stop| async move {
-                let mut tick = 0u8;
-                while !stop.is_stop_requested() {
-                    if tick == 0 {
-                        yt_worker.maintain().await;
-                    }
-                    tick = (tick + 1) % 60;
-                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-                }
-            });
         reminders.start(runtime.desktop_assembly().tasks());
         safety.start(
             safety_receiver,
@@ -750,7 +726,6 @@ impl DesktopRuntimeHostState {
         Ok(Self {
             safety,
             reminders,
-            ytdlp,
             runtime,
             game,
             desktop,
@@ -991,10 +966,6 @@ impl DesktopRuntimeHostState {
 
     pub fn worlds(&self) -> &WorldRemoteRuntime {
         &self.worlds
-    }
-
-    pub fn ytdlp(&self) -> &Arc<vrcx_0_ytdlp::Runtime> {
-        &self.ytdlp
     }
 
     pub fn safety(&self) -> &Arc<crate::safety::SafetyRuntime> {
@@ -2161,7 +2132,6 @@ impl DesktopRuntimeHostState {
     }
 
     pub fn stop_for_application_exit(&self, reason: &str, before_task_shutdown: impl FnOnce()) {
-        self.ytdlp.stop();
         let _ = vrcx_0_host_desktop::power::set_keep_awake(false);
         self.desktop.desktop_widget.shutdown();
         self.runtime.stop_backend_runtime(reason);

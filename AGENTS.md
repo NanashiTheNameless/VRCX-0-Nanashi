@@ -141,8 +141,6 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   profile merge never see it, and data export skips dot files; keep it there.
   Keep the names "census", not
   "telemetry": profile merge skips config keys containing `telemetry`.
-- **yt-dlp / media** - `crates/ytdlp/`, `YTDLP_SETUP.md`. Cookie use is opt-in
-  and backs up originals.
 - **Notification sounds** - `crates/host-desktop/src/sound.rs`,
   `crates/host-desktop/sounds/`. Built-in sounds are CC0 only, leveled to
   -23 LUFS / -1 dBTP, and listed with their sources in `sounds/README.md`,

@@ -9860,7 +9860,6 @@ dependencies = [
  "vrcx-0-platform",
  "vrcx-0-remote-sync",
  "vrcx-0-runtime-host-desktop",
- "vrcx-0-ytdlp",
  "webkit2gtk-nvidia-quirk",
  "windows-sys 0.61.2",
  "zeroize",
@@ -10470,7 +10469,6 @@ dependencies = [
  "vrcx-0-platform",
  "vrcx-0-remote-sync",
  "vrcx-0-vrchat-client",
- "vrcx-0-ytdlp",
  "zeroize",
 ]
 
@@ -10506,26 +10504,6 @@ dependencies = [
  "vrcx-0-contracts",
  "vrcx-0-core",
  "vrcx-0-http-client",
-]
-
-[[package]]
-name = "vrcx-0-ytdlp"
-version = "0.1.0"
-dependencies = [
- "base64 0.23.1",
- "chrono",
- "libc",
- "reqwest",
- "serde",
- "serde_json",
- "sha2 0.11.1",
- "specta",
- "tokio",
- "tracing",
- "vrcx-0-core",
- "vrcx-0-http-client",
- "windows-sys 0.61.2",
- "zip",
 ]
 
 [[package]]
