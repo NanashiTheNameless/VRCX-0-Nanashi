@@ -900,6 +900,7 @@ impl DesktopRuntimeHostState {
             && !report.cancelled
             && self.remote_sync_app_settings_apply(&db, &stream_scope)?
         {
+            self.safety().reload_settings();
             self.runtime
                 .desktop_assembly()
                 .event_bus()

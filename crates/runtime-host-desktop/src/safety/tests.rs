@@ -1096,3 +1096,58 @@ fn watchlists_keep_checking_players_while_game_isolation_drops_the_game_log() {
     assert_eq!(*inner.recorded.lock().unwrap(), 0);
     assert_eq!(f.receiver.try_recv().unwrap().user_id, USER);
 }
+
+#[test]
+fn reload_picks_up_a_synced_watchlist_so_a_later_save_cannot_restore_it() {
+    let f = Fixture::new();
+    f.runtime
+        .set_watch("group", GROUP.into(), "Watched Group".into(), true)
+        .unwrap();
+    let config = ConfigRepository::new(f.runtime.db.clone());
+    let mut synced = f.runtime.settings();
+    synced.groups.clear();
+    config
+        .set_json(SETTINGS_KEY, &serde_json::to_value(&synced).unwrap())
+        .unwrap();
+
+    f.runtime.reload_settings();
+    assert!(f.runtime.settings().groups.is_empty());
+
+    f.runtime
+        .set_watch("avatar", AVATAR.into(), "Watched".into(), true)
+        .unwrap();
+    let stored: SafetySettings =
+        serde_json::from_value(config.get_json(SETTINGS_KEY, json!({})).unwrap()).unwrap();
+    assert!(stored.groups.is_empty());
+    assert_eq!(stored.avatars.len(), 1);
+}
+
+#[test]
+fn reload_ignores_invalid_stored_settings() {
+    let f = Fixture::new();
+    f.runtime
+        .set_watch("group", GROUP.into(), "Watched Group".into(), true)
+        .unwrap();
+    ConfigRepository::new(f.runtime.db.clone())
+        .set_raw(SETTINGS_KEY, "not json")
+        .unwrap();
+
+    f.runtime.reload_settings();
+    assert_eq!(f.runtime.settings().groups.len(), 1);
+}
+
+#[test]
+fn reload_after_a_synced_deletion_returns_to_defaults() {
+    let f = Fixture::new();
+    f.runtime
+        .set_watch("group", GROUP.into(), "Watched Group".into(), true)
+        .unwrap();
+    ConfigRepository::new(f.runtime.db.clone())
+        .remove(SETTINGS_KEY)
+        .unwrap();
+
+    f.runtime.reload_settings();
+    let mut expected = SafetySettings::default();
+    expected.validate().unwrap();
+    assert_eq!(f.runtime.settings(), expected);
+}

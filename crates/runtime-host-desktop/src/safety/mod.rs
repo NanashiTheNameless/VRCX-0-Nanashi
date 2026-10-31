@@ -192,6 +192,43 @@ impl SafetyRuntime {
         self.save_locked(&mut state, &mut settings)
     }
 
+    /// Re-reads the settings after something else wrote them to config, such
+    /// as a RemoteSync settings import. Keeping the old copy would show the
+    /// old watchlists and write them back on the next save.
+    pub fn reload_settings(&self) {
+        let Ok(stored) = self.config.get_raw(SETTINGS_KEY) else {
+            return;
+        };
+        let mut settings = match stored {
+            None => SafetySettings::default(),
+            Some(raw) => match serde_json::from_str::<SafetySettings>(&raw) {
+                Ok(settings) => settings,
+                Err(_) => return,
+            },
+        };
+        if settings.validate().is_err() {
+            return;
+        }
+        let mut state = self.state.lock().unwrap();
+        if state.settings == settings {
+            return;
+        }
+        Self::apply_settings_locked(&mut state, &mut settings);
+    }
+
+    fn apply_settings_locked(state: &mut State, settings: &mut SafetySettings) {
+        state.settings = settings.clone();
+        // A source URL/format change must never reuse the previous source's data.
+        state.caches.retain(|cache| {
+            settings
+                .sources
+                .iter()
+                .any(|source| cache_matches(cache, source))
+        });
+        state.seen.clear();
+        state.policy_revision += 1;
+    }
+
     fn save_locked(
         &self,
         state: &mut State,
@@ -204,16 +241,7 @@ impl SafetyRuntime {
                 &serde_json::to_value(&settings).map_err(|e| e.to_string())?,
             )
             .map_err(|e| e.to_string())?;
-        state.settings = settings.clone();
-        // A source URL/format change must never reuse the previous source's data.
-        state.caches.retain(|cache| {
-            settings
-                .sources
-                .iter()
-                .any(|source| cache_matches(cache, source))
-        });
-        state.seen.clear();
-        state.policy_revision += 1;
+        Self::apply_settings_locked(state, settings);
         Ok(settings.clone())
     }
 
