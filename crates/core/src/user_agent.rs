@@ -29,6 +29,14 @@ pub fn set_app_version(version: &str) {
     let _ = APP_VERSION.set(version.trim().to_string());
 }
 
+/// The app version recorded at startup, if any.
+pub fn app_version() -> Option<&'static str> {
+    APP_VERSION
+        .get()
+        .map(String::as_str)
+        .filter(|version| !version.is_empty())
+}
+
 /// How services that identify API clients can reach the developer.
 pub fn contact_url() -> String {
     format!("https://github.com/{BUILD_REPOSITORY}")

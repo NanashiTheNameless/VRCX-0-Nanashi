@@ -499,6 +499,12 @@ pub struct RemoteSyncSettingChoice {
     pub synced: bool,
 }
 
+// This crate's own version is not the app's; the app binary records the
+// stamped release version (e.g. 3.0.1-Nightly-abc1234) at startup.
+fn remote_sync_app_version() -> &'static str {
+    vrcx_0_core::user_agent::app_version().unwrap_or(env!("CARGO_PKG_VERSION"))
+}
+
 impl DesktopRuntimeHostState {
     pub fn remote_sync_enabled(&self) -> bool {
         self.config_string(BACKEND_KEY, "off") == BACKEND_REMOTESYNC
@@ -853,7 +859,7 @@ impl DesktopRuntimeHostState {
             return Err(Error::Custom("Sign in to VRChat before syncing.".into()));
         }
         let api_origin = self.config_string(API_ORIGIN_KEY, OFFICIAL_API);
-        let client = RemoteSyncClient::new_with_version(&api_origin, env!("CARGO_PKG_VERSION"))
+        let client = RemoteSyncClient::new_with_version(&api_origin, remote_sync_app_version())
             .map_err(sync_error)?;
         let account = client.account(&token).await.map_err(sync_error)?;
         if !account.sync_allowed {
@@ -867,7 +873,7 @@ impl DesktopRuntimeHostState {
             vrchat_user_id: scope.current_user_id.trim().to_owned(),
             display_name: auth.identity().display_name,
             device_label: vrcx_0_remote_sync::device_label(),
-            app_version: env!("CARGO_PKG_VERSION").to_owned(),
+            app_version: remote_sync_app_version().to_owned(),
         };
         let signer = self.remote_sync_device_key()?;
         let db = Arc::clone(self.runtime.desktop_assembly().database());
@@ -1075,7 +1081,7 @@ impl DesktopRuntimeHostState {
             .map(Zeroizing::new)
             .ok_or_else(|| Error::Custom("This PC is not paired with RemoteSync.".into()))?;
         let api_origin = self.config_string(API_ORIGIN_KEY, OFFICIAL_API);
-        let client = RemoteSyncClient::new_with_version(&api_origin, env!("CARGO_PKG_VERSION"))
+        let client = RemoteSyncClient::new_with_version(&api_origin, remote_sync_app_version())
             .map_err(sync_error)?;
         Ok((client, token))
     }
@@ -1641,7 +1647,7 @@ impl DesktopRuntimeHostState {
         let mut shared: std::collections::BTreeMap<String, String> =
             serde_json::from_str(&self.config_string(SHARED_COLLECTIONS_KEY, "{}"))
                 .unwrap_or_default();
-        let client = RemoteSyncClient::new_with_version(&api_origin, env!("CARGO_PKG_VERSION"))
+        let client = RemoteSyncClient::new_with_version(&api_origin, remote_sync_app_version())
             .map_err(sync_error)?;
         let existing = shared.get(&share_key).cloned();
         let id = match client.save_collection(&token, existing.as_deref(), &snapshot).await {
