@@ -670,6 +670,13 @@ const generatedCommands = {
     async appMcpServerSetPort(port: number): Promise<McpServerStatus> {
         return await TAURI_INVOKE('app__mcp_server_set_port', { port });
     },
+    async appMcpServerOpenClientInstall(
+        client: McpInstallClient
+    ): Promise<null> {
+        return await TAURI_INVOKE('app__mcp_server_open_client_install', {
+            client
+        });
+    },
     async appMcpServerRotateToken(): Promise<McpServerStatus> {
         return await TAURI_INVOKE('app__mcp_server_rotate_token');
     },
@@ -4348,6 +4355,8 @@ export type ClientConfigSnippets = {
     claudeCodeCommand: string;
     mcpRemoteJson: string;
     genericJson: string;
+    codexToml: string;
+    opencodeJson: string;
 };
 export type ClipboardImage = {
     fileName: string;
@@ -5378,7 +5387,11 @@ export type GameClientEvent =
     | { kind: 'crashRelaunchDecision'; payload: CrashRelaunchDecisionPayload }
     | { kind: 'debugLoggingOutcome'; payload: DebugLoggingOutcome }
     | { kind: 'notification'; payload: RuntimeNotificationPayload };
-export type GameIsolationSnapshot = { revision: number; enabled: boolean };
+export type GameIsolationSnapshot = {
+    revision: number;
+    enabled: boolean;
+    localGameAccount: LocalGameAccount | null;
+};
 export type GameLogAllUserStatsOutput = {
     lastSeen: string;
     userId: string;
@@ -6314,6 +6327,7 @@ export type LocalFavoriteSnapshot = {
     favorites: FavoriteRow[];
     groupNames: string[];
 };
+export type LocalGameAccount = { userId: string; displayName: string };
 export type LocalModerationOutput = {
     userId: string;
     updatedAt: number;
@@ -6415,6 +6429,11 @@ export type MaintenanceTableSizesOutput = {
      */
     databaseBytes: number;
 };
+export type McpInstallClient =
+    | 'cherryStudio'
+    | 'cursor'
+    | 'vsCode'
+    | 'lmStudio';
 export type McpServerState = 'disabled' | 'running';
 export type McpServerStatus = {
     enabled: boolean;

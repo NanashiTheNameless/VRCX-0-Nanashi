@@ -647,7 +647,8 @@ const initialState: RuntimeStoreState = {
     },
     gameIsolation: {
         revision: 0,
-        enabled: false
+        enabled: false,
+        localGameAccount: null
     },
     privacyLock: {
         revision: 0,

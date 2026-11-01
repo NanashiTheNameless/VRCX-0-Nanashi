@@ -236,6 +236,16 @@ impl GameLogEventSink for GameLogHostRuntime {
         cursor: vrcx_0_application_game::GameLogScanCursor,
         publish: bool,
     ) -> RuntimeResult<()> {
+        if publish {
+            let account = cursor
+                .authenticated_user()
+                .filter(|_| self.session.snapshot().is_game_running)
+                .map(|user| crate::LocalGameAccount {
+                    user_id: user.user_id.clone(),
+                    display_name: user.display_name.clone(),
+                });
+            self.isolation.set_local_game_account(account);
+        }
         self.isolation.ingest_game_log(events, |events| {
             self.inner
                 .ingest_game_log_scan(events, origin, cursor, publish)
@@ -270,6 +280,9 @@ impl GameLogEventSink for GameLogHostRuntime {
 
 impl GameProcessEventSink for GameLogHostRuntime {
     fn on_game_process_event(&self, event: GameProcessEvent) -> RuntimeResult<()> {
+        if !event.is_game_running {
+            self.isolation.set_local_game_account(None);
+        }
         self.inner.on_game_process_event(event)
     }
 }

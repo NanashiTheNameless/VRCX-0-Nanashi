@@ -31,4 +31,4 @@ pub use ports::{
     McpSocialHistoryQueryPort,
 };
 pub use runtime::{McpCaller, McpRuntime, McpRuntimeDeps};
-pub use types::{ClientConfigSnippets, McpServerState, McpServerStatus};
+pub use types::{ClientConfigSnippets, McpInstallClient, McpServerState, McpServerStatus};

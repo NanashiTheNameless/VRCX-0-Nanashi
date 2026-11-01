@@ -122,7 +122,6 @@ fn with_group_key(mut notification: NotificationListItemOutput) -> NotificationL
     notification.group_key = notification_group_key(&NotificationGroupFacts {
         kind: &notification.r#type,
         sender_user_id: &notification.sender_user_id,
-        created_at: &notification.created_at.to_string(),
         data: &notification.data,
         details: &notification.details,
     });

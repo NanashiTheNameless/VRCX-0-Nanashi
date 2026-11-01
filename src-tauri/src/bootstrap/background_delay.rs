@@ -190,7 +190,7 @@ fn destroy_main_window_for_background_mode_if_hidden(
         return false;
     }
     state.runtime_host().set_frontend_tray_notification(false);
-    if let Err(error) = window.destroy() {
+    if let Err(error) = super::window::destroy_main_window_releasing_web_process(&window) {
         tracing::warn!(error = %error, "failed to destroy main window for background mode");
         let _ = window.hide();
         let _ = window.set_skip_taskbar(true);

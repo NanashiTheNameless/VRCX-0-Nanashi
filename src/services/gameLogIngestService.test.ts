@@ -343,9 +343,11 @@ describe('gameLogIngestService characterization', () => {
 
     it('keeps the local game room out of an isolated account', async () => {
         const { service, useRuntimeStore } = await loadGameLogService();
-        useRuntimeStore
-            .getState()
-            .setGameIsolation({ revision: 1, enabled: true });
+        useRuntimeStore.getState().setGameIsolation({
+            revision: 1,
+            enabled: true,
+            localGameAccount: null
+        });
 
         service.applyRuntimeGameLogProjection(
             projection({

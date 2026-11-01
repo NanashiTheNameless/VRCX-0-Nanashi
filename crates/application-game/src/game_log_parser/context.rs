@@ -1,10 +1,18 @@
 use std::collections::HashSet;
 
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct GameLogAuthenticatedUser {
+    pub user_id: String,
+    pub display_name: String,
+}
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub(crate) struct LogContext {
     pub(crate) position: u64,
     #[serde(flatten)]
     pub(crate) file_creation: crate::game_log_watcher::FileCreationStamp,
+    #[serde(default)]
+    pub(crate) authenticated_user: Option<GameLogAuthenticatedUser>,
     #[serde(skip)]
     pub(crate) at_end: bool,
     #[serde(skip)]
@@ -22,6 +30,7 @@ impl LogContext {
         Self {
             position: 0,
             file_creation: Default::default(),
+            authenticated_user: None,
             at_end: true,
             read_failed: false,
             recent_world_name: String::new(),

@@ -25,8 +25,15 @@ async function loadRecentActionService(
     vi.resetModules();
     const localStorage = createLocalStorage(initialStorage);
     vi.stubGlobal('localStorage', localStorage);
+    const { useRuntimeStore } = await import('@/state/runtimeStore');
+    const setCurrentUser = (currentUserId: string | null) => {
+        useRuntimeStore.setState((state) => ({
+            auth: { ...state.auth, currentUserId }
+        }));
+    };
+    setCurrentUser('usr_self');
     const service = await import('./recentActionService');
-    return { service, localStorage };
+    return { service, localStorage, setCurrentUser };
 }
 
 describe('recentActionService', () => {
@@ -48,7 +55,7 @@ describe('recentActionService', () => {
 
         expect(
             JSON.parse(String(localStorage.dump().VRCX_recentActions))
-        ).toEqual({ v: 2, actions: { 'usr_abc:Invite': 1767225600 } });
+        ).toEqual({ v: 2, actions: { 'usr_self:usr_abc:Invite': 1767225600 } });
         expect(service.isActionRecent('usr_abc', 'Invite')).toBe(true);
 
         vi.setSystemTime(new Date('2026-01-01T00:29:59Z'));
@@ -66,8 +73,8 @@ describe('recentActionService', () => {
     it('migrates persisted milliseconds and ISO dates without resetting cooldowns', async () => {
         const { service, localStorage } = await loadRecentActionService({
             VRCX_recentActions: JSON.stringify({
-                'usr_old:Invite': 1767225540123,
-                'usr_iso:Invite': '2025-12-31T23:59:00Z'
+                'usr_self:usr_old:Invite': 1767225540123,
+                'usr_self:usr_iso:Invite': '2025-12-31T23:59:00Z'
             })
         });
         service.configureRecentActionCooldown({ enabled: true, minutes: 30 });
@@ -78,8 +85,8 @@ describe('recentActionService', () => {
         ).toEqual({
             v: 2,
             actions: {
-                'usr_old:Invite': 1767225540,
-                'usr_iso:Invite': 1767225540
+                'usr_self:usr_old:Invite': 1767225540,
+                'usr_self:usr_iso:Invite': 1767225540
             }
         });
         vi.setSystemTime(new Date('2026-01-01T00:29:00Z'));
@@ -90,8 +97,8 @@ describe('recentActionService', () => {
         vi.setSystemTime(new Date(0));
         const { service, localStorage } = await loadRecentActionService({
             VRCX_recentActions: JSON.stringify({
-                'usr_negative:Invite': -1001,
-                'usr_positive:Invite': 30001
+                'usr_self:usr_negative:Invite': -1001,
+                'usr_self:usr_positive:Invite': 30001
             })
         });
         service.configureRecentActionCooldown({ enabled: true, minutes: 5 });
@@ -99,7 +106,10 @@ describe('recentActionService', () => {
         const migrated = localStorage.dump();
         expect(JSON.parse(String(migrated.VRCX_recentActions))).toEqual({
             v: 2,
-            actions: { 'usr_negative:Invite': -2, 'usr_positive:Invite': 30 }
+            actions: {
+                'usr_self:usr_negative:Invite': -2,
+                'usr_self:usr_positive:Invite': 30
+            }
         });
         const restored = await loadRecentActionService(migrated);
         restored.service.configureRecentActionCooldown({
@@ -118,7 +128,7 @@ describe('recentActionService', () => {
     it('keeps cooldown checks working when migration cannot write to localStorage', async () => {
         const { service, localStorage } = await loadRecentActionService({
             VRCX_recentActions: JSON.stringify({
-                'usr_old:Invite': 1767225600000
+                'usr_self:usr_old:Invite': 1767225600000
             })
         });
         localStorage.setItem.mockImplementation(() => {
@@ -126,6 +136,34 @@ describe('recentActionService', () => {
         });
         service.configureRecentActionCooldown({ enabled: true, minutes: 5 });
         expect(service.isActionRecent('usr_old', 'Invite')).toBe(true);
+    });
+
+    it('keeps cooldowns separate for each logged-in account', async () => {
+        const { service, setCurrentUser } = await loadRecentActionService();
+
+        service.configureRecentActionCooldown({ enabled: true, minutes: 30 });
+        service.recordRecentAction('usr_abc', 'Send Friend Request');
+
+        setCurrentUser('usr_alt');
+        expect(service.isActionRecent('usr_abc', 'Send Friend Request')).toBe(
+            false
+        );
+
+        setCurrentUser('usr_self');
+        expect(service.isActionRecent('usr_abc', 'Send Friend Request')).toBe(
+            true
+        );
+    });
+
+    it('does not record actions without a logged-in account', async () => {
+        const { service, localStorage, setCurrentUser } =
+            await loadRecentActionService();
+
+        service.configureRecentActionCooldown({ enabled: true, minutes: 30 });
+        setCurrentUser(null);
+        service.recordRecentAction('usr_abc', 'Invite');
+
+        expect(localStorage.dump().VRCX_recentActions).toBeUndefined();
     });
 
     it('ignores recent actions when cooldown is disabled', async () => {
