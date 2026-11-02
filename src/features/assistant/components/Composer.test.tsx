@@ -47,6 +47,51 @@ describe('Composer', () => {
         expect(input.value).toBe('');
     });
 
+    it('sends on Enter but not while an IME composition is open', () => {
+        const onSend = vi.fn();
+        render(
+            <Composer
+                busy={false}
+                disabled={false}
+                toolbar={<button type="button">Model</button>}
+                onSend={onSend}
+                onStop={vi.fn()}
+            />
+        );
+        const input = screen.getByPlaceholderText('Write a message');
+        fireEvent.change(input, { target: { value: 'こんにちは' } });
+
+        fireEvent.keyDown(input, { key: 'Enter', isComposing: true });
+        expect(onSend).not.toHaveBeenCalled();
+
+        fireEvent.keyDown(input, { key: 'Enter' });
+        expect(onSend).toHaveBeenCalledWith('こんにちは');
+        expect(screen.getByRole('button', { name: 'Model' })).toBeTruthy();
+    });
+
+    it('sends a suggestion shown above the input as is', () => {
+        const onSend = vi.fn();
+        render(
+            <Composer
+                busy={false}
+                disabled={false}
+                suggestions={['Who did I play with most this week?']}
+                onSend={onSend}
+                onStop={vi.fn()}
+            />
+        );
+
+        fireEvent.click(
+            screen.getByRole('button', {
+                name: 'Who did I play with most this week?'
+            })
+        );
+
+        expect(onSend).toHaveBeenCalledWith(
+            'Who did I play with most this week?'
+        );
+    });
+
     it('keeps stop available while a disabled busy turn is running', () => {
         const onStop = vi.fn();
         render(<Composer busy disabled onSend={vi.fn()} onStop={onStop} />);

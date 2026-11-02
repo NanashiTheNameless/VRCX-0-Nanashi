@@ -2,6 +2,8 @@ pub mod adoption_census;
 mod ancillary_snapshot;
 mod app_launcher;
 mod assistant_adapters;
+#[cfg(test)]
+mod assistant_llm_harness;
 pub mod auth_failure;
 mod autostart;
 mod avatar;

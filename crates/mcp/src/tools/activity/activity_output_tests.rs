@@ -273,6 +273,7 @@ async fn copresence_summary_requires_auth_scope_owner() {
             min_minutes: None,
             limit: Some(5),
             friends_only: None,
+            utc_offset_minutes: None,
         }))
         .await
         .expect_err("empty auth_scope owner must reject the tool call");
@@ -450,6 +451,100 @@ fn social_period_states_the_best_time_bucket_timezone() {
         .caveats
         .iter()
         .any(|caveat| caveat.contains("Best-time buckets are in UTC+09:00")));
+}
+
+#[tokio::test]
+async fn friend_activity_pattern_without_a_user_returns_the_most_active_friends() {
+    let (_dir, runtime, db) =
+        crate::test_support::test_runtime_with_database("activity-pattern-ranked", "usr_owner")
+            .unwrap();
+    for (user_id, online_events) in [("usr_quiet", 1), ("usr_busy", 3), ("usr_mid", 2)] {
+        for index in 0..online_events {
+            let created_at = 1780308000 + index * 86_400;
+            vrcx_0_persistence::feed::test_support::seed_feed_online_row(
+                &db,
+                "usr_owner",
+                (created_at, user_id, user_id),
+            )
+            .unwrap();
+        }
+    }
+    let server = VrcxMcpServer::new(runtime);
+
+    let result = server
+        .get_friend_activity_pattern(Parameters(
+            serde_json::from_value(serde_json::json!({ "limit": 2 })).unwrap(),
+        ))
+        .await
+        .unwrap();
+
+    let structured = result.structured_content.unwrap();
+    let users: Vec<&str> = structured["rows"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|row| row["userId"].as_str().unwrap())
+        .collect();
+    assert_eq!(users, ["usr_busy", "usr_mid"]);
+    assert!(structured["caveats"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|caveat| caveat.as_str().unwrap().contains("2 most active of 3")));
+}
+
+#[tokio::test]
+async fn empty_copresence_window_says_it_is_the_complete_answer() {
+    let (_dir, runtime, _db) =
+        crate::test_support::test_runtime_with_database("copresence-empty-window", "usr_owner")
+            .unwrap();
+    let server = VrcxMcpServer::new(runtime);
+
+    let result = server
+        .get_copresence_summary(Parameters(
+            serde_json::from_value(serde_json::json!({ "timeWindow": "7d" })).unwrap(),
+        ))
+        .await
+        .unwrap();
+
+    let summary = result.structured_content.unwrap()["summary"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert!(
+        summary.contains("complete answer for this window"),
+        "{summary}"
+    );
+}
+
+#[test]
+fn social_period_fading_splits_an_open_ended_window_at_its_midpoint() {
+    let (_dir, runtime, _db) = crate::test_support::test_runtime_with_database(
+        "social-period-open-window-fading",
+        "usr_owner",
+    )
+    .unwrap();
+    let server = VrcxMcpServer::new(runtime);
+    let from = Utc::now() - chrono::Duration::days(14);
+
+    let input = server
+        .summary_fading_input(
+            &OwnerId::new("usr_owner"),
+            &social_aggregates::TimeWindow {
+                from: Some(rfc3339_z(from)),
+                to: None,
+            },
+        )
+        .unwrap();
+
+    assert_eq!(input.prior_from, rfc3339_z(from));
+    let pivot = DateTime::parse_from_rfc3339(&input.pivot).unwrap();
+    assert!(
+        (pivot.with_timezone(&Utc) - (from + chrono::Duration::days(7)))
+            .num_minutes()
+            .abs()
+            <= 1
+    );
 }
 
 fn closed_stay(left_at: &str, minutes: i64) -> GameLogJoinLeaveEntry {

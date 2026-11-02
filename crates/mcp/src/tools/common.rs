@@ -69,13 +69,13 @@ impl schemars::JsonSchema for TimeWindowParams {
             "oneOf": [
                 {
                     "type": "string",
-                    "description": "Relative window such as 90d or this week, a four-digit calendar year such as 2026, this year or last year, a calendar month such as 2026-10 or a calendar day such as 2026-10-18 in the user's local calendar, or all history. Calendar forms use the tool's utcOffsetMinutes when it takes one."
+                    "description": "90d, this week, last month, this year, 2026, 2026-10, 2026-10-18 or all; calendar forms use the user's local calendar, or utcOffsetMinutes when the tool has it."
                 },
                 {
                     "type": "integer",
                     "minimum": 1000,
                     "maximum": 9998,
-                    "description": "Four-digit calendar year such as 2026, in the user's local calendar, or the tool's utcOffsetMinutes when it takes one."
+                    "description": "Calendar year, e.g. 2026, in the user's local calendar."
                 },
                 {
                     "type": "object",
@@ -601,7 +601,7 @@ struct DisambiguationOutput {
 struct NotFoundOutput {
     not_found: bool,
     query: String,
-    hint: &'static str,
+    summary: String,
 }
 
 pub(super) fn disambiguation_result(
@@ -619,8 +619,14 @@ pub(super) fn not_found_result(query: &str) -> Result<CallToolResult, String> {
     structured_result(NotFoundOutput {
         not_found: true,
         query: query.to_string(),
-        hint: "no user matching this name in local history",
+        summary: not_found_summary(query),
     })
+}
+
+pub(super) fn not_found_summary(query: &str) -> String {
+    format!(
+        "No one matching \"{query}\" appears in this profile's local history. That is the answer: say so, and do not search for the name with other tools."
+    )
 }
 
 pub(super) fn map_application_query_error(error: vrcx_0_application_core::Error) -> String {

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use chrono::{DateTime, Datelike, FixedOffset};
 use vrcx_0_contracts::llm::{ChatMessage, FunctionCall, ToolCall};
 
@@ -22,6 +24,8 @@ const TOOLS_PROMPT: &str = "\
 Tools:
 - Choose tools by their descriptions. Multi-step investigation is fine: resolve a \
 person, drill into their companions or activity, compare periods, then answer.
+- Stop calling tools once a result answers the question. A result that is empty for the \
+period the user asked about is the answer; do not verify it with other tools.
 - Ranked tools pre-sort and limit rows; mention truncation or limited coverage when \
 it matters.";
 
@@ -186,9 +190,11 @@ fn assemble_narrator_history(history: &[Message]) -> Vec<ChatMessage> {
 }
 
 // One user question plus everything the model did in response to it.
+#[derive(Default)]
 struct OpenTurn {
     messages: Vec<ChatMessage>,
     chars: usize,
+    tool_summaries: HashMap<String, String>,
 }
 
 fn assemble_open_history(history: &[Message]) -> Vec<ChatMessage> {
@@ -228,10 +234,7 @@ fn split_open_turns(history: &[Message]) -> Vec<OpenTurn> {
 
     fn push(turns: &mut Vec<OpenTurn>, message: ChatMessage) {
         if turns.is_empty() {
-            turns.push(OpenTurn {
-                messages: Vec::new(),
-                chars: 0,
-            });
+            turns.push(OpenTurn::default());
         }
         let turn = turns.last_mut().expect("turn exists");
         turn.chars += message_chars(&message);
@@ -270,10 +273,7 @@ fn split_open_turns(history: &[Message]) -> Vec<OpenTurn> {
             Role::User => {
                 flush_calls(&mut turns, &mut pending_calls, &mut unanswered);
                 settle_unanswered(&mut turns, &mut unanswered);
-                turns.push(OpenTurn {
-                    messages: Vec::new(),
-                    chars: 0,
-                });
+                turns.push(OpenTurn::default());
                 push(&mut turns, ChatMessage::user(message.content.clone()));
             }
             Role::Assistant => {
@@ -309,6 +309,10 @@ fn split_open_turns(history: &[Message]) -> Vec<OpenTurn> {
                     .clone()
                     .filter(|content| !content.is_empty())
                     .unwrap_or_else(|| collapsed_tool_content(&record.summary));
+                if let Some(turn) = turns.last_mut() {
+                    turn.tool_summaries
+                        .insert(record.tool_call_id.clone(), record.summary.clone());
+                }
                 push(
                     &mut turns,
                     ChatMessage::tool(record.tool_call_id.clone(), content),
@@ -324,14 +328,19 @@ fn split_open_turns(history: &[Message]) -> Vec<OpenTurn> {
 fn collapse_turn(turn: OpenTurn) -> OpenTurn {
     let mut collapsed = OpenTurn {
         messages: Vec::with_capacity(turn.messages.len()),
-        chars: 0,
+        ..OpenTurn::default()
     };
     for mut message in turn.messages {
         if message.role == "tool" {
+            let recorded = message
+                .tool_call_id
+                .as_ref()
+                .and_then(|id| turn.tool_summaries.get(id))
+                .map(String::as_str);
             let summary = message
                 .content
                 .as_deref()
-                .map(tool_summary_from_content)
+                .map(|content| tool_summary_from_content(content, recorded))
                 .unwrap_or_default();
             message.content = Some(collapsed_tool_content(&summary));
         }
@@ -353,9 +362,10 @@ fn collapsed_tool_content(summary: &str) -> String {
 }
 
 // Full tool content is the budgeted JSON the model saw; its top-level `summary`
-// is the deterministic collapse unit. Text results and already-collapsed
-// results fall back to a clipped prefix.
-fn tool_summary_from_content(content: &str) -> String {
+// is the deterministic collapse unit. Results without one use the summary
+// recorded for the call: a clipped JSON prefix would only hold the
+// alphabetically first `caveats` key.
+fn tool_summary_from_content(content: &str, recorded: Option<&str>) -> String {
     if let Some(rest) = content.strip_prefix(COLLAPSED_PREFIX) {
         return rest.to_string();
     }
@@ -364,7 +374,13 @@ fn tool_summary_from_content(content: &str) -> String {
             return summary.to_string();
         }
     }
-    limit_chars(content.trim(), COLLAPSED_SUMMARY_LIMIT)
+    match recorded
+        .map(str::trim)
+        .filter(|summary| !summary.is_empty())
+    {
+        Some(summary) => summary.to_string(),
+        None => limit_chars(content.trim(), COLLAPSED_SUMMARY_LIMIT),
+    }
 }
 
 fn message_chars(message: &ChatMessage) -> usize {
@@ -774,6 +790,35 @@ mod tests {
         assert_eq!(
             second_tool.content.as_deref(),
             Some("{\"summary\":\"Bob tops the list.\"}")
+        );
+    }
+
+    #[test]
+    fn collapsed_results_without_a_summary_keep_the_recorded_summary() {
+        let old_content = serde_json::json!({
+            "caveats": ["Fading is a relative drop, not proof. ".repeat(10)],
+            "rows": [{ "displayName": "Alice" }],
+        })
+        .to_string();
+        let history = vec![
+            message(Role::User, "q1"),
+            tool_call("call_1", "get_fading_friends", "{}"),
+            tool_result(
+                "call_1",
+                "The tool returned 1 row. Top result: Alice.",
+                &old_content,
+            ),
+            message(Role::Assistant, "a1"),
+            message(Role::User, "q2"),
+            message(Role::Assistant, "a2"),
+            message(Role::User, "q3"),
+        ];
+
+        let assembled = assemble_open_history(&history);
+        let collapsed = assembled.iter().find(|m| m.role == "tool").unwrap();
+        assert_eq!(
+            collapsed.content.as_deref(),
+            Some("[tool result collapsed to its summary] The tool returned 1 row. Top result: Alice.")
         );
     }
 

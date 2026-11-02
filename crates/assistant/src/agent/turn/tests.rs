@@ -66,12 +66,21 @@ fn utc_offset_acceptance_is_read_from_the_tool_schema() {
         ),
     ];
 
-    assert!(tool_accepts_utc_offset(&tool_defs, "get_best_time_to_play"));
-    assert!(!tool_accepts_utc_offset(
+    assert!(tool_has_property(
         &tool_defs,
-        "get_copresence_summary"
+        "get_best_time_to_play",
+        "utcOffsetMinutes"
     ));
-    assert!(!tool_accepts_utc_offset(&tool_defs, "unknown_tool"));
+    assert!(!tool_has_property(
+        &tool_defs,
+        "get_copresence_summary",
+        "utcOffsetMinutes"
+    ));
+    assert!(!tool_has_property(
+        &tool_defs,
+        "unknown_tool",
+        "utcOffsetMinutes"
+    ));
 }
 
 fn tool_call(name: &str, arguments: &str) -> ToolCall {
@@ -309,6 +318,21 @@ fn unfinished_answer_is_replaced_by_supported_tool_summary() {
         FinalAnswerGuard::Corrected("deferred")
     );
     assert_eq!(answer, "Alice has the most mutual connections.");
+}
+
+#[test]
+fn a_full_answer_that_mentions_a_stalling_phrase_passes_the_guard() {
+    let mut answer = format!(
+        "{}\n\nフレンド登録済みであることも確認しています。",
+        "| 相手 | 時間 |\n|---|---|\n| Alice | 3時間 |\n".repeat(6)
+    );
+    let original = answer.clone();
+
+    assert_eq!(
+        guard_final_answer(&mut answer, Some("Alice tops the list.")),
+        FinalAnswerGuard::Valid
+    );
+    assert_eq!(answer, original);
 }
 
 #[test]

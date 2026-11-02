@@ -4,13 +4,14 @@ use rmcp::model::CallToolResult;
 use rmcp::{schemars, tool, tool_router};
 use serde::{Deserialize, Serialize};
 use vrcx_0_contracts::social_aggregates;
+use vrcx_0_core::activity_buckets;
 use vrcx_0_core::presence::PresenceView;
 
 use crate::server::VrcxMcpServer;
 use crate::{McpFriendMemo, McpLocalModeration};
 
 use super::common::{
-    application_query_result, map_application_query_error, require_current_user_id,
+    map_application_query_error, not_found_summary, require_current_user_id,
     resolve_optional_target_or_result, resolve_target_or_result, structured_result,
     TargetResolutionOutcome, TimeWindowParams, WithResolution,
 };
@@ -59,13 +60,21 @@ impl VrcxMcpServer {
         Parameters(input): Parameters<FindUserParams>,
     ) -> Result<CallToolResult, String> {
         let owner_user_id = require_current_user_id(&self.runtime)?;
-        application_query_result(self.runtime.social_history_queries.resolve_user(
-            social_aggregates::ResolveUserInput {
+        let name = input.name.trim().to_string();
+        let output = self
+            .runtime
+            .social_history_queries
+            .resolve_user(social_aggregates::ResolveUserInput {
                 owner_user_id: owner_user_id.clone(),
-                name_query: input.name,
+                name_query: name.clone(),
                 limit: input.limit,
-            },
-        ))
+            })
+            .map_err(map_application_query_error)?;
+        let summary = output.rows.is_empty().then(|| not_found_summary(&name));
+        structured_result(FindUserOutput {
+            inner: output,
+            summary,
+        })
     }
 
     #[tool(
@@ -120,6 +129,7 @@ impl VrcxMcpServer {
             FriendProfileParams {
                 user: target.user_id,
                 time_window: input.time_window,
+                utc_offset_minutes: input.utc_offset_minutes,
             },
         )?;
         structured_result(WithResolution {
@@ -326,11 +336,19 @@ impl VrcxMcpServer {
         if user_id.is_empty() {
             return Err("get_friend_profile requires userId".into());
         }
-        let time_window_params = input.time_window.unwrap_or_default();
+        let time_window_params = input
+            .time_window
+            .unwrap_or_default()
+            .in_utc_offset(input.utc_offset_minutes)?;
         let time_window: social_aggregates::TimeWindow = time_window_params.clone().into();
-        let recent_changes =
+        let mut recent_changes =
             self.friend_profile_changes(&owner_user_id, &user_id, time_window.clone())?;
         let latest_bio = latest_bio_from_changes(&recent_changes);
+        for change in &mut recent_changes {
+            if change.kind == "bio" {
+                change.recent_events.clear();
+            }
+        }
         let current = self
             .runtime
             .realtime_runtime
@@ -379,16 +397,17 @@ impl VrcxMcpServer {
                 time_window: time_window.clone(),
                 group_by: social_aggregates::CopresenceGroupBy::Friend,
                 min_minutes: None,
-                limit: Some(100),
+                limit: Some(1),
                 owner_user_id: Some(owner_user_id.clone()),
                 audience: social_aggregates::CopresenceAudience::Everyone,
                 order_by: social_aggregates::CopresenceOrderBy::default(),
-                utc_offset_minutes: None,
+                utc_offset_minutes: input.utc_offset_minutes,
+                target_user_id: Some(user_id.clone()),
             })
             .map_err(map_application_query_error)?
             .rows
             .into_iter()
-            .find(|row| row.user_id == user_id);
+            .next();
         let activity_pattern = self
             .runtime
             .activity_queries
@@ -397,7 +416,7 @@ impl VrcxMcpServer {
                 user_id: Some(user_id.clone()),
                 time_window: time_window.clone(),
                 bucket: social_aggregates::ActivityBucket::HourOfDay,
-                utc_offset_minutes: None,
+                utc_offset_minutes: input.utc_offset_minutes,
             })
             .map_err(map_application_query_error)?
             .rows
@@ -419,6 +438,10 @@ impl VrcxMcpServer {
                 "Friend profile combines local VRCX-0-Nanashi observations and current realtime memory; missing fields mean unobserved or not loaded.".into(),
                 "When realtime friend memory is unavailable, current uses the latest observed local profile fields where possible.".into(),
                 "Moderation status is read-only here; MCP does not execute block or mute actions.".into(),
+                format!(
+                    "activityPattern hour buckets are in {}.",
+                    activity_buckets::utc_offset_label(input.utc_offset_minutes.unwrap_or(0))
+                ),
             ],
         })
     }
@@ -622,6 +645,9 @@ struct FriendProfileParams {
     #[serde(alias = "userId", alias = "user_id")]
     user: String,
     time_window: Option<TimeWindowParams>,
+    /// The user's UTC offset in minutes (e.g. 540 for UTC+9, -300 for UTC-5).
+    /// Pass it so the activity pattern's hour buckets come back in local time.
+    utc_offset_minutes: Option<i64>,
 }
 #[derive(Clone, Debug, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -634,6 +660,15 @@ struct FriendChangesParams {
     kind: FriendChangeKindParam,
     limit: Option<i64>,
 }
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FindUserOutput {
+    #[serde(flatten)]
+    inner: social_aggregates::ResolveUserOutput,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    summary: Option<String>,
+}
+
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct FriendNoteOutput {
@@ -681,11 +716,14 @@ struct FriendProfileOutput {
     user_id: String,
     current: Option<FriendProfileCurrent>,
     relationship: FriendRelationshipProfile,
+    #[serde(skip_serializing_if = "Option::is_none")]
     note: Option<FriendNoteRow>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     moderation: Option<FriendModerationStatus>,
     copresence: Option<social_aggregates::CopresenceSummaryRow>,
     activity_pattern: Option<social_aggregates::FriendActivityPatternRow>,
     recent_changes: Vec<FriendProfileChangeSummary>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     favorite_groups: Vec<String>,
     caveats: Vec<String>,
 }
@@ -695,12 +733,19 @@ struct FriendProfileOutput {
 struct FriendProfileCurrent {
     user_id: String,
     display_name: String,
+    #[serde(skip_serializing_if = "CompactString::is_empty")]
     state: CompactString,
+    #[serde(skip_serializing_if = "String::is_empty")]
     location: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
     world_id: String,
+    #[serde(skip_serializing_if = "CompactString::is_empty")]
     status: CompactString,
+    #[serde(skip_serializing_if = "CompactString::is_empty")]
     status_description: CompactString,
+    #[serde(skip_serializing_if = "String::is_empty")]
     bio: String,
+    #[serde(skip_serializing_if = "CompactString::is_empty")]
     platform: CompactString,
 }
 
@@ -713,7 +758,9 @@ struct FriendRelationshipProfile {
     friend_number: Option<i64>,
     friended_at: Option<String>,
     recent_events: Vec<social_aggregates::FriendLogRow>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     display_name_changes: Vec<social_aggregates::FriendLogRow>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     trust_changes: Vec<social_aggregates::FriendLogRow>,
 }
 
@@ -745,6 +792,7 @@ struct FriendProfileChangeSummary {
     kind: String,
     change_count: i64,
     last_changed_at: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     recent_events: Vec<social_aggregates::FriendChangeEvent>,
 }
 fn normalize_optional_text(value: Option<String>) -> Option<String> {
