@@ -745,6 +745,24 @@ const generatedCommands = {
             sessionId
         });
     },
+    async appAssistantRenameSession(
+        sessionId: string,
+        title: string
+    ): Promise<null> {
+        return await TAURI_INVOKE('app__assistant_rename_session', {
+            sessionId,
+            title
+        });
+    },
+    async appAssistantSetSessionPinned(
+        sessionId: string,
+        pinned: boolean
+    ): Promise<null> {
+        return await TAURI_INVOKE('app__assistant_set_session_pinned', {
+            sessionId,
+            pinned
+        });
+    },
     async appAssistantSetPanelOpen(
         sessionId: string,
         open: boolean
@@ -3912,6 +3930,21 @@ export type AppUpdateStatusSnapshot = {
     release: AppUpdateReleaseSnapshot | null;
     shouldNotify: boolean;
 };
+export type AssistantChart = {
+    kind: AssistantChartKind;
+    axis: AssistantChartAxis;
+    subject?: string | null;
+    points: AssistantChartPoint[];
+};
+export type AssistantChartAxis = 'hourOfDay' | 'dayOfWeek' | 'label';
+export type AssistantChartKind =
+    | 'myPlaytime'
+    | 'bestTimes'
+    | 'friendPattern'
+    | 'topCompanions'
+    | 'topWorlds'
+    | 'sharedWorlds';
+export type AssistantChartPoint = { key: string; value: number };
 export type AssistantChoiceCandidate = {
     userId: string;
     displayName: string;
@@ -3973,6 +4006,7 @@ export type AssistantToolResultEvent = {
     ok: boolean;
     summary: string;
     entities: Entity[];
+    charts: AssistantChart[];
 };
 export type AssistantTurnEntitiesEvent = {
     ownerUserId: OwnerId;
@@ -7757,6 +7791,7 @@ export type Session = {
 export type SessionSummary = {
     id: string;
     title: string;
+    pinned: boolean;
     busy: boolean;
     updatedAt: number;
 };
@@ -7919,6 +7954,7 @@ export type ToolResultRecord = {
     ok: boolean;
     summary: string;
     entities: Entity[];
+    charts?: AssistantChart[];
 };
 export type TranslationOverrides = {
     enabled: boolean | null;

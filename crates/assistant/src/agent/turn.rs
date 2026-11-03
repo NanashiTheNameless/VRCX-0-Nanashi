@@ -11,6 +11,7 @@ use vrcx_0_mcp::{
     apply_user_choice, InProcessMcpTools, McpError, ToolCallOutcome, UserChoiceRequest,
 };
 
+use crate::charts::{tool_charts, AssistantChart};
 use crate::choices::{choice_candidates, PendingChoices};
 use crate::entities::{extract_entities, surfaced_entities, Entity};
 use crate::events::AssistantEmitter;
@@ -31,6 +32,9 @@ use super::tool_summary::{
 // rounds is forced to answer from what it has. It is not a steering device.
 const MAX_TOOL_ROUNDS: usize = 64;
 const TOOL_CALL_TIMEOUT: Duration = Duration::from_secs(30);
+const CHART_SHOWN_NOTE: &str =
+    "The app draws these rows as a chart under your reply; mention only the 2-3 key figures, not a table.";
+
 const FINAL_ANSWER_PROMPT: &str = "\
 Do not call any more tools. Write the final answer now, using only the tool results \
 above. If the data is incomplete, say so briefly and answer with the best supported \
@@ -118,14 +122,18 @@ user means all history (\"ever\", \"so far\"), and follow the selected tool's \
 all-history guard.
 - If a tool returns `needsDisambiguation`, ask the user to choose. Never invent a \
 usr_ id.
+- A user message may mention someone as [@Name](vrcx-0://user/open?id=usr_…) or a world \
+as [@Name](vrcx-0://world/open?id=wrld_…). That id is exactly the person or world meant: \
+pass it as the user or world argument directly instead of searching by name.
 
 Style:
 - Answer directly; do not narrate plans or tool calls.
+- The app is VRCX-0-Nanashi; never shorten its name to VRCX.
 - Reply in Markdown. Stay on VRChat social topics. Refer to people and worlds \
 by name; never show raw ids (usr_, wrld_, grp_, avtr_) in the reply. Be \
 concise and warm. Never use emoji.
-- Call the app VRCX-0-Nanashi.
-- Put comparative or ranked numbers in a Markdown table with a value column.
+- Put comparative or ranked numbers in a Markdown table with a value column, unless the \
+tool result has `chartShown`.
 - Never draw charts from text characters (▇ █ ▁ ─ etc.); use a table instead.";
 
 pub(crate) struct TurnContext {
@@ -275,8 +283,13 @@ pub(crate) async fn run_turn(ctx: TurnContext) {
                 }
             }
             collected.extend(resolved.entities.iter().cloned());
-            ctx.emitter
-                .tool_result(&call.id, resolved.ok, &resolved.summary, &resolved.entities);
+            ctx.emitter.tool_result(
+                &call.id,
+                resolved.ok,
+                &resolved.summary,
+                &resolved.entities,
+                &resolved.charts,
+            );
             record_tool_result(&ctx, call, &resolved);
             working.push(ChatMessage::tool(call.id.clone(), resolved.content));
         }
@@ -404,7 +417,10 @@ fn prepare_call<'a>(
     let rejected = |message: String| PreparedCall {
         call,
         arguments: None,
-        resolved: Some(resolve_tool_outcome(Err(McpError::Custom(message)))),
+        resolved: Some(resolve_tool_outcome(
+            &call.function.name,
+            Err(McpError::Custom(message)),
+        )),
     };
     if output_truncated {
         tracing::warn!(tool = %call.function.name, "assistant: skipped tool call from a truncated response");
@@ -446,10 +462,13 @@ fn prepare_call<'a>(
     );
     let signature = tool_call_signature(&call.function.name, arguments.as_ref());
     let resolved = if !tool_is_available(tool_defs, &call.function.name) {
-        Some(resolve_tool_outcome(Err(McpError::Custom(format!(
-            "tool `{}` is not available in this session",
-            call.function.name
-        )))))
+        Some(resolve_tool_outcome(
+            &call.function.name,
+            Err(McpError::Custom(format!(
+                "tool `{}` is not available in this session",
+                call.function.name
+            ))),
+        ))
     } else if dispatched_tools.insert(signature) {
         None
     } else {
@@ -499,14 +518,14 @@ async fn dispatch_call<'a>(
             .and_then(|result| UserChoiceRequest::from_structured(result.structured.as_ref()))
             .filter(|choice| asked.insert(choice.query.clone()));
         let (Some(choice), Some(arguments)) = (choice, arguments.as_mut()) else {
-            return (call.call, Some(resolve_tool_outcome(outcome)));
+            return (call.call, Some(resolve_tool_outcome(&name, outcome)));
         };
         match ask_user_choice(ctx, &call.call.id, &choice).await {
             UserChoice::Cancelled => return (call.call, None),
             UserChoice::Picked(user_id)
                 if apply_user_choice(arguments, &choice.query, &user_id) => {}
             UserChoice::Picked(_) | UserChoice::Skipped => {
-                return (call.call, Some(resolve_tool_outcome(outcome)));
+                return (call.call, Some(resolve_tool_outcome(&name, outcome)));
             }
         }
     }
@@ -576,6 +595,7 @@ fn record_tool_result(ctx: &TurnContext, call: &ToolCall, resolved: &ResolvedToo
             ok: resolved.ok,
             summary: resolved.summary.clone(),
             entities: resolved.entities.clone(),
+            charts: resolved.charts.clone(),
         },
         resolved.content.clone(),
     ) {
@@ -693,11 +713,15 @@ struct ResolvedTool {
     fallback_summary: Option<String>,
     supported_summary: Option<String>,
     entities: Vec<Entity>,
+    charts: Vec<AssistantChart>,
 }
 
-fn resolve_tool_outcome(outcome: Result<ToolCallOutcome, vrcx_0_mcp::McpError>) -> ResolvedTool {
+fn resolve_tool_outcome(
+    tool: &str,
+    outcome: Result<ToolCallOutcome, vrcx_0_mcp::McpError>,
+) -> ResolvedTool {
     match outcome {
-        Ok(result) => {
+        Ok(mut result) => {
             let entities = result
                 .structured
                 .as_ref()
@@ -708,6 +732,16 @@ fn resolve_tool_outcome(outcome: Result<ToolCallOutcome, vrcx_0_mcp::McpError>) 
                         .map(|value| extract_entities(&value))
                 })
                 .unwrap_or_default();
+            let charts = result
+                .structured
+                .as_ref()
+                .map(|value| tool_charts(tool, value))
+                .unwrap_or_default();
+            if let Some(Value::Object(fields)) = result.structured.as_mut() {
+                if !charts.is_empty() {
+                    fields.insert("chartShown".into(), Value::String(CHART_SHOWN_NOTE.into()));
+                }
+            }
             let content = tool_content(&result);
             let brief_summary = tool_fact_summary(&result, &content).or_else(|| {
                 result
@@ -733,6 +767,7 @@ fn resolve_tool_outcome(outcome: Result<ToolCallOutcome, vrcx_0_mcp::McpError>) 
                 fallback_summary,
                 supported_summary,
                 entities,
+                charts,
             }
         }
         Err(error) => {
@@ -745,6 +780,7 @@ fn resolve_tool_outcome(outcome: Result<ToolCallOutcome, vrcx_0_mcp::McpError>) 
                 fallback_summary: Some(summary),
                 supported_summary: None,
                 entities: Vec::new(),
+                charts: Vec::new(),
             }
         }
     }
@@ -789,6 +825,7 @@ fn duplicate_tool_call_result(tool_name: &str) -> ResolvedTool {
         fallback_summary: None,
         supported_summary: None,
         entities: Vec::new(),
+        charts: Vec::new(),
     }
 }
 

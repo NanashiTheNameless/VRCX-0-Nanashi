@@ -124,9 +124,27 @@
     "assistant": {
         "title": "Social AI",
         "new_chat": "New chat",
-        "recent": "Recent",
+        "session_group": {
+            "pinned": "Pinned",
+            "today": "Today",
+            "yesterday": "Yesterday",
+            "week": "Previous 7 days",
+            "older": "Older"
+        },
+        "session_menu": {
+            "more": "More",
+            "pin": "Pin",
+            "unpin": "Unpin",
+            "rename": "Rename"
+        },
+        "session_deleted": "Chat deleted",
+        "undo": "Undo",
         "sessions_empty": "No conversations yet",
-        "composer_placeholder": "Ask something",
+        "composer_placeholder": "Ask something, or type @ to mention a friend",
+        "mention": {
+            "add": "Mention a friend",
+            "list": "Friends"
+        },
         "disclaimer": "Answers are based on what VRCX-0 has recorded locally and may be incomplete or wrong.",
         "send": "Send",
         "stop": "Stop",
@@ -143,6 +161,7 @@
         "untitled": "New conversation",
         "close": "Close",
         "thinking": "Generating response",
+        "pending": "Thinking",
         "trace": {
             "working": "Looking through your data",
             "done": "Looked through your data"
@@ -189,6 +208,59 @@
             "more_settings": "More AI settings",
             "guided_badge": "Guided mode",
             "guided_hint": "Guided mode limits the tools for weaker local models. With a cloud API, switch to Auto or Open for fuller answers."
+        },
+        "tools": {
+            "favorite_local": "Update local favorites",
+            "favorite_vrchat": "Add a VRChat favorite",
+            "find_user": "Find a user",
+            "get_activity_streaks": "Check activity streaks",
+            "get_activity_timeline": "View activity timeline",
+            "get_best_time_to_play": "Find good times to play",
+            "get_companions_of": "See who they play with",
+            "get_copresence_summary": "Add up time together",
+            "get_fading_friends": "Find fading friends",
+            "get_favorites": "View favorites",
+            "get_friend_activity_pattern": "Look at a friend's routine",
+            "get_friend_changes": "Check friend changes",
+            "get_friend_circles": "View friend circles",
+            "get_friend_log": "View friend log",
+            "get_friend_note": "Read friend note",
+            "get_friend_profile": "View friend profile",
+            "get_invite_history": "View invite history",
+            "get_my_activity": "View my activity",
+            "get_online_friends": "Check online friends",
+            "get_social_graph": "View social graph",
+            "get_visit_timeline": "Replay a visit",
+            "get_world_profile": "View world profile",
+            "recall_encounter": "Recall people met",
+            "refresh_mutual_graph": "Refresh mutual friends",
+            "search_friend_feed": "Search friend feed",
+            "search_worlds_visited": "Search visited worlds",
+            "set_friend_note": "Edit friend note",
+            "summarize_social_period": "Summarize social activity"
+        },
+        "chart": {
+            "my_playtime": "My playtime",
+            "best_times": "When the most friends come online",
+            "friend_pattern": "When {name} comes online",
+            "top_companions": "Most time together",
+            "top_worlds": "Most-played worlds",
+            "show_more": "Show {count} more",
+            "shared_worlds": "Worlds most visited with {name}"
+        },
+        "brief": {
+            "prompt": "How are {mention} and I doing lately?",
+            "world": "Tell me about {mention}"
+        },
+        "follow_up": {
+            "title": "What else do you want to know?",
+            "companions": "Who does {mention} hang out with lately?",
+            "mutuals": "Which friends do {mention} and I share?",
+            "fading": "Are {mention} and I drifting apart?",
+            "last_visit": "Who was there the last time {mention} and I shared an instance?",
+            "world_visits": "Who was with me the last few times I went to {mention}?",
+            "world_people": "Who do I usually run into at {mention}?",
+            "world_popularity": "Is {mention} popular? How many people favorited it?"
         }
     },
     "user_hover_card": {

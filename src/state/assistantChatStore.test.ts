@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import type { AssistantChart } from '@/domain/assistant/types';
+
 import { useAssistantChatStore } from './assistantChatStore';
+
+const CHART: AssistantChart = {
+    kind: 'topCompanions',
+    axis: 'label',
+    points: [{ key: 'Alice', value: 120 }]
+};
 
 describe('assistantChatStore', () => {
     beforeEach(() => {
@@ -42,12 +50,14 @@ describe('assistantChatStore', () => {
                 {
                     id: 'session-completed',
                     title: 'Completed',
+                    pinned: false,
                     busy: false,
                     updatedAt: 1786406400
                 },
                 {
                     id: 'session-running',
                     title: 'Running',
+                    pinned: false,
                     busy: true,
                     updatedAt: 1786406400
                 }
@@ -94,12 +104,14 @@ describe('assistantChatStore', () => {
                 {
                     id: 'session-1',
                     title: 'First',
+                    pinned: false,
                     busy: false,
                     updatedAt: 1786406400
                 },
                 {
                     id: 'session-2',
                     title: 'Second',
+                    pinned: false,
                     busy: false,
                     updatedAt: 1786406400
                 }
@@ -185,7 +197,8 @@ describe('assistantChatStore', () => {
                                 id: 'usr_alice',
                                 displayName: 'Alice'
                             }
-                        ]
+                        ],
+                        charts: [CHART]
                     }
                 },
                 {
@@ -259,7 +272,8 @@ describe('assistantChatStore', () => {
                                 id: 'usr_alice',
                                 displayName: 'Alice'
                             }
-                        ]
+                        ],
+                        charts: [CHART]
                     }
                 ]
             },
@@ -282,7 +296,8 @@ describe('assistantChatStore', () => {
                         args: '{"timeWindow":"last week"}',
                         status: 'error',
                         summary: '',
-                        entities: []
+                        entities: [],
+                        charts: []
                     }
                 ]
             }
@@ -299,6 +314,7 @@ describe('assistantChatStore', () => {
                 {
                     id: 'session-1',
                     title: 'First',
+                    pinned: false,
                     busy: true,
                     updatedAt: 1786406400
                 }
@@ -322,5 +338,25 @@ describe('assistantChatStore', () => {
         expect(state.surfacedEntitiesBySession).toEqual({});
         expect(state.entityPanelOpenBySession).toEqual({});
         expect(state.busySessions).toEqual({});
+    });
+
+    it('opens a blank chat about a person until another session is opened', () => {
+        useAssistantChatStore.setState({ activeSessionId: 'session-1' });
+
+        useAssistantChatStore
+            .getState()
+            .startMentionDraft({ kind: 'user', id: 'usr_a', name: 'Alice' });
+        let state = useAssistantChatStore.getState();
+        expect(state.open).toBe(true);
+        expect(state.activeSessionId).toBeNull();
+        expect(state.mentionDraft).toEqual({
+            kind: 'user',
+            id: 'usr_a',
+            name: 'Alice'
+        });
+
+        state.setActiveSession('session-2');
+        state = useAssistantChatStore.getState();
+        expect(state.mentionDraft).toBeNull();
     });
 });

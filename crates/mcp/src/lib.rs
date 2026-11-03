@@ -27,10 +27,10 @@ pub use in_process::{spawn_in_process_tools, InProcessMcpTools, ToolCallOutcome,
 pub use ports::{
     McpActivityQueries, McpActivityQueryPort, McpConfig, McpConfigPort, McpFavoritesQueries,
     McpFavoritesQueryPort, McpFeedQueries, McpFeedQueryPort, McpFriendCurrent, McpFriendLocalData,
-    McpFriendLocalDataPort, McpFriendMemo, McpInterruptCheck, McpLocalModeration, McpMemoSave,
-    McpMutualGraph, McpMutualGraphMeta, McpMutualGraphPort, McpPlaySpan, McpReminder,
+    McpFriendLocalDataPort, McpFriendMemo, McpFuture, McpInterruptCheck, McpLocalModeration,
+    McpMemoSave, McpMutualGraph, McpMutualGraphMeta, McpMutualGraphPort, McpPlaySpan, McpReminder,
     McpReminderTrigger, McpReminders, McpRemindersPort, McpSocialHistoryQueries,
-    McpSocialHistoryQueryPort,
+    McpSocialHistoryQueryPort, McpWorldLookup, McpWorldLookupPort,
 };
 pub use runtime::{McpCaller, McpRuntime, McpRuntimeDeps};
 pub use types::{ClientConfigSnippets, McpInstallClient, McpServerState, McpServerStatus};

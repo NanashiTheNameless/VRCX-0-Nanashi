@@ -73,6 +73,7 @@ import {
     sendMessage,
     setEntityPanelOpen
 } from './assistantActions';
+import { useMentionPrompts } from './components/AssistantFollowUps';
 import { AssistantTranscript } from './components/AssistantTranscript';
 import { Composer } from './components/Composer';
 import { EntityPanel } from './components/EntityPanel';
@@ -138,6 +139,7 @@ export function AssistantDialog() {
     );
 
     const open = useAssistantChatStore((state) => state.open);
+    const mentionDraft = useAssistantChatStore((state) => state.mentionDraft);
     const setOpen = useAssistantChatStore((state) => state.setOpen);
     const activeSessionId = useAssistantChatStore(
         (state) => state.activeSessionId
@@ -331,13 +333,15 @@ export function AssistantDialog() {
     const notConfigured = !hasRuntime;
     const showSetupGate = notConfigured && endpointsLoaded;
     const examplePrompts = useMemo(
-        () => [
-            t('assistant.example_1'),
-            t('assistant.example_2'),
-            t('assistant.example_3')
-        ],
+        () =>
+            [
+                t('assistant.example_1'),
+                t('assistant.example_2'),
+                t('assistant.example_3')
+            ].map((text) => ({ label: text, text })),
         [t]
     );
+    const mentionPrompts = useMentionPrompts(mentionDraft, true);
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -411,7 +415,10 @@ export function AssistantDialog() {
                             <AssistantTranscript
                                 sessionId={activeSessionId}
                                 messages={messages}
+                                busy={busy}
+                                onSend={handleSend}
                                 thinkingLabel={t('assistant.thinking')}
+                                pendingLabel={t('assistant.pending')}
                                 scrollToLatestLabel={t(
                                     'assistant.scroll_to_latest'
                                 )}
@@ -477,8 +484,12 @@ export function AssistantDialog() {
                                 suggestions={
                                     messages?.length || notConfigured
                                         ? undefined
-                                        : examplePrompts
+                                        : mentionDraft
+                                          ? mentionPrompts
+                                          : examplePrompts
                                 }
+                                key={mentionDraft?.id}
+                                mentioned={mentionDraft}
                                 onSend={handleSend}
                                 onStop={() => cancelActiveTurn()}
                                 toolbar={

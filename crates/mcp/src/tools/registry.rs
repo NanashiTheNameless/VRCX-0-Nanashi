@@ -20,6 +20,7 @@ impl VrcxMcpServer {
             + Self::invites_tool_router()
             + Self::presence_tool_router()
             + Self::reminders_tool_router()
+            + Self::worlds_tool_router()
     }
 }
 
@@ -62,6 +63,7 @@ mod router_tests {
                 "get_online_friends",
                 "get_social_graph",
                 "get_visit_timeline",
+                "get_world_profile",
                 "list_reminders",
                 "recall_encounter",
                 "refresh_mutual_graph",

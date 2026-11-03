@@ -182,6 +182,7 @@ describe('useAssistantEvents auth scope', () => {
                 {
                     id: 'session-1',
                     title: 'Running',
+                    pinned: false,
                     busy: true,
                     updatedAt: 1786406400
                 }

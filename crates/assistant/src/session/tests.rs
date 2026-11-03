@@ -1,4 +1,5 @@
 use super::*;
+use crate::charts::{AssistantChartAxis, AssistantChartKind, AssistantChartPoint};
 use crate::test_support::TestAssistantSessionPersistence;
 
 const TEST_OWNER: &str = "usr_test";
@@ -82,6 +83,15 @@ fn reopened_session_restores_tool_rows_with_full_content_for_the_model() {
                         id: "usr_alice".into(),
                         display_name: "Alice".into(),
                     }],
+                    charts: vec![AssistantChart {
+                        kind: AssistantChartKind::TopCompanions,
+                        axis: AssistantChartAxis::Label,
+                        subject: None,
+                        points: vec![AssistantChartPoint {
+                            key: "Alice".into(),
+                            value: 120,
+                        }],
+                    }],
                 },
                 "{\"summary\":\"Alice tops the list.\",\"rows\":[{\"userId\":\"usr_alice\"}]}"
                     .into(),
@@ -109,6 +119,7 @@ fn reopened_session_restores_tool_rows_with_full_content_for_the_model() {
     assert_eq!(result.tool_call_id, "call_1");
     assert_eq!(result.summary, "Alice tops the list.");
     assert_eq!(result.entities[0].id, "usr_alice");
+    assert_eq!(result.charts[0].points[0].value, 120);
     assert_eq!(
         history[2].tool_content.as_deref(),
         Some("{\"summary\":\"Alice tops the list.\",\"rows\":[{\"userId\":\"usr_alice\"}]}")
@@ -460,4 +471,52 @@ fn is_current_turn_tracks_the_latest_turn() {
     assert!(!store.is_current_turn(&session.id, "turn_a"));
     assert!(store.is_current_turn(&session.id, "turn_b"));
     assert!(!store.is_current_turn("missing", "turn_b"));
+}
+
+#[test]
+fn title_shows_mentions_by_name_without_their_ids() {
+    assert_eq!(
+        derive_title("how long with [@Alice [VR]](vrcx-0://user/open?id=usr_a) and [@Bob](vrcx-0://user/open?id=usr_b)?"),
+        "how long with @Alice [VR] and @Bob?"
+    );
+    assert_eq!(
+        derive_title("when was I at [@Night Pier](vrcx-0://world/open?id=wrld_p)?"),
+        "when was I at @Night Pier?"
+    );
+    assert_eq!(
+        derive_title("see [docs](vrcx-0://user/open?id=) later"),
+        "see [docs](vrcx-0://user/open?id=) later"
+    );
+}
+
+#[test]
+fn rename_and_pin_survive_a_reopen_without_reordering() {
+    let persistence = test_persistence();
+    let owner = OwnerId::new(TEST_OWNER);
+    let session = {
+        let store = SessionStore::with_test_persistence(&persistence);
+        let session = create_test_session(&store);
+        store
+            .push_message(&session.id, Role::User, "who is online".into())
+            .unwrap();
+        let before = store.list(&owner)[0].updated_at;
+        store
+            .rename(&owner, &session.id, "  Weekend recap  ")
+            .unwrap();
+        store.set_pinned(&owner, &session.id, true).unwrap();
+        store.rename(&owner, &session.id, "   ").unwrap();
+        assert_eq!(store.list(&owner)[0].updated_at, before);
+        session
+    };
+
+    let reopened = SessionStore::with_test_persistence(&persistence);
+    let summary = &reopened.list(&owner)[0];
+    assert_eq!(summary.id, session.id);
+    assert_eq!(summary.title, "Weekend recap");
+    assert!(summary.pinned);
+
+    reopened
+        .push_message(&session.id, Role::User, "and today?".into())
+        .unwrap();
+    assert_eq!(reopened.list(&owner)[0].title, "Weekend recap");
 }
