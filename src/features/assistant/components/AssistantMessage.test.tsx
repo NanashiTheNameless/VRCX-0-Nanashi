@@ -41,7 +41,7 @@ describe('AssistantMessage', () => {
                 message={{
                     id: 'user_2',
                     role: 'user',
-                    text: 'When is [@Alice](vrcx-0://user/open?id=usr_a) online?',
+                    text: 'When is [@Alice](vrcx-0-nanashi://user/open?id=usr_a) online?',
                     streaming: false,
                     toolCalls: []
                 }}
@@ -49,7 +49,7 @@ describe('AssistantMessage', () => {
         );
 
         expect(html).toContain('@Alice</button>');
-        expect(html).not.toContain('vrcx-0://');
+        expect(html).not.toContain('vrcx-0-nanashi://');
     });
 
     it('renders a completed assistant response as Markdown', () => {

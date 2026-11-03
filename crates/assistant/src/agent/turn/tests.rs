@@ -38,7 +38,7 @@ fn system_prompt_keeps_core_boundaries_and_schema_field_names() {
         "`timeWindow`",
         "calendar year",
         "never shorten its name to VRCX",
-        "vrcx-0://user/open?id=",
+        "vrcx-0-nanashi://user/open?id=",
     ] {
         assert!(SYSTEM_PROMPT.contains(phrase), "missing phrase: {phrase}");
     }

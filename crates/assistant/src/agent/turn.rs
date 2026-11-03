@@ -122,8 +122,8 @@ user means all history (\"ever\", \"so far\"), and follow the selected tool's \
 all-history guard.
 - If a tool returns `needsDisambiguation`, ask the user to choose. Never invent a \
 usr_ id.
-- A user message may mention someone as [@Name](vrcx-0://user/open?id=usr_…) or a world \
-as [@Name](vrcx-0://world/open?id=wrld_…). That id is exactly the person or world meant: \
+- A user message may mention someone as [@Name](vrcx-0-nanashi://user/open?id=usr_…) or a world \
+as [@Name](vrcx-0-nanashi://world/open?id=wrld_…). That id is exactly the person or world meant: \
 pass it as the user or world argument directly instead of searching by name.
 
 Style:

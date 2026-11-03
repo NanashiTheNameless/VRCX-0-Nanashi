@@ -67,7 +67,7 @@ describe('AssistantFollowUps', () => {
 
         fireEvent.keyDown(window, { key: '2' });
         expect(onSend).toHaveBeenCalledWith(
-            'assistant.follow_up.mutuals [@Alice](vrcx-0://user/open?id=usr_a)'
+            'assistant.follow_up.mutuals [@Alice](vrcx-0-nanashi://user/open?id=usr_a)'
         );
     });
 
@@ -105,7 +105,7 @@ describe('AssistantFollowUps', () => {
         expect(result.current).toHaveLength(4);
         expect(result.current[0]).toEqual({
             label: 'assistant.brief.prompt Bob',
-            text: 'assistant.brief.prompt [@Bob](vrcx-0://user/open?id=usr_b)'
+            text: 'assistant.brief.prompt [@Bob](vrcx-0-nanashi://user/open?id=usr_b)'
         });
     });
 
@@ -145,7 +145,7 @@ describe('AssistantFollowUps', () => {
         expect(screen.getAllByRole('button')).toHaveLength(3);
         fireEvent.keyDown(window, { key: '3' });
         expect(onSend).toHaveBeenCalledWith(
-            'assistant.follow_up.world_popularity [@Night Pier](vrcx-0://world/open?id=wrld_p)'
+            'assistant.follow_up.world_popularity [@Night Pier](vrcx-0-nanashi://world/open?id=wrld_p)'
         );
     });
 });

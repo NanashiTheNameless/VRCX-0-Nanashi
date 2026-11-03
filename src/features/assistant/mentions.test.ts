@@ -15,14 +15,14 @@ describe('mentions', () => {
                 }
             })
         ).toBe(
-            '[@Al](vrcx-0://user/open?id=usr_1) and [@Alice B](vrcx-0://user/open?id=usr_2) vs @Carol at [@Night Pier](vrcx-0://world/open?id=wrld_1)'
+            '[@Al](vrcx-0-nanashi://user/open?id=usr_1) and [@Alice B](vrcx-0-nanashi://user/open?id=usr_2) vs @Carol at [@Night Pier](vrcx-0-nanashi://world/open?id=wrld_1)'
         );
     });
 
     it('splits mention tokens back out, keeping brackets inside names', () => {
         expect(
             splitMentions(
-                'hi [@Alice [VR]](vrcx-0://user/open?id=usr_1) at [@Pier](vrcx-0://world/open?id=wrld_1)!'
+                'hi [@Alice [VR]](vrcx-0-nanashi://user/open?id=usr_1) at [@Pier](vrcx-0-nanashi://world/open?id=wrld_1)!'
             )
         ).toEqual([
             { kind: 'text', text: 'hi ' },
@@ -37,8 +37,22 @@ describe('mentions', () => {
             },
             { kind: 'text', text: '!' }
         ]);
-        expect(splitMentions('[docs](vrcx-0://user/open?id=x)')).toEqual([
-            { kind: 'text', text: '[docs](vrcx-0://user/open?id=x)' }
+        expect(
+            splitMentions('[docs](vrcx-0-nanashi://user/open?id=x)')
+        ).toEqual([
+            { kind: 'text', text: '[docs](vrcx-0-nanashi://user/open?id=x)' }
+        ]);
+    });
+
+    it('still reads mentions saved with the older vrcx-0:// links', () => {
+        expect(
+            splitMentions('[@Alice](vrcx-0://user/open?id=usr_1) hi')
+        ).toEqual([
+            {
+                kind: 'mention',
+                target: { kind: 'user', id: 'usr_1', name: 'Alice' }
+            },
+            { kind: 'text', text: ' hi' }
         ]);
     });
 

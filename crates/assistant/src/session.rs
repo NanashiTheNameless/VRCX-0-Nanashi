@@ -970,7 +970,12 @@ fn derive_title(content: &str) -> String {
 }
 
 fn plain_mentions(text: &str) -> String {
-    const MARKERS: [&str; 2] = ["](vrcx-0://user/open?id=", "](vrcx-0://world/open?id="];
+    const MARKERS: [&str; 4] = [
+        "](vrcx-0-nanashi://user/open?id=",
+        "](vrcx-0-nanashi://world/open?id=",
+        "](vrcx-0://user/open?id=",
+        "](vrcx-0://world/open?id=",
+    ];
     let mut plain = String::with_capacity(text.len());
     let mut rest = text;
     while let Some((marker, marker_len)) = MARKERS

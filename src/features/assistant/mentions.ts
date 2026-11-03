@@ -2,7 +2,7 @@ import type { MentionTarget } from '@/domain/assistant/types';
 
 import { entityHref } from './entityLinks';
 
-const MENTION_MARKER = /\]\(vrcx-0:\/\/(user|world)\/open\?id=/g;
+const MENTION_MARKER = /\]\(vrcx-0(?:-nanashi)?:\/\/(user|world)\/open\?id=/g;
 const MENTION_QUERY_LIMIT = 32;
 
 export type MentionSegment =

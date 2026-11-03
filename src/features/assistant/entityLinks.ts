@@ -9,11 +9,12 @@ interface MarkdownNode {
     children?: MarkdownNode[];
 }
 
-const ENTITY_HREF = /^vrcx-0:\/\/(user|world)\/open\?id=([^&#\s]+)$/;
+const ENTITY_HREF =
+    /^vrcx-0(?:-nanashi)?:\/\/(user|world)\/open\?id=([^&#\s]+)$/;
 const ASCII_WORD = /[A-Za-z0-9_]/;
 
 export function entityHref(kind: EntityLinkKind, id: string): string {
-    return `vrcx-0://${kind}/open?id=${id}`;
+    return `vrcx-0-nanashi://${kind}/open?id=${id}`;
 }
 
 export function parseEntityHref(

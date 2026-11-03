@@ -52,7 +52,7 @@ describe('AssistantMarkdown', () => {
         const { container } = render(
             <AssistantMarkdown
                 text={
-                    'Most with **K0519** (not K05190), at 米白温馨小屋. Also `K0519` and [x](vrcx-0://user/open?id=usr_fake).'
+                    'Most with **K0519** (not K05190), at 米白温馨小屋. Also `K0519` and [x](vrcx-0-nanashi://user/open?id=usr_fake).'
                 }
                 entities={[
                     { kind: 'user', id: 'usr_k', displayName: 'K0519' },

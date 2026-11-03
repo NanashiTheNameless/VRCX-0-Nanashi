@@ -476,16 +476,20 @@ fn is_current_turn_tracks_the_latest_turn() {
 #[test]
 fn title_shows_mentions_by_name_without_their_ids() {
     assert_eq!(
-        derive_title("how long with [@Alice [VR]](vrcx-0://user/open?id=usr_a) and [@Bob](vrcx-0://user/open?id=usr_b)?"),
+        derive_title("how long with [@Alice [VR]](vrcx-0-nanashi://user/open?id=usr_a) and [@Bob](vrcx-0-nanashi://user/open?id=usr_b)?"),
         "how long with @Alice [VR] and @Bob?"
     );
     assert_eq!(
-        derive_title("when was I at [@Night Pier](vrcx-0://world/open?id=wrld_p)?"),
+        derive_title("when was I at [@Night Pier](vrcx-0-nanashi://world/open?id=wrld_p)?"),
         "when was I at @Night Pier?"
     );
     assert_eq!(
-        derive_title("see [docs](vrcx-0://user/open?id=) later"),
-        "see [docs](vrcx-0://user/open?id=) later"
+        derive_title("[docs](vrcx-0-nanashi://user/open?id=) x"),
+        "[docs](vrcx-0-nanashi://user/open?id=) x"
+    );
+    assert_eq!(
+        derive_title("with [@Alice](vrcx-0://user/open?id=usr_a)?"),
+        "with @Alice?"
     );
 }
 

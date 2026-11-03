@@ -157,7 +157,7 @@ describe('Composer', () => {
         fireEvent.keyDown(input, { key: 'Enter' });
 
         expect(onSend).toHaveBeenCalledWith(
-            'time with [@Alice Doe](vrcx-0://user/open?id=usr_a) this week'
+            'time with [@Alice Doe](vrcx-0-nanashi://user/open?id=usr_a) this week'
         );
     });
 
@@ -182,7 +182,7 @@ describe('Composer', () => {
         fireEvent.keyDown(input, { key: 'Enter' });
 
         expect(onSend).toHaveBeenCalledWith(
-            '[@Alice](vrcx-0://user/open?id=usr_a) how are we?'
+            '[@Alice](vrcx-0-nanashi://user/open?id=usr_a) how are we?'
         );
     });
 });
