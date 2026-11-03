@@ -267,7 +267,10 @@ describe('UserDialogActivitySummaryPanel', () => {
         );
         expect(useAssistantChatStore.getState()).toMatchObject({
             open: true,
-            mentionDraft: { kind: 'user', id: 'usr_test', name: 'Mika' }
+            assistantDraft: {
+                topic: 'profile',
+                target: { kind: 'user', id: 'usr_test', name: 'Mika' }
+            }
         });
     });
 });

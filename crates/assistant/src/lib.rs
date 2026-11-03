@@ -10,6 +10,7 @@ mod playbook;
 mod ports;
 mod reminder_draft;
 mod runtime;
+mod screenshots;
 mod session;
 #[cfg(test)]
 mod test_support;
@@ -36,5 +37,6 @@ pub use ports::{
 };
 pub use reminder_draft::ReminderDraft;
 pub use runtime::{AssistantController, AssistantControllerDeps, SendResult};
+pub use screenshots::AssistantScreenshots;
 pub use session::{ActiveTurn, Message, Role, Session, SessionSummary, TurnStatus};
 pub use vrcx_0_contracts::llm::{LlmEndpointDetectModelsResult, LlmModelReasoning};

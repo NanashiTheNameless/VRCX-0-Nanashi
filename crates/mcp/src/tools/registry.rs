@@ -20,6 +20,7 @@ impl VrcxMcpServer {
             + Self::invites_tool_router()
             + Self::presence_tool_router()
             + Self::reminders_tool_router()
+            + Self::screenshots_tool_router()
             + Self::worlds_tool_router()
     }
 }
@@ -68,8 +69,10 @@ mod router_tests {
                 "recall_encounter",
                 "refresh_mutual_graph",
                 "search_friend_feed",
+                "search_screenshots",
                 "search_worlds_visited",
                 "set_friend_note",
+                "summarize_screenshots",
                 "summarize_social_period",
             ]
         );

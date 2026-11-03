@@ -8,4 +8,5 @@ mod invites;
 mod presence;
 mod registry;
 mod reminders;
+mod screenshots;
 mod worlds;

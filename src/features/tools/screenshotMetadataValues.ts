@@ -5,43 +5,142 @@ import type {
     ScreenshotFolderInfo,
     ScreenshotFolderTree,
     ScreenshotLibraryImage,
+    ScreenshotFilter,
     ScreenshotMetadata,
-    ScreenshotSearchResult,
+    ScreenshotPeopleMatch,
     WorldDetail
 } from '@/platform/tauri/bindings';
 import { SCREENSHOT_GALLERY_CONFIG_KEYS } from '@/repositories/configKeys';
-import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
-import { isRecord } from '@/shared/utils/record';
 import {
-    parseVrchatScreenshotDateFromFileName,
-    resolveScreenshotCapturedTime
-} from '@/shared/utils/screenshot';
+    displayDateBoundary,
+    displayDayKey,
+    parseAbsoluteDateMs
+} from '@/shared/utils/displayTimeZone';
+import { isRecord } from '@/shared/utils/record';
+import { parseVrchatScreenshotDateFromFileName } from '@/shared/utils/screenshot';
 
-export const SCREENSHOT_METADATA_SEARCH_TYPES = [
-    {
-        value: 'Player Name',
-        index: 0,
-        labelKey: 'dialog.screenshot_metadata.search_types.player_name'
-    },
-    {
-        value: 'Player ID',
-        index: 1,
-        labelKey: 'dialog.screenshot_metadata.search_types.player_id'
-    },
-    {
-        value: 'World Name',
-        index: 2,
-        labelKey: 'dialog.screenshot_metadata.search_types.world_name'
-    },
-    {
-        value: 'World ID',
-        index: 3,
-        labelKey: 'dialog.screenshot_metadata.search_types.world_id'
+export type ScreenshotSearchScope = {
+    people: string[];
+    worlds: string[];
+    peopleMatch: ScreenshotPeopleMatch;
+    dateFrom: string;
+    dateTo: string;
+    text: string;
+};
+
+export const EMPTY_SCREENSHOT_SEARCH: ScreenshotSearchScope = {
+    people: [],
+    worlds: [],
+    peopleMatch: 'all',
+    dateFrom: '',
+    dateTo: '',
+    text: ''
+};
+
+export function hasScreenshotSearch(scope: ScreenshotSearchScope): boolean {
+    return Boolean(
+        scope.people.length ||
+        scope.worlds.length ||
+        scope.dateFrom ||
+        scope.dateTo ||
+        scope.text.trim()
+    );
+}
+
+export function screenshotFilterFromScope(
+    scope: ScreenshotSearchScope
+): ScreenshotFilter {
+    const end = scope.dateTo ? displayDateBoundary(scope.dateTo, 'end') : null;
+    return {
+        people: scope.people,
+        peopleMatch: scope.peopleMatch,
+        worldIds: scope.worlds,
+        from: scope.dateFrom
+            ? displayDateBoundary(scope.dateFrom, 'start')
+            : null,
+        to: end === null ? null : end + 1,
+        text: scope.text.trim()
+    };
+}
+
+export function screenshotScopeFromFilter(
+    filter: Partial<ScreenshotFilter>
+): ScreenshotSearchScope {
+    return {
+        people: filter.people ?? [],
+        worlds: filter.worldIds ?? [],
+        peopleMatch: filter.peopleMatch === 'any' ? 'any' : 'all',
+        dateFrom: filter.from
+            ? displayDayKey(new Date(filter.from * 1000))
+            : '',
+        dateTo: filter.to
+            ? displayDayKey(new Date((filter.to - 1) * 1000))
+            : '',
+        text: filter.text ?? ''
+    };
+}
+
+function stringList(value: unknown): string[] {
+    return Array.isArray(value)
+        ? value.filter((item): item is string => typeof item === 'string')
+        : [];
+}
+
+function finiteNumber(value: unknown): number | null {
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+export function parseScreenshotFilterParam(
+    value: string
+): Partial<ScreenshotFilter> | null {
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(value);
+    } catch {
+        return null;
     }
-] as const;
+    if (!isRecord(parsed)) {
+        return null;
+    }
+    return {
+        people: stringList(parsed.people),
+        peopleMatch: parsed.peopleMatch === 'any' ? 'any' : 'all',
+        worldIds: stringList(parsed.worldIds),
+        from: finiteNumber(parsed.from),
+        to: finiteNumber(parsed.to),
+        text: typeof parsed.text === 'string' ? parsed.text : ''
+    };
+}
 
-export type ScreenshotMetadataSearchType =
-    (typeof SCREENSHOT_METADATA_SEARCH_TYPES)[number];
+export function libraryImageSearchRow(
+    image: ScreenshotLibraryImage,
+    scope: ScreenshotSearchScope,
+    locale?: string
+): ScreenshotSearchRow {
+    const players = image.metadata?.players ?? [];
+    const text = scope.text.trim().toLowerCase();
+    const matched = players.filter(
+        (player) =>
+            scope.people.includes(player.id ?? '') ||
+            (text && (player.displayName ?? '').toLowerCase().includes(text))
+    );
+    const dateTime =
+        image.capturedAt > 0 ? new Date(image.capturedAt * 1000) : null;
+    return {
+        filePath: image.path,
+        dateTime,
+        dateLabel: formatScreenshotDateTime(dateTime, locale),
+        world: image.worldName || '-',
+        author: image.metadata?.author.displayName || '-',
+        playerCount: players.length,
+        resolution:
+            image.width && image.height
+                ? `${image.width}x${image.height}`
+                : '-',
+        match:
+            matched.map((player) => player.displayName ?? '').join(', ') || '-'
+    };
+}
 
 export type ScreenshotSearchSort = {
     asc: boolean;
@@ -367,110 +466,4 @@ export function normalizeScreenshotMetadata(
         note: stringValue(source.note),
         application: stringValue(source.application)
     };
-}
-
-export function normalizeScreenshotSearchResult(
-    result: Omit<ScreenshotSearchResult, 'metadata'> & {
-        metadata: ScreenshotMetadata | null;
-    }
-) {
-    const width = result.width ?? 0;
-    const height = result.height ?? 0;
-    return normalizeScreenshotMetadata(result.metadata ?? {}, {
-        filePath: result.filePath,
-        fileName: result.fileName,
-        fileSizeBytes: result.fileSizeBytes,
-        creationDate: result.creationDate || '',
-        resolution: width > 0 && height > 0 ? `${width}x${height}` : ''
-    });
-}
-
-function getFolderPathFromPath(path: unknown) {
-    const value = String(path || '');
-    const separatorIndex = Math.max(
-        value.lastIndexOf('/'),
-        value.lastIndexOf('\\')
-    );
-    return separatorIndex > 0 ? value.slice(0, separatorIndex) : '';
-}
-
-export function searchResultToLibraryImage(
-    result: Omit<ScreenshotSearchResult, 'metadata'> & {
-        metadata: ScreenshotMetadata | null;
-    }
-): ScreenshotLibraryImage {
-    const creationTime = result.creationDate
-        ? parseAbsoluteDateMs(result.creationDate)
-        : Number.NaN;
-    const createdAt = Number.isNaN(creationTime)
-        ? null
-        : Math.floor(creationTime / 1000);
-    const fileName = result.fileName || getFileNameFromPath(result.filePath);
-
-    return {
-        path: result.filePath,
-        folderPath: getFolderPathFromPath(result.filePath),
-        fileName,
-        sizeBytes: result.fileSizeBytes,
-        modifiedAt: createdAt ?? 0,
-        createdAt,
-        width: result.width,
-        height: result.height,
-        worldId: result.metadata?.world?.id || null,
-        worldName: result.metadata?.world?.name || null,
-        capturedAt: Math.floor(
-            resolveScreenshotCapturedTime({
-                capturedAt: result.metadata?.timestamp,
-                fileName,
-                modifiedAt: createdAt
-            }) / 1000
-        ),
-        metadata: result.metadata,
-        error: result.metadata?.error || null
-    };
-}
-
-export function buildScreenshotSearchRow(
-    normalized: NormalizedScreenshotMetadata,
-    selectedSearchType: ScreenshotMetadataSearchType,
-    query: string,
-    locale?: string
-): ScreenshotSearchRow {
-    let match = '';
-    if (selectedSearchType.index === 0) {
-        const normalizedQuery = query.toLowerCase();
-        const hits = normalized.players
-            .filter((player) =>
-                (player.displayName ?? '')
-                    .toLowerCase()
-                    .includes(normalizedQuery)
-            )
-            .map((player) => player.displayName || '');
-        match = hits.join(', ');
-    } else if (selectedSearchType.index === 1) {
-        match =
-            normalized.players.find((player) => player.id === query)
-                ?.displayName || '';
-    }
-
-    return {
-        filePath: normalized.filePath,
-        dateTime: normalized.dateTime,
-        dateLabel: formatScreenshotDateTime(normalized.dateTime, locale),
-        world: normalized.world?.name || '-',
-        author: normalized.author?.displayName || '-',
-        playerCount: normalized.players.length,
-        resolution: normalized.resolution || '-',
-        match: match || '-'
-    };
-}
-
-export function sortScreenshotRowsByNewest(
-    rows: ScreenshotSearchRow[]
-): ScreenshotSearchRow[] {
-    return [...rows].sort((left, right) => {
-        const leftTime = left.dateTime?.getTime() ?? 0;
-        const rightTime = right.dateTime?.getTime() ?? 0;
-        return rightTime - leftTime;
-    });
 }

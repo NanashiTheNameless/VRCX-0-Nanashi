@@ -496,6 +496,7 @@ mod tests {
                 summary: summary.into(),
                 entities: Vec::new(),
                 charts: Vec::new(),
+                screenshots: None,
             }),
             tool_content: Some(content.into()),
         }
