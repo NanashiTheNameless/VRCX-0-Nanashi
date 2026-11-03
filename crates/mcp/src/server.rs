@@ -15,7 +15,7 @@ use crate::disambiguation::{
 };
 use crate::runtime::McpRuntime;
 
-const DATA_CAVEATS_URI: &str = "vrcx-0://data-caveats";
+const DATA_CAVEATS_URI: &str = "vrcx-0-nanashi://data-caveats";
 
 const SERVER_INSTRUCTIONS: &str = "\
 VRCX-0-Nanashi (a fork of VRCX-0 - always say \"VRCX-0-Nanashi\", never \"VRCX\" or \"VRCX-0\", in user-facing replies) exposes the signed-in user's VRChat social facts from local, observer-centered history and the live session. \
