@@ -9,6 +9,7 @@ mod autostart;
 mod avatar;
 mod background_image;
 mod background_remote;
+mod chatbox;
 mod context;
 mod current_user_mutation;
 pub mod data_dir;

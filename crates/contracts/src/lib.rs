@@ -80,5 +80,6 @@ pub use vrcx_0_runtime_event::{
     RuntimeEventPayload,
 };
 pub use web::{
-    RealtimeAuthTokenFetch, RealtimeConnectionOptions, WebExecuteRequest, WebUploadMode,
+    RealtimeAuthTokenFetch, RealtimeConnectionOptions, WebExecuteRequest, WebMultipartPart,
+    WebUploadMode,
 };

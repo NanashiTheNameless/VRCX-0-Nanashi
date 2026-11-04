@@ -25,13 +25,13 @@ pub use disambiguation::{apply_user_choice, UserChoiceRequest};
 pub use error::McpError;
 pub use in_process::{spawn_in_process_tools, InProcessMcpTools, ToolCallOutcome, ToolDescriptor};
 pub use ports::{
-    McpActivityQueries, McpActivityQueryPort, McpConfig, McpConfigPort, McpFavoritesQueries,
-    McpFavoritesQueryPort, McpFeedQueries, McpFeedQueryPort, McpFriendCurrent, McpFriendLocalData,
-    McpFriendLocalDataPort, McpFriendMemo, McpFuture, McpInterruptCheck, McpLocalModeration,
-    McpMemoSave, McpMutualGraph, McpMutualGraphMeta, McpMutualGraphPort, McpPlaySpan, McpReminder,
-    McpReminderTrigger, McpReminders, McpRemindersPort, McpScreenshotQueries,
-    McpScreenshotQueryPort, McpSocialHistoryQueries, McpSocialHistoryQueryPort, McpWorldLookup,
-    McpWorldLookupPort,
+    McpActivityQueries, McpActivityQueryPort, McpChatbox, McpChatboxPort, McpConfig, McpConfigPort,
+    McpFavoritesQueries, McpFavoritesQueryPort, McpFeedQueries, McpFeedQueryPort, McpFriendCurrent,
+    McpFriendLocalData, McpFriendLocalDataPort, McpFriendMemo, McpFuture, McpInterruptCheck,
+    McpLocalModeration, McpMemoSave, McpMutualGraph, McpMutualGraphMeta, McpMutualGraphPort,
+    McpPlaySpan, McpReminder, McpReminderTrigger, McpReminders, McpRemindersPort,
+    McpScreenshotQueries, McpScreenshotQueryPort, McpSocialHistoryQueries,
+    McpSocialHistoryQueryPort, McpWorldLookup, McpWorldLookupPort,
 };
 pub use runtime::{McpCaller, McpRuntime, McpRuntimeDeps};
 pub use types::{ClientConfigSnippets, McpInstallClient, McpServerState, McpServerStatus};

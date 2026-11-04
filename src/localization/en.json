@@ -216,6 +216,7 @@
             "get_activity_streaks": "Check activity streaks",
             "get_activity_timeline": "View activity timeline",
             "get_best_time_to_play": "Find good times to play",
+            "get_chatbox": "Check the Chatbox",
             "get_companions_of": "See who they play with",
             "get_copresence_summary": "Add up time together",
             "get_fading_friends": "Find fading friends",
@@ -237,9 +238,12 @@
             "search_friend_feed": "Search friend feed",
             "search_screenshots": "Search screenshots",
             "search_worlds_visited": "Search visited worlds",
+            "send_chatbox_message": "Send to the Chatbox",
+            "set_chatbox_afk": "Switch Chatbox AFK",
             "set_friend_note": "Edit friend note",
             "summarize_screenshots": "Rank screenshots",
-            "summarize_social_period": "Summarize social activity"
+            "summarize_social_period": "Summarize social activity",
+            "update_chatbox": "Change Chatbox settings"
         },
         "chart": {
             "my_playtime": "My playtime",
@@ -1102,7 +1106,8 @@
         "clear_selection": "Clear selection",
         "toggle_theme_safe_mode": "Temporarily disable community themes",
         "theme_safe_mode_on": "Community themes disabled for this session",
-        "theme_safe_mode_off": "Community themes restored"
+        "theme_safe_mode_off": "Community themes restored",
+        "toggle_favorite": "Add / remove favorite"
     },
     "privacy_lock": {
         "locked_title": "Locked",
@@ -2568,8 +2573,7 @@
             "label": {
                 "inventory_bundle_consumed": "Bundle opened",
                 "fps": "fps",
-                "frames": "frames",
-                "prev": "Prev"
+                "frames": "frames"
             },
             "action": {
                 "preview": "Preview",
@@ -2650,6 +2654,129 @@
                 "unfavorited_toast": "Unfavorited {count} print(s).",
                 "favorite_skipped_toast": "{count} print(s) were not favorited. The limit is {max}."
             },
+            "screenshot_share": {
+                "send": "Send to Discord",
+                "more": "More send options",
+                "quick_tooltip": "One-click send to: {targets}",
+                "choose_target": "Send to channel",
+                "manage": "Manage webhooks...",
+                "progress": "Sending to {target} ({done}/{total})",
+                "sent": "Sent {count} screenshot(s) to {target}",
+                "undo": "Undo",
+                "undone": "Message deleted from Discord",
+                "undo_failed": "Couldn't delete the message: {reason}",
+                "failed": "Couldn't send to {target}: {reason}",
+                "print": "Add a frame when sending",
+                "print_hint": "Adds a white frame with the photo details.",
+                "spoiler": "Mark as spoiler",
+                "metadata": "Include screenshot metadata",
+                "metadata_hint": "Keeps the world and player info VRCX wrote into the file.",
+                "embed": {
+                    "player_count": "Players",
+                    "people": "With",
+                    "stay": "Stayed",
+                    "stay_ongoing": "{duration} so far",
+                    "stay_total": "{duration}",
+                    "more_people": "and {count} more"
+                },
+                "error": {
+                    "http": "Discord returned HTTP {status}",
+                    "invalid": "This webhook URL is wrong or the webhook was deleted",
+                    "too_large": "The image is over this server's upload limit. Try High quality or Standard.",
+                    "rate_limited": "Discord is rate limiting. Try again in a moment.",
+                    "network": "Couldn't reach Discord",
+                    "file": "Couldn't read the screenshot"
+                },
+                "fields": {
+                    "title": "Include",
+                    "world": "World",
+                    "time": "Time taken",
+                    "player_count": "Player count",
+                    "people": "People with you",
+                    "stay": "Time spent"
+                },
+                "compression": {
+                    "title": "Image quality",
+                    "high": "High quality",
+                    "standard": "Standard",
+                    "original": "Original",
+                    "high_hint": "Sends the original if it fits, otherwise compresses to under 10 MB.",
+                    "standard_hint": "Compresses to under 5 MB so it loads faster.",
+                    "original_hint": "No compression. Fails if the file is over the server's upload limit."
+                },
+                "targets": {
+                    "title": "Discord webhooks",
+                    "description": "Screenshots are sent to these channels. Webhook URLs are stored only on this PC.",
+                    "tab_targets": "Channels",
+                    "tab_history": "History",
+                    "quick": "One-click send",
+                    "quick_hint": "Send to Discord posts straight to every starred channel.",
+                    "invalid": "Invalid",
+                    "edit": "Edit",
+                    "add": "Add webhook",
+                    "add_title": "Add webhook",
+                    "edit_title": "Edit webhook",
+                    "empty": "No webhooks yet. Create one in the Discord channel settings under Integrations > Webhooks and copy its URL.",
+                    "name": "Name",
+                    "name_placeholder": "e.g. My photo album",
+                    "url": "Webhook URL",
+                    "url_keep": "Leave empty to keep the current URL",
+                    "url_hint": "Copy it from Channel settings > Integrations > Webhooks in Discord. It is checked once when you save."
+                },
+                "history": {
+                    "empty": "Nothing sent yet",
+                    "summary": "{date} · {count} image(s)",
+                    "open": "Open in Discord",
+                    "retract": "Delete from Discord"
+                },
+                "dialog": {
+                    "title": "Send {count} screenshot(s)",
+                    "target": "Send to",
+                    "remember": "Save as the default for this channel",
+                    "send": "Send"
+                },
+                "preview": {
+                    "title": "Preview ({count} message(s))",
+                    "images": "{count} image(s)"
+                }
+            },
+            "screenshot_print": {
+                "menu": "Add frame",
+                "copy": "Copy",
+                "copied": "Framed screenshot copied",
+                "save": "Save to folder...",
+                "saved": "Saved {count} framed screenshot(s)",
+                "failed": "Couldn't make the framed screenshot: {reason}",
+                "dialog_title": "Add a frame to the screenshot",
+                "dialog_title_many": "Add a frame to {count} screenshots",
+                "style": "Style",
+                "style_modern": "Modern",
+                "style_classic": "Classic",
+                "note": "Note",
+                "note_placeholder": "A line for this moment",
+                "people": "People with you",
+                "people_count": "Show how many",
+                "people_names": "Show names",
+                "people_off": "Don't show",
+                "people_selected": "{count} of {total} selected",
+                "people_all": "All",
+                "people_none": "None",
+                "people_search": "Search names",
+                "people_hint": "Up to 3 names fit on the frame; the rest show as a count.",
+                "player_count": "Players in the instance",
+                "stay": "Time spent",
+                "image": {
+                    "captured_by": "Captured by",
+                    "by_author": "by {author}",
+                    "name_separator": ", ",
+                    "with_names": "with {names}",
+                    "with_names_more": "with {names} +{count}",
+                    "with_count_one": "with {count} other",
+                    "with_count_other": "with {count} others",
+                    "in_room": "{count} in room",
+                    "stayed": "stayed {duration}"
+                }
+            },
             "prints_filter": {
                 "all": "All",
                 "favorites": "Favorites",
@@ -2701,7 +2828,137 @@
             },
             "filter_placeholder": "Filter tools",
             "filter_empty": "No tools match",
-            "sections": "Sections"
+            "sections": "Sections",
+            "chatbox": {
+                "title": "Chatbox",
+                "description": "Show the time, what you are playing and your own text in the in-game chatbox, or type and translate messages.",
+                "save_failed": "Couldn't save Chatbox settings.",
+                "status": {
+                    "off": "Off",
+                    "manual": "Showing your message",
+                    "afk": "AFK",
+                    "game_not_running": "Paused · VRChat isn't running",
+                    "isolated": "Paused · Game isolation is on",
+                    "showing": "Showing status"
+                },
+                "composer": {
+                    "title": "Type and send",
+                    "placeholder": "Type a message",
+                    "translation": "Translation",
+                    "send": "Send",
+                    "cancel": "Cancel",
+                    "translating": "Translating...",
+                    "translated": "Translation",
+                    "shorten": "Shorten with AI",
+                    "too_long": "Over the {max}-character limit",
+                    "hint_direct": "Enter sends · Shift+Enter adds a line",
+                    "hint_translate": "Enter translates · check it, then send",
+                    "translation_failed": "Couldn't translate this message.",
+                    "send_failed": "Couldn't send the message.",
+                    "game_not_running": "Start VRChat to send messages.",
+                    "isolated": "Turn off game isolation to send messages.",
+                    "translation_settings": "Translation settings",
+                    "set_up_translation": "Set up translation",
+                    "shorten_needs_llm": "To shorten with AI, use an LLM in translation settings.",
+                    "send_phrase": "Send",
+                    "remove_phrase": "Remove",
+                    "save_phrase": "Save as quick phrase",
+                    "translate_to": "Translate to"
+                },
+                "pages": {
+                    "title": "Status",
+                    "hint": "Lines whose values are unavailable right now are hidden. Only pages that are on take part; with one page on, it stays put.",
+                    "page": "Page {index}",
+                    "seconds": "Seconds",
+                    "add_page": "Add page",
+                    "remove_page": "Remove page",
+                    "empty_page": "Add a line to show something on this page.",
+                    "enabled": "Show status",
+                    "add_line": "Add line",
+                    "blank_line": "Blank line",
+                    "remove_line": "Remove line",
+                    "page_enabled": "Use this page",
+                    "page_off": "Off"
+                },
+                "preview": {
+                    "title": "In-game preview",
+                    "page": "Page {current} of {total}",
+                    "characters": "{count} / {max}",
+                    "next_page": "Next page in {seconds}s",
+                    "empty": "Nothing to show right now."
+                },
+                "afk": {
+                    "title": "AFK",
+                    "go_afk": "Go AFK",
+                    "back": "I'm back",
+                    "auto_headset": "Switch to AFK when you take off your headset",
+                    "auto_headset_hint": "Needs Wrist Overlay or HMD Notifications turned on.",
+                    "text": "AFK text",
+                    "text_placeholder": "AFK",
+                    "show_duration": "Show how long you have been away"
+                },
+                "settings": {
+                    "title": "Settings",
+                    "host": "Address",
+                    "port": "Port",
+                    "typing_indicator": "Show the typing indicator (...) while you type",
+                    "notify_sound": "Play the notification sound when you send"
+                },
+                "in_game": {
+                    "afk": "AFK"
+                },
+                "editor": {
+                    "insert_variable": "Insert value",
+                    "insert_symbol": "Symbols",
+                    "presets": "Styles",
+                    "template_placeholder": "Type text and insert values"
+                },
+                "variables": {
+                    "time": "Time",
+                    "track": "Track (title - artist)",
+                    "title": "Title",
+                    "artist": "Artist",
+                    "album": "Album",
+                    "progress": "Progress bar",
+                    "position": "Position",
+                    "duration": "Length",
+                    "cpu": "CPU usage",
+                    "memory": "RAM",
+                    "gpu": "GPU usage",
+                    "vram": "VRAM",
+                    "gputemp": "GPU temperature",
+                    "session": "Session time"
+                },
+                "formats": {
+                    "hour12": "12-hour",
+                    "show_seconds": "Seconds",
+                    "cpu_decimals": "CPU decimals",
+                    "memory": "RAM shows",
+                    "memory_percent": "Percent",
+                    "memory_used": "Used",
+                    "memory_usedOfTotal": "Used / total",
+                    "memory_total": "Total",
+                    "memory_decimals": "RAM decimals",
+                    "memory_unit": "Unit",
+                    "media_max_chars": "Max characters per song field",
+                    "media_max_chars_unlimited": "No limit",
+                    "gpu_decimals": "GPU decimals",
+                    "vram": "VRAM shows",
+                    "vram_decimals": "VRAM decimals",
+                    "temperature_unit": "Temperature unit",
+                    "progress": "Bar"
+                },
+                "presets": {
+                    "now_playing": "Now playing: {track}",
+                    "game_session": "Playing for {duration}"
+                },
+                "preset_groups": {
+                    "time": "Time",
+                    "music": "Music",
+                    "system": "System",
+                    "session": "Session"
+                }
+            }
         },
         "profile": {
             "game_info": {
@@ -6344,7 +6601,17 @@
             },
             "no_message": "No message",
             "slot_value": "Slot {value}",
-            "attach_image": "Attach image"
+            "attach_image": "Attach image",
+            "translate": {
+                "to": "Translate to",
+                "translate": "Translate",
+                "result": "Translation",
+                "use": "Use translation",
+                "shorten": "Shorten with AI",
+                "too_long": "Longer than the {max}-character limit.",
+                "shorten_needs_llm": "Switch translation to an LLM in Translation settings to shorten with AI.",
+                "failed": "Couldn't translate this message."
+            }
         },
         "invite_request_message": {
             "header": "Request with Message"
@@ -6602,7 +6869,20 @@
             "people_match_all": "Together",
             "people_match_any": "Any of them",
             "without_people": "{count} without a player list",
-            "without_people_hint": "These screenshots were taken while VRCX-0-Nanashi wasn't running, so they don't record who was there and never match a people filter."
+            "without_people_hint": "These screenshots were taken while VRCX-0-Nanashi wasn't running, so they don't record who was there and never match a people filter.",
+            "fullscreen": "View fullscreen",
+            "filmstrip": "Filmstrip",
+            "timeline": "Timeline",
+            "timeline_description": "All screenshots by capture date",
+            "timeline_scrubber": "Jump to date",
+            "worlds": "Worlds",
+            "worlds_description": "Screenshots grouped by world",
+            "people": "People",
+            "people_description": "Screenshots grouped by who was there",
+            "world_album_count": "{count} worlds",
+            "people_album_count": "{count} people",
+            "empty_albums": "Nothing to group yet",
+            "empty_albums_description": "Screenshots taken while VRCX-0-Nanashi is running record the world and who was there."
         },
         "set_avatar_styles": {
             "header": "Set Avatar Styles",
@@ -7572,6 +7852,8 @@
             "rotate_counterclockwise": "Rotate counterclockwise",
             "reset": "Reset",
             "close": "Close",
+            "previous": "Previous image",
+            "next": "Next image",
             "copy_failed": "Failed to copy image",
             "download_failed": "Failed to download image",
             "label": {
@@ -8253,7 +8535,9 @@
             "settings_and_diagnostics": "Settings and diagnostics.",
             "current_instance_player_roster_rebuilt_from_local_activity_data": "Current-instance player roster rebuilt from local activity data.",
             "themes": "Themes",
-            "themes_description": "Theme source and custom CSS management."
+            "themes_description": "Theme source and custom CSS management.",
+            "chatbox": "Chatbox",
+            "chatbox_description": "Show your status and send messages in the in-game chatbox."
         }
     },
     "linux_rendering": {

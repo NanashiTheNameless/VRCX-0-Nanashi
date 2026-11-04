@@ -5,6 +5,7 @@ import type {
 } from '@/platform/tauri/bindings';
 import configRepository from '@/repositories/configRepository';
 import vrchatEconomyRepository from '@/repositories/vrchatEconomyRepository';
+import { useChatboxStore } from '@/state/chatboxStore';
 import { useDataDirMigrationStore } from '@/state/dataDirMigrationStore';
 import { useFriendLogStore } from '@/state/friendLogStore';
 import { useProfileBackupStore } from '@/state/profileBackupStore';
@@ -251,6 +252,16 @@ function handleRuntimeEvent(event: RuntimeEvent): void {
 
     if (event.name === 'gameIsolationState') {
         applyGameIsolationSnapshot(event.payload);
+        return;
+    }
+
+    if (event.name === 'chatboxState') {
+        useChatboxStore.getState().setStatus(event.payload);
+        return;
+    }
+
+    if (event.name === 'chatboxConfig') {
+        useChatboxStore.getState().setSavedConfig(event.payload);
         return;
     }
 
@@ -563,6 +574,8 @@ export async function bindRuntimeEvents(): Promise<() => void> {
         'communityThemeState',
         'notificationDoNotDisturbState',
         'gameIsolationState',
+        'chatboxState',
+        'chatboxConfig',
         'privacyLockState',
         'desktopWidgetState',
         'gameLogProjection',

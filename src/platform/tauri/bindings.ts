@@ -146,6 +146,32 @@ const generatedCommands = {
     ): Promise<GameIsolationSnapshot> {
         return await TAURI_INVOKE('app__game_isolation_set', { enabled });
     },
+    async appChatboxEditorStateGet(): Promise<ChatboxEditorState> {
+        return await TAURI_INVOKE('app__chatbox_editor_state_get');
+    },
+    async appChatboxConfigSet(config: ChatboxConfig): Promise<ChatboxConfig> {
+        return await TAURI_INVOKE('app__chatbox_config_set', { config });
+    },
+    async appChatboxStatusGet(): Promise<ChatboxStatus | null> {
+        return await TAURI_INVOKE('app__chatbox_status_get');
+    },
+    async appChatboxPreviewingSet(previewing: boolean): Promise<void> {
+        await TAURI_INVOKE('app__chatbox_previewing_set', { previewing });
+    },
+    async appChatboxSend(text: string): Promise<ChatboxSendOutcome> {
+        return await TAURI_INVOKE('app__chatbox_send', { text });
+    },
+    async appChatboxAfkSet(afk: boolean): Promise<void> {
+        await TAURI_INVOKE('app__chatbox_afk_set', { afk });
+    },
+    async appChatboxTypingSet(typing: boolean): Promise<void> {
+        await TAURI_INVOKE('app__chatbox_typing_set', { typing });
+    },
+    async appChatboxSamplesRender(
+        lines: ChatboxLinePreviewInput[]
+    ): Promise<string[]> {
+        return await TAURI_INVOKE('app__chatbox_samples_render', { lines });
+    },
     async appStartBackgroundMode(): Promise<BackendRuntimeSnapshot> {
         return await TAURI_INVOKE('app__start_background_mode');
     },
@@ -3471,6 +3497,54 @@ const generatedCommands = {
             changeFilename
         });
     },
+    async appGetScreenshotShareTargets(): Promise<ScreenshotShareTarget[]> {
+        return await TAURI_INVOKE('app__get_screenshot_share_targets');
+    },
+    async appSaveScreenshotShareTarget(
+        input: ScreenshotShareTargetInput
+    ): Promise<ScreenshotShareTarget> {
+        return await TAURI_INVOKE('app__save_screenshot_share_target', {
+            input
+        });
+    },
+    async appDeleteScreenshotShareTarget(id: string): Promise<null> {
+        return await TAURI_INVOKE('app__delete_screenshot_share_target', {
+            id
+        });
+    },
+    async appGetScreenshotShareFacts(
+        paths: string[]
+    ): Promise<ScreenshotShareFacts[]> {
+        return await TAURI_INVOKE('app__get_screenshot_share_facts', { paths });
+    },
+    async appShareScreenshots(
+        targetId: string,
+        messages: ScreenshotShareMessage[]
+    ): Promise<ScreenshotShareSendResult> {
+        return await TAURI_INVOKE('app__share_screenshots', {
+            targetId,
+            messages
+        });
+    },
+    async appGetScreenshotShareProgress(): Promise<ScreenshotShareProgress> {
+        return await TAURI_INVOKE('app__get_screenshot_share_progress');
+    },
+    async appCopyScreenshotPrint(input: ScreenshotPrintInput): Promise<null> {
+        return await TAURI_INVOKE('app__copy_screenshot_print', { input });
+    },
+    async appSaveScreenshotPrints(
+        items: ScreenshotPrintInput[]
+    ): Promise<string[]> {
+        return await TAURI_INVOKE('app__save_screenshot_prints', { items });
+    },
+    async appGetScreenshotShareHistory(): Promise<ScreenshotShareRecord[]> {
+        return await TAURI_INVOKE('app__get_screenshot_share_history');
+    },
+    async appDeleteScreenshotShareRecord(id: string): Promise<null> {
+        return await TAURI_INVOKE('app__delete_screenshot_share_record', {
+            id
+        });
+    },
     async appCropAllPrints(ugcFolderPath: string): Promise<null> {
         return await TAURI_INVOKE('app__crop_all_prints', { ugcFolderPath });
     },
@@ -4263,6 +4337,8 @@ export type BackendRuntimeEventPayloadMap = {
     feedLoggerHealth: FeedLoggerProbe;
     notificationDoNotDisturbState: NotificationDoNotDisturbSnapshot;
     gameIsolationState: GameIsolationSnapshot;
+    chatboxState: ChatboxStatus;
+    chatboxConfig: ChatboxConfig;
     privacyLockState: PrivacyLockSnapshot;
     desktopWidgetState: DesktopWidgetSnapshot;
 };
@@ -4432,6 +4508,108 @@ export type CapabilityStatus = {
     available: boolean;
     reason?: string | null;
 };
+export type ChatboxActivity = 'off' | 'status' | 'manual' | 'afk';
+export type ChatboxAfkConfig = {
+    text: string;
+    showDuration: boolean;
+    autoWhenHeadsetRemoved: boolean;
+};
+export type ChatboxConfig = {
+    statusEnabled: boolean;
+    pages: ChatboxPage[];
+    afk: ChatboxAfkConfig;
+    messages: ChatboxMessageConfig;
+    oscHost: string;
+    oscPort: number;
+};
+export type ChatboxEditorState = {
+    config: ChatboxConfig;
+    limits: ChatboxLimits;
+    variables: ChatboxVariable[];
+    defaultFormats: ChatboxFormats;
+};
+export type ChatboxFormats = {
+    hour12: boolean;
+    showSeconds: boolean;
+    cpuDecimals: number;
+    memory: ChatboxMemoryFormat;
+    memoryDecimals: number;
+    memoryUnit: ChatboxMemoryUnit;
+    mediaMaxChars: number;
+    gpuDecimals: number;
+    vram: ChatboxMemoryFormat;
+    vramDecimals: number;
+    vramUnit: ChatboxMemoryUnit;
+    temperatureUnit: ChatboxTemperatureUnit;
+    progress: ChatboxProgressStyle;
+};
+export type ChatboxLimits = {
+    maxChars: number;
+    maxPages: number;
+    maxLinesPerPage: number;
+    maxTemplateChars: number;
+    maxDecimals: number;
+    maxAfkTextChars: number;
+    maxQuickPhrases: number;
+    minPageSeconds: number;
+    maxPageSeconds: number;
+};
+export type ChatboxLinePreviewInput = {
+    template: string;
+    formats: ChatboxFormats;
+};
+export type ChatboxMemoryFormat = 'percent' | 'used' | 'usedOfTotal' | 'total';
+export type ChatboxMemoryUnit = 'gb' | 'mb';
+export type ChatboxMessageConfig = {
+    typingIndicator: boolean;
+    notifySound: boolean;
+    quickPhrases: string[];
+};
+export type ChatboxPage = {
+    id: string;
+    enabled: boolean;
+    seconds: number;
+    lines: ChatboxPageLine[];
+};
+export type ChatboxPageLine = {
+    id: string;
+    template: string;
+    formats: ChatboxFormats;
+};
+export type ChatboxPauseReason = 'gameNotRunning' | 'isolated';
+export type ChatboxProgressStyle = 'line' | 'blocks' | 'dots';
+export type ChatboxSendOutcome =
+    | { result: 'sent'; text: string }
+    | { result: 'empty' }
+    | { result: 'paused'; reason: ChatboxPauseReason };
+export type ChatboxStatus = {
+    activity: ChatboxActivity;
+    pauseReason: ChatboxPauseReason | null;
+    preview: string;
+    pageId: string | null;
+    pageNumber: number | null;
+    pageCount: number;
+    pageDurationSeconds: number | null;
+    pageElapsedSeconds: number | null;
+    manualAfk: boolean;
+    vrMode: boolean;
+};
+export type ChatboxTemperatureUnit = 'celsius' | 'fahrenheit';
+export type ChatboxVariable =
+    | 'time'
+    | 'track'
+    | 'title'
+    | 'artist'
+    | 'album'
+    | 'progress'
+    | 'position'
+    | 'duration'
+    | 'cpu'
+    | 'memory'
+    | 'gpu'
+    | 'vram'
+    | 'gputemp'
+    | 'session';
 export type CleanupWarning = {
     kind: CleanupWarningKind;
     favorites: number;
@@ -7737,6 +7915,7 @@ export type ScreenshotFacet = {
     name: string;
     count: number;
     lastCapturedAt: number;
+    coverPath: string;
 };
 export type ScreenshotFilter = {
     people?: string[];
@@ -7800,12 +7979,90 @@ export type ScreenshotMetadata = {
     error?: string | null;
 };
 export type ScreenshotPeopleMatch = 'all' | 'any';
+export type ScreenshotPrintInput = { path: string; caption: string };
 export type ScreenshotProcessedPayload = { path: string };
 export type ScreenshotQueryResult = {
     total: number;
     withoutPeople: number;
     images: ScreenshotLibraryImage[];
 };
+export type ScreenshotShareCompression = 'high' | 'standard' | 'original';
+export type ScreenshotShareEmbed = {
+    title: string | null;
+    url: string | null;
+    timestamp: string | null;
+    fields: ScreenshotShareEmbedField[];
+};
+export type ScreenshotShareEmbedField = {
+    name: string;
+    value: string;
+    inline: boolean;
+};
+export type ScreenshotShareFacts = {
+    path: string;
+    worldId: string | null;
+    worldName: string | null;
+    worldAuthorName: string | null;
+    authorName: string | null;
+    capturedAt: number;
+    people: string[];
+    playerCount: number | null;
+    stay: ScreenshotStay | null;
+};
+export type ScreenshotShareFields = {
+    world: boolean;
+    time: boolean;
+    playerCount: boolean;
+    people: boolean;
+    stay: boolean;
+    spoiler: boolean;
+    metadata: boolean;
+    compression: ScreenshotShareCompression;
+    print: boolean;
+};
+export type ScreenshotShareMessage = {
+    paths: string[];
+    content: string;
+    embed: ScreenshotShareEmbed | null;
+    spoiler: boolean;
+    metadata: boolean;
+    compression: ScreenshotShareCompression;
+    printCaptions: string[];
+};
+export type ScreenshotShareProgress = {
+    running: boolean;
+    processedFiles: number;
+    totalFiles: number;
+};
+export type ScreenshotShareRecord = {
+    id: string;
+    targetId: string;
+    targetName: string;
+    messageUrl: string | null;
+    sentAt: number;
+    fileNames: string[];
+};
+export type ScreenshotShareSendResult = {
+    records: ScreenshotShareRecord[];
+    error: string | null;
+    targetInvalid: boolean;
+};
+export type ScreenshotShareTarget = {
+    id: string;
+    name: string;
+    urlHint: string;
+    fields: ScreenshotShareFields;
+    quick: boolean;
+    invalid: boolean;
+};
+export type ScreenshotShareTargetInput = {
+    id: string | null;
+    name: string;
+    url: string | null;
+    fields: ScreenshotShareFields;
+    quick: boolean;
+};
+export type ScreenshotStay = { ms: number; ongoing: boolean };
 export type ScreenshotTimeWindow = { from: number; to: number };
 export type ScreenshotWindowImages = {
     total: number;

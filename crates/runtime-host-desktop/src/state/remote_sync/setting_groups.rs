@@ -188,7 +188,7 @@ pub(super) const SETTING_GROUPS: &[(&str, &[&str], &[&str])] = &[
     ),
     (
         "social",
-        &["discord"],
+        &["discord", "chatbox"],
         &["booprecentemojis", "statuspresets"],
     ),
     ("assistant", &["socialai", "assistant", "reminder"], &[]),

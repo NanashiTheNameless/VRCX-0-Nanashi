@@ -7,12 +7,15 @@ pub mod desktop_widget_window;
 pub mod discord_rpc;
 pub mod game_launch;
 pub mod game_window;
+pub mod gpu_usage;
 pub mod host_capabilities;
 #[cfg(target_os = "linux")]
 pub mod linux_registry;
 pub mod local_player_moderations;
 pub mod local_test_avatars;
 pub mod log_scanner;
+pub mod media_session;
+pub mod osc_udp;
 #[cfg(any(windows, target_os = "linux"))]
 pub mod overlay_notifications;
 pub mod power;
@@ -24,6 +27,7 @@ pub mod sidebar_window;
 pub mod sound;
 pub mod system_fonts;
 pub mod system_theme;
+pub mod system_usage;
 pub mod taskbar_overlay;
 #[cfg(windows)]
 pub mod telemetry_policy;

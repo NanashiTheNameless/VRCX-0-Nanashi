@@ -633,6 +633,7 @@ impl DesktopRuntimeHostState {
             runtime.paths().clone(),
             vrcx_0_host_desktop::vrchat_paths::vrchat_photos_location(),
             runtime.desktop_assembly().event_bus().clone(),
+            Arc::clone(runtime.web_client()),
         );
         let vrchat_api =
             crate::vrchat_api::build_vrchat_api_runtime(crate::vrchat_api::VrchatApiRuntimeDeps {
@@ -1270,16 +1271,31 @@ impl DesktopRuntimeHostState {
     }
 
     pub fn mcp_runtime(&self, caller: vrcx_0_mcp::McpCaller) -> vrcx_0_mcp::McpRuntime {
-        mcp_runtime_for(&self.runtime, Some(self.mcp_reminders()), caller)
+        mcp_runtime_for(
+            &self.runtime,
+            Some(self.mcp_reminders()),
+            self.mcp_chatbox(),
+            caller,
+        )
     }
 
     pub fn assistant_controller_deps(&self) -> vrcx_0_assistant::AssistantControllerDeps {
-        assistant_controller_deps_for(&self.runtime, Some(self.mcp_reminders()))
+        assistant_controller_deps_for(
+            &self.runtime,
+            Some(self.mcp_reminders()),
+            self.mcp_chatbox(),
+        )
     }
 
     fn mcp_reminders(&self) -> vrcx_0_mcp::McpReminders {
         Arc::new(crate::mcp_adapters::DesktopMcpRemindersAdapter::new(
             Arc::clone(&self.reminders),
+        ))
+    }
+
+    fn mcp_chatbox(&self) -> vrcx_0_mcp::McpChatbox {
+        Arc::new(crate::mcp_adapters::DesktopMcpChatboxAdapter::new(
+            self.chatbox(),
         ))
     }
 
@@ -2366,6 +2382,10 @@ impl DesktopRuntimeHostState {
         self.desktop.services.game_isolation().set_enabled(enabled)
     }
 
+    pub fn chatbox(&self) -> Arc<crate::chatbox::ChatboxRuntime> {
+        self.desktop.services.chatbox()
+    }
+
     pub fn desktop_widget(&self) -> Arc<crate::desktop_widget::DesktopWidget> {
         Arc::clone(&self.desktop.desktop_widget)
     }
@@ -3119,6 +3139,14 @@ impl DesktopRuntimeProfileExtension {
                                 now + Duration::from_secs(BACKGROUND_DISCORD_CADENCE_SECONDS);
                         }
                     }
+                    let chatbox = desktop_services.chatbox();
+                    if let Err(error) = tokio::task::spawn_blocking(move || {
+                        chatbox.tick();
+                    })
+                    .await
+                    {
+                        tracing::warn!(error = %error, "chatbox tick task failed");
+                    }
                     if wait_for_desktop_maintenance_tick(&stop_token).await {
                         break;
                     }
@@ -3334,6 +3362,7 @@ fn emit_profile_background_output(
 pub(crate) fn mcp_runtime_for(
     runtime: &RuntimeHostState,
     reminders: Option<vrcx_0_mcp::McpReminders>,
+    chatbox: vrcx_0_mcp::McpChatbox,
     caller: vrcx_0_mcp::McpCaller,
 ) -> vrcx_0_mcp::McpRuntime {
     let db = runtime.database();
@@ -3376,6 +3405,7 @@ pub(crate) fn mcp_runtime_for(
                 runtime.paths().app_data.join("metadataCache.db"),
                 vrcx_0_host_desktop::vrchat_paths::vrchat_photos_location(),
             )),
+            chatbox,
             favorite_mutations: assembly.favorite_mutations().clone(),
             reminders,
             tasks: assembly.tasks().clone(),
@@ -3387,6 +3417,7 @@ pub(crate) fn mcp_runtime_for(
 pub(crate) fn assistant_controller_deps_for(
     runtime: &RuntimeHostState,
     reminders: Option<vrcx_0_mcp::McpReminders>,
+    chatbox: vrcx_0_mcp::McpChatbox,
 ) -> vrcx_0_assistant::AssistantControllerDeps {
     let assembly = runtime.desktop_assembly();
     vrcx_0_assistant::AssistantControllerDeps {
@@ -3399,7 +3430,12 @@ pub(crate) fn assistant_controller_deps_for(
         proxy_url: runtime.web_client().proxy_url().map(str::to_string),
         bus: assembly.event_bus().clone(),
         tasks: assembly.tasks().clone(),
-        mcp_runtime: mcp_runtime_for(runtime, reminders, vrcx_0_mcp::McpCaller::Assistant),
+        mcp_runtime: mcp_runtime_for(
+            runtime,
+            reminders,
+            chatbox,
+            vrcx_0_mcp::McpCaller::Assistant,
+        ),
         session_persistence: Arc::new(
             crate::assistant_adapters::DesktopAssistantSessionPersistenceAdapter::new(Arc::clone(
                 runtime.database(),

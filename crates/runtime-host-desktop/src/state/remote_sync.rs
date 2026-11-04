@@ -326,6 +326,7 @@ fn syncable_app_setting(key: &str) -> bool {
         "remotesync",
         "repair",
         "safetysourcecache",
+        "screenshotshare",
         "secret",
         "shareownerkeys",
         "startasminimized",
@@ -1744,6 +1745,12 @@ mod tests {
         assert!(!syncable_app_setting("config:vrcx_feedLogger"));
         assert!(!syncable_app_setting("config:vrcx_dtTimeZone"));
         assert!(syncable_app_setting("config:vrcx_theme"));
+    }
+
+    #[test]
+    fn screenshot_share_webhooks_are_never_synced() {
+        assert!(!syncable_app_setting("config:vrcx_screenshotShareTargets"));
+        assert!(!syncable_app_setting("config:vrcx_screenshotShareHistory"));
     }
 
     #[test]

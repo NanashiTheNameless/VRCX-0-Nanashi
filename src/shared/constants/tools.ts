@@ -43,6 +43,7 @@ export type ToolRouteName =
     | 'gallery'
     | 'inventory'
     | 'vrchat-log'
+    | 'chatbox'
     | 'group-moderation'
     | 'my-groups';
 
@@ -301,6 +302,17 @@ const toolDefinitions: ToolDefinition[] = [
             target: 'launch',
             method: 'showLaunchOptions'
         }
+    },
+    {
+        key: 'chatbox',
+        category: 'vrchat',
+        iconKey: 'message-square-text',
+        navIcon: 'lucide:MessageSquareText',
+        titleKey: 'view.tools.chatbox.title',
+        descriptionKey: 'view.tools.chatbox.description',
+        navEligible: true,
+        requiredCapability: 'gameProcessMonitor',
+        action: { type: 'route', routeName: 'chatbox' }
     },
     {
         key: 'app-launcher',

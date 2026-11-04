@@ -24,6 +24,7 @@ use vrcx_0_host_desktop::tts::{SystemTtsEngine, TtsEngine};
 use vrcx_0_overlay_runtime::VrOverlayRuntimeServices;
 use vrcx_0_persistence::{config::ConfigRepository, DatabaseService};
 
+use crate::chatbox::ChatboxRuntime;
 use crate::game_isolation::GameIsolationRuntime;
 use crate::host_actions::RuntimeHost;
 use crate::notification::{
@@ -83,6 +84,7 @@ pub struct DesktopRuntimeServices {
     wrist_player_profiles: wrist_player_profiles::WristPlayerProfiles,
     game_log_snapshot: RuntimeSnapshotStore,
     now_playing: NowPlayingStore,
+    chatbox: Arc<ChatboxRuntime>,
 }
 
 impl DesktopRuntimeServices {
@@ -141,6 +143,12 @@ impl DesktopRuntimeServices {
                 policy: Arc::clone(&notification_policy),
             }));
         deps.activity_sinks.add(notification_sink);
+        let chatbox = Arc::new(ChatboxRuntime::new(
+            deps.config.clone(),
+            deps.session.clone(),
+            game_isolation.clone(),
+            deps.event_bus.clone(),
+        ));
         Ok(Self {
             db: Arc::clone(&deps.db),
             web: deps.web,
@@ -169,6 +177,7 @@ impl DesktopRuntimeServices {
             wrist_player_profiles: Default::default(),
             game_log_snapshot: RuntimeSnapshotStore::default(),
             now_playing: NowPlayingStore::default(),
+            chatbox,
         })
     }
 
@@ -254,6 +263,10 @@ impl DesktopRuntimeServices {
 
     pub fn game_isolation(&self) -> GameIsolationRuntime {
         self.game_isolation.clone()
+    }
+
+    pub fn chatbox(&self) -> Arc<ChatboxRuntime> {
+        Arc::clone(&self.chatbox)
     }
 
     pub fn event_bus(&self) -> RuntimeEventBus {
