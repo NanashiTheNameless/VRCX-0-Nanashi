@@ -136,6 +136,16 @@ fn flush_before_task_shutdown(state: &AppState) {
 
 #[tauri::command]
 #[specta::specta]
+pub fn app__language_changed(app_handle: AppHandle, language: String) -> Result<(), AppError> {
+    #[cfg(target_os = "macos")]
+    let _ = crate::macos_menu::configure_macos_app_menu(&app_handle, &language);
+    drop(app_handle);
+    drop(language);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
 pub fn app__set_tray_icon_notification(state: State<'_, AppState>, notify: Option<bool>) {
     state
         .runtime_host()
@@ -317,7 +327,10 @@ pub fn app__set_startup(
 
     impl AutostartPlatform for TauriAutostartPlatform {
         fn set_enabled(&self, enabled: bool) -> Result<(), String> {
-            if !(cfg!(target_os = "windows") || cfg!(target_os = "linux")) {
+            if !(cfg!(target_os = "windows")
+                || cfg!(target_os = "linux")
+                || cfg!(target_os = "macos"))
+            {
                 return Err(format!(
                     "Autostart is not supported on {}",
                     vrcx_0_platform::host_capabilities::current_platform()
@@ -387,11 +400,15 @@ pub(crate) fn default_desktop_notification_sound() -> &'static str {
     {
         "Default"
     }
-    #[cfg(unix)]
+    #[cfg(target_os = "macos")]
+    {
+        "NSUserNotificationDefaultSoundName"
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
     {
         "message-new-instant"
     }
-    #[cfg(not(any(target_os = "windows", unix)))]
+    #[cfg(not(any(target_os = "windows", target_os = "macos", unix)))]
     {
         "Default"
     }

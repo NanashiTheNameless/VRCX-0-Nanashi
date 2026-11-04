@@ -26,6 +26,7 @@ import {
 
 const PLATFORM_LABELS: Record<string, string> = {
     windows: 'Windows',
+    macos: 'macOS',
     linux: 'Linux'
 };
 

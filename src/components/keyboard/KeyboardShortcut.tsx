@@ -8,6 +8,7 @@ const KEY_LABELS: Record<string, string> = {
     ArrowRight: '\u2192',
     ArrowUp: '\u2191',
     ArrowDown: '\u2193',
+    Meta: '\u2318',
     Mod: 'Ctrl',
     Control: 'Ctrl',
     Escape: 'Esc'
@@ -18,6 +19,7 @@ const KEY_ARIA_LABELS: Record<string, string> = {
     ArrowRight: 'Arrow Right',
     ArrowUp: 'Arrow Up',
     ArrowDown: 'Arrow Down',
+    Meta: 'Command',
     Mod: 'Control',
     Control: 'Control',
     Escape: 'Escape'

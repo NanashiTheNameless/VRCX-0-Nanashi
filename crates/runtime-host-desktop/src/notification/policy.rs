@@ -121,6 +121,7 @@ impl LocalNotificationPolicy {
         plan
     }
 
+    #[cfg_attr(target_os = "macos", allow(dead_code))]
     pub(crate) fn hmd_allowed(&self) -> bool {
         let settings = self.settings();
         !self.game_isolation.is_enabled()

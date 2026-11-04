@@ -65,7 +65,7 @@ pub(crate) fn enable_autostart(app: &tauri::AppHandle) -> Result<(), String> {
 }
 
 pub(super) fn sync_autostart_from_db(app: &tauri::App, state: &AppState) {
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))]
     {
         if db_config_bool(state, "config:vrcx_startatwindowsstartup") == Some(true) {
             if let Err(error) = enable_autostart(app.handle()) {
@@ -79,7 +79,7 @@ pub(super) fn sync_autostart_from_db(app: &tauri::App, state: &AppState) {
         );
     }
 
-    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
     {
         let _ = app;
         state.runtime_host().record_lifecycle_phase(

@@ -26,7 +26,7 @@ export function useSidebarAutoHide(): void {
     const reducedMotion = usePreferencesStore(
         (state) => state.reducedMotionAndBlur
     );
-    const supported = platform === 'windows';
+    const supported = platform === 'windows' || platform === 'macos';
 
     useEffect(() => {
         if (!supported) {

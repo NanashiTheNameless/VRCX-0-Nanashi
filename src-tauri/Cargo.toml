@@ -17,7 +17,7 @@ required-features = ["bindings-export"]
 
 [dependencies]
 async-trait = { workspace = true }
-tauri = { version = "2", features = ["tray-icon", "image-ico"] }
+tauri = { version = "2", features = ["tray-icon", "image-ico", "macos-proxy"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 semver = { workspace = true }

@@ -19,7 +19,7 @@ export type SettingsCardDefinition = {
     titleKey: string;
 };
 
-export type SettingsHostPlatform = 'windows' | 'linux';
+export type SettingsHostPlatform = 'windows' | 'macos' | 'linux';
 
 export type SettingsRuntimeRequirement =
     | 'game-log-ingest'
@@ -81,6 +81,7 @@ defineCard(
             key: 'start-at-login',
             labelKey: 'view.settings.general.application.startup',
             platformLabelKeys: {
+                macos: 'view.settings.general.application.startup_system',
                 linux: 'view.settings.general.application.startup_system'
             },
             prefKey: 'isStartAtWindowsStartup'
@@ -813,14 +814,14 @@ defineCard(
         },
         {
             key: 'ovrtoolkit-hud',
-            platforms: ['windows'],
+            platforms: ['windows', 'macos'],
             labelKey:
                 'view.settings.notifications.notifications.vr_notifications.ovrtoolkit_hud_notifications',
             prefKey: 'ovrtHudNotifications'
         },
         {
             key: 'ovrtoolkit-wrist',
-            platforms: ['windows'],
+            platforms: ['windows', 'macos'],
             labelKey:
                 'view.settings.notifications.notifications.vr_notifications.ovrtoolkit_wrist_notifications',
             prefKey: 'ovrtWristNotifications'
@@ -1708,7 +1709,7 @@ export function getSettingsCard(
 }
 
 function isSettingsHostPlatform(value: string): value is SettingsHostPlatform {
-    return value === 'windows' || value === 'linux';
+    return value === 'windows' || value === 'macos' || value === 'linux';
 }
 
 function meetsRequirement(

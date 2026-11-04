@@ -7,6 +7,7 @@ use serde::Serialize;
 pub enum HostPlatform {
     Windows,
     Linux,
+    Macos,
     #[default]
     Unknown,
 }
@@ -16,6 +17,7 @@ impl HostPlatform {
         match self {
             Self::Windows => "windows",
             Self::Linux => "linux",
+            Self::Macos => "macos",
             Self::Unknown => "unknown",
         }
     }
@@ -58,6 +60,8 @@ pub const fn current_host_platform() -> HostPlatform {
         HostPlatform::Windows
     } else if cfg!(target_os = "linux") {
         HostPlatform::Linux
+    } else if cfg!(target_os = "macos") {
+        HostPlatform::Macos
     } else {
         HostPlatform::Unknown
     }

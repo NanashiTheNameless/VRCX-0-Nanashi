@@ -4,6 +4,7 @@ use std::fs;
 #[cfg(any(target_os = "linux", test))]
 use std::path::Path;
 use std::path::PathBuf;
+#[cfg_attr(target_os = "macos", allow(unused_imports))]
 use std::time::SystemTime;
 
 #[cfg(any(target_os = "linux", test))]

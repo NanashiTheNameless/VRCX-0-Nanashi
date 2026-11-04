@@ -1,6 +1,7 @@
 import { useShallow } from 'zustand/react/shallow';
 
 import { usePreferencesStore } from '@/state/preferencesStore';
+import { useRuntimeStore } from '@/state/runtimeStore';
 
 import { useSettingsPageSection } from '../../SettingsPageStateContext';
 import { SettingsTabContent } from '../SettingsViewParts';
@@ -37,6 +38,9 @@ export function SettingsInterfaceTab() {
             trustColor: state.trustColor
         }))
     );
+    const isMacHost = useRuntimeStore(
+        (state) => state.hostCapabilities.platform === 'macos'
+    );
     const {
         locale,
         zoomInput,
@@ -71,6 +75,7 @@ export function SettingsInterfaceTab() {
                 locale={locale}
                 prefs={prefs}
                 zoomInput={zoomInput}
+                hideFontControls={isMacHost}
                 onLanguageChange={onLanguageChange}
                 onFontFamilyChange={onFontFamilyChange}
                 onCjkFontPackChange={onCjkFontPackChange}

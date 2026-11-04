@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
     registerLanguageCode,
@@ -9,7 +9,10 @@ import {
 
 import { applyAppFontPreferences } from './themeService';
 
+beforeEach(() => vi.stubGlobal('VRCX_0_MACOS_SYSTEM_FONTS_ENABLED', false));
+
 afterEach(() => {
+    vi.unstubAllGlobals();
     document.head
         .querySelectorAll(
             'style[data-vrcx-app-font], style[data-vrcx-cjk-font]'

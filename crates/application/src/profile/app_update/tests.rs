@@ -475,15 +475,26 @@ fn normalize_release_requires_an_uploaded_manifest_asset_when_required() {
     let catalog_release = release(
         "v1.2.3",
         false,
-        vec![asset(
-            "version_manifest.json",
-            "uploaded",
-            "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/download/v1.2.3/version_manifest.json",
-        )],
+        vec![
+            asset(
+                "version_manifest.json",
+                "uploaded",
+                "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/download/v1.2.3/version_manifest.json",
+            ),
+            asset(
+                "VRCX-0-Nanashi_1.2.3_macos_universal.app.tar.gz",
+                "uploaded",
+                "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/download/v1.2.3/VRCX-0-Nanashi_1.2.3_macos_universal.app.tar.gz",
+            ),
+        ],
     );
 
     // One manifest carries every platform, so any supported target resolves it.
-    for target in ["windows-x86_64-stable", "linux-x86_64-appimage-stable"] {
+    for target in [
+        "windows-x86_64-stable",
+        "linux-x86_64-appimage-stable",
+        "macos-aarch64-stable",
+    ] {
         let normalized = normalize_release(&catalog_release, Some(target), true)
             .unwrap_or_else(|| panic!("release with a manifest normalizes for {target}"));
         assert_eq!(normalized.updater_type, AppUpdateDeliveryKind::Tauri);
@@ -497,6 +508,36 @@ fn normalize_release_requires_an_uploaded_manifest_asset_when_required() {
         .expect("notify-only normalize succeeds without a manifest asset");
     assert_eq!(notify_only.updater_type, AppUpdateDeliveryKind::Manual);
     assert!(notify_only.manifest_url.is_empty());
+}
+
+#[test]
+fn normalize_release_skips_a_release_without_a_macos_archive_for_macos_targets() {
+    let without_macos = release(
+        "v1.2.3",
+        false,
+        vec![asset(
+            "version_manifest.json",
+            "uploaded",
+            "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/download/v1.2.3/version_manifest.json",
+        )],
+    );
+
+    assert!(normalize_release(&without_macos, Some("macos-aarch64-stable"), true).is_none());
+    assert!(normalize_release(&without_macos, Some("macos-x86_64-stable"), true).is_none());
+    let windows = normalize_release(&without_macos, Some("windows-x86_64-stable"), true)
+        .expect("Windows still installs a release without macOS packages");
+    assert_eq!(windows.updater_type, AppUpdateDeliveryKind::Tauri);
+    let notify_only = normalize_release(&without_macos, Some("macos-aarch64-stable"), false)
+        .expect("notify-only normalize succeeds without macOS packages");
+    assert_eq!(notify_only.updater_type, AppUpdateDeliveryKind::Manual);
+
+    let mut with_pending_archive = without_macos.clone();
+    with_pending_archive.assets.push(asset(
+        "VRCX-0-Nanashi_1.2.3_macos_universal.app.tar.gz",
+        "starter",
+        "https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/download/v1.2.3/VRCX-0-Nanashi_1.2.3_macos_universal.app.tar.gz",
+    ));
+    assert!(normalize_release(&with_pending_archive, Some("macos-aarch64-stable"), true).is_none());
 }
 
 #[test]

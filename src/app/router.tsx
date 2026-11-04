@@ -11,7 +11,8 @@ import {
 
 import { GlobalHosts } from '@/app/GlobalHosts';
 import { AppTitleBar } from '@/components/layout/AppTitleBar';
-import { MenuActionHost } from '@/components/layout/MenuActionHost';
+import { MacNativeMenuActionHost } from '@/components/layout/MacNativeMenuActionHost';
+import { MacOverlayTitleBar } from '@/components/layout/MacOverlayTitleBar';
 import { QuickSearchProvider } from '@/components/layout/QuickSearchProvider';
 import { useGlobalKeyboardShortcuts } from '@/components/layout/useGlobalKeyboardShortcuts';
 import { useSidebarAutoHide } from '@/components/layout/useSidebarAutoHide';
@@ -124,6 +125,7 @@ function AppRouterContent() {
     const hostPlatform = useRuntimeStore(
         (state) => state.hostCapabilities.platform
     );
+    const isMacHost = hostPlatform === 'macos';
     const { pathname, search, hash } = useLocation();
     const sessionReady = useSessionStore(
         (state) => state.sessionPhase === 'ready'
@@ -177,6 +179,21 @@ function AppRouterContent() {
             restoreSidebarWindowModeAfterLogin();
         }
     }, [pathname]);
+    useEffect(() => {
+        if (!isMacHost) {
+            return undefined;
+        }
+
+        const handleContextMenu = (event: MouseEvent) => {
+            event.preventDefault();
+        };
+
+        document.addEventListener('contextmenu', handleContextMenu);
+        return () => {
+            document.removeEventListener('contextmenu', handleContextMenu);
+        };
+    }, [isMacHost]);
+
     const isWindowsHost = hostPlatform === 'windows';
     const hasCustomWindowFrame =
         isWindowsHost && !window.__VRCX_SYSTEM_WINDOW_FRAME__;
@@ -196,7 +213,7 @@ function AppRouterContent() {
                     aria-hidden="true"
                     className="vrcx-0-background-image-transition-layer"
                 />
-                <AppTitleBar />
+                {isMacHost ? <MacOverlayTitleBar /> : <AppTitleBar />}
                 <div
                     data-vrcx-0-surface="route-host"
                     className="vrcx-0-route-host min-h-0 flex-1 overflow-hidden"
@@ -241,7 +258,7 @@ function AppRouterContent() {
                     </RouteErrorBoundary>
                 </div>
                 <GlobalHosts />
-                <MenuActionHost />
+                <MacNativeMenuActionHost />
             </div>
             {hasCustomWindowFrame ? <WindowResizeHandles /> : null}
         </QuickSearchProvider>

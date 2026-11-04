@@ -114,7 +114,7 @@ Run the install script again, or `docker compose pull && docker compose up -d`. 
 
 | Problem              | Check                                                                                                                                                 |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Recorder unreachable | Container running, firewall allows the port, address correct.                                                                                         |
+| Recorder unreachable | Container running, firewall allows the port, address correct. macOS: allow VRCX-0-Nanashi under **Local Network**.                                    |
 | Wrong password       | The password in VRCX-0-Nanashi must match the recorder password.                                                                                      |
 | Different account    | Log the recorder in with the account used in VRCX-0-Nanashi.                                                                                          |
 | Logs                 | `docker compose logs` in the install directory. On Windows, errors are listed in the recorder window; with `--headless`, the log goes to the console. |

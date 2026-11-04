@@ -72,4 +72,16 @@ describe('KeyboardShortcutsDialog', () => {
         expect(screen.getByText('shortcuts.tray.inactive')).toBeTruthy();
         expect(screen.queryByText('shortcuts.tray.unset')).toBeNull();
     });
+
+    it('does not offer the Windows tray shortcut on macOS', async () => {
+        useRuntimeStore.setState((state) => ({
+            hostCapabilities: { ...state.hostCapabilities, platform: 'macos' }
+        }));
+        render(<KeyboardShortcutsDialog open onOpenChange={() => {}} />);
+
+        expect(await screen.findByText('shortcuts.title')).toBeTruthy();
+        expect(screen.queryByText('shortcuts.tray.title')).toBeNull();
+        expect(screen.getByLabelText('Command + K')).toBeTruthy();
+        expect(screen.getByLabelText('R')).toBeTruthy();
+    });
 });

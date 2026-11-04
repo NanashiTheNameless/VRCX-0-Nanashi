@@ -1,3 +1,9 @@
+// Game launch is Windows/Linux only; on macOS these helpers are unused.
+#![cfg_attr(
+    target_os = "macos",
+    allow(dead_code, unused_imports, unused_variables)
+)]
+
 #[cfg(target_os = "windows")]
 use std::path::Path;
 use std::path::PathBuf;
@@ -106,7 +112,14 @@ pub fn start_game(arguments: &str) -> Result<bool, Error> {
         start_game_windows(arguments)
     }
 
-    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    #[cfg(target_os = "macos")]
+    {
+        Err(Error::Custom(
+            "Game launch is not supported on macOS".into(),
+        ))
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
     {
         Err(Error::Custom(format!(
             "Game launch is not supported on {}",
@@ -136,7 +149,14 @@ pub fn start_game_from_path(path: &str, arguments: &str) -> Result<bool, Error> 
         Ok(true)
     }
 
-    #[cfg(not(any(target_os = "windows", target_os = "linux")))]
+    #[cfg(target_os = "macos")]
+    {
+        Err(Error::Custom(
+            "Game launch is not supported on macOS".into(),
+        ))
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
     {
         Err(Error::Custom(format!(
             "Game launch is not supported on {}",

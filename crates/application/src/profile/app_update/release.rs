@@ -183,21 +183,41 @@ pub(super) fn is_stable_release_newer_than_preview_build(
 const UPDATER_MANIFEST_ASSET: &str = "version_manifest.json";
 
 fn manifest_asset_name_for_target(target: &str) -> Option<&'static str> {
-    if target.starts_with("windows-") || target.starts_with("linux-") {
+    if target.starts_with("windows-")
+        || target.starts_with("linux-")
+        || target.starts_with("macos-")
+    {
         Some(UPDATER_MANIFEST_ASSET)
     } else {
         None
     }
 }
 
+// macOS packages are published after the rest of a release and can be
+// missing from it, so a macOS install only takes a release that carries its
+// archive.
+const MACOS_UPDATER_ARCHIVE_SUFFIX: &str = "_macos_universal.app.tar.gz";
+
+fn is_uploaded(asset: &AppUpdateCatalogAsset) -> bool {
+    asset.state.as_deref() == Some("uploaded")
+}
+
 fn resolve_manifest_asset(assets: &[AppUpdateCatalogAsset], target: &str) -> Option<String> {
     let manifest_name = manifest_asset_name_for_target(target)?;
+    if target.starts_with("macos-")
+        && !assets.iter().any(|asset| {
+            is_uploaded(asset)
+                && asset
+                    .name
+                    .as_deref()
+                    .is_some_and(|name| name.ends_with(MACOS_UPDATER_ARCHIVE_SUFFIX))
+        })
+    {
+        return None;
+    }
     assets
         .iter()
-        .find(|asset| {
-            asset.state.as_deref() == Some("uploaded")
-                && asset.name.as_deref() == Some(manifest_name)
-        })
+        .find(|asset| is_uploaded(asset) && asset.name.as_deref() == Some(manifest_name))
         .and_then(|asset| asset.browser_download_url.clone())
         .filter(|url| !url.trim().is_empty())
 }

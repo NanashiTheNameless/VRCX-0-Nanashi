@@ -135,8 +135,11 @@ export function TitleBarBuildBadge() {
 const SHORTCUT_KBD_CLASS =
     'bg-background/45 h-3.5 min-w-3.5 rounded-[3px] px-1 text-[9px] leading-3.5 shadow-none';
 
-function getTitleBarShortcutLabel(actionKey: string) {
-    return `Ctrl+${actionKey}`;
+function getTitleBarShortcutLabel(isMacHost: boolean, actionKey: string) {
+    const modifierKey = isMacHost ? '⌘' : 'Ctrl';
+    return isMacHost
+        ? `${modifierKey}${actionKey}`
+        : `${modifierKey}+${actionKey}`;
 }
 
 function formatTitleBarShortcutLabel(value: string, shortcutLabel: string) {
@@ -250,7 +253,9 @@ export function useTitleBarActions(
     } = useRightSidePanelVisibility(location.pathname);
     const alwaysOnTop = useShellStore((state) => state.windowAlwaysOnTop);
 
-    const alwaysOnTopSupported = hostPlatform === 'windows';
+    const isMacHost = hostPlatform === 'macos';
+    const alwaysOnTopSupported =
+        hostPlatform === 'windows' || hostPlatform === 'macos';
     const notificationCenterEnabled = notificationLayout !== 'table';
     const notificationActionVisible =
         isSessionReady && (sidebarWindowMode || notificationCenterEnabled);
@@ -265,7 +270,7 @@ export function useTitleBarActions(
     const rightSidebarLabel = rightSidebarOpen
         ? t('app_menu.hide_friends_sidebar')
         : t('app_menu.show_friends_sidebar');
-    const quickSearchShortcutLabel = getTitleBarShortcutLabel('K');
+    const quickSearchShortcutLabel = getTitleBarShortcutLabel(isMacHost, 'K');
     const quickSearchLabel = t('app_menu.quick_search');
     const directAccessLabel = t('prompt.direct_access_omni.header');
     const sidebarWindowModeBlocked = !sidebarWindowMode && criticalTaskActive;
@@ -512,7 +517,7 @@ export function useTitleBarActions(
                                     {quickSearchLabel}
                                 </span>
                                 <KeyboardShortcut
-                                    keys={['Mod', 'K']}
+                                    keys={[isMacHost ? 'Meta' : 'Mod', 'K']}
                                     kbdClassName={SHORTCUT_KBD_CLASS}
                                     className="ml-auto hidden gap-0.5 min-[760px]:inline-flex"
                                 />

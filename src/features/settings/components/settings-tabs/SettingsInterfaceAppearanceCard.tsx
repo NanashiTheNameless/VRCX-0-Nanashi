@@ -66,6 +66,7 @@ type SettingsInterfaceAppearanceCardProps = {
     locale: string;
     prefs: AppearancePrefs;
     zoomInput: string;
+    hideFontControls: boolean;
     onLanguageChange: (value: string | null) => void;
     onFontFamilyChange: (value: string) => void;
     onCjkFontPackChange: (value: string) => void;
@@ -274,6 +275,7 @@ export function SettingsInterfaceAppearanceCard({
     locale,
     prefs,
     zoomInput,
+    hideFontControls,
     onLanguageChange,
     onFontFamilyChange,
     onCjkFontPackChange,
@@ -320,12 +322,14 @@ export function SettingsInterfaceAppearanceCard({
                 </Field>
             ) : null}
 
-            <FontFamilyPreferenceField
-                locale={locale}
-                prefs={prefs}
-                onFontFamilyChange={onFontFamilyChange}
-                onCjkFontPackChange={onCjkFontPackChange}
-            />
+            {!hideFontControls ? (
+                <FontFamilyPreferenceField
+                    locale={locale}
+                    prefs={prefs}
+                    onFontFamilyChange={onFontFamilyChange}
+                    onCjkFontPackChange={onCjkFontPackChange}
+                />
+            ) : null}
 
             <Field
                 settingId="interface.appearance.zoom"

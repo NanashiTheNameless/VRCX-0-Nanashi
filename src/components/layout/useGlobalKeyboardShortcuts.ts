@@ -32,6 +32,9 @@ export function useGlobalKeyboardShortcuts() {
     const setSystemHostOpen = useRuntimeStore(
         (state) => state.setSystemHostOpen
     );
+    const isMacHost = useRuntimeStore(
+        (state) => state.hostCapabilities.platform === 'macos'
+    );
     const sessionReady = useSessionStore(
         (state) => state.sessionPhase === 'ready'
     );
@@ -79,7 +82,7 @@ export function useGlobalKeyboardShortcuts() {
     useShortcutHandler('friends-sidebar', toggleSidePanelOpen, sessionReady);
 
     useEffect(() => {
-        const primaryModifierKey = 'Control';
+        const primaryModifierKey = isMacHost ? 'Meta' : 'Control';
         let primaryModifierHeld = false;
         let shortcutHintsSuppressed = false;
         let shortcutHintTimer: number | null = null;
@@ -136,14 +139,14 @@ export function useGlobalKeyboardShortcuts() {
                 hideShortcutHints();
             }
 
-            dispatchGlobalShortcut(event, false);
+            dispatchGlobalShortcut(event, isMacHost);
         }
 
         function handleKeyUp(event: KeyboardEvent) {
             if (event.key !== primaryModifierKey) {
                 return;
             }
-            primaryModifierHeld = event.ctrlKey;
+            primaryModifierHeld = isMacHost ? event.metaKey : event.ctrlKey;
             if (!primaryModifierHeld) {
                 shortcutHintsSuppressed = false;
                 hideShortcutHints();
@@ -170,5 +173,5 @@ export function useGlobalKeyboardShortcuts() {
             );
             hideShortcutHints();
         };
-    }, [sessionReady, setShortcutHintsVisible]);
+    }, [isMacHost, sessionReady, setShortcutHintsVisible]);
 }
