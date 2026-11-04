@@ -13,3 +13,7 @@ Fork (VRCX-0-Nanashi) bundles notification sounds from "UI Sounds" by HaelDB and
 "Interface Beeps" by bart (https://opengameart.org), and "Digital Audio" by Kenney
 (https://kenney.nl), all released under CC0 1.0 Universal. The full text is in
 LICENSES/CC0-1.0.txt; the files are listed in crates/host-desktop/sounds/README.md.
+
+Fork (VRCX-0-Nanashi) uses the jpeg-encoder crate, parts of which are derived from
+the Independent JPEG Group's software. This software is based in part on the work
+of the Independent JPEG Group.

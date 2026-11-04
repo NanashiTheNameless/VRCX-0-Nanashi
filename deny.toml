@@ -20,6 +20,7 @@ allow = [
     "CC0-1.0",
     "CDLA-Permissive-2.0",
     "GPL-3.0-only",
+    "IJG",
     "ISC",
     "LGPL-2.1-or-later",
     "MIT",
