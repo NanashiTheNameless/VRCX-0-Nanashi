@@ -392,6 +392,7 @@ impl GeminiStreamState {
                             .unwrap_or_else(|| json!({}))
                             .to_string(),
                     },
+                    extra_content: None,
                 });
             }
         }
@@ -422,6 +423,7 @@ mod tests {
                 name: "search".into(),
                 arguments: r#"{"q":"ada"}"#.into(),
             },
+            extra_content: None,
         });
         let messages = vec![
             ChatMessage::system("Be brief"),

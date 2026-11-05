@@ -284,6 +284,7 @@ fn parse_converse_output(payload: &Value) -> AssistantTurn {
                         .unwrap_or_else(|| json!({}))
                         .to_string(),
                 },
+                extra_content: None,
             });
         }
     }
@@ -320,6 +321,7 @@ mod tests {
                 name: "search".into(),
                 arguments: r#"{"q":"ada"}"#.into(),
             },
+            extra_content: None,
         });
         let body = bedrock_body(
             &[

@@ -1540,6 +1540,7 @@ fn call(id: &str, name: &str, arguments: &str) -> ToolCall {
             name: name.into(),
             arguments: arguments.into(),
         },
+        extra_content: None,
     }
 }
 

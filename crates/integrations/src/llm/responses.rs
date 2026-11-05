@@ -297,6 +297,7 @@ impl ResponsesStreamState {
                             name,
                             arguments: text("arguments"),
                         },
+                        extra_content: None,
                     });
                 }
                 Some("reasoning") => reasoning_details.push(item),

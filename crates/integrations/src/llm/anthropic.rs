@@ -353,6 +353,7 @@ impl AnthropicStreamState {
                         tool.input_json
                     },
                 },
+                extra_content: None,
             })
             .collect();
         AssistantTurn {
@@ -386,6 +387,7 @@ mod tests {
                 name: "search".into(),
                 arguments: r#"{"q":"ada"}"#.into(),
             },
+            extra_content: None,
         });
         let messages = vec![
             ChatMessage::system("Be brief"),

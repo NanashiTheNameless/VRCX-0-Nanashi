@@ -279,6 +279,7 @@ impl CohereStreamState {
                         call.arguments
                     },
                 },
+                extra_content: None,
             })
             .collect();
         AssistantTurn {

@@ -34,5 +34,9 @@ allow = [
     "Zlib"
 ]
 
+[[licenses.exceptions]]
+crate = "jpeg-encoder"
+allow = ["IJG"]
+
 [licenses.private]
 ignore = true

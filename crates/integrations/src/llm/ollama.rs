@@ -279,6 +279,7 @@ impl OllamaStreamState {
                 id: format!("call_{}", self.tool_calls.len()),
                 kind: "function".into(),
                 function: FunctionCall { name, arguments },
+                extra_content: None,
             });
         }
     }
@@ -325,6 +326,7 @@ mod tests {
                 name: "search".into(),
                 arguments: "{}".into(),
             },
+            extra_content: None,
         });
         let body = ollama_body(
             "llama3",
