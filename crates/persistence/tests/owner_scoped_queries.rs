@@ -13,6 +13,7 @@ const OWNER_TABLES: &[&str] = &[
     "gamelog_portal_spawn",
     "gamelog_resource_load",
     "gamelog_video_play",
+    "remote_sync_tombstone",
 ];
 
 const OWNER_FILTER_EXCEPTIONS: &[(&str, &str)] = &[
@@ -48,6 +49,10 @@ const OWNER_FILTER_EXCEPTIONS: &[(&str, &str)] = &[
     ("src/game_log/write.rs", "update gamelog_video_play set video_name = @video_name"),
     // World id to world name is a global fact, not account history.
     ("src/realtime/query.rs", "select world_name from gamelog_location where world_id = @world_id"),
+    // The restore trigger scopes by the restored row's own owner, formatted in as `owner_id = {}`.
+    ("src/remote_sync/streams.rs", "after insert on {} begin delete from remote_sync_tombstone where stream = '{literal}' and owner_id = {}"),
+    // Synced app settings belong to the machine, stored with owner_id = 0.
+    ("src/remote_sync/streams.rs", "select row_key, deleted_at from remote_sync_tombstone where stream = @stream and owner_id = 0"),
 ];
 
 const SEA_QUERY_TABLE_METHODS: &[&str] = &[

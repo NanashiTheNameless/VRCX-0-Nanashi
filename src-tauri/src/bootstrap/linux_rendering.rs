@@ -187,13 +187,21 @@ fn write_mode(app: &AppHandle, mode: &str) -> Result<(), String> {
 
 #[cfg(all(test, target_os = "linux"))]
 mod tests {
+    use std::sync::Mutex;
+
     use super::environment_override_active;
+
+    // Both tests set the same process-wide variable; tests run in parallel.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     // `resolve` writes this variable in our own environment before WebKit
     // starts, and a restart re-execs with it still set. Presence alone must
     // not be read as an override, or the settings snapshot never resolves.
     #[test]
     fn own_disabling_values_are_not_treated_as_an_override() {
+        let _guard = ENV_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let previous = std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").ok();
         for value in ["0", "", "false", "off", "no"] {
             std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", value);
@@ -210,6 +218,9 @@ mod tests {
 
     #[test]
     fn genuinely_disabling_values_are_an_override() {
+        let _guard = ENV_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
         let previous = std::env::var("WEBKIT_DISABLE_DMABUF_RENDERER").ok();
         for value in ["1", "true", "yes", "on"] {
             std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", value);

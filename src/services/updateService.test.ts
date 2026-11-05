@@ -43,7 +43,7 @@ describe('updateService branch release fetching', () => {
         expect(hasMore).toBe(false);
         expect(mocks.fetchGithubReleases).toHaveBeenCalledWith(
             expect.objectContaining({
-                url: 'https://api.github.com/repos/Map1en/VRCX-0/releases?per_page=30&page=1'
+                url: 'https://api.github.com/repos/NanashiTheNameless/VRCX-0-Nanashi/releases?per_page=30&page=1'
             })
         );
     });
@@ -61,7 +61,7 @@ describe('updateService branch release fetching', () => {
         expect(hasMore).toBe(true);
         expect(mocks.fetchGithubReleases).toHaveBeenCalledWith(
             expect.objectContaining({
-                url: 'https://api.github.com/repos/Map1en/VRCX-0/releases?per_page=30&page=2'
+                url: 'https://api.github.com/repos/NanashiTheNameless/VRCX-0-Nanashi/releases?per_page=30&page=2'
             })
         );
     });

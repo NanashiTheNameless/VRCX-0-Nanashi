@@ -764,6 +764,7 @@ fn desktop_runtime_host_reaches_infrastructure_only_through_listed_modules() {
     const PERSISTENCE_HANDLES: &[&str] = &["DatabaseService", "screenshot_cache::MetadataCacheDb"];
     const PERSISTENCE_QUERY_MODULES: &[&str] = &[
         "assistant_adapters.rs",
+        "context.rs",
         "data_dir.rs",
         "feed_logger.rs",
         "game_log.rs",
@@ -775,9 +776,12 @@ fn desktop_runtime_host_reaches_infrastructure_only_through_listed_modules() {
         "mcp_adapters.rs",
         "notification/dispatcher.rs",
         "notification/indicator.rs",
+        "safety/avatar_blocks.rs",
+        "safety/mod.rs",
         "state.rs",
+        "state/remote_sync.rs",
     ];
-    const VRCHAT_CLIENT_MODULES: &[&str] = &["privacy_lock.rs"];
+    const VRCHAT_CLIENT_MODULES: &[&str] = &["privacy_lock.rs", "state/remote_sync.rs"];
 
     let root = workspace_file(SOURCE_ROOT);
     let mut persistence_queries = std::collections::BTreeMap::<String, BTreeSet<String>>::new();
