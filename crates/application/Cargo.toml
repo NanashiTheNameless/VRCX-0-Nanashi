@@ -35,6 +35,7 @@ vrcx-0-core = { path = "../core" }
 vrcx-0-contracts = { path = "../contracts" }
 vrcx-0-application-core = { path = "../application-core" }
 vrcx-0-application-realtime = { path = "../application-realtime" }
+vrcx-0-vrchat-protocol = { path = "../vrchat-protocol" }
 specta.workspace = true
 
 [dev-dependencies]

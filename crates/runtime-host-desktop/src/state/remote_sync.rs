@@ -635,7 +635,7 @@ impl DesktopRuntimeHostState {
                 .filter(|(key, _)| syncable_app_setting(key))
                 .collect(),
         };
-        self.config_set_values(vec![crate::local_data::ConfigWriteEntry {
+        self.config_set_values(vec![vrcx_0_contracts::ConfigWriteEntry {
             key: SYNC_SETTING_CHOICES_KEY.into(),
             value: serde_json::to_string(&StoredRemoteSyncSettingChoices {
                 grouping_version: 1,
@@ -786,7 +786,7 @@ impl DesktopRuntimeHostState {
                     continue;
                 }
                 if local_value != value {
-                    self.config_set_values(vec![crate::local_data::ConfigWriteEntry {
+                    self.config_set_values(vec![vrcx_0_contracts::ConfigWriteEntry {
                         key: key.clone(),
                         value: value.clone(),
                     }])?;
@@ -794,7 +794,7 @@ impl DesktopRuntimeHostState {
                     changed = true;
                 }
             } else {
-                self.config_set_values(vec![crate::local_data::ConfigWriteEntry {
+                self.config_set_values(vec![vrcx_0_contracts::ConfigWriteEntry {
                     key: key.clone(),
                     value: value.clone(),
                 }])?;
@@ -1722,7 +1722,7 @@ impl DesktopRuntimeHostState {
             error => sync_error(error),
         })?;
         shared.insert(share_key, id.clone());
-        self.config_set_values(vec![crate::local_data::ConfigWriteEntry {
+        self.config_set_values(vec![vrcx_0_contracts::ConfigWriteEntry {
             key: SHARED_COLLECTIONS_KEY.into(),
             value: serde_json::to_string(&shared)?,
         }])?;

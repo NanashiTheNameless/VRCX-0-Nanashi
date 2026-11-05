@@ -5,7 +5,7 @@ on:
         workflows: ['**']
         types: [completed]
     schedule:
-        - cron: '17 * * * *'
+        - cron: '17 */4 * * *'
     workflow_dispatch:
         inputs:
             run_id:
@@ -39,3 +39,6 @@ jobs:
             - uses: NanashiTheNameless/retry-unacquired-runners@main
               with:
                   run-id: ${{ inputs.run_id }}
+                  # CI Success fails whenever a job it needs was not acquired;
+                  # it is not a real failure and is rerun with the others.
+                  exclude-jobs: '^CI Success$'

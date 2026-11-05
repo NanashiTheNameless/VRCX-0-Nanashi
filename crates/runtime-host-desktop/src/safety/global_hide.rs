@@ -165,7 +165,7 @@ impl SafetyRuntime {
             }
         }
         let (api, _) = self.api.get().ok_or("Safety API is not ready")?;
-        let request = vrcx_0_vrchat_client::http_api::api_input(
+        let request = vrcx_0_vrchat_protocol::http_api::api_input(
             scope.endpoint.clone(),
             "GET",
             "auth/user/avatarmoderations",
@@ -274,7 +274,7 @@ impl SafetyRuntime {
         let job = self.global_hide_job(&scope, &id);
         let message = format!("Global hide from community list: {id}");
         self.record_global_hide(&job, &source, &message, "global hide avatar", "attempting");
-        let Ok((_, request)) = vrcx_0_vrchat_client::avatars::avatar_moderation_send_input(
+        let Ok((_, request)) = vrcx_0_vrchat_protocol::avatars::avatar_moderation_send_input(
             scope.endpoint.clone(),
             id.clone(),
         ) else {
@@ -332,7 +332,7 @@ impl SafetyRuntime {
         let account = scope.current_user_id.clone();
         let job = self.global_hide_job(scope, id);
         let message = format!("User-requested unblock of app-made block: {id}");
-        let Ok((_, request)) = vrcx_0_vrchat_client::avatars::avatar_moderation_delete_input(
+        let Ok((_, request)) = vrcx_0_vrchat_protocol::avatars::avatar_moderation_delete_input(
             scope.endpoint.clone(),
             id.to_string(),
         ) else {

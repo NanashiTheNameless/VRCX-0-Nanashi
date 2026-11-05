@@ -7,12 +7,12 @@ use chrono::Utc;
 use serde_json::{json, Value};
 use vrcx_0_application::remote::VrchatApiRuntime;
 use vrcx_0_application_activity::ActivityRouter;
-use vrcx_0_application_core::vrchat_api::VrchatScope;
+use vrcx_0_application_core::ConfigStore;
 use vrcx_0_application_core::{RuntimeAuthScope, RuntimeAuthScopeSnapshot, TaskSupervisor};
 use vrcx_0_application_game::{GameLogEventOrigin, GameLogEventSink, GameLogScanCursor};
 use vrcx_0_contracts::activity::{ActivityEvent, ActivityKind};
+use vrcx_0_contracts::vrchat_api::VrchatScope;
 use vrcx_0_core::game_log_parser::{GameLogEvent, GameLogEventKind};
-use vrcx_0_persistence::config::ConfigRepository;
 
 mod avatar_blocks;
 mod global_hide;
@@ -60,7 +60,7 @@ pub(crate) struct SafetyJob {
 }
 
 pub struct SafetyRuntime {
-    config: ConfigRepository,
+    config: Arc<dyn ConfigStore>,
     db: Arc<vrcx_0_persistence::DatabaseService>,
     auth: RuntimeAuthScope,
     overlay: ActivityRouter,
@@ -88,7 +88,7 @@ pub struct SafetyRuntime {
 
 impl SafetyRuntime {
     pub(crate) fn new(
-        config: ConfigRepository,
+        config: Arc<dyn ConfigStore>,
         db: Arc<vrcx_0_persistence::DatabaseService>,
         auth: RuntimeAuthScope,
         overlay: ActivityRouter,
@@ -1459,7 +1459,7 @@ async fn request(
     let (method, path, body) = input;
     let scope = &job.scope;
     let request =
-        vrcx_0_vrchat_client::http_api::api_input(scope.endpoint.clone(), method, path, body);
+        vrcx_0_vrchat_protocol::http_api::api_input(scope.endpoint.clone(), method, path, body);
     let response = tokio::time::timeout(
         Duration::from_secs(15),
         api.execute_guarded(scope, request, VrchatScope::Vrchat, || {

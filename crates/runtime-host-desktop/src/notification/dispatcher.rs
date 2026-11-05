@@ -10,9 +10,9 @@ use vrcx_0_application_activity::notification::{
     NotificationResolver, OverlayLocale, RenderedNotification,
 };
 use vrcx_0_application_activity::{ActivityDelivery, ActivitySink, ActivitySnapshot};
+use vrcx_0_application_core::ConfigStore;
 use vrcx_0_application_core::{ImageCache, RuntimeAuthScope, TaskSupervisor};
 use vrcx_0_host_desktop::tts::TtsEngine;
-use vrcx_0_persistence::config::ConfigRepository;
 use vrcx_0_persistence::DatabaseService;
 
 use super::desktop::{send_desktop_notification, DesktopNotificationAction, DesktopNotifier};
@@ -150,7 +150,7 @@ impl ActivitySink for NotificationDispatcher {
         // Fork: per-event custom sound. Treated as an audio surface, so the
         // policy's Do Not Disturb / privacy-lock pause mutes it too.
         play_custom_notification_sound(
-            self.output.policy.config(),
+            self.output.policy.config().as_ref(),
             &delivery,
             &self.output,
             &settings,
@@ -319,7 +319,7 @@ fn prepare_rendered_notification(
 /// Fork: per-event custom sound (see `sounds.rs`). Treated as an audio
 /// surface, so the policy's Do Not Disturb / privacy-lock pause mutes it too.
 fn play_custom_notification_sound(
-    config: &ConfigRepository,
+    config: &dyn ConfigStore,
     delivery: &ActivityDelivery,
     output: &NotificationOutputContext,
     settings: &NotificationSettings,

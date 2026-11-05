@@ -11,7 +11,6 @@ mod background_image;
 mod background_remote;
 mod chatbox;
 mod context;
-mod current_user_mutation;
 pub mod data_dir;
 mod database_upgrade;
 pub mod deep_link;
@@ -39,7 +38,6 @@ pub mod notification;
 mod privacy_lock;
 mod process_monitor;
 mod profile_backup;
-mod profile_bio;
 mod proxy_connectivity;
 mod registry_backup;
 mod screenshot;
@@ -50,9 +48,6 @@ mod startup_bootstrap;
 mod state;
 pub mod tray_shortcut;
 pub mod vr_overlay;
-pub mod vrchat_api;
-mod vrchat_remote;
-mod world_remote;
 
 pub use ancillary_snapshot::AncillaryRuntimeSnapshot;
 pub use app_launcher::AppLauncherSnapshotEvent;
@@ -96,7 +91,6 @@ pub use state::{
     CurrentUserRefreshOutcome, DesktopRuntimeBundle, DesktopRuntimeHostOptions,
     DesktopRuntimeHostState, GameRuntimeBundle,
 };
-pub use vrchat_remote::DesktopVrchatRemoteFacade;
 pub use vrcx_0_composition::{Error, Result};
 
 pub mod reminders;

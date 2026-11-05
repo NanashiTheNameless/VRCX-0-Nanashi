@@ -1,247 +1,48 @@
-use std::cell::RefCell;
 use std::collections::{BTreeSet, VecDeque};
 use std::sync::{
     atomic::{AtomicBool, AtomicU64, Ordering},
-    Arc, Condvar, Mutex, Weak,
+    Arc, Condvar, Mutex,
 };
 use std::thread::{self, ThreadId};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
-use chrono::Timelike;
 use serde::Serialize;
 use vrcx_0_application_activity::notification::unresolved_group_id;
-use vrcx_0_application_activity::{ActivityDelivery, ActivitySink, ActivitySnapshot};
+use vrcx_0_application_activity::ActivitySnapshot;
 use vrcx_0_application_core::{GameProcessEvent, GameProcessEventSink, TaskSupervisor};
-use vrcx_0_core::text::first_non_empty_owned;
-use vrcx_0_host_desktop::vr_overlay::{
-    OverlayActivationButton, OverlayPlacement, OverlaySurfaceConfig, VrDeviceSnapshot, WristAnchor,
-    WristPressCounts,
-};
-use vrcx_0_vr_overlay::{
-    MainSurfaceModel, OverlaySize, OverlaySurfaceId, RgbaFrame, SlintHmdRenderer,
-    SlintWristRenderer, WristSurfaceModel, MAIN_SURFACE_ID,
-};
+use vrcx_0_vr_overlay_backend::{VrDeviceSnapshot, WristPressCounts};
 
-use crate::VrOverlayRuntimeServices;
+use crate::{VrOverlayRuntimeServices, WristPage, WristPlayerRow, WristPlayersSort};
 
 use super::{
     avatar_cache::AvatarBitmapCache,
-    build_wrist_surface_model,
+    config::VrOverlayRuntimeConfig,
     eligibility::{VrOverlayEligibility, WristOverlayStartMode},
-    localization::OverlayLocale,
     manager::VrOverlayManager,
-    service::{HostVrOverlayService, OverlayBackendPreference},
-    surfaces::hmd_toast::{refresh_cached_location_names, HmdToastState},
-    surfaces::wrist::{clock_text, compact_duration},
-    test_preview::test_wrist_frame_input,
+    service::HostVrOverlayService,
+    surfaces::hmd_toast::HmdToastState,
     tracker_watch::{TrackerDisconnect, TrackerWatch},
-    WristOverlayFrameInput, WristOverlayRenderOptions, WristOverlaySizePreset, WristPage,
-    WristPageOrder, WristPlacement, WristPlayerRow, WristPlayersSort, WristRuntimeFooter,
-    WristRuntimeNowPlaying,
 };
+
+mod activity_sink;
+pub(crate) mod frame;
+mod surface_layout;
+mod text;
 
 pub(crate) use super::config::load_runtime_config;
 pub use super::config::VR_OVERLAY_ENABLED_CONFIG_KEY;
+pub use activity_sink::VrOverlayActivitySink;
 
-trait VrOverlayFrameProducer: Send {
-    /// `None` when there is nothing new to show, such as while the wrist is hidden.
-    fn next_frame(&mut self, input: VrOverlayFrameInput) -> Result<Option<RgbaFrame>, String>;
-}
+use frame::{
+    clear_slint_hmd_renderer, clear_slint_wrist_renderer, RuntimeWristFrameProducer,
+    StaticWristFrameProducer, VrOverlayFrameProducer, VrOverlayFrameProducerFactory,
+};
+use surface_layout::{overlay_surface_configs, surface_active_for_start_mode, wrist_surface_ids};
 
-type VrOverlayFrameProducerFactory = Box<dyn Fn() -> Box<dyn VrOverlayFrameProducer> + Send + Sync>;
 type HmdFriendMembershipProvider = Arc<dyn Fn(&str) -> bool + Send + Sync>;
-
-thread_local! {
-    static SLINT_WRIST_RENDERER: RefCell<Option<SlintWristRenderer>> = const { RefCell::new(None) };
-    static SLINT_HMD_RENDERER: RefCell<Option<SlintHmdRenderer>> = const { RefCell::new(None) };
-}
 
 const WRIST_DEVICE_REFRESH_INTERVAL: Duration = Duration::from_secs(5);
 const WRIST_FRAME_REFRESH_INTERVAL: Duration = Duration::from_secs(1);
-/// How often the refresh loop checks for a wrist being shown or a menu press,
-/// so a newly shown or switched page is drawn without waiting a full refresh.
-const WRIST_STATE_POLL_INTERVAL: Duration = Duration::from_millis(100);
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum WristOverlayHand {
-    #[default]
-    Left,
-    Right,
-    Both,
-}
-
-impl WristOverlayHand {
-    pub(crate) fn from_config(value: &str) -> Self {
-        match value.trim() {
-            "right" => Self::Right,
-            "both" => Self::Both,
-            _ => Self::Left,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum HmdNotificationPosition {
-    Top,
-    Center,
-    #[default]
-    Bottom,
-}
-
-impl HmdNotificationPosition {
-    pub(crate) fn from_config(value: &str) -> Self {
-        match value.trim() {
-            "top" => Self::Top,
-            "center" => Self::Center,
-            _ => Self::Bottom,
-        }
-    }
-
-    fn newest_card_angle_degrees(self) -> f32 {
-        match self {
-            Self::Top => 4.0,
-            Self::Center => -6.0,
-            Self::Bottom => -18.0,
-        }
-    }
-
-    pub(crate) fn stacks_upward(self) -> bool {
-        self == Self::Top
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum HmdNotificationStyle {
-    #[default]
-    Standard,
-    Compact,
-}
-
-impl HmdNotificationStyle {
-    pub(crate) fn from_config(value: &str) -> Self {
-        match value.trim() {
-            "compact" => Self::Compact,
-            _ => Self::Standard,
-        }
-    }
-
-    fn single_card_height_px(self) -> f32 {
-        match self {
-            Self::Standard => 112.0,
-            Self::Compact => 60.0,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) struct HmdNotificationConfig {
-    pub(crate) enabled: bool,
-    pub(crate) start_mode: WristOverlayStartMode,
-    pub(crate) timeout_ms: u64,
-    pub(crate) opacity_percent: u8,
-    pub(crate) position: HmdNotificationPosition,
-    pub(crate) style: HmdNotificationStyle,
-    pub(crate) avatars: bool,
-    /// Fork: HMD card text size, in percent.
-    pub(crate) text_percent: u8,
-    /// Fork: shift from the chosen position, in cm at the panel's distance.
-    pub(crate) side_cm: i8,
-    pub(crate) up_cm: i8,
-    pub(crate) tracker_disconnect: bool,
-}
-
-impl HmdNotificationConfig {
-    pub const MAX_OFFSET_CM: i8 = 50;
-}
-
-impl Default for HmdNotificationConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            start_mode: WristOverlayStartMode::Vrchat,
-            timeout_ms: 5_000,
-            opacity_percent: 90,
-            position: HmdNotificationPosition::Bottom,
-            style: HmdNotificationStyle::Standard,
-            avatars: true,
-            text_percent: 100,
-            side_cm: 0,
-            up_cm: 0,
-            tracker_disconnect: true,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) struct VrOverlayRuntimeConfig {
-    pub(crate) start_mode: WristOverlayStartMode,
-    pub(crate) backend: OverlayBackendPreference,
-    pub(crate) button: OverlayActivationButton,
-    pub(crate) hand: WristOverlayHand,
-    pub(crate) hmd: HmdNotificationConfig,
-    pub(crate) render: WristOverlayRenderOptions,
-    pub(crate) locale: OverlayLocale,
-    pub(crate) dt_hour12: bool,
-    pub(crate) show_instance_id_in_location: bool,
-    /// Fork: customizable wrist pages (Settings > VR).
-    pub(crate) wrist_pages: WristPageOrder,
-    pub(crate) wrist_players_sort: WristPlayersSort,
-    /// Inactivity timeout in seconds. When the wrist menu is shown, it will
-    /// remain visible for this duration after the last interaction.
-    pub(crate) wrist_timeout_secs: u8,
-    /// Fork: after the press that opens the wrist menu, presses within this many
-    /// milliseconds do not switch the page. 0 disables it.
-    pub(crate) wrist_switch_cooldown_ms: u16,
-    /// Fork: wrist menu size, anchor, offsets and tilt (Settings > VR).
-    pub(crate) wrist_placement: WristPlacement,
-}
-
-impl Default for VrOverlayRuntimeConfig {
-    fn default() -> Self {
-        Self {
-            start_mode: WristOverlayStartMode::Vrchat,
-            backend: OverlayBackendPreference::Auto,
-            button: OverlayActivationButton::Grip,
-            hand: WristOverlayHand::Left,
-            hmd: HmdNotificationConfig::default(),
-            render: WristOverlayRenderOptions::default(),
-            locale: OverlayLocale::default(),
-            dt_hour12: true,
-            show_instance_id_in_location: false,
-            wrist_pages: WristPageOrder::default(),
-            wrist_players_sort: WristPlayersSort::Name,
-            wrist_timeout_secs: 15, // Default to 15 seconds
-            wrist_switch_cooldown_ms: 1_000,
-            wrist_placement: WristPlacement::default(),
-        }
-    }
-}
-
-impl VrOverlayRuntimeConfig {
-    fn surface_config_key(self) -> WristSurfaceRuntimeConfig {
-        WristSurfaceRuntimeConfig {
-            button: self.button,
-            hand: self.hand,
-            size: self.render.size,
-            hmd_enabled: self.hmd.enabled,
-            hmd_position: self.hmd.position,
-        }
-    }
-
-    fn should_clear_device_snapshot_for(self, next_config: Self) -> bool {
-        self.surface_config_key() != next_config.surface_config_key()
-            || self.render.show_devices != next_config.render.show_devices
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct WristSurfaceRuntimeConfig {
-    button: OverlayActivationButton,
-    hand: WristOverlayHand,
-    size: WristOverlaySizePreset,
-    hmd_enabled: bool,
-    hmd_position: HmdNotificationPosition,
-}
 
 struct VrOverlayFrameInput {
     config: VrOverlayRuntimeConfig,
@@ -336,34 +137,6 @@ pub struct VrOverlayRuntime {
     refresh_thread_id: Mutex<Option<ThreadId>>,
     frame_producer_factory: VrOverlayFrameProducerFactory,
     frame_producer: Mutex<Option<Box<dyn VrOverlayFrameProducer>>>,
-}
-
-#[derive(Clone)]
-pub struct VrOverlayActivitySink {
-    runtime: Weak<VrOverlayRuntime>,
-}
-
-impl VrOverlayActivitySink {
-    pub fn new(runtime: &Arc<VrOverlayRuntime>) -> Self {
-        Self {
-            runtime: Arc::downgrade(runtime),
-        }
-    }
-}
-
-impl ActivitySink for VrOverlayActivitySink {
-    fn emit_overlay_activity_snapshot(&self, snapshot: ActivitySnapshot) {
-        if let Some(runtime) = self.runtime.upgrade() {
-            runtime.prefetch_wrist_group_names(&snapshot);
-            runtime.reconcile_current();
-        }
-    }
-
-    fn emit_overlay_activity_delivery(&self, delivery: ActivityDelivery) {
-        if let Some(runtime) = self.runtime.upgrade() {
-            runtime.ingest_hmd_delivery(delivery);
-        }
-    }
 }
 
 impl VrOverlayRuntime {
@@ -1106,21 +879,18 @@ impl GameProcessEventSink for VrOverlayRuntime {
     }
 }
 
-struct RuntimeWristFrameProducer {
-    services: Arc<dyn VrOverlayRuntimeServices>,
-    page: WristPage,
-    presses: WristPressState,
-}
+#[cfg(test)]
+mod activity_sink_tests;
+#[cfg(test)]
+mod config_reload_tests;
+#[cfg(test)]
+mod device_refresh_tests;
+#[cfg(test)]
+mod footer_tests;
 
-impl RuntimeWristFrameProducer {
-    fn new(services: Arc<dyn VrOverlayRuntimeServices>) -> Self {
-        Self {
-            services,
-            page: WristPage::Feed,
-            presses: WristPressState::default(),
-        }
-    }
-}
+/// How often the refresh loop checks for a wrist being shown or a menu press,
+/// so a newly shown or switched page is drawn without waiting a full refresh.
+const WRIST_STATE_POLL_INTERVAL: Duration = Duration::from_millis(100);
 
 /// Tracks menu presses so the page can follow them.
 #[derive(Clone, Copy, Debug, Default)]
@@ -1153,211 +923,9 @@ fn track_wrist_page(
     *page = config.wrist_pages.normalize(*page);
 }
 
-impl VrOverlayFrameProducer for RuntimeWristFrameProducer {
-    fn next_frame(&mut self, input: VrOverlayFrameInput) -> Result<Option<RgbaFrame>, String> {
-        track_wrist_page(
-            &input.config,
-            &mut self.page,
-            &mut self.presses,
-            input.wrist_activations,
-        );
-        if !input.wrist_visible && !input.test_mode {
-            return Ok(None);
-        }
-        let page = self.page;
-        let frame_input = if input.test_mode {
-            test_wrist_frame_input(
-                input.config,
-                input.devices,
-                local_time_text(input.config.dt_hour12),
-                now_ms(),
-            )
-        } else {
-            build_wrist_frame_input(
-                self.services.as_ref(),
-                input.config,
-                input.devices,
-                input.wrist_visible,
-                page,
-            )
-        };
-        let model = build_wrist_surface_model(frame_input);
-        render_slint_wrist_frame(&model).map(Some)
-    }
-}
-
-fn render_slint_wrist_frame(model: &WristSurfaceModel) -> Result<RgbaFrame, String> {
-    SLINT_WRIST_RENDERER.with(|renderer| {
-        renderer
-            .borrow_mut()
-            .get_or_insert_with(SlintWristRenderer::new)
-            .render(model)
-    })
-}
-
-fn clear_slint_wrist_renderer() {
-    SLINT_WRIST_RENDERER.with(|renderer| {
-        renderer.borrow_mut().take();
-    });
-}
-
-pub(crate) fn render_slint_hmd_frame(model: &MainSurfaceModel) -> Result<RgbaFrame, String> {
-    SLINT_HMD_RENDERER.with(|renderer| {
-        renderer
-            .borrow_mut()
-            .get_or_insert_with(SlintHmdRenderer::new)
-            .render(model)
-    })
-}
-
-fn clear_slint_hmd_renderer() {
-    SLINT_HMD_RENDERER.with(|renderer| {
-        renderer.borrow_mut().take();
-    });
-}
-
-#[derive(Default)]
-struct StaticWristFrameProducer;
-
-impl VrOverlayFrameProducer for StaticWristFrameProducer {
-    fn next_frame(&mut self, _input: VrOverlayFrameInput) -> Result<Option<RgbaFrame>, String> {
-        Ok(Some(RgbaFrame::new(
-            OverlaySize::new(16, 8),
-            vec![0; 16 * 8 * 4],
-        )))
-    }
-}
-
-fn start_mode_allows(start_mode: WristOverlayStartMode, game_running: bool) -> bool {
-    match start_mode {
-        WristOverlayStartMode::SteamVr => true,
-        WristOverlayStartMode::Vrchat => game_running,
-    }
-}
-
-fn surface_active_for_start_mode(
-    enabled: bool,
-    start_mode: WristOverlayStartMode,
-    backend_available: bool,
-    steamvr_running: bool,
-    game_running: bool,
-) -> bool {
-    enabled && backend_available && steamvr_running && start_mode_allows(start_mode, game_running)
-}
-
-fn overlay_surface_configs(
-    active_surfaces: ActiveOverlaySurfaces,
-    config: VrOverlayRuntimeConfig,
-    runtime: &VrOverlayRuntime,
-) -> Vec<OverlaySurfaceConfig> {
-    let force_visible = runtime.is_test_mode();
-    let mut configs = Vec::new();
-    if active_surfaces.wrist {
-        configs.extend(wrist_surface_configs(config, force_visible));
-    }
-    if active_surfaces.hmd {
-        configs.push(hmd_surface_config(config.hmd));
-    }
-    configs
-}
-
-fn wrist_surface_configs(
-    config: VrOverlayRuntimeConfig,
-    force_visible: bool,
-) -> Vec<OverlaySurfaceConfig> {
-    wrist_surface_ids(config.hand)
-        .into_iter()
-        .map(|surface_id| {
-            let device_hint = if surface_id.as_str() == "wrist-right" {
-                "right-hand"
-            } else {
-                "left-hand"
-            };
-            wrist_surface_config(surface_id.as_str(), device_hint, config, force_visible)
-        })
-        .collect()
-}
-
-fn wrist_surface_ids(hand: WristOverlayHand) -> Vec<OverlaySurfaceId> {
-    let mut surface_ids = Vec::new();
-    if matches!(hand, WristOverlayHand::Left | WristOverlayHand::Both) {
-        surface_ids.push(OverlaySurfaceId::new("wrist-left"));
-    }
-    if matches!(hand, WristOverlayHand::Right | WristOverlayHand::Both) {
-        surface_ids.push(OverlaySurfaceId::new("wrist-right"));
-    }
-    surface_ids
-}
-
-fn wrist_surface_config(
-    surface_id: &str,
-    device_hint: &str,
-    config: VrOverlayRuntimeConfig,
-    force_visible: bool,
-) -> OverlaySurfaceConfig {
-    let placement = config.wrist_placement;
-    let timeout_ms = u64::from(config.wrist_timeout_secs) * 1_000;
-    OverlaySurfaceConfig {
-        surface_id: OverlaySurfaceId::new(surface_id),
-        size: config.render.size.overlay_size(),
-        physical_width_meters: placement.physical_width_meters(),
-        placement: OverlayPlacement::TrackedDeviceRelative {
-            device_hint: device_hint.to_string(),
-            adjust: placement.adjust(),
-        },
-        activation_button: config.button,
-        force_visible,
-        visible_duration_ms: timeout_ms,
-        switch_cooldown_ms: u64::from(config.wrist_switch_cooldown_ms),
-    }
-}
-
-/// HMD pixel density reference: the original 960px panel was 0.991m wide.
-const HMD_SURFACE_SIZE: OverlaySize = OverlaySize::new(960, 528);
-const HMD_SURFACE_DISTANCE_METERS: f32 = 1.2;
-const HMD_SURFACE_WIDTH_METERS: f32 = 0.991;
-const HMD_STACK_INSET_PX: f32 = 20.0;
 /// Fork: room for cards to grow sideways; cards hug their text, so the extra
 /// width only shows for long notifications.
 const HMD_PANEL_WIDTH_PX: u32 = 1280;
-
-fn hmd_surface_config(hmd: HmdNotificationConfig) -> OverlaySurfaceConfig {
-    let HmdNotificationConfig {
-        position,
-        style,
-        text_percent,
-        ..
-    } = hmd;
-    let meters_per_px = HMD_SURFACE_WIDTH_METERS / HMD_SURFACE_SIZE.width as f32;
-    let newest_card_y = HMD_SURFACE_DISTANCE_METERS
-        * position.newest_card_angle_degrees().to_radians().tan()
-        + f32::from(hmd.up_cm) / 100.0;
-    // The panel is only as tall as its cards, so the edge holding the newest
-    // card is anchored and the stack grows away from it.
-    let card_half_height = style.single_card_height_px() * f32::from(text_percent) / 100.0 / 2.0;
-    let edge_offset = (HMD_STACK_INSET_PX + card_half_height) * meters_per_px;
-    let (offset_y_meters, anchor) = if position.stacks_upward() {
-        (newest_card_y - edge_offset, WristAnchor::Bottom)
-    } else {
-        (newest_card_y + edge_offset, WristAnchor::Top)
-    };
-    OverlaySurfaceConfig {
-        surface_id: OverlaySurfaceId::new(MAIN_SURFACE_ID),
-        size: OverlaySize::new(HMD_PANEL_WIDTH_PX, HMD_SURFACE_SIZE.height),
-        physical_width_meters: HMD_PANEL_WIDTH_PX as f32 * meters_per_px,
-        placement: OverlayPlacement::HeadLocked {
-            offset_x_meters: f32::from(hmd.side_cm) / 100.0,
-            offset_y_meters,
-            distance_meters: HMD_SURFACE_DISTANCE_METERS,
-            anchor: Some(anchor),
-        },
-        activation_button: OverlayActivationButton::Grip,
-        force_visible: false,
-        // HMD toasts expire per toast; the surface itself does not time out.
-        visible_duration_ms: u64::MAX,
-        switch_cooldown_ms: 0,
-    }
-}
 
 /// Codes in `theirs` that the signed-in user also lists, in their order.
 fn shared_languages(local: &[String], theirs: &[String]) -> Vec<String> {
@@ -1369,162 +937,6 @@ fn shared_languages(local: &[String], theirs: &[String]) -> Vec<String> {
         }
     }
     shared
-}
-
-pub(super) fn build_wrist_frame_input(
-    services: &dyn VrOverlayRuntimeServices,
-    config: VrOverlayRuntimeConfig,
-    devices: Vec<VrDeviceSnapshot>,
-    live_now_playing: bool,
-    page: WristPage,
-) -> WristOverlayFrameInput {
-    let game_log = services.game_log_snapshot();
-    let now_playing = services.now_playing();
-    let captured_at_ms = now_ms();
-    // Fork: player rows (with local notes) only when a player page is shown.
-    let players = if page == WristPage::Feed {
-        Vec::new()
-    } else {
-        let ids: Vec<String> = game_log
-            .players
-            .iter()
-            .map(|player| player.user_id.clone())
-            .collect();
-        let notes = services.user_notes(&ids);
-        let friends = services.friend_records(&ids);
-        let cached = services.cached_user_statuses(&ids);
-        let current_user_id = services.auth_scope().snapshot().current_user_id;
-        let local_languages = cached
-            .get(&current_user_id)
-            .map(|status| status.languages.as_slice())
-            .unwrap_or_default();
-        let mut rows: Vec<(Option<i64>, WristPlayerRow)> = game_log
-            .players
-            .iter()
-            .map(|player| {
-                let friend = friends.get(&player.user_id);
-                let cached = cached.get(&player.user_id);
-                (
-                    player.join_time_ms,
-                    WristPlayerRow {
-                        display_name: player.display_name.clone(),
-                        note: notes.get(&player.user_id).cloned().unwrap_or_default(),
-                        joined_text: player
-                            .join_time_ms
-                            .map(|joined| compact_duration((captured_at_ms - joined).max(0)))
-                            .unwrap_or_default(),
-                        is_friend: friend.is_some(),
-                        // Everyone listed here is in the current instance, so
-                        // a player without friend presence is online.
-                        state: friend
-                            .map(|(_, presence)| presence.section().as_str().to_string())
-                            .unwrap_or_else(|| "online".to_string()),
-                        platform: friend
-                            .map(|(_, presence)| presence.platform().to_string())
-                            .filter(|platform| !platform.is_empty())
-                            .or_else(|| cached.map(|status| status.platform.clone()))
-                            .unwrap_or_default(),
-                        status_description: friend
-                            .map(|(record, _)| record.status_description.to_string())
-                            .filter(|description| !description.is_empty())
-                            .or_else(|| cached.map(|status| status.status_description.clone()))
-                            .unwrap_or_default(),
-                        age_verified: friend
-                            .and_then(|(record, _)| record.extra.get("ageVerificationStatus"))
-                            .and_then(serde_json::Value::as_str)
-                            .map(|status| status == "18+")
-                            .or_else(|| cached.map(|status| status.age_verified))
-                            .unwrap_or_default(),
-                        is_local: !current_user_id.is_empty() && player.user_id == current_user_id,
-                        languages: if player.user_id == current_user_id {
-                            local_languages
-                                .iter()
-                                .map(|code| code.to_ascii_uppercase())
-                                .collect()
-                        } else {
-                            shared_languages(
-                                local_languages,
-                                cached.map_or(&[], |status| status.languages.as_slice()),
-                            )
-                        },
-                    },
-                )
-            })
-            .collect();
-        sort_wrist_players(&mut rows, config.wrist_players_sort);
-        rows.into_iter().map(|(_, row)| row).collect()
-    };
-    let mut activity = services.activity_router().snapshot();
-    for entry in &mut activity.entries {
-        refresh_cached_location_names(services, entry);
-    }
-    WristOverlayFrameInput {
-        activity,
-        devices,
-        now_playing: (!now_playing.url.trim().is_empty()).then(|| WristRuntimeNowPlaying {
-            title: first_non_empty_owned([now_playing.name.as_str(), now_playing.url.as_str()]),
-            artist: now_playing.artist.clone(),
-            length_seconds: now_playing.length,
-            position_seconds: now_playing.position,
-            started_at: now_playing.started_at.unwrap_or_default(),
-        }),
-        live_now_playing,
-        footer: WristRuntimeFooter {
-            player_count: game_log.players.len() as u32,
-            instance_duration: instance_duration_text(
-                &game_log.location,
-                game_log.started_at,
-                captured_at_ms,
-            ),
-            online_duration: services
-                .game_started_at()
-                .map(|started_at| elapsed_minutes_text(started_at, captured_at_ms))
-                .unwrap_or_default(),
-            local_time: local_time_text(config.dt_hour12),
-        },
-        options: config.render,
-        locale: config.locale.as_str().to_string(),
-        show_instance_id_in_location: config.show_instance_id_in_location,
-        captured_at_ms,
-        page,
-        players,
-    }
-}
-
-fn now_ms() -> i64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_millis().min(i64::MAX as u128) as i64)
-        .unwrap_or_default()
-}
-
-fn local_time_text(hour12: bool) -> String {
-    let now = vrcx_0_core::time::display_now();
-    clock_text(now.hour(), now.minute(), hour12)
-}
-
-fn instance_duration_text(location: &str, started_at: i64, now_ms: i64) -> String {
-    if !is_world_instance_location(location) {
-        return String::new();
-    }
-    elapsed_minutes_text(started_at, now_ms)
-}
-
-fn elapsed_minutes_text(started_at: i64, now_ms: i64) -> String {
-    if started_at <= 0 {
-        return String::new();
-    }
-    let started_at_ms = started_at.saturating_mul(1000);
-    if now_ms < started_at_ms {
-        return String::new();
-    }
-    let minute_start_ms = now_ms - now_ms.rem_euclid(60_000);
-    compact_duration((minute_start_ms - started_at_ms).max(0))
-}
-
-fn is_world_instance_location(location: &str) -> bool {
-    let location = location.trim().to_ascii_lowercase();
-    location.starts_with("wrld_") && location.contains(':')
 }
 
 /// Name order (case-insensitive) or most recent join first; ties by name.
@@ -1545,6 +957,7 @@ fn sort_wrist_players(rows: &mut [(Option<i64>, WristPlayerRow)], sort: WristPla
 #[cfg(test)]
 mod wrist_page_tests {
     use super::*;
+    use crate::WristPageOrder;
 
     fn config_with(pages: &str) -> VrOverlayRuntimeConfig {
         VrOverlayRuntimeConfig {
@@ -1723,12 +1136,3 @@ mod wrist_page_tests {
         assert_eq!(names, ["Cid", "bea", "Aaron"]);
     }
 }
-
-#[cfg(test)]
-mod activity_sink_tests;
-#[cfg(test)]
-mod config_reload_tests;
-#[cfg(test)]
-mod device_refresh_tests;
-#[cfg(test)]
-mod footer_tests;

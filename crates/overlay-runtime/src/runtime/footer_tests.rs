@@ -1,4 +1,4 @@
-use super::{elapsed_minutes_text, instance_duration_text};
+use super::text::{elapsed_minutes_text, instance_duration_text};
 
 fn ms(seconds: i64) -> i64 {
     seconds * 1000

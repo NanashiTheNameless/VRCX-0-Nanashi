@@ -150,7 +150,7 @@ impl SafetyRuntime {
             let review = state.avatar_review.take().unwrap();
             (review, self.block_revision.load(Ordering::SeqCst))
         };
-        let existing_request = vrcx_0_vrchat_client::http_api::api_input(
+        let existing_request = vrcx_0_vrchat_protocol::http_api::api_input(
             review.scope.endpoint.clone(),
             "GET",
             "auth/user/avatarmoderations",
@@ -233,7 +233,7 @@ impl SafetyRuntime {
                 continue;
             }
             tokio::time::sleep(Duration::from_secs(1)).await;
-            let input = vrcx_0_vrchat_client::http_api::api_input(
+            let input = vrcx_0_vrchat_protocol::http_api::api_input(
                 review.scope.endpoint.clone(),
                 "POST",
                 "auth/user/avatarmoderations",

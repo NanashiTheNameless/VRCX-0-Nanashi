@@ -1,10 +1,8 @@
 use super::*;
 use vrcx_0_application::remote::{VrchatApiFuture, VrchatApiPort};
-use vrcx_0_application_core::{
-    vrchat_api::{VrchatApiRequest, VrchatApiResponse},
-    RemoteMutationGate,
-};
+use vrcx_0_application_core::RemoteMutationGate;
 use vrcx_0_contracts::activity::ActivityKind;
+use vrcx_0_contracts::vrchat_api::{VrchatRequest, VrchatResponse};
 
 const USER: &str = "usr_11111111-1111-1111-1111-111111111111";
 const SELF: &str = "usr_22222222-2222-2222-2222-222222222222";
@@ -34,8 +32,7 @@ impl Fixture {
         std::fs::create_dir_all(&dir).unwrap();
         let db =
             Arc::new(vrcx_0_persistence::DatabaseService::new(&dir.join("test.sqlite3")).unwrap());
-        let config = ConfigRepository::new(db.clone());
-        config.ensure_table().unwrap();
+        let config = crate::notification::test_support::db_config_store(db.clone());
         let auth = RuntimeAuthScope::new();
         auth.set(SELF, "https://api.vrchat.cloud/api/1");
         let (runtime, receiver) = SafetyRuntime::new(config, db, auth, ActivityRouter::new());
@@ -110,7 +107,7 @@ fn join() -> GameLogEventKind {
     }
 }
 struct Port {
-    requests: Mutex<Vec<VrchatApiRequest>>,
+    requests: Mutex<Vec<VrchatRequest>>,
     response: Value,
     post_status: std::sync::atomic::AtomicI32,
 }
@@ -119,7 +116,7 @@ impl VrchatApiPort for Port {
         &self,
         _: String,
         _: String,
-        input: VrchatApiRequest,
+        input: VrchatRequest,
         _: VrchatScope,
     ) -> VrchatApiFuture<'_> {
         let status = if input.method.as_deref() == Some("POST") {
@@ -129,7 +126,7 @@ impl VrchatApiPort for Port {
         };
         self.requests.lock().unwrap().push(input);
         Box::pin(async move {
-            Ok(VrchatApiResponse {
+            Ok(VrchatResponse {
                 status,
                 data: self.response.to_string(),
             })
@@ -1103,7 +1100,7 @@ fn reload_picks_up_a_synced_watchlist_so_a_later_save_cannot_restore_it() {
     f.runtime
         .set_watch("group", GROUP.into(), "Watched Group".into(), true)
         .unwrap();
-    let config = ConfigRepository::new(f.runtime.db.clone());
+    let config = crate::notification::test_support::db_config_store(f.runtime.db.clone());
     let mut synced = f.runtime.settings();
     synced.groups.clear();
     config
@@ -1128,8 +1125,8 @@ fn reload_ignores_invalid_stored_settings() {
     f.runtime
         .set_watch("group", GROUP.into(), "Watched Group".into(), true)
         .unwrap();
-    ConfigRepository::new(f.runtime.db.clone())
-        .set_raw(SETTINGS_KEY, "not json")
+    crate::notification::test_support::db_config_store(f.runtime.db.clone())
+        .set_string(SETTINGS_KEY, "not json")
         .unwrap();
 
     f.runtime.reload_settings();
@@ -1142,7 +1139,7 @@ fn reload_after_a_synced_deletion_returns_to_defaults() {
     f.runtime
         .set_watch("group", GROUP.into(), "Watched Group".into(), true)
         .unwrap();
-    ConfigRepository::new(f.runtime.db.clone())
+    crate::notification::test_support::db_config_store(f.runtime.db.clone())
         .remove(SETTINGS_KEY)
         .unwrap();
 

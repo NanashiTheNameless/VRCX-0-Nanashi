@@ -10,26 +10,29 @@ use vrcx_0_application::avatars::AvatarModerationRuntime;
 use vrcx_0_application::favorites::{
     FavoriteMutationCoordinator, FavoriteMutationRuntimeDeps, FavoriteRemote, FavoriteStore,
 };
-use vrcx_0_application::profile::VrcStatusService;
+use vrcx_0_application::profile::{ProfileConfigStore, VrcStatusService};
 use vrcx_0_application::social::{
     ModerationSyncRuntime, MutualGraphFetchRuntime, PrintCleanupQueue,
 };
 use vrcx_0_application_activity::notification::{
     load_overlay_activity_filters, reload_activity_router, save_notification_activity_filters,
     ActivityFilterProfile, AuthWebhookEvent, AuthWebhookQueue, AuthWebhookQueueDeps,
-    NotificationActivityFilterProfiles, NotificationActivityFiltersSetInput, NotificationConfig,
-    NotificationRemote, NotificationResolver, NotificationWebhookSink, NotificationWebhookSinkDeps,
+    NotificationActivityFilterProfiles, NotificationActivityFiltersSetInput, NotificationRemote,
+    NotificationResolver, NotificationWebhookSink, NotificationWebhookSinkDeps,
     WebhookDeliveryMonitor, WebhookDeliverySnapshot,
 };
 use vrcx_0_application_activity::{ActivityRouter, ActivitySinkRegistry, GroupInstanceMonitor};
-use vrcx_0_application_core::RemoteMutationGate;
 use vrcx_0_application_core::{
-    AvatarCache, FileCache, HostSessionRuntime, ImageCache, InstanceDwellRegistry,
-    RealtimeNotificationProjectionObserver, RealtimeNotificationProjectionObserverRegistry,
-    RuntimeAuthScope, RuntimeBackgroundJobs, RuntimeDiagnostics, RuntimeEventBus, RuntimeLifecycle,
+    AvatarCache, FileCache, HostSessionRuntime, ImageCache, RuntimeAuthScope,
+    RuntimeBackgroundJobs, RuntimeDiagnostics, RuntimeEventBus, RuntimeLifecycle,
     RuntimeSyncEngine, TaskSupervisor, WebClient, WorldCache,
 };
-use vrcx_0_persistence::config::ConfigRepository;
+use vrcx_0_application_core::{ConfigStore, RemoteMutationGate};
+use vrcx_0_application_realtime::{
+    InstanceDwellRegistry, RealtimeNotificationProjectionObserver,
+    RealtimeNotificationProjectionObserverRegistry,
+};
+use vrcx_0_persistence::storage::StorageService;
 use vrcx_0_persistence::DatabaseService;
 
 const AVATAR_CACHE_WORKING_CAPACITY: u64 = 32;
@@ -70,8 +73,8 @@ pub(crate) struct RuntimeHostContext {
     pub(crate) world_cache: Arc<WorldCache>,
     pub(crate) file_cache: FileCache,
     pub(crate) instance_dwell: Arc<InstanceDwellRegistry>,
-    pub(crate) config: ConfigRepository,
-    notification_config: Arc<dyn NotificationConfig>,
+    config_store: Arc<dyn ConfigStore>,
+    profile_config: Arc<dyn ProfileConfigStore>,
     notification_resolver: Arc<NotificationResolver>,
     activity_router: ActivityRouter,
     group_instance_monitor: GroupInstanceMonitor,
@@ -89,24 +92,26 @@ pub struct RuntimeHostDesktopAssemblyDeps {
 impl RuntimeHostDesktopAssemblyDeps {
     pub fn new(
         db: Arc<DatabaseService>,
+        storage: Arc<StorageService>,
         web: Arc<WebClient>,
         image_cache: Arc<ImageCache>,
     ) -> Self {
+        let config_store = Arc::new(vrcx_0_outbound_adapters::LocalConfigStore::new(
+            Arc::clone(&db),
+            storage,
+        ));
         Self::from_context(Arc::new(RuntimeHostContext::new(
             db,
             web,
             image_cache,
             TaskSupervisor::new(),
             std::env::temp_dir().join("vrcx-test"),
+            config_store,
         )))
     }
 
     pub(crate) fn from_context(context: Arc<RuntimeHostContext>) -> Self {
         Self { context }
-    }
-
-    pub fn config(&self) -> &ConfigRepository {
-        self.context.config()
     }
 
     pub fn database(&self) -> &Arc<DatabaseService> {
@@ -224,8 +229,12 @@ impl RuntimeHostDesktopAssemblyDeps {
             .realtime_notification_projection_observer_registry()
     }
 
-    pub fn notification_config(&self) -> Arc<dyn NotificationConfig> {
-        self.context.notification_config()
+    pub fn config_store(&self) -> Arc<dyn ConfigStore> {
+        self.context.config_store()
+    }
+
+    pub fn profile_config(&self) -> Arc<dyn ProfileConfigStore> {
+        self.context.profile_config()
     }
 
     pub fn notification_resolver(&self) -> Arc<NotificationResolver> {
@@ -263,14 +272,11 @@ impl RuntimeHostContext {
         image_cache: Arc<ImageCache>,
         tasks: TaskSupervisor,
         app_data_dir: PathBuf,
+        local_config: Arc<vrcx_0_outbound_adapters::LocalConfigStore>,
     ) -> Self {
-        let config = ConfigRepository::new(Arc::clone(&db));
-        let notification_config: Arc<dyn NotificationConfig> = Arc::new(
-            vrcx_0_outbound_adapters::LocalNotificationConfig::new(config.clone()),
-        );
-        let auth_credentials: Arc<dyn AuthCredentialStore> = Arc::new(
-            vrcx_0_outbound_adapters::LocalAuthCredentialStore::from_repository(config.clone()),
-        );
+        let config_store: Arc<dyn ConfigStore> = local_config.clone();
+        let profile_config: Arc<dyn ProfileConfigStore> = local_config.clone();
+        let auth_credentials: Arc<dyn AuthCredentialStore> = local_config;
         let login_api: Arc<dyn LoginApi> = Arc::new(vrcx_0_outbound_adapters::VrchatLoginApi::new(
             Arc::clone(&web),
         ));
@@ -291,6 +297,7 @@ impl RuntimeHostContext {
         let avatar_cache = Arc::new(AvatarCache::new(
             vrcx_0_outbound_adapters::LocalAvatarCacheAdapter::new(
                 Arc::clone(&db),
+                Arc::clone(&web),
                 AVATAR_CACHE_WORKING_CAPACITY,
                 AVATAR_CACHE_WORKING_TTL,
             ),
@@ -298,19 +305,21 @@ impl RuntimeHostContext {
         let world_cache = Arc::new(WorldCache::new(
             vrcx_0_outbound_adapters::LocalWorldCacheAdapter::new(
                 Arc::clone(&db),
+                Arc::clone(&web),
                 WORLD_CACHE_WORKING_CAPACITY,
                 WORLD_CACHE_WORKING_TTL,
             ),
         ));
         let file_cache = FileCache::new(vrcx_0_outbound_adapters::LocalFileCacheAdapter::new(
             Arc::clone(&db),
+            Arc::clone(&web),
             FILE_CACHE_WORKING_CAPACITY,
         ));
         let activity_router = ActivityRouter::with_filters_and_persistence(
-            load_overlay_activity_filters(notification_config.as_ref()),
+            load_overlay_activity_filters(config_store.as_ref()),
             Some(app_data_dir.join("overlay_activity_wrist.json")),
         );
-        reload_activity_router(&activity_router, notification_config.as_ref());
+        reload_activity_router(&activity_router, config_store.as_ref());
         let activity_sinks = ActivitySinkRegistry::default();
         let notification_projection_observers =
             RealtimeNotificationProjectionObserverRegistry::default();
@@ -326,7 +335,7 @@ impl RuntimeHostContext {
             vrcx_0_outbound_adapters::LocalNotificationWebhookTransport::new(Arc::clone(&web)),
         );
         let auth_webhook_queue = AuthWebhookQueue::new(AuthWebhookQueueDeps {
-            config: Arc::clone(&notification_config),
+            config: Arc::clone(&config_store),
             webhook_transport: notification_webhook_transport.clone(),
             diagnostics: diagnostics.clone(),
             monitor: webhook_delivery_monitor.clone(),
@@ -341,7 +350,7 @@ impl RuntimeHostContext {
         activity_sinks.add(Arc::new(NotificationWebhookSink::new(
             NotificationWebhookSinkDeps {
                 session: session.clone(),
-                config: Arc::clone(&notification_config),
+                config: Arc::clone(&config_store),
                 resolver: Arc::clone(&notification_resolver),
                 webhook_transport: notification_webhook_transport,
                 diagnostics: diagnostics.clone(),
@@ -409,8 +418,8 @@ impl RuntimeHostContext {
             world_cache,
             file_cache,
             instance_dwell: Arc::new(InstanceDwellRegistry::new()),
-            config,
-            notification_config,
+            config_store,
+            profile_config,
             notification_resolver,
             activity_router,
             group_instance_monitor: GroupInstanceMonitor::default(),
@@ -419,10 +428,6 @@ impl RuntimeHostContext {
             auth_webhook_queue,
             webhook_delivery_monitor,
         }
-    }
-
-    pub fn config(&self) -> &ConfigRepository {
-        &self.config
     }
 
     pub fn database(&self) -> &Arc<DatabaseService> {
@@ -543,8 +548,12 @@ impl RuntimeHostContext {
         self.notification_projection_observers.clone()
     }
 
-    pub fn notification_config(&self) -> Arc<dyn NotificationConfig> {
-        Arc::clone(&self.notification_config)
+    pub fn config_store(&self) -> Arc<dyn ConfigStore> {
+        Arc::clone(&self.config_store)
+    }
+
+    pub fn profile_config(&self) -> Arc<dyn ProfileConfigStore> {
+        Arc::clone(&self.profile_config)
     }
 
     pub fn notification_resolver(&self) -> Arc<NotificationResolver> {
@@ -560,7 +569,7 @@ impl RuntimeHostContext {
     }
 
     pub fn reload_overlay_activity_filters(&self) {
-        reload_activity_router(&self.activity_router, self.notification_config.as_ref());
+        reload_activity_router(&self.activity_router, self.config_store.as_ref());
     }
 
     pub fn notification_activity_filter_profiles(&self) -> NotificationActivityFilterProfiles {
@@ -571,7 +580,7 @@ impl RuntimeHostContext {
         &self,
         input: NotificationActivityFiltersSetInput,
     ) -> crate::Result<ActivityFilterProfile> {
-        let profile = save_notification_activity_filters(self.notification_config.as_ref(), input)?;
+        let profile = save_notification_activity_filters(self.config_store.as_ref(), input)?;
         self.reload_overlay_activity_filters();
         Ok(profile)
     }

@@ -1,6 +1,6 @@
 use super::*;
-use crate::ports::TestGameStateStore;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use vrcx_0_application_core::{ConfigStore, MemoryConfigStore};
 use vrcx_0_core::time::parse_epoch_seconds;
 
 struct TestDir;
@@ -11,8 +11,8 @@ impl TestDir {
         Self
     }
 
-    fn open_db(&self) -> TestGameStateStore {
-        TestGameStateStore::default()
+    fn open_db(&self) -> MemoryConfigStore {
+        MemoryConfigStore::default()
     }
 }
 

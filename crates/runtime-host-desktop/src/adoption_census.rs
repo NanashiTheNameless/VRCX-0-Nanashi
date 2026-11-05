@@ -10,10 +10,10 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use sha2::{Digest, Sha256};
+use vrcx_0_application_core::ConfigStore;
 use vrcx_0_application_core::{sleep_until_due_or_stopped, TaskSupervisor, WebClient};
 use vrcx_0_contracts::external_api::{self, ExternalApiScope};
 use vrcx_0_core::user_agent::APP_NAME;
-use vrcx_0_persistence::config::ConfigRepository;
 
 const ADOPTION_CENSUS_INTERVAL: Duration = Duration::from_secs(2 * 60 * 60);
 const ADOPTION_CENSUS_ENABLED_KEY: &str = "adoptionCensusEnabled";
@@ -40,7 +40,7 @@ const ADOPTION_CENSUS_OPT_OUT_FILES: [&str; 4] = [
 const ADOPTION_CENSUS_ID_FILE: &str = ".adoption-census-id";
 
 pub(crate) fn start_adoption_census_loop(
-    config: ConfigRepository,
+    config: Arc<dyn ConfigStore>,
     web: Arc<WebClient>,
     data_dir: &Path,
     tasks: &TaskSupervisor,
@@ -55,7 +55,7 @@ pub(crate) fn start_adoption_census_loop(
             if stop_token.is_stop_requested() {
                 return;
             }
-            if adoption_census_enabled(&config) {
+            if adoption_census_enabled(config.as_ref()) {
                 match install_id_hash(&id_path) {
                     Ok(id_hash) => {
                         let input = external_api::adoption_census_post_input(&id_hash, APP_NAME);
@@ -104,12 +104,12 @@ pub fn adoption_census_lock() -> Option<AdoptionCensusLock> {
         .then_some(AdoptionCensusLock::File)
 }
 
-fn adoption_census_enabled(config: &ConfigRepository) -> bool {
+fn adoption_census_enabled(config: &dyn ConfigStore) -> bool {
     adoption_census_lock().is_none() && setting_enabled(config)
 }
 
 /// An unreadable setting counts as opted out.
-fn setting_enabled(config: &ConfigRepository) -> bool {
+fn setting_enabled(config: &dyn ConfigStore) -> bool {
     matches!(config.get_bool(ADOPTION_CENSUS_ENABLED_KEY, true), Ok(true))
 }
 
@@ -262,12 +262,12 @@ mod tests {
     fn opting_out_disables_the_ping_and_forgets_the_id() {
         let dir = TestDir::new("opt-out");
         let db = Arc::new(DatabaseService::new(&dir.0.join("VRCX-0.sqlite3")).unwrap());
-        let config = ConfigRepository::new(db);
-        assert!(setting_enabled(&config));
+        let config = crate::notification::test_support::db_config_store(db);
+        assert!(setting_enabled(config.as_ref()));
 
         config.set_bool(ADOPTION_CENSUS_ENABLED_KEY, false).unwrap();
-        assert!(!setting_enabled(&config));
-        assert!(!adoption_census_enabled(&config));
+        assert!(!setting_enabled(config.as_ref()));
+        assert!(!adoption_census_enabled(config.as_ref()));
 
         let path = dir.0.join(ADOPTION_CENSUS_ID_FILE);
         install_id_hash(&path).unwrap();

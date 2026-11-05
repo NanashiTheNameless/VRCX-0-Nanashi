@@ -3,19 +3,19 @@ use futures_util::future::BoxFuture;
 use std::sync::Arc;
 use std::time::Duration;
 
-use vrcx_0_application_core::vrchat_api::{VrchatApiRequest, VrchatApiResponse, VrchatScope};
 use vrcx_0_application_core::{
     is_remote_mutation_request, AuthenticatedMutationContext, RemoteMutationGate, Result,
     RuntimeAuthScope,
 };
+use vrcx_0_contracts::vrchat_api::{VrchatRequest, VrchatResponse, VrchatScope};
 
 const VRCHAT_REMOTE_MUTATION_INTERVAL: Duration = Duration::from_millis(250);
 
-pub type VrchatApiFuture<'a> = BoxFuture<'a, Result<VrchatApiResponse>>;
-pub type VrchatRequestFuture<'a> = BoxFuture<'a, Result<VrchatApiResponse>>;
+pub type VrchatApiFuture<'a> = BoxFuture<'a, Result<VrchatResponse>>;
+pub type VrchatRequestFuture<'a> = BoxFuture<'a, Result<VrchatResponse>>;
 
 pub trait VrchatRequestPort: Send + Sync {
-    fn send(&self, input: VrchatApiRequest, scope: VrchatScope) -> VrchatRequestFuture<'_>;
+    fn send(&self, input: VrchatRequest, scope: VrchatScope) -> VrchatRequestFuture<'_>;
 }
 
 #[cfg(test)]
@@ -23,9 +23,9 @@ pub(crate) struct TestVrchatRequestPort;
 
 #[cfg(test)]
 impl VrchatRequestPort for TestVrchatRequestPort {
-    fn send(&self, _input: VrchatApiRequest, _scope: VrchatScope) -> VrchatRequestFuture<'_> {
+    fn send(&self, _input: VrchatRequest, _scope: VrchatScope) -> VrchatRequestFuture<'_> {
         Box::pin(async {
-            Ok(VrchatApiResponse {
+            Ok(VrchatResponse {
                 status: 200,
                 data: "{}".into(),
             })
@@ -38,7 +38,7 @@ pub trait VrchatApiPort: Send + Sync {
         &self,
         command: String,
         detail: String,
-        input: VrchatApiRequest,
+        input: VrchatRequest,
         scope: VrchatScope,
     ) -> VrchatApiFuture<'_>;
 }
@@ -56,10 +56,10 @@ impl VrchatApiRuntime {
     pub async fn execute_guarded(
         &self,
         expected: &vrcx_0_application_core::RuntimeAuthScopeSnapshot,
-        input: VrchatApiRequest,
+        input: VrchatRequest,
         scope: VrchatScope,
         authorized: impl Fn() -> bool,
-    ) -> Result<VrchatApiResponse> {
+    ) -> Result<VrchatResponse> {
         let denied = || {
             vrcx_0_application_core::Error::Custom(
                 "Background action cancelled: account or policy changed".into(),
@@ -122,9 +122,9 @@ impl VrchatApiRuntime {
         &self,
         command: impl Into<String>,
         detail: impl Into<String>,
-        mut input: VrchatApiRequest,
+        mut input: VrchatRequest,
         scope: VrchatScope,
-    ) -> Result<VrchatApiResponse> {
+    ) -> Result<VrchatResponse> {
         let command = command.into();
         let detail = detail.into();
         if !is_remote_mutation_request(&input) {
@@ -152,7 +152,7 @@ mod tests {
 
     #[derive(Default)]
     struct RecordingPort {
-        requests: Mutex<Vec<VrchatApiRequest>>,
+        requests: Mutex<Vec<VrchatRequest>>,
     }
 
     impl VrchatApiPort for RecordingPort {
@@ -160,12 +160,12 @@ mod tests {
             &self,
             _command: String,
             _detail: String,
-            input: VrchatApiRequest,
+            input: VrchatRequest,
             _scope: VrchatScope,
         ) -> VrchatApiFuture<'_> {
             self.requests.lock().unwrap().push(input);
             Box::pin(async {
-                Ok(VrchatApiResponse {
+                Ok(VrchatResponse {
                     status: 200,
                     data: "{}".into(),
                 })
@@ -186,7 +186,7 @@ mod tests {
             .execute(
                 "read",
                 "read",
-                VrchatApiRequest {
+                VrchatRequest {
                     method: Some("GET".into()),
                     ..Default::default()
                 },
@@ -211,7 +211,7 @@ mod tests {
             .execute(
                 "write",
                 "write",
-                VrchatApiRequest {
+                VrchatRequest {
                     method: Some("POST".into()),
                     ..Default::default()
                 },
@@ -242,7 +242,7 @@ mod tests {
             .execute(
                 "write",
                 "write",
-                VrchatApiRequest {
+                VrchatRequest {
                     endpoint: Some("https://stale.example.test/api/1".into()),
                     method: Some("POST".into()),
                     ..Default::default()
@@ -277,7 +277,7 @@ mod tests {
                     allowed.store(false, Ordering::SeqCst);
                 }
             };
-            let request = VrchatApiRequest {
+            let request = VrchatRequest {
                 method: Some("POST".into()),
                 ..Default::default()
             };

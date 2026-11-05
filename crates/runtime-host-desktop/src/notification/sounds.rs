@@ -11,7 +11,7 @@ use std::path::PathBuf;
 
 use serde::Deserialize;
 use vrcx_0_application_activity::{ActivityActorRelation, ActivityEntry};
-use vrcx_0_persistence::config::ConfigRepository;
+use vrcx_0_application_core::ConfigStore;
 
 pub const NOTIFICATION_SOUNDS_CONFIG_KEY: &str = "notificationSounds";
 
@@ -68,7 +68,7 @@ impl NotificationSoundConfig {
     }
 }
 
-pub fn load_notification_sounds(config: &ConfigRepository) -> NotificationSoundConfig {
+pub fn load_notification_sounds(config: &dyn ConfigStore) -> NotificationSoundConfig {
     config
         .get_string(NOTIFICATION_SOUNDS_CONFIG_KEY, "")
         .map(|raw| NotificationSoundConfig::parse(&raw))

@@ -6,7 +6,7 @@ const FRIEND: &str = "usr_11111111-1111-1111-1111-111111111111";
 
 struct Fixture {
     runtime: Arc<ReminderRuntime>,
-    config: ConfigRepository,
+    config: std::sync::Arc<dyn vrcx_0_application_core::ConfigStore>,
     auth: RuntimeAuthScope,
     dir: std::path::PathBuf,
 }
@@ -24,8 +24,7 @@ impl Fixture {
         std::fs::create_dir_all(&dir).unwrap();
         let db =
             Arc::new(vrcx_0_persistence::DatabaseService::new(&dir.join("test.sqlite3")).unwrap());
-        let config = ConfigRepository::new(db);
-        config.ensure_table().unwrap();
+        let config = crate::notification::test_support::db_config_store(db);
         let auth = RuntimeAuthScope::new();
         auth.set(SELF, "https://api.vrchat.cloud/api/1");
         let runtime = ReminderRuntime::new(config.clone(), auth.clone(), ActivityRouter::new());

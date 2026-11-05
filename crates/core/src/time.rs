@@ -107,6 +107,13 @@ pub fn epoch_from_json(value: &serde_json::Value) -> Option<EpochSeconds> {
     }
 }
 
+pub fn now_unix_seconds() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

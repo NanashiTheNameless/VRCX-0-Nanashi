@@ -7,21 +7,20 @@ use vrcx_0_application_activity::{
     ActivityRouter,
 };
 use vrcx_0_application_core::{
-    MemoryWorldCachePort, NoopWebClientPort, RuntimeAuthScope, TaskSupervisor, WebClient,
-    WorldCache,
+    ConfigStore, MemoryConfigStore, MemoryWorldCachePort, NoopWebClientPort, RuntimeAuthScope,
+    TaskSupervisor, WebClient, WorldCache,
 };
 use vrcx_0_application_game::{NowPlayingSnapshot, PlayerState, RuntimeSnapshot};
 use vrcx_0_contracts::activity::ActivityKind;
 use vrcx_0_core::{friends::FriendRecord, presence::PresenceView};
-use vrcx_0_persistence::config::ConfigRepository;
-use vrcx_0_persistence::DatabaseService;
 
-use super::{
-    hmd_surface_config, load_runtime_config, HmdNotificationConfig, HmdNotificationPosition,
-    HmdNotificationStyle, StaticWristFrameProducer, VrOverlayRuntime, HMD_STACK_INSET_PX,
-    HMD_SURFACE_SIZE, HMD_SURFACE_WIDTH_METERS,
+use super::frame::StaticWristFrameProducer;
+use super::surface_layout::{
+    hmd_surface_config, HMD_STACK_INSET_PX, HMD_SURFACE_SIZE, HMD_SURFACE_WIDTH_METERS,
 };
+use super::{load_runtime_config, VrOverlayRuntime};
 use crate::config::{
+    HmdNotificationConfig, HmdNotificationPosition, HmdNotificationStyle,
     HMD_NOTIFICATIONS_ENABLED_CONFIG_KEY, HMD_NOTIFICATION_AVATARS_CONFIG_KEY,
     HMD_NOTIFICATION_OFFSET_SIDE_CM_CONFIG_KEY, HMD_NOTIFICATION_OFFSET_UP_CM_CONFIG_KEY,
     HMD_NOTIFICATION_OPACITY_CONFIG_KEY, HMD_NOTIFICATION_POSITION_CONFIG_KEY,
@@ -37,10 +36,10 @@ use crate::config::{
 };
 use crate::tracker_watch::TrackerDisconnect;
 use crate::VrOverlayRuntimeServices;
-use vrcx_0_host_desktop::vr_overlay::{OverlayPlacement, WristAnchor};
+use vrcx_0_vr_overlay_backend::{OverlayPlacement, WristAnchor};
 
 struct TestServices {
-    config: ConfigRepository,
+    config: Arc<dyn ConfigStore>,
     web: Arc<WebClient>,
     auth_scope: RuntimeAuthScope,
     world_cache: Arc<WorldCache>,
@@ -53,7 +52,7 @@ struct TestServices {
 }
 
 impl VrOverlayRuntimeServices for TestServices {
-    fn config(&self) -> &ConfigRepository {
+    fn config(&self) -> &Arc<dyn ConfigStore> {
         &self.config
     }
 
@@ -148,10 +147,9 @@ fn test_services() -> (TestDir, TestServices) {
         std::process::id()
     )));
     std::fs::create_dir_all(&dir.0).unwrap();
-    let db = Arc::new(DatabaseService::new(&dir.0.join("VRCX-0.sqlite3")).unwrap());
-    let config = ConfigRepository::new(db);
+    let config: Arc<dyn ConfigStore> = Arc::new(MemoryConfigStore::default());
     let services = TestServices {
-        config: config.clone(),
+        config,
         web: Arc::new(WebClient::new(NoopWebClientPort)),
         auth_scope: RuntimeAuthScope::new(),
         world_cache: Arc::new(WorldCache::new(MemoryWorldCachePort::default())),
@@ -167,7 +165,7 @@ fn test_services() -> (TestDir, TestServices) {
 
 /// Fork: `test_services` also backs the wrist friend-indicator test, which needs
 /// the raw `TestServices` rather than a runtime.
-fn test_runtime() -> (TestDir, ConfigRepository, VrOverlayRuntime) {
+fn test_runtime() -> (TestDir, Arc<dyn ConfigStore>, VrOverlayRuntime) {
     let (dir, services) = test_services();
     let config = services.config.clone();
     let runtime = VrOverlayRuntime::new(Arc::new(services));
@@ -233,7 +231,7 @@ fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
         ..Default::default()
     };
     let frame =
-        super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
+        super::frame::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
     assert_eq!(frame.players[0].display_name, "Ada");
     assert!(!frame.players[0].is_friend);
     assert_eq!(frame.players[0].state, "online");
@@ -264,7 +262,7 @@ fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
         },
     );
     let frame =
-        super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
+        super::frame::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
     let cells = build_wrist_surface_model(frame).players;
     assert!(!cells[0].is_friend);
     assert_eq!(cells[0].status, "online / PC VR / 18+ / Just visiting");
@@ -275,7 +273,7 @@ fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
         .auth_scope
         .set("usr_me", "https://api.vrchat.cloud/api/1");
     let frame =
-        super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
+        super::frame::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
     assert_eq!(frame.players[0].languages, vec!["JPN", "ENG"]);
     let cells = build_wrist_surface_model(frame).players;
     assert_eq!(
@@ -291,7 +289,7 @@ fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
         join_time_ms: Some(5),
     });
     let frame =
-        super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
+        super::frame::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
     assert!(frame.players[2].is_local);
     assert_eq!(frame.players[2].languages, vec!["ENG", "JPN", "FRA"]);
     assert_eq!(frame.players[0].languages, vec!["JPN", "ENG"]);
@@ -301,9 +299,10 @@ fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
 
     config.wrist_players_sort = WristPlayersSort::Joined;
     let frame =
-        super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
+        super::frame::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
     assert_eq!(frame.players[0].display_name, "Zoe");
-    let frame = super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Notes);
+    let frame =
+        super::frame::build_wrist_frame_input(&services, config, vec![], false, WristPage::Notes);
     let model = build_wrist_surface_model(frame);
     let cells = model.players;
     assert_eq!(cells.len(), 1);
@@ -312,17 +311,19 @@ fn wrist_frames_show_live_friend_indicators_with_notes_and_sorting() {
 
     services.friends.get_mut("usr_friend").unwrap().1 = PresenceView::Offline;
     let frame =
-        super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
+        super::frame::build_wrist_frame_input(&services, config, vec![], false, WristPage::Players);
     assert!(frame.players[0].is_friend);
     assert_eq!(frame.players[0].state, "offline");
     assert!(frame.players[0].platform.is_empty());
 
     services.friends.clear();
-    let frame = super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Notes);
+    let frame =
+        super::frame::build_wrist_frame_input(&services, config, vec![], false, WristPage::Notes);
     assert!(!frame.players[0].is_friend);
     assert!(frame.players[0].status_description.is_empty());
     assert_eq!(frame.players[0].note, "Local note");
-    let frame = super::build_wrist_frame_input(&services, config, vec![], false, WristPage::Feed);
+    let frame =
+        super::frame::build_wrist_frame_input(&services, config, vec![], false, WristPage::Feed);
     assert!(frame.players.is_empty());
 }
 

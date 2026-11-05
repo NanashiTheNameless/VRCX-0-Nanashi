@@ -1,19 +1,15 @@
 use crate::VrOverlayRuntimeServices;
-use vrcx_0_host_desktop::vr_overlay::OverlayActivationButton;
+use vrcx_0_vr_overlay_backend::OverlayActivationButton;
 
 use super::eligibility::WristOverlayStartMode;
 use super::localization::{OverlayLocale, OverlayLocalizer};
-use super::runtime::{
-    HmdNotificationConfig, HmdNotificationPosition, HmdNotificationStyle, VrOverlayRuntimeConfig,
-    WristOverlayHand,
-};
 use super::service::OverlayBackendPreference;
 use super::surfaces::wrist::{wrist_anchor_from_config, MAX_TEXT_PERCENT, MIN_TEXT_PERCENT};
 use super::{
     WristOverlayRenderOptions, WristOverlaySizePreset, WristPageOrder, WristPlacement,
     WristPlayersSort,
 };
-use vrcx_0_persistence::config::ConfigRepository;
+use vrcx_0_application_core::ConfigStore;
 
 pub const VR_OVERLAY_ENABLED_CONFIG_KEY: &str = "wristOverlayEnabled";
 pub const VR_OVERLAY_BACKEND_CONFIG_KEY: &str = "wristOverlayBackend";
@@ -55,20 +51,201 @@ const APP_LANGUAGE_CONFIG_KEY: &str = "appLanguage";
 const DATE_TIME_HOUR12_CONFIG_KEY: &str = "dtHour12";
 const SHOW_INSTANCE_ID_IN_LOCATION_CONFIG_KEY: &str = "VRCX_showInstanceIdInLocation";
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum WristOverlayHand {
+    #[default]
+    Left,
+    Right,
+    Both,
+}
+
+impl WristOverlayHand {
+    pub(crate) fn from_config(value: &str) -> Self {
+        match value.trim() {
+            "right" => Self::Right,
+            "both" => Self::Both,
+            _ => Self::Left,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum HmdNotificationPosition {
+    Top,
+    Center,
+    #[default]
+    Bottom,
+}
+
+impl HmdNotificationPosition {
+    pub(crate) fn from_config(value: &str) -> Self {
+        match value.trim() {
+            "top" => Self::Top,
+            "center" => Self::Center,
+            _ => Self::Bottom,
+        }
+    }
+
+    pub(crate) fn newest_card_angle_degrees(self) -> f32 {
+        match self {
+            Self::Top => 4.0,
+            Self::Center => -6.0,
+            Self::Bottom => -18.0,
+        }
+    }
+
+    pub(crate) fn stacks_upward(self) -> bool {
+        self == Self::Top
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum HmdNotificationStyle {
+    #[default]
+    Standard,
+    Compact,
+}
+
+impl HmdNotificationStyle {
+    pub(crate) fn from_config(value: &str) -> Self {
+        match value.trim() {
+            "compact" => Self::Compact,
+            _ => Self::Standard,
+        }
+    }
+
+    pub(crate) fn single_card_height_px(self) -> f32 {
+        match self {
+            Self::Standard => 112.0,
+            Self::Compact => 60.0,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct HmdNotificationConfig {
+    pub(crate) enabled: bool,
+    pub(crate) start_mode: WristOverlayStartMode,
+    pub(crate) timeout_ms: u64,
+    pub(crate) opacity_percent: u8,
+    pub(crate) position: HmdNotificationPosition,
+    pub(crate) style: HmdNotificationStyle,
+    pub(crate) avatars: bool,
+    /// Fork: HMD card text size, in percent.
+    pub(crate) text_percent: u8,
+    /// Fork: shift from the chosen position, in cm at the panel's distance.
+    pub(crate) side_cm: i8,
+    pub(crate) up_cm: i8,
+    pub(crate) tracker_disconnect: bool,
+}
+
+impl Default for HmdNotificationConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            start_mode: WristOverlayStartMode::Vrchat,
+            timeout_ms: 5_000,
+            opacity_percent: 90,
+            position: HmdNotificationPosition::Bottom,
+            style: HmdNotificationStyle::Standard,
+            avatars: true,
+            text_percent: 100,
+            side_cm: 0,
+            up_cm: 0,
+            tracker_disconnect: true,
+        }
+    }
+}
+
+impl HmdNotificationConfig {
+    pub const MAX_OFFSET_CM: i8 = 50;
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct VrOverlayRuntimeConfig {
+    pub(crate) start_mode: WristOverlayStartMode,
+    pub(crate) backend: OverlayBackendPreference,
+    pub(crate) button: OverlayActivationButton,
+    pub(crate) hand: WristOverlayHand,
+    pub(crate) hmd: HmdNotificationConfig,
+    pub(crate) render: WristOverlayRenderOptions,
+    pub(crate) locale: OverlayLocale,
+    pub(crate) dt_hour12: bool,
+    pub(crate) show_instance_id_in_location: bool,
+    /// Fork: customizable wrist pages (Settings > VR).
+    pub(crate) wrist_pages: WristPageOrder,
+    pub(crate) wrist_players_sort: WristPlayersSort,
+    /// Inactivity timeout in seconds. When the wrist menu is shown, it will
+    /// remain visible for this duration after the last interaction.
+    pub(crate) wrist_timeout_secs: u8,
+    /// Fork: after the press that opens the wrist menu, presses within this many
+    /// milliseconds do not switch the page. 0 disables it.
+    pub(crate) wrist_switch_cooldown_ms: u16,
+    /// Fork: wrist menu size, anchor, offsets and tilt (Settings > VR).
+    pub(crate) wrist_placement: WristPlacement,
+}
+
+impl Default for VrOverlayRuntimeConfig {
+    fn default() -> Self {
+        Self {
+            start_mode: WristOverlayStartMode::Vrchat,
+            backend: OverlayBackendPreference::Auto,
+            button: OverlayActivationButton::Grip,
+            hand: WristOverlayHand::Left,
+            hmd: HmdNotificationConfig::default(),
+            render: WristOverlayRenderOptions::default(),
+            locale: OverlayLocale::default(),
+            dt_hour12: true,
+            show_instance_id_in_location: false,
+            wrist_pages: WristPageOrder::default(),
+            wrist_players_sort: WristPlayersSort::Name,
+            wrist_timeout_secs: 15, // Default to 15 seconds
+            wrist_switch_cooldown_ms: 1_000,
+            wrist_placement: WristPlacement::default(),
+        }
+    }
+}
+
+impl VrOverlayRuntimeConfig {
+    fn surface_config_key(self) -> WristSurfaceRuntimeConfig {
+        WristSurfaceRuntimeConfig {
+            button: self.button,
+            hand: self.hand,
+            size: self.render.size,
+            hmd_enabled: self.hmd.enabled,
+            hmd_position: self.hmd.position,
+        }
+    }
+
+    pub(crate) fn should_clear_device_snapshot_for(self, next_config: Self) -> bool {
+        self.surface_config_key() != next_config.surface_config_key()
+            || self.render.show_devices != next_config.render.show_devices
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct WristSurfaceRuntimeConfig {
+    button: OverlayActivationButton,
+    hand: WristOverlayHand,
+    size: WristOverlaySizePreset,
+    hmd_enabled: bool,
+    hmd_position: HmdNotificationPosition,
+}
+
 #[cfg(windows)]
-pub(crate) fn load_app_language(config: &ConfigRepository) -> String {
+pub(crate) fn load_app_language(config: &dyn ConfigStore) -> String {
     config
         .get_string(APP_LANGUAGE_CONFIG_KEY, "en")
         .unwrap_or_else(|_| "en".to_string())
 }
 
-pub(crate) fn load_hour12(config: &ConfigRepository) -> bool {
+pub(crate) fn load_hour12(config: &dyn ConfigStore) -> bool {
     config
         .get_bool(DATE_TIME_HOUR12_CONFIG_KEY, true)
         .unwrap_or(true)
 }
 
-fn load_locale_settings(config: &ConfigRepository) -> (OverlayLocale, bool) {
+fn load_locale_settings(config: &dyn ConfigStore) -> (OverlayLocale, bool) {
     let locale = config
         .get_string(APP_LANGUAGE_CONFIG_KEY, "en")
         .map(|value| OverlayLocale::from_config(&value))
@@ -90,7 +267,7 @@ pub(crate) fn is_localizer_config_key(key: &str) -> bool {
     .any(|localizer_key| vrcx_0_contracts::resolve_config_key(localizer_key) == key)
 }
 
-pub(crate) fn load_localizer(config: &ConfigRepository) -> OverlayLocalizer {
+pub(crate) fn load_localizer(config: &dyn ConfigStore) -> OverlayLocalizer {
     let (locale, show_instance_id) = load_locale_settings(config);
     OverlayLocalizer::with_instance_id(locale, show_instance_id)
 }
@@ -98,7 +275,7 @@ pub(crate) fn load_localizer(config: &ConfigRepository) -> OverlayLocalizer {
 pub(super) fn load_runtime_config(
     services: &dyn VrOverlayRuntimeServices,
 ) -> VrOverlayRuntimeConfig {
-    let config = services.config();
+    let config = services.config().as_ref();
     let start_mode = config
         .get_string(VR_OVERLAY_START_MODE_CONFIG_KEY, "vrchatVrMode")
         .map(|value| WristOverlayStartMode::from_config(&value))

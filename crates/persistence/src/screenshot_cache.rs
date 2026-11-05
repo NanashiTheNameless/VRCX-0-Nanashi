@@ -8,6 +8,7 @@ use vrcx_0_core::screenshots::{
     ScreenshotFolderInfo, ScreenshotFolderTree, ScreenshotLibraryImage,
     ScreenshotLibraryScanStatus, ScreenshotMetadata, ScreenshotTimeWindow, ScreenshotWindowImages,
 };
+use vrcx_0_core::time::now_unix_seconds;
 
 use crate::{Error, Result};
 
@@ -1044,13 +1045,6 @@ fn convert_cache_dates_to_seconds(conn: &mut Connection) -> Result<()> {
 
 fn path_string(path: &Path) -> String {
     path.to_string_lossy().into_owned()
-}
-
-fn now_unix_seconds() -> i64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap_or_default()
-        .as_secs() as i64
 }
 
 mod filter;

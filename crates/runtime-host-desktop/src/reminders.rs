@@ -12,10 +12,10 @@ use std::time::Duration;
 use chrono::{DateTime, Utc};
 use serde_json::json;
 use vrcx_0_application_activity::ActivityRouter;
+use vrcx_0_application_core::ConfigStore;
 use vrcx_0_application_core::{RuntimeAuthScope, TaskSupervisor};
 use vrcx_0_contracts::activity::{ActivityEvent, ActivityKind, ActivitySubject};
 use vrcx_0_contracts::reminders::{Reminder, ReminderTrigger};
-use vrcx_0_persistence::config::ConfigRepository;
 
 pub const REMINDERS_KEY: &str = "assistantReminders";
 pub const MAX_REMINDERS_PER_ACCOUNT: usize = 50;
@@ -27,7 +27,7 @@ const TICK: Duration = Duration::from_secs(15);
 static NEXT_ID: AtomicU32 = AtomicU32::new(0);
 
 pub struct ReminderRuntime {
-    config: ConfigRepository,
+    config: Arc<dyn ConfigStore>,
     auth: RuntimeAuthScope,
     overlay: ActivityRouter,
     reminders: Mutex<Vec<Reminder>>,
@@ -35,7 +35,7 @@ pub struct ReminderRuntime {
 
 impl ReminderRuntime {
     pub(crate) fn new(
-        config: ConfigRepository,
+        config: Arc<dyn ConfigStore>,
         auth: RuntimeAuthScope,
         overlay: ActivityRouter,
     ) -> Arc<Self> {

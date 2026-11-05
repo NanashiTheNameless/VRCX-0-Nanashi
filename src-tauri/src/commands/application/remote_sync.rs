@@ -261,27 +261,27 @@ pub fn app__remote_sync_settings_set(
         state.runtime_host().remote_sync_cancel();
     }
     state.runtime_host().config_set_values(vec![
-        vrcx_0_runtime_host_desktop::local_data::ConfigWriteEntry {
+        vrcx_0_contracts::ConfigWriteEntry {
             key: BACKEND_KEY.into(),
             value: backend,
         },
-        vrcx_0_runtime_host_desktop::local_data::ConfigWriteEntry {
+        vrcx_0_contracts::ConfigWriteEntry {
             key: API_ORIGIN_KEY.into(),
             value: api_origin,
         },
-        vrcx_0_runtime_host_desktop::local_data::ConfigWriteEntry {
+        vrcx_0_contracts::ConfigWriteEntry {
             key: WEBSITE_ORIGIN_KEY.into(),
             value: website_origin,
         },
-        vrcx_0_runtime_host_desktop::local_data::ConfigWriteEntry {
+        vrcx_0_contracts::ConfigWriteEntry {
             key: SYNC_INTERVAL_MINUTES_KEY.into(),
             value: sync_interval_minutes.to_string(),
         },
-        vrcx_0_runtime_host_desktop::local_data::ConfigWriteEntry {
+        vrcx_0_contracts::ConfigWriteEntry {
             key: SYNC_SETTINGS_ENABLED_KEY.into(),
             value: sync_settings_enabled.to_string(),
         },
-        vrcx_0_runtime_host_desktop::local_data::ConfigWriteEntry {
+        vrcx_0_contracts::ConfigWriteEntry {
             key: PAUSE_WHILE_GAME_RUNNING_KEY.into(),
             value: pause_while_game_running.to_string(),
         },
@@ -339,12 +339,12 @@ pub async fn app__remote_sync_pair_poll(
                 .runtime_host()
                 .remote_sync_secret_set(TOKEN_KEY, token.as_str())
                 .map_err(|error| AppError::WebClient(error.to_string()))?;
-            state.runtime_host().config_set_values(vec![
-                vrcx_0_runtime_host_desktop::local_data::ConfigWriteEntry {
+            state
+                .runtime_host()
+                .config_set_values(vec![vrcx_0_contracts::ConfigWriteEntry {
                     key: ACCOUNT_ID_KEY.into(),
                     value: account_id.clone(),
-                },
-            ])?;
+                }])?;
             Ok(RemoteSyncPairingPoll::Approved { account_id })
         }
     }
@@ -607,12 +607,12 @@ async fn trust_check(state: &AppState) -> Result<RemoteSyncTrustSnapshot, AppErr
     }
     history.insert(server, memory);
     if let Ok(value) = serde_json::to_string(&history) {
-        let _ = state.runtime_host().config_set_values(vec![
-            vrcx_0_runtime_host_desktop::local_data::ConfigWriteEntry {
+        let _ = state
+            .runtime_host()
+            .config_set_values(vec![vrcx_0_contracts::ConfigWriteEntry {
                 key: TRUST_HISTORY_KEY.into(),
                 value,
-            },
-        ]);
+            }]);
     }
     Ok(RemoteSyncTrustSnapshot {
         code_official_at_ms: memory.code_official_at_ms.map(|at| at as f64),
