@@ -58,7 +58,7 @@ Download `vrcx-0-logger_<version>_linux_<arch>` from [Releases](https://github.c
 
 ### Windows
 
-Download `vrcx-0-logger_<version>_windows_x86_64.exe` from [Releases](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases) and run it. The window shows the address and a generated password to enter in VRCX-0-Nanashi, along with the listen address, port, data folder, retention and storage limit. Settings are saved in `%LOCALAPPDATA%\VRCX-0-Nanashi Logger\logger.env`, and records go to the `data` folder next to it by default. The recorder runs while the window is open, and connection problems such as VRChat being unreachable are listed below the status.
+Download `vrcx-0-logger_<version>_windows_<arch>.exe` (`x86_64` or `aarch64`) from [Releases](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases) and run it. The window shows the address and a generated password to enter in VRCX-0-Nanashi, along with the listen address, port, data folder, retention and storage limit. Settings are saved in `%LOCALAPPDATA%\VRCX-0-Nanashi Logger\logger.env`, and records go to the `data` folder next to it by default. The recorder runs while the window is open, and connection problems such as VRChat being unreachable are listed below the status.
 
 To run it without a window, for example from Task Scheduler, start it with `--headless` and set the environment variables listed under Configuration.
 

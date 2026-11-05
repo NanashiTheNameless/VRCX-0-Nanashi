@@ -395,10 +395,18 @@ jobs:
     # collector image: a binary linked on the runner needs whatever glibc the
     # runner has, and the image's loader refuses a newer one before main runs.
     collector:
-        name: Collector CLI (Linux x86_64)
+        name: Collector CLI (Linux ${{ matrix.arch }})
         needs: prepare
-        runs-on: ubuntu-24.04
+        runs-on: ${{ matrix.os }}
         container: rust:1-trixie
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - arch: amd64
+                      os: ubuntu-24.04
+                    - arch: arm64
+                      os: ubuntu-24.04-arm
         steps:
             - uses: actions/checkout@v7
 
@@ -407,7 +415,7 @@ jobs:
             - uses: Swatinem/rust-cache@v2
               with:
                   workspaces: . -> target
-                  shared-key: nightly-collector
+                  shared-key: nightly-collector-${{ matrix.arch }}
 
             - name: Build collector
               run: cargo build --locked --release -p vrcx-0-nanashi-collector
@@ -423,14 +431,14 @@ jobs:
             - name: Prepare collector release assets
               run: |
                   mkdir -p collector-assets
-                  cp target/release/vrcx-0-nanashi-collector collector-assets/vrcx-0-nanashi-headless-linux-amd64
+                  cp target/release/vrcx-0-nanashi-collector collector-assets/vrcx-0-nanashi-headless-linux-${{ matrix.arch }}
                   printf '{"appVersion":"%s","appCommit":"%s"}\n' \
                       "${{ needs.prepare.outputs.build_version }}" "$GITHUB_SHA" \
-                      > collector-assets/vrcx-0-nanashi-headless-linux-amd64.json
+                      > collector-assets/vrcx-0-nanashi-headless-linux-${{ matrix.arch }}.json
 
             - uses: actions/upload-artifact@v7
               with:
-                  name: nightly-collector-linux-amd64
+                  name: nightly-collector-linux-${{ matrix.arch }}
                   path: collector-assets/*
                   if-no-files-found: error
 
@@ -464,6 +472,12 @@ jobs:
                       arch: x86_64
                       os: windows-latest
                       rust_target: x86_64-pc-windows-msvc
+                      binary: vrcx-0-logger.exe
+                      suffix: .exe
+                    - platform: windows
+                      arch: aarch64
+                      os: windows-11-arm
+                      rust_target: aarch64-pc-windows-msvc
                       binary: vrcx-0-logger.exe
                       suffix: .exe
         steps:
@@ -611,7 +625,7 @@ jobs:
                   rolling_assets=()
                   for asset in release-assets/*; do
                       case "$(basename "$asset")" in
-                          vrcx-0-nanashi-headless-linux-amd64.json) ;;
+                          vrcx-0-nanashi-headless-linux-amd64.json | vrcx-0-nanashi-headless-linux-arm64.json) ;;
                           vrcx-0-nanashi-headless*|vrcx-0-logger*) continue ;;
                       esac
                       rolling_assets+=("$asset")
