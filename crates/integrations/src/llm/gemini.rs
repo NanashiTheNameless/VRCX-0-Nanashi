@@ -233,9 +233,13 @@ pub(super) fn gemini_body(messages: &[ChatMessage], tools: &[ToolDefinition]) ->
                         .ok()
                         .filter(Value::is_object)
                         .unwrap_or_else(|| json!({}));
-                    parts.push(json!({
+                    let mut part = json!({
                         "functionCall": { "name": call.function.name, "args": args }
-                    }));
+                    });
+                    if let Some(signature) = thought_signature(call.extra_content.as_ref()) {
+                        part["thoughtSignature"] = Value::String(signature.to_string());
+                    }
+                    parts.push(part);
                 }
                 ("model", parts)
             }
@@ -295,6 +299,15 @@ pub(super) fn gemini_body(messages: &[ChatMessage], tools: &[ToolDefinition]) ->
         );
     }
     Value::Object(body)
+}
+
+/// Stored in the same shape the OpenAI-compatible Gemini endpoint uses, so a
+/// conversation keeps its signatures when the endpoint kind changes.
+fn thought_signature(extra_content: Option<&Value>) -> Option<&str> {
+    extra_content?
+        .pointer("/google/thought_signature")
+        .and_then(Value::as_str)
+        .filter(|signature| !signature.is_empty())
 }
 
 /// Gemini accepts an OpenAPI subset of JSON Schema and rejects some keywords.
@@ -392,7 +405,11 @@ impl GeminiStreamState {
                             .unwrap_or_else(|| json!({}))
                             .to_string(),
                     },
-                    extra_content: None,
+                    extra_content: part
+                        .get("thoughtSignature")
+                        .and_then(Value::as_str)
+                        .filter(|signature| !signature.is_empty())
+                        .map(|signature| json!({ "google": { "thought_signature": signature } })),
                 });
             }
         }
@@ -477,6 +494,37 @@ mod tests {
         assert_eq!(turn.tool_calls[0].function.name, "search");
         assert_eq!(turn.tool_calls[0].function.arguments, r#"{"q":"ada"}"#);
         assert!(!turn.truncated());
+    }
+
+    #[test]
+    fn function_call_thought_signature_round_trips() {
+        let mut state = GeminiStreamState::default();
+        state.apply_line(
+            r#"data: {"candidates":[{"content":{"parts":[{"functionCall":{"name":"search","args":{"q":"ada"}},"thoughtSignature":"EvcCCvQ"},{"functionCall":{"name":"lookup","args":{}}}]}}]}"#,
+            &mut |_: &str| {},
+        );
+        let turn = state.finish();
+        assert_eq!(
+            turn.tool_calls[0].extra_content,
+            Some(json!({ "google": { "thought_signature": "EvcCCvQ" } }))
+        );
+        assert_eq!(turn.tool_calls[1].extra_content, None);
+
+        let mut assistant = ChatMessage::assistant("");
+        assistant.content = None;
+        assistant.tool_calls = turn.tool_calls;
+        let messages = vec![
+            ChatMessage::user("Who is Ada?"),
+            assistant,
+            ChatMessage::tool("call_0", "{}"),
+            ChatMessage::tool("call_1", "{}"),
+        ];
+
+        let body = gemini_body(&messages, &[]);
+
+        let parts = &body["contents"][1]["parts"];
+        assert_eq!(parts[0]["thoughtSignature"], "EvcCCvQ");
+        assert!(parts[1].get("thoughtSignature").is_none());
     }
 
     #[test]
