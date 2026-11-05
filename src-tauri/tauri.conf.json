@@ -53,6 +53,7 @@
     },
     "bundle": {
         "active": true,
+        "publisher": "NamelessNanashi",
         "licenseFile": "DISCLAIMER.txt",
         "resources": {
             "../LICENSE": "LICENSE",
