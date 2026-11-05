@@ -3,7 +3,7 @@ use std::sync::Arc;
 use vrcx_0_application_core::GameProcessEvent;
 use vrcx_0_composition::Result;
 
-use super::VrOverlayRuntimeSnapshot;
+use super::{unsupported_message, VrOverlayRuntimeSnapshot};
 use crate::DesktopRuntimeServices;
 
 pub(super) struct Overlay;
@@ -44,9 +44,8 @@ impl Overlay {
 }
 
 fn unsupported_error() -> vrcx_0_composition::Error {
-    vrcx_0_application_core::Error::Custom(format!(
-        "VR overlay is not supported on {}",
-        vrcx_0_platform::host_capabilities::current_platform()
+    vrcx_0_application_core::Error::Custom(unsupported_message(
+        vrcx_0_platform::host_capabilities::current_platform(),
     ))
     .into()
 }

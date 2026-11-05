@@ -4,7 +4,7 @@ use vrcx_0_application::auth::AuthCredentialStore;
 use vrcx_0_application_activity::notification::{
     extract_file_version, fallback_file_version, reload_activity_router,
     rename_local_favorite_group_in_activity_filters, CachedNotificationUserImageResolver,
-    NotificationRemoteFuture, NotificationResolver,
+    NotificationResolver,
 };
 use vrcx_0_application_activity::{ActivityRouter, ActivitySink, ActivitySinkRegistry};
 use vrcx_0_application_core::{
@@ -376,7 +376,7 @@ impl VrOverlayRuntimeServices for DesktopRuntimeServices {
         &'a self,
         endpoint: &'a str,
         group_id: &'a str,
-    ) -> NotificationRemoteFuture<'a, String> {
+    ) -> vrcx_0_application_activity::notification::NotificationRemoteFuture<'a, String> {
         Box::pin(self.notification_resolver.group_name(endpoint, group_id))
     }
 
