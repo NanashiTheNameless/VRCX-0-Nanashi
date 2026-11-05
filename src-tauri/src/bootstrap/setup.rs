@@ -241,6 +241,31 @@ fn exit_with_startup_error(app: &tauri::App, error: &AppError) -> ! {
     std::process::exit(1);
 }
 
+fn exit_with_main_window_error(app: &tauri::App, error: &dyn std::error::Error) -> ! {
+    tracing::error!(error = %error, "failed to create the main window");
+    show_blocking_dialog(
+        app,
+        MessageDialogKind::Error,
+        &main_window_error_message(error),
+    );
+    std::process::exit(1);
+}
+
+#[cfg(target_os = "windows")]
+fn main_window_error_message(error: &dyn std::fmt::Display) -> String {
+    format!(
+        "VRCX-0-Nanashi could not open its window.\n\n{error}\n\n\
+         VRCX-0-Nanashi needs the Microsoft Edge WebView2 Runtime. Install or repair it from:\n\
+         https://go.microsoft.com/fwlink/p/?LinkId=2124703\n\n\
+         Then start VRCX-0-Nanashi again."
+    )
+}
+
+#[cfg(not(target_os = "windows"))]
+fn main_window_error_message(error: &dyn std::fmt::Display) -> String {
+    format!("VRCX-0-Nanashi could not open its window.\n\n{error}")
+}
+
 fn show_blocking_dialog(app: &tauri::App, kind: MessageDialogKind, message: &str) {
     app.dialog()
         .message(message)
@@ -288,7 +313,9 @@ pub fn setup_app_with_data_dir(
         "Tauri setup is wiring runtime services.",
         0,
     );
-    create_main_window(app.handle(), state.runtime_host().proxy_url())?;
+    if let Err(error) = create_main_window(app.handle(), state.runtime_host().proxy_url()) {
+        exit_with_main_window_error(app, error.as_ref());
+    }
     super::linux_rendering::start_fallback(app.handle());
     state.runtime_host().record_lifecycle_phase(
         "mainWindow",
