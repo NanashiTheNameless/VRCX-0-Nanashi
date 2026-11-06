@@ -137,7 +137,39 @@ function Watchlist({
     );
 }
 
-function normalizeSafetySettings(settings: SafetySettings): SafetySettings {
+// The bindings mark these fields optional because the backend accepts partial
+// input, but it always returns every field.
+type LoadedSafetySource = Required<SafetySource>;
+type LoadedSafetySettings = Required<Omit<SafetySettings, 'sources'>> & {
+    sources: LoadedSafetySource[];
+};
+
+function loadedSafetySettings(value: SafetySettings): LoadedSafetySettings {
+    return {
+        enabled: value.enabled ?? true,
+        groups: value.groups ?? [],
+        avatars: value.avatars ?? [],
+        urlWarnings: value.urlWarnings ?? true,
+        warnShorteners: value.warnShorteners ?? true,
+        blockedDomains: value.blockedDomains ?? [],
+        allowedDomains: value.allowedDomains ?? [],
+        sources: (value.sources ?? []).map((source) => ({
+            id: source.id ?? '',
+            name: source.name ?? '',
+            url: source.url ?? '',
+            format: source.format ?? 'avatarIds',
+            enabled: source.enabled ?? false,
+            warn: source.warn ?? true,
+            blockUsers: source.blockUsers ?? false,
+            banGroupIds: source.banGroupIds ?? [],
+            globalHide: source.globalHide ?? false
+        }))
+    };
+}
+
+function normalizeSafetySettings(
+    settings: LoadedSafetySettings
+): LoadedSafetySettings {
     return {
         ...settings,
         blockedDomains: lines(settings.blockedDomains.join('\n')),
@@ -151,7 +183,7 @@ function normalizeSafetySettings(settings: SafetySettings): SafetySettings {
 
 // Account actions a source performs on its own. Turning one on is never
 // saved automatically; it waits for the confirmation.
-function automaticActions(settings: SafetySettings): Set<string> {
+function automaticActions(settings: LoadedSafetySettings): Set<string> {
     const actions = new Set<string>();
     if (!settings.enabled) return actions;
     for (const source of normalizeSafetySettings(settings).sources) {
@@ -167,9 +199,9 @@ function automaticActions(settings: SafetySettings): Set<string> {
 
 export function SettingsSafetyCard() {
     const { t } = useTranslation();
-    const [settings, setSettings] = useState<SafetySettings | null>(null);
+    const [settings, setSettings] = useState<LoadedSafetySettings | null>(null);
     const [saved, setSaved] = useState('');
-    const [stored, setStored] = useState<SafetySettings | null>(null);
+    const [stored, setStored] = useState<LoadedSafetySettings | null>(null);
     const [status, setStatus] = useState<SafetyStatus | null>(null);
     const historyOpen = useNavigationCacheStore(
         (state) => state.settingsCards[SAFETY_HISTORY_CARD_ID] ?? false
@@ -186,8 +218,9 @@ export function SettingsSafetyCard() {
             commands.appSafetySettingsGet(),
             commands.appSafetyStatus()
         ])
-            .then(([value, state]) => {
+            .then(([response, state]) => {
                 if (active) {
+                    const value = loadedSafetySettings(response);
                     setSettings(value);
                     setSaved(JSON.stringify(value));
                     setStored(value);
@@ -201,9 +234,9 @@ export function SettingsSafetyCard() {
             active = false;
         };
     }, []);
-    const update = (patch: Partial<SafetySettings>) =>
+    const update = (patch: Partial<LoadedSafetySettings>) =>
         setSettings((current) => current && { ...current, ...patch });
-    const updateSource = (id: string, patch: Partial<SafetySource>) =>
+    const updateSource = (id: string, patch: Partial<LoadedSafetySource>) =>
         setSettings(
             (current) =>
                 current && {
@@ -236,7 +269,7 @@ export function SettingsSafetyCard() {
         }
     }
     const addsAutomaticActions = useCallback(
-        (draft: SafetySettings) => {
+        (draft: LoadedSafetySettings) => {
             const before = stored ? automaticActions(stored) : new Set();
             return [...automaticActions(draft)].some(
                 (action) => !before.has(action)
@@ -245,9 +278,9 @@ export function SettingsSafetyCard() {
         [stored]
     );
     // The draft is kept as typed; the runtime gets the cleaned-up copy.
-    const persist = useCallback(async (draft: SafetySettings) => {
-        const value = await commands.appSafetySettingsSave(
-            normalizeSafetySettings(draft)
+    const persist = useCallback(async (draft: LoadedSafetySettings) => {
+        const value = loadedSafetySettings(
+            await commands.appSafetySettingsSave(normalizeSafetySettings(draft))
         );
         setStored(value);
         setSaved(JSON.stringify(draft));

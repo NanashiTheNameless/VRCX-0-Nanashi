@@ -35,7 +35,6 @@ export function useSearchResults({
     includeCommunityLabs,
     pageSizes,
     searchText,
-    searchUserByBio,
     searchUserSortByLastLoggedIn,
     selectedWorldCategory,
     setPageSize,
@@ -49,7 +48,6 @@ export function useSearchResults({
     includeCommunityLabs: boolean;
     pageSizes: SearchPageSizes;
     searchText: string;
-    searchUserByBio: boolean;
     searchUserSortByLastLoggedIn: boolean;
     selectedWorldCategory: string;
     setPageSize: (tab: SearchActiveTab, pageSize: number) => void;
@@ -237,7 +235,6 @@ export function useSearchResults({
             runUserSearch(
                 buildUserSearchRequest(
                     searchText,
-                    searchUserByBio,
                     searchUserSortByLastLoggedIn,
                     pageSizes.user
                 )
@@ -302,7 +299,6 @@ export function useSearchResults({
         runUserSearch,
         runWorldSearch,
         searchText,
-        searchUserByBio,
         searchUserSortByLastLoggedIn,
         selectedWorldCategory,
         t,

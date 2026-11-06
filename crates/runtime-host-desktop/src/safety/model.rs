@@ -24,10 +24,12 @@ pub struct GlobalHideAccountState {
     pub day_count: u32,
     pub paused: bool,
     /// No requests before this epoch second.
+    #[specta(type = i64)]
     #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
     pub backoff_until: i64,
     pub consecutive_errors: u32,
     pub last_error: String,
+    #[specta(type = i64)]
     #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
     pub last_block_at: i64,
 }
@@ -63,6 +65,7 @@ pub struct GlobalHideStatus {
     pub today: u32,
     pub daily_cap: u32,
     pub paused: bool,
+    #[specta(type = i64)]
     #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
     pub backoff_until: i64,
     pub last_error: String,
@@ -156,8 +159,10 @@ pub struct SourceCache {
     pub url: String,
     pub format: SourceFormat,
     pub entries: BTreeSet<String>,
+    #[specta(type = i64)]
     #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
     pub updated_at: i64,
+    #[specta(type = i64)]
     #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
     pub last_attempt: i64,
     pub error: String,
@@ -173,6 +178,7 @@ pub struct SafetyAuditEntry {
     #[serde(default)]
     pub account_user_id: String,
     #[serde(default)]
+    #[specta(type = i64)]
     #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
     pub event_created_at: i64,
     #[serde(default)]
@@ -181,6 +187,7 @@ pub struct SafetyAuditEntry {
     pub log_kind: String,
     #[serde(default)]
     pub avatar_id: String,
+    #[specta(type = i64)]
     #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
     pub created_at: i64,
     pub event_type: String,
@@ -204,6 +211,7 @@ pub struct SafetyStatus {
 pub struct SourceStatus {
     pub id: String,
     pub count: u32,
+    #[specta(type = i64)]
     #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
     pub updated_at: i64,
     pub error: String,
@@ -443,6 +451,7 @@ pub fn logged_urls(data: &str) -> Vec<String> {
 pub struct SafetyLogRow {
     pub account_user_id: String,
     pub kind: String,
+    #[specta(type = i64)]
     #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
     pub created_at: i64,
     pub user_id: String,
@@ -463,6 +472,7 @@ pub struct AvatarBlockPreview {
     pub token: String,
     pub account_user_id: String,
     pub source_name: String,
+    #[specta(type = i64)]
     #[serde(deserialize_with = "vrcx_0_contracts::epoch::de")]
     pub updated_at: i64,
     pub offset: u32,

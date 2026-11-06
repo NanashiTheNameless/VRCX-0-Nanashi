@@ -6,6 +6,7 @@ pub struct DatabaseUpgradeStatus {
     pub from_version: i64,
     pub to_version: i64,
     pub work_db_path: String,
+    #[specta(type = i64)]
     #[serde(deserialize_with = "crate::epoch::de")]
     pub started_at: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -14,6 +15,7 @@ pub struct DatabaseUpgradeStatus {
     pub stage: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub operation: Option<String>,
+    #[specta(type = Option<i64>)]
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",

@@ -67,7 +67,16 @@ export function RemindersPage() {
     const [formInitial, setFormInitial] = useState<ReminderFormInitial>({});
     const [formKey, setFormKey] = useState(0);
 
-    function applyDraft(draft: ReminderDraft) {
+    function applyDraft(response: ReminderDraft) {
+        const draft: Required<ReminderDraft> = {
+            message: response.message ?? '',
+            kind: response.kind ?? '',
+            friendName: response.friendName ?? '',
+            worldId: response.worldId ?? '',
+            atLocal: response.atLocal ?? '',
+            repeatMinutes: response.repeatMinutes ?? 0,
+            recurring: response.recurring ?? false
+        };
         const friendId = matchFriendByName(
             draft.friendName,
             Object.entries(friendsById).map(([id, friend]) => ({
