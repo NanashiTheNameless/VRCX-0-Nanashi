@@ -18,9 +18,22 @@ Windows as `vrcx-0-logger_<version>_windows_x86_64.exe`. On Linux, most people s
 install script or Docker image described in the [recorder guide](crates/logger/README.md)
 instead of the bare binary.
 
-Fork builds are not code-signed. On Windows, SmartScreen may warn on first run. On macOS,
-if the first launch is blocked, open **System Settings > Privacy & Security** and click
-**Open Anyway**.
+New builds use NamelessNanashi's self-signed identity. This does not establish
+Microsoft or Apple trust: Windows SmartScreen can still warn, and on macOS a
+blocked first launch still needs **System Settings > Privacy & Security > Open
+Anyway**.
+
+Release downloads include matching `.nn-signature` files. Verify a download with
+OpenSSL and a trusted copy of the public key in `signing/release-public-key.pem`:
+
+```bash
+openssl dgst -sha256 -verify NamelessNanashi-release-public-key.pem -signature DOWNLOAD.nn-signature DOWNLOAD
+```
+
+Success prints `Verified OK`. The release also includes the public key as
+`NamelessNanashi-release-public-key.pem`; compare it with a copy you already
+trust before using it to verify files. These signatures are separate from the
+in-app updater's existing signatures.
 
 ## Why macOS shows up late
 

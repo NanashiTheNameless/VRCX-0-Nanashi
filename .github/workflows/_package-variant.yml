@@ -2,6 +2,11 @@ name: Package Variant
 
 on:
     workflow_call:
+        secrets:
+            NN_SIGNING_KEY_PEM_BASE64:
+                required: true
+            NN_SIGNING_PASSWORD:
+                required: true
         inputs:
             variant:
                 description: Package variant (preview or devkit).
@@ -78,6 +83,8 @@ jobs:
         name: ${{ needs.prepare.outputs.display_name }} ${{ matrix.platform }}
         needs: prepare
         runs-on: ${{ matrix.os }}
+        env:
+            NN_SIGNING_REQUIRED: '1'
         defaults:
             run:
                 shell: bash
@@ -158,11 +165,6 @@ jobs:
                   } else {
                       config.bundle ??= {};
                       config.bundle.createUpdaterArtifacts = false;
-                      if (runnerOs === 'Windows') {
-                          config.bundle.windows ??= {};
-                          delete config.bundle.windows.certificateThumbprint;
-                          delete config.bundle.windows.signCommand;
-                      }
                   }
 
                   fs.writeFileSync(outputConfigPath, `${JSON.stringify(config, null, 4)}\n`);
@@ -176,10 +178,11 @@ jobs:
                   PACKAGE_VARIANT: ${{ inputs.variant }}
                   VRCX_0_BUILD_LABEL: ${{ inputs.variant }}
                   VRCX_0_BUILD_BADGE: ${{ needs.prepare.outputs.display_name }} ${{ needs.prepare.outputs.timestamp }}
+                  NN_SIGNING_KEY_PEM_BASE64: ${{ secrets.NN_SIGNING_KEY_PEM_BASE64 }}
+                  NN_SIGNING_PASSWORD: ${{ secrets.NN_SIGNING_PASSWORD }}
               run: |
                   args=(
                       --config "${{ steps.config.outputs.config }}"
-                      --no-sign
                       --no-bundle
                   )
                   if [[ "$PACKAGE_VARIANT" == "preview" ]]; then
@@ -194,6 +197,8 @@ jobs:
                   VRCX_0_BUILD_LABEL: ${{ inputs.variant }}
                   VRCX_0_BUILD_BADGE: ${{ needs.prepare.outputs.display_name }} ${{ needs.prepare.outputs.timestamp }}
                   VRCX_0_WEBKIT_BUILD_TARGET: safari17.4
+                  NN_SIGNING_KEY_PEM_BASE64: ${{ secrets.NN_SIGNING_KEY_PEM_BASE64 }}
+                  NN_SIGNING_PASSWORD: ${{ secrets.NN_SIGNING_PASSWORD }}
               run: |
                   mold -run npm run "$BUILD_SCRIPT" -- \
                       --config "${{ steps.config.outputs.config }}" \
@@ -203,6 +208,8 @@ jobs:
               name: Collect package artifact
               env:
                   PACKAGE_VARIANT: ${{ inputs.variant }}
+                  NN_SIGNING_KEY_PEM_BASE64: ${{ secrets.NN_SIGNING_KEY_PEM_BASE64 }}
+                  NN_SIGNING_PASSWORD: ${{ secrets.NN_SIGNING_PASSWORD }}
               run: |
                   mkdir -p package-assets
                   version="${{ steps.version.outputs.version }}"
@@ -235,6 +242,7 @@ jobs:
                   esac
 
                   echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
+                  npm run signing:sign -- package-assets
                   ls -la package-assets
 
             - name: Smoke test packaged AppImage
@@ -318,6 +326,8 @@ jobs:
             - prepare
             - macos-binary
         runs-on: macos-latest
+        env:
+            NN_SIGNING_REQUIRED: '1'
         defaults:
             run:
                 shell: bash
@@ -345,6 +355,9 @@ jobs:
                   lipo -info "$universal_dir/VRCX-0-Nanashi"
 
             - name: Bundle DMG
+              env:
+                  NN_SIGNING_KEY_PEM_BASE64: ${{ secrets.NN_SIGNING_KEY_PEM_BASE64 }}
+                  NN_SIGNING_PASSWORD: ${{ secrets.NN_SIGNING_PASSWORD }}
               run: |
                   override_config="${RUNNER_TEMP}/tauri-package-override.json"
                   echo '{"bundle":{"createUpdaterArtifacts":false,"targets":["dmg"]}}' > "$override_config"
@@ -354,6 +367,8 @@ jobs:
               name: Collect package artifact
               env:
                   PACKAGE_VARIANT: ${{ inputs.variant }}
+                  NN_SIGNING_KEY_PEM_BASE64: ${{ secrets.NN_SIGNING_KEY_PEM_BASE64 }}
+                  NN_SIGNING_PASSWORD: ${{ secrets.NN_SIGNING_PASSWORD }}
               run: |
                   mkdir -p package-assets
                   version="$(node -p "require('./src-tauri/tauri.conf.json').version")"
@@ -369,6 +384,7 @@ jobs:
 
                   cp target/universal-apple-darwin/release/bundle/dmg/*.dmg "package-assets/${stem}_macos_universal.dmg"
                   echo "artifact_name=$artifact_name" >> "$GITHUB_OUTPUT"
+                  npm run signing:sign -- package-assets
                   ls -la package-assets
 
             - uses: actions/upload-artifact@v7

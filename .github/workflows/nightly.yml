@@ -64,6 +64,8 @@ jobs:
         name: ${{ matrix.label }}
         needs: prepare
         runs-on: ${{ matrix.os }}
+        env:
+            NN_SIGNING_REQUIRED: '1'
         defaults:
             run:
                 shell: bash
@@ -77,6 +79,8 @@ jobs:
                       artifact_name: windows-installer
                       artifact_path: |
                           target/release/bundle/nsis/*_windows_x86_64_setup.exe
+                          target/release/bundle/nsis/*.nn-signature
+                          target/release/bundle/nsis/NamelessNanashi-*.pem
                           target/release/bundle/manifest_windows.json
                     - label: Linux AppImage
                       os: ubuntu-24.04
@@ -85,6 +89,8 @@ jobs:
                       artifact_path: |
                           target/release/bundle/appimage/*.AppImage
                           target/release/bundle/appimage/*.AppImage.sig
+                          target/release/bundle/appimage/*.nn-signature
+                          target/release/bundle/appimage/NamelessNanashi-*.pem
                           target/release/bundle/manifest_linux.json
         steps:
             # Defender scans every file the cache restore, build and cache save
@@ -135,7 +141,7 @@ jobs:
                       echo "TAURI_UPDATER_PUBLIC_KEY repository variable is required for updater artifacts" >&2
                       exit 1
                   fi
-                  node -e "const fs = require('node:fs'); const path = 'src-tauri/tauri.conf.json'; const config = JSON.parse(fs.readFileSync(path, 'utf8')); config.plugins ??= {}; config.plugins.updater ??= {}; config.plugins.updater.pubkey = process.env.TAURI_UPDATER_PUBLIC_KEY; config.bundle ??= {}; config.bundle.windows ??= {}; delete config.bundle.windows.certificateThumbprint; delete config.bundle.windows.signCommand; fs.writeFileSync(path, JSON.stringify(config, null, 4) + '\n');"
+                  node -e "const fs = require('node:fs'); const path = 'src-tauri/tauri.conf.json'; const config = JSON.parse(fs.readFileSync(path, 'utf8')); config.plugins ??= {}; config.plugins.updater ??= {}; config.plugins.updater.pubkey = process.env.TAURI_UPDATER_PUBLIC_KEY; fs.writeFileSync(path, JSON.stringify(config, null, 4) + '\n');"
 
             - name: Build package
               env:
@@ -145,6 +151,8 @@ jobs:
                   TAURI_UPDATER_PUBLIC_KEY: ${{ vars.TAURI_UPDATER_PUBLIC_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_UPDATER_PRIVATE_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_UPDATER_PRIVATE_KEY_PASSWORD }}
+                  NN_SIGNING_KEY_PEM_BASE64: ${{ secrets.NN_SIGNING_KEY_PEM_BASE64 }}
+                  NN_SIGNING_PASSWORD: ${{ secrets.NN_SIGNING_PASSWORD }}
                   VRCX_0_WEBKIT_BUILD_TARGET: ${{ matrix.webkit_build_target }}
               run: |
                   case "$RUNNER_OS" in
@@ -178,6 +186,7 @@ jobs:
                   setup_path="$bundle_dir/nsis/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_windows_x86_64_setup.exe"
                   mv "$setup_source" "$setup_path"
                   mv "${setup_source}.sig" "${setup_path}.sig"
+                  mv "${setup_source}.nn-signature" "${setup_path}.nn-signature"
                   node scripts/create-tauri-updater-manifest.ts \
                       --version "${{ needs.prepare.outputs.build_version }}" \
                       --tag "${{ needs.prepare.outputs.tag }}" \
@@ -200,6 +209,9 @@ jobs:
                       fi
                       if [[ -f "${source}.sig" && "${source}.sig" != "${destination}.sig" ]]; then
                           mv "${source}.sig" "${destination}.sig"
+                      fi
+                      if [[ -f "${source}.nn-signature" && "${source}.nn-signature" != "${destination}.nn-signature" ]]; then
+                          mv "${source}.nn-signature" "${destination}.nn-signature"
                       fi
                       if [[ ! -f "${destination}.sig" ]]; then
                           node node_modules/@tauri-apps/cli/tauri.js signer sign "$destination" > "${destination}.sig"
@@ -314,6 +326,8 @@ jobs:
             - prepare
             - macos-binary
         runs-on: macos-latest
+        env:
+            NN_SIGNING_REQUIRED: '1'
         defaults:
             run:
                 shell: bash
@@ -357,6 +371,8 @@ jobs:
               env:
                   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_UPDATER_PRIVATE_KEY }}
                   TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_UPDATER_PRIVATE_KEY_PASSWORD }}
+                  NN_SIGNING_KEY_PEM_BASE64: ${{ secrets.NN_SIGNING_KEY_PEM_BASE64 }}
+                  NN_SIGNING_PASSWORD: ${{ secrets.NN_SIGNING_PASSWORD }}
               run: |
                   override_config="${RUNNER_TEMP}/tauri-nightly-override.json"
                   node -e "require('node:fs').writeFileSync(process.argv[1], JSON.stringify({ bundle: { macOS: { bundleVersion: process.argv[2] } } }))" "$override_config" "${{ github.run_number }}"
@@ -367,6 +383,7 @@ jobs:
                   dmg_dir="target/universal-apple-darwin/release/bundle/dmg"
                   dmg_path="$(find "$dmg_dir" -maxdepth 1 -name '*.dmg' | sort | head -n 1)"
                   mv "$dmg_path" "$dmg_dir/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_macos_universal.dmg"
+                  mv "${dmg_path}.nn-signature" "$dmg_dir/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_macos_universal.dmg.nn-signature"
 
                   updater_dir="target/universal-apple-darwin/release/bundle/macos"
                   archive_path="$(find "$updater_dir" -maxdepth 1 -name '*.app.tar.gz' | sort | head -n 1)"
@@ -376,6 +393,7 @@ jobs:
                   fi
                   mv "$archive_path" "$updater_dir/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_macos_universal.app.tar.gz"
                   mv "${archive_path}.sig" "$updater_dir/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_macos_universal.app.tar.gz.sig"
+                  mv "${archive_path}.nn-signature" "$updater_dir/VRCX-0-Nanashi_${{ needs.prepare.outputs.build_version }}_macos_universal.app.tar.gz.nn-signature"
 
             - uses: actions/upload-artifact@v7
               with:
@@ -384,6 +402,9 @@ jobs:
                       target/universal-apple-darwin/release/bundle/dmg/*.dmg
                       target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz
                       target/universal-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
+                      target/universal-apple-darwin/release/bundle/dmg/*.nn-signature
+                      target/universal-apple-darwin/release/bundle/macos/*.nn-signature
+                      target/universal-apple-darwin/release/bundle/macos/NamelessNanashi-*.pem
                   if-no-files-found: error
 
     # RemoteSync collector child program. It is a server-side tool for
@@ -716,7 +737,7 @@ jobs:
                   find macos-assets -mindepth 2 -type f -exec mv -n {} macos-assets/ \;
                   archive_name="VRCX-0-Nanashi_${VERSION}_macos_universal.app.tar.gz"
                   dmg_path="macos-assets/VRCX-0-Nanashi_${VERSION}_macos_universal.dmg"
-                  for file in "$dmg_path" "macos-assets/${archive_name}" "macos-assets/${archive_name}.sig"; do
+                  for file in "$dmg_path" "${dmg_path}.nn-signature" "macos-assets/${archive_name}" "macos-assets/${archive_name}.sig" "macos-assets/${archive_name}.nn-signature"; do
                       if [[ ! -s "$file" ]]; then
                           echo "Missing macOS release asset: $file" >&2
                           exit 1
@@ -746,7 +767,7 @@ jobs:
 
                   # The archive goes up before the manifest names it, so an
                   # install never sees a macOS entry without its file.
-                  assets=("$dmg_path" "macos-assets/${archive_name}")
+                  assets=("$dmg_path" "${dmg_path}.nn-signature" "macos-assets/${archive_name}" "macos-assets/${archive_name}.nn-signature")
                   gh release upload "$TAG" "${assets[@]}" --repo "$GITHUB_REPOSITORY" --clobber
                   gh release upload "$TAG" "$manifest_path" --repo "$GITHUB_REPOSITORY" --clobber
 

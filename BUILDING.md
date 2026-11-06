@@ -34,6 +34,30 @@ Build for release (skip code signing and installer):
 npm run tauri:build -- --no-sign --no-bundle
 ```
 
+Normal `tauri:build`, Preview and Dev Kit builds use the configured NamelessNanashi
+signing identity. Windows signs the executable and installer with Authenticode; macOS
+signs the app before packaging; all platforms add `.nn-signature` download
+signatures. Existing Tauri updater keys remain separate. Contributors without
+the kit can still build unsigned, and `--no-sign` explicitly skips app signing.
+
+Native signing needs OpenSSL and Windows SDK SignTool on Windows. On a local
+Mac, import `signing/identity.cert.pem` into Keychain Access and trust it for
+Code Signing first. Builds use a temporary private keychain; hosted macOS release
+jobs also install and remove temporary trust for this certificate. Private keys
+are read from the kit or Actions secrets and never stored in the repository.
+
+Nightly, Preview and Dev Kit packaging requires `NN_SIGNING_KEY_PEM_BASE64` and
+`NN_SIGNING_PASSWORD` repository secrets. To upload them from the local kit with
+an authenticated GitHub CLI:
+
+```bash
+npm run signing:secrets
+```
+
+This command updates Actions secrets in `NanashiTheNameless/VRCX-0-Nanashi` and
+does not push code. Local signing and verification of finished downloads use
+`npm run signing:sign -- <file>` and `npm run signing:verify -- <file>`.
+
 The RemoteSync collector is a separate server-side program for people who run a RemoteSync
 server. It is not part of the desktop app and regular users never need it. Build it on Linux
 x86_64 with:

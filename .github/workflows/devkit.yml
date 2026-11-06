@@ -15,5 +15,8 @@ jobs:
     package:
         name: Package Dev Kit
         uses: ./.github/workflows/_package-variant.yml
+        secrets:
+            NN_SIGNING_KEY_PEM_BASE64: ${{ secrets.NN_SIGNING_KEY_PEM_BASE64 }}
+            NN_SIGNING_PASSWORD: ${{ secrets.NN_SIGNING_PASSWORD }}
         with:
             variant: devkit
