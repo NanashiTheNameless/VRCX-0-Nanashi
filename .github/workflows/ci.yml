@@ -236,7 +236,6 @@ jobs:
                   RUST_TEST_ARGS: ${{ matrix.rust_test_args }}
               run: npm run rust:test:ci -- $RUST_TEST_ARGS
 
-
     ci-success:
         name: CI Success
         runs-on: ubuntu-latest
