@@ -36,6 +36,7 @@ pub enum ProfileRestoreDatabaseCheck {
 pub struct ProfileRestoreManifestSummary {
     pub app_version: String,
     pub db_version: i64,
+    #[specta(type = i64)]
     #[serde(deserialize_with = "crate::epoch::de")]
     pub created_at: i64,
     pub platform: String,

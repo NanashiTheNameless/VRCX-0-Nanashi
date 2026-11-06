@@ -133,6 +133,7 @@ pub struct BackendRuntimeSnapshot {
     pub process_status: BackendRuntimeProcessStatus,
     pub game_log_persisted_count: u64,
     pub last_error: Option<String>,
+    #[specta(type = i64)]
     #[serde(default, deserialize_with = "vrcx_0_contracts::epoch::de")]
     pub updated_at: i64,
     pub friend_profile_load: FriendProfileLoadStatusPayload,

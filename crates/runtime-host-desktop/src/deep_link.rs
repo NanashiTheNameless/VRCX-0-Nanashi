@@ -28,26 +28,31 @@ pub fn extra_schemes_enabled() -> (bool, bool) {
     rename_all_fields = "camelCase"
 )]
 pub enum DeepLinkAction {
-    #[specta(rename_all = "camelCase")]
-    OpenWorld { world_id: String },
-    #[specta(rename_all = "camelCase")]
+    OpenWorld {
+        world_id: String,
+    },
     OpenInstance {
         world_id: String,
         instance_id: String,
         short_name: String,
         launch_token: String,
     },
-    #[specta(rename_all = "camelCase")]
-    OpenAvatar { avatar_id: String },
-    #[specta(rename_all = "camelCase")]
-    ImportCollection { collection_id: String },
-    #[specta(rename_all = "camelCase")]
-    OpenUser { user_id: String },
-    #[specta(rename_all = "camelCase")]
-    OpenGroup { group_id: String },
+    OpenAvatar {
+        avatar_id: String,
+    },
+    ImportCollection {
+        collection_id: String,
+    },
+    OpenUser {
+        user_id: String,
+    },
+    OpenGroup {
+        group_id: String,
+    },
     /// Legacy VRCX `vrcx://addavatardb/<url>`: offer to add an avatar search provider.
-    #[specta(rename_all = "camelCase")]
-    AddAvatarProvider { url: String },
+    AddAvatarProvider {
+        url: String,
+    },
 }
 
 #[derive(Default)]

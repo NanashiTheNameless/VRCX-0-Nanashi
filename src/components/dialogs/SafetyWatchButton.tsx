@@ -28,9 +28,10 @@ export function SafetyWatchButton({
             .then((settings) => {
                 if (active)
                     setEnabled(
-                        (kind === 'group'
-                            ? settings.groups
-                            : settings.avatars
+                        (
+                            (kind === 'group'
+                                ? settings.groups
+                                : settings.avatars) ?? []
                         ).some((entry) => entry.id === id && entry.enabled)
                     );
             })

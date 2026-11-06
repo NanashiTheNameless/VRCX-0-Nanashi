@@ -25,11 +25,12 @@ pub struct GameLogRuntimeState {
     pub is_steamvr_running: bool,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, serde::Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase", from = "StoredPlayerState")]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct PlayerState {
     pub user_id: String,
     pub display_name: String,
+    #[specta(type = Option<i64>)]
     #[serde(rename = "joinTime", serialize_with = "serialize_join_time")]
     pub join_time_ms: Option<i64>,
 }
@@ -42,6 +43,14 @@ struct StoredPlayerState {
     #[serde(default, deserialize_with = "vrcx_0_contracts::epoch::de_opt")]
     join_time: Option<i64>,
     join_time_ms: Option<i64>,
+}
+
+// Hand-written instead of `serde(from)`, which specta's unified bindings
+// cannot represent.
+impl<'de> serde::Deserialize<'de> for PlayerState {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        StoredPlayerState::deserialize(deserializer).map(Self::from)
+    }
 }
 
 impl From<StoredPlayerState> for PlayerState {

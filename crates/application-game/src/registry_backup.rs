@@ -66,6 +66,7 @@ pub struct RegistryBackupMaintenanceResult {
 struct StoredRegistryBackup {
     #[serde(default)]
     name: String,
+    #[specta(type = i64)]
     #[serde(default, deserialize_with = "vrcx_0_contracts::epoch::de")]
     date: i64,
     #[serde(default)]

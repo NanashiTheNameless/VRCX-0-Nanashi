@@ -110,6 +110,7 @@ pub struct VrcStatusSnapshot {
     pub status: String,
     pub indicator: String,
     pub summary: String,
+    #[specta(type = Option<i64>)]
     #[serde(default, deserialize_with = "vrcx_0_contracts::epoch::de_opt")]
     pub updated_at: Option<i64>,
     pub last_fetched_at: Option<i64>,

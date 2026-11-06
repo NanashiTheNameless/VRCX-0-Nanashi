@@ -40,8 +40,10 @@ pub struct DataDirMigrationResult {
 pub struct DataDirCleanupPending {
     pub old_dir: String,
     pub bytes: u64,
+    #[specta(type = i64)]
     #[serde(deserialize_with = "crate::epoch::de")]
     pub migrated_at: i64,
+    #[specta(type = Option<i64>)]
     #[serde(
         default,
         skip_serializing_if = "Option::is_none",

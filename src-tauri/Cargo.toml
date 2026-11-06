@@ -72,10 +72,10 @@ vrcx-0-remote-sync = { path = "../crates/remote-sync" }
 vrcx-0-nanashi-website-protocol.workspace = true
 url.workspace = true
 zeroize.workspace = true
-specta-typescript = "0.0.9"
+specta-typescript = "0.0.13"
 tauri-plugin-global-shortcut = "2"
 specta = { workspace = true }
-tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "typescript"] }
+tauri-specta = { version = "=2.0.0-rc.26", features = ["derive", "typescript"] }
 
 [target.'cfg(windows)'.dependencies]
 tauri-winrt-notification = "0.8.1"

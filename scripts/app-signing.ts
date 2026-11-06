@@ -239,11 +239,13 @@ function privateCommandFailure(
 function runPrivate(
     command: string,
     args: string[],
-    environment = process.env
+    environment = process.env,
+    timeout?: number
 ): string {
     const result = spawnSync(command, args, {
         env: environment,
-        encoding: 'utf8'
+        encoding: 'utf8',
+        timeout
     });
     if (result.error || result.status !== 0) {
         throw privateCommandFailure(command, args, environment, result);
@@ -384,41 +386,34 @@ function prepareNative(
     const passwordFile = path.join(temporary, 'password.txt');
     const keychain = path.join(temporary, 'signing.keychain-db');
     let keychainCreated = false;
-    let trustAdded = false;
     let keychains: string[] | undefined;
+    // Trust is only added on disposable GitHub-hosted runners, and
+    // `remove-trusted-cert -d` waits there for an authorization prompt nobody
+    // can answer, so it is left for the VM teardown. Every cleanup command is
+    // bounded so a stuck `security` call fails the job instead of hanging it.
+    const cleanupTimeout = 60_000;
     const cleanup = () => {
         try {
-            if (trustAdded) {
-                runPrivate('sudo', [
-                    '-n',
+            if (keychains) {
+                runPrivate(
                     '/usr/bin/security',
-                    'remove-trusted-cert',
-                    '-d',
-                    certFile
-                ]);
+                    ['list-keychains', '-d', 'user', '-s', ...keychains],
+                    process.env,
+                    cleanupTimeout
+                );
             }
         } finally {
             try {
-                if (keychains) {
-                    runPrivate('/usr/bin/security', [
-                        'list-keychains',
-                        '-d',
-                        'user',
-                        '-s',
-                        ...keychains
-                    ]);
+                if (keychainCreated) {
+                    runPrivate(
+                        '/usr/bin/security',
+                        ['delete-keychain', keychain],
+                        process.env,
+                        cleanupTimeout
+                    );
                 }
             } finally {
-                try {
-                    if (keychainCreated) {
-                        runPrivate('/usr/bin/security', [
-                            'delete-keychain',
-                            keychain
-                        ]);
-                    }
-                } finally {
-                    fs.rmSync(temporary, { recursive: true, force: true });
-                }
+                fs.rmSync(temporary, { recursive: true, force: true });
             }
         }
     };
@@ -556,7 +551,6 @@ function prepareNative(
                 keychain,
                 certFile
             ]);
-            trustAdded = true;
         }
         return {
             config: { bundle: { macOS: { signingIdentity: thumbprint } } },

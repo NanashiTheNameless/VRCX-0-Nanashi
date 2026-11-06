@@ -10,6 +10,7 @@ pub struct CommunityThemeInstallMetadata {
     pub version: String,
     pub source_url: String,
     pub sha256: String,
+    #[specta(type = i64)]
     #[serde(default, deserialize_with = "vrcx_0_contracts::epoch::de")]
     pub installed_at: i64,
     pub updated_at: i64,

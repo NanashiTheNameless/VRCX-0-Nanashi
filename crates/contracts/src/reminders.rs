@@ -33,6 +33,7 @@ pub enum ReminderTrigger {
     /// A point in time (epoch seconds); optionally repeats.
     #[serde(rename_all = "camelCase")]
     Time {
+        #[specta(type = i64)]
         #[serde(deserialize_with = "crate::epoch::de")]
         at: i64,
         #[serde(default)]
@@ -50,8 +51,10 @@ pub struct Reminder {
     /// Event reminders: keep firing (with a cooldown) instead of once.
     #[serde(default)]
     pub recurring: bool,
+    #[specta(type = i64)]
     #[serde(deserialize_with = "crate::epoch::de")]
     pub created_at: i64,
+    #[specta(type = Option<i64>)]
     #[serde(default, deserialize_with = "crate::epoch::de_opt")]
     pub last_fired_at: Option<i64>,
     #[serde(default)]
