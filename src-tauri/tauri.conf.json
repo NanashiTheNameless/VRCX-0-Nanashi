@@ -75,6 +75,10 @@
             "nsis": {
                 "installerIcon": "icons/icon.ico",
                 "displayLanguageSelector": false,
+                "languages": ["English"],
+                "customLanguageFiles": {
+                    "English": "nsis/English.nsh"
+                },
                 "installMode": "currentUser"
             }
         },
