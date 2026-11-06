@@ -40,8 +40,9 @@ signs the app before packaging; all platforms add `.nn-signature` download
 signatures. Existing Tauri updater keys remain separate. Contributors without
 the kit can still build unsigned, and `--no-sign` explicitly skips app signing.
 
-Native signing needs OpenSSL and Windows SDK SignTool on Windows. On a local
-Mac, import `signing/identity.cert.pem` into Keychain Access and trust it for
+Native signing needs Homebrew `openssl@3` on macOS, and OpenSSL plus Windows SDK
+SignTool on Windows. `NN_SIGNING_OPENSSL` can select another compatible OpenSSL.
+On a local Mac, import `signing/identity.cert.pem` into Keychain Access and trust it for
 Code Signing first. Builds use a temporary private keychain; hosted macOS release
 jobs also install and remove temporary trust for this certificate. Private keys
 are read from the kit or Actions secrets and never stored in the repository.

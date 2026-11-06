@@ -1,7 +1,9 @@
 import { spawnSync } from 'node:child_process';
 import {
+    createPrivateKey,
     createPublicKey,
     generateKeyPairSync,
+    X509Certificate,
     type KeyObject
 } from 'node:crypto';
 import fs from 'node:fs';
@@ -12,6 +14,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
     desktopAssets,
+    exportPkcs12,
     insertSigningConfig,
     loadSigningIdentity,
     signFile,
@@ -263,6 +266,87 @@ describe('signing identity configuration', () => {
 });
 
 describe('packaging integration', () => {
+    it.each([
+        ['darwin', 'pbeWithSHA1And3-KeyTripleDES-CBC', 'sha1'],
+        ['win32', 'AES-256-CBC', 'sha256']
+    ] as const)(
+        'exports a password-protected %s identity with its original key and certificate',
+        (platform, encryption, digest) => {
+            const output = path.join(directory, `${platform}.p12`);
+            const environment = {
+                ...process.env,
+                NN_SIGNING_OPENSSL: process.env.NN_SIGNING_OPENSSL || 'openssl',
+                NN_SIGNING_PASSWORD: password
+            };
+            exportPkcs12(
+                path.join(secret, 'identity.key.pem'),
+                path.join(trusted, 'identity.cert.pem'),
+                output,
+                password,
+                platform,
+                environment
+            );
+            const inspect = spawnSync(
+                environment.NN_SIGNING_OPENSSL,
+                [
+                    'pkcs12',
+                    '-in',
+                    output,
+                    '-passin',
+                    'env:NN_SIGNING_PASSWORD',
+                    '-info',
+                    '-noout'
+                ],
+                { env: environment, encoding: 'utf8' }
+            );
+            expect(inspect.status, inspect.stderr).toBe(0);
+            expect(inspect.stderr).toContain(
+                `MAC: ${digest}, Iteration 100000`
+            );
+            expect(inspect.stderr).toContain(encryption);
+            const decoded = spawnSync(
+                environment.NN_SIGNING_OPENSSL,
+                [
+                    'pkcs12',
+                    '-in',
+                    output,
+                    '-passin',
+                    'env:NN_SIGNING_PASSWORD',
+                    '-nodes'
+                ],
+                { env: environment, encoding: 'utf8' }
+            );
+            expect(decoded.status, decoded.stderr).toBe(0);
+            expect(
+                createPublicKey(createPrivateKey(decoded.stdout)).export({
+                    type: 'spki',
+                    format: 'der'
+                })
+            ).toEqual(publicKey.export({ type: 'spki', format: 'der' }));
+            expect(new X509Certificate(decoded.stdout).raw).toEqual(
+                new X509Certificate(
+                    fs.readFileSync(path.join(trusted, 'identity.cert.pem'))
+                ).raw
+            );
+            const wrongPassword = spawnSync(
+                environment.NN_SIGNING_OPENSSL,
+                [
+                    'pkcs12',
+                    '-in',
+                    output,
+                    '-passin',
+                    'env:NN_SIGNING_PASSWORD',
+                    '-noout'
+                ],
+                {
+                    env: { ...environment, NN_SIGNING_PASSWORD: 'incorrect' },
+                    encoding: 'utf8'
+                }
+            );
+            expect(wrongPassword.status).not.toBe(0);
+        }
+    );
+
     it('finds downloadable packages without signing updater files, keys, or app internals', () => {
         const packages = fs.mkdtempSync(path.join(directory, 'packages-'));
         for (const file of [

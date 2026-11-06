@@ -235,6 +235,74 @@ function nativeWindows(
     }
 }
 
+function exportPkcs12(
+    privateFile: string,
+    certFile: string,
+    output: string,
+    password: string,
+    platform: NodeJS.Platform = process.platform,
+    environment: NodeJS.ProcessEnv = process.env
+): void {
+    const openssl =
+        environment.NN_SIGNING_OPENSSL ||
+        (platform === 'darwin'
+            ? path.join(
+                  runPrivate(
+                      'brew',
+                      ['--prefix', 'openssl@3'],
+                      environment
+                  ).trim(),
+                  'bin',
+                  'openssl'
+              )
+            : 'openssl');
+    const compatibility =
+        platform === 'darwin'
+            ? [
+                  '-keypbe',
+                  'PBE-SHA1-3DES',
+                  '-certpbe',
+                  'PBE-SHA1-3DES',
+                  '-macalg',
+                  'sha1'
+              ]
+            : [
+                  '-keypbe',
+                  'AES-256-CBC',
+                  '-certpbe',
+                  'AES-256-CBC',
+                  '-macalg',
+                  'sha256'
+              ];
+    runPrivate(
+        openssl,
+        [
+            'pkcs12',
+            '-export',
+            '-inkey',
+            privateFile,
+            '-in',
+            certFile,
+            '-passin',
+            'env:NN_SIGNING_PASSWORD',
+            '-passout',
+            'env:NN_SIGNING_PASSWORD',
+            '-name',
+            'NamelessNanashi',
+            '-CSP',
+            'Microsoft Enhanced RSA and AES Cryptographic Provider',
+            '-keysig',
+            '-iter',
+            '100000',
+            '-out',
+            output,
+            ...compatibility
+        ],
+        { ...environment, NN_SIGNING_PASSWORD: password }
+    );
+    fs.chmodSync(output, 0o600);
+}
+
 function prepareNative(
     identity: SigningIdentity,
     environment: NodeJS.ProcessEnv
@@ -296,52 +364,14 @@ function prepareNative(
         fs.writeFileSync(passwordFile, `${identity.password}\n`, {
             mode: 0o600
         });
-        const openssl = environment.NN_SIGNING_OPENSSL || 'openssl';
-        const compatibility =
-            process.platform === 'darwin'
-                ? [
-                      '-keypbe',
-                      'PBE-SHA1-3DES',
-                      '-certpbe',
-                      'PBE-SHA1-3DES',
-                      '-macalg',
-                      'sha1'
-                  ]
-                : [
-                      '-keypbe',
-                      'AES-256-CBC',
-                      '-certpbe',
-                      'AES-256-CBC',
-                      '-macalg',
-                      'sha256'
-                  ];
-        runPrivate(
-            openssl,
-            [
-                'pkcs12',
-                '-export',
-                '-inkey',
-                privateFile,
-                '-in',
-                certFile,
-                '-passin',
-                'env:NN_SIGNING_PASSWORD',
-                '-passout',
-                'env:NN_SIGNING_PASSWORD',
-                '-name',
-                'NamelessNanashi',
-                '-CSP',
-                'Microsoft Enhanced RSA and AES Cryptographic Provider',
-                '-keysig',
-                '-iter',
-                '100000',
-                '-out',
-                pfx,
-                ...compatibility
-            ],
-            { ...environment, NN_SIGNING_PASSWORD: identity.password }
+        exportPkcs12(
+            privateFile,
+            certFile,
+            pfx,
+            identity.password,
+            process.platform,
+            environment
         );
-        fs.chmodSync(pfx, 0o600);
         if (process.platform === 'win32') {
             return {
                 config: {
@@ -571,10 +601,13 @@ async function tauri(args: string[]): Promise<number> {
                 await signFiles([file], identity.key);
             } else {
                 if (process.platform === 'win32') {
-                    for (const file of [
+                    nativeWindows(
                         path.join(output, 'VRCX-0-Nanashi.exe'),
-                        ...desktopAssets(path.join(output, 'bundle'))
-                    ]) {
+                        environment
+                    );
+                    for (const file of desktopAssets(
+                        path.join(output, 'bundle')
+                    )) {
                         nativeWindows(file, environment, true);
                     }
                 } else if (process.platform === 'darwin') {
@@ -720,6 +753,7 @@ if (
 
 export {
     desktopAssets,
+    exportPkcs12,
     insertSigningConfig,
     loadSigningIdentity,
     signFile,
