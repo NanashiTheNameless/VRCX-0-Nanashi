@@ -588,8 +588,7 @@ jobs:
 
             - name: Flatten release assets
               run: |
-                  find release-assets -mindepth 2 -type f -exec mv -n {} release-assets/ \;
-                  find release-assets -mindepth 1 -type d -empty -delete
+                  bash scripts/flatten-release-assets.sh release-assets
                   find release-assets -type f | sort
 
             - name: Build the updater manifest
@@ -646,6 +645,7 @@ jobs:
               run: |
                   rolling_assets=()
                   for asset in release-assets/*; do
+                      [[ -f "$asset" ]] || continue
                       case "$(basename "$asset")" in
                           vrcx-0-nanashi-headless-linux-amd64.json | vrcx-0-nanashi-headless-linux-arm64.json) ;;
                           vrcx-0-nanashi-headless*|vrcx-0-logger*) continue ;;
@@ -735,7 +735,7 @@ jobs:
                   VERSION: ${{ needs.prepare.outputs.build_version }}
               run: |
                   set -euo pipefail
-                  find macos-assets -mindepth 2 -type f -exec mv -n {} macos-assets/ \;
+                  bash scripts/flatten-release-assets.sh macos-assets
                   archive_name="VRCX-0-Nanashi_${VERSION}_macos_universal.app.tar.gz"
                   dmg_path="macos-assets/VRCX-0-Nanashi_${VERSION}_macos_universal.dmg"
                   for file in "$dmg_path" "${dmg_path}.nn-signature" "macos-assets/${archive_name}" "macos-assets/${archive_name}.sig" "macos-assets/${archive_name}.nn-signature"; do

@@ -47,6 +47,68 @@ afterEach(() => {
     }
 });
 
+describe('release asset flattening', () => {
+    const script = path.join(import.meta.dirname, 'flatten-release-assets.sh');
+
+    it('deduplicates shared public files and flattens installers and signatures', () => {
+        const directory = createTemporaryDirectory();
+        fs.mkdirSync(path.join(directory, 'nsis'));
+        fs.mkdirSync(path.join(directory, 'appimage', 'nested'), {
+            recursive: true
+        });
+        const files = {
+            'NamelessNanashi-release-public-key.pem': 'shared public key',
+            'nsis/NamelessNanashi-release-public-key.pem': 'shared public key',
+            'nsis/NamelessNanashi-identity.cert.pem': 'shared certificate',
+            'appimage/nested/NamelessNanashi-identity.cert.pem':
+                'shared certificate',
+            'nsis/installer.exe': 'installer bytes',
+            'nsis/installer.exe.nn-signature': 'installer signature',
+            'appimage/Application with spaces.AppImage': 'AppImage bytes'
+        };
+        for (const [name, contents] of Object.entries(files)) {
+            fs.writeFileSync(path.join(directory, name), contents);
+        }
+        const result = spawnSync('bash', [script, directory], {
+            encoding: 'utf8'
+        });
+        expect(result.status, result.stderr).toBe(0);
+        expect(fs.readdirSync(directory).sort()).toEqual([
+            'Application with spaces.AppImage',
+            'NamelessNanashi-identity.cert.pem',
+            'NamelessNanashi-release-public-key.pem',
+            'installer.exe',
+            'installer.exe.nn-signature'
+        ]);
+        for (const [name, contents] of Object.entries(files)) {
+            expect(
+                fs.readFileSync(
+                    path.join(directory, path.basename(name)),
+                    'utf8'
+                )
+            ).toBe(contents);
+        }
+    });
+
+    it('fails on conflicting names without overwriting or deleting either file', () => {
+        const directory = createTemporaryDirectory();
+        fs.mkdirSync(path.join(directory, 'nsis'));
+        const original = path.join(directory, 'public-key.pem');
+        const conflict = path.join(directory, 'nsis', 'public-key.pem');
+        fs.writeFileSync(original, 'expected public key');
+        fs.writeFileSync(conflict, 'different public key');
+        const result = spawnSync('bash', [script, directory], {
+            encoding: 'utf8'
+        });
+        expect(result.status).not.toBe(0);
+        expect(result.stderr).toContain(
+            'Conflicting release assets: public-key.pem'
+        );
+        expect(fs.readFileSync(original, 'utf8')).toBe('expected public key');
+        expect(fs.readFileSync(conflict, 'utf8')).toBe('different public key');
+    });
+});
+
 describe('recorder third-party notices', () => {
     it('lists each crate the recorder builds once, whatever cargo tree marks it with', () => {
         const packages = parseCargoTreePackages(
