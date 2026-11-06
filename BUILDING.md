@@ -47,8 +47,10 @@ Code Signing first. Builds use a temporary private keychain; hosted macOS releas
 jobs also install and remove temporary trust for this certificate. Private keys
 are read from the kit or Actions secrets and never stored in the repository.
 
-Nightly, Preview and Dev Kit packaging requires `NN_SIGNING_KEY_PEM_BASE64` and
-`NN_SIGNING_PASSWORD` repository secrets. To upload them from the local kit with
+Nightly, Preview and Dev Kit packaging requires `NN_SIGNING_KEY_PEM_BASE64`,
+`NN_SIGNING_MACOS_P12_BASE64` and `NN_SIGNING_PASSWORD` repository secrets. The
+macOS package is exported and verified during secret setup, then imported directly
+by the runner. To upload them from the local kit with
 an authenticated GitHub CLI:
 
 ```bash

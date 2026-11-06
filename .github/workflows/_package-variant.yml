@@ -3,6 +3,8 @@ name: Package Variant
 on:
     workflow_call:
         secrets:
+            NN_SIGNING_MACOS_P12_BASE64:
+                required: true
             NN_SIGNING_KEY_PEM_BASE64:
                 required: true
             NN_SIGNING_PASSWORD:
@@ -356,6 +358,7 @@ jobs:
 
             - name: Bundle DMG
               env:
+                  NN_SIGNING_MACOS_P12_BASE64: ${{ secrets.NN_SIGNING_MACOS_P12_BASE64 }}
                   NN_SIGNING_KEY_PEM_BASE64: ${{ secrets.NN_SIGNING_KEY_PEM_BASE64 }}
                   NN_SIGNING_PASSWORD: ${{ secrets.NN_SIGNING_PASSWORD }}
               run: |

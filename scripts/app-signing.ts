@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process';
+import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import {
     createPrivateKey,
     createPublicKey,
@@ -196,6 +196,46 @@ async function signFiles(files: string[], key: KeyObject): Promise<void> {
     }
 }
 
+function privateCommandFailure(
+    command: string,
+    args: string[],
+    environment: NodeJS.ProcessEnv,
+    result: Pick<
+        SpawnSyncReturns<string>,
+        'stderr' | 'error' | 'status' | 'signal'
+    >
+): Error {
+    const sensitive = [
+        ...args.filter(
+            (arg, index) =>
+                path.isAbsolute(arg) ||
+                path.win32.isAbsolute(arg) ||
+                ['-p', '-P', '-k'].includes(args[index - 1])
+        ),
+        ...Object.entries(environment)
+            .filter(([name]) =>
+                /PASSWORD|PRIVATE_KEY|SIGNING_KEY|SIGNING_MACOS_P12|TOKEN|SECRET|SIGNING_HOME/i.test(
+                    name
+                )
+            )
+            .map(([, value]) => value)
+    ].filter((value): value is string => Boolean(value));
+    let details = (result.stderr || '').replace(
+        /-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----[\s\S]*?-----END (?:[A-Z0-9]+ )*PRIVATE KEY-----/g,
+        '[redacted private key]'
+    );
+    for (const value of sensitive.sort((a, b) => b.length - a.length)) {
+        details = details.replaceAll(value, '[redacted]');
+    }
+    const status =
+        (result.error as NodeJS.ErrnoException | undefined)?.code ||
+        result.signal ||
+        `exit ${result.status}`;
+    return new Error(
+        `${path.basename(command)} ${args[0]} failed during app signing (${status}).${details.trim() ? `\n${details.trim().slice(0, 4096)}` : ''}`
+    );
+}
+
 function runPrivate(
     command: string,
     args: string[],
@@ -206,9 +246,7 @@ function runPrivate(
         encoding: 'utf8'
     });
     if (result.error || result.status !== 0) {
-        throw new Error(
-            `${path.basename(command)} ${args[0]} failed during app signing.`
-        );
+        throw privateCommandFailure(command, args, environment, result);
     }
     return result.stdout;
 }
@@ -235,15 +273,11 @@ function nativeWindows(
     }
 }
 
-function exportPkcs12(
-    privateFile: string,
-    certFile: string,
-    output: string,
-    password: string,
-    platform: NodeJS.Platform = process.platform,
-    environment: NodeJS.ProcessEnv = process.env
-): void {
-    const openssl =
+function opensslCommand(
+    platform: NodeJS.Platform,
+    environment: NodeJS.ProcessEnv
+): string {
+    return (
         environment.NN_SIGNING_OPENSSL ||
         (platform === 'darwin'
             ? path.join(
@@ -255,7 +289,36 @@ function exportPkcs12(
                   'bin',
                   'openssl'
               )
-            : 'openssl');
+            : 'openssl')
+    );
+}
+
+function exportPkcs12(
+    privateFile: string,
+    certFile: string,
+    output: string,
+    password: string,
+    platform: NodeJS.Platform = process.platform,
+    environment: NodeJS.ProcessEnv = process.env
+): void {
+    if (platform === 'darwin' && environment.NN_SIGNING_MACOS_P12_BASE64) {
+        fs.writeFileSync(
+            output,
+            Buffer.from(environment.NN_SIGNING_MACOS_P12_BASE64, 'base64'),
+            { mode: 0o600 }
+        );
+        return;
+    }
+    if (
+        platform === 'darwin' &&
+        environment.GITHUB_ACTIONS === 'true' &&
+        environment.NN_SIGNING_REQUIRED === '1'
+    ) {
+        throw new Error(
+            'NN_SIGNING_MACOS_P12_BASE64 is required for macOS release signing. Run npm run signing:secrets to configure it.'
+        );
+    }
+    const openssl = opensslCommand(platform, environment);
     const compatibility =
         platform === 'darwin'
             ? [
@@ -360,10 +423,17 @@ function prepareNative(
         }
     };
     try {
-        fs.writeFileSync(privateFile, identity.encryptedPem, { mode: 0o600 });
-        fs.writeFileSync(passwordFile, `${identity.password}\n`, {
-            mode: 0o600
-        });
+        if (
+            process.platform !== 'darwin' ||
+            !environment.NN_SIGNING_MACOS_P12_BASE64
+        ) {
+            fs.writeFileSync(privateFile, identity.encryptedPem, {
+                mode: 0o600
+            });
+            fs.writeFileSync(passwordFile, `${identity.password}\n`, {
+                mode: 0o600
+            });
+        }
         exportPkcs12(
             privateFile,
             certFile,
@@ -567,6 +637,7 @@ async function tauri(args: string[]): Promise<number> {
                 'No local app signing kit found; building without NamelessNanashi signatures.'
             );
         }
+        delete environment.NN_SIGNING_MACOS_P12_BASE64;
         const cli = path.join(
             root,
             'node_modules',
@@ -671,10 +742,50 @@ function configureRepositorySecrets(): void {
         ...process.env,
         NN_SIGNING_REQUIRED: '1'
     });
+    const temporary = fs.mkdtempSync(
+        path.join(os.tmpdir(), 'vrcx-0-secret-setup-')
+    );
+    let macosPackage: Buffer;
+    try {
+        const privateFile = path.join(temporary, 'identity.key.pem');
+        const output = path.join(temporary, 'identity.p12');
+        fs.writeFileSync(privateFile, identity!.encryptedPem, { mode: 0o600 });
+        const openssl = opensslCommand(process.platform, process.env);
+        const environment: NodeJS.ProcessEnv = {
+            ...process.env,
+            NN_SIGNING_OPENSSL: openssl,
+            NN_SIGNING_REQUIRED: '0'
+        };
+        delete environment.NN_SIGNING_MACOS_P12_BASE64;
+        exportPkcs12(
+            privateFile,
+            path.join(publicDirectory, 'identity.cert.pem'),
+            output,
+            identity!.password,
+            'darwin',
+            environment
+        );
+        runPrivate(
+            openssl,
+            [
+                'pkcs12',
+                '-in',
+                output,
+                '-passin',
+                'env:NN_SIGNING_PASSWORD',
+                '-noout'
+            ],
+            { ...environment, NN_SIGNING_PASSWORD: identity!.password }
+        );
+        macosPackage = fs.readFileSync(output);
+    } finally {
+        fs.rmSync(temporary, { recursive: true, force: true });
+    }
     const repository = 'NanashiTheNameless/VRCX-0-Nanashi';
     const values = {
         NN_SIGNING_KEY_PEM_BASE64: identity!.encryptedPem.toString('base64'),
-        NN_SIGNING_PASSWORD: identity!.password
+        NN_SIGNING_PASSWORD: identity!.password,
+        NN_SIGNING_MACOS_P12_BASE64: macosPackage.toString('base64')
     };
     for (const [name, value] of Object.entries(values)) {
         const result = spawnSync(
@@ -756,6 +867,7 @@ export {
     exportPkcs12,
     insertSigningConfig,
     loadSigningIdentity,
+    privateCommandFailure,
     signFile,
     signFiles,
     verifyFile

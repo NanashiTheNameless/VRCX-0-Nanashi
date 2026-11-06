@@ -17,6 +17,7 @@ import {
     exportPkcs12,
     insertSigningConfig,
     loadSigningIdentity,
+    privateCommandFailure,
     signFile,
     verifyFile
 } from './app-signing';
@@ -266,6 +267,63 @@ describe('signing identity configuration', () => {
 });
 
 describe('packaging integration', () => {
+    it('requires a pre-exported macOS identity in release jobs', () => {
+        expect(() =>
+            exportPkcs12('unused', 'unused', 'unused', password, 'darwin', {
+                GITHUB_ACTIONS: 'true',
+                NN_SIGNING_REQUIRED: '1'
+            })
+        ).toThrow('NN_SIGNING_MACOS_P12_BASE64 is required');
+    });
+
+    it('reports command failures without exposing credentials or private paths', () => {
+        const privateFile = path.join(secret, 'identity.key.pem');
+        const error = privateCommandFailure(
+            'openssl',
+            ['pkcs12', '-inkey', privateFile, '-P', password],
+            {
+                NN_SIGNING_PASSWORD: password,
+                NN_SIGNING_KEY_PEM_BASE64: encryptedPem.toString('base64'),
+                NN_SIGNING_MACOS_P12_BASE64: 'fixture-macos-encrypted-package',
+                NN_APP_SIGNING_HOME: directory
+            },
+            {
+                status: 1,
+                signal: null,
+                error: undefined,
+                stderr: `unsupported algorithm: ${privateFile}\n${password}\n${directory}\n${encryptedPem.toString('base64')}\n${encryptedPem.toString('utf8')}\nfixture-macos-encrypted-package`
+            }
+        );
+        expect(error.message).toContain('openssl pkcs12 failed');
+        expect(error.message).toContain('exit 1');
+        expect(error.message).toContain('unsupported algorithm');
+        for (const value of [
+            privateFile,
+            password,
+            directory,
+            encryptedPem.toString('base64'),
+            'fixture-macos-encrypted-package',
+            encryptedPem.toString('utf8')
+        ]) {
+            expect(error.message).not.toContain(value);
+        }
+    });
+
+    it('reports spawn failures using their code without echoing their arguments', () => {
+        const failure = Object.assign(new Error(`spawn failed: ${password}`), {
+            code: 'ENOENT'
+        });
+        const error = privateCommandFailure(
+            '/missing/openssl',
+            ['pkcs12', '-P', password],
+            {},
+            { status: null, signal: null, error: failure, stderr: '' }
+        );
+        expect(error.message).toContain('ENOENT');
+        expect(error.message).not.toContain(password);
+        expect(error.message).not.toContain('/missing/openssl');
+    });
+
     it.each([
         ['darwin', 'pbeWithSHA1And3-KeyTripleDES-CBC', 'sha1'],
         ['win32', 'AES-256-CBC', 'sha256']
@@ -276,7 +334,8 @@ describe('packaging integration', () => {
             const environment = {
                 ...process.env,
                 NN_SIGNING_OPENSSL: process.env.NN_SIGNING_OPENSSL || 'openssl',
-                NN_SIGNING_PASSWORD: password
+                NN_SIGNING_PASSWORD: password,
+                NN_SIGNING_REQUIRED: '0'
             };
             exportPkcs12(
                 path.join(secret, 'identity.key.pem'),
@@ -344,6 +403,27 @@ describe('packaging integration', () => {
                 }
             );
             expect(wrongPassword.status).not.toBe(0);
+            if (platform === 'darwin') {
+                const supplied = path.join(directory, 'supplied-identity.p12');
+                exportPkcs12(
+                    'unavailable-private-file',
+                    'unavailable-certificate',
+                    supplied,
+                    password,
+                    platform,
+                    {
+                        GITHUB_ACTIONS: 'true',
+                        NN_SIGNING_REQUIRED: '1',
+                        NN_SIGNING_OPENSSL: 'unavailable-openssl',
+                        NN_SIGNING_MACOS_P12_BASE64: fs
+                            .readFileSync(output)
+                            .toString('base64')
+                    }
+                );
+                expect(fs.readFileSync(supplied)).toEqual(
+                    fs.readFileSync(output)
+                );
+            }
         }
     );
 
