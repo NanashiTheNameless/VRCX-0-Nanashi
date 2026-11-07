@@ -72,6 +72,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import { STATUS_BAR_TOGGLE_ACTIVE } from './status-bar/statusBarToggle';
 import { TitleBarUpdateButton } from './TitleBarUpdateButton';
+import { useLinuxHardwareRendering } from './useLinuxHardwareRendering';
 import { useQuickSearchActions } from './useQuickSearchActions';
 import { useRightSidePanelVisibility } from './useRightSidePanelVisibility';
 
@@ -253,6 +254,16 @@ export function useTitleBarActions(
     } = useRightSidePanelVisibility(location.pathname);
     const alwaysOnTop = useShellStore((state) => state.windowAlwaysOnTop);
 
+    const linuxHardwareRendering = useLinuxHardwareRendering(
+        hostPlatform === 'linux'
+    );
+    // WebKitGTK crashes the whole app on a View Transition when the DMABUF
+    // renderer is off (the Linux default), so Linux uses the overlay effect
+    // unless hardware rendering is on.
+    const themeToggleAnimation =
+        hostPlatform !== 'linux' || linuxHardwareRendering
+            ? 'reveal'
+            : 'overlay';
     const isMacHost = hostPlatform === 'macos';
     const alwaysOnTopSupported =
         hostPlatform === 'windows' || hostPlatform === 'macos';
@@ -434,10 +445,7 @@ export function useTitleBarActions(
                 render={
                     <span className="inline-flex">
                         <AnimatedThemeToggler
-                            // WebKitGTK crashes the whole app on a View
-                            // Transition when the DMABUF renderer is off,
-                            // which is the default on Linux.
-                            animated={hostPlatform !== 'linux'}
+                            animation={themeToggleAnimation}
                             theme={resolvedThemeMode}
                             onThemeChange={(nextThemeMode) => {
                                 void setThemeModePreference(

@@ -25,8 +25,12 @@ interface AnimatedThemeTogglerProps extends React.ComponentPropsWithoutRef<'butt
     theme?: 'light' | 'dark';
     /** Called on toggle. Pair with `theme` for controlled usage. */
     onThemeChange?: (theme: 'light' | 'dark') => void;
-    /** Set false to switch instantly without the View Transitions reveal. */
-    animated?: boolean;
+    /**
+     * `reveal` uses the View Transitions API; `overlay` draws the same shape
+     * with an ordinary element animation (for engines where View Transitions
+     * are unsafe); `none` switches instantly.
+     */
+    animation?: 'reveal' | 'overlay' | 'none';
 }
 
 function polygonCollapsed(point: string, vertexCount: number): string {
@@ -150,6 +154,74 @@ function getThemeTransitionClipPaths(
     }
 }
 
+// The page surface colour the next theme will have, read by flipping the
+// class and back before anything is painted.
+function nextThemeSurfaceColor(): string {
+    const root = document.documentElement;
+    root.classList.toggle('dark');
+    const body = getComputedStyle(document.body).backgroundColor;
+    const html = getComputedStyle(root).backgroundColor;
+    root.classList.toggle('dark');
+    const transparent = (value: string) =>
+        !value || value === 'transparent' || value === 'rgba(0, 0, 0, 0)';
+    if (!transparent(body)) return body;
+    if (!transparent(html)) return html;
+    return 'var(--background)';
+}
+
+// Grows a cover in the next theme's colour over the page, switches the theme
+// underneath once it is covered, then fades the cover out. Uses only element
+// animations, which are safe where View Transitions crash (WebKitGTK without
+// the DMABUF renderer).
+function runOverlayTransition({
+    clipPath,
+    duration,
+    easing,
+    applyTheme,
+    onStart,
+    onEnd
+}: {
+    clipPath: string[];
+    duration: number;
+    easing: string;
+    applyTheme: () => void;
+    onStart: (anim: Animation) => void;
+    onEnd: () => void;
+}) {
+    const overlay = document.createElement('div');
+    overlay.setAttribute('aria-hidden', 'true');
+    Object.assign(overlay.style, {
+        position: 'fixed',
+        inset: '0',
+        zIndex: '2147483647',
+        pointerEvents: 'none',
+        background: nextThemeSurfaceColor(),
+        clipPath: clipPath[0]
+    });
+    document.body.appendChild(overlay);
+
+    const grow = overlay.animate(
+        { clipPath },
+        { duration, easing, fill: 'forwards' }
+    );
+    onStart(grow);
+    grow.finished
+        .then(() => {
+            applyTheme();
+            const fade = overlay.animate(
+                { opacity: [1, 0] },
+                { duration: Math.min(150, duration), fill: 'forwards' }
+            );
+            onStart(fade);
+            return fade.finished;
+        })
+        .catch(() => {})
+        .finally(() => {
+            overlay.remove();
+            onEnd();
+        });
+}
+
 export const AnimatedThemeToggler = ({
     className,
     duration = 400,
@@ -157,7 +229,7 @@ export const AnimatedThemeToggler = ({
     fromCenter = false,
     theme,
     onThemeChange,
-    animated = true,
+    animation = 'reveal',
     ...props
 }: AnimatedThemeTogglerProps) => {
     const shape = variant ?? 'circle';
@@ -247,7 +319,11 @@ export const AnimatedThemeToggler = ({
             }
         };
 
-        if (!animated || typeof document.startViewTransition !== 'function') {
+        const useOverlay = animation === 'overlay';
+        if (
+            animation === 'none' ||
+            (!useOverlay && typeof document.startViewTransition !== 'function')
+        ) {
             applyTheme();
             return;
         }
@@ -260,6 +336,24 @@ export const AnimatedThemeToggler = ({
             viewportWidth,
             viewportHeight
         );
+
+        if (useOverlay) {
+            runOverlayTransition({
+                clipPath,
+                duration,
+                easing: shape === 'star' ? 'linear' : 'ease-in-out',
+                applyTheme: () => flushSync(applyTheme),
+                onStart: (anim) => {
+                    isTransitioningRef.current = true;
+                    activeAnimRef.current = anim;
+                },
+                onEnd: () => {
+                    isTransitioningRef.current = false;
+                    activeAnimRef.current = null;
+                }
+            });
+            return;
+        }
 
         const root = document.documentElement;
         root.dataset.magicuiThemeVt = 'active';
@@ -309,7 +403,7 @@ export const AnimatedThemeToggler = ({
                 .catch(() => {});
         }
     }, [
-        animated,
+        animation,
         shape,
         fromCenter,
         duration,

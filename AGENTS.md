@@ -402,8 +402,10 @@ Many crates use nested module folders where each file is a sibling
   reintroduce live OS-theme switching.
 - Linux: the View Transitions API crashes the whole app on WebKitGTK when the
   DMABUF renderer is off, which is the Linux default (compatibility mode). The
-  titlebar theme toggle passes `animated={false}` on Linux; do not use
-  `document.startViewTransition` there. Menus and other popups are opaque with
+  titlebar theme toggle uses `animation="overlay"` on Linux (an ordinary
+  element animation that looks the same) unless hardware rendering is on
+  (`useLinuxHardwareRendering`); never call `document.startViewTransition`
+  in compatibility mode. Menus and other popups are opaque with
   no backdrop blur, because the blur does not reliably render in that mode.
 - `README.md` is a short index; the user docs it links sit beside it
   (`FEATURES.md`, `TELEMETRY.md`, `INSTALL.md`, `BUILDING.md`; `docs/` is

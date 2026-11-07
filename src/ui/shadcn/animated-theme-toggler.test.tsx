@@ -45,6 +45,42 @@ describe('AnimatedThemeToggler', () => {
         delete document.documentElement.dataset.magicuiThemeVt;
     });
 
+    it('draws the overlay effect without the View Transitions API', async () => {
+        const onThemeChange = vi.fn();
+        const startViewTransition = vi.fn();
+        document.startViewTransition = startViewTransition;
+        const animations: Keyframe[][] = [];
+        const animate = vi.fn(
+            (keyframes: Keyframe[] | PropertyIndexedKeyframes) => {
+                animations.push(keyframes as Keyframe[]);
+                return { cancel: vi.fn(), finished: Promise.resolve() };
+            }
+        );
+        Object.defineProperty(HTMLElement.prototype, 'animate', {
+            configurable: true,
+            value: animate
+        });
+
+        render(
+            <AnimatedThemeToggler
+                theme="light"
+                animation="overlay"
+                onThemeChange={onThemeChange}
+                aria-label="toggle theme"
+            />
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'toggle theme' }));
+
+        await waitFor(() => expect(onThemeChange).toHaveBeenCalledWith('dark'));
+        expect(startViewTransition).not.toHaveBeenCalled();
+        expect(animate).toHaveBeenCalledTimes(2);
+        expect(animations[1]).toEqual({ opacity: [1, 0] });
+        await waitFor(() =>
+            expect(document.querySelector('div[aria-hidden="true"]')).toBeNull()
+        );
+        delete (HTMLElement.prototype as { animate?: unknown }).animate;
+    });
+
     it('switches instantly without a View Transition when not animated', () => {
         const onThemeChange = vi.fn();
         const startViewTransition = vi.fn();
@@ -53,7 +89,7 @@ describe('AnimatedThemeToggler', () => {
         render(
             <AnimatedThemeToggler
                 theme="light"
-                animated={false}
+                animation="none"
                 onThemeChange={onThemeChange}
                 aria-label="toggle theme"
             />
