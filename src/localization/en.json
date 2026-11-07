@@ -1505,7 +1505,10 @@
                 "online_for": "Online for {duration}",
                 "rows": "entries",
                 "favorites_are_still_hydrating": "Favorites are still loading",
-                "favorites_only": "Favorites only"
+                "favorites_only": "Favorites only",
+                "previous_location": "Previous location",
+                "current_location": "Current location",
+                "stayed": "Stayed {duration}"
             },
             "success": {
                 "vrchat_launch_request_sent": "Opened in VRChat",
@@ -1733,7 +1736,8 @@
                 "of": "of",
                 "avatars": "avatars",
                 "local_test_avatars": "Local test avatars",
-                "local_test_avatars_description": "Avatars built with Build & Test in the VRChat SDK. Only you can see them in game."
+                "local_test_avatars_description": "Avatars built with Build & Test in the VRChat SDK. Only you can see them in game.",
+                "sort_by": "Sort by"
             },
             "source": {
                 "own": "Uploaded",

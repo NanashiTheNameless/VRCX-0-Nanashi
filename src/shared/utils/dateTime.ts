@@ -24,7 +24,7 @@ export const DEFAULT_TIME_UNIT_LABELS = Object.freeze({
     s: 's'
 });
 
-type DateFilterFormat = 'long' | 'short' | 'time' | 'date';
+type DateFilterFormat = 'long' | 'short' | 'time' | 'date' | 'weekdayDate';
 
 export const DATE_FORMAT_PRESETS = Object.freeze([
     'time-mdy',
@@ -229,6 +229,19 @@ function toLocalDate(date: Date, dateFormat: string) {
     );
 }
 
+function toLocalWeekdayDate(date: Date, dateFormat: string) {
+    return formatDateTimeValue(
+        date,
+        {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+        },
+        { locale: dateFormat }
+    );
+}
+
 export function formatDateFilterWithPreferences(
     dateStr: unknown,
     format: DateFilterFormat,
@@ -253,6 +266,20 @@ export function formatDateFilterWithPreferences(
         return formatIsoDateTime(dt);
     }
     const datePreset = preferences.dateFormat ?? 'locale';
+    if (datePreset !== 'locale' && format === 'weekdayDate') {
+        // Day headings: the preset's date with the weekday name, no time.
+        const weekday = formatDateTimeValue(
+            dt,
+            { weekday: 'long' },
+            { locale: dateFormat }
+        );
+        const day = formatDatePattern(dt, datePreset, dateHour12, {
+            date: true,
+            time: false,
+            seconds: false
+        });
+        return `${weekday}, ${day}`;
+    }
     if (datePreset !== 'locale') {
         return formatDatePattern(dt, datePreset, dateHour12, {
             date: format !== 'time',
@@ -271,6 +298,9 @@ export function formatDateFilterWithPreferences(
     }
     if (format === 'date') {
         return toLocalDate(dt, dateFormat);
+    }
+    if (format === 'weekdayDate') {
+        return toLocalWeekdayDate(dt, dateFormat);
     }
 
     return '-';

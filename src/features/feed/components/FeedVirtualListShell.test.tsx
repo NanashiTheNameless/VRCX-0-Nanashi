@@ -9,6 +9,7 @@ import type {
     FeedRow,
     FeedTableInstance
 } from '@/components/feed/feedTypes';
+import { formatDateFilter } from '@/lib/dateTime';
 
 vi.mock('@/components/feed/FeedDetailCell', () => ({
     FeedDetailCell: () => <span>detail</span>
@@ -26,9 +27,7 @@ vi.mock('@/state/preferencesStore', () => ({
 
 vi.mock('./FeedTableParts', () => ({
     FeedExpandedRow: () => <div>expanded detail</div>,
-    FeedUserLink: () => <button type="button">user</button>,
-    formatTimestampLong: () => 'long time',
-    formatTimestampShort: () => 'time'
+    FeedUserLink: () => <button type="button">user</button>
 }));
 
 import { FeedVirtualListShell } from './FeedVirtualListShell';
@@ -98,7 +97,48 @@ describe('FeedVirtualListShell', () => {
         const summary = view.container.querySelector(
             '[data-feed-list-summary]'
         );
-        expect(summary?.textContent).toContain('timeusertypedetail');
+        expect(summary?.textContent).toMatch(/:\d{2}usertypedetail$/);
+    });
+
+    it('marks only earlier days with a heading and shows the clock per row', () => {
+        const now = new Date();
+        const yesterday = new Date(now);
+        yesterday.setDate(now.getDate() - 1);
+        const todayRow: FeedRow = {
+            ...row,
+            created_at: Math.floor(now.getTime() / 1000)
+        };
+        const yesterdayRow: FeedRow = {
+            ...row,
+            rowId: 2,
+            created_at: Math.floor(yesterday.getTime() / 1000)
+        };
+        const view = render(
+            <FeedVirtualListShell
+                {...props}
+                rows={[todayRow, yesterdayRow]}
+                sourceRows={[todayRow, yesterdayRow]}
+            />
+        );
+
+        const todayLabel = formatDateFilter(now.toISOString(), 'weekdayDate');
+        const yesterdayLabel = formatDateFilter(
+            yesterday.toISOString(),
+            'weekdayDate'
+        );
+        expect(screen.queryByText(todayLabel)).toBeNull();
+        const text = view.container.textContent ?? '';
+        expect(text.indexOf(yesterdayLabel)).toBeGreaterThan(
+            text.indexOf('user')
+        );
+        const summaries = view.container.querySelectorAll(
+            '[data-feed-list-summary]'
+        );
+        expect(summaries).toHaveLength(2);
+        // The fork's default clock includes seconds.
+        expect(summaries[0]?.textContent).toMatch(
+            /^\d{1,2}:\d{2}(:\d{2})?(\s?[AP]M)?user/
+        );
     });
 
     it('renders static labels instead of sortable headers', () => {
@@ -156,6 +196,19 @@ describe('FeedVirtualListShell', () => {
         );
         view.rerender(<FeedVirtualListShell {...props} />);
         expect(screen.queryByText('expanded detail')).toBeNull();
+    });
+
+    it('expands an expandable row when its blank area is clicked', () => {
+        const view = render(<FeedVirtualListShell {...props} />);
+        const summary = view.container.querySelector(
+            '[data-feed-list-summary]'
+        );
+        if (!summary) {
+            throw new Error('missing summary row');
+        }
+
+        fireEvent.click(summary);
+        expect(screen.getByText('expanded detail')).not.toBeNull();
     });
 
     it('reloads the latest window after newer rows were discarded', () => {

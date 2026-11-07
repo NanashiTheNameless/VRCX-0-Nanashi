@@ -23,12 +23,12 @@ import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
 import { UserBadges } from '@/components/UserBadges';
 import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
 import type { FriendRecord } from '@/domain/friends/types';
-import { useFriendsLocationsWorldSummaries } from '@/features/friends/useFriendsLocationsWorldSummaries';
 import {
     formatDateLabel,
     toLocalDayKey
 } from '@/features/instance-history/instance-activity/instanceActivityDate';
 import { formatClock, formatDateTime, timeToText } from '@/lib/dateTime';
+import { useWorldSummaries } from '@/lib/useWorldSummaries';
 import { cn } from '@/lib/utils';
 import { convertFileSrc } from '@/platform/tauri/assets';
 import type {
@@ -788,7 +788,7 @@ export function ActivityJourneyView({
         ],
         [visits]
     );
-    const fetchedWorlds = useFriendsLocationsWorldSummaries(missingWorldIds);
+    const fetchedWorlds = useWorldSummaries(missingWorldIds);
     const avatarUserIds = useMemo(
         () => [
             ...new Set(

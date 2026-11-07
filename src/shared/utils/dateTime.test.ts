@@ -61,6 +61,28 @@ describe('dateTime utils', () => {
         ).toBe('2026年6月4日');
     });
 
+    it('keeps day headings date-only under a date format preset', () => {
+        expect(
+            formatDateFilterWithPreferences(UTC_DATE, 'weekdayDate', {
+                appLocale: 'en',
+                dateFormat: 'time-mdy'
+            })
+        ).toBe('Thursday, 06/04/26');
+    });
+
+    it('adds the localized weekday to day heading labels', () => {
+        expect(
+            formatDateFilterWithPreferences(UTC_DATE, 'weekdayDate', {
+                appLocale: 'zh-CN'
+            })
+        ).toBe('2026年6月4日星期四');
+        expect(
+            formatDateFilterWithPreferences(UTC_DATE, 'weekdayDate', {
+                appLocale: 'en'
+            })
+        ).toBe('Thursday, June 4, 2026');
+    });
+
     it('formats Japanese date labels with Japanese locale ordering', () => {
         const date = new Date(UTC_DATE);
         const expected = date.toLocaleDateString('ja', {
