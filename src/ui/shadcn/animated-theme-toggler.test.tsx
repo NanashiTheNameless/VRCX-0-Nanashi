@@ -45,6 +45,26 @@ describe('AnimatedThemeToggler', () => {
         delete document.documentElement.dataset.magicuiThemeVt;
     });
 
+    it('switches instantly without a View Transition when not animated', () => {
+        const onThemeChange = vi.fn();
+        const startViewTransition = vi.fn();
+        document.startViewTransition = startViewTransition;
+
+        render(
+            <AnimatedThemeToggler
+                theme="light"
+                animated={false}
+                onThemeChange={onThemeChange}
+                aria-label="toggle theme"
+            />
+        );
+        fireEvent.click(screen.getByRole('button', { name: 'toggle theme' }));
+
+        expect(onThemeChange).toHaveBeenCalledWith('dark');
+        expect(startViewTransition).not.toHaveBeenCalled();
+        expect(document.documentElement.classList.contains('dark')).toBe(true);
+    });
+
     it('switches to the next theme and reveals it from the button center', async () => {
         const onThemeChange = vi.fn();
         let finishTransition: () => void = () => undefined;

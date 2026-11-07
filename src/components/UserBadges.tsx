@@ -13,6 +13,7 @@ import {
 } from '@/components/badges/badgeFit';
 import { BadgeIcon } from '@/components/badges/BadgeIcon';
 import {
+    badgeRuleGroupIds,
     badgeUserFactsFrom,
     buildCustomBadgeIndex,
     isVrchatStaff,
@@ -22,11 +23,13 @@ import {
     type CustomBadgeIndex
 } from '@/domain/badges/customBadges';
 import type { FavoriteGroupMap } from '@/domain/favorites/types';
+import { queryClient } from '@/lib/queryClient';
 import { useKnownUserFact } from '@/lib/useKnownUser';
 import { cn } from '@/lib/utils';
 import {
     FORK_MAINTAINER_USER_ID,
-    OWNER_USER_ID
+    OWNER_USER_ID,
+    VRCHAT_STAFF_GROUP_ID
 } from '@/shared/constants/user';
 import {
     ensureCustomBadgesLoaded,
@@ -34,6 +37,12 @@ import {
 } from '@/state/customBadgeStore';
 import { useFavoriteStore } from '@/state/favoriteStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
+import {
+    groupMembership,
+    setTrackedGroupIds,
+    trackUserGroupMembership,
+    useUserGroupMembershipStore
+} from '@/state/userGroupMembershipStore';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 export type DeveloperBadgeKind = 'fork' | 'upstream';
@@ -170,7 +179,16 @@ function useUserBadgeState(userId: string): UserBadgeState {
     useEffect(() => {
         ensureCustomBadgesLoaded();
     }, []);
+    useEffect(() => {
+        trackUserGroupMembership(queryClient);
+    }, []);
+    const membership = useUserGroupMembershipStore((state) =>
+        userId ? state.byUser.get(userId) : undefined
+    );
     const badges = useCustomBadgeStore((state) => state.badges);
+    useEffect(() => {
+        setTrackedGroupIds(badgeRuleGroupIds(badges));
+    }, [badges]);
     const remote = useFavoriteStore(
         (state) => state.groupedFavoriteFriendIdsByGroupKey
     );
@@ -187,7 +205,9 @@ function useUserBadgeState(userId: string): UserBadgeState {
         return { isStaff: false, customBadges: [] };
     }
     return {
-        isStaff: isVrchatStaff(fact),
+        isStaff:
+            groupMembership(membership, VRCHAT_STAFF_GROUP_ID) === true ||
+            isVrchatStaff(fact),
         customBadges: index.badgesById.size
             ? resolveUserCustomBadges(
                   index,
@@ -195,7 +215,9 @@ function useUserBadgeState(userId: string): UserBadgeState {
                   index.needsFacts
                       ? badgeUserFactsFrom(
                             fact,
-                            isFriend || fact?.isFriend === true
+                            isFriend || fact?.isFriend === true,
+                            userId,
+                            (groupId) => groupMembership(membership, groupId)
                         )
                       : null
               )

@@ -192,8 +192,8 @@ impl RemoteSyncClient {
             .max_tls_version(reqwest::tls::Version::TLS_1_3)
             .build()
             .map_err(|e| Error::Transport(e.to_string()))?;
-        let os = sysinfo::System::name().unwrap_or_else(|| std::env::consts::OS.into());
-        let os_version = sysinfo::System::os_version().unwrap_or_else(|| "unknown".into());
+        let os = sysinfo::System::name().unwrap_or_else(|_| std::env::consts::OS.into());
+        let os_version = sysinfo::System::os_version().unwrap_or_else(|_| "unknown".into());
         let client_header = format!(
             "VRCX-0-Nanashi/{app_version} ({os} {os_version}; {})",
             std::env::consts::ARCH
@@ -1118,6 +1118,7 @@ pub fn unsigned_website_result() -> WebsiteVerification {
 /// Name shown for this PC in the vault's list of devices.
 pub fn device_label() -> String {
     sysinfo::System::host_name()
+        .ok()
         .map(|name| name.trim().chars().take(64).collect::<String>())
         .filter(|name| !name.is_empty())
         .unwrap_or_else(|| "VRCX-0-Nanashi".into())

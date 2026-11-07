@@ -434,6 +434,10 @@ export function useTitleBarActions(
                 render={
                     <span className="inline-flex">
                         <AnimatedThemeToggler
+                            // WebKitGTK crashes the whole app on a View
+                            // Transition when the DMABUF renderer is off,
+                            // which is the default on Linux.
+                            animated={hostPlatform !== 'linux'}
                             theme={resolvedThemeMode}
                             onThemeChange={(nextThemeMode) => {
                                 void setThemeModePreference(

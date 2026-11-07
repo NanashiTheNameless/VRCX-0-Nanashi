@@ -60,7 +60,8 @@ const RULE_KINDS: CustomBadgeRuleKind[] = [
     'vrchatGroup',
     'trust',
     'supporter',
-    'memo'
+    'memo',
+    'bio'
 ];
 
 function newRule(kind: CustomBadgeRuleKind): CustomBadgeRule {
@@ -83,6 +84,7 @@ function newRule(kind: CustomBadgeRuleKind): CustomBadgeRule {
         case 'trust':
             return { kind, trustKey: 'known' };
         case 'memo':
+        case 'bio':
             return { kind, contains: '' };
         case 'friends':
         case 'supporter':
@@ -445,13 +447,14 @@ function RuleEditor({
             );
             break;
         case 'memo':
+        case 'bio':
             body = (
                 <Input
                     className="w-64"
                     maxLength={CUSTOM_BADGE_MEMO_MAX}
                     value={rule.contains}
                     placeholder={t(`${T}.memo_placeholder`)}
-                    aria-label={t(`${T}.rule.memo`)}
+                    aria-label={t(`${T}.rule.${rule.kind}`)}
                     onChange={(event) =>
                         onChange({ ...rule, contains: event.target.value })
                     }

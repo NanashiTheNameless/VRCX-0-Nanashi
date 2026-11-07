@@ -3997,7 +3997,7 @@
                     "group_refresh": "Refresh members",
                     "group_members_one": "{count} member, fetched {date}",
                     "group_members_other": "{count} members, fetched {date}",
-                    "group_not_fetched": "Members not fetched yet. The badge applies once they are fetched.",
+                    "group_not_fetched": "Members not fetched yet. Users whose own group list shows this group still get the badge.",
                     "group_truncated": "Only the first {limit} are kept.",
                     "group_fetch_failed": "Couldn't fetch the group members.",
                     "memo_placeholder": "Text to look for",
@@ -4006,19 +4006,21 @@
                         "users": "Specific users",
                         "friends": "All friends",
                         "friendGroup": "Favorite friend group",
-                        "vrchatGroup": "VRChat group members",
+                        "vrchatGroup": "Is in VRChat group",
                         "trust": "Trust rank",
                         "supporter": "VRC+ supporters",
-                        "memo": "Memo or note contains"
+                        "memo": "Memo or note contains",
+                        "bio": "Bio contains"
                     },
                     "rule_description": {
                         "users": "Users you list here.",
                         "friends": "Everyone on your friends list.",
                         "friendGroup": "Friends in one of your VRChat or local favorite groups.",
-                        "vrchatGroup": "Members of a VRChat group, or of one role in it. The member list is saved when you fetch it.",
+                        "vrchatGroup": "Users in a VRChat group (pick one of yours, or paste a grp_ ID or a vrchat.com group link). Each user's own group list is trusted when the app has seen it; the fetched member list fills in the rest. Limiting to a role needs the member list.",
                         "trust": "Users with this trust rank, when their profile is known.",
                         "supporter": "Users with VRChat Plus, when their profile is known.",
-                        "memo": "Users whose memo or VRChat note contains this text."
+                        "memo": "Users whose memo or VRChat note contains this text.",
+                        "bio": "Users whose VRChat bio contains this text, when their profile is known."
                     }
                 },
                 "user_colors": {

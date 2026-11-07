@@ -378,14 +378,12 @@ pub fn parse_vrc_image(xml_string: &str) -> ScreenshotMetadata {
     loop {
         match reader.read_event_into(&mut buf) {
             Ok(Event::Start(ref e)) | Ok(Event::Empty(ref e)) => {
-                let name = String::from_utf8_lossy(e.local_name().as_ref()).into_owned();
+                let name = e.local_name().as_ref().to_owned();
                 current_tag = name;
             }
             Ok(Event::Text(ref e)) => {
-                let text = e
-                    .decode()
-                    .ok()
-                    .and_then(|text| unescape(&text).ok().map(|text| text.into_owned()))
+                let text = unescape(&e.xml10_content())
+                    .map(|text| text.into_owned())
                     .unwrap_or_default();
                 if text.trim().is_empty() {
                     continue;

@@ -25,6 +25,8 @@ interface AnimatedThemeTogglerProps extends React.ComponentPropsWithoutRef<'butt
     theme?: 'light' | 'dark';
     /** Called on toggle. Pair with `theme` for controlled usage. */
     onThemeChange?: (theme: 'light' | 'dark') => void;
+    /** Set false to switch instantly without the View Transitions reveal. */
+    animated?: boolean;
 }
 
 function polygonCollapsed(point: string, vertexCount: number): string {
@@ -155,6 +157,7 @@ export const AnimatedThemeToggler = ({
     fromCenter = false,
     theme,
     onThemeChange,
+    animated = true,
     ...props
 }: AnimatedThemeTogglerProps) => {
     const shape = variant ?? 'circle';
@@ -244,7 +247,7 @@ export const AnimatedThemeToggler = ({
             }
         };
 
-        if (typeof document.startViewTransition !== 'function') {
+        if (!animated || typeof document.startViewTransition !== 'function') {
             applyTheme();
             return;
         }
@@ -306,6 +309,7 @@ export const AnimatedThemeToggler = ({
                 .catch(() => {});
         }
     }, [
+        animated,
         shape,
         fromCenter,
         duration,

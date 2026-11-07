@@ -56,11 +56,27 @@ export function sizedAvatarUrl(url: string): string {
     }
 }
 
-function isBotContributor(entry: Record<string, unknown>): boolean {
+// Apps and automation accounts that GitHub reports as ordinary users.
+const APP_CONTRIBUTOR_LOGINS = new Set([
+    'chatgpt-codex-connector',
+    'claude',
+    'codex',
+    'copilot',
+    'copilot-swe-agent',
+    'devin-ai-integration',
+    'fossabot',
+    'imgbotapp',
+    'openai-codex',
+    'renovate',
+    'snyk-bot'
+]);
+
+export function isBotContributor(entry: Record<string, unknown>): boolean {
+    const login = String(entry.login || '').toLowerCase();
     return (
         entry.type === 'Bot' ||
-        entry.login === 'fossabot' ||
-        String(entry.login || '').endsWith('[bot]')
+        login.endsWith('[bot]') ||
+        APP_CONTRIBUTOR_LOGINS.has(login)
     );
 }
 

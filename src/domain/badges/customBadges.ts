@@ -47,7 +47,8 @@ export type CustomBadgeRule =
       }
     | { kind: 'trust'; trustKey: TrustColorKey }
     | { kind: 'supporter' }
-    | { kind: 'memo'; contains: string };
+    | { kind: 'memo'; contains: string }
+    | { kind: 'bio'; contains: string };
 
 export type CustomBadgeRuleKind = CustomBadgeRule['kind'];
 
@@ -66,6 +67,10 @@ export type BadgeUserFacts = {
     hasTrustData: boolean;
     trustKey: TrustColorKey | null;
     memo: string;
+    bio: string;
+    userId: string;
+    // From the user's own group list: true, false, or null when not known.
+    groupMembership: (groupId: string) => boolean | null;
 };
 
 export type CustomBadgeIndex = {
@@ -191,9 +196,10 @@ export function normalizeBadgeRule(value: unknown): CustomBadgeRule | null {
             return isTrustKey(source.trustKey)
                 ? { kind: 'trust', trustKey: source.trustKey }
                 : null;
-        case 'memo': {
+        case 'memo':
+        case 'bio': {
             const contains = text(source.contains, CUSTOM_BADGE_MEMO_MAX);
-            return contains ? { kind: 'memo', contains } : null;
+            return contains ? { kind: source.kind, contains } : null;
         }
         default:
             return null;
@@ -249,7 +255,9 @@ function isDynamicRule(rule: CustomBadgeRule): boolean {
         rule.kind === 'friends' ||
         rule.kind === 'trust' ||
         rule.kind === 'supporter' ||
-        rule.kind === 'memo'
+        rule.kind === 'memo' ||
+        rule.kind === 'bio' ||
+        rule.kind === 'vrchatGroup'
     );
 }
 
@@ -270,10 +278,8 @@ export function buildCustomBadgeIndex(
         badgesById.set(badge.id, badge);
         const ids = new Set<string>();
         for (const rule of badge.rules) {
-            if (rule.kind === 'users' || rule.kind === 'vrchatGroup') {
-                const list =
-                    rule.kind === 'users' ? rule.userIds : rule.memberIds;
-                for (const id of list) {
+            if (rule.kind === 'users') {
+                for (const id of rule.userIds) {
                     ids.add(id);
                 }
             } else if (rule.kind === 'friendGroup') {
@@ -303,9 +309,13 @@ export function buildCustomBadgeIndex(
     return { byUserId, dynamicBadges, badgesById, needsFacts };
 }
 
+const NO_GROUP_KNOWLEDGE = () => null;
+
 export function badgeUserFactsFrom(
     fact: Record<string, unknown> | null | undefined,
-    isFriend: boolean
+    isFriend: boolean,
+    userId = '',
+    groupMembership: (groupId: string) => boolean | null = NO_GROUP_KNOWLEDGE
 ): BadgeUserFacts {
     const tags = Array.isArray(fact?.tags)
         ? fact.tags.filter((tag): tag is string => typeof tag === 'string')
@@ -325,8 +335,62 @@ export function badgeUserFactsFrom(
         trustKey: hasTrustData ? resolveTrustColorKey(fact) : null,
         memo: [fact?.memo, fact?.note]
             .filter((value): value is string => typeof value === 'string')
-            .join('\n')
+            .join('\n'),
+        bio: typeof fact?.bio === 'string' ? fact.bio : '',
+        userId,
+        groupMembership
     };
+}
+
+function containsText(haystack: string, needle: string): boolean {
+    return (
+        haystack.length > 0 &&
+        haystack.toLowerCase().includes(needle.toLowerCase())
+    );
+}
+
+const memberSets = new WeakMap<object, ReadonlySet<string>>();
+
+function memberSetOf(
+    rule: Extract<CustomBadgeRule, { kind: 'vrchatGroup' }>
+): ReadonlySet<string> {
+    let set = memberSets.get(rule);
+    if (!set) {
+        set = new Set(rule.memberIds);
+        memberSets.set(rule, set);
+    }
+    return set;
+}
+
+// The user's own group list is trusted over the stored member list, which is
+// often private, partial or out of date. A role can only be checked against
+// the member list, since group lists do not say which roles a user has.
+function vrchatGroupRuleMatches(
+    rule: Extract<CustomBadgeRule, { kind: 'vrchatGroup' }>,
+    facts: BadgeUserFacts
+): boolean {
+    const inStoredList = memberSetOf(rule).has(facts.userId);
+    const fromOwnList = facts.groupMembership(rule.groupId);
+    if (fromOwnList === false) {
+        return false;
+    }
+    if (rule.roleId) {
+        return inStoredList;
+    }
+    return fromOwnList === true || inStoredList;
+}
+
+/** Groups referenced by the badges' group rules. */
+export function badgeRuleGroupIds(badges: readonly CustomBadge[]): string[] {
+    const ids = new Set<string>();
+    for (const badge of badges) {
+        for (const rule of badge.rules) {
+            if (rule.kind === 'vrchatGroup') {
+                ids.add(rule.groupId);
+            }
+        }
+    }
+    return [...ids];
 }
 
 function dynamicRuleMatches(
@@ -341,10 +405,11 @@ function dynamicRuleMatches(
         case 'trust':
             return facts.hasTrustData && facts.trustKey === rule.trustKey;
         case 'memo':
-            return (
-                facts.memo.length > 0 &&
-                facts.memo.toLowerCase().includes(rule.contains.toLowerCase())
-            );
+            return containsText(facts.memo, rule.contains);
+        case 'bio':
+            return containsText(facts.bio, rule.contains);
+        case 'vrchatGroup':
+            return vrchatGroupRuleMatches(rule, facts);
         default:
             return false;
     }

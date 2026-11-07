@@ -51,7 +51,7 @@ tauri-plugin-updater = {
     features = ["rustls-tls", "system-proxy"],
 }
 sha2.workspace = true
-dirs = "6"
+dirs = { workspace = true }
 vrcx-0-core = { path = "../crates/core" }
 vrcx-0-platform = { path = "../crates/platform" }
 vrcx-0-host-desktop = { path = "../crates/host-desktop" }

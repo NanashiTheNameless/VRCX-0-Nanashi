@@ -5,10 +5,15 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import {
     FORK_MAINTAINER_USER_ID,
-    OWNER_USER_ID
+    OWNER_USER_ID,
+    VRCHAT_STAFF_GROUP_ID
 } from '@/shared/constants/user';
 import { useCustomBadgeStore } from '@/state/customBadgeStore';
 import { useUserFactsStore } from '@/state/userFactsStore';
+import {
+    recordUserGroups,
+    resetUserGroupMembershipStoreForTests
+} from '@/state/userGroupMembershipStore';
 
 import {
     CustomBadgeFolder,
@@ -139,6 +144,16 @@ describe('UserBadges', () => {
             (node) => node.getAttribute('aria-label')
         );
         expect(labels).toEqual(['dialog.user.badges.fork_developer', 'Artist']);
+    });
+
+    it('shows the staff badge for members of the VRChat staff group', () => {
+        const memberId = 'usr_55555555-5555-5555-5555-555555555555';
+        recordUserGroups(memberId, [VRCHAT_STAFF_GROUP_ID]);
+        render(<UserBadges userId={memberId} />);
+        expect(
+            screen.getByRole('img', { name: 'dialog.user.badges.vrchat_staff' })
+        ).toBeTruthy();
+        resetUserGroupMembershipStoreForTests();
     });
 
     it('shows the staff badge for VRChat staff', () => {

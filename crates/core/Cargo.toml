@@ -11,7 +11,7 @@ chrono = { workspace = true }
 jiff = "0.2.38"
 rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
 compact_str = { workspace = true }
-quick-xml = "0.41"
+quick-xml = "0.42"
 regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

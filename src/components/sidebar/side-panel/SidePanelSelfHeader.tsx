@@ -269,7 +269,10 @@ export function SidePanelSelfHeader() {
                                         >
                                             {displayName}
                                         </span>
-                                        <UserBadges userId={currentUserId} />
+                                        <UserBadges
+                                            userId={currentUserId}
+                                            className="ml-1"
+                                        />
                                         {gameIsolationEnabled ? (
                                             <span className="text-content-secondary shrink-0 rounded border px-1 text-[10px] leading-4">
                                                 {t('game_isolation.badge')}

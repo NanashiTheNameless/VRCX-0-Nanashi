@@ -41,7 +41,8 @@ function resolve(
     fact: Record<string, unknown> | null = null,
     isFriend = false,
     remote: Record<string, string[]> = {},
-    local: Record<string, string[]> = {}
+    local: Record<string, string[]> = {},
+    ownGroups: Record<string, boolean> = {}
 ) {
     const index = buildCustomBadgeIndex(
         normalizeCustomBadges(badges),
@@ -51,7 +52,14 @@ function resolve(
     return resolveUserCustomBadges(
         index,
         userId,
-        index.needsFacts ? badgeUserFactsFrom(fact, isFriend) : null
+        index.needsFacts
+            ? badgeUserFactsFrom(
+                  fact,
+                  isFriend,
+                  userId,
+                  (groupId) => ownGroups[groupId] ?? null
+              )
+            : null
     ).map((entry) => entry.id);
 }
 
@@ -190,6 +198,53 @@ describe('resolveUserCustomBadges', () => {
         ]);
     });
 
+    it("trusts the user's own group list over the stored member list", () => {
+        const group = 'grp_00000000-0000-0000-0000-000000000001';
+        const rule = (memberIds: string[], roleId = '') =>
+            badge({
+                rules: [
+                    {
+                        kind: 'vrchatGroup',
+                        groupId: group,
+                        groupName: 'Group',
+                        roleId,
+                        roleName: roleId ? 'Role' : '',
+                        memberIds,
+                        refreshedAt: 1,
+                        truncated: false
+                    }
+                ]
+            });
+        const own = (member: boolean) => ({ [group]: member });
+
+        // In the user's list but missing from an incomplete member list.
+        expect(
+            resolve([rule([])], ALICE, null, false, {}, {}, own(true))
+        ).toEqual(['b1']);
+        // Left the group: their list wins over a stale member list.
+        expect(
+            resolve([rule([ALICE])], ALICE, null, false, {}, {}, own(false))
+        ).toEqual([]);
+        // Their list not seen: fall back to the stored member list.
+        expect(resolve([rule([ALICE])], ALICE)).toEqual(['b1']);
+        // A role needs the role's member list; the group list has no roles.
+        const role = 'grol_00000000-0000-0000-0000-000000000001';
+        expect(
+            resolve([rule([], role)], ALICE, null, false, {}, {}, own(true))
+        ).toEqual([]);
+        expect(
+            resolve(
+                [rule([ALICE], role)],
+                ALICE,
+                null,
+                false,
+                {},
+                {},
+                own(true)
+            )
+        ).toEqual(['b1']);
+    });
+
     it('matches saved VRChat group members', () => {
         const badges = [
             badge({
@@ -248,6 +303,15 @@ describe('resolveUserCustomBadges', () => {
         ];
         expect(resolve(memo, ALICE, { memo: 'great dj' })).toEqual(['memo']);
         expect(resolve(memo, ALICE, { memo: 'artist' })).toEqual([]);
+
+        const bio = [
+            badge({ id: 'bio', rules: [{ kind: 'bio', contains: 'Mapper' }] })
+        ];
+        expect(resolve(bio, ALICE, { bio: 'World mapper, DMs open' })).toEqual([
+            'bio'
+        ]);
+        expect(resolve(bio, ALICE, { bio: '' })).toEqual([]);
+        expect(resolve(bio, ALICE, null)).toEqual([]);
     });
 });
 

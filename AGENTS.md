@@ -158,7 +158,11 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   Settings > Interface > User Badges, and the user dialog's Badges submenu.
   Three badges are built in and always shown, never collapsed, hideable or
   configurable: fork developer (`FORK_MAINTAINER_USER_ID`), upstream developer
-  (`OWNER_USER_ID`) and VRChat Staff (`isVrchatStaff`). Their icons
+  (`OWNER_USER_ID`) and VRChat Staff (`isVrchatStaff`, or membership of
+  `VRCHAT_STAFF_GROUP_ID`). Group membership comes from users' own group lists
+  as the app loads them (`src/state/userGroupMembershipStore.ts`), never from
+  extra requests, and outranks stored group member lists, which are often
+  private or incomplete. Their icons
   (`CodeXml`, `Diamond`, `ShieldCheck`, `RESERVED_BADGE_ICONS`) stay reserved
   so custom badges cannot imitate them; keep the developer badge flashier than
   the upstream one. Custom badges are local, visible only to the user, stored
@@ -396,6 +400,11 @@ Many crates use nested module folders where each file is a sibling
 
 - Linux: avoid native GTK/WebKit theme changes; they have caused crashes. Do not
   reintroduce live OS-theme switching.
+- Linux: the View Transitions API crashes the whole app on WebKitGTK when the
+  DMABUF renderer is off, which is the Linux default (compatibility mode). The
+  titlebar theme toggle passes `animated={false}` on Linux; do not use
+  `document.startViewTransition` there. Menus and other popups are opaque with
+  no backdrop blur, because the blur does not reliably render in that mode.
 - `README.md` is a short index; the user docs it links sit beside it
   (`FEATURES.md`, `TELEMETRY.md`, `INSTALL.md`, `BUILDING.md`; `docs/` is
   gitignored, so not there). Keep them
