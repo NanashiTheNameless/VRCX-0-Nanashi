@@ -380,7 +380,6 @@ function UserDialogPresenceSection({
                             endpoint={currentEndpoint}
                             hint={locationWorldTitle}
                             instanceClickAction="world"
-                            disableTooltip
                             showPlayerSummary={false}
                         />
                         <InstanceActionBar

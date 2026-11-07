@@ -91,10 +91,7 @@ struct ScratchDir(PathBuf);
 
 impl ScratchDir {
     fn new(kind: &str) -> Self {
-        let nonce = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_nanos();
+        let nonce = uuid::Uuid::new_v4();
         Self(std::env::temp_dir().join(format!(
             "vrcx-0-assistant-{kind}-{}-{nonce}",
             std::process::id()
@@ -110,6 +107,34 @@ impl ScratchDir {
         }
         println!("could not remove the snapshot at {}", self.0.display());
     }
+}
+
+#[test]
+fn concurrent_scratch_directories_are_isolated() {
+    let barrier = Arc::new(std::sync::Barrier::new(8));
+    let workers: Vec<_> = (0..8)
+        .map(|_| {
+            let barrier = Arc::clone(&barrier);
+            std::thread::spawn(move || {
+                barrier.wait();
+                (0..128)
+                    .map(|_| {
+                        let scratch = ScratchDir::new("loop");
+                        std::fs::create_dir(&scratch.0)
+                            .expect("reserve a unique scratch directory");
+                        scratch
+                    })
+                    .collect::<Vec<_>>()
+            })
+        })
+        .collect();
+    let directories: Vec<_> = workers
+        .into_iter()
+        .flat_map(|worker| worker.join().unwrap())
+        .collect();
+    let paths: BTreeSet<_> = directories.iter().map(|scratch| &scratch.0).collect();
+    assert_eq!(paths.len(), 8 * 128);
+    assert!(paths.iter().all(|path| path.is_dir()));
 }
 
 impl Drop for ScratchDir {

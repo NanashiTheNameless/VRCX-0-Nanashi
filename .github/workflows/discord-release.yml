@@ -1,0 +1,68 @@
+name: Discord Release Announcement
+
+on:
+    release:
+        types: [published]
+    workflow_dispatch:
+        inputs:
+            tag:
+                description: Release tag to announce, e.g. v2.34.0-beta.5
+                required: true
+                type: string
+
+permissions:
+    contents: read
+
+jobs:
+    announce:
+        name: Post Release to Discord
+        runs-on: ubuntu-24.04
+        steps:
+            - name: Post release
+              env:
+                  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+                  GH_TOKEN: ${{ github.token }}
+                  RELEASE_TAG: ${{ inputs.tag }}
+              run: |
+                  if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+                      echo "::notice::DISCORD_RELEASE_WEBHOOK is not configured; skipping."
+                      exit 0
+                  fi
+                  if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+                      gh api "repos/$GITHUB_REPOSITORY/releases/tags/$RELEASE_TAG" > "$RUNNER_TEMP/release.json"
+                  else
+                      jq .release "$GITHUB_EVENT_PATH" > "$RUNNER_TEMP/release.json"
+                  fi
+                  node - <<'EOF'
+                  const fs = require('node:fs');
+                  const release = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/release.json`, 'utf8'));
+                  const body = (release.body ?? '').replace(/\r\n/g, '\n');
+                  const english = body.match(/<!-- vrcx-0-changelog:start tag=[^>]*-en -->\n([\s\S]*?)<!-- vrcx-0-changelog:end -->/);
+                  let description = (english ? english[1] : body).replace(/^v\d[^\n]*\n/, '').trim();
+                  const limit = 3900;
+                  if (description.length > limit) {
+                      const cut = description.lastIndexOf('\n', limit);
+                      description = `${description.slice(0, cut > 0 ? cut : limit).trimEnd()}\n\n[Read the full changelog](${release.html_url})`;
+                  }
+                  const payload = {
+                      allowed_mentions: { parse: [] },
+                      embeds: [
+                          {
+                              title: `VRCX-0-Nanashi ${release.name || release.tag_name}${release.prerelease ? ' (Beta)' : ''}`,
+                              url: release.html_url,
+                              description: description || undefined,
+                              color: release.prerelease ? 0xf0b232 : 0x5865f2,
+                          },
+                      ],
+                  };
+                  fetch(`${process.env.DISCORD_WEBHOOK_URL}?wait=true`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(payload),
+                  }).then(async (response) => {
+                      if (!response.ok) {
+                          console.error(`Discord webhook failed: ${response.status} ${await response.text()}`);
+                          process.exit(1);
+                      }
+                  });
+                  EOF
