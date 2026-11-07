@@ -3,7 +3,7 @@ import { Fragment, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
-import { OWNER_USER_ID } from '@/shared/constants/user';
+import { FORK_MAINTAINER_USER_ID } from '@/shared/constants/user';
 import { useDialogStore } from '@/state/dialogStore';
 import {
     Breadcrumb,
@@ -55,8 +55,8 @@ export function DialogHost() {
     const dialogKind = activeDialog?.kind || '';
     const dialogPayload = activeDialog?.payload || null;
     const isUserDialog = dialogKind === 'user';
-    const isOwnerDialog =
-        isUserDialog && activeDialog?.entityId === OWNER_USER_ID;
+    const isForkMaintainerDialog =
+        isUserDialog && activeDialog?.entityId === FORK_MAINTAINER_USER_ID;
     const isWorldDialog = dialogKind === 'world';
     const isAvatarDialog = dialogKind === 'avatar';
     const isGroupDialog = dialogKind === 'group';
@@ -107,7 +107,7 @@ export function DialogHost() {
                         isAvatarDialog
                         ? 'entity-dialog bg-(--entity-dialog-ground) sm:w-[min(96vw,72rem)] sm:!max-w-[min(96vw,72rem)]'
                         : 'sm:w-[65rem] sm:!max-w-[65rem]',
-                    isOwnerDialog && 'owner-dialog'
+                    isForkMaintainerDialog && 'fork-maintainer-dialog dark'
                 )}
             >
                 <DialogHeader className="sr-only">

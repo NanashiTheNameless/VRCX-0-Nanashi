@@ -23,6 +23,10 @@ const STORAGE = `${ADVANCED}.advanced_ui.storage`;
 const TROUBLESHOOTING = `${ADVANCED}.advanced_ui.troubleshooting`;
 
 export const syncSettingLabels: Record<string, SyncSettingLabel> = {
+    customuserbadges: [
+        `${APPEARANCE}.user_badges.list`,
+        `${APPEARANCE}.user_badges.header`
+    ],
     applanguage: [`${APPEARANCE}.appearance.language`],
     autoupdatevrcx: [
         `${GENERAL}.application.update_mode`,

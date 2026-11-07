@@ -3,6 +3,7 @@ import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
+import { UserBadges } from '@/components/UserBadges';
 import { formatDateFilterOrFallback } from '@/lib/dateTime';
 import { cn } from '@/lib/utils';
 import type { ActivityPageFadingRow } from '@/platform/tauri/bindings';
@@ -65,8 +66,11 @@ export function ActivityFadingList({
                                     }
                                     className="flex w-full items-center justify-between gap-3 px-2 py-1.5 text-left transition-colors hover:bg-[var(--act-track)]"
                                 >
-                                    <span className="text-muted-foreground truncate text-sm">
-                                        {row.displayName || row.userId}
+                                    <span className="flex min-w-0 items-center gap-x-1">
+                                        <span className="text-muted-foreground max-w-full min-w-0 truncate text-sm">
+                                            {row.displayName || row.userId}
+                                        </span>
+                                        <UserBadges userId={row.userId} />
                                     </span>
                                     <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
                                         {t(

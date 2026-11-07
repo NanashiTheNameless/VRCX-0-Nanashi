@@ -2,6 +2,7 @@ import { MapPinIcon, PencilIcon, PersonStandingIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Location } from '@/components/Location';
+import { UserBadges } from '@/components/UserBadges';
 import type { FriendRecordInput } from '@/domain/friends/types';
 import { cn } from '@/lib/utils';
 import { openUserDialog } from '@/services/dialogService';
@@ -116,12 +117,13 @@ function FeedUserName({
             type="button"
             variant="ghost"
             className={cn(
-                'h-auto shrink-0 cursor-pointer justify-start p-0 text-left font-normal',
+                'h-auto shrink-0 cursor-pointer justify-start gap-x-1 p-0 text-left font-normal',
                 className
             )}
             onClick={() => openFeedUser(row, friend)}
         >
             {displayName}
+            <UserBadges userId={userId} />
         </Button>
     );
 }

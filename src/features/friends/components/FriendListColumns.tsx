@@ -17,6 +17,7 @@ import { TimestampText } from '@/components/data-table/TimestampText';
 import { LanguageCodeBadge } from '@/components/language/LanguageCodeBadge';
 import { BioLinkFavicon } from '@/components/media/BioLinkFavicon';
 import { FadeInImage } from '@/components/media/FadeInImage';
+import { UserBadges } from '@/components/UserBadges';
 import { UserStatusDot } from '@/components/UserStatusDot';
 import { timeToText } from '@/lib/dateTime';
 import { cn } from '@/lib/utils';
@@ -245,8 +246,14 @@ export function useFriendListColumns({
                               }
                             : undefined;
                     return (
-                        <span className="name truncate" style={nameStyle}>
-                            {row.original?.displayName || ''}
+                        <span className="flex min-w-0 items-center gap-x-1">
+                            <span
+                                className="name max-w-full min-w-0 truncate"
+                                style={nameStyle}
+                            >
+                                {row.original?.displayName || ''}
+                            </span>
+                            <UserBadges userId={friendId} />
                         </span>
                     );
                 }

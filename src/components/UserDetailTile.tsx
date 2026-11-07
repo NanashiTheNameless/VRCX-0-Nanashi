@@ -1,6 +1,7 @@
 import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 
 import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
+import { UserBadges } from '@/components/UserBadges';
 import { UserStatusAvatar } from '@/components/UserStatusAvatar';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/shadcn/button';
@@ -14,6 +15,7 @@ type UserDetailContentProps = {
     namePrefix?: ReactNode;
     nameStyle?: CSSProperties;
     subline?: ReactNode;
+    userId?: string;
 };
 
 export function UserDetailContent({
@@ -24,7 +26,8 @@ export function UserDetailContent({
     displayName,
     namePrefix,
     nameStyle,
-    subline
+    subline,
+    userId
 }: UserDetailContentProps) {
     return (
         <>
@@ -39,12 +42,13 @@ export function UserDetailContent({
                     className="block truncate leading-5 font-medium"
                     style={nameStyle}
                 >
-                    {namePrefix ? (
-                        <span className="flex min-w-0 items-center gap-1">
+                    {namePrefix || userId ? (
+                        <span className="flex min-w-0 items-center gap-x-1">
                             {namePrefix}
-                            <span className="min-w-0 truncate">
+                            <span className="max-w-full min-w-0 truncate">
                                 {displayName}
                             </span>
+                            <UserBadges userId={userId} />
                         </span>
                     ) : (
                         displayName
@@ -97,7 +101,7 @@ export function UserDetailTile({
                 )}
                 onClick={onOpen}
             >
-                <UserDetailContent {...contentProps} />
+                <UserDetailContent userId={userId} {...contentProps} />
             </Button>
         </UserHoverCard>
     );

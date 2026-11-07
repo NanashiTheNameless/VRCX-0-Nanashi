@@ -16,6 +16,7 @@ import { Location } from '@/components/Location';
 import { FadeInImage } from '@/components/media/FadeInImage';
 import { TileShell } from '@/components/tile/TileShell';
 import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
+import { UserBadges } from '@/components/UserBadges';
 import { UserStatusDot } from '@/components/UserStatusDot';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/shadcn/button';
@@ -164,10 +165,10 @@ export function FavoriteCardView({
                         </>
                     ) : (
                         <>
-                            <div className="flex min-w-0 items-center gap-1.5">
+                            <div className="flex min-w-0 items-center gap-x-1.5">
                                 <UserHoverCard {...friendHoverCard}>
                                     <span
-                                        className="truncate font-medium"
+                                        className="max-w-full min-w-0 truncate font-medium"
                                         style={
                                             item.titleColor
                                                 ? { color: item.titleColor }
@@ -177,6 +178,11 @@ export function FavoriteCardView({
                                         {item.title}
                                     </span>
                                 </UserHoverCard>
+                                <UserBadges
+                                    userId={
+                                        isFriend ? friendHoverCard.userId : ''
+                                    }
+                                />
                                 {item.isUnavailable ? (
                                     <TriangleAlertIcon className="text-destructive size-4 shrink-0" />
                                 ) : item.isDeleted ? (
@@ -345,10 +351,10 @@ export function FavoriteCardView({
                 </div>
             </UserHoverCard>
             <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 items-center gap-1.5">
+                <div className="flex min-w-0 items-center gap-x-1.5">
                     <UserHoverCard {...friendHoverCard}>
                         <span
-                            className="object-row__title truncate"
+                            className="object-row__title max-w-full min-w-0 truncate"
                             style={
                                 item.titleColor
                                     ? { color: item.titleColor }
@@ -358,6 +364,9 @@ export function FavoriteCardView({
                             {item.title}
                         </span>
                     </UserHoverCard>
+                    <UserBadges
+                        userId={isFriend ? friendHoverCard.userId : ''}
+                    />
                     {item.isUnavailable ? (
                         <TriangleAlertIcon className="text-destructive size-4 shrink-0" />
                     ) : item.isDeleted ? (

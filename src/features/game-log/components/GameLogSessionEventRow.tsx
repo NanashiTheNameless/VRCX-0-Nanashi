@@ -17,6 +17,7 @@ import {
     getLogFilterRowAttributes
 } from '@/components/data-table/LogFilterContextMenu';
 import { TimestampText } from '@/components/data-table/TimestampText';
+import { UserBadges } from '@/components/UserBadges';
 import { timeToText } from '@/lib/dateTime';
 import { cn } from '@/lib/utils';
 import { copyTextToClipboard } from '@/services/clipboardService';
@@ -178,12 +179,13 @@ function PlayerNameButton({ item }: { item: GameLogSessionMember }) {
         <Button
             type="button"
             variant="ghost"
-            className="h-auto min-w-0 justify-start p-0 text-left font-medium hover:bg-transparent"
+            className="h-auto min-w-0 justify-start gap-x-1 p-0 text-left font-medium hover:bg-transparent"
             onClick={() => {
                 openGameLogUser(item, t);
             }}
         >
-            <span className="truncate">{displayName}</span>
+            <span className="max-w-full min-w-0 truncate">{displayName}</span>
+            <UserBadges userId={item?.userId} />
         </Button>
     );
 }

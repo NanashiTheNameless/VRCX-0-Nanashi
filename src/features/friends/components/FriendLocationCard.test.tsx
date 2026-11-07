@@ -340,17 +340,19 @@ describe('FriendLocationCard local mode', () => {
                         }}
                     />
                 );
-                const name = getByText('Friend');
+                const title = getByText('Friend').closest(
+                    '[data-slot="card-title"]'
+                );
                 expect(container.querySelectorAll('[data-epoch]')).toHaveLength(
                     1
                 );
                 expect(
-                    name.parentElement
+                    title?.parentElement
                         ?.querySelector('[data-epoch]')
                         ?.getAttribute('data-epoch')
                 ).toBe('1000');
                 expect(
-                    name.parentElement
+                    title?.parentElement
                         ?.querySelector('[data-epoch]')
                         ?.getAttribute('data-format')
                 ).toBe(density === 'dense' ? 'short' : 'default');

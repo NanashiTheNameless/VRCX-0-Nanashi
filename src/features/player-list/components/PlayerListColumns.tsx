@@ -31,6 +31,7 @@ import { BioLinkFavicon } from '@/components/media/BioLinkFavicon';
 import { FadeInImage } from '@/components/media/FadeInImage';
 import { MutualFriendAvatars } from '@/components/mutual-friends/MutualFriendAvatars';
 import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
+import { UserBadges } from '@/components/UserBadges';
 import { UserStatusDot } from '@/components/UserStatusDot';
 import { timeToText } from '@/lib/dateTime';
 import { cn } from '@/lib/utils';
@@ -94,8 +95,14 @@ function DisplayNameCell({
 
     return (
         <UserHoverCard userId={row.original.userId} side="right" align="start">
-            <span className="block min-w-0 truncate text-sm" style={style}>
-                {row.original.displayName}
+            <span className="flex min-w-0 items-center gap-x-1">
+                <span
+                    className="max-w-full min-w-0 truncate text-sm"
+                    style={style}
+                >
+                    {row.original.displayName}
+                </span>
+                <UserBadges userId={row.original.userId} />
             </span>
         </UserHoverCard>
     );

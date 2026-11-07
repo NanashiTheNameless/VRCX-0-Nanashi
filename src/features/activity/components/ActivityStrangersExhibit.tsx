@@ -6,6 +6,7 @@ import {
     toMutualFriendAvatar
 } from '@/components/mutual-friends/MutualFriendAvatars';
 import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
+import { UserBadges } from '@/components/UserBadges';
 import { mutualFriendIdsOf } from '@/lib/mutual-friends/mutualFriendsStrangers';
 import { useUserMutualFriends } from '@/lib/mutual-friends/useUserMutualFriends';
 import type { ActivityPageCompanionRow } from '@/platform/tauri/bindings';
@@ -99,8 +100,11 @@ export function ActivityStrangersExhibit({
                                     className="size-9"
                                 />
                                 <span className="min-w-0 flex-1">
-                                    <span className="text-foreground block truncate text-sm">
-                                        {row.displayName || row.userId}
+                                    <span className="flex min-w-0 items-center gap-x-1">
+                                        <span className="text-foreground max-w-full min-w-0 truncate text-sm">
+                                            {row.displayName || row.userId}
+                                        </span>
+                                        <UserBadges userId={row.userId} />
                                     </span>
                                     <StrangerMutuals userId={row.userId} />
                                 </span>

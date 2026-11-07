@@ -28,6 +28,7 @@ vi.mock('@/components/user-hover-card/UserHoverCard', () => ({
 }));
 
 vi.mock('@/lib/useKnownUser', () => ({
+    useKnownUserFact: () => null,
     useKnownUserFacts: (userIds: string[]) =>
         Object.fromEntries(
             userIds.map((userId) => [

@@ -6,6 +6,7 @@ import type {
 import configRepository from '@/repositories/configRepository';
 import vrchatEconomyRepository from '@/repositories/vrchatEconomyRepository';
 import { useChatboxStore } from '@/state/chatboxStore';
+import { useCustomBadgeStore } from '@/state/customBadgeStore';
 import { useDataDirMigrationStore } from '@/state/dataDirMigrationStore';
 import { useFriendLogStore } from '@/state/friendLogStore';
 import { useProfileBackupStore } from '@/state/profileBackupStore';
@@ -170,7 +171,12 @@ function handleRuntimeEvent(event: RuntimeEvent): void {
     if (event.name === 'remoteSyncSettingsImported') {
         void configRepository
             .reload()
-            .then(loadPreferenceSnapshot)
+            .then(() =>
+                Promise.all([
+                    loadPreferenceSnapshot(),
+                    useCustomBadgeStore.getState().reload()
+                ])
+            )
             .catch((error) => {
                 console.warn(
                     'Failed to refresh settings after RemoteSync import:',

@@ -277,6 +277,7 @@ export function FriendRow({
                 }
                 displayName={displayName}
                 nameStyle={nameStyle}
+                userId={friend.id || ''}
                 subline={
                     groupByInstanceTimerVisible ? (
                         isCurrentUser ? (

@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 
 import { FadeInImage } from '@/components/media/FadeInImage';
 import { TranslatableText } from '@/components/translation/TranslatableText';
+import { UserBadges } from '@/components/UserBadges';
 import type {
     GroupPostRecord,
     GroupProfileRecord
@@ -117,7 +118,7 @@ export function GroupPostUserButton({
         <Button
             type="button"
             variant="ghost"
-            className="h-auto max-w-full justify-start gap-1 p-0 text-left text-xs hover:bg-transparent"
+            className="h-auto max-w-full justify-start gap-x-1 p-0 text-left text-xs hover:bg-transparent"
             onClick={() =>
                 openUserDialog({
                     userId,
@@ -127,9 +128,10 @@ export function GroupPostUserButton({
             }
         >
             {label}
-            <span className="text-foreground truncate font-medium">
+            <span className="text-foreground max-w-full min-w-0 truncate font-medium">
                 {displayName}
             </span>
+            <UserBadges userId={userId} />
         </Button>
     );
 }
@@ -226,7 +228,7 @@ function PostCard({
             {({ action, meta, error, text: body, isTranslated }) => (
                 <article className="bg-card hover:border-foreground/20 group/post rounded-lg border px-4 py-3 transition-colors">
                     <div className="text-muted-foreground flex min-w-0 items-center gap-x-2 text-xs">
-                        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                        <div className="flex min-w-0 items-center gap-x-2 gap-y-1">
                             {post.authorId ? (
                                 <GroupPostUserButton
                                     userId={post.authorId}

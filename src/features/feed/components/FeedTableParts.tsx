@@ -29,6 +29,7 @@ import type {
     FeedRow
 } from '@/components/feed/feedTypes';
 import { LaunchModeContextMenuGroup } from '@/components/launch/LaunchModeContextMenuGroup';
+import { UserBadges } from '@/components/UserBadges';
 import { resolveFriendPresenceLocation } from '@/domain/friends/presence';
 import { formatDateFilter } from '@/lib/dateTime';
 import { useKnownUserFact } from '@/lib/useKnownUser';
@@ -220,11 +221,14 @@ function FeedUserLink({
                         ) : null}
                         <span
                             className={cn(
-                                'truncate',
-                                showAvatar ? 'min-w-0 flex-1' : 'max-w-full'
+                                'flex min-w-0 items-center gap-x-1',
+                                showAvatar ? 'flex-1' : 'max-w-full'
                             )}
                         >
-                            {userLabel}
+                            <span className="max-w-full min-w-0 truncate">
+                                {userLabel}
+                            </span>
+                            <UserBadges userId={userId} />
                         </span>
                     </Button>
                 }

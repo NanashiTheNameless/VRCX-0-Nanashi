@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 
 import { DataTableSortButton } from '@/components/data-table/DataTableSortButton';
 import { ToolbarFilterMenu } from '@/components/layout/ToolbarControls';
+import { UserBadges } from '@/components/UserBadges';
 import {
     isFriendLogType,
     type FriendLogType
@@ -155,7 +156,7 @@ export function renderUserCell(row: FriendLogRow) {
         <Button
             type="button"
             variant="ghost"
-            className="h-auto justify-start p-0 text-left text-sm font-medium hover:bg-transparent"
+            className="h-auto justify-start gap-x-1 p-0 text-left text-sm font-medium hover:bg-transparent"
             onClick={() =>
                 openUserDialog({
                     userId: row.userId,
@@ -164,6 +165,7 @@ export function renderUserCell(row: FriendLogRow) {
             }
         >
             {displayName}
+            <UserBadges userId={row.userId} />
         </Button>
     ) : (
         <div className="text-sm font-medium">{displayName}</div>
@@ -183,7 +185,7 @@ export function renderUserCell(row: FriendLogRow) {
 
     if (row?.type === 'TrustLevel') {
         return (
-            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <div className="flex min-w-0 items-center gap-x-2 gap-y-1 text-sm">
                 {userLabel}
                 <span className="inline-flex items-center gap-1">
                     <span className="text-muted-foreground">

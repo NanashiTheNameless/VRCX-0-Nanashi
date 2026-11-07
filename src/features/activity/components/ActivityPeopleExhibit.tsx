@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { FadeInImage } from '@/components/media/FadeInImage';
 import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
+import { UserBadges } from '@/components/UserBadges';
 import { cn } from '@/lib/utils';
 import type {
     ActivityCompanionOrder,
@@ -150,8 +151,14 @@ export function ActivityPeopleExhibit({
                                 className="size-16"
                             />
                             <span className="min-w-0 flex-1">
-                                <span className="text-foreground block truncate text-xl font-semibold tracking-[-0.015em]">
-                                    {lead.displayName || lead.userId}
+                                <span className="flex min-w-0 items-center gap-x-1.5">
+                                    <span className="text-foreground max-w-full min-w-0 truncate text-xl font-semibold tracking-[-0.015em]">
+                                        {lead.displayName || lead.userId}
+                                    </span>
+                                    <UserBadges
+                                        userId={lead.userId}
+                                        size="full"
+                                    />
                                 </span>
                                 <span className="text-muted-foreground mt-1.5 block text-xs tabular-nums">
                                     {t('view.activity.people.lead_caption', {
@@ -191,8 +198,14 @@ export function ActivityPeopleExhibit({
                                                 url={avatarOf(row.userId)}
                                                 className="size-7"
                                             />
-                                            <span className="text-foreground min-w-0 flex-1 truncate text-sm">
-                                                {row.displayName || row.userId}
+                                            <span className="flex min-w-0 flex-1 items-center gap-x-1">
+                                                <span className="text-foreground max-w-full min-w-0 truncate text-sm">
+                                                    {row.displayName ||
+                                                        row.userId}
+                                                </span>
+                                                <UserBadges
+                                                    userId={row.userId}
+                                                />
                                             </span>
                                             <span
                                                 aria-hidden="true"

@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AffinityBadge } from '@/components/affinity/AffinityBadge';
 import { Location } from '@/components/Location';
+import { UserBadges } from '@/components/UserBadges';
 import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
 import type { LoadStatus } from '@/domain/shared/types';
 import { describeGameLogDetail } from '@/features/game-log/gameLogRows';
@@ -111,12 +112,13 @@ function GameLogWidgetUserName({
             type="button"
             variant="ghost"
             className={cn(
-                'h-auto min-w-0 cursor-pointer justify-start p-0 text-left font-normal',
+                'h-auto min-w-0 cursor-pointer justify-start gap-x-1 p-0 text-left font-normal',
                 className
             )}
             onClick={() => openGameLogWidgetUser(row)}
         >
             {displayName}
+            <UserBadges userId={userId} />
         </Button>
     );
 }

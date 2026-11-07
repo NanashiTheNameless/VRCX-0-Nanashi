@@ -20,6 +20,7 @@ import {
     TimelineSeparator
 } from '@/components/reui/timeline';
 import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
+import { UserBadges } from '@/components/UserBadges';
 import { buildFavoriteIdSet } from '@/domain/favorites/favoriteIdSet';
 import type { FriendRecord } from '@/domain/friends/types';
 import { useFriendsLocationsWorldSummaries } from '@/features/friends/useFriendsLocationsWorldSummaries';
@@ -166,10 +167,11 @@ function PersonChip({
                     ) : null}
                 </Avatar>
                 <span className="flex min-w-0 flex-col items-start">
-                    <span className="flex max-w-full min-w-0 items-center gap-1 leading-4">
-                        <span className="min-w-0 truncate">
+                    <span className="flex max-w-full min-w-0 items-center gap-x-1 leading-4">
+                        <span className="max-w-full min-w-0 truncate">
                             {person.displayName}
                         </span>
+                        <UserBadges userId={person.userId} />
                         {person.isFavorite ? (
                             <AffinityBadge isFavorite iconOnly />
                         ) : null}
@@ -522,7 +524,7 @@ function VisitItem({
                     'bg-[var(--act-edge)] group-data-[orientation=vertical]/timeline:h-[calc(100%-1rem)] group-data-[orientation=vertical]/timeline:translate-y-5'
                 )}
             />
-            <div className="flex min-w-0 flex-wrap gap-x-5 gap-y-2 md:flex-nowrap">
+            <div className="flex min-w-0 gap-x-5 gap-y-2 md:flex-nowrap">
                 <WorldImage
                     visit={visit}
                     imageUrl={worldImageUrl}
@@ -551,7 +553,7 @@ function VisitItem({
                         />
                     </button>
                     {friends.length > 0 ? (
-                        <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1">
+                        <div className="flex min-w-0 items-center gap-x-1.5 gap-y-1">
                             {friends.map((person) => (
                                 <PersonChip
                                     key={person.key}
@@ -567,7 +569,7 @@ function VisitItem({
                             {t('view.activity.journey.alone')}
                         </p>
                     ) : strangers.length > 0 || view.otherPeople.length > 0 ? (
-                        <div className="text-muted-foreground flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-0.5 text-sm">
+                        <div className="text-muted-foreground flex min-w-0 items-baseline gap-x-3 text-sm">
                             {strangers.map((person) => (
                                 <StrangerName
                                     key={person.key}

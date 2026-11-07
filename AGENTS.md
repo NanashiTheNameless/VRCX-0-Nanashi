@@ -31,7 +31,7 @@ that touches identity, packaging, or networking defaults.
 | Own deep-link scheme | `vrcx-0-nanashi://`                                                                        | `src-tauri/tauri.conf.json`, `src-tauri/src/commands/application/deep_link.rs`                        |
 | Also accepted        | `vrcx-0://`, `vrcx://`                                                                     | same                                                                                                  |
 | Update source        | `NanashiTheNameless/VRCX-0-Nanashi` releases                                               | `crates/outbound-adapters/src/github_release_catalog.rs`, `crates/host-desktop/src/updater_policy.rs` |
-| User agent           | `NanashiTheNameless/VRCX-0-Nanashi`                                                        | `crates/core/src/user_agent.rs`                                                                       |
+| User agent           | `VRCX-0-Nanashi/<version> (+https://github.com/NanashiTheNameless/VRCX-0-Nanashi)`         | `crates/core/src/user_agent.rs`                                                                       |
 | Export format id     | `vrcx-0-nanashi-data-export`                                                               | `crates/persistence/src/data_export.rs`                                                               |
 | RemoteSync origins   | `https://vrcx.namelessnanashi.dev` (website), `https://vrcx-api.namelessnanashi.dev` (API) | `crates/remote-sync/src/lib.rs`, `src/shared/constants/vrcxDeepLinks.ts`                              |
 
@@ -153,6 +153,27 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   send keys, tokens or VRChat cookies to the public policy.
 - **Updater** - `crates/host-desktop/src/updater_policy.rs`. Fork releases, plus
   reinstall/downgrade and per-version selection.
+- **User badges** - `src/components/UserBadges.tsx`, `src/components/badges/`,
+  `src/domain/badges/customBadges.ts`, `src/state/customBadgeStore.ts`,
+  Settings > Interface > User Badges, and the user dialog's Badges submenu.
+  Three badges are built in and always shown, never collapsed, hideable or
+  configurable: fork developer (`FORK_MAINTAINER_USER_ID`), upstream developer
+  (`OWNER_USER_ID`) and VRChat Staff (`isVrchatStaff`). Their icons
+  (`CodeXml`, `Diamond`, `ShieldCheck`, `RESERVED_BADGE_ICONS`) stay reserved
+  so custom badges cannot imitate them; keep the developer badge flashier than
+  the upstream one. Custom badges are local, visible only to the user, stored
+  in the `customUserBadges` config key and synced under the `badges` Settings
+  Sync category; they stack after the built-in ones, including on the
+  developer accounts. A user can have any number; when they would truncate the
+  name they collapse (labels, then icons, then a folder tile) through
+  `src/components/badges/badgeFit.ts`, never by wrapping. Badges make no
+  requests of their own beyond the VRChat group member fetch the user starts,
+  leave the PC only through Settings Sync when it is on, and nothing is for
+  sale: selling badges or themes needs the maintainer's decision first
+  (VRChat Terms of Service section 12 restricts commercial use). The
+  maintainer's user dialog always uses the black, white and red palette
+  (`.fork-maintainer-dialog` in `src/styles/globals.css`), whatever the
+  viewer's theme; the upstream developer's dialog is a normal dialog.
 
 ## Things that look like bugs but are not
 
@@ -186,6 +207,11 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   fragment, and exist next to the plain VRChat link, which stays available.
   Community theme download counts and install reporting (`theme.vrcx-0.dev`)
   were removed; the theme catalog itself comes from GitHub.
+- The VRChat realtime websocket (`BROWSER_WEBSOCKET_USER_AGENT` in
+  `crates/vrchat-client/src/realtime.rs`) sends a browser user agent on
+  purpose. Only that connection does; every other request, VRChat API
+  included, uses the app user agent with the contact link. Do not change
+  either direction.
 
 ## Ground rules
 
@@ -202,6 +228,9 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   only locale file. Do not add locale files.
 - **Plain ASCII punctuation** in UI strings and docs. No em/en dashes, curly
   quotes, or emoji.
+- **Single-brace placeholders** in `en.json`: `{count}`, not `{{count}}`.
+  `i18nService` interpolates with `{`/`}`, so double braces show up as literal
+  text. `src/localization/en.test.ts` guards this.
 - **Smallest reasonable change.** Do not rearchitect adjacent code, upgrade
   unrelated dependencies, or reformat files you did not otherwise touch.
 - Non-fork-specific fixes usually belong upstream. Say so rather than folding

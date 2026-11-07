@@ -28,8 +28,13 @@ import {
     VolumeXIcon,
     XIcon
 } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+    UserBadgeActionSub,
+    UserBadgeCreateDialog
+} from '@/components/badges/UserBadgeMenu';
 import { FavoriteActionSub } from '@/components/favorites/FavoriteActionMenu';
 
 import {
@@ -148,6 +153,7 @@ export function UserDialogHeaderActions({
     const actionsDisabled = actionStatus !== 'idle';
     const hasAvatarOverride =
         avatarOverrideState.hideAvatar || avatarOverrideState.showAvatar;
+    const [createBadgeOpen, setCreateBadgeOpen] = useState(false);
 
     return (
         <>
@@ -181,6 +187,10 @@ export function UserDialogHeaderActions({
                 <EntityActionItem icon={NotebookPenIcon} onClick={onEditMemo}>
                     {t('dialog.user.actions.edit_note_memo')}
                 </EntityActionItem>
+                <UserBadgeActionSub
+                    userId={profile.id ?? ''}
+                    onCreateBadge={() => setCreateBadgeOpen(true)}
+                />
                 {currentAvatarTarget ? (
                     <EntityActionItem
                         icon={UserIcon}
@@ -502,6 +512,11 @@ export function UserDialogHeaderActions({
                     </>
                 ) : null}
             </EntityActionDropdown>
+            <UserBadgeCreateDialog
+                userId={profile.id ?? ''}
+                open={createBadgeOpen}
+                onOpenChange={setCreateBadgeOpen}
+            />
         </>
     );
 }

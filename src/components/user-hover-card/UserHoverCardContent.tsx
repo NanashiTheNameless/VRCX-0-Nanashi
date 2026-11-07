@@ -20,6 +20,7 @@ import {
     ProfileEffect,
     ProfileNameplate
 } from '@/components/ProfileDecorations';
+import { UserBadges } from '@/components/UserBadges';
 import { UserStatusDot } from '@/components/UserStatusDot';
 import { timeToText } from '@/lib/dateTime';
 import { openUserDialog, openWorldDialog } from '@/services/dialogService';
@@ -229,6 +230,12 @@ export function UserHoverCardContent({
                         >
                             {displayName || t('user_hover_card.unknown_user')}
                         </button>
+                        <UserBadges
+                            userId={userId}
+                            size="full"
+                            collapsible={false}
+                            className="mt-0.5"
+                        />
                         {trustLabel ? (
                             <span className="text-muted-foreground block truncate text-xs">
                                 {trustLabel}

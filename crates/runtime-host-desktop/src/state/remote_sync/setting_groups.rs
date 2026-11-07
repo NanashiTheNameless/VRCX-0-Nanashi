@@ -192,6 +192,7 @@ pub(super) const SETTING_GROUPS: &[(&str, &[&str], &[&str])] = &[
         &["booprecentemojis", "statuspresets"],
     ),
     ("assistant", &["socialai", "assistant", "reminder"], &[]),
+    ("badges", &[], &["customuserbadges"]),
 ];
 
 pub(super) fn setting_group(key: &str) -> &'static str {
@@ -258,6 +259,7 @@ mod tests {
             ("discordJoinButton", "social"),
             ("statusPresets", "social"),
             ("assistantReasoningEffort", "assistant"),
+            ("customUserBadges", "badges"),
         ] {
             assert_eq!(
                 setting_group(&format!("config:vrcx_{name}")),

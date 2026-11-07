@@ -8,6 +8,7 @@ import {
 } from '@/components/data-table/LogFilterContextMenu';
 import { Location } from '@/components/Location';
 import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
+import { UserBadges } from '@/components/UserBadges';
 import { formatDateFilter, timeToText } from '@/lib/dateTime';
 import { useKnownUserFacts } from '@/lib/useKnownUser';
 import { cn } from '@/lib/utils';
@@ -134,8 +135,11 @@ function SessionFriendList({
                                 {facepileInitial(displayName)}
                             </AvatarFallback>
                         </Avatar>
-                        <span className="min-w-0 flex-1 truncate text-sm">
-                            {displayName}
+                        <span className="flex min-w-0 flex-1 items-center gap-x-1">
+                            <span className="max-w-full min-w-0 truncate text-sm">
+                                {displayName}
+                            </span>
+                            <UserBadges userId={friend.userId} />
                         </span>
                     </li>
                 );

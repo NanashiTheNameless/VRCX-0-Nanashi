@@ -28,6 +28,7 @@ import { useFriendsSidebarPreferences } from '@/components/sidebar/friends-sideb
 import { SidePanelSelfAccountMenu } from '@/components/sidebar/side-panel/SidePanelSelfAccountMenu';
 import { useFriendsSidebarDisplayPreferences } from '@/components/sidebar/useFriendsSidebarDisplayPreferences';
 import { useFriendsSidebarRuntimeSnapshot } from '@/components/sidebar/useFriendsSidebarRuntimeSnapshot';
+import { UserBadges } from '@/components/UserBadges';
 import { UserStatusAvatar } from '@/components/UserStatusAvatar';
 import { presenceLocationTag, presenceOf } from '@/domain/friends/presence';
 import { cn } from '@/lib/utils';
@@ -258,16 +259,17 @@ export function SidePanelSelfHeader() {
                                                 aria-label={t(
                                                     'side_panel.self_menu'
                                                 )}
-                                                className="focus-visible:ring-ring text-content-tertiary flex min-w-0 cursor-pointer items-center gap-0.5 rounded-md text-left outline-none focus-visible:ring-2"
+                                                className="focus-visible:ring-ring text-content-tertiary flex min-w-0 cursor-pointer items-center gap-x-0.5 rounded-md text-left outline-none focus-visible:ring-2"
                                             />
                                         }
                                     >
                                         <span
                                             style={nameStyle}
-                                            className="min-w-0 truncate text-sm leading-5 font-medium"
+                                            className="max-w-full min-w-0 truncate text-sm leading-5 font-medium"
                                         >
                                             {displayName}
                                         </span>
+                                        <UserBadges userId={currentUserId} />
                                         {gameIsolationEnabled ? (
                                             <span className="text-content-secondary shrink-0 rounded border px-1 text-[10px] leading-4">
                                                 {t('game_isolation.badge')}

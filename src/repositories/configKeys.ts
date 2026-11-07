@@ -347,6 +347,9 @@ export const ConfigKeys = defineConfigKeys({
     feedHiddenUsersHideNotifications: { type: 'bool', default: true },
     feedHiddenUsersHideAll: { type: 'bool', default: false },
 
+    // ── User badges ──────────────────────────────────
+    customUserBadges: { type: 'string', default: '[]' },
+
     // ── Onboarding ───────────────────────────────────
     onboarding_welcome_seen: { type: 'bool', default: false },
 

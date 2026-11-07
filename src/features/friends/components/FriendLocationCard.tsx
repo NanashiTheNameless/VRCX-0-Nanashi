@@ -17,6 +17,7 @@ import {
     useDecorationHover
 } from '@/components/ProfileDecorations';
 import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
+import { UserBadges } from '@/components/UserBadges';
 import { UserStatusDot } from '@/components/UserStatusDot';
 import {
     presenceDotClassName,
@@ -288,11 +289,14 @@ export function FriendLocationCard({
             <UserHoverCard userId={hoverUserId} seed={friend}>
                 <CardTitle
                     className={cn(
-                        'min-w-0 truncate text-[length:var(--friend-card-title-font-size)]',
+                        'flex min-w-0 items-center gap-x-1 text-[length:var(--friend-card-title-font-size)]',
                         isDense ? 'flex-1 leading-5' : 'w-full'
                     )}
                 >
-                    {friend?.displayName || ''}
+                    <span className="max-w-full min-w-0 truncate">
+                        {friend?.displayName || ''}
+                    </span>
+                    <UserBadges userId={hoverUserId} />
                 </CardTitle>
             </UserHoverCard>
             {instanceEpoch ? (

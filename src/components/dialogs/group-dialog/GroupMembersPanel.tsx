@@ -16,6 +16,7 @@ import {
     ToolbarSearch
 } from '@/components/layout/ToolbarControls';
 import { FadeInImage } from '@/components/media/FadeInImage';
+import { UserBadges } from '@/components/UserBadges';
 import type {
     GroupMemberRow,
     GroupProfileRecord,
@@ -185,8 +186,9 @@ function GroupMemberTile({
                 </div>
             )}
             <span className="min-w-0 flex-1 overflow-hidden">
-                <span className="flex min-w-0 items-center gap-1 leading-5 font-medium">
-                    <span className="truncate">{label}</span>
+                <span className="flex min-w-0 items-center gap-x-1 leading-5 font-medium">
+                    <span className="max-w-full min-w-0 truncate">{label}</span>
+                    <UserBadges userId={userId} />
                     {row.isRepresenting ? (
                         <Tooltip>
                             <TooltipTrigger

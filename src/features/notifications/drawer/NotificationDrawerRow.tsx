@@ -7,6 +7,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { UserBadges } from '@/components/UserBadges';
 import { useMinuteNowMs } from '@/lib/useMinuteNowMs';
 import { cn } from '@/lib/utils';
 import type { NotificationRow } from '@/repositories/notificationPersistenceRepository';
@@ -269,6 +270,13 @@ export function NotificationDrawerRow({
                                             {senderName}
                                         </button>
                                     ) : null}
+                                    <UserBadges
+                                        userId={
+                                            view.actor.kind === 'user'
+                                                ? view.actor.id
+                                                : ''
+                                        }
+                                    />
                                     {isBroadcast ? (
                                         <span className="text-muted-foreground shrink-0 text-xs">
                                             · {typeLabel}

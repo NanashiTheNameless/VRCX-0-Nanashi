@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { GroupCard } from '@/components/groups/GroupCard';
 import { EmptyState, LoadingState } from '@/components/layout/PageScaffold';
 import { FadeInImage } from '@/components/media/FadeInImage';
+import { UserBadges } from '@/components/UserBadges';
 import type { AvatarProfileRecord } from '@/domain/entities/avatar';
 import type { UserProfileRecord } from '@/domain/entities/user';
 import type { WorldProfileRecord } from '@/domain/entities/world';
@@ -205,9 +206,9 @@ function SearchEntityCard({
                 </AvatarFallback>
             </Avatar>
             <span className="flex min-w-0 flex-1 flex-col gap-2 overflow-hidden">
-                <span className="flex max-w-full min-w-0 items-center gap-1.5">
+                <span className="flex max-w-full min-w-0 items-center gap-x-1.5">
                     <span
-                        className="min-w-0 truncate text-sm font-semibold"
+                        className="max-w-full min-w-0 truncate text-sm font-semibold"
                         style={titleStyle}
                     >
                         {title || ''}
@@ -399,17 +400,20 @@ export function UserRow({
             FallbackIcon={UserIcon}
             title={user.displayName || ''}
             titleMeta={
-                user.$trustLevel ? (
-                    <span
-                        className={cn(
-                            'shrink-0 text-xs font-medium',
-                            user.$trustClass || 'text-muted-foreground'
-                        )}
-                        style={trustStyle}
-                    >
-                        {user.$trustLevel}
-                    </span>
-                ) : null
+                <>
+                    <UserBadges userId={user.id} />
+                    {user.$trustLevel ? (
+                        <span
+                            className={cn(
+                                'shrink-0 text-xs font-medium',
+                                user.$trustClass || 'text-muted-foreground'
+                            )}
+                            style={trustStyle}
+                        >
+                            {user.$trustLevel}
+                        </span>
+                    ) : null}
+                </>
             }
             meta={
                 languages.length ? (

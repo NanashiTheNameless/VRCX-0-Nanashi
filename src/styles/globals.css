@@ -1396,29 +1396,91 @@
 }
 
 /* no real reason, I wanted it so I added it. XD */
-@property --owner-angle {
+@property --dev-angle {
     syntax: '<angle>';
     initial-value: 0deg;
     inherits: false;
 }
 
 :root {
-    --owner-gold: #f5c453;
-    --owner-violet: #8b6cff;
-    --owner-cyan: #3fe1c8;
+    --dev-black: #0b0b0c;
+    --dev-red: #e5202e;
+    --dev-white: #ffffff;
+    --upstream-gray: #9aa0a6;
 }
 
-.owner-dialog::before {
+/* The maintainer's profile always uses this palette, whatever theme, mode or
+   community theme the viewer has picked. Declared on the dialog element itself
+   so inherited theme tokens cannot win. */
+.entity-dialog.fork-maintainer-dialog {
+    --background: #0b0b0c !important;
+    --foreground: #f5f5f5 !important;
+    --card: #141416 !important;
+    --card-foreground: #f5f5f5 !important;
+    --popover: #111113 !important;
+    --popover-foreground: #f5f5f5 !important;
+    --primary: #e5202e !important;
+    --primary-foreground: #ffffff !important;
+    --secondary: #1d1d20 !important;
+    --secondary-foreground: #f5f5f5 !important;
+    --muted: #1d1d20 !important;
+    --muted-foreground: #b4b4b8 !important;
+    --accent: rgba(229, 32, 46, 0.16) !important;
+    --accent-foreground: #ffffff !important;
+    --destructive: #ff4d57 !important;
+    --destructive-foreground: #ffffff !important;
+    --border: rgba(229, 32, 46, 0.28) !important;
+    --input: rgba(255, 255, 255, 0.2) !important;
+    --ring: #e5202e !important;
+    --surface-canvas: #0b0b0c !important;
+    --surface-shell: #0f0f11 !important;
+    --surface-panel: #0e0e10 !important;
+    --surface-raised: #18181b !important;
+    --surface-overlay: #111113 !important;
+    --surface-interactive: #18181b !important;
+    --surface-interactive-hover: #222226 !important;
+    --content-primary: #f5f5f5 !important;
+    --content-secondary: #b4b4b8 !important;
+    --content-tertiary: #8d8d93 !important;
+    --content-disabled: #5c5c62 !important;
+    --stroke-subtle: rgba(255, 255, 255, 0.08) !important;
+    --stroke-default: rgba(255, 255, 255, 0.12) !important;
+    --stroke-strong: rgba(229, 32, 46, 0.45) !important;
+    --border-subtle: rgba(255, 255, 255, 0.08) !important;
+    --border-hover: rgba(229, 32, 46, 0.45) !important;
+    --state-hover-surface: rgba(229, 32, 46, 0.12) !important;
+    --state-pressed-surface: rgba(229, 32, 46, 0.2) !important;
+    --control-quiet-foreground: #8d8d93 !important;
+    --control-quiet-hover-foreground: #ffffff !important;
+    --control-quiet-hover-surface: rgba(229, 32, 46, 0.12) !important;
+    --control-quiet-active-surface: rgba(229, 32, 46, 0.2) !important;
+    --entity-dialog-ground: #0b0b0c !important;
+    --vrcx-0-table-surface: #0b0b0c !important;
+    --vrcx-0-table-header-surface: #0b0b0c !important;
+    --vrcx-0-table-row-striped-surface: #111113 !important;
+    color-scheme: dark;
+    color: #f5f5f5;
+    background-color: #0b0b0c;
+}
+
+.fork-maintainer-dialog {
+    box-shadow:
+        0 0 30px -8px rgba(229, 32, 46, 0.55),
+        0 0 0 1px rgba(11, 11, 12, 0.9);
+}
+
+.fork-maintainer-dialog::before {
     position: absolute;
     inset: 0;
     padding: 2px;
     border-radius: inherit;
     background: conic-gradient(
-        from var(--owner-angle),
-        var(--owner-gold),
-        var(--owner-violet),
-        var(--owner-cyan),
-        var(--owner-gold)
+        from var(--dev-angle),
+        var(--dev-black),
+        var(--dev-red),
+        var(--dev-white),
+        var(--dev-red),
+        var(--dev-black)
     );
     content: '';
     pointer-events: none;
@@ -1430,12 +1492,12 @@
         linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
-    animation: owner-spin 10s linear infinite;
+    animation: dev-spin 8s linear infinite;
 }
 
-@keyframes owner-spin {
+@keyframes dev-spin {
     to {
-        --owner-angle: 360deg;
+        --dev-angle: 360deg;
     }
 }
 
@@ -1473,34 +1535,250 @@
     }
 }
 
-.owner-badge {
+.upstream-dev-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 20px;
+    flex: none;
+    padding: 0 7px 0 5px;
+    border: 1px solid #8d96a3;
+    border-radius: 999px;
+    color: #1f242b;
+    background: linear-gradient(
+        135deg,
+        #f4f6f9 0%,
+        #c3cad4 45%,
+        #9aa3af 55%,
+        #dfe4ea 100%
+    );
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.6) inset,
+        0 1px 2px rgba(0, 0, 0, 0.25);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.upstream-dev-badge svg {
+    width: 12px;
+    height: 12px;
+    color: #3b6ea8;
+    fill: rgba(120, 170, 230, 0.35);
+    stroke-width: 2.25;
+}
+
+.upstream-dev-badge--compact {
+    width: 20px;
+    justify-content: center;
+    padding: 0;
+}
+
+.upstream-dev-badge--compact svg {
+    width: 11px;
+    height: 11px;
+}
+
+.fork-dev-badge {
     position: relative;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 20px;
+    gap: 3px;
     height: 20px;
     flex: none;
-    border-radius: 50%;
-    color: var(--owner-gold);
-    background: radial-gradient(
-        circle at 50% 35%,
-        rgba(245, 196, 83, 0.22),
-        rgba(245, 196, 83, 0.05)
+    padding: 0 7px 0 5px;
+    border: 1px solid var(--dev-red);
+    border-radius: 999px;
+    color: var(--dev-white);
+    background: linear-gradient(
+        135deg,
+        var(--dev-black) 0%,
+        #1c1c1f 55%,
+        #3a0a0e 100%
     );
-    box-shadow: 0 0 10px -3px rgba(245, 196, 83, 0.6);
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.12) inset,
+        0 0 12px -2px rgba(229, 32, 46, 0.85);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
     overflow: hidden;
 }
 
-.owner-badge svg {
+.fork-dev-badge svg {
+    width: 13px;
+    height: 13px;
+    color: var(--dev-red);
+    stroke-width: 2.75;
+}
+
+.fork-dev-badge::after {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        100deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.45) 50%,
+        transparent 70%
+    );
+    content: '';
+    pointer-events: none;
+    transform: translateX(-120%);
+    animation: fork-dev-shimmer 3.2s ease-in-out infinite;
+}
+
+.fork-dev-badge--compact {
+    width: 20px;
+    justify-content: center;
+    padding: 0;
+}
+
+.fork-dev-badge--compact svg {
     width: 12px;
     height: 12px;
 }
 
+@keyframes fork-dev-shimmer {
+    60%,
+    100% {
+        transform: translateX(120%);
+    }
+}
+
 @media (prefers-reduced-motion: reduce) {
-    .owner-dialog::before {
+    .fork-maintainer-dialog::before {
         animation: none;
     }
+
+    .fork-dev-badge::after {
+        display: none;
+    }
+}
+
+.reduce-effects .fork-maintainer-dialog::before {
+    animation: none;
+}
+
+.reduce-effects .fork-dev-badge::after {
+    display: none;
+}
+
+.vrchat-staff-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 20px;
+    flex: none;
+    padding: 0 7px 0 5px;
+    border: 1px solid #0b5bd3;
+    border-radius: 6px;
+    color: #ffffff;
+    background: linear-gradient(180deg, #2f7cf6 0%, #1557c7 100%);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    text-transform: uppercase;
+}
+
+.vrchat-staff-badge svg {
+    width: 12px;
+    height: 12px;
+    stroke-width: 2.5;
+}
+
+.vrchat-staff-badge--compact {
+    width: 18px;
+    height: 18px;
+    justify-content: center;
+    padding: 0;
+    border-radius: 5px;
+}
+
+.vrchat-staff-badge--compact svg {
+    width: 11px;
+    height: 11px;
+}
+
+.custom-user-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    max-width: 10rem;
+    height: 18px;
+    flex: none;
+    padding: 0 6px 0 4px;
+    border-radius: 999px;
+    color: var(--custom-badge-fg);
+    background: var(--custom-badge-color);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+}
+
+.custom-user-badge svg {
+    width: 11px;
+    height: 11px;
+    flex: none;
+}
+
+.custom-user-badge--compact {
+    width: 16px;
+    height: 16px;
+    justify-content: center;
+    padding: 0;
+}
+
+.custom-user-badge--compact svg {
+    width: 10px;
+    height: 10px;
+}
+
+.custom-user-badge-folder {
+    display: inline-grid;
+    grid-template-columns: repeat(2, 7px);
+    grid-auto-rows: 7px;
+    align-content: center;
+    justify-content: center;
+    gap: 1px;
+    width: 18px;
+    height: 18px;
+    flex: none;
+    border: 1px solid var(--stroke-strong);
+    border-radius: 5px;
+    background: color-mix(in oklch, var(--foreground) 8%, transparent);
+}
+
+.custom-user-badge-folder__cell {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 2px;
+    color: var(--custom-badge-fg);
+    background: var(--custom-badge-color);
+}
+
+.custom-user-badge-folder__cell svg {
+    width: 5px;
+    height: 5px;
+    stroke-width: 3;
+}
+
+.custom-user-badge-folder--full {
+    grid-template-columns: repeat(2, 8px);
+    grid-auto-rows: 8px;
+    width: 21px;
+    height: 21px;
+    border-radius: 6px;
+}
+
+.custom-user-badge-folder--full .custom-user-badge-folder__cell svg {
+    width: 6px;
+    height: 6px;
 }
 
 .reduce-effects [data-slot='dialog-overlay'],

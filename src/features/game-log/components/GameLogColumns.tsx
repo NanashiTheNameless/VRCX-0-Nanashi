@@ -16,6 +16,7 @@ import {
     DATA_TABLE_PRIMARY_CELL_CLASS_NAME
 } from '@/components/data-table/DataTableView';
 import { TimestampText } from '@/components/data-table/TimestampText';
+import { UserBadges } from '@/components/UserBadges';
 import { openWorldDialog } from '@/services/dialogService';
 import { openExternalLink } from '@/services/entityMediaService';
 import { openGameLogUser } from '@/services/gameLogUserDialogService';
@@ -179,25 +180,31 @@ export function useGameLogColumns({
                                 isFavorite={Boolean(row.original?.isFavorite)}
                                 iconOnly
                             />
-                            <div className="min-w-0">
-                                {canOpenUser ? (
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        className="h-auto max-w-full min-w-0 p-0 text-left text-sm hover:bg-transparent"
-                                        onClick={() => {
-                                            openGameLogUser(row.original, t);
-                                        }}
-                                    >
-                                        <span className="truncate">
+                            <div className="flex min-w-0 items-center gap-x-1">
+                                <div className="max-w-full min-w-0">
+                                    {canOpenUser ? (
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            className="h-auto max-w-full min-w-0 p-0 text-left text-sm hover:bg-transparent"
+                                            onClick={() => {
+                                                openGameLogUser(
+                                                    row.original,
+                                                    t
+                                                );
+                                            }}
+                                        >
+                                            <span className="truncate">
+                                                {displayName}
+                                            </span>
+                                        </Button>
+                                    ) : (
+                                        <span className="block truncate">
                                             {displayName}
                                         </span>
-                                    </Button>
-                                ) : (
-                                    <span className="block truncate">
-                                        {displayName}
-                                    </span>
-                                )}
+                                    )}
+                                </div>
+                                <UserBadges userId={row.original?.userId} />
                             </div>
                         </div>
                     );

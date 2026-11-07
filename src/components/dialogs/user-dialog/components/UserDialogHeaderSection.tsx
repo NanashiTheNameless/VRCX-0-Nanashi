@@ -3,7 +3,6 @@ import {
     ClockIcon,
     CopyIcon,
     ExternalLinkIcon,
-    GemIcon,
     GlobeIcon,
     PencilIcon,
     StickyNoteIcon,
@@ -20,16 +19,13 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { UserBadges } from '@/components/UserBadges';
 import { UserStatusDot } from '@/components/UserStatusDot';
 import type { UserBadgeRecord } from '@/domain/entities/user';
 import { userFacingErrorMessage } from '@/lib/errorDisplay';
 import { cn } from '@/lib/utils';
 import type { RecentActionType } from '@/services/recentActionService';
 import { useResolvedThemeMode } from '@/services/themeService';
-import {
-    FORK_MAINTAINER_USER_ID,
-    OWNER_USER_ID
-} from '@/shared/constants/user';
 import { Button } from '@/ui/shadcn/button';
 import { CardTitle } from '@/ui/shadcn/card';
 import { Separator } from '@/ui/shadcn/separator';
@@ -127,7 +123,7 @@ function AutoFitDisplayName({ text }: { text: string }) {
     }, [text]);
 
     return (
-        <span ref={textRef} className="min-w-0 flex-1 truncate">
+        <span ref={textRef} className="min-w-0 truncate">
             {text}
         </span>
     );
@@ -305,7 +301,7 @@ function HeaderMetaRow({
     return (
         <div className="flex min-w-0 items-center gap-2">
             {icon ? <HeaderRowIcon icon={icon} /> : null}
-            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1 gap-y-0.5">
+            <div className="flex min-w-0 flex-1 items-center gap-x-1">
                 {children}
             </div>
         </div>
@@ -655,8 +651,6 @@ export function UserDialogHeaderSection({
         ? formatStatsDuration(estimatedOnlineDurationMs)
         : '';
     const hasProfileBadges = hasRenderableUserProfileBadges(profile);
-    const isOwner = profile.id === OWNER_USER_ID;
-    const isForkMaintainer = profile.id === FORK_MAINTAINER_USER_ID;
     const profileBackgroundStyle = appearanceVisibility.profileBackground
         ? resolveProfileBackgroundStyle(profile, resolvedThemeMode === 'dark')
         : undefined;
@@ -774,7 +768,7 @@ export function UserDialogHeaderSection({
                                             <Button
                                                 type="button"
                                                 variant="ghost"
-                                                className="h-auto min-w-0 flex-1 shrink justify-start overflow-hidden p-0 text-left text-lg leading-tight font-semibold shadow-none hover:bg-transparent hover:text-inherit hover:shadow-none dark:hover:bg-transparent"
+                                                className="h-auto min-w-0 shrink justify-start overflow-hidden p-0 text-left text-lg leading-tight font-semibold shadow-none hover:bg-transparent hover:text-inherit hover:shadow-none dark:hover:bg-transparent"
                                                 onClick={() =>
                                                     onCopyDisplayName(
                                                         copyableDisplayName
@@ -799,66 +793,11 @@ export function UserDialogHeaderSection({
                                     {profileTitle}
                                 </span>
                             )}
-                            {isOwner ? (
-                                <Tooltip>
-                                    <TooltipTrigger
-                                        render={
-                                            <span
-                                                className="owner-badge"
-                                                role="img"
-                                                aria-label={t(
-                                                    'dialog.user.badges.upstream_developer',
-                                                    {
-                                                        defaultValue:
-                                                            'Upstream VRCX-0 Developer'
-                                                    }
-                                                )}
-                                            >
-                                                <GemIcon aria-hidden="true" />
-                                            </span>
-                                        }
-                                    />
-                                    <TooltipContent>
-                                        {t(
-                                            'dialog.user.badges.upstream_developer',
-                                            {
-                                                defaultValue:
-                                                    'Upstream VRCX-0 Developer'
-                                            }
-                                        )}
-                                    </TooltipContent>
-                                </Tooltip>
-                            ) : null}
-                            {isForkMaintainer ? (
-                                <Tooltip>
-                                    <TooltipTrigger
-                                        render={
-                                            <span
-                                                className="owner-badge"
-                                                role="img"
-                                                aria-label={t(
-                                                    'dialog.user.badges.fork_developer',
-                                                    {
-                                                        defaultValue:
-                                                            'VRCX-0-Nanashi Developer'
-                                                    }
-                                                )}
-                                            >
-                                                <GemIcon aria-hidden="true" />
-                                            </span>
-                                        }
-                                    />
-                                    <TooltipContent>
-                                        {t(
-                                            'dialog.user.badges.fork_developer',
-                                            {
-                                                defaultValue:
-                                                    'VRCX-0-Nanashi Developer'
-                                            }
-                                        )}
-                                    </TooltipContent>
-                                </Tooltip>
-                            ) : null}
+                            <UserBadges
+                                userId={profile.id}
+                                size="full"
+                                collapsible={false}
+                            />
                         </CardTitle>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">

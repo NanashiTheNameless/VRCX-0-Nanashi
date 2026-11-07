@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Location } from '@/components/Location';
 import { FadeInImage } from '@/components/media/FadeInImage';
+import { UserBadges } from '@/components/UserBadges';
 import {
     formatClock,
     formatDateFilter,
@@ -196,7 +197,7 @@ export function NotificationRow({
             </span>
             {actorButton}
             <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <div className="flex min-w-0 items-center gap-2">
+                <div className="flex min-w-0 items-center gap-x-2">
                     {actorName ? (
                         <button
                             type="button"
@@ -211,6 +212,9 @@ export function NotificationRow({
                             {actorName}
                         </button>
                     ) : null}
+                    <UserBadges
+                        userId={view.actor.kind === 'user' ? view.actor.id : ''}
+                    />
                     <span
                         className={cn(
                             'min-w-0 truncate',

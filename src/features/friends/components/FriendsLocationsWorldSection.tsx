@@ -17,6 +17,7 @@ import {
 } from '@/components/ProfileDecorations';
 import { resolveSidebarStatusDotClassName } from '@/components/sidebar/friends-sidebar/friendsSidebarModel';
 import { UserHoverCard } from '@/components/user-hover-card/UserHoverCard';
+import { UserBadges } from '@/components/UserBadges';
 import { UserStatusDot } from '@/components/UserStatusDot';
 import { presenceTravelingTag } from '@/domain/friends/presence';
 import type { FriendRecord } from '@/domain/friends/types';
@@ -123,13 +124,14 @@ function FriendChip({
                     />
                 </Avatar>
                 <span className="flex min-w-0 flex-col items-start">
-                    <span className="flex max-w-full min-w-0 items-center gap-1 leading-4">
+                    <span className="flex max-w-full min-w-0 items-center gap-x-1 leading-4">
                         {isTraveling ? (
                             <Spinner className="size-3 shrink-0" />
                         ) : null}
-                        <span className="min-w-0 truncate">
+                        <span className="max-w-full min-w-0 truncate">
                             {friend.displayName}
                         </span>
+                        <UserBadges userId={friend.id} />
                         {isFavorite ? (
                             <AffinityBadge isFavorite iconOnly />
                         ) : null}

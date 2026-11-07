@@ -449,6 +449,20 @@ defineCard(
 
 defineCard(
     'interface',
+    'user-badges',
+    'view.settings.appearance.user_badges.header',
+    [
+        {
+            key: 'list',
+            labelKey: 'view.settings.appearance.user_badges.list',
+            descriptionKey:
+                'view.settings.appearance.user_badges.list_description'
+        }
+    ]
+);
+
+defineCard(
+    'interface',
     'user-dialog',
     'view.settings.appearance.user_dialog.header',
     [
