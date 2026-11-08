@@ -1369,7 +1369,9 @@
     },
     "support_vrcx": {
         "title": "Support VRCX-0-Nanashi",
-        "description": "Support future VRCX-0-Nanashi development through GitHub Sponsors or Ko-fi."
+        "description": "Support future VRCX-0-Nanashi development through GitHub Sponsors or Ko-fi.",
+        "badge_note": "As a thank-you, supporters can get a Donator or Sponsor badge that everyone using VRCX-0-Nanashi sees next to their name.",
+        "badge_request": "Request a badge"
     },
     "view": {
         "login": {

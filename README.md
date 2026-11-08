@@ -53,6 +53,11 @@ everyone who worked on both.
 
 ## Support this fork
 
+As a thank-you, supporters can get a Donator or Sponsor badge that everyone using
+VRCX-0-Nanashi sees next to their name. After supporting, open a
+[badge request](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/issues/new?template=badge_request.yml)
+with your VRChat user ID.
+
 - [GitHub Sponsors](https://github.com/sponsors/NanashiTheNameless)
 - [Buy Me a Coffee](https://buymeacoffee.com/NamelessNanashi)
 - [Ko-fi](https://ko-fi.com/NanashiTheNameless)

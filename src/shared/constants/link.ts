@@ -10,6 +10,8 @@ const links: Record<string, string> = {
     throne: 'https://throne.com/NamelessNanashi',
     upstreamGithub: 'https://github.com/Map1en/VRCX-0',
     issues: 'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/issues',
+    badgeRequest:
+        'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/issues/new?template=badge_request.yml',
     releases: 'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases',
     contributorsApi:
         'https://api.github.com/repos/NanashiTheNameless/VRCX-0-Nanashi/contributors?per_page=100',

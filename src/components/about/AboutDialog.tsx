@@ -294,6 +294,18 @@ export function AboutVrcxDialog({
                             )
                         )}
                     </div>
+                    <p className="text-muted-foreground max-w-sm text-center text-xs">
+                        {t('support_vrcx.badge_note')}{' '}
+                        <button
+                            type="button"
+                            className="text-foreground underline underline-offset-2"
+                            onClick={() => {
+                                openExternalLink(links.badgeRequest);
+                            }}
+                        >
+                            {t('support_vrcx.badge_request')}
+                        </button>
+                    </p>
                 </div>
 
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t pt-4">
