@@ -299,7 +299,7 @@ pub fn parse_catalog(
             description: clip(&badge.description, TEXT_MAX),
             icon: clip(&badge.icon, 64),
             style: clip(&badge.style, 32),
-            animation: clip(&badge.animation, 32),
+            animation: clip(&badge.animation, 96),
             color_from,
             color_to,
             color_border,
@@ -351,7 +351,7 @@ pub fn parse_catalog(
             description: clip(&award.description, TEXT_MAX),
             icon: clip(&award.icon, 64),
             style: clip(&award.style, 32),
-            animation: clip(&award.animation, 32),
+            animation: clip(&award.animation, 96),
             color_from: color(
                 &award.color_from,
                 &format!("{where_}: colorFrom"),

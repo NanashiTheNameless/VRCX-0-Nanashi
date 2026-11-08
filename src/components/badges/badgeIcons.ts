@@ -53,5 +53,12 @@ export function useBadgeIconCatalog(enabled = true): BadgeIconCatalog | null {
 }
 
 export function badgeIconLabel(name: string): string {
-    return name.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+    // Lucide Lab icons are stored as "Lab" plus their name (see
+    // badgeIconCatalog); no Lucide icon name starts that way.
+    const lab = /^Lab(?=[A-Z])/.test(name);
+    const label = (lab ? name.slice(3) : name).replace(
+        /([a-z0-9])([A-Z])/g,
+        '$1 $2'
+    );
+    return lab ? `${label} (Lab)` : label;
 }

@@ -164,10 +164,24 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   as the app loads them (`src/state/userGroupMembershipStore.ts`), never from
   extra requests, and outranks stored group member lists, which are often
   private or incomplete. Their icons
-  (`CodeXml`, `Diamond`, `ShieldCheck`, plus every `AWARD_ICONS` entry, all in
-  `RESERVED_BADGE_ICONS`) stay reserved
+  (`CodeXml`, `Diamond`, plus every `AWARD_ICONS` entry, all in
+  `RESERVED_BADGE_ICONS`, plus their families as checked in
+  `isReservedBadgeIcon`: any icon with Code, Braces, Brackets or Shield in its
+  name except QR codes, and any icon starting with an award icon's name,
+  Diamond, Flask, TestTube or Sparkle, Lucide Lab ones included, plus any
+  icon the current global list uses and its variants) stay reserved
   so custom badges cannot imitate them; keep the developer badge flashier than
-  the upstream one. Custom badges are local, visible only to the user, stored
+  the upstream one. The developer badge's scan and glitch keyframes are
+  generated from `scripts/devBadgeEffects.ts` (`npm run badges:dev-fx`, then
+  `npm run format`): never hand-edit the block between its GENERATED markers in
+  `src/styles/globals.css`, and keep at least a quarter second with no glitch
+  on either side of each scan (the script and its test enforce both). Shape
+  shows who sees a badge: custom badges, which only the user sees, are round;
+  badges everyone sees (developer, staff, global) are rounded squares; the
+  collapsed custom badge folder stays a rounded square. Custom badges may use
+  any Lucide or Lucide Lab (`@lucide/lab`) icon; Lab icons are stored as
+  `Lab` plus their name (`LabBurger`) so a saved badge never switches icon if
+  Lucide later adds one with the same name. Custom badges are local, visible only to the user, stored
   in the `customUserBadges` config key and synced under the `badges` Settings
   Sync category; they stack after the built-in ones, including on the
   developer accounts. A user can have any number; when they would truncate the
@@ -184,7 +198,9 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   `src/domain/badges/globalBadges.ts` (icons, styles, animations, validator),
   `crates/integrations/src/global_badges.rs` (parse and signature check),
   `crates/runtime-host-desktop/src/global_badges.rs` (embedded copy, cache,
-  6-hour refresh), `GlobalBadgeChip` in `src/components/UserBadges.tsx`,
+  6-hour refresh and the update check), `src/state/globalBadgeStore.ts` (the
+  screen rereads the adopted list every minute; a local call, no network),
+  `GlobalBadgeChip` in `src/components/UserBadges.tsx`,
   `.github/workflows/data-assets.yml`. Badges the maintainer gives by hand to
   people who helped the fork, seen by every user. Every release embeds the
   file; the app also downloads `global-badges.jsonc` and `.sig` from the
@@ -198,9 +214,15 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   Dates are epoch seconds. The file is public, so a VRChat user id goes in
   only with that person's consent. Animations touch only transform and
   opacity, list badges animate on hover only, and reduced motion stops them.
-  Edit with `npm run badges:editor` (`tools/badge-editor/`, a local Vite page
-  on 127.0.0.1:9010 that saves the file keeping its comments), check with
-  `npm run badges:validate`. The editor's live profile preview runs
+  A badge may use any Lucide or Lucide Lab icon; `npm run badges:validate`
+  checks the name against the app's icon set. A badge's `"animation"` may combine effects separated by spaces
+  (`"embers glow"`); each background effect draws on its own layer and each
+  icon effect wraps the icon, so they never fight over one element. Apps from
+  before combined effects show the default (`shimmer`) for a list, so the
+  field stays a string. Edit with `npm run badges:editor` (`tools/badge-editor/`, a local Vite page
+  on 127.0.0.1:9010 that saves the file keeping its comments; its Gallery view,
+  also at `?view=gallery`, shows every badge and effect at both sizes), check
+  with `npm run badges:validate`. The editor's live profile preview runs
   `crates/badge-editor-profile`, a developer-only binary that is not a default
   workspace member and is never shipped: it reads the installed app's saved
   VRChat session read-only, looks up one profile and prints it, and must never
@@ -428,7 +450,21 @@ Many crates use nested module folders where each file is a sibling
 - TypeScript: run `npm run format` before committing; oxfmt is opinionated.
 - Commits follow Conventional Commits, e.g.
   `fix(overlay): restart the wrist menu timer on every press`. Many are scoped
-  by crate or subsystem.
+  by crate or subsystem. The format:
+    - Subject: `type(scope): summary`, imperative and lower case, no full stop,
+      about 72 characters at most. Types in use: `feat`, `fix`, `docs`, `test`,
+      `ci`, `chore`, `refactor`. Leave the scope out only when no single
+      subsystem fits.
+    - Body, after a blank line, only when the subject does not say enough:
+      explain what changed and why in plain sentences wrapped at 72 columns. A
+      commit that spans several areas groups its points under short headings
+      (`Global badges`, `Tooling`, `Dependencies`) as `- ` bullets.
+    - Name dependency changes with their versions (`Update rmcp to 3.9.0`), and
+      say when a commit changes what users see, such as a new
+      `data/global-badges.jsonc` revision.
+    - Plain ASCII, like the rest of the repository. No `Co-Authored-By`
+      trailers or other AI or tool attribution, and no "Generated with" lines
+      in pull request descriptions.
 - Comments should explain why, not what. Do not add comments that were not asked
   for.
 

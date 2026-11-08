@@ -17,20 +17,36 @@
 //   colour styles and "animation" one of the animations; see
 //   src/domain/badges/globalBadges.ts (the editor lists them).
 {
-    "revision": 3,
+    "revision": 4,
     "badges": [
+        {
+            "id": "early-supporter",
+            "label": "Early Supporter",
+            "description": "Supported VRCX-0-Nanashi from early on.",
+            "icon": "Sprout",
+            "style": "gold",
+            "animation": "sparkle shimmer glow"
+        },
         {
             "id": "sponsor",
             "label": "Sponsor",
-            "description": "Supports VRCX-0-Nanashi with regular donations",
+            "description": "Supports VRCX-0-Nanashi with regular donations.",
             "icon": "Gem",
             "style": "amethyst",
-            "animation": "glow"
+            "animation": "flip sparkle"
+        },
+        {
+            "id": "donator",
+            "label": "Donator",
+            "description": "Supported VRCX-0-Nanashi with a donation.",
+            "icon": "HandHeart",
+            "style": "ember",
+            "animation": "flow wiggle"
         },
         {
             "id": "contributor",
             "label": "Contributor",
-            "description": "Made a significant contribution to VRCX-0-Nanashi",
+            "description": "Made a significant contribution to VRCX-0-Nanashi.",
             "icon": "GitPullRequest",
             "style": "emerald",
             "animation": "flow"
@@ -38,39 +54,23 @@
         {
             "id": "security-reporter",
             "label": "Security Reporter",
-            "description": "Privately reported multible valid security problems",
+            "description": "Privately reported multiple valid security problems.",
             "icon": "ShieldPlus",
             "style": "midnight",
             "animation": "glow"
         },
         {
-            "id": "donator",
-            "label": "Donator",
-            "description": "Supported VRCX-0-Nanashi with a donation",
-            "icon": "HandHeart",
-            "style": "ember",
-            "animation": "shimmer"
-        },
-        {
             "id": "code-reviewer",
             "label": "Code Reviewer",
-            "description": "Reviewed pull requests or tested branches and reported back",
+            "description": "Reviewed pull requests or tested branches and reported back.",
             "icon": "GitMerge",
             "style": "teal",
             "animation": "flow"
         },
         {
-            "id": "early-supporter",
-            "label": "Early Supporter",
-            "description": "Supported VRCX-0-Nanashi from early on",
-            "icon": "Sprout",
-            "style": "gold",
-            "animation": "sparkle"
-        },
-        {
             "id": "bug-hunter",
             "label": "Bug Hunter",
-            "description": "Found and reported important bugs",
+            "description": "Found and reported important bugs.",
             "icon": "Bug",
             "style": "crimson",
             "animation": "wiggle"
@@ -78,7 +78,7 @@
         {
             "id": "tool-maker",
             "label": "Tool Maker",
-            "description": "Built a script, integration or tool that works with VRCX-0-Nanashi",
+            "description": "Built a script, integration or tool that works with VRCX-0-Nanashi.",
             "icon": "Wrench",
             "style": "midnight",
             "animation": "none"
@@ -86,7 +86,7 @@
         {
             "id": "theme-artist",
             "label": "Theme Artist",
-            "description": "Made a theme or artwork for VRCX-0-Nanashi",
+            "description": "Made a theme or artwork for VRCX-0-Nanashi.",
             "icon": "Palette",
             "style": "amethyst",
             "animation": "flow"
@@ -94,7 +94,7 @@
         {
             "id": "docs-writer",
             "label": "Docs Writer",
-            "description": "Wrote or improved the guides",
+            "description": "Wrote or improved the guides.",
             "icon": "BookOpen",
             "style": "emerald",
             "animation": "none"
@@ -102,7 +102,7 @@
         {
             "id": "accessibility-reviewer",
             "label": "Accessibility Reviewer",
-            "description": "Tested accessibility and reported what needed fixing",
+            "description": "Tested accessibility and reported what needed fixing.",
             "icon": "Accessibility",
             "style": "sapphire",
             "animation": "none"
@@ -110,34 +110,34 @@
         {
             "id": "beta-tester",
             "label": "Beta Tester",
-            "description": "Tested nightly builds and reported back",
+            "description": "Tested nightly builds and reported back.",
             "icon": "FlaskConical",
             "style": "sapphire",
             "animation": "shimmer"
         },
         {
-            "id": "idea-contributor",
-            "label": "Idea Contributor",
-            "description": "Suggested a feature that shipped",
-            "icon": "Lightbulb",
-            "style": "gold",
-            "animation": "sparkle"
-        },
-        {
             "id": "promoter",
             "label": "Promoter",
-            "description": "Made a video, guide or post that brought people to VRCX-0-Nanashi",
+            "description": "Made a video, guide or post that brought people to VRCX-0-Nanashi.",
             "icon": "Megaphone",
             "style": "rose",
             "animation": "wiggle"
         },
         {
+            "id": "idea-contributor",
+            "label": "Idea Contributor",
+            "description": "Suggested a feature that shipped.",
+            "icon": "Lightbulb",
+            "style": "teal",
+            "animation": "sparkle"
+        },
+        {
             "id": "special-thanks",
             "label": "Special Thanks",
-            "description": "Helped VRCX-0-Nanashi in a way no other badge covers",
+            "description": "Helped VRCX-0-Nanashi in a way no other badge covers.",
             "icon": "Sparkles",
-            "style": "gold",
-            "animation": "sparkle"
+            "style": "rose",
+            "animation": "glow"
         }
     ],
     "awards": [

@@ -205,6 +205,57 @@ describe('UserBadges', () => {
         }
     });
 
+    it('gives every combined effect its own layer or icon wrapper', () => {
+        const awardee = 'usr_88888888-8888-8888-8888-888888888888';
+        useGlobalBadgeStore.setState({
+            catalog: normalizeGlobalBadgeCatalog({
+                revision: 1,
+                source: 'embedded',
+                badges: [
+                    {
+                        id: 'donator',
+                        label: 'Donator',
+                        description: 'Supported the fork',
+                        icon: 'HandHeart',
+                        style: 'ember',
+                        animation: 'flow embers wiggle flip'
+                    }
+                ],
+                awards: [{ userId: awardee, badge: 'donator' }]
+            })
+        });
+        try {
+            render(<UserBadges userId={awardee} size="full" />);
+            const chip = screen.getByRole('img', { name: 'Donator' });
+            expect(
+                Array.from(
+                    chip.querySelectorAll('.global-badge-fx'),
+                    (layer) => layer.className
+                )
+            ).toEqual([
+                'global-badge-fx global-badge-fx--flow global-badge-fx--n1',
+                'global-badge-fx global-badge-fx--embers global-badge-fx--n1',
+                'global-badge-fx global-badge-fx--embers global-badge-fx--n2',
+                'global-badge-fx global-badge-fx--embers global-badge-fx--n3'
+            ]);
+            // Icon wrappers nest in list order, the icon innermost.
+            const wrappers = Array.from(
+                chip.querySelectorAll('.global-badge-icon-fx'),
+                (wrapper) => wrapper.className.split('--')[1]
+            );
+            expect(wrappers).toEqual(['flicker', 'wiggle', 'flip']);
+            expect(
+                chip.querySelector(
+                    '.global-badge-icon-fx--flip > :not(.global-badge-icon-fx)'
+                )
+            ).toBeTruthy();
+            // Embers stay inside the badge; only glow draws past its edge.
+            expect(chip.classList.contains('global-badge--spill')).toBe(false);
+        } finally {
+            useGlobalBadgeStore.setState({ catalog: null });
+        }
+    });
+
     it('shows the global badge tooltip when an award has no reason', async () => {
         const awardee = 'usr_77777777-7777-7777-7777-777777777777';
         useGlobalBadgeStore.setState({

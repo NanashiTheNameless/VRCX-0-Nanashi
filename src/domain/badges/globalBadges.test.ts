@@ -8,7 +8,8 @@ import {
     AWARD_ANIMATIONS,
     AWARD_ICONS,
     AWARD_STYLES,
-    awardAnimation,
+    awardAnimations,
+    DEFAULT_AWARD_ANIMATION,
     awardIcon,
     awardStyle,
     normalizeHexColor,
@@ -57,12 +58,98 @@ describe('award appearance', () => {
         }
     });
 
+    it('holds back the icons the current global list uses, with variants', () => {
+        const globalIcons = new Set(['Cat', 'LabGemRing']);
+        expect(isReservedBadgeIcon('Cat', globalIcons)).toBe(true);
+        expect(isReservedBadgeIcon('CatOff', globalIcons)).toBe(true);
+        expect(isReservedBadgeIcon('LabCat', globalIcons)).toBe(true);
+        expect(isReservedBadgeIcon('Category', globalIcons)).toBe(false);
+        expect(isReservedBadgeIcon('Cat')).toBe(false);
+    });
+
+    it('keeps the code, shield and award icon families', () => {
+        for (const icon of [
+            'Code',
+            'FileCode',
+            'SquareCode',
+            'Braces',
+            'DiamondPlus',
+            'BugOff',
+            'Sparkles',
+            'SparkleSquare',
+            'ZapOff',
+            'GitPullRequestDraft',
+            'FlaskRound',
+            'BadgeCheck',
+            'LabGemRing',
+            'LabCopyCode'
+        ]) {
+            expect(isReservedBadgeIcon(icon), icon).toBe(true);
+        }
+        for (const icon of [
+            'QrCode',
+            'ScanQrCode',
+            'WandSparkles',
+            'DatabaseZap',
+            'Codesandbox',
+            'Star',
+            'Heart',
+            'Music'
+        ]) {
+            expect(isReservedBadgeIcon(icon), icon).toBe(false);
+        }
+    });
+
+    it('keeps every shield icon for the VRChat Staff badge', () => {
+        for (const icon of [
+            'Shield',
+            'ShieldUser',
+            'ShieldHalf',
+            'UserShield'
+        ]) {
+            expect(isReservedBadgeIcon(icon), icon).toBe(true);
+            expect(normalizeBadgeIcon(icon), icon).not.toBe(icon);
+        }
+        expect(isReservedBadgeIcon('Heart')).toBe(false);
+    });
+
     it('falls back to defaults for unknown names', () => {
-        expect(awardIcon('Skull')).toBe('Award');
+        // Any well-formed icon name is allowed; only malformed ones fall back.
+        expect(awardIcon('Skull')).toBe('Skull');
+        expect(awardIcon('LabGemRing')).toBe('LabGemRing');
+        expect(awardIcon('not an icon')).toBe('Award');
         expect(awardStyle('neon')).toBe('gold');
-        expect(awardAnimation('spin')).toBe('shimmer');
+        expect(awardAnimations('spin')).toEqual(['shimmer']);
         expect(awardStyle(AWARD_STYLES[3])).toBe(AWARD_STYLES[3]);
-        expect(awardAnimation(AWARD_ANIMATIONS[0])).toBe('none');
+        expect(awardAnimations(AWARD_ANIMATIONS[0])).toEqual([]);
+    });
+});
+
+describe('awardAnimations', () => {
+    it('reads one effect, several, or none', () => {
+        expect(awardAnimations('glow')).toEqual(['glow']);
+        expect(awardAnimations(' embers  glow ')).toEqual(['embers', 'glow']);
+        expect(awardAnimations('flow flow sparkle')).toEqual([
+            'flow',
+            'sparkle'
+        ]);
+        expect(awardAnimations('none')).toEqual([]);
+    });
+
+    it('skips unknown names and falls back to the default when none are left', () => {
+        expect(awardAnimations('spin flip')).toEqual(['flip']);
+        expect(awardAnimations('spin')).toEqual(['shimmer']);
+        expect(awardAnimations('')).toEqual(['shimmer']);
+    });
+
+    it('matches what apps from before combined effects show for a list', () => {
+        // They looked the whole value up as one effect name and fell back to
+        // the default, so a list shows as shimmer there.
+        const olderApp = (value: string) =>
+            AWARD_ANIMATIONS.find((animation) => animation === value) ??
+            DEFAULT_AWARD_ANIMATION;
+        expect(olderApp('embers glow')).toBe('shimmer');
+        expect(DEFAULT_AWARD_ANIMATION).toBe('shimmer');
     });
 });
 
@@ -187,6 +274,11 @@ describe('validateGlobalBadgeFile', () => {
                     },
                     {
                         userId: USER,
+                        badge: 'donator',
+                        animation: 'embers glow flip'
+                    },
+                    {
+                        userId: USER,
                         badge: 'custom',
                         label: 'First Tester',
                         description: 'Tested build one',
@@ -198,13 +290,48 @@ describe('validateGlobalBadgeFile', () => {
         ).toEqual([]);
     });
 
+    it('rejects broken effect lists', () => {
+        for (const animation of ['none glow', 'glow glow', 'glow spin', '']) {
+            expect(
+                validateGlobalBadgeFile({
+                    revision: 1,
+                    badges: [{ ...badge, animation }],
+                    awards: []
+                }),
+                animation
+            ).toEqual([expect.stringContaining('"animation" must be one of')]);
+        }
+    });
+
+    it('accepts any real icon and rejects names the icon set lacks', () => {
+        const iconNames = new Set(['Cat', 'HandHeart', 'LabGemRing']);
+        const withIcon = (icon: string) =>
+            validateGlobalBadgeFile(
+                { revision: 1, badges: [{ ...badge, icon }], awards: [] },
+                { iconNames }
+            );
+        expect(withIcon('Cat')).toEqual([]);
+        expect(withIcon('LabGemRing')).toEqual([]);
+        expect(withIcon('Sproutt')).toEqual([
+            expect.stringContaining('"icon" must be a Lucide icon name')
+        ]);
+        // Without the icon list only the name's shape is checked.
+        expect(
+            validateGlobalBadgeFile({
+                revision: 1,
+                badges: [{ ...badge, icon: 'Sproutt' }],
+                awards: []
+            })
+        ).toEqual([]);
+    });
+
     it('reports every kind of mistake', () => {
         const problems = validateGlobalBadgeFile({
             revision: 0,
             badges: [
                 {
                     ...badge,
-                    icon: 'Star',
+                    icon: 'not-an-icon',
                     style: 'neon',
                     animation: 'spin',
                     colorFrom: 'orange',

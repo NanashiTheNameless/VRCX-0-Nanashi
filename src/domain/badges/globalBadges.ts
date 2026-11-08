@@ -32,9 +32,10 @@ export type GlobalBadgeCatalog = {
     source: 'embedded' | 'cached' | 'downloaded';
 };
 
-// Icons only global badges may use (custom badges cannot pick them), so an
-// award can never be imitated. Keep this list in sync with the editor, which
-// imports it.
+// A global badge may use any Lucide or Lucide Lab icon. These are the award
+// icons custom badges can never pick (with their variants, see
+// isReservedBadgeIcon), whatever the downloaded list uses; icons the current
+// list uses are held back from custom badges as well.
 export const AWARD_ICONS = Object.freeze([
     'HandHeart',
     'HeartHandshake',
@@ -89,7 +90,9 @@ export const AWARD_ANIMATIONS = Object.freeze([
     'flow',
     'sparkle',
     'wiggle',
-    'glow'
+    'glow',
+    'embers',
+    'flip'
 ] as const);
 
 export type AwardStyle = (typeof AWARD_STYLES)[number];
@@ -148,21 +151,41 @@ export const DEFAULT_AWARD_ICON = 'Award';
 export const DEFAULT_AWARD_STYLE: AwardStyle = 'gold';
 export const DEFAULT_AWARD_ANIMATION: AwardAnimation = 'shimmer';
 
+// Icon names are capitalised words (HandHeart, LabGemRing).
+export const BADGE_ICON_NAME = /^[A-Z][A-Za-z0-9]{0,63}$/;
+
+// Any well-formed icon name; one the icon set does not have draws the
+// default award icon (BadgeIcon falls back).
 export function awardIcon(value: string): string {
-    return (AWARD_ICONS as readonly string[]).includes(value)
-        ? value
-        : DEFAULT_AWARD_ICON;
+    return BADGE_ICON_NAME.test(value) ? value : DEFAULT_AWARD_ICON;
 }
 
 export function awardStyle(value: string): AwardStyle {
     return AWARD_STYLES.find((style) => style === value) ?? DEFAULT_AWARD_STYLE;
 }
 
-export function awardAnimation(value: string): AwardAnimation {
-    return (
-        AWARD_ANIMATIONS.find((animation) => animation === value) ??
-        DEFAULT_AWARD_ANIMATION
-    );
+/**
+ * The effects a badge combines. "animation" holds one effect name or several
+ * separated by spaces; "none" means no effect. Unknown names are skipped, and
+ * if nothing usable is left the badge falls back to the default, the same as
+ * apps from before effects could be combined (they show the default for any
+ * list).
+ */
+export function awardAnimations(value: string): AwardAnimation[] {
+    const names = value.split(/\s+/).filter(Boolean);
+    if (names.length === 1 && names[0] === 'none') {
+        return [];
+    }
+    const effects: AwardAnimation[] = [];
+    for (const name of names) {
+        const effect = AWARD_ANIMATIONS.find(
+            (animation) => animation === name && animation !== 'none'
+        );
+        if (effect && !effects.includes(effect)) {
+            effects.push(effect);
+        }
+    }
+    return effects.length > 0 ? effects : [DEFAULT_AWARD_ANIMATION];
 }
 
 /** The badge as this person sees it: their award's overrides win. */
@@ -329,22 +352,40 @@ function record(value: unknown): Record<string, unknown> | null {
         : null;
 }
 
+function isValidAnimationList(value: unknown): boolean {
+    if (typeof value !== 'string') {
+        return false;
+    }
+    const names = value.split(/\s+/).filter(Boolean);
+    if (names.length === 0 || new Set(names).size !== names.length) {
+        return false;
+    }
+    if (names.includes('none')) {
+        return names.length === 1;
+    }
+    return names.every((name) =>
+        (AWARD_ANIMATIONS as readonly string[]).includes(name)
+    );
+}
+
 // Checks icon, style, animation and colours. Awards may leave any of them out
 // (they inherit from the badge type); badge types must name the first three.
 function checkAppearance(
     entry: Record<string, unknown>,
     where: string,
     optional: boolean,
-    problems: string[]
+    problems: string[],
+    iconNames: ReadonlySet<string> | undefined
 ) {
     const present = (key: string) =>
         entry[key] !== undefined && entry[key] !== '';
+    const icon = String(entry.icon);
     if (
         (!optional || present('icon')) &&
-        !(AWARD_ICONS as readonly string[]).includes(String(entry.icon))
+        (!BADGE_ICON_NAME.test(icon) || (iconNames && !iconNames.has(icon)))
     ) {
         problems.push(
-            `${where}: "icon" must be one of the award icons (${AWARD_ICONS.join(', ')}).`
+            `${where}: "icon" must be a Lucide icon name like HandHeart (https://lucide.dev/icons/), or a Lucide Lab icon with "Lab" in front, like LabGemRing.`
         );
     }
     if (
@@ -357,12 +398,10 @@ function checkAppearance(
     }
     if (
         (!optional || present('animation')) &&
-        !(AWARD_ANIMATIONS as readonly string[]).includes(
-            String(entry.animation)
-        )
+        !isValidAnimationList(entry.animation)
     ) {
         problems.push(
-            `${where}: "animation" must be one of ${AWARD_ANIMATIONS.join(', ')}.`
+            `${where}: "animation" must be one of ${AWARD_ANIMATIONS.join(', ')}, or several of them separated by spaces ("none" only on its own).`
         );
     }
     for (const field of AWARD_COLOR_FIELDS) {
@@ -386,7 +425,12 @@ function checkAppearance(
  * and the editor need: everything the app would skip, plus unknown fields
  * and names the app does not know (it would fall back to defaults).
  */
-export function validateGlobalBadgeFile(data: unknown): string[] {
+// Pass iconNames (every icon the app can draw) to also reject names that are
+// well formed but not real icons.
+export function validateGlobalBadgeFile(
+    data: unknown,
+    { iconNames }: { iconNames?: ReadonlySet<string> } = {}
+): string[] {
     const problems: string[] = [];
     const root = record(data);
     if (!root) {
@@ -431,7 +475,7 @@ export function validateGlobalBadgeFile(data: unknown): string[] {
         if (!label || label.length > 32) {
             problems.push(`${where}: "label" must be 1 to 32 characters.`);
         }
-        checkAppearance(badge, where, false, problems);
+        checkAppearance(badge, where, false, problems, iconNames);
     });
     const awards = Array.isArray(root.awards) ? root.awards : null;
     if (!awards) {
@@ -461,7 +505,7 @@ export function validateGlobalBadgeFile(data: unknown): string[] {
                 `${where}: "badge" must be the id of a badge in "badges", or "${CUSTOM_AWARD_BADGE}".`
             );
         }
-        checkAppearance(award, where, true, problems);
+        checkAppearance(award, where, true, problems, iconNames);
         const since =
             award.since === undefined || award.since === null
                 ? undefined

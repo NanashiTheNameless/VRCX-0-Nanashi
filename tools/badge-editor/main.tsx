@@ -13,8 +13,11 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import { AppProviders } from '@/app/providers/AppProviders';
-import { BadgeIcon } from '@/components/badges/BadgeIcon';
-import { loadBadgeIcons } from '@/components/badges/badgeIcons';
+import { BadgeIconPicker } from '@/components/badges/BadgeIconPicker';
+import {
+    loadBadgeIcons,
+    useBadgeIconCatalog
+} from '@/components/badges/badgeIcons';
 import { UserDialogHeaderSection } from '@/components/dialogs/user-dialog/components/UserDialogHeaderSection';
 import type {
     UserHeaderCommands,
@@ -28,7 +31,7 @@ import {
 import { UserDetailContent } from '@/components/UserDetailTile';
 import {
     AWARD_ANIMATIONS,
-    AWARD_ICONS,
+    DEFAULT_AWARD_ICON,
     AWARD_STYLES,
     CUSTOM_AWARD_BADGE,
     activeAwardsFor,
@@ -43,6 +46,8 @@ import { VRCHAT_STAFF_GROUP_ID } from '@/shared/constants/user';
 import { computeTrustLevel } from '@/shared/utils/userTransforms';
 import { useGlobalBadgeStore } from '@/state/globalBadgeStore';
 import { recordUserGroups } from '@/state/userGroupMembershipStore';
+
+import { BadgeGallery, type GalleryBadge } from './BadgeGallery';
 
 type BadgeDraft = {
     id: string;
@@ -357,6 +362,69 @@ function Select({
     );
 }
 
+// Effects combine, so each one is a toggle. The value is the effect names
+// separated by spaces, "none" when every effect is off, or empty to inherit.
+function EffectsPicker({
+    value,
+    onChange,
+    inheritLabel
+}: {
+    value: string;
+    onChange: (value: string) => void;
+    inheritLabel?: string;
+}) {
+    const selected = value.split(/\s+/).filter(Boolean);
+    const inheriting = inheritLabel !== undefined && selected.length === 0;
+    const toggle = (effect: string) => {
+        const next = selected.includes(effect)
+            ? selected.filter((name) => name !== effect)
+            : [...selected.filter((name) => name !== 'none'), effect];
+        onChange(next.length > 0 ? next.join(' ') : 'none');
+    };
+    const chip = (active: boolean) =>
+        `rounded border px-2 py-0.5 text-xs ${
+            active
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-input hover:bg-accent'
+        }`;
+    return (
+        <div className="flex flex-wrap gap-1">
+            {inheritLabel !== undefined ? (
+                <button
+                    type="button"
+                    className={chip(inheriting)}
+                    onClick={() => onChange('')}
+                >
+                    {inheritLabel}
+                </button>
+            ) : null}
+            <button
+                type="button"
+                className={chip(
+                    selected.length === 1 && selected[0] === 'none'
+                )}
+                onClick={() => onChange('none')}
+            >
+                none
+            </button>
+            {AWARD_ANIMATIONS.filter((effect) => effect !== 'none').map(
+                (effect) => (
+                    <button
+                        key={effect}
+                        type="button"
+                        aria-pressed={selected.includes(effect)}
+                        className={chip(selected.includes(effect))}
+                        onClick={() => toggle(effect)}
+                    >
+                        {effect}
+                    </button>
+                )
+            )}
+        </div>
+    );
+}
+
+// Any Lucide or Lucide Lab icon; awards can also inherit the badge type's.
 function IconPicker({
     value,
     onChange,
@@ -367,14 +435,15 @@ function IconPicker({
     allowInherit?: boolean;
 }) {
     return (
-        <div className="grid grid-cols-8 gap-1">
+        <div className="flex flex-wrap items-center gap-2">
             {allowInherit ? (
                 <button
                     type="button"
                     title="Use the badge type's icon"
+                    aria-pressed={!value}
                     onClick={() => onChange('')}
                     className={
-                        'flex size-8 items-center justify-center rounded-md border text-[9px] ' +
+                        'rounded-md border px-2 py-1 text-xs ' +
                         (!value
                             ? 'border-(--ring) bg-(--state-selected-surface)'
                             : 'hover:bg-(--state-hover-surface)')
@@ -383,22 +452,11 @@ function IconPicker({
                     inherit
                 </button>
             ) : null}
-            {AWARD_ICONS.map((icon) => (
-                <button
-                    key={icon}
-                    type="button"
-                    title={icon}
-                    onClick={() => onChange(icon)}
-                    className={
-                        'flex size-8 items-center justify-center rounded-md border ' +
-                        (icon === value
-                            ? 'border-(--ring) bg-(--state-selected-surface)'
-                            : 'hover:bg-(--state-hover-surface)')
-                    }
-                >
-                    <BadgeIcon name={icon} allowReserved className="size-4" />
-                </button>
-            ))}
+            <BadgeIconPicker
+                value={value || DEFAULT_AWARD_ICON}
+                onValueChange={onChange}
+                allowReserved
+            />
         </div>
     );
 }
@@ -577,6 +635,12 @@ function Editor() {
     const [liveStatus, setLiveStatus] = useState('');
     // Badge types start collapsed to a one-line summary.
     const [openBadges, setOpenBadges] = useState<Set<number>>(() => new Set());
+    // ?view=gallery opens straight into the gallery.
+    const [view, setView] = useState<'edit' | 'gallery'>(() =>
+        new URLSearchParams(window.location.search).get('view') === 'gallery'
+            ? 'gallery'
+            : 'edit'
+    );
 
     async function load() {
         const response = await fetch(ENDPOINT);
@@ -646,9 +710,17 @@ function Editor() {
         };
     }, [liveUserId]);
 
+    const iconCatalog = useBadgeIconCatalog();
     const problems = useMemo(
-        () => (draft ? validateGlobalBadgeFile(draft) : []),
-        [draft]
+        () =>
+            draft
+                ? validateGlobalBadgeFile(draft, {
+                      iconNames: iconCatalog
+                          ? new Set(iconCatalog.names)
+                          : undefined
+                  })
+                : [],
+        [draft, iconCatalog]
     );
 
     // The preview uses the app's own store, so it shows exactly what the app
@@ -703,6 +775,14 @@ function Editor() {
         nowSeconds
     );
 
+    const galleryBadges: GalleryBadge[] = draft.badges.map((badge) => ({
+        id: badge.id,
+        label: badge.label || badge.id,
+        effects: badge.animation,
+        award: (animation) =>
+            sampleAward(animation ? { ...badge, animation } : badge)
+    }));
+
     return (
         <div className="grid min-h-screen grid-cols-[minmax(0,1fr)_minmax(0,46rem)] gap-6 p-6">
             <div className="flex min-w-0 flex-col gap-6">
@@ -730,543 +810,650 @@ function Editor() {
                     <span className="text-muted-foreground text-xs">
                         {status}
                     </span>
+                    <div className="ml-auto flex overflow-hidden rounded-md border text-sm">
+                        {(['edit', 'gallery'] as const).map((mode) => (
+                            <button
+                                key={mode}
+                                type="button"
+                                aria-pressed={view === mode}
+                                className={
+                                    view === mode
+                                        ? 'bg-primary text-primary-foreground px-3 py-1'
+                                        : 'px-3 py-1'
+                                }
+                                onClick={() => setView(mode)}
+                            >
+                                {mode === 'edit' ? 'Edit' : 'Gallery'}
+                            </button>
+                        ))}
+                    </div>
                 </header>
 
-                {problems.length ? (
-                    <ul className="rounded-md border border-red-500/50 p-3 text-xs text-red-300">
-                        {problems.map((problem) => (
-                            <li key={problem}>{problem}</li>
-                        ))}
-                    </ul>
-                ) : null}
+                {view === 'gallery' ? (
+                    <BadgeGallery badges={galleryBadges} />
+                ) : (
+                    <>
+                        {problems.length ? (
+                            <ul className="rounded-md border border-red-500/50 p-3 text-xs text-red-300">
+                                {problems.map((problem) => (
+                                    <li key={problem}>{problem}</li>
+                                ))}
+                            </ul>
+                        ) : null}
 
-                <details className="rounded-lg border p-3">
-                    <summary className="cursor-pointer font-semibold">
-                        Badge types ({draft.badges.length})
-                    </summary>
-                    <div className="mt-3 flex flex-col gap-3">
-                        <div className="flex items-center gap-2">
-                            <button
-                                type="button"
-                                className="rounded-md border px-2 py-0.5 text-xs"
-                                onClick={() =>
-                                    update((current) => ({
-                                        ...current,
-                                        badges: [
-                                            ...current.badges,
-                                            {
-                                                id: `badge-${current.badges.length + 1}`,
-                                                label: 'New badge',
-                                                description: '',
-                                                icon: 'Award',
-                                                style: 'gold',
-                                                animation: 'shimmer'
-                                            }
-                                        ]
-                                    }))
-                                }
-                            >
-                                Add badge type
-                            </button>
-                        </div>
-                        {draft.badges.map((badge, index) => {
-                            const set = (patch: Partial<BadgeDraft>) =>
-                                update((current) => ({
-                                    ...current,
-                                    badges: current.badges.map((entry, i) =>
-                                        i === index
-                                            ? { ...entry, ...patch }
-                                            : entry
-                                    )
-                                }));
-                            const open = openBadges.has(index);
-                            const summary = (
-                                <button
-                                    type="button"
-                                    className="flex w-full items-center gap-3 text-left"
-                                    onClick={() =>
-                                        setOpenBadges((current) => {
-                                            const next = new Set(current);
-                                            if (next.has(index))
-                                                next.delete(index);
-                                            else next.add(index);
-                                            return next;
-                                        })
-                                    }
-                                >
-                                    <span className="text-muted-foreground w-3 text-xs">
-                                        {open ? 'v' : '>'}
-                                    </span>
-                                    <GlobalBadgeChip
-                                        award={sampleAward(badge)}
-                                        size="full"
-                                    />
-                                    <GlobalBadgeChip
-                                        award={sampleAward(badge)}
-                                    />
-                                    <span className="text-muted-foreground font-mono text-xs">
-                                        {badge.id}
-                                    </span>
-                                </button>
-                            );
-                            // Order in the file is the order badges show
-                            // in, most prestigious first.
-                            const move = (delta: number) => {
-                                const target = index + delta;
-                                if (
-                                    target < 0 ||
-                                    target >= draft.badges.length
-                                ) {
-                                    return;
-                                }
-                                update((current) => {
-                                    const badges = [...current.badges];
-                                    [badges[index], badges[target]] = [
-                                        badges[target],
-                                        badges[index]
-                                    ];
-                                    return { ...current, badges };
-                                });
-                                setOpenBadges((current) => {
-                                    const next = new Set<number>();
-                                    for (const i of current) {
-                                        next.add(
-                                            i === index
-                                                ? target
-                                                : i === target
-                                                  ? index
-                                                  : i
-                                        );
-                                    }
-                                    return next;
-                                });
-                            };
-                            const header = (
+                        <details className="rounded-lg border p-3">
+                            <summary className="cursor-pointer font-semibold">
+                                Badge types ({draft.badges.length})
+                            </summary>
+                            <div className="mt-3 flex flex-col gap-3">
                                 <div className="flex items-center gap-2">
-                                    <div className="min-w-0 flex-1">
-                                        {summary}
-                                    </div>
                                     <button
                                         type="button"
-                                        className="rounded-md border px-2 py-0.5 text-xs disabled:opacity-40"
-                                        title="Show earlier (more prestigious)"
-                                        disabled={index === 0}
-                                        onClick={() => move(-1)}
-                                    >
-                                        Up
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="rounded-md border px-2 py-0.5 text-xs disabled:opacity-40"
-                                        title="Show later (less prestigious)"
-                                        disabled={
-                                            index === draft.badges.length - 1
+                                        className="rounded-md border px-2 py-0.5 text-xs"
+                                        onClick={() =>
+                                            update((current) => ({
+                                                ...current,
+                                                badges: [
+                                                    ...current.badges,
+                                                    {
+                                                        id: `badge-${current.badges.length + 1}`,
+                                                        label: 'New badge',
+                                                        description: '',
+                                                        icon: 'Award',
+                                                        style: 'gold',
+                                                        animation: 'shimmer'
+                                                    }
+                                                ]
+                                            }))
                                         }
-                                        onClick={() => move(1)}
                                     >
-                                        Down
+                                        Add badge type
                                     </button>
                                 </div>
-                            );
-                            if (!open) {
+                                {draft.badges.map((badge, index) => {
+                                    const set = (patch: Partial<BadgeDraft>) =>
+                                        update((current) => ({
+                                            ...current,
+                                            badges: current.badges.map(
+                                                (entry, i) =>
+                                                    i === index
+                                                        ? { ...entry, ...patch }
+                                                        : entry
+                                            )
+                                        }));
+                                    const open = openBadges.has(index);
+                                    const summary = (
+                                        <button
+                                            type="button"
+                                            className="flex w-full items-center gap-3 text-left"
+                                            onClick={() =>
+                                                setOpenBadges((current) => {
+                                                    const next = new Set(
+                                                        current
+                                                    );
+                                                    if (next.has(index))
+                                                        next.delete(index);
+                                                    else next.add(index);
+                                                    return next;
+                                                })
+                                            }
+                                        >
+                                            <span className="text-muted-foreground w-3 text-xs">
+                                                {open ? 'v' : '>'}
+                                            </span>
+                                            <GlobalBadgeChip
+                                                award={sampleAward(badge)}
+                                                size="full"
+                                            />
+                                            <GlobalBadgeChip
+                                                award={sampleAward(badge)}
+                                            />
+                                            <span className="text-muted-foreground font-mono text-xs">
+                                                {badge.id}
+                                            </span>
+                                        </button>
+                                    );
+                                    // Order in the file is the order badges show
+                                    // in, most prestigious first.
+                                    const move = (delta: number) => {
+                                        const target = index + delta;
+                                        if (
+                                            target < 0 ||
+                                            target >= draft.badges.length
+                                        ) {
+                                            return;
+                                        }
+                                        update((current) => {
+                                            const badges = [...current.badges];
+                                            [badges[index], badges[target]] = [
+                                                badges[target],
+                                                badges[index]
+                                            ];
+                                            return { ...current, badges };
+                                        });
+                                        setOpenBadges((current) => {
+                                            const next = new Set<number>();
+                                            for (const i of current) {
+                                                next.add(
+                                                    i === index
+                                                        ? target
+                                                        : i === target
+                                                          ? index
+                                                          : i
+                                                );
+                                            }
+                                            return next;
+                                        });
+                                    };
+                                    const header = (
+                                        <div className="flex items-center gap-2">
+                                            <div className="min-w-0 flex-1">
+                                                {summary}
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="rounded-md border px-2 py-0.5 text-xs disabled:opacity-40"
+                                                title="Show earlier (more prestigious)"
+                                                disabled={index === 0}
+                                                onClick={() => move(-1)}
+                                            >
+                                                Up
+                                            </button>
+                                            <button
+                                                type="button"
+                                                className="rounded-md border px-2 py-0.5 text-xs disabled:opacity-40"
+                                                title="Show later (less prestigious)"
+                                                disabled={
+                                                    index ===
+                                                    draft.badges.length - 1
+                                                }
+                                                onClick={() => move(1)}
+                                            >
+                                                Down
+                                            </button>
+                                        </div>
+                                    );
+                                    if (!open) {
+                                        return (
+                                            <div
+                                                key={index}
+                                                className="rounded-lg border p-3"
+                                            >
+                                                {header}
+                                            </div>
+                                        );
+                                    }
+                                    return (
+                                        <div
+                                            key={index}
+                                            className="flex flex-col gap-3 rounded-lg border p-3"
+                                        >
+                                            {header}
+                                            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,17rem)] gap-3">
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <Field label="Id (used by awards)">
+                                                        <input
+                                                            className={
+                                                                inputClass
+                                                            }
+                                                            value={badge.id}
+                                                            onChange={(event) =>
+                                                                set({
+                                                                    id: event
+                                                                        .target
+                                                                        .value
+                                                                })
+                                                            }
+                                                        />
+                                                    </Field>
+                                                    <Field label="Label">
+                                                        <input
+                                                            className={
+                                                                inputClass
+                                                            }
+                                                            value={badge.label}
+                                                            maxLength={32}
+                                                            onChange={(event) =>
+                                                                set({
+                                                                    label: event
+                                                                        .target
+                                                                        .value
+                                                                })
+                                                            }
+                                                        />
+                                                    </Field>
+                                                    <div className="col-span-2">
+                                                        <Field label="Description (tooltip)">
+                                                            <input
+                                                                className={
+                                                                    inputClass
+                                                                }
+                                                                value={
+                                                                    badge.description ??
+                                                                    ''
+                                                                }
+                                                                onChange={(
+                                                                    event
+                                                                ) =>
+                                                                    set({
+                                                                        description:
+                                                                            event
+                                                                                .target
+                                                                                .value
+                                                                    })
+                                                                }
+                                                            />
+                                                        </Field>
+                                                    </div>
+                                                    <Field label="Style">
+                                                        <Select
+                                                            value={badge.style}
+                                                            options={
+                                                                AWARD_STYLES
+                                                            }
+                                                            onChange={(style) =>
+                                                                set({ style })
+                                                            }
+                                                        />
+                                                    </Field>
+                                                    <Field label="Effects">
+                                                        <EffectsPicker
+                                                            value={
+                                                                badge.animation
+                                                            }
+                                                            onChange={(
+                                                                animation
+                                                            ) =>
+                                                                set({
+                                                                    animation
+                                                                })
+                                                            }
+                                                        />
+                                                    </Field>
+                                                    <div className="col-span-2 grid grid-cols-4 gap-2">
+                                                        {COLOR_FIELDS.map(
+                                                            ([
+                                                                field,
+                                                                label
+                                                            ]) => (
+                                                                <ColorField
+                                                                    key={field}
+                                                                    label={
+                                                                        label
+                                                                    }
+                                                                    value={
+                                                                        badge[
+                                                                            field
+                                                                        ] ?? ''
+                                                                    }
+                                                                    onChange={(
+                                                                        value
+                                                                    ) =>
+                                                                        set({
+                                                                            [field]:
+                                                                                value
+                                                                        })
+                                                                    }
+                                                                />
+                                                            )
+                                                        )}
+                                                    </div>
+                                                    <div className="col-span-2 flex items-center gap-3">
+                                                        <GlobalBadgeChip
+                                                            award={sampleAward(
+                                                                badge
+                                                            )}
+                                                            size="full"
+                                                        />
+                                                        <GlobalBadgeChip
+                                                            award={sampleAward(
+                                                                badge
+                                                            )}
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            className="ml-auto rounded-md border px-2 py-0.5 text-xs text-red-300"
+                                                            onClick={() =>
+                                                                update(
+                                                                    (
+                                                                        current
+                                                                    ) => ({
+                                                                        ...current,
+                                                                        badges: current.badges.filter(
+                                                                            (
+                                                                                _,
+                                                                                i
+                                                                            ) =>
+                                                                                i !==
+                                                                                index
+                                                                        )
+                                                                    })
+                                                                )
+                                                            }
+                                                        >
+                                                            Remove
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <Field label="Icon (award icons only)">
+                                                    <IconPicker
+                                                        value={badge.icon}
+                                                        onChange={(icon) =>
+                                                            set({ icon })
+                                                        }
+                                                    />
+                                                </Field>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </details>
+
+                        <section className="flex flex-col gap-3">
+                            <div className="flex items-center gap-2">
+                                <h2 className="font-semibold">Awards</h2>
+                                <button
+                                    type="button"
+                                    className="rounded-md border px-2 py-0.5 text-xs"
+                                    onClick={() => {
+                                        update((current) => ({
+                                            ...current,
+                                            awards: [
+                                                ...current.awards,
+                                                {
+                                                    userId: '',
+                                                    badge:
+                                                        current.badges[0]?.id ??
+                                                        '',
+                                                    name: '',
+                                                    reason: '',
+                                                    since: todayUtcSeconds(),
+                                                    until: null
+                                                }
+                                            ]
+                                        }));
+                                        setSelected(draft.awards.length);
+                                    }}
+                                >
+                                    Add award
+                                </button>
+                                <span className="text-muted-foreground text-xs">
+                                    Add people only with their consent: this
+                                    file is public.
+                                </span>
+                            </div>
+                            {draft.awards.map((award, index) => {
+                                const isCustom =
+                                    award.badge === CUSTOM_AWARD_BADGE;
+                                const set = (patch: Partial<AwardDraft>) =>
+                                    update((current) => ({
+                                        ...current,
+                                        awards: current.awards.map((entry, i) =>
+                                            i === index
+                                                ? { ...entry, ...patch }
+                                                : entry
+                                        )
+                                    }));
                                 return (
                                     <div
                                         key={index}
-                                        className="rounded-lg border p-3"
+                                        // Focusable so a click on the card's empty space
+                                        // selects it too.
+                                        tabIndex={-1}
+                                        onFocusCapture={() =>
+                                            setSelected(index)
+                                        }
+                                        className={
+                                            'grid grid-cols-6 gap-2 rounded-lg border p-3 ' +
+                                            (selected === index
+                                                ? 'border-(--ring)'
+                                                : '')
+                                        }
                                     >
-                                        {header}
+                                        <div className="col-span-2">
+                                            <Field label="Name (only for this file)">
+                                                <input
+                                                    className={inputClass}
+                                                    value={award.name ?? ''}
+                                                    onChange={(event) =>
+                                                        set({
+                                                            name: event.target
+                                                                .value
+                                                        })
+                                                    }
+                                                />
+                                            </Field>
+                                        </div>
+                                        <div className="col-span-3">
+                                            <Field label="VRChat user id or profile link">
+                                                <input
+                                                    className={inputClass}
+                                                    value={award.userId}
+                                                    placeholder="usr_..."
+                                                    onChange={(event) =>
+                                                        set({
+                                                            userId:
+                                                                event.target.value.match(
+                                                                    /usr_[0-9a-f-]{36}/i
+                                                                )?.[0] ??
+                                                                event.target
+                                                                    .value
+                                                        })
+                                                    }
+                                                />
+                                            </Field>
+                                        </div>
+                                        <Field label="Badge">
+                                            <Select
+                                                value={award.badge}
+                                                options={[
+                                                    ...draft.badges.map(
+                                                        (b) => b.id
+                                                    ),
+                                                    CUSTOM_AWARD_BADGE
+                                                ]}
+                                                onChange={(badge) =>
+                                                    set({ badge })
+                                                }
+                                            />
+                                        </Field>
+                                        <div className="col-span-4">
+                                            <Field label="Reason (tooltip)">
+                                                <input
+                                                    className={inputClass}
+                                                    value={award.reason ?? ''}
+                                                    onChange={(event) =>
+                                                        set({
+                                                            reason: event.target
+                                                                .value
+                                                        })
+                                                    }
+                                                />
+                                            </Field>
+                                        </div>
+                                        <DateField
+                                            label="Since (UTC)"
+                                            value={award.since}
+                                            onChange={(since) => set({ since })}
+                                        />
+                                        <DateField
+                                            label="Until (UTC, empty = no end)"
+                                            value={award.until}
+                                            onChange={(until) => set({ until })}
+                                        />
+                                        <details
+                                            className="col-span-6 rounded-md border p-2"
+                                            open={isCustom || undefined}
+                                        >
+                                            <summary className="cursor-pointer text-xs">
+                                                {isCustom
+                                                    ? 'This one-off badge (label required, the rest falls back to defaults)'
+                                                    : 'Look for this person (overrides the badge type)'}
+                                                {OVERRIDE_FIELDS.some(
+                                                    (field) => award[field]
+                                                )
+                                                    ? ' - customised'
+                                                    : ''}
+                                            </summary>
+                                            <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,17rem)] gap-3">
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div className="col-span-2">
+                                                        <Field
+                                                            label={
+                                                                isCustom
+                                                                    ? 'Label (required)'
+                                                                    : 'Label (blank = inherit)'
+                                                            }
+                                                        >
+                                                            <input
+                                                                className={
+                                                                    inputClass
+                                                                }
+                                                                value={
+                                                                    award.label ??
+                                                                    ''
+                                                                }
+                                                                maxLength={32}
+                                                                onChange={(
+                                                                    event
+                                                                ) =>
+                                                                    set({
+                                                                        label: event
+                                                                            .target
+                                                                            .value
+                                                                    })
+                                                                }
+                                                            />
+                                                        </Field>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <Field label="Description (tooltip, blank = inherit)">
+                                                            <input
+                                                                className={
+                                                                    inputClass
+                                                                }
+                                                                value={
+                                                                    award.description ??
+                                                                    ''
+                                                                }
+                                                                onChange={(
+                                                                    event
+                                                                ) =>
+                                                                    set({
+                                                                        description:
+                                                                            event
+                                                                                .target
+                                                                                .value
+                                                                    })
+                                                                }
+                                                            />
+                                                        </Field>
+                                                    </div>
+                                                    <Field label="Style">
+                                                        <Select
+                                                            value={
+                                                                award.style ??
+                                                                ''
+                                                            }
+                                                            options={
+                                                                AWARD_STYLES
+                                                            }
+                                                            inheritLabel={
+                                                                isCustom
+                                                                    ? 'default'
+                                                                    : 'inherit'
+                                                            }
+                                                            onChange={(style) =>
+                                                                set({ style })
+                                                            }
+                                                        />
+                                                    </Field>
+                                                    <Field label="Effects">
+                                                        <EffectsPicker
+                                                            value={
+                                                                award.animation ??
+                                                                ''
+                                                            }
+                                                            inheritLabel={
+                                                                isCustom
+                                                                    ? 'default'
+                                                                    : 'inherit'
+                                                            }
+                                                            onChange={(
+                                                                animation
+                                                            ) =>
+                                                                set({
+                                                                    animation
+                                                                })
+                                                            }
+                                                        />
+                                                    </Field>
+                                                    <div className="col-span-2 grid grid-cols-4 gap-2">
+                                                        {COLOR_FIELDS.map(
+                                                            ([
+                                                                field,
+                                                                label
+                                                            ]) => (
+                                                                <ColorField
+                                                                    key={field}
+                                                                    label={
+                                                                        label
+                                                                    }
+                                                                    value={
+                                                                        award[
+                                                                            field
+                                                                        ] ?? ''
+                                                                    }
+                                                                    onChange={(
+                                                                        value
+                                                                    ) =>
+                                                                        set({
+                                                                            [field]:
+                                                                                value
+                                                                        })
+                                                                    }
+                                                                />
+                                                            )
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <Field label="Icon">
+                                                    <IconPicker
+                                                        value={award.icon ?? ''}
+                                                        allowInherit
+                                                        onChange={(icon) =>
+                                                            set({ icon })
+                                                        }
+                                                    />
+                                                </Field>
+                                            </div>
+                                        </details>
+                                        <div className="col-span-6 flex justify-end">
+                                            <button
+                                                type="button"
+                                                className="rounded-md border px-2 py-0.5 text-xs text-red-300"
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    update((current) => ({
+                                                        ...current,
+                                                        awards: current.awards.filter(
+                                                            (_, i) =>
+                                                                i !== index
+                                                        )
+                                                    }));
+                                                    setSelected(null);
+                                                }}
+                                            >
+                                                Remove award
+                                            </button>
+                                        </div>
                                     </div>
                                 );
-                            }
-                            return (
-                                <div
-                                    key={index}
-                                    className="flex flex-col gap-3 rounded-lg border p-3"
-                                >
-                                    {header}
-                                    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,17rem)] gap-3">
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <Field label="Id (used by awards)">
-                                                <input
-                                                    className={inputClass}
-                                                    value={badge.id}
-                                                    onChange={(event) =>
-                                                        set({
-                                                            id: event.target
-                                                                .value
-                                                        })
-                                                    }
-                                                />
-                                            </Field>
-                                            <Field label="Label">
-                                                <input
-                                                    className={inputClass}
-                                                    value={badge.label}
-                                                    maxLength={32}
-                                                    onChange={(event) =>
-                                                        set({
-                                                            label: event.target
-                                                                .value
-                                                        })
-                                                    }
-                                                />
-                                            </Field>
-                                            <div className="col-span-2">
-                                                <Field label="Description (tooltip)">
-                                                    <input
-                                                        className={inputClass}
-                                                        value={
-                                                            badge.description ??
-                                                            ''
-                                                        }
-                                                        onChange={(event) =>
-                                                            set({
-                                                                description:
-                                                                    event.target
-                                                                        .value
-                                                            })
-                                                        }
-                                                    />
-                                                </Field>
-                                            </div>
-                                            <Field label="Style">
-                                                <Select
-                                                    value={badge.style}
-                                                    options={AWARD_STYLES}
-                                                    onChange={(style) =>
-                                                        set({ style })
-                                                    }
-                                                />
-                                            </Field>
-                                            <Field label="Animation">
-                                                <Select
-                                                    value={badge.animation}
-                                                    options={AWARD_ANIMATIONS}
-                                                    onChange={(animation) =>
-                                                        set({ animation })
-                                                    }
-                                                />
-                                            </Field>
-                                            <div className="col-span-2 grid grid-cols-4 gap-2">
-                                                {COLOR_FIELDS.map(
-                                                    ([field, label]) => (
-                                                        <ColorField
-                                                            key={field}
-                                                            label={label}
-                                                            value={
-                                                                badge[field] ??
-                                                                ''
-                                                            }
-                                                            onChange={(value) =>
-                                                                set({
-                                                                    [field]:
-                                                                        value
-                                                                })
-                                                            }
-                                                        />
-                                                    )
-                                                )}
-                                            </div>
-                                            <div className="col-span-2 flex items-center gap-3">
-                                                <GlobalBadgeChip
-                                                    award={sampleAward(badge)}
-                                                    size="full"
-                                                />
-                                                <GlobalBadgeChip
-                                                    award={sampleAward(badge)}
-                                                />
-                                                <button
-                                                    type="button"
-                                                    className="ml-auto rounded-md border px-2 py-0.5 text-xs text-red-300"
-                                                    onClick={() =>
-                                                        update((current) => ({
-                                                            ...current,
-                                                            badges: current.badges.filter(
-                                                                (_, i) =>
-                                                                    i !== index
-                                                            )
-                                                        }))
-                                                    }
-                                                >
-                                                    Remove
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <Field label="Icon (award icons only)">
-                                            <IconPicker
-                                                value={badge.icon}
-                                                onChange={(icon) =>
-                                                    set({ icon })
-                                                }
-                                            />
-                                        </Field>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </details>
-
-                <section className="flex flex-col gap-3">
-                    <div className="flex items-center gap-2">
-                        <h2 className="font-semibold">Awards</h2>
-                        <button
-                            type="button"
-                            className="rounded-md border px-2 py-0.5 text-xs"
-                            onClick={() => {
-                                update((current) => ({
-                                    ...current,
-                                    awards: [
-                                        ...current.awards,
-                                        {
-                                            userId: '',
-                                            badge: current.badges[0]?.id ?? '',
-                                            name: '',
-                                            reason: '',
-                                            since: todayUtcSeconds(),
-                                            until: null
-                                        }
-                                    ]
-                                }));
-                                setSelected(draft.awards.length);
-                            }}
-                        >
-                            Add award
-                        </button>
-                        <span className="text-muted-foreground text-xs">
-                            Add people only with their consent: this file is
-                            public.
-                        </span>
-                    </div>
-                    {draft.awards.map((award, index) => {
-                        const isCustom = award.badge === CUSTOM_AWARD_BADGE;
-                        const set = (patch: Partial<AwardDraft>) =>
-                            update((current) => ({
-                                ...current,
-                                awards: current.awards.map((entry, i) =>
-                                    i === index ? { ...entry, ...patch } : entry
-                                )
-                            }));
-                        return (
-                            <div
-                                key={index}
-                                // Focusable so a click on the card's empty space
-                                // selects it too.
-                                tabIndex={-1}
-                                onFocusCapture={() => setSelected(index)}
-                                className={
-                                    'grid grid-cols-6 gap-2 rounded-lg border p-3 ' +
-                                    (selected === index
-                                        ? 'border-(--ring)'
-                                        : '')
-                                }
-                            >
-                                <div className="col-span-2">
-                                    <Field label="Name (only for this file)">
-                                        <input
-                                            className={inputClass}
-                                            value={award.name ?? ''}
-                                            onChange={(event) =>
-                                                set({
-                                                    name: event.target.value
-                                                })
-                                            }
-                                        />
-                                    </Field>
-                                </div>
-                                <div className="col-span-3">
-                                    <Field label="VRChat user id or profile link">
-                                        <input
-                                            className={inputClass}
-                                            value={award.userId}
-                                            placeholder="usr_..."
-                                            onChange={(event) =>
-                                                set({
-                                                    userId:
-                                                        event.target.value.match(
-                                                            /usr_[0-9a-f-]{36}/i
-                                                        )?.[0] ??
-                                                        event.target.value
-                                                })
-                                            }
-                                        />
-                                    </Field>
-                                </div>
-                                <Field label="Badge">
-                                    <Select
-                                        value={award.badge}
-                                        options={[
-                                            ...draft.badges.map((b) => b.id),
-                                            CUSTOM_AWARD_BADGE
-                                        ]}
-                                        onChange={(badge) => set({ badge })}
-                                    />
-                                </Field>
-                                <div className="col-span-4">
-                                    <Field label="Reason (tooltip)">
-                                        <input
-                                            className={inputClass}
-                                            value={award.reason ?? ''}
-                                            onChange={(event) =>
-                                                set({
-                                                    reason: event.target.value
-                                                })
-                                            }
-                                        />
-                                    </Field>
-                                </div>
-                                <DateField
-                                    label="Since (UTC)"
-                                    value={award.since}
-                                    onChange={(since) => set({ since })}
-                                />
-                                <DateField
-                                    label="Until (UTC, empty = no end)"
-                                    value={award.until}
-                                    onChange={(until) => set({ until })}
-                                />
-                                <details
-                                    className="col-span-6 rounded-md border p-2"
-                                    open={isCustom || undefined}
-                                >
-                                    <summary className="cursor-pointer text-xs">
-                                        {isCustom
-                                            ? 'This one-off badge (label required, the rest falls back to defaults)'
-                                            : 'Look for this person (overrides the badge type)'}
-                                        {OVERRIDE_FIELDS.some(
-                                            (field) => award[field]
-                                        )
-                                            ? ' - customised'
-                                            : ''}
-                                    </summary>
-                                    <div className="mt-2 grid grid-cols-[minmax(0,1fr)_minmax(0,17rem)] gap-3">
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <div className="col-span-2">
-                                                <Field
-                                                    label={
-                                                        isCustom
-                                                            ? 'Label (required)'
-                                                            : 'Label (blank = inherit)'
-                                                    }
-                                                >
-                                                    <input
-                                                        className={inputClass}
-                                                        value={
-                                                            award.label ?? ''
-                                                        }
-                                                        maxLength={32}
-                                                        onChange={(event) =>
-                                                            set({
-                                                                label: event
-                                                                    .target
-                                                                    .value
-                                                            })
-                                                        }
-                                                    />
-                                                </Field>
-                                            </div>
-                                            <div className="col-span-2">
-                                                <Field label="Description (tooltip, blank = inherit)">
-                                                    <input
-                                                        className={inputClass}
-                                                        value={
-                                                            award.description ??
-                                                            ''
-                                                        }
-                                                        onChange={(event) =>
-                                                            set({
-                                                                description:
-                                                                    event.target
-                                                                        .value
-                                                            })
-                                                        }
-                                                    />
-                                                </Field>
-                                            </div>
-                                            <Field label="Style">
-                                                <Select
-                                                    value={award.style ?? ''}
-                                                    options={AWARD_STYLES}
-                                                    inheritLabel={
-                                                        isCustom
-                                                            ? 'default'
-                                                            : 'inherit'
-                                                    }
-                                                    onChange={(style) =>
-                                                        set({ style })
-                                                    }
-                                                />
-                                            </Field>
-                                            <Field label="Animation">
-                                                <Select
-                                                    value={
-                                                        award.animation ?? ''
-                                                    }
-                                                    options={AWARD_ANIMATIONS}
-                                                    inheritLabel={
-                                                        isCustom
-                                                            ? 'default'
-                                                            : 'inherit'
-                                                    }
-                                                    onChange={(animation) =>
-                                                        set({ animation })
-                                                    }
-                                                />
-                                            </Field>
-                                            <div className="col-span-2 grid grid-cols-4 gap-2">
-                                                {COLOR_FIELDS.map(
-                                                    ([field, label]) => (
-                                                        <ColorField
-                                                            key={field}
-                                                            label={label}
-                                                            value={
-                                                                award[field] ??
-                                                                ''
-                                                            }
-                                                            onChange={(value) =>
-                                                                set({
-                                                                    [field]:
-                                                                        value
-                                                                })
-                                                            }
-                                                        />
-                                                    )
-                                                )}
-                                            </div>
-                                        </div>
-                                        <Field label="Icon">
-                                            <IconPicker
-                                                value={award.icon ?? ''}
-                                                allowInherit
-                                                onChange={(icon) =>
-                                                    set({ icon })
-                                                }
-                                            />
-                                        </Field>
-                                    </div>
-                                </details>
-                                <div className="col-span-6 flex justify-end">
-                                    <button
-                                        type="button"
-                                        className="rounded-md border px-2 py-0.5 text-xs text-red-300"
-                                        onClick={(event) => {
-                                            event.stopPropagation();
-                                            update((current) => ({
-                                                ...current,
-                                                awards: current.awards.filter(
-                                                    (_, i) => i !== index
-                                                )
-                                            }));
-                                            setSelected(null);
-                                        }}
-                                    >
-                                        Remove award
-                                    </button>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </section>
+                            })}
+                        </section>
+                    </>
+                )}
             </div>
 
             <aside className="sticky top-6 flex h-fit flex-col gap-4">

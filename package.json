@@ -49,6 +49,7 @@
         "test:watch": "vitest",
         "build:licenses": "node ./scripts/generate-third-party-licenses.ts",
         "badges:editor": "vite --config tools/badge-editor/vite.config.mts",
+        "badges:dev-fx": "node scripts/generate-dev-badge-effects.ts",
         "badges:validate": "node scripts/validate-global-badges.ts",
         "build": "vite build && npm run build:licenses"
     },
@@ -61,6 +62,7 @@
         "@dnd-kit/utilities": "^3.2.2",
         "@fontsource-variable/geist": "^5.3.0",
         "@fontsource/noto-sans": "^5.3.0",
+        "@lucide/lab": "^0.12.0",
         "@shadcn/react": "^0.3.1",
         "@sigma/node-border": "^4.0.0",
         "@tanstack/react-query": "^5.107.1",

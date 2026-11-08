@@ -7,8 +7,13 @@ import path from 'node:path';
 import { parse, printParseErrorCode, type ParseError } from 'jsonc-parser';
 
 type Validator = {
-    validateGlobalBadgeFile: (data: unknown) => string[];
+    validateGlobalBadgeFile: (
+        data: unknown,
+        options?: { iconNames?: ReadonlySet<string> }
+    ) => string[];
 };
+
+type IconCatalog = { BADGE_ICON_NAMES: readonly string[] };
 
 function readJsonc(file: string): unknown {
     const errors: ParseError[] = [];
@@ -32,15 +37,26 @@ const publishedIndex = args.indexOf('--published');
 const published = publishedIndex >= 0 ? args[publishedIndex + 1] : undefined;
 const file =
     args.find(
-        (arg, index) => !arg.startsWith('--') && index !== publishedIndex + 1
+        (arg, index) =>
+            !arg.startsWith('--') &&
+            (publishedIndex < 0 || index !== publishedIndex + 1)
     ) ?? 'data/global-badges.jsonc';
 
 const validator = (await import(
     new URL('../src/domain/badges/globalBadges.ts', import.meta.url).href
 )) as Validator;
 
+// The icons the app can draw (Lucide plus Lucide Lab), so a misspelt or
+// missing icon fails here instead of showing as the default in the app.
+const { BADGE_ICON_NAMES } = (await import(
+    new URL('../src/components/badges/badgeIconCatalog.ts', import.meta.url)
+        .href
+)) as IconCatalog;
+
 const data = readJsonc(path.resolve(file));
-const problems = validator.validateGlobalBadgeFile(data);
+const problems = validator.validateGlobalBadgeFile(data, {
+    iconNames: new Set(BADGE_ICON_NAMES)
+});
 if (published && fs.existsSync(published)) {
     const before = (readJsonc(published) as { revision?: unknown }).revision;
     const after = (data as { revision?: unknown }).revision;

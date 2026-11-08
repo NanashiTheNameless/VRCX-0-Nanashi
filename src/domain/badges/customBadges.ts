@@ -30,8 +30,63 @@ export const RESERVED_BADGE_ICONS: ReadonlySet<string> = new Set([
     ...AWARD_ICONS
 ]);
 
-export function isReservedBadgeIcon(icon: string): boolean {
-    return RESERVED_BADGE_ICONS.has(icon);
+// Icon names are made of capitalised words (FileCode, ShieldUser, BugOff).
+// A family matches a whole word, so "Code" catches FileCode but not a name
+// that merely starts with those letters.
+const wordPattern = (words: readonly string[], anchored: boolean) =>
+    new RegExp(
+        `${anchored ? '^(?:Lab)?' : ''}(?:${[...words]
+            .sort((a, b) => b.length - a.length)
+            .join('|')})(?![a-z])`
+    );
+
+// Code and shield icons are kept wherever the word appears (FileCode,
+// SquareCode, UserShield): at list size they all read as the developer or
+// VRChat Staff badge. QR codes are a different symbol.
+const ANYWHERE_FAMILIES = wordPattern(
+    ['Code', 'Braces', 'Brackets', 'Shield'],
+    false
+);
+// Every other built-in and award icon is kept with its variants, which
+// start with its name (BugOff, DiamondPlus, ZapOff, Lucide Lab's GemRing).
+const LEADING_FAMILIES = wordPattern(
+    [...AWARD_ICONS, 'Diamond', 'Flask', 'TestTube', 'Sparkle'],
+    true
+);
+
+// Whether icon is root or one of its variants (BugOff for Bug).
+function inFamily(icon: string, root: string): boolean {
+    const bare = (name: string) => name.replace(/^Lab(?=[A-Z])/, '');
+    const name = bare(icon);
+    const base = bare(root);
+    return (
+        name === base ||
+        (name.startsWith(base) && /[A-Z0-9]/.test(name.charAt(base.length)))
+    );
+}
+
+// globalIcons: the icons the current global badge list uses. Global badges
+// may use any icon, so whatever they pick is held back from custom badges
+// too.
+export function isReservedBadgeIcon(
+    icon: string,
+    globalIcons?: ReadonlySet<string>
+): boolean {
+    if (
+        RESERVED_BADGE_ICONS.has(icon) ||
+        (ANYWHERE_FAMILIES.test(icon) && !icon.includes('QrCode')) ||
+        LEADING_FAMILIES.test(icon)
+    ) {
+        return true;
+    }
+    if (globalIcons) {
+        for (const root of globalIcons) {
+            if (inFamily(icon, root)) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 export type CustomBadgeRule =

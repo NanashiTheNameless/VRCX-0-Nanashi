@@ -3983,7 +3983,8 @@
                     "icon_search": "Search icons",
                     "icon_results_one": "{count} icon",
                     "icon_results_other": "{count} icons",
-                    "icon_results_limited": "Showing {shown} of {total} icons. Search to narrow down.",
+                    "icon_browse": "Browse icons on lucide.dev",
+                    "icon_reserved": "Some matching icons are kept for built-in and global badges, so custom badges cannot use them.",
                     "color": "Badge color",
                     "add_rule": "Add rule",
                     "remove_rule": "Remove rule",
@@ -5480,7 +5481,7 @@
                 "award_since": "Since {since}",
                 "award_until": "Until {until}",
                 "vrchat_staff": "VRChat Staff",
-                "vrchat_staff_short": "Staff",
+                "vrchat_staff_short": "VRC Staff",
                 "upstream_developer": "Upstream VRCX-0 Developer",
                 "upstream_developer_short": "Upstream"
             },

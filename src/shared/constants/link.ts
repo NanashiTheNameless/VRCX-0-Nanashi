@@ -21,6 +21,7 @@ const links: Record<string, string> = {
     vrchatDocsConfigurationFile:
         'https://docs.vrchat.com/docs/configuration-file',
     vrchatDocsLaunchOptions: 'https://docs.vrchat.com/docs/launch-options',
+    lucideIcons: 'https://lucide.dev/icons/',
     vrchatPassword: vrchatPasswordUrl(),
     vrchatRegister: vrchatRegisterUrl(),
     communityThemesRepository:

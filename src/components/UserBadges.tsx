@@ -4,7 +4,8 @@ import {
     useMemo,
     useRef,
     type ComponentPropsWithRef,
-    type CSSProperties
+    type CSSProperties,
+    type ReactNode
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -25,10 +26,12 @@ import {
 } from '@/domain/badges/customBadges';
 import {
     activeAwardsFor,
-    awardAnimation,
+    awardAnimations,
     awardIcon,
+    DEFAULT_AWARD_ICON,
     awardStyle,
-    type ActiveAward
+    type ActiveAward,
+    type AwardAnimation
 } from '@/domain/badges/globalBadges';
 import type { FavoriteGroupMap } from '@/domain/favorites/types';
 import { formatDateFilter } from '@/lib/dateTime';
@@ -104,6 +107,9 @@ export function DeveloperBadge({
                   defaultValue: 'Upstream VRCX-0 Developer'
               });
 
+    const forkShortLabel = t('dialog.user.badges.fork_developer_short', {
+        defaultValue: 'Dev'
+    });
     const badge =
         kind === 'fork' ? (
             <span
@@ -115,13 +121,23 @@ export function DeveloperBadge({
                 role="img"
                 aria-label={label}
             >
+                {/* Effect layers: a breathing red rim, and red and white
+                    copies of the icon and label that split off while it
+                    glitches. */}
+                <span aria-hidden="true" className="fork-dev-fx fork-dev-rim" />
+                {(['red', 'white'] as const).map((tint) => (
+                    <span
+                        key={tint}
+                        aria-hidden="true"
+                        className={`fork-dev-fx fork-dev-ghost fork-dev-ghost--${tint}`}
+                    >
+                        <CodeXmlIcon />
+                        {size === 'full' ? <span>{forkShortLabel}</span> : null}
+                    </span>
+                ))}
                 <CodeXmlIcon aria-hidden="true" />
                 {size === 'full' ? (
-                    <span aria-hidden="true">
-                        {t('dialog.user.badges.fork_developer_short', {
-                            defaultValue: 'Dev'
-                        })}
-                    </span>
+                    <span aria-hidden="true">{forkShortLabel}</span>
                 ) : null}
             </span>
         ) : (
@@ -242,6 +258,30 @@ function formatAwardDate(seconds: number): string {
     return formatDateFilter(seconds, 'date');
 }
 
+// Effects drawn on a layer of their own inside the badge.
+const LAYER_EFFECTS: ReadonlySet<AwardAnimation> = new Set([
+    'shimmer',
+    'flow',
+    'sparkle',
+    'glow',
+    'embers'
+]);
+// Effects drawn as separate particles get several layers, so each pair of
+// particles can keep its own timing instead of moving as one sheet.
+const LAYER_COUNTS: Partial<Record<AwardAnimation, number>> = {
+    sparkle: 3,
+    embers: 3
+};
+// Effects that move the icon, by the wrapper class each uses. Nested
+// wrappers combine, so a wiggling icon can also flip.
+const ICON_EFFECTS: Partial<Record<AwardAnimation, string>> = {
+    wiggle: 'wiggle',
+    flip: 'flip',
+    embers: 'flicker'
+};
+// Effects that draw a little past the badge's edge without changing its size.
+const SPILLING_EFFECTS: ReadonlySet<AwardAnimation> = new Set(['glow']);
+
 // Awarded by the maintainer through data/global-badges.jsonc. Built in:
 // never collapsed, and their icons are reserved so custom badges cannot
 // imitate them.
@@ -257,7 +297,7 @@ export function GlobalBadgeChip({
     const { t } = useTranslation();
     const { badge, grant } = award;
     const style = awardStyle(badge.style);
-    const animation = awardAnimation(badge.animation);
+    const effects = awardAnimations(badge.animation);
     // Per-badge colour overrides from the file replace the style's colours.
     const colors: Record<string, string> = {};
     if (badge.colorFrom) {
@@ -273,7 +313,9 @@ export function GlobalBadgeChip({
             className={cn(
                 'global-badge',
                 `global-badge--${style}`,
-                animation !== 'none' && `global-badge--anim-${animation}`,
+                effects.map((effect) => `global-badge--anim-${effect}`),
+                effects.some((effect) => SPILLING_EFFECTS.has(effect)) &&
+                    'global-badge--spill',
                 size === 'compact' && 'global-badge--compact',
                 className
             )}
@@ -281,7 +323,38 @@ export function GlobalBadgeChip({
             role="img"
             aria-label={badge.label}
         >
-            <BadgeIcon name={awardIcon(badge.icon)} allowReserved />
+            {effects
+                .filter((effect) => LAYER_EFFECTS.has(effect))
+                .flatMap((effect) =>
+                    Array.from(
+                        { length: LAYER_COUNTS[effect] ?? 1 },
+                        (_, index) => (
+                            <span
+                                key={`${effect}-${index}`}
+                                aria-hidden="true"
+                                className={`global-badge-fx global-badge-fx--${effect} global-badge-fx--n${index + 1}`}
+                            />
+                        )
+                    )
+                )}
+            {effects.reduceRight<ReactNode>(
+                (icon, effect) =>
+                    ICON_EFFECTS[effect] ? (
+                        <span
+                            aria-hidden="true"
+                            className={`global-badge-icon-fx global-badge-icon-fx--${ICON_EFFECTS[effect]}`}
+                        >
+                            {icon}
+                        </span>
+                    ) : (
+                        icon
+                    ),
+                <BadgeIcon
+                    name={awardIcon(badge.icon)}
+                    allowReserved
+                    fallback={DEFAULT_AWARD_ICON}
+                />
+            )}
             {size === 'full' ? (
                 <span aria-hidden="true">{badge.label}</span>
             ) : null}
@@ -344,7 +417,7 @@ export function VrchatStaffBadge({
             {size === 'full' ? (
                 <span aria-hidden="true">
                     {t('dialog.user.badges.vrchat_staff_short', {
-                        defaultValue: 'Staff'
+                        defaultValue: 'VRChat Staff'
                     })}
                 </span>
             ) : null}
