@@ -1412,12 +1412,6 @@
 }
 
 /* no real reason, I wanted it so I added it. XD */
-@property --dev-angle {
-    syntax: '<angle>';
-    initial-value: 0deg;
-    inherits: false;
-}
-
 :root {
     --dev-black: #0b0b0c;
     --dev-red: #e5202e;
@@ -1485,13 +1479,23 @@
         0 0 0 1px rgba(11, 11, 12, 0.9);
 }
 
+.fork-maintainer-dialog {
+    isolation: isolate;
+    overflow: hidden;
+}
+
+/* The border is a large conic gradient that rotates (transform only, no
+   repaint) behind a cover in the dialog's colour inset by 2px, so only a
+   2px ring of it shows. The dialog clips its own overflow. */
 .fork-maintainer-dialog::before {
     position: absolute;
-    inset: 0;
-    padding: 2px;
-    border-radius: inherit;
+    top: 50%;
+    left: 50%;
+    z-index: -2;
+    width: 150vmax;
+    height: 150vmax;
+    margin: -75vmax 0 0 -75vmax;
     background: conic-gradient(
-        from var(--dev-angle),
         var(--dev-black),
         var(--dev-red),
         var(--dev-white),
@@ -1500,20 +1504,22 @@
     );
     content: '';
     pointer-events: none;
-    -webkit-mask:
-        linear-gradient(#000 0 0) content-box,
-        linear-gradient(#000 0 0);
-    mask:
-        linear-gradient(#000 0 0) content-box,
-        linear-gradient(#000 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
     animation: dev-spin 8s linear infinite;
+}
+
+.fork-maintainer-dialog::after {
+    position: absolute;
+    inset: 2px;
+    z-index: -1;
+    border-radius: calc(var(--radius-xl) - 2px);
+    background: var(--entity-dialog-ground);
+    content: '';
+    pointer-events: none;
 }
 
 @keyframes dev-spin {
     to {
-        --dev-angle: 360deg;
+        transform: rotate(1turn);
     }
 }
 
@@ -1681,6 +1687,288 @@
 
 .reduce-effects .fork-dev-badge::after {
     display: none;
+}
+
+.global-badge {
+    --award-from: #f5c453;
+    --award-to: #b7791f;
+    --award-border: #92610f;
+    --award-glow: rgba(245, 196, 83, 0.55);
+    --award-fg: #ffffff;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 20px;
+    flex: none;
+    padding: 0 7px 0 5px;
+    border: 1px solid var(--award-border);
+    border-radius: 999px;
+    color: var(--award-fg);
+    background: linear-gradient(
+        135deg,
+        var(--award-from) 0%,
+        var(--award-to) 100%
+    );
+    background-size: 200% 200%;
+    box-shadow: 0 0 6px -2px var(--award-glow);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    text-transform: uppercase;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+}
+
+.global-badge svg {
+    width: 12px;
+    height: 12px;
+    stroke-width: 2.5;
+}
+
+.global-badge--compact {
+    width: 20px;
+    justify-content: center;
+    padding: 0;
+}
+
+.global-badge--compact svg {
+    width: 11px;
+    height: 11px;
+}
+
+.global-badge--ember {
+    --award-from: #f59e0b;
+    --award-to: #db2777;
+    --award-border: #c2410c;
+    --award-glow: rgba(234, 88, 12, 0.6);
+}
+
+.global-badge--gold {
+    --award-from: #fcd34d;
+    --award-to: #b45309;
+    --award-border: #92400e;
+    --award-glow: rgba(245, 158, 11, 0.55);
+}
+
+.global-badge--emerald {
+    --award-from: #34d399;
+    --award-to: #047857;
+    --award-border: #065f46;
+    --award-glow: rgba(16, 185, 129, 0.55);
+}
+
+.global-badge--sapphire {
+    --award-from: #60a5fa;
+    --award-to: #1e40af;
+    --award-border: #1e3a8a;
+    --award-glow: rgba(59, 130, 246, 0.55);
+}
+
+.global-badge--amethyst {
+    --award-from: #c084fc;
+    --award-to: #6d28d9;
+    --award-border: #5b21b6;
+    --award-glow: rgba(147, 51, 234, 0.55);
+}
+
+.global-badge--crimson {
+    --award-from: #fb7185;
+    --award-to: #9f1239;
+    --award-border: #881337;
+    --award-glow: rgba(225, 29, 72, 0.55);
+}
+
+.global-badge--rose {
+    --award-from: #f9a8d4;
+    --award-to: #be185d;
+    --award-border: #9d174d;
+    --award-glow: rgba(236, 72, 153, 0.5);
+}
+
+.global-badge--teal {
+    --award-from: #5eead4;
+    --award-to: #0f766e;
+    --award-border: #115e59;
+    --award-glow: rgba(20, 184, 166, 0.5);
+}
+
+.global-badge--midnight {
+    --award-from: #475569;
+    --award-to: #0f172a;
+    --award-border: #94a3b8;
+    --award-glow: rgba(148, 163, 184, 0.45);
+}
+
+/* Award animations: each one a different kind of motion. All stay calmer
+   than the fork developer badge, and all animate only transform and opacity
+   (no repaints), which keeps them cheap even with software rendering. Small
+   badges in lists animate only while hovered, so long lists stay smooth. */
+.global-badge--anim-glow {
+    overflow: visible;
+}
+
+.global-badge--anim-shimmer::after,
+.global-badge--anim-flow::before,
+.global-badge--anim-sparkle::before,
+.global-badge--anim-sparkle::after,
+.global-badge--anim-glow::before {
+    position: absolute;
+    content: '';
+    pointer-events: none;
+}
+
+.global-badge--anim-shimmer::after {
+    inset: 0;
+    background: linear-gradient(
+        100deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.5) 50%,
+        transparent 70%
+    );
+    transform: translateX(-120%);
+    animation: award-sweep 3.4s ease-in-out infinite;
+}
+
+/* Colours stream through: a wide gradient slides behind the content. */
+.global-badge--anim-flow {
+    isolation: isolate;
+}
+
+.global-badge--anim-flow::before {
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 300%;
+    z-index: -1;
+    background: linear-gradient(
+        90deg,
+        var(--award-from),
+        var(--award-to),
+        var(--award-from),
+        var(--award-to)
+    );
+    animation: award-flow 3s linear infinite;
+}
+
+/* Twinkling stars in two layers that alternate. */
+.global-badge--anim-sparkle::before,
+.global-badge--anim-sparkle::after {
+    inset: 0;
+}
+
+.global-badge--anim-sparkle::before {
+    background:
+        radial-gradient(circle at 18% 28%, #fff 0 1.2px, transparent 1.8px),
+        radial-gradient(circle at 62% 72%, #fff 0 1px, transparent 1.6px),
+        radial-gradient(circle at 90% 30%, #fff 0 1.2px, transparent 1.8px);
+    animation: award-twinkle 1.8s ease-in-out infinite;
+}
+
+.global-badge--anim-sparkle::after {
+    background:
+        radial-gradient(circle at 38% 75%, #fff 0 1px, transparent 1.6px),
+        radial-gradient(circle at 76% 18%, #fff 0 1.2px, transparent 1.8px),
+        radial-gradient(circle at 8% 70%, #fff 0 0.9px, transparent 1.5px);
+    animation: award-twinkle 1.8s ease-in-out 0.9s infinite;
+}
+
+/* The icon rocks back and forth, then rests. */
+.global-badge--anim-wiggle svg {
+    transform-origin: 50% 70%;
+    animation: award-wiggle 2.8s ease-in-out infinite;
+}
+
+/* A soft halo that breathes in and out (a static glow faded in and out). */
+.global-badge--anim-glow::before {
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    box-shadow: 0 0 12px 2px var(--award-glow);
+    opacity: 0.2;
+    animation: award-glow 2.6s ease-in-out infinite;
+}
+
+.global-badge--anim-glow {
+    isolation: isolate;
+}
+
+@keyframes award-sweep {
+    60%,
+    100% {
+        transform: translateX(120%);
+    }
+}
+
+@keyframes award-flow {
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+@keyframes award-twinkle {
+    0%,
+    100% {
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+
+@keyframes award-wiggle {
+    0%,
+    60%,
+    100% {
+        transform: rotate(0);
+    }
+    10%,
+    30%,
+    50% {
+        transform: rotate(-14deg);
+    }
+    20%,
+    40% {
+        transform: rotate(14deg);
+    }
+}
+
+@keyframes award-glow {
+    50% {
+        opacity: 1;
+    }
+}
+
+/* Small badges in lists: animate only while hovered. */
+.global-badge--compact,
+.global-badge--compact::before,
+.global-badge--compact::after,
+.global-badge--compact svg {
+    animation-play-state: paused;
+}
+
+.global-badge--compact:hover,
+.global-badge--compact:hover::before,
+.global-badge--compact:hover::after,
+.global-badge--compact:hover svg {
+    animation-play-state: running;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .global-badge,
+    .global-badge::before,
+    .global-badge::after,
+    .global-badge svg {
+        animation: none !important;
+    }
+}
+
+.reduce-effects .global-badge,
+.reduce-effects .global-badge::before,
+.reduce-effects .global-badge::after,
+.reduce-effects .global-badge svg {
+    animation: none !important;
 }
 
 .vrchat-staff-badge {

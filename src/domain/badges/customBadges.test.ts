@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-    FORK_MAINTAINER_USER_ID,
-    OWNER_USER_ID
+    FORK_DEVELOPER_USER_ID,
+    UPSTREAM_DEVELOPER_USER_ID
 } from '@/shared/constants/user';
 
 import {
@@ -65,17 +65,27 @@ function resolve(
 
 describe('normalizeCustomBadges', () => {
     it('refuses the icons reserved for the built-in badges', () => {
-        const [codeBadge, diamondBadge, staffBadge, starBadge] =
-            normalizeCustomBadges([
-                badge({ id: 'a', icon: 'CodeXml' }),
-                badge({ id: 'b', icon: 'Diamond' }),
-                badge({ id: 'd', icon: 'ShieldCheck' }),
-                badge({ id: 'c', icon: 'Rocket' })
-            ]);
+        const [
+            codeBadge,
+            diamondBadge,
+            staffBadge,
+            donatorBadge,
+            awardBadge,
+            starBadge
+        ] = normalizeCustomBadges([
+            badge({ id: 'a', icon: 'CodeXml' }),
+            badge({ id: 'b', icon: 'Diamond' }),
+            badge({ id: 'd', icon: 'ShieldCheck' }),
+            badge({ id: 'e', icon: 'HandHeart' }),
+            badge({ id: 'f', icon: 'Rocket' }),
+            badge({ id: 'c', icon: 'Music' })
+        ]);
         expect(codeBadge.icon).toBe(DEFAULT_CUSTOM_BADGE_ICON);
         expect(diamondBadge.icon).toBe(DEFAULT_CUSTOM_BADGE_ICON);
         expect(staffBadge.icon).toBe(DEFAULT_CUSTOM_BADGE_ICON);
-        expect(starBadge.icon).toBe('Rocket');
+        expect(donatorBadge.icon).toBe(DEFAULT_CUSTOM_BADGE_ICON);
+        expect(awardBadge.icon).toBe(DEFAULT_CUSTOM_BADGE_ICON);
+        expect(starBadge.icon).toBe('Music');
     });
 
     it('keeps the developer accounts in user lists', () => {
@@ -84,7 +94,11 @@ describe('normalizeCustomBadges', () => {
                 rules: [
                     {
                         kind: 'users',
-                        userIds: [FORK_MAINTAINER_USER_ID, OWNER_USER_ID, ALICE]
+                        userIds: [
+                            FORK_DEVELOPER_USER_ID,
+                            UPSTREAM_DEVELOPER_USER_ID,
+                            ALICE
+                        ]
                     }
                 ]
             })
@@ -92,7 +106,11 @@ describe('normalizeCustomBadges', () => {
         expect(entry.rules).toEqual([
             {
                 kind: 'users',
-                userIds: [FORK_MAINTAINER_USER_ID, OWNER_USER_ID, ALICE]
+                userIds: [
+                    FORK_DEVELOPER_USER_ID,
+                    UPSTREAM_DEVELOPER_USER_ID,
+                    ALICE
+                ]
             }
         ]);
     });
@@ -165,13 +183,15 @@ describe('resolveUserCustomBadges', () => {
             badge({ id: 'friends', rules: [{ kind: 'friends' }] }),
             badge({
                 id: 'listed',
-                rules: [{ kind: 'users', userIds: [OWNER_USER_ID] }]
+                rules: [
+                    { kind: 'users', userIds: [UPSTREAM_DEVELOPER_USER_ID] }
+                ]
             })
         ];
-        expect(resolve(badges, FORK_MAINTAINER_USER_ID, {}, true)).toEqual([
+        expect(resolve(badges, FORK_DEVELOPER_USER_ID, {}, true)).toEqual([
             'friends'
         ]);
-        expect(resolve(badges, OWNER_USER_ID, {}, true)).toEqual([
+        expect(resolve(badges, UPSTREAM_DEVELOPER_USER_ID, {}, true)).toEqual([
             'friends',
             'listed'
         ]);

@@ -1,0 +1,34 @@
+<!doctype html>
+<html class="dark">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Global badge editor</title>
+        <style>
+            /* The app's 4:3 banner is far too tall at preview width. */
+            .badge-editor-profile [class*='aspect-[4/3]'] {
+                aspect-ratio: auto;
+                height: 8rem;
+            }
+            /* The app pins the page and scrolls inside its panels; this page
+               is one long document, so only the page itself scrolls. */
+            html {
+                height: auto !important;
+                overflow-x: hidden !important;
+                overflow-y: auto !important;
+                overscroll-behavior: auto !important;
+            }
+            body,
+            #root {
+                height: auto !important;
+                min-height: 100%;
+                overflow: visible !important;
+                overscroll-behavior: auto !important;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="root"></div>
+        <script type="module" src="./main.tsx"></script>
+    </body>
+</html>

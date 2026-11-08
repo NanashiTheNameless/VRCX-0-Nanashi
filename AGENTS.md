@@ -12,7 +12,7 @@ The fork is maintained by one person. Read `CONTRIBUTING.md` before proposing
 changes, and treat it as authoritative where this file is silent.
 
 The React frontend lives in `src/features/<domain>/`. The Rust backend is a Cargo
-workspace of 31 crates under `crates/`, plus `src-tauri` (32 members total).
+workspace of 34 crates under `crates/`, plus `src-tauri` (35 members total).
 
 npm is the only supported package manager. `package-lock.json` is the sole
 lockfile; CI runs `npm ci`. Do not reintroduce a pnpm or yarn lockfile.
@@ -157,13 +157,15 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   `src/domain/badges/customBadges.ts`, `src/state/customBadgeStore.ts`,
   Settings > Interface > User Badges, and the user dialog's Badges submenu.
   Three badges are built in and always shown, never collapsed, hideable or
-  configurable: fork developer (`FORK_MAINTAINER_USER_ID`), upstream developer
-  (`OWNER_USER_ID`) and VRChat Staff (`isVrchatStaff`, or membership of
-  `VRCHAT_STAFF_GROUP_ID`). Group membership comes from users' own group lists
+  configurable: fork developer (`FORK_DEVELOPER_USER_ID`), upstream developer
+  (`UPSTREAM_DEVELOPER_USER_ID`) and VRChat Staff (`isVrchatStaff`, or membership of
+  `VRCHAT_STAFF_GROUP_ID`). Global badges (below) follow them and are
+  never collapsed either. Group membership comes from users' own group lists
   as the app loads them (`src/state/userGroupMembershipStore.ts`), never from
   extra requests, and outranks stored group member lists, which are often
   private or incomplete. Their icons
-  (`CodeXml`, `Diamond`, `ShieldCheck`, `RESERVED_BADGE_ICONS`) stay reserved
+  (`CodeXml`, `Diamond`, `ShieldCheck`, plus every `AWARD_ICONS` entry, all in
+  `RESERVED_BADGE_ICONS`) stay reserved
   so custom badges cannot imitate them; keep the developer badge flashier than
   the upstream one. Custom badges are local, visible only to the user, stored
   in the `customUserBadges` config key and synced under the `badges` Settings
@@ -178,6 +180,40 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   maintainer's user dialog always uses the black, white and red palette
   (`.fork-maintainer-dialog` in `src/styles/globals.css`), whatever the
   viewer's theme; the upstream developer's dialog is a normal dialog.
+- **Global badges** - `data/global-badges.jsonc` (the list),
+  `src/domain/badges/globalBadges.ts` (icons, styles, animations, validator),
+  `crates/integrations/src/global_badges.rs` (parse and signature check),
+  `crates/runtime-host-desktop/src/global_badges.rs` (embedded copy, cache,
+  6-hour refresh), `GlobalBadgeChip` in `src/components/UserBadges.tsx`,
+  `.github/workflows/data-assets.yml`. Badges the maintainer gives by hand to
+  people who helped the fork, seen by every user. Every release embeds the
+  file; the app also downloads `global-badges.jsonc` and `.sig` from the
+  `data-assets` release (never latest, never prerelease, and the Discord
+  announcement skips it), signed with the updater key, and adopts a copy only
+  if the signature checks out and its `revision` is higher. Never accept an
+  unsigned or older list, and never send anything about the user with the
+  download (`Policy::public`, no credentials). Badges show in file order
+  (most prestigious first), then one-off awards (`"badge": "custom"`, which
+  carry their own label and look; no badge type may use the id `custom`).
+  Dates are epoch seconds. The file is public, so a VRChat user id goes in
+  only with that person's consent. Animations touch only transform and
+  opacity, list badges animate on hover only, and reduced motion stops them.
+  Edit with `npm run badges:editor` (`tools/badge-editor/`, a local Vite page
+  on 127.0.0.1:9010 that saves the file keeping its comments), check with
+  `npm run badges:validate`. The editor's live profile preview runs
+  `crates/badge-editor-profile`, a developer-only binary that is not a default
+  workspace member and is never shipped: it reads the installed app's saved
+  VRChat session read-only, looks up one profile and prints it, and must never
+  write to the app's data or reach any other endpoint.
+
+- **Issue triage** - `.github/workflows/issue-triage.yml`,
+  `scripts/issue-triage.ts`. Closes issues that are not in English, skip the
+  issue forms, leave required answers empty, or ask for a badge without a real
+  VRChat user id, and reopens them when the author fixes them. Language is
+  judged offline from scripts and common words: never send issue text to a
+  translation, AI or other outside service. The maintainer's, collaborators'
+  and bots' issues, issues assigned to the maintainer, issues labelled
+  `triage-ok`, and auto-closed issues reopened by hand are never touched.
 
 ## Things that look like bugs but are not
 

@@ -23,6 +23,7 @@ mod game_log;
 mod game_log_import;
 mod game_media;
 mod game_state_store;
+pub mod global_badges;
 mod group;
 mod group_order;
 mod host_actions;

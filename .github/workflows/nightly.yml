@@ -214,7 +214,9 @@ jobs:
                           mv "${source}.nn-signature" "${destination}.nn-signature"
                       fi
                       if [[ ! -f "${destination}.sig" ]]; then
-                          node node_modules/@tauri-apps/cli/tauri.js signer sign "$destination" > "${destination}.sig"
+                          # The signer writes "<file>.sig" itself; sending its output
+                          # into that same file would corrupt the signature.
+                          node node_modules/@tauri-apps/cli/tauri.js signer sign "$destination" > /dev/null
                       fi
                       if [[ ! -s "${destination}.sig" ]]; then
                           echo "No updater signature for $destination" >&2

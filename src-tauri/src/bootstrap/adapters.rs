@@ -393,9 +393,28 @@ pub(super) fn start_host_services(app: &tauri::AppHandle, state: &AppState) {
     crate::commands::application::remote_sync::start_background_sync(app);
 }
 
+/// How long a manifest found by a check is reused when that update is then
+/// downloaded, so "Download" right after a check does not fetch it again.
+const CHECKED_UPDATE_TTL: Duration = Duration::from_secs(10 * 60);
+
+type CheckedUpdate = Option<(String, std::time::Instant, Update)>;
+
 #[derive(Clone)]
 pub struct TauriUpdaterPort {
     app_handle: tauri::AppHandle,
+    checked: Arc<std::sync::Mutex<CheckedUpdate>>,
+}
+
+fn checked_update_key(request: &UpdaterCheckRequest) -> String {
+    format!(
+        "{}\n{}\n{}\n{}\n{}\n{}",
+        request.manifest_url,
+        request.target,
+        request.current_version,
+        request.expected_version,
+        request.allow_downgrades,
+        request.proxy.as_deref().unwrap_or_default()
+    )
 }
 
 impl TauriUpdaterPort {
@@ -407,7 +426,40 @@ impl TauriUpdaterPort {
                 "failed to resolve update cache directory during startup cleanup"
             ),
         }
-        Self { app_handle }
+        Self {
+            app_handle,
+            checked: Arc::default(),
+        }
+    }
+
+    fn remember_checked(&self, request: &UpdaterCheckRequest, update: Option<&Update>) {
+        let mut checked = self
+            .checked
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        *checked = update.map(|update| {
+            (
+                checked_update_key(request),
+                std::time::Instant::now(),
+                update.clone(),
+            )
+        });
+    }
+
+    fn take_checked(&self, request: &UpdaterCheckRequest) -> Option<Update> {
+        let mut checked = self
+            .checked
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        match checked.take() {
+            Some((key, found_at, update))
+                if key == checked_update_key(request)
+                    && found_at.elapsed() < CHECKED_UPDATE_TTL =>
+            {
+                Some(update)
+            }
+            _ => None,
+        }
     }
 }
 
@@ -574,10 +626,9 @@ impl UpdaterPort for TauriUpdaterPort {
         &self,
         request: UpdaterCheckRequest,
     ) -> ApplicationResult<Option<UpdaterMetadata>> {
-        Ok(find_update(&self.app_handle, &request)
-            .await?
-            .as_ref()
-            .map(updater_metadata_from))
+        let update = find_update(&self.app_handle, &request).await?;
+        self.remember_checked(&request, update.as_ref());
+        Ok(update.as_ref().map(updater_metadata_from))
     }
 
     async fn download(
@@ -586,8 +637,13 @@ impl UpdaterPort for TauriUpdaterPort {
         on_progress: UpdaterProgressCallback,
     ) -> ApplicationResult<UpdaterDownloadOutcome> {
         let mut retried = false;
+        let mut checked = self.take_checked(&request);
         let (update, bytes) = loop {
-            let Some(update) = find_update(&self.app_handle, &request).await? else {
+            let found = match checked.take() {
+                Some(update) => Some(update),
+                None => find_update(&self.app_handle, &request).await?,
+            };
+            let Some(update) = found else {
                 return Err(ApplicationError::Custom(
                     "No installable update was found.".into(),
                 ));

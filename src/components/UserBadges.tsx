@@ -1,6 +1,7 @@
 import { CodeXmlIcon, DiamondIcon, ShieldCheckIcon } from 'lucide-react';
 import {
     useEffect,
+    useMemo,
     useRef,
     type ComponentPropsWithRef,
     type CSSProperties
@@ -22,13 +23,21 @@ import {
     type CustomBadge,
     type CustomBadgeIndex
 } from '@/domain/badges/customBadges';
+import {
+    activeAwardsFor,
+    awardAnimation,
+    awardIcon,
+    awardStyle,
+    type ActiveAward
+} from '@/domain/badges/globalBadges';
 import type { FavoriteGroupMap } from '@/domain/favorites/types';
+import { formatDateFilter } from '@/lib/dateTime';
 import { queryClient } from '@/lib/queryClient';
 import { useKnownUserFact } from '@/lib/useKnownUser';
 import { cn } from '@/lib/utils';
 import {
-    FORK_MAINTAINER_USER_ID,
-    OWNER_USER_ID,
+    FORK_DEVELOPER_USER_ID,
+    UPSTREAM_DEVELOPER_USER_ID,
     VRCHAT_STAFF_GROUP_ID
 } from '@/shared/constants/user';
 import {
@@ -37,6 +46,10 @@ import {
 } from '@/state/customBadgeStore';
 import { useFavoriteStore } from '@/state/favoriteStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
+import {
+    ensureGlobalBadgesLoaded,
+    useGlobalBadgeStore
+} from '@/state/globalBadgeStore';
 import {
     groupMembership,
     setTrackedGroupIds,
@@ -54,10 +67,10 @@ export function developerBadgeKind(
     if (!userId) {
         return null;
     }
-    if (userId === FORK_MAINTAINER_USER_ID) {
+    if (userId === FORK_DEVELOPER_USER_ID) {
         return 'fork';
     }
-    if (userId === OWNER_USER_ID) {
+    if (userId === UPSTREAM_DEVELOPER_USER_ID) {
         return 'upstream';
     }
     return null;
@@ -223,6 +236,85 @@ function useUserBadgeState(userId: string): UserBadgeState {
               )
             : []
     };
+}
+
+function formatAwardDate(seconds: number): string {
+    return formatDateFilter(seconds, 'date');
+}
+
+// Awarded by the maintainer through data/global-badges.jsonc. Built in:
+// never collapsed, and their icons are reserved so custom badges cannot
+// imitate them.
+export function GlobalBadgeChip({
+    award,
+    size = 'compact',
+    className
+}: {
+    award: ActiveAward;
+    size?: BadgeSize;
+    className?: string;
+}) {
+    const { t } = useTranslation();
+    const { badge, grant } = award;
+    const style = awardStyle(badge.style);
+    const animation = awardAnimation(badge.animation);
+    // Per-badge colour overrides from the file replace the style's colours.
+    const colors: Record<string, string> = {};
+    if (badge.colorFrom) {
+        colors['--award-from'] = badge.colorFrom;
+        colors['--award-glow'] =
+            `color-mix(in srgb, ${badge.colorFrom} 60%, transparent)`;
+    }
+    if (badge.colorTo) colors['--award-to'] = badge.colorTo;
+    if (badge.colorBorder) colors['--award-border'] = badge.colorBorder;
+    if (badge.colorText) colors['--award-fg'] = badge.colorText;
+    const chip = (
+        <span
+            className={cn(
+                'global-badge',
+                `global-badge--${style}`,
+                animation !== 'none' && `global-badge--anim-${animation}`,
+                size === 'compact' && 'global-badge--compact',
+                className
+            )}
+            style={colors as CSSProperties}
+            role="img"
+            aria-label={badge.label}
+        >
+            <BadgeIcon name={awardIcon(badge.icon)} allowReserved />
+            {size === 'full' ? (
+                <span aria-hidden="true">{badge.label}</span>
+            ) : null}
+        </span>
+    );
+    const period =
+        grant.since !== null && grant.until !== null
+            ? t('dialog.user.badges.award_period', {
+                  since: formatAwardDate(grant.since),
+                  until: formatAwardDate(grant.until)
+              })
+            : grant.since !== null
+              ? t('dialog.user.badges.award_since', {
+                    since: formatAwardDate(grant.since)
+                })
+              : grant.until !== null
+                ? t('dialog.user.badges.award_until', {
+                      until: formatAwardDate(grant.until)
+                  })
+                : '';
+    return (
+        <Tooltip>
+            <TooltipTrigger render={chip} />
+            <TooltipContent className="max-w-64">
+                <div className="font-semibold">{badge.label}</div>
+                {badge.description ? <div>{badge.description}</div> : null}
+                {grant.reason ? (
+                    <div className="opacity-80">{grant.reason}</div>
+                ) : null}
+                {period ? <div className="opacity-70">{period}</div> : null}
+            </TooltipContent>
+        </Tooltip>
+    );
 }
 
 // Built in like the developer badges: shown for every VRChat staff account and
@@ -411,6 +503,18 @@ type UserBadgesProps = DeveloperBadgeProps & {
     collapsible?: boolean;
 };
 
+function useActiveAwards(userId: string): ActiveAward[] {
+    useEffect(() => {
+        ensureGlobalBadgesLoaded();
+    }, []);
+    const catalog = useGlobalBadgeStore((state) => state.catalog);
+    const nowSeconds = useGlobalBadgeStore((state) => state.nowSeconds);
+    return useMemo(
+        () => activeAwardsFor(catalog, userId, nowSeconds),
+        [catalog, userId, nowSeconds]
+    );
+}
+
 export function UserBadges({
     userId,
     size = 'compact',
@@ -420,6 +524,7 @@ export function UserBadges({
     const normalizedUserId = userId?.trim() ?? '';
     const { isStaff, customBadges } = useUserBadgeState(normalizedUserId);
     const hasDeveloperBadge = developerBadgeKind(normalizedUserId) !== null;
+    const awards = useActiveAwards(normalizedUserId);
     const wrapperRef = useRef<HTMLSpanElement>(null);
     const builtinRef = useRef<HTMLSpanElement>(null);
     const measureRef = useRef<HTMLSpanElement>(null);
@@ -434,7 +539,12 @@ export function UserBadges({
         contentKey: customBadges.map((badge) => badge.id).join(',')
     });
 
-    if (!hasDeveloperBadge && !isStaff && !customBadges.length) {
+    if (
+        !hasDeveloperBadge &&
+        !isStaff &&
+        !awards.length &&
+        !customBadges.length
+    ) {
         return null;
     }
 
@@ -446,13 +556,20 @@ export function UserBadges({
                 className
             )}
         >
-            {hasDeveloperBadge || isStaff ? (
+            {hasDeveloperBadge || isStaff || awards.length ? (
                 <span
                     ref={builtinRef}
                     className="inline-flex items-center gap-1"
                 >
                     <DeveloperBadge userId={normalizedUserId} size={size} />
                     {isStaff ? <VrchatStaffBadge size={size} /> : null}
+                    {awards.map((award) => (
+                        <GlobalBadgeChip
+                            key={award.badge.id}
+                            award={award}
+                            size={size}
+                        />
+                    ))}
                 </span>
             ) : null}
             {customBadges.length ? (

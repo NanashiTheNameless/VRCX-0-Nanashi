@@ -33,7 +33,8 @@ members = [
     "crates/integration-api",
     "crates/assistant",
     "crates/remote-sync",
-    "crates/collector-cli"
+    "crates/collector-cli",
+    "crates/badge-editor-profile"
 ]
 default-members = [
     "src-tauri",

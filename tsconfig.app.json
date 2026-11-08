@@ -9,6 +9,6 @@
         "composite": false,
         "incremental": false
     },
-    "include": ["src/**/*"],
+    "include": ["src/**/*", "tools/**/*.tsx"],
     "exclude": ["node_modules", "build", "dist"]
 }

@@ -48,6 +48,8 @@
         "test": "vitest run",
         "test:watch": "vitest",
         "build:licenses": "node ./scripts/generate-third-party-licenses.ts",
+        "badges:editor": "vite --config tools/badge-editor/vite.config.mts",
+        "badges:validate": "node scripts/validate-global-badges.ts",
         "build": "vite build && npm run build:licenses"
     },
     "dependencies": {
@@ -107,6 +109,7 @@
         "browserslist": "^4.29.5",
         "husky": "^9.1.7",
         "jsdom": "^31.0.0",
+        "jsonc-parser": "^3.3.1",
         "lightningcss": "^1.33.0",
         "lint-staged": "^17.6.0",
         "oxfmt": "^0.77.0",

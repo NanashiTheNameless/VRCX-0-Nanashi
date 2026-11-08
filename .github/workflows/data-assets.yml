@@ -1,0 +1,67 @@
+name: Data Assets
+
+# Publishes data/global-badges.jsonc, signed with the app updater key, on
+# the `data-assets` release. Running apps download it every few hours and
+# use it once the signature checks out. The release is never marked latest
+# or prerelease, so it cannot be mistaken for an app release.
+on:
+    push:
+        branches:
+            - master
+        paths:
+            - 'data/global-badges.jsonc'
+            - 'src/domain/badges/globalBadges.ts'
+            - 'scripts/validate-global-badges.ts'
+            - '.github/workflows/data-assets.yml'
+    workflow_dispatch:
+
+permissions:
+    contents: write
+
+concurrency:
+    group: data-assets
+    cancel-in-progress: false
+
+jobs:
+    publish:
+        name: Sign and publish data assets
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        env:
+            GH_TOKEN: ${{ github.token }}
+            TAG: data-assets
+            FILE: global-badges.jsonc
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: ./.github/actions/setup-node
+
+            - name: Fetch the published copy
+              run: |
+                  mkdir -p "$RUNNER_TEMP/published"
+                  gh release download "$TAG" --pattern "$FILE" --dir "$RUNNER_TEMP/published" || true
+
+            - name: Validate
+              run: node scripts/validate-global-badges.ts "data/$FILE" --published "$RUNNER_TEMP/published/$FILE"
+
+            - name: Sign
+              env:
+                  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_UPDATER_PRIVATE_KEY }}
+                  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_UPDATER_PRIVATE_KEY_PASSWORD }}
+              run: |
+                  mkdir -p "$RUNNER_TEMP/out"
+                  cp "data/$FILE" "$RUNNER_TEMP/out/$FILE"
+                  node node_modules/@tauri-apps/cli/tauri.js signer sign "$RUNNER_TEMP/out/$FILE"
+                  test -s "$RUNNER_TEMP/out/$FILE.sig"
+
+            - name: Publish
+              run: |
+                  if ! gh release view "$TAG" >/dev/null 2>&1; then
+                      gh release create "$TAG" \
+                          --title "Data assets" \
+                          --notes "Signed data files the app downloads (global badges). Not an app release." \
+                          --target "$GITHUB_SHA" \
+                          --latest=false
+                  fi
+                  gh release upload "$TAG" "$RUNNER_TEMP/out/$FILE" "$RUNNER_TEMP/out/$FILE.sig" --clobber
+                  gh release edit "$TAG" --latest=false --prerelease=false

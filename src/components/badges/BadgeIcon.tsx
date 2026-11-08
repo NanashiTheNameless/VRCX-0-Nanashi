@@ -5,15 +5,19 @@ import { useBadgeIconCatalog } from './badgeIcons';
 
 export function BadgeIcon({
     name,
-    className
+    className,
+    allowReserved = false
 }: {
     name: string;
     className?: string;
+    // Built-in global badges may draw reserved icons; custom badges may not.
+    allowReserved?: boolean;
 }) {
     const catalog = useBadgeIconCatalog();
     const Icon =
-        (isReservedBadgeIcon(name) ? null : catalog?.icons[name]) ??
-        catalog?.icons.Star;
+        (!allowReserved && isReservedBadgeIcon(name)
+            ? null
+            : catalog?.icons[name]) ?? catalog?.icons.Star;
     if (!Icon) {
         return (
             <span

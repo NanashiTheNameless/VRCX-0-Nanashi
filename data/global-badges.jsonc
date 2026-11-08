@@ -1,0 +1,153 @@
+// Badges the maintainer awards by hand. Edit with `npm run badges:editor`
+// or by hand, then push: the data-assets workflow checks the file, signs it
+// and publishes it, and running apps pick it up within a few hours. Every
+// release also has this file built in.
+//
+// Rules:
+// - Badges show in the order listed here, most prestigious first; one-off
+//   "custom" awards come after them.
+// - Bump "revision" on every change. Apps keep the highest revision they
+//   have seen and ignore older copies.
+// - Only add someone with their consent: this file is public.
+// - "since" and "until" are UTC epoch seconds like the rest of the app (the
+//   editor has date pickers). Date strings such as "2026-11-07" also work
+//   when typing by hand. "until" is the first moment the badge is no longer
+//   shown; leave it out for no end.
+// - "icon" must be one of the reserved award icons, "style" one of the
+//   colour styles and "animation" one of the animations; see
+//   src/domain/badges/globalBadges.ts (the editor lists them).
+{
+    "revision": 1,
+    "badges": [
+        {
+            "id": "sponsor",
+            "label": "Sponsor",
+            "description": "Supports VRCX-0-Nanashi with regular donations",
+            "icon": "Gem",
+            "style": "amethyst",
+            "animation": "glow"
+        },
+        {
+            "id": "contributor",
+            "label": "Contributor",
+            "description": "Made a significant contribution to VRCX-0-Nanashi",
+            "icon": "GitPullRequest",
+            "style": "emerald",
+            "animation": "flow"
+        },
+        {
+            "id": "security-reporter",
+            "label": "Security Reporter",
+            "description": "Privately reported multible valid security problems",
+            "icon": "ShieldPlus",
+            "style": "midnight",
+            "animation": "glow"
+        },
+        {
+            "id": "donator",
+            "label": "Donator",
+            "description": "Supported VRCX-0-Nanashi with a donation",
+            "icon": "HandHeart",
+            "style": "ember",
+            "animation": "shimmer"
+        },
+        {
+            "id": "code-reviewer",
+            "label": "Code Reviewer",
+            "description": "Reviewed pull requests or tested branches and reported back",
+            "icon": "GitMerge",
+            "style": "teal",
+            "animation": "flow"
+        },
+        {
+            "id": "early-supporter",
+            "label": "Early Supporter",
+            "description": "Supported VRCX-0-Nanashi from early on",
+            "icon": "Sprout",
+            "style": "gold",
+            "animation": "sparkle"
+        },
+        {
+            "id": "bug-hunter",
+            "label": "Bug Hunter",
+            "description": "Found and reported important bugs",
+            "icon": "Bug",
+            "style": "crimson",
+            "animation": "wiggle"
+        },
+        {
+            "id": "tool-maker",
+            "label": "Tool Maker",
+            "description": "Built a script, integration or tool that works with VRCX-0-Nanashi",
+            "icon": "Wrench",
+            "style": "midnight",
+            "animation": "none"
+        },
+        {
+            "id": "theme-artist",
+            "label": "Theme Artist",
+            "description": "Made a theme or artwork for VRCX-0-Nanashi",
+            "icon": "Palette",
+            "style": "amethyst",
+            "animation": "flow"
+        },
+        {
+            "id": "docs-writer",
+            "label": "Docs Writer",
+            "description": "Wrote or improved the guides",
+            "icon": "BookOpen",
+            "style": "emerald",
+            "animation": "none"
+        },
+        {
+            "id": "accessibility-reviewer",
+            "label": "Accessibility Reviewer",
+            "description": "Tested accessibility and reported what needed fixing",
+            "icon": "Accessibility",
+            "style": "sapphire",
+            "animation": "none"
+        },
+        {
+            "id": "beta-tester",
+            "label": "Beta Tester",
+            "description": "Tested nightly builds and reported back",
+            "icon": "FlaskConical",
+            "style": "sapphire",
+            "animation": "shimmer"
+        },
+        {
+            "id": "idea-contributor",
+            "label": "Idea Contributor",
+            "description": "Suggested a feature that shipped",
+            "icon": "Lightbulb",
+            "style": "gold",
+            "animation": "sparkle"
+        },
+        {
+            "id": "promoter",
+            "label": "Promoter",
+            "description": "Made a video, guide or post that brought people to VRCX-0-Nanashi",
+            "icon": "Megaphone",
+            "style": "rose",
+            "animation": "wiggle"
+        },
+        {
+            "id": "special-thanks",
+            "label": "Special Thanks",
+            "description": "Helped VRCX-0-Nanashi in a way no other badge covers",
+            "icon": "Sparkles",
+            "style": "gold",
+            "animation": "sparkle"
+        }
+    ],
+    "awards": [
+        // {
+        //     "userId": "usr_00000000-0000-0000-0000-000000000000",
+        //     "badge": "donator",
+        //     "name": "Display name, only to make this file easier to read",
+        //     "reason": "Donated in November 2026",
+        //     "since": 1794009600,
+        //     "until": 1825545600
+        // },
+    ]
+}

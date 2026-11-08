@@ -1,0 +1,49 @@
+name: Issue Triage
+
+# Closes issues that are invalid (not from an issue form, required parts
+# empty, a badge request without a real VRChat user ID) or not in English,
+# with a comment saying why, and reopens them when the author fixes them. The
+# checks are in scripts/issue-triage.ts and run offline: issue text is never
+# sent to another service. Issues from the maintainer, collaborators and bots,
+# issues labelled `triage-ok` or assigned to the maintainer, and issues
+# reopened by hand are left alone. Run it by hand with "dry run" to see what
+# it would do.
+on:
+    issues:
+        types:
+            - opened
+            - edited
+    schedule:
+        - cron: '17 6 * * *'
+    workflow_dispatch:
+        inputs:
+            dry_run:
+                description: Only log what would happen
+                type: boolean
+                default: true
+
+permissions:
+    issues: write
+
+concurrency:
+    group: issue-triage-${{ github.event.issue.number || 'all' }}
+    cancel-in-progress: false
+
+jobs:
+    triage:
+        name: Check issues
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  sparse-checkout: scripts/issue-triage.ts
+                  sparse-checkout-cone-mode: false
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: 26.x
+            - name: Triage
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
+                  DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+              run: node scripts/issue-triage.ts

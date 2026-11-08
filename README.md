@@ -19,7 +19,7 @@ It is a Rust + Tauri rewrite of VRCX.
 | ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [What this fork changes](FEATURES.md)                 | Every difference from upstream VRCX-0: History Sync (RemoteSync), relay links, the self-hosted recorder, Social AI, safety watchlists, the wrist overlay, notification sounds, and more |
 | [Dates and timezones](TIMESTAMPS.md)                  | Epoch-second storage, automatic old-data migration, per-PC timezone settings, and sync compatibility                                                                                    |
-| [Telemetry](TELEMETRY.md)                             | What upstream telemetry was removed, the one anonymous adoption count this fork sends, and every way to opt out                                                                         |
+| [Telemetry](TELEMETRY.md)                             | What upstream telemetry was removed, the one anonymous adoption count this fork sends, every way to opt out, and the global badges list download                                        |
 | [Install](INSTALL.md)                                 | Downloads for Windows, macOS and Linux, and platform notes                                                                                                                              |
 | [Building from source](BUILDING.md)                   | Requirements, dev and release builds, the RemoteSync collector and the recorder                                                                                                         |
 | [Self-hosted Recorder guide](crates/logger/README.md) | Running your own recorder server                                                                                                                                                        |
@@ -35,6 +35,11 @@ It is a Rust + Tauri rewrite of VRCX.
   is kept but experimental.
 - **Separate app.** Installs side by side with upstream VRCX-0 with its own data folder, link
   scheme and updates.
+- **Badges.** Badges next to user names: built in for the developers and VRChat Staff, your
+  own custom ones, and global badges the developer gives to people who helped the fork
+  (sponsors, contributors, bug and security reporters, testers and more). Want one? Open a
+  [badge request](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/issues/new?template=badge_request.yml)
+  with your VRChat user ID. See [Global badges](FEATURES.md).
 - **English only**, and updates come from this fork's
   [Nightly-Rolling release](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/tag/Nightly-Rolling).
 

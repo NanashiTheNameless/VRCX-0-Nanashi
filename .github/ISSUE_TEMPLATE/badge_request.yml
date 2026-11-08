@@ -1,0 +1,60 @@
+name: Badge Request
+description: Ask for a global badge for something you did for the fork
+title: 'Badge request: '
+labels:
+    - badge
+body:
+    - type: markdown
+      attributes:
+          value: |
+              Global badges show next to your name for everyone who uses VRCX-0-Nanashi. They are given by hand to people who helped the fork. Nothing is for sale, and asking does not guarantee a badge.
+
+              Do not use this form to report a security problem; see the [security policy](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/security/policy) instead. Please write in English.
+
+    - type: input
+      attributes:
+          label: VRChat user ID
+          description: Starts with `usr_`. It is in your profile link on vrchat.com (`https://vrchat.com/home/user/usr_...`).
+          placeholder: usr_00000000-0000-0000-0000-000000000000
+      validations:
+          required: true
+    - type: input
+      attributes:
+          label: VRChat display name
+          description: Only used to check the ID is yours.
+    - type: dropdown
+      attributes:
+          label: Which badge?
+          options:
+              - Sponsor
+              - Contributor
+              - Security Reporter
+              - Donator
+              - Code Reviewer
+              - Early Supporter
+              - Bug Hunter
+              - Tool Maker
+              - Theme Artist
+              - Docs Writer
+              - Accessibility Reviewer
+              - Beta Tester
+              - Idea Contributor
+              - Promoter
+              - Special Thanks
+              - Something else (explain below)
+      validations:
+          required: true
+    - type: textarea
+      attributes:
+          label: What did you do?
+          description: Links help a lot - pull requests, issues, a video or post, the name you donated under. Do not post payment details or receipts.
+      validations:
+          required: true
+    - type: checkboxes
+      attributes:
+          label: Consent
+          options:
+              - label: I understand the badge list is public, and I agree to my VRChat user ID being listed in it.
+                required: true
+              - label: This is my own VRChat account.
+                required: true

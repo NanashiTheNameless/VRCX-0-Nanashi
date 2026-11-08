@@ -274,6 +274,8 @@ export const commands = {
         __TAURI_INVOKE<null>('app__quick_search_working_set_invalidate'),
     appAdoptionCensusLock: () =>
         __TAURI_INVOKE<AdoptionCensusLock | null>('app__adoption_census_lock'),
+    appGlobalBadgesGet: () =>
+        __TAURI_INVOKE<GlobalBadgeCatalog>('app__global_badges_get'),
     appVrcStatusGet: () =>
         __TAURI_INVOKE<VrcStatusSnapshot>('app__vrc_status_get'),
     appVrcStatusRefresh: () =>
@@ -5661,6 +5663,70 @@ export type GameLogWriteKind =
 export type GameNoVrPayload = {
     isGameNoVR: boolean;
 };
+
+export type GlobalBadgeCatalog = {
+    revision?: number;
+    badges?: GlobalBadgeDefinition[];
+    awards?: GlobalBadgeGrant[];
+    source?: GlobalBadgeSource;
+};
+
+/**
+ *  A kind of global badge. `icon`, `style` and `animation` are names the
+ *  frontend knows; unknown names fall back to safe defaults there. The
+ *  `color_*` fields are `#rrggbb` overrides for the style's colours, empty
+ *  when the style's own colour is used.
+ */
+export type GlobalBadgeDefinition = {
+    id?: string;
+    label?: string;
+    description?: string;
+    icon?: string;
+    style?: string;
+    animation?: string;
+    colorFrom?: string;
+    colorTo?: string;
+    colorBorder?: string;
+    colorText?: string;
+};
+
+/**
+ *  One person holding one badge. Dates are UTC epoch seconds; `until` is
+ *  exclusive, and `None` means open-ended. `overrides` changes how the badge
+ *  looks for this person only; empty fields keep the badge type's values.
+ */
+export type GlobalBadgeGrant = {
+    userId?: string;
+    badge?: string;
+    reason?: string;
+    since?: number | null;
+    until?: number | null;
+    overrides?: GlobalBadgeOverrides;
+};
+
+/**
+ *  Per-person appearance overrides for an award. Empty means "inherit". For a
+ *  one-off award (badge [`CUSTOM_AWARD_BADGE`]) they are the whole badge.
+ */
+export type GlobalBadgeOverrides = {
+    label?: string;
+    description?: string;
+    icon?: string;
+    style?: string;
+    animation?: string;
+    colorFrom?: string;
+    colorTo?: string;
+    colorBorder?: string;
+    colorText?: string;
+};
+
+export type GlobalBadgeSource =
+    /**  The copy built into this release. */
+    | 'embedded'
+    /**  A signed copy downloaded earlier and kept in the data folder. */
+    | 'cached'
+    /**  A signed copy downloaded during this run. */
+    | 'downloaded';
 
 /**  Fork: global-hide status for the signed-in account. */
 export type GlobalHideStatus = {

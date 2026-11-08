@@ -22,3 +22,9 @@ body:
       attributes:
           label: Anything else?
           description: Screenshots, examples, links - anything that helps explain your idea.
+    - type: input
+      attributes:
+          label: VRChat user ID (optional, for a badge)
+          description: |
+              If this leads to a change, you can get the **Idea Contributor** badge, which every user of the fork sees next to your name. Paste your VRChat user ID (starts with `usr_`; it is in your profile link on vrchat.com). Leave it empty if you do not want a badge. The badge list is public, so filling this in means you agree to your ID being listed in it.
+          placeholder: usr_00000000-0000-0000-0000-000000000000

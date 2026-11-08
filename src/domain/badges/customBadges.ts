@@ -1,3 +1,4 @@
+import { AWARD_ICONS } from '@/domain/badges/globalBadges';
 import { collectFavoriteGroupFriendIds } from '@/domain/favorites/favoriteGroupSelection';
 import type { FavoriteGroupMap } from '@/domain/favorites/types';
 import { TRUST_COLOR_DEFAULTS } from '@/shared/constants/trustColors';
@@ -20,11 +21,13 @@ const ROLE_ID = /^grol_[0-9a-z-]{1,64}$/i;
 const ICON_NAME = /^[A-Z][A-Za-z0-9]{0,63}$/;
 
 // Icons of the built-in badges (fork developer, upstream developer, VRChat
-// staff). Custom badges may not use them, so those badges cannot be imitated.
+// staff) and of global badges. Custom badges may not use them, so those
+// badges cannot be imitated.
 export const RESERVED_BADGE_ICONS: ReadonlySet<string> = new Set([
     'CodeXml',
     'Diamond',
-    'ShieldCheck'
+    'ShieldCheck',
+    ...AWARD_ICONS
 ]);
 
 export function isReservedBadgeIcon(icon: string): boolean {

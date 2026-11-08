@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use serde::Deserialize;
 use serde_json::Value;
@@ -13,30 +14,53 @@ use vrcx_0_contracts::external_api::{self, ExternalApiScope};
 const GITHUB_RELEASES_URL: &str =
     "https://api.github.com/repos/NanashiTheNameless/VRCX-0-Nanashi/releases";
 
+/// How long one release list answers every caller. Opening the updater dialog
+/// asks for the list and runs a check at the same time, and installing looks
+/// the release up again; within this window they share one GitHub request.
+const SHARED_LIST_TTL: Duration = Duration::from_secs(60);
+
 pub struct GitHubReleaseCatalogAdapter {
     web: Arc<WebClient>,
+    // Held across the request, so concurrent callers wait for the one in
+    // flight instead of starting their own.
+    recent: tokio::sync::Mutex<Option<(Instant, Vec<AppUpdateCatalogRelease>)>>,
 }
 
 impl GitHubReleaseCatalogAdapter {
     pub fn new(web: Arc<WebClient>) -> Self {
-        Self { web }
+        Self {
+            web,
+            recent: tokio::sync::Mutex::new(None),
+        }
+    }
+
+    async fn fetch(&self) -> vrcx_0_application_core::Result<Vec<AppUpdateCatalogRelease>> {
+        let mut headers = HashMap::new();
+        headers.insert(
+            "Accept".to_string(),
+            "application/vnd.github+json".to_string(),
+        );
+        let input = external_api::github_releases_get_input(GITHUB_RELEASES_URL, headers);
+        let response = self
+            .web
+            .execute_external_api(input, ExternalApiScope::UpdateRelease)
+            .await?;
+        parse_catalog_response(response.status, &response.data)
     }
 }
 
 impl AppUpdateReleaseCatalogPort for GitHubReleaseCatalogAdapter {
     fn list_releases(&self) -> AppUpdateReleaseCatalogFuture<'_> {
         Box::pin(async move {
-            let mut headers = HashMap::new();
-            headers.insert(
-                "Accept".to_string(),
-                "application/vnd.github+json".to_string(),
-            );
-            let input = external_api::github_releases_get_input(GITHUB_RELEASES_URL, headers);
-            let response = self
-                .web
-                .execute_external_api(input, ExternalApiScope::UpdateRelease)
-                .await?;
-            parse_catalog_response(response.status, &response.data)
+            let mut recent = self.recent.lock().await;
+            if let Some((fetched_at, releases)) = recent.as_ref() {
+                if fetched_at.elapsed() < SHARED_LIST_TTL {
+                    return Ok(releases.clone());
+                }
+            }
+            let releases = self.fetch().await?;
+            *recent = Some((Instant::now(), releases.clone()));
+            Ok(releases)
         })
     }
 }

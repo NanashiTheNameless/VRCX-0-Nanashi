@@ -7,7 +7,9 @@ description = "External service clients"
 
 [dependencies]
 vrcx-0-http-client = { path = "../http-client" }
+base64 = { workspace = true }
 futures-util = "0.3"
+minisign-verify = "0.3"
 reqwest = { workspace = true, features = ["json", "socks", "stream"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }

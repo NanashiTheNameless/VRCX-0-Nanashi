@@ -1,1 +1,8 @@
 blank_issues_enabled: false
+contact_links:
+    - name: Report a security problem
+      url: https://github.com/NanashiTheNameless/VRCX-0-Nanashi/security/advisories/new
+      about: Report it privately, never in a public issue.
+    - name: Upstream VRCX-0
+      url: https://github.com/Map1en/VRCX-0
+      about: For the official app and its support. Please do not report bugs from this fork there.

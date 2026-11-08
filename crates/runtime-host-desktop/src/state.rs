@@ -210,6 +210,7 @@ struct DesktopRuntimeProfileExtension {
     desktop_maintenance_running: Arc<AtomicBool>,
     background_image_started: AtomicBool,
     adoption_census_started: AtomicBool,
+    global_badges_started: AtomicBool,
     app_launcher_events_started: AtomicBool,
     discord_reconcile_generation: Arc<AtomicU64>,
     registry_backup_state: Arc<Mutex<RegistryBackupMaintenanceState>>,
@@ -2240,6 +2241,12 @@ impl DesktopRuntimeProfileExtension {
                 self.game.auto_launch.clone(),
                 state.desktop_assembly().event_bus().clone(),
                 state.desktop_assembly().tasks().clone(),
+            );
+        }
+        if !self.global_badges_started.swap(true, Ordering::AcqRel) {
+            crate::global_badges::start_global_badges_loop(
+                &state.app_data_dir().current_dir,
+                state.desktop_assembly().tasks(),
             );
         }
         if !self.adoption_census_started.swap(true, Ordering::AcqRel) {

@@ -11,6 +11,9 @@ are not actively solicited, but small, focused fixes are welcome.
 - UI text is English only; do not add translations.
 - Issues and discussion must be in English. Other languages are not officially supported on
   this fork.
+- Issues are checked automatically: one that is not in English, does not use an issue form or
+  leaves its required parts empty is closed with a comment saying why. Edit it to fix that and
+  it reopens by itself.
 - Use plain ASCII punctuation (no em/en dashes, curly quotes, or emoji) in UI
   strings and docs.
 
@@ -25,3 +28,15 @@ actually solves the problem.
 - Keep the change minimal and on-topic.
 
 Contributions are accepted under the project license (GPLv3). No CLA is required.
+
+## Badges
+
+People who help the fork can get a global badge that every user of the fork sees next to
+their name: contributors, code reviewers, bug and security reporters, testers, theme and tool
+makers, docs writers and more. The issue and pull request templates have an optional field for
+your VRChat user ID (`usr_...`, from your profile link) if you want one. Badges are added by
+hand to the public file `data/global-badges.jsonc`, so giving your ID means agreeing to it
+being public. You can also ask with a
+[badge request](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/issues/new?template=badge_request.yml).
+
+Report security problems privately, never in a public issue: see [SECURITY.md](SECURITY.md).

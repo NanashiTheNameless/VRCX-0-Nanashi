@@ -18,6 +18,7 @@ pub mod feed_live;
 pub mod friend_log;
 pub mod game_log;
 pub mod game_log_query;
+pub mod global_badges;
 mod legacy_migration;
 pub mod llm;
 pub mod local_moderation;

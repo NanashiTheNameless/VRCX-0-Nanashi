@@ -30,6 +30,7 @@ pub(super) fn build_profile_extension(
         desktop_maintenance_running: Arc::new(AtomicBool::new(false)),
         background_image_started: AtomicBool::new(false),
         adoption_census_started: AtomicBool::new(false),
+        global_badges_started: AtomicBool::new(false),
         app_launcher_events_started: AtomicBool::new(false),
         discord_reconcile_generation: Arc::new(AtomicU64::new(0)),
         registry_backup_state: Arc::new(Mutex::new(RegistryBackupMaintenanceState::default())),

@@ -1,7 +1,10 @@
-export const OWNER_USER_ID = 'usr_63f57413-1470-4703-b655-50b7c0845414';
+// Map1en, developer of upstream VRCX-0. Shown with the UPSTREAM badge.
+export const UPSTREAM_DEVELOPER_USER_ID =
+    'usr_63f57413-1470-4703-b655-50b7c0845414';
 
-// Fork: VRCX-0-Nanashi maintainer, shown with a developer badge.
-export const FORK_MAINTAINER_USER_ID =
+// NanashiTheNameless, developer of the VRCX-0-Nanashi fork. Shown with the
+// DEV badge and the fork's own profile theme.
+export const FORK_DEVELOPER_USER_ID =
     'usr_51f73598-041f-42f3-bb89-319a6d27b10c';
 
 // VRChat's official team group (https://vrc.group/VRCHAT.0000). Its members

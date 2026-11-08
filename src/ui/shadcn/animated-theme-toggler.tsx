@@ -174,14 +174,18 @@ function nextThemeSurfaceColor(): string {
 // animations, which are safe where View Transitions crash (WebKitGTK without
 // the DMABUF renderer).
 function runOverlayTransition({
-    clipPath,
+    x,
+    y,
+    radius,
     duration,
     easing,
     applyTheme,
     onStart,
     onEnd
 }: {
-    clipPath: string[];
+    x: number;
+    y: number;
+    radius: number;
     duration: number;
     easing: string;
     applyTheme: () => void;
@@ -190,18 +194,25 @@ function runOverlayTransition({
 }) {
     const overlay = document.createElement('div');
     overlay.setAttribute('aria-hidden', 'true');
+    // A circle that covers the whole window when fully grown, scaled up from
+    // the button. Scaling (unlike growing a clip-path) needs no repaint.
     Object.assign(overlay.style, {
         position: 'fixed',
-        inset: '0',
+        left: `${x - radius}px`,
+        top: `${y - radius}px`,
+        width: `${radius * 2}px`,
+        height: `${radius * 2}px`,
+        borderRadius: '50%',
         zIndex: '2147483647',
         pointerEvents: 'none',
         background: nextThemeSurfaceColor(),
-        clipPath: clipPath[0]
+        transform: 'scale(0)',
+        willChange: 'transform'
     });
     document.body.appendChild(overlay);
 
     const grow = overlay.animate(
-        { clipPath },
+        { transform: ['scale(0)', 'scale(1)'] },
         { duration, easing, fill: 'forwards' }
     );
     onStart(grow);
@@ -339,7 +350,9 @@ export const AnimatedThemeToggler = ({
 
         if (useOverlay) {
             runOverlayTransition({
-                clipPath,
+                x,
+                y,
+                radius: maxRadius,
                 duration,
                 easing: shape === 'star' ? 'linear' : 'ease-in-out',
                 applyTheme: () => flushSync(applyTheme),

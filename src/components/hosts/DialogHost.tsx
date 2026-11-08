@@ -3,7 +3,7 @@ import { Fragment, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
-import { FORK_MAINTAINER_USER_ID } from '@/shared/constants/user';
+import { FORK_DEVELOPER_USER_ID } from '@/shared/constants/user';
 import { useDialogStore } from '@/state/dialogStore';
 import {
     Breadcrumb,
@@ -56,7 +56,7 @@ export function DialogHost() {
     const dialogPayload = activeDialog?.payload || null;
     const isUserDialog = dialogKind === 'user';
     const isForkMaintainerDialog =
-        isUserDialog && activeDialog?.entityId === FORK_MAINTAINER_USER_ID;
+        isUserDialog && activeDialog?.entityId === FORK_DEVELOPER_USER_ID;
     const isWorldDialog = dialogKind === 'world';
     const isAvatarDialog = dialogKind === 'avatar';
     const isGroupDialog = dialogKind === 'group';

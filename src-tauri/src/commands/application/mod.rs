@@ -11,6 +11,7 @@ pub mod favorite_transfer;
 pub mod feed_logger;
 pub mod friend_log;
 pub mod frontend_batch;
+pub mod global_badges;
 pub mod group_calendar;
 pub mod group_quick_moderation;
 pub mod integration_api;

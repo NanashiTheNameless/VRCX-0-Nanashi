@@ -16,6 +16,8 @@ permissions:
 jobs:
     announce:
         name: Post Release to Discord
+        # data-assets holds signed data files, not an app release.
+        if: ${{ github.event.release.tag_name != 'data-assets' && inputs.tag != 'data-assets' }}
         runs-on: ubuntu-24.04
         steps:
             - name: Post release

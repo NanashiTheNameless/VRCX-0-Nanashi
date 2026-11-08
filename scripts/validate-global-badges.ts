@@ -1,0 +1,64 @@
+// Checks data/global-badges.jsonc before it is signed and published.
+// Usage: node scripts/validate-global-badges.ts [file] [--published file]
+// With --published, the new revision must be higher than the published one.
+import fs from 'node:fs';
+import path from 'node:path';
+
+import { parse, printParseErrorCode, type ParseError } from 'jsonc-parser';
+
+type Validator = {
+    validateGlobalBadgeFile: (data: unknown) => string[];
+};
+
+function readJsonc(file: string): unknown {
+    const errors: ParseError[] = [];
+    const data: unknown = parse(fs.readFileSync(file, 'utf8'), errors, {
+        allowTrailingComma: true
+    });
+    if (errors.length) {
+        const details = errors
+            .map(
+                (error) =>
+                    `${printParseErrorCode(error.error)} at ${error.offset}`
+            )
+            .join(', ');
+        throw new Error(`${file} is not valid JSONC: ${details}`);
+    }
+    return data;
+}
+
+const args = process.argv.slice(2);
+const publishedIndex = args.indexOf('--published');
+const published = publishedIndex >= 0 ? args[publishedIndex + 1] : undefined;
+const file =
+    args.find(
+        (arg, index) => !arg.startsWith('--') && index !== publishedIndex + 1
+    ) ?? 'data/global-badges.jsonc';
+
+const validator = (await import(
+    new URL('../src/domain/badges/globalBadges.ts', import.meta.url).href
+)) as Validator;
+
+const data = readJsonc(path.resolve(file));
+const problems = validator.validateGlobalBadgeFile(data);
+if (published && fs.existsSync(published)) {
+    const before = (readJsonc(published) as { revision?: unknown }).revision;
+    const after = (data as { revision?: unknown }).revision;
+    if (
+        typeof before === 'number' &&
+        typeof after === 'number' &&
+        after <= before
+    ) {
+        problems.push(
+            `"revision" is ${after}, but the published file is already at ${before}; bump it.`
+        );
+    }
+}
+if (problems.length) {
+    console.error(`${file} has ${problems.length} problem(s):`);
+    for (const problem of problems) {
+        console.error(`- ${problem}`);
+    }
+    process.exit(1);
+}
+console.log(`${file} is valid.`);

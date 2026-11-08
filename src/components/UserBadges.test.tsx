@@ -3,12 +3,14 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { normalizeGlobalBadgeCatalog } from '@/domain/badges/globalBadges';
 import {
-    FORK_MAINTAINER_USER_ID,
-    OWNER_USER_ID,
+    FORK_DEVELOPER_USER_ID,
+    UPSTREAM_DEVELOPER_USER_ID,
     VRCHAT_STAFF_GROUP_ID
 } from '@/shared/constants/user';
 import { useCustomBadgeStore } from '@/state/customBadgeStore';
+import { useGlobalBadgeStore } from '@/state/globalBadgeStore';
 import { useUserFactsStore } from '@/state/userFactsStore';
 import {
     recordUserGroups,
@@ -24,8 +26,8 @@ import {
 
 describe('developerBadgeKind', () => {
     it('distinguishes the fork maintainer from the upstream developer', () => {
-        expect(developerBadgeKind(FORK_MAINTAINER_USER_ID)).toBe('fork');
-        expect(developerBadgeKind(OWNER_USER_ID)).toBe('upstream');
+        expect(developerBadgeKind(FORK_DEVELOPER_USER_ID)).toBe('fork');
+        expect(developerBadgeKind(UPSTREAM_DEVELOPER_USER_ID)).toBe('upstream');
         expect(developerBadgeKind('usr_someone-else')).toBeNull();
         expect(developerBadgeKind('')).toBeNull();
         expect(developerBadgeKind(undefined)).toBeNull();
@@ -37,7 +39,7 @@ describe('DeveloperBadge', () => {
 
     it('renders the fork badge with its text label at full size', () => {
         const { container } = render(
-            <DeveloperBadge userId={FORK_MAINTAINER_USER_ID} size="full" />
+            <DeveloperBadge userId={FORK_DEVELOPER_USER_ID} size="full" />
         );
         const badge = screen.getByRole('img', {
             name: 'dialog.user.badges.fork_developer'
@@ -50,7 +52,7 @@ describe('DeveloperBadge', () => {
 
     it('renders the fork badge without a text label when compact', () => {
         const { container } = render(
-            <DeveloperBadge userId={FORK_MAINTAINER_USER_ID} />
+            <DeveloperBadge userId={FORK_DEVELOPER_USER_ID} />
         );
         const badge = screen.getByRole('img', {
             name: 'dialog.user.badges.fork_developer'
@@ -62,7 +64,9 @@ describe('DeveloperBadge', () => {
     });
 
     it('renders the upstream badge with its own style', () => {
-        render(<DeveloperBadge userId={OWNER_USER_ID} size="full" />);
+        render(
+            <DeveloperBadge userId={UPSTREAM_DEVELOPER_USER_ID} size="full" />
+        );
         const badge = screen.getByRole('img', {
             name: 'dialog.user.badges.upstream_developer'
         });
@@ -131,19 +135,74 @@ describe('UserBadges', () => {
                     color: '#ff0000',
                     enabled: true,
                     rules: [
-                        { kind: 'users', userIds: [FORK_MAINTAINER_USER_ID] }
+                        { kind: 'users', userIds: [FORK_DEVELOPER_USER_ID] }
                     ]
                 }
             ]
         });
         const { container } = render(
-            <UserBadges userId={FORK_MAINTAINER_USER_ID} />
+            <UserBadges userId={FORK_DEVELOPER_USER_ID} />
         );
         const labels = Array.from(
             container.querySelectorAll('[role="img"]'),
             (node) => node.getAttribute('aria-label')
         );
         expect(labels).toEqual(['dialog.user.badges.fork_developer', 'Artist']);
+    });
+
+    it('shows global badges after the built-in ones', () => {
+        const awardee = 'usr_66666666-6666-6666-6666-666666666666';
+        useGlobalBadgeStore.setState({
+            catalog: normalizeGlobalBadgeCatalog({
+                revision: 1,
+                source: 'embedded',
+                badges: [
+                    {
+                        id: 'donator',
+                        label: 'Donator',
+                        description: 'Supported the fork',
+                        icon: 'HandHeart',
+                        style: 'ember',
+                        animation: 'shimmer'
+                    }
+                ],
+                awards: [
+                    {
+                        userId: awardee,
+                        badge: 'donator',
+                        reason: 'Thanks',
+                        since: null,
+                        until: null
+                    },
+                    {
+                        userId: FORK_DEVELOPER_USER_ID,
+                        badge: 'donator',
+                        reason: '',
+                        since: null,
+                        until: null
+                    }
+                ]
+            })
+        });
+        try {
+            render(<UserBadges userId={awardee} size="full" />);
+            const chip = screen.getByRole('img', { name: 'Donator' });
+            expect(chip.classList.contains('global-badge--ember')).toBe(true);
+            expect(chip.classList.contains('global-badge--anim-shimmer')).toBe(
+                true
+            );
+            cleanup();
+            const { container } = render(
+                <UserBadges userId={FORK_DEVELOPER_USER_ID} />
+            );
+            expect(
+                Array.from(container.querySelectorAll('[role="img"]'), (node) =>
+                    node.getAttribute('aria-label')
+                )
+            ).toEqual(['dialog.user.badges.fork_developer', 'Donator']);
+        } finally {
+            useGlobalBadgeStore.setState({ catalog: null });
+        }
     });
 
     it('shows the staff badge for members of the VRChat staff group', () => {
