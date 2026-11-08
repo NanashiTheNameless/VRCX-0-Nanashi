@@ -20,6 +20,16 @@ const GROUP_ID = /^grp_[0-9a-z-]{1,64}$/i;
 const ROLE_ID = /^grol_[0-9a-z-]{1,64}$/i;
 const ICON_NAME = /^[A-Z][A-Za-z0-9]{0,63}$/;
 
+export const BADGE_AGE_LEVELS = ['any', 'adult'] as const;
+export type BadgeAgeLevel = (typeof BADGE_AGE_LEVELS)[number];
+// VRChat's last_platform values.
+export const BADGE_PLATFORMS = ['standalonewindows', 'android', 'ios'] as const;
+export type BadgePlatform = (typeof BADGE_PLATFORMS)[number];
+// VRChat's own status values. Offline users report "offline", so these only
+// match while a user is online.
+export const BADGE_STATUSES = ['join me', 'active', 'ask me', 'busy'] as const;
+export type BadgeStatus = (typeof BADGE_STATUSES)[number];
+
 // Icons of the built-in badges (fork developer, upstream developer, VRChat
 // staff) and of global badges. Custom badges may not use them, so those
 // badges cannot be imitated.
@@ -78,8 +88,12 @@ export type CustomBadgeRule =
       }
     | { kind: 'trust'; trustKey: TrustColorKey }
     | { kind: 'supporter' }
+    | { kind: 'ageVerified'; level: BadgeAgeLevel }
+    | { kind: 'platform'; platform: BadgePlatform }
+    | { kind: 'status'; status: BadgeStatus }
     | { kind: 'memo'; contains: string }
-    | { kind: 'bio'; contains: string };
+    | { kind: 'bio'; contains: string }
+    | { kind: 'pronouns'; contains: string };
 
 export type CustomBadgeRuleKind = CustomBadgeRule['kind'];
 
@@ -99,6 +113,11 @@ export type BadgeUserFacts = {
     trustKey: TrustColorKey | null;
     memo: string;
     bio: string;
+    pronouns: string;
+    ageVerified: boolean;
+    ageVerificationStatus: string;
+    platform: string;
+    status: string;
     userId: string;
     // From the user's own group list: true, false, or null when not known.
     groupMembership: (groupId: string) => boolean | null;
@@ -119,6 +138,16 @@ function asRecord(value: unknown): Record<string, unknown> {
 
 function text(value: unknown, max = 256): string {
     return typeof value === 'string' ? value.trim().slice(0, max) : '';
+}
+
+function oneOf<T extends string>(
+    values: readonly T[],
+    value: unknown
+): value is T {
+    return (
+        typeof value === 'string' &&
+        (values as readonly string[]).includes(value)
+    );
 }
 
 function isTrustKey(value: unknown): value is TrustColorKey {
@@ -228,8 +257,24 @@ export function normalizeBadgeRule(value: unknown): CustomBadgeRule | null {
             return isTrustKey(source.trustKey)
                 ? { kind: 'trust', trustKey: source.trustKey }
                 : null;
+        case 'ageVerified':
+            return {
+                kind: 'ageVerified',
+                level: oneOf(BADGE_AGE_LEVELS, source.level)
+                    ? source.level
+                    : 'any'
+            };
+        case 'platform':
+            return oneOf(BADGE_PLATFORMS, source.platform)
+                ? { kind: 'platform', platform: source.platform }
+                : null;
+        case 'status':
+            return oneOf(BADGE_STATUSES, source.status)
+                ? { kind: 'status', status: source.status }
+                : null;
         case 'memo':
-        case 'bio': {
+        case 'bio':
+        case 'pronouns': {
             const contains = text(source.contains, CUSTOM_BADGE_MEMO_MAX);
             return contains ? { kind: source.kind, contains } : null;
         }
@@ -289,6 +334,10 @@ function isDynamicRule(rule: CustomBadgeRule): boolean {
         rule.kind === 'supporter' ||
         rule.kind === 'memo' ||
         rule.kind === 'bio' ||
+        rule.kind === 'pronouns' ||
+        rule.kind === 'ageVerified' ||
+        rule.kind === 'platform' ||
+        rule.kind === 'status' ||
         rule.kind === 'vrchatGroup'
     );
 }
@@ -343,6 +392,14 @@ export function buildCustomBadgeIndex(
 
 const NO_GROUP_KNOWLEDGE = () => null;
 
+function stringField(
+    fact: Record<string, unknown> | null | undefined,
+    key: string
+): string {
+    const value = fact?.[key];
+    return typeof value === 'string' ? value : '';
+}
+
 export function badgeUserFactsFrom(
     fact: Record<string, unknown> | null | undefined,
     isFriend: boolean,
@@ -368,7 +425,13 @@ export function badgeUserFactsFrom(
         memo: [fact?.memo, fact?.note]
             .filter((value): value is string => typeof value === 'string')
             .join('\n'),
-        bio: typeof fact?.bio === 'string' ? fact.bio : '',
+        bio: stringField(fact, 'bio'),
+        pronouns: stringField(fact, 'pronouns'),
+        ageVerified: fact?.ageVerified === true,
+        ageVerificationStatus: stringField(fact, 'ageVerificationStatus'),
+        platform:
+            stringField(fact, 'last_platform') || stringField(fact, 'platform'),
+        status: stringField(fact, 'status'),
         userId,
         groupMembership
     };
@@ -412,6 +475,15 @@ function vrchatGroupRuleMatches(
     return fromOwnList === true || inStoredList;
 }
 
+// Same test as the age verified chip in the user dialog, so a badge agrees
+// with what the profile shows.
+function ageRuleMatches(level: BadgeAgeLevel, facts: BadgeUserFacts): boolean {
+    if (!facts.ageVerified || !facts.ageVerificationStatus) {
+        return false;
+    }
+    return level === 'any' || facts.ageVerificationStatus === '18+';
+}
+
 /** Groups referenced by the badges' group rules. */
 export function badgeRuleGroupIds(badges: readonly CustomBadge[]): string[] {
     const ids = new Set<string>();
@@ -440,6 +512,14 @@ function dynamicRuleMatches(
             return containsText(facts.memo, rule.contains);
         case 'bio':
             return containsText(facts.bio, rule.contains);
+        case 'pronouns':
+            return containsText(facts.pronouns, rule.contains);
+        case 'ageVerified':
+            return ageRuleMatches(rule.level, facts);
+        case 'platform':
+            return facts.platform === rule.platform;
+        case 'status':
+            return facts.status === rule.status;
         case 'vrchatGroup':
             return vrchatGroupRuleMatches(rule, facts);
         default:

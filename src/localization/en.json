@@ -4019,7 +4019,11 @@
                         "trust": "Trust rank",
                         "supporter": "VRC+ supporters",
                         "memo": "Memo or note contains",
-                        "bio": "Bio contains"
+                        "bio": "Bio contains",
+                        "ageVerified": "Age verified",
+                        "platform": "Platform",
+                        "status": "Status",
+                        "pronouns": "Pronouns contain"
                     },
                     "rule_description": {
                         "users": "Users you list here.",
@@ -4029,7 +4033,26 @@
                         "trust": "Users with this trust rank, when their profile is known.",
                         "supporter": "Users with VRChat Plus, when their profile is known.",
                         "memo": "Users whose memo or VRChat note contains this text.",
-                        "bio": "Users whose VRChat bio contains this text, when their profile is known."
+                        "bio": "Users whose VRChat bio contains this text, when their profile is known.",
+                        "ageVerified": "Users who show VRChat age verification on their profile, when their profile is known. Users who hide it never match.",
+                        "platform": "Users whose last VRChat platform is this one, when it is known.",
+                        "status": "Online users with this status. Changes as their status changes.",
+                        "pronouns": "Users whose VRChat pronouns contain this text, when their profile is known."
+                    },
+                    "age_level": {
+                        "any": "Any age verification",
+                        "adult": "Verified 18+ only"
+                    },
+                    "platform_option": {
+                        "standalonewindows": "PC",
+                        "android": "Android (Quest)",
+                        "ios": "iOS"
+                    },
+                    "status_option": {
+                        "join_me": "Join Me",
+                        "active": "Online",
+                        "ask_me": "Ask Me",
+                        "busy": "Do Not Disturb"
                     }
                 },
                 "user_colors": {

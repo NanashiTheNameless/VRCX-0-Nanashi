@@ -5,6 +5,9 @@ import { useShallow } from 'zustand/react/shallow';
 
 import { CustomBadgeChip } from '@/components/UserBadges';
 import {
+    BADGE_AGE_LEVELS,
+    BADGE_PLATFORMS,
+    BADGE_STATUSES,
     CUSTOM_BADGE_GROUP_MEMBER_LIMIT,
     CUSTOM_BADGE_LABEL_MAX,
     CUSTOM_BADGE_MEMO_MAX,
@@ -61,9 +64,53 @@ const RULE_KINDS: CustomBadgeRuleKind[] = [
     'vrchatGroup',
     'trust',
     'supporter',
+    'ageVerified',
+    'platform',
+    'status',
     'memo',
-    'bio'
+    'bio',
+    'pronouns'
 ];
+
+// Option keys for the translation file, which cannot hold the spaces in
+// VRChat's status values.
+const optionKey = (value: string) => value.replace(/\W+/g, '_');
+
+function OptionSelect<V extends string>({
+    value,
+    values,
+    labelPrefix,
+    onValueChange
+}: {
+    value: V;
+    values: readonly V[];
+    labelPrefix: string;
+    onValueChange: (value: V) => void;
+}) {
+    const { t } = useTranslation();
+    return (
+        <Select
+            value={value}
+            onValueChange={(next) => {
+                const match = values.find((entry) => entry === next);
+                if (match) {
+                    onValueChange(match);
+                }
+            }}
+        >
+            <SelectTrigger className="w-56">
+                <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+                {values.map((entry) => (
+                    <SelectItem key={entry} value={entry}>
+                        {t(`${labelPrefix}.${optionKey(entry)}`)}
+                    </SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
+    );
+}
 
 function newRule(kind: CustomBadgeRuleKind): CustomBadgeRule {
     switch (kind) {
@@ -84,8 +131,15 @@ function newRule(kind: CustomBadgeRuleKind): CustomBadgeRule {
             };
         case 'trust':
             return { kind, trustKey: 'known' };
+        case 'ageVerified':
+            return { kind, level: 'any' };
+        case 'platform':
+            return { kind, platform: 'standalonewindows' };
+        case 'status':
+            return { kind, status: 'join me' };
         case 'memo':
         case 'bio':
+        case 'pronouns':
             return { kind, contains: '' };
         case 'friends':
         case 'supporter':
@@ -447,8 +501,41 @@ function RuleEditor({
                 </Select>
             );
             break;
+        case 'ageVerified':
+            body = (
+                <OptionSelect
+                    value={rule.level}
+                    values={BADGE_AGE_LEVELS}
+                    labelPrefix={`${T}.age_level`}
+                    onValueChange={(level) => onChange({ ...rule, level })}
+                />
+            );
+            break;
+        case 'platform':
+            body = (
+                <OptionSelect
+                    value={rule.platform}
+                    values={BADGE_PLATFORMS}
+                    labelPrefix={`${T}.platform_option`}
+                    onValueChange={(platform) =>
+                        onChange({ ...rule, platform })
+                    }
+                />
+            );
+            break;
+        case 'status':
+            body = (
+                <OptionSelect
+                    value={rule.status}
+                    values={BADGE_STATUSES}
+                    labelPrefix={`${T}.status_option`}
+                    onValueChange={(status) => onChange({ ...rule, status })}
+                />
+            );
+            break;
         case 'memo':
         case 'bio':
+        case 'pronouns':
             body = (
                 <Input
                     className="w-64"

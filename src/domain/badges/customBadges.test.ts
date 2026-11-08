@@ -64,6 +64,31 @@ function resolve(
 }
 
 describe('normalizeCustomBadges', () => {
+    it('keeps valid profile rules and drops unknown options', () => {
+        const [entry] = normalizeCustomBadges([
+            badge({
+                id: 'a',
+                rules: [
+                    { kind: 'ageVerified', level: 'adult' },
+                    { kind: 'ageVerified', level: 'bogus' },
+                    { kind: 'platform', platform: 'ios' },
+                    { kind: 'platform', platform: 'web' },
+                    { kind: 'status', status: 'busy' },
+                    { kind: 'status', status: 'offline' },
+                    { kind: 'pronouns', contains: ' she ' },
+                    { kind: 'pronouns', contains: '' }
+                ] as unknown as CustomBadge['rules']
+            })
+        ]);
+        expect(entry.rules).toEqual([
+            { kind: 'ageVerified', level: 'adult' },
+            { kind: 'ageVerified', level: 'any' },
+            { kind: 'platform', platform: 'ios' },
+            { kind: 'status', status: 'busy' },
+            { kind: 'pronouns', contains: 'she' }
+        ]);
+    });
+
     it('keeps reserved icon names, which draw as the default instead', () => {
         const [
             codeBadge,
@@ -340,6 +365,73 @@ describe('resolveUserCustomBadges', () => {
         ]);
         expect(resolve(bio, ALICE, { bio: '' })).toEqual([]);
         expect(resolve(bio, ALICE, null)).toEqual([]);
+    });
+
+    it('matches age verification the way the user dialog shows it', () => {
+        const any = [
+            badge({ id: 'age', rules: [{ kind: 'ageVerified', level: 'any' }] })
+        ];
+        const adult = [
+            badge({
+                id: 'adult',
+                rules: [{ kind: 'ageVerified', level: 'adult' }]
+            })
+        ];
+        const shown18 = { ageVerified: true, ageVerificationStatus: '18+' };
+        const shown = { ageVerified: true, ageVerificationStatus: 'verified' };
+        expect(resolve(any, ALICE, shown18)).toEqual(['age']);
+        expect(resolve(any, ALICE, shown)).toEqual(['age']);
+        expect(resolve(adult, ALICE, shown18)).toEqual(['adult']);
+        expect(resolve(adult, ALICE, shown)).toEqual([]);
+        expect(
+            resolve(any, ALICE, {
+                ageVerified: false,
+                ageVerificationStatus: '18+'
+            })
+        ).toEqual([]);
+        expect(resolve(any, ALICE, { ageVerified: true })).toEqual([]);
+        expect(resolve(any, ALICE, null)).toEqual([]);
+    });
+
+    it('matches platform, status and pronouns from user facts', () => {
+        const quest = [
+            badge({
+                id: 'quest',
+                rules: [{ kind: 'platform', platform: 'android' }]
+            })
+        ];
+        expect(resolve(quest, ALICE, { last_platform: 'android' })).toEqual([
+            'quest'
+        ]);
+        expect(resolve(quest, ALICE, { platform: 'android' })).toEqual([
+            'quest'
+        ]);
+        expect(
+            resolve(quest, ALICE, {
+                last_platform: 'standalonewindows',
+                platform: 'android'
+            })
+        ).toEqual([]);
+
+        const joinMe = [
+            badge({
+                id: 'join',
+                rules: [{ kind: 'status', status: 'join me' }]
+            })
+        ];
+        expect(resolve(joinMe, ALICE, { status: 'join me' })).toEqual(['join']);
+        expect(resolve(joinMe, ALICE, { status: 'offline' })).toEqual([]);
+
+        const pronouns = [
+            badge({
+                id: 'they',
+                rules: [{ kind: 'pronouns', contains: 'they' }]
+            })
+        ];
+        expect(resolve(pronouns, ALICE, { pronouns: 'They/Them' })).toEqual([
+            'they'
+        ]);
+        expect(resolve(pronouns, ALICE, { pronouns: '' })).toEqual([]);
     });
 });
 
