@@ -417,6 +417,36 @@ pub async fn app__save_vrc_reg_json_file(
     }
 }
 
+#[tauri::command]
+#[specta::specta]
+pub async fn app__save_jsonc_file(
+    state: State<'_, AppState>,
+    app_handle: AppHandle,
+    default_name: String,
+    content: String,
+) -> Result<String, AppError> {
+    use tauri_plugin_dialog::DialogExt;
+
+    let mut builder = app_handle.dialog().file();
+    if !default_name.trim().is_empty() {
+        builder = builder.set_file_name(default_name.trim());
+    }
+    builder = builder.add_filter("JSONC Files", &["jsonc", "json"]);
+
+    match super::dialog::save_file(builder).await {
+        Some(file_path) => {
+            let path = match file_path {
+                tauri_plugin_dialog::FilePath::Path(p) => p,
+                other => PathBuf::from(other.to_string()),
+            };
+            shell_actions::write_string_file(&path, &content)?;
+            state.runtime_host().register_host_file_access(&path);
+            Ok(path.to_string_lossy().to_string())
+        }
+        None => Ok(String::new()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::with_fixed_extension;

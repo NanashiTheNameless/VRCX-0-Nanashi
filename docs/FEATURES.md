@@ -4,7 +4,7 @@ Everything VRCX-0-Nanashi does differently from upstream [VRCX-0](https://github
 
 - [Privacy and network](#privacy-and-network)
 - [Sync and sharing](#sync-and-sharing)
-- [Social AI and reminders](#social-ai-and-reminders)
+- [AI Assistant and reminders](#ai-assistant-and-reminders)
 - [Safety](#safety)
 - [VR overlay](#vr-overlay)
 - [Notifications and media](#notifications-and-media)
@@ -57,6 +57,20 @@ There are two ways to keep history beyond one PC, and they cannot be on at the s
 Under Settings > Sync Options, pair this PC with a RemoteSync server (the official one or your
 own) to keep an end-to-end encrypted copy of your history there and share it between your PCs.
 
+Status, bio and pronouns have independent recording and sync choices under Settings > Social >
+Profile History. Recording defaults off; syncing defaults on for each field and still requires
+History Sync to be enabled and paired. A user's **Profile History** tab shows observed changes
+with before and after values. These choices also control existing status and bio history.
+See [Profile History](PROFILE_HISTORY.md).
+
+Automatic recording is limited to friends, players currently in your instance, and your
+own profile. Opening another user's profile allows that observation without starting
+ongoing tracking after they leave.
+
+The server collector records the same profile fields using its own copy of the primary
+PC's recording and sync choices. The primary PC is the selected Server deduplication
+device; its next History Sync updates the collector without changing other PCs' choices.
+
 - **Your key stays yours.** The key is created on your PC, never sent to the server, and shown
   to you as a recovery string. You can move the key to another device.
 - **History that is synced.** Friend feed, friend log, your own profile changes, avatar wear
@@ -85,7 +99,7 @@ own) to keep an end-to-end encrypted copy of your history there and share it bet
   name they have in the app, or by a plain name for saved view state such as table filters.
   Categories keep application behavior, appearance, layout, history, favorites, instance
   defaults, avatar search, media, notifications, overlays, safety, automation, Discord and
-  Social AI preferences together. Existing exclusions are preserved when categories change.
+  AI Assistant preferences together. Existing exclusions are preserved when categories change.
   Changes apply on Save. A setting that is off keeps its value on that PC and is left alone
   on the server, so other PCs can still share it. The choice is per PC and is not synced.
 - **Manage it.** See and sign out connected clients, and delete the server copy, from the same
@@ -141,18 +155,41 @@ the two, choose History sync.
   password but uses plain HTTP unless you give an `https://` address, so keep it on your own
   network or a VPN.
 
-See the [recorder guide](crates/logger/README.md).
+See the [recorder guide](RECORDER.md).
 
 ### Import from VRCX or VRCX-0
 
 Merges the other app's database and adds settings you have not set here yet.
 
-## Social AI and reminders
+## AI Assistant and reminders
 
-### Social AI is off by default
+### The AI Assistant is off by default
 
-Turn it on under Settings > AI. Nothing is sent to an AI service while it is disabled. The chat
-is also on the left navigation as **Social AI**.
+Formerly called Social AI. Turn it on under Settings > AI. Nothing is sent to an AI service
+while it is disabled. The chat has its own **AI Assistant** entry in the main left navigation
+(layouts that had it in the default Social folder are moved once).
+
+### Help with the app and its settings
+
+The assistant can read every doc in this repository's `docs/` folder, plus the README, which
+ship inside the app. Ask how a page or feature works and it answers from them; reading them
+sends nothing anywhere except to the AI service you connected.
+
+The assistant can find settings by what they do, explain them, and show you where they are:
+it closes the chat, opens Settings at the setting, keeps it highlighted, and leaves a small
+guide card with a button back to the conversation.
+
+It can also offer to change a setting for you. Nothing changes until you approve: a card in
+the chat names the setting, says what it does and why the assistant suggests it, shows where
+it is in Settings (with a Show me button) and its current and new values, with Approve and
+Decline. It asks again for every change; there is no approve-all. Every other change the
+assistant wants to make (reminders, favorites, friend notes, the VRChat Chatbox) uses the same
+card. It can ask to change on/off settings and the choice and number settings the Settings
+page offers (for example table density, notification conditions, overlay position, timeouts
+and opacity), only with the values the Settings page allows. Settings for the assistant
+itself, integrations, webhooks, History Sync, updates, network, startup, storage, deleting
+VRChat prints, safety and the adoption count can only be shown, not changed. To stop it from asking at all, turn on **Don't let the AI ask
+to make changes** in the chat settings, or as the default under Settings > AI.
 
 Supported APIs:
 
@@ -168,7 +205,7 @@ Supported APIs:
 
 ### Assistant reminders
 
-Ask the assistant (with writes turned on) to tell you when a friend comes online, goes offline,
+Ask the assistant (and approve its request) to tell you when a friend comes online, goes offline,
 moves or joins you, or at a time.
 
 Reminders are saved, fire as normal notifications with the chat closed, and have their own
@@ -178,8 +215,8 @@ Reminders are saved, fire as normal notifications with the chat closed, and have
 
 ### Safety watchlists and warnings
 
-Settings > Notifications includes group/avatar watchlists, opt-in community lists, and URL-host
-warnings.
+Settings > Advanced > Safety watchlists and warnings holds group/avatar watchlists, opt-in
+community lists, and URL-host warnings.
 
 **Watching and warnings**
 
@@ -273,7 +310,7 @@ for anyone, friends, or favorite friends.
 
 - Sounds work in background mode and respect Do Not Disturb and privacy lock.
 - Built-in sounds are CC0 clips listed in
-  [crates/host-desktop/sounds](crates/host-desktop/sounds/README.md).
+  [crates/host-desktop/sounds](../crates/host-desktop/sounds/README.md).
 
 ### Keeps the PC awake
 
@@ -289,9 +326,34 @@ screen can still turn off.
 | Per-PC timezone                           | Settings > Interface > Time/Date accepts an IANA timezone such as `America/Chicago` or a fixed offset such as `UTC+05:30`. Blank follows the system timezone. The setting applies to displayed dates, reminders, calendar filters and Rust overlays, and is never synced to another PC.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Resizable feed columns                    | In the feed's column view, drag a column's right edge (or focus it and use the arrow keys) to set its width.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | Local fonts by default                    | Bundled 0xProto and system CJK fonts work offline. Additional online font choices are labeled in Settings > Interface.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| Custom user badges                        | Settings > Interface > User Badges adds your own badges next to user names (lists, feed, game log, sidebar, hover cards, user dialog). A badge has a name, color and any [Lucide](https://lucide.dev/icons/) or Lucide Lab icon (code, shield and award-style icons are kept for the built-in and global badges), and applies to listed users, all friends, a favorite friend group, members of a VRChat group or one of its roles (each user's own group list is trusted when seen; a fetched member list fills in the rest), a trust rank, VRC+ supporters, users who show VRChat age verification (any, or 18+ only), users on a given platform (PC, Android, iOS), online users with a given status, users whose memo or note contains some text, or users whose VRChat bio or pronouns contain some text. A user can carry several badges. The user dialog's action menu has a Badges submenu to tick a user onto existing badges or create a new one for them. Badges are saved with your settings and are visible only to you. Three badges are built in and always shown: the fork developer, the upstream developer, and VRChat Staff (any account VRChat marks as staff, or a member of VRChat's official team group VRCHAT.0000, learned from the user's own group list when the app loads it). Global badges (below) come next. Custom badges can be added on top of them, but their icons cannot be reused.   |
+| Custom user badges                        | Settings > Social > User Badges adds your own badges next to user names (lists, feed, game log, sidebar, hover cards, user dialog). A badge has a name, color and any [Lucide](https://lucide.dev/icons/) or Lucide Lab icon (code, shield and award-style icons are kept for the built-in and global badges), and applies to listed users, all friends, a favorite friend group, members of a VRChat group or one of its roles (each user's own group list is trusted when seen; a fetched member list fills in the rest), a trust rank, VRC+ supporters, users who show VRChat age verification (any, or 18+ only), users on a given platform (PC, Android, iOS), online users with a given status, users whose memo or note contains some text, or users whose VRChat bio or pronouns contain some text. A user can carry several badges. The user dialog's action menu has a Badges submenu to tick a user onto existing badges or create a new one for them. Badges are saved with your settings and are visible only to you. Three badges are built in and always shown: the fork developer, the upstream developer, and VRChat Staff (any account VRChat marks as staff, or a member of VRChat's official team group VRCHAT.0000, learned from the user's own group list when the app loads it). Global badges (below) come next. Custom badges can be added on top of them, but their icons cannot be reused.      |
 | Global badges                             | Badges the developer gives to people who helped the fork: Sponsor, Donator, Early Supporter, Contributor, Security Reporter, Code Reviewer, Bug Hunter, Tool Maker, Theme Artist, Docs Writer, Accessibility Reviewer, Beta Tester, Promoter, Idea Contributor and Special Thanks, plus one-off badges for something specific. Every user of the fork sees them, always shown and never collapsed, with a tooltip saying why and since when. Each has its own colors, any [Lucide](https://lucide.dev/icons/) or Lucide Lab icon, and one or more effects that can be combined, such as shimmer, flow, sparkle, embers or flip (list badges animate only on hover, and none do with reduced motion). The developer can preview every badge and effect in the badge editor's Gallery view. The list is `data/global-badges.jsonc` in this repository: every release has it built in, and the app checks every 6 hours, and whenever you check for updates, for a newer copy published under the `data-assets` release, signed with the same key as app updates (an unsigned or older copy is ignored). That check is a plain download from GitHub with no login and nothing about you. Badges are given by hand and only with consent, because the list is public: to ask for one, open a [badge request](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/issues/new?template=badge_request.yml). Nothing is for sale. |
 | English only                              | Other UI translations were removed. Support (issues, questions) is offered in English only; other languages, including any custom translations you load, are not officially supported on this fork.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+
+The **Docs** page in the left navigation shows all of the project's documentation inside the
+app: this page, the user guide, install and build notes, telemetry, the recorder guide and
+more. It has search and a contents list, follows links between docs, opens other repository
+files on GitHub, and loads no images or anything else from the web.
+
+Custom badge rules are set up as a sentence: "Show this badge for users who match
+ALL / ANY / NONE of these", with each condition reading as plain words (are your
+friends, were last on PC, have the status Join Me). Conditions can be grouped
+("who match ANY of these") and nested, reversed with Not, or switched off with Use
+without deleting them. A combine choice only appears once two or more conditions
+in a list are on; a single condition decides by itself, and a list with none on
+never matches. The editor shows the whole expression in plain words and as a
+condition map leading to the badge. A Self condition matches whichever VRChat
+account is signed in. Turning on advanced logic adds XOR, NAND, XNOR (also called
+XAND) and an interactive logic guide with diagrams and a truth table. Existing
+badges keep OR matching. Missing profile information counts as no match before Not
+is applied. Manual assignments from the user dialog always add a user with OR while
+preserving the badge's other rules.
+
+Badges can be exported and imported as JSONC (JSON with comments), one at a time or
+the whole list, by copying the text or saving and opening a `.jsonc` file. Import
+accepts a full export, a list or a single badge; badges with the same ID replace
+the saved ones unless you choose to add copies. Fetched VRChat group member lists
+are left out of exports.
 
 Absolute dates are stored as signed Unix epoch seconds in UTC. Updates convert existing
 ISO dates and millisecond timestamps automatically. Distinct old game-log events within
@@ -343,4 +405,4 @@ closes.
 
 Not upstream.
 
-[Back to the README](README.md)
+[Back to the README](../README.md)

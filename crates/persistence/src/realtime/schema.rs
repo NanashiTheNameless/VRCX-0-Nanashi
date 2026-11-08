@@ -2,6 +2,7 @@ use crate::database::{schema::add_column_if_missing, DatabaseService};
 use crate::Error;
 
 pub fn ensure_realtime_tables(db: &DatabaseService, user_prefix: &str) -> Result<(), Error> {
+    crate::config::ensure_config_table(db)?;
     ensure_user_prefix(user_prefix)?;
     db.ensure_schema_once(&format!("realtime:{user_prefix}"), || {
         for sql in realtime_table_statements(user_prefix) {

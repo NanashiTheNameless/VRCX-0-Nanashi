@@ -535,7 +535,7 @@ function prepareNative(
                 environment.RUNNER_ENVIRONMENT !== 'github-hosted'
             ) {
                 throw new Error(
-                    'Trust the NamelessNanashi certificate for Code Signing on this signing Mac first; see BUILDING.md.'
+                    'Trust the NamelessNanashi certificate for Code Signing on this signing Mac first; see docs/BUILDING.md.'
                 );
             }
             runPrivate('sudo', [

@@ -24,7 +24,7 @@ pub struct PersistedSession {
     pub surfaced_entities: String,
     pub endpoint_id: String,
     pub model: String,
-    pub allow_writes: bool,
+    pub allow_edit_requests: bool,
     pub playbook_mode: String,
     pub pinned: bool,
 }
@@ -38,7 +38,7 @@ pub fn assistant_sessions_load(
     let params = ParamsBuilder::new().set("owner_id", owner_id).build();
     let sessions = db
         .execute(
-            "SELECT s.id, s.title, s.created_at, s.updated_at, s.entity_panel_open, s.surfaced_entities, s.endpoint_id, s.model, s.allow_writes, s.playbook_mode, COALESCE(o.user_id, ''), s.pinned FROM assistant_session s LEFT JOIN owners o ON o.id = s.owner_id WHERE s.owner_id IN (0, @owner_id) ORDER BY s.updated_at DESC",
+            "SELECT s.id, s.title, s.created_at, s.updated_at, s.entity_panel_open, s.surfaced_entities, s.endpoint_id, s.model, s.allow_edit_requests, s.playbook_mode, COALESCE(o.user_id, ''), s.pinned FROM assistant_session s LEFT JOIN owners o ON o.id = s.owner_id WHERE s.owner_id IN (0, @owner_id) ORDER BY s.updated_at DESC",
             &params,
         )?
         .into_iter()
@@ -52,7 +52,7 @@ pub fn assistant_sessions_load(
             surfaced_entities: row_string(&row, 5),
             endpoint_id: row_string(&row, 6),
             model: row_string(&row, 7),
-            allow_writes: row_i64(&row, 8) != 0,
+            allow_edit_requests: row_i64(&row, 8) != 0,
             playbook_mode: row_string(&row, 9),
             pinned: row_i64(&row, 11) != 0,
         })
@@ -136,16 +136,16 @@ pub fn assistant_session_set_runtime(
     id: &str,
     endpoint_id: Option<&str>,
     model: Option<&str>,
-    allow_writes: bool,
+    allow_edit_requests: bool,
     playbook_mode: &str,
 ) -> Result<(), Error> {
     ensure_assistant_tables(db)?;
     db.execute_non_query(
-        "UPDATE assistant_session SET endpoint_id = @endpoint_id, model = @model, allow_writes = @allow_writes, playbook_mode = @playbook_mode WHERE id = @id",
+        "UPDATE assistant_session SET endpoint_id = @endpoint_id, model = @model, allow_edit_requests = @allow_edit_requests, playbook_mode = @playbook_mode WHERE id = @id",
         &ParamsBuilder::new()
             .set("endpoint_id", endpoint_id.unwrap_or("").to_string())
             .set("model", model.unwrap_or("").to_string())
-            .set("allow_writes", i64::from(allow_writes))
+            .set("allow_edit_requests", i64::from(allow_edit_requests))
             .set("playbook_mode", playbook_mode.to_string())
             .set("id", id.to_string())
             .build(),
@@ -199,6 +199,23 @@ pub fn assistant_session_delete(
         }
         Ok(())
     })?;
+    Ok(())
+}
+
+/// Deletes a session's messages from `seq` on, for editing an earlier message.
+pub fn assistant_messages_delete_from(
+    db: &DatabaseService,
+    session_id: &str,
+    seq: i64,
+) -> Result<(), Error> {
+    ensure_assistant_tables(db)?;
+    db.execute_non_query(
+        "DELETE FROM assistant_message WHERE session_id = @session_id AND seq >= @seq",
+        &ParamsBuilder::new()
+            .set("session_id", session_id.to_string())
+            .set("seq", seq)
+            .build(),
+    )?;
     Ok(())
 }
 
@@ -259,7 +276,7 @@ mod tests {
         assert_eq!(session.title, "hi");
         assert_eq!(session.endpoint_id, "ep_1");
         assert_eq!(session.model, "model-a");
-        assert!(session.allow_writes);
+        assert!(session.allow_edit_requests);
         assert_eq!(session.playbook_mode, "guided");
         assert!(session.pinned);
         let messages =
@@ -267,6 +284,23 @@ mod tests {
         assert_eq!(messages.len(), 2);
         assert_eq!(messages[0].seq, 1);
         assert_eq!(messages[1].role, "assistant");
+    }
+
+    #[test]
+    fn sessions_ask_for_edits_until_turned_off_and_ignore_the_old_write_flag() {
+        let db = test_db("assistant-edit-requests");
+        assistant_session_upsert(&db, &OwnerId::new("usr_a"), "ses_1", "", 1000, 1000).unwrap();
+        db.execute_non_query(
+            "UPDATE assistant_session SET allow_writes = 0 WHERE id = 'ses_1'",
+            &ParamsBuilder::new().build(),
+        )
+        .ok();
+        let loaded = assistant_sessions_load(&db, &OwnerId::new("usr_a")).unwrap();
+        assert!(loaded[0].allow_edit_requests);
+
+        assistant_session_set_runtime(&db, "ses_1", None, None, false, "auto").unwrap();
+        let loaded = assistant_sessions_load(&db, &OwnerId::new("usr_a")).unwrap();
+        assert!(!loaded[0].allow_edit_requests);
     }
 
     #[test]

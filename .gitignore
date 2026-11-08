@@ -6,7 +6,6 @@ dist/
 # Tauri / Rust
 target/
 src-tauri/gen/
-docs/
 src-tauri/resources/licenses/THIRD_PARTY_NOTICES.txt
 
 # Misc

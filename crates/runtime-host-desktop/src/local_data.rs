@@ -110,6 +110,32 @@ pub struct LocalDataRuntime {
 }
 
 impl LocalDataRuntime {
+    pub fn profile_history_settings_get(
+        &self,
+    ) -> Result<vrcx_0_contracts::profile_history::ProfileHistorySettings> {
+        Ok(vrcx_0_persistence::profile_history::settings_get(&self.db)?)
+    }
+
+    pub fn profile_history_settings_set(
+        &self,
+        settings: vrcx_0_contracts::profile_history::ProfileHistorySettings,
+    ) -> Result<()> {
+        Ok(vrcx_0_persistence::profile_history::settings_set(
+            &self.db, &settings,
+        )?)
+    }
+
+    pub fn profile_history_query(
+        &self,
+        query: vrcx_0_contracts::profile_history::ProfileHistoryQuery,
+    ) -> Result<Vec<vrcx_0_contracts::profile_history::ProfileHistoryEntry>> {
+        Ok(vrcx_0_persistence::profile_history::query(
+            &self.db,
+            &self.current_owner(),
+            &query,
+        )?)
+    }
+
     fn current_owner(&self) -> OwnerId {
         OwnerId::new(self.auth_scope.snapshot().current_user_id)
     }

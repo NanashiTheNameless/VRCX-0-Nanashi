@@ -26,6 +26,83 @@ pub(super) struct FriendProfileRefreshExpectation {
 }
 
 impl RealtimeHostRuntime {
+    pub(super) fn observe_profile_history(
+        &self,
+        owner: &vrcx_0_core::OwnerId,
+        endpoint: &str,
+        users: &[RawJsonObject],
+    ) {
+        self.observe_profile_history_with_intent(owner, endpoint, users, false);
+    }
+
+    fn observe_profile_history_with_intent(
+        &self,
+        owner: &vrcx_0_core::OwnerId,
+        endpoint: &str,
+        users: &[RawJsonObject],
+        manually_opened: bool,
+    ) {
+        let friends = self
+            .friends
+            .session_context()
+            .filter(|session| session.user_id == owner.as_str() && session.endpoint == endpoint)
+            .map(|_| self.friends.friend_user_ids_snapshot());
+        let game = self.local_game_context();
+        let current_players = match &game {
+            vrcx_0_application_core::LocalGameContextSnapshot::Available {
+                is_game_running: true,
+                location,
+                player_user_ids,
+                ..
+            } if vrcx_0_core::location::parse_location(location).is_real_instance => {
+                player_user_ids.as_slice()
+            }
+            _ => &[],
+        };
+        let eligible = users
+            .iter()
+            .filter(|user| {
+                let Some(id) = user.get("id").and_then(Value::as_str) else {
+                    return false;
+                };
+                manually_opened
+                    || id == owner.as_str()
+                    || friends.as_ref().is_some_and(|ids| ids.contains(id))
+                    || current_players.iter().any(|player| player == id)
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+        if !eligible.is_empty() {
+            self.persist_profile_history(owner, endpoint, &eligible, manually_opened);
+        }
+    }
+
+    // Friend baseline and projection records come from the authoritative roster.
+    // The baseline visitor holds its lock, so do not acquire that lock again here.
+    fn persist_profile_history(
+        &self,
+        owner: &vrcx_0_core::OwnerId,
+        endpoint: &str,
+        users: &[RawJsonObject],
+        manually_opened: bool,
+    ) {
+        let scope = self.deps.auth_scope.snapshot();
+        if !scope.active
+            || scope.current_user_id != owner.as_str()
+            || !self.deps.auth_scope.matches(owner.as_str(), endpoint)
+        {
+            return;
+        }
+        if let Err(error) =
+            self.deps
+                .stores
+                .batch_writer
+                .observe_profile_history(owner, users, manually_opened)
+        {
+            tracing::warn!(error = %error, "Profile history persistence failed");
+        }
+    }
+
     pub(super) fn apply_friend_profile_refresh(
         self: &Arc<Self>,
         endpoint: String,
@@ -128,9 +205,28 @@ impl RealtimeHostRuntime {
     }
 
     pub fn record_user_profile(&self, endpoint: &str, profile: &serde_json::Value) {
+        self.record_user_profile_for_scope(endpoint, profile, &self.deps.auth_scope.snapshot());
+    }
+
+    fn record_user_profile_for_scope(
+        &self,
+        endpoint: &str,
+        profile: &serde_json::Value,
+        scope: &vrcx_0_application_core::RuntimeAuthScopeSnapshot,
+    ) {
+        if scope.active && !self.deps.auth_scope.snapshot().generation_matches(scope) {
+            return;
+        }
         let user_id = json_string_field(profile.get("id"));
         if user_id.is_empty() {
             return;
+        }
+        if let Some(profile) = profile.as_object() {
+            self.observe_profile_history(
+                &vrcx_0_core::OwnerId::new(scope.current_user_id.clone()),
+                endpoint,
+                &[profile.clone().into()],
+            );
         }
         let (is_friend, is_current_user) = match self.state.lock() {
             Ok(state) => match state.connection.active_context.as_ref() {
@@ -171,6 +267,7 @@ impl RealtimeHostRuntime {
 
     pub(super) fn collect_friend_record_cache_changes<'a>(
         &self,
+        owner: &vrcx_0_core::OwnerId,
         records: impl IntoIterator<Item = &'a FriendRecord>,
         options: &UserFactMergeOptions,
     ) -> Vec<RawJsonObject> {
@@ -179,6 +276,14 @@ impl RealtimeHostRuntime {
             .filter_map(|record| {
                 let value = serde_json::to_value(record)
                     .expect("FriendRecord contains only JSON-serializable fields");
+                if let Some(profile) = value.as_object() {
+                    self.persist_profile_history(
+                        owner,
+                        &options.endpoint,
+                        &[profile.clone().into()],
+                        false,
+                    );
+                }
                 self.user_facts
                     .record_user(&value, options)
                     .map(|output| output.user)
@@ -187,38 +292,53 @@ impl RealtimeHostRuntime {
     }
 
     pub(super) fn record_baseline_friends_into_cache(&self) {
-        let Some(changed) = self.friends.with_user_cache_records(|endpoint, records| {
-            self.collect_friend_record_cache_changes(
-                records,
-                &UserFactMergeOptions {
-                    endpoint: endpoint.to_string(),
-                    source: "friend".into(),
-                    received_at: vrcx_0_core::time::now_epoch(),
-                    is_friend: true,
-                    ..Default::default()
-                },
-            )
-        }) else {
+        let Some(changed) = self
+            .friends
+            .with_user_cache_records(|owner, endpoint, records| {
+                self.collect_friend_record_cache_changes(
+                    &vrcx_0_core::OwnerId::new(owner),
+                    records,
+                    &UserFactMergeOptions {
+                        endpoint: endpoint.to_string(),
+                        source: "friend".into(),
+                        received_at: vrcx_0_core::time::now_epoch(),
+                        is_friend: true,
+                        ..Default::default()
+                    },
+                )
+            })
+        else {
             return;
         };
         self.emit_user_cache_changes(changed);
     }
 
     pub fn ingest_user_facts(&self, entries: Vec<Value>) {
+        let owner = vrcx_0_core::OwnerId::new(self.deps.auth_scope.snapshot().current_user_id);
         let endpoint = self.active_endpoint();
         if endpoint.is_empty() {
             return;
         }
         let mut changed = Vec::new();
         for entry in &entries {
+            // Manual opens carry their original scope across the asynchronous request.
+            // A late response from another account or endpoint cannot grant an exception.
+            let manually_opened =
+                entry.get("manualProfileHistory").and_then(Value::as_bool) == Some(true);
+            if manually_opened
+                && (entry.get("ownerUserId").and_then(Value::as_str) != Some(owner.as_str())
+                    || entry.get("endpoint").and_then(Value::as_str) != Some(endpoint.as_str()))
+            {
+                continue;
+            }
             let Some(user) = entry.get("user") else {
                 continue;
             };
-            if entry
+            let is_current_user = entry
                 .get("isCurrentUser")
                 .and_then(Value::as_bool)
-                .unwrap_or(false)
-            {
+                .unwrap_or(false);
+            if is_current_user && !manually_opened {
                 continue;
             }
             let options = UserFactMergeOptions {
@@ -235,6 +355,21 @@ impl RealtimeHostRuntime {
                     .unwrap_or(false),
                 ..Default::default()
             };
+            if !["seed", "instance", "playerSnapshot"].contains(&options.source.as_str()) {
+                if let Some(profile) = user.as_object() {
+                    self.observe_profile_history_with_intent(
+                        &owner,
+                        &endpoint,
+                        &[profile.clone().into()],
+                        manually_opened,
+                    );
+                }
+            }
+            // The native GET already merged facts. A manual marker only captures
+            // history, and must not overwrite roster flags or current-user facts.
+            if is_current_user || manually_opened {
+                continue;
+            }
             if let Some(output) = self.user_facts.record_user(user, &options) {
                 changed.push(output.user);
             }
@@ -278,6 +413,7 @@ impl RealtimeHostRuntime {
         user_id_input: String,
         options: UserQueryOptions,
     ) -> Result<VrchatResponse> {
+        let profile_scope = self.deps.auth_scope.snapshot();
         let (user_id, request) = self
             .deps
             .remote_requests
@@ -322,6 +458,7 @@ impl RealtimeHostRuntime {
                             &user_id,
                             &profile,
                             refresh_expectation,
+                            &profile_scope,
                         );
                     }
                     if let Some(object) = profile.as_object_mut() {
@@ -369,6 +506,7 @@ impl RealtimeHostRuntime {
         requested_user_id: &str,
         profile: &Value,
         expectation: Option<FriendProfileRefreshExpectation>,
+        scope: &vrcx_0_application_core::RuntimeAuthScopeSnapshot,
     ) {
         let profile_user_id = json_string_field(profile.get("id"));
         if profile_user_id != requested_user_id {
@@ -379,7 +517,7 @@ impl RealtimeHostRuntime {
             );
             return;
         }
-        self.record_user_profile(endpoint, profile);
+        self.record_user_profile_for_scope(endpoint, profile, scope);
         let Some(expectation) = expectation else {
             return;
         };

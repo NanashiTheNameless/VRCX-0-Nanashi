@@ -52,6 +52,7 @@ export function useUserDialogProfileResource({
     normalizedUserId,
     updateEntityDialogMetadata
 }: UseUserDialogProfileResourceInput) {
+    const profileHistoryOwnerUserId = normalizeUserId(currentUserSnapshot?.id);
     const normalizedLocalSnapshot = useMemo(
         () => normalizeTargetSnapshot(localSnapshot, normalizedUserId),
         [localSnapshot, normalizedUserId]
@@ -209,7 +210,11 @@ export function useUserDialogProfileResource({
                 userId: normalizedUserId,
                 force: isTargetCurrentUser || reloadToken > 0,
                 dialog: true,
-                isFriend
+                isFriend,
+                profileHistoryContext: {
+                    ownerUserId: profileHistoryOwnerUserId,
+                    endpoint: currentEndpoint || ''
+                }
             }),
             friendStatusRequest
         ])
@@ -322,6 +327,7 @@ export function useUserDialogProfileResource({
         isFriend,
         isTargetCurrentUser,
         normalizedUserId,
+        profileHistoryOwnerUserId,
         reloadToken
     ]);
 

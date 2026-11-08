@@ -1,20 +1,32 @@
 import {
     ArrowDownIcon,
     ArrowUpIcon,
+    DownloadIcon,
     PencilIcon,
     PlusIcon,
-    Trash2Icon
+    Trash2Icon,
+    UploadIcon
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { BadgeEditor, newBadge } from '@/components/badges/BadgeEditor';
+import {
+    BadgeEditor,
+    newBadge,
+    useFriendGroupLabels
+} from '@/components/badges/BadgeEditor';
+import { describeCustomBadge } from '@/components/badges/badgeRuleText';
+import {
+    CustomBadgeExportDialog,
+    CustomBadgeImportDialog
+} from '@/components/badges/CustomBadgeTransferDialogs';
 import { CustomBadgeChip } from '@/components/UserBadges';
 import {
     CUSTOM_BADGE_LIMIT,
     type CustomBadge,
     isReservedBadgeIcon
 } from '@/domain/badges/customBadges';
+import { mergeImportedBadges } from '@/domain/badges/customBadgeTransfer';
 import { toast } from '@/services/toastService';
 import {
     ensureCustomBadgesLoaded,
@@ -33,6 +45,9 @@ export function SettingsCustomBadgesCard() {
     const badges = useCustomBadgeStore((state) => state.badges);
     const update = useCustomBadgeStore((state) => state.update);
     const [editing, setEditing] = useState<CustomBadge | null>(null);
+    const [exporting, setExporting] = useState<CustomBadge[] | null>(null);
+    const [importing, setImporting] = useState(false);
+    const friendGroupLabel = useFriendGroupLabels();
 
     useEffect(() => {
         ensureCustomBadgesLoaded();
@@ -61,26 +76,86 @@ export function SettingsCustomBadgesCard() {
         });
     }
 
+    function importBadges(imported: CustomBadge[], replaceSameId: boolean) {
+        let merged: ReturnType<typeof mergeImportedBadges> | null = null;
+        update((current) => {
+            merged = mergeImportedBadges(current, imported, replaceSameId);
+            return merged.badges;
+        })
+            .then(() => {
+                if (merged) {
+                    toast.add({
+                        type: 'success',
+                        title: t(`${T}.transfer.imported`, {
+                            added: merged.added,
+                            replaced: merged.replaced,
+                            skipped: merged.skipped,
+                            limit: CUSTOM_BADGE_LIMIT
+                        })
+                    });
+                }
+            })
+            .catch((error: unknown) => {
+                toast.add({
+                    type: 'error',
+                    title: t(`${T}.save_failed`),
+                    description: error instanceof Error ? error.message : ''
+                });
+            });
+    }
+
     return (
-        <SettingsCard cardId="interface.user-badges" title={t(`${T}.header`)}>
+        <SettingsCard cardId="social.user-badges" title={t(`${T}.header`)}>
             <Field
-                settingId="interface.user-badges.list"
+                settingId="social.user-badges.list"
                 label={t(`${T}.list`)}
                 description={t(`${T}.list_description`)}
             >
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={
-                        Boolean(editing) || badges.length >= CUSTOM_BADGE_LIMIT
-                    }
-                    onClick={() => setEditing(newBadge())}
-                >
-                    <PlusIcon />
-                    {t(`${T}.add`)}
-                </Button>
+                <div className="flex flex-wrap gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={Boolean(editing)}
+                        onClick={() => setImporting(true)}
+                    >
+                        <UploadIcon />
+                        {t(`${T}.transfer.import`)}
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={!badges.length}
+                        onClick={() => setExporting([...badges])}
+                    >
+                        <DownloadIcon />
+                        {t(`${T}.transfer.export_all`)}
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={
+                            Boolean(editing) ||
+                            badges.length >= CUSTOM_BADGE_LIMIT
+                        }
+                        onClick={() => setEditing(newBadge())}
+                    >
+                        <PlusIcon />
+                        {t(`${T}.add`)}
+                    </Button>
+                </div>
             </Field>
+            <CustomBadgeExportDialog
+                badges={exporting}
+                onClose={() => setExporting(null)}
+            />
+            <CustomBadgeImportDialog
+                open={importing}
+                onClose={() => setImporting(false)}
+                onImport={importBadges}
+            />
             <div className="flex flex-col gap-2 px-4 pb-4">
                 {editing && !badges.some((badge) => badge.id === editing.id) ? (
                     <BadgeEditor
@@ -119,13 +194,9 @@ export function SettingsCustomBadgesCard() {
                                 </span>
                             ) : null}
                             <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
-                                {badge.rules.length
-                                    ? badge.rules
-                                          .map((rule) =>
-                                              t(`${T}.rule.${rule.kind}`)
-                                          )
-                                          .join(', ')
-                                    : t(`${T}.no_rules`)}
+                                {describeCustomBadge(badge, t, {
+                                    friendGroupLabel
+                                })}
                             </span>
                             <Switch
                                 checked={badge.enabled}
@@ -159,6 +230,15 @@ export function SettingsCustomBadgesCard() {
                                 onClick={() => move(badge.id, 1)}
                             >
                                 <ArrowDownIcon />
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={t(`${T}.transfer.export`)}
+                                onClick={() => setExporting([badge])}
+                            >
+                                <DownloadIcon />
                             </Button>
                             <Button
                                 type="button"

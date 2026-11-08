@@ -127,8 +127,16 @@ pub struct LlmEndpointDetectModelsInput {
 pub struct AssistantRuntimeSelection {
     pub endpoint_id: Option<String>,
     pub model: Option<String>,
-    pub allow_writes: bool,
+    #[serde(default = "allow_edit_requests_by_default")]
+    pub allow_edit_requests: bool,
     pub playbook_mode: PlaybookMode,
+}
+
+// Every edit the assistant asks for needs the user's approval, so asking is
+// on unless the user turns it off. Selections saved before this field existed
+// carry the old allowWrites flag, which meant something else and is ignored.
+fn allow_edit_requests_by_default() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, Serialize, Type)]
@@ -154,7 +162,7 @@ impl Default for AssistantRuntimeSelection {
         Self {
             endpoint_id: None,
             model: None,
-            allow_writes: false,
+            allow_edit_requests: true,
             playbook_mode: PlaybookMode::Auto,
         }
     }

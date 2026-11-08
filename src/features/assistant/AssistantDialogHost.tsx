@@ -4,6 +4,7 @@ import { MountOnFirstOpen } from '@/components/hosts/MountOnFirstOpen';
 import { useAssistantChatStore } from '@/state/assistantChatStore';
 import { usePreferencesStore } from '@/state/preferencesStore';
 
+import { AssistantGuideOverlay } from './components/AssistantGuideOverlay';
 import { useAssistantEvents } from './useAssistantEvents';
 
 const AssistantDialog = lazy(() =>
@@ -19,8 +20,11 @@ export function AssistantDialogHost() {
         (state) => state.socialAiEnabled
     );
     return (
-        <MountOnFirstOpen open={open && socialAiEnabled}>
-            <AssistantDialog />
-        </MountOnFirstOpen>
+        <>
+            <MountOnFirstOpen open={open && socialAiEnabled}>
+                <AssistantDialog />
+            </MountOnFirstOpen>
+            {socialAiEnabled ? <AssistantGuideOverlay /> : null}
+        </>
     );
 }

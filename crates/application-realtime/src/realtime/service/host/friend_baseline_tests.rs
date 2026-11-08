@@ -9,6 +9,80 @@ use vrcx_0_core::presence::PresenceView;
 use vrcx_0_core::OwnerId;
 
 #[test]
+fn friend_badge_fields_reach_the_shared_user_cache_and_projection() -> Result<()> {
+    let (_dir, runtime, active_session) = runtime_with_active_session("badge-facts")?;
+    let profile = json!({
+        "id": "usr_friend",
+        "displayName": "Friend",
+        "ageVerificationStatus": "18+",
+        "bio": "An artist",
+        "pronouns": "they/them",
+        "memo": "Local friend memo",
+        "note": "VRChat note",
+        "lastPlatform": "android"
+    });
+    runtime.sync_friend_baseline(
+        &active_session,
+        HashMap::from([(
+            "usr_friend".into(),
+            FriendBaselineEntry {
+                record: serde_json::from_value(profile.clone()).unwrap(),
+                presence: FriendBaselinePresence::default(),
+            },
+        )]),
+    )?;
+    let events = runtime.runtime().deps.event_bus.take_events_for_test();
+    let projection = events
+        .iter()
+        .find(|event| event.name == "realtimeUserProjection")
+        .expect("baseline should publish the friend's shared facts");
+    let fact = runtime
+        .runtime()
+        .user_facts
+        .get_user(&active_session.endpoint, "usr_friend")
+        .expect("friend facts should be retained");
+    for key in ["ageVerificationStatus", "bio", "pronouns", "memo", "note"] {
+        assert_eq!(fact[key], profile[key], "{key}");
+        assert_eq!(projection.payload["users"][0][key], profile[key], "{key}");
+    }
+    assert_eq!(fact["last_platform"], json!("android"));
+
+    let rev = runtime
+        .runtime()
+        .friends
+        .friend_rev_of(7, "usr_friend")
+        .unwrap();
+    assert!(runtime.runtime().apply_friend_profile_refresh(
+        active_session.endpoint.clone(),
+        "usr_friend".into(),
+        json!({
+            "id": "usr_friend",
+            "ageVerified": false,
+            "ageVerificationStatus": "hidden",
+            "bio": "",
+            "pronouns": null,
+            "memo": "",
+            "note": null
+        }),
+        FriendProfileRefreshExpectation { generation: 7, rev },
+    )?);
+    let events = runtime.runtime().deps.event_bus.take_events_for_test();
+    let projection = events
+        .iter()
+        .find(|event| event.name == "realtimeUserProjection")
+        .expect("profile changes should publish updated shared facts");
+    assert_eq!(projection.payload["users"][0]["ageVerified"], json!(false));
+    assert_eq!(
+        projection.payload["users"][0]["ageVerificationStatus"],
+        json!("hidden")
+    );
+    for key in ["bio", "pronouns", "memo", "note"] {
+        assert_eq!(projection.payload["users"][0][key], json!(""), "{key}");
+    }
+    Ok(())
+}
+
+#[test]
 fn sync_friend_snapshot_debounces_online_to_offline() -> Result<()> {
     let (_dir, runtime, active_session) = runtime_with_active_session("baseline-projection")?;
     runtime.set_task_executor_for_test(DiscardTaskExecutor);

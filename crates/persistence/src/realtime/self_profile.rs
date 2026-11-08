@@ -9,6 +9,17 @@ pub(crate) fn observe_self_profile_field(
     user_prefix: &str,
     observation: &SelfProfileObservation,
 ) -> Result<u64, Error> {
+    let settings = crate::profile_history::settings_in_transaction(tx)?;
+    let enabled = match observation.field {
+        vrcx_0_contracts::realtime::SelfProfileField::Status
+        | vrcx_0_contracts::realtime::SelfProfileField::StatusDescription => {
+            settings.status.recording
+        }
+        vrcx_0_contracts::realtime::SelfProfileField::Bio => settings.bio.recording,
+    };
+    if !enabled {
+        return Ok(0);
+    }
     let field = observation.field.as_str();
     let previous_value = tx
         .execute(

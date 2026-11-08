@@ -53,6 +53,7 @@ import {
     ensureGlobalBadgesLoaded,
     useGlobalBadgeStore
 } from '@/state/globalBadgeStore';
+import { useRuntimeStore } from '@/state/runtimeStore';
 import {
     groupMembership,
     setTrackedGroupIds,
@@ -223,6 +224,7 @@ function useUserBadgeState(userId: string): UserBadgeState {
     );
     const local = useFavoriteStore((state) => state.localFriendFavorites);
     const index = customBadgeIndexFor(badges, remote, local);
+    const currentUserId = useRuntimeStore((state) => state.auth.currentUserId);
     const fact = useKnownUserFact(userId || null) as Record<
         string,
         unknown
@@ -246,7 +248,8 @@ function useUserBadgeState(userId: string): UserBadgeState {
                             fact,
                             isFriend || fact?.isFriend === true,
                             userId,
-                            (groupId) => groupMembership(membership, groupId)
+                            (groupId) => groupMembership(membership, groupId),
+                            currentUserId
                         )
                       : null
               )

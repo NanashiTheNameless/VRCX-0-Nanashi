@@ -29,6 +29,7 @@ import {
     type UserDialogPresenceSectionProps,
     type UserDialogProfileLinksSectionProps
 } from './UserDialogInfoTab';
+import { UserDialogProfileHistoryTab } from './UserDialogProfileHistoryTab';
 
 type MutualTabProps = ComponentProps<typeof UserDialogMutualTab>;
 type GroupsTabProps = ComponentProps<typeof UserDialogGroupsTab>;
@@ -438,6 +439,11 @@ export function UserDialogTabsSection({
                     active={activeTab === 'feed'}
                     currentUserId={presence.currentUserId || null}
                     profile={profile}
+                />
+                <UserDialogProfileHistoryTab
+                    active={activeTab === 'profile-history'}
+                    userId={String(profile?.id || '')}
+                    currentUserId={presence.currentUserId || null}
                 />
                 <UserDialogActivityTab
                     profile={profile}

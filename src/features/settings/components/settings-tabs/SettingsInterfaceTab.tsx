@@ -5,7 +5,6 @@ import { useRuntimeStore } from '@/state/runtimeStore';
 
 import { useSettingsPageSection } from '../../SettingsPageStateContext';
 import { SettingsTabContent } from '../SettingsViewParts';
-import { SettingsCustomBadgesCard } from './SettingsCustomBadgesCard';
 import { SettingsCustomLanguagesCard } from './SettingsCustomLanguagesCard';
 import { SettingsInterfaceAppearanceCard } from './SettingsInterfaceAppearanceCard';
 import { SettingsInterfaceDisplayCards } from './SettingsInterfaceDisplayCards';
@@ -116,7 +115,6 @@ export function SettingsInterfaceTab() {
                 onSaveTrustColor={onSaveTrustColor}
                 onTrustColorDraftChange={onTrustColorDraftChange}
             />
-            <SettingsCustomBadgesCard />
         </SettingsTabContent>
     );
 }

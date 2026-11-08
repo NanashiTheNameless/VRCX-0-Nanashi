@@ -13,6 +13,9 @@ use vrcx_0_mcp::{
 
 use crate::charts::{tool_charts, AssistantChart};
 use crate::choices::{choice_candidates, PendingChoices};
+use crate::client_tools::{
+    is_client_tool, is_edit_tool, EditDecision, PendingClientRequests, APPROVE_EDIT,
+};
 use crate::entities::{extract_entities, surfaced_entities, Entity};
 use crate::events::AssistantEmitter;
 use crate::playbook;
@@ -100,9 +103,11 @@ const DEFERRED_ANSWER_MARKERS: &[&str] = &[
 ];
 
 pub const SYSTEM_PROMPT: &str = "\
-You are the VRCX-0-Nanashi social assistant. Answer questions about the signed-in user's \
-(\"me\") VRChat social life. All facts come from the provided tools: local, \
-observer-centered history plus the live session.
+You are the VRCX-0-Nanashi AI Assistant. Answer questions about the signed-in user's \
+(\"me\") VRChat social life, and help them use VRCX-0-Nanashi itself: find settings, \
+explain what they do, show where they are, and change them with the user's approval. All \
+facts come from the provided tools: local, observer-centered history plus the live \
+session, and the app's own settings.
 
 Rules:
 1. Never guess social facts. Every number, ranking, date, or claim must come from a \
@@ -112,6 +117,8 @@ tool result in this conversation.
 instances I did not attend is invisible - say the picture is partial.
 4. I am not my own friend. Leave me out of friend lists, counts, and rankings.
 5. Reflect the `caveats` a tool returns. Treat figures as approximate.
+6. Facts about the app come only from read_docs and find_settings. Never invent a setting, where it is, or its \
+values, and never claim a change was made unless change_setting reported it applied.
 
 Tool arguments:
 - Never repeat a tool call with the same arguments.
@@ -131,7 +138,7 @@ pass it as the user or world argument directly instead of searching by name.
 Style:
 - Answer directly; do not narrate plans or tool calls.
 - The app is VRCX-0-Nanashi; never shorten its name to VRCX.
-- Reply in Markdown. Stay on VRChat social topics. Refer to people and worlds \
+- Reply in Markdown. Stay on VRChat social topics and on using VRCX-0-Nanashi. Refer to people and worlds \
 by name; never show raw ids (usr_, wrld_, grp_, avtr_) in the reply. Be \
 concise and warm. Never use emoji.
 - Put comparative or ranked numbers in a Markdown table with a value column, unless the \
@@ -142,6 +149,7 @@ pub(crate) struct TurnContext {
     pub tools: Arc<InProcessMcpTools>,
     pub sessions: Arc<SessionStore>,
     pub choices: PendingChoices,
+    pub client_requests: PendingClientRequests,
     pub emitter: AssistantEmitter,
     pub client: AssistantLlmClient,
     pub tool_defs: Arc<Vec<ToolDefinition>>,
@@ -150,8 +158,9 @@ pub(crate) struct TurnContext {
     pub locale: Option<String>,
     pub cancel: CancellationToken,
     pub apply_playbook: bool,
-    /// Fork: whether write tools (reminders, favorites, notes) are exposed.
-    pub allow_writes: bool,
+    /// Fork: whether the model may ask to make edits (settings, reminders,
+    /// favorites, notes). Every edit still needs the user's approval.
+    pub allow_edit_requests: bool,
     pub options: LlmRequestOptions,
 }
 
@@ -499,6 +508,28 @@ async fn dispatch_call<'a>(
     }
     let name = call.call.function.name.clone();
     let mut arguments = call.arguments;
+    if is_client_tool(&name) {
+        return match ask_client(ctx, &call.call.id, &name, &name, arguments.as_ref()).await {
+            ClientAnswer::Cancelled => (call.call, None),
+            ClientAnswer::Answered(response) => (
+                call.call,
+                Some(resolve_tool_outcome(&name, client_outcome(&name, response))),
+            ),
+        };
+    }
+    if is_edit_tool(&name) {
+        match ask_client(ctx, &call.call.id, APPROVE_EDIT, &name, arguments.as_ref()).await {
+            ClientAnswer::Cancelled => return (call.call, None),
+            ClientAnswer::Answered(response) => {
+                if EditDecision::from_response(response.as_ref()) == EditDecision::Declined {
+                    return (
+                        call.call,
+                        Some(resolve_tool_outcome(&name, Ok(declined_outcome()))),
+                    );
+                }
+            }
+        }
+    }
     let mut asked = HashSet::new();
     loop {
         let outcome = match await_tool_call(
@@ -532,6 +563,70 @@ async fn dispatch_call<'a>(
             }
         }
     }
+}
+
+enum ClientAnswer {
+    Answered(Option<Value>),
+    Cancelled,
+}
+
+/// Hands a request to the app window and waits for its answer. There is no
+/// timeout: an approval card waits as long as the user needs, and stopping the
+/// turn cancels it.
+async fn ask_client(
+    ctx: &TurnContext,
+    tool_call_id: &str,
+    kind: &str,
+    tool: &str,
+    arguments: Option<&serde_json::Map<String, Value>>,
+) -> ClientAnswer {
+    if !ctx.sessions.is_current_turn(&ctx.session_id, &ctx.turn_id) {
+        return ClientAnswer::Answered(None);
+    }
+    let request_id = format!("request_{}", random_hex());
+    let receiver = ctx
+        .client_requests
+        .register(request_id.clone(), ctx.session_id.clone());
+    ctx.emitter.client_request(
+        tool_call_id,
+        &request_id,
+        kind,
+        tool,
+        arguments.cloned().map(Value::Object).unwrap_or(Value::Null),
+    );
+    tokio::select! {
+        response = receiver => ClientAnswer::Answered(response.ok().flatten()),
+        _ = ctx.cancel.cancelled() => {
+            ctx.client_requests.remove(&request_id);
+            ClientAnswer::Cancelled
+        }
+    }
+}
+
+fn declined_outcome() -> ToolCallOutcome {
+    let value = serde_json::json!({
+        "approved": false,
+        "message": "The user declined this edit. Do not try it again unless they ask for it."
+    });
+    ToolCallOutcome {
+        is_error: false,
+        text: value.to_string(),
+        structured: Some(value),
+    }
+}
+
+fn client_outcome(tool: &str, response: Option<Value>) -> Result<ToolCallOutcome, McpError> {
+    let Some(value) = response else {
+        return Err(McpError::Custom(format!(
+            "tool `{tool}` got no answer from the app window"
+        )));
+    };
+    let is_error = value.get("error").is_some();
+    Ok(ToolCallOutcome {
+        is_error,
+        text: value.to_string(),
+        structured: Some(value),
+    })
 }
 
 enum UserChoice {

@@ -9,6 +9,101 @@ use super::*;
 
 const USER: &str = "usr_12345678-1234-1234-1234-1234567890ab";
 
+fn record_profile_field(pc: &Pc, field: vrcx_0_persistence::profile_history::ProfileHistoryField) {
+    use vrcx_0_persistence::profile_history::{self, ProfileHistoryField};
+    let previous = profile_history::settings_get(&pc.db).unwrap();
+    let mut settings = previous.clone();
+    match field {
+        ProfileHistoryField::Status => settings.status.recording = true,
+        ProfileHistoryField::Bio => settings.bio.recording = true,
+        ProfileHistoryField::Pronouns => settings.pronouns.recording = true,
+    }
+    profile_history::settings_set(&pc.db, &settings).unwrap();
+    for (at, value) in [(1791633599, "Before"), (1791633600, "After")] {
+        let mut profile = serde_json::json!({"id":"usr_friend"});
+        profile[field.as_str()] = serde_json::json!(value);
+        profile_history::observe(
+            &pc.db,
+            &serde_json::from_value(serde_json::json!(USER)).unwrap(),
+            &[profile.as_object().unwrap().clone().into()],
+            at,
+        )
+        .unwrap();
+    }
+    profile_history::settings_set(&pc.db, &previous).unwrap();
+}
+
+fn profile_rows(pc: &Pc) -> Vec<vrcx_0_persistence::profile_history::ProfileHistoryEntry> {
+    vrcx_0_persistence::profile_history::query(
+        &pc.db,
+        &serde_json::from_value(serde_json::json!(USER)).unwrap(),
+        &vrcx_0_persistence::profile_history::ProfileHistoryQuery {
+            user_id: "usr_friend".into(),
+            field: None,
+            before_at: None,
+            before_id: None,
+            before_field: None,
+        },
+    )
+    .unwrap()
+}
+
+#[tokio::test]
+async fn profile_history_sync_is_selectable_per_field_and_catches_up_without_reupload() {
+    use vrcx_0_persistence::profile_history::{ProfileHistoryField, ProfileHistorySettings};
+    let server = FakeServer::default();
+    let secret = SyncSecret::generate().unwrap();
+    let a = pc("profile-fields-a");
+    let b = pc("profile-fields-b");
+    for field in ProfileHistoryField::ALL {
+        record_profile_field(&a, field);
+    }
+    let mut sending = ProfileHistorySettings::default();
+    sending.bio.sync = false;
+    vrcx_0_persistence::profile_history::settings_set(&a.db, &sending).unwrap();
+    let mut receiving = ProfileHistorySettings::default();
+    receiving.pronouns.sync = false;
+    vrcx_0_persistence::profile_history::settings_set(&b.db, &receiving).unwrap();
+    a.sync(&server, &secret).await.unwrap();
+    let first = b.sync(&server, &secret).await.unwrap();
+    assert_eq!(first.pushed_rows, 0);
+    let rows = profile_rows(&b);
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].field, ProfileHistoryField::Status);
+    sending.bio.sync = true;
+    vrcx_0_persistence::profile_history::settings_set(&a.db, &sending).unwrap();
+    a.sync(&server, &secret).await.unwrap();
+    receiving.pronouns.sync = true;
+    vrcx_0_persistence::profile_history::settings_set(&b.db, &receiving).unwrap();
+    let caught_up = b.sync(&server, &secret).await.unwrap();
+    assert_eq!(caught_up.pushed_rows, 0);
+    assert_eq!(profile_rows(&b).len(), 3);
+    b.sync(&server, &secret).await.unwrap();
+    assert_eq!(profile_rows(&b).len(), 3);
+}
+
+#[tokio::test]
+async fn disabled_profile_field_is_not_resent_in_a_pending_signed_chunk() {
+    use vrcx_0_persistence::profile_history::{ProfileHistoryField, ProfileHistorySettings};
+    let server = FakeServer::default();
+    let secret = SyncSecret::generate().unwrap();
+    let a = pc("pending-profile");
+    record_profile_field(&a, ProfileHistoryField::Bio);
+    *server.fail_next_upload_response.lock().unwrap() = true;
+    assert!(a.sync(&server, &secret).await.is_err());
+    let uploaded = *server.uploads.lock().unwrap();
+    let mut settings = ProfileHistorySettings::default();
+    settings.bio.sync = false;
+    vrcx_0_persistence::profile_history::settings_set(&a.db, &settings).unwrap();
+    let error = a.sync(&server, &secret).await.unwrap_err();
+    assert!(error.to_string().contains("queued upload"));
+    assert_eq!(*server.uploads.lock().unwrap(), uploaded);
+    settings.bio.sync = true;
+    vrcx_0_persistence::profile_history::settings_set(&a.db, &settings).unwrap();
+    a.sync(&server, &secret).await.unwrap();
+    assert_eq!(server.chunk_count(), 1);
+}
+
 #[derive(Default)]
 struct FakeVault {
     info: Option<VaultInfo>,

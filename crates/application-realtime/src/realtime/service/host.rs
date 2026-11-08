@@ -54,6 +54,8 @@ mod message_dispatch;
 mod notification_apply;
 #[cfg(test)]
 mod notification_enrichment_tests;
+#[cfg(test)]
+mod profile_history_tests;
 mod state;
 #[cfg(any(test, feature = "test-utils"))]
 pub mod test_support;

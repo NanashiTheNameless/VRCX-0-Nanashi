@@ -4,7 +4,7 @@
 //! supervisor, deletes rows the supervisor confirmed, and answers requests
 //! for the current friends state. It exposes no way to act on VRChat.
 
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -21,7 +21,7 @@ use vrcx_0_application_core::{
 use vrcx_0_composition::{RuntimeHostOptions, RuntimeHostProfile, RuntimeHostState};
 use vrcx_0_core::presence::PresenceView;
 use vrcx_0_persistence::remote_sync::streams::{
-    delete_rows_through, export_rows, StreamScope, ROW_STREAMS,
+    delete_exported_rows, delete_rows_through, export_rows, StreamScope, ROW_STREAMS,
 };
 use vrcx_0_platform::app_paths::{AppDataDirResolution, AppDataDirSource};
 use zeroize::Zeroizing;
@@ -209,6 +209,11 @@ impl Recorder {
         let db = self.state.database();
         let mut messages = Vec::new();
         for (index, spec) in ROW_STREAMS.iter().enumerate() {
+            if !vrcx_0_persistence::profile_history::upload_stream_enabled(db, spec.name)
+                .map_err(|error| error.to_string())?
+            {
+                continue;
+            }
             let rows = export_rows(db, &self.scope, spec, self.cursors[index], ROWS_PER_POLL)
                 .map_err(|error| error.to_string())?;
             for (rowid, row) in rows {
@@ -235,12 +240,8 @@ impl Recorder {
             return Err("rows that were never sent cannot be pruned".into());
         }
         let mut highest = BTreeMap::new();
-        while let Some((row_id, index, rowid)) = self.emitted.rows.front().copied() {
-            if row_id > through {
-                break;
-            }
-            self.emitted.rows.pop_front();
-            highest.insert(index, rowid);
+        for (_, index, rowid) in self.emitted.rows.iter().take_while(|row| row.0 <= through) {
+            highest.insert(*index, *rowid);
         }
         for (index, rowid) in highest {
             delete_rows_through(
@@ -251,6 +252,37 @@ impl Recorder {
             )
             .map_err(|error| error.to_string())?;
         }
+        self.emitted.rows.retain(|row| row.0 > through);
+        Ok(())
+    }
+
+    fn acknowledge(&mut self, row_ids: &[u64]) -> Result<(), String> {
+        if row_ids.len() > 100_000
+            || row_ids
+                .iter()
+                .any(|id| *id == 0 || *id > self.emitted.next_row_id)
+        {
+            return Err("rows that were never sent cannot be acknowledged".into());
+        }
+        let selected: BTreeSet<_> = row_ids.iter().copied().collect();
+        let mut by_stream = BTreeMap::<usize, Vec<i64>>::new();
+        for (id, index, rowid) in &self.emitted.rows {
+            if selected.contains(id) {
+                by_stream.entry(*index).or_default().push(*rowid);
+            }
+        }
+        for (index, rowids) in by_stream {
+            delete_exported_rows(
+                self.state.database(),
+                &self.scope,
+                &ROW_STREAMS[index],
+                &rowids,
+            )
+            .map_err(|error| error.to_string())?;
+        }
+        self.emitted
+            .rows
+            .retain(|(id, _, _)| !selected.contains(id));
         Ok(())
     }
 
@@ -327,6 +359,35 @@ impl Recorder {
             );
         }
         match (request.op.as_str(), request.through_row_id) {
+            ("setProfileHistorySettings", None) if request.acknowledged_row_ids.is_none() => {
+                match request.profile_history_settings {
+                    Some(settings) => match vrcx_0_persistence::profile_history::settings_set(
+                        self.state.database(),
+                        &settings,
+                    ) {
+                        Ok(()) => success(request.id, None),
+                        Err(_) => failure(
+                            request.id,
+                            "settings_failed",
+                            "Profile history settings could not be saved.",
+                        ),
+                    },
+                    None => failure(
+                        request.id,
+                        "invalid_request",
+                        "Profile history settings are required.",
+                    ),
+                }
+            }
+            ("acknowledgeRows", None) if request.profile_history_settings.is_none() => {
+                match request.acknowledged_row_ids {
+                    Some(ids) => match self.acknowledge(&ids) {
+                        Ok(()) => success(request.id, None),
+                        Err(message) => failure(request.id, "unacknowledged_rows", &message),
+                    },
+                    None => failure(request.id, "invalid_request", "Row IDs are required."),
+                }
+            }
             ("pruneRows", Some(through)) => match self.prune(through) {
                 Ok(()) => success(request.id, None),
                 Err(message) => failure(request.id, "unacknowledged_rows", &message),
@@ -383,6 +444,15 @@ pub async fn run(
     let Ok(state) = host_state(data_dir, version) else {
         return Outcome::Unavailable("the recording runtime could not start".into());
     };
+
+    if vrcx_0_persistence::profile_history::settings_set(
+        state.database(),
+        &session.profile_history_settings,
+    )
+    .is_err()
+    {
+        return Outcome::Unavailable("profile history settings could not be applied".into());
+    }
 
     let cookies = cookie_payload(&session);
     drop(session);
@@ -519,7 +589,116 @@ mod tests {
             id,
             op: op.into(),
             through_row_id,
+            acknowledged_row_ids: None,
+            profile_history_settings: None,
         }
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn profile_history_uses_its_own_mirrored_recording_and_sync_choices() {
+        use vrcx_0_persistence::profile_history::{self, ProfileHistorySettings};
+        let (_dir, mut recorder) = recorder("profile-choices");
+        let observe = |recorder: &Recorder, text: &str, at| {
+            profile_history::observe(recorder.state.database(), &vrcx_0_core::OwnerId::new(USER),
+                &[serde_json::from_value(json!({"id": "usr_friend", "status": text, "statusDescription": text, "bio": text, "pronouns": text})).unwrap()], at).unwrap();
+        };
+        observe(&recorder, "before opt-in", 1);
+        observe(&recorder, "still disabled", 2);
+        assert!(recorder.new_rows().unwrap().is_empty());
+        let mut settings = ProfileHistorySettings::default();
+        settings.status.recording = true;
+        settings.pronouns.recording = true;
+        let update = |recorder: &mut Recorder, settings: &ProfileHistorySettings| {
+            assert!(
+                recorder
+                    .handle(ControlRequest {
+                        profile_history_settings: Some(settings.clone()),
+                        ..request(1, "setProfileHistorySettings", None)
+                    })
+                    .ok
+            );
+        };
+        update(&mut recorder, &settings);
+        observe(&recorder, "baseline", 3);
+        observe(&recorder, "changed", 4);
+        let rows = recorder.new_rows().unwrap();
+        assert_eq!(
+            rows.iter()
+                .map(|row| row.stream.as_str())
+                .collect::<Vec<_>>(),
+            [
+                "profile_history_status",
+                "profile_history_status",
+                "profile_history_pronouns"
+            ]
+        );
+        settings.status.sync = false;
+        update(&mut recorder, &settings);
+        observe(&recorder, "changed again", 5);
+        let rows = recorder.new_rows().unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].stream, "profile_history_pronouns");
+        settings.status.sync = true;
+        update(&mut recorder, &settings);
+        assert_eq!(recorder.new_rows().unwrap().len(), 2);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn selected_acknowledgments_preserve_paused_rows_and_future_export_ids() {
+        let (_dir, mut recorder) = recorder("selected-ack");
+        for (index, bio) in ["a", "b", "c"].iter().enumerate() {
+            record(&recorder, &format!("2026-10-10T1{index}:00:00.000Z"), bio);
+        }
+        recorder.new_rows().unwrap();
+        assert!(recorder.acknowledge(&[4]).is_err());
+        recorder.acknowledge(&[1, 3]).unwrap();
+        assert_eq!(
+            recorder
+                .emitted
+                .rows
+                .iter()
+                .map(|row| row.0)
+                .collect::<Vec<_>>(),
+            [2]
+        );
+        // Retrying a confirmed chunk is harmless; row 2 is still waiting.
+        recorder.acknowledge(&[1, 3]).unwrap();
+        recorder.acknowledge(&[2]).unwrap();
+        assert!(recorder.emitted.rows.is_empty());
+        record(&recorder, "2026-10-10T13:00:00.000Z", "d");
+        let rows = recorder.new_rows().unwrap();
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].row["bio"], "d");
+        assert_eq!(rows[0].row_id, 4);
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn acknowledging_status_keeps_bio_rows_in_the_shared_own_profile_table() {
+        let (_dir, recorder) = recorder("own-profile-ack");
+        let db = recorder.state.database();
+        let table = format!(
+            "{}_self_profile_log",
+            vrcx_0_persistence::realtime::normalize_user_table_prefix(USER).unwrap()
+        );
+        db.execute_non_query(&format!("INSERT INTO {table} (created_at, field, value) VALUES (1, 'status', 'active'), (2, 'bio', 'keep'), (3, 'status', 'busy')"), &Default::default()).unwrap();
+        let status = ROW_STREAMS
+            .iter()
+            .find(|spec| spec.name == "self_profile_status")
+            .unwrap();
+        let bio = ROW_STREAMS
+            .iter()
+            .find(|spec| spec.name == "self_profile_bio")
+            .unwrap();
+        delete_rows_through(db, &recorder.scope, status, 3).unwrap();
+        assert_eq!(
+            export_rows(db, &recorder.scope, bio, 0, 100).unwrap().len(),
+            1
+        );
+        delete_exported_rows(db, &recorder.scope, status, &[2]).unwrap();
+        assert_eq!(
+            export_rows(db, &recorder.scope, bio, 0, 100).unwrap().len(),
+            1
+        );
     }
 
     #[tokio::test(flavor = "multi_thread")]
@@ -631,6 +810,7 @@ mod tests {
             v: 1,
             auth: "authcookie-fixture".into(),
             two_factor_auth: Some("twofactor-fixture".into()),
+            profile_history_settings: Default::default(),
         };
         let decoded = STANDARD
             .decode(cookie_payload(&session).as_bytes())
@@ -647,6 +827,7 @@ mod tests {
             v: 1,
             auth: "authcookie-fixture".into(),
             two_factor_auth: None,
+            profile_history_settings: Default::default(),
         };
         let decoded = STANDARD
             .decode(cookie_payload(&without).as_bytes())

@@ -6,7 +6,8 @@ import {
     MessageCircleDashedIcon,
     PanelRightIcon,
     Settings2Icon,
-    XIcon
+    XIcon,
+    ClipboardCopyIcon
 } from 'lucide-react';
 import { useEffect, useEffectEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +26,7 @@ import {
     type PlaybookMode,
     type Session
 } from '@/platform/tauri/bindings';
+import { copyTextToClipboard } from '@/services/clipboardService';
 import { toast } from '@/services/toastService';
 import { useAssistantChatStore } from '@/state/assistantChatStore';
 import {
@@ -73,6 +75,7 @@ import {
     sendMessage,
     setEntityPanelOpen
 } from './assistantActions';
+import { chatMarkdown } from './assistantMarkdown';
 import { useDraftPrompts } from './components/AssistantFollowUps';
 import { AssistantTranscript } from './components/AssistantTranscript';
 import { Composer } from './components/Composer';
@@ -93,7 +96,7 @@ const HEALTH_DOT_CLASS: Record<AssistantHealth, string> = {
 const DEFAULT_RUNTIME_SELECTION: AssistantRuntimeSelection = {
     endpointId: null,
     model: null,
-    allowWrites: false,
+    allowEditRequests: true,
     playbookMode: 'auto'
 };
 
@@ -105,7 +108,7 @@ function selectionFromSession(session: Session): AssistantRuntimeSelection {
     return {
         endpointId: session.endpointId,
         model: session.model,
-        allowWrites: session.allowWrites,
+        allowEditRequests: session.allowEditRequests,
         playbookMode: session.playbookMode
     };
 }
@@ -249,7 +252,7 @@ export function AssistantDialog() {
                 const selection = await commands.appAssistantSetDefaultRuntime(
                     next.endpointId,
                     next.model,
-                    next.allowWrites,
+                    next.allowEditRequests ?? true,
                     next.playbookMode
                 );
                 setRuntimeSelection(selection);
@@ -259,7 +262,7 @@ export function AssistantDialog() {
                 activeSessionId,
                 next.endpointId,
                 next.model,
-                next.allowWrites,
+                next.allowEditRequests ?? true,
                 next.playbookMode
             );
             setRuntimeSelection(selectionFromSession(session));
@@ -370,6 +373,36 @@ export function AssistantDialog() {
                         ) : null}
                     </div>
                     <div className="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            disabled={
+                                !messages?.some((message) =>
+                                    message.text.trim()
+                                )
+                            }
+                            onClick={() =>
+                                void copyTextToClipboard(
+                                    chatMarkdown(
+                                        activeTitle || t('assistant.title'),
+                                        messages ?? [],
+                                        {
+                                            user: t('assistant.message.you'),
+                                            assistant: t('assistant.title')
+                                        }
+                                    ),
+                                    {
+                                        successMessage: t(
+                                            'assistant.message.chat_copied'
+                                        )
+                                    }
+                                )
+                            }
+                            title={t('assistant.message.copy_chat')}
+                            aria-label={t('assistant.message.copy_chat')}
+                            className="text-muted-foreground hover:text-foreground rounded-md p-1.5 transition-colors hover:bg-(--state-hover-surface) disabled:opacity-40"
+                        >
+                            <ClipboardCopyIcon className="size-4" />
+                        </button>
                         <button
                             type="button"
                             onClick={() => setEntityPanelOpen(!entityPanelOpen)}
@@ -706,12 +739,14 @@ function RuntimeToolbar({
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuCheckboxItem
-                        checked={selection.allowWrites}
-                        onCheckedChange={(allowWrites) =>
-                            onSelectionChange({ allowWrites })
+                        checked={selection.allowEditRequests === false}
+                        onCheckedChange={(disallow) =>
+                            onSelectionChange({
+                                allowEditRequests: !disallow
+                            })
                         }
                     >
-                        {t('assistant.runtime.allow_writes')}
+                        {t('assistant.runtime.disallow_edit_requests')}
                     </DropdownMenuCheckboxItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={onOpenSettings}>

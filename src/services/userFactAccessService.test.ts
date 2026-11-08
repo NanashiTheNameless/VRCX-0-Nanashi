@@ -87,4 +87,74 @@ describe('userFactAccessService', () => {
             }
         ]);
     });
+
+    it('keeps manual observations separate from background facts and other account scopes', async () => {
+        const entries = [
+            {
+                user: { id: 'usr_target', bio: 'background' },
+                source: 'profile'
+            },
+            {
+                user: { id: 'usr_target', bio: 'manual' },
+                source: 'profile',
+                manualProfileHistory: true,
+                ownerUserId: 'usr_owner',
+                endpoint: 'api'
+            },
+            {
+                user: { id: 'usr_target', bio: 'other account' },
+                source: 'profile',
+                manualProfileHistory: true,
+                ownerUserId: 'usr_other',
+                endpoint: 'api'
+            }
+        ];
+        ingestUserFactEntries(entries);
+        await flushPendingUserFactEntries();
+        expect(tauriMock.appIngestUserFacts).toHaveBeenCalledWith(entries);
+    });
+
+    it('keeps cleared badge fields when batching profile updates', async () => {
+        ingestUserFactEntries([
+            {
+                source: 'profile',
+                user: {
+                    id: 'usr_target',
+                    ageVerified: true,
+                    ageVerificationStatus: '18+',
+                    bio: 'An artist',
+                    pronouns: 'they/them',
+                    memo: 'Local friend memo',
+                    note: 'VRChat note'
+                }
+            },
+            {
+                source: 'profile',
+                user: {
+                    id: 'usr_target',
+                    ageVerified: false,
+                    ageVerificationStatus: null,
+                    bio: '',
+                    pronouns: null,
+                    memo: '',
+                    note: ''
+                }
+            }
+        ]);
+        await flushPendingUserFactEntries();
+        expect(tauriMock.appIngestUserFacts).toHaveBeenCalledWith([
+            {
+                source: 'profile',
+                user: {
+                    id: 'usr_target',
+                    ageVerified: false,
+                    ageVerificationStatus: null,
+                    bio: '',
+                    pronouns: null,
+                    memo: '',
+                    note: ''
+                }
+            }
+        ]);
+    });
 });

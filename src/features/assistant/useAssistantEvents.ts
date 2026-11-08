@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 
 import type {
     AssistantChoiceRequestEvent,
+    AssistantClientRequestEvent,
     AssistantDeltaEvent,
     AssistantDoneEvent,
     AssistantErrorEvent,
@@ -10,8 +11,11 @@ import type {
     AssistantTurnEntitiesEvent
 } from '@/platform/tauri/bindings';
 import { tauriClient } from '@/platform/tauri/client';
+import i18n from '@/services/i18nService';
 import { useAssistantChatStore } from '@/state/assistantChatStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
+
+import { handleAssistantClientRequest } from './assistantClientRequests';
 
 function isCurrentAccountEvent(event: {
     ownerUserId: string;
@@ -113,6 +117,20 @@ export function useAssistantEvents(): void {
                     store.applyChoiceRequest(event);
                 }
             },
+            assistantClientRequest: (event: AssistantClientRequestEvent) => {
+                if (!isCurrentAccountEvent(event)) {
+                    return;
+                }
+                flushNow();
+                handleAssistantClientRequest(event, i18n.t.bind(i18n)).catch(
+                    (error: unknown) => {
+                        console.warn(
+                            '[assistant] failed to answer a request',
+                            error
+                        );
+                    }
+                );
+            },
             assistantTurnEntities: (event: AssistantTurnEntitiesEvent) => {
                 if (isCurrentAccountEvent(event)) {
                     store.applyTurnEntities(event);
@@ -170,6 +188,10 @@ export function useAssistantEvents(): void {
             tauriClient.events.subscribe(
                 'assistantChoiceRequest',
                 handlers.assistantChoiceRequest
+            ),
+            tauriClient.events.subscribe(
+                'assistantClientRequest',
+                handlers.assistantClientRequest
             ),
             tauriClient.events.subscribe(
                 'assistantTurnEntities',

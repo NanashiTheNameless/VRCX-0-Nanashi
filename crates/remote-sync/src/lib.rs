@@ -711,6 +711,22 @@ impl RemoteSyncClient {
         .await
     }
 
+    /// Updates the collector's own copy of its primary device's choices.
+    pub async fn collector_profile_history_set(
+        &self,
+        token: &str,
+        vault_id: VaultId,
+        settings: &serde_json::Value,
+    ) -> Result<(), Error> {
+        self.send_empty(
+            self.client
+                .post(self.api_endpoint(&format!("/vaults/{vault_id}/collector/profile-history")))
+                .json(settings),
+            token,
+        )
+        .await
+    }
+
     pub async fn collector_lock(&self, token: &str, vault_id: VaultId) -> Result<(), Error> {
         self.send_empty(
             self.client

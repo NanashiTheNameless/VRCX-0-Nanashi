@@ -122,7 +122,7 @@
         "remove_failed": "The item could not be removed from history."
     },
     "assistant": {
-        "title": "Social AI",
+        "title": "AI Assistant",
         "new_chat": "New chat",
         "session_group": {
             "pinned": "Pinned",
@@ -140,21 +140,21 @@
         "session_deleted": "Chat deleted",
         "undo": "Undo",
         "sessions_empty": "No conversations yet",
-        "composer_placeholder": "Ask something, or type @ to mention a friend",
+        "composer_placeholder": "Ask about your friends or the app, or type @ to mention a friend",
         "mention": {
             "add": "Mention a friend",
             "list": "Friends"
         },
-        "disclaimer": "Answers are based on what VRCX-0 has recorded locally and may be incomplete or wrong.",
+        "disclaimer": "Answers are based on what VRCX-0-Nanashi has recorded locally and may be incomplete or wrong. The assistant asks before changing anything, and nothing changes unless you approve.",
         "send": "Send",
         "stop": "Stop",
-        "empty_title": "What would you like to know?",
-        "empty_description": "The assistant looks through the game logs, friend activity and history VRCX-0 has recorded to help you review and make sense of your social life. Type a question to start.",
+        "empty_title": "What can I help with?",
+        "empty_description": "Ask about your friends, activity and worlds from the history VRCX-0-Nanashi has recorded, or about the app itself: where a setting is, what it does, or to change one for you. Type a question to start.",
         "example_1": "Who have I played with most this week?",
         "example_2": "Who am I drifting away from?",
-        "example_3": "When is the best time to catch my friends online?",
+        "example_3": "Where do I set up notifications in VR?",
         "not_configured": "Select an LLM Endpoint and model to start.",
-        "setup_title": "Connect a model to get started",
+        "setup_title": "Connect a model to start using the AI Assistant",
         "open_settings": "Go to AI settings",
         "entities_title": "Mentioned",
         "entities_empty": "People and worlds mentioned in answers show up here.",
@@ -163,8 +163,8 @@
         "thinking": "Generating response",
         "pending": "Thinking",
         "trace": {
-            "working": "Looking through your data",
-            "done": "Looked through your data"
+            "working": "Looking things up",
+            "done": "Looked things up"
         },
         "choice": {
             "title": "Who do you mean by \"{query}\"?",
@@ -178,6 +178,59 @@
             "confirm": "Confirm",
             "picked": "Picked {name}",
             "skipped": "No one picked for \"{query}\""
+        },
+        "message": {
+            "copy": "Copy as Markdown",
+            "copied": "Message copied as Markdown.",
+            "copy_chat": "Copy the whole chat as Markdown",
+            "chat_copied": "Chat copied as Markdown.",
+            "edit": "Edit message",
+            "edit_hint": "Sending replaces this message and everything after it with a new answer.",
+            "send_edit": "Send",
+            "you": "You"
+        },
+        "edit": {
+            "title_setting": "Change this setting?",
+            "title_action": "Allow the assistant to do this?",
+            "setting": "Setting",
+            "meaning": "What it does",
+            "why": "Why the assistant suggests it",
+            "where": "Where it is",
+            "current": "Now",
+            "new": "After",
+            "on": "On",
+            "off": "Off",
+            "units": {
+                "seconds": "seconds",
+                "minutes": "minutes",
+                "percent": "%"
+            },
+            "blocked": "This has no effect until another setting is turned on.",
+            "details": "Details",
+            "action_description": "The assistant asked to do this for you. Nothing happens unless you approve, and it asks again for every change.",
+            "approve": "Approve",
+            "decline": "Decline",
+            "show_me": "Show me",
+            "approved": "Approved",
+            "applied": "Changed {label} from {old} to {new}.",
+            "declined": "Declined",
+            "failed": "Couldn't make the change: {error}",
+            "invalid": "The assistant asked for a change that cannot be made: {error}",
+            "actions": {
+                "favorite_local": "Update a local favorite list",
+                "favorite_vrchat": "Add a VRChat favorite",
+                "set_friend_note": "Edit a friend note",
+                "create_reminder": "Create a reminder",
+                "delete_reminder": "Delete a reminder",
+                "send_chatbox_message": "Send a message to the VRChat Chatbox",
+                "set_chatbox_afk": "Switch Chatbox AFK",
+                "update_chatbox": "Change Chatbox settings"
+            }
+        },
+        "guide": {
+            "title": "The AI Assistant is showing you",
+            "back": "Back to the AI Assistant",
+            "dismiss": "Done"
         },
         "scroll_to_latest": "Scroll to bottom",
         "connection": {
@@ -199,7 +252,7 @@
             "model_unset": "No model available",
             "search_models": "Search models",
             "playbook_mode": "Analysis mode",
-            "allow_writes": "Allow write actions",
+            "disallow_edit_requests": "Don't let the AI ask to make changes",
             "manage_endpoints": "Manage LLM Endpoints",
             "reasoning_effort": "Reasoning effort",
             "reasoning_effort_provider_default": "Provider default",
@@ -211,6 +264,11 @@
         },
         "tools": {
             "favorite_local": "Update local favorites",
+            "find_settings": "Look up settings",
+            "read_docs": "Read the docs",
+            "show_in_docs": "Open the docs",
+            "show_in_settings": "Show a setting",
+            "change_setting": "Change a setting",
             "favorite_vrchat": "Add a VRChat favorite",
             "find_user": "Find a user",
             "get_activity_streaks": "Check activity streaks",
@@ -1374,6 +1432,14 @@
         "badge_request": "Request a badge"
     },
     "view": {
+        "docs": {
+            "title": "Docs",
+            "description": "The VRCX-0-Nanashi documentation, built into the app. Reading it makes no requests.",
+            "list": "Docs",
+            "search": "Search the docs",
+            "no_results": "Nothing matches. Try other words.",
+            "contents": "On this page"
+        },
         "login": {
             "savedAccounts": "Saved Accounts",
             "login": "Sign In",
@@ -2492,8 +2558,8 @@
                 "registry_backup": "VRChat Registry Backup",
                 "registry_backup_description": "Create or restore a VRChat registry backup",
                 "llm_endpoints": "AI Connections",
-                "llm_endpoints_description": "AI connections for Social AI and translation",
-                "social_ai_description": "Chat with an AI about your friends, activity and worlds"
+                "llm_endpoints_description": "AI connections for the AI Assistant and translation",
+                "social_ai_description": "Chat with an AI about your friends, activity and worlds, and get help with settings"
             },
             "vrchat_log": {
                 "title": "VRChat Log Viewer",
@@ -2842,11 +2908,11 @@
             },
             "llm_endpoints": {
                 "title": "LLM Endpoints",
-                "description": "Shared OpenAI-compatible connections for Social AI and translation.",
+                "description": "Shared OpenAI-compatible connections for the AI Assistant and translation.",
                 "follow_custom_proxy": "Use VRCX-0-Nanashi Custom Proxy",
                 "follow_custom_proxy_description": "LLM requests use it when configured; otherwise, the system proxy applies.",
                 "add": "Add endpoint",
-                "empty_description": "Add an OpenAI-compatible endpoint for Social AI and OpenAI-compatible translation.",
+                "empty_description": "Add an OpenAI-compatible endpoint for the AI Assistant and OpenAI-compatible translation.",
                 "preset": "Preset",
                 "preset_custom": "Custom",
                 "presets": {
@@ -3063,7 +3129,7 @@
                 "sync_interval_minutes": "{minutes} minutes",
                 "save_sync_interval": "Save interval",
                 "dedupe_device": "Server deduplication device",
-                "dedupe_device_description": "Choose one paired PC to merge and deduplicate server history. Other PCs only upload and download changes. All PCs must run this app version to sync.",
+                "dedupe_device_description": "Choose the primary PC to merge and deduplicate server history. The server collector follows its Profile History recording and sync choices after the primary PC syncs. Other PCs keep their own choices. All PCs must run this app version to sync.",
                 "dedupe_device_empty": "Select a paired PC",
                 "pause_in_game": "Pause automatic sync while VRChat is open",
                 "pause_in_game_description": "Automatic sync waits until VRChat closes, then runs right away. Sync now and the sync on exit still work.",
@@ -3078,7 +3144,7 @@
                     "general": "Application and startup",
                     "overlay": "VR and desktop overlays",
                     "safety": "Safety",
-                    "assistant": "Social AI and reminders",
+                    "assistant": "AI Assistant and reminders",
                     "feed": "Feed, history and tables",
                     "notifications": "Notifications",
                     "automation": "Status and invite automation",
@@ -3114,8 +3180,8 @@
                     "activitypageshowhomeworld": "Show home world in Activity",
                     "applauncherenabledv2": "App launcher",
                     "applauncherentriesv2": "App launcher apps",
-                    "assistantlastselection": "Social AI model selection",
-                    "assistantreasoningeffort": "Social AI reasoning effort",
+                    "assistantlastselection": "AI Assistant model selection",
+                    "assistantreasoningeffort": "AI Assistant reasoning effort",
                     "assistantreminders": "Reminders",
                     "autoacceptinvitegroups": "Auto-accept invite requests from groups",
                     "autoacceptinvitemessageslot": "Auto-accept invite response message",
@@ -3467,19 +3533,20 @@
                 "collector_lock": "Relock now"
             },
             "ai": {
-                "header": "Social AI",
-                "description": "Defaults for new conversations. Each conversation can override them from the Social AI panel.",
+                "header": "AI Assistant",
+                "description": "Defaults for new conversations. Each conversation can override them from the AI Assistant panel.",
                 "default_model": "Default model",
                 "default_model_description": "New conversations start with this model.",
                 "default_model_unset": "No model available",
-                "setup_hint": "Social AI needs an OpenAI-compatible connection before it can answer anything.",
+                "setup_hint": "The AI Assistant needs an OpenAI-compatible connection before it can answer anything.",
                 "playbook_mode_description": "How much freedom the model gets when analyzing your data.",
-                "endpoints_description": "Shared by Social AI and translation.",
-                "enable": "Enable Social AI",
-                "enable_description": "Shows the Social AI button and chat. Off by default; nothing is sent to an AI service while disabled.",
+                "endpoints_description": "Shared by the AI Assistant and translation.",
+                "enable": "Enable the AI Assistant",
+                "enable_description": "Shows the AI Assistant button and chat. It can answer questions about your social history and help with settings. Off by default; nothing is sent to an AI service while disabled.",
+                "disallow_edit_requests_description": "Default for new conversations. The assistant normally asks before every change it wants to make (settings, reminders, favorites, notes) and waits for your approval. Turn this on to stop it from asking at all; it can still show you where settings are.",
                 "reminders": {
                     "title": "Reminders",
-                    "description": "Reminders fire as \"Assistant reminder\" notifications (desktop, VR, sound) even with Social AI closed. Create one here, or ask the assistant with write actions turned on.",
+                    "description": "Reminders fire as \"Assistant reminder\" notifications (desktop, VR, sound) even with the AI Assistant closed. Create one here, or ask the assistant and approve its request.",
                     "empty": "No reminders yet.",
                     "new": "New reminder",
                     "message": "Message",
@@ -3517,8 +3584,8 @@
                     "ai_draft": "Draft reminder",
                     "ai_drafting": "Drafting",
                     "ai_drafted": "Draft ready. Check the form below, then save it.",
-                    "ai_not_configured": "Social AI is off, so it cannot fill in the form for you. Turn it on in Settings > AI, or create the reminder by hand below.",
-                    "ai_open_settings": "Open Social AI settings",
+                    "ai_not_configured": "The AI Assistant is off, so it cannot fill in the form for you. Turn it on in Settings > AI, or create the reminder by hand below.",
+                    "ai_open_settings": "Open AI Assistant settings",
                     "ai_friend_unmatched": "No friend named \"{name}\" matched. Pick the friend yourself before saving."
                 }
             },
@@ -3550,6 +3617,23 @@
                     "hide_notifications_description": "Their hidden updates also won't appear in desktop notifications, TTS, VR overlays, webhooks, or in-app notifications.",
                     "hide_private_location_changes": "Don't notify moves to private worlds",
                     "hide_private_location_changes_description": "When a friend goes to a private world, no desktop notification, TTS, VR notification, or webhook is sent. The wrist overlay feed uses its own Hide Private Worlds setting."
+                },
+                "profile_history": {
+                    "header": "Profile History",
+                    "description": "Save observed changes for friends, current instance players, and yourself. Opening a user's profile saves enabled field values that are not already in history, without ongoing tracking. No additional profile requests are made. Automatic timelines start from the first value seen after enabling a field. The collector follows the primary PC's choices after History Sync.",
+                    "status": "Status and status text",
+                    "bio": "Bio",
+                    "pronouns": "Pronouns",
+                    "recording": "Record history",
+                    "recording_description": "Off by default. Record future observed changes on this PC. Turning this off keeps saved history.",
+                    "sync": "Sync history",
+                    "sync_description": "On by default. Upload and receive this field through encrypted History Sync when enabled and paired. Existing history is included, even while local recording is off.",
+                    "status_recording": "Record status history",
+                    "status_sync": "Sync status history",
+                    "bio_recording": "Record bio history",
+                    "bio_sync": "Sync bio history",
+                    "pronouns_recording": "Record pronouns history",
+                    "pronouns_sync": "Sync pronouns history"
                 }
             },
             "vr": {
@@ -3831,7 +3915,7 @@
                     "auto_login_delay": "Auto Sign-In Delay",
                     "auto_login_delay_button": "Set Delay (Seconds)",
                     "error_log": "Error log",
-                    "error_log_description": "error-log.txt records errors and connection problems, including the provider reply when the Social AI fails. Attach it when reporting a bug; it can contain local paths and account IDs, so review it first.",
+                    "error_log_description": "error-log.txt records errors and connection problems, including the provider reply when the AI Assistant fails. Attach it when reporting a bug; it can contain local paths and account IDs, so review it first.",
                     "open_error_log": "Show error log"
                 },
                 "automation": {
@@ -3974,7 +4058,7 @@
                 "user_badges": {
                     "header": "User Badges",
                     "list": "Custom badges",
-                    "list_description": "Add your own badges to users. A badge shows next to a user's name everywhere when any of its rules match, and a user can have several badges at once. Badges are only visible to you.",
+                    "list_description": "Add your own badges to users. A badge shows next to a user's name everywhere when its rule expression matches, and a user can have several badges at once. Badges are only visible to you.",
                     "add": "Add badge",
                     "edit": "Edit badge",
                     "delete": "Delete badge",
@@ -3992,6 +4076,41 @@
                     "icon_now_reserved": "Icon unavailable, showing a star",
                     "icon_now_reserved_detail": "This icon is now kept for built-in and global badges, so the badge shows a star instead. Pick another icon.",
                     "color": "Badge color",
+                    "combine_rules": "Combine rules",
+                    "assigned_users": "Manually assigned users always get this badge (OR). The rules below apply to everyone else.",
+                    "rule_type": "Rule type",
+                    "negate": "NOT (reverse this rule)",
+                    "operator": {
+                        "or": "OR - any rule",
+                        "and": "AND - all rules",
+                        "xor": "XOR - odd number of matches",
+                        "nand": "NAND - not all rules",
+                        "nor": "NOR - no rules",
+                        "xnor": "XNOR - even number of matches",
+                        "xand": "XAND - alias for XNOR"
+                    },
+                    "operator_description": {
+                        "or": "Matches when at least one rule matches.",
+                        "and": "Matches only when every rule matches.",
+                        "xor": "Matches when an odd number of rules match. With two rules, exactly one must match.",
+                        "nand": "Matches when at least one rule does not match. It reverses AND.",
+                        "nor": "Matches only when none of the rules match. It reverses OR.",
+                        "xnor": "Matches when an even number of rules match, including zero. With two rules, both must match or both must not match.",
+                        "xand": "Another name for XNOR. Matches when an even number of rules match, including zero.",
+                        "not": "Reverses one rule or group: a match becomes no match, and no match becomes a match. Only input A is used here."
+                    },
+                    "guide": {
+                        "title": "Rule logic guide",
+                        "intro": "Try the inputs below. Green means a match; gray means no match. Each diagram shows how an operator turns the same inputs into a badge result.",
+                        "input_a": "A: User is a friend",
+                        "input_b": "B: User has VRC+",
+                        "matches": "Matches",
+                        "no_match": "No match",
+                        "truth_table": "All combinations of two rules",
+                        "legend": "1 = matches, 0 = no match. The highlighted row follows the inputs above. NOT uses only A.",
+                        "groups": "Use a rule group to combine conditions before applying the outer operator. For example: AND with All friends and a nested OR group containing PC and Android means friends on either platform. NOT can reverse a whole group. Empty badges and empty groups never match, even with NOT.",
+                        "missing": "Rules use information already loaded by the app. Missing profile information counts as no match; NOT reverses that result too. The user dialog's Badges menu adds a specific user with OR so the other conditions keep their meaning."
+                    },
                     "add_rule": "Add rule",
                     "remove_rule": "Remove rule",
                     "no_rules": "No rules yet. Add a rule to choose who gets this badge.",
@@ -4013,6 +4132,7 @@
                     "save_failed": "Couldn't save the badges.",
                     "rule": {
                         "users": "Specific users",
+                        "self": "Self",
                         "friends": "All friends",
                         "friendGroup": "Favorite friend group",
                         "vrchatGroup": "Is in VRChat group",
@@ -4023,10 +4143,12 @@
                         "ageVerified": "Age verified",
                         "platform": "Platform",
                         "status": "Status",
-                        "pronouns": "Pronouns contain"
+                        "pronouns": "Pronouns contain",
+                        "group": "Rule group"
                     },
                     "rule_description": {
                         "users": "Users you list here.",
+                        "self": "Your currently signed-in VRChat account. Follows account changes and does not match while signed out.",
                         "friends": "Everyone on your friends list.",
                         "friendGroup": "Friends in one of your VRChat or local favorite groups.",
                         "vrchatGroup": "Users in a VRChat group (pick one of yours, or paste a grp_ ID or a vrchat.com group link). Each user's own group list is trusted when the app has seen it; the fetched member list fills in the rest. Limiting to a role needs the member list.",
@@ -4037,7 +4159,8 @@
                         "ageVerified": "Users who show VRChat age verification on their profile, when their profile is known. Users who hide it never match.",
                         "platform": "Users whose last VRChat platform is this one, when it is known.",
                         "status": "Online users with this status. Changes as their status changes.",
-                        "pronouns": "Users whose VRChat pronouns contain this text, when their profile is known."
+                        "pronouns": "Users whose VRChat pronouns contain this text, when their profile is known.",
+                        "group": "Combine nested rules with their own operator. The group result is one input to the surrounding rules."
                     },
                     "age_level": {
                         "any": "Any age verification",
@@ -4053,6 +4176,116 @@
                         "active": "Online",
                         "ask_me": "Ask Me",
                         "busy": "Do Not Disturb"
+                    },
+                    "rule_enabled": "Use",
+                    "condition_tree": "Conditions",
+                    "single_condition": "Only one condition is on, so it decides the badge by itself.",
+                    "no_enabled_conditions": "No conditions are on, so nobody gets this badge.",
+                    "add_branch": "Add a group",
+                    "add_condition": "Add condition",
+                    "add_condition_pick": "Add a condition...",
+                    "advanced": "Show advanced logic (XOR, NAND, XNOR and the logic guide)",
+                    "sentence": {
+                        "lead": "Show this badge for users who match",
+                        "lead_one": "Show this badge for users who:",
+                        "of": "of these:",
+                        "group_lead": "who match",
+                        "group_lead_one": "who:"
+                    },
+                    "match": {
+                        "and": "ALL",
+                        "or": "ANY",
+                        "nor": "NONE",
+                        "xor": "AN ODD NUMBER",
+                        "nand": "NOT ALL",
+                        "xnor": "AN EVEN NUMBER",
+                        "xand": "AN EVEN NUMBER (XAND)"
+                    },
+                    "phrase": {
+                        "users": "are one of these users",
+                        "self": "are you (your signed-in account)",
+                        "friends": "are your friends",
+                        "friendGroup": "are in the favorite friend group",
+                        "vrchatGroup": "are in the VRChat group",
+                        "trust": "have the trust rank",
+                        "supporter": "have VRC+",
+                        "ageVerified": "show age verification",
+                        "platform": "were last on",
+                        "status": "have the status",
+                        "memo": "have a memo or note containing",
+                        "bio": "have a bio containing",
+                        "pronouns": "have pronouns containing",
+                        "group": "match a group of conditions"
+                    },
+                    "phrase_not": {
+                        "users": "are not one of these users",
+                        "self": "are not you (your signed-in account)",
+                        "friends": "are not your friends",
+                        "friendGroup": "are not in the favorite friend group",
+                        "vrchatGroup": "are not in the VRChat group",
+                        "trust": "do not have the trust rank",
+                        "supporter": "do not have VRC+",
+                        "ageVerified": "do not show age verification",
+                        "platform": "were not last on",
+                        "status": "do not have the status",
+                        "memo": "do not have a memo or note containing",
+                        "bio": "do not have a bio containing",
+                        "pronouns": "do not have pronouns containing",
+                        "group": "do not match this group"
+                    },
+                    "summary": {
+                        "title": "In plain words",
+                        "lead": "Users who {expression}",
+                        "nobody": "Nobody gets this badge yet.",
+                        "and": " and ",
+                        "or": " or ",
+                        "not_group": "do not match ({item})",
+                        "users_not_one": "are not the {count} listed user",
+                        "users_not_other": "are not one of {count} listed users",
+                        "users_one": "are the {count} listed user",
+                        "users_other": "are one of {count} listed users",
+                        "assigned_one": "{count} assigned user, plus users who {expression}",
+                        "assigned_other": "{count} assigned users, plus users who {expression}",
+                        "unset": "(not set)",
+                        "wrap": {
+                            "nor": "match none of ({items})",
+                            "xor": "match an odd number of ({items})",
+                            "nand": "do not match all of ({items})",
+                            "xnor": "match an even number of ({items})",
+                            "xand": "match an even number of ({items})"
+                        }
+                    },
+                    "map": {
+                        "title": "Condition map",
+                        "off": "off",
+                        "not": "NOT",
+                        "result": "Badge"
+                    },
+                    "transfer": {
+                        "export_all": "Export all",
+                        "export": "Export badge",
+                        "import": "Import",
+                        "export_title": "Export badges",
+                        "export_description": "JSONC text with comments. Fetched VRChat group member lists are left out; fetch them again after importing.",
+                        "copy": "Copy",
+                        "copied": "Copied to the clipboard.",
+                        "save_file": "Save file",
+                        "saved": "Saved {path}",
+                        "save_failed": "Couldn't save the file.",
+                        "import_title": "Import badges",
+                        "import_description": "Paste JSONC exported from VRCX-0-Nanashi, or open a .jsonc file. A single badge, a list of badges or a full export all work.",
+                        "import_placeholder": "Paste JSONC here",
+                        "open_file": "Open file",
+                        "open_failed": "Couldn't open the file.",
+                        "replace_same_id": "Replace saved badges that have the same ID",
+                        "replace_same_id_description": "Turn this off to add imported badges as new copies.",
+                        "found_one": "{count} badge found.",
+                        "found_other": "{count} badges found.",
+                        "invalid_one": "{count} entry is not a valid badge and will be skipped.",
+                        "invalid_other": "{count} entries are not valid badges and will be skipped.",
+                        "parse_error": "This is not valid badge JSONC: {error}",
+                        "import_confirm": "Import",
+                        "imported": "Badges imported: {added} added, {replaced} replaced, {skipped} skipped because of the {limit} badge limit."
                     }
                 },
                 "user_colors": {
@@ -4547,8 +4780,8 @@
             },
             "search": {
                 "placeholder": "Search settings",
-                "results": "{count} results",
-                "no_results": "No settings match \"{query}\"."
+                "results": "Settings search results",
+                "no_results": "No matching settings"
             },
             "custom_languages": {
                 "header": "Languages",
@@ -4742,11 +4975,6 @@
                 "reset": "Reset",
                 "restart_required": "Restart required",
                 "requires_parent": "Turn on “{name}” first"
-            },
-            "search": {
-                "placeholder": "Search settings",
-                "results": "Settings search results",
-                "no_results": "No matching settings"
             }
         },
         "dashboard": {
@@ -5420,7 +5648,7 @@
             "ai_drafting": "Thinking...",
             "ai_drafted": "Check the form, then create the reminder.",
             "ai_friend_unmatched": "No single friend matched \"{name}\"; pick one.",
-            "ai_not_configured": "Choose a default model for Social AI first.",
+            "ai_not_configured": "Choose a default model for the AI Assistant first.",
             "ai_open_settings": "Open AI settings",
             "list_title": "Your reminders",
             "manage": "Manage reminders"
@@ -5940,6 +6168,24 @@
                 "muteChat_on": "You won't see {name}'s chatbox messages in VRChat.",
                 "muteChat_off": "You'll see {name}'s chatbox messages in VRChat again.",
                 "unfriend": "{name} will be removed from your friends list. To be friends again, one of you will need to send a new friend request."
+            },
+            "profile_history": {
+                "header": "Profile History",
+                "filter": "Filter profile history",
+                "all": "All fields",
+                "refresh": "Refresh",
+                "more": "Load more",
+                "description": "Changes and snapshots are shown at the time this app or another synced device observed them. Recording is optional for each field under Settings > Social > Profile History.",
+                "empty": "No recorded history for this user and field.",
+                "status": "Status",
+                "status_text": "Status text",
+                "bio": "Bio",
+                "pronouns": "Pronouns",
+                "before": "Before",
+                "after": "After",
+                "snapshot": "Snapshot",
+                "blank": "(empty)",
+                "loading": "Loading profile history"
             }
         },
         "world": {

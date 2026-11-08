@@ -137,14 +137,13 @@ const navDefinitions = [
         defaultFolderId: 'default-folder-social'
     },
     {
-        // Fork: opens the Social AI chat, or its settings while it is off.
+        // Fork: opens the AI Assistant chat, or its settings while it is off.
         key: 'social-ai',
         icon: 'lucide:Sparkles',
         tooltip: 'assistant.title',
         labelKey: 'assistant.title',
         routeName: null,
-        action: { type: 'tool' as const, toolKey: 'social-ai' },
-        defaultFolderId: 'default-folder-social'
+        action: { type: 'tool' as const, toolKey: 'social-ai' }
     },
     {
         key: 'tools',
@@ -152,6 +151,14 @@ const navDefinitions = [
         tooltip: 'nav_tooltip.tools',
         labelKey: 'nav_tooltip.tools',
         routeName: 'tools'
+    },
+    {
+        // Fork: the built-in docs viewer.
+        key: 'docs',
+        icon: 'lucide:BookOpen',
+        tooltip: 'view.docs.title',
+        labelKey: 'view.docs.title',
+        routeName: 'docs'
     },
     ...toolNavDefinitions
 ];

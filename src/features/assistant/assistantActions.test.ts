@@ -53,7 +53,7 @@ function session(id: string): Session {
         activeTurn: null,
         endpointId: null,
         model: null,
-        allowWrites: false,
+        allowEditRequests: false,
         playbookMode: 'auto',
         entityPanelOpen: false,
         surfacedEntities: [],

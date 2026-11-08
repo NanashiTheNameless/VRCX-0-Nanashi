@@ -15,7 +15,7 @@ import { toast } from './toastService';
 export type OfflineRecordHealthLevel = 'ok' | 'warning' | 'error';
 
 const GUIDE_URL =
-    'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/blob/master/crates/logger/README.md';
+    'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/blob/master/docs/RECORDER.md';
 
 export function offlineRecordGuideUrl(): string {
     return GUIDE_URL;

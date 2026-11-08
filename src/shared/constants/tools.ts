@@ -70,7 +70,7 @@ type ToolAction =
           type: 'dialog';
           dialogKey: ToolDialogKey;
       }
-    // Fork: open the Social AI chat.
+    // Fork: open the AI Assistant chat.
     | {
           type: 'assistant';
       };

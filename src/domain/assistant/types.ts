@@ -102,6 +102,17 @@ export type AssistantChoiceRequestEvent = {
     candidates: AssistantChoiceCandidate[];
 };
 
+export type AssistantClientRequestEvent = {
+    ownerUserId: string;
+    sessionId: string;
+    turnId: string;
+    toolCallId: string;
+    requestId: string;
+    kind: string;
+    tool: string;
+    arguments: unknown;
+};
+
 export type AssistantTurnEntitiesEvent = {
     ownerUserId: string;
     sessionId: string;
@@ -141,6 +152,23 @@ export interface UIUserChoice {
     pickedUserId?: string;
 }
 
+export type EditRequestStatus =
+    | 'pending'
+    | 'approved'
+    | 'applied'
+    | 'declined'
+    | 'failed';
+
+export interface UIEditRequest {
+    id: string;
+    sessionId: string;
+    kind: string;
+    tool: string;
+    arguments: unknown;
+    status: EditRequestStatus;
+    detail?: string;
+}
+
 export interface UIMessage {
     id: string;
     role: 'user' | 'assistant';
@@ -149,5 +177,6 @@ export interface UIMessage {
     streaming: boolean;
     toolCalls: UIToolCall[];
     choices?: UIUserChoice[];
+    editRequests?: UIEditRequest[];
     error?: string;
 }

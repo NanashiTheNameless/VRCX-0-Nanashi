@@ -62,10 +62,36 @@ pub const ROW_STREAMS: &[StreamSpec] = &[
     feed("feed_gps", &["user_id", "location"]),
     feed("feed_status", &["user_id", "status", "status_description"]),
     feed("feed_bio", &["user_id", "bio"]),
+    feed(
+        "profile_history_status",
+        &["user_id", "property", "previous_value", "value"],
+    ),
+    feed(
+        "profile_history_bio",
+        &["user_id", "property", "previous_value", "value"],
+    ),
+    feed(
+        "profile_history_pronouns",
+        &["user_id", "property", "previous_value", "value"],
+    ),
     feed("feed_avatar", &["user_id", "avatar_name"]),
     feed("feed_online_offline", &["user_id", "type"]),
     feed("friend_log_history", &["user_id", "type"]),
     feed("self_profile_log", &["field", "value"]),
+    StreamSpec {
+        name: "self_profile_status",
+        table: StreamTable::User("self_profile_log"),
+        key: &["field", "value"],
+        time: "created_at",
+        slack: true,
+    },
+    StreamSpec {
+        name: "self_profile_bio",
+        table: StreamTable::User("self_profile_log"),
+        key: &["field", "value"],
+        time: "created_at",
+        slack: true,
+    },
     StreamSpec {
         name: "avatar_wear_log",
         table: StreamTable::User("avatar_wear_log"),
@@ -541,6 +567,7 @@ impl StreamScope {
         crate::database::schema::ensure_global_store_tables(db)?;
         ensure_game_log_tables(db)?;
         crate::profile_bio::ensure_profile_bio_table(db, &OwnerId::new(vrchat_user_id))?;
+        crate::profile_history::ensure_tables(db, &OwnerId::new(vrchat_user_id))?;
         super::ensure_remote_sync_tables(db)?;
         let owner_row_id = owner_id_get_or_insert(db, &OwnerId::new(vrchat_user_id))?.value();
         let scope = Self {
@@ -772,6 +799,14 @@ fn owner_filter(spec: &StreamSpec) -> &'static str {
     }
 }
 
+fn field_filter(spec: &StreamSpec) -> &'static str {
+    match spec.name {
+        "self_profile_status" => " AND field IN ('status', 'statusDescription')",
+        "self_profile_bio" => " AND field = 'bio'",
+        _ => "",
+    }
+}
+
 /// Rows recorded on this PC after `after_rowid`, oldest first. Rows that
 /// were imported from sync are left out so they are never uploaded as new.
 pub fn export_rows(
@@ -790,9 +825,10 @@ pub fn export_rows(
         .join(", ");
     let rows = db.execute(
         &format!(
-            "SELECT rowid, {column_list} FROM {table} WHERE rowid > @after{owner} AND rowid NOT IN (SELECT local_rowid FROM remote_sync_provenance WHERE stream = @stream) ORDER BY rowid LIMIT @limit",
+            "SELECT rowid, {column_list} FROM {table} WHERE rowid > @after{owner}{field} AND rowid NOT IN (SELECT local_rowid FROM remote_sync_provenance WHERE stream = @stream) ORDER BY rowid LIMIT @limit",
             table = quote(&table),
             owner = owner_filter(spec),
+            field = field_filter(spec),
         ),
         &ParamsBuilder::new()
             .set("after", after_rowid)
@@ -846,9 +882,10 @@ pub fn pending_row_count(
     let table = scope.table_name(spec);
     let rows = db.execute(
         &format!(
-            "SELECT COUNT(*) FROM (SELECT 1 FROM {table} WHERE rowid > @after{owner} AND rowid NOT IN (SELECT local_rowid FROM remote_sync_provenance WHERE stream = @stream) LIMIT @limit)",
+            "SELECT COUNT(*) FROM (SELECT 1 FROM {table} WHERE rowid > @after{owner}{field} AND rowid NOT IN (SELECT local_rowid FROM remote_sync_provenance WHERE stream = @stream) LIMIT @limit)",
             table = quote(&table),
             owner = owner_filter(spec),
+            field = field_filter(spec),
         ),
         &ParamsBuilder::new()
             .set("after", after_rowid)
@@ -881,9 +918,10 @@ pub fn export_rows_for_compaction(
         .join(", ");
     let rows = db.execute(
         &format!(
-            "SELECT {column_list} FROM {} WHERE 1 = 1{} ORDER BY rowid",
+            "SELECT {column_list} FROM {} WHERE 1 = 1{}{} ORDER BY rowid",
             quote(&table),
             owner_filter(spec),
+            field_filter(spec),
         ),
         &ParamsBuilder::new()
             .set("owner_row_id", scope.owner_row_id)
@@ -907,15 +945,36 @@ pub fn delete_rows_through(
 ) -> Result<i64, Error> {
     db.execute_non_query(
         &format!(
-            "DELETE FROM {} WHERE rowid <= @through{}",
-            quote(&scope.table_name(spec)),
-            owner_filter(spec)
+            "DELETE FROM {table} WHERE rowid <= @through AND rowid < (SELECT MAX(rowid) FROM {table}){}{}",
+            owner_filter(spec),
+            field_filter(spec),
+            table = quote(&scope.table_name(spec)),
         ),
         &ParamsBuilder::new()
             .set("through", through_rowid)
             .set("owner_row_id", scope.owner_row_id)
             .build(),
     )
+}
+
+/// Acknowledges selected exported rows without deleting fields paused by the user.
+#[cfg(feature = "collector")]
+pub fn delete_exported_rows(
+    db: &DatabaseService,
+    scope: &StreamScope,
+    spec: &StreamSpec,
+    rowids: &[i64],
+) -> Result<(), Error> {
+    db.write_transaction(|tx| {
+        // Keep the highest row as a sentinel: older Feed tables do not use
+        // AUTOINCREMENT, so emptying them would reuse IDs behind the export cursor.
+        let table = quote(&scope.table_name(spec));
+        let sql = format!("DELETE FROM {table} WHERE rowid = @rowid AND rowid < (SELECT MAX(rowid) FROM {table}){}{}", owner_filter(spec), field_filter(spec));
+        for rowid in rowids {
+            tx.execute_non_query(&sql, &ParamsBuilder::new().set("rowid", *rowid).set("owner_row_id", scope.owner_row_id).build())?;
+        }
+        Ok(())
+    })
 }
 
 /// Where a pulled chunk came from. `server_seq` becomes the new pull cursor.
@@ -954,6 +1013,7 @@ pub struct ImportReport {
     pub redundant: BTreeMap<String, Vec<usize>>,
     pub invalid_rows: u64,
     pub unknown_streams: Vec<String>,
+    pub skipped_streams: Vec<String>,
 }
 
 fn scalar(value: &Value) -> Option<Value> {
@@ -1075,9 +1135,34 @@ pub fn import_chunk_deduping(
     dedupe: Option<&Dedupe<'_>>,
 ) -> Result<ImportReport, Error> {
     let mut report = ImportReport::default();
+    let mut expanded;
+    let streams = if let Some(legacy) = streams.get("self_profile_log") {
+        expanded = streams.clone();
+        expanded.remove("self_profile_log");
+        for row in legacy {
+            let name = match row.get("field").and_then(Value::as_str) {
+                Some("status" | "statusDescription") => "self_profile_status",
+                Some("bio") => "self_profile_bio",
+                _ => {
+                    report
+                        .unknown_streams
+                        .push("self_profile_log (unknown field)".into());
+                    continue;
+                }
+            };
+            expanded.entry(name.into()).or_default().push(row.clone());
+        }
+        &expanded
+    } else {
+        streams
+    };
     let mut prepared = Vec::new();
     let mut prepared_state = Vec::new();
     for (name, rows) in streams {
+        if !crate::profile_history::stream_enabled(db, name)? {
+            report.skipped_streams.push(name.clone());
+            continue;
+        }
         let (state_name, deletions) = match name.strip_suffix(DELETED_SUFFIX) {
             Some(base) => (base, true),
             None => (name.as_str(), false),
@@ -1117,6 +1202,7 @@ pub fn import_chunk_deduping(
     }
 
     db.write_transaction(|tx| {
+        let profile_choices = crate::profile_history::settings_in_transaction(tx)?;
         let seen = vault_params(source.vault)
             .set("source_id", source.source_id)
             .set("source_seq", to_i64(source.source_seq))
@@ -1127,8 +1213,21 @@ pub fn import_chunk_deduping(
                 &seen,
             )?
             .is_empty();
-        if !report.replayed {
+        {
             for stream in &prepared {
+                if let Some(field) = vrcx_0_contracts::profile_history::ProfileHistoryField::from_stream(stream.spec.name) {
+                    if !profile_choices.choice(field).sync {
+                        report.skipped_streams.push(stream.spec.name.into());
+                        continue;
+                    }
+                }
+                let profile_stream = vrcx_0_contracts::profile_history::ProfileHistoryField::from_stream(stream.spec.name).is_some();
+                let profile_seen = vault_params(source.vault).set("source_id", source.source_id).set("source_seq", to_i64(source.source_seq)).set("stream", stream.spec.name).build();
+                if profile_stream {
+                    if !tx.execute(
+                        &format!("SELECT 1 FROM remote_sync_profile_stream_seen WHERE {VAULT_WHERE} AND source_id = @source_id AND source_seq = @source_seq AND stream = @stream"), &profile_seen,
+                    )?.is_empty() { continue; }
+                } else if report.replayed { continue; }
                 let inserted_before = report.inserted;
                 let first_new_rowid = tx
                     .execute(
@@ -1159,7 +1258,7 @@ pub fn import_chunk_deduping(
                     let copies = late_copies::drop_synced_copies(
                         tx,
                         &stream.table,
-                        stream.spec.name,
+                        if matches!(stream.spec.name, "self_profile_status" | "self_profile_bio") { "self_profile_log" } else { stream.spec.name },
                         late_copies::Rows::From(first_new_rowid),
                     )?
                     .max(0) as u64;
@@ -1167,8 +1266,24 @@ pub fn import_chunk_deduping(
                     report.inserted -= copies;
                     report.matched += copies;
                 }
+                if profile_stream {
+                    tx.execute_non_query(
+                        "INSERT OR IGNORE INTO remote_sync_profile_stream_seen (api_origin, account_id, vault_id, source_id, source_seq, stream) VALUES (@api_origin, @account_id, @vault_id, @source_id, @source_seq, @stream)", &profile_seen,
+                    )?;
+                }
             }
             for state in &prepared_state {
+                if let Some(field) = vrcx_0_contracts::profile_history::ProfileHistoryField::from_stream(state.spec.name) {
+                    if !profile_choices.choice(field).sync {
+                        report.skipped_streams.push(state.spec.name.into());
+                        continue;
+                    }
+                }
+                let profile_stream = vrcx_0_contracts::profile_history::ProfileHistoryField::from_stream(state.spec.name).is_some();
+                let profile_seen = vault_params(source.vault).set("source_id", source.source_id).set("source_seq", to_i64(source.source_seq)).set("stream", state.spec.name).build();
+                if profile_stream {
+                    if !tx.execute(&format!("SELECT 1 FROM remote_sync_profile_stream_seen WHERE {VAULT_WHERE} AND source_id = @source_id AND source_seq = @source_seq AND stream = @stream"), &profile_seen)?.is_empty() { continue; }
+                } else if report.replayed { continue; }
                 for row in state.rows {
                     let outcome = if state.deletions {
                         import_state_deletion(tx, scope, &state.table, state.spec, row)?
@@ -1180,6 +1295,11 @@ pub fn import_chunk_deduping(
                         RowOutcome::Matched | RowOutcome::Redundant => report.matched += 1,
                         RowOutcome::Invalid => report.invalid_rows += 1,
                     }
+                }
+            }
+            for state in &prepared_state {
+                if vrcx_0_contracts::profile_history::ProfileHistoryField::from_stream(state.spec.name).is_some_and(|field| profile_choices.choice(field).sync) {
+                    tx.execute_non_query("INSERT OR IGNORE INTO remote_sync_profile_stream_seen (api_origin, account_id, vault_id, source_id, source_seq, stream) VALUES (@api_origin, @account_id, @vault_id, @source_id, @source_seq, @stream)", &vault_params(source.vault).set("source_id", source.source_id).set("source_seq", to_i64(source.source_seq)).set("stream", state.spec.name).build())?;
                 }
             }
             tx.execute_non_query(
@@ -1267,6 +1387,20 @@ fn import_row(
     let Some(object) = row.as_object() else {
         return Ok(RowOutcome::Invalid);
     };
+    if matches!(spec.name, "self_profile_status" | "self_profile_bio") {
+        let field = object
+            .get("field")
+            .and_then(Value::as_str)
+            .unwrap_or_default();
+        let valid = if spec.name == "self_profile_bio" {
+            field == "bio"
+        } else {
+            matches!(field, "status" | "statusDescription")
+        };
+        if !valid {
+            return Ok(RowOutcome::Invalid);
+        }
+    }
     let Some(values) = import_values(&stream.columns, object) else {
         return Ok(RowOutcome::Invalid);
     };

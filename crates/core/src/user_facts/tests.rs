@@ -88,6 +88,76 @@ fn aliases_and_whitelist_normalize_input() {
 }
 
 #[test]
+fn badge_profile_fields_survive_friend_ingestion_and_sparse_updates() {
+    let profile = json!({
+        "id": "usr_1",
+        "ageVerified": true,
+        "ageVerificationStatus": "18+",
+        "bio": "An artist",
+        "pronouns": "they/them",
+        "memo": "Local friend memo",
+        "note": "VRChat note"
+    });
+    let first = merge_user_fact(None, &profile, &opts("friend"));
+    let next = merge_user_fact(
+        Some(&first.fact),
+        &json!({ "id": "usr_1", "status": "active", "lastPlatform": "android" }),
+        &opts("realtime"),
+    );
+    let object = next.fact.to_object();
+    for (key, value) in profile.as_object().unwrap() {
+        assert_eq!(object.get(key), Some(value), "{key}");
+    }
+    assert_eq!(object["last_platform"], json!("android"));
+    assert_eq!(object["$platform"], json!("android"));
+    assert!(!object.contains_key("lastPlatform"));
+}
+
+#[test]
+fn badge_profile_fields_can_be_cleared_without_placeholders_restoring_them() {
+    let profile = json!({
+        "id": "usr_1",
+        "ageVerified": true,
+        "ageVerificationStatus": "18+",
+        "bio": "An artist",
+        "pronouns": "they/them",
+        "memo": "Local friend memo",
+        "note": "VRChat note"
+    });
+    for cleared in [json!("hidden"), json!(""), Value::Null] {
+        let first = merge_user_fact(None, &profile, &opts("profile"));
+        let next = merge_user_fact(
+            Some(&first.fact),
+            &json!({
+                "id": "usr_1",
+                "ageVerified": false,
+                "ageVerificationStatus": cleared,
+                "bio": "",
+                "pronouns": null,
+                "memo": "",
+                "note": null
+            }),
+            &opts("realtime"),
+        );
+        assert!(next.changed);
+        let object = next.fact.to_object();
+        assert_eq!(object["ageVerified"], json!(false));
+        assert_eq!(
+            object["ageVerificationStatus"],
+            json!(cleared.as_str().unwrap_or_default())
+        );
+        for key in ["bio", "pronouns", "memo", "note"] {
+            assert_eq!(object[key], json!(""), "{key}");
+        }
+        for source in ["seed", "instance", "playerSnapshot"] {
+            let placeholder = merge_user_fact(Some(&next.fact), &profile, &opts(source));
+            assert!(!placeholder.changed, "{source}");
+            assert_eq!(placeholder.fact.to_object(), object, "{source}");
+        }
+    }
+}
+
+#[test]
 fn later_observations_win_regardless_of_source() {
     let profile = merge_user_fact(
         None,

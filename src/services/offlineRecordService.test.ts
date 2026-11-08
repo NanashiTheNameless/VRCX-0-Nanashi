@@ -126,7 +126,7 @@ describe('recorder errors', () => {
 describe('recorder setup guide', () => {
     it("opens the guide in this fork's repository", () => {
         expect(offlineRecordGuideUrl()).toBe(
-            'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/blob/master/crates/logger/README.md'
+            'https://github.com/NanashiTheNameless/VRCX-0-Nanashi/blob/master/docs/RECORDER.md'
         );
     });
 });

@@ -9,6 +9,7 @@ import {
 } from 'vitest';
 
 const tauriMock = vi.hoisted(() => ({
+    ingestUserFactEntries: vi.fn(),
     commands: {
         appVrchatCurrentUserUpdate: vi.fn(),
         appVrchatCurrentUserProfileUpdate: vi.fn(),
@@ -21,6 +22,9 @@ const tauriMock = vi.hoisted(() => ({
 }));
 
 vi.mock('@/platform/tauri/bindings', () => ({ commands: tauriMock.commands }));
+vi.mock('@/services/userFactAccessService', () => ({
+    ingestUserFactEntries: tauriMock.ingestUserFactEntries
+}));
 
 import {
     clearEntityQueryCache,
@@ -35,6 +39,7 @@ import userProfileRepository from './userProfileRepository';
 describe('UserProfileRepository', () => {
     afterEach(() => clearEntityQueryCache());
     beforeEach(() => {
+        tauriMock.ingestUserFactEntries.mockReset();
         tauriMock.commands.appVrchatCurrentUserUpdate.mockReset();
         vi.mocked(
             tauriMock.commands.appVrchatCurrentUserProfileUpdate
@@ -44,6 +49,44 @@ describe('UserProfileRepository', () => {
         tauriMock.commands.appVrchatUserGet.mockReset();
         tauriMock.commands.appVrchatCurrentUserBadgeUpdate.mockReset();
         vi.mocked(tauriMock.commands.appUserMutualFriendsListGet).mockReset();
+    });
+
+    it('marks only explicit profile opens and preserves the raw fields and request scope', async () => {
+        const profile = {
+            id: 'usr_target',
+            bio: 'Observed bio',
+            pronouns: null
+        };
+        tauriMock.commands.appVrchatUserGet.mockResolvedValue({
+            status: 200,
+            data: JSON.stringify(profile)
+        });
+        await userProfileRepository.getUserProfile({
+            userId: 'usr_target',
+            dialog: true
+        });
+        expect(tauriMock.ingestUserFactEntries).not.toHaveBeenCalled();
+        await userProfileRepository.getUserProfile({
+            userId: 'usr_target',
+            dialog: true,
+            profileHistoryContext: {
+                ownerUserId: 'usr_owner',
+                endpoint: DEFAULT_VRCHAT_API_ENDPOINT
+            }
+        });
+        expect(tauriMock.ingestUserFactEntries).toHaveBeenCalledWith([
+            {
+                user: profile,
+                source: 'profile',
+                isCurrentUser: false,
+                manualProfileHistory: true,
+                ownerUserId: 'usr_owner',
+                endpoint: DEFAULT_VRCHAT_API_ENDPOINT
+            }
+        ]);
+        expect(
+            tauriMock.ingestUserFactEntries.mock.calls[0][0][0].user
+        ).not.toHaveProperty('status');
     });
 
     it('stores the normalized mutation result in the shared user query', async () => {

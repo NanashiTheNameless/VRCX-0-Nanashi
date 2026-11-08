@@ -70,7 +70,11 @@ pub fn insert_backfilled_feed(
         let mut inserted = 0;
         let mut rows = Vec::with_capacity(new_entries.len());
         for (table, entry) in new_entries {
-            inserted += insert_feed_entry(tx, &user_prefix, entry)?;
+            let affected = insert_feed_entry(tx, &user_prefix, entry)?;
+            inserted += affected;
+            if affected == 0 {
+                continue;
+            }
             let row_id = tx.execute("SELECT last_insert_rowid()", &Default::default())?;
             rows.push((table, row_id.first().map_or(0, |row| row_i64(row, 0))));
         }
@@ -149,6 +153,23 @@ pub(crate) fn insert_feed_entry(
     user_prefix: &str,
     entry: &FeedLiveEntry,
 ) -> Result<u64, Error> {
+    match entry {
+        FeedLiveEntry::Status { .. }
+            if !crate::profile_history::settings_in_transaction(tx)?
+                .status
+                .recording =>
+        {
+            return Ok(0)
+        }
+        FeedLiveEntry::Bio { .. }
+            if !crate::profile_history::settings_in_transaction(tx)?
+                .bio
+                .recording =>
+        {
+            return Ok(0)
+        }
+        _ => {}
+    }
     let affected = match entry {
         FeedLiveEntry::Gps {
             created_at,

@@ -1,10 +1,5 @@
 import * as lab from '@lucide/lab';
-import {
-    createLucideIcon,
-    icons,
-    type IconNode,
-    type LucideIcon
-} from 'lucide-react';
+import { createLucideIcon, type IconNode, type LucideIcon } from 'lucide-react';
 
 // Lucide Lab icons are stored with this prefix so a saved badge never
 // switches icon if Lucide later adds one with the same name.
@@ -20,7 +15,13 @@ function isIconNode(value: unknown): value is IconNode {
     );
 }
 
-function labIcons(): Record<string, LucideIcon> {
+/**
+ * Lucide Lab icons, minus the ones Lucide has since adopted: those already
+ * appear under their Lucide name.
+ */
+export function labIcons(
+    isLucideIcon: (name: string) => boolean
+): Record<string, LucideIcon> {
     const found: Record<string, LucideIcon> = {};
     for (const [key, node] of Object.entries(lab)) {
         // The package also exposes its module object ("default",
@@ -29,9 +30,7 @@ function labIcons(): Record<string, LucideIcon> {
             continue;
         }
         const name = key.charAt(0).toUpperCase() + key.slice(1);
-        // Lab icons that Lucide has since adopted already appear under
-        // their Lucide name.
-        if (name in icons) {
+        if (isLucideIcon(name)) {
             continue;
         }
         const id = `${LAB_ICON_PREFIX}${name}`;
@@ -39,11 +38,3 @@ function labIcons(): Record<string, LucideIcon> {
     }
     return found;
 }
-
-export const BADGE_ICONS: Readonly<Record<string, LucideIcon>> = {
-    ...icons,
-    ...labIcons()
-};
-
-export const BADGE_ICON_NAMES: readonly string[] =
-    Object.keys(BADGE_ICONS).sort();

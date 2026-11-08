@@ -449,20 +449,6 @@ defineCard(
 
 defineCard(
     'interface',
-    'user-badges',
-    'view.settings.appearance.user_badges.header',
-    [
-        {
-            key: 'list',
-            labelKey: 'view.settings.appearance.user_badges.list',
-            descriptionKey:
-                'view.settings.appearance.user_badges.list_description'
-        }
-    ]
-);
-
-defineCard(
-    'interface',
     'user-dialog',
     'view.settings.appearance.user_dialog.header',
     [
@@ -521,6 +507,19 @@ defineCard(
     ]
 );
 
+defineCard(
+    'social',
+    'profile-history',
+    'view.settings.social.profile_history.header',
+    ['status', 'bio', 'pronouns'].flatMap((field) =>
+        ['recording', 'sync'].map((property) => ({
+            key: `${field}-${property}`,
+            labelKey: `view.settings.social.profile_history.${field}_${property}`,
+            descriptionKey: `view.settings.social.profile_history.${property}_description`
+        }))
+    )
+);
+
 defineCard('social', 'friend-bios', 'view.settings.social.friend_bios.header', [
     {
         key: 'keep-up-to-date',
@@ -566,6 +565,20 @@ defineCard('social', 'favorites', 'view.settings.social.favorites.header', [
         descriptionKey: 'view.settings.general.favorites.header_tooltip'
     }
 ]);
+
+defineCard(
+    'social',
+    'user-badges',
+    'view.settings.appearance.user_badges.header',
+    [
+        {
+            key: 'list',
+            labelKey: 'view.settings.appearance.user_badges.list',
+            descriptionKey:
+                'view.settings.appearance.user_badges.list_description'
+        }
+    ]
+);
 
 defineCard(
     'notifications',
@@ -1228,6 +1241,11 @@ defineCard('ai', 'assistant', 'view.settings.ai.header', [
         key: 'playbook-mode',
         labelKey: 'assistant.runtime.playbook_mode',
         descriptionKey: 'view.settings.ai.playbook_mode_description'
+    },
+    {
+        key: 'disallow-edit-requests',
+        labelKey: 'assistant.runtime.disallow_edit_requests',
+        descriptionKey: 'view.settings.ai.disallow_edit_requests_description'
     }
 ]);
 

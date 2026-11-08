@@ -26,6 +26,23 @@ pub async fn app__assistant_send_message(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn app__assistant_edit_message(
+    state: State<'_, AppState>,
+    sessionId: String,
+    userIndex: u32,
+    text: String,
+    locale: Option<String>,
+) -> Result<vrcx_0_assistant::SendResult, AppError> {
+    state
+        .assistant()
+        .await?
+        .edit_message(sessionId, userIndex, text, locale)
+        .await
+        .map_err(AppError::from)
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn app__assistant_cancel(
     state: State<'_, AppState>,
     sessionId: String,
@@ -46,6 +63,21 @@ pub async fn app__assistant_answer_choice(
         .assistant()
         .await?
         .answer_choice(&sessionId, &choiceId, userId);
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn app__assistant_answer_client_request(
+    state: State<'_, AppState>,
+    sessionId: String,
+    requestId: String,
+    response: Option<serde_json::Value>,
+) -> Result<(), AppError> {
+    state
+        .assistant()
+        .await?
+        .answer_client_request(&sessionId, &requestId, response);
     Ok(())
 }
 
@@ -147,7 +179,7 @@ pub async fn app__assistant_set_session_runtime(
     sessionId: String,
     endpointId: Option<String>,
     model: Option<String>,
-    allowWrites: bool,
+    allowEditRequests: bool,
     playbookMode: PlaybookMode,
 ) -> Result<Session, AppError> {
     state
@@ -161,7 +193,7 @@ pub async fn app__assistant_set_session_runtime(
                 .map(str::trim)
                 .filter(|value| !value.is_empty())
                 .map(str::to_string),
-            allowWrites,
+            allowEditRequests,
             playbookMode,
         )
         .map_err(AppError::from)
@@ -173,7 +205,7 @@ pub async fn app__assistant_set_default_runtime(
     state: State<'_, AppState>,
     endpointId: Option<String>,
     model: Option<String>,
-    allowWrites: bool,
+    allowEditRequests: bool,
     playbookMode: PlaybookMode,
 ) -> Result<AssistantRuntimeSelection, AppError> {
     state
@@ -186,7 +218,7 @@ pub async fn app__assistant_set_default_runtime(
                 .map(str::trim)
                 .filter(|value| !value.is_empty())
                 .map(str::to_string),
-            allowWrites,
+            allowEditRequests,
             playbookMode,
         )
         .map_err(AppError::from)

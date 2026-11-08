@@ -491,7 +491,7 @@ fn delete_clears_last_selection_and_falls_back_translation_endpoint() {
         .set_last_selection(&AssistantRuntimeSelection {
             endpoint_id: Some(first.id.clone()),
             model: Some("first-model".into()),
-            allow_writes: true,
+            allow_edit_requests: true,
             playbook_mode: PlaybookMode::Guided,
         })
         .unwrap();
@@ -510,4 +510,19 @@ fn delete_clears_last_selection_and_falls_back_translation_endpoint() {
             .unwrap(),
         second.id
     );
+}
+
+#[test]
+fn saved_selections_from_before_edit_requests_still_ask_for_edits() {
+    let old: AssistantRuntimeSelection = serde_json::from_str(
+        r#"{"endpointId":"ep_1","model":"m","allowWrites":false,"playbookMode":"auto"}"#,
+    )
+    .unwrap();
+    assert!(old.allow_edit_requests);
+    let off: AssistantRuntimeSelection = serde_json::from_str(
+        r#"{"endpointId":null,"model":null,"allowEditRequests":false,"playbookMode":"auto"}"#,
+    )
+    .unwrap();
+    assert!(!off.allow_edit_requests);
+    assert!(AssistantRuntimeSelection::default().allow_edit_requests);
 }

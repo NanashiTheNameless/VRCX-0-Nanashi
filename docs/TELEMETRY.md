@@ -64,11 +64,11 @@ the adoption count: it does not contain the code that sends it.
 
 ## Global badges list
 
-The app also downloads the [global badges](FEATURES.md) list, 30 seconds after startup and
-then every 6 hours: `global-badges.jsonc` and its signature from this repository's
+The app also downloads the [global badges](FEATURES.md) list, 10 seconds after startup, then
+every 6 hours and whenever you check for updates: `global-badges.jsonc` and its signature from this repository's
 `data-assets` GitHub release. It is a plain file download, like checking for updates: no
 login, no install ID and nothing about you or your VRChat account is sent, and nothing is
 counted. A copy is used only when its signature checks out and it is newer than the one built
 into the app.
 
-[Back to the README](README.md)
+[Back to the README](../README.md)

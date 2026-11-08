@@ -1,16 +1,29 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+    act,
+    cleanup,
+    fireEvent,
+    render,
+    screen
+} from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { normalizeGlobalBadgeCatalog } from '@/domain/badges/globalBadges';
+import {
+    flushRealtimeRosterUpdates,
+    queueRealtimeUserFactsUpdate,
+    resetRealtimeRosterUpdates
+} from '@/services/realtimeRosterUpdateQueue';
 import {
     FORK_DEVELOPER_USER_ID,
     UPSTREAM_DEVELOPER_USER_ID,
     VRCHAT_STAFF_GROUP_ID
 } from '@/shared/constants/user';
 import { useCustomBadgeStore } from '@/state/customBadgeStore';
+import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useGlobalBadgeStore } from '@/state/globalBadgeStore';
+import { useRuntimeStore } from '@/state/runtimeStore';
 import { useUserFactsStore } from '@/state/userFactsStore';
 import {
     recordUserGroups,
@@ -91,6 +104,9 @@ describe('UserBadges', () => {
     afterEach(() => {
         cleanup();
         useCustomBadgeStore.setState({ badges: [], loaded: false });
+        resetRealtimeRosterUpdates();
+        useFriendRosterStore.getState().resetRoster();
+        useUserFactsStore.getState().resetUserFacts();
     });
 
     function setBadges() {
@@ -116,6 +132,125 @@ describe('UserBadges', () => {
             ]
         });
     }
+
+    function setAdultFriendBadge() {
+        useCustomBadgeStore.setState({
+            loaded: true,
+            badges: [
+                {
+                    id: 'adult-friend',
+                    label: 'Adult Friend',
+                    icon: 'Smile',
+                    color: '#ff0000',
+                    enabled: true,
+                    operator: 'and',
+                    rules: [
+                        { kind: 'friends' },
+                        { kind: 'ageVerified', level: 'adult' }
+                    ]
+                }
+            ]
+        });
+    }
+
+    it('renders badge fields from shared user projections without a full profile fetch', () => {
+        setAdultFriendBadge();
+        useFriendRosterStore.getState().setRosterSnapshot({
+            friendsById: { [userId]: { id: userId } }
+        });
+        render(<UserBadges userId={userId} />);
+        expect(screen.queryByRole('img', { name: 'Adult Friend' })).toBeNull();
+
+        act(() => {
+            queueRealtimeUserFactsUpdate([
+                { id: userId, ageVerificationStatus: '18+' }
+            ]);
+            flushRealtimeRosterUpdates();
+        });
+        expect(screen.getByRole('img', { name: 'Adult Friend' })).toBeTruthy();
+
+        for (const ageVerificationStatus of ['hidden', '']) {
+            act(() => {
+                queueRealtimeUserFactsUpdate([
+                    { id: userId, ageVerificationStatus }
+                ]);
+                flushRealtimeRosterUpdates();
+            });
+            expect(
+                screen.queryByRole('img', { name: 'Adult Friend' })
+            ).toBeNull();
+        }
+        act(() => {
+            queueRealtimeUserFactsUpdate([
+                { id: userId, ageVerified: false, ageVerificationStatus: '18+' }
+            ]);
+            flushRealtimeRosterUpdates();
+        });
+        expect(screen.queryByRole('img', { name: 'Adult Friend' })).toBeNull();
+    });
+
+    it('combines friend verification with other shared profile fields', () => {
+        setAdultFriendBadge();
+        const [badge] = useCustomBadgeStore.getState().badges;
+        useCustomBadgeStore.setState({
+            badges: [
+                {
+                    ...badge,
+                    rules: [...badge.rules, { kind: 'bio', contains: 'artist' }]
+                }
+            ]
+        });
+        useFriendRosterStore.getState().setRosterSnapshot({
+            friendsById: { [userId]: { id: userId } }
+        });
+        queueRealtimeUserFactsUpdate([
+            { id: userId, ageVerificationStatus: '18+', bio: 'An artist' }
+        ]);
+        flushRealtimeRosterUpdates();
+        render(<UserBadges userId={userId} />);
+        expect(screen.getByRole('img', { name: 'Adult Friend' })).toBeTruthy();
+    });
+
+    it('follows the signed-in account for the Self condition', () => {
+        const other = 'usr_22222222-2222-2222-2222-222222222222';
+        const auth = useRuntimeStore.getState().auth;
+        useCustomBadgeStore.setState({
+            loaded: true,
+            badges: [
+                {
+                    id: 'me',
+                    label: 'Me',
+                    icon: 'Smile',
+                    color: '#ff0000',
+                    enabled: true,
+                    rules: [{ kind: 'self' }]
+                }
+            ]
+        });
+        try {
+            act(() =>
+                useRuntimeStore.setState({
+                    auth: { ...auth, currentUserId: userId }
+                })
+            );
+            render(<UserBadges userId={userId} />);
+            expect(screen.getByRole('img', { name: 'Me' })).toBeTruthy();
+            act(() =>
+                useRuntimeStore.setState({
+                    auth: { ...auth, currentUserId: other }
+                })
+            );
+            expect(screen.queryByRole('img', { name: 'Me' })).toBeNull();
+            act(() =>
+                useRuntimeStore.setState({
+                    auth: { ...auth, currentUserId: null }
+                })
+            );
+            expect(screen.queryByRole('img', { name: 'Me' })).toBeNull();
+        } finally {
+            useRuntimeStore.setState({ auth });
+        }
+    });
 
     it('shows every matching custom badge for a user', () => {
         setBadges();

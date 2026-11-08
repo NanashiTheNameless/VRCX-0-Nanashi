@@ -187,6 +187,11 @@ fn writes_friend_log_and_feed_rows() -> Result<(), crate::Error> {
 fn writes_bio_feed_rows() -> Result<(), crate::Error> {
     let dir = TestDir::new("realtime-feed-bio");
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
+    crate::config::set_json(
+        &db,
+        vrcx_0_contracts::profile_history::SETTINGS_KEY,
+        &json!({"bio":{"recording":true}}),
+    )?;
     let counts = write_realtime_batch(
         &db,
         &OwnerId::new("usr_self"),
@@ -224,6 +229,11 @@ fn writes_bio_feed_rows() -> Result<(), crate::Error> {
 fn writes_bio_feed_rows_into_upstream_v18_layout() -> Result<(), crate::Error> {
     let dir = TestDir::new("realtime-feed-bio-upstream-v18");
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
+    crate::config::set_json(
+        &db,
+        vrcx_0_contracts::profile_history::SETTINGS_KEY,
+        &json!({"bio":{"recording":true}}),
+    )?;
     db.execute_non_query(
         "CREATE TABLE usrself_feed_bio (id INTEGER PRIMARY KEY, created_at TEXT, user_id TEXT, display_name TEXT, bio TEXT, previous_bio TEXT, bio_links TEXT DEFAULT '[]', previous_bio_links TEXT DEFAULT '[]')",
         &Default::default(),
@@ -1086,6 +1096,12 @@ fn write_self_profile_observations(
 fn self_profile_observations_log_only_values_that_differ_from_the_latest_row() {
     let dir = TestDir::new("self-profile-changes");
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3")).unwrap();
+    crate::config::set_json(
+        &db,
+        vrcx_0_contracts::profile_history::SETTINGS_KEY,
+        &json!({"status":{"recording":true},"bio":{"recording":true}}),
+    )
+    .unwrap();
 
     for (observed_at, bio) in [
         (1778803200, "old bio"),

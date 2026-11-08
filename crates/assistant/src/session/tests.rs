@@ -289,7 +289,7 @@ fn runtime_selection_round_trips_and_lazy_seeds_old_sessions() {
                 AssistantRuntimeSelection {
                     endpoint_id: Some("ep_1".into()),
                     model: Some("model-a".into()),
-                    allow_writes: true,
+                    allow_edit_requests: true,
                     playbook_mode: PlaybookMode::Guided,
                 },
             )
@@ -304,7 +304,7 @@ fn runtime_selection_round_trips_and_lazy_seeds_old_sessions() {
         .unwrap();
     assert_eq!(reopened.endpoint_id.as_deref(), Some("ep_1"));
     assert_eq!(reopened.model.as_deref(), Some("model-a"));
-    assert!(reopened.allow_writes);
+    assert!(reopened.allow_edit_requests);
     assert_eq!(reopened.playbook_mode, PlaybookMode::Guided);
 
     let old_session_id = {
@@ -319,7 +319,7 @@ fn runtime_selection_round_trips_and_lazy_seeds_old_sessions() {
             AssistantRuntimeSelection {
                 endpoint_id: Some("ep_seed".into()),
                 model: Some("seed-model".into()),
-                allow_writes: false,
+                allow_edit_requests: false,
                 playbook_mode: PlaybookMode::Open,
             },
         )
@@ -530,4 +530,43 @@ fn rename_and_pin_survive_a_reopen_without_reordering() {
         .push_message(&session.id, Role::User, "and today?".into())
         .unwrap();
     assert_eq!(reopened.list(&owner)[0].title, "Weekend recap");
+}
+
+#[test]
+fn editing_a_message_drops_it_and_everything_after_it_including_on_disk() {
+    let persistence = test_persistence();
+    let owner = OwnerId::new(TEST_OWNER);
+    let session = {
+        let store = SessionStore::with_test_persistence(&persistence);
+        let session = create_test_session(&store);
+        for (role, text) in [
+            (Role::User, "first question"),
+            (Role::Assistant, "first answer"),
+            (Role::User, "second question"),
+            (Role::Assistant, "second answer"),
+        ] {
+            store.push_message(&session.id, role, text.into()).unwrap();
+        }
+        assert!(store
+            .truncate_at_user_message(&owner, &session.id, 1)
+            .unwrap());
+        let kept: Vec<String> = store
+            .history(&session.id)
+            .into_iter()
+            .map(|message| message.content)
+            .collect();
+        assert_eq!(kept, vec!["first question", "first answer"]);
+        assert!(!store
+            .truncate_at_user_message(&owner, &session.id, 5)
+            .unwrap());
+        assert!(!store
+            .truncate_at_user_message(&OwnerId::new("usr_other"), &session.id, 0)
+            .unwrap());
+        session
+    };
+
+    let reopened = SessionStore::with_test_persistence(&persistence);
+    let history = reopened.get(&owner, &session.id).unwrap().unwrap().messages;
+    assert_eq!(history.len(), 2);
+    assert_eq!(history[1].content, "first answer");
 }

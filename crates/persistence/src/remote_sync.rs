@@ -59,6 +59,7 @@ pub struct SyncLogEntry {
 
 pub fn ensure_remote_sync_tables(db: &DatabaseService) -> Result<(), Error> {
     db.ensure_schema_until_stable(SCHEMA_KEY, || {
+        let initialize_profile_streams = db.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'remote_sync_profile_stream_seen'", &Default::default())?.is_empty();
         for sql in [
             "CREATE TABLE IF NOT EXISTS remote_sync_state (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, vrchat_user_id TEXT NOT NULL DEFAULT '', source_id TEXT NOT NULL, pull_cursor INTEGER NOT NULL DEFAULT 0, highest_manifest_seq INTEGER NOT NULL DEFAULT 0, push_source_seq INTEGER NOT NULL DEFAULT 0, last_sync_at INTEGER, PRIMARY KEY (api_origin, account_id, vault_id))",
             "CREATE TABLE IF NOT EXISTS remote_sync_push_state (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, stream TEXT NOT NULL, row_cursor INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (api_origin, account_id, vault_id, stream))",
@@ -69,6 +70,7 @@ pub fn ensure_remote_sync_tables(db: &DatabaseService) -> Result<(), Error> {
             "CREATE TABLE IF NOT EXISTS remote_sync_replaced_chunk (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, server_seq INTEGER NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, replacement_chunk_id TEXT, replacement_source_seq INTEGER, announced INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (api_origin, account_id, vault_id, server_seq))",
             "CREATE INDEX IF NOT EXISTS remote_sync_replaced_chunk_source_idx ON remote_sync_replaced_chunk (api_origin, account_id, vault_id, source_id, source_seq)",
             "CREATE TABLE IF NOT EXISTS remote_sync_seen_chunk (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id, source_id, source_seq))",
+            "CREATE TABLE IF NOT EXISTS remote_sync_profile_stream_seen (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, stream TEXT NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id, source_id, source_seq, stream))",
             "CREATE TABLE IF NOT EXISTS remote_sync_coverage (id INTEGER PRIMARY KEY, vrchat_user_id TEXT NOT NULL, started_at INTEGER NOT NULL, extended_at INTEGER NOT NULL, ended_at INTEGER)",
             "CREATE INDEX IF NOT EXISTS remote_sync_coverage_user_idx ON remote_sync_coverage (vrchat_user_id, started_at)",
             "CREATE TABLE IF NOT EXISTS remote_sync_provenance (stream TEXT NOT NULL, local_rowid INTEGER NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, PRIMARY KEY (stream, local_rowid))",
@@ -78,6 +80,14 @@ pub fn ensure_remote_sync_tables(db: &DatabaseService) -> Result<(), Error> {
             "CREATE INDEX IF NOT EXISTS remote_sync_log_recent_idx ON remote_sync_log (api_origin, account_id, vault_id, created_at DESC)",
         ] {
             db.execute_non_query(sql, &Default::default())?;
+        }
+        if initialize_profile_streams {
+            for stream in ["feed_status", "feed_bio", "profile_bio", "self_profile_status", "self_profile_bio"] {
+                db.execute_non_query(
+                    "INSERT OR IGNORE INTO remote_sync_profile_stream_seen (api_origin, account_id, vault_id, source_id, source_seq, stream) SELECT api_origin, account_id, vault_id, source_id, source_seq, @stream FROM remote_sync_seen_chunk",
+                    &ParamsBuilder::new().set("stream", stream).build(),
+                )?;
+            }
         }
         Ok(true)
     })
@@ -653,6 +663,7 @@ pub fn clear_account_state(
             "remote_sync_retention_state",
             "remote_sync_replaced_chunk",
             "remote_sync_seen_chunk",
+            "remote_sync_profile_stream_seen",
             "remote_sync_log",
         ] {
             tx.execute_non_query(
@@ -677,6 +688,7 @@ pub fn clear_vault_state(db: &DatabaseService, vault: &VaultRef) -> Result<(), E
             "remote_sync_retention_state",
             "remote_sync_replaced_chunk",
             "remote_sync_seen_chunk",
+            "remote_sync_profile_stream_seen",
         ] {
             tx.execute_non_query(&format!("DELETE FROM {table} WHERE {VAULT_WHERE}"), &params)?;
         }

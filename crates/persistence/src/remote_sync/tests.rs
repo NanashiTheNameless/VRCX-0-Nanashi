@@ -78,6 +78,68 @@ fn chunk(stream: &str, rows: Vec<Value>) -> BTreeMap<String, Vec<Value>> {
     BTreeMap::from([(stream.to_owned(), rows)])
 }
 
+#[test]
+fn profile_field_sync_skips_existing_and_new_history_and_can_catch_up() {
+    use crate::profile_history::{ProfileHistoryField, ProfileHistorySettings};
+    let (_dir, db, scope) = setup("profile-field-sync");
+    let vault = vault();
+    let history = json!({"created_at":1791633600,"user_id":"usr_friend","property":"bio","previous_value":"A","value":"B"});
+    let streams = BTreeMap::from([
+        ("feed_status".into(), vec![status_row(1791633600, "busy")]),
+        (
+            "feed_bio".into(),
+            vec![
+                json!({"created_at":1791633600,"user_id":"usr_friend","display_name":"Friend","bio":"B","previous_bio":"A"}),
+            ],
+        ),
+        ("profile_history_bio".into(), vec![history]),
+        (
+            "self_profile_log".into(),
+            vec![
+                json!({"created_at":1791633600,"field":"bio","value":"B","previous_value":"A"}),
+                json!({"created_at":1791633600,"field":"status","value":"busy","previous_value":"active"}),
+            ],
+        ),
+    ]);
+    let mut settings = ProfileHistorySettings::default();
+    settings.bio.sync = false;
+    crate::profile_history::settings_set(&db, &settings).unwrap();
+    assert!(!crate::profile_history::stream_enabled(&db, "profile_bio#deleted").unwrap());
+    let first = import_chunk(&db, &scope, source(&vault, "other-pc", 1, 1), &streams).unwrap();
+    assert_eq!(first.inserted, 2);
+    assert_eq!(first.skipped_streams.len(), 3);
+    assert!(
+        export_rows(&db, &scope, stream_spec("feed_status").unwrap(), 0, 100)
+            .unwrap()
+            .is_empty()
+    );
+    settings.bio.sync = true;
+    crate::profile_history::settings_set(&db, &settings).unwrap();
+    assert_eq!(
+        vault_state_get(&db, &vault).unwrap().unwrap().pull_cursor,
+        0
+    );
+    let caught_up = import_chunk(&db, &scope, source(&vault, "other-pc", 1, 1), &streams).unwrap();
+    assert!(caught_up.replayed);
+    assert_eq!(caught_up.inserted, 3);
+    assert!(caught_up.skipped_streams.is_empty());
+    let repeated = import_chunk(&db, &scope, source(&vault, "other-pc", 1, 1), &streams).unwrap();
+    assert_eq!(repeated.inserted, 0);
+    for field in ProfileHistoryField::ALL {
+        assert!(
+            export_rows(&db, &scope, stream_spec(field.stream()).unwrap(), 0, 100)
+                .unwrap()
+                .is_empty()
+        );
+    }
+    let own = scope.table_name(stream_spec("self_profile_log").unwrap());
+    assert_eq!(
+        db.execute(&format!("SELECT COUNT(*) FROM {own}"), &Default::default())
+            .unwrap()[0][0],
+        json!(2)
+    );
+}
+
 fn source<'a>(
     vault: &'a VaultRef,
     source_id: &'a str,

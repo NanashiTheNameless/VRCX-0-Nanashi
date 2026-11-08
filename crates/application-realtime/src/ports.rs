@@ -15,6 +15,13 @@ use vrcx_0_contracts::FavoriteRow;
 use vrcx_0_core::{FavoriteEntityKind, OwnerId};
 
 pub trait RealtimeBatchWriter: Send + Sync {
+    fn observe_profile_history(
+        &self,
+        owner: &OwnerId,
+        users: &[vrcx_0_core::json::RawJsonObject],
+        manually_opened: bool,
+    ) -> Result<()>;
+
     fn write_realtime_batch(
         &self,
         owner: &OwnerId,

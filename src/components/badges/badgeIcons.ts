@@ -10,14 +10,22 @@ let catalog: BadgeIconCatalog | null = null;
 let pending: Promise<BadgeIconCatalog> | null = null;
 const listeners = new Set<() => void>();
 
-// The full icon set is large, so it lives in its own chunk that only loads
-// once a custom badge or the badge editor is shown.
+// The full icon set is large, so it only loads once a custom badge or the
+// badge editor is shown, as two chunks (Lucide and Lucide Lab) fetched side
+// by side so neither is oversized.
 export function loadBadgeIcons(): Promise<BadgeIconCatalog> {
     if (catalog) {
         return Promise.resolve(catalog);
     }
-    pending ??= import('./badgeIconCatalog').then((module) => {
-        catalog = { icons: module.BADGE_ICONS, names: module.BADGE_ICON_NAMES };
+    pending ??= Promise.all([
+        import('./badgeIconCatalogLucide'),
+        import('./badgeIconCatalogLab')
+    ]).then(([lucide, lab]) => {
+        const icons: Readonly<Record<string, LucideIcon>> = {
+            ...lucide.LUCIDE_ICONS,
+            ...lab.labIcons((name) => name in lucide.LUCIDE_ICONS)
+        };
+        catalog = { icons, names: Object.keys(icons).sort() };
         for (const listener of listeners) {
             listener();
         }
@@ -54,7 +62,7 @@ export function useBadgeIconCatalog(enabled = true): BadgeIconCatalog | null {
 
 export function badgeIconLabel(name: string): string {
     // Lucide Lab icons are stored as "Lab" plus their name (see
-    // badgeIconCatalog); no Lucide icon name starts that way.
+    // badgeIconCatalogLab); no Lucide icon name starts that way.
     const lab = /^Lab(?=[A-Z])/.test(name);
     const label = (lab ? name.slice(3) : name).replace(
         /([a-z0-9])([A-Z])/g,

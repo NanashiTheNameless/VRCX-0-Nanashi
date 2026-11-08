@@ -15,6 +15,7 @@ enum Change {
     Columns(&'static [&'static str]),
     /// Friend log rows say what changed in a column that depends on `type`.
     FriendLog,
+    ProfileField,
 }
 
 /// How one history stream tells a late copy of a change from a repeat of it.
@@ -27,6 +28,24 @@ struct Rule {
 }
 
 const RULES: &[Rule] = &[
+    Rule {
+        stream: "profile_history_status",
+        subject: "user_id",
+        change: Change::ProfileField,
+        max_seconds: NOTICED_LIVE_SECONDS,
+    },
+    Rule {
+        stream: "profile_history_bio",
+        subject: "user_id",
+        change: Change::ProfileField,
+        max_seconds: NOTICED_ON_NEXT_LOOK_SECONDS,
+    },
+    Rule {
+        stream: "profile_history_pronouns",
+        subject: "user_id",
+        change: Change::ProfileField,
+        max_seconds: NOTICED_ON_NEXT_LOOK_SECONDS,
+    },
     Rule {
         stream: "feed_gps",
         subject: "user_id",
@@ -92,6 +111,7 @@ impl Change {
     /// SQL that is true when row `other` is the same change as row `r`.
     fn same(&self, other: &str) -> String {
         match self {
+            Self::ProfileField => format!("{other}.property IS r.property AND {other}.value IS r.value AND {other}.previous_value IS r.previous_value"),
             Self::Columns(columns) => columns
                 .iter()
                 .map(|column| format!("{other}.\"{column}\" IS r.\"{column}\""))
@@ -105,6 +125,7 @@ impl Change {
     /// happen before the change of row `r` can happen again.
     fn undoes(&self) -> String {
         match self {
+            Self::ProfileField => "x.property IS r.property AND x.value IS NOT r.value".into(),
             Self::Columns(_) => format!("NOT ({})", self.same("x")),
             Self::FriendLog => format!("CASE WHEN r.type IN ('DisplayName', 'TrustLevel') THEN x.type = r.type AND NOT ({}) ELSE x.type IN ('Friend', 'Unfriend') AND x.type != r.type END", self.same("x")),
         }
@@ -114,7 +135,7 @@ impl Change {
     /// row, with nothing in between.
     fn applies(&self) -> &'static str {
         match self {
-            Self::Columns(_) => "1",
+            Self::Columns(_) | Self::ProfileField => "1",
             Self::FriendLog => "r.type IN ('Friend', 'Unfriend', 'DisplayName', 'TrustLevel')",
         }
     }

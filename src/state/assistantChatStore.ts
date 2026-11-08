@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 import type {
     AssistantChoiceRequestEvent,
+    AssistantClientRequestEvent,
     AssistantDeltaEvent,
     AssistantDoneEvent,
     AssistantErrorEvent,
@@ -9,6 +10,7 @@ import type {
     AssistantToolResultEvent,
     AssistantTurnEntitiesEvent,
     AssistantDraft,
+    EditRequestStatus,
     Entity,
     SessionSummary,
     UIMessage
@@ -36,6 +38,7 @@ interface AssistantChatState {
     hydrateSession: (session: Session) => void;
     appendUserMessage: (sessionId: string, text: string) => void;
     dropTrailingUserMessage: (sessionId: string) => void;
+    truncateMessagesAt: (sessionId: string, messageId: string) => void;
     markBusy: (sessionId: string, busy: boolean) => void;
     applyDelta: (event: AssistantDeltaEvent) => void;
     applyToolCall: (event: AssistantToolCallEvent) => void;
@@ -45,6 +48,17 @@ interface AssistantChatState {
         sessionId: string,
         choiceId: string,
         userId: string | null
+    ) => void;
+    applyEditRequest: (
+        event: AssistantClientRequestEvent,
+        status?: EditRequestStatus,
+        detail?: string
+    ) => void;
+    resolveEditRequest: (
+        sessionId: string,
+        requestId: string,
+        status: EditRequestStatus,
+        detail?: string
     ) => void;
     applyTurnEntities: (event: AssistantTurnEntitiesEvent) => void;
     applyDone: (event: AssistantDoneEvent) => void;
@@ -382,6 +396,16 @@ export const useAssistantChatStore = create<AssistantChatState>((set) => ({
             })
         ),
 
+    truncateMessagesAt: (sessionId, messageId) =>
+        set((state) =>
+            updateMessages(state, sessionId, (messages) => {
+                const index = messages.findIndex(
+                    (message) => message.id === messageId
+                );
+                return index < 0 ? messages : messages.slice(0, index);
+            })
+        ),
+
     dropTrailingUserMessage: (sessionId) =>
         set((state) =>
             updateMessages(state, sessionId, (messages) => {
@@ -488,6 +512,52 @@ export const useAssistantChatStore = create<AssistantChatState>((set) => ({
                                             pickedUserId: userId ?? undefined
                                         }
                                       : choice
+                              )
+                          }
+                        : message
+                )
+            )
+        ),
+
+    applyEditRequest: (event, status = 'pending', detail) =>
+        set((state) =>
+            updateMessages(state, event.sessionId, (messages) =>
+                withAssistantMessage(messages, event.turnId, (message) => {
+                    message.editRequests = [
+                        ...(message.editRequests ?? []),
+                        {
+                            id: event.requestId,
+                            sessionId: event.sessionId,
+                            kind: event.kind,
+                            tool: event.tool,
+                            arguments: event.arguments,
+                            status,
+                            ...(detail ? { detail } : {})
+                        }
+                    ];
+                    return message;
+                })
+            )
+        ),
+
+    resolveEditRequest: (sessionId, requestId, status, detail) =>
+        set((state) =>
+            updateMessages(state, sessionId, (messages) =>
+                messages.map((message) =>
+                    message.editRequests?.some(
+                        (request) => request.id === requestId
+                    )
+                        ? {
+                              ...message,
+                              editRequests: message.editRequests.map(
+                                  (request) =>
+                                      request.id === requestId
+                                          ? {
+                                                ...request,
+                                                status,
+                                                ...(detail ? { detail } : {})
+                                            }
+                                          : request
                               )
                           }
                         : message

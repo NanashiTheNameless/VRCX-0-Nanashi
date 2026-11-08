@@ -1,10 +1,17 @@
-import { icons } from 'lucide-react';
-import { describe, expect, it } from 'vitest';
+import { icons, type LucideIcon } from 'lucide-react';
+import { beforeAll, describe, expect, it } from 'vitest';
 
-import { BADGE_ICON_NAMES, BADGE_ICONS } from './badgeIconCatalog';
-import { badgeIconLabel } from './badgeIcons';
+import { badgeIconLabel, loadBadgeIcons } from './badgeIcons';
+
+let BADGE_ICONS: Readonly<Record<string, LucideIcon>> = {};
+let BADGE_ICON_NAMES: readonly string[] = [];
 
 describe('badge icon catalog', () => {
+    beforeAll(async () => {
+        ({ icons: BADGE_ICONS, names: BADGE_ICON_NAMES } =
+            await loadBadgeIcons());
+    });
+
     it('offers every Lucide icon and the Lucide Lab icons under a Lab prefix', () => {
         for (const name of Object.keys(icons)) {
             expect(BADGE_ICONS[name], name).toBeDefined();

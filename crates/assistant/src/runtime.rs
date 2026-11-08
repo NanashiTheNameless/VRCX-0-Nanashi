@@ -11,23 +11,13 @@ use vrcx_0_mcp::{spawn_in_process_tools, InProcessMcpTools, McpRuntime};
 
 use crate::agent::{run_turn, TurnContext};
 use crate::choices::PendingChoices;
+use crate::client_tools::{client_tool_defs, is_edit_tool, PendingClientRequests};
 use crate::config::{should_apply_playbook, PlaybookMode};
 use crate::endpoints::{
     resolve_reasoning_effort, AssistantRuntimeSelection, AssistantRuntimeStatus, EndpointStore,
     LlmEndpointDetectModelsInput, LlmEndpointDto, LlmEndpointUpsertInput, LlmTranslateInput,
 };
 
-/// Tools that mutate state (local DB or the VRChat account). They are hidden
-/// from the model unless the user has explicitly armed writes, so a prompt
-/// injection in attacker-controlled data (e.g. a friend's bio) cannot drive an
-/// autonomous write.
-const WRITE_TOOLS: &[&str] = &[
-    "favorite_local",
-    "favorite_vrchat",
-    "set_friend_note",
-    "create_reminder",
-    "delete_reminder",
-];
 use crate::error::AssistantError;
 use crate::events::AssistantEmitter;
 use crate::ports::{AssistantConfig, AssistantLlmClientFactory, AssistantSessionPersistence};
@@ -43,6 +33,7 @@ pub struct AssistantController {
     tool_defs: Arc<Vec<ToolDefinition>>,
     sessions: Arc<SessionStore>,
     choices: PendingChoices,
+    client_requests: PendingClientRequests,
     auth_scope: RuntimeAuthScope,
     cancels: Arc<Mutex<HashMap<String, (String, CancellationToken)>>>,
 }
@@ -78,6 +69,7 @@ impl AssistantController {
             tool_defs,
             sessions: Arc::new(SessionStore::with_persistence(deps.session_persistence)),
             choices: PendingChoices::default(),
+            client_requests: PendingClientRequests::default(),
             auth_scope: deps.auth_scope,
             cancels: Arc::new(Mutex::new(HashMap::new())),
         })
@@ -130,11 +122,11 @@ impl AssistantController {
         session_id: &str,
         endpoint_id: Option<String>,
         model: Option<String>,
-        allow_writes: bool,
+        allow_edit_requests: bool,
         playbook_mode: PlaybookMode,
     ) -> Result<Session, AssistantError> {
         let selection =
-            self.set_default_runtime(endpoint_id, model, allow_writes, playbook_mode)?;
+            self.set_default_runtime(endpoint_id, model, allow_edit_requests, playbook_mode)?;
         self.sessions
             .set_runtime(&self.owner_user_id(), session_id, selection)
             .map_err(AssistantError::from)?
@@ -145,13 +137,13 @@ impl AssistantController {
         &self,
         endpoint_id: Option<String>,
         model: Option<String>,
-        allow_writes: bool,
+        allow_edit_requests: bool,
         playbook_mode: PlaybookMode,
     ) -> Result<AssistantRuntimeSelection, AssistantError> {
         let selection = AssistantRuntimeSelection {
             endpoint_id,
             model,
-            allow_writes,
+            allow_edit_requests,
             playbook_mode,
         };
         self.endpoints.set_last_selection(&selection)?;
@@ -225,6 +217,21 @@ impl AssistantController {
         }
     }
 
+    pub fn answer_client_request(
+        &self,
+        session_id: &str,
+        request_id: &str,
+        response: Option<serde_json::Value>,
+    ) {
+        if self
+            .sessions
+            .is_visible_to(session_id, &self.owner_user_id())
+        {
+            self.client_requests
+                .answer(session_id, request_id, response);
+        }
+    }
+
     pub fn answer_choice(&self, session_id: &str, choice_id: &str, user_id: Option<String>) {
         if self
             .sessions
@@ -238,6 +245,30 @@ impl AssistantController {
         if let Some((_, token)) = self.cancels.lock().unwrap().remove(session_id) {
             token.cancel();
         }
+    }
+
+    /// Replaces an earlier user message: stops any running turn, drops that
+    /// message and everything after it, and sends the new text in its place.
+    pub async fn edit_message(
+        &self,
+        session_id: String,
+        user_index: u32,
+        text: String,
+        locale: Option<String>,
+    ) -> Result<SendResult, AssistantError> {
+        let owner_user_id = self.owner_user_id();
+        if !self.sessions.is_visible_to(&session_id, &owner_user_id) {
+            return Err(AssistantError::SessionNotFound);
+        }
+        self.cancel_visible(&session_id);
+        if !self
+            .sessions
+            .truncate_at_user_message(&owner_user_id, &session_id, user_index as usize)
+            .map_err(AssistantError::from)?
+        {
+            return Err(AssistantError::SessionNotFound);
+        }
+        self.send_message(Some(session_id), text, locale).await
     }
 
     pub async fn send_message(
@@ -280,7 +311,7 @@ impl AssistantController {
             forbid_tool_calls: false,
         };
 
-        let tool_defs = visible_tool_defs(&self.tool_defs, session.allow_writes);
+        let tool_defs = visible_tool_defs(&self.tool_defs, session.allow_edit_requests);
 
         let session_id = session.id.clone();
         let turn_id = format!("turn_{}", random_hex());
@@ -320,6 +351,7 @@ impl AssistantController {
             tools: Arc::clone(&self.tools),
             sessions: Arc::clone(&self.sessions),
             choices: self.choices.clone(),
+            client_requests: self.client_requests.clone(),
             emitter: AssistantEmitter::new(
                 self.bus.clone(),
                 owner_user_id,
@@ -333,7 +365,7 @@ impl AssistantController {
             locale,
             cancel,
             apply_playbook: should_apply_playbook(session.playbook_mode, &endpoint.base_url),
-            allow_writes: session.allow_writes,
+            allow_edit_requests: session.allow_edit_requests,
             options,
         };
 
@@ -358,24 +390,27 @@ impl AssistantController {
     }
 }
 
+/// Edit tools are hidden while the user has turned off edit requests. When
+/// shown, every call still waits for the user's approval in the app, so text
+/// from other people (a friend's bio, say) cannot make an edit on its own.
 fn visible_tool_defs(
     tool_defs: &Arc<Vec<ToolDefinition>>,
-    allow_writes: bool,
+    allow_edit_requests: bool,
 ) -> Arc<Vec<ToolDefinition>> {
-    if allow_writes {
+    if allow_edit_requests {
         return Arc::clone(tool_defs);
     }
     Arc::new(
         tool_defs
             .iter()
-            .filter(|tool| !WRITE_TOOLS.contains(&tool.name.as_str()))
+            .filter(|tool| !is_edit_tool(&tool.name))
             .cloned()
             .collect(),
     )
 }
 
 async fn load_tool_defs(tools: &InProcessMcpTools) -> Result<Vec<ToolDefinition>, AssistantError> {
-    Ok(tools
+    let mut defs: Vec<ToolDefinition> = tools
         .list_tools()
         .await?
         .into_iter()
@@ -384,7 +419,9 @@ async fn load_tool_defs(tools: &InProcessMcpTools) -> Result<Vec<ToolDefinition>
             description: tool.description,
             parameters: provider_safe_parameters(tool.parameters),
         })
-        .collect())
+        .collect();
+    defs.extend(client_tool_defs());
+    Ok(defs)
 }
 
 /// OpenAI-compatible providers reject an object schema without `properties`
@@ -444,13 +481,18 @@ mod tests {
     }
 
     #[test]
-    fn write_tools_stay_hidden_unless_writes_are_armed() {
+    fn edit_tools_stay_hidden_while_edit_requests_are_off() {
         let tool_defs = Arc::new(
             [
                 "get_copresence_summary",
+                "find_settings",
+                "show_in_settings",
+                "change_setting",
                 "favorite_local",
                 "favorite_vrchat",
                 "set_friend_note",
+                "create_reminder",
+                "delete_reminder",
             ]
             .map(|name| crate::test_support::tool_def(name, serde_json::Value::Null))
             .to_vec(),
@@ -458,7 +500,14 @@ mod tests {
 
         let hidden = visible_tool_defs(&tool_defs, false);
         let names: Vec<&str> = hidden.iter().map(|tool| tool.name.as_str()).collect();
-        assert_eq!(names, vec!["get_copresence_summary"]);
+        assert_eq!(
+            names,
+            vec![
+                "get_copresence_summary",
+                "find_settings",
+                "show_in_settings"
+            ]
+        );
 
         let armed = visible_tool_defs(&tool_defs, true);
         assert_eq!(armed.len(), tool_defs.len());

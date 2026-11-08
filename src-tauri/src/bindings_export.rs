@@ -31,8 +31,9 @@ use vrcx_0_application_realtime::{
     RealtimeInstanceQueueProjection, RealtimeNotificationProjection, RealtimeUserProjection,
 };
 use vrcx_0_assistant::{
-    AssistantChoiceRequestEvent, AssistantDeltaEvent, AssistantDoneEvent, AssistantErrorEvent,
-    AssistantToolCallEvent, AssistantToolResultEvent, AssistantTurnEntitiesEvent,
+    AssistantChoiceRequestEvent, AssistantClientRequestEvent, AssistantDeltaEvent,
+    AssistantDoneEvent, AssistantErrorEvent, AssistantToolCallEvent, AssistantToolResultEvent,
+    AssistantTurnEntitiesEvent,
 };
 use vrcx_0_core::realtime::RealtimeWsStatusPayload;
 use vrcx_0_core::screenshots::{ScreenshotExportProgress, ScreenshotLibraryScanStatus};
@@ -117,6 +118,7 @@ pub fn builder() -> Builder<tauri::Wry> {
         .typ::<AssistantToolCallEvent>()
         .typ::<AssistantToolResultEvent>()
         .typ::<AssistantChoiceRequestEvent>()
+        .typ::<AssistantClientRequestEvent>()
         .typ::<AssistantTurnEntitiesEvent>()
         .typ::<AssistantDoneEvent>()
         .typ::<AssistantErrorEvent>()
@@ -296,8 +298,10 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::application::integration_api::app__integration_api_set_allow_lan_connections,
             commands::application::integration_api::app__integration_api_rotate_token,
             commands::application::assistant::app__assistant_send_message,
+            commands::application::assistant::app__assistant_edit_message,
             commands::application::assistant::app__assistant_cancel,
             commands::application::assistant::app__assistant_answer_choice,
+            commands::application::assistant::app__assistant_answer_client_request,
             commands::application::assistant::app__assistant_list_sessions,
             commands::application::assistant::app__assistant_get_session,
             commands::application::assistant::app__assistant_new_session,
@@ -436,6 +440,9 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::local::friends::app__friend_log_history_query,
             commands::local::friends::app__friend_log_history_delete,
             commands::local::friends::app__friend_profile_bio_list,
+            commands::local::friends::app__profile_history_settings_get,
+            commands::local::friends::app__profile_history_settings_set,
+            commands::local::friends::app__profile_history_query,
             commands::local::notifications::app__notification_list_query,
             commands::local::notifications::app__notification_add_v1,
             commands::local::notifications::app__notification_v2_expire,
@@ -680,6 +687,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::host::shell::app__save_file_selector_dialog,
             commands::host::shell::app__open_folder_selector_dialog,
             commands::host::shell::app__save_vrc_reg_json_file,
+            commands::host::shell::app__save_jsonc_file,
             commands::host::theme_debug::app__community_theme_debug_load_local_theme,
             commands::host::devkit::app__devkit_read_file,
             commands::host::devkit::app__devkit_panic,

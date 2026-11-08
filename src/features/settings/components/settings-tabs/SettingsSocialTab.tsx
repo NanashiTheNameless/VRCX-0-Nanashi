@@ -48,6 +48,8 @@ import { useSettingsPageSection } from '../../SettingsPageStateContext';
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
+import { SettingsCustomBadgesCard } from './SettingsCustomBadgesCard';
+import { SettingsProfileHistoryCard } from './SettingsProfileHistoryCard';
 
 type UserOption = {
     value: string;
@@ -242,6 +244,7 @@ export function SettingsSocialTab() {
                     />
                 </Field>
             </SettingsCard>
+            <SettingsProfileHistoryCard />
             <SettingsCard
                 cardId="social.friend-bios"
                 title={t('view.settings.social.friend_bios.header')}
@@ -561,6 +564,7 @@ export function SettingsSocialTab() {
                     </DropdownMenu>
                 </Field>
             </SettingsCard>
+            <SettingsCustomBadgesCard />
         </SettingsTabContent>
     );
 }

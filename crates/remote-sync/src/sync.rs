@@ -57,6 +57,11 @@ pub fn pending_row_count(
     let scope = StreamScope::open(db, vrchat_user_id).map_err(storage)?;
     let mut pending = 0;
     for spec in ROW_STREAMS {
+        if !vrcx_0_persistence::profile_history::upload_stream_enabled(db, spec.name)
+            .map_err(storage)?
+        {
+            continue;
+        }
         let after = store::push_cursor_get(db, vault, spec.name).map_err(storage)?;
         let remaining = limit.saturating_sub(pending) as u32;
         pending += store::streams::pending_row_count(db, &scope, spec, after, remaining)
@@ -567,6 +572,9 @@ fn build_chunk(
     let mut rows_left = CHUNK_ROW_LIMIT;
     let mut bytes = 0;
     for spec in ROW_STREAMS {
+        if !vrcx_0_persistence::profile_history::upload_stream_enabled(db, spec.name)? {
+            continue;
+        }
         if rows_left == 0 || bytes >= CHUNK_BYTE_LIMIT {
             break;
         }
@@ -622,6 +630,9 @@ fn build_state_chunk(
     vault: &VaultRef,
 ) -> Result<Option<BuiltChunk>, vrcx_0_persistence::Error> {
     for spec in STATE_STREAMS {
+        if !vrcx_0_persistence::profile_history::stream_enabled(db, spec.name)? {
+            continue;
+        }
         let sent_key = format!("state:{}", spec.name);
         let offset_key = format!("stateoff:{}", spec.name);
         let exported = export_state(db, scope, spec)?;
@@ -697,6 +708,9 @@ fn build_compaction_journal(
     let keys = &vault.keys;
     let mut streams = Vec::<(String, Vec<serde_json::Value>)>::new();
     for spec in ROW_STREAMS {
+        if spec.name == "self_profile_log" {
+            continue;
+        }
         let rows = export_rows_for_compaction(db, scope, spec).map_err(storage)?;
         streams.push((spec.name.to_owned(), rows));
     }
@@ -788,6 +802,9 @@ async fn finish_compaction<T: SyncTransport>(
     }
     let mut uploaded = Vec::with_capacity(journal.chunks.len());
     for chunk in &journal.chunks {
+        if !all_profile_history_synced(db)? {
+            return Err(Error::Storage("A queued history compaction needs profile history sync re-enabled before it can finish.".into()));
+        }
         let blob = STANDARD
             .decode(&chunk.blob_base64)
             .map_err(|error| Error::Storage(error.to_string()))?;
@@ -893,6 +910,9 @@ async fn resume_compaction<T: SyncTransport>(
     else {
         return Ok(false);
     };
+    if !all_profile_history_synced(db)? {
+        return Err(Error::Storage("A queued history compaction needs profile history sync re-enabled before it can finish.".into()));
+    }
     let journal: CompactionJournal = serde_json::from_str(&serialized)
         .map_err(|error| Error::Storage(format!("Compaction journal is unreadable: {error}")))?;
     let (manifest_seq, manifest_blob) = transport.get_manifest(vault.id).await?;
@@ -905,6 +925,15 @@ async fn resume_compaction<T: SyncTransport>(
     }
     finish_compaction(transport, db, vault, signer, &journal).await?;
     Ok(true)
+}
+
+fn all_profile_history_synced(db: &DatabaseService) -> Result<bool, Error> {
+    let settings = vrcx_0_persistence::profile_history::settings_get(db).map_err(storage)?;
+    Ok(
+        vrcx_0_persistence::profile_history::ProfileHistoryField::ALL
+            .into_iter()
+            .all(|field| settings.choice(field).sync),
+    )
 }
 
 /// What both halves of a pass share.
@@ -986,8 +1015,16 @@ async fn push<T: SyncTransport>(
                 pending
             }
         };
-        upload_pending(transport, db, vault, &pending).await?;
+        upload_pending(transport, db, vault, &pending, signer).await?;
         report.pushed_chunks += 1;
+    }
+}
+
+struct OwnSigner<'a>(&'a SignerKey);
+
+impl SignerLookup for OwnSigner<'_> {
+    fn signer(&self, key_id: &str, _at: i64) -> Option<ed25519_dalek::VerifyingKey> {
+        (key_id == self.0.key_id()).then(|| self.0.public())
     }
 }
 
@@ -997,11 +1034,39 @@ async fn upload_pending<T: SyncTransport>(
     db: &Arc<DatabaseService>,
     vault: &Vault,
     pending: &PendingChunk,
+    signer: &SignerKey,
 ) -> Result<(), Error> {
     let blob = STANDARD
         .decode(&pending.blob_base64)
         .map_err(|error| Error::Storage(error.to_string()))?;
     let chunk_id = pending.chunk_id.parse().map_err(integrity)?;
+    if !all_profile_history_synced(db)? {
+        let opened = vrcx_0_nanashi_website_protocol::chunk::open_chunk(
+            &blob,
+            vault.id,
+            chunk_id,
+            &vault.keys,
+            &OwnSigner(signer),
+        )
+        .map_err(integrity)?;
+        let settings = vrcx_0_persistence::profile_history::settings_get(db).map_err(storage)?;
+        for (stream, rows) in &opened.body.streams {
+            let enabled = if stream == "self_profile_log" {
+                rows.iter().all(
+                    |row| match row.get("field").and_then(serde_json::Value::as_str) {
+                        Some("status" | "statusDescription") => settings.status.sync,
+                        Some("bio") => settings.bio.sync,
+                        _ => true,
+                    },
+                )
+            } else {
+                vrcx_0_persistence::profile_history::stream_enabled(db, stream).map_err(storage)?
+            };
+            if !enabled {
+                return Err(Error::Storage("A queued upload contains profile history whose sync is now off. Re-enable syncing for that field to finish the queued upload.".into()));
+            }
+        }
+    }
     let stored = transport.upload_chunk(vault.id, chunk_id, blob).await?;
     store::pending_chunk_commit(db, &vault.reference, pending).map_err(storage)?;
     // A chunk stored right after the pull cursor has nothing unread before
@@ -1102,7 +1167,7 @@ async fn replace_chunk<T: SyncTransport>(
     replaced.replacement = Some((pending.chunk_id.clone(), source_seq));
     store::replaced_chunk_queue(db, &vault.reference, &replaced, Some(&pending))
         .map_err(storage)?;
-    upload_pending(transport, db, vault, &pending).await
+    upload_pending(transport, db, vault, &pending, deduper.signer).await
 }
 
 /// Lists the replaced chunks in the manifest, so the other PCs do not take
@@ -1346,7 +1411,11 @@ async fn pull<T: SyncTransport>(
             })
             .await?;
             if let Some(deduper) = deduper {
-                if imported.invalid_rows == 0 && imported.unknown_streams.is_empty() {
+                if imported.invalid_rows == 0
+                    && imported.unknown_streams.is_empty()
+                    && imported.skipped_streams.is_empty()
+                    && !streams.contains_key("self_profile_log")
+                {
                     if let Some(kept) = rows_to_keep(streams, &imported.redundant) {
                         replace_chunk(pass, deduper, &header, server_seq, kept).await?;
                     }
@@ -1409,6 +1478,9 @@ async fn compact_fully<T: SyncTransport>(
     signer: &SignerKey,
     identity: &SyncIdentity,
 ) -> Result<(), Error> {
+    if !all_profile_history_synced(db)? {
+        return Ok(());
+    }
     let info = transport
         .list_vaults()
         .await?
@@ -1492,7 +1564,7 @@ pub async fn sync_account<T: SyncTransport>(
     // A chunk left over from an interrupted pass goes up first: nothing new
     // may be sealed under its sequence number.
     if let Some(pending) = store::pending_chunk_get(&db, &vault.reference).map_err(storage)? {
-        upload_pending(transport, &db, &vault, &pending).await?;
+        upload_pending(transport, &db, &vault, &pending, signer).await?;
         report.pushed_chunks += 1;
     }
     let pass = Pass {

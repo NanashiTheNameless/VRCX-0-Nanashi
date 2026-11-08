@@ -34,6 +34,10 @@ interface UserFact {
     isFriend?: boolean;
     isBoopingEnabled?: boolean;
     hasSharedConnectionsOptOut?: boolean;
+    ageVerified?: boolean;
+    ageVerificationStatus?: string;
+    bio?: string;
+    pronouns?: string;
     tags?: string[];
     platform?: string;
     last_platform?: string;

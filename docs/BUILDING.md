@@ -96,4 +96,4 @@ reduce linking time; local builds can also use it after installing `mold`:
 mold -run npm run tauri:build -- --no-sign --no-bundle
 ```
 
-[Back to the README](README.md)
+[Back to the README](../README.md)

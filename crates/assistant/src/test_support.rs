@@ -204,7 +204,7 @@ impl AssistantSessionPersistencePort for TestAssistantSessionPersistence {
                     surfaced_entities: "[]".into(),
                     endpoint_id: String::new(),
                     model: String::new(),
-                    allow_writes: false,
+                    allow_edit_requests: false,
                     playbook_mode: "open".into(),
                     pinned: false,
                 },
@@ -249,7 +249,7 @@ impl AssistantSessionPersistencePort for TestAssistantSessionPersistence {
         if let Some(session) = state.sessions.get_mut(input.id) {
             session.endpoint_id = input.endpoint_id.unwrap_or_default().to_string();
             session.model = input.model.unwrap_or_default().to_string();
-            session.allow_writes = input.allow_writes;
+            session.allow_edit_requests = input.allow_edit_requests;
             session.playbook_mode = input.playbook_mode.to_string();
         }
         Ok(())
@@ -288,6 +288,17 @@ impl AssistantSessionPersistencePort for TestAssistantSessionPersistence {
             content: input.content.to_string(),
             created_at: input.created_at,
         });
+        Ok(())
+    }
+
+    fn delete_messages_from(&self, session_id: &str, seq: i64) -> AssistantPortResult<()> {
+        let mut state = self.state.lock().unwrap();
+        if state.fail_writes {
+            return Err(test_failure("message delete failed"));
+        }
+        if let Some(messages) = state.messages.get_mut(session_id) {
+            messages.retain(|message| message.seq < seq);
+        }
         Ok(())
     }
 }

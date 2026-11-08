@@ -174,7 +174,7 @@ describe('choosing which settings sync', () => {
             'config:vrcx_instancedialogminimumavatarperformance',
             'New instance minimum avatar performance'
         ],
-        ['config:vrcx_assistant.lastselection', 'Social AI model selection'],
+        ['config:vrcx_assistant.lastselection', 'AI Assistant model selection'],
         ['config:vrcx_0_rightsidebarwidth', 'Side panel width'],
         ['config:vrcx_0_screenshotgridsort', 'Screenshot sort order'],
         ['config:vrcx_gameisolationenabled', 'Game isolation']

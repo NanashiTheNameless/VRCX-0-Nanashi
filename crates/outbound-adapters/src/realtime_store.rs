@@ -140,6 +140,25 @@ impl SocialMutationStore for PersistenceRealtimeStore {
 }
 
 impl RealtimeBatchWriter for PersistenceRealtimeStore {
+    fn observe_profile_history(
+        &self,
+        owner: &OwnerId,
+        users: &[vrcx_0_core::json::RawJsonObject],
+        manually_opened: bool,
+    ) -> crate::Result<()> {
+        let observe = if manually_opened {
+            vrcx_0_persistence::profile_history::observe_snapshot
+        } else {
+            vrcx_0_persistence::profile_history::observe
+        };
+        Ok(observe(
+            &self.db,
+            owner,
+            users,
+            vrcx_0_core::time::now_epoch(),
+        )?)
+    }
+
     fn write_realtime_batch(
         &self,
         owner: &OwnerId,

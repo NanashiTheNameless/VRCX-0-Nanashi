@@ -277,6 +277,7 @@ fn syncable_app_setting(key: &str) -> bool {
         return false;
     };
     if name.starts_with("0_nanashi_avatarproviderdefaults")
+        || name.starts_with("profilehistory")
         || name.starts_with("currentusergroups_")
         || name == "elprimarycolor"
     {
@@ -904,8 +905,13 @@ impl DesktopRuntimeHostState {
         if self.remote_sync_settings_enabled() {
             self.remote_sync_app_settings_prepare(&db, &stream_scope, has_local_vault)?;
         }
+        if account.collector_allowed && has_local_vault {
+            let (vault_id, state) = self.remote_sync_current_vault()?;
+            self.remote_sync_collector_profile_history_publish(&client, &token, vault_id, &state)
+                .await?;
+        }
         let report = sync_account(
-            &AuthorizedClient::new(client, token),
+            &AuthorizedClient::new(client.clone(), token.clone()),
             Arc::clone(&db),
             &secret,
             &signer,
@@ -915,6 +921,15 @@ impl DesktopRuntimeHostState {
         )
         .await
         .map_err(sync_error)?;
+        if account.collector_allowed
+            && !has_local_vault
+            && !report.cancelled
+            && auth.matches(&scope.current_user_id, &scope.endpoint)
+        {
+            let (vault_id, state) = self.remote_sync_current_vault()?;
+            self.remote_sync_collector_profile_history_publish(&client, &token, vault_id, &state)
+                .await?;
+        }
         if self.remote_sync_settings_enabled()
             && !report.cancelled
             && self.remote_sync_app_settings_apply(&db, &stream_scope)?
@@ -1178,6 +1193,12 @@ impl DesktopRuntimeHostState {
                 )));
             }
             if manifest.dedupe_device_key_id.as_deref() == Some(key_id.as_str()) {
+                if account.collector_allowed {
+                    self.remote_sync_collector_profile_history_publish(
+                        &client, &token, vault_id, &state,
+                    )
+                    .await?;
+                }
                 return Ok(());
             }
             let previous_seq = manifest.manifest_seq;
@@ -1200,6 +1221,12 @@ impl DesktopRuntimeHostState {
                         &state.vault,
                         manifest.manifest_seq,
                     )?;
+                    if account.collector_allowed {
+                        self.remote_sync_collector_profile_history_publish(
+                            &client, &token, vault_id, &state,
+                        )
+                        .await?;
+                    }
                     return Ok(());
                 }
                 Err(vrcx_0_remote_sync::Error::Api { code, .. })
@@ -1300,6 +1327,64 @@ impl DesktopRuntimeHostState {
             seq,
         )?;
         Ok(manifest)
+    }
+
+    async fn remote_sync_collector_profile_history_publish(
+        &self,
+        client: &RemoteSyncClient,
+        token: &str,
+        vault_id: protocol::ids::VaultId,
+        state: &store::VaultState,
+    ) -> Result<()> {
+        let signer = self.remote_sync_device_key()?;
+        for _ in 0..3 {
+            let auth = self.runtime.desktop_assembly().auth_scope().snapshot();
+            if !self.remote_sync_enabled()
+                || !auth.active
+                || auth.current_user_id.trim() != state.vrchat_user_id
+                || self.config_string(API_ORIGIN_KEY, OFFICIAL_API) != state.vault.api_origin
+                || self.config_string(ACCOUNT_ID_KEY, "") != state.vault.account_id
+            {
+                return Ok(());
+            }
+            let manifest = self
+                .remote_sync_manifest(client, token, vault_id, state)
+                .await?;
+            if manifest.dedupe_device_key_id.as_deref() != Some(signer.key_id().as_str()) {
+                return Ok(());
+            }
+            if !self.remote_sync_enabled()
+                || !self
+                    .runtime
+                    .desktop_assembly()
+                    .auth_scope()
+                    .matches(&auth.current_user_id, &auth.endpoint)
+                || self.config_string(API_ORIGIN_KEY, OFFICIAL_API) != state.vault.api_origin
+                || self.config_string(ACCOUNT_ID_KEY, "") != state.vault.account_id
+            {
+                return Ok(());
+            }
+            let (settings, revision) = vrcx_0_persistence::profile_history::settings_snapshot(
+                self.runtime.desktop_assembly().database(),
+            )?;
+            let request = serde_json::json!({
+                "version": 1, "primaryDeviceKeyId": signer.key_id(),
+                "manifestSeq": manifest.manifest_seq, "settingsRevision": revision,
+                "settings": settings,
+            });
+            match client
+                .collector_profile_history_set(token, vault_id, &request)
+                .await
+            {
+                Ok(()) => return Ok(()),
+                // Older instances can keep syncing history while they upgrade.
+                Err(vrcx_0_remote_sync::Error::Api { status: 404, .. }) => return Ok(()),
+                Err(vrcx_0_remote_sync::Error::Api { code, .. })
+                    if code == protocol::api::codes::MANIFEST_SEQ_CONFLICT => {}
+                Err(error) => return Err(sync_error(error)),
+            }
+        }
+        Err(Error::from(vrcx_0_application_core::Error::Custom("The primary device's collector settings could not be updated because the vault kept changing. Try syncing again.".into())))
     }
 
     /// Starts or extends the read-only server collector after explicitly
@@ -1412,6 +1497,8 @@ impl DesktopRuntimeHostState {
             .await
             .map_err(sync_error)?;
         store::manifest_seq_advance(db, &state.vault, next.manifest_seq)?;
+        self.remote_sync_collector_profile_history_publish(&client, &token, vault_id, &state)
+            .await?;
         client
             .collector_unlock(&token, vault_id, sealed)
             .await
@@ -1742,6 +1829,10 @@ mod tests {
 
     #[test]
     fn recorder_settings_are_never_synced() {
+        assert!(!syncable_app_setting("config:vrcx_profileHistorySettings"));
+        assert!(!syncable_app_setting(
+            "config:vrcx_profileHistorySettingsRevision"
+        ));
         assert!(!syncable_app_setting("config:vrcx_feedLogger"));
         assert!(!syncable_app_setting("config:vrcx_dtTimeZone"));
         assert!(syncable_app_setting("config:vrcx_theme"));

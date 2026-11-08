@@ -147,7 +147,7 @@ impl AssistantSessionPersistencePort for DesktopAssistantSessionPersistenceAdapt
                         surfaced_entities: session.surfaced_entities,
                         endpoint_id: session.endpoint_id,
                         model: session.model,
-                        allow_writes: session.allow_writes,
+                        allow_edit_requests: session.allow_edit_requests,
                         playbook_mode: session.playbook_mode,
                         pinned: session.pinned,
                     })
@@ -210,7 +210,7 @@ impl AssistantSessionPersistencePort for DesktopAssistantSessionPersistenceAdapt
             input.id,
             input.endpoint_id,
             input.model,
-            input.allow_writes,
+            input.allow_edit_requests,
             input.playbook_mode,
         )
         .map_err(port_error)
@@ -237,6 +237,11 @@ impl AssistantSessionPersistencePort for DesktopAssistantSessionPersistenceAdapt
             input.created_at,
         )
         .map_err(port_error)
+    }
+
+    fn delete_messages_from(&self, session_id: &str, seq: i64) -> AssistantPortResult<()> {
+        assistant::assistant_messages_delete_from(self.db.as_ref(), session_id, seq)
+            .map_err(port_error)
     }
 }
 

@@ -168,6 +168,12 @@ const USER_FACT_FIELDS: &[&str] = &[
     "statusDescription",
     "isBoopingEnabled",
     "hasSharedConnectionsOptOut",
+    "ageVerified",
+    "ageVerificationStatus",
+    "bio",
+    "pronouns",
+    "memo",
+    "note",
     derived_keys::PRESENCE,
 ];
 
@@ -183,6 +189,7 @@ fn resolve_field(raw: &str) -> Option<&'static str> {
         "display_name" | "name" => Some("displayName"),
         "user_id" | "userId" => Some("id"),
         derived_keys::FRIEND_NUMBER => Some("friendNumber"),
+        "lastPlatform" => Some("last_platform"),
         other => user_fact_field(other),
     }
 }
@@ -227,6 +234,13 @@ fn is_present(value: &Value) -> bool {
     true
 }
 
+fn is_clearable_profile_text(field: &str) -> bool {
+    matches!(
+        field,
+        "ageVerificationStatus" | "bio" | "pronouns" | "memo" | "note"
+    )
+}
+
 fn normalize_fact_patch(input: &Value) -> Map<String, Value> {
     let mut patch = Map::new();
     let Some(object) = input.as_object() else {
@@ -258,6 +272,19 @@ fn normalize_fact_patch(input: &Value) -> Map<String, Value> {
             "tags" => {
                 if value.is_array() {
                     patch.insert("tags".into(), value.clone());
+                }
+            }
+            "ageVerified" => {
+                if value.is_boolean() {
+                    patch.insert(key.into(), value.clone());
+                }
+            }
+            other if is_clearable_profile_text(other) => {
+                if value.is_string() || value.is_null() {
+                    patch.insert(
+                        other.into(),
+                        Value::String(value.as_str().unwrap_or_default().into()),
+                    );
                 }
             }
             other => {
@@ -356,7 +383,7 @@ pub fn merge_user_fact_owned(
 
     let placeholder = PLACEHOLDER_SOURCES.contains(&options.source.as_str());
     for (field, value) in &patch {
-        if field == "id" || !is_present(value) {
+        if field == "id" || (!is_present(value) && !is_clearable_profile_text(field)) {
             continue;
         }
         let Some(field_name) = user_fact_field(field) else {

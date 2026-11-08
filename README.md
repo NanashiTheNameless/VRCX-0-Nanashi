@@ -15,21 +15,33 @@ It is a Rust + Tauri rewrite of VRCX.
 
 ## Documentation
 
-| Topic                                                 | What is in it                                                                                                                                                                           |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [What this fork changes](FEATURES.md)                 | Every difference from upstream VRCX-0: History Sync (RemoteSync), relay links, the self-hosted recorder, Social AI, safety watchlists, the wrist overlay, notification sounds, and more |
-| [Dates and timezones](TIMESTAMPS.md)                  | Epoch-second storage, automatic old-data migration, per-PC timezone settings, and sync compatibility                                                                                    |
-| [Telemetry](TELEMETRY.md)                             | What upstream telemetry was removed, the one anonymous adoption count this fork sends, every way to opt out, and the global badges list download                                        |
-| [Install](INSTALL.md)                                 | Downloads for Windows, macOS and Linux, and platform notes                                                                                                                              |
-| [Building from source](BUILDING.md)                   | Requirements, dev and release builds, the RemoteSync collector and the recorder                                                                                                         |
-| [Self-hosted Recorder guide](crates/logger/README.md) | Running your own recorder server                                                                                                                                                        |
-| [Contributing](CONTRIBUTING.md)                       | How to propose changes to this fork                                                                                                                                                     |
+| Topic                                                  | What is in it                                                                                                                                                                                  |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Using the app](docs/USER_GUIDE.md)                    | A guide to the whole app: pages, tools, settings tabs, notifications, VR, privacy, and the features it shares with upstream VRCX-0                                                             |
+| [Pages](docs/PAGES.md)                                 | Every page in the app: what it shows and what you can do there                                                                                                                                 |
+| [Dialogs](docs/DIALOGS.md)                             | The user, world, avatar, group, new instance and launch dialogs                                                                                                                                |
+| [Layout and appearance](docs/LAYOUT_AND_APPEARANCE.md) | The window, friends sidebar, Sidebar Mode, Quick Search, keyboard shortcuts, Privacy Lock, themes                                                                                              |
+| [Notifications and VR](docs/NOTIFICATIONS_AND_VR.md)   | Every notification channel, filters, Do Not Disturb, webhooks, HMD notifications and the wrist overlay                                                                                         |
+| [Tools](docs/TOOLS.md)                                 | Screenshots, social automation, the Chatbox, App Launcher, groups, backups and more                                                                                                            |
+| [AI Assistant](docs/AI_ASSISTANT.md)                   | Setting it up, what to ask, approving changes, reminders, the MCP server                                                                                                                       |
+| [Integrations](docs/INTEGRATIONS.md)                   | Discord presence, translation, YouTube, avatar search providers, the Integration API                                                                                                           |
+| [Troubleshooting](docs/TROUBLESHOOTING.md)             | Error log, display problems, multiple accounts, Game Isolation, storage, missing history                                                                                                       |
+| [Badges](docs/BADGES.md)                               | Every badge next to user names: the built-in developer, upstream and VRChat Staff badges and how they look, global badges, custom badges and their rules                                       |
+| [Profile History](docs/PROFILE_HISTORY.md)             | Per-field recording and encrypted sync choices for status, bio and pronouns, and the timeline in user dialogs                                                                                  |
+| [What this fork changes](docs/FEATURES.md)             | Every difference from upstream VRCX-0: History Sync (RemoteSync), relay links, the self-hosted recorder, the AI Assistant, safety watchlists, the wrist overlay, notification sounds, and more |
+| [Dates and timezones](docs/TIMESTAMPS.md)              | Epoch-second storage, automatic old-data migration, per-PC timezone settings, and sync compatibility                                                                                           |
+| [Telemetry](docs/TELEMETRY.md)                         | What upstream telemetry was removed, the one anonymous adoption count this fork sends, every way to opt out, and the global badges list download                                               |
+| [Install](docs/INSTALL.md)                             | Downloads for Windows, macOS and Linux, and platform notes                                                                                                                                     |
+| [Building from source](docs/BUILDING.md)               | Requirements, dev and release builds, the RemoteSync collector and the recorder                                                                                                                |
+| [Self-hosted Recorder guide](docs/RECORDER.md)         | Running your own recorder server                                                                                                                                                               |
+| [Contributing](CONTRIBUTING.md)                        | How to propose changes to this fork                                                                                                                                                            |
+| [Security](SECURITY.md)                                | How to report a security problem privately                                                                                                                                                     |
 
 ## At a glance
 
 - **No usage telemetry.** Upstream's usage stats, heartbeats, crash reporting and feedback
   uploads are removed. The fork sends one anonymous adoption count, which you can turn off.
-  See [Telemetry](TELEMETRY.md).
+  See [Telemetry](docs/TELEMETRY.md).
 - **Its own sync, off by default.** End-to-end encrypted History Sync through RemoteSync, on
   the official server or your own. It is preferred over upstream's Self-hosted Recorder, which
   is kept but experimental.
@@ -39,11 +51,11 @@ It is a Rust + Tauri rewrite of VRCX.
   own custom ones, and global badges the developer gives to people who helped the fork
   (sponsors, contributors, bug and security reporters, testers and more). Want one? Open a
   [badge request](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/issues/new?template=badge_request.yml)
-  with your VRChat user ID. See [Global badges](FEATURES.md).
+  with your VRChat user ID. See [Global badges](docs/FEATURES.md).
 - **English only**, and updates come from this fork's
   [Nightly-Rolling release](https://github.com/NanashiTheNameless/VRCX-0-Nanashi/releases/tag/Nightly-Rolling).
 
-The full list is in [What this fork changes](FEATURES.md).
+The full list is in [What this fork changes](docs/FEATURES.md).
 
 ## Credits
 

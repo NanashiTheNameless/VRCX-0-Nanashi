@@ -14,6 +14,9 @@ type UserFactIngestEntry = {
     source?: string;
     isFriend?: boolean;
     isCurrentUser?: boolean;
+    manualProfileHistory?: boolean;
+    ownerUserId?: string;
+    endpoint?: string;
 };
 
 const pendingUserFactEntries = new Map<string, UserFactIngestEntry>();
@@ -55,7 +58,10 @@ function ingestUserFactEntries(entries: UserFactIngestEntry[]): void {
             userId,
             entry.source || '',
             entry.isFriend === true ? 'friend' : '',
-            entry.isCurrentUser === true ? 'current' : ''
+            entry.isCurrentUser === true ? 'current' : '',
+            entry.manualProfileHistory === true ? 'manualProfileHistory' : '',
+            entry.ownerUserId || '',
+            entry.endpoint || ''
         ].join('\u0000');
         const existing = pendingUserFactEntries.get(key);
         pendingUserFactEntries.set(key, {
@@ -79,6 +85,19 @@ function mergeUserFactInput(
 ): Record<string, unknown> {
     const merged = { ...existing };
     for (const [field, value] of Object.entries(incoming)) {
+        if (
+            [
+                'ageVerificationStatus',
+                'bio',
+                'pronouns',
+                'memo',
+                'note'
+            ].includes(field) &&
+            (value === null || typeof value === 'string')
+        ) {
+            merged[field] = value;
+            continue;
+        }
         if (
             value === null ||
             value === undefined ||

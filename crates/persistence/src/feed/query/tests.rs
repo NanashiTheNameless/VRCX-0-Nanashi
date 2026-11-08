@@ -351,6 +351,11 @@ fn latest_query_keeps_the_persisted_cursor_when_live_rows_fill_the_result(
 fn location_hidden_users_drop_only_their_gps_rows() -> Result<(), crate::Error> {
     let dir = TestDir::new("feed-location-hidden-users");
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
+    crate::config::set_json(
+        &db,
+        vrcx_0_contracts::profile_history::SETTINGS_KEY,
+        &serde_json::json!({"status":{"recording":true}}),
+    )?;
     write_realtime_batch(
         &db,
         &OwnerId::new("usr_self"),
@@ -577,6 +582,11 @@ fn private_avatar_search_applies_dates_to_every_match_branch() -> Result<(), cra
 fn date_window_includes_both_ends_and_excludes_the_next_second() -> Result<(), crate::Error> {
     let dir = TestDir::new("feed-millisecond-date-window");
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
+    crate::config::set_json(
+        &db,
+        vrcx_0_contracts::profile_history::SETTINGS_KEY,
+        &serde_json::json!({"status":{"recording":true}}),
+    )?;
     write_realtime_batch(
         &db,
         &OwnerId::new("usr_self"),
@@ -722,6 +732,11 @@ fn cursor_pagination_walks_same_timestamp_rows_across_tables_in_full_page_order(
 ) -> Result<(), crate::Error> {
     let dir = TestDir::new("feed-cursor-ties");
     let db = DatabaseService::new(&dir.path.join("VRCX-0.sqlite3"))?;
+    crate::config::set_json(
+        &db,
+        vrcx_0_contracts::profile_history::SETTINGS_KEY,
+        &serde_json::json!({"status":{"recording":true}}),
+    )?;
     let tie = 1778803800;
     seed_feed_bio_row(
         &db,

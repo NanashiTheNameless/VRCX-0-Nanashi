@@ -13,6 +13,44 @@ use vrcx_0_contracts::friend_log::{
 use vrcx_0_contracts::profile_bio::ProfileBioOutput;
 use vrcx_0_core::OwnerId;
 
+#[tauri::command]
+#[specta::specta]
+pub async fn app__profile_history_settings_get(
+    state: State<'_, AppState>,
+) -> Result<vrcx_0_contracts::profile_history::ProfileHistorySettings, AppError> {
+    let local = state.runtime_host().local_data().clone();
+    run_blocking("profile history settings", move || {
+        local.profile_history_settings_get()
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn app__profile_history_settings_set(
+    state: State<'_, AppState>,
+    settings: vrcx_0_contracts::profile_history::ProfileHistorySettings,
+) -> Result<(), AppError> {
+    let local = state.runtime_host().local_data().clone();
+    run_blocking("save profile history settings", move || {
+        local.profile_history_settings_set(settings)
+    })
+    .await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn app__profile_history_query(
+    state: State<'_, AppState>,
+    query: vrcx_0_contracts::profile_history::ProfileHistoryQuery,
+) -> Result<Vec<vrcx_0_contracts::profile_history::ProfileHistoryEntry>, AppError> {
+    let local = state.runtime_host().local_data().clone();
+    run_blocking("profile history query", move || {
+        local.profile_history_query(query)
+    })
+    .await
+}
+
 #[tauri::command(async)]
 #[specta::specta]
 pub fn app__friend_log_current_list(

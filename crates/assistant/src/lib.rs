@@ -1,6 +1,7 @@
 mod agent;
 mod charts;
 mod choices;
+mod client_tools;
 mod config;
 mod endpoints;
 mod entities;
@@ -24,8 +25,9 @@ pub use endpoints::{
 pub use entities::{Entity, EntityKind};
 pub use error::AssistantError;
 pub use events::{
-    AssistantChoiceRequestEvent, AssistantDeltaEvent, AssistantDoneEvent, AssistantErrorEvent,
-    AssistantToolCallEvent, AssistantToolResultEvent, AssistantTurnEntitiesEvent,
+    AssistantChoiceRequestEvent, AssistantClientRequestEvent, AssistantDeltaEvent,
+    AssistantDoneEvent, AssistantErrorEvent, AssistantToolCallEvent, AssistantToolResultEvent,
+    AssistantTurnEntitiesEvent,
 };
 pub use ports::{
     AssistantConfig, AssistantConfigPort, AssistantLlmClient, AssistantLlmClientFactory,

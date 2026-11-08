@@ -114,7 +114,7 @@ pub struct PersistedAssistantSession {
     pub surfaced_entities: String,
     pub endpoint_id: String,
     pub model: String,
-    pub allow_writes: bool,
+    pub allow_edit_requests: bool,
     pub playbook_mode: String,
     pub pinned: bool,
 }
@@ -131,7 +131,7 @@ pub struct AssistantSessionRuntimeUpdate<'a> {
     pub id: &'a str,
     pub endpoint_id: Option<&'a str>,
     pub model: Option<&'a str>,
-    pub allow_writes: bool,
+    pub allow_edit_requests: bool,
     pub playbook_mode: &'a str,
 }
 
@@ -172,6 +172,8 @@ pub trait AssistantSessionPersistencePort: Send + Sync {
     fn delete_session(&self, owner_user_id: &OwnerId, session_id: &str) -> AssistantPortResult<()>;
 
     fn insert_message(&self, input: AssistantMessageInsert<'_>) -> AssistantPortResult<()>;
+    /// Deletes the session's messages with `seq` at or after this one.
+    fn delete_messages_from(&self, session_id: &str, seq: i64) -> AssistantPortResult<()>;
 }
 
 pub type AssistantConfig = Arc<dyn AssistantConfigPort>;

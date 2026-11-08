@@ -236,7 +236,7 @@ describe('assistantChatStore', () => {
             activeTurn: null,
             endpointId: null,
             model: null,
-            allowWrites: false,
+            allowEditRequests: false,
             playbookMode: 'auto',
             entityPanelOpen: false,
             surfacedEntities: [],

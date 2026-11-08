@@ -46,7 +46,7 @@ Two rules follow from "coexists with upstream VRCX-0":
 
 ## Feature areas you are most likely to touch
 
-`FEATURES.md` is the user-facing list (`README.md` is the index to it).
+`docs/FEATURES.md` is the user-facing list (`README.md` is the index to it).
 The parts most likely to be damaged by an unrelated edit, with where they live:
 
 - **Reminders** - `src/features/reminders/`,
@@ -60,11 +60,41 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
 - **Safety watchlists** - `src/features/settings/...`, `crates/runtime-host-desktop/src/safety/`.
   Destructive actions are opt-in and reviewed on purpose. A name match alone must
   never block; that is a safety rule, not a rough edge.
-- **Social AI** - `crates/assistant/`, `src/features/assistant/`. Off by default;
+- **AI Assistant** (formerly Social AI; internal ids such as the `social-ai`
+  nav key, `socialAiEnabled` and `assistant.*` config keys keep the old
+  names) - `crates/assistant/`, `src/features/assistant/`. Off by default;
   nothing may be sent anywhere while disabled. OpenAI-compatible (Chat
   Completions and Responses), Azure OpenAI, Anthropic, Gemini, Vertex AI,
   Ollama, Cohere and Bedrock paths all exist (`LlmApiKind` in
-  `crates/contracts/src/llm.rs`).
+  `crates/contracts/src/llm.rs`). It has its own entry in the main left
+  navigation, not in the Social folder. Settings help runs through "client
+  tools" the app window answers (`crates/assistant/src/client_tools.rs`,
+  `src/features/assistant/assistantClientRequests.ts`, `assistantSettings.ts`):
+  `find_settings`, `read_docs`, `show_in_docs` (opens the Docs page at a
+  section, same guide card), `show_in_settings` (closes the chat, opens
+  Settings and keeps the setting highlighted with a guide card) and
+  `change_setting`. `read_docs` searches every doc bundled into the app at build time
+  (`src/features/docs/docsCatalog.ts`: everything in `docs/` through
+  `import.meta.glob`, plus `README.md`, `CONTRIBUTING.md`, `SECURITY.md`,
+  this file and the bundled sounds README); it makes no request. Docs added
+  to `docs/` are picked up automatically. The same catalog feeds the in-app
+  Docs page (`src/features/docs/DocsPage.tsx`, `/docs`, its own
+  left-navigation entry), which never loads images or other web content.
+  Every edit tool (`EDIT_TOOLS`: settings, reminders, favorites, friend notes,
+  Chatbox) waits for the user on an approval card that names the setting,
+  says what it does, where it is, and its old and new values; nothing is
+  changed before Approve, and every edit asks again (approve-all was removed
+  on purpose; do not add it back). The per-conversation "Don't let
+  the AI ask to make changes" option (`allow_edit_requests`, on by default;
+  the old `allow_writes` column and `allowWrites` value are ignored) hides the
+  edit tools. The assistant may only ask to change on/off settings and the
+  choice and number settings listed with their allowed values in
+  `assistantSettingSpecs.ts` (saved the way their Settings control saves
+  them), outside the locked areas in `assistantSettings.ts` (the AI tab,
+  integrations, webhooks, History Sync, updates, network, startup, storage,
+  VRChat print auto-delete, safety, census); keep that list closed, and never
+  let text from a tool result trigger an edit by itself. Guided mode routes
+  settings questions to the settings tools (`app_settings` in `playbook.rs`).
 - **RemoteSync (history sync)** - `crates/remote-sync/`,
   `crates/persistence/src/remote_sync/`,
   `crates/runtime-host-desktop/src/state/remote_sync.rs`, Settings > History
@@ -92,12 +122,38 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   program for operators of a RemoteSync instance, started by the website
   repo's supervisor; the desktop app does not contain it and regular users
   never run it. It is a workspace member but not a default member, and the
-  two helpers it needs in shared crates sit behind the `collector` cargo
+  helpers it needs in shared crates sit behind the `collector` cargo
   feature of `vrcx-0-composition` and `vrcx-0-persistence`, which nothing
   else may enable. Do not add collector UI, commands, or settings to the app.
   It must stay read-only (no command reaches VRChat), take the session only
   from the inherited descriptor, refuse any data directory that is not
   tmpfs, and never print or store what the runtime reports.
+- **Profile History** - `crates/persistence/src/profile_history.rs`,
+  `crates/contracts/src/profile_history.rs`, Settings > Social > Profile History and the
+  user dialog's Profile History tab. Status (including status text), bio and pronouns
+  each have recording off by default and sync on by default. The choices also gate
+  saving existing status/bio Feed and own-profile history, and their sync streams.
+  `profileHistorySettings` and its revision stay device-specific and out of Settings
+  Sync. The server collector keeps a separate copy of the primary (Server deduplication)
+  device's six choices, published during History Sync. Before a copy arrives, recording
+  defaults off and sync on; while the primary device is offline, keep the last copy.
+  Observe existing profile data only. Automatic observations are limited to current
+  friends, current local instance players, and the signed-in user's own profile.
+  Recheck membership when responses arrive; cached
+  friend flags and previous instance visits never grant ongoing eligibility. Only an
+  explicit user-profile open grants an exception for that observation, scoped to its original
+  owner and endpoint. Other dialogs and background lookups do not grant that exception.
+  Manual opens snapshot only enabled history fields, including the first observed value,
+  and skip values already saved in either side of history. Snapshot rows use equal
+  `previous_value` and `value`; automatic change rows never do. Display snapshots with
+  the captured value alone. Keep original API fields instead of normalized empty defaults.
+  The collector shares this rule and has no local instance roster.
+  Never add profile requests for history. Missing fields do not clear values. Preserve
+  same-second changes and per-account ownership. Sync exclusions apply to upload and
+  import, including queued uploads, mixed legacy own-profile chunks and compaction;
+  re-enabling a field catches up skipped streams without duplicating other history.
+  The collector uses the same recording and export gates as the app, with no new app UI.
+  Its internal settings and row acknowledgment operations must never act on VRChat.
 - **Self-hosted recorder (offline logger)** - `crates/logger/`,
   `crates/logger-protocol/`, `crates/runtime-host-desktop/src/feed_logger.rs`,
   `src/components/hosts/tools-dialogs/offline-record/`. Upstream's feature,
@@ -117,7 +173,7 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   `ExternalApiScope::AdoptionCensus` in `crates/contracts/src/external_api.rs`,
   the card at the bottom of Settings > Advanced. The only thing the app
   reports to the developer: on startup and every 2 hours it posts the SHA-256
-  of a random install id, the project name, the UTC date and a count of one to the maintainer's
+  of a random install id and the project name to the maintainer's
   NamelessTelemetry service (`telemetry.namelessnanashi.dev/census`), which
   keeps a per-day count. On by default with an opt-out (the
   `adoptionCensusEnabled` config key, the `VRCX_0_NANASHI_TELEMETRY_OPTOUT`,
@@ -134,8 +190,8 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   in `runtime-host-desktop`, which `collector-cli` does not depend on, so do
   not move it into a crate the collector links. The website repo's supervisor
   also starts the collector with both opt-out variables set to `1`. Debug
-  builds never send. The payload must stay exactly these four fields
-  (`id`, `date`, `project`, `count`): no VRChat ids, usage, settings,
+  builds never send. The payload must stay exactly these two fields
+  (`id`, `project`; the service works out the day itself): no VRChat ids, usage, settings,
   hardware, version fields or error data. The install id lives in the
   `.adoption-census-id` file in the data folder, not in config, so sync and
   profile merge never see it, and data export skips dot files; keep it there.
@@ -155,7 +211,7 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   reinstall/downgrade and per-version selection.
 - **User badges** - `src/components/UserBadges.tsx`, `src/components/badges/`,
   `src/domain/badges/customBadges.ts`, `src/state/customBadgeStore.ts`,
-  Settings > Interface > User Badges, and the user dialog's Badges submenu.
+  Settings > Social > User Badges, and the user dialog's Badges submenu.
   Three badges are built in and always shown, never collapsed, hideable or
   configurable: fork developer (`FORK_DEVELOPER_USER_ID`), upstream developer
   (`UPSTREAM_DEVELOPER_USER_ID`) and VRChat Staff (`isVrchatStaff`, or membership of
@@ -309,6 +365,73 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
 - Non-fork-specific fixes usually belong upstream. Say so rather than folding
   them in.
 
+## Merging from upstream
+
+When asked to "merge from upstream", "sync with upstream" or similar, merge
+`upstream/master` (the `upstream` remote, Map1en/VRCX-0) into the fork. Do it
+on a branch, never directly on `master`, and do not stage or commit anything
+until the user asks; the user decides what goes into the merge commit.
+
+1. `git fetch upstream`, then `git merge upstream/master` on the branch. Never
+   rebase the fork onto upstream.
+2. Resolve conflicts in favor of the fork invariants above and the rules in
+   this file. Then check the files git merged on its own as well: several
+   patterns below merge silently and are only visible by reading the result.
+3. Run the full checks (see Commands), regenerate bindings if any command or
+   `specta::Type` changed, and fix what the merge broke.
+4. Update the docs (below).
+5. Summarize for the user: what upstream added or changed, what was kept from
+   the fork and why, what was dropped, and which docs changed.
+
+Things upstream merges keep bringing back or breaking:
+
+- **Identity**: names, ids, data folder, link scheme, update source, user
+  agent, export id and RemoteSync origins stay the fork's (the table at the
+  top). No upstream trackers, Discord or blog links, issue templates or
+  telemetry.
+- **Removed things stay removed**: upstream telemetry, translated locale files
+  and translated READMEs, `vrcx-0.dev` services and links, community theme
+  download counts, world registration for "Copy VRCX world URL".
+- **Text**: English only, plain ASCII punctuation (convert new curly quotes and
+  dashes in `en.json`), US spelling including translation keys, single-brace
+  placeholders.
+- **Dates**: the fork stores signed epoch seconds. Upstream tests, seeders and
+  SQL often use ISO strings or `strftime` on what is an integer here; port them
+  (see `docs/TIMESTAMPS.md`).
+- **AI Assistant**: upstream calls it Social AI. Keep the fork's name and
+  strings, the top-level nav entry, the client tools, and the approval gate:
+  any new upstream tool that changes data or acts for the user must go into
+  `EDIT_TOOLS` in `crates/assistant/src/client_tools.rs`, and new upstream
+  settings the assistant should be able to change need a spec in
+  `assistantSettingSpecs.ts`. Keep prompt rules (no emoji, "VRCX-0-Nanashi",
+  local-calendar time) and add upstream's new facts.
+- **MCP and reminders**: upstream builds the MCP runtime without the fork's
+  `reminders` field; make sure the assistant still gets it.
+- **Shared world collections and relay links** stay on RemoteSync.
+- **Recorder**: keep the fork's install script, compose file, image, guide
+  (`docs/RECORDER.md`), the Settings > Sync Options card, and no beta channel.
+- **Process-global test state**: upstream tests that build a full runtime can
+  race fork tests that seal secrets; keep the harness pre-initializing them.
+
+### Updating the docs after a merge
+
+Every merge that changes what users see needs the docs to match, because the
+in-app Docs page and the AI Assistant answer from them:
+
+- New or changed pages, dialogs, settings, notifications, tools, shortcuts or
+  looks: update the matching file in `docs/` (`USER_GUIDE.md`, `PAGES.md`,
+  `DIALOGS.md`, `LAYOUT_AND_APPEARANCE.md`, `NOTIFICATIONS_AND_VR.md`,
+  `BADGES.md`, and the others there) to the same level of detail as the rest,
+  written from the code and the app's own text, not from upstream's README.
+- `docs/FEATURES.md` lists only what the fork does differently. If upstream
+  now does something the fork added, remove or reword that entry; if the fork
+  keeps a different behavior, say so there.
+- Upstream README changes worth knowing (new highlights, platform notes) go
+  into `docs/USER_GUIDE.md` or `docs/INSTALL.md` in the fork's words, without
+  upstream's links.
+- Keep the README's documentation table and `docs/` in step, and check every
+  relative link still resolves.
+
 ## Commands
 
 Frontend (Node):
@@ -355,7 +478,7 @@ the main-thread allowlist test fails.
 
 ## Dates and timezones
 
-See `TIMESTAMPS.md` before changing stored dates, date inputs, history grouping,
+See `docs/TIMESTAMPS.md` before changing stored dates, date inputs, history grouping,
 calendar queries, imports, or sync boundaries.
 
 - App-owned stored absolute dates use signed `i64` Unix epoch seconds in UTC.
@@ -490,8 +613,12 @@ Many crates use nested module folders where each file is a sibling
   (`useLinuxHardwareRendering`); never call `document.startViewTransition`
   in compatibility mode. Menus and other popups are opaque with
   no backdrop blur, because the blur does not reliably render in that mode.
-- `README.md` is a short index; the user docs it links sit beside it
-  (`FEATURES.md`, `TELEMETRY.md`, `INSTALL.md`, `BUILDING.md`; `docs/` is
-  gitignored, so not there). Keep them
+- `README.md` is a short index; every other doc lives in `docs/`
+  (`USER_GUIDE.md`, `FEATURES.md`, `TELEMETRY.md`, `INSTALL.md`, `BUILDING.md`,
+  `TIMESTAMPS.md`, `RECORDER.md`). `CONTRIBUTING.md` and `SECURITY.md` stay in
+  the root, where GitHub looks for them.
+  `crates/logger/README.md` only points to `docs/RECORDER.md`, because released
+  builds link to that path. `USER_GUIDE.md` describes the whole app, upstream
+  features included, and the AI Assistant answers from the docs. Keep them
   accurate when behavior changes, and keep the README table in step when a
   doc is added or renamed.

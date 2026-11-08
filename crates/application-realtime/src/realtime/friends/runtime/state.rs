@@ -416,12 +416,16 @@ impl RealtimeFriendsRuntime {
 
     pub(crate) fn with_user_cache_records<R>(
         &self,
-        visit: impl FnOnce(&str, &mut dyn Iterator<Item = &FriendRecord>) -> R,
+        visit: impl FnOnce(&str, &str, &mut dyn Iterator<Item = &FriendRecord>) -> R,
     ) -> Option<R> {
         let state = self.lock_state();
         let roster = state.roster.as_ref()?;
         let mut records = roster.entries.values().map(|entry| &entry.record);
-        Some(visit(&roster.session.endpoint, &mut records))
+        Some(visit(
+            &roster.session.user_id,
+            &roster.session.endpoint,
+            &mut records,
+        ))
     }
 
     pub fn roster_snapshot(&self) -> Option<RealtimeFriendRosterSnapshot> {

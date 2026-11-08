@@ -81,6 +81,9 @@ export type NavShortcutEntry = {
 };
 
 const NAV_CONFIG_KEY = 'VRCX_customNavMenuLayoutList';
+const ASSISTANT_NAV_MIGRATED_KEY = 'VRCX_navAssistantTopLevelMigrated';
+const ASSISTANT_NAV_KEY = 'social-ai';
+const SOCIAL_FOLDER_ID = 'default-folder-social';
 export {
     NAV_CUSTOMIZE_REQUESTED_EVENT,
     NAV_LAYOUT_UPDATED_EVENT,
@@ -108,6 +111,7 @@ export const routePathByName = Object.freeze({
     reminders: '/reminders',
     'charts-mutual': '/charts/mutual',
     tools: '/tools',
+    docs: '/docs',
     gallery: '/tools/gallery',
     inventory: '/tools/inventory',
     'screenshot-metadata': '/tools/screenshot-metadata',
@@ -165,19 +169,15 @@ export function createBaseDefaultNavLayout(t: TranslateKey): NavLayoutEntry[] {
             nameKey: 'nav_tooltip.social',
             name: t('nav_tooltip.social'),
             icon: 'lucide:ContactRound',
-            items: [
-                'friend-log',
-                'friend-list',
-                'moderation',
-                'social-ai',
-                'reminders'
-            ]
+            items: ['friend-log', 'friend-list', 'moderation', 'reminders']
         },
+        { type: 'item', key: ASSISTANT_NAV_KEY },
         { type: 'item', key: 'notification' },
         { type: 'item', key: 'my-avatars' },
         { type: 'item', key: 'activity' },
         { type: 'item', key: 'charts-mutual' },
-        { type: 'item', key: 'tools' }
+        { type: 'item', key: 'tools' },
+        { type: 'item', key: 'docs' }
     ];
 }
 
@@ -531,6 +531,90 @@ export function getNavShortcutEntries(
     return shortcutEntries;
 }
 
+function isAssistantFolderItem(item: unknown): boolean {
+    return (
+        item === ASSISTANT_NAV_KEY ||
+        (isRecord(item) && item.key === ASSISTANT_NAV_KEY)
+    );
+}
+
+/**
+ * The AI Assistant used to sit in the default Social folder. Moves it from
+ * there to the top level, right after the folder, keeping a custom icon. A
+ * layout that placed it anywhere else is returned unchanged.
+ */
+export function moveAssistantOutOfSocialFolder(layout: unknown): unknown {
+    if (!Array.isArray(layout)) {
+        return layout;
+    }
+    const index = layout.findIndex(
+        (entry) =>
+            isRecord(entry) &&
+            entry.type === 'folder' &&
+            entry.id === SOCIAL_FOLDER_ID &&
+            Array.isArray(entry.items) &&
+            entry.items.some(isAssistantFolderItem)
+    );
+    if (index < 0) {
+        return layout;
+    }
+    const folder = layout[index] as Record<string, unknown> & {
+        items: unknown[];
+    };
+    const item = folder.items.find(isAssistantFolderItem);
+    const icon = isRecord(item) ? item.icon : undefined;
+    const next = [...layout];
+    next.splice(
+        index,
+        1,
+        {
+            ...folder,
+            items: folder.items.filter((entry) => !isAssistantFolderItem(entry))
+        },
+        {
+            type: 'item',
+            key: ASSISTANT_NAV_KEY,
+            ...(typeof icon === 'string' ? { icon } : {})
+        }
+    );
+    return next;
+}
+
+async function migrateStoredAssistantNav(storedValue: string): Promise<string> {
+    if (!storedValue) {
+        return storedValue;
+    }
+    const migrated = await configRepository.getBool(
+        ASSISTANT_NAV_MIGRATED_KEY,
+        false
+    );
+    if (migrated) {
+        return storedValue;
+    }
+    let nextValue = storedValue;
+    try {
+        const parsed: unknown = JSON.parse(storedValue);
+        if (Array.isArray(parsed)) {
+            const moved = moveAssistantOutOfSocialFolder(parsed);
+            if (moved !== parsed) {
+                nextValue = JSON.stringify(moved);
+            }
+        } else if (isRecord(parsed)) {
+            const moved = moveAssistantOutOfSocialFolder(parsed.layout);
+            if (moved !== parsed.layout) {
+                nextValue = JSON.stringify({ ...parsed, layout: moved });
+            }
+        }
+    } catch {
+        return storedValue;
+    }
+    if (nextValue !== storedValue) {
+        await configRepository.setString(NAV_CONFIG_KEY, nextValue);
+    }
+    await configRepository.setBool(ASSISTANT_NAV_MIGRATED_KEY, true);
+    return nextValue;
+}
+
 export async function loadNavMenuModel({
     dashboards,
     notificationLayout,
@@ -550,7 +634,9 @@ export async function loadNavMenuModel({
 
     let layout: unknown = defaultLayout;
     let hiddenKeys: string[] = [];
-    const storedValue = await configRepository.getString(NAV_CONFIG_KEY, '');
+    const storedValue = await migrateStoredAssistantNav(
+        await configRepository.getString(NAV_CONFIG_KEY, '')
+    );
 
     if (storedValue) {
         try {

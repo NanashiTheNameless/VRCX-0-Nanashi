@@ -31,6 +31,7 @@ struct TestRealtimeStoreState {
     current: HashMap<String, Vec<FriendLogCurrentOutput>>,
     history: HashMap<String, Vec<FriendLogHistoryOutput>>,
     feeds: HashMap<String, Vec<FeedLiveEntry>>,
+    profile_history: HashMap<String, Vec<vrcx_0_core::json::RawJsonObject>>,
     notifications_v1: HashMap<String, Vec<Value>>,
     notifications_v2: HashMap<String, Vec<Value>>,
     app_notifications: HashMap<String, Vec<AppNotification>>,
@@ -47,6 +48,15 @@ pub struct TestRealtimeStore {
 }
 
 impl TestRealtimeStore {
+    pub fn take_profile_history(&self, owner: &str) -> Vec<vrcx_0_core::json::RawJsonObject> {
+        self.state
+            .lock()
+            .expect("test store lock")
+            .profile_history
+            .remove(owner)
+            .unwrap_or_default()
+    }
+
     pub fn set_fail_writes(&self, fail: bool) {
         self.state.lock().expect("test store lock").fail_writes = fail;
     }
@@ -395,6 +405,22 @@ impl crate::SocialMutationStore for TestRealtimeStore {
 }
 
 impl crate::RealtimeBatchWriter for TestRealtimeStore {
+    fn observe_profile_history(
+        &self,
+        owner: &OwnerId,
+        users: &[vrcx_0_core::json::RawJsonObject],
+        _manually_opened: bool,
+    ) -> Result<()> {
+        self.state
+            .lock()
+            .expect("test store lock")
+            .profile_history
+            .entry(owner.as_str().to_owned())
+            .or_default()
+            .extend_from_slice(users);
+        Ok(())
+    }
+
     fn write_realtime_batch(
         &self,
         owner: &OwnerId,

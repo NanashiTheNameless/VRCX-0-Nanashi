@@ -12,7 +12,7 @@ import { Button } from '@/ui/shadcn/button';
 
 // Fork: reminders from the assistant (upstream #479) or made by hand. They
 // fire through the normal notification filters (type "Assistant reminder"),
-// Social AI open or not.
+// AI Assistant open or not.
 
 export const REMINDERS_I18N = 'view.settings.ai.reminders';
 const P = REMINDERS_I18N;

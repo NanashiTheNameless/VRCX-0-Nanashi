@@ -15,7 +15,7 @@ macOS packages can show up later than the rest of a release; see
 Each nightly release also carries the Self-hosted Recorder for Linux servers as
 `vrcx-0-logger_<version>_linux_x86_64` and `vrcx-0-logger_<version>_linux_aarch64`, and for
 Windows as `vrcx-0-logger_<version>_windows_x86_64.exe`. On Linux, most people should use the
-install script or Docker image described in the [recorder guide](crates/logger/README.md)
+install script or Docker image described in the [recorder guide](RECORDER.md)
 instead of the bare binary.
 
 New builds use NamelessNanashi's self-signed identity. This does not establish
@@ -46,7 +46,7 @@ whether anyone gets an update today.
 
 So macOS builds run on their own and are added to a release after it is
 already published. When GitHub cannot be bothered to hand out a macOS runner at
-all (often), [retry-unacquired-runners](.github/workflows/retry-unacquired-runners.yml)
+all (often), [retry-unacquired-runners](../.github/workflows/retry-unacquired-runners.yml)
 re-runs just the failed macOS jobs, and the packages are added to that release
 whenever they finally finish. A macOS job that gets a runner and then dies
 anyway can be brought back with "Re-run failed jobs", with the same result.
@@ -87,4 +87,4 @@ Hardware acceleration for the app interface is off by default. Turn it on under
 display properly, the app turns it back off automatically. Setting
 `WEBKIT_DISABLE_DMABUF_RENDERER` yourself hides this option.
 
-[Back to the README](README.md)
+[Back to the README](../README.md)

@@ -30,6 +30,9 @@ pub struct SessionMessage {
     pub v: u8,
     pub auth: String,
     pub two_factor_auth: Option<String>,
+    #[serde(default)]
+    #[zeroize(skip)]
+    pub profile_history_settings: vrcx_0_persistence::profile_history::ProfileHistorySettings,
 }
 
 impl SessionMessage {
@@ -61,6 +64,11 @@ pub struct ControlRequest {
     pub op: String,
     #[serde(default)]
     pub through_row_id: Option<u64>,
+    #[serde(default)]
+    pub acknowledged_row_ids: Option<Vec<u64>>,
+    #[serde(default)]
+    pub profile_history_settings:
+        Option<vrcx_0_persistence::profile_history::ProfileHistorySettings>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]

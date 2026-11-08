@@ -98,6 +98,14 @@ export async function saveJsonFile(
     await commands.appSaveVrcRegJsonFile(null, defaultName, json);
 }
 
+export async function saveJsoncFile(
+    defaultName: string,
+    content: string
+): Promise<string> {
+    const path = await commands.appSaveJsoncFile(defaultName, content);
+    return typeof path === 'string' ? path : '';
+}
+
 export async function readVrchatConfigFileSafe(): Promise<string> {
     const config = await commands.appReadConfigFileSafe();
     return typeof config === 'string' ? config : '';

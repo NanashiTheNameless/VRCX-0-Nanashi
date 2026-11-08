@@ -5,6 +5,8 @@ import i18n from '@/services/i18nService';
 import { toast } from '@/services/toastService';
 import { useAssistantChatStore } from '@/state/assistantChatStore';
 
+import { userMessageIndex } from './assistantMarkdown';
+
 const UNDO_DELETE_MS = 5000;
 const pendingDeletes = new Set<string>();
 
@@ -193,6 +195,46 @@ export async function sendMessage(text: string): Promise<void> {
     }
     if (current.activeSessionId !== result.sessionId) {
         current.setActiveSession(result.sessionId);
+    }
+    await refreshSessions();
+}
+
+/**
+ * Replaces one of your earlier messages: everything from it on is dropped and
+ * the new text is sent in its place.
+ */
+export async function editUserMessage(
+    messageId: string,
+    text: string
+): Promise<void> {
+    const trimmed = text.trim();
+    const store = useAssistantChatStore.getState();
+    const sessionId = store.activeSessionId;
+    if (!trimmed || !sessionId) {
+        return;
+    }
+    const userIndex = userMessageIndex(
+        store.messagesBySession[sessionId] ?? [],
+        messageId
+    );
+    if (userIndex < 0) {
+        return;
+    }
+    store.truncateMessagesAt(sessionId, messageId);
+    store.appendUserMessage(sessionId, trimmed);
+    store.markBusy(sessionId, true);
+    try {
+        await commands.appAssistantEditMessage(
+            sessionId,
+            userIndex,
+            trimmed,
+            i18n.language ? describeLanguageForModel(i18n.language) : null
+        );
+    } catch (error) {
+        useAssistantChatStore.getState().markBusy(sessionId, false);
+        // Reload what the backend actually kept.
+        await openSession(sessionId).catch(() => undefined);
+        throw error;
     }
     await refreshSessions();
 }

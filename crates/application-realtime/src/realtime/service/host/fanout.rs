@@ -183,6 +183,7 @@ impl RealtimeHostRuntime {
             }
             if !projection.patches.is_empty() {
                 let changed = self.collect_friend_record_cache_changes(
+                    &output.owner_user_id,
                     projection.patches.iter().map(|patch| &patch.record),
                     &UserFactMergeOptions {
                         endpoint,
@@ -343,6 +344,11 @@ impl RealtimeHostRuntime {
             .active_current_user_context()
             .filter(|active| active.generation == projection.generation)
         {
+            self.observe_profile_history(
+                &output.owner_user_id,
+                &active.session.endpoint,
+                std::slice::from_ref(&snapshot),
+            );
             self.apply_current_user_snapshot_sink(&active, &snapshot);
         }
         self.deps.event_bus.emit(projection);

@@ -56,6 +56,7 @@ export function AssistantTranscript({
                                     <AssistantMessage
                                         message={message}
                                         thinkingLabel={thinkingLabel}
+                                        editable={!busy}
                                     />
                                     {!busy && message === messages.at(-1) && (
                                         <AssistantFollowUps

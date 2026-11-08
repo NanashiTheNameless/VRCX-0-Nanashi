@@ -138,6 +138,10 @@ export function buildUserDialogTabs({
     return [
         { value: 'info', label: translate('dialog.user.info.header') },
         {
+            value: 'profile-history',
+            label: translate('dialog.user.profile_history.header')
+        },
+        {
             value: 'instance-history',
             label: translate('dialog.previous_instances.header'),
             hidden: !isCurrentUser

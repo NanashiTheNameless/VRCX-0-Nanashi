@@ -56,6 +56,22 @@ pub struct AssistantChoiceRequestEvent {
     pub candidates: Vec<AssistantChoiceCandidate>,
 }
 
+/// A tool the app window answers: a settings lookup, opening Settings, or an
+/// approval card for an edit. `kind` is the tool name, or `approve_edit` for an
+/// edit tool that runs once approved.
+#[derive(Serialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct AssistantClientRequestEvent {
+    pub owner_user_id: OwnerId,
+    pub session_id: String,
+    pub turn_id: String,
+    pub tool_call_id: String,
+    pub request_id: String,
+    pub kind: String,
+    pub tool: String,
+    pub arguments: serde_json::Value,
+}
+
 #[derive(Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AssistantTurnEntitiesEvent {
@@ -97,6 +113,10 @@ impl RuntimeEventPayload for AssistantToolResultEvent {
 
 impl RuntimeEventPayload for AssistantChoiceRequestEvent {
     const EVENT_NAME: &'static str = "assistantChoiceRequest";
+}
+
+impl RuntimeEventPayload for AssistantClientRequestEvent {
+    const EVENT_NAME: &'static str = "assistantClientRequest";
 }
 
 impl RuntimeEventPayload for AssistantTurnEntitiesEvent {
@@ -202,6 +222,26 @@ impl AssistantEmitter {
             choice_id: choice_id.to_string(),
             query: query.trim().to_string(),
             candidates,
+        });
+    }
+
+    pub fn client_request(
+        &self,
+        tool_call_id: &str,
+        request_id: &str,
+        kind: &str,
+        tool: &str,
+        arguments: serde_json::Value,
+    ) {
+        self.bus.emit(AssistantClientRequestEvent {
+            owner_user_id: self.owner_user_id.clone(),
+            session_id: self.session_id.clone(),
+            turn_id: self.turn_id.clone(),
+            tool_call_id: tool_call_id.to_string(),
+            request_id: request_id.to_string(),
+            kind: kind.to_string(),
+            tool: tool.to_string(),
+            arguments,
         });
     }
 

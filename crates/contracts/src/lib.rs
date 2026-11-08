@@ -31,6 +31,7 @@ pub mod player_list;
 mod profile_backup;
 pub mod profile_bio;
 mod profile_config;
+pub mod profile_history;
 pub mod realtime;
 pub mod reminders;
 pub mod social_aggregates;

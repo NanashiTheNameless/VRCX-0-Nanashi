@@ -15,6 +15,7 @@ import {
     type CurrentUserUpdateRequest,
     type HttpApiExecuteResponse
 } from '@/platform/tauri/bindings';
+import { ingestUserFactEntries } from '@/services/userFactAccessService';
 import { stripDefaultAvatarImage } from '@/shared/utils/avatar';
 import { createConcurrencyLimiter } from '@/shared/utils/concurrency';
 import { isRecord } from '@/shared/utils/record';
@@ -87,6 +88,7 @@ interface UserProfileInput extends UserEndpointInput {
     force?: boolean;
     dialog?: boolean;
     isFriend?: boolean | null;
+    profileHistoryContext?: { ownerUserId: string; endpoint: string };
 }
 
 interface UserAppearanceProfileInput extends UserEndpointInput {
@@ -226,7 +228,8 @@ async function getUserProfile({
     userId,
     force = false,
     dialog = false,
-    isFriend = null
+    isFriend = null,
+    profileHistoryContext
 }: UserProfileInput) {
     const normalizedUserId = userId?.trim() ?? '';
     if (!normalizedUserId) {
@@ -245,6 +248,24 @@ async function getUserProfile({
         response,
         `users/${encodeURIComponent(normalizedUserId)}`
     ).json;
+    if (
+        profileHistoryContext?.ownerUserId &&
+        profileHistoryContext.endpoint &&
+        isRecord(json) &&
+        json.id === normalizedUserId
+    ) {
+        // Only the user dialog supplies this context. Record the API fields before
+        // normalization supplies empty defaults, including when the query cache is used.
+        ingestUserFactEntries([
+            {
+                user: json,
+                source: 'profile',
+                isCurrentUser: json.id === profileHistoryContext.ownerUserId,
+                manualProfileHistory: true,
+                ...profileHistoryContext
+            }
+        ]);
+    }
     return normalize(json);
 }
 

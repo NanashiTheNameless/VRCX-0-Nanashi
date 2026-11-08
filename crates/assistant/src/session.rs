@@ -154,7 +154,7 @@ pub struct Session {
     pub active_turn: Option<ActiveTurn>,
     pub endpoint_id: Option<String>,
     pub model: Option<String>,
-    pub allow_writes: bool,
+    pub allow_edit_requests: bool,
     pub playbook_mode: PlaybookMode,
     pub entity_panel_open: bool,
     pub surfaced_entities: Vec<Entity>,
@@ -180,7 +180,7 @@ struct StoredSession {
     active_turn: Option<ActiveTurn>,
     endpoint_id: Option<String>,
     model: Option<String>,
-    allow_writes: bool,
+    allow_edit_requests: bool,
     playbook_mode: PlaybookMode,
     entity_panel_open: bool,
     surfaced_entities: Vec<Entity>,
@@ -197,7 +197,7 @@ impl StoredSession {
             active_turn: self.active_turn.clone(),
             endpoint_id: self.endpoint_id.clone(),
             model: self.model.clone(),
-            allow_writes: self.allow_writes,
+            allow_edit_requests: self.allow_edit_requests,
             playbook_mode: self.playbook_mode,
             entity_panel_open: self.entity_panel_open,
             surfaced_entities: self.surfaced_entities.clone(),
@@ -322,7 +322,7 @@ impl SessionStore {
                             active_turn: None,
                             endpoint_id: optional_string(entry.endpoint_id),
                             model: optional_string(entry.model),
-                            allow_writes: entry.allow_writes,
+                            allow_edit_requests: entry.allow_edit_requests,
                             playbook_mode: PlaybookMode::parse(&entry.playbook_mode),
                             entity_panel_open: entry.entity_panel_open,
                             surfaced_entities: serde_json::from_str(&entry.surfaced_entities)
@@ -502,7 +502,7 @@ impl SessionStore {
             active_turn: None,
             endpoint_id: normalize_optional(runtime.endpoint_id),
             model: normalize_optional(runtime.model),
-            allow_writes: runtime.allow_writes,
+            allow_edit_requests: runtime.allow_edit_requests,
             playbook_mode: runtime.playbook_mode,
             entity_panel_open: false,
             surfaced_entities: Vec::new(),
@@ -801,6 +801,43 @@ impl SessionStore {
         Ok(true)
     }
 
+    /// Removes the session's `user_index`-th user message (counting from zero)
+    /// and everything after it, so an edited version can be sent in its place.
+    /// Returns false when there is no such message.
+    pub fn truncate_at_user_message(
+        &self,
+        owner_user_id: &OwnerId,
+        session_id: &str,
+        user_index: usize,
+    ) -> AssistantPortResult<bool> {
+        if !self.is_visible_to(session_id, owner_user_id) {
+            return Ok(false);
+        }
+        let load = self.content_load(session_id);
+        let _load = load.lock().unwrap();
+        let removed_from = self.with_loaded_session(session_id, |state| {
+            let cached = state.contents.get_mut(session_id)?;
+            let position = cached
+                .messages
+                .iter()
+                .enumerate()
+                .filter(|(_, message)| matches!(message.role, Role::User))
+                .nth(user_index)
+                .map(|(position, _)| position)?;
+            let seq = cached.messages[position].seq;
+            cached.messages.truncate(position);
+            state.touch_content(session_id);
+            Some(seq)
+        })?;
+        let Some(seq) = removed_from else {
+            return Ok(false);
+        };
+        if let Some(persistence) = self.persistence.as_ref() {
+            persistence.delete_messages_from(session_id, seq as i64)?;
+        }
+        Ok(true)
+    }
+
     pub fn history(&self, session_id: &str) -> Vec<Message> {
         let mut state = self.state.lock().unwrap();
         let history = state
@@ -922,7 +959,7 @@ fn persist_runtime(
         id: session_id,
         endpoint_id: session.endpoint_id.as_deref(),
         model: session.model.as_deref(),
-        allow_writes: session.allow_writes,
+        allow_edit_requests: session.allow_edit_requests,
         playbook_mode: session.playbook_mode.as_config_str(),
     }) {
         tracing::warn!(%error, "assistant: failed to persist runtime selection");
@@ -932,7 +969,7 @@ fn persist_runtime(
 fn apply_runtime(session: &mut StoredSession, runtime: AssistantRuntimeSelection) {
     session.endpoint_id = normalize_optional(runtime.endpoint_id);
     session.model = normalize_optional(runtime.model);
-    session.allow_writes = runtime.allow_writes;
+    session.allow_edit_requests = runtime.allow_edit_requests;
     session.playbook_mode = runtime.playbook_mode;
 }
 

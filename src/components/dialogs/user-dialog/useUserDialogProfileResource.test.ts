@@ -78,7 +78,11 @@ describe('useUserDialogProfileResource', () => {
                 expect.objectContaining({
                     userId: 'usr_target',
                     force: true,
-                    dialog: true
+                    dialog: true,
+                    profileHistoryContext: {
+                        ownerUserId: 'usr_target',
+                        endpoint: 'https://api.vrchat.cloud/api/1'
+                    }
                 })
             );
         });

@@ -118,6 +118,24 @@ bundle to narrate. Read the whole bundle and summarize it; do not separately cal
 individual tools it already includes.",
 };
 
+const APP_SETTINGS: Playbook = Playbook {
+    tool_whitelist: &[
+        "read_docs",
+        "show_in_docs",
+        "find_settings",
+        "show_in_settings",
+        "change_setting",
+    ],
+    constraint_prompt: "The user is asking about VRCX-0-Nanashi itself: how a page or feature \
+works, where a setting is, what it does, or to change one. For how something works, call \
+read_docs with a few words and answer from the sections it returns. For a setting, call \
+find_settings with a few words describing it, then answer from the label, description and \
+location it returns (Settings > tab > card). To point the user at \
+it, call show_in_settings. Only when the user asked for the change, call change_setting once \
+with a value of the reported kind; the user approves or declines it on a card. Never invent \
+settings, locations or values.",
+};
+
 const INTENTS: &[Intent] = &[
     Intent {
         label: "circles",
@@ -201,6 +219,27 @@ period (their week or month)",
         ],
         playbook: SOCIAL_RECAP,
     },
+    Intent {
+        label: "app_settings",
+        description: "how to use VRCX-0-Nanashi itself: how a page or feature of the app works, \
+where a setting or option is, what a setting does, or asking to turn a setting on or off or \
+change it",
+        keywords: &[
+            "setting",
+            "turn on ",
+            "turn off ",
+            "where do i find",
+            "where can i find",
+            "how do i change",
+            "how do i enable",
+            "how do i disable",
+            "how does the app",
+            "documentation",
+            " docs",
+            "badge",
+        ],
+        playbook: APP_SETTINGS,
+    },
 ];
 
 pub(crate) fn classify_keyword(user_text: &str) -> Option<Playbook> {
@@ -236,8 +275,8 @@ pub(crate) async fn classify_llm(
 
 fn classify_prompt() -> String {
     let mut prompt = String::from(
-        "Classify a VRChat social assistant user's question into one intent. The question \
-may be in any language. Reply with exactly one label from the list below, or `none` if \
+        "Classify a question asked to the VRCX-0-Nanashi AI Assistant (VRChat social history \
+and help with the app's settings) into one intent. The question may be in any language. Reply with exactly one label from the list below, or `none` if \
 none fit. Output only the label, nothing else.\n\nIntents:\n",
     );
     for intent in INTENTS {
@@ -353,6 +392,35 @@ mod tests {
         assert!(classify_keyword("who is online now").is_some());
         assert!(classify_keyword("which month did i play most").is_some());
         assert!(classify_keyword("recap my week").is_some());
+        assert!(classify_keyword("where do i find the badge settings").is_some());
+    }
+
+    #[test]
+    fn settings_questions_keep_only_settings_tools() {
+        let tools = vec![
+            tool("find_settings"),
+            tool("show_in_settings"),
+            tool("change_setting"),
+            tool("get_copresence_summary"),
+        ];
+        let filtered = classify_keyword("Turn off the compact tables setting")
+            .unwrap()
+            .filter_tools(&tools);
+        let names: Vec<&str> = filtered.iter().map(|tool| tool.name.as_str()).collect();
+        assert_eq!(
+            names,
+            vec!["find_settings", "show_in_settings", "change_setting"]
+        );
+        assert!(classify_keyword("what do the docs say about sync").is_some());
+        // With edit requests off, change_setting is not visible to filter.
+        let read_only = classify_keyword("which setting hides unfriends")
+            .unwrap()
+            .filter_tools(&tools[..2]);
+        assert_eq!(read_only.len(), 2);
+        assert!(classify_keyword("who is online now")
+            .unwrap()
+            .filter_tools(&tools)
+            .is_empty());
     }
 
     #[test]
@@ -365,6 +433,7 @@ mod tests {
             "online_friends",
             "activity_timeline",
             "social_recap",
+            "app_settings",
         ] {
             assert_eq!(
                 matched_intent(label).map(|intent| intent.label),

@@ -7,7 +7,9 @@ import { CustomBadgeChip } from '@/components/UserBadges';
 import {
     BADGE_AGE_LEVELS,
     BADGE_PLATFORMS,
+    BADGE_RULE_OPERATORS,
     BADGE_STATUSES,
+    CUSTOM_BADGE_GROUP_DEPTH_LIMIT,
     CUSTOM_BADGE_GROUP_MEMBER_LIMIT,
     CUSTOM_BADGE_LABEL_MAX,
     CUSTOM_BADGE_MEMO_MAX,
@@ -15,11 +17,13 @@ import {
     DEFAULT_CUSTOM_BADGE_ICON,
     createCustomBadgeId,
     extractBadgeUserIds,
+    enabledBadgeRules,
     isGroupMemberListTruncated,
     normalizeBadgeColor,
     type CustomBadge,
     type CustomBadgeRule,
     type CustomBadgeRuleKind,
+    type BadgeRuleOperator,
     isReservedBadgeIcon
 } from '@/domain/badges/customBadges';
 import type { GroupRoleRecord } from '@/domain/entities/group';
@@ -31,6 +35,7 @@ import { TRUST_COLOR_ENTRIES } from '@/shared/constants/trustColors';
 import { useFavoriteStore } from '@/state/favoriteStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { Button } from '@/ui/shadcn/button';
+import { Checkbox } from '@/ui/shadcn/checkbox';
 import { Input } from '@/ui/shadcn/input';
 import {
     Select,
@@ -40,9 +45,18 @@ import {
     SelectValue
 } from '@/ui/shadcn/select';
 import { Spinner } from '@/ui/shadcn/spinner';
+import { Switch } from '@/ui/shadcn/switch';
 import { Textarea } from '@/ui/shadcn/textarea';
 
 import { BadgeIconPicker } from './BadgeIconPicker';
+import { BadgeRuleGuide } from './BadgeRuleGuide';
+import { BadgeRuleMap } from './BadgeRuleMap';
+import {
+    SIMPLE_BADGE_OPERATORS,
+    describeCustomBadge,
+    isSimpleBadgeOperator,
+    usesAdvancedBadgeLogic
+} from './badgeRuleText';
 
 const T = 'view.settings.appearance.user_badges';
 
@@ -59,6 +73,7 @@ const COLOR_PRESETS = [
 
 const RULE_KINDS: CustomBadgeRuleKind[] = [
     'users',
+    'self',
     'friends',
     'friendGroup',
     'vrchatGroup',
@@ -80,11 +95,15 @@ function OptionSelect<V extends string>({
     value,
     values,
     labelPrefix,
+    label,
+    className = 'w-56',
     onValueChange
 }: {
     value: V;
     values: readonly V[];
     labelPrefix: string;
+    label?: string;
+    className?: string;
     onValueChange: (value: V) => void;
 }) {
     const { t } = useTranslation();
@@ -98,7 +117,7 @@ function OptionSelect<V extends string>({
                 }
             }}
         >
-            <SelectTrigger className="w-56">
+            <SelectTrigger className={className} aria-label={label}>
                 <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -114,6 +133,8 @@ function OptionSelect<V extends string>({
 
 function newRule(kind: CustomBadgeRuleKind): CustomBadgeRule {
     switch (kind) {
+        case 'group':
+            return { kind, operator: 'or', rules: [] };
         case 'users':
             return { kind, userIds: [] };
         case 'friendGroup':
@@ -141,6 +162,7 @@ function newRule(kind: CustomBadgeRuleKind): CustomBadgeRule {
         case 'bio':
         case 'pronouns':
             return { kind, contains: '' };
+        case 'self':
         case 'friends':
         case 'supporter':
             return { kind };
@@ -402,14 +424,74 @@ function VrchatGroupRuleEditor({
     );
 }
 
+function GateSentence({
+    lead,
+    leadOne,
+    rules,
+    operator,
+    advanced,
+    onChange
+}: {
+    lead: string;
+    leadOne: string;
+    rules: readonly CustomBadgeRule[];
+    operator: BadgeRuleOperator;
+    advanced: boolean;
+    onChange: (operator: BadgeRuleOperator) => void;
+}) {
+    const { t } = useTranslation();
+    const enabledCount = enabledBadgeRules(rules).length;
+    if (enabledCount === 0) {
+        return (
+            <p className="text-muted-foreground text-xs">
+                {t(`${T}.no_enabled_conditions`)}
+            </p>
+        );
+    }
+    if (enabledCount === 1) {
+        return <span className="text-sm font-medium">{leadOne}</span>;
+    }
+    const values =
+        advanced || !isSimpleBadgeOperator(operator)
+            ? BADGE_RULE_OPERATORS
+            : SIMPLE_BADGE_OPERATORS;
+    return (
+        <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                <span>{lead}</span>
+                <OptionSelect
+                    className="w-44"
+                    value={operator}
+                    values={values}
+                    labelPrefix={`${T}.match`}
+                    label={t(`${T}.combine_rules`)}
+                    onValueChange={onChange}
+                />
+                <span>{t(`${T}.sentence.of`)}</span>
+            </div>
+            {advanced ? (
+                <p className="text-muted-foreground text-xs">
+                    {t(`${T}.operator_description.${operator}`)}
+                </p>
+            ) : null}
+        </div>
+    );
+}
+
 function RuleEditor({
     rule,
     onChange,
-    onRemove
+    onRemove,
+    depth,
+    advanced,
+    allowToggles = true
 }: {
     rule: CustomBadgeRule;
     onChange: (rule: CustomBadgeRule) => void;
     onRemove: () => void;
+    depth: number;
+    advanced: boolean;
+    allowToggles?: boolean;
 }) {
     const { t } = useTranslation();
     const friendGroups = useFavoriteStore(
@@ -425,9 +507,20 @@ function RuleEditor({
     const [userText, setUserText] = useState(
         rule.kind === 'users' ? rule.userIds.join('\n') : ''
     );
+    const enabled = rule.enabled !== false;
 
     let body = null;
     switch (rule.kind) {
+        case 'group':
+            body = (
+                <RulesEditor
+                    rules={rule.rules}
+                    depth={depth + 1}
+                    advanced={advanced}
+                    onChange={(rules) => onChange({ ...rule, rules })}
+                />
+            );
+            break;
         case 'users':
             body = (
                 <div className="flex flex-col gap-1">
@@ -457,7 +550,10 @@ function RuleEditor({
                         onChange({ ...rule, groupKey: String(value || '') })
                     }
                 >
-                    <SelectTrigger className="w-64">
+                    <SelectTrigger
+                        className="w-64"
+                        aria-label={t(`${T}.rule.friendGroup`)}
+                    >
                         <SelectValue
                             placeholder={t(`${T}.friend_group_pick`)}
                         />
@@ -488,7 +584,10 @@ function RuleEditor({
                         }
                     }}
                 >
-                    <SelectTrigger className="w-56">
+                    <SelectTrigger
+                        className="w-56"
+                        aria-label={t(`${T}.rule.trust`)}
+                    >
                         <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -507,6 +606,7 @@ function RuleEditor({
                     value={rule.level}
                     values={BADGE_AGE_LEVELS}
                     labelPrefix={`${T}.age_level`}
+                    label={t(`${T}.rule.ageVerified`)}
                     onValueChange={(level) => onChange({ ...rule, level })}
                 />
             );
@@ -517,6 +617,7 @@ function RuleEditor({
                     value={rule.platform}
                     values={BADGE_PLATFORMS}
                     labelPrefix={`${T}.platform_option`}
+                    label={t(`${T}.rule.platform`)}
                     onValueChange={(platform) =>
                         onChange({ ...rule, platform })
                     }
@@ -529,6 +630,7 @@ function RuleEditor({
                     value={rule.status}
                     values={BADGE_STATUSES}
                     labelPrefix={`${T}.status_option`}
+                    label={t(`${T}.rule.status`)}
                     onValueChange={(status) => onChange({ ...rule, status })}
                 />
             );
@@ -549,33 +651,82 @@ function RuleEditor({
                 />
             );
             break;
+        case 'self':
         case 'friends':
         case 'supporter':
             body = null;
             break;
     }
 
+    const heading =
+        rule.kind === 'group' ? (
+            <GateSentence
+                lead={t(`${T}.sentence.group_lead`)}
+                leadOne={t(`${T}.sentence.group_lead_one`)}
+                rules={rule.rules}
+                operator={rule.operator}
+                advanced={advanced}
+                onChange={(operator) => onChange({ ...rule, operator })}
+            />
+        ) : (
+            <span
+                className="text-sm font-medium"
+                title={t(`${T}.rule_description.${rule.kind}`)}
+            >
+                {t(
+                    `${T}.${rule.negated ? 'phrase_not' : 'phrase'}.${rule.kind}`
+                )}
+            </span>
+        );
+
     return (
-        <div className="flex flex-col gap-2 rounded-md border p-2">
-            <div className="flex items-center justify-between gap-2">
-                <div className="flex flex-col">
-                    <span className="text-sm font-medium">
-                        {t(`${T}.rule.${rule.kind}`)}
-                    </span>
-                    <span className="text-muted-foreground text-xs">
-                        {t(`${T}.rule_description.${rule.kind}`)}
-                    </span>
+        <div
+            className={`flex min-w-0 flex-col gap-2 rounded-md border p-2 ${enabled ? '' : 'border-dashed opacity-60'}`}
+        >
+            <div className="flex flex-wrap items-center gap-2">
+                {allowToggles ? (
+                    <label className="flex shrink-0 items-center gap-1.5 text-xs">
+                        <Checkbox
+                            checked={enabled}
+                            onCheckedChange={(checked) =>
+                                onChange({ ...rule, enabled: checked === true })
+                            }
+                        />
+                        {t(`${T}.rule_enabled`)}
+                    </label>
+                ) : null}
+                <div className="min-w-0 flex-1">{heading}</div>
+                <div className="flex shrink-0 items-center gap-2">
+                    {allowToggles ? (
+                        <label className="flex items-center gap-1.5 text-xs">
+                            <Checkbox
+                                checked={rule.negated === true}
+                                onCheckedChange={(negated) =>
+                                    onChange({
+                                        ...rule,
+                                        negated: negated === true
+                                    })
+                                }
+                            />
+                            {t(`${T}.negate`)}
+                        </label>
+                    ) : null}
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label={t(`${T}.remove_rule`)}
+                        onClick={onRemove}
+                    >
+                        <XIcon />
+                    </Button>
                 </div>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label={t(`${T}.remove_rule`)}
-                    onClick={onRemove}
-                >
-                    <XIcon />
-                </Button>
             </div>
+            {rule.kind !== 'group' ? (
+                <span className="text-muted-foreground text-xs">
+                    {t(`${T}.rule_description.${rule.kind}`)}
+                </span>
+            ) : null}
             {body}
         </div>
     );
@@ -590,6 +741,114 @@ function nextRuleKey(): string {
     return `rule-${ruleKeyCounter}`;
 }
 
+function RulesEditor({
+    rules,
+    onChange,
+    advanced,
+    depth = 0
+}: {
+    rules: CustomBadgeRule[];
+    onChange: (rules: CustomBadgeRule[]) => void;
+    advanced: boolean;
+    depth?: number;
+}) {
+    const { t } = useTranslation();
+    const [ruleKeys, setRuleKeys] = useState(() =>
+        rules.map(() => nextRuleKey())
+    );
+
+    function add(rule: CustomBadgeRule) {
+        onChange([...rules, rule]);
+        setRuleKeys((current) => [...current, nextRuleKey()]);
+    }
+
+    return (
+        <div
+            className="flex min-w-0 flex-col gap-2"
+            role="group"
+            aria-label={t(`${T}.condition_tree`)}
+        >
+            {rules.length ? (
+                <div className="ml-2 flex min-w-0 flex-col gap-2 border-l-2 pl-4">
+                    {rules.map((rule, index) => (
+                        <div
+                            key={ruleKeys[index]}
+                            className="relative min-w-0 before:absolute before:top-5 before:-left-4 before:w-4 before:border-t-2"
+                        >
+                            <RuleEditor
+                                rule={rule}
+                                depth={depth}
+                                advanced={advanced}
+                                onChange={(next) =>
+                                    onChange(
+                                        rules.map((entry, i) =>
+                                            i === index ? next : entry
+                                        )
+                                    )
+                                }
+                                onRemove={() => {
+                                    onChange(
+                                        rules.filter((_, i) => i !== index)
+                                    );
+                                    setRuleKeys((current) =>
+                                        current.filter((_, i) => i !== index)
+                                    );
+                                }}
+                            />
+                        </div>
+                    ))}
+                </div>
+            ) : depth === 0 ? (
+                <span className="text-muted-foreground text-sm">
+                    {t(`${T}.no_rules`)}
+                </span>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-2">
+                <Select
+                    value=""
+                    onValueChange={(value) => {
+                        const kind = RULE_KINDS.find(
+                            (entry) => entry === value
+                        );
+                        if (kind) {
+                            add(newRule(kind));
+                        }
+                    }}
+                >
+                    <SelectTrigger
+                        size="sm"
+                        className="w-56"
+                        aria-label={t(`${T}.add_condition`)}
+                    >
+                        <PlusIcon />
+                        <SelectValue
+                            placeholder={t(`${T}.add_condition_pick`)}
+                        />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {RULE_KINDS.map((kind) => (
+                            <SelectItem key={kind} value={kind}>
+                                {t(`${T}.rule.${kind}`)}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                {depth < CUSTOM_BADGE_GROUP_DEPTH_LIMIT ? (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => add(newRule('group'))}
+                    >
+                        <PlusIcon />
+                        {t(`${T}.add_branch`)}
+                    </Button>
+                ) : null}
+            </div>
+        </div>
+    );
+}
+
 export function BadgeEditor({
     initial,
     onCancel,
@@ -601,18 +860,18 @@ export function BadgeEditor({
 }) {
     const { t } = useTranslation();
     const [draft, setDraft] = useState(initial);
-    const [ruleKind, setRuleKind] = useState<CustomBadgeRuleKind>('users');
-    const [ruleKeys, setRuleKeys] = useState(() =>
-        initial.rules.map(() => nextRuleKey())
+    const [advanced, setAdvanced] = useState(() =>
+        usesAdvancedBadgeLogic(initial.operator ?? 'or', initial.rules)
     );
     const label = draft.label.trim();
-
-    function updateRule(index: number, rule: CustomBadgeRule) {
-        setDraft((current) => ({
-            ...current,
-            rules: current.rules.map((entry, i) => (i === index ? rule : entry))
-        }));
-    }
+    const operator = draft.operator ?? 'or';
+    const friendGroupLabels = useFriendGroupLabels();
+    const chip = (
+        <CustomBadgeChip
+            badge={{ ...draft, label: label || t(`${T}.map.result`) }}
+            size="full"
+        />
+    );
 
     return (
         <div className="flex flex-col gap-3 rounded-lg border p-3">
@@ -664,74 +923,71 @@ export function BadgeEditor({
                     {t(`${T}.icon_now_reserved_detail`)}
                 </p>
             ) : null}
-            <div className="flex flex-col gap-2">
-                {draft.rules.length ? (
-                    draft.rules.map((rule, index) => (
-                        <RuleEditor
-                            key={ruleKeys[index]}
-                            rule={rule}
-                            onChange={(next) => updateRule(index, next)}
-                            onRemove={() => {
-                                setDraft((current) => ({
-                                    ...current,
-                                    rules: current.rules.filter(
-                                        (_, i) => i !== index
-                                    )
-                                }));
-                                setRuleKeys((current) =>
-                                    current.filter((_, i) => i !== index)
-                                );
-                            }}
-                        />
-                    ))
-                ) : (
-                    <span className="text-muted-foreground text-sm">
-                        {t(`${T}.no_rules`)}
-                    </span>
-                )}
-                <div className="flex flex-wrap items-center gap-2">
-                    <Select
-                        value={ruleKind}
-                        onValueChange={(value) => {
-                            const kind = RULE_KINDS.find(
-                                (entry) => entry === value
-                            );
-                            if (kind) {
-                                setRuleKind(kind);
-                            }
+            {draft.assignedUserIds?.length ? (
+                <div className="flex flex-col gap-2">
+                    <p className="text-muted-foreground text-xs">
+                        {t(`${T}.assigned_users`)}
+                    </p>
+                    <RuleEditor
+                        rule={{ kind: 'users', userIds: draft.assignedUserIds }}
+                        depth={0}
+                        advanced={advanced}
+                        allowToggles={false}
+                        onChange={(rule) => {
+                            if (rule.kind === 'users')
+                                setDraft({
+                                    ...draft,
+                                    assignedUserIds: rule.userIds
+                                });
                         }}
-                    >
-                        <SelectTrigger className="w-56">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {RULE_KINDS.map((kind) => (
-                                <SelectItem key={kind} value={kind}>
-                                    {t(`${T}.rule.${kind}`)}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                            setDraft((current) => ({
-                                ...current,
-                                rules: [...current.rules, newRule(ruleKind)]
-                            }));
-                            setRuleKeys((current) => [
-                                ...current,
-                                nextRuleKey()
-                            ]);
-                        }}
-                    >
-                        <PlusIcon />
-                        {t(`${T}.add_rule`)}
-                    </Button>
+                        onRemove={() =>
+                            setDraft({ ...draft, assignedUserIds: [] })
+                        }
+                    />
                 </div>
+            ) : null}
+            <GateSentence
+                lead={t(`${T}.sentence.lead`)}
+                leadOne={t(`${T}.sentence.lead_one`)}
+                rules={draft.rules}
+                operator={operator}
+                advanced={advanced}
+                onChange={(next) =>
+                    setDraft((current) => ({ ...current, operator: next }))
+                }
+            />
+            <RulesEditor
+                rules={draft.rules}
+                advanced={advanced}
+                onChange={(rules) =>
+                    setDraft((current) => ({
+                        ...current,
+                        rules,
+                        operator: current.operator ?? 'or'
+                    }))
+                }
+            />
+            <div className="flex flex-col gap-1 rounded-md border p-2">
+                <span className="text-muted-foreground text-xs font-medium">
+                    {t(`${T}.summary.title`)}
+                </span>
+                <p className="text-sm" data-testid="badge-rule-summary">
+                    {describeCustomBadge(draft, t, {
+                        friendGroupLabel: friendGroupLabels
+                    })}
+                </p>
             </div>
+            <BadgeRuleMap
+                rules={draft.rules}
+                operator={operator}
+                badge={chip}
+                options={{ friendGroupLabel: friendGroupLabels }}
+            />
+            <label className="flex items-center gap-2 text-xs">
+                <Switch checked={advanced} onCheckedChange={setAdvanced} />
+                {t(`${T}.advanced`)}
+            </label>
+            {advanced ? <BadgeRuleGuide /> : null}
             <div className="flex justify-end gap-2">
                 <Button
                     type="button"
@@ -752,4 +1008,22 @@ export function BadgeEditor({
             </div>
         </div>
     );
+}
+
+export function useFriendGroupLabels(): (groupKey: string) => string {
+    const friendGroups = useFavoriteStore(
+        useShallow((state) => ({
+            favoriteFriendGroups: state.favoriteFriendGroups,
+            localFriendFavoriteGroups: state.localFriendFavoriteGroups
+        }))
+    );
+    return useMemo(() => {
+        const labels = new Map(
+            buildFeedFavoriteGroupOptions(friendGroups).map((option) => [
+                option.key,
+                option.label
+            ])
+        );
+        return (groupKey: string) => labels.get(groupKey) ?? groupKey;
+    }, [friendGroups]);
 }

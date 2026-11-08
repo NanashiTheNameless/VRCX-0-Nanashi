@@ -13,6 +13,17 @@ export const CUSTOM_BADGE_MEMO_MAX = 64;
 export const CUSTOM_BADGE_GROUP_MEMBER_LIMIT = 5000;
 export const DEFAULT_CUSTOM_BADGE_ICON = 'Star';
 export const DEFAULT_CUSTOM_BADGE_COLOR = '#3b82f6';
+export const CUSTOM_BADGE_GROUP_DEPTH_LIMIT = 8;
+export const BADGE_RULE_OPERATORS = [
+    'or',
+    'and',
+    'xor',
+    'nand',
+    'nor',
+    'xnor',
+    'xand'
+] as const;
+export type BadgeRuleOperator = (typeof BADGE_RULE_OPERATORS)[number];
 
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 const USER_ID = /^usr_[0-9a-z-]{1,64}$/i;
@@ -72,8 +83,9 @@ export function isReservedBadgeIcon(icon: string): boolean {
     );
 }
 
-export type CustomBadgeRule =
+export type CustomBadgeRule = (
     | { kind: 'users'; userIds: string[] }
+    | { kind: 'self' }
     | { kind: 'friends' }
     | { kind: 'friendGroup'; groupKey: string }
     | {
@@ -93,7 +105,9 @@ export type CustomBadgeRule =
     | { kind: 'status'; status: BadgeStatus }
     | { kind: 'memo'; contains: string }
     | { kind: 'bio'; contains: string }
-    | { kind: 'pronouns'; contains: string };
+    | { kind: 'pronouns'; contains: string }
+    | { kind: 'group'; operator: BadgeRuleOperator; rules: CustomBadgeRule[] }
+) & { negated?: boolean; enabled?: boolean };
 
 export type CustomBadgeRuleKind = CustomBadgeRule['kind'];
 
@@ -103,10 +117,13 @@ export type CustomBadge = {
     icon: string;
     color: string;
     enabled: boolean;
+    operator?: BadgeRuleOperator;
+    assignedUserIds?: string[];
     rules: CustomBadgeRule[];
 };
 
 export type BadgeUserFacts = {
+    isSelf: boolean;
     isFriend: boolean;
     tags: readonly string[];
     hasTrustData: boolean;
@@ -114,7 +131,9 @@ export type BadgeUserFacts = {
     memo: string;
     bio: string;
     pronouns: string;
-    ageVerified: boolean;
+    // null when the profile data does not say (friend list data only has the
+    // status).
+    ageVerified: boolean | null;
     ageVerificationStatus: string;
     platform: string;
     status: string;
@@ -128,6 +147,7 @@ export type CustomBadgeIndex = {
     dynamicBadges: CustomBadge[];
     badgesById: Map<string, CustomBadge>;
     needsFacts: boolean;
+    staticRuleUserIds: Map<CustomBadgeRule, ReadonlySet<string>>;
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -211,14 +231,67 @@ export function normalizeBadgeColor(value: unknown): string {
         : DEFAULT_CUSTOM_BADGE_COLOR;
 }
 
-export function normalizeBadgeRule(value: unknown): CustomBadgeRule | null {
+export function normalizeBadgeRule(
+    value: unknown,
+    depth = 0
+): CustomBadgeRule | null {
+    const rule = normalizeBadgeRuleValue(value, depth);
+    if (!rule) {
+        return null;
+    }
+    const source = asRecord(value);
+    return {
+        ...rule,
+        ...(source.negated === true ? { negated: true } : {}),
+        ...(source.enabled === false ? { enabled: false } : {})
+    };
+}
+
+// A disabled condition left incomplete is dropped on its own. Any other
+// invalid condition makes the whole list invalid, since leaving it out would
+// change what the expression means.
+function normalizeBadgeRuleList(
+    values: readonly unknown[],
+    depth: number
+): CustomBadgeRule[] | null {
+    const rules: CustomBadgeRule[] = [];
+    for (const value of values) {
+        const rule = normalizeBadgeRule(value, depth);
+        if (rule) {
+            rules.push(rule);
+        } else if (asRecord(value).enabled !== false) {
+            return null;
+        }
+    }
+    return rules;
+}
+
+function normalizeBadgeRuleValue(
+    value: unknown,
+    depth: number
+): CustomBadgeRule | null {
     const source = asRecord(value);
     switch (source.kind) {
+        case 'group': {
+            if (
+                depth >= CUSTOM_BADGE_GROUP_DEPTH_LIMIT ||
+                !oneOf(BADGE_RULE_OPERATORS, source.operator) ||
+                !Array.isArray(source.rules)
+            ) {
+                return null;
+            }
+            const rules = normalizeBadgeRuleList(source.rules, depth + 1);
+            return rules
+                ? { kind: 'group', operator: source.operator, rules }
+                : null;
+        }
         case 'users':
             return {
                 kind: 'users',
                 userIds: normalizeBadgeUserIds(source.userIds)
             };
+        case 'self':
+            return { kind: 'self' };
         case 'friends':
             return { kind: 'friends' };
         case 'supporter':
@@ -290,15 +363,31 @@ export function normalizeCustomBadge(value: unknown): CustomBadge | null {
     if (!id || !label) {
         return null;
     }
-    const rules = (Array.isArray(source.rules) ? source.rules : [])
-        .map(normalizeBadgeRule)
-        .filter((rule): rule is CustomBadgeRule => rule !== null);
+    if (
+        source.operator !== undefined &&
+        !oneOf(BADGE_RULE_OPERATORS, source.operator)
+    ) {
+        return null;
+    }
+    const sourceRules = Array.isArray(source.rules) ? source.rules : [];
+    const rules =
+        source.operator === undefined
+            ? sourceRules
+                  .map((rule) => normalizeBadgeRule(rule))
+                  .filter((rule): rule is CustomBadgeRule => rule !== null)
+            : (normalizeBadgeRuleList(sourceRules, 0) ?? []);
     return {
         id,
         label,
         icon: normalizeBadgeIcon(source.icon),
         color: normalizeBadgeColor(source.color),
         enabled: source.enabled !== false,
+        ...(source.operator !== undefined
+            ? { operator: source.operator as BadgeRuleOperator }
+            : {}),
+        ...(Array.isArray(source.assignedUserIds)
+            ? { assignedUserIds: normalizeBadgeUserIds(source.assignedUserIds) }
+            : {}),
         rules
     };
 }
@@ -327,8 +416,26 @@ export function normalizeCustomBadges(value: unknown): CustomBadge[] {
     return badges;
 }
 
-function isDynamicRule(rule: CustomBadgeRule): boolean {
+export function isBadgeRuleEnabled(rule: CustomBadgeRule): boolean {
     return (
+        rule.enabled !== false &&
+        (rule.kind !== 'group' || rule.rules.some(isBadgeRuleEnabled))
+    );
+}
+
+export function enabledBadgeRules(
+    rules: readonly CustomBadgeRule[]
+): CustomBadgeRule[] {
+    return rules.filter(isBadgeRuleEnabled);
+}
+
+function isDynamicRule(rule: CustomBadgeRule): boolean {
+    if (!isBadgeRuleEnabled(rule)) {
+        return false;
+    }
+    return (
+        (rule.kind === 'group' && rule.rules.some(isDynamicRule)) ||
+        rule.kind === 'self' ||
         rule.kind === 'friends' ||
         rule.kind === 'trust' ||
         rule.kind === 'supporter' ||
@@ -351,24 +458,45 @@ export function buildCustomBadgeIndex(
     const dynamicBadges: CustomBadge[] = [];
     const badgesById = new Map<string, CustomBadge>();
     let needsFacts = false;
+    const staticRuleUserIds = new Map<CustomBadgeRule, ReadonlySet<string>>();
+
+    function indexRule(rule: CustomBadgeRule) {
+        if (!isBadgeRuleEnabled(rule)) {
+            return;
+        }
+        if (rule.kind === 'group') {
+            rule.rules.forEach(indexRule);
+        } else if (rule.kind === 'users') {
+            staticRuleUserIds.set(rule, new Set(rule.userIds));
+        } else if (rule.kind === 'friendGroup') {
+            staticRuleUserIds.set(
+                rule,
+                new Set(
+                    collectFavoriteGroupFriendIds(
+                        [rule.groupKey],
+                        remoteFriendIdsByGroupKey,
+                        localFriendFavorites
+                    )
+                )
+            );
+        }
+    }
 
     for (const badge of badges) {
         if (!badge.enabled) {
             continue;
         }
         badgesById.set(badge.id, badge);
-        const ids = new Set<string>();
-        for (const rule of badge.rules) {
-            if (rule.kind === 'users') {
-                for (const id of rule.userIds) {
-                    ids.add(id);
+        const rules = enabledBadgeRules(badge.rules);
+        rules.forEach(indexRule);
+        const ids = new Set(badge.assignedUserIds ?? []);
+        const operator = rules.length < 2 ? 'or' : (badge.operator ?? 'or');
+        if (operator === 'or') {
+            for (const rule of rules) {
+                if (rule.negated) {
+                    continue;
                 }
-            } else if (rule.kind === 'friendGroup') {
-                for (const id of collectFavoriteGroupFriendIds(
-                    [rule.groupKey],
-                    remoteFriendIdsByGroupKey,
-                    localFriendFavorites
-                )) {
+                for (const id of staticRuleUserIds.get(rule) ?? []) {
                     ids.add(id);
                 }
             }
@@ -381,13 +509,25 @@ export function buildCustomBadgeIndex(
                 byUserId.set(id, [badge.id]);
             }
         }
-        if (badge.rules.some(isDynamicRule)) {
+        if (
+            operator !== 'or' ||
+            rules.some(
+                (rule) =>
+                    rule.negated || rule.kind === 'group' || isDynamicRule(rule)
+            )
+        ) {
             dynamicBadges.push(badge);
-            needsFacts = true;
         }
+        needsFacts ||= rules.some(isDynamicRule);
     }
 
-    return { byUserId, dynamicBadges, badgesById, needsFacts };
+    return {
+        byUserId,
+        dynamicBadges,
+        badgesById,
+        needsFacts,
+        staticRuleUserIds
+    };
 }
 
 const NO_GROUP_KNOWLEDGE = () => null;
@@ -404,7 +544,8 @@ export function badgeUserFactsFrom(
     fact: Record<string, unknown> | null | undefined,
     isFriend: boolean,
     userId = '',
-    groupMembership: (groupId: string) => boolean | null = NO_GROUP_KNOWLEDGE
+    groupMembership: (groupId: string) => boolean | null = NO_GROUP_KNOWLEDGE,
+    currentUserId: string | null = null
 ): BadgeUserFacts {
     const tags = Array.isArray(fact?.tags)
         ? fact.tags.filter((tag): tag is string => typeof tag === 'string')
@@ -418,6 +559,7 @@ export function badgeUserFactsFrom(
             fact.$isProbableTroll)
     );
     return {
+        isSelf: Boolean(userId) && userId === currentUserId,
         isFriend,
         tags,
         hasTrustData,
@@ -427,7 +569,8 @@ export function badgeUserFactsFrom(
             .join('\n'),
         bio: stringField(fact, 'bio'),
         pronouns: stringField(fact, 'pronouns'),
-        ageVerified: fact?.ageVerified === true,
+        ageVerified:
+            typeof fact?.ageVerified === 'boolean' ? fact.ageVerified : null,
         ageVerificationStatus: stringField(fact, 'ageVerificationStatus'),
         platform:
             stringField(fact, 'last_platform') || stringField(fact, 'platform'),
@@ -475,24 +618,36 @@ function vrchatGroupRuleMatches(
     return fromOwnList === true || inStoredList;
 }
 
-// Same test as the age verified chip in the user dialog, so a badge agrees
-// with what the profile shows.
+// VRChat shows age verification as a status: "18+" or "verified" when shown,
+// "hidden" when the user hides it. Friend list data carries only the status,
+// so it decides on its own; a profile that says ageVerified is false never
+// matches. The player list and wrist overlay read "18+" the same way.
 function ageRuleMatches(level: BadgeAgeLevel, facts: BadgeUserFacts): boolean {
-    if (!facts.ageVerified || !facts.ageVerificationStatus) {
+    const status = facts.ageVerificationStatus;
+    if (
+        facts.ageVerified === false ||
+        (status !== '18+' && status !== 'verified')
+    ) {
         return false;
     }
-    return level === 'any' || facts.ageVerificationStatus === '18+';
+    return level === 'any' || status === '18+';
 }
 
 /** Groups referenced by the badges' group rules. */
 export function badgeRuleGroupIds(badges: readonly CustomBadge[]): string[] {
     const ids = new Set<string>();
-    for (const badge of badges) {
-        for (const rule of badge.rules) {
-            if (rule.kind === 'vrchatGroup') {
-                ids.add(rule.groupId);
-            }
+    function visit(rule: CustomBadgeRule) {
+        if (!isBadgeRuleEnabled(rule)) {
+            return;
         }
+        if (rule.kind === 'group') {
+            rule.rules.forEach(visit);
+        } else if (rule.kind === 'vrchatGroup') {
+            ids.add(rule.groupId);
+        }
+    }
+    for (const badge of badges) {
+        badge.rules.forEach(visit);
     }
     return [...ids];
 }
@@ -502,6 +657,8 @@ function dynamicRuleMatches(
     facts: BadgeUserFacts
 ): boolean {
     switch (rule.kind) {
+        case 'self':
+            return facts.isSelf;
         case 'friends':
             return facts.isFriend;
         case 'supporter':
@@ -527,6 +684,57 @@ function dynamicRuleMatches(
     }
 }
 
+export function combineBadgeRules(
+    operator: BadgeRuleOperator,
+    matches: readonly boolean[]
+): boolean {
+    if (!matches.length) {
+        return false;
+    }
+    if (matches.length === 1) {
+        return matches[0];
+    }
+    const count = matches.filter(Boolean).length;
+    switch (operator) {
+        case 'or':
+            return count > 0;
+        case 'and':
+            return count === matches.length;
+        case 'xor':
+            return count % 2 === 1;
+        case 'nand':
+            return count !== matches.length;
+        case 'nor':
+            return count === 0;
+        case 'xnor':
+        case 'xand':
+            return count % 2 === 0;
+    }
+}
+
+function ruleMatches(
+    rule: CustomBadgeRule,
+    index: CustomBadgeIndex,
+    userId: string,
+    facts: BadgeUserFacts | null
+): boolean {
+    if (!isBadgeRuleEnabled(rule)) {
+        return false;
+    }
+    const matched =
+        rule.kind === 'group'
+            ? combineBadgeRules(
+                  rule.operator,
+                  enabledBadgeRules(rule.rules).map((child) =>
+                      ruleMatches(child, index, userId, facts)
+                  )
+              )
+            : rule.kind === 'users' || rule.kind === 'friendGroup'
+              ? index.staticRuleUserIds.get(rule)?.has(userId) === true
+              : facts !== null && dynamicRuleMatches(rule, facts);
+    return rule.negated ? !matched : matched;
+}
+
 export function resolveUserCustomBadges(
     index: CustomBadgeIndex,
     userId: string,
@@ -536,14 +744,17 @@ export function resolveUserCustomBadges(
         return [];
     }
     const matched = new Set(index.byUserId.get(userId) ?? []);
-    if (facts) {
-        for (const badge of index.dynamicBadges) {
-            if (
-                !matched.has(badge.id) &&
-                badge.rules.some((rule) => dynamicRuleMatches(rule, facts))
-            ) {
-                matched.add(badge.id);
-            }
+    for (const badge of index.dynamicBadges) {
+        if (
+            !matched.has(badge.id) &&
+            combineBadgeRules(
+                badge.operator ?? 'or',
+                enabledBadgeRules(badge.rules).map((rule) =>
+                    ruleMatches(rule, index, userId, facts)
+                )
+            )
+        ) {
+            matched.add(badge.id);
         }
     }
     const result: CustomBadge[] = [];
@@ -573,8 +784,16 @@ export function isUserListedOnBadge(
     badge: CustomBadge,
     userId: string
 ): boolean {
-    return badge.rules.some(
-        (rule) => rule.kind === 'users' && rule.userIds.includes(userId)
+    return (
+        badge.assignedUserIds?.includes(userId) === true ||
+        ((badge.operator ?? 'or') === 'or' &&
+            badge.rules.some(
+                (rule) =>
+                    rule.kind === 'users' &&
+                    isBadgeRuleEnabled(rule) &&
+                    !rule.negated &&
+                    rule.userIds.includes(userId)
+            ))
     );
 }
 
@@ -585,11 +804,40 @@ export function setUserListedOnBadge(
     userId: string,
     listed: boolean
 ): CustomBadge {
+    if (badge.assignedUserIds || (badge.operator ?? 'or') !== 'or') {
+        if (!listed) {
+            const next = {
+                ...badge,
+                assignedUserIds: badge.assignedUserIds?.filter(
+                    (id) => id !== userId
+                )
+            };
+            if ((badge.operator ?? 'or') !== 'or') {
+                return next;
+            }
+            badge = next;
+        } else {
+            return isUserListedOnBadge(badge, userId)
+                ? badge
+                : {
+                      ...badge,
+                      assignedUserIds: [
+                          ...(badge.assignedUserIds ?? []),
+                          userId
+                      ]
+                  };
+        }
+    }
     if (listed) {
         if (isUserListedOnBadge(badge, userId)) {
             return badge;
         }
-        const index = badge.rules.findIndex((rule) => rule.kind === 'users');
+        const index = badge.rules.findIndex(
+            (rule) =>
+                rule.kind === 'users' &&
+                isBadgeRuleEnabled(rule) &&
+                !rule.negated
+        );
         if (index < 0) {
             return {
                 ...badge,
@@ -609,14 +857,21 @@ export function setUserListedOnBadge(
         ...badge,
         rules: badge.rules
             .map((rule) =>
-                rule.kind === 'users'
+                rule.kind === 'users' &&
+                isBadgeRuleEnabled(rule) &&
+                !rule.negated
                     ? {
                           ...rule,
                           userIds: rule.userIds.filter((id) => id !== userId)
                       }
                     : rule
             )
-            .filter((rule) => rule.kind !== 'users' || rule.userIds.length > 0)
+            .filter(
+                (rule) =>
+                    rule.kind !== 'users' ||
+                    rule.negated ||
+                    rule.userIds.length > 0
+            )
     };
 }
 

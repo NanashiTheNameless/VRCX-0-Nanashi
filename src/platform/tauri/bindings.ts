@@ -576,6 +576,18 @@ export const commands = {
             text,
             locale
         }),
+    appAssistantEditMessage: (
+        sessionId: string,
+        userIndex: number,
+        text: string,
+        locale: string | null
+    ) =>
+        __TAURI_INVOKE<SendResult>('app__assistant_edit_message', {
+            sessionId,
+            userIndex,
+            text,
+            locale
+        }),
     appAssistantCancel: (sessionId: string) =>
         __TAURI_INVOKE<null>('app__assistant_cancel', { sessionId }),
     appAssistantAnswerChoice: (
@@ -587,6 +599,16 @@ export const commands = {
             sessionId,
             choiceId,
             userId
+        }),
+    appAssistantAnswerClientRequest: (
+        sessionId: string,
+        requestId: string,
+        response: JsonValue | null
+    ) =>
+        __TAURI_INVOKE<null>('app__assistant_answer_client_request', {
+            sessionId,
+            requestId,
+            response
         }),
     appAssistantListSessions: () =>
         __TAURI_INVOKE<SessionSummary[]>('app__assistant_list_sessions'),
@@ -619,25 +641,25 @@ export const commands = {
         sessionId: string,
         endpointId: string | null,
         model: string | null,
-        allowWrites: boolean,
+        allowEditRequests: boolean,
         playbookMode: PlaybookMode
     ) =>
         __TAURI_INVOKE<Session>('app__assistant_set_session_runtime', {
             sessionId,
             endpointId,
             model,
-            allowWrites,
+            allowEditRequests,
             playbookMode
         }),
     appAssistantSetDefaultRuntime: (
         endpointId: string | null,
         model: string | null,
-        allowWrites: boolean,
+        allowEditRequests: boolean,
         playbookMode: PlaybookMode
     ) =>
         __TAURI_INVOKE<AssistantRuntimeSelection>(
             'app__assistant_set_default_runtime',
-            { endpointId, model, allowWrites, playbookMode }
+            { endpointId, model, allowEditRequests, playbookMode }
         ),
     appLlmEndpointFollowCustomProxy: () =>
         __TAURI_INVOKE<boolean>('app__llm_endpoint_follow_custom_proxy'),
@@ -1136,6 +1158,16 @@ export const commands = {
     appFriendProfileBioList: (ownerUserId: OwnerId) =>
         __TAURI_INVOKE<ProfileBioOutput[]>('app__friend_profile_bio_list', {
             ownerUserId
+        }),
+    appProfileHistorySettingsGet: () =>
+        __TAURI_INVOKE<ProfileHistorySettings>(
+            'app__profile_history_settings_get'
+        ),
+    appProfileHistorySettingsSet: (settings: ProfileHistorySettings) =>
+        __TAURI_INVOKE<null>('app__profile_history_settings_set', { settings }),
+    appProfileHistoryQuery: (query: ProfileHistoryQuery) =>
+        __TAURI_INVOKE<ProfileHistoryEntry[]>('app__profile_history_query', {
+            query
         }),
     appNotificationListQuery: (query: NotificationListQueryInput) =>
         __TAURI_INVOKE<NotificationListItemOutput[]>(
@@ -2259,6 +2291,11 @@ export const commands = {
             defaultName,
             json
         }),
+    appSaveJsoncFile: (defaultName: string, content: string) =>
+        __TAURI_INVOKE<string>('app__save_jsonc_file', {
+            defaultName,
+            content
+        }),
     appCommunityThemeDebugLoadLocalTheme: (folderPath: string) =>
         __TAURI_INVOKE<CommunityThemeDebugLocalThemeOutput>(
             'app__community_theme_debug_load_local_theme',
@@ -3296,6 +3333,22 @@ export type AssistantChoiceRequestEvent = {
     candidates: AssistantChoiceCandidate[];
 };
 
+/**
+ *  A tool the app window answers: a settings lookup, opening Settings, or an
+ *  approval card for an edit. `kind` is the tool name, or `approve_edit` for an
+ *  edit tool that runs once approved.
+ */
+export type AssistantClientRequestEvent = {
+    ownerUserId: OwnerId;
+    sessionId: string;
+    turnId: string;
+    toolCallId: string;
+    requestId: string;
+    kind: string;
+    tool: string;
+    arguments: JsonValue;
+};
+
 export type AssistantDeltaEvent = {
     ownerUserId: OwnerId;
     sessionId: string;
@@ -3321,7 +3374,7 @@ export type AssistantErrorEvent = {
 export type AssistantRuntimeSelection = {
     endpointId: string | null;
     model: string | null;
-    allowWrites: boolean;
+    allowEditRequests?: boolean;
     playbookMode: PlaybookMode;
 };
 
@@ -7221,6 +7274,36 @@ export type ProfileDecorationEquipSlot =
     | 'profileEffect'
     | 'nameplateEffect';
 
+export type ProfileHistoryChoice = {
+    recording?: boolean;
+    sync?: boolean;
+};
+
+export type ProfileHistoryEntry = {
+    id: number;
+    field: ProfileHistoryField;
+    property: string;
+    createdAt: number;
+    previousValue: string;
+    value: string;
+};
+
+export type ProfileHistoryField = 'status' | 'bio' | 'pronouns';
+
+export type ProfileHistoryQuery = {
+    userId: string;
+    field: ProfileHistoryField | null;
+    beforeId: number | null;
+    beforeAt: number | null;
+    beforeField: ProfileHistoryField | null;
+};
+
+export type ProfileHistorySettings = {
+    status?: ProfileHistoryChoice;
+    bio?: ProfileHistoryChoice;
+    pronouns?: ProfileHistoryChoice;
+};
+
 /**  Rows added per table, for the result summary. */
 export type ProfileMergeReport = {
     tablesMerged: number;
@@ -8196,7 +8279,7 @@ export type Session = {
     activeTurn: ActiveTurn | null;
     endpointId: string | null;
     model: string | null;
-    allowWrites: boolean;
+    allowEditRequests: boolean;
     playbookMode: PlaybookMode;
     entityPanelOpen: boolean;
     surfacedEntities: Entity[];

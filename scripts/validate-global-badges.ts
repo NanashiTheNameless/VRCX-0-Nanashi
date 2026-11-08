@@ -14,7 +14,11 @@ type Validator = {
     ) => string[];
 };
 
-type IconCatalog = { BADGE_ICON_NAMES: readonly string[] };
+type LabCatalog = {
+    labIcons: (
+        isLucideIcon: (name: string) => boolean
+    ) => Record<string, unknown>;
+};
 
 function readJsonc(file: string): unknown {
     const errors: ParseError[] = [];
@@ -47,12 +51,18 @@ const validator = (await import(
     new URL('../src/domain/badges/globalBadges.ts', import.meta.url).href
 )) as Validator;
 
-// The icons the app can draw (Lucide plus Lucide Lab), so a misspelt or
-// missing icon fails here instead of showing as the default in the app.
-const { BADGE_ICON_NAMES } = (await import(
-    new URL('../src/components/badges/badgeIconCatalog.ts', import.meta.url)
+// The icons the app can draw (Lucide plus Lucide Lab, put together the way
+// src/components/badges/badgeIcons.ts does), so a misspelt or missing icon
+// fails here instead of showing as the default in the app.
+const { icons: lucideIcons } = await import('lucide-react');
+const { labIcons } = (await import(
+    new URL('../src/components/badges/badgeIconCatalogLab.ts', import.meta.url)
         .href
-)) as IconCatalog;
+)) as LabCatalog;
+const BADGE_ICON_NAMES = [
+    ...Object.keys(lucideIcons),
+    ...Object.keys(labIcons((name) => name in lucideIcons))
+];
 
 const data = readJsonc(path.resolve(file));
 const problems = validator.validateGlobalBadgeFile(data, {

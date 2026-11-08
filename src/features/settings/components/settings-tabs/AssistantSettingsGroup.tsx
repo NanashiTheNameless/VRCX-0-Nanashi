@@ -39,7 +39,7 @@ type AssistantSettingsGroupProps = {
 const EMPTY_SELECTION: AssistantRuntimeSelection = {
     endpointId: null,
     model: null,
-    allowWrites: false,
+    allowEditRequests: true,
     playbookMode: 'auto'
 };
 
@@ -109,7 +109,7 @@ export function AssistantSettingsGroup({
                 await commands.appAssistantSetDefaultRuntime(
                     next.endpointId,
                     next.model,
-                    next.allowWrites,
+                    next.allowEditRequests ?? true,
                     next.playbookMode
                 )
             );
@@ -256,6 +256,25 @@ export function AssistantSettingsGroup({
                                     </SelectGroup>
                                 </SelectContent>
                             </Select>
+                        </Field>
+
+                        <Field
+                            settingId="ai.assistant.disallow-edit-requests"
+                            label={t(
+                                'assistant.runtime.disallow_edit_requests'
+                            )}
+                            description={t(
+                                'view.settings.ai.disallow_edit_requests_description'
+                            )}
+                        >
+                            <Switch
+                                checked={selection.allowEditRequests === false}
+                                onCheckedChange={(disallow) =>
+                                    void updateSelection({
+                                        allowEditRequests: !disallow
+                                    })
+                                }
+                            />
                         </Field>
                     </>
                 )}

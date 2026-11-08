@@ -253,6 +253,15 @@ export const protectedRoutes: AppRouteDefinition[] = [
         )
     },
     {
+        path: '/docs',
+        titleKey: 'view.docs.title',
+        descriptionKey: 'view.docs.description',
+        element: lazyRouteElement(
+            () => import('@/features/docs/DocsPage'),
+            'DocsPage'
+        )
+    },
+    {
         path: '/reminders',
         titleKey: 'view.reminders.title',
         descriptionKey: 'view.reminders.description',
