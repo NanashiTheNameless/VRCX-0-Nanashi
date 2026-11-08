@@ -64,4 +64,6 @@ jobs:
                           --latest=false
                   fi
                   gh release upload "$TAG" "$RUNNER_TEMP/out/$FILE" "$RUNNER_TEMP/out/$FILE.sig" --clobber
+                  gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" \
+                      -f sha="$GITHUB_SHA" -F force=true >/dev/null
                   gh release edit "$TAG" --latest=false --prerelease=false
