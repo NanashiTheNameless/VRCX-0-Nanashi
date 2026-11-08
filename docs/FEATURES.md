@@ -67,6 +67,10 @@ Automatic recording is limited to friends, players currently in your instance, a
 own profile. Opening another user's profile allows that observation without starting
 ongoing tracking after they leave.
 
+**Refresh all friend profiles**, on the Friends page, fetches fresh profile data for the entire
+friend roster, including profiles whose details were already loaded or cached. A 5-minute
+cooldown follows completion or cancellation, with a countdown on the button.
+
 The server collector records the same profile fields using its own copy of the primary
 PC's recording and sync choices. The primary PC is the selected Server deduplication
 device; its next History Sync updates the collector without changing other PCs' choices.

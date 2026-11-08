@@ -1,4 +1,5 @@
 import {
+    RefreshCwIcon,
     UserMinusIcon,
     UserRoundSearchIcon,
     WaypointsIcon
@@ -15,7 +16,13 @@ import {
     ToolbarStatus,
     ToolbarViews
 } from '@/components/layout/ToolbarControls';
+import {
+    friendProfileRefreshScopeKey,
+    useFriendProfileRefreshStore
+} from '@/services/friendProfileLoadService';
+import { SECOND_MS } from '@/shared/constants/time';
 import { useRoomMutualScanStore } from '@/state/roomMutualScanStore';
+import { useRuntimeStore } from '@/state/runtimeStore';
 import { Button } from '@/ui/shadcn/button';
 import { DropdownMenuGroup, DropdownMenuItem } from '@/ui/shadcn/dropdown-menu';
 import { Spinner } from '@/ui/shadcn/spinner';
@@ -56,6 +63,7 @@ export function FriendListToolbar({
         onBulkUnfriend: () => void;
         onBulkUnfriendModeChange: (value: boolean) => void;
         onLoadFriendUserDetails: () => void;
+        onRefreshAllFriends: () => void;
         onLoadMutualFriends: () => void;
         onResetTableLayout: () => void;
         onSearchChange: (value: string) => void;
@@ -82,12 +90,26 @@ export function FriendListToolbar({
         onBulkUnfriend,
         onBulkUnfriendModeChange,
         onLoadFriendUserDetails,
+        onRefreshAllFriends,
         onLoadMutualFriends,
         onResetTableLayout,
         onSearchChange,
         onSearchFilterChange,
         onToggleFavoritesOnly
     } = toolbarCommands;
+    const endpoint = useRuntimeStore((state) => state.auth.currentUserEndpoint);
+    const refreshScope = friendProfileRefreshScopeKey(currentUserId, endpoint);
+    const refreshCooldownSeconds = useFriendProfileRefreshStore((state) =>
+        Math.max(
+            0,
+            Math.ceil(
+                ((state.cooldowns[refreshScope] ?? 0) - state.now) / SECOND_MS
+            )
+        )
+    );
+    const refreshPending = useFriendProfileRefreshStore(
+        (state) => state.pending
+    );
     const roomMutualScanRunning = useRoomMutualScanStore(
         (state) => state.running
     );
@@ -202,6 +224,31 @@ export function FriendListToolbar({
                             <UserRoundSearchIcon data-icon="inline-start" />
                         )}
                         {t('view.friend_list.load')}
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        disabled={
+                            !currentUserId ||
+                            isLoadingUserDetails ||
+                            refreshPending ||
+                            refreshCooldownSeconds > 0
+                        }
+                        onClick={onRefreshAllFriends}
+                        title={
+                            refreshCooldownSeconds > 0
+                                ? t('view.friend_list.refresh_all_cooldown', {
+                                      count: refreshCooldownSeconds
+                                  })
+                                : t('view.friend_list.refresh_all_description')
+                        }
+                    >
+                        <RefreshCwIcon data-icon="inline-start" />
+                        {refreshCooldownSeconds > 0
+                            ? t('view.friend_list.refresh_all_cooldown_label', {
+                                  count: refreshCooldownSeconds
+                              })
+                            : t('view.friend_list.refresh_all')}
                     </Button>
                     <TableColumnVisibilityMenu
                         table={table}

@@ -845,8 +845,27 @@ async fn a_friends_first_recorded_bio_only_becomes_the_baseline_without_a_feed_e
 }
 
 #[tokio::test]
+async fn status_and_bio_backfill_require_recording_to_be_enabled() {
+    let desktop = Desktop::new("backfill-profile-history-default-off");
+    desktop.store_bio("usr_a", "old", 0);
+    let synced = desktop
+        .sync(&[
+            friend_snapshot(1, 0, 0),
+            friend_changed_status(2, 20, "busy", "afk"),
+            profile_seen(3, 30, json!({"id":"usr_a","displayName":"A","bio":"new"})),
+        ])
+        .await;
+    assert_eq!(synced.inserted, 0);
+    assert!(desktop.feed().is_empty());
+    assert_eq!(desktop.stored_bio("usr_a").as_deref(), Some("new"));
+}
+
+#[tokio::test]
 async fn a_friends_bio_change_while_closed_appears_in_the_feed_with_the_time_the_recorder_saw_it() {
     let desktop = Desktop::new("backfill-bio-change");
+    let mut settings = vrcx_0_persistence::profile_history::settings_get(&desktop.db).unwrap();
+    settings.bio.recording = true;
+    vrcx_0_persistence::profile_history::settings_set(&desktop.db, &settings).unwrap();
     desktop.store_bio("usr_a", "old", 0);
 
     desktop
@@ -975,6 +994,9 @@ async fn a_sync_can_be_retried_without_duplicating_rows() {
 #[tokio::test]
 async fn only_online_offline_location_status_avatar_and_bio_entries_are_backfilled() {
     let desktop = Desktop::new("backfill-entry-kinds");
+    let mut settings = vrcx_0_persistence::profile_history::settings_get(&desktop.db).unwrap();
+    settings.status.recording = true;
+    vrcx_0_persistence::profile_history::settings_set(&desktop.db, &settings).unwrap();
 
     let synced = desktop
         .sync(&[

@@ -5,6 +5,7 @@ import { useRuntimeStore } from '@/state/runtimeStore';
 
 const mocks = vi.hoisted(() => ({
     appFriendProfileLoadStart: vi.fn(),
+    appFriendProfileRefreshAll: vi.fn(),
     appFriendProfileLoadCancel: vi.fn(),
     toastAdd: vi.fn()
 }));
@@ -12,6 +13,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
         appFriendProfileLoadStart: mocks.appFriendProfileLoadStart,
+        appFriendProfileRefreshAll: mocks.appFriendProfileRefreshAll,
         appFriendProfileLoadCancel: mocks.appFriendProfileLoadCancel
     }
 }));
@@ -30,7 +32,9 @@ import {
     minimizeFriendProfileLoadDialog,
     openFriendProfileLoadDialog,
     resetFriendProfileLoadService,
-    startFriendProfileLoad
+    startFriendProfileLoad,
+    useFriendProfileRefreshStore,
+    friendProfileRefreshScopeKey
 } from './friendProfileLoadService';
 
 function runningPayload() {
@@ -72,6 +76,7 @@ describe('friendProfileLoadService', () => {
         resetFriendProfileLoadService();
         useRuntimeStore.getState().resetRuntimeState();
         mocks.appFriendProfileLoadStart.mockReset();
+        mocks.appFriendProfileRefreshAll.mockReset();
         mocks.appFriendProfileLoadCancel.mockReset();
         mocks.toastAdd.mockReset();
         vi.useRealTimers();
@@ -90,6 +95,137 @@ describe('friendProfileLoadService', () => {
             processedFriends: 0,
             dialogOpen: true
         });
+    });
+
+    it('refreshes every friend through the refresh command and opens progress', async () => {
+        mocks.appFriendProfileRefreshAll.mockResolvedValue(runningPayload());
+        await startFriendProfileLoad(true);
+        expect(mocks.appFriendProfileRefreshAll).toHaveBeenCalledTimes(1);
+        expect(mocks.appFriendProfileLoadStart).not.toHaveBeenCalled();
+        expect(useRuntimeStore.getState().friendProfileLoad).toMatchObject({
+            status: 'running',
+            totalFriends: 3,
+            dialogOpen: true
+        });
+    });
+
+    it('starts five minutes of cooldown at completion and keeps it after progress resets', async () => {
+        vi.useFakeTimers();
+        mocks.appFriendProfileRefreshAll.mockResolvedValue(runningPayload());
+        await startFriendProfileLoad(true);
+
+        await vi.advanceTimersByTimeAsync(600_000);
+        applyFriendProfileLoadStatusPayload(completedPayload());
+        const scope = friendProfileRefreshScopeKey('', '');
+        expect(useFriendProfileRefreshStore.getState().cooldowns[scope]).toBe(
+            Date.now() + 300_000
+        );
+
+        await vi.advanceTimersByTimeAsync(5000);
+        expect(useRuntimeStore.getState().friendProfileLoad.status).toBe(
+            'idle'
+        );
+        await startFriendProfileLoad(true);
+        expect(mocks.appFriendProfileRefreshAll).toHaveBeenCalledTimes(1);
+        expect(mocks.toastAdd).toHaveBeenCalledWith({
+            type: 'info',
+            title: 'view.friend_list.refresh_all_cooldown'
+        });
+
+        mocks.appFriendProfileLoadStart.mockResolvedValue(
+            completedPayload({ runId: 2 })
+        );
+        await startFriendProfileLoad();
+        expect(mocks.appFriendProfileLoadStart).toHaveBeenCalledTimes(1);
+
+        await vi.advanceTimersByTimeAsync(294_999);
+        await startFriendProfileLoad(true);
+        expect(mocks.appFriendProfileRefreshAll).toHaveBeenCalledTimes(1);
+        await vi.advanceTimersByTimeAsync(1);
+        mocks.appFriendProfileRefreshAll.mockResolvedValue({
+            ...runningPayload(),
+            runId: 3
+        });
+        await startFriendProfileLoad(true);
+        expect(mocks.appFriendProfileRefreshAll).toHaveBeenCalledTimes(2);
+    });
+
+    it('starts cooldown after cancellation without extending it for duplicate events', async () => {
+        vi.useFakeTimers();
+        mocks.appFriendProfileRefreshAll.mockResolvedValue(runningPayload());
+        await startFriendProfileLoad(true);
+        const cancelled = {
+            ...completedPayload(),
+            status: 'cancelled' as const
+        };
+        applyFriendProfileLoadStatusPayload(cancelled);
+        const cooldowns = useFriendProfileRefreshStore.getState().cooldowns;
+        await vi.advanceTimersByTimeAsync(1000);
+        applyFriendProfileLoadStatusPayload(cancelled);
+        expect(useFriendProfileRefreshStore.getState().cooldowns).toBe(
+            cooldowns
+        );
+        await startFriendProfileLoad(true);
+        expect(mocks.appFriendProfileRefreshAll).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps cooldowns separate by account and endpoint when switching back', async () => {
+        vi.useFakeTimers();
+        useRuntimeStore.getState().setAuthBootstrap({
+            currentUserId: 'usr_a',
+            currentUserEndpoint: 'https://api.vrchat.cloud/api/1'
+        });
+        mocks.appFriendProfileRefreshAll.mockResolvedValue(completedPayload());
+        await startFriendProfileLoad(true);
+
+        useRuntimeStore.getState().setAuthBootstrap({ currentUserId: 'usr_b' });
+        mocks.appFriendProfileRefreshAll.mockResolvedValue(
+            completedPayload({ runId: 2 })
+        );
+        await startFriendProfileLoad(true);
+        expect(mocks.appFriendProfileRefreshAll).toHaveBeenCalledTimes(2);
+
+        useRuntimeStore.getState().setAuthBootstrap({ currentUserId: 'usr_a' });
+        await startFriendProfileLoad(true);
+        expect(mocks.appFriendProfileRefreshAll).toHaveBeenCalledTimes(2);
+
+        useRuntimeStore.getState().setAuthBootstrap({
+            currentUserEndpoint: 'https://example.com/api/1'
+        });
+        mocks.appFriendProfileRefreshAll.mockResolvedValue(
+            completedPayload({ runId: 3 })
+        );
+        await startFriendProfileLoad(true);
+        expect(mocks.appFriendProfileRefreshAll).toHaveBeenCalledTimes(3);
+    });
+
+    it('handles completion arriving before the start response', async () => {
+        vi.useFakeTimers();
+        const pending = deferred<FriendProfileLoadStatusPayload>();
+        mocks.appFriendProfileRefreshAll.mockReturnValue(pending.promise);
+        const start = startFriendProfileLoad(true);
+        await startFriendProfileLoad(true);
+        expect(mocks.appFriendProfileRefreshAll).toHaveBeenCalledTimes(1);
+        applyFriendProfileLoadStatusPayload(completedPayload());
+        pending.resolve(runningPayload());
+        await start;
+        await startFriendProfileLoad(true);
+        expect(mocks.appFriendProfileRefreshAll).toHaveBeenCalledTimes(1);
+        expect(useFriendProfileRefreshStore.getState().pending).toBe(false);
+    });
+
+    it('allows retry when starting the refresh fails', async () => {
+        mocks.appFriendProfileRefreshAll.mockRejectedValueOnce(
+            new Error('offline')
+        );
+        await expect(startFriendProfileLoad(true)).rejects.toThrow('offline');
+        expect(useFriendProfileRefreshStore.getState()).toMatchObject({
+            cooldowns: {},
+            pending: false
+        });
+        mocks.appFriendProfileRefreshAll.mockResolvedValue(runningPayload());
+        await startFriendProfileLoad(true);
+        expect(mocks.appFriendProfileRefreshAll).toHaveBeenCalledTimes(2);
     });
 
     it('shows the already-loaded toast when the backend completes with nothing to load', async () => {

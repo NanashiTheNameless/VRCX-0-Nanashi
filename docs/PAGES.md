@@ -151,8 +151,20 @@ and set a date range. Unfriend events can be hidden (Settings > Social > Friend 
 ### Friends
 
 Your full friends list as a table. Search by display name, username, rank, status, VRChat note,
-local note or bio and links; filter to favorites. **Load friend details** fetches full profiles
-for everyone, and **Load Mutual Friends** fetches who you share friends with. **Bulk Unfriend
+local note or bio and links; filter to favorites. **Load friend details** fills in missing
+full profiles. **Refresh all friend profiles** fetches every friend's profile again, including
+already loaded or cached profiles and friends outside the current search and filters.
+It updates profile data, including bio, pronouns, status, and badge-related fields, using
+the existing request pacing and retry behavior. Progress appears in a dialog that can be
+minimized or canceled; only one profile loading or refresh job runs at a time. A 5-minute
+cooldown follows completion or cancellation of a full refresh, with a countdown on the
+button. It applies per account and VRChat endpoint and stays active when you leave and
+return to the page. **Load friend details** remains available during the cooldown.
+Profile history recording still follows your per-field choices.
+**Refresh friends list** in the sidebar's settings updates the friends list, online/offline
+presence and favorites. Use **Refresh all friend profiles** to update every friend's full
+profile details.
+**Load Mutual Friends** fetches who you share friends with. **Bulk Unfriend
 Mode** lets you select several friends and unfriend them at once.
 
 ### Moderation

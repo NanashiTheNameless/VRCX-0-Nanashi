@@ -6,12 +6,35 @@ use vrcx_0_contracts::friend_log::{
 use vrcx_0_contracts::local_moderation::LocalModerationOutput;
 use vrcx_0_contracts::mutual_graph::MutualGraphSnapshotOutput;
 use vrcx_0_contracts::profile_bio::ProfileBioOutput;
+use vrcx_0_contracts::profile_history::{
+    ProfileHistoryEntry, ProfileHistoryQuery, ProfileHistorySettings,
+};
 use vrcx_0_core::OwnerId;
 
 use super::LocalDataStore;
 use crate::Result;
 
 impl LocalDataStore {
+    pub fn profile_history_settings_get(&self) -> Result<ProfileHistorySettings> {
+        Ok(vrcx_0_persistence::profile_history::settings_get(&self.db)?)
+    }
+
+    pub fn profile_history_settings_set(&self, settings: &ProfileHistorySettings) -> Result<()> {
+        Ok(vrcx_0_persistence::profile_history::settings_set(
+            &self.db, settings,
+        )?)
+    }
+
+    pub fn profile_history_query(
+        &self,
+        owner: &OwnerId,
+        query: &ProfileHistoryQuery,
+    ) -> Result<Vec<ProfileHistoryEntry>> {
+        Ok(vrcx_0_persistence::profile_history::query(
+            &self.db, owner, query,
+        )?)
+    }
+
     pub fn friend_log_current_list(&self, user_id: String) -> Result<Vec<FriendLogCurrentOutput>> {
         Ok(vrcx_0_persistence::friends::friend_log_current_list(
             self.db.as_ref(),

@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use futures_util::future::join_all;
 use tokio::sync::watch;
+use tokio::time::Instant;
 
 use vrcx_0_application_core::{
     BackendRuntimeStatusPublisher, Error, RateLimitBackoff, RequestPacer, Result, RuntimeAuthScope,
@@ -25,6 +26,7 @@ const FRIEND_PROFILE_BULK_LOAD_BACKOFF: RateLimitBackoff =
 pub(super) const FRIEND_PROFILE_BULK_LOAD_REQUEST_INTERVAL: Duration = Duration::from_secs(1);
 pub(super) const FRIEND_PROFILE_BULK_LOAD_CONCURRENCY: usize = 3;
 pub(super) const FRIEND_PROFILE_BULK_LOAD_REQUEST_SPACING: Duration = Duration::from_millis(333);
+const FRIEND_PROFILE_REFRESH_COOLDOWN: Duration = Duration::from_secs(300);
 
 pub(super) struct FriendProfileBulkLoadInitialProgress {
     pub(super) total: u32,
@@ -60,6 +62,8 @@ pub struct FriendProfileBulkLoadState {
     failed: u32,
     started_at: i64,
     finished_at: Option<i64>,
+    refresh_all: bool,
+    refresh_cooldowns: HashMap<(String, String), Instant>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -102,6 +106,19 @@ impl FriendProfileBulkLoadOwner {
 }
 
 impl FriendProfileBulkLoadState {
+    fn start_refresh_cooldown(&mut self) {
+        if !self.refresh_all {
+            return;
+        }
+        let Some(owner) = &self.owner else {
+            return;
+        };
+        self.refresh_cooldowns.insert(
+            (owner.user_id.clone(), owner.endpoint.clone()),
+            Instant::now() + FRIEND_PROFILE_REFRESH_COOLDOWN,
+        );
+    }
+
     fn payload(&self) -> FriendProfileLoadStatusPayload {
         FriendProfileLoadStatusPayload {
             run_id: self.run_id,
@@ -125,10 +142,13 @@ fn is_active_bulk_load_status(status: FriendProfileBulkLoadStatus) -> bool {
 
 pub(super) fn select_friend_profile_bulk_load_targets(
     friends_by_id: &HashMap<String, FriendRecord>,
+    refresh_all: bool,
 ) -> Vec<String> {
     let mut ids: Vec<String> = friends_by_id
         .values()
-        .filter(|friend| !friend.id.trim().is_empty() && friend_missing_date_joined(friend))
+        .filter(|friend| {
+            !friend.id.trim().is_empty() && (refresh_all || friend_missing_date_joined(friend))
+        })
         .map(|friend| friend.id.clone())
         .collect();
     ids.sort();
@@ -154,7 +174,12 @@ impl RealtimeHostRuntime {
         self: &Arc<Self>,
     ) -> Result<FriendProfileLoadStatusPayload> {
         self.friend_profile_bulk
-            .start_friend_profile_bulk_load(self)
+            .start_friend_profile_bulk_load(self, false)
+    }
+
+    pub fn refresh_all_friend_profiles(self: &Arc<Self>) -> Result<FriendProfileLoadStatusPayload> {
+        self.friend_profile_bulk
+            .start_friend_profile_bulk_load(self, true)
     }
 
     pub fn cancel_friend_profile_bulk_load(&self) -> Result<FriendProfileLoadStatusPayload> {
@@ -181,6 +206,7 @@ impl FriendProfileBulkLoader {
     fn start_friend_profile_bulk_load(
         &self,
         host: &Arc<RealtimeHostRuntime>,
+        refresh_all: bool,
     ) -> Result<FriendProfileLoadStatusPayload> {
         let active = {
             let state = host
@@ -207,6 +233,18 @@ impl FriendProfileBulkLoader {
             if is_active_bulk_load_status(bulk.status) && bulk.owner.as_ref() == Some(&owner) {
                 return Ok(bulk.payload());
             }
+            let now = Instant::now();
+            bulk.refresh_cooldowns.retain(|_, until| *until > now);
+            if let Some(until) = bulk
+                .refresh_cooldowns
+                .get(&(owner.user_id.clone(), owner.endpoint.clone()))
+                .filter(|_| refresh_all)
+            {
+                let seconds = until.duration_since(now).as_secs_f64().ceil();
+                return Err(Error::Custom(format!(
+                    "Refresh all friend profiles is on cooldown. Try again in {seconds} sec."
+                )));
+            }
             let snapshot = host.friends.snapshot().filter(|snapshot| {
                 snapshot.generation == active.generation
                     && snapshot.current_user_id == active.session.user_id
@@ -217,7 +255,11 @@ impl FriendProfileBulkLoader {
                 ));
             };
             let stale_run_id = is_active_bulk_load_status(bulk.status).then_some(bulk.run_id);
-            let targets = select_friend_profile_bulk_load_targets(&snapshot.friends_by_id);
+            if stale_run_id.is_some() {
+                bulk.start_refresh_cooldown();
+            }
+            let targets =
+                select_friend_profile_bulk_load_targets(&snapshot.friends_by_id, refresh_all);
             let initial_progress = FriendProfileBulkLoadInitialProgress::new(
                 snapshot.friends_by_id.len(),
                 targets.len(),
@@ -232,6 +274,8 @@ impl FriendProfileBulkLoader {
             bulk.failed = 0;
             bulk.started_at = now;
             bulk.finished_at = None;
+            bulk.refresh_all = refresh_all;
+            bulk.start_refresh_cooldown();
             let spawn_worker = !targets.is_empty();
             bulk.status = if spawn_worker {
                 FriendProfileBulkLoadStatus::Running
@@ -315,6 +359,7 @@ impl FriendProfileBulkLoader {
             }
             bulk.status = FriendProfileBulkLoadStatus::Cancelled;
             bulk.finished_at = Some(chrono::Utc::now().timestamp());
+            bulk.start_refresh_cooldown();
             bulk.run_id
         };
         self.cancel_tx.send_replace(cancelled_run_id);
@@ -473,6 +518,17 @@ impl FriendProfileBulkLoader {
             if !loader.friend_profile_bulk_load_is_current(run_id, owner) {
                 return None;
             }
+            let cache_policy = {
+                let bulk = loader.state.lock().ok()?;
+                if bulk.run_id != run_id {
+                    return None;
+                }
+                if bulk.refresh_all {
+                    UserQueryCachePolicy::Refresh
+                } else {
+                    UserQueryCachePolicy::UseCache
+                }
+            };
             let response = tokio::select! {
                 biased;
                 _ = wait_for_friend_profile_bulk_load_cancel(run_id, cancel_rx) => return None,
@@ -481,7 +537,7 @@ impl FriendProfileBulkLoader {
                     user_id.to_string(),
                     UserQueryOptions {
                         kind: UserQueryKind::LiveFriend,
-                        cache_policy: UserQueryCachePolicy::UseCache,
+                        cache_policy,
                     },
                 ) => response,
             };
@@ -625,6 +681,7 @@ impl FriendProfileBulkLoader {
                 _ => return,
             };
             bulk.finished_at = Some(chrono::Utc::now().timestamp());
+            bulk.start_refresh_cooldown();
         }
         self.emit_friend_profile_bulk_load_status();
     }

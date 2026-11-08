@@ -11,7 +11,44 @@ import { Switch } from '@/ui/shadcn/switch';
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 
-const FIELDS: ProfileHistoryField[] = ['status', 'bio', 'pronouns'];
+const FIELDS = [
+    {
+        field: 'status',
+        choices: [
+            {
+                property: 'recording',
+                settingId: 'social.profile-history.status-recording'
+            },
+            {
+                property: 'sync',
+                settingId: 'social.profile-history.status-sync'
+            }
+        ]
+    },
+    {
+        field: 'bio',
+        choices: [
+            {
+                property: 'recording',
+                settingId: 'social.profile-history.bio-recording'
+            },
+            { property: 'sync', settingId: 'social.profile-history.bio-sync' }
+        ]
+    },
+    {
+        field: 'pronouns',
+        choices: [
+            {
+                property: 'recording',
+                settingId: 'social.profile-history.pronouns-recording'
+            },
+            {
+                property: 'sync',
+                settingId: 'social.profile-history.pronouns-sync'
+            }
+        ]
+    }
+] as const;
 const T = 'view.settings.social.profile_history';
 
 export function SettingsProfileHistoryCard() {
@@ -64,16 +101,16 @@ export function SettingsProfileHistoryCard() {
             <p className="text-muted-foreground text-sm">
                 {t(`${T}.description`)}
             </p>
-            {FIELDS.map((field) => (
+            {FIELDS.map(({ field, choices }) => (
                 <div
                     key={field}
                     className="space-y-3 border-b pb-4 last:border-b-0"
                 >
                     <p className="font-medium">{t(`${T}.${field}`)}</p>
-                    {(['recording', 'sync'] as const).map((property) => (
+                    {choices.map(({ property, settingId }) => (
                         <Field
                             key={property}
-                            settingId={`social.profile-history.${field}-${property}`}
+                            settingId={settingId}
                             label={t(`${T}.${field}_${property}`)}
                             description={t(`${T}.${property}_description`)}
                             onReset={() =>

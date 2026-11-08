@@ -38,8 +38,11 @@ The sidebar lists your friends and groups in tabs.
   favorite groups. Tabs can show an icon, text or both. Friends and Groups are built in.
 - **Pinned worlds**: pin a world from its world dialog and it gets a tab of its own, showing the
   world's public instances and which friends are in them, so you can join from the sidebar.
-- A filter box filters friends, groups or instances, and a refresh button reloads your friends
-  (with a short cooldown).
+- A filter box filters friends, groups or instances. **Refresh friends list** in the sidebar's
+  settings updates your friends list, online/offline presence and favorites, with a 30-second
+  cooldown. To fetch every friend's full profile details again, use **Refresh all friend
+  profiles** on the Friends page; it has a separate 5-minute cooldown after completion or
+  cancellation.
 - The **Notification Center** in the sidebar shows recent notifications grouped by Needs
   Action, Activity and System, with **Join now**, mark as read and mark all read.
 

@@ -113,4 +113,50 @@ describe('UserProfileMediaPicker', () => {
             screen.queryByText('dialog.gallery_icons.locked_title')
         ).toBeNull();
     });
+
+    it('applies typed hex colors and prevents invalid colors from being saved', async () => {
+        mocks.getFileList.mockResolvedValue({ json: [] });
+        const onSetBannerColor = vi.fn().mockResolvedValue(undefined);
+        const { container } = render(
+            <UserProfileMediaPicker
+                field="banner"
+                profile={{
+                    id: 'usr_self',
+                    bannerType: 'color',
+                    bannerColor: 'a9d96a'
+                }}
+                isVrcPlus={false}
+                busy={false}
+                onSetFile={vi.fn()}
+                onSetBannerColor={onSetBannerColor}
+            />
+        );
+        const hex = screen.getByRole('textbox', {
+            name: 'dialog.user.profile_edit.hex_color'
+        });
+        const apply = screen.getByRole('button', {
+            name: 'dialog.user.profile_edit.apply_color'
+        });
+        fireEvent.change(hex, { target: { value: '891454' } });
+        expect(container.querySelector('input[type="color"]')).toHaveProperty(
+            'value',
+            '#891454'
+        );
+        fireEvent.click(apply);
+        await waitFor(() =>
+            expect(onSetBannerColor).toHaveBeenCalledWith('#891454')
+        );
+        await waitFor(() => expect(hex).toHaveProperty('disabled', false));
+        fireEvent.change(hex, { target: { value: '#AbC' } });
+        fireEvent.click(apply);
+        await waitFor(() =>
+            expect(onSetBannerColor).toHaveBeenCalledWith('#aabbcc')
+        );
+        await waitFor(() => expect(hex).toHaveProperty('disabled', false));
+        fireEvent.change(hex, { target: { value: '#12345678' } });
+        expect(apply).toHaveProperty('disabled', true);
+        expect(screen.getByRole('alert')).toBeTruthy();
+        fireEvent.click(apply);
+        expect(onSetBannerColor).toHaveBeenCalledTimes(2);
+    });
 });

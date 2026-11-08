@@ -41,7 +41,7 @@ fn select_targets_includes_friends_missing_date_joined() {
         friend_record(json!({"id": "usr_c", "displayName": "C", "date_joined": "2026-01-01"})),
     );
 
-    let targets = select_friend_profile_bulk_load_targets(&friends_by_id);
+    let targets = select_friend_profile_bulk_load_targets(&friends_by_id, false);
     assert_eq!(targets, vec!["usr_a".to_string(), "usr_b".to_string()]);
 }
 
@@ -52,7 +52,11 @@ fn select_targets_excludes_fully_loaded_roster() {
         "usr_a".to_string(),
         friend_record(json!({"id": "usr_a", "date_joined": "2026-01-01"})),
     );
-    assert!(select_friend_profile_bulk_load_targets(&friends_by_id).is_empty());
+    assert!(select_friend_profile_bulk_load_targets(&friends_by_id, false).is_empty());
+    assert_eq!(
+        select_friend_profile_bulk_load_targets(&friends_by_id, true),
+        ["usr_a"]
+    );
 }
 
 #[tokio::test(start_paused = true)]
@@ -167,6 +171,33 @@ fn start_is_idempotent_while_a_run_is_active() -> Result<()> {
     Ok(())
 }
 
+#[tokio::test(start_paused = true)]
+async fn refresh_all_cooldown_survives_normal_loads_and_expires_after_five_minutes() -> Result<()> {
+    let (_dir, runtime, session) = runtime_with_active_session("friend-profile-refresh-cooldown")?;
+    runtime.runtime().friends.set_baseline(
+        vrcx_0_core::friends::FriendRosterBaseline {
+            current_user_id: session.user_id,
+            endpoint: session.endpoint,
+            websocket: session.websocket,
+            friends_by_id: HashMap::new(),
+        },
+        7,
+        1,
+    );
+
+    let first = runtime.runtime().refresh_all_friend_profiles()?;
+    assert_eq!(first.status, FriendProfileBulkLoadStatus::Completed);
+    assert!(runtime.runtime().refresh_all_friend_profiles().is_err());
+    runtime.runtime().start_friend_profile_bulk_load()?;
+    assert!(runtime.runtime().refresh_all_friend_profiles().is_err());
+    tokio::time::advance(Duration::from_secs(299)).await;
+    assert!(runtime.runtime().refresh_all_friend_profiles().is_err());
+    tokio::time::advance(Duration::from_secs(1)).await;
+    let next = runtime.runtime().refresh_all_friend_profiles()?;
+    assert!(next.run_id > first.run_id);
+    Ok(())
+}
+
 async fn wait_for_bulk_load_processed(runtime: &Arc<RealtimeHostRuntime>, processed: u32) {
     let deadline = std::time::Instant::now() + Duration::from_secs(5);
     while runtime.friend_profile_bulk_load_status().processed < processed
@@ -174,6 +205,52 @@ async fn wait_for_bulk_load_processed(runtime: &Arc<RealtimeHostRuntime>, proces
     {
         tokio::task::yield_now().await;
     }
+}
+
+#[tokio::test]
+async fn refresh_all_bypasses_cached_profiles_even_when_details_are_complete() -> Result<()> {
+    let (_dir, runtime, session) = runtime_with_active_session("friend-profile-refresh-all")?;
+    runtime.runtime().friends.set_baseline(
+        vrcx_0_core::friends::FriendRosterBaseline {
+            current_user_id: session.user_id.clone(),
+            endpoint: session.endpoint.clone(),
+            websocket: session.websocket.clone(),
+            friends_by_id: HashMap::from([(
+                "usr_friend".into(),
+                friend_entry(json!({
+                    "id":"usr_friend", "displayName":"Friend", "date_joined":"2026-01-01"
+                })),
+            )]),
+        },
+        7,
+        1,
+    );
+    runtime
+        .runtime()
+        .user_query_cache
+        .get_or_fetch(
+            UserQueryKind::LiveFriend,
+            &session.endpoint,
+            "usr_friend",
+            async {
+                Ok(Arc::new(VrchatResponse {
+                    status: 200,
+                    data: json!({"id":"usr_friend","bio":"cached"}).to_string(),
+                }))
+            },
+        )
+        .await
+        .expect("the existing friend profile should be cached");
+    let started = runtime.runtime().refresh_all_friend_profiles()?;
+    assert_eq!(started.status, FriendProfileBulkLoadStatus::Running);
+    assert_eq!(started.total, 1);
+    assert_eq!(started.processed, 0);
+    wait_for_bulk_load_processed(runtime.runtime(), 1).await;
+    let completed = runtime.runtime().friend_profile_bulk_load_status();
+    assert_eq!(completed.processed, 1);
+    assert_eq!(completed.loaded, 0);
+    assert_eq!(completed.failed, 1);
+    Ok(())
 }
 
 async fn park_bulk_worker_on_the_transport_gate() {

@@ -32,10 +32,19 @@ export function profileMediaUpdate(
         : { bannerType: 'avatarBanner' };
 }
 
+export function normalizeProfileBannerColor(value: string): string | null {
+    const match = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value.trim());
+    if (!match) return null;
+    const hex = match[1].toLowerCase();
+    return `#${hex.length === 3 ? [...hex].map((digit) => digit + digit).join('') : hex}`;
+}
+
 export function profileBannerColorUpdate(hexColor: string): ProfileMediaUpdate {
+    const normalized = normalizeProfileBannerColor(hexColor);
+    if (!normalized) throw new Error('Enter a valid RGB hex color.');
     return {
         bannerType: 'color',
-        bannerColor: hexColor.replace(/^#/, '').toLowerCase()
+        bannerColor: normalized.slice(1)
     };
 }
 

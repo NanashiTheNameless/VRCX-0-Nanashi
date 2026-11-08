@@ -97,6 +97,10 @@ export const commands = {
         __TAURI_INVOKE<FriendProfileLoadStatusPayload>(
             'app__friend_profile_load_start'
         ),
+    appFriendProfileRefreshAll: () =>
+        __TAURI_INVOKE<FriendProfileLoadStatusPayload>(
+            'app__friend_profile_refresh_all'
+        ),
     appFriendProfileLoadCancel: () =>
         __TAURI_INVOKE<FriendProfileLoadStatusPayload>(
             'app__friend_profile_load_cancel'

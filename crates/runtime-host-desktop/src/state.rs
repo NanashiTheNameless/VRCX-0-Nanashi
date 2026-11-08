@@ -1276,6 +1276,13 @@ impl DesktopRuntimeHostState {
             .start_friend_profile_bulk_load()?)
     }
 
+    pub fn refresh_all_friend_profiles(&self) -> Result<FriendProfileLoadStatusPayload> {
+        Ok(self
+            .runtime
+            .realtime_runtime()
+            .refresh_all_friend_profiles()?)
+    }
+
     pub fn cancel_friend_profile_bulk_load(&self) -> Result<FriendProfileLoadStatusPayload> {
         Ok(self
             .runtime

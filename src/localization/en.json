@@ -1302,8 +1302,8 @@
         "search_open_direct": "Open this link or ID",
         "search_clipboard_detected": "Link or ID detected in clipboard. Press Enter to open.",
         "search_joined_groups": "Joined Groups",
-        "refresh_tooltip": "Refresh friends",
-        "refresh_available_in_seconds": "Recently synced. Please try again in {count} sec.",
+        "refresh_tooltip": "Refresh friends list",
+        "refresh_available_in_seconds": "Friends list recently refreshed. Please try again in {count} sec.",
         "groups": "Groups",
         "friends": "Friends",
         "me": "ME",
@@ -1412,7 +1412,7 @@
             "vrchat_launch_request_sent": "Opened in VRChat",
             "invite_request_sent": "Invite request sent",
             "boop_sent": "Boop sent",
-            "friend_and_favorite_snapshots_refreshed": "Friends refreshed"
+            "friend_and_favorite_snapshots_refreshed": "Friends list and favorites refreshed"
         },
         "error": {
             "unable_to_open_this_instance_in_vrchat": "Unable to open this instance in VRChat",
@@ -1422,7 +1422,7 @@
             "cannot_update_profile_no_current_user_session_is_available": "Sign in to update your profile"
         },
         "empty": {
-            "no_authenticated_user_snapshot_is_available": "Sign in before refreshing friends"
+            "no_authenticated_user_snapshot_is_available": "Sign in before refreshing your friends list"
         }
     },
     "support_vrcx": {
@@ -2287,6 +2287,10 @@
             "bulk_unfriend": "Bulk Unfriend Mode",
             "bulk_unfriend_selection": "Unfriend Selected",
             "load": "Load friend details",
+            "refresh_all": "Refresh all friend profiles",
+            "refresh_all_description": "Fetch fresh profile details for every friend, including already loaded profiles and friends outside the current search and filters. A 5-minute cooldown follows completion or cancellation.",
+            "refresh_all_cooldown": "Friend profiles recently refreshed. Please try again in {count} sec.",
+            "refresh_all_cooldown_label": "Refresh all friend profiles ({count}s)",
             "load_cancel": "Cancel",
             "favorites_only_tooltip": "Filter favorites only",
             "search_placeholder": "Search",
@@ -6137,6 +6141,8 @@
                 "details": "Basic Info",
                 "avatar_image": "Avatar Image",
                 "solid_color": "Solid Color",
+                "hex_color": "Hex color",
+                "invalid_hex_color": "Enter 3 or 6 hex digits, with or without #.",
                 "apply_color": "Apply Color"
             },
             "account_standing": {
@@ -8621,7 +8627,7 @@
         },
         "side_panel": {
             "toast": {
-                "failed_to_refresh_friends": "Failed to refresh friends"
+                "failed_to_refresh_friends": "Failed to refresh friends list"
             },
             "dynamic": {
                 "value_value_value": "{value} ({value2}/{value3})",

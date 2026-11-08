@@ -19,6 +19,10 @@
     },
     "type": "module",
     "scripts": {
+        "clean": "node scripts/clean.mjs",
+        "clean:dry-run": "node scripts/clean.mjs --dry-run",
+        "clean:caches": "node scripts/clean.mjs --caches-only",
+        "clean:caches:dry-run": "node scripts/clean.mjs --caches-only --dry-run",
         "generate:tauri-bindings": "cargo run --manifest-path src-tauri/Cargo.toml --features bindings-export --bin export-bindings && oxfmt src/platform/tauri/bindings.ts",
         "prepare": "husky",
         "dev": "vite",

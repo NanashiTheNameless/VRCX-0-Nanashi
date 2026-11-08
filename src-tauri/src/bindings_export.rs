@@ -170,6 +170,7 @@ pub fn builder() -> Builder<tauri::Wry> {
             commands::application::realtime::app__realtime_retry_now,
             commands::application::realtime::app__ingest_user_facts,
             commands::application::realtime::app__friend_profile_load_start,
+            commands::application::realtime::app__friend_profile_refresh_all,
             commands::application::realtime::app__friend_profile_load_cancel,
             commands::application::lifecycle::app__ancillary_runtime_snapshot_get,
             commands::application::lifecycle::app__notification_do_not_disturb_mode_set,

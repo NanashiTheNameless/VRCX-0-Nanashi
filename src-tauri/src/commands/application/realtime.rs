@@ -41,6 +41,14 @@ pub async fn app__friend_profile_load_start(
     Ok(state.runtime_host().start_friend_profile_bulk_load()?)
 }
 
+#[tauri::command]
+#[specta::specta]
+pub async fn app__friend_profile_refresh_all(
+    state: State<'_, AppState>,
+) -> Result<FriendProfileLoadStatusPayload, AppError> {
+    Ok(state.runtime_host().refresh_all_friend_profiles()?)
+}
+
 #[tauri::command(async)]
 #[specta::specta]
 pub fn app__friend_profile_load_cancel(

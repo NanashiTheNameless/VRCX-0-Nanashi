@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { LoadingState } from '@/components/layout/PageScaffold';
@@ -8,6 +8,7 @@ import vrchatMediaRepository from '@/repositories/vrchatMediaRepository';
 import { toast } from '@/services/toastService';
 import {
     isProfileMediaFileUsableWithoutVrcPlus,
+    normalizeProfileBannerColor,
     type ProfileMediaField
 } from '@/shared/utils/currentUserMedia';
 import { convertFileUrlToImageUrl } from '@/shared/utils/entityMedia';
@@ -73,6 +74,11 @@ export function UserProfileMediaPicker({
     );
     const isBanner = field === 'banner';
     const pending = busy || Boolean(pendingKey);
+    const normalizedColorDraft = normalizeProfileBannerColor(colorDraft);
+    const currentColor = normalizeProfileBannerColor(current.color);
+    const colorValue =
+        normalizedColorDraft || currentColor || DEFAULT_BANNER_COLOR;
+    const colorErrorId = useId();
     const isLocked = (file: MediaFile) =>
         !isVrcPlus && !isProfileMediaFileUsableWithoutVrcPlus(field, file);
     const hasLockedFiles = files.some(isLocked);
@@ -138,7 +144,7 @@ export function UserProfileMediaPicker({
                         </span>
                         <Input
                             type="color"
-                            value={colorDraft}
+                            value={colorValue}
                             disabled={pending}
                             onChange={(event) =>
                                 setColorDraft(event.target.value)
@@ -146,19 +152,58 @@ export function UserProfileMediaPicker({
                             className="size-8 shrink-0 cursor-pointer p-0.5"
                         />
                     </label>
+                    <Input
+                        aria-label={t('dialog.user.profile_edit.hex_color')}
+                        aria-invalid={!normalizedColorDraft || undefined}
+                        aria-describedby={
+                            !normalizedColorDraft ? colorErrorId : undefined
+                        }
+                        value={colorDraft}
+                        placeholder="#RRGGBB"
+                        className="w-28 font-mono"
+                        autoComplete="off"
+                        spellCheck={false}
+                        disabled={pending}
+                        onChange={(event) => setColorDraft(event.target.value)}
+                        onBlur={() => {
+                            if (normalizedColorDraft)
+                                setColorDraft(normalizedColorDraft);
+                        }}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                                event.preventDefault();
+                                event.currentTarget.blur();
+                            }
+                        }}
+                    />
                     <Button
                         type="button"
                         size="sm"
                         className="ms-auto"
-                        disabled={pending || colorDraft === current.color}
-                        onClick={() =>
-                            run(COLOR_PENDING_KEY, () =>
-                                onSetBannerColor(colorDraft)
-                            )
+                        disabled={
+                            pending ||
+                            !normalizedColorDraft ||
+                            normalizedColorDraft === currentColor
                         }
+                        onClick={() => {
+                            if (!normalizedColorDraft) return;
+                            setColorDraft(normalizedColorDraft);
+                            return run(COLOR_PENDING_KEY, () =>
+                                onSetBannerColor(normalizedColorDraft)
+                            );
+                        }}
                     >
                         {t('dialog.user.profile_edit.apply_color')}
                     </Button>
+                    {!normalizedColorDraft ? (
+                        <p
+                            id={colorErrorId}
+                            role="alert"
+                            className="text-destructive w-full text-xs"
+                        >
+                            {t('dialog.user.profile_edit.invalid_hex_color')}
+                        </p>
+                    ) : null}
                 </div>
             ) : null}
             <div
@@ -187,11 +232,11 @@ export function UserProfileMediaPicker({
                         label={t('dialog.user.profile_edit.solid_color')}
                         showLabel
                         fallbackIcon={false}
-                        previewStyle={{ backgroundColor: colorDraft }}
+                        previewStyle={{ backgroundColor: colorValue }}
                         aspectClassName={aspectClassName}
                         isCurrent={
                             Boolean(current.color) &&
-                            colorDraft === current.color
+                            normalizedColorDraft === currentColor
                         }
                         busy={pendingKey === COLOR_PENDING_KEY}
                         inert={pending}

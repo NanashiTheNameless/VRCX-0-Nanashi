@@ -34,6 +34,40 @@ Build for release (skip code signing and installer):
 npm run tauri:build -- --no-sign --no-bundle
 ```
 
+Both cleanup commands use `scripts/clean.mjs`:
+
+- `npm run clean:caches` clears this checkout's Rust build cache (`target/` and
+  `src-tauri/target/`), Vite and tool caches, and TypeScript build metadata.
+- `npm run clean` also removes frontend output (`dist/`, `build/` and the badge editor's
+  `dist/`), generated Tauri files (`src-tauri/gen/` and the generated third-party notice),
+  coverage reports (`coverage/` and `.nyc_output/`), and Python bytecode in `scripts/`.
+  Rust binaries, installers, bundles and their signatures are removed with the target
+  directories.
+
+Use `npm run clean:dry-run` or `npm run clean:caches:dry-run` to preview the corresponding
+cleanup without removing anything. Appending `-- --dry-run` to either cleanup command
+also works.
+Both commands report each cleaned path, file and directory counts, and estimated space
+reclaimed, followed by totals and counts of missing, skipped and failed paths. Dry runs
+report what would be removed and estimated space to reclaim. Space uses allocated disk
+blocks when the filesystem reports them, otherwise file sizes; hard-linked file data
+counts once and only when all its links are included in successful cleanup paths.
+Symlinks inside directories are counted without following their targets. Failed paths
+are excluded from totals, and a cleanup failure makes the command exit with an error.
+Append `-- --frontend-only` to keep compiled Rust artifacts. For example:
+
+```bash
+npm run clean:dry-run
+npm run clean:caches:dry-run
+npm run clean:caches -- --frontend-only
+```
+
+Installed dependencies, shared npm and Cargo download caches, app data, signing
+credentials, and tracked generated source files such as the Tauri bindings are kept.
+Symlink paths are skipped. Custom Cargo target directories are kept unless they use
+the checkout's standard `target/` or `src-tauri/target/` paths. Rust dependencies need
+recompiling after clearing the target directories.
+
 Normal `tauri:build`, Preview and Dev Kit builds use the configured NamelessNanashi
 signing identity. Windows signs the executable and installer with Authenticode; macOS
 signs the app before packaging; all platforms add `.nn-signature` download

@@ -674,13 +674,41 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread")]
     async fn acknowledging_status_keeps_bio_rows_in_the_shared_own_profile_table() {
+        use vrcx_0_persistence::realtime::{
+            write_realtime_batch, RealtimePersistenceBatch, SelfProfileField,
+            SelfProfileObservation,
+        };
         let (_dir, recorder) = recorder("own-profile-ack");
         let db = recorder.state.database();
-        let table = format!(
-            "{}_self_profile_log",
-            vrcx_0_persistence::realtime::normalize_user_table_prefix(USER).unwrap()
-        );
-        db.execute_non_query(&format!("INSERT INTO {table} (created_at, field, value) VALUES (1, 'status', 'active'), (2, 'bio', 'keep'), (3, 'status', 'busy')"), &Default::default()).unwrap();
+        let mut settings = vrcx_0_persistence::profile_history::settings_get(db).unwrap();
+        settings.status.recording = true;
+        settings.bio.recording = true;
+        vrcx_0_persistence::profile_history::settings_set(db, &settings).unwrap();
+        write_realtime_batch(
+            db,
+            &vrcx_0_core::OwnerId::new(USER),
+            &RealtimePersistenceBatch {
+                self_profile_observations: vec![
+                    SelfProfileObservation {
+                        observed_at: 1,
+                        field: SelfProfileField::Status,
+                        value: "active".into(),
+                    },
+                    SelfProfileObservation {
+                        observed_at: 2,
+                        field: SelfProfileField::Bio,
+                        value: "keep".into(),
+                    },
+                    SelfProfileObservation {
+                        observed_at: 3,
+                        field: SelfProfileField::Status,
+                        value: "busy".into(),
+                    },
+                ],
+                ..Default::default()
+            },
+        )
+        .unwrap();
         let status = ROW_STREAMS
             .iter()
             .find(|spec| spec.name == "self_profile_status")

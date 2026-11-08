@@ -55,7 +55,9 @@ preview so it looks good when pasted; the plain VRChat link is always available 
   [BADGES.md](BADGES.md).
 - On your own profile: **Edit Profile** (bio, links, pronouns, languages), **Edit Social
   Status** with saved presets, **Account Standing**, and your profile media (banner and
-  icon, managed in the Gallery).
+  icon, managed in the Gallery). For a solid banner color, use the color picker or enter
+  a 3- or 6-digit hex color, with or without `#`, then choose **Apply Color**. The preview
+  updates for valid colors; invalid values cannot be applied.
 - Copy the user ID, VRChat URL, display name, or open **Show Discord Connections** and
   **Show Mutual Friends**.
 

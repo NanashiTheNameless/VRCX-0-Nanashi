@@ -476,12 +476,12 @@ export function useFriendListRowActions({
         }
     }
 
-    function loadFriendUserDetails() {
+    function loadFriendUserDetails(refreshAll = false) {
         if (isLoadingUserDetails) {
             openFriendProfileLoadDialog();
             return;
         }
-        startFriendProfileLoad().catch((error: unknown) => {
+        startFriendProfileLoad(refreshAll).catch((error: unknown) => {
             console.warn(
                 '[FriendListPage] Failed to start friend profile loading',
                 error
