@@ -17,7 +17,7 @@
 //   colour styles and "animation" one of the animations; see
 //   src/domain/badges/globalBadges.ts (the editor lists them).
 {
-    "revision": 2,
+    "revision": 3,
     "badges": [
         {
             "id": "sponsor",
@@ -153,7 +153,6 @@
             "userId": "usr_29ebb28e-b8ce-4287-9959-c292a64819cd",
             "badge": "early-supporter",
             "name": "Peanut128",
-            "reason": "Supported VRCX-0-Nanashi early on in development.",
             "since": 1794096000
         }
     ]

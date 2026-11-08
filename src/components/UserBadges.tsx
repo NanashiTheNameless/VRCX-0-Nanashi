@@ -305,7 +305,7 @@ export function GlobalBadgeChip({
     return (
         <Tooltip>
             <TooltipTrigger render={chip} />
-            <TooltipContent className="max-w-64">
+            <TooltipContent className="flex max-w-64 flex-col items-start gap-1">
                 <div className="font-semibold">{badge.label}</div>
                 {badge.description ? <div>{badge.description}</div> : null}
                 {grant.reason ? (

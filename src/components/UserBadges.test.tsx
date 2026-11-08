@@ -205,6 +205,41 @@ describe('UserBadges', () => {
         }
     });
 
+    it('shows the global badge tooltip when an award has no reason', async () => {
+        const awardee = 'usr_77777777-7777-7777-7777-777777777777';
+        useGlobalBadgeStore.setState({
+            catalog: normalizeGlobalBadgeCatalog({
+                revision: 1,
+                source: 'embedded',
+                badges: [
+                    {
+                        id: 'early-supporter',
+                        label: 'Early Supporter',
+                        description: 'Supported the fork from early on',
+                        icon: 'HandHeart',
+                        style: 'ember',
+                        animation: 'shimmer'
+                    }
+                ],
+                awards: [{ userId: awardee, badge: 'early-supporter' }]
+            })
+        });
+        try {
+            render(<UserBadges userId={awardee} size="full" />);
+            fireEvent.focus(
+                screen.getByRole('img', { name: 'Early Supporter' })
+            );
+            const description = await screen.findByText(
+                'Supported the fork from early on'
+            );
+            expect(description.parentElement?.textContent).toBe(
+                'Early SupporterSupported the fork from early on'
+            );
+        } finally {
+            useGlobalBadgeStore.setState({ catalog: null });
+        }
+    });
+
     it('shows the staff badge for members of the VRChat staff group', () => {
         const memberId = 'usr_55555555-5555-5555-5555-555555555555';
         recordUserGroups(memberId, [VRCHAT_STAFF_GROUP_ID]);
