@@ -125,7 +125,7 @@ function isTrustKey(value: unknown): value is TrustColorKey {
     return typeof value === 'string' && value in TRUST_COLOR_DEFAULTS;
 }
 
-// Same test as the "VRChat Team" trust colour: a developer type other than
+// Same test as the "VRChat Team" trust color: a developer type other than
 // none, or the moderator tag.
 export function isVrchatStaff(
     fact: Record<string, unknown> | null | undefined

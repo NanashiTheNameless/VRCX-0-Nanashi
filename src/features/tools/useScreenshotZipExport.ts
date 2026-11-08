@@ -58,7 +58,7 @@ export function useScreenshotZipExport() {
             if (session.progress?.cancelled) {
                 toast.add({
                     type: 'warning',
-                    title: t('message.screenshot_metadata.export_cancelled')
+                    title: t('message.screenshot_metadata.export_canceled')
                 });
                 return;
             }

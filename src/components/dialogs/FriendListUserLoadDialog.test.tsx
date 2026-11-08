@@ -126,7 +126,7 @@ describe('FriendListUserLoadDialog', () => {
         const { html } = renderDialog({ cancelled: true });
 
         expect(
-            findButton('view.friend_list.description.cancelling').disabled
+            findButton('view.friend_list.description.canceling').disabled
         ).toBe(true);
         expect(html).toContain('role="progressbar"');
         expect(html).toContain('aria-valuemin="0"');

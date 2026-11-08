@@ -298,7 +298,7 @@ export function GlobalBadgeChip({
     const { badge, grant } = award;
     const style = awardStyle(badge.style);
     const effects = awardAnimations(badge.animation);
-    // Per-badge colour overrides from the file replace the style's colours.
+    // Per-badge color overrides from the file replace the style's colors.
     const colors: Record<string, string> = {};
     if (badge.colorFrom) {
         colors['--award-from'] = badge.colorFrom;

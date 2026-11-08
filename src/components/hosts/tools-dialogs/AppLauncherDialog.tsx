@@ -212,7 +212,7 @@ function runErrorKey(run: AppLauncherRun): string | null {
         return 'dialog.app_launcher.run_error_elevation_required';
     }
     if (run.osErrorCode === 1223) {
-        return 'dialog.app_launcher.run_error_elevation_cancelled';
+        return 'dialog.app_launcher.run_error_elevation_canceled';
     }
     return 'dialog.app_launcher.run_error_failed';
 }

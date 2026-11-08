@@ -344,7 +344,7 @@ describe('resolveUserCustomBadges', () => {
 });
 
 describe('isVrchatStaff', () => {
-    it('recognises staff by developer type or moderator tag', () => {
+    it('recognizes staff by developer type or moderator tag', () => {
         expect(isVrchatStaff({ developerType: 'internal' })).toBe(true);
         expect(isVrchatStaff({ tags: ['admin_moderator'] })).toBe(true);
         expect(isVrchatStaff({ $isModerator: true })).toBe(true);

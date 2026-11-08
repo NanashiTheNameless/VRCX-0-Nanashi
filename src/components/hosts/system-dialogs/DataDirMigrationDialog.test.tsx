@@ -258,7 +258,7 @@ describe('DataDirMigrationDialog', () => {
         render(<DataDirMigrationDialog />);
 
         const cancel = screen.getByRole('button', {
-            name: 'data_dir_migration.cancelling'
+            name: 'data_dir_migration.canceling'
         }) as HTMLButtonElement;
         expect(cancel.disabled).toBe(true);
         fireEvent.click(cancel);

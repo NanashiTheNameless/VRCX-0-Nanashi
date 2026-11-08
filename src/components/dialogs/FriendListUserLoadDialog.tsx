@@ -75,7 +75,7 @@ export function FriendListUserLoadDialog({
                         onClick={onCancel}
                     >
                         {progress.cancelled
-                            ? t('view.friend_list.description.cancelling')
+                            ? t('view.friend_list.description.canceling')
                             : t('view.friend_list.load_cancel')}
                     </Button>
                 </DialogFooter>

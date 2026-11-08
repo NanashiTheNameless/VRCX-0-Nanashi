@@ -192,7 +192,7 @@ describe('AppLauncherDialog Windows launch diagnostics', () => {
 
         expect(
             await screen.findByText(
-                'dialog.app_launcher.run_error_elevation_cancelled:1223'
+                'dialog.app_launcher.run_error_elevation_canceled:1223'
             )
         ).toBeTruthy();
     });

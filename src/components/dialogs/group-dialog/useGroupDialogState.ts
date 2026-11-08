@@ -496,7 +496,7 @@ export function useGroupDialogState({
             await refreshGroupProfile();
             toast.add({
                 type: 'success',
-                title: t('dialog.group.success.group_join_request_cancelled')
+                title: t('dialog.group.success.group_join_request_canceled')
             });
         } catch (error) {
             toast.add({

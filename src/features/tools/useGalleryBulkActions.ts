@@ -108,12 +108,9 @@ export function useGalleryBulkActions({
         if (cancelled) {
             toast.add({
                 type: 'warning',
-                title: t(
-                    'view.tools.gallery_selection.delete_cancelled_toast',
-                    {
-                        count: deleted
-                    }
-                )
+                title: t('view.tools.gallery_selection.delete_canceled_toast', {
+                    count: deleted
+                })
             });
             return;
         }

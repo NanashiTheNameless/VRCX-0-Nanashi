@@ -416,7 +416,7 @@
         "start_existing": "Use existing data",
         "start_fresh": "Start fresh",
         "new_folder": "New folder",
-        "cancelling": "Cancelling",
+        "canceling": "Canceling",
         "mode_description": {
             "adoptExisting": "Use the records and settings in this folder without copying your current data.",
             "freshStart": "Start over without copying your current data. Nothing in the old folder will be deleted."
@@ -965,7 +965,7 @@
             "ungroup_folder": "Ungroup folder",
             "move_into_folder": "Move an item into this folder",
             "restore_default_description": "This replaces your current arrangement with the default one.",
-            "applies_immediately": "This applies immediately and is not undone by cancelling.",
+            "applies_immediately": "This applies immediately and is not undone by canceling.",
             "header": "Customize Navigation",
             "dialog_title": "Customize Navigation Menu",
             "new_folder": "New Folder",
@@ -1213,7 +1213,7 @@
             "no_session": "Sign in before using the lock",
             "failed": "The lock operation failed",
             "account_mismatch": "The approved account is not the locked account, so the lock was not removed. A new QR code has been generated.",
-            "verification_cancelled": "Verification was cancelled."
+            "verification_canceled": "Verification was canceled."
         }
     },
     "side_panel": {
@@ -2251,7 +2251,7 @@
                 "friends": "friends"
             },
             "success": {
-                "friend_detail_loading_cancelled": "Friend detail loading cancelled",
+                "friend_detail_loading_canceled": "Friend detail loading canceled",
                 "roster_bootstrap_did_not_complete": "Couldn't load your friends",
                 "vrchat_launch_request_sent": "Opened in VRChat",
                 "invite_request_sent": "Invite request sent",
@@ -2276,7 +2276,7 @@
                 "friend_locations_failed_to_load": "Friend locations failed to load"
             },
             "description": {
-                "cancelling": "Cancelling"
+                "canceling": "Canceling"
             },
             "dynamic": {
                 "open_value": "Open {value}"
@@ -2304,7 +2304,7 @@
                     "stop": "Stop",
                     "stop_fetching": "Stop fetching",
                     "go_to_friend": "Go to friend",
-                    "cancelling": "Cancelling",
+                    "canceling": "Canceling",
                     "find_friend": "Find a friend",
                     "open_profile": "Open profile",
                     "hide_from_graph": "Hide from graph",
@@ -2345,7 +2345,7 @@
                 },
                 "legend": {
                     "circles": "Communities",
-                    "more_circles": "+{count} smaller, shown in grey",
+                    "more_circles": "+{count} smaller, shown in gray",
                     "size_means_degree": "Bigger dot = more mutual friends",
                     "hollow_means_unknown": "Hollow dot = mutuals not shared",
                     "cross_edges": "Bright lines connect different circles",
@@ -2380,7 +2380,7 @@
             "label": {
                 "connections": "connections",
                 "try_a_broader_search_term_or_clear_the_node_filter": "Try a broader search term or clear the node filter",
-                "mutual_graph_fetch_cancelled_the_cached_graph_was_not_replaced": "Fetch canceled. Your existing graph was kept."
+                "mutual_graph_fetch_canceled_the_cached_graph_was_not_replaced": "Fetch canceled. Your existing graph was kept."
             },
             "success": {
                 "mutual_friends_graph_refreshed": "Mutual-friends graph refreshed"
@@ -2700,7 +2700,7 @@
                 "deleting_progress": "Deleting {done}/{total}",
                 "deleted_toast": "Deleted {count} item(s).",
                 "delete_partial_toast": "Deleted {succeeded} item(s), {failed} failed. {reason}",
-                "delete_cancelled_toast": "Cancelled. Deleted {count} item(s).",
+                "delete_canceled_toast": "Canceled. Deleted {count} item(s).",
                 "delete_unlocked": "Delete {count}",
                 "delete_locked": "Every selected item is locked.",
                 "delete_locked_favorite": "Favorited - unfavorite to delete",
@@ -5223,7 +5223,7 @@
         },
         "activity": {
             "title": "Activity",
-            "description": "Where your time went, summarised over a period",
+            "description": "Where your time went, summarized over a period",
             "range": {
                 "all": "All time",
                 "days": "Last {days} days",
@@ -5440,7 +5440,7 @@
             "run_status_stopped": "Stopped",
             "run_status_completed": "Completed",
             "run_error_elevation_required": "Administrator permission is required (Windows error {code}). Turn on “Run as administrator”.",
-            "run_error_elevation_cancelled": "Administrator permission was cancelled (Windows error {code}).",
+            "run_error_elevation_canceled": "Administrator permission was canceled (Windows error {code}).",
             "run_error_failed": "The app could not be started.",
             "stop_locked_steam": "Launched by Steam; VRCX-0-Nanashi can’t close it.",
             "stop_locked_admin": "Runs as administrator; VRCX-0-Nanashi can’t close it.",
@@ -5831,7 +5831,7 @@
                 "friend_request_accepted": "Friend request accepted",
                 "friend_request_sent": "Friend request sent",
                 "friend_request_declined": "Friend request declined",
-                "friend_request_cancelled": "Friend request cancelled",
+                "friend_request_canceled": "Friend request canceled",
                 "value_failed": "{value} failed",
                 "failed_to_value_user": "Failed to {value} user",
                 "failed_to_value": "Failed to {value}",
@@ -6542,7 +6542,7 @@
                 "group_icon": "Group Icon"
             },
             "success": {
-                "group_join_request_cancelled": "Group join request cancelled",
+                "group_join_request_canceled": "Group join request canceled",
                 "group_refreshed": "Group refreshed",
                 "group_invite_sent": "Group invite sent",
                 "group_post_deleted": "Group post deleted"
@@ -7323,7 +7323,7 @@
             "import_bans_clear_errors": "Clear Errors",
             "import_bans_no_ids_found": "No valid user IDs found (usr_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).",
             "import_bans_done": "Done. Banned {success}/{total} users.",
-            "import_bans_cancelled": "Cancelled. Banned {success}/{total} users.",
+            "import_bans_canceled": "Canceled. Banned {success}/{total} users.",
             "export_logs": "Export CSV",
             "export_logs_copied": "Audit log CSV copied to clipboard",
             "inspector_empty": "Select a row to view details",
@@ -7982,7 +7982,7 @@
             "export_done": "Exported {count} screenshot(s).",
             "export_partial": "Export finished, {count} file(s) were skipped.",
             "export_failed": "Failed to export the screenshots",
-            "export_cancelled": "Export cancelled.",
+            "export_canceled": "Export canceled.",
             "file_deleted": "Screenshot moved to the trash",
             "file_delete_failed": "Failed to delete screenshot"
         },

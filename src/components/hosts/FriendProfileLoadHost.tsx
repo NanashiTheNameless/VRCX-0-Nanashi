@@ -55,7 +55,7 @@ export function FriendProfileLoadHost() {
             toast.add({
                 type: 'warning',
                 title: t(
-                    'view.friend_list.success.friend_detail_loading_cancelled'
+                    'view.friend_list.success.friend_detail_loading_canceled'
                 )
             });
             return;

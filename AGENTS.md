@@ -236,7 +236,7 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   VRChat user id, and reopens them when the author fixes them. Language is
   judged offline from scripts and common words: never send issue text to a
   translation, AI or other outside service. The maintainer's, collaborators'
-  and bots' issues, issues assigned to the maintainer, issues labelled
+  and bots' issues, issues assigned to the maintainer, issues labeled
   `triage-ok`, and auto-closed issues reopened by hand are never touched.
 
 ## Things that look like bugs but are not
@@ -292,6 +292,15 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   only locale file. Do not add locale files.
 - **Plain ASCII punctuation** in UI strings and docs. No em/en dashes, curly
   quotes, or emoji.
+- **US English spelling** in UI strings, translation keys, docs and the fork's
+  own code comments: color, canceled, canceling, gray, summarized, labeled.
+  Upstream still uses some British forms, including in translation keys (the
+  fork renamed `..._cancelled` keys to `..._canceled` and `cancelling` to
+  `canceling`). When an upstream merge brings those back, keep the fork's US
+  key names and update the merged code to them, or the strings show as raw
+  keys. Code names that come from libraries (`is_cancelled()`) and VRChat's
+  own data values stay as they are, and upstream code comments are left alone
+  to keep merges small.
 - **Single-brace placeholders** in `en.json`: `{count}`, not `{{count}}`.
   `i18nService` interpolates with `{`/`}`, so double braces show up as literal
   text. `src/localization/en.test.ts` guards this.

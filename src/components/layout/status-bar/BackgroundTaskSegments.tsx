@@ -137,9 +137,9 @@ export function FriendProfileLoadSegment() {
     );
     let tooltip = t('view.friend_list.loading.loading_friend_details');
     if (status === 'cancelled') {
-        tooltip = t('view.friend_list.success.friend_detail_loading_cancelled');
+        tooltip = t('view.friend_list.success.friend_detail_loading_canceled');
     } else if (status === 'cancelling') {
-        tooltip = t('view.friend_list.description.cancelling');
+        tooltip = t('view.friend_list.description.canceling');
     }
 
     return (
@@ -148,7 +148,7 @@ export function FriendProfileLoadSegment() {
             showDot={false}
             label={t(
                 status === 'cancelling'
-                    ? 'view.friend_list.description.cancelling'
+                    ? 'view.friend_list.description.canceling'
                     : 'view.friend_list.loading.loading_friend_details'
             )}
             value={total > 0 ? `${processed}/${total}` : ''}
@@ -178,7 +178,7 @@ export function MutualGraphSegment() {
             t('view.charts.toast.failed_to_fetch_mutual_friends_graph');
     } else if (status === 'cancelled') {
         tooltip = t(
-            'view.charts.label.mutual_graph_fetch_cancelled_the_cached_graph_was_not_replaced'
+            'view.charts.label.mutual_graph_fetch_canceled_the_cached_graph_was_not_replaced'
         );
     }
 
@@ -239,7 +239,7 @@ export function MutualGraphRunToasts() {
             toast.add({
                 type: 'warning',
                 title: t(
-                    'view.charts.label.mutual_graph_fetch_cancelled_the_cached_graph_was_not_replaced'
+                    'view.charts.label.mutual_graph_fetch_canceled_the_cached_graph_was_not_replaced'
                 )
             });
             return;

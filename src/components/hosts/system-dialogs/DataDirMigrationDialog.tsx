@@ -181,7 +181,7 @@ export function DataDirMigrationDialog() {
                         <div className="flex items-center justify-between gap-3 text-sm">
                             <span className="font-medium">
                                 {cancelling
-                                    ? t('data_dir_migration.cancelling')
+                                    ? t('data_dir_migration.canceling')
                                     : t(dataDirMigrationPhaseKey(status.phase))}
                             </span>
                             {copyPercent != null ? (
@@ -319,7 +319,7 @@ export function DataDirMigrationDialog() {
                         >
                             {t(
                                 cancelling
-                                    ? 'data_dir_migration.cancelling'
+                                    ? 'data_dir_migration.canceling'
                                     : 'common.actions.cancel'
                             )}
                         </Button>

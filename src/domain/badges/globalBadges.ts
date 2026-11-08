@@ -143,7 +143,7 @@ export function normalizeGlobalBadgeCatalog(
 
 /**
  * The `badge` of a one-off award with no badge type: the award carries its
- * own label (required), description, icon, style, animation and colours.
+ * own label (required), description, icon, style, animation and colors.
  */
 export const CUSTOM_AWARD_BADGE = 'custom';
 
@@ -277,8 +277,8 @@ const USER_ID =
 const DATE =
     /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2}))?$/;
 /**
- * A colour as `#rrggbb`, from `#rrggbb`, `rrggbb`, `#rgb` or `rgb`; null when
- * the text is not a hex colour.
+ * A color as `#rrggbb`, from `#rrggbb`, `rrggbb`, `#rgb` or `rgb`; null when
+ * the text is not a hex color.
  */
 export function normalizeHexColor(value: unknown): string | null {
     const text = String(value ?? '')
@@ -368,7 +368,7 @@ function isValidAnimationList(value: unknown): boolean {
     );
 }
 
-// Checks icon, style, animation and colours. Awards may leave any of them out
+// Checks icon, style, animation and colors. Awards may leave any of them out
 // (they inherit from the badge type); badge types must name the first three.
 function checkAppearance(
     entry: Record<string, unknown>,
@@ -407,7 +407,7 @@ function checkAppearance(
     for (const field of AWARD_COLOR_FIELDS) {
         if (present(field) && normalizeHexColor(entry[field]) === null) {
             problems.push(
-                `${where}: "${field}" must be a hex colour like #ff8800 or #f80, or left out.`
+                `${where}: "${field}" must be a hex color like #ff8800 or #f80, or left out.`
             );
         }
     }

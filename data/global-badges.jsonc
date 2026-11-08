@@ -6,16 +6,18 @@
 // Rules:
 // - Badges show in the order listed here, most prestigious first; one-off
 //   "custom" awards come after them.
-// - Bump "revision" on every change. Apps keep the highest revision they
-//   have seen and ignore older copies.
+// - Bump "revision" for every change running apps should pick up: they keep
+//   the highest revision they have seen and ignore copies that are not
+//   newer. The same revision may be released again; it may never go down.
 // - Only add someone with their consent: this file is public.
 // - "since" and "until" are UTC epoch seconds like the rest of the app (the
 //   editor has date pickers). Date strings such as "2026-11-07" also work
 //   when typing by hand. "until" is the first moment the badge is no longer
 //   shown; leave it out for no end.
-// - "icon" must be one of the reserved award icons, "style" one of the
-//   colour styles and "animation" one of the animations; see
-//   src/domain/badges/globalBadges.ts (the editor lists them).
+// - "icon" may be any Lucide icon, or a Lucide Lab icon with "Lab" in
+//   front; "style" is one of the color styles and "animation" one or more
+//   of the effects, separated by spaces; see src/domain/badges/globalBadges.ts
+//   (the editor lists them).
 {
     "revision": 4,
     "badges": [

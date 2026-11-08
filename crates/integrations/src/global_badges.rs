@@ -202,7 +202,7 @@ fn normalize_hex_color(value: &str) -> Option<String> {
     }
 }
 
-/// A colour override, or empty (use the style's colour) when absent or bad.
+/// A color override, or empty (use the style's color) when absent or bad.
 fn color(value: &str, field: &str, problems: &mut Vec<String>) -> String {
     let value = value.trim();
     if value.is_empty() {
@@ -211,7 +211,7 @@ fn color(value: &str, field: &str, problems: &mut Vec<String>) -> String {
     match normalize_hex_color(value) {
         Some(color) => color,
         None => {
-            problems.push(format!("{field} \"{value}\" is not a #rrggbb colour"));
+            problems.push(format!("{field} \"{value}\" is not a #rrggbb color"));
             String::new()
         }
     }

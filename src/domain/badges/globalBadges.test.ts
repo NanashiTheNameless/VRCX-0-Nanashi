@@ -359,7 +359,7 @@ describe('validateGlobalBadgeFile', () => {
             '"style"',
             '"animation"',
             'unknown field "extra"',
-            '"colorFrom" must be a hex colour',
+            '"colorFrom" must be a hex color',
             '"id" must be',
             'used twice',
             '"userId"',

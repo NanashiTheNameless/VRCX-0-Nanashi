@@ -82,7 +82,7 @@ export function GroupModerationBanImportDialog({
                       success: status.succeeded,
                       total: status.total
                   })
-                : t('dialog.group_member_moderation.import_bans_cancelled', {
+                : t('dialog.group_member_moderation.import_bans_canceled', {
                       success: status.succeeded,
                       total: status.total
                   })

@@ -41,6 +41,8 @@ jobs:
                   mkdir -p "$RUNNER_TEMP/published"
                   gh release download "$TAG" --pattern "$FILE" --dir "$RUNNER_TEMP/published" || true
 
+            # The revision may stay the same, which re-releases it (for example
+            # after a code change starts this workflow), but never go down.
             - name: Validate
               run: node scripts/validate-global-badges.ts "data/$FILE" --published "$RUNNER_TEMP/published/$FILE"
 

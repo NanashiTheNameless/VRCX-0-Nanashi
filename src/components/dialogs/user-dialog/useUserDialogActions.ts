@@ -449,9 +449,7 @@ export function useUserDialogActions({
                         title:
                             action === 'decline'
                                 ? t('dialog.user.toast.friend_request_declined')
-                                : t(
-                                      'dialog.user.toast.friend_request_cancelled'
-                                  )
+                                : t('dialog.user.toast.friend_request_canceled')
                     });
                 }
             }

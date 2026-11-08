@@ -26,6 +26,6 @@ export function privacyLockOutcomeMessage(
         case 'deviceFailed':
             return outcome.reason || t('device_login.failed_title');
         case 'cancelled':
-            return t('privacy_lock.error.verification_cancelled');
+            return t('privacy_lock.error.verification_canceled');
     }
 }

@@ -83,7 +83,7 @@ export function MutualFriendsHud({
                         >
                             {fetchProgress.cancelRequested
                                 ? t(
-                                      'view.charts.mutual_friend.actions.cancelling'
+                                      'view.charts.mutual_friend.actions.canceling'
                                   )
                                 : t(
                                       'view.charts.mutual_friend.actions.stop_fetching'

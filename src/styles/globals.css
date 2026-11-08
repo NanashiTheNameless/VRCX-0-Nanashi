@@ -1485,7 +1485,7 @@
 }
 
 /* The border is a large conic gradient that rotates (transform only, no
-   repaint) behind a cover in the dialog's colour inset by 2px, so only a
+   repaint) behind a cover in the dialog's color inset by 2px, so only a
    2px ring of it shows. The dialog clips its own overflow. */
 .fork-maintainer-dialog::before {
     position: absolute;
@@ -3414,7 +3414,7 @@
     transform: translateX(-120%);
     animation: award-sweep 3.4s ease-in-out infinite;
 }
-/* Colours stream through: a wide gradient slides behind the content. */
+/* Colors stream through: a wide gradient slides behind the content. */
 .global-badge-fx--flow {
     z-index: -1;
 }
@@ -3432,7 +3432,7 @@
     );
     animation: award-flow 3s linear infinite;
 }
-/* Sparkles: four-pointed stars, white tinted with the badge's colour, each
+/* Sparkles: four-pointed stars, white tinted with the badge's color, each
    popping in with a turn and vanishing
    on its own timing. The durations share no common beat, so the pattern
    takes a long time to repeat. */
@@ -3504,7 +3504,7 @@
     animation: award-wiggle 2.8s ease-in-out infinite;
 }
 /* A hot glow along the bottom edge with sparks rising through the badge,
-   all in the badge's own colours, so embers suit any style.
+   all in the badge's own colors, so embers suit any style.
    Each pair of sparks has its own speed, start and drift, and the durations
    share no common beat, so the fire never settles into a loop you notice. */
 .global-badge-fx--embers.global-badge-fx--n1 {

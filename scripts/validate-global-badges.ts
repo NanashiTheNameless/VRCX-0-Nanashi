@@ -1,6 +1,7 @@
 // Checks data/global-badges.jsonc before it is signed and published.
 // Usage: node scripts/validate-global-badges.ts [file] [--published file]
-// With --published, the new revision must be higher than the published one.
+// With --published, the revision may not be lower than the published one;
+// the same revision may be released again.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -63,10 +64,10 @@ if (published && fs.existsSync(published)) {
     if (
         typeof before === 'number' &&
         typeof after === 'number' &&
-        after <= before
+        after < before
     ) {
         problems.push(
-            `"revision" is ${after}, but the published file is already at ${before}; bump it.`
+            `"revision" is ${after}, but the published file is already at ${before}; it may not go down.`
         );
     }
 }
