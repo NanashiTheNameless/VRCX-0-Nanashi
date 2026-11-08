@@ -1,6 +1,4 @@
-# VRCX-0-Nanashi
-
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/NanashiTheNameless/VRCX-0-Nanashi)
+# VRCX-0-Nanashi [![Ask DeepWiki](images/ask-deepwiki.svg)](https://deepwiki.com/NanashiTheNameless/VRCX-0-Nanashi)
 
 **A personal fork of [VRCX-0](https://github.com/Map1en/VRCX-0) by Map1en.**
 
