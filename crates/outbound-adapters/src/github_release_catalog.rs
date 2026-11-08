@@ -35,6 +35,17 @@ impl GitHubReleaseCatalogAdapter {
     }
 
     async fn fetch(&self) -> vrcx_0_application_core::Result<Vec<AppUpdateCatalogRelease>> {
+        match self.fetch_once().await {
+            Err(Attempt::Retry(error)) => {
+                tracing::debug!(%error, "retrying the GitHub release list");
+                tokio::time::sleep(RETRY_DELAY).await;
+                self.fetch_once().await.map_err(Attempt::into_error)
+            }
+            result => result.map_err(Attempt::into_error),
+        }
+    }
+
+    async fn fetch_once(&self) -> Result<Vec<AppUpdateCatalogRelease>, Attempt> {
         let mut headers = HashMap::new();
         headers.insert(
             "Accept".to_string(),
@@ -44,8 +55,36 @@ impl GitHubReleaseCatalogAdapter {
         let response = self
             .web
             .execute_external_api(input, ExternalApiScope::UpdateRelease)
-            .await?;
-        parse_catalog_response(response.status, &response.data)
+            .await
+            .map_err(Attempt::Retry)?;
+        classify_response(response.status, &response.data)
+    }
+}
+
+fn classify_response(status: i32, data: &str) -> Result<Vec<AppUpdateCatalogRelease>, Attempt> {
+    let result = parse_catalog_response(status, data);
+    if status >= 500 {
+        result.map_err(Attempt::Retry)
+    } else {
+        result.map_err(Attempt::GiveUp)
+    }
+}
+
+/// GitHub's release API sometimes times out or answers 5xx for a moment, so
+/// those get one more try. Anything else, such as a rate limit, would fail
+/// the same way again.
+const RETRY_DELAY: Duration = Duration::from_secs(2);
+
+enum Attempt {
+    Retry(Error),
+    GiveUp(Error),
+}
+
+impl Attempt {
+    fn into_error(self) -> Error {
+        match self {
+            Self::Retry(error) | Self::GiveUp(error) => error,
+        }
     }
 }
 
@@ -151,7 +190,7 @@ fn parse_catalog_response(
 
 #[cfg(test)]
 mod tests {
-    use super::parse_catalog_response;
+    use super::{classify_response, parse_catalog_response, Attempt};
 
     #[test]
     fn catalog_response_maps_github_json_to_application_releases() {
@@ -195,5 +234,26 @@ mod tests {
                 .to_string(),
             "rate limited"
         );
+    }
+
+    #[test]
+    fn only_server_errors_are_retried() {
+        assert!(matches!(
+            classify_response(504, "<html>Gateway Timeout</html>"),
+            Err(Attempt::Retry(_))
+        ));
+        assert!(matches!(classify_response(502, ""), Err(Attempt::Retry(_))));
+        assert!(matches!(
+            classify_response(403, r#"{"message":"API rate limit exceeded"}"#),
+            Err(Attempt::GiveUp(_))
+        ));
+        assert!(matches!(
+            classify_response(404, r#"{"message":"Not Found"}"#),
+            Err(Attempt::GiveUp(_))
+        ));
+        assert!(matches!(
+            classify_response(200, r#"[{"tag_name":"v3.0.1"}]"#),
+            Ok(releases) if releases.len() == 1
+        ));
     }
 }

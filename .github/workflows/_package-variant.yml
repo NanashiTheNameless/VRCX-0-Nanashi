@@ -202,9 +202,17 @@ jobs:
                   NN_SIGNING_KEY_PEM_BASE64: ${{ secrets.NN_SIGNING_KEY_PEM_BASE64 }}
                   NN_SIGNING_PASSWORD: ${{ secrets.NN_SIGNING_PASSWORD }}
               run: |
-                  mold -run npm run "$BUILD_SCRIPT" -- \
-                      --config "${{ steps.config.outputs.config }}" \
-                      --bundles appimage
+                  # The bundler downloads AppRun and linuxdeploy from GitHub with
+                  # no retry, and those downloads drop now and then. A retry
+                  # reuses the compiled binary, so only bundling runs again.
+                  for attempt in 1 2 3; do
+                      mold -run npm run "$BUILD_SCRIPT" -- \
+                          --config "${{ steps.config.outputs.config }}" \
+                          --bundles appimage && break
+                      if [[ "$attempt" == 3 ]]; then exit 1; fi
+                      echo "::warning::AppImage build failed (attempt $attempt), retrying"
+                      sleep 15
+                  done
 
             - id: collect
               name: Collect package artifact

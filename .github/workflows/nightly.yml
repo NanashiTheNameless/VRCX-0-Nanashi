@@ -159,7 +159,14 @@ jobs:
                       Linux)
                           # mold links the release binary much faster than the default linker.
                           mold -run npm run tauri:build -- --config src-tauri/tauri.linux.conf.json --no-bundle -- --timings
-                          npm run tauri -- bundle --config src-tauri/tauri.linux.conf.json --bundles appimage
+                          # The bundler downloads AppRun and linuxdeploy from GitHub with
+                          # no retry, and those downloads drop now and then.
+                          for attempt in 1 2 3; do
+                              npm run tauri -- bundle --config src-tauri/tauri.linux.conf.json --bundles appimage && break
+                              if [[ "$attempt" == 3 ]]; then exit 1; fi
+                              echo "::warning::AppImage bundling failed (attempt $attempt), retrying"
+                              sleep 15
+                          done
                           ;;
                       Windows)
                           npm run tauri:build -- --bundles nsis -- --timings
