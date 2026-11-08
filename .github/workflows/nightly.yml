@@ -622,19 +622,10 @@ jobs:
             - name: Remove updater signatures from GitHub release assets
               run: find release-assets -type f -name '*.sig' -delete
 
-            - name: Create the nightly tag when it does not exist
-              env:
-                  GH_TOKEN: ${{ github.token }}
-              run: |
-                  # A rerun of a failed publication, or a release whose tag was
-                  # deleted, must not block on a missing tag.
-                  tag="${{ needs.prepare.outputs.tag }}"
-                  if ! gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/${tag}" >/dev/null 2>&1; then
-                      gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
-                          -f ref="refs/tags/${tag}" \
-                          -f sha="$GITHUB_SHA"
-                  fi
-
+            # The release API creates the tag at target_commitish when it is
+            # missing, which also covers reruns. Creating the ref directly was
+            # refused (403) for a commit that changed a workflow file, while the
+            # release API created a tag on such a commit without trouble.
             - uses: softprops/action-gh-release@v3
               with:
                   tag_name: ${{ needs.prepare.outputs.tag }}
