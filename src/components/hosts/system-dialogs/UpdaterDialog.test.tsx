@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
     restartApplication: vi.fn(),
     setStringConfigPreference: vi.fn(),
     toastAdd: vi.fn(),
+    refreshGlobalBadges: vi.fn(),
     updateCheckDisabled: false
 }));
 
@@ -42,6 +43,10 @@ vi.mock('@/platform/tauri/bindings', () => ({
         appAppUpdateReleaseGet: mocks.appAppUpdateReleaseGet,
         appAppUpdateReleasesList: mocks.appAppUpdateReleasesList
     }
+}));
+
+vi.mock('@/state/globalBadgeStore', () => ({
+    refreshGlobalBadges: mocks.refreshGlobalBadges
 }));
 
 vi.mock('@/services/entityMediaService', () => ({
@@ -248,6 +253,23 @@ describe('UpdaterDialog', () => {
         mocks.appAppUpdateReleaseGet.mockResolvedValue(null);
         mocks.appAppUpdateReleasesList.mockResolvedValue([]);
         mocks.toNormalizedReleaseFromSnapshot.mockReturnValue(null);
+    });
+
+    it('rereads the global badge list after checking for updates', async () => {
+        let finishCheck: (value: unknown) => void = () => {};
+        mocks.appAppUpdateCheckRun.mockReturnValue(
+            new Promise((resolve) => {
+                finishCheck = resolve;
+            })
+        );
+
+        render(<UpdaterDialog open onOpenChange={vi.fn()} />);
+
+        expect(mocks.refreshGlobalBadges).not.toHaveBeenCalled();
+        finishCheck({ hasAvailableUpdate: false, error: null, release: null });
+        await waitFor(() => {
+            expect(mocks.refreshGlobalBadges).toHaveBeenCalledTimes(1);
+        });
     });
 
     it('uses the release page action for preview checks even when a Tauri update is installable', async () => {

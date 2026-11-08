@@ -519,7 +519,12 @@ impl DesktopRuntimeHostState {
     pub async fn check_for_app_update(
         &self,
     ) -> vrcx_0_application::profile::AppUpdateStatusSnapshot {
-        self.desktop.app_update.check_now().await
+        let data_dir = &self.runtime.app_data_dir().current_dir;
+        let (status, ()) = tokio::join!(
+            self.desktop.app_update.check_now(),
+            crate::global_badges::refresh(data_dir)
+        );
+        status
     }
 
     pub async fn installable_app_update_releases(

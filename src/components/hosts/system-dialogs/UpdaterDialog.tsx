@@ -19,6 +19,7 @@ import {
     isUpdateCheckDisabledBuild
 } from '@/shared/buildLabel';
 import { links } from '@/shared/constants/link';
+import { refreshGlobalBadges } from '@/state/globalBadgeStore';
 import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import {
@@ -246,6 +247,7 @@ export function UpdaterDialog({ open, onOpenChange }: UpdaterDialogProps) {
                 }
             })
             .finally(() => {
+                void refreshGlobalBadges();
                 if (active) {
                     setLoading(false);
                 }

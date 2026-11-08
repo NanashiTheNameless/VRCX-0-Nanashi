@@ -16,7 +16,7 @@ const EMBEDDED: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../data/global-badges.jsonc"
 ));
-const FIRST_CHECK_DELAY: Duration = Duration::from_secs(30);
+const FIRST_CHECK_DELAY: Duration = Duration::from_secs(10);
 const REFRESH_INTERVAL: Duration = Duration::from_secs(6 * 60 * 60);
 /// Dot files in the data folder are skipped by data export.
 const CACHE_FILE: &str = ".global-badges.jsonc";
@@ -79,7 +79,9 @@ fn write_cached(dir: &Path, text: &str, signature: &str) {
     }
 }
 
-async fn refresh(dir: &Path) {
+/// Downloads the signed list now and adopts it if newer. Also run by the
+/// manual update check, so users need not wait for the next interval.
+pub(crate) async fn refresh(dir: &Path) {
     match fetch_signed_catalog().await {
         Ok((text, signature)) => match parse_catalog(&text, GlobalBadgeSource::Downloaded) {
             Ok((catalog, problems)) => {

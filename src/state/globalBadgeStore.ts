@@ -50,6 +50,11 @@ async function readCatalog() {
     }
 }
 
+// The update check also downloads the badge list, so read it again right away.
+export function refreshGlobalBadges() {
+    return readCatalog();
+}
+
 export function ensureGlobalBadgesLoaded() {
     if (started) {
         return;
