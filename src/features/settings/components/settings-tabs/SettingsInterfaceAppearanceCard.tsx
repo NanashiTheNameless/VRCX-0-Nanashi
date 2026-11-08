@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import { ChevronDownIcon, Settings2Icon } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { getLanguageName } from '@/localization/index';
@@ -16,6 +17,14 @@ import {
 } from '@/shared/constants/fonts';
 import type { TableDensity } from '@/state/shellStore';
 import { Button } from '@/ui/shadcn/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
+} from '@/ui/shadcn/dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -288,6 +297,7 @@ export function SettingsInterfaceAppearanceCard({
 }: SettingsInterfaceAppearanceCardProps) {
     const { t } = useTranslation();
     const languageCodes = useLanguageCodes();
+    const [confirmReduceEffects, setConfirmReduceEffects] = useState(false);
 
     return (
         <SettingsCard
@@ -428,9 +438,60 @@ export function SettingsInterfaceAppearanceCard({
             >
                 <Switch
                     checked={prefs.reducedMotionAndBlur}
-                    onCheckedChange={onReducedMotionAndBlurChange}
+                    onCheckedChange={(checked) => {
+                        // Turning effects off asks first; turning them back
+                        // on does not.
+                        if (checked) {
+                            setConfirmReduceEffects(true);
+                        } else {
+                            onReducedMotionAndBlurChange(false);
+                        }
+                    }}
                 />
             </Field>
+            <Dialog
+                open={confirmReduceEffects}
+                onOpenChange={setConfirmReduceEffects}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {t(
+                                'view.settings.appearance.appearance.reduced_motion_and_blur_confirm_title'
+                            )}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {t(
+                                'view.settings.appearance.appearance.reduced_motion_and_blur_confirm_description'
+                            )}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            autoFocus
+                            onClick={() => setConfirmReduceEffects(false)}
+                        >
+                            {t(
+                                'view.settings.appearance.appearance.reduced_motion_and_blur_confirm_cancel'
+                            )}
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={() => {
+                                setConfirmReduceEffects(false);
+                                onReducedMotionAndBlurChange(true);
+                            }}
+                        >
+                            {t(
+                                'view.settings.appearance.appearance.reduced_motion_and_blur_confirm_action'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <Field
                 settingId="interface.appearance.accessible-status"

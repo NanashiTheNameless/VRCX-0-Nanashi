@@ -188,9 +188,10 @@ describe('UserBadges', () => {
             render(<UserBadges userId={awardee} size="full" />);
             const chip = screen.getByRole('img', { name: 'Donator' });
             expect(chip.classList.contains('global-badge--ember')).toBe(true);
-            expect(chip.classList.contains('global-badge--anim-shimmer')).toBe(
-                true
-            );
+            // Effects draw on layers inside the chip, not as classes on it.
+            expect(
+                chip.querySelector('.global-badge-fx--shimmer')
+            ).toBeTruthy();
             cleanup();
             const { container } = render(
                 <UserBadges userId={FORK_DEVELOPER_USER_ID} />

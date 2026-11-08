@@ -11,6 +11,30 @@ const SECOND = 'usr_22222222-2222-2222-2222-222222222222';
 describe('BadgeEditor', () => {
     afterEach(cleanup);
 
+    it('explains when the badge icon is now reserved, and only then', () => {
+        const editor = (icon: string) => (
+            <BadgeEditor
+                initial={{
+                    id: 'b',
+                    label: 'Badge',
+                    icon,
+                    color: '#336699',
+                    enabled: true,
+                    rules: []
+                }}
+                onCancel={() => undefined}
+                onSave={() => undefined}
+            />
+        );
+        const note =
+            'view.settings.appearance.user_badges.icon_now_reserved_detail';
+        render(editor('ShieldUser'));
+        expect(screen.getByText(note)).toBeTruthy();
+        cleanup();
+        render(editor('Cat'));
+        expect(screen.queryByText(note)).toBeNull();
+    });
+
     it('keeps each user list with its rule when an earlier rule is removed', () => {
         let saved: unknown = null;
         render(

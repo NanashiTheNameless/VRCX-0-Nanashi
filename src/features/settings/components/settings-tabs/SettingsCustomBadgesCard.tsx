@@ -12,7 +12,8 @@ import { BadgeEditor, newBadge } from '@/components/badges/BadgeEditor';
 import { CustomBadgeChip } from '@/components/UserBadges';
 import {
     CUSTOM_BADGE_LIMIT,
-    type CustomBadge
+    type CustomBadge,
+    isReservedBadgeIcon
 } from '@/domain/badges/customBadges';
 import { toast } from '@/services/toastService';
 import {
@@ -112,6 +113,11 @@ export function SettingsCustomBadgesCard() {
                             className="flex items-center gap-2 rounded-md border px-2 py-1.5"
                         >
                             <CustomBadgeChip badge={badge} size="full" />
+                            {isReservedBadgeIcon(badge.icon) ? (
+                                <span className="shrink-0 text-xs text-amber-600 dark:text-amber-400">
+                                    {t(`${T}.icon_now_reserved`)}
+                                </span>
+                            ) : null}
                             <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
                                 {badge.rules.length
                                     ? badge.rules

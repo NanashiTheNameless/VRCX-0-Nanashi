@@ -33,9 +33,9 @@ export type GlobalBadgeCatalog = {
 };
 
 // A global badge may use any Lucide or Lucide Lab icon. These are the award
-// icons custom badges can never pick (with their variants, see
-// isReservedBadgeIcon), whatever the downloaded list uses; icons the current
-// list uses are held back from custom badges as well.
+// icons custom badges can never pick, with their variants (see
+// isReservedBadgeIcon). Other icons stay free for custom badges even when a
+// global badge uses them.
 export const AWARD_ICONS = Object.freeze([
     'HandHeart',
     'HeartHandshake',

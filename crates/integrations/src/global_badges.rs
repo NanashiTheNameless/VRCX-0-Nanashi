@@ -511,6 +511,31 @@ mod tests {
     }
 
     #[test]
+    fn keeps_a_long_list_of_combined_effects() {
+        // Every effect at once: longer than the old 32-character limit, which
+        // cut the list and made the frontend fall back to the default.
+        let effects = "shimmer flow sparkle wiggle glow embers flip";
+        let text = format!(
+            r#"{{
+            "revision": 1,
+            "badges": [
+                {{ "id": "donator", "label": "Donator", "icon": "HandHeart",
+                  "animation": "{effects}" }}
+            ],
+            "awards": [
+                {{ "userId": "usr_11111111-1111-1111-1111-111111111111",
+                  "badge": "donator", "animation": "{effects}" }}
+            ]
+        }}"#
+        );
+        let (catalog, problems) = parse_catalog(&text, GlobalBadgeSource::Embedded).unwrap();
+        assert!(problems.is_empty(), "{problems:?}");
+        assert!(effects.len() > 32);
+        assert_eq!(catalog.badges[0].animation, effects);
+        assert_eq!(catalog.awards[0].overrides.animation, effects);
+    }
+
+    #[test]
     fn skips_bad_entries_and_reports_them() {
         let text = r##"{
             "revision": 3,

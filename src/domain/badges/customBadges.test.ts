@@ -8,9 +8,9 @@ import {
 import {
     badgeUserFactsFrom,
     buildCustomBadgeIndex,
-    DEFAULT_CUSTOM_BADGE_ICON,
     extractBadgeUserIds,
     isGroupMemberListTruncated,
+    isReservedBadgeIcon,
     isUserListedOnBadge,
     isVrchatStaff,
     normalizeCustomBadges,
@@ -64,7 +64,7 @@ function resolve(
 }
 
 describe('normalizeCustomBadges', () => {
-    it('refuses the icons reserved for the built-in badges', () => {
+    it('keeps reserved icon names, which draw as the default instead', () => {
         const [
             codeBadge,
             diamondBadge,
@@ -80,12 +80,20 @@ describe('normalizeCustomBadges', () => {
             badge({ id: 'f', icon: 'Rocket' }),
             badge({ id: 'c', icon: 'Music' })
         ]);
-        expect(codeBadge.icon).toBe(DEFAULT_CUSTOM_BADGE_ICON);
-        expect(diamondBadge.icon).toBe(DEFAULT_CUSTOM_BADGE_ICON);
-        expect(staffBadge.icon).toBe(DEFAULT_CUSTOM_BADGE_ICON);
-        expect(donatorBadge.icon).toBe(DEFAULT_CUSTOM_BADGE_ICON);
-        expect(awardBadge.icon).toBe(DEFAULT_CUSTOM_BADGE_ICON);
+        // The names stay so Settings can say why the badge shows the default
+        // icon; BadgeIcon refuses to draw them for custom badges.
+        for (const entry of [
+            codeBadge,
+            diamondBadge,
+            staffBadge,
+            donatorBadge,
+            awardBadge
+        ]) {
+            expect(isReservedBadgeIcon(entry.icon), entry.icon).toBe(true);
+        }
+        expect(codeBadge.icon).toBe('CodeXml');
         expect(starBadge.icon).toBe('Music');
+        expect(isReservedBadgeIcon(starBadge.icon)).toBe(false);
     });
 
     it('keeps the developer accounts in user lists', () => {

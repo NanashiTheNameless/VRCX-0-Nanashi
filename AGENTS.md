@@ -168,9 +168,11 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   `RESERVED_BADGE_ICONS`, plus their families as checked in
   `isReservedBadgeIcon`: any icon with Code, Braces, Brackets or Shield in its
   name except QR codes, and any icon starting with an award icon's name,
-  Diamond, Flask, TestTube or Sparkle, Lucide Lab ones included, plus any
-  icon the current global list uses and its variants) stay reserved
-  so custom badges cannot imitate them; keep the developer badge flashier than
+  Diamond, Flask, TestTube or Sparkle, Lucide Lab ones included) stay
+  reserved so custom badges cannot imitate them. The reserved list is fixed
+  and separate from the icons global badges happen to use: an unreserved icon
+  stays free for custom badges even when a global badge uses it. Keep the
+  developer badge flashier than
   the upstream one. The developer badge's scan and glitch keyframes are
   generated from `scripts/devBadgeEffects.ts` (`npm run badges:dev-fx`, then
   `npm run format`): never hand-edit the block between its GENERATED markers in

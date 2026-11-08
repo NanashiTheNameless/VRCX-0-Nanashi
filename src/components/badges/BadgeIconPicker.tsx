@@ -6,7 +6,6 @@ import { isReservedBadgeIcon } from '@/domain/badges/customBadges';
 import { cn } from '@/lib/utils';
 import { openExternalLink } from '@/services/entityMediaService';
 import { links } from '@/shared/constants/link';
-import { useGlobalBadgeIcons } from '@/state/globalBadgeStore';
 import { Button } from '@/ui/shadcn/button';
 import { Input } from '@/ui/shadcn/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/shadcn/popover';
@@ -34,7 +33,6 @@ export function BadgeIconPicker({
     const [query, setQuery] = useState('');
     const catalog = useBadgeIconCatalog(open);
 
-    const globalIcons = useGlobalBadgeIcons();
     const { results, held } = useMemo(() => {
         const needle = query
             .trim()
@@ -46,11 +44,9 @@ export function BadgeIconPicker({
         if (allowReserved) {
             return { results: matches, held: 0 };
         }
-        const allowed = matches.filter(
-            (name) => !isReservedBadgeIcon(name, globalIcons)
-        );
+        const allowed = matches.filter((name) => !isReservedBadgeIcon(name));
         return { results: allowed, held: matches.length - allowed.length };
-    }, [catalog, query, allowReserved, globalIcons]);
+    }, [catalog, query, allowReserved]);
     const [shown, setShown] = useState(BATCH);
     // State, not a ref: the marker only exists once the popover is open,
     // and the effect below must run again when it appears.

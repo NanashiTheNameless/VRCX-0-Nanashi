@@ -54,39 +54,12 @@ const LEADING_FAMILIES = wordPattern(
     true
 );
 
-// Whether icon is root or one of its variants (BugOff for Bug).
-function inFamily(icon: string, root: string): boolean {
-    const bare = (name: string) => name.replace(/^Lab(?=[A-Z])/, '');
-    const name = bare(icon);
-    const base = bare(root);
+export function isReservedBadgeIcon(icon: string): boolean {
     return (
-        name === base ||
-        (name.startsWith(base) && /[A-Z0-9]/.test(name.charAt(base.length)))
-    );
-}
-
-// globalIcons: the icons the current global badge list uses. Global badges
-// may use any icon, so whatever they pick is held back from custom badges
-// too.
-export function isReservedBadgeIcon(
-    icon: string,
-    globalIcons?: ReadonlySet<string>
-): boolean {
-    if (
         RESERVED_BADGE_ICONS.has(icon) ||
         (ANYWHERE_FAMILIES.test(icon) && !icon.includes('QrCode')) ||
         LEADING_FAMILIES.test(icon)
-    ) {
-        return true;
-    }
-    if (globalIcons) {
-        for (const root of globalIcons) {
-            if (inFamily(icon, root)) {
-                return true;
-            }
-        }
-    }
-    return false;
+    );
 }
 
 export type CustomBadgeRule =
@@ -194,11 +167,12 @@ export function extractBadgeUserIds(value: string): string[] {
     );
 }
 
+// Keeps a reserved name instead of replacing it: the badge still draws the
+// default icon (BadgeIcon refuses reserved ones), and Settings can tell the
+// user why and ask them to pick another.
 export function normalizeBadgeIcon(value: unknown): string {
     const icon = text(value, 64);
-    return ICON_NAME.test(icon) && !isReservedBadgeIcon(icon)
-        ? icon
-        : DEFAULT_CUSTOM_BADGE_ICON;
+    return ICON_NAME.test(icon) ? icon : DEFAULT_CUSTOM_BADGE_ICON;
 }
 
 export function normalizeBadgeColor(value: unknown): string {

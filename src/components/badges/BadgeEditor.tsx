@@ -16,7 +16,8 @@ import {
     normalizeBadgeColor,
     type CustomBadge,
     type CustomBadgeRule,
-    type CustomBadgeRuleKind
+    type CustomBadgeRuleKind,
+    isReservedBadgeIcon
 } from '@/domain/badges/customBadges';
 import type { GroupRoleRecord } from '@/domain/entities/group';
 import { buildFeedFavoriteGroupOptions } from '@/domain/feed/feedFavoriteGroups';
@@ -571,6 +572,11 @@ export function BadgeEditor({
                     <CustomBadgeChip badge={{ ...draft, label }} size="full" />
                 ) : null}
             </div>
+            {isReservedBadgeIcon(draft.icon) ? (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                    {t(`${T}.icon_now_reserved_detail`)}
+                </p>
+            ) : null}
             <div className="flex flex-col gap-2">
                 {draft.rules.length ? (
                     draft.rules.map((rule, index) => (

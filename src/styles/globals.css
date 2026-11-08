@@ -3763,11 +3763,59 @@
     .global-badge-icon-fx {
         animation: none !important;
     }
+    /* Still frames, so badges keep their character without moving: three
+       upright stars, a few sparks partway up, a steady halo. */
+    .global-badge-fx--sparkle::before,
+    .global-badge-fx--sparkle::after {
+        opacity: 0;
+    }
+    .global-badge-fx--sparkle.global-badge-fx--n2::before,
+    .global-badge-fx--sparkle.global-badge-fx--n1::after,
+    .global-badge-fx--sparkle.global-badge-fx--n2::after {
+        opacity: 0.95;
+        transform: scale(1);
+    }
+    .global-badge-fx--embers::before,
+    .global-badge-fx--embers::after {
+        opacity: 0;
+    }
+    .global-badge-fx--embers.global-badge-fx--n1::before,
+    .global-badge-fx--embers.global-badge-fx--n2::after,
+    .global-badge-fx--embers.global-badge-fx--n3::before {
+        opacity: 0.9;
+        transform: translate(1px, -5px);
+    }
+    .global-badge-fx--glow::before {
+        opacity: 0.55;
+    }
 }
 .reduce-effects .global-badge-fx::before,
 .reduce-effects .global-badge-fx::after,
 .reduce-effects .global-badge-icon-fx {
     animation: none !important;
+}
+.reduce-effects .global-badge-fx--sparkle::before,
+.reduce-effects .global-badge-fx--sparkle::after {
+    opacity: 0;
+}
+.reduce-effects .global-badge-fx--sparkle.global-badge-fx--n2::before,
+.reduce-effects .global-badge-fx--sparkle.global-badge-fx--n1::after,
+.reduce-effects .global-badge-fx--sparkle.global-badge-fx--n2::after {
+    opacity: 0.95;
+    transform: scale(1);
+}
+.reduce-effects .global-badge-fx--embers::before,
+.reduce-effects .global-badge-fx--embers::after {
+    opacity: 0;
+}
+.reduce-effects .global-badge-fx--embers.global-badge-fx--n1::before,
+.reduce-effects .global-badge-fx--embers.global-badge-fx--n2::after,
+.reduce-effects .global-badge-fx--embers.global-badge-fx--n3::before {
+    opacity: 0.9;
+    transform: translate(1px, -5px);
+}
+.reduce-effects .global-badge-fx--glow::before {
+    opacity: 0.55;
 }
 .vrchat-staff-badge {
     display: inline-flex;

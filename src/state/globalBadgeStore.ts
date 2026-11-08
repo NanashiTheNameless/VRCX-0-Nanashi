@@ -71,31 +71,3 @@ export function ensureGlobalBadgesLoaded() {
     void readCatalog();
     setInterval(() => void readCatalog(), REFRESH_MS);
 }
-
-const iconSets = new WeakMap<GlobalBadgeCatalog, ReadonlySet<string>>();
-const NO_ICONS: ReadonlySet<string> = new Set();
-
-// Every icon the current global badge list uses, badge types and per-person
-// overrides alike. Custom badges may not use these (see isReservedBadgeIcon).
-export function globalBadgeIcons(
-    catalog: GlobalBadgeCatalog | null
-): ReadonlySet<string> {
-    if (!catalog) {
-        return NO_ICONS;
-    }
-    let icons = iconSets.get(catalog);
-    if (!icons) {
-        icons = new Set(
-            [
-                ...catalog.badges.map((badge) => badge.icon),
-                ...catalog.awards.map((grant) => grant.overrides.icon)
-            ].filter(Boolean)
-        );
-        iconSets.set(catalog, icons);
-    }
-    return icons;
-}
-
-export function useGlobalBadgeIcons(): ReadonlySet<string> {
-    return useGlobalBadgeStore((state) => globalBadgeIcons(state.catalog));
-}

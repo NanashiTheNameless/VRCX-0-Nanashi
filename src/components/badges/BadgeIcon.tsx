@@ -1,6 +1,5 @@
 import { isReservedBadgeIcon } from '@/domain/badges/customBadges';
 import { cn } from '@/lib/utils';
-import { useGlobalBadgeIcons } from '@/state/globalBadgeStore';
 
 import { useBadgeIconCatalog } from './badgeIcons';
 
@@ -18,9 +17,8 @@ export function BadgeIcon({
     fallback?: string;
 }) {
     const catalog = useBadgeIconCatalog();
-    const globalIcons = useGlobalBadgeIcons();
     const Icon =
-        (!allowReserved && isReservedBadgeIcon(name, globalIcons)
+        (!allowReserved && isReservedBadgeIcon(name)
             ? null
             : catalog?.icons[name]) ??
         catalog?.icons[fallback] ??

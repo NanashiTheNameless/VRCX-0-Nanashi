@@ -54,17 +54,17 @@ describe('award appearance', () => {
         for (const icon of AWARD_ICONS) {
             expect(known[icon], icon).toBeTruthy();
             expect(isReservedBadgeIcon(icon), icon).toBe(true);
-            expect(normalizeBadgeIcon(icon)).not.toBe(icon);
         }
     });
 
-    it('holds back the icons the current global list uses, with variants', () => {
-        const globalIcons = new Set(['Cat', 'LabGemRing']);
-        expect(isReservedBadgeIcon('Cat', globalIcons)).toBe(true);
-        expect(isReservedBadgeIcon('CatOff', globalIcons)).toBe(true);
-        expect(isReservedBadgeIcon('LabCat', globalIcons)).toBe(true);
-        expect(isReservedBadgeIcon('Category', globalIcons)).toBe(false);
-        expect(isReservedBadgeIcon('Cat')).toBe(false);
+    it('keeps a reserved icon name so Settings can explain it', () => {
+        // The badge still draws the default icon; BadgeIcon refuses reserved
+        // names for custom badges.
+        expect(normalizeBadgeIcon('ShieldUser')).toBe('ShieldUser');
+        expect(isReservedBadgeIcon(normalizeBadgeIcon('ShieldUser'))).toBe(
+            true
+        );
+        expect(normalizeBadgeIcon('not an icon')).toBe('Star');
     });
 
     it('keeps the code, shield and award icon families', () => {
@@ -108,7 +108,6 @@ describe('award appearance', () => {
             'UserShield'
         ]) {
             expect(isReservedBadgeIcon(icon), icon).toBe(true);
-            expect(normalizeBadgeIcon(icon), icon).not.toBe(icon);
         }
         expect(isReservedBadgeIcon('Heart')).toBe(false);
     });

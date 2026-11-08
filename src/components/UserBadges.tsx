@@ -313,7 +313,6 @@ export function GlobalBadgeChip({
             className={cn(
                 'global-badge',
                 `global-badge--${style}`,
-                effects.map((effect) => `global-badge--anim-${effect}`),
                 effects.some((effect) => SPILLING_EFFECTS.has(effect)) &&
                     'global-badge--spill',
                 size === 'compact' && 'global-badge--compact',
