@@ -15,6 +15,12 @@ packages from Ubuntu 24.04, including its security updates. The `4.1` in the
 package names is the API version, not the WebKit engine version. macOS uses the
 system WebKit, updated with macOS and Safari; Windows uses WebView2.
 
+Linux AppImage packaging also requires `gstreamer1.0-plugins-base` and
+`gstreamer1.0-plugins-good` on the build system. The Linux bundle configuration
+enables `bundleMediaFramework` to include the media plugins and plugin scanner.
+The AppImage smoke test checks for these files, including the plugin that provides
+`appsink`.
+
 ```bash
 git clone https://github.com/NanashiTheNameless/VRCX-0-Nanashi
 cd VRCX-0-Nanashi

@@ -15,6 +15,21 @@ def checksum(path):
         return hashlib.file_digest(image, 'sha256').hexdigest()
 
 
+def check_media_plugins(image, directory):
+    subprocess.run(
+        [str(image), '--appimage-extract', 'usr/lib/*gstreamer*'],
+        cwd=directory, check=True, capture_output=True, text=True, timeout=90,
+    )
+    appdir = directory / 'squashfs-root'
+    for relative in (
+        'usr/lib/gstreamer-1.0/libgstapp.so',
+        'usr/lib/gstreamer-1.0/libgstcoreelements.so',
+        'usr/lib/gstreamer-1.0/libgstplayback.so',
+        'usr/lib/gstreamer1.0/gstreamer-1.0/gst-plugin-scanner',
+    ):
+        assert (appdir / relative).is_file(), f'AppImage is missing {relative}'
+
+
 def launch(image, expected, environment):
     with subprocess.Popen(
         [str(image), '--appimage-smoke-test'], env=environment,
@@ -47,6 +62,7 @@ def smoke_test(source, version):
     digest = checksum(source)
     with tempfile.TemporaryDirectory(prefix='vrcx-appimage-smoke-') as directory:
         root = Path(directory)
+        check_media_plugins(source, root)
         downloads = root / 'My Downloads'
         downloads.mkdir()
         home = root / 'home'
@@ -85,7 +101,7 @@ def smoke_test(source, version):
         launch(custom, custom, environment)
         assert checksum(custom) == digest
     assert checksum(source) == digest
-    print('AppImage smoke test passed: first launch, autostart, repeat launch, updater/relaunch paths, collision, custom filename.')
+    print('AppImage smoke test passed: media plugins, first launch, autostart, repeat launch, updater/relaunch paths, collision, custom filename.')
 
 
 if __name__ == '__main__':

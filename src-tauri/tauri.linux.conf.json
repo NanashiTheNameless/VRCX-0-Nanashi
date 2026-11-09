@@ -5,6 +5,11 @@
     },
     "bundle": {
         "targets": ["appimage"],
-        "createUpdaterArtifacts": true
+        "createUpdaterArtifacts": true,
+        "linux": {
+            "appimage": {
+                "bundleMediaFramework": true
+            }
+        }
     }
 }

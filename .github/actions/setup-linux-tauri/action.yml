@@ -55,6 +55,8 @@ runs:
                   rpm \
                   wget
               sudo apt-get install -y --no-install-recommends \
+                  gstreamer1.0-plugins-base \
+                  gstreamer1.0-plugins-good \
                   libgtk-3-dev \
                   libwebkit2gtk-4.1-0 \
                   libwebkit2gtk-4.1-dev \
