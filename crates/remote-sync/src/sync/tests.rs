@@ -10,14 +10,10 @@ use super::*;
 const USER: &str = "usr_12345678-1234-1234-1234-1234567890ab";
 
 fn record_profile_field(pc: &Pc, field: vrcx_0_persistence::profile_history::ProfileHistoryField) {
-    use vrcx_0_persistence::profile_history::{self, ProfileHistoryField};
+    use vrcx_0_persistence::profile_history;
     let previous = profile_history::settings_get(&pc.db).unwrap();
     let mut settings = previous.clone();
-    match field {
-        ProfileHistoryField::Status => settings.status.recording = true,
-        ProfileHistoryField::Bio => settings.bio.recording = true,
-        ProfileHistoryField::Pronouns => settings.pronouns.recording = true,
-    }
+    settings.choice_mut(field).recording = true;
     profile_history::settings_set(&pc.db, &settings).unwrap();
     for (at, value) in [(1791633599, "Before"), (1791633600, "After")] {
         let mut profile = serde_json::json!({"id":"usr_friend"});
@@ -55,7 +51,11 @@ async fn profile_history_sync_is_selectable_per_field_and_catches_up_without_reu
     let secret = SyncSecret::generate().unwrap();
     let a = pc("profile-fields-a");
     let b = pc("profile-fields-b");
-    for field in ProfileHistoryField::ALL {
+    for field in [
+        ProfileHistoryField::Status,
+        ProfileHistoryField::Bio,
+        ProfileHistoryField::Pronouns,
+    ] {
         record_profile_field(&a, field);
     }
     let mut sending = ProfileHistorySettings::default();

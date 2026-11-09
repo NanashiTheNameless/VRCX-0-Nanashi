@@ -57,10 +57,13 @@ There are two ways to keep history beyond one PC, and they cannot be on at the s
 Under Settings > Sync Options, pair this PC with a RemoteSync server (the official one or your
 own) to keep an end-to-end encrypted copy of your history there and share it between your PCs.
 
-Status, bio and pronouns have independent recording and sync choices under Settings > Social >
-Profile History. Recording defaults off; syncing defaults on for each field and still requires
+Status, bio, pronouns, display name, bio links, profile pictures, profile decorations,
+badges, tags, age verification and avatar cloning have independent recording and sync
+choices under Settings > Social > Profile History. Recording defaults off; syncing defaults on for each field and still requires
 History Sync to be enabled and paired. A user's **Profile History** tab shows observed changes
 with before and after values. These choices also control existing status and bio history.
+The app also keeps each friend's last seen full-profile details on this PC, so after a
+restart **Load friend details** only fetches friends whose full profile was never loaded.
 See [Profile History](PROFILE_HISTORY.md).
 
 Automatic recording is limited to friends, players currently in your instance, and your

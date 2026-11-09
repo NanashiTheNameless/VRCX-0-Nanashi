@@ -2,11 +2,19 @@
 
 Open Settings > Social > Profile History. Each field has two independent switches:
 
-| Field                  | Record history | Sync history  |
-| ---------------------- | -------------- | ------------- |
-| Status and status text | Off by default | On by default |
-| Bio                    | Off by default | On by default |
-| Pronouns               | Off by default | On by default |
+| Field                                                          | Record history | Sync history  |
+| -------------------------------------------------------------- | -------------- | ------------- |
+| Status and status text                                         | Off by default | On by default |
+| Bio                                                            | Off by default | On by default |
+| Pronouns                                                       | Off by default | On by default |
+| Display name                                                   | Off by default | On by default |
+| Bio links                                                      | Off by default | On by default |
+| Profile pictures (icon and profile picture)                    | Off by default | On by default |
+| Profile decorations (banner and icon frame)                    | Off by default | On by default |
+| Badges                                                         | Off by default | On by default |
+| Tags (including trust rank and languages)                      | Off by default | On by default |
+| Age verification (status and whether the user is verified)     | Off by default | On by default |
+| Avatar cloning (whether the user allows cloning their avatars) | Off by default | On by default |
 
 These choices belong to this PC and are never copied by Settings Sync.
 
@@ -15,6 +23,11 @@ These choices belong to this PC and are never copied by Settings Sync.
 Recording saves changes the app observes in profiles it already receives, including your
 own profile. It does not start additional profile requests. Missing fields are ignored;
 an explicitly empty value records a field being cleared. Repeated values do not add rows.
+
+Lists are saved one item per line. Tags and badges are compared as sorted lists, and badges
+by name only, so VRChat reordering them or updating a badge's timestamps is not recorded as
+a change. Bio links keep their order. Yes/no values such as avatar cloning are saved as
+`true` or `false`.
 
 Automatic recording covers your friends and players currently in your game instance.
 When a non-friend leaves, you leave the instance, or the game closes, automatic recording
@@ -44,14 +57,23 @@ earlier history.
 that periodically fetches profiles. If you use it, enable **Record bio history** to save its
 bio changes. Current profile data and badges keep working with history recording off.
 
-Use **Refresh all friend profiles** on the Friends page or beside **Refresh friends list** in
-the bottom-right sidebar settings popover to fetch all friends' profiles again,
+Use **Refresh all friend profiles**, in the arrow menu of **Load friend details** on the
+Friends page or beside **Refresh friends list** in the bottom-right sidebar settings
+popover, to fetch all friends' profiles again,
 including profiles already loaded. This updates current data and records observed changes
 for fields whose recording is enabled. It uses the automatic history rules, so each field's
 first observation establishes a baseline. Opening an individual profile also captures
 enabled values that are not already in history. Completing or canceling a full refresh starts
-a 5-minute cooldown before another full refresh can run. Both buttons ask for confirmation
+a 5-minute cooldown before another full refresh can run. Both places ask for confirmation
 first, explaining that the job can take a while and should be allowed to finish.
+
+**Load friend details** reuses what the app already knows. The app keeps each friend's
+last seen full-profile details (join date, pronouns, badges, age verification, profile
+decorations and avatar cloning) on this PC, per account, and only rewrites them when they
+change. After a restart, Load applies those saved details without a request, so it only
+fetches friends whose full profile was never loaded. The saved details are never synced.
+Applying them does not add history rows; they become the comparison baseline, and the next
+real change is recorded as usual.
 Only one profile request runs at a time, spaced at least half a second apart. Rate limiting
 pauses requests for at least 60 seconds, backs off further on repeated limits, and honors
 longer waits from VRChat. Persistent limits stop the refresh. Other VRChat reads also
@@ -60,7 +82,7 @@ respect that wait; actions report a rate limit instead of executing much later.
 ## Reading history
 
 Open a user dialog and select **Profile History**. This tab is also available on your own
-profile. Filter to Status, Bio or Pronouns, or show all fields. Each entry shows its observed
+profile. Filter to one field or show all fields. Each entry shows its observed
 time, previous value and new value. Times use your configured display timezone.
 Manually captured values are labeled **Snapshot** and show the captured value once,
 without claiming an earlier value or edit time.
@@ -92,8 +114,8 @@ is off, so it cannot discard history this PC has chosen not to import.
 
 ## Server collector
 
-The read-only server collector saves the same observed status, bio, and pronouns changes
-as the app. It has its own copy of the six recording and sync switches, following the
+The read-only server collector saves the same observed profile changes as the app. It has
+its own copy of every field's recording and sync switches, following the
 primary PC selected as the **Server deduplication device** under Settings > Sync Options.
 Other paired PCs keep their own choices.
 
@@ -112,5 +134,7 @@ Stopping or restarting the collector discards unsent temporary history. Disablin
 sync also pauses a previously queued signed upload containing that field until re-enabled.
 
 The desktop app, server API, supervisor, and collector runtime need compatible versions
-for these settings to follow the primary PC. The settings copy contains only field choices
+for these settings to follow the primary PC. A server that predates the newer fields
+receives only the status, bio and pronouns choices; its collector keeps the defaults
+(recording off) for the rest. The settings copy contains only field choices
 and device ordering metadata; profile values use the existing encrypted history chunks.

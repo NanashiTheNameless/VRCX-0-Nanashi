@@ -150,6 +150,11 @@ impl UserQueryCache {
             .await
     }
 
+    /// Whether a live answer is cached, so a caller can skip request pacing.
+    pub(crate) fn contains(&self, kind: UserQueryKind, endpoint: &str, user_id: &str) -> bool {
+        self.cache.contains_key(&cache_key(kind, endpoint, user_id))
+    }
+
     pub(crate) async fn invalidate(&self, kind: UserQueryKind, endpoint: &str, user_id: &str) {
         self.cache
             .invalidate(&cache_key(kind, endpoint, user_id))

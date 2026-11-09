@@ -968,3 +968,53 @@ async fn cached_non_object_user_response_is_returned_verbatim() -> Result<()> {
     assert_eq!(response.data, " 42 ");
     Ok(())
 }
+
+#[tokio::test]
+async fn load_uses_saved_profile_details_without_a_request() -> Result<()> {
+    let (_dir, runtime, session) = runtime_with_active_session("friend-profile-saved-details")?;
+    runtime.runtime().friends.set_baseline(
+        vrcx_0_core::friends::FriendRosterBaseline {
+            current_user_id: session.user_id.clone(),
+            endpoint: session.endpoint.clone(),
+            websocket: session.websocket.clone(),
+            friends_by_id: HashMap::from([(
+                "usr_friend".into(),
+                friend_entry(json!({"id":"usr_friend", "displayName":"Friend"})),
+            )]),
+        },
+        7,
+        1,
+    );
+    let saved: vrcx_0_core::json::RawJsonObject = serde_json::from_value(json!({
+        "id": "usr_friend",
+        "date_joined": "2020-01-01",
+        "pronouns": "they/them"
+    }))
+    .expect("saved details parse");
+    runtime
+        .runtime()
+        .deps
+        .stores
+        .batch_writer
+        .observe_friend_profile_details(
+            &vrcx_0_core::OwnerId::new(session.user_id.clone()),
+            &vrcx_0_core::vrchat_endpoints::normalize_vrchat_api_endpoint(Some(&session.endpoint)),
+            &[saved],
+        )?;
+
+    let started = runtime.runtime().start_friend_profile_bulk_load()?;
+    assert_eq!(started.total, 1);
+    wait_for_bulk_load_processed(runtime.runtime(), 1).await;
+    let completed = runtime.runtime().friend_profile_bulk_load_status();
+    // The test web client cannot answer, so a request would have failed.
+    assert_eq!((completed.loaded, completed.failed), (1, 0));
+    let friend = runtime
+        .runtime()
+        .friends
+        .snapshot()
+        .and_then(|snapshot| snapshot.friends_by_id.get("usr_friend").cloned())
+        .expect("friend stays in the roster");
+    assert_eq!(friend.date_joined.as_str(), Some("2020-01-01"));
+    assert_eq!(friend.extra.get("pronouns"), Some(&json!("they/them")));
+    Ok(())
+}

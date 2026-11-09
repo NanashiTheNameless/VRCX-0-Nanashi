@@ -28,14 +28,21 @@ pub trait RealtimeBatchWriter: Send + Sync {
         batch: &RealtimePersistenceBatch,
     ) -> Result<RealtimeWriteCounts>;
 
-    fn observe_age_verification(
+    fn observe_friend_profile_details(
         &self,
         owner: &OwnerId,
         endpoint: &str,
         users: &[vrcx_0_core::json::RawJsonObject],
     ) -> Result<()>;
 
-    fn age_verification_facts(
+    fn friend_profile_details(
+        &self,
+        owner: &OwnerId,
+        endpoint: &str,
+        user_id: &str,
+    ) -> Result<Option<Value>>;
+
+    fn friend_profile_details_list(
         &self,
         owner: &OwnerId,
         endpoint: &str,

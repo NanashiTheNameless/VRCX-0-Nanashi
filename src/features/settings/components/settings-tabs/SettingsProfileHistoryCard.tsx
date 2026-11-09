@@ -11,9 +11,11 @@ import { Switch } from '@/ui/shadcn/switch';
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 
+// Literal ids, so the settings manifest test can find every switch.
 const FIELDS = [
     {
         field: 'status',
+        key: 'status',
         choices: [
             {
                 property: 'recording',
@@ -27,16 +29,21 @@ const FIELDS = [
     },
     {
         field: 'bio',
+        key: 'bio',
         choices: [
             {
                 property: 'recording',
                 settingId: 'social.profile-history.bio-recording'
             },
-            { property: 'sync', settingId: 'social.profile-history.bio-sync' }
+            {
+                property: 'sync',
+                settingId: 'social.profile-history.bio-sync'
+            }
         ]
     },
     {
         field: 'pronouns',
+        key: 'pronouns',
         choices: [
             {
                 property: 'recording',
@@ -47,8 +54,122 @@ const FIELDS = [
                 settingId: 'social.profile-history.pronouns-sync'
             }
         ]
+    },
+    {
+        field: 'displayName',
+        key: 'display_name',
+        choices: [
+            {
+                property: 'recording',
+                settingId: 'social.profile-history.display-name-recording'
+            },
+            {
+                property: 'sync',
+                settingId: 'social.profile-history.display-name-sync'
+            }
+        ]
+    },
+    {
+        field: 'bioLinks',
+        key: 'bio_links',
+        choices: [
+            {
+                property: 'recording',
+                settingId: 'social.profile-history.bio-links-recording'
+            },
+            {
+                property: 'sync',
+                settingId: 'social.profile-history.bio-links-sync'
+            }
+        ]
+    },
+    {
+        field: 'profilePictures',
+        key: 'profile_pictures',
+        choices: [
+            {
+                property: 'recording',
+                settingId: 'social.profile-history.profile-pictures-recording'
+            },
+            {
+                property: 'sync',
+                settingId: 'social.profile-history.profile-pictures-sync'
+            }
+        ]
+    },
+    {
+        field: 'profileDecorations',
+        key: 'profile_decorations',
+        choices: [
+            {
+                property: 'recording',
+                settingId:
+                    'social.profile-history.profile-decorations-recording'
+            },
+            {
+                property: 'sync',
+                settingId: 'social.profile-history.profile-decorations-sync'
+            }
+        ]
+    },
+    {
+        field: 'badges',
+        key: 'badges',
+        choices: [
+            {
+                property: 'recording',
+                settingId: 'social.profile-history.badges-recording'
+            },
+            {
+                property: 'sync',
+                settingId: 'social.profile-history.badges-sync'
+            }
+        ]
+    },
+    {
+        field: 'tags',
+        key: 'tags',
+        choices: [
+            {
+                property: 'recording',
+                settingId: 'social.profile-history.tags-recording'
+            },
+            {
+                property: 'sync',
+                settingId: 'social.profile-history.tags-sync'
+            }
+        ]
+    },
+    {
+        field: 'ageVerification',
+        key: 'age_verification',
+        choices: [
+            {
+                property: 'recording',
+                settingId: 'social.profile-history.age-verification-recording'
+            },
+            {
+                property: 'sync',
+                settingId: 'social.profile-history.age-verification-sync'
+            }
+        ]
+    },
+    {
+        field: 'avatarCloning',
+        key: 'avatar_cloning',
+        choices: [
+            {
+                property: 'recording',
+                settingId: 'social.profile-history.avatar-cloning-recording'
+            },
+            {
+                property: 'sync',
+                settingId: 'social.profile-history.avatar-cloning-sync'
+            }
+        ]
     }
 ] as const;
+
 const T = 'view.settings.social.profile_history';
 
 export function SettingsProfileHistoryCard() {
@@ -82,7 +203,12 @@ export function SettingsProfileHistoryCard() {
         if (!settings || saving) return;
         const next = {
             ...settings,
-            [field]: { ...settings[field], [property]: value }
+            [field]: {
+                recording: false,
+                sync: true,
+                ...settings[field],
+                [property]: value
+            }
         };
         setSaving(true);
         setError('');
@@ -101,24 +227,24 @@ export function SettingsProfileHistoryCard() {
             <p className="text-muted-foreground text-sm">
                 {t(`${T}.description`)}
             </p>
-            {FIELDS.map(({ field, choices }) => (
+            {FIELDS.map(({ field, key, choices }) => (
                 <div
                     key={field}
                     className="space-y-3 border-b pb-4 last:border-b-0"
                 >
-                    <p className="font-medium">{t(`${T}.${field}`)}</p>
+                    <p className="font-medium">{t(`${T}.${key}`)}</p>
                     {choices.map(({ property, settingId }) => (
                         <Field
                             key={property}
                             settingId={settingId}
-                            label={t(`${T}.${field}_${property}`)}
+                            label={t(`${T}.${key}_${property}`)}
                             description={t(`${T}.${property}_description`)}
                             onReset={() =>
                                 save(field, property, property === 'sync')
                             }
                         >
                             <Switch
-                                aria-label={`${t(`${T}.${field}`)}: ${t(`${T}.${property}`)}`}
+                                aria-label={`${t(`${T}.${key}`)}: ${t(`${T}.${property}`)}`}
                                 checked={
                                     settings?.[field]?.[property] ??
                                     property === 'sync'

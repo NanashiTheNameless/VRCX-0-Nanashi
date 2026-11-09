@@ -1368,14 +1368,33 @@ impl DesktopRuntimeHostState {
                 self.runtime.desktop_assembly().database(),
             )?;
             let request = serde_json::json!({
-                "version": 1, "primaryDeviceKeyId": signer.key_id(),
+                "version": 2, "primaryDeviceKeyId": signer.key_id(),
                 "manifestSeq": manifest.manifest_seq, "settingsRevision": revision,
                 "settings": settings,
             });
-            match client
+            let mut result = client
                 .collector_profile_history_set(token, vault_id, &request)
-                .await
-            {
+                .await;
+            // Servers that predate the added profile fields accept only the
+            // original three; their collector keeps the defaults for the rest.
+            if matches!(
+                result,
+                Err(vrcx_0_remote_sync::Error::Api { status: 400, .. })
+            ) {
+                let legacy = serde_json::json!({
+                    "version": 1, "primaryDeviceKeyId": signer.key_id(),
+                    "manifestSeq": manifest.manifest_seq, "settingsRevision": revision,
+                    "settings": {
+                        "status": settings.status,
+                        "bio": settings.bio,
+                        "pronouns": settings.pronouns,
+                    },
+                });
+                result = client
+                    .collector_profile_history_set(token, vault_id, &legacy)
+                    .await;
+            }
+            match result {
                 Ok(()) => return Ok(()),
                 // Older instances can keep syncing history while they upgrade.
                 Err(vrcx_0_remote_sync::Error::Api { status: 404, .. }) => return Ok(()),

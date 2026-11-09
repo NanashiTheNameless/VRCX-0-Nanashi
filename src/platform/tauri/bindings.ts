@@ -7292,7 +7292,18 @@ export type ProfileHistoryEntry = {
     value: string;
 };
 
-export type ProfileHistoryField = 'status' | 'bio' | 'pronouns';
+export type ProfileHistoryField =
+    | 'status'
+    | 'bio'
+    | 'pronouns'
+    | 'displayName'
+    | 'bioLinks'
+    | 'profilePictures'
+    | 'profileDecorations'
+    | 'badges'
+    | 'tags'
+    | 'ageVerification'
+    | 'avatarCloning';
 
 export type ProfileHistoryQuery = {
     userId: string;
@@ -7306,6 +7317,14 @@ export type ProfileHistorySettings = {
     status?: ProfileHistoryChoice;
     bio?: ProfileHistoryChoice;
     pronouns?: ProfileHistoryChoice;
+    displayName?: ProfileHistoryChoice;
+    bioLinks?: ProfileHistoryChoice;
+    profilePictures?: ProfileHistoryChoice;
+    profileDecorations?: ProfileHistoryChoice;
+    badges?: ProfileHistoryChoice;
+    tags?: ProfileHistoryChoice;
+    ageVerification?: ProfileHistoryChoice;
+    avatarCloning?: ProfileHistoryChoice;
 };
 
 /**  Rows added per table, for the result summary. */

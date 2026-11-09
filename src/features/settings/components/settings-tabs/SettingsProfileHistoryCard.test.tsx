@@ -87,6 +87,53 @@ describe('SettingsProfileHistoryCard', () => {
         );
     });
 
+    it('shows every added field and saves it under its own key', async () => {
+        const initial = {
+            status: { recording: false, sync: true },
+            bio: { recording: false, sync: true },
+            pronouns: { recording: false, sync: true }
+        };
+        api.get.mockResolvedValue(initial);
+        api.set.mockResolvedValue(undefined);
+        render(<SettingsProfileHistoryCard />);
+        for (const key of [
+            'display_name',
+            'bio_links',
+            'profile_pictures',
+            'profile_decorations',
+            'badges',
+            'tags',
+            'age_verification',
+            'avatar_cloning'
+        ]) {
+            expect(
+                screen
+                    .getByRole('switch', {
+                        name: `${T}.${key}: ${T}.recording`
+                    })
+                    .getAttribute('aria-checked')
+            ).toBe('false');
+            expect(
+                screen
+                    .getByRole('switch', { name: `${T}.${key}: ${T}.sync` })
+                    .getAttribute('aria-checked')
+            ).toBe('true');
+        }
+        const badges = screen.getByRole('switch', {
+            name: `${T}.badges: ${T}.recording`
+        });
+        await waitFor(() =>
+            expect(badges.hasAttribute('disabled')).toBe(false)
+        );
+        fireEvent.click(badges);
+        await waitFor(() =>
+            expect(api.set).toHaveBeenCalledWith({
+                ...initial,
+                badges: { recording: true, sync: true }
+            })
+        );
+    });
+
     it('keeps the saved choice when a write fails', async () => {
         api.get.mockResolvedValue({
             status: { recording: false, sync: true },

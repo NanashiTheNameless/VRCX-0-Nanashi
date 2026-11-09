@@ -74,6 +74,38 @@ pub const ROW_STREAMS: &[StreamSpec] = &[
         "profile_history_pronouns",
         &["user_id", "property", "previous_value", "value"],
     ),
+    feed(
+        "profile_history_display_name",
+        &["user_id", "property", "previous_value", "value"],
+    ),
+    feed(
+        "profile_history_bio_links",
+        &["user_id", "property", "previous_value", "value"],
+    ),
+    feed(
+        "profile_history_profile_pictures",
+        &["user_id", "property", "previous_value", "value"],
+    ),
+    feed(
+        "profile_history_profile_decorations",
+        &["user_id", "property", "previous_value", "value"],
+    ),
+    feed(
+        "profile_history_badges",
+        &["user_id", "property", "previous_value", "value"],
+    ),
+    feed(
+        "profile_history_tags",
+        &["user_id", "property", "previous_value", "value"],
+    ),
+    feed(
+        "profile_history_age_verification",
+        &["user_id", "property", "previous_value", "value"],
+    ),
+    feed(
+        "profile_history_avatar_cloning",
+        &["user_id", "property", "previous_value", "value"],
+    ),
     feed("feed_avatar", &["user_id", "avatar_name"]),
     feed("feed_online_offline", &["user_id", "type"]),
     feed("friend_log_history", &["user_id", "type"]),

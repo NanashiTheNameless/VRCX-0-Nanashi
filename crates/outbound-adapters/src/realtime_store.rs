@@ -169,13 +169,13 @@ impl RealtimeBatchWriter for PersistenceRealtimeStore {
         )?)
     }
 
-    fn observe_age_verification(
+    fn observe_friend_profile_details(
         &self,
         owner: &OwnerId,
         endpoint: &str,
         users: &[vrcx_0_core::json::RawJsonObject],
     ) -> crate::Result<()> {
-        Ok(vrcx_0_persistence::age_verification::observe(
+        Ok(vrcx_0_persistence::friend_profile_details::observe(
             &self.db,
             owner,
             endpoint,
@@ -184,14 +184,26 @@ impl RealtimeBatchWriter for PersistenceRealtimeStore {
         )?)
     }
 
-    fn age_verification_facts(
+    fn friend_profile_details(
+        &self,
+        owner: &OwnerId,
+        endpoint: &str,
+        user_id: &str,
+    ) -> crate::Result<Option<serde_json::Value>> {
+        Ok(
+            vrcx_0_persistence::friend_profile_details::get(&self.db, owner, endpoint, user_id)?
+                .map(serde_json::Value::Object),
+        )
+    }
+
+    fn friend_profile_details_list(
         &self,
         owner: &OwnerId,
         endpoint: &str,
         user_ids: &[String],
     ) -> crate::Result<Vec<serde_json::Value>> {
         Ok(
-            vrcx_0_persistence::age_verification::list(&self.db, owner, endpoint, user_ids)?
+            vrcx_0_persistence::friend_profile_details::list(&self.db, owner, endpoint, user_ids)?
                 .into_iter()
                 .map(serde_json::Value::Object)
                 .collect(),

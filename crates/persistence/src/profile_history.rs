@@ -171,11 +171,8 @@ fn observe_with_intent(
             for field in ProfileHistoryField::ALL {
                 if !settings.choice(field).recording { continue; }
                 for property in field.properties() {
-                    let value = match user.get(*property) {
-                        Some(Value::String(value)) => value.as_str(),
-                        Some(Value::Null) => "",
-                        _ => continue,
-                    };
+                    let Some(value) = user.get(*property).and_then(|value| history_value(property, value)) else { continue };
+                    let value = value.as_str();
                     let args = ParamsBuilder::new().set("user", user_id).set("property", *property).set("value", value).build();
                     let previous = tx.execute(
                         &format!("SELECT value FROM {prefix}_profile_history_baseline WHERE user_id = @user AND property = @property"), &args,
@@ -207,6 +204,40 @@ fn observe_with_intent(
         }
         Ok(())
     })
+}
+
+/// The text recorded for one profile property, or `None` when the value has
+/// a shape history does not record. Lists are stored one item per line;
+/// tags and badges are sorted so VRChat reordering them is not a change, and
+/// badges keep only their names because each badge also carries timestamps.
+pub fn history_value(property: &str, value: &Value) -> Option<String> {
+    match value {
+        Value::String(value) => Some(value.clone()),
+        Value::Null => Some(String::new()),
+        Value::Bool(value) => Some(value.to_string()),
+        Value::Number(value) => Some(value.to_string()),
+        Value::Array(items) => {
+            let mut lines: Vec<String> = items
+                .iter()
+                .filter_map(|item| match item {
+                    Value::String(text) => Some(text.trim().to_string()),
+                    Value::Object(badge) if property == "badges" => badge
+                        .get("badgeName")
+                        .or_else(|| badge.get("badgeId"))
+                        .and_then(Value::as_str)
+                        .map(|name| name.trim().to_string()),
+                    _ => None,
+                })
+                .filter(|line| !line.is_empty())
+                .collect();
+            if matches!(property, "tags" | "badges") {
+                lines.sort();
+                lines.dedup();
+            }
+            Some(lines.join("\n"))
+        }
+        Value::Object(_) => None,
+    }
 }
 
 pub fn query(

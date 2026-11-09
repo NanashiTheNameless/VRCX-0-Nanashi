@@ -164,6 +164,21 @@ impl FriendRecord {
     }
 }
 
+/// Properties a full profile carries that VRChat's friend list does not.
+pub const FRIEND_PROFILE_DETAIL_KEYS: &[&str] = &[
+    "date_joined",
+    "pronouns",
+    "badges",
+    "ageVerified",
+    "ageVerificationStatus",
+    "bannerUrl",
+    "bannerCustomUrl",
+    "bannerType",
+    "iconFrame",
+    "iconType",
+    "allowAvatarCopying",
+];
+
 pub const FRIEND_PRESENCE_KEYS: &[&str] = &[
     "state",
     "location",

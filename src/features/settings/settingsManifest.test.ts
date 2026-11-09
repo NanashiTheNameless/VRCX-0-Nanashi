@@ -21,7 +21,7 @@ const componentSources = import.meta.glob<string>(
 function collectPageSettingIds() {
     return Object.values(componentSources).flatMap((source) =>
         Array.from(
-            source.matchAll(/settingId(?:="|: ')([^"']+)["']/g),
+            source.matchAll(/settingId(?:="|:\s*')([^"']+)["']/g),
             (match) => match[1]
         )
     );

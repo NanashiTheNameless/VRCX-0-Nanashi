@@ -7,12 +7,28 @@ use vrcx_0_core::user_facts::{
     merge_user_fact_owned, normalize_user_id, user_fact_key, UserFact, UserFactMergeOptions,
 };
 
-pub(crate) struct UserFactStore {
-    users: Mutex<HashMap<String, UserFact>>,
-    saved_age_verification: Mutex<HashMap<String, AgeVerificationValue>>,
+/// Most entries the saved-details record keeps. They only spare unchanged
+/// database writes, so when one fills up it is cleared and the next write per
+/// friend just compares against the database again.
+const MAX_SAVED_ENTRIES: usize = 8_192;
+
+/// Records `value` for `key` and reports whether it differs from the value
+/// recorded before.
+fn note_saved<V: PartialEq>(saved: &mut HashMap<String, V>, key: String, value: V) -> bool {
+    if saved.get(&key) == Some(&value) {
+        return false;
+    }
+    if saved.len() >= MAX_SAVED_ENTRIES && !saved.contains_key(&key) {
+        saved.clear();
+    }
+    saved.insert(key, value);
+    true
 }
 
-pub(crate) type AgeVerificationValue = (Option<bool>, Option<String>);
+pub(crate) struct UserFactStore {
+    users: Mutex<HashMap<String, UserFact>>,
+    saved_profile_details: Mutex<HashMap<String, String>>,
+}
 
 pub(crate) struct UserFactOutput {
     pub user: RawJsonObject,
@@ -22,28 +38,23 @@ impl UserFactStore {
     pub(crate) fn new() -> Self {
         Self {
             users: Mutex::new(HashMap::new()),
-            saved_age_verification: Mutex::new(HashMap::new()),
+            saved_profile_details: Mutex::new(HashMap::new()),
         }
     }
 
-    /// Records `value` as the stored age verification for `key` and reports
-    /// whether it differs from what was stored before, so unchanged facts do
-    /// not cost a database write.
-    pub(crate) fn note_saved_age_verification(
-        &self,
-        key: String,
-        value: AgeVerificationValue,
-    ) -> bool {
+    /// Records `details` as the stored profile details for `key` and reports
+    /// whether they differ from what was stored before.
+    pub(crate) fn note_saved_profile_details(&self, key: String, details: String) -> bool {
         let mut saved = self
-            .saved_age_verification
+            .saved_profile_details
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        saved.insert(key, value.clone()) != Some(value)
+        note_saved(&mut saved, key, details)
     }
 
-    pub(crate) fn forget_saved_age_verification(&self, keys: &[String]) {
+    pub(crate) fn forget_saved_profile_details(&self, keys: &[String]) {
         let mut saved = self
-            .saved_age_verification
+            .saved_profile_details
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner());
         for key in keys {
@@ -156,14 +167,27 @@ mod tests {
     use serde_json::json;
 
     #[test]
-    fn saved_age_verification_only_reports_real_changes() {
+    fn saved_value_records_stay_bounded() {
+        let mut saved = HashMap::new();
+        for index in 0..MAX_SAVED_ENTRIES {
+            assert!(note_saved(&mut saved, index.to_string(), 0));
+        }
+        assert_eq!(saved.len(), MAX_SAVED_ENTRIES);
+        assert!(!note_saved(&mut saved, "0".into(), 0));
+        assert!(note_saved(&mut saved, "0".into(), 1));
+        assert_eq!(saved.len(), MAX_SAVED_ENTRIES);
+        assert!(note_saved(&mut saved, "new".into(), 0));
+        assert_eq!(saved.len(), 1);
+    }
+
+    #[test]
+    fn saved_profile_details_only_report_real_changes() {
         let store = UserFactStore::new();
-        let adult = (Some(true), Some("18+".to_string()));
-        assert!(store.note_saved_age_verification("a".into(), adult.clone()));
-        assert!(!store.note_saved_age_verification("a".into(), adult.clone()));
-        assert!(store.note_saved_age_verification("a".into(), (Some(true), Some("hidden".into()))));
-        store.forget_saved_age_verification(&["a".into()]);
-        assert!(store.note_saved_age_verification("a".into(), adult));
+        assert!(store.note_saved_profile_details("a".into(), "{}".into()));
+        assert!(!store.note_saved_profile_details("a".into(), "{}".into()));
+        assert!(store.note_saved_profile_details("a".into(), "{\"x\":1}".into()));
+        store.forget_saved_profile_details(&["a".into()]);
+        assert!(store.note_saved_profile_details("a".into(), "{\"x\":1}".into()));
     }
 
     fn opts(is_friend: bool) -> UserFactMergeOptions {

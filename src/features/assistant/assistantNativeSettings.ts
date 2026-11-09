@@ -1,5 +1,9 @@
 import { create } from 'zustand';
 
+import {
+    PROFILE_HISTORY_FIELDS,
+    profileHistorySettingId
+} from '@/lib/profileHistoryFields';
 import { commands, type ProfileHistoryField } from '@/platform/tauri/bindings';
 
 import type { SettingValueSpec } from './assistantSettingSpecs';
@@ -19,6 +23,7 @@ function profileField(
             const value = (await commands.appProfileHistorySettingsGet())[
                 field
             ]?.[property];
+            if (value === undefined) return property === 'sync';
             if (typeof value !== 'boolean')
                 throw new Error(
                     'The app returned an incomplete profile history setting.'
@@ -29,7 +34,12 @@ function profileField(
             const settings = await commands.appProfileHistorySettingsGet();
             await commands.appProfileHistorySettingsSet({
                 ...settings,
-                [field]: { ...settings[field], [property]: value }
+                [field]: {
+                    recording: false,
+                    sync: true,
+                    ...settings[field],
+                    [property]: value
+                }
             });
         }
     };
@@ -78,19 +88,17 @@ function syncPreference(
     };
 }
 
+const PROFILE_HISTORY_ACTIONS = Object.fromEntries(
+    PROFILE_HISTORY_FIELDS.flatMap((info) =>
+        (['recording', 'sync'] as const).map((property) => [
+            profileHistorySettingId(info, property),
+            profileField(info.field, property)
+        ])
+    )
+);
+
 const NATIVE_SETTING_ACTIONS: Readonly<Record<string, NativeSettingAction>> = {
-    'social.profile-history.status-recording': profileField(
-        'status',
-        'recording'
-    ),
-    'social.profile-history.status-sync': profileField('status', 'sync'),
-    'social.profile-history.bio-recording': profileField('bio', 'recording'),
-    'social.profile-history.bio-sync': profileField('bio', 'sync'),
-    'social.profile-history.pronouns-recording': profileField(
-        'pronouns',
-        'recording'
-    ),
-    'social.profile-history.pronouns-sync': profileField('pronouns', 'sync'),
+    ...PROFILE_HISTORY_ACTIONS,
     'advanced.safety.url-warnings': safetyWarning('urlWarnings'),
     'advanced.safety.shorteners': safetyWarning('warnShorteners'),
     'history-sync.remotesync.sync-interval': syncPreference(

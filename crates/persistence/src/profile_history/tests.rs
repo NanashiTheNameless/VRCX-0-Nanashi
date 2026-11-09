@@ -327,3 +327,137 @@ fn pagination_preserves_same_second_changes_across_fields() {
     assert_eq!(next[1].value, history[3].value);
     assert_eq!(rows(&db, Some(ProfileHistoryField::Bio)).len(), 2);
 }
+
+#[test]
+fn list_and_flag_values_are_stored_as_stable_text() {
+    assert_eq!(
+        history_value(
+            "tags",
+            &json!(["system_trust_known", "language_eng", "language_eng"])
+        ),
+        Some("language_eng\nsystem_trust_known".into())
+    );
+    assert_eq!(
+        history_value(
+            "bioLinks",
+            &json!(["https://b.example", "https://a.example"])
+        ),
+        Some("https://b.example\nhttps://a.example".into())
+    );
+    assert_eq!(
+        history_value(
+            "badges",
+            &json!([
+                {"badgeId": "bdg_2", "badgeName": "Supporter", "updatedAt": "2026-01-02"},
+                {"badgeId": "bdg_1", "badgeName": "Early Adopter", "assignedAt": "2026-01-01"}
+            ])
+        ),
+        Some("Early Adopter\nSupporter".into())
+    );
+    assert_eq!(
+        history_value("ageVerified", &json!(true)),
+        Some("true".into())
+    );
+    assert_eq!(
+        history_value("displayName", &json!(null)),
+        Some(String::new())
+    );
+    assert_eq!(history_value("bannerUrl", &json!({"nested": true})), None);
+}
+
+#[test]
+fn added_fields_record_only_real_changes() {
+    let (_dir, db) = database();
+    let mut settings = settings_get(&db).unwrap();
+    for field in [
+        ProfileHistoryField::Badges,
+        ProfileHistoryField::Tags,
+        ProfileHistoryField::DisplayName,
+        ProfileHistoryField::AgeVerification,
+    ] {
+        settings.choice_mut(field).recording = true;
+    }
+    settings_set(&db, &settings).unwrap();
+    let profile = |badges: Value, tags: Value, name: &str, verified: bool| {
+        json!({
+            "id": "usr_friend",
+            "badges": badges,
+            "tags": tags,
+            "displayName": name,
+            "ageVerified": verified
+        })
+    };
+    let badge = |name: &str, updated: &str| json!({"badgeName": name, "updatedAt": updated});
+    record(
+        &db,
+        profile(
+            json!([badge("A", "1"), badge("B", "1")]),
+            json!(["t1", "t2"]),
+            "Name",
+            false,
+        ),
+        1,
+    );
+    // Reordered lists, newer badge timestamps and an unchanged name are not changes.
+    record(
+        &db,
+        profile(
+            json!([badge("B", "2"), badge("A", "2")]),
+            json!(["t2", "t1"]),
+            "Name",
+            false,
+        ),
+        2,
+    );
+    assert!(rows(&db, None).is_empty());
+
+    record(
+        &db,
+        profile(
+            json!([badge("A", "3"), badge("B", "3"), badge("C", "3")]),
+            json!(["t2", "t1"]),
+            "New Name",
+            true,
+        ),
+        3,
+    );
+    let mut changes: Vec<(ProfileHistoryField, String, String, String)> = rows(&db, None)
+        .into_iter()
+        .map(|entry| {
+            (
+                entry.field,
+                entry.property,
+                entry.previous_value,
+                entry.value,
+            )
+        })
+        .collect();
+    changes.sort_by(|a, b| a.1.cmp(&b.1));
+    assert_eq!(
+        changes,
+        vec![
+            (
+                ProfileHistoryField::AgeVerification,
+                "ageVerified".into(),
+                "false".into(),
+                "true".into()
+            ),
+            (
+                ProfileHistoryField::Badges,
+                "badges".into(),
+                "A\nB".into(),
+                "A\nB\nC".into()
+            ),
+            (
+                ProfileHistoryField::DisplayName,
+                "displayName".into(),
+                "Name".into(),
+                "New Name".into()
+            ),
+        ]
+    );
+
+    // A profile without these properties leaves the remembered values alone.
+    record(&db, json!({"id": "usr_friend"}), 4);
+    assert_eq!(rows(&db, None).len(), 3);
+}

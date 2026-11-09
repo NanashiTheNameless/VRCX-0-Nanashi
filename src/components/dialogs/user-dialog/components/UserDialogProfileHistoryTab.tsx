@@ -3,6 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 import { formatCompactDateTime } from '@/lib/dateTime';
 import {
+    PROFILE_HISTORY_FIELDS,
+    profileHistoryFieldKey
+} from '@/lib/profileHistoryFields';
+import {
     commands,
     type ProfileHistoryEntry,
     type ProfileHistoryField
@@ -14,7 +18,32 @@ import { Spinner } from '@/ui/shadcn/spinner';
 import { EntityDialogTabContent } from '../../EntityDialogScaffold';
 
 const T = 'dialog.user.profile_history';
-const FIELDS: ProfileHistoryField[] = ['status', 'bio', 'pronouns'];
+
+// Labels per VRChat property, since one field can cover several properties.
+const PROPERTY_KEYS: Record<string, string> = {
+    status: 'status',
+    statusDescription: 'status_text',
+    bio: 'bio',
+    pronouns: 'pronouns',
+    displayName: 'display_name',
+    bioLinks: 'bio_links',
+    userIcon: 'user_icon',
+    profilePicOverride: 'profile_picture',
+    bannerUrl: 'banner',
+    bannerCustomUrl: 'custom_banner',
+    bannerType: 'banner_type',
+    iconFrame: 'icon_frame',
+    iconType: 'icon_type',
+    badges: 'badges',
+    tags: 'tags',
+    ageVerificationStatus: 'age_verification_status',
+    ageVerified: 'age_verified',
+    allowAvatarCopying: 'avatar_cloning'
+};
+
+function entryLabelKey(row: ProfileHistoryEntry): string {
+    return PROPERTY_KEYS[row.property] ?? profileHistoryFieldKey(row.field);
+}
 
 export function UserDialogProfileHistoryTab({
     active,
@@ -110,9 +139,9 @@ export function UserDialogProfileHistoryTab({
                     }
                 >
                     <option value="all">{t(`${T}.all`)}</option>
-                    {FIELDS.map((entry) => (
+                    {PROFILE_HISTORY_FIELDS.map(({ field: entry, key }) => (
                         <option key={entry} value={entry}>
-                            {t(`view.settings.social.profile_history.${entry}`)}
+                            {t(`view.settings.social.profile_history.${key}`)}
                         </option>
                     ))}
                 </select>
@@ -146,9 +175,7 @@ export function UserDialogProfileHistoryTab({
                     >
                         <div className="flex flex-wrap justify-between gap-2">
                             <span className="font-medium">
-                                {t(
-                                    `${T}.${row.property === 'statusDescription' ? 'status_text' : row.field}`
-                                )}
+                                {t(`${T}.${entryLabelKey(row)}`)}
                             </span>
                             <time className="text-muted-foreground tabular-nums">
                                 {formatCompactDateTime(row.createdAt)}

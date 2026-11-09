@@ -111,7 +111,7 @@ describe('assistant docs', () => {
             expect(page, query).toBeDefined();
             expect(page?.text).toContain('**Social > Friends**');
             expect(page?.text).toContain(
-                '**Refresh all friend profiles** button'
+                'The arrow beside it opens **Refresh all friend profiles**'
             );
             expect(page?.text).toContain('toolbar above the friends table');
         }

@@ -28,6 +28,60 @@ describe('UserDialogProfileHistoryTab', () => {
         vi.resetAllMocks();
     });
 
+    it('labels added fields by property and keeps list values on separate lines', async () => {
+        api.query.mockResolvedValue([
+            {
+                id: 2,
+                field: 'profilePictures',
+                property: 'profilePicOverride',
+                createdAt: 1791633600,
+                previousValue: '',
+                value: 'https://example.test/picture.png'
+            },
+            {
+                id: 3,
+                field: 'badges',
+                property: 'badges',
+                createdAt: 1791633500,
+                previousValue: 'Early Adopter',
+                value: 'Early Adopter\nSupporter'
+            }
+        ]);
+        render(
+            <UserDialogProfileHistoryTab
+                active
+                userId="usr_friend"
+                currentUserId="usr_self"
+            />
+        );
+        expect(await screen.findByText(`${T}.profile_picture`)).toBeTruthy();
+        expect(screen.getByText(`${T}.badges`)).toBeTruthy();
+        expect(
+            screen.getByText(
+                (_, element) =>
+                    element?.tagName === 'P' &&
+                    element.textContent === 'Early Adopter\nSupporter'
+            )
+        ).toBeTruthy();
+        const options = Array.from(
+            screen.getByRole('combobox').querySelectorAll('option')
+        ).map((option) => option.value);
+        expect(options).toEqual([
+            'all',
+            'status',
+            'bio',
+            'pronouns',
+            'displayName',
+            'bioLinks',
+            'profilePictures',
+            'profileDecorations',
+            'badges',
+            'tags',
+            'ageVerification',
+            'avatarCloning'
+        ]);
+    });
+
     it('shows before and after values and filters each field', async () => {
         api.query.mockResolvedValue([
             {

@@ -511,9 +511,23 @@ defineCard(
     'social',
     'profile-history',
     'view.settings.social.profile_history.header',
-    ['status', 'bio', 'pronouns'].flatMap((field) =>
+    (
+        [
+            ['status', 'status'],
+            ['bio', 'bio'],
+            ['pronouns', 'pronouns'],
+            ['display-name', 'display_name'],
+            ['bio-links', 'bio_links'],
+            ['profile-pictures', 'profile_pictures'],
+            ['profile-decorations', 'profile_decorations'],
+            ['badges', 'badges'],
+            ['tags', 'tags'],
+            ['age-verification', 'age_verification'],
+            ['avatar-cloning', 'avatar_cloning']
+        ] as const
+    ).flatMap(([slug, field]) =>
         ['recording', 'sync'].map((property) => ({
-            key: `${field}-${property}`,
+            key: `${slug}-${property}`,
             labelKey: `view.settings.social.profile_history.${field}_${property}`,
             descriptionKey: `view.settings.social.profile_history.${property}_description`
         }))

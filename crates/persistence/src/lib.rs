@@ -1,6 +1,5 @@
 pub mod activity;
 pub mod activity_page;
-pub mod age_verification;
 pub mod assistant;
 pub mod avatars;
 pub mod browse_history;
@@ -15,6 +14,7 @@ mod error;
 pub mod favorites;
 pub mod feed;
 pub mod files;
+pub mod friend_profile_details;
 pub mod friends;
 pub mod game_log;
 pub mod legacy_migration;

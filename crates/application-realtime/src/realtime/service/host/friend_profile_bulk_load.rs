@@ -512,14 +512,6 @@ impl FriendProfileBulkLoader {
                     transport_rx,
                 )
                 .await?;
-            tokio::select! {
-                biased;
-                _ = wait_for_friend_profile_bulk_load_cancel(run_id, cancel_rx) => return None,
-                _ = pacer.acquire_slot() => {}
-            }
-            if !loader.friend_profile_bulk_load_is_current(run_id, owner) {
-                return None;
-            }
             let cache_policy = {
                 let bulk = loader.state.lock().ok()?;
                 if bulk.run_id != run_id {
@@ -531,6 +523,30 @@ impl FriendProfileBulkLoader {
                     UserQueryCachePolicy::UseCache
                 }
             };
+            // Loading reuses what is already known: details saved from an
+            // earlier session need no request, and a cached answer needs no
+            // pacing slot. A full refresh always asks VRChat.
+            let mut cached = false;
+            if cache_policy == UserQueryCachePolicy::UseCache {
+                if attempt == 0 && host.apply_saved_friend_profile_details(user_id) {
+                    return Some(FriendProfileBulkLoadItemOutcome::Loaded);
+                }
+                cached = host.user_query_cache.contains(
+                    UserQueryKind::LiveFriend,
+                    &owner.endpoint,
+                    user_id,
+                );
+            }
+            if !cached {
+                tokio::select! {
+                    biased;
+                    _ = wait_for_friend_profile_bulk_load_cancel(run_id, cancel_rx) => return None,
+                    _ = pacer.acquire_slot() => {}
+                }
+            }
+            if !loader.friend_profile_bulk_load_is_current(run_id, owner) {
+                return None;
+            }
             let response = tokio::select! {
                 biased;
                 _ = wait_for_friend_profile_bulk_load_cancel(run_id, cancel_rx) => return None,

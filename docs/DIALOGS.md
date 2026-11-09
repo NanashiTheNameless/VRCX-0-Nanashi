@@ -26,8 +26,9 @@ preview so it looks good when pasted; the plain VRChat link is always available 
   avatar cloning and boops, and VRChat Credits.
 - **Groups**: their groups, with owned and mutual groups first; sort alphabetically, by
   members or in their in-game order.
-- **Profile History**: observed changes to status, status text, bio and pronouns, with before
-  and after values, field filters and older entries. Also available on your own profile.
+- **Profile History**: observed changes to status, status text, bio, pronouns, display name,
+  bio links, profile pictures, profile decorations, badges, tags, age verification and
+  avatar cloning, with before and after values, field filters and older entries. Also available on your own profile.
   Recording is opt-in for each field; see [Profile History](PROFILE_HISTORY.md).
 - **Worlds** they made, sortable by name, update, creation, favorites or popularity, and their
   public **Favorite Worlds**.

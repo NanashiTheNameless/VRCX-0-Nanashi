@@ -141,12 +141,16 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   tmpfs, and never print or store what the runtime reports.
 - **Profile History** - `crates/persistence/src/profile_history.rs`,
   `crates/contracts/src/profile_history.rs`, Settings > Social > Profile History and the
-  user dialog's Profile History tab. Status (including status text), bio and pronouns
-  each have recording off by default and sync on by default. The choices also gate
+  user dialog's Profile History tab. Status (including status text), bio, pronouns,
+  display name, bio links, profile pictures, profile decorations, badges, tags, age
+  verification and avatar cloning each have recording off by default and sync on by
+  default, each with its own sync stream. Lists are stored as stable text (tags and badges
+  sorted, badges by name) so reordering or badge timestamps never count as changes. The choices also gate
   saving existing status/bio Feed and own-profile history, and their sync streams.
   `profileHistorySettings` and its revision stay device-specific and out of Settings
   Sync. The server collector keeps a separate copy of the primary (Server deduplication)
-  device's six choices, published during History Sync. Before a copy arrives, recording
+  device's choices (a version 2 copy with every field; servers that only accept version 1
+  get the original three), published during History Sync. Before a copy arrives, recording
   defaults off and sync on; while the primary device is offline, keep the last copy.
   Observe existing profile data only. Automatic observations are limited to current
   friends, current local instance players, and the signed-in user's own profile.

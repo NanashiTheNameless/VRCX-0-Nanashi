@@ -258,7 +258,7 @@ impl RealtimeHostRuntime {
         if users.is_empty() {
             return;
         }
-        self.persist_friend_age_verification(&users);
+        self.persist_friend_profile_details(&users);
         self.deps.event_bus.emit(RealtimeUserProjection {
             users: users
                 .into_iter()
@@ -317,44 +317,46 @@ impl RealtimeHostRuntime {
         else {
             return;
         };
-        changed.extend(self.restore_friend_age_verification(&owner, &endpoint, &friend_ids));
+        changed.extend(self.restore_friend_profile_details(&owner, &endpoint, &friend_ids));
         dedupe_latest_user_facts(&mut changed);
         self.emit_user_cache_changes(changed);
     }
 
-    // VRChat's friend list carries no age verification, so the last value
-    // observed for each friend is seeded as a placeholder that any live
-    // observation replaces.
-    fn restore_friend_age_verification(
+    // VRChat's friend list carries none of the full-profile details, so the
+    // last values observed for each friend are seeded as placeholders that
+    // any live observation replaces.
+    fn restore_friend_profile_details(
         &self,
         owner: &vrcx_0_core::OwnerId,
         endpoint: &str,
         friend_ids: &[String],
     ) -> Vec<RawJsonObject> {
         let storage_endpoint = normalize_vrchat_api_endpoint(Some(endpoint));
-        let facts = match self.deps.stores.batch_writer.age_verification_facts(
+        let saved = match self.deps.stores.batch_writer.friend_profile_details_list(
             owner,
             &storage_endpoint,
             friend_ids,
         ) {
-            Ok(facts) => facts,
+            Ok(saved) => saved,
             Err(error) => {
-                tracing::warn!(error = %error, "Age verification restore failed");
+                tracing::warn!(error = %error, "Friend profile details restore failed");
                 return Vec::new();
             }
         };
-        facts
+        saved
             .iter()
-            .filter_map(|fact| {
-                let object = fact.as_object()?;
+            .filter_map(|details| {
+                let object = details.as_object()?;
                 let user_id = object.get("id").and_then(Value::as_str)?;
-                self.user_facts.note_saved_age_verification(
-                    saved_age_key(owner, &storage_endpoint, user_id),
-                    age_verification_value(object),
-                );
+                if let Some(text) = friend_profile_details_text(object) {
+                    self.user_facts.note_saved_profile_details(
+                        saved_details_key(owner, &storage_endpoint, user_id),
+                        text,
+                    );
+                }
                 self.user_facts
                     .record_user(
-                        fact,
+                        details,
                         &UserFactMergeOptions {
                             endpoint: endpoint.to_string(),
                             source: "seed".into(),
@@ -371,7 +373,9 @@ impl RealtimeHostRuntime {
             .collect()
     }
 
-    fn persist_friend_age_verification(&self, users: &[RawJsonObject]) {
+    /// Saves the full-profile details of friends whose facts carry them, so
+    /// Load friend details can reuse them after a restart.
+    fn persist_friend_profile_details(&self, users: &[RawJsonObject]) {
         let scope = self.deps.auth_scope.snapshot();
         if !scope.active || scope.current_user_id.is_empty() {
             return;
@@ -380,11 +384,12 @@ impl RealtimeHostRuntime {
         let mut by_endpoint: std::collections::BTreeMap<String, (Vec<RawJsonObject>, Vec<String>)> =
             std::collections::BTreeMap::new();
         for user in users {
-            let is_friend = user.get("isFriend").and_then(Value::as_bool) == Some(true);
-            let value = age_verification_value(user);
-            if !is_friend || value == (None, None) {
+            if user.get("isFriend").and_then(Value::as_bool) != Some(true) {
                 continue;
             }
+            let Some(details) = friend_profile_details_text(user) else {
+                continue;
+            };
             let Some(user_id) = user.get("id").and_then(Value::as_str) else {
                 continue;
             };
@@ -393,10 +398,10 @@ impl RealtimeHostRuntime {
             if !self.deps.auth_scope.matches(owner.as_str(), &endpoint) {
                 continue;
             }
-            let key = saved_age_key(&owner, &endpoint, user_id);
+            let key = saved_details_key(&owner, &endpoint, user_id);
             if !self
                 .user_facts
-                .note_saved_age_verification(key.clone(), value)
+                .note_saved_profile_details(key.clone(), details)
             {
                 continue;
             }
@@ -409,10 +414,10 @@ impl RealtimeHostRuntime {
                 .deps
                 .stores
                 .batch_writer
-                .observe_age_verification(&owner, &endpoint, &users)
+                .observe_friend_profile_details(&owner, &endpoint, &users)
             {
-                self.user_facts.forget_saved_age_verification(&keys);
-                tracing::warn!(error = %error, "Age verification persistence failed");
+                self.user_facts.forget_saved_profile_details(&keys);
+                tracing::warn!(error = %error, "Friend profile details persistence failed");
             }
         }
     }
@@ -579,6 +584,56 @@ impl RealtimeHostRuntime {
             }
         }
         Ok(value)
+    }
+
+    /// Applies a friend's saved full-profile details without a request, the
+    /// same way a fetched profile is applied. Returns false when nothing was
+    /// saved or the roster moved on, so the caller fetches instead.
+    pub(super) fn apply_saved_friend_profile_details(self: &Arc<Self>, user_id: &str) -> bool {
+        let scope = self.deps.auth_scope.snapshot();
+        if !scope.active || scope.current_user_id.is_empty() {
+            return false;
+        }
+        let Some(session_endpoint) = self.state.lock().ok().and_then(|state| {
+            state
+                .connection
+                .active_context
+                .as_ref()
+                .map(|active| active.session.endpoint.clone())
+        }) else {
+            return false;
+        };
+        let owner = vrcx_0_core::OwnerId::new(scope.current_user_id.clone());
+        let details = match self.deps.stores.batch_writer.friend_profile_details(
+            &owner,
+            &normalize_vrchat_api_endpoint(Some(&session_endpoint)),
+            user_id,
+        ) {
+            // Without a join date the friend still needs one full fetch.
+            Ok(Some(details))
+                if details
+                    .get("date_joined")
+                    .and_then(Value::as_str)
+                    .is_some_and(|value| !value.trim().is_empty()) =>
+            {
+                details
+            }
+            Ok(_) => return false,
+            Err(error) => {
+                tracing::warn!(error = %error, "Friend profile details restore failed");
+                return false;
+            }
+        };
+        let Some(expectation) = self.capture_friend_rev(user_id) else {
+            return false;
+        };
+        self.apply_friend_profile_refresh(
+            session_endpoint,
+            user_id.to_string(),
+            details,
+            expectation,
+        )
+        .unwrap_or(false)
     }
 
     fn capture_friend_rev(&self, user_id: &str) -> Option<FriendProfileRefreshExpectation> {
@@ -792,17 +847,19 @@ fn dedupe_latest_user_facts(users: &mut Vec<RawJsonObject>) {
     *users = deduped;
 }
 
-fn saved_age_key(owner: &vrcx_0_core::OwnerId, endpoint: &str, user_id: &str) -> String {
+fn saved_details_key(owner: &vrcx_0_core::OwnerId, endpoint: &str, user_id: &str) -> String {
     format!("{}\u{0}{endpoint}\u{0}{user_id}", owner.as_str())
 }
 
-fn age_verification_value(
-    user: &serde_json::Map<String, Value>,
-) -> crate::realtime::user_facts::AgeVerificationValue {
-    (
-        user.get("ageVerified").and_then(Value::as_bool),
-        user.get("ageVerificationStatus")
-            .and_then(Value::as_str)
-            .map(str::to_string),
-    )
+/// The full-profile details carried by `user` as stable text, or `None` when
+/// it carries none.
+fn friend_profile_details_text(user: &serde_json::Map<String, Value>) -> Option<String> {
+    let details: serde_json::Map<String, Value> = vrcx_0_core::friends::FRIEND_PROFILE_DETAIL_KEYS
+        .iter()
+        .filter_map(|key| user.get(*key).map(|value| (key.to_string(), value.clone())))
+        .collect();
+    if details.is_empty() {
+        return None;
+    }
+    serde_json::to_string(&details).ok()
 }

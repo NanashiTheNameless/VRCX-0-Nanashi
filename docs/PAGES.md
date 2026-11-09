@@ -163,11 +163,11 @@ links; filter to favorites.
 **Load friend details**, in the toolbar above the friends table, fills in missing full
 profiles: it fetches only friends whose full profile was never loaded and reuses saved
 copies. It asks you to confirm first and has a 1-minute cooldown after finishing or being
-canceled, with a countdown on the button. The arrow beside it opens **Refresh all friend
-profiles**. The same **Refresh all friend profiles** action is also in the bottom-right
-sidebar settings popover, beside **Refresh friends list**. Both places ask you to confirm
-that the refresh can take a while and should be allowed to finish once started, and it has
-a 5-minute cooldown after finishing or being canceled.
+canceled, with a countdown on the button.
+The arrow beside it opens **Refresh all friend profiles**, which is also in the
+bottom-right sidebar settings popover, beside **Refresh friends list**. Both places ask you
+to confirm that the refresh can take a while and should be allowed to finish once started,
+and it has a 5-minute cooldown after finishing or being canceled.
 **Refresh all friend profiles** fetches every friend's profile again, including
 already loaded or cached profiles and friends outside the current search and filters.
 It updates profile data, including bio, pronouns, status, and badge-related fields. Profiles
