@@ -444,8 +444,8 @@ describe('SessionEventGroups video lane overflow', () => {
         const view = render(
             <SessionEventGroups
                 events={Array.from({ length: 20 }, (_, index) => ({
-                    type: 'VideoPlay',
-                    created_at: `video-${index}`,
+                    type: 'VideoPlay' as const,
+                    created_at: 1786528800 + index,
                     videoName: `Song ${index}`
                 }))}
             />,
