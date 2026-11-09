@@ -1,5 +1,5 @@
 import { ArrowLeftIcon } from 'lucide-react';
-import { Fragment, lazy, Suspense } from 'react';
+import { Fragment, lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
@@ -50,13 +50,28 @@ export function DialogHost() {
     const breadcrumbs = useDialogStore((state) => state.breadcrumbs);
     const closeDialog = useDialogStore((state) => state.closeDialog);
     const popToBreadcrumb = useDialogStore((state) => state.popToBreadcrumb);
+    const [retainedPresentation, setRetainedPresentation] = useState({
+        activeDialog,
+        breadcrumbs
+    });
 
-    const currentBreadcrumbIndex = breadcrumbs.length - 1;
-    const dialogKind = activeDialog?.kind || '';
-    const dialogPayload = activeDialog?.payload || null;
+    const renderedDialog = activeDialog ?? retainedPresentation.activeDialog;
+    const renderedBreadcrumbs = activeDialog
+        ? breadcrumbs
+        : retainedPresentation.breadcrumbs;
+
+    useEffect(() => {
+        if (activeDialog) {
+            setRetainedPresentation({ activeDialog, breadcrumbs });
+        }
+    }, [activeDialog, breadcrumbs]);
+
+    const currentBreadcrumbIndex = renderedBreadcrumbs.length - 1;
+    const dialogKind = renderedDialog?.kind || '';
+    const dialogPayload = renderedDialog?.payload || null;
     const isUserDialog = dialogKind === 'user';
     const isForkMaintainerDialog =
-        isUserDialog && activeDialog?.entityId === FORK_DEVELOPER_USER_ID;
+        isUserDialog && renderedDialog?.entityId === FORK_DEVELOPER_USER_ID;
     const isWorldDialog = dialogKind === 'world';
     const isAvatarDialog = dialogKind === 'avatar';
     const isGroupDialog = dialogKind === 'group';
@@ -96,6 +111,14 @@ export function DialogHost() {
                 }
                 closeDialog();
             }}
+            onOpenChangeComplete={(open) => {
+                if (!open && !useDialogStore.getState().activeDialog) {
+                    setRetainedPresentation({
+                        activeDialog: null,
+                        breadcrumbs: []
+                    });
+                }
+            }}
         >
             <DialogContent
                 showCloseButton={false}
@@ -112,10 +135,10 @@ export function DialogHost() {
             >
                 <DialogHeader className="sr-only">
                     <DialogTitle>
-                        {activeDialog?.title ?? defaultTitle}
+                        {renderedDialog?.title ?? defaultTitle}
                     </DialogTitle>
                     <DialogDescription>
-                        {activeDialog?.description ?? defaultDescription}
+                        {renderedDialog?.description ?? defaultDescription}
                     </DialogDescription>
                 </DialogHeader>
                 {currentBreadcrumbIndex > 0 ? (
@@ -133,7 +156,7 @@ export function DialogHost() {
                         </Button>
                         <Breadcrumb className="min-w-0">
                             <BreadcrumbList>
-                                {breadcrumbs.map((crumb, index) => (
+                                {renderedBreadcrumbs.map((crumb, index) => (
                                     <Fragment
                                         key={`${crumb.key ?? crumb.label}-${index}`}
                                     >
@@ -171,20 +194,20 @@ export function DialogHost() {
                 >
                     {isUserDialog ? (
                         <UserDialogContent
-                            key={`user:${activeDialog?.entityId ?? ''}:${
-                                activeDialog?.openNonce ?? 0
+                            key={`user:${renderedDialog?.entityId ?? ''}:${
+                                renderedDialog?.openNonce ?? 0
                             }`}
-                            userId={activeDialog?.entityId}
+                            userId={renderedDialog?.entityId}
                             seedData={dialogPayload?.seedData ?? null}
                             initialAction={dialogPayload?.initialAction ?? ''}
-                            openNonce={activeDialog?.openNonce ?? 0}
+                            openNonce={renderedDialog?.openNonce ?? 0}
                         />
                     ) : isWorldDialog ? (
                         <WorldDialogContent
-                            worldId={activeDialog?.entityId}
+                            worldId={renderedDialog?.entityId}
                             seedData={dialogPayload?.seedData ?? null}
                             initialAction={dialogPayload?.initialAction ?? ''}
-                            openNonce={activeDialog?.openNonce ?? 0}
+                            openNonce={renderedDialog?.openNonce ?? 0}
                             initialActionNonce={
                                 dialogPayload?.initialActionNonce ?? 0
                             }
@@ -195,17 +218,17 @@ export function DialogHost() {
                         />
                     ) : isAvatarDialog ? (
                         <AvatarDialogContent
-                            avatarId={activeDialog?.entityId}
+                            avatarId={renderedDialog?.entityId}
                             seedData={dialogPayload?.seedData ?? null}
                         />
                     ) : isGroupDialog ? (
                         <GroupDialogContent
-                            groupId={activeDialog?.entityId}
+                            groupId={renderedDialog?.entityId}
                             seedData={dialogPayload?.seedData ?? null}
                         />
                     ) : (
                         <div className="text-muted-foreground rounded-md border border-dashed p-4 text-sm">
-                            {activeDialog?.body ?? 'Unsupported dialog type.'}
+                            {renderedDialog?.body ?? 'Unsupported dialog type.'}
                         </div>
                     )}
                 </Suspense>

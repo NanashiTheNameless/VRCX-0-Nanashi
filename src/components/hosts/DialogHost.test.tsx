@@ -7,7 +7,12 @@ import {
     render,
     screen
 } from '@testing-library/react';
-import type { ComponentProps, PropsWithChildren } from 'react';
+import {
+    type ComponentProps,
+    type PropsWithChildren,
+    useEffect,
+    useState
+} from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/components/dialogs/AvatarDialogContent', () => ({
@@ -19,7 +24,9 @@ vi.mock('@/components/dialogs/GroupDialogContent', () => ({
 }));
 
 vi.mock('@/components/dialogs/UserDialogContent', () => ({
-    UserDialogContent: () => null
+    UserDialogContent: ({ userId }: { userId: string }) => (
+        <div data-testid="user-profile">{userId}</div>
+    )
 }));
 
 vi.mock('@/components/dialogs/WorldDialogContent', () => ({
@@ -43,20 +50,47 @@ type OpenChangeDetails = { reason: string; cancel: () => void };
 const dialogMock = vi.hoisted(() => ({
     onOpenChange: null as
         | ((open: boolean, details: OpenChangeDetails) => void)
-        | null
+        | null,
+    onOpenChangeComplete: null as ((open: boolean) => void) | null
 }));
 
 vi.mock('@/ui/shadcn/dialog', () => ({
     Dialog: ({
         children,
         open,
-        onOpenChange
+        onOpenChange,
+        onOpenChangeComplete
     }: PropsWithChildren<{
         open: boolean;
         onOpenChange: (open: boolean, details: OpenChangeDetails) => void;
+        onOpenChangeComplete?: (open: boolean) => void;
     }>) => {
+        const [mounted, setMounted] = useState(open);
+        useEffect(() => {
+            if (open) {
+                setMounted(true);
+            }
+        }, [open]);
         dialogMock.onOpenChange = onOpenChange;
-        return open ? <div>{children}</div> : null;
+        dialogMock.onOpenChangeComplete = onOpenChangeComplete ?? null;
+        return mounted ? (
+            <div
+                data-testid="dialog-root"
+                data-state={open ? 'open' : 'closed'}
+            >
+                {!open ? (
+                    <button
+                        onClick={() => {
+                            setMounted(false);
+                            onOpenChangeComplete?.(false);
+                        }}
+                    >
+                        finish close animation
+                    </button>
+                ) : null}
+                {children}
+            </div>
+        ) : null;
     },
     DialogContent: ({
         children,
@@ -74,6 +108,7 @@ vi.mock('@/ui/shadcn/dialog', () => ({
     DialogTitle: ({ children }: PropsWithChildren) => <h1>{children}</h1>
 }));
 
+import { FORK_DEVELOPER_USER_ID } from '@/shared/constants/user';
 import { useDialogStore } from '@/state/dialogStore';
 
 import { DialogHost } from './DialogHost';
@@ -163,5 +198,89 @@ describe('DialogHost breadcrumb navigation', () => {
 
         expect(useDialogStore.getState().activeDialog).toBeNull();
         expect(useDialogStore.getState().breadcrumbs).toEqual([]);
+    });
+
+    it('keeps the profile, theme, and breadcrumbs until the close animation finishes', async () => {
+        useDialogStore.getState().setDialog({
+            kind: 'user',
+            entityId: FORK_DEVELOPER_USER_ID,
+            title: 'Maintainer'
+        });
+        render(<DialogHost />);
+        const profile = await screen.findByTestId('user-profile');
+        const popup = profile.closest('section');
+
+        act(() => {
+            dialogMock.onOpenChange?.(false, {
+                reason: 'outside-press',
+                cancel: vi.fn()
+            });
+        });
+
+        expect(useDialogStore.getState().activeDialog).toBeNull();
+        expect(useDialogStore.getState().breadcrumbs).toEqual([]);
+        expect(
+            screen.getByTestId('dialog-root').getAttribute('data-state')
+        ).toBe('closed');
+        expect(screen.getByTestId('user-profile')).toBe(profile);
+        expect(profile.textContent).toBe(FORK_DEVELOPER_USER_ID);
+        expect(popup?.classList.contains('fork-maintainer-dialog')).toBe(true);
+        expect(
+            screen.getByRole('heading', { name: 'Maintainer' })
+        ).toBeTruthy();
+        expect(
+            screen.getByRole('button', { name: 'common.actions.back' })
+        ).toBeTruthy();
+        expect(screen.queryAllByText('Unsupported dialog type.')).toEqual([]);
+
+        fireEvent.click(
+            screen.getByRole('button', { name: 'finish close animation' })
+        );
+
+        expect(screen.queryByTestId('user-profile')).toBeNull();
+        expect(screen.queryByTestId('dialog-root')).toBeNull();
+    });
+
+    it('preserves a newly opened profile if an earlier close completes', async () => {
+        render(<DialogHost />);
+        const finishEarlierClose = dialogMock.onOpenChangeComplete;
+
+        act(() => useDialogStore.getState().closeDialog());
+        act(() =>
+            useDialogStore.getState().setDialogTrail(
+                {
+                    kind: 'user',
+                    entityId: 'usr_new',
+                    title: 'New user'
+                },
+                []
+            )
+        );
+        await screen.findByTestId('user-profile');
+        act(() => finishEarlierClose?.(false));
+
+        expect(screen.getByTestId('user-profile').textContent).toBe('usr_new');
+        expect(useDialogStore.getState().activeDialog?.entityId).toBe(
+            'usr_new'
+        );
+        expect(screen.getByRole('heading', { name: 'New user' })).toBeTruthy();
+
+        act(() => useDialogStore.getState().closeDialog());
+        expect(screen.getByTestId('user-profile').textContent).toBe('usr_new');
+        expect(screen.queryAllByText('Unsupported dialog type.')).toEqual([]);
+    });
+
+    it('still shows the fallback for an unsupported open dialog', () => {
+        useDialogStore.getState().setDialogTrail(
+            {
+                kind: 'unknown',
+                entityId: 'unknown',
+                title: 'Unknown'
+            },
+            []
+        );
+        render(<DialogHost />);
+
+        expect(screen.getAllByText('Unsupported dialog type.')).toHaveLength(2);
     });
 });
