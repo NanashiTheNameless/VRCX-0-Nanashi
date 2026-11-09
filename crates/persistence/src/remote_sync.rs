@@ -57,9 +57,72 @@ pub struct SyncLogEntry {
     pub created_at: i64,
 }
 
+/// A bookkeeping table stored `WITHOUT ROWID`: its rows live in the primary
+/// key itself, so SQLite keeps no second copy of every key in a separate
+/// index. Older databases created it as an ordinary table.
+struct KeyedTable {
+    name: &'static str,
+    columns: &'static str,
+    create_sql: &'static str,
+}
+
+const PROVENANCE_TABLE: KeyedTable = KeyedTable {
+    name: "remote_sync_provenance",
+    columns: "stream, local_rowid, source_id, source_seq",
+    create_sql: "CREATE TABLE IF NOT EXISTS remote_sync_provenance (stream TEXT NOT NULL, local_rowid INTEGER NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, PRIMARY KEY (stream, local_rowid)) WITHOUT ROWID",
+};
+
+const PROFILE_STREAM_SEEN_TABLE: KeyedTable = KeyedTable {
+    name: "remote_sync_profile_stream_seen",
+    columns: "api_origin, account_id, vault_id, source_id, source_seq, stream",
+    create_sql: "CREATE TABLE IF NOT EXISTS remote_sync_profile_stream_seen (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, stream TEXT NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id, source_id, source_seq, stream)) WITHOUT ROWID",
+};
+
+fn table_has_rowid(rows: Vec<Vec<serde_json::Value>>) -> bool {
+    rows.first()
+        .and_then(|row| row.first())
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|sql| !sql.to_ascii_uppercase().contains("WITHOUT ROWID"))
+}
+
+/// Rebuilds an older ordinary table as `WITHOUT ROWID`, keeping every row.
+/// Its secondary indexes are dropped with it and recreated by the caller.
+fn rebuild_without_rowid(db: &DatabaseService, table: &KeyedTable) -> Result<(), Error> {
+    let lookup = format!(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = '{}'",
+        table.name
+    );
+    if !table_has_rowid(db.execute(&lookup, &Default::default())?) {
+        return Ok(());
+    }
+    let staging = format!("{}_without_rowid", table.name);
+    db.write_transaction(|tx| {
+        if !table_has_rowid(tx.execute(&lookup, &Default::default())?) {
+            return Ok(());
+        }
+        let create = table.create_sql.replacen(table.name, &staging, 1);
+        for sql in [
+            format!("DROP TABLE IF EXISTS {staging}"),
+            create,
+            format!(
+                "INSERT INTO {staging} ({columns}) SELECT {columns} FROM {name}",
+                columns = table.columns,
+                name = table.name
+            ),
+            format!("DROP TABLE {}", table.name),
+            format!("ALTER TABLE {staging} RENAME TO {}", table.name),
+        ] {
+            tx.execute_non_query(&sql, &Default::default())?;
+        }
+        Ok(())
+    })
+}
+
 pub fn ensure_remote_sync_tables(db: &DatabaseService) -> Result<(), Error> {
     db.ensure_schema_until_stable(SCHEMA_KEY, || {
         let initialize_profile_streams = db.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'remote_sync_profile_stream_seen'", &Default::default())?.is_empty();
+        rebuild_without_rowid(db, &PROVENANCE_TABLE)?;
+        rebuild_without_rowid(db, &PROFILE_STREAM_SEEN_TABLE)?;
         for sql in [
             "CREATE TABLE IF NOT EXISTS remote_sync_state (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, vrchat_user_id TEXT NOT NULL DEFAULT '', source_id TEXT NOT NULL, pull_cursor INTEGER NOT NULL DEFAULT 0, highest_manifest_seq INTEGER NOT NULL DEFAULT 0, push_source_seq INTEGER NOT NULL DEFAULT 0, last_sync_at INTEGER, PRIMARY KEY (api_origin, account_id, vault_id))",
             "CREATE TABLE IF NOT EXISTS remote_sync_push_state (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, stream TEXT NOT NULL, row_cursor INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (api_origin, account_id, vault_id, stream))",
@@ -70,10 +133,10 @@ pub fn ensure_remote_sync_tables(db: &DatabaseService) -> Result<(), Error> {
             "CREATE TABLE IF NOT EXISTS remote_sync_replaced_chunk (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, server_seq INTEGER NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, replacement_chunk_id TEXT, replacement_source_seq INTEGER, announced INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (api_origin, account_id, vault_id, server_seq))",
             "CREATE INDEX IF NOT EXISTS remote_sync_replaced_chunk_source_idx ON remote_sync_replaced_chunk (api_origin, account_id, vault_id, source_id, source_seq)",
             "CREATE TABLE IF NOT EXISTS remote_sync_seen_chunk (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id, source_id, source_seq))",
-            "CREATE TABLE IF NOT EXISTS remote_sync_profile_stream_seen (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, stream TEXT NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id, source_id, source_seq, stream))",
+            PROFILE_STREAM_SEEN_TABLE.create_sql,
             "CREATE TABLE IF NOT EXISTS remote_sync_coverage (id INTEGER PRIMARY KEY, vrchat_user_id TEXT NOT NULL, started_at INTEGER NOT NULL, extended_at INTEGER NOT NULL, ended_at INTEGER)",
             "CREATE INDEX IF NOT EXISTS remote_sync_coverage_user_idx ON remote_sync_coverage (vrchat_user_id, started_at)",
-            "CREATE TABLE IF NOT EXISTS remote_sync_provenance (stream TEXT NOT NULL, local_rowid INTEGER NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, PRIMARY KEY (stream, local_rowid))",
+            PROVENANCE_TABLE.create_sql,
             "CREATE INDEX IF NOT EXISTS remote_sync_provenance_source_idx ON remote_sync_provenance (stream, source_id, local_rowid)",
             "CREATE TABLE IF NOT EXISTS remote_sync_tombstone (stream TEXT NOT NULL, owner_id INTEGER NOT NULL DEFAULT 0, row_key TEXT NOT NULL, deleted_at INTEGER NOT NULL, PRIMARY KEY (stream, owner_id, row_key))",
             "CREATE TABLE IF NOT EXISTS remote_sync_log (id INTEGER PRIMARY KEY, api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, kind TEXT NOT NULL, message TEXT NOT NULL, first_seq INTEGER, last_seq INTEGER, created_at INTEGER NOT NULL)",

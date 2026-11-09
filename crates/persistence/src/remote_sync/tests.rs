@@ -1255,3 +1255,72 @@ fn profile_bio_links_sync_and_survive_rows_from_older_versions() {
         )
     );
 }
+
+#[test]
+fn older_bookkeeping_tables_are_rebuilt_without_rowid_keeping_every_row() {
+    let (_dir, db) = test_db("without-rowid");
+    for sql in [
+        "CREATE TABLE remote_sync_provenance (stream TEXT NOT NULL, local_rowid INTEGER NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, PRIMARY KEY (stream, local_rowid))",
+        "CREATE INDEX remote_sync_provenance_source_idx ON remote_sync_provenance (stream, source_id, local_rowid)",
+        "INSERT INTO remote_sync_provenance VALUES ('feed_gps', 1, 'source-a', 3), ('feed_gps', 2, 'source-b', 4)",
+        "CREATE TABLE remote_sync_profile_stream_seen (api_origin TEXT NOT NULL, account_id TEXT NOT NULL, vault_id TEXT NOT NULL, source_id TEXT NOT NULL, source_seq INTEGER NOT NULL, stream TEXT NOT NULL, PRIMARY KEY (api_origin, account_id, vault_id, source_id, source_seq, stream))",
+        "INSERT INTO remote_sync_profile_stream_seen VALUES ('https://api.test', 'acct', 'vault', 'source-a', 7, 'feed_bio')",
+    ] {
+        db.execute_non_query(sql, &Default::default()).unwrap();
+    }
+
+    ensure_remote_sync_tables(&db).unwrap();
+
+    for table in ["remote_sync_provenance", "remote_sync_profile_stream_seen"] {
+        let sql = db
+            .execute(
+                &format!("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = '{table}'"),
+                &Default::default(),
+            )
+            .unwrap();
+        assert!(
+            sql[0][0].as_str().unwrap().contains("WITHOUT ROWID"),
+            "{table} was not rebuilt"
+        );
+    }
+    assert_eq!(
+        db.execute(
+            "SELECT stream, local_rowid, source_id, source_seq FROM remote_sync_provenance ORDER BY local_rowid",
+            &Default::default(),
+        )
+        .unwrap(),
+        vec![
+            vec![json!("feed_gps"), json!(1), json!("source-a"), json!(3)],
+            vec![json!("feed_gps"), json!(2), json!("source-b"), json!(4)],
+        ]
+    );
+    assert_eq!(
+        db.execute(
+            "SELECT api_origin, account_id, vault_id, source_id, source_seq, stream FROM remote_sync_profile_stream_seen",
+            &Default::default(),
+        )
+        .unwrap(),
+        vec![vec![
+            json!("https://api.test"),
+            json!("acct"),
+            json!("vault"),
+            json!("source-a"),
+            json!(7),
+            json!("feed_bio"),
+        ]]
+    );
+    assert!(!db
+        .execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'remote_sync_provenance_source_idx'",
+            &Default::default(),
+        )
+        .unwrap()
+        .is_empty());
+    assert!(db
+        .execute(
+            "SELECT 1 FROM sqlite_master WHERE name LIKE '%_without_rowid'",
+            &Default::default(),
+        )
+        .unwrap()
+        .is_empty());
+}

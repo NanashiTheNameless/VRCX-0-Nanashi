@@ -825,7 +825,7 @@ pub fn export_rows(
         .join(", ");
     let rows = db.execute(
         &format!(
-            "SELECT rowid, {column_list} FROM {table} WHERE rowid > @after{owner}{field} AND rowid NOT IN (SELECT local_rowid FROM remote_sync_provenance WHERE stream = @stream) ORDER BY rowid LIMIT @limit",
+            "SELECT rowid, {column_list} FROM {table} WHERE rowid > @after{owner}{field} AND NOT EXISTS (SELECT 1 FROM remote_sync_provenance AS provenance WHERE provenance.stream = @stream AND provenance.local_rowid = {table}.rowid) ORDER BY rowid LIMIT @limit",
             table = quote(&table),
             owner = owner_filter(spec),
             field = field_filter(spec),
@@ -882,7 +882,7 @@ pub fn pending_row_count(
     let table = scope.table_name(spec);
     let rows = db.execute(
         &format!(
-            "SELECT COUNT(*) FROM (SELECT 1 FROM {table} WHERE rowid > @after{owner}{field} AND rowid NOT IN (SELECT local_rowid FROM remote_sync_provenance WHERE stream = @stream) LIMIT @limit)",
+            "SELECT COUNT(*) FROM (SELECT 1 FROM {table} WHERE rowid > @after{owner}{field} AND NOT EXISTS (SELECT 1 FROM remote_sync_provenance AS provenance WHERE provenance.stream = @stream AND provenance.local_rowid = {table}.rowid) LIMIT @limit)",
             table = quote(&table),
             owner = owner_filter(spec),
             field = field_filter(spec),
