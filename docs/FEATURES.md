@@ -67,12 +67,14 @@ Automatic recording is limited to friends, players currently in your instance, a
 own profile. Opening another user's profile allows that observation without starting
 ongoing tracking after they leave.
 
-**Refresh all friend profiles**, on the Friends page and beside **Refresh friends list** in
-the bottom-right sidebar settings popover, fetches fresh profile data for the entire friend
-roster, including profiles whose details were already loaded or cached. Both buttons ask
-for confirmation first. Requests run one at a time, at least half a second apart, with long
+**Refresh all friend profiles**, in the arrow menu of the **Load friend details** button on
+the Friends page and beside **Refresh friends list** in the bottom-right sidebar settings
+popover, fetches fresh profile data for the entire friend roster, including profiles whose
+details were already loaded or cached. It asks for confirmation first. Requests run one at a time, at least half a second apart, with long
 rate-limit backoff that honors VRChat's retry delays. A 5-minute cooldown follows completion
-or cancellation, with a countdown on both buttons.
+or cancellation, with a countdown on both buttons. **Load friend details** itself, which
+only fetches friends whose full profile was never loaded, also asks for confirmation and
+has its own 1-minute cooldown; the two cooldowns are separate.
 
 The server collector records the same profile fields using its own copy of the primary
 PC's recording and sync choices. The primary PC is the selected Server deduplication

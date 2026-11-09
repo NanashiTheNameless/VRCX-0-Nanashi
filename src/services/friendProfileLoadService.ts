@@ -13,7 +13,39 @@ import {
 import i18n from './i18nService';
 
 const TERMINAL_RESET_DELAY_MS = 5000;
-const REFRESH_COOLDOWN_MS = 300 * SECOND_MS;
+
+export type FriendProfileLoadKind = 'load' | 'refresh';
+
+// Loading only fetches friends whose profile was never loaded, so a short
+// cooldown is enough to stop repeated clicks; a full refresh fetches every
+// friend again and keeps the longer one.
+const COOLDOWN_MS: Record<FriendProfileLoadKind, number> = {
+    load: 60 * SECOND_MS,
+    refresh: 300 * SECOND_MS
+};
+
+const TEXT_KEYS: Record<
+    FriendProfileLoadKind,
+    {
+        title: string;
+        description: string;
+        confirm: string;
+        cooldown: string;
+    }
+> = {
+    load: {
+        title: 'view.friend_list.load',
+        description: 'view.friend_list.load_confirm_description',
+        confirm: 'view.friend_list.load_confirm',
+        cooldown: 'view.friend_list.load_cooldown'
+    },
+    refresh: {
+        title: 'view.friend_list.refresh_all',
+        description: 'view.friend_list.refresh_all_confirm_description',
+        confirm: 'view.friend_list.refresh_all_confirm',
+        cooldown: 'view.friend_list.refresh_all_cooldown'
+    }
+};
 
 export const useFriendProfileRefreshStore = create<{
     cooldowns: Record<string, number>;
@@ -23,24 +55,30 @@ export const useFriendProfileRefreshStore = create<{
 
 export function friendProfileRefreshScopeKey(
     userId: string | null,
-    endpoint: string | null
+    endpoint: string | null,
+    kind: FriendProfileLoadKind = 'refresh'
 ): string {
-    return JSON.stringify([userId || '', endpoint || '']);
+    return kind === 'refresh'
+        ? JSON.stringify([userId || '', endpoint || ''])
+        : JSON.stringify([userId || '', endpoint || '', kind]);
 }
 
-const refreshRuns = new Map<number, string>();
+const cooldownRuns = new Map<
+    number,
+    { scope: string; kind: FriendProfileLoadKind }
+>();
 let cooldownTimer: ReturnType<typeof setInterval> | null = null;
 
 function startRefreshCooldown(runId: number): void {
-    const scope = refreshRuns.get(runId);
-    if (scope === undefined) return;
-    refreshRuns.delete(runId);
+    const run = cooldownRuns.get(runId);
+    if (run === undefined) return;
+    cooldownRuns.delete(runId);
     const now = Date.now();
     useFriendProfileRefreshStore.setState((state) => ({
         now,
         cooldowns: {
             ...state.cooldowns,
-            [scope]: now + REFRESH_COOLDOWN_MS
+            [run.scope]: now + COOLDOWN_MS[run.kind]
         }
     }));
     if (cooldownTimer === null) {
@@ -156,52 +194,50 @@ export function applyFriendProfileLoadStatusPayload(
 export async function startFriendProfileLoad(
     refreshAll = false
 ): Promise<void> {
+    const kind: FriendProfileLoadKind = refreshAll ? 'refresh' : 'load';
+    const text = TEXT_KEYS[kind];
     const auth = useRuntimeStore.getState().auth;
     const scope = friendProfileRefreshScopeKey(
         auth.currentUserId,
-        auth.currentUserEndpoint
+        auth.currentUserEndpoint,
+        kind
     );
-    if (refreshAll) {
-        const state = useFriendProfileRefreshStore.getState();
-        if (state.pending) return;
-        const { status } = useRuntimeStore.getState().friendProfileLoad;
-        if (status === 'running' || status === 'cancelling') {
-            openFriendProfileLoadDialog();
-            return;
-        }
-        const remaining = (state.cooldowns[scope] ?? 0) - Date.now();
-        if (remaining > 0) {
-            toast.add({
-                type: 'info',
-                title: i18n.t('view.friend_list.refresh_all_cooldown', {
-                    count: Math.ceil(remaining / SECOND_MS)
-                })
-            });
-            return;
-        }
-        useFriendProfileRefreshStore.setState({ pending: true });
+    const state = useFriendProfileRefreshStore.getState();
+    if (state.pending) return;
+    const { status } = useRuntimeStore.getState().friendProfileLoad;
+    if (status === 'running' || status === 'cancelling') {
+        openFriendProfileLoadDialog();
+        return;
     }
+    const remaining = (state.cooldowns[scope] ?? 0) - Date.now();
+    if (remaining > 0) {
+        toast.add({
+            type: 'info',
+            title: i18n.t(text.cooldown, {
+                count: Math.ceil(remaining / SECOND_MS)
+            })
+        });
+        return;
+    }
+    useFriendProfileRefreshStore.setState({ pending: true });
     try {
-        if (refreshAll) {
-            const result = await useModalStore.getState().confirm({
-                title: i18n.t('view.friend_list.refresh_all'),
-                description: i18n.t(
-                    'view.friend_list.refresh_all_confirm_description'
-                ),
-                confirmText: i18n.t('view.friend_list.refresh_all_confirm'),
-                cancelText: i18n.t('common.actions.cancel')
-            });
-            const currentAuth = useRuntimeStore.getState().auth;
-            if (
-                !result.ok ||
-                scope !==
-                    friendProfileRefreshScopeKey(
-                        currentAuth.currentUserId,
-                        currentAuth.currentUserEndpoint
-                    )
-            )
-                return;
-        }
+        const result = await useModalStore.getState().confirm({
+            title: i18n.t(text.title),
+            description: i18n.t(text.description),
+            confirmText: i18n.t(text.confirm),
+            cancelText: i18n.t('common.actions.cancel')
+        });
+        const currentAuth = useRuntimeStore.getState().auth;
+        if (
+            !result.ok ||
+            scope !==
+                friendProfileRefreshScopeKey(
+                    currentAuth.currentUserId,
+                    currentAuth.currentUserEndpoint,
+                    kind
+                )
+        )
+            return;
         clearResetTimer();
         useRuntimeStore
             .getState()
@@ -209,14 +245,12 @@ export async function startFriendProfileLoad(
         const payload = refreshAll
             ? await commands.appFriendProfileRefreshAll()
             : await commands.appFriendProfileLoadStart();
-        if (refreshAll) {
-            refreshRuns.set(payload.runId, scope);
-            if (
-                payload.runId === latestRunId &&
-                isFriendProfileLoadTerminalStatus(latestStatus)
-            ) {
-                startRefreshCooldown(payload.runId);
-            }
+        cooldownRuns.set(payload.runId, { scope, kind });
+        if (
+            payload.runId === latestRunId &&
+            isFriendProfileLoadTerminalStatus(latestStatus)
+        ) {
+            startRefreshCooldown(payload.runId);
         }
         applyFriendProfileLoadStatusPayload(payload);
         if (
@@ -234,9 +268,7 @@ export async function startFriendProfileLoad(
             });
         }
     } finally {
-        if (refreshAll) {
-            useFriendProfileRefreshStore.setState({ pending: false });
-        }
+        useFriendProfileRefreshStore.setState({ pending: false });
     }
 }
 
@@ -280,7 +312,7 @@ export function resetFriendProfileLoadService(): void {
     clearResetTimer();
     latestRunId = 0;
     latestStatus = 'idle';
-    refreshRuns.clear();
+    cooldownRuns.clear();
     if (cooldownTimer !== null) clearInterval(cooldownTimer);
     cooldownTimer = null;
     useFriendProfileRefreshStore.setState({

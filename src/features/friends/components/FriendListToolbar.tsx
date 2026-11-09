@@ -1,4 +1,5 @@
 import {
+    ChevronDownIcon,
     UserMinusIcon,
     UserRoundSearchIcon,
     WaypointsIcon
@@ -15,10 +16,20 @@ import {
     ToolbarStatus,
     ToolbarViews
 } from '@/components/layout/ToolbarControls';
-import { RefreshAllFriendProfilesButton } from '@/components/RefreshAllFriendProfilesButton';
+import {
+    RefreshAllFriendProfilesMenuItem,
+    useFriendProfileLoadAvailability
+} from '@/components/RefreshAllFriendProfilesButton';
 import { useRoomMutualScanStore } from '@/state/roomMutualScanStore';
+import { HintTooltip } from '@/ui/hint-tooltip';
 import { Button } from '@/ui/shadcn/button';
-import { DropdownMenuGroup, DropdownMenuItem } from '@/ui/shadcn/dropdown-menu';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuTrigger
+} from '@/ui/shadcn/dropdown-menu';
 import { Spinner } from '@/ui/shadcn/spinner';
 
 import type { FriendListRow } from '../friendListRows';
@@ -65,6 +76,7 @@ export function FriendListToolbar({
     };
 }) {
     const { t } = useTranslation();
+    const loadAvailability = useFriendProfileLoadAvailability('load');
     const {
         activeSearchFilterIds,
         favoritesOnly,
@@ -191,20 +203,59 @@ export function FriendListToolbar({
                         )}
                         {t('view.friend_list.load_mutual_friends')}
                     </Button>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        disabled={!currentUserId}
-                        onClick={onLoadFriendUserDetails}
-                    >
-                        {isLoadingUserDetails ? (
-                            <Spinner data-icon="inline-start" />
-                        ) : (
-                            <UserRoundSearchIcon data-icon="inline-start" />
-                        )}
-                        {t('view.friend_list.load')}
-                    </Button>
-                    <RefreshAllFriendProfilesButton />
+                    <div className="flex">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-r-none"
+                            disabled={
+                                !currentUserId || loadAvailability.remaining > 0
+                            }
+                            title={
+                                loadAvailability.remaining > 0
+                                    ? t('view.friend_list.load_cooldown', {
+                                          count: loadAvailability.remaining
+                                      })
+                                    : t('view.friend_list.load_description')
+                            }
+                            onClick={onLoadFriendUserDetails}
+                        >
+                            {isLoadingUserDetails ? (
+                                <Spinner data-icon="inline-start" />
+                            ) : (
+                                <UserRoundSearchIcon data-icon="inline-start" />
+                            )}
+                            {loadAvailability.remaining > 0
+                                ? t('view.friend_list.load_cooldown_label', {
+                                      count: loadAvailability.remaining
+                                  })
+                                : t('view.friend_list.load')}
+                        </Button>
+                        <DropdownMenu>
+                            <HintTooltip
+                                label={t('view.friend_list.profile_options')}
+                            >
+                                <DropdownMenuTrigger
+                                    render={
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="icon"
+                                            className="-ml-px rounded-l-none"
+                                            disabled={!currentUserId}
+                                        >
+                                            <ChevronDownIcon />
+                                        </Button>
+                                    }
+                                />
+                            </HintTooltip>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuGroup>
+                                    <RefreshAllFriendProfilesMenuItem />
+                                </DropdownMenuGroup>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                     <TableColumnVisibilityMenu
                         table={table}
                         onResetLayout={onResetTableLayout}

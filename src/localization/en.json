@@ -905,7 +905,7 @@
         "toast_off_running": "Game Isolation turned off · Recording resumes from the next room",
         "failed": "Couldn't change Game Isolation",
         "badge": "Isolated",
-        "menu_item": "Game Isolation…",
+        "menu_item": "Game Isolation...",
         "prompt_other_account_title": "VRChat on this PC is signed in as {name}",
         "prompt_other_account_description": "That's not the current account. Turn on Game Isolation so its Game Log isn't recorded under this account.",
         "prompt_own_account_title": "This account is the one playing VRChat on this PC",
@@ -1211,7 +1211,7 @@
             "selection": "Selection in screenshots and favorites",
             "gallery_inventory": "Gallery and inventory"
         },
-        "navigation_items": "Open navigation item 1–9",
+        "navigation_items": "Open navigation item 1-9",
         "hold_for_hints": "Show shortcut hints (hold)",
         "toggle_details": "Show / hide details",
         "clear_selection": "Clear selection",
@@ -1244,7 +1244,7 @@
         },
         "setup": {
             "create_title": "Set a lock password",
-            "create_description": "The lock hides VRCX-0-Nanashi behind this 4-digit password while it keeps running. It is not encryption — it only keeps someone at your PC from browsing around.",
+            "create_description": "The lock hides VRCX-0-Nanashi behind this 4-digit password while it keeps running. It is not encryption; it only keeps someone at your PC from browsing around.",
             "change_title": "Change lock password",
             "change_description": "Enter your current lock password, then choose a new one.",
             "clear_title": "Remove lock password",
@@ -1307,7 +1307,7 @@
         "search_groups": "Groups",
         "search_own_groups": "My Groups",
         "search_direct_access": "Paste a link or ID",
-        "search_scope_direct_access": "wrld_ · usr_ · vrchat.com/…",
+        "search_scope_direct_access": "wrld_ · usr_ · vrchat.com/...",
         "search_open_direct": "Open this link or ID",
         "search_clipboard_detected": "Link or ID detected in clipboard. Press Enter to open.",
         "search_joined_groups": "Joined Groups",
@@ -1371,7 +1371,7 @@
                 "display_icon_text": "Icon + Text",
                 "display_icon_only": "Icon Only",
                 "tab_layout": "Tabs",
-                "layout_hint": "Drag to reorder. Friends and Groups are built in — add favorite groups as your own tabs.",
+                "layout_hint": "Drag to reorder. Friends and Groups are built in; add favorite groups as your own tabs.",
                 "system_badge": "Built-in",
                 "world_badge": "World",
                 "always_visible": "Always visible",
@@ -2298,6 +2298,12 @@
             "bulk_unfriend": "Bulk Unfriend Mode",
             "bulk_unfriend_selection": "Unfriend Selected",
             "load": "Load friend details",
+            "load_description": "Fetch full profile details for friends whose profiles have not been loaded yet. A 1-minute cooldown follows completion or cancellation.",
+            "load_cooldown": "Friend details recently loaded. Please try again in {count} sec.",
+            "load_cooldown_label": "Load friend details ({count}s)",
+            "load_confirm": "Load details",
+            "load_confirm_description": "Loading full profiles for friends that do not have them yet can take a while with a large friends list. Once started, let it finish. A 1-minute cooldown starts after it finishes or is canceled.",
+            "profile_options": "More friend profile options",
             "refresh_all": "Refresh all friend profiles",
             "refresh_all_description": "Fetch fresh profile details for every friend, including already loaded profiles and friends outside the current search and filters. A 5-minute cooldown follows completion or cancellation.",
             "refresh_all_cooldown": "Friend profiles recently refreshed. Please try again in {count} sec.",
@@ -3898,7 +3904,7 @@
                     "background_mode": "Background Mode in Tray",
                     "background_mode_description": "Saves ~90% memory while in the tray. Some page states may reset when restored.",
                     "background_mode_delay": "Delay Background Mode",
-                    "background_mode_delay_description": "Wait before switching — if you reopen the window within the delay, it resumes instantly.",
+                    "background_mode_delay_description": "Wait before switching. If you reopen the window within the delay, it resumes instantly.",
                     "background_mode_delay_button": "Set Delay (Minutes)",
                     "auto_install_updates_on_startup": "Auto-Update on Startup",
                     "auto_install_updates_on_startup_description": "Automatically download and install updates when the app starts.",
@@ -4993,7 +4999,7 @@
                 "modified": "Modified",
                 "reset": "Reset",
                 "restart_required": "Restart required",
-                "requires_parent": "Turn on “{name}” first"
+                "requires_parent": "Turn on \"{name}\" first"
             }
         },
         "dashboard": {
@@ -5709,11 +5715,11 @@
             "run_status_failed": "Launch failed",
             "run_status_stopped": "Stopped",
             "run_status_completed": "Completed",
-            "run_error_elevation_required": "Administrator permission is required (Windows error {code}). Turn on “Run as administrator”.",
+            "run_error_elevation_required": "Administrator permission is required (Windows error {code}). Turn on \"Run as administrator\".",
             "run_error_elevation_canceled": "Administrator permission was canceled (Windows error {code}).",
             "run_error_failed": "The app could not be started.",
-            "stop_locked_steam": "Launched by Steam; VRCX-0-Nanashi can’t close it.",
-            "stop_locked_admin": "Runs as administrator; VRCX-0-Nanashi can’t close it.",
+            "stop_locked_steam": "Launched by Steam; VRCX-0-Nanashi can't close it.",
+            "stop_locked_admin": "Runs as administrator; VRCX-0-Nanashi can't close it.",
             "remove_app": "Remove app",
             "remove_confirm": "Remove {name} from App Launcher?",
             "name_required": "Name is required",
@@ -5790,7 +5796,7 @@
                 "moderation_enable_chatbox": "Unmute Chatbox",
                 "moderation_disable_chatbox": "Mute Chatbox",
                 "edit_status": "Edit Social Status",
-                "report_user": "Report User…",
+                "report_user": "Report User...",
                 "unfriend": "Unfriend",
                 "badges": "Badges",
                 "badge_new": "New badge for this user...",
@@ -6887,7 +6893,7 @@
             },
             "edit": {
                 "short_code": "Short Code",
-                "short_code_hint": "3–6 uppercase letters or numbers. Changing it also changes the group link.",
+                "short_code_hint": "3-6 uppercase letters or numbers. Changing it also changes the group link.",
                 "add_link": "Add Link",
                 "remove_link": "Remove Link",
                 "join_state_open": "Anyone",
@@ -7088,7 +7094,7 @@
         },
         "discord_names": {
             "header": "Discord Names",
-            "description": "To search your entire friends list, click “Load friend details” in the Friends List tab."
+            "description": "To search your entire friends list, choose \"Load friend details\" in the Friends List tab."
         },
         "note_export": {
             "header": "Note Export",
@@ -7556,8 +7562,8 @@
                 "this_user_instance_row_cannot_be_deleted_without_event_ids": "This visit can't be deleted"
             },
             "label": {
-                "showing_recent_only": "Showing the {count} most recent visits — open full history",
-                "search_limited_to_recent": "Searching the {count} most recent visits — search full history",
+                "showing_recent_only": "Showing the {count} most recent visits. Open full history",
+                "search_limited_to_recent": "Searching the {count} most recent visits. Search full history",
                 "players_count": "{count} players",
                 "recorded_instance_visits": "recorded instance visits",
                 "recorded_instance_visits_count": "{count} recorded instance visits.",
@@ -8139,10 +8145,10 @@
             "description": "Limit how many entries VRCX-0-Nanashi loads from the database into the UI. Large values may impact RAM usage and performance.",
             "table_max_entries": "Max Table Entries",
             "table_max_entries_error": "Enter a number between {min} and {max}",
-            "table_max_entries_hint": "Valid range: {min} – {max}",
+            "table_max_entries_hint": "Valid range: {min} - {max}",
             "search_limit_returns": "Max Search Results",
             "search_limit_returns_error": "Enter a number between {min} and {max}",
-            "search_limit_returns_hint": "Valid range: {min} – {max}",
+            "search_limit_returns_hint": "Valid range: {min} - {max}",
             "search_limit_returns_warning": "Very high values may freeze the app",
             "cancel": "Cancel",
             "save": "Save"

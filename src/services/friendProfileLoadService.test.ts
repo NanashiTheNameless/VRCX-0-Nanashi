@@ -161,6 +161,59 @@ describe('friendProfileLoadService', () => {
         expect(useFriendProfileRefreshStore.getState().pending).toBe(false);
     });
 
+    it('asks before loading friend details and does nothing when declined', async () => {
+        mocks.confirm.mockResolvedValue({ ok: false });
+        await startFriendProfileLoad();
+        expect(mocks.confirm).toHaveBeenCalledWith({
+            title: 'view.friend_list.load',
+            description: 'view.friend_list.load_confirm_description',
+            confirmText: 'view.friend_list.load_confirm',
+            cancelText: 'common.actions.cancel'
+        });
+        expect(mocks.appFriendProfileLoadStart).not.toHaveBeenCalled();
+        expect(useFriendProfileRefreshStore.getState()).toMatchObject({
+            cooldowns: {},
+            pending: false
+        });
+    });
+
+    it('starts a one minute load cooldown that does not block a full refresh', async () => {
+        vi.useFakeTimers();
+        mocks.appFriendProfileLoadStart.mockResolvedValue(completedPayload());
+        await startFriendProfileLoad();
+        const loadScope = friendProfileRefreshScopeKey('', '', 'load');
+        expect(
+            useFriendProfileRefreshStore.getState().cooldowns[loadScope]
+        ).toBe(Date.now() + 60_000);
+        expect(
+            useFriendProfileRefreshStore.getState().cooldowns[
+                friendProfileRefreshScopeKey('', '')
+            ]
+        ).toBeUndefined();
+
+        await startFriendProfileLoad();
+        expect(mocks.appFriendProfileLoadStart).toHaveBeenCalledTimes(1);
+        expect(mocks.toastAdd).toHaveBeenCalledWith({
+            type: 'info',
+            title: 'view.friend_list.load_cooldown'
+        });
+
+        mocks.appFriendProfileRefreshAll.mockResolvedValue({
+            ...runningPayload(),
+            runId: 2
+        });
+        await startFriendProfileLoad(true);
+        expect(mocks.appFriendProfileRefreshAll).toHaveBeenCalledTimes(1);
+        applyFriendProfileLoadStatusPayload(completedPayload({ runId: 2 }));
+
+        await vi.advanceTimersByTimeAsync(60_000);
+        mocks.appFriendProfileLoadStart.mockResolvedValue(
+            completedPayload({ runId: 3 })
+        );
+        await startFriendProfileLoad();
+        expect(mocks.appFriendProfileLoadStart).toHaveBeenCalledTimes(2);
+    });
+
     it('starts five minutes of cooldown at completion and keeps it after progress resets', async () => {
         vi.useFakeTimers();
         mocks.appFriendProfileRefreshAll.mockResolvedValue(runningPayload());

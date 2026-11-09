@@ -65,10 +65,10 @@ API keys are stored on your PC. Requests go only to the connection you chose.
 - **Docs**: the assistant reads every doc in the app's Docs page and answers from them, and can
   open the Docs page at the section it means (the chat closes, and a card in the corner takes
   you back).
-  For example, **Refresh all friend profiles** is on **Social > Friends**, in the toolbar
-  above the table beside **Load friend details**. It refreshes full profiles, with a 5-minute
+  For example, **Refresh all friend profiles** is on **Social > Friends**, in the arrow menu
+  of the **Load friend details** button above the table. It refreshes full profiles, with a 5-minute
   cooldown after completion or cancellation. The same action is beside **Refresh friends
-  list** in the bottom-right sidebar settings popover. Both buttons ask for confirmation
+  list** in the bottom-right sidebar settings popover. Both places ask for confirmation
   before starting. Profile requests are paced conservatively and pause when VRChat applies
   a rate limit. Refreshing the mutual graph updates mutual relationships instead.
 - **Find settings**: it searches settings by what they do and tells you where they are
