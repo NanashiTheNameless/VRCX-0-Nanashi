@@ -21,11 +21,11 @@ use super::state::ActiveRealtimeContext;
 use super::{RealtimeHostRuntime, RealtimeHostRuntimeDeps, RealtimeStopRequest};
 
 const FRIEND_PROFILE_BULK_LOAD_BACKOFF: RateLimitBackoff =
-    RateLimitBackoff::new(Duration::from_millis(500), 4);
+    RateLimitBackoff::new(Duration::from_secs(60), 4);
 #[cfg(test)]
-pub(super) const FRIEND_PROFILE_BULK_LOAD_REQUEST_INTERVAL: Duration = Duration::from_secs(1);
-pub(super) const FRIEND_PROFILE_BULK_LOAD_CONCURRENCY: usize = 3;
-pub(super) const FRIEND_PROFILE_BULK_LOAD_REQUEST_SPACING: Duration = Duration::from_millis(333);
+pub(super) const FRIEND_PROFILE_BULK_LOAD_REQUEST_INTERVAL: Duration = Duration::from_secs(2);
+pub(super) const FRIEND_PROFILE_BULK_LOAD_CONCURRENCY: usize = 1;
+pub(super) const FRIEND_PROFILE_BULK_LOAD_REQUEST_SPACING: Duration = Duration::from_secs(2);
 const FRIEND_PROFILE_REFRESH_COOLDOWN: Duration = Duration::from_secs(300);
 
 pub(super) struct FriendProfileBulkLoadInitialProgress {
@@ -49,6 +49,8 @@ impl FriendProfileBulkLoadInitialProgress {
 pub(super) enum FriendProfileBulkLoadItemOutcome {
     Loaded,
     Failed,
+    BackoffExhausted,
+    AuthRejected,
 }
 
 #[derive(Default)]
@@ -553,13 +555,13 @@ impl FriendProfileBulkLoader {
                 Ok(response) if (200..300).contains(&response.status) => {
                     return Some(FriendProfileBulkLoadItemOutcome::Loaded);
                 }
-                Ok(response)
-                    if response.status == 429
-                        && attempt < FRIEND_PROFILE_BULK_LOAD_BACKOFF.max_retries() =>
-                {
+                Ok(response) if matches!(response.status, 429 | 503) => {
                     let delay = FRIEND_PROFILE_BULK_LOAD_BACKOFF.delay(attempt);
-                    attempt += 1;
                     pacer.delay_next_slots(delay).await;
+                    if attempt >= FRIEND_PROFILE_BULK_LOAD_BACKOFF.max_retries() {
+                        return Some(FriendProfileBulkLoadItemOutcome::BackoffExhausted);
+                    }
+                    attempt += 1;
                     tokio::select! {
                         biased;
                         _ = wait_for_friend_profile_bulk_load_cancel(run_id, cancel_rx) => return None,
@@ -569,6 +571,9 @@ impl FriendProfileBulkLoader {
                     if !loader.friend_profile_bulk_load_is_current(run_id, owner) {
                         return None;
                     }
+                }
+                Ok(response) if matches!(response.status, 401 | 403) => {
+                    return Some(FriendProfileBulkLoadItemOutcome::AuthRejected);
                 }
                 _ => return Some(FriendProfileBulkLoadItemOutcome::Failed),
             }
@@ -596,7 +601,9 @@ impl FriendProfileBulkLoader {
                 FriendProfileBulkLoadItemOutcome::Loaded => {
                     bulk.loaded = bulk.loaded.saturating_add(1);
                 }
-                FriendProfileBulkLoadItemOutcome::Failed => {
+                FriendProfileBulkLoadItemOutcome::Failed
+                | FriendProfileBulkLoadItemOutcome::BackoffExhausted
+                | FriendProfileBulkLoadItemOutcome::AuthRejected => {
                     bulk.failed = bulk.failed.saturating_add(1);
                 }
             }
@@ -656,7 +663,16 @@ impl FriendProfileBulkLoader {
             else {
                 return;
             };
+            let stop = matches!(
+                outcome,
+                FriendProfileBulkLoadItemOutcome::BackoffExhausted
+                    | FriendProfileBulkLoadItemOutcome::AuthRejected
+            );
             if !self.friend_profile_bulk_load_record_progress(run_id, owner, outcome) {
+                return;
+            }
+            if stop {
+                let _ = self.cancel_friend_profile_bulk_load();
                 return;
             }
         }

@@ -8,7 +8,8 @@ use serde::Deserialize;
 use serde_json::{json, Map, Value};
 use vrcx_0_contracts::social_aggregates::ResolvedUserRow;
 
-pub(crate) const PICK_USER_INPUT_KEY: &str = "vrcx-0/pick-user";
+pub(crate) const PICK_USER_INPUT_KEY: &str = "vrcx-0-nanashi/pick-user";
+pub(crate) const LEGACY_PICK_USER_INPUT_KEY: &str = "vrcx-0/pick-user";
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct UserChoiceRequest {

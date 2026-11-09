@@ -10,6 +10,7 @@ vrcx-0-http-client = { path = "../http-client" }
 base64 = { workspace = true }
 bytes = { workspace = true }
 futures-util = "0.3"
+httpdate = "1.0.3"
 hyper-util = { version = "0.1.20", features = ["client-legacy", "tokio"] }
 percent-encoding = { workspace = true }
 reqwest = { workspace = true, features = [
@@ -23,7 +24,7 @@ reqwest = { workspace = true, features = [
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
-tokio = { workspace = true, features = ["net", "io-util", "time"] }
+tokio = { workspace = true, features = ["net", "io-util", "time", "sync"] }
 tokio-tungstenite = { version = "0.30", features = ["rustls-tls-native-roots"] }
 tower-service = "0.3"
 url = { workspace = true }
@@ -32,4 +33,4 @@ vrcx-0-contracts = { path = "../contracts" }
 cookie_store = "0.22.1"
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["macros", "rt", "time"] }
+tokio = { workspace = true, features = ["macros", "rt", "time", "test-util"] }

@@ -28,7 +28,16 @@ const FIRST = ['user_guide', 'features'];
 const LAST = ['readme', 'contributing', 'security', 'sounds', 'agents'];
 
 function docTitle(text: string, fallback: string): string {
-    return /^#\s+(.+)$/m.exec(text)?.[1].trim() ?? fallback;
+    const heading = /^#\s+(.+)$/m.exec(text)?.[1];
+    return heading ? cleanHeading(heading) || fallback : fallback;
+}
+
+// Inline image badges belong on GitHub, not in the document picker or search paths.
+function cleanHeading(heading: string): string {
+    return heading
+        .replace(/\[!\[[^\]]*\]\([^)]*\)\]\([^)]*\)/g, '')
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+        .trim();
 }
 
 function rank(id: string): number {
@@ -115,11 +124,12 @@ export function splitDocSections(docId: string, text: string): DocSection[] {
         const heading = inCode ? null : /^(#{1,6})\s+(.*)$/.exec(raw);
         if (heading) {
             const level = heading[1].length;
+            const title = cleanHeading(heading[2]);
             path.length = level - 1;
-            path[level - 1] = heading[2].trim();
+            path[level - 1] = title;
             current = {
                 docId,
-                heading: heading[2].trim(),
+                heading: title,
                 path: path.filter(Boolean),
                 text: ''
             };

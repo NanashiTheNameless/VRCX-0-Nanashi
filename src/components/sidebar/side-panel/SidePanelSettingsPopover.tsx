@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { RefreshAllFriendProfilesButton } from '@/components/RefreshAllFriendProfilesButton';
 import { cn } from '@/lib/utils';
 import type { FavoriteGroupItem } from '@/shared/utils/sidebarTabLayout';
 import { Button } from '@/ui/shadcn/button';
@@ -202,6 +203,10 @@ export function SidePanelSettingsPopover({
                         )}
                         {t('side_panel.refresh_tooltip')}
                     </Button>
+                    <RefreshAllFriendProfilesButton
+                        compact
+                        onBeforeRefresh={() => onOpenChange(false)}
+                    />
                     <Separator />
                     <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                         {t('side_panel.settings.display')}

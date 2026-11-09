@@ -35,6 +35,9 @@ How the adoption count works:
 Any one of these opts out:
 
 - Turn off **Settings > Advanced > Anonymous adoption count > Count this install**.
+  You can also ask the AI Assistant to turn it off and choose **Allow** on its in-chat
+  permission card. Nothing changes before that approval. Policy, environment and flag-file
+  opt-outs still take precedence and cannot be overridden by the assistant.
 - Set one of these environment variables to `1` (`true`, `yes` and `on` work too):
   `VRCX_0_NANASHI_TELEMETRY_OPTOUT`, `DO_NOT_TRACK` or `TELEMETRY_OPTOUT`.
 - Set the environment variable `TELEMETRY=0` (`false`, `no` and `off` work too).

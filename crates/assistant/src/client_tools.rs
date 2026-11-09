@@ -48,7 +48,8 @@ pub(crate) fn client_tool_defs() -> Vec<ToolDefinition> {
             description: "Search the app's settings by what they do (words like \"badges\", \
 \"overlay timeout\", \"dark theme\"). Returns matching settings with their id, label, \
 description, where they are in Settings, current value, the kind of value and allowed \
-values, and whether you may request a change. Use it before show_in_settings or \
+values, whether you may request a change, and changeBlockedReason when blocked. Clearly \
+explain that reason instead of offering a prompt for a blocked setting. Use it before show_in_settings or \
 change_setting, and to answer questions about what a setting does."
                 .into(),
             parameters: json!({
@@ -70,7 +71,8 @@ fork changes, install and build notes, telemetry, dates and timezones, the self-
 recorder, security reporting, contributing, the README and the developer notes. Pass `query` \
 to search them (returns the best matching sections), `docId` with an optional `section` to \
 read one doc or section in full, or nothing to list the docs and their sections. Use it for \
-questions about how the app or a feature works."
+questions about how the app or a feature works, or where a page or button is. Check these \
+docs before claiming a feature is absent."
                 .into(),
             parameters: json!({
                 "type": "object",
@@ -120,8 +122,10 @@ find_settings."
             name: CHANGE_SETTING.into(),
             description: "Ask the user to approve changing one setting. The app shows a card \
 with the setting, what the change means, the old and new values and where it is in \
-Settings, and waits for the user. Only use it when the user asked for the change or agreed \
-to it. Returns whether the user approved and the value now in effect."
+Settings, and waits for the user's Allow or Deny in the chat. When the user asks to change \
+a supported setting, prefer this tool after find_settings instead of giving manual steps \
+or asking for another text confirmation. Only use it when the user asked for the change or \
+agreed to it. Returns whether the user approved and the value now in effect."
                 .into(),
             parameters: json!({
                 "type": "object",

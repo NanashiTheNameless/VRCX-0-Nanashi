@@ -7,7 +7,8 @@ const mocks = vi.hoisted(() => ({
     appFriendProfileLoadStart: vi.fn(),
     appFriendProfileRefreshAll: vi.fn(),
     appFriendProfileLoadCancel: vi.fn(),
-    toastAdd: vi.fn()
+    toastAdd: vi.fn(),
+    confirm: vi.fn()
 }));
 
 vi.mock('@/platform/tauri/bindings', () => ({
@@ -20,6 +21,10 @@ vi.mock('@/platform/tauri/bindings', () => ({
 
 vi.mock('@/services/toastService', () => ({
     toast: { add: mocks.toastAdd }
+}));
+
+vi.mock('@/state/modalStore', () => ({
+    useModalStore: { getState: () => ({ confirm: mocks.confirm }) }
 }));
 
 vi.mock('./i18nService', () => ({
@@ -79,6 +84,7 @@ describe('friendProfileLoadService', () => {
         mocks.appFriendProfileRefreshAll.mockReset();
         mocks.appFriendProfileLoadCancel.mockReset();
         mocks.toastAdd.mockReset();
+        mocks.confirm.mockReset().mockResolvedValue({ ok: true });
         vi.useRealTimers();
     });
 
@@ -107,6 +113,52 @@ describe('friendProfileLoadService', () => {
             totalFriends: 3,
             dialogOpen: true
         });
+    });
+
+    it('waits for confirmation before starting a full refresh', async () => {
+        const confirmation = deferred<{ ok: boolean }>();
+        mocks.confirm.mockReturnValue(confirmation.promise);
+        mocks.appFriendProfileRefreshAll.mockResolvedValue(runningPayload());
+        const start = startFriendProfileLoad(true);
+        expect(mocks.confirm).toHaveBeenCalledWith({
+            title: 'view.friend_list.refresh_all',
+            description: 'view.friend_list.refresh_all_confirm_description',
+            confirmText: 'view.friend_list.refresh_all_confirm',
+            cancelText: 'common.actions.cancel'
+        });
+        expect(mocks.appFriendProfileRefreshAll).not.toHaveBeenCalled();
+        expect(useRuntimeStore.getState().friendProfileLoad.dialogOpen).toBe(
+            false
+        );
+        confirmation.resolve({ ok: true });
+        await start;
+        expect(mocks.appFriendProfileRefreshAll).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not start or enter cooldown when confirmation is declined', async () => {
+        mocks.confirm.mockResolvedValue({ ok: false });
+        await startFriendProfileLoad(true);
+        expect(mocks.appFriendProfileRefreshAll).not.toHaveBeenCalled();
+        expect(useFriendProfileRefreshStore.getState()).toMatchObject({
+            cooldowns: {},
+            pending: false
+        });
+        expect(useRuntimeStore.getState().friendProfileLoad.dialogOpen).toBe(
+            false
+        );
+    });
+
+    it('discards confirmation if the signed-in account changed while it was open', async () => {
+        const confirmation = deferred<{ ok: boolean }>();
+        mocks.confirm.mockReturnValue(confirmation.promise);
+        const start = startFriendProfileLoad(true);
+        useRuntimeStore
+            .getState()
+            .setAuthBootstrap({ currentUserId: 'usr_other' });
+        confirmation.resolve({ ok: true });
+        await start;
+        expect(mocks.appFriendProfileRefreshAll).not.toHaveBeenCalled();
+        expect(useFriendProfileRefreshStore.getState().pending).toBe(false);
     });
 
     it('starts five minutes of cooldown at completion and keeps it after progress resets', async () => {

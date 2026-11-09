@@ -44,12 +44,18 @@ earlier history.
 that periodically fetches profiles. If you use it, enable **Record bio history** to save its
 bio changes. Current profile data and badges keep working with history recording off.
 
-Use **Refresh all friend profiles** on the Friends page to fetch all friends' profiles again,
+Use **Refresh all friend profiles** on the Friends page or beside **Refresh friends list** in
+the bottom-right sidebar settings popover to fetch all friends' profiles again,
 including profiles already loaded. This updates current data and records observed changes
 for fields whose recording is enabled. It uses the automatic history rules, so each field's
 first observation establishes a baseline. Opening an individual profile also captures
 enabled values that are not already in history. Completing or canceling a full refresh starts
-a 5-minute cooldown before another full refresh can run.
+a 5-minute cooldown before another full refresh can run. Both buttons ask for confirmation
+first, explaining that the job can take a while and should be allowed to finish.
+Only one profile request runs at a time, spaced at least 2 seconds apart. Rate limiting
+pauses requests for at least 60 seconds, backs off further on repeated limits, and honors
+longer waits from VRChat. Persistent limits stop the refresh. Other VRChat reads also
+respect that wait; actions report a rate limit instead of executing much later.
 
 ## Reading history
 

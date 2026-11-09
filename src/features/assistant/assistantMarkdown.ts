@@ -1,8 +1,14 @@
 import type { UIMessage } from '@/domain/assistant/types';
 
+import { asciiAssistantPunctuation } from './assistantText';
+
 /** One message as Markdown: its text as written (assistant replies already are). */
 export function messageMarkdown(message: UIMessage): string {
-    return message.text.trim();
+    return (
+        message.role === 'assistant'
+            ? asciiAssistantPunctuation(message.text)
+            : message.text
+    ).trim();
 }
 
 /**

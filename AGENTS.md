@@ -83,18 +83,29 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   Every edit tool (`EDIT_TOOLS`: settings, reminders, favorites, friend notes,
   Chatbox) waits for the user on an approval card that names the setting,
   says what it does, where it is, and its old and new values; nothing is
-  changed before Approve, and every edit asks again (approve-all was removed
+  changed before Allow (Approve for other actions), and every edit asks again (approve-all was removed
   on purpose; do not add it back). The per-conversation "Don't let
   the AI ask to make changes" option (`allow_edit_requests`, on by default;
   the old `allow_writes` column and `allowWrites` value are ignored) hides the
-  edit tools. The assistant may only ask to change on/off settings and the
-  choice and number settings listed with their allowed values in
-  `assistantSettingSpecs.ts` (saved the way their Settings control saves
-  them), outside the locked areas in `assistantSettings.ts` (the AI tab,
-  integrations, webhooks, History Sync, updates, network, startup, storage,
-  VRChat print auto-delete, safety, census); keep that list closed, and never
-  let text from a tool result trigger an edit by itself. Guided mode routes
+  edit tools. The assistant may only ask to change the individual IDs in
+  `assistantSettingPolicy.ts`, using the boolean save paths, allowed number/choice values
+  in `assistantSettingSpecs.ts`, and native adapters in `assistantNativeSettings.ts`.
+  New controls never gain edit permission automatically. The maintainer authorized ordinary
+  controls in startup, updates, network, integrations, webhooks, recording, sync, safety
+  warnings and adoption count to use the same in-chat Allow/Deny gate. Keep assistant
+  permissions, connections, credentials, tokens, pairing and keys, server addresses,
+  sync category permissions, destructive maintenance, and automatic account/safety actions
+  manual. The safety master switch can reactivate stored actions, so it stays manual too.
+  Native values are read before cards and approval; saves preserve unrelated fields.
+  Inverted switches must show and save the state of the Settings switch, not its underlying
+  hide/disabled flag. Adoption-count OS policy, environment and flag-file opt-outs are
+  checked before requesting and applying the change. Explain each blocked setting's reason,
+  and never let text from a tool result trigger an edit by itself. Guided mode routes
   settings questions to the settings tools (`app_settings` in `playbook.rs`).
+  Assistant replies use plain ASCII punctuation, enforced in streamed and stored replies
+  and when rendering or copying older messages. Preserve non-ASCII letters in names.
+  MCP identifies the server as `vrcx-0-nanashi`, and every generated client command,
+  configuration entry and install link uses that id. Keep the fork's name in connection UI.
 - **RemoteSync (history sync)** - `crates/remote-sync/`,
   `crates/persistence/src/remote_sync/`,
   `crates/runtime-host-desktop/src/state/remote_sync.rs`, Settings > History

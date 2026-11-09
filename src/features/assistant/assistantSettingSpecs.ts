@@ -33,6 +33,7 @@ export type NumberSettingSpec = {
     max: number;
     unit: 'seconds' | 'minutes' | 'percent';
     scale?: number;
+    choices?: readonly number[];
 };
 
 export type SettingValueSpec = ChoiceSettingSpec | NumberSettingSpec;
@@ -51,6 +52,35 @@ const VR = 'view.settings.vr';
 export const SETTING_VALUE_SPECS: Partial<
     Record<PreferenceKey, SettingValueSpec>
 > = {
+    autoUpdateVRCX: {
+        kind: 'choice',
+        options: [
+            ['Off', 'off'],
+            ['Notify', 'notify'],
+            ['Auto Download', 'auto_download'],
+            ['Auto Install', 'auto_install']
+        ].map(([value, label]) => ({
+            value,
+            labelKey: `view.settings.general.application.update_mode_option.${label}`
+        }))
+    },
+    autoLoginDelaySeconds: {
+        kind: 'number',
+        min: 0,
+        max: 10,
+        unit: 'seconds'
+    },
+    webhookFormat: {
+        kind: 'choice',
+        options: [
+            {
+                value: 'generic',
+                labelKey:
+                    'view.settings.notifications.notifications.webhook.format_generic'
+            },
+            { value: 'discord', labelKey: 'Discord' }
+        ]
+    },
     backgroundModeDelayMinutes: {
         kind: 'number',
         min: 10,
@@ -236,9 +266,12 @@ export function parseSettingValue(
     value: unknown
 ): ParsedSettingValue {
     if (spec.kind === 'choice') {
-        const option = spec.options.find(
-            (entry) => String(entry.value) === String(value)
-        );
+        const option =
+            typeof value === 'string' || typeof value === 'number'
+                ? spec.options.find(
+                      (entry) => String(entry.value) === String(value)
+                  )
+                : undefined;
         return option
             ? { ok: true, shown: option.value, stored: option.value }
             : {
@@ -248,18 +281,32 @@ export function parseSettingValue(
                       .join(', ')}.`
               };
     }
-    const number = typeof value === 'number' ? value : Number(value);
-    if (!Number.isFinite(number) || number < spec.min || number > spec.max) {
+    const number =
+        typeof value === 'number'
+            ? value
+            : typeof value === 'string' && value.trim()
+              ? Number(value)
+              : NaN;
+    if (
+        !Number.isFinite(number) ||
+        number < spec.min ||
+        number > spec.max ||
+        (!spec.scale && !Number.isInteger(number)) ||
+        (spec.choices && !spec.choices.includes(number))
+    ) {
         return {
             ok: false,
-            error: `Use a number from ${spec.min} to ${spec.max} ${spec.unit}.`
+            error: spec.choices
+                ? `Choose one of: ${spec.choices.join(', ')} ${spec.unit}.`
+                : `Use a number from ${spec.min} to ${spec.max} ${spec.unit}.`
         };
     }
-    const shown = spec.scale ? number : Math.round(number);
+    const stored = Math.round(number * (spec.scale ?? 1));
+    const shown = stored / (spec.scale ?? 1);
     return {
         ok: true,
         shown,
-        stored: Math.round(shown * (spec.scale ?? 1))
+        stored
     };
 }
 

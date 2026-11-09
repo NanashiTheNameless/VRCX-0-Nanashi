@@ -715,6 +715,11 @@ impl SessionStore {
         role: Role,
         content: String,
     ) -> AssistantPortResult<bool> {
+        let content = if role == Role::Assistant {
+            crate::text::ascii_punctuation(&content)
+        } else {
+            content
+        };
         self.push(session_id, role, MessageBody::Text(content))
     }
 

@@ -60,21 +60,32 @@ describe('AssistantEditRequestCard', () => {
         ).toBeTruthy();
         expect(screen.getByText('assistant.edit.off')).toBeTruthy();
         expect(screen.getByText('assistant.edit.on')).toBeTruthy();
+        expect(
+            screen.getByRole('region', {
+                name: 'assistant.edit.permission_required'
+            })
+        ).toBeTruthy();
+        expect(screen.getByText('assistant.edit.change_effect')).toBeTruthy();
+        expect(
+            screen.getByText('assistant.edit.permission_notice')
+        ).toBeTruthy();
+        expect(mocks.complete).not.toHaveBeenCalled();
 
         fireEvent.click(
             screen.getByRole('button', { name: 'assistant.edit.show_me' })
         );
         expect(mocks.show).toHaveBeenCalled();
+        expect(mocks.complete).not.toHaveBeenCalled();
     });
 
     it.each([
-        ['assistant.edit.approve', 'approved'],
-        ['assistant.edit.decline', 'declined']
+        ['assistant.edit.allow', 'approved'],
+        ['assistant.edit.deny', 'declined']
     ])('passes %s on once and locks the card', (button, decision) => {
         render(<AssistantEditRequestCard request={request()} active />);
         fireEvent.click(screen.getByRole('button', { name: button }));
         fireEvent.click(
-            screen.getByRole('button', { name: 'assistant.edit.decline' })
+            screen.getByRole('button', { name: 'assistant.edit.deny' })
         );
         expect(mocks.complete).toHaveBeenCalledTimes(1);
         expect((mocks.complete.mock.calls[0] as unknown[])[1]).toBe(decision);
@@ -95,7 +106,7 @@ describe('AssistantEditRequestCard', () => {
         expect(
             (
                 screen.getByRole('button', {
-                    name: 'assistant.edit.approve'
+                    name: 'assistant.edit.allow'
                 }) as HTMLButtonElement
             ).disabled
         ).toBe(true);

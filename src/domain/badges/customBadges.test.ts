@@ -145,6 +145,7 @@ describe('normalizeCustomBadges', () => {
                 id: 'a',
                 rules: [
                     { kind: 'ageVerified', level: 'adult' },
+                    { kind: 'ageVerified', level: 'hidden' },
                     { kind: 'ageVerified', level: 'bogus' },
                     { kind: 'platform', platform: 'ios' },
                     { kind: 'platform', platform: 'web' },
@@ -157,6 +158,7 @@ describe('normalizeCustomBadges', () => {
         ]);
         expect(entry.rules).toEqual([
             { kind: 'ageVerified', level: 'adult' },
+            { kind: 'ageVerified', level: 'hidden' },
             { kind: 'ageVerified', level: 'any' },
             { kind: 'platform', platform: 'ios' },
             { kind: 'status', status: 'busy' },
@@ -694,6 +696,33 @@ describe('resolveUserCustomBadges', () => {
         ).toEqual([]);
         expect(resolve(any, ALICE, { ageVerified: true })).toEqual([]);
         expect(resolve(any, ALICE, null)).toEqual([]);
+    });
+
+    it('matches hidden verification only when the profile explicitly confirms it', () => {
+        const hidden = [
+            badge({
+                id: 'hidden',
+                rules: [{ kind: 'ageVerified', level: 'hidden' }]
+            })
+        ];
+        const fact = { ageVerified: true, ageVerificationStatus: 'hidden' };
+        expect(resolve(hidden, ALICE, fact)).toEqual(['hidden']);
+        for (const missingOrUnverified of [
+            null,
+            { ageVerificationStatus: 'hidden' },
+            { ageVerified: false, ageVerificationStatus: 'hidden' },
+            { ageVerified: true },
+            { ageVerified: true, ageVerificationStatus: 'verified' },
+            { ageVerified: true, ageVerificationStatus: '18+' }
+        ]) {
+            expect(resolve(hidden, ALICE, missingOrUnverified)).toEqual([]);
+        }
+        for (const level of ['any', 'adult'] as const) {
+            const visible = [
+                badge({ id: level, rules: [{ kind: 'ageVerified', level }] })
+            ];
+            expect(resolve(visible, ALICE, fact)).toEqual([]);
+        }
     });
 
     it('reads age verification from friend list data, which only has the status', () => {

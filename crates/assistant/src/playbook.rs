@@ -127,12 +127,19 @@ const APP_SETTINGS: Playbook = Playbook {
         "change_setting",
     ],
     constraint_prompt: "The user is asking about VRCX-0-Nanashi itself: how a page or feature \
-works, where a setting is, what it does, or to change one. For how something works, call \
-read_docs with a few words and answer from the sections it returns. For a setting, call \
+works, where a button or setting is, what it does, or to change one. For a page, button or \
+feature, call read_docs with a few words and answer from the sections it returns, including \
+the exact button label and location. Check the docs before saying a feature is missing; \
+if search finds nothing useful, try a shorter query or read the relevant page section. \
+A question about where or how to use a button asks for directions, not an action. \
+For a setting, call \
 find_settings with a few words describing it, then answer from the label, description and \
 location it returns (Settings > tab > card). To point the user at \
-it, call show_in_settings. Only when the user asked for the change, call change_setting once \
-with a value of the reported kind; the user approves or declines it on a card. Never invent \
+it, call show_in_settings. When the user asks to change a supported setting, prefer calling \
+change_setting once with a value of the reported kind; it shows an in-chat permission card \
+and waits for Allow or Deny. The card is the confirmation, so do not first ask for a yes in \
+plain text or just give manual instructions. Use it only for a change the user asked for \
+or agreed to. Never invent \
 settings, locations or values.",
 };
 
@@ -222,10 +229,16 @@ period (their week or month)",
     Intent {
         label: "app_settings",
         description: "how to use VRCX-0-Nanashi itself: how a page or feature of the app works, \
-where a setting or option is, what a setting does, or asking to turn a setting on or off or \
+where a page, button, setting or option is, what a setting does, or asking to turn a setting on or off or \
 change it",
         keywords: &[
             "setting",
+            "button",
+            "refresh all friend profiles",
+            "refresh friend profiles",
+            "refresh friends profile",
+            "refresh friends list",
+            "load friend details",
             "turn on ",
             "turn off ",
             "where do i find",
@@ -237,6 +250,9 @@ change it",
             "documentation",
             " docs",
             "badge",
+            "telemetry",
+            "adoption count",
+            "census",
         ],
         playbook: APP_SETTINGS,
     },
@@ -421,6 +437,29 @@ mod tests {
             .unwrap()
             .filter_tools(&tools)
             .is_empty());
+    }
+
+    #[test]
+    fn profile_refresh_button_questions_use_docs_instead_of_graph_actions() {
+        let tools = vec![
+            tool("read_docs"),
+            tool("show_in_docs"),
+            tool("refresh_mutual_graph"),
+            tool("get_friend_profile"),
+        ];
+        for question in [
+            "Where if the refresh friends profile button?",
+            "Where is Refresh all friend profiles?",
+            "How do I refresh friend profiles?",
+            "Where is Refresh friends list?",
+            "Where is Load friend details?",
+        ] {
+            let filtered = classify_keyword(question)
+                .expect("profile refresh help should match app help")
+                .filter_tools(&tools);
+            let names: Vec<&str> = filtered.iter().map(|tool| tool.name.as_str()).collect();
+            assert_eq!(names, ["read_docs", "show_in_docs"], "{question}");
+        }
     }
 
     #[test]

@@ -93,6 +93,30 @@ describe('assistant docs', () => {
         );
     });
 
+    it('finds the friend profile refresh button and its actual location', () => {
+        for (const query of [
+            'Where if the refresh friends profile button?',
+            'refresh all friend profiles',
+            'refresh friend profile'
+        ]) {
+            const result = searchDocs(query);
+            const page =
+                'results' in result
+                    ? result.results.find(
+                          (entry) =>
+                              entry.docId === 'pages' &&
+                              entry.section.endsWith(' > Friends')
+                      )
+                    : undefined;
+            expect(page, query).toBeDefined();
+            expect(page?.text).toContain('**Social > Friends**');
+            expect(page?.text).toContain(
+                '**Refresh all friend profiles** button'
+            );
+            expect(page?.text).toContain('toolbar above the friends table');
+        }
+    });
+
     it('matches word forms', () => {
         expect(stemWord('glitchy')).toBe('glitch');
         expect(stemWord('glitches')).toBe('glitch');

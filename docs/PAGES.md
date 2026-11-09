@@ -150,12 +150,26 @@ and set a date range. Unfriend events can be hidden (Settings > Social > Friend 
 
 ### Friends
 
-Your full friends list as a table. Search by display name, username, rank, status, VRChat note,
-local note or bio and links; filter to favorites. **Load friend details** fills in missing
-full profiles. **Refresh all friend profiles** fetches every friend's profile again, including
+Open **Social > Friends** in the default left navigation. Your full friends list appears as
+a table. Search by display name, username, rank, status, VRChat note, local note or bio and
+links; filter to favorites.
+
+The **Refresh all friend profiles** button is in the toolbar above the friends table,
+immediately after **Load friend details**. **Load friend details** fills in missing
+full profiles. The same **Refresh all friend profiles** button is also in the bottom-right
+sidebar settings popover, beside **Refresh friends list**. Both full-profile buttons ask
+you to confirm that the refresh can take a while, should be allowed to finish once started,
+and has a 5-minute cooldown after finishing or being canceled.
+**Refresh all friend profiles** fetches every friend's profile again, including
 already loaded or cached profiles and friends outside the current search and filters.
-It updates profile data, including bio, pronouns, status, and badge-related fields, using
-the existing request pacing and retry behavior. Progress appears in a dialog that can be
+It updates profile data, including bio, pronouns, status, and badge-related fields. Profiles
+load one at a time, with at least 2 seconds between requests. A rate-limit response pauses
+the job for at least 60 seconds, doubling the backoff on repeated limits and honoring longer
+server-provided waits. Persistent rate limiting stops the refresh rather than continuing
+through the remaining friends. Other VRChat reads share the server's wait, including after
+cancellation or restarting a refresh. Actions report a rate limit instead of waiting to
+execute much later; retry them after the wait.
+Progress appears in a dialog that can be
 minimized or canceled; only one profile loading or refresh job runs at a time. A 5-minute
 cooldown follows completion or cancellation of a full refresh, with a countdown on the
 button. It applies per account and VRChat endpoint and stays active when you leave and
@@ -164,7 +178,8 @@ Profile history recording still follows your per-field choices.
 **Refresh friends list** in the sidebar's settings updates the friends list, online/offline
 presence and favorites. Use **Refresh all friend profiles** to update every friend's full
 profile details.
-**Load Mutual Friends** fetches who you share friends with. **Bulk Unfriend
+**Load Mutual Friends** and a mutual-graph refresh fetch mutual relationships, not full
+profile details, bios or pronouns. **Bulk Unfriend
 Mode** lets you select several friends and unfriend them at once.
 
 ### Moderation

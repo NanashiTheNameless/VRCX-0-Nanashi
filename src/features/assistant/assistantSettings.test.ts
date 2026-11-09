@@ -9,6 +9,11 @@ const mocks = vi.hoisted(() => ({
     setDensity: vi.fn(async (..._args: unknown[]) => undefined)
 }));
 
+vi.mock('@/platform/tauri/bindings', async (importOriginal) => ({
+    ...(await importOriginal<Record<string, unknown>>()),
+    commands: { appAdoptionCensusLock: vi.fn(async () => null) }
+}));
+
 vi.mock('@/services/preferencesService', async (importOriginal) => ({
     ...(await importOriginal<Record<string, unknown>>()),
     setBoolConfigPreference: mocks.setBool,
@@ -69,19 +74,19 @@ describe('assistant settings', () => {
         expect(result.tabs?.map((tab) => tab.tab)).toContain('social');
     });
 
-    it('lets the assistant ask only for boolean settings outside the locked areas', () => {
+    it('keeps permissions, credentials and destructive controls manual', () => {
         expect(
             canAssistantChangeSetting(getSettingsManifestEntry(HIDE_UNFRIENDS))
         ).toBe(true);
         for (const id of [
             'social.user-badges.list',
-            'integrations.translation.enabled',
+            'integrations.translation.api-key',
             'ai.assistant.disallow-edit-requests',
-            'advanced.storage.gamelog',
+            'advanced.storage.avatar-cleanup',
             'media.prints.auto-delete',
             'media.prints.auto-delete-limit',
-            'notifications.webhook.format',
-            'system.network.auto-login-delay-seconds'
+            'history-sync.backend.backend',
+            'advanced.safety.enabled'
         ]) {
             expect(
                 canAssistantChangeSetting(getSettingsManifestEntry(id))
@@ -113,10 +118,98 @@ describe('assistant settings', () => {
         ).toMatchObject({ ok: false });
         expect(
             previewSettingChange(
-                { settingId: 'integrations.translation.enabled', value: true },
+                { settingId: 'integrations.translation.api-key', value: true },
                 t
             )
         ).toMatchObject({ ok: false });
+    });
+
+    it('allows explicit safe controls in previously locked categories', () => {
+        for (const id of [
+            'system.startup.start-at-login',
+            'system.startup.start-minimized',
+            'system.updates.auto-install',
+            'system.network.auto-login-delay-seconds',
+            'system.network.proxy',
+            'integrations.discord.show-images',
+            'integrations.translation.enabled',
+            'integrations.youtube.enabled',
+            'notifications.webhook.format',
+            'advanced.storage.feed-history',
+            'advanced.safety.url-warnings',
+            'social.profile-history.bio-sync',
+            'history-sync.remotesync.pause-in-game'
+        ])
+            expect(canAssistantChangeSetting(entry(id)), id).toBe(true);
+        expect(
+            canAssistantChangeSetting({
+                ...entry(HIDE_UNFRIENDS),
+                id: 'social.new-toggle'
+            })
+        ).toBe(false);
+    });
+
+    it('shows and saves the switch state for inverted hide flags', async () => {
+        usePreferencesStore.setState({ hideNicknames: true });
+        expect(
+            previewSettingChange(
+                { settingId: 'interface.user-dialog.nicknames', value: true },
+                t
+            )
+        ).toMatchObject({
+            ok: true,
+            oldValue: { value: false },
+            newValue: { value: true }
+        });
+        await applySettingChange('interface.user-dialog.nicknames', true);
+        expect(mocks.setBool).toHaveBeenCalledWith('hideNicknames', false);
+    });
+
+    it('rejects non-numeric values and non-primitive choices', () => {
+        for (const value of [null, false, true, '', ' ', [], [5], {}]) {
+            expect(
+                previewSettingChange(
+                    { settingId: 'notifications.tts.volume', value },
+                    t
+                )
+            ).toMatchObject({ ok: false });
+        }
+        expect(
+            previewSettingChange({ settingId: WRIST_HAND, value: ['left'] }, t)
+        ).toMatchObject({ ok: false });
+    });
+
+    it('allows the census exception and explains locked settings', () => {
+        usePreferencesStore.setState({ adoptionCensusEnabled: true });
+        const census = describeAssistantSetting(
+            entry('advanced.adoption-census.enabled'),
+            t
+        );
+        expect(census).toMatchObject({
+            canRequestChange: true,
+            valueKind: 'boolean',
+            currentValue: true
+        });
+        expect(
+            previewSettingChange(
+                { settingId: census.settingId, value: false },
+                t
+            )
+        ).toMatchObject({
+            ok: true,
+            oldValue: { value: true },
+            newValue: { value: false }
+        });
+        const locked = describeAssistantSetting(
+            entry('integrations.translation.api-key'),
+            t
+        );
+        expect(locked).toMatchObject({
+            canRequestChange: false,
+            changeBlockedReason: expect.stringContaining(
+                'Connections, credentials, pairing'
+            )
+        });
     });
 
     it('offers choice and number settings with their options and range', () => {
@@ -214,7 +307,7 @@ describe('assistant settings', () => {
         expect(mocks.setStriped).toHaveBeenCalledWith(false);
         expect(mocks.setBool).toHaveBeenCalledTimes(1);
         await expect(
-            applySettingChange('integrations.translation.enabled', true)
+            applySettingChange('integrations.translation.api-key', true)
         ).rejects.toThrow();
     });
 

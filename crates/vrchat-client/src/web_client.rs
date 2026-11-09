@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use base64::{engine::general_purpose::STANDARD as B64, Engine};
 use cookie_store::{CookieStore, RawCookie};
-use reqwest::header::{HeaderName, HeaderValue, CONTENT_TYPE, REFERER, USER_AGENT};
+use reqwest::header::{HeaderName, HeaderValue, AUTHORIZATION, CONTENT_TYPE, REFERER, USER_AGENT};
 use reqwest::multipart::{Form, Part};
 use reqwest::{Client, Method, Proxy};
 use vrcx_0_contracts::external_api::IDENTIFY_WITH_CONTACT_HEADER;
@@ -34,6 +34,9 @@ impl vrcx_0_contracts::ApplicationErrorSource for WebClientError {
 
 use crate::cookies::{CookieEntry, CookieJar};
 use WebClientError as Error;
+
+mod rate_limit;
+use rate_limit::VrchatRateLimits;
 
 pub use crate::cookies::{
     deserialize_cookie_store, deserialize_legacy_cookie_entries, serialize_cookie_store,
@@ -203,6 +206,7 @@ pub struct WebClient {
     jar: Arc<CookieJar>,
     proxy_url: Option<String>,
     user_agent: String,
+    rate_limits: VrchatRateLimits,
 }
 
 fn build_http_client(
@@ -265,10 +269,27 @@ async fn execute_request(
     request: reqwest::Request,
     response_body_limit: Option<usize>,
     policy: vrcx_0_http_client::Policy,
+    rate_limits: &VrchatRateLimits,
+    vrchat_api: bool,
 ) -> Result<(i32, String)> {
+    let can_wait = matches!(*request.method(), Method::GET | Method::HEAD)
+        && !request.headers().contains_key(AUTHORIZATION);
+    let mut rate_limit = match rate_limits.acquire(request.url(), vrchat_api, can_wait).await {
+        Ok(limit) => limit,
+        Err(delay) => return Ok((429, serde_json::json!({
+            "error": {
+                "message": format!("VRChat API requests are paused after a rate-limit response. Try again in {} seconds.", delay.as_secs_f64().ceil()),
+                "status_code": 429
+            }
+        }).to_string())),
+    };
     let mut response = vrcx_0_http_client::execute(client, request, policy)
         .await
         .map_err(|e| Error::Custom(e.to_string()))?;
+    if let Some(rate_limit) = rate_limit.as_mut() {
+        rate_limit.observe(response.status(), response.headers());
+    }
+    drop(rate_limit);
     let status = response.status().as_u16() as i32;
     let content_type = response
         .headers()
@@ -342,6 +363,7 @@ impl WebClient {
             jar,
             proxy_url,
             user_agent,
+            rate_limits: VrchatRateLimits::default(),
         };
 
         if let Some(cookies_b64) = cookies_b64 {
@@ -451,9 +473,13 @@ impl WebClient {
     }
 
     pub async fn execute(&self, request: WebExecuteRequest) -> Result<(i32, String)> {
-        let result = self.do_execute(request).await;
+        let result = self.do_execute(request, false).await;
 
         normalize_execute_result(result)
+    }
+
+    pub async fn execute_vrchat_api(&self, request: WebExecuteRequest) -> Result<(i32, String)> {
+        normalize_execute_result(self.do_execute(request, true).await)
     }
 
     pub async fn execute_without_redirects(
@@ -536,10 +562,22 @@ impl WebClient {
         )?;
         let response_body_limit = request.response_body_limit;
         let request = self.build_standard_request_with(&client, &mut request)?;
-        execute_request(&client, request, response_body_limit, policy).await
+        execute_request(
+            &client,
+            request,
+            response_body_limit,
+            policy,
+            &self.rate_limits,
+            false,
+        )
+        .await
     }
 
-    async fn do_execute(&self, mut request: WebExecuteRequest) -> Result<(i32, String)> {
+    async fn do_execute(
+        &self,
+        mut request: WebExecuteRequest,
+        vrchat_api: bool,
+    ) -> Result<(i32, String)> {
         let response_body_limit = request.response_body_limit;
         let upload = std::mem::take(&mut request.upload);
         let request = match upload {
@@ -575,6 +613,8 @@ impl WebClient {
             request,
             response_body_limit,
             vrcx_0_http_client::Policy::sensitive(self.proxy_url.is_some()),
+            &self.rate_limits,
+            vrchat_api,
         )
         .await
     }

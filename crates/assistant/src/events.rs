@@ -159,7 +159,7 @@ impl AssistantEmitter {
             owner_user_id: self.owner_user_id.clone(),
             session_id: self.session_id.clone(),
             turn_id: self.turn_id.clone(),
-            text: text.to_string(),
+            text: crate::text::ascii_punctuation(text),
             replace: false,
         });
     }
@@ -169,7 +169,7 @@ impl AssistantEmitter {
             owner_user_id: self.owner_user_id.clone(),
             session_id: self.session_id.clone(),
             turn_id: self.turn_id.clone(),
-            text: text.to_string(),
+            text: crate::text::ascii_punctuation(text),
             replace: true,
         });
     }

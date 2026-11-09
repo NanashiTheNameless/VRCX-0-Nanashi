@@ -8,6 +8,7 @@ import { HighlightedCodeBlock } from '@/components/HighlightedCodeBlock';
 import type { Entity } from '@/domain/assistant/types';
 import { openExternalLink } from '@/services/entityMediaService';
 
+import { asciiAssistantPunctuation } from '../assistantText';
 import { entityLinking, parseEntityHref } from '../entityLinks';
 import { EntityChip } from './EntityChip';
 
@@ -192,7 +193,7 @@ export function AssistantMarkdown({
     streaming = false
 }: AssistantMarkdownProps) {
     const linking = useMemo(() => entityLinking(entities), [entities]);
-    const blocks = splitMarkdownBlocks(text);
+    const blocks = splitMarkdownBlocks(asciiAssistantPunctuation(text));
     const last = blocks.length - 1;
     return blocks.map((block, index) => (
         <MarkdownBlock

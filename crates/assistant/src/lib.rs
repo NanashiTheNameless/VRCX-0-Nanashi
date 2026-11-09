@@ -15,6 +15,7 @@ mod screenshots;
 mod session;
 #[cfg(test)]
 mod test_support;
+mod text;
 
 pub use choices::AssistantChoiceCandidate;
 pub use config::PlaybookMode;

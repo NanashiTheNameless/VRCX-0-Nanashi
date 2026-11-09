@@ -4,6 +4,7 @@ import {
     findDisabledAncestor,
     getSettingPreferenceKey
 } from '@/features/settings/settingsFieldState';
+import { commands } from '@/platform/tauri/bindings';
 import { ConfigKeys } from '@/repositories/configKeys';
 import {
     setAccessibleStatusIndicatorsPreference,
@@ -11,6 +12,13 @@ import {
     setCloseToTrayPreference,
     setCropInstancePrintsPreference,
     setDataTableStripedPreference,
+    setDiscordBoolPreference,
+    setFeedPersistenceDisabledPreference,
+    setGameLogPersistenceDisabledPreference,
+    setProxyEnabledPreference,
+    setStartAtWindowsStartupPreference,
+    setTranslationApiEnabledPreference,
+    setYoutubeApiEnabledPreference,
     setRecentActionCooldownEnabledPreference,
     setSaveInstanceEmojiPreference,
     setSaveInstancePrintsPreference,
@@ -23,6 +31,7 @@ import {
     setSystemWindowFramePreference,
     setWristOverlayEnabledPreference
 } from '@/services/preferencesService';
+import { isUpdateCheckDisabledBuild } from '@/shared/buildLabel';
 import {
     getSettingsCard,
     getSettingsManifestEntry,
@@ -35,37 +44,28 @@ import {
     usePreferencesStore,
     type PreferencesSnapshot
 } from '@/state/preferencesStore';
+import { markRestartPending } from '@/state/restartPendingStore';
+import { useRuntimeStore } from '@/state/runtimeStore';
 
+import {
+    nativeSettingAction,
+    saveAssistantNativeSetting,
+    useAssistantNativeSettings
+} from './assistantNativeSettings';
+import {
+    ASSISTANT_EDITABLE_SETTINGS,
+    INVERTED_SETTING_SWITCHES
+} from './assistantSettingPolicy';
 import {
     displayValue,
     parseSettingValue,
     saveSpecValue,
     SETTING_VALUE_SPECS
 } from './assistantSettingSpecs';
+import { asciiAssistantPunctuation } from './assistantText';
 
 const RESULT_LIMIT = 12;
-
-// Settings the assistant may show but never ask to change: turning the
-// assistant itself on or off, anything that sends data to other services or
-// changes what the app reports, sync, updates, network, storage that deletes
-// history, deleting VRChat prints, safety actions, and starting with the OS.
-const LOCKED_TABS: ReadonlySet<string> = new Set([
-    'ai',
-    'integrations',
-    'history-sync'
-]);
-const LOCKED_CARDS: ReadonlySet<string> = new Set([
-    'system.updates',
-    'system.network',
-    'system.startup',
-    'advanced.storage',
-    'notifications.webhook'
-]);
-const LOCKED_SETTINGS: ReadonlySet<string> = new Set([
-    'media.prints.auto-delete',
-    'media.prints.auto-delete-limit'
-]);
-const LOCKED_WORDS = /safety|census|telemetry|proxy|update|sync/i;
+export const ADOPTION_CENSUS_SETTING = 'advanced.adoption-census.enabled';
 
 // Boolean settings saved through their own setter because changing them does
 // more than store the value.
@@ -73,6 +73,30 @@ const DEDICATED_BOOL_SETTERS: Partial<
     Record<keyof PreferencesSnapshot, (value: boolean) => Promise<unknown>>
 > = {
     accessibleStatusIndicators: setAccessibleStatusIndicatorsPreference,
+    isStartAtWindowsStartup: setStartAtWindowsStartupPreference,
+    proxyEnabled: async (value) => {
+        await setProxyEnabledPreference(value);
+        markRestartPending();
+    },
+    gameLogDisabled: setGameLogPersistenceDisabledPreference,
+    feedPersistenceDisabled: setFeedPersistenceDisabledPreference,
+    translationAPI: setTranslationApiEnabledPreference,
+    youtubeAPI: setYoutubeApiEnabledPreference,
+    discordActive: (value) => setDiscordBoolPreference('discordActive', value),
+    discordWorldIntegration: (value) =>
+        setDiscordBoolPreference('discordWorldIntegration', value),
+    discordInstance: (value) =>
+        setDiscordBoolPreference('discordInstance', value),
+    discordShowPlatform: (value) =>
+        setDiscordBoolPreference('discordShowPlatform', value),
+    discordHideInvite: (value) =>
+        setDiscordBoolPreference('discordHideInvite', value),
+    discordJoinButton: (value) =>
+        setDiscordBoolPreference('discordJoinButton', value),
+    discordHideImage: (value) =>
+        setDiscordBoolPreference('discordHideImage', value),
+    discordWorldNameAsDiscordStatus: (value) =>
+        setDiscordBoolPreference('discordWorldNameAsDiscordStatus', value),
     isCloseToTray: setCloseToTrayPreference,
     cropInstancePrints: setCropInstancePrintsPreference,
     dataTableStriped: setDataTableStripedPreference,
@@ -86,7 +110,10 @@ const DEDICATED_BOOL_SETTERS: Partial<
     screenshotHelperModifyFilename: setScreenshotHelperModifyFilenamePreference,
     showNewDashboardButton: setShowNewDashboardButtonPreference,
     isStartAsMinimizedState: setStartAsMinimizedPreference,
-    systemWindowFrame: setSystemWindowFramePreference,
+    systemWindowFrame: async (value) => {
+        await setSystemWindowFramePreference(value);
+        markRestartPending();
+    },
     wristOverlayEnabled: setWristOverlayEnabledPreference
 };
 
@@ -105,23 +132,131 @@ export type AssistantSettingInfo = {
     valueKind: AssistantSettingValueKind;
     currentValue: unknown;
     options?: { value: string | number; label: string }[];
-    range?: { min: number; max: number; unit: string };
+    range?: {
+        min: number;
+        max: number;
+        unit: string;
+        choices?: readonly number[];
+    };
     canRequestChange: boolean;
     blocked: boolean;
     note?: string;
+    changeBlockedReason?: string;
 };
 
 /** A value as the user sees it on an approval card. */
 export type SettingValueDisplay = { value: unknown; label: string };
 
+function assistantPreferenceKey(
+    entry: SettingsManifestEntry | undefined
+): keyof PreferencesSnapshot | undefined {
+    return entry?.id === ADOPTION_CENSUS_SETTING
+        ? 'adoptionCensusEnabled'
+        : getSettingPreferenceKey(entry);
+}
+
 function isLocked(entry: SettingsManifestEntry): boolean {
-    return (
-        LOCKED_TABS.has(entry.tab) ||
-        LOCKED_CARDS.has(entry.cardId) ||
-        LOCKED_SETTINGS.has(entry.id) ||
-        LOCKED_WORDS.test(entry.id) ||
-        LOCKED_WORDS.test(entry.prefKey ?? '')
-    );
+    return !ASSISTANT_EDITABLE_SETTINGS.has(entry.id);
+}
+
+function lockedSettingReason(entry: SettingsManifestEntry): string {
+    switch (entry.id) {
+        case 'ai.assistant.enabled':
+        case 'ai.assistant.disallow-edit-requests':
+        case 'ai.mcp.enabled':
+        case 'ai.mcp.allow-lan':
+        case 'ai.mcp.allow-vrchat-writes':
+        case 'integrations.api.enabled':
+        case 'integrations.api.information-types':
+        case 'integrations.api.allow-lan':
+            return 'Assistant permissions and access to app data must be changed manually. The assistant cannot grant or remove its own access.';
+        case 'ai.assistant.default-model':
+        case 'ai.assistant.playbook-mode':
+        case 'ai.endpoints.follow-custom-proxy':
+        case 'ai.mcp.connect':
+        case 'ai.mcp.port':
+        case 'ai.mcp.token':
+        case 'ai.mcp.rotate-token':
+        case 'integrations.translation.api-key':
+        case 'integrations.youtube.api-key':
+        case 'integrations.api.port':
+        case 'integrations.api.token':
+        case 'integrations.remote-database.enabled':
+        case 'integrations.remote-database.providers':
+        case 'notifications.webhook.url':
+        case 'history-sync.backend.backend':
+        case 'history-sync.remotesync.api-url':
+        case 'history-sync.remotesync.website-url':
+        case 'history-sync.remotesync.dedupe-device':
+        case 'history-sync.remotesync.setting-choices':
+        case 'history-sync.recorder.status':
+            return 'Connections, credentials, pairing, and data-access choices must be configured manually. The assistant cannot edit these through chat.';
+        case 'media.prints.auto-delete':
+        case 'media.prints.auto-delete-limit':
+        case 'advanced.storage.auto-sweep-cache':
+        case 'advanced.storage.avatar-cleanup':
+        case 'advanced.storage.browse-history-retention':
+        case 'advanced.storage.data-location':
+        case 'advanced.danger.purge-avatar-history':
+        case 'advanced.data-export.import':
+        case 'advanced.import-recovery.gamelog-import':
+            return 'Data deletion, cleanup, migration, and replacement must be reviewed and performed manually.';
+        case 'advanced.safety.enabled':
+            return 'The safety master switch must be changed manually because enabling it can reactivate saved blocking, hiding, or banning rules.';
+        case 'advanced.safety.global-hide':
+            return 'Automatic hiding and other safety actions must be configured and reviewed manually.';
+        case 'social.interaction.auto-decline-friend-requests':
+            return 'Automatic friend-request rejection affects other users and must be configured manually.';
+        case 'system.updates.update-check-disabled':
+        case 'ai.mcp.status':
+        case 'integrations.api.status':
+        case 'notifications.webhook.delivery-status':
+            return 'This is a read-only status display, not an editable setting.';
+        default:
+            return 'This control has no explicitly approved assistant save action or value specification. Change it on its Settings card.';
+    }
+}
+
+export async function runtimeSettingBlock(
+    settingId: string
+): Promise<{ reason: string; forcedOff?: boolean } | null> {
+    if (settingId === 'advanced.storage.gamelog') {
+        const runtime = useRuntimeStore.getState();
+        if (!runtime.hostCapabilities.runtimeGameLogIngest.supported) {
+            return {
+                reason: 'Game Log recording is unavailable on this platform.'
+            };
+        }
+        if (runtime.gameState.isGameRunning !== false) {
+            return {
+                reason: 'VRChat must be closed before changing Game Log recording. The assistant cannot override this requirement.'
+            };
+        }
+    }
+    if (
+        settingId === 'system.updates.auto-install' &&
+        isUpdateCheckDisabledBuild()
+    ) {
+        return {
+            reason: 'Update checks are disabled in this build. The assistant cannot enable automatic updates.'
+        };
+    }
+    if (settingId !== ADOPTION_CENSUS_SETTING) return null;
+    try {
+        const lock = await commands.appAdoptionCensusLock();
+        if (!lock) return null;
+        const reasons = {
+            policy: 'Anonymous adoption count is forced off by Windows policy. The assistant cannot override that policy.',
+            environment:
+                'Anonymous adoption count is forced off by an environment opt-out. The assistant cannot override that opt-out.',
+            file: 'Anonymous adoption count is forced off by an opt-out flag file next to the executable. The assistant cannot override that file.'
+        };
+        return { reason: reasons[lock], forcedOff: true };
+    } catch {
+        return {
+            reason: 'The app could not verify the adoption-count policy, so the assistant cannot request or apply a change right now.'
+        };
+    }
 }
 
 export function settingLocation(
@@ -154,17 +289,20 @@ function isBoolSetting(
 
 /**
  * On/off settings with a known save path, and the number and choice settings
- * in SETTING_VALUE_SPECS, outside the locked areas.
+ * in SETTING_VALUE_SPECS or the native adapters, on the explicit allowlist.
  */
 export function canAssistantChangeSetting(
     entry: SettingsManifestEntry | undefined,
     prefs: PreferencesSnapshot = usePreferencesStore.getState()
 ): boolean {
-    const key = getSettingPreferenceKey(entry);
-    if (!entry || !key || isLocked(entry)) {
+    const key = assistantPreferenceKey(entry);
+    if (!entry || isLocked(entry)) {
         return false;
     }
-    return isBoolSetting(key, prefs) || Boolean(SETTING_VALUE_SPECS[key]);
+    if (nativeSettingAction(entry.id)) return true;
+    return Boolean(
+        key && (isBoolSetting(key, prefs) || SETTING_VALUE_SPECS[key])
+    );
 }
 
 function unitLabel(unit: string, t: TFunction): string {
@@ -177,8 +315,10 @@ export function displaySettingValue(
     shown: unknown,
     t: TFunction
 ): SettingValueDisplay {
-    const key = getSettingPreferenceKey(entry);
-    const spec = key ? SETTING_VALUE_SPECS[key] : undefined;
+    const key = assistantPreferenceKey(entry);
+    const spec =
+        nativeSettingAction(entry.id)?.spec ??
+        (key ? SETTING_VALUE_SPECS[key] : undefined);
     if (typeof shown === 'boolean') {
         return {
             value: shown,
@@ -208,11 +348,27 @@ export function describeAssistantSetting(
     t: TFunction,
     prefs: PreferencesSnapshot = usePreferencesStore.getState()
 ): AssistantSettingInfo {
-    const key = getSettingPreferenceKey(entry);
-    const spec = key ? SETTING_VALUE_SPECS[key] : undefined;
-    const stored = key ? prefs[key] : undefined;
+    const key = assistantPreferenceKey(entry);
+    const spec =
+        nativeSettingAction(entry.id)?.spec ??
+        (key ? SETTING_VALUE_SPECS[key] : undefined);
+    const native = nativeSettingAction(entry.id);
+    const raw = native
+        ? useAssistantNativeSettings.getState().values[entry.id]
+        : key
+          ? prefs[key]
+          : undefined;
+    const stored =
+        INVERTED_SETTING_SWITCHES.has(entry.id) && typeof raw === 'boolean'
+            ? !raw
+            : raw;
     const blockedBy = findDisabledAncestor(entry, prefs);
     const canRequestChange = canAssistantChangeSetting(entry, prefs);
+    const changeBlockedReason = canRequestChange
+        ? null
+        : isLocked(entry)
+          ? lockedSettingReason(entry)
+          : 'This setting has no supported assistant save action or value specification. Change it on its Settings card.';
     const notes = [
         blockedBy
             ? `Has no effect until "${t(blockedBy.labelKey)}" is turned on.`
@@ -220,7 +376,7 @@ export function describeAssistantSetting(
         canRequestChange
             ? ''
             : isLocked(entry)
-              ? 'Only the user can change this one; use show_in_settings.'
+              ? `${changeBlockedReason} Use show_in_settings.`
               : 'This setting is changed on its Settings card; use show_in_settings.'
     ].filter(Boolean);
     const shape: Pick<
@@ -245,7 +401,8 @@ export function describeAssistantSetting(
                       range: {
                           min: spec.min,
                           max: spec.max,
-                          unit: spec.unit
+                          unit: spec.unit,
+                          ...(spec.choices ? { choices: spec.choices } : {})
                       }
                   }
                 : { valueKind: 'other', currentValue: stored ?? null };
@@ -257,6 +414,7 @@ export function describeAssistantSetting(
         location: settingLocation(entry, t),
         ...shape,
         canRequestChange,
+        ...(changeBlockedReason ? { changeBlockedReason } : {}),
         blocked: Boolean(blockedBy),
         ...(notes.length ? { note: notes.join(' ') } : {})
     };
@@ -336,7 +494,7 @@ type ParsedChange =
     | {
           ok: true;
           entry: SettingsManifestEntry;
-          key: keyof PreferencesSnapshot;
+          key?: keyof PreferencesSnapshot;
           shown: string | number | boolean;
           stored: string | number | boolean;
       }
@@ -350,8 +508,8 @@ function parseChange(
     const entry = getSettingsManifestEntry(
         typeof settingId === 'string' ? settingId : ''
     );
-    const key = getSettingPreferenceKey(entry);
-    if (!entry || !key) {
+    const key = assistantPreferenceKey(entry);
+    if (!entry) {
         return {
             ok: false,
             error: 'Unknown settingId. Look it up with find_settings.'
@@ -360,16 +518,32 @@ function parseChange(
     if (!canAssistantChangeSetting(entry, prefs)) {
         return {
             ok: false,
-            error: 'This setting cannot be changed by the assistant. Use show_in_settings so the user can change it.'
+            error: `This setting is blocked for assistant changes. ${isLocked(entry) ? lockedSettingReason(entry) : 'No supported assistant save action or value specification is available.'} Use show_in_settings so the user can review it.`
         };
     }
-    if (isBoolSetting(key, prefs)) {
+    const native = nativeSettingAction(entry.id);
+    if (
+        native &&
+        useAssistantNativeSettings.getState().values[entry.id] === undefined
+    ) {
+        return {
+            ok: false,
+            error: 'Read the current setting before requesting a change.'
+        };
+    }
+    if ((native && !native.spec) || (key && isBoolSetting(key, prefs))) {
         const next = readBoolean(value);
         return next === null
             ? { ok: false, error: 'This setting takes true or false.' }
-            : { ok: true, entry, key, shown: next, stored: next };
+            : {
+                  ok: true,
+                  entry,
+                  key,
+                  shown: next,
+                  stored: INVERTED_SETTING_SWITCHES.has(entry.id) ? !next : next
+              };
     }
-    const spec = SETTING_VALUE_SPECS[key];
+    const spec = native?.spec ?? (key ? SETTING_VALUE_SPECS[key] : undefined);
     if (!spec) {
         return { ok: false, error: 'This setting cannot be changed.' };
     }
@@ -393,12 +567,21 @@ export function previewSettingChange(
         return parsed;
     }
     const info = describeAssistantSetting(parsed.entry, t, prefs);
+    if (
+        parsed.shown === false &&
+        parsed.entry.id === 'advanced.storage.feed-history'
+    ) {
+        info.description = t('confirm.disable_feed_persistence');
+    }
     return {
         ok: true,
         info,
         oldValue: displaySettingValue(parsed.entry, info.currentValue, t),
         newValue: displaySettingValue(parsed.entry, parsed.shown, t),
-        reason: typeof record.reason === 'string' ? record.reason.trim() : ''
+        reason:
+            typeof record.reason === 'string'
+                ? asciiAssistantPunctuation(record.reason.trim())
+                : ''
     };
 }
 
@@ -414,6 +597,21 @@ export async function applySettingChange(
     if (!parsed.ok) {
         throw new Error(parsed.error);
     }
+    const block = await runtimeSettingBlock(settingId);
+    if (block) throw new Error(block.reason);
+    const native = nativeSettingAction(settingId);
+    if (native) {
+        await saveAssistantNativeSetting(settingId, parsed.stored);
+        useAssistantNativeSettings.setState((state) => ({
+            values: {
+                ...state.values,
+                [settingId]: parsed.shown as boolean | number
+            }
+        }));
+        return;
+    }
+    if (!parsed.key)
+        throw new Error('This setting has no supported save action.');
     if (typeof parsed.stored === 'boolean') {
         const dedicated = DEDICATED_BOOL_SETTERS[parsed.key];
         if (dedicated) {

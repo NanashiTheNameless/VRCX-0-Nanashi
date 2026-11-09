@@ -37,7 +37,7 @@ It is a Rust + Tauri rewrite of VRCX.
 
 ## At a glance
 
-- **No usage telemetry.** Upstream's usage stats, heartbeats, crash reporting and feedback
+- **No usage telemetry.** Upstream's usage stats, telemetry pings, crash reporting and feedback
   uploads are removed. The fork sends one anonymous adoption count, which you can turn off.
   See [Telemetry](docs/TELEMETRY.md).
 - **Its own sync, off by default.** End-to-end encrypted History Sync through RemoteSync, on

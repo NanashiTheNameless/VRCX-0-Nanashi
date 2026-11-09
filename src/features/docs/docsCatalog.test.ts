@@ -4,10 +4,19 @@ import {
     DOC_SOURCES,
     DOCS_REPOSITORY_URL,
     headingSlug,
-    resolveDocLink
+    resolveDocLink,
+    splitDocSections
 } from './docsCatalog';
 
 describe('docs catalog', () => {
+    it('omits the inline README badge from titles and section paths', () => {
+        const readme = DOC_SOURCES.find((source) => source.id === 'readme')!;
+        expect(readme.title).toBe('VRCX-0-Nanashi');
+        expect(splitDocSections(readme.id, readme.text)[0]).toMatchObject({
+            heading: 'VRCX-0-Nanashi',
+            path: ['VRCX-0-Nanashi']
+        });
+    });
     it('knows where each doc lives in the repository', () => {
         const paths = Object.fromEntries(
             DOC_SOURCES.map((source) => [source.id, source.path])

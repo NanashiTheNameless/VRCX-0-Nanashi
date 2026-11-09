@@ -3,12 +3,26 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
     answer: vi.fn(async (..._args: unknown[]) => null),
-    setBool: vi.fn(async () => undefined)
+    setBool: vi.fn(async () => undefined),
+    profileGet: vi.fn(async () => ({
+        status: { recording: false, sync: true },
+        bio: { recording: true, sync: false },
+        pronouns: { recording: false, sync: true }
+    })),
+    profileSet: vi.fn(async (..._args: unknown[]) => undefined),
+    censusLock: vi.fn(
+        async (): Promise<'policy' | 'environment' | 'file' | null> => null
+    )
 }));
 
 vi.mock('@/platform/tauri/bindings', async (importOriginal) => ({
     ...(await importOriginal<Record<string, unknown>>()),
-    commands: { appAssistantAnswerClientRequest: mocks.answer }
+    commands: {
+        appAssistantAnswerClientRequest: mocks.answer,
+        appProfileHistorySettingsGet: mocks.profileGet,
+        appProfileHistorySettingsSet: mocks.profileSet,
+        appAdoptionCensusLock: mocks.censusLock
+    }
 }));
 vi.mock('@/services/preferencesService', async (importOriginal) => ({
     ...(await importOriginal<Record<string, unknown>>()),
@@ -24,6 +38,7 @@ import {
     handleAssistantClientRequest,
     useAssistantGuideStore
 } from './assistantClientRequests';
+import { useAssistantNativeSettings } from './assistantNativeSettings';
 
 const t = ((key: string, values?: Record<string, unknown>) =>
     values ? `${key} ${JSON.stringify(values)}` : key) as unknown as TFunction;
@@ -63,6 +78,10 @@ describe('assistant client requests', () => {
     beforeEach(() => {
         mocks.answer.mockClear();
         mocks.setBool.mockClear();
+        mocks.profileGet.mockClear();
+        mocks.profileSet.mockClear();
+        useAssistantNativeSettings.setState({ values: {} });
+        mocks.censusLock.mockReset().mockResolvedValue(null);
         useAssistantChatStore.getState().resetAssistantChatState();
         useAssistantChatStore.setState({
             open: true,
@@ -148,16 +167,127 @@ describe('assistant client requests', () => {
         expect(editRequests()[0].status).toBe('declined');
     });
 
-    it('refuses locked or unknown settings without showing a card', async () => {
+    it('allows an ordinary webhook switch only after its in-chat approval', async () => {
+        usePreferencesStore.setState({ webhookEnabled: false });
         await handleAssistantClientRequest(
             event('change_setting', {
-                settingId: 'integrations.translation.enabled',
+                settingId: 'notifications.webhook.enabled',
+                value: true
+            }),
+            t
+        );
+        expect(editRequests()).toHaveLength(1);
+        expect(mocks.setBool).not.toHaveBeenCalled();
+        await completeEditRequest(editRequests()[0], 'approved', t);
+        expect(mocks.setBool).toHaveBeenCalledWith('webhookEnabled', true);
+    });
+
+    it('reads native profile switches and preserves other fields after approval', async () => {
+        await handleAssistantClientRequest(
+            event('change_setting', {
+                settingId: 'social.profile-history.status-recording',
+                value: true
+            }),
+            t
+        );
+        expect(mocks.profileGet).toHaveBeenCalled();
+        expect(mocks.profileSet).not.toHaveBeenCalled();
+        expect(
+            useAssistantNativeSettings.getState().values[
+                'social.profile-history.status-recording'
+            ]
+        ).toBe(false);
+        await completeEditRequest(editRequests()[0], 'approved', t);
+        expect(mocks.profileSet).toHaveBeenCalledWith({
+            status: { recording: true, sync: true },
+            bio: { recording: true, sync: false },
+            pronouns: { recording: false, sync: true }
+        });
+    });
+
+    it('fails closed when a native setting cannot be read', async () => {
+        mocks.profileGet.mockRejectedValueOnce(new Error('unavailable'));
+        await handleAssistantClientRequest(
+            event('change_setting', {
+                settingId: 'social.profile-history.bio-sync',
+                value: true
+            }),
+            t
+        );
+        expect(editRequests()).toEqual([]);
+        expect(mocks.profileSet).not.toHaveBeenCalled();
+        expect(mocks.answer.mock.calls[0][2]).toHaveProperty('error');
+    });
+
+    it('refuses locked settings without showing a card', async () => {
+        await handleAssistantClientRequest(
+            event('change_setting', {
+                settingId: 'integrations.translation.api-key',
                 value: true
             }),
             t
         );
         expect(mocks.answer.mock.calls[0][2]).toHaveProperty('error');
+        expect(
+            String((mocks.answer.mock.calls[0][2] as { error: string }).error)
+        ).toContain('Connections, credentials, pairing');
         expect(editRequests()).toEqual([]);
+    });
+
+    it('shows a real census approval card and saves only after Allow', async () => {
+        usePreferencesStore.setState({ adoptionCensusEnabled: true });
+        await handleAssistantClientRequest(
+            event('change_setting', {
+                settingId: 'advanced.adoption-census.enabled',
+                value: false,
+                reason: 'Stop the anonymous adoption count'
+            }),
+            t
+        );
+        const [request] = editRequests();
+        expect(request).toBeDefined();
+        expect(mocks.setBool).not.toHaveBeenCalled();
+        await completeEditRequest(request, 'approved', t);
+        expect(mocks.setBool).toHaveBeenCalledWith(
+            'adoptionCensusEnabled',
+            false
+        );
+    });
+
+    it.each(['policy', 'environment', 'file'] as const)(
+        'explains the %s census opt-out and does not offer a card',
+        async (lock) => {
+            mocks.censusLock.mockResolvedValue(lock);
+            await handleAssistantClientRequest(
+                event('change_setting', {
+                    settingId: 'advanced.adoption-census.enabled',
+                    value: true
+                }),
+                t
+            );
+            expect(editRequests()).toEqual([]);
+            expect(mocks.setBool).not.toHaveBeenCalled();
+            expect(mocks.answer.mock.calls[0][2]).toMatchObject({
+                error: expect.stringContaining('forced off')
+            });
+        }
+    );
+
+    it('rechecks policy before applying an approved census change', async () => {
+        await handleAssistantClientRequest(
+            event('change_setting', {
+                settingId: 'advanced.adoption-census.enabled',
+                value: true
+            }),
+            t
+        );
+        const [request] = editRequests();
+        mocks.censusLock.mockResolvedValue('policy');
+        await completeEditRequest(request, 'approved', t);
+        expect(mocks.setBool).not.toHaveBeenCalled();
+        expect(mocks.answer.mock.calls.at(-1)?.[2]).toMatchObject({
+            error: expect.stringContaining('Windows policy')
+        });
     });
 
     it('shows other edits as approval cards and passes the decision on', async () => {

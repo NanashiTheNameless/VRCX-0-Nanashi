@@ -25,6 +25,14 @@ const messages = [
 ];
 
 describe('assistant markdown', () => {
+    it('normalizes assistant typography in copied replies while preserving user text and names', () => {
+        const text =
+            '**It\u2019s** \u201con\u201d\u2014wait\u2026\n\u2022 Caf\u00e9\u00a0\u2192 off';
+        expect(messageMarkdown(message('a', 'assistant', text))).toBe(
+            '**It\'s** "on" - wait...\n- Caf\u00e9 -> off'
+        );
+        expect(messageMarkdown(message('u', 'user', text))).toBe(text);
+    });
     it('copies a message as the Markdown it was written in', () => {
         expect(messageMarkdown(messages[1])).toBe(
             '| Friend | Hours |\n| --- | --- |\n| Alice | 12 |'

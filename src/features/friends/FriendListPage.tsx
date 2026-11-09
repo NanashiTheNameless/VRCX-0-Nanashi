@@ -52,9 +52,6 @@ export function FriendListPage({
                     onLoadFriendUserDetails: () => {
                         actions.loadFriendUserDetails();
                     },
-                    onRefreshAllFriends: () => {
-                        actions.loadFriendUserDetails(true);
-                    },
                     onLoadMutualFriends: () => {
                         actions.loadMutualFriends();
                     },

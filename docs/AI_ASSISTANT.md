@@ -58,13 +58,19 @@ API keys are stored on your PC. Requests go only to the connection you chose.
 - About a friend or a world: mention them, for example "How are @Alice and I doing lately?" or
   "Who do I usually run into at @The Black Cat?".
 - About the app: "where do I turn on HMD notifications", "what does the glitchy red badge
-  mean", "make the tables compact".
+  mean", "where is the refresh friends profile button", "make the tables compact".
 
 ## Help with the app
 
 - **Docs**: the assistant reads every doc in the app's Docs page and answers from them, and can
   open the Docs page at the section it means (the chat closes, and a card in the corner takes
   you back).
+  For example, **Refresh all friend profiles** is on **Social > Friends**, in the toolbar
+  above the table beside **Load friend details**. It refreshes full profiles, with a 5-minute
+  cooldown after completion or cancellation. The same action is beside **Refresh friends
+  list** in the bottom-right sidebar settings popover. Both buttons ask for confirmation
+  before starting. Profile requests are paced conservatively and pause when VRChat applies
+  a rate limit. Refreshing the mutual graph updates mutual relationships instead.
 - **Find settings**: it searches settings by what they do and tells you where they are
   (Settings > tab > card).
 - **Show me**: it closes the chat, opens Settings at the setting and keeps it highlighted. A
@@ -76,19 +82,43 @@ API keys are stored on your PC. Requests go only to the connection you chose.
 The assistant never changes anything on its own. Every change it wants to make shows a card in
 the chat and waits for you:
 
-- **Settings**: the card names the setting, says what it does and why the assistant suggests
-  it, shows where it is (with **Show me**), and its current and new value.
+- **Settings**: a **Permission required** card appears directly in the conversation, using
+  the app's current theme. It names the setting, shows **Current value** and **Requested
+  value**, explains what the change does, and shows where it is. Choose **Allow**, **Deny**,
+  or **Show me the setting**. Showing the setting does not approve or apply the change.
 - **Other changes**: creating or deleting a reminder, adding a favorite (local or on VRChat),
   editing a friend note, and sending to the VRChat Chatbox (a message, AFK, or Chatbox
   settings). The card shows what it will do and the details.
 
-Choose **Approve** or **Decline**. It asks again for every change. If you decline, it accepts
+For other actions, choose **Approve** or **Decline**. It asks again for every change. If you decline, it accepts
 that and does not ask for the same change again.
 
-The assistant can change on/off settings and the choice and number settings the Settings page
-offers, only with values the Settings page allows. It can show but never change settings for
-the assistant itself, integrations, webhooks, History Sync, updates, network, startup, storage,
-deleting VRChat prints, safety, and the adoption count.
+The assistant can request changes only for individually supported settings, with the same
+values and save actions as Settings. These include ordinary appearance and notification
+options, startup, update mode, login delay, the existing proxy toggle, Discord options,
+translation and YouTube toggles, webhook enable/auth-event/format choices, game-log and Feed
+recording, each Profile History recording and sync switch, History Sync interval (1, 5, 10,
+15, 30 or 60 minutes), pause while playing, Settings Sync, and URL and shortener warnings.
+A proxy or system-window-frame change marks a restart as needed; it does not restart the app.
+
+The assistant can show but cannot change its own permissions, AI connections, API access,
+credentials, tokens, pairing, encryption keys, server addresses, sync category choices,
+collector authorization, cleanup or deletion, data migration, automatic friend-request
+rejection, or automatic blocking, hiding and banning. The safety master switch stays manual
+because it can reactivate saved automatic actions. Other complex controls without a
+supported save action also stay manual. Read-only status displays cannot be edited.
+The assistant explains the specific reason when a setting is blocked.
+
+**Anonymous adoption count** also uses the in-chat Allow/Deny card. Device policy,
+environment opt-outs and opt-out flag files still block changes; the assistant explains
+which one applies. Automatic update changes are unavailable in builds with update checks
+disabled. No approval can override these restrictions.
+Game Log recording also requires a platform with log ingestion support and VRChat to be closed.
+
+When you ask to change a supported setting, the assistant prefers showing the real card
+over giving manual instructions or asking repeated yes/no questions in text. No change is
+made until you choose **Allow**. Replies use straight quotes, apostrophes and hyphens;
+streamed, saved, displayed and copied replies normalize typographic punctuation to ASCII.
 
 To stop it from asking at all, turn on **Don't let the AI ask to make changes** in the chat
 settings (the sliders icon next to the model name) for one conversation, or as the default
@@ -120,6 +150,9 @@ them by hand there or have the AI fill the form from a sentence. See
 Settings > AI > MCP Server lets other AI tools (Claude Desktop, Claude Code, Cherry Studio,
 Codex, opencode, Cursor, VS Code, LM Studio, or any client that supports Streamable HTTP) read
 your VRCX-0-Nanashi data.
+
+The server identifies itself as `vrcx-0-nanashi`. Generated connection commands, configuration
+entries and one-click installs use that name too.
 
 - It is token-protected and listens on this PC only (port 8798 by default). **Allow LAN
   connections** lets other devices on your network connect; keep it off on untrusted networks.

@@ -71,7 +71,7 @@ async fn pacer_releases_concurrency_slots_within_one_interval() {
     pacer.acquire_slot().await;
     assert_eq!(
         start.elapsed(),
-        FRIEND_PROFILE_BULK_LOAD_REQUEST_SPACING * 3
+        FRIEND_PROFILE_BULK_LOAD_REQUEST_SPACING * FRIEND_PROFILE_BULK_LOAD_CONCURRENCY as u32
     );
 }
 

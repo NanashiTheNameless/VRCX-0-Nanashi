@@ -190,14 +190,21 @@
             "you": "You"
         },
         "edit": {
+            "permission_required": "Permission required",
+            "setting_request_description": "The AI Assistant would like to change a setting.",
+            "change_effect": "What will this change do?",
+            "allow_question": "Do you want to allow this change?",
+            "permission_notice": "Nothing changes until you choose Allow. Every change asks for your permission.",
+            "allow": "Allow",
+            "deny": "Deny",
             "title_setting": "Change this setting?",
             "title_action": "Allow the assistant to do this?",
             "setting": "Setting",
             "meaning": "What it does",
             "why": "Why the assistant suggests it",
             "where": "Where it is",
-            "current": "Now",
-            "new": "After",
+            "current": "Current value",
+            "new": "Requested value",
             "on": "On",
             "off": "Off",
             "units": {
@@ -210,7 +217,7 @@
             "action_description": "The assistant asked to do this for you. Nothing happens unless you approve, and it asks again for every change.",
             "approve": "Approve",
             "decline": "Decline",
-            "show_me": "Show me",
+            "show_me": "Show me the setting",
             "approved": "Approved",
             "applied": "Changed {label} from {old} to {new}.",
             "declined": "Declined",
@@ -2291,6 +2298,9 @@
             "refresh_all_description": "Fetch fresh profile details for every friend, including already loaded profiles and friends outside the current search and filters. A 5-minute cooldown follows completion or cancellation.",
             "refresh_all_cooldown": "Friend profiles recently refreshed. Please try again in {count} sec.",
             "refresh_all_cooldown_label": "Refresh all friend profiles ({count}s)",
+            "refresh_all_confirm": "Start profile refresh",
+            "refresh_all_confirm_description": "Refreshing every friend's full profile can take a while, especially with a large friends list. Once started, let it finish and avoid stopping it. A 5-minute cooldown starts after the refresh finishes or is canceled.",
+            "refresh_all_failed": "Failed to start friend profile refresh",
             "load_cancel": "Cancel",
             "favorites_only_tooltip": "Filter favorites only",
             "search_placeholder": "Search",
@@ -3769,7 +3779,7 @@
                     "enable": "Enable MCP server",
                     "enable_description": "Start a token-protected MCP server on localhost.",
                     "connect_client": "Connect AI tools",
-                    "connect_client_description": "Add VRCX-0 to Claude, Cherry Studio, Codex, and other AI tools so they can read your social data.",
+                    "connect_client_description": "Add VRCX-0-Nanashi to Claude, Cherry Studio, Codex, and other AI tools so they can read your social data.",
                     "connect_client_action": "Connect",
                     "connect_dialog_description": "Pick the AI tool you use and follow its steps.",
                     "client_other": "Other clients",
@@ -3777,9 +3787,9 @@
                     "install_requires_client": "The client must already be installed.",
                     "lan_placeholder_note": "LAN connections are on, so the config uses `YOUR-LAN-IP`. Replace it with this computer's local IP. One-click adding always uses this computer.",
                     "guide": {
-                        "claude_desktop": "In Claude Desktop, open Settings → Developer → Edit Config, merge the config below into claude_desktop_config.json, then restart Claude. Node.js must be installed.",
+                        "claude_desktop": "In Claude Desktop, open Settings > Developer > Edit Config, merge the config below into claude_desktop_config.json, then restart Claude. Node.js must be installed.",
                         "claude_code": "Run this command once in a terminal.",
-                        "cherry_studio": "Click the button and confirm in Cherry Studio, then turn on vrcx-0 in its MCP server list.",
+                        "cherry_studio": "Click the button and confirm in Cherry Studio, then turn on vrcx-0-nanashi in its MCP server list.",
                         "codex": "Add this to ~/.codex/config.toml. The Codex CLI, IDE extension, and ChatGPT desktop app share this config.",
                         "opencode": "Merge this into your opencode.json.",
                         "cursor": "Click the button and confirm in Cursor, or merge the config below into ~/.cursor/mcp.json.",
@@ -4167,8 +4177,9 @@
                         "group": "Combine nested rules with their own operator. The group result is one input to the surrounding rules."
                     },
                     "age_level": {
-                        "any": "Any age verification",
-                        "adult": "Verified 18+ only"
+                        "any": "Any visible verification",
+                        "adult": "Verified 18+ only",
+                        "hidden": "Verified, hidden"
                     },
                     "platform_option": {
                         "standalonewindows": "PC",
@@ -4213,7 +4224,7 @@
                         "vrchatGroup": "are in the VRChat group",
                         "trust": "have the trust rank",
                         "supporter": "have VRC+",
-                        "ageVerified": "show age verification",
+                        "ageVerified": "have age verification",
                         "platform": "were last on",
                         "status": "have the status",
                         "memo": "have a memo or note containing",
@@ -4229,7 +4240,7 @@
                         "vrchatGroup": "are not in the VRChat group",
                         "trust": "do not have the trust rank",
                         "supporter": "do not have VRC+",
-                        "ageVerified": "do not show age verification",
+                        "ageVerified": "do not have age verification",
                         "platform": "were not last on",
                         "status": "do not have the status",
                         "memo": "do not have a memo or note containing",
@@ -4513,7 +4524,7 @@
                     "locked_environment": "Turned off by an environment variable (VRCX_0_NANASHI_TELEMETRY_OPTOUT, DO_NOT_TRACK, TELEMETRY_OPTOUT, TELEMETRY or CI). Nothing is sent, and this switch stays off until the variable is removed.",
                     "locked_file": "Turned off by an opt-out file next to the app. Nothing is sent, and this switch stays off until the file is removed.",
                     "locked_policy": "Turned off by a Windows policy (DisableTelemetry). Nothing is sent, and this switch stays off until the policy is removed.",
-                    "description": "On startup and every 2 hours while it runs, VRCX-0-Nanashi sends a scrambled random install ID, the app name and the date to telemetry.namelessnanashi.dev, so the developer can see how many installs are in use per day. Nothing about you, your VRChat account, your friends or how you use the app is sent, and there are no crash or usage reports. Turning this off stops the pings and deletes the install ID."
+                    "description": "On startup and every 2 hours while it runs, VRCX-0-Nanashi sends a scrambled random install ID and the app name to telemetry.namelessnanashi.dev, so the developer can see how many installs are in use per day. The server determines the date. Nothing about you, your VRChat account, your friends or how you use the app is sent, and there are no crash or usage reports. Turning this off stops the pings and deletes the install ID."
                 },
                 "advanced_ui": {
                     "behavior": {

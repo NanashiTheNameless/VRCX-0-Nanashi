@@ -1,4 +1,10 @@
-import { ArrowRightIcon, CheckIcon, MapPinIcon, XIcon } from 'lucide-react';
+import {
+    CheckIcon,
+    InfoIcon,
+    MapPinIcon,
+    ShieldCheckIcon,
+    XIcon
+} from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,6 +18,7 @@ import {
     showSettingInGuide,
     type EditDecision
 } from '../assistantClientRequests';
+import { useAssistantNativeSettings } from '../assistantNativeSettings';
 import { previewSettingChange } from '../assistantSettings';
 
 function formatValue(value: unknown): string {
@@ -38,7 +45,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 function ValuePill({ next, label }: { next: boolean; label: string }) {
     return (
         <span
-            className={`rounded px-2 py-0.5 text-xs font-semibold ${next ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}
+            className={`inline-block max-w-full rounded px-2 py-0.5 text-sm font-medium break-words ${next ? 'bg-primary/10 text-primary' : 'bg-background text-foreground'}`}
         >
             {label}
         </span>
@@ -56,6 +63,7 @@ export function AssistantEditRequestCard({
     const [busy, setBusy] = useState(false);
     // Read so the card shows the live value if it changes while waiting.
     usePreferencesStore((state) => state);
+    useAssistantNativeSettings((state) => state.values);
     const isSetting = request.kind === 'change_setting';
     const preview = isSetting
         ? previewSettingChange(request.arguments, t)
@@ -98,81 +106,78 @@ export function AssistantEditRequestCard({
 
     return (
         <section
-            className="bg-card flex flex-col gap-3 rounded-xl border border-amber-500/60 p-4"
+            className="bg-card text-card-foreground flex min-w-0 flex-col gap-4 rounded-xl border p-4 sm:p-5"
             aria-label={t(
                 isSetting
-                    ? 'assistant.edit.title_setting'
+                    ? 'assistant.edit.permission_required'
                     : 'assistant.edit.title_action'
             )}
         >
-            <h3 className="text-sm font-semibold">
-                {t(
-                    isSetting
-                        ? 'assistant.edit.title_setting'
-                        : 'assistant.edit.title_action'
-                )}
-            </h3>
+            <header className="flex items-start gap-3">
+                <span className="bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg">
+                    <ShieldCheckIcon className="size-5" aria-hidden="true" />
+                </span>
+                <div className="min-w-0 space-y-1">
+                    <h3 className="text-base font-semibold">
+                        {t(
+                            isSetting
+                                ? 'assistant.edit.permission_required'
+                                : 'assistant.edit.title_action'
+                        )}
+                    </h3>
+                    {isSetting ? (
+                        <p className="text-muted-foreground text-sm">
+                            {t('assistant.edit.setting_request_description')}
+                        </p>
+                    ) : null}
+                </div>
+            </header>
             {isSetting && preview ? (
                 preview.ok ? (
-                    <dl className="flex flex-col gap-2">
-                        <Row label={t('assistant.edit.setting')}>
-                            <span className="font-medium">
-                                {preview.info.label}
-                            </span>
-                        </Row>
-                        {preview.info.description ? (
-                            <Row label={t('assistant.edit.meaning')}>
-                                {preview.info.description}
+                    <>
+                        <dl className="bg-muted/50 flex flex-col gap-3 rounded-lg p-3">
+                            <Row label={t('assistant.edit.setting')}>
+                                <span className="font-medium">
+                                    {preview.info.label}
+                                </span>
                             </Row>
-                        ) : null}
-                        {preview.reason ? (
-                            <Row label={t('assistant.edit.why')}>
-                                {preview.reason}
-                            </Row>
-                        ) : null}
-                        <Row label={t('assistant.edit.where')}>
-                            <span className="inline-flex flex-wrap items-center gap-2">
-                                {preview.info.location}
-                                <Button
-                                    type="button"
-                                    variant="link"
-                                    size="sm"
-                                    className="h-auto p-0"
-                                    onClick={() => {
-                                        const entry = getSettingsManifestEntry(
-                                            preview.info.settingId
-                                        );
-                                        if (entry) {
-                                            showSettingInGuide(entry, t);
-                                        }
-                                    }}
-                                >
-                                    <MapPinIcon />
-                                    {t('assistant.edit.show_me')}
-                                </Button>
-                            </span>
-                        </Row>
-                        <Row
-                            label={`${t('assistant.edit.current')} / ${t('assistant.edit.new')}`}
-                        >
-                            <span className="inline-flex items-center gap-2">
+                            <Row label={t('assistant.edit.current')}>
                                 <ValuePill
                                     next={false}
                                     label={preview.oldValue.label}
                                 />
-                                <ArrowRightIcon className="size-4" />
+                            </Row>
+                            <Row label={t('assistant.edit.new')}>
                                 <ValuePill
                                     next
                                     label={preview.newValue.label}
                                 />
-                            </span>
-                        </Row>
-                        {preview.info.blocked ? (
-                            <p className="text-xs text-amber-600 dark:text-amber-400">
-                                {t('assistant.edit.blocked')}
-                            </p>
-                        ) : null}
-                    </dl>
+                            </Row>
+                            <Row label={t('assistant.edit.where')}>
+                                {preview.info.location}
+                            </Row>
+                        </dl>
+                        <div className="space-y-2">
+                            <h4 className="text-sm font-semibold">
+                                {t('assistant.edit.change_effect')}
+                            </h4>
+                            {preview.info.description ? (
+                                <p className="text-sm">
+                                    {preview.info.description}
+                                </p>
+                            ) : null}
+                            {preview.reason ? (
+                                <p className="text-muted-foreground text-sm">
+                                    {preview.reason}
+                                </p>
+                            ) : null}
+                            {preview.info.blocked ? (
+                                <p className="text-xs text-amber-600 dark:text-amber-400">
+                                    {t('assistant.edit.blocked')}
+                                </p>
+                            ) : null}
+                        </div>
+                    </>
                 ) : (
                     <p className="text-destructive text-sm" role="alert">
                         {t('assistant.edit.invalid', { error: preview.error })}
@@ -199,27 +204,66 @@ export function AssistantEditRequestCard({
                     ) : null}
                 </>
             )}
+            {isSetting && preview?.ok ? (
+                <p className="text-sm font-medium">
+                    {t('assistant.edit.allow_question')}
+                </p>
+            ) : null}
             <div className="flex flex-wrap items-center gap-2">
                 <Button
                     type="button"
-                    size="sm"
+                    className="flex-1 sm:flex-none"
                     disabled={busy || (isSetting && !preview?.ok)}
                     onClick={() => void decide('approved')}
                 >
                     <CheckIcon />
-                    {t('assistant.edit.approve')}
+                    {t(
+                        isSetting
+                            ? 'assistant.edit.allow'
+                            : 'assistant.edit.approve'
+                    )}
                 </Button>
                 <Button
                     type="button"
-                    size="sm"
-                    variant="ghost"
+                    className="flex-1 sm:flex-none"
+                    variant="outline"
                     disabled={busy}
                     onClick={() => void decide('declined')}
                 >
                     <XIcon />
-                    {t('assistant.edit.decline')}
+                    {t(
+                        isSetting
+                            ? 'assistant.edit.deny'
+                            : 'assistant.edit.decline'
+                    )}
                 </Button>
+                {isSetting && preview?.ok ? (
+                    <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full sm:w-auto"
+                        disabled={busy}
+                        onClick={() => {
+                            const entry = getSettingsManifestEntry(
+                                preview.info.settingId
+                            );
+                            if (entry) showSettingInGuide(entry, t);
+                        }}
+                    >
+                        <MapPinIcon />
+                        {t('assistant.edit.show_me')}
+                    </Button>
+                ) : null}
             </div>
+            {isSetting ? (
+                <p className="text-muted-foreground flex items-start gap-2 text-xs">
+                    <InfoIcon
+                        className="size-3.5 shrink-0"
+                        aria-hidden="true"
+                    />
+                    {t('assistant.edit.permission_notice')}
+                </p>
+            ) : null}
         </section>
     );
 }

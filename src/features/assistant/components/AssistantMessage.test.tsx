@@ -17,6 +17,49 @@ function assistantMessage(message: Partial<UIMessage>): UIMessage {
 }
 
 describe('AssistantMessage', () => {
+    it('renders a real setting approval card inside the chat message', () => {
+        const html = renderToStaticMarkup(
+            <AssistantMessage
+                thinkingLabel="Thinking..."
+                message={assistantMessage({
+                    editRequests: [
+                        {
+                            id: 'req_setting',
+                            sessionId: 'ses_1',
+                            kind: 'change_setting',
+                            tool: 'change_setting',
+                            arguments: {
+                                settingId: 'advanced.adoption-census.enabled',
+                                value: false,
+                                reason: 'Stop the anonymous adoption count'
+                            },
+                            status: 'pending'
+                        }
+                    ]
+                })}
+            />
+        );
+        expect(html).toContain('assistant.edit.permission_required');
+        expect(html).toContain('assistant.edit.allow');
+        expect(html).toContain('assistant.edit.deny');
+        expect(html).toContain('assistant.edit.show_me');
+        expect(html).toContain('Stop the anonymous adoption count');
+    });
+
+    it('displays assistant punctuation as ASCII without removing non-ASCII names', () => {
+        const html = renderToStaticMarkup(
+            <AssistantMessage
+                thinkingLabel="Thinking..."
+                message={assistantMessage({
+                    text: 'Caf\u00e9\u2019s profile\u2014ready\u2026',
+                    streaming: false
+                })}
+            />
+        );
+        expect(html).toContain('Caf\u00e9');
+        expect(html).toContain('profile - ready...');
+        expect(html).not.toMatch(/[\u2018-\u201f\u2026]/);
+    });
     it('renders the user message text', () => {
         const html = renderToStaticMarkup(
             <AssistantMessage

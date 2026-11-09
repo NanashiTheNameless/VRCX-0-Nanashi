@@ -4,6 +4,7 @@ import { commands } from '@/platform/tauri/bindings';
 import type { FriendProfileLoadStatusPayload } from '@/platform/tauri/bindings';
 import { toast } from '@/services/toastService';
 import { SECOND_MS } from '@/shared/constants/time';
+import { useModalStore } from '@/state/modalStore';
 import {
     type FriendProfileLoadState,
     useRuntimeStore
@@ -163,6 +164,11 @@ export async function startFriendProfileLoad(
     if (refreshAll) {
         const state = useFriendProfileRefreshStore.getState();
         if (state.pending) return;
+        const { status } = useRuntimeStore.getState().friendProfileLoad;
+        if (status === 'running' || status === 'cancelling') {
+            openFriendProfileLoadDialog();
+            return;
+        }
         const remaining = (state.cooldowns[scope] ?? 0) - Date.now();
         if (remaining > 0) {
             toast.add({
@@ -175,11 +181,32 @@ export async function startFriendProfileLoad(
         }
         useFriendProfileRefreshStore.setState({ pending: true });
     }
-    clearResetTimer();
-    useRuntimeStore.getState().setFriendProfileLoadState({ dialogOpen: true });
-    let payload: FriendProfileLoadStatusPayload;
     try {
-        payload = refreshAll
+        if (refreshAll) {
+            const result = await useModalStore.getState().confirm({
+                title: i18n.t('view.friend_list.refresh_all'),
+                description: i18n.t(
+                    'view.friend_list.refresh_all_confirm_description'
+                ),
+                confirmText: i18n.t('view.friend_list.refresh_all_confirm'),
+                cancelText: i18n.t('common.actions.cancel')
+            });
+            const currentAuth = useRuntimeStore.getState().auth;
+            if (
+                !result.ok ||
+                scope !==
+                    friendProfileRefreshScopeKey(
+                        currentAuth.currentUserId,
+                        currentAuth.currentUserEndpoint
+                    )
+            )
+                return;
+        }
+        clearResetTimer();
+        useRuntimeStore
+            .getState()
+            .setFriendProfileLoadState({ dialogOpen: true });
+        const payload = refreshAll
             ? await commands.appFriendProfileRefreshAll()
             : await commands.appFriendProfileLoadStart();
         if (refreshAll) {
@@ -191,25 +218,25 @@ export async function startFriendProfileLoad(
                 startRefreshCooldown(payload.runId);
             }
         }
+        applyFriendProfileLoadStatusPayload(payload);
+        if (
+            !refreshAll &&
+            payload.status === 'completed' &&
+            payload.processed === payload.total &&
+            payload.loaded === 0 &&
+            payload.failed === 0
+        ) {
+            toast.add({
+                type: 'success',
+                title: i18n.t(
+                    'view.friend_list.label.friend_details_are_already_loaded'
+                )
+            });
+        }
     } finally {
         if (refreshAll) {
             useFriendProfileRefreshStore.setState({ pending: false });
         }
-    }
-    applyFriendProfileLoadStatusPayload(payload);
-    if (
-        !refreshAll &&
-        payload.status === 'completed' &&
-        payload.processed === payload.total &&
-        payload.loaded === 0 &&
-        payload.failed === 0
-    ) {
-        toast.add({
-            type: 'success',
-            title: i18n.t(
-                'view.friend_list.label.friend_details_are_already_loaded'
-            )
-        });
     }
 }
 

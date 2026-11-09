@@ -11,7 +11,8 @@ use rmcp::service::{MaybeSendFuture, RequestContext, RoleServer};
 use rmcp::{tool_handler, ErrorData as RmcpError, ServerHandler};
 
 use crate::disambiguation::{
-    choices_from_state, with_choices, UserChoiceRequest, PICK_USER_INPUT_KEY,
+    choices_from_state, with_choices, UserChoiceRequest, LEGACY_PICK_USER_INPUT_KEY,
+    PICK_USER_INPUT_KEY,
 };
 use crate::runtime::McpRuntime;
 
@@ -19,7 +20,7 @@ const DATA_CAVEATS_URI: &str = "vrcx-0-nanashi://data-caveats";
 
 const SERVER_INSTRUCTIONS: &str = "\
 VRCX-0-Nanashi (a fork of VRCX-0 - always say \"VRCX-0-Nanashi\", never \"VRCX\" or \"VRCX-0\", in user-facing replies) exposes the signed-in user's VRChat social facts from local, observer-centered history and the live session. \
-Tools return aggregated facts centered on the signed-in user (\"me\"); you interpret them. Never use emoji in replies.
+Tools return aggregated facts centered on the signed-in user (\"me\"); you interpret them. Never use emoji in replies. Use plain ASCII punctuation: straight quotes and apostrophes, hyphens instead of en/em dashes, and three periods for ellipses.
 
 Ground rules:
 - Missing data means \"not observed\". It never means \"did not happen\".
@@ -102,7 +103,10 @@ impl ServerHandler for VrcxMcpServer {
                 .enable_resources()
                 .build(),
         )
-        .with_server_info(Implementation::new("vrcx-0", env!("CARGO_PKG_VERSION")))
+        .with_server_info(
+            Implementation::new("vrcx-0-nanashi", env!("CARGO_PKG_VERSION"))
+                .with_title("VRCX-0-Nanashi"),
+        )
         .with_instructions(SERVER_INSTRUCTIONS)
     }
 
@@ -122,7 +126,11 @@ impl ServerHandler for VrcxMcpServer {
         let mut pending_reply = request
             .input_responses
             .as_ref()
-            .and_then(|responses| responses.get(PICK_USER_INPUT_KEY))
+            .and_then(|responses| {
+                responses
+                    .get(PICK_USER_INPUT_KEY)
+                    .or_else(|| responses.get(LEGACY_PICK_USER_INPUT_KEY))
+            })
             .cloned();
         loop {
             let response = self

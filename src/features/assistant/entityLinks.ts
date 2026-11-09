@@ -1,5 +1,7 @@
 import type { Entity } from '@/domain/assistant/types';
 
+import { asciiAssistantPunctuation } from './assistantText';
+
 type EntityLinkKind = 'user' | 'world';
 
 interface MarkdownNode {
@@ -30,7 +32,7 @@ function linkableNames(entities: readonly Entity[]): Map<string, string> {
         if (entity.kind !== 'user' && entity.kind !== 'world') {
             continue;
         }
-        const name = entity.displayName.trim();
+        const name = asciiAssistantPunctuation(entity.displayName.trim());
         if ([...name].length < 2) {
             continue;
         }

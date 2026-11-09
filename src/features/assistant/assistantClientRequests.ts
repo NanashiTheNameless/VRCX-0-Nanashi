@@ -11,13 +11,17 @@ import {
     getSettingDeepLinkPath,
     type SettingsManifestEntry
 } from '@/shared/constants/settingsManifest';
+import { getSettingsManifestEntry } from '@/shared/constants/settingsManifest';
 import { useAssistantChatStore } from '@/state/assistantChatStore';
 
+import { loadAssistantNativeSettings } from './assistantNativeSettings';
 import {
     applySettingChange,
+    describeAssistantSetting,
     findAssistantSettings,
     previewSettingChange,
     resolveSettingsTarget,
+    runtimeSettingBlock,
     settingLocation
 } from './assistantSettings';
 
@@ -120,13 +124,40 @@ export async function handleAssistantClientRequest(
 ): Promise<void> {
     const store = useAssistantChatStore.getState();
     switch (event.kind) {
-        case 'find_settings':
-            await answer(
-                event.sessionId,
-                event.requestId,
-                findAssistantSettings(recordString(event.arguments, 'query'), t)
+        case 'find_settings': {
+            const result = findAssistantSettings(
+                recordString(event.arguments, 'query'),
+                t
             );
+            for (const setting of 'settings' in result ? result.settings : []) {
+                if (!setting.canRequestChange) continue;
+                try {
+                    await loadAssistantNativeSettings([setting.settingId]);
+                    const entry = getSettingsManifestEntry(setting.settingId);
+                    if (entry)
+                        Object.assign(
+                            setting,
+                            describeAssistantSetting(entry, t)
+                        );
+                } catch {
+                    setting.canRequestChange = false;
+                    setting.changeBlockedReason =
+                        'The app could not read this setting. Try again before requesting a change.';
+                    setting.note = setting.changeBlockedReason;
+                    setting.currentValue = null;
+                    continue;
+                }
+                const block = await runtimeSettingBlock(setting.settingId);
+                if (block) {
+                    setting.canRequestChange = false;
+                    setting.changeBlockedReason = block.reason;
+                    setting.note = block.reason;
+                    if (block.forcedOff) setting.currentValue = false;
+                }
+            }
+            await answer(event.sessionId, event.requestId, result);
             return;
+        }
         case 'read_docs': {
             // The docs are large; load them the first time they are read.
             const { answerReadDocs } = await import('./assistantDocs');
@@ -175,10 +206,27 @@ export async function handleAssistantClientRequest(
             return;
         }
         case 'change_setting': {
+            try {
+                await loadAssistantNativeSettings([
+                    recordString(event.arguments, 'settingId')
+                ]);
+            } catch {
+                await answer(event.sessionId, event.requestId, {
+                    error: 'The app could not read the current setting. No change was requested.'
+                });
+                return;
+            }
             const preview = previewSettingChange(event.arguments, t);
             if (!preview.ok) {
                 await answer(event.sessionId, event.requestId, {
                     error: preview.error
+                });
+                return;
+            }
+            const block = await runtimeSettingBlock(preview.info.settingId);
+            if (block) {
+                await answer(event.sessionId, event.requestId, {
+                    error: block.reason
                 });
                 return;
             }
@@ -214,7 +262,18 @@ export async function completeEditRequest(
         await answer(request.sessionId, request.id, { decision });
         return;
     }
-    const preview = previewSettingChange(request.arguments, t);
+    let readError = '';
+    try {
+        await loadAssistantNativeSettings([
+            recordString(request.arguments, 'settingId')
+        ]);
+    } catch {
+        readError =
+            'The app could not recheck the current setting. No change was applied.';
+    }
+    const preview = readError
+        ? { ok: false as const, error: readError }
+        : previewSettingChange(request.arguments, t);
     if (!preview.ok) {
         store.resolveEditRequest(
             request.sessionId,

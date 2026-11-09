@@ -146,9 +146,11 @@ The rule editor reads as a sentence: "Show this badge for users who match **ALL*
 - **Is in VRChat group**: members of a group, or of one role in it. Each user's own group list
   is trusted when the app has seen it; a member list you fetch fills in the rest (up to 5000
   members).
-- **Trust rank**, **VRC+ supporters** and **Age verified** (any, or 18+ only), using friend
-  list data and profiles the app has already loaded. Hidden or unverified age data does
-  not match; badges do not fetch profiles themselves.
+- **Trust rank**, **VRC+ supporters** and **Age verified**, using friend list data and
+  profiles the app has already loaded. Age verification has three choices: **Any visible
+  verification**, **Verified 18+ only**, and **Verified, hidden**. The hidden choice requires
+  both a hidden verification status and an explicit verified flag. A hidden status alone,
+  missing data, or an unverified flag does not match. Badges do not fetch profiles themselves.
 - **Platform**: users last seen on PC, Android (Quest) or iOS.
 - **Status**: online users with Join Me, Online, Ask Me or Do Not Disturb.
 - **Memo or note contains**, **Bio contains** and **Pronouns contain** some text.

@@ -41,8 +41,10 @@ The sidebar lists your friends and groups in tabs.
 - A filter box filters friends, groups or instances. **Refresh friends list** in the sidebar's
   settings updates your friends list, online/offline presence and favorites, with a 30-second
   cooldown. To fetch every friend's full profile details again, use **Refresh all friend
-  profiles** on the Friends page; it has a separate 5-minute cooldown after completion or
-  cancellation.
+  profiles**, available alongside it in the bottom-right settings popover and on the Friends
+  page. Both full-profile buttons share a confirmation, progress and a 5-minute cooldown
+  after completion or cancellation. The confirmation explains that the job can take a while
+  and should be allowed to finish once started.
 - The **Notification Center** in the sidebar shows recent notifications grouped by Needs
   Action, Activity and System, with **Join now**, mark as read and mark all read.
 

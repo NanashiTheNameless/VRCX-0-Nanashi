@@ -83,19 +83,19 @@ pub fn client_config_snippets(
     };
     ClientConfigSnippets {
         claude_code_command: format!(
-            "claude mcp add --transport http vrcx-0 {url} --header \"{auth_header}\""
+            "claude mcp add --transport http vrcx-0-nanashi {url} --header \"{auth_header}\""
         ),
         mcp_remote_json: format!(
-            "{{\n  \"mcpServers\": {{\n    \"vrcx-0\": {{\n      {mcp_remote_command}\n    }}\n  }}\n}}"
+            "{{\n  \"mcpServers\": {{\n    \"vrcx-0-nanashi\": {{\n      {mcp_remote_command}\n    }}\n  }}\n}}"
         ),
         generic_json: format!(
-            "{{\n  \"mcpServers\": {{\n    \"vrcx-0\": {{\n      \"url\": \"{url}\",\n      \"headers\": {{\n        \"Authorization\": \"Bearer {token}\"\n      }}\n    }}\n  }}\n}}"
+            "{{\n  \"mcpServers\": {{\n    \"vrcx-0-nanashi\": {{\n      \"url\": \"{url}\",\n      \"headers\": {{\n        \"Authorization\": \"Bearer {token}\"\n      }}\n    }}\n  }}\n}}"
         ),
         codex_toml: format!(
-            "[mcp_servers.vrcx-0]\nurl = \"{url}\"\nhttp_headers = {{ \"Authorization\" = \"Bearer {token}\" }}"
+            "[mcp_servers.vrcx-0-nanashi]\nurl = \"{url}\"\nhttp_headers = {{ \"Authorization\" = \"Bearer {token}\" }}"
         ),
         opencode_json: format!(
-            "{{\n  \"$schema\": \"https://opencode.ai/config.json\",\n  \"mcp\": {{\n    \"vrcx-0\": {{\n      \"type\": \"remote\",\n      \"url\": \"{url}\",\n      \"headers\": {{\n        \"Authorization\": \"Bearer {token}\"\n      }},\n      \"enabled\": true\n    }}\n  }}\n}}"
+            "{{\n  \"$schema\": \"https://opencode.ai/config.json\",\n  \"mcp\": {{\n    \"vrcx-0-nanashi\": {{\n      \"type\": \"remote\",\n      \"url\": \"{url}\",\n      \"headers\": {{\n        \"Authorization\": \"Bearer {token}\"\n      }},\n      \"enabled\": true\n    }}\n  }}\n}}"
         ),
     }
 }
@@ -109,21 +109,24 @@ pub fn client_install_url(client: McpInstallClient, port: u16, token: &str) -> S
             "cherrystudio://mcp/install?servers={}",
             base64_query_value(&json!({
                 "mcpServers": {
-                    "vrcx-0": { "type": "streamableHttp", "baseUrl": url, "headers": headers }
+                    "vrcx-0-nanashi": { "type": "streamableHttp", "baseUrl": url, "headers": headers }
                 }
             }))
         ),
         McpInstallClient::Cursor => format!(
-            "cursor://anysphere.cursor-deeplink/mcp/install?name=vrcx-0&config={}",
+            "cursor://anysphere.cursor-deeplink/mcp/install?name=vrcx-0-nanashi&config={}",
             remote_config()
         ),
         McpInstallClient::LmStudio => {
-            format!("lmstudio://add_mcp?name=vrcx-0&config={}", remote_config())
+            format!(
+                "lmstudio://add_mcp?name=vrcx-0-nanashi&config={}",
+                remote_config()
+            )
         }
         McpInstallClient::VsCode => format!(
             "vscode:mcp/install?{}",
             utf8_percent_encode(
-                &json!({ "name": "vrcx-0", "type": "http", "url": url, "headers": headers })
+                &json!({ "name": "vrcx-0-nanashi", "type": "http", "url": url, "headers": headers })
                     .to_string(),
                 NON_ALPHANUMERIC
             )
@@ -264,7 +267,7 @@ mod tests {
 
         assert_eq!(
             snippets.codex_toml,
-            "[mcp_servers.vrcx-0]\nurl = \"http://127.0.0.1:7654/mcp\"\nhttp_headers = { \"Authorization\" = \"Bearer tok_secret\" }"
+            "[mcp_servers.vrcx-0-nanashi]\nurl = \"http://127.0.0.1:7654/mcp\"\nhttp_headers = { \"Authorization\" = \"Bearer tok_secret\" }"
         );
         assert_eq!(
             serde_json::from_str::<serde_json::Value>(&snippets.opencode_json)
@@ -272,7 +275,7 @@ mod tests {
             json!({
                 "$schema": "https://opencode.ai/config.json",
                 "mcp": {
-                    "vrcx-0": {
+                    "vrcx-0-nanashi": {
                         "type": "remote",
                         "url": "http://127.0.0.1:7654/mcp",
                         "headers": { "Authorization": "Bearer tok_secret" },
@@ -325,14 +328,14 @@ mod tests {
         assert_eq!(
             decoded_query_config(
                 &cursor,
-                "cursor://anysphere.cursor-deeplink/mcp/install?name=vrcx-0&config="
+                "cursor://anysphere.cursor-deeplink/mcp/install?name=vrcx-0-nanashi&config="
             ),
             expected
         );
 
         let lm_studio = client_install_url(McpInstallClient::LmStudio, 7654, "tok_secret");
         assert_eq!(
-            decoded_query_config(&lm_studio, "lmstudio://add_mcp?name=vrcx-0&config="),
+            decoded_query_config(&lm_studio, "lmstudio://add_mcp?name=vrcx-0-nanashi&config="),
             expected
         );
     }
@@ -346,7 +349,7 @@ mod tests {
             decoded_query_config(&link, "cherrystudio://mcp/install?servers="),
             json!({
                 "mcpServers": {
-                    "vrcx-0": {
+                    "vrcx-0-nanashi": {
                         "type": "streamableHttp",
                         "baseUrl": "http://127.0.0.1:7654/mcp",
                         "headers": { "Authorization": "Bearer tok_secret" },
@@ -372,7 +375,7 @@ mod tests {
         assert_eq!(
             config,
             json!({
-                "name": "vrcx-0",
+                "name": "vrcx-0-nanashi",
                 "type": "http",
                 "url": "http://127.0.0.1:7654/mcp",
                 "headers": { "Authorization": "Bearer tok_secret" },

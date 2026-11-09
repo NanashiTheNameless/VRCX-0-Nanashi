@@ -230,7 +230,14 @@ impl WebClient {
         }
         let field_log_context = crate::user_api_field_log::request_context(&input, scope);
         let request = self.build_api_request(input, scope)?;
-        let (status, data) = self.execute(request).await?;
+        let (status, data) = if scope == VrchatScope::Vrchat {
+            self.inner
+                .execute_vrchat_api(request)
+                .await
+                .map_err(crate::Error::from)?
+        } else {
+            self.execute(request).await?
+        };
         if let Some(context) = field_log_context {
             crate::user_api_field_log::record(self.db.db_path(), context, status, &data).await;
         }
@@ -259,7 +266,7 @@ impl WebClient {
         let scope = VrchatScope::Vrchat;
         let (pooled_status, pooled_data) = self
             .inner
-            .execute(self.build_api_request(input.clone(), scope)?)
+            .execute_vrchat_api(self.build_api_request(input.clone(), scope)?)
             .await?;
         if (200..300).contains(&pooled_status) {
             return Ok(vrcx_0_contracts::RealtimeAuthTokenFetch {

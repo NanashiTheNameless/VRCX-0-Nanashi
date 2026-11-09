@@ -31,7 +31,7 @@ const GROUP_ID = /^grp_[0-9a-z-]{1,64}$/i;
 const ROLE_ID = /^grol_[0-9a-z-]{1,64}$/i;
 const ICON_NAME = /^[A-Z][A-Za-z0-9]{0,63}$/;
 
-export const BADGE_AGE_LEVELS = ['any', 'adult'] as const;
+export const BADGE_AGE_LEVELS = ['any', 'adult', 'hidden'] as const;
 export type BadgeAgeLevel = (typeof BADGE_AGE_LEVELS)[number];
 // VRChat's last_platform values.
 export const BADGE_PLATFORMS = ['standalonewindows', 'android', 'ios'] as const;
@@ -620,10 +620,13 @@ function vrchatGroupRuleMatches(
 
 // VRChat shows age verification as a status: "18+" or "verified" when shown,
 // "hidden" when the user hides it. Friend list data carries only the status,
-// so it decides on its own; a profile that says ageVerified is false never
-// matches. The player list and wrist overlay read "18+" the same way.
+// so visible statuses decide on their own. Hidden verification also requires
+// ageVerified to be true; a profile that says it is false never matches.
 function ageRuleMatches(level: BadgeAgeLevel, facts: BadgeUserFacts): boolean {
     const status = facts.ageVerificationStatus;
+    if (level === 'hidden') {
+        return status === 'hidden' && facts.ageVerified === true;
+    }
     if (
         facts.ageVerified === false ||
         (status !== '18+' && status !== 'verified')

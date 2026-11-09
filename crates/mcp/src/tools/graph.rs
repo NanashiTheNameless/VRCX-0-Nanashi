@@ -21,7 +21,7 @@ use vrcx_0_core::OwnerId;
 #[tool_router(router = graph_tool_router, vis = "pub(crate)")]
 impl VrcxMcpServer {
     #[tool(
-        description = "[action] Trigger throttled VRChat reads to refresh stale mutual-friend graph snapshots (feeds get_social_graph and get_friend_circles). Returns immediately with status; large friend lists take time; friends who opt out of Shared Connections are skipped. Use only when graph data is stale or empty."
+        description = "[action] Trigger throttled VRChat reads to refresh stale mutual-friend graph snapshots (feeds get_social_graph and get_friend_circles). Updates mutual relationships, not full user profiles, bios or pronouns; it is not the Friends page's Refresh all friend profiles action. Returns immediately with status; large friend lists take time; friends who opt out of Shared Connections are skipped. Use only when graph data is stale or empty, not to answer where a UI button is."
     )]
     async fn refresh_mutual_graph(
         &self,
@@ -329,6 +329,7 @@ fn is_stale_mutual_meta(meta: &McpMutualGraphMeta, stale_after: DateTime<Utc>) -
 fn mutual_graph_refresh_caveats() -> Vec<String> {
     vec![
         "This triggers throttled VRChat API reads and updates only local mutual graph snapshots.".into(),
+        "This does not refresh full user profiles, bios or pronouns. Use Refresh all friend profiles on the Friends page for profile updates.".into(),
         "Large friend lists can take a long time; friends who opt out of Shared Connections are skipped.".into(),
     ]
 }

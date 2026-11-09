@@ -36,10 +36,10 @@ const RUNNING_STATUS = {
     activeConnections: 0,
     lastError: null,
     clientConfig: {
-        claudeCodeCommand: 'claude mcp add vrcx-0',
+        claudeCodeCommand: 'claude mcp add vrcx-0-nanashi',
         mcpRemoteJson: '{\n  "remote": true\n}',
         genericJson: '{\n  "generic": true\n}',
-        codexToml: '[mcp_servers.vrcx-0]',
+        codexToml: '[mcp_servers.vrcx-0-nanashi]',
         opencodeJson: '{\n  "opencode": true\n}'
     }
 };
@@ -75,7 +75,7 @@ describe('McpServerSettingsGroup', () => {
         expect(codeLines()).toEqual(['{', '  "remote": true', '}']);
 
         fireEvent.click(screen.getByRole('tab', { name: 'Claude Code' }));
-        expect(codeLines()).toEqual(['claude mcp add vrcx-0']);
+        expect(codeLines()).toEqual(['claude mcp add vrcx-0-nanashi']);
         expect(screen.getByText('common.label.terminal')).toBeTruthy();
 
         fireEvent.click(screen.getByRole('tab', { name: 'Codex' }));
@@ -84,7 +84,7 @@ describe('McpServerSettingsGroup', () => {
                 'view.settings.integrations.mcp_server.guide.codex'
             )
         ).toBeTruthy();
-        expect(codeLines()).toEqual(['[mcp_servers.vrcx-0]']);
+        expect(codeLines()).toEqual(['[mcp_servers.vrcx-0-nanashi]']);
     });
 
     it('asks the backend to open the selected client install link', async () => {
