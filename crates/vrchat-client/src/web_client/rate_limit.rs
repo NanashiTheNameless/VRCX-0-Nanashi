@@ -4,13 +4,15 @@ use std::time::{Duration, SystemTime};
 
 use reqwest::header::{HeaderMap, DATE, RETRY_AFTER};
 use reqwest::{StatusCode, Url};
-use tokio::sync::{Mutex, OwnedMutexGuard};
+use tokio::sync::Mutex;
 use tokio::time::Instant;
 
-const API_REQUEST_SPACING: Duration = Duration::from_millis(500);
 const MIN_RATE_LIMIT_WAIT: Duration = Duration::from_secs(60);
 const MAX_BACKOFF: Duration = Duration::from_secs(15 * 60);
+const MAX_RETRY_AFTER: Duration = Duration::from_secs(60 * 60);
 
+// Only a server pause is shared across requests. Ordinary requests run
+// concurrently; bulk jobs pace themselves with their own RequestPacer.
 #[derive(Default)]
 pub(super) struct VrchatRateLimits {
     origins: Mutex<HashMap<String, Arc<Mutex<ApiRateLimit>>>>,
@@ -36,7 +38,7 @@ impl VrchatRateLimits {
         url: &Url,
         vrchat_api: bool,
         can_wait: bool,
-    ) -> Result<Option<OwnedMutexGuard<ApiRateLimit>>, Duration> {
+    ) -> Result<Option<Arc<Mutex<ApiRateLimit>>>, Duration> {
         let state = {
             let mut origins = self.origins.lock().await;
             let origin = url.origin().ascii_serialization();
@@ -51,28 +53,22 @@ impl VrchatRateLimits {
             }
         };
         loop {
-            let mut guard = Arc::clone(&state).lock_owned().await;
+            let not_before = state.lock().await.not_before;
             let now = Instant::now();
-            match guard.not_before {
+            match not_before {
                 Some(until) if until > now => {
-                    let delay = until.duration_since(now);
-                    if !can_wait && delay > API_REQUEST_SPACING {
-                        return Err(delay);
+                    if !can_wait {
+                        return Err(until.duration_since(now));
                     }
-                    drop(guard);
                     tokio::time::sleep_until(until).await;
                 }
                 None => {
-                    drop(guard);
                     if !can_wait {
                         return Err(Duration::MAX);
                     }
                     std::future::pending::<()>().await;
                 }
-                _ => {
-                    guard.not_before = Some(now + API_REQUEST_SPACING);
-                    return Ok(Some(guard));
-                }
+                _ => return Ok(Some(state)),
             }
         }
     }
@@ -84,9 +80,16 @@ impl ApiRateLimit {
         if status == StatusCode::TOO_MANY_REQUESTS
             || (status == StatusCode::SERVICE_UNAVAILABLE && retry_after.is_some())
         {
-            let delay = retry_after.unwrap_or_default().max(self.backoff);
-            self.not_before = Instant::now().checked_add(delay);
-            self.backoff = self.backoff.saturating_mul(2).min(MAX_BACKOFF);
+            let now = Instant::now();
+            let retry_after = retry_after.unwrap_or_default().min(MAX_RETRY_AFTER);
+            // Requests already in flight when the pause began report the
+            // same limit; only the first one escalates the backoff.
+            if self.not_before.is_some_and(|until| until > now) {
+                self.not_before = self.not_before.max(Some(now + retry_after));
+            } else {
+                self.not_before = Some(now + retry_after.max(self.backoff));
+                self.backoff = self.backoff.saturating_mul(2).min(MAX_BACKOFF);
+            }
         } else if status.is_success() {
             self.backoff = MIN_RATE_LIMIT_WAIT;
         }
@@ -134,20 +137,24 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
-    async fn api_requests_are_serialized_and_spaced() {
+    async fn api_requests_run_concurrently_without_a_pause() {
         let limits = VrchatRateLimits::default();
         let url = Url::parse("https://api.vrchat.cloud/api/1/users/usr_a").unwrap();
-        let first = limits.acquire(&url, false, true).await.unwrap().unwrap();
-        assert!(
-            tokio::time::timeout(Duration::from_secs(1), limits.acquire(&url, false, true))
-                .await
-                .is_err()
-        );
-        drop(first);
         let start = Instant::now();
-        drop(limits.acquire(&url, false, true).await.unwrap().unwrap());
-        drop(limits.acquire(&url, false, true).await.unwrap().unwrap());
-        assert_eq!(start.elapsed(), API_REQUEST_SPACING);
+        let in_flight: Vec<_> = acquire_without_waiting(&limits, &url).await;
+        assert_eq!(in_flight.len(), 10);
+        assert_eq!(start.elapsed(), Duration::ZERO);
+    }
+
+    async fn acquire_without_waiting(
+        limits: &VrchatRateLimits,
+        url: &Url,
+    ) -> Vec<Arc<Mutex<ApiRateLimit>>> {
+        let mut handles = Vec::new();
+        for _ in 0..10 {
+            handles.push(limits.acquire(url, false, false).await.unwrap().unwrap());
+        }
+        handles
     }
 
     #[tokio::test(start_paused = true)]
@@ -156,14 +163,17 @@ mod tests {
         let profile = Url::parse("https://api.vrchat.cloud/api/1/users/usr_a").unwrap();
         let friends = Url::parse("https://api.vrchat.cloud/api/1/auth/user/friends").unwrap();
         let start = Instant::now();
-        let mut first = limits
+        let first = limits
             .acquire(&profile, false, true)
             .await
             .unwrap()
             .unwrap();
         let mut headers = HeaderMap::new();
         headers.insert(RETRY_AFTER, "600".parse().unwrap());
-        first.observe(StatusCode::TOO_MANY_REQUESTS, &headers);
+        first
+            .lock()
+            .await
+            .observe(StatusCode::TOO_MANY_REQUESTS, &headers);
         drop(first);
         assert!(tokio::time::timeout(
             Duration::from_secs(5),
@@ -186,8 +196,11 @@ mod tests {
         let limits = VrchatRateLimits::default();
         let url = Url::parse("https://api.vrchat.cloud/api/1/users/usr_a").unwrap();
         for delay in [60, 120, 240] {
-            let mut request = limits.acquire(&url, false, true).await.unwrap().unwrap();
-            request.observe(StatusCode::TOO_MANY_REQUESTS, &HeaderMap::new());
+            let request = limits.acquire(&url, false, true).await.unwrap().unwrap();
+            request
+                .lock()
+                .await
+                .observe(StatusCode::TOO_MANY_REQUESTS, &HeaderMap::new());
             drop(request);
             let start = Instant::now();
             drop(limits.acquire(&url, false, true).await.unwrap().unwrap());
@@ -202,11 +215,55 @@ mod tests {
     }
 
     #[tokio::test(start_paused = true)]
+    async fn concurrent_rate_limits_escalate_the_backoff_once() {
+        let limits = VrchatRateLimits::default();
+        let url = Url::parse("https://api.vrchat.cloud/api/1/users/usr_a").unwrap();
+        let in_flight = acquire_without_waiting(&limits, &url).await;
+        for request in &in_flight {
+            request
+                .lock()
+                .await
+                .observe(StatusCode::TOO_MANY_REQUESTS, &HeaderMap::new());
+        }
+        let start = Instant::now();
+        let next = limits.acquire(&url, false, true).await.unwrap().unwrap();
+        assert_eq!(start.elapsed(), MIN_RATE_LIMIT_WAIT);
+        next.lock()
+            .await
+            .observe(StatusCode::TOO_MANY_REQUESTS, &HeaderMap::new());
+        let start = Instant::now();
+        drop(limits.acquire(&url, false, true).await.unwrap().unwrap());
+        assert_eq!(start.elapsed(), MIN_RATE_LIMIT_WAIT * 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn huge_retry_after_is_capped_instead_of_pausing_forever() {
+        let limits = VrchatRateLimits::default();
+        let url = Url::parse("https://api.vrchat.cloud/api/1/users/usr_a").unwrap();
+        let mut headers = HeaderMap::new();
+        headers.insert(RETRY_AFTER, u64::MAX.to_string().parse().unwrap());
+        limits
+            .acquire(&url, false, true)
+            .await
+            .unwrap()
+            .unwrap()
+            .lock()
+            .await
+            .observe(StatusCode::TOO_MANY_REQUESTS, &headers);
+        let start = Instant::now();
+        drop(limits.acquire(&url, false, true).await.unwrap().unwrap());
+        assert_eq!(start.elapsed(), MAX_RETRY_AFTER);
+    }
+
+    #[tokio::test(start_paused = true)]
     async fn configured_api_endpoints_share_limits_with_fresh_client_fallbacks() {
         let limits = VrchatRateLimits::default();
         let url = Url::parse("https://example.com/custom-api/users/usr_a").unwrap();
-        let mut first = limits.acquire(&url, true, true).await.unwrap().unwrap();
-        first.observe(StatusCode::TOO_MANY_REQUESTS, &HeaderMap::new());
+        let first = limits.acquire(&url, true, true).await.unwrap().unwrap();
+        first
+            .lock()
+            .await
+            .observe(StatusCode::TOO_MANY_REQUESTS, &HeaderMap::new());
         drop(first);
         let start = Instant::now();
         drop(limits.acquire(&url, false, true).await.unwrap().unwrap());
@@ -217,8 +274,11 @@ mod tests {
     async fn interactive_actions_fail_without_waiting_through_a_server_pause() {
         let limits = VrchatRateLimits::default();
         let url = Url::parse("https://api.vrchat.cloud/api/1/users/usr_a").unwrap();
-        let mut first = limits.acquire(&url, false, true).await.unwrap().unwrap();
-        first.observe(StatusCode::TOO_MANY_REQUESTS, &HeaderMap::new());
+        let first = limits.acquire(&url, false, true).await.unwrap().unwrap();
+        first
+            .lock()
+            .await
+            .observe(StatusCode::TOO_MANY_REQUESTS, &HeaderMap::new());
         drop(first);
         let start = Instant::now();
         assert!(

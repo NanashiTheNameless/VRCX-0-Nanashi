@@ -70,7 +70,7 @@ ongoing tracking after they leave.
 **Refresh all friend profiles**, on the Friends page and beside **Refresh friends list** in
 the bottom-right sidebar settings popover, fetches fresh profile data for the entire friend
 roster, including profiles whose details were already loaded or cached. Both buttons ask
-for confirmation first. Requests run one at a time, at least 2 seconds apart, with long
+for confirmation first. Requests run one at a time, at least half a second apart, with long
 rate-limit backoff that honors VRChat's retry delays. A 5-minute cooldown follows completion
 or cancellation, with a countdown on both buttons.
 

@@ -169,7 +169,7 @@ and has a 5-minute cooldown after finishing or being canceled.
 **Refresh all friend profiles** fetches every friend's profile again, including
 already loaded or cached profiles and friends outside the current search and filters.
 It updates profile data, including bio, pronouns, status, and badge-related fields. Profiles
-load one at a time, with at least 2 seconds between requests. A rate-limit response pauses
+load one at a time, with at least half a second between requests. A rate-limit response pauses
 the job for at least 60 seconds, doubling the backoff on repeated limits and honoring longer
 server-provided waits. Persistent rate limiting stops the refresh rather than continuing
 through the remaining friends. Other VRChat reads share the server's wait, including after

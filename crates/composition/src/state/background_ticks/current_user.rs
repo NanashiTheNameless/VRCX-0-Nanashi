@@ -36,12 +36,23 @@ pub(in crate::state) async fn run_background_current_user_refresh(
         Ok(accepted) => {
             if !background_capability_session_matches(session_slot, &session) {
                 tracing::warn!("ignored stale background current user refresh");
+                background_jobs.mark_completed(
+                    BACKGROUND_CURRENT_USER_REFRESH_JOB,
+                    "Stale background current user refresh ignored.",
+                );
             } else if !accepted {
-                tracing::warn!("ignored background current user refresh rejected by realtime");
+                // The first tick runs before the realtime connection is up;
+                // login already loaded the current user, so nothing is lost.
+                tracing::debug!("background current user refresh skipped until realtime connects");
+                background_jobs.mark_completed(
+                    BACKGROUND_CURRENT_USER_REFRESH_JOB,
+                    "Background current user refresh skipped until realtime connects.",
+                );
+            } else {
+                let detail = "current user facts refreshed.";
+                emit_background_info(runtime_context, backend_runtime, detail);
+                background_jobs.mark_completed(BACKGROUND_CURRENT_USER_REFRESH_JOB, detail);
             }
-            let detail = "current user facts refreshed.";
-            emit_background_info(runtime_context, backend_runtime, detail);
-            background_jobs.mark_completed(BACKGROUND_CURRENT_USER_REFRESH_JOB, detail);
         }
         Err(error) => {
             tracing::warn!(

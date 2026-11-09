@@ -274,7 +274,7 @@ async fn execute_request(
 ) -> Result<(i32, String)> {
     let can_wait = matches!(*request.method(), Method::GET | Method::HEAD)
         && !request.headers().contains_key(AUTHORIZATION);
-    let mut rate_limit = match rate_limits.acquire(request.url(), vrchat_api, can_wait).await {
+    let rate_limit = match rate_limits.acquire(request.url(), vrchat_api, can_wait).await {
         Ok(limit) => limit,
         Err(delay) => return Ok((429, serde_json::json!({
             "error": {
@@ -286,10 +286,12 @@ async fn execute_request(
     let mut response = vrcx_0_http_client::execute(client, request, policy)
         .await
         .map_err(|e| Error::Custom(e.to_string()))?;
-    if let Some(rate_limit) = rate_limit.as_mut() {
-        rate_limit.observe(response.status(), response.headers());
+    if let Some(rate_limit) = rate_limit {
+        rate_limit
+            .lock()
+            .await
+            .observe(response.status(), response.headers());
     }
-    drop(rate_limit);
     let status = response.status().as_u16() as i32;
     let content_type = response
         .headers()

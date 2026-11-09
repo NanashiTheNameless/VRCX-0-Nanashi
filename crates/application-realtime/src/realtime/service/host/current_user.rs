@@ -2,8 +2,9 @@ use std::sync::Arc;
 
 use serde_json::Value;
 use tokio::sync::watch;
-use vrcx_0_application_core::{Error, Result};
+use vrcx_0_application_core::{Error, Result, RuntimeVrchatAuthFailurePayload};
 use vrcx_0_contracts::vrchat_api::VrchatScope;
+use vrcx_0_core::OwnerId;
 
 use crate::realtime::RealtimeCurrentUserOutput;
 
@@ -195,10 +196,11 @@ impl RealtimeHostRuntime {
             )
             .await?;
         if !(200..300).contains(&response.status) {
-            return Err(Error::Custom(format!(
-                "Current user refresh returned HTTP {}.",
-                response.status
-            )));
+            let reason = format!("Current user refresh returned HTTP {}.", response.status);
+            if response.status == 401 {
+                self.report_current_user_auth_failure(&active, &reason);
+            }
+            return Err(Error::Custom(reason));
         }
         let snapshot = serde_json::from_str::<Value>(&response.data)
             .map_err(|error| Error::Custom(format!("current user refresh json: {error}")))?;
@@ -211,6 +213,27 @@ impl RealtimeHostRuntime {
             snapshot,
             overlay_patch,
         ))
+    }
+
+    // An expired session otherwise keeps failing every refresh until restart;
+    // reporting it starts the same silent re-login as other 401s.
+    fn report_current_user_auth_failure(&self, active: &ActiveRealtimeContext, reason: &str) {
+        let scope = self.deps.auth_scope.snapshot();
+        if !scope.active
+            || scope.generation != active.auth_scope_generation
+            || scope.current_user_id != active.session.user_id
+        {
+            return;
+        }
+        self.report_vrchat_auth_failure(RuntimeVrchatAuthFailurePayload {
+            owner_user_id: OwnerId::new(scope.current_user_id),
+            endpoint: scope.endpoint,
+            path: "auth/user".into(),
+            reason: reason.to_string(),
+            status_code: 401,
+            auth_scope_generation: scope.generation,
+            realtime_transport: None,
+        });
     }
 
     pub(super) fn active_current_user_context(&self) -> Option<ActiveRealtimeContext> {
