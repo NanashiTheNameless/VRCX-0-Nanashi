@@ -636,6 +636,7 @@ fn configure_connection(conn: &Connection) -> Result<(), Error> {
          PRAGMA journal_mode=WAL;
          PRAGMA synchronous=NORMAL;
          PRAGMA secure_delete=OFF;
+         PRAGMA journal_size_limit=16777216;
          PRAGMA optimize=0x10002;",
     )
     .map_err(Error::sqlite)?;

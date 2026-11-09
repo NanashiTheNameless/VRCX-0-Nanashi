@@ -11,6 +11,8 @@ import { VRCHAT_STAFF_GROUP_ID } from '@/shared/constants/user';
 
 const CACHE_KEY = 'vrcx0.userGroupMembership';
 const MAX_REMEMBERED_USERS = 2000;
+// A full player list loads many group lists at once; save once per burst.
+const CACHE_WRITE_DELAY_MS = 1000;
 
 export type UserGroupMembership = {
     // Every group in the user's list, when it was seen this session.
@@ -106,6 +108,30 @@ function writeCache(byUser: ReadonlyMap<string, UserGroupMembership>) {
 export const useUserGroupMembershipStore =
     create<UserGroupMembershipStoreState>(() => ({ byUser: readCache() }));
 
+let cacheWriteTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleCacheWrite() {
+    if (cacheWriteTimer !== null) {
+        return;
+    }
+    cacheWriteTimer = setTimeout(
+        flushUserGroupMembershipCache,
+        CACHE_WRITE_DELAY_MS
+    );
+}
+
+/** Saves a pending cache write now. */
+export function flushUserGroupMembershipCache() {
+    if (cacheWriteTimer === null) {
+        return;
+    }
+    clearTimeout(cacheWriteTimer);
+    cacheWriteTimer = null;
+    writeCache(useUserGroupMembershipStore.getState().byUser);
+}
+
+globalThis.addEventListener?.('pagehide', flushUserGroupMembershipCache);
+
 export function recordUserGroups(userId: string, groupIds: readonly string[]) {
     if (!userId.startsWith('usr_')) {
         return;
@@ -119,8 +145,14 @@ export function recordUserGroups(userId: string, groupIds: readonly string[]) {
     const byUser = new Map(useUserGroupMembershipStore.getState().byUser);
     byUser.delete(userId);
     byUser.set(userId, { all, known });
+    for (const oldest of byUser.keys()) {
+        if (byUser.size <= MAX_REMEMBERED_USERS) {
+            break;
+        }
+        byUser.delete(oldest);
+    }
     useUserGroupMembershipStore.setState({ byUser });
-    writeCache(byUser);
+    scheduleCacheWrite();
 }
 
 /** Group ids in a cached user group list, or null if the data is not one. */
@@ -188,6 +220,10 @@ export function trackUserGroupMembership(client: QueryClient) {
 }
 
 export function resetUserGroupMembershipStoreForTests() {
+    if (cacheWriteTimer !== null) {
+        clearTimeout(cacheWriteTimer);
+        cacheWriteTimer = null;
+    }
     trackedClient = null;
     trackedGroupIds = new Set([VRCHAT_STAFF_GROUP_ID]);
     useUserGroupMembershipStore.setState({ byUser: new Map() });

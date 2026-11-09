@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { VRCHAT_STAFF_GROUP_ID } from '@/shared/constants/user';
 
 import {
+    flushUserGroupMembershipCache,
     groupIdsFromUserGroupData,
     groupMembership,
     recordUserGroups,
@@ -51,12 +52,26 @@ describe('userGroupMembershipStore', () => {
     it('remembers only tracked groups across restarts', () => {
         setTrackedGroupIds([OTHER]);
         recordUserGroups(USER, [OTHER, UNTRACKED]);
+        expect(localStorage.getItem('vrcx0.userGroupMembership')).toBeNull();
+        flushUserGroupMembershipCache();
         const saved = JSON.parse(
             localStorage.getItem('vrcx0.userGroupMembership') || '{}'
         );
         expect(saved[USER].in).toEqual([OTHER]);
         expect(saved[USER].out).toEqual([VRCHAT_STAFF_GROUP_ID]);
         expect(JSON.stringify(saved)).not.toContain(UNTRACKED);
+    });
+
+    it('keeps at most 2000 users in memory, dropping the oldest', () => {
+        const userId = (index: number) =>
+            `usr_${String(index).padStart(8, '0')}`;
+        for (let index = 0; index <= 2000; index += 1) {
+            recordUserGroups(userId(index), [OTHER]);
+        }
+        const { byUser } = useUserGroupMembershipStore.getState();
+        expect(byUser.size).toBe(2000);
+        expect(byUser.has(userId(0))).toBe(false);
+        expect(byUser.has(userId(2000))).toBe(true);
     });
 
     it('updates when a user leaves a group', () => {
