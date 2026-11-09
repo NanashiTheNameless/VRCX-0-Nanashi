@@ -94,9 +94,10 @@ async fn semantic_remote_hydrates_each_group_once_and_preserves_instance_order()
         ..Default::default()
     };
 
-    let refresh = refresh_background_group_instances(&remote, &test_session())
-        .await
-        .unwrap();
+    let refresh =
+        refresh_background_group_instances(&remote, &test_session(), &GroupProfileCache::default())
+            .await
+            .unwrap();
 
     assert_eq!(refresh.instances[0].as_value()["id"], json!("instance-a"));
     assert_eq!(refresh.instances[1].as_value()["id"], json!("instance-b"));
@@ -129,9 +130,10 @@ async fn unavailable_group_profile_keeps_a_minimal_group_fallback() {
         ..Default::default()
     };
 
-    let refresh = refresh_background_group_instances(&remote, &test_session())
-        .await
-        .unwrap();
+    let refresh =
+        refresh_background_group_instances(&remote, &test_session(), &GroupProfileCache::default())
+            .await
+            .unwrap();
 
     assert_eq!(
         refresh.instances[0].as_value()["group"],
@@ -363,4 +365,83 @@ fn cleared_projection_preserves_empty_error_and_arrays() {
             "groupOrder": [],
         })
     );
+}
+
+fn group_profile_calls(remote: &TestBackgroundGroupRemote) -> usize {
+    remote
+        .calls
+        .lock()
+        .unwrap()
+        .iter()
+        .filter(|call| call.starts_with("group-profile:"))
+        .count()
+}
+
+fn shared_group_remote() -> TestBackgroundGroupRemote {
+    TestBackgroundGroupRemote {
+        instances: vec![json!({ "id": "instance-a", "groupId": "grp_shared" })],
+        profiles: HashMap::from([(
+            "grp_shared".into(),
+            json!({ "id": "grp_shared", "name": "Shared Group" }),
+        )]),
+        ..Default::default()
+    }
+}
+
+#[tokio::test(start_paused = true)]
+async fn group_profiles_are_reused_between_refreshes_until_they_expire() {
+    let remote = shared_group_remote();
+    let cache = GroupProfileCache::default();
+    let session = test_session();
+
+    refresh_background_group_instances(&remote, &session, &cache)
+        .await
+        .unwrap();
+    let second = refresh_background_group_instances(&remote, &session, &cache)
+        .await
+        .unwrap();
+    assert_eq!(group_profile_calls(&remote), 1);
+    assert_eq!(
+        second.instances[0].as_value()["group"]["name"],
+        json!("Shared Group")
+    );
+
+    tokio::time::advance(GROUP_PROFILE_CACHE_TTL).await;
+    refresh_background_group_instances(&remote, &session, &cache)
+        .await
+        .unwrap();
+    assert_eq!(group_profile_calls(&remote), 2);
+}
+
+#[tokio::test]
+async fn cached_group_profiles_are_not_shared_between_accounts() {
+    let remote = shared_group_remote();
+    let cache = GroupProfileCache::default();
+    let mut other_account = test_session();
+    other_account.current_user_id = "usr_other".into();
+
+    refresh_background_group_instances(&remote, &test_session(), &cache)
+        .await
+        .unwrap();
+    refresh_background_group_instances(&remote, &other_account, &cache)
+        .await
+        .unwrap();
+    assert_eq!(group_profile_calls(&remote), 2);
+}
+
+#[tokio::test]
+async fn unavailable_group_profiles_are_fetched_again_next_refresh() {
+    let remote = TestBackgroundGroupRemote {
+        instances: vec![json!({ "id": "instance-a", "groupId": "grp_unavailable" })],
+        ..Default::default()
+    };
+    let cache = GroupProfileCache::default();
+
+    refresh_background_group_instances(&remote, &test_session(), &cache)
+        .await
+        .unwrap();
+    refresh_background_group_instances(&remote, &test_session(), &cache)
+        .await
+        .unwrap();
+    assert_eq!(group_profile_calls(&remote), 2);
 }

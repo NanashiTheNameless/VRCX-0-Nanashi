@@ -128,6 +128,7 @@ pub struct RuntimeHostState {
     pub(super) social_maintenance: SocialMaintenanceRuntime,
     pub(super) activity_warmup: ActivityWarmupRuntime,
     pub(super) background_group_instances_refresh_running: Arc<AtomicBool>,
+    pub(super) background_group_profile_cache: Arc<vrcx_0_application::game::GroupProfileCache>,
     pub(super) authenticated_session_projection: Arc<Mutex<AuthenticatedSessionProjection>>,
     pub(super) _profile_lock: ProfileLock,
 }
@@ -647,6 +648,8 @@ impl RuntimeHostStateBuilder {
             ),
         );
         let background_group_instances_refresh_running = Arc::new(AtomicBool::new(false));
+        let background_group_profile_cache =
+            Arc::new(vrcx_0_application::game::GroupProfileCache::default());
         let social_maintenance = SocialMaintenanceRuntime::new(
             Arc::new(RuntimeHostSocialMaintenanceActions {
                 db: Arc::clone(&self.db),
@@ -660,6 +663,7 @@ impl RuntimeHostStateBuilder {
                 group_instances_refresh_running: Arc::clone(
                     &background_group_instances_refresh_running,
                 ),
+                group_profile_cache: Arc::clone(&background_group_profile_cache),
                 group_order_source: Arc::clone(&group_order_source),
                 group_notification_group_ids: Mutex::new(None),
                 profile_bio_pacer: ProfileBioScanPacer::default(),
@@ -698,6 +702,7 @@ impl RuntimeHostStateBuilder {
             social_maintenance,
             activity_warmup,
             background_group_instances_refresh_running,
+            background_group_profile_cache,
             authenticated_session_projection,
             _profile_lock: self.profile_lock,
         })

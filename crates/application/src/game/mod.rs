@@ -4,8 +4,8 @@ mod instance_launch;
 pub use background_capabilities::{
     refresh_background_group_instances, refresh_background_group_instances_for_group,
     BackgroundCapabilitySession, BackgroundGroupInstancesRefresh, BackgroundGroupProfileFuture,
-    BackgroundGroupRemote, BackgroundGroupRemoteFuture, RuntimeGroupInstancesProjection,
-    RuntimeGroupInstancesStatus,
+    BackgroundGroupRemote, BackgroundGroupRemoteFuture, GroupProfileCache,
+    RuntimeGroupInstancesProjection, RuntimeGroupInstancesStatus,
 };
 
 pub use instance_launch::{

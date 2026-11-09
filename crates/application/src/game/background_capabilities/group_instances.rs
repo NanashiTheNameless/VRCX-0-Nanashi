@@ -1,4 +1,6 @@
 use std::collections::{HashMap, HashSet};
+use std::sync::Mutex;
+use std::time::Duration;
 
 use chrono::Utc;
 use futures_util::future::BoxFuture;
@@ -7,9 +9,73 @@ use serde_json::{json, Map, Value};
 use vrcx_0_application_core::BackgroundCapabilitySessionIdentity;
 use vrcx_0_core::{json::RawJson, location::parse_location, vrchat_json::GroupInstanceJson};
 
+use tokio::time::Instant;
 use vrcx_0_application_core::Result;
 
 const GROUP_PROFILE_HYDRATION_CONCURRENCY: usize = 4;
+const GROUP_PROFILE_CACHE_TTL: Duration = Duration::from_secs(60 * 60);
+const GROUP_PROFILE_CACHE_MAX_ENTRIES: usize = 512;
+
+/// Group profiles used to fill in group instance details, kept between
+/// refreshes so unchanged groups are not fetched again every few minutes.
+/// Keyed by account as well as group, because a profile fetched with a
+/// session can carry that account's membership fields.
+#[derive(Default)]
+pub struct GroupProfileCache {
+    entries: Mutex<HashMap<GroupProfileCacheKey, CachedGroupProfile>>,
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+struct GroupProfileCacheKey {
+    endpoint: String,
+    current_user_id: String,
+    group_id: String,
+}
+
+struct CachedGroupProfile {
+    fetched_at: Instant,
+    profile: Value,
+}
+
+impl GroupProfileCache {
+    fn get(&self, key: &GroupProfileCacheKey, now: Instant) -> Option<Value> {
+        let entries = self.entries.lock().ok()?;
+        entries
+            .get(key)
+            .filter(|entry| {
+                now.saturating_duration_since(entry.fetched_at) < GROUP_PROFILE_CACHE_TTL
+            })
+            .map(|entry| entry.profile.clone())
+    }
+
+    fn insert(&self, key: GroupProfileCacheKey, profile: Value, now: Instant) {
+        let Ok(mut entries) = self.entries.lock() else {
+            return;
+        };
+        entries.insert(
+            key,
+            CachedGroupProfile {
+                fetched_at: now,
+                profile,
+            },
+        );
+        if entries.len() > GROUP_PROFILE_CACHE_MAX_ENTRIES {
+            entries.retain(|_, entry| {
+                now.saturating_duration_since(entry.fetched_at) < GROUP_PROFILE_CACHE_TTL
+            });
+        }
+        while entries.len() > GROUP_PROFILE_CACHE_MAX_ENTRIES {
+            let Some(oldest) = entries
+                .iter()
+                .min_by_key(|(_, entry)| entry.fetched_at)
+                .map(|(key, _)| key.clone())
+            else {
+                break;
+            };
+            entries.remove(&oldest);
+        }
+    }
+}
 
 pub type BackgroundGroupRemoteFuture<'a, T> = BoxFuture<'a, Result<T>>;
 pub type BackgroundGroupProfileFuture<'a> = BoxFuture<'a, Option<Value>>;
@@ -132,12 +198,14 @@ impl vrcx_0_contracts::RuntimeEventPayload for RuntimeGroupInstancesProjection {
 pub async fn refresh_background_group_instances(
     remote: &dyn BackgroundGroupRemote,
     session: &BackgroundCapabilitySessionIdentity,
+    group_profiles: &GroupProfileCache,
 ) -> Result<BackgroundGroupInstancesRefresh> {
     let instances = remote
         .group_instances(&session.endpoint, &session.current_user_id)
         .await?;
     let fetched_at = Utc::now().timestamp();
-    let instances = hydrate_background_group_instances(remote, &session.endpoint, instances).await;
+    let instances =
+        hydrate_background_group_instances(remote, session, instances, group_profiles).await;
     Ok(BackgroundGroupInstancesRefresh {
         instances: instances.into_iter().map(RawJson::from).collect(),
         fetched_at,
@@ -160,9 +228,11 @@ pub async fn refresh_background_group_instances_for_group(
 
 async fn hydrate_background_group_instances(
     remote: &dyn BackgroundGroupRemote,
-    endpoint: &str,
+    session: &BackgroundCapabilitySessionIdentity,
     instances: Vec<Value>,
+    group_profiles: &GroupProfileCache,
 ) -> Vec<Value> {
+    let endpoint = session.endpoint.as_str();
     let mut group_ids = Vec::new();
     let mut seen = HashSet::new();
     for instance in &instances {
@@ -178,19 +248,38 @@ async fn hydrate_background_group_instances(
         return instances;
     }
 
-    let group_fetches = group_ids.into_iter().map(|group_id| async move {
+    let cache_key = |group_id: &str| GroupProfileCacheKey {
+        endpoint: endpoint.to_string(),
+        current_user_id: session.current_user_id.clone(),
+        group_id: group_id.to_string(),
+    };
+    let now = Instant::now();
+    let mut groups_by_id = HashMap::new();
+    let mut missing = Vec::new();
+    for group_id in group_ids {
+        match group_profiles.get(&cache_key(&group_id), now) {
+            Some(group) => {
+                groups_by_id.insert(group_id, group);
+            }
+            None => missing.push(group_id),
+        }
+    }
+    let group_fetches = missing.into_iter().map(|group_id| async move {
         remote
             .group_profile(endpoint, &group_id)
             .await
             .map(|group| (group_id, group))
     });
-    let groups_by_id: HashMap<String, Value> = stream::iter(group_fetches)
+    for (group_id, group) in stream::iter(group_fetches)
         .buffer_unordered(GROUP_PROFILE_HYDRATION_CONCURRENCY)
         .collect::<Vec<_>>()
         .await
         .into_iter()
         .flatten()
-        .collect();
+    {
+        group_profiles.insert(cache_key(&group_id), group.clone(), Instant::now());
+        groups_by_id.insert(group_id, group);
+    }
 
     instances
         .into_iter()

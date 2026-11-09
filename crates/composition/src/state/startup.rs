@@ -98,6 +98,7 @@ impl RuntimeHostState {
         run_background_group_instance_refresh(
             &context,
             &self.background_group_instances_refresh_running,
+            &self.background_group_profile_cache,
             self.group_order_source.as_ref(),
         )
         .await;

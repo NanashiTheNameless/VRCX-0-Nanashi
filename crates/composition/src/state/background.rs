@@ -33,6 +33,7 @@ pub(super) struct RuntimeHostSocialMaintenanceActions {
     pub(super) background_jobs: RuntimeBackgroundJobs,
     pub(super) authenticated_runtime: AuthenticatedRuntimeOrchestrator,
     pub(super) group_instances_refresh_running: Arc<AtomicBool>,
+    pub(super) group_profile_cache: Arc<vrcx_0_application::game::GroupProfileCache>,
     pub(super) group_order_source: Arc<dyn GroupOrderSource>,
     pub(super) group_notification_group_ids: Mutex<Option<GroupNotificationGroupIds>>,
     pub(super) profile_bio_pacer: ProfileBioScanPacer,
@@ -155,6 +156,7 @@ impl SocialMaintenanceActions for RuntimeHostSocialMaintenanceActions {
             run_background_group_instance_refresh(
                 &context,
                 &self.group_instances_refresh_running,
+                &self.group_profile_cache,
                 self.group_order_source.as_ref(),
             )
             .await

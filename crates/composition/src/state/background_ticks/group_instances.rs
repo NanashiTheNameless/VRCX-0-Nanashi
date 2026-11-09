@@ -2,7 +2,7 @@ use std::sync::{atomic::AtomicBool, Arc, Mutex};
 
 use vrcx_0_application::game::{
     refresh_background_group_instances, refresh_background_group_instances_for_group,
-    RuntimeGroupInstancesProjection,
+    GroupProfileCache, RuntimeGroupInstancesProjection,
 };
 use vrcx_0_application::social::{
     BACKGROUND_GROUP_INSTANCE_NOTIFICATION_CADENCE_SECONDS,
@@ -23,6 +23,7 @@ use super::BackgroundTickContext;
 pub(in crate::state) async fn run_background_group_instance_refresh(
     context: &BackgroundTickContext<'_>,
     refresh_running: &Arc<AtomicBool>,
+    group_profiles: &GroupProfileCache,
     group_order_source: &dyn GroupOrderSource,
 ) {
     let Some(_refresh_guard) = SharedAtomicFlagGuard::try_acquire(refresh_running) else {
@@ -54,7 +55,7 @@ pub(in crate::state) async fn run_background_group_instance_refresh(
         ));
     let remote =
         vrcx_0_outbound_adapters::VrchatBackgroundGroupRemote::new(Arc::clone(context.web));
-    match refresh_background_group_instances(&remote, &session).await {
+    match refresh_background_group_instances(&remote, &session, group_profiles).await {
         Ok(refresh) => {
             if !background_capability_session_matches(context.session_slot, &session) {
                 tracing::warn!("ignored stale background group instance refresh");
