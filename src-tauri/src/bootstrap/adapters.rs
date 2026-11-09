@@ -614,10 +614,33 @@ async fn find_update(
     let updater = builder.build().map_err(|error| {
         ApplicationError::Custom(format!("Failed to initialize updater: {error}"))
     })?;
-    updater
-        .check()
-        .await
-        .map_err(|error| ApplicationError::Custom(format!("Failed to check for updates: {error}")))
+    let mut attempt = 1;
+    loop {
+        match updater.check().await {
+            Err(error)
+                if attempt < UPDATE_CHECK_ATTEMPTS && is_retryable_update_check_error(&error) =>
+            {
+                tracing::warn!(attempt, error = %error, "Update check failed; retrying");
+                tokio::time::sleep(UPDATE_CHECK_RETRY_DELAY * attempt).await;
+                attempt += 1;
+            }
+            result => {
+                return result.map_err(|error| {
+                    ApplicationError::Custom(format!("Failed to check for updates: {error}"))
+                })
+            }
+        }
+    }
+}
+
+const UPDATE_CHECK_ATTEMPTS: u32 = 3;
+const UPDATE_CHECK_RETRY_DELAY: std::time::Duration = std::time::Duration::from_secs(2);
+
+// GitHub's release downloads answer 5xx now and then, which the updater
+// reports as a missing release JSON.
+fn is_retryable_update_check_error(error: &tauri_plugin_updater::Error) -> bool {
+    matches!(error, tauri_plugin_updater::Error::ReleaseNotFound)
+        || is_update_transport_error(error)
 }
 
 #[async_trait]
@@ -764,6 +787,16 @@ mod updater_artifact_tests {
     use super::*;
 
     static TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+    #[test]
+    fn missing_release_json_is_retried_but_bad_signatures_are_not() {
+        assert!(is_retryable_update_check_error(
+            &tauri_plugin_updater::Error::ReleaseNotFound
+        ));
+        assert!(!is_retryable_update_check_error(
+            &tauri_plugin_updater::Error::EmptyEndpoints
+        ));
+    }
 
     struct TestDir(PathBuf);
 

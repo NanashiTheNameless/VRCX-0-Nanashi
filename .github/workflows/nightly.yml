@@ -161,15 +161,14 @@ jobs:
                           mold -run npm run tauri:build -- --config src-tauri/tauri.linux.conf.json --no-bundle -- --timings
                           # The bundler downloads AppRun and linuxdeploy from GitHub with
                           # no retry, and those downloads drop now and then.
-                          for attempt in 1 2 3; do
-                              npm run tauri -- bundle --config src-tauri/tauri.linux.conf.json --bundles appimage && break
-                              if [[ "$attempt" == 3 ]]; then exit 1; fi
-                              echo "::warning::AppImage bundling failed (attempt $attempt), retrying"
-                              sleep 15
-                          done
+                          bash scripts/retry.sh -- \
+                              npm run tauri -- bundle --config src-tauri/tauri.linux.conf.json --bundles appimage
                           ;;
                       Windows)
-                          npm run tauri:build -- --bundles nsis -- --timings
+                          # The bundler downloads NSIS and its plugins from GitHub with no
+                          # retry, so compile once and retry only the bundling.
+                          npm run tauri:build -- --no-bundle -- --timings
+                          bash scripts/retry.sh -- npm run tauri -- bundle --bundles nsis
                           ;;
                   esac
 
@@ -386,7 +385,8 @@ jobs:
               run: |
                   override_config="${RUNNER_TEMP}/tauri-nightly-override.json"
                   node -e "require('node:fs').writeFileSync(process.argv[1], JSON.stringify({ bundle: { macOS: { bundleVersion: process.argv[2] } } }))" "$override_config" "${{ github.run_number }}"
-                  npm run tauri -- bundle --target universal-apple-darwin --bundles app,dmg --config "$override_config"
+                  bash scripts/retry.sh -- \
+                      npm run tauri -- bundle --target universal-apple-darwin --bundles app,dmg --config "$override_config"
 
             - name: Prepare macOS release and updater assets
               run: |
@@ -626,7 +626,28 @@ jobs:
             # missing, which also covers reruns. Creating the ref directly was
             # refused (403) for a commit that changed a workflow file, while the
             # release API created a tag on such a commit without trouble.
-            - uses: softprops/action-gh-release@v3
+            - id: release
+              uses: softprops/action-gh-release@v3
+              continue-on-error: true
+              with:
+                  tag_name: ${{ needs.prepare.outputs.tag }}
+                  target_commitish: ${{ github.sha }}
+                  name: Nightly ${{ needs.prepare.outputs.display_version }}
+                  body: |
+                      Automated nightly build of ${{ github.sha }}.
+                  draft: false
+                  prerelease: true
+                  make_latest: false
+                  files: release-assets/*
+                  fail_on_unmatched_files: true
+
+            - name: Wait before retrying the release upload
+              if: steps.release.outcome == 'failure'
+              run: sleep 60
+
+            - name: Retry the release upload
+              if: steps.release.outcome == 'failure'
+              uses: softprops/action-gh-release@v3
               with:
                   tag_name: ${{ needs.prepare.outputs.tag }}
                   target_commitish: ${{ github.sha }}
@@ -661,7 +682,7 @@ jobs:
                   # The ref is created when missing and moved otherwise, so a fresh
                   # repository and a rerun both work without a local git push.
                   if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/Nightly-Rolling" >/dev/null 2>&1; then
-                      gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/Nightly-Rolling" \
+                      bash scripts/retry.sh -- gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/Nightly-Rolling" \
                           -f sha="$GITHUB_SHA" -F force=true >/dev/null
                   else
                       gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
@@ -676,7 +697,7 @@ jobs:
                           | while read -r asset_id; do
                               gh api --method DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$asset_id" || true
                           done
-                      gh release upload Nightly-Rolling "${rolling_assets[@]}" \
+                      bash scripts/retry.sh -- gh release upload Nightly-Rolling "${rolling_assets[@]}" \
                           --repo "$GITHUB_REPOSITORY" --clobber
                   else
                       gh release create Nightly-Rolling "${rolling_assets[@]}" \
@@ -751,7 +772,7 @@ jobs:
                   fi
 
                   mkdir -p manifest
-                  gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
+                  bash scripts/retry.sh -- gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
                       --pattern version_manifest.json --dir manifest --clobber
                   manifest_path="manifest/version_manifest.json"
                   # One universal archive serves both Apple Silicon and Intel installs.
@@ -769,14 +790,14 @@ jobs:
                   # The archive goes up before the manifest names it, so an
                   # install never sees a macOS entry without its file.
                   assets=("$dmg_path" "${dmg_path}.nn-signature" "macos-assets/${archive_name}" "macos-assets/${archive_name}.nn-signature")
-                  gh release upload "$TAG" "${assets[@]}" --repo "$GITHUB_REPOSITORY" --clobber
-                  gh release upload "$TAG" "$manifest_path" --repo "$GITHUB_REPOSITORY" --clobber
+                  bash scripts/retry.sh -- gh release upload "$TAG" "${assets[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+                  bash scripts/retry.sh -- gh release upload "$TAG" "$manifest_path" --repo "$GITHUB_REPOSITORY" --clobber
 
                   # Nightly-Rolling only takes them while it still points at this build.
                   rolling_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/Nightly-Rolling" --jq '.object.sha' 2>/dev/null || true)"
                   if [[ "$rolling_sha" == "$GITHUB_SHA" ]]; then
-                      gh release upload Nightly-Rolling "${assets[@]}" --repo "$GITHUB_REPOSITORY" --clobber
-                      gh release upload Nightly-Rolling "$manifest_path" --repo "$GITHUB_REPOSITORY" --clobber
+                      bash scripts/retry.sh -- gh release upload Nightly-Rolling "${assets[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+                      bash scripts/retry.sh -- gh release upload Nightly-Rolling "$manifest_path" --repo "$GITHUB_REPOSITORY" --clobber
                   else
                       echo "::notice::Nightly-Rolling has moved to a newer build; leaving it unchanged."
                   fi

@@ -205,14 +205,9 @@ jobs:
                   # The bundler downloads AppRun and linuxdeploy from GitHub with
                   # no retry, and those downloads drop now and then. A retry
                   # reuses the compiled binary, so only bundling runs again.
-                  for attempt in 1 2 3; do
-                      mold -run npm run "$BUILD_SCRIPT" -- \
-                          --config "${{ steps.config.outputs.config }}" \
-                          --bundles appimage && break
-                      if [[ "$attempt" == 3 ]]; then exit 1; fi
-                      echo "::warning::AppImage build failed (attempt $attempt), retrying"
-                      sleep 15
-                  done
+                  bash scripts/retry.sh -- mold -run npm run "$BUILD_SCRIPT" -- \
+                      --config "${{ steps.config.outputs.config }}" \
+                      --bundles appimage
 
             - id: collect
               name: Collect package artifact
@@ -372,7 +367,8 @@ jobs:
               run: |
                   override_config="${RUNNER_TEMP}/tauri-package-override.json"
                   echo '{"bundle":{"createUpdaterArtifacts":false,"targets":["dmg"]}}' > "$override_config"
-                  npm run tauri -- bundle --target universal-apple-darwin --bundles dmg --config "$override_config"
+                  bash scripts/retry.sh -- \
+                      npm run tauri -- bundle --target universal-apple-darwin --bundles dmg --config "$override_config"
 
             - id: collect
               name: Collect package artifact
