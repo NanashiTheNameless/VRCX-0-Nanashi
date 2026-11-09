@@ -65,8 +65,9 @@ What happened in the instances you were in, read from VRChat's own log while the
   Video play, Event, External (messages a world writes to VRChat's log for VRCX-style apps), String
   load and Image load (worlds loading text or images from the web).
 - **Sessions view** groups entries by visit: the world, when you were there, which friends and
-  how many players were there, and which videos played and who played them. Expand a session
-  for every event. A session marked **Other device** was recorded from your online status
+  how many players were there, and which videos played and who played them. When a session's
+  video list is too long to fit, **Show all** expands it and **Show less** shrinks it back.
+  Expand a session for every event. A session marked **Other device** was recorded from your online status
   while VRChat was not running on this PC, so it has no player or video details.
 - **Table view** lists every entry. Right-click to open a logged link, copy the detail, show the
   instance's history or delete the entry.
