@@ -9,7 +9,10 @@ use vrcx_0_core::user_facts::{
 
 pub(crate) struct UserFactStore {
     users: Mutex<HashMap<String, UserFact>>,
+    saved_age_verification: Mutex<HashMap<String, AgeVerificationValue>>,
 }
+
+pub(crate) type AgeVerificationValue = (Option<bool>, Option<String>);
 
 pub(crate) struct UserFactOutput {
     pub user: RawJsonObject,
@@ -19,6 +22,32 @@ impl UserFactStore {
     pub(crate) fn new() -> Self {
         Self {
             users: Mutex::new(HashMap::new()),
+            saved_age_verification: Mutex::new(HashMap::new()),
+        }
+    }
+
+    /// Records `value` as the stored age verification for `key` and reports
+    /// whether it differs from what was stored before, so unchanged facts do
+    /// not cost a database write.
+    pub(crate) fn note_saved_age_verification(
+        &self,
+        key: String,
+        value: AgeVerificationValue,
+    ) -> bool {
+        let mut saved = self
+            .saved_age_verification
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        saved.insert(key, value.clone()) != Some(value)
+    }
+
+    pub(crate) fn forget_saved_age_verification(&self, keys: &[String]) {
+        let mut saved = self
+            .saved_age_verification
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        for key in keys {
+            saved.remove(key);
         }
     }
 
@@ -125,6 +154,17 @@ fn is_pinned(fact: &UserFact) -> bool {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn saved_age_verification_only_reports_real_changes() {
+        let store = UserFactStore::new();
+        let adult = (Some(true), Some("18+".to_string()));
+        assert!(store.note_saved_age_verification("a".into(), adult.clone()));
+        assert!(!store.note_saved_age_verification("a".into(), adult.clone()));
+        assert!(store.note_saved_age_verification("a".into(), (Some(true), Some("hidden".into()))));
+        store.forget_saved_age_verification(&["a".into()]);
+        assert!(store.note_saved_age_verification("a".into(), adult));
+    }
 
     fn opts(is_friend: bool) -> UserFactMergeOptions {
         UserFactMergeOptions {
