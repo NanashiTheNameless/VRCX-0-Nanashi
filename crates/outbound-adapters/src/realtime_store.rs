@@ -168,6 +168,35 @@ impl RealtimeBatchWriter for PersistenceRealtimeStore {
             &self.db, owner, batch,
         )?)
     }
+
+    fn observe_age_verification(
+        &self,
+        owner: &OwnerId,
+        endpoint: &str,
+        users: &[vrcx_0_core::json::RawJsonObject],
+    ) -> crate::Result<()> {
+        Ok(vrcx_0_persistence::age_verification::observe(
+            &self.db,
+            owner,
+            endpoint,
+            users.iter().map(|user| user.as_map()),
+            vrcx_0_core::time::now_epoch(),
+        )?)
+    }
+
+    fn age_verification_facts(
+        &self,
+        owner: &OwnerId,
+        endpoint: &str,
+        user_ids: &[String],
+    ) -> crate::Result<Vec<serde_json::Value>> {
+        Ok(
+            vrcx_0_persistence::age_verification::list(&self.db, owner, endpoint, user_ids)?
+                .into_iter()
+                .map(serde_json::Value::Object)
+                .collect(),
+        )
+    }
 }
 
 impl FeedQueryStore for PersistenceRealtimeStore {

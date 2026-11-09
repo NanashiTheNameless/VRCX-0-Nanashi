@@ -32,6 +32,7 @@ struct TestRealtimeStoreState {
     history: HashMap<String, Vec<FriendLogHistoryOutput>>,
     feeds: HashMap<String, Vec<FeedLiveEntry>>,
     profile_history: HashMap<String, Vec<vrcx_0_core::json::RawJsonObject>>,
+    age_verification: HashMap<(String, String, String), serde_json::Map<String, Value>>,
     notifications_v1: HashMap<String, Vec<Value>>,
     notifications_v2: HashMap<String, Vec<Value>>,
     app_notifications: HashMap<String, Vec<AppNotification>>,
@@ -419,6 +420,60 @@ impl crate::RealtimeBatchWriter for TestRealtimeStore {
             .or_default()
             .extend_from_slice(users);
         Ok(())
+    }
+
+    fn observe_age_verification(
+        &self,
+        owner: &OwnerId,
+        endpoint: &str,
+        users: &[vrcx_0_core::json::RawJsonObject],
+    ) -> Result<()> {
+        let mut state = self.state.lock().expect("test store lock");
+        for user in users {
+            let Some(user_id) = user.get("id").and_then(Value::as_str) else {
+                continue;
+            };
+            let fact: serde_json::Map<String, Value> = ["ageVerified", "ageVerificationStatus"]
+                .into_iter()
+                .filter_map(|key| user.get(key).map(|value| (key.to_string(), value.clone())))
+                .collect();
+            if fact.is_empty() {
+                continue;
+            }
+            state.age_verification.insert(
+                (
+                    owner.as_str().to_owned(),
+                    endpoint.to_owned(),
+                    user_id.to_owned(),
+                ),
+                fact,
+            );
+        }
+        Ok(())
+    }
+
+    fn age_verification_facts(
+        &self,
+        owner: &OwnerId,
+        endpoint: &str,
+        user_ids: &[String],
+    ) -> Result<Vec<Value>> {
+        let state = self.state.lock().expect("test store lock");
+        Ok(user_ids
+            .iter()
+            .filter_map(|user_id| {
+                let key = (
+                    owner.as_str().to_owned(),
+                    endpoint.to_owned(),
+                    user_id.clone(),
+                );
+                state.age_verification.get(&key).map(|fact| {
+                    let mut fact = fact.clone();
+                    fact.insert("id".into(), Value::String(user_id.clone()));
+                    Value::Object(fact)
+                })
+            })
+            .collect())
     }
 
     fn write_realtime_batch(

@@ -4,6 +4,7 @@ use std::sync::Arc;
 use serde_json::Value;
 use vrcx_0_application_core::{Error, Result};
 use vrcx_0_contracts::vrchat_api::VrchatScope;
+use vrcx_0_core::vrchat_endpoints::normalize_vrchat_api_endpoint;
 
 use super::message_dispatch::json_string_field;
 use super::state::ActiveRealtimeContext;
@@ -257,6 +258,7 @@ impl RealtimeHostRuntime {
         if users.is_empty() {
             return;
         }
+        self.persist_friend_age_verification(&users);
         self.deps.event_bus.emit(RealtimeUserProjection {
             users: users
                 .into_iter()
@@ -292,11 +294,15 @@ impl RealtimeHostRuntime {
     }
 
     pub(super) fn record_baseline_friends_into_cache(&self) {
-        let Some(changed) = self
+        let Some(mut changed) = self
             .friends
             .with_user_cache_records(|owner, endpoint, records| {
-                self.collect_friend_record_cache_changes(
-                    &vrcx_0_core::OwnerId::new(owner),
+                let records: Vec<&FriendRecord> = records.into_iter().collect();
+                let owner = vrcx_0_core::OwnerId::new(owner);
+                let friend_ids: Vec<String> =
+                    records.iter().map(|record| record.id.clone()).collect();
+                let mut changed = self.collect_friend_record_cache_changes(
+                    &owner,
                     records,
                     &UserFactMergeOptions {
                         endpoint: endpoint.to_string(),
@@ -305,12 +311,92 @@ impl RealtimeHostRuntime {
                         is_friend: true,
                         ..Default::default()
                     },
-                )
+                );
+                changed.extend(self.restore_friend_age_verification(&owner, endpoint, &friend_ids));
+                changed
             })
         else {
             return;
         };
+        dedupe_latest_user_facts(&mut changed);
         self.emit_user_cache_changes(changed);
+    }
+
+    // VRChat's friend list carries no age verification, so the last value
+    // observed for each friend is seeded as a placeholder that any live
+    // observation replaces.
+    fn restore_friend_age_verification(
+        &self,
+        owner: &vrcx_0_core::OwnerId,
+        endpoint: &str,
+        friend_ids: &[String],
+    ) -> Vec<RawJsonObject> {
+        let facts = match self.deps.stores.batch_writer.age_verification_facts(
+            owner,
+            &normalize_vrchat_api_endpoint(Some(endpoint)),
+            friend_ids,
+        ) {
+            Ok(facts) => facts,
+            Err(error) => {
+                tracing::warn!(error = %error, "Age verification restore failed");
+                return Vec::new();
+            }
+        };
+        facts
+            .iter()
+            .filter_map(|fact| {
+                self.user_facts
+                    .record_user(
+                        fact,
+                        &UserFactMergeOptions {
+                            endpoint: endpoint.to_string(),
+                            source: "seed".into(),
+                            received_at: fact
+                                .get("observedAt")
+                                .and_then(serde_json::Value::as_i64)
+                                .unwrap_or_default(),
+                            is_friend: true,
+                            ..Default::default()
+                        },
+                    )
+                    .map(|output| output.user)
+            })
+            .collect()
+    }
+
+    fn persist_friend_age_verification(&self, users: &[RawJsonObject]) {
+        let scope = self.deps.auth_scope.snapshot();
+        if !scope.active || scope.current_user_id.is_empty() {
+            return;
+        }
+        let owner = vrcx_0_core::OwnerId::new(scope.current_user_id.clone());
+        let mut by_endpoint: std::collections::BTreeMap<String, Vec<RawJsonObject>> =
+            std::collections::BTreeMap::new();
+        for user in users {
+            let is_friend = user.get("isFriend").and_then(serde_json::Value::as_bool) == Some(true);
+            let has_age =
+                user.contains_key("ageVerified") || user.contains_key("ageVerificationStatus");
+            if !is_friend || !has_age {
+                continue;
+            }
+            let endpoint = normalize_vrchat_api_endpoint(
+                user.get("endpoint").and_then(serde_json::Value::as_str),
+            );
+            if !self.deps.auth_scope.matches(owner.as_str(), &endpoint) {
+                continue;
+            }
+            by_endpoint.entry(endpoint).or_default().push(user.clone());
+        }
+        for (endpoint, users) in by_endpoint {
+            if let Err(error) = self
+                .deps
+                .stores
+                .batch_writer
+                .observe_age_verification(&owner, &endpoint, &users)
+            {
+                tracing::warn!(error = %error, "Age verification persistence failed");
+            }
+        }
     }
 
     pub fn ingest_user_facts(&self, entries: Vec<Value>) {
@@ -672,4 +758,18 @@ impl RealtimeHostRuntime {
                 .await;
         }
     }
+}
+
+fn dedupe_latest_user_facts(users: &mut Vec<RawJsonObject>) {
+    let mut seen = std::collections::HashSet::new();
+    let mut deduped: Vec<RawJsonObject> = users
+        .drain(..)
+        .rev()
+        .filter(|user| {
+            let key = (user.get("endpoint").cloned(), user.get("id").cloned());
+            seen.insert(key)
+        })
+        .collect();
+    deduped.reverse();
+    *users = deduped;
 }

@@ -27,6 +27,20 @@ pub trait RealtimeBatchWriter: Send + Sync {
         owner: &OwnerId,
         batch: &RealtimePersistenceBatch,
     ) -> Result<RealtimeWriteCounts>;
+
+    fn observe_age_verification(
+        &self,
+        owner: &OwnerId,
+        endpoint: &str,
+        users: &[vrcx_0_core::json::RawJsonObject],
+    ) -> Result<()>;
+
+    fn age_verification_facts(
+        &self,
+        owner: &OwnerId,
+        endpoint: &str,
+        user_ids: &[String],
+    ) -> Result<Vec<Value>>;
 }
 
 pub trait FriendLogStore: Send + Sync {

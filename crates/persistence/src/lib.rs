@@ -1,5 +1,6 @@
 pub mod activity;
 pub mod activity_page;
+pub mod age_verification;
 pub mod assistant;
 pub mod avatars;
 pub mod browse_history;

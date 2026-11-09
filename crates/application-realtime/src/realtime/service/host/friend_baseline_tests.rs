@@ -2023,3 +2023,71 @@ fn emit_friend_log_changed_carries_the_active_baseline_scope() -> Result<()> {
     assert_eq!(projection.payload["baselineRevision"], 1);
     Ok(())
 }
+
+#[test]
+fn friend_age_verification_survives_a_restart_without_friend_list_data() -> Result<()> {
+    let (_dir, runtime, active_session) = runtime_with_active_session("age-restore")?;
+    let baseline = |record: Value| {
+        HashMap::from([(
+            "usr_friend".to_string(),
+            FriendBaselineEntry {
+                record: serde_json::from_value(record).unwrap(),
+                presence: FriendBaselinePresence::default(),
+            },
+        )])
+    };
+    runtime.sync_friend_baseline(
+        &active_session,
+        baseline(json!({
+            "id": "usr_friend",
+            "displayName": "Friend",
+            "ageVerified": true,
+            "ageVerificationStatus": "hidden"
+        })),
+    )?;
+
+    // The friend list VRChat returns after a restart has no age fields.
+    runtime.runtime().user_facts.clear();
+    runtime.sync_friend_baseline(
+        &active_session,
+        baseline(json!({"id": "usr_friend", "displayName": "Friend"})),
+    )?;
+    runtime.runtime().user_facts.clear();
+    runtime.runtime().deps.event_bus.take_events_for_test();
+    runtime.runtime().record_baseline_friends_into_cache();
+
+    let fact = runtime
+        .runtime()
+        .user_facts
+        .get_user(&active_session.endpoint, "usr_friend")
+        .expect("friend facts should be restored");
+    assert_eq!(fact["ageVerified"], json!(true));
+    assert_eq!(fact["ageVerificationStatus"], json!("hidden"));
+    let events = runtime.runtime().deps.event_bus.take_events_for_test();
+    let users: Vec<&Value> = events
+        .iter()
+        .filter(|event| event.name == "realtimeUserProjection")
+        .flat_map(|event| event.payload["users"].as_array().into_iter().flatten())
+        .filter(|user| user["id"] == json!("usr_friend"))
+        .collect();
+    assert_eq!(users.len(), 1, "one projection per friend");
+    assert_eq!(users[0]["ageVerificationStatus"], json!("hidden"));
+
+    // A live observation replaces the restored placeholder and is stored.
+    runtime.runtime().user_facts.record_user(
+        &json!({"id": "usr_friend", "ageVerified": true, "ageVerificationStatus": "18+"}),
+        &vrcx_0_core::user_facts::UserFactMergeOptions {
+            endpoint: active_session.endpoint.clone(),
+            source: "profile".into(),
+            is_friend: true,
+            ..Default::default()
+        },
+    );
+    let fact = runtime
+        .runtime()
+        .user_facts
+        .get_user(&active_session.endpoint, "usr_friend")
+        .unwrap();
+    assert_eq!(fact["ageVerificationStatus"], json!("18+"));
+    Ok(())
+}
