@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import type { NotificationRow as NotificationRecord } from '@/repositories/notificationPersistenceRepository';
 import { convertFileUrlToImageUrl } from '@/services/entityMediaService';
 import { getDismissResponse } from '@/shared/utils/notificationResponse';
+import { HintTooltip } from '@/ui/hint-tooltip';
 import { Button } from '@/ui/shadcn/button';
 import {
     DropdownMenu,
@@ -121,6 +122,7 @@ export function NotificationRow({
     const showDelete = Boolean(shouldShowDeleteLog(notification));
     const hasMenu =
         showMenuMarkRead || overflowActions.length > 0 || showDelete;
+    const moreActionsLabel = t('side_panel.notification_center.more_actions');
 
     const actorButton = (
         <button
@@ -346,20 +348,19 @@ export function NotificationRow({
                 >
                     {hasMenu ? (
                         <DropdownMenu>
-                            <DropdownMenuTrigger
-                                render={
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon-xs"
-                                        aria-label={t(
-                                            'side_panel.notification_center.more_actions'
-                                        )}
-                                    >
-                                        <MoreHorizontalIcon data-icon="icon" />
-                                    </Button>
-                                }
-                            />
+                            <HintTooltip label={moreActionsLabel}>
+                                <DropdownMenuTrigger
+                                    render={
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon-xs"
+                                        >
+                                            <MoreHorizontalIcon data-icon="icon" />
+                                        </Button>
+                                    }
+                                />
+                            </HintTooltip>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuGroup>
                                     {showMenuMarkRead ? (

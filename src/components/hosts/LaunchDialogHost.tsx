@@ -35,6 +35,7 @@ import {
 } from '@/state/launchStore';
 import { useModalStore } from '@/state/modalStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
+import { HintTooltip } from '@/ui/hint-tooltip';
 import { Button } from '@/ui/shadcn/button';
 import {
     Dialog,
@@ -567,20 +568,21 @@ export function LaunchDialogHost() {
                                 {t('dialog.launch.share')}
                             </Button>
                             <DropdownMenu>
-                                <DropdownMenuTrigger
-                                    render={
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon-sm"
-                                            aria-label={t(
-                                                'dialog.launch.more_copy_options'
-                                            )}
-                                        >
-                                            <MoreHorizontalIcon data-icon="inline-start" />
-                                        </Button>
-                                    }
-                                />
+                                <HintTooltip
+                                    label={t('dialog.launch.more_copy_options')}
+                                >
+                                    <DropdownMenuTrigger
+                                        render={
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon-sm"
+                                            >
+                                                <MoreHorizontalIcon data-icon="inline-start" />
+                                            </Button>
+                                        }
+                                    />
+                                </HintTooltip>
                                 <DropdownMenuContent align="end">
                                     {copyMenuItem(
                                         details.url,

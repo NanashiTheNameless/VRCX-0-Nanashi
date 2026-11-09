@@ -33,6 +33,7 @@ import {
 } from '@/shared/utils/displayTimeZone';
 import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
+import { HintTooltip } from '@/ui/hint-tooltip';
 import { Badge } from '@/ui/shadcn/badge';
 import { Button } from '@/ui/shadcn/button';
 import { Separator } from '@/ui/shadcn/separator';
@@ -313,29 +314,35 @@ function PostCard({
                                 {action}
                                 {canManagePosts ? (
                                     <>
-                                        <Button
-                                            type="button"
-                                            size="icon-sm"
-                                            variant="ghost"
-                                            aria-label={t(
-                                                'common.actions.edit'
-                                            )}
-                                            onClick={() => onEditPost?.(post)}
+                                        <HintTooltip
+                                            label={t('common.actions.edit')}
                                         >
-                                            <PencilIcon />
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            size="icon-sm"
-                                            variant="ghost"
-                                            className="text-destructive"
-                                            aria-label={t(
-                                                'common.actions.delete'
-                                            )}
-                                            onClick={() => onDeletePost?.(post)}
+                                            <Button
+                                                type="button"
+                                                size="icon-sm"
+                                                variant="ghost"
+                                                onClick={() =>
+                                                    onEditPost?.(post)
+                                                }
+                                            >
+                                                <PencilIcon />
+                                            </Button>
+                                        </HintTooltip>
+                                        <HintTooltip
+                                            label={t('common.actions.delete')}
                                         >
-                                            <Trash2Icon />
-                                        </Button>
+                                            <Button
+                                                type="button"
+                                                size="icon-sm"
+                                                variant="ghost"
+                                                className="text-destructive"
+                                                onClick={() =>
+                                                    onDeletePost?.(post)
+                                                }
+                                            >
+                                                <Trash2Icon />
+                                            </Button>
+                                        </HintTooltip>
                                     </>
                                 ) : null}
                             </div>

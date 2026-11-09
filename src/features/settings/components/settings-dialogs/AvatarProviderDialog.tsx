@@ -2,6 +2,7 @@ import { PlusIcon, Trash2Icon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { isDefaultAvatarProvider } from '@/repositories/avatarSearchProviderRepository';
+import { HintTooltip } from '@/ui/hint-tooltip';
 import { Button } from '@/ui/shadcn/button';
 import {
     Dialog,
@@ -100,18 +101,23 @@ export function AvatarProviderDialog({
                                             provider
                                         ) ? null : (
                                             <InputGroupAddon align="inline-end">
-                                                <InputGroupButton
-                                                    type="button"
-                                                    size="icon-xs"
-                                                    aria-label={'Remove'}
-                                                    onClick={() =>
-                                                        removeAvatarProvider(
-                                                            index
-                                                        )
-                                                    }
+                                                <HintTooltip
+                                                    label={t(
+                                                        'common.actions.remove'
+                                                    )}
                                                 >
-                                                    <Trash2Icon data-icon="inline-start" />
-                                                </InputGroupButton>
+                                                    <InputGroupButton
+                                                        type="button"
+                                                        size="icon-xs"
+                                                        onClick={() =>
+                                                            removeAvatarProvider(
+                                                                index
+                                                            )
+                                                        }
+                                                    >
+                                                        <Trash2Icon data-icon="inline-start" />
+                                                    </InputGroupButton>
+                                                </HintTooltip>
                                             </InputGroupAddon>
                                         )}
                                     </InputGroup>

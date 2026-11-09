@@ -18,6 +18,9 @@ to avoid the two fighting (VRChat Config can do that for you). Options:
 - **Show World Images**.
 - **Use World Name as Activity**.
 
+The app sends your status again every minute even when nothing changed, so it comes back on its
+own if Discord restarts or misses an update.
+
 ## Content Translation
 
 Translates user bios and world descriptions when you ask (the **Translate** button in a user or

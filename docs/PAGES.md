@@ -95,10 +95,15 @@ recording and VRChat to be running.
   people with avatar interaction disabled, chatbox muted or a timeout, and **Age verified**.
 - Tabs filter All, Friends, Favorites and Restricted players. Search covers names, notes and
   user IDs.
-- For group instances you can show each player's group roles (the instance's group is picked
-  automatically, or choose another group).
-- **Check mutual friends** shows how many players share friends with you and which friend
-  communities they mostly come from (it uses the Mutual Friend Graph's data).
+- The world header is compact: the world's image, name, release status (shown as an icon) and
+  instance details. Platform sizes and cache status are no longer shown here; open the world
+  dialog for those.
+- **Group roles** (shield button in the toolbar) shows each player's roles in a group. It is off
+  until you turn it on; then pick the group (the instance's group is picked automatically for
+  group instances).
+- **Check mutual friends** (icon button in the toolbar) shows how many players share friends
+  with you and which friend communities they mostly come from (it uses the Mutual Friend
+  Graph's data).
 
 ## Search
 

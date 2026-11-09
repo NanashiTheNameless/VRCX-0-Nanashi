@@ -743,6 +743,7 @@
             "confirm": "Confirm",
             "clear": "Clear",
             "delete": "Delete",
+            "edit": "Edit",
             "remove": "Remove",
             "reset": "Reset",
             "back": "Back",
@@ -755,6 +756,7 @@
             "accept": "Accept",
             "decline": "Decline",
             "copy": "Copy",
+            "copied": "Copied",
             "open_link": "Open Link",
             "view_on_website": "View on Website",
             "save": "Save",
@@ -7206,6 +7208,7 @@
         },
         "image_crop": {
             "crop_area": "Crop area. Drag an edge or corner to resize. Drag the handle above the frame to rotate.",
+            "toolbar_label": "Image crop tools",
             "rotate_left": "Rotate Left",
             "rotate_right": "Rotate Right",
             "rotation_angle": "Rotation angle",

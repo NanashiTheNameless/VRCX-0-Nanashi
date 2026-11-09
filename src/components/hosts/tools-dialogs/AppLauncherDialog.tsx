@@ -35,6 +35,7 @@ import { toast } from '@/services/toastService';
 import { publishToolsStatusUpdated } from '@/shared/constants/tools';
 import { useModalStore } from '@/state/modalStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
+import { HintTooltip } from '@/ui/hint-tooltip';
 import { Button } from '@/ui/shadcn/button';
 import {
     Dialog,
@@ -965,18 +966,19 @@ function EntryDetailsPanel({
                                 value={entry.target}
                                 readOnly
                             />
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="icon-sm"
-                                disabled={saving}
-                                aria-label={t(
-                                    'dialog.app_launcher.choose_target'
-                                )}
-                                onClick={onBrowseTarget}
+                            <HintTooltip
+                                label={t('dialog.app_launcher.choose_target')}
                             >
-                                <FolderOpenIcon />
-                            </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="icon-sm"
+                                    disabled={saving}
+                                    onClick={onBrowseTarget}
+                                >
+                                    <FolderOpenIcon />
+                                </Button>
+                            </HintTooltip>
                         </div>
                     </Field>
                     <ToggleField

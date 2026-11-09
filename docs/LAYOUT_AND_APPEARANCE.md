@@ -20,6 +20,8 @@ looks.
   Always on Top, zoom, Report Issue on GitHub, Third-Party Notices and About. About shows when
   the app started, how long the session and the current instance have lasted, and the last game
   event.
+- **Hover hints**: buttons that show only an icon, and status icons such as the unavailable or
+  private marks on favorites, show their name when you hover over them.
 
 ## Friends sidebar
 
