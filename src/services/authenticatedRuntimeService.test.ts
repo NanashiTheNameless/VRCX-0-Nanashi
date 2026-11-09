@@ -5,6 +5,7 @@ import { useFavoriteStore } from '@/state/favoriteStore';
 import { useFriendRosterStore } from '@/state/friendRosterStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useSessionStore } from '@/state/sessionStore';
+import { useUserFactsStore } from '@/state/userFactsStore';
 
 import {
     applyAuthenticatedRuntimePhaseSnapshot,
@@ -114,6 +115,7 @@ describe('authenticatedRuntimeService', () => {
         useSessionStore.getState().resetSessionState();
         useFriendRosterStore.getState().resetRoster();
         useFavoriteStore.getState().resetFavorites();
+        useUserFactsStore.getState().resetUserFacts();
         useRuntimeStore.getState().setAuthBootstrap({
             currentUserId: 'usr_self',
             currentUserEndpoint: 'https://api.example.test/api/1',
@@ -202,6 +204,21 @@ describe('authenticatedRuntimeService', () => {
         ).toEqual(['usr_reloaded']);
     });
 
+    it('restores friend age facts from a startup snapshot without a user projection', () => {
+        const snapshot = phaseSnapshot();
+        snapshot.friendBaseline!.snapshot!.friendsById.usr_friend.ageVerificationStatus =
+            '18+';
+        applyAuthenticatedRuntimePhaseSnapshot(snapshot);
+        expect(
+            useUserFactsStore.getState().usersByKey[
+                'https://api.example.test/api/1::usr_friend'
+            ]
+        ).toMatchObject({
+            isFriend: true,
+            ageVerificationStatus: '18+'
+        });
+    });
+
     it('ignores a phase snapshot for another authenticated user', () => {
         applyAuthenticatedRuntimePhaseSnapshot(
             phaseSnapshot({ userId: 'usr_other' })
@@ -209,6 +226,7 @@ describe('authenticatedRuntimeService', () => {
 
         expect(useSessionStore.getState().isFriendsLoaded).toBe(false);
         expect(useSessionStore.getState().isFavoritesLoaded).toBe(false);
+        expect(useUserFactsStore.getState().usersByKey).toEqual({});
     });
 
     it('ignores a phase snapshot from an older authenticated scope', () => {

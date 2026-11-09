@@ -24,8 +24,10 @@ describe('friendBootstrapService baseline reconciliation', () => {
             await import('@/state/friendRosterStore');
         const { useRuntimeStore } = await import('@/state/runtimeStore');
         const { useSessionStore } = await import('@/state/sessionStore');
+        const { useUserFactsStore } = await import('@/state/userFactsStore');
 
         useFriendRosterStore.getState().resetRoster();
+        useUserFactsStore.getState().resetUserFacts();
         useRuntimeStore.getState().resetRuntimeState();
         useSessionStore.getState().resetSessionState();
         useRuntimeStore.getState().setAuthBootstrap({
@@ -60,6 +62,7 @@ describe('friendBootstrapService baseline reconciliation', () => {
         const { useSessionStore } = await import('@/state/sessionStore');
         const { bootstrapFriendRoster } =
             await import('./friendBootstrapService');
+        const { useUserFactsStore } = await import('@/state/userFactsStore');
         serviceMocks.socialFriendRosterBaselineGet.mockResolvedValue({
             stale: false,
             count: 2,
@@ -72,6 +75,7 @@ describe('friendBootstrapService baseline reconciliation', () => {
                     usr_online: {
                         id: 'usr_online',
                         displayName: 'Online Fast',
+                        ageVerificationStatus: '18+',
                         state: 'online',
                         platform: 'standalonewindows',
                         location: 'wrld_live:123'
@@ -100,6 +104,14 @@ describe('friendBootstrapService baseline reconciliation', () => {
         });
 
         expect(useSessionStore.getState().isFriendsLoaded).toBe(true);
+        expect(
+            useUserFactsStore.getState().usersByKey[
+                'https://api.example.test::usr_online'
+            ]
+        ).toMatchObject({
+            isFriend: true,
+            ageVerificationStatus: '18+'
+        });
         expect(useFriendRosterStore.getState()).toMatchObject({
             loadStatus: 'ready',
             detail: 'fast roster',

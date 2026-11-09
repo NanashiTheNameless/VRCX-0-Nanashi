@@ -151,6 +151,9 @@ The rule editor reads as a sentence: "Show this badge for users who match **ALL*
   verification**, **Verified 18+ only**, and **Verified, hidden**. The hidden choice requires
   both a hidden verification status and an explicit verified flag. A hidden status alone,
   missing data, or an unverified flag does not match. Badges do not fetch profiles themselves.
+  Friend facts available in the startup snapshot are restored after a restart, so these
+  badges do not depend on receiving another profile event. People outside your friends list
+  can match once the app observes the required data, such as when you open their profile.
 - **Platform**: users last seen on PC, Android (Quest) or iOS.
 - **Status**: online users with Join Me, Online, Ask Me or Do Not Disturb.
 - **Memo or note contains**, **Bio contains** and **Pronouns contain** some text.

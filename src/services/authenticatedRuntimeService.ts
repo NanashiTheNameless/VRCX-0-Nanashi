@@ -12,6 +12,7 @@ import { useSessionStore } from '@/state/sessionStore';
 
 import { rosterSnapshotInput } from './friendBootstrapModel';
 import { signalFriendLogChanged } from './friendLogMutationService';
+import { hydrateFriendUserFacts } from './friendUserFactsHydration';
 import { flushRealtimeRosterUpdates } from './realtimeRosterUpdateQueue';
 import { syncStartupServicesTask } from './startupServicesStatus';
 
@@ -101,6 +102,7 @@ function applyFriendStep(snapshot: AuthenticatedRuntimePhaseSnapshot): void {
                 output?.detail || snapshot.friends.detail
             )
         );
+    hydrateFriendUserFacts(baseline, snapshot.endpoint);
     useSessionStore.getState().setFriendsLoaded(true);
     if (output?.friendLogChanged) {
         signalFriendLogChanged();

@@ -15,6 +15,7 @@ import {
     type FriendBootstrapResult
 } from './friendBootstrapModel';
 import { signalFriendLogChanged } from './friendLogMutationService';
+import { hydrateFriendUserFacts } from './friendUserFactsHydration';
 import { flushRealtimeRosterUpdates } from './realtimeRosterUpdateQueue';
 import { syncStartupServicesTask } from './startupServicesStatus';
 
@@ -148,6 +149,7 @@ async function runFriendBootstrap({
                 rosterSnapshotInput(normalizedUserId, snapshot, detail)
             );
     }
+    hydrateFriendUserFacts(snapshot, normalizedEndpoint);
     useSessionStore.getState().setFriendsLoaded(true);
     syncStartupServicesTask([detail]);
     if (result.friendLogChanged) {

@@ -10,6 +10,7 @@ import {
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { normalizeGlobalBadgeCatalog } from '@/domain/badges/globalBadges';
+import { hydrateFriendUserFacts } from '@/services/friendUserFactsHydration';
 import {
     flushRealtimeRosterUpdates,
     queueRealtimeUserFactsUpdate,
@@ -187,6 +188,42 @@ describe('UserBadges', () => {
             flushRealtimeRosterUpdates();
         });
         expect(screen.queryByRole('img', { name: 'Adult Friend' })).toBeNull();
+    });
+
+    it('restores a grouped adult-friend badge from the startup roster without opening a profile', () => {
+        setAdultFriendBadge();
+        const [badge] = useCustomBadgeStore.getState().badges;
+        useCustomBadgeStore.setState({
+            badges: [
+                {
+                    ...badge,
+                    operator: 'or',
+                    rules: [
+                        { kind: 'group', operator: 'and', rules: badge.rules }
+                    ]
+                }
+            ]
+        });
+        const snapshot = {
+            currentUserId: 'usr_self',
+            generation: 1,
+            presenceById: {},
+            friendsById: {
+                [userId]: { id: userId, ageVerificationStatus: '18+' }
+            }
+        };
+        useFriendRosterStore.getState().setRosterSnapshot(snapshot);
+        render(<UserBadges userId={userId} />);
+        expect(screen.queryByRole('img', { name: 'Adult Friend' })).toBeNull();
+
+        act(() => {
+            hydrateFriendUserFacts(
+                snapshot,
+                useRuntimeStore.getState().auth.currentUserEndpoint
+            );
+        });
+
+        expect(screen.getByRole('img', { name: 'Adult Friend' })).toBeTruthy();
     });
 
     it('combines friend verification with other shared profile fields', () => {
