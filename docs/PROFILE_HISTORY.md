@@ -52,7 +52,7 @@ first observation establishes a baseline. Opening an individual profile also cap
 enabled values that are not already in history. Completing or canceling a full refresh starts
 a 5-minute cooldown before another full refresh can run. Both buttons ask for confirmation
 first, explaining that the job can take a while and should be allowed to finish.
-Only one profile request runs at a time, spaced at least 2 seconds apart. Rate limiting
+Only one profile request runs at a time, spaced at least half a second apart. Rate limiting
 pauses requests for at least 60 seconds, backs off further on repeated limits, and honors
 longer waits from VRChat. Persistent limits stop the refresh. Other VRChat reads also
 respect that wait; actions report a rate limit instead of executing much later.

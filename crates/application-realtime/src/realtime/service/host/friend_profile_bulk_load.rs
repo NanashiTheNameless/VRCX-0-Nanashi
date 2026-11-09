@@ -23,9 +23,9 @@ use super::{RealtimeHostRuntime, RealtimeHostRuntimeDeps, RealtimeStopRequest};
 const FRIEND_PROFILE_BULK_LOAD_BACKOFF: RateLimitBackoff =
     RateLimitBackoff::new(Duration::from_secs(60), 4);
 #[cfg(test)]
-pub(super) const FRIEND_PROFILE_BULK_LOAD_REQUEST_INTERVAL: Duration = Duration::from_secs(2);
+pub(super) const FRIEND_PROFILE_BULK_LOAD_REQUEST_INTERVAL: Duration = Duration::from_millis(500);
 pub(super) const FRIEND_PROFILE_BULK_LOAD_CONCURRENCY: usize = 1;
-pub(super) const FRIEND_PROFILE_BULK_LOAD_REQUEST_SPACING: Duration = Duration::from_secs(2);
+pub(super) const FRIEND_PROFILE_BULK_LOAD_REQUEST_SPACING: Duration = Duration::from_millis(500);
 const FRIEND_PROFILE_REFRESH_COOLDOWN: Duration = Duration::from_secs(300);
 
 pub(super) struct FriendProfileBulkLoadInitialProgress {
