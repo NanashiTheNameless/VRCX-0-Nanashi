@@ -15,6 +15,7 @@ import { MacNativeMenuActionHost } from '@/components/layout/MacNativeMenuAction
 import { MacOverlayTitleBar } from '@/components/layout/MacOverlayTitleBar';
 import { QuickSearchProvider } from '@/components/layout/QuickSearchProvider';
 import { useGlobalKeyboardShortcuts } from '@/components/layout/useGlobalKeyboardShortcuts';
+import { useLinuxHardwareRendering } from '@/components/layout/useLinuxHardwareRendering';
 import { useSidebarAutoHide } from '@/components/layout/useSidebarAutoHide';
 import { useTrayShortcut } from '@/components/layout/useTrayShortcut';
 import { WindowResizeHandles } from '@/components/layout/WindowResizeHandles';
@@ -126,6 +127,9 @@ function AppRouterContent() {
         (state) => state.hostCapabilities.platform
     );
     const isMacHost = hostPlatform === 'macos';
+    const linuxHardwareRendering = useLinuxHardwareRendering(
+        hostPlatform === 'linux'
+    );
     const { pathname, search, hash } = useLocation();
     const sessionReady = useSessionStore(
         (state) => state.sessionPhase === 'ready'
@@ -202,6 +206,10 @@ function AppRouterContent() {
         <QuickSearchProvider enabled={sessionReady}>
             <div
                 data-vrcx-0-surface="app-root"
+                data-linux-backdrop-fallback={
+                    (hostPlatform === 'linux' && !linuxHardwareRendering) ||
+                    undefined
+                }
                 className={cn(
                     'vrcx-0-app-root flex min-h-0 w-full flex-col overflow-hidden',
                     hasCustomWindowFrame

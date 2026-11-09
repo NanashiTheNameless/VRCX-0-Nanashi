@@ -85,12 +85,32 @@ describe('Linux rendering setting', () => {
         expect(toggle.getAttribute('aria-checked')).toBe('false');
     });
 
-    it('hides the setting when the environment owns the rendering mode', async () => {
+    it('keeps the setting disabled with a note when the environment owns rendering', async () => {
         mocks.get.mockResolvedValue(null);
-        const { container } = render(<LinuxRenderingSetting />);
-        await waitFor(() =>
-            expect(container.querySelector('[role="switch"]')).toBeNull()
-        );
+        render(<LinuxRenderingSetting />);
+        await screen.findByText(/linux_rendering.environment_override/);
+        const toggle = screen.getByRole('switch');
+        expect(screen.getByText('linux_rendering.title')).toBeDefined();
+        expect(toggle.hasAttribute('data-disabled')).toBe(true);
+        expect(toggle.getAttribute('aria-checked')).toBe('false');
+        fireEvent.click(toggle);
+        expect(mocks.set).not.toHaveBeenCalled();
+        expect(mocks.toast).not.toHaveBeenCalled();
+        expect(useRestartPendingStore.getState().pending).toBe(false);
+    });
+
+    it('keeps the setting visible when loading its state fails', async () => {
+        mocks.get.mockRejectedValue(new Error('rendering state unavailable'));
+        render(<LinuxRenderingSetting />);
+        await screen.findByText('linux_rendering.failed');
+        expect(screen.getByText('linux_rendering.title')).toBeDefined();
+        const toggle = screen.getByRole('switch');
+        expect(toggle.hasAttribute('data-disabled')).toBe(true);
+        expect(
+            screen.queryByText(/linux_rendering.environment_override/)
+        ).toBeNull();
+        fireEvent.click(toggle);
+        expect(mocks.set).not.toHaveBeenCalled();
     });
 
     it('prevents a settings change while a critical task is active', async () => {

@@ -84,7 +84,8 @@ and an existing file with the destination name is never replaced.
 
 Hardware acceleration for the app interface is off by default. Turn it on under
 **Settings > System > Hardware acceleration (experimental)**; if the interface doesn't
-display properly, the app turns it back off automatically. Setting
-`WEBKIT_DISABLE_DMABUF_RENDERER` yourself hides this option.
+display properly, the app turns it back off automatically. Forcing compatibility with
+`WEBKIT_DISABLE_DMABUF_RENDERER=1` leaves this option visible but grayed out, with a note
+explaining why it cannot be changed.
 
 [Back to the README](../README.md)

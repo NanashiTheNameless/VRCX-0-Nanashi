@@ -20,7 +20,13 @@
 - **Linux**: hardware acceleration is off by default. Turn on **Hardware acceleration
   (experimental)** under Settings > System > Window & Tray and restart. After the restart you
   have 30 seconds to confirm the interface looks right; otherwise the app turns acceleration
-  off again and restarts. Setting `WEBKIT_DISABLE_DMABUF_RENDERER` yourself hides this option.
+  off again and restarts. Forcing compatibility with `WEBKIT_DISABLE_DMABUF_RENDERER=1`
+  grays out this option and shows a note explaining the environment override.
+  Dialog backgrounds still blur with acceleration off, unless **Reduce Effects** is on.
+  The option stays visible even when an environment override prevents changes. If that note
+  appears after restarting an older build, fully quit the app and launch it again from the
+  desktop. If the note remains, remove the override from your launcher or session to use the
+  switch. The app keeps its own rendering choice out of the next process's startup environment.
 - **A community theme broke the interface**: press Ctrl+Alt+Shift+T (Cmd on macOS) to turn
   community themes off for the session, then change the theme.
 - **Too much motion**: turn on **Reduce Effects** (Settings > Interface > Appearance).

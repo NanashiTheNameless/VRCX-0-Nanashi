@@ -26,6 +26,10 @@ pub struct LinuxRenderingSnapshot {
 #[cfg(target_os = "linux")]
 static ENVIRONMENT_OVERRIDE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
 
+#[cfg(target_os = "linux")]
+static STARTUP_DMABUF_ENV: std::sync::OnceLock<Option<std::ffi::OsString>> =
+    std::sync::OnceLock::new();
+
 /// Whether `WEBKIT_DISABLE_DMABUF_RENDERER` is set to a value that actually
 /// disables the DMABUF renderer. WebKit treats "0" as disabled-by-false, so
 /// only a truthy value hands rendering control to the environment.
@@ -50,13 +54,26 @@ pub fn apply_webkit_workaround() {
     {
         use webkit2gtk_nvidia_quirk::{apply_workaround_with_options, ApplyWorkaroundOptions};
 
-        // Only a truthy value counts as an external override. `resolve` sets
-        // this variable in our own process environment before WebKit starts,
-        // and a restart re-execs with it still set, so testing mere presence
-        // would treat our own "0" (acceleration on) as an override and leave
-        // the settings snapshot unresolved forever.
+        // Capture external policy before either the driver workaround or our
+        // saved setting changes it; a restarted process must inherit this value.
+        let _ = STARTUP_DMABUF_ENV.set(std::env::var_os(DMABUF_RENDERER_ENV));
         let _ = ENVIRONMENT_OVERRIDE.set(environment_override_active());
         apply_workaround_with_options(ApplyWorkaroundOptions::default());
+    }
+}
+
+pub fn restore_startup_environment() {
+    #[cfg(target_os = "linux")]
+    if let Some(original) = STARTUP_DMABUF_ENV.get() {
+        restore_dmabuf_environment(original.as_deref());
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn restore_dmabuf_environment(original: Option<&std::ffi::OsStr>) {
+    match original {
+        Some(value) => std::env::set_var(DMABUF_RENDERER_ENV, value),
+        None => std::env::remove_var(DMABUF_RENDERER_ENV),
     }
 }
 
@@ -189,9 +206,9 @@ fn write_mode(app: &AppHandle, mode: &str) -> Result<(), String> {
 mod tests {
     use std::sync::Mutex;
 
-    use super::environment_override_active;
+    use super::{environment_override_active, restore_dmabuf_environment, DMABUF_RENDERER_ENV};
 
-    // Both tests set the same process-wide variable; tests run in parallel.
+    // These tests set the same process-wide variable; tests run in parallel.
     static ENV_LOCK: Mutex<()> = Mutex::new(());
 
     // `resolve` writes this variable in our own environment before WebKit
@@ -233,5 +250,40 @@ mod tests {
             Some(value) => std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", value),
             None => std::env::remove_var("WEBKIT_DISABLE_DMABUF_RENDERER"),
         }
+    }
+
+    #[test]
+    fn restart_does_not_inherit_the_apps_rendering_setting() {
+        let _guard = ENV_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let previous = std::env::var_os(DMABUF_RENDERER_ENV);
+        for own_value in ["0", "1"] {
+            std::env::set_var(DMABUF_RENDERER_ENV, own_value);
+            restore_dmabuf_environment(None);
+            assert_eq!(std::env::var_os(DMABUF_RENDERER_ENV), None);
+            assert!(!environment_override_active());
+        }
+        restore_dmabuf_environment(previous.as_deref());
+    }
+
+    #[test]
+    fn restart_preserves_the_original_external_rendering_policy() {
+        let _guard = ENV_LOCK
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        let previous = std::env::var_os(DMABUF_RENDERER_ENV);
+        for original in ["0", "1", "true", "off", ""] {
+            for own_value in ["0", "1"] {
+                std::env::set_var(DMABUF_RENDERER_ENV, own_value);
+                restore_dmabuf_environment(Some(std::ffi::OsStr::new(original)));
+                assert_eq!(std::env::var(DMABUF_RENDERER_ENV).as_deref(), Ok(original));
+                assert_eq!(
+                    environment_override_active(),
+                    matches!(original, "1" | "true")
+                );
+            }
+        }
+        restore_dmabuf_environment(previous.as_deref());
     }
 }

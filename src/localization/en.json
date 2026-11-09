@@ -9025,6 +9025,7 @@
     "linux_rendering": {
         "title": "Hardware acceleration (experimental)",
         "description": "Applies after restarting VRCX-0-Nanashi. After enabling, confirm within 30 seconds of startup; otherwise acceleration is turned off and VRCX-0-Nanashi restarts.",
+        "environment_override": "Disabled by your launch environment (WEBKIT_DISABLE_DMABUF_RENDERER). Remove that override and fully restart VRCX-0-Nanashi to change this setting.",
         "saved": "Saved. Restart VRCX-0-Nanashi to apply.",
         "restart_now": "Restart now",
         "confirm_title": "Is the interface displaying correctly?",

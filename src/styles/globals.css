@@ -704,6 +704,22 @@
         background: var(--vrcx-0-app-surface);
     }
 
+    :root:not(.reduce-effects):has(
+            :is(
+                [data-slot='dialog-overlay'],
+                [data-slot='alert-dialog-overlay'],
+                [data-slot='sheet-backdrop']
+            )[data-open]
+        )
+        .vrcx-0-app-root[data-linux-backdrop-fallback='true'] {
+        filter: blur(4px);
+    }
+
+    :root:not(.reduce-effects):has([data-slot='sheet-backdrop'][data-open])
+        .vrcx-0-app-root[data-linux-backdrop-fallback='true'] {
+        filter: blur(8px);
+    }
+
     .vrcx-0-background-image-transition-layer {
         position: absolute;
         z-index: 0;

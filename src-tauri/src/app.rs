@@ -502,6 +502,10 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
+            if let tauri::RunEvent::Exit = event {
+                bootstrap::linux_rendering::restore_startup_environment();
+                return;
+            }
             #[cfg(target_os = "macos")]
             if let tauri::RunEvent::Reopen {
                 has_visible_windows,
