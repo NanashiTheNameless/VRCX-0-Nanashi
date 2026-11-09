@@ -91,13 +91,13 @@ describe('AssistantEditRequestCard', () => {
         expect((mocks.complete.mock.calls[0] as unknown[])[1]).toBe(decision);
     });
 
-    it('cannot approve a change that is not allowed', () => {
+    it('cannot approve changes to credentials', () => {
         render(
             <AssistantEditRequestCard
                 request={request({
                     arguments: {
-                        settingId: 'integrations.translation.enabled',
-                        value: true
+                        settingId: 'integrations.translation.api-key',
+                        value: 'test-key'
                     }
                 })}
                 active
