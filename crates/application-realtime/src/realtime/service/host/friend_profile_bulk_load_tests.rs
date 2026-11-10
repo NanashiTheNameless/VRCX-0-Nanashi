@@ -261,6 +261,33 @@ async fn park_bulk_worker_on_the_transport_gate() {
     .await;
 }
 
+async fn hold_user_query(
+    runtime: &Arc<RealtimeHostRuntime>,
+    endpoint: &str,
+    user_id: &str,
+) -> (
+    tokio::sync::oneshot::Sender<Arc<VrchatResponse>>,
+    tokio::task::JoinHandle<()>,
+) {
+    let (response_tx, response_rx) = tokio::sync::oneshot::channel();
+    let (started_tx, started_rx) = tokio::sync::oneshot::channel();
+    let runtime = Arc::clone(runtime);
+    let endpoint = endpoint.to_string();
+    let user_id = user_id.to_string();
+    let query = tokio::spawn(async move {
+        runtime
+            .user_query_cache
+            .get_or_fetch(UserQueryKind::LiveFriend, &endpoint, &user_id, async move {
+                started_tx.send(()).expect("query started");
+                Ok(response_rx.await.expect("controlled response"))
+            })
+            .await
+            .expect("controlled query should succeed");
+    });
+    started_rx.await.expect("query should be pending");
+    (response_tx, query)
+}
+
 #[tokio::test]
 async fn unexpected_exit_and_same_account_replacement_keep_bulk_worker_active() -> Result<()> {
     let (_dir, runtime, active_session) =
@@ -300,6 +327,8 @@ async fn unexpected_exit_and_same_account_replacement_keep_bulk_worker_active() 
         )
         .await
         .expect("first bulk response should be cached");
+    let (second_response_tx, second_query) =
+        hold_user_query(runtime.runtime(), &active_session.endpoint, "usr_b").await;
     let started = runtime.runtime().start_friend_profile_bulk_load()?;
     assert_eq!(started.status, FriendProfileBulkLoadStatus::Running);
     wait_for_bulk_load_processed(runtime.runtime(), 1).await;
@@ -359,15 +388,10 @@ async fn unexpected_exit_and_same_account_replacement_keep_bulk_worker_active() 
         status: 200,
         data: json!({"id": "usr_b", "displayName": "B", "date_joined": "2026-01-01"}).to_string(),
     });
-    runtime
-        .runtime()
-        .user_query_cache
-        .get_or_fetch(
-            UserQueryKind::LiveFriend,
-            &active_session.endpoint,
-            "usr_b",
-            async move { Ok(second_response) },
-        )
+    second_response_tx
+        .send(second_response)
+        .expect("release second bulk response");
+    second_query
         .await
         .expect("second bulk response should be cached");
 
@@ -484,6 +508,8 @@ async fn explicit_stop_keeps_a_real_worker_cancelled_after_it_exits() -> Result<
         1,
     );
 
+    let (response_tx, query) =
+        hold_user_query(runtime.runtime(), &active_session.endpoint, "usr_a").await;
     let started = runtime.runtime().start_friend_profile_bulk_load()?;
     assert_eq!(started.status, FriendProfileBulkLoadStatus::Running);
     runtime.runtime().stop(RealtimeStopRequest {
@@ -492,6 +518,13 @@ async fn explicit_stop_keeps_a_real_worker_cancelled_after_it_exits() -> Result<
         ..RealtimeStopRequest::default()
     });
 
+    response_tx
+        .send(Arc::new(VrchatResponse {
+            status: 200,
+            data: json!({"id": "usr_a"}).to_string(),
+        }))
+        .expect("release canceled query");
+    query.await.expect("controlled query should finish");
     tokio::time::sleep(Duration::from_millis(25)).await;
     let finished = runtime.runtime().friend_profile_bulk_load_status();
     assert_eq!(finished.run_id, started.run_id);

@@ -104,7 +104,7 @@ describe('useFriendListRows', () => {
         expect(secondRows[0].$mutualCount).toBe(0);
     });
 
-    it('preserves a real friend number and falls back to the roster index only when absent', () => {
+    it('preserves persisted friend numbers without inventing roster index numbers', () => {
         useFriendRosterStore.getState().applyFriendPatches([
             { userId: 'usr_a', patch: { displayName: 'Alice' } },
             {
@@ -114,11 +114,14 @@ describe('useFriendListRows', () => {
         ]);
 
         const result = renderRows();
-        const numbers = result.current.rosterRows.map(
-            (row) => row.friendNumber
-        );
-
-        expect(numbers).toContain(77);
+        expect(
+            result.current.rosterRows.find((row) => row.id === 'usr_a')
+                ?.friendNumber
+        ).toBe(0);
+        expect(
+            result.current.rosterRows.find((row) => row.id === 'usr_b')
+                ?.friendNumber
+        ).toBe(77);
         expect(result.current.rosterRows).toHaveLength(2);
     });
 });

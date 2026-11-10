@@ -26,7 +26,6 @@ import {
 type FriendListRowCacheEntry = {
     fact: UserFact | null | undefined;
     friend: FriendRecord;
-    index: number;
     profileBio: ProfileBioOutput | undefined;
     row: FriendListRow;
     stats: FriendStats | undefined;
@@ -85,7 +84,7 @@ export function useFriendListRows({
         const previousCache = rowCacheRef.current;
         const nextCache = new Map<string, FriendListRowCacheEntry>();
         const rows: FriendListRow[] = [];
-        for (const [index, friendId] of orderedFriendIds.entries()) {
+        for (const friendId of orderedFriendIds) {
             const rosterFriend = friendsById[friendId];
             if (!rosterFriend) {
                 continue;
@@ -99,20 +98,12 @@ export function useFriendListRows({
                 cached.friend === rosterFriend &&
                 cached.fact === fact &&
                 cached.stats === stats &&
-                cached.profileBio === profileBio &&
-                cached.index === index
+                cached.profileBio === profileBio
                     ? cached.row
-                    : buildFriendListRow(
-                          rosterFriend,
-                          fact,
-                          stats,
-                          index,
-                          profileBio
-                      );
+                    : buildFriendListRow(rosterFriend, fact, stats, profileBio);
             nextCache.set(friendId, {
                 fact,
                 friend: rosterFriend,
-                index,
                 profileBio,
                 row,
                 stats

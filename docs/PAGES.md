@@ -160,6 +160,10 @@ Open **Social > Friends** in the default left navigation. Your full friends list
 a table. Search by display name, username, rank, status, VRChat note, local note or bio and
 links; filter to favorites.
 
+The friend number column uses the number saved in your friend history, rather than the
+friend's position in VRChat's response. New friends receive numbers above those in current
+and removed-friend history, so removing a friend does not free their number for reuse.
+
 **Load friend details**, in the toolbar above the friends table, fills in missing full
 profiles: it fetches only friends whose full profile was never loaded and reuses saved
 copies. It asks you to confirm first and has a 1-minute cooldown after finishing or being

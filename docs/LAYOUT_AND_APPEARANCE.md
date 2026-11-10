@@ -23,6 +23,11 @@ looks.
 - **Hover hints**: buttons that show only an icon, and status icons such as the unavailable or
   private marks on favorites, show their name when you hover over them.
 
+Use Ctrl+= (or Ctrl++), Ctrl+- and Ctrl+0 to zoom in, zoom out and reset to 100%.
+Zoom uses a direct 50-200% scale. A brief notification shows the level and offers a reset.
+**Settings > Interface > Appearance > Zoom with Mouse Wheel** optionally lets you hold Ctrl
+and scroll to zoom; it is off by default.
+
 ## Friends sidebar
 
 The sidebar lists your friends and groups in tabs.

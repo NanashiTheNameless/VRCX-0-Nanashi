@@ -134,7 +134,13 @@ The developer's own user dialog always uses a black, white and red color scheme.
 Choose the **access type** (Public, Friends+, Friends, Invite+, Invite, or Group with Group
 Members, Group+ or Group Public), the **region** (US West, US East, Europe, Japan), a minimum
 avatar performance, queue and age gate, and an instance name. Then **Create Instance** or
-**Create and Invite**.
+**Create and Invite**. The normal form uses two columns when space allows.
+
+You can add a description (up to 256 characters), up to three languages, a category, and up
+to three vibes. Categories and vibes come from VRChat's current options; the first selected
+vibe is the main one. Instance names allow up to 128 characters, and long saved names wrap
+in the preset picker. These choices are remembered for the next instance. **Reset to Defaults**
+restores the normal form's defaults without deleting saved instance-name presets.
 
 ## Launch
 

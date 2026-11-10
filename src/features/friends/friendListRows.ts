@@ -66,10 +66,9 @@ export function buildFriendListRow(
     rosterFriend: FriendRecord,
     fact: UserFact | null | undefined,
     stats: FriendStats | undefined,
-    index: number,
     profileBio?: ProfileBioOutput
 ): FriendListRow {
-    const friend: FriendListRow = {
+    return {
         ...applyFactDerivedFields(rosterFriend, fact),
         ...(profileBio && {
             bio: profileBio.bio,
@@ -80,14 +79,6 @@ export function buildFriendListRow(
         $timeSpent: stats?.timeSpent,
         $mutualCount: stats?.mutualCount,
         $mutualOptedOut: stats?.mutualOptedOut
-    };
-    if (friendNumberForSort(friend) > 0) {
-        return friend;
-    }
-    return {
-        ...friend,
-        friendNumber: index + 1,
-        $friendNumber: index + 1
     };
 }
 

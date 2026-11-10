@@ -1,12 +1,17 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-    setWindowTheme: vi.fn()
+    setWindowTheme: vi.fn(),
+    setZoom: vi.fn<(zoom: number) => Promise<void>>()
 }));
 
 vi.mock(import('@/platform/tauri/webview'), async (importOriginal) => ({
     ...(await importOriginal()),
     setWindowTheme: mocks.setWindowTheme
+}));
+
+vi.mock('@/platform/tauri/client', () => ({
+    tauriClient: { webview: { setZoom: mocks.setZoom } }
 }));
 
 import { useShellStore } from '@/state/shellStore';
@@ -18,6 +23,7 @@ import {
 } from './themeService';
 import {
     applyThemeMode,
+    applyZoomLevel,
     resolveAppCjkFontPackForLocale,
     supportsConfigurableCjkFontPack
 } from './themeService';
@@ -79,6 +85,29 @@ describe('themeService theme mode', () => {
         expect(mocks.setWindowTheme).not.toHaveBeenCalled();
         expect(useShellStore.getState().themeMode).toBe('dark');
         expect(toggleDarkClass).toHaveBeenLastCalledWith('dark', true);
+    });
+});
+
+describe('themeService zoom level', () => {
+    beforeEach(() => {
+        mocks.setZoom.mockReset().mockResolvedValue(undefined);
+    });
+
+    it('applies the zoom level as a percentage of the webview scale', async () => {
+        await applyZoomLevel(125);
+
+        expect(mocks.setZoom).toHaveBeenLastCalledWith(1.25);
+        expect(useShellStore.getState().zoomLevel).toBe(125);
+    });
+
+    it('clamps the zoom level to 50-200 percent', async () => {
+        await applyZoomLevel(300);
+        expect(mocks.setZoom).toHaveBeenLastCalledWith(2);
+        expect(useShellStore.getState().zoomLevel).toBe(200);
+
+        await applyZoomLevel(30);
+        expect(mocks.setZoom).toHaveBeenLastCalledWith(0.5);
+        expect(useShellStore.getState().zoomLevel).toBe(50);
     });
 });
 

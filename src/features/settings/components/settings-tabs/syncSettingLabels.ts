@@ -79,6 +79,7 @@ export const syncSettingLabels: Record<string, SyncSettingLabel> = {
     thememode: [`${APPEARANCE}.appearance.theme_mode`],
     themecolor: [`${APPEARANCE}.theme_color.header`],
     zoomlevel: [`${APPEARANCE}.appearance.zoom`],
+    ctrlwheelzoom: [`${APPEARANCE}.appearance.ctrl_wheel_zoom`],
     fontfamily: [`${APPEARANCE}.appearance.font_family`],
     customfontfamily: [
         `${APPEARANCE}.appearance.font_family_custom`,

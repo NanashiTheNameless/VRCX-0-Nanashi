@@ -18,6 +18,7 @@ function renderCard(reducedMotionAndBlur: boolean) {
                 appCjkFontPack: 'none',
                 tableDensity: 'standard',
                 dataTableStriped: false,
+                ctrlWheelZoom: false,
                 accessibleStatusIndicators: false,
                 reducedMotionAndBlur
             }}
@@ -28,6 +29,7 @@ function renderCard(reducedMotionAndBlur: boolean) {
             onCjkFontPackChange={() => {}}
             onZoomInputChange={() => {}}
             onZoomBlur={() => {}}
+            onCtrlWheelZoomChange={() => {}}
             onTableDensityChange={() => {}}
             onDataTableStripedChange={() => {}}
             onAccessibleStatusIndicatorsChange={() => {}}
