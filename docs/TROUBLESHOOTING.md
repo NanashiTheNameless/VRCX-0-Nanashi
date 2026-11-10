@@ -20,9 +20,11 @@
 - **Linux**: hardware acceleration is off by default. Turn on **Hardware acceleration
   (experimental)** under Settings > System > Window & Tray and restart. After the restart you
   have 30 seconds to confirm the interface looks right; otherwise the app turns acceleration
-  off again and restarts. Forcing compatibility with `WEBKIT_DISABLE_DMABUF_RENDERER=1`
+  off again and restarts. NVIDIA GPUs on X11 or Hyprland usually cannot use it. Forcing
+  compatibility with `WEBKIT_DISABLE_DMABUF_RENDERER=1`
   grays out this option and shows a note explaining the environment override.
-  Dialog backgrounds still blur with acceleration off, unless **Reduce Effects** is on.
+  Menus, popups and dialog overlays are opaque on Linux and never use a backdrop blur; the app
+  behind an open dialog still blurs, unless **Reduce Effects** is on.
   The option stays visible even when an environment override prevents changes. If that note
   appears after restarting an older build, fully quit the app and launch it again from the
   desktop. If the note remains, remove the override from your launcher or session to use the

@@ -73,8 +73,12 @@ The developer's own user dialog always uses a black, white and red color scheme.
   created, updated and published (and published to Labs), version, release status, platforms
   and restrictions, plus **your last visit**, **your visits**, **your time spent**, friends who
   visited and when they last did, the world's persistent data and its cache size on your PC.
-- **Instances**: the world's open instances with their players and friends in them. You can pin
-  a world to the side panel from here to keep watching its instances.
+- **Instances**: the world's open instances with their players and friends in them. Each row
+  leads with the room name when the instance has one, followed by its location, category and
+  vibes, its description, and its spoken languages on the right. The filter menu narrows the
+  list to instances **With friends**, can **Hide closed or full** ones, and filters by category,
+  vibes and languages when any instance has them; **Clear filters** resets it. You can pin a
+  world to the side panel from here to keep watching its instances.
 - **Screenshots** you took in this world.
 - **JSON**.
 

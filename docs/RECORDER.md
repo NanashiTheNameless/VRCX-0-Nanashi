@@ -101,7 +101,7 @@ Traffic between VRCX-0-Nanashi and the recorder is encrypted with the password. 
 
 ## Operation
 
-- **Status bar**: an icon next to the proxy icon shows the recorder state. Orange: logging in, reconnecting, a different account or an unexpected response. Red: unreachable, wrong password, version mismatch, or VRChat needs a login or two-factor code.
+- **Status bar**: once a recorder is set up, a cloud icon next to the proxy icon shows its state and opens its settings; with no recorder it is not shown. A crossed-out gray cloud: the recorder has no VRChat login yet. Orange with an exclamation mark: logging in, reconnecting, a different account or an unexpected response. Red with an exclamation mark: unreachable, wrong password, version mismatch, VRChat needs a login or two-factor code, or the last filling-in failed. While filling in, the icon switches to a syncing cloud and blinks, then briefly shows a check mark when it finishes; with Reduce Effects or reduced motion on it does not blink.
 - **Filling in**: runs automatically when VRCX-0-Nanashi connects; **Fill in now** starts it manually. Closing VRCX-0-Nanashi normally hands over to the recorder immediately.
 - **Webhook**: Discord or any URL accepting POST. Sent when login stops, two-factor verification is needed, records cannot be saved, unsynced records are deleted by the storage limit, and when recording recovers. Each message starts with a type (`login`, `storage`, `recovered`, `test`) and includes the original error when there is one.
 - **Health check**: `GET /health` returns 200 while the recorder can read its database. The image has no shell, so monitor it from outside the container.

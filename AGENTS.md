@@ -182,8 +182,10 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   Options (`SettingsSelfHostedRecorderCard.tsx`), not a Tools entry; one
   English README; no beta channel and no
   stable/beta recorder check, because every recorder the fork publishes is
-  a nightly build. Nightly builds the binaries and calls
-  `logger-image.yml` to publish the image.
+  a nightly build. The status bar icon (`OfflineRecordIndicator.tsx`) shows
+  only once a recorder is set up, never as a placeholder for everyone.
+  Nightly builds the binaries and calls `logger-image.yml` to publish the
+  image.
 - **Adoption count** - `crates/runtime-host-desktop/src/adoption_census.rs`,
   `ExternalApiScope::AdoptionCensus` in `crates/contracts/src/external_api.rs`,
   the card at the bottom of Settings > Advanced. The only thing the app
@@ -424,7 +426,8 @@ Things upstream merges keep bringing back or breaking:
   `reminders` field; make sure the assistant still gets it.
 - **Shared world collections and relay links** stay on RemoteSync.
 - **Recorder**: keep the fork's install script, compose file, image, guide
-  (`docs/RECORDER.md`), the Settings > Sync Options card, and no beta channel.
+  (`docs/RECORDER.md`), the Settings > Sync Options card, no beta channel,
+  and the status bar icon hidden until a recorder is set up.
 - **Process-global test state**: upstream tests that build a full runtime can
   race fork tests that seal secrets; keep the harness pre-initializing them.
 

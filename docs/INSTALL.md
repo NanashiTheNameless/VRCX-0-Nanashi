@@ -84,7 +84,8 @@ and an existing file with the destination name is never replaced.
 
 Hardware acceleration for the app interface is off by default. Turn it on under
 **Settings > System > Hardware acceleration (experimental)**; if the interface doesn't
-display properly, the app turns it back off automatically. Forcing compatibility with
+display properly, the app turns it back off automatically. NVIDIA GPUs on X11 or Hyprland
+usually cannot use it. Forcing compatibility with
 `WEBKIT_DISABLE_DMABUF_RENDERER=1` leaves this option visible but grayed out, with a note
 explaining why it cannot be changed.
 
