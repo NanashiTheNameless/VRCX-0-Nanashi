@@ -46,7 +46,7 @@ const WRIST_DEVICE_REFRESH_INTERVAL: Duration = Duration::from_secs(5);
 const WRIST_FRAME_REFRESH_INTERVAL: Duration = Duration::from_secs(1);
 /// Fork: frame interval for animated badges. Between full refreshes only the
 /// moving parts are redrawn from the last page, with no new data read.
-const BADGE_ANIMATION_INTERVAL: Duration = Duration::from_millis(50);
+const BADGE_ANIMATION_INTERVAL: Duration = Duration::from_millis(16);
 
 struct VrOverlayFrameInput {
     config: VrOverlayRuntimeConfig,

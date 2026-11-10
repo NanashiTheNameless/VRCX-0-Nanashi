@@ -58,6 +58,7 @@ describe('buildOverlayUserBadges', () => {
         expect(developer).toHaveLength(2);
         expect(developer[0]).toMatchObject({
             colorBorder: '#e5202e',
+            colorIcon: '#e5202e',
             round: false,
             effects: ['glitch']
         });
@@ -78,7 +79,10 @@ describe('buildOverlayUserBadges', () => {
         expect(table.users?.usr_nobody).toBeUndefined();
         expect(table.animations).toBe(true);
         const upstreamIndex = table.users?.[UPSTREAM_DEVELOPER_USER_ID]?.[0];
-        expect(table.styles?.[upstreamIndex!]?.effects).toEqual(['sparkle']);
+        expect(table.styles?.[upstreamIndex!]?.effects).toEqual([
+            'upstream-glint'
+        ]);
+        expect(table.styles?.[upstreamIndex!]?.colorIcon).toBe('#3b6ea8');
         expect(developer[1]?.effects ?? []).toEqual([]);
     });
 
@@ -93,7 +97,7 @@ describe('buildOverlayUserBadges', () => {
                     {
                         userId: 'usr_still',
                         badge: 'artist',
-                        overrides: { animation: 'none' }
+                        overrides: { animation: 'none', colorFrom: '#123456' }
                     }
                 ]
             })
@@ -106,6 +110,8 @@ describe('buildOverlayUserBadges', () => {
         expect(still).toBeDefined();
         expect(table.styles?.[artist!]?.effects).toEqual(['embers', 'glow']);
         expect(table.styles?.[still!]?.effects).toEqual([]);
+        expect(table.styles?.[artist!]?.colorGlow).toBe('#f59e0b8c');
+        expect(table.styles?.[still!]?.colorGlow).toBe('#12345699');
     });
 
     it('stops overlay motion when Reduce Effects is enabled', () => {

@@ -8,11 +8,13 @@ build = "build.rs"
 
 [features]
 default = []
-slint-ui = ["dep:slint", "dep:slint-build"]
+slint-ui = ["dep:slint", "dep:slint-build", "dep:resvg", "dep:serde_json"]
 
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
 slint = { workspace = true, optional = true }
+resvg = { version = "0.48.1", default-features = false, optional = true }
+serde_json = { workspace = true, optional = true }
 specta.workspace = true
 
 [build-dependencies]

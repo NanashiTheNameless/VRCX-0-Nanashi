@@ -54,6 +54,7 @@
         "build:licenses": "node ./scripts/generate-third-party-licenses.ts",
         "badges:editor": "vite --config tools/badge-editor/vite.config.mts",
         "badges:dev-fx": "node scripts/generate-dev-badge-effects.ts",
+        "badges:overlay-fx": "node scripts/generate-overlay-badge-effects.ts",
         "badges:validate": "node scripts/validate-global-badges.ts",
         "build": "vite build && npm run build:licenses"
     },

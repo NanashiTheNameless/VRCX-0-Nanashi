@@ -11,8 +11,10 @@ pub struct OverlayBadge {
     pub to: Color,
     pub border: Color,
     pub icon_color: Color,
+    pub glow_color: Color,
     pub round: bool,
     pub effects: BadgeEffects,
+    pub animations: bool,
 }
 
 /// Fork: badge animations, drawn in the overlay the way the app draws them.
@@ -27,6 +29,8 @@ pub struct BadgeEffects {
     pub flip: bool,
     /// The fork developer badge's glitch, scan line and breathing rim.
     pub glitch: bool,
+    pub upstream_glint: bool,
+    pub flip_before_wiggle: bool,
 }
 
 impl BadgeEffects {
@@ -44,9 +48,13 @@ impl BadgeEffects {
                 "sparkle" => effects.sparkle = true,
                 "glow" => effects.glow = true,
                 "embers" => effects.embers = true,
-                "wiggle" => effects.wiggle = true,
+                "wiggle" => {
+                    effects.wiggle = true;
+                    effects.flip_before_wiggle = effects.flip;
+                }
                 "flip" => effects.flip = true,
                 "glitch" => effects.glitch = true,
+                "upstream-glint" => effects.upstream_glint = true,
                 _ => {}
             }
         }

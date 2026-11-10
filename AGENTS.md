@@ -250,7 +250,13 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   generated from `scripts/devBadgeEffects.ts` (`npm run badges:dev-fx`, then
   `npm run format`): never hand-edit the block between its GENERATED markers in
   `src/styles/globals.css`, and keep at least a quarter second with no glitch
-  on either side of each scan (the script and its test enforce both). Shape
+  on either side of each scan (the script and its test enforce both). Appearance
+  and motion in VR, HMD notifications, and the Desktop Overlay come from
+  `crates/vr-overlay/src/slint_ui/badge.rs` and generated
+  `crates/vr-overlay/ui/badge-effects.json`. Run `npm run badges:overlay-fx`
+  after changing badge CSS timings or particles; `badges:dev-fx` updates this
+  data too. Never hand-edit the generated data or substitute different
+  animation timelines for the app's own keyframes. Shape
   shows who sees a badge: custom badges, which only the user sees, are round;
   badges everyone sees (developer, staff, global) are rounded squares; the
   collapsed custom badge folder stays a rounded square. Custom badges may use

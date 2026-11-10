@@ -77,12 +77,10 @@ fn overlay_badge(style: OverlayBadgeStyle, animations: bool) -> Option<OverlayBa
         to: parse_hex_color(&style.color_to).unwrap_or(from),
         border: parse_hex_color(&style.color_border).unwrap_or(from),
         icon_color: parse_hex_color(&style.color_icon).unwrap_or(Color::rgba(255, 255, 255, 255)),
+        glow_color: parse_hex_color(&style.color_glow).unwrap_or(Color { a: 153, ..from }),
         round: style.round,
-        effects: if animations {
-            BadgeEffects::from_names(style.effects.iter().map(String::as_str))
-        } else {
-            BadgeEffects::default()
-        },
+        effects: BadgeEffects::from_names(style.effects.iter().map(String::as_str)),
+        animations,
     })
 }
 
@@ -164,6 +162,7 @@ mod tests {
             color_to: String::new(),
             color_border: "#e5202e".to_string(),
             color_icon: "#ffffff".to_string(),
+            color_glow: "#e5202e99".to_string(),
             round: false,
             effects: vec!["glow".to_string(), "bogus".to_string()],
         }
@@ -227,7 +226,8 @@ mod tests {
         });
         let many = user_badges("usr_many");
         assert_eq!(many.len(), MAX_OVERLAY_BADGES);
-        assert!(!many[0].effects.any());
+        assert!(many[0].effects.glow);
+        assert!(!many[0].animations);
         reset_overlay_user_badges_for_tests();
     }
 }

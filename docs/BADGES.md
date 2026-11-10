@@ -220,6 +220,11 @@ rest are left out. The app window works out who gets which badge and passes the 
 the overlays on the same PC, so badges appear there a moment after the app has started,
 and changes to your custom badges follow within a few seconds.
 
+The overlays use the main app's animation keyframes, durations, easing, particle positions,
+and delays. The developer badge follows the same 22.6-second cycle, including both scans
+and the quiet gaps around them. The upstream developer badge keeps its separate diamond
+glints. Reduced motion keeps still sparkles, embers, and glows without moving them.
+
 ## Reserved icons
 
 So nobody can imitate them, custom badges cannot use:

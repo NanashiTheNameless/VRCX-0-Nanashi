@@ -74,7 +74,7 @@ const FORK_DEVELOPER_LOOK: Look = {
     colorFrom: '#0b0b0c',
     colorTo: '#3a0a0e',
     colorBorder: '#e5202e',
-    colorIcon: '#ffffff',
+    colorIcon: '#e5202e',
     round: false,
     effects: ['glitch']
 };
@@ -82,9 +82,9 @@ const UPSTREAM_DEVELOPER_LOOK: Look = {
     colorFrom: '#f4f6f9',
     colorTo: '#9aa3af',
     colorBorder: '#8d96a3',
-    colorIcon: '#1f242b',
+    colorIcon: '#3b6ea8',
     round: false,
-    effects: ['sparkle']
+    effects: ['upstream-glint']
 };
 const VRCHAT_STAFF_LOOK: Look = {
     colorFrom: '#2f7cf6',
@@ -106,6 +106,18 @@ const AWARD_LOOKS: Record<AwardStyle, [string, string, string]> = {
 };
 
 type IconCatalog = Readonly<Record<string, LucideIcon>>;
+
+const AWARD_GLOWS: Record<AwardStyle, string> = {
+    ember: '#ea580c99',
+    gold: '#f59e0b8c',
+    emerald: '#10b9818c',
+    sapphire: '#3b82f68c',
+    amethyst: '#9333ea8c',
+    crimson: '#e11d488c',
+    rose: '#ec489980',
+    teal: '#14b8a680',
+    midnight: '#94a3b873'
+};
 
 class StyleTable {
     readonly styles: OverlayBadgeStyle[] = [];
@@ -150,6 +162,9 @@ function awardLook(award: ActiveAward): Look {
         colorTo: badge.colorTo || to,
         colorBorder: badge.colorBorder || border,
         colorIcon: badge.colorText || '#ffffff',
+        colorGlow: badge.colorFrom
+            ? `${badge.colorFrom}99`
+            : AWARD_GLOWS[awardStyle(badge.style)],
         round: false,
         effects: awardAnimations(badge.animation)
     };

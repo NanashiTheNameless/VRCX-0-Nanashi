@@ -7,11 +7,11 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 
 /// How one badge looks. `icon` is SVG path data in a 24 by 24 box, drawn as
-/// a stroke like Lucide icons. Colors are `#rrggbb`. `round` badges are the
+/// a stroke like Lucide icons. Colors are hex RGB or RGBA. `round` badges are the
 /// user's own custom badges; everyone-visible badges are rounded squares.
 /// `effects` names the badge's animations: the global badge effects
 /// (`shimmer`, `flow`, `sparkle`, `glow`, `embers`, `wiggle`, `flip`) and the
-/// developer badge's `glitch`; unknown names are ignored.
+/// developer badges' `glitch` and `upstream-glint`; unknown names are ignored.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize, specta::Type)]
 #[serde(default, rename_all = "camelCase")]
 pub struct OverlayBadgeStyle {
@@ -20,6 +20,7 @@ pub struct OverlayBadgeStyle {
     pub color_to: String,
     pub color_border: String,
     pub color_icon: String,
+    pub color_glow: String,
     pub round: bool,
     pub effects: Vec<String>,
 }

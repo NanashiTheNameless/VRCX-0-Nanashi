@@ -1,3 +1,4 @@
+mod badge;
 mod desktop_widget;
 mod hmd;
 mod platform;

@@ -7075,11 +7075,11 @@ export type NowPlayingSnapshot = {
 
 /**
  *  How one badge looks. `icon` is SVG path data in a 24 by 24 box, drawn as
- *  a stroke like Lucide icons. Colors are `#rrggbb`. `round` badges are the
+ *  a stroke like Lucide icons. Colors are hex RGB or RGBA. `round` badges are the
  *  user's own custom badges; everyone-visible badges are rounded squares.
  *  `effects` names the badge's animations: the global badge effects
  *  (`shimmer`, `flow`, `sparkle`, `glow`, `embers`, `wiggle`, `flip`) and the
- *  developer badge's `glitch`; unknown names are ignored.
+ *  developer badges' `glitch` and `upstream-glint`; unknown names are ignored.
  */
 export type OverlayBadgeStyle = {
     icon?: string;
@@ -7087,6 +7087,7 @@ export type OverlayBadgeStyle = {
     colorTo?: string;
     colorBorder?: string;
     colorIcon?: string;
+    colorGlow?: string;
     round?: boolean;
     effects?: string[];
 };

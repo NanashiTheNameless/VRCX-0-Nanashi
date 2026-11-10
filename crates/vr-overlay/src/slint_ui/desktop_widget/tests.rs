@@ -452,6 +452,8 @@ fn rows_draw_the_actors_badges_after_the_name() {
                 to: crate::Color::rgba(0, 255, 0, 255),
                 border: crate::Color::rgba(0, 255, 0, 255),
                 icon_color: crate::Color::rgba(255, 255, 255, 255),
+                glow_color: crate::Color::rgba(0, 255, 0, 150),
+                animations: true,
                 round: true,
                 effects: crate::BadgeEffects::default(),
             }],
@@ -476,6 +478,8 @@ fn badge_motion_keeps_the_widget_drawing_after_the_row_has_settled() {
         to: crate::Color::rgba(0, 0, 255, 255),
         border: crate::Color::rgba(0, 255, 0, 255),
         icon_color: crate::Color::rgba(255, 255, 255, 255),
+        glow_color: crate::Color::rgba(0, 255, 0, 150),
+        animations: true,
         round: false,
         effects: crate::BadgeEffects {
             flow: true,

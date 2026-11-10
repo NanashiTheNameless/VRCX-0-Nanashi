@@ -134,10 +134,14 @@ pub(super) fn create_component_window<C>(
 ) -> Result<(C, Rc<MinimalSoftwareWindow>), String>
 where
     C: ComponentHandle,
+    for<'a> super::BadgeRasterizer<'a>: slint::Global<'a, C>,
 {
     ensure_platform()?;
     take_last_created_window();
     let component = create().map_err(|error| error.to_string())?;
+    component
+        .global::<super::BadgeRasterizer>()
+        .on_frame(super::badge::frame);
     let window = take_last_created_window()
         .ok_or_else(|| "Slint platform did not create a software window".to_string())?;
     Ok((component, window))
@@ -167,62 +171,6 @@ pub(super) fn to_slint_color(color: crate::Color) -> slint::Color {
     slint::Color::from_argb_u8(color.a, color.r, color.g, color.b)
 }
 
-/// Pixels per side of a badge body image; Slint scales it to the badge.
-const BADGE_BODY_PX: u32 = 64;
-
-type BadgeBodyKey = ([u8; 4], [u8; 4], bool);
-
-thread_local! {
-    static BADGE_BODIES: RefCell<HashMap<BadgeBodyKey, Image>> = RefCell::new(HashMap::new());
-}
-
-/// Fork: a badge's background, a 135 degree gradient from `from` to `to` in a
-/// rounded square or a circle with smooth edges. The software renderer
-/// ignores rounded corners on gradients and clips, so the shape is drawn
-/// here instead.
-pub(super) fn badge_body(from: crate::Color, to: crate::Color, round: bool) -> Image {
-    let key = (
-        [from.r, from.g, from.b, from.a],
-        [to.r, to.g, to.b, to.a],
-        round,
-    );
-    if let Some(image) = BADGE_BODIES.with(|bodies| bodies.borrow().get(&key).cloned()) {
-        return image;
-    }
-    let size = BADGE_BODY_PX;
-    let half = size as f32 / 2.0;
-    // Same proportions as the Slint chip's border radius.
-    let radius = if round { half } else { size as f32 * 0.28 };
-    let mut buffer = SharedPixelBuffer::<Rgba8Pixel>::new(size, size);
-    let lerp =
-        |a: u8, b: u8, t: f32| (f32::from(a) + (f32::from(b) - f32::from(a)) * t).round() as u8;
-    for (index, pixel) in buffer.make_mut_slice().iter_mut().enumerate() {
-        let x = (index as u32 % size) as f32 + 0.5;
-        let y = (index as u32 / size) as f32 + 0.5;
-        let t = ((x + y) / (2.0 * size as f32)).clamp(0.0, 1.0);
-        let dx = ((x - half).abs() - (half - radius)).max(0.0);
-        let dy = ((y - half).abs() - (half - radius)).max(0.0);
-        let coverage = (radius + 0.5 - (dx * dx + dy * dy).sqrt()).clamp(0.0, 1.0);
-        let alpha = f32::from(lerp(from.a, to.a, t)) * coverage;
-        *pixel = Rgba8Pixel {
-            r: lerp(from.r, to.r, t),
-            g: lerp(from.g, to.g, t),
-            b: lerp(from.b, to.b, t),
-            a: alpha.round() as u8,
-        };
-    }
-    let image = Image::from_rgba8(buffer);
-    BADGE_BODIES.with(|bodies| {
-        let mut bodies = bodies.borrow_mut();
-        // Looks rarely change; start over instead of growing without end.
-        if bodies.len() > 512 {
-            bodies.clear();
-        }
-        bodies.insert(key, image.clone());
-    });
-    image
-}
-
 /// Fork: user badges for a name, at most [`crate::MAX_OVERLAY_BADGES`].
 pub(super) fn badge_items(
     badges: &[crate::OverlayBadge],
@@ -231,17 +179,13 @@ pub(super) fn badge_items(
         .iter()
         .take(crate::MAX_OVERLAY_BADGES)
         .map(|badge| super::OverlayBadgeItem {
-            body: badge_body(badge.from, badge.to, badge.round),
-            flow_body: if badge.effects.flow {
-                badge_body(badge.to, badge.from, badge.round)
-            } else {
-                Image::default()
-            },
             icon: slint::SharedString::from(&*badge.icon),
             from: to_slint_color(badge.from),
             to: to_slint_color(badge.to),
             border: to_slint_color(badge.border),
             icon_color: to_slint_color(badge.icon_color),
+            glow_color: to_slint_color(badge.glow_color),
+            animations: badge.animations,
             round: badge.round,
             shimmer: badge.effects.shimmer,
             flow: badge.effects.flow,
@@ -251,6 +195,8 @@ pub(super) fn badge_items(
             wiggle: badge.effects.wiggle,
             flip: badge.effects.flip,
             glitch: badge.effects.glitch,
+            upstream_glint: badge.effects.upstream_glint,
+            flip_before_wiggle: badge.effects.flip_before_wiggle,
         })
         .collect();
     slint::ModelRc::new(slint::VecModel::from(items))

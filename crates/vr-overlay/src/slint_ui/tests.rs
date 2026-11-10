@@ -1013,6 +1013,8 @@ fn green_badge() -> crate::OverlayBadge {
         to: crate::Color::rgba(0, 255, 0, 255),
         border: crate::Color::rgba(0, 255, 0, 255),
         icon_color: crate::Color::rgba(255, 0, 255, 255),
+        glow_color: crate::Color::rgba(0, 255, 0, 150),
+        animations: true,
         round: false,
         effects: crate::BadgeEffects::default(),
     }
