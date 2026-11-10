@@ -73,7 +73,8 @@ A small window on the desktop that keeps the last 50 activity entries, for peopl
 desktop mode, instead of system notifications. Turn it on or off from the status bar.
 Right-click the window for **Always on Top** and **Click-Through**; while Click-Through is on,
 turn it off from the tray. Set its background opacity, whether the newest entry is at the top
-or bottom, and its own filters.
+or bottom, and its own filters. User [badges](BADGES.md#badges-in-vr-and-the-desktop-overlay)
+show after names.
 
 ## Text-to-Speech
 
@@ -107,7 +108,8 @@ The app's own notification cards in your headset view, drawn natively. Choose wh
 style (standard or compact), friend icons, tracker disconnect alerts, how long they stay (1 to
 30 seconds) and their opacity. **Left / right offset** and **up / down offset** move them from
 the chosen position, and **text size** sets how big they are. Cards fit their text: short
-notifications get small cards and long ones wrap onto more lines.
+notifications get small cards and long ones wrap onto more lines. User
+[badges](BADGES.md#badges-in-vr-and-the-desktop-overlay) show after the name.
 
 ## Wrist overlay
 
@@ -130,6 +132,8 @@ A menu on your wrist in VR, opened with a controller button.
   moving the menu sideways, up or down, out from the wrist, and tilting it, with an anchored
   edge that stays put when the menu grows.
 - The wrist feed has its own filters.
+- User [badges](BADGES.md#badges-in-vr-and-the-desktop-overlay) show after names on the Feed,
+  Players and Notes pages.
 
 ## Overlay Test
 

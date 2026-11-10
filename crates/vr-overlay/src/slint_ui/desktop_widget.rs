@@ -12,7 +12,8 @@ use slint::{
 use crate::{DesktopWidgetAction, DesktopWidgetRow, DesktopWidgetSurfaceModel};
 
 use super::platform::{
-    cached_avatar_image, create_component_window, retain_avatar_images, AvatarImageCache,
+    badge_items, cached_avatar_image, create_component_window, retain_avatar_images,
+    AvatarImageCache,
 };
 use super::{DesktopWidgetPanel, DesktopWidgetRowItem};
 
@@ -216,6 +217,7 @@ fn row_item(row: &DesktopWidgetRow, cache: &mut AvatarImageCache) -> DesktopWidg
         show_avatar_slot: row.show_avatar_slot,
         has_avatar,
         avatar,
+        badges: badge_items(&row.badges),
     }
 }
 

@@ -363,6 +363,13 @@ impl Widget {
 }
 
 impl Frame {
+    fn green_pixels(&self) -> usize {
+        self.0
+            .chunks_exact(4)
+            .filter(|px| px[3] > 200 && px[1] > 200 && px[0] < 60 && px[2] < 60)
+            .count()
+    }
+
     fn alpha(&self, x: u32, y: u32) -> u8 {
         self.0[((y * WIDTH + x) * 4 + 3) as usize]
     }
@@ -432,6 +439,29 @@ impl Frame {
     }
 }
 
+#[test]
+fn rows_draw_the_actors_badges_after_the_name() {
+    let plain = Widget::new().settled(&model(vec![row(1, "Ada", false)], 0, false));
+    let badged = Widget::new().settled(&model(
+        vec![DesktopWidgetRow {
+            badges: vec![crate::OverlayBadge {
+                icon: std::sync::Arc::from("M 4 4 L 20 20"),
+                from: crate::Color::rgba(0, 255, 0, 255),
+                to: crate::Color::rgba(0, 255, 0, 255),
+                border: crate::Color::rgba(0, 255, 0, 255),
+                icon_color: crate::Color::rgba(255, 255, 255, 255),
+                round: true,
+            }],
+            ..row(1, "Ada", false)
+        }],
+        0,
+        false,
+    ));
+
+    assert_eq!(plain.green_pixels(), 0);
+    assert!(badged.green_pixels() > 40, "{}", badged.green_pixels());
+}
+
 fn bottom_row_y() -> f32 {
     HEIGHT as f32 - 18.0
 }
@@ -464,6 +494,7 @@ fn row(id: u64, actor: &str, warning: bool) -> DesktopWidgetRow {
         warning,
         show_avatar_slot: false,
         avatar: None,
+        badges: Vec::new(),
     }
 }
 

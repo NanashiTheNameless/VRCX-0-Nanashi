@@ -1,0 +1,48 @@
+// Fork: user badges next to names, drawn like the app's compact badges:
+// rounded squares for badges everyone sees, circles for the user's own.
+export struct OverlayBadgeItem {
+    icon: string,
+    from: color,
+    to: color,
+    border: color,
+    icon-color: color,
+    round: bool,
+}
+
+export component BadgeChip inherits Rectangle {
+    in property <OverlayBadgeItem> badge;
+    in property <length> size: 16px;
+
+    width: root.size;
+    height: root.size;
+    border-radius: root.badge.round ? root.size / 2 : root.size * 0.28;
+    border-width: max(1px, root.size / 16);
+    border-color: root.badge.border;
+    background: @linear-gradient(135deg, root.badge.from 0%, root.badge.to 100%);
+
+    Path {
+        x: root.size * 0.2;
+        y: root.size * 0.2;
+        width: root.size * 0.6;
+        height: root.size * 0.6;
+        viewbox-width: 24;
+        viewbox-height: 24;
+        commands: root.badge.icon;
+        stroke: root.badge.icon-color;
+        stroke-width: max(1px, root.size * 0.6 / 12);
+        stroke-line-cap: round;
+        stroke-line-join: round;
+    }
+}
+
+export component BadgeRow inherits HorizontalLayout {
+    in property <[OverlayBadgeItem]> badges;
+    in property <length> size: 16px;
+    spacing: root.size / 5;
+    alignment: start;
+
+    for badge in root.badges : BadgeChip {
+        badge: badge;
+        size: root.size;
+    }
+}

@@ -15,6 +15,7 @@ use vrcx_0_vr_overlay_backend::{
 };
 
 use super::super::localization::{OverlayLocale, OverlayLocalizer, OverlayPanelLocalizer};
+use crate::badges::user_badges;
 use vrcx_0_contracts::activity::ActivityKind;
 
 const MAX_FEED_ROWS: usize = 24;
@@ -324,6 +325,9 @@ pub struct WristPlayerRow {
     /// the signed-in user, for the signed-in user all of their own.
     #[serde(default)]
     pub languages: Vec<String>,
+    /// Fork: for the user badges drawn after the name.
+    #[serde(default)]
+    pub user_id: String,
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize, specta::Type)]
@@ -573,6 +577,7 @@ fn player_cells(players: &[WristPlayerRow], notes_only: bool) -> Vec<PlayerCell>
                 status: status_parts.join(" / "),
                 note: player.note.trim().to_string(),
                 is_friend: player.is_friend,
+                badges: user_badges(&player.user_id),
             }
         })
         .collect()
@@ -592,6 +597,7 @@ fn empty_players_line(notes_only: bool) -> FeedLine {
         relation: FeedRelation::None,
         severity: FeedSeverity::Normal,
         accent: FeedAccent::None,
+        badges: Vec::new(),
     }
 }
 
@@ -667,6 +673,7 @@ pub(crate) fn feed_line_from_activity(
         relation: feed_relation(entry.actor_relation),
         severity: feed_severity(entry),
         accent: feed_accent(entry),
+        badges: user_badges(&entry.actor_user_id),
     }
 }
 
@@ -950,6 +957,7 @@ mod page_tests {
             age_verified: false,
             is_local: false,
             languages: Vec::new(),
+            user_id: String::new(),
         }
     }
 
@@ -1002,6 +1010,7 @@ mod page_tests {
                 age_verified: false,
                 is_local: false,
                 languages: Vec::new(),
+                user_id: String::new(),
             })
             .collect::<Vec<_>>();
         let cells = player_cells(&players, false);

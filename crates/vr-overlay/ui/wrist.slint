@@ -1,3 +1,5 @@
+import { BadgeRow, OverlayBadgeItem } from "badge.slint";
+
 export struct WristDeviceItem {
     label: string,
     percent: string,
@@ -19,6 +21,7 @@ export struct WristFeedItem {
     has-actor: bool,
     is-favorite: bool,
     show-accent: bool,
+    badges: [OverlayBadgeItem],
 }
 
 export struct WristPlayerItem {
@@ -29,6 +32,7 @@ export struct WristPlayerItem {
     name-color: color,
     has-status: bool,
     has-note: bool,
+    badges: [OverlayBadgeItem],
 }
 
 component WristPlayerColumn inherits VerticalLayout {
@@ -46,7 +50,11 @@ component WristPlayerColumn inherits VerticalLayout {
         width: root.width;
         spacing: 1px;
 
-        HorizontalLayout {
+        name-row := HorizontalLayout {
+            property <length> badge-size: 14px * root.scale;
+            property <length> badges-width: cell.badges.length > 0
+                ? cell.badges.length * self.badge-size + (cell.badges.length - 1) * self.badge-size / 5 + 6px * root.scale
+                : 0px;
             spacing: 6px * root.scale;
 
             joined := Text {
@@ -59,12 +67,23 @@ component WristPlayerColumn inherits VerticalLayout {
 
             Text {
                 horizontal-stretch: 1;
-                width: root.width - joined.preferred-width - 6px * root.scale;
+                width: root.width - joined.preferred-width - 6px * root.scale - name-row.badges-width;
                 text: cell.name;
                 font-size: 14px * root.scale;
                 font-weight: 600;
                 wrap: word-wrap;
                 color: cell.name-color;
+            }
+
+            if cell.badges.length > 0 : VerticalLayout {
+                horizontal-stretch: 0;
+                alignment: start;
+                padding-top: 2px * root.scale;
+
+                BadgeRow {
+                    badges: cell.badges;
+                    size: name-row.badge-size;
+                }
             }
         }
 
@@ -408,6 +427,16 @@ export component WristPanel inherits Window {
                     font-weight: 600;
                     vertical-alignment: center;
                     color: line.actor-color;
+                }
+
+                if line.has-actor && line.badges.length > 0: VerticalLayout {
+                    horizontal-stretch: 0;
+                    alignment: center;
+
+                    BadgeRow {
+                        badges: line.badges;
+                        size: 15px * root.content-scale;
+                    }
                 }
 
                 if line.has-actor && line.is-favorite: Rectangle {

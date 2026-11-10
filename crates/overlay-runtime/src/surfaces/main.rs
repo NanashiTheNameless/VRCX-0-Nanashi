@@ -58,6 +58,7 @@ fn toast_card_from_activity(toast: HmdToastView, localizer: &OverlayLocalizer) -
         relation: feed_relation(entry.actor_relation),
         action: action_text(&entry, toast.merge_count, localizer),
         severity: feed_severity(&entry),
+        badges: crate::badges::user_badges(&entry.actor_user_id),
         avatar: toast.avatar,
         show_avatar: toast.show_avatar,
     }

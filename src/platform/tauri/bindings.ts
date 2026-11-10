@@ -280,6 +280,8 @@ export const commands = {
         __TAURI_INVOKE<AdoptionCensusLock | null>('app__adoption_census_lock'),
     appGlobalBadgesGet: () =>
         __TAURI_INVOKE<GlobalBadgeCatalog>('app__global_badges_get'),
+    appOverlayUserBadgesSet: (badges: OverlayUserBadges) =>
+        __TAURI_INVOKE<void>('app__overlay_user_badges_set', { badges }),
     appVrcStatusGet: () =>
         __TAURI_INVOKE<VrcStatusSnapshot>('app__vrc_status_get'),
     appVrcStatusRefresh: () =>
@@ -7069,6 +7071,29 @@ export type NowPlayingSnapshot = {
     videoName?: string | null;
     videoId?: string | null;
     updatedAt: number | null;
+};
+
+/**
+ *  How one badge looks. `icon` is SVG path data in a 24 by 24 box, drawn as
+ *  a stroke like Lucide icons. Colors are `#rrggbb`. `round` badges are the
+ *  user's own custom badges; everyone-visible badges are rounded squares.
+ */
+export type OverlayBadgeStyle = {
+    icon?: string;
+    colorFrom?: string;
+    colorTo?: string;
+    colorBorder?: string;
+    colorIcon?: string;
+    round?: boolean;
+};
+
+/**
+ *  Every badge style in use, and for each user the indexes of their badges
+ *  in `styles`, in display order.
+ */
+export type OverlayUserBadges = {
+    styles?: OverlayBadgeStyle[];
+    users?: { [key in string]: number[] };
 };
 
 export type OwnerId = string;

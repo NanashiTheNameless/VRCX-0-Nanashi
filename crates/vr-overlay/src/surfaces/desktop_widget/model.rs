@@ -1,4 +1,4 @@
-use crate::AvatarBitmap;
+use crate::{AvatarBitmap, OverlayBadge};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DesktopWidgetRow {
@@ -10,6 +10,8 @@ pub struct DesktopWidgetRow {
     pub warning: bool,
     pub show_avatar_slot: bool,
     pub avatar: Option<AvatarBitmap>,
+    /// Fork: the actor's user badges.
+    pub badges: Vec<OverlayBadge>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

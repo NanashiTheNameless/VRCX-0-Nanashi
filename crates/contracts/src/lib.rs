@@ -26,6 +26,7 @@ mod media;
 pub mod memos;
 pub mod mutual_graph;
 pub mod notifications;
+pub mod overlay_badges;
 mod persistence;
 pub mod player_list;
 mod profile_backup;

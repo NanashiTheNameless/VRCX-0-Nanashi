@@ -167,6 +167,25 @@ pub(super) fn to_slint_color(color: crate::Color) -> slint::Color {
     slint::Color::from_argb_u8(color.a, color.r, color.g, color.b)
 }
 
+/// Fork: user badges for a name, at most [`crate::MAX_OVERLAY_BADGES`].
+pub(super) fn badge_items(
+    badges: &[crate::OverlayBadge],
+) -> slint::ModelRc<super::OverlayBadgeItem> {
+    let items: Vec<super::OverlayBadgeItem> = badges
+        .iter()
+        .take(crate::MAX_OVERLAY_BADGES)
+        .map(|badge| super::OverlayBadgeItem {
+            icon: slint::SharedString::from(&*badge.icon),
+            from: to_slint_color(badge.from),
+            to: to_slint_color(badge.to),
+            border: to_slint_color(badge.border),
+            icon_color: to_slint_color(badge.icon_color),
+            round: badge.round,
+        })
+        .collect();
+    slint::ModelRc::new(slint::VecModel::from(items))
+}
+
 fn take_last_created_window() -> Option<Rc<MinimalSoftwareWindow>> {
     LAST_CREATED_WINDOW.with(|slot| slot.borrow_mut().take())
 }

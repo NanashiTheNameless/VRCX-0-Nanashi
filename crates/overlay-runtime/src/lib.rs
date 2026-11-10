@@ -1,4 +1,5 @@
 mod avatar_cache;
+mod badges;
 mod config;
 pub mod desktop_widget;
 mod eligibility;
@@ -12,6 +13,7 @@ pub mod surfaces;
 mod test_preview;
 mod tracker_watch;
 
+pub use badges::set_overlay_user_badges;
 pub use eligibility::{VrOverlayEligibility, WristOverlayStartMode};
 pub use manager::VrOverlayManager;
 pub use runtime::{

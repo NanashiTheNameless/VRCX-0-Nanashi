@@ -51,4 +51,7 @@ pub struct FeedLine {
     pub severity: FeedSeverity,
     #[serde(skip)]
     pub accent: FeedAccent,
+    /// Fork: the actor's user badges.
+    #[serde(skip)]
+    pub badges: Vec<super::OverlayBadge>,
 }

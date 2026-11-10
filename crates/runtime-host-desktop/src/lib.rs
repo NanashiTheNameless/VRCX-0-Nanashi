@@ -36,6 +36,7 @@ mod log_watcher;
 mod mcp_adapters;
 mod media;
 pub mod notification;
+pub mod overlay_badges;
 mod privacy_lock;
 mod process_monitor;
 mod profile_backup;

@@ -1,4 +1,6 @@
-use crate::model::{DeviceChip, FeedLine, OverlayFooter, OverlayNowPlaying, OverlaySize};
+use crate::model::{
+    DeviceChip, FeedLine, OverlayBadge, OverlayFooter, OverlayNowPlaying, OverlaySize,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WristSurfaceModel {
@@ -28,6 +30,7 @@ pub struct PlayerCell {
     pub status: String,
     pub note: String,
     pub is_friend: bool,
+    pub badges: Vec<OverlayBadge>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

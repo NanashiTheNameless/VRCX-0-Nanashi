@@ -140,6 +140,7 @@ impl FeedRow {
             warning: text.severity == FeedSeverity::Warning,
             show_avatar_slot: self.entry.actor_user_id.trim().starts_with("usr_"),
             avatar: self.avatar.clone(),
+            badges: crate::badges::user_badges(&self.entry.actor_user_id),
         }
     }
 }

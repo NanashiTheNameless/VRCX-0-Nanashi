@@ -4,6 +4,7 @@ import { useRuntimeStore } from '@/state/runtimeStore';
 import { useShellStore } from '@/state/shellStore';
 
 import { setI18nLanguage } from './i18nService';
+import { startOverlayBadgeSync } from './overlayBadgeSyncService';
 import { bindRuntimeEvents } from './runtimeEventBridgeService';
 import { initializeReactRuntime } from './startupService';
 import { applyThemeMode } from './themeService';
@@ -49,6 +50,7 @@ function createReactRuntimeStartPromise() {
         .then((cleanup) => {
             cleanups.push(cleanup ?? null);
             cleanups.push(startRuntimeUpdateLoop());
+            cleanups.push(startOverlayBadgeSync());
             void hydrateVrcStatus();
             reactRuntimeCleanup = () => {
                 for (const entry of cleanups) {

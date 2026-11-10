@@ -65,6 +65,7 @@ fn player_grid_model(players: usize, max_height: u32, note: &str) -> WristSurfac
                 status: "active / PC VR / exploring".to_string(),
                 note: note.to_string(),
                 is_friend: index % 2 == 0,
+                badges: Vec::new(),
             })
             .collect(),
         ..sample_wrist_model()
@@ -778,6 +779,7 @@ fn wrist_feed_item_preserves_actor_detail_and_muted_media_detail() {
         relation: FeedRelation::Favorite,
         severity: FeedSeverity::Important,
         accent: FeedAccent::None,
+        badges: Vec::new(),
     };
     let media = FeedLine {
         time_text: String::new(),
@@ -787,6 +789,7 @@ fn wrist_feed_item_preserves_actor_detail_and_muted_media_detail() {
         relation: FeedRelation::None,
         severity: FeedSeverity::Normal,
         accent: FeedAccent::None,
+        badges: Vec::new(),
     };
 
     let favorite_item = wrist_feed_item(&favorite, true);
@@ -815,6 +818,7 @@ fn wrist_feed_friends_are_yellow_and_only_favorites_get_a_star() {
         relation: FeedRelation::Friend,
         severity: FeedSeverity::Normal,
         accent: FeedAccent::Online,
+        badges: Vec::new(),
     };
     let friend = wrist_feed_item(&row, true);
     row.relation = FeedRelation::Favorite;
@@ -839,6 +843,7 @@ fn wrist_feed_item_uses_feed_type_accents_and_keeps_severity_precedence() {
         relation: FeedRelation::Friend,
         severity: FeedSeverity::Normal,
         accent: FeedAccent::Online,
+        badges: Vec::new(),
     };
 
     let online = wrist_feed_item(&row, true);
@@ -895,6 +900,7 @@ fn sample_wrist_model() -> WristSurfaceModel {
             relation: FeedRelation::Favorite,
             severity: FeedSeverity::Important,
             accent: FeedAccent::None,
+            badges: Vec::new(),
         }],
         players: Vec::new(),
         text: WristTextScale::default(),
@@ -928,6 +934,7 @@ fn sample_main_model() -> MainSurfaceModel {
                 ]),
             }),
             show_avatar: true,
+            badges: Vec::new(),
         }],
     }
 }
@@ -941,6 +948,7 @@ fn feed_row(index: u32) -> FeedLine {
         relation: FeedRelation::None,
         severity: FeedSeverity::Normal,
         accent: FeedAccent::None,
+        badges: Vec::new(),
     }
 }
 
@@ -993,4 +1001,83 @@ fn device(
         text: String::new(),
         priority,
     }
+}
+
+/// Lucide's star, with the compact arcs and relative commands Lucide uses.
+const LUCIDE_STAR: &str = "M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z";
+
+fn green_badge() -> crate::OverlayBadge {
+    crate::OverlayBadge {
+        icon: Arc::from(LUCIDE_STAR),
+        from: crate::Color::rgba(0, 255, 0, 255),
+        to: crate::Color::rgba(0, 255, 0, 255),
+        border: crate::Color::rgba(0, 255, 0, 255),
+        icon_color: crate::Color::rgba(255, 0, 255, 255),
+        round: false,
+    }
+}
+
+/// Pixels close to one color.
+fn pixels_like(frame: &RgbaFrame, rgb: (u8, u8, u8)) -> usize {
+    frame
+        .data
+        .chunks_exact(4)
+        .filter(|px| {
+            px[3] > 200
+                && px[0].abs_diff(rgb.0) < 40
+                && px[1].abs_diff(rgb.1) < 40
+                && px[2].abs_diff(rgb.2) < 40
+        })
+        .count()
+}
+
+#[test]
+fn wrist_feed_draws_the_actors_badges_with_their_icons() {
+    let mut model = sample_wrist_model();
+    let plain = SlintWristRenderer::new().render_logical(&model).unwrap();
+    model.feed_rows[0].badges = vec![green_badge(), green_badge()];
+    let badged = SlintWristRenderer::new().render_logical(&model).unwrap();
+
+    assert_eq!(pixels_like(&plain, (0, 255, 0)), 0);
+    assert!(pixels_like(&badged, (0, 255, 0)) > 100);
+    assert!(pixels_like(&badged, (255, 0, 255)) > 10);
+}
+
+#[test]
+fn wrist_player_grid_draws_badges_after_names() {
+    let mut model = player_grid_model(2, 1024, "");
+    let plain = SlintWristRenderer::new().render_logical(&model).unwrap();
+    model.players[1].badges = vec![green_badge()];
+    let badged = SlintWristRenderer::new().render_logical(&model).unwrap();
+
+    assert_eq!(pixels_like(&plain, (0, 255, 0)), 0);
+    assert!(pixels_like(&badged, (0, 255, 0)) > 50);
+    assert!(pixels_like(&badged, (255, 0, 255)) > 5);
+}
+
+#[test]
+fn wrist_rows_draw_at_most_the_badge_limit() {
+    let mut few = sample_wrist_model();
+    few.feed_rows[0].badges = vec![green_badge(); crate::MAX_OVERLAY_BADGES];
+    let mut many = few.clone();
+    many.feed_rows[0].badges = vec![green_badge(); crate::MAX_OVERLAY_BADGES + 4];
+    let few = SlintWristRenderer::new().render_logical(&few).unwrap();
+    let many = SlintWristRenderer::new().render_logical(&many).unwrap();
+
+    assert_eq!(
+        pixels_like(&few, (0, 255, 0)),
+        pixels_like(&many, (0, 255, 0))
+    );
+}
+
+#[test]
+fn hmd_cards_draw_the_actors_badges() {
+    let mut model = sample_main_model();
+    let plain = SlintHmdRenderer::new().render(&model).unwrap();
+    model.toasts[0].badges = vec![green_badge()];
+    let badged = SlintHmdRenderer::new().render(&model).unwrap();
+
+    assert_eq!(pixels_like(&plain, (0, 255, 0)), 0);
+    assert!(pixels_like(&badged, (0, 255, 0)) > 100);
+    assert!(pixels_like(&badged, (255, 0, 255)) > 10);
 }

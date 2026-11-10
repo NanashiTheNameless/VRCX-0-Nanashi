@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::model::{Color, FeedRelation, FeedSeverity, OverlaySize};
+use crate::model::{Color, FeedRelation, FeedSeverity, OverlayBadge, OverlaySize};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct AvatarBitmap {
@@ -17,6 +17,8 @@ pub struct ToastCard {
     pub severity: FeedSeverity,
     pub avatar: Option<AvatarBitmap>,
     pub show_avatar: bool,
+    /// Fork: the actor's user badges.
+    pub badges: Vec<OverlayBadge>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

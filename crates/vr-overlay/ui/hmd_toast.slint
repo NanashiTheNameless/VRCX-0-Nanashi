@@ -1,4 +1,5 @@
 import { AvatarPlaceholder } from "avatar_placeholder.slint";
+import { BadgeRow, OverlayBadgeItem } from "badge.slint";
 
 export struct HmdToastItem {
     actor: string,
@@ -9,6 +10,7 @@ export struct HmdToastItem {
     is-favorite: bool,
     relation-color: color,
     severity-color: color,
+    badges: [OverlayBadgeItem],
 }
 
 component HmdToastCard inherits Rectangle {
@@ -28,11 +30,18 @@ component HmdToastCard inherits Rectangle {
     property <length> avatar-x: (root.compact ? 20px : 24px) * root.scale;
     property <length> content-x: root.toast.show-avatar ? self.avatar-x + self.avatar-size + (root.compact ? 16px : 24px) * root.scale : 24px * root.scale;
     property <length> star-room: root.toast.is-favorite ? (root.compact ? 26px : 30px) * root.scale : 0px;
+    property <length> badge-size: (root.compact ? 20px : 24px) * root.scale;
+    property <int> badge-count: root.toast.badges.length;
+    property <length> badge-room: self.badge-count > 0
+        ? 8px * root.scale + self.badge-count * self.badge-size + (self.badge-count - 1) * self.badge-size / 5
+        : 0px;
+    // Room after the name for the favorite star and the badges.
+    property <length> name-extra: self.star-room + self.badge-room;
     property <length> line-gap: 4px * root.scale;
     // Fork: cards hug their text and wrap it instead of eliding; the card grows
     // as tall as its wrapped lines need.
-    property <length> inline-width: actor-text.preferred-width + self.star-room + 12px * root.scale + action-text.preferred-width;
-    property <length> stacked-width: max(actor-text.preferred-width + self.star-room, action-text.preferred-width);
+    property <length> inline-width: actor-text.preferred-width + self.name-extra + 12px * root.scale + action-text.preferred-width;
+    property <length> stacked-width: max(actor-text.preferred-width + self.name-extra, action-text.preferred-width);
     property <bool> single-line: root.compact && self.content-x + self.inline-width + self.right-pad <= root.max-card-width;
     property <length> card-width: clamp(
         self.content-x + (self.single-line ? self.inline-width : self.stacked-width) + self.right-pad,
@@ -95,7 +104,7 @@ component HmdToastCard inherits Rectangle {
         actor-text := Text {
             x: root.content-x;
             y: root.single-line ? (parent.height - self.height) / 2 : root.pad;
-            width: root.single-line ? self.preferred-width : root.content-width - root.star-room;
+            width: root.single-line ? self.preferred-width : root.content-width - root.name-extra;
             height: self.preferred-height;
             text: root.toast.actor;
             font-size: (root.compact ? 22px : 28px) * root.scale;
@@ -120,8 +129,16 @@ component HmdToastCard inherits Rectangle {
             stroke-line-join: round;
         }
 
+        if root.badge-count > 0 : BadgeRow {
+            x: root.content-x + min(actor-text.preferred-width, actor-text.width) + root.star-room + 8px * root.scale;
+            y: actor-text.y + (min(actor-text.height, (root.compact ? 34px : 40px) * root.scale) - root.badge-size) / 2;
+            height: root.badge-size;
+            badges: root.toast.badges;
+            size: root.badge-size;
+        }
+
         action-text := Text {
-            property <length> inline-offset: actor-text.width + root.star-room + 12px * root.scale;
+            property <length> inline-offset: actor-text.width + root.name-extra + 12px * root.scale;
             x: root.single-line ? root.content-x + self.inline-offset : root.content-x;
             y: root.single-line ? (parent.height - self.height) / 2 : root.pad + actor-text.height + root.line-gap;
             width: root.single-line ? root.content-width - self.inline-offset : root.content-width;

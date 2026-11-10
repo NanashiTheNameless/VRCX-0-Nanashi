@@ -163,6 +163,7 @@ pub(super) fn build_wrist_frame_input(
                 (
                     player.join_time_ms,
                     WristPlayerRow {
+                        user_id: player.user_id.clone(),
                         display_name: player.display_name.clone(),
                         note: notes.get(&player.user_id).cloned().unwrap_or_default(),
                         joined_text: player

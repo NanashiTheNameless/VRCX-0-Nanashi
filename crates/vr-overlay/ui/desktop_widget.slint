@@ -1,4 +1,5 @@
 import { AvatarPlaceholder } from "avatar_placeholder.slint";
+import { BadgeRow, OverlayBadgeItem } from "badge.slint";
 
 export struct DesktopWidgetRowItem {
     time: string,
@@ -9,6 +10,7 @@ export struct DesktopWidgetRowItem {
     show-avatar-slot: bool,
     has-avatar: bool,
     avatar: image,
+    badges: [OverlayBadgeItem],
 }
 
 component ShadowText inherits Rectangle {
@@ -175,6 +177,17 @@ component WidgetRow inherits Rectangle {
                 drag-requested => {
                     root.drag-requested();
                 }
+            }
+        }
+
+        if root.item.actor != "" && root.item.badges.length > 0: VerticalLayout {
+            alignment: start;
+            horizontal-stretch: 0;
+            padding-top: root.text-drop + max(0px, (root.line-height - 12px) / 2);
+
+            BadgeRow {
+                badges: root.item.badges;
+                size: 12px;
             }
         }
 

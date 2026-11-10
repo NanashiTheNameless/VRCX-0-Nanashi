@@ -12,7 +12,7 @@ use crate::{
 };
 
 use super::platform::{
-    create_component_window, pixel_count, render_fitting_height, to_slint_color,
+    badge_items, create_component_window, pixel_count, render_fitting_height, to_slint_color,
 };
 use super::surface::SlintSurfaceHost;
 use super::{WristDeviceItem, WristFeedItem, WristPanel, WristPlayerItem};
@@ -250,6 +250,7 @@ fn wrist_player_item(cell: &PlayerCell) -> WristPlayerItem {
         }),
         has_status: !cell.status.is_empty(),
         has_note: !cell.note.is_empty(),
+        badges: badge_items(&cell.badges),
     }
 }
 
@@ -511,6 +512,7 @@ pub(super) fn wrist_feed_item(row: &FeedLine, dark_background: bool) -> WristFee
         has_actor,
         is_favorite: row.relation == FeedRelation::Favorite,
         show_accent,
+        badges: badge_items(if has_actor { &row.badges } else { &[] }),
     }
 }
 

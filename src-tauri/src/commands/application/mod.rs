@@ -23,6 +23,7 @@ pub mod my_avatars;
 pub mod note_export;
 pub mod notification_chains;
 pub mod overlay_activity;
+pub mod overlay_badges;
 pub mod presence_automation;
 pub mod privacy_lock;
 pub mod profile_backup;

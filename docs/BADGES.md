@@ -1,8 +1,9 @@
 # Badges
 
 Badges are the small labels next to user names. They show up everywhere a name does: friend
-and player lists, the Feed, the Game Log, the friends sidebar, hover cards and the user
-dialog. There are four kinds: built-in badges, global badges, your own custom badges, and
+and player lists, the Feed, the Game Log, the friends sidebar, hover cards, the user dialog
+and notifications. They also show in VR and on the desktop overlay (see
+[Badges in VR and the Desktop Overlay](#badges-in-vr-and-the-desktop-overlay)). There are four kinds: built-in badges, global badges, your own custom badges, and
 the collapsed folder custom badges fold into when space runs out.
 
 The shape tells you who can see a badge:
@@ -208,6 +209,16 @@ export, a list or a single badge. Badges with the same ID replace your saved one
 choose to add copies. Fetched VRChat group member lists are left out of exports; fetch them
 again after importing.
 
+## Badges in VR and the Desktop Overlay
+
+The wrist menu's Feed, Players and Notes pages, HMD notification cards and the Desktop
+Overlay draw each user's badges after their name, as small icon tiles in the badge's colors:
+rounded squares for built-in and global badges, circles for custom badges. They never move or
+animate there, and show at most six per name; the rest are left out. The app window works out
+who gets which badge and passes the result to the overlays on the same PC, so badges appear
+there a moment after the app has started, and changes to your custom badges follow within a
+few seconds.
+
 ## Reserved icons
 
 So nobody can imitate them, custom badges cannot use:
@@ -229,4 +240,5 @@ motion setting stops every badge animation, the developer badge's glitch include
 
 Badges make no requests of their own, apart from fetching a VRChat group's member list when
 you ask for it, and the signed global badge list download described above. Custom badges
-leave your PC only through Settings Sync when you have it on.
+leave your PC only through Settings Sync when you have it on. Handing badges to the VR and
+desktop overlays stays on your PC.

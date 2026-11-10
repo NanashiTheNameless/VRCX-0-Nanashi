@@ -8,7 +8,7 @@ use slint::{
 use crate::{FeedRelation, FeedSeverity, MainSurfaceModel, OverlaySize, RgbaFrame, ToastCard};
 
 use super::platform::{
-    cached_avatar_image, create_component_window, pixel_count, render_fitting_height,
+    badge_items, cached_avatar_image, create_component_window, pixel_count, render_fitting_height,
     retain_avatar_images, to_slint_color, AvatarImageCache,
 };
 use super::surface::SlintSurfaceHost;
@@ -121,6 +121,7 @@ fn hmd_toast_item(
         is_favorite: toast.relation == FeedRelation::Favorite,
         relation_color: hmd_relation_color(toast.relation),
         severity_color: hmd_severity_color(toast.severity, accent),
+        badges: badge_items(&toast.badges),
     }
 }
 
