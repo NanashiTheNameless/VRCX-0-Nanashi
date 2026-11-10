@@ -365,7 +365,9 @@ impl Widget {
 impl Frame {
     fn green_pixels(&self) -> usize {
         self.0
-            .chunks_exact(4)
+            .as_chunks::<4>()
+            .0
+            .iter()
             .filter(|px| px[3] > 200 && px[1] > 200 && px[0] < 60 && px[2] < 60)
             .count()
     }

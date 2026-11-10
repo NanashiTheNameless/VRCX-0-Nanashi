@@ -1021,7 +1021,9 @@ fn green_badge() -> crate::OverlayBadge {
 fn pixels_like(frame: &RgbaFrame, rgb: (u8, u8, u8)) -> usize {
     frame
         .data
-        .chunks_exact(4)
+        .as_chunks::<4>()
+        .0
+        .iter()
         .filter(|px| {
             px[3] > 200
                 && px[0].abs_diff(rgb.0) < 40
