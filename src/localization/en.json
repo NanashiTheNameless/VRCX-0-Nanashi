@@ -4110,6 +4110,7 @@
                     "list": "Custom badges",
                     "list_description": "Add your own badges to users. A badge shows next to a user's name everywhere when its rule expression matches, and a user can have several badges at once. Badges are only visible to you.",
                     "add": "Add badge",
+                    "many_badges": "You have {count} badges. More than {limit} can slow down long lists of names and make Settings Sync uploads larger.",
                     "edit": "Edit badge",
                     "delete": "Delete badge",
                     "enabled": "Show this badge",
@@ -4188,12 +4189,17 @@
                         "vrchatGroup": "Is in VRChat group",
                         "trust": "Trust rank",
                         "supporter": "VRC+ supporters",
-                        "memo": "Memo or note contains",
-                        "bio": "Bio contains",
+                        "memo": "Memo or note",
+                        "bio": "Bio",
                         "ageVerified": "Age verified",
                         "platform": "Platform",
                         "status": "Status",
-                        "pronouns": "Pronouns contain",
+                        "language": "Spoken language",
+                        "friendNumber": "Friend number",
+                        "moderation": "Blocked or muted",
+                        "displayName": "Display name",
+                        "statusText": "Status text",
+                        "pronouns": "Pronouns",
                         "group": "Rule group"
                     },
                     "rule_description": {
@@ -4204,12 +4210,17 @@
                         "vrchatGroup": "Users in a VRChat group (pick one of yours, or paste a grp_ ID or a vrchat.com group link). Each user's own group list is trusted when the app has seen it; the fetched member list fills in the rest. Limiting to a role needs the member list.",
                         "trust": "Users with this trust rank, when their profile is known.",
                         "supporter": "Users with VRChat Plus, when their profile is known.",
-                        "memo": "Users whose memo or VRChat note contains this text.",
-                        "bio": "Users whose VRChat bio contains this text, when their profile is known.",
+                        "memo": "Users whose memo or VRChat note matches. The memo and the note are checked separately.",
+                        "bio": "Users whose VRChat bio matches, when their profile is known.",
                         "ageVerified": "Users who show VRChat age verification on their profile, when their profile is known. Users who hide it never match.",
                         "platform": "Users whose last VRChat platform is this one, when it is known.",
-                        "status": "Online users with this status. Changes as their status changes.",
-                        "pronouns": "Users whose VRChat pronouns contain this text, when their profile is known.",
+                        "status": "Users with this status. Online statuses change as their status changes; Offline matches friends who are offline.",
+                        "language": "Users who list this language on their VRChat profile, when their profile is known.",
+                        "friendNumber": "Users whose friend number is in this range. Numbers count up as you add friends and are never reused, so former friends keep theirs.",
+                        "moderation": "Users you have blocked or muted in VRChat, from the moderation list the app keeps up to date in the background.",
+                        "displayName": "Users whose current display name matches.",
+                        "statusText": "Users whose status text matches, when it is known.",
+                        "pronouns": "Users whose VRChat pronouns match, when their profile is known.",
                         "group": "Combine nested rules with their own operator. The group result is one input to the surrounding rules."
                     },
                     "age_level": {
@@ -4226,8 +4237,44 @@
                         "join_me": "Join Me",
                         "active": "Online",
                         "ask_me": "Ask Me",
-                        "busy": "Do Not Disturb"
+                        "busy": "Do Not Disturb",
+                        "offline": "Offline"
                     },
+                    "moderation_option": {
+                        "block": "Blocked",
+                        "mute": "Muted"
+                    },
+                    "text_phrase": "have {field}",
+                    "text_phrase_not": "do not have {field}",
+                    "text_field": {
+                        "displayName": "a display name",
+                        "statusText": "a status text",
+                        "memo": "a memo or note",
+                        "bio": "a bio",
+                        "pronouns": "pronouns"
+                    },
+                    "text_match_label": "How to compare",
+                    "text_match": {
+                        "contains": "Contains",
+                        "startsWith": "Starts with",
+                        "exact": "Is exactly",
+                        "regex": "Matches regular expression",
+                        "any": "Is not empty"
+                    },
+                    "text_match_phrase": {
+                        "contains": "containing",
+                        "startsWith": "starting with",
+                        "exact": "equal to",
+                        "regex": "matching"
+                    },
+                    "regex_placeholder": "Regular expression",
+                    "regex_invalid": "Not a valid regular expression. This condition never matches until it is fixed.",
+                    "friend_number_min": "From",
+                    "friend_number_max": "to",
+                    "friend_number_no_max": "No limit",
+                    "friend_number_invalid": "The upper number is below the lower one.",
+                    "friend_number_range": "{min} to {max}",
+                    "friend_number_from": "{min} or higher",
                     "rule_enabled": "Use",
                     "condition_tree": "Conditions",
                     "single_condition": "Only one condition is on, so it decides the badge by itself.",
@@ -4263,9 +4310,11 @@
                         "ageVerified": "have age verification",
                         "platform": "were last on",
                         "status": "have the status",
-                        "memo": "have a memo or note containing",
-                        "bio": "have a bio containing",
-                        "pronouns": "have pronouns containing",
+                        "language": "speak",
+                        "friendNumber": "have a friend number of",
+                        "moderation": "are on your moderation list as",
+                        "moderation_block": "are blocked by you",
+                        "moderation_mute": "are muted by you",
                         "group": "match a group of conditions"
                     },
                     "phrase_not": {
@@ -4279,9 +4328,11 @@
                         "ageVerified": "do not have age verification",
                         "platform": "were not last on",
                         "status": "do not have the status",
-                        "memo": "do not have a memo or note containing",
-                        "bio": "do not have a bio containing",
-                        "pronouns": "do not have pronouns containing",
+                        "language": "do not speak",
+                        "friendNumber": "do not have a friend number of",
+                        "moderation": "are not on your moderation list as",
+                        "moderation_block": "are not blocked by you",
+                        "moderation_mute": "are not muted by you",
                         "group": "do not match this group"
                     },
                     "summary": {
@@ -4336,7 +4387,7 @@
                         "invalid_other": "{count} entries are not valid badges and will be skipped.",
                         "parse_error": "This is not valid badge JSONC: {error}",
                         "import_confirm": "Import",
-                        "imported": "Badges imported: {added} added, {replaced} replaced, {skipped} skipped because of the {limit} badge limit."
+                        "imported": "Badges imported: {added} added, {replaced} replaced."
                     }
                 },
                 "user_colors": {

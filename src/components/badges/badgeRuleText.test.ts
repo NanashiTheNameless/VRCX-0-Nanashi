@@ -1,6 +1,9 @@
 import type { TFunction } from 'i18next';
 import { describe, expect, it } from 'vitest';
 
+import type { CustomBadgeRule } from '@/domain/badges/customBadges';
+import en from '@/localization/en.json';
+
 import { describeCustomBadge, usesAdvancedBadgeLogic } from './badgeRuleText';
 
 const P = 'view.settings.appearance.user_badges.';
@@ -108,5 +111,65 @@ describe('usesAdvancedBadgeLogic', () => {
                 { kind: 'group', operator: 'xnor', rules: [] }
             ])
         ).toBe(true);
+    });
+});
+
+describe('new condition wording', () => {
+    const translate = ((key: string, values: Record<string, unknown> = {}) => {
+        let node: unknown = en;
+        for (const part of key.split('.')) {
+            node = (node as Record<string, unknown> | undefined)?.[part];
+        }
+        if (typeof node !== 'string') {
+            throw new Error(`Missing string ${key}`);
+        }
+        return node.replace(/\{(\w+)\}/g, (_, name) => String(values[name]));
+    }) as unknown as TFunction;
+    const describe1 = (rule: CustomBadgeRule) =>
+        describeCustomBadge({ rules: [rule] }, translate);
+
+    it('reads text conditions by match mode', () => {
+        expect(describe1({ kind: 'bio', contains: 'dj' })).toBe(
+            'Users who have a bio containing "dj"'
+        );
+        expect(
+            describe1({
+                kind: 'displayName',
+                contains: 'Al',
+                match: 'startsWith'
+            })
+        ).toBe('Users who have a display name starting with "Al"');
+        expect(
+            describe1({ kind: 'statusText', contains: 'afk', match: 'exact' })
+        ).toBe('Users who have a status text equal to "afk"');
+        expect(
+            describe1({ kind: 'pronouns', contains: '^she', match: 'regex' })
+        ).toBe('Users who have pronouns matching /^she/');
+        expect(
+            describe1({
+                kind: 'memo',
+                contains: '',
+                match: 'any',
+                negated: true
+            })
+        ).toBe('Users who do not have a memo or note');
+    });
+
+    it('reads language, friend number, moderation and offline conditions', () => {
+        expect(describe1({ kind: 'language', language: 'eng' })).toBe(
+            'Users who speak English (ENG)'
+        );
+        expect(describe1({ kind: 'friendNumber', min: 1, max: 50 })).toBe(
+            'Users who have a friend number of 1 to 50'
+        );
+        expect(describe1({ kind: 'friendNumber', min: 100, max: 0 })).toBe(
+            'Users who have a friend number of 100 or higher'
+        );
+        expect(
+            describe1({ kind: 'moderation', moderation: 'mute', negated: true })
+        ).toBe('Users who are not muted by you');
+        expect(describe1({ kind: 'status', status: 'offline' })).toBe(
+            'Users who have the status Offline'
+        );
     });
 });

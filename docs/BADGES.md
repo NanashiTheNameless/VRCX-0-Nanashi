@@ -132,7 +132,10 @@ A custom badge has:
   [reserved ones](#reserved-icons). Lab icons show "(Lab)" in the picker.
 - **rules** that decide who gets it.
 
-You can have up to 50 custom badges, turn each one on or off, and change their order.
+You can have as many custom badges as you like, turn each one on or off, and change their order.
+Above 50, Settings shows a warning: every name on screen checks every badge, and all of them
+sync as one value, so very many badges can slow down long lists and enlarge Settings Sync
+uploads.
 
 ### Who gets a custom badge
 
@@ -157,8 +160,20 @@ The rule editor reads as a sentence: "Show this badge for users who match **ALL*
   This is kept per account on your PC only and is never synced. People outside your friends
   list can match once the app observes the required data, such as when you open their profile.
 - **Platform**: users last seen on PC, Android (Quest) or iOS.
-- **Status**: online users with Join Me, Online, Ask Me or Do Not Disturb.
-- **Memo or note contains**, **Bio contains** and **Pronouns contain** some text.
+- **Status**: online users with Join Me, Online, Ask Me or Do Not Disturb, or **Offline**,
+  which matches friends who are offline. A friend who is offline never matches an online
+  status, even if their last status is still known.
+- **Spoken language**: users who list a language on their VRChat profile.
+- **Friend number**: friends whose number falls in a range, such as 1 to 50, or from a
+  number up with no upper limit. Numbers count up as you add friends and are never reused,
+  so a former friend keeps their number.
+- **Blocked or muted**: users you have blocked or muted in VRChat. The app reads this from
+  the moderation list it keeps up to date in the background; badges never ask VRChat for it.
+- **Display name**, **Status text**, **Memo or note**, **Bio** and **Pronouns**: compare a
+  piece of profile text. Each one can **Contains**, **Starts with**, **Is exactly** or
+  **Matches regular expression** some text, all ignoring case, or **Is not empty**, which
+  needs no text and matches when the user has any. The memo and the VRChat note are checked
+  separately. An invalid regular expression is marked in the editor and never matches.
 
 More options:
 

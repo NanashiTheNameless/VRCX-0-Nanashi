@@ -2,11 +2,13 @@ import type { TFunction } from 'i18next';
 
 import {
     enabledBadgeRules,
+    isBadgeTextRule,
     type BadgeRuleOperator,
     type CustomBadge,
     type CustomBadgeRule
 } from '@/domain/badges/customBadges';
 import { TRUST_COLOR_ENTRIES } from '@/shared/constants/trustColors';
+import { languageOptionLabel } from '@/shared/utils/userLanguage';
 
 const T = 'view.settings.appearance.user_badges';
 
@@ -67,10 +69,33 @@ export function badgeRuleValueText(
             return t(`${T}.platform_option.${optionKey(rule.platform)}`);
         case 'status':
             return t(`${T}.status_option.${optionKey(rule.status)}`);
+        case 'displayName':
+        case 'statusText':
         case 'memo':
         case 'bio':
-        case 'pronouns':
-            return rule.contains ? `"${rule.contains}"` : unset;
+        case 'pronouns': {
+            const match = rule.match ?? 'contains';
+            if (match === 'any') {
+                return '';
+            }
+            if (!rule.contains) {
+                return unset;
+            }
+            const value =
+                match === 'regex' ? `/${rule.contains}/` : `"${rule.contains}"`;
+            return `${t(`${T}.text_match_phrase.${match}`)} ${value}`;
+        }
+        case 'language':
+            return languageOptionLabel({ key: rule.language });
+        case 'friendNumber':
+            return rule.max
+                ? t(`${T}.friend_number_range`, {
+                      min: rule.min,
+                      max: rule.max
+                  })
+                : t(`${T}.friend_number_from`, { min: rule.min });
+        case 'moderation':
+            return '';
         default:
             return '';
     }
@@ -98,7 +123,15 @@ export function badgeRulePhrase(
         return negated ? t(`${T}.summary.not_group`, { item: text }) : text;
     }
     const value = badgeRuleValueText(rule, t, options);
-    const phrase = t(`${T}.${negated ? 'phrase_not' : 'phrase'}.${rule.kind}`);
+    const phraseKey =
+        rule.kind === 'moderation'
+            ? `moderation_${rule.moderation}`
+            : rule.kind;
+    const phrase = isBadgeTextRule(rule)
+        ? t(`${T}.${negated ? 'text_phrase_not' : 'text_phrase'}`, {
+              field: t(`${T}.text_field.${rule.kind}`)
+          })
+        : t(`${T}.${negated ? 'phrase_not' : 'phrase'}.${phraseKey}`);
     return value ? `${phrase} ${value}` : phrase;
 }
 

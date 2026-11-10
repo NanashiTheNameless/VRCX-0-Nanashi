@@ -22,7 +22,7 @@ import {
 } from '@/components/badges/CustomBadgeTransferDialogs';
 import { CustomBadgeChip } from '@/components/UserBadges';
 import {
-    CUSTOM_BADGE_LIMIT,
+    CUSTOM_BADGE_WARN_COUNT,
     type CustomBadge,
     isReservedBadgeIcon
 } from '@/domain/badges/customBadges';
@@ -88,9 +88,7 @@ export function SettingsCustomBadgesCard() {
                         type: 'success',
                         title: t(`${T}.transfer.imported`, {
                             added: merged.added,
-                            replaced: merged.replaced,
-                            skipped: merged.skipped,
-                            limit: CUSTOM_BADGE_LIMIT
+                            replaced: merged.replaced
                         })
                     });
                 }
@@ -119,7 +117,7 @@ export function SettingsCustomBadgesCard() {
                         disabled={Boolean(editing)}
                         onClick={() => setImporting(true)}
                     >
-                        <UploadIcon />
+                        <DownloadIcon />
                         {t(`${T}.transfer.import`)}
                     </Button>
                     <Button
@@ -129,23 +127,28 @@ export function SettingsCustomBadgesCard() {
                         disabled={!badges.length}
                         onClick={() => setExporting([...badges])}
                     >
-                        <DownloadIcon />
+                        <UploadIcon />
                         {t(`${T}.transfer.export_all`)}
                     </Button>
                     <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        disabled={
-                            Boolean(editing) ||
-                            badges.length >= CUSTOM_BADGE_LIMIT
-                        }
+                        disabled={Boolean(editing)}
                         onClick={() => setEditing(newBadge())}
                     >
                         <PlusIcon />
                         {t(`${T}.add`)}
                     </Button>
                 </div>
+                {badges.length > CUSTOM_BADGE_WARN_COUNT ? (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">
+                        {t(`${T}.many_badges`, {
+                            count: badges.length,
+                            limit: CUSTOM_BADGE_WARN_COUNT
+                        })}
+                    </p>
+                ) : null}
             </Field>
             <CustomBadgeExportDialog
                 badges={exporting}
@@ -238,7 +241,7 @@ export function SettingsCustomBadgesCard() {
                                 aria-label={t(`${T}.transfer.export`)}
                                 onClick={() => setExporting([badge])}
                             >
-                                <DownloadIcon />
+                                <UploadIcon />
                             </Button>
                             <Button
                                 type="button"

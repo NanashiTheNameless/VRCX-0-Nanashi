@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 
 import { CustomBadgeChip } from '@/components/UserBadges';
 import {
-    CUSTOM_BADGE_LIMIT,
     isUserListedOnBadge,
     setUserListedOnBadge,
     type CustomBadge
@@ -101,10 +100,7 @@ export function UserBadgeActionSub({
                     </DropdownMenuCheckboxItem>
                 ))}
                 {badges.length ? <DropdownMenuSeparator /> : null}
-                <DropdownMenuItem
-                    disabled={badges.length >= CUSTOM_BADGE_LIMIT}
-                    onClick={onCreateBadge}
-                >
+                <DropdownMenuItem onClick={onCreateBadge}>
                     <PlusIcon />
                     {t('dialog.user.actions.badge_new')}
                 </DropdownMenuItem>

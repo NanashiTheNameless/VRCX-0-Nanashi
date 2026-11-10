@@ -1,7 +1,6 @@
 import { parse, printParseErrorCode, type ParseError } from 'jsonc-parser';
 
 import {
-    CUSTOM_BADGE_LIMIT,
     createCustomBadgeId,
     normalizeCustomBadge,
     type CustomBadge,
@@ -134,7 +133,6 @@ export type CustomBadgeMerge = {
     badges: CustomBadge[];
     added: number;
     replaced: number;
-    skipped: number;
 };
 
 /**
@@ -150,7 +148,6 @@ export function mergeImportedBadges(
     const usedIds = new Set(current.map((badge) => badge.id));
     let added = 0;
     let replaced = 0;
-    let skipped = 0;
     for (const badge of imported) {
         const existing = replaceSameId
             ? next.findIndex((entry) => entry.id === badge.id)
@@ -158,10 +155,6 @@ export function mergeImportedBadges(
         if (existing >= 0) {
             next[existing] = badge;
             replaced += 1;
-            continue;
-        }
-        if (next.length >= CUSTOM_BADGE_LIMIT) {
-            skipped += 1;
             continue;
         }
         let id = badge.id;
@@ -172,5 +165,5 @@ export function mergeImportedBadges(
         next.push({ ...badge, id });
         added += 1;
     }
-    return { badges: next, added, replaced, skipped };
+    return { badges: next, added, replaced };
 }

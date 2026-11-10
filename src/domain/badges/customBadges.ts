@@ -7,9 +7,12 @@ import { resolveTrustColorKey } from '@/shared/utils/trustColors';
 type TrustColorKey = keyof typeof TRUST_COLOR_DEFAULTS;
 
 export const CUSTOM_BADGES_CONFIG_KEY = 'customUserBadges';
-export const CUSTOM_BADGE_LIMIT = 50;
+// Not a limit: Settings shows a warning above this many badges, since every
+// name on screen checks them and they all sync as one value.
+export const CUSTOM_BADGE_WARN_COUNT = 50;
 export const CUSTOM_BADGE_LABEL_MAX = 32;
 export const CUSTOM_BADGE_MEMO_MAX = 64;
+export const CUSTOM_BADGE_FRIEND_NUMBER_MAX = 1_000_000;
 export const CUSTOM_BADGE_GROUP_MEMBER_LIMIT = 5000;
 export const DEFAULT_CUSTOM_BADGE_ICON = 'Star';
 export const DEFAULT_CUSTOM_BADGE_COLOR = '#3b82f6';
@@ -30,16 +33,44 @@ const USER_ID = /^usr_[0-9a-z-]{1,64}$/i;
 const GROUP_ID = /^grp_[0-9a-z-]{1,64}$/i;
 const ROLE_ID = /^grol_[0-9a-z-]{1,64}$/i;
 const ICON_NAME = /^[A-Z][A-Za-z0-9]{0,63}$/;
+const LANGUAGE_KEY = /^[a-z]{2,8}$/;
 
 export const BADGE_AGE_LEVELS = ['any', 'adult', 'hidden'] as const;
 export type BadgeAgeLevel = (typeof BADGE_AGE_LEVELS)[number];
 // VRChat's last_platform values.
 export const BADGE_PLATFORMS = ['standalonewindows', 'android', 'ios'] as const;
 export type BadgePlatform = (typeof BADGE_PLATFORMS)[number];
-// VRChat's own status values. Offline users report "offline", so these only
-// match while a user is online.
-export const BADGE_STATUSES = ['join me', 'active', 'ask me', 'busy'] as const;
+// VRChat's own status values, plus "offline". Offline users report
+// "offline", so the others only match while a user is online.
+export const BADGE_STATUSES = [
+    'join me',
+    'active',
+    'ask me',
+    'busy',
+    'offline'
+] as const;
 export type BadgeStatus = (typeof BADGE_STATUSES)[number];
+// Conditions that look at a piece of profile text.
+export const BADGE_TEXT_RULE_KINDS = [
+    'displayName',
+    'statusText',
+    'memo',
+    'bio',
+    'pronouns'
+] as const;
+export type BadgeTextRuleKind = (typeof BADGE_TEXT_RULE_KINDS)[number];
+// How a text condition compares. "any" matches any non-empty text and needs
+// no value; regular expressions ignore case like the others.
+export const BADGE_TEXT_MATCHES = [
+    'contains',
+    'startsWith',
+    'exact',
+    'regex',
+    'any'
+] as const;
+export type BadgeTextMatch = (typeof BADGE_TEXT_MATCHES)[number];
+export const BADGE_MODERATIONS = ['block', 'mute'] as const;
+export type BadgeModeration = (typeof BADGE_MODERATIONS)[number];
 
 // Icons of the built-in badges (fork developer, upstream developer, VRChat
 // staff) and of global badges. Custom badges may not use them, so those
@@ -103,9 +134,11 @@ export type CustomBadgeRule = (
     | { kind: 'ageVerified'; level: BadgeAgeLevel }
     | { kind: 'platform'; platform: BadgePlatform }
     | { kind: 'status'; status: BadgeStatus }
-    | { kind: 'memo'; contains: string }
-    | { kind: 'bio'; contains: string }
-    | { kind: 'pronouns'; contains: string }
+    | { kind: BadgeTextRuleKind; contains: string; match?: BadgeTextMatch }
+    | { kind: 'language'; language: string }
+    // Inclusive range; a max of 0 means no upper limit.
+    | { kind: 'friendNumber'; min: number; max: number }
+    | { kind: 'moderation'; moderation: BadgeModeration }
     | { kind: 'group'; operator: BadgeRuleOperator; rules: CustomBadgeRule[] }
 ) & { negated?: boolean; enabled?: boolean };
 
@@ -128,9 +161,19 @@ export type BadgeUserFacts = {
     tags: readonly string[];
     hasTrustData: boolean;
     trustKey: TrustColorKey | null;
-    memo: string;
+    displayName: string;
+    statusText: string;
+    // The local memo and the VRChat note, each matched on its own.
+    memos: readonly string[];
     bio: string;
     pronouns: string;
+    languages: readonly string[];
+    // 0 when unknown.
+    friendNumber: number;
+    // From the friend list; null for users who are not friends.
+    presence: 'online' | 'active' | 'offline' | null;
+    // From the local moderation list; null when it has not been read.
+    moderation: { block: boolean; mute: boolean } | null;
     // null when the profile data does not say (friend list data only has the
     // status).
     ageVerified: boolean | null;
@@ -147,6 +190,7 @@ export type CustomBadgeIndex = {
     dynamicBadges: CustomBadge[];
     badgesById: Map<string, CustomBadge>;
     needsFacts: boolean;
+    needsModeration: boolean;
     staticRuleUserIds: Map<CustomBadgeRule, ReadonlySet<string>>;
 };
 
@@ -345,15 +389,55 @@ function normalizeBadgeRuleValue(
             return oneOf(BADGE_STATUSES, source.status)
                 ? { kind: 'status', status: source.status }
                 : null;
+        case 'displayName':
+        case 'statusText':
         case 'memo':
         case 'bio':
         case 'pronouns': {
-            const contains = text(source.contains, CUSTOM_BADGE_MEMO_MAX);
-            return contains ? { kind: source.kind, contains } : null;
+            const match = oneOf(BADGE_TEXT_MATCHES, source.match)
+                ? source.match
+                : 'contains';
+            const contains =
+                match === 'any'
+                    ? ''
+                    : text(source.contains, CUSTOM_BADGE_MEMO_MAX);
+            if (match !== 'any' && !contains) {
+                return null;
+            }
+            return match === 'contains'
+                ? { kind: source.kind, contains }
+                : { kind: source.kind, contains, match };
         }
+        case 'language': {
+            const language = text(source.language, 16).toLowerCase();
+            return LANGUAGE_KEY.test(language)
+                ? { kind: 'language', language }
+                : null;
+        }
+        case 'friendNumber': {
+            const min = friendNumberBound(source.min);
+            const max = friendNumberBound(source.max);
+            if (min === null || max === null || (max > 0 && max < min)) {
+                return null;
+            }
+            return { kind: 'friendNumber', min, max };
+        }
+        case 'moderation':
+            return oneOf(BADGE_MODERATIONS, source.moderation)
+                ? { kind: 'moderation', moderation: source.moderation }
+                : null;
         default:
             return null;
     }
+}
+
+function friendNumberBound(value: unknown): number | null {
+    const number = Number(value ?? 0);
+    return Number.isInteger(number) &&
+        number >= 0 &&
+        number <= CUSTOM_BADGE_FRIEND_NUMBER_MAX
+        ? number
+        : null;
 }
 
 export function normalizeCustomBadge(value: unknown): CustomBadge | null {
@@ -409,9 +493,6 @@ export function normalizeCustomBadges(value: unknown): CustomBadge[] {
             seen.add(badge.id);
             badges.push(badge);
         }
-        if (badges.length >= CUSTOM_BADGE_LIMIT) {
-            break;
-        }
     }
     return badges;
 }
@@ -439,13 +520,28 @@ function isDynamicRule(rule: CustomBadgeRule): boolean {
         rule.kind === 'friends' ||
         rule.kind === 'trust' ||
         rule.kind === 'supporter' ||
-        rule.kind === 'memo' ||
-        rule.kind === 'bio' ||
-        rule.kind === 'pronouns' ||
+        isBadgeTextRule(rule) ||
+        rule.kind === 'language' ||
+        rule.kind === 'friendNumber' ||
+        rule.kind === 'moderation' ||
         rule.kind === 'ageVerified' ||
         rule.kind === 'platform' ||
         rule.kind === 'status' ||
         rule.kind === 'vrchatGroup'
+    );
+}
+
+export function isBadgeTextRule(
+    rule: CustomBadgeRule
+): rule is Extract<CustomBadgeRule, { kind: BadgeTextRuleKind }> {
+    return (BADGE_TEXT_RULE_KINDS as readonly string[]).includes(rule.kind);
+}
+
+function usesModeration(rule: CustomBadgeRule): boolean {
+    return (
+        isBadgeRuleEnabled(rule) &&
+        (rule.kind === 'moderation' ||
+            (rule.kind === 'group' && rule.rules.some(usesModeration)))
     );
 }
 
@@ -458,6 +554,7 @@ export function buildCustomBadgeIndex(
     const dynamicBadges: CustomBadge[] = [];
     const badgesById = new Map<string, CustomBadge>();
     let needsFacts = false;
+    let needsModeration = false;
     const staticRuleUserIds = new Map<CustomBadgeRule, ReadonlySet<string>>();
 
     function indexRule(rule: CustomBadgeRule) {
@@ -519,6 +616,7 @@ export function buildCustomBadgeIndex(
             dynamicBadges.push(badge);
         }
         needsFacts ||= rules.some(isDynamicRule);
+        needsModeration ||= rules.some(usesModeration);
     }
 
     return {
@@ -526,6 +624,7 @@ export function buildCustomBadgeIndex(
         dynamicBadges,
         badgesById,
         needsFacts,
+        needsModeration,
         staticRuleUserIds
     };
 }
@@ -540,12 +639,19 @@ function stringField(
     return typeof value === 'string' ? value : '';
 }
 
+export type BadgeUserContext = {
+    friendNumber?: number;
+    presence?: BadgeUserFacts['presence'];
+    moderation?: BadgeUserFacts['moderation'];
+};
+
 export function badgeUserFactsFrom(
     fact: Record<string, unknown> | null | undefined,
     isFriend: boolean,
     userId = '',
     groupMembership: (groupId: string) => boolean | null = NO_GROUP_KNOWLEDGE,
-    currentUserId: string | null = null
+    currentUserId: string | null = null,
+    context: BadgeUserContext = {}
 ): BadgeUserFacts {
     const tags = Array.isArray(fact?.tags)
         ? fact.tags.filter((tag): tag is string => typeof tag === 'string')
@@ -564,11 +670,21 @@ export function badgeUserFactsFrom(
         tags,
         hasTrustData,
         trustKey: hasTrustData ? resolveTrustColorKey(fact) : null,
-        memo: [fact?.memo, fact?.note]
-            .filter((value): value is string => typeof value === 'string')
-            .join('\n'),
+        displayName: stringField(fact, 'displayName'),
+        statusText: stringField(fact, 'statusDescription'),
+        memos: [fact?.memo, fact?.note].filter(
+            (value): value is string => typeof value === 'string'
+        ),
         bio: stringField(fact, 'bio'),
         pronouns: stringField(fact, 'pronouns'),
+        languages: tags
+            .filter((tag) => tag.startsWith('language_'))
+            .map((tag) => tag.slice('language_'.length).toLowerCase()),
+        friendNumber: positiveInteger(
+            context.friendNumber ?? fact?.$friendNumber ?? fact?.friendNumber
+        ),
+        presence: context.presence ?? null,
+        moderation: context.moderation ?? null,
         ageVerified:
             typeof fact?.ageVerified === 'boolean' ? fact.ageVerified : null,
         ageVerificationStatus: stringField(fact, 'ageVerificationStatus'),
@@ -580,10 +696,79 @@ export function badgeUserFactsFrom(
     };
 }
 
-function containsText(haystack: string, needle: string): boolean {
+function positiveInteger(value: unknown): number {
+    const number = Number.parseInt(String(value ?? ''), 10);
+    return Number.isFinite(number) && number > 0 ? number : 0;
+}
+
+const regexCache = new Map<string, RegExp | null>();
+
+/** The pattern as a case-insensitive expression, or null when invalid. */
+export function compileBadgeRegex(pattern: string): RegExp | null {
+    let compiled = regexCache.get(pattern);
+    if (compiled === undefined) {
+        try {
+            compiled = new RegExp(pattern, 'i');
+        } catch {
+            compiled = null;
+        }
+        if (regexCache.size >= 256) {
+            regexCache.clear();
+        }
+        regexCache.set(pattern, compiled);
+    }
+    return compiled;
+}
+
+function textMatches(
+    value: string,
+    rule: Extract<CustomBadgeRule, { kind: BadgeTextRuleKind }>
+): boolean {
+    const match = rule.match ?? 'contains';
+    if (match === 'any') {
+        return value.trim().length > 0;
+    }
+    if (!value) {
+        return false;
+    }
+    if (match === 'regex') {
+        return compileBadgeRegex(rule.contains)?.test(value) === true;
+    }
+    const haystack = value.toLowerCase();
+    const needle = rule.contains.toLowerCase();
+    switch (match) {
+        case 'startsWith':
+            return haystack.trimStart().startsWith(needle);
+        case 'exact':
+            return haystack.trim() === needle;
+        default:
+            return haystack.includes(needle);
+    }
+}
+
+function textValues(kind: BadgeTextRuleKind, facts: BadgeUserFacts) {
+    switch (kind) {
+        case 'memo':
+            return facts.memos;
+        case 'displayName':
+            return [facts.displayName];
+        case 'statusText':
+            return [facts.statusText];
+        case 'bio':
+            return [facts.bio];
+        case 'pronouns':
+            return [facts.pronouns];
+    }
+}
+
+function friendNumberMatches(
+    rule: Extract<CustomBadgeRule, { kind: 'friendNumber' }>,
+    number: number
+): boolean {
     return (
-        haystack.length > 0 &&
-        haystack.toLowerCase().includes(needle.toLowerCase())
+        number > 0 &&
+        number >= rule.min &&
+        (rule.max === 0 || number <= rule.max)
     );
 }
 
@@ -668,18 +853,28 @@ function dynamicRuleMatches(
             return facts.tags.includes('system_supporter');
         case 'trust':
             return facts.hasTrustData && facts.trustKey === rule.trustKey;
+        case 'displayName':
+        case 'statusText':
         case 'memo':
-            return containsText(facts.memo, rule.contains);
         case 'bio':
-            return containsText(facts.bio, rule.contains);
         case 'pronouns':
-            return containsText(facts.pronouns, rule.contains);
+            return textValues(rule.kind, facts).some((value) =>
+                textMatches(value, rule)
+            );
+        case 'language':
+            return facts.languages.includes(rule.language);
+        case 'friendNumber':
+            return friendNumberMatches(rule, facts.friendNumber);
+        case 'moderation':
+            return facts.moderation?.[rule.moderation] === true;
         case 'ageVerified':
             return ageRuleMatches(rule.level, facts);
         case 'platform':
             return facts.platform === rule.platform;
         case 'status':
-            return facts.status === rule.status;
+            return rule.status === 'offline'
+                ? facts.presence === 'offline' || facts.status === 'offline'
+                : facts.presence !== 'offline' && facts.status === rule.status;
         case 'vrchatGroup':
             return vrchatGroupRuleMatches(rule, facts);
         default:

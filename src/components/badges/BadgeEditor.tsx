@@ -6,17 +6,22 @@ import { useShallow } from 'zustand/react/shallow';
 import { CustomBadgeChip } from '@/components/UserBadges';
 import {
     BADGE_AGE_LEVELS,
+    BADGE_MODERATIONS,
     BADGE_PLATFORMS,
     BADGE_RULE_OPERATORS,
     BADGE_STATUSES,
+    BADGE_TEXT_MATCHES,
+    CUSTOM_BADGE_FRIEND_NUMBER_MAX,
     CUSTOM_BADGE_GROUP_DEPTH_LIMIT,
     CUSTOM_BADGE_GROUP_MEMBER_LIMIT,
     CUSTOM_BADGE_LABEL_MAX,
     CUSTOM_BADGE_MEMO_MAX,
     DEFAULT_CUSTOM_BADGE_COLOR,
     DEFAULT_CUSTOM_BADGE_ICON,
+    compileBadgeRegex,
     createCustomBadgeId,
     extractBadgeUserIds,
+    isBadgeTextRule,
     enabledBadgeRules,
     isGroupMemberListTruncated,
     normalizeBadgeColor,
@@ -32,6 +37,7 @@ import { formatDateFilter } from '@/lib/dateTime';
 import groupProfileRepository from '@/repositories/groupProfileRepository';
 import { toast } from '@/services/toastService';
 import { TRUST_COLOR_ENTRIES } from '@/shared/constants/trustColors';
+import { languageOptionLabel } from '@/shared/utils/userLanguage';
 import { useFavoriteStore } from '@/state/favoriteStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { Button } from '@/ui/shadcn/button';
@@ -48,6 +54,7 @@ import { Spinner } from '@/ui/shadcn/spinner';
 import { Switch } from '@/ui/shadcn/switch';
 import { Textarea } from '@/ui/shadcn/textarea';
 
+import { useSpokenLanguageSelection } from '../dialogs/useSpokenLanguageSelection';
 import { BadgeIconPicker } from './BadgeIconPicker';
 import { BadgeRuleGuide } from './BadgeRuleGuide';
 import { BadgeRuleMap } from './BadgeRuleMap';
@@ -82,10 +89,17 @@ const RULE_KINDS: CustomBadgeRuleKind[] = [
     'ageVerified',
     'platform',
     'status',
+    'language',
+    'friendNumber',
+    'moderation',
+    'displayName',
+    'statusText',
     'memo',
     'bio',
     'pronouns'
 ];
+
+const NO_LANGUAGE_KEYS: readonly string[] = [];
 
 // Option keys for the translation file, which cannot hold the spaces in
 // VRChat's status values.
@@ -158,10 +172,18 @@ function newRule(kind: CustomBadgeRuleKind): CustomBadgeRule {
             return { kind, platform: 'standalonewindows' };
         case 'status':
             return { kind, status: 'join me' };
+        case 'displayName':
+        case 'statusText':
         case 'memo':
         case 'bio':
         case 'pronouns':
             return { kind, contains: '' };
+        case 'language':
+            return { kind, language: 'eng' };
+        case 'friendNumber':
+            return { kind, min: 1, max: 0 };
+        case 'moderation':
+            return { kind, moderation: 'block' };
         case 'self':
         case 'friends':
         case 'supporter':
@@ -635,18 +657,69 @@ function RuleEditor({
                 />
             );
             break;
+        case 'displayName':
+        case 'statusText':
         case 'memo':
         case 'bio':
         case 'pronouns':
+            body = <TextRuleEditor rule={rule} onChange={onChange} />;
+            break;
+        case 'language':
+            body = <LanguageRuleEditor rule={rule} onChange={onChange} />;
+            break;
+        case 'friendNumber':
             body = (
-                <Input
-                    className="w-64"
-                    maxLength={CUSTOM_BADGE_MEMO_MAX}
-                    value={rule.contains}
-                    placeholder={t(`${T}.memo_placeholder`)}
-                    aria-label={t(`${T}.rule.${rule.kind}`)}
-                    onChange={(event) =>
-                        onChange({ ...rule, contains: event.target.value })
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <label className="flex items-center gap-1.5">
+                        {t(`${T}.friend_number_min`)}
+                        <Input
+                            type="number"
+                            className="w-28"
+                            min={0}
+                            max={CUSTOM_BADGE_FRIEND_NUMBER_MAX}
+                            value={rule.min}
+                            onChange={(event) =>
+                                onChange({
+                                    ...rule,
+                                    min: friendNumberInput(event.target.value)
+                                })
+                            }
+                        />
+                    </label>
+                    <label className="flex items-center gap-1.5">
+                        {t(`${T}.friend_number_max`)}
+                        <Input
+                            type="number"
+                            className="w-28"
+                            min={0}
+                            max={CUSTOM_BADGE_FRIEND_NUMBER_MAX}
+                            value={rule.max || ''}
+                            placeholder={t(`${T}.friend_number_no_max`)}
+                            onChange={(event) =>
+                                onChange({
+                                    ...rule,
+                                    max: friendNumberInput(event.target.value)
+                                })
+                            }
+                        />
+                    </label>
+                    {rule.max > 0 && rule.max < rule.min ? (
+                        <span className="text-destructive">
+                            {t(`${T}.friend_number_invalid`)}
+                        </span>
+                    ) : null}
+                </div>
+            );
+            break;
+        case 'moderation':
+            body = (
+                <OptionSelect
+                    value={rule.moderation}
+                    values={BADGE_MODERATIONS}
+                    labelPrefix={`${T}.moderation_option`}
+                    label={t(`${T}.rule.moderation`)}
+                    onValueChange={(moderation) =>
+                        onChange({ ...rule, moderation })
                     }
                 />
             );
@@ -673,9 +746,14 @@ function RuleEditor({
                 className="text-sm font-medium"
                 title={t(`${T}.rule_description.${rule.kind}`)}
             >
-                {t(
-                    `${T}.${rule.negated ? 'phrase_not' : 'phrase'}.${rule.kind}`
-                )}
+                {isBadgeTextRule(rule)
+                    ? t(
+                          `${T}.${rule.negated ? 'text_phrase_not' : 'text_phrase'}`,
+                          { field: t(`${T}.text_field.${rule.kind}`) }
+                      )
+                    : t(
+                          `${T}.${rule.negated ? 'phrase_not' : 'phrase'}.${rule.kind}`
+                      )}
             </span>
         );
 
@@ -729,6 +807,110 @@ function RuleEditor({
             ) : null}
             {body}
         </div>
+    );
+}
+
+function friendNumberInput(value: string): number {
+    const number = Math.floor(Number(value));
+    return Number.isFinite(number)
+        ? Math.min(Math.max(number, 0), CUSTOM_BADGE_FRIEND_NUMBER_MAX)
+        : 0;
+}
+
+type TextRule = Extract<CustomBadgeRule, { contains: string }>;
+
+function TextRuleEditor({
+    rule,
+    onChange
+}: {
+    rule: TextRule;
+    onChange: (rule: CustomBadgeRule) => void;
+}) {
+    const { t } = useTranslation();
+    const match = rule.match ?? 'contains';
+    const invalidRegex =
+        match === 'regex' &&
+        rule.contains !== '' &&
+        compileBadgeRegex(rule.contains) === null;
+    return (
+        <div className="flex flex-wrap items-center gap-2">
+            <OptionSelect
+                value={match}
+                values={BADGE_TEXT_MATCHES}
+                labelPrefix={`${T}.text_match`}
+                label={t(`${T}.text_match_label`)}
+                className="w-44"
+                onValueChange={(next) => {
+                    const { match: _previous, ...rest } = rule;
+                    onChange(
+                        next === 'contains' ? rest : { ...rest, match: next }
+                    );
+                }}
+            />
+            {match !== 'any' ? (
+                <Input
+                    className="w-64"
+                    maxLength={CUSTOM_BADGE_MEMO_MAX}
+                    value={rule.contains}
+                    placeholder={t(
+                        match === 'regex'
+                            ? `${T}.regex_placeholder`
+                            : `${T}.memo_placeholder`
+                    )}
+                    aria-label={t(`${T}.rule.${rule.kind}`)}
+                    aria-invalid={invalidRegex || undefined}
+                    onChange={(event) =>
+                        onChange({ ...rule, contains: event.target.value })
+                    }
+                />
+            ) : null}
+            {invalidRegex ? (
+                <span className="text-destructive text-xs">
+                    {t(`${T}.regex_invalid`)}
+                </span>
+            ) : null}
+        </div>
+    );
+}
+
+function LanguageRuleEditor({
+    rule,
+    onChange
+}: {
+    rule: Extract<CustomBadgeRule, { kind: 'language' }>;
+    onChange: (rule: CustomBadgeRule) => void;
+}) {
+    const { t } = useTranslation();
+    const { availableLanguageOptions } =
+        useSpokenLanguageSelection(NO_LANGUAGE_KEYS);
+    const options = availableLanguageOptions.some(
+        (option) => option.key === rule.language
+    )
+        ? availableLanguageOptions
+        : [{ key: rule.language, value: '' }, ...availableLanguageOptions];
+    return (
+        <Select
+            value={rule.language}
+            onValueChange={(value) => {
+                if (value) {
+                    onChange({ ...rule, language: String(value) });
+                }
+            }}
+        >
+            <SelectTrigger
+                className="w-64"
+                aria-label={t(`${T}.rule.language`)}
+            >
+                <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+                {options.map((option) => (
+                    <SelectItem key={option.key} value={option.key}>
+                        {languageOptionLabel(option)}
+                    </SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
     );
 }
 

@@ -20,6 +20,7 @@ import {
     normalizeBadgeRule,
     resolveUserCustomBadges,
     setUserListedOnBadge,
+    type BadgeUserContext,
     type CustomBadge,
     type CustomBadgeRule
 } from './customBadges';
@@ -151,6 +152,7 @@ describe('normalizeCustomBadges', () => {
                     { kind: 'platform', platform: 'web' },
                     { kind: 'status', status: 'busy' },
                     { kind: 'status', status: 'offline' },
+                    { kind: 'status', status: 'away' },
                     { kind: 'pronouns', contains: ' she ' },
                     { kind: 'pronouns', contains: '' }
                 ] as unknown as CustomBadge['rules']
@@ -162,6 +164,7 @@ describe('normalizeCustomBadges', () => {
             { kind: 'ageVerified', level: 'any' },
             { kind: 'platform', platform: 'ios' },
             { kind: 'status', status: 'busy' },
+            { kind: 'status', status: 'offline' },
             { kind: 'pronouns', contains: 'she' }
         ]);
     });
@@ -1083,5 +1086,188 @@ describe('Self condition', () => {
         expect(resolveSelf(all, ALICE, ALICE)).toEqual(['both']);
         expect(resolveSelf(all, BOB, ALICE)).toEqual(['others']);
         expect(resolveSelf(all, BOB, BOB)).toEqual([]);
+    });
+});
+
+describe('profile text, language, friend number and moderation conditions', () => {
+    function resolveWith(
+        rules: CustomBadgeRule[],
+        fact: Record<string, unknown> | null,
+        context: BadgeUserContext = {},
+        isFriend = false
+    ) {
+        const index = buildCustomBadgeIndex(
+            normalizeCustomBadges([badge({ id: 'x', rules })]),
+            {},
+            {}
+        );
+        return resolveUserCustomBadges(
+            index,
+            ALICE,
+            badgeUserFactsFrom(fact, isFriend, ALICE, undefined, null, context)
+        ).map((entry) => entry.id);
+    }
+
+    it('normalizes the new conditions and drops incomplete ones', () => {
+        const [entry] = normalizeCustomBadges([
+            badge({
+                rules: [
+                    {
+                        kind: 'displayName',
+                        contains: ' Al ',
+                        match: 'startsWith'
+                    },
+                    { kind: 'statusText', contains: 'x', match: 'contains' },
+                    { kind: 'bio', contains: 'ignored', match: 'any' },
+                    { kind: 'bio', contains: '', match: 'exact' },
+                    { kind: 'memo', contains: 'a', match: 'bogus' },
+                    { kind: 'language', language: 'ENG' },
+                    { kind: 'language', language: 'e' },
+                    { kind: 'friendNumber', min: 5, max: 10 },
+                    { kind: 'friendNumber', min: 10, max: 5 },
+                    { kind: 'friendNumber', min: -1, max: 0 },
+                    { kind: 'moderation', moderation: 'mute' },
+                    { kind: 'moderation', moderation: 'hideAvatar' }
+                ] as unknown as CustomBadge['rules']
+            })
+        ]);
+        expect(entry.rules).toEqual([
+            { kind: 'displayName', contains: 'Al', match: 'startsWith' },
+            { kind: 'statusText', contains: 'x' },
+            { kind: 'bio', contains: '', match: 'any' },
+            { kind: 'memo', contains: 'a' },
+            { kind: 'language', language: 'eng' },
+            { kind: 'friendNumber', min: 5, max: 10 },
+            { kind: 'moderation', moderation: 'mute' }
+        ]);
+    });
+
+    it('compares text by each match mode, ignoring case', () => {
+        const fact = { displayName: 'Alice Smith', statusDescription: 'AFK' };
+        const name = (contains: string, match?: string) =>
+            resolveWith(
+                [{ kind: 'displayName', contains, match } as CustomBadgeRule],
+                fact
+            );
+        expect(name('smith')).toEqual(['x']);
+        expect(name('alice', 'startsWith')).toEqual(['x']);
+        expect(name('smith', 'startsWith')).toEqual([]);
+        expect(name('alice smith', 'exact')).toEqual(['x']);
+        expect(name('alice', 'exact')).toEqual([]);
+        expect(name('^al.*h$', 'regex')).toEqual(['x']);
+        expect(name('^smith', 'regex')).toEqual([]);
+        expect(name('(', 'regex')).toEqual([]);
+        expect(
+            resolveWith(
+                [{ kind: 'statusText', contains: 'afk', match: 'exact' }],
+                fact
+            )
+        ).toEqual(['x']);
+    });
+
+    it('matches "not empty" only when the text exists, and checks memo and note separately', () => {
+        const hasBio: CustomBadgeRule[] = [
+            { kind: 'bio', contains: '', match: 'any' }
+        ];
+        expect(resolveWith(hasBio, { bio: 'hi' })).toEqual(['x']);
+        expect(resolveWith(hasBio, { bio: '   ' })).toEqual([]);
+        expect(resolveWith(hasBio, null)).toEqual([]);
+        expect(
+            resolveWith(
+                [{ kind: 'bio', contains: '', match: 'any', negated: true }],
+                {
+                    bio: ''
+                }
+            )
+        ).toEqual(['x']);
+
+        const memoIs: CustomBadgeRule[] = [
+            { kind: 'memo', contains: 'dj', match: 'exact' }
+        ];
+        expect(resolveWith(memoIs, { memo: 'artist', note: 'DJ' })).toEqual([
+            'x'
+        ]);
+        expect(resolveWith(memoIs, { memo: 'dj and artist' })).toEqual([]);
+    });
+
+    it('matches profile languages from language tags', () => {
+        const rules: CustomBadgeRule[] = [
+            { kind: 'language', language: 'jpn' }
+        ];
+        expect(
+            resolveWith(rules, { tags: ['language_eng', 'language_jpn'] })
+        ).toEqual(['x']);
+        expect(resolveWith(rules, { tags: ['language_eng'] })).toEqual([]);
+        expect(resolveWith(rules, null)).toEqual([]);
+    });
+
+    it('matches friend numbers in an inclusive range, open-ended when max is 0', () => {
+        const range: CustomBadgeRule[] = [
+            { kind: 'friendNumber', min: 1, max: 50 }
+        ];
+        expect(resolveWith(range, null, { friendNumber: 50 })).toEqual(['x']);
+        expect(resolveWith(range, null, { friendNumber: 51 })).toEqual([]);
+        expect(resolveWith(range, { friendNumber: 3 })).toEqual(['x']);
+        expect(resolveWith(range, null)).toEqual([]);
+        const from: CustomBadgeRule[] = [
+            { kind: 'friendNumber', min: 100, max: 0 }
+        ];
+        expect(resolveWith(from, null, { friendNumber: 5000 })).toEqual(['x']);
+        expect(resolveWith(from, null, { friendNumber: 99 })).toEqual([]);
+    });
+
+    it('matches blocked and muted users only once the moderation list is read', () => {
+        const blocked: CustomBadgeRule[] = [
+            { kind: 'moderation', moderation: 'block' }
+        ];
+        const index = buildCustomBadgeIndex(
+            normalizeCustomBadges([badge({ rules: blocked })]),
+            {},
+            {}
+        );
+        expect(index.needsModeration).toBe(true);
+        expect(
+            resolveWith(blocked, null, {
+                moderation: { block: true, mute: false }
+            })
+        ).toEqual(['x']);
+        expect(
+            resolveWith(blocked, null, {
+                moderation: { block: false, mute: true }
+            })
+        ).toEqual([]);
+        expect(resolveWith(blocked, null)).toEqual([]);
+        expect(
+            buildCustomBadgeIndex(
+                normalizeCustomBadges([
+                    badge({ rules: [{ ...blocked[0], enabled: false }] })
+                ]),
+                {},
+                {}
+            ).needsModeration
+        ).toBe(false);
+    });
+
+    it('matches offline friends, and online statuses only while online', () => {
+        const offline: CustomBadgeRule[] = [
+            { kind: 'status', status: 'offline' }
+        ];
+        const joinMe: CustomBadgeRule[] = [
+            { kind: 'status', status: 'join me' }
+        ];
+        expect(
+            resolveWith(offline, { status: 'join me' }, { presence: 'offline' })
+        ).toEqual(['x']);
+        expect(resolveWith(offline, { status: 'offline' })).toEqual(['x']);
+        expect(
+            resolveWith(offline, { status: 'join me' }, { presence: 'online' })
+        ).toEqual([]);
+        expect(resolveWith(offline, null)).toEqual([]);
+        expect(
+            resolveWith(joinMe, { status: 'join me' }, { presence: 'offline' })
+        ).toEqual([]);
+        expect(
+            resolveWith(joinMe, { status: 'join me' }, { presence: 'online' })
+        ).toEqual(['x']);
     });
 });

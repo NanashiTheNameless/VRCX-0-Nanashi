@@ -34,6 +34,7 @@ import {
     type AwardAnimation
 } from '@/domain/badges/globalBadges';
 import type { FavoriteGroupMap } from '@/domain/favorites/types';
+import { presenceSection } from '@/domain/friends/presence';
 import { formatDateFilter } from '@/lib/dateTime';
 import { queryClient } from '@/lib/queryClient';
 import { useKnownUserFact } from '@/lib/useKnownUser';
@@ -53,6 +54,10 @@ import {
     ensureGlobalBadgesLoaded,
     useGlobalBadgeStore
 } from '@/state/globalBadgeStore';
+import {
+    trackLocalModerations,
+    useLocalModerationStore
+} from '@/state/localModerationStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import {
     groupMembership,
@@ -200,6 +205,8 @@ function customBadgeIndexFor(
     return cachedIndex.index;
 }
 
+const NO_MODERATION = { block: false, mute: false };
+
 type UserBadgeState = {
     isStaff: boolean;
     customBadges: CustomBadge[];
@@ -232,6 +239,26 @@ function useUserBadgeState(userId: string): UserBadgeState {
     const isFriend = useFriendRosterStore((state) =>
         index.needsFacts && userId ? Boolean(state.friendsById[userId]) : false
     );
+    const presence = useFriendRosterStore((state) => {
+        const friend =
+            index.needsFacts && userId ? state.friendsById[userId] : undefined;
+        return friend?.$presence ? presenceSection(friend.$presence) : null;
+    });
+    const friendNumber = useFriendRosterStore((state) =>
+        index.needsFacts && userId
+            ? (state.friendsById[userId]?.$friendNumber ?? 0)
+            : 0
+    );
+    useEffect(() => {
+        if (index.needsModeration) {
+            trackLocalModerations(currentUserId);
+        }
+    }, [index.needsModeration, currentUserId]);
+    const moderation = useLocalModerationStore((state) =>
+        index.needsModeration && userId && state.loaded
+            ? (state.byUserId.get(userId) ?? NO_MODERATION)
+            : null
+    );
     if (!userId) {
         return { isStaff: false, customBadges: [] };
     }
@@ -249,7 +276,12 @@ function useUserBadgeState(userId: string): UserBadgeState {
                             isFriend || fact?.isFriend === true,
                             userId,
                             (groupId) => groupMembership(membership, groupId),
-                            currentUserId
+                            currentUserId,
+                            {
+                                friendNumber: friendNumber || undefined,
+                                presence,
+                                moderation
+                            }
                         )
                       : null
               )

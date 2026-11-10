@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CUSTOM_BADGE_LIMIT, type CustomBadge } from './customBadges';
+import { CUSTOM_BADGE_WARN_COUNT, type CustomBadge } from './customBadges';
 import {
     CUSTOM_BADGE_EXPORT_FORMAT,
     exportCustomBadgesJsonc,
@@ -124,7 +124,7 @@ describe('mergeImportedBadges', () => {
         const current = [badge({ id: 'a', label: 'A' }), badge({ id: 'b' })];
         const imported = [badge({ id: 'a', label: 'New A' })];
         const replaced = mergeImportedBadges(current, imported, true);
-        expect(replaced).toMatchObject({ added: 0, replaced: 1, skipped: 0 });
+        expect(replaced).toMatchObject({ added: 0, replaced: 1 });
         expect(replaced.badges.map((entry) => entry.label)).toEqual([
             'New A',
             current[1].label
@@ -135,17 +135,18 @@ describe('mergeImportedBadges', () => {
         expect(new Set(copied.badges.map((entry) => entry.id)).size).toBe(3);
     });
 
-    it('stops adding at the badge limit but still replaces', () => {
-        const current = Array.from({ length: CUSTOM_BADGE_LIMIT }, (_, i) =>
-            badge({ id: `b${i}` })
+    it('keeps adding past the warning count and still replaces', () => {
+        const current = Array.from(
+            { length: CUSTOM_BADGE_WARN_COUNT },
+            (_, i) => badge({ id: `b${i}` })
         );
         const merged = mergeImportedBadges(
             current,
             [badge({ id: 'b0', label: 'Kept' }), badge({ id: 'new' })],
             true
         );
-        expect(merged).toMatchObject({ added: 0, replaced: 1, skipped: 1 });
-        expect(merged.badges).toHaveLength(CUSTOM_BADGE_LIMIT);
+        expect(merged).toMatchObject({ added: 1, replaced: 1 });
+        expect(merged.badges).toHaveLength(CUSTOM_BADGE_WARN_COUNT + 1);
         expect(merged.badges[0].label).toBe('Kept');
     });
 });
