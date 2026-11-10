@@ -16,6 +16,8 @@ import {
 import { isVrcxInstanceLink } from '@/shared/constants/vrcxDeepLinks';
 import { useLaunchStore } from '@/state/launchStore';
 import { useModalStore } from '@/state/modalStore';
+import { usePartyJoinStore } from '@/state/partyJoinStore';
+import { useRuntimeStore } from '@/state/runtimeStore';
 import { useWorldCollectionImportStore } from '@/state/worldCollectionImportStore';
 
 import {
@@ -160,6 +162,18 @@ export function handleDeepLinkAction(action: DeepLinkAction): void {
             void addAvatarProviderFlow(action.url).catch((error: unknown) => {
                 console.warn('Failed to add avatar search provider:', error);
             });
+            break;
+        case 'joinParty':
+            // Fork: only offers the party; the Party dialog asks first.
+            usePartyJoinStore.getState().setOffer({
+                partyId: action.partyId,
+                name: action.name,
+                emoji: action.emoji,
+                followMode: action.followMode,
+                leaderUserId: action.leaderUserId,
+                members: action.members
+            });
+            useRuntimeStore.getState().setSystemHostOpen('partyOpen', true);
             break;
     }
 }

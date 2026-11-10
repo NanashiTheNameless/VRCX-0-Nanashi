@@ -10,6 +10,7 @@ pub(crate) mod instance_queue;
 pub(crate) mod invite_automation;
 pub(crate) mod notifications;
 mod output;
+pub(crate) mod party;
 mod payloads;
 mod print_content_refresh;
 mod projection;

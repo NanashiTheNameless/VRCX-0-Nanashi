@@ -276,7 +276,12 @@ fn syncable_app_setting(key: &str) -> bool {
     let Some(name) = key.strip_prefix("config:vrcx_") else {
         return false;
     };
+    // Follow links, parties and boop consent act from one PC and hold who
+    // opted in to invites there; syncing them could make two PCs invite.
     if name.starts_with("0_nanashi_avatarproviderdefaults")
+        || name.starts_with("followlink")
+        || name.starts_with("partygroups")
+        || name.starts_with("autoinviteconsent")
         || name.starts_with("profilehistory")
         || name.starts_with("currentusergroups_")
         || name == "elprimarycolor"
@@ -1845,6 +1850,22 @@ impl DesktopRuntimeHostState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn follow_link_party_and_consent_settings_are_never_synced() {
+        for key in [
+            "config:vrcx_followLinkRules",
+            "config:vrcx_followLinkShares",
+            "config:vrcx_partyGroups",
+            "config:vrcx_autoInviteConsentEmoji",
+            "config:vrcx_autoInviteConsentBoopBack",
+            "config:vrcx_autoInviteConsentHours",
+            "config:vrcx_autoInviteConsents",
+        ] {
+            assert!(!syncable_app_setting(key), "{key}");
+            assert!(!syncable_app_setting(&key.to_ascii_lowercase()), "{key}");
+        }
+    }
 
     #[test]
     fn recorder_settings_are_never_synced() {

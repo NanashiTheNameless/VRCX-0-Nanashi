@@ -623,6 +623,18 @@ impl crate::RealtimeRemoteRequests for TestRealtimeRemoteRequests {
         Ok(test_request(endpoint, &format!("/groups/{group_id}")))
     }
 
+    fn group_member(
+        &self,
+        endpoint: String,
+        group_id: String,
+        user_id: String,
+    ) -> Result<vrcx_0_contracts::vrchat_api::VrchatRequest> {
+        Ok(test_request(
+            endpoint,
+            &format!("/groups/{group_id}/members/{user_id}"),
+        ))
+    }
+
     fn invite_send(
         &self,
         endpoint: String,
@@ -632,6 +644,38 @@ impl crate::RealtimeRemoteRequests for TestRealtimeRemoteRequests {
         let mut request = test_request(endpoint, &format!("/invite/{receiver_user_id}"));
         request.body = vrcx_0_contracts::vrchat_api::VrchatRequestBody::Json(body);
         Ok((receiver_user_id, request))
+    }
+
+    fn request_invite_send(
+        &self,
+        endpoint: String,
+        receiver_user_id: String,
+    ) -> Result<vrcx_0_contracts::vrchat_api::VrchatRequest> {
+        Ok(test_request(
+            endpoint,
+            &format!("/requestInvite/{receiver_user_id}"),
+        ))
+    }
+
+    fn instance_self_invite(
+        &self,
+        endpoint: String,
+        world_id: String,
+        instance_id: String,
+    ) -> Result<vrcx_0_contracts::vrchat_api::VrchatRequest> {
+        Ok(test_request(
+            endpoint,
+            &format!("/invite/myself/to/{world_id}:{instance_id}"),
+        ))
+    }
+
+    fn boop_send(
+        &self,
+        endpoint: String,
+        user_id: String,
+        _emoji_id: String,
+    ) -> Result<vrcx_0_contracts::vrchat_api::VrchatRequest> {
+        Ok(test_request(endpoint, &format!("/users/{user_id}/boop")))
     }
 
     fn notification_hide(
@@ -742,6 +786,7 @@ fn runtime_with_active_session_game_context(
             instance_dwell: Arc::new(crate::InstanceDwellRegistry::new()),
             print_cleanup: Arc::new(NoopPrintCleanupInputSink),
             current_user_snapshot_sink: None,
+            game_launcher: None,
         },
         web,
     ));

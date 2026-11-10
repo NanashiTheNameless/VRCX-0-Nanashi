@@ -76,6 +76,15 @@ impl RealtimeRemoteRequests for VrchatRealtimeRemoteRequests {
         Ok(vrcx_0_vrchat_protocol::groups::profile_get_input(endpoint, group_id, true)?.1)
     }
 
+    fn group_member(
+        &self,
+        endpoint: String,
+        group_id: String,
+        user_id: String,
+    ) -> crate::Result<VrchatRequest> {
+        Ok(vrcx_0_vrchat_protocol::groups::member_get_input(endpoint, group_id, user_id)?.2)
+    }
+
     fn invite_send(
         &self,
         endpoint: String,
@@ -87,6 +96,53 @@ impl RealtimeRemoteRequests for VrchatRealtimeRemoteRequests {
             receiver_user_id,
             body,
         )?)
+    }
+
+    fn request_invite_send(
+        &self,
+        endpoint: String,
+        receiver_user_id: String,
+    ) -> crate::Result<VrchatRequest> {
+        Ok(
+            vrcx_0_vrchat_protocol::notifications::request_invite_send_input(
+                endpoint,
+                receiver_user_id,
+                vrcx_0_contracts::vrchat_requests::RequestInviteRequest { request_slot: None },
+            )?
+            .1,
+        )
+    }
+
+    fn instance_self_invite(
+        &self,
+        endpoint: String,
+        world_id: String,
+        instance_id: String,
+    ) -> crate::Result<VrchatRequest> {
+        Ok(
+            vrcx_0_vrchat_protocol::instances::instance_self_invite_input(
+                endpoint,
+                world_id,
+                instance_id,
+                String::new(),
+            )?
+            .2,
+        )
+    }
+
+    fn boop_send(
+        &self,
+        endpoint: String,
+        user_id: String,
+        emoji_id: String,
+    ) -> crate::Result<VrchatRequest> {
+        Ok(vrcx_0_vrchat_protocol::notifications::boop_send_input(
+            endpoint,
+            user_id,
+            emoji_id,
+            String::new(),
+        )?
+        .1)
     }
 
     fn notification_hide(

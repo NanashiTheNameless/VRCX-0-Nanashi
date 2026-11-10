@@ -54,6 +54,7 @@ mod message_dispatch;
 mod notification_apply;
 #[cfg(test)]
 mod notification_enrichment_tests;
+mod party;
 #[cfg(test)]
 mod profile_history_tests;
 mod state;

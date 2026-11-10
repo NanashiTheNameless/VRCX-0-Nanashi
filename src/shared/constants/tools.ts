@@ -20,6 +20,8 @@ export type ToolDialogKey =
     | 'presence-schedule'
     | 'presence-room-rules'
     | 'presence-invite-requests'
+    | 'follow-links'
+    | 'party'
     | 'group-calendar'
     | 'export-discord-names'
     | 'note-export'
@@ -383,6 +385,33 @@ const toolDefinitions: ToolDefinition[] = [
         action: {
             type: 'dialog',
             dialogKey: 'presence-invite-requests'
+        }
+    },
+    // Fork: gated follow links and parties.
+    {
+        key: 'follow-links',
+        category: 'automation',
+        iconKey: 'footprints',
+        navIcon: 'lucide:Footprints',
+        titleKey: 'view.tools.follow_party.follow_links',
+        descriptionKey: 'view.tools.follow_party.follow_links_description',
+        navEligible: true,
+        action: {
+            type: 'dialog',
+            dialogKey: 'follow-links'
+        }
+    },
+    {
+        key: 'party',
+        category: 'automation',
+        iconKey: 'users',
+        navIcon: 'lucide:Users',
+        titleKey: 'view.tools.follow_party.party',
+        descriptionKey: 'view.tools.follow_party.party_description',
+        navEligible: true,
+        action: {
+            type: 'dialog',
+            dialogKey: 'party'
         }
     },
     {

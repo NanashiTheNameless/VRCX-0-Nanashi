@@ -288,6 +288,7 @@ fn desktop_idle_stop_still_cleans_up_profile_services() -> Result<()> {
                 group_order_source: Arc::new(UnavailableGroupOrderSource),
                 friend_projection_observer: None,
                 profile_extension: Some(extension.clone()),
+                game_launcher: None,
             })?;
 
     let before = state.backend_runtime.snapshot();

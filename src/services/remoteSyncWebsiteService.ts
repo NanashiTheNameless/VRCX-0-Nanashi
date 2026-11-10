@@ -1,5 +1,10 @@
+import {
+    partyLinkParams,
+    type FollowLinkRule,
+    type PartyGroup
+} from '@/domain/presence/followParty';
 import configRepository from '@/repositories/configRepository';
-import { isAvatarId, isWorldId } from '@/shared/constants/vrchatIds';
+import { isAvatarId, isUserId, isWorldId } from '@/shared/constants/vrchatIds';
 import {
     isVrcxInstanceLink,
     VRCX_OPEN_RELAY_ORIGIN
@@ -99,6 +104,70 @@ export async function buildInstanceRelayUrl(input: {
     if (input.shortName) url.searchParams.set('shortName', input.shortName);
     if (input.launchToken)
         url.searchParams.set('launchToken', input.launchToken);
+    return url.toString();
+}
+
+/**
+ * Gated follow link. Everything is in the fragment, so the website never
+ * receives it; the criteria shown there are informational, the app checks
+ * them against VRChat before answering a request invite.
+ */
+export async function buildFollowLinkUrl(input: {
+    userId: string;
+    displayName: string;
+    rules: FollowLinkRule[];
+    consentEmoji?: string;
+}): Promise<string> {
+    if (!isUserId(input.userId)) {
+        throw new Error('Cannot create a follow link without a user ID.');
+    }
+    const origin = await getRemoteSyncWebsiteOrigin();
+    const url = new URL('/open/follow', origin);
+    const fragment = new URLSearchParams();
+    fragment.set('u', input.userId);
+    const name = limitPreview(input.displayName);
+    if (name) fragment.set('n', name);
+    const requirements = new Set<string>();
+    for (const rule of input.rules.filter((rule) => rule.enabled)) {
+        if (rule.requireFriend) requirements.add('friend');
+        if (rule.age !== 'none') requirements.add(rule.age);
+        if (rule.groups.length) requirements.add('group');
+    }
+    if (requirements.size) fragment.set('r', [...requirements].join(','));
+    if (input.consentEmoji) fragment.set('e', input.consentEmoji);
+    url.hash = fragment.toString();
+    return url.toString();
+}
+
+/**
+ * Live location link. The key in the fragment decrypts the location; the
+ * website never receives it.
+ */
+export async function buildLiveFollowUrl(input: {
+    code: string;
+    linkKey: string;
+    displayName: string;
+}): Promise<string> {
+    if (!/^[A-Za-z0-9]{10}$/.test(input.code)) {
+        throw new Error('Cannot create a link for an invalid share code.');
+    }
+    const origin = await getRemoteSyncWebsiteOrigin();
+    const url = new URL(`/f/${input.code}`, origin);
+    const fragment = new URLSearchParams();
+    fragment.set('k', input.linkKey);
+    const name = limitPreview(input.displayName).slice(0, 60);
+    if (name) fragment.set('n', name);
+    url.hash = fragment.toString();
+    return url.toString();
+}
+
+export async function buildPartyLinkUrl(
+    party: PartyGroup,
+    selfUserId: string
+): Promise<string> {
+    const origin = await getRemoteSyncWebsiteOrigin();
+    const url = new URL('/open/party', origin);
+    url.hash = partyLinkParams(party, selfUserId).toString();
     return url.toString();
 }
 

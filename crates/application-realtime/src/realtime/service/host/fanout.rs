@@ -193,6 +193,7 @@ impl RealtimeHostRuntime {
             }
         }
         self.ingest_friend_activity(&projection, live_feed.iter().chain(&joining));
+        self.schedule_party_follow(&live_feed);
         if !projection.patches.is_empty() || !projection.removals.is_empty() {
             let endpoint = self.active_endpoint();
             if !projection.removals.is_empty() {
@@ -328,6 +329,7 @@ impl RealtimeHostRuntime {
             }
             self.deps.event_bus.emit(projection.clone());
             self.schedule_invite_automation(&projection);
+            self.schedule_party_boops(&projection);
             self.schedule_friend_request_auto_decline(auto_declines);
         }
         self.schedule_world_name_warm(world_name_fetch_ids);

@@ -37,6 +37,58 @@ struct SystemGameClientActions {
     app_paths: AppPaths,
 }
 
+/// Launches VRChat into a party member's instance. Uses the same launch
+/// arguments, desktop mode and custom path as a crash relaunch.
+pub struct DesktopGameLauncher {
+    config: Arc<dyn ConfigStore>,
+    actions: SystemGameClientActions,
+}
+
+impl DesktopGameLauncher {
+    pub fn new(
+        config: Arc<dyn ConfigStore>,
+        file_access: HostFileAccess,
+        app_paths: AppPaths,
+    ) -> Self {
+        Self {
+            config,
+            actions: SystemGameClientActions {
+                file_access,
+                app_paths,
+            },
+        }
+    }
+}
+
+impl vrcx_0_application_realtime::RealtimeGameLauncher for DesktopGameLauncher {
+    fn launch_into(&self, location: &str) -> RuntimeResult<bool> {
+        let location = location.trim();
+        if location.is_empty()
+            || location
+                .chars()
+                .any(|character| character.is_whitespace() || matches!(character, '"' | '\\' | '&'))
+        {
+            return Ok(false);
+        }
+        if self.actions.is_game_running() {
+            return Ok(false);
+        }
+        let arguments = vrcx_0_application_game::build_launch_arguments(
+            location,
+            &self.config.get_string("launchArguments", "")?,
+            self.config
+                .get_bool(vrcx_0_application_game::IS_GAME_NO_VR_CONFIG_KEY, false)?,
+        );
+        let path_override = self.config.get_string("vrcLaunchPathOverride", "")?;
+        if path_override.trim().is_empty() {
+            self.actions.start_game(&arguments)
+        } else {
+            self.actions
+                .start_game_from_path(&path_override, &arguments)
+        }
+    }
+}
+
 #[derive(Default)]
 struct SystemGameClientDebugLoggingActions;
 

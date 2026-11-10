@@ -6,6 +6,7 @@ license.workspace = true
 description = "RemoteSync protocol and client service"
 
 [dependencies]
+altcha = "1.1.0"
 base64 = { workspace = true }
 chrono = { workspace = true }
 ed25519-dalek = { version = "3.0.0", features = ["zeroize"] }

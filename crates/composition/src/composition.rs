@@ -18,4 +18,5 @@ pub struct RuntimeHostComposition {
     pub group_order_source: Arc<dyn GroupOrderSource>,
     pub friend_projection_observer: Option<Arc<dyn FriendProjectionObserver>>,
     pub profile_extension: Option<Arc<dyn RuntimeHostProfileExtension>>,
+    pub game_launcher: Option<Arc<dyn vrcx_0_application_realtime::RealtimeGameLauncher>>,
 }

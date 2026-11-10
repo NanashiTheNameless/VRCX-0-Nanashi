@@ -29,9 +29,9 @@ pub use background_capabilities::{
     PresencePlayer,
 };
 pub use game_client::{
-    DebugLoggingOutcome, DebugLoggingOutcomeKind, GameClientActions, GameClientCacheActions,
-    GameClientDebugLoggingActions, GameClientLocationSource, GameClientRuntime,
-    GameClientRuntimeDeps, GameClientWindowActions, NoopGameClientCacheActions,
+    build_launch_arguments, DebugLoggingOutcome, DebugLoggingOutcomeKind, GameClientActions,
+    GameClientCacheActions, GameClientDebugLoggingActions, GameClientLocationSource,
+    GameClientRuntime, GameClientRuntimeDeps, GameClientWindowActions, NoopGameClientCacheActions,
     NoopGameClientWindowActions,
 };
 pub use game_event_bus::{

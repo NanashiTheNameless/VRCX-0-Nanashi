@@ -35,6 +35,16 @@ const PresenceInviteRequestsDialog = lazy(() =>
         })
     )
 );
+const FollowLinksDialog = lazy(() =>
+    import('./tools-dialogs/follow-party/FollowLinksDialog').then((module) => ({
+        default: module.FollowLinksDialog
+    }))
+);
+const PartyDialog = lazy(() =>
+    import('./tools-dialogs/follow-party/PartyDialog').then((module) => ({
+        default: module.PartyDialog
+    }))
+);
 const GroupCalendarDialog = lazy(() =>
     import('./tools-dialogs/GroupCalendarDialog').then((module) => ({
         default: module.GroupCalendarDialog
@@ -102,6 +112,10 @@ export function ToolsDialogsHost() {
     const presenceInviteRequestsOpen = useRuntimeStore(
         (state) => state.systemHosts.presenceInviteRequestsOpen
     );
+    const followLinksOpen = useRuntimeStore(
+        (state) => state.systemHosts.followLinksOpen
+    );
+    const partyOpen = useRuntimeStore((state) => state.systemHosts.partyOpen);
     const groupCalendarOpen = useRuntimeStore(
         (state) => state.systemHosts.groupCalendarOpen
     );
@@ -170,6 +184,22 @@ export function ToolsDialogsHost() {
                     open={presenceInviteRequestsOpen}
                     onOpenChange={(open: boolean) =>
                         setSystemHostOpen('presenceInviteRequestsOpen', open)
+                    }
+                />
+            </MountOnFirstOpen>
+            <MountOnFirstOpen open={followLinksOpen}>
+                <FollowLinksDialog
+                    open={followLinksOpen}
+                    onOpenChange={(open: boolean) =>
+                        setSystemHostOpen('followLinksOpen', open)
+                    }
+                />
+            </MountOnFirstOpen>
+            <MountOnFirstOpen open={partyOpen}>
+                <PartyDialog
+                    open={partyOpen}
+                    onOpenChange={(open: boolean) =>
+                        setSystemHostOpen('partyOpen', open)
                     }
                 />
             </MountOnFirstOpen>

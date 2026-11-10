@@ -458,6 +458,7 @@ impl RuntimeHostStateBuilder {
             group_order_source,
             friend_projection_observer,
             profile_extension,
+            game_launcher,
         } = composition;
         let authenticated_session_projection =
             Arc::new(Mutex::new(AuthenticatedSessionProjection::default()));
@@ -538,6 +539,7 @@ impl RuntimeHostStateBuilder {
                     ),
                 )),
                 current_user_snapshot_sink,
+                game_launcher,
             },
             Arc::clone(&self.runtime_context.web),
         ));
@@ -805,6 +807,7 @@ impl RuntimeHostState {
             group_order_source: Arc::new(UnavailableGroupOrderSource),
             friend_projection_observer: None,
             profile_extension: None,
+            game_launcher: None,
         })
     }
 

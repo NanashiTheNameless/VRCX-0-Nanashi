@@ -291,6 +291,48 @@ pub fn app__remote_sync_settings_set(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn app__follow_share_list(
+    state: State<'_, AppState>,
+) -> Result<Vec<vrcx_0_runtime_host_desktop::follow_share::FollowShareEntry>, AppError> {
+    Ok(state.runtime_host().follow_share_list()?)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn app__follow_share_create(
+    state: State<'_, AppState>,
+    label: String,
+    password: Option<String>,
+) -> Result<vrcx_0_runtime_host_desktop::follow_share::FollowShareEntry, AppError> {
+    Ok(state
+        .runtime_host()
+        .follow_share_create(label, password)
+        .await?)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn app__follow_share_set_enabled(
+    state: State<'_, AppState>,
+    id: String,
+    enabled: bool,
+) -> Result<(), AppError> {
+    Ok(state
+        .runtime_host()
+        .follow_share_set_enabled(&id, enabled)?)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn app__follow_share_delete(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<(), AppError> {
+    Ok(state.runtime_host().follow_share_delete(&id).await?)
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn app__remote_sync_pair_start(
     state: State<'_, AppState>,
     device_label: String,
@@ -1005,6 +1047,11 @@ fn background_sync_due(
 /// off or this PC is not paired, a tick does nothing and contacts no server.
 pub(crate) fn start_background_sync(app: &tauri::AppHandle) {
     use tauri::Manager;
+    let follow_app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let state = follow_app.state::<AppState>();
+        state.runtime_host().follow_share_push_loop().await;
+    });
     let coverage_app = app.clone();
     tauri::async_runtime::spawn(async move {
         let state = coverage_app.state::<AppState>();

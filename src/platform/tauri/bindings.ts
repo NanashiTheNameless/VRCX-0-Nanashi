@@ -424,6 +424,17 @@ export const commands = {
         __TAURI_INVOKE<null>('app__remote_sync_setting_choices_set', {
             choices
         }),
+    appFollowShareList: () =>
+        __TAURI_INVOKE<FollowShareEntry[]>('app__follow_share_list'),
+    appFollowShareCreate: (label: string, password: string | null) =>
+        __TAURI_INVOKE<FollowShareEntry>('app__follow_share_create', {
+            label,
+            password
+        }),
+    appFollowShareSetEnabled: (id: string, enabled: boolean) =>
+        __TAURI_INVOKE<null>('app__follow_share_set_enabled', { id, enabled }),
+    appFollowShareDelete: (id: string) =>
+        __TAURI_INVOKE<null>('app__follow_share_delete', { id }),
     appRemoteSyncPairStart: (deviceLabel: string) =>
         __TAURI_INVOKE<RemoteSyncPairingStart>('app__remote_sync_pair_start', {
             deviceLabel
@@ -4427,7 +4438,25 @@ export type DeepLinkAction =
     | { type: 'openUser'; userId: string }
     | { type: 'openGroup'; groupId: string }
     /**  Legacy VRCX `vrcx://addavatardb/<url>`: offer to add an avatar search provider. */
-    | { type: 'addAvatarProvider'; url: string };
+    | { type: 'addAvatarProvider'; url: string }
+    /**
+     *  Fork: `vrcx-0-nanashi://party/join?...` from a party link. Only offers
+     *  the party; the user confirms before anything is saved.
+     */
+    | {
+          type: 'joinParty';
+          partyId: string;
+          name: string;
+          emoji: string;
+          followMode: string;
+          leaderUserId: string | null;
+          members: DeepLinkPartyMember[];
+      };
+
+export type DeepLinkPartyMember = {
+    userId: string;
+    role: string;
+};
 
 export type DeepLinkSchemeSettings = {
     /**  `vrcx-0://` (upstream VRCX-0 links). */
@@ -5116,6 +5145,19 @@ export type FileMetadataOutput = {
     name: string;
     ownerId: string;
     avatarName: string | null;
+};
+
+export type FollowShareEntry = {
+    id: string;
+    label: string;
+    /**  `public` or `password`. */
+    mode: string;
+    code: string;
+    enabled: boolean;
+    expired: boolean;
+    createdAt: number;
+    /**  Only for building the link on this PC; never stored in plain text. */
+    linkKey: string;
 };
 
 export type FriendLocationTime = {

@@ -2,16 +2,26 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use vrcx_0_core::realtime::RealtimeSessionContext;
 
-use super::decision::CooldownView;
+use super::decision::{CooldownView, INVITE_DENIAL_BACKOFF_MS};
 
 const CLOSED_LOCATIONS_CAPACITY: usize = 512;
 pub(crate) const INVITE_FAILURE_BACKOFF_MS: i64 = 60 * 1000;
+// Fixed limits, deliberately not settings: automation has to stay at the
+// volume of a person using VRChat (Terms of Service 13.2(i) and the API
+// guidelines on unmetered requests and 429 responses).
+pub(crate) const AUTOMATION_RATE_LIMIT_BACKOFF_MS: i64 = 5 * 60 * 1000;
+pub(crate) const FOLLOW_RULE_CHECKS_PER_HOUR: usize = 30;
+pub(crate) const FOLLOW_RULE_INVITES_PER_HOUR: usize = 20;
+const HOUR_MS: i64 = 60 * 60 * 1000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum InviteOutcome {
     Sent,
     Skipped,
     Failed,
+    /// A follow link rule was checked against VRChat and the sender did not
+    /// pass. Backs off so repeated requests do not repeat the lookups.
+    Denied,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -20,8 +30,12 @@ pub(crate) struct InviteAutomationState {
     cooldowns: HashMap<String, i64>,
     pending: HashSet<String>,
     failure_backoff: HashMap<String, i64>,
+    denial_backoff: HashMap<String, i64>,
     closed_locations: HashSet<String>,
     closed_order: VecDeque<String>,
+    rate_limited_until: Option<i64>,
+    follow_checks: VecDeque<i64>,
+    follow_invites: VecDeque<i64>,
 }
 
 impl InviteAutomationState {
@@ -30,6 +44,11 @@ impl InviteAutomationState {
             last_sent_at_ms: self.cooldowns.get(scope_key).copied(),
             is_pending: self.pending.contains(scope_key),
             in_failure_backoff: self.is_in_failure_backoff(scope_key, now_ms),
+            in_rate_limit_backoff: self.is_rate_limited(now_ms),
+            in_denial_backoff: self
+                .denial_backoff
+                .get(scope_key)
+                .is_some_and(|until_ms| now_ms < *until_ms),
         }
     }
 
@@ -37,6 +56,38 @@ impl InviteAutomationState {
         self.failure_backoff
             .get(scope_key)
             .is_some_and(|until_ms| now_ms < *until_ms)
+    }
+
+    pub(crate) fn is_rate_limited(&self, now_ms: i64) -> bool {
+        self.rate_limited_until
+            .is_some_and(|until_ms| now_ms < until_ms)
+    }
+
+    /// Pauses all invite automation after VRChat answers 429.
+    pub(crate) fn note_rate_limited(&mut self, now_ms: i64) {
+        let until_ms = now_ms + AUTOMATION_RATE_LIMIT_BACKOFF_MS;
+        if self
+            .rate_limited_until
+            .is_none_or(|current| current < until_ms)
+        {
+            self.rate_limited_until = Some(until_ms);
+        }
+    }
+
+    /// Reserves one follow link rule check (a round of VRChat lookups) in the
+    /// hourly budget. Returns false when the budget is used up.
+    pub(crate) fn take_follow_check(&mut self, now_ms: i64) -> bool {
+        take_from_hourly_budget(&mut self.follow_checks, FOLLOW_RULE_CHECKS_PER_HOUR, now_ms)
+    }
+
+    pub(crate) fn follow_invite_budget_left(&mut self, now_ms: i64) -> bool {
+        prune_hour(&mut self.follow_invites, now_ms);
+        self.follow_invites.len() < FOLLOW_RULE_INVITES_PER_HOUR
+    }
+
+    pub(crate) fn record_follow_invite(&mut self, now_ms: i64) {
+        prune_hour(&mut self.follow_invites, now_ms);
+        self.follow_invites.push_back(now_ms);
     }
 
     pub(crate) fn begin(&mut self, scope_key: &str) {
@@ -49,6 +100,11 @@ impl InviteAutomationState {
             InviteOutcome::Sent => {
                 self.cooldowns.insert(scope_key.to_string(), now_ms);
                 self.failure_backoff.remove(scope_key);
+                self.denial_backoff.remove(scope_key);
+            }
+            InviteOutcome::Denied => {
+                self.denial_backoff
+                    .insert(scope_key.to_string(), now_ms + INVITE_DENIAL_BACKOFF_MS);
             }
             InviteOutcome::Failed => {
                 self.failure_backoff
@@ -70,6 +126,7 @@ impl InviteAutomationState {
         self.cooldowns.clear();
         self.pending.clear();
         self.failure_backoff.clear();
+        self.denial_backoff.clear();
         self.closed_locations.clear();
         self.closed_order.clear();
     }
@@ -90,6 +147,24 @@ impl InviteAutomationState {
     pub(crate) fn closed_locations(&self) -> HashSet<String> {
         self.closed_locations.clone()
     }
+}
+
+fn prune_hour(window: &mut VecDeque<i64>, now_ms: i64) {
+    while window
+        .front()
+        .is_some_and(|at_ms| now_ms.saturating_sub(*at_ms) >= HOUR_MS)
+    {
+        window.pop_front();
+    }
+}
+
+fn take_from_hourly_budget(window: &mut VecDeque<i64>, cap: usize, now_ms: i64) -> bool {
+    prune_hour(window, now_ms);
+    if window.len() >= cap {
+        return false;
+    }
+    window.push_back(now_ms);
+    true
 }
 
 pub(crate) fn sender_scope_key(
@@ -136,6 +211,67 @@ mod tests {
     }
 
     #[test]
+    fn denied_sender_backs_off_without_a_send_cooldown() {
+        let mut state = InviteAutomationState::default();
+        let now = 1_000_000;
+        state.begin("scope");
+        state.finish("scope", InviteOutcome::Denied, now);
+
+        let view = state.cooldown_view("scope", now);
+        assert!(view.in_denial_backoff);
+        assert!(!view.in_failure_backoff);
+        assert_eq!(view.last_sent_at_ms, None);
+        assert!(
+            state
+                .cooldown_view("scope", now + INVITE_DENIAL_BACKOFF_MS - 1)
+                .in_denial_backoff
+        );
+        assert!(
+            !state
+                .cooldown_view("scope", now + INVITE_DENIAL_BACKOFF_MS)
+                .in_denial_backoff
+        );
+    }
+
+    #[test]
+    fn rate_limit_pauses_every_sender_and_survives_a_session_change() {
+        let mut state = InviteAutomationState::default();
+        let now = 1_000_000;
+        state.note_rate_limited(now);
+        assert!(state.cooldown_view("a", now).in_rate_limit_backoff);
+        assert!(state.cooldown_view("b", now).in_rate_limit_backoff);
+
+        state.note_rate_limited(now - 60_000);
+        assert!(
+            state
+                .cooldown_view("a", now + AUTOMATION_RATE_LIMIT_BACKOFF_MS - 1)
+                .in_rate_limit_backoff
+        );
+
+        state.clear_all();
+        assert!(state.is_rate_limited(now));
+        assert!(!state.is_rate_limited(now + AUTOMATION_RATE_LIMIT_BACKOFF_MS));
+    }
+
+    #[test]
+    fn follow_checks_and_invites_are_capped_per_hour() {
+        let mut state = InviteAutomationState::default();
+        let now = 10_000_000;
+        for offset in 0..FOLLOW_RULE_CHECKS_PER_HOUR {
+            assert!(state.take_follow_check(now + offset as i64));
+        }
+        assert!(!state.take_follow_check(now + 1_000));
+        assert!(state.take_follow_check(now + HOUR_MS));
+
+        for offset in 0..FOLLOW_RULE_INVITES_PER_HOUR {
+            assert!(state.follow_invite_budget_left(now + offset as i64));
+            state.record_follow_invite(now + offset as i64);
+        }
+        assert!(!state.follow_invite_budget_left(now + 1_000));
+        assert!(state.follow_invite_budget_left(now + HOUR_MS));
+    }
+
+    #[test]
     fn skipped_outcome_sets_neither_cooldown_nor_backoff() {
         let mut state = InviteAutomationState::default();
         state.begin("scope");
@@ -144,6 +280,7 @@ mod tests {
         assert!(!view.is_pending);
         assert_eq!(view.last_sent_at_ms, None);
         assert!(!view.in_failure_backoff);
+        assert!(!view.in_denial_backoff);
     }
 
     #[test]

@@ -53,7 +53,27 @@ pub enum DeepLinkAction {
     AddAvatarProvider {
         url: String,
     },
+    /// Fork: `vrcx-0-nanashi://party/join?...` from a party link. Only offers
+    /// the party; the user confirms before anything is saved.
+    JoinParty {
+        party_id: String,
+        name: String,
+        emoji: String,
+        follow_mode: String,
+        leader_user_id: Option<String>,
+        members: Vec<DeepLinkPartyMember>,
+    },
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct DeepLinkPartyMember {
+    pub user_id: String,
+    pub role: String,
+}
+
+const MAX_PARTY_LINK_MEMBERS: usize = 32;
+const MAX_PARTY_NAME_CHARS: usize = 60;
 
 #[derive(Default)]
 pub struct PendingDeepLinks {
@@ -94,6 +114,11 @@ pub fn parse_deep_link(value: &str) -> Option<DeepLinkAction> {
     }
     if url.host_str() == Some("instance") && url.path() == "/open" {
         return parse_instance_deep_link(&url);
+    }
+    if url.host_str() == Some("party") && url.path() == "/join" {
+        return (url.scheme() == "vrcx-0-nanashi")
+            .then(|| parse_party_deep_link(&url))
+            .flatten();
     }
     let id = url
         .query_pairs()
@@ -225,6 +250,76 @@ fn parse_instance_deep_link(url: &url::Url) -> Option<DeepLinkAction> {
     })
 }
 
+fn parse_party_deep_link(url: &url::Url) -> Option<DeepLinkAction> {
+    let mut party_id = None;
+    let mut name = None;
+    let mut emoji = None;
+    let mut follow_mode = None;
+    let mut leader_user_id = None;
+    let mut members = Vec::new();
+    for (key, value) in url.query_pairs() {
+        let target = match key.as_ref() {
+            "id" => &mut party_id,
+            "name" => &mut name,
+            "emoji" => &mut emoji,
+            "mode" => &mut follow_mode,
+            "leader" => &mut leader_user_id,
+            "m" => {
+                let (user_id, role) = value.split_once(':')?;
+                if !is_user_id(user_id)
+                    || !matches!(role, "member" | "guest")
+                    || members
+                        .iter()
+                        .any(|member: &DeepLinkPartyMember| member.user_id == user_id)
+                    || members.len() >= MAX_PARTY_LINK_MEMBERS
+                {
+                    return None;
+                }
+                members.push(DeepLinkPartyMember {
+                    user_id: user_id.to_string(),
+                    role: role.to_string(),
+                });
+                continue;
+            }
+            _ => continue,
+        };
+        if target.replace(value.into_owned()).is_some() {
+            return None;
+        }
+    }
+    let party_id = party_id?;
+    let name = name.unwrap_or_default().trim().to_string();
+    let emoji = emoji?;
+    let follow_mode = follow_mode?;
+    if !(6..=40).contains(&party_id.len())
+        || !party_id
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'-')
+        || name.chars().count() > MAX_PARTY_NAME_CHARS
+        || name.chars().any(char::is_control)
+        || !vrcx_0_application_realtime::is_consent_emoji(&emoji)
+        || !matches!(follow_mode.as_str(), "leader" | "anyone")
+        || members.is_empty()
+    {
+        return None;
+    }
+    if let Some(leader) = &leader_user_id {
+        if !members.iter().any(|member| &member.user_id == leader) {
+            return None;
+        }
+    } else if follow_mode == "leader" {
+        return None;
+    }
+    Some(DeepLinkAction::JoinParty {
+        party_id,
+        name,
+        emoji,
+        follow_mode,
+        leader_user_id,
+        members,
+    })
+}
+
 pub fn queue_deep_link_action(
     pending: &PendingDeepLinks,
     action: DeepLinkAction,
@@ -240,7 +335,62 @@ fn is_collection_id(value: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_deep_link, queue_deep_link_action, DeepLinkAction, PendingDeepLinks};
+    use super::{
+        parse_deep_link, queue_deep_link_action, DeepLinkAction, DeepLinkPartyMember,
+        PendingDeepLinks,
+    };
+
+    #[test]
+    fn parses_party_join_links_only_on_the_fork_scheme() {
+        let link = "vrcx-0-nanashi://party/join?id=abc123def&name=Friday%20crew&emoji=default_fire&mode=leader&leader=usr_11111111-1111-1111-1111-111111111111&m=usr_11111111-1111-1111-1111-111111111111:member&m=usr_22222222-2222-2222-2222-222222222222:guest";
+        assert_eq!(
+            parse_deep_link(link),
+            Some(DeepLinkAction::JoinParty {
+                party_id: "abc123def".into(),
+                name: "Friday crew".into(),
+                emoji: "default_fire".into(),
+                follow_mode: "leader".into(),
+                leader_user_id: Some("usr_11111111-1111-1111-1111-111111111111".into()),
+                members: vec![
+                    DeepLinkPartyMember {
+                        user_id: "usr_11111111-1111-1111-1111-111111111111".into(),
+                        role: "member".into(),
+                    },
+                    DeepLinkPartyMember {
+                        user_id: "usr_22222222-2222-2222-2222-222222222222".into(),
+                        role: "guest".into(),
+                    },
+                ],
+            })
+        );
+        assert_eq!(
+            parse_deep_link(&link.replace("vrcx-0-nanashi://", "vrcx-0://")),
+            None
+        );
+    }
+
+    #[test]
+    fn rejects_malformed_party_join_links() {
+        let base = "vrcx-0-nanashi://party/join?id=abc123def&emoji=default_fire&mode=anyone";
+        for link in [
+            base.to_string(),
+            format!("{base}&m=usr_11111111-1111-1111-1111-111111111111:owner"),
+            format!("{base}&m=bad:member"),
+            format!("{base}&m=usr_11111111-1111-1111-1111-111111111111:member&m=usr_11111111-1111-1111-1111-111111111111:guest"),
+            format!("{base}&m=usr_11111111-1111-1111-1111-111111111111:member&id=other12"),
+            format!("{base}&m=usr_11111111-1111-1111-1111-111111111111:member#x"),
+            base.replace("default_fire", "default_stop") + "&m=usr_11111111-1111-1111-1111-111111111111:member",
+            base.replace("id=abc123def", "id=a b") + "&m=usr_11111111-1111-1111-1111-111111111111:member",
+            base.replace("mode=anyone", "mode=leader") + "&m=usr_11111111-1111-1111-1111-111111111111:member",
+            format!("{base}&m=usr_11111111-1111-1111-1111-111111111111:member&leader=usr_22222222-2222-2222-2222-222222222222"),
+        ] {
+            assert_eq!(parse_deep_link(&link), None, "{link}");
+        }
+        assert!(parse_deep_link(&format!(
+            "{base}&m=usr_11111111-1111-1111-1111-111111111111:member"
+        ))
+        .is_some());
+    }
 
     #[test]
     fn parses_open_world_deep_link_with_full_world_id() {

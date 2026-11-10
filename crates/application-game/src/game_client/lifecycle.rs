@@ -54,7 +54,11 @@ pub fn plan_crash_relaunch(
     })
 }
 
-fn build_launch_arguments(location: &str, launch_arguments: &str, desktop_mode: bool) -> String {
+pub fn build_launch_arguments(
+    location: &str,
+    launch_arguments: &str,
+    desktop_mode: bool,
+) -> String {
     let launch_url = format!("vrchat://launch?id={location}");
     let mut args = vec![launch_url];
     if !launch_arguments.trim().is_empty() {

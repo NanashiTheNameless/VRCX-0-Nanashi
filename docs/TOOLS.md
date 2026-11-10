@@ -33,6 +33,36 @@ auto-delete your oldest non-favorite prints on VRChat when you have more than a 
 - **Invite Request Auto-Reply**: automatically invite allowlisted favorite friends who request an
   invite, optionally only in certain statuses, with a message slot of your choice. Your current
   instance still has to allow invites.
+- **Follow Links**: rules for who your app invites when they send you a request invite: must be
+  your friend, age verified (or age verified as 18+), a member of one of up to 8 of your groups,
+  or any mix of these. Every check reads fresh data from VRChat; anything VRChat does not show
+  (a hidden age status, a private member list) counts as a no. **Copy link** makes a page on your
+  History Sync website that tells people to request an invite from you; it never shows your
+  location, and everything in it stays in the link. **Opt in by boop** shows an emoji: people
+  who pass a rule and boop you with it get an invite each time you move, until they boop you
+  with **Stop** (which cancels at once), you pick a new emoji, you clear opt-ins, or the chosen
+  number of hours (1 to 168, default 24) passes without an invite. An optional Thumbs Up boop
+  confirms the opt-in.
+  **Live location links** show your current world and instance to anyone with the link, with a
+  Join in VRChat button, optionally behind a password. They need no account. The location is
+  encrypted with a key that only exists in the link, so the History Sync server stores data it
+  cannot read. Invite and invite+ instances are never shown, the page says when your PC has not
+  updated it for 10 minutes, and a link stops a day after its last update. Up to 5 links; turn
+  one off or delete it to stop sharing.
+- **Party**: groups of people who stay together. Each party has its own emoji, and **Boop
+  members to confirm** boops the members with it. You only follow members who booped you with
+  that emoji, and a Stop boop undoes it. When a confirmed member moves (in **Only the leader**
+  mode, only the leader), the app sends you an invite to their instance if VRChat lets you join
+  it, or asks them for an invite if it is invite-only, and their app answers. In game you still
+  click the invite; with **Launch VRChat to follow when it is closed** on, the app starts
+  VRChat straight into their instance instead. **Guests** do not need the app: their request
+  invites are answered, and they get an invite when you move only after booping you with the
+  party emoji. **Copy link** shares the party; opening it in the app asks before joining.
+- **Limits** for Follow Links and Party cannot be changed: at most 20 automatic invites and 30
+  rule checks per hour, one unasked invite per person per move, a 2-minute pause between
+  follows, and a 5-minute pause for all of it whenever VRChat answers that the app is sending
+  too much. Request invites, boops and location updates may only work between friends; that is
+  VRChat's rule.
 
 ## VRChat & System
 

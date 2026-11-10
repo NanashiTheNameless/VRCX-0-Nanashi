@@ -152,6 +152,7 @@ impl RealtimeMessageSink for RealtimeHostRuntimeMessageSink {
         }
 
         let is_user_update = event_kind == RealtimeWsEventKind::UserUpdate;
+        let is_user_location = event_kind == RealtimeWsEventKind::UserLocation;
         if let Some(output) = self.runtime.current_user.apply_ws_event(
             generation,
             &event_kind,
@@ -161,6 +162,9 @@ impl RealtimeMessageSink for RealtimeHostRuntimeMessageSink {
             let overlay_patch = output.projection.patch.clone();
             let wake_at_ms = output.wake_at_ms;
             self.runtime.apply_current_user_output(output);
+            if is_user_location {
+                self.runtime.schedule_party_own_move();
+            }
             if let Some(at_ms) = wake_at_ms {
                 self.runtime.schedule_current_user_wake(generation, at_ms);
             }

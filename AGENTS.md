@@ -111,7 +111,9 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   `crates/runtime-host-desktop/src/state/remote_sync.rs`, Settings > History
   Sync. The fork's own end-to-end encrypted sync; upstream has no equivalent,
   so it is not something to align with upstream. Off by default, and while it
-  is off or the PC is not paired no request goes to any sync server. Wire
+  is off or the PC is not paired no request goes to any sync server (the
+  one exception is a live location link the user turned on; see Follow
+  links and parties). Wire
   format and crypto come from the `vrcx-0-nanashi-website-protocol` crate
   (pinned by commit in `Cargo.toml`); do not reimplement them here. A server
   response is verified before anything is imported, imported rows are never
@@ -309,6 +311,25 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   VRChat session read-only, looks up one profile and prints it, and must never
   write to the app's data or reach any other endpoint.
 
+- **Follow links and parties** - `crates/application-realtime/src/realtime/invite_automation/criteria.rs`,
+  `crates/application-realtime/src/realtime/party/`, `crates/application-realtime/src/realtime/service/host/party.rs`,
+  `crates/runtime-host-desktop/src/state/follow_share.rs`, `src/components/hosts/tools-dialogs/follow-party/`,
+  `src/domain/presence/followParty.ts`, Tools > Follow Links and Tools > Party. Identity
+  always comes from VRChat (the sender of a request invite or boop, the location of a
+  friend); never trust a claim made through our website or a link. Every criterion
+  fails closed: unreadable data is a denial, and a rule with no requirement is
+  ignored. Unasked (outbound) invites need consent: a mutual party confirmation or
+  a boop with the shown emoji; a boop with `default_stop` always cancels, and
+  consent is rechecked right before each send. The fixed limits in
+  `invite_automation/runtime.rs` and `party/runtime.rs` (hourly caps, one invite per
+  person per move, the 5-minute pause after any 429) are deliberately not settings;
+  do not make them configurable or raise the defaults above the existing
+  auto-accept. Consent emojis are permanent default emojis only, never everyday
+  boops or Stop, and the Rust and TypeScript lists must match (a test compares
+  them). Live location links send only a location sealed with a key that stays in
+  the link (protocol `follow` module in the website repo), never invite or invite+
+  instances, and contact the server only while a link is on. All of these keys
+  stay out of Settings Sync. The headless/collector profile gets no game launcher.
 - **Issue triage** - `.github/workflows/issue-triage.yml`,
   `scripts/issue-triage.ts`. Closes issues that are not in English, skip the
   issue forms, leave required answers empty, or ask for a badge without a real

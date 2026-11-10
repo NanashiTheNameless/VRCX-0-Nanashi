@@ -83,6 +83,7 @@ use vrcx_0_platform::app_paths::AppDataDirResolution;
 
 mod assembly;
 mod background_ticks;
+pub mod follow_share;
 pub mod remote_sync;
 
 use background_ticks::{

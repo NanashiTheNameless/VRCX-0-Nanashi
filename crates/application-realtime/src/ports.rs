@@ -145,6 +145,11 @@ impl RealtimeStores {
     }
 }
 
+/// Starts VRChat straight into an instance with the user's launch options.
+pub trait RealtimeGameLauncher: Send + Sync {
+    fn launch_into(&self, location: &str) -> Result<bool>;
+}
+
 pub trait RealtimeRemoteRequests: Send + Sync {
     fn current_user(&self, endpoint: String) -> Result<VrchatRequest>;
     fn user(&self, endpoint: String, user_id: String) -> Result<(String, VrchatRequest)>;
@@ -161,12 +166,35 @@ pub trait RealtimeRemoteRequests: Send + Sync {
     ) -> Result<VrchatRequest>;
     fn world(&self, endpoint: String, world_id: String) -> Result<(String, VrchatRequest)>;
     fn group(&self, endpoint: String, group_id: String) -> Result<VrchatRequest>;
+    fn group_member(
+        &self,
+        endpoint: String,
+        group_id: String,
+        user_id: String,
+    ) -> Result<VrchatRequest>;
     fn invite_send(
         &self,
         endpoint: String,
         receiver_user_id: String,
         body: Value,
     ) -> Result<(String, VrchatRequest)>;
+    fn request_invite_send(
+        &self,
+        endpoint: String,
+        receiver_user_id: String,
+    ) -> Result<VrchatRequest>;
+    fn instance_self_invite(
+        &self,
+        endpoint: String,
+        world_id: String,
+        instance_id: String,
+    ) -> Result<VrchatRequest>;
+    fn boop_send(
+        &self,
+        endpoint: String,
+        user_id: String,
+        emoji_id: String,
+    ) -> Result<VrchatRequest>;
     fn notification_hide(
         &self,
         endpoint: String,

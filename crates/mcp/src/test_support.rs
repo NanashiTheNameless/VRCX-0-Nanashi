@@ -707,6 +707,7 @@ fn test_runtime_with_database_and_event_bus(
             instance_dwell: Arc::new(vrcx_0_application_realtime::InstanceDwellRegistry::new()),
             print_cleanup: Arc::new(NoopPrintCleanupInputSink),
             current_user_snapshot_sink: None,
+            game_launcher: None,
         },
         Arc::clone(&web),
     ));

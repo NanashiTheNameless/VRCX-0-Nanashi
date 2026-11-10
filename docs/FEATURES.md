@@ -135,6 +135,21 @@ World, avatar, and instance dialogs can copy links through `vrcx.namelessnanashi
 - Plain VRChat links remain available.
 - The legacy `open.vrcx-0.dev` relay host is not accepted.
 
+### Follow links, live location links and parties
+
+Tools > Follow Links and Tools > Party (see [TOOLS.md](TOOLS.md)) are this fork's own.
+
+- Follow links and parties act only through VRChat's own request invites, invites and boops,
+  so VRChat itself says who asked; the app checks every rule on your PC with fresh VRChat data.
+- Nothing invites someone who did not ask, except people who opted in by booping you with the
+  emoji you show; a boop with Stop always cancels that.
+- Live location links need no account. The History Sync server only stores the location
+  encrypted with a key in the link, and invite-only instances are never published. They are
+  the only feature that contacts the History Sync server without pairing, and only while a
+  link is on.
+- Fixed limits keep the automation at the pace of a person.
+- Rules, parties, opt-ins and live links stay on the PC; Settings Sync never copies them.
+
 ### Shared world collections on the fork's own service
 
 A world favorite group can be shared as a public page on the RemoteSync website and updated by

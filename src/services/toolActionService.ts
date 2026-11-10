@@ -30,6 +30,8 @@ type ToolDialogHostKey =
     | 'presenceScheduleOpen'
     | 'presenceRoomRulesOpen'
     | 'presenceInviteRequestsOpen'
+    | 'followLinksOpen'
+    | 'partyOpen'
     | 'groupCalendarOpen'
     | 'exportDiscordNamesOpen'
     | 'noteExportOpen'
@@ -56,6 +58,8 @@ const toolDialogHostMap: Record<ToolDialogKey, ToolDialogHostKey> = {
     'presence-schedule': 'presenceScheduleOpen',
     'presence-room-rules': 'presenceRoomRulesOpen',
     'presence-invite-requests': 'presenceInviteRequestsOpen',
+    'follow-links': 'followLinksOpen',
+    party: 'partyOpen',
     'group-calendar': 'groupCalendarOpen',
     'export-discord-names': 'exportDiscordNamesOpen',
     'note-export': 'noteExportOpen',

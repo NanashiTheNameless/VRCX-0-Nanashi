@@ -16,6 +16,7 @@ use super::feed::FeedLiveProjector;
 use crate::realtime::current_user::RealtimeCurrentUserRuntime;
 use crate::realtime::friends::{baseline_friend_view, RealtimeFriendsRuntime};
 use crate::realtime::invite_automation::runtime::InviteAutomationState;
+use crate::realtime::party::runtime::PartyRuntimeState;
 use crate::realtime::user_facts::UserFactStore;
 use crate::realtime::user_query_cache::UserQueryCache;
 use crate::realtime::{
@@ -161,6 +162,7 @@ pub(super) struct WorldEnrichmentState {
 #[derive(Default)]
 pub(super) struct AutomationState {
     pub(super) invite: InviteAutomationState,
+    pub(super) party: PartyRuntimeState,
 }
 
 #[derive(Default)]
@@ -234,6 +236,7 @@ pub struct RealtimeHostRuntimeDeps {
     pub instance_dwell: Arc<InstanceDwellRegistry>,
     pub print_cleanup: Arc<dyn PrintCleanupInputSink>,
     pub current_user_snapshot_sink: Option<RealtimeCurrentUserSnapshotSink>,
+    pub game_launcher: Option<Arc<dyn crate::RealtimeGameLauncher>>,
 }
 
 pub type RealtimeCurrentUserSnapshotSink =

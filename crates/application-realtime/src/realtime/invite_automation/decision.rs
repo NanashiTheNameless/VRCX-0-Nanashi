@@ -3,7 +3,11 @@ use std::collections::HashSet;
 use vrcx_0_application_core::LocalGameContextSnapshot;
 use vrcx_0_core::location::parse_location;
 
+use super::criteria::FollowRule;
+use crate::realtime::party::config::Party;
+
 pub const INVITE_AUTOMATION_COOLDOWN_MS: i64 = 10 * 60 * 1000;
+pub const INVITE_DENIAL_BACKOFF_MS: i64 = 2 * 60 * 1000;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InviteAutomationMode {
@@ -18,6 +22,16 @@ pub struct InviteAutomationConfig {
     pub selected_groups: Vec<String>,
     pub allowed_statuses: Vec<String>,
     pub message_slot: Option<i32>,
+    pub follow_rules: Vec<FollowRule>,
+    pub parties: Vec<Party>,
+}
+
+impl InviteAutomationConfig {
+    pub fn is_enabled(&self) -> bool {
+        self.mode != InviteAutomationMode::Off
+            || !self.follow_rules.is_empty()
+            || !self.parties.is_empty()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -32,6 +46,11 @@ pub struct InviteNotificationFacts {
 pub struct SenderAllowlist {
     pub is_favorite: bool,
     pub group_keys_of_sender: HashSet<String>,
+    /// Id of the follow link rule the sender passed, checked against fresh
+    /// VRChat data.
+    pub follow_rule_id: Option<String>,
+    /// Id of the enabled party whose roster lists the sender.
+    pub party_id: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -67,6 +86,8 @@ pub struct CooldownView {
     pub last_sent_at_ms: Option<i64>,
     pub is_pending: bool,
     pub in_failure_backoff: bool,
+    pub in_denial_backoff: bool,
+    pub in_rate_limit_backoff: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -104,6 +125,10 @@ pub enum InviteAutomationSkipReason {
     Pending,
     Cooldown,
     FailureBackoff,
+    DenialBackoff,
+    RateLimitBackoff,
+    FollowCheckCapReached,
+    FollowInviteCapReached,
 }
 
 impl InviteAutomationSkipReason {
@@ -120,6 +145,10 @@ impl InviteAutomationSkipReason {
             Self::Pending => "sender-invite-pending",
             Self::Cooldown => "sender-cooldown",
             Self::FailureBackoff => "send-failure-backoff",
+            Self::DenialBackoff => "sender-denial-backoff",
+            Self::RateLimitBackoff => "rate-limit-backoff",
+            Self::FollowCheckCapReached => "follow-check-hourly-cap",
+            Self::FollowInviteCapReached => "follow-invite-hourly-cap",
         }
     }
 }
@@ -144,7 +173,7 @@ pub fn context_gates(
     config: &InviteAutomationConfig,
     location: &InviteLocationFacts,
 ) -> Result<(), InviteAutomationSkipReason> {
-    if config.mode == InviteAutomationMode::Off {
+    if !config.is_enabled() {
         return Err(InviteAutomationSkipReason::Disabled);
     }
     if !config.allowed_statuses.is_empty()
@@ -178,11 +207,17 @@ pub fn cooldown_gate(
     cooldown: &CooldownView,
     now_ms: i64,
 ) -> Result<(), InviteAutomationSkipReason> {
+    if cooldown.in_rate_limit_backoff {
+        return Err(InviteAutomationSkipReason::RateLimitBackoff);
+    }
     if cooldown.is_pending {
         return Err(InviteAutomationSkipReason::Pending);
     }
     if cooldown.in_failure_backoff {
         return Err(InviteAutomationSkipReason::FailureBackoff);
+    }
+    if cooldown.in_denial_backoff {
+        return Err(InviteAutomationSkipReason::DenialBackoff);
     }
     if cooldown.last_sent_at_ms.is_some_and(|last_sent_at| {
         now_ms.saturating_sub(last_sent_at) < INVITE_AUTOMATION_COOLDOWN_MS
@@ -227,6 +262,15 @@ fn skip(reason: InviteAutomationSkipReason) -> InviteDecision {
 }
 
 fn sender_allowed(config: &InviteAutomationConfig, allowlist: &SenderAllowlist) -> bool {
+    sender_allowed_by_favorites(config, allowlist)
+        || allowlist.follow_rule_id.is_some()
+        || allowlist.party_id.is_some()
+}
+
+pub fn sender_allowed_by_favorites(
+    config: &InviteAutomationConfig,
+    allowlist: &SenderAllowlist,
+) -> bool {
     match config.mode {
         InviteAutomationMode::Off => false,
         InviteAutomationMode::AllFavorites => {
@@ -239,7 +283,7 @@ fn sender_allowed(config: &InviteAutomationConfig, allowlist: &SenderAllowlist) 
     }
 }
 
-fn can_invite_from_location(
+pub(crate) fn can_invite_from_location(
     facts: &InviteLocationFacts,
     parsed: &vrcx_0_core::location::ParsedLocation,
 ) -> bool {
@@ -299,10 +343,14 @@ mod tests {
                 selected_groups: vec!["friend:group_0".into()],
                 allowed_statuses: Vec::new(),
                 message_slot: None,
+                follow_rules: Vec::new(),
+                parties: Vec::new(),
             },
             allowlist: SenderAllowlist {
                 is_favorite: true,
                 group_keys_of_sender: HashSet::from(["friend:group_0".into()]),
+                follow_rule_id: None,
+                party_id: None,
             },
             location: InviteLocationFacts {
                 local_game_context: local_game_context(
@@ -318,6 +366,8 @@ mod tests {
                 last_sent_at_ms: None,
                 is_pending: false,
                 in_failure_backoff: false,
+                in_denial_backoff: false,
+                in_rate_limit_backoff: false,
             },
             now_ms: 1_000_000,
         }
@@ -519,6 +569,105 @@ mod tests {
             evaluate_invite_automation(&backing_off),
             InviteDecision::Skip {
                 reason: InviteAutomationSkipReason::FailureBackoff,
+            }
+        );
+
+        let mut rate_limited = base_input();
+        rate_limited.cooldown.in_rate_limit_backoff = true;
+        assert_eq!(
+            evaluate_invite_automation(&rate_limited),
+            InviteDecision::Skip {
+                reason: InviteAutomationSkipReason::RateLimitBackoff,
+            }
+        );
+
+        let mut denied = base_input();
+        denied.cooldown.in_denial_backoff = true;
+        assert_eq!(
+            evaluate_invite_automation(&denied),
+            InviteDecision::Skip {
+                reason: InviteAutomationSkipReason::DenialBackoff,
+            }
+        );
+    }
+
+    fn friend_follow_rule() -> FollowRule {
+        FollowRule {
+            id: "rule_1".into(),
+            criteria: super::super::criteria::AccessCriteria {
+                require_friend: true,
+                ..Default::default()
+            },
+        }
+    }
+
+    #[test]
+    fn follow_rule_match_allows_sender_while_favorites_mode_is_off() {
+        let mut input = base_input();
+        input.config.mode = InviteAutomationMode::Off;
+        input.config.follow_rules = vec![friend_follow_rule()];
+        input.allowlist.is_favorite = false;
+        input.allowlist.group_keys_of_sender.clear();
+
+        assert_eq!(
+            evaluate_invite_automation(&input),
+            InviteDecision::Skip {
+                reason: InviteAutomationSkipReason::SenderNotAllowlisted,
+            }
+        );
+
+        input.allowlist.follow_rule_id = Some("rule_1".into());
+        assert!(matches!(
+            evaluate_invite_automation(&input),
+            InviteDecision::Send { .. }
+        ));
+    }
+
+    #[test]
+    fn party_roster_requester_is_allowed_while_favorites_mode_is_off() {
+        let mut input = base_input();
+        input.config.mode = InviteAutomationMode::Off;
+        input.config.parties = crate::realtime::party::config::parse_parties(&serde_json::json!([{
+            "id": "p1", "enabled": true, "emoji": "default_go", "followMode": "anyone",
+            "members": [{"userId": "usr_sender", "role": "guest"}]
+        }]));
+        input.allowlist.is_favorite = false;
+        input.allowlist.group_keys_of_sender.clear();
+        input.allowlist.party_id = Some("p1".into());
+        assert!(input.config.is_enabled());
+        assert!(matches!(
+            evaluate_invite_automation(&input),
+            InviteDecision::Send { .. }
+        ));
+    }
+
+    #[test]
+    fn disabled_only_without_favorites_mode_and_follow_rules() {
+        let mut input = base_input();
+        input.config.mode = InviteAutomationMode::Off;
+        input.allowlist.follow_rule_id = Some("stale".into());
+        assert_eq!(
+            evaluate_invite_automation(&input),
+            InviteDecision::Skip {
+                reason: InviteAutomationSkipReason::Disabled,
+            }
+        );
+        input.config.follow_rules = vec![friend_follow_rule()];
+        assert!(input.config.is_enabled());
+    }
+
+    #[test]
+    fn follow_rules_never_widen_the_location_policy() {
+        let mut input = base_input();
+        input.config.mode = InviteAutomationMode::Off;
+        input.config.follow_rules = vec![friend_follow_rule()];
+        input.allowlist.follow_rule_id = Some("rule_1".into());
+        set_current_location(&mut input, "wrld_a:1~private(usr_other)");
+        input.location.last_location = "wrld_a:1~private(usr_other)".into();
+        assert_eq!(
+            evaluate_invite_automation(&input),
+            InviteDecision::Skip {
+                reason: InviteAutomationSkipReason::CurrentLocationNotInvitable,
             }
         );
     }

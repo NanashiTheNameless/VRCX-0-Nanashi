@@ -184,6 +184,7 @@ fn test_server_with_game_context(
             instance_dwell: Arc::new(vrcx_0_application_realtime::InstanceDwellRegistry::new()),
             print_cleanup: Arc::new(NoopPrintCleanupInputSink),
             current_user_snapshot_sink: None,
+            game_launcher: None,
         },
         Arc::clone(&web),
     ));

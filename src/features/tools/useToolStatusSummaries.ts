@@ -10,6 +10,13 @@ import {
     normalizeTimeRule,
     ruleTitle
 } from '@/components/hosts/tools-dialogs/presence-automation/presenceAutomationDialogUtils';
+import {
+    FOLLOW_LINK_RULES_KEY,
+    PARTY_GROUPS_KEY,
+    parseFollowLinkRules,
+    parsePartyGroups,
+    ruleHasRequirement
+} from '@/domain/presence/followParty';
 import { formatDateTime } from '@/lib/dateTime';
 import {
     commands,
@@ -121,6 +128,120 @@ function contextRuleItems(
         }));
 }
 
+function parseJson(raw: string | null): unknown {
+    try {
+        return raw === null ? null : JSON.parse(raw);
+    } catch {
+        return null;
+    }
+}
+
+/** Fork: follow link rules and live location links, each with its own switch. */
+async function followLinkStatus(
+    t: TFunction
+): Promise<ToolStatusSummary | null> {
+    const [rawRules, shares] = await Promise.all([
+        configRepository
+            .getString(FOLLOW_LINK_RULES_KEY, '[]')
+            .catch(() => null),
+        commands.appFollowShareList().catch(() => null)
+    ]);
+    const rules = parseFollowLinkRules(parseJson(rawRules));
+    const liveShares = (shares ?? []).filter((share) => !share.expired);
+    if (!rules.length && !liveShares.length) {
+        return null;
+    }
+    const setRuleEnabled = async (id: string, enabled: boolean) => {
+        const next = rules.map((rule) =>
+            rule.id === id ? { ...rule, enabled } : rule
+        );
+        await configRepository.setString(
+            FOLLOW_LINK_RULES_KEY,
+            JSON.stringify(next)
+        );
+        publishToolsStatusUpdated();
+    };
+    const items: ToolStatusItem[] = [
+        ...rules.map((rule) => ({
+            id: rule.id,
+            label: rule.label || t('view.tools.follow_party.rule_default'),
+            description: ruleHasRequirement(rule)
+                ? t('view.tools.follow_party.status_rule')
+                : t('view.tools.follow_party.rule_needs_requirement'),
+            enabled: rule.enabled,
+            setEnabled: (enabled: boolean) => setRuleEnabled(rule.id, enabled)
+        })),
+        ...liveShares.map((share) => ({
+            id: `live:${share.id}`,
+            label: share.label || share.code,
+            description:
+                share.mode === 'password'
+                    ? t('view.tools.follow_party.status_live_password')
+                    : t('view.tools.follow_party.status_live_public'),
+            enabled: share.enabled,
+            setEnabled: async (enabled: boolean) => {
+                await commands.appFollowShareSetEnabled(share.id, enabled);
+                publishToolsStatusUpdated();
+            }
+        }))
+    ];
+    const active = items.filter((item) => item.enabled).length;
+    return {
+        label: t('view.tools.follow_party.status_on_of_total', {
+            enabled: active,
+            total: items.length
+        }),
+        tone: active > 0 ? 'active' : 'neutral',
+        items
+    };
+}
+
+/** Fork: parties, each with its own switch. */
+async function partyStatus(t: TFunction): Promise<ToolStatusSummary | null> {
+    const raw = await configRepository
+        .getString(PARTY_GROUPS_KEY, '[]')
+        .catch(() => null);
+    const parties = parsePartyGroups(parseJson(raw));
+    if (!parties.length) {
+        return null;
+    }
+    const active = parties.filter((party) => party.enabled).length;
+    return {
+        label: t('view.tools.follow_party.status_on_of_total', {
+            enabled: active,
+            total: parties.length
+        }),
+        tone: active > 0 ? 'active' : 'neutral',
+        items: parties.map((party) => ({
+            id: party.id,
+            label: party.name || t('view.tools.follow_party.unnamed_party'),
+            description: t('view.tools.follow_party.status_party_members', {
+                count: party.members.length
+            }),
+            enabled: party.enabled,
+            setEnabled: async (enabled: boolean) => {
+                // Reread so a change made in the dialog meanwhile is kept.
+                const current = parsePartyGroups(
+                    parseJson(
+                        await configRepository.getString(PARTY_GROUPS_KEY, '[]')
+                    )
+                );
+                await configRepository.setString(
+                    PARTY_GROUPS_KEY,
+                    JSON.stringify(
+                        current.map((other) =>
+                            other.id === party.id
+                                ? { ...other, enabled }
+                                : other
+                        )
+                    )
+                );
+                publishToolsStatusUpdated();
+            }
+        }))
+    };
+}
+
 export function countPresenceRules(rules: readonly unknown[] | null): {
     enabled: number;
     total: number;
@@ -142,7 +263,9 @@ async function loadToolStatusSummaries(
         inviteMode,
         endpoints,
         appLauncher,
-        backupSettings
+        backupSettings,
+        followLinks,
+        party
     ] = await Promise.all([
         commands.appPresenceAutomationRulesGet('time').catch(() => null),
         commands.appPresenceAutomationRulesGet('context').catch(() => null),
@@ -151,7 +274,9 @@ async function loadToolStatusSummaries(
             .catch(() => null),
         commands.appLlmEndpointList().catch(() => null),
         getCurrentAppLauncherSnapshot().catch(() => null),
-        getProfileBackupSettings().catch(() => null)
+        getProfileBackupSettings().catch(() => null),
+        followLinkStatus(t).catch(() => null),
+        partyStatus(t).catch(() => null)
     ]);
 
     const next = new Map<string, ToolStatusSummary>();
@@ -258,6 +383,13 @@ async function loadToolStatusSummaries(
                 }
             }
         });
+    }
+
+    if (followLinks) {
+        next.set('follow-links', followLinks);
+    }
+    if (party) {
+        next.set('party', party);
     }
 
     if (endpoints?.length) {

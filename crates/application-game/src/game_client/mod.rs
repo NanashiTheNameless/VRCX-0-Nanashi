@@ -4,6 +4,7 @@ mod processor;
 mod runtime;
 
 pub use actions::{GameClientActions, GameClientDebugLoggingActions};
+pub use lifecycle::build_launch_arguments;
 pub use processor::{
     DebugLoggingOutcome, DebugLoggingOutcomeKind, GameClientCacheActions, GameClientLocationSource,
     GameClientWindowActions, NoopGameClientCacheActions, NoopGameClientWindowActions,

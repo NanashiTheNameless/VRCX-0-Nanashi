@@ -54,11 +54,18 @@ pub(super) fn build_runtime_composition(
         wiring.services.game_isolation(),
     ));
     let friend_projection_observer: Arc<dyn FriendProjectionObserver> = wiring.services.clone();
+    let game_launcher: Arc<dyn vrcx_0_application_realtime::RealtimeGameLauncher> =
+        Arc::new(crate::game_client::DesktopGameLauncher::new(
+            builder.desktop_assembly().config_store(),
+            wiring.host_file_access.clone(),
+            builder.paths().clone(),
+        ));
     RuntimeHostComposition {
         local_game_context,
         group_order_source: Arc::new(HostGroupOrderSource),
         friend_projection_observer: Some(friend_projection_observer),
         profile_extension: Some(extension),
+        game_launcher: Some(game_launcher),
     }
 }
 

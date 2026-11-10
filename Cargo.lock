@@ -124,6 +124,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "altcha"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e19ecf5c964b673ef76d4f944ccca5a5b24f9cf07b95c47eadeb234e6f0d8b2"
+dependencies = [
+ "digest 0.10.7",
+ "hex",
+ "hmac 0.12.1",
+ "pbkdf2",
+ "rand 0.10.3",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "subtle",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "android-activity"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1163,6 +1181,7 @@ dependencies = [
  "cipher",
  "cpufeatures 0.3.1",
  "rand_core 0.10.1",
+ "zeroize",
 ]
 
 [[package]]
@@ -1175,6 +1194,7 @@ dependencies = [
  "chacha20",
  "cipher",
  "poly1305",
+ "zeroize",
 ]
 
 [[package]]
@@ -1889,6 +1909,7 @@ checksum = "9ed9a281f7bc9b7576e61468ba615a66a5c8cfdff42420a70aa82701a3b1e292"
 dependencies = [
  "block-buffer 0.10.4",
  "crypto-common 0.1.7",
+ "subtle",
 ]
 
 [[package]]
@@ -3278,7 +3299,16 @@ version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4aaa26c720c68b866f2c96ef5c1264b3e6f473fe5d4ce61cd44bbe913e553018"
 dependencies = [
- "hmac",
+ "hmac 0.13.0",
+]
+
+[[package]]
+name = "hmac"
+version = "0.12.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c49c37c09c17a53d937dfbb742eb3a961d65a994e6bcdcf37e7399d0cc8ab5e"
+dependencies = [
+ "digest 0.10.7",
 ]
 
 [[package]]
@@ -3292,12 +3322,13 @@ dependencies = [
 
 [[package]]
 name = "hpke"
-version = "0.14.1"
+version = "0.15.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5324110b02044183df000f0bd7d2d7e61f1000631508627e77f63983b6fdffb"
+checksum = "8f512e325a1a71bf3273fb9b7fc9e5d96dac136fb4a95d0e6637001b12ea3e09"
 dependencies = [
  "aead",
  "chacha20poly1305",
+ "curve25519-dalek",
  "getrandom 0.4.3",
  "hkdf",
  "hybrid-array",
@@ -5929,6 +5960,16 @@ name = "pastey"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2ee67f1008b1ba2321834326597b8e186293b049a023cdef258527550b9935b4"
+
+[[package]]
+name = "pbkdf2"
+version = "0.12.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8ed6a7761f76e3b9f92dfb0a60a6a6477c61024b775147ff0973a02653abaf2"
+dependencies = [
+ "digest 0.10.7",
+ "hmac 0.12.1",
+]
 
 [[package]]
 name = "percent-encoding"
@@ -10312,7 +10353,7 @@ dependencies = [
 [[package]]
 name = "vrcx-0-nanashi-website-protocol"
 version = "0.1.0"
-source = "git+https://github.com/NanashiTheNameless/VRCX-0-Nanashi-Website?rev=99cb2bdf96ffead57cffa3dc08efb646356984a3#99cb2bdf96ffead57cffa3dc08efb646356984a3"
+source = "git+https://github.com/NanashiTheNameless/VRCX-0-Nanashi-Website?rev=f6e7b5917ed31e955df94df16eb3a89be30eb390#f6e7b5917ed31e955df94df16eb3a89be30eb390"
 dependencies = [
  "argon2",
  "chacha20poly1305",
@@ -10442,6 +10483,7 @@ dependencies = [
 name = "vrcx-0-remote-sync"
 version = "0.1.0"
 dependencies = [
+ "altcha",
  "base64 0.23.1",
  "chrono",
  "ed25519-dalek",

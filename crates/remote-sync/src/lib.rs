@@ -310,6 +310,72 @@ impl RemoteSyncClient {
         }
     }
 
+    fn public_endpoint(&self, path: &str) -> String {
+        self.endpoint(&format!("/public/v{}{path}", api::PROTOCOL_VERSION))
+    }
+
+    /// Creates an anonymous follow link share. Solves the server's
+    /// proof-of-work check first; no account or token is involved.
+    pub async fn follow_share_create(
+        &self,
+        password: Option<api::FollowSharePassword>,
+    ) -> Result<api::FollowShareCreated, Error> {
+        let challenge: altcha::Challenge = self
+            .send_json(
+                self.client.get(self.public_endpoint("/follow/challenge")),
+                Policy::sensitive(false),
+            )
+            .await?;
+        let solution = tokio::task::spawn_blocking({
+            let challenge = challenge.clone();
+            move || altcha::solve_challenge(altcha::SolveChallengeOptions::new(&challenge))
+        })
+        .await
+        .map_err(|e| Error::Transport(e.to_string()))?
+        .map_err(|e| Error::Transport(e.to_string()))?
+        .ok_or(Error::InvalidResponse)?;
+        let payload = serde_json::to_vec(&altcha::Payload {
+            challenge,
+            solution,
+        })
+        .map_err(|_| Error::InvalidResponse)?;
+        let request = api::FollowShareCreate {
+            altcha: STANDARD.encode(payload),
+            password,
+        };
+        self.send_json(
+            self.client
+                .post(self.public_endpoint("/follow"))
+                .json(&request),
+            Policy::sensitive(false),
+        )
+        .await
+    }
+
+    pub async fn follow_share_update(
+        &self,
+        code: &str,
+        write_token: &str,
+        sealed: Vec<u8>,
+    ) -> Result<(), Error> {
+        self.send_empty(
+            self.client
+                .put(self.public_endpoint(&format!("/follow/{code}")))
+                .json(&api::FollowShareUpdate { sealed }),
+            write_token,
+        )
+        .await
+    }
+
+    pub async fn follow_share_delete(&self, code: &str, write_token: &str) -> Result<(), Error> {
+        self.send_empty(
+            self.client
+                .delete(self.public_endpoint(&format!("/follow/{code}"))),
+            write_token,
+        )
+        .await
+    }
+
     /// Sends a request whose success carries no body worth reading.
     async fn send_empty(&self, request: reqwest::RequestBuilder, token: &str) -> Result<(), Error> {
         self.send_bytes(request, token).await.map(|_| ())
