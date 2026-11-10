@@ -21,6 +21,15 @@ enables `bundleMediaFramework` to include the media plugins and plugin scanner.
 The AppImage smoke test checks for these files, including the plugin that provides
 `appsink`.
 
+CI uses Node.js 26 LTS and the latest stable Rust toolchain. Linux packages stay
+on Ubuntu 24.04 with its current security updates to preserve the supported Linux
+baseline. The recorder container uses the maintained Distroless Debian 13 image.
+
+Some Rust versions stay pinned for compatibility: `tauri-specta` requires the
+matching Specta prerelease and TypeScript exporter, and the Linux deep-link plugin
+requires `rust-ini` 0.21.1. The RemoteSync protocol also stays pinned to a reviewed
+commit so desktop and server wire formats remain compatible.
+
 ```bash
 git clone https://github.com/NanashiTheNameless/VRCX-0-Nanashi
 cd VRCX-0-Nanashi

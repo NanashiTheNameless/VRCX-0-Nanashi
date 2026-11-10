@@ -1,4 +1,4 @@
-FROM gcr.io/distroless/static-debian12
+FROM gcr.io/distroless/static-debian13
 
 ARG TARGETARCH
 COPY --chmod=755 dist/vrcx-0-logger-${TARGETARCH} /usr/local/bin/vrcx-0-logger

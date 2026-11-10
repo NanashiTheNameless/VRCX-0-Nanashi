@@ -49,7 +49,7 @@ jobs:
 
             - uses: actions/setup-node@v7
               with:
-                  node-version: 24.x
+                  node-version: 26.x
 
             - id: version
               name: Compute nightly version
@@ -525,7 +525,7 @@ jobs:
 
             - uses: actions/setup-node@v7
               with:
-                  node-version: 24.x
+                  node-version: 26.x
 
             - name: Install musl toolchain
               if: matrix.platform == 'linux'
@@ -587,7 +587,7 @@ jobs:
 
             - uses: actions/setup-node@v7
               with:
-                  node-version: 24.x
+                  node-version: 26.x
 
             - uses: actions/download-artifact@v8
               with:
@@ -742,7 +742,7 @@ jobs:
 
             - uses: actions/setup-node@v7
               with:
-                  node-version: 24.x
+                  node-version: 26.x
 
             - uses: actions/download-artifact@v8
               with:
