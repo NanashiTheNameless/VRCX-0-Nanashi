@@ -453,6 +453,7 @@ fn rows_draw_the_actors_badges_after_the_name() {
                 border: crate::Color::rgba(0, 255, 0, 255),
                 icon_color: crate::Color::rgba(255, 255, 255, 255),
                 round: true,
+                effects: crate::BadgeEffects::default(),
             }],
             ..row(1, "Ada", false)
         }],
@@ -462,6 +463,39 @@ fn rows_draw_the_actors_badges_after_the_name() {
 
     assert_eq!(plain.green_pixels(), 0);
     assert!(badged.green_pixels() > 40, "{}", badged.green_pixels());
+}
+
+#[test]
+fn badge_motion_keeps_the_widget_drawing_after_the_row_has_settled() {
+    let mut widget = Widget::new();
+    let mut model = model(vec![row(1, "Ada", false)], 0, false);
+    widget.settled(&model);
+    model.rows[0].badges = vec![crate::OverlayBadge {
+        icon: std::sync::Arc::from("M 4 4 L 20 20"),
+        from: crate::Color::rgba(0, 255, 0, 255),
+        to: crate::Color::rgba(0, 0, 255, 255),
+        border: crate::Color::rgba(0, 255, 0, 255),
+        icon_color: crate::Color::rgba(255, 255, 255, 255),
+        round: false,
+        effects: crate::BadgeEffects {
+            flow: true,
+            ..Default::default()
+        },
+    }];
+    let first = widget.render(&model);
+    assert!(widget.host.is_animating());
+    let mut changed = false;
+    for _ in 0..10 {
+        std::thread::sleep(Duration::from_millis(100));
+        if widget.host.render_bgra(&mut widget.out) && widget.out != first.0 {
+            changed = true;
+            break;
+        }
+    }
+    assert!(changed);
+    model.rows[0].badges[0].effects = crate::BadgeEffects::default();
+    widget.settled(&model);
+    assert!(!widget.host.is_animating());
 }
 
 fn bottom_row_y() -> f32 {

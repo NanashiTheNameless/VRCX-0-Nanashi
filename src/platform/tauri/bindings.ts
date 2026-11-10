@@ -7077,6 +7077,9 @@ export type NowPlayingSnapshot = {
  *  How one badge looks. `icon` is SVG path data in a 24 by 24 box, drawn as
  *  a stroke like Lucide icons. Colors are `#rrggbb`. `round` badges are the
  *  user's own custom badges; everyone-visible badges are rounded squares.
+ *  `effects` names the badge's animations: the global badge effects
+ *  (`shimmer`, `flow`, `sparkle`, `glow`, `embers`, `wiggle`, `flip`) and the
+ *  developer badge's `glitch`; unknown names are ignored.
  */
 export type OverlayBadgeStyle = {
     icon?: string;
@@ -7085,15 +7088,18 @@ export type OverlayBadgeStyle = {
     colorBorder?: string;
     colorIcon?: string;
     round?: boolean;
+    effects?: string[];
 };
 
 /**
  *  Every badge style in use, and for each user the indexes of their badges
- *  in `styles`, in display order.
+ *  in `styles`, in display order. `animations` is off when the user turned
+ *  on Reduce Effects, and then no badge moves.
  */
 export type OverlayUserBadges = {
     styles?: OverlayBadgeStyle[];
     users?: { [key in string]: number[] };
+    animations?: boolean;
 };
 
 export type OwnerId = string;

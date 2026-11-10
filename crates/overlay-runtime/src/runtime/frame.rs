@@ -26,6 +26,16 @@ use crate::{WristPage, WristPlayerRow};
 pub(super) trait VrOverlayFrameProducer: Send {
     /// `None` when there is nothing new to show, such as while the wrist is hidden.
     fn next_frame(&mut self, input: VrOverlayFrameInput) -> Result<Option<RgbaFrame>, String>;
+
+    /// Fork: the next frame of moving badges on the last drawn page, without
+    /// rebuilding it; `None` when nothing moves.
+    fn animate(&mut self) -> Option<RgbaFrame> {
+        None
+    }
+
+    fn is_animating(&self) -> bool {
+        false
+    }
 }
 
 pub(super) type VrOverlayFrameProducerFactory =
@@ -83,6 +93,19 @@ impl VrOverlayFrameProducer for RuntimeWristFrameProducer {
         let model = build_wrist_surface_model(frame_input);
         render_slint_wrist_frame(&model).map(Some)
     }
+
+    fn animate(&mut self) -> Option<RgbaFrame> {
+        SLINT_WRIST_RENDERER.with(|renderer| renderer.borrow_mut().as_mut()?.animate())
+    }
+
+    fn is_animating(&self) -> bool {
+        SLINT_WRIST_RENDERER.with(|renderer| {
+            renderer
+                .borrow()
+                .as_ref()
+                .is_some_and(SlintWristRenderer::is_animating)
+        })
+    }
 }
 
 fn render_slint_wrist_frame(model: &WristSurfaceModel) -> Result<RgbaFrame, String> {
@@ -106,6 +129,20 @@ pub(crate) fn render_slint_hmd_frame(model: &MainSurfaceModel) -> Result<RgbaFra
             .borrow_mut()
             .get_or_insert_with(SlintHmdRenderer::new)
             .render(model)
+    })
+}
+
+/// Fork: the next frame of moving badges on the HMD cards, if any.
+pub(crate) fn animate_slint_hmd_frame() -> Option<RgbaFrame> {
+    SLINT_HMD_RENDERER.with(|renderer| renderer.borrow_mut().as_mut()?.animate())
+}
+
+pub(crate) fn slint_hmd_animating() -> bool {
+    SLINT_HMD_RENDERER.with(|renderer| {
+        renderer
+            .borrow()
+            .as_ref()
+            .is_some_and(SlintHmdRenderer::is_animating)
     })
 }
 

@@ -4,9 +4,9 @@ pub mod slint_ui;
 pub mod surfaces;
 
 pub use model::{
-    Color, DeviceChip, DeviceRole, DeviceStatus, FeedAccent, FeedKind, FeedLine, FeedRelation,
-    FeedSeverity, OverlayBadge, OverlayFooter, OverlayNowPlaying, OverlaySize, OverlaySurfaceId,
-    RgbaFrame, MAIN_SURFACE_ID, MAX_OVERLAY_BADGES,
+    BadgeEffects, Color, DeviceChip, DeviceRole, DeviceStatus, FeedAccent, FeedKind, FeedLine,
+    FeedRelation, FeedSeverity, OverlayBadge, OverlayFooter, OverlayNowPlaying, OverlaySize,
+    OverlaySurfaceId, RgbaFrame, MAIN_SURFACE_ID, MAX_OVERLAY_BADGES,
 };
 #[cfg(feature = "slint-ui")]
 pub use slint_ui::{SlintDesktopWidgetHost, SlintHmdRenderer, SlintWristRenderer};

@@ -213,11 +213,12 @@ again after importing.
 
 The wrist menu's Feed, Players and Notes pages, HMD notification cards and the Desktop
 Overlay draw each user's badges after their name, as small icon tiles in the badge's colors:
-rounded squares for built-in and global badges, circles for custom badges. They never move or
-animate there, and show at most six per name; the rest are left out. The app window works out
-who gets which badge and passes the result to the overlays on the same PC, so badges appear
-there a moment after the app has started, and changes to your custom badges follow within a
-few seconds.
+rounded squares for built-in and global badges, circles for custom badges. The developer and
+global badges animate there; custom badges stay still. Reduce Effects in Settings or your
+OS reduced-motion preference stops the animations. Overlays show at most six per name; the
+rest are left out. The app window works out who gets which badge and passes the result to
+the overlays on the same PC, so badges appear there a moment after the app has started,
+and changes to your custom badges follow within a few seconds.
 
 ## Reserved icons
 

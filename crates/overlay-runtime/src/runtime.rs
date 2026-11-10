@@ -34,8 +34,9 @@ pub use super::config::VR_OVERLAY_ENABLED_CONFIG_KEY;
 pub use activity_sink::VrOverlayActivitySink;
 
 use frame::{
-    clear_slint_hmd_renderer, clear_slint_wrist_renderer, RuntimeWristFrameProducer,
-    StaticWristFrameProducer, VrOverlayFrameProducer, VrOverlayFrameProducerFactory,
+    animate_slint_hmd_frame, clear_slint_hmd_renderer, clear_slint_wrist_renderer,
+    slint_hmd_animating, RuntimeWristFrameProducer, StaticWristFrameProducer,
+    VrOverlayFrameProducer, VrOverlayFrameProducerFactory,
 };
 use surface_layout::{overlay_surface_configs, surface_active_for_start_mode, wrist_surface_ids};
 
@@ -43,6 +44,9 @@ type HmdFriendMembershipProvider = Arc<dyn Fn(&str) -> bool + Send + Sync>;
 
 const WRIST_DEVICE_REFRESH_INTERVAL: Duration = Duration::from_secs(5);
 const WRIST_FRAME_REFRESH_INTERVAL: Duration = Duration::from_secs(1);
+/// Fork: frame interval for animated badges. Between full refreshes only the
+/// moving parts are redrawn from the last page, with no new data read.
+const BADGE_ANIMATION_INTERVAL: Duration = Duration::from_millis(50);
 
 struct VrOverlayFrameInput {
     config: VrOverlayRuntimeConfig,
@@ -289,13 +293,17 @@ impl VrOverlayRuntime {
             let mut next_refresh = Instant::now();
             let mut last_wrist_state = None;
             let mut refresh_wake_sequence = 0;
+            let mut next_animation: Option<Instant> = None;
             while !stop_token.is_stop_requested() {
                 let observed_sequence = refresh_wake_sequence;
-                runtime.refresh_wake.wait_timeout(
-                    WRIST_STATE_POLL_INTERVAL
-                        .min(next_refresh.saturating_duration_since(Instant::now())),
-                    &mut refresh_wake_sequence,
-                );
+                let mut wait = WRIST_STATE_POLL_INTERVAL
+                    .min(next_refresh.saturating_duration_since(Instant::now()));
+                if let Some(next_animation) = next_animation {
+                    wait = wait.min(next_animation.saturating_duration_since(Instant::now()));
+                }
+                runtime
+                    .refresh_wake
+                    .wait_timeout(wait, &mut refresh_wake_sequence);
                 if stop_token.is_stop_requested() {
                     break;
                 }
@@ -303,6 +311,12 @@ impl VrOverlayRuntime {
                 let wrist_state = runtime.wrist_state();
                 let wrist_changed = wrist_state.is_some() && wrist_state != last_wrist_state;
                 if !woken && !wrist_changed && Instant::now() < next_refresh {
+                    if next_animation.is_some_and(|due| Instant::now() >= due) {
+                        runtime.push_badge_animation_frames();
+                        next_animation = runtime
+                            .badges_animating()
+                            .then(|| Instant::now() + BADGE_ANIMATION_INTERVAL);
+                    }
                     continue;
                 }
                 if wrist_state.is_some() {
@@ -320,6 +334,9 @@ impl VrOverlayRuntime {
                 }
                 runtime.report_hmd_afk();
                 next_refresh = Instant::now() + runtime.refresh_interval();
+                next_animation = runtime
+                    .badges_animating()
+                    .then(|| Instant::now() + BADGE_ANIMATION_INTERVAL);
             }
             runtime.clear_refresh_thread_id();
         });
@@ -792,6 +809,73 @@ impl VrOverlayRuntime {
                     surface_id = surface_id.as_str(),
                     "failed to update wrist overlay frame"
                 );
+            }
+        }
+    }
+
+    /// Fork: whether a shown wrist page or HMD card has moving badges.
+    fn badges_animating(&self) -> bool {
+        let Ok(manager) = self.manager.try_lock() else {
+            return false;
+        };
+        if !manager.is_running() {
+            return false;
+        }
+        let config = self.current_runtime_config();
+        let hmd_id = vrcx_0_vr_overlay::OverlaySurfaceId::new(vrcx_0_vr_overlay::MAIN_SURFACE_ID);
+        let wrist_visible = self.is_test_mode()
+            || wrist_surface_ids(config.hand)
+                .iter()
+                .any(|id| manager.is_surface_visible(id));
+        (manager.is_surface_visible(&hmd_id) && slint_hmd_animating())
+            || (wrist_visible
+                && self
+                    .frame_producer
+                    .lock()
+                    .ok()
+                    .is_some_and(|producer| producer.as_ref().is_some_and(|p| p.is_animating())))
+    }
+
+    /// Fork: redraws only the moving badges of the last wrist page and HMD
+    /// cards. Skipped while the manager is busy; the next tick catches up.
+    fn push_badge_animation_frames(&self) {
+        let Ok(mut manager) = self.manager.try_lock() else {
+            return;
+        };
+        if !manager.is_running() {
+            return;
+        }
+        let config = self.current_runtime_config();
+        let wrist_ids = wrist_surface_ids(config.hand);
+        let wrist_visible = self.is_test_mode()
+            || wrist_ids
+                .iter()
+                .any(|surface_id| manager.is_surface_visible(surface_id));
+        if wrist_visible {
+            let frame = self
+                .frame_producer
+                .lock()
+                .ok()
+                .and_then(|mut producer| producer.as_mut()?.animate());
+            if let Some(frame) = frame {
+                for surface_id in &wrist_ids {
+                    if let Err(error) = manager.update_surface_frame(surface_id, frame.clone()) {
+                        tracing::warn!(
+                            error = %error,
+                            surface_id = surface_id.as_str(),
+                            "failed to update animated wrist overlay frame"
+                        );
+                    }
+                }
+            }
+        }
+        let surface_id =
+            vrcx_0_vr_overlay::OverlaySurfaceId::new(vrcx_0_vr_overlay::MAIN_SURFACE_ID);
+        if manager.is_surface_visible(&surface_id) {
+            if let Some(frame) = animate_slint_hmd_frame() {
+                if let Err(error) = manager.update_surface_frame(&surface_id, frame) {
+                    tracing::warn!(error = %error, "failed to update animated HMD overlay frame");
+                }
             }
         }
     }

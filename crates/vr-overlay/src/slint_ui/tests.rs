@@ -1014,6 +1014,7 @@ fn green_badge() -> crate::OverlayBadge {
         border: crate::Color::rgba(0, 255, 0, 255),
         icon_color: crate::Color::rgba(255, 0, 255, 255),
         round: false,
+        effects: crate::BadgeEffects::default(),
     }
 }
 
@@ -1075,6 +1076,7 @@ fn wrist_rows_draw_at_most_the_badge_limit() {
 #[test]
 fn hmd_cards_draw_the_actors_badges() {
     let mut model = sample_main_model();
+    model.toasts[0].avatar = None;
     let plain = SlintHmdRenderer::new().render(&model).unwrap();
     model.toasts[0].badges = vec![green_badge()];
     let badged = SlintHmdRenderer::new().render(&model).unwrap();
@@ -1082,4 +1084,162 @@ fn hmd_cards_draw_the_actors_badges() {
     assert_eq!(pixels_like(&plain, (0, 255, 0)), 0);
     assert!(pixels_like(&badged, (0, 255, 0)) > 100);
     assert!(pixels_like(&badged, (255, 0, 255)) > 10);
+}
+
+#[test]
+fn still_badges_never_ask_for_more_frames() {
+    let mut model = sample_wrist_model();
+    model.feed_rows[0].badges = vec![green_badge()];
+    let mut renderer = SlintWristRenderer::new();
+    renderer.render(&model).unwrap();
+
+    assert!(!renderer.is_animating());
+    assert!(renderer.animate().is_none());
+}
+
+#[test]
+fn every_badge_effect_keeps_drawing_new_frames() {
+    let effects = [
+        crate::BadgeEffects {
+            shimmer: true,
+            ..Default::default()
+        },
+        crate::BadgeEffects {
+            flow: true,
+            ..Default::default()
+        },
+        crate::BadgeEffects {
+            sparkle: true,
+            ..Default::default()
+        },
+        crate::BadgeEffects {
+            glow: true,
+            ..Default::default()
+        },
+        crate::BadgeEffects {
+            embers: true,
+            ..Default::default()
+        },
+        crate::BadgeEffects {
+            wiggle: true,
+            ..Default::default()
+        },
+        crate::BadgeEffects {
+            flip: true,
+            ..Default::default()
+        },
+        crate::BadgeEffects {
+            glitch: true,
+            ..Default::default()
+        },
+    ];
+    for effect in effects {
+        let mut model = sample_wrist_model();
+        model.feed_rows[0].badges = vec![crate::OverlayBadge {
+            effects: effect,
+            from: crate::Color::rgba(40, 90, 200, 255),
+            to: crate::Color::rgba(200, 40, 90, 255),
+            ..green_badge()
+        }];
+        let mut renderer = SlintWristRenderer::new();
+        let first = renderer.render(&model).unwrap();
+        assert!(renderer.is_animating(), "{effect:?} should animate");
+
+        // Effects run on cycles of a few seconds; sample across one.
+        let mut changed = false;
+        for _ in 0..30 {
+            thread::sleep(std::time::Duration::from_millis(100));
+            if let Some(frame) = renderer.animate() {
+                changed |= frame.data != first.data;
+            }
+        }
+        assert!(changed, "{effect:?} never changed the frame");
+        assert!(renderer.is_animating());
+        model.feed_rows[0].badges[0].effects = crate::BadgeEffects::default();
+        renderer.render(&model).unwrap();
+        assert!(!renderer.is_animating());
+        assert!(renderer.animate().is_none());
+    }
+}
+
+#[test]
+fn hmd_cards_animate_their_badges() {
+    let mut model = sample_main_model();
+    model.toasts[0].badges = vec![crate::OverlayBadge {
+        effects: crate::BadgeEffects {
+            shimmer: true,
+            ..Default::default()
+        },
+        ..green_badge()
+    }];
+    let mut renderer = SlintHmdRenderer::new();
+    let first = renderer.render(&model).unwrap();
+    assert!(renderer.is_animating());
+    let mut changed = false;
+    for _ in 0..30 {
+        thread::sleep(std::time::Duration::from_millis(150));
+        if let Some(frame) = renderer.animate() {
+            if frame.data != first.data {
+                changed = true;
+                break;
+            }
+        }
+    }
+    assert!(changed, "the notification badge never changed the frame");
+}
+
+#[test]
+fn wrist_player_badges_sit_right_after_a_short_name() {
+    let mut model = player_grid_model(1, 1024, "");
+    model.players[0].name = "Al".to_string();
+    model.players[0].badges = vec![green_badge()];
+    let frame = SlintWristRenderer::new().render_logical(&model).unwrap();
+
+    let width = frame.size.width as usize;
+    let green_x = frame
+        .data
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .enumerate()
+        .filter(|(_, px)| px[3] > 200 && px[1] > 215 && px[0] < 40 && px[2] < 40)
+        .map(|(index, _)| index % width)
+        .min()
+        .expect("badge drawn");
+    // A short name leaves the badge near the left of the column, not at the
+    // far edge of the panel.
+    assert!(green_x < width / 3, "badge at x={green_x} of {width}");
+}
+
+#[test]
+fn round_badges_are_drawn_round() {
+    let mut model = player_grid_model(1, 1024, "");
+    model.players[0].name = "Al".to_string();
+    model.players[0].badges = vec![crate::OverlayBadge {
+        round: true,
+        ..green_badge()
+    }];
+    let frame = SlintWristRenderer::new().render(&model).unwrap();
+
+    let width = frame.size.width as usize;
+    let green: Vec<(usize, usize)> = frame
+        .data
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .enumerate()
+        .filter(|(_, px)| px[3] > 200 && px[1] > 215 && px[0] < 40 && px[2] < 40)
+        .map(|(index, _)| (index % width, index / width))
+        .collect();
+    let left = green.iter().map(|(x, _)| *x).min().unwrap();
+    let right = green.iter().map(|(x, _)| *x).max().unwrap();
+    let top = green.iter().map(|(_, y)| *y).min().unwrap();
+    let bottom = green.iter().map(|(_, y)| *y).max().unwrap();
+    let at = |x: usize, y: usize| green.contains(&(x, y));
+    // A circle leaves its bounding box's corners empty.
+    assert!(
+        !at(left, top),
+        "top left corner filled: {left},{top}..{right},{bottom}"
+    );
+    assert!(!at(right, bottom), "bottom right corner filled");
 }

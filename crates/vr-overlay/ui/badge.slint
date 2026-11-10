@@ -1,37 +1,268 @@
 // Fork: user badges next to names, drawn like the app's compact badges:
 // rounded squares for badges everyone sees, circles for the user's own.
+// Effects follow the app's badge animations. Each effect layer only exists
+// while its badge has that effect, so still badges never cause redraws.
+// The software renderer squares off gradients and clipping, so the badge's
+// shape comes from `body`, an image the host draws with rounded corners (or
+// as a circle), and every effect stays inside the shape by itself.
 export struct OverlayBadgeItem {
+    body: image,
+    // The reversed gradient the flow effect fades to.
+    flow-body: image,
     icon: string,
     from: color,
     to: color,
     border: color,
     icon-color: color,
     round: bool,
+    shimmer: bool,
+    flow: bool,
+    sparkle: bool,
+    glow: bool,
+    embers: bool,
+    wiggle: bool,
+    flip: bool,
+    glitch: bool,
+}
+
+component BadgeGlyph inherits Path {
+    in property <string> icon;
+    in property <color> tint;
+    in property <length> line;
+    viewbox-width: 24;
+    viewbox-height: 24;
+    commands: root.icon;
+    stroke: root.tint;
+    stroke-width: root.line;
+    stroke-line-cap: round;
+    stroke-line-join: round;
+}
+
+// A four-point sparkle that grows and fades once per cycle.
+component Sparkle inherits Path {
+    in property <length> chip;
+    in property <float> cx;
+    in property <float> cy;
+    in property <float> delay-ms;
+    property <float> t: Math.mod(animation-tick() / 1ms + root.delay-ms, 2500) / 2500;
+    property <float> grow: root.t < 0.4 ? Math.sin(root.t / 0.4 * 180deg) : 0;
+    width: root.chip * 0.32 * root.grow;
+    height: self.width;
+    x: root.chip * root.cx - self.width / 2;
+    y: root.chip * root.cy - self.height / 2;
+    viewbox-width: 24;
+    viewbox-height: 24;
+    commands: "M 12 0 L 14.5 9.5 L 24 12 L 14.5 14.5 L 12 24 L 9.5 14.5 L 0 12 L 9.5 9.5 Z";
+    fill: #ffffff;
+    opacity: root.grow;
+}
+
+// An ember that rises from the bottom and fades out.
+component Ember inherits Rectangle {
+    in property <length> chip;
+    in property <float> cx;
+    in property <float> drift;
+    in property <float> period-ms;
+    in property <float> delay-ms;
+    property <float> t: Math.mod(animation-tick() / 1ms + root.delay-ms, root.period-ms) / root.period-ms;
+    width: root.chip * 0.13;
+    height: self.width;
+    border-radius: self.width / 2;
+    x: root.chip * (root.cx + root.drift * root.t) - self.width / 2;
+    y: root.chip * (0.82 - 0.64 * root.t) - self.height / 2;
+    background: #ffcf6e;
+    opacity: root.t < 0.15 ? root.t / 0.15 : 1 - (root.t - 0.15) / 0.85;
 }
 
 export component BadgeChip inherits Rectangle {
     in property <OverlayBadgeItem> badge;
     in property <length> size: 16px;
 
+    property <length> radius: root.badge.round ? root.size / 2 : root.size * 0.28;
+    property <length> icon-size: root.size * 0.6;
+    property <length> line: max(1px, root.icon-size / 12);
+    // Wiggle: a few quick side to side shakes, then a rest.
+    property <float> wiggle-t: root.badge.wiggle ? Math.mod(animation-tick() / 1ms, 2800) / 2800 : 0;
+    property <length> wiggle-x: root.wiggle-t > 0 && root.wiggle-t < 0.4
+        ? root.size * 0.07 * Math.sin(root.wiggle-t / 0.4 * 720deg)
+        : 0px;
+    // Flip: the icon turns around once per cycle.
+    property <float> flip-t: root.badge.flip ? Math.mod(animation-tick() / 1ms, 4000) / 4000 : 0;
+    property <float> flip-scale: root.flip-t > 0.35 && root.flip-t < 0.65
+        ? Math.max(0.08, abs(Math.cos((root.flip-t - 0.35) / 0.3 * 180deg)))
+        : 1;
+    // Embers make the icon flicker like a flame.
+    property <float> flicker: root.badge.embers && Math.mod(animation-tick() / 1ms, 1300) > 650 ? 0.78 : 1;
+    // Developer glitch: a short burst of split, jittering icons, a scan line
+    // sweeping down well apart from it, and a breathing red rim.
+    property <float> glitch-ms: root.badge.glitch ? Math.mod(animation-tick() / 1ms, 5650) : -1;
+    property <bool> glitching: (root.glitch-ms >= 0 && root.glitch-ms < 260)
+        || (root.glitch-ms >= 3900 && root.glitch-ms < 4060);
+    property <length> glitch-x: root.glitching
+        ? root.size * 0.08 * (Math.mod(Math.floor(root.glitch-ms / 60), 2) == 0 ? 1 : -1)
+        : 0px;
+
     width: root.size;
     height: root.size;
-    border-radius: root.badge.round ? root.size / 2 : root.size * 0.28;
-    border-width: max(1px, root.size / 16);
-    border-color: root.badge.border;
-    background: @linear-gradient(135deg, root.badge.from 0%, root.badge.to 100%);
 
-    Path {
-        x: root.size * 0.2;
-        y: root.size * 0.2;
-        width: root.size * 0.6;
-        height: root.size * 0.6;
-        viewbox-width: 24;
-        viewbox-height: 24;
-        commands: root.badge.icon;
-        stroke: root.badge.icon-color;
-        stroke-width: max(1px, root.size * 0.6 / 12);
-        stroke-line-cap: round;
-        stroke-line-join: round;
+    if root.badge.glow : Rectangle {
+        property <float> t: Math.mod(animation-tick() / 1ms, 2600) / 2600;
+        x: -root.size * 0.18;
+        y: -root.size * 0.18;
+        width: root.size * 1.36;
+        height: root.size * 1.36;
+        border-radius: root.badge.round ? self.width / 2 : root.size * 0.42;
+        background: root.badge.from;
+        opacity: 0.12 + 0.38 * (0.5 - 0.5 * Math.cos(self.t * 360deg));
+    }
+
+    Rectangle {
+        width: root.size;
+        height: root.size;
+
+        Image {
+            width: root.size;
+            height: root.size;
+            source: root.badge.body;
+            image-fit: fill;
+            image-rendering: smooth;
+        }
+
+        if root.badge.flow : Image {
+            property <float> t: Math.mod(animation-tick() / 1ms, 3000) / 3000;
+            width: root.size;
+            height: root.size;
+            source: root.badge.flow-body;
+            image-fit: fill;
+            image-rendering: smooth;
+            opacity: 0.5 - 0.5 * Math.cos(self.t * 360deg);
+        }
+
+        // A soft light sweeping across, kept clear of the rounded edges.
+        if root.badge.shimmer : Rectangle {
+            property <float> t: Math.mod(animation-tick() / 1ms, 3400) / 3400;
+            // Sweeps across in the first part of each cycle, then rests.
+            property <float> p: Math.min(1, self.t / 0.6);
+            property <float> band: 0.22;
+            property <float> center: -self.band / 2 + (1 + self.band) * self.p;
+            // Half the height the band may cover here without leaving the shape.
+            property <float> half: root.badge.round
+                ? Math.sqrt(Math.max(0, 0.25 - (self.center - 0.5) * (self.center - 0.5))) - 0.08
+                : 0.36;
+            visible: self.p < 1 && self.half > 0.05 && self.center > 0.1 && self.center < 0.9;
+            width: root.size * self.band;
+            height: root.size * self.half * 2;
+            x: root.size * (self.center - self.band / 2);
+            y: root.size * (0.5 - self.half);
+            border-radius: self.width / 2;
+            background: #ffffff;
+            opacity: 0.32;
+        }
+
+        if root.badge.glitch && root.glitching : BadgeGlyph {
+            x: (root.size - root.icon-size) / 2 + root.glitch-x;
+            y: (root.size - root.icon-size) / 2;
+            width: root.icon-size;
+            height: root.icon-size;
+            icon: root.badge.icon;
+            tint: #e5202ed9;
+            line: root.line;
+        }
+
+        if root.badge.glitch && root.glitching : BadgeGlyph {
+            x: (root.size - root.icon-size) / 2 - root.glitch-x;
+            y: (root.size - root.icon-size) / 2;
+            width: root.icon-size;
+            height: root.icon-size;
+            icon: root.badge.icon;
+            tint: #ffffffb3;
+            line: root.line;
+        }
+
+        BadgeGlyph {
+            width: root.icon-size * root.flip-scale;
+            height: root.icon-size;
+            x: (root.size - self.width) / 2 + root.wiggle-x + root.glitch-x / 2;
+            y: (root.size - root.icon-size) / 2;
+            icon: root.badge.icon;
+            tint: root.badge.icon-color;
+            line: root.line;
+            opacity: root.flicker;
+        }
+
+        if root.badge.sparkle : Sparkle {
+            chip: root.size;
+            cx: 0.2;
+            cy: 0.25;
+            delay-ms: 0;
+        }
+
+        if root.badge.sparkle : Sparkle {
+            chip: root.size;
+            cx: 0.8;
+            cy: 0.35;
+            delay-ms: 850;
+        }
+
+        if root.badge.sparkle : Sparkle {
+            chip: root.size;
+            cx: 0.55;
+            cy: 0.8;
+            delay-ms: 1700;
+        }
+
+        if root.badge.embers : Ember {
+            chip: root.size;
+            cx: 0.3;
+            drift: 0.08;
+            period-ms: 1900;
+            delay-ms: 0;
+        }
+
+        if root.badge.embers : Ember {
+            chip: root.size;
+            cx: 0.65;
+            drift: -0.1;
+            period-ms: 2600;
+            delay-ms: 900;
+        }
+
+        if root.badge.embers : Ember {
+            chip: root.size;
+            cx: 0.5;
+            drift: 0.05;
+            period-ms: 2200;
+            delay-ms: 1400;
+        }
+
+        // Kept between the rounded corners so it never leaves the badge.
+        if root.badge.glitch && root.glitch-ms >= 1500 && root.glitch-ms < 2700 : Rectangle {
+            x: root.size * 0.08;
+            width: root.size * 0.84;
+            height: max(1px, root.size * 0.08);
+            y: root.radius + (root.size - 2 * root.radius - self.height) * (root.glitch-ms - 1500) / 1200;
+            border-radius: self.height / 2;
+            background: #ff5a64;
+            opacity: 0.75;
+        }
+    }
+
+    Rectangle {
+        width: root.size;
+        height: root.size;
+        border-radius: root.radius;
+        border-width: max(1px, root.size / 16);
+        border-color: root.badge.border;
+    }
+
+    if root.badge.glitch : Rectangle {
+        property <float> t: Math.mod(animation-tick() / 1ms, 2800) / 2800;
+        width: root.size;
+        height: root.size;
+        border-radius: root.radius;
+        border-width: max(1px, root.size / 10);
+        border-color: #e5202e;
+        opacity: 0.35 + 0.65 * (0.5 - 0.5 * Math.cos(self.t * 360deg));
     }
 }
 

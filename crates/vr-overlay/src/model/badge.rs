@@ -12,6 +12,46 @@ pub struct OverlayBadge {
     pub border: Color,
     pub icon_color: Color,
     pub round: bool,
+    pub effects: BadgeEffects,
+}
+
+/// Fork: badge animations, drawn in the overlay the way the app draws them.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct BadgeEffects {
+    pub shimmer: bool,
+    pub flow: bool,
+    pub sparkle: bool,
+    pub glow: bool,
+    pub embers: bool,
+    pub wiggle: bool,
+    pub flip: bool,
+    /// The fork developer badge's glitch, scan line and breathing rim.
+    pub glitch: bool,
+}
+
+impl BadgeEffects {
+    pub fn any(self) -> bool {
+        self != Self::default()
+    }
+
+    /// Effects by name; unknown names are ignored.
+    pub fn from_names<'a>(names: impl IntoIterator<Item = &'a str>) -> Self {
+        let mut effects = Self::default();
+        for name in names {
+            match name.trim() {
+                "shimmer" => effects.shimmer = true,
+                "flow" => effects.flow = true,
+                "sparkle" => effects.sparkle = true,
+                "glow" => effects.glow = true,
+                "embers" => effects.embers = true,
+                "wiggle" => effects.wiggle = true,
+                "flip" => effects.flip = true,
+                "glitch" => effects.glitch = true,
+                _ => {}
+            }
+        }
+        effects
+    }
 }
 
 /// Most badges drawn after one name; the rest are left out so the name keeps

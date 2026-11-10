@@ -8,7 +8,7 @@ pub mod geometry;
 pub mod now_playing;
 pub mod surface;
 
-pub use badge::{OverlayBadge, MAX_OVERLAY_BADGES};
+pub use badge::{BadgeEffects, OverlayBadge, MAX_OVERLAY_BADGES};
 pub use color::Color;
 pub use device::{DeviceChip, DeviceRole, DeviceStatus};
 pub use feed::{FeedAccent, FeedKind, FeedLine, FeedRelation, FeedSeverity};

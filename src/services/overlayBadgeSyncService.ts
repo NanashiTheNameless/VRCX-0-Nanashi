@@ -15,6 +15,7 @@ import {
 import {
     activeAwardsFor,
     awardIcon,
+    awardAnimations,
     awardStyle,
     DEFAULT_AWARD_ICON,
     type ActiveAward,
@@ -47,6 +48,7 @@ import {
     trackLocalModerations,
     useLocalModerationStore
 } from '@/state/localModerationStore';
+import { usePreferencesStore } from '@/state/preferencesStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useUserFactsStore } from '@/state/userFactsStore';
 import {
@@ -73,14 +75,16 @@ const FORK_DEVELOPER_LOOK: Look = {
     colorTo: '#3a0a0e',
     colorBorder: '#e5202e',
     colorIcon: '#ffffff',
-    round: false
+    round: false,
+    effects: ['glitch']
 };
 const UPSTREAM_DEVELOPER_LOOK: Look = {
     colorFrom: '#f4f6f9',
     colorTo: '#9aa3af',
     colorBorder: '#8d96a3',
     colorIcon: '#1f242b',
-    round: false
+    round: false,
+    effects: ['sparkle']
 };
 const VRCHAT_STAFF_LOOK: Look = {
     colorFrom: '#2f7cf6',
@@ -146,7 +150,8 @@ function awardLook(award: ActiveAward): Look {
         colorTo: badge.colorTo || to,
         colorBorder: badge.colorBorder || border,
         colorIcon: badge.colorText || '#ffffff',
-        round: false
+        round: false,
+        effects: awardAnimations(badge.animation)
     };
 }
 
@@ -273,7 +278,15 @@ export function buildOverlayUserBadges(icons: IconCatalog): OverlayUserBadges {
             users[userId] = kept;
         }
     }
-    return { styles: table.styles, users };
+    return {
+        styles: table.styles,
+        users,
+        animations:
+            !usePreferencesStore.getState().reducedMotionAndBlur &&
+            (typeof window === 'undefined' ||
+                window.matchMedia?.('(prefers-reduced-motion: reduce)')
+                    .matches !== true)
+    };
 }
 
 let started = false;
@@ -316,18 +329,29 @@ export function startOverlayBadgeSync(): () => void {
     ensureCustomBadgesLoaded();
     ensureGlobalBadgesLoaded();
     trackUserGroupMembership(queryClient);
+    const reducedMotion =
+        typeof window === 'undefined'
+            ? undefined
+            : window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    reducedMotion?.addEventListener('change', schedule);
     const unsubscribers = [
         useCustomBadgeStore.subscribe(schedule),
         useFavoriteStore.subscribe(schedule),
         useFriendRosterStore.subscribe(schedule),
         useGlobalBadgeStore.subscribe(schedule),
         useLocalModerationStore.subscribe(schedule),
+        usePreferencesStore.subscribe((state, previous) => {
+            if (state.reducedMotionAndBlur !== previous.reducedMotionAndBlur) {
+                schedule();
+            }
+        }),
         useRuntimeStore.subscribe(schedule),
         useUserFactsStore.subscribe(schedule),
         useUserGroupMembershipStore.subscribe(schedule)
     ];
     schedule();
     return () => {
+        reducedMotion?.removeEventListener('change', schedule);
         for (const unsubscribe of unsubscribers) {
             unsubscribe();
         }

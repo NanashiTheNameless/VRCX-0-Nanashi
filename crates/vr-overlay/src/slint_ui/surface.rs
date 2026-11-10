@@ -26,6 +26,9 @@ pub struct SlintSurfaceRenderer<H: SlintSurfaceHost> {
     last_model: Option<H::Model>,
     last_frame: Option<RgbaFrame>,
     render_count: usize,
+    /// Fork: whether the last frame drew something that moves (animated
+    /// badges), so the same model still needs new frames.
+    animating: bool,
 }
 
 impl<H: SlintSurfaceHost> SlintSurfaceRenderer<H> {
@@ -35,11 +38,12 @@ impl<H: SlintSurfaceHost> SlintSurfaceRenderer<H> {
             last_model: None,
             last_frame: None,
             render_count: 0,
+            animating: false,
         }
     }
 
     pub fn render(&mut self, model: &H::Model) -> Result<RgbaFrame, String> {
-        if self.last_model.as_ref() == Some(model) {
+        if self.last_model.as_ref() == Some(model) && !self.animating {
             if let Some(frame) = self.last_frame.as_ref() {
                 return Ok(frame.clone());
             }
@@ -47,6 +51,7 @@ impl<H: SlintSurfaceHost> SlintSurfaceRenderer<H> {
         let host = self.host_for_size(H::model_size(model))?;
         host.apply_model(model);
         let rendered = host.render_if_needed();
+        self.animating = host.window().has_active_animations();
         self.last_model = Some(model.clone());
         let Some(frame) = rendered else {
             return self.last_frame.clone().ok_or_else(|| {
@@ -59,6 +64,27 @@ impl<H: SlintSurfaceHost> SlintSurfaceRenderer<H> {
         self.render_count += 1;
         self.last_frame = Some(frame.clone());
         Ok(frame)
+    }
+
+    /// Fork: whether the current frame has moving parts that need
+    /// [`Self::animate`] called again.
+    pub fn is_animating(&self) -> bool {
+        self.animating && self.host.is_some()
+    }
+
+    /// Fork: the next frame of the current model's animations, or `None`
+    /// when nothing moves or nothing changed since the last frame.
+    pub fn animate(&mut self) -> Option<RgbaFrame> {
+        if !self.animating || self.last_model.is_none() {
+            return None;
+        }
+        let host = self.host.as_mut()?;
+        let rendered = host.render_if_needed();
+        self.animating = host.window().has_active_animations();
+        let frame = rendered?;
+        self.render_count += 1;
+        self.last_frame = Some(frame.clone());
+        Some(frame)
     }
 
     #[cfg(test)]
@@ -76,6 +102,7 @@ impl<H: SlintSurfaceHost> SlintSurfaceRenderer<H> {
             self.host = Some(H::new(size)?);
             self.last_model = None;
             self.last_frame = None;
+            self.animating = false;
         }
         self.host
             .as_mut()

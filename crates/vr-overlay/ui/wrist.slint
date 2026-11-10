@@ -51,6 +51,7 @@ component WristPlayerColumn inherits VerticalLayout {
         spacing: 1px;
 
         name-row := HorizontalLayout {
+            alignment: start;
             property <length> badge-size: 14px * root.scale;
             property <length> badges-width: cell.badges.length > 0
                 ? cell.badges.length * self.badge-size + (cell.badges.length - 1) * self.badge-size / 5 + 6px * root.scale
@@ -65,9 +66,11 @@ component WristPlayerColumn inherits VerticalLayout {
                 color: root.quiet-color;
             }
 
+            // Hugs the name so the badges sit right after it; wraps once the
+            // name needs the whole row.
             Text {
-                horizontal-stretch: 1;
-                width: root.width - joined.preferred-width - 6px * root.scale - name-row.badges-width;
+                horizontal-stretch: 0;
+                width: min(self.preferred-width, root.width - joined.preferred-width - 6px * root.scale - name-row.badges-width);
                 text: cell.name;
                 font-size: 14px * root.scale;
                 font-weight: 600;

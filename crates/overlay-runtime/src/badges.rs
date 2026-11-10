@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use vrcx_0_contracts::overlay_badges::{OverlayBadgeStyle, OverlayUserBadges};
-use vrcx_0_vr_overlay::{Color, OverlayBadge, MAX_OVERLAY_BADGES};
+use vrcx_0_vr_overlay::{BadgeEffects, Color, OverlayBadge, MAX_OVERLAY_BADGES};
 
 const MAX_STYLES: usize = 4096;
 const MAX_USERS: usize = 50_000;
@@ -21,11 +21,12 @@ struct BadgeTable {
 /// Replaces the badge table. Malformed styles are dropped, and so are their
 /// uses.
 pub fn set_overlay_user_badges(input: OverlayUserBadges) {
+    let animations = input.animations;
     let styles: Vec<Option<OverlayBadge>> = input
         .styles
         .into_iter()
         .take(MAX_STYLES)
-        .map(overlay_badge)
+        .map(|style| overlay_badge(style, animations))
         .collect();
     let mut users = HashMap::new();
     for (user_id, indexes) in input.users {
@@ -64,7 +65,7 @@ pub(crate) fn user_badges(user_id: &str) -> Vec<OverlayBadge> {
         .unwrap_or_default()
 }
 
-fn overlay_badge(style: OverlayBadgeStyle) -> Option<OverlayBadge> {
+fn overlay_badge(style: OverlayBadgeStyle, animations: bool) -> Option<OverlayBadge> {
     let icon = style.icon.trim();
     if icon.is_empty() || icon.len() > MAX_ICON_LEN || !is_path_data(icon) {
         return None;
@@ -77,6 +78,11 @@ fn overlay_badge(style: OverlayBadgeStyle) -> Option<OverlayBadge> {
         border: parse_hex_color(&style.color_border).unwrap_or(from),
         icon_color: parse_hex_color(&style.color_icon).unwrap_or(Color::rgba(255, 255, 255, 255)),
         round: style.round,
+        effects: if animations {
+            BadgeEffects::from_names(style.effects.iter().map(String::as_str))
+        } else {
+            BadgeEffects::default()
+        },
     })
 }
 
@@ -159,6 +165,7 @@ mod tests {
             color_border: "#e5202e".to_string(),
             color_icon: "#ffffff".to_string(),
             round: false,
+            effects: vec!["glow".to_string(), "bogus".to_string()],
         }
     }
 
@@ -196,8 +203,11 @@ mod tests {
                 style("M4 4a8 8 0 1 0 16 0", "#0b0b0c"),
             ],
             users,
+            animations: true,
         });
         let badges = user_badges("usr_a");
+        assert!(badges[0].effects.glow);
+        assert!(!badges[0].effects.shimmer);
         assert_eq!(badges.len(), 2);
         assert_eq!(&*badges[0].icon, "M4 4a8 8 0 1 0 16 0");
         assert_eq!(badges[0].to, badges[0].from);
@@ -212,8 +222,12 @@ mod tests {
         set_overlay_user_badges(OverlayUserBadges {
             styles: vec![style("M 0 0 L 24 24", "#ffffff")],
             users,
+            // Reduce Effects: badges stay still.
+            animations: false,
         });
-        assert_eq!(user_badges("usr_many").len(), MAX_OVERLAY_BADGES);
+        let many = user_badges("usr_many");
+        assert_eq!(many.len(), MAX_OVERLAY_BADGES);
+        assert!(!many[0].effects.any());
         reset_overlay_user_badges_for_tests();
     }
 }
