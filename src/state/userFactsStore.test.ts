@@ -37,7 +37,65 @@ describe('userFactsStore', () => {
         store.replaceUserFacts([replacement]);
 
         const nextState = useUserFactsStore.getState();
-        expect(nextState.usersByKey['api::usr_test']).toBe(replacement);
+        expect(nextState.usersByKey['api::usr_test']).toEqual(replacement);
+    });
+
+    it('keeps what was known about a non-friend when a partial record arrives', () => {
+        const store = useUserFactsStore.getState();
+        store.replaceUserFacts([
+            rustUser({
+                ageVerified: true,
+                ageVerificationStatus: '18+',
+                bio: 'hello',
+                tags: ['language_eng']
+            })
+        ]);
+        // A game log sighting only knows the name.
+        store.replaceUserFacts([rustUser({ displayName: 'Renamed' })]);
+
+        expect(
+            useUserFactsStore.getState().usersByKey['api::usr_test']
+        ).toMatchObject({
+            displayName: 'Renamed',
+            ageVerified: true,
+            ageVerificationStatus: '18+',
+            bio: 'hello',
+            tags: ['language_eng']
+        });
+
+        // A field the record does carry still wins, clears included.
+        store.replaceUserFacts([rustUser({ bio: '' })]);
+        expect(
+            useUserFactsStore.getState().usersByKey['api::usr_test']
+        ).toMatchObject({ bio: '', ageVerificationStatus: '18+' });
+    });
+
+    it('takes friend records whole and never keeps an old friend flag', () => {
+        const store = useUserFactsStore.getState();
+        store.replaceUserFacts([rustUser({ isFriend: true, bio: 'old' })]);
+        const friend = rustUser({ isFriend: true });
+        store.replaceUserFacts([friend]);
+        expect(useUserFactsStore.getState().usersByKey['api::usr_test']).toBe(
+            friend
+        );
+
+        store.replaceUserFacts([rustUser({ bio: 'unfriended' })]);
+        const fact = useUserFactsStore.getState().usersByKey['api::usr_test'];
+        expect(fact?.isFriend).toBeUndefined();
+        expect(useUserFactsStore.getState().order).toContain('api::usr_test');
+    });
+
+    it('evicts the least recently seen non-friend first', () => {
+        const store = useUserFactsStore.getState();
+        store.replaceUserFacts(manyUsers(1000));
+        // usr_0 is seen again, so usr_1 is now the oldest.
+        store.replaceUserFacts([rustUser({ id: 'usr_0' })]);
+        store.replaceUserFacts([rustUser({ id: 'usr_new' })]);
+
+        const state = useUserFactsStore.getState();
+        expect(state.usersByKey['api::usr_0']).toBeDefined();
+        expect(state.usersByKey['api::usr_1']).toBeUndefined();
+        expect(state.order.length).toBe(1000);
     });
 
     it('converts a legacy timestamp while preserving the user facts', () => {

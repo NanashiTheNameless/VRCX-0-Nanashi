@@ -98,6 +98,27 @@ function toUserFact(user: UserFactInput, key: string): UserFact | null {
     };
 }
 
+// The backend only keeps facts for friends and the signed-in user, so every
+// record about anyone else carries just the fields that one response had (a
+// game log sighting has no age verification, bio or tags). Fill the gaps from
+// what was known before, so details such as an 18+ badge do not vanish each
+// time a partial record arrives. Fields the record does carry still win,
+// including deliberate clears. Friendship flags always come from the record.
+function mergeNonFriendFact(
+    previous: UserFact | undefined,
+    next: UserFact
+): UserFact {
+    if (!previous || next.isFriend || next.isCurrentUser) {
+        return next;
+    }
+    const {
+        isFriend: _isFriend,
+        isCurrentUser: _isCurrentUser,
+        ...kept
+    } = previous;
+    return { ...kept, ...next };
+}
+
 export const useUserFactsStore = create<UserFactsStoreState>((set) => ({
     ...initialState,
     replaceUserFacts(users) {
@@ -125,17 +146,25 @@ export const useUserFactsStore = create<UserFactsStoreState>((set) => ({
                     order = [...order];
                     changed = true;
                 }
-                const isNew = !usersByKey[key];
-                usersByKey[key] = userFact;
+                const previous = usersByKey[key];
+                const isNew = !previous;
+                const next = mergeNonFriendFact(previous, userFact);
+                usersByKey[key] = next;
                 const endpoint = endpointFromKey(key);
                 if (isNew) {
                     if (!userIdsByEndpoint[endpoint]) {
                         userIdsByEndpoint[endpoint] = new Set();
                     }
-                    userIdsByEndpoint[endpoint].add(userFact.id);
-                    if (!userFact.isFriend) {
-                        order.push(key);
+                    userIdsByEndpoint[endpoint].add(next.id);
+                }
+                if (!next.isFriend) {
+                    // Recently seen users go to the back, so players still
+                    // around are the last to be evicted.
+                    const index = isNew ? -1 : order.indexOf(key);
+                    if (index !== -1) {
+                        order.splice(index, 1);
                     }
+                    order.push(key);
                 }
             }
             if (!changed) {
