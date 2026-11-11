@@ -55,10 +55,15 @@ preview so it looks good when pasted; the plain VRChat link is always available 
 - **Badges**: tick them onto your custom badges or make a new badge for them. See
   [BADGES.md](BADGES.md).
 - On your own profile: **Edit Profile** (bio, links, pronouns, languages), **Edit Social
-  Status** with saved presets, **Account Standing**, and your profile media (banner and
+  Status** with saved presets, **VRChat Account**, and your profile media (banner and
   icon, managed in the Gallery). For a solid banner color, use the color picker or enter
   a 3- or 6-digit hex color, with or without `#`, then choose **Apply Color**. The preview
   updates for valid colors; invalid values cannot be applied.
+  **VRChat Account** has two tabs. **Content Filters** switches VRChat's filters that hide
+  avatars and worlds tagged with excessive gore, extreme horror, intense violence, sexually
+  suggestive content, or adult language and themes; changes save to your VRChat account and
+  apply in game. **Account Standing** shows your standing as VRChat reports it, with the raw
+  data.
 - Copy the user ID, VRChat URL, display name, or open **Show Discord Connections** and
   **Show Mutual Friends**.
 
@@ -75,7 +80,8 @@ The developer's own user dialog always uses a black, white and red color scheme.
   visited and when they last did, the world's persistent data and its cache size on your PC.
 - **Instances**: the world's open instances with their players and friends in them. Each row
   leads with the room name when the instance has one, followed by its location, category and
-  vibes, its description, and its spoken languages on the right. The filter menu narrows the
+  vibes, its description, and its languages on the right, keeping the languages the host set
+  apart from the languages of the people in the instance now. The filter menu narrows the
   list to instances **With friends**, can **Hide closed or full** ones, and filters by category,
   vibes and languages when any instance has them; **Clear filters** resets it. You can pin a
   world to the side panel from here to keep watching its instances.
@@ -87,6 +93,7 @@ The developer's own user dialog always uses a black, white and red color scheme.
 - **New Instance** (and self-invite or open in-game at once). See [New instance](#new-instance).
 - **Share**, copy the links, **Make Home** or **Reset Home**.
 - Favorite it, locally or in VRChat.
+- **Like** or **Dislike** it from the menu; unticking your current rating clears it.
 - **Show Instance History** for this world.
 - **Local Data**: open the world's cache, delete it from the cache, and delete its persistent
   data.
@@ -138,10 +145,12 @@ The developer's own user dialog always uses a black, white and red color scheme.
 Choose the **access type** (Public, Friends+, Friends, Invite+, Invite, or Group with Group
 Members, Group+ or Group Public), the **region** (US West, US East, Europe, Japan), a minimum
 avatar performance, queue and age gate, and an instance name. Then **Create Instance** or
-**Create and Invite**. The normal form uses two columns when space allows.
+**Create and Invite**. The normal form leads with access, name and description, then the
+category, languages and vibes, then the region and other options.
 
 You can add a description (up to 256 characters), up to three languages, a category, and up
-to three vibes. Categories and vibes come from VRChat's current options; the first selected
+to three vibes. Categories are chips, and the first one is selected by default; hovering one
+shows its translation when VRChat provides one. Categories and vibes come from VRChat's current options; the first selected
 vibe is the main one. Instance names allow up to 128 characters, and long saved names wrap
 in the preset picker. These choices are remembered for the next instance. **Reset to Defaults**
 restores the normal form's defaults without deleting saved instance-name presets.

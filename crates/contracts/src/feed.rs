@@ -363,3 +363,10 @@ pub struct WorldFriendVisitRow {
     pub visit_count: i64,
     pub last_visited_at: i64,
 }
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct WorldRecentFriendCountRow {
+    pub world_id: String,
+    pub friend_count: i64,
+}

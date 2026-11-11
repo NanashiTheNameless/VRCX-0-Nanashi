@@ -116,7 +116,9 @@ Search VRChat by:
   public, private or all, and sort by name.
 - **Group**.
 - **Explore** shows popular and newly discovered worlds with their instance counts, and can
-  shuffle them.
+  shuffle them. The top world is featured in a larger card. Cards show which friends are in
+  the world now and how many friends visited it in the last 7 days, counted from your local
+  history.
 
 ## View history
 

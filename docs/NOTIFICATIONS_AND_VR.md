@@ -18,6 +18,11 @@ and more, through several channels at once. Each channel has its own on/off swit
 | Wrist overlay feed    | The app's own wrist menu in VR                                                   | VR > Wrist Overlay                |
 | In-app                | The Notifications page, the sidebar's Notification Center, tray and taskbar dots | Notifications > In-App Indicators |
 
+Where the user's name has its own place (the wrist feed, the Desktop Overlay, HMD and desktop
+notifications), the event text is a short phrase such as **Online** or **In Test World**. Text
+read aloud or shown as one line (text-to-speech, XSOverlay, OVR Toolkit and webhooks) uses a
+full sentence with the name.
+
 ### When to show
 
 Desktop notifications, text-to-speech and VR overlays each have a condition: **Never**,

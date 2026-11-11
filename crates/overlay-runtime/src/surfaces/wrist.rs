@@ -1113,7 +1113,7 @@ mod tests {
         entry.content.title = ActivityText::literal("Ada");
         entry.content.summary = "Ada online in wrld_1".to_string();
 
-        assert_eq!(feed_line(&entry, "en").detail, "Ada has logged in");
+        assert_eq!(feed_line(&entry, "en").detail, "Ada Online");
     }
 
     #[test]
@@ -1123,7 +1123,7 @@ mod tests {
         entry.content.title = ActivityText::literal("Ada");
         entry.content.body = ActivityText::message(OverlayMessage::notifications_has_joined());
 
-        assert_eq!(feed_line(&entry, "en").detail, "Ada has joined");
+        assert_eq!(feed_line(&entry, "en").detail, "Ada Joined");
     }
 
     #[test]
@@ -1133,10 +1133,7 @@ mod tests {
         entry.content.body =
             ActivityText::message(OverlayMessage::notifications_online_location("wrld_1"));
 
-        assert_eq!(
-            feed_line(&entry, "en").detail,
-            "Ada has logged in to Test World"
-        );
+        assert_eq!(feed_line(&entry, "en").detail, "Ada Online in Test World");
     }
 
     #[test]
@@ -1145,7 +1142,7 @@ mod tests {
         entry.content.title = ActivityText::literal("Ada");
         entry.content.body = ActivityText::message(OverlayMessage::notifications_gps("wrld_1"));
 
-        assert_eq!(feed_line(&entry, "en").detail, "Ada is in an instance");
+        assert_eq!(feed_line(&entry, "en").detail, "Ada In an instance");
     }
 
     #[test]
@@ -1163,7 +1160,7 @@ mod tests {
 
         assert_eq!(
             feed_line(&entry, "en").detail,
-            "Ada is in Group World Group+(Group Name)"
+            "Ada In Group World Group+(Group Name)"
         );
     }
 
@@ -1175,11 +1172,11 @@ mod tests {
 
         assert_eq!(
             feed_line_with_instance_id(&entry, "en", true).detail,
-            "Ada is in Test World Public #12345"
+            "Ada In Test World Public #12345"
         );
         assert_eq!(
             feed_line_with_instance_id(&entry, "en", false).detail,
-            "Ada is in Test World Public"
+            "Ada In Test World Public"
         );
     }
 

@@ -111,7 +111,7 @@ export function UserDialogContent({
     const [actionStatus, setActionStatus] = useState('idle');
     const [groupInviteOpen, setGroupInviteOpen] = useState(false);
     const [reportOpen, setReportOpen] = useState(false);
-    const [accountStandingOpen, setAccountStandingOpen] = useState(false);
+    const [vrchatAccountOpen, setVrchatAccountOpen] = useState(false);
     const [groupQuickModerationOpen, setGroupQuickModerationOpen] =
         useState(false);
     const [recentActionVersion, setRecentActionVersion] = useState(0);
@@ -146,7 +146,7 @@ export function UserDialogContent({
         setGroupInviteOpen(false);
         setGroupQuickModerationOpen(false);
         setReportOpen(false);
-        setAccountStandingOpen(false);
+        setVrchatAccountOpen(false);
     }, [targetIdentity]);
 
     const currentGameLocation = normalizeUserId(gameState?.currentLocation);
@@ -425,8 +425,8 @@ export function UserDialogContent({
                 profileControls={{
                     onRefresh: refreshProfile,
                     onEditMemo: editMemo,
-                    onShowAccountStanding: () => {
-                        setAccountStandingOpen(true);
+                    onShowVrchatAccount: () => {
+                        setVrchatAccountOpen(true);
                     }
                 }}
                 friendControls={{
@@ -479,9 +479,13 @@ export function UserDialogContent({
                 selfProfileDetails={profileDetails}
             />
             <UserDialogContentDialogs
-                accountStandingDialog={{
-                    open: accountStandingOpen,
-                    onOpenChange: setAccountStandingOpen
+                vrchatAccountDialog={{
+                    open: vrchatAccountOpen,
+                    onOpenChange: setVrchatAccountOpen,
+                    currentUserId: normalizedCurrentUserId,
+                    contentFilters: currentUserSnapshot?.contentFilters,
+                    hideContentFilterSettings:
+                        currentUserSnapshot?.hideContentFilterSettings === true
                 }}
                 actionStatus={actionStatus}
                 noteMemoDialog={memoDialog}
