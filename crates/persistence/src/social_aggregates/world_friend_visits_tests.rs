@@ -140,6 +140,7 @@ fn recent_counts(db: &DatabaseService, world_ids: &[&str], since: &str) -> Vec<(
         .iter()
         .map(|world_id| world_id.to_string())
         .collect::<Vec<_>>();
+    let since = vrcx_0_core::time::parse_epoch_seconds(since).unwrap();
     get_world_recent_friend_counts(db, &OwnerId::new(OWNER_USER_ID), &world_ids, since)
         .unwrap()
         .into_iter()

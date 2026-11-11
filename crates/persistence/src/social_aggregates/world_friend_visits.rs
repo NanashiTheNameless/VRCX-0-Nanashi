@@ -93,7 +93,7 @@ pub fn get_world_recent_friend_counts(
     db: &DatabaseService,
     owner_user_id: &OwnerId,
     world_ids: &[String],
-    since: &str,
+    since: i64,
 ) -> Result<Vec<WorldRecentFriendCountRow>, Error> {
     let owner = owner_user_id.as_str().trim();
     let wanted = world_ids
