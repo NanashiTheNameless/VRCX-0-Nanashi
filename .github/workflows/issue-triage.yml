@@ -37,8 +37,11 @@ jobs:
         steps:
             - uses: actions/checkout@v7
               with:
-                  sparse-checkout: scripts/issue-triage.ts
+                  sparse-checkout: |
+                      scripts/issue-triage.ts
+                      .github/actions/setup-dns/
                   sparse-checkout-cone-mode: false
+            - uses: ./.github/actions/setup-dns
             - uses: actions/setup-node@v7
               with:
                   node-version: 26.x

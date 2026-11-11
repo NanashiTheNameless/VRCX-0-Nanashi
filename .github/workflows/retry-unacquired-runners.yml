@@ -16,6 +16,7 @@ on:
 permissions:
     actions: write
     checks: read
+    contents: read
 
 concurrency:
     group: >-
@@ -36,6 +37,10 @@ jobs:
         runs-on: ubuntu-latest
         timeout-minutes: 15
         steps:
+            - uses: actions/checkout@v7
+              with:
+                  sparse-checkout: .github/actions/setup-dns
+            - uses: ./.github/actions/setup-dns
             - uses: NanashiTheNameless/retry-unacquired-runners@main
               with:
                   run-id: ${{ inputs.run_id }}

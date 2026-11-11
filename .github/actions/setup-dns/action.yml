@@ -1,0 +1,185 @@
+name: Setup DNS
+description: Resolve through Cloudflare, then Quad9, then Google, then the runner's own DNS.
+
+# Hosted runners occasionally lose their provider's resolver, which breaks every
+# download in the job. Failing to change DNS only warns, because the runner's
+# own DNS usually still works; the job fails only when nothing resolves.
+
+runs:
+    using: composite
+    steps:
+        - if: runner.os == 'Linux'
+          shell: bash
+          run: |
+              set -uo pipefail
+
+              servers=(1.1.1.1 1.0.0.1 9.9.9.9 149.112.112.112 8.8.8.8 8.8.4.4)
+              sudo=()
+              if [[ "$(id -u)" -ne 0 ]]; then
+                  sudo=(sudo)
+              fi
+
+              # Prints the given servers that are not in our list, in order.
+              runner_servers() {
+                  local server ours
+                  for server in "$@"; do
+                      for ours in "${servers[@]}"; do
+                          [[ "$server" == "$ours" ]] && continue 2
+                      done
+                      echo "$server"
+                  done
+              }
+
+              if command -v resolvectl >/dev/null && systemctl is-active --quiet systemd-resolved 2>/dev/null; then
+                  iface="$(ip route show default | awk '{print $5; exit}')"
+                  if [[ -n "$iface" ]]; then
+                      read -ra current <<<"$(resolvectl dns "$iface" | cut -d: -f2-)"
+                      mapfile -t defaults < <(runner_servers "${current[@]}")
+                      if "${sudo[@]}" resolvectl dns "$iface" "${servers[@]}" "${defaults[@]}" &&
+                          "${sudo[@]}" resolvectl domain "$iface" '~.'; then
+                          echo "DNS on $iface: ${servers[*]} ${defaults[*]}"
+                      else
+                          echo "::warning::Could not change DNS on $iface; keeping the runner's DNS"
+                      fi
+                  else
+                      echo "::warning::No default route found; keeping the runner's DNS"
+                  fi
+                  "${sudo[@]}" resolvectl flush-caches || true
+              elif [[ -f /etc/resolv.conf ]]; then
+                  # Job containers read /etc/resolv.conf directly, and glibc only uses
+                  # its first three nameservers. Start with one server per provider,
+                  # then hand the full list to a local dnsmasq that tries it in order.
+                  read -ra current <<<"$(awk '/^[[:space:]]*nameserver/ { printf "%s ", $2 }' /etc/resolv.conf)"
+                  mapfile -t defaults < <(runner_servers "${current[@]}")
+                  others="$(grep -v '^[[:space:]]*nameserver' /etc/resolv.conf || true)"
+
+                  # cp rewrites the file in place; Docker bind-mounts it, so it cannot
+                  # be replaced with mv.
+                  write_resolv() {
+                      local resolv
+                      resolv="$(mktemp)"
+                      {
+                          printf 'nameserver %s\n' "$@"
+                          echo 'options timeout:2 attempts:2'
+                          if [[ -n "$others" ]]; then
+                              printf '%s\n' "$others"
+                          fi
+                      } >"$resolv"
+                      "${sudo[@]}" cp "$resolv" /etc/resolv.conf
+                  }
+
+                  if ! write_resolv 1.1.1.1 9.9.9.9 8.8.8.8; then
+                      echo "::warning::Could not write /etc/resolv.conf; keeping the runner's DNS"
+                  else
+                      if ! command -v dnsmasq >/dev/null && command -v apt-get >/dev/null; then
+                          for attempt in 1 2 3; do
+                              if "${sudo[@]}" apt-get update -qq &&
+                                  "${sudo[@]}" env DEBIAN_FRONTEND=noninteractive \
+                                      apt-get install -y -qq --no-install-recommends dnsmasq-base >/dev/null; then
+                                  break
+                              fi
+                              sleep $((attempt * 5))
+                          done
+                      fi
+
+                      # dnsmasq drops to nobody and rereads this file, so it must be
+                      # world readable.
+                      upstreams=/etc/resolv.ci-upstreams.conf
+                      if command -v dnsmasq >/dev/null &&
+                          printf 'nameserver %s\n' "${servers[@]}" "${defaults[@]}" |
+                          "${sudo[@]}" tee "$upstreams" >/dev/null &&
+                          "${sudo[@]}" chmod 644 "$upstreams" &&
+                          "${sudo[@]}" dnsmasq --resolv-file="$upstreams" --strict-order \
+                              --listen-address=127.0.0.1 --bind-interfaces --pid-file= &&
+                          write_resolv 127.0.0.1 &&
+                          getent hosts github.com >/dev/null; then
+                          echo "DNS through dnsmasq: ${servers[*]} ${defaults[*]}"
+                      else
+                          write_resolv 1.1.1.1 9.9.9.9 8.8.8.8 || true
+                          echo "::warning::Local dnsmasq unavailable; using 1.1.1.1 9.9.9.9 8.8.8.8 only"
+                      fi
+                  fi
+              else
+                  echo "::warning::No supported DNS configuration found; keeping the runner's DNS"
+              fi
+
+              for _ in 1 2 3; do
+                  getent hosts github.com >/dev/null && exit 0
+                  sleep 2
+              done
+              echo "::error::github.com does not resolve with any DNS server"
+              exit 1
+
+        - if: runner.os == 'macOS'
+          shell: bash
+          run: |
+              # Written for the system bash 3.2: no mapfile, no set -u with empty arrays.
+              set -o pipefail
+
+              servers="1.1.1.1 1.0.0.1 9.9.9.9 149.112.112.112 8.8.8.8 8.8.4.4"
+              defaults=""
+              for server in $(scutil --dns | awk '/^resolver #1$/ { r = 1; next } /^resolver #/ { r = 0 } r && /nameserver\[[0-9]+\]/ { print $3 }'); do
+                  case " $servers $defaults " in
+                      *" $server "*) ;;
+                      *) defaults="$defaults $server" ;;
+                  esac
+              done
+
+              changed=0
+              while IFS= read -r service; do
+                  case "$service" in
+                      "" | \**) continue ;;
+                  esac
+                  # shellcheck disable=SC2086
+                  if sudo networksetup -setdnsservers "$service" $servers $defaults; then
+                      changed=1
+                  else
+                      echo "::warning::Could not change DNS for $service"
+                  fi
+              done < <(networksetup -listallnetworkservices | tail -n +2)
+
+              if [ "$changed" -eq 1 ]; then
+                  echo "DNS: $servers$defaults"
+              else
+                  echo "::warning::No network service accepted the DNS change; keeping the runner's DNS"
+              fi
+              sudo dscacheutil -flushcache || true
+              sudo killall -HUP mDNSResponder || true
+
+              for _ in 1 2 3; do
+                  dscacheutil -q host -a name github.com | grep -q address && exit 0
+                  sleep 2
+              done
+              echo "::error::github.com does not resolve with any DNS server"
+              exit 1
+
+        - if: runner.os == 'Windows'
+          shell: pwsh
+          run: |
+              $servers = @('1.1.1.1', '1.0.0.1', '9.9.9.9', '149.112.112.112', '8.8.8.8', '8.8.4.4')
+              $interfaces = Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue |
+                  Select-Object -ExpandProperty ifIndex -Unique
+              if (-not $interfaces) {
+                  Write-Output "::warning::No default route found; keeping the runner's DNS"
+              }
+              foreach ($interface in $interfaces) {
+                  $defaults = @((Get-DnsClientServerAddress -InterfaceIndex $interface -AddressFamily IPv4).ServerAddresses |
+                      Where-Object { $_ -notin $servers })
+                  try {
+                      Set-DnsClientServerAddress -InterfaceIndex $interface -ServerAddresses ($servers + $defaults) -ErrorAction Stop
+                      Write-Output "DNS on interface ${interface}: $($servers + $defaults -join ' ')"
+                  } catch {
+                      Write-Output "::warning::Could not change DNS on interface ${interface}: $_"
+                  }
+              }
+              Clear-DnsClientCache
+              foreach ($attempt in 1..3) {
+                  try {
+                      Resolve-DnsName github.com -DnsOnly -ErrorAction Stop | Out-Null
+                      exit 0
+                  } catch {
+                      Start-Sleep -Seconds 2
+                  }
+              }
+              Write-Output '::error::github.com does not resolve with any DNS server'
+              exit 1

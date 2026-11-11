@@ -34,6 +34,9 @@ concurrency:
 permissions:
     contents: read
 
+env:
+    CARGO_NET_RETRY: '10'
+
 jobs:
     prepare:
         name: Prepare Nightly Metadata
@@ -46,6 +49,8 @@ jobs:
             tag: ${{ steps.version.outputs.tag }}
         steps:
             - uses: actions/checkout@v7
+
+            - uses: ./.github/actions/setup-dns
 
             - uses: actions/setup-node@v7
               with:
@@ -112,6 +117,8 @@ jobs:
                   }
 
             - uses: actions/checkout@v7
+
+            - uses: ./.github/actions/setup-dns
 
             - uses: dtolnay/rust-toolchain@stable
 
@@ -274,6 +281,8 @@ jobs:
         steps:
             - uses: actions/checkout@v7
 
+            - uses: ./.github/actions/setup-dns
+
             - uses: dtolnay/rust-toolchain@stable
               with:
                   targets: ${{ matrix.rust_target }}
@@ -341,6 +350,8 @@ jobs:
                 shell: bash
         steps:
             - uses: actions/checkout@v7
+
+            - uses: ./.github/actions/setup-dns
 
             - uses: dtolnay/rust-toolchain@stable
 
@@ -441,6 +452,8 @@ jobs:
         steps:
             - uses: actions/checkout@v7
 
+            - uses: ./.github/actions/setup-dns
+
             - uses: dtolnay/rust-toolchain@stable
 
             - uses: Swatinem/rust-cache@v2
@@ -514,6 +527,8 @@ jobs:
         steps:
             - uses: actions/checkout@v7
 
+            - uses: ./.github/actions/setup-dns
+
             - uses: dtolnay/rust-toolchain@stable
               with:
                   targets: ${{ matrix.rust_target }}
@@ -584,6 +599,8 @@ jobs:
                   done
 
             - uses: actions/checkout@v7
+
+            - uses: ./.github/actions/setup-dns
 
             - uses: actions/setup-node@v7
               with:
@@ -739,6 +756,8 @@ jobs:
             contents: write
         steps:
             - uses: actions/checkout@v7
+
+            - uses: ./.github/actions/setup-dns
 
             - uses: actions/setup-node@v7
               with:

@@ -14,9 +14,70 @@ runs:
           run: |
               set -euo pipefail
 
-              sudo apt-get update
+              # retry <recover> <command...>: runs recover between failed attempts.
+              retry() {
+                  local recover="$1" attempt
+                  shift
+                  for attempt in 1 2 3; do
+                      if "$@"; then
+                          return 0
+                      fi
+                      if ((attempt < 3)); then
+                          echo "::warning::'$*' failed (attempt $attempt of 3), retrying in $((attempt * 15))s"
+                          sleep $((attempt * 15))
+                          "$recover" || true
+                      fi
+                  done
+                  return 1
+              }
+
+              # Runner images point apt at azure.archive.ubuntu.com through this list.
+              # Prefer the kernel.org mirror, then the in-region Azure mirror, then
+              # Canonical's own servers.
+              if [[ "$(dpkg --print-architecture)" == "amd64" && -f /etc/apt/apt-mirrors.txt ]]; then
+                  printf '%s\tpriority:%s\n' \
+                      https://mirrors.edge.kernel.org/ubuntu/ 1 \
+                      http://azure.archive.ubuntu.com/ubuntu/ 2 \
+                      https://archive.ubuntu.com/ubuntu/ 3 \
+                      https://security.ubuntu.com/ubuntu/ 4 |
+                      sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+              fi
+
+              printf '%s\n' \
+                  'Acquire::Retries "5";' \
+                  'Acquire::http::Timeout "30";' \
+                  'Acquire::https::Timeout "30";' \
+                  'DPkg::Lock::Timeout "300";' |
+                  sudo tee /etc/apt/apt.conf.d/80-ci-retries >/dev/null
+
+              # Read only Ubuntu's own sources. Everything installed here comes from
+              # them, and the image's extra repositories (packages.microsoft.com and
+              # others) must not fail the build when they are down.
+              ubuntu_sources=/etc/apt/sources.list.d/ubuntu.sources
+              if [[ ! -f "$ubuntu_sources" ]]; then
+                  ubuntu_sources=/etc/apt/sources.list
+              fi
+              apt_options=(-o "Dir::Etc::sourcelist=$ubuntu_sources" -o "Dir::Etc::sourceparts=-")
+
+              apt_update() {
+                  sudo apt-get "${apt_options[@]}" update --error-on=any
+              }
+              apt_install() {
+                  sudo apt-get "${apt_options[@]}" install -y --no-install-recommends "$@"
+              }
+              # Drop half-downloaded files so a retry cannot reuse a corrupt or
+              # mismatched download from another mirror.
+              apt_reset() {
+                  sudo rm -rf /var/lib/apt/lists/partial/* /var/cache/apt/archives/partial/*
+              }
+              apt_reset_and_update() {
+                  apt_reset
+                  apt_update
+              }
+
+              retry apt_reset apt_update
               if [[ "$SETUP_MODE" == "ci" ]]; then
-                  sudo apt-get install -y --no-install-recommends \
+                  retry apt_reset_and_update apt_install \
                       clang \
                       cmake \
                       g++ \
@@ -37,7 +98,7 @@ runs:
                   exit 1
               fi
 
-              sudo apt-get install -y --no-install-recommends \
+              retry apt_reset_and_update apt_install \
                   build-essential \
                   clang \
                   cmake \
@@ -54,7 +115,7 @@ runs:
                   patchelf \
                   rpm \
                   wget
-              sudo apt-get install -y --no-install-recommends \
+              retry apt_reset_and_update apt_install \
                   gstreamer1.0-plugins-base \
                   gstreamer1.0-plugins-good \
                   libgtk-3-dev \

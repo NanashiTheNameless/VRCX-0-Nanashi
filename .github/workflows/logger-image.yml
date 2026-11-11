@@ -26,6 +26,13 @@ jobs:
         env:
             TAG: ${{ github.event.release.tag_name || inputs.tag }}
         steps:
+            # Older tags predate the DNS action, so take it from the workflow's own
+            # commit before checking out the tag.
+            - uses: actions/checkout@v7
+              with:
+                  sparse-checkout: .github/actions/setup-dns
+            - uses: ./.github/actions/setup-dns
+
             - uses: actions/checkout@v7
               with:
                   ref: ${{ env.TAG }}

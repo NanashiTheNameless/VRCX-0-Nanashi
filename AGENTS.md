@@ -287,8 +287,7 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   `.github/workflows/data-assets.yml`. Badges the maintainer gives by hand to
   people who helped the fork, seen by every user. Every release embeds the
   file; the app also downloads `global-badges.jsonc` and `.sig` from the
-  `data-assets` release (never latest, never prerelease, and the Discord
-  announcement skips it), signed with the updater key, and adopts a copy only
+  `data-assets` release (never latest, never prerelease), signed with the updater key, and adopts a copy only
   if the signature checks out and its `revision` is higher. Never accept an
   unsigned or older list, and never send anything about the user with the
   download (`Policy::public`, no credentials). Badges show in file order
