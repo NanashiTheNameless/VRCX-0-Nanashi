@@ -593,7 +593,7 @@ fn friend_feed_search_completes_with_one_blocking_thread() {
             db.as_ref(),
             "usr_owner",
             (
-                "2026-08-12T10:00:00.000Z",
+                vrcx_0_core::time::parse_epoch_seconds("2026-08-12T10:00:00.000Z").unwrap(),
                 "usr_alice",
                 "Alice",
                 "needle",
