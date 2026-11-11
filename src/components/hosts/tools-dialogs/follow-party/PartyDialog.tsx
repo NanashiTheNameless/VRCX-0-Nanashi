@@ -212,7 +212,7 @@ export function PartyDialog({ open, onOpenChange }: DialogOpenProps) {
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="flex max-h-[85vh] min-h-0 flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+            <DialogContent className="flex h-[85vh] min-h-0 flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
                 <DialogHeader className="px-4 pt-4 pr-12 pb-3">
                     <DialogTitle>{t(`${I18N}.party`)}</DialogTitle>
                     <DialogDescription>

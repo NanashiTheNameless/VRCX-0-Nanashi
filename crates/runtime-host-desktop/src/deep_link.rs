@@ -53,6 +53,16 @@ pub enum DeepLinkAction {
     AddAvatarProvider {
         url: String,
     },
+    /// Fork: `vrcx-0-nanashi://user/join?id=` from a follow link page. The
+    /// app asks first, then joins if it can see a joinable instance or asks
+    /// the user for an invite otherwise.
+    JoinUser {
+        user_id: String,
+    },
+    /// Fork: `vrcx-0-nanashi://user/request-invite?id=`; asks first.
+    RequestInviteUser {
+        user_id: String,
+    },
     /// Fork: `vrcx-0-nanashi://party/join?...` from a party link. Only offers
     /// the party; the user confirms before anything is saved.
     JoinParty {
@@ -133,6 +143,12 @@ pub fn parse_deep_link(value: &str) -> Option<DeepLinkAction> {
             Some(DeepLinkAction::ImportCollection { collection_id: id })
         }
         ("user", "/open") if is_user_id(&id) => Some(DeepLinkAction::OpenUser { user_id: id }),
+        ("user", "/join") if is_user_id(&id) && url.scheme() == "vrcx-0-nanashi" => {
+            Some(DeepLinkAction::JoinUser { user_id: id })
+        }
+        ("user", "/request-invite") if is_user_id(&id) && url.scheme() == "vrcx-0-nanashi" => {
+            Some(DeepLinkAction::RequestInviteUser { user_id: id })
+        }
         ("group", "/open") if is_group_id(&id) => Some(DeepLinkAction::OpenGroup { group_id: id }),
         _ => None,
     }
@@ -365,6 +381,31 @@ mod tests {
         );
         assert_eq!(
             parse_deep_link(&link.replace("vrcx-0-nanashi://", "vrcx-0://")),
+            None
+        );
+    }
+
+    #[test]
+    fn parses_join_and_request_invite_links_only_on_the_fork_scheme() {
+        let user = "usr_11111111-1111-1111-1111-111111111111";
+        assert_eq!(
+            parse_deep_link(&format!("vrcx-0-nanashi://user/join?id={user}")),
+            Some(DeepLinkAction::JoinUser {
+                user_id: user.into()
+            })
+        );
+        assert_eq!(
+            parse_deep_link(&format!("vrcx-0-nanashi://user/request-invite?id={user}")),
+            Some(DeepLinkAction::RequestInviteUser {
+                user_id: user.into()
+            })
+        );
+        assert_eq!(
+            parse_deep_link(&format!("vrcx-0://user/join?id={user}")),
+            None
+        );
+        assert_eq!(
+            parse_deep_link("vrcx-0-nanashi://user/join?id=usr_bad"),
             None
         );
     }

@@ -399,6 +399,18 @@
             "cancel": "Cancel",
             "added": "Avatar search provider added",
             "already_added": "Avatar search provider is already added"
+        },
+        "follow": {
+            "join_title": "Join {name}?",
+            "join_description": "VRChat will send you an invite to {name}'s instance.",
+            "join_request_description": "You cannot join {name}'s instance directly. Ask {name} for an invite instead? Their app may invite you automatically.",
+            "join_confirm": "Join",
+            "request_title": "Ask {name} for an invite?",
+            "request_description": "This sends {name} a VRChat request invite. If you meet their rules, their app invites you automatically.",
+            "request_confirm": "Request invite",
+            "request_sent": "Request invite sent to {name}.",
+            "cancel": "Cancel",
+            "failed": "The follow link action failed."
         }
     },
     "language": "English (en)",

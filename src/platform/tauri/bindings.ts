@@ -4440,6 +4440,14 @@ export type DeepLinkAction =
     /**  Legacy VRCX `vrcx://addavatardb/<url>`: offer to add an avatar search provider. */
     | { type: 'addAvatarProvider'; url: string }
     /**
+     *  Fork: `vrcx-0-nanashi://user/join?id=` from a follow link page. The
+     *  app asks first, then joins if it can see a joinable instance or asks
+     *  the user for an invite otherwise.
+     */
+    | { type: 'joinUser'; userId: string }
+    /**  Fork: `vrcx-0-nanashi://user/request-invite?id=`; asks first. */
+    | { type: 'requestInviteUser'; userId: string }
+    /**
      *  Fork: `vrcx-0-nanashi://party/join?...` from a party link. Only offers
      *  the party; the user confirms before anything is saved.
      */

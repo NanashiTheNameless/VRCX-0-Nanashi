@@ -26,6 +26,7 @@ import {
     openUserDialog,
     openWorldDialog
 } from './dialogService';
+import { joinUserFlow, requestInviteFlow } from './followLinkActionService';
 import i18n from './i18nService';
 import { subscribeRuntimeEvent } from './runtime-event-bridge/subscription';
 
@@ -162,6 +163,34 @@ export function handleDeepLinkAction(action: DeepLinkAction): void {
             void addAvatarProviderFlow(action.url).catch((error: unknown) => {
                 console.warn('Failed to add avatar search provider:', error);
             });
+            break;
+        case 'joinUser':
+            if (isUserId(action.userId)) {
+                void joinUserFlow(action.userId).catch((error: unknown) => {
+                    toast.add({
+                        type: 'error',
+                        title: errorMessage(
+                            error,
+                            i18n.t('deep_link.follow.failed')
+                        )
+                    });
+                });
+            }
+            break;
+        case 'requestInviteUser':
+            if (isUserId(action.userId)) {
+                void requestInviteFlow(action.userId).catch(
+                    (error: unknown) => {
+                        toast.add({
+                            type: 'error',
+                            title: errorMessage(
+                                error,
+                                i18n.t('deep_link.follow.failed')
+                            )
+                        });
+                    }
+                );
+            }
             break;
         case 'joinParty':
             // Fork: only offers the party; the Party dialog asks first.

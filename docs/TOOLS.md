@@ -37,8 +37,11 @@ auto-delete your oldest non-favorite prints on VRChat when you have more than a 
   your friend, age verified (or age verified as 18+), a member of one of up to 8 of your groups,
   or any mix of these. Every check reads fresh data from VRChat; anything VRChat does not show
   (a hidden age status, a private member list) counts as a no. **Copy link** makes a page on your
-  History Sync website that tells people to request an invite from you; it never shows your
-  location, and everything in it stays in the link. **Opt in by boop** shows an emoji: people
+  History Sync website with **Join**, **Request an invite**, **Open profile** and **Open in
+  VRCX-0-Nanashi** buttons. It never shows your location, and everything in it stays in the
+  link. In the viewer's app, Join asks first, then sends them an invite to your instance if
+  they can see it and VRChat lets them in, or a request invite otherwise; Request an invite
+  asks first too. **Opt in by boop** shows an emoji: people
   who pass a rule and boop you with it get an invite each time you move, until they boop you
   with **Stop** (which cancels at once), you pick a new emoji, you clear opt-ins, or the chosen
   number of hours (1 to 168, default 24) passes without an invite. An optional Thumbs Up boop
