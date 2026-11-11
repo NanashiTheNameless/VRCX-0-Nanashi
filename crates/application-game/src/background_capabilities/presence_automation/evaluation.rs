@@ -77,10 +77,33 @@ pub(super) fn evaluate_presence_rules(
     }
 }
 
+// Scope conditions hold in both match modes: game running and the time window
+// gate when a rule may run at all, and instance types guard Join Me rules from
+// firing in private instances.
+const ALWAYS_REQUIRED_CONDITIONS: &[&str] = &["isGameRunning", "timeWindow", "instanceTypeIn"];
+
 fn rule_matches(rule: &Value, facts: &BackgroundPresenceFacts) -> bool {
-    array_field(rule, "conditions")
+    let (required, optional): (Vec<&Value>, Vec<&Value>) = array_field(rule, "conditions")
         .into_iter()
+        .partition(|condition| {
+            string_field(condition, "type")
+                .is_some_and(|kind| ALWAYS_REQUIRED_CONDITIONS.contains(&kind.as_str()))
+        });
+    if !required
+        .iter()
         .all(|condition| condition_matches(condition, facts))
+    {
+        return false;
+    }
+    if string_field(rule, "conditionMatch").as_deref() == Some("any") && !optional.is_empty() {
+        optional
+            .iter()
+            .any(|condition| condition_matches(condition, facts))
+    } else {
+        optional
+            .iter()
+            .all(|condition| condition_matches(condition, facts))
+    }
 }
 
 pub(super) fn condition_matches(condition: &Value, facts: &BackgroundPresenceFacts) -> bool {
@@ -157,6 +180,18 @@ pub(super) fn condition_matches(condition: &Value, facts: &BackgroundPresenceFac
             facts.parsed_location.is_traveling == condition_bool_value(condition, true)
         }
         Some("isGameRunning") => facts.is_game_running == condition_bool_value(condition, true),
+        Some("gameMode") => {
+            facts.is_game_running
+                && match string_field(condition, "value").as_deref() {
+                    Some("vr") => !facts.is_game_no_vr,
+                    Some("desktop") => facts.is_game_no_vr,
+                    _ => false,
+                }
+        }
+        Some("worldIn") => {
+            !facts.parsed_location.world_id.is_empty()
+                && string_array_field(condition, "values").contains(&facts.parsed_location.world_id)
+        }
         Some("canInviteFromCurrentLocation") => {
             facts.can_invite_from_current_location == condition_bool_value(condition, true)
         }
@@ -222,6 +257,7 @@ pub(super) fn has_presence_action(rule: &Value) -> bool {
     actions.contains_key("status")
         || actions.contains_key("statusDescription")
         || actions.contains_key("clearStatusDescription")
+        || actions.contains_key("pronouns")
 }
 
 pub(super) fn rule_enabled(rule: &Value) -> bool {
@@ -332,9 +368,23 @@ fn validate_action_patch(actions: &Value) -> Map<String, Value> {
         {
             patch.insert("statusDescription".into(), Value::String(String::new()));
         }
+        if object.contains_key("pronouns") {
+            patch.insert(
+                "pronouns".into(),
+                Value::String(
+                    string_field(actions, "pronouns")
+                        .unwrap_or_default()
+                        .chars()
+                        .take(MAX_PRONOUNS_CHARS)
+                        .collect(),
+                ),
+            );
+        }
     }
     patch
 }
+
+const MAX_PRONOUNS_CHARS: usize = 32;
 
 fn valid_status(value: &str) -> bool {
     matches!(value, "active" | "join me" | "ask me" | "busy" | "offline")

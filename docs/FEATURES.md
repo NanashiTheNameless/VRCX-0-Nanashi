@@ -237,7 +237,7 @@ Supported APIs:
 ### Assistant reminders
 
 Ask the assistant (and approve its request) to tell you when a friend comes online, goes offline,
-moves or joins you, or at a time.
+moves, joins you or leaves your instance, or at a time.
 
 Reminders are saved, fire as normal notifications with the chat closed, and have their own
 **Reminders** entry in the left navigation (and a card under Settings > AI).
@@ -344,6 +344,12 @@ for anyone, friends, or favorite friends.
 - Sounds work in background mode and respect Do Not Disturb and privacy lock.
 - Built-in sounds are CC0 clips listed in
   [crates/host-desktop/sounds](../crates/host-desktop/sounds/README.md).
+
+### Instance Rules can match any condition and change pronouns
+
+Tools > Instance Rules can require VR or desktop mode and specific worlds, combine conditions
+with **All** or **Any**, and change your pronouns as well as your status and status message.
+Status Schedule rules can change pronouns too. See [TOOLS.md](TOOLS.md#social-automation).
 
 ### Keeps the PC awake
 

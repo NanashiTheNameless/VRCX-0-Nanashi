@@ -348,3 +348,43 @@ fn reminders_persist_are_capped_and_delete_is_owner_scoped() {
         )
         .is_err());
 }
+
+#[test]
+fn player_left_reminder_fires_only_on_leave() {
+    let f = Fixture::new();
+    f.runtime
+        .create(
+            SELF,
+            "say bye".into(),
+            ReminderTrigger::PlayerLeft {
+                user_id: FRIEND.into(),
+                display_name: "Friend".into(),
+            },
+            false,
+        )
+        .unwrap();
+    let now = at("2026-09-27T12:00:00Z");
+    f.runtime.observe(
+        &candidate(
+            ActivityKind::OnPlayerJoined,
+            FRIEND,
+            "2026-09-27T12:00:00Z",
+            ActivityFacts::default(),
+        ),
+        now,
+    );
+    assert_eq!(f.runtime.list(SELF).len(), 1, "a join must not fire it");
+    f.runtime.observe(
+        &candidate(
+            ActivityKind::OnPlayerLeft,
+            FRIEND,
+            "2026-09-27T12:00:00Z",
+            ActivityFacts::default(),
+        ),
+        now,
+    );
+    assert!(
+        f.runtime.list(SELF).is_empty(),
+        "one-shot fires and is removed"
+    );
+}

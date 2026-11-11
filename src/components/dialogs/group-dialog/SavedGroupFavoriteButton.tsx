@@ -132,7 +132,7 @@ export function SavedGroupFavoriteButton({ groupId }: { groupId: string }) {
                         >
                             <Trash2Icon />
                             {t('saved_group_favorites.remove', {
-                                defaultValue: '取消收藏'
+                                defaultValue: 'Remove from saved groups'
                             })}
                         </DropdownMenuItem>
                     </DropdownMenuGroup>

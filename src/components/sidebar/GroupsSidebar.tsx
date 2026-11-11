@@ -584,7 +584,7 @@ export function GroupsSidebar({ filterQuery = '' }: { filterQuery?: string }) {
                 type: 'section',
                 key: 'section:saved',
                 title: t('saved_group_favorites.sidebar_saved', {
-                    defaultValue: '收藏群组'
+                    defaultValue: 'Saved Groups'
                 })
             });
             savedCollections.forEach(({ collection, groupIds }) => {

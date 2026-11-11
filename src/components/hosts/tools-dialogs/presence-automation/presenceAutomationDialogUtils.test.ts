@@ -7,10 +7,12 @@ import {
     hasGameRunningCondition,
     normalizeContextRule,
     normalizeTimeRule,
+    parseWorldIds,
     priorityLabelKeyFromNumber,
     priorityNumberFromValue,
     priorityValueFromNumber,
     removeRuleAction,
+    ruleActionSummary,
     setContextPreset,
     setGameRunningCondition,
     updateRule,
@@ -302,5 +304,69 @@ describe('presenceAutomationDialogUtils rule contracts', () => {
         }));
         expect(updated[0]).toMatchObject({ id: 'first', enabled: false });
         expect(updated[1]).toBe(second);
+    });
+});
+
+describe('presenceAutomationDialogUtils game mode, worlds and match mode', () => {
+    it('adds game mode and world conditions before instance types', () => {
+        expect(
+            buildContextConditions({
+                id: 'rule',
+                domain: 'context',
+                preset: 'inSelectedInstanceTypes',
+                gameMode: 'vr',
+                selectedWorldIds: ['wrld_a'],
+                selectedInstanceTypes: ['public']
+            })
+        ).toEqual([
+            { type: 'isGameRunning' },
+            { type: 'gameMode', value: 'vr' },
+            { type: 'worldIn', values: ['wrld_a'] },
+            { type: 'instanceTypeIn', values: ['public'] }
+        ]);
+    });
+
+    it('normalizes unknown modes to the defaults and keeps valid ones', () => {
+        expect(
+            normalizeContextRule({
+                id: 'rule',
+                conditionMatch: 'sometimes',
+                gameMode: 'phone',
+                selectedWorldIds: ['wrld_a', 'not a world', 'wrld_a']
+            })
+        ).toMatchObject({
+            conditionMatch: 'all',
+            gameMode: 'any',
+            selectedWorldIds: ['wrld_a']
+        });
+        expect(
+            normalizeContextRule({
+                id: 'rule',
+                conditionMatch: 'any',
+                gameMode: 'desktop'
+            })
+        ).toMatchObject({ conditionMatch: 'any', gameMode: 'desktop' });
+    });
+
+    it('reads world ids out of pasted text and links', () => {
+        expect(
+            parseWorldIds(
+                'https://vrchat.com/home/world/wrld_4432ea9b-729c-46e3-8eaf-846aa0a37fdd/info, wrld_b wrld_b'
+            )
+        ).toEqual(['wrld_4432ea9b-729c-46e3-8eaf-846aa0a37fdd', 'wrld_b']);
+        expect(parseWorldIds('no ids here')).toEqual([]);
+    });
+
+    it('lists pronouns in the action summary', () => {
+        const t = ((key: string) => key) as never;
+        expect(
+            ruleActionSummary(
+                {
+                    id: 'rule',
+                    actions: { pronouns: 'they/them' }
+                },
+                t
+            )
+        ).toBe('view.tools.social_automation.pronouns');
     });
 });

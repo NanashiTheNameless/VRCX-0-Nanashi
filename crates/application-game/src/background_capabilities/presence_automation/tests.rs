@@ -297,3 +297,112 @@ fn instance_group_in_matches_only_selected_group_instances() {
         }
     ));
 }
+
+fn vr_facts_in(world_id: &str) -> BackgroundPresenceFacts {
+    BackgroundPresenceFacts {
+        is_game_running: true,
+        is_game_no_vr: false,
+        instance_type: "public".into(),
+        parsed_location: vrcx_0_core::location::ParsedLocation {
+            world_id: world_id.into(),
+            ..Default::default()
+        },
+        ..Default::default()
+    }
+}
+
+fn status_of(facts: &BackgroundPresenceFacts, rule: Value) -> Option<Value> {
+    evaluate_presence_rules(facts, &[rule])
+        .patch
+        .get("status")
+        .cloned()
+}
+
+#[test]
+fn game_mode_and_world_conditions_match_the_current_session() {
+    let vr = vr_facts_in("wrld_a");
+    let desktop = BackgroundPresenceFacts {
+        is_game_no_vr: true,
+        ..vr_facts_in("wrld_a")
+    };
+    let not_running = BackgroundPresenceFacts {
+        is_game_running: false,
+        ..vr_facts_in("wrld_a")
+    };
+    let vr_mode = json!({"type": "gameMode", "value": "vr"});
+    let desktop_mode = json!({"type": "gameMode", "value": "desktop"});
+    let in_a = json!({"type": "worldIn", "values": ["wrld_a"]});
+    let in_b = json!({"type": "worldIn", "values": ["wrld_b"]});
+
+    assert!(condition_matches(&vr_mode, &vr));
+    assert!(!condition_matches(&vr_mode, &desktop));
+    assert!(condition_matches(&desktop_mode, &desktop));
+    assert!(!condition_matches(&desktop_mode, &not_running));
+    assert!(condition_matches(&in_a, &vr));
+    assert!(!condition_matches(&in_b, &vr));
+    assert!(!condition_matches(&in_a, &vr_facts_in("")));
+}
+
+#[test]
+fn any_match_mode_needs_one_condition_but_keeps_scope_conditions_required() {
+    let rule = |conditions: Value, mode: &str| {
+        json!({
+            "id": "rule",
+            "conditionMatch": mode,
+            "conditions": conditions,
+            "actions": {"status": "busy"},
+        })
+    };
+    let busy = Some(Value::String("busy".into()));
+    let vr_in_b = json!([
+        {"type": "isGameRunning"},
+        {"type": "gameMode", "value": "vr"},
+        {"type": "worldIn", "values": ["wrld_b"]},
+    ]);
+    let facts = vr_facts_in("wrld_a");
+
+    assert_eq!(status_of(&facts, rule(vr_in_b.clone(), "all")), None);
+    assert_eq!(status_of(&facts, rule(vr_in_b.clone(), "any")), busy);
+
+    let private_only = json!([
+        {"type": "instanceTypeIn", "values": ["private"]},
+        {"type": "gameMode", "value": "vr"},
+    ]);
+    assert_eq!(
+        status_of(&facts, rule(private_only, "any")),
+        None,
+        "instance types stay required in any mode"
+    );
+    assert_eq!(
+        status_of(
+            &facts,
+            rule(json!([{"type": "isGameRunning", "value": false}]), "any")
+        ),
+        None,
+        "game running stays required in any mode"
+    );
+}
+
+#[test]
+fn pronouns_action_is_truncated_and_written_only_when_changed() {
+    let facts = vr_facts_in("wrld_a");
+    let long = "x".repeat(40);
+    let rule = json!({
+        "id": "rule",
+        "conditions": [{"type": "isGameRunning"}],
+        "actions": {"pronouns": long},
+    });
+    assert!(has_presence_action(&rule));
+
+    let evaluation = evaluate_presence_rules(&facts, &[rule]);
+    let pronouns = evaluation.patch.get("pronouns").unwrap().as_str().unwrap();
+    assert_eq!(pronouns.chars().count(), 32);
+
+    let same = json!({"pronouns": pronouns});
+    assert!(changed_patch(&same, &evaluation.patch).is_empty());
+    let other = json!({"pronouns": "they/them"});
+    assert_eq!(
+        changed_patch(&other, &evaluation.patch).get("pronouns"),
+        evaluation.patch.get("pronouns")
+    );
+}

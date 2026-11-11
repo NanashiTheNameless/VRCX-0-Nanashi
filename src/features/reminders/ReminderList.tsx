@@ -39,6 +39,8 @@ export function describeReminderTrigger(
                 : t(`${P}.trigger_location`, { name: trigger.displayName });
         case 'playerJoined':
             return t(`${P}.trigger_joined`, { name: trigger.displayName });
+        case 'playerLeft':
+            return t(`${P}.trigger_left`, { name: trigger.displayName });
         case 'time': {
             const at = formatDateFilter(trigger.at, 'long');
             return trigger.repeatMinutes

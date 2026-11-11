@@ -30,6 +30,12 @@ pub enum ReminderTrigger {
         user_id: String,
         display_name: String,
     },
+    /// A player leaves the instance you are in.
+    #[serde(rename_all = "camelCase")]
+    PlayerLeft {
+        user_id: String,
+        display_name: String,
+    },
     /// A point in time (epoch seconds); optionally repeats.
     #[serde(rename_all = "camelCase")]
     Time {

@@ -70,12 +70,18 @@ export function SafetyLogProvider({
                 chunk.forEach(([key], i) => next.set(key, results[i] || []));
             }
             if (mounted.current && expected === revision.current) {
-                setWarnings(next);
+                // Polling usually finds nothing new; keeping the old map keeps
+                // the context value stable so badges do not re-render.
+                setWarnings((previous) =>
+                    sameWarnings(previous, next) ? previous : next
+                );
                 setFailed(false);
             }
         } catch {
             if (mounted.current && expected === revision.current) {
-                setWarnings(new Map());
+                setWarnings((previous) =>
+                    previous.size ? new Map() : previous
+                );
                 setFailed(true);
             }
         } finally {
@@ -177,4 +183,22 @@ export function SafetyLogBadge({ row }: { row: Row }) {
             </TooltipContent>
         </Tooltip>
     );
+}
+
+function sameWarnings(
+    previous: ReadonlyMap<string, string[]>,
+    next: ReadonlyMap<string, string[]>
+) {
+    if (previous.size !== next.size) return false;
+    for (const [key, warnings] of next) {
+        const before = previous.get(key);
+        if (
+            !before ||
+            before.length !== warnings.length ||
+            before.some((warning, index) => warning !== warnings[index])
+        ) {
+            return false;
+        }
+    }
+    return true;
 }

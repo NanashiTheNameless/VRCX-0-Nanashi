@@ -74,11 +74,11 @@ fn keyed_activity_renders_a_standalone_body_and_a_full_sentence() {
     delivery.entry.content.body =
         ActivityText::message(vrcx_0_i18n::OverlayMessage::notifications_online());
 
-    let render = render_delivery(&delivery, OverlayLocale::Ja, false);
+    let render = render_delivery(&delivery, OverlayLocale::En, false);
 
     assert_eq!(render.title, "Alice");
-    assert_eq!(render.body, "オンライン");
-    assert_eq!(render.text, "Alice がオンラインになりました");
+    assert_eq!(render.body, "Online");
+    assert_eq!(render.text, "Alice came online");
 }
 
 #[test]

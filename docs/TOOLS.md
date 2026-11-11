@@ -24,12 +24,17 @@ auto-delete your oldest non-favorite prints on VRChat when you have more than a 
 
 ## Social Automation
 
-- **Status Schedule**: rules that change your status, status message or both during a time
-  window, on chosen days (or every day). Rules can run only while you are in game, and can
-  restore your previous status when the window ends. Same start and end time keeps a rule
-  active all day.
-- **Instance Rules**: change your status or status message depending on the instance, world or
-  friends you are with, with priorities (high, medium, low) when several rules match.
+- **Status Schedule**: rules that change your status, status message, pronouns or any mix of
+  them during a time window, on chosen days (or every day). Rules can run only while you are in
+  game, and can restore your previous values when the window ends. Same start and end time
+  keeps a rule active all day.
+- **Instance Rules**: change your status, status message or pronouns depending on the instance,
+  world or friends you are with, with priorities (high, medium, low) when several rules match.
+  A rule can also require VR or desktop mode (**Playing in**) and specific worlds (**Only in
+  these worlds**, by world ID). **Match** picks whether all of these conditions must hold or
+  any one is enough; **Instance types** always apply either way, so a Join Me rule stays limited
+  to the instance types you picked. Status messages and pronouns are limited to 32
+  characters.
 - **Invite Request Auto-Reply**: automatically invite allowlisted favorite friends who request an
   invite, optionally only in certain statuses, with a message slot of your choice. Your current
   instance still has to allow invites.

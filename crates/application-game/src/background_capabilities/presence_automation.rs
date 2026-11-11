@@ -49,6 +49,8 @@ pub struct BackgroundPresenceAutomationState {
     last_description_write_at_ms: i64,
     last_status_value: String,
     last_description_value: String,
+    last_pronouns_write_at_ms: i64,
+    last_pronouns_value: String,
     next_allowed_at_ms: i64,
     last_error: String,
     time_restore_snapshots: HashMap<String, TimeRestoreSnapshot>,

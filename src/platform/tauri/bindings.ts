@@ -7780,6 +7780,8 @@ export type ReminderTrigger =
       }
     /**  A player joins the instance you are in. */
     | { kind: 'playerJoined'; userId: string; displayName: string }
+    /**  A player leaves the instance you are in. */
+    | { kind: 'playerLeft'; userId: string; displayName: string }
     /**  A point in time (epoch seconds); optionally repeats. */
     | { kind: 'time'; at: number; repeatMinutes?: number };
 

@@ -87,7 +87,7 @@ pub(super) fn changed_patch(
     patch: &Map<String, Value>,
 ) -> Map<String, Value> {
     let mut changed = Map::new();
-    for field in ["status", "statusDescription"] {
+    for field in ["status", "statusDescription", "pronouns"] {
         if let Some(value) = patch.get(field) {
             if current_user.text_field(field) != text_of(Some(value)) {
                 changed.insert(field.into(), value.clone());
@@ -153,6 +153,16 @@ pub(super) fn throttle_skip_reason(
             return Some("description-throttled");
         }
     }
+    if let Some(value) = changed_patch
+        .get("pronouns")
+        .map(|value| text_of(Some(value)))
+    {
+        if value == state.last_pronouns_value
+            && now_ms - state.last_pronouns_write_at_ms < throttle.min_description_write_interval_ms
+        {
+            return Some("pronouns-throttled");
+        }
+    }
     None
 }
 
@@ -174,6 +184,13 @@ pub(super) fn update_presence_write_timestamps(
     {
         state.last_description_write_at_ms = now_ms;
         state.last_description_value = value;
+    }
+    if let Some(value) = changed_patch
+        .get("pronouns")
+        .map(|value| text_of(Some(value)))
+    {
+        state.last_pronouns_write_at_ms = now_ms;
+        state.last_pronouns_value = value;
     }
 }
 

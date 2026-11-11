@@ -163,7 +163,8 @@ impl ReminderRuntime {
             ReminderTrigger::FriendOnline { user_id, .. }
             | ReminderTrigger::FriendOffline { user_id, .. }
             | ReminderTrigger::FriendLocation { user_id, .. }
-            | ReminderTrigger::PlayerJoined { user_id, .. } => {
+            | ReminderTrigger::PlayerJoined { user_id, .. }
+            | ReminderTrigger::PlayerLeft { user_id, .. } => {
                 if user_id.trim().is_empty() {
                     return Err("Pick a friend.".into());
                 }
@@ -335,7 +336,8 @@ fn trigger_display_name(trigger: &ReminderTrigger) -> &str {
         ReminderTrigger::FriendOnline { display_name, .. }
         | ReminderTrigger::FriendOffline { display_name, .. }
         | ReminderTrigger::FriendLocation { display_name, .. }
-        | ReminderTrigger::PlayerJoined { display_name, .. } => display_name,
+        | ReminderTrigger::PlayerJoined { display_name, .. }
+        | ReminderTrigger::PlayerLeft { display_name, .. } => display_name,
         ReminderTrigger::Time { .. } => "",
     }
 }
@@ -360,6 +362,10 @@ fn event_detail(trigger: &ReminderTrigger, candidate: &ActivityEvent) -> Option<
             user_id,
             display_name,
         } => (user_id, display_name, ActivityKind::OnPlayerJoined),
+        ReminderTrigger::PlayerLeft {
+            user_id,
+            display_name,
+        } => (user_id, display_name, ActivityKind::OnPlayerLeft),
         ReminderTrigger::Time { .. } => return None,
     };
     if candidate.kind != wanted || candidate.actor.user_id != *user_id {
@@ -389,6 +395,7 @@ fn event_detail(trigger: &ReminderTrigger, candidate: &ActivityEvent) -> Option<
             }
         }
         ReminderTrigger::PlayerJoined { .. } => format!("{name} joined your instance"),
+        ReminderTrigger::PlayerLeft { .. } => format!("{name} left your instance"),
         ReminderTrigger::Time { .. } => return None,
     })
 }

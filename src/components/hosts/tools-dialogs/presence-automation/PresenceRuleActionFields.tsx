@@ -30,10 +30,52 @@ type PresenceRuleActionFieldsProps = {
     status?: string;
     statusDescriptionEnabled: boolean;
     statusDescription: string;
+    pronounsEnabled: boolean;
+    pronouns: string;
     onStatusChange: (status: string) => void;
     onStatusDescriptionEnabledChange: (enabled: boolean) => void;
     onStatusDescriptionChange: (statusDescription: string) => void;
+    onPronounsEnabledChange: (enabled: boolean) => void;
+    onPronounsChange: (pronouns: string) => void;
 };
+
+const MAX_TEXT_LENGTH = 32;
+
+function LimitedTextInput({
+    id,
+    value,
+    disabled,
+    placeholder,
+    label,
+    onChange
+}: {
+    id: string;
+    value: string;
+    disabled?: boolean;
+    placeholder?: string;
+    label: string;
+    onChange: (value: string) => void;
+}) {
+    return (
+        <Field className="sm:max-w-md">
+            <div className="flex min-w-0 items-center gap-2">
+                <Input
+                    id={id}
+                    className="min-w-0"
+                    value={value}
+                    maxLength={MAX_TEXT_LENGTH}
+                    disabled={disabled}
+                    placeholder={placeholder}
+                    aria-label={label}
+                    onChange={(event) => onChange(event.target.value)}
+                />
+                <FieldDescription className="shrink-0 text-xs tabular-nums">
+                    {value.length}/{MAX_TEXT_LENGTH}
+                </FieldDescription>
+            </div>
+        </Field>
+    );
+}
 
 export function PresenceRuleActionFields({
     idPrefix,
@@ -41,14 +83,20 @@ export function PresenceRuleActionFields({
     status,
     statusDescriptionEnabled,
     statusDescription,
+    pronounsEnabled,
+    pronouns,
     onStatusChange,
     onStatusDescriptionEnabledChange,
-    onStatusDescriptionChange
+    onStatusDescriptionChange,
+    onPronounsEnabledChange,
+    onPronounsChange
 }: PresenceRuleActionFieldsProps) {
     const { t } = useTranslation();
     const statusId = `${idPrefix}-status-action`;
     const statusDescriptionSwitchId = `${idPrefix}-status-description-action`;
     const statusDescriptionInputId = `${idPrefix}-status-description-input`;
+    const pronounsSwitchId = `${idPrefix}-pronouns-action`;
+    const pronounsInputId = `${idPrefix}-pronouns-input`;
 
     return (
         <FieldSet
@@ -117,31 +165,43 @@ export function PresenceRuleActionFields({
                             {t(`${I18N_ROOT}.signature`)}
                         </FieldLabel>
                     </Field>
+                    <Field
+                        orientation="horizontal"
+                        className="w-auto"
+                        data-disabled={disabled}
+                    >
+                        <Switch
+                            id={pronounsSwitchId}
+                            checked={pronounsEnabled}
+                            disabled={disabled}
+                            onCheckedChange={onPronounsEnabledChange}
+                        />
+                        <FieldLabel htmlFor={pronounsSwitchId}>
+                            {t(`${I18N_ROOT}.pronouns`)}
+                        </FieldLabel>
+                    </Field>
                 </div>
                 {statusDescriptionEnabled ? (
-                    <Field className="sm:max-w-md">
-                        <div className="flex min-w-0 items-center gap-2">
-                            <Input
-                                id={statusDescriptionInputId}
-                                className="min-w-0"
-                                value={statusDescription}
-                                maxLength={32}
-                                disabled={disabled}
-                                placeholder={t(
-                                    'view.settings.general.automation.status_description_placeholder'
-                                )}
-                                aria-label={t(`${I18N_ROOT}.signature`)}
-                                onChange={(event) =>
-                                    onStatusDescriptionChange(
-                                        event.target.value
-                                    )
-                                }
-                            />
-                            <FieldDescription className="shrink-0 text-xs tabular-nums">
-                                {statusDescription.length}/32
-                            </FieldDescription>
-                        </div>
-                    </Field>
+                    <LimitedTextInput
+                        id={statusDescriptionInputId}
+                        value={statusDescription}
+                        disabled={disabled}
+                        placeholder={t(
+                            'view.settings.general.automation.status_description_placeholder'
+                        )}
+                        label={t(`${I18N_ROOT}.signature`)}
+                        onChange={onStatusDescriptionChange}
+                    />
+                ) : null}
+                {pronounsEnabled ? (
+                    <LimitedTextInput
+                        id={pronounsInputId}
+                        value={pronouns}
+                        disabled={disabled}
+                        placeholder={t(`${I18N_ROOT}.pronouns_placeholder`)}
+                        label={t(`${I18N_ROOT}.pronouns`)}
+                        onChange={onPronounsChange}
+                    />
                 ) : null}
             </FieldGroup>
         </FieldSet>

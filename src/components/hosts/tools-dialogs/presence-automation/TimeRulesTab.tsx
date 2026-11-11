@@ -398,6 +398,11 @@ export function TimeRulesTab({
                         statusDescription={
                             selectedRule.actions?.statusDescription || ''
                         }
+                        pronounsEnabled={hasRuleAction(
+                            selectedRule,
+                            'pronouns'
+                        )}
+                        pronouns={selectedRule.actions?.pronouns || ''}
                         onStatusChange={(value) =>
                             update(selectedRule.id, (current) =>
                                 value === 'no-change'
@@ -423,6 +428,22 @@ export function TimeRulesTab({
                             update(selectedRule.id, (current) =>
                                 updateRuleAction(current, {
                                     statusDescription: value
+                                })
+                            )
+                        }
+                        onPronounsEnabledChange={(checked) =>
+                            update(selectedRule.id, (current) =>
+                                checked
+                                    ? updateRuleAction(current, {
+                                          pronouns: ''
+                                      })
+                                    : removeRuleAction(current, 'pronouns')
+                            )
+                        }
+                        onPronounsChange={(value) =>
+                            update(selectedRule.id, (current) =>
+                                updateRuleAction(current, {
+                                    pronouns: value
                                 })
                             )
                         }

@@ -46,8 +46,11 @@ import {
 } from './AutomationRuleLayout';
 import { FriendMultiSelect } from './FriendMultiSelect';
 import {
+    conditionMatchOptions,
     contextPresetLabelKeyFromValue,
     contextPresetOptions,
+    gameModeOptions,
+    parseWorldIds,
     createGroupOptions,
     createInstanceOptions,
     createContextRule,
@@ -461,6 +464,61 @@ export function ContextRulesTab({
                                     />
                                 </Field>
                             ) : null}
+                            <OptionSelect
+                                label={t(`${I18N_ROOT}.game_mode`)}
+                                value={selectedRule.gameMode || 'any'}
+                                options={gameModeOptions}
+                                disabled={loading}
+                                onChange={(gameMode) =>
+                                    update(selectedRule.id, (current) => ({
+                                        ...current,
+                                        gameMode
+                                    }))
+                                }
+                            />
+                            <Field>
+                                <FieldLabel
+                                    htmlFor={`${selectedRule.id}-world-ids`}
+                                >
+                                    {t(`${I18N_ROOT}.world_ids`)}
+                                </FieldLabel>
+                                <FieldDescription>
+                                    {t(`${I18N_ROOT}.world_ids_hint`)}
+                                </FieldDescription>
+                                <Input
+                                    key={selectedRule.id}
+                                    id={`${selectedRule.id}-world-ids`}
+                                    defaultValue={(
+                                        selectedRule.selectedWorldIds || []
+                                    ).join(', ')}
+                                    placeholder="wrld_..."
+                                    disabled={loading}
+                                    onBlur={(event) => {
+                                        const selectedWorldIds = parseWorldIds(
+                                            event.target.value
+                                        );
+                                        event.target.value =
+                                            selectedWorldIds.join(', ');
+                                        update(selectedRule.id, (current) => ({
+                                            ...current,
+                                            selectedWorldIds
+                                        }));
+                                    }}
+                                />
+                            </Field>
+                            <OptionSelect
+                                label={t(`${I18N_ROOT}.match`)}
+                                description={t(`${I18N_ROOT}.match_hint`)}
+                                value={selectedRule.conditionMatch || 'all'}
+                                options={conditionMatchOptions}
+                                disabled={loading}
+                                onChange={(conditionMatch) =>
+                                    update(selectedRule.id, (current) => ({
+                                        ...current,
+                                        conditionMatch
+                                    }))
+                                }
+                            />
                             <Field>
                                 <FieldLabel>
                                     {t(`${I18N_ROOT}.room_types`)}
@@ -495,6 +553,11 @@ export function ContextRulesTab({
                         statusDescription={
                             selectedRule.actions?.statusDescription || ''
                         }
+                        pronounsEnabled={hasRuleAction(
+                            selectedRule,
+                            'pronouns'
+                        )}
+                        pronouns={selectedRule.actions?.pronouns || ''}
                         onStatusChange={(value) =>
                             update(selectedRule.id, (current) =>
                                 value === 'no-change'
@@ -523,6 +586,22 @@ export function ContextRulesTab({
                                 })
                             )
                         }
+                        onPronounsEnabledChange={(checked) =>
+                            update(selectedRule.id, (current) =>
+                                checked
+                                    ? updateRuleAction(current, {
+                                          pronouns: ''
+                                      })
+                                    : removeRuleAction(current, 'pronouns')
+                            )
+                        }
+                        onPronounsChange={(value) =>
+                            update(selectedRule.id, (current) =>
+                                updateRuleAction(current, {
+                                    pronouns: value
+                                })
+                            )
+                        }
                     />
                 </FieldGroup>
             ) : (
@@ -545,5 +624,60 @@ export function ContextRulesTab({
             list={customRulesList}
             editor={customRulesEditor}
         />
+    );
+}
+
+function OptionSelect<TValue extends string>({
+    label,
+    description,
+    value,
+    options,
+    disabled,
+    onChange
+}: {
+    label: string;
+    description?: string;
+    value: TValue;
+    options: readonly { value: TValue; labelKey: string }[];
+    disabled?: boolean;
+    onChange: (value: TValue) => void;
+}) {
+    const { t } = useTranslation();
+    return (
+        <Field>
+            <FieldLabel>{label}</FieldLabel>
+            {description ? (
+                <FieldDescription>{description}</FieldDescription>
+            ) : null}
+            <Select
+                value={value}
+                disabled={disabled}
+                items={options.map((option) => ({
+                    value: option.value,
+                    label: t(option.labelKey)
+                }))}
+                onValueChange={(next) => {
+                    const match = options.find(
+                        (option) => option.value === next
+                    );
+                    if (match) {
+                        onChange(match.value);
+                    }
+                }}
+            >
+                <SelectTrigger aria-label={label}>
+                    <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectGroup>
+                        {options.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                                {t(option.labelKey)}
+                            </SelectItem>
+                        ))}
+                    </SelectGroup>
+                </SelectContent>
+            </Select>
+        </Field>
     );
 }

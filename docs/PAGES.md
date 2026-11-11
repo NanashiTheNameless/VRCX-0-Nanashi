@@ -204,8 +204,8 @@ type filters and search.
 ### Reminders
 
 Reminders fire as normal notifications (desktop, VR, sound) even with the AI Assistant closed.
-A reminder can be for a friend coming online, going offline, moving, or joining you, or for a
-time. Create them by hand, describe one in plain words for the AI to fill in the form (when the
+A reminder can be for a friend coming online, going offline, moving, joining you or
+leaving your instance, or for a time. Create them by hand, describe one in plain words for the AI to fill in the form (when the
 AI Assistant is set up), or ask the assistant in a chat. See [AI_ASSISTANT.md](AI_ASSISTANT.md).
 
 ## AI Assistant

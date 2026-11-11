@@ -25,7 +25,7 @@ const MAX_IN_MINUTES: u32 = 366 * 24 * 60;
 #[tool_router(router = reminders_tool_router, vis = "pub(crate)")]
 impl VrcxMcpServer {
     #[tool(
-        description = "[write·local] Create a reminder that fires later as a normal VRCX-0-Nanashi notification (desktop, VR, sound per the user's notification settings), even with this chat closed. Triggers: friend_online, friend_offline, friend_location (optionally one worldId), player_joined (joins the user's current instance), or time (at = RFC 3339 time, or inMinutes). Event reminders fire once unless recurring=true; time reminders repeat when repeatMinutes is set. Confirm the wording with the user before creating."
+        description = "[write·local] Create a reminder that fires later as a normal VRCX-0-Nanashi notification (desktop, VR, sound per the user's notification settings), even with this chat closed. Triggers: friend_online, friend_offline, friend_location (optionally one worldId), player_joined (joins the user's current instance), player_left (leaves the user's current instance), or time (at = RFC 3339 time, or inMinutes). Event reminders fire once unless recurring=true; time reminders repeat when repeatMinutes is set. Confirm the wording with the user before creating."
     )]
     async fn create_reminder(
         &self,
@@ -88,6 +88,10 @@ impl VrcxMcpServer {
                         world_id: world_id(input.world_id.as_deref())?,
                     },
                     ReminderTriggerKind::PlayerJoined => McpReminderTrigger::PlayerJoined {
+                        user_id,
+                        display_name,
+                    },
+                    ReminderTriggerKind::PlayerLeft => McpReminderTrigger::PlayerLeft {
                         user_id,
                         display_name,
                     },
@@ -186,6 +190,7 @@ enum ReminderTriggerKind {
     FriendOffline,
     FriendLocation,
     PlayerJoined,
+    PlayerLeft,
     Time,
 }
 

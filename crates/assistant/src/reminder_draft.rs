@@ -12,6 +12,7 @@ pub const REMINDER_DRAFT_KINDS: &[&str] = &[
     "friendOffline",
     "friendLocation",
     "playerJoined",
+    "playerLeft",
     "time",
 ];
 
@@ -35,10 +36,11 @@ pub(crate) fn reminder_draft_system_prompt(now_local: &str) -> String {
 You turn a request for a reminder into JSON for a form. Reply with one JSON object and \
 nothing else, with these fields:
 - message: short text the reminder shows (e.g. \"Alice is online\"), in the user's words and language.
-- kind: one of friendOnline, friendOffline, friendLocation, playerJoined, time.
+- kind: one of friendOnline, friendOffline, friendLocation, playerJoined, playerLeft, time.
   friendOnline = a friend comes online; friendOffline = goes offline; friendLocation = a \
 friend changes location or goes to a world; playerJoined = someone joins the user's current \
-instance; time = at a clock time or after a delay.
+instance; playerLeft = someone leaves the user's current instance; time = at a clock time or \
+after a delay.
 - friendName: the person's name exactly as written, or \"\" for time reminders.
 - worldId: a wrld_... id only if the user gave one, else \"\".
 - atLocal: for time reminders, local time as YYYY-MM-DDTHH:MM, else \"\". The user's local \

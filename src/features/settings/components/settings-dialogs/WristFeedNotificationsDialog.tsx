@@ -482,7 +482,7 @@ function ActivityFilterDialog({
                                                       'saved_group_favorites.scope_all',
                                                       {
                                                           defaultValue:
-                                                              '全部收藏群组'
+                                                              'All saved groups'
                                                       }
                                                   )
                                                 : groupInstanceType &&

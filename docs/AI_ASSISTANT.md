@@ -139,8 +139,8 @@ changes**.
 
 ## Reminders
 
-Ask the assistant to tell you when a friend comes online, goes offline, moves or joins you, or
-at a time; approve the card and the reminder is saved. Reminders fire as **Assistant reminder**
+Ask the assistant to tell you when a friend comes online, goes offline, moves, joins you or
+leaves your instance, or at a time; approve the card and the reminder is saved. Reminders fire as **Assistant reminder**
 notifications even with the chat closed. The **Reminders** page lists them, and you can create
 them by hand there or have the AI fill the form from a sentence. See
 [PAGES.md](PAGES.md#reminders) and [NOTIFICATIONS_AND_VR.md](NOTIFICATIONS_AND_VR.md).

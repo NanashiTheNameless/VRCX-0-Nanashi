@@ -9,7 +9,35 @@ const I18N_ROOT = 'view.tools.social_automation';
 export type PresenceRuleActions = Record<string, unknown> & {
     status?: string;
     statusDescription?: string;
+    pronouns?: string;
 };
+
+export type GameModeFilter = 'any' | 'vr' | 'desktop';
+export type ConditionMatch = 'all' | 'any';
+
+export const gameModeOptions: readonly {
+    value: GameModeFilter;
+    labelKey: string;
+}[] = [
+    { value: 'any', labelKey: `${I18N_ROOT}.game_mode_any` },
+    { value: 'vr', labelKey: `${I18N_ROOT}.game_mode_vr` },
+    { value: 'desktop', labelKey: `${I18N_ROOT}.game_mode_desktop` }
+];
+
+export const conditionMatchOptions: readonly {
+    value: ConditionMatch;
+    labelKey: string;
+}[] = [
+    { value: 'all', labelKey: `${I18N_ROOT}.match_all` },
+    { value: 'any', labelKey: `${I18N_ROOT}.match_any` }
+];
+
+const WORLD_ID_PATTERN = /wrld_[A-Za-z0-9-]+/g;
+
+/** The distinct world ids in free text, in order. */
+export function parseWorldIds(text: string): string[] {
+    return [...new Set(text.match(WORLD_ID_PATTERN) || [])];
+}
 
 type PresenceRuleCondition = Record<string, unknown> & {
     type: string;
@@ -40,6 +68,9 @@ export type TimeAutomationRule = PresenceAutomationRule & {
 
 export type ContextAutomationRule = PresenceAutomationRule & {
     domain: 'context';
+    conditionMatch?: ConditionMatch;
+    gameMode?: GameModeFilter;
+    selectedWorldIds?: string[];
     friendCountValue?: number;
     playerCountValue?: number;
     preset?: string;
@@ -286,6 +317,9 @@ export function ruleActionSummary(rule: PresenceAutomationRule, t: TFunction) {
     if (hasRuleAction(rule, 'statusDescription')) {
         parts.push(t(`${I18N_ROOT}.signature`));
     }
+    if (hasRuleAction(rule, 'pronouns')) {
+        parts.push(t(`${I18N_ROOT}.pronouns`));
+    }
     return parts.length ? parts.join(' / ') : t(`${I18N_ROOT}.do_not_change`);
 }
 
@@ -403,6 +437,13 @@ export function buildContextConditions(rule: ContextAutomationRule) {
         });
     }
 
+    if (rule.gameMode === 'vr' || rule.gameMode === 'desktop') {
+        conditions.push({ type: 'gameMode', value: rule.gameMode });
+    }
+    if (rule.selectedWorldIds?.length) {
+        conditions.push({ type: 'worldIn', values: rule.selectedWorldIds });
+    }
+
     if (rule.selectedInstanceTypes?.length) {
         conditions.push({
             type: 'instanceTypeIn',
@@ -469,6 +510,14 @@ export function normalizeContextRule(rule: unknown): ContextAutomationRule {
         specificFriendIds: asStringArray(source.specificFriendIds),
         friendCountValue: Number(source.friendCountValue) || 1,
         playerCountValue: Number(source.playerCountValue) || 1,
+        conditionMatch: source.conditionMatch === 'any' ? 'any' : 'all',
+        gameMode:
+            source.gameMode === 'vr' || source.gameMode === 'desktop'
+                ? source.gameMode
+                : 'any',
+        selectedWorldIds: parseWorldIds(
+            asStringArray(source.selectedWorldIds).join(' ')
+        ),
         actions: asRuleRecord(source.actions)
     };
     return {

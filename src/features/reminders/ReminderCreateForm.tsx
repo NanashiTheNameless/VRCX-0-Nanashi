@@ -42,6 +42,7 @@ const KIND_LABEL_KEYS: Record<ReminderKind, string> = {
     friendOffline: `${P}.kind_friend_offline`,
     friendLocation: `${P}.kind_friend_location`,
     playerJoined: `${P}.kind_player_joined`,
+    playerLeft: `${P}.kind_player_left`,
     time: `${P}.kind_time`
 };
 const KINDS = Object.keys(KIND_LABEL_KEYS) as ReminderKind[];
