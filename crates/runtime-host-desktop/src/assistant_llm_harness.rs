@@ -29,7 +29,12 @@ use crate::state::{assistant_controller_deps_for, mcp_runtime_for};
 const TURN_TIMEOUT: Duration = Duration::from_secs(240);
 // Kana inside a quoted display name must not pass for a Japanese reply.
 const JAPANESE_MIN_HIRAGANA: usize = 20;
-const WRITE_TOOLS: [&str; 3] = ["favorite_local", "favorite_vrchat", "set_friend_note"];
+const WRITE_TOOLS: [&str; 4] = [
+    "favorite_local",
+    "favorite_vrchat",
+    "favorite_move",
+    "set_friend_note",
+];
 
 struct HarnessChatbox;
 
@@ -1743,6 +1748,87 @@ async fn scripted_broken_and_truncated_calls_come_back_as_tool_errors() {
         .contains("not a valid JSON object"));
     assert!(run.llm.last_tool_message(2).contains("output token limit"));
     assert_eq!(log.answer, "I could not look that up.");
+    run.finish().await;
+}
+
+async fn wait_for_scripted_event(
+    events: &mut UnboundedReceiver<(String, Value)>,
+    expected: &str,
+) -> Value {
+    tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            let (event, payload) = events.recv().await.expect("event channel open");
+            if event == expected {
+                return payload;
+            }
+        }
+    })
+    .await
+    .expect("scripted event arrived")
+}
+
+#[tokio::test]
+async fn scripted_cancel_wins_over_a_ready_edit_approval() {
+    let mut run = ScriptedRun::start(vec![tool_turn(
+        vec![call(
+            "call_1",
+            "set_friend_note",
+            r#"{"userId":"usr_alice","note":"late approval","dryRun":false}"#,
+        )],
+        "tool_calls",
+    )])
+    .await;
+    let controller = &run.rig.harness.controller;
+    controller
+        .set_default_runtime(
+            Some(controller.endpoint_list().unwrap()[0].id.clone()),
+            Some(SCRIPTED_MODEL.into()),
+            true,
+            PlaybookMode::Open,
+        )
+        .unwrap();
+    let sent = controller
+        .send_message(None, "Note that I met Alice.".into(), Some("en".into()))
+        .await
+        .unwrap();
+    let request =
+        wait_for_scripted_event(&mut run.rig.harness.events, "assistantClientRequest").await;
+    assert_eq!(request["kind"], "approve_edit");
+    let controller = &run.rig.harness.controller;
+    controller.cancel(&sent.session_id);
+    controller.answer_client_request(
+        &sent.session_id,
+        request["requestId"].as_str().unwrap(),
+        Some(json!({"decision":"approved"})),
+    );
+    wait_for_scripted_event(&mut run.rig.harness.events, "assistantError").await;
+    let session = run
+        .rig
+        .harness
+        .controller
+        .get_session(&sent.session_id)
+        .unwrap()
+        .unwrap();
+    assert!(session
+        .messages
+        .iter()
+        .all(|message| message.tool_result.is_none()));
+    let mut tools = ToolProbe {
+        tools: vrcx_0_mcp::spawn_in_process_tools(mcp_runtime_for(
+            &run.rig.runtime,
+            None,
+            harness_chatbox(),
+            McpCaller::Assistant,
+        ))
+        .await
+        .unwrap(),
+        sizes: Vec::new(),
+        dump_dir: None,
+    };
+    let note = tools
+        .call("get_friend_note", json!({"user":"usr_alice"}))
+        .await;
+    assert!(!note.to_string().contains("late approval"));
     run.finish().await;
 }
 

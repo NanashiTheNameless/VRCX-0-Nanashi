@@ -529,7 +529,63 @@ async fn dispatch_call<'a>(
         };
     }
     if is_edit_tool(&name) {
-        match ask_client(ctx, &call.call.id, APPROVE_EDIT, &name, arguments.as_ref()).await {
+        let mut approval_arguments = arguments.clone();
+        if name == "favorite_move" {
+            let mut preview_arguments = arguments.clone().unwrap_or_default();
+            preview_arguments.insert("dryRun".into(), Value::Bool(true));
+            let preview = match await_tool_call(
+                ctx.tools.call_tool(name.clone(), Some(preview_arguments)),
+                &ctx.cancel,
+                TOOL_CALL_TIMEOUT,
+            )
+            .await
+            {
+                AwaitToolCall::Cancelled => return (call.call, None),
+                AwaitToolCall::TimedOut => {
+                    return (
+                        call.call,
+                        Some(resolve_tool_outcome(
+                            &name,
+                            Err(McpError::Custom(
+                                "Favorite move preview timed out. No favorites were moved.".into(),
+                            )),
+                        )),
+                    );
+                }
+                AwaitToolCall::Completed(preview) => preview,
+            };
+            match preview {
+                Ok(preview) if !preview.is_error => {
+                    let favorite = preview.structured.as_ref().and_then(|v| v.get("favorite"));
+                    let has_moves = favorite
+                        .and_then(|v| v.get("items"))
+                        .and_then(Value::as_array)
+                        .is_some_and(|items| {
+                            items.iter().any(|item| item["status"] == "wouldMove")
+                        });
+                    if !has_moves {
+                        return (call.call, Some(resolve_tool_outcome(&name, Ok(preview))));
+                    }
+                    approval_arguments.get_or_insert_default().insert(
+                        "favoriteMove".into(),
+                        favorite.cloned().unwrap_or(Value::Null),
+                    );
+                    arguments
+                        .get_or_insert_default()
+                        .insert("dryRun".into(), Value::Bool(false));
+                }
+                preview => return (call.call, Some(resolve_tool_outcome(&name, preview))),
+            }
+        }
+        match ask_client(
+            ctx,
+            &call.call.id,
+            APPROVE_EDIT,
+            &name,
+            approval_arguments.as_ref(),
+        )
+        .await
+        {
             ClientAnswer::Cancelled => return (call.call, None),
             ClientAnswer::Answered(response) => {
                 if EditDecision::from_response(response.as_ref()) == EditDecision::Declined {
@@ -540,6 +596,9 @@ async fn dispatch_call<'a>(
                 }
             }
         }
+    }
+    if ctx.cancel.is_cancelled() || !ctx.sessions.is_current_turn(&ctx.session_id, &ctx.turn_id) {
+        return (call.call, None);
     }
     let mut asked = HashSet::new();
     loop {
@@ -606,11 +665,12 @@ async fn ask_client(
         arguments.cloned().map(Value::Object).unwrap_or(Value::Null),
     );
     tokio::select! {
-        response = receiver => ClientAnswer::Answered(response.ok().flatten()),
+        biased;
         _ = ctx.cancel.cancelled() => {
             ctx.client_requests.remove(&request_id);
             ClientAnswer::Cancelled
         }
+        response = receiver => ClientAnswer::Answered(response.ok().flatten()),
     }
 }
 

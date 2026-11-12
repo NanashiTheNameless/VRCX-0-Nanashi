@@ -25,7 +25,8 @@ const MAX_IN_MINUTES: u32 = 366 * 24 * 60;
 #[tool_router(router = reminders_tool_router, vis = "pub(crate)")]
 impl VrcxMcpServer {
     #[tool(
-        description = "[write·local] Create a reminder that fires later as a normal VRCX-0-Nanashi notification (desktop, VR, sound per the user's notification settings), even with this chat closed. Triggers: friend_online, friend_offline, friend_location (optionally one worldId), player_joined (joins the user's current instance), player_left (leaves the user's current instance), or time (at = RFC 3339 time, or inMinutes). Event reminders fire once unless recurring=true; time reminders repeat when repeatMinutes is set. Confirm the wording with the user before creating."
+        description = "[write·local] Create a reminder that fires later as a normal VRCX-0-Nanashi notification (desktop, VR, sound per the user's notification settings), even with this chat closed. Triggers: friend_online, friend_offline, friend_location (optionally one worldId), player_joined (joins the user's current instance), player_left (leaves the user's current instance), or time (at = RFC 3339 time, or inMinutes). Event reminders fire once unless recurring=true; time reminders repeat when repeatMinutes is set. Confirm the wording with the user before creating.",
+        annotations(read_only_hint = false)
     )]
     async fn create_reminder(
         &self,
@@ -106,7 +107,8 @@ impl VrcxMcpServer {
     }
 
     #[tool(
-        description = "[L1·query] List the user's active reminders (id, message, trigger, recurring, last fired)."
+        description = "[L1·query] List the user's active reminders (id, message, trigger, recurring, last fired).",
+        annotations(read_only_hint = true)
     )]
     async fn list_reminders(
         &self,
@@ -120,7 +122,10 @@ impl VrcxMcpServer {
         structured_result(ReminderListOutput { reminders })
     }
 
-    #[tool(description = "[write·local] Delete one reminder by id (from list_reminders).")]
+    #[tool(
+        description = "[write·local] Delete one reminder by id (from list_reminders).",
+        annotations(read_only_hint = false)
+    )]
     async fn delete_reminder(
         &self,
         Parameters(input): Parameters<DeleteReminderParams>,

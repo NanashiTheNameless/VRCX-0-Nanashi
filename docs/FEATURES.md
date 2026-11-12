@@ -209,8 +209,9 @@ guide card with a button back to the conversation.
 It can also offer to change a supported setting for you. A themed **Permission required**
 card appears in the chat with the setting, its current and requested values, location, and
 what the change does. Choose **Allow**, **Deny**, or **Show me the setting**; nothing changes
-before Allow. Other changes (reminders, favorites, friend notes, the VRChat Chatbox) use
-Approve and Decline. Every change asks again; there is no approve-all.
+before Allow. Like upstream, other changes (favorites, friend notes, the VRChat Chatbox) ask
+for approval. The fork also gates reminders and settings, uses Approve and Decline for
+actions, and asks again for every change; there is no approve-all.
 
 An explicit per-setting allowlist includes ordinary appearance and notification options,
 startup, updates, login delay, the existing proxy toggle, Discord and integration toggles,

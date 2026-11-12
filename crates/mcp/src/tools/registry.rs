@@ -45,6 +45,7 @@ mod router_tests {
                 "create_reminder",
                 "delete_reminder",
                 "favorite_local",
+                "favorite_move",
                 "favorite_vrchat",
                 "find_user",
                 "get_activity_streaks",
@@ -66,6 +67,7 @@ mod router_tests {
                 "get_online_friends",
                 "get_social_graph",
                 "get_visit_timeline",
+                "get_vrchat_favorites",
                 "get_world_profile",
                 "list_reminders",
                 "recall_encounter",
@@ -78,6 +80,37 @@ mod router_tests {
                 "set_friend_note",
                 "summarize_screenshots",
                 "summarize_social_period",
+                "update_chatbox",
+            ]
+        );
+    }
+
+    #[test]
+    fn every_tool_declares_whether_it_changes_anything() {
+        let router = VrcxMcpServer::tool_router();
+        let mut side_effecting = Vec::new();
+        for tool in router.list_all() {
+            let read_only = tool
+                .annotations
+                .as_ref()
+                .and_then(|annotations| annotations.read_only_hint)
+                .unwrap_or_else(|| panic!("{} must declare read_only_hint", tool.name));
+            if !read_only {
+                side_effecting.push(tool.name.to_string());
+            }
+        }
+
+        assert_eq!(
+            side_effecting,
+            vec![
+                "create_reminder",
+                "delete_reminder",
+                "favorite_local",
+                "favorite_move",
+                "favorite_vrchat",
+                "send_chatbox_message",
+                "set_chatbox_afk",
+                "set_friend_note",
                 "update_chatbox",
             ]
         );

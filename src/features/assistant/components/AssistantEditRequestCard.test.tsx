@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -141,5 +142,49 @@ describe('AssistantEditRequestCard', () => {
         expect(screen.getByRole('status').textContent).toContain(
             'assistant.edit.declined'
         );
+    });
+
+    it('previews each favorite and offers a backup without approving the move', () => {
+        render(
+            <MemoryRouter>
+                <AssistantEditRequestCard
+                    request={request({
+                        kind: 'approve_edit',
+                        tool: 'favorite_move',
+                        arguments: {
+                            favoriteMove: {
+                                kind: 'world',
+                                target: {
+                                    name: 'worlds2',
+                                    displayName: 'Sleep'
+                                },
+                                items: [
+                                    {
+                                        entityId: 'wrld_a',
+                                        name: 'Night Lake',
+                                        source: {
+                                            name: 'worlds1',
+                                            displayName: 'Chill'
+                                        },
+                                        status: 'wouldMove'
+                                    }
+                                ]
+                            }
+                        }
+                    })}
+                    active
+                />
+            </MemoryRouter>
+        );
+        expect(screen.getByText('Night Lake')).toBeTruthy();
+        expect(screen.queryByText('wrld_a')).toBeNull();
+        expect(screen.getByRole('link').getAttribute('href')).toBe(
+            '/favorites/worlds?export=1'
+        );
+        expect(mocks.complete).not.toHaveBeenCalled();
+        fireEvent.click(
+            screen.getByRole('button', { name: 'assistant.edit.approve' })
+        );
+        expect((mocks.complete.mock.calls[0] as unknown[])[1]).toBe('approved');
     });
 });

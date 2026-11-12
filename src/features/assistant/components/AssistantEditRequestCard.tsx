@@ -7,9 +7,11 @@ import {
 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router';
 
 import type { UIEditRequest } from '@/domain/assistant/types';
 import { getSettingsManifestEntry } from '@/shared/constants/settingsManifest';
+import { useAssistantChatStore } from '@/state/assistantChatStore';
 import { usePreferencesStore } from '@/state/preferencesStore';
 import { Button } from '@/ui/shadcn/button';
 
@@ -49,6 +51,61 @@ function ValuePill({ next, label }: { next: boolean; label: string }) {
         >
             {label}
         </span>
+    );
+}
+
+type FavoriteMovePreview = {
+    kind: 'world' | 'friend' | 'avatar';
+    target: { name: string; displayName: string };
+    items: {
+        entityId: string;
+        name: string | null;
+        source: { name: string; displayName: string } | null;
+        status: 'wouldMove' | 'alreadyInTarget' | 'notFavorited';
+    }[];
+};
+
+function FavoriteMoveDetails({ preview }: { preview: FavoriteMovePreview }) {
+    const { t } = useTranslation();
+    const page = preview.kind === 'friend' ? 'friends' : `${preview.kind}s`;
+    return (
+        <div className="space-y-3">
+            <p className="text-sm font-medium">
+                {t('assistant.edit.favorite_move.summary', {
+                    target: preview.target.displayName || preview.target.name
+                })}
+            </p>
+            <ul className="space-y-2 text-sm">
+                {preview.items.map((item) => (
+                    <li key={item.entityId}>
+                        <span className="font-medium">
+                            {item.name || item.entityId}
+                        </span>
+                        <span className="text-muted-foreground ml-2">
+                            {item.status === 'wouldMove'
+                                ? t('assistant.edit.favorite_move.source', {
+                                      group:
+                                          item.source?.displayName ||
+                                          item.source?.name
+                                  })
+                                : t(
+                                      `assistant.edit.favorite_move.${item.status === 'alreadyInTarget' ? 'already_in_target' : 'not_favorited'}`
+                                  )}
+                        </span>
+                    </li>
+                ))}
+            </ul>
+            <p className="text-muted-foreground text-xs">
+                {t('assistant.edit.favorite_move.backup_hint')}
+            </p>
+            <Link
+                className="text-primary text-sm underline"
+                to={`/favorites/${page}?export=1`}
+                onClick={() => useAssistantChatStore.getState().setOpen(false)}
+            >
+                {t('assistant.edit.favorite_move.backup_open')}
+            </Link>
+        </div>
     );
 }
 
@@ -103,6 +160,11 @@ export function AssistantEditRequestCard({
         request.arguments && typeof request.arguments === 'object'
             ? Object.entries(request.arguments as Record<string, unknown>)
             : [];
+    const favoriteMove =
+        request.tool === 'favorite_move'
+            ? (request.arguments as { favoriteMove?: FavoriteMovePreview })
+                  ?.favoriteMove
+            : undefined;
 
     return (
         <section
@@ -193,7 +255,9 @@ export function AssistantEditRequestCard({
                     <p className="text-muted-foreground text-xs">
                         {t('assistant.edit.action_description')}
                     </p>
-                    {args.length ? (
+                    {favoriteMove ? (
+                        <FavoriteMoveDetails preview={favoriteMove} />
+                    ) : args.length ? (
                         <dl className="flex flex-col gap-1">
                             {args.map(([key, value]) => (
                                 <Row key={key} label={key}>

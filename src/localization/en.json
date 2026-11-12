@@ -231,7 +231,16 @@
                 "delete_reminder": "Delete a reminder",
                 "send_chatbox_message": "Send a message to the VRChat Chatbox",
                 "set_chatbox_afk": "Switch Chatbox AFK",
-                "update_chatbox": "Change Chatbox settings"
+                "update_chatbox": "Change Chatbox settings",
+                "favorite_move": "Move VRChat favorites between groups"
+            },
+            "favorite_move": {
+                "summary": "Move favorites to \"{target}\"",
+                "source": "From {group}",
+                "already_in_target": "Already in this group",
+                "not_favorited": "Not in your VRChat favorites; skipped",
+                "backup_hint": "A move removes each favorite before adding it to the new group. Back up your favorite ID list first.",
+                "backup_open": "Back up first"
             }
         },
         "guide": {
@@ -308,7 +317,9 @@
             "set_friend_note": "Edit friend note",
             "summarize_screenshots": "Rank screenshots",
             "summarize_social_period": "Summarize social activity",
-            "update_chatbox": "Change Chatbox settings"
+            "update_chatbox": "Change Chatbox settings",
+            "favorite_move": "Move VRChat favorites",
+            "get_vrchat_favorites": "List VRChat favorites"
         },
         "chart": {
             "my_playtime": "My playtime",
@@ -2978,7 +2989,7 @@
                 "base_url_invalid": "Enter a full http:// or https:// address.",
                 "models": "Models",
                 "models_placeholder": "Search detected models, or type one and press Enter",
-                "models_empty": "Nothing detected yet. Type a model name and press Enter to add it.",
+                "models_empty": "Detect models or add model IDs manually.",
                 "unusable": "No models yet, so this endpoint cannot be used.",
                 "key_saved": "Saved",
                 "key_empty": "Empty",
@@ -2989,7 +3000,7 @@
                 "clear_key": "Clear key",
                 "key_preserve_placeholder": "Leave blank to keep the saved key",
                 "saved": "Endpoint saved",
-                "saved_unusable": "Saved, but no models were found for this endpoint.",
+                "saved_unusable": "Saved without selected models. Select models to use this endpoint.",
                 "save_failed": "Failed to save endpoint",
                 "load_failed": "Failed to load endpoints",
                 "models_detected": "{count} models detected",
@@ -3002,7 +3013,17 @@
                 "headers": "Extra headers",
                 "headers_description": "Optional. One per line as Name: value. Sent with every request, for gateways that need custom auth.",
                 "show_key": "Show key",
-                "hide_key": "Hide key"
+                "hide_key": "Hide key",
+                "models_description": "Detect available models, then select the ones to use in the AI Assistant and translation.",
+                "models_search": "Search models",
+                "models_selected": "{count} models selected",
+                "models_select_visible": "Select shown",
+                "models_clear": "Clear selection",
+                "models_remove": "Remove {model}",
+                "models_no_matches": "No models match your search.",
+                "models_manual": "Add model IDs manually",
+                "models_manual_hint": "Separate IDs with commas. Press Enter or click Add. You can also save directly.",
+                "models_add": "Add"
             },
             "filter_placeholder": "Filter tools",
             "filter_empty": "No tools match",

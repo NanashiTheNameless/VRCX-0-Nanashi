@@ -21,7 +21,11 @@ A connection has a name, a **base URL**, an **API type**, an API key, and its mo
   Google Gemini, Vertex AI, Ollama, Cohere and Amazon Bedrock. Most providers, LM Studio,
   llama.cpp and vLLM speak OpenAI-compatible.
 - **Local or LAN models** (an `http://` or `192.168.x.x` address) work with no API key.
-- **Detect models** asks the server for its models; you can also type a model name.
+- **Detect models** asks the server for available models without selecting or saving them.
+  Search the list and tick the models you want, or use **Select shown** and **Clear selection**.
+  **Add model IDs manually** accepts IDs separated by commas or newlines; press Enter, click
+  **Add**, or save directly. Only selected IDs are saved for the AI Assistant and translation.
+  Detecting from a connection's row opens its editor. Canceling leaves saved selections alone.
 - **Extra headers** (one per line, `Name: value`) are sent with every request, for gateways
   that need their own authentication.
 - **Use VRCX-0-Nanashi Custom Proxy** sends AI requests through the proxy set under Settings >
@@ -87,11 +91,23 @@ the chat and waits for you:
   value**, explains what the change does, and shows where it is. Choose **Allow**, **Deny**,
   or **Show me the setting**. Showing the setting does not approve or apply the change.
 - **Other changes**: creating or deleting a reminder, adding a favorite (local or on VRChat),
+  moving VRChat favorites between groups,
   editing a friend note, and sending to the VRChat Chatbox (a message, AFK, or Chatbox
   settings). The card shows what it will do and the details.
 
 For other actions, choose **Approve** or **Decline**. It asks again for every change. If you decline, it accepts
 that and does not ask for the same change again.
+
+For favorite moves, the assistant first lists your VRChat favorite groups and their contents.
+It can move up to 10 favorites of one kind (worlds, friends, or avatars) to a group per call,
+using the group's tag or your name for it. The card previews each favorite's name and current
+group, the destination, and any favorites skipped because they are already there or are not
+on the account. **Back up first** opens the matching Favorites page's ID export dialog without
+approving the move. Every batch needs its own approval. VRChat has no move operation, so each
+favorite is removed and re-added. If adding fails, the app tries the original group; if that
+also fails, it saves the favorite in the local **Recovered** group. Stopping the chat before
+approval cancels the request. Once approved and started, the move finishes its recovery work
+even if the chat stops waiting.
 
 The assistant can request changes only for individually supported settings, with the same
 values and save actions as Settings. These include ordinary appearance and notification
@@ -159,5 +175,5 @@ entries and one-click installs use that name too.
 - **Connect AI tools** gives one-click setup or the config to paste for each client. Client
   configs contain the token in plain text, so share them only with tools you trust. **Rotate
   token** makes old configs stop working.
-- **Allow VRChat account writes** lets connected tools add favorites to your real VRChat
+- **Allow VRChat account writes** lets connected tools add or move favorites on your real VRChat
   account. It turns itself off every time the server starts.

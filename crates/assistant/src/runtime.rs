@@ -490,6 +490,7 @@ mod tests {
                 "change_setting",
                 "favorite_local",
                 "favorite_vrchat",
+                "favorite_move",
                 "set_friend_note",
                 "create_reminder",
                 "delete_reminder",

@@ -84,7 +84,7 @@ turn says so. If no tool can do what the user asks, say that plainly.
 
 const EDITS_PROMPT: &str = "\
 Edits:
-- change_setting, create_reminder, delete_reminder, favorite_local, favorite_vrchat, \
+- change_setting, create_reminder, delete_reminder, favorite_local, favorite_vrchat, favorite_move, \
 set_friend_note, send_chatbox_message, set_chatbox_afk and update_chatbox change the \
 user's data or act for them. Each call shows the user an approval card and \
 waits; only call one when the user asked for that change or clearly agreed to it, and \
@@ -110,7 +110,7 @@ show_in_settings.";
 /// why and how the user can turn them back on.
 const EDITS_DISABLED_PROMPT: &str = "\
 The user turned off edit requests in this chat, so change_setting, create_reminder, \
-delete_reminder, favorite_local, favorite_vrchat, set_friend_note and the Chatbox tools \
+delete_reminder, favorite_local, favorite_vrchat, favorite_move, set_friend_note and the Chatbox tools \
 (send_chatbox_message, set_chatbox_afk, update_chatbox) are not available to you. You can still find settings and show them with show_in_settings so the user can \
 change them, and list reminders with list_reminders. If the user asks for an edit, do not \
 say you cannot do it at all. Tell them edit requests are off for this chat and how to turn \

@@ -21,6 +21,7 @@ pub(crate) const APPROVE_EDIT: &str = "approve_edit";
 pub(crate) const EDIT_TOOLS: &[&str] = &[
     "favorite_local",
     "favorite_vrchat",
+    "favorite_move",
     "set_friend_note",
     "create_reminder",
     "delete_reminder",
@@ -242,6 +243,7 @@ mod tests {
         assert_eq!(names.len(), 5);
         assert!(is_edit_tool(CHANGE_SETTING));
         assert!(is_edit_tool("create_reminder"));
+        assert!(is_edit_tool("favorite_move"));
         assert!(is_edit_tool("send_chatbox_message"));
         assert!(!is_edit_tool(FIND_SETTINGS));
         assert!(!is_edit_tool(READ_DOCS));
