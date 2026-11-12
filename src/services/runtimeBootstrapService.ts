@@ -10,6 +10,7 @@ import { initializeReactRuntime } from './startupService';
 import { applyThemeMode } from './themeService';
 import { toast } from './toastService';
 import { startRuntimeUpdateLoop } from './updateLoopService';
+import { startUserGroupSync } from './userGroupSyncService';
 import { hydrateVrcStatus } from './vrcStatusService';
 
 type ShellState = ReturnType<typeof useShellStore.getState>;
@@ -51,6 +52,7 @@ function createReactRuntimeStartPromise() {
             cleanups.push(cleanup ?? null);
             cleanups.push(startRuntimeUpdateLoop());
             cleanups.push(startOverlayBadgeSync());
+            cleanups.push(startUserGroupSync());
             void hydrateVrcStatus();
             reactRuntimeCleanup = () => {
                 for (const entry of cleanups) {

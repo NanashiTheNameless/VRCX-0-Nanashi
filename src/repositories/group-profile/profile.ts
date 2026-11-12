@@ -163,8 +163,9 @@ export async function fetchGroupProfile({
 
 export async function getUserGroups({
     userId,
-    force = false
-}: Pick<GroupUserInput, 'userId'> & { force?: boolean }) {
+    force = false,
+    retry = entityQueryPolicies.groupCollection.retry
+}: Pick<GroupUserInput, 'userId'> & { force?: boolean; retry?: number }) {
     const normalizedUserId = normalizeEntityId(userId);
     if (!normalizedUserId) {
         throw new Error(
@@ -177,7 +178,7 @@ export async function getUserGroups({
             normalizedUserId,
             DEFAULT_VRCHAT_API_ENDPOINT
         ),
-        policy: entityQueryPolicies.groupCollection,
+        policy: { ...entityQueryPolicies.groupCollection, retry },
         force,
         queryFn: async () => {
             const response = unwrapVrchatGroupResponse<GroupUserGroupRow[]>(

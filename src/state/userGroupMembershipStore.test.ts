@@ -9,6 +9,7 @@ import {
     groupMembership,
     recordUserGroups,
     resetUserGroupMembershipStoreForTests,
+    setPinnedUserGroupIds,
     setTrackedGroupIds,
     trackUserGroupMembership,
     useUserGroupMembershipStore
@@ -79,6 +80,21 @@ describe('userGroupMembershipStore', () => {
         expect(groupMembership(entry(), VRCHAT_STAFF_GROUP_ID)).toBe(true);
         recordUserGroups(USER, []);
         expect(groupMembership(entry(), VRCHAT_STAFF_GROUP_ID)).toBe(false);
+    });
+
+    it('keeps current players when initializing more users than the cache holds', () => {
+        setPinnedUserGroupIds([USER]);
+        recordUserGroups(USER, [VRCHAT_STAFF_GROUP_ID]);
+        for (let index = 0; index < 2000; index++) {
+            recordUserGroups(`usr_${index}`, []);
+        }
+        expect(useUserGroupMembershipStore.getState().byUser.size).toBe(2000);
+        expect(groupMembership(entry(), VRCHAT_STAFF_GROUP_ID)).toBe(true);
+        expect(entry('usr_0')).toBeUndefined();
+
+        setPinnedUserGroupIds([]);
+        recordUserGroups('usr_next', []);
+        expect(entry()).toBeUndefined();
     });
 
     it('learns from user group lists loaded anywhere in the app', () => {

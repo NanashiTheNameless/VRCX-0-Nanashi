@@ -466,8 +466,13 @@ describe('UserBadges', () => {
 
     it('shows the staff badge for members of the VRChat staff group', () => {
         const memberId = 'usr_55555555-5555-5555-5555-555555555555';
-        recordUserGroups(memberId, [VRCHAT_STAFF_GROUP_ID]);
         render(<UserBadges userId={memberId} />);
+        expect(
+            screen.queryByRole('img', {
+                name: 'dialog.user.badges.vrchat_staff'
+            })
+        ).toBeNull();
+        act(() => recordUserGroups(memberId, [VRCHAT_STAFF_GROUP_ID]));
         expect(
             screen.getByRole('img', { name: 'dialog.user.badges.vrchat_staff' })
         ).toBeTruthy();

@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { VRCHAT_STAFF_GROUP_ID } from '@/shared/constants/user';
 
 // Group membership learned from users' own group lists, which the app loads
-// for profiles, the player list group picker and similar views. A user's own
+// at user initialization, for profiles and similar views. A user's own
 // list is the most reliable source, so it wins over any stored member list
 // of a group (those are often private, partial or stale). Nothing is fetched
 // here; lists are only read when something else in the app loads them.
@@ -41,6 +41,11 @@ export function groupMembership(
 }
 
 let trackedGroupIds = new Set<string>([VRCHAT_STAFF_GROUP_ID]);
+let pinnedUserIds = new Set<string>();
+
+export function setPinnedUserGroupIds(userIds: Iterable<string>) {
+    pinnedUserIds = new Set(userIds);
+}
 
 /** Groups whose membership is remembered across restarts. */
 export function setTrackedGroupIds(groupIds: Iterable<string>) {
@@ -149,7 +154,9 @@ export function recordUserGroups(userId: string, groupIds: readonly string[]) {
         if (byUser.size <= MAX_REMEMBERED_USERS) {
             break;
         }
-        byUser.delete(oldest);
+        if (!pinnedUserIds.has(oldest)) {
+            byUser.delete(oldest);
+        }
     }
     useUserGroupMembershipStore.setState({ byUser });
     scheduleCacheWrite();
@@ -226,5 +233,6 @@ export function resetUserGroupMembershipStoreForTests() {
     }
     trackedClient = null;
     trackedGroupIds = new Set([VRCHAT_STAFF_GROUP_ID]);
+    pinnedUserIds = new Set();
     useUserGroupMembershipStore.setState({ byUser: new Map() });
 }

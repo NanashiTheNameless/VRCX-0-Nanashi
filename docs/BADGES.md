@@ -58,8 +58,11 @@ and check mark icon, in white on VRChat blue, with a white border inside a thin 
 so it stays visible on light and dark themes. It does not animate. Its full name is **VRChat
 Staff**.
 
-Group membership is learned from each user's own group list as the app loads it; the app
-makes no extra requests to find staff.
+After sign-in, the app automatically loads each initialized user's group list, including
+friends, current instance players and users loaded later. Current players are checked first.
+Requests are paced and reuse cached lists. Staff badges update in the user list and wrist
+menu when those lists arrive; opening a profile is not required. A full instance can take
+time to finish loading, and failed requests do not count as proof of non-membership.
 
 ## Global badges
 
@@ -244,7 +247,7 @@ motion setting stops every badge animation, the developer badge's glitch include
 
 ## Privacy
 
-Badges make no requests of their own, apart from fetching a VRChat group's member list when
-you ask for it, and the signed global badge list download described above. Custom badges
-leave your PC only through Settings Sync when you have it on. Handing badges to the VR and
-desktop overlays stays on your PC.
+The app loads initialized users' group lists from VRChat automatically after sign-in.
+Badges also use a VRChat group's member list when you ask for it, and the signed global
+badge list download described above. Custom badges leave your PC only through Settings Sync
+when you have it on. Handing badges to the VR and desktop overlays stays on your PC.

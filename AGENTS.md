@@ -236,9 +236,12 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   (`UPSTREAM_DEVELOPER_USER_ID`) and VRChat Staff (`isVrchatStaff`, or membership of
   `VRCHAT_STAFF_GROUP_ID`). Global badges (below) follow them and are
   never collapsed either. Group membership comes from users' own group lists
-  as the app loads them (`src/state/userGroupMembershipStore.ts`), never from
-  extra requests, and outranks stored group member lists, which are often
-  private or incomplete. Their icons
+  loaded automatically for every initialized user by
+  `src/services/userGroupSyncService.ts` and tracked in
+  `src/state/userGroupMembershipStore.ts`. These cached, paced lookups start
+  after sign-in, including for current instance players and later arrivals,
+  without opening profiles. A user's own list outranks stored group member
+  lists, which are often private or incomplete. Their icons
   (`CodeXml`, `Diamond`, plus every `AWARD_ICONS` entry, all in
   `RESERVED_BADGE_ICONS`, plus their families as checked in
   `isReservedBadgeIcon`: any icon with Code, Braces, Brackets or Shield in its
@@ -270,7 +273,8 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   developer accounts. A user can have any number; when they would truncate the
   name they collapse (labels, then icons, then a folder tile) through
   `src/components/badges/badgeFit.ts`, never by wrapping. Badges make no
-  requests of their own beyond the VRChat group member fetch the user starts,
+  requests of their own beyond the automatic user group initialization above
+  and the VRChat group member fetch the user starts,
   leave the PC only through Settings Sync when it is on, and nothing is for
   sale: selling badges or themes needs the maintainer's decision first
   (VRChat Terms of Service section 12 restricts commercial use). The

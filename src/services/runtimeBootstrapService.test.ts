@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
     initializeReactRuntime: vi.fn(),
     applyThemeMode: vi.fn(),
     startRuntimeUpdateLoop: vi.fn(),
+    startUserGroupSync: vi.fn(),
     hydrateVrcStatus: vi.fn()
 }));
 
@@ -31,6 +32,10 @@ vi.mock('./updateLoopService', () => ({
 
 vi.mock('./vrcStatusService', () => ({
     hydrateVrcStatus: mocks.hydrateVrcStatus
+}));
+
+vi.mock('./userGroupSyncService', () => ({
+    startUserGroupSync: mocks.startUserGroupSync
 }));
 
 import {
@@ -74,6 +79,7 @@ describe('runtimeBootstrapService', () => {
         mocks.initializeReactRuntime.mockResolvedValue(undefined);
         mocks.bindRuntimeEvents.mockResolvedValue(undefined);
         mocks.startRuntimeUpdateLoop.mockReturnValue(undefined);
+        mocks.startUserGroupSync.mockReturnValue(undefined);
         mocks.hydrateVrcStatus.mockResolvedValue(undefined);
     });
 
@@ -133,9 +139,11 @@ describe('runtimeBootstrapService', () => {
         const initialization = deferred<void>();
         const eventCleanup = vi.fn();
         const updateLoopCleanup = vi.fn();
+        const groupSyncCleanup = vi.fn();
         mocks.initializeReactRuntime.mockReturnValue(initialization.promise);
         mocks.bindRuntimeEvents.mockResolvedValue(eventCleanup);
         mocks.startRuntimeUpdateLoop.mockReturnValue(updateLoopCleanup);
+        mocks.startUserGroupSync.mockReturnValue(groupSyncCleanup);
 
         const cleanupFirst = startReactRuntimeServices();
         const cleanupSecond = startReactRuntimeServices();
@@ -151,6 +159,8 @@ describe('runtimeBootstrapService', () => {
 
         expect(eventCleanup).toHaveBeenCalledTimes(1);
         expect(updateLoopCleanup).toHaveBeenCalledTimes(1);
+        expect(mocks.startUserGroupSync).toHaveBeenCalledTimes(1);
+        expect(groupSyncCleanup).toHaveBeenCalledTimes(1);
         expect(mocks.hydrateVrcStatus).toHaveBeenCalledTimes(1);
     });
 
