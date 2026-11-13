@@ -5704,7 +5704,7 @@
             }
         },
         "about": {
-            "tagline": "A fast, lightweight companion application for VRChat, built with Tauri and Rust.",
+            "tagline": "An Opinionated VRCX-0 Fork.",
             "contributors": "Contributors",
             "contributors_error": "Couldn't load the contributor list.",
             "thanks": "Every translation, test, bug report, and idea comes from the community. Thank you.",
