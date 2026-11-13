@@ -265,6 +265,9 @@ How your friends know each other. **Start Fetch** downloads mutual friends in th
 - Find a friend, filter by a minimum number of connections, hide friends from the graph, and tune
   the layout (iterations, spacing, curvature, community separation).
 
+If the graph fails while rebuilding, you can retry or leave the page even if
+closing the old graph also failed.
+
 ## Tools
 
 See [TOOLS.md](TOOLS.md).

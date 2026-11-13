@@ -76,6 +76,12 @@ Older exports and profile backups remain importable. The updater blocks all
 releases with a base version below 3.0.1, including older nightly builds.
 Autostart entries are refreshed when the updated app starts.
 
+## Windows startup
+
+If WebView2 reports that its data folder is still in use or a resource is busy,
+the app retries opening its window up to 10 times, half a second apart. This can
+help when restarting just after closing the app.
+
 ## Linux
 
 On first launch, the AppImage removes its build version from the standard download
