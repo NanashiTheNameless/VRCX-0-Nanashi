@@ -95,6 +95,9 @@ localTime) or as a **Discord** webhook message. It can also tell you when the ap
 restore a dropped background sign-in. **Send Test Webhook** checks it, and **Delivery status**
 shows the last success, the last failure and anything dropped.
 
+Discord notification titles include the user's name in the event text, even when the embed
+also shows it in the author line. Boop titles include the sender's name before the boop text.
+
 How delivery works: only HTTP 2xx counts as success, each attempt times out after 10 seconds,
 temporary failures are retried, pending deliveries are kept in memory only (and lost if the
 app restarts), and too many queued deliveries may be dropped. Webhook URLs often contain

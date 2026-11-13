@@ -30,7 +30,9 @@ A connection has a name, a **base URL**, an **API type**, an API key, and its mo
   that need their own authentication.
 - **Use VRCX-0-Nanashi Custom Proxy** sends AI requests through the proxy set under Settings >
   System > Login & Network; otherwise the system proxy applies.
-- The same connections are used by content translation.
+- The same connections are used by content translation. Translation follows the default
+  model in Settings > AI unless you assign it a separate model in the Content Translation
+  card under Settings > Integrations.
 
 API keys are stored on your PC. Requests go only to the connection you chose.
 

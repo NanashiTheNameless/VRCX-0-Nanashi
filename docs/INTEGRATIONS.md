@@ -25,9 +25,19 @@ own if Discord restarts or misses an update.
 
 Translates user bios and world descriptions when you ask (the **Translate** button in a user or
 world dialog), and messages in the Chatbox tool. Providers: Google, DeepL, or an
-OpenAI-compatible AI connection (see [AI_ASSISTANT.md](AI_ASSISTANT.md)) with an optional
-system prompt that must include `{targetLang}`. The text you translate is sent to that
-provider.
+**LLM endpoint** from your [AI connections](AI_ASSISTANT.md#ai-connections). The text you
+translate is sent to that provider.
+
+LLM translation follows the **default model** in Settings > AI unless you pick a model
+specifically for translation. The model picker lists the models selected in AI Connections;
+**Default model** switches back to following the AI setting. If no default is set, choose
+one there or pick a translation model before testing or saving. An assigned model stays
+assigned when its connection is deleted; the dialog warns you to pick another. Removing a
+model from a connection's selected list also shows a warning, but keeps the saved assignment.
+
+You can set a reasoning effort when the selected model supports it, and an optional system
+prompt that must include `{targetLang}`. **Test** tries the current draft without saving it;
+**Save** stores it.
 
 ## YouTube API
 

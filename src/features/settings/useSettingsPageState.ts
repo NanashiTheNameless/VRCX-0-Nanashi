@@ -199,7 +199,7 @@ export function useSettingsPageState() {
 
     const {
         discordPrefs,
-        fetchTranslationModels,
+        translationDefaultModel,
         integrationPrefs,
         integrationStatus,
         llmEndpoints,
@@ -403,7 +403,7 @@ export function useSettingsPageState() {
         desktopWidgetDialogOpen,
         discordPrefs,
         favoriteFriendGroupOptions,
-        fetchTranslationModels,
+        translationDefaultModel,
         handleCropInstancePrintsChange,
         handleGameLogDisabledChange,
         handleFeedPersistenceDisabledChange,

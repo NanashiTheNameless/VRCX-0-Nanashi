@@ -53,8 +53,7 @@ function createInput(
         hmdNotificationsDialogOpen: false,
         integrationStatus: {
             youtube: 'idle',
-            translation: 'idle',
-            models: 'idle'
+            translation: 'idle'
         },
         integrationPrefs: {
             youtubeAPI: false,
@@ -64,7 +63,6 @@ function createInput(
             translationAPIType: 'google',
             translationAPIKey: '',
             translationEndpointId: '',
-            translationAPIEndpoint: '',
             translationAPIModel: '',
             translationAPIPrompt: '',
             translationAPIReasoningEffort: ''
@@ -211,14 +209,13 @@ function createInput(
         tableMaxSizeError: '',
         tablePageSizesDialogOpen: false,
         testTranslationApiConfig: asyncCallback,
-        fetchTranslationModels: asyncCallback,
+        translationDefaultModel: null,
         translationApiDialogOpen: false,
         translationDraft: {
             bioLanguage: 'en',
             translationAPIType: 'google',
             translationAPIKey: '',
             translationEndpointId: '',
-            translationAPIEndpoint: '',
             translationAPIModel: '',
             translationAPIPrompt: '',
             translationAPIReasoningEffort: ''
