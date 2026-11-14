@@ -73,10 +73,12 @@ them and how to make your own.
 
 The Tools page groups helpers by kind:
 
-- **Images**: Screenshot (browse your VRChat photos and their details), Gallery (photos,
+- **Images**: Screenshot (browse your VRChat photos and their details, manage favorites,
+  export ZIPs, add frames and send photos to Discord through webhooks), Gallery (photos,
   profile icons and prints), Inventory (emojis, stickers, items and cosmetics).
-- **VRChat**: VRChat Config, Launch Options, Chatbox (show the time, what you are playing or
-  your own text in the in-game chatbox, or type and translate messages).
+- **VRChat**: VRChat Config, Launch Options, Chatbox (rotate status pages showing the time,
+  the song playing or your own text in the in-game chatbox, or type messages with optional
+  translation before sending). Chatbox is built in, so it needs no separate chatbox app.
 - **Automation**: App Launcher (start apps when VRChat starts) and Calendar (upcoming events
   from your groups).
 - **Groups**: My Groups (reorder, hide and leave groups) and Group Moderation (members, bans,
