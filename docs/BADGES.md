@@ -160,7 +160,8 @@ The rule editor reads as a sentence: "Show this badge for users who match **ALL*
   missing data, or an unverified flag does not match. Badges do not fetch profiles themselves.
   VRChat's friend list does not include age verification, so the app remembers the last value
   it saw for each friend (from a profile you opened or a live update) in its local database
-  and restores it after a restart. A newer observation always replaces the remembered one.
+  and restores it after a restart or reconnect, including when the app's window opens after
+  the background connection is ready. A newer observation always replaces the remembered one.
   This is kept per account on your PC only and is never synced. People outside your friends
   list can match once the app observes the required data, such as when you open their profile.
 - **Platform**: users last seen on PC, Android (Quest) or iOS.

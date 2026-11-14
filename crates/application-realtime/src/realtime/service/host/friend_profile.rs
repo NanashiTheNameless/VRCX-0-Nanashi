@@ -322,6 +322,71 @@ impl RealtimeHostRuntime {
         self.emit_user_cache_changes(changed);
     }
 
+    pub(super) fn fill_snapshot_friend_age_verification(
+        &self,
+        owner: &str,
+        endpoint: &str,
+        friends: &mut std::collections::HashMap<String, FriendRecord>,
+    ) {
+        let storage_endpoint = normalize_vrchat_api_endpoint(Some(endpoint));
+        if !self.deps.auth_scope.matches(owner, &storage_endpoint) {
+            return;
+        }
+        let ids: Vec<String> = friends.keys().cloned().collect();
+        let cached = self.user_facts.get_users(endpoint, &ids);
+        let cached_ids: std::collections::HashSet<&str> = cached
+            .iter()
+            .filter(|(_, details)| {
+                details.contains_key("ageVerified") && details.contains_key("ageVerificationStatus")
+            })
+            .map(|(id, _)| id.as_str())
+            .collect();
+        let missing: Vec<String> = ids
+            .into_iter()
+            .filter(|id| !cached_ids.contains(id.as_str()))
+            .collect();
+        if !missing.is_empty() {
+            match self.deps.stores.batch_writer.friend_profile_details_list(
+                &vrcx_0_core::OwnerId::new(owner),
+                &storage_endpoint,
+                &missing,
+            ) {
+                Ok(saved) => {
+                    for details in saved {
+                        let Some(friend) = details
+                            .get("id")
+                            .and_then(Value::as_str)
+                            .and_then(|id| friends.get_mut(id))
+                        else {
+                            continue;
+                        };
+                        for key in &["ageVerified", "ageVerificationStatus"] {
+                            if let Some(value) = details.get(*key) {
+                                friend
+                                    .extra
+                                    .entry(key.to_string())
+                                    .or_insert_with(|| value.clone());
+                            }
+                        }
+                    }
+                }
+                Err(error) => {
+                    tracing::warn!(error = %error, "Friend snapshot age verification restore failed");
+                }
+            }
+        }
+        for (id, details) in cached {
+            let Some(friend) = friends.get_mut(&id) else {
+                continue;
+            };
+            for key in &["ageVerified", "ageVerificationStatus"] {
+                if let Some(value) = details.get(*key) {
+                    friend.extra.insert(key.to_string(), value.clone());
+                }
+            }
+        }
+    }
+
     // VRChat's friend list carries none of the full-profile details, so the
     // last values observed for each friend are seeded as placeholders that
     // any live observation replaces.

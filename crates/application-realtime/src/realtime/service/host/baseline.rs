@@ -280,6 +280,11 @@ impl RealtimeHostRuntime {
                         apply_friend_number(user_id, record, &numbers);
                     }
                 }
+                self.fill_snapshot_friend_age_verification(
+                    &pending_snapshot.current_user_id,
+                    &pending_snapshot.endpoint,
+                    &mut pending_snapshot.friends_by_id,
+                );
                 return Ok(FriendBaselineSyncOutcome::accepted(
                     FriendBaselineResult {
                         accepted: true,
@@ -447,7 +452,12 @@ impl RealtimeHostRuntime {
         );
 
         Ok(match final_snapshot {
-            Some(snapshot) => {
+            Some(mut snapshot) => {
+                self.fill_snapshot_friend_age_verification(
+                    &snapshot.current_user_id,
+                    &snapshot.endpoint,
+                    &mut snapshot.friends_by_id,
+                );
                 FriendBaselineSyncOutcome::accepted(result, snapshot, friend_log_changed)
             }
             None => FriendBaselineSyncOutcome::rejected(result),

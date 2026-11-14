@@ -477,7 +477,13 @@ impl RealtimeHostRuntime {
     }
 
     pub fn friend_roster_snapshot(&self) -> Option<crate::realtime::RealtimeFriendRosterSnapshot> {
-        self.friends.roster_snapshot()
+        let mut snapshot = self.friends.roster_snapshot()?;
+        self.fill_snapshot_friend_age_verification(
+            &snapshot.current_user_id,
+            &snapshot.endpoint,
+            &mut snapshot.snapshot.friends_by_id,
+        );
+        Some(snapshot)
     }
 
     pub fn current_user_snapshot(&self) -> Option<serde_json::Value> {

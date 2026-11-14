@@ -2192,10 +2192,21 @@ fn friend_age_verification_survives_a_restart_without_friend_list_data() -> Resu
 
     // The friend list VRChat returns after a restart has no age fields.
     runtime.runtime().user_facts.clear();
-    runtime.sync_friend_baseline(
-        &active_session,
+    let outcome = runtime.runtime().sync_friend_snapshot_with_watermark(
+        active_session.clone(),
+        runtime.runtime().capture_friend_baseline_watermark()?,
         baseline(json!({"id": "usr_friend", "displayName": "Friend"})),
+        Default::default(),
     )?;
+    let snapshot = outcome.snapshot.unwrap();
+    assert_eq!(
+        snapshot.friends_by_id["usr_friend"].extra["ageVerified"],
+        json!(true)
+    );
+    assert_eq!(
+        snapshot.friends_by_id["usr_friend"].extra["ageVerificationStatus"],
+        json!("hidden")
+    );
     runtime.runtime().user_facts.clear();
     runtime.runtime().deps.event_bus.take_events_for_test();
     runtime.runtime().record_baseline_friends_into_cache();
@@ -2217,6 +2228,11 @@ fn friend_age_verification_survives_a_restart_without_friend_list_data() -> Resu
     assert_eq!(users.len(), 1, "one projection per friend");
     assert_eq!(users[0]["ageVerificationStatus"], json!("hidden"));
 
+    let snapshot = runtime.runtime().friend_roster_snapshot().unwrap();
+    let friend = &snapshot.snapshot.friends_by_id["usr_friend"];
+    assert_eq!(friend.extra["ageVerified"], json!(true));
+    assert_eq!(friend.extra["ageVerificationStatus"], json!("hidden"));
+
     // A live observation replaces the restored placeholder and is stored.
     runtime.runtime().user_facts.record_user(
         &json!({"id": "usr_friend", "ageVerified": true, "ageVerificationStatus": "18+"}),
@@ -2233,5 +2249,121 @@ fn friend_age_verification_survives_a_restart_without_friend_list_data() -> Resu
         .get_user(&active_session.endpoint, "usr_friend")
         .unwrap();
     assert_eq!(fact["ageVerificationStatus"], json!("18+"));
+    let snapshot = runtime.runtime().friend_roster_snapshot().unwrap();
+    assert_eq!(
+        snapshot.snapshot.friends_by_id["usr_friend"].extra["ageVerificationStatus"],
+        json!("18+")
+    );
+    runtime.runtime().record_user_profile(
+        &active_session.endpoint,
+        &json!({"id": "usr_friend", "ageVerified": false, "ageVerificationStatus": ""}),
+    );
+    let snapshot = runtime.runtime().friend_roster_snapshot().unwrap();
+    assert_eq!(
+        snapshot.snapshot.friends_by_id["usr_friend"].extra["ageVerified"],
+        json!(false)
+    );
+    assert_eq!(
+        snapshot.snapshot.friends_by_id["usr_friend"].extra["ageVerificationStatus"],
+        json!("")
+    );
+    Ok(())
+}
+
+#[test]
+fn friend_baseline_restores_saved_badge_details_before_transport_starts() -> Result<()> {
+    let (_dir, runtime, active_session) = runtime_with_active_session("badge-baseline-restore")?;
+    let owner = OwnerId::new(active_session.user_id.clone());
+    runtime
+        .runtime()
+        .deps
+        .stores
+        .batch_writer
+        .observe_friend_profile_details(
+            &owner,
+            &active_session.endpoint,
+            &[json!({
+                "id": "usr_friend",
+                "ageVerified": true,
+                "ageVerificationStatus": "18+"
+            })
+            .as_object()
+            .unwrap()
+            .clone()
+            .into()],
+        )?;
+    runtime
+        .runtime()
+        .state
+        .lock()
+        .unwrap()
+        .connection
+        .active_context = None;
+    let outcome = runtime.runtime().sync_friend_snapshot_with_watermark(
+        active_session,
+        Default::default(),
+        HashMap::from([(
+            "usr_friend".into(),
+            FriendBaselineEntry {
+                record: FriendRecord {
+                    id: "usr_friend".into(),
+                    ..Default::default()
+                },
+                presence: Default::default(),
+            },
+        )]),
+        Default::default(),
+    )?;
+    let snapshot = outcome.snapshot.unwrap();
+    assert_eq!(
+        snapshot.friends_by_id["usr_friend"].extra["ageVerified"],
+        json!(true)
+    );
+    assert_eq!(
+        snapshot.friends_by_id["usr_friend"].extra["ageVerificationStatus"],
+        json!("18+")
+    );
+    assert!(runtime
+        .runtime()
+        .user_facts
+        .get_user(&snapshot.endpoint, "usr_friend")
+        .is_none());
+
+    let mut friends = HashMap::from([(
+        "usr_friend".into(),
+        FriendRecord {
+            id: "usr_friend".into(),
+            extra: serde_json::from_value(json!({
+                "ageVerified": false,
+                "ageVerificationStatus": "hidden"
+            }))
+            .unwrap(),
+            ..Default::default()
+        },
+    )]);
+    runtime.runtime().fill_snapshot_friend_age_verification(
+        owner.as_str(),
+        &snapshot.endpoint,
+        &mut friends,
+    );
+    assert_eq!(friends["usr_friend"].extra["ageVerified"], json!(false));
+    assert_eq!(
+        friends["usr_friend"].extra["ageVerificationStatus"],
+        json!("hidden")
+    );
+
+    friends.get_mut("usr_friend").unwrap().extra.clear();
+    runtime.runtime().fill_snapshot_friend_age_verification(
+        "usr_other",
+        &snapshot.endpoint,
+        &mut friends,
+    );
+    assert!(friends["usr_friend"].extra.is_empty());
+    runtime.runtime().fill_snapshot_friend_age_verification(
+        owner.as_str(),
+        "https://other.example/api/1",
+        &mut friends,
+    );
+    assert!(friends["usr_friend"].extra.is_empty());
     Ok(())
 }
