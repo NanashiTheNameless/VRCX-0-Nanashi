@@ -3031,6 +3031,11 @@
             "chatbox": {
                 "title": "Chatbox",
                 "description": "Show the time, what you are playing and your own text in the in-game chatbox, or type and translate messages.",
+                "recommendation": {
+                    "title": "Recommended: VRCOSC",
+                    "description": "For a more capable chatbox, use VRCOSC. It offers chatbox animations, per-avatar profiles and a modular OSC system.",
+                    "open": "Get VRCOSC"
+                },
                 "save_failed": "Couldn't save Chatbox settings.",
                 "status": {
                     "off": "Off",

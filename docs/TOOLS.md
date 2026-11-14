@@ -93,7 +93,12 @@ auto-delete your oldest non-favorite prints on VRChat when you have more than a 
 
 ## Chatbox
 
-Shows information in VRChat's in-game chatbox over OSC, or sends messages you type.
+We recommend [VRCOSC](https://github.com/VolcanicArts/VRCOSC) for a more capable chatbox,
+with chatbox animations, per-avatar profiles and a modular OSC system. Tools > Chatbox
+shows this recommendation at the top, with a **Get VRCOSC** button that opens its GitHub page.
+
+The built-in Chatbox shows information in VRChat's in-game chatbox over OSC, or sends
+messages you type.
 
 - **Status pages**: build one or more pages of lines from text and values: the time, what you
   are playing (track, title, artist, with a maximum length), how long you have been playing,

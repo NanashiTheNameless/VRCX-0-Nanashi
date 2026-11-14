@@ -1,10 +1,14 @@
+import { ExternalLinkIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { PageBody, PageScaffold } from '@/components/layout/PageScaffold';
 import { ToolPageHeader } from '@/components/layout/ToolPageHeader';
 import { commands } from '@/platform/tauri/bindings';
+import { openExternalLink } from '@/services/entityMediaService';
 import { useChatboxStore } from '@/state/chatboxStore';
+import { Alert, AlertDescription, AlertTitle } from '@/ui/shadcn/alert';
 import { Badge } from '@/ui/shadcn/badge';
+import { Button } from '@/ui/shadcn/button';
 import { Spinner } from '@/ui/shadcn/spinner';
 
 import { chatboxStatusLabelKey } from './chatboxConfig';
@@ -42,6 +46,31 @@ export function ChatboxPage() {
         <PageScaffold className="chatbox-page flex-1">
             {header}
             <PageBody>
+                <Alert
+                    role="note"
+                    className="border-primary/30 bg-primary/5 shrink-0"
+                >
+                    <AlertTitle>
+                        {t('view.tools.chatbox.recommendation.title')}
+                    </AlertTitle>
+                    <AlertDescription className="flex flex-wrap items-center justify-between gap-3">
+                        <span className="min-w-0 flex-1 basis-64">
+                            {t('view.tools.chatbox.recommendation.description')}
+                        </span>
+                        <Button
+                            type="button"
+                            size="sm"
+                            onClick={() =>
+                                void openExternalLink(
+                                    'https://github.com/VolcanicArts/VRCOSC'
+                                )
+                            }
+                        >
+                            {t('view.tools.chatbox.recommendation.open')}
+                            <ExternalLinkIcon data-icon="inline-end" />
+                        </Button>
+                    </AlertDescription>
+                </Alert>
                 {config && meta ? (
                     <div className="min-h-0 flex-1 overflow-y-auto">
                         <div className="flex flex-col gap-3 pb-3">

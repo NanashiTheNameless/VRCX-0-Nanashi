@@ -78,7 +78,8 @@ The Tools page groups helpers by kind:
   profile icons and prints), Inventory (emojis, stickers, items and cosmetics).
 - **VRChat**: VRChat Config, Launch Options, Chatbox (rotate status pages showing the time,
   the song playing or your own text in the in-game chatbox, or type messages with optional
-  translation before sending). Chatbox is built in, so it needs no separate chatbox app.
+  translation before sending). For a more capable chatbox, we recommend
+  [VRCOSC](https://github.com/VolcanicArts/VRCOSC); the Chatbox page links to it.
 - **Automation**: App Launcher (start apps when VRChat starts) and Calendar (upcoming events
   from your groups).
 - **Groups**: My Groups (reorder, hide and leave groups) and Group Moderation (members, bans,

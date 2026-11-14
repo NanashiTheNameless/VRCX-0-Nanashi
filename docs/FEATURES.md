@@ -337,6 +337,11 @@ the result while wearing the headset.
 
 ## Notifications and media
 
+### VRCOSC is recommended for Chatbox
+
+Tools > Chatbox recommends [VRCOSC](https://github.com/VolcanicArts/VRCOSC) for a more
+capable chatbox, with a **Get VRCOSC** button that opens its GitHub page.
+
 ### Custom notification sounds
 
 Under Settings > Notifications, choose a built-in sound or an audio file and volume per event
