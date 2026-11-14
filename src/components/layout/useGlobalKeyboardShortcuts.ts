@@ -5,8 +5,11 @@ import { useLocation, useNavigate } from 'react-router';
 import { isTextEntryTarget } from '@/components/keyboard/keyboardShortcutGuards';
 import {
     dispatchGlobalShortcut,
+    findGlobalShortcut,
     useShortcutHandler
 } from '@/components/keyboard/shortcutDispatcher';
+import { FALLBACK_LOCALE_CODE } from '@/localization/index';
+import { setAppLanguagePreference } from '@/services/preferencesService';
 import { toast } from '@/services/toastService';
 import { toggleCommunityThemeLayersSuppressed } from '@/services/vrcx0CssLayerService';
 import {
@@ -62,6 +65,27 @@ export function useGlobalKeyboardShortcuts() {
                     : 'shortcuts.theme_safe_mode_off'
             )
         });
+    });
+
+    useShortcutHandler('reset-language', () => {
+        void setAppLanguagePreference(FALLBACK_LOCALE_CODE).then(
+            () => {
+                toast.add({
+                    type: 'info',
+                    title: t('shortcuts.language_reset', {
+                        lng: FALLBACK_LOCALE_CODE
+                    })
+                });
+            },
+            () => {
+                toast.add({
+                    type: 'error',
+                    title: t('shortcuts.language_reset_save_failed', {
+                        lng: FALLBACK_LOCALE_CODE
+                    })
+                });
+            }
+        );
     });
 
     useShortcutHandler('keyboard-shortcuts', () => {
@@ -142,6 +166,12 @@ export function useGlobalKeyboardShortcuts() {
             dispatchGlobalShortcut(event, isMacHost);
         }
 
+        function handleCaptureKeyDown(event: KeyboardEvent) {
+            if (findGlobalShortcut(event, isMacHost)?.capture) {
+                dispatchGlobalShortcut(event, isMacHost);
+            }
+        }
+
         function handleKeyUp(event: KeyboardEvent) {
             if (event.key !== primaryModifierKey) {
                 return;
@@ -159,11 +189,13 @@ export function useGlobalKeyboardShortcuts() {
             }
         }
 
+        window.addEventListener('keydown', handleCaptureKeyDown, true);
         window.addEventListener('keydown', handleKeyDown);
         window.addEventListener('keyup', handleKeyUp);
         window.addEventListener('blur', resetShortcutHints);
         document.addEventListener('visibilitychange', handleVisibilityChange);
         return () => {
+            window.removeEventListener('keydown', handleCaptureKeyDown, true);
             window.removeEventListener('keydown', handleKeyDown);
             window.removeEventListener('keyup', handleKeyUp);
             window.removeEventListener('blur', resetShortcutHints);

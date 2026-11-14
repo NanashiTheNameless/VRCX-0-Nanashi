@@ -8,6 +8,7 @@ import {
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { formatKeyboardShortcut } from '@/components/keyboard/KeyboardShortcut';
 import { FALLBACK_LOCALE_CODE, getLanguageName } from '@/localization/index';
 import { commands, type CustomLocaleEntry } from '@/platform/tauri/bindings';
 import {
@@ -21,6 +22,7 @@ import {
 import { setAppLanguagePreference } from '@/services/preferencesService';
 import { toast } from '@/services/toastService';
 import { useLlmEndpointsStore } from '@/state/llmEndpointsStore';
+import { useRuntimeStore } from '@/state/runtimeStore';
 import { useShellStore } from '@/state/shellStore';
 import { useUiTranslationJobStore } from '@/state/uiTranslationJobStore';
 import { Button } from '@/ui/shadcn/button';
@@ -56,6 +58,9 @@ function errorMessage(error: unknown): string {
 // Fork: manage user language files and translate the UI into new ones.
 export function SettingsCustomLanguagesCard() {
     const { t } = useTranslation();
+    const isMacHost = useRuntimeStore(
+        (state) => state.hostCapabilities.platform === 'macos'
+    );
     const endpoints = useLlmEndpointsStore((state) => state.endpoints);
     const loadEndpoints = useLlmEndpointsStore((state) => state.load);
     const activeLocale = useShellStore((state) => state.locale);
@@ -260,6 +265,16 @@ export function SettingsCustomLanguagesCard() {
                 </div>
             }
         >
+            <p className="text-muted-foreground text-sm">
+                {t('view.settings.custom_languages.reset_hint', {
+                    shortcut: formatKeyboardShortcut([
+                        isMacHost ? 'Meta' : 'Mod',
+                        'Alt',
+                        'Shift',
+                        'L'
+                    ])
+                })}
+            </p>
             <Field label={getLanguageName(FALLBACK_LOCALE_CODE)}>
                 <Button
                     type="button"

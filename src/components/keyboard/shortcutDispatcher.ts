@@ -95,7 +95,9 @@ export function findGlobalShortcut(event: KeyboardEvent, isMacHost: boolean) {
         const token = definition.keys.at(-1);
         return (
             token !== undefined &&
-            matchesKey(token, event.key) &&
+            (matchesKey(token, event.key) ||
+                (definition.code !== undefined &&
+                    definition.code === event.code)) &&
             matchesModifier(definition, 'Shift', event.shiftKey) &&
             matchesModifier(definition, 'Alt', event.altKey)
         );

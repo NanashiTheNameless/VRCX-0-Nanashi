@@ -86,7 +86,12 @@ Ctrl is Cmd on macOS. **Keyboard Shortcuts** (Ctrl+/) lists them all.
 | Ctrl+B           | Collapse or expand the navigation                                      |
 | Ctrl+Shift+B     | Hide or show the friends sidebar                                       |
 | Ctrl+Alt+Shift+T | Turn community themes off for this session (if a theme breaks the app) |
+| Ctrl+Alt+Shift+L | Reset the UI language to English and save that choice                  |
 | Left / Right     | Previous or next page in search results and tables                     |
+
+The language reset works anywhere in the app, including the login page, open menus,
+dialogs and text fields. Use it if a custom language is hard to read. It restores the
+built-in English UI immediately and saves English for the next launch.
 
 In screenshot details: Left and Right go to the previous and next screenshot, I shows or hides
 details, Space opens it full screen, F favorites it, Ctrl+C copies the image, and Delete deletes

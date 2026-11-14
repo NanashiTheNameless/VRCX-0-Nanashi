@@ -19,6 +19,8 @@ interface ShortcutDefinitionBase {
 export interface GlobalShortcutDefinition extends ShortcutDefinitionBase {
     scope: 'global';
     allowInTextEntry: boolean;
+    code?: string;
+    capture?: boolean;
     ignoredModifiers?: readonly ShortcutModifier[];
     allowRepeat?: boolean;
     alwaysPreventDefault?: boolean;
@@ -80,6 +82,17 @@ export const SHORTCUT_REGISTRY = [
         allowInTextEntry: false,
         group: 'general',
         labelKey: 'shortcuts.toggle_theme_safe_mode'
+    },
+    {
+        id: 'reset-language',
+        scope: 'global',
+        keys: ['Mod', 'Alt', 'Shift', 'L'],
+        code: 'KeyL',
+        capture: true,
+        allowInTextEntry: true,
+        allowRepeat: false,
+        group: 'general',
+        labelKey: 'shortcuts.reset_language'
     },
     {
         id: 'shortcut-hints',

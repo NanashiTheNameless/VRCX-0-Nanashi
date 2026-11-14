@@ -16,6 +16,12 @@ vi.mock('@/services/windowModeService', () => ({
 }));
 
 import {
+    registerLanguageCode,
+    unregisterLanguageCode
+} from '@/localization/locales';
+import configRepository from '@/repositories/configRepository';
+import { toast } from '@/services/toastService';
+import {
     setVrcxCssLayer,
     VRCX_CSS_LAYER_ATTR
 } from '@/services/vrcx0CssLayerService';
@@ -62,8 +68,118 @@ describe('useGlobalKeyboardShortcuts', () => {
 
     afterEach(() => {
         cleanup();
+        vi.restoreAllMocks();
         vi.useRealTimers();
-        useShellStore.setState({ shortcutHintsVisible: false });
+        useShellStore.setState({ shortcutHintsVisible: false, locale: 'en' });
+        unregisterLanguageCode('lol_us');
+    });
+
+    it.each(['/settings', '/login', '/tools/chatbox'])(
+        'restores and saves English from a menu input on %s',
+        async (pathname) => {
+            registerLanguageCode('lol_us');
+            useShellStore.setState({ locale: 'lol_us' });
+            const save = vi
+                .spyOn(configRepository, 'setString')
+                .mockResolvedValue(null);
+            vi.spyOn(configRepository, 'getString').mockResolvedValue('');
+            renderHook(() => useGlobalKeyboardShortcuts(), {
+                wrapper: ({ children }) => (
+                    <MemoryRouter initialEntries={[pathname]}>
+                        {children}
+                    </MemoryRouter>
+                )
+            });
+            const menu = document.createElement('div');
+            menu.setAttribute('role', 'menu');
+            menu.addEventListener('keydown', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+            });
+            const input = document.createElement('input');
+            menu.append(input);
+            document.body.append(menu);
+            input.focus();
+            const event = new KeyboardEvent('keydown', {
+                bubbles: true,
+                cancelable: true,
+                ctrlKey: true,
+                altKey: true,
+                shiftKey: true,
+                key: 'L'
+            });
+            try {
+                await act(async () => {
+                    input.dispatchEvent(event);
+                });
+                expect(event.defaultPrevented).toBe(true);
+                expect(useShellStore.getState().locale).toBe('en');
+                expect(document.documentElement.lang).toBe('en');
+                expect(save).toHaveBeenCalledExactlyOnceWith(
+                    'appLanguage',
+                    'en'
+                );
+            } finally {
+                menu.remove();
+            }
+        }
+    );
+
+    it('restores English on macOS with a non-Latin keyboard layout without handling repeats', async () => {
+        useShellStore.setState({ locale: 'lol_us' });
+        useRuntimeStore.setState((state) => ({
+            hostCapabilities: {
+                ...state.hostCapabilities,
+                platform: 'macos'
+            }
+        }));
+        const save = vi
+            .spyOn(configRepository, 'setString')
+            .mockResolvedValue(null);
+        vi.spyOn(configRepository, 'getString').mockResolvedValue('');
+        renderHook(() => useGlobalKeyboardShortcuts(), { wrapper });
+        const chord = {
+            bubbles: true,
+            cancelable: true,
+            metaKey: true,
+            altKey: true,
+            shiftKey: true,
+            key: '\u0414',
+            code: 'KeyL'
+        };
+        await act(async () => {
+            window.dispatchEvent(new KeyboardEvent('keydown', chord));
+            window.dispatchEvent(
+                new KeyboardEvent('keydown', { ...chord, repeat: true })
+            );
+        });
+        expect(useShellStore.getState().locale).toBe('en');
+        expect(save).toHaveBeenCalledExactlyOnceWith('appLanguage', 'en');
+    });
+
+    it('keeps English active and reports when saving the reset fails', async () => {
+        useShellStore.setState({ locale: 'lol_us' });
+        vi.spyOn(configRepository, 'setString').mockRejectedValue(
+            new Error('Disk full')
+        );
+        const notify = vi.spyOn(toast, 'add');
+        renderHook(() => useGlobalKeyboardShortcuts(), { wrapper });
+        await act(async () => {
+            window.dispatchEvent(
+                new KeyboardEvent('keydown', {
+                    cancelable: true,
+                    ctrlKey: true,
+                    altKey: true,
+                    shiftKey: true,
+                    key: 'L'
+                })
+            );
+        });
+        expect(useShellStore.getState().locale).toBe('en');
+        expect(notify).toHaveBeenCalledWith({
+            type: 'error',
+            title: 'shortcuts.language_reset_save_failed'
+        });
     });
 
     it('toggles the keyboard shortcuts dialog with Ctrl+/', () => {

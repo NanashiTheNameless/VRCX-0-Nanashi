@@ -1239,6 +1239,9 @@
         "toggle_details": "Show / hide details",
         "clear_selection": "Clear selection",
         "toggle_theme_safe_mode": "Temporarily disable community themes",
+        "reset_language": "Reset language to English",
+        "language_reset": "Language reset to English",
+        "language_reset_save_failed": "English restored for this session, but the language preference could not be saved.",
         "theme_safe_mode_on": "Community themes disabled for this session",
         "theme_safe_mode_off": "Community themes restored",
         "toggle_favorite": "Add / remove favorite"
@@ -5032,6 +5035,7 @@
             },
             "custom_languages": {
                 "header": "Languages",
+                "reset_hint": "Press {shortcut} anywhere in the app to restore English, including in menus and text fields.",
                 "description": "Extra UI languages loaded from JSON files in the data folder's locales directory. Each file uses the same keys as the built-in English file; missing strings stay in English. Support is only offered in English; custom languages are not officially supported.",
                 "reload": "Reload",
                 "open_folder": "Open folder",

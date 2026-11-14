@@ -26,6 +26,10 @@ describe('shortcut help derivation', () => {
                         labelKey: 'shortcuts.toggle_theme_safe_mode',
                         keys: ['Mod', 'Alt', 'Shift', 'T']
                     },
+                    {
+                        labelKey: 'shortcuts.reset_language',
+                        keys: ['Mod', 'Alt', 'Shift', 'L']
+                    },
                     { labelKey: 'shortcuts.hold_for_hints', keys: ['Mod'] }
                 ]
             },
