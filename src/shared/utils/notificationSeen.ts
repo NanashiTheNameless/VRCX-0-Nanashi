@@ -1,8 +1,6 @@
 import { DAY_MS } from '@/shared/constants/time';
 import { parseAbsoluteDateMs } from '@/shared/utils/displayTimeZone';
 
-import { getNotificationLifecycleBucket } from './notificationLifecycle';
-
 export const RECENT_WINDOW_MS = DAY_MS;
 const ACTION_REQUIRED_V1_TYPES = new Set<string>(['friendRequest']);
 
@@ -48,10 +46,4 @@ export function isUnseenNotification(
         notification.seen === false &&
         !isNotificationExpired(notification)
     );
-}
-
-export function shouldMarkSeenRemotely(
-    notification?: NotificationSeenLike | null
-): boolean {
-    return getNotificationLifecycleBucket(notification?.type) !== 'system';
 }

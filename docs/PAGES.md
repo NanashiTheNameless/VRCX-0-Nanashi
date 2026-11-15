@@ -225,8 +225,14 @@ and posts, moderation warnings and notices, instance closed, badges earned, VRC+
 gifts, avatar review results, and app (System) notifications.
 
 Depending on the type you can accept, decline (optionally with a message), invite, send a boop,
-mark as read, ignore locally or delete. Settings > Notifications > In-App Indicators >
-Notification View switches this page to a table layout.
+mark as read or delete. Friend requests offer **Ignore** instead of decline, which moves the
+request to Ignored Friend Requests on VRChat. Each action's tooltip, or the small line under it
+in a menu, says whether it **Runs on VRChat** or **Only changes VRCX-0-Nanashi's local data**.
+Mark as read (and mark all read) marks the notification read in the app first, then on VRChat;
+older invites and invite requests are marked expired instead. If VRChat cannot be reached the
+notification stays read in the app and a warning says it could not sync to VRChat.
+Settings > Notifications > In-App Indicators > Notification View switches this page to a table
+layout.
 
 ## My Avatars
 

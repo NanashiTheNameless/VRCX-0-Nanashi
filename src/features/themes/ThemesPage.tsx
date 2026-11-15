@@ -44,6 +44,9 @@ export function ThemesPage() {
         developerToolsAvailable,
         visibleSource,
         accentControlled,
+        themeControlsAccent,
+        accentOverride,
+        accentThemeName,
         customCssBadge,
         installTheme,
         disableTheme,
@@ -62,7 +65,8 @@ export function ThemesPage() {
         pickLocalThemeFolder,
         stopLocalPreview,
         updateThemeMode,
-        updateThemeColor
+        updateThemeColor,
+        updateAccentOverride
     } = useThemesController();
     const scrollRef = useRef<HTMLDivElement | null>(null);
     useRouteScrollMemory(scrollRef, 'themes');
@@ -113,8 +117,12 @@ export function ThemesPage() {
 
                         <AccentColorPicker
                             accentControlled={accentControlled}
+                            themeControlsAccent={themeControlsAccent}
+                            accentOverride={accentOverride}
+                            accentThemeName={accentThemeName}
                             themeColor={themeColor}
                             updateThemeColor={updateThemeColor}
+                            updateAccentOverride={updateAccentOverride}
                         />
 
                         <CustomCssSection

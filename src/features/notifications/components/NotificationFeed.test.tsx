@@ -53,7 +53,6 @@ it.each([
                 onAcceptFriendRequest: vi.fn(),
                 onAcceptRequestInvite: vi.fn(),
                 onHideNotification: vi.fn(),
-                onIgnoreNotificationLocally: vi.fn(),
                 onMarkSeen: vi.fn(),
                 onSendInviteResponseWithMessage: vi.fn(),
                 onSendNotificationResponse: vi.fn(),

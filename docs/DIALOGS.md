@@ -83,8 +83,12 @@ The developer's own user dialog always uses a black, white and red color scheme.
   vibes, its description, and its languages on the right, keeping the languages the host set
   apart from the languages of the people in the instance now. The filter menu narrows the
   list to instances **With friends**, can **Hide closed or full** ones, and filters by category,
-  vibes and languages when any instance has them; **Clear filters** resets it. You can pin a
-  world to the side panel from here to keep watching its instances.
+  vibes and languages when any instance has them; **Clear filters** resets it. The list puts
+  the instance you are in first, then instances with more of your friends, then ones you can
+  join (not full, and not age-gated unless you are age verified), then ones whose players
+  mostly speak a language on your profile, then the busiest. Languages show by name, with
+  short codes in table columns. You can pin a world to the side panel from here to keep
+  watching its instances.
 - **Screenshots** you took in this world.
 - **JSON**.
 

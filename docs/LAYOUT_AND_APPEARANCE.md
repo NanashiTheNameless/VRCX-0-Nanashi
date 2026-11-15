@@ -140,7 +140,9 @@ Open **Settings > Interface > Appearance**, or the **Themes** dialog, to change 
   strong) keeps text readable.
 - **Community themes**: browse the catalog (from GitHub), install and enable a theme, update it,
   or disable and delete it. A theme tested with an older app version is marked. Some themes
-  control the accent color themselves. Theme authors can preview a local theme folder that
+  control the accent color themselves; the accent picker then says which theme provides it,
+  and **Override theme accent** lets you use your own color anyway (it may clash with the
+  theme's colors). Theme authors can preview a local theme folder that
   reloads as they edit it.
 - **Custom CSS**: write your own CSS in the built-in editor, on top of any theme.
 - If a theme makes the app unusable, press Ctrl+Alt+Shift+T to turn community themes off for

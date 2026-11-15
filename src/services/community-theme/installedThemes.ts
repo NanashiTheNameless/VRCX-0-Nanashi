@@ -11,6 +11,7 @@ import {
 import { useCommunityThemeStore } from '@/state/communityThemeStore';
 
 import {
+    loadCommunityThemeAccentOverride,
     syncCommunityThemeAccentControl,
     syncCommunityThemeAppearanceControl
 } from './appearanceControl';
@@ -128,6 +129,7 @@ export async function initializeCommunityThemes(
     const store = useCommunityThemeStore.getState();
     store.setError(null);
     try {
+        await loadCommunityThemeAccentOverride();
         if (prefetchedProjection) {
             await applyCommunityThemeProjection(prefetchedProjection);
         } else {
