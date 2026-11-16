@@ -477,6 +477,11 @@ export function WorldDialogOverviewSection({
         world.recommendedCapacity && world.capacity
             ? `${world.recommendedCapacity}/${world.capacity}`
             : world.recommendedCapacity || world.capacity || '';
+    const occupantSplitText = `${t('dialog.world.instances.public_count', {
+        count: world.publicOccupants ?? 0
+    })} · ${t('dialog.world.instances.private_count', {
+        count: world.privateOccupants ?? 0
+    })}`;
     const platformText = platformRows
         .map((platform) => {
             const size = fileAnalysisSizeForPlatform(
@@ -627,6 +632,7 @@ export function WorldDialogOverviewSection({
                     label={t('dialog.world.info.capacity')}
                     value={capacityText}
                 />
+                <WorldOverviewMetric full value={occupantSplitText} />
                 <WorldOverviewMetric
                     label={t('dialog.world.info.favorites')}
                     value={favoritesText}

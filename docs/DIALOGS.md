@@ -74,21 +74,23 @@ The developer's own user dialog always uses a black, white and red color scheme.
 ### What it shows
 
 - **Info**: name, description (with **Translate Description**), your local note, author tags,
-  YouTube preview, players now, favorites, visits, capacity, heat and popularity, when it was
+  YouTube preview, players now (split into public and private), favorites, visits, capacity,
+  heat and popularity, when it was
   created, updated and published (and published to Labs), version, release status, platforms
   and restrictions, plus **your last visit**, **your visits**, **your time spent**, friends who
   visited and when they last did, the world's persistent data and its cache size on your PC.
 - **Instances**: the world's open instances with their players and friends in them. Each row
   leads with the room name when the instance has one, followed by its location, category and
   vibes, its description, and its languages on the right, keeping the languages the host set
-  apart from the languages of the people in the instance now. The filter menu narrows the
-  list to instances **With friends**, can **Hide closed or full** ones, and filters by category,
-  vibes and languages when any instance has them; **Clear filters** resets it. The list puts
+  apart from the languages of the people in the instance now. The **With friends** and
+  **Hide closed or full** toggles above the list narrow it, the filter menu (shown when any
+  instance has a category, vibes or languages) filters by those, and **Clear filters** resets
+  it. The refresh button reloads the world and its instances. The list puts
   the instance you are in first, then instances with more of your friends, then ones you can
   join (not full, and not age-gated unless you are age verified), then ones whose players
   mostly speak a language on your profile, then the busiest. Languages show by name, with
-  short codes in table columns. You can pin a world to the side panel from here to keep
-  watching its instances.
+  short codes in table columns. The pin button next to it pins the world to the side panel
+  to keep watching its instances.
 - **Screenshots** you took in this world.
 - **JSON**.
 

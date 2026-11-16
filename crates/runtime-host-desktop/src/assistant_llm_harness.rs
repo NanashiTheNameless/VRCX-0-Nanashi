@@ -96,9 +96,14 @@ struct ScratchDir(PathBuf);
 
 impl ScratchDir {
     fn new(kind: &str) -> Self {
-        let nonce = uuid::Uuid::new_v4();
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let sequence = NEXT.fetch_add(1, Ordering::Relaxed);
         Self(std::env::temp_dir().join(format!(
-            "vrcx-0-assistant-{kind}-{}-{nonce}",
+            "vrcx-0-assistant-{kind}-{}-{nonce}-{sequence}",
             std::process::id()
         )))
     }
