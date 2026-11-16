@@ -7,8 +7,8 @@ use crate::error::AppError;
 use crate::state::AppState;
 
 use super::types::{
-    ExternalApiAvatarSearchInput, ExternalApiImageInput, ExternalApiUrlInput,
-    ExternalApiYoutubeVideoInput,
+    ExternalApiAvatarSearchInput, ExternalApiCodeSearchInput, ExternalApiImageInput,
+    ExternalApiUrlInput, ExternalApiYoutubeVideoInput,
 };
 
 #[tauri::command]
@@ -35,6 +35,27 @@ pub async fn app__external_api_youtube_video_metadata_get(
         .runtime_host()
         .external_api()
         .youtube_video_metadata(input.video_id, input.api_key)
+        .await
+        .map_err(AppError::from)
+}
+
+/// Fork: a Brave Search for VRChat codes, with the user's own key.
+#[tauri::command]
+#[specta::specta]
+pub async fn app__external_api_code_search_get(
+    state: State<'_, AppState>,
+    input: ExternalApiCodeSearchInput,
+) -> Result<ExternalApiExecuteResponse, AppError> {
+    state
+        .runtime_host()
+        .external_api()
+        .code_search(
+            input.provider,
+            input.query,
+            input.api_key,
+            input.search_engine_id,
+            input.endpoint,
+        )
         .await
         .map_err(AppError::from)
 }

@@ -2775,6 +2775,24 @@
                 "info_push": "VRChat Announcements",
                 "info_push_description": "Read VRChat's help articles and the banners shown in the game"
             },
+            "inventory": {
+                "check_free_items": "Check free items",
+                "find_codes": "Find codes",
+                "find_codes_official": "Search VRChat's official posts",
+                "find_codes_web": "Search the web (often expired)",
+                "find_codes_in_app": "Search in the app",
+                "find_codes_settings": "Choose search engines",
+                "code_search": {
+                    "header": "Find Codes",
+                    "description": "Results from the search engine you chose in Settings. Words that look like codes are pointed out; many are expired, already used or not meant to be shared, and VRChat decides whether one works.",
+                    "search": "Search",
+                    "hint": "Search to see results.",
+                    "no_results": "No results.",
+                    "possible_codes": "Possible codes:",
+                    "redeem_confirm_title": "Redeem this code?",
+                    "redeem_confirm_description": "Send {code} to VRChat to redeem it? Only redeem codes that were shared publicly for everyone."
+                }
+            },
             "success": {
                 "media_item_deleted": "Media item deleted",
                 "print_deleted": "Print deleted"
@@ -3739,6 +3757,8 @@
                 "enable": "Enable the AI Assistant",
                 "enable_description": "Shows the AI Assistant button and chat. It can answer questions about your social history and help with settings. Off by default; nothing is sent to an AI service while disabled.",
                 "disallow_edit_requests_description": "Default for new conversations. The assistant normally asks before every change it wants to make (settings, reminders, favorites, notes) and waits for your approval. Turn this on to stop it from asking at all; it can still show you where settings are.",
+                "web_search": "Allow web search",
+                "web_search_description": "Lets the assistant use your AI service's own web search when you ask it to look something up, such as current VRChat redeem codes. Works with Anthropic, OpenAI Responses, Gemini and Vertex AI connections; your service runs the search and may charge for it. Off by default.",
                 "reminders": {
                     "title": "Reminders",
                     "description": "Reminders fire as \"Assistant reminder\" notifications (desktop, VR, sound) even with the AI Assistant closed. Create one here, or ask the assistant and approve its request.",
@@ -4060,6 +4080,28 @@
                         "running": "Running",
                         "error": "Error"
                     }
+                },
+                "code_search": {
+                    "header": "Code Search",
+                    "description": "Where Find codes in Tools > Inventory looks for VRChat redeem codes. No search engine is chosen until you pick one. Codes found on the web are often expired, already used or not meant to be shared; VRChat decides whether a code works.",
+                    "none": "None",
+                    "custom": "Custom address",
+                    "link_engine": "Search in the browser with",
+                    "link_engine_description": "Opens a search in your browser. VRCX-0-Nanashi sends nothing and reads nothing back.",
+                    "link_template": "Custom search address",
+                    "link_template_description": "A web address with {query} where the search words go.",
+                    "link_template_invalid": "Use an http or https address that contains {query}.",
+                    "provider": "Search in the app with",
+                    "provider_description": "Shows results inside the app and points out words that look like codes. Only your search words, and the key or server below, go to this service.",
+                    "provider_brave": "Brave Search API",
+                    "provider_google": "Google Programmable Search",
+                    "provider_searxng": "Your SearXNG server",
+                    "api_key": "API key",
+                    "api_key_description": "Your own key from the search service. Kept on this PC and not synced.",
+                    "google_engine_id": "Search engine ID",
+                    "google_engine_id_description": "The ID (cx) of your Programmable Search Engine, set to search the whole web.",
+                    "searxng_endpoint": "SearXNG address",
+                    "searxng_endpoint_description": "Your server's address. JSON results must be turned on in its settings."
                 },
                 "vrcx_ipc": {
                     "header": "VRCX IPC",
@@ -8583,10 +8625,13 @@
         },
         "redeem": {
             "header": "Redeem Code",
-            "description": "Enter your code to redeem",
+            "description": "Enter a code, or several separated by commas. They are redeemed one at a time, a few seconds apart.",
             "cancel": "Cancel",
             "redeem": "Redeem",
-            "success": "Code redeemed successfully"
+            "success": "Code redeemed successfully",
+            "too_many": "Enter at most {limit} codes at a time.",
+            "in_progress": "Redeeming {count} codes, about {seconds} seconds",
+            "summary": "Codes redeemed: {redeemed}. Failed: {failed}. Not tried: {skipped}."
         },
         "table_entries_settings": {
             "header": "Table Size Limits",

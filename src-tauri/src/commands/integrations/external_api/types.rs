@@ -22,6 +22,20 @@ pub struct ExternalApiYoutubeVideoInput {
 
 #[derive(Debug, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
+pub struct ExternalApiCodeSearchInput {
+    pub(crate) provider: vrcx_0_runtime_host_desktop::CodeSearchProvider,
+    #[serde(default)]
+    pub(crate) query: String,
+    #[serde(default)]
+    pub(crate) api_key: String,
+    #[serde(default)]
+    pub(crate) search_engine_id: String,
+    #[serde(default)]
+    pub(crate) endpoint: String,
+}
+
+#[derive(Debug, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct ExternalApiUrlInput {
     #[serde(default)]
     pub(crate) url: String,

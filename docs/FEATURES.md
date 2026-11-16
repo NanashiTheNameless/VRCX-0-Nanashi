@@ -205,6 +205,10 @@ are not read from the file, and a file that is not one of these databases is ref
   instance announcements, the megaphone button next to the instance shows a message (and
   optionally an image) to everyone there.
 - **VRChat Announcements** (Tools > Other): VRChat's help articles and in-game banners.
+- **Find codes** (Tools > Inventory): searches for VRChat redeem codes with the search engines
+  you choose in Settings > Integrations > Code Search (none by default), in your browser or
+  inside the app, and the AI Assistant can search the web for them when **Allow web search** is
+  on. **Redeem** takes several codes at once, redeemed one at a time with a pause between.
 - **Free store items** (Settings > Notifications > In-App Indicators), off by default: checks
   the VRChat store every 3 hours, notifies you through your notification channels, and offers
   to claim free items you do not own yet. **Check now** looks right away. Nothing is claimed

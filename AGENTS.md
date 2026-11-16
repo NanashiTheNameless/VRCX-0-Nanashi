@@ -213,6 +213,17 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   `merge_profile_database` and `forget_vrcx_world_data` (client edit tools in `EDIT_TOOLS`, run in
   `src/features/assistant/assistantVrcxTools.ts` only after Approve). Reading
   world data and IPC custom tags needs no approval; that text is untrusted.
+- **Finding redeem codes** - `src/services/codeSearchService.ts`,
+  `src/components/economy/` (Find codes, Code Search dialog),
+  `ExternalApiScope::CodeSearch`, Settings > Integrations > Code Search, and
+  the assistant's **Allow web search** (`assistantWebSearch`,
+  `supports_web_search` in `crates/assistant/src/endpoints.rs`). No search
+  engine is chosen by default: browser links and in-app search do nothing
+  until the user picks one, and nothing is searched in the background. Keep
+  `codeSearch*` keys out of Settings Sync. Web search uses only the AI
+  service's own tool, is off by default and is changed manually. Found codes
+  are never redeemed without the user confirming; multi-code redeem stays
+  sequential with a pause between codes and stops on a 429.
 - **Adoption count** - `crates/runtime-host-desktop/src/adoption_census.rs`,
   `ExternalApiScope::AdoptionCensus` in `crates/contracts/src/external_api.rs`,
   the card at the bottom of Settings > Advanced. The only thing the app

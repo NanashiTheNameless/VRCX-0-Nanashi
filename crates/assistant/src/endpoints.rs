@@ -29,6 +29,19 @@ const TRANSLATION_API_ENDPOINT_CONFIG_KEY: &str = "translationAPIEndpoint";
 const TRANSLATION_API_KEY_CONFIG_KEY: &str = "translationAPIKey";
 const TRANSLATION_API_MODEL_CONFIG_KEY: &str = "translationAPIModel";
 const ASSISTANT_REASONING_EFFORT_CONFIG_KEY: &str = "assistantReasoningEffort";
+const ASSISTANT_WEB_SEARCH_CONFIG_KEY: &str = "assistantWebSearch";
+
+/// Fork: services with a web search tool of their own that the assistant can
+/// offer when the user allows it.
+pub fn supports_web_search(api_kind: LlmApiKind) -> bool {
+    matches!(
+        api_kind,
+        LlmApiKind::Anthropic
+            | LlmApiKind::OpenaiResponses
+            | LlmApiKind::Gemini
+            | LlmApiKind::VertexAi
+    )
+}
 const DEFAULT_TRANSLATION_SYSTEM_PROMPT: &str = "\
 Translate the text in the user message into {targetLang}. Keep line breaks, emoji, URLs, \
 @handles and names as written. If the text is already in {targetLang}, return it \
@@ -404,6 +417,7 @@ impl EndpointStore {
                 input.reasoning_effort.as_deref().unwrap_or(""),
             ),
             forbid_tool_calls: false,
+            web_search: false,
         };
         Ok(client
             .complete_chat(
@@ -473,6 +487,19 @@ impl EndpointStore {
         self.config
             .set_string(ASSISTANT_REASONING_EFFORT_CONFIG_KEY, &value)?;
         Ok(value)
+    }
+
+    /// Off by default.
+    pub fn assistant_web_search(&self) -> Result<bool, AssistantError> {
+        self.config
+            .get_bool(ASSISTANT_WEB_SEARCH_CONFIG_KEY, false)
+            .map_err(AssistantError::from)
+    }
+
+    pub fn set_assistant_web_search(&self, enabled: bool) -> Result<bool, AssistantError> {
+        self.config
+            .set_bool(ASSISTANT_WEB_SEARCH_CONFIG_KEY, enabled)?;
+        Ok(enabled)
     }
 
     fn explicit_proxy_url(&self) -> Result<Option<&str>, AssistantError> {

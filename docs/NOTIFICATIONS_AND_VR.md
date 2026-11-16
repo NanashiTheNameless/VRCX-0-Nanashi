@@ -65,8 +65,8 @@ notification (**Free store items**) through your notification channels, so you s
 app is minimized or you are in VR; turn it off per channel in each channel's filters like any
 other notification type. **Claim All** adds them to
 your account; nothing is claimed before that. Items VRChat refuses are not offered again, and
-**Don't check for free items again** turns the setting off. **Check now**, next to the switch,
-looks once right away, even while the setting is off, and lists every free item you do not own
+**Don't check for free items again** turns the setting off. **Check now**, next to the switch
+(also **Check free items** in Tools > Inventory), looks once right away, even while the setting is off, and lists every free item you do not own
 yet, including ones offered before.
 
 ## Do Not Disturb

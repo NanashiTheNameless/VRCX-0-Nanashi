@@ -1,5 +1,11 @@
 import { refreshInventoryBundles } from '@/services/inventoryBundleService';
 import {
+    parseRedeemCodes,
+    REDEEM_CODE_DELAY_MS,
+    REDEEM_CODE_LIMIT,
+    redeemCodesInTurn
+} from '@/services/redeemCodeService';
+import {
     mergeCurrentUserMediaFields,
     profileMediaFileUrl,
     profileMediaUpdate,
@@ -231,8 +237,17 @@ export function useGalleryInventoryActions({
             confirmText: t('prompt.redeem.redeem'),
             cancelText: t('prompt.redeem.cancel')
         });
-        const code = result.value?.trim();
-        if (!result.ok || !code) {
+        const codes = parseRedeemCodes(result.value ?? '');
+        if (!result.ok || !codes.length) {
+            return;
+        }
+        if (codes.length > REDEEM_CODE_LIMIT) {
+            toast.add({
+                type: 'error',
+                title: t('prompt.redeem.too_many', {
+                    limit: REDEEM_CODE_LIMIT
+                })
+            });
             return;
         }
         if (!isRuntimeAuthTarget(authTarget)) {
@@ -240,12 +255,67 @@ export function useGalleryInventoryActions({
         }
         setMutatingKey('inventory:redeem');
         try {
-            await mediaRepository.redeemReward(code);
-            if (isRuntimeAuthTarget(authTarget)) {
+            if (codes.length > 1) {
                 toast.add({
-                    type: 'success',
-                    title: t('prompt.redeem.success')
+                    type: 'info',
+                    title: t('prompt.redeem.in_progress', {
+                        count: codes.length,
+                        seconds: Math.ceil(
+                            ((codes.length - 1) * REDEEM_CODE_DELAY_MS) / 1000
+                        )
+                    })
                 });
+            }
+            // One at a time with a pause between, and only while the same
+            // account stays signed in.
+            const outcomes = await redeemCodesInTurn(
+                codes,
+                (code) => mediaRepository.redeemReward(code),
+                { shouldStop: () => !isRuntimeAuthTarget(authTarget) }
+            );
+            if (!isRuntimeAuthTarget(authTarget)) {
+                return;
+            }
+            const redeemed = outcomes.filter(
+                (outcome) => outcome.status === 'redeemed'
+            );
+            const failed = outcomes.filter(
+                (outcome) => outcome.status === 'failed'
+            );
+            const skipped = outcomes.filter(
+                (outcome) => outcome.status === 'skipped'
+            );
+            if (codes.length === 1) {
+                toast.add(
+                    redeemed.length
+                        ? { type: 'success', title: t('prompt.redeem.success') }
+                        : {
+                              type: 'error',
+                              title:
+                                  (failed[0]?.status === 'failed' &&
+                                      failed[0].error) ||
+                                  t('view.tools.toast.failed_to_redeem_reward')
+                          }
+                );
+            } else {
+                toast.add({
+                    type:
+                        failed.length || skipped.length ? 'warning' : 'success',
+                    title: t('prompt.redeem.summary', {
+                        redeemed: redeemed.length,
+                        failed: failed.length,
+                        skipped: skipped.length
+                    }),
+                    description: failed
+                        .map((outcome) =>
+                            outcome.status === 'failed'
+                                ? `${outcome.code}: ${outcome.error}`
+                                : ''
+                        )
+                        .join('\n')
+                });
+            }
+            if (redeemed.length) {
                 await refreshInventory();
             }
         } catch (error) {

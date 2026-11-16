@@ -134,7 +134,7 @@ impl LlmClient {
         messages: &[ChatMessage],
         _options: &LlmRequestOptions,
     ) -> Result<String, LlmError> {
-        let body = gemini_body(messages, &[]);
+        let body = gemini_body(messages, &[], false);
         let url = format!(
             "{}/{}:generateContent",
             self.base_url,
@@ -174,13 +174,17 @@ impl LlmClient {
         &self,
         messages: &[ChatMessage],
         tools: &[ToolDefinition],
-        _options: &LlmRequestOptions,
+        options: &LlmRequestOptions,
         mut on_text: F,
     ) -> Result<AssistantTurn, LlmError>
     where
         F: FnMut(&str),
     {
-        let body = gemini_body(messages, tools);
+        let body = gemini_body(
+            messages,
+            tools,
+            options.web_search && !options.forbid_tool_calls,
+        );
         let url = format!(
             "{}/{}:streamGenerateContent?alt=sse",
             self.base_url,
@@ -210,7 +214,11 @@ impl LlmClient {
     }
 }
 
-pub(super) fn gemini_body(messages: &[ChatMessage], tools: &[ToolDefinition]) -> Value {
+pub(super) fn gemini_body(
+    messages: &[ChatMessage],
+    tools: &[ToolDefinition],
+    web_search: bool,
+) -> Value {
     let mut system = Vec::new();
     let mut tool_names_by_id = std::collections::HashMap::new();
     let mut contents: Vec<(String, Vec<Value>)> = Vec::new();
@@ -283,20 +291,25 @@ pub(super) fn gemini_body(messages: &[ChatMessage], tools: &[ToolDefinition]) ->
     if !system.is_empty() {
         body.insert("systemInstruction".into(), json!({ "parts": system }));
     }
+    let mut tool_list = Vec::new();
     if !tools.is_empty() {
-        body.insert(
-            "tools".into(),
-            json!([{
-                "functionDeclarations": tools
-                    .iter()
-                    .map(|tool| json!({
-                        "name": tool.name,
-                        "description": tool.description,
-                        "parameters": sanitize_schema(&tool.parameters),
-                    }))
-                    .collect::<Vec<_>>()
-            }]),
-        );
+        tool_list.push(json!({
+            "functionDeclarations": tools
+                .iter()
+                .map(|tool| json!({
+                    "name": tool.name,
+                    "description": tool.description,
+                    "parameters": sanitize_schema(&tool.parameters),
+                }))
+                .collect::<Vec<_>>()
+        }));
+    }
+    if web_search {
+        // Grounding with Google Search; Google runs it and cites sources.
+        tool_list.push(json!({ "google_search": {} }));
+    }
+    if !tool_list.is_empty() {
+        body.insert("tools".into(), Value::Array(tool_list));
     }
     Value::Object(body)
 }
@@ -458,7 +471,7 @@ mod tests {
             }),
         }];
 
-        let body = gemini_body(&messages, &tools);
+        let body = gemini_body(&messages, &tools, false);
 
         assert_eq!(body["systemInstruction"]["parts"][0]["text"], "Be brief");
         assert_eq!(body["contents"][1]["role"], "model");
@@ -520,7 +533,7 @@ mod tests {
             ChatMessage::tool("call_1", "{}"),
         ];
 
-        let body = gemini_body(&messages, &[]);
+        let body = gemini_body(&messages, &[], false);
 
         let parts = &body["contents"][1]["parts"];
         assert_eq!(parts[0]["thoughtSignature"], "EvcCCvQ");

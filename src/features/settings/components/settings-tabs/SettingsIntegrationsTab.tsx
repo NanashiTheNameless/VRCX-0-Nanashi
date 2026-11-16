@@ -9,6 +9,7 @@ import { useSettingsPageSection } from '../../SettingsPageStateContext';
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
+import { CodeSearchSettingsGroup } from './CodeSearchSettingsGroup';
 import { IntegrationApiSettingsGroup } from './IntegrationApiSettingsGroup';
 import { VrcxIpcSettingsGroup } from './VrcxIpcSettingsGroup';
 import { VrcxWorldDataSettingsGroup } from './VrcxWorldDataSettingsGroup';
@@ -331,6 +332,8 @@ export function SettingsIntegrationsTab() {
             <VrcxIpcSettingsGroup />
 
             <VrcxWorldDataSettingsGroup />
+
+            <CodeSearchSettingsGroup />
         </SettingsTabContent>
     );
 }

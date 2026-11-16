@@ -14,7 +14,20 @@ top of the page, or pinned to the left navigation as its own item.
   the image quality.
 - **Gallery**: your VRChat photos, profile icons and prints. Upload (Ctrl+V pastes an image),
   crop, select and delete.
-- **Inventory**: your emojis, stickers, items and cosmetics.
+- **Inventory**: your emojis, stickers, items and cosmetics. **Redeem** takes a code VRChat
+  gave you and adds its item. **Check free items** looks at the VRChat store once and offers to
+  claim free items you do not own yet, like **Check now** in Settings (see
+  [NOTIFICATIONS_AND_VR.md](NOTIFICATIONS_AND_VR.md#free-store-items)). Items that need a code
+  are not in the store's list; use **Redeem** for those. **Find codes** looks for codes on the
+  web with the search engines you choose in Settings > Integrations > Code Search; until you
+  choose one it only offers to open that setting. It can open a search in your browser (of
+  VRChat's official posts, or the whole web), or search inside the app and point out words that
+  look like codes, with **Copy** and **Redeem** (which asks first). Codes found on the web are
+  often expired, already used or not meant to be shared; VRChat decides whether one works. You
+  can also ask the AI Assistant to search the web for codes when **Allow web search** is on in
+  Settings > AI. **Redeem** takes several codes at once, separated by commas; they are redeemed
+  one at a time, 3 seconds apart, at most 20 at a time, and it stops if VRChat says too many
+  requests.
 
 The **Screenshot Helper** (Settings > Media) writes the world, instance and players into each
 new screenshot's metadata, can rename the file to include the world, and can copy the new

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { FreeStoreItemCheckButton } from '@/components/economy/FreeStoreItemCheckButton';
 import type { NotificationLayout } from '@/state/shellStore';
 import {
     Select,
@@ -14,7 +15,6 @@ import { Switch } from '@/ui/shadcn/switch';
 import { SETTINGS_DEFAULT_VALUES } from '../../settingsFieldState';
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
-import { FreeStoreItemCheckButton } from './FreeStoreItemCheckButton';
 
 type SettingsNotificationsInAppCardProps = {
     prefs: {

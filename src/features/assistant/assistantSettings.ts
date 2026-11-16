@@ -166,6 +166,7 @@ function lockedSettingReason(entry: SettingsManifestEntry): string {
     switch (entry.id) {
         case 'ai.assistant.enabled':
         case 'ai.assistant.disallow-edit-requests':
+        case 'ai.assistant.web-search':
         case 'ai.mcp.enabled':
         case 'ai.mcp.allow-lan':
         case 'ai.mcp.allow-vrchat-writes':
@@ -184,6 +185,12 @@ function lockedSettingReason(entry: SettingsManifestEntry): string {
         case 'integrations.youtube.api-key':
         case 'integrations.api.port':
         case 'integrations.api.token':
+        case 'integrations.code-search.link-engine':
+        case 'integrations.code-search.link-template':
+        case 'integrations.code-search.provider':
+        case 'integrations.code-search.api-key':
+        case 'integrations.code-search.google-engine-id':
+        case 'integrations.code-search.searxng-endpoint':
         case 'integrations.remote-database.enabled':
         case 'integrations.remote-database.providers':
         case 'notifications.webhook.url':

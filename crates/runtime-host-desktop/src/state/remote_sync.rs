@@ -306,6 +306,7 @@ fn syncable_app_setting(key: &str) -> bool {
         "bounds",
         "branch",
         "census",
+        "codesearch",
         "cookie",
         "credential",
         "databaseversion",
@@ -1879,6 +1880,7 @@ mod tests {
         assert!(!syncable_app_setting("config:vrcx_dtTimeZone"));
         assert!(!syncable_app_setting("config:vrcx_vrcxipcpipename"));
         assert!(!syncable_app_setting("config:vrcx_vrcxworlddataport"));
+        assert!(!syncable_app_setting("config:vrcx_codesearchprovider"));
         assert!(syncable_app_setting("config:vrcx_theme"));
     }
 

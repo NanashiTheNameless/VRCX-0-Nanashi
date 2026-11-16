@@ -12,6 +12,8 @@ import {
 import { Fragment } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { FindRedeemCodesMenu } from '@/components/economy/FindRedeemCodesMenu';
+import { FreeStoreItemCheckButton } from '@/components/economy/FreeStoreItemCheckButton';
 import { FileDropOverlay } from '@/components/file-drop/FileDropOverlay';
 import {
     EmptyState,
@@ -421,6 +423,10 @@ export function InventoryPage() {
                             <GiftIcon data-icon="inline-start" />
                             {t('dialog.gallery_icons.redeem')}
                         </Button>
+                        <FindRedeemCodesMenu />
+                        <FreeStoreItemCheckButton
+                            label={t('view.tools.inventory.check_free_items')}
+                        />
                     </>
                 }
             />

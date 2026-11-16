@@ -147,6 +147,21 @@ Endpoints (all `GET`, answering VRCX's `{ ok, error, data, statusCode, connectio
 `/vrcx/data/lasterror`, `/vrcx/data/settings?set=externalReads&value=` and `/vrcx/status`. `get`,
 `getall` and `getbulk` take `world=` to read another world that allows it.
 
+## Code Search
+
+Settings > Integrations > Code Search chooses where **Find codes** (Tools > Inventory) looks for
+VRChat redeem codes. Nothing is chosen by default, and nothing is searched until you pick an
+engine.
+
+- **Search in the browser with**: DuckDuckGo, Google, Bing, Brave Search, Startpage, Ecosia, or a
+  custom address with `{query}` where the words go. This only opens your browser.
+- **Search in the app with**: the Brave Search API or Google Programmable Search with your own
+  key (and, for Google, your search engine ID), or your own SearXNG server with JSON results
+  turned on. Only the search words, and that key or server, go to the service. Results show in
+  the app with words that look like codes pointed out.
+
+These settings stay on this PC and are not included in Settings Sync.
+
 ## MCP server
 
 Under Settings > AI. Lets external AI tools read your local data. See

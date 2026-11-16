@@ -66,6 +66,16 @@ API keys are stored on your PC. Requests go only to the connection you chose.
 - About the app: "where do I turn on HMD notifications", "what does the glitchy red badge
   mean", "where is the refresh friends profile button", "make the tables compact".
 
+## Web search
+
+**Allow web search** (Settings > AI) is off by default. When it is on and your connection is
+Anthropic, OpenAI Responses, Gemini or Vertex AI, the assistant can use that service's own web
+search when you ask it to look something up, such as current VRChat redeem codes. Your AI
+service runs the search (it may charge for it), and the assistant says where each finding came
+from. Codes found on the web may be expired, used up or not meant to be shared; redeem them
+yourself in Tools > Inventory > Redeem. Other connections do not offer web search. Turning it on
+cannot be done by the assistant.
+
 ## Help with the app
 
 - **Docs**: the assistant reads every doc in the app's Docs page and answers from them, and can

@@ -275,6 +275,7 @@ fn chat_request_body_omits_reasoning_when_effort_is_empty() {
     let options = LlmRequestOptions {
         reasoning_effort: Some(String::new()),
         forbid_tool_calls: false,
+        web_search: false,
     };
     let body = ChatRequestBody {
         model: "m",
@@ -295,6 +296,7 @@ fn streaming_chat_request_body_includes_reasoning_effort_verbatim() {
     let options = LlmRequestOptions {
         reasoning_effort: Some("xhigh".into()),
         forbid_tool_calls: false,
+        web_search: false,
     };
     let body = ChatRequestBody {
         model: "m",
@@ -728,6 +730,7 @@ async fn stream_chat_retries_without_reasoning_when_provider_rejects_it() {
     let options = LlmRequestOptions {
         reasoning_effort: Some("high".into()),
         forbid_tool_calls: false,
+        web_search: false,
     };
     let tools = [ToolDefinition {
         name: "lookup".into(),
@@ -788,6 +791,7 @@ fn responses_body_converts_chat_history_and_resends_reasoning() {
     let options = LlmRequestOptions {
         reasoning_effort: Some("high".into()),
         forbid_tool_calls: false,
+        web_search: false,
     };
 
     let body = responses::responses_body("gpt-test", &messages, &tools, &options, true);
@@ -1245,4 +1249,51 @@ async fn length_finish_reason_marks_the_turn_truncated() {
 
     assert!(turn.truncated());
     assert_eq!(turn.tool_calls.len(), 1);
+}
+
+#[test]
+fn web_search_tool_is_offered_only_when_allowed() {
+    let messages = [ChatMessage::user("find VRChat codes")];
+    let tools = [ToolDefinition {
+        name: "lookup".into(),
+        description: "Look something up".into(),
+        parameters: serde_json::json!({ "type": "object", "properties": {} }),
+    }];
+
+    let anthropic = anthropic::anthropic_body("claude", &messages, &tools, true, true);
+    let anthropic_tools = anthropic["tools"].as_array().unwrap();
+    assert_eq!(anthropic_tools.len(), 2);
+    assert_eq!(anthropic_tools[1]["type"], "web_search_20250305");
+    let plain = anthropic::anthropic_body("claude", &messages, &[], true, false);
+    assert!(plain.get("tools").is_none());
+
+    let gemini = gemini::gemini_body(&messages, &tools, true);
+    assert_eq!(
+        gemini["tools"][1],
+        serde_json::json!({ "google_search": {} })
+    );
+    assert_eq!(
+        gemini::gemini_body(&messages, &tools, false)["tools"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+
+    let on = LlmRequestOptions {
+        web_search: true,
+        ..LlmRequestOptions::default()
+    };
+    let responses = responses::responses_body("gpt", &messages, &tools, &on, true);
+    assert_eq!(
+        responses["tools"][1],
+        serde_json::json!({ "type": "web_search" })
+    );
+    let forbidden = LlmRequestOptions {
+        web_search: true,
+        forbid_tool_calls: true,
+        ..LlmRequestOptions::default()
+    };
+    let responses = responses::responses_body("gpt", &messages, &tools, &forbidden, true);
+    assert_eq!(responses["tools"].as_array().unwrap().len(), 1);
 }

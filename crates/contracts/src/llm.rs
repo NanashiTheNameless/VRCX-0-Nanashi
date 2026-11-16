@@ -53,6 +53,9 @@ pub struct LlmHeader {
 pub struct LlmRequestOptions {
     pub reasoning_effort: Option<String>,
     pub forbid_tool_calls: bool,
+    /// Fork: offer the service's own web search tool (Anthropic, OpenAI
+    /// Responses, Gemini and Vertex AI). Only when the user turned it on.
+    pub web_search: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

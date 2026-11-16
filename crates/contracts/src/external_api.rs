@@ -15,6 +15,9 @@ const BACKGROUND_IMAGE_AIC_ORIGIN: &str = "https://api.artic.edu";
 const BACKGROUND_IMAGE_APOD_ORIGIN: &str = "https://api.nasa.gov";
 const COMMUNITY_THEME_CATALOG_ORIGIN: &str = "https://raw.githubusercontent.com";
 const ADOPTION_CENSUS_ORIGIN: &str = "https://telemetry.namelessnanashi.dev";
+const CODE_SEARCH_BRAVE_ORIGIN: &str = "https://api.search.brave.com";
+const CODE_SEARCH_BRAVE_PATH: &str = "/res/v1/web/search";
+const CODE_SEARCH_GOOGLE_PATH: &str = "/customsearch/v1";
 const ADOPTION_CENSUS_PATH: &str = "/census";
 const COMMUNITY_THEME_CATALOG_PATH_PREFIX: &str = "/Map1en/VRCX-0-Community-Themes/master/themes/";
 
@@ -46,6 +49,11 @@ pub enum ExternalApiScope {
     CommunityTheme,
     #[serde(rename = "externalAdoptionCensus")]
     AdoptionCensus,
+    /// Fork: the search engine the user chose for finding VRChat codes (Brave
+    /// or Google with their own key, or their own SearXNG server). Used only
+    /// when they search.
+    #[serde(rename = "externalCodeSearch")]
+    CodeSearch,
 }
 
 impl ExternalApiScope {
@@ -61,6 +69,7 @@ impl ExternalApiScope {
             Self::BackgroundImage => "externalBackgroundImage",
             Self::CommunityTheme => "externalCommunityTheme",
             Self::AdoptionCensus => "externalAdoptionCensus",
+            Self::CodeSearch => "externalCodeSearch",
         }
     }
 
@@ -239,6 +248,95 @@ pub fn youtube_video_metadata_get_input(
     };
     request.params = request.query_params.clone();
     request
+}
+
+/// Fork: the search engines the user can pick for finding VRChat codes.
+/// There is no default; nothing is searched until one is chosen.
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum CodeSearchProvider {
+    Brave,
+    Google,
+    Searxng,
+}
+
+/// Fork: one search for VRChat codes. Only the query and what the chosen
+/// engine needs (its key, search engine ID, or the user's server) are used.
+pub fn code_search_get_input(
+    provider: CodeSearchProvider,
+    query: &str,
+    api_key: &str,
+    search_engine_id: &str,
+    endpoint: &str,
+) -> Result<ExternalHttpRequestInput, ExternalApiError> {
+    let text = |value: &str| Value::String(value.to_string());
+    let require = |value: &str, message: &str| {
+        let value = value.trim();
+        if value.is_empty() {
+            Err(ExternalApiError::Custom(message.into()))
+        } else {
+            Ok(value.to_string())
+        }
+    };
+    Ok(match provider {
+        CodeSearchProvider::Brave => ExternalHttpRequestInput {
+            url: Some(format!(
+                "{CODE_SEARCH_BRAVE_ORIGIN}{CODE_SEARCH_BRAVE_PATH}"
+            )),
+            method: Some(ExternalHttpMethod::Get),
+            headers: Some(HashMap::from([
+                ("Accept".to_string(), "application/json".to_string()),
+                (
+                    "X-Subscription-Token".to_string(),
+                    require(api_key, "Brave Search needs an API key.")?,
+                ),
+            ])),
+            query_params: Some(HashMap::from([
+                ("q".to_string(), text(query)),
+                ("count".to_string(), text("20")),
+                ("safesearch".to_string(), text("strict")),
+            ])),
+            ..Default::default()
+        },
+        CodeSearchProvider::Google => ExternalHttpRequestInput {
+            url: Some(format!("{YOUTUBE_API_ORIGIN}{CODE_SEARCH_GOOGLE_PATH}")),
+            method: Some(ExternalHttpMethod::Get),
+            query_params: Some(HashMap::from([
+                ("q".to_string(), text(query)),
+                (
+                    "key".to_string(),
+                    Value::String(require(api_key, "Google search needs an API key.")?),
+                ),
+                (
+                    "cx".to_string(),
+                    Value::String(require(
+                        search_engine_id,
+                        "Google search needs a search engine ID.",
+                    )?),
+                ),
+                ("num".to_string(), text("10")),
+                ("safe".to_string(), text("active")),
+            ])),
+            ..Default::default()
+        },
+        CodeSearchProvider::Searxng => {
+            let base = require(endpoint, "SearXNG needs the address of your server.")?;
+            ExternalHttpRequestInput {
+                url: Some(format!("{}/search", base.trim_end_matches('/'))),
+                method: Some(ExternalHttpMethod::Get),
+                headers: Some(HashMap::from([(
+                    "Accept".to_string(),
+                    "application/json".to_string(),
+                )])),
+                query_params: Some(HashMap::from([
+                    ("q".to_string(), text(query)),
+                    ("format".to_string(), text("json")),
+                    ("safesearch".to_string(), text("2")),
+                ])),
+                ..Default::default()
+            }
+        }
+    })
 }
 
 pub fn vrc_status_json_get_input(path: &str) -> ExternalHttpRequestInput {
@@ -447,6 +545,13 @@ fn external_url_allowed(url: &Url, scope: ExternalApiScope, policy: &ExternalApi
         }
         ExternalApiScope::AdoptionCensus => {
             origin == ADOPTION_CENSUS_ORIGIN && url.path() == ADOPTION_CENSUS_PATH
+        }
+        // SearXNG runs at an address the user chose, so any /search path is
+        // allowed; no key is ever sent there.
+        ExternalApiScope::CodeSearch => {
+            (origin == CODE_SEARCH_BRAVE_ORIGIN && url.path() == CODE_SEARCH_BRAVE_PATH)
+                || (origin == YOUTUBE_API_ORIGIN && url.path() == CODE_SEARCH_GOOGLE_PATH)
+                || url.path().ends_with("/search")
         }
     }
 }

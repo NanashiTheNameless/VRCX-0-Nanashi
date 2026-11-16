@@ -416,3 +416,68 @@ fn adoption_census_scope_rejects_other_urls() {
         );
     }
 }
+
+#[test]
+fn code_search_reaches_only_the_chosen_engine() {
+    let brave = build_web_execute_request(
+        code_search_get_input(CodeSearchProvider::Brave, "VRChat code", "key-1", "", "").unwrap(),
+        ExternalApiScope::CodeSearch,
+    )
+    .expect("brave request");
+    assert!(brave
+        .url
+        .starts_with("https://api.search.brave.com/res/v1/web/search?"));
+    assert!(brave
+        .headers
+        .iter()
+        .any(|(name, value)| name == "X-Subscription-Token" && value == "key-1"));
+    assert!(!brave.allow_http1);
+
+    let google = build_web_execute_request(
+        code_search_get_input(
+            CodeSearchProvider::Google,
+            "VRChat code",
+            "key-2",
+            "cx-1",
+            "",
+        )
+        .unwrap(),
+        ExternalApiScope::CodeSearch,
+    )
+    .expect("google request");
+    assert!(google
+        .url
+        .starts_with("https://www.googleapis.com/customsearch/v1?"));
+    assert!(google.url.contains("cx=cx-1"));
+
+    let searxng = build_web_execute_request(
+        code_search_get_input(
+            CodeSearchProvider::Searxng,
+            "VRChat code",
+            "ignored",
+            "",
+            "https://search.example.org/",
+        )
+        .unwrap(),
+        ExternalApiScope::CodeSearch,
+    )
+    .expect("searxng request");
+    assert!(searxng
+        .url
+        .starts_with("https://search.example.org/search?"));
+    assert!(searxng.url.contains("format=json"));
+    assert!(!searxng
+        .headers
+        .iter()
+        .any(|(name, _)| name.eq_ignore_ascii_case("x-subscription-token")));
+
+    assert!(code_search_get_input(CodeSearchProvider::Brave, "q", " ", "", "").is_err());
+    assert!(code_search_get_input(CodeSearchProvider::Google, "q", "key", "", "").is_err());
+    assert!(code_search_get_input(CodeSearchProvider::Searxng, "q", "", "", "").is_err());
+
+    let elsewhere = ExternalHttpRequestInput {
+        url: Some("https://example.com/res/v1/web/other".into()),
+        ..Default::default()
+    };
+    assert!(build_web_execute_request(elsewhere, ExternalApiScope::CodeSearch).is_err());
+}

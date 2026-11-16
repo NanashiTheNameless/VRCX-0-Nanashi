@@ -6,7 +6,7 @@ use vrcx_0_application_core::{
 };
 use vrcx_0_integrations::external_api::{self, ExternalHttpRequestInput};
 
-pub use vrcx_0_integrations::external_api::ExternalApiExecuteResponse;
+pub use vrcx_0_integrations::external_api::{CodeSearchProvider, ExternalApiExecuteResponse};
 
 #[derive(Clone)]
 pub struct ExternalApiRuntime {
@@ -67,6 +67,36 @@ impl ExternalApiRuntime {
                 Ok(external_api::youtube_video_metadata_get_input(
                     &video_id, &api_key,
                 ))
+            },
+        )
+        .await
+    }
+
+    /// Fork: searches the web for VRChat codes with the engine the user
+    /// chose. Only the query and what that engine needs are sent.
+    pub async fn code_search(
+        &self,
+        provider: external_api::CodeSearchProvider,
+        query: String,
+        api_key: String,
+        search_engine_id: String,
+        endpoint: String,
+    ) -> Result<ExternalApiExecuteResponse> {
+        self.execute(
+            "app__external_api_code_search_get",
+            "Searching the web for VRChat codes.",
+            external_api::ExternalApiScope::CodeSearch,
+            || {
+                let query = require_text(query, "ExternalApiCodeSearchGet requires query.")?;
+                let query: String = query.chars().take(200).collect();
+                external_api::code_search_get_input(
+                    provider,
+                    &query,
+                    &api_key,
+                    &search_engine_id,
+                    &endpoint,
+                )
+                .map_err(|error| Error::Custom(error.to_string()))
             },
         )
         .await

@@ -738,6 +738,14 @@ export const commands = {
         __TAURI_INVOKE<string>('app__assistant_set_reasoning_effort', {
             effort
         }),
+    /**
+     *  Fork: whether the assistant may use the connected AI service's own web
+     *  search (off by default).
+     */
+    appAssistantWebSearch: () =>
+        __TAURI_INVOKE<boolean>('app__assistant_web_search'),
+    appAssistantSetWebSearch: (enabled: boolean) =>
+        __TAURI_INVOKE<boolean>('app__assistant_set_web_search', { enabled }),
     appOverlayActivityDefinitionsGet: () =>
         __TAURI_INVOKE<ActivityTypeDefinition[]>(
             'app__overlay_activity_definitions_get'
@@ -755,6 +763,12 @@ export const commands = {
         ),
     appNotificationTestSend: (message: string) =>
         __TAURI_INVOKE<void>('app__notification_test_send', { message }),
+    /**
+     *  Fork: free store items the opt-in check found, sent to the notification
+     *  channels. Only item names are passed.
+     */
+    appFreeStoreItemsNotify: (names: string[]) =>
+        __TAURI_INVOKE<void>('app__free_store_items_notify', { names }),
     appPresenceAutomationRulesGet: (kind: PresenceAutomationRuleKind) =>
         __TAURI_INVOKE<RawJson[]>('app__presence_automation_rules_get', {
             kind
@@ -1333,6 +1347,12 @@ export const commands = {
     ) =>
         __TAURI_INVOKE<ExternalApiExecuteResponse>(
             'app__external_api_youtube_video_metadata_get',
+            { input }
+        ),
+    /**  Fork: a Brave Search for VRChat codes, with the user's own key. */
+    appExternalApiCodeSearchGet: (input: ExternalApiCodeSearchInput) =>
+        __TAURI_INVOKE<ExternalApiExecuteResponse>(
+            'app__external_api_code_search_get',
             { input }
         ),
     appVrchatAuthConfigGet: () =>
@@ -2999,7 +3019,8 @@ export type ActivityKind =
     | 'SafetyAvatar'
     | 'SafetyCommunity'
     | 'SafetyUrl'
-    | 'Reminder';
+    | 'Reminder'
+    | 'FreeStoreItem';
 
 export type ActivityOverlapViewBuildInput = {
     ownerUserId: OwnerId;
@@ -4145,6 +4166,12 @@ export type ClipboardImage = {
     dataBase64: string;
 };
 
+/**
+ *  Fork: the search engines the user can pick for finding VRChat codes.
+ *  There is no default; nothing is searched until one is chosen.
+ */
+export type CodeSearchProvider = 'brave' | 'google' | 'searxng';
+
 export type CollectorLiveFriend = {
     userId: string;
     displayName: string;
@@ -4596,6 +4623,14 @@ export type EntityKind = 'user' | 'world';
 export type ExternalApiAvatarSearchInput = {
     url?: string;
     vrcxId?: string;
+};
+
+export type ExternalApiCodeSearchInput = {
+    provider: CodeSearchProvider;
+    query?: string;
+    apiKey?: string;
+    searchEngineId?: string;
+    endpoint?: string;
 };
 
 export type ExternalApiExecuteResponse = {

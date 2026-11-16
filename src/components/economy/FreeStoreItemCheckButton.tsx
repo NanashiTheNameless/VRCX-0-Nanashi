@@ -9,8 +9,13 @@ import { useRuntimeStore } from '@/state/runtimeStore';
 import { Button } from '@/ui/shadcn/button';
 
 // Checks the VRChat store once, on click, whether or not the automatic check
-// is on. Found items open the usual claim window.
-export function FreeStoreItemCheckButton() {
+// is on. Found items open the usual claim window. Used in Settings and in
+// Tools > Inventory.
+export function FreeStoreItemCheckButton({
+    label
+}: {
+    label?: string;
+} = {}) {
     const { t } = useTranslation();
     const currentUserId = useRuntimeStore((state) => state.auth.currentUserId);
     const [checking, setChecking] = useState(false);
@@ -62,9 +67,10 @@ export function FreeStoreItemCheckButton() {
                 data-icon="inline-start"
                 className={cn(checking && 'animate-spin')}
             />
-            {t(
-                'view.settings.notifications.notifications.in_app.free_store_items_check'
-            )}
+            {label ??
+                t(
+                    'view.settings.notifications.notifications.in_app.free_store_items_check'
+                )}
         </Button>
     );
 }

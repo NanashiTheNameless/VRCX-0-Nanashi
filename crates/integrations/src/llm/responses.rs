@@ -158,19 +158,23 @@ pub(super) fn responses_body(
     if !instructions.is_empty() {
         body.insert("instructions".into(), json!(instructions.join("\n\n")));
     }
-    if !tools.is_empty() {
-        let tools = tools
-            .iter()
-            .map(|tool| {
-                json!({
-                    "type": "function",
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": tool.parameters,
-                })
+    let mut tool_list = tools
+        .iter()
+        .map(|tool| {
+            json!({
+                "type": "function",
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": tool.parameters,
             })
-            .collect::<Vec<_>>();
-        body.insert("tools".into(), Value::Array(tools));
+        })
+        .collect::<Vec<_>>();
+    if options.web_search && !options.forbid_tool_calls {
+        // OpenAI runs the search itself and answers with the results.
+        tool_list.push(json!({ "type": "web_search" }));
+    }
+    if !tool_list.is_empty() {
+        body.insert("tools".into(), Value::Array(tool_list));
     }
     if let Some(effort) = options
         .reasoning_effort

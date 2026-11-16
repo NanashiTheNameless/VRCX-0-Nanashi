@@ -70,7 +70,7 @@ impl LlmClient {
         messages: &[ChatMessage],
         _options: &LlmRequestOptions,
     ) -> Result<String, LlmError> {
-        let body = anthropic_body(&self.model, messages, &[], false);
+        let body = anthropic_body(&self.model, messages, &[], false, false);
         let response = self
             .anthropic_request(self.http.post(format!("{}/messages", self.base_url)))
             .json(&body)
@@ -111,13 +111,19 @@ impl LlmClient {
         &self,
         messages: &[ChatMessage],
         tools: &[ToolDefinition],
-        _options: &LlmRequestOptions,
+        options: &LlmRequestOptions,
         mut on_text: F,
     ) -> Result<AssistantTurn, LlmError>
     where
         F: FnMut(&str),
     {
-        let body = anthropic_body(&self.model, messages, tools, true);
+        let body = anthropic_body(
+            &self.model,
+            messages,
+            tools,
+            true,
+            options.web_search && !options.forbid_tool_calls,
+        );
         let response = self
             .anthropic_request(self.http.post(format!("{}/messages", self.base_url)))
             .json(&body)
@@ -154,6 +160,7 @@ pub(super) fn anthropic_body(
     messages: &[ChatMessage],
     tools: &[ToolDefinition],
     stream: bool,
+    web_search: bool,
 ) -> Value {
     let (system, converted) = convert_messages(messages);
     let mut body = Map::new();
@@ -164,22 +171,26 @@ pub(super) fn anthropic_body(
     if !system.is_empty() {
         body.insert("system".into(), json!(system));
     }
-    if !tools.is_empty() {
-        body.insert(
-            "tools".into(),
-            Value::Array(
-                tools
-                    .iter()
-                    .map(|tool| {
-                        json!({
-                            "name": tool.name,
-                            "description": tool.description,
-                            "input_schema": tool.parameters,
-                        })
-                    })
-                    .collect(),
-            ),
-        );
+    let mut tool_list: Vec<Value> = tools
+        .iter()
+        .map(|tool| {
+            json!({
+                "name": tool.name,
+                "description": tool.description,
+                "input_schema": tool.parameters,
+            })
+        })
+        .collect();
+    if web_search {
+        // Anthropic runs the search itself and answers with the results.
+        tool_list.push(json!({
+            "type": "web_search_20250305",
+            "name": "web_search",
+            "max_uses": 5,
+        }));
+    }
+    if !tool_list.is_empty() {
+        body.insert("tools".into(), Value::Array(tool_list));
     }
     Value::Object(body)
 }
@@ -397,7 +408,7 @@ mod tests {
             ChatMessage::user("Thanks"),
         ];
 
-        let body = anthropic_body("claude", &messages, &[], true);
+        let body = anthropic_body("claude", &messages, &[], true, false);
 
         assert_eq!(body["system"], "Be brief");
         let turns = body["messages"].as_array().unwrap();

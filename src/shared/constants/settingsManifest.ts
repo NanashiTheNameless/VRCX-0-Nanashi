@@ -1275,6 +1275,11 @@ defineCard('ai', 'assistant', 'view.settings.ai.header', [
         key: 'disallow-edit-requests',
         labelKey: 'assistant.runtime.disallow_edit_requests',
         descriptionKey: 'view.settings.ai.disallow_edit_requests_description'
+    },
+    {
+        key: 'web-search',
+        labelKey: 'view.settings.ai.web_search',
+        descriptionKey: 'view.settings.ai.web_search_description'
     }
 ]);
 
@@ -1493,6 +1498,50 @@ defineCard(
             labelKey: 'view.settings.integrations.integration_api.token',
             descriptionKey:
                 'view.settings.integrations.integration_api.token_description'
+        }
+    ]
+);
+
+defineCard(
+    'integrations',
+    'code-search',
+    'view.settings.integrations.code_search.header',
+    [
+        {
+            key: 'link-engine',
+            labelKey: 'view.settings.integrations.code_search.link_engine',
+            descriptionKey:
+                'view.settings.integrations.code_search.link_engine_description'
+        },
+        {
+            key: 'link-template',
+            labelKey: 'view.settings.integrations.code_search.link_template',
+            descriptionKey:
+                'view.settings.integrations.code_search.link_template_description'
+        },
+        {
+            key: 'provider',
+            labelKey: 'view.settings.integrations.code_search.provider',
+            descriptionKey:
+                'view.settings.integrations.code_search.provider_description'
+        },
+        {
+            key: 'api-key',
+            labelKey: 'view.settings.integrations.code_search.api_key',
+            descriptionKey:
+                'view.settings.integrations.code_search.api_key_description'
+        },
+        {
+            key: 'google-engine-id',
+            labelKey: 'view.settings.integrations.code_search.google_engine_id',
+            descriptionKey:
+                'view.settings.integrations.code_search.google_engine_id_description'
+        },
+        {
+            key: 'searxng-endpoint',
+            labelKey: 'view.settings.integrations.code_search.searxng_endpoint',
+            descriptionKey:
+                'view.settings.integrations.code_search.searxng_endpoint_description'
         }
     ]
 );

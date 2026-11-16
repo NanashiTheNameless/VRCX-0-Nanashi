@@ -110,3 +110,28 @@ pub async fn app__assistant_set_reasoning_effort(
         .set_assistant_reasoning_effort(&effort)
         .map_err(AppError::from)
 }
+
+/// Fork: whether the assistant may use the connected AI service's own web
+/// search (off by default).
+#[tauri::command]
+#[specta::specta]
+pub async fn app__assistant_web_search(state: State<'_, AppState>) -> Result<bool, AppError> {
+    state
+        .assistant()
+        .await?
+        .assistant_web_search()
+        .map_err(AppError::from)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn app__assistant_set_web_search(
+    state: State<'_, AppState>,
+    enabled: bool,
+) -> Result<bool, AppError> {
+    state
+        .assistant()
+        .await?
+        .set_assistant_web_search(enabled)
+        .map_err(AppError::from)
+}

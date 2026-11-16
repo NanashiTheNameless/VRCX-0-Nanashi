@@ -29,6 +29,7 @@ import { Switch } from '@/ui/shadcn/switch';
 
 import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
+import { AssistantWebSearchField } from './AssistantWebSearchField';
 
 const PLAYBOOK_MODES: PlaybookMode[] = ['auto', 'guided', 'open'];
 
@@ -276,6 +277,8 @@ export function AssistantSettingsGroup({
                                 }
                             />
                         </Field>
+
+                        <AssistantWebSearchField />
                     </>
                 )}
             </SettingsCard>

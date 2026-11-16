@@ -117,6 +117,14 @@ impl AssistantController {
         self.endpoints.set_assistant_reasoning_effort(effort)
     }
 
+    pub fn assistant_web_search(&self) -> Result<bool, AssistantError> {
+        self.endpoints.assistant_web_search()
+    }
+
+    pub fn set_assistant_web_search(&self, enabled: bool) -> Result<bool, AssistantError> {
+        self.endpoints.set_assistant_web_search(enabled)
+    }
+
     pub fn set_session_runtime(
         &self,
         session_id: &str,
@@ -309,6 +317,8 @@ impl AssistantController {
                 &stored_effort,
             ),
             forbid_tool_calls: false,
+            web_search: crate::endpoints::supports_web_search(endpoint.api_kind)
+                && self.endpoints.assistant_web_search().unwrap_or(false),
         };
 
         let tool_defs = visible_tool_defs(&self.tool_defs, session.allow_edit_requests);

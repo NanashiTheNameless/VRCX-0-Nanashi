@@ -311,6 +311,11 @@ pub(super) fn create_main_window(
         builder = builder.proxy_url(proxy_url);
     }
     builder = builder.browser_extensions_enabled(false);
+    // Fork: start maximized until the user has a saved window size; after
+    // that the window-state plugin restores what they last used.
+    if !has_saved_main_window_state(app) {
+        builder = builder.maximized(true);
+    }
 
     let main_window = builder.build()?;
     super::sidebar_auto_hide::attach(&main_window);
@@ -323,6 +328,21 @@ pub(super) fn create_main_window(
     #[cfg(not(target_os = "windows"))]
     let _ = main_window;
     Ok(())
+}
+
+/// Whether the window-state plugin saved a size for the main window.
+fn has_saved_main_window_state(app: &tauri::AppHandle) -> bool {
+    use tauri_plugin_window_state::AppHandleExt;
+
+    let Ok(config_dir) = app.path().app_config_dir() else {
+        return false;
+    };
+    std::fs::read(config_dir.join(app.filename()))
+        .ok()
+        .and_then(|bytes| {
+            serde_json::from_slice::<serde_json::Map<String, serde_json::Value>>(&bytes).ok()
+        })
+        .is_some_and(|states| states.contains_key("main"))
 }
 
 #[cfg(target_os = "windows")]
