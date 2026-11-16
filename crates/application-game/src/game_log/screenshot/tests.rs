@@ -278,7 +278,7 @@ fn screenshot_side_effects_use_the_host_path_of_a_logged_wine_path() {
         display_name: "Self".to_string(),
     };
     let input = ScreenshotInput {
-        created_at: SHOT_AT.to_string(),
+        created_at: SHOT_AT,
         path: format!("{WINE_SCREENSHOT_PATH}\r\n"),
         snapshot: RuntimeSnapshot {
             location: LOCATION.to_string(),
