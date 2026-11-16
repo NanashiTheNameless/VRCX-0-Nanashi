@@ -4,6 +4,7 @@ import {
     HistoryIcon,
     LogInIcon,
     MailIcon,
+    MegaphoneIcon,
     PencilIcon,
     RefreshCwIcon
 } from 'lucide-react';
@@ -18,6 +19,7 @@ import { Spinner } from '@/ui/shadcn/spinner';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 import { InstanceActionSummary } from './InstanceActionSummary';
+import { InstanceAnnouncementDialog } from './InstanceAnnouncementDialog';
 import { InstanceCalendarLinkDialog } from './InstanceCalendarLinkDialog';
 import {
     useInstanceActionBarController,
@@ -113,12 +115,14 @@ export function InstanceActionBar({
 }) {
     const { t } = useTranslation();
     const [calendarLinkOpen, setCalendarLinkOpen] = useState(false);
+    const [announcementOpen, setAnnouncementOpen] = useState(false);
 
     const {
         actionTarget,
         busy,
         calendarEntryId,
         calendarGroupId,
+        canAnnounce,
         canCloseCurrentInstance,
         canLinkCalendarEvent,
         canOpenInstanceInGame,
@@ -138,6 +142,7 @@ export function InstanceActionBar({
         renameInstance,
         resolvedUserCount,
         selfInvite,
+        sendAnnouncement,
         setCalendarLink
     } = useInstanceActionBarController({
         target,
@@ -251,6 +256,18 @@ export function InstanceActionBar({
                     onClick={() => setCalendarLinkOpen(true)}
                 />
             ) : null}
+            {canAnnounce && actionTarget.isRealInstanceLocation ? (
+                <ActionButton
+                    label={t(
+                        'component.instance_action_bar.announcement.header'
+                    )}
+                    icon={MegaphoneIcon}
+                    disableTooltip={disableTooltip}
+                    loading={busy === 'announce'}
+                    disabled={Boolean(busy)}
+                    onClick={() => setAnnouncementOpen(true)}
+                />
+            ) : null}
             {showRefresh && actionTarget.isRealInstanceLocation ? (
                 <ActionButton
                     label={refreshTooltip}
@@ -273,6 +290,14 @@ export function InstanceActionBar({
                 />
             ) : null}
             {instanceInfoPlacement === 'start' ? null : instanceSummary}
+            {canAnnounce ? (
+                <InstanceAnnouncementDialog
+                    open={announcementOpen}
+                    busy={busy === 'announce'}
+                    onOpenChange={setAnnouncementOpen}
+                    onSubmit={sendAnnouncement}
+                />
+            ) : null}
             {canLinkCalendarEvent ? (
                 <InstanceCalendarLinkDialog
                     open={calendarLinkOpen}

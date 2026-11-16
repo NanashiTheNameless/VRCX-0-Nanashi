@@ -10,6 +10,8 @@ import { SettingsCard } from '../SettingsCard';
 import { Field } from '../SettingsField';
 import { SettingsTabContent } from '../SettingsViewParts';
 import { IntegrationApiSettingsGroup } from './IntegrationApiSettingsGroup';
+import { VrcxIpcSettingsGroup } from './VrcxIpcSettingsGroup';
+import { VrcxWorldDataSettingsGroup } from './VrcxWorldDataSettingsGroup';
 
 export function SettingsIntegrationsTab() {
     const integrations = useSettingsPageSection('integrations');
@@ -325,6 +327,10 @@ export function SettingsIntegrationsTab() {
             </SettingsCard>
 
             <IntegrationApiSettingsGroup />
+
+            <VrcxIpcSettingsGroup />
+
+            <VrcxWorldDataSettingsGroup />
         </SettingsTabContent>
     );
 }

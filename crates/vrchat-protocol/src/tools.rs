@@ -328,9 +328,39 @@ pub fn invite_message_edit_input(
     ))
 }
 
+/// VRChat's own announcements (help articles and banners), as VRCX's Info
+/// Push dialog reads them.
+pub fn info_push_get_input(endpoint: String) -> VrchatRequest {
+    get_input(
+        endpoint,
+        "infoPush",
+        HashMap::from([
+            ("require".to_string(), json!("user-all")),
+            (
+                "include".to_string(),
+                json!("help-article,quick-menu-banner,loading-screen-banners"),
+            ),
+        ]),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn info_push_asks_for_vrcx_categories() {
+        let request = info_push_get_input("endpoint".into());
+        assert_eq!(request.path.as_deref(), Some("infoPush"));
+        let params = request.query_params.unwrap();
+        assert_eq!(params.get("require"), Some(&json!("user-all")));
+        assert_eq!(
+            params.get("include"),
+            Some(&json!(
+                "help-article,quick-menu-banner,loading-screen-banners"
+            ))
+        );
+    }
 
     fn json_body(request: &VrchatRequest) -> &Value {
         request.body.as_json().expect("expected JSON request body")

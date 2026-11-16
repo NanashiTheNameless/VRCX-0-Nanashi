@@ -57,6 +57,10 @@ import {
     trackUserGroupMembership,
     useUserGroupMembershipStore
 } from '@/state/userGroupMembershipStore';
+import {
+    useVrcxCustomTagStore,
+    vrcxCustomTagBadge
+} from '@/state/vrcxCustomTagStore';
 
 // Fork: the VR wrist menu, HMD notifications and the Desktop Overlay draw
 // user badges themselves. Custom badge rules only run here, so this works
@@ -197,6 +201,7 @@ export function buildOverlayUserBadges(icons: IconCatalog): OverlayUserBadges {
     const membershipByUser = useUserGroupMembershipStore.getState().byUser;
     const moderationState = useLocalModerationStore.getState();
     const globalState = useGlobalBadgeStore.getState();
+    const ipcTags = useVrcxCustomTagStore.getState().tagsByUserId;
 
     const candidates = new Set<string>([
         FORK_DEVELOPER_USER_ID,
@@ -205,6 +210,7 @@ export function buildOverlayUserBadges(icons: IconCatalog): OverlayUserBadges {
         ...(facts.userIdsByEndpoint[endpoint] ?? []),
         ...index.byUserId.keys(),
         ...membershipByUser.keys(),
+        ...Object.keys(ipcTags),
         ...(globalState.catalog?.awards.map((grant) => grant.userId) ?? [])
     ]);
     if (currentUserId) {
@@ -288,6 +294,10 @@ export function buildOverlayUserBadges(icons: IconCatalog): OverlayUserBadges {
                 styles.push(table.add(icon, 'Star', customLook(badge)));
             }
         }
+        for (const ipcTag of ipcTags[userId] ?? []) {
+            const badge = vrcxCustomTagBadge(ipcTag);
+            styles.push(table.add(badge.icon, 'Tag', customLook(badge)));
+        }
         const kept = styles.filter((style): style is number => style !== null);
         if (kept.length) {
             users[userId] = kept;
@@ -362,7 +372,8 @@ export function startOverlayBadgeSync(): () => void {
         }),
         useRuntimeStore.subscribe(schedule),
         useUserFactsStore.subscribe(schedule),
-        useUserGroupMembershipStore.subscribe(schedule)
+        useUserGroupMembershipStore.subscribe(schedule),
+        useVrcxCustomTagStore.subscribe(schedule)
     ];
     schedule();
     return () => {

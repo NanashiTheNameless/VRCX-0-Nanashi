@@ -148,3 +148,6 @@ VRCX-0-Nanashi data folder and the VRChat crash dumps folder.
 - **Message Templates**: edit your invite and request message slots.
 - **My Reports**: reports you submitted to VRChat.
 - **Purchase History**: items you bought and your VRChat Credits activity.
+- **VRChat Announcements**: VRChat's help articles and the Quick Menu and loading screen banners
+  it shows in the game, read from VRChat. Help articles expand to their full text, images,
+  videos and links; disabled, expired and scheduled ones are marked.

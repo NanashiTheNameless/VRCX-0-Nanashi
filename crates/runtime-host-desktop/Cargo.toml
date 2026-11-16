@@ -42,6 +42,7 @@ vrcx-0-nanashi-website-protocol = { workspace = true }
 vrcx-0-host-desktop = { path = "../host-desktop" }
 vrcx-0-i18n = { path = "../i18n" }
 vrcx-0-integration-api = { path = "../integration-api" }
+vrcx-0-vrcx-compat = { path = "../vrcx-compat" }
 vrcx-0-integrations = { path = "../integrations" }
 vrcx-0-logger-protocol = { path = "../logger-protocol", features = ["specta"] }
 vrcx-0-media = { path = "../media" }

@@ -26,6 +26,24 @@ pub async fn app__profile_merge_run(
     Ok(state.runtime_host().run_profile_merge(source).await?)
 }
 
+/// Fork (VRCX's DB Merger): merge a VRCX, VRCX-0 or VRCX-0-Nanashi database
+/// file the user picked, without replacing anything already here.
+#[tauri::command(async)]
+#[specta::specta]
+pub async fn app__profile_merge_run_file(
+    state: State<'_, AppState>,
+    path: String,
+) -> Result<ProfileMergeReport, AppError> {
+    let path = path.trim();
+    if path.is_empty() {
+        return Err(AppError::Custom("No database file was chosen.".into()));
+    }
+    Ok(state
+        .runtime_host()
+        .run_profile_merge_file(std::path::PathBuf::from(path))
+        .await?)
+}
+
 #[tauri::command(async)]
 #[specta::specta]
 pub async fn app__profile_settings_import(

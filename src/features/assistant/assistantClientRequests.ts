@@ -24,6 +24,13 @@ import {
     runtimeSettingBlock,
     settingLocation
 } from './assistantSettings';
+import {
+    answerVrcxReadTool,
+    runVrcxAction,
+    validateVrcxAction,
+    VRCX_ASSISTANT_ACTION_TOOLS,
+    VRCX_ASSISTANT_READ_TOOLS
+} from './assistantVrcxTools';
 
 export type AssistantGuideTarget = {
     /** App route to open. */
@@ -123,6 +130,26 @@ export async function handleAssistantClientRequest(
     t: TFunction
 ): Promise<void> {
     const store = useAssistantChatStore.getState();
+    if (VRCX_ASSISTANT_READ_TOOLS.has(event.kind)) {
+        let response: Record<string, unknown>;
+        try {
+            response = await answerVrcxReadTool(event.kind, event.arguments);
+        } catch (error) {
+            response = { error: errorText(error) };
+        }
+        await answer(event.sessionId, event.requestId, response);
+        return;
+    }
+    if (VRCX_ASSISTANT_ACTION_TOOLS.has(event.kind)) {
+        const error = validateVrcxAction(event.kind, event.arguments);
+        if (error) {
+            await answer(event.sessionId, event.requestId, { error });
+            return;
+        }
+        store.applyEditRequest(event);
+        store.setOpen(true);
+        return;
+    }
     switch (event.kind) {
         case 'find_settings': {
             const result = findAssistantSettings(
@@ -255,6 +282,39 @@ export async function completeEditRequest(
     if (decision === 'declined') {
         store.resolveEditRequest(request.sessionId, request.id, 'declined');
         await answer(request.sessionId, request.id, { decision });
+        return;
+    }
+    if (VRCX_ASSISTANT_ACTION_TOOLS.has(request.kind)) {
+        try {
+            const { result, detail } = await runVrcxAction(
+                request.kind,
+                request.arguments,
+                t
+            );
+            store.resolveEditRequest(
+                request.sessionId,
+                request.id,
+                'applied',
+                detail
+            );
+            await answer(request.sessionId, request.id, {
+                decision,
+                applied: true,
+                ...result
+            });
+        } catch (error) {
+            const message = errorText(error);
+            store.resolveEditRequest(
+                request.sessionId,
+                request.id,
+                'failed',
+                message
+            );
+            await answer(request.sessionId, request.id, {
+                decision,
+                error: message
+            });
+        }
         return;
     }
     if (request.kind !== 'change_setting') {

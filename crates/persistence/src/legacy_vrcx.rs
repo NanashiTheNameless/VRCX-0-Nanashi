@@ -88,6 +88,15 @@ fn discover_legacy_source() -> Result<Option<LegacyVrcxSource>, String> {
     Ok(None)
 }
 
+/// VRCX's Persistent World Info file, read only by the import in Settings >
+/// Integrations > Persistent World Info.
+pub fn legacy_vrcx_world_data_file() -> Option<PathBuf> {
+    legacy_vrcx_dirs()
+        .into_iter()
+        .map(|dir| dir.join("VRCX-WorldData.db"))
+        .find(|path| path.is_file())
+}
+
 pub(crate) fn legacy_vrcx_dirs() -> Vec<PathBuf> {
     let mut dirs = Vec::new();
 

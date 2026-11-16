@@ -56,7 +56,7 @@ where
             .iter()
             .map(|entry| game_log_event(entry.created_at, &entry.data)),
     );
-    for entry in &output.batch.externals {
+    for entry in output.batch.externals.iter().filter(|entry| !entry.silent) {
         let mut event = ActivityEvent::new(
             ActivityKind::External,
             format!(

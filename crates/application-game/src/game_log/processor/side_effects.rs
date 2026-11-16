@@ -141,6 +141,7 @@ pub(super) fn dispatch_side_effect(
             location,
             group_id,
         } => handle_location_group_name(deps, created_at, location, group_id),
+        GameLogSideEffect::WorldData { data } => deps.host_actions.world_data_request(&data),
         GameLogSideEffect::UdonException { data } => {
             if deps
                 .config

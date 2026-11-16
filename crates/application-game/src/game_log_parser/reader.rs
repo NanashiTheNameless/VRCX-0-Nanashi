@@ -10,7 +10,7 @@ use super::media::{
     parse_api_request, parse_avatar_change, parse_avatar_pedestal_change, parse_avpro_video_change,
     parse_join_blocked, parse_now_playing_log, parse_screenshot, parse_sdk2_video_play,
     parse_usharp_video_play, parse_usharp_video_sync, parse_video_change, parse_video_error,
-    parse_world_vrcx,
+    parse_world_data_vrcx, parse_world_vrcx,
 };
 use super::presence::{
     parse_location, parse_location_destination, parse_notification, parse_player_joined_or_left,
@@ -205,6 +205,7 @@ fn parse_opened_log(
                 || parse_usharp_video_play(out, file_name, trimmed, content)
                 || parse_usharp_video_sync(out, file_name, trimmed, content)
                 || parse_world_vrcx(out, file_name, trimmed, content)
+                || parse_world_data_vrcx(out, file_name, trimmed, content)
                 || parse_audio_config(out, file_name, trimmed, content, ctx)
                 || parse_screenshot(out, file_name, trimmed, content)
                 || parse_string_download(out, file_name, trimmed, content)

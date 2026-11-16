@@ -161,6 +161,7 @@ pub(super) const SETTING_GROUPS: &[(&str, &[&str], &[&str])] = &[
             "imagenotifications",
             "busystatusdonotdisturb",
             "hidevideoerrornotifications",
+            "freestoreitemnotifications",
             "taskbaricondot",
             "showpostupdatechangelogtoast",
             "seenpostupdatechangelogversion",

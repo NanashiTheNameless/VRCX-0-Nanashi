@@ -1,6 +1,7 @@
 import { lazy } from 'react';
 
 import { InviteMessageTemplatesDialog } from '@/components/dialogs/InviteMessageDialog';
+import { useFreeStoreItemStore } from '@/state/freeStoreItemStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 
 import { MountOnFirstOpen } from './MountOnFirstOpen';
@@ -75,6 +76,16 @@ const ModerationReportsDialog = lazy(() =>
         default: module.ModerationReportsDialog
     }))
 );
+const FreeStoreItemDialog = lazy(() =>
+    import('./tools-dialogs/FreeStoreItemDialog').then((module) => ({
+        default: module.FreeStoreItemDialog
+    }))
+);
+const InfoPushDialog = lazy(() =>
+    import('./tools-dialogs/InfoPushDialog').then((module) => ({
+        default: module.InfoPushDialog
+    }))
+);
 const PurchaseHistoryDialog = lazy(() =>
     import('./tools-dialogs/PurchaseHistoryDialog').then((module) => ({
         default: module.PurchaseHistoryDialog
@@ -140,6 +151,10 @@ export function ToolsDialogsHost() {
     const purchaseHistoryOpen = useRuntimeStore(
         (state) => state.systemHosts.purchaseHistoryOpen
     );
+    const infoPushOpen = useRuntimeStore(
+        (state) => state.systemHosts.infoPushOpen
+    );
+    const freeStoreItemOpen = useFreeStoreItemStore((state) => state.open);
     const llmEndpointsOpen = useRuntimeStore(
         (state) => state.systemHosts.llmEndpointsOpen
     );
@@ -266,6 +281,17 @@ export function ToolsDialogsHost() {
                     open={purchaseHistoryOpen}
                     onOpenChange={(open) =>
                         setSystemHostOpen('purchaseHistoryOpen', open)
+                    }
+                />
+            </MountOnFirstOpen>
+            <MountOnFirstOpen open={freeStoreItemOpen}>
+                <FreeStoreItemDialog />
+            </MountOnFirstOpen>
+            <MountOnFirstOpen open={infoPushOpen}>
+                <InfoPushDialog
+                    open={infoPushOpen}
+                    onOpenChange={(open) =>
+                        setSystemHostOpen('infoPushOpen', open)
                     }
                 />
             </MountOnFirstOpen>

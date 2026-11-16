@@ -49,6 +49,7 @@ fn game_log_event_and_external_batches_become_system_activity() {
                 display_name: "External User".to_string(),
                 user_id: "usr_external".to_string(),
                 location: "wrld_1:123".to_string(),
+                silent: false,
             }],
             ..GameLogWriteBatch::default()
         },
@@ -86,6 +87,7 @@ fn game_log_system_and_video_events_with_same_timestamp_do_not_collide() {
                     display_name: "External User".to_string(),
                     user_id: "usr_external".to_string(),
                     location: "wrld_1:123".to_string(),
+                    silent: false,
                 },
                 GameLogExternalEntry {
                     created_at: 1780185901,
@@ -93,6 +95,7 @@ fn game_log_system_and_video_events_with_same_timestamp_do_not_collide() {
                     display_name: "External User".to_string(),
                     user_id: "usr_external".to_string(),
                     location: "wrld_1:123".to_string(),
+                    silent: false,
                 },
             ],
             ..GameLogWriteBatch::default()
@@ -147,4 +150,29 @@ fn game_log_system_and_video_events_with_same_timestamp_do_not_collide() {
         .map(|event| event.source_id.as_str())
         .collect::<std::collections::HashSet<_>>();
     assert_eq!(source_ids.len(), events.len());
+}
+
+#[test]
+fn silent_external_entries_are_saved_without_activity() {
+    let external = |message: &str, silent: bool| GameLogExternalEntry {
+        created_at: 1780185901,
+        message: message.to_string(),
+        display_name: "External User".to_string(),
+        user_id: "usr_external".to_string(),
+        location: "wrld_1:123".to_string(),
+        silent,
+    };
+    let output = GameLogIngestOutput {
+        batch: GameLogWriteBatch {
+            externals: vec![external("Quiet", true), external("Loud", false)],
+            ..GameLogWriteBatch::default()
+        },
+        ..GameLogIngestOutput::default()
+    };
+
+    let events = all_events(&output);
+
+    assert_eq!(events.len(), 1);
+    assert_eq!(events[0].facts.message, "Loud");
+    assert_eq!(output.batch.externals.len(), 2);
 }

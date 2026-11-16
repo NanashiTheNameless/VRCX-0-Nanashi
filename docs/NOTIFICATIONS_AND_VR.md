@@ -56,6 +56,14 @@ instance.
 **Test Notification** sends a sample through every channel to check your setup. It skips
 filters but respects each channel's switch, condition and Do Not Disturb.
 
+## Free store items
+
+**Free Store Items** (Notifications > In-App Indicators) is off by default. When on, the app
+checks VRChat's store a minute after you sign in and then every 3 hours, compares it with your
+purchases, and shows a window listing free items you do not own yet. **Claim All** adds them to
+your account; nothing is claimed before that. Items VRChat refuses are not offered again, and
+**Don't check for free items again** turns the setting off.
+
 ## Do Not Disturb
 
 Do Not Disturb pauses desktop notifications, text-to-speech, XSOverlay, OVR Toolkit and the

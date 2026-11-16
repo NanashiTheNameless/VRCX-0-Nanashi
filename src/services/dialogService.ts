@@ -366,6 +366,15 @@ function openEntityDialog({
     }
 }
 
+// VRCX tells programs on its IPC pipe which user dialog is open; nothing is
+// sent unless the user turned the pipe on.
+function announceUserDialogToIpcClients(userId: string | null | undefined) {
+    if (!userId) {
+        return;
+    }
+    void commands.appVrcxIpcAnnounceUserDialog(userId).catch(() => {});
+}
+
 export function openUserDialog({
     userId,
     title = '',
@@ -374,6 +383,7 @@ export function openUserDialog({
     initialAction = ''
 }: OpenUserDialogOptions = {}) {
     recordUserDialogSeed(userId, title, seedData);
+    announceUserDialogToIpcClients(userId);
     openEntityDialog({
         kind: 'user',
         entityId: userId,

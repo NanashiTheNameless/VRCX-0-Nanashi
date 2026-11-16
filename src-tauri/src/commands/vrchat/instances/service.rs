@@ -10,9 +10,9 @@ use vrcx_0_contracts::vrchat_requests::InstanceCreateOptions;
 use vrcx_0_core::json::RawJson;
 
 use super::types::{
-    VrchatInstanceCalendarLinkInput, VrchatInstanceCloseInput, VrchatInstanceCreateInput,
-    VrchatInstanceDisplayNameInput, VrchatInstanceIdentityInput, VrchatInstanceSelfInviteInput,
-    VrchatInstanceShortNameInput,
+    VrchatInstanceAnnounceInput, VrchatInstanceCalendarLinkInput, VrchatInstanceCloseInput,
+    VrchatInstanceCreateInput, VrchatInstanceDisplayNameInput, VrchatInstanceIdentityInput,
+    VrchatInstanceSelfInviteInput, VrchatInstanceShortNameInput,
 };
 
 #[tauri::command]
@@ -108,6 +108,26 @@ pub async fn app__vrchat_instance_display_name_set(
         .runtime_host()
         .vrchat_remote()
         .instance_display_name(input.location, input.display_name)
+        .await
+        .map_err(AppError::from)
+}
+
+/// Fork (from VRCX): announcement to everyone in a group instance.
+#[tauri::command]
+#[specta::specta]
+pub async fn app__vrchat_instance_announce(
+    state: State<'_, AppState>,
+    input: VrchatInstanceAnnounceInput,
+) -> Result<VrchatResponse, AppError> {
+    state
+        .runtime_host()
+        .vrchat_remote()
+        .instance_announce(
+            input.location,
+            input.message,
+            input.image_id,
+            input.image_version,
+        )
         .await
         .map_err(AppError::from)
 }

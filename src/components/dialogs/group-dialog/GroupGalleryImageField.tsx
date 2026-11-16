@@ -21,18 +21,39 @@ function text(value: unknown): string {
     return typeof value === 'string' ? value : '';
 }
 
+function latestFileVersion(row: unknown): string {
+    const versions =
+        row && typeof row === 'object'
+            ? (row as { versions?: unknown }).versions
+            : undefined;
+    if (!Array.isArray(versions)) {
+        return '';
+    }
+    const numbers = versions
+        .map((entry) =>
+            entry && typeof entry === 'object'
+                ? Number((entry as { version?: unknown }).version)
+                : NaN
+        )
+        .filter((value) => Number.isInteger(value) && value > 0);
+    return numbers.length ? String(Math.max(...numbers)) : '';
+}
+
 export function GroupGalleryImageField({
     id,
     open,
     imageId,
     disabled,
-    onChange
+    onChange,
+    onVersionChange
 }: {
     id: string;
     open: boolean;
     imageId: string;
     disabled: boolean;
     onChange: (imageId: string) => void;
+    /** The picked image's newest file version, or '' for a typed id. */
+    onVersionChange?: (version: string) => void;
 }) {
     const { t } = useTranslation();
     const [galleryRows, setGalleryRows] = useState<
@@ -91,7 +112,8 @@ export function GroupGalleryImageField({
         .map((row) => ({
             id: text(row?.id || row?.fileId || row?.file_id),
             label: getGroupRowLabel(row),
-            image: getGroupRowImage(row, 'gallery')
+            image: getGroupRowImage(row, 'gallery'),
+            version: latestFileVersion(row)
         }))
         .filter((option) => option.id);
 
@@ -102,7 +124,10 @@ export function GroupGalleryImageField({
                 <InputGroupInput
                     id={id}
                     value={imageId}
-                    onChange={(event) => onChange(event.target.value)}
+                    onChange={(event) => {
+                        onChange(event.target.value);
+                        onVersionChange?.('');
+                    }}
                     disabled={disabled}
                     placeholder={t('dialog.group.label.gallery_image_id')}
                 />
@@ -110,7 +135,10 @@ export function GroupGalleryImageField({
                     <InputGroupButton
                         type="button"
                         disabled={disabled || !imageId}
-                        onClick={() => onChange('')}
+                        onClick={() => {
+                            onChange('');
+                            onVersionChange?.('');
+                        }}
                     >
                         {t('common.actions.clear')}
                     </InputGroupButton>
@@ -140,7 +168,10 @@ export function GroupGalleryImageField({
                                 imageId === option.id &&
                                     'border-primary border-2'
                             )}
-                            onClick={() => onChange(option.id)}
+                            onClick={() => {
+                                onChange(option.id);
+                                onVersionChange?.(option.version);
+                            }}
                         >
                             {option.image ? (
                                 <FadeInImage

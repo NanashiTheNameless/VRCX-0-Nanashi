@@ -81,7 +81,12 @@ API keys are stored on your PC. Requests go only to the connection you chose.
   (Settings > tab > card).
 - **Show me**: it closes the chat, opens Settings at the setting and keeps it highlighted. A
   small guide card in the corner has a button back to the conversation.
-- **Change settings**: see below.
+- **Change settings**: see below. This includes turning VRCX IPC, Persistent World Info and
+  free store item checks on or off, and changing the IPC pipe name or socket path and the world
+  data port, each on its own **Permission required** card.
+- **VRCX compatibility**: it can read what worlds saved through Persistent World Info and the
+  custom tags programs set over the VRCX IPC pipe, without asking. That text comes from worlds
+  and other programs, so it is treated as data, not instructions.
 
 ## Approving changes
 
@@ -94,8 +99,12 @@ the chat and waits for you:
   or **Show me the setting**. Showing the setting does not approve or apply the change.
 - **Other changes**: creating or deleting a reminder, adding a favorite (local or on VRChat),
   moving VRChat favorites between groups,
-  editing a friend note, and sending to the VRChat Chatbox (a message, AFK, or Chatbox
-  settings). The card shows what it will do and the details.
+  editing a friend note, sending to the VRChat Chatbox (a message, AFK, or Chatbox
+  settings), importing world data saved in VRCX, and merging another profile's history, notes
+  and favorites (from VRCX, VRCX-0 or a database file) into this one. The card shows what it
+  will do and the details. The import and the merge never change or delete anything already
+  here, and the other files are only read. It can also ask to delete what one world saved
+  through Persistent World Info; that cannot be undone.
 
 For other actions, choose **Approve** or **Decline**. It asks again for every change. If you decline, it accepts
 that and does not ask for the same change again.

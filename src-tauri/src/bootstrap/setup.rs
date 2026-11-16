@@ -14,7 +14,9 @@ use tracing_subscriber::Layer;
 
 use crate::error::AppError;
 use crate::state::{AppState, BACKGROUND_MODE_RESUME_ROUTE_STORAGE_KEY};
-use vrcx_0_runtime_host_desktop::deep_link::{parse_deep_link, queue_deep_link_action};
+use vrcx_0_runtime_host_desktop::deep_link::{
+    parse_deep_link, parse_vrcx_launch_command, queue_deep_link_action, DeepLinkAction,
+};
 
 use super::adapters::{
     observe_tray_realtime_phase, start_host_services, start_mcp_server_if_enabled,
@@ -414,6 +416,16 @@ fn wire_deep_links(app: &tauri::AppHandle) {
             app,
             state.inner(),
         );
+        let launch_handle = app.clone();
+        state
+            .runtime_host()
+            .vrcx_compat()
+            .set_launch_command_handler(std::sync::Arc::new(move |command: String| {
+                match parse_vrcx_launch_command(&command) {
+                    Some(action) => queue_parsed_deep_link(&launch_handle, action),
+                    None => tracing::warn!(command = %command, "ignored unsupported VRCX launch command"),
+                }
+            }));
     }
     #[cfg(all(debug_assertions, any(windows, target_os = "linux")))]
     if let Err(error) = app.deep_link().register_all() {
@@ -445,8 +457,12 @@ fn queue_deep_link_url(app: &tauri::AppHandle, value: &str) {
         tracing::warn!(url = %value, "ignored unsupported deep link");
         return;
     };
+    queue_parsed_deep_link(app, action);
+}
+
+fn queue_parsed_deep_link(app: &tauri::AppHandle, action: DeepLinkAction) {
     let Some(state) = app.try_state::<AppState>() else {
-        tracing::warn!(url = %value, "ignored deep link before app state was ready");
+        tracing::warn!("ignored deep link before app state was ready");
         return;
     };
     if state.runtime_host().privacy_lock().is_locked() {

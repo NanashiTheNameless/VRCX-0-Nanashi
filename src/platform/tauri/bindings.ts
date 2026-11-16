@@ -583,6 +583,39 @@ export const commands = {
         __TAURI_INVOKE<IntegrationApiStatus>(
             'app__integration_api_rotate_token'
         ),
+    appVrcxIpcStatus: () => __TAURI_INVOKE<IpcStatus>('app__vrcx_ipc_status'),
+    appVrcxIpcSetSettings: (settings: IpcSettings) =>
+        __TAURI_INVOKE<IpcStatus>('app__vrcx_ipc_set_settings', { settings }),
+    appVrcxCustomTags: () =>
+        __TAURI_INVOKE<VrcxCustomTag[]>('app__vrcx_custom_tags'),
+    /**  VRCX tells programs on the pipe which user dialog is open. */
+    appVrcxIpcAnnounceUserDialog: (userId: string) =>
+        __TAURI_INVOKE<null>('app__vrcx_ipc_announce_user_dialog', { userId }),
+    appVrcxWorldDataStatus: () =>
+        __TAURI_INVOKE<WorldDataStatus>('app__vrcx_world_data_status'),
+    appVrcxWorldDataSetSettings: (settings: WorldDataSettings) =>
+        __TAURI_INVOKE<WorldDataStatus>('app__vrcx_world_data_set_settings', {
+            settings
+        }),
+    appVrcxWorldDataWorlds: () =>
+        __TAURI_INVOKE<WorldDataWorld[]>('app__vrcx_world_data_worlds'),
+    appVrcxWorldDataEntries: (worldId: string) =>
+        __TAURI_INVOKE<WorldDataEntry[]>('app__vrcx_world_data_entries', {
+            worldId
+        }),
+    appVrcxWorldDataForget: (worldId: string) =>
+        __TAURI_INVOKE<null>('app__vrcx_world_data_forget', { worldId }),
+    /**  VRCX's world data file, if one was found, for the import button. */
+    appVrcxWorldDataImportSource: () =>
+        __TAURI_INVOKE<string | null>('app__vrcx_world_data_import_source'),
+    /**
+     *  Merges VRCX's world data, or the chosen file, without overwriting values
+     *  already saved here. The other file is only read.
+     */
+    appVrcxWorldDataImport: (path: string | null) =>
+        __TAURI_INVOKE<WorldDataImportReport>('app__vrcx_world_data_import', {
+            path
+        }),
     appAssistantSendMessage: (
         sessionId: string | null,
         text: string,
@@ -1702,6 +1735,12 @@ export const commands = {
             'app__vrchat_instance_display_name_set',
             { input }
         ),
+    /**  Fork (from VRCX): announcement to everyone in a group instance. */
+    appVrchatInstanceAnnounce: (input: VrchatInstanceAnnounceInput) =>
+        __TAURI_INVOKE<HttpApiExecuteResponse>(
+            'app__vrchat_instance_announce',
+            { input }
+        ),
     appVrchatInstanceCountGet: () =>
         __TAURI_INVOKE<HttpApiExecuteResponse>(
             'app__vrchat_instance_count_get'
@@ -2057,6 +2096,19 @@ export const commands = {
             'app__vrchat_economy_store_get',
             { input }
         ),
+    appVrchatEconomyStoreShelvesGet: (input: VrchatEconomyStoreInput) =>
+        __TAURI_INVOKE<HttpApiExecuteResponse>(
+            'app__vrchat_economy_store_shelves_get',
+            { input }
+        ),
+    /**  Fork (from VRCX): claims a free store item. The price sent is always 0. */
+    appVrchatEconomyClaimFreeListing: (
+        input: VrchatEconomyClaimFreeListingInput
+    ) =>
+        __TAURI_INVOKE<HttpApiExecuteResponse>(
+            'app__vrchat_economy_claim_free_listing',
+            { input }
+        ),
     appVrchatToolsGroupCalendarEventGet: (
         input: VrchatToolsCalendarEventInput
     ) =>
@@ -2098,6 +2150,9 @@ export const commands = {
             'app__vrchat_tools_moderation_reports_get',
             { input }
         ),
+    /**  Fork (from VRCX): VRChat's own announcements for the Info Push dialog. */
+    appVrchatInfoPushGet: () =>
+        __TAURI_INVOKE<HttpApiExecuteResponse>('app__vrchat_info_push_get'),
     appVrchatToolsUserNoteSave: (input: VrchatToolsUserNoteSaveInput) =>
         __TAURI_INVOKE<HttpApiExecuteResponse>(
             'app__vrchat_tools_user_note_save',
@@ -2583,6 +2638,14 @@ export const commands = {
     appProfileMergeRun: (source: ProfileMergeSourceKind) =>
         __TAURI_INVOKE<ProfileMergeReport>('app__profile_merge_run', {
             source
+        }),
+    /**
+     *  Fork (VRCX's DB Merger): merge a VRCX, VRCX-0 or VRCX-0-Nanashi database
+     *  file the user picked, without replacing anything already here.
+     */
+    appProfileMergeRunFile: (path: string) =>
+        __TAURI_INVOKE<ProfileMergeReport>('app__profile_merge_run_file', {
+            path
         }),
     appProfileSettingsImport: (source: ProfileMergeSourceKind) =>
         __TAURI_INVOKE<ProfileSettingsImportReport>(
@@ -3720,6 +3783,7 @@ export type BackendRuntimeEventPayloadMap = {
     realtimeProjectionSync: RealtimeProjectionSync;
     updateIsGameRunning: HostSessionProjection;
     integrationApiStartFailed: IntegrationApiStartFailedPayload;
+    vrcxCustomTags: VrcxCustomTagsPayload;
     feedLoggerSync: FeedLoggerSyncEvent;
     feedLoggerHealth: FeedLoggerProbe;
     notificationDoNotDisturbState: NotificationDoNotDisturbSnapshot;
@@ -6445,6 +6509,31 @@ export type InviteMessageType =
     | 'requestResponse'
     | 'response';
 
+export type IpcSettings = {
+    enabled: boolean;
+    /**  Empty means `default_ipc_pipe_name()`. */
+    pipeName: string;
+    /**
+     *  Linux and macOS only. Empty means the socket .NET would use for the
+     *  pipe name.
+     */
+    socketPath: string;
+};
+
+export type IpcStatus = {
+    enabled: boolean;
+    running: boolean;
+    /**  As configured; empty means the default. */
+    pipeName: string;
+    /**  As configured; empty means the default. */
+    socketPath: string;
+    address: string;
+    defaultPipeName: string;
+    defaultSocketPath: string;
+    connectedClients: number;
+    error: string | null;
+};
+
 export type LeaveTarget = 'offline' | 'active';
 
 export type LegacyVrcxMigrationStatus = {
@@ -8884,6 +8973,10 @@ export type VrchatCurrentUserUpdateInput = {
     params: CurrentUserUpdateRequest;
 };
 
+export type VrchatEconomyClaimFreeListingInput = {
+    listingId: string;
+};
+
 export type VrchatEconomyPageInput = {
     n: number;
     offset?: number;
@@ -9102,6 +9195,13 @@ export type VrchatGroupUserGroupsInput = {
 export type VrchatGroupUserInput = {
     groupId?: string;
     userId?: string;
+};
+
+export type VrchatInstanceAnnounceInput = {
+    location: string;
+    message: string;
+    imageId?: string | null;
+    imageVersion?: string | null;
 };
 
 export type VrchatInstanceCalendarLinkInput = {
@@ -9436,6 +9536,23 @@ export type VrchatWorldSaveInput = {
     params: WorldUpdateRequest;
 };
 
+/**
+ *  A tag another program asked to show next to a user, drawn as a custom
+ *  badge. Kept in memory only, like VRCX. `id` is empty for VRCX's one tag
+ *  per user; `icon` is empty when the program did not choose one.
+ */
+export type VrcxCustomTag = {
+    userId: string;
+    id: string;
+    tag: string;
+    colour: string;
+    icon: string;
+};
+
+export type VrcxCustomTagsPayload = {
+    tags: VrcxCustomTag[];
+};
+
 export type WatchEntry = {
     id: string;
     /**  Optional exact log-name match. It is warning-only, never proof of identity. */
@@ -9464,6 +9581,40 @@ export type WebhookDeliveryRecord = {
 export type WebhookDeliverySnapshot = {
     notification: WebhookDeliveryChannelSnapshot;
     auth: WebhookDeliveryChannelSnapshot;
+};
+
+export type WorldDataEntry = {
+    key: string;
+    value: string;
+    valueSize: number;
+    lastModified: number | null;
+};
+
+export type WorldDataImportReport = {
+    worldsAdded: number;
+    entriesAdded: number;
+    /**  Values already saved here, or over a world's 10 MB cap. */
+    entriesSkipped: number;
+};
+
+export type WorldDataSettings = {
+    enabled: boolean;
+    port: number;
+};
+
+export type WorldDataStatus = {
+    enabled: boolean;
+    port: number;
+    running: boolean;
+    error: string | null;
+};
+
+export type WorldDataWorld = {
+    worldId: string;
+    allowExternalRead: boolean;
+    totalDataSize: number;
+    entryCount: number;
+    lastModified: number | null;
 };
 
 export type WorldDetail = {

@@ -16,17 +16,18 @@ use vrcx_0_vrchat_protocol::avatars::{
     AvatarListByUserGetInput,
 };
 use vrcx_0_vrchat_protocol::economy::{
-    balance_get_input, licensed_avatars_get_input, purchases_get_input, store_get_input,
-    transactions_get_input,
+    balance_get_input, claim_free_listing_input, licensed_avatars_get_input, purchases_get_input,
+    store_get_input, store_shelves_get_input, transactions_get_input,
 };
 use vrcx_0_vrchat_protocol::favorites::{favorite_groups_get_input, favorite_worlds_get_input};
 use vrcx_0_vrchat_protocol::friends::friend_status_get_input;
 use vrcx_0_vrchat_protocol::instances::{
-    active_instances_get_input, discover_instances_get_input, instance_calendar_link_input,
-    instance_categories_get_input, instance_category_options, instance_close_input,
-    instance_count_get_input, instance_create_input, instance_display_name_input,
-    instance_get_input, instance_self_invite_input, instance_short_name_get_input,
-    instance_vibe_options, instance_vibes_get_input, InstanceCreateOptions, InstanceCreateRequest,
+    active_instances_get_input, discover_instances_get_input, instance_announce_input,
+    instance_calendar_link_input, instance_categories_get_input, instance_category_options,
+    instance_close_input, instance_count_get_input, instance_create_input,
+    instance_display_name_input, instance_get_input, instance_self_invite_input,
+    instance_short_name_get_input, instance_vibe_options, instance_vibes_get_input,
+    InstanceCreateOptions, InstanceCreateRequest,
 };
 use vrcx_0_vrchat_protocol::media::{
     asset_upload_input, avatar_gallery_image_upload_input, cosmetics_index_get_input,
@@ -51,9 +52,9 @@ use vrcx_0_vrchat_protocol::tools::{
     discover_calendars_get_input, following_calendars_get_input, group_calendar_event_get_input,
     group_calendar_get_input, group_calendar_ics_get_input, group_event_create_input,
     group_event_delete_input, group_event_follow_input, group_event_update_input,
-    invite_message_edit_input, invite_messages_get_input, moderation_reports_get_input,
-    user_note_save_input, user_report_input, CalendarDiscoverParams, CalendarListParams,
-    GroupCalendarEventMutation, InviteMessageType, ModerationReportType,
+    info_push_get_input, invite_message_edit_input, invite_messages_get_input,
+    moderation_reports_get_input, user_note_save_input, user_report_input, CalendarDiscoverParams,
+    CalendarListParams, GroupCalendarEventMutation, InviteMessageType, ModerationReportType,
 };
 use vrcx_0_vrchat_protocol::users::{
     account_standing_get_input, profile_get_input, user_represented_group_get_input,
@@ -218,6 +219,40 @@ impl VrchatRemoteFacade {
             "app__vrchat_economy_store_get",
             format!("Getting store {store_id}."),
             request,
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
+    pub async fn economy_store_shelves(&self, store_id: String) -> Result<VrchatResponse> {
+        let (store_id, request) =
+            store_shelves_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), store_id)?;
+        self.execute(
+            "app__vrchat_economy_store_shelves_get",
+            format!("Getting store shelves for {store_id}."),
+            request,
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
+    pub async fn economy_claim_free_listing(&self, listing_id: String) -> Result<VrchatResponse> {
+        let (listing_id, request) =
+            claim_free_listing_input(VRCHAT_API_DEFAULT_ENDPOINT.into(), listing_id)?;
+        self.execute(
+            "app__vrchat_economy_claim_free_listing",
+            format!("Claiming free store listing {listing_id}."),
+            request,
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
+    pub async fn info_push(&self) -> Result<VrchatResponse> {
+        self.execute(
+            "app__vrchat_info_push_get",
+            "Getting VRChat announcements.",
+            info_push_get_input(VRCHAT_API_DEFAULT_ENDPOINT.into()),
             VrchatScope::Vrchat,
         )
         .await
@@ -480,6 +515,29 @@ impl VrchatRemoteFacade {
         self.execute(
             "app__vrchat_instance_display_name_set",
             format!("Renaming instance {location}."),
+            request,
+            VrchatScope::Vrchat,
+        )
+        .await
+    }
+
+    pub async fn instance_announce(
+        &self,
+        location: String,
+        message: String,
+        image_id: Option<String>,
+        image_version: Option<String>,
+    ) -> Result<VrchatResponse> {
+        let (location, request) = instance_announce_input(
+            VRCHAT_API_DEFAULT_ENDPOINT.into(),
+            location,
+            message,
+            image_id,
+            image_version,
+        )?;
+        self.execute(
+            "app__vrchat_instance_announce",
+            format!("Sending an announcement to instance {location}."),
             request,
             VrchatScope::Vrchat,
         )

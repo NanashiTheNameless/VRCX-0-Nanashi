@@ -30,6 +30,7 @@ export type ToolDialogKey =
     | 'edit-invite-messages'
     | 'moderation-reports'
     | 'purchase-history'
+    | 'info-push'
     | 'llm-endpoints'
     | 'profile-backup';
 
@@ -513,6 +514,16 @@ const toolDefinitions: ToolDefinition[] = [
         descriptionKey: 'view.tools.other.purchase_history_description',
         navEligible: true,
         action: { type: 'dialog', dialogKey: 'purchase-history' }
+    },
+    {
+        key: 'info-push',
+        category: 'other',
+        iconKey: 'rss',
+        navIcon: 'lucide:Rss',
+        titleKey: 'view.tools.other.info_push',
+        descriptionKey: 'view.tools.other.info_push_description',
+        navEligible: true,
+        action: { type: 'dialog', dialogKey: 'info-push' }
     }
 ];
 

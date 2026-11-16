@@ -94,6 +94,7 @@ export const ConfigKeys = defineConfigKeys({
     showActivityJourneyAvatarFrame: { type: 'bool', default: false },
     showActivityJourneyNameplate: { type: 'bool', default: false },
     hideUserMemos: { type: 'bool', default: false },
+    freeStoreItemNotifications: { type: 'bool', default: false },
     hideUserNotes: { type: 'bool', default: false },
     compactTableMode: { type: 'bool', default: false },
     dataTableStriped: { type: 'bool', default: false },

@@ -305,6 +305,23 @@ pub(super) fn parse_world_vrcx(
     true
 }
 
+pub(super) fn parse_world_data_vrcx(
+    out: &mut dyn GameLogParseSink,
+    fname: &str,
+    line: &str,
+    content: &str,
+) -> bool {
+    let Some(data) = content.strip_prefix("[VRCX-World] ") else {
+        return false;
+    };
+    out.push_event(
+        fname,
+        line,
+        GameLogEventKind::WorldData { data: data.into() },
+    );
+    true
+}
+
 pub(super) fn parse_screenshot(
     out: &mut dyn GameLogParseSink,
     fname: &str,

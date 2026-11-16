@@ -125,6 +125,11 @@ const APP_SETTINGS: Playbook = Playbook {
         "find_settings",
         "show_in_settings",
         "change_setting",
+        "read_vrcx_world_data",
+        "read_vrcx_custom_tags",
+        "import_vrcx_world_data",
+        "merge_profile_database",
+        "forget_vrcx_world_data",
     ],
     constraint_prompt: "The user is asking about VRCX-0-Nanashi itself: how a page or feature \
 works, where a button or setting is, what it does, or to change one. For a page, button or \
@@ -140,7 +145,11 @@ change_setting once with a value of the reported kind; it shows an in-chat permi
 and waits for Allow or Deny. The card is the confirmation, so do not first ask for a yes in \
 plain text or just give manual instructions. Use it only for a change the user asked for \
 or agreed to. Never invent \
-settings, locations or values.",
+settings, locations or values. To show what worlds saved (Persistent World Info) or the \
+custom tags VRCX programs set, use read_vrcx_world_data or read_vrcx_custom_tags. To import \
+VRCX's world data or merge another profile's database, call import_vrcx_world_data or \
+merge_profile_database once the user asked for it, and forget_vrcx_world_data to delete \
+what one world saved; each shows an approval card.",
 };
 
 const INTENTS: &[Intent] = &[

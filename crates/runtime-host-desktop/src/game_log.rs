@@ -37,6 +37,7 @@ fn host_error(error: vrcx_0_platform::Error) -> RuntimeError {
 struct HostGameLogActions {
     file_access: HostFileAccess,
     app_paths: AppPaths,
+    world_data: Arc<vrcx_0_vrcx_compat::WorldDataService>,
 }
 
 impl GameLogHostActions for HostGameLogActions {
@@ -83,6 +84,10 @@ impl GameLogHostActions for HostGameLogActions {
         )
     }
 
+    fn world_data_request(&self, data: &str) {
+        self.world_data.process_log_request(data);
+    }
+
     fn resolve_game_path(&self, path: &str) -> String {
         #[cfg(target_os = "linux")]
         {
@@ -122,6 +127,7 @@ pub struct GameLogHostRuntimeDeps {
     pub backend_status: BackendRuntimeStatusPublisher,
     pub side_effect_sink: GameLogSideEffectSink,
     pub isolation: GameIsolationRuntime,
+    pub world_data: Arc<vrcx_0_vrcx_compat::WorldDataService>,
 }
 
 impl GameLogHostRuntime {
@@ -154,6 +160,7 @@ impl GameLogHostRuntime {
             host_actions: Arc::new(HostGameLogActions {
                 file_access: deps.file_access,
                 app_paths: deps.app_paths,
+                world_data: deps.world_data,
             }),
             activity: Arc::new(deps.activity_router),
             world_cache: Arc::clone(&deps.world_cache),

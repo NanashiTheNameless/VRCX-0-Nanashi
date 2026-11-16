@@ -40,6 +40,7 @@ type ToolDialogHostKey =
     | 'editInviteMessagesOpen'
     | 'moderationReportsOpen'
     | 'purchaseHistoryOpen'
+    | 'infoPushOpen'
     | 'llmEndpointsOpen'
     | 'profileBackupOpen';
 
@@ -68,6 +69,7 @@ const toolDialogHostMap: Record<ToolDialogKey, ToolDialogHostKey> = {
     'edit-invite-messages': 'editInviteMessagesOpen',
     'moderation-reports': 'moderationReportsOpen',
     'purchase-history': 'purchaseHistoryOpen',
+    'info-push': 'infoPushOpen',
     'llm-endpoints': 'llmEndpointsOpen',
     'profile-backup': 'profileBackupOpen'
 };

@@ -88,7 +88,8 @@ The Tools page groups helpers by kind:
   VRChat, Export Friends List, Export My Avatars.
 - **Folders**: open the VRChat photos, VRChat data, VRCX-0-Nanashi data and crash dumps folders.
 - **Debug**: VRChat Log Viewer.
-- **Other**: AI Connections, AI Assistant, Message Templates, My Reports, Purchase History.
+- **Other**: AI Connections, AI Assistant, Message Templates, My Reports, Purchase History,
+  VRChat Announcements.
 
 ## Settings
 
@@ -115,7 +116,8 @@ finds any setting by name.
 - **AI** - AI Assistant; LLM Endpoints (the AI services you connect); MCP Server (lets
   external AI tools use your local data).
 - **Integrations** - Discord Presence; Content Translation; YouTube API; Remote Avatar
-  Database; Integration API (real-time game data for other apps).
+  Database; Integration API (real-time game data for other apps); VRCX IPC (programs made for
+  VRCX); Persistent World Info (worlds made for VRCX that save data).
 - **Sync Options** - History Sync with RemoteSync, or the Self-hosted Recorder.
 - **Advanced** - Storage & cleanup; Troubleshooting (error log, link handling, database usage);
   Import & recovery; Safety watchlists and warnings; Export & import data; Anonymous adoption
@@ -146,6 +148,9 @@ under Settings > VR shows them without starting VRChat, as long as SteamVR is ru
 
 - **MCP server** (Settings > AI) lets external AI tools read your local social data.
 - **Integration API** (Settings > Integrations) shares real-time in-game data with other apps.
+- **VRCX IPC** and **Persistent World Info** (Settings > Integrations), both off by default, let
+  programs and worlds made for VRCX work with this app; see
+  [INTEGRATIONS.md](INTEGRATIONS.md#vrcx-ipc).
 - **Self-hosted Recorder** (Settings > Sync Options) keeps your Feed recording on your own
   server while the app is closed; see the [recorder guide](RECORDER.md).
 - **Headless mode** runs the app without a window; it is for running on servers.

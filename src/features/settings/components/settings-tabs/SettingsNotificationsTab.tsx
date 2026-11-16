@@ -39,6 +39,7 @@ type SettingsNotificationsPrefs = Pick<
     | 'notificationIconDot'
     | 'taskbarIconDot'
     | 'friendLogNotificationDot'
+    | 'freeStoreItemNotifications'
     | 'desktopNotificationSound'
     | 'desktopNotificationAvatars'
     | 'desktopToast'
@@ -62,6 +63,7 @@ type SettingsNotificationsTabContentProps = {
     onNotificationIconDotChange: (checked: boolean) => void;
     onTaskbarIconDotChange: (checked: boolean) => void;
     onFriendLogNotificationDotChange: (checked: boolean) => void;
+    onFreeStoreItemNotificationsChange: (checked: boolean) => void;
     webhookSettings?: ReactNode;
     desktopToastOptions: SettingsOptionList;
     notificationTtsOptions: SettingsOptionList;
@@ -111,6 +113,7 @@ export function SettingsNotificationsTabContent({
     onNotificationIconDotChange,
     onTaskbarIconDotChange,
     onFriendLogNotificationDotChange,
+    onFreeStoreItemNotificationsChange,
     webhookSettings,
     desktopToastOptions,
     notificationTtsOptions,
@@ -169,6 +172,9 @@ export function SettingsNotificationsTabContent({
                 onTaskbarIconDotChange={onTaskbarIconDotChange}
                 onFriendLogNotificationDotChange={
                     onFriendLogNotificationDotChange
+                }
+                onFreeStoreItemNotificationsChange={
+                    onFreeStoreItemNotificationsChange
                 }
             />
             <SettingsCard

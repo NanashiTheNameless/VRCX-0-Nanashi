@@ -71,6 +71,9 @@ pub enum GameLogSideEffect {
         location: String,
         group_id: String,
     },
+    WorldData {
+        data: String,
+    },
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -301,6 +304,7 @@ impl GameLogIngestEngine {
                                 display_name: String::new(),
                                 user_id: String::new(),
                                 location: self.state.current_location.clone(),
+                                silent: false,
                             });
                         }
                     }
@@ -345,15 +349,24 @@ impl GameLogIngestEngine {
                     created_at: event.created_at,
                     data: data.clone(),
                 }),
-                GameLogEventKind::External { data } => {
+                GameLogEventKind::External {
+                    data,
+                    display_name,
+                    user_id,
+                    silent,
+                } => {
                     output.batch.externals.push(GameLogExternalEntry {
                         created_at: event.created_at,
                         message: data.clone(),
-                        display_name: String::new(),
-                        user_id: String::new(),
+                        display_name: display_name.clone(),
+                        user_id: user_id.clone(),
                         location: self.state.current_location.clone(),
+                        silent: *silent,
                     });
                 }
+                GameLogEventKind::WorldData { data } => output
+                    .side_effects
+                    .push(GameLogSideEffect::WorldData { data: data.clone() }),
             }
             if batch_write_count(&output.batch) > write_count_before {
                 output.runtime_persisted_mirrors.push(event.to_compat_row());

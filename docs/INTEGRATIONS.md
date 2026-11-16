@@ -88,6 +88,65 @@ All messages are JSON with a `type` field. Every message except `bye` carries an
 Each member has `userId`, `displayName`, `isSelf`, `isFriend`, `joinedAt`, `languages` and
 `note`. Send `{ "type": "resync" }` at any time to receive a fresh `room.snapshot`.
 
+## VRCX IPC
+
+Settings > Integrations > VRCX IPC. Off by default. Programs made for VRCX can talk to
+VRCX-0-Nanashi over the same local pipe VRCX uses, so they work without changes:
+
+- **Custom tags**: a program can tag a user, or clear all tags. Each tag shows exactly like
+  one of your custom badges (see [BADGES.md](BADGES.md#tags-from-vrcx-programs)), everywhere
+  user names appear, in VR and on the Desktop Overlay. Tags are kept in memory only and
+  disappear when the app closes or the pipe is turned off, like in VRCX.
+- **Game Log entries**: a program can add an event line, or an entry attributed to a user, to
+  the Game Log, with the usual notification. An entry sent with `notify` set to `false` is saved
+  without a notification, like in VRCX. Entries are only added while you are signed in.
+- **Launch commands**: a program can open a world, instance, user, avatar or group, using the
+  same paths as `vrcx://` links (for example `world/wrld_...`).
+- **What the app sends**: connected programs are told when the pipe starts
+  (`VRCXLaunch`) and which user's dialog you open (`ShowUserDialog` with the user ID), as VRCX
+  does. Nothing is sent while the pipe is off.
+
+Any program on this computer that can open the pipe can use it, so turn it on only if you use
+such a program. Photon event logging from VRChat mods is not supported.
+
+The pipe uses VRCX's name, `vrcx-ipc-` followed by a number made from your user name, and VRCX's
+packet format (JSON objects ending with a NUL character). **Pipe name** changes the name; leave
+it empty for VRCX's. On Linux and macOS the pipe is a Unix socket, by default where .NET programs
+look for it (`CoreFxPipe_<pipe name>` in the temporary folder, readable only by you); **Socket
+path** chooses another place. VRCX and VRCX-0-Nanashi cannot use the same pipe at the same time;
+the status shows an error if another program already has it.
+
+These settings stay on this PC and are not included in Settings Sync.
+
+## Persistent World Info
+
+Settings > Integrations > Persistent World Info. Off by default. Worlds made for VRCX can save
+values, such as progress or scores, by writing `[VRCX-World]` lines to VRChat's log, and read
+them back over HTTP from a server on this computer. VRCX dropped this feature; VRCX-0-Nanashi
+brings it back with the same requests and answers, so those worlds work again.
+
+- The server listens only on `127.0.0.1`, port **22500** by default (VRCX's), and answers only
+  requests addressed to `127.0.0.1` or `localhost`. Change the port only if a world asks for a
+  different one.
+- VRChat lets a world reach the server only when **Allow Untrusted URLs** is on in VRChat's
+  settings.
+- Each world gets its own key and can save up to 10 MB. A world can let other worlds read its
+  data.
+- Nothing is saved while the feature is off. Values are kept in `VRCX-0-Nanashi-WorldData.db`
+  in the data folder, in VRCX's format: VRCX's `VRCX-WorldData.db` can be copied over under that
+  name.
+- **Stored data** > **View** lists the worlds that saved something and their values. **Forget
+  this world** deletes its values and its key.
+- **Import world data** adds what worlds saved in VRCX: **Import from VRCX** reads VRCX's
+  `VRCX-WorldData.db` from VRCX's data folder, and **Choose file** reads any such file. Worlds
+  keep their keys, values already saved here are kept, and the 10 MB cap still applies. The
+  other file is only read. Importing works whether or not the feature is on.
+
+Endpoints (all `GET`, answering VRCX's `{ ok, error, data, statusCode, connectionKey }`):
+`/vrcx/data/init`, `/vrcx/data/get?key=`, `/vrcx/data/getall`, `/vrcx/data/getbulk?keys=`,
+`/vrcx/data/lasterror`, `/vrcx/data/settings?set=externalReads&value=` and `/vrcx/status`. `get`,
+`getall` and `getbulk` take `world=` to read another world that allows it.
+
 ## MCP server
 
 Under Settings > AI. Lets external AI tools read your local data. See

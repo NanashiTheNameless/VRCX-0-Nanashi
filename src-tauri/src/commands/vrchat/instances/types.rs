@@ -47,6 +47,17 @@ pub struct VrchatInstanceDisplayNameInput {
 
 #[derive(Debug, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct VrchatInstanceAnnounceInput {
+    pub(crate) location: String,
+    pub(crate) message: String,
+    #[serde(default)]
+    pub(crate) image_id: Option<String>,
+    #[serde(default)]
+    pub(crate) image_version: Option<String>,
+}
+
+#[derive(Debug, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct VrchatInstanceCalendarLinkInput {
     pub(crate) location: String,
     pub(crate) calendar_entry_id: Option<String>,

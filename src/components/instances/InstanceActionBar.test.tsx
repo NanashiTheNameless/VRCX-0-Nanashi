@@ -21,7 +21,8 @@ const mocks = vi.hoisted(() => ({
             currentUserId: 'usr_self'
         },
         gameState: {
-            isGameRunning: true
+            isGameRunning: true,
+            currentLocation: ''
         }
     },
     showLaunchDialog: vi.fn(),
@@ -170,6 +171,7 @@ describe('InstanceActionBar', () => {
             'https://api.example.test/api/1';
         mocks.runtimeState.auth.currentUserId = 'usr_self';
         mocks.runtimeState.gameState.isGameRunning = true;
+        mocks.runtimeState.gameState.currentLocation = '';
         mocks.showLaunchDialog.mockReset();
         mocks.tryOpenLaunchLocation.mockReset();
         mocks.selfInviteToInstance.mockReset();
@@ -381,6 +383,33 @@ describe('InstanceActionBar', () => {
         ).toContain(renameLabel);
         expect(render({ ownerId: 'usr_self' })).not.toContain(renameLabel);
         expect(render({ ownerId: 'usr_other' })).not.toContain(renameLabel);
+    });
+
+    it('offers announcements only in the group instance the user is in', () => {
+        const location = 'wrld_test:12345~group(grp_team)';
+        const announceLabel =
+            'aria-label="component.instance_action_bar.announcement.header"';
+        const render = (permissions: string[]) =>
+            renderActionBar({
+                target: { location },
+                instance: {
+                    ownerId: 'grp_team',
+                    group: { myMember: { permissions } }
+                },
+                showLaunch: false,
+                showInvite: false
+            });
+
+        expect(render(['group-instance-announcement-create'])).not.toContain(
+            announceLabel
+        );
+
+        mocks.runtimeState.gameState.currentLocation = location;
+        expect(render(['group-instance-announcement-create'])).toContain(
+            announceLabel
+        );
+        expect(render(['*'])).toContain(announceLabel);
+        expect(render(['group-instance-manage'])).not.toContain(announceLabel);
     });
 
     it('shows the linked event marker', () => {

@@ -10576,6 +10576,7 @@ dependencies = [
  "vrcx-0-remote-sync",
  "vrcx-0-vrchat-client",
  "vrcx-0-vrchat-protocol",
+ "vrcx-0-vrcx-compat",
  "zeroize",
 ]
 
@@ -10643,6 +10644,23 @@ dependencies = [
  "url",
  "vrcx-0-contracts",
  "vrcx-0-core",
+]
+
+[[package]]
+name = "vrcx-0-vrcx-compat"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "http",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "specta",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+ "vrcx-0-local-server",
 ]
 
 [[package]]

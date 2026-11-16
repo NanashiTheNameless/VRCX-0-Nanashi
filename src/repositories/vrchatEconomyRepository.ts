@@ -48,6 +48,8 @@ export type EconomyTransactionRecord = Record<string, unknown> & {
 
 export type EconomyListingRecord = Record<string, unknown> & {
     id?: string;
+    active?: boolean;
+    subtitle?: string;
     listingId?: string;
     displayName?: string;
     description?: string;
@@ -219,6 +221,28 @@ async function getStoreListings({
     });
 }
 
+// The store's shelves with hydrated listings, read fresh each time so a free
+// item is noticed as soon as VRChat adds it.
+async function getStoreShelfListings(
+    storeId: string
+): Promise<EconomyListingRecord[]> {
+    const json = unwrapVrchatResponse<unknown>(
+        await commands.appVrchatEconomyStoreShelvesGet({ storeId }),
+        'economy/store/shelves'
+    ).json;
+    return (Array.isArray(json) ? json : []).flatMap((shelf) =>
+        isRecord(shelf) ? records<EconomyListingRecord>(shelf.listings) : []
+    );
+}
+
+// Claims a free listing; the backend always sends a price of 0.
+async function claimFreeListing(listingId: string) {
+    return unwrapVrchatResponse<unknown>(
+        await commands.appVrchatEconomyClaimFreeListing({ listingId }),
+        'economy/purchase/listing'
+    ).json;
+}
+
 export function ownedFromPurchases(
     purchases: EconomyPurchaseRecord[],
     currentUserId: string
@@ -249,7 +273,9 @@ const vrchatEconomyRepository = Object.freeze({
     getLicensedAvatars,
     getTransactions,
     setBalance,
-    getStoreListings
+    getStoreListings,
+    getStoreShelfListings,
+    claimFreeListing
 });
 
 export default vrchatEconomyRepository;

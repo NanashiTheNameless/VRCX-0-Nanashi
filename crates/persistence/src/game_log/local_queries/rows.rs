@@ -217,6 +217,7 @@ pub(crate) fn game_log_batch_for_kind(
                     display_name: object_field_string(&entry, &["displayName", "display_name"]),
                     user_id: object_field_string(&entry, &["userId", "user_id"]),
                     location: object_field_string(&entry, &["location"]),
+                    silent: false,
                 })
                 .collect();
         }

@@ -224,3 +224,17 @@ pub async fn app__vrchat_tools_invite_message_edit(
         .await
         .map_err(AppError::from)
 }
+
+/// Fork (from VRCX): VRChat's own announcements for the Info Push dialog.
+#[tauri::command]
+#[specta::specta]
+pub async fn app__vrchat_info_push_get(
+    state: State<'_, AppState>,
+) -> Result<VrchatResponse, AppError> {
+    state
+        .runtime_host()
+        .vrchat_remote()
+        .info_push()
+        .await
+        .map_err(AppError::from)
+}

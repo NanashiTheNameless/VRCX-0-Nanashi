@@ -631,6 +631,14 @@ defineCard(
             labelKey:
                 'view.settings.appearance.friend_log.show_notification_dot',
             prefKey: 'friendLogNotificationDot'
+        },
+        {
+            key: 'free-store-items',
+            labelKey:
+                'view.settings.notifications.notifications.in_app.free_store_items',
+            descriptionKey:
+                'view.settings.notifications.notifications.in_app.free_store_items_description',
+            prefKey: 'freeStoreItemNotifications'
         }
     ]
 );
@@ -1485,6 +1493,65 @@ defineCard(
             labelKey: 'view.settings.integrations.integration_api.token',
             descriptionKey:
                 'view.settings.integrations.integration_api.token_description'
+        }
+    ]
+);
+
+defineCard(
+    'integrations',
+    'vrcx-ipc',
+    'view.settings.integrations.vrcx_ipc.header',
+    [
+        {
+            key: 'enabled',
+            labelKey: 'view.settings.integrations.vrcx_ipc.enable',
+            descriptionKey:
+                'view.settings.integrations.vrcx_ipc.enable_description'
+        },
+        {
+            key: 'pipe-name',
+            labelKey: 'view.settings.integrations.vrcx_ipc.pipe_name'
+        },
+        {
+            key: 'socket-path',
+            labelKey: 'view.settings.integrations.vrcx_ipc.socket_path',
+            platforms: ['linux', 'macos']
+        },
+        {
+            key: 'status',
+            labelKey: 'view.settings.integrations.vrcx_ipc.status_label'
+        }
+    ]
+);
+
+defineCard(
+    'integrations',
+    'world-data',
+    'view.settings.integrations.world_data.header',
+    [
+        {
+            key: 'enabled',
+            labelKey: 'view.settings.integrations.world_data.enable',
+            descriptionKey:
+                'view.settings.integrations.world_data.enable_description'
+        },
+        {
+            key: 'port',
+            labelKey: 'view.settings.integrations.world_data.port_label',
+            descriptionKey:
+                'view.settings.integrations.world_data.port_description'
+        },
+        {
+            key: 'stored',
+            labelKey: 'view.settings.integrations.world_data.stored',
+            descriptionKey:
+                'view.settings.integrations.world_data.stored_description'
+        },
+        {
+            key: 'import',
+            labelKey: 'view.settings.integrations.world_data.import_label',
+            descriptionKey:
+                'view.settings.integrations.world_data.import_description'
         }
     ]
 );

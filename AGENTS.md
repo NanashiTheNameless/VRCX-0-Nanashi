@@ -12,7 +12,7 @@ The fork is maintained by one person. Read `CONTRIBUTING.md` before proposing
 changes, and treat it as authoritative where this file is silent.
 
 The React frontend lives in `src/features/<domain>/`. The Rust backend is a Cargo
-workspace of 34 crates under `crates/`, plus `src-tauri` (35 members total).
+workspace of 35 crates under `crates/`, plus `src-tauri` (36 members total).
 
 npm is the only supported package manager. `package-lock.json` is the sole
 lockfile; CI runs `npm ci`. Do not reintroduce a pnpm or yarn lockfile.
@@ -188,6 +188,31 @@ The parts most likely to be damaged by an unrelated edit, with where they live:
   only once a recorder is set up, never as a placeholder for everyone.
   Nightly builds the binaries and calls `logger-image.yml` to publish the
   image.
+- **VRCX compatibility** - `crates/vrcx-compat/` (IPC pipe and Persistent
+  World Info), `crates/runtime-host-desktop/src/vrcx_compat.rs`, Settings >
+  Integrations. Both are off by default; nothing listens and nothing is
+  stored while off. Keep VRCX's wire formats exactly (pipe name
+  `vrcx-ipc-<sum of user name UTF-16 units>`, NUL-terminated JSON packets,
+  .NET's `CoreFxPipe_<name>` socket on Linux and macOS, `[VRCX-World]` log
+  requests, port 22500 and VRCX's endpoints and response fields), so
+  programs and worlds built for VRCX work unchanged (the stored file is the
+  fork's own `VRCX-0-Nanashi-WorldData.db`, in VRCX's schema; VRCX's
+  `VRCX-WorldData.db` is imported read-only, existing values win); the pipe name, socket
+  path and port are user settings with VRCX's values as defaults, kept out
+  of Settings Sync. The world data server binds 127.0.0.1 only and refuses
+  any Host other than 127.0.0.1 or localhost. IPC Game Log entries go
+  through the normal game log ingest and only while signed in. Photon event
+  logging is deliberately not supported. IPC tags render exactly as custom
+  badges (`vrcxCustomTagBadge` in `src/state/vrcxCustomTagStore.ts`, in
+  `UserBadges` and the overlay badge sync); VRCX's `UserId`/`Tag`/`TagColour`
+  packets must keep working, with `Icon`, `Id`, `TagColor` and `Color` as
+  optional extras, and reserved icons are never accepted. The maintainer authorized the AI
+  Assistant to change the VRCX IPC and world data switches, pipe name, socket
+  path and port, and the free store item switch, each through the normal
+  approval card, and to run `import_vrcx_world_data`,
+  `merge_profile_database` and `forget_vrcx_world_data` (client edit tools in `EDIT_TOOLS`, run in
+  `src/features/assistant/assistantVrcxTools.ts` only after Approve). Reading
+  world data and IPC custom tags needs no approval; that text is untrusted.
 - **Adoption count** - `crates/runtime-host-desktop/src/adoption_census.rs`,
   `ExternalApiScope::AdoptionCensus` in `crates/contracts/src/external_api.rs`,
   the card at the bottom of Settings > Advanced. The only thing the app

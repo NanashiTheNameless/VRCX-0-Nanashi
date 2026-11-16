@@ -167,6 +167,30 @@ fn is_excluded(relative: &Path) -> bool {
     name.starts_with('.') || name.ends_with(".lock") || EXCLUDED_TOP_LEVEL.contains(&name.as_str())
 }
 
+const SQLITE_SIDECARS: &[&str] = &["-wal", "-shm", "-journal"];
+
+/// Other SQLite databases in the data folder, such as the Persistent World
+/// Info file, are exported from a snapshot so a write during the export
+/// cannot leave a half-written copy. Their journal files are left out.
+fn is_sqlite_file(relative: &Path) -> bool {
+    matches!(
+        relative
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .map(str::to_ascii_lowercase)
+            .as_deref(),
+        Some("db" | "sqlite" | "sqlite3")
+    )
+}
+
+fn is_sqlite_sidecar(relative: &Path, files: &[PathBuf]) -> bool {
+    let name = relative.to_string_lossy();
+    SQLITE_SIDECARS.iter().any(|suffix| {
+        name.strip_suffix(suffix)
+            .is_some_and(|base| files.iter().any(|file| file.as_os_str() == base))
+    })
+}
+
 fn zip_name(relative: &Path) -> String {
     relative
         .components()
@@ -220,6 +244,8 @@ pub fn export_data_archive(
         let mut files = Vec::new();
         collect_files(app_data, app_data, &mut files)?;
         files.sort();
+        let all_files = files.clone();
+        files.retain(|relative| !is_sqlite_sidecar(relative, &all_files));
 
         if let Some(parent) = archive.parent() {
             fs::create_dir_all(parent)?;
@@ -243,11 +269,23 @@ pub fn export_data_archive(
             .start_file(DATABASE_FILE, file_options())
             .map_err(zip_error)?;
         bytes += io::copy(&mut File::open(&snapshot)?, &mut writer)?;
-        for relative in &files {
+        for (index, relative) in files.iter().enumerate() {
+            let mut source = app_data.join(relative);
+            if is_sqlite_file(relative) {
+                let copy = staging.join(format!("snapshot-{index}"));
+                match copy_database_snapshot(&source, &copy, |_, _| {}) {
+                    Ok(()) => source = copy,
+                    Err(error) => tracing::warn!(
+                        file = %relative.display(),
+                        error = %error,
+                        "exporting a database file as is"
+                    ),
+                }
+            }
             writer
                 .start_file(zip_name(relative), file_options())
                 .map_err(zip_error)?;
-            bytes += io::copy(&mut File::open(app_data.join(relative))?, &mut writer)?;
+            bytes += io::copy(&mut File::open(&source)?, &mut writer)?;
         }
         writer.finish().map_err(zip_error)?.sync_all()?;
         if archive.exists() {
@@ -503,6 +541,50 @@ mod tests {
              INSERT INTO cookies VALUES ('auth', 'session-{value}');"
         ))
         .unwrap();
+    }
+
+    #[test]
+    fn other_databases_are_exported_from_a_snapshot_without_journals() {
+        let source = temp_dir("sqlite-source");
+        make_db(&source.join(DATABASE_FILE), "dark");
+        let world_data = source.join("VRCX-0-Nanashi-WorldData.db");
+        let conn = rusqlite::Connection::open(&world_data).unwrap();
+        conn.execute_batch(
+            "PRAGMA journal_mode = WAL;
+             CREATE TABLE data (key TEXT, value TEXT);
+             INSERT INTO data VALUES ('score', '7');",
+        )
+        .unwrap();
+        // The open connection keeps the write in the WAL file, which a plain
+        // file copy would miss.
+        assert!(source.join("VRCX-0-Nanashi-WorldData.db-wal").is_file());
+
+        let archive = temp_dir("sqlite-out").join("export.zip");
+        export_data_archive(&source.join(DATABASE_FILE), &source, &archive, "3.0.0").unwrap();
+        drop(conn);
+
+        let mut zip = ZipArchive::new(File::open(&archive).unwrap()).unwrap();
+        let names: Vec<String> = zip
+            .file_names()
+            .map(|name| name.unwrap().into_owned())
+            .collect();
+        assert!(names.contains(&"VRCX-0-Nanashi-WorldData.db".to_string()));
+        assert!(!names
+            .iter()
+            .any(|name| name.ends_with("-wal") || name.ends_with("-shm")));
+        let extracted = temp_dir("sqlite-extract").join("world.db");
+        io::copy(
+            &mut zip.by_name("VRCX-0-Nanashi-WorldData.db").unwrap(),
+            &mut File::create(&extracted).unwrap(),
+        )
+        .unwrap();
+        let value: String = rusqlite::Connection::open(&extracted)
+            .unwrap()
+            .query_row("SELECT value FROM data WHERE key = 'score'", [], |row| {
+                row.get(0)
+            })
+            .unwrap();
+        assert_eq!(value, "7");
     }
 
     #[test]

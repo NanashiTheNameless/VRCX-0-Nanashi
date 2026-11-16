@@ -13,7 +13,8 @@ use vrcx_0_application_core::Error;
 use vrcx_0_persistence::legacy_migration::copy_database_snapshot;
 use vrcx_0_persistence::profile_merge::{
     import_profile_configs_file, import_settings_file, merge_profile_database_file,
-    merge_settings_file, ProfileMergeReport, ProfileSettingsImportReport,
+    merge_settings_file, validate_profile_database_file, ProfileMergeReport,
+    ProfileSettingsImportReport,
 };
 use vrcx_0_persistence::DatabaseService;
 
@@ -59,6 +60,11 @@ pub fn profile_merge_source_path(kind: ProfileMergeSourceKind) -> Option<PathBuf
     }
 }
 
+/// VRCX's Persistent World Info file, for the world data import.
+pub fn vrcx_world_data_file() -> Option<PathBuf> {
+    vrcx_0_persistence::legacy_vrcx::legacy_vrcx_world_data_file()
+}
+
 pub fn profile_merge_sources() -> ProfileMergeSources {
     let display = |kind| profile_merge_source_path(kind).map(|path| path.display().to_string());
     ProfileMergeSources {
@@ -79,7 +85,21 @@ fn with_staged_source<T>(
 ) -> Result<T, Error> {
     let source = profile_merge_source_path(kind)
         .ok_or_else(|| Error::Custom("No data found to import from.".into()))?;
-    if source == db.db_path() {
+    with_staged_path(db, app_data, source, backup_label, apply)
+}
+
+fn with_staged_path<T>(
+    db: &DatabaseService,
+    app_data: &Path,
+    source: PathBuf,
+    backup_label: &str,
+    apply: impl FnOnce(&Path, &Path) -> Result<T, Error>,
+) -> Result<T, Error> {
+    let same_file = match (source.canonicalize(), db.db_path().canonicalize()) {
+        (Ok(source), Ok(own)) => source == own,
+        _ => source == db.db_path(),
+    };
+    if same_file {
         return Err(Error::Custom("That is this profile's own database.".into()));
     }
     let staging = app_data.join(MERGE_STAGING_DIR);
@@ -141,6 +161,31 @@ pub fn run_profile_merge(
             rows = report.rows_added,
             tables = report.tables_merged,
             "merged external profile data"
+        );
+        Ok(report)
+    })
+}
+
+/// Fork (VRCX's DB Merger): merge a profile database file the user picked,
+/// such as an old VRCX backup. Only the database is merged, with the same
+/// rules as the automatic sources; settings files are not read.
+pub fn run_profile_merge_file(
+    db: &DatabaseService,
+    app_data: &Path,
+    source: PathBuf,
+) -> Result<ProfileMergeReport, Error> {
+    if !source.is_file() {
+        return Err(Error::Custom("That file does not exist.".into()));
+    }
+    validate_profile_database_file(&source).map_err(crate::Error::from)?;
+    with_staged_path(db, app_data, source, "merge-file", |snapshot, source| {
+        let report =
+            merge_profile_database_file(db.db_path(), snapshot).map_err(crate::Error::from)?;
+        tracing::info!(
+            source = %source.display(),
+            rows = report.rows_added,
+            tables = report.tables_merged,
+            "merged a profile database file"
         );
         Ok(report)
     })

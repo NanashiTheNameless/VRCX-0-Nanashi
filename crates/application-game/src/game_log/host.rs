@@ -16,6 +16,9 @@ pub trait GameLogHostActions: Send + Sync {
     fn resolve_game_path(&self, path: &str) -> String {
         path.to_string()
     }
+
+    /// A `[VRCX-World]` request from the world the player is in.
+    fn world_data_request(&self, _data: &str) {}
 }
 
 #[derive(Default)]

@@ -59,7 +59,8 @@ describe('tool catalog categories', () => {
                 'social-ai',
                 'edit-invite-message',
                 'moderation-reports',
-                'purchase-history'
+                'purchase-history',
+                'info-push'
             ]
         });
     });

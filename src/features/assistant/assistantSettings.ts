@@ -121,6 +121,7 @@ export type AssistantSettingValueKind =
     | 'boolean'
     | 'number'
     | 'choice'
+    | 'text'
     | 'other';
 
 export type AssistantSettingInfo = {
@@ -138,6 +139,8 @@ export type AssistantSettingInfo = {
         unit: string;
         choices?: readonly number[];
     };
+    /** Text settings: an empty value restores the default described here. */
+    text?: { maxLength: number; emptyMeans: string };
     canRequestChange: boolean;
     blocked: boolean;
     note?: string;
@@ -200,6 +203,7 @@ function lockedSettingReason(entry: SettingsManifestEntry): string {
         case 'advanced.danger.purge-avatar-history':
         case 'advanced.data-export.import':
         case 'advanced.import-recovery.gamelog-import':
+        case 'integrations.world-data.stored':
             return 'Data deletion, cleanup, migration, and replacement must be reviewed and performed manually.';
         case 'advanced.safety.enabled':
             return 'The safety master switch must be changed manually because enabling it can reactivate saved blocking, hiding, or banning rules.';
@@ -210,8 +214,11 @@ function lockedSettingReason(entry: SettingsManifestEntry): string {
         case 'system.updates.update-check-disabled':
         case 'ai.mcp.status':
         case 'integrations.api.status':
+        case 'integrations.vrcx-ipc.status':
         case 'notifications.webhook.delivery-status':
             return 'This is a read-only status display, not an editable setting.';
+        case 'integrations.world-data.import':
+            return 'This is an action, not a setting. Use import_vrcx_world_data, which shows its own approval card.';
         default:
             return 'This control has no explicitly approved assistant save action or value specification. Change it on its Settings card.';
     }
@@ -340,6 +347,15 @@ export function displaySettingValue(
             label: `${String(shown)} ${unitLabel(spec.unit, t)}`
         };
     }
+    if (spec?.kind === 'text') {
+        const text = typeof shown === 'string' ? shown : '';
+        return {
+            value: text,
+            label:
+                text ||
+                t('assistant.edit.default_value', { value: spec.defaultLabel })
+        };
+    }
     return { value: shown, label: String(shown ?? '') };
 }
 
@@ -381,7 +397,7 @@ export function describeAssistantSetting(
     ].filter(Boolean);
     const shape: Pick<
         AssistantSettingInfo,
-        'valueKind' | 'currentValue' | 'options' | 'range'
+        'valueKind' | 'currentValue' | 'options' | 'range' | 'text'
     > =
         typeof stored === 'boolean'
             ? { valueKind: 'boolean', currentValue: stored }
@@ -405,7 +421,16 @@ export function describeAssistantSetting(
                           ...(spec.choices ? { choices: spec.choices } : {})
                       }
                   }
-                : { valueKind: 'other', currentValue: stored ?? null };
+                : spec?.kind === 'text'
+                  ? {
+                        valueKind: 'text',
+                        currentValue: typeof stored === 'string' ? stored : '',
+                        text: {
+                            maxLength: spec.maxLength,
+                            emptyMeans: spec.defaultLabel
+                        }
+                    }
+                  : { valueKind: 'other', currentValue: stored ?? null };
     return {
         settingId: entry.id,
         cardId: entry.cardId,
@@ -605,7 +630,7 @@ export async function applySettingChange(
         useAssistantNativeSettings.setState((state) => ({
             values: {
                 ...state.values,
-                [settingId]: parsed.shown as boolean | number
+                [settingId]: parsed.shown as boolean | number | string
             }
         }));
         return;

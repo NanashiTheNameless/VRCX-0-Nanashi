@@ -210,8 +210,10 @@
             "units": {
                 "seconds": "seconds",
                 "minutes": "minutes",
-                "percent": "%"
+                "percent": "%",
+                "port": "(port)"
             },
+            "default_value": "Default ({value})",
             "blocked": "This has no effect until another setting is turned on.",
             "details": "Details",
             "action_description": "The assistant asked to do this for you. Nothing happens unless you approve, and it asks again for every change.",
@@ -232,7 +234,10 @@
                 "send_chatbox_message": "Send a message to the VRChat Chatbox",
                 "set_chatbox_afk": "Switch Chatbox AFK",
                 "update_chatbox": "Change Chatbox settings",
-                "favorite_move": "Move VRChat favorites between groups"
+                "favorite_move": "Move VRChat favorites between groups",
+                "import_vrcx_world_data": "Import Persistent World Info saved in VRCX",
+                "merge_profile_database": "Merge another profile's history, notes and favorites into this one",
+                "forget_vrcx_world_data": "Delete everything one world saved through Persistent World Info"
             },
             "favorite_move": {
                 "summary": "Move favorites to \"{target}\"",
@@ -2766,7 +2771,9 @@
                 "moderation_reports": "My Reports",
                 "moderation_reports_description": "View reports you've submitted",
                 "purchase_history": "Purchase History",
-                "purchase_history_description": "View items you bought and your VRChat Credits activity"
+                "purchase_history_description": "View items you bought and your VRChat Credits activity",
+                "info_push": "VRChat Announcements",
+                "info_push_description": "Read VRChat's help articles and the banners shown in the game"
             },
             "success": {
                 "media_item_deleted": "Media item deleted",
@@ -4053,6 +4060,60 @@
                         "running": "Running",
                         "error": "Error"
                     }
+                },
+                "vrcx_ipc": {
+                    "header": "VRCX IPC",
+                    "description": "Lets programs made for VRCX talk to VRCX-0-Nanashi over the same local pipe: they can show custom tags next to users, add Game Log entries with a notification, and open worlds, users, avatars and groups. Connected programs are told when VRCX-0-Nanashi starts and which user's dialog you open.",
+                    "enable": "Enable VRCX IPC",
+                    "enable_description": "Any program on this computer that can open the pipe can use it. Off by default.",
+                    "pipe_name": "Pipe name",
+                    "pipe_name_description": "Leave empty for VRCX's name on this computer, {name}. VRCX and VRCX-0-Nanashi cannot use the same pipe at the same time.",
+                    "socket_path": "Socket path",
+                    "socket_path_description": "Leave empty for the socket .NET programs use for the pipe name, {path}.",
+                    "status_label": "Status",
+                    "status_description": "{address} - {count} connected programs",
+                    "apply": "Apply",
+                    "status": {
+                        "disabled": "Off",
+                        "stopped": "Stopped",
+                        "running": "Running",
+                        "error": "Error"
+                    }
+                },
+                "world_data": {
+                    "header": "Persistent World Info",
+                    "description": "Worlds made for VRCX can save values, such as your progress, by writing them to VRChat's log, and read them back from a server on this computer. VRCX no longer does this; old worlds that use it work again here. VRChat only lets worlds read it when Allow Untrusted URLs is on in VRChat.",
+                    "enable": "Enable Persistent World Info",
+                    "enable_description": "Stores what worlds save and serves it on 127.0.0.1 only. Nothing is stored while this is off.",
+                    "port_label": "Server port",
+                    "port_description": "Default: 22500, the port worlds made for VRCX use. Change it only if a world asks for a different one.",
+                    "port_apply": "Apply",
+                    "port_invalid": "Port must be between 1024 and 65535",
+                    "stored": "Stored data",
+                    "stored_description": "Each world can save up to 10 MB. Forgetting a world deletes its data and gives it a new key.",
+                    "view": "View",
+                    "viewer_title": "Persistent World Info",
+                    "viewer_description": "Values worlds saved. A world marked shared lets other worlds read its data.",
+                    "empty": "No world has saved anything yet.",
+                    "select_world": "Choose a world to see what it saved.",
+                    "no_entries": "This world has no saved values.",
+                    "world_summary": "{count} values, {size}",
+                    "shared": "shared",
+                    "forget": "Forget this world",
+                    "forgotten": "Deleted what {world} saved.",
+                    "import_label": "Import world data",
+                    "import_description": "Adds what worlds saved in VRCX, from VRCX's VRCX-WorldData.db or a file you choose. Values already saved here are kept, and the other file is only read.",
+                    "import_vrcx": "Import from VRCX",
+                    "import_file": "Choose file",
+                    "import": "Import",
+                    "import_confirm_title": "Import world data?",
+                    "import_confirm_description": "This adds the worlds and values saved in {path}. Nothing saved here is changed, and the file is not modified.",
+                    "import_done": "Imported {values} values from {worlds} new worlds. {skipped} values were already here or over a world's limit.",
+                    "status": {
+                        "disabled": "Off",
+                        "running": "Running",
+                        "error": "Error"
+                    }
                 }
             },
             "advanced_groups": {
@@ -4592,7 +4653,9 @@
                     "layout_notification_center": "Notification Center",
                     "layout_table": "Notifications Page",
                     "in_app": {
-                        "header": "In-App Indicators"
+                        "header": "In-App Indicators",
+                        "free_store_items": "Free Store Items",
+                        "free_store_items_description": "Check the VRChat store every few hours and offer to claim new free items you do not own yet. Off by default."
                     },
                     "post_update_changelog_prompt": "Show Update Notes After Updating",
                     "post_update_changelog_prompt_description": "Show what's new after an update is installed.",
@@ -5113,7 +5176,13 @@
                 "settings_button": "Import settings",
                 "settings_confirm_title": "Import settings from {app}?",
                 "settings_confirm_description": "This replaces this profile's settings with {app}'s. History, notes and favorites are not touched, and {app}'s own data is not modified. A backup is saved to the backups folder first. Restart the app afterwards so every setting takes effect.",
-                "settings_done": "Imported {count} settings from {app}. Restart the app to apply them all."
+                "settings_done": "Imported {count} settings from {app}. Restart the app to apply them all.",
+                "file_label": "Merge a database file",
+                "file_description": "Adds history, notes and favorites from a VRCX, VRCX-0 or VRCX-0-Nanashi database file you choose, such as an old backup, in the same way. Settings are not read from the file.",
+                "file_button": "Choose file",
+                "file_confirm_title": "Merge this database?",
+                "file_confirm_description": "This copies history, notes and favorites from {path} into this profile. Nothing here is overwritten or deleted, and the file is not modified. A backup of this profile is saved to the backups folder first.",
+                "file_done": "Merged the database: {rows} rows added across {tables} tables."
             },
             "deep_link_schemes": {
                 "upstream": "Open vrcx-0:// links",
@@ -8389,6 +8458,32 @@
                 "group": "Groups"
             }
         },
+        "free_store_item": {
+            "header": "Free Store Items",
+            "description": "These items are free in the VRChat store and you do not own them yet. Claim them to add them to your account.",
+            "dont_show_again": "Don't check for free items again",
+            "claim_all": "Claim All",
+            "claimed": "Claimed {count} free items",
+            "claim_failed": "VRChat did not give {count} items; they will not be offered again"
+        },
+        "info_push": {
+            "header": "VRChat Announcements",
+            "description": "Help articles and banners VRChat shows in the game, read from VRChat.",
+            "categories": {
+                "help-article": "Help articles",
+                "quick-menu-banner": "Quick Menu banners",
+                "loading-screen-banners": "Loading screen banners"
+            },
+            "end_date": "Ends",
+            "domains": "Domains",
+            "open_link": "Open link",
+            "open_video": "Open video",
+            "disabled": "Disabled",
+            "expired": "Expired",
+            "scheduled": "Scheduled",
+            "empty": "Nothing here right now.",
+            "failed_to_load": "Could not load VRChat's announcements"
+        },
         "purchase_history": {
             "header": "Purchase History",
             "description": "Items you bought and your VRChat Credits activity",
@@ -9044,6 +9139,15 @@
                 "failed": "Failed to update the instance's group event"
             },
             "calendar_event": "Linked group event",
+            "announcement": {
+                "header": "Send Announcement",
+                "description": "Shows a message to everyone in this group instance.",
+                "message": "Message",
+                "image_hint": "Without an image, the group's banner is shown.",
+                "send": "Send",
+                "sent": "Announcement sent",
+                "failed": "Failed to send the announcement"
+            },
             "rename": {
                 "header": "Rename Instance",
                 "description": "Leave empty to clear the name.",

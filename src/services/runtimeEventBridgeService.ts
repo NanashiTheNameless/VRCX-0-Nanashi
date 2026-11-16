@@ -13,6 +13,7 @@ import { useProfileBackupStore } from '@/state/profileBackupStore';
 import { useRuntimeStore } from '@/state/runtimeStore';
 import { useSessionStore } from '@/state/sessionStore';
 import { useVrcNotificationStore } from '@/state/vrcNotificationStore';
+import { useVrcxCustomTagStore } from '@/state/vrcxCustomTagStore';
 
 import { handleAppLauncherSnapshotEvent } from './appLauncherSnapshotService';
 import {
@@ -398,6 +399,11 @@ function handleRuntimeEvent(event: RuntimeEvent): void {
         return;
     }
 
+    if (event.name === 'vrcxCustomTags') {
+        useVrcxCustomTagStore.getState().setTags(event.payload.tags);
+        return;
+    }
+
     if (event.name === 'feedLoggerHealth') {
         handleFeedLoggerHealthEvent(event.payload);
         return;
@@ -619,6 +625,7 @@ export async function bindRuntimeEvents(): Promise<() => void> {
         'realtimeProjectionSync',
         'updateIsGameRunning',
         'integrationApiStartFailed',
+        'vrcxCustomTags',
         'feedLoggerHealth',
         'feedLoggerSync',
         'browserFocus'
@@ -660,6 +667,14 @@ export async function bindRuntimeEvents(): Promise<() => void> {
             hydrateIntegrationApiStatus(
                 await commands.appIntegrationApiStatus()
             );
+        }
+    );
+    void hydrateRuntimeState(
+        'Failed to hydrate VRCX custom tags:',
+        async () => {
+            useVrcxCustomTagStore
+                .getState()
+                .setTags(await commands.appVrcxCustomTags());
         }
     );
     void hydrateRuntimeState(

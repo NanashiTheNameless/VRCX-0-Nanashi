@@ -47,6 +47,7 @@ pub(crate) fn build_game_log_runtime(
             Some(game_log_observer),
         ),
         isolation: wiring.services.game_isolation(),
+        world_data: Arc::clone(&wiring.world_data),
     }))
 }
 

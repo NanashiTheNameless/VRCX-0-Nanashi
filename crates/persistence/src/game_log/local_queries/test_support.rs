@@ -238,6 +238,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
                     display_name: "Vip Friend".into(),
                     user_id: "usr_vip".into(),
                     location: "wrld_alpha:inst-a~group(grp_alpha)".into(),
+                    silent: false,
                 },
                 GameLogExternalEntry {
                     created_at: 1778746260,
@@ -245,6 +246,7 @@ pub(super) fn seed_fixture(db: &DatabaseService) -> Result<(), Error> {
                     display_name: "Other Friend".into(),
                     user_id: "usr_other".into(),
                     location: "wrld_alpha:inst-a~group(grp_alpha)".into(),
+                    silent: false,
                 },
             ],
             ..GameLogWriteBatch::default()

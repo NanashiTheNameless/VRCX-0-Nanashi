@@ -620,6 +620,7 @@ const initialState: RuntimeStoreState = {
         editInviteMessagesOpen: false,
         moderationReportsOpen: false,
         purchaseHistoryOpen: false,
+        infoPushOpen: false,
         llmEndpointsOpen: false,
         profileBackupOpen: false,
         offlineRecordOpen: false

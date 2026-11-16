@@ -22,7 +22,7 @@ export function ProfileMergeFields() {
     const { t } = useTranslation();
     const [sources, setSources] = useState<ProfileMergeSources | null>(null);
     const [running, setRunning] = useState<{
-        kind: ProfileMergeSourceKind;
+        kind: ProfileMergeSourceKind | 'file';
         action: 'merge' | 'settings';
     } | null>(null);
 
@@ -116,6 +116,49 @@ export function ProfileMergeFields() {
         }
     }
 
+    // Fork (VRCX's DB Merger): any VRCX, VRCX-0 or VRCX-0-Nanashi database
+    // file, such as an old backup, with the same non-destructive merge.
+    async function mergeFile() {
+        const path = await commands.appOpenFileSelectorDialog(
+            null,
+            null,
+            'Database|*.sqlite3;*.sqlite;*.db'
+        );
+        if (typeof path !== 'string' || !path.trim()) {
+            return;
+        }
+        const confirmed = await useModalStore.getState().confirm({
+            title: t('view.settings.profile_merge.file_confirm_title'),
+            description: t(
+                'view.settings.profile_merge.file_confirm_description',
+                { path }
+            ),
+            confirmText: t('view.settings.profile_merge.confirm'),
+            cancelText: t('view.settings.profile_merge.cancel')
+        });
+        if (!confirmed.ok) {
+            return;
+        }
+        setRunning({ kind: 'file', action: 'merge' });
+        try {
+            const report = await commands.appProfileMergeRunFile(path);
+            toast.add({
+                type: 'success',
+                title: t('view.settings.profile_merge.file_done', {
+                    rows: report.rowsAdded,
+                    tables: report.tablesMerged
+                })
+            });
+        } catch (error) {
+            toast.add({
+                type: 'error',
+                title: error instanceof Error ? error.message : String(error)
+            });
+        } finally {
+            setRunning(null);
+        }
+    }
+
     return (
         <>
             {SOURCES.map(({ kind, appName }) => {
@@ -169,6 +212,22 @@ export function ProfileMergeFields() {
                     </Field>
                 );
             })}
+            <Field
+                label={t('view.settings.profile_merge.file_label')}
+                description={t('view.settings.profile_merge.file_description')}
+            >
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={running !== null}
+                    onClick={() => void mergeFile()}
+                >
+                    {running?.kind === 'file'
+                        ? t('view.settings.profile_merge.running')
+                        : t('view.settings.profile_merge.file_button')}
+                </Button>
+            </Field>
         </>
     );
 }

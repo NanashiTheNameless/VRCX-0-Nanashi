@@ -21,6 +21,7 @@ type SettingsNotificationsInAppCardProps = {
         notificationIconDot: boolean;
         taskbarIconDot: boolean;
         friendLogNotificationDot: boolean;
+        freeStoreItemNotifications: boolean;
     };
     showTaskbarIconDot: boolean;
     notificationLayoutOptions: ReadonlyArray<readonly [string, string]>;
@@ -28,6 +29,7 @@ type SettingsNotificationsInAppCardProps = {
     onNotificationIconDotChange: (value: boolean) => void;
     onTaskbarIconDotChange: (value: boolean) => void;
     onFriendLogNotificationDotChange: (value: boolean) => void;
+    onFreeStoreItemNotificationsChange: (value: boolean) => void;
 };
 
 export function SettingsNotificationsInAppCard({
@@ -37,7 +39,8 @@ export function SettingsNotificationsInAppCard({
     onNotificationLayoutChange,
     onNotificationIconDotChange,
     onTaskbarIconDotChange,
-    onFriendLogNotificationDotChange
+    onFriendLogNotificationDotChange,
+    onFreeStoreItemNotificationsChange
 }: SettingsNotificationsInAppCardProps) {
     const { t } = useTranslation();
     const notificationLayoutItems = notificationLayoutOptions.map(
@@ -144,6 +147,26 @@ export function SettingsNotificationsInAppCard({
                 <Switch
                     checked={prefs.friendLogNotificationDot}
                     onCheckedChange={onFriendLogNotificationDotChange}
+                />
+            </Field>
+
+            <Field
+                settingId="notifications.in-app.free-store-items"
+                onReset={() =>
+                    onFreeStoreItemNotificationsChange(
+                        SETTINGS_DEFAULT_VALUES.freeStoreItemNotifications
+                    )
+                }
+                label={t(
+                    'view.settings.notifications.notifications.in_app.free_store_items'
+                )}
+                description={t(
+                    'view.settings.notifications.notifications.in_app.free_store_items_description'
+                )}
+            >
+                <Switch
+                    checked={prefs.freeStoreItemNotifications}
+                    onCheckedChange={onFreeStoreItemNotificationsChange}
                 />
             </Field>
         </SettingsCard>

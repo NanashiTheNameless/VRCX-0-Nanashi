@@ -213,6 +213,26 @@ export, a list or a single badge. Badges with the same ID replace your saved one
 choose to add copies. Fetched VRChat group member lists are left out of exports; fetch them
 again after importing.
 
+### Tags from VRCX programs
+
+When **VRCX IPC** is on (Settings > Integrations), programs made for VRCX can tag users. Each tag
+is drawn as a custom badge: round, visible only to you, after your own custom badges, and it
+collapses with them. They also show in VR and on the Desktop Overlay. Tags are not saved, not
+synced, and not editable in Settings; they disappear when the app closes or the pipe is turned
+off.
+
+A program sends VRCX's `CustomTag` message with `UserId`, `Tag` (the label) and `TagColour`.
+VRCX-0-Nanashi also accepts:
+
+- `TagColor` or `Color` instead of `TagColour`. Any CSS color works; anything else uses the
+  default badge color.
+- `Icon`: any Lucide or Lucide Lab icon a custom badge may use (Lab icons as `Lab` plus the
+  name). Reserved icons and unknown names show the tag icon instead.
+- `Id`: gives a user several tags from one program, one per id. Without it, each new tag
+  replaces the user's previous one, as in VRCX. An empty `Tag` removes that tag.
+
+Labels longer than 32 characters are cut, like custom badge labels.
+
 ## Badges in VR and the Desktop Overlay
 
 The wrist menu's Feed, Players and Notes pages, HMD notification cards and the Desktop

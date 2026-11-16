@@ -16,6 +16,7 @@ export function useSettingsNotificationsTabState() {
             notificationIconDot: state.notificationIconDot,
             taskbarIconDot: state.taskbarIconDot,
             friendLogNotificationDot: state.friendLogNotificationDot,
+            freeStoreItemNotifications: state.freeStoreItemNotifications,
             desktopToast: state.desktopToast,
             afkDesktopToast: state.afkDesktopToast,
             desktopNotificationSound: state.desktopNotificationSound,
@@ -134,6 +135,13 @@ export function useSettingsNotificationsTabState() {
             saveBoolPreference(
                 'busyStatusDoNotDisturb',
                 'busyStatusDoNotDisturb',
+                enabled
+            );
+        },
+        onFreeStoreItemNotificationsChange: (enabled: boolean) => {
+            saveBoolPreference(
+                'freeStoreItemNotifications',
+                'freeStoreItemNotifications',
                 enabled
             );
         },

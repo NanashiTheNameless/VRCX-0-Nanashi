@@ -198,6 +198,7 @@ pub struct DesktopRuntimeHostState {
     friend_log_name_resolutions: vrcx_0_application::social::FriendLogNameResolutionCoordinator,
     user_dialog_tab_counts: vrcx_0_application::social::UserDialogTabCountsRuntime,
     user_dialog_tab_counts_source: Arc<vrcx_0_outbound_adapters::LocalUserDialogTabCountsSource>,
+    vrcx_compat: Arc<crate::vrcx_compat::DesktopVrcxCompatRuntime>,
     vrchat_requests: vrcx_0_outbound_adapters::VrchatRequestAdapter,
     world_names: vrcx_0_outbound_adapters::CachedWorldNameResolver,
     translation: vrcx_0_outbound_adapters::LocalTranslationAdapter,
@@ -304,6 +305,13 @@ impl DesktopRuntimeHostState {
             },
             updater_port,
         );
+        let vrcx_compat = Arc::new(crate::vrcx_compat::DesktopVrcxCompatRuntime::new(
+            builder.desktop_assembly().config_store(),
+            builder.desktop_assembly().event_bus().clone(),
+            builder.desktop_assembly().auth_scope().clone(),
+            Arc::clone(&wiring.world_data),
+        ));
+        vrcx_compat.attach_game_log(Arc::clone(&game.game_log_runtime));
         let extension = assembly::build_profile_extension(&builder, &game, &desktop);
         let composition =
             assembly::build_runtime_composition(&builder, &wiring, Arc::clone(&extension));
@@ -328,6 +336,10 @@ impl DesktopRuntimeHostState {
             &desktop,
             wiring.integration_api_input,
         );
+        let compat = Arc::clone(&vrcx_compat);
+        runtime.desktop_assembly().tasks().spawn(async move {
+            compat.start_from_config().await;
+        });
 
         Ok(Self {
             safety,
@@ -366,6 +378,7 @@ impl DesktopRuntimeHostState {
             translation: local.translation,
             webhook_transport: remote.webhook_transport,
             remote_sync: remote_sync::RemoteSyncShared::default(),
+            vrcx_compat,
         })
     }
 
@@ -572,6 +585,10 @@ impl DesktopRuntimeHostState {
 
     pub fn integration_api(&self) -> &DesktopIntegrationApiRuntime {
         &self.desktop.integration_api
+    }
+
+    pub fn vrcx_compat(&self) -> &Arc<crate::vrcx_compat::DesktopVrcxCompatRuntime> {
+        &self.vrcx_compat
     }
 
     pub fn instance_launch(&self) -> &InstanceLaunchRuntime {
@@ -1577,6 +1594,29 @@ impl DesktopRuntimeHostState {
     }
 
     /// Fork: non-destructively merge VRCX or upstream VRCX-0 data into this profile.
+    /// Fork (VRCX's DB Merger): merge a profile database file the user picked.
+    pub async fn run_profile_merge_file(
+        &self,
+        path: std::path::PathBuf,
+    ) -> Result<vrcx_0_persistence::profile_merge::ProfileMergeReport> {
+        let database = Arc::clone(self.runtime.database());
+        let app_data = self.runtime.paths().app_data.clone();
+        tokio::task::spawn_blocking(move || {
+            vrcx_0_outbound_adapters::run_profile_merge_file(&database, &app_data, path)
+        })
+        .await
+        .map_err(|error| {
+            vrcx_0_composition::Error::from(vrcx_0_application_core::Error::Custom(format!(
+                "import task failed: {error}"
+            )))
+        })?
+        .map_err(|error| {
+            vrcx_0_composition::Error::from(vrcx_0_application_core::Error::Custom(
+                error.to_string(),
+            ))
+        })
+    }
+
     pub async fn run_profile_merge(
         &self,
         kind: vrcx_0_outbound_adapters::ProfileMergeSourceKind,

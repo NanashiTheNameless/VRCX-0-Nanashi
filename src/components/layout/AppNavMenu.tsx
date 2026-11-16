@@ -8,6 +8,7 @@ import {
     type ShortcutHintItem
 } from '@/components/keyboard/ShortcutHintPanel';
 import type { Dashboard } from '@/repositories/dashboardRepository';
+import { startFreeStoreItemWatch } from '@/services/freeStoreItemService';
 import { startInventoryBundleWatch } from '@/services/inventoryBundleService';
 import { markAllNotificationsSeenWithFeedback } from '@/services/notificationMarkAllSeenService';
 import { setNavbarCollapsedPreference } from '@/services/preferencesService';
@@ -193,6 +194,9 @@ function useAppNavNotifications({
         (state) => state.refreshForCurrentUser
     );
     const hasUnseenBundles = useInventoryBundleStore(hasUnseenInventoryBundles);
+    const freeStoreItemNotifications = usePreferencesStore(
+        (state) => state.freeStoreItemNotifications
+    );
     const notifiedKeys = new Set(notifiedMenus);
     if (vrcUnseenNotificationCount > 0) {
         notifiedKeys.add('notification');
@@ -214,6 +218,17 @@ function useAppNavNotifications({
         }
         return startInventoryBundleWatch(currentUserId);
     }, [currentUserId, sessionPhase]);
+
+    useEffect(() => {
+        if (
+            sessionPhase !== 'ready' ||
+            !currentUserId ||
+            !freeStoreItemNotifications
+        ) {
+            return undefined;
+        }
+        return startFreeStoreItemWatch(currentUserId);
+    }, [currentUserId, freeStoreItemNotifications, sessionPhase]);
 
     useEffect(() => {
         if (!activeIndex) {

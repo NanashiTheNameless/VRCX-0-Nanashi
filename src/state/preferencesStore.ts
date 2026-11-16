@@ -349,6 +349,7 @@ export const DEFAULT_PREFERENCES = Object.freeze({
     dtDateFormat: DEFAULT_DATE_FORMAT as DateFormatPreset,
     hideUserNotes: false,
     hideUserMemos: false,
+    freeStoreItemNotifications: false,
     friendLogNotificationDot: true,
     hideUnfriends: false,
     profileBioScanEnabled: false,
@@ -565,6 +566,9 @@ export function normalizePreferenceSnapshot(snapshot: unknown = {}) {
         dtDateFormat: normalizeDateFormatPreset(next.dtDateFormat),
         hideUserNotes: normalizeBool(next.hideUserNotes),
         hideUserMemos: normalizeBool(next.hideUserMemos),
+        freeStoreItemNotifications: normalizeBool(
+            next.freeStoreItemNotifications
+        ),
         friendLogNotificationDot: normalizeBool(next.friendLogNotificationDot),
         hideUnfriends: normalizeBool(next.hideUnfriends),
         profileBioScanEnabled: normalizeBool(next.profileBioScanEnabled),

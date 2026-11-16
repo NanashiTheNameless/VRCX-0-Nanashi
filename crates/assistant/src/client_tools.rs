@@ -13,6 +13,12 @@ pub(crate) const READ_DOCS: &str = "read_docs";
 pub(crate) const SHOW_IN_SETTINGS: &str = "show_in_settings";
 pub(crate) const SHOW_IN_DOCS: &str = "show_in_docs";
 pub(crate) const CHANGE_SETTING: &str = "change_setting";
+// Fork: VRCX compatibility and profile data, answered by the app window.
+pub(crate) const READ_VRCX_WORLD_DATA: &str = "read_vrcx_world_data";
+pub(crate) const READ_VRCX_CUSTOM_TAGS: &str = "read_vrcx_custom_tags";
+pub(crate) const IMPORT_VRCX_WORLD_DATA: &str = "import_vrcx_world_data";
+pub(crate) const MERGE_PROFILE_DATABASE: &str = "merge_profile_database";
+pub(crate) const FORGET_VRCX_WORLD_DATA: &str = "forget_vrcx_world_data";
 /// Request kind for approving an MCP edit tool before it runs. Not a tool.
 pub(crate) const APPROVE_EDIT: &str = "approve_edit";
 
@@ -29,12 +35,24 @@ pub(crate) const EDIT_TOOLS: &[&str] = &[
     "set_chatbox_afk",
     "update_chatbox",
     CHANGE_SETTING,
+    IMPORT_VRCX_WORLD_DATA,
+    MERGE_PROFILE_DATABASE,
+    FORGET_VRCX_WORLD_DATA,
 ];
 
 pub(crate) fn is_client_tool(name: &str) -> bool {
     matches!(
         name,
-        FIND_SETTINGS | READ_DOCS | SHOW_IN_DOCS | SHOW_IN_SETTINGS | CHANGE_SETTING
+        FIND_SETTINGS
+            | READ_DOCS
+            | SHOW_IN_DOCS
+            | SHOW_IN_SETTINGS
+            | CHANGE_SETTING
+            | READ_VRCX_WORLD_DATA
+            | READ_VRCX_CUSTOM_TAGS
+            | IMPORT_VRCX_WORLD_DATA
+            | MERGE_PROFILE_DATABASE
+            | FORGET_VRCX_WORLD_DATA
     )
 }
 
@@ -132,13 +150,96 @@ agreed to it. Returns whether the user approved and the value now in effect."
                 "type": "object",
                 "properties": {
                     "settingId": { "type": "string", "description": "Id from find_settings." },
-                    "value": { "description": "New value: true or false for an on/off setting, one of the option values for a choice, or a number inside the range and in the unit find_settings reported." },
+                    "value": { "description": "New value: true or false for an on/off setting, one of the option values for a choice, a number inside the range and in the unit find_settings reported, or text for a text setting (empty text restores the default find_settings describes)." },
                     "reason": {
                         "type": "string",
                         "description": "One plain sentence for the user on what this change does for them."
                     }
                 },
                 "required": ["settingId", "value", "reason"]
+            }),
+        },
+        ToolDefinition {
+            name: READ_VRCX_WORLD_DATA.into(),
+            description: "Read Persistent World Info: the values worlds made for VRCX saved \
+on this PC. Without worldId, lists the worlds that saved something (with value count, size, \
+and whether other worlds may read them) and whether the feature is on. With worldId, returns \
+that world's saved keys and values. Read-only."
+                .into(),
+            parameters: json!({
+                "type": "object",
+                "properties": {
+                    "worldId": { "type": "string", "description": "A world id from the list." }
+                }
+            }),
+        },
+        ToolDefinition {
+            name: READ_VRCX_CUSTOM_TAGS.into(),
+            description: "Read the custom user tags programs connected over the VRCX IPC pipe \
+have set (user id, tag text and color), and whether the pipe is on and how many programs \
+are connected. Read-only."
+                .into(),
+            parameters: json!({ "type": "object", "properties": {} }),
+        },
+        ToolDefinition {
+            name: IMPORT_VRCX_WORLD_DATA.into(),
+            description: "Ask the user to approve importing Persistent World Info that worlds \
+saved in VRCX. Without path it reads VRCX's VRCX-WorldData.db from VRCX's data folder; with \
+path it reads that file. Values already saved here are kept and the other file is only read. \
+An approval card waits for the user's Approve or Decline. Only use it when the user asked \
+for the import or agreed to it. Returns how many worlds and values were added."
+                .into(),
+            parameters: json!({
+                "type": "object",
+                "properties": {
+                    "path": { "type": "string", "description": "Optional full path to a world data file." },
+                    "reason": {
+                        "type": "string",
+                        "description": "One plain sentence for the user on what this does for them."
+                    }
+                },
+                "required": ["reason"]
+            }),
+        },
+        ToolDefinition {
+            name: MERGE_PROFILE_DATABASE.into(),
+            description: "Ask the user to approve merging another profile's history, notes \
+and favorites into this one without changing or deleting anything here. source is \"vrcx\" \
+or \"vrcx0\" for that app's data on this PC (settings the user has not set here are added \
+too), or \"file\" with path for a VRCX, VRCX-0 or VRCX-0-Nanashi database file (settings are \
+not read from a file). A backup of this profile is saved first. An approval card waits for \
+the user's Approve or Decline. Only use it when the user asked for the merge or agreed to it."
+                .into(),
+            parameters: json!({
+                "type": "object",
+                "properties": {
+                    "source": { "type": "string", "enum": ["vrcx", "vrcx0", "file"] },
+                    "path": { "type": "string", "description": "Full path, only for source \"file\"." },
+                    "reason": {
+                        "type": "string",
+                        "description": "One plain sentence for the user on what this does for them."
+                    }
+                },
+                "required": ["source", "reason"]
+            }),
+        },
+        ToolDefinition {
+            name: FORGET_VRCX_WORLD_DATA.into(),
+            description: "Ask the user to approve deleting everything one world saved \
+through Persistent World Info, including its key; the world gets a new key next time. \
+This cannot be undone. Use a worldId from read_vrcx_world_data. An approval card waits \
+for the user's Approve or Decline. Only use it when the user asked for it."
+                .into(),
+            parameters: json!({
+                "type": "object",
+                "properties": {
+                    "worldId": { "type": "string", "description": "A world id from read_vrcx_world_data." },
+                    "reason": {
+                        "type": "string",
+                        "description": "One plain sentence for the user on what this does for them."
+                    }
+                },
+                "required": ["worldId", "reason"]
             }),
         },
     ]
@@ -240,8 +341,13 @@ mod tests {
         for name in &names {
             assert!(is_client_tool(name));
         }
-        assert_eq!(names.len(), 5);
+        assert_eq!(names.len(), 10);
+        assert!(is_edit_tool(FORGET_VRCX_WORLD_DATA));
         assert!(is_edit_tool(CHANGE_SETTING));
+        assert!(is_edit_tool(IMPORT_VRCX_WORLD_DATA));
+        assert!(is_edit_tool(MERGE_PROFILE_DATABASE));
+        assert!(!is_edit_tool(READ_VRCX_WORLD_DATA));
+        assert!(!is_edit_tool(READ_VRCX_CUSTOM_TAGS));
         assert!(is_edit_tool("create_reminder"));
         assert!(is_edit_tool("favorite_move"));
         assert!(is_edit_tool("send_chatbox_message"));

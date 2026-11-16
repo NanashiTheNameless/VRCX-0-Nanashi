@@ -44,3 +44,9 @@ pub struct VrchatEconomyUserInput {
 pub struct VrchatEconomyStoreInput {
     pub(crate) store_id: String,
 }
+
+#[derive(Debug, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct VrchatEconomyClaimFreeListingInput {
+    pub(crate) listing_id: String,
+}

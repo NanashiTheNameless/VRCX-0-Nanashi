@@ -1,4 +1,11 @@
-import { CodeXml, Diamond, Palette, ShieldCheck, Star } from 'lucide-react';
+import {
+    CodeXml,
+    Diamond,
+    Palette,
+    ShieldCheck,
+    Star,
+    Tag
+} from 'lucide-react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { normalizeGlobalBadgeCatalog } from '@/domain/badges/globalBadges';
@@ -9,17 +16,86 @@ import {
 import { useCustomBadgeStore } from '@/state/customBadgeStore';
 import { useGlobalBadgeStore } from '@/state/globalBadgeStore';
 import { usePreferencesStore } from '@/state/preferencesStore';
+import { useVrcxCustomTagStore } from '@/state/vrcxCustomTagStore';
 
 import { buildOverlayUserBadges } from './overlayBadgeSyncService';
 
-const icons = { CodeXml, Diamond, Palette, ShieldCheck, Star };
+const icons = { CodeXml, Diamond, Palette, ShieldCheck, Star, Tag };
 
 describe('buildOverlayUserBadges', () => {
     afterEach(() => {
         useCustomBadgeStore.setState({ badges: [], loaded: false });
         useGlobalBadgeStore.setState({ catalog: null });
         usePreferencesStore.setState({ reducedMotionAndBlur: false });
+        useVrcxCustomTagStore.setState({ tagsByUserId: {} });
         vi.unstubAllGlobals();
+    });
+
+    it('draws VRCX IPC tags like custom badges, after them', () => {
+        useCustomBadgeStore.setState({
+            loaded: true,
+            badges: [
+                {
+                    id: 'artist',
+                    label: 'Artist',
+                    icon: 'Palette',
+                    color: '#ff0000',
+                    enabled: true,
+                    rules: [{ kind: 'users', userIds: ['usr_tagged'] }]
+                }
+            ]
+        });
+        useVrcxCustomTagStore.getState().setTags([
+            {
+                userId: 'usr_tagged',
+                id: '',
+                tag: 'Moderator',
+                colour: '#0f0',
+                icon: ''
+            },
+            {
+                userId: 'usr_only_tag',
+                id: '',
+                tag: 'Guest',
+                colour: 'nonsense',
+                icon: 'Star'
+            },
+            {
+                userId: 'usr_only_tag',
+                id: 'second',
+                tag: 'Host',
+                colour: '#123456',
+                icon: 'CodeXml'
+            },
+            {
+                userId: 'usr_blank',
+                id: '',
+                tag: '  ',
+                colour: '#123456',
+                icon: ''
+            }
+        ]);
+
+        const table = buildOverlayUserBadges(icons);
+        const styleOf = (userId: string) =>
+            (table.users?.[userId] ?? []).map((index) => table.styles?.[index]);
+
+        const tagged = styleOf('usr_tagged');
+        expect(tagged).toHaveLength(2);
+        expect(tagged[1]).toMatchObject({
+            colorFrom: '#00ff00',
+            colorBorder: '#00ff00',
+            round: true
+        });
+        const onlyTag = styleOf('usr_only_tag');
+        expect(onlyTag).toHaveLength(2);
+        expect(onlyTag[0]).toMatchObject({
+            colorFrom: '#3b82f6',
+            round: true
+        });
+        // A program cannot borrow the developer badge's reserved icon.
+        expect(onlyTag[1]?.icon).toBe(tagged[1]?.icon);
+        expect(table.users?.usr_blank).toBeUndefined();
     });
 
     it('gives the developer the built-in badge and listed users their custom badges', () => {

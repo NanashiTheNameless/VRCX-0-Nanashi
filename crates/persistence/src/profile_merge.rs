@@ -434,6 +434,27 @@ pub fn import_profile_configs(conn: &Connection, source_path: &Path) -> Result<u
     result
 }
 
+/// Fork (VRCX's DB Merger): a database file the user picked must be a VRCX,
+/// VRCX-0 or VRCX-0-Nanashi profile, which all keep settings in `configs`.
+/// Anything else is refused before tables from it could be created here.
+pub fn validate_profile_database_file(path: &Path) -> Result<(), Error> {
+    let conn = Connection::open_with_flags(path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
+        .map_err(|_| Error::Custom("That file is not a database.".into()))?;
+    let has_configs: i64 = conn
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'configs')",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|_| Error::Custom("That file is not a database.".into()))?;
+    if has_configs == 0 {
+        return Err(Error::Custom(
+            "That database is not from VRCX, VRCX-0 or VRCX-0-Nanashi.".into(),
+        ));
+    }
+    Ok(())
+}
+
 /// Open the live profile database at `main_path` and merge `source_path` into it.
 pub fn merge_profile_database_file(
     main_path: &Path,

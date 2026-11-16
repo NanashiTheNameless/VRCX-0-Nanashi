@@ -50,6 +50,7 @@ mod startup_bootstrap;
 mod state;
 pub mod tray_shortcut;
 pub mod vr_overlay;
+pub mod vrcx_compat;
 
 pub use ancillary_snapshot::AncillaryRuntimeSnapshot;
 pub use app_launcher::AppLauncherSnapshotEvent;

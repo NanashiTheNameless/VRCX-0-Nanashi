@@ -77,7 +77,8 @@ Settings > Advanced > Storage & cleanup:
   Self-hosted Recorder (Settings > Sync Options). See [FEATURES.md](FEATURES.md) and
   [RECORDER.md](RECORDER.md).
 - Import from VRCX or VRCX-0, or restore a backup, under Settings > Advanced > Export & import
-  data.
+  data. An old VRCX, VRCX-0 or VRCX-0-Nanashi database file can be merged with **Merge a
+  database file** under Settings > Advanced > Import & recovery.
 
 ## Links
 

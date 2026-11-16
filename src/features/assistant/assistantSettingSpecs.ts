@@ -31,12 +31,26 @@ export type NumberSettingSpec = {
     kind: 'number';
     min: number;
     max: number;
-    unit: 'seconds' | 'minutes' | 'percent';
+    unit: 'seconds' | 'minutes' | 'percent' | 'port';
     scale?: number;
     choices?: readonly number[];
 };
 
-export type SettingValueSpec = ChoiceSettingSpec | NumberSettingSpec;
+/**
+ * Free text, such as a pipe name. An empty value means the setting's default,
+ * which `defaultLabel` describes; `validate` returns an error or null.
+ */
+export type TextSettingSpec = {
+    kind: 'text';
+    maxLength: number;
+    defaultLabel: string;
+    validate?: (value: string) => string | null;
+};
+
+export type SettingValueSpec =
+    | ChoiceSettingSpec
+    | NumberSettingSpec
+    | TextSettingSpec;
 
 const pairs = (
     options: readonly (readonly [string, string])[]
@@ -265,6 +279,22 @@ export function parseSettingValue(
     spec: SettingValueSpec,
     value: unknown
 ): ParsedSettingValue {
+    if (spec.kind === 'text') {
+        if (typeof value !== 'string') {
+            return { ok: false, error: 'This setting takes text.' };
+        }
+        const text = value.trim();
+        if (text.length > spec.maxLength) {
+            return {
+                ok: false,
+                error: `Use at most ${spec.maxLength} characters.`
+            };
+        }
+        const error = text ? (spec.validate?.(text) ?? null) : null;
+        return error
+            ? { ok: false, error }
+            : { ok: true, shown: text, stored: text };
+    }
     if (spec.kind === 'choice') {
         const option =
             typeof value === 'string' || typeof value === 'number'

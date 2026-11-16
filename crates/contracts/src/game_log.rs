@@ -87,6 +87,10 @@ pub struct GameLogExternalEntry {
     pub display_name: String,
     pub user_id: String,
     pub location: String,
+    /// Saved but not notified, for a VRCX IPC entry sent with `notify: false`.
+    /// Not stored.
+    #[serde(skip)]
+    pub silent: bool,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

@@ -18,6 +18,7 @@ import { recordLocationHintsFromInstances } from '@/services/domainIngestionServ
 import { selfInviteToInstance } from '@/services/launchService';
 import { toast } from '@/services/toastService';
 import { hasGroupIdPrefix } from '@/shared/constants/vrchatIds';
+import { extractFileId, extractFileVersion } from '@/shared/utils/fileUtils';
 import { useInstanceJoinHistoryStore } from '@/state/instanceJoinHistoryStore';
 import { useLaunchStore } from '@/state/launchStore';
 import { useModalStore } from '@/state/modalStore';
@@ -145,6 +146,35 @@ function canLinkInstanceCalendarEvent(instance: InstanceActionRecord | null) {
     );
 }
 
+// VRCX allows announcements only in the group instance you are in.
+function canAnnounceInInstance(
+    instance: InstanceActionRecord | null,
+    location: string,
+    currentLocation: string
+) {
+    const ownerId = normalizeLocationText(instance?.ownerId);
+    if (!hasGroupIdPrefix(ownerId) || !location || !currentLocation) {
+        return false;
+    }
+    if (
+        instanceLocationKey(location) !== instanceLocationKey(currentLocation)
+    ) {
+        return false;
+    }
+    return [instance?.group, instance?.owner].some((group) =>
+        hasGroupPermission(group, 'group-instance-announcement-create')
+    );
+}
+
+function groupBannerUrl(instance: InstanceActionRecord | null): string {
+    for (const group of [instance?.group, instance?.owner]) {
+        if (typeof group?.bannerUrl === 'string' && group.bannerUrl) {
+            return group.bannerUrl;
+        }
+    }
+    return '';
+}
+
 function canRenameInstance(
     instance: InstanceActionRecord | null,
     currentUserId: string | null,
@@ -192,6 +222,9 @@ export function useInstanceActionBarController({
     const isGameRunning = useRuntimeStore(
         (state) => state.gameState.isGameRunning === true
     );
+    const currentGameLocation = useRuntimeStore(
+        (state) => state.gameState.currentLocation
+    );
     const confirm = useModalStore((state) => state.confirm);
     const prompt = useModalStore((state) => state.prompt);
     const isVrcPlusSupporter = useRuntimeStore((state) =>
@@ -237,6 +270,11 @@ export function useInstanceActionBarController({
         instanceInfo,
         currentUserId,
         isVrcPlusSupporter
+    );
+    const canAnnounce = canAnnounceInInstance(
+        instanceInfo,
+        actionTarget.instanceLocation,
+        currentGameLocation
     );
     const calendarEntryId = normalizeLocationText(
         instanceInfo?.calendarEntryId
@@ -509,6 +547,53 @@ export function useInstanceActionBarController({
         }
     }
 
+    // Without a chosen image VRCX sends the group banner, as VRChat shows one.
+    async function sendAnnouncement(
+        message: string,
+        imageId: string,
+        imageVersion = ''
+    ) {
+        const requestLocation = actionTarget.instanceLocation;
+        const text = message.trim();
+        if (!requestLocation || !text || busy) {
+            return false;
+        }
+        const chosenImageId = imageId.trim();
+        const banner = groupBannerUrl(instanceInfo);
+        const announcementImageId = chosenImageId || extractFileId(banner);
+        const announcementImageVersion = chosenImageId
+            ? imageVersion.trim()
+            : extractFileVersion(banner);
+        setBusy('announce');
+        try {
+            unwrapVrchatResponse<unknown>(
+                await commands.appVrchatInstanceAnnounce({
+                    location: requestLocation,
+                    message: text,
+                    imageId: announcementImageId || null,
+                    imageVersion: announcementImageVersion || null
+                }),
+                `instances/${requestLocation}/announce`
+            );
+            toast.add({
+                type: 'success',
+                title: t('component.instance_action_bar.announcement.sent')
+            });
+            return true;
+        } catch (error) {
+            toast.add({
+                type: 'error',
+                title:
+                    error instanceof Error
+                        ? error.message
+                        : t('component.instance_action_bar.announcement.failed')
+            });
+            return false;
+        } finally {
+            setBusy('');
+        }
+    }
+
     async function closeInstance() {
         if (!actionTarget.instanceLocation || busy) {
             return;
@@ -567,6 +652,7 @@ export function useInstanceActionBarController({
         busy,
         calendarEntryId,
         calendarGroupId,
+        canAnnounce,
         canCloseCurrentInstance,
         canLinkCalendarEvent,
         canRename,
@@ -585,6 +671,7 @@ export function useInstanceActionBarController({
         refreshInstance,
         renameInstance,
         resolvedUserCount,
+        sendAnnouncement,
         setCalendarLink,
         selfInvite
     };

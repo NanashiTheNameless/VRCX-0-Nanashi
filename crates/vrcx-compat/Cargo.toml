@@ -1,0 +1,22 @@
+[package]
+name = "vrcx-0-vrcx-compat"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true
+description = "VRCX-compatible IPC pipe and Persistent World Info server"
+
+[dependencies]
+axum = "0.8"
+http = "1"
+rusqlite = { workspace = true, features = ["bundled"] }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+specta = { workspace = true }
+tokio = { workspace = true, features = ["io-util", "macros", "net", "rt", "sync", "time"] }
+tokio-util = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+vrcx-0-local-server = { path = "../local-server" }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["io-util", "macros", "net", "rt", "rt-multi-thread", "sync", "time"] }

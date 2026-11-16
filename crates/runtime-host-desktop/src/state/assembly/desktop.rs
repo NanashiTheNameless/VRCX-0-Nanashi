@@ -37,6 +37,7 @@ pub(crate) struct DesktopWiring {
     pub(crate) current_user_presence_observer: Arc<CurrentUserLocalPresenceObserver>,
     pub(crate) integration_api_observer: Arc<dyn InstanceRosterObserver>,
     pub(crate) integration_api_input: IntegrationApiInput,
+    pub(crate) world_data: Arc<vrcx_0_vrcx_compat::WorldDataService>,
 }
 
 pub(crate) struct IntegrationApiInput {
@@ -83,6 +84,16 @@ pub(crate) fn build_desktop_wiring(
             Arc::clone(&current_user_presence_observer) as Arc<dyn InstanceRosterObserver>,
         ]));
     let profile_config = context.profile_config();
+    let game_log_snapshot = services.game_log_snapshot_handle();
+    let world_data = Arc::new(vrcx_0_vrcx_compat::WorldDataService::new(
+        builder
+            .paths()
+            .app_data
+            .join(vrcx_0_vrcx_compat::WORLD_DATA_DB_FILE),
+        Arc::new(move || {
+            vrcx_0_core::location::world_id_from_location(&game_log_snapshot.snapshot().location)
+        }),
+    ));
     Ok(DesktopWiring {
         host_file_access,
         services,
@@ -96,6 +107,7 @@ pub(crate) fn build_desktop_wiring(
             receiver,
             enrichment_receiver,
         },
+        world_data,
     })
 }
 

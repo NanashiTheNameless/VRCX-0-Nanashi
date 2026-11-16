@@ -178,6 +178,10 @@ pub enum GameLogEventKind {
     Vrcx {
         data: String,
     },
+    /// VRCX's Persistent World Info request (`[VRCX-World] ...`).
+    WorldData {
+        data: String,
+    },
     ApiRequest {
         url: String,
     },
@@ -200,6 +204,10 @@ pub enum GameLogEventKind {
     },
     External {
         data: String,
+        display_name: String,
+        user_id: String,
+        /// Saved without a notification (VRCX IPC `notify: false`).
+        silent: bool,
     },
 }
 
@@ -256,6 +264,7 @@ impl GameLogEventKind {
             Self::VideoSync { .. } => "video-sync",
             Self::NowPlaying { .. } => "nowplaying",
             Self::Vrcx { .. } => "vrcx",
+            Self::WorldData { .. } => "vrcx-world",
             Self::ApiRequest { .. } => "api-request",
             Self::Screenshot { .. } => "screenshot",
             Self::StickerSpawn { .. } => "sticker-spawn",
@@ -287,9 +296,15 @@ impl GameLogEventKind {
             Self::Notification { data }
             | Self::NowPlaying { data }
             | Self::Vrcx { data }
+            | Self::WorldData { data }
             | Self::UdonException { data }
-            | Self::Event { data }
-            | Self::External { data } => vec![data.clone()],
+            | Self::Event { data } => vec![data.clone()],
+            Self::External {
+                data,
+                display_name,
+                user_id,
+                ..
+            } => vec![data.clone(), display_name.clone(), user_id.clone()],
             Self::AvatarChange {
                 display_name,
                 avatar_name,
@@ -360,7 +375,13 @@ impl GameLogEventKind {
             "udon-exception" => Some(Self::UdonException { data: arg(0) }),
             "event" => Some(Self::Event { data: arg(0) }),
             "vrcx" => Some(Self::Vrcx { data: arg(0) }),
-            "external" => Some(Self::External { data: arg(0) }),
+            "vrcx-world" => Some(Self::WorldData { data: arg(0) }),
+            "external" => Some(Self::External {
+                data: arg(0),
+                display_name: arg(1),
+                user_id: arg(2),
+                silent: false,
+            }),
             _ => None,
         }
     }

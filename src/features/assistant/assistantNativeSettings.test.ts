@@ -6,7 +6,11 @@ const mocks = vi.hoisted(() => ({
     syncGet: vi.fn(),
     syncSet: vi.fn(),
     safetyGet: vi.fn(),
-    safetySet: vi.fn()
+    safetySet: vi.fn(),
+    ipcStatus: vi.fn(),
+    ipcSet: vi.fn(),
+    worldDataStatus: vi.fn(),
+    worldDataSet: vi.fn()
 }));
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
@@ -15,7 +19,11 @@ vi.mock('@/platform/tauri/bindings', () => ({
         appRemoteSyncSettingsGet: mocks.syncGet,
         appRemoteSyncSettingsSet: mocks.syncSet,
         appSafetySettingsGet: mocks.safetyGet,
-        appSafetySettingsSave: mocks.safetySet
+        appSafetySettingsSave: mocks.safetySet,
+        appVrcxIpcStatus: mocks.ipcStatus,
+        appVrcxIpcSetSettings: mocks.ipcSet,
+        appVrcxWorldDataStatus: mocks.worldDataStatus,
+        appVrcxWorldDataSetSettings: mocks.worldDataSet
     }
 }));
 
@@ -115,6 +123,55 @@ describe('native assistant setting adapters', () => {
         expect(mocks.safetySet).toHaveBeenCalledWith({
             ...settings,
             urlWarnings: false
+        });
+    });
+
+    it('changes one VRCX IPC field and keeps the others', async () => {
+        mocks.ipcStatus.mockResolvedValue({
+            enabled: false,
+            pipeName: 'custom-pipe',
+            socketPath: '/run/user/1000/vrcx.sock'
+        });
+        mocks.ipcSet.mockResolvedValue({ error: null });
+        await saveAssistantNativeSetting('integrations.vrcx-ipc.enabled', true);
+        expect(mocks.ipcSet).toHaveBeenCalledWith({
+            enabled: true,
+            pipeName: 'custom-pipe',
+            socketPath: '/run/user/1000/vrcx.sock'
+        });
+
+        const pipeSpec = nativeSettingAction(
+            'integrations.vrcx-ipc.pipe-name'
+        )!.spec!;
+        expect(parseSettingValue(pipeSpec, 'a/b')).toMatchObject({
+            ok: false
+        });
+        expect(parseSettingValue(pipeSpec, ' my-pipe ')).toEqual({
+            ok: true,
+            shown: 'my-pipe',
+            stored: 'my-pipe'
+        });
+        expect(parseSettingValue(pipeSpec, '')).toEqual({
+            ok: true,
+            shown: '',
+            stored: ''
+        });
+        expect(parseSettingValue(pipeSpec, 5)).toMatchObject({ ok: false });
+    });
+
+    it('reports a world data port that could not be opened', async () => {
+        mocks.worldDataStatus.mockResolvedValue({ enabled: true, port: 22500 });
+        mocks.worldDataSet.mockResolvedValue({
+            error: 'Port 23000 is already in use.'
+        });
+        const spec = nativeSettingAction('integrations.world-data.port')!.spec!;
+        expect(parseSettingValue(spec, 80)).toMatchObject({ ok: false });
+        await expect(
+            saveAssistantNativeSetting('integrations.world-data.port', 23000)
+        ).rejects.toThrow('Port 23000 is already in use.');
+        expect(mocks.worldDataSet).toHaveBeenCalledWith({
+            enabled: true,
+            port: 23000
         });
     });
 

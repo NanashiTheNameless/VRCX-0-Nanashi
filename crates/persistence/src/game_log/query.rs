@@ -702,6 +702,7 @@ pub fn get_game_log_externals(
             display_name: row_string(&row, 2),
             user_id: row_string(&row, 3),
             location: row_string(&row, 4),
+            silent: false,
         })
         .collect())
 }

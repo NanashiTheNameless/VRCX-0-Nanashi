@@ -232,6 +232,45 @@ pub fn active_instances_get_input(endpoint: String, n: i32, offset: i32) -> Vrch
     )
 }
 
+/// Sends an announcement to everyone in a group instance, as VRCX does: a
+/// message with the fixed title VRChat shows, and an optional image file.
+pub fn instance_announce_input(
+    endpoint: String,
+    location: String,
+    message: String,
+    image_id: Option<String>,
+    image_version: Option<String>,
+) -> Result<(String, VrchatRequest), HttpApiError> {
+    let location = require_text(location, "VrchatInstanceAnnounce requires location.")?;
+    let message = require_text(message, "VrchatInstanceAnnounce requires a message.")?;
+    let mut body = json!({
+        "location": location,
+        "title": "Instance Announcement",
+        "message": message,
+    });
+    if let Some(image_id) = image_id
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+    {
+        body["imageId"] = Value::String(image_id);
+        if let Some(version) = image_version
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+        {
+            body["imageVersion"] = Value::String(version);
+        }
+    }
+    Ok((
+        location.clone(),
+        api_input(
+            endpoint,
+            "POST",
+            format!("instances/{location}/announce"),
+            body,
+        ),
+    ))
+}
+
 pub fn discover_instances_get_input(endpoint: String, n: i32) -> VrchatRequest {
     get_input(
         endpoint,
@@ -243,6 +282,51 @@ pub fn discover_instances_get_input(endpoint: String, n: i32) -> VrchatRequest {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn announcement_posts_the_vrcx_body() {
+        let (_, request) = instance_announce_input(
+            "endpoint".into(),
+            "wrld_1:123~group(grp_1)".into(),
+            " Hello ".into(),
+            Some("file_1".into()),
+            Some("3".into()),
+        )
+        .unwrap();
+        assert_eq!(request.method.as_deref(), Some("POST"));
+        assert_eq!(
+            request.path.as_deref(),
+            Some("instances/wrld_1:123~group(grp_1)/announce")
+        );
+        assert_eq!(
+            request.body.as_json(),
+            Some(&json!({
+                "location": "wrld_1:123~group(grp_1)",
+                "title": "Instance Announcement",
+                "message": "Hello",
+                "imageId": "file_1",
+                "imageVersion": "3",
+            }))
+        );
+
+        let (_, plain) = instance_announce_input(
+            "endpoint".into(),
+            "wrld_1:1".into(),
+            "Hi".into(),
+            None,
+            None,
+        )
+        .unwrap();
+        assert_eq!(plain.body.as_json().unwrap().get("imageId"), None);
+        assert!(instance_announce_input(
+            "endpoint".into(),
+            "wrld_1:1".into(),
+            " ".into(),
+            None,
+            None
+        )
+        .is_err());
+    }
 
     #[test]
     fn display_name_sets_or_clears_the_instance_name() {

@@ -344,6 +344,8 @@ fn syncable_app_setting(key: &str) -> bool {
         "windowsstartup",
         "youtubeapi",
         "vrchatregistry",
+        "vrcxipc",
+        "vrcxworlddata",
         "savedcredentials",
         "lastuserloggedin",
     ]
@@ -1875,6 +1877,8 @@ mod tests {
         ));
         assert!(!syncable_app_setting("config:vrcx_feedLogger"));
         assert!(!syncable_app_setting("config:vrcx_dtTimeZone"));
+        assert!(!syncable_app_setting("config:vrcx_vrcxipcpipename"));
+        assert!(!syncable_app_setting("config:vrcx_vrcxworlddataport"));
         assert!(syncable_app_setting("config:vrcx_theme"));
     }
 

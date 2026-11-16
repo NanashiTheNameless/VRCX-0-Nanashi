@@ -65,6 +65,10 @@ import {
     trackUserGroupMembership,
     useUserGroupMembershipStore
 } from '@/state/userGroupMembershipStore';
+import {
+    useVrcxCustomTags,
+    vrcxCustomTagBadge
+} from '@/state/vrcxCustomTagStore';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/shadcn/tooltip';
 
 export type DeveloperBadgeKind = 'fork' | 'upstream';
@@ -629,7 +633,18 @@ export function UserBadges({
     collapsible = true
 }: UserBadgesProps) {
     const normalizedUserId = userId?.trim() ?? '';
-    const { isStaff, customBadges } = useUserBadgeState(normalizedUserId);
+    const { isStaff, customBadges: ownBadges } =
+        useUserBadgeState(normalizedUserId);
+    // Tags programs set over the VRCX IPC pipe show as more custom badges,
+    // after the user's own.
+    const ipcTags = useVrcxCustomTags(normalizedUserId);
+    const customBadges = useMemo(
+        () =>
+            ipcTags.length
+                ? [...ownBadges, ...ipcTags.map(vrcxCustomTagBadge)]
+                : ownBadges,
+        [ownBadges, ipcTags]
+    );
     const hasDeveloperBadge = developerBadgeKind(normalizedUserId) !== null;
     const awards = useActiveAwards(normalizedUserId);
     const wrapperRef = useRef<HTMLSpanElement>(null);

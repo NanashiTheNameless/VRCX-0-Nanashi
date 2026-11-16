@@ -168,6 +168,12 @@ yourself an invite. **Switch avatar before joining** changes your avatar first, 
 current, own or favorite avatars. You can copy the VRChat link, the VRCX-0-Nanashi link or the
 instance ID, or share it.
 
+## Send Announcement
+
+In a group instance you are in, if your group role may post instance announcements, a megaphone
+button appears next to the instance. It sends a message to everyone in the instance, with an
+image from your VRChat gallery or, without one, the group's banner.
+
 ## Instance History
 
 Opened from a user or world, it lists the instances you shared, with a **Players** table and a

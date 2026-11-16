@@ -103,7 +103,8 @@ pub use profile_bio::LocalProfileBioStore;
 pub use profile_database_upgrade::LocalDatabaseUpgradeStore;
 pub use profile_merge_runner::{
     discard_data_import, profile_merge_sources, run_data_export, run_profile_merge,
-    run_profile_settings_import, stage_data_import, ProfileMergeSourceKind, ProfileMergeSources,
+    run_profile_merge_file, run_profile_settings_import, stage_data_import, vrcx_world_data_file,
+    ProfileMergeSourceKind, ProfileMergeSources,
 };
 pub use proxy_connectivity::ProxyConnectivityAdapter;
 pub use quick_search::LocalQuickSearchDetailStore;

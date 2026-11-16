@@ -186,7 +186,28 @@ See the [recorder guide](RECORDER.md).
 
 ### Import from VRCX or VRCX-0
 
-Merges the other app's database and adds settings you have not set here yet.
+Merges the other app's database and adds settings you have not set here yet. **Merge a database
+file** (Settings > Advanced > Import & recovery) does the same for any VRCX, VRCX-0 or
+VRCX-0-Nanashi database file you choose, such as an old backup, like VRCX's DB Merger. Settings
+are not read from the file, and a file that is not one of these databases is refused.
+
+### VRCX features upstream VRCX-0 does not have
+
+- **VRCX IPC** (Settings > Integrations), off by default: programs made for VRCX can add custom
+  user tags, Game Log entries and launch commands over VRCX's pipe. The pipe name and, on Linux
+  and macOS, the socket path can be changed. See [INTEGRATIONS.md](INTEGRATIONS.md#vrcx-ipc).
+- **Persistent World Info** (Settings > Integrations), off by default: worlds made for VRCX can
+  save values through VRChat's log and read them back from `127.0.0.1` (port 22500 by default,
+  changeable). VRCX itself dropped this. What worlds saved in VRCX can be imported from VRCX's
+  `VRCX-WorldData.db`. See
+  [INTEGRATIONS.md](INTEGRATIONS.md#persistent-world-info).
+- **Send Announcement**: in a group instance you are in, with the group's permission to post
+  instance announcements, the megaphone button next to the instance shows a message (and
+  optionally an image) to everyone there.
+- **VRChat Announcements** (Tools > Other): VRChat's help articles and in-game banners.
+- **Free store items** (Settings > Notifications > In-App Indicators), off by default: checks
+  the VRChat store every 3 hours and offers to claim free items you do not own yet. Nothing is
+  claimed until you choose **Claim All**.
 
 ## AI Assistant and reminders
 

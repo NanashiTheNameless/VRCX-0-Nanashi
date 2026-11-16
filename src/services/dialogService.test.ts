@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { recordBrowseHistory } = vi.hoisted(() => ({
-    recordBrowseHistory: vi.fn().mockResolvedValue(null)
+const { recordBrowseHistory, announceUserDialog } = vi.hoisted(() => ({
+    recordBrowseHistory: vi.fn().mockResolvedValue(null),
+    announceUserDialog: vi.fn().mockResolvedValue(null)
 }));
 
 vi.mock('@/services/toastService', () => ({
@@ -20,7 +21,8 @@ vi.mock('@/services/userFactAccessService', () => ({
 
 vi.mock('@/platform/tauri/bindings', () => ({
     commands: {
-        appBrowseHistoryRecord: recordBrowseHistory
+        appBrowseHistoryRecord: recordBrowseHistory,
+        appVrcxIpcAnnounceUserDialog: announceUserDialog
     }
 }));
 
@@ -69,6 +71,15 @@ describe('dialogService entity trail', () => {
             imageUrl: 'https://example.com/world.png',
             recordVisit: true
         });
+    });
+
+    it('tells VRCX IPC clients which user dialog opened', () => {
+        announceUserDialog.mockClear();
+        openUserDialog({ userId: 'usr_a', title: 'User A' });
+        openWorldDialog({ worldId: 'wrld_a', title: 'World A' });
+
+        expect(announceUserDialog).toHaveBeenCalledTimes(1);
+        expect(announceUserDialog).toHaveBeenCalledWith('usr_a');
     });
 
     it('truncates a dialog cycle when reopening an entity already in the trail', () => {

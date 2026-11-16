@@ -170,6 +170,13 @@ fn strip_scheme_prefix<'a>(value: &'a str, scheme: &str) -> Option<&'a str> {
 /// `vrcx://world/wrld_...`, `vrcx://world/wrld_...:12345~private(usr_...)`,
 /// `vrcx://avatar/avtr_...`, `vrcx://user/usr_...`, `vrcx://group/grp_...`,
 /// `vrcx://addavatardb/https://...`.
+/// A VRCX launch command received over the IPC pipe, such as
+/// `world/wrld_...`; the same paths as `vrcx://` links. The user turned the
+/// pipe on, so this does not depend on the `vrcx://` scheme setting.
+pub fn parse_vrcx_launch_command(command: &str) -> Option<DeepLinkAction> {
+    parse_legacy_vrcx_deep_link(command.trim().trim_start_matches('/'))
+}
+
 fn parse_legacy_vrcx_deep_link(rest: &str) -> Option<DeepLinkAction> {
     let (command, argument) = rest.split_once('/')?;
     let argument = argument.trim_end_matches('/');
@@ -582,6 +589,19 @@ mod tests {
                 world_id: "wrld_12345678-1234-1234-1234-1234567890ab".into()
             })
         );
+    }
+
+    #[test]
+    fn parses_vrcx_ipc_launch_commands() {
+        const USER: &str = "usr_12345678-1234-1234-1234-1234567890ab";
+        assert_eq!(
+            super::parse_vrcx_launch_command(&format!("user/{USER}")),
+            Some(DeepLinkAction::OpenUser {
+                user_id: USER.into()
+            })
+        );
+        assert_eq!(super::parse_vrcx_launch_command("import/avatar"), None);
+        assert_eq!(super::parse_vrcx_launch_command(""), None);
     }
 
     #[test]

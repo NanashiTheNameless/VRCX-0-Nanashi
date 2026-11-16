@@ -31,6 +31,7 @@ members = [
     "crates/logger",
     "crates/mcp",
     "crates/integration-api",
+    "crates/vrcx-compat",
     "crates/assistant",
     "crates/remote-sync",
     "crates/collector-cli",
@@ -68,6 +69,7 @@ default-members = [
     "crates/logger",
     "crates/mcp",
     "crates/integration-api",
+    "crates/vrcx-compat",
     "crates/assistant",
     "crates/remote-sync"
 ]

@@ -796,3 +796,29 @@ fn parses_now_playing_lines_with_a_producer_suffix() {
         ])]
     );
 }
+
+#[test]
+fn parses_vrcx_world_data_requests() {
+    let line = "2026.06.21 23:00:40 Log        -  [VRCX-World] {\"requestType\":\"store\",\"connectionKey\":\"k\",\"key\":\"a\",\"value\":\"b\"}";
+    let mut sink = RecordingParseSink::default();
+
+    assert!(!media::parse_world_vrcx(
+        &mut sink,
+        FILE,
+        line,
+        content(line)
+    ));
+    assert!(media::parse_world_data_vrcx(
+        &mut sink,
+        FILE,
+        line,
+        content(line)
+    ));
+    assert_eq!(
+        sink.payloads(),
+        vec![payload(&[
+            "vrcx-world",
+            "{\"requestType\":\"store\",\"connectionKey\":\"k\",\"key\":\"a\",\"value\":\"b\"}",
+        ])]
+    );
+}

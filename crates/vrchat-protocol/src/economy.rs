@@ -83,6 +83,52 @@ pub fn store_get_input(
     ))
 }
 
+/// The store's shelves with their listings, as VRCX reads them to find free
+/// items.
+pub fn store_shelves_get_input(
+    endpoint: String,
+    store_id: String,
+) -> Result<(String, VrchatRequest), HttpApiError> {
+    let store_id = require_text(store_id, "VrchatEconomyStoreShelvesGet requires storeId.")?;
+    Ok((
+        store_id.clone(),
+        get_input(
+            endpoint,
+            "economy/store/shelves",
+            HashMap::from([
+                ("storeId".to_string(), json!(store_id)),
+                ("fetch".to_string(), json!("public")),
+                ("hydrateListings".to_string(), json!(true)),
+            ]),
+        ),
+    ))
+}
+
+/// Claims a free listing. The price is always 0, so VRChat refuses anything
+/// that is not free.
+pub fn claim_free_listing_input(
+    endpoint: String,
+    listing_id: String,
+) -> Result<(String, VrchatRequest), HttpApiError> {
+    let listing_id = require_text(
+        listing_id,
+        "VrchatEconomyClaimFreeListing requires listingId.",
+    )?;
+    Ok((
+        listing_id.clone(),
+        crate::http_api::api_input(
+            endpoint,
+            "POST",
+            "economy/purchase/listing",
+            Some(json!({
+                "listingId": listing_id,
+                "totalPrice": 0,
+                "quantity": 1,
+            })),
+        ),
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -123,6 +169,20 @@ mod tests {
         let params = store.query_params.unwrap();
         assert_eq!(params.get("storeId"), Some(&json!("store_1")));
         assert_eq!(params.get("hydrateListings"), Some(&json!(true)));
+
+        let (_, shelves) = store_shelves_get_input("endpoint".into(), "esto_1".into()).unwrap();
+        assert_eq!(shelves.path.as_deref(), Some("economy/store/shelves"));
+        let params = shelves.query_params.unwrap();
+        assert_eq!(params.get("fetch"), Some(&json!("public")));
+        assert_eq!(params.get("hydrateListings"), Some(&json!(true)));
+
+        let (_, claim) = claim_free_listing_input("endpoint".into(), "prod_1".into()).unwrap();
+        assert_eq!(claim.method.as_deref(), Some("POST"));
+        assert_eq!(claim.path.as_deref(), Some("economy/purchase/listing"));
+        assert_eq!(
+            claim.body.as_json(),
+            Some(&json!({ "listingId": "prod_1", "totalPrice": 0, "quantity": 1 }))
+        );
 
         assert!(purchases_get_input("endpoint".into(), " ".into(), 50, 0).is_err());
         assert!(store_get_input("endpoint".into(), " ".into()).is_err());
